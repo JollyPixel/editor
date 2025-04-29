@@ -1,0 +1,7 @@
+{
+  "extends": "@openally/config.typescript/esm",
+  "compilerOptions": {
+    "composite": false,
+    "types": ["node"]
+  }
+}

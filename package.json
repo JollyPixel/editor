@@ -1,0 +1,31 @@
+{
+  "name": "@jolly-pixel/editor",
+  "version": "1.0.0",
+  "description": "N/A",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc -b",
+    "test": "npm run test --ws --if-present",
+    "lint": "npx eslint workspaces"
+  },
+  "workspaces": [
+    "src/tree-view"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JollyPixel/editor.git"
+  },
+  "keywords": [],
+  "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/JollyPixel/editor/issues"
+  },
+  "homepage": "https://github.com/JollyPixel/editor#readme",
+  "devDependencies": {
+    "@openally/config.eslint": "^2.1.0",
+    "@openally/config.typescript": "^1.0.3",
+    "@types/node": "^22.15.3",
+    "typescript": "^5.8.3"
+  }
+}
