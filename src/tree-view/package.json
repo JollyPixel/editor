@@ -2,10 +2,13 @@
   "name": "@jolly-pixel/tree-view",
   "version": "1.0.0",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/TreeView.class.js",
+  "types": "dist/TreeView.class.d.ts",
   "scripts": {
-    "build": "tsc -b"
+    "prepublish": "rimraf ./dist && tsc -b",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "keywords": [],
   "files": [

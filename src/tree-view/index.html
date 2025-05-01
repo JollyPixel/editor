@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tree-View</title>
+  <link rel="stylesheet" href="./public/main.css">
+</head>
+
+<body>
+  <main></main>
+  <script type="module">
+    import { TreeView } from "./src/TreeView.class.ts";
+
+    const treeView = new TreeView(
+      document.querySelector("main"),
+      {
+        dragStartCallback(event, node) {
+          event.dataTransfer.setData("text/plain", node.textContent);
+
+          return true;
+        },
+        dropCallback(event, dropLocation) {
+          console.log(
+            event.dataTransfer.getData("text/plain") +
+            " was dropped " +
+            dropLocation.where +
+            " " +
+            dropLocation.target.textContent
+          );
+
+          return true;
+        }
+      }
+    );
+
+    function createItem(label) {
+      const itemElt = document.createElement("li");
+
+      const iconElt = document.createElement("div");
+      iconElt.classList.add("icon");
+      itemElt.appendChild(iconElt);
+
+      const spanElt = document.createElement("span");
+      spanElt.textContent = label;
+      itemElt.appendChild(spanElt);
+
+      return itemElt;
+    }
+
+    function createGroup(label) {
+      const groupElt = document.createElement("li");
+
+      const spanElt = document.createElement("span");
+      spanElt.textContent = label;
+      groupElt.appendChild(spanElt);
+
+      return groupElt;
+    }
+
+    for (let i = 0; i < 10; i++) {
+      const group = createGroup("Group " + (i + 1));
+      treeView.append(group, "group");
+
+      for (let j = 0; j < 5; j++) {
+        const item = createItem("Item " + (i * 3 + j + 1));
+        treeView.append(item, "item", group);
+      }
+    }
+
+    treeView.append(
+      createGroup("Empty Group 1"),
+      "group",
+      document.querySelector(".group")
+    );
+
+    treeView.append(
+      createGroup("Empty Group 2"),
+      "group",
+      document.querySelector(".group:last-child")
+    );
+
+    treeView.addEventListener("selectionChange", function () {
+      let text;
+      if (treeView.selectedNodes.length > 1) {
+        text = "" + treeView.selectedNodes.length + " items selected";
+      }
+      else if (treeView.selectedNodes.length === 1) {
+        text = "1 item selected";
+      }
+      else {
+        text = "No items selected";
+      }
+
+      console.log(text);
+    });
+
+    treeView.addEventListener("activate", function () {
+      alert("Activated " + treeView.selectedNodes[0].querySelector("span").textContent);
+    });
+  </script>
+</body>
+
+</html>
