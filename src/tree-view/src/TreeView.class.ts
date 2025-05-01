@@ -1,5 +1,8 @@
+// Import Internal Dependencies
+import { TreeViewSelector } from "./TreeViewSelector.class.js";
+
 interface DropLocation {
-  target: HTMLLIElement | HTMLOListElement;
+  target: Element;
   where: "above" | "inside" | "below";
 }
 
@@ -21,13 +24,10 @@ export interface TreeViewOptions {
 
 export class TreeView extends EventTarget {
   root: HTMLOListElement;
-  selectedNodes: HTMLLIElement[];
+  selector: TreeViewSelector;
 
   private dragStartCallback: DragStartCallback | null;
   private dropCallback: DropCallback | null;
-  private multipleSelection: boolean;
-
-  private firstSelectedNode: HTMLLIElement | null;
   private previousDropLocation: DropLocation | null;
   private hasDraggedOverAfterLeaving: boolean;
   private isDraggingNodes: boolean;
@@ -39,12 +39,10 @@ export class TreeView extends EventTarget {
     super();
 
     const {
-      multipleSelection = true,
       dragStartCallback = null,
       dropCallback = null
     } = options;
 
-    this.multipleSelection = multipleSelection;
     this.dragStartCallback = dragStartCallback;
     this.dropCallback = dropCallback;
     this.root = document.createElement("ol");
@@ -52,8 +50,9 @@ export class TreeView extends EventTarget {
     this.root.classList.add("tree");
     container.appendChild(this.root);
 
-    this.selectedNodes = [];
-    this.firstSelectedNode = null;
+    this.selector = new TreeViewSelector({
+      multipleSelection: options.multipleSelection
+    });
 
     this.root.addEventListener("click", this.onClick);
     this.root.addEventListener("dblclick", this.onDoubleClick);
@@ -76,29 +75,8 @@ export class TreeView extends EventTarget {
     }
   }
 
-  clearSelection() {
-    for (const selectedNode of this.selectedNodes) {
-      selectedNode.classList.remove("selected");
-    }
-    this.selectedNodes.length = 0;
-    this.firstSelectedNode = null;
-  }
-
-  addToSelection(element: HTMLLIElement) {
-    if (this.selectedNodes.indexOf(element) !== -1) {
-      return;
-    }
-
-    this.selectedNodes.push(element);
-    element.classList.add("selected");
-
-    if (this.selectedNodes.length === 1) {
-      this.firstSelectedNode = element;
-    }
-  }
-
   scrollIntoView(
-    element: HTMLLIElement
+    element: Element
   ) {
     let ancestor = element.parentElement;
     while (ancestor && ancestor.className === "children") {
@@ -122,8 +100,7 @@ export class TreeView extends EventTarget {
 
   clear() {
     this.root.innerHTML = "";
-    this.selectedNodes.length = 0;
-    this.firstSelectedNode = null;
+    this.selector.clear();
     this.hasDraggedOverAfterLeaving = false;
     this.isDraggingNodes = false;
   }
@@ -133,14 +110,14 @@ export class TreeView extends EventTarget {
     type: "item" | "group",
     parentGroupElement?: HTMLLIElement
   ) {
-    let childrenElt: HTMLOListElement | null = null;
-    let siblingsElt: HTMLOListElement;
+    let childrenElt: Element | null = null;
+    let siblingsElt: Element;
 
     if (parentGroupElement) {
       if (!isGroup(parentGroupElement)) {
         throw new Error("Invalid parent group");
       }
-      siblingsElt = parentGroupElement.nextSibling as HTMLOListElement;
+      siblingsElt = parentGroupElement.nextElementSibling!;
     }
     else {
       siblingsElt = this.root;
@@ -162,7 +139,7 @@ export class TreeView extends EventTarget {
       }
     }
     else if (type === "group") {
-      childrenElt = element.nextSibling as HTMLOListElement;
+      childrenElt = element.nextElementSibling;
     }
 
     siblingsElt.appendChild(element);
@@ -178,7 +155,7 @@ export class TreeView extends EventTarget {
     type: "item" | "group",
     referenceElement: HTMLLIElement
   ) {
-    let childrenElt: HTMLOListElement | null = null;
+    let childrenElt: Element | null = null;
 
     if (!element.classList.contains(type)) {
       element.classList.add(type);
@@ -196,7 +173,7 @@ export class TreeView extends EventTarget {
       }
     }
     else if (type === "group") {
-      childrenElt = element.nextSibling as HTMLOListElement;
+      childrenElt = element.nextElementSibling;
     }
 
     if (referenceElement.parentElement) {
@@ -226,212 +203,48 @@ export class TreeView extends EventTarget {
   remove(
     element: HTMLLIElement
   ) {
-    const selectedIndex = this.selectedNodes.indexOf(element);
-    if (selectedIndex !== -1) {
-      element.classList.remove("selected");
-      this.selectedNodes.splice(selectedIndex, 1);
-    }
-    if (this.firstSelectedNode === element) {
-      this.firstSelectedNode = this.selectedNodes[0];
+    this.selector.remove(element);
+    if (!element.parentElement) {
+      return;
     }
 
     if (element.classList.contains("group")) {
-      const childrenElement = element.nextSibling as HTMLElement;
+      const childrenElement = element.nextElementSibling;
+      this.selector.nodes
+        .filter((selectedNode) => childrenElement?.contains(selectedNode))
+        .forEach((node) => this.selector.remove(node));
 
-      const removedSelectedNodes: HTMLLIElement[] = [];
-      for (const selectedNode of this.selectedNodes) {
-        if (childrenElement.contains(selectedNode)) {
-          removedSelectedNodes.push(selectedNode);
-        }
-      }
-
-      for (const removedSelectedNode of removedSelectedNodes) {
-        removedSelectedNode.classList.remove("selected");
-        this.selectedNodes.splice(this.selectedNodes.indexOf(removedSelectedNode), 1);
-        if (this.firstSelectedNode === removedSelectedNode) {
-          this.firstSelectedNode = this.selectedNodes[0];
-        }
-      }
-
-      element.parentElement!.removeChild(childrenElement);
+      childrenElement && element.parentElement.removeChild(childrenElement);
     }
 
-    element.parentElement!.removeChild(element);
+    element.parentElement.removeChild(element);
   }
-
-  private onClick = (event: MouseEvent) => {
-    const element = event.target as HTMLElement;
-
-    if (element.className === "toggle" && isGroup(element.parentElement)) {
-      element.parentElement.classList.toggle("collapsed");
-    }
-    else if (
-      !["BUTTON", "INPUT", "SELECT"].includes(element.tagName) &&
-      this.updateSelection(event)
-    ) {
-      this.dispatchEvent(new Event("selectionChange"));
-    }
-  };
-
-  // Returns whether the selection changed
-  private updateSelection(event: MouseEvent) {
-    let selectionChanged = false;
-
-    if (
-      (!this.multipleSelection || (!event.shiftKey && !event.ctrlKey)) &&
-      this.selectedNodes.length > 0
-    ) {
-      this.clearSelection();
-      selectionChanged = true;
-    }
-
-    let ancestorElement = event.target as HTMLElement;
-    while (
-      ancestorElement.tagName !== "LI" ||
-      (!ancestorElement.classList.contains("item") && !ancestorElement.classList.contains("group"))
-    ) {
-      if (ancestorElement === this.root) {
-        return selectionChanged;
-      }
-      ancestorElement = ancestorElement.parentElement!;
-    }
-
-    const element = ancestorElement as HTMLLIElement;
-
-    if (this.selectedNodes.length > 0 && this.selectedNodes[0].parentElement !== element.parentElement) {
-      return selectionChanged;
-    }
-
-    if (this.multipleSelection && event.shiftKey && this.selectedNodes.length > 0) {
-      const startElement = this.firstSelectedNode;
-      const elements: HTMLLIElement[] = [];
-      let inside = false;
-
-      for (let i = 0; i < element.parentElement!.children.length; i++) {
-        const child = element.parentElement!.children[i] as HTMLElement;
-
-        if (child === startElement || child === element) {
-          if (inside || startElement === element) {
-            elements.push(child as HTMLLIElement);
-            break;
-          }
-          inside = true;
-        }
-
-        if (inside && child.tagName === "LI") {
-          elements.push(child as HTMLLIElement);
-        }
-      }
-
-      this.clearSelection();
-      this.selectedNodes = elements;
-      this.firstSelectedNode = startElement;
-      for (const selectedNode of this.selectedNodes) {
-        selectedNode.classList.add("selected");
-      }
-
-      return true;
-    }
-
-    let index: number;
-    if (event.ctrlKey && (index = this.selectedNodes.indexOf(element)) !== -1) {
-      this.selectedNodes.splice(index, 1);
-      element.classList.remove("selected");
-
-      if (this.firstSelectedNode === element) {
-        this.firstSelectedNode = this.selectedNodes[0];
-      }
-
-      return true;
-    }
-
-    this.addToSelection(element);
-
-    return true;
-  }
-
-  private onDoubleClick = (event: MouseEvent) => {
-    if (this.selectedNodes.length !== 1) {
-      return;
-    }
-
-    const element = event.target as HTMLElement;
-    if (element.tagName === "BUTTON" || element.tagName === "INPUT" || element.tagName === "SELECT") {
-      return;
-    }
-    if (element.className === "toggle") {
-      return;
-    }
-
-    this.dispatchEvent(new Event("activate"));
-  };
-
-  private onKeyDown = (event: KeyboardEvent) => {
-    if (document.activeElement !== this.root) {
-      return;
-    }
-
-    if (this.firstSelectedNode === null) {
-      if (event.key === "ArrowDown") {
-        this.addToSelection(this.root.firstElementChild as HTMLLIElement);
-        this.dispatchEvent(new Event("selectionChange"));
-        event.preventDefault();
-      }
-
-      return;
-    }
-
-    switch (event.key) {
-      case "ArrowUp":
-        this.moveVertically(-1);
-        event.preventDefault();
-        break;
-      case "ArrowDown":
-        this.moveVertically(1);
-        event.preventDefault();
-        break;
-
-      case "ArrowLeft":
-        this.moveHorizontally(-1);
-        event.preventDefault();
-        break;
-      case "ArrowRight":
-        this.moveHorizontally(1);
-        event.preventDefault();
-        break;
-
-      case "Enter":
-        if (this.selectedNodes.length !== 1) {
-          return;
-        }
-        this.dispatchEvent(new Event("activate"));
-        event.preventDefault();
-        break;
-    }
-  };
 
   moveVertically(offset: number) {
-    let node = this.firstSelectedNode;
+    let node: Element | null = this.selector.firstSelectedNode;
     if (!node) {
       return;
     }
 
     if (offset === -1) {
       if (node.previousElementSibling) {
-        let target = node.previousElementSibling as HTMLElement;
+        let target: Element | null = node.previousElementSibling;
 
-        while (target.classList.contains("children")) {
-          if (!target.previousElementSibling!.classList.contains("collapsed") && target.childElementCount > 0) {
-            target = target.lastElementChild as HTMLElement;
+        while (target && target.classList.contains("children")) {
+          if (
+            !target.previousElementSibling!.classList.contains("collapsed") &&
+            target.childElementCount > 0
+          ) {
+            target = target.lastElementChild;
           }
           else {
-            target = target.previousElementSibling as HTMLElement;
+            target = target.previousElementSibling;
           }
         }
-        node = target as HTMLLIElement;
+        node = target;
       }
       else if (node.parentElement!.classList.contains("children")) {
-        node = node.parentElement!.previousElementSibling as HTMLLIElement;
+        node = node.parentElement!.previousElementSibling;
       }
       else {
         return;
@@ -445,32 +258,32 @@ export class TreeView extends EventTarget {
           node.nextElementSibling &&
           node.nextElementSibling.childElementCount > 0
         ) {
-          node = node.nextElementSibling.firstElementChild as HTMLLIElement;
+          node = node.nextElementSibling.firstElementChild;
         }
         else if (node.nextElementSibling && node.nextElementSibling.nextElementSibling) {
-          node = node.nextElementSibling.nextElementSibling as HTMLLIElement;
+          node = node.nextElementSibling.nextElementSibling;
         }
         else {
           walkUp = true;
         }
       }
       else if (node.nextElementSibling) {
-        node = node.nextElementSibling as HTMLLIElement;
+        node = node.nextElementSibling;
       }
       else {
         walkUp = true;
       }
 
-      if (walkUp) {
+      if (walkUp && node) {
         if (node.parentElement && node.parentElement.classList.contains("children")) {
-          let target = node.parentElement as HTMLElement;
+          let target = node.parentElement;
           while (target.nextElementSibling === null) {
             target = target.parentElement!;
             if (!target.classList.contains("children")) {
               return;
             }
           }
-          node = target.nextElementSibling as HTMLLIElement;
+          node = target.nextElementSibling;
         }
         else {
           return;
@@ -482,14 +295,14 @@ export class TreeView extends EventTarget {
       return;
     }
 
-    this.clearSelection();
-    this.addToSelection(node);
+    this.selector.clear();
+    this.selector.add(node);
     this.scrollIntoView(node);
     this.dispatchEvent(new Event("selectionChange"));
   }
 
   moveHorizontally = (offset: number) => {
-    let node = this.firstSelectedNode;
+    let node = this.selector.firstSelectedNode;
     if (!node) {
       return;
     }
@@ -499,7 +312,7 @@ export class TreeView extends EventTarget {
         if (!node.parentElement!.classList.contains("children")) {
           return;
         }
-        node = node.parentElement!.previousElementSibling as HTMLLIElement;
+        node = node.parentElement!.previousElementSibling;
       }
       else if (node.classList.contains("group")) {
         node.classList.add("collapsed");
@@ -518,44 +331,24 @@ export class TreeView extends EventTarget {
       return;
     }
 
-    this.clearSelection();
-    this.addToSelection(node);
+    this.selector.clear();
+    this.selector.add(node);
     this.scrollIntoView(node);
     this.dispatchEvent(new Event("selectionChange"));
-  };
-
-  private onDragStart = (event: DragEvent) => {
-    const element = event.target as HTMLLIElement;
-    if (!isGroup(element) && !isItem(element)) {
-      return false;
-    }
-
-    if (this.selectedNodes.indexOf(element) === -1) {
-      this.clearSelection();
-      this.addToSelection(element);
-      this.dispatchEvent(new Event("selectionChange"));
-    }
-
-    if (this.dragStartCallback && !this.dragStartCallback(event, element)) {
-      return false;
-    }
-
-    this.isDraggingNodes = true;
-
-    return true;
-  };
-
-  private onDragEnd = () => {
-    this.previousDropLocation = null;
-    this.isDraggingNodes = false;
   };
 
   private getDropLocation(
     event: DragEvent
   ): DropLocation | null {
-    let element = event.target as HTMLElement;
+    if (!(event.target instanceof HTMLElement)) {
+      return null;
+    }
 
-    if (element.tagName === "OL" && element.classList.contains("children")) {
+    let element = event.target;
+    if (
+      element.tagName === "OL" &&
+      element.classList.contains("children")
+    ) {
       element = element.parentElement!;
     }
 
@@ -588,25 +381,25 @@ export class TreeView extends EventTarget {
     if (where === "below") {
       if (
         element.classList.contains("item") &&
-        element.nextSibling &&
-        (element.nextSibling as HTMLElement).tagName === "LI"
+        element.nextElementSibling &&
+        element.nextElementSibling.tagName === "LI"
       ) {
-        element = element.nextSibling as HTMLElement;
+        element = element.nextElementSibling as HTMLElement;
         where = "above";
       }
       else if (
         element.classList.contains("group") &&
-        element.nextSibling &&
-        element.nextSibling.nextSibling &&
-        (element.nextSibling.nextSibling as HTMLElement).tagName === "LI"
+        element.nextElementSibling &&
+        element.nextElementSibling.nextElementSibling &&
+        element.nextElementSibling.nextElementSibling.tagName === "LI"
       ) {
-        element = element.nextSibling.nextSibling as HTMLElement;
-        where = "above" as const;
+        element = element.nextElementSibling.nextElementSibling as HTMLElement;
+        where = "above";
       }
     }
 
     return {
-      target: element as HTMLLIElement,
+      target: element,
       where
     };
   }
@@ -624,16 +417,136 @@ export class TreeView extends EventTarget {
     if (offset > rect.height * 3 / 4) {
       return (
         element.classList.contains("group") &&
-        (element.nextSibling as HTMLElement).childElementCount > 0) ? "inside" : "below";
+        element.nextElementSibling &&
+        element.nextElementSibling.childElementCount > 0
+      ) ? "inside" : "below";
     }
 
     return element.classList.contains("item") ? "below" : "inside";
   }
 
+  private clearDropClasses() {
+    this.root
+      .querySelector(".drop-above")?.classList.remove("drop-above");
+    this.root
+      .querySelector(".drop-inside")?.classList.remove("drop-inside");
+    this.root
+      .querySelector(".drop-below")?.classList.remove("drop-below");
+    // For the rare case where we're dropping a foreign item into an empty tree view
+    this.root.classList.remove("drop-inside");
+  }
+
+  private onClick = (event: MouseEvent) => {
+    if (!(event.target instanceof HTMLElement)) {
+      return;
+    }
+
+    const element = event.target;
+    if (
+      element.className === "toggle" &&
+      isGroup(element.parentElement)
+    ) {
+      element.parentElement.classList.toggle("collapsed");
+    }
+    else if (
+      !["BUTTON", "INPUT", "SELECT"].includes(element.tagName) &&
+      this.selector.updateSelection(this.root, event)
+    ) {
+      this.dispatchEvent(new Event("selectionChange"));
+    }
+  };
+
+  private onDoubleClick = (event: MouseEvent) => {
+    const element = event.target as HTMLElement;
+
+    if (
+      this.selector.size !== 1 ||
+      element.tagName === "BUTTON" ||
+      element.tagName === "INPUT" ||
+      element.tagName === "SELECT" ||
+      element.className === "toggle"
+    ) {
+      return;
+    }
+
+    this.dispatchEvent(
+      new Event("activate")
+    );
+  };
+
+  private onKeyDown = (event: KeyboardEvent) => {
+    if (document.activeElement !== this.root) {
+      return;
+    }
+
+    if (this.selector.firstSelectedNode === null) {
+      if (event.key === "ArrowDown") {
+        this.selector.add(this.root.firstElementChild as HTMLLIElement);
+        this.dispatchEvent(new Event("selectionChange"));
+        event.preventDefault();
+      }
+
+      return;
+    }
+
+    switch (event.key) {
+      case "ArrowUp":
+        this.moveVertically(-1);
+        event.preventDefault();
+        break;
+      case "ArrowDown":
+        this.moveVertically(1);
+        event.preventDefault();
+        break;
+
+      case "ArrowLeft":
+        this.moveHorizontally(-1);
+        event.preventDefault();
+        break;
+      case "ArrowRight":
+        this.moveHorizontally(1);
+        event.preventDefault();
+        break;
+
+      case "Enter":
+        if (this.selector.size === 1) {
+          this.dispatchEvent(new Event("activate"));
+          event.preventDefault();
+        }
+        break;
+    }
+  };
+
+  private onDragStart = (event: DragEvent) => {
+    const element = event.target as HTMLLIElement;
+    if (!isGroup(element) && !isItem(element)) {
+      return false;
+    }
+
+    if (!this.selector.has(element)) {
+      this.selector.clear();
+      this.selector.add(element);
+      this.dispatchEvent(
+        new Event("selectionChange")
+      );
+    }
+
+    if (this.dragStartCallback && !this.dragStartCallback(event, element)) {
+      return false;
+    }
+
+    this.isDraggingNodes = true;
+
+    return true;
+  };
+
+  private onDragEnd = () => {
+    this.previousDropLocation = null;
+    this.isDraggingNodes = false;
+  };
+
   private onDragOver = (event: DragEvent) => {
     const dropLocation = this.getDropLocation(event);
-
-    // Prevent dropping onto null
     if (dropLocation === null) {
       return false;
     }
@@ -641,12 +554,18 @@ export class TreeView extends EventTarget {
     // If we're dragging nodes from the current tree view
     // Prevent dropping into descendant
     if (this.isDraggingNodes) {
-      if (dropLocation.where === "inside" && this.selectedNodes.indexOf(dropLocation.target as HTMLLIElement) !== -1) {
+      if (
+        dropLocation.where === "inside" &&
+        this.selector.has(dropLocation.target as HTMLLIElement)
+      ) {
         return false;
       }
 
-      for (const selectedNode of this.selectedNodes) {
-        if (selectedNode.classList.contains("group") && (selectedNode.nextSibling as HTMLElement).contains(dropLocation.target)) {
+      for (const selectedNode of this.selector.nodes) {
+        if (
+          selectedNode.classList.contains("group") &&
+          (selectedNode.nextSibling as HTMLElement).contains(dropLocation.target)
+        ) {
           return false;
         }
       }
@@ -668,17 +587,6 @@ export class TreeView extends EventTarget {
     return event.preventDefault();
   };
 
-  private clearDropClasses() {
-    this.root
-      .querySelector(".drop-above")?.classList.remove("drop-above");
-    this.root
-      .querySelector(".drop-inside")?.classList.remove("drop-inside");
-    this.root
-      .querySelector(".drop-below")?.classList.remove("drop-below");
-    // For the rare case where we're dropping a foreign item into an empty tree view
-    this.root.classList.remove("drop-inside");
-  }
-
   private onDragLeave = () => {
     this.hasDraggedOverAfterLeaving = false;
     setTimeout(() => {
@@ -690,33 +598,24 @@ export class TreeView extends EventTarget {
 
   private onDrop = (event: DragEvent) => {
     this.previousDropLocation = null;
-
     event.preventDefault();
+
     const dropLocation = this.getDropLocation(event);
     if (dropLocation === null) {
       return;
     }
 
     this.clearDropClasses();
-
     if (!this.isDraggingNodes) {
-      if (this.dropCallback) {
-        this.dropCallback(event, dropLocation, []);
-      }
+      this.dropCallback?.(event, dropLocation, []);
 
       // eslint-disable-next-line consistent-return
       return false;
     }
 
-    const children = this.selectedNodes[0].parentElement!.children;
-    const orderedNodes: HTMLLIElement[] = [];
-
-    for (let i = 0; i < children.length; i++) {
-      const child = children[i] as HTMLLIElement;
-      if (this.selectedNodes.indexOf(child) !== -1) {
-        orderedNodes.push(child);
-      }
-    }
+    const children = this.selector.nodes[0].parentElement!.children as unknown as HTMLLIElement[];
+    const orderedNodes: HTMLLIElement[] = [...children]
+      .filter((child) => this.selector.has(child));
 
     const reparent = this.dropCallback ?
       this.dropCallback(event, dropLocation, orderedNodes) :
@@ -725,8 +624,8 @@ export class TreeView extends EventTarget {
       return;
     }
 
-    let newParent: HTMLElement | null = null;
-    let referenceElt: HTMLElement | null;
+    let newParent: Element | null = null;
+    let referenceElt: Element | null;
 
     switch (dropLocation.where) {
       case "inside":
@@ -734,15 +633,15 @@ export class TreeView extends EventTarget {
           return;
         }
 
-        newParent = dropLocation.target.nextSibling as HTMLElement;
+        newParent = dropLocation.target.nextElementSibling;
         referenceElt = null;
         break;
 
       case "below":
         newParent = dropLocation.target.parentElement;
-        referenceElt = dropLocation.target.nextSibling as HTMLElement;
+        referenceElt = dropLocation.target.nextElementSibling;
         if (referenceElt && referenceElt.tagName === "OL") {
-          referenceElt = referenceElt.nextSibling as HTMLElement;
+          referenceElt = referenceElt.nextElementSibling;
         }
         break;
 
@@ -752,25 +651,25 @@ export class TreeView extends EventTarget {
         break;
     }
 
-    let draggedChildren: HTMLElement | null = null;
+    let draggedChildren: Element | null = null;
 
     for (const selectedNode of orderedNodes) {
       if (selectedNode.classList.contains("group")) {
-        draggedChildren = selectedNode.nextSibling as HTMLElement;
-        draggedChildren.parentElement!.removeChild(draggedChildren);
+        draggedChildren = selectedNode.nextElementSibling;
+        draggedChildren && draggedChildren.parentElement!.removeChild(draggedChildren);
       }
 
       if (referenceElt === selectedNode) {
-        referenceElt = selectedNode.nextSibling as HTMLElement;
+        referenceElt = selectedNode.nextElementSibling;
       }
 
       selectedNode.parentElement!.removeChild(selectedNode);
       newParent?.insertBefore(selectedNode, referenceElt);
-      referenceElt = selectedNode.nextSibling as HTMLElement;
+      referenceElt = selectedNode.nextElementSibling;
 
       if (draggedChildren) {
         newParent?.insertBefore(draggedChildren, referenceElt);
-        referenceElt = draggedChildren.nextSibling as HTMLElement;
+        referenceElt = draggedChildren.nextElementSibling;
       }
     }
 

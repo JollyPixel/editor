@@ -83,10 +83,10 @@
 
     treeView.addEventListener("selectionChange", function () {
       let text;
-      if (treeView.selectedNodes.length > 1) {
-        text = "" + treeView.selectedNodes.length + " items selected";
+      if (treeView.selector.nodes.length > 1) {
+        text = "" + treeView.selector.nodes.length + " items selected";
       }
-      else if (treeView.selectedNodes.length === 1) {
+      else if (treeView.selector.nodes.length === 1) {
         text = "1 item selected";
       }
       else {
@@ -97,7 +97,7 @@
     });
 
     treeView.addEventListener("activate", function () {
-      alert("Activated " + treeView.selectedNodes[0].querySelector("span").textContent);
+      alert("Activated " + treeView.selector.nodes[0].querySelector("span").textContent);
     });
   </script>
 </body>
