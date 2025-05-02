@@ -16,8 +16,58 @@ export class TreeViewSelector {
     this.multipleSelection = multipleSelection;
   }
 
-  get size() {
+  get size(): number {
     return this.nodes.length;
+  }
+
+  clear(): void {
+    for (const selectedNode of this.nodes) {
+      selectedNode.classList.remove("selected");
+    }
+    this.nodes.length = 0;
+    this.firstSelectedNode = null;
+  }
+
+  has(
+    element: Element
+  ): boolean {
+    return this.nodes.indexOf(element) !== -1;
+  }
+
+  add(
+    element: Element
+  ): void {
+    if (this.has(element)) {
+      return;
+    }
+
+    this.nodes.push(element);
+    element.classList.add("selected");
+
+    if (this.nodes.length === 1) {
+      this.firstSelectedNode = element;
+    }
+  }
+
+  remove(
+    element: Element
+  ): void {
+    const selectedIndex = this.nodes.indexOf(element);
+    if (selectedIndex !== -1) {
+      element.classList.remove("selected");
+      this.nodes.splice(selectedIndex, 1);
+    }
+
+    if (this.firstSelectedNode !== element) {
+      return;
+    }
+
+    if (this.nodes.length > 0) {
+      this.firstSelectedNode = this.nodes[0];
+    }
+    else {
+      this.clear();
+    }
   }
 
   updateSelection(
@@ -94,53 +144,5 @@ export class TreeViewSelector {
     }
 
     return true;
-  }
-
-  clear() {
-    for (const selectedNode of this.nodes) {
-      selectedNode.classList.remove("selected");
-    }
-    this.nodes.length = 0;
-    this.firstSelectedNode = null;
-  }
-
-  add(
-    element: Element
-  ) {
-    if (this.nodes.indexOf(element) !== -1) {
-      return;
-    }
-
-    this.nodes.push(element);
-    element.classList.add("selected");
-
-    if (this.nodes.length === 1) {
-      this.firstSelectedNode = element;
-    }
-  }
-
-  has(
-    element: Element
-  ): boolean {
-    return this.nodes.indexOf(element) !== -1;
-  }
-
-  remove(
-    element: Element
-  ) {
-    const selectedIndex = this.nodes.indexOf(element);
-    if (selectedIndex !== -1) {
-      element.classList.remove("selected");
-      this.nodes.splice(selectedIndex, 1);
-    }
-
-    if (this.firstSelectedNode === element) {
-      if (this.nodes.length > 0) {
-        this.firstSelectedNode = this.nodes[0];
-      }
-      else {
-        this.clear();
-      }
-    }
   }
 }
