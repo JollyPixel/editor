@@ -1,0 +1,18 @@
+{
+  "name": "@jolly-pixel/project",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/index.class.js",
+  "types": "dist/index.class.d.ts",
+  "scripts": {
+    "prepublish": "rimraf ./dist && tsc -b"
+  },
+  "keywords": [],
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@openally/config": "^1.0.1",
+    "fluent-json-schema": "^6.0.0"
+  }
+}
