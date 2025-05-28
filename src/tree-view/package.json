@@ -6,6 +6,7 @@
   "types": "dist/TreeView.class.d.ts",
   "scripts": {
     "prepublish": "rimraf ./dist && tsc -b",
+    "test": "tsx --test test/**/*.test.ts",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
