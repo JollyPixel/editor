@@ -10,7 +10,8 @@
   },
   "workspaces": [
     "src/tree-view",
-    "src/project"
+    "src/project",
+    "src/server"
   ],
   "repository": {
     "type": "git",
