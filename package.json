@@ -11,7 +11,8 @@
   "workspaces": [
     "src/tree-view",
     "src/project",
-    "src/server"
+    "src/server",
+    "src/client"
   ],
   "repository": {
     "type": "git",

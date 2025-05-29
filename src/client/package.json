@@ -1,0 +1,22 @@
+{
+  "name": "@jolly-pixel/client",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [],
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "vue": "^3.5.16"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.4",
+    "@vue/tsconfig": "^0.7.0",
+    "vue-tsc": "^2.2.10"
+  }
+}
