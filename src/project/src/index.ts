@@ -1,1 +1,1 @@
-export * from "./Manifest.js";
+export * from "./class/Project.class.js";

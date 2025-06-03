@@ -13,6 +13,6 @@
   ],
   "dependencies": {
     "@openally/config": "^1.0.1",
-    "fluent-json-schema": "^6.0.0"
+    "better-sqlite3": "^11.10.0"
   }
 }
