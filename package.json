@@ -4,7 +4,7 @@
   "description": "N/A",
   "main": "index.js",
   "scripts": {
-    "build": "tsc -b",
+    "build": "npm run build --ws --if-present",
     "test": "npm run test --ws --if-present",
     "lint": "npx eslint workspaces",
     "ci:publish": "changeset publish",
