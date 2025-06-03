@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "properties": {
+    "port": {
+      "type": "number",
+      "description": "port to use for the WebSocket/TRPC server",
+      "default": 3001
+    },
+    "projects": {
+      "type": "array",
+      "description": "absolute location (filesystem path) of individual projects",
+      "items": {
+        "type": "string"
+      },
+      "minContains": 1
+    }
+  },
+  "required": [
+    "projects"
+  ],
+  "additionalProperties": false
+}
