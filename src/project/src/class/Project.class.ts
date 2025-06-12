@@ -9,7 +9,10 @@ import { AssetManager } from "./AssetManager.class.js";
 
 export type ProjectConfiguration = {
   name: string;
+  shortDescription?: string;
+  icon?: string;
   security?: {
+    master?: string;
     password?: string;
     allowNoPassword?: boolean;
   };
