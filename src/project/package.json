@@ -13,6 +13,6 @@
   ],
   "dependencies": {
     "@openally/config": "^1.0.1",
-    "better-sqlite3": "^11.10.0"
+    "better-sqlite3": "^12.0.0"
   }
 }
