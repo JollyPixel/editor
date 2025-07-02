@@ -12,6 +12,12 @@
     },
     {
       "path": "./packages/fs-tree"
+    },
+    {
+      "path": "./packages/engine"
+    },
+    {
+      "path": "./packages/editors/voxel-map"
     }
   ]
 }

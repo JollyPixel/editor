@@ -14,7 +14,9 @@
     "packages/project",
     "packages/server",
     "packages/client",
-    "packages/fs-tree"
+    "packages/fs-tree",
+    "packages/editors/voxel-map",
+    "packages/engine"
   ],
   "repository": {
     "type": "git",
