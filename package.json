@@ -6,7 +6,7 @@
   "scripts": {
     "build": "npm run build --ws --if-present",
     "test": "npm run test --ws --if-present",
-    "lint": "npx eslint workspaces",
+    "lint": "npx eslint packages",
     "ci:publish": "changeset publish",
     "ci:version": "changeset version"
   },
@@ -29,14 +29,14 @@
   "homepage": "https://github.com/JollyPixel/editor#readme",
   "devDependencies": {
     "@changesets/changelog-github": "^0.5.1",
-    "@changesets/cli": "^2.29.4",
-    "@openally/config.eslint": "^2.1.0",
+    "@changesets/cli": "^2.29.5",
+    "@openally/config.eslint": "^2.2.0",
     "@openally/config.typescript": "^1.0.3",
-    "@types/node": "^22.15.3",
-    "happy-dom": "^17.4.6",
+    "@types/node": "^24.0.10",
+    "happy-dom": "^18.0.1",
     "rimraf": "^6.0.1",
-    "tsx": "^4.19.4",
+    "tsx": "^4.20.3",
     "typescript": "^5.8.3",
-    "vite": "^6.3.4"
+    "vite": "^7.0.0"
   }
 }
