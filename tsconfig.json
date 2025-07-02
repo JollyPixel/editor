@@ -2,16 +2,16 @@
   "files": [],
   "references": [
     {
-      "path": "./src/tree-view"
+      "path": "./packages/tree-view"
     },
     {
-      "path": "./src/project"
+      "path": "./packages/project"
     },
     {
-      "path": "./src/server"
+      "path": "./packages/server"
     },
     {
-      "path": "./src/client"
+      "path": "./packages/client"
     }
   ]
 }

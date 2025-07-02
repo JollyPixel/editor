@@ -11,10 +11,10 @@
     "ci:version": "changeset version"
   },
   "workspaces": [
-    "src/tree-view",
-    "src/project",
-    "src/server",
-    "src/client"
+    "packages/tree-view",
+    "packages/project",
+    "packages/server",
+    "packages/client"
   ],
   "repository": {
     "type": "git",
