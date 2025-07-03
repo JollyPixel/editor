@@ -1,0 +1,21 @@
+{
+  "name": "@jolly-pixel/fs-tree",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/index.class.js",
+  "types": "dist/index.class.d.ts",
+  "scripts": {
+    "prepublish": "rimraf ./dist && tsc -b",
+    "test": "tsx --test test/**/*.test.ts",
+    "build": "tsc"
+  },
+  "keywords": [],
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "chokidar": "^4.0.3",
+    "digraph-js": "^2.2.3",
+    "ts-pattern": "^5.7.1"
+  }
+}
