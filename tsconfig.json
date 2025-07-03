@@ -2,9 +2,6 @@
   "files": [],
   "references": [
     {
-      "path": "./packages/tree-view"
-    },
-    {
       "path": "./packages/project"
     },
     {
@@ -12,6 +9,9 @@
     },
     {
       "path": "./packages/client"
+    },
+    {
+      "path": "./packages/fs-tree"
     }
   ]
 }

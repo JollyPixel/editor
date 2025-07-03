@@ -12,7 +12,7 @@ body {
   font-family: sans-serif;
   font-size: 14px;
   display: flex;
-  flex-flow: column;
+  flex-direction: column;
   background-color: #eee;
 }
 
@@ -25,12 +25,34 @@ a:hover {
 }
 
 main {
+  width: 400px;
   position: relative;
   background-color: #fff;
   border: 1px solid #888;
   flex: 1;
   margin: 20px !important;
   overflow-y: auto;
+}
+
+nav {
+  position: relative;
+  height: 50px;
+  display: flex;
+  background: #EEE;
+  margin-left: 20px;
+  padding: 5px;
+}
+
+nav * + * {
+  margin-left: 5px;
+}
+
+nav > .selected-nodes {
+  display: flex;
+  background: rgb(136, 145, 15);
+  justify-content: center;
+  align-items: center;
+  padding: 0 10px;
 }
 
 ol.tree {
