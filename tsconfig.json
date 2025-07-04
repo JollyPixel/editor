@@ -12,6 +12,9 @@
     },
     {
       "path": "./packages/client"
+    },
+    {
+      "path": "./packages/fs-tree"
     }
   ]
 }

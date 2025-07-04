@@ -14,7 +14,8 @@
     "packages/tree-view",
     "packages/project",
     "packages/server",
-    "packages/client"
+    "packages/client",
+    "packages/fs-tree"
   ],
   "repository": {
     "type": "git",
