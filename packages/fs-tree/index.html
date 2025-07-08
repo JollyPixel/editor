@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tree-View</title>
+  <link rel="stylesheet" href="./public/main.css">
+</head>
+
+<body>
+  <nav>
+    <button class="create-item" data-type="item">Create item</button>
+    <button class="create-group" data-type="group">Create group</button>
+    <button class="remove-selected">Remove Selected</button>
+    <div class="selected-nodes">No items selected</div>
+  </nav>
+  <main>
+  </main>
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <script type="module">
+    import { TreeView } from "./src/frontend/TreeView.class.ts";
+
+    const socket = io("http://localhost:3000");
+
+    socket.on("connect", () => {
+      console.log("Connected to WebSocket server!");
+    });
+
+    const treeView = new TreeView(
+      document.querySelector("main"),
+      {
+        dragStartCallback(event, node) {
+          event.dataTransfer.setData("text/plain", node.textContent);
+
+          return true;
+        },
+        dropCallback(event, dropLocation) {
+          console.log(
+            event.dataTransfer.getData("text/plain") +
+            " was dropped " +
+            dropLocation.where +
+            " " +
+            dropLocation.target.textContent
+          );
+
+          return true;
+        }
+      }
+    );
+
+    socket.on("initialFSTree", (initialTree) => {
+      console.log("Received initialFSTree:", initialTree);
+
+      // for (const dirent of initialTree) {
+      //   const node = dirent.kind === "directory" ?
+      //     createGroup(dirent.name) :
+      //     createItem(dirent.name);
+      //   treeView.append(node, dirent.kind === "directory" ? "group" : "item");
+      // }
+    });
+
+    socket.on("fsTreeChange", (event) => {
+      console.log("Received fsTreeChange event:", event);
+      // TODO: Handle FSTree changes to update the TreeView
+    });
+
+    function onClickCreate(event) {
+      const type = event.target.dataset.type;
+      const label = prompt("Enter a name", "");
+      if (label.length === 0) {
+        return;
+      }
+
+      const parentNode = treeView.selector.nodes[0];
+      const parentPath = parentNode ? (parentNode.dataset.path || "") : "";
+      const operation = {
+        type: type === "item" ? "mkfile" : "mkdir",
+        path: parentPath + "/" + label
+      };
+      socket.emit("fsTreeOperation", operation);
+    }
+
+    function createItem(label) {
+      const itemElt = document.createElement("li");
+
+      const iconElt = document.createElement("i");
+      iconElt.classList.add("icon");
+      itemElt.appendChild(iconElt);
+
+      const spanElt = document.createElement("span");
+      spanElt.textContent = label;
+      itemElt.appendChild(spanElt);
+
+      return itemElt;
+    }
+
+    function createGroup(label) {
+      const groupElt = document.createElement("li");
+
+      const spanElt = document.createElement("span");
+      spanElt.textContent = label;
+      groupElt.appendChild(spanElt);
+
+      return groupElt;
+    }
+
+    document.querySelector("nav .create-item").addEventListener("click", onClickCreate);
+    document.querySelector("nav .create-group").addEventListener("click", onClickCreate);
+    document.querySelector("nav .remove-selected").addEventListener("click", function() {
+      while (treeView.selector.size > 0) {
+        const node = treeView.selector.nodes.at(-1);
+        const operation = {
+          type: node.classList.contains("group") ? "rmdir" : "unlink",
+          path: node.dataset.path
+        };
+        socket.emit("fsTreeOperation", operation);
+        treeView.remove(node);
+      }
+    });
+
+    treeView.addEventListener("selectionChange", function () {
+      let text;
+      if (treeView.selector.nodes.length > 1) {
+        text = "" + treeView.selector.nodes.length + " items selected";
+      }
+      else if (treeView.selector.nodes.length === 1) {
+        text = "1 item selected";
+      }
+      else {
+        text = "No items selected";
+      }
+
+      document.querySelector("nav .selected-nodes").textContent = text;
+    });
+
+    treeView.addEventListener("activate", function () {
+      alert("Activated " + treeView.selector.nodes[0].querySelector("span").textContent);
+    });
+  </script>
+</body>
+
+</html>

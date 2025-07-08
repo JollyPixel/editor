@@ -1,20 +1,6 @@
-<p align="center"><h1 align="center">
-  Tree-View
-</h1>
+# TreeView
 
-<p align="center">
-  A modern fork/re-implementation of <a href="https://github.com/sparklinlabs/dnd-tree-view">dnd-tree-view</a> from Sparklin Labs, rewritten to be fully compatible with the Web Platform using <code>EventTarget</code> and native <code>ES2022</code> features.
-</p>
-
-## Getting Started
-
-This package is available in the Node Package Repository and can be easily installed with [npm](https://docs.npmjs.com/getting-started/what-is-npm) or [yarn](https://yarnpkg.com).
-
-```bash
-$ npm i @jolly-pixel/tree-view
-# or
-$ yarn add @jolly-pixel/tree-view
-```
+A modern fork/re-implementation of <a href="https://github.com/sparklinlabs/dnd-tree-view">dnd-tree-view</a> from Sparklin Labs, rewritten to be fully compatible with the Web Platform using <code>EventTarget</code> and native <code>ES2022</code> features.
 
 ## Usage example
 
