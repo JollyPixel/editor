@@ -1,7 +1,7 @@
 {
   "extends": "@openally/config.typescript/esm",
   "compilerOptions": {
-    "composite": false,
+    "composite": true,
     "types": ["node"],
     "lib": ["DOM", "ES2022"]
   }

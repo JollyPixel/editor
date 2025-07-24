@@ -1,0 +1,25 @@
+{
+  "name": "@jolly-pixel/engine",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "prepublish": "rimraf ./dist && tsc -b",
+    "build": "tsc"
+  },
+  "keywords": [],
+  "files": [
+    "dist"
+  ],
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  },
+  "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "stats.js": "^0.17.0",
+    "three": "^0.178.0"
+  }
+}
