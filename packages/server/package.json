@@ -18,7 +18,7 @@
     "@trpc/server": "^11.4.3",
     "pino": "^9.7.0",
     "ws": "^8.18.3",
-    "zod": "^3.25.67"
+    "zod": "^4.0.8"
   },
   "devDependencies": {
     "@types/ws": "^8.18.1"
