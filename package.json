@@ -8,7 +8,8 @@
     "test": "npm run test --ws --if-present",
     "lint": "npx eslint packages",
     "ci:publish": "changeset publish",
-    "ci:version": "changeset version"
+    "ci:version": "changeset version",
+    "clear": "clear-ts-build"
   },
   "workspaces": [
     "packages/project",
