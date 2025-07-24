@@ -4,13 +4,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tree-View</title>
+  <title>Voxel Map Editor</title>
   <link rel="stylesheet" href="./public/main.css">
+  <link rel="stylesheet" href="./public/tools.css">
+  <link rel="stylesheet" href="./public/tree.css">
 </head>
 
-<body>
-  <canvas id="game" tabindex="-1"></canvas>
-  <script type="module" src="./src/index.ts"></script>
-</body>
+<div id="tools-container">
+  <div class="box" id="settings-box">
+    <div class="box-title">Settings</div>
+    <div class="box-content">
+
+    </div>
+  </div>
+  <div class="box" id="layer-box">
+    <div class="box-title">Layers</div>
+    <div class="box-content">
+
+    </div>
+  </div>
+  <div class="box" id="cube-box">
+    <div class="box-title">Cubes</div>
+    <div class="box-content">
+
+    </div>
+  </div>
+</div>
+<div id="game-container">
+  <canvas tabindex="-1"></canvas>
+</div>
+<script type="module" src="./src/index.ts"></script>
 
 </html>

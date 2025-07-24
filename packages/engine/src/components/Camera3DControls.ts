@@ -38,8 +38,6 @@ export class Camera3DControls extends Behavior {
     super(actor);
 
     this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
-    this.camera.position.set(450, 450, 700);
-    this.camera.lookAt(0, 0, 0);
 
     this.#bindings = {
       forward: options.bindings?.forward ?? "KeyW",

@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
+import { ViewHelper } from "three/addons/helpers/ViewHelper.js";
 import {
   ActorComponent,
   Actor,
@@ -12,6 +13,7 @@ import {
   GridRenderer,
   RollOverRenderer
 } from "./components/index.js";
+import { LayerTree } from "./LayerTree.js";
 
 export interface VoxelRendererOptions {
   ratio?: number;
@@ -23,8 +25,10 @@ export class VoxelRenderer extends ActorComponent {
 
   raycaster = new THREE.Raycaster();
   lastIntersect: THREE.Intersection<THREE.Object3D> | null = null;
-  objects: THREE.Object3D[] = [];
   plane: THREE.Mesh;
+  helper: ViewHelper;
+
+  tree = new LayerTree();
 
   ratio: number = 50;
 
@@ -58,16 +62,24 @@ export class VoxelRenderer extends ActorComponent {
         .rotateX(-Math.PI / 2),
       new THREE.MeshBasicMaterial({ visible: this.debug })
     );
-    this.objects.push(this.plane);
+    this.tree.root.objects.push(this.plane);
 
     threeScene.add(
       this.plane,
-      new THREE.AmbientLight(0x606060, 3)
+      new THREE.AmbientLight(new THREE.Color("#ffffff"), 3)
     );
 
     this.actor.registerComponent(GridRenderer, { ratio: this.ratio });
     this.actor.registerComponent(RollOverRenderer, void 0, (component) => {
       threeScene.add(component.object);
+    });
+
+    this.helper = new ViewHelper(
+      this.camera,
+      this.actor.gameInstance.threeRenderer.domElement
+    );
+    this.actor.gameInstance.addEventListener("draw", () => {
+      this.helper.render(this.actor.gameInstance.threeRenderer);
     });
   }
 
@@ -76,7 +88,7 @@ export class VoxelRenderer extends ActorComponent {
   ) {
     if (intersect.object !== this.plane) {
       this.actor.gameInstance.threeScene.remove(intersect.object);
-      this.objects.splice(this.objects.indexOf(intersect.object), 1);
+      this.tree.remove(intersect.object);
     }
   }
 
@@ -89,14 +101,14 @@ export class VoxelRenderer extends ActorComponent {
       "textures/cube3.png"
     ];
 
-    const voxel = new VoxelShapes.Slope({
+    const voxel = new VoxelShapes.Cube({
       size: this.ratio,
       // color: 0x00ff00
       texture: textures[Math.floor(Math.random() * textures.length)]
     }).setPositionFromIntersection(intersect);
 
     this.actor.gameInstance.threeScene.add(voxel);
-    this.objects.push(voxel);
+    this.tree.add(voxel);
   }
 
   update() {
@@ -112,7 +124,7 @@ export class VoxelRenderer extends ActorComponent {
       this.camera
     );
 
-    const intersects = this.raycaster.intersectObjects(this.objects, false);
+    const intersects = this.raycaster.intersectObjects(this.tree.selected.objects, false);
     if (intersects.length === 0) {
       return;
     }
