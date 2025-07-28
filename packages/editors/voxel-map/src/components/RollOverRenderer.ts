@@ -55,13 +55,13 @@ export class RollOverRenderer extends ActorComponent {
       return;
     }
 
-    const { raycaster, camera, ratio, objects } = this.voxelRenderer;
+    const { raycaster, camera, ratio, tree } = this.voxelRenderer;
     raycaster.setFromCamera(
       this.actor.gameInstance.input.getMousePosition(),
       camera
     );
 
-    const intersects = raycaster.intersectObjects(objects, false);
+    const intersects = raycaster.intersectObjects(tree.selected.objects, false);
     if (intersects.length === 0) {
       return;
     }

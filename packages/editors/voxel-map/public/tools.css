@@ -1,0 +1,18 @@
+
+.box {
+  display: flex;
+  flex-direction: column;
+}
+.box + .box {
+  margin-top: 10px;
+}
+
+.box > .box-title {
+  font-weight: bold;
+  color: #FFF;
+  padding: 5px;
+  background: #263238;
+}
+.box > .box-content {
+  background: linear-gradient(to bottom,  rgb(43, 61, 88) 0%,rgba(255,255,255,0) 100%);
+}

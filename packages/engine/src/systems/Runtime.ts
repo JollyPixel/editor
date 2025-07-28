@@ -40,7 +40,9 @@ export class Runtime {
     }
 
     this.canvas = canvas;
-    this.gameInstance = new GameInstance(canvas);
+    this.gameInstance = new GameInstance(canvas, {
+      enableOnExit: true
+    });
 
     this.maxDeltaTime = options.maxDeltaTime ?? 50;
     this.targetFrameTime = 1000 / this.gameInstance.framesPerSecond;

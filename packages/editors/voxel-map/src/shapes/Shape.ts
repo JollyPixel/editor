@@ -19,10 +19,14 @@ export class Shape extends THREE.Mesh {
     const { size, color, texture } = options;
 
     this.size = size;
-    this.material = new THREE.MeshBasicMaterial({
-      color: color ?? new THREE.Color(1, 1, 1),
-      map: texture ? new THREE.TextureLoader().load(texture) : undefined
-    });
+    if (color) {
+      this.material = new THREE.MeshLambertMaterial({ color });
+    }
+    else {
+      this.material = new THREE.MeshLambertMaterial({
+        map: texture ? new THREE.TextureLoader().load(texture) : undefined
+      });
+    }
   }
 
   setPositionFromIntersection(

@@ -2,8 +2,17 @@
   "name": "@jolly-pixel/fs-tree",
   "version": "1.0.0",
   "type": "module",
-  "main": "dist/index.class.js",
-  "types": "dist/index.class.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./tree-view": {
+      "import": "./dist/frontend/TreeView.class.js",
+      "types": "./dist/frontend/TreeView.class.d.ts"
+    },
+    "./package.json": "./package.json"
+  },
   "scripts": {
     "prepublish": "rimraf ./dist && tsc -b",
     "test": "tsx --test test/**/*.test.ts",

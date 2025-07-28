@@ -20,6 +20,7 @@ export class GameInstance extends EventTarget {
 
   tree = new ActorTree();
   cachedActors: Actor[] = [];
+
   renderComponents: (THREE.PerspectiveCamera | THREE.OrthographicCamera)[] = [];
   componentsToBeStarted: Component[] = [];
   componentsToBeDestroyed: Component[] = [];
@@ -50,6 +51,7 @@ export class GameInstance extends EventTarget {
     this.threeRenderer.shadowMap.enabled = true;
     this.threeRenderer.shadowMap.type = THREE.BasicShadowMap;
     this.threeRenderer.setSize(0, 0, false);
+    this.threeRenderer.autoClear = false;
 
     if (options.layers) {
       this.layers = options.layers;
@@ -63,7 +65,6 @@ export class GameInstance extends EventTarget {
   connect() {
     this.input.connect();
     window.addEventListener("resize", this.resizeRenderer);
-    document.body.appendChild(this.threeRenderer.domElement);
 
     /**
      * We need to refactor that using a Scene loader
@@ -191,7 +192,6 @@ export class GameInstance extends EventTarget {
   private resizeRenderer = () => {
     let width: number;
     let height: number;
-
     if (this.ratio) {
       if (document.body.clientWidth / document.body.clientHeight > this.ratio) {
         height = document.body.clientHeight;
@@ -203,8 +203,15 @@ export class GameInstance extends EventTarget {
       }
     }
     else {
-      width = this.threeRenderer.domElement.clientWidth;
-      height = this.threeRenderer.domElement.clientHeight;
+      const parent = this.threeRenderer.domElement.parentElement;
+      if (parent) {
+        width = parent.clientWidth;
+        height = parent.clientHeight;
+      }
+      else {
+        width = this.threeRenderer.domElement.clientWidth;
+        height = this.threeRenderer.domElement.clientHeight;
+      }
     }
 
     if (
@@ -244,6 +251,7 @@ export class GameInstance extends EventTarget {
     for (const renderComponent of this.renderComponents) {
       this.threeRenderer.render(this.threeScene, renderComponent);
     }
+    this.dispatchEvent(new CustomEvent("draw"));
   }
 
   clear() {
