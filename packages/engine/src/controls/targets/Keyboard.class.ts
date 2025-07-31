@@ -17,27 +17,36 @@ export interface KeyState {
   wasJustReleased: boolean;
 }
 
+export interface KeyboardOptions {
+  eventProvider?: Document;
+}
+
 export class Keyboard implements ControlTarget {
+  #eventProvider: Document;
+
   buttons = new Map<string, KeyState>();
   buttonsDown = new Set<string>();
   autoRepeatedCode: string | null = null;
   char = "";
   newChar = "";
 
-  constructor() {
+  constructor(options: KeyboardOptions = {}) {
+    const { eventProvider = document } = options;
+
     this.reset();
+    this.#eventProvider = eventProvider;
   }
 
   connect() {
-    document.addEventListener("keydown", this.onKeyDown);
-    document.addEventListener("keypress", this.onKeyPress);
-    document.addEventListener("keyup", this.onKeyUp);
+    this.#eventProvider.addEventListener("keydown", this.onKeyDown);
+    this.#eventProvider.addEventListener("keypress", this.onKeyPress);
+    this.#eventProvider.addEventListener("keyup", this.onKeyUp);
   }
 
   disconnect() {
-    document.removeEventListener("keydown", this.onKeyDown);
-    document.removeEventListener("keypress", this.onKeyPress);
-    document.removeEventListener("keyup", this.onKeyUp);
+    this.#eventProvider.removeEventListener("keydown", this.onKeyDown);
+    this.#eventProvider.removeEventListener("keypress", this.onKeyPress);
+    this.#eventProvider.removeEventListener("keyup", this.onKeyUp);
   }
 
   reset() {

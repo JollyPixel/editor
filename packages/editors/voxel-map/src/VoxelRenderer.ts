@@ -45,7 +45,9 @@ export class VoxelRenderer extends ActorComponent {
     const { cameraActorName = "camera", ratio = 50 } = options;
 
     this.ratio = ratio;
-    const behavior = JP.getActor(cameraActorName)?.getBehavior(Components.Camera3DControls);
+    const behavior = this.actor.gameInstance.tree
+      .getActor(cameraActorName)
+      ?.getBehavior(Components.Camera3DControls);
     if (!behavior) {
       throw new Error(`Unable to fetch camera behavior from actor with name <${cameraActorName}>`);
     }

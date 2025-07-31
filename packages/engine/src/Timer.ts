@@ -13,7 +13,7 @@ export interface TimerOptions {
 export class Timer {
   interval: number;
   loop: boolean;
-  #tick = 0;
+  #tick = 1;
   #isStarted: boolean;
   #callback: (() => void);
 
@@ -52,7 +52,7 @@ export class Timer {
       this.#isStarted = false;
     }
 
-    this.#tick = 0;
+    this.#tick = 1;
     this.#callback();
 
     return true;

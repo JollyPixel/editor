@@ -6,7 +6,9 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "prepublish": "rimraf ./dist && tsc -b",
-    "build": "tsc"
+    "build": "tsc",
+    "test-only": "tsx --test test/**/*.spec.ts",
+    "test": "c8 -r html npm run test-only"
   },
   "keywords": [],
   "files": [

@@ -7,10 +7,16 @@ import { Input } from "../controls/Input.class.js";
 import { Actor } from "../Actor.js";
 import { ActorTree } from "../ActorTree.js";
 import { ActorComponent, type Component } from "../ActorComponent.js";
+import {
+  GameInstanceDefaultLoader,
+  type LoaderProvider
+} from "./Loader.js";
 
 export interface GameInstanceOptions {
   layers?: string[];
   enableOnExit?: boolean;
+  loader?: LoaderProvider;
+  threeRendererProvider?: typeof THREE.WebGLRenderer;
 }
 
 export class GameInstance extends EventTarget {
@@ -18,13 +24,15 @@ export class GameInstance extends EventTarget {
   ratio: number | null = null;
   layers: string[] = ["Default"];
 
-  tree = new ActorTree();
+  tree = new ActorTree({
+    addCallback: (actor) => this.threeScene.add(actor.threeObject),
+    removeCallback: (actor) => this.threeScene.remove(actor.threeObject)
+  });
   cachedActors: Actor[] = [];
 
   renderComponents: (THREE.PerspectiveCamera | THREE.OrthographicCamera)[] = [];
   componentsToBeStarted: Component[] = [];
   componentsToBeDestroyed: Component[] = [];
-  actorsToBeDestroyed: Actor[] = [];
 
   input: Input;
   audio = new THREE.AudioListener();
@@ -33,6 +41,8 @@ export class GameInstance extends EventTarget {
   threeRenderer: THREE.WebGLRenderer;
   threeScene = new THREE.Scene();
 
+  loader: LoaderProvider;
+
   skipRendering = false;
 
   constructor(
@@ -40,8 +50,20 @@ export class GameInstance extends EventTarget {
     options: GameInstanceOptions = {}
   ) {
     super();
+    const { threeRendererProvider = THREE.WebGLRenderer } = options;
     globalThis.game = this;
-    this.threeRenderer = new THREE.WebGLRenderer({
+
+    if (options.loader) {
+      this.loader = options.loader;
+    }
+    else {
+      this.loader = new GameInstanceDefaultLoader();
+    }
+
+    this.tree.addEventListener("SkipRendering", () => {
+      this.skipRendering = true;
+    });
+    this.threeRenderer = new threeRendererProvider({
       canvas,
       antialias: true,
       alpha: true
@@ -154,10 +176,10 @@ export class GameInstance extends EventTarget {
     });
     this.componentsToBeDestroyed.length = 0;
 
-    this.actorsToBeDestroyed.forEach((actor) => {
+    this.tree.actorsToBeDestroyed.forEach((actor) => {
       this.#doActorDestruction(actor);
     });
-    this.actorsToBeDestroyed.length = 0;
+    this.tree.actorsToBeDestroyed.length = 0;
 
     if (this.input.exited) {
       this.threeRenderer.clear();
@@ -254,24 +276,6 @@ export class GameInstance extends EventTarget {
     this.dispatchEvent(new CustomEvent("draw"));
   }
 
-  clear() {
-    this.threeRenderer.clear();
-  }
-
-  addActor(
-    actor: Actor
-  ) {
-    this.tree.root.push(actor);
-    this.threeScene.add(actor.threeObject);
-  }
-
-  removeActor(
-    actor: Actor
-  ) {
-    this.tree.root.splice(this.tree.root.indexOf(actor), 1);
-    this.threeScene.remove(actor.threeObject);
-  }
-
   destroyComponent(
     component: ActorComponent
   ) {
@@ -286,22 +290,6 @@ export class GameInstance extends EventTarget {
     if (index !== -1) {
       this.componentsToBeStarted.splice(index, 1);
     }
-  }
-
-  destroyActor(
-    actor: Actor
-  ) {
-    if (!actor.pendingForDestruction) {
-      this.actorsToBeDestroyed.push(actor);
-      actor.markDestructionPending();
-    }
-  }
-
-  destroyAllActors() {
-    for (const { actor } of this.tree.walk()) {
-      this.destroyActor(actor);
-    }
-    this.skipRendering = true;
   }
 
   #doActorDestruction(

@@ -27,7 +27,7 @@ export class Input extends EventTarget {
   mouse: targets.Mouse;
   touchpad: targets.Touchpad;
   gamepad: targets.Gamepad;
-  fullscreen: targets.Fullscreen | null;
+  fullscreen: targets.Fullscreen;
   keyboard: targets.Keyboard;
 
   exited = false;
@@ -80,6 +80,14 @@ export class Input extends EventTarget {
     window.removeEventListener("blur", this.onBlur);
   }
 
+  enterFullscreen() {
+    this.fullscreen.enter();
+  }
+
+  exitFullscreen() {
+    this.fullscreen.exit();
+  }
+
   update() {
     this.#targets()
       .forEach((subscriber) => subscriber?.update());
@@ -87,6 +95,22 @@ export class Input extends EventTarget {
 
   getScreenSize() {
     return new THREE.Vector2(this.#canvas.clientWidth, this.#canvas.clientHeight);
+  }
+
+  getMouseVisible() {
+    return this.#canvas.style.cursor !== "none";
+  }
+
+  setMouseVisible(visible: boolean) {
+    this.#canvas.style.cursor = visible ? "auto" : "none";
+  }
+
+  lockMouse() {
+    this.mouse.lock();
+  }
+
+  unlockMouse() {
+    this.mouse.unlock();
   }
 
   isMouseMoving(): boolean {
@@ -155,6 +179,57 @@ export class Input extends EventTarget {
     return this.mouse.buttons[index]?.wasJustPressed ?? false;
   }
 
+  getTouchPosition(index: number) {
+    if (index < 0 || index >= this.touchpad.touches.length) {
+      throw new Error(`Touch index ${index} is out of bounds.`);
+    }
+
+    const position = this.touchpad.touches[index].position;
+    const x = (position.x / this.#canvas.clientWidth) * 2;
+    const y = (position.y / this.#canvas.clientHeight) * 2;
+
+    return new THREE.Vector2(
+      x - 1,
+      (y - 1) * -1
+    );
+  }
+
+  isTouchDown(
+    index: number
+  ): boolean {
+    if (index < 0 || index >= this.touchpad.touchesDown.length) {
+      throw new Error(`Touch index ${index} is out of bounds.`);
+    }
+
+    return this.touchpad.touchesDown[index];
+  }
+
+  wasTouchStarted(
+    index: number
+  ): boolean {
+    if (index < 0 || index >= this.touchpad.touches.length) {
+      throw new Error(`Touch index ${index} is out of bounds.`);
+    }
+
+    return this.touchpad.touches[index].wasStarted;
+  }
+
+  wasTouchEnded(
+    index: number
+  ): boolean {
+    if (index < 0 || index >= this.touchpad.touches.length) {
+      throw new Error(`Touch index ${index} is out of bounds.`);
+    }
+
+    return this.touchpad.touches[index].wasEnded;
+  }
+
+  vibrate(
+    pattern: VibratePattern
+  ): void {
+    window.navigator.vibrate(pattern);
+  }
+
   isKeyDown(
     key: InputKeyboardAction
   ): boolean {
@@ -209,10 +284,106 @@ export class Input extends EventTarget {
     return keyState?.wasJustAutoRepeated ?? false;
   }
 
-  vibrate(
-    pattern: VibratePattern
-  ): void {
-    window.navigator.vibrate(pattern);
+  getTextEntered() {
+    return this.keyboard.char;
+  }
+
+  isGamepadButtonDown(
+    gamepad: 0 | 1 | 2 | 3,
+    key: number
+  ) {
+    if (!this.gamepad.buttons[gamepad][key]) {
+      throw new Error("Invalid gamepad info");
+    }
+
+    return this.gamepad.buttons[gamepad][key].isDown;
+  }
+
+  wasGamepadButtonJustPressed(
+    gamepad: 0 | 1 | 2 | 3,
+    key: number
+  ) {
+    if (!this.gamepad.buttons[gamepad][key]) {
+      throw new Error("Invalid gamepad info");
+    }
+
+    return this.gamepad.buttons[gamepad][key].wasJustPressed;
+  }
+
+  wasGamepadButtonJustReleased(
+    gamepad: 0 | 1 | 2 | 3,
+    key: number
+  ) {
+    if (!this.gamepad.buttons[gamepad][key]) {
+      throw new Error("Invalid gamepad info");
+    }
+
+    return this.gamepad.buttons[gamepad][key].wasJustReleased;
+  }
+
+  setGamepadAxisDeadZone(
+    deadZone: number
+  ) {
+    this.gamepad.axisDeadZone = deadZone;
+  }
+
+  getGamepadAxisDeadZone() {
+    return this.gamepad.axisDeadZone;
+  }
+
+  wasGamepadAxisJustPressed(
+    gamepad: 0 | 1 | 2 | 3,
+    axis: number,
+    options: { autoRepeat?: boolean; positive?: boolean; } = {}
+  ) {
+    const axisInfo = this.gamepad.axes[gamepad][axis];
+    if (!axisInfo) {
+      throw new Error("Invalid gamepad info");
+    }
+    const { autoRepeat = false, positive = false } = options;
+
+    if (positive) {
+      return axisInfo.wasPositiveJustPressed || (autoRepeat && axisInfo.wasPositiveJustAutoRepeated);
+    }
+
+    return axisInfo.wasNegativeJustPressed || (autoRepeat && axisInfo.wasNegativeJustAutoRepeated);
+  }
+
+  wasGamepadAxisJustReleased(
+    gamepad: 0 | 1 | 2 | 3,
+    axis: number,
+    options: { positive?: boolean; } = {}
+  ) {
+    const axisInfo = this.gamepad.axes[gamepad][axis];
+    if (!axisInfo) {
+      throw new Error("Invalid gamepad info");
+    }
+
+    return options.positive ?
+      axisInfo.wasPositiveJustReleased :
+      axisInfo.wasNegativeJustReleased;
+  }
+
+  getGamepadAxisValue(
+    gamepad: 0 | 1 | 2 | 3,
+    axis: number
+  ) {
+    if (!this.gamepad.axes[gamepad][axis]) {
+      throw new Error("Invalid gamepad info");
+    }
+
+    return this.gamepad.axes[gamepad][axis].value;
+  }
+
+  getGamepadButtonValue(
+    gamepad: 0 | 1 | 2 | 3,
+    button: number
+  ) {
+    if (!this.gamepad.buttons[gamepad][button]) {
+      throw new Error("Invalid gamepad info");
+    }
+
+    return this.gamepad.buttons[gamepad][button].value;
   }
 
   private onBlur = () => {
