@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import Stats from "stats.js";
+import * as THREE from "three";
 
 // Import Internal Dependencies
 import { GameInstance } from "./GameInstance.js";
@@ -22,6 +23,7 @@ export class Runtime {
   gameInstance: GameInstance;
   canvas: HTMLCanvasElement;
   stats?: Stats;
+  manager = new THREE.LoadingManager();
 
   accumulatedTime: number;
   lastTimestamp: number;
@@ -41,7 +43,10 @@ export class Runtime {
 
     this.canvas = canvas;
     this.gameInstance = new GameInstance(canvas, {
-      enableOnExit: true
+      enableOnExit: true,
+      loader: {
+        audio: new THREE.AudioLoader(this.manager)
+      }
     });
 
     this.maxDeltaTime = options.maxDeltaTime ?? 50;

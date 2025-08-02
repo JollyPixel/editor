@@ -56,6 +56,7 @@ export class Camera3DControls extends Behavior {
   }
 
   start() {
+    this.camera.add(this.actor.gameInstance.audio);
     this.actor.gameInstance.renderComponents.push(this.camera);
   }
 

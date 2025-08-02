@@ -15,7 +15,10 @@ export interface CameraOptions {
 export class Camera extends ActorComponent {
   threeCamera: THREE.PerspectiveCamera;
 
-  constructor(actor: Actor, options: CameraOptions = {}) {
+  constructor(
+    actor: Actor,
+    options: CameraOptions = {}
+  ) {
     super({
       actor,
       typeName: "Camera"
@@ -29,9 +32,11 @@ export class Camera extends ActorComponent {
     } = options;
 
     this.threeCamera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-    this.actor.gameInstance.renderComponents.push(
-      this.threeCamera
-    );
+  }
+
+  start() {
+    this.threeCamera.add(this.actor.gameInstance.audio);
+    this.actor.gameInstance.renderComponents.push(this.threeCamera);
   }
 
   override destroy() {
