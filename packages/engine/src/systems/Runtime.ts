@@ -1,6 +1,8 @@
 // Import Third-party Dependencies
 import Stats from "stats.js";
 import * as THREE from "three";
+import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
+import { MTLLoader } from "three/addons/loaders/MTLLoader.js";
 
 // Import Internal Dependencies
 import { GameInstance } from "./GameInstance.js";
@@ -45,7 +47,9 @@ export class Runtime {
     this.gameInstance = new GameInstance(canvas, {
       enableOnExit: true,
       loader: {
-        audio: new THREE.AudioLoader(this.manager)
+        audio: new THREE.AudioLoader(this.manager),
+        objLoader: new OBJLoader(this.manager),
+        mtlLoader: new MTLLoader(this.manager)
       }
     });
 
@@ -104,29 +108,24 @@ export class Runtime {
     }
     this.stats?.begin();
 
-    const deltaTime = Math.min(
-      timestamp - this.lastTimestamp,
-      this.maxDeltaTime
-    );
-
-    this.accumulatedTime += deltaTime;
+    this.accumulatedTime += timestamp - this.lastTimestamp;
     this.lastTimestamp = timestamp;
 
-    if (deltaTime >= this.targetFrameTime) {
-      const {
-        updates, timeLeft
-      } = this.gameInstance.tick(this.accumulatedTime);
-      this.accumulatedTime = timeLeft;
-      if (this.gameInstance.input.exited) {
-        this.stop();
+    // if (deltaTime >= this.targetFrameTime) {
+    const {
+      updates, timeLeft
+    } = this.gameInstance.tick(this.accumulatedTime);
+    this.accumulatedTime = timeLeft;
+    if (this.gameInstance.input.exited) {
+      this.stop();
 
-        return;
-      }
-
-      if (updates > 0) {
-        this.gameInstance.draw();
-      }
+      return;
     }
+
+    if (updates > 0) {
+      this.gameInstance.draw();
+    }
+    // }
 
     this.stats?.end();
     this.tickAnimationFrameId = requestAnimationFrame(this.tick);

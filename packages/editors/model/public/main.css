@@ -1,0 +1,51 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  font-family: sans-serif;
+  font-size: 14px;
+  display: flex;
+  flex-flow: column;
+  background-color: #eee;
+}
+
+a {
+  color: #00f;
+}
+
+a:hover {
+  text-decoration: none;
+}
+
+main {
+  position: relative;
+  background-color: #fff;
+  border: 1px solid #888;
+  flex: 1;
+  margin: 20px !important;
+  overflow-y: auto;
+}
+
+canvas {
+  flex: 1;
+  outline: none;
+}
+
+.stats {
+  position: fixed;
+  top: 0px;
+  right: 0px;
+  cursor: pointer;
+  opacity: 0.9;
+  z-index: 10000;
+}

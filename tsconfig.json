@@ -18,6 +18,9 @@
     },
     {
       "path": "./packages/editors/voxel-map"
+    },
+    {
+      "path": "./packages/editors/model"
     }
   ]
 }
