@@ -7,6 +7,13 @@ import { type Component } from "./ActorComponent.js";
 import { Behavior } from "./Behavior.js";
 import { Transform } from "./Transform.js";
 
+type ComponentConstructor = new (actor: Actor, ...args: any[]) => Component;
+
+type RequiresOptions<T extends ComponentConstructor> =
+  T extends new (actor: Actor, options: infer O, ...args: any[]) => any
+    ? undefined extends O ? false : true
+    : false;
+
 export interface ActorOptions {
   name: string;
   parent?: Actor | null;
@@ -59,14 +66,13 @@ export class Actor {
     }
   }
 
-  registerComponent<
-    T extends new (actor: Actor, options?: O) => Component,
-    O = unknown
-  >(
+  registerComponent<T extends ComponentConstructor>(
     componentClass: T,
-    options?: O,
-    callback?: (component: InstanceType<T>) => void
-  ) {
+    ...args: RequiresOptions<T> extends true
+      ? [options: ConstructorParameters<T>[1], callback?: (component: InstanceType<T>) => void]
+      : [options?: ConstructorParameters<T>[1], callback?: (component: InstanceType<T>) => void]
+  ): this {
+    const [options, callback] = args;
     const component = new componentClass(this, options);
     if (this.components.indexOf(component) === -1) {
       this.components.push(component);
