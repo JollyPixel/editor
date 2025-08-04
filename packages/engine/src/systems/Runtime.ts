@@ -3,6 +3,7 @@ import Stats from "stats.js";
 import * as THREE from "three";
 
 // Import Internal Dependencies
+import { Assets } from "../systems/index.js";
 import { GameInstance } from "./GameInstance.js";
 import { GameInstanceDefaultLoader } from "../systems/Loader.js";
 
@@ -70,7 +71,6 @@ export class Runtime {
 
     this.#isRunning = true;
     this.canvas.focus();
-    this.gameInstance.connect();
 
     if (this.stats) {
       document.body.appendChild(this.stats.dom);
@@ -79,7 +79,10 @@ export class Runtime {
     this.lastTimestamp = 0;
     this.accumulatedTime = 0;
 
-    this.tick();
+    Assets.loadAll({ manager: this.manager }).then(() => {
+      this.gameInstance.connect();
+      this.tick();
+    }).catch(console.error);
   }
 
   stop() {

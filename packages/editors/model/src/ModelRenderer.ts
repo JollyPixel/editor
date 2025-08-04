@@ -1,12 +1,20 @@
 // Import Third-party Dependencies
-import { Actor, ActorComponent } from "@jolly-pixel/engine";
+import {
+  Actor,
+  ActorComponent,
+  Systems
+} from "@jolly-pixel/engine";
 import * as THREE from "three";
+
+// Import Internal Dependencies
+import { modelLoader } from "./loaders.js";
 
 export interface ModelRendererOptions {
 }
 
 export class ModelRenderer extends ActorComponent {
-  model: THREE.Group;
+  asset: Systems.LazyAsset<THREE.Group<THREE.Object3DEventMap>>;
+  model: THREE.Group<THREE.Object3DEventMap>;
 
   constructor(
     actor: Actor,
@@ -17,34 +25,11 @@ export class ModelRenderer extends ActorComponent {
       typeName: "ModelRenderer"
     });
 
-    this.actor.gameInstance.loader.mtlLoader.load(
-      "models/Tiny_Witch.mtl",
-      (materials) => {
-        materials.preload();
-
-        for (const material of Object.values(materials.materials)) {
-          if (isMaterialWithMap(material) && material.map) {
-            material.map.magFilter = THREE.NearestFilter;
-          }
-        }
-
-        this.actor.gameInstance.loader.objLoader.setMaterials(materials).load(
-          "models/Tiny_Witch.obj",
-          (root) => {
-            this.model = root;
-            this.actor.threeObject.add(this.model);
-          }
-        );
-      }
-    );
+    this.asset = modelLoader("models/Tiny_Witch.obj");
   }
-}
 
-function isMaterialWithMap(
-  material: THREE.Material
-): material is THREE.MeshPhongMaterial | THREE.MeshStandardMaterial {
-  return (
-    material instanceof THREE.MeshStandardMaterial ||
-    material instanceof THREE.MeshPhongMaterial
-  );
+  awake() {
+    this.model = this.asset.get();
+    this.actor.threeObject.add(this.model);
+  }
 }
