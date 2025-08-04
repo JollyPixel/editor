@@ -17,6 +17,7 @@
     "packages/client",
     "packages/fs-tree",
     "packages/editors/voxel-map",
+    "packages/editors/model",
     "packages/engine"
   ],
   "repository": {

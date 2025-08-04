@@ -3,7 +3,9 @@ import Stats from "stats.js";
 import * as THREE from "three";
 
 // Import Internal Dependencies
+import { Assets } from "../systems/index.js";
 import { GameInstance } from "./GameInstance.js";
+import { GameInstanceDefaultLoader } from "../systems/Loader.js";
 
 export interface RuntimeOptions {
   /**
@@ -44,9 +46,7 @@ export class Runtime {
     this.canvas = canvas;
     this.gameInstance = new GameInstance(canvas, {
       enableOnExit: true,
-      loader: {
-        audio: new THREE.AudioLoader(this.manager)
-      }
+      loader: new GameInstanceDefaultLoader(this.manager)
     });
 
     this.maxDeltaTime = options.maxDeltaTime ?? 50;
@@ -71,7 +71,6 @@ export class Runtime {
 
     this.#isRunning = true;
     this.canvas.focus();
-    this.gameInstance.connect();
 
     if (this.stats) {
       document.body.appendChild(this.stats.dom);
@@ -80,7 +79,10 @@ export class Runtime {
     this.lastTimestamp = 0;
     this.accumulatedTime = 0;
 
-    this.tick();
+    Assets.loadAll({ manager: this.manager }).then(() => {
+      this.gameInstance.connect();
+      this.tick();
+    }).catch(console.error);
   }
 
   stop() {
@@ -104,29 +106,24 @@ export class Runtime {
     }
     this.stats?.begin();
 
-    const deltaTime = Math.min(
-      timestamp - this.lastTimestamp,
-      this.maxDeltaTime
-    );
-
-    this.accumulatedTime += deltaTime;
+    this.accumulatedTime += timestamp - this.lastTimestamp;
     this.lastTimestamp = timestamp;
 
-    if (deltaTime >= this.targetFrameTime) {
-      const {
-        updates, timeLeft
-      } = this.gameInstance.tick(this.accumulatedTime);
-      this.accumulatedTime = timeLeft;
-      if (this.gameInstance.input.exited) {
-        this.stop();
+    // if (deltaTime >= this.targetFrameTime) {
+    const {
+      updates, timeLeft
+    } = this.gameInstance.tick(this.accumulatedTime);
+    this.accumulatedTime = timeLeft;
+    if (this.gameInstance.input.exited) {
+      this.stop();
 
-        return;
-      }
-
-      if (updates > 0) {
-        this.gameInstance.draw();
-      }
+      return;
     }
+
+    if (updates > 0) {
+      this.gameInstance.draw();
+    }
+    // }
 
     this.stats?.end();
     this.tickAnimationFrameId = requestAnimationFrame(this.tick);
