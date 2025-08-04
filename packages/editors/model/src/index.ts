@@ -21,8 +21,8 @@ function initRuntime() {
   // gameInstance.setRatio(16 / 9);
 
   new Actor(gameInstance, { name: "camera" })
-    .registerComponent(Components.Camera3DControls, { speed: 8, rotationSpeed: 1 }, (component) => {
-      component.camera.position.set(200, 200, 400);
+    .registerComponent(Components.Camera3DControls, { speed: 0.25, rotationSpeed: 0.50 }, (component) => {
+      component.camera.position.set(5, 5, 5);
       component.camera.lookAt(0, 0, 0);
     });
   new Actor(gameInstance, { name: "model" })
@@ -31,11 +31,11 @@ function initRuntime() {
   gameInstance.threeScene.background = null;
   gameInstance.threeScene.add(
     new THREE.GridHelper(
-      1000,
-      32,
+      10,
+      10,
       new THREE.Color("#888888")
     ),
-    new THREE.AmbientLight(new THREE.Color("#ffffff"), 30)
+    new THREE.AmbientLight(new THREE.Color("#ffffff"), 2)
   );
 
   return runtime;

@@ -1,11 +1,10 @@
 // Import Third-party Dependencies
 import Stats from "stats.js";
 import * as THREE from "three";
-import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
-import { MTLLoader } from "three/addons/loaders/MTLLoader.js";
 
 // Import Internal Dependencies
 import { GameInstance } from "./GameInstance.js";
+import { GameInstanceDefaultLoader } from "../systems/Loader.js";
 
 export interface RuntimeOptions {
   /**
@@ -46,11 +45,7 @@ export class Runtime {
     this.canvas = canvas;
     this.gameInstance = new GameInstance(canvas, {
       enableOnExit: true,
-      loader: {
-        audio: new THREE.AudioLoader(this.manager),
-        objLoader: new OBJLoader(this.manager),
-        mtlLoader: new MTLLoader(this.manager)
-      }
+      loader: new GameInstanceDefaultLoader(this.manager)
     });
 
     this.maxDeltaTime = options.maxDeltaTime ?? 50;

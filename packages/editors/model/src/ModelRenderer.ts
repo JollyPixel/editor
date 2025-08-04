@@ -6,9 +6,12 @@ export interface ModelRendererOptions {
 }
 
 export class ModelRenderer extends ActorComponent {
-  threeObject: THREE.Group;
-  mtl: any;
-  constructor(actor: Actor, _options: ModelRendererOptions) {
+  model: THREE.Group;
+
+  constructor(
+    actor: Actor,
+    _options: ModelRendererOptions
+  ) {
     super({
       actor,
       typeName: "ModelRenderer"
@@ -16,24 +19,32 @@ export class ModelRenderer extends ActorComponent {
 
     this.actor.gameInstance.loader.mtlLoader.load(
       "models/Tiny_Witch.mtl",
-      (mtl) => {
-        mtl.preload();
-        this.actor.gameInstance.loader.objLoader.setMaterials(mtl);
-        this.actor.gameInstance.loader.objLoader.load(
+      (materials) => {
+        materials.preload();
+
+        for (const material of Object.values(materials.materials)) {
+          if (isMaterialWithMap(material) && material.map) {
+            material.map.magFilter = THREE.NearestFilter;
+          }
+        }
+
+        this.actor.gameInstance.loader.objLoader.setMaterials(materials).load(
           "models/Tiny_Witch.obj",
-          (object) => {
-            console.log("cb");
-            this.threeObject = object;
-            this.threeObject.scale.setScalar(50);
-            console.log("object", this.threeObject);
-            this.actor.threeObject.add(this.threeObject);
-          },
-          () => void 0,
-          (error) => {
-            console.log(error);
+          (root) => {
+            this.model = root;
+            this.actor.threeObject.add(this.model);
           }
         );
       }
     );
   }
+}
+
+function isMaterialWithMap(
+  material: THREE.Material
+): material is THREE.MeshPhongMaterial | THREE.MeshStandardMaterial {
+  return (
+    material instanceof THREE.MeshStandardMaterial ||
+    material instanceof THREE.MeshPhongMaterial
+  );
 }

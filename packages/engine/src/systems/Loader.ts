@@ -10,7 +10,15 @@ export interface LoaderProvider {
 }
 
 export class GameInstanceDefaultLoader implements LoaderProvider {
-  audio = new THREE.AudioLoader();
-  objLoader = new OBJLoader();
-  mtlLoader = new MTLLoader();
+  audio: THREE.AudioLoader;
+  objLoader: OBJLoader;
+  mtlLoader: MTLLoader;
+
+  constructor(
+    manager?: THREE.LoadingManager
+  ) {
+    this.audio = new THREE.AudioLoader(manager);
+    this.objLoader = new OBJLoader(manager);
+    this.mtlLoader = new MTLLoader(manager);
+  }
 }
