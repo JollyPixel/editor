@@ -26,7 +26,15 @@ function initRuntime() {
       component.camera.lookAt(0, 0, 0);
     });
   new Actor(gameInstance, { name: "model" })
-    .registerComponent<any>(ModelRenderer, {});
+    .registerComponent(ModelRenderer, {
+      path: "models/Tiny_Witch.obj"
+    });
+  new Actor(gameInstance, { name: "model" })
+    .registerComponent(ModelRenderer, {
+      path: "models/Tree.fbx"
+    }, (component) => {
+      component.actor.threeObject.position.set(2, 0, 0);
+    });
 
   gameInstance.threeScene.background = null;
   gameInstance.threeScene.add(

@@ -10,34 +10,32 @@ import * as THREE from "three";
 import { modelLoader } from "./loaders.js";
 
 export interface ModelRendererOptions {
+  path: string;
 }
 
 export class ModelRenderer extends ActorComponent {
-  assets: Systems.LazyAsset<THREE.Group<THREE.Object3DEventMap>>[];
+  asset: Systems.LazyAsset<THREE.Group<THREE.Object3DEventMap>>;
+  position: THREE.Vector3;
   model: THREE.Group<THREE.Object3DEventMap>;
 
   constructor(
     actor: Actor,
-    _options: ModelRendererOptions
+    options: ModelRendererOptions
   ) {
     super({
       actor,
       typeName: "ModelRenderer"
     });
 
-    this.assets = [
-      modelLoader("models/Tiny_Witch.obj"),
-      modelLoader("models/Tree.fbx")
-    ];
+    const {
+      path
+    } = options;
+
+    this.asset = modelLoader(path);
   }
 
   awake() {
-    for (const asset of this.assets) {
-      const model = asset.get();
-      if (model.name === "Tree") {
-        model.position.set(2, 0, 0);
-      }
-      this.actor.threeObject.add(model);
-    }
+    const model = this.asset.get();
+    this.actor.threeObject.add(model);
   }
 }
