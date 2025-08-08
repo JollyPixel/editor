@@ -13,7 +13,6 @@ import {
 } from "./Loader.js";
 
 export interface GameInstanceOptions {
-  layers?: string[];
   enableOnExit?: boolean;
   loader?: LoaderProvider;
   threeRendererProvider?: typeof THREE.WebGLRenderer;
@@ -22,7 +21,6 @@ export interface GameInstanceOptions {
 export class GameInstance extends EventTarget {
   framesPerSecond = 60;
   ratio: number | null = null;
-  layers: string[] = ["Default"];
 
   tree = new ActorTree({
     addCallback: (actor) => this.threeScene.add(actor.threeObject),
@@ -35,7 +33,10 @@ export class GameInstance extends EventTarget {
   componentsToBeDestroyed: Component[] = [];
 
   input: Input;
-  audio = new THREE.AudioListener();
+  audio = {
+    listener: new THREE.AudioListener(),
+    globalVolume: 1
+  };
   clock = new Timer();
 
   threeRenderer: THREE.WebGLRenderer;
@@ -74,10 +75,6 @@ export class GameInstance extends EventTarget {
     this.threeRenderer.shadowMap.type = THREE.BasicShadowMap;
     this.threeRenderer.setSize(0, 0, false);
     this.threeRenderer.autoClear = false;
-
-    if (options.layers) {
-      this.layers = options.layers;
-    }
 
     this.input = new Input(this.threeRenderer.domElement, {
       enableOnExit: options.enableOnExit
@@ -252,10 +249,6 @@ export class GameInstance extends EventTarget {
       }));
     }
   };
-
-  setActiveLayer(layer: number | null) {
-    this.cachedActors.forEach((cachedActor) => cachedActor.setActiveLayer(layer));
-  }
 
   draw() {
     this.resizeRenderer();

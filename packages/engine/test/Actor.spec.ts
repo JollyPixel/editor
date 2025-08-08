@@ -65,17 +65,6 @@ describe("Actor", () => {
       assert.strictEqual(gameInstance.tree.remove.mock.calls.length, 1);
       assert.strictEqual(gameInstance.tree.remove.mock.calls[0].arguments[0], actor);
     });
-
-    test("should call setIsLayerActive on all components", () => {
-      const actor = new Actor(createGameInstance() as any, { name: "foobar" });
-
-      const component = { setIsLayerActive: mock.fn() };
-      actor.components.push(component as any);
-      actor.setActiveLayer(null);
-
-      assert.strictEqual(component.setIsLayerActive.mock.calls.length, 1);
-      assert.strictEqual(component.setIsLayerActive.mock.calls[0].arguments[0], true);
-    });
   });
 
   describe("markDestructionPending", () => {

@@ -6,4 +6,5 @@ export * from "./ActorComponent.js";
 export * from "./Behavior.js";
 export * from "./controls/Input.class.js";
 export * from "./Timer.js";
-export * from "./Audio.js";
+export * from "./audio/Audio.js";
+export * from "./audio/AudioBackground.js";

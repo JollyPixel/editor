@@ -18,7 +18,7 @@ export interface ActorOptions {
   name: string;
   parent?: Actor | null;
   visible?: boolean;
-  layer?: number;
+  layer?: number | number[];
 }
 
 export class Actor {
@@ -31,10 +31,9 @@ export class Actor {
   components: Component[] = [];
   behaviors: Record<string, Behavior<any>[]> = {};
   transform: Transform;
-  layer = 0;
   pendingForDestruction = false;
 
-  threeObject = new THREE.Object3D();
+  threeObject = new THREE.Group();
 
   constructor(
     gameInstance: GameInstance,
@@ -49,11 +48,17 @@ export class Actor {
     this.gameInstance = gameInstance;
     this.name = name;
     this.parent = parent;
-    this.layer = layer;
 
     this.threeObject.visible = visible;
     this.threeObject.name = this.name;
     this.threeObject.userData.isActor = true;
+
+    const layers = Array.isArray(layer) ? layer : [layer];
+    for (const layer of layers) {
+      this.threeObject.layers.enable(layer);
+      this.gameInstance.threeScene.layers.enable(layer);
+    }
+
     this.transform = new Transform(this.threeObject);
 
     if (parent) {
@@ -117,15 +122,6 @@ export class Actor {
     }
 
     this.threeObject.clear();
-  }
-
-  setActiveLayer(
-    layer: number | null
-  ) {
-    const active = layer === null || this.layer === layer;
-    for (const component of this.components) {
-      component.setIsLayerActive?.(active);
-    }
   }
 
   markDestructionPending() {

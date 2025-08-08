@@ -2,7 +2,8 @@
 import {
   Systems,
   Actor,
-  Components
+  Components,
+  AudioBackground
 } from "@jolly-pixel/engine";
 import * as THREE from "three";
 
@@ -23,14 +24,15 @@ new Actor(gameInstance, { name: "camera" })
 
 new Actor(gameInstance, { name: "sprite" })
   .registerComponent(SpriteRenderer, {
-    texture: "./assets/sprites/dino.png",
-    tileHorizontal: 24,
+    texture: "./assets/sprites/teleport-door.png",
+    tileHorizontal: 16,
     tileVertical: 1,
     animations: {
-      idle: { from: 0, to: 13 }
+      open: { from: 0, to: 15 }
     }
   }, (sprite) => {
-    sprite.animation.play("idle", { loop: true, duration: 0.5 });
+    sprite.setHorizontalFlip(true);
+    sprite.animation.play("open", { loop: true, duration: 2.5 });
   });
 
 gameInstance.threeScene.background = null;
@@ -43,4 +45,40 @@ gameInstance.threeScene.add(
   new THREE.AmbientLight(new THREE.Color("#ffffff"), 1)
 );
 
+const ab = new AudioBackground(gameInstance, {
+  playlists: [
+    {
+      name: "default",
+      onEnd: "loop",
+      tracks: [
+        {
+          name: "behemoth",
+          assetPath: "./assets/sounds/behemoth.ogg"
+        },
+        {
+          name: "infernal-heat",
+          assetPath: "./assets/sounds/infernal-heat.ogg"
+        }
+      ]
+    },
+    {
+      name: "second",
+      onEnd: "play-next-playlist",
+      nextPlaylistName: "default",
+      tracks: [
+        {
+          name: "tech-space",
+          assetPath: "./assets/sounds/tech-space.ogg",
+          volume: 1
+        }
+      ]
+    }
+  ]
+});
+
 runtime.start();
+
+canvasHTMLElement.addEventListener("click", async() => {
+  await ab.preload();
+  await ab.play("second.tech-space");
+});
