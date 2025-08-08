@@ -15,7 +15,6 @@ export interface Component {
   start?(): void;
   update?(): void;
   destroy(): void;
-  setIsLayerActive?(active: boolean): void;
 }
 
 export interface ActorComponentOptions {

@@ -17,6 +17,9 @@
       "path": "./packages/engine"
     },
     {
+      "path": "./packages/experimental"
+    },
+    {
       "path": "./packages/editors/voxel-map"
     },
     {

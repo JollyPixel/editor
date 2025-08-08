@@ -16,6 +16,7 @@
     "packages/server",
     "packages/client",
     "packages/fs-tree",
+    "packages/experimental",
     "packages/editors/voxel-map",
     "packages/editors/model",
     "packages/engine"

@@ -35,7 +35,7 @@ export class Camera extends ActorComponent {
   }
 
   start() {
-    this.threeCamera.add(this.actor.gameInstance.audio);
+    this.threeCamera.add(this.actor.gameInstance.audio.listener);
     this.actor.gameInstance.renderComponents.push(this.threeCamera);
   }
 

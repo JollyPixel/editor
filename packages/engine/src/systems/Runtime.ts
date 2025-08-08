@@ -13,12 +13,6 @@ export interface RuntimeOptions {
    * Whether to include performance statistics (eg: FPS, memory usage).
    */
   includePerformanceStats?: boolean;
-  /**
-   * @default 50
-   * Maximum delta time in milliseconds to prevent large jumps in time.
-   * This is useful to avoid issues with large frame drops or when the game is paused.
-   */
-  maxDeltaTime?: number;
 }
 
 export class Runtime {
@@ -30,7 +24,6 @@ export class Runtime {
   accumulatedTime: number;
   lastTimestamp: number;
   tickAnimationFrameId: number;
-  maxDeltaTime: number;
   targetFrameTime: number;
 
   #isRunning = false;
@@ -49,7 +42,6 @@ export class Runtime {
       loader: new GameInstanceDefaultLoader(this.manager)
     });
 
-    this.maxDeltaTime = options.maxDeltaTime ?? 50;
     this.targetFrameTime = 1000 / this.gameInstance.framesPerSecond;
 
     if (options.includePerformanceStats) {
@@ -109,7 +101,6 @@ export class Runtime {
     this.accumulatedTime += timestamp - this.lastTimestamp;
     this.lastTimestamp = timestamp;
 
-    // if (deltaTime >= this.targetFrameTime) {
     const {
       updates, timeLeft
     } = this.gameInstance.tick(this.accumulatedTime);
@@ -123,7 +114,6 @@ export class Runtime {
     if (updates > 0) {
       this.gameInstance.draw();
     }
-    // }
 
     this.stats?.end();
     this.tickAnimationFrameId = requestAnimationFrame(this.tick);
