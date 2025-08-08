@@ -13,7 +13,7 @@ export interface ModelRendererOptions {
 }
 
 export class ModelRenderer extends ActorComponent {
-  asset: Systems.LazyAsset<THREE.Group<THREE.Object3DEventMap>>;
+  assets: Systems.LazyAsset<THREE.Group<THREE.Object3DEventMap>>[];
   model: THREE.Group<THREE.Object3DEventMap>;
 
   constructor(
@@ -25,11 +25,19 @@ export class ModelRenderer extends ActorComponent {
       typeName: "ModelRenderer"
     });
 
-    this.asset = modelLoader("models/Tiny_Witch.obj");
+    this.assets = [
+      modelLoader("models/Tiny_Witch.obj"),
+      modelLoader("models/Tree.fbx")
+    ];
   }
 
   awake() {
-    this.model = this.asset.get();
-    this.actor.threeObject.add(this.model);
+    for (const asset of this.assets) {
+      const model = asset.get();
+      if (model.name === "Tree") {
+        model.position.set(2, 0, 0);
+      }
+      this.actor.threeObject.add(model);
+    }
   }
 }
