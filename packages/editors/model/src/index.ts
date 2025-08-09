@@ -25,15 +25,29 @@ function initRuntime() {
       component.camera.position.set(5, 5, 5);
       component.camera.lookAt(0, 0, 0);
     });
-  new Actor(gameInstance, { name: "model" })
+  new Actor(gameInstance, { name: "tinyWitchModel" })
     .registerComponent(ModelRenderer, {
       path: "models/Tiny_Witch.obj"
     });
-  new Actor(gameInstance, { name: "model" })
+  new Actor(gameInstance, { name: "treeModel" })
     .registerComponent(ModelRenderer, {
       path: "models/Tree.fbx"
     }, (component) => {
       component.actor.threeObject.position.set(2, 0, 0);
+    });
+  new Actor(gameInstance, { name: "duckModel" })
+    .registerComponent(ModelRenderer, {
+      path: "models/Duck.gltf"
+    }, (component) => {
+      component.actor.threeObject.position.set(-2, 0, 0);
+      component.actor.threeObject.rotateY(45);
+    });
+  new Actor(gameInstance, { name: "toyCarModel" })
+    .registerComponent(ModelRenderer, {
+      path: "models/ToyCar.glb"
+    }, (component) => {
+      component.actor.threeObject.position.set(0, 0.90, -4);
+      component.actor.threeObject.scale.set(50, 50, 50);
     });
 
   gameInstance.threeScene.background = null;

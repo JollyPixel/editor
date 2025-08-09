@@ -6,10 +6,11 @@ import * as THREE from "three";
 import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
 import { MTLLoader } from "three/addons/loaders/MTLLoader.js";
 import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 export const modelLoader = Systems.Assets.registerLoader<THREE.Group<THREE.Object3DEventMap>>(
   {
-    extensions: [".obj", ".fbx"],
+    extensions: [".obj", ".fbx", ".glb", ".gltf"],
     type: "model"
   },
   (asset, context) => {
@@ -18,6 +19,9 @@ export const modelLoader = Systems.Assets.registerLoader<THREE.Group<THREE.Objec
         return objectLoader(asset, context);
       case ".fbx":
         return fbxLoader(asset, context);
+      case ".glb":
+      case ".gltf":
+        return gltfLoader(asset, context);
       default:
         throw new Error(`Unsupported model type: ${asset.ext}`);
     }
@@ -87,6 +91,27 @@ function fbxLoader(
       (object) => {
         object.name = asset.name;
         resolve(object);
+      },
+      void 0,
+      (error) => reject(error)
+    );
+  });
+}
+
+function gltfLoader(
+  asset: Systems.Asset,
+  context: Systems.AssetLoaderContext
+): Promise<THREE.Group<THREE.Object3DEventMap>> {
+  const { manager } = context;
+
+  const loader = new GLTFLoader(manager)
+    .setPath(asset.path);
+
+  return new Promise((resolve, reject) => {
+    loader.load(
+      asset.basename,
+      (object) => {
+        resolve(object.scene);
       },
       void 0,
       (error) => reject(error)
