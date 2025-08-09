@@ -15,7 +15,6 @@ export interface ModelRendererOptions {
 
 export class ModelRenderer extends ActorComponent {
   asset: Systems.LazyAsset<THREE.Group<THREE.Object3DEventMap>>;
-  position: THREE.Vector3;
   model: THREE.Group<THREE.Object3DEventMap>;
 
   constructor(
