@@ -4,6 +4,7 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import { type GameInstance } from "./systems/GameInstance.js";
 import { type Component } from "./ActorComponent.js";
+import { ActorTree } from "./ActorTree.js";
 import { Behavior } from "./Behavior.js";
 import { Transform } from "./Transform.js";
 
@@ -21,13 +22,12 @@ export interface ActorOptions {
   layer?: number | number[];
 }
 
-export class Actor {
+export class Actor extends ActorTree {
   gameInstance: GameInstance;
 
   name: string;
   awoken = false;
   parent: Actor | null = null;
-  children: Actor[] = [];
   components: Component[] = [];
   behaviors: Record<string, Behavior<any>[]> = {};
   transform: Transform;
@@ -39,6 +39,7 @@ export class Actor {
     gameInstance: GameInstance,
     options: ActorOptions
   ) {
+    super();
     const { name, parent = null, visible = true, layer } = options;
 
     if (parent !== null && parent.pendingForDestruction) {
@@ -64,7 +65,7 @@ export class Actor {
     this.transform = new Transform(this.threeObject);
 
     if (parent) {
-      parent.children.push(this);
+      parent.add(this);
       parent.threeObject.add(this.threeObject);
       this.threeObject.updateMatrixWorld(false);
     }
@@ -120,7 +121,7 @@ export class Actor {
     }
     else {
       this.parent.threeObject.remove(this.threeObject);
-      this.parent.children.splice(this.parent.children.indexOf(this), 1);
+      this.parent.remove(this);
     }
 
     this.threeObject.clear();
@@ -128,36 +129,9 @@ export class Actor {
 
   markDestructionPending() {
     this.pendingForDestruction = true;
-    this.children.forEach((child) => child.markDestructionPending());
+    this.destroyAllActors();
   }
 
-  getChild(name: string) {
-    const nameParts = name.split("/");
-
-    const findChildByPath = (currentActor: Actor, pathParts: string[]): Actor | null => {
-      if (pathParts.length === 0) {
-        return currentActor;
-      }
-
-      const [nextName, ...remainingParts] = pathParts;
-      const foundChild = Array.from(this.gameInstance.tree.walkFromNode(currentActor))
-        .find(({ actor }) => actor.name === nextName && !actor.isDestroyed());
-
-      return foundChild ?
-        findChildByPath(foundChild.actor, remainingParts) :
-        null;
-    };
-
-    const result = findChildByPath(this, nameParts);
-
-    return result === this ? null : result;
-  }
-
-  getChildren(): Actor[] {
-    return this.children.filter((child) => !child.isDestroyed());
-  }
-
-  // Behaviors
   addBehavior<T extends new(...args: any) => Behavior>(
     behaviorClass: T,
     properties: ConstructorParameters<T>[0] = Object.create(null)
@@ -231,16 +205,16 @@ export class Actor {
       this.transform.getGlobalMatrix(Transform.Matrix);
     }
 
-    const oldSiblings = (this.parent === null) ? this.gameInstance.tree.root : this.parent.children;
-    oldSiblings.splice(oldSiblings.indexOf(this), 1);
+    const oldSiblings = (this.parent === null) ? this.gameInstance.tree : this.parent;
+    oldSiblings.remove(this);
     this.threeObject.parent?.remove(this.threeObject);
 
     this.parent = newParent;
 
     const siblings = (newParent === null) ?
-      this.gameInstance.tree.root :
-      newParent.children;
-    siblings.push(this);
+      this.gameInstance.tree :
+      newParent;
+    siblings.add(this);
     const threeParent = (newParent === null) ?
       this.gameInstance.threeScene :
       newParent.threeObject;

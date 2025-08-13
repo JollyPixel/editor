@@ -164,8 +164,13 @@ export class GameInstance extends EventTarget {
     }
 
     // Update all actors
+    const actorToBeDestroyed: Actor[] = [];
     this.cachedActors.forEach((actor) => {
       actor.update();
+
+      if (actor.isDestroyed()) {
+        actorToBeDestroyed.push(actor);
+      }
     });
 
     // Apply pending component / actor destructions
@@ -174,10 +179,9 @@ export class GameInstance extends EventTarget {
     });
     this.componentsToBeDestroyed.length = 0;
 
-    this.tree.actorsToBeDestroyed.forEach((actor) => {
+    actorToBeDestroyed.forEach((actor) => {
       this.#doActorDestruction(actor);
     });
-    this.tree.actorsToBeDestroyed.length = 0;
 
     if (this.input.exited) {
       this.threeRenderer.clear();
