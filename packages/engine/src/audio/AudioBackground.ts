@@ -13,6 +13,7 @@ export type AudioBackgroundSoundPath = `${string}.${string}`;
 export interface AudioBackgroundOptions {
   playlists: AudioBackgroundPlaylist[];
   autoPlay?: boolean | AudioBackgroundSoundPath | AudioBackgroundSoundIndex;
+  onError?: (error: Error) => void;
 }
 
 export interface AudioBackgroundPlaylist {
@@ -43,6 +44,7 @@ export class AudioBackground {
   playlists: AudioBackgroundPlaylist[] = [];
   audio: null | THREE.Audio = null;
 
+  #onError: (error: Error) => void;
   #buffers = new Map<string, AudioBuffer>();
   #currentIndex: AudioBackgroundSoundIndex | null = null;
 
@@ -50,19 +52,24 @@ export class AudioBackground {
     gameInstance: GameInstance,
     options: AudioBackgroundOptions
   ) {
-    const { playlists, autoPlay = false } = options;
+    const {
+      playlists,
+      autoPlay = false,
+      onError = (err) => console.error(err)
+    } = options;
 
     this.gameInstance = gameInstance;
     this.playlists = playlists;
+    this.#onError = onError;
     if (autoPlay) {
       this.play(typeof autoPlay === "boolean" ? [0, 0] : autoPlay)
-        .catch(console.error);
+        .catch(this.#onError);
     }
   }
 
   async preload(): Promise<void> {
     await Promise.all(
-      this.playlists.flatMap((playlist) => playlist.tracks.map((track) => this.#loadAudioTrackBuffer(track)))
+      this.playlists.flatMap((playlist) => playlist.tracks.map((track) => this.#loadAudioBuffer(track)))
     );
   }
 
@@ -115,23 +122,25 @@ export class AudioBackground {
     return playlist && playlist.tracks.length > 0 ? playlist : null;
   }
 
-  async #loadAudioTrackBuffer(
+  async #loadAudioBuffer(
     track: AudioBackgroundTrack
   ): Promise<AudioBuffer> {
     if (this.#buffers.has(track.assetPath)) {
       return this.#buffers.get(track.assetPath)!;
     }
 
-    const buffer = await this.gameInstance.loader.audio.loadAsync(track.assetPath);
+    const buffer = await this.gameInstance.loader.audio.loadAsync(
+      track.assetPath
+    );
     this.#buffers.set(track.assetPath, buffer);
 
     return buffer;
   }
 
-  async #loadAudioTrack(
+  async #createAudioFromTrack(
     track: AudioBackgroundTrack
   ): Promise<THREE.Audio> {
-    const buffer = await this.#loadAudioTrackBuffer(track);
+    const buffer = await this.#loadAudioBuffer(track);
 
     const { name, volume = 1 } = track;
     const sound = new THREE.Audio(this.gameInstance.audio.listener);
@@ -159,10 +168,6 @@ export class AudioBackground {
     return this.#getTrackByIndex(this.#currentIndex);
   }
 
-  /**
-   * Plays a sound from the audio background.
-   * @param pathOrIndex - The path in the format "playlistName.trackName" or an index in the format [playlistIndex, trackIndex].
-   */
   async play(
     pathOrIndex: AudioBackgroundSoundPath | AudioBackgroundSoundIndex | undefined
   ) {
@@ -179,21 +184,16 @@ export class AudioBackground {
       throw new Error(`Track not found: ${pathOrIndex}`);
     }
 
+    this.#currentIndex = typeof pathOrIndex === "string"
+      ? this.#getTrackIndexFromPath(pathOrIndex)
+      : pathOrIndex;
+
     if (this.audio) {
       this.stop();
     }
-
-    const audio = await this.#loadAudioTrack(track);
-    audio.onEnded = () => {
-      this.playNext().catch(console.error);
-    };
-
-    this.audio = audio;
-    this.#currentIndex = typeof pathOrIndex === "string" ?
-      this.#getTrackIndexFromPath(pathOrIndex) :
-      pathOrIndex;
-
-    audio.play();
+    this.audio = await this.#createAudioFromTrack(track);
+    this.audio.onEnded = () => this.playNext().catch(this.#onError);
+    this.audio.play();
   }
 
   async playNext() {

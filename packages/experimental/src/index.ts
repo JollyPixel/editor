@@ -8,7 +8,8 @@ import {
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { SpriteRenderer } from "./components/SpriteRenderer.class.js";
+import { TileMapRenderer } from "./components/tiled/TileMapRenderer.js";
+// import { SpriteRenderer } from "./components/sprite/SpriteRenderer.class.js";
 
 const canvasHTMLElement = document.querySelector("canvas") as HTMLCanvasElement;
 const runtime = new Systems.Runtime(canvasHTMLElement, {
@@ -22,33 +23,38 @@ new Actor(gameInstance, { name: "camera" })
     component.camera.lookAt(0, 0, 0);
   });
 
-new Actor(gameInstance, { name: "sprite" })
-  .registerComponent(SpriteRenderer, {
-    texture: "./assets/sprites/teleport-door.png",
-    tileHorizontal: 16,
-    tileVertical: 1,
-    animations: {
-      open: { from: 0, to: 15 }
-    }
-  }, (sprite) => {
-    sprite.setHorizontalFlip(true);
-    sprite.animation.play("open", { loop: true, duration: 2.5 });
+// new Actor(gameInstance, { name: "sprite" })
+//   .registerComponent(SpriteRenderer, {
+//     texture: "./assets/sprites/teleport-door.png",
+//     tileHorizontal: 16,
+//     tileVertical: 1,
+//     animations: {
+//       open: { from: 0, to: 15 }
+//     }
+//   }, (sprite) => {
+//     sprite.setHorizontalFlip(true);
+//     sprite.animation.play("open", { loop: true, duration: 2.5 });
+//   });
+
+new Actor(gameInstance, { name: "tilemap" })
+  .registerComponent(TileMapRenderer, {
+    assetPath: "./assets/tilemaps/experimental_map.tmj"
   });
 
-gameInstance.threeScene.background = null;
+gameInstance.threeScene.background = new THREE.Color("#000000");
 gameInstance.threeScene.add(
   // new THREE.GridHelper(
   //   50,
   //   10,
   //   new THREE.Color("#888888")
   // ),
-  new THREE.AmbientLight(new THREE.Color("#ffffff"), 1)
+  new THREE.AmbientLight(new THREE.Color("#ffffffff"), 3)
 );
 
 const ab = new AudioBackground(gameInstance, {
   playlists: [
     {
-      name: "default",
+      name: "normal",
       onEnd: "loop",
       tracks: [
         {
@@ -62,23 +68,23 @@ const ab = new AudioBackground(gameInstance, {
       ]
     },
     {
-      name: "second",
+      name: "boss",
       onEnd: "play-next-playlist",
-      nextPlaylistName: "default",
+      nextPlaylistName: "normal",
       tracks: [
         {
           name: "tech-space",
           assetPath: "./assets/sounds/tech-space.ogg",
-          volume: 1
+          volume: 0.5
         }
       ]
     }
   ]
 });
 
-runtime.start();
-
 canvasHTMLElement.addEventListener("click", async() => {
   await ab.preload();
   await ab.play("second.tech-space");
 });
+
+runtime.start();

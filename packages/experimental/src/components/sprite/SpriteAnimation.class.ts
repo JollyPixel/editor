@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-// import { type Component } from "@jolly-pixel/engine";
 
 export interface SpriteAnimationRange {
   from: number;
