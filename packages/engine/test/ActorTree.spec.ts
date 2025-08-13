@@ -13,8 +13,8 @@ describe("ActorTree", () => {
 
       actorTree.add(actor);
 
-      assert.ok(actorTree.root.includes(actor));
-      assert.equal(actorTree.root.length, 1);
+      assert.ok(actorTree.children.includes(actor));
+      assert.equal(actorTree.children.length, 1);
     });
 
     test("should call addCallback when adding a new root actor", () => {
@@ -38,12 +38,12 @@ describe("ActorTree", () => {
       const actor = {} as any;
 
       actorTree.add(actor);
-      assert.equal(actorTree.root.length, 1);
+      assert.equal(actorTree.children.length, 1);
 
       actorTree.remove(actor);
 
-      assert.equal(actorTree.root.length, 0);
-      assert.ok(!actorTree.root.includes(actor));
+      assert.equal(actorTree.children.length, 0);
+      assert.ok(!actorTree.children.includes(actor));
     });
 
     test("should call removeCallback when removing an actor", () => {
@@ -73,7 +73,7 @@ describe("ActorTree", () => {
       // Try to remove actor that was never added
       actorTree.remove(actor2);
 
-      assert.equal(actorTree.root.length, 1);
+      assert.equal(actorTree.children.length, 1);
       assert.equal(removeCallback.mock.calls.length, 0);
     });
   });
@@ -89,7 +89,7 @@ describe("ActorTree", () => {
       });
 
       // @ts-expect-error
-      actorTree.root.push(targetActor, otherActor);
+      actorTree.children.push(targetActor, otherActor);
 
       const result = actorTree.getActor("Player");
       assert.equal(result, targetActor);
@@ -102,7 +102,7 @@ describe("ActorTree", () => {
       });
 
       // @ts-expect-error
-      actorTree.root.push(actor);
+      actorTree.children.push(actor);
 
       const result = actorTree.getActor("NonExistent");
       assert.equal(result, null);
@@ -116,7 +116,7 @@ describe("ActorTree", () => {
       actor.pendingForDestruction = true;
 
       // @ts-expect-error
-      actorTree.root.push(actor);
+      actorTree.children.push(actor);
 
       const result = actorTree.getActor("Player");
       assert.equal(result, null);
@@ -131,7 +131,7 @@ describe("ActorTree", () => {
       destroyedActor.pendingForDestruction = true;
 
       // @ts-expect-error
-      actorTree.root.push(validActor, destroyedActor);
+      actorTree.children.push(validActor, destroyedActor);
 
       const result = Array.from(actorTree.getRootActors());
       assert.deepEqual(result, [validActor]);
@@ -143,7 +143,7 @@ describe("ActorTree", () => {
       destroyedActor.pendingForDestruction = true;
 
       // @ts-expect-error
-      actorTree.root.push(destroyedActor);
+      actorTree.children.push(destroyedActor);
 
       const result = Array.from(actorTree.getRootActors());
       assert.deepEqual(result, []);
@@ -159,7 +159,7 @@ describe("ActorTree", () => {
       });
 
       // @ts-expect-error
-      actorTree.root.push(parent);
+      actorTree.children.push(parent);
 
       const result = Array.from(actorTree.getAllActors());
       assert.deepEqual(result, [parent, child]);
@@ -174,8 +174,6 @@ describe("ActorTree", () => {
       // @ts-expect-error
       actorTree.destroyActor(actor);
 
-      assert.equal(actorTree.actorsToBeDestroyed.length, 1);
-      assert.equal(actorTree.actorsToBeDestroyed[0], actor);
       assert.equal(actor.markDestructionPending.mock.calls.length, 1);
     });
 
@@ -187,7 +185,6 @@ describe("ActorTree", () => {
       // @ts-expect-error
       actorTree.destroyActor(actor);
 
-      assert.equal(actorTree.actorsToBeDestroyed.length, 0);
       assert.equal(actor.markDestructionPending.mock.calls.length, 0);
     });
   });
@@ -200,7 +197,7 @@ describe("ActorTree", () => {
     ];
 
     const actorTree = new ActorTree();
-    actorTree.root.push(...actors as any);
+    actorTree.children.push(...actors as any);
 
     assert.deepEqual(
       Array.from(actorTree.walk()).map((node) => node.actor),
@@ -219,7 +216,7 @@ describe("ActorTree", () => {
     });
 
     const actorTree = new ActorTree();
-    actorTree.root.push(rootActor as any);
+    actorTree.children.push(rootActor as any);
 
     const walkResult = Array.from(actorTree.walk());
     const expectedOrder = [rootActor, childActor1, grandChildActor, childActor2];
@@ -240,7 +237,7 @@ describe("ActorTree", () => {
     });
 
     const actorTree = new ActorTree();
-    actorTree.root.push(rootActor as any);
+    actorTree.children.push(rootActor as any);
 
     const walkResult = Array.from(actorTree.walk());
 
@@ -312,7 +309,7 @@ describe("ActorTree", () => {
     });
 
     const actorTree = new ActorTree();
-    actorTree.root.push(root1 as any, root2 as any);
+    actorTree.children.push(root1 as any, root2 as any);
 
     const walkResult = Array.from(actorTree.walk());
     const expectedOrder = [root1, child1, root2, child2];
@@ -326,7 +323,7 @@ describe("ActorTree", () => {
   test("should be iterable with for...of loop", () => {
     const actors = [createFakeActor(), createFakeActor()];
     const actorTree = new ActorTree();
-    actorTree.root.push(...actors as any);
+    actorTree.children.push(...actors as any);
 
     const collected: any[] = [];
     for (const node of actorTree.walk()) {
@@ -344,7 +341,7 @@ describe("ActorTree", () => {
     ];
 
     const actorTree = new ActorTree();
-    actorTree.root.push(...actors as any);
+    actorTree.children.push(...actors as any);
 
     const collected: any[] = [];
     for (const node of actorTree.walk()) {

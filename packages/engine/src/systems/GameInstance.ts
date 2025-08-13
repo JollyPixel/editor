@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-import { Timer } from "three/addons/misc/Timer.js";
 
 // Import Internal Dependencies
 import { Input } from "../controls/Input.class.js";
@@ -37,7 +36,9 @@ export class GameInstance extends EventTarget {
     listener: new THREE.AudioListener(),
     globalVolume: 1
   };
-  clock = new Timer();
+  // @ts-ignore
+  // TODO: since r179 Timer is part of the care but TS def is not ok
+  clock = new THREE.Timer();
 
   threeRenderer: THREE.WebGLRenderer;
   threeScene = new THREE.Scene();
@@ -163,8 +164,13 @@ export class GameInstance extends EventTarget {
     }
 
     // Update all actors
+    const actorToBeDestroyed: Actor[] = [];
     this.cachedActors.forEach((actor) => {
       actor.update();
+
+      if (actor.isDestroyed()) {
+        actorToBeDestroyed.push(actor);
+      }
     });
 
     // Apply pending component / actor destructions
@@ -173,10 +179,9 @@ export class GameInstance extends EventTarget {
     });
     this.componentsToBeDestroyed.length = 0;
 
-    this.tree.actorsToBeDestroyed.forEach((actor) => {
+    actorToBeDestroyed.forEach((actor) => {
       this.#doActorDestruction(actor);
     });
-    this.tree.actorsToBeDestroyed.length = 0;
 
     if (this.input.exited) {
       this.threeRenderer.clear();

@@ -75,10 +75,12 @@ describe("Actor", () => {
         { name: "foobar" }
       );
       const fakeActorChildren = {
+        children: [],
         markDestructionPending: mock.fn()
       };
 
-      actor.children.push(fakeActorChildren as any, fakeActorChildren as any);
+      actor.add(fakeActorChildren as any);
+      actor.add(fakeActorChildren as any);
       actor.markDestructionPending();
 
       assert.strictEqual(actor.pendingForDestruction, true);
