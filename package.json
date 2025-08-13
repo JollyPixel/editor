@@ -34,7 +34,7 @@
   "homepage": "https://github.com/JollyPixel/editor#readme",
   "devDependencies": {
     "@changesets/changelog-github": "^0.5.1",
-    "@changesets/cli": "^2.29.5",
+    "@changesets/cli": "^2.9.2",
     "@openally/config.eslint": "^2.2.0",
     "@openally/config.typescript": "^1.0.3",
     "@types/node": "^24.0.10",
