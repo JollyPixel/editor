@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-import { Timer } from "three/addons/misc/Timer.js";
 
 // Import Internal Dependencies
 import { Input } from "../controls/Input.class.js";
@@ -37,7 +36,9 @@ export class GameInstance extends EventTarget {
     listener: new THREE.AudioListener(),
     globalVolume: 1
   };
-  clock = new Timer();
+  // @ts-ignore
+  // TODO: since r179 Timer is part of the care but TS def is not ok
+  clock = new THREE.Timer();
 
   threeRenderer: THREE.WebGLRenderer;
   threeScene = new THREE.Scene();

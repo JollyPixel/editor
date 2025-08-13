@@ -39,7 +39,7 @@ export class Actor {
     gameInstance: GameInstance,
     options: ActorOptions
   ) {
-    const { name, parent = null, visible = true, layer = 0 } = options;
+    const { name, parent = null, visible = true, layer } = options;
 
     if (parent !== null && parent.pendingForDestruction) {
       throw new Error("Cannot add actor to a parent that is pending for destruction.");
@@ -53,10 +53,12 @@ export class Actor {
     this.threeObject.name = this.name;
     this.threeObject.userData.isActor = true;
 
-    const layers = Array.isArray(layer) ? layer : [layer];
-    for (const layer of layers) {
-      this.threeObject.layers.enable(layer);
-      this.gameInstance.threeScene.layers.enable(layer);
+    if (layer) {
+      const layers = Array.isArray(layer) ? layer : [layer];
+      for (const layer of layers) {
+        this.threeObject.layers.enable(layer);
+        this.gameInstance.threeScene.layers.enable(layer);
+      }
     }
 
     this.transform = new Transform(this.threeObject);
