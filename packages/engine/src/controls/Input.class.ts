@@ -1,10 +1,15 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
+import { EventEmitter } from "@posva/event-emitter";
 
 // Import Internal Dependencies
 import * as targets from "./targets/index.js";
 
 export type { MouseEventButton } from "./targets/Mouse.class.js";
+
+export type InputEvents = {
+  exit: [];
+};
 
 export interface InputOptions {
   /**
@@ -21,7 +26,7 @@ export type InputMouseAction =
 
 export type InputKeyboardAction = string | "ANY" | "NONE";
 
-export class Input extends EventTarget {
+export class Input extends EventEmitter<InputEvents> {
   #canvas: HTMLCanvasElement;
 
   mouse: targets.Mouse;
@@ -396,7 +401,7 @@ export class Input extends EventTarget {
     // in some circumstances so we check if the callback was cleared already
     // http://stackoverflow.com/questions/8711393/onbeforeunload-fires-twice
     if (!this.exited) {
-      this.dispatchEvent(new CustomEvent("exit"));
+      this.emit("exit");
     }
     this.exited = true;
   };

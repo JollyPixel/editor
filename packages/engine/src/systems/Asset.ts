@@ -61,7 +61,7 @@ export interface AssetLoaderOptions {
   type: AssetTypeName;
 }
 
-export class AssetManager extends EventTarget {
+export class AssetManager {
   toBeLoaded: Asset[] = [];
 
   extToLoader: Map<string, string> = new Map();
@@ -90,9 +90,6 @@ export class AssetManager extends EventTarget {
     }
 
     this.toBeLoaded.push(asset);
-    this.dispatchEvent(new CustomEvent("asset:load", {
-      detail: asset
-    }));
 
     return {
       asset,
