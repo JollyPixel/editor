@@ -80,7 +80,7 @@ export class VoxelRenderer extends ActorComponent {
       this.camera,
       this.actor.gameInstance.threeRenderer.domElement
     );
-    this.actor.gameInstance.addEventListener("draw", () => {
+    this.actor.gameInstance.on("draw", () => {
       this.helper.render(this.actor.gameInstance.threeRenderer);
     });
   }

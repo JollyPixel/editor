@@ -23,7 +23,7 @@ export async function createAudio(
 
   const buffer = await gameInstance.loader.audio.loadAsync(assetPath);
   sound.setBuffer(buffer);
-  sound.setVolume(volume * gameInstance.audio.globalVolume);
+  sound.setVolume(volume * gameInstance.audio.volume);
   if (play) {
     sound.play();
   }
@@ -42,7 +42,7 @@ export async function createPositionalAudio(
 
   const buffer = await gameInstance.loader.audio.loadAsync(assetPath);
   sound.setBuffer(buffer);
-  sound.setVolume(volume * gameInstance.audio.globalVolume);
+  sound.setVolume(volume * gameInstance.audio.volume);
   if (play) {
     sound.play();
   }

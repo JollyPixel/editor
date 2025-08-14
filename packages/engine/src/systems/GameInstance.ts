@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
+import { EventEmitter } from "@posva/event-emitter";
 
 // Import Internal Dependencies
 import { Input } from "../controls/Input.class.js";
@@ -10,6 +11,14 @@ import {
   GameInstanceDefaultLoader,
   type LoaderProvider
 } from "./Loader.js";
+import { GlobalAudio } from "../audio/GlobalAudio.js";
+
+export type GameInstanceEvents = {
+  resize: [
+    { width: number; height: number; }
+  ];
+  draw: [];
+};
 
 export interface GameInstanceOptions {
   enableOnExit?: boolean;
@@ -17,7 +26,7 @@ export interface GameInstanceOptions {
   threeRendererProvider?: typeof THREE.WebGLRenderer;
 }
 
-export class GameInstance extends EventTarget {
+export class GameInstance extends EventEmitter<GameInstanceEvents> {
   framesPerSecond = 60;
   ratio: number | null = null;
 
@@ -32,10 +41,7 @@ export class GameInstance extends EventTarget {
   componentsToBeDestroyed: Component[] = [];
 
   input: Input;
-  audio = {
-    listener: new THREE.AudioListener(),
-    globalVolume: 1
-  };
+  audio = new GlobalAudio();
   // @ts-ignore
   // TODO: since r179 Timer is part of the care but TS def is not ok
   clock = new THREE.Timer();
@@ -44,8 +50,6 @@ export class GameInstance extends EventTarget {
   threeScene = new THREE.Scene();
 
   loader: LoaderProvider;
-
-  skipRendering = false;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -62,9 +66,6 @@ export class GameInstance extends EventTarget {
       this.loader = new GameInstanceDefaultLoader();
     }
 
-    this.tree.addEventListener("SkipRendering", () => {
-      this.skipRendering = true;
-    });
     this.threeRenderer = new threeRendererProvider({
       canvas,
       antialias: true,
@@ -188,12 +189,6 @@ export class GameInstance extends EventTarget {
 
       return;
     }
-    if (this.skipRendering) {
-      this.skipRendering = false;
-      this.update();
-
-      return;
-    }
   }
 
   setRatio(
@@ -249,9 +244,7 @@ export class GameInstance extends EventTarget {
         }
         renderComponent.updateProjectionMatrix();
       }
-      this.dispatchEvent(new CustomEvent("resize", {
-        detail: { width, height }
-      }));
+      this.emit("resize", { width, height });
     }
   };
 
@@ -271,7 +264,7 @@ export class GameInstance extends EventTarget {
     for (const renderComponent of this.renderComponents) {
       this.threeRenderer.render(this.threeScene, renderComponent);
     }
-    this.dispatchEvent(new CustomEvent("draw"));
+    this.emit("draw");
   }
 
   destroyComponent(

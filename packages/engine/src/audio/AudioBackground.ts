@@ -59,6 +59,7 @@ export class AudioBackground {
     } = options;
 
     this.gameInstance = gameInstance;
+    this.gameInstance.audio.on("volumechange", this.#updateAudioVolume.bind(this));
     this.playlists = playlists;
     this.#onError = onError;
     if (autoPlay) {
@@ -71,6 +72,19 @@ export class AudioBackground {
     await Promise.all(
       this.playlists.flatMap((playlist) => playlist.tracks.map((track) => this.#loadAudioBuffer(track)))
     );
+  }
+
+  #updateAudioVolume(
+    globalVolume: number
+  ) {
+    if (!this.audio || this.#currentIndex === null) {
+      return;
+    }
+
+    const track = this.#getTrackByIndex(this.#currentIndex);
+    if (track) {
+      this.audio.setVolume((track.volume ?? 1) * globalVolume);
+    }
   }
 
   #getTrackIndexFromPath(
@@ -146,7 +160,7 @@ export class AudioBackground {
     const sound = new THREE.Audio(this.gameInstance.audio.listener);
     sound.setBuffer(buffer);
     sound.setLoop(false);
-    sound.setVolume(volume * this.gameInstance.audio.globalVolume);
+    sound.setVolume(volume * this.gameInstance.audio.volume);
     sound.name = name;
 
     return sound;

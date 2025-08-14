@@ -1,7 +1,16 @@
+// Import Third-party Dependencies
+import { EventEmitter } from "@posva/event-emitter";
+
 // Import Internal Dependencies
 import type { ControlTarget } from "../ControlTarget.js";
 
-export class Fullscreen extends EventTarget implements ControlTarget {
+export type FullscreenState = "active" | "suspended";
+
+export type FullscreenEvents = {
+  stateChange: [FullscreenState];
+};
+
+export class Fullscreen extends EventEmitter<FullscreenEvents> implements ControlTarget {
   #canvas: HTMLCanvasElement;
 
   wantsFullscreen = false;
@@ -43,18 +52,14 @@ export class Fullscreen extends EventTarget implements ControlTarget {
   private onFullscreenChange = () => {
     const isFullscreen = document.fullscreenElement === this.#canvas;
     if (this.wasFullscreen !== isFullscreen) {
-      this.dispatchEvent(new CustomEvent("stateChange", {
-        detail: isFullscreen ? "active" : "suspended"
-      }));
+      this.emit("stateChange", isFullscreen ? "active" : "suspended");
       this.wasFullscreen = isFullscreen;
     }
   };
 
   private onFullscreenError = () => {
     if (this.wasFullscreen) {
-      this.dispatchEvent(new CustomEvent("stateChange", {
-        detail: "suspended"
-      }));
+      this.emit("stateChange", "suspended");
       this.wasFullscreen = false;
     }
   };

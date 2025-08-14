@@ -14,7 +14,7 @@ export interface ActorTreeOptions {
   removeCallback?: (actor: Actor) => void;
 }
 
-export class ActorTree extends EventTarget {
+export class ActorTree {
   #addCallback?: (actor: Actor) => void;
   #removeCallback?: (actor: Actor) => void;
 
@@ -23,7 +23,6 @@ export class ActorTree extends EventTarget {
   constructor(
     options: ActorTreeOptions = {}
   ) {
-    super();
     this.#addCallback = options.addCallback;
     this.#removeCallback = options.removeCallback;
   }
@@ -202,8 +201,6 @@ export class ActorTree extends EventTarget {
     for (const { actor } of this.walk()) {
       this.destroyActor(actor);
     }
-
-    this.dispatchEvent(new CustomEvent("SkipRendering"));
   }
 
   * #walkDepthFirstGenerator(

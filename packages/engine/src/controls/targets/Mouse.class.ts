@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { EventEmitter } from "@posva/event-emitter";
+
 // Import Internal Dependencies
 import type { ControlTarget } from "../ControlTarget.js";
 
@@ -21,12 +24,18 @@ export const MouseEventButton = {
   scrollDown: 6
 } as const;
 
+export type MouseLockState = "locked" | "unlocked";
+
+export type MouseEvents = {
+  lockStateChange: [MouseLockState];
+};
+
 export interface MouseOptions {
   mouseDownCallback?: (event: MouseEvent) => void;
   mouseUpCallback?: (event: MouseEvent) => void;
 }
 
-export class Mouse extends EventTarget implements ControlTarget {
+export class Mouse extends EventEmitter<MouseEvents> implements ControlTarget {
   #canvas: HTMLCanvasElement;
 
   buttons: MouseButtonState[] = [];
@@ -240,22 +249,14 @@ export class Mouse extends EventTarget implements ControlTarget {
   private onPointerLockChange = () => {
     const isPointerLocked = this.locked;
     if (this.#wasPointerLocked !== isPointerLocked) {
-      this.dispatchEvent(
-        new CustomEvent("lockStateChange", {
-          detail: isPointerLocked ? "active" : "suspended"
-        })
-      );
+      this.emit("lockStateChange", isPointerLocked ? "locked" : "unlocked");
       this.#wasPointerLocked = isPointerLocked;
     }
   };
 
   private onPointerLockError = () => {
     if (this.#wasPointerLocked) {
-      this.dispatchEvent(
-        new CustomEvent("lockStateChange", {
-          detail: "suspended"
-        })
-      );
+      this.emit("lockStateChange", "unlocked");
       this.#wasPointerLocked = false;
     }
   };
