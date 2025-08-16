@@ -19,7 +19,8 @@
     "packages/experimental",
     "packages/editors/voxel-map",
     "packages/editors/model",
-    "packages/engine"
+    "packages/engine",
+    "packages/runtime"
   ],
   "repository": {
     "type": "git",

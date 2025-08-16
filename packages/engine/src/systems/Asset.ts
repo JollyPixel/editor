@@ -108,20 +108,23 @@ export class AssetManager {
   }
 
   async loadAll(
-    context: AssetLoaderContext
+    context: AssetLoaderContext,
+    onProgress?: (progress: number, max: number) => void
   ): Promise<void> {
     if (this.toBeLoaded.length === 0) {
       return;
     }
+    const max = this.toBeLoaded.length;
 
     try {
-      await Promise.all(this.toBeLoaded.map(async(asset) => {
+      await Promise.all(this.toBeLoaded.map(async(asset, index) => {
         const loader = this.loaders.get(asset.type);
         if (!loader) {
           throw new Error(`No loader registered for asset type: ${asset.type}`);
         }
 
         const result = await loader(asset, context);
+        onProgress?.(index + 1, max);
         this.assets.set(asset.id, result);
       }));
     }

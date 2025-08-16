@@ -2,7 +2,8 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "src",
+    "noImplicitOverride": false
   },
   "include": [
     "src"
@@ -14,9 +15,6 @@
   "references": [
     {
       "path": "../engine"
-    },
-    {
-      "path": "../runtime"
     }
   ]
 }
