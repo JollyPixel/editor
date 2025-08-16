@@ -1,9 +1,9 @@
 // Import Third-party Dependencies
 import {
-  Systems,
   Actor,
   Components
 } from "@jolly-pixel/engine";
+import { Player, loadPlayer } from "@jolly-pixel/runtime";
 import { TreeView } from "@jolly-pixel/fs-tree/tree-view";
 
 // Import Internal Dependencies
@@ -13,11 +13,13 @@ import { CubeSelectorRenderer } from "./CubeSelectorRenderer.js";
 const runtime = initRuntime();
 initTreeView();
 initCubeSelector();
-runtime.start();
+
+loadPlayer(runtime)
+  .catch(console.error);
 
 function initRuntime() {
   const canvasHTMLElement = document.querySelector("#game-container > canvas") as HTMLCanvasElement;
-  const runtime = new Systems.Runtime(canvasHTMLElement, {
+  const runtime = new Player(canvasHTMLElement, {
     includePerformanceStats: true
   });
   const { gameInstance } = runtime;

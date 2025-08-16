@@ -37,8 +37,22 @@ async function tmjLoader(
   asset: Systems.Asset,
   context: Systems.AssetLoaderContext
 ): Promise<LoadedTileMapAsset> {
-  const response = await fetch(asset.path + asset.basename);
-  const tilemap = (await response.json()) as TiledMap;
+  const assetPath = asset.path + asset.basename;
+
+  const response = await fetch(assetPath);
+  if (response.status !== 200) {
+    throw new Error(`Failed to load tilemap '${assetPath}': ${response.statusText}`);
+  }
+
+  let tilemap: TiledMap;
+  try {
+    tilemap = (await response.json()) as TiledMap;
+  }
+  catch (error: any) {
+    throw new Error(`Failed to parse JSON tilemap '${assetPath}'`, {
+      cause: error
+    });
+  }
 
   const textureLoader = new THREE.TextureLoader(context.manager);
   const tilesets = new Map<string, LoadedTileSetAsset>();

@@ -1,13 +1,9 @@
 // Import Third-party Dependencies
 import Stats from "stats.js";
 import * as THREE from "three";
+import { Systems } from "@jolly-pixel/engine";
 
-// Import Internal Dependencies
-import { Assets } from "../systems/index.js";
-import { GameInstance } from "./GameInstance.js";
-import { GameInstanceDefaultLoader } from "../systems/Loader.js";
-
-export interface RuntimeOptions {
+export interface PlayerOptions {
   /**
    * @default false
    * Whether to include performance statistics (eg: FPS, memory usage).
@@ -15,8 +11,8 @@ export interface RuntimeOptions {
   includePerformanceStats?: boolean;
 }
 
-export class Runtime {
-  gameInstance: GameInstance;
+export class Player {
+  gameInstance: Systems.GameInstance;
   canvas: HTMLCanvasElement;
   stats?: Stats;
   manager = new THREE.LoadingManager();
@@ -30,16 +26,16 @@ export class Runtime {
 
   constructor(
     canvas: HTMLCanvasElement,
-    options: RuntimeOptions = {}
+    options: PlayerOptions = {}
   ) {
     if (!canvas) {
       throw new Error("Canvas element is required to create a Runtime instance.");
     }
 
     this.canvas = canvas;
-    this.gameInstance = new GameInstance(canvas, {
+    this.gameInstance = new Systems.GameInstance(canvas, {
       enableOnExit: true,
-      loader: new GameInstanceDefaultLoader(this.manager)
+      loader: new Systems.GameInstanceDefaultLoader(this.manager)
     });
 
     this.targetFrameTime = 1000 / this.gameInstance.framesPerSecond;
@@ -63,18 +59,15 @@ export class Runtime {
 
     this.#isRunning = true;
     this.canvas.focus();
+    this.lastTimestamp = 0;
+    this.accumulatedTime = 0;
 
     if (this.stats) {
       document.body.appendChild(this.stats.dom);
     }
 
-    this.lastTimestamp = 0;
-    this.accumulatedTime = 0;
-
-    Assets.loadAll({ manager: this.manager }).then(() => {
-      this.gameInstance.connect();
-      this.tick();
-    }).catch(console.error);
+    this.gameInstance.connect();
+    this.tick();
   }
 
   stop() {

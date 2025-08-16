@@ -9,8 +9,8 @@ import {
   type AssetLoaderOptions
 } from "./Asset.js";
 
+export * from "./Loader.js";
 export * from "./GameInstance.js";
-export * from "./Runtime.js";
 
 export { Asset };
 export type {
