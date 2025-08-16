@@ -1,9 +1,9 @@
 // Import Third-party Dependencies
 import {
-  Systems,
   Actor,
   Components
 } from "@jolly-pixel/engine";
+import { Player, loadPlayer } from "@jolly-pixel/runtime";
 import * as THREE from "three";
 
 // Import Internal Dependencies
@@ -11,11 +11,12 @@ import { ModelRenderer } from "./ModelRenderer.js";
 import { ModelManipulator } from "./ModelManipulator.js";
 
 const runtime = initRuntime();
-runtime.start();
+loadPlayer(runtime)
+  .catch(console.error);
 
 function initRuntime() {
   const canvasHTMLElement = document.querySelector("canvas") as HTMLCanvasElement;
-  const runtime = new Systems.Runtime(canvasHTMLElement, {
+  const runtime = new Player(canvasHTMLElement, {
     includePerformanceStats: true
   });
   const { gameInstance } = runtime;
