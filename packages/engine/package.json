@@ -24,6 +24,6 @@
     "@posva/event-emitter": "^1.0.3",
     "picomatch": "^4.0.3",
     "stats.js": "^0.17.0",
-    "three": "^0.179.1"
+    "three": "^0.180.0"
   }
 }
