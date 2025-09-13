@@ -8,6 +8,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { ModelRenderer } from "./ModelRenderer.js";
+import { ModelManipulator } from "./ModelManipulator.js";
 
 const runtime = initRuntime();
 runtime.start();
@@ -20,11 +21,14 @@ function initRuntime() {
   const { gameInstance } = runtime;
   // gameInstance.setRatio(16 / 9);
 
+  let cameraComponent: Components.Camera3DControls;
   new Actor(gameInstance, { name: "camera" })
     .registerComponent(Components.Camera3DControls, { speed: 0.25, rotationSpeed: 0.50 }, (component) => {
+      cameraComponent = component;
       component.camera.position.set(5, 5, 5);
       component.camera.lookAt(0, 0, 0);
     });
+
   new Actor(gameInstance, { name: "tinyWitchModel" })
     .registerComponent(ModelRenderer, {
       path: "models/Tiny_Witch.obj"
@@ -59,6 +63,13 @@ function initRuntime() {
     ),
     new THREE.AmbientLight(new THREE.Color("#ffffff"), 2)
   );
+
+  setTimeout(() => {
+    new Actor(gameInstance, { name: "modelManipulator" })
+      .registerComponent(ModelManipulator, {
+        camera: cameraComponent.camera
+      });
+  });
 
   return runtime;
 }
