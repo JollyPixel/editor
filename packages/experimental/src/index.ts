@@ -1,10 +1,10 @@
 // Import Third-party Dependencies
 import {
-  Systems,
   Actor,
   Components,
   AudioBackground
 } from "@jolly-pixel/engine";
+import { Player, loadPlayer } from "@jolly-pixel/runtime";
 import * as THREE from "three";
 
 // Import Internal Dependencies
@@ -12,7 +12,7 @@ import { TileMapRenderer } from "./components/tiled/TileMapRenderer.js";
 // import { SpriteRenderer } from "./components/sprite/SpriteRenderer.class.js";
 
 const canvasHTMLElement = document.querySelector("canvas") as HTMLCanvasElement;
-const runtime = new Systems.Runtime(canvasHTMLElement, {
+const runtime = new Player(canvasHTMLElement, {
   includePerformanceStats: true
 });
 const { gameInstance } = runtime;
@@ -87,4 +87,5 @@ canvasHTMLElement.addEventListener("click", async() => {
   await ab.play("second.tech-space");
 });
 
-runtime.start();
+loadPlayer(runtime, { loadingDelay: 1500 })
+  .catch(console.error);
