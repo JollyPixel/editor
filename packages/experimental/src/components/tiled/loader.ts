@@ -1,7 +1,8 @@
 // Import Third-party Dependencies
 import {
   Systems,
-  pathUtils
+  pathUtils,
+  loadJSON
 } from "@jolly-pixel/engine";
 import * as THREE from "three";
 
@@ -37,22 +38,7 @@ async function tmjLoader(
   asset: Systems.Asset,
   context: Systems.AssetLoaderContext
 ): Promise<LoadedTileMapAsset> {
-  const assetPath = asset.path + asset.basename;
-
-  const response = await fetch(assetPath);
-  if (response.status !== 200) {
-    throw new Error(`Failed to load tilemap '${assetPath}': ${response.statusText}`);
-  }
-
-  let tilemap: TiledMap;
-  try {
-    tilemap = (await response.json()) as TiledMap;
-  }
-  catch (error: any) {
-    throw new Error(`Failed to parse JSON tilemap '${assetPath}'`, {
-      cause: error
-    });
-  }
+  const tilemap = await loadJSON<TiledMap>(asset.path + asset.basename);
 
   const textureLoader = new THREE.TextureLoader(context.manager);
   const tilesets = new Map<string, LoadedTileSetAsset>();

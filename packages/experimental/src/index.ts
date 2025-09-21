@@ -6,6 +6,7 @@ import {
 } from "@jolly-pixel/engine";
 import { Player, loadPlayer } from "@jolly-pixel/runtime";
 import * as THREE from "three";
+import { ViewHelper } from "three/addons/helpers/ViewHelper.js";
 
 // Import Internal Dependencies
 import { TileMapRenderer } from "./components/tiled/TileMapRenderer.js";
@@ -21,6 +22,14 @@ new Actor(gameInstance, { name: "camera" })
   .registerComponent(Components.Camera3DControls, { speed: 0.35, rotationSpeed: 0.45 }, (component) => {
     component.camera.position.set(10, 10, 5);
     component.camera.lookAt(0, 0, 0);
+
+    const helper = new ViewHelper(
+      component.camera,
+      gameInstance.threeRenderer.domElement
+    );
+    gameInstance.on("draw", () => {
+      helper.render(gameInstance.threeRenderer);
+    });
   });
 
 // new Actor(gameInstance, { name: "sprite" })
@@ -38,16 +47,17 @@ new Actor(gameInstance, { name: "camera" })
 
 new Actor(gameInstance, { name: "tilemap" })
   .registerComponent(TileMapRenderer, {
-    assetPath: "./assets/tilemaps/experimental_map.tmj"
+    assetPath: "./assets/tilemaps/experimental_map.tmj",
+    orientation: "top-down"
   });
 
 gameInstance.threeScene.background = new THREE.Color("#000000");
 gameInstance.threeScene.add(
-  // new THREE.GridHelper(
-  //   50,
-  //   10,
-  //   new THREE.Color("#888888")
-  // ),
+  new THREE.GridHelper(
+    50,
+    50,
+    new THREE.Color("#888888")
+  ),
   new THREE.AmbientLight(new THREE.Color("#ffffffff"), 3)
 );
 

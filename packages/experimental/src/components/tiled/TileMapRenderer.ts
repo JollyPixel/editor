@@ -7,27 +7,40 @@ import {
   tiledMapLoader,
   type LoadedTileMapAsset
 } from "./loader.js";
-import type { TiledMap, TiledObject } from "./types.js";
 import { TileSet } from "./TileSet.js";
+import { TileObject } from "./TileObject.js";
 import { TileLayer } from "./TileLayer.js";
+
+export type TileMapOrientation = "top-down" | "platformer";
 
 export interface TileMapRendererOptions {
   assetPath: string;
+  /**
+   * @default "platformer"
+   */
+  orientation?: TileMapOrientation;
 }
 
 export class TileMapRenderer extends ActorComponent {
   #map: Systems.LazyAsset<LoadedTileMapAsset>;
+  #orientation: TileMapOrientation;
 
   constructor(
     actor: Actor,
     options: TileMapRendererOptions
   ) {
+    const {
+      assetPath,
+      orientation = "platformer"
+    } = options;
+
     super({
       actor,
       typeName: "TileMapRenderer"
     });
 
-    this.#map = tiledMapLoader(options.assetPath);
+    this.#map = tiledMapLoader(assetPath);
+    this.#orientation = orientation;
   }
 
   awake() {
@@ -36,14 +49,6 @@ export class TileMapRenderer extends ActorComponent {
       ({ tileset, texture }) => new TileSet(tileset, texture)
     );
 
-    this.#generateLayers(tilemap, tilesets);
-    this.#generateObjects(tilemap);
-  }
-
-  #generateLayers(
-    tilemap: TiledMap,
-    tilesets: TileSet[]
-  ) {
     for (const layer of TileLayer.fromTileMap(tilemap)) {
       for (const { tileId, position } of layer) {
         const texture = TileSet.find(tilesets, tileId)?.getTileTexture(tileId) ?? null;
@@ -53,66 +58,14 @@ export class TileMapRenderer extends ActorComponent {
         this.actor.threeObject.add(cube);
       }
     }
-  }
 
-  #generateObjects(
-    tilemap: TiledMap
-  ) {
-    let zIndex = 0;
-    for (const layer of tilemap.layers) {
-      if (layer.type !== "objectgroup") {
-        continue;
-      }
-      zIndex++;
-
-      for (const object of layer.objects) {
-        const childrenActor = new Actor(this.actor.gameInstance, {
-          name: object.name,
-          parent: this.actor
-        });
-        childrenActor.threeObject.position.set(
-          object.x / tilemap.tilewidth,
-          object.y / tilemap.tileheight,
-          zIndex
-        );
-
-        if (object.rotation !== 0) {
-          const rotationRadians = (object.rotation * Math.PI) / 180;
-          childrenActor.threeObject.rotation.z = -rotationRadians;
-        }
-
-        if (object.width > 0 && object.height > 0) {
-          const visualBox = this.#createObjectVisualization(object, tilemap);
-          childrenActor.threeObject.add(visualBox);
-        }
-      }
+    for (const layer of TileObject.fromTileMap(tilemap)) {
+      layer.createActors(this.actor);
     }
-  }
 
-  #createObjectVisualization(
-    object: TiledObject,
-    tilemap: TiledMap
-  ) {
-    const width = object.width / tilemap.tilewidth;
-    const height = object.height / tilemap.tileheight;
-
-    const geometry = new THREE.BoxGeometry(
-      width,
-      height,
-      0.1
-    );
-
-    const material = new THREE.MeshBasicMaterial({
-      color: 0x00ff00,
-      transparent: true,
-      opacity: 1,
-      wireframe: true
-    });
-
-    const box = new THREE.Mesh(geometry, material);
-    box.position.set(width / 2, height / 2, 0);
-
-    return box;
+    if (this.#orientation === "top-down") {
+      this.actor.threeObject.rotateX(-Math.PI / 2);
+    }
   }
 }
 
