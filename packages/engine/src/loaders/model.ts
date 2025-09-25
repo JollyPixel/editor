@@ -7,8 +7,8 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 // Import Internal Dependencies
 import {
+  Asset,
   Assets,
-  type Asset,
   type AssetLoaderContext
 } from "../systems/index.js";
 
@@ -17,7 +17,7 @@ export type Model = {
   animations: THREE.AnimationClip[];
 };
 
-export const model = Assets.registerLoader<Model>(
+Assets.registry.loader(
   {
     extensions: [".obj", ".fbx", ".glb", ".gltf"],
     type: "model"
@@ -25,17 +25,18 @@ export const model = Assets.registerLoader<Model>(
   (asset, context) => {
     switch (asset.ext) {
       case ".obj":
-        return objectLoader(asset, context);
+        return safeLoad(asset, objectLoader(asset, context));
       case ".fbx":
-        return fbxLoader(asset, context);
+        return safeLoad(asset, fbxLoader(asset, context));
       case ".glb":
       case ".gltf":
-        return gltfLoader(asset, context);
+        return safeLoad(asset, gltfLoader(asset, context));
       default:
         throw new Error(`Unsupported model type: ${asset.ext}`);
     }
   }
 );
+export const model = Assets.lazyLoad<Model>();
 
 async function objectLoader(
   asset: Asset,
@@ -150,4 +151,18 @@ function isMaterialWithMap(
     material instanceof THREE.MeshStandardMaterial ||
     material instanceof THREE.MeshPhongMaterial
   );
+}
+
+async function safeLoad(
+  asset: Asset,
+  loader: Promise<Model>
+) {
+  try {
+    const model = await loader;
+
+    return model;
+  }
+  catch (error) {
+    throw new Error(`Failed to load model: ${asset.toString()}`, { cause: error });
+  }
 }

@@ -15,7 +15,7 @@ export async function loadPlayer(
   player: Player,
   options: LoadPlayerOptions = {}
 ) {
-  const { loadingDelay = 0 } = options;
+  const { loadingDelay = 850 } = options;
 
   // Prevent keypress events from leaking out to a parent window
   // They might trigger scrolling for instance
@@ -39,14 +39,22 @@ export async function loadPlayer(
     if (loadingDelay > 0) {
       await timers.setTimeout(loadingDelay);
     }
-    await Systems.Assets.loadAll(
-      { manager: player.manager },
-      loadingComponent.setProgress.bind(loadingComponent)
+    const context = { manager: player.manager };
+
+    setTimeout(() => {
+      Systems.Assets.autoload = true;
+      Systems.Assets.scheduleAutoload(context);
+    });
+    await Systems.Assets.loadAssets(
+      context,
+      {
+        onLoad: loadingComponent.setAsset.bind(loadingComponent),
+        onProgress: loadingComponent.setProgress.bind(loadingComponent)
+      }
     );
     loadingComponent.complete(() => player.start());
   }
   catch (error: any) {
-    console.error("Error loading assets:", error);
     loadingComponent.error(error);
   }
 }

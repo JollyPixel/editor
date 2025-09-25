@@ -12,7 +12,7 @@ import { PlayerBehavior } from "./PlayerBehavior.js";
 import { ModelManipulator } from "./ModelManipulator.js";
 
 const runtime = initRuntime();
-loadPlayer(runtime, { loadingDelay: 1500 })
+loadPlayer(runtime)
   .catch(console.error);
 
 function initRuntime() {
