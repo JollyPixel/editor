@@ -18,6 +18,7 @@ export type GameInstanceEvents = {
     { width: number; height: number; }
   ];
   draw: [];
+  awake: [];
 };
 
 export interface GameInstanceOptions {
@@ -96,6 +97,7 @@ export class GameInstance extends EventEmitter<GameInstanceEvents> {
         actor.awoken = true;
       }
     }
+    this.emit("awake");
 
     return this;
   }
@@ -166,8 +168,9 @@ export class GameInstance extends EventEmitter<GameInstanceEvents> {
 
     // Update all actors
     const actorToBeDestroyed: Actor[] = [];
+    const deltaTime = this.clock.getDelta();
     this.cachedActors.forEach((actor) => {
-      actor.update();
+      actor.update(deltaTime);
 
       if (actor.isDestroyed()) {
         actorToBeDestroyed.push(actor);

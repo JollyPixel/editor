@@ -2,14 +2,14 @@
 import {
   Actor,
   Components,
-  AudioBackground
+  AudioBackground,
+  Renderers
 } from "@jolly-pixel/engine";
 import { Player, loadPlayer } from "@jolly-pixel/runtime";
 import * as THREE from "three";
 import { ViewHelper } from "three/addons/helpers/ViewHelper.js";
 
 // Import Internal Dependencies
-import { TileMapRenderer } from "./components/tiled/TileMapRenderer.js";
 // import { SpriteRenderer } from "./components/sprite/SpriteRenderer.class.js";
 
 const canvasHTMLElement = document.querySelector("canvas") as HTMLCanvasElement;
@@ -46,7 +46,7 @@ new Actor(gameInstance, { name: "camera" })
 //   });
 
 new Actor(gameInstance, { name: "tilemap" })
-  .registerComponent(TileMapRenderer, {
+  .registerComponent(Renderers.TileMapRenderer, {
     assetPath: "./assets/tilemaps/experimental_map.tmj",
     orientation: "top-down"
   });

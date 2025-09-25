@@ -151,7 +151,7 @@ export class Loading extends LitElement {
           <div class="error">${this.errorMessage}</div>
         ` : html`
           <a href="https://github.com/JollyPixel" target="_blank">
-            <img src="./public/images/jollypixel-full-logo-min.png" draggable="false">
+            <img src="./images/jollypixel-full-logo-min.svg" draggable="false">
             <progress
               max="${this.maxProgress}"
               value="${this.progress}">
