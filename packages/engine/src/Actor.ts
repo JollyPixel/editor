@@ -99,13 +99,39 @@ export class Actor extends ActorTree {
     return this;
   }
 
+  registerComponentAndGet<T extends ComponentConstructor>(
+    componentClass: T,
+    ...args: RequiresOptions<T> extends true
+      ? [options: ConstructorParameters<T>[1]]
+      : [options?: ConstructorParameters<T>[1]]
+  ): InstanceType<T> {
+    const [options] = args;
+    const component = new componentClass(this, options);
+    if (this.components.indexOf(component) === -1) {
+      this.components.push(component);
+    }
+
+    const index = this.gameInstance.componentsToBeStarted.indexOf(component);
+    if (index === -1) {
+      this.gameInstance.componentsToBeStarted.push(component);
+    }
+
+    if (this.awoken) {
+      component.awake?.();
+    }
+
+    return component as InstanceType<T>;
+  }
+
   awake() {
     this.components.forEach((component) => component.awake?.());
   }
 
-  update() {
+  update(
+    deltaTime: number
+  ) {
     if (!this.pendingForDestruction) {
-      this.components.forEach((component) => component.update?.());
+      this.components.forEach((component) => component.update?.(deltaTime));
     }
   }
 

@@ -1,17 +1,18 @@
 // Import Third-party Dependencies
 import {
   Actor,
-  Components
+  Components,
+  Renderers
 } from "@jolly-pixel/engine";
 import { Player, loadPlayer } from "@jolly-pixel/runtime";
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { ModelRenderer } from "./ModelRenderer.js";
+import { PlayerBehavior } from "./PlayerBehavior.js";
 import { ModelManipulator } from "./ModelManipulator.js";
 
 const runtime = initRuntime();
-loadPlayer(runtime)
+loadPlayer(runtime, { loadingDelay: 1500 })
   .catch(console.error);
 
 function initRuntime() {
@@ -22,38 +23,48 @@ function initRuntime() {
   const { gameInstance } = runtime;
   // gameInstance.setRatio(16 / 9);
 
-  let cameraComponent: Components.Camera3DControls;
-  new Actor(gameInstance, { name: "camera" })
-    .registerComponent(Components.Camera3DControls, { speed: 0.25, rotationSpeed: 0.50 }, (component) => {
-      cameraComponent = component;
-      component.camera.position.set(5, 5, 5);
-      component.camera.lookAt(0, 0, 0);
+  const { camera } = new Actor(gameInstance, { name: "camera" })
+    .registerComponentAndGet(
+      Components.Camera3DControls,
+      { speed: 0.25, rotationSpeed: 0.50 }
+    );
+
+  camera.position.set(5, 5, 5);
+  camera.lookAt(0, 0, 0);
+
+  new Actor(gameInstance, { name: "modelManipulator" })
+    .registerComponent(ModelManipulator, {
+      camera
     });
 
   new Actor(gameInstance, { name: "tinyWitchModel" })
-    .registerComponent(ModelRenderer, {
+    .registerComponent(Renderers.ModelRenderer, {
       path: "models/Tiny_Witch.obj"
-    });
-  new Actor(gameInstance, { name: "treeModel" })
-    .registerComponent(ModelRenderer, {
-      path: "models/Tree.fbx"
     }, (component) => {
-      component.actor.threeObject.position.set(2, 0, 0);
+      component.actor.threeObject.position.set(-5, 0, 0);
     });
-  new Actor(gameInstance, { name: "duckModel" })
-    .registerComponent(ModelRenderer, {
-      path: "models/Duck.gltf"
-    }, (component) => {
-      component.actor.threeObject.position.set(-2, 0, 0);
-      component.actor.threeObject.rotateY(45);
-    });
-  new Actor(gameInstance, { name: "toyCarModel" })
-    .registerComponent(ModelRenderer, {
-      path: "models/ToyCar.glb"
-    }, (component) => {
-      component.actor.threeObject.position.set(0, 0.90, -4);
-      component.actor.threeObject.scale.set(50, 50, 50);
-    });
+  // new Actor(gameInstance, { name: "tree" })
+  //   .registerComponent(ModelRenderer, {
+  //     path: "models/CommonTree_1.obj"
+  //   }, (component) => {
+  //     component.actor.threeObject.position.set(0, 0, 0);
+  //   });
+  new Actor(gameInstance, { name: "player" })
+    .registerComponent(PlayerBehavior);
+  // new Actor(gameInstance, { name: "duckModel" })
+  //   .registerComponent(ModelRenderer, {
+  //     path: "models/Duck.gltf"
+  //   }, (component) => {
+  //     component.actor.threeObject.position.set(-2, 0, 0);
+  //     component.actor.threeObject.rotateY(45);
+  //   });
+  // new Actor(gameInstance, { name: "toyCarModel" })
+  //   .registerComponent(ModelRenderer, {
+  //     path: "models/ToyCar.glb"
+  //   }, (component) => {
+  //     component.actor.threeObject.position.set(0, 0.90, -4);
+  //     component.actor.threeObject.scale.set(50, 50, 50);
+  //   });
 
   gameInstance.threeScene.background = null;
   gameInstance.threeScene.add(
@@ -62,15 +73,8 @@ function initRuntime() {
       10,
       new THREE.Color("#888888")
     ),
-    new THREE.AmbientLight(new THREE.Color("#ffffff"), 2)
+    new THREE.AmbientLight(new THREE.Color("#ffffff"), 1)
   );
-
-  setTimeout(() => {
-    new Actor(gameInstance, { name: "modelManipulator" })
-      .registerComponent(ModelManipulator, {
-        camera: cameraComponent.camera
-      });
-  });
 
   return runtime;
 }

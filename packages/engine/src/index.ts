@@ -8,5 +8,9 @@ export * from "./controls/Input.class.js";
 export * from "./Timer.js";
 export * from "./audio/Audio.js";
 export * from "./audio/AudioBackground.js";
+
+export * as Renderers from "./renderers/index.js";
+export * as Loaders from "./loaders/index.js";
+
 export * as pathUtils from "./utils/path.js";
 export { loadJSON } from "./utils/loadJSON.js";

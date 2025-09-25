@@ -5,6 +5,9 @@ export type ComponentType =
   | "ScriptBehavior"
   | "Camera"
   | "VoxelRenderer"
+  | "SpriteRenderer"
+  | "ModelRenderer"
+  | "TiledMapRenderer"
   | (string & {});
 
 export interface Component {
@@ -13,7 +16,7 @@ export interface Component {
 
   awake?(): void;
   start?(): void;
-  update?(): void;
+  update?(deltaTime: number): void;
   destroy(): void;
 }
 

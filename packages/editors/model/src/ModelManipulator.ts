@@ -36,7 +36,7 @@ export class ModelManipulator extends ActorComponent {
     this.#camera = options.camera;
     this.#canvas = this.actor.gameInstance.threeRenderer.domElement;
     // @ts-ignore
-    this.#actors = this.actor.gameInstance.tree.root.filter((node) => node.name.endsWith("Model"));
+    this.#actors = this.actor.gameInstance.tree.children.filter((node) => node.name.endsWith("Model"));
     this.#raycaster = new THREE.Raycaster();
     this.#mouse = new THREE.Vector2();
     this.#dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
