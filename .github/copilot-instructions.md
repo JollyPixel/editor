@@ -28,6 +28,8 @@ applyTo: "**/*.js, **/*.mjs, **/*.cjs"
 * Respect **.editorconfig** rules (indentation, line endings, etc.).
 * Favor a **functional style** (pure functions, immutability) when practical.
 * Before adding any external dependency, **ask the user** for approval.
+* Always add comment before the line and not at the end of the line.
+* In function or arrow function always add a new line before return statement.
 
 ## 3  Imports
 

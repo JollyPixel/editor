@@ -18,7 +18,7 @@ describe("Behavior", () => {
     const behavior = new BehaviorOne(fakeActor);
 
     assert.deepEqual(fakeActor.components, [behavior]);
-    assert.deepEqual(fakeActor.gameInstance.componentsToBeStarted, [behavior]);
+    assert.deepEqual(fakeActor.gameInstance.scene.componentsToBeStarted, [behavior]);
     assert.deepEqual(fakeActor.behaviors, {
       BehaviorOne: [behavior]
     });
@@ -33,7 +33,7 @@ describe("Behavior", () => {
     const behavior2 = new BehaviorOne(fakeActor);
 
     assert.deepEqual(fakeActor.components, [behavior1, behavior2]);
-    assert.deepEqual(fakeActor.gameInstance.componentsToBeStarted, [behavior1, behavior2]);
+    assert.deepEqual(fakeActor.gameInstance.scene.componentsToBeStarted, [behavior1, behavior2]);
     assert.deepEqual(fakeActor.behaviors, {
       BehaviorOne: [behavior1, behavior2]
     });
@@ -48,7 +48,7 @@ describe("Behavior", () => {
     const anotherBehavior = new BehaviorTwo(fakeActor);
 
     assert.deepEqual(fakeActor.components, [mockBehavior, anotherBehavior]);
-    assert.deepEqual(fakeActor.gameInstance.componentsToBeStarted, [mockBehavior, anotherBehavior]);
+    assert.deepEqual(fakeActor.gameInstance.scene.componentsToBeStarted, [mockBehavior, anotherBehavior]);
     assert.deepEqual(fakeActor.behaviors, {
       BehaviorOne: [mockBehavior],
       BehaviorTwo: [anotherBehavior]

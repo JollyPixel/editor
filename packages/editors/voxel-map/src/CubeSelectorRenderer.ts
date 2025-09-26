@@ -28,7 +28,7 @@ export class CubeSelectorRenderer extends EventTarget {
   input: Input;
 
   objects: THREE.Object3D[] = [];
-  threeRenderer: THREE.WebGLRenderer;
+  webGLRenderer: THREE.WebGLRenderer;
   rayCaster: THREE.Raycaster;
   selectedObject: THREE.Object3D | null;
   scene: THREE.Scene;
@@ -53,15 +53,15 @@ export class CubeSelectorRenderer extends EventTarget {
     this.cubeSize = cubeSize;
 
     // Create WebGL renderer
-    this.threeRenderer = new THREE.WebGLRenderer({
+    this.webGLRenderer = new THREE.WebGLRenderer({
       alpha: true,
       antialias: true
     });
-    this.threeRenderer.setSize(this.renderingWidth, this.renderingHeight);
-    this.threeRenderer.autoClear = false;
-    this.input = new Input(this.threeRenderer.domElement);
+    this.webGLRenderer.setSize(this.renderingWidth, this.renderingHeight);
+    this.webGLRenderer.autoClear = false;
+    this.input = new Input(this.webGLRenderer.domElement);
     this.input.connect();
-    container.appendChild(this.threeRenderer.domElement);
+    container.appendChild(this.webGLRenderer.domElement);
 
     this.rayCaster = new THREE.Raycaster();
     this.selectedObject = null;
@@ -116,7 +116,7 @@ export class CubeSelectorRenderer extends EventTarget {
   }
 
   private loop = () => {
-    this.threeRenderer.clear();
+    this.webGLRenderer.clear();
     this.input.update();
 
     this.camera.updateMatrixWorld(true);
@@ -143,7 +143,7 @@ export class CubeSelectorRenderer extends EventTarget {
       }
     }
 
-    this.threeRenderer.render(this.scene, this.camera);
+    this.webGLRenderer.render(this.scene, this.camera);
 
     window.requestAnimationFrame(this.loop);
   };

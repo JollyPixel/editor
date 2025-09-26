@@ -33,7 +33,7 @@ export class Asset {
   }
 
   toString() {
-    return (this.path + this.basename).toLowerCase();
+    return this.path + this.basename;
   }
 
   static from(

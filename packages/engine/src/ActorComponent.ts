@@ -38,7 +38,7 @@ export class ActorComponent implements Component {
     this.typeName = options.typeName;
 
     this.actor.components.push(this);
-    this.actor.gameInstance.componentsToBeStarted.push(this);
+    this.actor.gameInstance.scene.componentsToBeStarted.push(this);
   }
 
   isDestroyed() {
@@ -46,9 +46,9 @@ export class ActorComponent implements Component {
   }
 
   destroy() {
-    const startIndex = this.actor.gameInstance.componentsToBeStarted.indexOf(this);
+    const startIndex = this.actor.gameInstance.scene.componentsToBeStarted.indexOf(this);
     if (startIndex !== -1) {
-      this.actor.gameInstance.componentsToBeStarted.splice(startIndex, 1);
+      this.actor.gameInstance.scene.componentsToBeStarted.splice(startIndex, 1);
     }
 
     const index = this.actor.components.indexOf(this);

@@ -17,10 +17,7 @@ export class Player {
   stats?: Stats;
   manager = new THREE.LoadingManager();
 
-  accumulatedTime: number;
-  lastTimestamp: number;
   tickAnimationFrameId: number;
-  targetFrameTime: number;
 
   #isRunning = false;
 
@@ -37,8 +34,6 @@ export class Player {
       enableOnExit: true,
       loadingManager: this.manager
     });
-
-    this.targetFrameTime = 1000 / this.gameInstance.framesPerSecond;
 
     if (options.includePerformanceStats) {
       this.stats = new Stats();
@@ -59,8 +54,6 @@ export class Player {
 
     this.#isRunning = true;
     this.canvas.focus();
-    this.lastTimestamp = 0;
-    this.accumulatedTime = 0;
 
     if (this.stats) {
       document.body.appendChild(this.stats.dom);
@@ -91,21 +84,11 @@ export class Player {
     }
     this.stats?.begin();
 
-    this.accumulatedTime += timestamp - this.lastTimestamp;
-    this.lastTimestamp = timestamp;
-
-    const {
-      updates, timeLeft
-    } = this.gameInstance.tick(this.accumulatedTime);
-    this.accumulatedTime = timeLeft;
-    if (this.gameInstance.input.exited) {
+    const exit = this.gameInstance.update(timestamp);
+    if (exit) {
       this.stop();
 
       return;
-    }
-
-    if (updates > 0) {
-      this.gameInstance.draw();
     }
 
     this.stats?.end();

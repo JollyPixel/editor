@@ -23,7 +23,6 @@ function initRuntime() {
     includePerformanceStats: true
   });
   const { gameInstance } = runtime;
-  // gameInstance.setRatio(16 / 9);
 
   new Actor(gameInstance, { name: "camera" })
     .registerComponent(Components.Camera3DControls, { speed: 8, rotationSpeed: 1 }, (component) => {

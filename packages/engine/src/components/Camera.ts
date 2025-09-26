@@ -36,14 +36,11 @@ export class Camera extends ActorComponent {
 
   start() {
     this.threeCamera.add(this.actor.gameInstance.audio.listener);
-    this.actor.gameInstance.renderComponents.push(this.threeCamera);
+    this.actor.gameInstance.renderer.addRenderComponent(this.threeCamera);
   }
 
   override destroy() {
-    const index = this.actor.gameInstance.renderComponents.indexOf(this.threeCamera);
-    if (index !== -1) {
-      this.actor.gameInstance.renderComponents.splice(index, 1);
-    }
+    this.actor.gameInstance.renderer.removeRenderComponent(this.threeCamera);
     super.destroy();
   }
 }
