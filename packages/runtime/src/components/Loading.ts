@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import { Systems } from "@jolly-pixel/engine";
 import { LitElement, css, html } from "lit";
 import { property, state } from "lit/decorators.js";
 
@@ -16,7 +17,13 @@ export class Loading extends LitElement {
   declare maxProgress: number;
 
   @state()
+  declare assetName: string;
+
+  @state()
   declare errorMessage: string;
+
+  @state()
+  declare errorStack: string;
 
   static styles = css`
     #loading {
@@ -28,7 +35,6 @@ export class Loading extends LitElement {
       color: #444;
       font-size: 24px;
       font-family: sans-serif;
-      text-transform: uppercase;
       display: flex;
       flex-flow: column;
       align-items: center;
@@ -73,9 +79,15 @@ export class Loading extends LitElement {
       max-width: 100%;
     }
 
+    #loading .asset {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 16px;
+      text-transform: uppercase;
+    }
+
     #loading progress {
       background: #c4c8b7;
-      margin-top: 10px;
       width: 100%;
       height: 5px;
     }
@@ -84,17 +96,32 @@ export class Loading extends LitElement {
       background: #d0d4c3;
     }
     #loading progress::-webkit-progress-value {
-      background: #a5a49e;
+      background: #3E7CB8;
     }
     #loading progress::-moz-progress-bar {
-      background: #a5a49e;
+      background: #3E7CB8;
     }
 
-    #loading .error {
+    #loading div.error {
       text-align: center;
       padding: 0 2em;
       font-size: 18px;
-      color: red;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+      font-family: Monaco, "DejaVu Sans Mono", "Lucida Console", "Andale Mono", monospace;
+      color: #BF360C;
+      text-transform: uppercase;
+    }
+
+    #loading pre.error {
+      text-align: left;
+      overflow: auto;
+      padding: 1em;
+      margin-top: 1em;
+      background: #CFD8DC;
+      color: #182024ff;
+      font-size: 15px;
+      border-radius: 4px;
     }
   `;
 
@@ -105,6 +132,8 @@ export class Loading extends LitElement {
     this.progress = 0;
     this.maxProgress = 100;
     this.errorMessage = "";
+    this.errorStack = "";
+    this.assetName = "Loading runtime...";
   }
 
   start() {
@@ -126,10 +155,21 @@ export class Loading extends LitElement {
     }, 500);
   }
 
-  error(error: Error) {
+  error(
+    error: Error
+  ) {
     this.errorMessage = error.message || "An error occurred";
+
+    const causeStackTrace = (error?.cause as Error)?.stack ?? "";
+    this.errorStack = causeStackTrace === "" ? (error.stack || "") : causeStackTrace;
     this.started = true;
     this.completed = false;
+  }
+
+  setAsset(
+    asset: Systems.Asset
+  ) {
+    this.assetName = asset.toString();
   }
 
   setProgress(
@@ -149,9 +189,11 @@ export class Loading extends LitElement {
       <div id="loading">
         ${this.errorMessage ? html`
           <div class="error">${this.errorMessage}</div>
+          <pre class="error">${this.errorStack}</pre>
         ` : html`
           <a href="https://github.com/JollyPixel" target="_blank">
             <img src="./images/jollypixel-full-logo-min.svg" draggable="false">
+            <p class="asset">${this.assetName}</p>
             <progress
               max="${this.maxProgress}"
               value="${this.progress}">

@@ -1,24 +1,21 @@
 // Import Internal Dependencies
 import {
-  Asset,
   AssetManager,
-  type AssetTypeName,
-  type LazyAsset,
-  type AssetLoaderContext,
-  type AssetLoaderCallback,
-  type AssetLoaderOptions
-} from "./Asset.js";
+  type AssetOnProgressCallback
+} from "./Asset/Manager.js";
+
+export * from "./Asset/Base.js";
+export type {
+  AssetLoaderCallback,
+  AssetLoaderContext,
+  AssetLoaderOptions
+} from "./Asset/Registry.js";
 
 export * from "./Loader.js";
 export * from "./GameInstance.js";
 
-export { Asset };
 export type {
-  AssetTypeName,
-  LazyAsset,
-  AssetLoaderCallback,
-  AssetLoaderOptions,
-  AssetLoaderContext
+  AssetOnProgressCallback
 };
 
 export const Assets = new AssetManager();

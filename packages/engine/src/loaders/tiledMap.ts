@@ -24,7 +24,7 @@ export interface TiledMapAsset {
   tilesets: Map<string, TiledSetAsset>;
 }
 
-export const tiledMap = Assets.registerLoader<TiledMapAsset>(
+Assets.registry.loader(
   {
     extensions: [".tmj"],
     type: "tilemap"
@@ -38,6 +38,7 @@ export const tiledMap = Assets.registerLoader<TiledMapAsset>(
     }
   }
 );
+export const tiledMap = Assets.lazyLoad<TiledMapAsset>();
 
 async function tmjLoader(
   asset: Asset,

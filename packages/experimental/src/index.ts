@@ -97,5 +97,5 @@ canvasHTMLElement.addEventListener("click", async() => {
   await ab.play("second.tech-space");
 });
 
-loadPlayer(runtime, { loadingDelay: 1500 })
+loadPlayer(runtime)
   .catch(console.error);

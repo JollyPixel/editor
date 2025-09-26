@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import {
-  Actor,
   Behavior,
   type BehaviorProperties,
   Renderers
@@ -11,28 +10,16 @@ export interface PlayerBehaviorProperties extends BehaviorProperties {
 }
 
 export class PlayerBehavior extends Behavior<PlayerBehaviorProperties> {
-  model: Renderers.ModelRenderer;
-
-  constructor(
-    actor: Actor
-  ) {
-    super(actor);
-
-    this.model = this.actor.registerComponentAndGet(Renderers.ModelRenderer, {
-      path: "models/Standard.fbx",
-      animations: {
-        default: "idle_loop",
-        clipNameRewriter: (name) => name.slice(name.indexOf("|") + 1).toLowerCase()
-      }
-    });
-    this.mergeProperties({
-      speed: 0.05
-    });
-  }
+  model = new Renderers.ModelRenderer(this.actor, {
+    path: "models/Standard.fbx",
+    animations: {
+      default: "idle_loop",
+      clipNameRewriter: (name) => name.slice(name.indexOf("|") + 1).toLowerCase()
+    }
+  });
 
   awake() {
-    this.actor.threeObject.rotateX(-90 * (Math.PI / 180));
-    this.actor.threeObject.position.set(2, 0, 0);
+    this.actor.threeObject.rotateX(-Math.PI / 2);
     this.model.animation.setFadeDuration(0.25);
   }
 
