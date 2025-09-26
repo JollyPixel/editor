@@ -3,11 +3,11 @@ import {
   Actor,
   Components,
   AudioBackground,
-  Renderers
+  TiledMapRenderer,
+  createViewHelper
 } from "@jolly-pixel/engine";
 import { Player, loadPlayer } from "@jolly-pixel/runtime";
 import * as THREE from "three";
-import { ViewHelper } from "three/addons/helpers/ViewHelper.js";
 
 // Import Internal Dependencies
 // import { SpriteRenderer } from "./components/sprite/SpriteRenderer.class.js";
@@ -23,13 +23,7 @@ new Actor(gameInstance, { name: "camera" })
     component.camera.position.set(10, 10, 5);
     component.camera.lookAt(0, 0, 0);
 
-    const helper = new ViewHelper(
-      component.camera,
-      gameInstance.threeRenderer.domElement
-    );
-    gameInstance.on("draw", () => {
-      helper.render(gameInstance.threeRenderer);
-    });
+    createViewHelper(component.camera, gameInstance);
   });
 
 // new Actor(gameInstance, { name: "sprite" })
@@ -46,13 +40,14 @@ new Actor(gameInstance, { name: "camera" })
 //   });
 
 new Actor(gameInstance, { name: "tilemap" })
-  .registerComponent(Renderers.TileMapRenderer, {
+  .registerComponent(TiledMapRenderer, {
     assetPath: "./assets/tilemaps/experimental_map.tmj",
     orientation: "top-down"
   });
 
-gameInstance.threeScene.background = new THREE.Color("#000000");
-gameInstance.threeScene.add(
+const scene = gameInstance.scene.getSource();
+scene.background = new THREE.Color("#000000");
+scene.add(
   new THREE.GridHelper(
     50,
     50,

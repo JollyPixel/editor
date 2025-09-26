@@ -1,10 +1,10 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-import { ViewHelper } from "three/addons/helpers/ViewHelper.js";
 import {
   ActorComponent,
   Actor,
-  Components
+  Components,
+  createViewHelper
 } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
@@ -26,7 +26,6 @@ export class VoxelRenderer extends ActorComponent {
   raycaster = new THREE.Raycaster();
   lastIntersect: THREE.Intersection<THREE.Object3D> | null = null;
   plane: THREE.Mesh;
-  helper: ViewHelper;
 
   tree = new LayerTree();
 
@@ -45,7 +44,7 @@ export class VoxelRenderer extends ActorComponent {
     const { cameraActorName = "camera", ratio = 50 } = options;
 
     this.ratio = ratio;
-    const behavior = this.actor.gameInstance.tree
+    const behavior = this.actor.gameInstance.scene.tree
       .getActor(cameraActorName)
       ?.getBehavior(Components.Camera3DControls);
     if (!behavior) {
@@ -56,7 +55,7 @@ export class VoxelRenderer extends ActorComponent {
   }
 
   awake() {
-    const { threeScene } = this.actor.gameInstance;
+    const threeScene = this.actor.gameInstance.scene.getSource();
     threeScene.background = new THREE.Color("#e7f2ff");
 
     this.plane = new THREE.Mesh(
@@ -76,20 +75,14 @@ export class VoxelRenderer extends ActorComponent {
       threeScene.add(component.object);
     });
 
-    this.helper = new ViewHelper(
-      this.camera,
-      this.actor.gameInstance.threeRenderer.domElement
-    );
-    this.actor.gameInstance.on("draw", () => {
-      this.helper.render(this.actor.gameInstance.threeRenderer);
-    });
+    createViewHelper(this.camera, this.actor.gameInstance);
   }
 
   remove(
     intersect: THREE.Intersection<THREE.Object3D>
   ) {
     if (intersect.object !== this.plane) {
-      this.actor.gameInstance.threeScene.remove(intersect.object);
+      this.actor.gameInstance.scene.getSource().remove(intersect.object);
       this.tree.remove(intersect.object);
     }
   }
@@ -109,7 +102,7 @@ export class VoxelRenderer extends ActorComponent {
       texture: textures[Math.floor(Math.random() * textures.length)]
     }).setPositionFromIntersection(intersect);
 
-    this.actor.gameInstance.threeScene.add(voxel);
+    this.actor.gameInstance.scene.getSource().add(voxel);
     this.tree.add(voxel);
   }
 

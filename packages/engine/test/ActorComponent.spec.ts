@@ -17,7 +17,7 @@ describe("ActorComponent", () => {
     });
 
     assert.deepEqual(fakeActor.components, [component]);
-    assert.deepEqual(fakeActor.gameInstance.componentsToBeStarted, [component]);
+    assert.deepEqual(fakeActor.gameInstance.scene.componentsToBeStarted, [component]);
     assert.equal(component.actor, fakeActor);
     assert.equal(component.typeName, "TestComponent");
     assert.equal(component.pendingForDestruction, false);
@@ -39,7 +39,7 @@ describe("ActorComponent", () => {
     });
 
     assert.deepEqual(fakeActor.components, [component1, component2]);
-    assert.deepEqual(fakeActor.gameInstance.componentsToBeStarted, [component1, component2]);
+    assert.deepEqual(fakeActor.gameInstance.scene.componentsToBeStarted, [component1, component2]);
   });
 
   test("should not be destroyed initially", () => {
@@ -64,12 +64,12 @@ describe("ActorComponent", () => {
     });
 
     assert.equal(fakeActor.components.length, 1);
-    assert.equal(fakeActor.gameInstance.componentsToBeStarted.length, 1);
+    assert.equal(fakeActor.gameInstance.scene.componentsToBeStarted.length, 1);
 
     component.destroy();
 
     assert.equal(fakeActor.components.length, 0);
-    assert.equal(fakeActor.gameInstance.componentsToBeStarted.length, 0);
+    assert.equal(fakeActor.gameInstance.scene.componentsToBeStarted.length, 0);
   });
 
   test("should handle destroy when multiple components exist", () => {
@@ -88,14 +88,14 @@ describe("ActorComponent", () => {
     });
 
     assert.equal(fakeActor.components.length, 2);
-    assert.equal(fakeActor.gameInstance.componentsToBeStarted.length, 2);
+    assert.equal(fakeActor.gameInstance.scene.componentsToBeStarted.length, 2);
 
     component1.destroy();
 
     assert.equal(fakeActor.components.length, 1);
-    assert.equal(fakeActor.gameInstance.componentsToBeStarted.length, 1);
+    assert.equal(fakeActor.gameInstance.scene.componentsToBeStarted.length, 1);
     assert.equal(fakeActor.components[0], component2);
-    assert.equal(fakeActor.gameInstance.componentsToBeStarted[0], component2);
+    assert.equal(fakeActor.gameInstance.scene.componentsToBeStarted[0], component2);
   });
 
   test("should handle destroy on component not in componentsToBeStarted", () => {
@@ -108,16 +108,16 @@ describe("ActorComponent", () => {
     });
 
     // Manually remove from componentsToBeStarted to simulate started component
-    const startIndex = fakeActor.gameInstance.componentsToBeStarted.indexOf(component);
-    fakeActor.gameInstance.componentsToBeStarted.splice(startIndex, 1);
+    const startIndex = fakeActor.gameInstance.scene.componentsToBeStarted.indexOf(component);
+    fakeActor.gameInstance.scene.componentsToBeStarted.splice(startIndex, 1);
 
     assert.equal(fakeActor.components.length, 1);
-    assert.equal(fakeActor.gameInstance.componentsToBeStarted.length, 0);
+    assert.equal(fakeActor.gameInstance.scene.componentsToBeStarted.length, 0);
 
     component.destroy();
 
     assert.equal(fakeActor.components.length, 0);
-    assert.equal(fakeActor.gameInstance.componentsToBeStarted.length, 0);
+    assert.equal(fakeActor.gameInstance.scene.componentsToBeStarted.length, 0);
   });
 
   test("should handle destroy on component not in actor components", () => {
@@ -134,12 +134,12 @@ describe("ActorComponent", () => {
     fakeActor.components.splice(componentIndex, 1);
 
     assert.equal(fakeActor.components.length, 0);
-    assert.equal(fakeActor.gameInstance.componentsToBeStarted.length, 1);
+    assert.equal(fakeActor.gameInstance.scene.componentsToBeStarted.length, 1);
 
     component.destroy();
 
     assert.equal(fakeActor.components.length, 0);
-    assert.equal(fakeActor.gameInstance.componentsToBeStarted.length, 0);
+    assert.equal(fakeActor.gameInstance.scene.componentsToBeStarted.length, 0);
   });
 
   test("should handle destroy on already destroyed component", () => {
@@ -153,12 +153,12 @@ describe("ActorComponent", () => {
 
     component.destroy();
     assert.equal(fakeActor.components.length, 0);
-    assert.equal(fakeActor.gameInstance.componentsToBeStarted.length, 0);
+    assert.equal(fakeActor.gameInstance.scene.componentsToBeStarted.length, 0);
 
     // Should not throw or cause issues
     component.destroy();
     assert.equal(fakeActor.components.length, 0);
-    assert.equal(fakeActor.gameInstance.componentsToBeStarted.length, 0);
+    assert.equal(fakeActor.gameInstance.scene.componentsToBeStarted.length, 0);
   });
 
   test("should handle different component types", () => {

@@ -10,23 +10,23 @@ import { TileSet } from "./TileSet.js";
 import { TileObject } from "./TileObject.js";
 import { TileLayer } from "./TileLayer.js";
 
-export type TileMapOrientation = "top-down" | "platformer";
+export type TiledMapOrientation = "top-down" | "platformer";
 
-export interface TileMapRendererOptions {
+export interface TiledMapRendererOptions {
   assetPath: string;
   /**
    * @default "platformer"
    */
-  orientation?: TileMapOrientation;
+  orientation?: TiledMapOrientation;
 }
 
-export class TileMapRenderer extends ActorComponent {
+export class TiledMapRenderer extends ActorComponent {
   #map: Systems.LazyAsset<loaders.TiledMapAsset>;
-  #orientation: TileMapOrientation;
+  #orientation: TiledMapOrientation;
 
   constructor(
     actor: Actor,
-    options: TileMapRendererOptions
+    options: TiledMapRendererOptions
   ) {
     const {
       assetPath,

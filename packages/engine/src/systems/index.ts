@@ -11,8 +11,8 @@ export type {
   AssetLoaderOptions
 } from "./Asset/Registry.js";
 
-export * from "./Loader.js";
 export * from "./GameInstance.js";
+export * from "./Renderers/index.js";
 
 export type {
   AssetOnProgressCallback

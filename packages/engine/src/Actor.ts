@@ -58,7 +58,7 @@ export class Actor extends ActorTree {
       const layers = Array.isArray(layer) ? layer : [layer];
       for (const layer of layers) {
         this.threeObject.layers.enable(layer);
-        this.gameInstance.threeScene.layers.enable(layer);
+        this.gameInstance.scene.getSource().layers.enable(layer);
       }
     }
 
@@ -70,7 +70,7 @@ export class Actor extends ActorTree {
       this.threeObject.updateMatrixWorld(false);
     }
     else {
-      this.gameInstance.tree.add(this);
+      this.gameInstance.scene.tree.add(this);
     }
   }
 
@@ -86,9 +86,9 @@ export class Actor extends ActorTree {
       this.components.push(component);
     }
 
-    const index = this.gameInstance.componentsToBeStarted.indexOf(component);
+    const index = this.gameInstance.scene.componentsToBeStarted.indexOf(component);
     if (index === -1) {
-      this.gameInstance.componentsToBeStarted.push(component);
+      this.gameInstance.scene.componentsToBeStarted.push(component);
     }
 
     callback?.(component as InstanceType<T>);
@@ -111,9 +111,9 @@ export class Actor extends ActorTree {
       this.components.push(component);
     }
 
-    const index = this.gameInstance.componentsToBeStarted.indexOf(component);
+    const index = this.gameInstance.scene.componentsToBeStarted.indexOf(component);
     if (index === -1) {
-      this.gameInstance.componentsToBeStarted.push(component);
+      this.gameInstance.scene.componentsToBeStarted.push(component);
     }
 
     if (this.awoken) {
@@ -143,7 +143,7 @@ export class Actor extends ActorTree {
     this.components.forEach((component) => component.destroy?.());
 
     if (this.parent === null) {
-      this.gameInstance.tree.remove(this);
+      this.gameInstance.scene.tree.remove(this);
     }
     else {
       this.parent.threeObject.remove(this.threeObject);
@@ -231,18 +231,18 @@ export class Actor extends ActorTree {
       this.transform.getGlobalMatrix(Transform.Matrix);
     }
 
-    const oldSiblings = (this.parent === null) ? this.gameInstance.tree : this.parent;
+    const oldSiblings = (this.parent === null) ? this.gameInstance.scene.tree : this.parent;
     oldSiblings.remove(this);
     this.threeObject.parent?.remove(this.threeObject);
 
     this.parent = newParent;
 
     const siblings = (newParent === null) ?
-      this.gameInstance.tree :
+      this.gameInstance.scene.tree :
       newParent;
     siblings.add(this);
     const threeParent = (newParent === null) ?
-      this.gameInstance.threeScene :
+      this.gameInstance.scene.getSource() :
       newParent.threeObject;
     threeParent.add(this.threeObject);
 

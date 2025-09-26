@@ -24,11 +24,15 @@ export function createTreeActor() {
 }
 
 export function createGameInstance(): {
-  componentsToBeStarted: ActorComponent[];
-  tree: ReturnType<typeof createTreeActor>;
+  scene: {
+    componentsToBeStarted: ActorComponent[];
+    tree: ReturnType<typeof createTreeActor>;
+  };
 } {
   return {
-    componentsToBeStarted: [],
-    tree: createTreeActor()
+    scene: {
+      componentsToBeStarted: [],
+      tree: createTreeActor()
+    }
   };
 }

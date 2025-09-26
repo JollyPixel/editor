@@ -2,14 +2,13 @@
 import {
   Actor,
   Components,
-  Renderers
+  ModelRenderer
 } from "@jolly-pixel/engine";
 import { Player, loadPlayer } from "@jolly-pixel/runtime";
 import * as THREE from "three";
 
 // Import Internal Dependencies
 import { PlayerBehavior } from "./PlayerBehavior.js";
-import { ModelManipulator } from "./ModelManipulator.js";
 
 const runtime = initRuntime();
 loadPlayer(runtime)
@@ -21,7 +20,6 @@ function initRuntime() {
     includePerformanceStats: true
   });
   const { gameInstance } = runtime;
-  // gameInstance.setRatio(16 / 9);
 
   const { camera } = new Actor(gameInstance, { name: "camera" })
     .registerComponentAndGet(
@@ -32,13 +30,8 @@ function initRuntime() {
   camera.position.set(5, 5, 5);
   camera.lookAt(0, 0, 0);
 
-  new Actor(gameInstance, { name: "modelManipulator" })
-    .registerComponent(ModelManipulator, {
-      camera
-    });
-
   new Actor(gameInstance, { name: "tinyWitchModel" })
-    .registerComponent(Renderers.ModelRenderer, {
+    .registerComponent(ModelRenderer, {
       path: "models/Tiny_Witch.obj"
     }, (component) => {
       component.actor.threeObject.position.set(-5, 0, 0);
@@ -66,8 +59,9 @@ function initRuntime() {
   //     component.actor.threeObject.scale.set(50, 50, 50);
   //   });
 
-  gameInstance.threeScene.background = null;
-  gameInstance.threeScene.add(
+  const scene = gameInstance.scene.getSource();
+  scene.background = null;
+  scene.add(
     new THREE.GridHelper(
       10,
       10,

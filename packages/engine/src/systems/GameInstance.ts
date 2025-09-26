@@ -1,303 +1,103 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-import { EventEmitter } from "@posva/event-emitter";
 
 // Import Internal Dependencies
-import { Input } from "../controls/Input.class.js";
-import { Actor } from "../Actor.js";
-import { ActorTree } from "../ActorTree.js";
-import { ActorComponent, type Component } from "../ActorComponent.js";
 import {
-  GameInstanceDefaultLoader,
-  type LoaderProvider
-} from "./Loader.js";
+  type GameRenderer
+} from "./Renderers/index.js";
+import {
+  SceneEngine,
+  type Scene
+} from "./Scene.js";
+import { FixedTimeStep } from "./FixedTimeStep.js";
+import { Input } from "../controls/Input.class.js";
 import { GlobalAudio } from "../audio/GlobalAudio.js";
-
-export type GameInstanceEvents = {
-  resize: [
-    { width: number; height: number; }
-  ];
-  draw: [];
-  awake: [];
-};
 
 export interface GameInstanceOptions {
   enableOnExit?: boolean;
-  loader?: LoaderProvider;
-  threeRendererProvider?: typeof THREE.WebGLRenderer;
+  loadingManager?: THREE.LoadingManager;
+
+  scene?: Scene;
+  input?: Input;
 }
 
-export class GameInstance extends EventEmitter<GameInstanceEvents> {
-  framesPerSecond = 60;
-  ratio: number | null = null;
-
-  tree = new ActorTree({
-    addCallback: (actor) => this.threeScene.add(actor.threeObject),
-    removeCallback: (actor) => this.threeScene.remove(actor.threeObject)
-  });
-  cachedActors: Actor[] = [];
-
-  renderComponents: (THREE.PerspectiveCamera | THREE.OrthographicCamera)[] = [];
-  componentsToBeStarted: Component[] = [];
-  componentsToBeDestroyed: Component[] = [];
-
+export class GameInstance<T = THREE.WebGLRenderer> {
+  renderer: GameRenderer<T>;
   input: Input;
+  loadingManager: THREE.LoadingManager;
+  scheduler = new FixedTimeStep();
+  scene: Scene;
   audio = new GlobalAudio();
-  // @ts-ignore
-  // TODO: since r179 Timer is part of the care but TS def is not ok
-  clock = new THREE.Timer();
 
-  threeRenderer: THREE.WebGLRenderer;
-  threeScene = new THREE.Scene();
-
-  loader: LoaderProvider;
+  accumulatedTime = 0;
+  lastTimestamp = 0;
 
   constructor(
-    canvas: HTMLCanvasElement,
+    renderer: GameRenderer<T>,
     options: GameInstanceOptions = {}
   ) {
-    super();
-    const { threeRendererProvider = THREE.WebGLRenderer } = options;
+    const {
+      loadingManager = new THREE.LoadingManager(),
+      scene = new SceneEngine(),
+      input = new Input(renderer.canvas, { enableOnExit: options.enableOnExit ?? false })
+    } = options;
     globalThis.game = this;
 
-    if (options.loader) {
-      this.loader = options.loader;
-    }
-    else {
-      this.loader = new GameInstanceDefaultLoader();
-    }
-
-    this.threeRenderer = new threeRendererProvider({
-      canvas,
-      antialias: true,
-      alpha: true
-    });
-
-    this.threeRenderer.setPixelRatio(window.devicePixelRatio);
-    this.threeRenderer.shadowMap.enabled = true;
-    this.threeRenderer.shadowMap.type = THREE.BasicShadowMap;
-    this.threeRenderer.setSize(0, 0, false);
-    this.threeRenderer.autoClear = false;
-
-    this.input = new Input(this.threeRenderer.domElement, {
-      enableOnExit: options.enableOnExit
-    });
+    this.loadingManager = loadingManager;
+    this.renderer = renderer as unknown as GameRenderer<T>;
+    this.scene = scene;
+    this.input = input;
   }
 
   connect() {
     this.input.connect();
-    window.addEventListener("resize", this.resizeRenderer);
-
-    /**
-     * We need to refactor that using a Scene loader
-     */
-    for (const { actor } of this.tree.walk()) {
-      if (!actor.awoken) {
-        actor.awake();
-        actor.awoken = true;
-      }
-    }
-    this.emit("awake");
+    window.addEventListener("resize", this.renderer.resize);
+    this.scene.awake();
 
     return this;
   }
 
   disconnect() {
     this.input.disconnect();
-    window.removeEventListener("resize", this.resizeRenderer);
+    window.removeEventListener("resize", this.renderer.resize);
 
     return this;
   }
 
-  tick(
-    accumulatedTime: number,
-    callback?: Function
-  ): { updates: number; timeLeft: number; } {
-    this.clock.update();
+  update(
+    timestamp: number
+  ): boolean {
+    this.accumulatedTime += timestamp - this.lastTimestamp;
+    this.lastTimestamp = timestamp;
 
-    const updateInterval = 1 / this.framesPerSecond * 1000;
-    let newAccumulatedTime = accumulatedTime;
-
-    // Limit how many update()s to try and catch up,
-    // to avoid falling into the "black pit of despair" aka "doom spiral".
-    // where every tick takes longer than the previous one.
-    // See http://blogs.msdn.com/b/shawnhar/archive/2011/03/25/technical-term-that-should-exist-quot-black-pit-of-despair-quot.aspx
-    const maxAccumulatedUpdates = 5;
-
-    const maxAccumulatedTime = maxAccumulatedUpdates * updateInterval;
-    if (newAccumulatedTime > maxAccumulatedTime) {
-      newAccumulatedTime = maxAccumulatedTime;
+    const {
+      updates, timeLeft
+    } = this.scheduler.tick(
+      this.accumulatedTime,
+      this.tick
+    );
+    this.accumulatedTime = timeLeft;
+    if (this.input.exited) {
+      return true;
     }
 
-    // Update
-    let updates = 0;
-    while (newAccumulatedTime >= updateInterval) {
-      this.update();
-      callback?.();
-      if (this.input.exited) {
-        break;
-      }
-      newAccumulatedTime -= updateInterval;
-      updates++;
+    if (updates > 0) {
+      this.renderer.draw(this.scene);
     }
 
-    return { updates, timeLeft: newAccumulatedTime };
+    return false;
   }
 
-  update() {
+  private tick = (deltaTime: number) => {
     this.input.update();
-
-    this.cachedActors.length = 0;
-    for (const { actor } of this.tree.walk()) {
-      this.cachedActors.push(actor);
-    }
-
-    for (let i = 0; i < this.componentsToBeStarted.length; i++) {
-      const component = this.componentsToBeStarted[i];
-
-      // If the component to be started is part of an actor
-      // which will not be updated, skip it until next loop
-      if (this.cachedActors.indexOf(component.actor) === -1) {
-        i++;
-        continue;
-      }
-
-      component.start?.();
-      this.componentsToBeStarted.splice(i, 1);
-    }
-
-    // Update all actors
-    const actorToBeDestroyed: Actor[] = [];
-    const deltaTime = this.clock.getDelta();
-    this.cachedActors.forEach((actor) => {
-      actor.update(deltaTime);
-
-      if (actor.isDestroyed()) {
-        actorToBeDestroyed.push(actor);
-      }
-    });
-
-    // Apply pending component / actor destructions
-    this.componentsToBeDestroyed.forEach((component) => {
-      component.destroy();
-    });
-    this.componentsToBeDestroyed.length = 0;
-
-    actorToBeDestroyed.forEach((actor) => {
-      this.#doActorDestruction(actor);
-    });
+    this.scene.update(deltaTime);
 
     if (this.input.exited) {
-      this.threeRenderer.clear();
+      this.renderer.clear();
 
-      return;
-    }
-  }
-
-  setRatio(
-    ratio: number | null = null
-  ) {
-    this.ratio = ratio;
-    if (this.ratio) {
-      this.threeRenderer.domElement.style.margin = "0";
-      this.threeRenderer.domElement.style.flex = "1";
-    }
-    else {
-      this.threeRenderer.domElement.style.margin = "auto";
-      this.threeRenderer.domElement.style.flex = "none";
-    }
-    this.resizeRenderer();
-
-    return this;
-  }
-
-  private resizeRenderer = () => {
-    let width: number;
-    let height: number;
-    if (this.ratio) {
-      if (document.body.clientWidth / document.body.clientHeight > this.ratio) {
-        height = document.body.clientHeight;
-        width = Math.min(document.body.clientWidth, height * this.ratio);
-      }
-      else {
-        width = document.body.clientWidth;
-        height = Math.min(document.body.clientHeight, width / this.ratio);
-      }
-    }
-    else {
-      const parent = this.threeRenderer.domElement.parentElement;
-      if (parent) {
-        width = parent.clientWidth;
-        height = parent.clientHeight;
-      }
-      else {
-        width = this.threeRenderer.domElement.clientWidth;
-        height = this.threeRenderer.domElement.clientHeight;
-      }
+      return true;
     }
 
-    if (
-      this.threeRenderer.domElement.width !== width ||
-      this.threeRenderer.domElement.height !== height
-    ) {
-      this.threeRenderer.setSize(width, height, false);
-      for (const renderComponent of this.renderComponents) {
-        if (renderComponent instanceof THREE.PerspectiveCamera) {
-          renderComponent.aspect = width / height;
-        }
-        renderComponent.updateProjectionMatrix();
-      }
-      this.emit("resize", { width, height });
-    }
+    return false;
   };
-
-  draw() {
-    this.resizeRenderer();
-
-    this.threeRenderer.clear();
-    // this.renderComponents.sort((a, b) => {
-    //   let order = (a.depth - b.depth);
-    //   if (order === 0) {
-    //     order = this.cachedActors.indexOf(a.actor) - this.cachedActors.indexOf(b.actor);
-    //   }
-
-    //   return order;
-    // });
-
-    for (const renderComponent of this.renderComponents) {
-      this.threeRenderer.render(this.threeScene, renderComponent);
-    }
-    this.emit("draw");
-  }
-
-  destroyComponent(
-    component: ActorComponent
-  ) {
-    if (component.pendingForDestruction) {
-      return;
-    }
-
-    this.componentsToBeDestroyed.push(component);
-    component.pendingForDestruction = true;
-
-    const index = this.componentsToBeStarted.indexOf(component);
-    if (index !== -1) {
-      this.componentsToBeStarted.splice(index, 1);
-    }
-  }
-
-  #doActorDestruction(
-    actor: Actor
-  ) {
-    while (actor.children.length > 0) {
-      this.#doActorDestruction(actor.children[0]);
-    }
-
-    const cachedIndex = this.cachedActors.indexOf(actor);
-    if (cachedIndex !== -1) {
-      this.cachedActors.splice(cachedIndex, 1);
-    }
-
-    actor.destroy();
-  }
 }

@@ -57,7 +57,7 @@ export class Camera3DControls extends Behavior {
 
   start() {
     this.camera.add(this.actor.gameInstance.audio.listener);
-    this.actor.gameInstance.renderComponents.push(this.camera);
+    this.actor.gameInstance.renderer.addRenderComponent(this.camera);
   }
 
   set speed(

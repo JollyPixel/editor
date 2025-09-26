@@ -36,7 +36,7 @@ describe("Actor", () => {
 
       const component = { update: mock.fn() };
       actor.components.push(component as any);
-      actor.update();
+      actor.update(0);
 
       assert.strictEqual(component.update.mock.calls.length, 1);
     });
@@ -47,7 +47,7 @@ describe("Actor", () => {
       const component = { update: mock.fn() };
       actor.components.push(component as any);
       actor.markDestructionPending();
-      actor.update();
+      actor.update(0);
 
       assert.strictEqual(component.update.mock.calls.length, 0);
     });
@@ -62,8 +62,8 @@ describe("Actor", () => {
       actor.destroy();
 
       assert.strictEqual(component.destroy.mock.calls.length, 1);
-      assert.strictEqual(gameInstance.tree.remove.mock.calls.length, 1);
-      assert.strictEqual(gameInstance.tree.remove.mock.calls[0].arguments[0], actor);
+      assert.strictEqual(gameInstance.scene.tree.remove.mock.calls.length, 1);
+      assert.strictEqual(gameInstance.scene.tree.remove.mock.calls[0].arguments[0], actor);
     });
   });
 
@@ -95,7 +95,7 @@ describe("Actor", () => {
       { name: "foobar" }
     );
 
-    assert.strictEqual(gameInstance.tree.add.mock.calls.length, 1);
-    assert.strictEqual(gameInstance.tree.add.mock.calls[0].arguments[0], actor);
+    assert.strictEqual(gameInstance.scene.tree.add.mock.calls.length, 1);
+    assert.strictEqual(gameInstance.scene.tree.add.mock.calls[0].arguments[0], actor);
   });
 });

@@ -34,7 +34,7 @@ export class ModelManipulator extends ActorComponent {
     });
 
     this.#camera = options.camera;
-    this.#canvas = this.actor.gameInstance.threeRenderer.domElement;
+    this.#canvas = this.actor.gameInstance.renderer.canvas;
     // @ts-ignore
     this.#actors = this.actor.gameInstance.tree.children.filter((node) => node.name.endsWith("Model"));
     this.#raycaster = new THREE.Raycaster();

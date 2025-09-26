@@ -1,20 +1,21 @@
 // Import Third-party Dependencies
 import {
-  Systems,
   Actor
 } from "@jolly-pixel/engine";
+import { Player, loadPlayer } from "@jolly-pixel/runtime";
 import * as THREE from "three";
 
 // Import Internal Dependencies
 import { OrbitCameraControls } from "./components/OrbitCamera.js";
 
 const canvasHTMLElement = document.querySelector("canvas") as HTMLCanvasElement;
-const runtime = new Systems.Runtime(canvasHTMLElement, {
+const runtime = new Player(canvasHTMLElement, {
   includePerformanceStats: true
 });
 const { gameInstance } = runtime;
-gameInstance.threeScene.background = null;
-gameInstance.setRatio(16 / 9);
+const scene = gameInstance.scene.getSource();
+scene.background = null;
+gameInstance.renderer.setRatio(16 / 9);
 
 new Actor(gameInstance, { name: "camera" })
   .registerComponent(OrbitCameraControls);
@@ -26,10 +27,11 @@ const mesh = new THREE.Mesh(
     side: THREE.DoubleSide
   })
 );
-gameInstance.threeScene.add(new THREE.AmbientLight(new THREE.Color("#ffffff"), 3));
-gameInstance.threeScene.add(mesh);
+scene.add(new THREE.AmbientLight(new THREE.Color("#ffffff"), 3));
+scene.add(mesh);
 
-runtime.start();
+loadPlayer(runtime)
+  .catch(console.error);
 
 function createGeometry(size: number): THREE.BufferGeometry {
   const halfSize = size / 2;
@@ -52,10 +54,7 @@ function createGeometry(size: number): THREE.BufferGeometry {
 
     // Face horizontale de la marche (dessus)
     vertices.push(
-      -halfSize, nextY, z,      // 0: gauche arrière
-      halfSize, nextY, z,       // 1: droite arrière
-      halfSize, nextY, nextZ,   // 2: droite avant
-      -halfSize, nextY, nextZ   // 3: gauche avant
+      -halfSize, nextY, z, halfSize, nextY, z, halfSize, nextY, nextZ, -halfSize, nextY, nextZ
     );
 
     // UVs pour la face horizontale
@@ -63,18 +62,14 @@ function createGeometry(size: number): THREE.BufferGeometry {
 
     // Indices pour la face horizontale (2 triangles)
     indices.push(
-      vertexIndex, vertexIndex + 1, vertexIndex + 2,
-      vertexIndex, vertexIndex + 2, vertexIndex + 3
+      vertexIndex, vertexIndex + 1, vertexIndex + 2, vertexIndex, vertexIndex + 2, vertexIndex + 3
     );
     vertexIndex += 4;
 
     // Face verticale de la marche (contremarche)
     if (step < stepCount - 1) {
       vertices.push(
-        -halfSize, y, nextZ,      // 0: gauche bas
-        halfSize, y, nextZ,       // 1: droite bas
-        halfSize, nextY, nextZ,   // 2: droite haut
-        -halfSize, nextY, nextZ   // 3: gauche haut
+        -halfSize, y, nextZ, halfSize, y, nextZ, halfSize, nextY, nextZ, -halfSize, nextY, nextZ
       );
 
       // UVs pour la face verticale
@@ -82,8 +77,7 @@ function createGeometry(size: number): THREE.BufferGeometry {
 
       // Indices pour la face verticale (2 triangles)
       indices.push(
-        vertexIndex, vertexIndex + 2, vertexIndex + 1,
-        vertexIndex, vertexIndex + 3, vertexIndex + 2
+        vertexIndex, vertexIndex + 2, vertexIndex + 1, vertexIndex, vertexIndex + 3, vertexIndex + 2
       );
       vertexIndex += 4;
     }
@@ -98,33 +92,25 @@ function createGeometry(size: number): THREE.BufferGeometry {
 
     // Face latérale gauche
     vertices.push(
-      -halfSize, y, z,          // 0: arrière bas
-      -halfSize, y, nextZ,      // 1: avant bas
-      -halfSize, nextY, nextZ,  // 2: avant haut
-      -halfSize, nextY, z       // 3: arrière haut
+      -halfSize, y, z, -halfSize, y, nextZ, -halfSize, nextY, nextZ, -halfSize, nextY, z
     );
 
     uvs.push(0, 0, 1, 0, 1, 1, 0, 1);
 
     indices.push(
-      vertexIndex, vertexIndex + 1, vertexIndex + 2,
-      vertexIndex, vertexIndex + 2, vertexIndex + 3
+      vertexIndex, vertexIndex + 1, vertexIndex + 2, vertexIndex, vertexIndex + 2, vertexIndex + 3
     );
     vertexIndex += 4;
 
     // Face latérale droite
     vertices.push(
-      halfSize, y, z,           // 0: arrière bas
-      halfSize, nextY, z,       // 1: arrière haut
-      halfSize, nextY, nextZ,   // 2: avant haut
-      halfSize, y, nextZ        // 3: avant bas
+      halfSize, y, z, halfSize, nextY, z, halfSize, nextY, nextZ, halfSize, y, nextZ
     );
 
     uvs.push(0, 0, 1, 0, 1, 1, 0, 1);
 
     indices.push(
-      vertexIndex, vertexIndex + 1, vertexIndex + 2,
-      vertexIndex, vertexIndex + 2, vertexIndex + 3
+      vertexIndex, vertexIndex + 1, vertexIndex + 2, vertexIndex, vertexIndex + 2, vertexIndex + 3
     );
     vertexIndex += 4;
   }

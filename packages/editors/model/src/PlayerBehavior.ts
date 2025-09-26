@@ -2,7 +2,7 @@
 import {
   Behavior,
   type BehaviorProperties,
-  Renderers
+  ModelRenderer
 } from "@jolly-pixel/engine";
 
 export interface PlayerBehaviorProperties extends BehaviorProperties {
@@ -10,7 +10,7 @@ export interface PlayerBehaviorProperties extends BehaviorProperties {
 }
 
 export class PlayerBehavior extends Behavior<PlayerBehaviorProperties> {
-  model = new Renderers.ModelRenderer(this.actor, {
+  model = new ModelRenderer(this.actor, {
     path: "models/Standard.fbx",
     animations: {
       default: "idle_loop",
