@@ -9,7 +9,7 @@ export * from "./Timer.js";
 export * from "./audio/Audio.js";
 export * from "./audio/AudioBackground.js";
 
-export * as Renderers from "./renderers/index.js";
+export * from "./renderers/index.js";
 export * as Loaders from "./loaders/index.js";
 
 export * as pathUtils from "./utils/path.js";

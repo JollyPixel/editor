@@ -3,7 +3,7 @@ import {
   Actor,
   Components,
   AudioBackground,
-  Renderers
+  TiledMapRenderer
 } from "@jolly-pixel/engine";
 import { Player, loadPlayer } from "@jolly-pixel/runtime";
 import * as THREE from "three";
@@ -46,7 +46,7 @@ new Actor(gameInstance, { name: "camera" })
 //   });
 
 new Actor(gameInstance, { name: "tilemap" })
-  .registerComponent(Renderers.TileMapRenderer, {
+  .registerComponent(TiledMapRenderer, {
     assetPath: "./assets/tilemaps/experimental_map.tmj",
     orientation: "top-down"
   });

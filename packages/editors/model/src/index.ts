@@ -2,7 +2,7 @@
 import {
   Actor,
   Components,
-  Renderers
+  ModelRenderer
 } from "@jolly-pixel/engine";
 import { Player, loadPlayer } from "@jolly-pixel/runtime";
 import * as THREE from "three";
@@ -38,7 +38,7 @@ function initRuntime() {
     });
 
   new Actor(gameInstance, { name: "tinyWitchModel" })
-    .registerComponent(Renderers.ModelRenderer, {
+    .registerComponent(ModelRenderer, {
       path: "models/Tiny_Witch.obj"
     }, (component) => {
       component.actor.threeObject.position.set(-5, 0, 0);
