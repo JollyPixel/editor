@@ -35,7 +35,7 @@ export class Player {
     this.canvas = canvas;
     this.gameInstance = new Systems.GameInstance(canvas, {
       enableOnExit: true,
-      loader: new Systems.GameInstanceDefaultLoader(this.manager)
+      loadingManager: this.manager
     });
 
     this.targetFrameTime = 1000 / this.gameInstance.framesPerSecond;

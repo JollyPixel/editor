@@ -143,7 +143,8 @@ export class AudioBackground {
       return this.#buffers.get(track.assetPath)!;
     }
 
-    const buffer = await this.gameInstance.loader.audio.loadAsync(
+    const audioLoader = new THREE.AudioLoader(this.gameInstance.loadingManager);
+    const buffer = await audioLoader.loadAsync(
       track.assetPath
     );
     this.#buffers.set(track.assetPath, buffer);

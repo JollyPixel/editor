@@ -7,10 +7,6 @@ import { Input } from "../controls/Input.class.js";
 import { Actor } from "../Actor.js";
 import { ActorTree } from "../ActorTree.js";
 import { ActorComponent, type Component } from "../ActorComponent.js";
-import {
-  GameInstanceDefaultLoader,
-  type LoaderProvider
-} from "./Loader.js";
 import { GlobalAudio } from "../audio/GlobalAudio.js";
 
 export type GameInstanceEvents = {
@@ -23,7 +19,7 @@ export type GameInstanceEvents = {
 
 export interface GameInstanceOptions {
   enableOnExit?: boolean;
-  loader?: LoaderProvider;
+  loadingManager?: THREE.LoadingManager;
   threeRendererProvider?: typeof THREE.WebGLRenderer;
 }
 
@@ -42,6 +38,7 @@ export class GameInstance extends EventEmitter<GameInstanceEvents> {
   componentsToBeDestroyed: Component[] = [];
 
   input: Input;
+  loadingManager: THREE.LoadingManager;
   audio = new GlobalAudio();
   // @ts-ignore
   // TODO: since r179 Timer is part of the care but TS def is not ok
@@ -50,23 +47,18 @@ export class GameInstance extends EventEmitter<GameInstanceEvents> {
   threeRenderer: THREE.WebGLRenderer;
   threeScene = new THREE.Scene();
 
-  loader: LoaderProvider;
-
   constructor(
     canvas: HTMLCanvasElement,
     options: GameInstanceOptions = {}
   ) {
     super();
-    const { threeRendererProvider = THREE.WebGLRenderer } = options;
+    const {
+      threeRendererProvider = THREE.WebGLRenderer,
+      loadingManager = new THREE.LoadingManager()
+    } = options;
     globalThis.game = this;
 
-    if (options.loader) {
-      this.loader = options.loader;
-    }
-    else {
-      this.loader = new GameInstanceDefaultLoader();
-    }
-
+    this.loadingManager = loadingManager;
     this.threeRenderer = new threeRendererProvider({
       canvas,
       antialias: true,

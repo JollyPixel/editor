@@ -21,7 +21,8 @@ export async function createAudio(
   const sound = new THREE.Audio(gameInstance.audio.listener);
   sound.name = name ?? path.parse(assetPath).name;
 
-  const buffer = await gameInstance.loader.audio.loadAsync(assetPath);
+  const audioLoader = new THREE.AudioLoader(gameInstance.loadingManager);
+  const buffer = await audioLoader.loadAsync(assetPath);
   sound.setBuffer(buffer);
   sound.setVolume(volume * gameInstance.audio.volume);
   if (play) {
@@ -40,7 +41,8 @@ export async function createPositionalAudio(
   const sound = new THREE.PositionalAudio(gameInstance.audio.listener);
   sound.name = name ?? path.parse(assetPath).name;
 
-  const buffer = await gameInstance.loader.audio.loadAsync(assetPath);
+  const audioLoader = new THREE.AudioLoader(gameInstance.loadingManager);
+  const buffer = await audioLoader.loadAsync(assetPath);
   sound.setBuffer(buffer);
   sound.setVolume(volume * gameInstance.audio.volume);
   if (play) {
