@@ -3,8 +3,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import {
-  type GameRenderer,
-  ThreeRenderer
+  type GameRenderer
 } from "./Renderers/index.js";
 import {
   SceneEngine,
@@ -14,17 +13,15 @@ import { FixedTimeStep } from "./FixedTimeStep.js";
 import { Input } from "../controls/Input.class.js";
 import { GlobalAudio } from "../audio/GlobalAudio.js";
 
-export interface GameInstanceOptions<T = THREE.WebGLRenderer> {
+export interface GameInstanceOptions {
   enableOnExit?: boolean;
   loadingManager?: THREE.LoadingManager;
 
   scene?: Scene;
-  renderer?: GameRenderer<T>;
   input?: Input;
 }
 
 export class GameInstance<T = THREE.WebGLRenderer> {
-  canvas: HTMLCanvasElement;
   renderer: GameRenderer<T>;
   input: Input;
   loadingManager: THREE.LoadingManager;
@@ -36,14 +33,13 @@ export class GameInstance<T = THREE.WebGLRenderer> {
   lastTimestamp = 0;
 
   constructor(
-    canvas: HTMLCanvasElement,
+    renderer: GameRenderer<T>,
     options: GameInstanceOptions = {}
   ) {
     const {
       loadingManager = new THREE.LoadingManager(),
       scene = new SceneEngine(),
-      renderer = new ThreeRenderer(canvas),
-      input = new Input(canvas, { enableOnExit: options.enableOnExit ?? false })
+      input = new Input(renderer.canvas, { enableOnExit: options.enableOnExit ?? false })
     } = options;
     globalThis.game = this;
 
@@ -51,7 +47,6 @@ export class GameInstance<T = THREE.WebGLRenderer> {
     this.renderer = renderer as unknown as GameRenderer<T>;
     this.scene = scene;
     this.input = input;
-    this.canvas = canvas;
   }
 
   connect() {

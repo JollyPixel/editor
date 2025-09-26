@@ -11,7 +11,7 @@ export function createViewHelper(
 ): ViewHelper {
   const helper = new ViewHelper(
     camera,
-    gameInstance.canvas
+    gameInstance.renderer.canvas
   );
   gameInstance.renderer.onDraw(() => {
     helper.render(gameInstance.renderer.getSource());

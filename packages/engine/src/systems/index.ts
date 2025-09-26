@@ -12,6 +12,7 @@ export type {
 } from "./Asset/Registry.js";
 
 export * from "./GameInstance.js";
+export * from "./Renderers/index.js";
 
 export type {
   AssetOnProgressCallback

@@ -30,7 +30,10 @@ export class Player {
     }
 
     this.canvas = canvas;
-    this.gameInstance = new Systems.GameInstance(canvas, {
+    const renderer = new Systems.ThreeRenderer(
+      canvas
+    ) as unknown as Systems.GameRenderer<THREE.WebGLRenderer>;
+    this.gameInstance = new Systems.GameInstance(renderer, {
       enableOnExit: true,
       loadingManager: this.manager
     });

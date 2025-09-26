@@ -2,7 +2,7 @@
 import {
   Actor
 } from "@jolly-pixel/engine";
-import { Player } from "@jolly-pixel/runtime";
+import { Player, loadPlayer } from "@jolly-pixel/runtime";
 import * as THREE from "three";
 
 // Import Internal Dependencies
@@ -30,7 +30,8 @@ const mesh = new THREE.Mesh(
 scene.add(new THREE.AmbientLight(new THREE.Color("#ffffff"), 3));
 scene.add(mesh);
 
-runtime.start();
+loadPlayer(runtime)
+  .catch(console.error);
 
 function createGeometry(size: number): THREE.BufferGeometry {
   const halfSize = size / 2;
@@ -53,10 +54,7 @@ function createGeometry(size: number): THREE.BufferGeometry {
 
     // Face horizontale de la marche (dessus)
     vertices.push(
-      -halfSize, nextY, z, // 0: gauche arrière
-      halfSize, nextY, z, // 1: droite arrière
-      halfSize, nextY, nextZ, // 2: droite avant
-      -halfSize, nextY, nextZ // 3: gauche avant
+      -halfSize, nextY, z, halfSize, nextY, z, halfSize, nextY, nextZ, -halfSize, nextY, nextZ
     );
 
     // UVs pour la face horizontale
@@ -71,10 +69,7 @@ function createGeometry(size: number): THREE.BufferGeometry {
     // Face verticale de la marche (contremarche)
     if (step < stepCount - 1) {
       vertices.push(
-        -halfSize, y, nextZ, // 0: gauche bas
-        halfSize, y, nextZ, // 1: droite bas
-        halfSize, nextY, nextZ, // 2: droite haut
-        -halfSize, nextY, nextZ // 3: gauche haut
+        -halfSize, y, nextZ, halfSize, y, nextZ, halfSize, nextY, nextZ, -halfSize, nextY, nextZ
       );
 
       // UVs pour la face verticale
@@ -97,10 +92,7 @@ function createGeometry(size: number): THREE.BufferGeometry {
 
     // Face latérale gauche
     vertices.push(
-      -halfSize, y, z, // 0: arrière bas
-      -halfSize, y, nextZ, // 1: avant bas
-      -halfSize, nextY, nextZ, // 2: avant haut
-      -halfSize, nextY, z // 3: arrière haut
+      -halfSize, y, z, -halfSize, y, nextZ, -halfSize, nextY, nextZ, -halfSize, nextY, z
     );
 
     uvs.push(0, 0, 1, 0, 1, 1, 0, 1);
@@ -112,10 +104,7 @@ function createGeometry(size: number): THREE.BufferGeometry {
 
     // Face latérale droite
     vertices.push(
-      halfSize, y, z, // 0: arrière bas
-      halfSize, nextY, z, // 1: arrière haut
-      halfSize, nextY, nextZ, // 2: avant haut
-      halfSize, y, nextZ // 3: avant bas
+      halfSize, y, z, halfSize, nextY, z, halfSize, nextY, nextZ, halfSize, y, nextZ
     );
 
     uvs.push(0, 0, 1, 0, 1, 1, 0, 1);

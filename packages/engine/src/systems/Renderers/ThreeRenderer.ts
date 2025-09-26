@@ -42,6 +42,10 @@ export class ThreeRenderer extends EventEmitter<
     this.webGLRenderer.autoClear = false;
   }
 
+  get canvas() {
+    return this.webGLRenderer.domElement;
+  }
+
   getSource() {
     return this.webGLRenderer;
   }

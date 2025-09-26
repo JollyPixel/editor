@@ -7,6 +7,8 @@ import type { Scene } from "../Scene.js";
 export type RenderComponent = THREE.PerspectiveCamera | THREE.OrthographicCamera;
 
 export interface GameRenderer<T = any> {
+  readonly canvas: HTMLCanvasElement;
+
   getSource(): T;
   setRatio(ratio: number | null): this;
 
