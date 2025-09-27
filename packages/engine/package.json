@@ -23,6 +23,7 @@
   "dependencies": {
     "@posva/event-emitter": "^1.0.3",
     "picomatch": "^4.0.3",
+    "reflect-metadata": "^0.2.2",
     "three": "^0.180.0"
   }
 }

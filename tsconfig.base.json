@@ -1,6 +1,9 @@
 {
   "extends": "@openally/config.typescript/esm",
   "compilerOptions": {
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "useDefineForClassFields": false,
     "composite": true,
     "types": ["node"],
     "lib": ["DOM", "ES2022"]
