@@ -26,7 +26,7 @@ export interface Scene {
 export class SceneEngine extends EventEmitter<
   SceneEvents
 > implements Scene {
-  default = new THREE.Scene();
+  default: THREE.Scene;
 
   componentsToBeStarted: Component[] = [];
   componentsToBeDestroyed: Component[] = [];
@@ -37,6 +37,11 @@ export class SceneEngine extends EventEmitter<
     addCallback: (actor) => this.default.add(actor.threeObject),
     removeCallback: (actor) => this.default.remove(actor.threeObject)
   });
+
+  constructor(scene?: THREE.Scene) {
+    super();
+    this.default = scene ?? new THREE.Scene();
+  }
 
   getSource() {
     return this.default;
@@ -61,7 +66,9 @@ export class SceneEngine extends EventEmitter<
     }
 
     const cachedActors = this.#cachedActors;
-    for (let i = 0; i < this.componentsToBeStarted.length; i++) {
+
+    let i = 0;
+    while (i < this.componentsToBeStarted.length) {
       const component = this.componentsToBeStarted[i];
 
       // If the component to be started is part of an actor
@@ -80,7 +87,7 @@ export class SceneEngine extends EventEmitter<
     cachedActors.forEach((actor) => {
       actor.update(deltaTime);
 
-      if (actor.isDestroyed()) {
+      if (actor.pendingForDestruction || actor.isDestroyed()) {
         actorToBeDestroyed.push(actor);
       }
     });
@@ -99,15 +106,19 @@ export class SceneEngine extends EventEmitter<
   destroyActor(
     actor: Actor
   ) {
-    while (actor.children.length > 0) {
-      this.destroyActor(actor.children[0]);
-    }
+    const childrenToDestroy = [...actor.children];
+
+    childrenToDestroy.forEach((child) => {
+      this.destroyActor(child);
+    });
 
     const cachedIndex = this.#cachedActors.indexOf(actor);
     if (cachedIndex !== -1) {
       this.#cachedActors.splice(cachedIndex, 1);
     }
 
+    // NOTE: make sure to remove deeply into the tree
+    this.tree.remove(actor);
     actor.destroy();
   }
 
