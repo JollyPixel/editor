@@ -8,8 +8,12 @@ import {
   BrowserWindowAdapter,
   type WindowAdapter
 } from "../adapters/index.js";
+import { mapKeyToExtendedKey } from "./keyboard/code.js";
 import type {
-  InputControl
+  InputControl,
+  InputMouseAction,
+  InputKeyboardAction,
+  InputCustomAction
 } from "./types.js";
 
 export type { MouseEventButton } from "./targets/Mouse.class.js";
@@ -25,14 +29,6 @@ export interface InputOptions {
   enableOnExit?: boolean;
   windowAdapter?: WindowAdapter;
 }
-
-export type InputMouseAction =
-  | number
-  | keyof typeof sources.MouseEventButton
-  | "ANY"
-  | "NONE";
-
-export type InputKeyboardAction = string | "ANY" | "NONE";
 
 export class Input extends EventEmitter<InputEvents> {
   #canvas: HTMLCanvasElement;
@@ -201,7 +197,9 @@ export class Input extends EventEmitter<InputEvents> {
     return this.mouse.buttons[index]?.wasJustPressed ?? false;
   }
 
-  getTouchPosition(index: number) {
+  getTouchPosition(
+    index: number
+  ) {
     if (index < 0 || index >= this.touchpad.touches.length) {
       throw new Error(`Touch index ${index} is out of bounds.`);
     }
@@ -262,7 +260,9 @@ export class Input extends EventEmitter<InputEvents> {
       return this.keyboard.buttonsDown.size === 0;
     }
 
-    return this.keyboard.buttonsDown.has(key);
+    return this.keyboard.buttonsDown.has(
+      mapKeyToExtendedKey(key)
+    );
   }
 
   wasKeyJustPressed(
@@ -277,7 +277,9 @@ export class Input extends EventEmitter<InputEvents> {
         .every((button) => !button.wasJustPressed);
     }
 
-    const keyState = this.keyboard.buttons.get(key);
+    const keyState = this.keyboard.buttons.get(
+      mapKeyToExtendedKey(key)
+    );
 
     return keyState?.wasJustPressed ?? false;
   }
@@ -293,15 +295,19 @@ export class Input extends EventEmitter<InputEvents> {
       return Array.from(this.keyboard.buttons.values())
         .every((button) => !button.wasJustReleased);
     }
-    const keyState = this.keyboard.buttons.get(key);
+    const keyState = this.keyboard.buttons.get(
+      mapKeyToExtendedKey(key)
+    );
 
     return keyState?.wasJustReleased ?? false;
   }
 
   wasKeyJustAutoRepeated(
-    key: InputKeyboardAction
+    key: Exclude<InputKeyboardAction, InputCustomAction>
   ): boolean {
-    const keyState = this.keyboard.buttons.get(key);
+    const keyState = this.keyboard.buttons.get(
+      mapKeyToExtendedKey(key)
+    );
 
     return keyState?.wasJustAutoRepeated ?? false;
   }
@@ -423,3 +429,9 @@ export class Input extends EventEmitter<InputEvents> {
     this.exited = true;
   };
 }
+
+export type {
+  InputMouseAction,
+  InputKeyboardAction,
+  InputCustomAction
+};

@@ -6,6 +6,8 @@ import {
 } from "../../adapters/navigator.js";
 import type { InputControl } from "../types.js";
 
+export type GamepadIndex = 0 | 1 | 2 | 3;
+
 export interface GamepadButtonState {
   isDown: boolean;
   wasJustPressed: boolean;

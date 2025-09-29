@@ -29,6 +29,7 @@ export const MouseEventButton = {
   scrollUp: 5,
   scrollDown: 6
 } as const;
+export type MouseAction = keyof typeof MouseEventButton;
 
 export type MouseLockState = "locked" | "unlocked";
 

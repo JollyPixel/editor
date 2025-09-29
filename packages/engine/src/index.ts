@@ -11,6 +11,7 @@ export * from "./Timer.js";
 export * from "./audio/Audio.js";
 export * from "./audio/AudioBackground.js";
 export * from "./renderers/index.js";
+export * from "./controls/CombinedInput.js";
 
 export * as pathUtils from "./utils/path.js";
 export { loadJSON } from "./utils/loadJSON.js";

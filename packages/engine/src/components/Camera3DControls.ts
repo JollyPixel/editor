@@ -2,18 +2,19 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
+import type { InputKeyboardAction } from "../controls/types.js";
 import type { MouseEventButton } from "../controls/Input.class.js";
 import { Actor } from "../Actor.js";
 import { Behavior } from "../Behavior.js";
 
 export interface Camera3DControlsOptions {
   bindings?: {
-    forward?: string;
-    backward?: string;
-    left?: string;
-    right?: string;
-    up?: string;
-    down?: string;
+    forward?: InputKeyboardAction;
+    backward?: InputKeyboardAction;
+    left?: InputKeyboardAction;
+    right?: InputKeyboardAction;
+    up?: InputKeyboardAction;
+    down?: InputKeyboardAction;
     lookAround?: Exclude<keyof typeof MouseEventButton, "scrollUp" | "scrollDown">;
   };
   maxRollUp?: number;
