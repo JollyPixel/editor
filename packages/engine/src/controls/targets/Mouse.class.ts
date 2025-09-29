@@ -2,7 +2,13 @@
 import { EventEmitter } from "@posva/event-emitter";
 
 // Import Internal Dependencies
-import type { ControlTarget } from "../ControlTarget.js";
+import {
+  BrowserDocumentAdapter,
+  type DocumentAdapter
+} from "../../adapters/document.js";
+import type {
+  InputControl
+} from "../types.js";
 
 export interface MouseButtonState {
   isDown: boolean;
@@ -31,12 +37,17 @@ export type MouseEvents = {
 };
 
 export interface MouseOptions {
+  canvas: HTMLCanvasElement;
   mouseDownCallback?: (event: MouseEvent) => void;
   mouseUpCallback?: (event: MouseEvent) => void;
+  documentAdapter?: DocumentAdapter;
 }
 
-export class Mouse extends EventEmitter<MouseEvents> implements ControlTarget {
+export class Mouse extends EventEmitter<
+  MouseEvents
+> implements InputControl {
   #canvas: HTMLCanvasElement;
+  #documentAdapter: DocumentAdapter;
 
   buttons: MouseButtonState[] = [];
   buttonsDown: boolean[] = [];
@@ -55,15 +66,20 @@ export class Mouse extends EventEmitter<MouseEvents> implements ControlTarget {
   #mouseUpCallback?: (event: MouseEvent) => void;
 
   constructor(
-    canvas: HTMLCanvasElement,
-    options: MouseOptions = {}
+    options: MouseOptions
   ) {
-    const { mouseDownCallback, mouseUpCallback } = options;
+    const {
+      canvas,
+      mouseDownCallback,
+      mouseUpCallback,
+      documentAdapter = new BrowserDocumentAdapter()
+    } = options;
 
     super();
     this.#canvas = canvas;
     this.#mouseDownCallback = mouseDownCallback;
     this.#mouseUpCallback = mouseUpCallback;
+    this.#documentAdapter = documentAdapter;
     this.reset();
   }
 
@@ -73,9 +89,9 @@ export class Mouse extends EventEmitter<MouseEvents> implements ControlTarget {
     this.#canvas.addEventListener("dblclick", this.onMouseDoubleClick);
     this.#canvas.addEventListener("wheel", this.onMouseWheel);
     this.#canvas.addEventListener("contextmenu", this.onContextMenu);
-    document.addEventListener("pointerlockchange", this.onPointerLockChange, false);
-    document.addEventListener("pointerlockerror", this.onPointerLockError, false);
-    document.addEventListener("mouseup", this.onMouseUp);
+    this.#documentAdapter.addEventListener("pointerlockchange", this.onPointerLockChange, false);
+    this.#documentAdapter.addEventListener("pointerlockerror", this.onPointerLockError, false);
+    this.#documentAdapter.addEventListener("mouseup", this.onMouseUp);
   }
 
   disconnect() {
@@ -84,13 +100,9 @@ export class Mouse extends EventEmitter<MouseEvents> implements ControlTarget {
     this.#canvas.removeEventListener("dblclick", this.onMouseDoubleClick);
     this.#canvas.removeEventListener("wheel", this.onMouseWheel);
     this.#canvas.removeEventListener("contextmenu", this.onContextMenu);
-    document.removeEventListener("pointerlockchange", this.onPointerLockChange, false);
-    document.removeEventListener("pointerlockerror", this.onPointerLockError, false);
-    document.removeEventListener("mouseup", this.onMouseUp);
-  }
-
-  get domElement() {
-    return this.#canvas;
+    this.#documentAdapter.removeEventListener("pointerlockchange", this.onPointerLockChange, false);
+    this.#documentAdapter.removeEventListener("pointerlockerror", this.onPointerLockError, false);
+    this.#documentAdapter.removeEventListener("mouseup", this.onMouseUp);
   }
 
   reset() {

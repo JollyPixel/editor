@@ -1,17 +1,17 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 
-export interface FixedTimeStepClock {
+export interface TimerAdapter {
   update: () => void;
   getDelta: () => number;
 }
 
 export class FixedTimeStep {
   framesPerSecond = 60;
-  clock: FixedTimeStepClock;
+  clock: TimerAdapter;
 
   constructor(
-    clock: FixedTimeStepClock = new THREE.Timer()
+    clock: TimerAdapter = new THREE.Timer()
   ) {
     this.clock = clock;
   }

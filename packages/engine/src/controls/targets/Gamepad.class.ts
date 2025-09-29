@@ -1,6 +1,10 @@
 /* eslint-disable max-params */
 // Import Internal Dependencies
-import type { ControlTarget } from "../ControlTarget.js";
+import {
+  type NavigatorAdapter,
+  BrowserNavigatorAdapter
+} from "../../adapters/navigator.js";
+import type { InputControl } from "../types.js";
 
 export interface GamepadButtonState {
   isDown: boolean;
@@ -30,7 +34,13 @@ interface AxisDownState {
   negative: boolean;
 }
 
-export class Gamepad implements ControlTarget {
+export interface GamepadOptions {
+  navigatorAdapter?: NavigatorAdapter;
+}
+
+export class Gamepad implements InputControl {
+  #navigatorAdapter: NavigatorAdapter;
+
   static maxTouches = 10;
 
   buttons: GamepadButtonState[][] = [];
@@ -41,7 +51,14 @@ export class Gamepad implements ControlTarget {
   axisAutoRepeatDelayMs = 500;
   axisAutoRepeatRateMs = 33;
 
-  constructor() {
+  constructor(
+    options: GamepadOptions = {}
+  ) {
+    const {
+      navigatorAdapter = new BrowserNavigatorAdapter()
+    } = options;
+
+    this.#navigatorAdapter = navigatorAdapter;
     for (let i = 0; i < 4; i++) {
       this.buttons[i] = [];
       this.axes[i] = [];
@@ -49,14 +66,6 @@ export class Gamepad implements ControlTarget {
     }
 
     this.reset();
-  }
-
-  connect() {
-    // nothing
-  }
-
-  disconnect(): void {
-    // nothing
   }
 
   reset() {
@@ -84,7 +93,7 @@ export class Gamepad implements ControlTarget {
   }
 
   update() {
-    const gamepads = navigator.getGamepads();
+    const gamepads = this.#navigatorAdapter.getGamepads();
     if (gamepads === null) {
       return;
     }

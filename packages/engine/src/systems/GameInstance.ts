@@ -11,7 +11,7 @@ import {
 } from "./Scene.js";
 import {
   FixedTimeStep,
-  type FixedTimeStepClock
+  type TimerAdapter
 } from "./FixedTimeStep.js";
 import { Input } from "../controls/Input.class.js";
 import { GlobalAudio } from "../audio/GlobalAudio.js";
@@ -32,7 +32,7 @@ export interface GameInstanceOptions {
   input?: Input;
   scheduler?: FixedTimeStep;
   audio?: GlobalAudio;
-  clock?: FixedTimeStepClock;
+  clock?: TimerAdapter;
 
   windowAdapter?: WindowAdapter;
   globalsAdapter?: GlobalsAdapter;

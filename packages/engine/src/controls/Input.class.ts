@@ -3,7 +3,14 @@ import * as THREE from "three";
 import { EventEmitter } from "@posva/event-emitter";
 
 // Import Internal Dependencies
-import * as targets from "./targets/index.js";
+import * as sources from "./targets/index.js";
+import {
+  BrowserWindowAdapter,
+  type WindowAdapter
+} from "../adapters/index.js";
+import type {
+  InputControl
+} from "./types.js";
 
 export type { MouseEventButton } from "./targets/Mouse.class.js";
 
@@ -16,11 +23,12 @@ export interface InputOptions {
    * @default false
    */
   enableOnExit?: boolean;
+  windowAdapter?: WindowAdapter;
 }
 
 export type InputMouseAction =
   | number
-  | keyof typeof targets.MouseEventButton
+  | keyof typeof sources.MouseEventButton
   | "ANY"
   | "NONE";
 
@@ -28,12 +36,13 @@ export type InputKeyboardAction = string | "ANY" | "NONE";
 
 export class Input extends EventEmitter<InputEvents> {
   #canvas: HTMLCanvasElement;
+  #windowAdapter: WindowAdapter;
 
-  mouse: targets.Mouse;
-  touchpad: targets.Touchpad;
-  gamepad: targets.Gamepad;
-  fullscreen: targets.Fullscreen;
-  keyboard: targets.Keyboard;
+  mouse: sources.Mouse;
+  touchpad: sources.Touchpad;
+  gamepad: sources.Gamepad;
+  fullscreen: sources.Fullscreen;
+  keyboard: sources.Keyboard;
 
   exited = false;
 
@@ -43,26 +52,36 @@ export class Input extends EventEmitter<InputEvents> {
   ) {
     super();
     const {
-      enableOnExit = false
+      enableOnExit = false,
+      windowAdapter = new BrowserWindowAdapter()
     } = options;
 
     this.#canvas = canvas;
-    const fullscreen = new targets.Fullscreen(canvas);
-    this.mouse = new targets.Mouse(canvas, {
+    this.#windowAdapter = windowAdapter;
+    const fullscreen = new sources.Fullscreen({
+      canvas
+    });
+    this.mouse = new sources.Mouse({
+      canvas,
       mouseDownCallback: () => fullscreen.onMouseDown(),
       mouseUpCallback: () => fullscreen.onMouseUp()
     });
     this.fullscreen = fullscreen;
-    this.touchpad = new targets.Touchpad(this.mouse);
-    this.gamepad = new targets.Gamepad();
-    this.keyboard = new targets.Keyboard();
+    this.touchpad = new sources.Touchpad({
+      canvas,
+      mouse: this.mouse
+    });
+    this.gamepad = new sources.Gamepad({
+      navigatorAdapter: this.#windowAdapter.navigator
+    });
+    this.keyboard = new sources.Keyboard();
 
     if (enableOnExit) {
-      window.onbeforeunload = this.doExitCallback;
+      this.#windowAdapter.onbeforeunload = this.doExitCallback;
     }
   }
 
-  #targets() {
+  #sourceInputs(): InputControl[] {
     return [
       this.mouse,
       this.touchpad,
@@ -72,17 +91,15 @@ export class Input extends EventEmitter<InputEvents> {
   }
 
   connect() {
-    this.#targets()
-      .forEach((subscriber) => subscriber.connect());
-    this.fullscreen?.connect();
-    window.addEventListener("blur", this.onBlur);
+    [...this.#sourceInputs(), this.fullscreen]
+      .forEach((subscriber) => subscriber.connect?.());
+    this.#windowAdapter.addEventListener("blur", this.onBlur);
   }
 
   disconnect() {
-    this.#targets()
-      .forEach((subscriber) => subscriber.disconnect());
-    this.fullscreen?.disconnect();
-    window.removeEventListener("blur", this.onBlur);
+    [...this.#sourceInputs(), this.fullscreen]
+      .forEach((subscriber) => subscriber.disconnect?.());
+    this.#windowAdapter.removeEventListener("blur", this.onBlur);
   }
 
   enterFullscreen() {
@@ -94,8 +111,8 @@ export class Input extends EventEmitter<InputEvents> {
   }
 
   update() {
-    this.#targets()
-      .forEach((subscriber) => subscriber?.update());
+    this.#sourceInputs()
+      .forEach((subscriber) => subscriber.update());
   }
 
   getScreenSize() {
@@ -150,7 +167,7 @@ export class Input extends EventEmitter<InputEvents> {
       return this.mouse.buttonsDown.length === 0;
     }
 
-    const index = typeof action === "number" ? action : targets.MouseEventButton[action];
+    const index = typeof action === "number" ? action : sources.MouseEventButton[action];
 
     return this.mouse.buttonsDown[index];
   }
@@ -165,7 +182,7 @@ export class Input extends EventEmitter<InputEvents> {
       return this.mouse.buttons.every((button) => !button.wasJustReleased);
     }
 
-    const index = typeof action === "number" ? action : targets.MouseEventButton[action];
+    const index = typeof action === "number" ? action : sources.MouseEventButton[action];
 
     return this.mouse.buttons[index]?.wasJustReleased ?? false;
   }
@@ -179,7 +196,7 @@ export class Input extends EventEmitter<InputEvents> {
     if (action === "NONE") {
       return this.mouse.buttons.every((button) => !button.wasJustPressed);
     }
-    const index = typeof action === "number" ? action : targets.MouseEventButton[action];
+    const index = typeof action === "number" ? action : sources.MouseEventButton[action];
 
     return this.mouse.buttons[index]?.wasJustPressed ?? false;
   }
@@ -232,7 +249,7 @@ export class Input extends EventEmitter<InputEvents> {
   vibrate(
     pattern: VibratePattern
   ): void {
-    window.navigator.vibrate(pattern);
+    this.#windowAdapter.navigator.vibrate(pattern);
   }
 
   isKeyDown(
@@ -392,7 +409,7 @@ export class Input extends EventEmitter<InputEvents> {
   }
 
   private onBlur = () => {
-    this.#targets()
+    this.#sourceInputs()
       .forEach((subscriber) => subscriber.reset());
   };
 
