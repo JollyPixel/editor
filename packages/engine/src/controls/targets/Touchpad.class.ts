@@ -1,6 +1,8 @@
 // Import Internal Dependencies
 import { Mouse } from "./Mouse.class.js";
-import type { ControlTarget } from "../ControlTarget.js";
+import type {
+  InputControl
+} from "../types.js";
 
 export interface TouchState {
   isDown: boolean;
@@ -9,7 +11,12 @@ export interface TouchState {
   position: { x: number; y: number; };
 }
 
-export class Touchpad implements ControlTarget {
+export interface TouchpadOptions {
+  canvas: HTMLCanvasElement;
+  mouse: Mouse;
+}
+
+export class Touchpad implements InputControl {
   static readonly MaxTouches = 10;
 
   #canvas: HTMLCanvasElement;
@@ -19,9 +26,14 @@ export class Touchpad implements ControlTarget {
   touchesDown: boolean[] = [];
 
   constructor(
-    mouse: Mouse
+    options: TouchpadOptions
   ) {
-    this.#canvas = mouse.domElement;
+    const {
+      canvas,
+      mouse
+    } = options;
+
+    this.#canvas = canvas;
     this.#mouse = mouse;
     this.reset();
   }

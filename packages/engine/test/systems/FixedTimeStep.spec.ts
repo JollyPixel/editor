@@ -7,7 +7,7 @@ import assert from "node:assert";
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { FixedTimeStep, type FixedTimeStepClock } from "../src/systems/FixedTimeStep.js";
+import { FixedTimeStep, type TimerAdapter } from "../../src/systems/FixedTimeStep.js";
 
 // CONSTANTS
 const kDefaultFps = 60;
@@ -15,9 +15,9 @@ const kDefaultFps = 60;
 const kUpdateInterval = 1000 / kDefaultFps;
 const kFloatTolerance = 0.001;
 
-describe("FixedTimeStep", () => {
+describe("Systems.FixedTimeStep", () => {
   let fixedTimeStep: FixedTimeStep;
-  let mockClock: FixedTimeStepClock;
+  let mockClock: TimerAdapter;
 
   beforeEach(() => {
     mockClock = {

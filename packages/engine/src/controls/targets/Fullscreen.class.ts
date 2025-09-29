@@ -2,7 +2,11 @@
 import { EventEmitter } from "@posva/event-emitter";
 
 // Import Internal Dependencies
-import type { ControlTarget } from "../ControlTarget.js";
+import {
+  BrowserDocumentAdapter,
+  type DocumentAdapter
+} from "../../adapters/document.js";
+import type { InputConnectable } from "../types.js";
 
 export type FullscreenState = "active" | "suspended";
 
@@ -10,27 +14,55 @@ export type FullscreenEvents = {
   stateChange: [FullscreenState];
 };
 
-export class Fullscreen extends EventEmitter<FullscreenEvents> implements ControlTarget {
+export interface FullscreenOptions {
+  canvas: HTMLCanvasElement;
+  documentAdapter?: DocumentAdapter;
+}
+
+export class Fullscreen extends EventEmitter<FullscreenEvents> implements InputConnectable {
   #canvas: HTMLCanvasElement;
+  #documentAdapter: DocumentAdapter;
 
   wantsFullscreen = false;
   wasFullscreen = false;
 
   constructor(
-    canvas: HTMLCanvasElement
+    options: FullscreenOptions
   ) {
     super();
+    const {
+      canvas,
+      documentAdapter = new BrowserDocumentAdapter()
+    } = options;
+
     this.#canvas = canvas;
+    this.#documentAdapter = documentAdapter;
   }
 
   connect() {
-    document.addEventListener("fullscreenchange", this.onFullscreenChange, false);
-    document.addEventListener("fullscreenerror", this.onFullscreenError, false);
+    this.#documentAdapter.addEventListener(
+      "fullscreenchange",
+      this.onFullscreenChange,
+      false
+    );
+    this.#documentAdapter.addEventListener(
+      "fullscreenerror",
+      this.onFullscreenError,
+      false
+    );
   }
 
   disconnect() {
-    document.removeEventListener("fullscreenchange", this.onFullscreenChange, false);
-    document.removeEventListener("fullscreenerror", this.onFullscreenError, false);
+    this.#documentAdapter.removeEventListener(
+      "fullscreenchange",
+      this.onFullscreenChange,
+      false
+    );
+    this.#documentAdapter.removeEventListener(
+      "fullscreenerror",
+      this.onFullscreenError,
+      false
+    );
   }
 
   reset() {
@@ -44,13 +76,13 @@ export class Fullscreen extends EventEmitter<FullscreenEvents> implements Contro
 
   exit() {
     this.reset();
-    if (document.fullscreenElement === this.#canvas) {
-      document.exitFullscreen();
+    if (this.#documentAdapter.fullscreenElement === this.#canvas) {
+      this.#documentAdapter.exitFullscreen();
     }
   }
 
   private onFullscreenChange = () => {
-    const isFullscreen = document.fullscreenElement === this.#canvas;
+    const isFullscreen = this.#documentAdapter.fullscreenElement === this.#canvas;
     if (this.wasFullscreen !== isFullscreen) {
       this.emit("stateChange", isFullscreen ? "active" : "suspended");
       this.wasFullscreen = isFullscreen;

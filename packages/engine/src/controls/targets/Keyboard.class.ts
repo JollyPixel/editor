@@ -1,5 +1,11 @@
 // Import Internal Dependencies
-import type { ControlTarget } from "../ControlTarget.js";
+import type {
+  InputControl
+} from "../types.js";
+import {
+  BrowserDocumentAdapter,
+  type DocumentAdapter
+} from "../../adapters/index.js";
 
 // CONSTANTS
 const kControlKeys = new Set([
@@ -18,11 +24,11 @@ export interface KeyState {
 }
 
 export interface KeyboardOptions {
-  eventProvider?: Document;
+  documentAdapter?: DocumentAdapter;
 }
 
-export class Keyboard implements ControlTarget {
-  #eventProvider: Document;
+export class Keyboard implements InputControl {
+  #documentAdapter: DocumentAdapter;
 
   buttons = new Map<string, KeyState>();
   buttonsDown = new Set<string>();
@@ -30,23 +36,27 @@ export class Keyboard implements ControlTarget {
   char = "";
   newChar = "";
 
-  constructor(options: KeyboardOptions = {}) {
-    const { eventProvider = document } = options;
+  constructor(
+    options: KeyboardOptions = {}
+  ) {
+    const {
+      documentAdapter = new BrowserDocumentAdapter()
+    } = options;
 
     this.reset();
-    this.#eventProvider = eventProvider;
+    this.#documentAdapter = documentAdapter;
   }
 
   connect() {
-    this.#eventProvider.addEventListener("keydown", this.onKeyDown);
-    this.#eventProvider.addEventListener("keypress", this.onKeyPress);
-    this.#eventProvider.addEventListener("keyup", this.onKeyUp);
+    this.#documentAdapter.addEventListener("keydown", this.onKeyDown);
+    this.#documentAdapter.addEventListener("keypress", this.onKeyPress);
+    this.#documentAdapter.addEventListener("keyup", this.onKeyUp);
   }
 
   disconnect() {
-    this.#eventProvider.removeEventListener("keydown", this.onKeyDown);
-    this.#eventProvider.removeEventListener("keypress", this.onKeyPress);
-    this.#eventProvider.removeEventListener("keyup", this.onKeyUp);
+    this.#documentAdapter.removeEventListener("keydown", this.onKeyDown);
+    this.#documentAdapter.removeEventListener("keypress", this.onKeyPress);
+    this.#documentAdapter.removeEventListener("keyup", this.onKeyUp);
   }
 
   reset() {

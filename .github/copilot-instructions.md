@@ -69,6 +69,7 @@ Place all constants directly **beneath the imports** under a `// CONSTANTS` com
 * Cover edge cases and error handling.
 * **Never** modify production code solely to ease testing.
 * For browser‑like APIs, mock the DOM with **`happy-dom`**.
+* Always try to type variables such as mocks.
 
 ## 6  User Interaction (for Copilot / LLM)
 
