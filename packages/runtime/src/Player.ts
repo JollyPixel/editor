@@ -1,7 +1,9 @@
 // Import Third-party Dependencies
 import Stats from "stats.js";
 import * as THREE from "three";
-import { Systems } from "@jolly-pixel/engine";
+import {
+  Systems
+} from "@jolly-pixel/engine";
 
 export interface PlayerOptions {
   /**
@@ -30,12 +32,14 @@ export class Player {
     }
 
     this.canvas = canvas;
+    const scene = new Systems.SceneEngine();
     const renderer = new Systems.ThreeRenderer(
-      canvas
+      canvas, { scene, renderMode: "direct" }
     ) as unknown as Systems.GameRenderer<THREE.WebGLRenderer>;
     this.gameInstance = new Systems.GameInstance(renderer, {
       enableOnExit: true,
-      loadingManager: this.manager
+      loadingManager: this.manager,
+      scene
     });
 
     if (options.includePerformanceStats) {

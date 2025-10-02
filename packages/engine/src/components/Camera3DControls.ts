@@ -54,11 +54,9 @@ export class Camera3DControls extends Behavior {
     this.maxRollDown = options.maxRollDown ?? -Math.PI / 2;
     this.#rotationSpeed = options.rotationSpeed ?? 2;
     this.#movementSpeed = options.speed ?? 20;
-  }
 
-  start() {
-    this.camera.add(this.actor.gameInstance.audio.listener);
     this.actor.gameInstance.renderer.addRenderComponent(this.camera);
+    this.camera.add(this.actor.gameInstance.audio.listener);
   }
 
   set speed(

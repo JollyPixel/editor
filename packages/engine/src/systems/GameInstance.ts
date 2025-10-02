@@ -4,9 +4,8 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import {
   type GameRenderer
-} from "./Renderers/index.js";
+} from "./renderers/index.js";
 import {
-  SceneEngine,
   type Scene
 } from "./Scene.js";
 import {
@@ -28,7 +27,7 @@ export interface GameInstanceOptions {
   enableOnExit?: boolean;
 
   loadingManager?: THREE.LoadingManager;
-  scene?: Scene;
+  scene: Scene;
   input?: Input;
   scheduler?: FixedTimeStep;
   audio?: GlobalAudio;
@@ -53,11 +52,11 @@ export class GameInstance<T = THREE.WebGLRenderer> {
 
   constructor(
     renderer: GameRenderer<T>,
-    options: GameInstanceOptions = {}
+    options: GameInstanceOptions
   ) {
     const {
       loadingManager = new THREE.LoadingManager(),
-      scene = new SceneEngine(),
+      scene,
       input = new Input(renderer.canvas, { enableOnExit: options.enableOnExit ?? false }),
       scheduler = new FixedTimeStep(options.clock),
       audio = new GlobalAudio(),
@@ -108,9 +107,7 @@ export class GameInstance<T = THREE.WebGLRenderer> {
       return true;
     }
 
-    if (updates > 0) {
-      this.renderer.draw(this.scene);
-    }
+    updates > 0 && this.renderer.draw();
 
     return false;
   }

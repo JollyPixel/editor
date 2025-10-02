@@ -1,5 +1,7 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
+import { EffectComposer, type Pass } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { EventEmitter } from "@posva/event-emitter";
 
 // Import Internal Dependencies
@@ -8,6 +10,12 @@ import type {
   RenderComponent
 } from "./GameRenderer.js";
 import type { Scene } from "../Scene.js";
+import {
+  type RenderMode,
+  type RenderStrategy,
+  DirectRenderStrategy,
+  ComposerRenderStrategy
+} from "./RenderStrategy.js";
 
 export type ThreeRendererEvents = {
   resize: [
@@ -18,28 +26,33 @@ export type ThreeRendererEvents = {
   ];
 };
 
+export interface ThreeRendererOptions {
+  /**
+   * @default "direct"
+   */
+  renderMode: RenderMode;
+  scene: Scene;
+}
+
 export class ThreeRenderer extends EventEmitter<
   ThreeRendererEvents
 > implements GameRenderer {
   webGLRenderer: THREE.WebGLRenderer;
   renderComponents: RenderComponent[] = [];
+  renderStrategy: RenderStrategy;
   ratio: number | null = null;
+  scene: Scene;
 
   constructor(
-    canvas: HTMLCanvasElement
+    canvas: HTMLCanvasElement,
+    options: ThreeRendererOptions
   ) {
     super();
-    this.webGLRenderer = new THREE.WebGLRenderer({
-      canvas,
-      antialias: true,
-      alpha: true
-    });
+    const { scene, renderMode = "direct" } = options;
 
-    this.webGLRenderer.setPixelRatio(window.devicePixelRatio);
-    this.webGLRenderer.shadowMap.enabled = true;
-    this.webGLRenderer.shadowMap.type = THREE.BasicShadowMap;
-    this.webGLRenderer.setSize(0, 0, false);
-    this.webGLRenderer.autoClear = false;
+    this.scene = scene;
+    this.webGLRenderer = createWebGLRenderer(canvas);
+    this.setRenderMode(renderMode);
   }
 
   get canvas() {
@@ -50,29 +63,77 @@ export class ThreeRenderer extends EventEmitter<
     return this.webGLRenderer;
   }
 
-  addRenderComponent(component: RenderComponent): void {
+  addRenderComponent(
+    component: RenderComponent
+  ): void {
     this.renderComponents.push(component);
+    if (this.renderStrategy instanceof ComposerRenderStrategy) {
+      const renderPass = new RenderPass(this.scene.getSource(), component);
+      this.renderStrategy.addEffect(renderPass);
+    }
   }
 
-  removeRenderComponent(component: RenderComponent): void {
+  removeRenderComponent(
+    component: RenderComponent
+  ): void {
     const index = this.renderComponents.indexOf(component);
     if (index !== -1) {
       this.renderComponents.splice(index, 1);
     }
+
+    if (this.renderStrategy instanceof ComposerRenderStrategy) {
+      const composer = this.renderStrategy.getComposer();
+      const renderPass = composer.passes.find(
+        (pass) => (pass as RenderPass).camera === component
+      )!;
+      this.renderStrategy.removeEffect(renderPass);
+    }
+  }
+
+  setRenderMode(
+    mode: RenderMode
+  ): this {
+    if (mode === "direct") {
+      this.renderStrategy = new DirectRenderStrategy(this.webGLRenderer);
+    }
+    else {
+      const composer = new EffectComposer(this.webGLRenderer);
+
+      const scene = this.scene.getSource();
+      for (const renderComponent of this.renderComponents) {
+        const renderPass = new RenderPass(scene, renderComponent);
+        composer.addPass(renderPass);
+      }
+
+      this.renderStrategy = new ComposerRenderStrategy(
+        composer
+      );
+    }
+    this.resize();
+    this.clear();
+
+    return this;
+  }
+
+  setEffects(...effects: Pass[]): this {
+    if (this.renderStrategy instanceof ComposerRenderStrategy) {
+      for (const pass of effects) {
+        this.renderStrategy.addEffect(pass);
+      }
+    }
+
+    return this;
   }
 
   setRatio(
     ratio: number | null = null
   ) {
     this.ratio = ratio;
-    if (this.ratio) {
-      this.webGLRenderer.domElement.style.margin = "0";
-      this.webGLRenderer.domElement.style.flex = "1";
-    }
-    else {
-      this.webGLRenderer.domElement.style.margin = "auto";
-      this.webGLRenderer.domElement.style.flex = "none";
-    }
+
+    const styles = this.ratio ?
+      { margin: "0", flex: "1" } :
+      { margin: "auto", flex: "none" };
+    Object.assign(this.webGLRenderer.domElement.style, styles);
     this.resize();
 
     return this;
@@ -107,7 +168,7 @@ export class ThreeRenderer extends EventEmitter<
       this.webGLRenderer.domElement.width !== width ||
       this.webGLRenderer.domElement.height !== height
     ) {
-      this.webGLRenderer.setSize(width, height, false);
+      this.renderStrategy.resize(width, height);
       for (const renderComponent of this.renderComponents) {
         if (renderComponent instanceof THREE.PerspectiveCamera) {
           renderComponent.aspect = width / height;
@@ -118,24 +179,14 @@ export class ThreeRenderer extends EventEmitter<
     }
   };
 
-  draw(
-    scene: Scene
-  ) {
+  draw() {
     this.resize();
     this.clear();
-    // this.renderComponents.sort((a, b) => {
-    //   let order = (a.depth - b.depth);
-    //   if (order === 0) {
-    //     order = this.cachedActors.indexOf(a.actor) - this.cachedActors.indexOf(b.actor);
-    //   }
 
-    //   return order;
-    // });
-
-    const source = scene.getSource();
-    for (const renderComponent of this.renderComponents) {
-      this.webGLRenderer.render(source, renderComponent);
-    }
+    this.renderStrategy.render(
+      this.scene.getSource(),
+      this.renderComponents
+    );
     this.emit("draw", { source: this.webGLRenderer });
   }
 
@@ -148,4 +199,25 @@ export class ThreeRenderer extends EventEmitter<
   clear() {
     this.webGLRenderer.clear();
   }
+}
+
+function createWebGLRenderer(
+  canvas: HTMLCanvasElement
+): THREE.WebGLRenderer {
+  const renderer = new THREE.WebGLRenderer({
+    canvas,
+    antialias: true,
+    alpha: true
+  });
+
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.BasicShadowMap;
+  renderer.setSize(0, 0, false);
+  renderer.autoClear = false;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.NeutralToneMapping;
+  renderer.toneMappingExposure = 1.25;
+
+  return renderer;
 }
