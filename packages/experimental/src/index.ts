@@ -8,6 +8,9 @@ import {
 } from "@jolly-pixel/engine";
 import { Player, loadPlayer } from "@jolly-pixel/runtime";
 import * as THREE from "three";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { GlitchPass } from "three/addons/postprocessing/GlitchPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 
 // Import Internal Dependencies
 // import { SpriteRenderer } from "./components/sprite/SpriteRenderer.class.js";
@@ -17,11 +20,18 @@ const runtime = new Player(canvasHTMLElement, {
   includePerformanceStats: true
 });
 const { gameInstance } = runtime;
+gameInstance.renderer.setRenderMode("composer");
 
 new Actor(gameInstance, { name: "camera" })
   .registerComponent(Components.Camera3DControls, { speed: 0.35, rotationSpeed: 0.45 }, (component) => {
     component.camera.position.set(10, 10, 5);
     component.camera.lookAt(0, 0, 0);
+
+    gameInstance.renderer.setEffects(
+      new UnrealBloomPass(gameInstance.input.getScreenSize(), 2, 0, 0.7),
+      new GlitchPass(),
+      new OutputPass()
+    );
 
     createViewHelper(component.camera, gameInstance);
   });
