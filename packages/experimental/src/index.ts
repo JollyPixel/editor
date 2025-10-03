@@ -4,12 +4,12 @@ import {
   Components,
   AudioBackground,
   TiledMapRenderer,
+  TextRenderer,
   createViewHelper
 } from "@jolly-pixel/engine";
 import { Player, loadPlayer } from "@jolly-pixel/runtime";
 import * as THREE from "three";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
-import { GlitchPass } from "three/addons/postprocessing/GlitchPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 
 // Import Internal Dependencies
@@ -28,8 +28,7 @@ new Actor(gameInstance, { name: "camera" })
     component.camera.lookAt(0, 0, 0);
 
     gameInstance.renderer.setEffects(
-      new UnrealBloomPass(gameInstance.input.getScreenSize(), 2, 0, 0.7),
-      new GlitchPass(),
+      new UnrealBloomPass(gameInstance.input.getScreenSize(), 0.35, 0, 0.15),
       new OutputPass()
     );
 
@@ -54,6 +53,14 @@ new Actor(gameInstance, { name: "tilemap" })
     assetPath: "./assets/tilemaps/experimental_map.tmj",
     orientation: "top-down"
   });
+
+const textActor = new Actor(gameInstance, { name: "3d-text" })
+  .registerComponent(TextRenderer, {
+    path: "./assets/fonts/helvetiker_regular.typeface.json",
+    text: "Hello, 3D World !",
+    textGeometryOptions: { size: 2, depth: 2, center: true }
+  });
+textActor.threeObject.position.set(0, 5, 0);
 
 const scene = gameInstance.scene.getSource();
 scene.background = new THREE.Color("#000000");
@@ -99,7 +106,7 @@ const ab = new AudioBackground(gameInstance, {
 
 canvasHTMLElement.addEventListener("click", async() => {
   await ab.preload();
-  await ab.play("second.tech-space");
+  await ab.play("boss.tech-space");
 });
 
 loadPlayer(runtime)

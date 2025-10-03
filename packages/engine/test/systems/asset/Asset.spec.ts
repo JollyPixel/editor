@@ -63,4 +63,12 @@ describe("Systems.Asset", () => {
 
     assert.notStrictEqual(asset1.id, asset2.id);
   });
+
+  test("should generate assets with multiple dots in name", () => {
+    const asset = new Asset("/my.folder/image.file.png");
+    assert.strictEqual(asset.name, "image.file");
+    assert.strictEqual(asset.ext, ".png");
+    assert.strictEqual(asset.path, "/my.folder/");
+    assert.strictEqual(asset.longExt, ".file.png");
+  });
 });
