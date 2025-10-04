@@ -6,6 +6,7 @@ export type AssetTypeName =
   | "texture"
   | "audio"
   | "model"
+  | "font"
   | (string & {});
 
 export class Asset {
@@ -30,6 +31,15 @@ export class Asset {
 
   get basename() {
     return this.name + this.ext;
+  }
+
+  get longExt() {
+    const basename = this.basename;
+    const firstDotIndex = basename.indexOf(".");
+
+    return firstDotIndex === -1 ?
+      "" :
+      basename.slice(firstDotIndex);
   }
 
   toString() {

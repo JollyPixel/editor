@@ -8,6 +8,7 @@ export type ComponentType =
   | "SpriteRenderer"
   | "ModelRenderer"
   | "TiledMapRenderer"
+  | "TextRenderer"
   | (string & {});
 
 export interface Component {

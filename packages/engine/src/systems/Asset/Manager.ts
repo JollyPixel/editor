@@ -36,7 +36,7 @@ export class AssetManager {
   ): LazyAsset<T> {
     const asset = Asset.from(assetOrPath);
     if (asset.type === "unknown") {
-      asset.type = this.registry.getTypeForExt(asset.ext);
+      asset.type = this.registry.getTypeForExt(asset.longExt);
     }
 
     this.waiting.enqueue(asset);
