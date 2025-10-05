@@ -1,11 +1,10 @@
 // Import Internal Dependencies
-import { getColorAsRGBA } from "./utils";
+import { getColorAsRGBA } from "./utils.js";
 
 export interface BrushManagerOptions {
   color?: string;
   size?: number;
   maxSize?: number;
-  colorPickerHtmlElement?: HTMLInputElement;
   highlight?: {
     colorInline?: string;
     colorOutline?: string;
@@ -14,6 +13,7 @@ export interface BrushManagerOptions {
 
 export default class BrushManager {
   private color!: string;
+  private opacity: number;
 
   private size!: number;
   private maxSize: number;
@@ -21,29 +21,51 @@ export default class BrushManager {
   private colorInline!: string;
   private colorOutline!: string;
 
-  private colorPickerHtmlElement: HTMLInputElement | undefined;
-
   constructor(options: BrushManagerOptions = {}) {
     this.setColor(options.color || "red");
-    this.setSize(options.size || 32);
-    this.maxSize = options.maxSize || 32;
-    this.colorPickerHtmlElement = options.colorPickerHtmlElement;
+    this.maxSize = Math.max(options.maxSize || 32, 1);
+    this.setSize(options.size || this.maxSize);
+    this.opacity = 1;
 
     this.setColorInline(options.highlight?.colorInline || "#FFF");
     this.setColorOutline(options.highlight?.colorOutline || "#000");
   }
 
   setColor(color: string) {
-    const [r, g, b, a] = getColorAsRGBA(color);
-    this.color = `rgba(${r}, ${g}, ${b}, ${a / 255})`;
+    const [r, g, b] = getColorAsRGBA(color);
+    this.color = `rgba(${r}, ${g}, ${b}, ${this.opacity})`;
+  }
 
-    if (a === 255 && this.colorPickerHtmlElement !== undefined) {
-      this.colorPickerHtmlElement.value = `rgb(${r}, ${g}, ${b})`;
-    }
+  setColorWithOpacity(color: string, opacity: number) {
+    const [r, g, b] = getColorAsRGBA(color);
+    this.opacity = Math.max(0, Math.min(1, opacity));
+    this.color = `rgba(${r}, ${g}, ${b}, ${this.opacity})`;
   }
 
   getColor(): string {
     return this.color;
+  }
+
+  setOpacity(opacity: number) {
+    if (opacity < 0) {
+      this.opacity = 0;
+
+      return;
+    }
+    if (opacity > 1) {
+      this.opacity = 1;
+
+      return;
+    }
+
+    this.opacity = opacity;
+
+    const [r, g, b] = getColorAsRGBA(this.color);
+    this.color = `rgba(${r}, ${g}, ${b}, ${this.opacity})`;
+  }
+
+  getOpacity(): number {
+    return this.opacity;
   }
 
   setColorInline(color: string) {

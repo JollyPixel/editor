@@ -7,26 +7,38 @@
   <title>UV / Texture Editor</title>
   <link rel="stylesheet" href="./public/main.css">
 </head>
+<style>
+  body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+  }
 
-<nav>
-  <div id="menu">
-    <h2>Éditeur UV avec Zoom et Alignement SVG</h2>
-    <br/>
-    <strong>Mode :</strong>
-    <button id="paintMode">🎨 Peindre</button>
-    <button id="moveMode">✋ Déplacer UV</button>
-    <br><br>
-    <strong>Couleur :</strong>
-    <input type="color" id="colorPicker" value="#000000" alpha colorspace="limited-srgb" style="vertical-align: middle;">
-  </div>
+  #rightPanel {
+    height: 100%;
+    width: 300px;
+    min-width: 200px;
+    flex-shrink: 0;
+    border-left: 2px solid var(--jolly-border-color);
+    box-sizing: border-box;
+    background: purple;
+  }
+  section {
+    flex-grow: 1;
+    height: 100%;
+    min-width: .00px;
+  }
 
-  <div id="container"></div>
-</nav>
+</style>
 
-<div class="resizer"></div>
-
-<section>
-</section>
+<jolly-model-editor-left-panel></jolly-model-editor-left-panel>
+<jolly-resizer name="leftPanel-threejs"></jolly-resizer>
+<section id="threeRenderer"></section>
+<jolly-resizer name="threejs-rightPanel"></jolly-resizer>
+<div id="rightPanel"></div>
 
 <script type="module" src="./src/index.ts"></script>
 

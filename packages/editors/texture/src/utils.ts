@@ -18,3 +18,14 @@ export function getColorAsRGBA(color: string): [number, number, number, number] 
 
   return [r, g, b, a];
 }
+
+export function rgbToHex(r, g, b) {
+  // Vérifier que les valeurs sont entre 0 et 255
+  if ([r, g, b].some((val) => val < 0 || val > 255)) {
+    throw new Error("Les valeurs RGB doivent être comprises entre 0 et 255.");
+  }
+
+  const hexa = [r, g, b].map((val) => val.toString(16).padStart(2, "0"));
+
+  return `#${hexa[0]}${hexa[1]}${hexa[2]}`;
+}

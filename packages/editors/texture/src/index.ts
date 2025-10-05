@@ -1,81 +1,74 @@
 // Import Internal Dependencies
-import CanvasManager, { Mode } from "./CanvasManager";
-import "./threeScene.ts";
+import ThreeSceneManager from "./threeScene.js";
+import "./components/LeftPanel.ts";
+import "./components/LitResizer.ts";
 
-// CONSTANTS
-const kContainer = document.getElementById("container") as HTMLDivElement;
-const kColorPicker = document.getElementById("colorPicker") as HTMLInputElement;
+const kBody = document.querySelector("body") as HTMLBodyElement;
+const leftPanel = document.querySelector("jolly-model-editor-left-panel") as HTMLElement;
+const rightPanel = document.getElementById("rightPanel") as HTMLDivElement;
+const kSection = document.getElementById("threeRenderer") as HTMLDivElement;
 
-const canvasManager = new CanvasManager(kContainer, {
-  texture: {
-    size: { x: 128, y: 64 }
-  },
-  zoom: {
-    default: 1,
-    sensitivity: 1
-  },
-  brush: {
-    color: kColorPicker.value,
-    size: 5,
-    colorPickerHtmlElement: kColorPicker
+const kMinWidth = 300;
+
+const threeSceneManager = new ThreeSceneManager(kSection);
+
+function updateCanvasTexture() {
+  const leftPanelComponent = leftPanel as any;
+  const canvasManager = leftPanelComponent.getSharedCanvasManager();
+  if (canvasManager) {
+    threeSceneManager.setCanvasTexture(canvasManager);
   }
-});
-
-kColorPicker.addEventListener("input", () => {
-  const selectedColor = kColorPicker.value;
-  canvasManager.brush.setColor(selectedColor);
-});
-
-document.querySelectorAll<HTMLInputElement>(".color-button").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".color-button").forEach((b) => b.classList.remove("selected"));
-    btn.classList.add("selected");
-    // selectedColor = btn.dataset.color!;
-  });
-});
-
-function updateMode(newMode: Mode) {
-  canvasManager.setMode(newMode);
-  if (newMode === "paint") {
-    // svg.style.pointerEvents = "none";
-  }
-  else {
-    // svg.style.pointerEvents = "auto";
-    // hoverX = null;
-    // hoverY = null;
-  }
-
-  document.getElementById("paintMode")!.classList.toggle("mode-active", canvasManager.getMode() === "paint");
-  document.getElementById("moveMode")!.classList.toggle("mode-active", canvasManager.getMode() === "move");
 }
 
-document.getElementById("paintMode")!.addEventListener("click", () => updateMode("paint"));
-document.getElementById("moveMode")!.addEventListener("click", () => updateMode("move"));
-
-updateMode("paint");
-
-const resizer = document.querySelector(".resizer")!;
-const nav = document.querySelector("nav")!;
-
-let isResizing = false;
-
-resizer.addEventListener("mousedown", () => {
-  isResizing = true;
-  document.body.style.cursor = "col-resize";
+requestAnimationFrame(function updateLoop() {
+  updateCanvasTexture();
+  requestAnimationFrame(updateLoop);
 });
 
-document.addEventListener("mousemove", (e) => {
-  if (!isResizing) {
-    return;
+kBody.addEventListener("resizer", (e: Event) => {
+  const customEvent = e as CustomEvent;
+  const { delta, name } = customEvent.detail;
+
+  function triggerManagerResize() {
+    threeSceneManager.onResize();
+
+    const leftPanelComponent = leftPanel as any;
+
+    // Essayer d'abord via le getSharedCanvasManager
+    const sharedManager = leftPanelComponent.getSharedCanvasManager?.();
+    if (sharedManager) {
+      sharedManager.onResize();
+    }
+    // Sinon, essayer via activeComponent
+    else {
+      const activeComponent = leftPanelComponent.getActiveComponent();
+      if (activeComponent && activeComponent.canvasManagerInstance) {
+        activeComponent.canvasManagerInstance.onResize();
+      }
+    }
   }
-  const newWidth = e.clientX;
-  nav.style.width = `${newWidth}px`;
 
-  canvasManager.onResize();
-});
+  if (name === "leftPanel-threejs") {
+    const leftWidth = parseInt(getComputedStyle(leftPanel).width, 10);
+    const sectionWidth = parseInt(getComputedStyle(kSection).width, 10);
+    const newLeftWidth = leftWidth + delta;
+    const newSectionWidth = sectionWidth - delta;
 
-document.addEventListener("mouseup", () => {
-  isResizing = false;
-  document.body.style.cursor = "default";
+    if (newSectionWidth >= kMinWidth) {
+      leftPanel.style.width = `${newLeftWidth}px`;
+      triggerManagerResize();
+    }
+  }
+  else if (name === "threejs-rightPanel") {
+    const rightWidth = parseInt(getComputedStyle(rightPanel).width, 10);
+    const sectionWidth = parseInt(getComputedStyle(kSection).width, 10);
+    const newRightWidth = rightWidth - delta;
+    const newSectionWidth = sectionWidth + delta;
+
+    if (newSectionWidth >= kMinWidth && newRightWidth >= kMinWidth) {
+      rightPanel.style.width = `${newRightWidth}px`;
+      triggerManagerResize();
+    }
+  }
 });
 
