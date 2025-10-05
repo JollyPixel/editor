@@ -185,7 +185,7 @@ export default class CanvasManager {
     this.drawTexture();
   }
 
-  getMode() {
+  getMode(): Mode {
     return this.mode;
   }
   setMode(mode: Mode) {
@@ -195,15 +195,19 @@ export default class CanvasManager {
     }
   }
 
-  getParentHtmlElement() {
+  getParentHtmlElement(): HTMLDivElement {
     return this.parentHtmlElement;
   }
 
-  getCamera() {
+  getTextureSize(): { x: number; y: number; } {
+    return this.textureSize;
+  }
+
+  getCamera(): { x: number; y: number; } {
     return this.camera;
   }
 
-  getZoom() {
+  getZoom(): number {
     return this.zoom;
   }
 
@@ -494,6 +498,10 @@ export default class CanvasManager {
     this.clampCamera();
     // Redessine la texture
     this.drawTexture();
+  }
+
+  getTextureCanvas(): HTMLCanvasElement {
+    return this.textureCanvas;
   }
 
   getTexture() {

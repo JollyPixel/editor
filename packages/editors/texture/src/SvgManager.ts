@@ -10,12 +10,15 @@ export interface SvgManagerOptions {
   color?: string;
   selectedColor?: string;
   pixelSnapping?: boolean;
+  ratioPixelPerUnit?: number;
 }
 
 export default class SvgManager {
   private parentHtmlElement: HTMLDivElement;
   private canvasManager: CanvasManager;
   private svg: SVGElement;
+
+  private ratioPixelPerUnit: number;
 
   private UvColor: string;
 
@@ -28,6 +31,8 @@ export default class SvgManager {
     this.canvasManager = canvasManager;
     this.parentHtmlElement = this.canvasManager.getParentHtmlElement();
     this.svg = this.initSvgElement();
+
+    this.ratioPixelPerUnit = options.ratioPixelPerUnit || 16;
 
     this.UvColor = options.color || "red";
 
@@ -119,6 +124,27 @@ export default class SvgManager {
   updateSvgSize(width: number, height: number) {
     this.svg.setAttribute("width", String(width));
     this.svg.setAttribute("height", String(height));
+  }
+
+  drawUVs(UVs: number[]) {
+    const textureSize = this.canvasManager.getTextureSize();
+    const pixelUvValue = { x: 1 / textureSize.x, y: 1 / textureSize.y };
+    const defaultStyle = {
+      pointerEvents: "none",
+      strokeWidth: 2
+    };
+
+    for (let i = 0; i < UVs.length; i += 12) {
+      const uvHighLight = document.createElementNS(kSvgNs, "rect");
+      Object.assign(uvHighLight.style, defaultStyle);
+      uvHighLight.setAttribute("stroke", "red");
+      uvHighLight.setAttribute("fill", "none");
+      uvHighLight.setAttribute("x", String(UVs[i]));
+      uvHighLight.setAttribute("y", "0.01");
+      uvHighLight.setAttribute("width", String(UVs[i] * pixelUvValue.x));
+      uvHighLight.setAttribute("height", String(UVs[i + 1] * pixelUvValue.y));
+      uvHighLight.setAttribute("vector-effect", "non-scaling-stroke");
+    }
   }
 
   // createRect() {
