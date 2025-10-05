@@ -4,7 +4,21 @@
   ],
   "imageSize": 100,
   "commit": false,
-  "contributors": [],
+  "contributors": [
+    {
+      "login": "fraxken",
+      "name": "Thomas.G",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4438263?v=4",
+      "profile": "https://github.com/fraxken",
+      "contributions": [
+        "code",
+        "doc",
+        "bug",
+        "test",
+        "security"
+      ]
+    }
+  ],
   "contributorsPerLine": 7,
   "projectName": "editor",
   "projectOwner": "JollyPixel",
