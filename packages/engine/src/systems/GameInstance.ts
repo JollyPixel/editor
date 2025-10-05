@@ -26,7 +26,6 @@ import {
 export interface GameInstanceOptions {
   enableOnExit?: boolean;
 
-  loadingManager?: THREE.LoadingManager;
   scene: Scene;
   input?: Input;
   scheduler?: FixedTimeStep;
@@ -40,7 +39,7 @@ export interface GameInstanceOptions {
 export class GameInstance<T = THREE.WebGLRenderer> {
   renderer: GameRenderer<T>;
   input: Input;
-  loadingManager: THREE.LoadingManager;
+  loadingManager: THREE.LoadingManager = new THREE.LoadingManager();
   scheduler: FixedTimeStep;
   scene: Scene;
   audio: GlobalAudio;
@@ -55,7 +54,6 @@ export class GameInstance<T = THREE.WebGLRenderer> {
     options: GameInstanceOptions
   ) {
     const {
-      loadingManager = new THREE.LoadingManager(),
       scene,
       input = new Input(renderer.canvas, { enableOnExit: options.enableOnExit ?? false }),
       scheduler = new FixedTimeStep(options.clock),
@@ -64,7 +62,6 @@ export class GameInstance<T = THREE.WebGLRenderer> {
       globalsAdapter = new BrowserGlobalsAdapter()
     } = options;
 
-    this.loadingManager = loadingManager;
     this.renderer = renderer as unknown as GameRenderer<T>;
     this.scene = scene;
     this.input = input;
@@ -73,6 +70,14 @@ export class GameInstance<T = THREE.WebGLRenderer> {
     this.#windowAdapter = windowAdapter;
 
     globalsAdapter.setGame(this);
+  }
+
+  setLoadingManager(
+    manager: THREE.LoadingManager
+  ) {
+    this.loadingManager = manager;
+
+    return this;
   }
 
   connect() {

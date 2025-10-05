@@ -18,8 +18,7 @@ export type AssetOnProgressCallback = (
 ) => void;
 
 export interface LoadAssetsOptions {
-  onLoad?: (asset: Asset) => void;
-  onProgress?: AssetOnProgressCallback;
+  onStart?: (asset: Asset) => void;
 }
 
 export class AssetManager {
@@ -89,20 +88,22 @@ export class AssetManager {
     if (assets.length === 0) {
       return;
     }
-    const max = assets.length;
-    const { onProgress, onLoad } = options;
 
-    for (let index = 0; index < max; index++) {
-      const asset = assets[index];
+    const { onStart } = options;
+
+    const loadAsset = async(asset: Asset): Promise<void> => {
       const loader = this.registry.getLoaderForType(asset.type);
       if (!loader) {
         throw new Error(`No loader registered for asset type: ${asset.type}`);
       }
 
-      onLoad?.(asset);
+      onStart?.(asset);
+
       const result = await loader(asset, context);
-      onProgress?.(index + 1, max);
       this.assets.set(asset.id, result);
-    }
+    };
+
+    const loadingPromises = assets.map((asset) => loadAsset(asset));
+    await Promise.all(loadingPromises);
   }
 }
