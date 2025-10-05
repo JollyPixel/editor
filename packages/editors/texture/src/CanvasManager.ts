@@ -1,7 +1,7 @@
 /* eslint-disable @stylistic/no-mixed-operators */
 // Import Internal Dependencies
-import BrushManager, { BrushManagerOptions } from "./BrushManager";
-import SvgManager, { SvgManagerOptions } from "./SvgManager";
+import BrushManager, { type BrushManagerOptions } from "./BrushManager.js";
+import SvgManager, { type SvgManagerOptions } from "./SvgManager.js";
 
 export type Mode = "paint" | "move";
 
@@ -11,6 +11,7 @@ export interface CanvasManagerOptions {
     defaultColor?: string;
     size?: { x: number; y?: number; };
     maxSize?: number;
+    init?: HTMLCanvasElement;
   };
   uv?: SvgManagerOptions;
   zoom?: {
@@ -119,9 +120,14 @@ export default class CanvasManager {
     this.masterTextureCanvas = document.createElement("canvas");
     this.masterTextureCtx = this.masterTextureCanvas.getContext("2d")!;
 
-    this.textureCanvas = document.createElement("canvas");
-    this.textureCtx = this.textureCanvas.getContext("2d")!;
-    this.initTexture();
+    if (options.texture?.init) {
+      this.setTexture(options.texture?.init);
+    }
+    else {
+      this.textureCanvas = document.createElement("canvas");
+      this.textureCtx = this.textureCanvas.getContext("2d")!;
+      this.initTexture();
+    }
 
     this.mode = options.defaultMode || "paint";
 
@@ -137,6 +143,10 @@ export default class CanvasManager {
         this.SvgMananager.updateBrushHighlight(x, y);
         this.drawing(e.clientX, e.clientY);
       }
+    });
+
+    this.canvas.addEventListener("mouseleave", () => {
+      this.SvgMananager.updateBrushHighlight(null, null);
     });
 
     this.canvas.addEventListener("wheel", (e) => {
@@ -162,8 +172,9 @@ export default class CanvasManager {
     this.canvas.addEventListener("contextmenu", (e) => {
       e.preventDefault();
       if (this.mode === "paint" && e.button === 2) {
-        const color = this.colorPicker(e.clientX, e.clientY);
-        this.brush.setColor(color);
+        const pixelColor = this.colorPicker(e.clientX, e.clientY);
+        this.brush.setColorWithOpacity(pixelColor.hex, pixelColor.opacity);
+        this.emitColorPickedEvent(pixelColor);
       }
     });
 
@@ -182,10 +193,13 @@ export default class CanvasManager {
       this.onResize();
     });
 
-    this.drawTexture();
+    // Only draw if parent has valid dimensions, otherwise onResize() will handle it
+    if (this.boundingRect.width > 0 && this.boundingRect.height > 0) {
+      this.drawTexture();
+    }
   }
 
-  getMode() {
+  getMode(): Mode {
     return this.mode;
   }
   setMode(mode: Mode) {
@@ -195,15 +209,103 @@ export default class CanvasManager {
     }
   }
 
-  getParentHtmlElement() {
+  getParentHtmlElement(): HTMLDivElement {
     return this.parentHtmlElement;
   }
 
-  getCamera() {
+  public reparentCanvasTo(newParentElement: HTMLDivElement): void {
+    this.reparentTo(newParentElement);
+  }
+
+  private reparentTo(newParentElement: HTMLDivElement): void {
+    if (!this.canvas) {
+      console.error("CanvasManager: No canvas to reparent");
+
+      return;
+    }
+
+    if (!newParentElement) {
+      console.error("CanvasManager: Invalid parent element");
+
+      return;
+    }
+
+    // Retirer le canvas et le SVG de leurs parents courants
+    if (this.canvas.parentElement) {
+      this.canvas.remove();
+    }
+
+    // Ajouter le canvas au nouvel parent
+    newParentElement.appendChild(this.canvas);
+
+    // Reparenter aussi le SVG
+    this.SvgMananager.reparentSvgTo(newParentElement);
+
+    // Mettre à jour la référence du parent
+    this.parentHtmlElement = newParentElement;
+
+    // Recalculer les dimensions et redessiner
+    this.onResize();
+  }
+
+  getTextureSize(): { x: number; y: number; } {
+    return this.textureSize;
+  }
+
+  setTextureSize(size: { x: number; y: number; }): void {
+    if (size.x <= 0 || size.y <= 0) {
+      console.error("CanvasManager: Texture size must be positive");
+
+      return;
+    }
+
+    if (size.x > this.textureMaxSize || size.y > this.textureMaxSize) {
+      console.error(`CanvasManager: Texture size exceeds max size of ${this.textureMaxSize}`);
+
+      return;
+    }
+
+    // Récupérer les données du masterTextureCanvas (la vraie sauvegarde complète)
+    const masterImageData = this.masterTextureCtx.getImageData(0, 0, this.textureMaxSize, this.textureMaxSize);
+
+    // Changer la taille
+    this.textureSize = size;
+
+    // Redimensionner le canvas de texture
+    this.textureCanvas.width = size.x;
+    this.textureCanvas.height = size.y;
+
+    // Créer une nouvelle imageData avec la nouvelle taille
+    const newImageData = this.textureCtx.createImageData(size.x, size.y);
+
+    // Copier les pixels du master canvas dans le nouveau canvas
+    // en respectant la nouvelle taille
+    for (let y = 0; y < size.y; y++) {
+      for (let x = 0; x < size.x; x++) {
+        const masterIndex = (y * this.textureMaxSize + x) * 4;
+        const newIndex = (y * size.x + x) * 4;
+
+        newImageData.data[newIndex] = masterImageData.data[masterIndex];
+        newImageData.data[newIndex + 1] = masterImageData.data[masterIndex + 1];
+        newImageData.data[newIndex + 2] = masterImageData.data[masterIndex + 2];
+        newImageData.data[newIndex + 3] = masterImageData.data[masterIndex + 3];
+      }
+    }
+    this.textureCtx.putImageData(newImageData, 0, 0);
+
+    // Mettre à jour les dimensions en pixels (avec zoom)
+    this.texturePixelWidth = this.textureSize.x * this.zoom;
+    this.texturePixelHeight = this.textureSize.y * this.zoom;
+
+    // Redessiner immédiatement
+    this.drawTexture();
+  }
+
+  getCamera(): { x: number; y: number; } {
     return this.camera;
   }
 
-  getZoom() {
+  getZoom(): number {
     return this.zoom;
   }
 
@@ -282,6 +384,11 @@ export default class CanvasManager {
   }
 
   private drawTexture() {
+    // Don't draw if canvas has invalid dimensions
+    if (this.canvas.width === 0 || this.canvas.height === 0) {
+      return;
+    }
+
     // Reinitialize transform to clean the canvas easier
     this.ctx.setTransform(1, 0, 0, 1, 0, 0);
     // if texture is smaller in the canvas there will be the background canvas that appears
@@ -340,15 +447,30 @@ export default class CanvasManager {
     this.drawTexture();
   }
 
-  private colorPicker(x: number, y: number): string {
+  private colorPicker(x: number, y: number): { hex: string; opacity: number; } {
     const pixelPos = this.getMouseTexturePosition(x, y, true);
     if (pixelPos === null) {
-      return this.brush.getColor();
+      return { hex: this.brush.getColor(), opacity: this.brush.getOpacity() };
     }
 
     const imageData = this.textureCtx.getImageData(pixelPos.x, pixelPos.y, 1, 1);
+    const r = imageData.data[0];
+    const g = imageData.data[1];
+    const b = imageData.data[2];
+    const a = imageData.data[3] / 255;
 
-    return `rgba(${imageData.data[0]}, ${imageData.data[1]}, ${imageData.data[2]}, ${(imageData.data[3] / 255) || 0})`;
+    const hex = `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
+
+    return { hex, opacity: a };
+  }
+
+  private emitColorPickedEvent(color: { hex: string; opacity: number; }): void {
+    const event = new CustomEvent("colorpicked", {
+      detail: color,
+      bubbles: true,
+      composed: true
+    });
+    this.canvas.dispatchEvent(event);
   }
 
   private getMouseCanvasPosition(mouseX: number, mouseY: number): { x: number; y: number; } {
@@ -477,6 +599,11 @@ export default class CanvasManager {
   onResize() {
     this.boundingRect = this.parentHtmlElement.getBoundingClientRect();
 
+    // Skip resize if parent has invalid dimensions
+    if (this.boundingRect.width === 0 || this.boundingRect.height === 0) {
+      return;
+    }
+
     // Met à jour les dimensions du canvas
     this.canvas.width = Math.round(this.boundingRect.width);
     this.canvas.height = Math.round(this.boundingRect.height);
@@ -494,6 +621,22 @@ export default class CanvasManager {
     this.clampCamera();
     // Redessine la texture
     this.drawTexture();
+  }
+
+  centerTexture(): void {
+    // Center the texture on the canvas
+    this.camera.x = this.canvas.width / 2 - this.texturePixelWidth / 2;
+    this.camera.y = this.canvas.height / 2 - this.texturePixelHeight / 2;
+    this.clampCamera();
+    this.drawTexture();
+  }
+
+  getTextureCanvas(): HTMLCanvasElement {
+    return this.textureCanvas;
+  }
+
+  setTexture(canvas: HTMLCanvasElement) {
+    this.textureCanvas = canvas;
   }
 
   getTexture() {

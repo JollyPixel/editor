@@ -21,7 +21,12 @@
     "packages/fs-tree",
     "packages/fs-tree-backend",
     "packages/editors/voxel-map",
+<<<<<<< HEAD
     "packages/voxel-renderer"
+=======
+    "packages/editors/model",
+    "packages/editors/texture"
+>>>>>>> f56eef5 (feat: add texture update on Three cube)
   ],
   "repository": {
     "type": "git",
