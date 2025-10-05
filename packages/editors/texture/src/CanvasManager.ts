@@ -496,6 +496,10 @@ export default class CanvasManager {
     this.drawTexture();
   }
 
+  getTextureCanvas(): HTMLCanvasElement {
+    return this.textureCanvas;
+  }
+
   getTexture() {
     return this.textureCtx.getImageData(0, 0, this.textureSize.x, this.textureSize.y).data;
   }

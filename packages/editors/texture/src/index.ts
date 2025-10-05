@@ -1,14 +1,16 @@
 // Import Internal Dependencies
 import CanvasManager, { Mode } from "./CanvasManager";
-import "./threeScene.ts";
+import ThreeSceneManager from "./threeScene.ts";
 
 // CONSTANTS
 const kContainer = document.getElementById("container") as HTMLDivElement;
 const kColorPicker = document.getElementById("colorPicker") as HTMLInputElement;
+const kBrushSize = document.getElementById("brushSize") as HTMLInputElement;
+const kSection = document.querySelector("section") as HTMLDivElement;
 
 const canvasManager = new CanvasManager(kContainer, {
   texture: {
-    size: { x: 128, y: 64 }
+    size: { x: 16 }
   },
   zoom: {
     default: 1,
@@ -21,9 +23,17 @@ const canvasManager = new CanvasManager(kContainer, {
   }
 });
 
+const threeSceneManager = new ThreeSceneManager(kSection, canvasManager);
+
 kColorPicker.addEventListener("input", () => {
   const selectedColor = kColorPicker.value;
   canvasManager.brush.setColor(selectedColor);
+  kColorPicker.value = selectedColor;
+});
+kBrushSize.value = String(canvasManager.brush.getSize());
+kBrushSize.addEventListener("input", () => {
+  const brushSize = kBrushSize.value;
+  canvasManager.brush.setSize(Number(brushSize));
 });
 
 document.querySelectorAll<HTMLInputElement>(".color-button").forEach((btn) => {
@@ -36,14 +46,6 @@ document.querySelectorAll<HTMLInputElement>(".color-button").forEach((btn) => {
 
 function updateMode(newMode: Mode) {
   canvasManager.setMode(newMode);
-  if (newMode === "paint") {
-    // svg.style.pointerEvents = "none";
-  }
-  else {
-    // svg.style.pointerEvents = "auto";
-    // hoverX = null;
-    // hoverY = null;
-  }
 
   document.getElementById("paintMode")!.classList.toggle("mode-active", canvasManager.getMode() === "paint");
   document.getElementById("moveMode")!.classList.toggle("mode-active", canvasManager.getMode() === "move");
@@ -71,6 +73,7 @@ document.addEventListener("mousemove", (e) => {
   const newWidth = e.clientX;
   nav.style.width = `${newWidth}px`;
 
+  threeSceneManager.onResize();
   canvasManager.onResize();
 });
 
