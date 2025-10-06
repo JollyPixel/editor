@@ -4,7 +4,7 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import {
   type GameRenderer
-} from "./renderers/index.js";
+} from "./rendering/index.js";
 import {
   type Scene
 } from "./Scene.js";

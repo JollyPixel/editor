@@ -3,7 +3,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert";
 
 // Import Internal Dependencies
-import { Asset } from "../../../src/systems/Asset/Base.js";
+import { Asset } from "../../../src/systems/asset_bis/Base.js";
 
 describe("Systems.Asset", () => {
   test("should create asset with valid path", () => {
