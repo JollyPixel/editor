@@ -38,9 +38,9 @@ export class Player {
     ) as unknown as Systems.GameRenderer<THREE.WebGLRenderer>;
     this.gameInstance = new Systems.GameInstance(renderer, {
       enableOnExit: true,
-      loadingManager: this.manager,
       scene
     });
+    this.gameInstance.setLoadingManager(this.manager);
 
     if (options.includePerformanceStats) {
       this.stats = new Stats();

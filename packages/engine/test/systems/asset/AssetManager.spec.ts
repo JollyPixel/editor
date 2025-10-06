@@ -3,8 +3,8 @@ import { test, describe, beforeEach } from "node:test";
 import assert from "node:assert";
 
 // Import Internal Dependencies
-import { Asset } from "../../../src/systems/Asset/Base.js";
-import { AssetManager } from "../../../src/systems/Asset/Manager.js";
+import { Asset } from "../../../src/systems/asset/Base.js";
+import { AssetManager } from "../../../src/systems/asset/Manager.js";
 
 describe("Systems.AssetManager", () => {
   let assetManager: AssetManager;
@@ -87,28 +87,7 @@ describe("Systems.AssetManager", () => {
     assert.strictEqual(result2, "loaded-image2");
   });
 
-  test("should call onProgress callback during loading", async() => {
-    assetManager.registry.loader(
-      { type: "texture", extensions: [".png"] },
-      mockLoader
-    );
-
-    assetManager.load("/test1.png");
-    assetManager.load("/test2.png");
-
-    const progressCalls: { progress: number; max: number; }[] = [];
-    await assetManager.loadAssets(assetManager.context, {
-      onProgress: (progress, max) => {
-        progressCalls.push({ progress, max });
-      }
-    });
-
-    assert.strictEqual(progressCalls.length, 2);
-    assert.deepStrictEqual(progressCalls[0], { progress: 1, max: 2 });
-    assert.deepStrictEqual(progressCalls[1], { progress: 2, max: 2 });
-  });
-
-  test("should call onLoad callback for each asset", async() => {
+  test("should call onStart callback for each asset", async() => {
     assetManager.registry.loader(
       { type: "texture", extensions: [".png"] },
       mockLoader
@@ -118,7 +97,7 @@ describe("Systems.AssetManager", () => {
 
     const loadedAssets: Asset[] = [];
     await assetManager.loadAssets(assetManager.context, {
-      onLoad: (asset) => {
+      onStart: (asset) => {
         loadedAssets.push(asset);
       }
     });

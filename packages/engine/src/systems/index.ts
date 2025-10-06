@@ -12,7 +12,7 @@ export type {
 } from "./asset/Registry.js";
 
 export * from "./GameInstance.js";
-export * from "./renderers/index.js";
+export * from "./rendering/index.js";
 export * from "./Scene.js";
 
 export type {
