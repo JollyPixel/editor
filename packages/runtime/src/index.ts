@@ -17,24 +17,30 @@ export async function loadPlayer(
 ) {
   const { loadingDelay = 850 } = options;
 
+  player.canvas.style.opacity = "0";
+  player.canvas.style.transition = "opacity 0.5s ease-in";
+
   let loadingElement = document.querySelector("jolly-loading");
   if (loadingElement === null) {
     loadingElement = document.createElement("jolly-loading");
     document.body.appendChild(loadingElement);
   }
   const loadingComponent = loadingElement as Loading;
-
   loadingComponent.start();
 
-  const manager = player.manager;
-  manager.onLoad = () => {
-    setTimeout(() => {
-      loadingComponent.complete(() => player.start());
-    }, loadingDelay);
-  };
-  manager.onProgress = (_, loaded, total) => {
-    loadingComponent.setProgress(loaded, total);
-  };
+  let loadingComplete = false;
+  const loadingCompletePromise = new Promise((resolve) => {
+    player.manager.onProgress = (_, loaded, total) => {
+      loadingComponent.setProgress(loaded, total);
+
+      if (loaded >= total && !loadingComplete) {
+        loadingComplete = true;
+
+        // Attendre un petit délai pour s'assurer que le DOM est mis à jour
+        setTimeout(() => void resolve(undefined), 100);
+      }
+    };
+  });
 
   // Prevent keypress events from leaking out to a parent window
   // They might trigger scrolling for instance
@@ -49,7 +55,7 @@ export async function loadPlayer(
     if (loadingDelay > 0) {
       await timers.setTimeout(loadingDelay);
     }
-    const context = { manager };
+    const context = { manager: player.manager };
 
     setTimeout(() => {
       Systems.Assets.autoload = true;
@@ -61,6 +67,12 @@ export async function loadPlayer(
         onStart: loadingComponent.setAsset.bind(loadingComponent)
       }
     );
+
+    await loadingCompletePromise;
+    await loadingComponent.complete(() => {
+      player.canvas.style.opacity = "1";
+      player.start();
+    });
   }
   catch (error: any) {
     loadingComponent.error(error);
