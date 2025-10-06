@@ -3,8 +3,8 @@ import { test, describe, beforeEach } from "node:test";
 import assert from "node:assert";
 
 // Import Internal Dependencies
-import { Asset } from "../../../src/systems/asset_bis/Base.js";
-import { AssetManager } from "../../../src/systems/asset_bis/Manager.js";
+import { Asset } from "../../../src/systems/asset/Base.js";
+import { AssetManager } from "../../../src/systems/asset/Manager.js";
 
 describe("Systems.AssetManager", () => {
   let assetManager: AssetManager;

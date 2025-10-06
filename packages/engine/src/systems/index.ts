@@ -2,14 +2,14 @@
 import {
   AssetManager,
   type AssetOnProgressCallback
-} from "./asset_bis/Manager.js";
+} from "./asset/Manager.js";
 
-export * from "./asset_bis/Base.js";
+export * from "./asset/Base.js";
 export type {
   AssetLoaderCallback,
   AssetLoaderContext,
   AssetLoaderOptions
-} from "./asset_bis/Registry.js";
+} from "./asset/Registry.js";
 
 export * from "./GameInstance.js";
 export * from "./rendering/index.js";
