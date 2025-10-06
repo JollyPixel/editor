@@ -1,4 +1,4 @@
-name: Mutex CI
+name: Engine CI
 
 on:
   push:
