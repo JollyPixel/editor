@@ -135,12 +135,14 @@ export class Input extends EventEmitter<InputEvents> {
     [...this.#sourceInputs(), this.fullscreen]
       .forEach((subscriber) => subscriber.connect?.());
     this.#windowAdapter.addEventListener("blur", this.onBlur);
+    this.#windowAdapter.addEventListener("contextmenu", this.onContextMenu);
   }
 
   disconnect() {
     [...this.#sourceInputs(), this.fullscreen]
       .forEach((subscriber) => subscriber.disconnect?.());
     this.#windowAdapter.removeEventListener("blur", this.onBlur);
+    this.#windowAdapter.removeEventListener("contextmenu", this.onContextMenu);
   }
 
   enterFullscreen() {
@@ -462,6 +464,10 @@ export class Input extends EventEmitter<InputEvents> {
   private onBlur = () => {
     this.#sourceInputs()
       .forEach((subscriber) => subscriber.reset());
+  };
+
+  private onContextMenu = (event: MouseEvent) => {
+    event.preventDefault();
   };
 
   private doExitCallback = () => {
