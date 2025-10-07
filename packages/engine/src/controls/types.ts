@@ -1,5 +1,8 @@
 // Import Internal Dependencies
-import * as Keyboard from "./keyboard/code.js";
+import type {
+  ExtendedKeyCode,
+  KeyCode
+} from "./keyboard/code.js";
 import type { MouseEventButton } from "./targets/Mouse.class.js";
 
 /**
@@ -21,8 +24,13 @@ export interface InputConnectable {
 export interface InputControl extends InputUpdateable, InputConnectable {}
 
 export type InputCustomAction = "ANY" | "NONE";
-export type InputKeyboardAction = Keyboard.ExtendedKeyCode | InputCustomAction;
+export type InputKeyboardAction = ExtendedKeyCode | InputCustomAction;
 export type InputMouseAction =
   | number
   | keyof typeof MouseEventButton
   | InputCustomAction;
+
+export type {
+  ExtendedKeyCode,
+  KeyCode
+};

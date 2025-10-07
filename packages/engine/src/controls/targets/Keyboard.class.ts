@@ -6,6 +6,7 @@ import {
   BrowserDocumentAdapter,
   type DocumentAdapter
 } from "../../adapters/index.js";
+import { HookDb } from "../HookDb.js";
 
 // CONSTANTS
 const kControlKeys = new Set([
@@ -47,6 +48,13 @@ const kControlKeys = new Set([
   "F24"
 ]);
 
+export type KeyboardHooks = {
+  down: [event: KeyboardEvent];
+  up: [event: KeyboardEvent];
+  press: [event: KeyboardEvent];
+  [key: string]: [event: KeyboardEvent];
+};
+
 export interface KeyState {
   isDown: boolean;
   wasJustPressed: boolean;
@@ -60,6 +68,8 @@ export interface KeyboardOptions {
 
 export class Keyboard implements InputControl {
   #documentAdapter: DocumentAdapter;
+
+  hooks = new HookDb<KeyboardHooks>();
 
   buttons = new Map<string, KeyState>();
   buttonsDown = new Set<string>();
@@ -119,6 +129,8 @@ export class Keyboard implements InputControl {
     else {
       this.buttonsDown.add(event.code);
     }
+    this.hooks.emit("down", event);
+    this.hooks.emit(event.code, event);
 
     return !isControlKey;
   };
@@ -126,11 +138,13 @@ export class Keyboard implements InputControl {
   private onKeyPress = (event: KeyboardEvent) => {
     if (event.key.length === 1 && event.key.charCodeAt(0) >= 32) {
       this.newChar += event.key;
+      this.hooks.emit("press", event);
     }
   };
 
   private onKeyUp = (event: KeyboardEvent) => {
     this.buttonsDown.delete(event.code);
+    this.hooks.emit("up", event);
   };
 
   update() {

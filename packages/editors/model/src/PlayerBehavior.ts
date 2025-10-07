@@ -2,37 +2,48 @@
 import {
   Behavior,
   type BehaviorProperties,
-  ModelRenderer
+  ModelRenderer,
+  Input,
+  SceneProperty,
+  SceneActorComponent
 } from "@jolly-pixel/engine";
 
-export interface PlayerBehaviorProperties extends BehaviorProperties {
+export interface PlayerProperties extends BehaviorProperties {
   speed: number;
 }
 
-export class PlayerBehavior extends Behavior<PlayerBehaviorProperties> {
-  model = new ModelRenderer(this.actor, {
-    path: "models/Standard.fbx",
-    animations: {
-      default: "idle_loop",
-      clipNameRewriter: (name) => name.slice(name.indexOf("|") + 1).toLowerCase()
-    }
-  });
+export class PlayerBehavior extends Behavior<PlayerProperties> {
+  @SceneProperty({ type: "number" })
+  speed = 0.05;
+
+  @SceneActorComponent(ModelRenderer)
+  model: ModelRenderer;
+
+  @Input.listen("mouse.down")
+  @Input.listen("keyboard.Enter")
+  onInputEvent(
+    event: MouseEvent | KeyboardEvent
+  ) {
+    console.log("Input event detected in PlayerBehavior: ", event);
+  }
 
   awake() {
     this.actor.threeObject.rotateX(-Math.PI / 2);
+
+    this.model.animation.setClipNameRewriter((name) => name.slice(name.indexOf("|") + 1).toLowerCase());
+    this.model.animation.play("idle_loop");
     this.model.animation.setFadeDuration(0.25);
   }
 
   update() {
     const { input } = this.actor.gameInstance;
-    const speed = this.getProperty("speed", 0.05);
 
     if (input.isKeyDown("ArrowUp")) {
-      this.actor.threeObject.position.z += speed;
+      this.actor.threeObject.position.z += this.speed;
       this.model.animation.play("walk_loop");
     }
     else if (input.isKeyDown("ArrowDown")) {
-      this.actor.threeObject.position.z -= speed;
+      this.actor.threeObject.position.z -= this.speed;
       this.model.animation.play("walk_loop");
     }
     else if (input.isMouseButtonDown("left")) {

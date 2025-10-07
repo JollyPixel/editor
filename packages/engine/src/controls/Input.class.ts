@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 import { EventEmitter } from "@posva/event-emitter";
+import "reflect-metadata";
 
 // Import Internal Dependencies
 import * as sources from "./targets/index.js";
@@ -13,10 +14,26 @@ import type {
   InputControl,
   InputMouseAction,
   InputKeyboardAction,
-  InputCustomAction
+  InputCustomAction,
+  KeyCode
 } from "./types.js";
 
 export type { MouseEventButton } from "./targets/Mouse.class.js";
+
+export type InputListener =
+  | "mouse.down"
+  | "mouse.up"
+  | "mouse.move"
+  | "mouse.wheel"
+  | "keyboard.down"
+  | "keyboard.up"
+  | "keyboard.press"
+  | `keyboard.${KeyCode}`;
+
+export interface InputListenerMetadata {
+  type: InputListener;
+  methodName: string;
+}
 
 export type InputEvents = {
   exit: [];
@@ -31,6 +48,33 @@ export interface InputOptions {
 }
 
 export class Input extends EventEmitter<InputEvents> {
+  static Metadata = Symbol("InputMetadata");
+
+  static listen(
+    type: InputListener
+  ) {
+    return function fn(
+      object: Object,
+      methodName: string
+    ) {
+      const metadata = Reflect.getMetadata(
+        Input.Metadata,
+        object
+      ) as InputListenerMetadata[] | undefined;
+
+      const currentMethodMetadata: InputListenerMetadata = {
+        type, methodName
+      };
+      Reflect.defineMetadata(
+        Input.Metadata,
+        metadata ?
+          [...metadata, currentMethodMetadata] :
+          [currentMethodMetadata],
+        object
+      );
+    };
+  }
+
   #canvas: HTMLCanvasElement;
   #windowAdapter: WindowAdapter;
 
@@ -58,10 +102,11 @@ export class Input extends EventEmitter<InputEvents> {
       canvas
     });
     this.mouse = new sources.Mouse({
-      canvas,
-      mouseDownCallback: () => fullscreen.onMouseDown(),
-      mouseUpCallback: () => fullscreen.onMouseUp()
+      canvas
     });
+    this.mouse.hooks.on("down", () => fullscreen.onMouseDown());
+    this.mouse.hooks.on("up", () => fullscreen.onMouseUp());
+
     this.fullscreen = fullscreen;
     this.touchpad = new sources.Touchpad({
       canvas,

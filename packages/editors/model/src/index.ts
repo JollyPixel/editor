@@ -43,6 +43,9 @@ function initRuntime() {
   //     component.actor.threeObject.position.set(0, 0, 0);
   //   });
   new Actor(gameInstance, { name: "player" })
+    .registerComponent(ModelRenderer, {
+      path: "models/Standard.fbx"
+    })
     .registerComponent(PlayerBehavior);
   // new Actor(gameInstance, { name: "duckModel" })
   //   .registerComponent(ModelRenderer, {

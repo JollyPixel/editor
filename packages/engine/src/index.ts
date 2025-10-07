@@ -5,7 +5,11 @@ export * from "./Actor.js";
 export * from "./ActorTree.js";
 export * from "./ActorComponent.js";
 export * from "./Behavior.js";
-export * from "./BehaviorDecorators.js";
+export {
+  SceneProperty,
+  SceneActorComponent,
+  type ScenePropertyOptions
+} from "./BehaviorDecorators.js";
 export * from "./controls/Input.class.js";
 export * from "./Timer.js";
 export * from "./audio/Audio.js";
