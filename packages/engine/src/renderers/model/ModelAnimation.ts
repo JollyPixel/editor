@@ -36,6 +36,13 @@ export class ModelAnimation {
     rewriter: ModelAnimationClipNameRewriter
   ) {
     this.#clipNameRewriter = rewriter;
+    if (this.#clips.size > 0) {
+      const renamedClips = new Map<string, THREE.AnimationAction>();
+      for (const [name, action] of this.#clips) {
+        renamedClips.set(this.#clipNameRewriter(name), action);
+      }
+      this.#clips = renamedClips;
+    }
 
     return this;
   }

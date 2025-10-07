@@ -6,6 +6,7 @@ import {
   BrowserDocumentAdapter,
   type DocumentAdapter
 } from "../../adapters/document.js";
+import { HookDb } from "../HookDb.js";
 import type {
   InputControl
 } from "../types.js";
@@ -37,6 +38,13 @@ export type MouseEvents = {
   lockStateChange: [MouseLockState];
 };
 
+export type MouseHooks = {
+  down: [event: MouseEvent];
+  up: [event: MouseEvent];
+  move: [event: MouseEvent];
+  wheel: [event: WheelEvent];
+};
+
 export interface MouseOptions {
   canvas: HTMLCanvasElement;
   mouseDownCallback?: (event: MouseEvent) => void;
@@ -49,6 +57,8 @@ export class Mouse extends EventEmitter<
 > implements InputControl {
   #canvas: HTMLCanvasElement;
   #documentAdapter: DocumentAdapter;
+
+  hooks = new HookDb<MouseHooks>();
 
   buttons: MouseButtonState[] = [];
   buttonsDown: boolean[] = [];
@@ -63,23 +73,16 @@ export class Mouse extends EventEmitter<
   #wantsPointerLock = false;
   #wasPointerLocked = false;
 
-  #mouseDownCallback?: (event: MouseEvent) => void;
-  #mouseUpCallback?: (event: MouseEvent) => void;
-
   constructor(
     options: MouseOptions
   ) {
     const {
       canvas,
-      mouseDownCallback,
-      mouseUpCallback,
       documentAdapter = new BrowserDocumentAdapter()
     } = options;
 
     super();
     this.#canvas = canvas;
-    this.#mouseDownCallback = mouseDownCallback;
-    this.#mouseUpCallback = mouseUpCallback;
     this.#documentAdapter = documentAdapter;
     this.reset();
   }
@@ -222,6 +225,8 @@ export class Mouse extends EventEmitter<
         y: event.clientY - rect.top
       };
     }
+
+    this.hooks.emit("move", event);
   };
 
   private onMouseDown = (event: MouseEvent) => {
@@ -232,7 +237,7 @@ export class Mouse extends EventEmitter<
     if (this.#wantsPointerLock && !this.#wasPointerLocked) {
       this.#canvas.requestPointerLock();
     }
-    this.#mouseDownCallback?.(event);
+    this.hooks.emit("down", event);
   };
 
   private onMouseUp = (event: MouseEvent) => {
@@ -244,7 +249,7 @@ export class Mouse extends EventEmitter<
     if (this.#wantsPointerLock && !this.#wasPointerLocked) {
       this.#canvas.requestPointerLock();
     }
-    this.#mouseUpCallback?.(event);
+    this.hooks.emit("up", event);
   };
 
   private onMouseDoubleClick = (event: MouseEvent) => {
@@ -255,6 +260,7 @@ export class Mouse extends EventEmitter<
   private onMouseWheel = (event: WheelEvent) => {
     event.preventDefault();
     this.#newScrollDelta = ((event as any).wheelDelta > 0 || event.detail < 0) ? 1 : -1;
+    this.hooks.emit("wheel", event);
 
     return false;
   };
