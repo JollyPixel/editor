@@ -1,9 +1,9 @@
 // Import Internal Dependencies
 import type {
+  MouseEventButton,
   ExtendedKeyCode,
   KeyCode
-} from "./keyboard/code.js";
-import type { MouseEventButton } from "./targets/Mouse.class.js";
+} from "./devices/index.js";
 
 /**
  * Interface for input controls that maintain state and need periodic updates using eg. requestAnimationFrame.
@@ -11,6 +11,8 @@ import type { MouseEventButton } from "./targets/Mouse.class.js";
 export interface InputUpdateable {
   reset(): void;
   update(): void;
+
+  readonly wasActive: boolean;
 }
 
 /**

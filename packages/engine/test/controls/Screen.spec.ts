@@ -6,28 +6,24 @@ import assert from "node:assert/strict";
 import { Window } from "happy-dom";
 
 // Import Internal Dependencies
-import { Fullscreen } from "../../src/controls/targets/Fullscreen.class.js";
+import { Screen } from "../../src/controls/devices/index.js";
+import * as mocks from "./mocks/index.js";
 
 // CONSTANTS
-const kWindow = new Window();
+const kEmulatedBrowserWindow = new Window();
 
 describe("Controls.Fullscreen", () => {
-  let fullscreen: Fullscreen;
-  let mockCanvas: {
-    requestFullscreen: ReturnType<typeof mock.fn>;
-  };
-  let mockDocumentAdapter: MockDocumentAdapter;
+  let fullscreen: Screen;
+  let canvas: mocks.CanvasAdapter;
+  let documentAdapter: ScreenDocumentAdapter;
 
   beforeEach(() => {
-    mockCanvas = {
-      requestFullscreen: mock.fn(() => Promise.resolve())
-    };
+    canvas = new mocks.CanvasAdapter();
 
-    mockDocumentAdapter = new MockDocumentAdapter();
-    fullscreen = new Fullscreen({
-      // @ts-expect-error
-      canvas: mockCanvas,
-      documentAdapter: mockDocumentAdapter
+    documentAdapter = new ScreenDocumentAdapter();
+    fullscreen = new Screen({
+      canvas,
+      documentAdapter
     });
     fullscreen.connect();
   });
@@ -58,22 +54,22 @@ describe("Controls.Fullscreen", () => {
   });
 
   test("should exit fullscreen when canvas is in fullscreen", () => {
-    mockDocumentAdapter.fullscreenElement = mockCanvas;
+    documentAdapter.fullscreenElement = canvas;
     fullscreen.wasFullscreen = true;
 
     fullscreen.exit();
 
-    assert.strictEqual(mockDocumentAdapter.exitFullscreen.mock.calls.length, 1);
+    assert.strictEqual(documentAdapter.exitFullscreen.mock.calls.length, 1);
     assert.strictEqual(fullscreen.wantsFullscreen, false);
     assert.strictEqual(fullscreen.wasFullscreen, false);
   });
 
   test("should not call exitFullscreen when canvas is not in fullscreen", () => {
-    mockDocumentAdapter.fullscreenElement = null;
+    documentAdapter.fullscreenElement = null;
 
     fullscreen.exit();
 
-    assert.strictEqual(mockDocumentAdapter.exitFullscreen.mock.calls.length, 0);
+    assert.strictEqual(documentAdapter.exitFullscreen.mock.calls.length, 0);
   });
 
   test("should emit stateChange event when entering fullscreen", () => {
@@ -83,8 +79,8 @@ describe("Controls.Fullscreen", () => {
     });
 
     // Simulate entering fullscreen
-    mockDocumentAdapter.fullscreenElement = mockCanvas;
-    mockDocumentAdapter.dispatchEvent("fullscreenchange");
+    documentAdapter.fullscreenElement = canvas;
+    documentAdapter.dispatchEvent("fullscreenchange");
 
     assert.strictEqual(emittedState, "active");
     assert.strictEqual(fullscreen.wasFullscreen, true);
@@ -98,8 +94,8 @@ describe("Controls.Fullscreen", () => {
     });
 
     // Simulate exiting fullscreen
-    mockDocumentAdapter.fullscreenElement = null;
-    mockDocumentAdapter.dispatchEvent("fullscreenchange");
+    documentAdapter.fullscreenElement = null;
+    documentAdapter.dispatchEvent("fullscreenchange");
 
     assert.strictEqual(emittedState, "suspended");
     assert.strictEqual(fullscreen.wasFullscreen, false);
@@ -112,9 +108,9 @@ describe("Controls.Fullscreen", () => {
     });
 
     // Simulate fullscreenchange without actual state change
-    mockDocumentAdapter.fullscreenElement = null;
-    mockDocumentAdapter.dispatchEvent("fullscreenchange");
-    mockDocumentAdapter.dispatchEvent("fullscreenchange");
+    documentAdapter.fullscreenElement = null;
+    documentAdapter.dispatchEvent("fullscreenchange");
+    documentAdapter.dispatchEvent("fullscreenchange");
 
     assert.strictEqual(eventCount, 0);
   });
@@ -126,7 +122,7 @@ describe("Controls.Fullscreen", () => {
       emittedState = state;
     });
 
-    mockDocumentAdapter.dispatchEvent("fullscreenerror");
+    documentAdapter.dispatchEvent("fullscreenerror");
 
     assert.strictEqual(emittedState, "suspended");
     assert.strictEqual(fullscreen.wasFullscreen, false);
@@ -139,7 +135,7 @@ describe("Controls.Fullscreen", () => {
       eventCount++;
     });
 
-    mockDocumentAdapter.dispatchEvent("fullscreenerror");
+    documentAdapter.dispatchEvent("fullscreenerror");
 
     assert.strictEqual(eventCount, 0);
   });
@@ -150,7 +146,7 @@ describe("Controls.Fullscreen", () => {
 
     fullscreen.onMouseDown();
 
-    assert.strictEqual(mockCanvas.requestFullscreen.mock.calls.length, 1);
+    assert.strictEqual(canvas.requestFullscreen.mock.calls.length, 1);
   });
 
   test("should not request fullscreen on mouse down when already fullscreen", () => {
@@ -159,7 +155,7 @@ describe("Controls.Fullscreen", () => {
 
     fullscreen.onMouseDown();
 
-    assert.strictEqual(mockCanvas.requestFullscreen.mock.calls.length, 0);
+    assert.strictEqual(canvas.requestFullscreen.mock.calls.length, 0);
   });
 
   test("should not request fullscreen on mouse down when not wants fullscreen", () => {
@@ -168,7 +164,7 @@ describe("Controls.Fullscreen", () => {
 
     fullscreen.onMouseDown();
 
-    assert.strictEqual(mockCanvas.requestFullscreen.mock.calls.length, 0);
+    assert.strictEqual(canvas.requestFullscreen.mock.calls.length, 0);
   });
 
   test("should request fullscreen on mouse up when wants fullscreen", () => {
@@ -177,7 +173,7 @@ describe("Controls.Fullscreen", () => {
 
     fullscreen.onMouseUp();
 
-    assert.strictEqual(mockCanvas.requestFullscreen.mock.calls.length, 1);
+    assert.strictEqual(canvas.requestFullscreen.mock.calls.length, 1);
   });
 
   test("should not request fullscreen on mouse up when already fullscreen", () => {
@@ -186,28 +182,33 @@ describe("Controls.Fullscreen", () => {
 
     fullscreen.onMouseUp();
 
-    assert.strictEqual(mockCanvas.requestFullscreen.mock.calls.length, 0);
+    assert.strictEqual(canvas.requestFullscreen.mock.calls.length, 0);
   });
 
   test("should properly connect and disconnect event listeners", () => {
-    const newMockDocumentAdapter = new MockDocumentAdapter();
-    const newFullscreen = new Fullscreen({
+    const addEventListener = mock.fn();
+    const removeEventListener = mock.fn();
+
+    const newFullscreen = new Screen({
+      canvas,
       // @ts-expect-error
-      canvas: mockCanvas,
-      documentAdapter: newMockDocumentAdapter
+      documentAdapter: {
+        addEventListener,
+        removeEventListener
+      }
     });
 
     newFullscreen.connect();
 
-    assert.strictEqual(newMockDocumentAdapter.addEventListener.mock.calls.length, 2);
-    assert.strictEqual(newMockDocumentAdapter.addEventListener.mock.calls[0].arguments[0], "fullscreenchange");
-    assert.strictEqual(newMockDocumentAdapter.addEventListener.mock.calls[1].arguments[0], "fullscreenerror");
+    assert.strictEqual(addEventListener.mock.calls.length, 2);
+    assert.strictEqual(addEventListener.mock.calls[0].arguments[0], "fullscreenchange");
+    assert.strictEqual(addEventListener.mock.calls[1].arguments[0], "fullscreenerror");
 
     newFullscreen.disconnect();
 
-    assert.strictEqual(newMockDocumentAdapter.removeEventListener.mock.calls.length, 2);
-    assert.strictEqual(newMockDocumentAdapter.removeEventListener.mock.calls[0].arguments[0], "fullscreenchange");
-    assert.strictEqual(newMockDocumentAdapter.removeEventListener.mock.calls[1].arguments[0], "fullscreenerror");
+    assert.strictEqual(removeEventListener.mock.calls.length, 2);
+    assert.strictEqual(removeEventListener.mock.calls[0].arguments[0], "fullscreenchange");
+    assert.strictEqual(removeEventListener.mock.calls[1].arguments[0], "fullscreenerror");
   });
 
   test("should handle multiple state changes correctly", () => {
@@ -217,44 +218,28 @@ describe("Controls.Fullscreen", () => {
     });
 
     // Enter fullscreen
-    mockDocumentAdapter.fullscreenElement = mockCanvas;
-    mockDocumentAdapter.dispatchEvent("fullscreenchange");
+    documentAdapter.fullscreenElement = canvas;
+    documentAdapter.dispatchEvent("fullscreenchange");
 
     // Exit fullscreen
-    mockDocumentAdapter.fullscreenElement = null;
-    mockDocumentAdapter.dispatchEvent("fullscreenchange");
+    documentAdapter.fullscreenElement = null;
+    documentAdapter.dispatchEvent("fullscreenchange");
 
     // Enter again
-    mockDocumentAdapter.fullscreenElement = mockCanvas;
-    mockDocumentAdapter.dispatchEvent("fullscreenchange");
+    documentAdapter.fullscreenElement = canvas;
+    documentAdapter.dispatchEvent("fullscreenchange");
 
     assert.deepStrictEqual(states, ["active", "suspended", "active"]);
   });
 });
 
-class MockDocumentAdapter {
-  #listeners = new Map();
+class ScreenDocumentAdapter extends mocks.DocumentAdapter {
+  dispatchEvent(
+    type: "fullscreenchange" | "fullscreenerror"
+  ) {
+    const listeners = this.listeners.get(type) ?? new Set();
+    const event = new kEmulatedBrowserWindow.Event(type);
 
-  fullscreenElement: any = null;
-  addEventListener = mock.fn((type, listener) => {
-    if (!this.#listeners.has(type)) {
-      this.#listeners.set(type, new Set());
-    }
-    this.#listeners.get(type).add(listener);
-  });
-
-  removeEventListener = mock.fn((type, listener) => {
-    this.#listeners.get(type)?.delete(listener);
-  });
-
-  exitFullscreen = mock.fn(() => Promise.resolve());
-
-  dispatchEvent(type: string) {
-    const listeners = this.#listeners.get(type) ?? new Set();
-    const event = new kWindow.Event(type);
-
-    listeners.forEach((listener: any) => {
-      listener(event);
-    });
+    listeners.forEach((listener) => listener(event));
   }
 }

@@ -4,30 +4,33 @@ import { EventEmitter } from "@posva/event-emitter";
 // Import Internal Dependencies
 import {
   BrowserDocumentAdapter,
-  type DocumentAdapter
-} from "../../adapters/document.js";
+  type DocumentAdapter,
+  type CanvasAdapter
+} from "../../adapters/index.js";
 import type { InputConnectable } from "../types.js";
 
 export type FullscreenState = "active" | "suspended";
 
-export type FullscreenEvents = {
+export type ScreenEvents = {
   stateChange: [FullscreenState];
 };
 
-export interface FullscreenOptions {
-  canvas: HTMLCanvasElement;
+export interface ScreenOptions {
+  canvas: CanvasAdapter;
   documentAdapter?: DocumentAdapter;
 }
 
-export class Fullscreen extends EventEmitter<FullscreenEvents> implements InputConnectable {
-  #canvas: HTMLCanvasElement;
+export class Screen extends EventEmitter<
+  ScreenEvents
+> implements InputConnectable {
+  #canvas: CanvasAdapter;
   #documentAdapter: DocumentAdapter;
 
   wantsFullscreen = false;
   wasFullscreen = false;
 
   constructor(
-    options: FullscreenOptions
+    options: ScreenOptions
   ) {
     super();
     const {

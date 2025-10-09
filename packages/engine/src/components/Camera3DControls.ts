@@ -52,7 +52,7 @@ export class Camera3DControls extends Behavior {
 
     this.maxRollUp = options.maxRollUp ?? Math.PI / 2;
     this.maxRollDown = options.maxRollDown ?? -Math.PI / 2;
-    this.#rotationSpeed = options.rotationSpeed ?? 2;
+    this.#rotationSpeed = options.rotationSpeed ?? 0.004;
     this.#movementSpeed = options.speed ?? 20;
 
     this.actor.gameInstance.renderer.addRenderComponent(this.camera);
@@ -72,7 +72,9 @@ export class Camera3DControls extends Behavior {
   }
 
   #rotate() {
-    const mouseDelta = this.actor.gameInstance.input.getMouseDelta();
+    const mouseDelta = this.actor.gameInstance.input.getMouseDelta(
+      true
+    );
     const euler = new THREE.Euler(0, 0, 0, "YXZ");
 
     euler.setFromQuaternion(this.camera.quaternion);
@@ -113,11 +115,11 @@ export class Camera3DControls extends Behavior {
     this.camera.position.y += vector.y * this.#movementSpeed;
 
     if (input.isMouseButtonDown(this.#bindings.lookAround)) {
-      // this.#input.mouse.lock();
+      // input.mouse.lock();
       this.#rotate();
     }
-    if (input.wasMouseButtonJustReleased(this.#bindings.lookAround)) {
-      // this.#input.mouse.unlock();
+    else if (input.wasMouseButtonJustReleased(this.#bindings.lookAround)) {
+      // input.mouse.unlock();
     }
   }
 }

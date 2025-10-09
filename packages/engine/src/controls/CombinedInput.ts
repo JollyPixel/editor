@@ -3,113 +3,17 @@
 import type { Input } from "./Input.class.js";
 import {
   type MouseAction,
-  type GamepadIndex
-} from "./targets/index.js";
-import * as Keyboard from "./keyboard/code.js";
+  type GamepadIndex,
+  type GamepadButton,
+  type ExtendedKeyCode
+} from "./devices/index.js";
 
-export interface InputCondition {
-  evaluate(input: Input): boolean;
-  reset(): void;
-}
-
-export type CombinedInputType = "key" | "mouse" | "gamepad";
-export type CombinedInputState = "down" | "pressed" | "released";
-export type CombinedInputAction = `${Keyboard.ExtendedKeyCode | MouseAction}.${CombinedInputState}`;
-
-export type AtomicInputAction =
-  | Keyboard.ExtendedKeyCode
-  | MouseAction
-  | [GamepadIndex, number];
-
-export class AtomicInput implements InputCondition {
-  #type: CombinedInputType;
-  #action: AtomicInputAction;
-  #state: CombinedInputState;
-
-  constructor(
-    type: CombinedInputType,
-    action: AtomicInputAction,
-    state: CombinedInputState = "pressed"
-  ) {
-    this.#type = type;
-    this.#action = action;
-    this.#state = state;
-  }
-
-  evaluate(
-    input: Input
-  ): boolean {
-    switch (this.#type) {
-      case "key":
-        return this.#evaluateKey(input);
-      case "mouse":
-        return this.#evaluateMouse(input);
-      case "gamepad":
-        return this.#evaluateGamepad(input);
-      default:
-        return false;
-    }
-  }
-
-  reset(): void {
-    // No state to reset for atomic inputs
-  }
-
-  #evaluateKey(
-    input: Input
-  ): boolean {
-    const key = this.#action as Keyboard.ExtendedKeyCode;
-
-    switch (this.#state) {
-      case "down":
-        return input.isKeyDown(key);
-      case "pressed":
-        return input.wasKeyJustPressed(key);
-      case "released":
-        return input.wasKeyJustReleased(key);
-      default:
-        return false;
-    }
-  }
-
-  #evaluateMouse(
-    input: Input
-  ): boolean {
-    const button = this.#action as MouseAction;
-
-    switch (this.#state) {
-      case "down":
-        return input.isMouseButtonDown(button);
-      case "pressed":
-        return input.wasMouseButtonJustPressed(button);
-      case "released":
-        return input.wasMouseButtonJustReleased(button);
-      default:
-        return false;
-    }
-  }
-
-  #evaluateGamepad(
-    input: Input
-  ): boolean {
-    const [gamepad, button] = this.#action as [GamepadIndex, number];
-
-    if (typeof button === "number") {
-      switch (this.#state) {
-        case "down":
-          return input.isGamepadButtonDown(gamepad, button);
-        case "pressed":
-          return input.wasGamepadButtonJustPressed(gamepad, button);
-        case "released":
-          return input.wasGamepadButtonJustReleased(gamepad, button);
-        default:
-          return false;
-      }
-    }
-
-    return false;
-  }
-}
+import {
+  AtomicInput,
+  type InputCondition,
+  type CombinedInputAction,
+  type CombinedInputState
+} from "./AtomicInput.js";
 
 /**
  * Composite condition: ALL inputs must be satisfied.
@@ -122,11 +26,15 @@ export class AllInputs implements InputCondition {
   }
 
   evaluate(input: Input): boolean {
-    return this.#conditions.every((condition) => condition.evaluate(input));
+    return this.#conditions.every(
+      (condition) => condition.evaluate(input)
+    );
   }
 
   reset(): void {
-    this.#conditions.forEach((condition) => condition.reset());
+    this.#conditions.forEach(
+      (condition) => condition.reset()
+    );
   }
 }
 
@@ -141,11 +49,15 @@ export class AtLeastOneInput implements InputCondition {
   }
 
   evaluate(input: Input): boolean {
-    return this.#conditions.some((condition) => condition.evaluate(input));
+    return this.#conditions.some(
+      (condition) => condition.evaluate(input)
+    );
   }
 
   reset(): void {
-    this.#conditions.forEach((condition) => condition.reset());
+    this.#conditions.forEach(
+      (condition) => condition.reset()
+    );
   }
 }
 
@@ -160,11 +72,15 @@ export class NoneInputs implements InputCondition {
   }
 
   evaluate(input: Input): boolean {
-    return this.#conditions.every((condition) => !condition.evaluate(input));
+    return this.#conditions.every(
+      (condition) => !condition.evaluate(input)
+    );
   }
 
   reset(): void {
-    this.#conditions.forEach((condition) => condition.reset());
+    this.#conditions.forEach(
+      (condition) => condition.reset()
+    );
   }
 }
 
@@ -226,20 +142,20 @@ export class InputCombination {
 
   static key(key: CombinedInputAction): AtomicInput;
   static key(
-    key: Keyboard.ExtendedKeyCode,
+    key: ExtendedKeyCode,
     state?: CombinedInputState
   ): AtomicInput;
   static key(
-    key: Keyboard.ExtendedKeyCode | CombinedInputAction,
+    key: ExtendedKeyCode | CombinedInputAction,
     state: CombinedInputState = "pressed"
   ): AtomicInput {
     if (InputCombination.isCombinedAction(key)) {
-      const [keyCode, keyState] = key.split(".") as [Keyboard.ExtendedKeyCode, CombinedInputState];
+      const [keyCode, keyState] = key.split(".") as [ExtendedKeyCode, CombinedInputState];
 
       return new AtomicInput("key", keyCode, keyState);
     }
 
-    return new AtomicInput("key", key as Keyboard.ExtendedKeyCode, state);
+    return new AtomicInput("key", key as ExtendedKeyCode, state);
   }
 
   static mouse(button: MouseAction): AtomicInput;
@@ -262,7 +178,7 @@ export class InputCombination {
 
   static gamepad(
     gamepad: GamepadIndex,
-    button: number,
+    button: number | keyof typeof GamepadButton,
     state: CombinedInputState = "pressed"
   ): AtomicInput {
     return new AtomicInput("gamepad", [gamepad, button], state);
