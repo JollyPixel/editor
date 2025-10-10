@@ -88,7 +88,8 @@ export class BehaviorInitializer {
       }
 
       const [targetName, eventName] = type.split(".") as [string, any];
-      input[targetName].hooks.on(
+      const target = targetName === "input" ? input : input[targetName];
+      target.on(
         eventName,
         this.#behavior[methodName].bind(this.#behavior)
       );

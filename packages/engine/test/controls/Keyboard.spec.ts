@@ -3,22 +3,23 @@ import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { BrowserWindow, Window } from "happy-dom";
+import { Window } from "happy-dom";
 
 // Import Internal Dependencies
-import { Keyboard } from "../../src/controls/targets/Keyboard.class.js";
+import { Keyboard, type KeyCode } from "../../src/controls/devices/index.js";
+import * as mocks from "./mocks/index.js";
 
 // CONSTANTS
-const kWindow = new Window();
+const kEmulatedBrowserWindow = new Window();
 
 describe("Controls.Keyboard", () => {
   let keyboard: Keyboard;
-  let mockedDocumentAdapter: MockEventTarget;
+  let documentAdapter: KeyboardDocumentAdapter;
 
   beforeEach(() => {
-    mockedDocumentAdapter = new MockEventTarget();
+    documentAdapter = new KeyboardDocumentAdapter();
     keyboard = new Keyboard({
-      documentAdapter: mockedDocumentAdapter as unknown as Document
+      documentAdapter
     });
     keyboard.connect();
   });
@@ -27,13 +28,18 @@ describe("Controls.Keyboard", () => {
     keyboard.disconnect();
   });
 
+  test("should initialize with default values", () => {
+    assert.strictEqual(keyboard.wasActive, false);
+  });
+
   test("should detect key press", () => {
-    mockedDocumentAdapter.dispatchKeyboardEvent("keydown", {
+    documentAdapter.dispatchEvent("keydown", {
       code: "KeyA",
       key: "a"
     });
 
     keyboard.update();
+    assert.strictEqual(keyboard.wasActive, true);
 
     const keyState = keyboard.buttons.get("KeyA")!;
     assert.equal(keyState.wasJustPressed, true);
@@ -41,10 +47,10 @@ describe("Controls.Keyboard", () => {
   });
 
   test("should detect key release", () => {
-    mockedDocumentAdapter.dispatchKeyboardEvent("keydown", { code: "KeyA" });
+    documentAdapter.dispatchEvent("keydown", { code: "KeyA" });
     keyboard.update();
 
-    mockedDocumentAdapter.dispatchKeyboardEvent("keyup", { code: "KeyA" });
+    documentAdapter.dispatchEvent("keyup", { code: "KeyA" });
     keyboard.update();
 
     const keyState = keyboard.buttons.get("KeyA")!;
@@ -53,10 +59,10 @@ describe("Controls.Keyboard", () => {
   });
 
   test("should handle auto repeat", () => {
-    mockedDocumentAdapter.dispatchKeyboardEvent("keydown", { code: "KeyA" });
+    documentAdapter.dispatchEvent("keydown", { code: "KeyA" });
     keyboard.update();
 
-    mockedDocumentAdapter.dispatchKeyboardEvent("keydown", { code: "KeyA" });
+    documentAdapter.dispatchEvent("keydown", { code: "KeyA" });
     keyboard.update();
 
     const keyState = keyboard.buttons.get("KeyA")!;
@@ -64,7 +70,7 @@ describe("Controls.Keyboard", () => {
   });
 
   test("should capture character input", () => {
-    mockedDocumentAdapter.dispatchKeyboardEvent("keypress", {
+    documentAdapter.dispatchEvent("keypress", {
       key: "a"
     });
 
@@ -73,7 +79,7 @@ describe("Controls.Keyboard", () => {
   });
 
   test("should reset state correctly", () => {
-    mockedDocumentAdapter.dispatchKeyboardEvent("keydown", { code: "KeyA" });
+    documentAdapter.dispatchEvent("keydown", { code: "KeyA" });
     keyboard.update();
     keyboard.reset();
 
@@ -84,8 +90,8 @@ describe("Controls.Keyboard", () => {
   });
 
   test("should handle multiple keys pressed simultaneously", () => {
-    mockedDocumentAdapter.dispatchKeyboardEvent("keydown", { code: "KeyA" });
-    mockedDocumentAdapter.dispatchKeyboardEvent("keydown", { code: "KeyB" });
+    documentAdapter.dispatchEvent("keydown", { code: "KeyA" });
+    documentAdapter.dispatchEvent("keydown", { code: "KeyB" });
     keyboard.update();
 
     const keyStateA = keyboard.buttons.get("KeyA")!;
@@ -97,7 +103,7 @@ describe("Controls.Keyboard", () => {
   });
 
   test("should clear wasJustPressed after update cycle", () => {
-    mockedDocumentAdapter.dispatchKeyboardEvent("keydown", { code: "KeyA" });
+    documentAdapter.dispatchEvent("keydown", { code: "KeyA" });
     keyboard.update();
 
     const keyStateFirstUpdate = keyboard.buttons.get("KeyA")!;
@@ -111,10 +117,10 @@ describe("Controls.Keyboard", () => {
   });
 
   test("should clear wasJustReleased after update cycle", () => {
-    mockedDocumentAdapter.dispatchKeyboardEvent("keydown", { code: "KeyA" });
+    documentAdapter.dispatchEvent("keydown", { code: "KeyA" });
     keyboard.update();
 
-    mockedDocumentAdapter.dispatchKeyboardEvent("keyup", { code: "KeyA" });
+    documentAdapter.dispatchEvent("keyup", { code: "KeyA" });
     keyboard.update();
 
     const keyStateFirstUpdate = keyboard.buttons.get("KeyA")!;
@@ -127,10 +133,10 @@ describe("Controls.Keyboard", () => {
   });
 
   test("should clear wasJustAutoRepeated after update cycle", () => {
-    mockedDocumentAdapter.dispatchKeyboardEvent("keydown", { code: "KeyA" });
+    documentAdapter.dispatchEvent("keydown", { code: "KeyA" });
     keyboard.update();
 
-    mockedDocumentAdapter.dispatchKeyboardEvent("keydown", { code: "KeyA" });
+    documentAdapter.dispatchEvent("keydown", { code: "KeyA" });
     keyboard.update();
 
     const keyStateFirstUpdate = keyboard.buttons.get("KeyA")!;
@@ -143,7 +149,7 @@ describe("Controls.Keyboard", () => {
   });
 
   test("should update newChar property", () => {
-    mockedDocumentAdapter.dispatchKeyboardEvent("keypress", { key: "x" });
+    documentAdapter.dispatchEvent("keypress", { key: "x" });
 
     assert.equal(keyboard.newChar, "x");
 
@@ -153,7 +159,7 @@ describe("Controls.Keyboard", () => {
   });
 
   test("should handle keyup without prior keydown", () => {
-    mockedDocumentAdapter.dispatchKeyboardEvent("keyup", { code: "KeyA" });
+    documentAdapter.dispatchEvent("keyup", { code: "KeyA" });
     keyboard.update();
 
     const keyState = keyboard.buttons.get("KeyA");
@@ -161,51 +167,36 @@ describe("Controls.Keyboard", () => {
   });
 
   test("should maintain buttonsDown set correctly", () => {
-    mockedDocumentAdapter.dispatchKeyboardEvent("keydown", { code: "KeyA" });
+    documentAdapter.dispatchEvent("keydown", { code: "KeyA" });
     keyboard.update();
 
     assert.equal(keyboard.buttonsDown.has("KeyA"), true);
 
-    mockedDocumentAdapter.dispatchKeyboardEvent("keyup", { code: "KeyA" });
+    documentAdapter.dispatchEvent("keyup", { code: "KeyA" });
     keyboard.update();
 
     assert.equal(keyboard.buttonsDown.has("KeyA"), false);
   });
 });
 
-class MockEventTarget {
-  #listeners = new Map<string, Set<(event: BrowserWindow["KeyboardEvent"]) => void>>();
+interface EventData {
+  code?: KeyCode;
+  key?: string;
+}
 
-  addEventListener(
-    type: string,
-    listener: (event: BrowserWindow["KeyboardEvent"]) => void
+class KeyboardDocumentAdapter extends mocks.DocumentAdapter {
+  dispatchEvent(
+    type: "keydown" | "keypress" | "keyup",
+    eventData: EventData
   ) {
-    if (!this.#listeners.has(type)) {
-      this.#listeners.set(type, new Set());
-    }
-    this.#listeners.get(type)!.add(listener);
-  }
-
-  removeEventListener(
-    type: string,
-    listener: (event: BrowserWindow["KeyboardEvent"]) => void
-  ) {
-    this.#listeners.get(type)?.delete(listener);
-  }
-
-  dispatchKeyboardEvent(type: string, eventData: {
-    code?: string;
-    key?: string;
-  }) {
-    const event = new kWindow.KeyboardEvent(type, {
+    const event = new kEmulatedBrowserWindow.KeyboardEvent(type, {
       code: eventData.code || "",
       key: eventData.key || "",
       bubbles: true,
       cancelable: true
     });
 
-    const listeners = this.#listeners.get(type) ?? [];
-    // @ts-expect-error
+    const listeners = this.listeners.get(type) ?? [];
     listeners.forEach((listener) => listener(event));
   }
 }

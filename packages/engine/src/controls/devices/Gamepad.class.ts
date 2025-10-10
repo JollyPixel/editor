@@ -1,12 +1,84 @@
 /* eslint-disable max-params */
+// Import Third-party Dependencies
+import { EventEmitter } from "@posva/event-emitter";
+
 // Import Internal Dependencies
 import {
   type NavigatorAdapter,
-  BrowserNavigatorAdapter
-} from "../../adapters/navigator.js";
+  BrowserNavigatorAdapter,
+  type WindowAdapter,
+  BrowserWindowAdapter
+} from "../../adapters/index.js";
 import type { InputControl } from "../types.js";
 
 export type GamepadIndex = 0 | 1 | 2 | 3;
+
+/**
+ * Standard Gamepad button mapping (W3C Gamepad API specification).
+ *
+ * This mapping corresponds to a typical Xbox/PlayStation controller layout.
+ * Actual button availability may vary by controller model.
+ *
+ * @see https://w3c.github.io/gamepad/#remapping
+ * @see https://developer.mozilla.org/en-US/docs/Web/API/Gamepad/buttons
+ */
+export const GamepadButton = {
+  // Face buttons (right side)
+  // Bottom button (Xbox: A, PlayStation: Cross)
+  A: 0,
+  // Right button (Xbox: B, PlayStation: Circle)
+  B: 1,
+  // Left button (Xbox: X, PlayStation: Square)
+  X: 2,
+  // Top button (Xbox: Y, PlayStation: Triangle)
+  Y: 3,
+
+  // Shoulder buttons
+  // L1
+  LeftBumper: 4,
+  // R1
+  RightBumper: 5,
+  // L2
+  LeftTrigger: 6,
+  // R2
+  RightTrigger: 7,
+
+  // Center buttons
+  // Back/Share button
+  Select: 8,
+  // Start/Options button
+  Start: 9,
+
+  // Stick buttons (press down on analog stick)
+  // L3
+  LeftStick: 10,
+  // R3
+  RightStick: 11,
+
+  // D-Pad
+  DPadUp: 12,
+  DPadDown: 13,
+  DPadLeft: 14,
+  DPadRight: 15,
+
+  // Special buttons (may not be present on all controllers)
+  // Xbox and PlayStation button
+  Home: 16
+} as const;
+
+/**
+ * Standard Gamepad axis mapping.
+ *
+ * Axis values range from -1.0 to 1.0.
+ * - Negative values: Left/Up
+ * - Positive values: Right/Down
+ */
+export const GamepadAxis = {
+  LeftStickX: 0,
+  LeftStickY: 1,
+  RightStickX: 2,
+  RightStickY: 3
+} as const;
 
 export interface GamepadButtonState {
   isDown: boolean;
@@ -36,15 +108,29 @@ interface AxisDownState {
   negative: boolean;
 }
 
+export type GamepadEvents = {
+  connect: [gamepad: globalThis.Gamepad];
+  disconnect: [gamepad: globalThis.Gamepad];
+};
+
 export interface GamepadOptions {
   navigatorAdapter?: NavigatorAdapter;
+  windowAdapter?: WindowAdapter;
 }
 
-export class Gamepad implements InputControl {
+/**
+ * @see https://developer.mozilla.org/en-US/docs/Web/API/Gamepad_API/Using_the_Gamepad_API
+ */
+export class Gamepad extends EventEmitter<GamepadEvents> implements InputControl {
+  static MaxGamepads = 4;
+  static MaxButtons = 16;
+  static MaxAxes = 4;
+
   #navigatorAdapter: NavigatorAdapter;
+  #windowAdapter: WindowAdapter;
 
-  static maxTouches = 10;
-
+  #wasActive = false;
+  connectedGamepads = 0;
   buttons: GamepadButtonState[][] = [];
   axes: GamepadAxisState[][] = [];
   autoRepeats: (GamepadAutoRepeat | null)[] = [];
@@ -56,32 +142,49 @@ export class Gamepad implements InputControl {
   constructor(
     options: GamepadOptions = {}
   ) {
+    super();
     const {
-      navigatorAdapter = new BrowserNavigatorAdapter()
+      navigatorAdapter = new BrowserNavigatorAdapter(),
+      windowAdapter = new BrowserWindowAdapter()
     } = options;
 
     this.#navigatorAdapter = navigatorAdapter;
-    for (let i = 0; i < 4; i++) {
-      this.buttons[i] = [];
-      this.axes[i] = [];
-      this.autoRepeats[i] = null;
+    this.#windowAdapter = windowAdapter;
+    for (let gamepadIndex = 0; gamepadIndex < Gamepad.MaxGamepads; gamepadIndex++) {
+      this.buttons[gamepadIndex] = [];
+      this.axes[gamepadIndex] = [];
+      this.autoRepeats[gamepadIndex] = null;
     }
 
     this.reset();
   }
 
+  get wasActive() {
+    return this.#wasActive;
+  }
+
+  connect(): void {
+    this.#windowAdapter.addEventListener("gamepadconnected", this.onGamepadConnected);
+    this.#windowAdapter.addEventListener("gamepaddisconnected", this.onGamepadDisconnected);
+  }
+
+  disconnect(): void {
+    this.#windowAdapter.removeEventListener("gamepadconnected", this.onGamepadConnected);
+    this.#windowAdapter.removeEventListener("gamepaddisconnected", this.onGamepadDisconnected);
+  }
+
   reset() {
-    for (let i = 0; i < 4; i++) {
-      for (let button = 0; button < 16; button++) {
-        this.buttons[i][button] = {
+    for (let gamepadIndex = 0; gamepadIndex < Gamepad.MaxGamepads; gamepadIndex++) {
+      for (let button = 0; button < Gamepad.MaxButtons; button++) {
+        this.buttons[gamepadIndex][button] = {
           isDown: false,
           wasJustPressed: false,
           wasJustReleased: false,
           value: 0
         };
       }
-      for (let axes = 0; axes < 4; axes++) {
-        this.axes[i][axes] = {
+      for (let axes = 0; axes < Gamepad.MaxAxes; axes++) {
+        this.axes[gamepadIndex][axes] = {
           wasPositiveJustPressed: false,
           wasPositiveJustAutoRepeated: false,
           wasPositiveJustReleased: false,
@@ -100,11 +203,12 @@ export class Gamepad implements InputControl {
       return;
     }
 
-    for (let index = 0; index < 4; index++) {
-      const gamepad = gamepads[index];
+    this.#wasActive = false;
+    for (let gamepadIndex = 0; gamepadIndex < Gamepad.MaxGamepads; gamepadIndex++) {
+      const gamepad = gamepads[gamepadIndex];
       if (gamepad) {
-        this.#updateButtons(gamepad, index);
-        this.#updateAxes(gamepad, index);
+        this.#updateButtons(gamepad, gamepadIndex);
+        this.#updateAxes(gamepad, gamepadIndex);
       }
     }
   }
@@ -113,18 +217,23 @@ export class Gamepad implements InputControl {
     gamepad: globalThis.Gamepad,
     gamepadIndex: number
   ): void {
-    for (let i = 0; i < this.buttons[gamepadIndex].length; i++) {
-      if (gamepad.buttons[i] === null) {
+    for (let buttonIndex = 0; buttonIndex < this.buttons[gamepadIndex].length; buttonIndex++) {
+      if (gamepad.buttons[buttonIndex] === null) {
         continue;
       }
 
-      const button = this.buttons[gamepadIndex][i];
+      const button = this.buttons[gamepadIndex][buttonIndex];
       const wasDown = button.isDown;
+      const isDown = gamepad.buttons[buttonIndex].pressed;
 
-      button.isDown = gamepad.buttons[i].pressed;
-      button.value = gamepad.buttons[i].value;
+      button.isDown = isDown;
+      button.value = gamepad.buttons[buttonIndex].value;
       button.wasJustPressed = !wasDown && button.isDown;
       button.wasJustReleased = wasDown && !button.isDown;
+
+      if (isDown) {
+        this.#wasActive = true;
+      }
     }
   }
 
@@ -153,6 +262,13 @@ export class Gamepad implements InputControl {
       this.#updateAxisStates(axes, wasAxisDown, isAxisDown);
       this.#processCurrentAutoRepeat(gamepadIndex, stickIndex, axes, isAxisDown, now);
       this.#createNewAutoRepeat(gamepadIndex, stickIndex, axes, now);
+
+      if (
+        isAxisDown[0].positive || isAxisDown[0].negative ||
+        isAxisDown[1].positive || isAxisDown[1].negative
+      ) {
+        this.#wasActive = true;
+      }
     }
   }
 
@@ -281,4 +397,14 @@ export class Gamepad implements InputControl {
       this.autoRepeats[gamepadIndex] = newAutoRepeat;
     }
   }
+
+  private onGamepadConnected = (event: GamepadEvent) => {
+    this.connectedGamepads++;
+    this.emit("connect", event.gamepad);
+  };
+
+  private onGamepadDisconnected = (event: GamepadEvent) => {
+    this.connectedGamepads--;
+    this.emit("disconnect", event.gamepad);
+  };
 }

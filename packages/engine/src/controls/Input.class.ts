@@ -4,12 +4,12 @@ import { EventEmitter } from "@posva/event-emitter";
 import "reflect-metadata";
 
 // Import Internal Dependencies
-import * as sources from "./targets/index.js";
+import * as devices from "./devices/index.js";
 import {
   BrowserWindowAdapter,
   type WindowAdapter
 } from "../adapters/index.js";
-import { mapKeyToExtendedKey } from "./keyboard/code.js";
+import { mapKeyToExtendedKey } from "./devices/keyboard/code.js";
 import type {
   InputControl,
   InputMouseAction,
@@ -18,13 +18,27 @@ import type {
   KeyCode
 } from "./types.js";
 
-export type { MouseEventButton } from "./targets/Mouse.class.js";
+export type { MouseEventButton } from "./devices/Mouse.class.js";
+
+/**
+ * @note default stand for mouse + keyboard
+ */
+export type InputDevicePreference = "default" | "gamepad";
 
 export type InputListener =
+  | "input.devicePreferenceChange"
+  | "input.exit"
   | "mouse.down"
   | "mouse.up"
   | "mouse.move"
   | "mouse.wheel"
+  | "mouse.lockStateChange"
+  | "gamepad.connect"
+  | "gamepad.disconnect"
+  | "touchpad.start"
+  | "touchpad.move"
+  | "touchpad.end"
+  | "screen.stateChange"
   | "keyboard.down"
   | "keyboard.up"
   | "keyboard.press"
@@ -37,6 +51,7 @@ export interface InputListenerMetadata {
 
 export type InputEvents = {
   exit: [];
+  devicePreferenceChange: [preference: InputDevicePreference];
 };
 
 export interface InputOptions {
@@ -77,12 +92,13 @@ export class Input extends EventEmitter<InputEvents> {
 
   #canvas: HTMLCanvasElement;
   #windowAdapter: WindowAdapter;
+  #preference: InputDevicePreference = "default";
 
-  mouse: sources.Mouse;
-  touchpad: sources.Touchpad;
-  gamepad: sources.Gamepad;
-  fullscreen: sources.Fullscreen;
-  keyboard: sources.Keyboard;
+  mouse: devices.Mouse;
+  touchpad: devices.Touchpad;
+  gamepad: devices.Gamepad;
+  screen: devices.Screen;
+  keyboard: devices.Keyboard;
 
   exited = false;
 
@@ -98,24 +114,33 @@ export class Input extends EventEmitter<InputEvents> {
 
     this.#canvas = canvas;
     this.#windowAdapter = windowAdapter;
-    const fullscreen = new sources.Fullscreen({
+    const fullscreen = new devices.Screen({
       canvas
     });
-    this.mouse = new sources.Mouse({
+    this.mouse = new devices.Mouse({
       canvas
     });
-    this.mouse.hooks.on("down", () => fullscreen.onMouseDown());
-    this.mouse.hooks.on("up", () => fullscreen.onMouseUp());
+    this.mouse.on("down", () => fullscreen.onMouseDown());
+    this.mouse.on("up", () => fullscreen.onMouseUp());
 
-    this.fullscreen = fullscreen;
-    this.touchpad = new sources.Touchpad({
-      canvas,
-      mouse: this.mouse
+    this.screen = fullscreen;
+    this.touchpad = new devices.Touchpad({
+      canvas
     });
-    this.gamepad = new sources.Gamepad({
+    this.touchpad.on("start", (touch, position) => {
+      this.mouse.synchronizeWithTouch(touch, true, position);
+    });
+    this.touchpad.on("end", (touch) => {
+      this.mouse.synchronizeWithTouch(touch, false);
+    });
+    this.touchpad.on("move", (touch, position) => {
+      this.mouse.synchronizeWithTouch(touch, void 0, position);
+    });
+
+    this.gamepad = new devices.Gamepad({
       navigatorAdapter: this.#windowAdapter.navigator
     });
-    this.keyboard = new sources.Keyboard();
+    this.keyboard = new devices.Keyboard();
 
     if (enableOnExit) {
       this.#windowAdapter.onbeforeunload = this.doExitCallback;
@@ -132,28 +157,53 @@ export class Input extends EventEmitter<InputEvents> {
   }
 
   connect() {
-    [...this.#sourceInputs(), this.fullscreen]
+    [...this.#sourceInputs(), this.screen]
       .forEach((subscriber) => subscriber.connect?.());
     this.#windowAdapter.addEventListener("blur", this.onBlur);
+    this.#windowAdapter.addEventListener("contextmenu", this.onContextMenu);
   }
 
   disconnect() {
-    [...this.#sourceInputs(), this.fullscreen]
+    [...this.#sourceInputs(), this.screen]
       .forEach((subscriber) => subscriber.disconnect?.());
     this.#windowAdapter.removeEventListener("blur", this.onBlur);
+    this.#windowAdapter.removeEventListener("contextmenu", this.onContextMenu);
+  }
+
+  getDevicePreference(): InputDevicePreference {
+    return this.#preference;
+  }
+
+  isTouchpadAvailable() {
+    return "ontouchstart" in document.documentElement;
   }
 
   enterFullscreen() {
-    this.fullscreen.enter();
+    this.screen.enter();
   }
 
   exitFullscreen() {
-    this.fullscreen.exit();
+    this.screen.exit();
   }
 
   update() {
     this.#sourceInputs()
       .forEach((subscriber) => subscriber.update());
+
+    if (
+      this.gamepad.wasActive &&
+      this.#preference !== "gamepad"
+    ) {
+      this.#preference = "gamepad";
+      this.emit("devicePreferenceChange", this.#preference);
+    }
+    else if (
+      this.#preference !== "default" &&
+      (this.keyboard.wasActive || this.mouse.wasActive || this.touchpad.wasActive)
+    ) {
+      this.#preference = "default";
+      this.emit("devicePreferenceChange", this.#preference);
+    }
   }
 
   getScreenSize() {
@@ -190,12 +240,19 @@ export class Input extends EventEmitter<InputEvents> {
     return new THREE.Vector2(x - 1, (y - 1) * -1);
   }
 
-  getMouseDelta() {
+  getMouseDelta(
+    normalizeWithSize = false
+  ) {
     const delta = this.mouse.delta;
-    const x = (delta.x / this.#canvas.clientWidth) * 2;
-    const y = (delta.y / this.#canvas.clientHeight) * -2;
 
-    return new THREE.Vector2(x, y);
+    if (normalizeWithSize) {
+      const x = delta.x / (this.#canvas.clientWidth / 2);
+      const y = -delta.y / (this.#canvas.clientHeight / 2);
+
+      return new THREE.Vector2(x, y);
+    }
+
+    return new THREE.Vector2(delta.x, -delta.y);
   }
 
   isMouseButtonDown(
@@ -208,7 +265,7 @@ export class Input extends EventEmitter<InputEvents> {
       return this.mouse.buttonsDown.length === 0;
     }
 
-    const index = typeof action === "number" ? action : sources.MouseEventButton[action];
+    const index = typeof action === "number" ? action : devices.MouseEventButton[action];
 
     return this.mouse.buttonsDown[index];
   }
@@ -223,7 +280,7 @@ export class Input extends EventEmitter<InputEvents> {
       return this.mouse.buttons.every((button) => !button.wasJustReleased);
     }
 
-    const index = typeof action === "number" ? action : sources.MouseEventButton[action];
+    const index = typeof action === "number" ? action : devices.MouseEventButton[action];
 
     return this.mouse.buttons[index]?.wasJustReleased ?? false;
   }
@@ -237,7 +294,7 @@ export class Input extends EventEmitter<InputEvents> {
     if (action === "NONE") {
       return this.mouse.buttons.every((button) => !button.wasJustPressed);
     }
-    const index = typeof action === "number" ? action : sources.MouseEventButton[action];
+    const index = typeof action === "number" ? action : devices.MouseEventButton[action];
 
     return this.mouse.buttons[index]?.wasJustPressed ?? false;
   }
@@ -245,11 +302,7 @@ export class Input extends EventEmitter<InputEvents> {
   getTouchPosition(
     index: number
   ) {
-    if (index < 0 || index >= this.touchpad.touches.length) {
-      throw new Error(`Touch index ${index} is out of bounds.`);
-    }
-
-    const position = this.touchpad.touches[index].position;
+    const { position } = this.touchpad.getTouchState(index);
     const x = (position.x / this.#canvas.clientWidth) * 2;
     const y = (position.y / this.#canvas.clientHeight) * 2;
 
@@ -260,33 +313,21 @@ export class Input extends EventEmitter<InputEvents> {
   }
 
   isTouchDown(
-    index: number
+    index: devices.TouchAction
   ): boolean {
-    if (index < 0 || index >= this.touchpad.touchesDown.length) {
-      throw new Error(`Touch index ${index} is out of bounds.`);
-    }
-
-    return this.touchpad.touchesDown[index];
+    return this.touchpad.getTouchState(index).isDown;
   }
 
   wasTouchStarted(
-    index: number
+    index: devices.TouchAction
   ): boolean {
-    if (index < 0 || index >= this.touchpad.touches.length) {
-      throw new Error(`Touch index ${index} is out of bounds.`);
-    }
-
-    return this.touchpad.touches[index].wasStarted;
+    return this.touchpad.getTouchState(index).wasStarted;
   }
 
   wasTouchEnded(
-    index: number
+    index: devices.TouchAction
   ): boolean {
-    if (index < 0 || index >= this.touchpad.touches.length) {
-      throw new Error(`Touch index ${index} is out of bounds.`);
-    }
-
-    return this.touchpad.touches[index].wasEnded;
+    return this.touchpad.getTouchState(index).wasEnded;
   }
 
   vibrate(
@@ -362,36 +403,45 @@ export class Input extends EventEmitter<InputEvents> {
   }
 
   isGamepadButtonDown(
-    gamepad: 0 | 1 | 2 | 3,
-    key: number
+    gamepad: devices.GamepadIndex,
+    buttonIndex: number | keyof typeof devices.GamepadButton
   ) {
-    if (!this.gamepad.buttons[gamepad][key]) {
+    const finalizedButtonIndex = typeof buttonIndex === "string" ?
+      devices.GamepadButton[buttonIndex] : buttonIndex;
+
+    if (!this.gamepad.buttons[gamepad][finalizedButtonIndex]) {
       throw new Error("Invalid gamepad info");
     }
 
-    return this.gamepad.buttons[gamepad][key].isDown;
+    return this.gamepad.buttons[gamepad][finalizedButtonIndex].isDown;
   }
 
   wasGamepadButtonJustPressed(
-    gamepad: 0 | 1 | 2 | 3,
-    key: number
+    gamepad: devices.GamepadIndex,
+    buttonIndex: number | keyof typeof devices.GamepadButton
   ) {
-    if (!this.gamepad.buttons[gamepad][key]) {
+    const finalizedButtonIndex = typeof buttonIndex === "string" ?
+      devices.GamepadButton[buttonIndex] : buttonIndex;
+
+    if (!this.gamepad.buttons[gamepad][finalizedButtonIndex]) {
       throw new Error("Invalid gamepad info");
     }
 
-    return this.gamepad.buttons[gamepad][key].wasJustPressed;
+    return this.gamepad.buttons[gamepad][finalizedButtonIndex].wasJustPressed;
   }
 
   wasGamepadButtonJustReleased(
-    gamepad: 0 | 1 | 2 | 3,
-    key: number
+    gamepad: devices.GamepadIndex,
+    buttonIndex: number | keyof typeof devices.GamepadButton
   ) {
-    if (!this.gamepad.buttons[gamepad][key]) {
+    const finalizedButtonIndex = typeof buttonIndex === "string" ?
+      devices.GamepadButton[buttonIndex] : buttonIndex;
+
+    if (!this.gamepad.buttons[gamepad][finalizedButtonIndex]) {
       throw new Error("Invalid gamepad info");
     }
 
-    return this.gamepad.buttons[gamepad][key].wasJustReleased;
+    return this.gamepad.buttons[gamepad][finalizedButtonIndex].wasJustReleased;
   }
 
   setGamepadAxisDeadZone(
@@ -405,11 +455,14 @@ export class Input extends EventEmitter<InputEvents> {
   }
 
   wasGamepadAxisJustPressed(
-    gamepad: 0 | 1 | 2 | 3,
-    axis: number,
+    gamepad: devices.GamepadIndex,
+    axis: number | keyof typeof devices.GamepadAxis,
     options: { autoRepeat?: boolean; positive?: boolean; } = {}
   ) {
-    const axisInfo = this.gamepad.axes[gamepad][axis];
+    const finalizedAxisIndex = typeof axis === "string" ?
+      devices.GamepadAxis[axis] : axis;
+
+    const axisInfo = this.gamepad.axes[gamepad][finalizedAxisIndex];
     if (!axisInfo) {
       throw new Error("Invalid gamepad info");
     }
@@ -423,11 +476,14 @@ export class Input extends EventEmitter<InputEvents> {
   }
 
   wasGamepadAxisJustReleased(
-    gamepad: 0 | 1 | 2 | 3,
-    axis: number,
+    gamepad: devices.GamepadIndex,
+    axis: number | keyof typeof devices.GamepadAxis,
     options: { positive?: boolean; } = {}
   ) {
-    const axisInfo = this.gamepad.axes[gamepad][axis];
+    const finalizedAxisIndex = typeof axis === "string" ?
+      devices.GamepadAxis[axis] : axis;
+
+    const axisInfo = this.gamepad.axes[gamepad][finalizedAxisIndex];
     if (!axisInfo) {
       throw new Error("Invalid gamepad info");
     }
@@ -438,30 +494,40 @@ export class Input extends EventEmitter<InputEvents> {
   }
 
   getGamepadAxisValue(
-    gamepad: 0 | 1 | 2 | 3,
-    axis: number
+    gamepad: devices.GamepadIndex,
+    axis: number | keyof typeof devices.GamepadAxis
   ) {
-    if (!this.gamepad.axes[gamepad][axis]) {
+    const finalizedAxisIndex = typeof axis === "string" ?
+      devices.GamepadAxis[axis] : axis;
+
+    if (!this.gamepad.axes[gamepad][finalizedAxisIndex]) {
       throw new Error("Invalid gamepad info");
     }
 
-    return this.gamepad.axes[gamepad][axis].value;
+    return this.gamepad.axes[gamepad][finalizedAxisIndex].value;
   }
 
   getGamepadButtonValue(
-    gamepad: 0 | 1 | 2 | 3,
-    button: number
-  ) {
-    if (!this.gamepad.buttons[gamepad][button]) {
+    gamepad: devices.GamepadIndex,
+    buttonIndex: number | keyof typeof devices.GamepadButton
+  ): number {
+    const finalizedButtonIndex = typeof buttonIndex === "string" ?
+      devices.GamepadButton[buttonIndex] : buttonIndex;
+
+    if (!this.gamepad.buttons[gamepad][finalizedButtonIndex]) {
       throw new Error("Invalid gamepad info");
     }
 
-    return this.gamepad.buttons[gamepad][button].value;
+    return this.gamepad.buttons[gamepad][finalizedButtonIndex].value;
   }
 
   private onBlur = () => {
     this.#sourceInputs()
       .forEach((subscriber) => subscriber.reset());
+  };
+
+  private onContextMenu = (event: MouseEvent) => {
+    event.preventDefault();
   };
 
   private doExitCallback = () => {

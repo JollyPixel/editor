@@ -6,8 +6,10 @@ import type {
 
 export interface DocumentAdapter extends EventTargetAdapter {
   fullscreenElement?: Element | null;
+  pointerLockElement?: Element | null;
 
   exitFullscreen(): void;
+  exitPointerLock(): void;
 }
 
 export class BrowserDocumentAdapter implements DocumentAdapter {
@@ -28,6 +30,12 @@ export class BrowserDocumentAdapter implements DocumentAdapter {
   exitFullscreen() {
     if (document.fullscreenElement) {
       document.exitFullscreen();
+    }
+  }
+
+  exitPointerLock() {
+    if (document.pointerLockElement) {
+      document.exitPointerLock();
     }
   }
 }

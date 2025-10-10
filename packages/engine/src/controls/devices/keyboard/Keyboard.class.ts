@@ -1,12 +1,14 @@
+// Import Third-party Dependencies
+import { EventEmitter } from "@posva/event-emitter";
+
 // Import Internal Dependencies
 import type {
   InputControl
-} from "../types.js";
+} from "../../types.js";
 import {
   BrowserDocumentAdapter,
   type DocumentAdapter
-} from "../../adapters/index.js";
-import { HookDb } from "../HookDb.js";
+} from "../../../adapters/index.js";
 
 // CONSTANTS
 const kControlKeys = new Set([
@@ -48,7 +50,7 @@ const kControlKeys = new Set([
   "F24"
 ]);
 
-export type KeyboardHooks = {
+export type KeyboardEvents = {
   down: [event: KeyboardEvent];
   up: [event: KeyboardEvent];
   press: [event: KeyboardEvent];
@@ -66,11 +68,12 @@ export interface KeyboardOptions {
   documentAdapter?: DocumentAdapter;
 }
 
-export class Keyboard implements InputControl {
+export class Keyboard extends EventEmitter<
+  KeyboardEvents
+> implements InputControl {
   #documentAdapter: DocumentAdapter;
 
-  hooks = new HookDb<KeyboardHooks>();
-
+  #wasActive = false;
   buttons = new Map<string, KeyState>();
   buttonsDown = new Set<string>();
   autoRepeatedCode: string | null = null;
@@ -80,12 +83,17 @@ export class Keyboard implements InputControl {
   constructor(
     options: KeyboardOptions = {}
   ) {
+    super();
     const {
       documentAdapter = new BrowserDocumentAdapter()
     } = options;
 
     this.reset();
     this.#documentAdapter = documentAdapter;
+  }
+
+  get wasActive() {
+    return this.#wasActive;
   }
 
   connect() {
@@ -129,8 +137,8 @@ export class Keyboard implements InputControl {
     else {
       this.buttonsDown.add(event.code);
     }
-    this.hooks.emit("down", event);
-    this.hooks.emit(event.code, event);
+    this.emit("down", event);
+    this.emit(event.code, event);
 
     return !isControlKey;
   };
@@ -138,29 +146,37 @@ export class Keyboard implements InputControl {
   private onKeyPress = (event: KeyboardEvent) => {
     if (event.key.length === 1 && event.key.charCodeAt(0) >= 32) {
       this.newChar += event.key;
-      this.hooks.emit("press", event);
+      this.emit("press", event);
     }
   };
 
   private onKeyUp = (event: KeyboardEvent) => {
     this.buttonsDown.delete(event.code);
-    this.hooks.emit("up", event);
+    this.emit("up", event);
   };
 
   update() {
+    this.#wasActive = false;
+
     for (const [code, keyState] of this.buttons) {
       const wasDown = keyState.isDown;
+      const isDown = this.buttonsDown.has(code);
 
-      keyState.isDown = this.buttonsDown.has(code);
+      keyState.isDown = isDown;
       keyState.wasJustPressed = !wasDown && keyState.isDown;
       keyState.wasJustAutoRepeated = false;
       keyState.wasJustReleased = wasDown && !keyState.isDown;
+
+      if (isDown) {
+        this.#wasActive = true;
+      }
     }
 
     if (this.autoRepeatedCode !== null) {
       const keyState = this.buttons.get(this.autoRepeatedCode);
       if (keyState) {
         keyState.wasJustAutoRepeated = true;
+        this.#wasActive = true;
       }
       this.autoRepeatedCode = null;
     }
@@ -169,3 +185,5 @@ export class Keyboard implements InputControl {
     this.newChar = "";
   }
 }
+
+export type { KeyCode, ExtendedKeyCode } from "./code.js";

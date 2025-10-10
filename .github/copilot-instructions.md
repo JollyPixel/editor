@@ -30,6 +30,7 @@ applyTo: "**/*.js, **/*.mjs, **/*.cjs"
 * Before adding any external dependency, **ask the user** for approval.
 * Always add comment before the line and not at the end of the line.
 * In function or arrow function always add a new line before return statement.
+* Prefix with _ unused variables or parameters to avoid linting errors.
 
 ## 3  Imports
 

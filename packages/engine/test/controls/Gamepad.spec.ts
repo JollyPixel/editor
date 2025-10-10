@@ -3,21 +3,22 @@ import { describe, test, beforeEach, mock } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { Gamepad } from "../../src/controls/targets/Gamepad.class.js";
+import { Gamepad } from "../../src/controls/devices/index.js";
+import * as mocks from "./mocks/index.js";
 
 describe("Controls.Gamepad", () => {
   let gamepad: Gamepad;
-  let mockNavigatorAdapter: MockNavigatorAdapter;
+  let navigatorAdapter: mocks.NavigatorAdapter;
 
   beforeEach(() => {
-    mockNavigatorAdapter = new MockNavigatorAdapter();
+    navigatorAdapter = new mocks.NavigatorAdapter();
     gamepad = new Gamepad({
-      // @ts-expect-error
-      navigatorAdapter: mockNavigatorAdapter
+      navigatorAdapter
     });
   });
 
   test("should initialize with default values", () => {
+    assert.strictEqual(gamepad.wasActive, false);
     assert.strictEqual(gamepad.buttons.length, 4);
     assert.strictEqual(gamepad.axes.length, 4);
     assert.strictEqual(gamepad.autoRepeats.length, 4);
@@ -60,7 +61,7 @@ describe("Controls.Gamepad", () => {
   });
 
   test("should handle no gamepads available", () => {
-    mockNavigatorAdapter.gamepads = null;
+    navigatorAdapter.gamepads = [];
 
     assert.doesNotThrow(() => {
       gamepad.update();
@@ -68,11 +69,12 @@ describe("Controls.Gamepad", () => {
   });
 
   test("should update button states when button is pressed", () => {
-    const mockGamepad = createMockGamepad();
+    const mockGamepad = mocks.Gamepad();
     mockGamepad.buttons[0] = { pressed: true, value: 1.0 };
-    mockNavigatorAdapter.gamepads = [mockGamepad, null, null, null];
+    navigatorAdapter.gamepads = [mockGamepad, null, null, null];
 
     gamepad.update();
+    assert.strictEqual(gamepad.wasActive, true);
 
     const button = gamepad.buttons[0][0];
     assert.strictEqual(button.isDown, true);
@@ -82,9 +84,9 @@ describe("Controls.Gamepad", () => {
   });
 
   test("should update button states when button is released", () => {
-    const mockGamepad = createMockGamepad();
+    const mockGamepad = mocks.Gamepad();
     mockGamepad.buttons[0] = { pressed: true, value: 1.0 };
-    mockNavigatorAdapter.gamepads = [mockGamepad, null, null, null];
+    navigatorAdapter.gamepads = [mockGamepad, null, null, null];
 
     // First update to press the button
     gamepad.update();
@@ -101,9 +103,9 @@ describe("Controls.Gamepad", () => {
   });
 
   test("should skip null buttons", () => {
-    const mockGamepad = createMockGamepad();
+    const mockGamepad = mocks.Gamepad();
     mockGamepad.buttons[0] = null;
-    mockNavigatorAdapter.gamepads = [mockGamepad, null, null, null];
+    navigatorAdapter.gamepads = [mockGamepad, null, null, null];
 
     assert.doesNotThrow(() => {
       gamepad.update();
@@ -115,10 +117,10 @@ describe("Controls.Gamepad", () => {
   });
 
   test("should update axis values when stick is moved beyond dead zone", () => {
-    const mockGamepad = createMockGamepad();
+    const mockGamepad = mocks.Gamepad();
     mockGamepad.axes[0] = 0.8;
     mockGamepad.axes[1] = 0.6;
-    mockNavigatorAdapter.gamepads = [mockGamepad, null, null, null];
+    navigatorAdapter.gamepads = [mockGamepad, null, null, null];
 
     gamepad.update();
 
@@ -132,11 +134,11 @@ describe("Controls.Gamepad", () => {
   });
 
   test("should apply dead zone to axis values", () => {
-    const mockGamepad = createMockGamepad();
+    const mockGamepad = mocks.Gamepad();
     // Small movement within dead zone
     mockGamepad.axes[0] = 0.1;
     mockGamepad.axes[1] = 0.1;
-    mockNavigatorAdapter.gamepads = [mockGamepad, null, null, null];
+    navigatorAdapter.gamepads = [mockGamepad, null, null, null];
 
     gamepad.update();
 
@@ -150,10 +152,10 @@ describe("Controls.Gamepad", () => {
   });
 
   test("should handle negative axis values", () => {
-    const mockGamepad = createMockGamepad();
+    const mockGamepad = mocks.Gamepad();
     mockGamepad.axes[0] = -0.8;
     mockGamepad.axes[1] = -0.6;
-    mockNavigatorAdapter.gamepads = [mockGamepad, null, null, null];
+    navigatorAdapter.gamepads = [mockGamepad, null, null, null];
 
     gamepad.update();
 
@@ -167,10 +169,10 @@ describe("Controls.Gamepad", () => {
   });
 
   test("should detect axis release", () => {
-    const mockGamepad = createMockGamepad();
+    const mockGamepad = mocks.Gamepad();
     mockGamepad.axes[0] = 0.8;
     mockGamepad.axes[1] = 0.0;
-    mockNavigatorAdapter.gamepads = [mockGamepad, null, null, null];
+    navigatorAdapter.gamepads = [mockGamepad, null, null, null];
 
     // First update to press axis
     gamepad.update();
@@ -187,10 +189,10 @@ describe("Controls.Gamepad", () => {
   });
 
   test("should skip axes when null", () => {
-    const mockGamepad = createMockGamepad();
+    const mockGamepad = mocks.Gamepad();
     mockGamepad.axes[0] = null;
     mockGamepad.axes[1] = null;
-    mockNavigatorAdapter.gamepads = [mockGamepad, null, null, null];
+    navigatorAdapter.gamepads = [mockGamepad, null, null, null];
 
     assert.doesNotThrow(() => {
       gamepad.update();
@@ -204,10 +206,10 @@ describe("Controls.Gamepad", () => {
   });
 
   test("should create auto repeat when axis is pressed", () => {
-    const mockGamepad = createMockGamepad();
+    const mockGamepad = mocks.Gamepad();
     mockGamepad.axes[0] = 0.8;
     mockGamepad.axes[1] = 0.0;
-    mockNavigatorAdapter.gamepads = [mockGamepad, null, null, null];
+    navigatorAdapter.gamepads = [mockGamepad, null, null, null];
 
     gamepad.update();
 
@@ -225,10 +227,10 @@ describe("Controls.Gamepad", () => {
     // Mock Date.now to control time
     Date.now = mock.fn(() => mockTime);
 
-    const mockGamepad = createMockGamepad();
+    const mockGamepad = mocks.Gamepad();
     mockGamepad.axes[0] = 0.8;
     mockGamepad.axes[1] = 0.0;
-    mockNavigatorAdapter.gamepads = [mockGamepad, null, null, null];
+    navigatorAdapter.gamepads = [mockGamepad, null, null, null];
 
     // First update creates auto repeat
     gamepad.update();
@@ -248,10 +250,10 @@ describe("Controls.Gamepad", () => {
   });
 
   test("should cancel auto repeat when axis is released", () => {
-    const mockGamepad = createMockGamepad();
+    const mockGamepad = mocks.Gamepad();
     mockGamepad.axes[0] = 0.8;
     mockGamepad.axes[1] = 0.0;
-    mockNavigatorAdapter.gamepads = [mockGamepad, null, null, null];
+    navigatorAdapter.gamepads = [mockGamepad, null, null, null];
 
     // First update to create auto repeat
     gamepad.update();
@@ -265,13 +267,13 @@ describe("Controls.Gamepad", () => {
   });
 
   test("should handle multiple gamepads", () => {
-    const mockGamepad1 = createMockGamepad();
-    const mockGamepad2 = createMockGamepad();
+    const mockGamepad1 = mocks.Gamepad();
+    const mockGamepad2 = mocks.Gamepad();
 
     mockGamepad1.buttons[0] = { pressed: true, value: 1.0 };
     mockGamepad2.buttons[1] = { pressed: true, value: 0.8 };
 
-    mockNavigatorAdapter.gamepads = [mockGamepad1, mockGamepad2, null, null];
+    navigatorAdapter.gamepads = [mockGamepad1, mockGamepad2, null, null];
 
     gamepad.update();
 
@@ -287,11 +289,11 @@ describe("Controls.Gamepad", () => {
   });
 
   test("should handle second stick axes correctly", () => {
-    const mockGamepad = createMockGamepad();
+    const mockGamepad = mocks.Gamepad();
     // Second stick (axes 2 and 3)
     mockGamepad.axes[2] = 0.7;
     mockGamepad.axes[3] = -0.5;
-    mockNavigatorAdapter.gamepads = [mockGamepad, null, null, null];
+    navigatorAdapter.gamepads = [mockGamepad, null, null, null];
 
     gamepad.update();
 
@@ -305,10 +307,10 @@ describe("Controls.Gamepad", () => {
   });
 
   test("should prioritize first axis for auto repeat when both are pressed", () => {
-    const mockGamepad = createMockGamepad();
+    const mockGamepad = mocks.Gamepad();
     mockGamepad.axes[0] = 0.8;
     mockGamepad.axes[1] = 0.6;
-    mockNavigatorAdapter.gamepads = [mockGamepad, null, null, null];
+    navigatorAdapter.gamepads = [mockGamepad, null, null, null];
 
     gamepad.update();
 
@@ -318,26 +320,3 @@ describe("Controls.Gamepad", () => {
     assert.strictEqual(autoRepeat.axis, 0);
   });
 });
-
-function createMockGamepad(): any {
-  return {
-    id: "mock-gamepad",
-    index: 0,
-    connected: true,
-    timestamp: Date.now(),
-    mapping: "standard",
-    buttons: Array.from({ length: 16 }, () => {
-      return { pressed: false, value: 0 };
-    }),
-    axes: Array.from({ length: 4 }, () => 0),
-    hapticActuators: []
-  };
-}
-
-class MockNavigatorAdapter {
-  gamepads: any = [null, null, null, null];
-
-  getGamepads(): (globalThis.Gamepad | null)[] | null {
-    return this.gamepads;
-  }
-}

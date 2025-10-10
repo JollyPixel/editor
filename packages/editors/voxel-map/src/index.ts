@@ -37,7 +37,7 @@ function initRuntime() {
 }
 
 function initTreeView() {
-  const treeViewContainer = document.querySelector("#layer-box > .box-content");
+  const treeViewContainer = document.querySelector("#layer-box > .box-content") as HTMLDivElement;
   const treeView = new TreeView(treeViewContainer);
   treeView.append(createItem("Default"), "item");
 
