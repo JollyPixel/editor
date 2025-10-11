@@ -79,13 +79,13 @@ export class Screen extends EventEmitter<
 
   exit() {
     this.reset();
-    if (this.#documentAdapter.fullscreenElement === this.#canvas) {
+    if (this.#documentAdapter.fullscreenElement === (this.#canvas as any)) {
       this.#documentAdapter.exitFullscreen();
     }
   }
 
   private onFullscreenChange = () => {
-    const isFullscreen = this.#documentAdapter.fullscreenElement === this.#canvas;
+    const isFullscreen = this.#documentAdapter.fullscreenElement === (this.#canvas as any);
     if (this.wasFullscreen !== isFullscreen) {
       this.emit("stateChange", isFullscreen ? "active" : "suspended");
       this.wasFullscreen = isFullscreen;

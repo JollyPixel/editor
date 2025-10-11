@@ -3,6 +3,7 @@ import {
   Actor,
   Components,
   AudioBackground,
+  GlobalAudioManager,
   TiledMapRenderer,
   TextRenderer,
   createViewHelper
@@ -73,7 +74,10 @@ scene.add(
   new THREE.AmbientLight(new THREE.Color("#ffffffff"), 3)
 );
 
-const ab = new AudioBackground(gameInstance, {
+const audioManager = GlobalAudioManager.fromGameInstance(gameInstance);
+
+const ab = new AudioBackground({
+  audioManager,
   playlists: [
     {
       name: "normal",
@@ -81,11 +85,11 @@ const ab = new AudioBackground(gameInstance, {
       tracks: [
         {
           name: "behemoth",
-          assetPath: "./assets/sounds/behemoth.ogg"
+          path: "./assets/sounds/behemoth.ogg"
         },
         {
           name: "infernal-heat",
-          assetPath: "./assets/sounds/infernal-heat.ogg"
+          path: "./assets/sounds/infernal-heat.ogg"
         }
       ]
     },
@@ -96,16 +100,16 @@ const ab = new AudioBackground(gameInstance, {
       tracks: [
         {
           name: "tech-space",
-          assetPath: "./assets/sounds/tech-space.ogg",
+          path: "./assets/sounds/tech-space.ogg",
           volume: 0.5
         }
       ]
     }
   ]
 });
+gameInstance.audio.observe(ab);
 
 canvasHTMLElement.addEventListener("click", async() => {
-  await ab.preload();
   await ab.play("boss.tech-space");
 });
 

@@ -2,22 +2,66 @@
 import * as THREE from "three";
 import { EventEmitter } from "@posva/event-emitter";
 
+// Import Internal Dependencies
+import { type AudioListenerAdapter } from "./internals/AudioListener.js";
+
+export type VolumeObserver = {
+  onMasterVolumeChange: (volume: number) => void;
+};
+
 export type GlobalAudioEvents = {
   volumechange: [volume: number];
 };
 
 export class GlobalAudio extends EventEmitter<GlobalAudioEvents> {
-  readonly listener = new THREE.AudioListener();
-  #volume = 1;
+  #volumeObservers: VolumeObserver[] = [];
+
+  listener: AudioListenerAdapter;
+
+  constructor(
+    listenerAdapter?: AudioListenerAdapter
+  ) {
+    super();
+
+    this.listener = listenerAdapter ?? new THREE.AudioListener();
+  }
+
+  observe(
+    observer: VolumeObserver
+  ): this {
+    if (!this.#volumeObservers.includes(observer)) {
+      this.#volumeObservers.push(observer);
+    }
+
+    return this;
+  }
+
+  unobserve(
+    observer: VolumeObserver
+  ): this {
+    const index = this.#volumeObservers.indexOf(observer);
+    if (index !== -1) {
+      this.#volumeObservers.splice(index, 1);
+    }
+
+    return this;
+  }
 
   get volume() {
-    return this.#volume;
+    return this.listener.getMasterVolume();
   }
 
   set volume(
     value: number
   ) {
-    this.#volume = THREE.MathUtils.clamp(value, 0, 1);
-    this.emit("volumechange", this.#volume);
+    this.listener.setMasterVolume(
+      THREE.MathUtils.clamp(value, 0, 1)
+    );
+    const newVolume = this.listener.getMasterVolume();
+    for (const observer of this.#volumeObservers) {
+      observer.onMasterVolumeChange(newVolume);
+    }
+
+    this.emit("volumechange", newVolume);
   }
 }

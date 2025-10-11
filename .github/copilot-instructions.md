@@ -31,6 +31,7 @@ applyTo: "**/*.js, **/*.mjs, **/*.cjs"
 * Always add comment before the line and not at the end of the line.
 * In function or arrow function always add a new line before return statement.
 * Prefix with _ unused variables or parameters to avoid linting errors.
+* Do not add space between async and function parenthesis. Exemple: async() => {}
 
 ## 3  Imports
 
@@ -72,7 +73,13 @@ Place all constants directly **beneath the imports** under a `// CONSTANTS` com
 * For browser‑like APIs, mock the DOM with **`happy-dom`**.
 * Always try to type variables such as mocks.
 
-## 6  User Interaction (for Copilot / LLM)
+## 6  Node.js
+
+* Use node:timers/promises and its setTimeout function instead of creating your own timeout promise.
+* Use node:fs/promises instead of creating your own promise based file system functions.
+* Use node:assert for assertions instead of creating your own assertion functions.
+
+## 7  User Interaction (for Copilot / LLM)
 
 * When the spec is ambiguous, **ask clarifying questions**.
 * Reply in the **same language** as the prompt; generate **English** for code, comments, and docs.
