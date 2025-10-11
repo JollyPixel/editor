@@ -2,15 +2,19 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import type { GameInstance } from "../systems/GameInstance.js";
-import {
-  destroyAudio
-} from "./Audio.js";
+import type {
+  AudioManager
+} from "./AudioManager.js";
+import type {
+  VolumeObserver
+} from "./GlobalAudio.js";
 
 export type AudioBackgroundSoundIndex = [playlistIndex: number, trackIndex: number];
 export type AudioBackgroundSoundPath = `${string}.${string}`;
 
 export interface AudioBackgroundOptions {
+  audioManager: AudioManager;
+
   playlists: AudioBackgroundPlaylist[];
   autoPlay?: boolean | AudioBackgroundSoundPath | AudioBackgroundSoundIndex;
   onError?: (error: Error) => void;
@@ -31,7 +35,7 @@ export interface AudioBackgroundPlaylist {
 
 export interface AudioBackgroundTrack {
   name: string;
-  assetPath: string;
+  path: string;
   /**
    * @default 1
    */
@@ -39,43 +43,35 @@ export interface AudioBackgroundTrack {
   metadata?: Record<string, any>;
 }
 
-export class AudioBackground {
-  gameInstance: GameInstance;
+export class AudioBackground implements VolumeObserver {
   playlists: AudioBackgroundPlaylist[] = [];
   audio: null | THREE.Audio = null;
 
+  #audioManager: AudioManager;
   #onError: (error: Error) => void;
-  #buffers = new Map<string, AudioBuffer>();
   #currentIndex: AudioBackgroundSoundIndex | null = null;
 
   constructor(
-    gameInstance: GameInstance,
     options: AudioBackgroundOptions
   ) {
     const {
       playlists,
       autoPlay = false,
+      audioManager,
       onError = (err) => console.error(err)
     } = options;
 
-    this.gameInstance = gameInstance;
-    this.gameInstance.audio.on("volumechange", this.#updateAudioVolume.bind(this));
     this.playlists = playlists;
     this.#onError = onError;
+    this.#audioManager = audioManager;
     if (autoPlay) {
       this.play(typeof autoPlay === "boolean" ? [0, 0] : autoPlay)
         .catch(this.#onError);
     }
   }
 
-  async preload(): Promise<void> {
-    await Promise.all(
-      this.playlists.flatMap((playlist) => playlist.tracks.map((track) => this.#loadAudioBuffer(track)))
-    );
-  }
-
-  #updateAudioVolume(
-    globalVolume: number
+  onMasterVolumeChange(
+    masterVolume: number
   ) {
     if (!this.audio || this.#currentIndex === null) {
       return;
@@ -83,7 +79,7 @@ export class AudioBackground {
 
     const track = this.#getTrackByIndex(this.#currentIndex);
     if (track) {
-      this.audio.setVolume((track.volume ?? 1) * globalVolume);
+      this.audio.setVolume((track.volume ?? 1) * masterVolume);
     }
   }
 
@@ -136,43 +132,12 @@ export class AudioBackground {
     return playlist && playlist.tracks.length > 0 ? playlist : null;
   }
 
-  async #loadAudioBuffer(
-    track: AudioBackgroundTrack
-  ): Promise<AudioBuffer> {
-    if (this.#buffers.has(track.assetPath)) {
-      return this.#buffers.get(track.assetPath)!;
-    }
-
-    const audioLoader = new THREE.AudioLoader(this.gameInstance.loadingManager);
-    const buffer = await audioLoader.loadAsync(
-      track.assetPath
-    );
-    this.#buffers.set(track.assetPath, buffer);
-
-    return buffer;
-  }
-
-  async #createAudioFromTrack(
-    track: AudioBackgroundTrack
-  ): Promise<THREE.Audio> {
-    const buffer = await this.#loadAudioBuffer(track);
-
-    const { name, volume = 1 } = track;
-    const sound = new THREE.Audio(this.gameInstance.audio.listener);
-    sound.setBuffer(buffer);
-    sound.setLoop(false);
-    sound.setVolume(volume * this.gameInstance.audio.volume);
-    sound.name = name;
-
-    return sound;
-  }
-
   get isPlaying() {
-    return this.audio && this.audio.isPlaying;
+    return Boolean(this.audio?.isPlaying);
   }
 
   get isPaused() {
-    return this.audio && !this.audio.isPlaying;
+    return Boolean(this.audio && !this.audio.isPlaying);
   }
 
   get track(): AudioBackgroundTrack | null {
@@ -184,7 +149,7 @@ export class AudioBackground {
   }
 
   async play(
-    pathOrIndex: AudioBackgroundSoundPath | AudioBackgroundSoundIndex | undefined
+    pathOrIndex?: AudioBackgroundSoundPath | AudioBackgroundSoundIndex
   ) {
     if (typeof pathOrIndex === "undefined") {
       this.resume();
@@ -206,7 +171,11 @@ export class AudioBackground {
     if (this.audio) {
       this.stop();
     }
-    this.audio = await this.#createAudioFromTrack(track);
+
+    this.audio = await this.#audioManager.loadAudio(track.path, {
+      name: track.name,
+      volume: track.volume
+    });
     this.audio.onEnded = () => this.playNext().catch(this.#onError);
     this.audio.play();
   }
@@ -265,7 +234,8 @@ export class AudioBackground {
 
   stop() {
     if (this.audio) {
-      destroyAudio(this.audio);
+      this.#audioManager.destroyAudio(this.audio);
+      this.audio = null;
     }
     this.#currentIndex = null;
   }
