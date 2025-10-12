@@ -8,10 +8,6 @@ import {
 import {
   type Scene
 } from "./Scene.js";
-import {
-  FixedTimeStep,
-  type TimerAdapter
-} from "./FixedTimeStep.js";
 import { Input } from "../controls/Input.class.js";
 import { GlobalAudio } from "../audio/GlobalAudio.js";
 import {
@@ -28,9 +24,7 @@ export interface GameInstanceOptions {
 
   scene: Scene;
   input?: Input;
-  scheduler?: FixedTimeStep;
   audio?: GlobalAudio;
-  clock?: TimerAdapter;
 
   windowAdapter?: WindowAdapter;
   globalsAdapter?: GlobalsAdapter;
@@ -40,12 +34,8 @@ export class GameInstance<T = THREE.WebGLRenderer> {
   renderer: GameRenderer<T>;
   input: Input;
   loadingManager: THREE.LoadingManager = new THREE.LoadingManager();
-  scheduler: FixedTimeStep;
   scene: Scene;
   audio: GlobalAudio;
-
-  accumulatedTime = 0;
-  lastTimestamp = 0;
 
   #windowAdapter: WindowAdapter;
 
@@ -56,7 +46,6 @@ export class GameInstance<T = THREE.WebGLRenderer> {
     const {
       scene,
       input = new Input(renderer.canvas, { enableOnExit: options.enableOnExit ?? false }),
-      scheduler = new FixedTimeStep(options.clock),
       audio = new GlobalAudio(),
       windowAdapter = new BrowserWindowAdapter(),
       globalsAdapter = new BrowserGlobalsAdapter()
@@ -66,7 +55,6 @@ export class GameInstance<T = THREE.WebGLRenderer> {
     this.scene = scene;
     this.input = input;
     this.audio = audio;
-    this.scheduler = scheduler;
     this.#windowAdapter = windowAdapter;
 
     globalsAdapter.setGame(this);
@@ -96,28 +84,8 @@ export class GameInstance<T = THREE.WebGLRenderer> {
   }
 
   update(
-    timestamp: number
+    deltaTime: number
   ): boolean {
-    this.accumulatedTime += timestamp - this.lastTimestamp;
-    this.lastTimestamp = timestamp;
-
-    const {
-      updates, timeLeft
-    } = this.scheduler.tick(
-      this.accumulatedTime,
-      this.tick
-    );
-    this.accumulatedTime = timeLeft;
-    if (this.input.exited) {
-      return true;
-    }
-
-    updates > 0 && this.renderer.draw();
-
-    return false;
-  }
-
-  private tick = (deltaTime: number) => {
     this.input.update();
     this.scene.update(deltaTime);
 
@@ -128,5 +96,9 @@ export class GameInstance<T = THREE.WebGLRenderer> {
     }
 
     return false;
-  };
+  }
+
+  render() {
+    this.renderer.draw();
+  }
 }

@@ -17,11 +17,13 @@ export class Player {
   gameInstance: Systems.GameInstance;
   canvas: HTMLCanvasElement;
   stats?: Stats;
+  clock = new THREE.Clock();
   manager = new THREE.LoadingManager();
 
-  tickAnimationFrameId: number;
+  framesPerSecond = 60;
 
   #isRunning = false;
+  #deltaTime = 0;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -67,7 +69,8 @@ export class Player {
     }
 
     this.gameInstance.connect();
-    this.tick();
+    const renderer = this.gameInstance.renderer.getSource();
+    renderer.setAnimationLoop(this.tick);
   }
 
   stop() {
@@ -75,30 +78,45 @@ export class Player {
       return;
     }
 
+    this.#isRunning = false;
     this.gameInstance.input.exited = true;
-
-    if (this.tickAnimationFrameId) {
-      cancelAnimationFrame(this.tickAnimationFrameId);
-      this.tickAnimationFrameId = 0;
-    }
+    const renderer = this.gameInstance.renderer.getSource();
+    renderer.setAnimationLoop(null);
 
     this.gameInstance.disconnect();
   }
 
-  tick = (timestamp = performance.now()) => {
-    if (!this.#isRunning) {
-      return;
-    }
-    this.stats?.begin();
-
-    const exit = this.gameInstance.update(timestamp);
-    if (exit) {
-      this.stop();
-
+  setFps(
+    framesPerSecond: number | undefined
+  ): void {
+    if (!framesPerSecond) {
       return;
     }
 
-    this.stats?.end();
-    this.tickAnimationFrameId = requestAnimationFrame(this.tick);
+    this.framesPerSecond = THREE.MathUtils.clamp(
+      framesPerSecond,
+      1,
+      60
+    );
+  }
+
+  tick = () => {
+    this.#deltaTime += this.clock.getDelta();
+
+    const interval = 1 / this.framesPerSecond;
+    if (this.#deltaTime >= interval) {
+      this.stats?.begin();
+      const exit = this.gameInstance.update(this.#deltaTime);
+      if (exit) {
+        this.stop();
+
+        return;
+      }
+
+      this.gameInstance.render();
+
+      this.#deltaTime %= interval;
+      this.stats?.end();
+    }
   };
 }
