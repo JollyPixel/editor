@@ -4,6 +4,10 @@ import { Asset } from "./Base.js";
 export class AssetQueue {
   #assets: Asset[] = [];
 
+  get size() {
+    return this.#assets.length;
+  }
+
   enqueue(
     asset: Asset
   ) {

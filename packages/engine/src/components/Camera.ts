@@ -32,7 +32,7 @@ export class Camera extends ActorComponent {
     } = options;
 
     this.threeCamera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-    this.threeCamera.add(this.actor.gameInstance.audio.listener);
+    this.threeCamera.add(this.actor.gameInstance.audio.threeAudioListener);
     this.actor.gameInstance.renderer.addRenderComponent(this.threeCamera);
   }
 

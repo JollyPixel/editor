@@ -1,9 +1,11 @@
 // Import Third-party Dependencies
 import { Systems } from "@jolly-pixel/engine";
+import { getGPUTier } from "detect-gpu";
 
 // Import Internal Dependencies
 import { Loading } from "./components/Loading.js";
 import * as timers from "./utils/timers.js";
+import { getDevicePixelRatio } from "./utils/getDevicePixelRatio.js";
 
 import { Player, type PlayerOptions } from "./Player.js";
 
@@ -16,6 +18,8 @@ export async function loadPlayer(
   options: LoadPlayerOptions = {}
 ) {
   const { loadingDelay = 850 } = options;
+
+  const gpuTierPromise = getGPUTier();
 
   player.canvas.style.opacity = "0";
   player.canvas.style.transition = "opacity 0.5s ease-in";
@@ -55,20 +59,38 @@ export async function loadPlayer(
     if (loadingDelay > 0) {
       await timers.setTimeout(loadingDelay);
     }
+
+    const {
+      fps,
+      isMobile = false,
+      tier
+    } = await gpuTierPromise;
+
+    player.gameInstance.scheduler.setFps(fps);
+    player.gameInstance.renderer.getSource().setPixelRatio(
+      getDevicePixelRatio(isMobile)
+    );
+    if (tier < 1) {
+      throw new Error("GPU is not powerful enough to run this game");
+    }
+
     const context = { manager: player.manager };
 
     setTimeout(() => {
       Systems.Assets.autoload = true;
       Systems.Assets.scheduleAutoload(context);
     });
-    await Systems.Assets.loadAssets(
-      context,
-      {
-        onStart: loadingComponent.setAsset.bind(loadingComponent)
-      }
-    );
+    const waitingAssetsCount = Systems.Assets.waiting.size;
+    if (waitingAssetsCount > 0) {
+      await Systems.Assets.loadAssets(
+        context,
+        {
+          onStart: loadingComponent.setAsset.bind(loadingComponent)
+        }
+      );
+      await loadingCompletePromise;
+    }
 
-    await loadingCompletePromise;
     await loadingComponent.complete(() => {
       player.canvas.style.opacity = "1";
       player.start();

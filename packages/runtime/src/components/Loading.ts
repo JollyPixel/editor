@@ -1,7 +1,11 @@
 // Import Third-party Dependencies
 import { Systems } from "@jolly-pixel/engine";
 import { LitElement, css, html } from "lit";
+import { classMap } from "lit/directives/class-map.js";
 import { property, state } from "lit/decorators.js";
+
+// Import Internal Dependencies
+import * as timers from "../utils/timers.js";
 
 // CONSTANTS
 const kProgressAnimationDurationMs = 400;
@@ -32,6 +36,9 @@ export class Loading extends LitElement {
 
   @state()
   declare errorStack: string;
+
+  @state()
+  declare imageError: boolean;
 
   static styles = css`
     :host {
@@ -84,6 +91,10 @@ export class Loading extends LitElement {
       transform: translateY(-20px) scale(0.95);
       animation: logo-fade-in 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
       animation-delay: 0.2s;
+    }
+
+    #loading img.hidden {
+      display: none;
     }
 
     @keyframes logo-fade-in {
@@ -191,6 +202,10 @@ export class Loading extends LitElement {
       backface-visibility: hidden;
     }
 
+    #loading .progress-bar.speed-blur {
+      animation: speed-blur 0.3s ease;
+    }
+
     #loading .progress-bar::before {
       content: "";
       position: absolute;
@@ -281,6 +296,45 @@ export class Loading extends LitElement {
       font-size: 15px;
       border-radius: 4px;
     }
+
+    /* Media queries pour mobile */
+    @media (max-width: 600px) {
+      #loading {
+        padding: 15px;
+      }
+
+      #loading .asset {
+        font-size: 11px;
+        letter-spacing: 1px;
+        margin-top: 15px;
+      }
+
+      #loading div.error {
+        font-size: 16px;
+        padding: 0 1em;
+      }
+
+      #loading pre.error {
+        font-size: 13px;
+        padding: 0.8em;
+      }
+    }
+
+    @media (max-width: 400px) {
+      #loading {
+        padding: 10px;
+      }
+
+      #loading .asset {
+        font-size: 10px;
+        letter-spacing: 0.5px;
+        margin-top: 12px;
+      }
+
+      #loading .progress-container {
+        height: 5px;
+      }
+    }
   `;
 
   constructor() {
@@ -292,6 +346,7 @@ export class Loading extends LitElement {
     this.errorMessage = "";
     this.errorStack = "";
     this.assetName = "Loading runtime...";
+    this.imageError = false;
   }
 
   updated(
@@ -320,14 +375,6 @@ export class Loading extends LitElement {
 
     this.#progressVelocity = (this.progress - previousProgress) / deltaTime;
     this.#lastProgressUpdate = now;
-
-    const progressBar = this.shadowRoot?.querySelector(".progress-bar") as HTMLElement | null;
-    if (
-      this.#progressVelocity > kVelocityThreshold &&
-      progressBar
-    ) {
-      progressBar.style.animation = "speed-blur 0.3s ease";
-    }
   }
 
   async start() {
@@ -343,12 +390,12 @@ export class Loading extends LitElement {
     await this.updateComplete;
 
     // progression animation end (400ms)
-    await new Promise((resolve) => void setTimeout(resolve, kProgressAnimationDurationMs));
+    await timers.setTimeout(kProgressAnimationDurationMs);
 
     this.completed = true;
 
     // fade-out (500ms)
-    await new Promise((resolve) => void setTimeout(resolve, kFadeOutDurationMs));
+    await timers.setTimeout(kFadeOutDurationMs);
 
     this.remove();
     callback?.();
@@ -387,7 +434,20 @@ export class Loading extends LitElement {
     return (this.progress / this.maxProgress) * 100;
   }
 
+  #handleImageError(): void {
+    this.imageError = true;
+  }
+
   render() {
+    const progressBarClasses = classMap({
+      "progress-bar": true,
+      "speed-blur": this.#progressVelocity > kVelocityThreshold
+    });
+
+    const imageClasses = classMap({
+      hidden: this.imageError
+    });
+
     return html`
       <div id="loading">
         ${this.errorMessage ? html`
@@ -395,10 +455,14 @@ export class Loading extends LitElement {
           <pre class="error">${this.errorStack}</pre>
         ` : html`
           <a href="https://github.com/JollyPixel" target="_blank">
-            <img src="./images/jollypixel-full-logo-min.svg" draggable="false">
+            <img
+              class="${imageClasses}"
+              src="./images/jollypixel-full-logo-min.svg"
+              @error="${this.#handleImageError}"
+            >
             <p class="asset">${this.assetName}</p>
             <div class="progress-container">
-              <div class="progress-bar"></div>
+              <div class="${progressBarClasses}"></div>
             </div>
           </a>
         `}

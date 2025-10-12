@@ -81,5 +81,6 @@ Place all constants directly **beneath the imports** under a `// CONSTANTS` com
 
 ## 7  User Interaction (for Copilot / LLM)
 
+* Never update the code in VSCode without user approval
 * When the spec is ambiguous, **ask clarifying questions**.
 * Reply in the **same language** as the prompt; generate **English** for code, comments, and docs.

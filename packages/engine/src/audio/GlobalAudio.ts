@@ -26,6 +26,10 @@ export class GlobalAudio extends EventEmitter<GlobalAudioEvents> {
     this.listener = listenerAdapter ?? new THREE.AudioListener();
   }
 
+  get threeAudioListener() {
+    return this.listener as unknown as THREE.AudioListener;
+  }
+
   observe(
     observer: VolumeObserver
   ): this {
