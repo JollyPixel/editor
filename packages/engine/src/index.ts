@@ -11,7 +11,6 @@ export {
   type ScenePropertyOptions
 } from "./BehaviorDecorators.js";
 export * from "./controls/Input.class.js";
-export * from "./Timer.js";
 export * from "./audio/AudioBackground.js";
 export * from "./audio/AudioManager.js";
 export * from "./renderers/index.js";
