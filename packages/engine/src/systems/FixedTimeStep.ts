@@ -7,6 +7,8 @@ export interface TimerAdapter {
 }
 
 export class FixedTimeStep {
+  static MaxFramesPerSecond = 60;
+
   framesPerSecond = 60;
   clock: TimerAdapter;
 
@@ -14,6 +16,20 @@ export class FixedTimeStep {
     clock: TimerAdapter = new THREE.Timer()
   ) {
     this.clock = clock;
+  }
+
+  setFps(
+    framesPerSecond: number | undefined
+  ): void {
+    if (!framesPerSecond) {
+      return;
+    }
+
+    this.framesPerSecond = THREE.MathUtils.clamp(
+      framesPerSecond,
+      1,
+      FixedTimeStep.MaxFramesPerSecond
+    );
   }
 
   tick(
