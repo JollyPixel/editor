@@ -54,6 +54,37 @@ export interface MouseOptions {
 export class Mouse extends EventEmitter<
   MouseEvents
 > implements InputControl {
+  /**
+   * @see https://github.com/w3c/uievents/issues/181
+   */
+  static getWheelDelta(
+    event: WheelEvent
+  ): [number, number] {
+    const isApple = /^Mac|iPhone|iPod|iPad/i.test(navigator.platform);
+
+    if (isApple) {
+      // Note that deltaMode MUST be accessed BEFORE delta* in order to get
+      // non-pixel values in Firefox.
+      // See https://github.com/w3c/uievents/issues/181
+
+      switch (event.deltaMode) {
+        case event.DOM_DELTA_LINE:
+        case event.DOM_DELTA_PAGE:
+          // Discard the delta value, just take the sign
+          return [Math.sign(event.deltaX), Math.sign(-event.deltaY)];
+        case event.DOM_DELTA_PIXEL:
+        default:
+          return [event.deltaX / 120, -event.deltaY / 120];
+      }
+    }
+    else {
+      return [
+        -(event as any).wheelDeltaX / 120,
+        (event as any).wheelDeltaY / 120
+      ];
+    }
+  }
+
   #canvas: CanvasAdapter;
   #documentAdapter: DocumentAdapter;
 
@@ -65,7 +96,7 @@ export class Mouse extends EventEmitter<
 
   #delta = { x: 0, y: 0 };
   newDelta = { x: 0, y: 0 };
-  #newScrollDelta: number;
+  #scrollDelta = { x: 0, y: 0 };
 
   #wasActive = false;
   #wantsPointerLock = false;
@@ -110,7 +141,8 @@ export class Mouse extends EventEmitter<
   }
 
   reset() {
-    this.#newScrollDelta = 0;
+    this.#scrollDelta.x = 0;
+    this.#scrollDelta.y = 0;
     for (let i = 0; i <= 6; i++) {
       this.buttons[i] = {
         isDown: false,
@@ -193,16 +225,19 @@ export class Mouse extends EventEmitter<
   update() {
     this.#wasActive = false;
 
-    const isScrollUp = this.#newScrollDelta > 0;
-    const isScrollDown = this.#newScrollDelta < 0;
+    const isScrollUp = this.#scrollDelta.y > 0;
+    const isScrollDown = this.#scrollDelta.y < 0;
     this.buttonsDown[MouseEventButton.scrollUp] = isScrollUp;
     this.buttonsDown[MouseEventButton.scrollDown] = isScrollDown;
     if (isScrollDown || isScrollUp) {
       this.#wasActive = true;
     }
 
-    if (this.#newScrollDelta !== 0) {
-      this.#newScrollDelta = 0;
+    if (this.#scrollDelta.x !== 0) {
+      this.#scrollDelta.x = 0;
+    }
+    if (this.#scrollDelta.y !== 0) {
+      this.#scrollDelta.y = 0;
     }
 
     if (this.#wantsPointerLock && this.#wasPointerLocked) {
@@ -296,7 +331,9 @@ export class Mouse extends EventEmitter<
 
   private onMouseWheel = (event: WheelEvent) => {
     event.preventDefault();
-    this.#newScrollDelta = ((event as any).wheelDelta > 0 || event.detail < 0) ? 1 : -1;
+    const [deltaX, deltaY] = Mouse.getWheelDelta(event);
+
+    this.#scrollDelta = { x: deltaX, y: deltaY };
     this.emit("wheel", event);
 
     return false;
