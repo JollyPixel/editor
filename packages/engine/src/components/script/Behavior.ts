@@ -2,8 +2,10 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { ActorComponent } from "./ActorComponent.js";
-import { Actor } from "./Actor.js";
+import {
+  Actor,
+  ActorComponent
+} from "../../actor/index.js";
 import { BehaviorInitializer } from "./BehaviorInitializer.js";
 
 export type BehaviorPropertiesValue =

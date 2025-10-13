@@ -6,13 +6,12 @@ import {
   Assets,
   type Asset,
   type AssetLoaderContext
-} from "../systems/index.js";
-import { loadJSON } from "../utils/loadJSON.js";
-import * as pathUtils from "../utils/path.js";
+} from "../../../systems/index.js";
+import { loadJSON, pathUtils } from "../../../utils/index.js";
 import type {
   TiledMap,
   TiledMapTileset
-} from "../renderers/tiled/types.js";
+} from "./types.js";
 
 export interface TiledSetAsset {
   tileset: TiledMapTileset;

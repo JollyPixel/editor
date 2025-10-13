@@ -2,7 +2,7 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { Actor } from "../../Actor.js";
+import { Actor } from "../../../actor/Actor.js";
 import type {
   TiledMap,
   TiledObject,

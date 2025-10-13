@@ -3,7 +3,7 @@ import * as THREE from "three";
 import {
   ActorComponent,
   Actor,
-  Components,
+  Camera3DControls,
   createViewHelper
 } from "@jolly-pixel/engine";
 
@@ -46,7 +46,7 @@ export class VoxelRenderer extends ActorComponent {
     this.ratio = ratio;
     const behavior = this.actor.gameInstance.scene.tree
       .getActor(cameraActorName)
-      ?.getBehavior(Components.Camera3DControls);
+      ?.getBehavior(Camera3DControls);
     if (!behavior) {
       throw new Error(`Unable to fetch camera behavior from actor with name <${cameraActorName}>`);
     }

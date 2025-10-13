@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import {
   Actor,
-  Components
+  Camera3DControls
 } from "@jolly-pixel/engine";
 import { Player, loadPlayer } from "@jolly-pixel/runtime";
 import { TreeView } from "@jolly-pixel/fs-tree/tree-view";
@@ -25,7 +25,7 @@ function initRuntime() {
   const { gameInstance } = runtime;
 
   new Actor(gameInstance, { name: "camera" })
-    .registerComponent(Components.Camera3DControls, { speed: 8, rotationSpeed: 1 }, (component) => {
+    .registerComponent(Camera3DControls, { speed: 8, rotationSpeed: 1 }, (component) => {
       component.camera.position.set(200, 200, 400);
       component.camera.lookAt(0, 0, 0);
     });

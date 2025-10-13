@@ -7,7 +7,7 @@ import {
 // Import Internal Dependencies
 import {
   Assets
-} from "../systems/index.js";
+} from "../../../systems/index.js";
 
 Assets.registry.loader(
   {
@@ -25,4 +25,3 @@ Assets.registry.loader(
 export const font = Assets.lazyLoad<Font>();
 
 export type { Font };
-

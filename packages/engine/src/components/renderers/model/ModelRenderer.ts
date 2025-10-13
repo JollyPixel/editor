@@ -2,10 +2,9 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import * as Loaders from "../../loaders/index.js";
-import * as Systems from "../../systems/index.js";
-import { Actor } from "../../Actor.js";
-import { ActorComponent } from "../../ActorComponent.js";
+import * as Systems from "../../../systems/index.js";
+import { Actor, ActorComponent } from "../../../actor/index.js";
+import { model, type Model } from "./loader.js";
 
 import {
   ModelAnimation,
@@ -27,7 +26,7 @@ export interface ModelRendererOptions {
 }
 
 export class ModelRenderer extends ActorComponent {
-  #asset: Systems.LazyAsset<Loaders.Model>;
+  #asset: Systems.LazyAsset<Model>;
   #object: THREE.Group<THREE.Object3DEventMap>;
   #debug = false;
 
@@ -42,7 +41,7 @@ export class ModelRenderer extends ActorComponent {
       typeName: "ModelRenderer"
     });
 
-    this.#asset = Loaders.model(options.path);
+    this.#asset = model(options.path);
     this.#debug = options.debug ?? false;
 
     const { animations = {} } = options;

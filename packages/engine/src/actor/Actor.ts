@@ -2,11 +2,13 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { type GameInstance } from "./systems/GameInstance.js";
-import { type Component } from "./ActorComponent.js";
+import { type GameInstance } from "../systems/GameInstance.js";
 import { ActorTree } from "./ActorTree.js";
-import { Behavior } from "./Behavior.js";
 import { Transform } from "./Transform.js";
+import type { Behavior } from "../components/script/Behavior.js";
+import type {
+  Component
+} from "../components/types.js";
 
 type ComponentConstructor = new (actor: Actor, ...args: any[]) => Component;
 
