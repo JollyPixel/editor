@@ -3,9 +3,12 @@ import * as THREE from "three";
 import { EventEmitter } from "@posva/event-emitter";
 
 // Import Internal Dependencies
-import { Actor } from "../Actor.js";
-import { ActorComponent, type Component } from "../ActorComponent.js";
-import { ActorTree } from "../ActorTree.js";
+import {
+  Actor,
+  ActorComponent,
+  ActorTree
+} from "../actor/index.js";
+import type { Component } from "../components/types.js";
 
 export type SceneEvents = {
   awake: [];

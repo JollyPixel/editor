@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import {
   Actor,
-  Components,
+  Camera3DControls,
   ModelRenderer
 } from "@jolly-pixel/engine";
 import { Player, loadPlayer } from "@jolly-pixel/runtime";
@@ -23,7 +23,7 @@ function initRuntime() {
 
   const { camera } = new Actor(gameInstance, { name: "camera" })
     .registerComponentAndGet(
-      Components.Camera3DControls,
+      Camera3DControls,
       { speed: 0.25, rotationSpeed: 0.50 }
     );
 

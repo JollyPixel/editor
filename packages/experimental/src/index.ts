@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import {
   Actor,
-  Components,
+  Camera3DControls,
   AudioBackground,
   GlobalAudioManager,
   TiledMapRenderer,
@@ -24,7 +24,7 @@ const { gameInstance } = runtime;
 gameInstance.renderer.setRenderMode("composer");
 
 new Actor(gameInstance, { name: "camera" })
-  .registerComponent(Components.Camera3DControls, { speed: 0.35, rotationSpeed: 0.45 }, (component) => {
+  .registerComponent(Camera3DControls, { speed: 0.35, rotationSpeed: 0.45 }, (component) => {
     component.camera.position.set(10, 10, 5);
     component.camera.lookAt(0, 0, 0);
 

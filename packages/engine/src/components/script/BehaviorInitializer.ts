@@ -6,14 +6,14 @@ import "reflect-metadata";
 import {
   Input,
   type InputListenerMetadata
-} from "./controls/Input.class.js";
+} from "../../controls/Input.class.js";
 import { Behavior } from "./Behavior.js";
 import {
   getBehaviorMetadata,
   type ScenePropertyType,
   type BehaviorMetadata
 } from "./BehaviorDecorators.js";
-import { type ConsoleAdapter } from "./adapters/console.js";
+import { type ConsoleAdapter } from "../../adapters/console.js";
 
 // CONSTANTS
 const kDefaultValues: Record<ScenePropertyType, unknown> = {

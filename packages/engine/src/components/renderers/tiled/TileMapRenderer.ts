@@ -2,13 +2,12 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import * as loaders from "../../loaders/index.js";
-import { Actor } from "../../Actor.js";
-import { ActorComponent } from "../../ActorComponent.js";
-import * as Systems from "../../systems/index.js";
+import * as Systems from "../../../systems/index.js";
+import { Actor, ActorComponent } from "../../../actor/index.js";
 import { TileSet } from "./TileSet.js";
 import { TileObject } from "./TileObject.js";
 import { TileLayer } from "./TileLayer.js";
+import { tiledMap, type TiledMapAsset } from "./loader.js";
 
 export type TiledMapOrientation = "top-down" | "platformer";
 
@@ -21,7 +20,7 @@ export interface TiledMapRendererOptions {
 }
 
 export class TiledMapRenderer extends ActorComponent {
-  #map: Systems.LazyAsset<loaders.TiledMapAsset>;
+  #map: Systems.LazyAsset<TiledMapAsset>;
   #orientation: TiledMapOrientation;
 
   constructor(
@@ -38,7 +37,7 @@ export class TiledMapRenderer extends ActorComponent {
       typeName: "TiledMapRenderer"
     });
 
-    this.#map = loaders.tiledMap(assetPath);
+    this.#map = tiledMap(assetPath);
     this.#orientation = orientation;
   }
 

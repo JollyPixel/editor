@@ -2,8 +2,7 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { Actor } from "../../Actor.js";
-import { ActorComponent } from "../../ActorComponent.js";
+import { Actor, ActorComponent } from "../../../actor/index.js";
 import {
   SpriteAnimation,
   type SpriteAnimationOptions

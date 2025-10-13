@@ -7,8 +7,8 @@ import type {
   SpriteRenderer,
   TextRenderer,
   TiledMapRenderer
-} from "./renderers/index.js";
-import type { ActorComponent } from "./ActorComponent.js";
+} from "../renderers/index.js";
+import type { ActorComponent } from "../../actor/index.js";
 
 export type ScenePropertyType =
   | "string"

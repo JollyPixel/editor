@@ -2,7 +2,7 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import type { TiledMapTileset } from "@jolly-pixel/engine/src/renderers/tiled/types.js";
+import type { TiledMapTileset } from "./types.js";
 
 // CONSTANTS
 const kFlippedAntiDiagonal = 0x20000000;

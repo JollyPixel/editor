@@ -1,34 +1,18 @@
 // Import Internal Dependencies
 import { Actor } from "./Actor.js";
-
-export type ComponentType =
-  | "ScriptBehavior"
-  | "Camera"
-  | "VoxelRenderer"
-  | "SpriteRenderer"
-  | "ModelRenderer"
-  | "TiledMapRenderer"
-  | "TextRenderer"
-  | (string & {});
-
-export interface Component {
-  actor: Actor;
-  typeName: ComponentType;
-
-  awake?(): void;
-  start?(): void;
-  update?(deltaTime: number): void;
-  destroy(): void;
-}
+import type {
+  Component,
+  FreeComponentEnum
+} from "../components/types.js";
 
 export interface ActorComponentOptions {
   actor: Actor;
-  typeName: ComponentType;
+  typeName: FreeComponentEnum;
 }
 
 export class ActorComponent implements Component {
   actor: Actor;
-  typeName: ComponentType;
+  typeName: FreeComponentEnum;
 
   pendingForDestruction = false;
 

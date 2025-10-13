@@ -2,12 +2,13 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { Actor } from "../../Actor.js";
-import { ActorComponent } from "../../ActorComponent.js";
-import * as Systems from "../../systems/index.js";
-import * as Loaders from "../../loaders/index.js";
-
-import { Text3D, type Text3DOptions } from "./Text3D.class.js";
+import * as Systems from "../../../systems/index.js";
+import { Actor, ActorComponent } from "../../../actor/index.js";
+import {
+  Text3D,
+  type Text3DOptions
+} from "./Text3D.class.js";
+import { font, type Font } from "./loader.js";
 
 export interface TextRendererOptions extends Omit<Text3DOptions, "font"> {
   path: string;
@@ -15,7 +16,7 @@ export interface TextRendererOptions extends Omit<Text3DOptions, "font"> {
 }
 
 export class TextRenderer extends ActorComponent {
-  #asset: Systems.LazyAsset<Loaders.Font>;
+  #asset: Systems.LazyAsset<Font>;
 
   text: Text3D;
 
@@ -35,7 +36,7 @@ export class TextRenderer extends ActorComponent {
       material = new THREE.MeshBasicMaterial()
     } = options;
 
-    this.#asset = Loaders.font(path);
+    this.#asset = font(path);
     this.text = new Text3D({
       material,
       textGeometryOptions
