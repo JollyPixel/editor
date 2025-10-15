@@ -18,16 +18,26 @@ export type ScenePropertyType =
   | "boolean"
   | "boolean[]"
   | "Vector2"
-  | "Vector3";
+  | "Vector3"
+  | "Vector4"
+  | "Color";
 
 export interface ScenePropertyOptions {
   type: ScenePropertyType;
+  label?: string;
+  description?: string;
 }
 
 export type BehaviorKey = string | symbol;
 
+export type BehaviorPropertyMetadata = {
+  type: ScenePropertyType;
+  label: string;
+  description: string;
+};
+
 export type BehaviorMetadata = {
-  properties: Map<BehaviorKey, ScenePropertyType>;
+  properties: Map<BehaviorKey, BehaviorPropertyMetadata>;
   components: Map<BehaviorKey, SceneActorComponentType>;
 };
 
@@ -40,13 +50,21 @@ export function SceneProperty(
     object: Object,
     propertyName: BehaviorKey
   ): void {
+    const { label = propertyName.toString(), description = "" } = options;
+
+    const propertyValue: BehaviorPropertyMetadata = {
+      type,
+      label,
+      description
+    };
+
     const metadata = getBehaviorMetadata(object);
     if (metadata) {
-      metadata.properties.set(propertyName, type);
+      metadata.properties.set(propertyName, propertyValue);
     }
     else {
       const metadata = createBehaviorMetadata();
-      metadata.properties.set(propertyName, type);
+      metadata.properties.set(propertyName, propertyValue);
 
       Reflect.defineMetadata(
         SceneProperty.Metadata,

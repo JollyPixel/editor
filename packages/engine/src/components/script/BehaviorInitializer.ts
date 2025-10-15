@@ -24,7 +24,9 @@ const kDefaultValues: Record<ScenePropertyType, unknown> = {
   boolean: false,
   "boolean[]": [],
   Vector2: new THREE.Vector2(0, 0),
-  Vector3: new THREE.Vector3(0, 0, 0)
+  Vector3: new THREE.Vector3(0, 0, 0),
+  Vector4: new THREE.Vector4(0, 0, 0, 0),
+  Color: new THREE.Color(0, 0, 0)
 };
 
 export interface BehaviorInitializerOptions {
@@ -97,7 +99,9 @@ export class BehaviorInitializer {
   }
 
   #resolveProperties(): void {
-    for (const [propertyName, type] of this.#metadata.properties) {
+    for (const [propertyName, properties] of this.#metadata.properties) {
+      const { type } = properties;
+
       const currentValue = this.#behavior[propertyName];
       const defaultValue = this.#getDefaultValue(type);
       const finalValue = currentValue ?? defaultValue;
@@ -131,7 +135,9 @@ export class BehaviorInitializer {
 
     if (
       value instanceof THREE.Vector2 ||
-      value instanceof THREE.Vector3
+      value instanceof THREE.Vector3 ||
+      value instanceof THREE.Vector4 ||
+      value instanceof THREE.Color
     ) {
       return value.clone();
     }
