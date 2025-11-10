@@ -14,7 +14,7 @@
   ],
   "dependencies": {
     "@jolly-pixel/engine": "^1.0.0",
-    "three": "^0.180.0",
+    "three": "^0.181.1",
     "@jolly-pixel/runtime": "^1.0.0"
   },
   "devDependencies": {
