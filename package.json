@@ -12,15 +12,15 @@
     "clear": "clear-ts-build"
   },
   "workspaces": [
+    "packages/engine",
+    "packages/runtime",
+    "packages/fs-tree",
     "packages/project",
     "packages/server",
     "packages/client",
-    "packages/fs-tree",
     "packages/experimental",
     "packages/editors/voxel-map",
-    "packages/editors/model",
-    "packages/engine",
-    "packages/runtime"
+    "packages/editors/model"
   ],
   "repository": {
     "type": "git",

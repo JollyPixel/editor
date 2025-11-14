@@ -16,9 +16,8 @@
   "scripts": {
     "prepublish": "rimraf ./dist && tsc -b",
     "test": "tsx --test test/**/*.test.ts",
-    "build:ts": "tsc",
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc && vite build",
     "preview": "vite preview",
     "start-server": "tsx ./scripts/socket-server.js"
   },
