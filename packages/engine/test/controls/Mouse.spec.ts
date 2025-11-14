@@ -424,6 +424,8 @@ interface MouseEventData {
 
 interface WheelEventData {
   wheelDelta?: number;
+  wheelDeltaX?: number;
+  wheelDeltaY?: number;
   detail?: number;
 }
 
@@ -469,6 +471,14 @@ class MouseCanvasAdapter extends mocks.CanvasAdapter {
 
     Object.defineProperty(event, "wheelDelta", {
       value: eventData.wheelDelta ?? 0,
+      writable: false
+    });
+    Object.defineProperty(event, "wheelDeltaX", {
+      value: eventData.wheelDeltaX ?? 0,
+      writable: false
+    });
+    Object.defineProperty(event, "wheelDeltaY", {
+      value: eventData.wheelDeltaY ?? eventData.wheelDelta ?? 0,
       writable: false
     });
     Object.defineProperty(event, "detail", {
