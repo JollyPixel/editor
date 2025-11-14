@@ -6,7 +6,9 @@ import {
   Input,
   type InputDevicePreference,
   SceneProperty,
-  SceneActorComponent
+  SceneActorComponent,
+  Signal,
+  type SignalEvent
 } from "@jolly-pixel/engine";
 
 export interface PlayerProperties extends BehaviorProperties {
@@ -14,6 +16,9 @@ export interface PlayerProperties extends BehaviorProperties {
 }
 
 export class PlayerBehavior extends Behavior<PlayerProperties> {
+  @Signal()
+  onPlayerPunch: SignalEvent;
+
   @SceneProperty({ type: "number" })
   speed = 0.05;
 
@@ -33,9 +38,6 @@ export class PlayerBehavior extends Behavior<PlayerProperties> {
   }
 
   awake() {
-    console.log({
-      isTouchpadAvailable: this.actor.gameInstance.input.isTouchpadAvailable()
-    });
     this.actor.threeObject.rotateX(-Math.PI / 2);
 
     this.model.animation.setClipNameRewriter((name) => name.slice(name.indexOf("|") + 1).toLowerCase());
@@ -68,6 +70,7 @@ export class PlayerBehavior extends Behavior<PlayerProperties> {
     }
     else if (input.isMouseButtonDown("left")) {
       this.model.animation.play("punch_jab");
+      this.onPlayerPunch.emit();
     }
     else {
       this.model.animation.play("idle_loop");

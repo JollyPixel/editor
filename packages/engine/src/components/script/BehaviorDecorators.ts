@@ -81,7 +81,8 @@ export type SceneActorComponentType =
   | typeof SpriteRenderer
   | typeof TextRenderer
   | typeof TiledMapRenderer
-  | typeof ActorComponent;
+  | typeof ActorComponent
+  | any;
 
 export function SceneActorComponent(
   classObject: SceneActorComponentType
