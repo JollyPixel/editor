@@ -27,6 +27,9 @@
     },
     {
       "path": "./packages/editors/model"
+    },
+    {
+      "path": "./packages/editors/texture"
     }
   ]
 }

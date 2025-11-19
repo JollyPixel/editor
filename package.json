@@ -20,7 +20,8 @@
     "packages/client",
     "packages/experimental",
     "packages/editors/voxel-map",
-    "packages/editors/model"
+    "packages/editors/model",
+    "packages/editors/texture"
   ],
   "repository": {
     "type": "git",
