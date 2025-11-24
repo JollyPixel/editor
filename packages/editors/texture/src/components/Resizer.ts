@@ -1,62 +1,58 @@
-// Import Internal Dependencies
-import ThreeSceneManager from "../threeScene.js";
-import CanvasManager from "../CanvasManager.js";
+// Import Third-party Dependencies
+import { LitElement, css } from "lit";
+import { property } from "lit/decorators.js";
 
-export interface ResizerOptions {
-  resizerSelector?: string;
-  navSelector?: string;
-  threeSceneManager: ThreeSceneManager;
-  canvasManager: CanvasManager;
-}
+export type ModeResizer = "horizontal" | "vertical";
 
-export class Resizer {
-  private resizer: HTMLElement;
-  private nav: HTMLElement;
-  private threeSceneManager: ThreeSceneManager;
-  private canvasManager: CanvasManager;
-  private isResizing: boolean = false;
+export class Resizer extends LitElement {
+  @property({ type: String })
+  declare name: string;
 
-  constructor(options: ResizerOptions) {
-    this.resizer = document.querySelector(options.resizerSelector || ".resizer") as HTMLElement;
-    this.nav = document.querySelector(options.navSelector || "nav") as HTMLElement;
-    this.threeSceneManager = options.threeSceneManager;
-    this.canvasManager = options.canvasManager;
+  @property({ type: String })
+  declare mode: ModeResizer;
 
-    if (!this.resizer || !this.nav) {
-      throw new Error("Resizer or nav element not found in DOM");
+  static override styles = css`
+    :host {
+      width: 5px;
+      background: red;
+      flex-basis: 5px;
+      flex-shrink: 0;
+    }
+  `;
+
+  constructor() {
+    super();
+
+    this.name = "resizer";
+    this.mode = "horizontal";
+
+    this.style.cursor = this.mode === "horizontal" ? "col-resize" : "row-resize";
+
+    this.addEventListener("pointerdown", this.startDrag.bind(this));
+  }
+
+  startDrag(e: PointerEvent) {
+    this.setPointerCapture(e.pointerId);
+    let start = this.mode === "horizontal" ? e.clientX : e.clientY;
+    const onMove = (moveEvent: PointerEvent) => {
+      const delta = this.mode === "horizontal" ? moveEvent.clientX - start : moveEvent.clientY - start;
+      start = this.mode === "horizontal" ? moveEvent.clientX : moveEvent.clientY;
+
+      this.dispatchEvent(new CustomEvent("resizer", {
+        detail: { delta, name: this.name },
+        bubbles: true,
+        composed: true
+      }));
+    };
+
+    function onUp() {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
     }
 
-    this.init();
-  }
-
-  private init(): void {
-    this.resizer.addEventListener("pointerdown", (e) => this.onPointerDown(e));
-    document.addEventListener("pointermove", (e) => this.onPointerMove(e));
-    document.addEventListener("pointerup", () => this.onPointerUp());
-  }
-
-  private onPointerDown(e: PointerEvent): void {
-    this.isResizing = true;
-    this.threeSceneManager.setResizing(true);
-    document.body.style.cursor = "col-resize";
-    this.resizer.setPointerCapture(e.pointerId);
-  }
-
-  private onPointerMove(e: PointerEvent): void {
-    if (!this.isResizing) {
-      return;
-    }
-
-    const newWidth = e.clientX;
-    this.nav.style.width = `${newWidth}px`;
-
-    this.threeSceneManager.onResize();
-    this.canvasManager.onResize();
-  }
-
-  private onPointerUp(): void {
-    this.isResizing = false;
-    this.threeSceneManager.setResizing(false);
-    document.body.style.cursor = "default";
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
   }
 }
+
+customElements.define("jolly-resizer", Resizer);

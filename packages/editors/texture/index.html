@@ -17,19 +17,10 @@
     display: flex;
   }
 
-  #rightPanel {
-    height: 100%;
-    width: 300px;
-    min-width: 200px;
-    flex-shrink: 0;
-    border-left: 2px solid var(--jolly-border-color);
-    box-sizing: border-box;
-    background: purple;
-  }
   section {
     flex-grow: 1;
     height: 100%;
-    min-width: .00px;
+    min-width: 200px;
   }
 
 </style>
@@ -38,7 +29,8 @@
 <jolly-resizer name="leftPanel-threejs"></jolly-resizer>
 <section id="threeRenderer"></section>
 <jolly-resizer name="threejs-rightPanel"></jolly-resizer>
-<div id="rightPanel"></div>
+<jolly-model-editor-right-panel></jolly-model-editor-right-panel>
+<!-- <div id="rightPanel"></div> -->
 
 <script type="module" src="./src/index.ts"></script>
 

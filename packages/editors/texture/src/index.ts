@@ -1,11 +1,12 @@
 // Import Internal Dependencies
 import ThreeSceneManager from "./threeScene.js";
 import "./components/LeftPanel.ts";
-import "./components/LitResizer.ts";
+import "./components/RightPanel.js";
+import "./components/Resizer.js";
 
 const kBody = document.querySelector("body") as HTMLBodyElement;
 const leftPanel = document.querySelector("jolly-model-editor-left-panel") as HTMLElement;
-const rightPanel = document.getElementById("rightPanel") as HTMLDivElement;
+const rightPanel = document.querySelector("jolly-model-editor-right-panel") as HTMLElement;
 const kSection = document.getElementById("threeRenderer") as HTMLDivElement;
 
 const kMinWidth = 300;
