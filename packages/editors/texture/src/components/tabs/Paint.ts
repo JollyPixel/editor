@@ -3,7 +3,7 @@ import { LitElement, css, html } from "lit";
 import { query, state } from "lit/decorators.js";
 
 // Import Internal Dependencies
-import CanvasManager from "../../CanvasManager.js";
+import CanvasManager from "../../texture/CanvasManager.js";
 
 export class Paint extends LitElement {
   @query("#texturePreview")

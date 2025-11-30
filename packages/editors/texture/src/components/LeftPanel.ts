@@ -3,7 +3,7 @@ import { LitElement, css, html } from "lit";
 import { state, query } from "lit/decorators.js";
 
 // Import Internal Dependencies
-import CanvasManager from "../CanvasManager.js";
+import CanvasManager from "../texture/CanvasManager.js";
 import "./tabs/Paint.js";
 import "./tabs/Build.js";
 

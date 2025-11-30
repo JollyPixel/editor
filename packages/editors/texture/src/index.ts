@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import ThreeSceneManager from "./threeScene.js";
+import ThreeSceneManager from "./three/ThreeSceneManager.js";
 import "./components/LeftPanel.ts";
 import "./components/RightPanel.js";
 import "./components/Resizer.js";
