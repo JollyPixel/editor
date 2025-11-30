@@ -13,6 +13,7 @@ export interface BrushManagerOptions {
 
 export default class BrushManager {
   private color!: string;
+  private colorHex!: string;
   private opacity: number;
 
   private size!: number;
@@ -22,7 +23,7 @@ export default class BrushManager {
   private colorOutline!: string;
 
   constructor(options: BrushManagerOptions = {}) {
-    this.setColor(options.color || "red");
+    this.setColor(options.color || "#000000");
     this.maxSize = Math.max(options.maxSize || 32, 1);
     this.setSize(options.size || this.maxSize);
     this.opacity = 1;
@@ -32,11 +33,13 @@ export default class BrushManager {
   }
 
   setColor(color: string) {
+    this.colorHex = color;
     const [r, g, b] = getColorAsRGBA(color);
     this.color = `rgba(${r}, ${g}, ${b}, ${this.opacity})`;
   }
 
   setColorWithOpacity(color: string, opacity: number) {
+    this.colorHex = color;
     const [r, g, b] = getColorAsRGBA(color);
     this.opacity = Math.max(0, Math.min(1, opacity));
     this.color = `rgba(${r}, ${g}, ${b}, ${this.opacity})`;
@@ -44,6 +47,10 @@ export default class BrushManager {
 
   getColor(): string {
     return this.color;
+  }
+
+  getColorHex(): string {
+    return this.colorHex;
   }
 
   setOpacity(opacity: number) {

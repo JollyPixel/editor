@@ -9,12 +9,6 @@ export class Paint extends LitElement {
   @query("#texturePreview")
   declare texturePreviewElement: HTMLDivElement;
 
-  @query("#colorPicker")
-  declare colorPickerElement: HTMLInputElement;
-
-  @query("#brushSize")
-  declare brushSizeElement: HTMLInputElement;
-
   @state()
   declare brushColor: string;
 
@@ -117,13 +111,14 @@ export class Paint extends LitElement {
     }
 
     this.brushSize = manager.brush.getSize();
-    this.brushColor = manager.brush.getColor();
+    this.brushColor = manager.brush.getColorHex();
     this.brushOpacity = manager.brush.getOpacity();
   }
 
   protected override firstUpdated(): void {
     this.syncBrushInputs();
     this.setupColorPickListener();
+    this.handleColorChange({ target: { value: this.brushColor } } as any);
   }
 
   private setupColorPickListener(): void {
@@ -217,7 +212,7 @@ export class Paint extends LitElement {
           type="color"
           id="colorPicker"
           .value="${this.brushColor}"
-          @change="${this.handleColorChange}">
+          @input="${this.handleColorChange}">
       </div>
       <div class="input-row">
         <label>Opacity</label>

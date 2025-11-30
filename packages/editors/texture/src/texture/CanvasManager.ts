@@ -430,7 +430,7 @@ export default class CanvasManager {
   private colorPicker(x: number, y: number): { hex: string; opacity: number; } {
     const pixelPos = this.getMouseTexturePosition(x, y, true);
     if (pixelPos === null) {
-      return { hex: this.brush.getColor(), opacity: this.brush.getOpacity() };
+      return { hex: this.brush.getColorHex(), opacity: this.brush.getOpacity() };
     }
 
     const imageData = this.textureCtx.getImageData(pixelPos.x, pixelPos.y, 1, 1);
@@ -611,6 +611,7 @@ export default class CanvasManager {
 
   setTexture(canvas: HTMLCanvasElement) {
     this.textureCanvas = canvas;
+    this.textureCtx = this.textureCanvas.getContext("2d")!;
   }
 
   getTexture() {
