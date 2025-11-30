@@ -14,6 +14,7 @@ export interface GroupManagerOptions {
   size?: THREE.Vector3;
   scale?: THREE.Vector3;
   color?: THREE.Color;
+  name?: string;
   texture?: THREE.Texture | null;
 }
 
@@ -31,6 +32,7 @@ export default class GroupManager {
       size = new THREE.Vector3(1, 1, 1),
       scale = new THREE.Vector3(1, 1, 1),
       color = new THREE.Color(0xffffff),
+      name,
       texture = null
     } = options;
 
@@ -54,6 +56,8 @@ export default class GroupManager {
     this.mesh.scale.x = scale.x;
     this.mesh.scale.y = scale.y;
     this.mesh.scale.z = scale.z;
+    const meshName = name || `mesh_${this.group.uuid}`;
+    this.mesh.name = meshName;
 
     // Create edges
     const edgesGeo = new THREE.EdgesGeometry(geometry);
@@ -178,5 +182,9 @@ export default class GroupManager {
     if (this.group.parent) {
       this.group.parent.remove(this.group);
     }
+  }
+
+  public getGroupUUID(): string {
+    return this.group.uuid;
   }
 }

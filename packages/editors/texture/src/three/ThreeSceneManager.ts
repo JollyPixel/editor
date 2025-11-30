@@ -8,6 +8,7 @@ import { Input } from "@jolly-pixel/engine";
 // Import Internal Dependencies
 import type CanvasManager from "../texture/CanvasManager.js";
 import ModelManager from "./ModelManager.js";
+import type GroupManager from "./GroupManager.js";
 
 export default class ThreeSceneManager {
   private rootHTMLElement: HTMLDivElement;
@@ -22,7 +23,6 @@ export default class ThreeSceneManager {
   private orbitalControl: OrbitControls;
   private transformControl: TransformControls;
   private modelManager: ModelManager;
-  // private viewHelper: ViewHelper;
 
   private isTransformControlsDragging: boolean = false;
 
@@ -36,13 +36,13 @@ export default class ThreeSceneManager {
       antialias: true
     });
     this.renderer.sortObjects = true;
-    // this.renderer.autoClear = false;
 
     const bounding = this.rootHTMLElement.getBoundingClientRect();
 
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(75, bounding.width / bounding.height, 0.1, 1000);
     this.camera.position.z = 5;
+    this.camera.position.y = 1;
     this.cameraRaycaster = new THREE.Raycaster();
 
     this.transformControl = new TransformControls(this.camera, this.renderer.domElement);
@@ -54,7 +54,6 @@ export default class ThreeSceneManager {
 
     this.orbitalControl = this.initOrbitControl();
 
-    // Initialize ModelManager
     this.modelManager = new ModelManager({
       scene: this.scene,
       transformControl: this.transformControl
@@ -104,21 +103,58 @@ export default class ThreeSceneManager {
 
         if (group) {
           this.modelManager.selectGroup(group);
+          this.dispatchGroupSelected(group);
         }
 
         return;
       }
 
       this.modelManager.selectGroup(null);
+      this.dispatchGroupSelected(null);
     }
   }
 
-  public createCube() {
+  public createCube(name: string = "Cube"): GroupManager {
     const group = this.modelManager.addGroup({
       texture: this.texture
     });
 
+    this.dispatchGroupCreated(group, name);
+
     return group;
+  }
+
+  private dispatchGroupCreated(group: any, name: string = "Cube"): void {
+    const event = new CustomEvent("groupCreated", {
+      detail: { group, name },
+      bubbles: true,
+      composed: true
+    });
+    this.rootHTMLElement.dispatchEvent(event);
+  }
+
+  private dispatchGroupSelected(group: any | null): void {
+    const event = new CustomEvent("groupSelected", {
+      detail: { group },
+      bubbles: true,
+      composed: true
+    });
+    this.rootHTMLElement.dispatchEvent(event);
+  }
+
+  public getModelManager(): ModelManager {
+    return this.modelManager;
+  }
+
+  public setControlsEnabled(enabled: boolean): void {
+    this.orbitalControl.enabled = enabled;
+    this.transformControl.enabled = enabled;
+    if (enabled) {
+      this.input.connect();
+    }
+    else {
+      this.input.disconnect();
+    }
   }
 
   onResize() {
@@ -166,7 +202,6 @@ export default class ThreeSceneManager {
 
   public setCanvasTexture(canvasManager: CanvasManager): void {
     const textureCanvas = canvasManager.getTextureCanvas();
-    // this.textureCanvas = textureCanvas;
     this.texture = new THREE.CanvasTexture(textureCanvas);
     this.texture.magFilter = THREE.NearestFilter;
     this.texture.minFilter = THREE.NearestFilter;

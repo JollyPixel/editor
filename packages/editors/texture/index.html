@@ -15,6 +15,7 @@
     height: 100%;
     overflow: hidden;
     display: flex;
+    position: relative;
   }
 
   section {
@@ -30,7 +31,7 @@
 <section id="threeRenderer"></section>
 <jolly-resizer name="threejs-rightPanel"></jolly-resizer>
 <jolly-model-editor-right-panel></jolly-model-editor-right-panel>
-<!-- <div id="rightPanel"></div> -->
+<jolly-popup-manager></jolly-popup-manager>
 
 <script type="module" src="./src/index.ts"></script>
 

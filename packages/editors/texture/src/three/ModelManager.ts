@@ -87,6 +87,10 @@ export default class ModelManager {
     return this.meshToGroupMap.get(mesh);
   }
 
+  public getGroupByUUID(uuid: string): GroupManager | undefined {
+    return this.groups.find((group) => group.getGroupUUID() === uuid);
+  }
+
   public setTextureForAll(texture: THREE.Texture | null): void {
     this.groups.forEach((group) => {
       group.setTexture(texture);

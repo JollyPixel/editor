@@ -101,11 +101,9 @@ export default class CanvasManager {
     this.defaultTextureColor = options.texture?.defaultColor || "#ffffff";
     this.backgroundColor = getComputedStyle(this.parentHtmlElement).backgroundColor || "#555555";
 
-    // center the texture by default
     this.texturePixelWidth = this.textureSize.x * this.zoom;
     this.texturePixelHeight = this.textureSize.y * this.zoom;
-    this.camera.x = this.canvas.width / 2 - this.texturePixelWidth / 2;
-    this.camera.y = this.canvas.height / 2 - this.texturePixelHeight / 2;
+    this.centerTexture();
 
     // BackgroundTransparency
     this.backgroundTransparencyCanvas = document.createElement("canvas");
@@ -193,7 +191,6 @@ export default class CanvasManager {
       this.onResize();
     });
 
-    // Only draw if parent has valid dimensions, otherwise onResize() will handle it
     if (this.boundingRect.width > 0 && this.boundingRect.height > 0) {
       this.drawTexture();
     }
@@ -214,10 +211,6 @@ export default class CanvasManager {
   }
 
   public reparentCanvasTo(newParentElement: HTMLDivElement): void {
-    this.reparentTo(newParentElement);
-  }
-
-  private reparentTo(newParentElement: HTMLDivElement): void {
     if (!this.canvas) {
       console.error("CanvasManager: No canvas to reparent");
 
@@ -230,21 +223,16 @@ export default class CanvasManager {
       return;
     }
 
-    // Retirer le canvas et le SVG de leurs parents courants
     if (this.canvas.parentElement) {
       this.canvas.remove();
     }
 
-    // Ajouter le canvas au nouvel parent
     newParentElement.appendChild(this.canvas);
 
-    // Reparenter aussi le SVG
     this.SvgMananager.reparentSvgTo(newParentElement);
 
-    // Mettre à jour la référence du parent
     this.parentHtmlElement = newParentElement;
 
-    // Recalculer les dimensions et redessiner
     this.onResize();
   }
 
@@ -265,21 +253,15 @@ export default class CanvasManager {
       return;
     }
 
-    // Récupérer les données du masterTextureCanvas (la vraie sauvegarde complète)
     const masterImageData = this.masterTextureCtx.getImageData(0, 0, this.textureMaxSize, this.textureMaxSize);
 
-    // Changer la taille
     this.textureSize = size;
 
-    // Redimensionner le canvas de texture
     this.textureCanvas.width = size.x;
     this.textureCanvas.height = size.y;
 
-    // Créer une nouvelle imageData avec la nouvelle taille
     const newImageData = this.textureCtx.createImageData(size.x, size.y);
 
-    // Copier les pixels du master canvas dans le nouveau canvas
-    // en respectant la nouvelle taille
     for (let y = 0; y < size.y; y++) {
       for (let x = 0; x < size.x; x++) {
         const masterIndex = (y * this.textureMaxSize + x) * 4;
@@ -293,11 +275,9 @@ export default class CanvasManager {
     }
     this.textureCtx.putImageData(newImageData, 0, 0);
 
-    // Mettre à jour les dimensions en pixels (avec zoom)
     this.texturePixelWidth = this.textureSize.x * this.zoom;
     this.texturePixelHeight = this.textureSize.y * this.zoom;
 
-    // Redessiner immédiatement
     this.drawTexture();
   }
 
@@ -505,7 +485,7 @@ export default class CanvasManager {
   }
 
   private clampCamera() {
-    // pixel texture to pixel canvas
+    // Allow to keep one pixel visible when clamping
     const margin = this.zoom;
 
     const minX = -this.texturePixelWidth + margin;
@@ -560,7 +540,6 @@ export default class CanvasManager {
 
     this.zoom = newZoom;
 
-    // recalculate texture pixel size only on zooming event
     this.texturePixelWidth = this.textureSize.x * this.zoom;
     this.texturePixelHeight = this.textureSize.y * this.zoom;
 
@@ -592,6 +571,13 @@ export default class CanvasManager {
     this.masterTextureCtx.putImageData(imageData, 0, 0);
   }
 
+  centerTexture(): void {
+    this.camera.x = this.canvas.width / 2 - this.texturePixelWidth / 2;
+    this.camera.y = this.canvas.height / 2 - this.texturePixelHeight / 2;
+    this.clampCamera();
+    this.drawTexture();
+  }
+
   // drawLine(mouseX: number, mouseY: number) {
 
   // }
@@ -599,35 +585,23 @@ export default class CanvasManager {
   onResize() {
     this.boundingRect = this.parentHtmlElement.getBoundingClientRect();
 
-    // Skip resize if parent has invalid dimensions
     if (this.boundingRect.width === 0 || this.boundingRect.height === 0) {
       return;
     }
 
-    // Met à jour les dimensions du canvas
     this.canvas.width = Math.round(this.boundingRect.width);
     this.canvas.height = Math.round(this.boundingRect.height);
     this.ctx.imageSmoothingEnabled = false;
 
-    // Met à jour les dimensions du background transparency
     this.backgroundTransparencyCanvas.width = this.canvas.width;
     this.backgroundTransparencyCanvas.height = this.canvas.height;
     this.initBackgroundTransparency(
       8, { odd: "#999", even: "#666" }
     );
 
-    // Met à jour les dimensions du SVG
     this.SvgMananager.updateSvgSize(this.boundingRect.width, this.boundingRect.height);
     this.clampCamera();
-    // Redessine la texture
-    this.drawTexture();
-  }
 
-  centerTexture(): void {
-    // Center the texture on the canvas
-    this.camera.x = this.canvas.width / 2 - this.texturePixelWidth / 2;
-    this.camera.y = this.canvas.height / 2 - this.texturePixelHeight / 2;
-    this.clampCamera();
     this.drawTexture();
   }
 
