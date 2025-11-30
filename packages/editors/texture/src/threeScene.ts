@@ -8,10 +8,11 @@ import { Input } from "@jolly-pixel/engine";
 // Import Internal Dependencies
 import type CanvasManager from "./CanvasManager.js";
 
-const kSvgNs = "http://www.w3.org/2000/svg";
+// const kSvgNs = "http://www.w3.org/2000/svg";
 
 interface CreateCubeOptions {
   pos?: THREE.Vector3;
+  pivotPos?: THREE.Vector3;
   size?: THREE.Vector3;
   scale?: THREE.Vector3;
   color?: THREE.Color;
@@ -31,10 +32,10 @@ export default class ThreeSceneManager {
   private transformControl: TransformControls;
   // private viewHelper: ViewHelper;
 
-  private wireframeMesh: THREE.Mesh | null = null;
-  private selectedCube: THREE.Mesh | null = null;
+  private selectedGroup: THREE.Group | null = null;
+  private isTransformControlsDragging: boolean = false;
 
-  private cubes: THREE.Mesh[];
+  private meshes: THREE.Mesh[] = [];
   private texture: THREE.CanvasTexture | null = null;
 
   constructor(rootHTMLElement: HTMLDivElement) {
@@ -44,8 +45,8 @@ export default class ThreeSceneManager {
       alpha: true,
       antialias: true
     });
+    this.renderer.sortObjects = true;
     // this.renderer.autoClear = false;
-    this.wireframeMesh = null;
 
     const bounding = this.rootHTMLElement.getBoundingClientRect();
 
@@ -56,19 +57,22 @@ export default class ThreeSceneManager {
 
     this.transformControl = new TransformControls(this.camera, this.renderer.domElement);
 
-    this.scene.add(new THREE.GridHelper(10, 10));
-    this.cubes = [];
-    this.createCube();
+    this.transformControl.addEventListener("dragging-changed", (event: any) => {
+      this.isTransformControlsDragging = event.value;
+      this.orbitalControl.enabled = !event.value;
+    });
 
     this.orbitalControl = this.initOrbitControl();
+    this.input = new Input(this.renderer.domElement);
+    this.input.connect();
+    this.update();
+
+    this.scene.add(new THREE.GridHelper(10, 10));
+    this.meshes = [];
+    // this.createCube();
 
     this.renderer.setSize(bounding.width, bounding.height);
     this.rootHTMLElement.appendChild(this.renderer.domElement);
-
-    this.input = new Input(this.renderer.domElement);
-    this.input.connect();
-
-    this.update();
 
     this.renderer.setAnimationLoop(this.update.bind(this));
   }
@@ -82,6 +86,19 @@ export default class ThreeSceneManager {
     orbitalControl.enableZoom = true;
 
     return orbitalControl;
+  }
+
+  private pointTexture(size: number = 64): THREE.Texture {
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d")!;
+    ctx.beginPath();
+    ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+    ctx.fillStyle = "white";
+    ctx.fill();
+
+    return new THREE.CanvasTexture(canvas);
   }
 
   // private initUV(mesh: THREE.Mesh): void {
@@ -101,84 +118,140 @@ export default class ThreeSceneManager {
 
   private cameraRayCast() {
     if (this.input.wasMouseButtonJustPressed("left")) {
+      if (this.isTransformControlsDragging) {
+        return;
+      }
+
       this.cameraRaycaster.setFromCamera(
         this.input.getMousePosition(),
         this.camera
       );
 
-      const intersects = this.cameraRaycaster.intersectObjects(this.cubes);
-      if (intersects.length > 0) {
-        const intersect = intersects[0];
+      const cubeIntersects = this.cameraRaycaster.intersectObjects(this.meshes, false);
+
+      if (cubeIntersects.length > 0) {
+        const intersect = cubeIntersects[0];
         this.selectCube(intersect.object as THREE.Mesh);
+
+        return;
       }
-      else {
-        this.selectCube(null);
-      }
+
+      this.selectCube(null);
     }
   }
 
-  private createCube(options: CreateCubeOptions = {}) {
+  public createCube(options: CreateCubeOptions = {}) {
     const {
       pos = new THREE.Vector3(0, 0, 0),
+      pivotPos = new THREE.Vector3(0, 0, 0),
       size = new THREE.Vector3(1, 1, 1),
       scale = new THREE.Vector3(1, 1, 1),
       color = new THREE.Color(0xffffff)
     } = options;
 
+    const pivot = new THREE.Group();
+    pivot.position.copy(pos);
+    pivot.name = `pivot_${this.meshes.length}`;
+
     const geometry = new THREE.BoxGeometry(...size);
-    console.log(geometry.attributes.uv);
     const material = new THREE.MeshBasicMaterial({
       color,
       transparent: true,
       alphaTest: 0.01,
-      side: THREE.DoubleSide
+      side: THREE.DoubleSide,
+      map: this.texture
     });
-    // material.map = this.texture;
     material.needsUpdate = true;
 
     const cube = new THREE.Mesh(geometry, material);
+    cube.name = `mesh_${this.meshes.length}`;
 
-    cube.position.x = pos.x;
-    cube.position.y = pos.y;
-    cube.position.z = pos.z;
+    cube.position.copy(pivotPos);
 
     cube.scale.x = scale.x;
     cube.scale.y = scale.y;
     cube.scale.z = scale.z;
 
-    this.scene.add(cube);
+    const edgesGeo = new THREE.EdgesGeometry(geometry);
+    const edgesMat = new THREE.LineBasicMaterial({ color: 0x000000 });
+    const edgesLines = new THREE.LineSegments(edgesGeo, edgesMat);
+    edgesLines.name = "edges";
+    cube.add(edgesLines);
 
-    this.cubes.push(cube);
+    pivot.add(cube);
+
+    const pivotPointGeo = new THREE.BufferGeometry();
+    pivotPointGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array([0, 0, 0]), 3));
+    const pivotPointMat = new THREE.PointsMaterial({
+      color: 0xff00ff,
+      size: 15,
+      sizeAttenuation: false,
+      map: this.pointTexture(256)
+    });
+    pivotPointMat.depthTest = false;
+    pivotPointMat.transparent = true;
+    const pivotPoint = new THREE.Points(pivotPointGeo, pivotPointMat);
+    pivotPoint.name = "pivot_visual";
+    pivotPoint.visible = false;
+    pivotPoint.renderOrder = 1;
+
+    pivotPoint.position.copy(pos);
+    pivot.add(pivotPoint);
+
+    this.scene.add(pivot);
+
+    this.meshes.push(cube);
   }
 
   private selectCube(mesh: THREE.Mesh | null) {
-    if (!mesh) {
-      if (this.wireframeMesh) {
-        this.scene.remove(this.wireframeMesh);
-        this.wireframeMesh = null;
+    const previousMesh = this.selectedGroup?.children.find((child) => child.name.startsWith("mesh"));
+    if (mesh && mesh.id === previousMesh?.id) {
+      return;
+    }
+
+    console.log("this.selectedGroup");
+    console.log(this.selectedGroup);
+
+    console.log("previousMesh");
+    console.log(previousMesh);
+
+    if (previousMesh) {
+      const edgeChild = previousMesh.children.find(
+        (child) => child.name === "edges"
+      ) as THREE.LineSegments;
+      if (edgeChild && edgeChild.material instanceof THREE.LineBasicMaterial) {
+        edgeChild.material.color.set(0x000000);
       }
-      this.selectedCube = null;
+    }
+
+    const previousPivotPoint = this.selectedGroup?.children.find((child) => child.name === "pivot_visual")!;
+    if (previousPivotPoint) {
+      previousPivotPoint.visible = false;
+    }
+
+    if (!mesh) {
+      console.log("assign this.selectedGroup to null");
+      this.selectedGroup = null;
       this.transformControl.detach();
 
       return;
     }
 
-    if (mesh.id === this.selectedCube?.id) {
-      return;
+    console.log("assign this.selectedGroup");
+    this.selectedGroup = mesh.parent! as THREE.Group;
+
+    const groupPivot = mesh.parent!;
+
+    const edgeChild = mesh.children.find((child) => child.name === "edges") as THREE.LineSegments;
+    if (edgeChild && edgeChild.material instanceof THREE.LineBasicMaterial) {
+      edgeChild.material.color.set(0xff00ff);
     }
 
-    this.selectedCube = mesh;
-    const wireframeMesh = mesh.clone();
-    wireframeMesh.material = new THREE.MeshBasicMaterial({
-      color: 0xffff00,
-      wireframe: true
-    });
+    const pivotPoint = groupPivot.children.find((child) => child.name === "pivot_visual")!;
+    pivotPoint.visible = true;
 
-    this.transformControl.attach(this.selectedCube);
+    this.transformControl.attach(this.selectedGroup);
     this.scene.add(this.transformControl.getHelper());
-
-    this.scene.add(wireframeMesh);
-    this.wireframeMesh = wireframeMesh;
   }
 
   onResize() {
@@ -193,6 +266,7 @@ export default class ThreeSceneManager {
     this.cameraRayCast();
     this.handleKeyboardControls();
     this.orbitalControl.update();
+
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -232,10 +306,10 @@ export default class ThreeSceneManager {
     this.texture.needsUpdate = true;
     this.texture.generateMipmaps = false;
 
-    this.cubes.forEach((cube) => {
-      if (cube.material instanceof THREE.MeshBasicMaterial) {
-        cube.material.map = this.texture;
-        cube.material.needsUpdate = true;
+    this.meshes.forEach((mesh) => {
+      if (mesh.material instanceof THREE.MeshBasicMaterial) {
+        mesh.material.map = this.texture;
+        mesh.material.needsUpdate = true;
       }
     });
   }

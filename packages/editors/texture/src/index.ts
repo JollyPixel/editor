@@ -73,3 +73,7 @@ kBody.addEventListener("resizer", (e: Event) => {
   }
 });
 
+rightPanel.addEventListener("addcube", () => {
+  threeSceneManager.createCube();
+});
+
