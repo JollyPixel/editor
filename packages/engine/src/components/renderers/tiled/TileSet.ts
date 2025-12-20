@@ -35,11 +35,11 @@ export class TileSet {
   }
 
   #metadata: TiledMapTileset;
-  #texture: THREE.Texture;
+  #texture: THREE.Texture<HTMLImageElement>;
 
   constructor(
     tiledset: TiledMapTileset,
-    texture: THREE.Texture
+    texture: THREE.Texture<HTMLImageElement>
   ) {
     this.#metadata = tiledset;
     this.#texture = texture;

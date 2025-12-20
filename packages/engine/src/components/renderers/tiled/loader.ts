@@ -15,7 +15,7 @@ import type {
 
 export interface TiledSetAsset {
   tileset: TiledMapTileset;
-  texture: THREE.Texture;
+  texture: THREE.Texture<HTMLImageElement>;
 }
 
 export interface TiledMapAsset {
