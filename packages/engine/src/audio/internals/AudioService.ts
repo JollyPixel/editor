@@ -7,8 +7,8 @@ import {
   type AudioBufferLoader,
   InMemoryAudioBufferCache,
   ThreeAudioBufferLoader
-} from "./AudioBuffer.js";
-import type { AudioListenerAdapter } from "./AudioListener.js";
+} from "./AudioBuffer.ts";
+import type { AudioListenerAdapter } from "./AudioListener.ts";
 
 export interface AudioFactory {
   createAudio(

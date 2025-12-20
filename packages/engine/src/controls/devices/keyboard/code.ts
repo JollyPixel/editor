@@ -3,12 +3,12 @@ import {
   isAlphabet,
   ALPHABET_TO_KEY,
   type Alphabet
-} from "./transformers/alphabet.js";
+} from "./transformers/alphabet.ts";
 import {
   isNumeric,
   NUMERIC_TO_KEY,
   type Numeric
-} from "./transformers/numeric.js";
+} from "./transformers/numeric.ts";
 
 /**
  * @see https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_code_values

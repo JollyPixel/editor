@@ -45,7 +45,7 @@ class FSTree<T extends FSTreeFile = FSTreeFile> extends EventEmitter {
 ## Usage example
 
 ```typescript
-import { FSTree } from "./FSTree.class.js";
+import { FSTree } from "./FSTree.class.ts";
 
 const tree = await FSTree.loadFromPath("/path/to/another/directory");
 

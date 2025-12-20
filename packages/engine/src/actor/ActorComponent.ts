@@ -1,9 +1,9 @@
 // Import Internal Dependencies
-import { Actor } from "./Actor.js";
+import { Actor } from "./Actor.ts";
 import type {
   Component,
   FreeComponentEnum
-} from "../components/types.js";
+} from "../components/types.ts";
 
 export interface ActorComponentOptions {
   actor: Actor;

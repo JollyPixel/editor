@@ -4,11 +4,11 @@ import { EventEmitter } from "@posva/event-emitter";
 // Import Internal Dependencies
 import type {
   InputControl
-} from "../../types.js";
+} from "../../types.ts";
 import {
   BrowserDocumentAdapter,
   type DocumentAdapter
-} from "../../../adapters/index.js";
+} from "../../../adapters/index.ts";
 
 // CONSTANTS
 const kControlKeys = new Set([
@@ -186,4 +186,4 @@ export class Keyboard extends EventEmitter<
   }
 }
 
-export type { KeyCode, ExtendedKeyCode } from "./code.js";
+export type { KeyCode, ExtendedKeyCode } from "./code.ts";

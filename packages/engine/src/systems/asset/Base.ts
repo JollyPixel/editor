@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { parse } from "../../utils/path.js";
+import { parse } from "../../utils/path.ts";
 
 export type AssetTypeName =
   | "unknown"

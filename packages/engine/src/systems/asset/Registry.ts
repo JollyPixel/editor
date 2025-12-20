@@ -5,7 +5,7 @@ import * as THREE from "three";
 import {
   Asset,
   type AssetTypeName
-} from "./Base.js";
+} from "./Base.ts";
 
 // CONSTANTS
 const kDefaultAssetType = "unknown";

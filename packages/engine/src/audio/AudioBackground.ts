@@ -4,10 +4,10 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import type {
   AudioManager
-} from "./AudioManager.js";
+} from "./AudioManager.ts";
 import type {
   VolumeObserver
-} from "./GlobalAudio.js";
+} from "./GlobalAudio.ts";
 
 export type AudioBackgroundSoundIndex = [playlistIndex: number, trackIndex: number];
 export type AudioBackgroundSoundPath = `${string}.${string}`;

@@ -2,11 +2,11 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { Actor, ActorComponent } from "../../../actor/index.js";
+import { Actor, ActorComponent } from "../../../actor/index.ts";
 import {
   SpriteAnimation,
   type SpriteAnimationOptions
-} from "./SpriteAnimation.class.js";
+} from "./SpriteAnimation.class.ts";
 
 export interface SpriteRendererOptions {
   texture: string;

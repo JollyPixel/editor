@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import {
   GlobalAudio,
   type VolumeObserver
-} from "../../src/audio/GlobalAudio.js";
+} from "../../src/audio/GlobalAudio.ts";
 
 describe("Audio.GlobalAudio", () => {
   let globalAudio: GlobalAudio;

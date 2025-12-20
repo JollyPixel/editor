@@ -11,8 +11,8 @@ import {
   AudioBackground,
   type AudioBackgroundOptions,
   type AudioBackgroundPlaylist
-} from "../../src/audio/AudioBackground.js";
-import type { AudioManager } from "../../src/audio/AudioManager.js";
+} from "../../src/audio/AudioBackground.ts";
+import type { AudioManager } from "../../src/audio/AudioManager.ts";
 
 // CONSTANTS
 const kAsyncPropagationDelay = 10;

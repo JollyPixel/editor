@@ -2,7 +2,7 @@
 import { mock } from "node:test";
 
 // Import Internal Dependencies
-import { EventTargetAdapter } from "./eventTarget.js";
+import { EventTargetAdapter } from "./eventTarget.ts";
 
 export class DocumentAdapter extends EventTargetAdapter {
   fullscreenElement: any = null;

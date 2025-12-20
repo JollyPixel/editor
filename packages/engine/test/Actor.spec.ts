@@ -3,8 +3,8 @@ import { describe, test, mock } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { Actor } from "../src/index.js";
-import { createGameInstance } from "./mocks.js";
+import { Actor } from "../src/index.ts";
+import { createGameInstance } from "./mocks.ts";
 
 describe("Actor", () => {
   describe("isDestroyed", () => {

@@ -8,14 +8,14 @@ import { EventEmitter } from "@posva/event-emitter";
 import type {
   GameRenderer,
   RenderComponent
-} from "./GameRenderer.js";
-import type { Scene } from "../Scene.js";
+} from "./GameRenderer.ts";
+import type { Scene } from "../Scene.ts";
 import {
   type RenderMode,
   type RenderStrategy,
   DirectRenderStrategy,
   ComposerRenderStrategy
-} from "./RenderStrategy.js";
+} from "./RenderStrategy.ts";
 
 export type ThreeRendererEvents = {
   resize: [

@@ -15,7 +15,10 @@ export class OrbitCameraControls extends ActorComponent {
     super({ actor, typeName: "Camera" });
 
     this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
-    this.controls = new OrbitControls(this.camera, this.actor.gameInstance.canvas);
+    this.controls = new OrbitControls(
+      this.camera,
+      this.actor.gameInstance.renderer.canvas
+    );
     this.camera.position.set(0, 20, 100);
     this.camera.lookAt(0, 0, 0);
 

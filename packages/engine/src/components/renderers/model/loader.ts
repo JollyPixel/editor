@@ -10,7 +10,7 @@ import {
   Asset,
   Assets,
   type AssetLoaderContext
-} from "../../../systems/index.js";
+} from "../../../systems/index.ts";
 
 export type Model = {
   object: THREE.Group<THREE.Object3DEventMap>;

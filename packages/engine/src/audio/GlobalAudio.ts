@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { EventEmitter } from "@posva/event-emitter";
 
 // Import Internal Dependencies
-import { type AudioListenerAdapter } from "./internals/AudioListener.js";
+import { type AudioListenerAdapter } from "./internals/AudioListener.ts";
 
 export type VolumeObserver = {
   onMasterVolumeChange: (volume: number) => void;

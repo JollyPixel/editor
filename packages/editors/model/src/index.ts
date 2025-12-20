@@ -8,7 +8,7 @@ import { Player, loadPlayer } from "@jolly-pixel/runtime";
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { PlayerBehavior } from "./PlayerBehavior.js";
+import { PlayerBehavior } from "./PlayerBehavior.ts";
 
 const runtime = initRuntime();
 loadPlayer(runtime)

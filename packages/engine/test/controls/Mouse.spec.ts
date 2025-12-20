@@ -6,9 +6,9 @@ import assert from "node:assert/strict";
 import { Window } from "happy-dom";
 
 // Import Internal Dependencies
-import { Mouse, MouseEventButton } from "../../src/controls/devices/index.js";
-import { TouchIdentifier } from "../../src/controls/devices/Touchpad.class.js";
-import * as mocks from "./mocks/index.js";
+import { Mouse, MouseEventButton } from "../../src/controls/devices/index.ts";
+import { TouchIdentifier } from "../../src/controls/devices/Touchpad.class.ts";
+import * as mocks from "./mocks/index.ts";
 
 // CONSTANTS
 const kEmulatedBrowserWindow = new Window();

@@ -15,11 +15,12 @@
   },
   "scripts": {
     "prepublish": "rimraf ./dist && tsc -b",
-    "test": "tsx --test test/**/*.test.ts",
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "start-server": "tsx ./scripts/socket-server.js"
+    "test": "node --test test/**/*.test.ts",
+    "build": "tsc",
+    "vite:dev": "vite",
+    "vite:build": "vite build",
+    "vite:preview": "vite preview",
+    "start-server": "node ./scripts/socket-server.ts"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",

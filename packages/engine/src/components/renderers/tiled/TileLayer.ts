@@ -5,7 +5,7 @@ import * as THREE from "three";
 import type {
   TiledMap,
   TiledTileLayer
-} from "./types.js";
+} from "./types.ts";
 
 export class TileLayer {
   static* fromTileMap(

@@ -1,3 +1,3 @@
-export * from "./GameRenderer.js";
-export * from "./ThreeRenderer.js";
-export type { RenderMode } from "./RenderStrategy.js";
+export * from "./GameRenderer.ts";
+export * from "./ThreeRenderer.ts";
+export type { RenderMode } from "./RenderStrategy.ts";

@@ -14,7 +14,7 @@ import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js"
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 
 // Import Internal Dependencies
-// import { SpriteRenderer } from "./components/sprite/SpriteRenderer.class.js";
+// import { SpriteRenderer } from "./components/sprite/SpriteRenderer.class.ts";
 
 const canvasHTMLElement = document.querySelector("canvas") as HTMLCanvasElement;
 const runtime = new Player(canvasHTMLElement, {

@@ -7,7 +7,7 @@ import assert from "node:assert";
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { FixedTimeStep, type TimerAdapter } from "../../src/systems/FixedTimeStep.js";
+import { FixedTimeStep, type TimerAdapter } from "../../src/systems/FixedTimeStep.ts";
 
 // CONSTANTS
 const kDefaultFps = 60;

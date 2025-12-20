@@ -2,7 +2,7 @@
 import { mock } from "node:test";
 
 // Import Internal Dependencies
-import { ActorComponent, Behavior } from "../src/index.js";
+import { ActorComponent, Behavior } from "../src/index.ts";
 
 export function createActor(): {
   behaviors: Record<string, Behavior[]>;

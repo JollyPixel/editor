@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { Asset } from "./Base.js";
+import { Asset } from "./Base.ts";
 
 export class AssetQueue {
   #assets: Asset[] = [];

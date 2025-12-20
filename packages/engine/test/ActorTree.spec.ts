@@ -3,7 +3,7 @@ import { describe, test, mock } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { ActorTree } from "../src/index.js";
+import { ActorTree } from "../src/index.ts";
 
 describe("ActorTree", () => {
   describe("add", () => {

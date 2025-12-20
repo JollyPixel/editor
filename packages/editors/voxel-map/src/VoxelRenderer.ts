@@ -8,12 +8,12 @@ import {
 } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
-import { VoxelShapes } from "./shapes/index.js";
+import { VoxelShapes } from "./shapes/index.ts";
 import {
   GridRenderer,
   RollOverRenderer
-} from "./components/index.js";
-import { LayerTree } from "./LayerTree.js";
+} from "./components/index.ts";
+import { LayerTree } from "./LayerTree.ts";
 
 export interface VoxelRendererOptions {
   ratio?: number;

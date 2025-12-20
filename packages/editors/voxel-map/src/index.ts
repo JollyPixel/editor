@@ -7,8 +7,8 @@ import { Player, loadPlayer } from "@jolly-pixel/runtime";
 import { TreeView } from "@jolly-pixel/fs-tree/tree-view";
 
 // Import Internal Dependencies
-import { VoxelRenderer } from "./VoxelRenderer.js";
-import { CubeSelectorRenderer } from "./CubeSelectorRenderer.js";
+import { VoxelRenderer } from "./VoxelRenderer.ts";
+import { CubeSelectorRenderer } from "./CubeSelectorRenderer.ts";
 
 const runtime = initRuntime();
 initTreeView();

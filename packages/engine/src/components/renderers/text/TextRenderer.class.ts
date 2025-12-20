@@ -2,13 +2,13 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import * as Systems from "../../../systems/index.js";
-import { Actor, ActorComponent } from "../../../actor/index.js";
+import * as Systems from "../../../systems/index.ts";
+import { Actor, ActorComponent } from "../../../actor/index.ts";
 import {
   Text3D,
   type Text3DOptions
-} from "./Text3D.class.js";
-import { font, type Font } from "./loader.js";
+} from "./Text3D.class.ts";
+import { font, type Font } from "./loader.ts";
 
 export interface TextRendererOptions extends Omit<Text3DOptions, "font"> {
   path: string;

@@ -6,8 +6,8 @@ import assert from "node:assert/strict";
 import {
   GlobalAudioManager,
   type AudioLoadingOptions
-} from "../../src/audio/AudioManager.js";
-import type { AudioListenerAdapter } from "../../src/audio/internals/AudioListener.js";
+} from "../../src/audio/AudioManager.ts";
+import type { AudioListenerAdapter } from "../../src/audio/internals/AudioListener.ts";
 
 /**
  * These tests are currently skipped because they depend on THREE.js's Audio and PositionalAudio classes

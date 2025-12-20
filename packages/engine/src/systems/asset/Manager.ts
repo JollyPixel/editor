@@ -5,12 +5,12 @@ import * as THREE from "three";
 import {
   Asset,
   type LazyAsset
-} from "./Base.js";
-import { AssetQueue } from "./Queue.js";
+} from "./Base.ts";
+import { AssetQueue } from "./Queue.ts";
 import {
   AssetRegistry,
   type AssetLoaderContext
-} from "./Registry.js";
+} from "./Registry.ts";
 
 export type AssetOnProgressCallback = (
   progress: number,

@@ -3,8 +3,8 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { ActorComponent } from "../src/index.js";
-import { createActor } from "./mocks.js";
+import { ActorComponent } from "../src/index.ts";
+import { createActor } from "./mocks.ts";
 
 describe("ActorComponent", () => {
   test("should register component to actor and add to components to be started", () => {

@@ -5,8 +5,8 @@ import * as THREE from "three";
 import {
   Actor,
   ActorComponent
-} from "../../actor/index.js";
-import { BehaviorInitializer } from "./BehaviorInitializer.js";
+} from "../../actor/index.ts";
+import { BehaviorInitializer } from "./BehaviorInitializer.ts";
 
 export type BehaviorPropertiesValue =
   | string

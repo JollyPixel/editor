@@ -6,7 +6,7 @@ import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js
 import { LineMaterial } from "three/addons/lines/LineMaterial.js";
 
 // Import Internal Dependencies
-import { VoxelRenderer } from "../VoxelRenderer.js";
+import { VoxelRenderer } from "../VoxelRenderer.ts";
 
 export class RollOverRenderer extends ActorComponent {
   voxelRenderer: VoxelRenderer;

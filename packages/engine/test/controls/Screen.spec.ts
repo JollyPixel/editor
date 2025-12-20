@@ -6,8 +6,8 @@ import assert from "node:assert/strict";
 import { Window } from "happy-dom";
 
 // Import Internal Dependencies
-import { Screen } from "../../src/controls/devices/index.js";
-import * as mocks from "./mocks/index.js";
+import { Screen } from "../../src/controls/devices/index.ts";
+import * as mocks from "./mocks/index.ts";
 
 // CONSTANTS
 const kEmulatedBrowserWindow = new Window();

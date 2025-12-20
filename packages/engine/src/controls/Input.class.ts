@@ -4,21 +4,21 @@ import { EventEmitter } from "@posva/event-emitter";
 import "reflect-metadata";
 
 // Import Internal Dependencies
-import * as devices from "./devices/index.js";
+import * as devices from "./devices/index.ts";
 import {
   BrowserWindowAdapter,
   type WindowAdapter
-} from "../adapters/index.js";
-import { mapKeyToExtendedKey } from "./devices/keyboard/code.js";
+} from "../adapters/index.ts";
+import { mapKeyToExtendedKey } from "./devices/keyboard/code.ts";
 import type {
   InputControl,
   InputMouseAction,
   InputKeyboardAction,
   InputCustomAction,
   KeyCode
-} from "./types.js";
+} from "./types.ts";
 
-export type { MouseEventButton } from "./devices/Mouse.class.js";
+export type { MouseEventButton } from "./devices/Mouse.class.ts";
 
 /**
  * @note default stand for mouse + keyboard

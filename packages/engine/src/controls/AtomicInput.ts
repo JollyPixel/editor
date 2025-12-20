@@ -1,11 +1,11 @@
 // Import Internal Dependencies
-import type { Input } from "./Input.class.js";
+import type { Input } from "./Input.class.ts";
 import {
   type MouseAction,
   type GamepadIndex,
   type GamepadButton,
   type ExtendedKeyCode
-} from "./devices/index.js";
+} from "./devices/index.ts";
 
 export interface InputCondition {
   evaluate(input: Input): boolean;

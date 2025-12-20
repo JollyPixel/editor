@@ -2,11 +2,11 @@
 import type {
   EventTargetAdapter,
   EventTargetListener
-} from "./eventTarget.js";
+} from "./eventTarget.ts";
 import {
   type NavigatorAdapter,
   BrowserNavigatorAdapter
-} from "./navigator.js";
+} from "./navigator.ts";
 
 export interface WindowAdapter extends EventTargetAdapter {
   onbeforeunload?: ((this: Window, ev: BeforeUnloadEvent) => any) | null;

@@ -2,10 +2,10 @@
 import { EventEmitter } from "@posva/event-emitter";
 
 // Import Internal Dependencies
-import type { CanvasAdapter } from "../../adapters/canvas.js";
+import type { CanvasAdapter } from "../../adapters/canvas.ts";
 import type {
   InputControl
-} from "../types.js";
+} from "../types.ts";
 
 export const TouchIdentifier = {
   // usually first finger/index

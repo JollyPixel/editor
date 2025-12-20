@@ -2,14 +2,14 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import type { GameInstance } from "../systems/GameInstance.js";
+import type { GameInstance } from "../systems/GameInstance.ts";
 import {
   type AudioListenerAdapter
-} from "./internals/AudioListener.js";
+} from "./internals/AudioListener.ts";
 import {
   AudioService,
   type AudioFactory
-} from "./internals/AudioService.js";
+} from "./internals/AudioService.ts";
 
 // CONSTANTS
 const kDefaultVolume = 1;

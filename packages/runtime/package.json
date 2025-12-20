@@ -7,7 +7,7 @@
   "scripts": {
     "prepublish": "rimraf ./dist && tsc -b",
     "build": "tsc",
-    "test-only": "tsx --test test/**/*.spec.ts",
+    "test-only": "node --test test/**/*.spec.ts",
     "test": "c8 -r html npm run test-only"
   },
   "publishConfig": {

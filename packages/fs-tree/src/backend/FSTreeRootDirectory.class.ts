@@ -4,7 +4,7 @@ import path from "node:path";
 // Import Internal Dependencies
 import {
   fileURLToPathExtended
-} from "./utils/fileURLToPathExtended.js";
+} from "./utils/fileURLToPathExtended.ts";
 
 export class FSTreeRootDirectory {
   #dir: string;

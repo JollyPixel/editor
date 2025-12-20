@@ -7,8 +7,8 @@ import assert from "node:assert/strict";
 import {
   Actor,
   Behavior
-} from "../src/index.js";
-import { createActor, createGameInstance } from "./mocks.js";
+} from "../src/index.ts";
+import { createActor, createGameInstance } from "./mocks.ts";
 
 describe("Behavior", () => {
   test("should register behavior to actor and add to components to be started", () => {

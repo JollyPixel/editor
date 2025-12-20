@@ -10,8 +10,8 @@ import {
   Touchpad,
   TouchIdentifier,
   type TouchPosition
-} from "../../src/controls/devices/index.js";
-import * as mocks from "./mocks/index.js";
+} from "../../src/controls/devices/index.ts";
+import * as mocks from "./mocks/index.ts";
 
 describe("Controls.Touchpad", () => {
   let touchpad: Touchpad;

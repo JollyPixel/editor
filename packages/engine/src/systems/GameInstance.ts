@@ -4,20 +4,20 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import {
   type GameRenderer
-} from "./rendering/index.js";
+} from "./rendering/index.ts";
 import {
   type Scene
-} from "./Scene.js";
-import { Input } from "../controls/Input.class.js";
-import { GlobalAudio } from "../audio/GlobalAudio.js";
+} from "./Scene.ts";
+import { Input } from "../controls/Input.class.ts";
+import { GlobalAudio } from "../audio/GlobalAudio.ts";
 import {
   type WindowAdapter,
   BrowserWindowAdapter
-} from "../adapters/window.js";
+} from "../adapters/window.ts";
 import {
   type GlobalsAdapter,
   BrowserGlobalsAdapter
-} from "../adapters/global.js";
+} from "../adapters/global.ts";
 
 export interface GameInstanceOptions {
   enableOnExit?: boolean;

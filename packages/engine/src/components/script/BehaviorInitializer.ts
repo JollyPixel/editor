@@ -6,18 +6,18 @@ import "reflect-metadata";
 import {
   Input,
   type InputListenerMetadata
-} from "../../controls/Input.class.js";
+} from "../../controls/Input.class.ts";
 import {
   SignalEvent,
   getActorComponentMetadata
-} from "../../actor/Signal.js";
-import { Behavior } from "./Behavior.js";
+} from "../../actor/Signal.ts";
+import { Behavior } from "./Behavior.ts";
 import {
   getBehaviorMetadata,
   type ScenePropertyType,
   type BehaviorMetadata
-} from "./BehaviorDecorators.js";
-import { type ConsoleAdapter } from "../../adapters/console.js";
+} from "./BehaviorDecorators.ts";
+import { type ConsoleAdapter } from "../../adapters/console.ts";
 
 // CONSTANTS
 const kDefaultValues: Record<ScenePropertyType, unknown> = {

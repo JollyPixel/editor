@@ -2,7 +2,7 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { Layer } from "./Layer.js";
+import { Layer } from "./Layer.ts";
 
 export class LayerTree {
   root: Layer;

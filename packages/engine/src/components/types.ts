@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { Actor } from "../actor/Actor.js";
+import { Actor } from "../actor/Actor.ts";
 
 export type StrictComponentEnum =
   | "ScriptBehavior"

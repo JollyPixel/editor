@@ -7,8 +7,8 @@ import {
   Actor,
   ActorComponent,
   ActorTree
-} from "../actor/index.js";
-import type { Component } from "../components/types.js";
+} from "../actor/index.ts";
+import type { Component } from "../components/types.ts";
 
 export type SceneEvents = {
   awake: [];

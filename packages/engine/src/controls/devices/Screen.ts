@@ -6,8 +6,8 @@ import {
   BrowserDocumentAdapter,
   type DocumentAdapter,
   type CanvasAdapter
-} from "../../adapters/index.js";
-import type { InputConnectable } from "../types.js";
+} from "../../adapters/index.ts";
+import type { InputConnectable } from "../types.ts";
 
 export type FullscreenState = "active" | "suspended";
 

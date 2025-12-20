@@ -7,7 +7,7 @@ import {
 // Import Internal Dependencies
 import {
   Assets
-} from "../../../systems/index.js";
+} from "../../../systems/index.ts";
 
 Assets.registry.loader(
   {

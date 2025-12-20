@@ -3,7 +3,7 @@ import * as THREE from "three";
 import type { Pass } from "three/addons/postprocessing/EffectComposer.js";
 
 // Import Internal Dependencies
-import type { RenderMode } from "./RenderStrategy.js";
+import type { RenderMode } from "./RenderStrategy.ts";
 
 export type RenderComponent = THREE.PerspectiveCamera | THREE.OrthographicCamera;
 

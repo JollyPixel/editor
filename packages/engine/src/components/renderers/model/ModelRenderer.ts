@@ -2,14 +2,14 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import * as Systems from "../../../systems/index.js";
-import { Actor, ActorComponent } from "../../../actor/index.js";
-import { model, type Model } from "./loader.js";
+import * as Systems from "../../../systems/index.ts";
+import { Actor, ActorComponent } from "../../../actor/index.ts";
+import { model, type Model } from "./loader.ts";
 
 import {
   ModelAnimation,
   type ModelAnimationClipNameRewriter
-} from "./ModelAnimation.js";
+} from "./ModelAnimation.ts";
 
 export interface ModelRendererAnimationOptions {
   clipNameRewriter?: ModelAnimationClipNameRewriter;

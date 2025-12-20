@@ -3,8 +3,8 @@ import { describe, test, beforeEach, mock } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { Gamepad } from "../../src/controls/devices/index.js";
-import * as mocks from "./mocks/index.js";
+import { Gamepad } from "../../src/controls/devices/index.ts";
+import * as mocks from "./mocks/index.ts";
 
 describe("Controls.Gamepad", () => {
   let gamepad: Gamepad;

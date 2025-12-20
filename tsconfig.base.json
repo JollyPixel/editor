@@ -1,9 +1,9 @@
 {
-  "extends": "@openally/config.typescript/esm",
+  "extends": "@openally/config.typescript/esm-ts-next",
   "compilerOptions": {
     "emitDecoratorMetadata": true,
     "composite": true,
     "types": ["node"],
-    "lib": ["DOM", "ES2022"]
+    "lib": ["DOM", "ES2022", "ES2023", "ES2024"]
   }
 }

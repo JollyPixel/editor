@@ -2,7 +2,7 @@
 import pm from "picomatch";
 
 // Import Internal Dependencies
-import { Actor } from "./Actor.js";
+import { Actor } from "./Actor.ts";
 
 export type ActorTreeNode = {
   actor: Actor;

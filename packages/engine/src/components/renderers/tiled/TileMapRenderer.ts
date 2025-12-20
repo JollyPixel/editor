@@ -2,12 +2,12 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import * as Systems from "../../../systems/index.js";
-import { Actor, ActorComponent } from "../../../actor/index.js";
-import { TileSet } from "./TileSet.js";
-import { TileObject } from "./TileObject.js";
-import { TileLayer } from "./TileLayer.js";
-import { tiledMap, type TiledMapAsset } from "./loader.js";
+import * as Systems from "../../../systems/index.ts";
+import { Actor, ActorComponent } from "../../../actor/index.ts";
+import { TileSet } from "./TileSet.ts";
+import { TileObject } from "./TileObject.ts";
+import { TileLayer } from "./TileLayer.ts";
+import { tiledMap, type TiledMapAsset } from "./loader.ts";
 
 export type TiledMapOrientation = "top-down" | "platformer";
 

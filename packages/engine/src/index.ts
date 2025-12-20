@@ -1,8 +1,8 @@
-export * as Systems from "./systems/index.js";
-export * from "./components/index.js";
-export * from "./actor/index.js";
-export * from "./controls/Input.class.js";
-export * from "./audio/AudioBackground.js";
-export * from "./audio/AudioManager.js";
-export * from "./controls/CombinedInput.js";
-export * from "./utils/index.js";
+export * as Systems from "./systems/index.ts";
+export * from "./components/index.ts";
+export * from "./actor/index.ts";
+export * from "./controls/Input.class.ts";
+export * from "./audio/AudioBackground.ts";
+export * from "./audio/AudioManager.ts";
+export * from "./controls/CombinedInput.ts";
+export * from "./utils/index.ts";

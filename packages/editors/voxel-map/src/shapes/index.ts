@@ -1,7 +1,7 @@
 // Import Internal Dependencies
-import { Cube } from "./Cube.js";
-import { Slope } from "./Slope.js";
-import { SlopeCorner } from "./SlopeCorner.js";
+import { Cube } from "./Cube.ts";
+import { Slope } from "./Slope.ts";
+import { SlopeCorner } from "./SlopeCorner.ts";
 
 export const VoxelShapes = {
   Cube,
@@ -9,4 +9,4 @@ export const VoxelShapes = {
   SlopeCorner
 } as const;
 
-export * from "./Shape.js";
+export * from "./Shape.ts";

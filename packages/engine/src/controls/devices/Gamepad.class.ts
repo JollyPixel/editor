@@ -8,8 +8,8 @@ import {
   BrowserNavigatorAdapter,
   type WindowAdapter,
   BrowserWindowAdapter
-} from "../../adapters/index.js";
-import type { InputControl } from "../types.js";
+} from "../../adapters/index.ts";
+import type { InputControl } from "../types.ts";
 
 export type GamepadIndex = 0 | 1 | 2 | 3;
 

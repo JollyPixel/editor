@@ -2,10 +2,10 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import type { InputKeyboardAction } from "../../controls/types.js";
-import type { MouseEventButton } from "../../controls/Input.class.js";
-import { Actor } from "../../actor/Actor.js";
-import { Behavior } from "../script/Behavior.js";
+import type { InputKeyboardAction } from "../../controls/types.ts";
+import type { MouseEventButton } from "../../controls/Input.class.ts";
+import { Actor } from "../../actor/Actor.ts";
+import { Behavior } from "../script/Behavior.ts";
 
 export interface Camera3DControlsOptions {
   bindings?: {

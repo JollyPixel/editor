@@ -1,6 +1,6 @@
 // Import Internal Dependencies
-import { FSTree } from "./backend/FSTree.class.js";
-import type { FSTreeFile } from "./backend/types.js";
+import { FSTree } from "./backend/FSTree.class.ts";
+import type { FSTreeFile } from "./backend/types.ts";
 
 interface CustomFSNode extends FSTreeFile {
   type: "script";

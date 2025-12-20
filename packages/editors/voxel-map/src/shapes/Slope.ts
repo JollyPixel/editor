@@ -2,7 +2,7 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { Shape, type ShapeOptions } from "./Shape.js";
+import { Shape, type ShapeOptions } from "./Shape.ts";
 
 export class Slope extends Shape {
   constructor(

@@ -1,19 +1,19 @@
 /* eslint-disable max-classes-per-file */
 // Import Internal Dependencies
-import type { Input } from "./Input.class.js";
+import type { Input } from "./Input.class.ts";
 import {
   type MouseAction,
   type GamepadIndex,
   type GamepadButton,
   type ExtendedKeyCode
-} from "./devices/index.js";
+} from "./devices/index.ts";
 
 import {
   AtomicInput,
   type InputCondition,
   type CombinedInputAction,
   type CombinedInputState
-} from "./AtomicInput.js";
+} from "./AtomicInput.ts";
 
 /**
  * Composite condition: ALL inputs must be satisfied.

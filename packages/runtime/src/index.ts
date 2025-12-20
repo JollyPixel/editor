@@ -3,11 +3,11 @@ import { Systems } from "@jolly-pixel/engine";
 import { getGPUTier } from "detect-gpu";
 
 // Import Internal Dependencies
-import { Loading } from "./components/Loading.js";
-import * as timers from "./utils/timers.js";
-import { getDevicePixelRatio } from "./utils/getDevicePixelRatio.js";
+import { Loading } from "./components/Loading.ts";
+import * as timers from "./utils/timers.ts";
+import { getDevicePixelRatio } from "./utils/getDevicePixelRatio.ts";
 
-import { Player, type PlayerOptions } from "./Player.js";
+import { Player, type PlayerOptions } from "./Player.ts";
 
 export interface LoadPlayerOptions {
   loadingDelay?: number;

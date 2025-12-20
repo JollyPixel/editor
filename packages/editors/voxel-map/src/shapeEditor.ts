@@ -6,7 +6,7 @@ import { Player, loadPlayer } from "@jolly-pixel/runtime";
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { OrbitCameraControls } from "./components/OrbitCamera.js";
+import { OrbitCameraControls } from "./components/OrbitCamera.ts";
 
 const canvasHTMLElement = document.querySelector("canvas") as HTMLCanvasElement;
 const runtime = new Player(canvasHTMLElement, {

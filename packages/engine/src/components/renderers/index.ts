@@ -1,22 +1,22 @@
-export * from "./sprite/SpriteRenderer.class.js";
-export * from "./tiled/TileMapRenderer.js";
-export * from "./model/ModelRenderer.js";
-export * from "./text/TextRenderer.class.js";
+export * from "./sprite/SpriteRenderer.class.ts";
+export * from "./tiled/TileMapRenderer.ts";
+export * from "./model/ModelRenderer.ts";
+export * from "./text/TextRenderer.class.ts";
 
 // Import Internal Dependencies
 import {
   tiledMap,
   type TiledSetAsset,
   type TiledMapAsset
-} from "./tiled/loader.js";
+} from "./tiled/loader.ts";
 import {
   model,
   type Model
-} from "./model/loader.js";
+} from "./model/loader.ts";
 import {
   font,
   type Font
-} from "./text/loader.js";
+} from "./text/loader.ts";
 
 export const Loaders = {
   tiledMap,

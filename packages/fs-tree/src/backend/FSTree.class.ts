@@ -11,7 +11,7 @@ import {
 import lodashSet from "lodash.set";
 
 // Import Internal Dependencies
-import { FSTreeRootDirectory } from "./FSTreeRootDirectory.class.js";
+import { FSTreeRootDirectory } from "./FSTreeRootDirectory.class.ts";
 import type {
   FSTreeFile,
   FSTreeTag,
@@ -19,7 +19,7 @@ import type {
   FSTreeDirent,
   FSTreeOptionalDirent,
   FSTreeFsOperations
-} from "./types.js";
+} from "./types.ts";
 
 export type FSTreeFileMap<
   T extends FSTreeFile = FSTreeFile

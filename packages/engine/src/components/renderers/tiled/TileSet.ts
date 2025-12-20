@@ -2,7 +2,7 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import type { TiledMapTileset } from "./types.js";
+import type { TiledMapTileset } from "./types.ts";
 
 // CONSTANTS
 const kFlippedAntiDiagonal = 0x20000000;

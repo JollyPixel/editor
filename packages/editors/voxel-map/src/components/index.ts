@@ -1,2 +1,2 @@
-export * from "./GridRenderer.js";
-export * from "./RollOverRenderer.js";
+export * from "./GridRenderer.ts";
+export * from "./RollOverRenderer.ts";

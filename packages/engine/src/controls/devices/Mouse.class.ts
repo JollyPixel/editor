@@ -6,14 +6,14 @@ import {
   BrowserDocumentAdapter,
   type DocumentAdapter,
   type CanvasAdapter
-} from "../../adapters/index.js";
+} from "../../adapters/index.ts";
 import type {
   InputControl
-} from "../types.js";
+} from "../types.ts";
 import {
   TouchIdentifier,
   type TouchPosition
-} from "./Touchpad.class.js";
+} from "./Touchpad.class.ts";
 
 export interface MouseButtonState {
   isDown: boolean;

@@ -7,9 +7,9 @@ import path from "node:path";
 import { match } from "ts-pattern";
 
 // Import Internal Dependencies
-import { FSTree } from "./FSTree.class.js";
-import { FSTreeWatcher } from "./FSTreeWatcher.class.js";
-import type { FSTreeFsOperations, FSTreeTag } from "./types.js";
+import { FSTree } from "./FSTree.class.ts";
+import { FSTreeWatcher } from "./FSTreeWatcher.class.ts";
+import type { FSTreeFsOperations, FSTreeTag } from "./types.ts";
 
 type PendingOperation = () => Promise<void>;
 

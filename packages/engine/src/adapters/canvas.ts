@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { EventTargetAdapter } from "./eventTarget.js";
+import type { EventTargetAdapter } from "./eventTarget.ts";
 
 export interface CanvasAdapter extends EventTargetAdapter {
   requestFullscreen(): void;

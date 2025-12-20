@@ -2,7 +2,7 @@
 import type {
   EventTargetAdapter,
   EventTargetListener
-} from "./eventTarget.js";
+} from "./eventTarget.ts";
 
 export interface DocumentAdapter extends EventTargetAdapter {
   fullscreenElement?: Element | null;

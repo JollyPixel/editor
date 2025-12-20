@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import {
   GameInstance
-} from "../systems/GameInstance.js";
+} from "../systems/GameInstance.ts";
 
 export interface GlobalsAdapter {
   setGame(instance: GameInstance<any>): void;

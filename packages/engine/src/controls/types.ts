@@ -3,7 +3,7 @@ import type {
   MouseEventButton,
   ExtendedKeyCode,
   KeyCode
-} from "./devices/index.js";
+} from "./devices/index.ts";
 
 /**
  * Interface for input controls that maintain state and need periodic updates using eg. requestAnimationFrame.

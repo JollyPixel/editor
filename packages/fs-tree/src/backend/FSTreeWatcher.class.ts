@@ -5,8 +5,8 @@ import { randomBytes } from "node:crypto";
 import chokidar, { type FSWatcher } from "chokidar";
 
 // Import Internal Dependencies
-import { FSTree } from "./FSTree.class.js";
-import type { FSTreeTag } from "./types.js";
+import { FSTree } from "./FSTree.class.ts";
+import type { FSTreeTag } from "./types.ts";
 
 export class FSTreeWatcher {
   #watcher: FSWatcher;

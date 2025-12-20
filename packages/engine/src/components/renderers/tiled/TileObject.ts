@@ -2,12 +2,12 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { Actor } from "../../../actor/Actor.js";
+import { Actor } from "../../../actor/Actor.ts";
 import type {
   TiledMap,
   TiledObject,
   TiledObjectLayer
-} from "./types.js";
+} from "./types.ts";
 
 export interface TileObjectOptions {
   zIndex: number;

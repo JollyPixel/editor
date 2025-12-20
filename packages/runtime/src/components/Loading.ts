@@ -5,7 +5,7 @@ import { classMap } from "lit/directives/class-map.js";
 import { property, state } from "lit/decorators.js";
 
 // Import Internal Dependencies
-import * as timers from "../utils/timers.js";
+import * as timers from "../utils/timers.ts";
 
 // CONSTANTS
 const kProgressAnimationDurationMs = 400;

@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { TreeViewSelector } from "./TreeViewSelector.class.js";
+import { TreeViewSelector } from "./TreeViewSelector.class.ts";
 
 interface DropLocation {
   target: Element;
