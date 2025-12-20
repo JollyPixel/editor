@@ -12,8 +12,9 @@ permissions:
 jobs:
   version:
     permissions:
-      contents: write  # for changesets/action to push to the repo
-      pull-requests: write  # for changesets/action to create PRs
+      id-token: write # Required for OIDC publishing
+      contents: write # Required for changesets to push version commit
+      pull-requests: write # Required for changesets to create PRs
     timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
@@ -25,7 +26,11 @@ jobs:
       - name: Setup node.js
         uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
         with:
-          node-version: 22
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install latest npm
+        run: npm install -g npm@latest
 
       - name: Install dependencies
         run: npm ci
@@ -42,4 +47,5 @@ jobs:
           publish: npm run ci:publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ""
+          NPM_CONFIG_PROVENANCE: true

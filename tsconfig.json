@@ -2,15 +2,6 @@
   "files": [],
   "references": [
     {
-      "path": "./packages/project"
-    },
-    {
-      "path": "./packages/server"
-    },
-    {
-      "path": "./packages/client"
-    },
-    {
       "path": "./packages/fs-tree"
     },
     {

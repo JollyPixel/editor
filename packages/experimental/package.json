@@ -2,6 +2,7 @@
   "name": "@jolly-pixel/experimental",
   "version": "1.0.0",
   "type": "module",
+  "private": true,
   "scripts": {
     "prepublish": "rimraf ./dist && tsc -b",
     "dev": "vite",

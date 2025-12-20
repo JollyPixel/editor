@@ -10,6 +10,17 @@
     "build": "vite build",
     "preview": "vite preview"
   },
+  "private": true,
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JollyPixel/editor",
+    "directory": "packages/editors/model"
+  },
   "keywords": [],
   "files": [
     "dist"

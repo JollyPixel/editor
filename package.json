@@ -15,9 +15,6 @@
     "packages/engine",
     "packages/runtime",
     "packages/fs-tree",
-    "packages/project",
-    "packages/server",
-    "packages/client",
     "packages/experimental",
     "packages/editors/voxel-map",
     "packages/editors/model"
@@ -37,7 +34,7 @@
     "@changesets/changelog-github": "^0.5.1",
     "@changesets/cli": "^2.9.2",
     "@openally/config.eslint": "^2.2.0",
-    "@openally/config.typescript": "^1.0.3",
+    "@openally/config.typescript": "1.2.1",
     "@types/node": "^24.0.10",
     "@types/three": "^0.180.0",
     "c8": "^10.1.3",

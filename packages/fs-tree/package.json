@@ -21,6 +21,16 @@
     "preview": "vite preview",
     "start-server": "tsx ./scripts/socket-server.js"
   },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JollyPixel/editor",
+    "directory": "packages/fs-tree"
+  },
   "keywords": [],
   "files": [
     "dist"
