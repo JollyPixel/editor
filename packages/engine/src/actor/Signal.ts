@@ -1,14 +1,17 @@
 // Import Third-party Dependencies
 import "reflect-metadata";
 
-// CONSTANTS
-const kActorComponentSignalKey = Symbol("ActorComponentSignalKey");
-
-export interface SignalMetadata {
-  signals: Set<string>;
-}
+// Import Internal Dependencies
+import {
+  getBehaviorMetadata,
+  createBehaviorMetadata
+} from "../components/script/BehaviorDecorators.ts";
 
 export type SignalListener<T extends unknown[]> = (...args: T[]) => void;
+
+export type ActorComponentSignalMetadata = {
+  signals: Set<string>;
+};
 
 export class SignalEvent<T extends unknown[] = []> {
   private listeners: SignalListener<T>[] = [];
@@ -44,31 +47,19 @@ export function Signal(): PropertyDecorator {
     object: Object,
     propertyName: string | symbol
   ): void {
-    const metadata = getActorComponentMetadata(object);
+    const metadata = getBehaviorMetadata(object);
     if (metadata) {
       metadata.signals.add(propertyName.toString());
     }
     else {
-      const metadata = createActorComponentMetadata();
+      const metadata = createBehaviorMetadata();
       metadata.signals.add(propertyName.toString());
 
       Reflect.defineMetadata(
-        kActorComponentSignalKey,
+        Symbol.for("BehaviorMetadata"),
         metadata,
         object
       );
     }
   };
-}
-
-function createActorComponentMetadata(): SignalMetadata {
-  return {
-    signals: new Set<string>()
-  };
-}
-
-export function getActorComponentMetadata(
-  object: Object
-): SignalMetadata | undefined {
-  return Reflect.getMetadata(kActorComponentSignalKey, object);
 }
