@@ -10,6 +10,10 @@ import { getDevicePixelRatio } from "./utils/getDevicePixelRatio.ts";
 import { Player, type PlayerOptions } from "./Player.ts";
 
 export interface LoadPlayerOptions {
+  /**
+   * @default 850
+   * Minimum delay (ms) before starting asset loading. Gives the loading UI time to render.
+   */
   loadingDelay?: number;
 }
 
