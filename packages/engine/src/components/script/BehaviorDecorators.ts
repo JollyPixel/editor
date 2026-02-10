@@ -39,6 +39,7 @@ export type BehaviorPropertyMetadata = {
 export type BehaviorMetadata = {
   properties: Map<BehaviorKey, BehaviorPropertyMetadata>;
   components: Map<BehaviorKey, SceneActorComponentType>;
+  signals: Set<string>;
 };
 
 export function SceneProperty(
@@ -115,9 +116,10 @@ export function getBehaviorMetadata(
   return Reflect.getMetadata(SceneProperty.Metadata, object);
 }
 
-function createBehaviorMetadata(): BehaviorMetadata {
+export function createBehaviorMetadata(): BehaviorMetadata {
   return {
     properties: new Map(),
-    components: new Map()
+    components: new Map(),
+    signals: new Set<string>()
   };
 }

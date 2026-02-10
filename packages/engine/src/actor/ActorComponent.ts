@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { EventEmitter } from "@posva/event-emitter";
+
 // Import Internal Dependencies
 import { Actor } from "./Actor.ts";
 import type {
@@ -10,7 +13,11 @@ export interface ActorComponentOptions {
   typeName: FreeComponentEnum;
 }
 
-export class ActorComponent implements Component {
+export type ActorComponentEvents = {
+  metadataInitialized: [];
+};
+
+export class ActorComponent extends EventEmitter<ActorComponentEvents> implements Component {
   actor: Actor;
   typeName: FreeComponentEnum;
 
@@ -19,6 +26,7 @@ export class ActorComponent implements Component {
   constructor(
     options: ActorComponentOptions
   ) {
+    super();
     this.actor = options.actor;
     this.typeName = options.typeName;
 

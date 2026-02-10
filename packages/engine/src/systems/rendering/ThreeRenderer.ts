@@ -173,6 +173,12 @@ export class ThreeRenderer extends EventEmitter<
         if (renderComponent instanceof THREE.PerspectiveCamera) {
           renderComponent.aspect = width / height;
         }
+        if (renderComponent instanceof THREE.OrthographicCamera) {
+          renderComponent.left = width / -2;
+          renderComponent.right = width / 2;
+          renderComponent.top = height / 2;
+          renderComponent.bottom = height / -2;
+        }
         renderComponent.updateProjectionMatrix();
       }
       this.emit("resize", { width, height });

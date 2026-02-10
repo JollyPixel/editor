@@ -207,7 +207,21 @@ export class Input extends EventEmitter<InputEvents> {
   }
 
   getScreenSize() {
-    return new THREE.Vector2(this.#canvas.clientWidth, this.#canvas.clientHeight);
+    return new THREE.Vector2(
+      this.#canvas.clientWidth,
+      this.#canvas.clientHeight
+    );
+  }
+
+  getScreenBounds() {
+    const screenSize = this.getScreenSize();
+
+    return {
+      left: screenSize.x / -2,
+      right: screenSize.x / 2,
+      top: screenSize.y / 2,
+      bottom: screenSize.y / -2
+    };
   }
 
   getMouseVisible() {
@@ -238,6 +252,16 @@ export class Input extends EventEmitter<InputEvents> {
     const y = (position.y / this.#canvas.clientHeight) * 2;
 
     return new THREE.Vector2(x - 1, (y - 1) * -1);
+  }
+
+  getMouseWorldPosition() {
+    const mouseNormalized = this.getMousePosition();
+    const currentScreenSize = this.getScreenSize();
+
+    return new THREE.Vector2(
+      mouseNormalized.x * (currentScreenSize.x / 2),
+      mouseNormalized.y * (currentScreenSize.y / 2)
+    );
   }
 
   getMouseDelta(

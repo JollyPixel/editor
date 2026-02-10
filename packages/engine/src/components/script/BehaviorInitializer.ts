@@ -8,8 +8,7 @@ import {
   type InputListenerMetadata
 } from "../../controls/Input.class.ts";
 import {
-  SignalEvent,
-  getActorComponentMetadata
+  SignalEvent
 } from "../../actor/Signal.ts";
 import { Behavior } from "./Behavior.ts";
 import {
@@ -47,7 +46,6 @@ export class BehaviorInitializer {
   ): BehaviorInitializer | null {
     const proto = Object.getPrototypeOf(behavior);
     const metadata = getBehaviorMetadata(proto);
-
     if (!metadata) {
       return null;
     }
@@ -79,14 +77,7 @@ export class BehaviorInitializer {
   }
 
   #bindSignalHandlers() {
-    const metadata = getActorComponentMetadata(
-      Object.getPrototypeOf(this.#behavior)
-    );
-    if (!metadata) {
-      return;
-    }
-
-    const { signals } = metadata;
+    const { signals } = this.#metadata;
     for (const propertyName of signals) {
       this.#behavior[propertyName] = new SignalEvent();
     }
