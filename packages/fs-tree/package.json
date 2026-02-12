@@ -2,6 +2,7 @@
   "name": "@jolly-pixel/fs-tree",
   "version": "1.0.0",
   "type": "module",
+  "private": true,
   "exports": {
     ".": {
       "import": "./dist/index.js",
