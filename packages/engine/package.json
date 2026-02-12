@@ -1,5 +1,6 @@
 {
   "name": "@jolly-pixel/engine",
+  "description": "Minimal and opiniated ECS framework on top of three.js.",
   "version": "1.0.0",
   "type": "module",
   "main": "dist/index.js",
