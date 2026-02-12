@@ -1,11 +1,8 @@
 // Import Third-party Dependencies
 import "reflect-metadata";
 
-// Import Internal Dependencies
-import {
-  getBehaviorMetadata,
-  createBehaviorMetadata
-} from "../components/script/BehaviorDecorators.ts";
+// CONSTANTS
+const kSignalMetadata = Symbol.for("SignalMetadata");
 
 export type SignalListener<T extends unknown[]> = (...args: T[]) => void;
 
@@ -47,19 +44,31 @@ export function Signal(): PropertyDecorator {
     object: Object,
     propertyName: string | symbol
   ): void {
-    const metadata = getBehaviorMetadata(object);
+    const metadata = getSignalMetadata(object);
     if (metadata) {
       metadata.signals.add(propertyName.toString());
     }
     else {
-      const metadata = createBehaviorMetadata();
+      const metadata = createSignalMetadata();
       metadata.signals.add(propertyName.toString());
 
       Reflect.defineMetadata(
-        Symbol.for("BehaviorMetadata"),
+        kSignalMetadata,
         metadata,
         object
       );
     }
+  };
+}
+
+export function getSignalMetadata(
+  object: Object
+): ActorComponentSignalMetadata | undefined {
+  return Reflect.getMetadata(kSignalMetadata, object);
+}
+
+export function createSignalMetadata(): ActorComponentSignalMetadata {
+  return {
+    signals: new Set()
   };
 }

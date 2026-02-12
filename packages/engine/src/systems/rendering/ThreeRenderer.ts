@@ -7,7 +7,8 @@ import { EventEmitter } from "@posva/event-emitter";
 // Import Internal Dependencies
 import type {
   GameRenderer,
-  RenderComponent
+  RenderComponent,
+  RendererEvents
 } from "./GameRenderer.ts";
 import type { Scene } from "../Scene.ts";
 import {
@@ -17,14 +18,7 @@ import {
   ComposerRenderStrategy
 } from "./RenderStrategy.ts";
 
-export type ThreeRendererEvents = {
-  resize: [
-    { width: number; height: number; }
-  ];
-  draw: [
-    { source: THREE.WebGLRenderer; }
-  ];
-};
+export type ThreeRendererEvents = RendererEvents;
 
 export interface ThreeRendererOptions {
   /**
