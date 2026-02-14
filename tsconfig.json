@@ -11,6 +11,9 @@
       "path": "./packages/runtime"
     },
     {
+      "path": "./packages/mcp-server"
+    },
+    {
       "path": "./packages/experimental"
     },
     {
