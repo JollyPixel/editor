@@ -142,7 +142,9 @@ export class Actor extends ActorTree {
   }
 
   destroy() {
-    this.components.forEach((component) => component.destroy?.());
+    for (let i = this.components.length - 1; i >= 0; i--) {
+      this.components[i].destroy?.();
+    }
 
     if (this.parent === null) {
       this.gameInstance.scene.tree.remove(this);

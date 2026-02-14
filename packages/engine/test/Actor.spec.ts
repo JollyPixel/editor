@@ -65,6 +65,38 @@ describe("Actor", () => {
       assert.strictEqual(gameInstance.scene.tree.remove.mock.calls.length, 1);
       assert.strictEqual(gameInstance.scene.tree.remove.mock.calls[0].arguments[0], actor);
     });
+
+    test("should destroy all components even when destroy splices the components array", () => {
+      const gameInstance = createGameInstance();
+      const actor = new Actor(gameInstance as any, { name: "foobar" });
+
+      const destroySpies: ReturnType<typeof mock.fn>[] = [];
+
+      // Create three mock components whose destroy() splices themselves
+      // from actor.components, reproducing the real ActorComponent behavior
+      for (let i = 0; i < 3; i++) {
+        const spy = mock.fn();
+        const component = {
+          destroy() {
+            spy();
+            const idx = actor.components.indexOf(this as any);
+            if (idx !== -1) {
+              actor.components.splice(idx, 1);
+            }
+          }
+        };
+        actor.components.push(component as any);
+        destroySpies.push(spy);
+      }
+
+      assert.strictEqual(actor.components.length, 3);
+      actor.destroy();
+
+      assert.strictEqual(actor.components.length, 0);
+      for (const spy of destroySpies) {
+        assert.strictEqual(spy.mock.calls.length, 1);
+      }
+    });
   });
 
   describe("markDestructionPending", () => {
