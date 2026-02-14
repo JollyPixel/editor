@@ -1,0 +1,17 @@
+{
+  "name": "@jolly-pixel/mcp-server",
+  "description": "MCP server for @jolly-pixel/engine — exposes docs, source, and tools to LLMs",
+  "version": "1.0.0",
+  "type": "module",
+  "bin": {
+    "jolly-pixel-mcp": "./src/index.ts"
+  },
+  "scripts": {
+    "start": "node src/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.26.0",
+    "@nodesecure/fs-walk": "2.0.0",
+    "zod": "3.25.76"
+  }
+}
