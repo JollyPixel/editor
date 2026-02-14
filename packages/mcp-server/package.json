@@ -3,6 +3,7 @@
   "description": "MCP server for @jolly-pixel/engine — exposes docs, source, and tools to LLMs",
   "version": "1.0.0",
   "type": "module",
+  "private": true,
   "bin": {
     "jolly-pixel-mcp": "./src/index.ts"
   },
