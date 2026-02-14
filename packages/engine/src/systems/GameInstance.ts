@@ -51,7 +51,7 @@ export class GameInstance<T = THREE.WebGLRenderer> {
       globalsAdapter = new BrowserGlobalsAdapter()
     } = options;
 
-    this.renderer = renderer as unknown as GameRenderer<T>;
+    this.renderer = renderer;
     this.scene = scene;
     this.input = input;
     this.audio = audio;

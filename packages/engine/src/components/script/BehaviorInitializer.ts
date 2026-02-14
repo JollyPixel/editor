@@ -7,9 +7,6 @@ import {
   Input,
   type InputListenerMetadata
 } from "../../controls/Input.class.ts";
-import {
-  SignalEvent
-} from "../../actor/Signal.ts";
 import { Behavior } from "./Behavior.ts";
 import {
   getBehaviorMetadata,
@@ -70,17 +67,9 @@ export class BehaviorInitializer {
   }
 
   load(): void {
-    this.#bindSignalHandlers();
     this.#resolveProperties();
     this.#resolveActorComponents();
     this.#resolveInputListeners();
-  }
-
-  #bindSignalHandlers() {
-    const { signals } = this.#metadata;
-    for (const propertyName of signals) {
-      this.#behavior[propertyName] = new SignalEvent();
-    }
   }
 
   #resolveInputListeners(): void {

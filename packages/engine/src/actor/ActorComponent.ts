@@ -3,6 +3,7 @@ import { EventEmitter } from "@posva/event-emitter";
 
 // Import Internal Dependencies
 import { Actor } from "./Actor.ts";
+import { getSignalMetadata, SignalEvent } from "./Signal.ts";
 import type {
   Component,
   FreeComponentEnum
@@ -32,6 +33,22 @@ export class ActorComponent extends EventEmitter<ActorComponentEvents> implement
 
     this.actor.components.push(this);
     this.actor.gameInstance.scene.componentsToBeStarted.push(this);
+
+    // Defer the initialization of signal decorators to ensure
+    // that the component instance is fully constructed
+    queueMicrotask(() => this.#initSignalDecorators());
+  }
+
+  #initSignalDecorators() {
+    const proto = Object.getPrototypeOf(this);
+    const metadata = getSignalMetadata(proto);
+
+    if (metadata) {
+      for (const propertyName of metadata.signals) {
+        this[propertyName] = new SignalEvent();
+      }
+    }
+    this.emit("metadataInitialized");
   }
 
   isDestroyed() {

@@ -46,7 +46,12 @@ function initRuntime() {
     .registerComponent(ModelRenderer, {
       path: "models/Standard.fbx"
     })
-    .registerComponent(PlayerBehavior);
+    .registerComponent(PlayerBehavior, {}, (_component) => {
+      // console.log(component);
+      // component.onPlayerPunch.connect(() => {
+      //   console.log("Player punched!");
+      // });
+    });
   // new Actor(gameInstance, { name: "duckModel" })
   //   .registerComponent(ModelRenderer, {
   //     path: "models/Duck.gltf"

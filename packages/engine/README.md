@@ -198,7 +198,19 @@ gameInstance.audio.observe(bg);
 gameInstance.audio.volume = 0.5;
 ```
 
-### 🔨 Internals
+### 🖼️ UI
+
+An orthographic 2D overlay drawn on top of the 3D scene.
+UI elements are anchored to screen edges and support pointer interaction through signals.
+
+- [UIRenderer](./docs/ui/ui-renderer.md) — orthographic camera and
+  CSS2D overlay that drives the UI layer.
+  - [UINode](./docs/ui/ui-node.md) — base positioning component with
+    anchor, offset, and pivot.
+  - [UISprite](./docs/ui/ui-sprite.md) — interactive sprite with
+    style, hover states, text labels, and pointer signals.
+
+### 📦 Internals
 
 - [Adapters](./docs/internals/adapters.md)
 - [Audio](./docs/internals/audio.md)

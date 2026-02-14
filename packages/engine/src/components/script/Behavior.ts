@@ -91,6 +91,5 @@ function initializeBehaviorMetadata(
   // Delay the loading to ensure that all properties are initialized
   setTimeout(() => {
     BehaviorInitializer.for(behavior)?.load();
-    behavior.emit("metadataInitialized");
   });
 }

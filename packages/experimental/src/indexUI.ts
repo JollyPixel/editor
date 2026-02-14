@@ -1,12 +1,10 @@
 // Import Third-party Dependencies
 import {
-  Actor
+  Actor,
+  UIRenderer,
+  UISprite
 } from "@jolly-pixel/engine";
 import { Player, loadPlayer } from "@jolly-pixel/runtime";
-import * as THREE from "three";
-
-// Import Internal Dependencies
-import { ButtonBehavior } from "./ButtonBehavior.ts";
 
 const canvasHTMLElement = document.querySelector("canvas") as HTMLCanvasElement;
 const runtime = new Player(canvasHTMLElement, {
@@ -14,37 +12,38 @@ const runtime = new Player(canvasHTMLElement, {
 });
 const { gameInstance } = runtime;
 
-const camera2DActor = new Actor(gameInstance, { name: "camera2D" });
+const camera2DActor = new Actor(gameInstance, { name: "camera2D" })
+  .registerComponent(UIRenderer, { near: 1 });
 
-const screenBounds = gameInstance.input.getScreenBounds();
+const uiButton = new Actor(gameInstance, {
+  name: "uiContainer",
+  parent: camera2DActor
+})
+  .registerComponentAndGet(UISprite, {
+    anchor: { y: "top" },
+    offset: { y: -50 },
+    size: { width: 200, height: 60 },
+    style: {
+      color: 0x0077ff
+    },
+    styleOnHover: {
+      color: 0x0099ff
+    },
+    text: {
+      textContent: "Click Me",
+      style: {
+        color: "#ffffff",
+        fontSize: "20px",
+        fontWeight: "bold"
+      }
+    }
+  });
 
-const camera = new THREE.OrthographicCamera(
-  screenBounds.left,
-  screenBounds.right,
-  screenBounds.top,
-  screenBounds.bottom,
-  1
-);
-camera.position.z = 10;
-gameInstance.renderer.addRenderComponent(camera);
-camera2DActor.threeObject.add(camera);
-
-const actorUIButton = new ButtonBehavior(camera2DActor, {
-  x: 0,
-  y: screenBounds.top - 50,
-  width: 200,
-  height: 60,
-  text: "Click Me!",
-  backgroundColor: 0x3498db,
-  hoverColor: 0x2980b9
+uiButton.onHover.connect(() => {
+  console.log("Button hovered!");
 });
-actorUIButton.on("metadataInitialized", () => {
-  actorUIButton.onHover.connect(() => {
-    console.log("Button hovered!");
-  });
-  actorUIButton.onClick.connect(() => {
-    console.log("Button clicked!");
-  });
+uiButton.onClick.connect(() => {
+  console.log("Button clicked!");
 });
 
 loadPlayer(runtime)
