@@ -10,6 +10,7 @@ export class FixedTimeStep {
   static MaxFramesPerSecond = 60;
 
   framesPerSecond = 60;
+  timestep = 1000 / this.framesPerSecond;
   clock: TimerAdapter;
 
   constructor(
@@ -30,6 +31,7 @@ export class FixedTimeStep {
       1,
       FixedTimeStep.MaxFramesPerSecond
     );
+    this.timestep = 1000 / this.framesPerSecond;
   }
 
   tick(
@@ -38,7 +40,7 @@ export class FixedTimeStep {
   ): { updates: number; timeLeft: number; } {
     this.clock.update();
 
-    const updateInterval = 1000 / this.framesPerSecond;
+    const updateInterval = this.timestep;
     let newAccumulatedTime = accumulatedTime;
 
     // Limit how many update()s to try and catch up,
@@ -54,7 +56,7 @@ export class FixedTimeStep {
     // Update
     let updates = 0;
     while (newAccumulatedTime >= updateInterval) {
-      if (callback?.(this.clock.getDelta())) {
+      if (callback?.(updateInterval)) {
         break;
       }
       newAccumulatedTime -= updateInterval;

@@ -112,7 +112,7 @@ describe("Systems.FixedTimeStep", () => {
   test("should work with custom frames per second", () => {
     const customFps = 30;
     const customUpdateInterval = 1000 / customFps;
-    fixedTimeStep.framesPerSecond = customFps;
+    fixedTimeStep.setFps(customFps);
 
     const accumulatedTime = customUpdateInterval * 2.5;
     const result = fixedTimeStep.tick(accumulatedTime);
