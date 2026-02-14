@@ -84,14 +84,6 @@ export class Actor extends ActorTree {
   ): this {
     const [options, callback] = args;
     const component = new componentClass(this, options);
-    if (this.components.indexOf(component) === -1) {
-      this.components.push(component);
-    }
-
-    const index = this.gameInstance.scene.componentsToBeStarted.indexOf(component);
-    if (index === -1) {
-      this.gameInstance.scene.componentsToBeStarted.push(component);
-    }
 
     callback?.(component as InstanceType<T>);
     if (this.awoken) {
@@ -109,14 +101,6 @@ export class Actor extends ActorTree {
   ): InstanceType<T> {
     const [options] = args;
     const component = new componentClass(this, options);
-    if (this.components.indexOf(component) === -1) {
-      this.components.push(component);
-    }
-
-    const index = this.gameInstance.scene.componentsToBeStarted.indexOf(component);
-    if (index === -1) {
-      this.gameInstance.scene.componentsToBeStarted.push(component);
-    }
 
     if (this.awoken) {
       component.awake?.();

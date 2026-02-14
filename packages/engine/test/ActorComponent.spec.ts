@@ -1,5 +1,5 @@
 // Import Node.js Dependencies
-import { describe, test } from "node:test";
+import { describe, test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
@@ -7,6 +7,10 @@ import { ActorComponent } from "../src/index.ts";
 import { createActor } from "./mocks.ts";
 
 describe("ActorComponent", () => {
+  beforeEach(() => {
+    ActorComponent.clearId();
+  });
+
   test("should register component to actor and add to components to be started", () => {
     const fakeActor = createActor();
 
@@ -19,6 +23,7 @@ describe("ActorComponent", () => {
     assert.deepEqual(fakeActor.components, [component]);
     assert.deepEqual(fakeActor.gameInstance.scene.componentsToBeStarted, [component]);
     assert.equal(component.actor, fakeActor);
+    assert.equal(component.id, 0);
     assert.equal(component.typeName, "TestComponent");
     assert.equal(component.pendingForDestruction, false);
   });
@@ -40,6 +45,8 @@ describe("ActorComponent", () => {
 
     assert.deepEqual(fakeActor.components, [component1, component2]);
     assert.deepEqual(fakeActor.gameInstance.scene.componentsToBeStarted, [component1, component2]);
+    assert.equal(component1.id, 0);
+    assert.equal(component2.id, 1);
   });
 
   test("should not be destroyed initially", () => {

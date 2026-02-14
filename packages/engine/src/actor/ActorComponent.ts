@@ -19,6 +19,17 @@ export type ActorComponentEvents = {
 };
 
 export class ActorComponent extends EventEmitter<ActorComponentEvents> implements Component {
+  protected static Id = 0;
+
+  static generateNextId() {
+    return this.Id++;
+  }
+
+  static clearId() {
+    this.Id = 0;
+  }
+
+  id = ActorComponent.generateNextId();
   actor: Actor;
   typeName: FreeComponentEnum;
 
