@@ -6,10 +6,10 @@ import { EventEmitter } from "@posva/event-emitter";
 
 // Import Internal Dependencies
 import type {
-  GameRenderer,
+  Renderer,
   RenderComponent,
   RendererEvents
-} from "./GameRenderer.ts";
+} from "./Renderer.ts";
 import type { Scene } from "../Scene.ts";
 import {
   type RenderMode,
@@ -30,7 +30,7 @@ export interface ThreeRendererOptions {
 
 export class ThreeRenderer extends EventEmitter<
   ThreeRendererEvents
-> implements GameRenderer {
+> implements Renderer {
   webGLRenderer: THREE.WebGLRenderer;
   renderComponents: RenderComponent[] = [];
   renderStrategy: RenderStrategy;

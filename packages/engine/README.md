@@ -51,7 +51,7 @@ each frame.
 
 - [GameInstance](./docs/systems/game-instance.md) — top-level orchestrator that ties the renderer, scene,
   input, and audio into a unified game loop.
-  - [GameRenderer](./docs/systems/game-renderer.md) — abstracts the Three.js render pipeline and supports
+  - [Renderer](./docs/systems/renderer.md) — abstracts the Three.js render pipeline and supports
     direct and post-processing render strategies.
   - [Scene](./docs/systems/scene.md) — the ECS world manager that owns the actor tree and drives
     per-frame lifecycle (awake → start → update → destroy).

@@ -35,7 +35,7 @@ export class Player {
     const scene = new Systems.SceneEngine();
     const renderer = new Systems.ThreeRenderer(
       canvas, { scene, renderMode: "direct" }
-    ) as unknown as Systems.GameRenderer<THREE.WebGLRenderer>;
+    ) as unknown as Systems.Renderer<THREE.WebGLRenderer>;
     this.gameInstance = new Systems.GameInstance(renderer, {
       enableOnExit: true,
       scene

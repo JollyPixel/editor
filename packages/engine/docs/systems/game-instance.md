@@ -2,7 +2,7 @@
 
 The `GameInstance` is the central orchestrator of the engine. It
 wires together the [Scene](scene.md),
-[GameRenderer](game-renderer.md), [Input](../controls/input.md),
+[Renderer](renderer.md), [Input](../controls/input.md),
 and [Audio](../audio/audio.md) systems and drives the main
 **connect → update → render** loop.
 
@@ -26,7 +26,7 @@ const renderer = new ThreeRenderer(canvas, { scene });
 const game = new GameInstance(renderer, { scene });
 ```
 
-The constructor accepts a [GameRenderer](game-renderer.md) and a
+The constructor accepts a [Renderer](renderer.md) and a
 `GameInstanceOptions` object:
 
 ```ts
@@ -139,6 +139,6 @@ if (input.isKeyDown("Space")) {
 ### See also
 
 - [Scene](scene.md) — actor tree, lifecycle, and destruction
-- [GameRenderer](game-renderer.md) — rendering pipeline
+- [Renderer](renderer.md) — rendering pipeline
 - [Input](../controls/input.md) — input handling
 - [Actor](../actor/actor.md) — the engine's core entity

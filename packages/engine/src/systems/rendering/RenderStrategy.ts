@@ -6,7 +6,7 @@ import type {
 } from "three/addons/postprocessing/EffectComposer.js";
 
 // Import Internal Dependencies
-import type { RenderComponent } from "./GameRenderer.ts";
+import type { RenderComponent } from "./Renderer.ts";
 
 export type RenderMode = "direct" | "composer";
 

@@ -3,7 +3,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import {
-  type GameRenderer
+  type Renderer
 } from "./rendering/index.ts";
 import {
   type Scene
@@ -31,7 +31,7 @@ export interface GameInstanceOptions {
 }
 
 export class GameInstance<T = THREE.WebGLRenderer> {
-  renderer: GameRenderer<T>;
+  renderer: Renderer<T>;
   input: Input;
   loadingManager: THREE.LoadingManager = new THREE.LoadingManager();
   scene: Scene;
@@ -40,7 +40,7 @@ export class GameInstance<T = THREE.WebGLRenderer> {
   #windowAdapter: WindowAdapter;
 
   constructor(
-    renderer: GameRenderer<T>,
+    renderer: Renderer<T>,
     options: GameInstanceOptions
   ) {
     const {
