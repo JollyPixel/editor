@@ -1,9 +1,9 @@
 // Import Third-party Dependencies
 import Stats from "stats.js";
 import * as THREE from "three";
-import {
-  Systems
-} from "@jolly-pixel/engine";
+
+// Import Internal Dependencies
+import { Systems } from "@jolly-pixel/engine";
 
 export interface PlayerOptions {
   /**
@@ -15,15 +15,13 @@ export interface PlayerOptions {
 
 export class Player {
   gameInstance: Systems.GameInstance;
+  loop = new Systems.FixedTimeStep();
+
   canvas: HTMLCanvasElement;
   stats?: Stats;
-  clock = new THREE.Clock();
   manager = new THREE.LoadingManager();
 
-  framesPerSecond = 60;
-
   #isRunning = false;
-  #deltaTime = 0;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -69,8 +67,24 @@ export class Player {
     }
 
     this.gameInstance.connect();
+    this.loop.start();
     const renderer = this.gameInstance.renderer.getSource();
-    renderer.setAnimationLoop(this.tick);
+    renderer.setAnimationLoop(() => {
+      this.loop.tick({
+        fixedUpdate: (fixedDelta) => {
+          // fixedDelta is in ms, but gameInstance.update expects seconds
+          const exit = this.gameInstance.update(fixedDelta / 1000);
+          if (exit) {
+            this.stop();
+          }
+        },
+        update: (_interpolation, _delta) => {
+          this.stats?.begin();
+          this.gameInstance.render();
+          this.stats?.end();
+        }
+      });
+    });
   }
 
   stop() {
@@ -79,44 +93,11 @@ export class Player {
     }
 
     this.#isRunning = false;
+    this.loop.stop();
     this.gameInstance.input.exited = true;
     const renderer = this.gameInstance.renderer.getSource();
     renderer.setAnimationLoop(null);
 
     this.gameInstance.disconnect();
   }
-
-  setFps(
-    framesPerSecond: number | undefined
-  ): void {
-    if (!framesPerSecond) {
-      return;
-    }
-
-    this.framesPerSecond = THREE.MathUtils.clamp(
-      framesPerSecond,
-      1,
-      60
-    );
-  }
-
-  tick = () => {
-    this.#deltaTime += this.clock.getDelta();
-
-    const interval = 1 / this.framesPerSecond;
-    if (this.#deltaTime >= interval) {
-      this.stats?.begin();
-      const exit = this.gameInstance.update(this.#deltaTime);
-      if (exit) {
-        this.stop();
-
-        return;
-      }
-
-      this.gameInstance.render();
-
-      this.#deltaTime %= interval;
-      this.stats?.end();
-    }
-  };
 }

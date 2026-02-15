@@ -1,68 +1,122 @@
-// Import Third-party Dependencies
-import * as THREE from "three";
+// CONSTANTS
+const kDefaultMaxFps = 60;
+const kDefaultFixedFps = 60;
+const kMaxAccumulatedSteps = 5;
 
-export interface TimerAdapter {
-  update: () => void;
-  getDelta: () => number;
+class InternalTimer {
+  #last = 0;
+  #delta = 0;
+
+  start() {
+    this.#last = performance.now();
+    this.#delta = 0;
+  }
+
+  update() {
+    const now = performance.now();
+    this.#delta = now - this.#last;
+    this.#last = now;
+  }
+
+  getDelta() {
+    return this.#delta;
+  }
+}
+
+export interface FixedTimeStepCallbacks {
+  // Called every fixed step (physics/deterministic logic)
+  fixedUpdate: (fixedDelta: number) => void;
+  // Called every frame (rendering/variable logic)
+  update?: (interpolation: number, delta: number) => void;
 }
 
 export class FixedTimeStep {
-  static MaxFramesPerSecond = 60;
+  static MaxFramesPerSecond = kDefaultMaxFps;
 
-  framesPerSecond = 60;
-  timestep = 1000 / this.framesPerSecond;
-  clock: TimerAdapter;
+  #timer: InternalTimer;
+  #accumulated = 0;
+  #fixedDelta: number;
+  #maxAccumulated: number;
+  #running = false;
+
+  framesPerSecond = kDefaultMaxFps;
+  fixedFramesPerSecond = kDefaultFixedFps;
 
   constructor(
-    clock: TimerAdapter = new THREE.Timer()
+    fps: number = kDefaultMaxFps,
+    fixedFps: number = kDefaultFixedFps
   ) {
-    this.clock = clock;
+    this.framesPerSecond = fps;
+    this.fixedFramesPerSecond = fixedFps;
+    this.#fixedDelta = 1000 / this.fixedFramesPerSecond;
+    this.#maxAccumulated = kMaxAccumulatedSteps * this.#fixedDelta;
+    this.#timer = new InternalTimer();
   }
 
   setFps(
-    framesPerSecond: number | undefined
+    fps: number,
+    fixedFps: number = fps
   ): void {
-    if (!framesPerSecond) {
+    if (typeof fps === "number") {
+      this.framesPerSecond = Math.max(1, Math.min(fps, FixedTimeStep.MaxFramesPerSecond));
+    }
+    if (typeof fixedFps === "number") {
+      this.fixedFramesPerSecond = Math.max(1, Math.min(fixedFps, FixedTimeStep.MaxFramesPerSecond));
+    }
+
+    this.#fixedDelta = 1000 / this.fixedFramesPerSecond;
+    this.#maxAccumulated = kMaxAccumulatedSteps * this.#fixedDelta;
+  }
+
+  start() {
+    this.#accumulated = 0;
+    this.#timer.start();
+    this.#running = true;
+  }
+
+  stop() {
+    this.#running = false;
+  }
+
+  /**
+   * Main loop. Call this from your requestAnimationFrame or similar.
+   * @param callbacks { fixedUpdate, update }
+   */
+  tick(
+    callbacks: FixedTimeStepCallbacks
+  ): void {
+    if (!this.#running) {
       return;
     }
 
-    this.framesPerSecond = THREE.MathUtils.clamp(
-      framesPerSecond,
-      1,
-      FixedTimeStep.MaxFramesPerSecond
-    );
-    this.timestep = 1000 / this.framesPerSecond;
-  }
-
-  tick(
-    accumulatedTime: number,
-    callback?: (deltaTime: number) => boolean
-  ): { updates: number; timeLeft: number; } {
-    this.clock.update();
-
-    const updateInterval = this.timestep;
-    let newAccumulatedTime = accumulatedTime;
-
-    // Limit how many update()s to try and catch up,
-    // to avoid falling into the "black pit of despair" aka "doom spiral".
-    // where every tick takes longer than the previous one.
-    // See http://blogs.msdn.com/b/shawnhar/archive/2011/03/25/technical-term-that-should-exist-quot-black-pit-of-despair-quot.aspx
-    const maxAccumulatedUpdates = 5;
-    const maxAccumulatedTime = maxAccumulatedUpdates * updateInterval;
-    if (newAccumulatedTime > maxAccumulatedTime) {
-      newAccumulatedTime = maxAccumulatedTime;
+    this.#timer.update();
+    let delta = this.#timer.getDelta();
+    if (delta > 1000) {
+      // Prevent huge catch-up after tab switch or pause
+      delta = this.#fixedDelta;
+    }
+    this.#accumulated += delta;
+    if (this.#accumulated > this.#maxAccumulated) {
+      this.#accumulated = this.#maxAccumulated;
     }
 
-    // Update
-    let updates = 0;
-    while (newAccumulatedTime >= updateInterval) {
-      if (callback?.(updateInterval)) {
+    // Fixed update steps
+    let steps = 0;
+    while (this.#accumulated >= this.#fixedDelta) {
+      callbacks.fixedUpdate(this.#fixedDelta);
+      this.#accumulated -= this.#fixedDelta;
+      steps++;
+      if (steps > kMaxAccumulatedSteps) {
+        // Avoid spiral of death
+        this.#accumulated = 0;
         break;
       }
-      newAccumulatedTime -= updateInterval;
-      updates++;
     }
 
-    return { updates, timeLeft: newAccumulatedTime };
+    // Variable update (render/interpolation)
+    if (callbacks.update) {
+      const alpha = this.#accumulated / this.#fixedDelta;
+      callbacks.update(alpha, delta);
+    }
   }
 }
