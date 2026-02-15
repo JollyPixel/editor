@@ -21,7 +21,7 @@ export type RendererEvents = {
   ];
 };
 
-export interface GameRenderer<T = any, Events extends GenericEventMap = RendererEvents> {
+export interface Renderer<T = any, Events extends GenericEventMap = RendererEvents> {
   readonly canvas: HTMLCanvasElement;
 
   getSource(): T;

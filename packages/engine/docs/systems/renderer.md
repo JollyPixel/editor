@@ -1,6 +1,6 @@
-## GameRenderer
+## Renderer
 
-The `GameRenderer` interface defines the rendering pipeline used
+The `Renderer` interface defines the rendering pipeline used
 by [GameInstance](game-instance.md). It abstracts over the
 underlying graphics API so the rest of the engine only depends on
 a small set of operations: resize, draw, and clear.
