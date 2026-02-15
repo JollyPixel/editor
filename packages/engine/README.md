@@ -8,24 +8,25 @@
 
 ## 📌 About
 
-Minimal and opinionated [ECS](https://en.wikipedia.org/wiki/Entity_component_system) built on top of Three.js.
+Minimal and opinionated [ECS][ecs] built on top of Three.js inspired by [Superpowers][superpowers] and [Craftstudio][craftstudio].
 
-> [!NOTE]
-> JollyPixel is heavily inspired by [Superpowers](https://github.com/superpowers) for the naming (such as Actor instead of Entity).
+> [!WARNING]
+> The engine is still in a heavy phase of development (expect frequent API breaking changes).
 
 ## 💡 Features
 
-- Actor/Component architecture with scene tree
-- Godot-like [Signals](https://docs.godotengine.org/en/stable/getting_started/step_by_step/signals.html) for Actors and Components
+- [ECS][ecs] architecture with Actors, Components, and Scenes
+- Godot-like [Signals][signals]
 - Behavior scripts
 - Input controls (mouse, keyboard, gamepads, touchpad)
 - Built-in renderers (3D models, 3D text, sprites, …)
 - Asset management
 - Audio (background music, sound library, spatial audio)
+- UI toolkits for minimal in-game interfaces
 
 ## 💃 Getting Started
 
-This package is available in the Node Package Repository and can be easily installed with [npm](https://docs.npmjs.com/getting-started/what-is-npm) or [yarn](https://yarnpkg.com).
+This package is available in the Node Package Repository and can be easily installed with [npm][npm] or [yarn][yarn].
 
 ```bash
 $ npm i @jolly-pixel/engine
@@ -33,9 +34,16 @@ $ npm i @jolly-pixel/engine
 $ yarn add @jolly-pixel/engine
 ```
 
+## 🔎 Guides (WIP 🚧)
+
+- [Hello World with JollyPixel Engine](./docs/guides/hello-world.md)
+
 ## 📚 API
 
 ### ⚙️ Systems
+
+> [!TIP]
+> [@jolly-pixel/runtime](../runtime/README.md) manage most of that for you
 
 Systems are responsible for driving the game loop, orchestrating rendering, and managing shared
 resources such as assets. They operate on actors and their components
@@ -49,6 +57,9 @@ each frame.
     per-frame lifecycle (awake → start → update → destroy).
 - [Asset](./docs/asset.md) — lazy-loading asset pipeline with a
   registry of loaders, a queue, and a cache.
+
+<details>
+<summary>Code Example</summary>
 
 ```ts
 import { Systems, Actor } from "@jolly-pixel/engine";
@@ -66,65 +77,75 @@ const game = new Systems.GameInstance(renderer, {
 game.connect();
 ```
 
-> [!TIP]
-> [@jolly-pixel/runtime](../runtime/README.md) manage most of that for you
+</details>
 
 ### 🎭 Actor
 
 An Actor is a named node in the scene tree that holds a Transform, a list of Components, and a
-dictionary of Behaviors. The engine uses the name *Actor* (inspired by
-[Superpowers](https://github.com/superpowers)) instead of the
-traditional *Entity* term.
+dictionary of Behaviors. The engine uses the name *Actor* (inspired by [Superpowers][superpowers]) instead of the traditional *Entity* term.
 
-- [ActorTree](./docs/actor/actor-tree.md) — tree structure that
-  manages parent-child actor relationships and provides pattern-based
-  lookups.
 - [Actor](./docs/actor/actor.md) — the entity itself, holding its
   transform, components, and behaviors.
   - [Transform](./docs/actor/actor-transform.md) — built-in component
     wrapping a Three.js Object3D and exposing a complete local/global
     transform API (position, orientation, scale, movement).
+  - [ActorTree](./docs/actor/actor-tree.md) — tree structure that
+  manages parent-child actor relationships and provides pattern-based
+  lookups.
+
+<details>
+<summary>Code Example</summary>
 
 ```ts
-const player = new Actor(gameInstance, { name: "player" });
+const player = new Actor(gameInstance, {
+  name: "player"
+});
 player.transform.setLocalPosition(0, 1, 0);
 
 const child = new Actor(gameInstance, {
   name: "weapon",
   parent: player
 });
+
+player.destroy();
 ```
 
-### 🧩 Components
+</details>
+
+#### 🧩 Components
 
 Components are pure data and logic units attached to an Actor. They come in three flavours:
 
 - [ActorComponent](./docs/actor/actor-component.md) — the base class all components extend (behaviors and renderers are ActorComponent).
+  - [Signals](./docs/components/signal.md) — lightweight pub/sub event emitter for actor-level communication (Godot-inspired signals).
 - [Renderers](./docs/components/renderers.md) — visual components (sprites, models, text, tiled maps) that know how to draw themselves.
   - [Camera Controls](./docs/components/camera-3d-controls.md)
 - [Behavior](./docs/components/behavior.md) — script components with a property system and decorator-driven initialization.
-  - [Signals](./docs/components/signal.md) — lightweight pub/sub event emitter for actor-level communication (Godot-inspired signals).
+
+<details>
+<summary>Code Example</summary>
 
 ```ts
-import {
-  Behavior, ModelRenderer, Input,
-  Signal, SceneProperty, type SignalEvent
-} from "@jolly-pixel/engine";
+import { Behavior, Actor, SignalEvent } from "@jolly-pixel/engine";
+
+export interface PlayerBehaviorOptions {
+  speed?: number;
+}
 
 class PlayerBehavior extends Behavior {
-  @Signal()
-  onHit: SignalEvent;
+  onMovement = new SignalEvent();
+  speed = 0.1;
 
-  @SceneProperty({ type: "number" })
-  speed = 0.05;
-
-  @Input.listen("keyboard.down")
-  onKeyDown() {
-    console.log("key pressed");
+  constructor(
+    actor: Actor, options: PlayerBehaviorOptions = {}
+  ) {
+    super(actor);
+    this.speed = options?.speed ?? 0.1;
   }
 
   update() {
     if (this.actor.gameInstance.input.isKeyDown("ArrowUp")) {
+      this.onMovement.emit();
       this.actor.transform.moveForward(this.speed);
     }
   }
@@ -132,14 +153,15 @@ class PlayerBehavior extends Behavior {
 
 new Actor(gameInstance, { name: "player" })
   .registerComponent(ModelRenderer, { path: "models/Player.glb" })
-  .registerComponent(PlayerBehavior);
+  .registerComponent(PlayerBehavior, { speed: 0.5 });
 ```
+
+</details>
 
 ### 🎮 Device Controls
 
 Aggregates all physical devices (mouse, keyboard, gamepads, touchpad, screen) behind a unified
-query API so that behaviors can react to player actions without
-coupling to a specific device.
+query API so that behaviors can react to player actions without coupling to a specific device.
 
 - [Input](./docs/controls/input.md) — central input manager
   - [Mouse](./docs/controls/mouse.md)
@@ -147,8 +169,10 @@ coupling to a specific device.
   - [Gamepad](./docs/controls/gamepad.md)
   - [Touchpad](./docs/controls/touchpad.md)
   - [Screen](./docs/controls/screen.md)
-- [CombinedInput](./docs/controls/combinedinput.md) — composable input conditions (AND, OR, NOT, sequence)
-  for complex key bindings.
+- [CombinedInput](./docs/controls/combinedinput.md) — composable input conditions (AND, OR, NOT, sequence) for complex key bindings.
+
+<details>
+<summary>Code Example</summary>
 
 ```ts
 import { InputCombination } from "@jolly-pixel/engine";
@@ -168,6 +192,11 @@ if (dashCombo.evaluate(input)) {
 }
 ```
 
+> [!TIP]
+> In ActorComponent or Behavior input are accessible through this.actor.gameInstance.input
+
+</details>
+
 ### 🔊 Audio
 
 Manages sound playback across the engine. It provides a global volume controller, a factory for creating audio sources, and a playlist-based background music manager.
@@ -177,6 +206,9 @@ Manages sound playback across the engine. It provides a global volume controller
   - [AudioBackground](./docs/audio/audio-background.md) —
     playlist-based background music with sequential track playback,
     pause/resume/stop, and playlist chaining.
+
+<details>
+<summary>Code Example</summary>
 
 ```ts
 import { GlobalAudioManager, AudioBackground } from "@jolly-pixel/engine";
@@ -198,6 +230,8 @@ gameInstance.audio.observe(bg);
 gameInstance.audio.volume = 0.5;
 ```
 
+</details>
+
 ### 🖼️ UI
 
 An orthographic 2D overlay drawn on top of the 3D scene.
@@ -210,6 +244,20 @@ UI elements are anchored to screen edges and support pointer interaction through
   - [UISprite](./docs/ui/ui-sprite.md) — interactive sprite with
     style, hover states, text labels, and pointer signals.
 
+## Contributors guide
+
+If you are a developer **looking to contribute** to the project, you must first read the [CONTRIBUTING][contributing] guide.
+
+Once you have finished your development, check that the tests (and linter) are still good by running the following script:
+
+```bash
+$ npm run test
+$ npm run lint
+```
+
+> [!CAUTION]
+> In case you introduce a new feature or fix a bug, make sure to include tests for it as well.
+
 ### 📦 Internals
 
 - [Adapters](./docs/internals/adapters.md)
@@ -219,3 +267,13 @@ UI elements are anchored to screen edges and support pointer interaction through
 ## License
 
 MIT
+
+<!-- Reference-style links for DRYness -->
+
+[ecs]: https://en.wikipedia.org/wiki/Entity_component_system
+[superpowers]: https://github.com/superpowers
+[craftstudio]: https://sparklinlabs.itch.io/craftstudio
+[signals]: https://docs.godotengine.org/en/stable/getting_started/step_by_step/signals.html
+[npm]: https://docs.npmjs.com/getting-started/what-is-npm
+[yarn]: https://yarnpkg.com
+[contributing]: ../../CONTRIBUTING.md
