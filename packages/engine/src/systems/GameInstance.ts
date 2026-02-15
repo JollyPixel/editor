@@ -6,6 +6,10 @@ import {
   type GameRenderer
 } from "./rendering/index.ts";
 import {
+  Actor,
+  type ActorOptions
+} from "../actor/index.ts";
+import {
   type Scene
 } from "./Scene.ts";
 import { Input } from "../controls/Input.class.ts";
@@ -66,6 +70,16 @@ export class GameInstance<T = THREE.WebGLRenderer> {
     this.loadingManager = manager;
 
     return this;
+  }
+
+  createActor(
+    name: string,
+    options: Omit<ActorOptions, "name">
+  ): Actor {
+    return new Actor(this, {
+      name,
+      ...options
+    });
   }
 
   connect() {
