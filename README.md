@@ -60,6 +60,13 @@ Running test with npm workspace:
 $ npm run test -w <workspace>
 ```
 
+## Linter
+Running ESLint for all workspaces
+
+```bash
+$ npm run lint
+```
+
 ## Publishing package
 Each packages has his own `prepublishOnly` to build TypeScript source before publishing.
 
