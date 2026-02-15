@@ -97,13 +97,10 @@ dictionary of Behaviors. The engine uses the name *Actor* (inspired by [Superpow
 <summary>Code Example</summary>
 
 ```ts
-const player = new Actor(gameInstance, {
-  name: "player"
-});
+const player = gameInstance.createActor("Player");
 player.transform.setLocalPosition(0, 1, 0);
 
-const child = new Actor(gameInstance, {
-  name: "weapon",
+const child = gameInstance.createActor("Weapon", {
   parent: player
 });
 

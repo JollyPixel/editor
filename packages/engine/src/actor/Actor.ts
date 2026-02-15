@@ -38,7 +38,7 @@ export class Actor extends ActorTree {
   threeObject = new THREE.Group();
 
   constructor(
-    gameInstance: GameInstance,
+    gameInstance: GameInstance<any>,
     options: ActorOptions
   ) {
     super();
