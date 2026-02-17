@@ -1,4 +1,4 @@
-## Input
+# Input
 
 Unified input manager that aggregates mouse, keyboard, gamepad, and touchpad
 into a single high-level API. Handles device detection, preference switching,
@@ -30,7 +30,7 @@ function gameLoop() {
 gameLoop();
 ```
 
-### Device APIs
+## Device APIs
 
 Each device is available as a property on the `Input` instance
 (`input.mouse`, `input.keyboard`, `input.gamepad`, `input.touchpad`,
@@ -42,9 +42,9 @@ Each device is available as a property on the `Input` instance
 - [Touchpad](touchpad.md)
 - [Screen](screen.md)
 
-### Constructor
+## Constructor
 
-#### `new Input(canvas, options?)`
+### `new Input(canvas, options?)`
 
 ```ts
 interface InputOptions {
@@ -57,23 +57,23 @@ interface InputOptions {
 new Input(canvas: HTMLCanvasElement, options?: InputOptions);
 ```
 
-### Lifecycle
+## Lifecycle
 
-#### `connect()`
+### `connect()`
 
 Register all DOM event listeners for every device (mouse, keyboard,
 gamepad, touchpad, screen). Must be called before `update()`.
 
-#### `disconnect()`
+### `disconnect()`
 
 Remove all DOM event listeners. Call when tearing down the game loop.
 
-#### `update()`
+### `update()`
 
 Poll every device and flush per-frame state (just pressed / just released).
 Call once per frame **before** querying input state.
 
-### Events
+## Events
 
 `Input` extends `EventEmitter` and emits the following events:
 
@@ -88,9 +88,9 @@ type InputEvents = {
 };
 ```
 
-### Decorator
+## Decorator
 
-#### `Input.listen(type)`
+### `Input.listen(type)`
 
 Method decorator that registers a behavior method as a listener for an
 input event. Used with `reflect-metadata`.
@@ -124,61 +124,61 @@ Available listener types:
 - `input.devicePreferenceChange`
 - `input.exit`
 
-### Screen
+## Screen
 
-#### `enterFullscreen()`
+### `enterFullscreen()`
 
 Request fullscreen on the canvas element.
 
-#### `exitFullscreen()`
+### `exitFullscreen()`
 
 Exit fullscreen mode.
 
-#### `getScreenSize(): Vector2`
+### `getScreenSize(): Vector2`
 
 Returns canvas client dimensions as a `THREE.Vector2`.
 
-#### `getScreenBounds(): { left, right, top, bottom }`
+### `getScreenBounds(): { left, right, top, bottom }`
 
 Returns screen bounds centered at origin (useful for orthographic cameras).
 
-### Mouse
+## Mouse
 
-#### `getMousePosition(): Vector2`
+### `getMousePosition(): Vector2`
 
 Returns mouse position normalized to `[-1, 1]` on both axes.
 
-#### `getMouseWorldPosition(): Vector2`
+### `getMouseWorldPosition(): Vector2`
 
 Returns mouse position in world-space pixels, centered at origin.
 
-#### `getMouseDelta(normalizeWithSize?): Vector2`
+### `getMouseDelta(normalizeWithSize?): Vector2`
 
 Returns mouse movement delta since last frame.
 When `normalizeWithSize` is `true`, the delta is divided by half the canvas
 dimensions.
 
-#### `isMouseMoving(): boolean`
+### `isMouseMoving(): boolean`
 
 Returns `true` if the mouse moved during the current frame.
 
-#### `isMouseButtonDown(action): boolean`
+### `isMouseButtonDown(action): boolean`
 
 Returns `true` while the given button is held.
 
-#### `wasMouseButtonJustPressed(action): boolean`
+### `wasMouseButtonJustPressed(action): boolean`
 
 Returns `true` only on the frame the button was pressed.
 
-#### `wasMouseButtonJustReleased(action): boolean`
+### `wasMouseButtonJustReleased(action): boolean`
 
 Returns `true` only on the frame the button was released.
 
-#### `lockMouse()` / `unlockMouse()`
+### `lockMouse()` / `unlockMouse()`
 
 Request or release pointer lock on the canvas.
 
-#### `getMouseVisible(): boolean` / `setMouseVisible(visible)`
+### `getMouseVisible(): boolean` / `setMouseVisible(visible)`
 
 Get or set cursor visibility.
 
@@ -189,25 +189,25 @@ type InputMouseAction =
   | "ANY" | "NONE";
 ```
 
-### Keyboard
+## Keyboard
 
-#### `isKeyDown(key): boolean`
+### `isKeyDown(key): boolean`
 
 Returns `true` while the key is held.
 
-#### `wasKeyJustPressed(key): boolean`
+### `wasKeyJustPressed(key): boolean`
 
 Returns `true` only on the frame the key was pressed.
 
-#### `wasKeyJustReleased(key): boolean`
+### `wasKeyJustReleased(key): boolean`
 
 Returns `true` only on the frame the key was released.
 
-#### `wasKeyJustAutoRepeated(key): boolean`
+### `wasKeyJustAutoRepeated(key): boolean`
 
 Returns `true` on auto-repeat frames (held key).
 
-#### `getTextEntered(): string`
+### `getTextEntered(): string`
 
 Returns the character typed during the current frame (if any).
 
@@ -215,51 +215,51 @@ Returns the character typed during the current frame (if any).
 type InputKeyboardAction = KeyCode | "ANY" | "NONE";
 ```
 
-### Touchpad
+## Touchpad
 
-#### `isTouchDown(index): boolean`
+### `isTouchDown(index): boolean`
 
 Returns `true` while the touch point is active.
 
-#### `wasTouchStarted(index): boolean`
+### `wasTouchStarted(index): boolean`
 
 Returns `true` on the frame the touch began.
 
-#### `wasTouchEnded(index): boolean`
+### `wasTouchEnded(index): boolean`
 
 Returns `true` on the frame the touch ended.
 
-#### `getTouchPosition(index): Vector2`
+### `getTouchPosition(index): Vector2`
 
 Returns touch position normalized to `[-1, 1]`.
 
-#### `isTouchpadAvailable(): boolean`
+### `isTouchpadAvailable(): boolean`
 
 Returns `true` if the device supports touch events.
 
-### Gamepad
+## Gamepad
 
-#### `isGamepadButtonDown(gamepad, button): boolean`
+### `isGamepadButtonDown(gamepad, button): boolean`
 
 Returns `true` while the button is held.
 
-#### `wasGamepadButtonJustPressed(gamepad, button): boolean`
+### `wasGamepadButtonJustPressed(gamepad, button): boolean`
 
 Returns `true` only on the frame the button was pressed.
 
-#### `wasGamepadButtonJustReleased(gamepad, button): boolean`
+### `wasGamepadButtonJustReleased(gamepad, button): boolean`
 
 Returns `true` only on the frame the button was released.
 
-#### `getGamepadButtonValue(gamepad, button): number`
+### `getGamepadButtonValue(gamepad, button): number`
 
 Returns the analog value of a button (`0` to `1`).
 
-#### `getGamepadAxisValue(gamepad, axis): number`
+### `getGamepadAxisValue(gamepad, axis): number`
 
 Returns the current axis value (`-1` to `1`).
 
-#### `wasGamepadAxisJustPressed(gamepad, axis, options?): boolean`
+### `wasGamepadAxisJustPressed(gamepad, axis, options?): boolean`
 
 Returns `true` when an axis crosses the dead zone threshold.
 
@@ -272,11 +272,11 @@ interface GamepadAxisPressOptions {
 }
 ```
 
-#### `wasGamepadAxisJustReleased(gamepad, axis, options?): boolean`
+### `wasGamepadAxisJustReleased(gamepad, axis, options?): boolean`
 
 Returns `true` when an axis returns inside the dead zone.
 
-#### `setGamepadAxisDeadZone(deadZone)` / `getGamepadAxisDeadZone(): number`
+### `setGamepadAxisDeadZone(deadZone)` / `getGamepadAxisDeadZone(): number`
 
 Set or get the dead zone threshold for all axes.
 
@@ -298,13 +298,13 @@ type GamepadAxis =
   | number;
 ```
 
-### Misc
+## Misc
 
-#### `vibrate(pattern)`
+### `vibrate(pattern)`
 
 Trigger device vibration via `navigator.vibrate()`.
 
-#### `getDevicePreference(): InputDevicePreference`
+### `getDevicePreference(): InputDevicePreference`
 
 Returns `"default"` (mouse + keyboard) or `"gamepad"` based on which device
 was last active.

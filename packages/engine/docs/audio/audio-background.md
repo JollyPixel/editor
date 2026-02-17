@@ -1,4 +1,4 @@
-## AudioBackground
+# AudioBackground
 
 Playlist-based background music player. Supports multiple playlists
 with configurable end behavior (stop, loop, chain to another playlist).
@@ -50,7 +50,7 @@ await bg.playNext();
 bg.stop();
 ```
 
-### Types
+## Types
 
 ```ts
 // Reference a track by "playlistName.trackName"
@@ -76,7 +76,7 @@ interface AudioBackgroundTrack {
 }
 ```
 
-### Properties & API
+## Properties & API
 
 ```ts
 interface AudioBackground {

@@ -56,7 +56,7 @@ With a minimal CSS
 
 ## API
 
-### constructor(container: HTMLDivElement, options?: TreeViewOptions)
+## constructor(container: HTMLDivElement, options?: TreeViewOptions)
 
 | Option              | Type                                                                            | Description                                           |
 | ------------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------- |
@@ -66,37 +66,37 @@ With a minimal CSS
 
 ---
 
-### Public Methods
+## Public Methods
 
-#### `append(element: HTMLLIElement, type: "item" | "group", parentGroup?: HTMLLIElement): HTMLLIElement`
+### `append(element: HTMLLIElement, type: "item" | "group", parentGroup?: HTMLLIElement): HTMLLIElement`
 
 Append an item or group to the root or a given group.
 
-#### `insertBefore(element: HTMLLIElement, type: "item" | "group", referenceElement: HTMLLIElement): HTMLLIElement`
+### `insertBefore(element: HTMLLIElement, type: "item" | "group", referenceElement: HTMLLIElement): HTMLLIElement`
 
 Insert a node before another.
 
-#### `insertAt(element: HTMLLIElement, type: "item" | "group", index: number): HTMLLIElement | null`
+### `insertAt(element: HTMLLIElement, type: "item" | "group", index: number): HTMLLIElement | null`
 
 Insert a node at a given index (only for root-level nodes).
 
-#### `remove(element: HTMLLIElement): void`
+### `remove(element: HTMLLIElement): void`
 
 Remove an item or group and its children.
 
-#### `clear(): void`
+### `clear(): void`
 
 Clear the tree and any current selection.
 
-#### `scrollIntoView(element: Element): void`
+### `scrollIntoView(element: Element): void`
 
 Ensure the given element is visible and its ancestors expanded.
 
-#### `moveVertically(offset: number): void`
+### `moveVertically(offset: number): void`
 
 Change selection (Up: `-1`, Down: `+1`).
 
-#### `moveHorizontally(offset: number): void`
+### `moveHorizontally(offset: number): void`
 
 Collapse (`-1`) or expand (`+1`) groups.
 

@@ -1,4 +1,4 @@
-## ActorTree
+# ActorTree
 
 Hierarchical container that manages a collection of `Actor` nodes. It
 provides depth-first traversal, pattern-based lookups (including glob
@@ -38,9 +38,9 @@ for (const { actor, parent } of tree.walk()) {
 }
 ```
 
-### Constructor
+## Constructor
 
-#### `new ActorTree(options?)`
+### `new ActorTree(options?)`
 
 ```ts
 type ActorTreeNode = {
@@ -62,25 +62,25 @@ is added to or removed from this tree's direct `children` list.
 The `children: Actor[]` property holds the list of direct child
 actors managed by this tree.
 
-#### `add(actor)`
+### `add(actor)`
 
 Appends `actor` to the `children` list and fires the `addCallback`
 (if provided).
 
-#### `remove(actor)`
+### `remove(actor)`
 
 Removes `actor` from the `children` list and fires the
 `removeCallback` (if provided). No-op if the actor is not a direct
 child.
 
-#### `getActor(name): Actor | null`
+### `getActor(name): Actor | null`
 
 Returns the first actor whose `name` matches exactly. Supports
 path syntax with `/` separators to reach nested children
 (e.g. `"Player/RightHand/Weapon"`). Returns `null` if no match is
 found. Actors pending for destruction are excluded.
 
-#### `getActors(pattern): IterableIterator<Actor>`
+### `getActors(pattern): IterableIterator<Actor>`
 
 Returns an iterator of all actors matching a glob `pattern`
 (powered by picomatch). Supports:
@@ -91,36 +91,36 @@ Returns an iterator of all actors matching a glob `pattern`
 
 Actors pending for destruction are excluded.
 
-#### `getRootActors(): IterableIterator<Actor>`
+### `getRootActors(): IterableIterator<Actor>`
 
 Yields the direct children, skipping any that are pending for
 destruction.
 
-#### `getAllActors(): IterableIterator<Actor>`
+### `getAllActors(): IterableIterator<Actor>`
 
 Yields every actor in the tree via a depth-first walk (including
 actors pending for destruction).
 
-#### `destroyActor(actor)`
+### `destroyActor(actor)`
 
 Marks `actor` as pending for destruction. The actual cleanup is
 handled by the game systems on the next frame.
 
-#### `destroyAllActors()`
+### `destroyAllActors()`
 
 Marks every actor in the tree as pending for destruction.
 
-#### `walk(): IterableIterator<ActorTreeNode>`
+### `walk(): IterableIterator<ActorTreeNode>`
 
 Performs a depth-first traversal of the entire tree, yielding
 `{ actor, parent }` pairs starting from each root child.
 
-#### `walkFromNode(rootNode): IterableIterator<ActorTreeNode>`
+### `walkFromNode(rootNode): IterableIterator<ActorTreeNode>`
 
 Performs a depth-first traversal starting from `rootNode`'s
 children, yielding `{ actor, parent }` pairs.
 
-#### `[Symbol.iterator](): IterableIterator<Actor>`
+### `[Symbol.iterator](): IterableIterator<Actor>`
 
 Makes the tree iterable with `for...of`. Yields direct children,
 skipping any that are pending for destruction.

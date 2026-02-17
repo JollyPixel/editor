@@ -1,4 +1,4 @@
-## Signal
+# Signal
 
 Inspired by [Godot's signals](https://docs.godotengine.org/en/stable/getting_started/step_by_step/signals.html),
 signals are a lightweight pub/sub mechanism for communication
@@ -6,7 +6,7 @@ between [behaviors](../components/behavior.md). A `SignalEvent`
 is declared on a behavior with the `@Signal()` decorator and
 instantiated automatically during initialization.
 
-### Declaring a signal
+## Declaring a signal
 
 ```ts
 import {
@@ -27,7 +27,7 @@ export class PlayerBehavior extends Behavior {
 }
 ```
 
-### Listening to a signal
+## Listening to a signal
 
 Other behaviors can subscribe to a signal with `connect` and
 unsubscribe with `disconnect`:
@@ -40,7 +40,7 @@ player.onPlayerPunch.connect(() => {
 });
 ```
 
-### SignalEvent API
+## SignalEvent API
 
 ```ts
 interface SignalEvent<T extends unknown[] = []> {
@@ -60,7 +60,7 @@ interface SignalEvent<T extends unknown[] = []> {
 type SignalListener<T extends unknown[]> = (...args: T[]) => void;
 ```
 
-### Typed signals
+## Typed signals
 
 `SignalEvent` accepts a generic tuple to type the emitted arguments:
 
@@ -77,7 +77,7 @@ behavior.onDamage.connect((amount, source) => {
 });
 ```
 
-### See also
+## See also
 
 - [Behavior](./behavior.md)
 - [ActorComponent](../actor/actor-component.md)

@@ -1,10 +1,10 @@
-## Audio Internals
+# Audio Internals
 
 Low-level audio services used internally by `GlobalAudioManager`.
 These are not part of the public API but can be injected for testing
 or custom implementations.
 
-### AudioListener
+## AudioListener
 
 Minimal interface wrapping Three.js `AudioListener` master volume.
 
@@ -15,7 +15,7 @@ type AudioListenerAdapter = {
 };
 ```
 
-### AudioBuffer
+## AudioBuffer
 
 Buffer loading and caching layer.
 
@@ -37,7 +37,7 @@ Default implementations:
 - `ThreeAudioBufferLoader` — uses `THREE.AudioLoader`
 - `InMemoryAudioBufferCache` — in-memory `Map`-based cache
 
-### AudioService
+## AudioService
 
 Factory that creates `THREE.Audio` and `THREE.PositionalAudio` instances
 with automatic buffer caching.

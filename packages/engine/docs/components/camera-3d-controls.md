@@ -1,11 +1,11 @@
-## Camera3DControls
+# Camera3DControls
 
 A first-person camera controller built as a
 [Behavior](behavior.md). It creates a `PerspectiveCamera`,
 attaches the audio listener, and handles WASD movement with
 mouse-look rotation.
 
-### Usage
+## Usage
 
 ```ts
 import { Actor, Camera3DControls } from "@jolly-pixel/engine";
@@ -26,7 +26,7 @@ actor.addComponent(Camera3DControls, {
 });
 ```
 
-### Options
+## Options
 
 ```ts
 interface Camera3DControlsOptions {
@@ -54,7 +54,7 @@ interface Camera3DControlsOptions {
 | `maxRollDown` | `-π / 2` | Maximum downward pitch (radians) |
 | `bindings` | WASD + Space/Shift + middle mouse | Key and mouse bindings |
 
-### Runtime properties
+## Runtime properties
 
 ```ts
 interface Camera3DControls {
@@ -69,7 +69,7 @@ interface Camera3DControls {
 }
 ```
 
-### See also
+## See also
 
 - [Behavior](behavior.md)
 - [ActorComponent](../actor/actor-component.md)

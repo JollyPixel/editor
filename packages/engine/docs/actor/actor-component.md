@@ -1,4 +1,4 @@
-## ActorComponent
+# ActorComponent
 
 The engine follows an **Entity-Component** pattern inspired by
 game engines like Unity and Godot:
@@ -27,7 +27,7 @@ The engine ships with several built-in components:
 | [Camera3DControls](../components/camera-3d-controls.md) | First-person camera with WASD + mouse look |
 | [Behavior](../components/behavior.md) | Custom scripting with lifecycle hooks and decorators |
 
-### Attaching components
+## Attaching components
 
 Components are added to an actor with `addComponent` or
 `addComponentAndGet`:
@@ -46,7 +46,7 @@ When constructed, a component automatically registers itself on
 the actor's `components` list and is queued for its first `start()`
 call on the next frame.
 
-### Lifecycle
+## Lifecycle
 
 Components follow a lifecycle managed by the scene engine:
 
@@ -63,7 +63,7 @@ automatically registered for per-frame updates via the
 `needUpdate` property. Setting `needUpdate = false` on a
 component removes it from the update loop without destroying it.
 
-### API
+## API
 
 ```ts
 export type StrictComponentEnum =
@@ -105,7 +105,7 @@ interface ActorComponent {
 }
 ```
 
-### Accessing game context
+## Accessing game context
 
 The `context` getter provides a convenient shortcut to the
 game instance context without navigating through `actor.world`:
@@ -118,7 +118,7 @@ class PlayerBehavior extends Behavior {
 }
 ```
 
-### Events
+## Events
 
 `ActorComponent` extends `EventEmitter` and emits:
 
@@ -126,7 +126,7 @@ class PlayerBehavior extends Behavior {
 | ----- | ------------- |
 | `metadataInitialized` | After all decorator metadata (properties, signals, component refs) has been resolved |
 
-### See also
+## See also
 
 - [Behavior](../components/behavior.md)
 - [Signal](../components/signal.md)

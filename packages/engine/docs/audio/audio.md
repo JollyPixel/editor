@@ -1,4 +1,4 @@
-## Audio
+# Audio
 
 The audio system is built on top of Three.js Audio and provides three layers:
 
@@ -9,7 +9,7 @@ The audio system is built on top of Three.js Audio and provides three layers:
 `GlobalAudio` is created automatically by `World` and exposed
 as `world.audio`. The manager and background player are built on top of it.
 
-### 🔇 Browser autoplay policy
+## 🔇 Browser autoplay policy
 
 Browsers block audio playback until the user has interacted with the page
 (click, tap, key press). You must start playback from within a user gesture handler:
@@ -24,7 +24,7 @@ canvas.addEventListener("click", async() => {
 > This is a browser restriction, not an engine limitation.
 > See [Chrome Autoplay Policy](https://developer.chrome.com/blog/autoplay/).
 
-### GlobalAudio
+## GlobalAudio
 
 Master volume controller. Wraps a Three.js `AudioListener` and notifies observers when the volume changes.
 
@@ -53,7 +53,7 @@ interface GlobalAudio {
 }
 ```
 
-### GlobalAudioManager
+## GlobalAudioManager
 
 Loads audio files, configures volume/loop, and manages cleanup.
 Internally caches `AudioBuffer` instances to avoid redundant fetches.
@@ -79,6 +79,6 @@ interface AudioManager {
 GlobalAudioManager.fromWorld(world: World): GlobalAudioManager;
 ``` 
 
-### See also
+## See also
 
 - [AudioBackground](audio-background.md)

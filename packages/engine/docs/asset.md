@@ -1,4 +1,4 @@
-## Asset Loading
+# Asset Loading
 
 The asset system provides a unified pipeline for loading external resources
 (3D models, tiled maps, fonts, textures, audio, etc.). It is built around
@@ -18,7 +18,7 @@ import { Systems } from "@jolly-pixel/engine";
 const { Assets } = Systems;
 ```
 
-### Asset
+## Asset
 
 A lightweight value object describing a single resource.
 
@@ -49,7 +49,7 @@ interface Asset {
 If no `type` is given at construction time, the manager resolves it
 automatically from the file extension.
 
-### AssetManager
+## AssetManager
 
 Central façade that owns a loader registry, a waiting queue,
 and the loaded-asset cache.
@@ -74,7 +74,7 @@ interface AssetManager {
 }
 ```
 
-### Loading lifecycle
+## Loading lifecycle
 
 1. **Register loaders** — each loader calls `Assets.registry.loader()`
    at module evaluation time, binding file extensions to a type and
@@ -93,7 +93,7 @@ interface AssetManager {
 > When `autoload` is `true`, `loadAssets` is scheduled automatically
 > after each `load()` call, so you do not need to flush manually.
 
-### Built-in loaders
+## Built-in loaders
 
 The engine ships with three loaders. Each one registers itself
 when its module is imported.
@@ -120,7 +120,7 @@ const { tilemap, tilesets } = level.get();
 const font = myFont.get();
 ```
 
-### Writing a custom loader
+## Writing a custom loader
 
 To add support for a new file format, register a loader on the
 global `Assets.registry`:

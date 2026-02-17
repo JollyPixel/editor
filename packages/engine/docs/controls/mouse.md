@@ -1,4 +1,4 @@
-## Mouse
+# Mouse
 
 Low-level mouse device. Tracks button state, position, movement delta,
 scroll wheel, pointer lock, and double-click.
@@ -34,9 +34,9 @@ function gameLoop() {
 gameLoop();
 ```
 
-### Constructor
+## Constructor
 
-#### `new Mouse(options)`
+### `new Mouse(options)`
 
 ```ts
 interface MouseOptions {
@@ -48,7 +48,7 @@ interface MouseOptions {
 new Mouse(options: MouseOptions);
 ```
 
-### Types
+## Types
 
 ```ts
 const MouseEventButton = {
@@ -73,7 +73,7 @@ interface MouseButtonState {
 }
 ```
 
-### Events
+## Events
 
 ```ts
 type MouseEvents = {
@@ -85,7 +85,7 @@ type MouseEvents = {
 };
 ```
 
-### Properties
+## Properties
 
 ```ts
 interface Mouse {
@@ -106,7 +106,7 @@ interface Mouse {
 }
 ```
 
-### API
+## API
 
 ```ts
 interface Mouse {

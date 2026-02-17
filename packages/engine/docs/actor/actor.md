@@ -1,4 +1,4 @@
-## Actor
+# Actor
 
 The `Actor` is the central **entity** in the engine's
 Entity-Component architecture. On its own an actor is simply a
@@ -14,7 +14,7 @@ hierarchy (scene graph). Parent–child relationships drive
 transform inheritance: moving a parent automatically moves all of
 its descendants.
 
-### Creating an actor
+## Creating an actor
 
 ```ts
 import { Actor } from "@jolly-pixel/engine";
@@ -60,7 +60,7 @@ const hand = new Actor(world, {
 const found = world.scene.tree.getActor("Player/RightHand");
 ```
 
-### Adding components
+## Adding components
 
 An actor gains its capabilities through components. Use
 `addComponent` for a fluent (chainable) API, or
@@ -83,7 +83,7 @@ const camera = actor.addComponentAndGet(Camera3DControls, {
 });
 ```
 
-### Retrieving components
+## Retrieving components
 
 Use `getComponent` to look up a component by class or by type name.
 Use `getComponents` to iterate over all matching instances:
@@ -96,7 +96,7 @@ for (const enemyScript of actor.getComponents(EnemyBehavior)) {
 }
 ```
 
-### Managing Three.js children
+## Managing Three.js children
 
 Use `addChildren` and `removeChildren` to attach or detach
 Three.js objects (meshes, lights, helpers, etc.) to the actor's
@@ -122,7 +122,7 @@ On destruction, the actor traverses all remaining Three.js children
 and disposes their GPU resources (geometry and materials) before
 clearing the group.
 
-### Transform
+## Transform
 
 Every actor owns a [Transform](actor-transform.md) that wraps the
 underlying Three.js object. It provides a clean API for reading
@@ -133,7 +133,7 @@ global space.
 actor.transform.setLocalPosition(new THREE.Vector3(0, 2, 0));
 ```
 
-### Scene tree hierarchy
+## Scene tree hierarchy
 
 Because `Actor` extends [ActorTree](actor-tree.md), you can
 traverse children, search by name or glob pattern, and walk the
@@ -145,7 +145,7 @@ for (const child of player.getRootActors()) {
 }
 ```
 
-### Re-parenting
+## Re-parenting
 
 An actor can be moved to a different parent at runtime with
 `setParent`. By default the actor keeps its global (world) position and orientation.
@@ -160,11 +160,11 @@ Pass `keepLocal = true` to preserve the local values instead.
 hand.setParent(otherActor, true);
 ```
 
-### Lifecycle
+## Lifecycle
 
 See [ActorComponent](./actor-component.md#lifecycle) lifecycle section.
 
-### Destruction
+## Destruction
 
 Calling `markDestructionPending()` flags the actor (and
 recursively all its descendants) for destruction. While flagged,
@@ -179,7 +179,7 @@ if (player.isDestroyed()) {
 }
 ```
 
-### See also
+## See also
 
 - [ActorComponent](actor-component.md) — the component base type
 - [ActorTree](actor-tree.md) — tree traversal and lookups

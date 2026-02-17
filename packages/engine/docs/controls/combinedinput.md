@@ -1,4 +1,4 @@
-## CombinedInput
+# CombinedInput
 
 Declarative input combination system that lets you compose complex input
 conditions from simple building blocks. Build key chords, alternative
@@ -60,7 +60,7 @@ function gameLoop() {
 gameLoop();
 ```
 
-### InputCondition Interface
+## InputCondition Interface
 
 Every condition returned by `InputCombination` implements this interface:
 
@@ -71,21 +71,21 @@ interface InputCondition {
 }
 ```
 
-#### `evaluate(input): boolean`
+### `evaluate(input): boolean`
 
 Returns `true` when the condition is satisfied for the current frame.
 
-#### `reset()`
+### `reset()`
 
 Reset internal state (relevant for stateful conditions like sequences).
 
-### InputCombination
+## InputCombination
 
 Static factory class used to create all input conditions.
 
-### Atomic Conditions
+## Atomic Conditions
 
-#### `InputCombination.key(action)`
+### `InputCombination.key(action)`
 
 Create a keyboard condition from a combined action string.
 
@@ -95,7 +95,7 @@ InputCombination.key("KeyW.down");
 InputCombination.key("ShiftLeft.released");
 ```
 
-#### `InputCombination.key(key, state?)`
+### `InputCombination.key(key, state?)`
 
 Create a keyboard condition with an explicit key code and state.
 Defaults to `"pressed"` when `state` is omitted.
@@ -105,7 +105,7 @@ InputCombination.key("Space");
 InputCombination.key("KeyW", "down");
 ```
 
-#### `InputCombination.mouse(action)`
+### `InputCombination.mouse(action)`
 
 Create a mouse button condition from a combined action string.
 
@@ -114,7 +114,7 @@ InputCombination.mouse("left.pressed");
 InputCombination.mouse("right.down");
 ```
 
-#### `InputCombination.mouse(button, state?)`
+### `InputCombination.mouse(button, state?)`
 
 Create a mouse button condition with an explicit button and state.
 Defaults to `"pressed"` when `state` is omitted.
@@ -124,7 +124,7 @@ InputCombination.mouse("left");
 InputCombination.mouse("right", "down");
 ```
 
-#### `InputCombination.gamepad(gamepad, button, state?)`
+### `InputCombination.gamepad(gamepad, button, state?)`
 
 Create a gamepad button condition. Defaults to `"pressed"` when `state`
 is omitted.
@@ -134,9 +134,9 @@ InputCombination.gamepad(0, "A");
 InputCombination.gamepad(0, "LeftBumper", "down");
 ```
 
-### Composite Conditions
+## Composite Conditions
 
-#### `InputCombination.all(...conditions)`
+### `InputCombination.all(...conditions)`
 
 Returns a condition that is satisfied when **all** child conditions are
 satisfied simultaneously. Useful for key chords and modifier combinations.
@@ -154,7 +154,7 @@ InputCombination.all(
 );
 ```
 
-#### `InputCombination.atLeastOne(...conditions)`
+### `InputCombination.atLeastOne(...conditions)`
 
 Returns a condition that is satisfied when **at least one** child condition
 is satisfied. Useful for alternative bindings.
@@ -164,7 +164,7 @@ is satisfied. Useful for alternative bindings.
 InputCombination.atLeastOne("KeyW.down", "ArrowUp.down");
 ```
 
-#### `InputCombination.none(...conditions)`
+### `InputCombination.none(...conditions)`
 
 Returns a condition that is satisfied when **none** of the child conditions
 are satisfied. Useful for exclusion guards.
@@ -174,7 +174,7 @@ are satisfied. Useful for exclusion guards.
 InputCombination.none("ShiftLeft.down", "ShiftRight.down");
 ```
 
-#### `InputCombination.sequence(...conditions)`
+### `InputCombination.sequence(...conditions)`
 
 Returns a condition that is satisfied when all child conditions are triggered
 **in order** within a default timeout (100 ms between each step).
@@ -187,7 +187,7 @@ InputCombination.sequence(
 );
 ```
 
-#### `InputCombination.sequenceWithTimeout(timeoutMs, ...conditions)`
+### `InputCombination.sequenceWithTimeout(timeoutMs, ...conditions)`
 
 Same as `sequence` but with a custom timeout between each step.
 
@@ -200,7 +200,7 @@ InputCombination.sequenceWithTimeout(
 );
 ```
 
-### Types
+## Types
 
 ```ts
 type CombinedInputState = "down" | "pressed" | "released";
@@ -225,7 +225,7 @@ type GamepadButton =
   | "Home";
 ```
 
-### State Meanings
+## State Meanings
 
 | State | Meaning |
 | ------------ | ---------------------------------------- |

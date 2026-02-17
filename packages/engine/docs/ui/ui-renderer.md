@@ -1,4 +1,4 @@
-## UIRenderer
+# UIRenderer
 
 The **UIRenderer** is an [ActorComponent](../actor/actor-component.md)
 that provides an orthographic 2D overlay on top of the 3D scene.
@@ -18,7 +18,7 @@ const camera2D = new Actor(world, { name: "camera2D" })
   .addComponent(UIRenderer, { near: 1 });
 ```
 
-### How it works
+## How it works
 
 1. On construction the component creates an `OrthographicCamera`
    sized to match the current canvas and appends a `CSS2DRenderer`
@@ -30,7 +30,7 @@ const camera2D = new Actor(world, { name: "camera2D" })
    orthographic camera so that CSS2D objects (used by
    [UIText](./ui-sprite.md)) stay in sync with the 3D world.
 
-### Constructor
+## Constructor
 
 ```ts
 interface UIRendererOptions {
@@ -49,7 +49,7 @@ interface UIRendererOptions {
 | `far` | `2000` | Far clipping plane |
 | `zIndex` | `10` | Camera Z position — controls draw order |
 
-### Creating a HUD element
+## Creating a HUD element
 
 Once a `UIRenderer` exists, child actors can register
 [UISprite](./ui-sprite.md) components that are automatically
@@ -81,7 +81,7 @@ button.onClick.connect(() => {
 });
 ```
 
-### Updating positions at runtime
+## Updating positions at runtime
 
 When you change the offset or anchor of a node after creation
 you can force a full re-layout by calling `updateWorldPosition`:
@@ -91,7 +91,7 @@ const uiRenderer = camera2D.getComponent(UIRenderer)!;
 uiRenderer.updateWorldPosition();
 ```
 
-### Cleanup
+## Cleanup
 
 Calling `clear()` destroys every registered node, removes the
 CSS overlay from the DOM, and unsubscribes from renderer events:
@@ -100,7 +100,7 @@ CSS overlay from the DOM, and unsubscribes from renderer events:
 uiRenderer.clear();
 ```
 
-### API
+## API
 
 ```ts
 class UIRenderer extends ActorComponent {
@@ -114,7 +114,7 @@ class UIRenderer extends ActorComponent {
 }
 ```
 
-### See also
+## See also
 
 - [UINode](./ui-node.md) — base positioning component
 - [UISprite](./ui-sprite.md) — interactive sprite with events

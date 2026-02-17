@@ -1,4 +1,4 @@
-## Renderer
+# Renderer
 
 The `Renderer` interface defines the rendering pipeline used
 by [World](world.md). It abstracts over the
@@ -8,7 +8,7 @@ a small set of operations: resize, draw, and clear.
 The engine ships with one concrete implementation —
 `ThreeRenderer` — built on top of Three.js's `WebGLRenderer`.
 
-### ThreeRenderer
+## ThreeRenderer
 
 `ThreeRenderer` is the default renderer. It creates a
 `THREE.WebGLRenderer` from a `<canvas>` element and manages
@@ -43,7 +43,7 @@ const webGL = renderer.getSource();
 webGL.toneMappingExposure = 1.5;
 ```
 
-### Render modes
+## Render modes
 
 The renderer supports two rendering strategies, selectable at
 construction time or at runtime with `setRenderMode`:
@@ -61,7 +61,7 @@ Switching mode at runtime recreates the internal strategy,
 preserves existing render components (cameras), and triggers a
 resize.
 
-### Cameras (render components)
+## Cameras (render components)
 
 Cameras are registered as **render components**. The renderer
 iterates over all registered cameras on every draw call:
@@ -84,7 +84,7 @@ renderer.removeRenderComponent(camera);
 On resize, perspective cameras have their `aspect` updated and
 orthographic cameras have their frustum recalculated.
 
-### Post-processing effects
+## Post-processing effects
 
 In `"composer"` mode, additional passes can be added with
 `setEffects`:
@@ -103,7 +103,7 @@ renderer.setEffects(bloom);
 Effects are only applied when the render mode is `"composer"`;
 calling `setEffects` in `"direct"` mode is a no-op.
 
-### Aspect ratio
+## Aspect ratio
 
 By default the renderer fills its parent element. An explicit
 aspect ratio can be enforced with `setRatio`:
@@ -119,7 +119,7 @@ renderer.setRatio(null);
 When a ratio is set, the canvas is centered and letter-boxed
 within the viewport.
 
-### Resize
+## Resize
 
 `resize()` is called automatically on every draw and whenever the
 window fires a resize event (wired up by
@@ -136,7 +136,7 @@ renderer.on("resize", ({ width, height }) => {
 });
 ```
 
-### Draw and clear
+## Draw and clear
 
 `draw()` performs a full render frame:
 
@@ -153,7 +153,7 @@ renderer.onDraw(({ source }) => {
 
 `clear()` clears the frame buffer without rendering.
 
-### Events
+## Events
 
 `ThreeRenderer` extends `EventEmitter` and emits:
 
@@ -162,7 +162,7 @@ renderer.onDraw(({ source }) => {
 | `resize` | `{ width, height }` | After the canvas size changes |
 | `draw` | `{ source }` | After each render frame |
 
-### See also
+## See also
 
 - [World](world.md) — wires the renderer into the
   game loop
