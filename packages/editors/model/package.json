@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/editor.model",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "module",
   "main": "electron/main.js",
   "scripts": {
@@ -26,8 +26,8 @@
     "dist"
   ],
   "dependencies": {
-    "@jolly-pixel/engine": "^1.3.0",
-    "@jolly-pixel/runtime": "^2.0.0",
+    "@jolly-pixel/engine": "^2.0.0",
+    "@jolly-pixel/runtime": "^3.0.0",
     "three": "^0.182.0"
   },
   "devDependencies": {
