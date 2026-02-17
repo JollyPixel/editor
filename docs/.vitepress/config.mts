@@ -8,15 +8,7 @@ export default defineConfig({
   themeConfig: {
     nav: [
       { text: "Engine", link: "/engine/README", activeMatch: "^/engine/" },
-      { text: "Runtime", link: "/runtime/README", activeMatch: "^/runtime/" },
-      { text: "FSTree", link: "/fs-tree/README", activeMatch: "^/fs-tree/" },
-      {
-        text: "Editors",
-        items: [
-          { text: "Voxel Map", link: "/editors/voxel-map/README", activeMatch: "^/editors/voxel-map/" },
-          { text: "Model", link: "/editors/model/README", activeMatch: "^/editors/model/" }
-        ]
-      }
+      { text: "Runtime", link: "/runtime/README", activeMatch: "^/runtime/" }
     ],
     search: {
       provider: "local"
@@ -191,24 +183,6 @@ export default defineConfig({
             {
               text: "Runtime",
               link: "/runtime/Runtime"
-            }
-          ]
-        }
-      ],
-      "/fs-tree/": [
-        {
-          items: [
-            {
-              text: "FSTree",
-              link: "/fs-tree/FSTree"
-            },
-            {
-              text: "FSTreeSynchronizer",
-              link: "/fs-tree/FSTreeSynchronizer"
-            },
-            {
-              text: "TreeView",
-              link: "/fs-tree/TreeView"
             }
           ]
         }
