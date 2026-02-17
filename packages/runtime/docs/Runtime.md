@@ -9,19 +9,28 @@ stopping, and frame-rate control.
 - **setFps(fps)**: Clamps the target FPS between `1` and `60`. No-op if `fps` is falsy.
 
 ```ts
-interface RuntimeOptions<TContext = Record<string, unknown>> {
+interface RuntimeOptions<
+  TContext = Systems.GameInstanceDefaultContext
+> {
   /**
-   * When true, a stats.js panel is appended to the document to show FPS.
    * @default false
+   * Whether to include performance statistics (eg: FPS, memory usage).
    */
   includePerformanceStats?: boolean;
   /**
    * Optional context object passed to the GameInstance.
    */
   context?: TContext;
+  /**
+   * Optional global audio object passed to the GameInstance.
+   * If not provided, a default audio context will be created.
+   */
+  audio?: GlobalAudio;
 }
 
-class Runtime<TContext = Record<string, unknown>> {
+class Runtime<
+  TContext = GameInstanceDefaultContext
+> {
   gameInstance: Systems.GameInstance<THREE.WebGLRenderer, TContext>;
   canvas: HTMLCanvasElement;
   stats?: Stats;

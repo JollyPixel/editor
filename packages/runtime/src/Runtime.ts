@@ -8,7 +8,9 @@ import {
   type GlobalAudio
 } from "@jolly-pixel/engine";
 
-export interface RuntimeOptions<TContext = Record<string, unknown>> {
+export interface RuntimeOptions<
+  TContext = Systems.GameInstanceDefaultContext
+> {
   /**
    * @default false
    * Whether to include performance statistics (eg: FPS, memory usage).
@@ -25,7 +27,9 @@ export interface RuntimeOptions<TContext = Record<string, unknown>> {
   audio?: GlobalAudio;
 }
 
-export class Runtime<TContext = Record<string, unknown>> {
+export class Runtime<
+  TContext = Systems.GameInstanceDefaultContext
+> {
   gameInstance: Systems.GameInstance<THREE.WebGLRenderer, TContext>;
   loop = new Systems.FixedTimeStep();
 

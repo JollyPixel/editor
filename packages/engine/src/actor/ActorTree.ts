@@ -2,19 +2,28 @@
 import pm from "picomatch";
 
 // Import Internal Dependencies
+import type {
+  GameInstanceDefaultContext
+} from "../systems/GameInstance.ts";
 import { Actor } from "./Actor.ts";
 
-export type ActorTreeNode<TContext = Record<string, unknown>> = {
+export type ActorTreeNode<
+  TContext = GameInstanceDefaultContext
+> = {
   actor: Actor<TContext>;
   parent?: Actor<TContext>;
 };
 
-export interface ActorTreeOptions<TContext = Record<string, unknown>> {
+export interface ActorTreeOptions<
+  TContext = GameInstanceDefaultContext
+> {
   addCallback?: (actor: Actor<TContext>) => void;
   removeCallback?: (actor: Actor<TContext>) => void;
 }
 
-export class ActorTree<TContext = Record<string, unknown>> {
+export class ActorTree<
+  TContext = GameInstanceDefaultContext
+> {
   #addCallback?: (actor: Actor<TContext>) => void;
   #removeCallback?: (actor: Actor<TContext>) => void;
 

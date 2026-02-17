@@ -2,8 +2,10 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { type Actor, ActorComponent } from "../actor/index.ts";
+import type { GameInstanceDefaultContext } from "../systems/GameInstance.ts";
 import type { UIRenderer } from "./UIRenderer.ts";
+import { type Actor, ActorComponent } from "../actor/index.ts";
+import { UIRendererID } from "./common.ts";
 
 export type UIAnchorX = "left" | "center" | "right";
 export type UIAnchorY = "top" | "center" | "bottom";
@@ -56,17 +58,19 @@ export interface UINodeOptions extends UINodePositionalOptions {
   };
 }
 
-export class UINode extends ActorComponent<any> {
+export class UINode<TContext = GameInstanceDefaultContext> extends ActorComponent<TContext> {
   #options: UINodeOptions;
 
   constructor(
-    actor: Actor<any>,
+    actor: Actor<TContext>,
     options: UINodeOptions = {}
   ) {
     super({ actor, typeName: "UINode" });
     this.#options = options;
 
-    const uiRenderer = this.actor.gameInstance[Symbol.for("UIRenderer")] as UIRenderer;
+    const uiRenderer = this.actor.gameInstance[
+      UIRendererID
+    ] as UIRenderer<TContext> | undefined;
     if (uiRenderer) {
       uiRenderer.addChildren(this);
     }
