@@ -8,38 +8,26 @@ import {
   ActorComponent,
   ActorTree
 } from "../actor/index.ts";
+import type { WorldDefaultContext } from "./World.ts";
 import type { Component } from "../components/types.ts";
 
 export type SceneEvents = {
   awake: [];
 };
 
-export interface SceneContract {
-  readonly tree: ActorTree<any>;
-
-  componentsToBeStarted: Component[];
-  componentsToBeDestroyed: Component[];
-
-  getSource(): THREE.Scene;
-  awake(): void;
-  beginFrame(): void;
-  update(deltaTime: number): void;
-  fixedUpdate(deltaTime: number): void;
-  endFrame(): void;
-  destroyActor(actor: Actor<any>): void;
-}
-
-export class SceneManager extends EventEmitter<
-  SceneEvents
-> implements SceneContract {
+export class SceneManager<
+  TContext = WorldDefaultContext
+> extends EventEmitter<SceneEvents> {
   default: THREE.Scene;
 
   componentsToBeStarted: Component[] = [];
   componentsToBeDestroyed: Component[] = [];
 
-  #cachedActors: Actor<any>[] = [];
+  #registeredActors: Set<Actor<TContext>> = new Set();
+  #actorsByName: Map<string, Actor<TContext>[]> = new Map();
+  #cachedActors: Actor<TContext>[] = [];
 
-  readonly tree = new ActorTree<any>({
+  readonly tree = new ActorTree<TContext>({
     addCallback: (actor) => this.default.add(actor.object3D),
     removeCallback: (actor) => this.default.remove(actor.object3D)
   });
@@ -66,12 +54,7 @@ export class SceneManager extends EventEmitter<
   }
 
   beginFrame() {
-    this.#cachedActors.length = 0;
-    for (const { actor } of this.tree.walk()) {
-      this.#cachedActors.push(actor);
-    }
-
-    const cachedActors = this.#cachedActors;
+    this.#cachedActors = Array.from(this.#registeredActors);
 
     let i = 0;
     while (i < this.componentsToBeStarted.length) {
@@ -79,7 +62,7 @@ export class SceneManager extends EventEmitter<
 
       // If the component to be started is part of an actor
       // which will not be updated, skip it until next loop
-      if (cachedActors.indexOf(component.actor) === -1) {
+      if (!this.#registeredActors.has(component.actor)) {
         i++;
         continue;
       }
@@ -111,7 +94,7 @@ export class SceneManager extends EventEmitter<
     });
     this.componentsToBeDestroyed.length = 0;
 
-    const actorToBeDestroyed: Actor<any>[] = [];
+    const actorToBeDestroyed: Actor<TContext>[] = [];
     this.#cachedActors.forEach((actor) => {
       if (actor.pendingForDestruction || actor.isDestroyed()) {
         actorToBeDestroyed.push(actor);
@@ -124,7 +107,7 @@ export class SceneManager extends EventEmitter<
   }
 
   destroyActor(
-    actor: Actor<any>
+    actor: Actor<TContext>
   ) {
     const childrenToDestroy = [...actor.children];
 
@@ -132,18 +115,63 @@ export class SceneManager extends EventEmitter<
       this.destroyActor(child);
     });
 
-    const cachedIndex = this.#cachedActors.indexOf(actor);
-    if (cachedIndex !== -1) {
-      this.#cachedActors.splice(cachedIndex, 1);
-    }
+    this.unregisterActor(actor);
 
     // NOTE: make sure to remove deeply into the tree
     this.tree.remove(actor);
     actor.destroy();
   }
 
+  registerActor(
+    actor: Actor<TContext>
+  ) {
+    this.#registeredActors.add(actor);
+
+    const actors = this.#actorsByName.get(actor.name);
+    if (actors) {
+      actors.push(actor);
+    }
+    else {
+      this.#actorsByName.set(actor.name, [actor]);
+    }
+  }
+
+  unregisterActor(
+    actor: Actor<TContext>
+  ) {
+    this.#registeredActors.delete(actor);
+
+    const actors = this.#actorsByName.get(actor.name);
+    if (actors) {
+      const index = actors.indexOf(actor);
+      if (index !== -1) {
+        actors.splice(index, 1);
+      }
+      if (actors.length === 0) {
+        this.#actorsByName.delete(actor.name);
+      }
+    }
+  }
+
+  getActor(
+    name: string
+  ): Actor<TContext> | null {
+    const actors = this.#actorsByName.get(name);
+    if (!actors) {
+      return null;
+    }
+
+    for (const actor of actors) {
+      if (!actor.pendingForDestruction) {
+        return actor;
+      }
+    }
+
+    return null;
+  }
+
   destroyComponent(
-    component: ActorComponent<any>
+    component: ActorComponent<TContext>
   ) {
     if (component.pendingForDestruction) {
       return;

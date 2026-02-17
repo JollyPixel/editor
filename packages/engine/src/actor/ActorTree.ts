@@ -93,8 +93,17 @@ export class ActorTree<
     const currentPattern = patternParts[patternIndex];
     const isLastPattern = patternIndex === patternParts.length - 1;
 
+    const matchers = new Map<string, (name: string) => boolean>();
     // eslint-disable-next-line func-style
-    const matchSinglePattern = (name: string, pattern: string) => pm(pattern)(name);
+    const matchSinglePattern = (name: string, pattern: string) => {
+      let matcher = matchers.get(pattern);
+      if (!matcher) {
+        matcher = pm(pattern);
+        matchers.set(pattern, matcher);
+      }
+
+      return matcher(name);
+    };
 
     if (currentPattern === "**") {
       if (isLastPattern) {
@@ -176,7 +185,7 @@ export class ActorTree<
         break;
       }
 
-      currentNode = [...currentNode.children].find(
+      currentNode = currentNode.children.find(
         (child) => child.name === parts[i]
       ) ?? null;
     }
