@@ -7,8 +7,8 @@ and how its components interact during the lifecycle of a game session.
 
 ```
 src/
-├── index.ts               Entry point — exports Player and loadPlayer
-├── Player.ts              Core runtime class (game loop, renderer, clock)
+├── index.ts               Entry point — exports Runtime and loadRuntime
+├── Runtime.ts             Core runtime class (game loop, renderer, clock)
 ├── components/
 │   └── Loading.ts         <jolly-loading> Lit web component
 └── utils/
@@ -34,7 +34,7 @@ and the **engine** (`@jolly-pixel/engine`). It is responsible for:
                      │  provides <canvas>
                      ▼
 ┌─────────────────────────────────────────────────┐
-│                   loadPlayer()                  │
+│                   loadRuntime()                 │
 │  ┌───────────┐  ┌────────────┐  ┌────────────┐  │
 │  │  detect-  │  │  <jolly-   │  │   Assets   │  │
 │  │    gpu    │  │  loading>  │  │   loader   │  │
@@ -42,7 +42,7 @@ and the **engine** (`@jolly-pixel/engine`). It is responsible for:
 │        │              │                │        │
 │        ▼              ▼                ▼        │
 │  ┌──────────────────────────────────────────┐   │
-│  │                Player                    │   │
+│  │                Runtime                   │   │
 │  │  ┌────────────────────────────────────┐  │   │
 │  │  │          GameInstance              │  │   │
 │  │  │  (SceneEngine + ThreeRenderer)     │  │   │
@@ -54,11 +54,11 @@ and the **engine** (`@jolly-pixel/engine`). It is responsible for:
 
 ## Bootstrap sequence
 
-`loadPlayer()` orchestrates the full startup. Below is the ordered
+`loadRuntime()` orchestrates the full startup. Below is the ordered
 sequence of operations:
 
 ```
-loadPlayer(player)
+loadRuntime(runtime)
  │
  ├─ 1. Start GPU detection ─────────────── getGPUTier()  (async, runs in parallel)
  │
@@ -82,7 +82,7 @@ loadPlayer(player)
  │     ├─ fade-out ────────────────────── 500 ms
  │     └─ remove <jolly-loading>
  │
- └─ 8. Start player ───────────────────── player.start()
+ └─ 8. Start runtime ──────────────────── runtime.start()
        ├─ canvas opacity: 1               fade-in with CSS transition
        ├─ gameInstance.connect()
        └─ setAnimationLoop(tick)           game loop begins
@@ -93,7 +93,7 @@ loadPlayer(player)
 
 ## Game loop
 
-The `Player.tick` callback is called by Three.js via `setAnimationLoop`.
+The `Runtime.tick` callback is called by Three.js via `setAnimationLoop`.
 It implements a **fixed-timestep** pattern capped at the target FPS:
 
 ```
@@ -109,7 +109,7 @@ setAnimationLoop(tick)
      └─ if deltaTime >= interval
          ├─ stats.begin()
          ├─ gameInstance.update(deltaTime)
-         │   └─ returns true → player.stop()
+         │   └─ returns true → runtime.stop()
          ├─ gameInstance.render()
          ├─ deltaTime %= interval
          └─ stats.end()
@@ -117,7 +117,7 @@ setAnimationLoop(tick)
 
 The loop stops when:
 - `gameInstance.update()` signals an exit
-- `player.stop()` is called manually
+- `runtime.stop()` is called manually
 
 ## Loading screen
 

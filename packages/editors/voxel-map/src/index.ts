@@ -3,7 +3,7 @@ import {
   Actor,
   Camera3DControls
 } from "@jolly-pixel/engine";
-import { Player, loadPlayer } from "@jolly-pixel/runtime";
+import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
 import { TreeView } from "@jolly-pixel/fs-tree/tree-view";
 
 // Import Internal Dependencies
@@ -14,12 +14,12 @@ const runtime = initRuntime();
 initTreeView();
 initCubeSelector();
 
-loadPlayer(runtime)
+loadRuntime(runtime)
   .catch(console.error);
 
 function initRuntime() {
   const canvasHTMLElement = document.querySelector("#game-container > canvas") as HTMLCanvasElement;
-  const runtime = new Player(canvasHTMLElement, {
+  const runtime = new Runtime(canvasHTMLElement, {
     includePerformanceStats: true
   });
   const { gameInstance } = runtime;

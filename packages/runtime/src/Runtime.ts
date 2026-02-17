@@ -3,18 +3,30 @@ import Stats from "stats.js";
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { Systems } from "@jolly-pixel/engine";
+import {
+  Systems,
+  type GlobalAudio
+} from "@jolly-pixel/engine";
 
-export interface PlayerOptions {
+export interface RuntimeOptions<TContext = Record<string, unknown>> {
   /**
    * @default false
    * Whether to include performance statistics (eg: FPS, memory usage).
    */
   includePerformanceStats?: boolean;
+  /**
+   * Optional context object passed to the GameInstance.
+   */
+  context?: TContext;
+  /**
+   * Optional global audio object passed to the GameInstance.
+   * If not provided, a default audio context will be created.
+   */
+  audio?: GlobalAudio;
 }
 
-export class Player {
-  gameInstance: Systems.GameInstance;
+export class Runtime<TContext = Record<string, unknown>> {
+  gameInstance: Systems.GameInstance<THREE.WebGLRenderer, TContext>;
   loop = new Systems.FixedTimeStep();
 
   canvas: HTMLCanvasElement;
@@ -25,7 +37,7 @@ export class Player {
 
   constructor(
     canvas: HTMLCanvasElement,
-    options: PlayerOptions = {}
+    options: RuntimeOptions<TContext> = Object.create(null)
   ) {
     if (!canvas) {
       throw new Error("Canvas element is required to create a Runtime instance.");
@@ -38,7 +50,9 @@ export class Player {
     ) as unknown as Systems.Renderer<THREE.WebGLRenderer>;
     this.gameInstance = new Systems.GameInstance(renderer, {
       enableOnExit: true,
-      scene
+      scene,
+      context: options.context,
+      audio: options.audio
     });
     this.gameInstance.setLoadingManager(this.manager);
 

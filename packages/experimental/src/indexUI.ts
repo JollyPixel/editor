@@ -4,10 +4,10 @@ import {
   UIRenderer,
   UISprite
 } from "@jolly-pixel/engine";
-import { Player, loadPlayer } from "@jolly-pixel/runtime";
+import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
 
 const canvasHTMLElement = document.querySelector("canvas") as HTMLCanvasElement;
-const runtime = new Player(canvasHTMLElement, {
+const runtime = new Runtime(canvasHTMLElement, {
   includePerformanceStats: true
 });
 const { gameInstance } = runtime;
@@ -46,5 +46,5 @@ uiButton.onClick.connect(() => {
   console.log("Button clicked!");
 });
 
-loadPlayer(runtime)
+loadRuntime(runtime)
   .catch(console.error);

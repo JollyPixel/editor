@@ -7,9 +7,9 @@ import { Loading } from "./components/Loading.ts";
 import * as timers from "./utils/timers.ts";
 import { getDevicePixelRatio } from "./utils/getDevicePixelRatio.ts";
 
-import { Player, type PlayerOptions } from "./Player.ts";
+import { Runtime, type RuntimeOptions } from "./Runtime.ts";
 
-export interface LoadPlayerOptions {
+export interface LoadRuntimeOptions {
   /**
    * @default 850
    * Minimum delay (ms) before starting asset loading. Gives the loading UI time to render.
@@ -17,16 +17,16 @@ export interface LoadPlayerOptions {
   loadingDelay?: number;
 }
 
-export async function loadPlayer(
-  player: Player,
-  options: LoadPlayerOptions = {}
+export async function loadRuntime(
+  runtime: Runtime,
+  options: LoadRuntimeOptions = {}
 ) {
   const { loadingDelay = 850 } = options;
 
   const gpuTierPromise = getGPUTier();
 
-  player.canvas.style.opacity = "0";
-  player.canvas.style.transition = "opacity 0.5s ease-in";
+  runtime.canvas.style.opacity = "0";
+  runtime.canvas.style.transition = "opacity 0.5s ease-in";
 
   let loadingElement = document.querySelector("jolly-loading");
   if (loadingElement === null) {
@@ -38,7 +38,7 @@ export async function loadPlayer(
 
   let loadingComplete = false;
   const loadingCompletePromise = new Promise((resolve) => {
-    player.manager.onProgress = (_, loaded, total) => {
+    runtime.manager.onProgress = (_, loaded, total) => {
       loadingComponent.setProgress(loaded, total);
 
       if (loaded >= total && !loadingComplete) {
@@ -52,12 +52,12 @@ export async function loadPlayer(
 
   // Prevent keypress events from leaking out to a parent window
   // They might trigger scrolling for instance
-  player.canvas.addEventListener("keypress", (event) => {
+  runtime.canvas.addEventListener("keypress", (event) => {
     event.preventDefault();
   });
 
   // Make sure the focus is always on the game canvas wherever we click on the game window
-  document.addEventListener("click", () => player.canvas.focus());
+  document.addEventListener("click", () => runtime.canvas.focus());
 
   try {
     if (loadingDelay > 0) {
@@ -70,15 +70,15 @@ export async function loadPlayer(
       tier
     } = await gpuTierPromise;
 
-    player.loop.setFps(fps ?? 60);
-    player.gameInstance.renderer.getSource().setPixelRatio(
+    runtime.loop.setFps(fps ?? 60);
+    runtime.gameInstance.renderer.getSource().setPixelRatio(
       getDevicePixelRatio(isMobile)
     );
     if (tier < 1) {
       throw new Error("GPU is not powerful enough to run this game");
     }
 
-    const context = { manager: player.manager };
+    const context = { manager: runtime.manager };
 
     setTimeout(() => {
       Systems.Assets.autoload = true;
@@ -96,8 +96,8 @@ export async function loadPlayer(
     }
 
     await loadingComponent.complete(() => {
-      player.canvas.style.opacity = "1";
-      player.start();
+      runtime.canvas.style.opacity = "1";
+      runtime.start();
     });
   }
   catch (error: any) {
@@ -105,4 +105,4 @@ export async function loadPlayer(
   }
 }
 
-export { Player, type PlayerOptions };
+export { Runtime, type RuntimeOptions };
