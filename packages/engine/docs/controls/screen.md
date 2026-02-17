@@ -1,4 +1,4 @@
-## Screen
+# Screen
 
 Fullscreen manager. Requests and exits fullscreen mode on the canvas,
 tracks state changes, and handles errors.
@@ -20,9 +20,9 @@ screen.on("stateChange", (state) => {
 screen.enter();
 ```
 
-### Constructor
+## Constructor
 
-#### `new Screen(options)`
+### `new Screen(options)`
 
 ```ts
 interface ScreenOptions {
@@ -34,13 +34,13 @@ interface ScreenOptions {
 new Screen(options: ScreenOptions);
 ```
 
-### Types
+## Types
 
 ```ts
 type FullscreenState = "active" | "suspended";
 ```
 
-### Events
+## Events
 
 ```ts
 type ScreenEvents = {
@@ -48,7 +48,7 @@ type ScreenEvents = {
 };
 ```
 
-### Properties
+## Properties
 
 ```ts
 interface Screen {
@@ -59,7 +59,7 @@ interface Screen {
 }
 ```
 
-### API
+## API
 
 ```ts
 interface Screen {

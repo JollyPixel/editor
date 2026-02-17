@@ -1,11 +1,11 @@
-## Renderers
+# Renderers
 
 The engine ships with four built-in renderer components. Each one
 extends [ActorComponent](../actor/actor-component.md) and handles
 loading, displaying, and cleaning up a specific type of visual
 asset.
 
-### ModelRenderer
+## ModelRenderer
 
 Renders a 3D model loaded from an OBJ, FBX, or glTF file.
 The model is added to the actor's Three.js group on `awake` and
@@ -44,7 +44,7 @@ renderer.animation.play("walk");
 renderer.animation.stop();
 ```
 
-### SpriteRenderer
+## SpriteRenderer
 
 Renders a 2D sprite from a spritesheet texture. Supports
 frame-based animation, horizontal/vertical flipping, and opacity.
@@ -89,7 +89,7 @@ sprite.setOpacity(0.8);
 sprite.animation.play("run", { duration: 0.6, loop: true });
 ```
 
-### TiledMapRenderer
+## TiledMapRenderer
 
 Renders a [Tiled](https://www.mapeditor.org/) map exported as
 `.tmj` (JSON format). Each tile becomes a 3D cube, and object
@@ -114,7 +114,7 @@ On `awake` the component loads the map data and tileset textures
 through the [asset system](../asset.md), creates a textured cube
 for every tile, and spawns child actors for each object layer.
 
-### TextRenderer
+## TextRenderer
 
 Renders 3D extruded text using a Three.js typeface font
 (`.typeface.json`).
@@ -151,7 +151,7 @@ renderer.text.setValue("Score: 100");
 renderer.updateMesh();
 ```
 
-### See also
+## See also
 
 - [ActorComponent](../actor/actor-component.md)
 - [Camera3DControls](camera-3d-controls.md)

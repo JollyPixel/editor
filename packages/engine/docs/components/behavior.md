@@ -1,4 +1,4 @@
-## Behavior
+# Behavior
 
 A `Behavior` is a specialized
 [ActorComponent](../actor/actor-component.md) that adds scripting
@@ -67,9 +67,9 @@ export class PlayerBehavior extends Behavior<PlayerProperties> {
 }
 ```
 
-### Decorators
+## Decorators
 
-#### `@SceneProperty`
+### `@SceneProperty`
 
 Exposes a field as a configurable property in the scene editor.
 Supported types: `string`, `number`, `boolean` (and their array
@@ -80,7 +80,7 @@ variants), `Vector2`, `Vector3`, `Vector4`, `Color`.
 speed = 0.05;
 ```
 
-#### `@SceneActorComponent`
+### `@SceneActorComponent`
 
 Binds a field to a sibling component on the same actor. The
 component reference is resolved automatically during initialization.
@@ -90,7 +90,7 @@ component reference is resolved automatically during initialization.
 model: ModelRenderer;
 ```
 
-#### `@Signal`
+### `@Signal`
 
 Declares a [SignalEvent](../actor/signal.md) property on the
 behavior. See the dedicated documentation for the full API.
@@ -100,7 +100,7 @@ behavior. See the dedicated documentation for the full API.
 onPlayerPunch: SignalEvent;
 ```
 
-#### `@Input.listen`
+### `@Input.listen`
 
 Binds a method to an input event. The listener is wired
 automatically during behavior initialization.
@@ -112,7 +112,7 @@ onKeyDown(event: KeyboardEvent) {
 }
 ```
 
-### Properties
+## Properties
 
 Behaviors support typed runtime properties through the generic
 parameter `T extends BehaviorProperties`:
@@ -136,7 +136,7 @@ interface Behavior<T extends BehaviorProperties> {
 }
 ```
 
-### See also
+## See also
 
 - [ActorComponent](../actor/actor-component.md)
 - [Signal](./signal.md)

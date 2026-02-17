@@ -1,4 +1,4 @@
-## Gamepad
+# Gamepad
 
 Gamepad input handler supporting up to 4 controllers. Tracks button state,
 analog stick axes with dead zone, and axis auto-repeat for menu navigation.
@@ -31,9 +31,9 @@ function gameLoop() {
 gameLoop();
 ```
 
-### Constructor
+## Constructor
 
-#### `new Gamepad(options?)`
+### `new Gamepad(options?)`
 
 ```ts
 interface GamepadOptions {
@@ -44,7 +44,7 @@ interface GamepadOptions {
 new Gamepad(options?: GamepadOptions);
 ```
 
-### Types
+## Types
 
 ```ts
 type GamepadIndex = 0 | 1 | 2 | 3;
@@ -109,7 +109,7 @@ interface GamepadAutoRepeat {
 }
 ```
 
-### Events
+## Events
 
 ```ts
 type GamepadEvents = {
@@ -118,7 +118,7 @@ type GamepadEvents = {
 };
 ```
 
-### Properties
+## Properties
 
 ```ts
 interface Gamepad {
@@ -147,7 +147,7 @@ interface Gamepad {
 }
 ```
 
-### API
+## API
 
 ```ts
 interface Gamepad {

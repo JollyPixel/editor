@@ -1,4 +1,4 @@
-## Touchpad
+# Touchpad
 
 Multi-touch input handler. Tracks up to 10 simultaneous touch points
 with per-finger state (down, started, ended, position).
@@ -39,9 +39,9 @@ gameLoop();
 > only receive events on actual **touch-screen** hardware. On a laptop
 > trackpad, input is handled by the `Mouse` device instead.
 
-### Constructor
+## Constructor
 
-#### `new Touchpad(options)`
+### `new Touchpad(options)`
 
 ```ts
 interface TouchpadOptions {
@@ -51,7 +51,7 @@ interface TouchpadOptions {
 new Touchpad(options: TouchpadOptions);
 ```
 
-### Types
+## Types
 
 ```ts
 const TouchIdentifier = {
@@ -72,7 +72,7 @@ interface TouchState {
 }
 ```
 
-### Events
+## Events
 
 ```ts
 type TouchEvents = {
@@ -82,7 +82,7 @@ type TouchEvents = {
 };
 ```
 
-### Properties
+## Properties
 
 ```ts
 interface Touchpad {
@@ -101,7 +101,7 @@ interface Touchpad {
 }
 ```
 
-### API
+## API
 
 ```ts
 interface Touchpad {

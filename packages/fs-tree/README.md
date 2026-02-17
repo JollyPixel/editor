@@ -1,4 +1,4 @@
-<p align="center"><h1 align="center">
+<h1 align="center">
   fs-tree
 </h1>
 

@@ -31,14 +31,14 @@ const tree = await FSTree.loadFromPath(process.cwd());
 
 ## Methods
 
-### constructor(tree: FSTree, options: FSTreeSynchronizerOptions = {})
+## constructor(tree: FSTree, options: FSTreeSynchronizerOptions = {})
 
 Creates a new `FSTreeSynchronizer` instance, associating it with a specific `FSTree` to monitor and synchronize its changes.
 
-### async synchronize(): Promise<void>
+## async synchronize(): Promise\<void\>
 
 Asynchronously synchronizes all pending operations (e.g., file creations, deletions, moves) from the `FSTree` instance to the underlying file system. This method ensures that the disk state reflects the in-memory tree state.
 
-### async close(): Promise<void>
+## async close(): Promise\<void\>
 
 Asynchronously stops the synchronization process and releases any resources held by the synchronizer, such as file handles or watchers. It's important to call this method when the synchronizer is no longer needed to prevent resource leaks.

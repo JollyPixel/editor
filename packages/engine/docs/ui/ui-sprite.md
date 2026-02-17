@@ -1,4 +1,4 @@
-## UISprite
+# UISprite
 
 A **UISprite** is a [UINode](./ui-node.md) that renders a flat
 rectangular mesh and provides pointer interaction signals. It is
@@ -23,7 +23,7 @@ const btn = new Actor(world, {
 btn.onClick.connect(() => console.log("Clicked!"));
 ```
 
-### Style
+## Style
 
 The `style` option controls the default appearance of the sprite's
 `MeshBasicMaterial`. An optional `styleOnHover` is automatically
@@ -57,7 +57,7 @@ interface UISpriteStyle {
 });
 ```
 
-### Text
+## Text
 
 Passing a `text` option embeds a **UIText** label rendered with the
 CSS2DRenderer on top of the sprite mesh. The text is a regular HTML
@@ -94,7 +94,7 @@ All standard CSS text properties are supported: `color`,
 `letterSpacing`, `textTransform`, `textShadow`, `padding`,
 `backgroundColor`, `borderRadius`, `opacity`, and `whiteSpace`.
 
-### Signals
+## Signals
 
 `UISprite` exposes [SignalEvent](../components/signal.md) instances
 for every pointer interaction. Subscribe with `connect` and
@@ -124,7 +124,7 @@ sprite.onPointerLeave.connect(() => console.log("leave"));
 sprite.onRightClick.connect(() => console.log("right click"));
 ```
 
-### Hover styling
+## Hover styling
 
 When `styleOnHover` is provided the material is updated
 automatically on pointer enter and restored on pointer leave.
@@ -138,7 +138,7 @@ No manual signal wiring is needed.
 });
 ```
 
-### Hit testing
+## Hit testing
 
 `UISprite` performs hit testing every frame in its `update` loop
 by projecting the mouse world position onto the mesh bounding box.
@@ -151,7 +151,7 @@ if (sprite.isPointerOver()) {
 }
 ```
 
-### Constructor
+## Constructor
 
 ```ts
 interface UISpriteOptions extends UINodeOptions {
@@ -170,7 +170,7 @@ interface UISpriteOptions extends UINodeOptions {
 All [UINode options](./ui-node.md) (`anchor`, `offset`, `size`,
 `pivot`) are also accepted.
 
-### API
+## API
 
 ```ts
 class UISprite extends UINode {
@@ -190,7 +190,7 @@ class UISprite extends UINode {
 }
 ```
 
-### See also
+## See also
 
 - [UINode](./ui-node.md) — base positioning component
 - [UIRenderer](./ui-renderer.md) — the orthographic overlay system

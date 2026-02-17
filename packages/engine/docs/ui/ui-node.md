@@ -1,4 +1,4 @@
-## UINode
+# UINode
 
 A **UINode** is an [ActorComponent](../actor/actor-component.md)
 that positions an actor in screen space using an **anchor**,
@@ -25,7 +25,7 @@ const hud = new Actor(world, {
   });
 ```
 
-### Anchor
+## Anchor
 
 The **anchor** determines which screen edge the element aligns to.
 Anchors are independent on each axis.
@@ -39,7 +39,7 @@ When an anchor is set to `"left"`, the element is pushed against the
 left edge of the screen. Combined with an offset you can create
 consistent margins that survive window resizes.
 
-### Offset
+## Offset
 
 The **offset** shifts the element away from its anchor in
 world units. Positive X moves right, positive Y moves up.
@@ -52,7 +52,7 @@ world units. Positive X moves right, positive Y moves up.
 }
 ```
 
-### Pivot
+## Pivot
 
 The **pivot** is a normalized origin point from `0` to `1` that
 controls which part of the element sits at the computed position.
@@ -67,7 +67,7 @@ Setting the pivot to `{ x: 0, y: 1 }` makes the top-left corner
 the origin — useful for left-aligned HUD panels anchored to the
 top of the screen.
 
-### Size
+## Size
 
 The **size** defines the width and height of the element in world
 units. It is used by `UISprite` to create the mesh geometry and by
@@ -79,7 +79,7 @@ the anchoring logic to keep the element fully on-screen.
 }
 ```
 
-### Constructor
+## Constructor
 
 ```ts
 interface UINodeOptions {
@@ -109,7 +109,7 @@ interface UINodeOptions {
 | `size` | `{ width: 0, height: 0 }` | Element dimensions in world units |
 | `pivot` | `{ x: 0.5, y: 0.5 }` | Normalized origin point (0 – 1) |
 
-### Positioning examples
+## Positioning examples
 
 **Centered element:**
 
@@ -139,7 +139,7 @@ interface UINodeOptions {
 }
 ```
 
-### API
+## API
 
 ```ts
 class UINode extends ActorComponent {
@@ -151,7 +151,7 @@ class UINode extends ActorComponent {
 }
 ```
 
-### See also
+## See also
 
 - [UIRenderer](./ui-renderer.md) — the orthographic overlay system
 - [UISprite](./ui-sprite.md) — visual + interactive UI element

@@ -1,4 +1,4 @@
-## Scene
+# Scene
 
 The `Scene` is the top-level system that owns the
 [actor tree](../actor/actor-tree.md), drives the
@@ -13,7 +13,7 @@ animation frame follows a `beginFrame → fixedUpdate/update →
 endFrame` lifecycle that snapshots the tree once and reuses it
 for all updates within that frame.
 
-### Creating a scene
+## Creating a scene
 
 ```ts
 import { SceneEngine } from "@jolly-pixel/engine";
@@ -34,7 +34,7 @@ const threeScene = scene.getSource();
 threeScene.background = new THREE.Color(0x222222);
 ```
 
-### Actor tree
+## Actor tree
 
 The scene exposes a root [ActorTree](../actor/actor-tree.md) via
 the `tree` property. When an [Actor](../actor/actor.md) is created
@@ -45,7 +45,7 @@ traversal and lookup features are available from the root:
 const player = scene.tree.getActor("Player");
 ```
 
-### Lifecycle
+## Lifecycle
 
 The scene drives the lifecycle of all actors and components in
 three phases — **awake**, **fixedUpdate**, and **update** —
@@ -75,7 +75,7 @@ Per animation frame:
             └─ destroy actors     ← pending actor destructions
 ```
 
-#### Awake
+### Awake
 
 When `awake()` is called (typically once, at connection time), the
 scene walks the entire tree and calls `awake()` on every actor
@@ -89,7 +89,7 @@ scene.on("awake", () => {
 });
 ```
 
-#### beginFrame
+### beginFrame
 
 `beginFrame()` is called once per animation frame. It:
 
@@ -125,7 +125,7 @@ rendering-related logic.
    first) and removed from both the tree and the Three.js scene
    graph.
 
-### Destroying actors
+## Destroying actors
 
 Actors can be destroyed through the scene:
 
@@ -146,7 +146,7 @@ player.markDestructionPending();
 See [Actor — Destruction](../actor/actor.md#destruction) for more
 details.
 
-### Destroying components
+## Destroying components
 
 Individual components can be removed without destroying their
 actor:
@@ -160,7 +160,7 @@ it was still waiting for its `start()` call, it is removed from
 the start queue. The actual `destroy()` hook runs at the end of
 the current frame's update.
 
-### Events
+## Events
 
 `SceneEngine` extends `EventEmitter` and emits:
 
@@ -168,7 +168,7 @@ the current frame's update.
 | ----- | ------------- |
 | `awake` | After all actors have been awoken during `scene.awake()` |
 
-### See also
+## See also
 
 - [Actor](../actor/actor.md) — the engine's core entity
 - [ActorComponent](../actor/actor-component.md) — component

@@ -1,4 +1,4 @@
-## Keyboard
+# Keyboard
 
 Low-level keyboard device. Tracks per-key state (down, just pressed,
 just released, auto-repeat) and text input.
@@ -32,9 +32,9 @@ function gameLoop() {
 gameLoop();
 ```
 
-### Constructor
+## Constructor
 
-#### `new Keyboard(options?)`
+### `new Keyboard(options?)`
 
 ```ts
 interface KeyboardOptions {
@@ -45,7 +45,7 @@ interface KeyboardOptions {
 new Keyboard(options?: KeyboardOptions);
 ```
 
-### Types
+## Types
 
 ```ts
 interface KeyState {
@@ -61,7 +61,7 @@ type KeyCode = string;
 type ExtendedKeyCode = string;
 ```
 
-### Events
+## Events
 
 ```ts
 type KeyboardEvents = {
@@ -74,7 +74,7 @@ type KeyboardEvents = {
 };
 ```
 
-### Properties
+## Properties
 
 ```ts
 interface Keyboard {
@@ -89,7 +89,7 @@ interface Keyboard {
 }
 ```
 
-### API
+## API
 
 ```ts
 interface Keyboard {

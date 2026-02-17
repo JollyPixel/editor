@@ -1,4 +1,4 @@
-## World
+# World
 
 The `World` is the central orchestrator of the engine. It
 wires together the [SceneManager](scene-manager.md),
@@ -10,7 +10,7 @@ Every project creates exactly one `World`. It is passed to
 every [Actor](../actor/actor.md) at construction time and is
 available throughout the component tree via `actor.world`.
 
-### Creating a game instance
+## Creating a game instance
 
 ```ts
 import {
@@ -46,7 +46,7 @@ interface WorldOptions {
 }
 ```
 
-### Loading manager
+## Loading manager
 
 Three.js assets (models, textures, audio) can share a single
 `THREE.LoadingManager` via the game instance:
@@ -63,7 +63,7 @@ game.setLoadingManager(manager);
 The loading manager is available from anywhere as
 `actor.world.loadingManager`.
 
-### Connect and disconnect
+## Connect and disconnect
 
 `connect()` starts the game by wiring up input listeners, the
 window resize handler, and awakening the scene:
@@ -86,7 +86,7 @@ Internally this:
 game.disconnect();
 ```
 
-### Game loop
+## Game loop
 
 The game loop is driven by a
 [FixedTimeStep](../internals/fixed-time-step.md) which separates
@@ -132,7 +132,7 @@ Runs deterministic logic at a fixed rate (0 to N times per frame):
 1. Calls `sceneManager.fixedUpdate(deltaTime)` — runs
    `actor.fixedUpdate(deltaTime)` on each cached actor.
 
-#### `update(deltaTime)`
+### `update(deltaTime)`
 
 Runs variable-rate logic once per rendered frame:
 
@@ -148,13 +148,13 @@ Called once at the end of each animation frame:
 2. If the input system signals an exit, clears the renderer and
    returns `true`. Otherwise returns `false`.
 
-#### `render()`
+### `render()`
 
 Delegates to `renderer.draw()`, which resizes if needed, clears
 the frame buffer, and renders the scene through all active
 cameras.
 
-### Accessing subsystems
+## Accessing subsystems
 
 All subsystems are available as public properties, making them
 accessible from any actor or component:
@@ -168,7 +168,7 @@ if (input.isKeyDown("Space")) {
 }
 ```
 
-### See also
+## See also
 
 - [SceneManager](scene-manager.md) — actor tree, lifecycle, and destruction
 - [Renderer](renderer.md) — rendering pipeline

@@ -1,4 +1,4 @@
-## Adapters
+# Adapters
 
 Thin interfaces that abstract Browser and Three.js APIs behind
 injectable contracts. This enables unit testing with mocks and
@@ -8,7 +8,7 @@ and `canvas` globals.
 Each adapter has a matching `Browser*Adapter` class that delegates
 to the real browser API and is used as the default implementation.
 
-### EventTarget
+## EventTarget
 
 Base interface shared by all adapters that need event listeners.
 
@@ -29,7 +29,7 @@ interface EventTargetAdapter {
 }
 ```
 
-### Canvas
+## Canvas
 
 ```ts
 interface CanvasAdapter extends EventTargetAdapter {
@@ -39,7 +39,7 @@ interface CanvasAdapter extends EventTargetAdapter {
 }
 ```
 
-### Document
+## Document
 
 ```ts
 interface DocumentAdapter extends EventTargetAdapter {
@@ -53,7 +53,7 @@ interface DocumentAdapter extends EventTargetAdapter {
 
 Default: `BrowserDocumentAdapter` (delegates to `document`).
 
-### Window
+## Window
 
 ```ts
 interface WindowAdapter extends EventTargetAdapter {
@@ -64,7 +64,7 @@ interface WindowAdapter extends EventTargetAdapter {
 
 Default: `BrowserWindowAdapter` (delegates to `window`).
 
-### Navigator
+## Navigator
 
 ```ts
 interface NavigatorAdapter {
@@ -75,7 +75,7 @@ interface NavigatorAdapter {
 
 Default: `BrowserNavigatorAdapter` (delegates to `navigator`).
 
-### Console
+## Console
 
 ```ts
 interface ConsoleAdapter {
