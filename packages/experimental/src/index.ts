@@ -8,7 +8,7 @@ import {
   TextRenderer,
   createViewHelper
 } from "@jolly-pixel/engine";
-import { Player, loadPlayer } from "@jolly-pixel/runtime";
+import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
 import * as THREE from "three";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
@@ -17,7 +17,7 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 // import { SpriteRenderer } from "./components/sprite/SpriteRenderer.class.ts";
 
 const canvasHTMLElement = document.querySelector("canvas") as HTMLCanvasElement;
-const runtime = new Player(canvasHTMLElement, {
+const runtime = new Runtime(canvasHTMLElement, {
   includePerformanceStats: true
 });
 const { gameInstance } = runtime;
@@ -113,5 +113,5 @@ canvasHTMLElement.addEventListener("click", async() => {
   await ab.play("boss.tech-space");
 });
 
-loadPlayer(runtime)
+loadRuntime(runtime)
   .catch(console.error);

@@ -2,14 +2,14 @@
 import {
   Actor
 } from "@jolly-pixel/engine";
-import { Player, loadPlayer } from "@jolly-pixel/runtime";
+import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
 import * as THREE from "three";
 
 // Import Internal Dependencies
 import { OrbitCameraControls } from "./components/OrbitCamera.ts";
 
 const canvasHTMLElement = document.querySelector("canvas") as HTMLCanvasElement;
-const runtime = new Player(canvasHTMLElement, {
+const runtime = new Runtime(canvasHTMLElement, {
   includePerformanceStats: true
 });
 const { gameInstance } = runtime;
@@ -30,7 +30,7 @@ const mesh = new THREE.Mesh(
 scene.add(new THREE.AmbientLight(new THREE.Color("#ffffff"), 3));
 scene.add(mesh);
 
-loadPlayer(runtime)
+loadRuntime(runtime)
   .catch(console.error);
 
 function createGeometry(size: number): THREE.BufferGeometry {

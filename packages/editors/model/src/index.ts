@@ -4,19 +4,19 @@ import {
   Camera3DControls,
   ModelRenderer
 } from "@jolly-pixel/engine";
-import { Player, loadPlayer } from "@jolly-pixel/runtime";
+import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
 import * as THREE from "three";
 
 // Import Internal Dependencies
 import { PlayerBehavior } from "./PlayerBehavior.ts";
 
 const runtime = initRuntime();
-loadPlayer(runtime)
+loadRuntime(runtime)
   .catch(console.error);
 
 function initRuntime() {
   const canvasHTMLElement = document.querySelector("canvas") as HTMLCanvasElement;
-  const runtime = new Player(canvasHTMLElement, {
+  const runtime = new Runtime(canvasHTMLElement, {
     includePerformanceStats: true
   });
   const { gameInstance } = runtime;

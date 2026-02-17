@@ -46,25 +46,25 @@ The runtime needs a `<canvas>` element to render into. Start by creating an HTML
 > [!TIP]
 > The `tabindex="-1"` attribute on the canvas allows it to receive keyboard focus, which is required for capturing input events.
 
-Then in your main script, create a `Player` instance and call `loadPlayer` to bootstrap everything (GPU detection, asset loading screen, game loop startup):
+Then in your main script, create a `Runtime` instance and call `loadRuntime` to bootstrap everything (GPU detection, asset loading screen, game loop startup):
 
 ```ts
-import { Player, loadPlayer } from "@jolly-pixel/runtime";
+import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
 
 const canvas = document.querySelector("canvas")!;
 
-const player = new Player(canvas, {
+const runtime = new Runtime(canvas, {
   // Displays a stats.js FPS panel — useful during development
   includePerformanceStats: true
 });
 
 // The gameInstance gives you access to the engine systems
 // (scene, renderer, input, etc.)
-const { gameInstance } = player;
+const { gameInstance } = runtime;
 
-// loadPlayer will detect the GPU, show a loading screen,
+// loadRuntime will detect the GPU, show a loading screen,
 // load all registered assets, then start the game loop.
-loadPlayer(player)
+loadRuntime(runtime)
   .catch(console.error);
 ```
 
@@ -140,16 +140,16 @@ Finally, set the `main` field in your `package.json` to point to the Electron en
 
 ## 📚 API
 
-- [Player](./docs/Player.md)
+- [Runtime](./docs/Runtime.md)
 
-### `loadPlayer(player: Player, options?: LoadPlayerOptions)`
+### `loadRuntime(runtime: Runtime, options?: LoadRuntimeOptions)`
 
 Bootstraps the runtime by detecting GPU capabilities, displaying a loading screen, loading all registered assets, and starting the game loop.
 
 Returns a `Promise<void>` that resolves when loading completes, or shows an error on the loading screen if something fails.
 
 ```ts
-export interface LoadPlayerOptions {
+export interface LoadRuntimeOptions {
   /**
    * @default 850
    * Minimum delay (ms) before starting asset loading. Gives the loading UI time to render.
