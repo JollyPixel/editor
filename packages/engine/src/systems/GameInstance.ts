@@ -74,7 +74,7 @@ export class GameInstance<T = THREE.WebGLRenderer> {
 
   createActor(
     name: string,
-    options: Omit<ActorOptions, "name">
+    options: Omit<ActorOptions, "name"> = {}
   ): Actor {
     return new Actor(this, {
       name,
