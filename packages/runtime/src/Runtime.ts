@@ -31,7 +31,6 @@ export class Runtime<
   TContext = Systems.WorldDefaultContext
 > {
   world: Systems.World<THREE.WebGLRenderer, TContext>;
-  loop = new Systems.FixedTimeStep();
 
   canvas: HTMLCanvasElement;
   stats?: Stats;
@@ -49,9 +48,13 @@ export class Runtime<
 
     this.canvas = canvas;
     const sceneManager = new Systems.SceneManager();
-    const renderer = new Systems.ThreeRenderer(
-      canvas, { scene: sceneManager, renderMode: "direct" }
-    ) as unknown as Systems.Renderer<THREE.WebGLRenderer>;
+    const renderer: Systems.Renderer<any> = new Systems.ThreeRenderer(
+      canvas,
+      {
+        sceneManager,
+        renderMode: "direct"
+      }
+    );
     this.world = new Systems.World(renderer, {
       enableOnExit: true,
       sceneManager,
@@ -85,22 +88,12 @@ export class Runtime<
     }
 
     this.world.connect();
-    this.loop.start();
+    this.world.start();
     const renderer = this.world.renderer.getSource();
     renderer.setAnimationLoop(() => {
-      this.world.beginFrame();
-      this.loop.tick({
-        fixedUpdate: (fixedDelta) => {
-          this.world.fixedUpdate(fixedDelta / 1000);
-        },
-        update: (_interpolation, delta) => {
-          this.stats?.begin();
-          this.world.update(delta / 1000);
-          this.world.render();
-          this.stats?.end();
-        }
-      });
-      const exit = this.world.endFrame();
+      this.stats?.begin();
+      const exit = this.world.tick();
+      this.stats?.end();
       if (exit) {
         this.stop();
       }
@@ -113,7 +106,7 @@ export class Runtime<
     }
 
     this.#isRunning = false;
-    this.loop.stop();
+    this.world.stop();
     this.world.input.exited = true;
     const renderer = this.world.renderer.getSource();
     renderer.setAnimationLoop(null);
