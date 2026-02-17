@@ -55,8 +55,8 @@ export class Camera3DControls extends Behavior {
     this.#rotationSpeed = options.rotationSpeed ?? 0.004;
     this.#movementSpeed = options.speed ?? 20;
 
-    this.actor.gameInstance.renderer.addRenderComponent(this.camera);
-    this.camera.add(this.actor.gameInstance.audio.threeAudioListener);
+    this.actor.world.renderer.addRenderComponent(this.camera);
+    this.camera.add(this.actor.world.audio.threeAudioListener);
   }
 
   set speed(
@@ -72,7 +72,7 @@ export class Camera3DControls extends Behavior {
   }
 
   #rotate() {
-    const mouseDelta = this.actor.gameInstance.input.getMouseDelta(
+    const mouseDelta = this.actor.world.input.getMouseDelta(
       true
     );
     const euler = new THREE.Euler(0, 0, 0, "YXZ");
@@ -86,7 +86,7 @@ export class Camera3DControls extends Behavior {
   }
 
   update() {
-    const { input } = this.actor.gameInstance;
+    const { input } = this.actor.world;
 
     const vector = new THREE.Vector3(0);
     if (input.isKeyDown(this.#bindings.forward)) {

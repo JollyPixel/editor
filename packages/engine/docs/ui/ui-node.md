@@ -14,11 +14,11 @@ directly.
 ```ts
 import { Actor, UINode } from "@jolly-pixel/engine";
 
-const hud = new Actor(gameInstance, {
+const hud = new Actor(world, {
   name: "hud",
   parent: camera2D
 })
-  .registerComponent(UINode, {
+  .addComponent(UINode, {
     anchor: { x: "right", y: "top" },
     offset: { x: -16, y: -16 },
     size: { width: 100, height: 40 }

@@ -1,7 +1,7 @@
 ## Renderer
 
 The `Renderer` interface defines the rendering pipeline used
-by [GameInstance](game-instance.md). It abstracts over the
+by [World](world.md). It abstracts over the
 underlying graphics API so the rest of the engine only depends on
 a small set of operations: resize, draw, and clear.
 
@@ -123,7 +123,7 @@ within the viewport.
 
 `resize()` is called automatically on every draw and whenever the
 window fires a resize event (wired up by
-[GameInstance](game-instance.md)). It updates the renderer size,
+[World](world.md)). It updates the renderer size,
 the effect composer (if active), and every registered camera's
 projection matrix.
 
@@ -164,6 +164,6 @@ renderer.onDraw(({ source }) => {
 
 ### See also
 
-- [GameInstance](game-instance.md) — wires the renderer into the
+- [World](world.md) — wires the renderer into the
   game loop
-- [Scene](scene.md) — the scene graph that is rendered
+- [SceneManager](scene-manager.md) — the scene graph that is rendered

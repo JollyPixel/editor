@@ -58,13 +58,13 @@ export class TextRenderer extends ActorComponent<any> {
   }
 
   updateMesh(): void {
-    for (const child of this.actor.threeObject.children) {
-      isMeshWithGeometry(child) && this.actor.threeObject.remove(child);
+    for (const child of this.actor.object3D.children) {
+      isMeshWithGeometry(child) && this.actor.object3D.remove(child);
     }
 
     const mesh = this.text.mesh;
     if (mesh) {
-      this.actor.threeObject.add(mesh);
+      this.actor.object3D.add(mesh);
     }
   }
 }

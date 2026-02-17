@@ -8,7 +8,7 @@ import {
   Actor,
   Behavior
 } from "../src/index.ts";
-import { createActor, createGameInstance } from "./mocks.ts";
+import { createActor, createWorld } from "./mocks.ts";
 
 describe("Behavior", () => {
   test("should register behavior to actor and add to components to be started", () => {
@@ -18,7 +18,7 @@ describe("Behavior", () => {
     const behavior = new BehaviorOne(fakeActor);
 
     assert.deepEqual(fakeActor.components, [behavior]);
-    assert.deepEqual(fakeActor.gameInstance.scene.componentsToBeStarted, [behavior]);
+    assert.deepEqual(fakeActor.world.sceneManager.componentsToBeStarted, [behavior]);
     assert.deepEqual(fakeActor.behaviors, {
       BehaviorOne: [behavior]
     });
@@ -33,7 +33,7 @@ describe("Behavior", () => {
     const behavior2 = new BehaviorOne(fakeActor);
 
     assert.deepEqual(fakeActor.components, [behavior1, behavior2]);
-    assert.deepEqual(fakeActor.gameInstance.scene.componentsToBeStarted, [behavior1, behavior2]);
+    assert.deepEqual(fakeActor.world.sceneManager.componentsToBeStarted, [behavior1, behavior2]);
     assert.deepEqual(fakeActor.behaviors, {
       BehaviorOne: [behavior1, behavior2]
     });
@@ -48,7 +48,7 @@ describe("Behavior", () => {
     const anotherBehavior = new BehaviorTwo(fakeActor);
 
     assert.deepEqual(fakeActor.components, [mockBehavior, anotherBehavior]);
-    assert.deepEqual(fakeActor.gameInstance.scene.componentsToBeStarted, [mockBehavior, anotherBehavior]);
+    assert.deepEqual(fakeActor.world.sceneManager.componentsToBeStarted, [mockBehavior, anotherBehavior]);
     assert.deepEqual(fakeActor.behaviors, {
       BehaviorOne: [mockBehavior],
       BehaviorTwo: [anotherBehavior]
@@ -131,21 +131,21 @@ describe("Behavior", () => {
   });
 });
 
-describe("Actor Behavior", () => {
-  describe("getBehavior", () => {
+describe("Actor Component Lookup", () => {
+  describe("getComponent", () => {
     test("should return the correct behavior instance", () => {
       const actor = createRealActor();
 
       const behavior = new BehaviorOne(actor);
 
-      const retrievedBehavior = actor.getBehavior(BehaviorOne);
+      const retrievedBehavior = actor.getComponent(BehaviorOne);
       assert.equal(retrievedBehavior, behavior);
     });
 
     test("should return null if behavior does not exist", () => {
       const actor = createRealActor();
 
-      const retrievedBehavior = actor.getBehavior(BehaviorOne);
+      const retrievedBehavior = actor.getComponent(BehaviorOne);
       assert.equal(retrievedBehavior, null);
     });
 
@@ -155,7 +155,7 @@ describe("Actor Behavior", () => {
       const behavior1 = new BehaviorOne(actor);
       new BehaviorOne(actor);
 
-      const retrievedBehavior = actor.getBehavior(BehaviorOne);
+      const retrievedBehavior = actor.getComponent(BehaviorOne);
       assert.equal(retrievedBehavior, behavior1);
     });
 
@@ -167,7 +167,7 @@ describe("Actor Behavior", () => {
 
       destroyedBehavior.pendingForDestruction = true;
 
-      const retrievedBehavior = actor.getBehavior(BehaviorOne);
+      const retrievedBehavior = actor.getComponent(BehaviorOne);
       assert.equal(retrievedBehavior, validBehavior);
     });
 
@@ -176,7 +176,7 @@ describe("Actor Behavior", () => {
 
       const childBehavior = new ChildBehavior(actor);
 
-      const retrievedBehavior = actor.getBehavior(BehaviorOne);
+      const retrievedBehavior = actor.getComponent(BehaviorOne);
       assert.equal(retrievedBehavior, childBehavior);
     });
 
@@ -189,26 +189,26 @@ describe("Actor Behavior", () => {
       behavior1.pendingForDestruction = true;
       behavior2.pendingForDestruction = true;
 
-      const retrievedBehavior = actor.getBehavior(BehaviorOne);
+      const retrievedBehavior = actor.getComponent(BehaviorOne);
       assert.equal(retrievedBehavior, null);
     });
   });
 
-  describe("getBehaviors", () => {
+  describe("getComponents", () => {
     test("should return all instances of the behavior", () => {
       const actor = createRealActor();
 
       const behavior1 = new BehaviorOne(actor);
       const behavior2 = new BehaviorOne(actor);
 
-      const retrievedBehaviors = Array.from(actor.getBehaviors(BehaviorOne));
+      const retrievedBehaviors = Array.from(actor.getComponents(BehaviorOne));
       assert.deepEqual(retrievedBehaviors, [behavior1, behavior2]);
     });
 
     test("should return an empty array if no behaviors exist", () => {
       const actor = createRealActor();
 
-      const retrievedBehaviors = Array.from(actor.getBehaviors(BehaviorOne));
+      const retrievedBehaviors = Array.from(actor.getComponents(BehaviorOne));
       assert.deepEqual(retrievedBehaviors, []);
     });
 
@@ -218,8 +218,8 @@ describe("Actor Behavior", () => {
       const behavior1 = new BehaviorOne(actor);
       const behavior2 = new BehaviorTwo(actor);
 
-      const retrievedBehaviorsOne = Array.from(actor.getBehaviors(BehaviorOne));
-      const retrievedBehaviorsTwo = Array.from(actor.getBehaviors(BehaviorTwo));
+      const retrievedBehaviorsOne = Array.from(actor.getComponents(BehaviorOne));
+      const retrievedBehaviorsTwo = Array.from(actor.getComponents(BehaviorTwo));
 
       assert.deepEqual(retrievedBehaviorsOne, [behavior1]);
       assert.deepEqual(retrievedBehaviorsTwo, [behavior2]);
@@ -234,7 +234,7 @@ describe("Actor Behavior", () => {
 
       destroyedBehavior.pendingForDestruction = true;
 
-      const retrievedBehaviors = Array.from(actor.getBehaviors(BehaviorOne));
+      const retrievedBehaviors = Array.from(actor.getComponents(BehaviorOne));
       assert.deepEqual(retrievedBehaviors, [validBehavior1, validBehavior2]);
     });
 
@@ -245,7 +245,7 @@ describe("Actor Behavior", () => {
       const childBehavior1 = new ChildBehavior(actor);
       const childBehavior2 = new ChildBehavior(actor);
 
-      const retrievedBehaviors = Array.from(actor.getBehaviors(BehaviorOne));
+      const retrievedBehaviors = Array.from(actor.getComponents(BehaviorOne));
       assert.equal(retrievedBehaviors.length, 3);
       assert.ok(retrievedBehaviors.includes(parentBehavior));
       assert.ok(retrievedBehaviors.includes(childBehavior1));
@@ -260,7 +260,7 @@ describe("Actor Behavior", () => {
 
       parentBehavior.pendingForDestruction = true;
 
-      const retrievedBehaviors = Array.from(actor.getBehaviors(BehaviorOne));
+      const retrievedBehaviors = Array.from(actor.getComponents(BehaviorOne));
       assert.deepEqual(retrievedBehaviors, [childBehavior]);
     });
   });
@@ -272,7 +272,7 @@ class ChildBehavior extends BehaviorOne {}
 
 function createRealActor() {
   return new Actor(
-    createGameInstance() as any,
+    createWorld() as any,
     { name: "test" }
   );
 }

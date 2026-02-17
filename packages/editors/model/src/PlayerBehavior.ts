@@ -38,7 +38,7 @@ export class PlayerBehavior extends Behavior<PlayerProperties> {
   }
 
   awake() {
-    this.actor.threeObject.rotateX(-Math.PI / 2);
+    this.actor.object3D.rotateX(-Math.PI / 2);
 
     this.model.animation.setClipNameRewriter((name) => name.slice(name.indexOf("|") + 1).toLowerCase());
     this.model.animation.play("idle_loop");
@@ -46,7 +46,7 @@ export class PlayerBehavior extends Behavior<PlayerProperties> {
   }
 
   update() {
-    const { input } = this.actor.gameInstance;
+    const { input } = this.actor.world;
 
     if (input.isTouchDown("primary")) {
       console.log("Primary touch is down!");
@@ -61,11 +61,11 @@ export class PlayerBehavior extends Behavior<PlayerProperties> {
     }
 
     if (input.isKeyDown("ArrowUp")) {
-      this.actor.threeObject.position.z += this.speed;
+      this.actor.object3D.position.z += this.speed;
       this.model.animation.play("walk_loop");
     }
     else if (input.isKeyDown("ArrowDown")) {
-      this.actor.threeObject.position.z -= this.speed;
+      this.actor.object3D.position.z -= this.speed;
       this.model.animation.play("walk_loop");
     }
     else if (input.isMouseButtonDown("left")) {

@@ -2,7 +2,7 @@
 import { CSS2DObject } from "three/addons/renderers/CSS2DRenderer.js";
 
 // Import Internal Dependencies
-import type { GameInstanceDefaultContext } from "../systems/GameInstance.ts";
+import type { WorldDefaultContext } from "../systems/World.ts";
 import type { UINode } from "./UINode.ts";
 
 export interface UITextStyle {
@@ -41,7 +41,7 @@ const kDefaultStyle: UITextStyle = {
 };
 const kDefaultZOffset = 0.1;
 
-export class UIText<TContext = GameInstanceDefaultContext> {
+export class UIText<TContext = WorldDefaultContext> {
   #element: HTMLDivElement;
   #cssObject: CSS2DObject;
   #style: UITextStyle;

@@ -22,16 +22,16 @@ function initRuntime() {
   const runtime = new Runtime(canvasHTMLElement, {
     includePerformanceStats: true
   });
-  const { gameInstance } = runtime;
+  const { world } = runtime;
 
-  new Actor(gameInstance, { name: "camera" })
-    .registerComponent(Camera3DControls, { speed: 8, rotationSpeed: 1 }, (component) => {
+  new Actor(world, { name: "camera" })
+    .addComponent(Camera3DControls, { speed: 8, rotationSpeed: 1 }, (component) => {
       component.camera.position.set(200, 200, 400);
       component.camera.lookAt(0, 0, 0);
     });
 
-  new Actor(gameInstance, { name: "map" })
-    .registerComponent(VoxelRenderer, { ratio: 16, cameraActorName: "camera" });
+  new Actor(world, { name: "map" })
+    .addComponent(VoxelRenderer, { ratio: 16, cameraActorName: "camera" });
 
   return runtime;
 }

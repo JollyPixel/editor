@@ -5,7 +5,7 @@ with configurable end behavior (stop, loop, chain to another playlist).
 Implements `VolumeObserver` to react to master volume changes.
 
 ```ts
-const audioManager = GlobalAudioManager.fromGameInstance(gameInstance);
+const audioManager = GlobalAudioManager.fromWorld(world);
 
 const bg = new AudioBackground({
   audioManager,
@@ -31,7 +31,7 @@ const bg = new AudioBackground({
   ]
 });
 
-gameInstance.audio.observe(bg);
+world.audio.observe(bg);
 
 // Play by path ("playlistName.trackName")
 await bg.play("ambient.forest");

@@ -8,3 +8,4 @@ export * from "./audio/GlobalAudio.ts";
 export * from "./controls/CombinedInput.ts";
 export * from "./ui/index.ts";
 export * from "./utils/index.ts";
+export * as Types from "./types.ts";

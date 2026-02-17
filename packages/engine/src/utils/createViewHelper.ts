@@ -7,14 +7,14 @@ import type { Systems } from "../index.ts";
 
 export function createViewHelper(
   camera: THREE.Camera,
-  gameInstance: Systems.GameInstance
+  world: Systems.World
 ): ViewHelper {
   const helper = new ViewHelper(
     camera,
-    gameInstance.renderer.canvas
+    world.renderer.canvas
   );
-  gameInstance.renderer.onDraw(() => {
-    helper.render(gameInstance.renderer.getSource());
+  world.renderer.onDraw(() => {
+    helper.render(world.renderer.getSource());
   });
 
   return helper;

@@ -59,7 +59,7 @@ export class ModelRenderer extends ActorComponent<any> {
       console.log({ object, animations });
     }
 
-    this.actor.threeObject.add(object);
+    this.actor.object3D.add(object);
     this.#object = object;
     this.animation.setMixer(
       new THREE.AnimationMixer(this.#object)
@@ -78,7 +78,7 @@ export class ModelRenderer extends ActorComponent<any> {
   }
 
   override destroy(): void {
-    this.actor.threeObject.remove(this.#object);
+    this.actor.object3D.remove(this.#object);
     super.destroy();
   }
 }

@@ -29,17 +29,17 @@ The engine ships with several built-in components:
 
 ### Attaching components
 
-Components are added to an actor with `registerComponent` or
-`registerComponentAndGet`:
+Components are added to an actor with `addComponent` or
+`addComponentAndGet`:
 
 ```ts
-const actor = new Actor(gameInstance, { name: "Player" });
+const actor = new Actor(world, { name: "Player" });
 
-actor.registerComponent(ModelRenderer, {
+actor.addComponent(ModelRenderer, {
   model: knightModel
 });
 
-actor.registerComponent(PlayerBehavior);
+actor.addComponent(PlayerBehavior);
 ```
 
 When constructed, a component automatically registers itself on
@@ -72,13 +72,36 @@ export type StrictComponentEnum =
 export type FreeComponentEnum = StrictComponentEnum | (string & {});
 
 interface ActorComponent {
+  /** Sequential numeric identifier (per component class). */
+  id: number;
+  /** Persistent random hex identifier (16 characters). */
+  persistentId: string;
   actor: Actor;
   typeName: FreeComponentEnum;
 
+  /** Shortcut to `actor.world.context`. */
+  get context(): TContext;
+
   isDestroyed(): boolean;
+
+  /** Returns `"$typeName:$id-$persistentId"`. */
+  toString(): string;
 
   // Remove the component from its actor
   destroy(): void;
+}
+```
+
+### Accessing game context
+
+The `context` getter provides a convenient shortcut to the
+game instance context without navigating through `actor.world`:
+
+```ts
+class PlayerBehavior extends Behavior {
+  update() {
+    const { score } = this.context;
+  }
 }
 ```
 

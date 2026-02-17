@@ -34,9 +34,9 @@ export class ModelManipulator extends ActorComponent {
     });
 
     this.#camera = options.camera;
-    this.#canvas = this.actor.gameInstance.renderer.canvas;
+    this.#canvas = this.actor.world.renderer.canvas;
     // @ts-ignore
-    this.#actors = this.actor.gameInstance.tree.children.filter((node) => node.name.endsWith("Model"));
+    this.#actors = this.actor.world.tree.children.filter((node) => node.name.endsWith("Model"));
     this.#raycaster = new THREE.Raycaster();
     this.#mouse = new THREE.Vector2();
     this.#dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
@@ -113,8 +113,8 @@ export class ModelManipulator extends ActorComponent {
 
     const intersectableObjects: THREE.Object3D[] = [];
     this.#actors.forEach((actor) => {
-      if (actor.threeObject.children.length > 0) {
-        actor.threeObject.traverse((child) => {
+      if (actor.object3D.children.length > 0) {
+        actor.object3D.traverse((child) => {
           if (child instanceof THREE.Mesh) {
             intersectableObjects.push(child);
           }
@@ -135,7 +135,7 @@ export class ModelManipulator extends ActorComponent {
         const intersection = new THREE.Vector3();
         this.#raycaster.ray.intersectPlane(this.#dragPlane, intersection);
 
-        this.#dragOffset.copy(this.#draggedActor.threeObject.position).sub(intersection);
+        this.#dragOffset.copy(this.#draggedActor.object3D.position).sub(intersection);
       }
     }
   }
@@ -147,8 +147,8 @@ export class ModelManipulator extends ActorComponent {
 
     const intersectableObjects: THREE.Object3D[] = [];
     this.#actors.forEach((actor) => {
-      if (actor.threeObject.children.length > 0) {
-        actor.threeObject.traverse((child) => {
+      if (actor.object3D.children.length > 0) {
+        actor.object3D.traverse((child) => {
           if (child instanceof THREE.Mesh) {
             intersectableObjects.push(child);
           }
@@ -167,7 +167,7 @@ export class ModelManipulator extends ActorComponent {
         this.#canvas.style.cursor = "grabbing";
 
         this.#rotationStartMouse.copy(this.#mouse);
-        this.#rotationStartRotation = this.#draggedActor.threeObject.rotation.y;
+        this.#rotationStartRotation = this.#draggedActor.object3D.rotation.y;
       }
     }
   }
@@ -181,14 +181,14 @@ export class ModelManipulator extends ActorComponent {
 
         const intersection = new THREE.Vector3();
         if (this.#raycaster.ray.intersectPlane(this.#dragPlane, intersection)) {
-          this.#draggedActor.threeObject.position.copy(intersection.add(this.#dragOffset));
+          this.#draggedActor.object3D.position.copy(intersection.add(this.#dragOffset));
         }
       }
       else if (this.#isAltDown) {
         const mouseDelta = this.#mouse.x - this.#rotationStartMouse.x;
         const rotationSpeed = Math.PI * 2;
         const newRotation = this.#rotationStartRotation + (mouseDelta * rotationSpeed);
-        this.#draggedActor.threeObject.rotation.y = newRotation;
+        this.#draggedActor.object3D.rotation.y = newRotation;
       }
     }
     else if (this.#isControlDown || this.#isAltDown) {
@@ -196,8 +196,8 @@ export class ModelManipulator extends ActorComponent {
 
       const intersectableObjects: THREE.Object3D[] = [];
       this.#actors.forEach((actor) => {
-        if (actor.threeObject.children.length > 0) {
-          actor.threeObject.traverse((child) => {
+        if (actor.object3D.children.length > 0) {
+          actor.object3D.traverse((child) => {
             if (child instanceof THREE.Mesh) {
               intersectableObjects.push(child);
             }
@@ -231,7 +231,7 @@ export class ModelManipulator extends ActorComponent {
 
   #findActorForObject(object: THREE.Object3D): Actor | null {
     for (const actor of this.#actors) {
-      if (this.#isObjectInActor(object, actor.threeObject)) {
+      if (this.#isObjectInActor(object, actor.object3D)) {
         return actor;
       }
     }

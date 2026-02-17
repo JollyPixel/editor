@@ -1,15 +1,15 @@
 // Import Internal Dependencies
 import {
-  GameInstance
-} from "../systems/GameInstance.ts";
+  World
+} from "../systems/World.ts";
 
 export interface GlobalsAdapter {
-  setGame(instance: GameInstance<any, any>): void;
+  setGame(instance: World<any, any>): void;
 }
 
 export class BrowserGlobalsAdapter implements GlobalsAdapter {
   setGame(
-    instance: GameInstance<any, any>
+    instance: World<any, any>
   ) {
     globalThis.game = instance;
   }

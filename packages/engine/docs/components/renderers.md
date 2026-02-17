@@ -14,8 +14,8 @@ removed on `destroy`.
 ```ts
 import { Actor, ModelRenderer } from "@jolly-pixel/engine";
 
-const actor = new Actor(gameInstance, { name: "Knight" });
-actor.registerComponent(ModelRenderer, {
+const actor = new Actor(world, { name: "Knight" });
+actor.addComponent(ModelRenderer, {
   path: "models/knight.glb",
   animations: {
     default: "idle",
@@ -35,7 +35,7 @@ Every `ModelRenderer` exposes an `animation` property that
 controls clip playback with crossfade transitions:
 
 ```ts
-const renderer = actor.registerComponentAndGet(ModelRenderer, {
+const renderer = actor.addComponentAndGet(ModelRenderer, {
   path: "models/knight.glb"
 });
 
@@ -52,8 +52,8 @@ frame-based animation, horizontal/vertical flipping, and opacity.
 ```ts
 import { Actor, SpriteRenderer } from "@jolly-pixel/engine";
 
-const actor = new Actor(gameInstance, { name: "Player" });
-actor.registerComponent(SpriteRenderer, {
+const actor = new Actor(world, { name: "Player" });
+actor.addComponent(SpriteRenderer, {
   texture: "textures/player.png",
   tileHorizontal: 8,
   tileVertical: 4,
@@ -76,7 +76,7 @@ actor.registerComponent(SpriteRenderer, {
 Runtime helpers:
 
 ```ts
-const sprite = actor.registerComponentAndGet(SpriteRenderer, {
+const sprite = actor.addComponentAndGet(SpriteRenderer, {
   texture: "textures/hero.png",
   tileHorizontal: 6,
   tileVertical: 2,
@@ -98,8 +98,8 @@ layers are converted into child actors.
 ```ts
 import { Actor, TiledMapRenderer } from "@jolly-pixel/engine";
 
-const actor = new Actor(gameInstance, { name: "Level" });
-actor.registerComponent(TiledMapRenderer, {
+const actor = new Actor(world, { name: "Level" });
+actor.addComponent(TiledMapRenderer, {
   assetPath: "maps/level1.tmj",
   orientation: "platformer"
 });
@@ -123,8 +123,8 @@ Renders 3D extruded text using a Three.js typeface font
 import * as THREE from "three";
 import { Actor, TextRenderer } from "@jolly-pixel/engine";
 
-const actor = new Actor(gameInstance, { name: "Title" });
-actor.registerComponent(TextRenderer, {
+const actor = new Actor(world, { name: "Title" });
+actor.addComponent(TextRenderer, {
   path: "fonts/roboto.typeface.json",
   text: "Hello World",
   material: new THREE.MeshStandardMaterial({ color: 0xffffff }),
@@ -143,7 +143,7 @@ To update the text at runtime, use the `text` property and call
 `updateMesh()`:
 
 ```ts
-const renderer = actor.registerComponentAndGet(TextRenderer, {
+const renderer = actor.addComponentAndGet(TextRenderer, {
   path: "fonts/roboto.typeface.json"
 });
 

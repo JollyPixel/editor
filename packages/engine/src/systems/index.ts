@@ -11,10 +11,12 @@ export type {
   AssetLoaderOptions
 } from "./asset/Registry.ts";
 
-export * from "./GameInstance.ts";
+export * from "./World.ts";
 export * from "./FixedTimeStep.ts";
 export * from "./rendering/index.ts";
-export * from "./Scene.ts";
+export * from "./SceneManager.ts";
+export * from "./generators/IntegerIncrement.ts";
+export * from "./generators/PersistentIdIncrement.ts";
 
 export type {
   AssetOnProgressCallback

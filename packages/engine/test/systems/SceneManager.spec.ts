@@ -3,13 +3,13 @@ import { describe, test, beforeEach, mock } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { SceneEngine } from "../../src/systems/Scene.ts";
+import { SceneManager } from "../../src/systems/SceneManager.ts";
 
 // CONSTANTS
 const kDeltaTime = 16.67;
 
-describe("Systems.SceneEngine", () => {
-  let sceneEngine: SceneEngine;
+describe("Systems.SceneManager", () => {
+  let sceneManager: SceneManager;
   let mockThreeScene: {
     add: ReturnType<typeof mock.fn>;
     remove: ReturnType<typeof mock.fn>;
@@ -21,11 +21,11 @@ describe("Systems.SceneEngine", () => {
       remove: mock.fn()
     };
     // @ts-expect-error
-    sceneEngine = new SceneEngine(mockThreeScene);
+    sceneManager = new SceneManager(mockThreeScene);
   });
 
   test("should initialize with default values", () => {
-    const scene = new SceneEngine();
+    const scene = new SceneManager();
 
     assert.ok(scene.tree);
     assert.ok(Array.isArray(scene.componentsToBeStarted));
@@ -35,7 +35,7 @@ describe("Systems.SceneEngine", () => {
   });
 
   test("should use provided THREE.Scene", () => {
-    const result = sceneEngine.getSource();
+    const result = sceneManager.getSource();
 
     assert.strictEqual(result, mockThreeScene);
   });
@@ -55,9 +55,9 @@ describe("Systems.SceneEngine", () => {
     });
 
     // @ts-expect-error
-    sceneEngine.tree.children.push(actor1, actor2, actor3);
+    sceneManager.tree.children.push(actor1, actor2, actor3);
 
-    sceneEngine.awake();
+    sceneManager.awake();
 
     assert.strictEqual(actor1.awake.mock.calls.length, 1);
     assert.strictEqual(actor2.awake.mock.calls.length, 0);
@@ -68,14 +68,14 @@ describe("Systems.SceneEngine", () => {
 
   test("should emit awake event", () => {
     let eventEmitted = false;
-    sceneEngine.on("awake", () => {
+    sceneManager.on("awake", () => {
       eventEmitted = true;
     });
 
-    sceneEngine.awake();
+    sceneManager.awake();
 
     assert.strictEqual(eventEmitted, true);
-    sceneEngine.off("awake");
+    sceneManager.off("awake");
   });
 
   test("should start components for active actors", () => {
@@ -83,14 +83,14 @@ describe("Systems.SceneEngine", () => {
     const component = createFakeComponent({ actor });
 
     // @ts-expect-error
-    sceneEngine.tree.children.push(actor);
+    sceneManager.tree.children.push(actor);
     // @ts-expect-error
-    sceneEngine.componentsToBeStarted.push(component);
+    sceneManager.componentsToBeStarted.push(component);
 
-    sceneEngine.update(kDeltaTime);
+    sceneManager.update(kDeltaTime);
 
     assert.strictEqual(component.start.mock.calls.length, 1);
-    assert.strictEqual(sceneEngine.componentsToBeStarted.length, 0);
+    assert.strictEqual(sceneManager.componentsToBeStarted.length, 0);
   });
 
   test("should skip components for inactive actors", () => {
@@ -98,12 +98,12 @@ describe("Systems.SceneEngine", () => {
     const component = createFakeComponent({ actor: inactiveActor });
 
     // @ts-expect-error
-    sceneEngine.componentsToBeStarted.push(component);
+    sceneManager.componentsToBeStarted.push(component);
 
-    sceneEngine.update(kDeltaTime);
+    sceneManager.update(kDeltaTime);
 
     assert.strictEqual(component.start.mock.calls.length, 0);
-    assert.strictEqual(sceneEngine.componentsToBeStarted.length, 1);
+    assert.strictEqual(sceneManager.componentsToBeStarted.length, 1);
   });
 
   test("should update all actors", () => {
@@ -111,9 +111,9 @@ describe("Systems.SceneEngine", () => {
     const actor2 = createFakeActor({ name: "actor2" });
 
     // @ts-expect-error
-    sceneEngine.tree.children.push(actor1, actor2);
+    sceneManager.tree.children.push(actor1, actor2);
 
-    sceneEngine.update(kDeltaTime);
+    sceneManager.update(kDeltaTime);
 
     assert.strictEqual(actor1.update.mock.calls.length, 1);
     assert.strictEqual(actor1.update.mock.calls[0].arguments[0], kDeltaTime);
@@ -126,13 +126,13 @@ describe("Systems.SceneEngine", () => {
     const component2 = createFakeComponent();
 
     // @ts-expect-error
-    sceneEngine.componentsToBeDestroyed.push(component1, component2);
+    sceneManager.componentsToBeDestroyed.push(component1, component2);
 
-    sceneEngine.update(kDeltaTime);
+    sceneManager.update(kDeltaTime);
 
     assert.strictEqual(component1.destroy.mock.calls.length, 1);
     assert.strictEqual(component2.destroy.mock.calls.length, 1);
-    assert.strictEqual(sceneEngine.componentsToBeDestroyed.length, 0);
+    assert.strictEqual(sceneManager.componentsToBeDestroyed.length, 0);
   });
 
   test("should destroy actors marked for destruction", () => {
@@ -142,9 +142,9 @@ describe("Systems.SceneEngine", () => {
     });
 
     // @ts-expect-error
-    sceneEngine.tree.children.push(actor);
+    sceneManager.tree.children.push(actor);
 
-    sceneEngine.update(kDeltaTime);
+    sceneManager.update(kDeltaTime);
 
     assert.strictEqual(actor.destroy.mock.calls.length, 1);
   });
@@ -153,23 +153,23 @@ describe("Systems.SceneEngine", () => {
     const component = createFakeComponent();
 
     // @ts-expect-error
-    sceneEngine.componentsToBeStarted.push(component);
+    sceneManager.componentsToBeStarted.push(component);
     // @ts-expect-error
-    sceneEngine.destroyComponent(component);
+    sceneManager.destroyComponent(component);
 
     assert.strictEqual(component.pendingForDestruction, true);
     // @ts-expect-error
-    assert.ok(sceneEngine.componentsToBeDestroyed.includes(component));
-    assert.strictEqual(sceneEngine.componentsToBeStarted.length, 0);
+    assert.ok(sceneManager.componentsToBeDestroyed.includes(component));
+    assert.strictEqual(sceneManager.componentsToBeStarted.length, 0);
   });
 
   test("should not double-mark component for destruction", () => {
     const component = createFakeComponent({ pendingForDestruction: true });
 
     // @ts-expect-error
-    sceneEngine.destroyComponent(component);
+    sceneManager.destroyComponent(component);
 
-    assert.strictEqual(sceneEngine.componentsToBeDestroyed.length, 0);
+    assert.strictEqual(sceneManager.componentsToBeDestroyed.length, 0);
   });
 
   test("should handle nested actors with destruction", () => {
@@ -190,9 +190,9 @@ describe("Systems.SceneEngine", () => {
     });
 
     // @ts-expect-error
-    sceneEngine.tree.children.push(parent);
+    sceneManager.tree.children.push(parent);
 
-    sceneEngine.update(kDeltaTime);
+    sceneManager.update(kDeltaTime);
 
     assert.strictEqual(grandChild.destroy.mock.calls.length, 1);
     assert.strictEqual(child1.destroy.mock.calls.length, 1);
@@ -202,7 +202,7 @@ describe("Systems.SceneEngine", () => {
 
   test("should handle empty scene update", () => {
     assert.doesNotThrow(() => {
-      sceneEngine.update(kDeltaTime);
+      sceneManager.update(kDeltaTime);
     });
   });
 
@@ -210,16 +210,16 @@ describe("Systems.SceneEngine", () => {
     const actor = createFakeActor({ name: "actor" });
 
     // @ts-expect-error
-    sceneEngine.tree.add(actor);
+    sceneManager.tree.add(actor);
 
     assert.strictEqual(mockThreeScene.add.mock.calls.length, 1);
-    assert.strictEqual(mockThreeScene.add.mock.calls[0].arguments[0], actor.threeObject);
+    assert.strictEqual(mockThreeScene.add.mock.calls[0].arguments[0], actor.object3D);
 
     // @ts-expect-error
-    sceneEngine.tree.remove(actor);
+    sceneManager.tree.remove(actor);
 
     assert.strictEqual(mockThreeScene.remove.mock.calls.length, 1);
-    assert.strictEqual(mockThreeScene.remove.mock.calls[0].arguments[0], actor.threeObject);
+    assert.strictEqual(mockThreeScene.remove.mock.calls[0].arguments[0], actor.object3D);
   });
 });
 
@@ -245,7 +245,7 @@ function createFakeActor(
     children: [...children],
     awoken,
     pendingForDestruction,
-    threeObject: { id: Math.random() },
+    object3D: { id: Math.random() },
     awake: mock.fn(() => void 0),
     update: mock.fn(),
     destroy: mock.fn(),

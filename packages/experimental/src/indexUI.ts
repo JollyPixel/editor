@@ -10,16 +10,16 @@ const canvasHTMLElement = document.querySelector("canvas") as HTMLCanvasElement;
 const runtime = new Runtime(canvasHTMLElement, {
   includePerformanceStats: true
 });
-const { gameInstance } = runtime;
+const { world } = runtime;
 
-const camera2DActor = new Actor(gameInstance, { name: "camera2D" })
-  .registerComponent(UIRenderer, { near: 1 });
+const camera2DActor = new Actor(world, { name: "camera2D" })
+  .addComponent(UIRenderer, { near: 1 });
 
-const uiButton = new Actor(gameInstance, {
+const uiButton = new Actor(world, {
   name: "uiContainer",
   parent: camera2DActor
 })
-  .registerComponentAndGet(UISprite, {
+  .addComponentAndGet(UISprite, {
     anchor: { y: "top" },
     offset: { y: -50 },
     size: { width: 200, height: 60 },

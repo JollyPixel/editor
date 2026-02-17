@@ -14,7 +14,7 @@ export type SceneEvents = {
   awake: [];
 };
 
-export interface Scene {
+export interface SceneContract {
   readonly tree: ActorTree<any>;
 
   componentsToBeStarted: Component[];
@@ -26,9 +26,9 @@ export interface Scene {
   destroyActor(actor: Actor<any>): void;
 }
 
-export class SceneEngine extends EventEmitter<
+export class SceneManager extends EventEmitter<
   SceneEvents
-> implements Scene {
+> implements SceneContract {
   default: THREE.Scene;
 
   componentsToBeStarted: Component[] = [];
@@ -37,11 +37,13 @@ export class SceneEngine extends EventEmitter<
   #cachedActors: Actor<any>[] = [];
 
   readonly tree = new ActorTree<any>({
-    addCallback: (actor) => this.default.add(actor.threeObject),
-    removeCallback: (actor) => this.default.remove(actor.threeObject)
+    addCallback: (actor) => this.default.add(actor.object3D),
+    removeCallback: (actor) => this.default.remove(actor.object3D)
   });
 
-  constructor(scene?: THREE.Scene) {
+  constructor(
+    scene?: THREE.Scene
+  ) {
     super();
     this.default = scene ?? new THREE.Scene();
   }

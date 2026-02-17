@@ -71,7 +71,7 @@ export async function loadRuntime(
     } = await gpuTierPromise;
 
     runtime.loop.setFps(fps ?? 60);
-    runtime.gameInstance.renderer.getSource().setPixelRatio(
+    runtime.world.renderer.getSource().setPixelRatio(
       getDevicePixelRatio(isMobile)
     );
     if (tier < 1) {

@@ -3,8 +3,8 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import type {
-  GameInstanceDefaultContext
-} from "../../systems/GameInstance.ts";
+  WorldDefaultContext
+} from "../../systems/World.ts";
 import {
   Actor,
   ActorComponent
@@ -23,17 +23,17 @@ export type BehaviorPropertiesValue =
 export type BehaviorProperties = Record<string, BehaviorPropertiesValue>;
 
 export interface BehaviorOptions {
-  initializer?: (behavior: Behavior) => void;
+  initializer?: (behavior: Behavior<any, any>) => void;
 }
 
 export class Behavior<
   T extends BehaviorProperties = Record<string, BehaviorPropertiesValue>,
-  TContext = GameInstanceDefaultContext
+  TContext = WorldDefaultContext
 > extends ActorComponent<TContext> {
   #properties: T = Object.create(null);
 
   constructor(
-    actor: Actor<any>,
+    actor: Actor<TContext>,
     options: BehaviorOptions = {}
   ) {
     super({
@@ -90,7 +90,7 @@ export class Behavior<
 }
 
 function initializeBehaviorMetadata(
-  behavior: Behavior
+  behavior: Behavior<any, any>
 ): void {
   // Delay the loading to ensure that all properties are initialized
   setTimeout(() => {

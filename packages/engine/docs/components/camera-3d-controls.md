@@ -10,8 +10,8 @@ mouse-look rotation.
 ```ts
 import { Actor, Camera3DControls } from "@jolly-pixel/engine";
 
-const actor = new Actor(gameInstance, { name: "Camera" });
-actor.registerComponent(Camera3DControls, {
+const actor = new Actor(world, { name: "Camera" });
+actor.addComponent(Camera3DControls, {
   speed: 15,
   rotationSpeed: 0.003,
   bindings: {

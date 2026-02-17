@@ -44,7 +44,7 @@ and the **engine** (`@jolly-pixel/engine`). It is responsible for:
 │  ┌──────────────────────────────────────────┐   │
 │  │                Runtime                   │   │
 │  │  ┌────────────────────────────────────┐  │   │
-│  │  │          GameInstance              │  │   │
+│  │  │          World              │  │   │
 │  │  │  (SceneEngine + ThreeRenderer)     │  │   │
 │  │  └────────────────────────────────────┘  │   │
 │  │  THREE.Clock ─── tick() ─── stats.js     │   │
@@ -84,7 +84,7 @@ loadRuntime(runtime)
  │
  └─ 8. Start runtime ──────────────────── runtime.start()
        ├─ canvas opacity: 1               fade-in with CSS transition
-       ├─ gameInstance.connect()
+       ├─ world.connect()
        └─ setAnimationLoop(tick)           game loop begins
 ```
 
@@ -108,15 +108,15 @@ setAnimationLoop(tick)
      │
      └─ if deltaTime >= interval
          ├─ stats.begin()
-         ├─ gameInstance.update(deltaTime)
+         ├─ world.update(deltaTime)
          │   └─ returns true → runtime.stop()
-         ├─ gameInstance.render()
+         ├─ world.render()
          ├─ deltaTime %= interval
          └─ stats.end()
 ```
 
 The loop stops when:
-- `gameInstance.update()` signals an exit
+- `world.update()` signals an exit
 - `runtime.stop()` is called manually
 
 ## Loading screen

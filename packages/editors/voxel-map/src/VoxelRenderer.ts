@@ -44,9 +44,9 @@ export class VoxelRenderer extends ActorComponent {
     const { cameraActorName = "camera", ratio = 50 } = options;
 
     this.ratio = ratio;
-    const behavior = this.actor.gameInstance.scene.tree
+    const behavior = this.actor.world.sceneManager.tree
       .getActor(cameraActorName)
-      ?.getBehavior(Camera3DControls);
+      ?.getComponent(Camera3DControls);
     if (!behavior) {
       throw new Error(`Unable to fetch camera behavior from actor with name <${cameraActorName}>`);
     }
@@ -55,7 +55,7 @@ export class VoxelRenderer extends ActorComponent {
   }
 
   awake() {
-    const threeScene = this.actor.gameInstance.scene.getSource();
+    const threeScene = this.actor.world.sceneManager.getSource();
     threeScene.background = new THREE.Color("#e7f2ff");
 
     this.plane = new THREE.Mesh(
@@ -70,19 +70,19 @@ export class VoxelRenderer extends ActorComponent {
       new THREE.AmbientLight(new THREE.Color("#ffffff"), 3)
     );
 
-    this.actor.registerComponent(GridRenderer, { ratio: this.ratio });
-    this.actor.registerComponent(RollOverRenderer, void 0, (component) => {
+    this.actor.addComponent(GridRenderer, { ratio: this.ratio });
+    this.actor.addComponent(RollOverRenderer, void 0, (component) => {
       threeScene.add(component.object);
     });
 
-    createViewHelper(this.camera, this.actor.gameInstance);
+    createViewHelper(this.camera, this.actor.world);
   }
 
   remove(
     intersect: THREE.Intersection<THREE.Object3D>
   ) {
     if (intersect.object !== this.plane) {
-      this.actor.gameInstance.scene.getSource().remove(intersect.object);
+      this.actor.world.sceneManager.getSource().remove(intersect.object);
       this.tree.remove(intersect.object);
     }
   }
@@ -102,12 +102,12 @@ export class VoxelRenderer extends ActorComponent {
       texture: textures[Math.floor(Math.random() * textures.length)]
     }).setPositionFromIntersection(intersect);
 
-    this.actor.gameInstance.scene.getSource().add(voxel);
+    this.actor.world.sceneManager.getSource().add(voxel);
     this.tree.add(voxel);
   }
 
   update() {
-    const { input } = this.actor.gameInstance;
+    const { input } = this.actor.world;
 
     const isAnyMouseButtonsPressed = input.wasMouseButtonJustPressed("ANY");
     if (!isAnyMouseButtonsPressed) {
@@ -115,7 +115,7 @@ export class VoxelRenderer extends ActorComponent {
     }
 
     this.raycaster.setFromCamera(
-      this.actor.gameInstance.input.getMousePosition(),
+      this.actor.world.input.getMousePosition(),
       this.camera
     );
 

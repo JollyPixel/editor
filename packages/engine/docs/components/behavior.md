@@ -37,7 +37,7 @@ export class PlayerBehavior extends Behavior<PlayerProperties> {
   model: ModelRenderer;
 
   awake() {
-    this.actor.threeObject.rotateX(-Math.PI / 2);
+    this.actor.object3D.rotateX(-Math.PI / 2);
 
     this.model.animation.setClipNameRewriter(
       (name) => name.slice(name.indexOf("|") + 1).toLowerCase()
@@ -47,7 +47,7 @@ export class PlayerBehavior extends Behavior<PlayerProperties> {
   }
 
   update() {
-    const { input } = this.actor.gameInstance;
+    const { input } = this.actor.world;
 
     if (input.isMouseButtonDown("left")) {
       this.model.animation.play("punch_jab");

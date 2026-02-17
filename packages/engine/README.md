@@ -49,11 +49,11 @@ Systems are responsible for driving the game loop, orchestrating rendering, and 
 resources such as assets. They operate on actors and their components
 each frame.
 
-- [GameInstance](./docs/systems/game-instance.md) — top-level orchestrator that ties the renderer, scene,
+- [World](./docs/systems/world.md) — top-level orchestrator that ties the renderer, scene,
   input, and audio into a unified game loop.
   - [Renderer](./docs/systems/renderer.md) — abstracts the Three.js render pipeline and supports
     direct and post-processing render strategies.
-  - [Scene](./docs/systems/scene.md) — the ECS world manager that owns the actor tree and drives
+  - [SceneManager](./docs/systems/scene-manager.md) — the ECS world manager that owns the actor tree and drives
     per-frame lifecycle (awake → start → update → destroy).
 - [Asset](./docs/asset.md) — lazy-loading asset pipeline with a
   registry of loaders, a queue, and a cache.
@@ -64,14 +64,14 @@ each frame.
 ```ts
 import { Systems, Actor } from "@jolly-pixel/engine";
 
-const scene = new Systems.SceneEngine();
+const sceneManager = new Systems.SceneManager();
 const renderer = new Systems.ThreeRenderer(canvas, {
-  scene,
+  scene: sceneManager,
   renderMode: "direct"
 });
-const game = new Systems.GameInstance(renderer, {
+const game = new Systems.World(renderer, {
   enableOnExit: true,
-  scene
+  sceneManager
 });
 
 game.connect();
@@ -97,10 +97,10 @@ dictionary of Behaviors. The engine uses the name *Actor* (inspired by [Superpow
 <summary>Code Example</summary>
 
 ```ts
-const player = gameInstance.createActor("Player");
-player.transform.setLocalPosition(0, 1, 0);
+const player = world.createActor("Player");
+player.transform.setLocalPosition({ x: 0, y: 1, z: 0 });
 
-const child = gameInstance.createActor("Weapon", {
+const child = world.createActor("Weapon", {
   parent: player
 });
 
@@ -141,16 +141,16 @@ class PlayerBehavior extends Behavior {
   }
 
   update() {
-    if (this.actor.gameInstance.input.isKeyDown("ArrowUp")) {
+    if (this.actor.world.input.isKeyDown("ArrowUp")) {
       this.onMovement.emit();
       this.actor.transform.moveForward(this.speed);
     }
   }
 }
 
-new Actor(gameInstance, { name: "player" })
-  .registerComponent(ModelRenderer, { path: "models/Player.glb" })
-  .registerComponent(PlayerBehavior, { speed: 0.5 });
+new Actor(world, { name: "player" })
+  .addComponent(ModelRenderer, { path: "models/Player.glb" })
+  .addComponent(PlayerBehavior, { speed: 0.5 });
 ```
 
 </details>
@@ -174,7 +174,7 @@ query API so that behaviors can react to player actions without coupling to a sp
 ```ts
 import { InputCombination } from "@jolly-pixel/engine";
 
-const { input } = gameInstance;
+const { input } = world;
 
 if (input.isKeyDown("Space")) {
   console.log("jump!");
@@ -190,7 +190,7 @@ if (dashCombo.evaluate(input)) {
 ```
 
 > [!TIP]
-> In ActorComponent or Behavior input are accessible through this.actor.gameInstance.input
+> In ActorComponent or Behavior input are accessible through this.actor.world.input
 
 </details>
 
@@ -210,7 +210,7 @@ Manages sound playback across the engine. It provides a global volume controller
 ```ts
 import { GlobalAudioManager, AudioBackground } from "@jolly-pixel/engine";
 
-const audioManager = GlobalAudioManager.fromGameInstance(gameInstance);
+const audioManager = GlobalAudioManager.fromWorld(world);
 const bg = new AudioBackground({
   audioManager,
   autoPlay: true,
@@ -223,8 +223,8 @@ const bg = new AudioBackground({
   }]
 });
 
-gameInstance.audio.observe(bg);
-gameInstance.audio.volume = 0.5;
+world.audio.observe(bg);
+world.audio.volume = 0.5;
 ```
 
 </details>

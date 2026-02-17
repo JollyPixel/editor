@@ -10,7 +10,7 @@ stopping, and frame-rate control.
 
 ```ts
 interface RuntimeOptions<
-  TContext = Systems.GameInstanceDefaultContext
+  TContext = Systems.WorldDefaultContext
 > {
   /**
    * @default false
@@ -18,20 +18,20 @@ interface RuntimeOptions<
    */
   includePerformanceStats?: boolean;
   /**
-   * Optional context object passed to the GameInstance.
+   * Optional context object passed to the World.
    */
   context?: TContext;
   /**
-   * Optional global audio object passed to the GameInstance.
+   * Optional global audio object passed to the World.
    * If not provided, a default audio context will be created.
    */
   audio?: GlobalAudio;
 }
 
 class Runtime<
-  TContext = GameInstanceDefaultContext
+  TContext = WorldDefaultContext
 > {
-  gameInstance: Systems.GameInstance<THREE.WebGLRenderer, TContext>;
+  world: Systems.World<THREE.WebGLRenderer, TContext>;
   canvas: HTMLCanvasElement;
   stats?: Stats;
   clock: THREE.Clock;
@@ -61,8 +61,8 @@ const runtime = new Runtime(canvas, {
   includePerformanceStats: true
 });
 
-const { gameInstance } = runtime;
-// Work with the gameInstance
+const { world } = runtime;
+// Work with the world
 
 loadRuntime(runtime)
   .catch(console.error);
@@ -71,7 +71,7 @@ loadRuntime(runtime)
 ## Type-safe context
 
 The `TContext` generic lets you pass a typed context object to the
-underlying `GameInstance`:
+underlying `World`:
 
 ```ts
 interface MyContext {
@@ -83,6 +83,6 @@ const runtime = new Runtime<MyContext>(canvas, {
   context: { score: 0, level: "intro" }
 });
 
-// runtime.gameInstance.context is typed as MyContext
-runtime.gameInstance.context.score; // number
+// runtime.world.context is typed as MyContext
+runtime.world.context.score; // number
 ```

@@ -2,7 +2,7 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import type { GameInstanceDefaultContext } from "../systems/GameInstance.ts";
+import type { WorldDefaultContext } from "../systems/World.ts";
 import type { UIRenderer } from "./UIRenderer.ts";
 import { type Actor, ActorComponent } from "../actor/index.ts";
 import { UIRendererID } from "./common.ts";
@@ -58,7 +58,7 @@ export interface UINodeOptions extends UINodePositionalOptions {
   };
 }
 
-export class UINode<TContext = GameInstanceDefaultContext> extends ActorComponent<TContext> {
+export class UINode<TContext = WorldDefaultContext> extends ActorComponent<TContext> {
   #options: UINodeOptions;
 
   constructor(
@@ -68,7 +68,7 @@ export class UINode<TContext = GameInstanceDefaultContext> extends ActorComponen
     super({ actor, typeName: "UINode" });
     this.#options = options;
 
-    const uiRenderer = this.actor.gameInstance[
+    const uiRenderer = this.actor.world[
       UIRendererID
     ] as UIRenderer<TContext> | undefined;
     if (uiRenderer) {
@@ -76,7 +76,7 @@ export class UINode<TContext = GameInstanceDefaultContext> extends ActorComponen
     }
     else {
       this.updateToWorldPosition();
-      this.actor.gameInstance.renderer.on(
+      this.actor.world.renderer.on(
         "resize", this.updateToWorldPosition.bind(this)
       );
     }
@@ -99,7 +99,7 @@ export class UINode<TContext = GameInstanceDefaultContext> extends ActorComponen
   addChildren(
     object: THREE.Object3D
   ): void {
-    this.actor.threeObject.add(object);
+    this.actor.object3D.add(object);
   }
 
   updateToWorldPosition(): void {
@@ -108,7 +108,7 @@ export class UINode<TContext = GameInstanceDefaultContext> extends ActorComponen
       anchor = { x: "center", y: "center" }
     } = this.#options;
 
-    const screenBounds = this.actor.gameInstance.input.getScreenBounds();
+    const screenBounds = this.actor.world.input.getScreenBounds();
 
     const { width, height } = this.size;
     const pivot = this.pivot;
@@ -128,7 +128,7 @@ export class UINode<TContext = GameInstanceDefaultContext> extends ActorComponen
       pivotY: pivot.y
     });
 
-    this.actor.threeObject.position.set(x, y, 0);
+    this.actor.object3D.position.set(x, y, 0);
   }
 
   #computeX(
