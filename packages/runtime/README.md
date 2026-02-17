@@ -58,9 +58,9 @@ const runtime = new Runtime(canvas, {
   includePerformanceStats: true
 });
 
-// The gameInstance gives you access to the engine systems
+// The world gives you access to the engine systems
 // (scene, renderer, input, etc.)
-const { gameInstance } = runtime;
+const { world } = runtime;
 
 // loadRuntime will detect the GPU, show a loading screen,
 // load all registered assets, then start the game loop.

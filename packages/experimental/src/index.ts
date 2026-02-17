@@ -20,24 +20,24 @@ const canvasHTMLElement = document.querySelector("canvas") as HTMLCanvasElement;
 const runtime = new Runtime(canvasHTMLElement, {
   includePerformanceStats: true
 });
-const { gameInstance } = runtime;
-gameInstance.renderer.setRenderMode("composer");
+const { world } = runtime;
+world.renderer.setRenderMode("composer");
 
-new Actor(gameInstance, { name: "camera" })
-  .registerComponent(Camera3DControls, { speed: 0.35, rotationSpeed: 0.45 }, (component) => {
+new Actor(world, { name: "camera" })
+  .addComponent(Camera3DControls, { speed: 0.35, rotationSpeed: 0.45 }, (component) => {
     component.camera.position.set(10, 10, 5);
     component.camera.lookAt(0, 0, 0);
 
-    gameInstance.renderer.setEffects(
-      new UnrealBloomPass(gameInstance.input.getScreenSize(), 0.35, 0, 0.15),
+    world.renderer.setEffects(
+      new UnrealBloomPass(world.input.getScreenSize(), 0.35, 0, 0.15),
       new OutputPass()
     );
 
-    createViewHelper(component.camera, gameInstance);
+    createViewHelper(component.camera, world);
   });
 
-// new Actor(gameInstance, { name: "sprite" })
-//   .registerComponent(SpriteRenderer, {
+// new Actor(world, { name: "sprite" })
+//   .addComponent(SpriteRenderer, {
 //     texture: "./assets/sprites/teleport-door.png",
 //     tileHorizontal: 16,
 //     tileVertical: 1,
@@ -49,21 +49,21 @@ new Actor(gameInstance, { name: "camera" })
 //     sprite.animation.play("open", { loop: true, duration: 2.5 });
 //   });
 
-new Actor(gameInstance, { name: "tilemap" })
-  .registerComponent(TiledMapRenderer, {
+new Actor(world, { name: "tilemap" })
+  .addComponent(TiledMapRenderer, {
     assetPath: "./assets/tilemaps/experimental_map.tmj",
     orientation: "top-down"
   });
 
-const textActor = new Actor(gameInstance, { name: "3d-text" })
-  .registerComponent(TextRenderer, {
+const textActor = new Actor(world, { name: "3d-text" })
+  .addComponent(TextRenderer, {
     path: "./assets/fonts/helvetiker_regular.typeface.json",
     text: "Hello, 3D World !",
     textGeometryOptions: { size: 2, depth: 2, center: true }
   });
-textActor.threeObject.position.set(0, 5, 0);
+textActor.object3D.position.set(0, 5, 0);
 
-const scene = gameInstance.scene.getSource();
+const scene = world.sceneManager.getSource();
 scene.background = new THREE.Color("#000000");
 scene.add(
   new THREE.GridHelper(
@@ -74,7 +74,7 @@ scene.add(
   new THREE.AmbientLight(new THREE.Color("#ffffffff"), 3)
 );
 
-const audioManager = GlobalAudioManager.fromGameInstance(gameInstance);
+const audioManager = GlobalAudioManager.fromWorld(world);
 
 const ab = new AudioBackground({
   audioManager,
@@ -107,7 +107,7 @@ const ab = new AudioBackground({
     }
   ]
 });
-gameInstance.audio.observe(ab);
+world.audio.observe(ab);
 
 canvasHTMLElement.addEventListener("click", async() => {
   await ab.play("boss.tech-space");

@@ -3,8 +3,8 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import type {
-  GameInstanceDefaultContext
-} from "../systems/GameInstance.ts";
+  WorldDefaultContext
+} from "../systems/World.ts";
 import {
   Actor,
   SignalEvent
@@ -34,7 +34,7 @@ export interface UISpriteOptions extends UINodeOptions {
 }
 
 export class UISprite<
-  TContext = GameInstanceDefaultContext
+  TContext = WorldDefaultContext
 > extends UINode<TContext> {
   mesh: THREE.Mesh;
 
@@ -96,7 +96,7 @@ export class UISprite<
   }
 
   isPointerOver(): boolean {
-    const mouse = this.actor.gameInstance.input.getMouseWorldPosition();
+    const mouse = this.actor.world.input.getMouseWorldPosition();
     const box = new THREE.Box3().setFromObject(this.mesh);
 
     return box.containsPoint(
@@ -105,7 +105,7 @@ export class UISprite<
   }
 
   update() {
-    const { input } = this.actor.gameInstance;
+    const { input } = this.actor.world;
     const isOver = this.isPointerOver();
 
     // --- Pointer Enter / Leave ---

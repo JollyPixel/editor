@@ -82,7 +82,7 @@ const player = new Player(canvas, {
   includePerformanceStats: true
 });
 
-const { gameInstance } = player;
+const { world } = player;
 
 // You can now add actors, components, etc. to your scene here
 

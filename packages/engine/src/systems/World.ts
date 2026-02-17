@@ -10,8 +10,8 @@ import {
   type ActorOptions
 } from "../actor/index.ts";
 import {
-  type Scene
-} from "./Scene.ts";
+  type SceneContract
+} from "./SceneManager.ts";
 import { Input } from "../controls/Input.class.ts";
 import { GlobalAudio } from "../audio/GlobalAudio.ts";
 import {
@@ -23,12 +23,12 @@ import {
   BrowserGlobalsAdapter
 } from "../adapters/global.ts";
 
-export interface GameInstanceOptions<
-  TContext = GameInstanceDefaultContext
+export interface WorldOptions<
+  TContext = WorldDefaultContext
 > {
   enableOnExit?: boolean;
 
-  scene: Scene;
+  sceneManager: SceneContract;
   input?: Input;
   audio?: GlobalAudio;
   context?: TContext;
@@ -37,18 +37,18 @@ export interface GameInstanceOptions<
   globalsAdapter?: GlobalsAdapter;
 }
 
-export interface GameInstanceDefaultContext {
+export interface WorldDefaultContext {
   [key: string]: unknown;
 }
 
-export class GameInstance<
+export class World<
   T = THREE.WebGLRenderer,
-  TContext = GameInstanceDefaultContext
+  TContext = WorldDefaultContext
 > {
   renderer: Renderer<T>;
   input: Input;
   loadingManager: THREE.LoadingManager = new THREE.LoadingManager();
-  scene: Scene;
+  sceneManager: SceneContract;
   audio: GlobalAudio;
   context: TContext;
 
@@ -56,10 +56,10 @@ export class GameInstance<
 
   constructor(
     renderer: Renderer<T>,
-    options: GameInstanceOptions<TContext>
+    options: WorldOptions<TContext>
   ) {
     const {
-      scene,
+      sceneManager,
       input = new Input(renderer.canvas, { enableOnExit: options.enableOnExit ?? false }),
       audio = new GlobalAudio(),
       context = Object.create(null),
@@ -68,7 +68,7 @@ export class GameInstance<
     } = options;
 
     this.renderer = renderer;
-    this.scene = scene;
+    this.sceneManager = sceneManager;
     this.input = input;
     this.audio = audio;
     this.context = context;
@@ -98,7 +98,7 @@ export class GameInstance<
   connect() {
     this.input.connect();
     this.#windowAdapter.addEventListener("resize", this.renderer.resize);
-    this.scene.awake();
+    this.sceneManager.awake();
 
     return this;
   }
@@ -114,7 +114,7 @@ export class GameInstance<
     deltaTime: number
   ): boolean {
     this.input.update();
-    this.scene.update(deltaTime);
+    this.sceneManager.update(deltaTime);
 
     if (this.input.exited) {
       this.renderer.clear();

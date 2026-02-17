@@ -19,10 +19,10 @@ function initRuntime() {
   const runtime = new Runtime(canvasHTMLElement, {
     includePerformanceStats: true
   });
-  const { gameInstance } = runtime;
+  const { world } = runtime;
 
-  const { camera } = new Actor(gameInstance, { name: "camera" })
-    .registerComponentAndGet(
+  const { camera } = new Actor(world, { name: "camera" })
+    .addComponentAndGet(
       Camera3DControls,
       { speed: 0.25, rotationSpeed: 0.50 }
     );
@@ -30,44 +30,44 @@ function initRuntime() {
   camera.position.set(5, 5, 5);
   camera.lookAt(0, 0, 0);
 
-  new Actor(gameInstance, { name: "tinyWitchModel" })
-    .registerComponent(ModelRenderer, {
+  new Actor(world, { name: "tinyWitchModel" })
+    .addComponent(ModelRenderer, {
       path: "models/Tiny_Witch.obj"
     }, (component) => {
-      component.actor.threeObject.position.set(-5, 0, 0);
+      component.actor.object3D.position.set(-5, 0, 0);
     });
-  // new Actor(gameInstance, { name: "tree" })
-  //   .registerComponent(ModelRenderer, {
+  // new Actor(world, { name: "tree" })
+  //   .addComponent(ModelRenderer, {
   //     path: "models/CommonTree_1.obj"
   //   }, (component) => {
-  //     component.actor.threeObject.position.set(0, 0, 0);
+  //     component.actor.object3D.position.set(0, 0, 0);
   //   });
-  new Actor(gameInstance, { name: "player" })
-    .registerComponent(ModelRenderer, {
+  new Actor(world, { name: "player" })
+    .addComponent(ModelRenderer, {
       path: "models/Standard.fbx"
     })
-    .registerComponent(PlayerBehavior, {}, (_component) => {
+    .addComponent(PlayerBehavior, {}, (_component) => {
       // console.log(component);
       // component.onPlayerPunch.connect(() => {
       //   console.log("Player punched!");
       // });
     });
-  // new Actor(gameInstance, { name: "duckModel" })
-  //   .registerComponent(ModelRenderer, {
+  // new Actor(world, { name: "duckModel" })
+  //   .addComponent(ModelRenderer, {
   //     path: "models/Duck.gltf"
   //   }, (component) => {
-  //     component.actor.threeObject.position.set(-2, 0, 0);
-  //     component.actor.threeObject.rotateY(45);
+  //     component.actor.object3D.position.set(-2, 0, 0);
+  //     component.actor.object3D.rotateY(45);
   //   });
-  // new Actor(gameInstance, { name: "toyCarModel" })
-  //   .registerComponent(ModelRenderer, {
+  // new Actor(world, { name: "toyCarModel" })
+  //   .addComponent(ModelRenderer, {
   //     path: "models/ToyCar.glb"
   //   }, (component) => {
-  //     component.actor.threeObject.position.set(0, 0.90, -4);
-  //     component.actor.threeObject.scale.set(50, 50, 50);
+  //     component.actor.object3D.position.set(0, 0.90, -4);
+  //     component.actor.object3D.scale.set(50, 50, 50);
   //   });
 
-  const scene = gameInstance.scene.getSource();
+  const scene = world.sceneManager.getSource();
   scene.background = null;
   scene.add(
     new THREE.GridHelper(

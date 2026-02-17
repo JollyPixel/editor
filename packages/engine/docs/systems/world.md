@@ -1,14 +1,14 @@
-## GameInstance
+## World
 
-The `GameInstance` is the central orchestrator of the engine. It
-wires together the [Scene](scene.md),
+The `World` is the central orchestrator of the engine. It
+wires together the [SceneManager](scene-manager.md),
 [Renderer](renderer.md), [Input](../controls/input.md),
 and [Audio](../audio/audio.md) systems and drives the main
 **connect → update → render** loop.
 
-Every project creates exactly one `GameInstance`. It is passed to
+Every project creates exactly one `World`. It is passed to
 every [Actor](../actor/actor.md) at construction time and is
-available throughout the component tree via `actor.gameInstance`.
+available throughout the component tree via `actor.world`.
 
 ### Creating a game instance
 
@@ -16,23 +16,23 @@ available throughout the component tree via `actor.gameInstance`.
 import {
   SceneEngine,
   ThreeRenderer,
-  GameInstance
+  World
 } from "@jolly-pixel/engine";
 
 const canvas = document.querySelector("canvas")!;
-const scene = new SceneEngine();
-const renderer = new ThreeRenderer(canvas, { scene });
+const sceneManager = new SceneManager();
+const renderer = new ThreeRenderer(canvas, { scene: sceneManager });
 
-const game = new GameInstance(renderer, { scene });
+const game = new World(renderer, { sceneManager });
 ```
 
 The constructor accepts a [Renderer](renderer.md) and a
-`GameInstanceOptions` object:
+`WorldOptions` object:
 
 ```ts
-interface GameInstanceOptions {
+interface WorldOptions {
   /** The scene that manages actors and components. */
-  scene: Scene;
+  sceneManager: SceneContract;
   /** Input system for keyboard, mouse, gamepad, etc. @default auto-created from canvas */
   input?: Input;
   /** Global audio manager. @default new GlobalAudio() */
@@ -61,7 +61,7 @@ game.setLoadingManager(manager);
 ```
 
 The loading manager is available from anywhere as
-`actor.gameInstance.loadingManager`.
+`actor.world.loadingManager`.
 
 ### Connect and disconnect
 
@@ -110,9 +110,9 @@ requestAnimationFrame(loop);
 Performs a single logical frame:
 
 1. Updates the [Input](../controls/input.md) system.
-2. Calls `scene.update(deltaTime)` — starts new components,
+2. Calls `sceneManager.update(deltaTime)` — starts new components,
    updates actors, and cleans up destroyed entities
-   (see [Scene — Update loop](scene.md#update-loop)).
+   (see [SceneManager — Update loop](scene-manager.md#update-loop)).
 3. If the input system signals an exit, clears the renderer and
    returns `true`. Otherwise returns `false`.
 
@@ -129,7 +129,7 @@ accessible from any actor or component:
 
 ```ts
 // From inside a Behavior
-const { input, scene, audio, renderer } = this.actor.gameInstance;
+const { input, sceneManager, audio, renderer } = this.actor.world;
 
 if (input.isKeyDown("Space")) {
   audio.play("jump");
@@ -138,7 +138,7 @@ if (input.isKeyDown("Space")) {
 
 ### See also
 
-- [Scene](scene.md) — actor tree, lifecycle, and destruction
+- [SceneManager](scene-manager.md) — actor tree, lifecycle, and destruction
 - [Renderer](renderer.md) — rendering pipeline
 - [Input](../controls/input.md) — input handling
 - [Actor](../actor/actor.md) — the engine's core entity

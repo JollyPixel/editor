@@ -3,26 +3,26 @@ import pm from "picomatch";
 
 // Import Internal Dependencies
 import type {
-  GameInstanceDefaultContext
-} from "../systems/GameInstance.ts";
+  WorldDefaultContext
+} from "../systems/World.ts";
 import { Actor } from "./Actor.ts";
 
 export type ActorTreeNode<
-  TContext = GameInstanceDefaultContext
+  TContext = WorldDefaultContext
 > = {
   actor: Actor<TContext>;
   parent?: Actor<TContext>;
 };
 
 export interface ActorTreeOptions<
-  TContext = GameInstanceDefaultContext
+  TContext = WorldDefaultContext
 > {
   addCallback?: (actor: Actor<TContext>) => void;
   removeCallback?: (actor: Actor<TContext>) => void;
 }
 
 export class ActorTree<
-  TContext = GameInstanceDefaultContext
+  TContext = WorldDefaultContext
 > {
   #addCallback?: (actor: Actor<TContext>) => void;
   #removeCallback?: (actor: Actor<TContext>) => void;

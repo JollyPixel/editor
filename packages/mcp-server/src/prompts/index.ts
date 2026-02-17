@@ -59,8 +59,8 @@ export function registerPrompts(
               `Create an Actor named "${name}" with these components: ${components}.`,
               "",
               "Use @jolly-pixel/engine APIs:",
-              "- new Actor(gameInstance, { name, parent? })",
-              "- actor.registerComponent(ComponentClass, options?)",
+              "- new Actor(world, { name, parent? })",
+              "- actor.addComponent(ComponentClass, options?)",
               "- Available renderers: ModelRenderer, SpriteRenderer, TextRenderer, TiledRenderer",
               "- Available controls: Input, CombinedInput",
               "- Follow the project coding standards"

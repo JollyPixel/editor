@@ -6,8 +6,8 @@ The audio system is built on top of Three.js Audio and provides three layers:
 - **GlobalAudioManager** — load, configure, and destroy `Audio` / `PositionalAudio` instances
 - **AudioBackground** — playlist-based background music with auto-advance, loop, and chaining
 
-`GlobalAudio` is created automatically by `GameInstance` and exposed
-as `gameInstance.audio`. The manager and background player are built on top of it.
+`GlobalAudio` is created automatically by `World` and exposed
+as `world.audio`. The manager and background player are built on top of it.
 
 ### 🔇 Browser autoplay policy
 
@@ -75,8 +75,8 @@ interface AudioManager {
   destroyAudio(audio: THREE.Audio | THREE.PositionalAudio): void;
 }
 
-// Create from a GameInstance
-GlobalAudioManager.fromGameInstance(gameInstance: GameInstance): GlobalAudioManager;
+// Create from a World
+GlobalAudioManager.fromWorld(world: World): GlobalAudioManager;
 ``` 
 
 ### See also

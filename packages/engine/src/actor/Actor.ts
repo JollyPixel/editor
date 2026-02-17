@@ -4,12 +4,17 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import { ActorTree } from "./ActorTree.ts";
 import { Transform } from "./Transform.ts";
-import type { GameInstance, GameInstanceDefaultContext } from "../systems/GameInstance.ts";
-import type { ActorComponent } from "./ActorComponent.ts";
+import { IntegerIncrement } from "../systems/generators/IntegerIncrement.ts";
+import { PersistentIdIncrement } from "../systems/generators/PersistentIdIncrement.ts";
+import type { World, WorldDefaultContext } from "../systems/World.ts";
 import type { Behavior } from "../components/script/Behavior.ts";
 import type {
   Component
 } from "../components/types.ts";
+
+function isPendingForDestruction(component: Component): boolean {
+  return "pendingForDestruction" in component && (component as any).pendingForDestruction === true;
+}
 
 type ComponentConstructor = new (actor: Actor<any>, ...args: any[]) => Component;
 
@@ -19,7 +24,7 @@ type RequiresOptions<T extends ComponentConstructor> =
     : false;
 
 export interface ActorOptions<
-  TContext = GameInstanceDefaultContext
+  TContext = WorldDefaultContext
 > {
   name: string;
   parent?: Actor<TContext> | null;
@@ -28,10 +33,15 @@ export interface ActorOptions<
 }
 
 export class Actor<
-  TContext = GameInstanceDefaultContext
+  TContext = WorldDefaultContext
 > extends ActorTree<TContext> {
-  gameInstance: GameInstance<any, TContext>;
+  static Id = new IntegerIncrement();
+  static PersistentId = new PersistentIdIncrement();
 
+  world: World<any, TContext>;
+
+  id = Actor.Id.incr();
+  persistentId = Actor.PersistentId.next();
   name: string;
   awoken = false;
   parent: Actor<TContext> | null = null;
@@ -40,10 +50,10 @@ export class Actor<
   transform: Transform;
   pendingForDestruction = false;
 
-  threeObject = new THREE.Group();
+  object3D = new THREE.Group();
 
   constructor(
-    gameInstance: GameInstance<any, TContext>,
+    world: World<any, TContext>,
     options: ActorOptions<TContext>
   ) {
     super();
@@ -56,35 +66,35 @@ export class Actor<
       throw new Error("Cannot add actor to a parent that is pending for destruction.");
     }
 
-    this.gameInstance = gameInstance;
+    this.world = world;
     this.name = name;
     this.parent = parent;
 
-    this.threeObject.visible = visible;
-    this.threeObject.name = this.name;
-    this.threeObject.userData.isActor = true;
+    this.object3D.visible = visible;
+    this.object3D.name = this.name;
+    this.object3D.userData.isActor = true;
 
     if (layer) {
       const layers = Array.isArray(layer) ? layer : [layer];
       for (const layer of layers) {
-        this.threeObject.layers.enable(layer);
-        this.gameInstance.scene.getSource().layers.enable(layer);
+        this.object3D.layers.enable(layer);
+        this.world.sceneManager.getSource().layers.enable(layer);
       }
     }
 
-    this.transform = new Transform(this.threeObject);
+    this.transform = new Transform(this.object3D);
 
     if (parent) {
       parent.add(this);
-      parent.threeObject.add(this.threeObject);
-      this.threeObject.updateMatrixWorld(false);
+      parent.object3D.add(this.object3D);
+      this.object3D.updateMatrixWorld(false);
     }
     else {
-      this.gameInstance.scene.tree.add(this);
+      this.world.sceneManager.tree.add(this);
     }
   }
 
-  registerComponent<T extends ComponentConstructor>(
+  addComponent<T extends ComponentConstructor>(
     componentClass: T,
     ...args: RequiresOptions<T> extends true
       ? [options: ConstructorParameters<T>[1], callback?: (component: InstanceType<T>) => void]
@@ -101,7 +111,7 @@ export class Actor<
     return this;
   }
 
-  registerComponentAndGet<T extends ComponentConstructor>(
+  addComponentAndGet<T extends ComponentConstructor>(
     componentClass: T,
     ...args: RequiresOptions<T> extends true
       ? [options: ConstructorParameters<T>[1]]
@@ -117,17 +127,55 @@ export class Actor<
     return component as InstanceType<T>;
   }
 
-  getComponentByName<T extends ActorComponent<TContext>>(
-    componentTypeName: string
-  ): T {
-    const component = this.components.find(
-      (comp) => comp.typeName === componentTypeName
-    );
-    if (!component) {
-      throw new Error(`Component with typeName "${componentTypeName}" not found on actor "${this.name}"`);
+  getComponent(typeName: string): Component | null;
+  getComponent<T>(componentClass: new (...args: any[]) => T): T | null;
+  getComponent(typeNameOrClass: string | (new (...args: any[]) => any)): Component | null {
+    if (typeof typeNameOrClass === "string") {
+      for (const comp of this.components) {
+        if (comp.typeName === typeNameOrClass && !isPendingForDestruction(comp)) {
+          return comp;
+        }
+      }
+
+      return null;
     }
 
-    return component as T;
+    for (const comp of this.components) {
+      if (comp instanceof typeNameOrClass && !isPendingForDestruction(comp)) {
+        return comp;
+      }
+    }
+
+    return null;
+  }
+
+  * getComponents<T extends Component>(
+    componentClass: new (...args: any[]) => T
+  ): IterableIterator<T> {
+    for (const comp of this.components) {
+      if (comp instanceof componentClass && !isPendingForDestruction(comp)) {
+        yield comp as T;
+      }
+    }
+  }
+
+  addChildren(
+    ...objects: THREE.Object3D[]
+  ): this {
+    this.object3D.add(...objects);
+
+    return this;
+  }
+
+  removeChildren(
+    ...objects: THREE.Object3D[]
+  ): this {
+    for (const object of objects) {
+      this.object3D.remove(object);
+      Actor.disposeObject3D(object);
+    }
+
+    return this;
   }
 
   awake() {
@@ -142,6 +190,10 @@ export class Actor<
     }
   }
 
+  override toString(): string {
+    return `${this.name}:${this.id}-${this.persistentId}`;
+  }
+
   isDestroyed() {
     return this.pendingForDestruction;
   }
@@ -152,77 +204,40 @@ export class Actor<
     }
 
     if (this.parent === null) {
-      this.gameInstance.scene.tree.remove(this);
+      this.world.sceneManager.tree.remove(this);
     }
     else {
-      this.parent.threeObject.remove(this.threeObject);
+      this.parent.object3D.remove(this.object3D);
       this.parent.remove(this);
     }
 
-    this.threeObject.clear();
+    this.object3D.traverse((child) => Actor.disposeObject3D(child));
+    this.object3D.clear();
+  }
+
+  static disposeObject3D(
+    object: THREE.Object3D
+  ): void {
+    if ("geometry" in object && object.geometry instanceof THREE.BufferGeometry) {
+      object.geometry.dispose();
+    }
+
+    if ("material" in object) {
+      const materials = Array.isArray(object.material)
+        ? object.material
+        : [object.material];
+
+      for (const material of materials) {
+        if (material instanceof THREE.Material) {
+          material.dispose();
+        }
+      }
+    }
   }
 
   markDestructionPending() {
     this.pendingForDestruction = true;
     this.destroyAllActors();
-  }
-
-  addBehavior<T extends new(...args: any) => Behavior<any, TContext>>(
-    behaviorClass: T,
-    properties: ConstructorParameters<T>[0] = Object.create(null)
-  ) {
-    const behavior = new behaviorClass(this);
-
-    for (const [propertyName, value] of Object.entries(properties)) {
-      behavior.setProperty(propertyName, value as any);
-    }
-
-    if (this.awoken) {
-      // @ts-ignore
-      behavior.awake?.();
-    }
-
-    return behavior;
-  }
-
-  getBehavior<T extends new(...args: any) => any>(
-    behaviorClass: T
-  ): InstanceType<T> | null {
-    for (const behaviorName in this.behaviors) {
-      if (!Object.hasOwn(this.behaviors, behaviorName)) {
-        continue;
-      }
-
-      for (const behavior of this.behaviors[behaviorName]) {
-        if (
-          behavior instanceof behaviorClass &&
-          !behavior.isDestroyed()
-        ) {
-          return behavior as InstanceType<T>;
-        }
-      }
-    }
-
-    return null;
-  }
-
-  * getBehaviors<T extends new(...args: any) => any>(
-    behaviorClass: T
-  ): IterableIterator<InstanceType<T>> {
-    for (const behaviorName in this.behaviors) {
-      if (!Object.hasOwn(this.behaviors, behaviorName)) {
-        continue;
-      }
-
-      for (const behavior of this.behaviors[behaviorName]) {
-        if (
-          behavior instanceof behaviorClass &&
-          !behavior.isDestroyed()
-        ) {
-          yield behavior as InstanceType<T>;
-        }
-      }
-    }
   }
 
   setParent(
@@ -240,23 +255,23 @@ export class Actor<
       this.transform.getGlobalMatrix(Transform.Matrix);
     }
 
-    const oldSiblings = (this.parent === null) ? this.gameInstance.scene.tree : this.parent;
+    const oldSiblings = (this.parent === null) ? this.world.sceneManager.tree : this.parent;
     oldSiblings.remove(this);
-    this.threeObject.parent?.remove(this.threeObject);
+    this.object3D.parent?.remove(this.object3D);
 
     this.parent = newParent;
 
     const siblings = (newParent === null) ?
-      this.gameInstance.scene.tree :
+      this.world.sceneManager.tree :
       newParent;
     siblings.add(this);
     const threeParent = (newParent === null) ?
-      this.gameInstance.scene.getSource() :
-      newParent.threeObject;
-    threeParent.add(this.threeObject);
+      this.world.sceneManager.getSource() :
+      newParent.object3D;
+    threeParent.add(this.object3D);
 
     if (keepLocal) {
-      this.threeObject.updateMatrixWorld(false);
+      this.object3D.updateMatrixWorld(false);
     }
     else {
       this.transform.setGlobalMatrix(Transform.Matrix);

@@ -89,7 +89,7 @@ export class SpriteRenderer extends ActorComponent<any> {
   }
 
   start() {
-    this.actor.threeObject.add(this.threeObject);
+    this.actor.object3D.add(this.threeObject);
     this.threeObject.updateMatrixWorld(false);
     this.setFrame(0);
   }
@@ -115,7 +115,7 @@ export class SpriteRenderer extends ActorComponent<any> {
   }
 
   override destroy() {
-    this.actor.threeObject.remove(this.threeObject);
+    this.actor.object3D.remove(this.threeObject);
     this.texture.dispose();
     this.threeObject.clear();
 

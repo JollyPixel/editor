@@ -10,7 +10,7 @@ import type {
   RenderComponent,
   RendererEvents
 } from "./Renderer.ts";
-import type { Scene } from "../Scene.ts";
+import type { SceneContract } from "../SceneManager.ts";
 import {
   type RenderMode,
   type RenderStrategy,
@@ -25,7 +25,7 @@ export interface ThreeRendererOptions {
    * @default "direct"
    */
   renderMode: RenderMode;
-  scene: Scene;
+  scene: SceneContract;
 }
 
 export class ThreeRenderer extends EventEmitter<
@@ -35,7 +35,7 @@ export class ThreeRenderer extends EventEmitter<
   renderComponents: RenderComponent[] = [];
   renderStrategy: RenderStrategy;
   ratio: number | null = null;
-  scene: Scene;
+  scene: SceneContract;
 
   constructor(
     canvas: HTMLCanvasElement,

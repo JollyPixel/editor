@@ -12,13 +12,13 @@ const canvasHTMLElement = document.querySelector("canvas") as HTMLCanvasElement;
 const runtime = new Runtime(canvasHTMLElement, {
   includePerformanceStats: true
 });
-const { gameInstance } = runtime;
-const scene = gameInstance.scene.getSource();
+const { world } = runtime;
+const scene = world.sceneManager.getSource();
 scene.background = null;
-gameInstance.renderer.setRatio(16 / 9);
+world.renderer.setRatio(16 / 9);
 
-new Actor(gameInstance, { name: "camera" })
-  .registerComponent(OrbitCameraControls);
+new Actor(world, { name: "camera" })
+  .addComponent(OrbitCameraControls);
 
 const mesh = new THREE.Mesh(
   createGeometry(16),

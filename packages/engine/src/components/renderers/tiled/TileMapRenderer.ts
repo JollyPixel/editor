@@ -53,7 +53,7 @@ export class TiledMapRenderer extends ActorComponent<any> {
 
         const cube = new TileMapCube(texture);
         cube.position.set(position.x, position.y, position.z);
-        this.actor.threeObject.add(cube);
+        this.actor.object3D.add(cube);
       }
     }
 
@@ -62,7 +62,7 @@ export class TiledMapRenderer extends ActorComponent<any> {
     }
 
     if (this.#orientation === "top-down") {
-      this.actor.threeObject.rotateX(-Math.PI / 2);
+      this.actor.object3D.rotateX(-Math.PI / 2);
     }
   }
 }

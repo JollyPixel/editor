@@ -14,8 +14,8 @@ auto-discovers the renderer and registers itself.
 ```ts
 import { Actor, UIRenderer, UISprite } from "@jolly-pixel/engine";
 
-const camera2D = new Actor(gameInstance, { name: "camera2D" })
-  .registerComponent(UIRenderer, { near: 1 });
+const camera2D = new Actor(world, { name: "camera2D" })
+  .addComponent(UIRenderer, { near: 1 });
 ```
 
 ### How it works
@@ -56,11 +56,11 @@ Once a `UIRenderer` exists, child actors can register
 positioned relative to the screen edges.
 
 ```ts
-const button = new Actor(gameInstance, {
+const button = new Actor(world, {
   name: "startButton",
   parent: camera2D
 })
-  .registerComponentAndGet(UISprite, {
+  .addComponentAndGet(UISprite, {
     anchor: { x: "center", y: "top" },
     offset: { y: -80 },
     size: { width: 200, height: 60 },

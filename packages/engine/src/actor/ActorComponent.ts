@@ -4,16 +4,18 @@ import { EventEmitter } from "@posva/event-emitter";
 // Import Internal Dependencies
 import { Actor } from "./Actor.ts";
 import { getSignalMetadata, SignalEvent } from "./Signal.ts";
+import { IntegerIncrement } from "../systems/generators/IntegerIncrement.ts";
+import { PersistentIdIncrement } from "../systems/generators/PersistentIdIncrement.ts";
 import type {
-  GameInstanceDefaultContext
-} from "../systems/GameInstance.ts";
+  WorldDefaultContext
+} from "../systems/World.ts";
 import type {
   Component,
   FreeComponentEnum
 } from "../components/types.ts";
 
 export interface ActorComponentOptions<
-  TContext = GameInstanceDefaultContext
+  TContext = WorldDefaultContext
 > {
   actor: Actor<TContext>;
   typeName: FreeComponentEnum;
@@ -24,19 +26,13 @@ export type ActorComponentEvents = {
 };
 
 export class ActorComponent<
-  TContext = GameInstanceDefaultContext
+  TContext = WorldDefaultContext
 > extends EventEmitter<ActorComponentEvents> implements Component {
-  protected static Id = 0;
+  static Id = new IntegerIncrement();
+  static PersistentId = new PersistentIdIncrement();
 
-  static generateNextId() {
-    return this.Id++;
-  }
-
-  static clearId() {
-    this.Id = 0;
-  }
-
-  id = ActorComponent.generateNextId();
+  id = ActorComponent.Id.incr();
+  persistentId = ActorComponent.PersistentId.next();
   actor: Actor<TContext>;
   typeName: FreeComponentEnum;
 
@@ -50,11 +46,15 @@ export class ActorComponent<
     this.typeName = options.typeName;
 
     this.actor.components.push(this);
-    this.actor.gameInstance.scene.componentsToBeStarted.push(this);
+    this.actor.world.sceneManager.componentsToBeStarted.push(this);
 
     // Defer the initialization of signal decorators to ensure
     // that the component instance is fully constructed
     queueMicrotask(() => this.#initSignalDecorators());
+  }
+
+  get context(): TContext {
+    return this.actor.world.context;
   }
 
   #initSignalDecorators() {
@@ -69,14 +69,18 @@ export class ActorComponent<
     this.emit("metadataInitialized");
   }
 
+  override toString(): string {
+    return `${this.typeName}:${this.id}-${this.persistentId}`;
+  }
+
   isDestroyed() {
     return this.pendingForDestruction;
   }
 
   destroy() {
-    const startIndex = this.actor.gameInstance.scene.componentsToBeStarted.indexOf(this);
+    const startIndex = this.actor.world.sceneManager.componentsToBeStarted.indexOf(this);
     if (startIndex !== -1) {
-      this.actor.gameInstance.scene.componentsToBeStarted.splice(startIndex, 1);
+      this.actor.world.sceneManager.componentsToBeStarted.splice(startIndex, 1);
     }
 
     const index = this.actor.components.indexOf(this);

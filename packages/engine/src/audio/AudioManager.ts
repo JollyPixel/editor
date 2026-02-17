@@ -2,7 +2,7 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import type { GameInstance } from "../systems/GameInstance.ts";
+import type { World } from "../systems/World.ts";
 import {
   type AudioListenerAdapter
 } from "./internals/AudioListener.ts";
@@ -42,11 +42,11 @@ export class GlobalAudioManager implements AudioManager {
   #listener: AudioListenerAdapter;
   #audioService: AudioFactory;
 
-  static fromGameInstance(
-    gameInstance: GameInstance<any, any>
+  static fromWorld(
+    world: World<any, any>
   ): GlobalAudioManager {
     return new GlobalAudioManager({
-      listener: gameInstance.audio.listener
+      listener: world.audio.listener
     });
   }
 

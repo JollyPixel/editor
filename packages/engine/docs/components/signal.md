@@ -20,7 +20,7 @@ export class PlayerBehavior extends Behavior {
   onPlayerPunch: SignalEvent;
 
   update() {
-    if (this.actor.gameInstance.input.isMouseButtonDown("left")) {
+    if (this.actor.world.input.isMouseButtonDown("left")) {
       this.onPlayerPunch.emit();
     }
   }
@@ -33,7 +33,7 @@ Other behaviors can subscribe to a signal with `connect` and
 unsubscribe with `disconnect`:
 
 ```ts
-const player = actor.getBehavior(PlayerBehavior)!;
+const player = actor.getComponent(PlayerBehavior)!;
 
 player.onPlayerPunch.connect(() => {
   console.log("Player punched!");

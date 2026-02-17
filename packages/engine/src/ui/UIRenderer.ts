@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { CSS2DRenderer as ThreeCSS2DRenderer } from "three/addons/renderers/CSS2DRenderer.js";
 
 // Import Internal Dependencies
-import type { GameInstanceDefaultContext } from "../systems/GameInstance.ts";
+import type { WorldDefaultContext } from "../systems/World.ts";
 import type { UINode } from "./UINode.ts";
 import { type Actor, ActorComponent } from "../actor/index.ts";
 import { UIRendererID } from "./common.ts";
@@ -18,7 +18,7 @@ export interface UIRendererOptions {
 }
 
 export class UIRenderer<
-  TContext = GameInstanceDefaultContext
+  TContext = WorldDefaultContext
 > extends ActorComponent<TContext> {
   camera: THREE.OrthographicCamera;
   nodes: UINode<TContext>[] = [];
@@ -38,9 +38,9 @@ export class UIRenderer<
       far = 2000,
       zIndex = kOrthographicCameraZIndex
     } = options;
-    const { gameInstance } = actor;
+    const { world } = actor;
 
-    const screenBounds = gameInstance.input.getScreenBounds();
+    const screenBounds = world.input.getScreenBounds();
 
     this.camera = new THREE.OrthographicCamera(
       screenBounds.left,
@@ -51,7 +51,7 @@ export class UIRenderer<
       far
     );
     this.camera.position.z = zIndex;
-    this.actor.threeObject.add(this.camera);
+    this.actor.object3D.add(this.camera);
 
     this.#cssRenderer = new ThreeCSS2DRenderer();
     this.#cssRenderer.domElement.style.position = "absolute";
@@ -59,20 +59,20 @@ export class UIRenderer<
     this.#cssRenderer.domElement.style.left = "0";
     this.#cssRenderer.domElement.style.pointerEvents = "none";
 
-    const canvas = gameInstance.renderer.canvas;
+    const canvas = world.renderer.canvas;
     canvas.parentElement?.appendChild(this.#cssRenderer.domElement);
 
     const { width, height } = canvas.getBoundingClientRect();
     this.#cssRenderer.setSize(width, height);
 
-    gameInstance.renderer.addRenderComponent(this.camera);
+    world.renderer.addRenderComponent(this.camera);
 
     this.#boundResize = this.#onResize.bind(this);
     this.#boundDraw = this.#onDraw.bind(this);
-    gameInstance.renderer.on("resize", this.#boundResize);
-    gameInstance.renderer.on("draw", this.#boundDraw);
+    world.renderer.on("resize", this.#boundResize);
+    world.renderer.on("draw", this.#boundDraw);
 
-    Object.defineProperty(gameInstance, UIRendererID, {
+    Object.defineProperty(world, UIRendererID, {
       value: this,
       enumerable: false
     });
@@ -97,7 +97,7 @@ export class UIRenderer<
   }
 
   #onResize(): void {
-    const canvas = this.actor.gameInstance.renderer.canvas;
+    const canvas = this.actor.world.renderer.canvas;
     const { width, height } = canvas.getBoundingClientRect();
     this.#cssRenderer.setSize(width, height);
 
@@ -105,7 +105,7 @@ export class UIRenderer<
   }
 
   #onDraw(): void {
-    const scene = this.actor.gameInstance.scene.getSource();
+    const scene = this.actor.world.sceneManager.getSource();
     this.#cssRenderer.render(scene, this.camera);
   }
 
@@ -115,13 +115,13 @@ export class UIRenderer<
     }
     this.nodes = [];
 
-    const { gameInstance } = this.actor;
-    gameInstance.renderer.removeRenderComponent(this.camera);
-    gameInstance.renderer.off("resize", this.#boundResize);
-    gameInstance.renderer.off("draw", this.#boundDraw);
+    const { world } = this.actor;
+    world.renderer.removeRenderComponent(this.camera);
+    world.renderer.off("resize", this.#boundResize);
+    world.renderer.off("draw", this.#boundDraw);
 
     this.#cssRenderer.domElement.remove();
 
-    gameInstance[UIRendererID] = undefined;
+    world[UIRendererID] = undefined;
   }
 }

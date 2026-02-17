@@ -9,7 +9,7 @@ import {
 } from "@jolly-pixel/engine";
 
 export interface RuntimeOptions<
-  TContext = Systems.GameInstanceDefaultContext
+  TContext = Systems.WorldDefaultContext
 > {
   /**
    * @default false
@@ -17,20 +17,20 @@ export interface RuntimeOptions<
    */
   includePerformanceStats?: boolean;
   /**
-   * Optional context object passed to the GameInstance.
+   * Optional context object passed to the World.
    */
   context?: TContext;
   /**
-   * Optional global audio object passed to the GameInstance.
+   * Optional global audio object passed to the World.
    * If not provided, a default audio context will be created.
    */
   audio?: GlobalAudio;
 }
 
 export class Runtime<
-  TContext = Systems.GameInstanceDefaultContext
+  TContext = Systems.WorldDefaultContext
 > {
-  gameInstance: Systems.GameInstance<THREE.WebGLRenderer, TContext>;
+  world: Systems.World<THREE.WebGLRenderer, TContext>;
   loop = new Systems.FixedTimeStep();
 
   canvas: HTMLCanvasElement;
@@ -48,17 +48,17 @@ export class Runtime<
     }
 
     this.canvas = canvas;
-    const scene = new Systems.SceneEngine();
+    const sceneManager = new Systems.SceneManager();
     const renderer = new Systems.ThreeRenderer(
-      canvas, { scene, renderMode: "direct" }
+      canvas, { scene: sceneManager, renderMode: "direct" }
     ) as unknown as Systems.Renderer<THREE.WebGLRenderer>;
-    this.gameInstance = new Systems.GameInstance(renderer, {
+    this.world = new Systems.World(renderer, {
       enableOnExit: true,
-      scene,
+      sceneManager,
       context: options.context,
       audio: options.audio
     });
-    this.gameInstance.setLoadingManager(this.manager);
+    this.world.setLoadingManager(this.manager);
 
     if (options.includePerformanceStats) {
       this.stats = new Stats();
@@ -84,21 +84,21 @@ export class Runtime<
       document.body.appendChild(this.stats.dom);
     }
 
-    this.gameInstance.connect();
+    this.world.connect();
     this.loop.start();
-    const renderer = this.gameInstance.renderer.getSource();
+    const renderer = this.world.renderer.getSource();
     renderer.setAnimationLoop(() => {
       this.loop.tick({
         fixedUpdate: (fixedDelta) => {
-          // fixedDelta is in ms, but gameInstance.update expects seconds
-          const exit = this.gameInstance.update(fixedDelta / 1000);
+          // fixedDelta is in ms, but world.update expects seconds
+          const exit = this.world.update(fixedDelta / 1000);
           if (exit) {
             this.stop();
           }
         },
         update: (_interpolation, _delta) => {
           this.stats?.begin();
-          this.gameInstance.render();
+          this.world.render();
           this.stats?.end();
         }
       });
@@ -112,10 +112,10 @@ export class Runtime<
 
     this.#isRunning = false;
     this.loop.stop();
-    this.gameInstance.input.exited = true;
-    const renderer = this.gameInstance.renderer.getSource();
+    this.world.input.exited = true;
+    const renderer = this.world.renderer.getSource();
     renderer.setAnimationLoop(null);
 
-    this.gameInstance.disconnect();
+    this.world.disconnect();
   }
 }

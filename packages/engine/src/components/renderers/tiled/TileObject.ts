@@ -49,11 +49,11 @@ export class TileObject {
     parent: Actor<any>
   ) {
     for (const object of this.layer.objects) {
-      const childrenActor = new Actor(parent.gameInstance, {
+      const childrenActor = new Actor(parent.world, {
         name: object.name,
         parent
       });
-      childrenActor.threeObject.position.set(
+      childrenActor.object3D.position.set(
         object.x / this.width,
         object.y / this.height,
         this.zIndex
@@ -61,12 +61,12 @@ export class TileObject {
 
       if (object.rotation !== 0) {
         const rotationRadians = (object.rotation * Math.PI) / 180;
-        childrenActor.threeObject.rotation.z = -rotationRadians;
+        childrenActor.object3D.rotation.z = -rotationRadians;
       }
 
       if (object.width > 0 && object.height > 0) {
         const visualBox = this.#createObjectVisualization(object);
-        childrenActor.threeObject.add(visualBox);
+        childrenActor.object3D.add(visualBox);
       }
     }
   }

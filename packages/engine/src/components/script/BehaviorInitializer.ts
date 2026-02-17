@@ -13,7 +13,8 @@ import {
   type ScenePropertyType,
   type BehaviorMetadata
 } from "./BehaviorDecorators.ts";
-import { type ConsoleAdapter } from "../../adapters/console.ts";
+import type { WorldDefaultContext } from "../../systems/World.ts";
+import type { ConsoleAdapter } from "../../adapters/console.ts";
 
 // CONSTANTS
 const kDefaultValues: Record<ScenePropertyType, unknown> = {
@@ -33,14 +34,16 @@ export interface BehaviorInitializerOptions {
   consoleAdapter?: ConsoleAdapter;
 }
 
-export class BehaviorInitializer {
-  #behavior: Behavior;
+export class BehaviorInitializer<
+  TContext extends WorldDefaultContext
+> {
+  #behavior: Behavior<any, TContext>;
   #metadata: BehaviorMetadata;
   #console: ConsoleAdapter;
 
-  static for(
-    behavior: Behavior
-  ): BehaviorInitializer | null {
+  static for<TContext extends WorldDefaultContext>(
+    behavior: Behavior<any, TContext>
+  ): BehaviorInitializer<TContext> | null {
     const proto = Object.getPrototypeOf(behavior);
     const metadata = getBehaviorMetadata(proto);
     if (!metadata) {
@@ -51,7 +54,7 @@ export class BehaviorInitializer {
   }
 
   constructor(
-    behavior: Behavior,
+    behavior: Behavior<any, any>,
     metadata: BehaviorMetadata,
     options: BehaviorInitializerOptions = {}
   ) {
@@ -73,7 +76,7 @@ export class BehaviorInitializer {
   }
 
   #resolveInputListeners(): void {
-    const { input } = this.#behavior.actor.gameInstance;
+    const { input } = this.#behavior.actor.world;
 
     const metadata = Reflect.getMetadata(
       Input.Metadata,

@@ -86,7 +86,7 @@ export class GridRenderer extends ActorComponent {
     this.mesh = new THREE.LineSegments(geometry, material);
     this.mesh.computeLineDistances();
 
-    this.actor.threeObject.add(this.mesh);
+    this.actor.object3D.add(this.mesh);
   }
 
   clearMesh() {
@@ -101,7 +101,7 @@ export class GridRenderer extends ActorComponent {
     else {
       this.mesh.material.dispose();
     }
-    this.actor.threeObject.remove(this.mesh);
+    this.actor.object3D.remove(this.mesh);
     this.mesh = null;
   }
 

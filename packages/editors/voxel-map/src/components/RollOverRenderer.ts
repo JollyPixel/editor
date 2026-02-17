@@ -48,7 +48,7 @@ export class RollOverRenderer extends ActorComponent {
   }
 
   update() {
-    const { input } = this.actor.gameInstance;
+    const { input } = this.actor.world;
 
     const isMouseMoving = input.isMouseMoving();
     if (!isMouseMoving) {
@@ -57,7 +57,7 @@ export class RollOverRenderer extends ActorComponent {
 
     const { raycaster, camera, ratio, tree } = this.voxelRenderer;
     raycaster.setFromCamera(
-      this.actor.gameInstance.input.getMousePosition(),
+      this.actor.world.input.getMousePosition(),
       camera
     );
 

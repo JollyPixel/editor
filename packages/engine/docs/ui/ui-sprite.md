@@ -9,11 +9,11 @@ interactive 2D elements drawn by the
 ```ts
 import { Actor, UISprite } from "@jolly-pixel/engine";
 
-const btn = new Actor(gameInstance, {
+const btn = new Actor(world, {
   name: "playButton",
   parent: camera2D
 })
-  .registerComponentAndGet(UISprite, {
+  .addComponentAndGet(UISprite, {
     anchor: { x: "center", y: "center" },
     size: { width: 180, height: 50 },
     style: { color: 0x0077ff },
@@ -45,7 +45,7 @@ interface UISpriteStyle {
 | `opacity` | `1` | Transparency (0 fully transparent – 1 opaque) |
 
 ```ts
-.registerComponentAndGet(UISprite, {
+.addComponentAndGet(UISprite, {
   size: { width: 64, height: 64 },
   style: {
     map: myTexture,
@@ -112,7 +112,7 @@ unsubscribe with `disconnect`.
 | `onHover` | Same as `onPointerEnter` (convenience alias) |
 
 ```ts
-const sprite = actor.registerComponentAndGet(UISprite, {
+const sprite = actor.addComponentAndGet(UISprite, {
   size: { width: 100, height: 40 },
   style: { color: 0x333333 }
 });
@@ -131,7 +131,7 @@ automatically on pointer enter and restored on pointer leave.
 No manual signal wiring is needed.
 
 ```ts
-.registerComponentAndGet(UISprite, {
+.addComponentAndGet(UISprite, {
   size: { width: 120, height: 40 },
   style: { color: 0x222222, opacity: 0.8 },
   styleOnHover: { color: 0x4444ff, opacity: 1 }

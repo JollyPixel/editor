@@ -7,7 +7,7 @@ orchestrates per-frame updates and destruction. It acts as the
 bridge between the engine's Entity-Component model and the
 underlying Three.js `THREE.Scene`.
 
-Every [GameInstance](./game-instance.md) holds exactly one `Scene`.
+Every [World](./world.md) holds exactly one `Scene`.
 When the game connects, the scene **awakens** all actors; on every
 frame the game instance calls `scene.update(deltaTime)`, which
 starts newly registered components, updates every actor, and
@@ -49,13 +49,13 @@ const player = scene.tree.getActor("Player");
 
 The scene drives the lifecycle of all actors and components in two
 phases — **awake** and **update** — called by the
-`GameInstance`:
+`World`:
 
 ```
-gameInstance.connect()
+world.connect()
   └─ scene.awake()           ← awakens all existing actors
 
-gameInstance.update(dt)      ← called every frame
+world.update(dt)      ← called every frame
   └─ scene.update(dt)
        ├─ start components   ← newly registered components
        ├─ update actors      ← calls actor.update(dt) on each
