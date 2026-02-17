@@ -25,7 +25,7 @@ export interface ThreeRendererOptions {
    * @default "direct"
    */
   renderMode: RenderMode;
-  scene: SceneContract;
+  sceneManager: SceneContract;
 }
 
 export class ThreeRenderer extends EventEmitter<
@@ -35,7 +35,7 @@ export class ThreeRenderer extends EventEmitter<
   renderComponents: RenderComponent[] = [];
   renderStrategy: RenderStrategy;
   ratio: number | null = null;
-  scene: SceneContract;
+  sceneManager: SceneContract;
 
   #resizeObserver: ResizeObserver | null = null;
   #pendingResizeWidth = 0;
@@ -47,9 +47,9 @@ export class ThreeRenderer extends EventEmitter<
     options: ThreeRendererOptions
   ) {
     super();
-    const { scene, renderMode = "direct" } = options;
+    const { sceneManager, renderMode = "direct" } = options;
 
-    this.scene = scene;
+    this.sceneManager = sceneManager;
     this.webGLRenderer = createWebGLRenderer(canvas);
     this.setRenderMode(renderMode);
   }
@@ -67,7 +67,7 @@ export class ThreeRenderer extends EventEmitter<
   ): void {
     this.renderComponents.push(component);
     if (this.renderStrategy instanceof ComposerRenderStrategy) {
-      const renderPass = new RenderPass(this.scene.getSource(), component);
+      const renderPass = new RenderPass(this.sceneManager.getSource(), component);
       this.renderStrategy.addEffect(renderPass);
     }
   }
@@ -98,7 +98,7 @@ export class ThreeRenderer extends EventEmitter<
     else {
       const composer = new EffectComposer(this.webGLRenderer);
 
-      const scene = this.scene.getSource();
+      const scene = this.sceneManager.getSource();
       for (const renderComponent of this.renderComponents) {
         const renderPass = new RenderPass(scene, renderComponent);
         composer.addPass(renderPass);
@@ -213,7 +213,7 @@ export class ThreeRenderer extends EventEmitter<
     this.clear();
 
     this.renderStrategy.render(
-      this.scene.getSource(),
+      this.sceneManager.getSource(),
       this.renderComponents
     );
     this.emit("draw", { source: this.webGLRenderer });

@@ -66,7 +66,7 @@ import { Systems, Actor } from "@jolly-pixel/engine";
 
 const sceneManager = new Systems.SceneManager();
 const renderer = new Systems.ThreeRenderer(canvas, {
-  scene: sceneManager,
+  sceneManager,
   renderMode: "direct"
 });
 const game = new Systems.World(renderer, {

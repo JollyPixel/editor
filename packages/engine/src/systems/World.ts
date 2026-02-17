@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
+import { EventEmitter } from "@posva/event-emitter";
 
 // Import Internal Dependencies
 import {
@@ -18,6 +19,14 @@ import {
   type GlobalsAdapter,
   BrowserGlobalsAdapter
 } from "../adapters/global.ts";
+import { FixedTimeStep } from "./FixedTimeStep.ts";
+
+export type WorldEvents = {
+  beforeFixedUpdate: [number];
+  afterFixedUpdate: [number];
+  beforeUpdate: [number];
+  afterUpdate: [number];
+};
 
 export interface WorldOptions<
   TContext = WorldDefaultContext
@@ -39,18 +48,21 @@ export interface WorldDefaultContext {
 export class World<
   T = THREE.WebGLRenderer,
   TContext = WorldDefaultContext
-> {
+> extends EventEmitter<WorldEvents> {
   renderer: Renderer<T>;
   input: Input;
   loadingManager: THREE.LoadingManager = new THREE.LoadingManager();
   sceneManager: SceneContract;
   audio: GlobalAudio;
   context: TContext;
+  loop: FixedTimeStep;
 
   constructor(
     renderer: Renderer<T>,
     options: WorldOptions<TContext>
   ) {
+    super();
+
     const {
       sceneManager,
       input = new Input(renderer.canvas, { enableOnExit: options.enableOnExit ?? false }),
@@ -64,6 +76,7 @@ export class World<
     this.input = input;
     this.audio = audio;
     this.context = context;
+    this.loop = new FixedTimeStep();
 
     globalsAdapter.setGame(this);
   }
@@ -101,24 +114,54 @@ export class World<
     return this;
   }
 
-  beginFrame() {
+  start() {
+    this.loop.start();
+
+    return this;
+  }
+
+  stop() {
+    this.loop.stop();
+
+    return this;
+  }
+
+  setFps(
+    fps: number,
+    fixedFps?: number
+  ) {
+    this.loop.setFps(fps, fixedFps);
+
+    return this;
+  }
+
+  tick() {
+    this.#beginFrame();
+    this.loop.tick({
+      fixedUpdate: (fixedDelta) => {
+        const dt = fixedDelta / 1000;
+        this.emit("beforeFixedUpdate", dt);
+        this.sceneManager.fixedUpdate(dt);
+        this.emit("afterFixedUpdate", dt);
+      },
+      update: (_interpolation, delta) => {
+        const dt = delta / 1000;
+        this.emit("beforeUpdate", dt);
+        this.sceneManager.update(dt);
+        this.renderer.draw();
+        this.emit("afterUpdate", dt);
+      }
+    });
+
+    return this.#endFrame();
+  }
+
+  #beginFrame() {
     this.input.update();
     this.sceneManager.beginFrame();
   }
 
-  fixedUpdate(
-    deltaTime: number
-  ) {
-    this.sceneManager.fixedUpdate(deltaTime);
-  }
-
-  update(
-    deltaTime: number
-  ) {
-    this.sceneManager.update(deltaTime);
-  }
-
-  endFrame(): boolean {
+  #endFrame(): boolean {
     this.sceneManager.endFrame();
 
     if (this.input.exited) {
@@ -128,9 +171,5 @@ export class World<
     }
 
     return false;
-  }
-
-  render() {
-    this.renderer.draw();
   }
 }
