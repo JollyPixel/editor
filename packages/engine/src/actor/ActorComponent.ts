@@ -5,11 +5,16 @@ import { EventEmitter } from "@posva/event-emitter";
 import { Actor } from "./Actor.ts";
 import { getSignalMetadata, SignalEvent } from "./Signal.ts";
 import type {
+  GameInstanceDefaultContext
+} from "../systems/GameInstance.ts";
+import type {
   Component,
   FreeComponentEnum
 } from "../components/types.ts";
 
-export interface ActorComponentOptions<TContext = Record<string, unknown>> {
+export interface ActorComponentOptions<
+  TContext = GameInstanceDefaultContext
+> {
   actor: Actor<TContext>;
   typeName: FreeComponentEnum;
 }
@@ -18,7 +23,9 @@ export type ActorComponentEvents = {
   metadataInitialized: [];
 };
 
-export class ActorComponent<TContext = Record<string, unknown>> extends EventEmitter<ActorComponentEvents> implements Component {
+export class ActorComponent<
+  TContext = GameInstanceDefaultContext
+> extends EventEmitter<ActorComponentEvents> implements Component {
   protected static Id = 0;
 
   static generateNextId() {

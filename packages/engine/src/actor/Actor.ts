@@ -2,10 +2,10 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { type GameInstance } from "../systems/GameInstance.ts";
-import type { ActorComponent } from "./ActorComponent.ts";
 import { ActorTree } from "./ActorTree.ts";
 import { Transform } from "./Transform.ts";
+import type { GameInstance, GameInstanceDefaultContext } from "../systems/GameInstance.ts";
+import type { ActorComponent } from "./ActorComponent.ts";
 import type { Behavior } from "../components/script/Behavior.ts";
 import type {
   Component
@@ -18,14 +18,18 @@ type RequiresOptions<T extends ComponentConstructor> =
     ? undefined extends O ? false : true
     : false;
 
-export interface ActorOptions<TContext = Record<string, unknown>> {
+export interface ActorOptions<
+  TContext = GameInstanceDefaultContext
+> {
   name: string;
   parent?: Actor<TContext> | null;
   visible?: boolean;
   layer?: number | number[];
 }
 
-export class Actor<TContext = Record<string, unknown>> extends ActorTree<TContext> {
+export class Actor<
+  TContext = GameInstanceDefaultContext
+> extends ActorTree<TContext> {
   gameInstance: GameInstance<any, TContext>;
 
   name: string;
@@ -39,13 +43,16 @@ export class Actor<TContext = Record<string, unknown>> extends ActorTree<TContex
   threeObject = new THREE.Group();
 
   constructor(
-    gameInstance: GameInstance<any, any>,
+    gameInstance: GameInstance<any, TContext>,
     options: ActorOptions<TContext>
   ) {
     super();
     const { name, parent = null, visible = true, layer } = options;
 
-    if (parent !== null && parent.pendingForDestruction) {
+    if (
+      parent !== null &&
+      parent.pendingForDestruction
+    ) {
       throw new Error("Cannot add actor to a parent that is pending for destruction.");
     }
 
@@ -111,14 +118,13 @@ export class Actor<TContext = Record<string, unknown>> extends ActorTree<TContex
   }
 
   getComponentByName<T extends ActorComponent<TContext>>(
-    actor: Actor<TContext>,
-    componentName: string
+    componentTypeName: string
   ): T {
-    const component = actor.components.find(
-      (comp) => comp.typeName === componentName
+    const component = this.components.find(
+      (comp) => comp.typeName === componentTypeName
     );
     if (!component) {
-      throw new Error(`Component with typeName "${componentName}" not found on actor "${actor.name}"`);
+      throw new Error(`Component with typeName "${componentTypeName}" not found on actor "${this.name}"`);
     }
 
     return component as T;

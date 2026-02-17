@@ -2,6 +2,9 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
+import type {
+  GameInstanceDefaultContext
+} from "../systems/GameInstance.ts";
 import {
   Actor,
   SignalEvent
@@ -30,14 +33,16 @@ export interface UISpriteOptions extends UINodeOptions {
   styleOnHover?: UISpriteStyle;
 }
 
-export class UISprite extends UINode {
+export class UISprite<
+  TContext = GameInstanceDefaultContext
+> extends UINode<TContext> {
   mesh: THREE.Mesh;
 
   #isHovered = false;
   #isPressed = false;
   #style: UISpriteStyle;
   #styleOnHover: UISpriteStyle | null;
-  #text: UIText | undefined;
+  #text: UIText<TContext> | undefined;
 
   #lastClickTime = 0;
 
@@ -51,7 +56,7 @@ export class UISprite extends UINode {
   onHover = new SignalEvent();
 
   constructor(
-    actor: Actor<any>,
+    actor: Actor<TContext>,
     options: UISpriteOptions = {}
   ) {
     super(actor, options);

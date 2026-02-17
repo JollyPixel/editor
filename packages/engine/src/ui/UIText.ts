@@ -2,6 +2,7 @@
 import { CSS2DObject } from "three/addons/renderers/CSS2DRenderer.js";
 
 // Import Internal Dependencies
+import type { GameInstanceDefaultContext } from "../systems/GameInstance.ts";
 import type { UINode } from "./UINode.ts";
 
 export interface UITextStyle {
@@ -40,14 +41,14 @@ const kDefaultStyle: UITextStyle = {
 };
 const kDefaultZOffset = 0.1;
 
-export class UIText {
+export class UIText<TContext = GameInstanceDefaultContext> {
   #element: HTMLDivElement;
   #cssObject: CSS2DObject;
   #style: UITextStyle;
-  #node: UINode;
+  #node: UINode<TContext>;
 
   constructor(
-    node: UINode,
+    node: UINode<TContext>,
     options: UITextOptions = {}
   ) {
     this.#node = node;
@@ -64,7 +65,7 @@ export class UIText {
     this.#node.addChildren(this.#cssObject);
   }
 
-  get node(): UINode {
+  get node(): UINode<TContext> {
     return this.#node;
   }
 

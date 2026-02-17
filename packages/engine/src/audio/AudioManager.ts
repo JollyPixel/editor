@@ -43,7 +43,7 @@ export class GlobalAudioManager implements AudioManager {
   #audioService: AudioFactory;
 
   static fromGameInstance(
-    gameInstance: GameInstance
+    gameInstance: GameInstance<any, any>
   ): GlobalAudioManager {
     return new GlobalAudioManager({
       listener: gameInstance.audio.listener

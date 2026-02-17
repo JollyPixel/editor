@@ -18,7 +18,7 @@ export interface LoadRuntimeOptions {
 }
 
 export async function loadRuntime(
-  runtime: Runtime,
+  runtime: Runtime<any>,
   options: LoadRuntimeOptions = {}
 ) {
   const { loadingDelay = 850 } = options;

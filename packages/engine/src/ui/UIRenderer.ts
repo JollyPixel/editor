@@ -3,8 +3,10 @@ import * as THREE from "three";
 import { CSS2DRenderer as ThreeCSS2DRenderer } from "three/addons/renderers/CSS2DRenderer.js";
 
 // Import Internal Dependencies
-import { type Actor, ActorComponent } from "../actor/index.ts";
+import type { GameInstanceDefaultContext } from "../systems/GameInstance.ts";
 import type { UINode } from "./UINode.ts";
+import { type Actor, ActorComponent } from "../actor/index.ts";
+import { UIRendererID } from "./common.ts";
 
 // CONSTANTS
 const kOrthographicCameraZIndex = 10;
@@ -15,18 +17,18 @@ export interface UIRendererOptions {
   zIndex?: number;
 }
 
-export class UIRenderer extends ActorComponent<any> {
-  static ID = Symbol.for("UIRenderer");
-
+export class UIRenderer<
+  TContext = GameInstanceDefaultContext
+> extends ActorComponent<TContext> {
   camera: THREE.OrthographicCamera;
-  nodes: UINode[] = [];
+  nodes: UINode<TContext>[] = [];
 
   #cssRenderer: ThreeCSS2DRenderer;
   #boundDraw: () => void;
   #boundResize: () => void;
 
   constructor(
-    actor: Actor<any>,
+    actor: Actor<TContext>,
     options: UIRendererOptions = {}
   ) {
     super({ actor, typeName: "UIRenderer" });
@@ -70,13 +72,15 @@ export class UIRenderer extends ActorComponent<any> {
     gameInstance.renderer.on("resize", this.#boundResize);
     gameInstance.renderer.on("draw", this.#boundDraw);
 
-    Object.defineProperty(gameInstance, UIRenderer.ID, {
+    Object.defineProperty(gameInstance, UIRendererID, {
       value: this,
       enumerable: false
     });
   }
 
-  addChildren(node: UINode): void {
+  addChildren(
+    node: UINode<TContext>
+  ): void {
     const nodeIndex = this.nodes.indexOf(node);
     if (nodeIndex !== -1) {
       return;
@@ -118,6 +122,6 @@ export class UIRenderer extends ActorComponent<any> {
 
     this.#cssRenderer.domElement.remove();
 
-    gameInstance[UIRenderer.ID] = undefined;
+    gameInstance[UIRendererID] = undefined;
   }
 }

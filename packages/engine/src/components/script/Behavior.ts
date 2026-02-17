@@ -2,6 +2,9 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
+import type {
+  GameInstanceDefaultContext
+} from "../../systems/GameInstance.ts";
 import {
   Actor,
   ActorComponent
@@ -25,7 +28,7 @@ export interface BehaviorOptions {
 
 export class Behavior<
   T extends BehaviorProperties = Record<string, BehaviorPropertiesValue>,
-  TContext = Record<string, unknown>
+  TContext = GameInstanceDefaultContext
 > extends ActorComponent<TContext> {
   #properties: T = Object.create(null);
 

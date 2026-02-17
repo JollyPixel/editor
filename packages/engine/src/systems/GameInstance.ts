@@ -23,7 +23,9 @@ import {
   BrowserGlobalsAdapter
 } from "../adapters/global.ts";
 
-export interface GameInstanceOptions<TContext = Record<string, unknown>> {
+export interface GameInstanceOptions<
+  TContext = GameInstanceDefaultContext
+> {
   enableOnExit?: boolean;
 
   scene: Scene;
@@ -35,7 +37,14 @@ export interface GameInstanceOptions<TContext = Record<string, unknown>> {
   globalsAdapter?: GlobalsAdapter;
 }
 
-export class GameInstance<T = THREE.WebGLRenderer, TContext = Record<string, unknown>> {
+export interface GameInstanceDefaultContext {
+  [key: string]: unknown;
+}
+
+export class GameInstance<
+  T = THREE.WebGLRenderer,
+  TContext = GameInstanceDefaultContext
+> {
   renderer: Renderer<T>;
   input: Input;
   loadingManager: THREE.LoadingManager = new THREE.LoadingManager();
@@ -53,7 +62,7 @@ export class GameInstance<T = THREE.WebGLRenderer, TContext = Record<string, unk
       scene,
       input = new Input(renderer.canvas, { enableOnExit: options.enableOnExit ?? false }),
       audio = new GlobalAudio(),
-      context = {} as TContext,
+      context = Object.create(null),
       windowAdapter = new BrowserWindowAdapter(),
       globalsAdapter = new BrowserGlobalsAdapter()
     } = options;
