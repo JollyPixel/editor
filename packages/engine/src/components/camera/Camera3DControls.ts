@@ -33,7 +33,7 @@ export class Camera3DControls extends Behavior {
   #movementSpeed: number;
 
   constructor(
-    actor: Actor,
+    actor: Actor<any>,
     options: Camera3DControlsOptions = {}
   ) {
     super(actor);

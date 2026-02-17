@@ -19,7 +19,7 @@ export interface SpriteRendererOptions {
   };
 }
 
-export class SpriteRenderer extends ActorComponent {
+export class SpriteRenderer extends ActorComponent<any> {
   frameIndex: number;
   tileHorizontal: number;
   tileVertical: number;
@@ -33,7 +33,7 @@ export class SpriteRenderer extends ActorComponent {
   threeObject: THREE.Sprite;
 
   constructor(
-    actor: Actor,
+    actor: Actor<any>,
     options: SpriteRendererOptions
   ) {
     super({

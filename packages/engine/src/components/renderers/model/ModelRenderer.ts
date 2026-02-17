@@ -25,7 +25,7 @@ export interface ModelRendererOptions {
   animations?: ModelRendererAnimationOptions;
 }
 
-export class ModelRenderer extends ActorComponent {
+export class ModelRenderer extends ActorComponent<any> {
   #asset: Systems.LazyAsset<Model>;
   #object: THREE.Group<THREE.Object3DEventMap>;
   #debug = false;
@@ -33,7 +33,7 @@ export class ModelRenderer extends ActorComponent {
   animation = new ModelAnimation();
 
   constructor(
-    actor: Actor,
+    actor: Actor<any>,
     options: ModelRendererOptions
   ) {
     super({

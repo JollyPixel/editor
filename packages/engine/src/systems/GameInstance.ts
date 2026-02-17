@@ -23,34 +23,37 @@ import {
   BrowserGlobalsAdapter
 } from "../adapters/global.ts";
 
-export interface GameInstanceOptions {
+export interface GameInstanceOptions<TContext = Record<string, unknown>> {
   enableOnExit?: boolean;
 
   scene: Scene;
   input?: Input;
   audio?: GlobalAudio;
+  context?: TContext;
 
   windowAdapter?: WindowAdapter;
   globalsAdapter?: GlobalsAdapter;
 }
 
-export class GameInstance<T = THREE.WebGLRenderer> {
+export class GameInstance<T = THREE.WebGLRenderer, TContext = Record<string, unknown>> {
   renderer: Renderer<T>;
   input: Input;
   loadingManager: THREE.LoadingManager = new THREE.LoadingManager();
   scene: Scene;
   audio: GlobalAudio;
+  context: TContext;
 
   #windowAdapter: WindowAdapter;
 
   constructor(
     renderer: Renderer<T>,
-    options: GameInstanceOptions
+    options: GameInstanceOptions<TContext>
   ) {
     const {
       scene,
       input = new Input(renderer.canvas, { enableOnExit: options.enableOnExit ?? false }),
       audio = new GlobalAudio(),
+      context = {} as TContext,
       windowAdapter = new BrowserWindowAdapter(),
       globalsAdapter = new BrowserGlobalsAdapter()
     } = options;
@@ -59,6 +62,7 @@ export class GameInstance<T = THREE.WebGLRenderer> {
     this.scene = scene;
     this.input = input;
     this.audio = audio;
+    this.context = context;
     this.#windowAdapter = windowAdapter;
 
     globalsAdapter.setGame(this);
@@ -74,9 +78,9 @@ export class GameInstance<T = THREE.WebGLRenderer> {
 
   createActor(
     name: string,
-    options: Omit<ActorOptions, "name"> = {}
-  ): Actor {
-    return new Actor(this, {
+    options: Omit<ActorOptions<TContext>, "name"> = {}
+  ): Actor<TContext> {
+    return new Actor<TContext>(this, {
       name,
       ...options
     });

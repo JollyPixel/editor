@@ -15,7 +15,7 @@ export interface UIRendererOptions {
   zIndex?: number;
 }
 
-export class UIRenderer extends ActorComponent {
+export class UIRenderer extends ActorComponent<any> {
   static ID = Symbol.for("UIRenderer");
 
   camera: THREE.OrthographicCamera;
@@ -26,7 +26,7 @@ export class UIRenderer extends ActorComponent {
   #boundResize: () => void;
 
   constructor(
-    actor: Actor,
+    actor: Actor<any>,
     options: UIRendererOptions = {}
   ) {
     super({ actor, typeName: "UIRenderer" });

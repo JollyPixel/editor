@@ -15,13 +15,13 @@ export interface TextRendererOptions extends Omit<Text3DOptions, "font"> {
   text?: string;
 }
 
-export class TextRenderer extends ActorComponent {
+export class TextRenderer extends ActorComponent<any> {
   #asset: Systems.LazyAsset<Font>;
 
   text: Text3D;
 
   constructor(
-    actor: Actor,
+    actor: Actor<any>,
     options: TextRendererOptions
   ) {
     super({

@@ -56,11 +56,11 @@ export interface UINodeOptions extends UINodePositionalOptions {
   };
 }
 
-export class UINode extends ActorComponent {
+export class UINode extends ActorComponent<any> {
   #options: UINodeOptions;
 
   constructor(
-    actor: Actor,
+    actor: Actor<any>,
     options: UINodeOptions = {}
   ) {
     super({ actor, typeName: "UINode" });

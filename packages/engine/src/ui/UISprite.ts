@@ -51,7 +51,7 @@ export class UISprite extends UINode {
   onHover = new SignalEvent();
 
   constructor(
-    actor: Actor,
+    actor: Actor<any>,
     options: UISpriteOptions = {}
   ) {
     super(actor, options);
