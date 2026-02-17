@@ -13,7 +13,7 @@ export type StrictComponentEnum =
 export type FreeComponentEnum = StrictComponentEnum | (string & {});
 
 export interface Component {
-  actor: Actor;
+  actor: Actor<any>;
   typeName: FreeComponentEnum;
 
   awake?(): void;

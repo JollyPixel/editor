@@ -46,7 +46,7 @@ export class TileObject {
   }
 
   createActors(
-    parent: Actor
+    parent: Actor<any>
   ) {
     for (const object of this.layer.objects) {
       const childrenActor = new Actor(parent.gameInstance, {

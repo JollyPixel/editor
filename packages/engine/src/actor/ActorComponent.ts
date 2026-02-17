@@ -9,8 +9,8 @@ import type {
   FreeComponentEnum
 } from "../components/types.ts";
 
-export interface ActorComponentOptions {
-  actor: Actor;
+export interface ActorComponentOptions<TContext = Record<string, unknown>> {
+  actor: Actor<TContext>;
   typeName: FreeComponentEnum;
 }
 
@@ -18,7 +18,7 @@ export type ActorComponentEvents = {
   metadataInitialized: [];
 };
 
-export class ActorComponent extends EventEmitter<ActorComponentEvents> implements Component {
+export class ActorComponent<TContext = Record<string, unknown>> extends EventEmitter<ActorComponentEvents> implements Component {
   protected static Id = 0;
 
   static generateNextId() {
@@ -30,13 +30,13 @@ export class ActorComponent extends EventEmitter<ActorComponentEvents> implement
   }
 
   id = ActorComponent.generateNextId();
-  actor: Actor;
+  actor: Actor<TContext>;
   typeName: FreeComponentEnum;
 
   pendingForDestruction = false;
 
   constructor(
-    options: ActorComponentOptions
+    options: ActorComponentOptions<TContext>
   ) {
     super();
     this.actor = options.actor;

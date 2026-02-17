@@ -15,7 +15,7 @@ export type SceneEvents = {
 };
 
 export interface Scene {
-  readonly tree: ActorTree;
+  readonly tree: ActorTree<any>;
 
   componentsToBeStarted: Component[];
   componentsToBeDestroyed: Component[];
@@ -23,7 +23,7 @@ export interface Scene {
   getSource(): THREE.Scene;
   awake(): void;
   update(deltaTime: number): void;
-  destroyActor(actor: Actor): void;
+  destroyActor(actor: Actor<any>): void;
 }
 
 export class SceneEngine extends EventEmitter<
@@ -34,9 +34,9 @@ export class SceneEngine extends EventEmitter<
   componentsToBeStarted: Component[] = [];
   componentsToBeDestroyed: Component[] = [];
 
-  #cachedActors: Actor[] = [];
+  #cachedActors: Actor<any>[] = [];
 
-  readonly tree = new ActorTree({
+  readonly tree = new ActorTree<any>({
     addCallback: (actor) => this.default.add(actor.threeObject),
     removeCallback: (actor) => this.default.remove(actor.threeObject)
   });
@@ -86,7 +86,7 @@ export class SceneEngine extends EventEmitter<
     }
 
     // Update all actors
-    const actorToBeDestroyed: Actor[] = [];
+    const actorToBeDestroyed: Actor<any>[] = [];
     cachedActors.forEach((actor) => {
       actor.update(deltaTime);
 
@@ -107,7 +107,7 @@ export class SceneEngine extends EventEmitter<
   }
 
   destroyActor(
-    actor: Actor
+    actor: Actor<any>
   ) {
     const childrenToDestroy = [...actor.children];
 
@@ -126,7 +126,7 @@ export class SceneEngine extends EventEmitter<
   }
 
   destroyComponent(
-    component: ActorComponent
+    component: ActorComponent<any>
   ) {
     if (component.pendingForDestruction) {
       return;

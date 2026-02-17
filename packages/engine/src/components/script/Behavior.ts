@@ -24,12 +24,13 @@ export interface BehaviorOptions {
 }
 
 export class Behavior<
-  T extends BehaviorProperties = Record<string, BehaviorPropertiesValue>
-> extends ActorComponent {
+  T extends BehaviorProperties = Record<string, BehaviorPropertiesValue>,
+  TContext = Record<string, unknown>
+> extends ActorComponent<TContext> {
   #properties: T = Object.create(null);
 
   constructor(
-    actor: Actor,
+    actor: Actor<any>,
     options: BehaviorOptions = {}
   ) {
     super({

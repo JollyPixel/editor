@@ -19,12 +19,12 @@ export interface TiledMapRendererOptions {
   orientation?: TiledMapOrientation;
 }
 
-export class TiledMapRenderer extends ActorComponent {
+export class TiledMapRenderer extends ActorComponent<any> {
   #map: Systems.LazyAsset<TiledMapAsset>;
   #orientation: TiledMapOrientation;
 
   constructor(
-    actor: Actor,
+    actor: Actor<any>,
     options: TiledMapRendererOptions
   ) {
     const {

@@ -11,36 +11,36 @@ import type {
   Component
 } from "../components/types.ts";
 
-type ComponentConstructor = new (actor: Actor, ...args: any[]) => Component;
+type ComponentConstructor = new (actor: Actor<any>, ...args: any[]) => Component;
 
 type RequiresOptions<T extends ComponentConstructor> =
-  T extends new (actor: Actor, options: infer O, ...args: any[]) => any
+  T extends new (actor: Actor<any>, options: infer O, ...args: any[]) => any
     ? undefined extends O ? false : true
     : false;
 
-export interface ActorOptions {
+export interface ActorOptions<TContext = Record<string, unknown>> {
   name: string;
-  parent?: Actor | null;
+  parent?: Actor<TContext> | null;
   visible?: boolean;
   layer?: number | number[];
 }
 
-export class Actor extends ActorTree {
-  gameInstance: GameInstance;
+export class Actor<TContext = Record<string, unknown>> extends ActorTree<TContext> {
+  gameInstance: GameInstance<any, TContext>;
 
   name: string;
   awoken = false;
-  parent: Actor | null = null;
+  parent: Actor<TContext> | null = null;
   components: Component[] = [];
-  behaviors: Record<string, Behavior<any>[]> = {};
+  behaviors: Record<string, Behavior<any, TContext>[]> = {};
   transform: Transform;
   pendingForDestruction = false;
 
   threeObject = new THREE.Group();
 
   constructor(
-    gameInstance: GameInstance<any>,
-    options: ActorOptions
+    gameInstance: GameInstance<any, any>,
+    options: ActorOptions<TContext>
   ) {
     super();
     const { name, parent = null, visible = true, layer } = options;
@@ -110,8 +110,8 @@ export class Actor extends ActorTree {
     return component as InstanceType<T>;
   }
 
-  getComponentByName<T extends ActorComponent>(
-    actor: Actor,
+  getComponentByName<T extends ActorComponent<TContext>>(
+    actor: Actor<TContext>,
     componentName: string
   ): T {
     const component = actor.components.find(
@@ -161,7 +161,7 @@ export class Actor extends ActorTree {
     this.destroyAllActors();
   }
 
-  addBehavior<T extends new(...args: any) => Behavior>(
+  addBehavior<T extends new(...args: any) => Behavior<any, TContext>>(
     behaviorClass: T,
     properties: ConstructorParameters<T>[0] = Object.create(null)
   ) {
@@ -220,7 +220,7 @@ export class Actor extends ActorTree {
   }
 
   setParent(
-    newParent: Actor,
+    newParent: Actor<TContext>,
     keepLocal = false
   ) {
     if (this.pendingForDestruction) {

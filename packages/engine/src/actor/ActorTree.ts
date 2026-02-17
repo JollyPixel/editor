@@ -4,37 +4,37 @@ import pm from "picomatch";
 // Import Internal Dependencies
 import { Actor } from "./Actor.ts";
 
-export type ActorTreeNode = {
-  actor: Actor;
-  parent?: Actor;
+export type ActorTreeNode<TContext = Record<string, unknown>> = {
+  actor: Actor<TContext>;
+  parent?: Actor<TContext>;
 };
 
-export interface ActorTreeOptions {
-  addCallback?: (actor: Actor) => void;
-  removeCallback?: (actor: Actor) => void;
+export interface ActorTreeOptions<TContext = Record<string, unknown>> {
+  addCallback?: (actor: Actor<TContext>) => void;
+  removeCallback?: (actor: Actor<TContext>) => void;
 }
 
-export class ActorTree {
-  #addCallback?: (actor: Actor) => void;
-  #removeCallback?: (actor: Actor) => void;
+export class ActorTree<TContext = Record<string, unknown>> {
+  #addCallback?: (actor: Actor<TContext>) => void;
+  #removeCallback?: (actor: Actor<TContext>) => void;
 
-  children: Actor[] = [];
+  children: Actor<TContext>[] = [];
 
   constructor(
-    options: ActorTreeOptions = {}
+    options: ActorTreeOptions<TContext> = {}
   ) {
     this.#addCallback = options.addCallback;
     this.#removeCallback = options.removeCallback;
   }
 
   add(
-    actor: Actor
+    actor: Actor<TContext>
   ): void {
     this.children.push(actor);
     this.#addCallback?.(actor);
   }
 
-  remove(actor: Actor): void {
+  remove(actor: Actor<TContext>): void {
     const index = this.children.indexOf(actor);
     if (index !== -1) {
       this.children.splice(index, 1);
@@ -44,7 +44,7 @@ export class ActorTree {
 
   * getActors(
     pattern: string
-  ): IterableIterator<Actor> {
+  ): IterableIterator<Actor<TContext>> {
     if (pattern.includes("/")) {
       yield* this.#getActorsByPatternPath(pattern);
 
@@ -62,7 +62,7 @@ export class ActorTree {
 
   * #getActorsByPatternPath(
     pattern: string
-  ): IterableIterator<Actor> {
+  ): IterableIterator<Actor<TContext>> {
     const parts = pattern.split("/").filter((part) => part !== "");
 
     for (const rootActor of this.children) {
@@ -73,10 +73,10 @@ export class ActorTree {
   }
 
   * #matchActorPath(
-    actor: Actor,
+    actor: Actor<TContext>,
     patternParts: string[],
     patternIndex: number
-  ): IterableIterator<Actor> {
+  ): IterableIterator<Actor<TContext>> {
     if (patternIndex >= patternParts.length) {
       return;
     }
@@ -138,7 +138,7 @@ export class ActorTree {
    */
   getActor(
     name: string
-  ): Actor | null {
+  ): Actor<TContext> | null {
     if (name.includes("/")) {
       return this.#getActorByPath(name);
     }
@@ -154,14 +154,14 @@ export class ActorTree {
 
   #getActorByPath(
     path: string
-  ): Actor | null {
+  ): Actor<TContext> | null {
     const parts = path.split("/").filter((part) => part !== "");
     const parentNode = this.getActor(parts[0]);
     if (!parentNode) {
       return null;
     }
 
-    let currentNode: Actor | null = parentNode;
+    let currentNode: Actor<TContext> | null = parentNode;
     for (let i = 1; i < parts.length; i++) {
       if (!currentNode) {
         break;
@@ -175,7 +175,7 @@ export class ActorTree {
     return currentNode;
   }
 
-  * getRootActors(): IterableIterator<Actor> {
+  * getRootActors(): IterableIterator<Actor<TContext>> {
     for (const rootActor of this.children) {
       if (!rootActor.pendingForDestruction) {
         yield rootActor;
@@ -183,14 +183,14 @@ export class ActorTree {
     }
   }
 
-  * getAllActors(): IterableIterator<Actor> {
+  * getAllActors(): IterableIterator<Actor<TContext>> {
     for (const { actor } of this.walk()) {
       yield actor;
     }
   }
 
   destroyActor(
-    actor: Actor
+    actor: Actor<TContext>
   ) {
     if (!actor.pendingForDestruction) {
       actor.markDestructionPending();
@@ -204,9 +204,9 @@ export class ActorTree {
   }
 
   * #walkDepthFirstGenerator(
-    node: Actor,
-    parentNode?: Actor
-  ): IterableIterator<ActorTreeNode> {
+    node: Actor<TContext>,
+    parentNode?: Actor<TContext>
+  ): IterableIterator<ActorTreeNode<TContext>> {
     yield { actor: node, parent: parentNode };
 
     for (const child of node.children) {
@@ -214,21 +214,21 @@ export class ActorTree {
     }
   }
 
-  * walk(): IterableIterator<ActorTreeNode> {
+  * walk(): IterableIterator<ActorTreeNode<TContext>> {
     for (const child of this.children) {
       yield* this.#walkDepthFirstGenerator(child, undefined);
     }
   }
 
   * walkFromNode(
-    rootNode: Actor
-  ): IterableIterator<ActorTreeNode> {
+    rootNode: Actor<TContext>
+  ): IterableIterator<ActorTreeNode<TContext>> {
     for (const child of rootNode.children) {
       yield* this.#walkDepthFirstGenerator(child, rootNode);
     }
   }
 
-  * [Symbol.iterator](): IterableIterator<Actor> {
+  * [Symbol.iterator](): IterableIterator<Actor<TContext>> {
     for (const actor of this.children) {
       if (!actor.pendingForDestruction) {
         yield actor;
