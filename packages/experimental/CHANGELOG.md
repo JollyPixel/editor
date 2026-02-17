@@ -1,5 +1,13 @@
 # @jolly-pixel/experimental
 
+## 1.0.2
+
+### Patch Changes
+
+- Updated dependencies [[`c8405ca`](https://github.com/JollyPixel/editor/commit/c8405caba754802a9fdd5851411fa5af492c4e4b), [`c3ca721`](https://github.com/JollyPixel/editor/commit/c3ca72107b76c40e6cb81785883c82b01ffc0a02)]:
+  - @jolly-pixel/runtime@3.0.0
+  - @jolly-pixel/engine@2.0.0
+
 ## 1.0.1
 
 ### Patch Changes
