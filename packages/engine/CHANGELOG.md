@@ -1,5 +1,21 @@
 # @jolly-pixel/engine
 
+## 1.3.0
+
+### Minor Changes
+
+- [#153](https://github.com/JollyPixel/editor/pull/153) [`06693b6`](https://github.com/JollyPixel/editor/commit/06693b6ffa77fc957c615df41d19f110fa8b5735) Thanks [@fraxken](https://github.com/fraxken)! - Configure three as peerDependencies
+
+- [#151](https://github.com/JollyPixel/editor/pull/151) [`64a510e`](https://github.com/JollyPixel/editor/commit/64a510e4e1fd094958c20d03c9386115e8fad6ca) Thanks [@fraxken](https://github.com/fraxken)! - Implement type-safe GameInstance.context
+
+- [#148](https://github.com/JollyPixel/editor/pull/148) [`2bc5859`](https://github.com/JollyPixel/editor/commit/2bc5859c82e2118b1f49b1adaedba651a2490910) Thanks [@fraxken](https://github.com/fraxken)! - Export GlobalAudio class
+
+- [#150](https://github.com/JollyPixel/editor/pull/150) [`b8b2b30`](https://github.com/JollyPixel/editor/commit/b8b2b305291248fcdd786ea70809e6f2c73a4778) Thanks [@fraxken](https://github.com/fraxken)! - Add the ability to get an Actor component by his typeName
+
+### Patch Changes
+
+- [#147](https://github.com/JollyPixel/editor/pull/147) [`3668c6e`](https://github.com/JollyPixel/editor/commit/3668c6e9b48655a1138371684e2798e40b3e14f5) Thanks [@fraxken](https://github.com/fraxken)! - Make GameInstance.createActor options optional
+
 ## 1.2.0
 
 ### Minor Changes
