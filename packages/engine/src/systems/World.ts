@@ -15,10 +15,6 @@ import {
 import { Input } from "../controls/Input.class.ts";
 import { GlobalAudio } from "../audio/GlobalAudio.ts";
 import {
-  type WindowAdapter,
-  BrowserWindowAdapter
-} from "../adapters/window.ts";
-import {
   type GlobalsAdapter,
   BrowserGlobalsAdapter
 } from "../adapters/global.ts";
@@ -33,7 +29,6 @@ export interface WorldOptions<
   audio?: GlobalAudio;
   context?: TContext;
 
-  windowAdapter?: WindowAdapter;
   globalsAdapter?: GlobalsAdapter;
 }
 
@@ -52,8 +47,6 @@ export class World<
   audio: GlobalAudio;
   context: TContext;
 
-  #windowAdapter: WindowAdapter;
-
   constructor(
     renderer: Renderer<T>,
     options: WorldOptions<TContext>
@@ -63,7 +56,6 @@ export class World<
       input = new Input(renderer.canvas, { enableOnExit: options.enableOnExit ?? false }),
       audio = new GlobalAudio(),
       context = Object.create(null),
-      windowAdapter = new BrowserWindowAdapter(),
       globalsAdapter = new BrowserGlobalsAdapter()
     } = options;
 
@@ -72,7 +64,6 @@ export class World<
     this.input = input;
     this.audio = audio;
     this.context = context;
-    this.#windowAdapter = windowAdapter;
 
     globalsAdapter.setGame(this);
   }
@@ -97,7 +88,7 @@ export class World<
 
   connect() {
     this.input.connect();
-    this.#windowAdapter.addEventListener("resize", this.renderer.resize);
+    this.renderer.observeResize();
     this.sceneManager.awake();
 
     return this;
@@ -105,7 +96,7 @@ export class World<
 
   disconnect() {
     this.input.disconnect();
-    this.#windowAdapter.removeEventListener("resize", this.renderer.resize);
+    this.renderer.unobserveResize();
 
     return this;
   }

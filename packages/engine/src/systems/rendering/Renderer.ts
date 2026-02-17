@@ -47,6 +47,8 @@ export interface Renderer<T = any, Events extends GenericEventMap = RendererEven
       : [Events[Key]]
   ): void;
 
+  observeResize(): void;
+  unobserveResize(): void;
   resize(): void;
   draw(): void;
   onDraw(callback: (source: T) => void): void;

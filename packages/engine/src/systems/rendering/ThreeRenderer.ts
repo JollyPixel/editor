@@ -37,6 +37,11 @@ export class ThreeRenderer extends EventEmitter<
   ratio: number | null = null;
   scene: SceneContract;
 
+  #resizeObserver: ResizeObserver | null = null;
+  #pendingResizeWidth = 0;
+  #pendingResizeHeight = 0;
+  #resizeDirty = true;
+
   constructor(
     canvas: HTMLCanvasElement,
     options: ThreeRendererOptions
@@ -133,50 +138,74 @@ export class ThreeRenderer extends EventEmitter<
     return this;
   }
 
-  resize = () => {
-    let width: number;
-    let height: number;
-    if (this.ratio) {
-      if (document.body.clientWidth / document.body.clientHeight > this.ratio) {
-        height = document.body.clientHeight;
-        width = Math.min(document.body.clientWidth, height * this.ratio);
-      }
-      else {
-        width = document.body.clientWidth;
-        height = Math.min(document.body.clientHeight, width / this.ratio);
-      }
-    }
-    else {
-      const parent = this.webGLRenderer.domElement.parentElement;
-      if (parent) {
-        width = parent.clientWidth;
-        height = parent.clientHeight;
-      }
-      else {
-        width = this.webGLRenderer.domElement.clientWidth;
-        height = this.webGLRenderer.domElement.clientHeight;
-      }
+  observeResize() {
+    if (this.#resizeObserver) {
+      return;
     }
 
-    if (
-      this.webGLRenderer.domElement.width !== width ||
-      this.webGLRenderer.domElement.height !== height
-    ) {
-      this.renderStrategy.resize(width, height);
-      for (const renderComponent of this.renderComponents) {
-        if (renderComponent instanceof THREE.PerspectiveCamera) {
-          renderComponent.aspect = width / height;
-        }
-        if (renderComponent instanceof THREE.OrthographicCamera) {
-          renderComponent.left = width / -2;
-          renderComponent.right = width / 2;
-          renderComponent.top = height / 2;
-          renderComponent.bottom = height / -2;
-        }
-        renderComponent.updateProjectionMatrix();
+    const target = this.ratio ?
+      document.body :
+      this.webGLRenderer.domElement.parentElement ?? this.webGLRenderer.domElement;
+
+    this.#resizeObserver = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) {
+        return;
       }
-      this.emit("resize", { width, height });
+
+      const { width, height } = entry.contentRect;
+      if (this.ratio) {
+        if (width / height > this.ratio) {
+          this.#pendingResizeHeight = Math.round(height);
+          this.#pendingResizeWidth = Math.round(Math.min(width, height * this.ratio));
+        }
+        else {
+          this.#pendingResizeWidth = Math.round(width);
+          this.#pendingResizeHeight = Math.round(Math.min(height, width / this.ratio));
+        }
+      }
+      else {
+        this.#pendingResizeWidth = Math.round(width);
+        this.#pendingResizeHeight = Math.round(height);
+      }
+      this.#resizeDirty = true;
+    });
+    this.#resizeObserver.observe(target);
+  }
+
+  unobserveResize() {
+    if (this.#resizeObserver) {
+      this.#resizeObserver.disconnect();
+      this.#resizeObserver = null;
     }
+  }
+
+  resize = () => {
+    if (!this.#resizeDirty) {
+      return;
+    }
+    this.#resizeDirty = false;
+
+    const width = this.#pendingResizeWidth;
+    const height = this.#pendingResizeHeight;
+    if (width === 0 || height === 0) {
+      return;
+    }
+
+    this.renderStrategy.resize(width, height);
+    for (const renderComponent of this.renderComponents) {
+      if (renderComponent instanceof THREE.PerspectiveCamera) {
+        renderComponent.aspect = width / height;
+      }
+      if (renderComponent instanceof THREE.OrthographicCamera) {
+        renderComponent.left = width / -2;
+        renderComponent.right = width / 2;
+        renderComponent.top = height / 2;
+        renderComponent.bottom = height / -2;
+      }
+      renderComponent.updateProjectionMatrix();
+    }
+    this.emit("resize", { width, height });
   };
 
   draw() {
