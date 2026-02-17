@@ -1,5 +1,19 @@
 # @jolly-pixel/engine
 
+## 2.1.0
+
+### Minor Changes
+
+- [#168](https://github.com/JollyPixel/editor/pull/168) [`dd4d9c6`](https://github.com/JollyPixel/editor/commit/dd4d9c6d51048e2debd5c6fbe279dbfc5dd2cb86) Thanks [@fraxken](https://github.com/fraxken)! - Re-implement part of the game loop into World and expose hooks as EE
+
+- [#162](https://github.com/JollyPixel/editor/pull/162) [`2a3261b`](https://github.com/JollyPixel/editor/commit/2a3261b5d7516a3e7e2cfe8612c8e214f4b029ac) Thanks [@fraxken](https://github.com/fraxken)! - Implement fixedUpdate lifecycle and enhance component with needUpdate
+
+- [#169](https://github.com/JollyPixel/editor/pull/169) [`519f4f1`](https://github.com/JollyPixel/editor/commit/519f4f1c4b03373fce674b009ac48dc9a4ff4692) Thanks [@fraxken](https://github.com/fraxken)! - Optimize SceneManager, Actor and ActorTree
+
+### Patch Changes
+
+- [#166](https://github.com/JollyPixel/editor/pull/166) [`70f1b3b`](https://github.com/JollyPixel/editor/commit/70f1b3beefec61d38a8c0d1b617dd549540f406d) Thanks [@fraxken](https://github.com/fraxken)! - Use ResizeObserver to properly resize the screen and renderComponents aspect
+
 ## 2.0.0
 
 ### Major Changes
