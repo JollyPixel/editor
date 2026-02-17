@@ -22,7 +22,10 @@ export interface SceneContract {
 
   getSource(): THREE.Scene;
   awake(): void;
+  beginFrame(): void;
   update(deltaTime: number): void;
+  fixedUpdate(deltaTime: number): void;
+  endFrame(): void;
   destroyActor(actor: Actor<any>): void;
 }
 
@@ -62,9 +65,7 @@ export class SceneManager extends EventEmitter<
     this.emit("awake");
   }
 
-  update(
-    deltaTime: number
-  ) {
+  beginFrame() {
     this.#cachedActors.length = 0;
     for (const { actor } of this.tree.walk()) {
       this.#cachedActors.push(actor);
@@ -86,22 +87,36 @@ export class SceneManager extends EventEmitter<
       component.start?.();
       this.componentsToBeStarted.splice(i, 1);
     }
+  }
 
-    // Update all actors
-    const actorToBeDestroyed: Actor<any>[] = [];
-    cachedActors.forEach((actor) => {
-      actor.update(deltaTime);
-
-      if (actor.pendingForDestruction || actor.isDestroyed()) {
-        actorToBeDestroyed.push(actor);
-      }
+  fixedUpdate(
+    deltaTime: number
+  ) {
+    this.#cachedActors.forEach((actor) => {
+      actor.fixedUpdate(deltaTime);
     });
+  }
 
-    // Apply pending component / actor destructions
+  update(
+    deltaTime: number
+  ) {
+    this.#cachedActors.forEach((actor) => {
+      actor.update(deltaTime);
+    });
+  }
+
+  endFrame() {
     this.componentsToBeDestroyed.forEach((component) => {
       component.destroy();
     });
     this.componentsToBeDestroyed.length = 0;
+
+    const actorToBeDestroyed: Actor<any>[] = [];
+    this.#cachedActors.forEach((actor) => {
+      if (actor.pendingForDestruction || actor.isDestroyed()) {
+        actorToBeDestroyed.push(actor);
+      }
+    });
 
     actorToBeDestroyed.forEach((actor) => {
       this.destroyActor(actor);

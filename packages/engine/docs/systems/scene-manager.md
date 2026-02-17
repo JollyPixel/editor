@@ -8,10 +8,10 @@ bridge between the engine's Entity-Component model and the
 underlying Three.js `THREE.Scene`.
 
 Every [World](./world.md) holds exactly one `Scene`.
-When the game connects, the scene **awakens** all actors; on every
-frame the game instance calls `scene.update(deltaTime)`, which
-starts newly registered components, updates every actor, and
-cleans up anything marked for destruction.
+When the game connects, the scene **awakens** all actors. Each
+animation frame follows a `beginFrame → fixedUpdate/update →
+endFrame` lifecycle that snapshots the tree once and reuses it
+for all updates within that frame.
 
 ### Creating a scene
 
@@ -47,20 +47,32 @@ const player = scene.tree.getActor("Player");
 
 ### Lifecycle
 
-The scene drives the lifecycle of all actors and components in two
-phases — **awake** and **update** — called by the
-`World`:
+The scene drives the lifecycle of all actors and components in
+three phases — **awake**, **fixedUpdate**, and **update** —
+called by the `World`:
 
 ```
 world.connect()
-  └─ scene.awake()           ← awakens all existing actors
+  └─ scene.awake()                ← awakens all existing actors
 
-world.update(dt)      ← called every frame
-  └─ scene.update(dt)
-       ├─ start components   ← newly registered components
-       ├─ update actors      ← calls actor.update(dt) on each
-       ├─ destroy components ← pending component destructions
-       └─ destroy actors     ← pending actor destructions
+Per animation frame:
+  world.beginFrame()
+  │ └─ scene.beginFrame()
+  │      ├─ snapshot actors       ← walk tree once, cache all actors
+  │      └─ start components      ← newly registered components
+  │
+  ├─ world.fixedUpdate(dt)        ← 0..N times at fixed rate (e.g. 60 Hz)
+  │    └─ scene.fixedUpdate(dt)
+  │         └─ fixedUpdate actors ← calls actor.fixedUpdate(dt) on each
+  │
+  ├─ world.update(dt)             ← once per frame
+  │    └─ scene.update(dt)
+  │         └─ update actors      ← calls actor.update(dt) on each
+  │
+  └─ world.endFrame()
+       └─ scene.endFrame()
+            ├─ destroy components ← pending component destructions
+            └─ destroy actors     ← pending actor destructions
 ```
 
 #### Awake
@@ -77,23 +89,38 @@ scene.on("awake", () => {
 });
 ```
 
-#### Update loop
+#### beginFrame
 
-On each frame, `update(deltaTime)` performs the following steps in
-order:
+`beginFrame()` is called once per animation frame. It:
 
-1. **Snapshot** — the tree is walked and all actors are cached for
-   the current frame.
-2. **Start components** — any component queued in
-   `componentsToBeStarted` whose actor is part of the snapshot
-   receives its `start()` call and is removed from the queue.
-   Components whose actor is not yet in the snapshot are deferred
-   to the next frame.
-3. **Update actors** — each cached actor's `update(deltaTime)` is
-   called, which in turn updates all of its components.
-4. **Destroy components** — components queued in
+1. **Snapshots** the tree — walks all actors and caches them for
+   the current frame. This snapshot is reused by all subsequent
+   `fixedUpdate` and `update` calls within the same frame.
+2. **Starts components** — any component queued in
+   `componentsToBeStarted` whose actor is in the snapshot receives
+   its `start()` call. Components whose actor is not yet in the
+   snapshot are deferred to the next frame.
+
+#### fixedUpdate
+
+`fixedUpdate(deltaTime)` runs 0 to N times per frame at a constant
+rate (driven by [FixedTimeStep](../internals/fixed-time-step.md)).
+It calls `actor.fixedUpdate(deltaTime)` on each cached actor. Use
+this for physics and deterministic logic.
+
+#### update
+
+`update(deltaTime)` runs once per frame. It calls
+`actor.update(deltaTime)` on each cached actor. Use this for
+rendering-related logic.
+
+#### endFrame
+
+`endFrame()` is called once at the end of the animation frame. It:
+
+1. **Destroys components** — components queued in
    `componentsToBeDestroyed` have their `destroy()` hook called.
-5. **Destroy actors** — actors flagged with
+2. **Destroys actors** — actors flagged with
    `pendingForDestruction` are recursively destroyed (children
    first) and removed from both the tree and the Three.js scene
    graph.

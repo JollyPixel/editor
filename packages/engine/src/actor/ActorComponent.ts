@@ -36,6 +36,7 @@ export class ActorComponent<
   actor: Actor<TContext>;
   typeName: FreeComponentEnum;
 
+  #needUpdate = false;
   pendingForDestruction = false;
 
   constructor(
@@ -51,6 +52,26 @@ export class ActorComponent<
     // Defer the initialization of signal decorators to ensure
     // that the component instance is fully constructed
     queueMicrotask(() => this.#initSignalDecorators());
+  }
+
+  get needUpdate(): boolean {
+    return this.#needUpdate;
+  }
+
+  set needUpdate(value: boolean) {
+    this.#needUpdate = value;
+
+    if (this.#needUpdate) {
+      if (!this.actor.componentsRequiringUpdate.includes(this)) {
+        this.actor.componentsRequiringUpdate.push(this);
+      }
+    }
+    else {
+      const index = this.actor.componentsRequiringUpdate.indexOf(this);
+      if (index !== -1) {
+        this.actor.componentsRequiringUpdate.splice(index, 1);
+      }
+    }
   }
 
   get context(): TContext {
@@ -78,6 +99,8 @@ export class ActorComponent<
   }
 
   destroy() {
+    this.needUpdate = false;
+
     const startIndex = this.actor.world.sceneManager.componentsToBeStarted.indexOf(this);
     if (startIndex !== -1) {
       this.actor.world.sceneManager.componentsToBeStarted.splice(startIndex, 1);

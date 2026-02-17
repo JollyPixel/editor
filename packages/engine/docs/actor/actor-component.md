@@ -54,8 +54,14 @@ Components follow a lifecycle managed by the scene engine:
 | ---- | ------------ |
 | `awake()` | Once, when the scene starts or when the actor is added |
 | `start()` | Once, on the first frame after the component is created |
-| `update(deltaTime)` | Every frame, receives the elapsed time in seconds |
+| `fixedUpdate(deltaTime)` | Every fixed step, at a constant rate (default 60 Hz). Use for physics and deterministic logic |
+| `update(deltaTime)` | Every frame, receives the elapsed time in seconds. Use for rendering-related logic |
 | `destroy()` | When the actor or component is removed from the scene |
+
+Components that define `update()` or `fixedUpdate()` are
+automatically registered for per-frame updates via the
+`needUpdate` property. Setting `needUpdate = false` on a
+component removes it from the update loop without destroying it.
 
 ### API
 
@@ -78,6 +84,13 @@ interface ActorComponent {
   persistentId: string;
   actor: Actor;
   typeName: FreeComponentEnum;
+
+  /**
+   * When true, the component receives update() and fixedUpdate()
+   * calls. Automatically set when the component defines either
+   * method. Set to false to pause updates without destroying.
+   */
+  needUpdate: boolean;
 
   /** Shortcut to `actor.world.context`. */
   get context(): TContext;
