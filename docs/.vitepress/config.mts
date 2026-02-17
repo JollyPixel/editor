@@ -218,7 +218,7 @@ export default defineConfig({
       { icon: "github", link: "https://github.com/JollyPixel/editor" }
     ]
   },
-  base: "/jollypixel/",
+  base: "/editor/",
   rewrites: {
     ":packages/docs/(.*)": ":packages/(.*)"
   },
