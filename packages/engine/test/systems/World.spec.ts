@@ -16,7 +16,10 @@ function createMockSceneManager() {
     update: mock.fn(),
     fixedUpdate: mock.fn(),
     endFrame: mock.fn(),
-    destroyActor: mock.fn()
+    destroyActor: mock.fn(),
+    registerActor: mock.fn(),
+    unregisterActor: mock.fn(),
+    getActor: mock.fn()
   };
 }
 

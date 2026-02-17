@@ -66,6 +66,68 @@ describe("Systems.SceneManager", () => {
     assert.strictEqual(actor3.awoken, true);
   });
 
+  test("should register and unregister actors", () => {
+    const actor = createFakeActor({ name: "TestActor" });
+
+    // @ts-expect-error
+    sceneManager.registerActor(actor);
+    // @ts-expect-error
+    sceneManager.beginFrame();
+
+    // Actor should be in cached actors (used for update/fixedUpdate)
+    // @ts-expect-error
+    sceneManager.update(kDeltaTime);
+    assert.strictEqual(actor.update.mock.calls.length, 1);
+
+    // @ts-expect-error
+    sceneManager.unregisterActor(actor);
+    // @ts-expect-error
+    sceneManager.beginFrame();
+    // @ts-expect-error
+    sceneManager.update(kDeltaTime);
+
+    // Should not have additional update calls after unregister
+    assert.strictEqual(actor.update.mock.calls.length, 1);
+  });
+
+  test("should look up actor by name with getActor", () => {
+    const actor1 = createFakeActor({ name: "Player" });
+    const actor2 = createFakeActor({ name: "Enemy" });
+
+    // @ts-expect-error
+    sceneManager.registerActor(actor1);
+    // @ts-expect-error
+    sceneManager.registerActor(actor2);
+
+    assert.strictEqual(sceneManager.getActor("Player"), actor1);
+    assert.strictEqual(sceneManager.getActor("Enemy"), actor2);
+    assert.strictEqual(sceneManager.getActor("NonExistent"), null);
+  });
+
+  test("should skip pending-destruction actors in getActor", () => {
+    const actor = createFakeActor({
+      name: "Player",
+      pendingForDestruction: true
+    });
+
+    // @ts-expect-error
+    sceneManager.registerActor(actor);
+
+    assert.strictEqual(sceneManager.getActor("Player"), null);
+  });
+
+  test("should clean up name index on unregisterActor", () => {
+    const actor = createFakeActor({ name: "Player" });
+
+    // @ts-expect-error
+    sceneManager.registerActor(actor);
+    assert.strictEqual(sceneManager.getActor("Player"), actor);
+
+    // @ts-expect-error
+    sceneManager.unregisterActor(actor);
+    assert.strictEqual(sceneManager.getActor("Player"), null);
+  });
+
   test("should emit awake event", () => {
     let eventEmitted = false;
     sceneManager.on("awake", () => {
@@ -84,7 +146,7 @@ describe("Systems.SceneManager", () => {
       const component = createFakeComponent({ actor });
 
       // @ts-expect-error
-      sceneManager.tree.children.push(actor);
+      sceneManager.registerActor(actor);
       // @ts-expect-error
       sceneManager.componentsToBeStarted.push(component);
 
@@ -114,7 +176,9 @@ describe("Systems.SceneManager", () => {
       const actor2 = createFakeActor({ name: "actor2" });
 
       // @ts-expect-error
-      sceneManager.tree.children.push(actor1, actor2);
+      sceneManager.registerActor(actor1);
+      // @ts-expect-error
+      sceneManager.registerActor(actor2);
 
       sceneManager.beginFrame();
       sceneManager.update(kDeltaTime);
@@ -139,7 +203,9 @@ describe("Systems.SceneManager", () => {
       const actor2 = createFakeActor({ name: "actor2" });
 
       // @ts-expect-error
-      sceneManager.tree.children.push(actor1, actor2);
+      sceneManager.registerActor(actor1);
+      // @ts-expect-error
+      sceneManager.registerActor(actor2);
 
       sceneManager.beginFrame();
       sceneManager.fixedUpdate(kDeltaTime);
@@ -181,7 +247,7 @@ describe("Systems.SceneManager", () => {
       });
 
       // @ts-expect-error
-      sceneManager.tree.children.push(actor);
+      sceneManager.registerActor(actor);
 
       sceneManager.beginFrame();
       sceneManager.endFrame();
@@ -207,7 +273,13 @@ describe("Systems.SceneManager", () => {
       });
 
       // @ts-expect-error
-      sceneManager.tree.children.push(parent);
+      sceneManager.registerActor(parent);
+      // @ts-expect-error
+      sceneManager.registerActor(child1);
+      // @ts-expect-error
+      sceneManager.registerActor(child2);
+      // @ts-expect-error
+      sceneManager.registerActor(grandChild);
 
       sceneManager.beginFrame();
       sceneManager.endFrame();
@@ -224,7 +296,7 @@ describe("Systems.SceneManager", () => {
       const actor = createFakeActor({ name: "actor" });
 
       // @ts-expect-error
-      sceneManager.tree.children.push(actor);
+      sceneManager.registerActor(actor);
 
       sceneManager.beginFrame();
       sceneManager.fixedUpdate(kDeltaTime);

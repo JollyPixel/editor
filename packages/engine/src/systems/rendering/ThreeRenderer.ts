@@ -10,7 +10,8 @@ import type {
   RenderComponent,
   RendererEvents
 } from "./Renderer.ts";
-import type { SceneContract } from "../SceneManager.ts";
+import type { WorldDefaultContext } from "../World.ts";
+import type { SceneManager } from "../SceneManager.ts";
 import {
   type RenderMode,
   type RenderStrategy,
@@ -20,22 +21,24 @@ import {
 
 export type ThreeRendererEvents = RendererEvents;
 
-export interface ThreeRendererOptions {
+export interface ThreeRendererOptions<
+  TContext = WorldDefaultContext
+> {
   /**
    * @default "direct"
    */
   renderMode: RenderMode;
-  sceneManager: SceneContract;
+  sceneManager: SceneManager<TContext>;
 }
 
-export class ThreeRenderer extends EventEmitter<
-  ThreeRendererEvents
-> implements Renderer {
+export class ThreeRenderer<
+  TContext = WorldDefaultContext
+> extends EventEmitter<ThreeRendererEvents> implements Renderer {
   webGLRenderer: THREE.WebGLRenderer;
   renderComponents: RenderComponent[] = [];
   renderStrategy: RenderStrategy;
   ratio: number | null = null;
-  sceneManager: SceneContract;
+  sceneManager: SceneManager<TContext>;
 
   #resizeObserver: ResizeObserver | null = null;
   #pendingResizeWidth = 0;
@@ -44,7 +47,7 @@ export class ThreeRenderer extends EventEmitter<
 
   constructor(
     canvas: HTMLCanvasElement,
-    options: ThreeRendererOptions
+    options: ThreeRendererOptions<TContext>
   ) {
     super();
     const { sceneManager, renderMode = "direct" } = options;

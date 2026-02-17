@@ -29,12 +29,16 @@ export function createWorld(): {
   sceneManager: {
     componentsToBeStarted: ActorComponent[];
     tree: ReturnType<typeof createTreeActor>;
+    registerActor: ReturnType<typeof mock.fn>;
+    unregisterActor: ReturnType<typeof mock.fn>;
   };
 } {
   return {
     sceneManager: {
       componentsToBeStarted: [],
-      tree: createTreeActor()
+      tree: createTreeActor(),
+      registerActor: mock.fn(),
+      unregisterActor: mock.fn()
     }
   };
 }

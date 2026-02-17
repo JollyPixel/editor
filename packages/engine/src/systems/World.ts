@@ -11,7 +11,7 @@ import {
   type ActorOptions
 } from "../actor/index.ts";
 import {
-  type SceneContract
+  type SceneManager
 } from "./SceneManager.ts";
 import { Input } from "../controls/Input.class.ts";
 import { GlobalAudio } from "../audio/GlobalAudio.ts";
@@ -33,7 +33,7 @@ export interface WorldOptions<
 > {
   enableOnExit?: boolean;
 
-  sceneManager: SceneContract;
+  sceneManager: SceneManager<TContext>;
   input?: Input;
   audio?: GlobalAudio;
   context?: TContext;
@@ -52,7 +52,7 @@ export class World<
   renderer: Renderer<T>;
   input: Input;
   loadingManager: THREE.LoadingManager = new THREE.LoadingManager();
-  sceneManager: SceneContract;
+  sceneManager: SceneManager<TContext>;
   audio: GlobalAudio;
   context: TContext;
   loop: FixedTimeStep;

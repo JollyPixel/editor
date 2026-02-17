@@ -47,7 +47,7 @@ export class Runtime<
     }
 
     this.canvas = canvas;
-    const sceneManager = new Systems.SceneManager();
+    const sceneManager = new Systems.SceneManager<TContext>();
     const renderer: Systems.Renderer<any> = new Systems.ThreeRenderer(
       canvas,
       {
@@ -55,7 +55,7 @@ export class Runtime<
         renderMode: "direct"
       }
     );
-    this.world = new Systems.World(renderer, {
+    this.world = new Systems.World<THREE.WebGLRenderer, TContext>(renderer, {
       enableOnExit: true,
       sceneManager,
       context: options.context,

@@ -95,6 +95,8 @@ export class Actor<
     else {
       this.world.sceneManager.tree.add(this);
     }
+
+    this.world.sceneManager.registerActor(this);
   }
 
   #initializeComponent(
@@ -220,6 +222,8 @@ export class Actor<
   }
 
   destroy() {
+    this.world.sceneManager.unregisterActor(this);
+
     for (let i = this.components.length - 1; i >= 0; i--) {
       this.components[i].destroy?.();
     }
