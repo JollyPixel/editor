@@ -88,20 +88,22 @@ export class Runtime<
     this.loop.start();
     const renderer = this.world.renderer.getSource();
     renderer.setAnimationLoop(() => {
+      this.world.beginFrame();
       this.loop.tick({
         fixedUpdate: (fixedDelta) => {
-          // fixedDelta is in ms, but world.update expects seconds
-          const exit = this.world.update(fixedDelta / 1000);
-          if (exit) {
-            this.stop();
-          }
+          this.world.fixedUpdate(fixedDelta / 1000);
         },
-        update: (_interpolation, _delta) => {
+        update: (_interpolation, delta) => {
           this.stats?.begin();
+          this.world.update(delta / 1000);
           this.world.render();
           this.stats?.end();
         }
       });
+      const exit = this.world.endFrame();
+      if (exit) {
+        this.stop();
+      }
     });
   }
 

@@ -7,11 +7,13 @@ import { ActorComponent, Behavior } from "../src/index.ts";
 export function createActor(): {
   behaviors: Record<string, Behavior[]>;
   components: ActorComponent[];
+  componentsRequiringUpdate: ActorComponent[];
   world: ReturnType<typeof createWorld>;
 } {
   return {
     behaviors: {},
     components: [],
+    componentsRequiringUpdate: [],
     world: createWorld()
   };
 }

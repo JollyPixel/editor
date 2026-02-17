@@ -43,14 +43,17 @@ export class Actor<
   id = Actor.Id.incr();
   persistentId = Actor.PersistentId.next();
   name: string;
-  awoken = false;
   parent: Actor<TContext> | null = null;
+
   components: Component[] = [];
+  componentsRequiringUpdate: Component[] = [];
   behaviors: Record<string, Behavior<any, TContext>[]> = {};
-  transform: Transform;
+
+  awoken = false;
   pendingForDestruction = false;
 
   object3D = new THREE.Group();
+  transform: Transform;
 
   constructor(
     world: World<any, TContext>,
@@ -94,6 +97,20 @@ export class Actor<
     }
   }
 
+  #initializeComponent(
+    component: Component
+  ) {
+    if (this.awoken) {
+      component.awake?.();
+    }
+    if (
+      ("update" in component && typeof component.update === "function") ||
+      ("fixedUpdate" in component && typeof component.fixedUpdate === "function")
+    ) {
+      component.needUpdate = true;
+    }
+  }
+
   addComponent<T extends ComponentConstructor>(
     componentClass: T,
     ...args: RequiresOptions<T> extends true
@@ -101,12 +118,10 @@ export class Actor<
       : [options?: ConstructorParameters<T>[1], callback?: (component: InstanceType<T>) => void]
   ): this {
     const [options, callback] = args;
-    const component = new componentClass(this, options);
 
+    const component = new componentClass(this, options);
     callback?.(component as InstanceType<T>);
-    if (this.awoken) {
-      component.awake?.();
-    }
+    this.#initializeComponent(component);
 
     return this;
   }
@@ -118,11 +133,9 @@ export class Actor<
       : [options?: ConstructorParameters<T>[1]]
   ): InstanceType<T> {
     const [options] = args;
-    const component = new componentClass(this, options);
 
-    if (this.awoken) {
-      component.awake?.();
-    }
+    const component = new componentClass(this, options);
+    this.#initializeComponent(component);
 
     return component as InstanceType<T>;
   }
@@ -186,7 +199,15 @@ export class Actor<
     deltaTime: number
   ) {
     if (!this.pendingForDestruction) {
-      this.components.forEach((component) => component.update?.(deltaTime));
+      this.componentsRequiringUpdate.forEach((component) => component.update?.(deltaTime));
+    }
+  }
+
+  fixedUpdate(
+    deltaTime: number
+  ) {
+    if (!this.pendingForDestruction) {
+      this.componentsRequiringUpdate.forEach((component) => component.fixedUpdate?.(deltaTime));
     }
   }
 

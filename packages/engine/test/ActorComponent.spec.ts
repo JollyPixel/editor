@@ -168,6 +168,74 @@ describe("ActorComponent", () => {
     assert.equal(fakeActor.world.sceneManager.componentsToBeStarted.length, 0);
   });
 
+  test("should add component to componentsRequiringUpdate when needUpdate is set to true", () => {
+    const fakeActor = createActor();
+
+    const component = new ActorComponent({
+      // @ts-expect-error
+      actor: fakeActor,
+      typeName: "TestComponent"
+    });
+
+    assert.equal(component.needUpdate, false);
+    assert.equal(fakeActor.componentsRequiringUpdate.length, 0);
+
+    component.needUpdate = true;
+
+    assert.equal(component.needUpdate, true);
+    assert.equal(fakeActor.componentsRequiringUpdate.length, 1);
+    assert.equal(fakeActor.componentsRequiringUpdate[0], component);
+  });
+
+  test("should remove component from componentsRequiringUpdate when needUpdate is set to false", () => {
+    const fakeActor = createActor();
+
+    const component = new ActorComponent({
+      // @ts-expect-error
+      actor: fakeActor,
+      typeName: "TestComponent"
+    });
+
+    component.needUpdate = true;
+    assert.equal(fakeActor.componentsRequiringUpdate.length, 1);
+
+    component.needUpdate = false;
+    assert.equal(fakeActor.componentsRequiringUpdate.length, 0);
+  });
+
+  test("should not duplicate component in componentsRequiringUpdate on repeated needUpdate = true", () => {
+    const fakeActor = createActor();
+
+    const component = new ActorComponent({
+      // @ts-expect-error
+      actor: fakeActor,
+      typeName: "TestComponent"
+    });
+
+    component.needUpdate = true;
+    component.needUpdate = true;
+
+    assert.equal(fakeActor.componentsRequiringUpdate.length, 1);
+  });
+
+  test("should remove component from componentsRequiringUpdate on destroy", () => {
+    const fakeActor = createActor();
+
+    const component = new ActorComponent({
+      // @ts-expect-error
+      actor: fakeActor,
+      typeName: "TestComponent"
+    });
+
+    component.needUpdate = true;
+    assert.equal(fakeActor.componentsRequiringUpdate.length, 1);
+
+    component.destroy();
+
+    assert.equal(fakeActor.componentsRequiringUpdate.length, 0);
+    assert.equal(component.needUpdate, false);
+  });
+
   test("should handle different component types", () => {
     const fakeActor = createActor();
 

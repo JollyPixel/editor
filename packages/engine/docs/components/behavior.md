@@ -46,12 +46,19 @@ export class PlayerBehavior extends Behavior<PlayerProperties> {
     this.model.animation.setFadeDuration(0.25);
   }
 
+  fixedUpdate() {
+    const { input } = this.actor.world;
+
+    if (input.isMouseButtonDown("left")) {
+      this.onPlayerPunch.emit();
+    }
+  }
+
   update() {
     const { input } = this.actor.world;
 
     if (input.isMouseButtonDown("left")) {
       this.model.animation.play("punch_jab");
-      this.onPlayerPunch.emit();
     }
     else {
       this.model.animation.play("idle_loop");

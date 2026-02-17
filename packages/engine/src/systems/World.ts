@@ -110,11 +110,25 @@ export class World<
     return this;
   }
 
+  beginFrame() {
+    this.input.update();
+    this.sceneManager.beginFrame();
+  }
+
+  fixedUpdate(
+    deltaTime: number
+  ) {
+    this.sceneManager.fixedUpdate(deltaTime);
+  }
+
   update(
     deltaTime: number
-  ): boolean {
-    this.input.update();
+  ) {
     this.sceneManager.update(deltaTime);
+  }
+
+  endFrame(): boolean {
+    this.sceneManager.endFrame();
 
     if (this.input.exited) {
       this.renderer.clear();

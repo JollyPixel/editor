@@ -101,22 +101,25 @@ setAnimationLoop(tick)
  │
  └─ tick()
      │
-     ├─ deltaTime += clock.getDelta()
+     ├─ world.beginFrame()           ← snapshot tree + start components (once)
      │
-     ├─ if deltaTime < interval (1/fps)
-     │   └─ skip frame (wait for next call)
+     ├─ fixedTimeStep.tick({fixedUpdate, update})
+     │   │
+     │   ├─ fixedUpdate(fixedDelta)  ← runs 0..N times per frame
+     │   │   └─ world.fixedUpdate(dt)
+     │   │
+     │   └─ update(interpolation, delta) ← runs once per frame
+     │       ├─ stats.begin()
+     │       ├─ world.update(dt)
+     │       ├─ world.render()
+     │       └─ stats.end()
      │
-     └─ if deltaTime >= interval
-         ├─ stats.begin()
-         ├─ world.update(deltaTime)
-         │   └─ returns true → runtime.stop()
-         ├─ world.render()
-         ├─ deltaTime %= interval
-         └─ stats.end()
+     └─ world.endFrame()             ← destroy pending (once)
+         └─ returns true → runtime.stop()
 ```
 
 The loop stops when:
-- `world.update()` signals an exit
+- `world.endFrame()` signals an exit (input system exited)
 - `runtime.stop()` is called manually
 
 ## Loading screen

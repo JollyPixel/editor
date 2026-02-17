@@ -31,25 +31,69 @@ describe("Actor", () => {
       assert.strictEqual(component.awake.mock.calls.length, 1);
     });
 
-    test("should call update on all components", () => {
+    test("should call update on components requiring update", () => {
+      const actor = new Actor(createWorld() as any, { name: "foobar" });
+
+      const component = { update: mock.fn() };
+      actor.componentsRequiringUpdate.push(component as any);
+      actor.update(0);
+
+      assert.strictEqual(component.update.mock.calls.length, 1);
+    });
+
+    test("should not call update on components not in componentsRequiringUpdate", () => {
       const actor = new Actor(createWorld() as any, { name: "foobar" });
 
       const component = { update: mock.fn() };
       actor.components.push(component as any);
       actor.update(0);
 
-      assert.strictEqual(component.update.mock.calls.length, 1);
+      assert.strictEqual(component.update.mock.calls.length, 0);
     });
 
     test("should not call update if actor is marked for destruction", () => {
       const actor = new Actor(createWorld() as any, { name: "foobar" });
 
       const component = { update: mock.fn() };
-      actor.components.push(component as any);
+      actor.componentsRequiringUpdate.push(component as any);
       actor.markDestructionPending();
       actor.update(0);
 
       assert.strictEqual(component.update.mock.calls.length, 0);
+    });
+
+    test("should call fixedUpdate on components requiring update", () => {
+      const actor = new Actor(createWorld() as any, { name: "foobar" });
+
+      const component = { fixedUpdate: mock.fn() };
+      actor.componentsRequiringUpdate.push(component as any);
+      actor.fixedUpdate(0);
+
+      assert.strictEqual(component.fixedUpdate.mock.calls.length, 1);
+    });
+
+    test("should not call fixedUpdate if actor is marked for destruction", () => {
+      const actor = new Actor(createWorld() as any, { name: "foobar" });
+
+      const component = { fixedUpdate: mock.fn() };
+      actor.componentsRequiringUpdate.push(component as any);
+      actor.markDestructionPending();
+      actor.fixedUpdate(0);
+
+      assert.strictEqual(component.fixedUpdate.mock.calls.length, 0);
+    });
+
+    test("should skip components without fixedUpdate in fixedUpdate loop", () => {
+      const actor = new Actor(createWorld() as any, { name: "foobar" });
+
+      const componentWithUpdate = { update: mock.fn() };
+      const componentWithFixed = { fixedUpdate: mock.fn() };
+      actor.componentsRequiringUpdate.push(componentWithUpdate as any);
+      actor.componentsRequiringUpdate.push(componentWithFixed as any);
+      actor.fixedUpdate(0);
+
+      assert.strictEqual(componentWithUpdate.update?.mock.calls.length, 0);
+      assert.strictEqual(componentWithFixed.fixedUpdate.mock.calls.length, 1);
     });
 
     test("should call destroy on all components", () => {

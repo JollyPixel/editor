@@ -88,32 +88,64 @@ game.disconnect();
 
 ### Game loop
 
-The game loop is driven externally (typically via
-`requestAnimationFrame`). Each tick calls `update` then `render`:
+The game loop is driven by a
+[FixedTimeStep](../internals/fixed-time-step.md) which separates
+deterministic logic from rendering:
 
 ```ts
-function loop(time: number) {
-  const deltaTime = /* compute delta */;
+const fixedTimeStep = new FixedTimeStep();
+fixedTimeStep.start();
 
-  const exited = game.update(deltaTime);
-  if (!exited) {
-    game.render();
-    requestAnimationFrame(loop);
-  }
+function loop() {
+  game.beginFrame();
+  fixedTimeStep.tick({
+    fixedUpdate: (fixedDelta) => {
+      game.fixedUpdate(fixedDelta / 1000);
+    },
+    update: (_interpolation, delta) => {
+      game.update(delta / 1000);
+      game.render();
+    }
+  });
+  const exited = game.endFrame();
+  if (exited) { /* stop loop */ }
+
+  requestAnimationFrame(loop);
 }
 
 requestAnimationFrame(loop);
 ```
 
-#### `update(deltaTime): boolean`
+#### `beginFrame()`
 
-Performs a single logical frame:
+Called once at the start of each animation frame:
 
 1. Updates the [Input](../controls/input.md) system.
-2. Calls `sceneManager.update(deltaTime)` — starts new components,
-   updates actors, and cleans up destroyed entities
-   (see [SceneManager — Update loop](scene-manager.md#update-loop)).
-3. If the input system signals an exit, clears the renderer and
+2. Calls `sceneManager.beginFrame()` — snapshots the actor tree
+   and starts pending components. The snapshot is reused by all
+   `fixedUpdate` and `update` calls within the same frame.
+
+#### `fixedUpdate(deltaTime)`
+
+Runs deterministic logic at a fixed rate (0 to N times per frame):
+
+1. Calls `sceneManager.fixedUpdate(deltaTime)` — runs
+   `actor.fixedUpdate(deltaTime)` on each cached actor.
+
+#### `update(deltaTime)`
+
+Runs variable-rate logic once per rendered frame:
+
+1. Calls `sceneManager.update(deltaTime)` — runs
+   `actor.update(deltaTime)` on each cached actor.
+
+#### `endFrame(): boolean`
+
+Called once at the end of each animation frame:
+
+1. Calls `sceneManager.endFrame()` — destroys pending components
+   and actors.
+2. If the input system signals an exit, clears the renderer and
    returns `true`. Otherwise returns `false`.
 
 #### `render()`
