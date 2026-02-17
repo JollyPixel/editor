@@ -3,6 +3,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { type GameInstance } from "../systems/GameInstance.ts";
+import type { ActorComponent } from "./ActorComponent.ts";
 import { ActorTree } from "./ActorTree.ts";
 import { Transform } from "./Transform.ts";
 import type { Behavior } from "../components/script/Behavior.ts";
@@ -107,6 +108,20 @@ export class Actor extends ActorTree {
     }
 
     return component as InstanceType<T>;
+  }
+
+  getComponentByName<T extends ActorComponent>(
+    actor: Actor,
+    componentName: string
+  ): T {
+    const component = actor.components.find(
+      (comp) => comp.typeName === componentName
+    );
+    if (!component) {
+      throw new Error(`Component with typeName "${componentName}" not found on actor "${actor.name}"`);
+    }
+
+    return component as T;
   }
 
   awake() {
