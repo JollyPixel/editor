@@ -95,14 +95,14 @@ export async function loadRuntime(
       await loadingCompletePromise;
     }
 
-    await loadingComponent.complete(() => {
-      runtime.canvas.style.opacity = "1";
-      runtime.start();
-    });
+    await loadingComponent.complete();
   }
   catch (error: any) {
     loadingComponent.error(error);
   }
+
+  runtime.canvas.style.opacity = "1";
+  runtime.start();
 }
 
 export { Runtime, type RuntimeOptions };
