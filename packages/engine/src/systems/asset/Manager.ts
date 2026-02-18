@@ -103,8 +103,13 @@ export class AssetManager {
 
       onStart?.(asset);
 
-      const result = await loader(asset, context);
-      this.assets.set(asset.toString(), result);
+      try {
+        const result = await loader(asset, context);
+        this.assets.set(asset.toString(), result);
+      }
+      catch (cause) {
+        throw new Error(`Failed to load asset "${asset.toString()}"`, { cause });
+      }
     };
 
     const loadingPromises = assets.map((asset) => loadAsset(asset));
