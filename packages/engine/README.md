@@ -200,7 +200,7 @@ Manages sound playback across the engine. It provides a global volume controller
 
 - [Audio](./docs/audio/audio.md) — global audio controller owning the
   AudioContext and master volume.
-    [AudioLibrary](./docs/audio/audio-library.md)
+  - [AudioLibrary](./docs/audio/audio-library.md)
   - [AudioBackground](./docs/audio/audio-background.md) —
     playlist-based background music with sequential track playback,
     pause/resume/stop, and playlist chaining.

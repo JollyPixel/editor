@@ -2,11 +2,13 @@
 import { Assets } from "../systems/index.ts";
 import type { LazyAsset } from "../systems/asset/Base.ts";
 
-export class AudioLibrary {
-  #assets = new Map<string, LazyAsset<AudioBuffer>>();
+export class AudioLibrary<
+  TKeys extends string = string
+> {
+  #assets = new Map<TKeys, LazyAsset<AudioBuffer>>();
 
   register(
-    name: string,
+    name: TKeys,
     path: string
   ): LazyAsset<AudioBuffer> {
     const lazy = Assets.load<AudioBuffer>(path);
@@ -16,7 +18,7 @@ export class AudioLibrary {
   }
 
   get(
-    name: string
+    name: TKeys
   ): AudioBuffer {
     const lazy = this.#assets.get(name);
     if (!lazy) {

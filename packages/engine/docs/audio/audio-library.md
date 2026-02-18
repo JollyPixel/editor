@@ -19,7 +19,8 @@ import { GlobalAudioManager, AudioLibrary, Systems } from "@jolly-pixel/engine";
 
 const audioManager = GlobalAudioManager.fromWorld(world);
 
-const sfx = new AudioLibrary();
+type SfxKey = "shoot" | "explosion" | "music";
+const sfx = new AudioLibrary<SfxKey>();
 sfx.register("shoot",     "sounds/shoot.mp3");
 sfx.register("explosion", "sounds/explosion.mp3");
 sfx.register("music",     "sounds/theme.ogg");
@@ -64,14 +65,14 @@ this.actor.add(this.#footsteps);
 ## API
 
 ```ts
-interface AudioLibrary {
+class AudioLibrary<TKeys extends string = string> {
   // Enqueue `path` in AssetManager and store it under `name`.
   // Must be called before AssetManager.loadAssets().
-  register(name: string, path: string): LazyAsset<AudioBuffer>;
+  register(name: TKeys, path: string): LazyAsset<AudioBuffer>;
 
   // Return the loaded AudioBuffer for `name`.
   // Throws if the name was never registered or loadAssets has not completed.
-  get(name: string): AudioBuffer;
+  get(name: TKeys): AudioBuffer;
 }
 ```
 

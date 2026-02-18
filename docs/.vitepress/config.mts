@@ -57,6 +57,10 @@ export default defineConfig({
                 {
                   text: "AudioBackground",
                   link: "/engine/audio/audio-background"
+                },
+                {
+                  text: "AudioLibrary",
+                  link: "/engine/audio/audio-library"
                 }
               ]
             },
