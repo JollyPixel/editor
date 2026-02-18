@@ -19,7 +19,8 @@ function createMockSceneManager() {
     destroyActor: mock.fn(),
     registerActor: mock.fn(),
     unregisterActor: mock.fn(),
-    getActor: mock.fn()
+    getActor: mock.fn(),
+    bindWorld: mock.fn()
   };
 }
 

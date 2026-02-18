@@ -112,7 +112,12 @@ export class ThreeRenderer<
       );
     }
     this.resize();
-    this.clear();
+
+    // Guard: skip clear when the framebuffer still has zero dimensions
+    // (e.g. at construction time before the first ResizeObserver callback).
+    if (this.#pendingResizeWidth > 0 && this.#pendingResizeHeight > 0) {
+      this.clear();
+    }
 
     return this;
   }
@@ -213,8 +218,14 @@ export class ThreeRenderer<
 
   draw() {
     this.resize();
-    this.clear();
 
+    // Guard: skip draw when the framebuffer still has zero dimensions
+    // (e.g. before the first ResizeObserver callback fires).
+    if (this.#pendingResizeWidth === 0 || this.#pendingResizeHeight === 0) {
+      return;
+    }
+
+    this.clear();
     this.renderStrategy.render(
       this.sceneManager.getSource(),
       this.renderComponents

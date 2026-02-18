@@ -78,6 +78,7 @@ export class World<
     this.context = context;
     this.loop = new FixedTimeStep();
 
+    sceneManager.bindWorld(this);
     globalsAdapter.setGame(this);
   }
 
