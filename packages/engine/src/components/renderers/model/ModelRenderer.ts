@@ -11,30 +11,38 @@ import {
   type ModelAnimationClipNameRewriter
 } from "./ModelAnimation.ts";
 
-export interface ModelRendererAnimationOptions {
+export interface ModelRendererAnimationOptions<
+  TClipName extends string = string
+> {
   clipNameRewriter?: ModelAnimationClipNameRewriter;
-  default?: string;
+  default?: TClipName;
+  fadeDuration?: number;
 }
 
-export interface ModelRendererOptions {
+export interface ModelRendererOptions<
+  TClipName extends string = string
+> {
   path: string;
   /**
    * @default false
    */
   debug?: boolean;
-  animations?: ModelRendererAnimationOptions;
+  animations?: ModelRendererAnimationOptions<TClipName>;
 }
 
-export class ModelRenderer extends ActorComponent<any> {
+export class ModelRenderer<
+  TClipName extends string = string
+> extends ActorComponent<any> {
+  group: THREE.Group<THREE.Object3DEventMap>;
+
   #asset: Systems.LazyAsset<Model>;
-  #object: THREE.Group<THREE.Object3DEventMap>;
   #debug = false;
 
-  animation = new ModelAnimation();
+  animation = new ModelAnimation<TClipName>();
 
   constructor(
     actor: Actor<any>,
-    options: ModelRendererOptions
+    options: ModelRendererOptions<TClipName>
   ) {
     super({
       actor,
@@ -44,12 +52,20 @@ export class ModelRenderer extends ActorComponent<any> {
     this.#asset = model(options.path);
     this.#debug = options.debug ?? false;
 
-    const { animations = {} } = options;
-    if (animations.default) {
-      this.animation.play(animations.default);
+    const { animations } = options;
+    if (animations) {
+      if (animations.fadeDuration !== undefined) {
+        this.animation.setFadeDuration(animations.fadeDuration);
+      }
+      if (animations.clipNameRewriter) {
+        this.animation.setClipNameRewriter(animations.clipNameRewriter);
+      }
+      if (animations.default) {
+        this.animation.play(animations.default);
+      }
     }
-    if (animations.clipNameRewriter) {
-      this.animation.setClipNameRewriter(animations.clipNameRewriter);
+    else {
+      this.needUpdate = false;
     }
   }
 
@@ -59,10 +75,11 @@ export class ModelRenderer extends ActorComponent<any> {
       console.log({ object, animations });
     }
 
-    this.actor.object3D.add(object);
-    this.#object = object;
+    this.actor.addChildren(object);
+    this.group = object;
+
     this.animation.setMixer(
-      new THREE.AnimationMixer(this.#object)
+      new THREE.AnimationMixer(this.group)
     );
     this.animation.setClips(animations);
   }
@@ -75,10 +92,5 @@ export class ModelRenderer extends ActorComponent<any> {
     deltaTime: number
   ) {
     this.animation.update(deltaTime);
-  }
-
-  override destroy(): void {
-    this.actor.object3D.remove(this.#object);
-    super.destroy();
   }
 }
