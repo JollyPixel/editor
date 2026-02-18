@@ -86,9 +86,11 @@ export class ThreeRenderer<
     if (this.renderStrategy instanceof ComposerRenderStrategy) {
       const composer = this.renderStrategy.getComposer();
       const renderPass = composer.passes.find(
-        (pass) => (pass as RenderPass).camera === component
-      )!;
-      this.renderStrategy.removeEffect(renderPass);
+        (pass) => pass instanceof RenderPass && pass.camera === component
+      );
+      if (renderPass) {
+        this.renderStrategy.removeEffect(renderPass);
+      }
     }
   }
 
@@ -108,6 +110,7 @@ export class ThreeRenderer<
       }
 
       this.renderStrategy = new ComposerRenderStrategy(
+        this.webGLRenderer,
         composer
       );
     }
@@ -123,10 +126,24 @@ export class ThreeRenderer<
   }
 
   setEffects(...effects: Pass[]): this {
-    if (this.renderStrategy instanceof ComposerRenderStrategy) {
-      for (const pass of effects) {
-        this.renderStrategy.addEffect(pass);
+    if (!(this.renderStrategy instanceof ComposerRenderStrategy)) {
+      console.warn(
+        "ThreeRenderer.setEffects: called in direct render mode — effects are ignored. Call setRenderMode(\"composer\") first."
+      );
+
+      return this;
+    }
+
+    // Remove all existing effect passes, keeping only RenderPasses.
+    const composer = this.renderStrategy.getComposer();
+    for (const pass of [...composer.passes]) {
+      if (!(pass instanceof RenderPass)) {
+        this.renderStrategy.removeEffect(pass);
       }
+    }
+
+    for (const pass of effects) {
+      this.renderStrategy.addEffect(pass);
     }
 
     return this;

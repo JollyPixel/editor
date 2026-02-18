@@ -4,6 +4,7 @@ import type {
   EffectComposer,
   Pass
 } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 
 // Import Internal Dependencies
 import type { RenderComponent } from "./Renderer.ts";
@@ -33,28 +34,47 @@ export class DirectRenderStrategy implements RenderStrategy {
     }
   }
 
-  resize(width: number, height: number): void {
+  resize(
+    width: number,
+    height: number
+  ): void {
     this.#renderer.setSize(width, height, false);
   }
 }
 
 export class ComposerRenderStrategy implements RenderStrategy {
+  #renderer: THREE.WebGLRenderer;
   #composer: EffectComposer;
 
   constructor(
+    renderer: THREE.WebGLRenderer,
     composer: EffectComposer
   ) {
+    this.#renderer = renderer;
     this.#composer = composer;
   }
 
   render(
-    _scene: THREE.Scene,
+    scene: THREE.Scene,
     _renderComponents: RenderComponent[]
   ): void {
+    // Keep RenderPass scene references in sync with the active scene so that
+    // scene transitions work correctly in composer mode.
+    for (const pass of this.#composer.passes) {
+      if (pass instanceof RenderPass) {
+        pass.scene = scene;
+      }
+    }
     this.#composer.render();
   }
 
-  resize(width: number, height: number): void {
+  resize(
+    width: number,
+    height: number
+  ): void {
+    // Must resize the WebGLRenderer canvas first, otherwise the final pass
+    // renders into a (0, 0, 0, 0) WebGL viewport and nothing is drawn.
+    this.#renderer.setSize(width, height, false);
     this.#composer.setSize(width, height);
   }
 
