@@ -1,9 +1,5 @@
-// Import Third-party Dependencies
-import { EventEmitter } from "@posva/event-emitter";
-
 // Import Internal Dependencies
 import { Actor } from "./Actor.ts";
-import { getSignalMetadata, SignalEvent } from "./Signal.ts";
 import { IntegerIncrement } from "../systems/generators/IntegerIncrement.ts";
 import { PersistentIdIncrement } from "../systems/generators/PersistentIdIncrement.ts";
 import type {
@@ -21,13 +17,9 @@ export interface ActorComponentOptions<
   typeName: FreeComponentEnum;
 }
 
-export type ActorComponentEvents = {
-  metadataInitialized: [];
-};
-
 export class ActorComponent<
   TContext = WorldDefaultContext
-> extends EventEmitter<ActorComponentEvents> implements Component {
+> implements Component {
   static Id = new IntegerIncrement();
   static PersistentId = new PersistentIdIncrement();
 
@@ -42,16 +34,11 @@ export class ActorComponent<
   constructor(
     options: ActorComponentOptions<TContext>
   ) {
-    super();
     this.actor = options.actor;
     this.typeName = options.typeName;
 
     this.actor.components.push(this);
     this.actor.world.sceneManager.componentsToBeStarted.push(this);
-
-    // Defer the initialization of signal decorators to ensure
-    // that the component instance is fully constructed
-    queueMicrotask(() => this.#initSignalDecorators());
   }
 
   get needUpdate(): boolean {
@@ -78,19 +65,7 @@ export class ActorComponent<
     return this.actor.world.context;
   }
 
-  #initSignalDecorators() {
-    const proto = Object.getPrototypeOf(this);
-    const metadata = getSignalMetadata(proto);
-
-    if (metadata) {
-      for (const propertyName of metadata.signals) {
-        this[propertyName] = new SignalEvent();
-      }
-    }
-    this.emit("metadataInitialized");
-  }
-
-  override toString(): string {
+  toString(): string {
     return `${this.typeName}:${this.id}-${this.persistentId}`;
   }
 
