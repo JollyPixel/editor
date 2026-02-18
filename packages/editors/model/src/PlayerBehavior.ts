@@ -7,8 +7,7 @@ import {
   type InputDevicePreference,
   SceneProperty,
   SceneActorComponent,
-  Signal,
-  type SignalEvent
+  SignalEvent
 } from "@jolly-pixel/engine";
 
 export interface PlayerProperties extends BehaviorProperties {
@@ -16,8 +15,7 @@ export interface PlayerProperties extends BehaviorProperties {
 }
 
 export class PlayerBehavior extends Behavior<PlayerProperties> {
-  @Signal()
-  onPlayerPunch: SignalEvent;
+  onPlayerPunch = new SignalEvent();
 
   @SceneProperty({ type: "number" })
   speed = 0.05;

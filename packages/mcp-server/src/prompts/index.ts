@@ -28,7 +28,6 @@ export function registerPrompts(
               "",
               "Requirements:",
               "- Extend the Behavior class from @jolly-pixel/engine",
-              "- Use @Signal() decorator for events",
               "- Use @SceneProperty() for configurable properties",
               "- Use @Input.listen() for input bindings",
               "- Implement update() for per-frame logic",

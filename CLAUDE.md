@@ -85,7 +85,6 @@ Accumulator pattern separating fixed-rate logic from variable-rate rendering. De
 
 - `@SceneProperty(options)` — marks Behavior property as editor-editable
 - `@SceneActorComponent(class)` — marks property as referencing an actor component
-- `@Signal()` — marks property as a `SignalEvent` (auto-instantiated typed event emitter)
 
 ### Runtime (`@jolly-pixel/runtime`)
 

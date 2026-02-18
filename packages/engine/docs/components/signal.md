@@ -2,22 +2,18 @@
 
 Inspired by [Godot's signals](https://docs.godotengine.org/en/stable/getting_started/step_by_step/signals.html),
 signals are a lightweight pub/sub mechanism for communication
-between [behaviors](../components/behavior.md). A `SignalEvent`
-is declared on a behavior with the `@Signal()` decorator and
-instantiated automatically during initialization.
+between [behaviors](../components/behavior.md).
 
 ## Declaring a signal
 
 ```ts
 import {
   Behavior,
-  Signal,
-  type SignalEvent
+  SignalEvent
 } from "@jolly-pixel/engine";
 
 export class PlayerBehavior extends Behavior {
-  @Signal()
-  onPlayerPunch: SignalEvent;
+  onPlayerPunch = new SignalEvent();
 
   update() {
     if (this.actor.world.input.isMouseButtonDown("left")) {
@@ -65,8 +61,7 @@ type SignalListener<T extends unknown[]> = (...args: T[]) => void;
 `SignalEvent` accepts a generic tuple to type the emitted arguments:
 
 ```ts
-@Signal()
-onDamage: SignalEvent<[amount: number, source: string]>;
+onDamage = new SignalEvent<[amount: number, source: string]>();
 
 // Emit with typed arguments
 this.onDamage.emit(10, "fireball");

@@ -1,14 +1,4 @@
-// Import Third-party Dependencies
-import "reflect-metadata";
-
-// CONSTANTS
-const kSignalMetadata = Symbol.for("SignalMetadata");
-
 export type SignalListener<T extends unknown[]> = (...args: T[]) => void;
-
-export type ActorComponentSignalMetadata = {
-  signals: Set<string>;
-};
 
 export class SignalEvent<T extends unknown[] = []> {
   private listeners: SignalListener<T>[] = [];
@@ -39,36 +29,3 @@ export class SignalEvent<T extends unknown[] = []> {
   }
 }
 
-export function Signal(): PropertyDecorator {
-  return function fn(
-    object: Object,
-    propertyName: string | symbol
-  ): void {
-    const metadata = getSignalMetadata(object);
-    if (metadata) {
-      metadata.signals.add(propertyName.toString());
-    }
-    else {
-      const metadata = createSignalMetadata();
-      metadata.signals.add(propertyName.toString());
-
-      Reflect.defineMetadata(
-        kSignalMetadata,
-        metadata,
-        object
-      );
-    }
-  };
-}
-
-export function getSignalMetadata(
-  object: Object
-): ActorComponentSignalMetadata | undefined {
-  return Reflect.getMetadata(kSignalMetadata, object);
-}
-
-export function createSignalMetadata(): ActorComponentSignalMetadata {
-  return {
-    signals: new Set()
-  };
-}
