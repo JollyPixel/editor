@@ -142,13 +142,13 @@ export class Actor<
     return component as InstanceType<T>;
   }
 
-  getComponent(typeName: string): Component | null;
-  getComponent<T>(componentClass: new (...args: any[]) => T): T | null;
-  getComponent(typeNameOrClass: string | (new (...args: any[]) => any)): Component | null {
+  getComponent<T extends Component>(typeName: string): T | null;
+  getComponent<T extends Component>(componentClass: new (...args: any[]) => T): T | null;
+  getComponent<T extends Component>(typeNameOrClass: string | (new (...args: any[]) => T)): T | null {
     if (typeof typeNameOrClass === "string") {
       for (const comp of this.components) {
         if (comp.typeName === typeNameOrClass && !isPendingForDestruction(comp)) {
-          return comp;
+          return comp as T;
         }
       }
 
@@ -157,7 +157,7 @@ export class Actor<
 
     for (const comp of this.components) {
       if (comp instanceof typeNameOrClass && !isPendingForDestruction(comp)) {
-        return comp;
+        return comp as T;
       }
     }
 
