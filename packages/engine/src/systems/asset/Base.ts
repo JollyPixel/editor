@@ -3,10 +3,9 @@ import { parse } from "../../utils/path.ts";
 
 export type AssetTypeName =
   | "unknown"
-  | "texture"
-  | "audio"
   | "model"
   | "font"
+  | "tilemap"
   | (string & {});
 
 export class Asset {

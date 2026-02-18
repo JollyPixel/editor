@@ -38,12 +38,16 @@ export class AssetManager {
       asset.type = this.registry.getTypeForExt(asset.longExt);
     }
 
-    this.waiting.enqueue(asset);
-    this.scheduleAutoload(this.context);
+    const path = asset.toString();
+
+    if (!this.assets.has(path)) {
+      this.waiting.enqueue(asset);
+      this.scheduleAutoload(this.context);
+    }
 
     return {
       asset,
-      get: () => this.get<T>(asset.id)
+      get: () => this.get<T>(path)
     };
   }
 
@@ -52,19 +56,19 @@ export class AssetManager {
   }
 
   get<T>(
-    id: string
+    path: string
   ): T {
-    if (this.assets.has(id)) {
-      return this.assets.get(id) as T;
+    if (this.assets.has(path)) {
+      return this.assets.get(path) as T;
     }
 
-    throw new Error(`Asset with id ${id} not found.`);
+    throw new Error(`Asset "${path}" is not yet loaded.`);
   }
 
   scheduleAutoload(
     context: AssetLoaderContext
   ) {
-    if (this.context) {
+    if (context) {
       this.context = context;
     }
 
@@ -100,7 +104,7 @@ export class AssetManager {
       onStart?.(asset);
 
       const result = await loader(asset, context);
-      this.assets.set(asset.id, result);
+      this.assets.set(asset.toString(), result);
     };
 
     const loadingPromises = assets.map((asset) => loadAsset(asset));
