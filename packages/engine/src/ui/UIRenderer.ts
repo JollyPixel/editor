@@ -20,6 +20,8 @@ export interface UIRendererOptions {
 export class UIRenderer<
   TContext = WorldDefaultContext
 > extends ActorComponent<TContext> {
+  static ID = UIRendererID;
+
   camera: THREE.OrthographicCamera;
   nodes: UINode<TContext>[] = [];
 
@@ -72,10 +74,7 @@ export class UIRenderer<
     world.renderer.on("resize", this.#boundResize);
     world.renderer.on("draw", this.#boundDraw);
 
-    Object.defineProperty(world, UIRendererID, {
-      value: this,
-      enumerable: false
-    });
+    world[UIRendererID] = this;
   }
 
   addChildren(
