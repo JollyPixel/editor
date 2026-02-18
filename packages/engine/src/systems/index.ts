@@ -12,6 +12,7 @@ export type {
 } from "./asset/Registry.ts";
 
 export * from "./World.ts";
+export * from "./Scene.ts";
 export * from "./FixedTimeStep.ts";
 export * from "./rendering/index.ts";
 export * from "./SceneManager.ts";

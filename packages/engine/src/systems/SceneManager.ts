@@ -8,16 +8,30 @@ import {
   ActorComponent,
   ActorTree
 } from "../actor/index.ts";
-import type { WorldDefaultContext } from "./World.ts";
+import type { World, WorldDefaultContext } from "./World.ts";
 import type { Component } from "../components/types.ts";
+import type { Scene } from "./Scene.ts";
 
-export type SceneEvents = {
+export type AppendedSceneEntry<TContext> = {
+  scene: Scene<TContext>;
+  /**
+   * All actors created during the scene's awake(),
+   * tracked for cleanup on removeScene.
+   **/
+  ownedActors: ReadonlySet<Actor<TContext>>;
+};
+
+export type SceneEvents<TContext = WorldDefaultContext> = {
   awake: [];
+  sceneChanged: [scene: Scene<TContext>];
+  sceneDestroyed: [scene: Scene<TContext>];
+  sceneAppended: [scene: Scene<TContext>];
+  sceneRemoved: [scene: Scene<TContext>];
 };
 
 export class SceneManager<
   TContext = WorldDefaultContext
-> extends EventEmitter<SceneEvents> {
+> extends EventEmitter<SceneEvents<TContext>> {
   default: THREE.Scene;
 
   componentsToBeStarted: Component[] = [];
@@ -26,6 +40,14 @@ export class SceneManager<
   #registeredActors: Set<Actor<TContext>> = new Set();
   #actorsByName: Map<string, Actor<TContext>[]> = new Map();
   #cachedActors: Actor<TContext>[] = [];
+
+  #currentScene: Scene<TContext> | null = null;
+  #pendingScene: Scene<TContext> | null = null;
+  #sceneStartPending = false;
+  #world: World<any, TContext> | null = null;
+
+  #appendedScenes: Map<number, AppendedSceneEntry<TContext>> = new Map();
+  #appendedScenesPendingStart: Set<number> = new Set();
 
   readonly tree = new ActorTree<TContext>({
     addCallback: (actor) => this.default.add(actor.object3D),
@@ -39,8 +61,22 @@ export class SceneManager<
     this.default = scene ?? new THREE.Scene();
   }
 
+  get currentScene(): Scene<TContext> | null {
+    return this.#currentScene;
+  }
+
+  get hasPendingScene(): boolean {
+    return this.#pendingScene !== null;
+  }
+
   getSource() {
     return this.default;
+  }
+
+  bindWorld(
+    world: World<any, TContext>
+  ): void {
+    this.#world = world;
   }
 
   awake() {
@@ -53,7 +89,158 @@ export class SceneManager<
     this.emit("awake");
   }
 
+  setScene(
+    scene: Scene<TContext>
+  ): void {
+    if (this.#currentScene !== null) {
+      for (const entry of this.#appendedScenes.values()) {
+        this.emit("sceneRemoved", entry.scene);
+        entry.scene.destroy();
+      }
+      this.#appendedScenes.clear();
+      this.#appendedScenesPendingStart.clear();
+
+      this.emit("sceneDestroyed", this.#currentScene);
+      this.#currentScene.destroy();
+
+      const allActors = Array.from(this.#registeredActors);
+      for (const actor of allActors) {
+        this.destroyActor(actor);
+      }
+
+      this.componentsToBeStarted.length = 0;
+      this.componentsToBeDestroyed.length = 0;
+
+      this.default.clear();
+      this.#registeredActors.clear();
+      this.#actorsByName.clear();
+    }
+
+    scene.world = this.#world!;
+    this.#currentScene = scene;
+
+    scene.awake();
+    this.awake();
+
+    this.#sceneStartPending = true;
+    this.emit("sceneChanged", scene);
+  }
+
+  loadScene(
+    scene: Scene<TContext>
+  ): void {
+    this.#pendingScene = scene;
+  }
+
+  /**
+   * Inserts a scene as a prefab into the current scene.
+   * The scene's awake() is called immediately; start() is deferred to the next beginFrame.
+   * All actors created during awake() are tracked and will be destroyed on removeScene().
+   */
+  appendScene(
+    scene: Scene<TContext>
+  ): void {
+    const snapshot = new Set(this.#registeredActors);
+
+    scene.world = this.#world!;
+    scene.awake();
+
+    const ownedActors = new Set<Actor<TContext>>();
+    for (const actor of this.#registeredActors) {
+      if (!snapshot.has(actor)) {
+        ownedActors.add(actor);
+      }
+    }
+
+    // Awaken any actors created during awake() that haven't been woken yet
+    this.awake();
+
+    this.#appendedScenes.set(scene.id, { scene, ownedActors });
+    this.#appendedScenesPendingStart.add(scene.id);
+
+    this.emit("sceneAppended", scene);
+  }
+
+  removeScene(scene: Scene<TContext>): void;
+  removeScene(name: string): void;
+  removeScene(
+    target: Scene<TContext> | string
+  ): void {
+    if (typeof target === "string") {
+      for (const [id, entry] of this.#appendedScenes) {
+        if (entry.scene.name === target) {
+          this.#teardownAppendedScene(id, entry);
+        }
+      }
+    }
+    else {
+      const entry = this.#appendedScenes.get(target.id);
+      if (entry !== undefined) {
+        this.#teardownAppendedScene(target.id, entry);
+      }
+    }
+  }
+
+  #teardownAppendedScene(
+    id: number,
+    entry: AppendedSceneEntry<TContext>
+  ): void {
+    this.emit("sceneRemoved", entry.scene);
+    entry.scene.destroy();
+
+    // Destroy only root-level owned actors; destroyActor cascades to children
+    for (const actor of entry.ownedActors) {
+      if (actor.parent === null || !entry.ownedActors.has(actor.parent)) {
+        this.destroyActor(actor);
+      }
+    }
+
+    this.#appendedScenes.delete(id);
+    this.#appendedScenesPendingStart.delete(id);
+  }
+
+  getScene(): Scene<TContext> | null;
+  getScene(id: number): Scene<TContext> | null;
+  getScene(name: string): Scene<TContext>[];
+  getScene(
+    target?: number | string
+  ): Scene<TContext> | null | Scene<TContext>[] {
+    if (target === undefined) {
+      return this.#currentScene;
+    }
+
+    if (typeof target === "number") {
+      return this.#appendedScenes.get(target)?.scene ?? null;
+    }
+
+    const result: Scene<TContext>[] = [];
+    for (const entry of this.#appendedScenes.values()) {
+      if (entry.scene.name === target) {
+        result.push(entry.scene);
+      }
+    }
+
+    return result;
+  }
+
   beginFrame() {
+    if (this.#pendingScene !== null) {
+      this.setScene(this.#pendingScene);
+      this.#pendingScene = null;
+    }
+
+    if (this.#sceneStartPending) {
+      this.#currentScene?.start();
+      this.#sceneStartPending = false;
+    }
+
+    if (this.#appendedScenesPendingStart.size > 0) {
+      for (const id of this.#appendedScenesPendingStart) {
+        this.#appendedScenes.get(id)?.scene.start();
+      }
+      this.#appendedScenesPendingStart.clear();
+    }
+
     this.#cachedActors = Array.from(this.#registeredActors);
 
     let i = 0;
@@ -78,6 +265,11 @@ export class SceneManager<
     this.#cachedActors.forEach((actor) => {
       actor.fixedUpdate(deltaTime);
     });
+    this.#currentScene?.fixedUpdate(deltaTime);
+
+    for (const { scene } of this.#appendedScenes.values()) {
+      scene.fixedUpdate(deltaTime);
+    }
   }
 
   update(
@@ -86,6 +278,11 @@ export class SceneManager<
     this.#cachedActors.forEach((actor) => {
       actor.update(deltaTime);
     });
+    this.#currentScene?.update(deltaTime);
+
+    for (const { scene } of this.#appendedScenes.values()) {
+      scene.update(deltaTime);
+    }
   }
 
   endFrame() {
@@ -117,7 +314,10 @@ export class SceneManager<
 
     this.unregisterActor(actor);
 
-    // NOTE: make sure to remove deeply into the tree
+    // For root actors (parent === null): removes from tree.children and fires
+    // the removeCallback that detaches actor.object3D from the THREE.Scene.
+    // For non-root actors this is a no-op; actor.destroy() handles removal
+    // from the parent's children list via parent.remove(this).
     this.tree.remove(actor);
     actor.destroy();
   }
