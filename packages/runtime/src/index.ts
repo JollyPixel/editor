@@ -59,6 +59,7 @@ export async function loadRuntime(
   // Make sure the focus is always on the game canvas wherever we click on the game window
   document.addEventListener("click", () => runtime.canvas.focus());
 
+  let initialized = false;
   try {
     if (loadingDelay > 0) {
       await timers.setTimeout(loadingDelay);
@@ -92,17 +93,30 @@ export async function loadRuntime(
           onStart: loadingComponent.setAsset.bind(loadingComponent)
         }
       );
-      await loadingCompletePromise;
+
+      // loadingCompletePromise resolves when the Three.js manager reports 100%.
+      // Loaders that bypass the manager (e.g. bare fetch) never trigger onProgress,
+      // so we force completion manually rather than hanging indefinitely.
+      if (loadingComplete) {
+        await loadingCompletePromise;
+      }
+      else {
+        loadingComponent.setProgress(1, 1);
+        await timers.setTimeout(100);
+      }
     }
 
     await loadingComponent.complete();
+    runtime.canvas.style.opacity = "1";
+    initialized = true;
   }
   catch (error: any) {
     loadingComponent.error(error);
   }
 
-  runtime.canvas.style.opacity = "1";
-  runtime.start();
+  if (initialized) {
+    runtime.start();
+  }
 }
 
 export { Runtime, type RuntimeOptions };

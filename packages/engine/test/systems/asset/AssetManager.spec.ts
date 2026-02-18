@@ -49,7 +49,7 @@ describe("Systems.AssetManager", () => {
     assert.strictEqual(queuedAssets[1].name, "test2");
   });
 
-  test("should get loaded asset by id", async() => {
+  test("should get loaded asset via lazy handle", async() => {
     assetManager.registry.loader(
       { type: "texture", extensions: [".png"] },
       mockLoader
@@ -58,14 +58,26 @@ describe("Systems.AssetManager", () => {
     const lazyAsset = assetManager.load("/test.png");
     await assetManager.loadAssets(assetManager.context);
 
-    const result = assetManager.get(lazyAsset.asset.id);
+    assert.strictEqual(lazyAsset.get(), "loaded-test");
+  });
+
+  test("should get loaded asset by path", async() => {
+    assetManager.registry.loader(
+      { type: "texture", extensions: [".png"] },
+      mockLoader
+    );
+
+    const lazyAsset = assetManager.load("/test.png");
+    await assetManager.loadAssets(assetManager.context);
+
+    const result = assetManager.get(lazyAsset.asset.toString());
     assert.strictEqual(result, "loaded-test");
   });
 
   test("should throw error when getting non-existent asset", () => {
     assert.throws(
-      () => assetManager.get("non-existent-id"),
-      /Asset with id non-existent-id not found/
+      () => assetManager.get("/non-existent.png"),
+      /Asset "\/non-existent\.png" is not yet loaded/
     );
   });
 
@@ -80,11 +92,8 @@ describe("Systems.AssetManager", () => {
 
     await assetManager.loadAssets(assetManager.context);
 
-    const result1 = assetManager.get(asset1.asset.id);
-    const result2 = assetManager.get(asset2.asset.id);
-
-    assert.strictEqual(result1, "loaded-image1");
-    assert.strictEqual(result2, "loaded-image2");
+    assert.strictEqual(asset1.get(), "loaded-image1");
+    assert.strictEqual(asset2.get(), "loaded-image2");
   });
 
   test("should call onStart callback for each asset", async() => {
@@ -135,5 +144,50 @@ describe("Systems.AssetManager", () => {
     await assert.doesNotReject(
       () => assetManager.loadAssets(assetManager.context)
     );
+  });
+
+  test("should deduplicate assets loaded from the same path", async() => {
+    let loadCount = 0;
+    assetManager.registry.loader(
+      { type: "model", extensions: [".glb"] },
+      (asset, _context) => {
+        loadCount++;
+
+        return Promise.resolve(`loaded-${asset.name}`);
+      }
+    );
+
+    const handle1 = assetManager.load("/models/tree.glb");
+    const handle2 = assetManager.load("/models/tree.glb");
+
+    assert.strictEqual(assetManager.waiting.size, 1);
+
+    await assetManager.loadAssets(assetManager.context);
+
+    assert.strictEqual(loadCount, 1);
+    assert.strictEqual(handle1.get(), "loaded-tree");
+    assert.strictEqual(handle2.get(), "loaded-tree");
+  });
+
+  test("should not re-enqueue an already loaded asset", async() => {
+    let loadCount = 0;
+    assetManager.registry.loader(
+      { type: "model", extensions: [".glb"] },
+      (asset, _context) => {
+        loadCount++;
+
+        return Promise.resolve(`loaded-${asset.name}`);
+      }
+    );
+
+    const handle1 = assetManager.load("/models/tree.glb");
+    await assetManager.loadAssets(assetManager.context);
+
+    // Load the same path again after it is already cached
+    const handle2 = assetManager.load("/models/tree.glb");
+
+    assert.strictEqual(assetManager.waiting.size, 0);
+    assert.strictEqual(loadCount, 1);
+    assert.strictEqual(handle1.get(), handle2.get());
   });
 });
