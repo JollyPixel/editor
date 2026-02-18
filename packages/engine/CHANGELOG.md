@@ -1,5 +1,21 @@
 # @jolly-pixel/engine
 
+## 2.3.0
+
+### Minor Changes
+
+- [#181](https://github.com/JollyPixel/editor/pull/181) [`716f0b6`](https://github.com/JollyPixel/editor/commit/716f0b6e311d4c2a91722a65c78b8e4f35c8c55d) Thanks [@fraxken](https://github.com/fraxken)! - Remove @Signals decorator
+
+- [#184](https://github.com/JollyPixel/editor/pull/184) [`303d4ce`](https://github.com/JollyPixel/editor/commit/303d4cea5f4c3cfb91f82f41161617735c0ac2f8) Thanks [@fraxken](https://github.com/fraxken)! - Refactor ModelRenderer and complete ModelAnimation APIs
+
+- [#178](https://github.com/JollyPixel/editor/pull/178) [`73d50e3`](https://github.com/JollyPixel/editor/commit/73d50e3e65cf0a52bf80cd7ae8881563de93f5f2) Thanks [@fraxken](https://github.com/fraxken)! - Implement AudioLibrary and enhance AudioManager to load sound through Assets.registry
+
+### Patch Changes
+
+- [#183](https://github.com/JollyPixel/editor/pull/183) [`7d125aa`](https://github.com/JollyPixel/editor/commit/7d125aa87baa7b43dfc3420e77b06c5e921b30d1) Thanks [@fraxken](https://github.com/fraxken)! - Fix multiple bugs with ComposerRenderStrategy
+
+- [#185](https://github.com/JollyPixel/editor/pull/185) [`2f635ef`](https://github.com/JollyPixel/editor/commit/2f635ef3816ef7fea5c443637587940d52d0d375) Thanks [@fraxken](https://github.com/fraxken)! - Extend Actor.getComponent with type-sage generic
+
 ## 2.2.0
 
 ### Minor Changes
