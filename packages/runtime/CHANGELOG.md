@@ -1,5 +1,16 @@
 # @jolly-pixel/runtime
 
+## 3.2.0
+
+### Minor Changes
+
+- [#175](https://github.com/JollyPixel/editor/pull/175) [`f50efc5`](https://github.com/JollyPixel/editor/commit/f50efc5a4962203a136f9bc5e604f9535ef0c11e) Thanks [@fraxken](https://github.com/fraxken)! - Enhance and fix bugs with Asset Management
+
+### Patch Changes
+
+- Updated dependencies [[`f50efc5`](https://github.com/JollyPixel/editor/commit/f50efc5a4962203a136f9bc5e604f9535ef0c11e), [`f48549e`](https://github.com/JollyPixel/editor/commit/f48549e90658b774a6913bbf8630c358630121ed)]:
+  - @jolly-pixel/engine@2.2.0
+
 ## 3.1.0
 
 ### Minor Changes
