@@ -5,6 +5,8 @@
 
 - Node.js v24 or higher
 - [Vite](https://vite.dev/) (for local dev server)
+  - [vite-plugin-checker](https://github.com/fi3ework/vite-plugin-checker): provides checks for TypeScript, ESLint, vue-tsc, and Stylelint
+  - [vite-plugin-glsl](https://github.com/UstymUkhman/vite-plugin-glsl#readme): import, inline (and minify) GLSL/WGSL shader files
 - TypeScript (recommended)
 - `@jolly-pixel/engine` and `@jolly-pixel/runtime` packages
 
@@ -13,9 +15,11 @@
 Create a new directory and initialize your project:
 
 ```bash
-mkdir my-jolly-game && cd my-jolly-game
+mkdir my-jolly-game
+cd my-jolly-game
 npm init -y
-npm install @jolly-pixel/engine @jolly-pixel/runtime vite typescript --save
+npm i @jolly-pixel/engine @jolly-pixel/runtime three
+npm i -D @types/three typescript vite vite-plugin-checker vite-plugin-glsl
 ```
 
 Your `package.json` should look like this:
@@ -30,23 +34,37 @@ Your `package.json` should look like this:
   },
   "dependencies": {
     "@jolly-pixel/engine": "^1.0.0",
-    "@jolly-pixel/runtime": "^1.0.0"
+    "@jolly-pixel/runtime": "^1.0.0",
+    "three": "0.182.0"
   },
   "devDependencies": {
     "typescript": "^5.9.3",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "@types/three": "0.182.0",
+    "vite-plugin-checker": "0.12.0",
+    "vite-plugin-glsl": "1.5.5"
   }
 }
 ```
 
-## 2. Vite Configuration (optional)
+## 2. Vite Configuration
 
-Create a minimal `vite.config.js`:
+Create a minimal `vite.config.ts`:
 
 ```js
-export default {
-  root: '.',
-};
+import { defineConfig } from "vite";
+import checker from "vite-plugin-checker";
+import glsl from "vite-plugin-glsl";
+
+// https://vitejs.dev/config/
+export default defineConfig({
+  plugins: [
+    checker({
+      typescript: true
+    }),
+    glsl()
+  ]
+});
 ```
 
 ## 3. HTML Entry Point
@@ -61,6 +79,7 @@ Create `index.html` in your project root:
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>JollyPixel Hello World</title>
   <link rel="stylesheet" href="./main.css">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
 </head>
 <body>
   <canvas tabindex="-1"></canvas>
@@ -74,20 +93,21 @@ Create `index.html` in your project root:
 Create `src/main.ts`:
 
 ```ts
-import { Player, loadPlayer } from "@jolly-pixel/runtime";
+import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
 
-const canvas = document.querySelector("canvas")!;
+const canvas = document.querySelector("canvas") as HTMLCanvasElement | null;
+if (!canvas) {
+  throw new Error("HTMLCanvasElement not found");
+}
 
-const player = new Player(canvas, {
+const runtime = new Runtime(canvas, {
   includePerformanceStats: true
 });
 
-const { world } = player;
+// Add actors, components, and systems via the runtime API, for example:
+// runtime.world.addActor(...);
 
-// You can now add actors, components, etc. to your scene here
-
-loadPlayer(player)
-  .catch(console.error);
+loadRuntime(runtime).catch(console.error);
 ```
 
 ## 5. Run Your Game
@@ -103,6 +123,7 @@ Open [http://localhost:5173](http://localhost:5173) in your browser. You should 
 ## 6. Next Steps
 
 - Add actors and components to your scene using the engine API.
+- Explore our [games](https://github.com/JollyPixel/games) repository for real-world example.
 - See the [engine README](../../README.md) and [runtime README](../../../runtime/README.md) for more advanced usage and API details.
 
 ---
