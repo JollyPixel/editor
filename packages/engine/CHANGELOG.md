@@ -1,5 +1,15 @@
 # @jolly-pixel/engine
 
+## 2.4.0
+
+### Minor Changes
+
+- [#188](https://github.com/JollyPixel/editor/pull/188) [`3dd68d4`](https://github.com/JollyPixel/editor/commit/3dd68d4fe3b72ec801ddd8e3138771ab714c84b9) Thanks [@fraxken](https://github.com/fraxken)! - Make AudioLibrary type-safe and enhance error when asset loadind fail
+
+### Patch Changes
+
+- [#186](https://github.com/JollyPixel/editor/pull/186) [`c6a098d`](https://github.com/JollyPixel/editor/commit/c6a098dbe9e39109a7f82296937dd78ecf695764) Thanks [@fraxken](https://github.com/fraxken)! - Fix UIRenderer Symbol defineProperty and expose it as static prop
+
 ## 2.3.0
 
 ### Minor Changes
