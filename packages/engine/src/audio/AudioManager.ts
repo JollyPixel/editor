@@ -2,7 +2,10 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import type { World } from "../systems/World.ts";
+import {
+  type World,
+  Assets
+} from "../systems/index.ts";
 import {
   type AudioListenerAdapter
 } from "./internals/AudioListener.ts";
@@ -18,6 +21,8 @@ const kDefaultLoop = false;
 export type AudioManager = {
   loadAudio: (url: string, options?: AudioLoadingOptions) => Promise<THREE.Audio>;
   loadPositionalAudio: (url: string, options?: AudioLoadingOptions) => Promise<THREE.PositionalAudio>;
+  createAudio: (buffer: AudioBuffer, options?: AudioLoadingOptions) => THREE.Audio;
+  createPositionalAudio: (buffer: AudioBuffer, options?: AudioLoadingOptions) => THREE.PositionalAudio;
   destroyAudio: (audio: THREE.Audio | THREE.PositionalAudio) => void;
 };
 
@@ -45,9 +50,23 @@ export class GlobalAudioManager implements AudioManager {
   static fromWorld(
     world: World<any, any>
   ): GlobalAudioManager {
-    return new GlobalAudioManager({
+    const audioManager = new GlobalAudioManager({
       listener: world.audio.listener
     });
+
+    Assets.registry.loader(
+      {
+        extensions: [".mp3", ".ogg", ".wav", ".aac", ".flac"],
+        type: "audio"
+      },
+      async(asset, context) => {
+        const loader = new THREE.AudioLoader(context.manager);
+
+        return loader.loadAsync(asset.toString());
+      }
+    );
+
+    return audioManager;
   }
 
   constructor(
@@ -91,6 +110,28 @@ export class GlobalAudioManager implements AudioManager {
     options: AudioLoadingOptions = {}
   ): Promise<THREE.PositionalAudio> {
     const audio = await this.#audioService.createPositionalAudio(url);
+    this.#configureAudio(audio, options);
+
+    return audio;
+  }
+
+  createAudio(
+    buffer: AudioBuffer,
+    options: AudioLoadingOptions = {}
+  ): THREE.Audio {
+    const audio = new THREE.Audio(this.#listener as THREE.AudioListener);
+    audio.setBuffer(buffer);
+    this.#configureAudio(audio, options);
+
+    return audio;
+  }
+
+  createPositionalAudio(
+    buffer: AudioBuffer,
+    options: AudioLoadingOptions = {}
+  ): THREE.PositionalAudio {
+    const audio = new THREE.PositionalAudio(this.#listener as THREE.AudioListener);
+    audio.setBuffer(buffer);
     this.#configureAudio(audio, options);
 
     return audio;
