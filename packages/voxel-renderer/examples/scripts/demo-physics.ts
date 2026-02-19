@@ -12,6 +12,7 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import {
   VoxelRenderer,
+  Face,
   type BlockDefinition
 } from "../../src/index.ts";
 import { SphereBehavior } from "./components/SphereController.ts";
@@ -65,8 +66,38 @@ const voxelBlocks: BlockDefinition[] = [
     name: "Dirt",
     shapeId: "cube",
     collidable: true,
-    faceTextures: {},
-    defaultTexture: { tilesetId: "default", col: 2, row: 0 }
+    faceTextures: {
+      [Face.PosY]: {
+        tilesetId: "default",
+        col: 0,
+        row: 2
+      },
+      [Face.NegX]: {
+        tilesetId: "default",
+        col: 0,
+        row: 1
+      },
+      [Face.NegZ]: {
+        tilesetId: "default",
+        col: 0,
+        row: 1
+      },
+      [Face.PosX]: {
+        tilesetId: "default",
+        col: 0,
+        row: 1
+      },
+      [Face.PosZ]: {
+        tilesetId: "default",
+        col: 0,
+        row: 1
+      }
+    },
+    defaultTexture: {
+      tilesetId: "default",
+      col: 2,
+      row: 0
+    }
   }
 ];
 
@@ -150,7 +181,7 @@ world.createActor("sphere")
 // ── Tileset + runtime start ───────────────────────────────────────────────────
 voxelMap.loadTileset({
   tileSize: 32,
-  src: "tileset/Tileset001.png",
+  src: "tileset/UV_cube.png",
   id: "default"
 }).catch(console.error);
 
