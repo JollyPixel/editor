@@ -37,6 +37,7 @@ Click on one of the links to access the documentation of the package:
 | --- | --- | --- | 
 | engine | [@jolly-pixel/engine](./packages/engine) | ECS framework on top of Three.js |
 | runtime | [@jolly-pixel/runtime](./packages/runtime) | Runtime for the engine / ECS |
+| voxel-renderer | [@jolly-pixel/voxel.renderer](./packages/voxel-renderer) | Voxel Engine and Renderer |
 
 These packages are available in the Node Package Repository and can be easily installed with [npm](https://docs.npmjs.com/getting-started/what-is-npm) or [yarn](https://yarnpkg.com).
 ```bash

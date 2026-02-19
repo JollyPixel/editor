@@ -12,5 +12,10 @@ export default [
       }
     }
   },
-  ...typescriptConfig()
+  ...typescriptConfig({
+    rules: {
+      "@stylistic/no-mixed-operators": "off",
+      "max-classes-per-file": "off"
+    }
+  })
 ];

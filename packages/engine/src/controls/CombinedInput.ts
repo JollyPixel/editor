@@ -1,4 +1,4 @@
-/* eslint-disable max-classes-per-file */
+
 // Import Internal Dependencies
 import type { Input } from "./Input.class.ts";
 import {
