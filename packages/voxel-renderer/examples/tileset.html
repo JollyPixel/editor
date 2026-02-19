@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tileset UV Demo — @jolly-pixel/voxel.renderer</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      height: 100%;
+      overflow: hidden;
+      background: #1a1a2e;
+    }
+
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #title {
+      position: fixed;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #fff;
+      font: bold 15px monospace;
+      background: rgba(0, 0, 0, 0.55);
+      padding: 6px 16px;
+      border-radius: 4px;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    #hint {
+      position: fixed;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255, 255, 255, 0.5);
+      font: 11px monospace;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    #info {
+      position: fixed;
+      top: 48px;
+      left: 12px;
+      color: rgba(255, 255, 255, 0.7);
+      font: 11px monospace;
+      background: rgba(0, 0, 0, 0.55);
+      padding: 6px 10px;
+      border-radius: 4px;
+      pointer-events: none;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas></canvas>
+  <div id="title">TilesetManager UV Demo — Tileset001.png (9×4 tiles @ 32px)</div>
+  <div id="hint">Left drag: rotate &nbsp;·&nbsp; Right drag: pan &nbsp;·&nbsp; Scroll: zoom</div>
+  <div id="info">
+    Top grid: all 36 tiles with UV-mapped quads<br>
+    Bottom: textured cube (col=2, row=1 on each face)<br>
+    Check console for UV values
+  </div>
+  <script type="module" src="./scripts/demo-tileset.ts"></script>
+</body>
+
+</html>

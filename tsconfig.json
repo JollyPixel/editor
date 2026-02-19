@@ -21,6 +21,9 @@
     },
     {
       "path": "./packages/editors/model"
+    },
+    {
+      "path": "./packages/voxel-renderer"
     }
   ]
 }

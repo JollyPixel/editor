@@ -8,7 +8,8 @@ export default defineConfig({
   themeConfig: {
     nav: [
       { text: "Engine", link: "/engine/README", activeMatch: "^/engine/" },
-      { text: "Runtime", link: "/runtime/README", activeMatch: "^/runtime/" }
+      { text: "Runtime", link: "/runtime/README", activeMatch: "^/runtime/" },
+      { text: "Voxel Renderer", link: "/voxel-renderer/README", activeMatch: "^/voxel-renderer/" }
     ],
     search: {
       provider: "local"
@@ -187,6 +188,63 @@ export default defineConfig({
             {
               text: "Runtime",
               link: "/runtime/Runtime"
+            }
+          ]
+        }
+      ],
+      "/voxel-renderer/": [
+        {
+          items: [
+            {
+              text: "Introduction",
+              link: "/voxel-renderer/README"
+            },
+            {
+              text: "Core",
+              items: [
+                {
+                  text: "VoxelRenderer",
+                  link: "/voxel-renderer/VoxelRenderer"
+                },
+                {
+                  text: "World",
+                  link: "/voxel-renderer/World"
+                },
+                {
+                  text: "Blocks",
+                  link: "/voxel-renderer/Blocks"
+                }
+              ]
+            },
+            {
+              text: "Tilesets",
+              items: [
+                {
+                  text: "Tileset",
+                  link: "/voxel-renderer/Tileset"
+                },
+                {
+                  text: "Built-In Shapes",
+                  link: "/voxel-renderer/BuiltInShapes"
+                },
+                {
+                  text: "TiledConverter",
+                  link: "/voxel-renderer/TiledConverter"
+                }
+              ]
+            },
+            {
+              text: "Advanced",
+              items: [
+                {
+                  text: "Collision",
+                  link: "/voxel-renderer/Collision"
+                },
+                {
+                  text: "Serialization",
+                  link: "/voxel-renderer/Serialization"
+                }
+              ]
             }
           ]
         }
