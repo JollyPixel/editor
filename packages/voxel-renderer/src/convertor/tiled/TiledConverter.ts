@@ -106,7 +106,17 @@ export class TiledConverter {
     map: TiledMap,
     options: TiledConverterOptions
   ): VoxelWorldJSON {
-    const tileSets = map.tilesets.map((ts) => new TileSet(ts));
+    const tileSets: TileSet[] = [];
+    for (const ts of map.tilesets) {
+      if (!ts.tileheight) {
+        ts.tileheight = map.tileheight;
+      }
+      if (!ts.tilewidth) {
+        ts.tilewidth = map.tilewidth;
+      }
+
+      tileSets.push(new TileSet(ts));
+    }
 
     const tilesetIds = new Map<number, string>();
     for (let i = 0; i < map.tilesets.length; i++) {

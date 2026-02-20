@@ -10,18 +10,29 @@ import {
   VoxelRenderer
 } from "../../../src/index.ts";
 
-export class VoxelMap extends ActorComponent {
-  world = loadVoxelTiledMap("tilemap/experimental_map.tmj");
+export class VoxelBehavior extends ActorComponent {
+  world = loadVoxelTiledMap("tilemap/brackeys-level.tmj", {
+    layerMode: "stacked"
+  });
 
-  constructor(actor: Actor<any>) {
-    super({ actor, typeName: "VoxelMap" });
+  constructor(
+    actor: Actor
+  ) {
+    super({
+      actor,
+      typeName: "VoxelBehavior"
+    });
   }
 
   awake() {
     const world = this.world.get();
 
-    const voxelRenderer = this.actor.getComponent(VoxelRenderer)!;
-    voxelRenderer.load(world)
+    const voxelRenderer = this.actor.getComponent(VoxelRenderer);
+    if (!voxelRenderer) {
+      throw new Error("VoxelRenderer component not found on actor");
+    }
+    voxelRenderer
+      .load(world)
       .catch(console.error);
   }
 }

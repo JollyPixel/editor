@@ -10,7 +10,7 @@ import * as THREE from "three";
 import {
   VoxelRenderer
 } from "../../src/index.ts";
-import { VoxelMap } from "./components/VoxelMap.ts";
+import { VoxelBehavior } from "./components/VoxelMap.ts";
 import { createExamplesMenu } from "./utils/menu.ts";
 
 const canvas = document.querySelector("canvas") as HTMLCanvasElement | null;
@@ -48,10 +48,9 @@ world.createActor("camera")
 // No blocks or layers supplied here — load() will register them from the JSON.
 world.createActor("map")
   .addComponent(VoxelRenderer, {
-    alphaTest: 0.1,
     material: "lambert"
   })
-  .addComponent(VoxelMap);
+  .addComponent(VoxelBehavior);
 
 // ── Load runtime ────────────────────────────────────────────
 await loadRuntime(runtime)
