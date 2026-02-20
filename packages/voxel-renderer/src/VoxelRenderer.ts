@@ -2,8 +2,7 @@
 import * as THREE from "three";
 import {
   Actor,
-  ActorComponent,
-  Systems
+  ActorComponent
 } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
@@ -122,9 +121,7 @@ export interface VoxelRendererOptions {
  *   const layer = vr.addLayer("Ground");
  *   vr.setVoxel(layer.id, 0, 0, 0, 1);
  */
-export class VoxelRenderer<
-  TContext = Systems.WorldDefaultContext
-> extends ActorComponent<TContext> {
+export class VoxelRenderer extends ActorComponent {
   readonly world: VoxelWorld;
   readonly blockRegistry: BlockRegistry;
   readonly shapeRegistry: BlockShapeRegistry;
@@ -149,7 +146,7 @@ export class VoxelRenderer<
   #alphaTest: number;
 
   constructor(
-    actor: Actor<TContext>,
+    actor: Actor<any>,
     options: VoxelRendererOptions = {}
   ) {
     super({
