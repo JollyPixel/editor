@@ -14,12 +14,14 @@ import {
 
 import type {
   VoxelWorldJSON,
-  VoxelLayerJSON,
-  VoxelEntryKey,
   VoxelObjectLayerJSON,
   VoxelObjectJSON,
   VoxelObjectProperties
 } from "../../serialization/VoxelSerializer.ts";
+import type {
+  VoxelLayerJSON,
+  VoxelEntryKey
+} from "../../world/VoxelLayer.ts";
 import type { TilesetDefinition } from "../../tileset/types.ts";
 import type { BlockDefinition } from "../../blocks/BlockDefinition.ts";
 import type { BlockShapeID } from "../../blocks/BlockShape.ts";
@@ -316,6 +318,7 @@ function convertTileLayer(
     name: layer.name,
     visible: layer.visible,
     order: layerOrder,
+    properties: flattenProperties(layer.properties),
     voxels
   };
 }

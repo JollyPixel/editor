@@ -1,16 +1,14 @@
 // Import Internal Dependencies
 import type { VoxelWorld } from "../world/VoxelWorld.ts";
 import type {
+  VoxelLayerJSON
+} from "../world/VoxelLayer.ts";
+import type {
   TilesetManager,
   TilesetDefinition
 } from "../tileset/TilesetManager.ts";
 import type { VoxelEntry } from "../world/types.ts";
 import type { BlockDefinition } from "../blocks/BlockDefinition.ts";
-
-/**
- * x,y,z voxel positions are serialised as "x,y,z" keys in a sparse map for
- */
-export type VoxelEntryKey = `${number},${number},${number}`;
 
 /**
  * Flat key/value bag for custom object properties.
@@ -47,20 +45,6 @@ export interface VoxelObjectLayerJSON {
   objects: VoxelObjectJSON[];
 }
 
-export interface VoxelEntryJSON {
-  block: number;
-  transform: number;
-}
-
-export interface VoxelLayerJSON {
-  id: string;
-  name: string;
-  visible: boolean;
-  order: number;
-  offset?: { x: number; y: number; z: number; };
-  voxels: Record<VoxelEntryKey, VoxelEntryJSON>;
-}
-
 export interface VoxelWorldJSON {
   version: 1;
   chunkSize: number;
@@ -87,45 +71,13 @@ export class VoxelSerializer {
     world: VoxelWorld,
     tilesetManager: TilesetManager
   ): VoxelWorldJSON {
-    const layers: VoxelLayerJSON[] = [];
-
-    for (const layer of world.getLayers()) {
-      const voxels: Record<
-        VoxelEntryKey,
-        VoxelEntryJSON
-      > = Object.create(null);
-
-      for (const chunk of layer.getChunks()) {
-        const wx0 = chunk.cx * world.chunkSize + layer.offset.x;
-        const wy0 = chunk.cy * world.chunkSize + layer.offset.y;
-        const wz0 = chunk.cz * world.chunkSize + layer.offset.z;
-
-        for (const [idx, entry] of chunk.entries()) {
-          const { lx, ly, lz } = chunk.fromLinearIndex(idx);
-          const key: VoxelEntryKey = `${wx0 + lx},${wy0 + ly},${wz0 + lz}`;
-
-          voxels[key] = {
-            block: entry.blockId,
-            transform: entry.transform
-          };
-        }
-      }
-
-      layers.push({
-        id: layer.id,
-        name: layer.name,
-        visible: layer.visible,
-        order: layer.order,
-        offset: { ...layer.offset },
-        voxels
-      });
-    }
-
     return {
       version: 1,
       chunkSize: world.chunkSize,
       tilesets: tilesetManager.getDefinitions(),
-      layers
+      layers: world
+        .getLayers()
+        .map((layer) => layer.toJSON())
     };
   }
 
@@ -148,13 +100,14 @@ export class VoxelSerializer {
       .sort((a, b) => a.order - b.order);
 
     for (const layerJSON of sortedLayers) {
-      const layer = world.addLayer(layerJSON.name);
+      const layer = world.addLayer(layerJSON.name, {
+        visible: layerJSON.visible,
+        properties: layerJSON.properties
+      });
 
       // Override the auto-assigned id/order with the serialised values.
       layer.id = layerJSON.id;
       layer.order = layerJSON.order;
-      layer.visible = layerJSON.visible;
-      // Restore offset before voxels so setVoxelAt converts world keys correctly.
       if (layerJSON.offset) {
         layer.offset = { ...layerJSON.offset };
       }
