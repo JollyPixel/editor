@@ -1,5 +1,11 @@
 # @jolly-pixel/voxel.renderer
 
+## 1.0.2
+
+### Patch Changes
+
+- [#200](https://github.com/JollyPixel/editor/pull/200) [`a0b5a02`](https://github.com/JollyPixel/editor/commit/a0b5a0245e4b280299c349c871f6264d5e6c6c9c) Thanks [@fraxken](https://github.com/fraxken)! - VoxelRenderer should not expect context Generic for ActorComponent & Actor
+
 ## 1.0.1
 
 ### Patch Changes
