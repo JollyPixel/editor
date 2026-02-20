@@ -1,7 +1,7 @@
 # Asset Loading
 
 The asset system provides a unified pipeline for loading external resources
-(3D models, tiled maps, fonts, textures, audio, etc.). It is built around
+(3D models, fonts, textures, audio, etc.). It is built around
 two main concepts:
 
 - **Asset** — lightweight descriptor that identifies a file by its
@@ -63,11 +63,15 @@ interface LazyAsset<T = unknown> {
 
 ```ts
 interface AssetManager {
-  // Enqueue an asset and return a lazy handle
-  load<T>(assetOrPath: Asset | string): LazyAsset<T>;
+  // Enqueue an asset and return a lazy handle.
+  // Optional options are forwarded to the loader callback.
+  load<T, TOptions>(assetOrPath: Asset | string, options?: TOptions): LazyAsset<T>;
 
-  // Retrieve a previously loaded asset by id (throws if missing)
-  get<T>(id: string): T;
+  // Return a typed load function bound to this manager.
+  lazyLoad<T, TOptions>(): (assetOrPath: Asset | string, options?: TOptions) => LazyAsset<T>;
+
+  // Retrieve a previously loaded asset by path (throws if missing)
+  get<T>(path: string): T;
 
   // Flush the queue: load every waiting asset in parallel
   loadAssets(context: AssetLoaderContext): Promise<void>;
@@ -84,7 +88,7 @@ interface AssetManager {
    is returned immediately.
 3. **Flush the queue** — calling `Assets.loadAssets(context)` drains
    the queue and runs every registered loader in parallel. Each result
-   is cached by asset `id`.
+   is cached by asset path.
 4. **Access the result** — call `lazyAsset.get()` to retrieve the
    loaded resource from the cache. Throws if the asset has not been
    loaded yet.
@@ -101,7 +105,6 @@ when its module is imported.
 | Loader | Extensions | Result type |
 | ------ | ---------- | ----------- |
 | `Loaders.model` | `.obj`, `.fbx`, `.glb`, `.gltf` | `Model` (`THREE.Group` + `AnimationClip[]`) |
-| `Loaders.tiledMap` | `.tmj` | `TiledMapAsset` (map data + tileset textures) |
 | `Loaders.font` | `.typeface.json` | `Font` (Three.js typeface) |
 
 Usage:
@@ -111,12 +114,10 @@ import { Loaders } from "@jolly-pixel/engine";
 
 // Enqueue assets
 const knight = Loaders.model("models/knight.glb");
-const level = Loaders.tiledMap("maps/level1.tmj");
 const myFont = Loaders.font("fonts/roboto.typeface.json");
 
 // After loadAssets():
 const { object, animations } = knight.get();
-const { tilemap, tilesets } = level.get();
 const font = myFont.get();
 ```
 
@@ -155,3 +156,39 @@ export const spreadsheet = Assets.lazyLoad<string[][]>();
 The `context.manager` property is the shared `THREE.LoadingManager`
 instance, which can be passed to any Three.js loader to benefit from
 centralized progress tracking.
+
+## Per-load options
+
+Loaders can accept a typed `options` argument that callers supply at
+the `load()` call site. Options are forwarded as the third argument to
+the loader callback.
+
+**Register a loader with options:**
+
+```ts
+interface TilemapLoaderOptions {
+  flipY?: boolean;
+  baseDir?: string;
+}
+
+Assets.registry.loader<Tilemap, TilemapLoaderOptions>(
+  { extensions: [".tmj", ".json"], type: "tilemap" },
+  async(asset, context, options) => {
+    // options is typed TilemapLoaderOptions | undefined
+    const flipY = options?.flipY ?? false;
+    // ...
+  }
+);
+
+export const tilemap = Assets.lazyLoad<Tilemap, TilemapLoaderOptions>();
+```
+
+**Load with options:**
+
+```ts
+// Via lazyLoad helper — options are type-checked against TilemapLoaderOptions
+const map = tilemap("levels/level1.tmj", { flipY: true });
+
+// Or directly
+const map2 = Assets.load<Tilemap, TilemapLoaderOptions>("levels/level1.tmj", { baseDir: "assets/" });
+```

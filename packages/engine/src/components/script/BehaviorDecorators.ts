@@ -5,8 +5,7 @@ import "reflect-metadata";
 import type {
   ModelRenderer,
   SpriteRenderer,
-  TextRenderer,
-  TiledMapRenderer
+  TextRenderer
 } from "../renderers/index.ts";
 import type { ActorComponent } from "../../actor/index.ts";
 
@@ -80,7 +79,6 @@ export type SceneActorComponentType =
   | typeof ModelRenderer
   | typeof SpriteRenderer
   | typeof TextRenderer
-  | typeof TiledMapRenderer
   | typeof ActorComponent
   | any;
 

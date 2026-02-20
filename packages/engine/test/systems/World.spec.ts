@@ -71,11 +71,8 @@ describe("Systems.World", () => {
 
     // @ts-expect-error - using mocks
     world = new World(renderer, {
-      // @ts-expect-error - using mocks
       sceneManager,
-      // @ts-expect-error - using mocks
       input,
-      // @ts-expect-error - using mocks
       audio: createMockAudio(),
       globalsAdapter: createMockGlobalsAdapter()
     });

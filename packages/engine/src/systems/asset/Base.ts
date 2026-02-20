@@ -8,7 +8,13 @@ export type AssetTypeName =
   | "tilemap"
   | (string & {});
 
-export class Asset {
+export class Asset<
+  TReturn = unknown,
+  TOptions = unknown
+> {
+  declare readonly _return: TReturn;
+  declare readonly _options: TOptions;
+
   id = globalThis.crypto.randomUUID();
 
   name: string;
@@ -45,18 +51,21 @@ export class Asset {
     return this.path + this.basename;
   }
 
-  static from(
-    assetOrPath: Asset | string
-  ): Asset {
+  static from<TReturn = unknown, TOptions = unknown>(
+    assetOrPath: Asset<TReturn, TOptions> | string
+  ): Asset<TReturn, TOptions> {
     if (assetOrPath instanceof Asset) {
       return assetOrPath;
     }
 
-    return new Asset(assetOrPath);
+    return new Asset<TReturn, TOptions>(assetOrPath);
   }
 }
 
-export interface LazyAsset<T = unknown> {
-  asset: Asset;
-  get: () => T;
+export interface LazyAsset<
+  TReturn = unknown,
+  TOptions = unknown
+> {
+  asset: Asset<TReturn, TOptions>;
+  get: () => TReturn;
 }

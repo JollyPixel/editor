@@ -19,15 +19,19 @@ export interface AssetLoaderOptions {
   type: AssetTypeName;
 }
 
-export type AssetLoaderCallback<T = unknown> = (asset: Asset, context: AssetLoaderContext) => Promise<T>;
+export type AssetLoaderCallback<TReturn = unknown, TOptions = unknown> = (
+  asset: Asset<TReturn, TOptions>,
+  context: AssetLoaderContext,
+  options?: TOptions
+) => Promise<TReturn>;
 
 export class AssetRegistry {
   #extToType = new Map<string, string>();
-  #typeToLoader = new Map<string, AssetLoaderCallback>();
+  #typeToLoader = new Map<string, AssetLoaderCallback<any, any>>();
 
-  loader(
+  loader<TReturn = unknown, TOptions = unknown>(
     options: AssetLoaderOptions,
-    loader: AssetLoaderCallback
+    loader: AssetLoaderCallback<TReturn, TOptions>
   ) {
     this.#typeToLoader.set(options.type, loader);
     for (const ext of options.extensions) {
@@ -35,11 +39,15 @@ export class AssetRegistry {
     }
   }
 
-  getTypeForExt(ext: string) {
+  getTypeForExt(
+    ext: string
+  ) {
     return this.#extToType.get(ext) ?? kDefaultAssetType;
   }
 
-  getLoaderForType(type: string) {
+  getLoaderForType<TReturn = unknown, TOptions = unknown>(
+    type: string
+  ): AssetLoaderCallback<TReturn, TOptions> | undefined {
     return this.#typeToLoader.get(type);
   }
 }
