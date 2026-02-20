@@ -20,6 +20,10 @@ import {
   BrowserGlobalsAdapter
 } from "../adapters/global.ts";
 import { FixedTimeStep } from "./FixedTimeStep.ts";
+import {
+  Logger,
+  type LoggerOptions
+} from "./Logger.ts";
 
 export type WorldEvents = {
   beforeFixedUpdate: [number];
@@ -32,6 +36,15 @@ export interface WorldOptions<
   TContext = WorldDefaultContext
 > {
   enableOnExit?: boolean;
+  /**
+   * Enables debug mode. When true, the logger is pre-configured with level "trace"
+   * and all namespaces enabled ("*"), unless overridden by the `logger` option.
+   */
+  debug?: boolean;
+  /**
+   * Logger configuration. Individual options override the defaults derived from `debug`.
+   */
+  logger?: LoggerOptions;
 
   sceneManager: SceneManager<TContext>;
   input?: Input;
@@ -55,7 +68,12 @@ export class World<
   sceneManager: SceneManager<TContext>;
   audio: GlobalAudio;
   context: TContext;
-  loop: FixedTimeStep;
+
+  readonly loop: FixedTimeStep;
+  readonly debug: boolean;
+  readonly logger: Logger;
+
+  #worldLogger: Logger;
 
   constructor(
     renderer: Renderer<T>,
@@ -70,6 +88,18 @@ export class World<
       context = Object.create(null),
       globalsAdapter = new BrowserGlobalsAdapter()
     } = options;
+
+    this.debug = options.debug ?? false;
+    this.logger = new Logger({
+      level: this.debug ?
+        "trace" :
+        (options.logger?.level ?? "info"),
+      namespaces: this.debug ?
+        ["*"] :
+        (options.logger?.namespaces ?? []),
+      adapter: options.logger?.adapter
+    });
+    this.#worldLogger = this.logger.child({ namespace: "Systems.World" });
 
     this.renderer = renderer;
     this.sceneManager = sceneManager;
@@ -101,6 +131,8 @@ export class World<
   }
 
   connect() {
+    this.#worldLogger.debug("Connecting world");
+
     this.input.connect();
     this.renderer.observeResize();
     this.sceneManager.awake();
@@ -109,6 +141,8 @@ export class World<
   }
 
   disconnect() {
+    this.#worldLogger.debug("Disconnecting world");
+
     this.input.disconnect();
     this.renderer.unobserveResize();
 
@@ -116,12 +150,14 @@ export class World<
   }
 
   start() {
+    this.#worldLogger.debug("Starting world");
     this.loop.start();
 
     return this;
   }
 
   stop() {
+    this.#worldLogger.debug("Stopping world");
     this.loop.stop();
 
     return this;
@@ -131,6 +167,7 @@ export class World<
     fps: number,
     fixedFps?: number
   ) {
+    this.#worldLogger.debug(`Setting FPS: ${fps} (fixed: ${fixedFps ?? fps})`);
     this.loop.setFps(fps, fixedFps);
 
     return this;

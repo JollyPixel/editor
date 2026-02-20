@@ -4,6 +4,7 @@ import { describe, test, mock, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import { Logger } from "../src/systems/Logger.ts";
 import { Actor } from "../src/actor/index.ts";
 import { Scene } from "../src/systems/Scene.ts";
 import { SceneManager } from "../src/systems/SceneManager.ts";
@@ -42,6 +43,7 @@ class ConcreteScene extends Scene {
 function createSceneSetup() {
   const sm = new SceneManager();
   const world = {
+    logger: new Logger(),
     sceneManager: sm,
     createActor(name: string) {
       return new Actor(this as any, { name });

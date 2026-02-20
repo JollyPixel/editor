@@ -5,6 +5,7 @@ import { EventEmitter } from "@posva/event-emitter";
 // Import Internal Dependencies
 import type { World, WorldDefaultContext } from "./World.ts";
 import { IntegerIncrement } from "./generators/IntegerIncrement.ts";
+import type { Logger } from "./Logger.ts";
 
 export type SceneLifecycleEvents = {
   awake: [];
@@ -23,10 +24,24 @@ export abstract class Scene<
   /** Set by SceneManager when the scene is activated. */
   world!: World<any, TContext>;
 
+  #logger: Logger | undefined;
+
   constructor(name: string) {
     super();
     this.id = Scene.Id.incr();
     this.name = name;
+  }
+
+  /**
+   * A child logger scoped to this scene's namespace (`scenes.<name>`).
+   * Created lazily on first access; safe to use from `awake()` onwards.
+   */
+  get logger(): Logger {
+    this.#logger ??= this.world.logger.child({
+      namespace: `Scene.${this.name}`
+    });
+
+    return this.#logger;
   }
 
   /**

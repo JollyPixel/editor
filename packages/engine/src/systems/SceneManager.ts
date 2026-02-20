@@ -11,6 +11,7 @@ import {
 import type { World, WorldDefaultContext } from "./World.ts";
 import type { Component } from "../components/types.ts";
 import type { Scene } from "./Scene.ts";
+import type { Logger } from "./Logger.ts";
 
 export type AppendedSceneEntry<TContext> = {
   scene: Scene<TContext>;
@@ -45,6 +46,7 @@ export class SceneManager<
   #pendingScene: Scene<TContext> | null = null;
   #sceneStartPending = false;
   #world: World<any, TContext> | null = null;
+  #logger!: Logger;
 
   #appendedScenes: Map<number, AppendedSceneEntry<TContext>> = new Map();
   #appendedScenesPendingStart: Set<number> = new Set();
@@ -77,6 +79,7 @@ export class SceneManager<
     world: World<any, TContext>
   ): void {
     this.#world = world;
+    this.#logger = world.logger.child({ namespace: "Systems.SceneManager" });
   }
 
   awake() {
@@ -93,6 +96,10 @@ export class SceneManager<
     scene: Scene<TContext>
   ): void {
     if (this.#currentScene !== null) {
+      this.#logger.debug("Tearing down current scene", {
+        scene: this.#currentScene.name
+      });
+
       for (const entry of this.#appendedScenes.values()) {
         this.emit("sceneRemoved", entry.scene);
         entry.scene.destroy();
@@ -115,6 +122,10 @@ export class SceneManager<
       this.#registeredActors.clear();
       this.#actorsByName.clear();
     }
+
+    this.#logger.info("Scene changed", {
+      scene: scene.name
+    });
 
     scene.world = this.#world!;
     this.#currentScene = scene;
@@ -140,6 +151,8 @@ export class SceneManager<
   appendScene(
     scene: Scene<TContext>
   ): void {
+    this.#logger.debug("Appending scene", { scene: scene.name });
+
     const snapshot = new Set(this.#registeredActors);
 
     scene.world = this.#world!;
@@ -185,6 +198,10 @@ export class SceneManager<
     id: number,
     entry: AppendedSceneEntry<TContext>
   ): void {
+    this.#logger.debug("Removing appended scene", {
+      scene: entry.scene.name
+    });
+
     this.emit("sceneRemoved", entry.scene);
     entry.scene.destroy();
 
