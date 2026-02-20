@@ -11,6 +11,9 @@ import {
   AssetRegistry,
   type AssetLoaderContext
 } from "./Registry.ts";
+import {
+  Logger
+} from "../Logger.ts";
 
 export type AssetOnProgressCallback = (
   progress: number,
@@ -32,6 +35,15 @@ export class AssetManager {
   autoload = false;
   #hasAutoloadTimeout = false;
   #pendingOptions: Map<string, unknown> = new Map();
+  #logger = new Logger();
+
+  useLogger(
+    logger: Logger
+  ) {
+    this.#logger = logger.child({ namespace: "Systems.AssetManager" });
+
+    return this;
+  }
 
   load<TReturn = unknown, TOptions = unknown>(
     assetOrPath: Asset<TReturn, TOptions> | string,
@@ -43,6 +55,11 @@ export class AssetManager {
     }
 
     const key = asset.toString();
+    this.#logger.debug("Requesting asset load", {
+      asset: key,
+      type: asset.type,
+      options
+    });
 
     if (!this.assets.has(key)) {
       this.waiting.enqueue(asset);
@@ -68,6 +85,8 @@ export class AssetManager {
   get<TReturn>(
     path: string
   ): TReturn {
+    this.#logger.debug("Retrieving asset", { asset: path });
+
     if (this.assets.has(path)) {
       return this.assets.get(path) as TReturn;
     }
@@ -86,7 +105,7 @@ export class AssetManager {
       this.#hasAutoloadTimeout = true;
       setTimeout(() => {
         this.loadAssets(this.context)
-          .catch(console.error);
+          .catch((error) => this.#logger.error("Failed to load assets", { error }));
         this.#hasAutoloadTimeout = false;
       });
     }
@@ -104,10 +123,17 @@ export class AssetManager {
     }
 
     const { onStart } = options;
+    this.#logger.info("Starting asset loading", {
+      count: assets.length
+    });
 
     const loadAsset = async(asset: Asset): Promise<void> => {
       const loader = this.registry.getLoaderForType(asset.type);
       if (!loader) {
+        this.#logger.error(`No loader registered for asset type: ${asset.type}`, {
+          asset: asset.toString()
+        });
+
         throw new Error(`No loader registered for asset type: ${asset.type}`);
       }
 
@@ -122,11 +148,14 @@ export class AssetManager {
         this.assets.set(key, result);
       }
       catch (cause) {
+        this.#logger.error(`Failed to load asset "${asset.toString()}"`, { cause });
+
         throw new Error(`Failed to load asset "${asset.toString()}"`, { cause });
       }
     };
 
-    const loadingPromises = assets.map((asset) => loadAsset(asset));
-    await Promise.all(loadingPromises);
+    await Promise.all(
+      assets.map((asset) => loadAsset(asset))
+    );
   }
 }

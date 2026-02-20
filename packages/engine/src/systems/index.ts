@@ -11,6 +11,12 @@ export type {
   AssetLoaderOptions
 } from "./asset/Registry.ts";
 
+export {
+  Logger,
+  type LogLevel,
+  type LoggerOptions,
+  type LoggerChildOptions
+} from "./Logger.ts";
 export * from "./World.ts";
 export * from "./Scene.ts";
 export * from "./FixedTimeStep.ts";

@@ -125,7 +125,9 @@ export class ThreeRenderer<
     return this;
   }
 
-  setEffects(...effects: Pass[]): this {
+  setEffects(
+    ...effects: Pass[]
+  ): this {
     if (!(this.renderStrategy instanceof ComposerRenderStrategy)) {
       console.warn(
         "ThreeRenderer.setEffects: called in direct render mode — effects are ignored. Call setRenderMode(\"composer\") first."
