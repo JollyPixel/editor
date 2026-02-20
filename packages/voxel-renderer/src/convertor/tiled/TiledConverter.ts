@@ -14,12 +14,14 @@ import {
 
 import type {
   VoxelWorldJSON,
-  VoxelLayerJSON,
-  VoxelEntryKey,
   VoxelObjectLayerJSON,
   VoxelObjectJSON,
   VoxelObjectProperties
 } from "../../serialization/VoxelSerializer.ts";
+import type {
+  VoxelLayerJSON,
+  VoxelEntryKey
+} from "../../world/VoxelLayer.ts";
 import type { TilesetDefinition } from "../../tileset/types.ts";
 import type { BlockDefinition } from "../../blocks/BlockDefinition.ts";
 import type { BlockShapeID } from "../../blocks/BlockShape.ts";
@@ -106,7 +108,17 @@ export class TiledConverter {
     map: TiledMap,
     options: TiledConverterOptions
   ): VoxelWorldJSON {
-    const tileSets = map.tilesets.map((ts) => new TileSet(ts));
+    const tileSets: TileSet[] = [];
+    for (const ts of map.tilesets) {
+      if (!ts.tileheight) {
+        ts.tileheight = map.tileheight;
+      }
+      if (!ts.tilewidth) {
+        ts.tilewidth = map.tilewidth;
+      }
+
+      tileSets.push(new TileSet(ts));
+    }
 
     const tilesetIds = new Map<number, string>();
     for (let i = 0; i < map.tilesets.length; i++) {
@@ -306,6 +318,7 @@ function convertTileLayer(
     name: layer.name,
     visible: layer.visible,
     order: layerOrder,
+    properties: flattenProperties(layer.properties),
     voxels
   };
 }

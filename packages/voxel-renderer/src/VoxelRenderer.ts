@@ -34,7 +34,10 @@ import {
   type TilesetDefinition
 } from "./tileset/TilesetManager.ts";
 import { VoxelWorld } from "./world/VoxelWorld.ts";
-import { VoxelLayer } from "./world/VoxelLayer.ts";
+import {
+  VoxelLayer,
+  type VoxelLayerConfigurableOptions
+} from "./world/VoxelLayer.ts";
 import { VoxelChunk } from "./world/VoxelChunk.ts";
 import type { VoxelEntry, VoxelCoord } from "./world/types.ts";
 import { packTransform, type FACE } from "./utils/math.ts";
@@ -307,10 +310,23 @@ export class VoxelRenderer extends ActorComponent {
     });
   }
 
-  addLayer(
+  getLayer(
     name: string
+  ): VoxelLayer | undefined {
+    return this.world.getLayer(name);
+  }
+
+  addLayer(
+    name: string,
+    options: VoxelLayerConfigurableOptions = {}
   ): VoxelLayer {
-    return this.world.addLayer(name);
+    return this.world.addLayer(name, options);
+  }
+
+  removeLayer(
+    name: string
+  ): boolean {
+    return this.world.removeLayer(name);
   }
 
   setLayerOffset(

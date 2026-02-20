@@ -94,9 +94,25 @@ readonly serializer: VoxelSerializer;
 
 ### Methods
 
-#### `addLayer(name: string): VoxelLayer`
+#### `getLayer(name: string): VoxelLayer`
+
+Find a layer or `null` if none is found with **name**.
+
+#### `addLayer(name: string, options?: VoxelLayerConfigurableOptions): VoxelLayer`
 
 Creates and returns a new named layer.
+
+options is described by the following interface:
+```ts
+interface VoxelLayerConfigurableOptions {
+  visible?: boolean;
+  properties?: Record<string, any>;
+}
+```
+
+#### `removeLayer(name: string): VoxelLayer`
+
+Remove and returns a boolean confirming layer deletion.
 
 #### `setLayerOffset(name: string, offset: VoxelCoord): void`
 

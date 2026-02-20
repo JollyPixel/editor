@@ -53,9 +53,6 @@ export {
 // Serialization
 export {
   VoxelSerializer,
-  type VoxelEntryKey,
-  type VoxelLayerJSON,
-  type VoxelEntryJSON,
   type VoxelWorldJSON,
   type VoxelObjectJSON,
   type VoxelObjectLayerJSON,
@@ -74,6 +71,10 @@ export {
 export { VoxelWorld } from "./world/VoxelWorld.ts";
 export {
   VoxelLayer,
+  type VoxelEntryKey,
+  type VoxelEntryJSON,
+  type VoxelLayerJSON,
+  type VoxelLayerConfigurableOptions,
   type VoxelLayerOptions
 } from "./world/VoxelLayer.ts";
 export { VoxelChunk, DEFAULT_CHUNK_SIZE } from "./world/VoxelChunk.ts";

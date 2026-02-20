@@ -2,7 +2,10 @@
 import type { Vector3Like } from "three";
 
 // Import Internal Dependencies
-import { VoxelLayer } from "./VoxelLayer.ts";
+import {
+  VoxelLayer,
+  type VoxelLayerConfigurableOptions
+} from "./VoxelLayer.ts";
 import { VoxelChunk, DEFAULT_CHUNK_SIZE } from "./VoxelChunk.ts";
 import type { VoxelEntry, VoxelCoord } from "./types.ts";
 import { FACE_OFFSETS } from "../mesh/math.ts";
@@ -32,13 +35,15 @@ export class VoxelWorld {
   // --- Layer management --- //
 
   addLayer(
-    name: string
+    name: string,
+    options: VoxelLayerConfigurableOptions = {}
   ): VoxelLayer {
     const layer = new VoxelLayer({
       id: `layer_${kLayerIdCounter++}`,
       name,
       order: this.#layers.length,
-      chunkSize: this.chunkSize
+      chunkSize: this.chunkSize,
+      ...options
     });
     this.#layers.push(layer);
     this.#sortLayers();

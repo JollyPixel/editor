@@ -5,12 +5,36 @@ import type { Vector3Like } from "three";
 import { VoxelChunk } from "./VoxelChunk.ts";
 import type { VoxelEntry, VoxelCoord } from "./types.ts";
 
-export interface VoxelLayerOptions {
+/**
+ * x,y,z voxel positions are serialised as "x,y,z" keys in a sparse map for
+ */
+export type VoxelEntryKey = `${number},${number},${number}`;
+
+export interface VoxelEntryJSON {
+  block: number;
+  transform: number;
+}
+
+export interface VoxelLayerJSON {
+  id: string;
+  name: string;
+  visible: boolean;
+  order: number;
+  offset?: { x: number; y: number; z: number; };
+  properties?: Record<string, any>;
+  voxels: Record<VoxelEntryKey, VoxelEntryJSON>;
+}
+
+export interface VoxelLayerConfigurableOptions {
+  visible?: boolean;
+  properties?: Record<string, any>;
+}
+
+export interface VoxelLayerOptions extends VoxelLayerConfigurableOptions {
   id: string;
   name: string;
   order: number;
   chunkSize: number;
-  visible?: boolean;
   offset?: VoxelCoord;
 }
 
@@ -25,6 +49,7 @@ export class VoxelLayer {
   visible: boolean;
   order: number;
   offset: VoxelCoord;
+  properties: Record<string, any> = {};
 
   #chunks = new Map<string, VoxelChunk>();
   #chunkSize: number;
@@ -32,12 +57,23 @@ export class VoxelLayer {
   constructor(
     options: VoxelLayerOptions
   ) {
-    this.id = options.id;
-    this.name = options.name;
-    this.order = options.order;
-    this.#chunkSize = options.chunkSize;
-    this.visible = options.visible ?? true;
-    this.offset = options.offset ?? { x: 0, y: 0, z: 0 };
+    const {
+      id,
+      name,
+      order,
+      chunkSize,
+      visible = true,
+      offset = { x: 0, y: 0, z: 0 },
+      properties = {}
+    } = options;
+
+    this.id = id;
+    this.name = name;
+    this.order = order;
+    this.#chunkSize = chunkSize;
+    this.visible = visible;
+    this.offset = structuredClone(offset);
+    this.properties = structuredClone(properties);
   }
 
   #createChunkKey(
@@ -183,5 +219,42 @@ export class VoxelLayer {
 
   get chunkCount(): number {
     return this.#chunks.size;
+  }
+
+  #exportVoxels(): Record<VoxelEntryKey, VoxelEntryJSON> {
+    const voxels: Record<
+      VoxelEntryKey,
+      VoxelEntryJSON
+    > = {};
+
+    for (const chunk of this.getChunks()) {
+      const wx0 = chunk.cx * this.#chunkSize + this.offset.x;
+      const wy0 = chunk.cy * this.#chunkSize + this.offset.y;
+      const wz0 = chunk.cz * this.#chunkSize + this.offset.z;
+
+      for (const [idx, entry] of chunk.entries()) {
+        const { lx, ly, lz } = chunk.fromLinearIndex(idx);
+        const key: VoxelEntryKey = `${wx0 + lx},${wy0 + ly},${wz0 + lz}`;
+
+        voxels[key] = {
+          block: entry.blockId,
+          transform: entry.transform
+        };
+      }
+    }
+
+    return voxels;
+  }
+
+  toJSON() {
+    return {
+      id: this.id,
+      name: this.name,
+      visible: this.visible,
+      order: this.order,
+      offset: { ...this.offset },
+      properties: { ...this.properties },
+      voxels: this.#exportVoxels()
+    };
   }
 }
