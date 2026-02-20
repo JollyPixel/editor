@@ -186,9 +186,32 @@ export default defineConfig({
         {
           items: [
             {
-              text: "Runtime",
-              link: "/runtime/Runtime"
-            }
+              text: "Introduction",
+              link: "/runtime/README"
+            },
+            {
+              text: "APIs",
+              items: [
+                {
+                  text: "Runtime",
+                  link: "/runtime/Runtime"
+                }
+              ]
+            },
+            {
+              text: "Supported platforms",
+              items: [
+                {
+                  text: "Desktop",
+                  link: "/runtime/platforms/desktop"
+                },
+                {
+                  text: "Web",
+                  link: "/runtime/platforms/web"
+                }
+              ]
+            },
+
           ]
         }
       ],
