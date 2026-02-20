@@ -71,19 +71,15 @@ describe("Systems.SceneManager", () => {
 
     // @ts-expect-error
     sceneManager.registerActor(actor);
-    // @ts-expect-error
     sceneManager.beginFrame();
 
     // Actor should be in cached actors (used for update/fixedUpdate)
-    // @ts-expect-error
     sceneManager.update(kDeltaTime);
     assert.strictEqual(actor.update.mock.calls.length, 1);
 
     // @ts-expect-error
     sceneManager.unregisterActor(actor);
-    // @ts-expect-error
     sceneManager.beginFrame();
-    // @ts-expect-error
     sceneManager.update(kDeltaTime);
 
     // Should not have additional update calls after unregister

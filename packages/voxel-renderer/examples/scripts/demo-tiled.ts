@@ -8,10 +8,9 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import {
-  VoxelRenderer,
-  TiledConverter,
-  type TiledMap
+  VoxelRenderer
 } from "../../src/index.ts";
+import { VoxelMap } from "./components/VoxelMap.ts";
 import { createExamplesMenu } from "./utils/menu.ts";
 
 const canvas = document.querySelector("canvas") as HTMLCanvasElement | null;
@@ -47,29 +46,16 @@ world.createActor("camera")
 
 // ── VoxelRenderer ─────────────────────────────────────────────────────────────
 // No blocks or layers supplied here — load() will register them from the JSON.
-const voxelMap = world.createActor("map")
-  .addComponentAndGet(VoxelRenderer, {
+world.createActor("map")
+  .addComponent(VoxelRenderer, {
     alphaTest: 0.1,
     material: "lambert"
-  });
+  })
+  .addComponent(VoxelMap);
 
-// ── Load and convert the Tiled map ────────────────────────────────────────────
-async function main(): Promise<void> {
-  const tiledMap = await fetch("tilemap/experimental_map.tmj")
-    .then((r) => r.json()) as TiledMap;
-
-  const worldJson = new TiledConverter().convert(tiledMap, {
-    // Map Tiled .tsx source references to the matching .png files served from
-    // public/tilemap/ (spaces in filenames are intentional — Vite handles them).
-    resolveTilesetSrc: (tiledSource) => "tilemap/" + tiledSource.replace(/\.tsx$/, ".png"),
-    layerMode: "stacked"
-  });
-
-  // Kick off tileset loading + world deserialization concurrently with the
-  // runtime splash (~850 ms delay) so textures are ready before awake() runs.
-  voxelMap.load(worldJson).catch(console.error);
-  await loadRuntime(runtime);
-}
+// ── Load runtime ────────────────────────────────────────────
+await loadRuntime(runtime)
+  .catch(console.error);
 
 createExamplesMenu();
-main().catch(console.error);
+

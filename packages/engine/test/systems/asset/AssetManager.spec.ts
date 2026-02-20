@@ -192,7 +192,9 @@ describe("Systems.AssetManager", () => {
   });
 
   test("should pass options to the loader callback", async() => {
-    interface MyOptions { flipY: boolean; }
+    interface MyOptions {
+      flipY: boolean;
+    }
     let receivedOptions: MyOptions | undefined;
 
     assetManager.registry.loader<string, MyOptions>(
@@ -211,7 +213,9 @@ describe("Systems.AssetManager", () => {
   });
 
   test("should pass options through lazyLoad", async() => {
-    interface MyOptions { baseDir: string; }
+    interface MyOptions {
+      baseDir: string;
+    }
     let receivedOptions: MyOptions | undefined;
 
     assetManager.registry.loader<string, MyOptions>(
@@ -231,7 +235,9 @@ describe("Systems.AssetManager", () => {
   });
 
   test("should keep options from first call when same asset is loaded twice", async() => {
-    interface MyOptions { flipY: boolean; }
+    interface MyOptions {
+      flipY: boolean;
+    }
     let receivedOptions: MyOptions | undefined;
 
     assetManager.registry.loader<string, MyOptions>(
@@ -252,7 +258,9 @@ describe("Systems.AssetManager", () => {
   });
 
   test("should ignore options when asset is already cached", async() => {
-    interface MyOptions { flipY: boolean; }
+    interface MyOptions {
+      flipY: boolean;
+    }
     const receivedOptionsList: (MyOptions | undefined)[] = [];
 
     assetManager.registry.loader<string, MyOptions>(
