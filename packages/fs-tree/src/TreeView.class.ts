@@ -1,24 +1,45 @@
 // Import Internal Dependencies
-import { TreeViewSelector } from "./TreeViewSelector.class.ts";
+import {
+  TreeViewSelector
+} from "./TreeViewSelector.class.ts";
 
-interface DropLocation {
+export interface DropLocation {
   target: Element;
   where: "above" | "inside" | "below";
 }
 
-type DragStartCallback = (
+export type DragStartCallback = (
   event: DragEvent,
   node: HTMLLIElement
 ) => boolean;
-type DropCallback = (
+export type DropCallback = (
   event: DragEvent,
   dropLocation: DropLocation,
   orderedNodes: HTMLLIElement[]
 ) => boolean;
 
+/**
+ * Options for configuring the `TreeView` instance.
+ */
 export interface TreeViewOptions {
+  /**
+   * Callback invoked when a drag is initiated on a node.
+   * Return `false` to cancel the drag operation.
+   * @default null
+   */
   dragStartCallback?: DragStartCallback;
+
+  /**
+   * Callback invoked when a drop occurs.
+   * Return `false` to prevent reparenting of the dragged nodes.
+   * @default null
+   */
   dropCallback?: DropCallback;
+
+  /**
+   * When `true`, enables selecting multiple nodes in the tree.
+   * @default false
+   */
   multipleSelection?: boolean;
 }
 

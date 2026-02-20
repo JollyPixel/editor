@@ -25,26 +25,14 @@ a:hover {
 }
 
 main {
-  width: 400px;
+  width: calc(100% - 40px);
   position: relative;
   background-color: #fff;
-  border: 1px solid #888;
+  border: 1px solid #dfdfdf;
   flex: 1;
   margin: 20px !important;
   overflow-y: auto;
-}
-
-nav {
-  position: relative;
-  height: 50px;
-  display: flex;
-  background: #EEE;
-  margin-left: 20px;
-  padding: 5px;
-}
-
-nav * + * {
-  margin-left: 5px;
+  border-radius: 4px;
 }
 
 nav > .selected-nodes {

@@ -137,3 +137,8 @@ dist
 .pnp.*
 
 .claude
+
+nsecure-result.json
+temp/
+temp.js
+temp.mjs

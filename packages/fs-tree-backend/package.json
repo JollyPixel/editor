@@ -1,5 +1,5 @@
 {
-  "name": "@jolly-pixel/fs-tree",
+  "name": "@jolly-pixel/fs-tree-backend",
   "version": "1.0.0",
   "type": "module",
   "private": true,
@@ -9,6 +9,7 @@
     "prepublish": "rimraf ./dist && tsc -b",
     "test": "node --test test/**/*.test.ts",
     "build": "tsc",
+    "start-server": "node ./scripts/socket-server.ts",
     "preview": "vite"
   },
   "publishConfig": {
@@ -19,16 +20,26 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/JollyPixel/editor.git",
-    "directory": "packages/fs-tree"
+    "directory": "packages/fs-tree-backend"
   },
   "keywords": [],
   "files": [
     "dist"
   ],
+  "dependencies": {
+    "chokidar": "^5.0.0",
+    "digraph-js": "^2.2.3",
+    "lodash.set": "^4.3.2",
+    "ts-pattern": "^5.7.1"
+  },
   "directories": {
     "doc": "docs",
     "test": "test"
   },
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@types/lodash.set": "^4.3.9",
+    "socket.io": "^4.8.1"
+  }
 }
