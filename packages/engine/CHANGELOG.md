@@ -1,5 +1,13 @@
 # @jolly-pixel/engine
 
+## 2.5.0
+
+### Minor Changes
+
+- [#194](https://github.com/JollyPixel/editor/pull/194) [`0db96b9`](https://github.com/JollyPixel/editor/commit/0db96b9f165c06e113e36b49be91715b7bd332a3) Thanks [@fraxken](https://github.com/fraxken)! - Remove old tiled components and enhance Asset loading with options & new type safety
+
+- [#198](https://github.com/JollyPixel/editor/pull/198) [`13028f1`](https://github.com/JollyPixel/editor/commit/13028f1e85b4f1044d5fb7f8ef0d02d00a9e66d4) Thanks [@fraxken](https://github.com/fraxken)! - Implement World debug mode and logger with namespaces
+
 ## 2.4.0
 
 ### Minor Changes
