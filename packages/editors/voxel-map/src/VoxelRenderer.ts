@@ -13,7 +13,6 @@ import {
   GridRenderer,
   RollOverRenderer
 } from "./components/index.ts";
-import { LayerTree } from "./LayerTree.ts";
 
 export interface VoxelRendererOptions {
   ratio?: number;
@@ -26,8 +25,6 @@ export class VoxelRenderer extends ActorComponent {
   raycaster = new THREE.Raycaster();
   lastIntersect: THREE.Intersection<THREE.Object3D> | null = null;
   plane: THREE.Mesh;
-
-  tree = new LayerTree();
 
   ratio: number = 50;
 
@@ -63,7 +60,7 @@ export class VoxelRenderer extends ActorComponent {
         .rotateX(-Math.PI / 2),
       new THREE.MeshBasicMaterial({ visible: this.debug })
     );
-    this.tree.root.objects.push(this.plane);
+    this.actor.object3D.add(this.plane);
 
     threeScene.add(
       this.plane,
@@ -83,7 +80,7 @@ export class VoxelRenderer extends ActorComponent {
   ) {
     if (intersect.object !== this.plane) {
       this.actor.world.sceneManager.getSource().remove(intersect.object);
-      this.tree.remove(intersect.object);
+      this.actor.object3D.remove(intersect.object);
     }
   }
 
@@ -103,7 +100,7 @@ export class VoxelRenderer extends ActorComponent {
     }).setPositionFromIntersection(intersect);
 
     this.actor.world.sceneManager.getSource().add(voxel);
-    this.tree.add(voxel);
+    this.actor.object3D.add(voxel);
   }
 
   update() {
@@ -119,7 +116,7 @@ export class VoxelRenderer extends ActorComponent {
       this.camera
     );
 
-    const intersects = this.raycaster.intersectObjects(this.tree.selected.objects, false);
+    const intersects = this.raycaster.intersectObjects(this.actor.object3D.children, false);
     if (intersects.length === 0) {
       return;
     }
