@@ -25,20 +25,33 @@ interface BlockDefinition {
 
 ```ts
 type BlockShapeID =
-  | "fullCube"
-  | "halfCubeBottom"
-  | "halfCubeTop"
+  | "cube"
+  | "slabBottom"
+  | "slabTop"
+  | "poleY"
+  | "poleX"
+  | "poleZ"
+  | "poleCross"
   | "ramp"
-  | "cornerInner"
-  | "cornerOuter"
-  | "pillar"
-  | "wedge"
+  | "rampFlip"
+  | "rampCornerInner"
+  | "rampCornerOuter"
+  | "rampCornerInnerFlip"
+  | "rampCornerOuterFlip"
+  | "stair"
+  | "stairCornerInner"
+  | "stairCornerOuter"
+  | "stairFlip"
+  | "stairCornerInnerFlip"
+  | "stairCornerOuterFlip"
   | (string & {}); // custom shapes registered at runtime
 ```
 
 > The `(string & {})` tail means any string compiles, but unknown IDs fail silently at
 > runtime — the voxel is skipped. Always use a built-in ID or one registered via
 > `BlockShapeRegistry.register()`.
+
+![Available block shapes](./shapes.png)
 
 ---
 

@@ -17,10 +17,9 @@ import {
 import { createExamplesMenu } from "./utils/menu.ts";
 
 // CONSTANTS
-const kTileSrc = "/tileset/Tileset001.png";
-const kTileSize = 32;
-const kCols = 9;
-const kRows = 4;
+const kTileSrc = "/tileset/UV_cube.png";
+const kCols = 3;
+const kRows = 3;
 const kGap = 1.15;
 
 // ── TilesetManager setup ───────────────────────────────────────────────────────
@@ -30,9 +29,7 @@ const tilesetManager = new TilesetManager();
 await tilesetManager.loadTileset({
   id: "main",
   src: kTileSrc,
-  tileSize: kTileSize,
-  cols: kCols,
-  rows: kRows
+  tileSize: 32
 });
 
 console.log("[tileset-demo] Tileset loaded. defaultTilesetId:", tilesetManager.defaultTilesetId);
@@ -140,27 +137,7 @@ for (let row = 0; row < kRows; row++) {
   }
 }
 
-// ── Textured cube (below the grid) ────────────────────────────────────────────
-
-const kCubeCol = 2;
-const kCubeRow = 1;
-const cubeUV = tilesetManager.getTileUV({ col: kCubeCol, row: kCubeRow });
-console.log(`[tileset-demo] Cube UV (col=${kCubeCol}, row=${kCubeRow}):`, cubeUV);
-
-const cubeMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), createTileMaterial(cubeUV));
-
-// Position the cube below the grid, centered
-const kCubeX = kCenterX - 0.5;
-const kCubeZ = kGridH + 3;
-cubeMesh.position.set(kCubeX, 0, kCubeZ);
-scene.add(cubeMesh);
-
 // ── Animation loop ─────────────────────────────────────────────────────────────
 
-let angle = 0;
-
 createExamplesMenu();
-startLoop(renderer, scene, camera, controls, labelEntries, () => {
-  angle += 0.005;
-  cubeMesh.rotation.y = angle;
-});
+startLoop(renderer, scene, camera, controls, labelEntries);
