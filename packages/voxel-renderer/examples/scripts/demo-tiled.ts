@@ -26,12 +26,12 @@ const { world } = runtime;
 
 // ── Scene ─────────────────────────────────────────────────────────────────────
 const scene = world.sceneManager.getSource();
-scene.background = new THREE.Color("#87ceeb");
+scene.background = new THREE.Color("#211331");
 
-const dirLight = new THREE.DirectionalLight(new THREE.Color("#ffffff"), 1.5);
+const dirLight = new THREE.DirectionalLight(new THREE.Color("#f6faff"), 2);
 dirLight.position.set(20, 40, 30);
 scene.add(
-  new THREE.AmbientLight(new THREE.Color("#ffffff"), 1.5),
+  new THREE.AmbientLight(new THREE.Color("#ffffff"), 2.5),
   dirLight
 );
 
@@ -48,7 +48,13 @@ world.createActor("camera")
 // No blocks or layers supplied here — load() will register them from the JSON.
 world.createActor("map")
   .addComponent(VoxelRenderer, {
-    material: "lambert"
+    material: "lambert",
+    materialCustomizer: (material) => {
+      if (material instanceof THREE.MeshStandardMaterial) {
+        material.metalness = 0;
+        material.roughness = 0.85;
+      }
+    }
   })
   .addComponent(VoxelBehavior);
 

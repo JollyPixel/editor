@@ -8,11 +8,24 @@ Each chunk is rebuilt only when its content changes, keeping GPU work proportion
 ## VoxelRendererOptions
 
 ```ts
+type MaterialCustomizerFn = (
+  material: THREE.MeshLambertMaterial | THREE.MeshStandardMaterial,
+  tilesetId: string
+) => void;
+
 interface VoxelRendererOptions {
   /** Side length of each chunk in voxels. Default: `16`. */
   chunkSize?: number;
+  
   /** Chunk material preset. `"standard"` enables PBR at higher GPU cost. Default: `"lambert"`. */
   material?: "lambert" | "standard";
+
+  /**
+   * Optional callback to customize each material after it is created.
+   * Called with the material instance and the tileset ID it corresponds to
+   */
+  materialCustomizer?: MaterialCustomizerFn;
+  
   /**
    * Fragments with alpha below this value are discarded.
    * Set `0` to disable cutout transparency. Default: `0.1`.
