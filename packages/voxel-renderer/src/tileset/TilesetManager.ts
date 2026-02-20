@@ -35,11 +35,11 @@ export interface TilesetEntry {
 /**
  * Manages tileset textures and computes UV regions for each tile.
  *
- * UV formula (Y-flipped for WebGL origin):
- *   offsetU = col * tileW / imgW
- *   offsetV = 1 - (row + 1) * tileH / imgH
- *   scaleU  = tileW / imgW
- *   scaleV  = tileH / imgH
+ * UV formula (Y-flipped for WebGL origin, half-texel inset to prevent bleeding):
+ *   offsetU = col * tileW / imgW + 0.5 / imgW
+ *   offsetV = 1 - (row + 1) * tileH / imgH + 0.5 / imgH
+ *   scaleU  = (tileW - 1) / imgW
+ *   scaleV  = (tileH - 1) / imgH
  *
  * A single shared THREE.Texture is kept per tileset — no per-tile cloning.
  * NearestFilter is used to preserve pixel-art crispness.
@@ -112,11 +112,18 @@ export class TilesetManager {
     const imgW = cols * tileSize;
     const imgH = rows * tileSize;
 
+    // Inset by half a texel on each side so UV edge vertices sample the
+    // centre of the first/last texel rather than the boundary between tiles.
+    // This prevents floating-point interpolation from bleeding into adjacent
+    // tiles in the atlas (the "white line between blocks" artifact).
+    const halfTexelU = 0.5 / imgW;
+    const halfTexelV = 0.5 / imgH;
+
     return {
-      offsetU: ref.col * tileSize / imgW,
-      offsetV: 1 - ((ref.row + 1) * tileSize / imgH),
-      scaleU: tileSize / imgW,
-      scaleV: tileSize / imgH
+      offsetU: ref.col * tileSize / imgW + halfTexelU,
+      offsetV: 1 - ((ref.row + 1) * tileSize / imgH) + halfTexelV,
+      scaleU: (tileSize - 1) / imgW,
+      scaleV: (tileSize - 1) / imgH
     };
   }
 
@@ -131,34 +138,6 @@ export class TilesetManager {
     return id ?
       this.#tilesets.get(id)?.texture :
       undefined;
-  }
-
-  /**
-   * Returns (or lazily creates) a MeshLambertMaterial using the tileset texture.
-   * The material is cached per-tileset to avoid redundant GPU uploads.
-   */
-  createMaterial(
-    tilesetId?: string
-  ): THREE.MeshLambertMaterial {
-    const id = tilesetId ?? this.#defaultTilesetId;
-    if (id === null) {
-      throw new Error("TilesetManager: no tilesets have been loaded.");
-    }
-
-    const entry = this.#tilesets.get(id);
-    if (!entry) {
-      throw new Error(`TilesetManager: tileset "${id}" is not loaded.`);
-    }
-
-    if (!entry.material) {
-      entry.material = new THREE.MeshLambertMaterial({
-        map: entry.texture,
-        side: THREE.FrontSide,
-        alphaTest: 0.1
-      });
-    }
-
-    return entry.material;
   }
 
   getDefinitions(): ResolvedTilesetDefinition[] {

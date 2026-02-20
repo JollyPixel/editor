@@ -81,10 +81,6 @@ Throws if no tileset is loaded or the referenced ID is unknown.
 
 Returns the shared texture for a tileset. Defaults to `defaultTilesetId`.
 
-#### `createMaterial(tilesetId?: string): THREE.MeshLambertMaterial`
-
-Lazily creates and caches a `MeshLambertMaterial` backed by the tileset texture.
-
 #### `getDefinitions(): Array<TilesetDefinition & { cols: number; rows: number }>`
 
 Returns all registered tileset definitions with `cols` and `rows` resolved from the image.

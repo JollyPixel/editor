@@ -43,6 +43,11 @@ import type { VoxelEntry, VoxelCoord } from "./world/types.ts";
 import { packTransform, type FACE } from "./utils/math.ts";
 import { FACE_OFFSETS } from "./mesh/math.ts";
 
+type MaterialCustomizerFn = (
+  material: THREE.MeshLambertMaterial | THREE.MeshStandardMaterial,
+  tilesetId: string
+) => void;
+
 export const VoxelRotation = {
   /** No rotation (default). */
   None: 0,
@@ -91,6 +96,13 @@ export interface VoxelRendererOptions {
    * is faster but only supports a simple diffuse map.
    */
   material?: "lambert" | "standard";
+
+  /**
+   * Optional callback to customize each material after it is created.
+   * Called with the material instance and the tileset ID it corresponds to
+   */
+  materialCustomizer?: MaterialCustomizerFn;
+
   /**
    * Optional list of layer names to create on initialization.
    */
@@ -145,6 +157,7 @@ export class VoxelRenderer extends ActorComponent {
    * One material per tileset ID. Created lazily; disposed on tileset reload or destroy.
    */
   #materials = new Map<string, THREE.MeshLambertMaterial | THREE.MeshStandardMaterial>();
+  #materialCustomizer?: MaterialCustomizerFn;
   #materialType: "lambert" | "standard";
   #alphaTest: number;
 
@@ -160,6 +173,7 @@ export class VoxelRenderer extends ActorComponent {
     const {
       chunkSize = 16,
       material = "lambert",
+      materialCustomizer,
       layers = [],
       rapier,
       blocks = [],
@@ -168,6 +182,7 @@ export class VoxelRenderer extends ActorComponent {
     } = options;
 
     this.#materialType = material;
+    this.#materialCustomizer = materialCustomizer;
     this.#alphaTest = alphaTest;
 
     this.world = new VoxelWorld(chunkSize);
@@ -422,7 +437,9 @@ export class VoxelRenderer extends ActorComponent {
       return material;
     }
 
-    const texture = this.tilesetManager.getTexture(tilesetId) ?? null;
+    const texture = this.tilesetManager.getTexture(
+      tilesetId
+    ) ?? null;
 
     if (this.#materialType === "standard") {
       material = new THREE.MeshStandardMaterial({
@@ -438,6 +455,7 @@ export class VoxelRenderer extends ActorComponent {
         alphaTest: this.#alphaTest
       });
     }
+    this.#materialCustomizer?.(material, tilesetId);
 
     this.#materials.set(tilesetId, material);
 

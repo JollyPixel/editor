@@ -104,31 +104,38 @@ describe("TilesetManager.getTileUV", () => {
     const manager = new TilesetManager();
     manager.registerTexture(makeDef("terrain", 16, 4, 4), mockTexture(64, 64));
 
-    it("tile (col=0, row=0): offsetU=0, offsetV=0.75, scaleU=0.25, scaleV=0.25", () => {
-      // offsetV = 1 - (0+1)/4 = 0.75
+    it("tile (col=0, row=0): offsetU/offsetV/scale (inset by half-texel)", () => {
+      // halfTexel = 0.5 / (cols*tileSize) = 0.5 / 64 = 0.0078125
+      // offsetU = 0 + halfTexel = 0.0078125
+      // offsetV = 1 - (0+1)/4 + halfTexel = 0.7578125
+      // scaleU = scaleV = (tileSize - 1) / imgW = 15/64 = 0.234375
       const uv = manager.getTileUV({ col: 0, row: 0 });
-      assert.ok(approxEqual(uv.offsetU, 0));
-      assert.ok(approxEqual(uv.offsetV, 0.75));
-      assert.ok(approxEqual(uv.scaleU, 0.25));
-      assert.ok(approxEqual(uv.scaleV, 0.25));
+      assert.ok(approxEqual(uv.offsetU, 0.0078125));
+      assert.ok(approxEqual(uv.offsetV, 0.7578125));
+      assert.ok(approxEqual(uv.scaleU, 15 / 64));
+      assert.ok(approxEqual(uv.scaleV, 15 / 64));
     });
 
-    it("tile (col=1, row=0): offsetU=0.25", () => {
+    it("tile (col=1, row=0): offsetU/offsetV (inset by half-texel)", () => {
+      // offsetU = 1*16/64 + halfTexel = 0.2578125
+      // offsetV = 0.7578125
       const uv = manager.getTileUV({ col: 1, row: 0 });
-      assert.ok(approxEqual(uv.offsetU, 0.25));
-      assert.ok(approxEqual(uv.offsetV, 0.75));
+      assert.ok(approxEqual(uv.offsetU, 0.2578125));
+      assert.ok(approxEqual(uv.offsetV, 0.7578125));
     });
 
-    it("tile (col=0, row=3) is the bottom row: offsetV=0", () => {
-      // offsetV = 1 - (3+1)/4 = 0
+    it("tile (col=0, row=3) is the bottom row: offsetV (inset by half-texel)", () => {
+      // offsetV = 1 - (3+1)/4 + halfTexel = 0.0078125
       const uv = manager.getTileUV({ col: 0, row: 3 });
-      assert.ok(approxEqual(uv.offsetV, 0));
+      assert.ok(approxEqual(uv.offsetV, 0.0078125));
     });
 
-    it("tile (col=3, row=3): offsetU=0.75, offsetV=0", () => {
+    it("tile (col=3, row=3): offsetU/offsetV (inset by half-texel)", () => {
+      // offsetU = 3*16/64 + halfTexel = 0.7578125
+      // offsetV = halfTexel = 0.0078125
       const uv = manager.getTileUV({ col: 3, row: 3 });
-      assert.ok(approxEqual(uv.offsetU, 0.75));
-      assert.ok(approxEqual(uv.offsetV, 0));
+      assert.ok(approxEqual(uv.offsetU, 0.7578125));
+      assert.ok(approxEqual(uv.offsetV, 0.0078125));
     });
   });
 
@@ -136,16 +143,20 @@ describe("TilesetManager.getTileUV", () => {
     const manager = new TilesetManager();
     manager.registerTexture(makeDef("small", 16, 2, 2), mockTexture(32, 32));
 
-    it("scaleU = scaleV = 0.5", () => {
+    it("scaleU = scaleV (inset by half-texel)", () => {
+      // cols=2, tileSize=16 => imgW=32, halfTexel=0.5/32=0.015625
+      // scale = (16 - 1) / 32 = 15/32 = 0.46875
       const uv = manager.getTileUV({ col: 0, row: 0 });
-      assert.ok(approxEqual(uv.scaleU, 0.5));
-      assert.ok(approxEqual(uv.scaleV, 0.5));
+      assert.ok(approxEqual(uv.scaleU, 15 / 32));
+      assert.ok(approxEqual(uv.scaleV, 15 / 32));
     });
 
-    it("tile (col=1, row=1): offsetU=0.5, offsetV=0", () => {
+    it("tile (col=1, row=1): offsetU/offsetV (inset by half-texel)", () => {
+      // offsetU = 1*16/32 + halfTexel = 0.515625
+      // offsetV = 1 - ((1+1)*16/32) + halfTexel = 0.015625
       const uv = manager.getTileUV({ col: 1, row: 1 });
-      assert.ok(approxEqual(uv.offsetU, 0.5));
-      assert.ok(approxEqual(uv.offsetV, 0));
+      assert.ok(approxEqual(uv.offsetU, 0.515625));
+      assert.ok(approxEqual(uv.offsetV, 0.015625));
     });
   });
 
@@ -155,8 +166,8 @@ describe("TilesetManager.getTileUV", () => {
     manager.registerTexture(makeDef("walls", 16, 2, 2), mockTexture(32, 32));
 
     const uv = manager.getTileUV({ col: 0, row: 0, tilesetId: "walls" });
-    // walls is 2-col, 2-row → scaleU=0.5
-    assert.ok(approxEqual(uv.scaleU, 0.5));
+    // walls is 2-col, 2-row → scaleU=(tileSize-1)/(cols*tileSize)=15/32
+    assert.ok(approxEqual(uv.scaleU, 15 / 32));
   });
 });
 
