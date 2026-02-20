@@ -1,7 +1,7 @@
 {
   "name": "@jolly-pixel/voxel.renderer",
   "description": "Jolly Pixel 3D Voxel Engine and Renderer",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
