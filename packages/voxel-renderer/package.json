@@ -12,7 +12,6 @@
     "test-only": "node --test \"test/**/*.spec.ts\"",
     "test": "c8 -r html npm run test-only"
   },
-  "private": true,
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
     "access": "public",
