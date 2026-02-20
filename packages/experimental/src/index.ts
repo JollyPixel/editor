@@ -4,7 +4,6 @@ import {
   Camera3DControls,
   AudioBackground,
   GlobalAudioManager,
-  TiledMapRenderer,
   TextRenderer,
   createViewHelper
 } from "@jolly-pixel/engine";
@@ -49,11 +48,11 @@ new Actor(world, { name: "camera" })
 //     sprite.animation.play("open", { loop: true, duration: 2.5 });
 //   });
 
-new Actor(world, { name: "tilemap" })
-  .addComponent(TiledMapRenderer, {
-    assetPath: "./assets/tilemaps/experimental_map.tmj",
-    orientation: "top-down"
-  });
+new Actor(world, { name: "tilemap" });
+// .addComponent(TiledMapRenderer, {
+//   assetPath: "./assets/tilemaps/experimental_map.tmj",
+//   orientation: "top-down"
+// });
 
 const textActor = new Actor(world, { name: "3d-text" })
   .addComponent(TextRenderer, {

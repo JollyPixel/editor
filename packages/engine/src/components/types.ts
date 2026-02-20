@@ -7,7 +7,6 @@ export type StrictComponentEnum =
   | "VoxelRenderer"
   | "SpriteRenderer"
   | "ModelRenderer"
-  | "TiledMapRenderer"
   | "TextRenderer";
 
 export type FreeComponentEnum = StrictComponentEnum | (string & {});

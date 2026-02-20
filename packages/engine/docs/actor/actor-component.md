@@ -22,7 +22,6 @@ The engine ships with several built-in components:
 | --------- | ---- |
 | [ModelRenderer](../components/renderers.md#modelrenderer) | Renders a 3D model (OBJ, FBX, glTF) |
 | [SpriteRenderer](../components/renderers.md#spriterenderer) | Renders a 2D sprite / spritesheet |
-| [TiledMapRenderer](../components/renderers.md#tiledmaprenderer) | Renders a Tiled map |
 | [TextRenderer](../components/renderers.md#textrenderer) | Renders 3D text |
 | [Camera3DControls](../components/camera-3d-controls.md) | First-person camera with WASD + mouse look |
 | [Behavior](../components/behavior.md) | Custom scripting with lifecycle hooks and decorators |
@@ -72,7 +71,6 @@ export type StrictComponentEnum =
   | "VoxelRenderer"
   | "SpriteRenderer"
   | "ModelRenderer"
-  | "TiledMapRenderer"
   | "TextRenderer";
 
 export type FreeComponentEnum = StrictComponentEnum | (string & {});

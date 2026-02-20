@@ -89,31 +89,6 @@ sprite.setOpacity(0.8);
 sprite.animation.play("run", { duration: 0.6, loop: true });
 ```
 
-## TiledMapRenderer
-
-Renders a [Tiled](https://www.mapeditor.org/) map exported as
-`.tmj` (JSON format). Each tile becomes a 3D cube, and object
-layers are converted into child actors.
-
-```ts
-import { Actor, TiledMapRenderer } from "@jolly-pixel/engine";
-
-const actor = new Actor(world, { name: "Level" });
-actor.addComponent(TiledMapRenderer, {
-  assetPath: "maps/level1.tmj",
-  orientation: "platformer"
-});
-```
-
-| Option | Default | Description |
-| ------ | ------- | ----------- |
-| `assetPath` | — | Path to the `.tmj` map file |
-| `orientation` | `"platformer"` | `"top-down"` rotates the map flat on the XZ plane |
-
-On `awake` the component loads the map data and tileset textures
-through the [asset system](../asset.md), creates a textured cube
-for every tile, and spawns child actors for each object layer.
-
 ## TextRenderer
 
 Renders 3D extruded text using a Three.js typeface font

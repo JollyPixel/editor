@@ -25,41 +25,51 @@ export class AssetManager {
   registry = new AssetRegistry();
   waiting = new AssetQueue();
   assets: Map<string, unknown> = new Map();
-  context: AssetLoaderContext = { manager: new THREE.LoadingManager() };
+  context: AssetLoaderContext = {
+    manager: new THREE.LoadingManager()
+  };
 
   autoload = false;
   #hasAutoloadTimeout = false;
+  #pendingOptions: Map<string, unknown> = new Map();
 
-  load<T = unknown>(
-    assetOrPath: Asset | string
-  ): LazyAsset<T> {
+  load<TReturn = unknown, TOptions = unknown>(
+    assetOrPath: Asset<TReturn, TOptions> | string,
+    options?: TOptions
+  ): LazyAsset<TReturn, TOptions> {
     const asset = Asset.from(assetOrPath);
     if (asset.type === "unknown") {
       asset.type = this.registry.getTypeForExt(asset.longExt);
     }
 
-    const path = asset.toString();
+    const key = asset.toString();
 
-    if (!this.assets.has(path)) {
+    if (!this.assets.has(key)) {
       this.waiting.enqueue(asset);
+      if (options !== undefined && !this.#pendingOptions.has(key)) {
+        this.#pendingOptions.set(key, options);
+      }
       this.scheduleAutoload(this.context);
     }
 
     return {
       asset,
-      get: () => this.get<T>(path)
+      get: () => this.get<TReturn>(key)
     };
   }
 
-  lazyLoad<T = unknown>(): (assetOrPath: Asset | string) => LazyAsset<T> {
-    return (assetOrPath) => this.load<T>(assetOrPath);
+  lazyLoad<TReturn = unknown, TOptions = unknown>(): (
+  assetOrPath: Asset<TReturn, TOptions> | string,
+  options?: TOptions
+  ) => LazyAsset<TReturn, TOptions> {
+    return (assetOrPath, options) => this.load<TReturn, TOptions>(assetOrPath, options);
   }
 
-  get<T>(
+  get<TReturn>(
     path: string
-  ): T {
+  ): TReturn {
     if (this.assets.has(path)) {
-      return this.assets.get(path) as T;
+      return this.assets.get(path) as TReturn;
     }
 
     throw new Error(`Asset "${path}" is not yet loaded.`);
@@ -104,8 +114,12 @@ export class AssetManager {
       onStart?.(asset);
 
       try {
-        const result = await loader(asset, context);
-        this.assets.set(asset.toString(), result);
+        const key = asset.toString();
+        const pendingOptions = this.#pendingOptions.get(key);
+        this.#pendingOptions.delete(key);
+
+        const result = await loader(asset, context, pendingOptions);
+        this.assets.set(key, result);
       }
       catch (cause) {
         throw new Error(`Failed to load asset "${asset.toString()}"`, { cause });

@@ -8,11 +8,11 @@ import { AssetManager } from "../../../src/systems/asset/Manager.ts";
 
 describe("Systems.AssetManager", () => {
   let assetManager: AssetManager;
-  let mockLoader: (asset: Asset, context: any) => Promise<string>;
+  let mockLoader: (asset: Asset, context: any, options?: any) => Promise<string>;
 
   beforeEach(() => {
     assetManager = new AssetManager();
-    mockLoader = (asset, _context) => Promise.resolve(`loaded-${asset.name}`);
+    mockLoader = (asset, _context, _options) => Promise.resolve(`loaded-${asset.name}`);
   });
 
   test("should initialize with default values", () => {
@@ -189,5 +189,89 @@ describe("Systems.AssetManager", () => {
     assert.strictEqual(assetManager.waiting.size, 0);
     assert.strictEqual(loadCount, 1);
     assert.strictEqual(handle1.get(), handle2.get());
+  });
+
+  test("should pass options to the loader callback", async() => {
+    interface MyOptions { flipY: boolean; }
+    let receivedOptions: MyOptions | undefined;
+
+    assetManager.registry.loader<string, MyOptions>(
+      { type: "tilemap", extensions: [".tmj"] },
+      async(asset, _context, options) => {
+        receivedOptions = options;
+
+        return `loaded-${asset.name}`;
+      }
+    );
+
+    assetManager.load<string, MyOptions>("/maps/level1.tmj", { flipY: true });
+    await assetManager.loadAssets(assetManager.context);
+
+    assert.deepStrictEqual(receivedOptions, { flipY: true });
+  });
+
+  test("should pass options through lazyLoad", async() => {
+    interface MyOptions { baseDir: string; }
+    let receivedOptions: MyOptions | undefined;
+
+    assetManager.registry.loader<string, MyOptions>(
+      { type: "tilemap", extensions: [".tmj"] },
+      async(asset, _context, options) => {
+        receivedOptions = options;
+
+        return `loaded-${asset.name}`;
+      }
+    );
+
+    const lazyLoader = assetManager.lazyLoad<string, MyOptions>();
+    lazyLoader("/maps/level1.tmj", { baseDir: "assets/" });
+    await assetManager.loadAssets(assetManager.context);
+
+    assert.deepStrictEqual(receivedOptions, { baseDir: "assets/" });
+  });
+
+  test("should keep options from first call when same asset is loaded twice", async() => {
+    interface MyOptions { flipY: boolean; }
+    let receivedOptions: MyOptions | undefined;
+
+    assetManager.registry.loader<string, MyOptions>(
+      { type: "tilemap", extensions: [".tmj"] },
+      async(asset, _context, options) => {
+        receivedOptions = options;
+
+        return `loaded-${asset.name}`;
+      }
+    );
+
+    assetManager.load<string, MyOptions>("/maps/level1.tmj", { flipY: true });
+    // Second call with different options — first call wins
+    assetManager.load<string, MyOptions>("/maps/level1.tmj", { flipY: false });
+    await assetManager.loadAssets(assetManager.context);
+
+    assert.deepStrictEqual(receivedOptions, { flipY: true });
+  });
+
+  test("should ignore options when asset is already cached", async() => {
+    interface MyOptions { flipY: boolean; }
+    const receivedOptionsList: (MyOptions | undefined)[] = [];
+
+    assetManager.registry.loader<string, MyOptions>(
+      { type: "tilemap", extensions: [".tmj"] },
+      async(asset, _context, options) => {
+        receivedOptionsList.push(options);
+
+        return `loaded-${asset.name}`;
+      }
+    );
+
+    assetManager.load<string, MyOptions>("/maps/level1.tmj", { flipY: true });
+    await assetManager.loadAssets(assetManager.context);
+
+    // Asset is now cached — options on re-load are ignored
+    assetManager.load<string, MyOptions>("/maps/level1.tmj", { flipY: false });
+    await assetManager.loadAssets(assetManager.context);
+
+    assert.strictEqual(receivedOptionsList.length, 1);
+    assert.deepStrictEqual(receivedOptionsList[0], { flipY: true });
   });
 });
