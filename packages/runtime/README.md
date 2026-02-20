@@ -8,12 +8,22 @@
 
 ## 💡 Features
 
-- Web runtime with [Vite](https://vite.dev/)
-- Desktop runtime with [Electron.js](https://www.electronjs.org/)
+- Web runtime with [Vite][vite]
+- Desktop runtime with [Electron.js][electron]
+- Include [stats.js](https://github.com/mrdoob/stats.js)
+- GPU and FPS detection with [detect-gpu](https://github.com/pmndrs/detect-gpu)
+
+Commin in future releases:
+
+- Customizable Splash screen
+- Plugins
+
+> [!WARNING]
+> This package is still in development and the API will change and evolve very quickly.
 
 ## 💃 Getting Started
 
-This package is available in the Node Package Repository and can be easily installed with [npm](https://docs.npmjs.com/getting-started/what-is-npm) or [yarn](https://yarnpkg.com).
+This package is available in the Node Package Repository and can be easily installed with [npm][npm] or [yarn][yarn].
 
 ```bash
 $ npm i @jolly-pixel/runtime
@@ -23,7 +33,9 @@ $ yarn add @jolly-pixel/runtime
 
 ## 👀 Usage example
 
-The runtime needs a `<canvas>` element to render into. Start by creating an HTML file with a canvas and a module script entry point:
+The runtime needs a `<canvas>` element to render into.
+
+Start by creating an **HTML** file with a canvas and an ECMAScript `module` script entry point:
 
 ```html
 <!DOCTYPE html>
@@ -34,6 +46,7 @@ The runtime needs a `<canvas>` element to render into. Start by creating an HTML
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Game</title>
   <link rel="stylesheet" href="./main.css">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />z
 </head>
 
 <canvas tabindex="-1"></canvas>
@@ -46,7 +59,11 @@ The runtime needs a `<canvas>` element to render into. Start by creating an HTML
 > [!TIP]
 > The `tabindex="-1"` attribute on the canvas allows it to receive keyboard focus, which is required for capturing input events.
 
-Then in your main script, create a `Runtime` instance and call `loadRuntime` to bootstrap everything (GPU detection, asset loading screen, game loop startup):
+Then in your main script, create a `Runtime` instance and call `loadRuntime` to bootstrap everything:
+
+- GPU detection
+- Loading splash screen
+- World (automatically handle the loop)
 
 ```ts
 import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
@@ -68,72 +85,12 @@ loadRuntime(runtime)
   .catch(console.error);
 ```
 
-### Electron.js support
+For a more comprehensive illustration, we have created a mini game for [Brackeys 15][brackeys-2026-1]. The official JollyPixel documentation also come with an [Hello World](https://jollypixel.github.io/editor/engine/guides/hello-world.html) guide.
 
-The runtime also works inside an [Electron](https://www.electronjs.org/) application.
-Build your project with Vite first, then load the generated `dist/index.html` from the main process.
+Please refer to the dedicated guides below for additional information specific to your target:
 
-Create an `electron/main.js` file to set up the `BrowserWindow`:
-
-```js
-import { fileURLToPath } from "node:url";
-import path from "node:path";
-
-import { app, BrowserWindow } from "electron";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-function createWindow() {
-  const win = new BrowserWindow({
-    width: 800,
-    height: 600,
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      enableRemoteModule: false,
-      preload: path.join(__dirname, "preload.js")
-    }
-  });
-
-  win.loadFile(
-    path.join(__dirname, "../dist/index.html")
-  );
-}
-
-app.whenReady().then(createWindow);
-
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-  }
-});
-```
-
-Then add a `preload.js` alongside it to safely expose IPC channels
-to the renderer:
-
-```js
-const { contextBridge, ipcRenderer } = require("electron");
-
-contextBridge.exposeInMainWorld("electron", {
-  send: (channel, data) => ipcRenderer.send(channel, data),
-  on: (channel, func) => ipcRenderer.on(
-    channel, (_, ...args) => func(...args)
-  )
-});
-```
-
-Finally, set the `main` field in your `package.json` to point to the Electron entry and add the relevant scripts:
-
-```json
-{
-  "main": "electron/main.js",
-  "scripts": {
-    "start": "npm run build && electron .",
-    "build": "vite build"
-  }
-}
-```
+- [Desktop](./docs/platforms/electron.md)
+- [Web](./docs/platforms/vite.md)
 
 > [!NOTE]
 > The Vite web runtime and the Electron desktop runtime share the exact same HTML file and application code. Only the shell that loads `dist/index.html` differs.
@@ -158,10 +115,18 @@ export interface LoadRuntimeOptions {
 }
 ```
 
-### Custom loader component
+### 🎨 Custom loader and splash screen
 
-In future releases, the loading component will be customizable.
+🚧 The loading component (splash screen) will be customizable in future releases.
 
-## License
+## 📃 License
 
 MIT
+
+<!-- Reference-style links for DRYness -->
+
+[vite]: https://vite.dev/
+[electron]: https://www.electronjs.org/
+[npm]: https://docs.npmjs.com/getting-started/what-is-npm
+[yarn]: https://yarnpkg.com
+[brackeys-2026-1]: https://github.com/JollyPixel/games/tree/main/games/brackeys-2026-1
