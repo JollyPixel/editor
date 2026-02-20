@@ -4,7 +4,7 @@ import {
   Camera3DControls
 } from "@jolly-pixel/engine";
 import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
-import { TreeView } from "@jolly-pixel/fs-tree/tree-view";
+import { TreeView } from "@jolly-pixel/fs-tree";
 
 // Import Internal Dependencies
 import { VoxelRenderer } from "./VoxelRenderer.ts";

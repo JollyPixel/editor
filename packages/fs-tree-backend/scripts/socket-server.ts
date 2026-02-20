@@ -2,7 +2,7 @@
 import { Server } from "socket.io";
 
 // Import Internal Dependencies
-import { FSTree } from "../src/backend/FSTree.class.ts";
+import { FSTree } from "../src/FSTree.class.ts";
 
 const [treeRootPath] = process.argv.slice(2);
 if (typeof treeRootPath !== "string") {

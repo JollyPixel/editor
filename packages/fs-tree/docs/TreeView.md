@@ -1,106 +1,89 @@
 # TreeView
 
-A modern fork/re-implementation of <a href="https://github.com/sparklinlabs/dnd-tree-view">dnd-tree-view</a> from Sparklin Labs, rewritten to be fully compatible with the Web Platform using <code>EventTarget</code> and native <code>ES2022</code> features.
+Tree nodes come in two flavors: an `item` or a `group`.
 
-## Usage example
+- An `item` is a leaf node (no nested children) and represents a single selectable entry.
+- A `group` is a folder-like node rendered as an `li.group` followed by an `ol.children` element that contains its child `li` elements; groups include a toggle control and can be collapsed or expanded.
+
+![Tree-View](./tree-view-white.png)
+
+## Constructor Options
 
 ```ts
-import { TreeView } from "@jolly-pixel/tree-view";
+export type DragStartCallback = (
+  event: DragEvent,
+  node: HTMLLIElement
+) => boolean;
+export type DropCallback = (
+  event: DragEvent,
+  dropLocation: DropLocation,
+  orderedNodes: HTMLLIElement[]
+) => boolean;
 
-const container = document.getElementById("tree") as HTMLDivElement;
+/**
+ * Options for configuring the `TreeView` instance.
+ */
+export interface TreeViewOptions {
+  /**
+   * Callback invoked when a drag is initiated on a node.
+   * Return `false` to cancel the drag operation.
+   * @default null
+   */
+  dragStartCallback?: DragStartCallback;
 
-const tree = new TreeView(container, {
-  multipleSelection: true,
-  dragStartCallback(event, node) {
-    // Optional: cancel drag for some nodes
-    console.log("Dragging", node.textContent);
+  /**
+   * Callback invoked when a drop occurs.
+   * Return `false` to prevent reparenting of the dragged nodes.
+   * @default null
+   */
+  dropCallback?: DropCallback;
 
-    return true;
-  },
-  dropCallback(event, location, nodes) {
-    // Optional: handle drop and return false to cancel move
-    console.log("Dropped", nodes, "at", location);
-
-    return true;
-  }
-});
-
-const group = document.createElement("li");
-group.textContent = "Group A";
-
-const item = document.createElement("li");
-item.textContent = "Item A.1";
-
-tree.append(group, "group");
-tree.append(item, "item", group);
-```
-
-With a minimal CSS
-
-```css
-.tree {
-  list-style: none;
-}
-
-.tree .group > .toggle::before {
-  content: "▸";
-  display: inline-block;
-  margin-right: 5px;
-  cursor: pointer;
-}
-
-.tree .group.collapsed > .toggle::before {
-  content: "▾";
+  /**
+   * When `true`, enables selecting multiple nodes in the tree.
+   * @default false
+   */
+  multipleSelection?: boolean;
 }
 ```
-
-## API
-
-## constructor(container: HTMLDivElement, options?: TreeViewOptions)
-
-| Option              | Type                                                                            | Description                                           |
-| ------------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| `dragStartCallback` | `(event: DragEvent, node: HTMLLIElement) => boolean`                            | Called when a drag starts. Return `false` to cancel.  |
-| `dropCallback`      | `(event: DragEvent, location: DropLocation, nodes: HTMLLIElement[]) => boolean` | Called on drop. Return `false` to cancel move.        |
-| `multipleSelection` | `boolean`                                                                       | Enable Shift/Ctrl/Meta selection. Default is `false`. |
-
----
 
 ## Public Methods
 
-### `append(element: HTMLLIElement, type: "item" | "group", parentGroup?: HTMLLIElement): HTMLLIElement`
+The following is a compact TypeScript representation of the public surface of the `TreeView` class.
 
-Append an item or group to the root or a given group.
+```ts
+export class TreeView extends EventTarget {
+  root: HTMLOListElement;
+  selector: TreeViewSelector;
 
-### `insertBefore(element: HTMLLIElement, type: "item" | "group", referenceElement: HTMLLIElement): HTMLLIElement`
+  constructor(container: HTMLDivElement, options?: TreeViewOptions);
 
-Insert a node before another.
+  scrollIntoView(element: Element): void;
+  clear(): void;
 
-### `insertAt(element: HTMLLIElement, type: "item" | "group", index: number): HTMLLIElement | null`
+  append(
+    element: HTMLLIElement,
+    type: "item" | "group",
+    parentGroupElement?: HTMLLIElement
+  ): HTMLLIElement;
 
-Insert a node at a given index (only for root-level nodes).
+  insertBefore(
+    element: HTMLLIElement,
+    type: "item" | "group",
+    referenceElement: HTMLLIElement
+  ): HTMLLIElement;
 
-### `remove(element: HTMLLIElement): void`
+  insertAt(
+    element: HTMLLIElement,
+    type: "item" | "group",
+    index: number
+  ): HTMLLIElement | null;
 
-Remove an item or group and its children.
+  remove(element: HTMLLIElement): void;
 
-### `clear(): void`
-
-Clear the tree and any current selection.
-
-### `scrollIntoView(element: Element): void`
-
-Ensure the given element is visible and its ancestors expanded.
-
-### `moveVertically(offset: number): void`
-
-Change selection (Up: `-1`, Down: `+1`).
-
-### `moveHorizontally(offset: number): void`
-
-Collapse (`-1`) or expand (`+1`) groups.
-
----
+  moveVertically(offset: number): void;
+  moveHorizontally(offset: number): void;
+}
+```
 
 ## Events
 

@@ -1,12 +1,17 @@
 // Import Node.js Dependencies
-import { describe, it, beforeEach, afterEach } from "node:test";
+import {
+  describe,
+  it,
+  beforeEach,
+  afterEach
+} from "node:test";
 import assert from "node:assert";
 
 // Import Third-party Dependencies
 import { Window } from "happy-dom";
 
 // Import Internal Dependencies
-import { TreeView } from "../../src/frontend/TreeView.class.ts";
+import { TreeView } from "../src/TreeView.class.ts";
 
 const window = new Window();
 const document = window.document;

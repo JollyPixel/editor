@@ -5,6 +5,9 @@
       "path": "./packages/fs-tree"
     },
     {
+      "path": "./packages/fs-tree-backend"
+    },
+    {
       "path": "./packages/engine"
     },
     {
