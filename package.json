@@ -21,6 +21,7 @@
     "packages/fs-tree",
     "packages/fs-tree-backend",
     "packages/editors/voxel-map",
+    "packages/editors/texture",
     "packages/voxel-renderer"
   ],
   "repository": {
