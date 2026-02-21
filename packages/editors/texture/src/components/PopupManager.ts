@@ -2,7 +2,7 @@
 import { LitElement, css, html } from "lit";
 
 // Import Internal Dependencies
-import type ThreeSceneManager from "../three/ThreeSceneManager.js";
+import type ThreeSceneManager from "../three/ThreeSceneManager.ts";
 
 export class PopupManager extends LitElement {
   private sceneManager: ThreeSceneManager | null = null;

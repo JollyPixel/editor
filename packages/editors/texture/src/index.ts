@@ -1,10 +1,10 @@
 // Import Internal Dependencies
-import ThreeSceneManager from "./three/ThreeSceneManager.js";
+import ThreeSceneManager from "./three/ThreeSceneManager.ts";
 import "./components/LeftPanel.ts";
-import "./components/RightPanel.js";
-import "./components/PopupManager.js";
-import "./components/popups/index.js";
-import "./components/Resizer.js";
+import "./components/RightPanel.ts";
+import "./components/PopupManager.ts";
+import "./components/popups/index.ts";
+import "./components/Resizer.ts";
 
 const kBody = document.querySelector("body") as HTMLBodyElement;
 const leftPanel = document.querySelector("jolly-model-editor-left-panel") as HTMLElement;

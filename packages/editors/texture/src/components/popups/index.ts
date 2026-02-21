@@ -1,1 +1,1 @@
-export { AddMeshPopup } from "./AddMeshPopup.js";
+export { AddMeshPopup } from "./AddMeshPopup.ts";

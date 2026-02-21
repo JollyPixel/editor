@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { TransformControls } from "three/examples/jsm/Addons.js";
 
 // Import Internal Dependencies
-import GroupManager, { type GroupManagerOptions } from "./GroupManager.js";
+import GroupManager, { type GroupManagerOptions } from "./GroupManager.ts";
 
 export interface ModelManagerOptions {
   scene: THREE.Scene;

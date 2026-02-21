@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { getColorAsRGBA } from "../utils.js";
+import { getColorAsRGBA } from "../utils.ts";
 
 export interface BrushManagerOptions {
   color?: string;

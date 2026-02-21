@@ -1,7 +1,5 @@
-/* eslint-disable @stylistic/no-mixed-operators */
-
 // Import Internal Dependencies
-import CanvasManager from "./CanvasManager.js";
+import CanvasManager from "./CanvasManager.ts";
 
 // CONSTANTS
 const kSvgNs = "http://www.w3.org/2000/svg";

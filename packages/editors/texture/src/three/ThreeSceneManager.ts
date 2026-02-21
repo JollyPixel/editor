@@ -6,9 +6,9 @@ import { TransformControls } from "three/examples/jsm/Addons.js";
 import { Input } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
-import type CanvasManager from "../texture/CanvasManager.js";
-import ModelManager from "./ModelManager.js";
-import type GroupManager from "./GroupManager.js";
+import type CanvasManager from "../texture/CanvasManager.ts";
+import ModelManager from "./ModelManager.ts";
+import type GroupManager from "./GroupManager.ts";
 
 export default class ThreeSceneManager {
   private rootHTMLElement: HTMLDivElement;

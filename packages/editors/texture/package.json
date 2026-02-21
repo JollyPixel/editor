@@ -14,9 +14,10 @@
     "dist"
   ],
   "dependencies": {
-    "@jolly-pixel/engine": "1.0.0",
+    "@jolly-pixel/engine": "2.5.0",
     "@jolly-pixel/fs-tree": "1.0.0",
+    "@jolly-pixel/runtime": "3.2.0",
     "lit": "3.3.1",
-    "three": "^0.179.1"
+    "three": "0.179.1"
   }
 }

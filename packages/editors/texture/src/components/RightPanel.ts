@@ -1,12 +1,12 @@
 // Import Third-party Dependencies
 import { LitElement, css, html } from "lit";
-import { TreeView } from "@jolly-pixel/fs-tree/tree-view";
+import { TreeView } from "@jolly-pixel/fs-tree";
 
 // Import Internal Dependencies
-import type ModelManager from "../three/ModelManager.js";
-import type GroupManager from "../three/GroupManager.js";
-import type { PopupManager } from "./PopupManager.js";
-import { AddMeshPopup } from "./popups/index.js";
+import type ModelManager from "../three/ModelManager.ts";
+import type GroupManager from "../three/GroupManager.ts";
+import type { PopupManager } from "./PopupManager.ts";
+import { AddMeshPopup } from "./popups/index.ts";
 
 export class RightPanel extends LitElement {
   private treeView: TreeView;

@@ -3,9 +3,9 @@ import { LitElement, css, html } from "lit";
 import { state, query } from "lit/decorators.js";
 
 // Import Internal Dependencies
-import CanvasManager from "../texture/CanvasManager.js";
-import "./tabs/Paint.js";
-import "./tabs/Build.js";
+import CanvasManager from "../texture/CanvasManager.ts";
+import "./tabs/Paint.ts";
+import "./tabs/Build.ts";
 
 // CONSTANTS
 const kBuildComponentSelector = "jolly-model-editor-build";

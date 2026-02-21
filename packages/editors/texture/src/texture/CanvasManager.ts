@@ -1,7 +1,6 @@
-/* eslint-disable @stylistic/no-mixed-operators */
 // Import Internal Dependencies
-import BrushManager, { type BrushManagerOptions } from "./BrushManager.js";
-import SvgManager, { type SvgManagerOptions } from "./SvgManager.js";
+import BrushManager, { type BrushManagerOptions } from "./BrushManager.ts";
+import SvgManager, { type SvgManagerOptions } from "./SvgManager.ts";
 
 export type Mode = "paint" | "move";
 
