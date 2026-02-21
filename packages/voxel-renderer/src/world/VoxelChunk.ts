@@ -102,4 +102,8 @@ export class VoxelChunk {
   get voxelCount(): number {
     return this.#data.size;
   }
+
+  toString(): string {
+    return `${this.cx},${this.cy},${this.cz}`;
+  }
 }
