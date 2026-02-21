@@ -6,6 +6,7 @@ export {
   type VoxelSetOptions,
   type VoxelRemoveOptions
 } from "./VoxelRenderer.ts";
+export * from "./hooks.ts";
 
 // Built-in shapes
 export { Cube } from "./blocks/shapes/Cube.ts";

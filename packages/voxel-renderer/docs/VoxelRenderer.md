@@ -14,10 +14,26 @@ type MaterialCustomizerFn = (
 ) => void;
 
 interface VoxelRendererOptions {
-  /** Side length of each chunk in voxels. Default: `16`. */
+  /**
+   * @default 16
+   */
   chunkSize?: number;
-  
-  /** Chunk material preset. `"standard"` enables PBR at higher GPU cost. Default: `"lambert"`. */
+  /**
+   * Enables collision shapes when provided.
+   * disabled by default to avoid forcing Rapier as a dependency for users who don't need physics.
+   */
+  rapier?: {
+    /** Rapier3D module (static API) */
+    api: RapierAPI;
+    /** Rapier3D world instance */
+    world: RapierWorld;
+  };
+  /**
+   * @default "lambert"
+   * The type of material to use for rendering chunks. "standard" supports
+   * roughness and metalness maps but is more expensive to render; "lambert"
+   * is faster but only supports a simple diffuse map.
+   */
   material?: "lambert" | "standard";
 
   /**
@@ -25,23 +41,40 @@ interface VoxelRendererOptions {
    * Called with the material instance and the tileset ID it corresponds to
    */
   materialCustomizer?: MaterialCustomizerFn;
-  
+
   /**
-   * Fragments with alpha below this value are discarded.
-   * Set `0` to disable cutout transparency. Default: `0.1`.
+   * Optional list of layer names to create on initialization.
+   */
+  layers?: string[];
+  /**
+   * Optional initial block definitions to register.
+   * Block ID 0 is reserved for air
+   */
+  blocks?: BlockDefinition[];
+  /**
+   * Optional block shapes to register in addition to the default
+   * shapes provided by BlockShapeRegistry.createDefault().
+   */
+  shapes?: BlockShape[];
+  /**
+   * Alpha value below which fragments are discarded (cutout transparency).
+   * Set to 0 to disable alpha testing entirely (useful when your tileset tiles
+   * have no transparency, or during debugging to confirm geometry is present).
+   * @default 0.1
    */
   alphaTest?: number;
-  /** Layer names to create at initialisation. */
-  layers?: string[];
-  /** Block definitions to pre-register. */
-  blocks?: BlockDefinition[];
-  /** Custom shapes added on top of the built-in registry. */
-  shapes?: BlockShape[];
-  /** Enables Rapier3D collision. Omit to disable physics entirely. */
-  rapier?: {
-    api: RapierAPI;
-    world: RapierWorld;
-  };
+
+  /**
+   * Optional logger instance for debug output.
+   * Uses the engine's default logger if not provided.
+   */
+  logger?: Systems.Logger;
+
+  /**
+   * Optional callback that is called whenever a layer is added, removed, or updated.
+   * Useful for synchronizing external systems with changes to the voxel world.
+   */
+  onLayerUpdated?: VoxelLayerHookListener;
 }
 ```
 
@@ -123,6 +156,10 @@ interface VoxelLayerConfigurableOptions {
 }
 ```
 
+#### `updateLayer(name: string, options?: Partial< VoxelLayerConfigurableOptions >): boolean`
+
+Update a layer that already exists. Return `false` if no layer is found with the given name and `true` when updated.
+
 #### `removeLayer(name: string): VoxelLayer`
 
 Remove and returns a boolean confirming layer deletion.
@@ -178,6 +215,27 @@ Serialises the full world state (layers, voxels, tileset metadata) to a plain JS
 
 Clears the current world, restores state from a JSON snapshot, and reloads any
 referenced tilesets that are not already loaded.
+
+### Hooks
+
+```ts
+export type VoxelLayerHookAction =
+  | "added"
+  | "removed"
+  | "updated"
+  | "offset-updated"
+  | "voxel-set"
+  | "voxel-removed";
+
+export interface VoxelLayerHookEvent {
+  layerName: string;
+  action: VoxelLayerHookAction;
+  metadata: Record<string, any>;
+}
+export type VoxelLayerHookListener = (
+  event: VoxelLayerHookEvent
+) => void;
+```
 
 ---
 

@@ -14,6 +14,8 @@ export class VoxelBehavior extends ActorComponent {
   world = loadVoxelTiledMap("tilemap/brackeys-level.tmj", {
     layerMode: "stacked"
   });
+  // @ts-ignore
+  voxelRenderer: VoxelRenderer;
 
   constructor(
     actor: Actor
@@ -31,8 +33,17 @@ export class VoxelBehavior extends ActorComponent {
     if (!voxelRenderer) {
       throw new Error("VoxelRenderer component not found on actor");
     }
+    this.voxelRenderer = voxelRenderer;
     voxelRenderer
       .load(world)
       .catch(console.error);
+  }
+
+  start() {
+    setTimeout(() => {
+      console.log("Toggling visibility of 'Ground' layer...");
+      const success = this.voxelRenderer.removeLayer("Ground");
+      console.log(`Layer visibility update ${success ? "succeeded" : "failed"}`);
+    }, 5000);
   }
 }

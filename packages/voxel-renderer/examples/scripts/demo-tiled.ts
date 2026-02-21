@@ -23,6 +23,8 @@ const runtime = new Runtime(canvas, {
 });
 
 const { world } = runtime;
+world.logger.setLevel("debug");
+world.logger.enableNamespace("*");
 
 // ── Scene ─────────────────────────────────────────────────────────────────────
 const scene = world.sceneManager.getSource();

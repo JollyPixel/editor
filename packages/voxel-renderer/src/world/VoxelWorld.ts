@@ -51,6 +51,25 @@ export class VoxelWorld {
     return layer;
   }
 
+  updateLayer(
+    name: string,
+    options: Partial<VoxelLayerConfigurableOptions>
+  ): boolean {
+    const layer = this.getLayer(name);
+    if (!layer) {
+      return false;
+    }
+
+    if (options.properties) {
+      layer.properties = structuredClone(options.properties);
+    }
+    if (options.visible !== undefined) {
+      layer.visible = options.visible;
+    }
+
+    return true;
+  }
+
   removeLayer(
     name: string
   ): boolean {
@@ -242,12 +261,16 @@ export class VoxelWorld {
     this.#layers.sort((a, b) => b.order - a.order);
   }
 
-  #markAllLayersDirty(): void {
-    for (const layer of this.#layers) {
-      for (const chunk of layer.getChunks()) {
-        chunk.dirty = true;
-      }
+  #markLayerDirty(
+    layer: VoxelLayer
+  ): void {
+    for (const chunk of layer.getChunks()) {
+      chunk.dirty = true;
     }
+  }
+
+  #markAllLayersDirty(): void {
+    this.#layers.forEach((layer) => this.#markLayerDirty(layer));
   }
 
   /**
