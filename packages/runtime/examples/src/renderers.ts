@@ -1,16 +1,16 @@
 // Import Third-party Dependencies
 import {
-  Actor,
   Camera3DControls,
   AudioBackground,
   GlobalAudioManager,
   TextRenderer,
   createViewHelper
 } from "@jolly-pixel/engine";
-import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
+import {
+  Runtime,
+  loadRuntime
+} from "@jolly-pixel/runtime";
 import * as THREE from "three";
-import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
-import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 
 // Import Internal Dependencies
 // import { SpriteRenderer } from "./components/sprite/SpriteRenderer.class.ts";
@@ -22,15 +22,10 @@ const runtime = new Runtime(canvasHTMLElement, {
 const { world } = runtime;
 world.renderer.setRenderMode("composer");
 
-new Actor(world, { name: "camera" })
+world.createActor("camera")
   .addComponent(Camera3DControls, { speed: 0.35, rotationSpeed: 0.45 }, (component) => {
     component.camera.position.set(10, 10, 5);
     component.camera.lookAt(0, 0, 0);
-
-    world.renderer.setEffects(
-      new UnrealBloomPass(world.input.getScreenSize(), 0.35, 0, 0.15),
-      new OutputPass()
-    );
 
     createViewHelper(component.camera, world);
   });
@@ -48,13 +43,7 @@ new Actor(world, { name: "camera" })
 //     sprite.animation.play("open", { loop: true, duration: 2.5 });
 //   });
 
-new Actor(world, { name: "tilemap" });
-// .addComponent(TiledMapRenderer, {
-//   assetPath: "./assets/tilemaps/experimental_map.tmj",
-//   orientation: "top-down"
-// });
-
-const textActor = new Actor(world, { name: "3d-text" })
+const textActor = world.createActor("text")
   .addComponent(TextRenderer, {
     path: "./assets/fonts/helvetiker_regular.typeface.json",
     text: "Hello, 3D World !",

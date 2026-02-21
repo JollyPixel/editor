@@ -6,7 +6,6 @@
     "prepublish": "rimraf ./dist && tsc -b",
     "test": "node --test test/**/*.test.ts",
     "dev": "vite",
-    "build": "vite build",
     "preview": "vite preview"
   },
   "private": true,
