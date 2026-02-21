@@ -41,6 +41,8 @@ const runtime = new Runtime(canvas, {
 });
 
 const { world } = runtime;
+world.logger.setLevel("debug");
+world.logger.enableNamespace("*");
 
 const scene = world.sceneManager.getSource();
 scene.background = new THREE.Color("#87ceeb");

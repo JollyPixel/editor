@@ -2,7 +2,8 @@
 import * as THREE from "three";
 import {
   Actor,
-  ActorComponent
+  ActorComponent,
+  Systems
 } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
@@ -124,6 +125,12 @@ export interface VoxelRendererOptions {
    * @default 0.1
    */
   alphaTest?: number;
+
+  /**
+   * Optional logger instance for debug output.
+   * Uses the engine's default logger if not provided.
+   */
+  logger?: Systems.Logger;
 }
 
 /**
@@ -156,10 +163,15 @@ export class VoxelRenderer extends ActorComponent {
   /**
    * One material per tileset ID. Created lazily; disposed on tileset reload or destroy.
    */
-  #materials = new Map<string, THREE.MeshLambertMaterial | THREE.MeshStandardMaterial>();
+  #materials = new Map<
+    string,
+    THREE.MeshLambertMaterial | THREE.MeshStandardMaterial
+  >();
   #materialCustomizer?: MaterialCustomizerFn;
   #materialType: "lambert" | "standard";
   #alphaTest: number;
+
+  #logger: Systems.Logger;
 
   constructor(
     actor: Actor<any>,
@@ -178,12 +190,16 @@ export class VoxelRenderer extends ActorComponent {
       rapier,
       blocks = [],
       shapes = [],
-      alphaTest = 0.1
+      alphaTest = 0.1,
+      logger = actor.world.logger
     } = options;
 
     this.#materialType = material;
     this.#materialCustomizer = materialCustomizer;
     this.#alphaTest = alphaTest;
+    this.#logger = logger.child({
+      namespace: "VoxelRenderer"
+    });
 
     this.world = new VoxelWorld(chunkSize);
     if (layers.length > 0) {
@@ -191,8 +207,11 @@ export class VoxelRenderer extends ActorComponent {
     }
 
     this.blockRegistry = new BlockRegistry(blocks);
-    this.shapeRegistry = BlockShapeRegistry.createDefault();
-    shapes.forEach((shape) => this.shapeRegistry.register(shape));
+    this.shapeRegistry = BlockShapeRegistry
+      .createDefault();
+    shapes.forEach(
+      (shape) => this.shapeRegistry.register(shape)
+    );
 
     this.tilesetManager = new TilesetManager();
     this.serializer = new VoxelSerializer();
@@ -219,7 +238,7 @@ export class VoxelRenderer extends ActorComponent {
   // --- Lifecycle --- //
   awake(): void {
     // Build initial meshes for all existing chunks (e.g. after deserialize).
-    this.#rebuildAllChunks();
+    this.#rebuildAllChunks("awake");
   }
 
   update(
@@ -231,12 +250,17 @@ export class VoxelRenderer extends ActorComponent {
         continue;
       }
 
+      this.#logger.debug(
+        `Layer with name '${layer.name}' is dirty and will be rebuilt.`,
+        { source: "update" }
+      );
       this.#rebuildChunk(layer, chunk);
       chunk.dirty = false;
     }
   }
 
   override destroy(): void {
+    this.#logger.debug("Destroying VoxelRenderer.");
     // Remove and dispose all chunk meshes individually (we own the geometries
     // but share materials per tileset, so we must NOT call removeChildren).
     for (const mesh of this.#chunkMeshes.values()) {
@@ -369,6 +393,7 @@ export class VoxelRenderer extends ActorComponent {
     );
 
     this.tilesetManager.registerTexture(def, texture);
+    this.#logger.debug(`Loaded tileset '${def.id}' from '${def.src}'`);
 
     // Invalidate the cached material for this tileset so it is recreated
     // with the new texture.
@@ -377,11 +402,13 @@ export class VoxelRenderer extends ActorComponent {
     this.#materials.delete(def.id);
 
     // Force all chunks to rebuild geometry (UV offsets may have changed).
-    this.#markAllChunksDirty();
+    this.#markAllChunksDirty("loadTileset");
   }
 
   // --- Serialization --- //
   save(): VoxelWorldJSON {
+    this.#logger.debug("Serializing world to JSON...");
+
     return this.serializer.serialize(
       this.world,
       this.tilesetManager
@@ -397,6 +424,7 @@ export class VoxelRenderer extends ActorComponent {
       mesh.geometry.dispose();
     }
     this.#chunkMeshes.clear();
+    this.#logger.debug("Cleared existing chunk meshes while loading new world.");
 
     // Register block definitions embedded by a converter, if present.
     // Skips IDs already registered so callers can pre-register overrides.
@@ -426,12 +454,15 @@ export class VoxelRenderer extends ActorComponent {
       mat.dispose();
     }
     this.#materials.clear();
-    this.#rebuildAllChunks();
+
+    this.#rebuildAllChunks("load");
   }
 
   #getMaterial(
     tilesetId: string
   ): THREE.MeshLambertMaterial | THREE.MeshStandardMaterial {
+    this.#logger.debug(`Getting material for tileset '${tilesetId}'`);
+
     let material = this.#materials.get(tilesetId);
     if (material) {
       return material;
@@ -466,16 +497,17 @@ export class VoxelRenderer extends ActorComponent {
     layer: VoxelLayer,
     chunk: VoxelChunk
   ): void {
-    const chunkKeyBase = `${layer.id}:${chunk.cx},${chunk.cy},${chunk.cz}`;
+    const chunkKeyBase = `${layer.id}:${chunk.toString()}`;
+    this.#logger.debug(
+      `Rebuilding chunk '${chunkKeyBase}' with layer name '${layer.name}'`
+    );
 
     // Remove all existing meshes for this chunk (rebuilt per tileset below).
-    const keysToRemove: string[] = [];
     for (const key of this.#chunkMeshes.keys()) {
-      if (key.startsWith(`${chunkKeyBase}:`)) {
-        keysToRemove.push(key);
+      if (!key.startsWith(`${chunkKeyBase}:`)) {
+        continue;
       }
-    }
-    for (const key of keysToRemove) {
+
       const mesh = this.#chunkMeshes.get(key)!;
       this.actor.object3D.remove(mesh);
       mesh.geometry.dispose();
@@ -502,8 +534,18 @@ export class VoxelRenderer extends ActorComponent {
 
     // Rebuild collision collider if physics is enabled.
     if (this.#colliderBuilder) {
-      const collider = this.#buildColliderFromGeometries(chunk, geometries, layer.offset);
+      const offset = layer.offset;
+      this.#logger.debug(
+        `Rebuilding chunk geometries collider '${chunkKeyBase}' with layer name '${layer.name}'`,
+        {
+          offset
+        }
+      );
+
+      const collider = this.#buildColliderFromGeometries(chunk, geometries, offset);
       if (collider) {
+        this.#logger.debug(`Successfully built collider for chunk '${chunkKeyBase}'`);
+
         this.#chunkColliders.set(chunkKeyBase, collider);
       }
     }
@@ -518,11 +560,16 @@ export class VoxelRenderer extends ActorComponent {
     geometries: Map<string, THREE.BufferGeometry>,
     layerOffset: { x: number; y: number; z: number; }
   ): RapierCollider | null {
+    const colliderBuilder = this.#colliderBuilder;
+    if (!colliderBuilder) {
+      return null;
+    }
+
     if (geometries.size === 1) {
       // Fast path: single tileset — pass the geometry directly.
       const [geometry] = geometries.values();
 
-      return this.#colliderBuilder!.buildChunkCollider(chunk, geometry, layerOffset);
+      return colliderBuilder.buildChunkCollider(chunk, geometry, layerOffset);
     }
 
     // Merge position/index arrays from all tileset geometries.
@@ -557,20 +604,28 @@ export class VoxelRenderer extends ActorComponent {
     );
     combinedGeo.setIndex(combinedIndices);
 
-    const collider = this.#colliderBuilder!.buildChunkCollider(chunk, combinedGeo, layerOffset);
+    const collider = colliderBuilder.buildChunkCollider(chunk, combinedGeo, layerOffset);
     combinedGeo.dispose();
 
     return collider;
   }
 
-  #rebuildAllChunks(): void {
+  #rebuildAllChunks(
+    source?: string
+  ): void {
+    this.#logger.debug("Rebuilding all chunks...", { source });
+
     for (const { layer, chunk } of this.world.getAllChunks()) {
       this.#rebuildChunk(layer, chunk);
       chunk.dirty = false;
     }
   }
 
-  #markAllChunksDirty(): void {
+  #markAllChunksDirty(
+    source?: string
+  ): void {
+    this.#logger.debug("Marking all chunks dirty...", { source });
+
     for (const { chunk } of this.world.getAllChunks()) {
       chunk.dirty = true;
     }
