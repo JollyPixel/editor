@@ -2,6 +2,7 @@
   "name": "@jolly-pixel/editor.texture",
   "version": "1.0.0",
   "type": "module",
+  "private": true,
   "scripts": {
     "prepublish": "rimraf ./dist && tsc -b",
     "test": "tsx --test test/**/*.test.ts",
