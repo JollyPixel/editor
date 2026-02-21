@@ -20,9 +20,7 @@
     "packages/mcp-server",
     "packages/fs-tree",
     "packages/fs-tree-backend",
-    "packages/experimental",
     "packages/editors/voxel-map",
-    "packages/editors/model",
     "packages/voxel-renderer"
   ],
   "repository": {

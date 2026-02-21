@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import {
-  Actor,
   UIRenderer,
   UISprite
 } from "@jolly-pixel/engine";
@@ -12,11 +11,10 @@ const runtime = new Runtime(canvasHTMLElement, {
 });
 const { world } = runtime;
 
-const camera2DActor = new Actor(world, { name: "camera2D" })
+const camera2DActor = world.createActor("camera2D")
   .addComponent(UIRenderer, { near: 1 });
 
-const uiButton = new Actor(world, {
-  name: "uiContainer",
+const uiButton = world.createActor("uiContainer", {
   parent: camera2DActor
 })
   .addComponentAndGet(UISprite, {

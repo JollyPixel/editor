@@ -17,13 +17,7 @@
       "path": "./packages/mcp-server"
     },
     {
-      "path": "./packages/experimental"
-    },
-    {
       "path": "./packages/editors/voxel-map"
-    },
-    {
-      "path": "./packages/editors/model"
     },
     {
       "path": "./packages/voxel-renderer"

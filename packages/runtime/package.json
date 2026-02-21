@@ -9,7 +9,8 @@
     "prepublish": "rimraf ./dist && tsc -b",
     "build": "tsc",
     "test-only": "node --test test/**/*.spec.ts",
-    "test": "c8 -r html npm run test-only"
+    "test": "c8 -r html npm run test-only",
+    "dev": "vite"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
