@@ -17,6 +17,9 @@
     },
     {
       "path": "../../runtime"
+    },
+    {
+      "path": "../../voxel-renderer"
     }
   ]
 }

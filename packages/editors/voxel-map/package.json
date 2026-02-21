@@ -5,7 +5,9 @@
   "scripts": {
     "prepublish": "rimraf ./dist && tsc -b",
     "test": "node --test test/**/*.test.ts",
+    "check:ts": "tsc --noEmit",
     "dev": "vite",
+    "build": "vite build",
     "preview": "vite preview"
   },
   "private": true,
@@ -26,8 +28,10 @@
   "dependencies": {
     "@jolly-pixel/engine": "^2.0.0",
     "@jolly-pixel/fs-tree": "^1.0.0",
-    "three": "^0.182.0",
-    "@jolly-pixel/runtime": "^3.0.0"
+    "@jolly-pixel/runtime": "^3.0.0",
+    "@jolly-pixel/voxel.renderer": "1.4.0",
+    "lit": "3.3.2",
+    "three": "^0.182.0"
   },
   "devDependencies": {
     "@types/three": "^0.182.0"

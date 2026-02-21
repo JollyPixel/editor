@@ -1,67 +1,166 @@
 // Import Third-party Dependencies
-import {
-  Actor,
-  Camera3DControls
-} from "@jolly-pixel/engine";
+import * as THREE from "three";
 import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
-import { TreeView } from "@jolly-pixel/fs-tree";
+import { VoxelRenderer } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { VoxelRenderer } from "./VoxelRenderer.ts";
-import { CubeSelectorRenderer } from "./CubeSelectorRenderer.ts";
+import {
+  FreeFlyCamera,
+  GridRenderer,
+  VoxelBrush,
+  LayerGizmo,
+  ObjectLayerRenderer
+} from "./components/index.ts";
+import { editorState } from "./EditorState.ts";
+
+// Side-effect import — registers <editor-sidebar> and all child elements
+import { EditorSidebar } from "./ui/EditorSidebar.ts";
+
+// CONSTANTS
+const kDefaultLayerName = "Ground";
+const kDefaultTilesetId = "default";
+const kDefaultTilesetSrc = "textures/tileset.png";
+const kDefaultTileSize = 32;
+
+// --- Bootstrap --- //
 
 const runtime = initRuntime();
-initTreeView();
-initCubeSelector();
+loadRuntime(runtime, {
+  focusCanvas: false
+}).catch(console.error);
 
-loadRuntime(runtime)
-  .catch(console.error);
+function initRuntime(): Runtime {
+  const canvas = document.querySelector<HTMLCanvasElement>(
+    "#game-container > canvas"
+  )!;
 
-function initRuntime() {
-  const canvasHTMLElement = document.querySelector("#game-container > canvas") as HTMLCanvasElement;
-  const runtime = new Runtime(canvasHTMLElement, {
+  const runtime = new Runtime(canvas, {
     includePerformanceStats: true
   });
+
   const { world } = runtime;
 
-  new Actor(world, { name: "camera" })
-    .addComponent(Camera3DControls, { speed: 8, rotationSpeed: 1 }, (component) => {
-      component.camera.position.set(200, 200, 400);
-      component.camera.lookAt(0, 0, 0);
+  // --- Scene setup --- //
+  const scene = world.sceneManager.getSource();
+  scene.background = new THREE.Color(0x1e2a30);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+  dirLight.position.set(10, 20, 10);
+  scene.add(
+    new THREE.AmbientLight(0xffffff, 1.2),
+    dirLight
+  );
+
+  const freeFlyCamera = world
+    .createActor("camera")
+    .addComponentAndGet(FreeFlyCamera, {
+      position: { x: 8, y: 12, z: 32 }
     });
 
-  new Actor(world, { name: "map" })
-    .addComponent(VoxelRenderer, { ratio: 16, cameraActorName: "camera" });
+  const vr = world
+    .createActor("map")
+    .addComponentAndGet(VoxelRenderer, {
+      chunkSize: 16,
+      layers: [kDefaultLayerName],
+      blocks: [],
+      material: "lambert",
+      alphaTest: 0,
+      onLayerUpdated: (evt) => editorState.dispatchLayerUpdated(evt)
+    });
+
+  // Pre-select the default layer in editor state.
+  editorState.setSelectedLayer(kDefaultLayerName);
+
+  // Load default tileset concurrently — runtime.start() is deferred ~850 ms
+  // by loadRuntime(), so awake() runs reliably after the tileset is ready.
+  // Once the texture is registered, getDefaultBlocks() can derive cols/rows
+  // from the actual image dimensions instead of speculating a fixed layout.
+  vr.loadTileset({
+    id: kDefaultTilesetId,
+    src: kDefaultTilesetSrc,
+    tileSize: kDefaultTileSize
+  })
+    .then(() => {
+      for (const block of vr.tilesetManager.getDefaultBlocks(void 0, { limit: 32 })) {
+        vr.blockRegistry.register(block);
+      }
+      editorState.dispatchBlockRegistryChanged();
+    })
+    .catch(console.error);
+
+  const gridActor = world.createActor("grid");
+  const gridRenderer = gridActor.addComponentAndGet(GridRenderer, {
+    extent: 64
+  });
+
+  world.createActor("brush")
+    .addComponent(VoxelBrush, {
+      vr,
+      camera: freeFlyCamera.camera
+    });
+
+  world.createActor("gizmo")
+    .addComponent(LayerGizmo, {
+      vr,
+      camera: freeFlyCamera.camera
+    });
+
+  world.createActor("object-layer-renderer")
+    .addComponent(ObjectLayerRenderer, {
+      vr,
+      camera: freeFlyCamera.camera
+    });
+
+  // --- Wire sidebar --- //
+  const sidebar = document.querySelector<EditorSidebar>("#sidebar")!;
+  if (sidebar) {
+    sidebar.vr = vr;
+    sidebar.gridRenderer = gridRenderer;
+  }
+
+  setupResizeHandle(sidebar, canvas, gridRenderer);
 
   return runtime;
 }
 
-function initTreeView() {
-  const treeViewContainer = document.querySelector("#layer-box > .box-content") as HTMLDivElement;
-  const treeView = new TreeView(treeViewContainer);
-  treeView.append(createItem("Default"), "item");
+function setupResizeHandle(
+  sidebar: EditorSidebar,
+  canvas: HTMLCanvasElement,
+  gridRenderer: GridRenderer
+): void {
+  const handle = document.getElementById("resize-handle")!;
+  let dragging = false;
+  let startX = 0;
+  let startWidth = 0;
 
-  function createItem(label: string): HTMLLIElement {
-    const itemElt = document.createElement("li");
+  handle.addEventListener("mousedown", (e) => {
+    dragging = true;
+    startX = e.clientX;
+    startWidth = sidebar.offsetWidth;
+    handle.classList.add("dragging");
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  });
 
-    const iconElt = document.createElement("i");
-    iconElt.classList.add("icon");
-    itemElt.appendChild(iconElt);
-
-    const spanElt = document.createElement("span");
-    spanElt.textContent = label;
-    itemElt.appendChild(spanElt);
-
-    return itemElt;
-  }
-}
-
-function initCubeSelector() {
-  new CubeSelectorRenderer(
-    document.querySelector("#cube-box > .box-content") as HTMLElement,
-    {
-      width: 400,
-      height: 250
+  window.addEventListener("mousemove", (e) => {
+    if (!dragging) {
+      return;
     }
-  );
+
+    const newWidth = Math.max(200, Math.min(600, startWidth + (e.clientX - startX)));
+    sidebar.style.width = `${newWidth}px`;
+    gridRenderer.setResolution(canvas.clientWidth, canvas.clientHeight);
+  });
+
+  window.addEventListener("mouseup", () => {
+    if (!dragging) {
+      return;
+    }
+
+    dragging = false;
+    handle.classList.remove("dragging");
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+    gridRenderer.setResolution(canvas.clientWidth, canvas.clientHeight);
+  });
 }
+
