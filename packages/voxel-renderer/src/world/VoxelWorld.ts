@@ -14,6 +14,11 @@ import type { FACE } from "../utils/math.ts";
 // CONSTANTS
 let kLayerIdCounter = 0;
 
+export type IterableLayerChunk = {
+  layer: VoxelLayer;
+  chunk: VoxelChunk;
+};
+
 /**
  * Top-level container for layered voxel data.
  *
@@ -25,6 +30,7 @@ export class VoxelWorld {
   readonly chunkSize: number;
 
   #layers: VoxelLayer[] = [];
+  #layersToRemove: VoxelLayer[] = [];
 
   constructor(
     chunkSize: number = DEFAULT_CHUNK_SIZE
@@ -64,7 +70,7 @@ export class VoxelWorld {
       layer.properties = structuredClone(options.properties);
     }
     if (options.visible !== undefined) {
-      layer.visible = options.visible;
+      this.#updateLayerVisibility(layer, options.visible);
     }
 
     return true;
@@ -80,6 +86,8 @@ export class VoxelWorld {
       return false;
     }
 
+    const layer = this.#layers[idx];
+    this.#layersToRemove.push(layer);
     this.#layers.splice(idx, 1);
 
     return true;
@@ -117,8 +125,16 @@ export class VoxelWorld {
   ): void {
     const layer = this.getLayer(name);
     if (layer) {
-      layer.visible = visible;
+      this.#updateLayerVisibility(layer, visible);
     }
+  }
+
+  #updateLayerVisibility(
+    layer: VoxelLayer,
+    visible: boolean
+  ): void {
+    layer.visible = visible;
+    this.#markLayerDirty(layer);
   }
 
   setLayerOffset(
@@ -234,22 +250,42 @@ export class VoxelWorld {
 
   // --- Chunk helpers --- //
 
-  * getAllDirtyChunks(): IterableIterator<{ layer: VoxelLayer; chunk: VoxelChunk; }> {
+  * getAllDirtyChunks(): IterableIterator<IterableLayerChunk> {
     for (const layer of this.#layers) {
       for (const chunk of layer.getChunks()) {
         if (chunk.dirty) {
           yield { layer, chunk };
         }
       }
+
+      if (layer.wasVisible) {
+        layer.wasVisible = false;
+      }
     }
   }
 
-  * getAllChunks(): IterableIterator<{ layer: VoxelLayer; chunk: VoxelChunk; }> {
+  * getAllChunks(): IterableIterator<IterableLayerChunk> {
     for (const layer of this.#layers) {
       for (const chunk of layer.getChunks()) {
         yield { layer, chunk };
       }
     }
+  }
+
+  * getAllChunksToBeRemoved(): IterableIterator<IterableLayerChunk> {
+    do {
+      const layer = this.#layersToRemove.pop();
+      if (!layer) {
+        break;
+      }
+      if (!layer.visible && !layer.wasVisible) {
+        continue;
+      }
+
+      for (const chunk of layer.getChunks()) {
+        yield { layer, chunk };
+      }
+    } while (this.#layersToRemove.length > 0);
   }
 
   clear(): void {
@@ -270,7 +306,9 @@ export class VoxelWorld {
   }
 
   #markAllLayersDirty(): void {
-    this.#layers.forEach((layer) => this.#markLayerDirty(layer));
+    for (const layer of this.#layers) {
+      this.#markLayerDirty(layer);
+    }
   }
 
   /**

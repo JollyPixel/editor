@@ -38,12 +38,4 @@ export class VoxelBehavior extends ActorComponent {
       .load(world)
       .catch(console.error);
   }
-
-  start() {
-    setTimeout(() => {
-      console.log("Toggling visibility of 'Ground' layer...");
-      const success = this.voxelRenderer.removeLayer("Ground");
-      console.log(`Layer visibility update ${success ? "succeeded" : "failed"}`);
-    }, 5000);
-  }
 }

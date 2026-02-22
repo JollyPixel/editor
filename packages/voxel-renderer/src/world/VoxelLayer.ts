@@ -46,11 +46,12 @@ export interface VoxelLayerOptions extends VoxelLayerConfigurableOptions {
 export class VoxelLayer {
   id: string;
   name: string;
-  visible: boolean;
   order: number;
   offset: VoxelCoord;
   properties: Record<string, any> = {};
+  wasVisible = false;
 
+  #visible: boolean;
   #chunks = new Map<string, VoxelChunk>();
   #chunkSize: number;
 
@@ -71,9 +72,26 @@ export class VoxelLayer {
     this.name = name;
     this.order = order;
     this.#chunkSize = chunkSize;
-    this.visible = visible;
+    this.#visible = visible;
     this.offset = structuredClone(offset);
     this.properties = structuredClone(properties);
+  }
+
+  get visible() {
+    return this.#visible;
+  }
+
+  set visible(
+    value: boolean
+  ) {
+    if (this.#visible && !value) {
+      this.wasVisible = true;
+    }
+    else if (!this.#visible && value) {
+      this.wasVisible = false;
+    }
+
+    this.#visible = value;
   }
 
   #createChunkKey(
@@ -250,7 +268,7 @@ export class VoxelLayer {
     return {
       id: this.id,
       name: this.name,
-      visible: this.visible,
+      visible: this.#visible,
       order: this.order,
       offset: { ...this.offset },
       properties: { ...this.properties },
