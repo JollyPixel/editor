@@ -2,40 +2,78 @@
 
 Converts a Tiled JSON map (`TiledMap`) to `VoxelWorldJSON` for import via `VoxelRenderer.load()`.
 
-Tile layers become voxel layers. Object layers become `VoxelObjectLayerJSON` entries with
-pixel-to-voxel coordinate conversion. Group layers are flattened recursively.
+- Tile layers become voxel layers.
+- Object layers become `VoxelObjectLayerJSON` entries with pixel-to-voxel coordinate conversion.
+- Group layers are flattened recursively.
+
 Block definitions derived from the tileset are embedded in `result.blocks` so they are
 auto-registered when passed to `VoxelRenderer.load()`.
 
-Infinite maps and compressed tile data are not supported.
+```ts
+import { loadJSON } from "@jolly-pixel/engine";
+import {
+  TiledConverter,
+  VoxelRenderer,
+  type TiledMap
+} from "@jolly-pixel/voxel.renderer";
 
----
+const tiledMap = loadJSON<TiledMap>("map.tmj");
+
+const vr = new VoxelRenderer({});
+vr.load(
+  new TiledConverter().convert(tiledMap, {
+    resolveTilesetSrc: (_src, tilesetId) => `assets/${tilesetId}.png`,
+    layerMode: "stacked"
+  })
+);
+```
+
+> [!IMPORTANT]
+> Infinite maps and compressed tile data are not supported.
 
 ## TiledConverterOptions
 
 ```ts
 interface TiledConverterOptions {
   /**
-   * Resolves a Tiled tileset source path to a runtime URL or asset path.
-   * Called once per tileset found in the map.
+   * Maps a Tiled tileset `source` string (e.g. `"TX Tileset Grass.tsx"`) and
+   * its derived ID to the actual asset path/URL used for TilesetDefinition.src.
+   * Called once per tileset. For embedded tilesets without a source file,
+   * `tiledSource` is an empty string and `tilesetId` is the tileset name.
    */
   resolveTilesetSrc: (tiledSource: string, tilesetId: string) => string;
-  /** Side length of each chunk in voxels. Default: `16`. */
-  chunkSize?: number;
+
   /**
-   * "stacked" — each Tiled layer is placed at its own Y level (layer index).
-   * "flat"    — all layers are placed at Y = 0; higher layers occlude lower ones.
-   * Default: "stacked".
+   * Chunk size written into the VoxelWorldJSON output.
+   * @default 16
+   */
+  chunkSize?: number;
+
+  /**
+   * Controls how Tiled tile layers map to the 3-D Y axis.
+   *
+   * - `"flat"`    — all tile layers are placed at Y=0; when two layers occupy
+   *                 the same (x, z) cell the later layer wins.
+   * - `"stacked"` — tile layer at index N is placed at Y=N (useful for
+   *                 multi-floor or multi-depth maps).
+   *
+   * @default "flat"
    */
   layerMode?: "flat" | "stacked";
-  /** Shape ID applied to every voxel. Default: `"fullCube"`. */
+
+  /**
+   * BlockShape ID assigned to every generated block.
+   * @default "fullCube"
+   */
   defaultShapeId?: BlockShapeID;
-  /** Whether voxels are collidable. Default: `true`. */
+
+  /**
+   * Whether generated blocks are collidable.
+   * @default true
+   */
   collidable?: boolean;
 }
 ```
-
----
 
 ## TiledConverter
 
@@ -44,8 +82,6 @@ interface TiledConverterOptions {
 #### `convert(map: TiledMap, options: TiledConverterOptions): VoxelWorldJSON`
 
 Converts the Tiled map to a `VoxelWorldJSON` object ready to pass to `VoxelRenderer.load()`.
-
----
 
 ## TiledMap
 
@@ -56,23 +92,46 @@ type the raw JSON before converting:
 import type { TiledMap } from "@jolly-pixel/voxel.renderer";
 ```
 
----
-
 ## Example
 
+You can also build this with an ActorComponent and `loadVoxelTiledMap` (which use the Asset system of JollyPixel).
+
 ```ts
-import { TiledConverter, VoxelRenderer } from "@jolly-pixel/voxel.renderer";
-import type { TiledMap } from "@jolly-pixel/voxel.renderer";
+import {
+  Actor,
+  ActorComponent
+} from "@jolly-pixel/engine";
+import {
+  loadVoxelTiledMap,
+  VoxelRenderer
+} from "@jolly-pixel/voxel.renderer";
 
-const tiledMap: TiledMap = await fetch("map.json").then(r => r.json());
+export class VoxelBehavior extends ActorComponent {
+  world = loadVoxelTiledMap("map.tmj", {
+    layerMode: "stacked"
+  });
+  voxelRenderer: VoxelRenderer;
 
-const converter = new TiledConverter();
-const worldJson = converter.convert(tiledMap, {
-  resolveTilesetSrc: (_src, tilesetId) => `assets/${tilesetId}.png`,
-  layerMode: "stacked"
-});
+  constructor(
+    actor: Actor
+  ) {
+    super({
+      actor,
+      typeName: "VoxelBehavior"
+    });
+  }
 
-// loadRuntime's ~850 ms splash delay ensures local assets finish before awake() runs,
-// so load() can safely be called fire-and-forget here.
-vr.load(worldJson);
+  awake() {
+    const world = this.world.get();
+
+    const vr = this.actor.getComponent(VoxelRenderer);
+    if (!vr) {
+      throw new Error("VoxelRenderer component not found on actor");
+    }
+    this.voxelRenderer = vr;
+    voxelRenderer
+      .load(world)
+      .catch(console.error);
+  }
+}
 ```

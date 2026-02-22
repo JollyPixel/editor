@@ -2,24 +2,41 @@
 
 Block definitions, shapes, registries, and the `Face` constant.
 
----
-
 ## BlockDefinition
 
 Describes a block type: its shape, textures, and physics behaviour.
 
 ```ts
-interface BlockDefinition {
-  id: number;                                    // Unique ID — 0 is reserved for air
-  name: string;                                  // Display name
+/**
+ * Describes a block type: its shape, per-face texture tiles, and collidability.
+ * Block ID 0 is always air and is never stored in the registry.
+ */
+export interface BlockDefinition {
+  /**
+   * Unique numeric identifier.
+   * @note
+   * 0 is reserved for air.
+   **/
+  id: number;
+  /** Human-readable name for editor display. */
+  name: string;
+  /** ID of the BlockShape to use for geometry generation. */
   shapeId: BlockShapeID;
-  faceTextures: Partial<Record<Face, TileRef>>;  // Per-face texture overrides
-  defaultTexture?: TileRef;                      // Fallback for faces not in faceTextures
-  collidable: boolean;                           // false = no collision geometry emitted
+  /**
+   * Per-face tile references.
+   * If a face is absent, defaultTexture is used.
+   * Allows blocks to have a different top texture from their sides.
+   */
+  faceTextures: Partial<Record<FACE, TileRef>>;
+  /** Fallback tile used for any face not listed in faceTextures. */
+  defaultTexture?: TileRef;
+  /**
+   * If false, the mesh builder will not emit
+   * collision geometry for this block.
+   **/
+  collidable: boolean;
 }
 ```
-
----
 
 ## BlockShapeID
 
@@ -53,7 +70,6 @@ type BlockShapeID =
 
 ![Available block shapes](./shapes.png)
 
----
 
 ## BlockCollisionHint
 
@@ -66,7 +82,7 @@ type BlockCollisionHint = "box" | "trimesh" | "none";
   may ghost-collide on shared edges.
 - `"none"` — no collision geometry. Use for decorative or trigger blocks.
 
----
+See [Collision](./Collision.md) for more information.
 
 ## FaceDefinition
 
@@ -74,16 +90,18 @@ Geometry descriptor for one polygonal face of a block shape.
 
 ```ts
 interface FaceDefinition {
-  face: Face;                // Culling direction — which neighbour to check
-  normal: Vec3;              // Outward normal (need not be axis-aligned)
-  vertices: readonly Vec3[]; // 3 (triangle) or 4 (quad) positions in 0–1 block space
-  uvs: readonly Vec2[];      // Same count as vertices, in 0–1 tile space
+  /** Axis-aligned culling direction used to find the neighbor to check. */
+  face: FACE;
+  /** Outward-pointing surface normal (need not be axis-aligned). */
+  normal: Vec3;
+  /** 3 (triangle) or 4 (quad) positions in 0-1 block space. */
+  vertices: readonly Vec3[];
+  /** Same count as vertices; UV coordinates in 0-1 tile space. */
+  uvs: readonly Vec2[];
 }
 ```
 
 A quad is triangulated as `[0,1,2]` + `[0,2,3]`.
-
----
 
 ## BlockShape
 
@@ -102,8 +120,6 @@ interface BlockShape {
 the mesh builder to skip the opposite face on the neighbour. Partial shapes (ramps, wedges)
 must return `false` to avoid incorrect face culling.
 
----
-
 ## BlockRegistry
 
 Maps numeric block IDs to `BlockDefinition` objects. Accessible via `VoxelRenderer.blockRegistry`.
@@ -117,8 +133,6 @@ Registers a block definition. Throws if `def.id === 0`.
 #### `has(id: number): boolean`
 
 #### `getAll(): IterableIterator<BlockDefinition>`
-
----
 
 ## BlockShapeRegistry
 
@@ -134,8 +148,6 @@ by `VoxelRenderer`. Accessible via `VoxelRenderer.shapeRegistry`.
 #### `static createDefault(): BlockShapeRegistry`
 
 Creates a standalone registry pre-loaded with all built-in shapes.
-
----
 
 ## Face
 
