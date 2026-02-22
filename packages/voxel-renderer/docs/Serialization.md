@@ -4,7 +4,17 @@ Save and restore world state as plain JSON. Version 1 stores voxels as a sparse 
 keyed by `"x,y,z"` strings for human readability and easy diffing.
 Tileset metadata is embedded so the loader can restore textures automatically.
 
----
+```ts
+const vr = new VoxelRenderer({});
+
+// Save
+const json = vr.save();
+localStorage.setItem("map", JSON.stringify(json));
+
+// Load
+const data = JSON.parse(localStorage.getItem("map")!) as VoxelWorldJSON;
+await vr.load(data);
+```
 
 ## Types
 
@@ -22,7 +32,10 @@ interface VoxelLayerJSON {
   name: string;
   visible: boolean;
   order: number;
-  /** World-space translation of the layer. Absent in files produced before layer offsets were introduced; treated as {x:0,y:0,z:0} on load. */
+  /** World-space translation of the layer.
+   * Absent in files produced before layer offsets were introduced;
+   * treated as {x:0,y:0,z:0} on load.
+   **/
   offset?: { x: number; y: number; z: number };
   voxels: Record<VoxelEntryKey, VoxelEntryJSON>;
 }
@@ -62,14 +75,14 @@ interface VoxelWorldJSON {
   chunkSize: number;
   tilesets: TilesetDefinition[];
   layers: VoxelLayerJSON[];
-  /** Block definitions embedded by converters (e.g. TiledConverter). Auto-registered on load. */
+  /** Block definitions embedded by converters (e.g. TiledConverter).
+   * Auto-registered on load.
+   **/
   blocks?: BlockDefinition[];
   /** Object layers produced by converters from Tiled object layers. */
   objectLayers?: VoxelObjectLayerJSON[];
 }
 ```
-
----
 
 ## VoxelSerializer
 
@@ -83,17 +96,3 @@ Converts the world and tileset metadata to a plain JSON-serialisable object.
 #### `deserialize(data: VoxelWorldJSON, world: VoxelWorld): void`
 
 Clears `world` and restores it from a snapshot. Throws if `data.version !== 1`.
-
----
-
-## Example
-
-```ts
-// Save
-const json = vr.save();
-localStorage.setItem("map", JSON.stringify(json));
-
-// Load
-const data = JSON.parse(localStorage.getItem("map")!) as VoxelWorldJSON;
-await vr.load(data);
-```

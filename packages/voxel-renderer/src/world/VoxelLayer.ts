@@ -26,15 +26,34 @@ export interface VoxelLayerJSON {
 }
 
 export interface VoxelLayerConfigurableOptions {
+  /**
+   * Whether the layer is visible by default.
+   * @default true
+   */
   visible?: boolean;
+  /**
+   * Arbitrary layer properties.
+   * @default {}
+   */
   properties?: Record<string, any>;
 }
 
 export interface VoxelLayerOptions extends VoxelLayerConfigurableOptions {
+  /** Unique layer identifier. */
   id: string;
+  /** Human-readable layer name. */
   name: string;
+  /**
+   * Draw order;
+   * higher values render above lower ones.
+   **/
   order: number;
+  /** Size of one voxel chunk (required). */
   chunkSize: number;
+  /**
+   * World-space offset applied to voxels.
+   * @default { x: 0, y: 0, z: 0 }
+   **/
   offset?: VoxelCoord;
 }
 

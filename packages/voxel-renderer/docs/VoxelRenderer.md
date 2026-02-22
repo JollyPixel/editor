@@ -3,7 +3,58 @@
 `ActorComponent` that renders a layered voxel world as chunked Three.js meshes.
 Each chunk is rebuilt only when its content changes, keeping GPU work proportional to edits rather than world size.
 
----
+```ts
+const vr = actor.addComponentAndGet(VoxelRenderer, {
+  layers: ["Ground"],
+  blocks: [
+    {
+      id: 1,
+      name: "Grass",
+      shapeId: "fullCube",
+      collidable: true,
+      faceTextures: {},
+      defaultTexture: {
+        col: 0,
+        row: 0
+      }
+    }
+  ]
+});
+
+await vr.loadTileset({
+  id: "default",
+  src: "tileset.png",
+  tileSize: 16
+});
+
+vr.setVoxel("Ground", {
+  position: { x: 0, y: 0, z: 0 },
+  blockId: 1
+});
+
+vr.setVoxel("Ground", {
+  position: { x: 1, y: 0, z: 0 },
+  blockId: 1,
+  rotation: VoxelRotation.CW90,
+  flipX: false,
+  flipZ: false
+});
+
+const entry = vr.getVoxel({
+  x: 0, y: 0, z: 0
+});
+
+// Move an entire layer in world space
+// e.g. snap a prefab layer to a new grid position
+vr.setLayerOffset("Ground", {
+  x: 8, y: 0, z: 0
+});
+
+// Shift a layer incrementally
+vr.translateLayer("Ground", {
+  x: 0, y: 1, z: 0
+});
+```
 
 ## VoxelRendererOptions
 
@@ -20,7 +71,8 @@ interface VoxelRendererOptions {
   chunkSize?: number;
   /**
    * Enables collision shapes when provided.
-   * disabled by default to avoid forcing Rapier as a dependency for users who don't need physics.
+   * disabled by default to avoid forcing Rapier
+   * as a dependency for users who don't need physics.
    */
   rapier?: {
     /** Rapier3D module (static API) */
@@ -71,58 +123,15 @@ interface VoxelRendererOptions {
   logger?: Systems.Logger;
 
   /**
-   * Optional callback that is called whenever a layer is added, removed, or updated.
+   * Optional callback that is called whenever a layer is
+   * - added
+   * - removed
+   * - updated.
    * Useful for synchronizing external systems with changes to the voxel world.
    */
   onLayerUpdated?: VoxelLayerHookListener;
 }
 ```
-
----
-
-## VoxelSetOptions
-
-```ts
-interface VoxelSetOptions {
-  position: THREE.Vector3Like;
-  blockId: number;
-  /** Y-axis rotation in 90° steps. Default: `VoxelRotation.None`. */
-  rotation?: VoxelRotation;
-  /** Mirror the block on the X axis. Default: `false`. */
-  flipX?: boolean;
-  /** Mirror the block on the Z axis. Default: `false`. */
-  flipZ?: boolean;
-}
-```
-
----
-
-## VoxelRemoveOptions
-
-```ts
-interface VoxelRemoveOptions {
-  position: THREE.Vector3Like;
-}
-```
-
----
-
-## VoxelRotation
-
-Y-axis rotation applied to a placed voxel, in 90° steps.
-
-```ts
-const VoxelRotation = {
-  None:   0, // 0°
-  CCW90:  1, // 90° counter-clockwise
-  Deg180: 2, // 180°
-  CW90:   3, // 90° clockwise
-} as const;
-
-type VoxelRotation = typeof VoxelRotation[keyof typeof VoxelRotation];
-```
-
----
 
 ## VoxelRenderer
 
@@ -131,11 +140,13 @@ Extends `ActorComponent`.
 ### Properties
 
 ```ts
-readonly world: VoxelWorld;
-readonly blockRegistry: BlockRegistry;
-readonly shapeRegistry: BlockShapeRegistry;
-readonly tilesetManager: TilesetManager;
-readonly serializer: VoxelSerializer;
+class VoxelRenderer {
+  readonly world: VoxelWorld;
+  readonly blockRegistry: BlockRegistry;
+  readonly shapeRegistry: BlockShapeRegistry;
+  readonly tilesetManager: TilesetManager;
+  readonly serializer: VoxelSerializer;
+}
 ```
 
 ### Methods
@@ -179,9 +190,41 @@ Adds `delta` to the layer's current offset. Equivalent to `setLayerOffset` with
 
 Places a voxel at a world-space position.
 
+```ts
+interface VoxelSetOptions {
+  position: THREE.Vector3Like;
+  blockId: number;
+  /** Y-axis rotation in 90° steps. Default: `VoxelRotation.None`. */
+  rotation?: VoxelRotation;
+  /** Mirror the block on the X axis. Default: `false`. */
+  flipX?: boolean;
+  /** Mirror the block on the Z axis. Default: `false`. */
+  flipZ?: boolean;
+}
+```
+
+Y-axis rotation applied to a placed voxel, in 90° steps.
+
+```ts
+const VoxelRotation = {
+  None:   0, // 0°
+  CCW90:  1, // 90° counter-clockwise
+  Deg180: 2, // 180°
+  CW90:   3, // 90° clockwise
+} as const;
+
+type VoxelRotation = typeof VoxelRotation[keyof typeof VoxelRotation];
+```
+
 #### `removeVoxel(layerName: string, options: VoxelRemoveOptions): void`
 
 Removes the voxel at a world-space position.
+
+```ts
+interface VoxelRemoveOptions {
+  position: THREE.Vector3Like;
+}
+```
 
 #### `getVoxel` overloads
 
@@ -218,54 +261,4 @@ referenced tilesets that are not already loaded.
 
 ### Hooks
 
-```ts
-export type VoxelLayerHookAction =
-  | "added"
-  | "removed"
-  | "updated"
-  | "offset-updated"
-  | "voxel-set"
-  | "voxel-removed";
-
-export interface VoxelLayerHookEvent {
-  layerName: string;
-  action: VoxelLayerHookAction;
-  metadata: Record<string, any>;
-}
-export type VoxelLayerHookListener = (
-  event: VoxelLayerHookEvent
-) => void;
-```
-
----
-
-## Example
-
-```ts
-const vr = actor.addComponentAndGet(VoxelRenderer, {
-  layers: ["Ground"],
-  blocks: [
-    {
-      id: 1, name: "Grass", shapeId: "fullCube", collidable: true,
-      faceTextures: {}, defaultTexture: { col: 0, row: 0 }
-    }
-  ]
-});
-
-await vr.loadTileset({ id: "default", src: "tileset.png", tileSize: 16 });
-
-// Place a voxel
-vr.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: 1 });
-
-// Place a rotated voxel
-vr.setVoxel("Ground", { position: { x: 1, y: 0, z: 0 }, blockId: 1, rotation: VoxelRotation.CW90 });
-
-// Read back
-const entry = vr.getVoxel({ x: 0, y: 0, z: 0 });
-
-// Move an entire layer in world space (e.g. snap a prefab layer to a new grid position)
-vr.setLayerOffset("Ground", { x: 8, y: 0, z: 0 });
-
-// Shift a layer incrementally
-vr.translateLayer("Ground", { x: 0, y: 1, z: 0 });
-```
+See [Hooks](./Hooks.md) for more information

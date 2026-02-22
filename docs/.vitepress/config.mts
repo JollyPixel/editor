@@ -5,6 +5,10 @@ import { defineConfig } from "vitepress";
 export default defineConfig({
   title: "JollyPixel",
   description: "The collaborative 3D HTML5 game maker",
+  srcExclude: [
+    "**/public/**",
+    "packages/editors/texture/src/components/**"
+  ],
   themeConfig: {
     nav: [
       { text: "Engine", link: "/engine/README", activeMatch: "^/engine/" },
@@ -234,6 +238,10 @@ export default defineConfig({
                   link: "/voxel-renderer/World"
                 },
                 {
+                  text: "Layer",
+                  link: "/voxel-renderer/Layer"
+                },
+                {
                   text: "Blocks",
                   link: "/voxel-renderer/Blocks"
                 }
@@ -266,6 +274,10 @@ export default defineConfig({
                 {
                   text: "Serialization",
                   link: "/voxel-renderer/Serialization"
+                },
+                {
+                  text: "Hooks",
+                  link: "/voxel-renderer/Hooks"
                 }
               ]
             }

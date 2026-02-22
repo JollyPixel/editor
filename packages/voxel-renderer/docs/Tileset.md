@@ -3,7 +3,29 @@
 Tileset loading, UV computation, and pixel-art texture management.
 `NearestFilter` and `SRGBColorSpace` are applied automatically to preserve pixel-art crispness.
 
----
+```ts
+const vr = new VoxelRenderer({});
+
+await vr.loadTileset({
+  id: "default",
+  src: "assets/tileset.png",
+  tileSize: 16
+  // cols and rows are optional — derived from the image at load time
+});
+
+// Tile at column 2, row 0 — uses the default tileset
+const tileRef: TileRef = {
+  col: 2,
+  row: 0
+};
+
+// Tile from a secondary tileset
+const decorTile: TileRef = {
+  col: 0,
+  row: 3,
+  tilesetId: "decor"
+};
+```
 
 ## TilesetDefinition
 
@@ -11,15 +33,22 @@ Describes an atlas image.
 
 ```ts
 interface TilesetDefinition {
-  id: string;        // Unique identifier; referenced by TileRef.tilesetId
-  src: string;       // URL or path to the atlas image
-  tileSize: number;  // Tile width and height in pixels (tiles are square)
-  cols?: number;     // Number of tile columns — auto-derived from the image if omitted
-  rows?: number;     // Number of tile rows — auto-derived from the image if omitted
+  id: string;
+  src: string;
+  /** Tile width/height in pixels (tiles are square) */
+  tileSize: number;
+  /**
+   * Number of tile columns in the atlas.
+   * When omitted, derived automatically from the image width
+   */
+  cols?: number;
+  /**
+   * Number of tile rows in the atlas.
+   * When omitted, derived automatically from the image height
+   */
+  rows?: number;
 }
 ```
-
----
 
 ## TileRef
 
@@ -29,26 +58,26 @@ References a specific tile in an atlas by grid position.
 interface TileRef {
   col: number;
   row: number;
-  tilesetId?: string; // omit to use the default (first loaded) tileset
+  // omit to use the default (first loaded) tileset
+  tilesetId?: string;
 }
 ```
-
----
 
 ## TilesetUVRegion
 
 Precomputed UV atlas region returned by `TilesetManager.getTileUV()`.
 
 ```ts
-interface TilesetUVRegion {
-  offsetU: number; // U coordinate of the tile's bottom-left corner
-  offsetV: number; // V coordinate (Y-flipped for WebGL origin)
-  scaleU: number;  // Tile width in UV space
-  scaleV: number;  // Tile height in UV space
+/**
+ * Precomputed UV region for a specific tile in the atlas. 
+ **/
+export interface TilesetUVRegion {
+  offsetU: number;
+  offsetV: number;
+  scaleU: number;
+  scaleV: number;
 }
 ```
-
----
 
 ## TilesetManager
 
@@ -88,22 +117,3 @@ Returns all registered tileset definitions with `cols` and `rows` resolved from 
 #### `dispose(): void`
 
 Disposes all textures and materials and clears the registry.
-
----
-
-## Example
-
-```ts
-await vr.loadTileset({
-  id: "default",
-  src: "assets/tileset.png",
-  tileSize: 16
-  // cols and rows are optional — derived from the image at load time
-});
-
-// Tile at column 2, row 0 — uses the default tileset
-const tileRef: TileRef = { col: 2, row: 0 };
-
-// Tile from a secondary tileset
-const decorTile: TileRef = { col: 0, row: 3, tilesetId: "decor" };
-```

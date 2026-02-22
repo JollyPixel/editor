@@ -1,9 +1,7 @@
 # Collision
 
-Optional Rapier3D physics integration. Disabled by default — no Rapier dependency is
+Optional [Rapier3D](https://rapier.rs/) physics integration. Disabled by default — no Rapier dependency is
 required when physics is not needed.
-
----
 
 ## Setup
 
@@ -22,8 +20,6 @@ const vr = actor.addComponentAndGet(VoxelRenderer, {
 
 Colliders are built and updated automatically alongside chunk meshes.
 
----
-
 ## Rapier Interfaces
 
 The library uses structural interfaces to avoid importing the Rapier WASM module at the
@@ -35,24 +31,39 @@ interface RapierAPI {
     fixed(): RapierRigidBodyDesc;
   };
   ColliderDesc: {
-    cuboid(hx: number, hy: number, hz: number): RapierColliderDesc;
-    trimesh(vertices: Float32Array, indices: Uint32Array): RapierColliderDesc;
+    cuboid(
+      hx: number,
+      hy: number,
+      hz: number
+    ): RapierColliderDesc;
+    trimesh(
+      vertices: Float32Array,
+      indices: Uint32Array
+    ): RapierColliderDesc;
   };
 }
 
 interface RapierWorld {
-  createRigidBody(desc: RapierRigidBodyDesc): RapierRigidBody;
-  createCollider(desc: RapierColliderDesc, parent?: RapierRigidBody): RapierCollider;
-  removeCollider(collider: RapierCollider, wakeUp: boolean): void;
-  removeRigidBody(body: RapierRigidBody): void;
+  createRigidBody(
+    desc: RapierRigidBodyDesc
+  ): RapierRigidBody;
+  createCollider(
+    desc: RapierColliderDesc,
+    parent?: RapierRigidBody
+  ): RapierCollider;
+  removeCollider(
+    collider: RapierCollider,
+    wakeUp: boolean
+  ): void;
+  removeRigidBody(
+    body: RapierRigidBody
+  ): void;
 }
 
 interface RapierCollider {
   readonly handle: number;
 }
 ```
-
----
 
 ## Collision Strategy
 
@@ -65,8 +76,6 @@ The strategy is chosen per-chunk based on the `collisionHint` of each voxel's sh
 - `"none"` — block is skipped entirely (triggers, decoration).
 
 If **any** block in a chunk uses `"trimesh"`, the entire chunk gets a single trimesh collider.
-
----
 
 ## VoxelColliderBuilder
 

@@ -25,6 +25,7 @@ Chunked voxel engine and renderer for Three.js and the JollyPixel [engine][engin
 - `save()` / `load()` round-trips the full world state as plain JSON
 - `TiledConverter` to import Tiled `.tmj` maps in `"stacked"` or `"flat"` layer modes
 - Optional Rapier3D physics with `"box"` or `"trimesh"` colliders rebuilt per dirty chunk; zero extra dependency if omitted
+- Compatible with JollyPixel engine logger
 
 > [!NOTE]
 > The implementation and optimization are probably far from perfect. Feel free to open a PR to help us.
@@ -189,6 +190,42 @@ All four examples use OrbitControls (left drag: rotate, right drag: pan, scroll:
 - [Collision](docs/Collision.md) - Rapier3D integration, `VoxelColliderBuilder`, and physics interfaces.
 - [Built-In Shapes](docs/BuiltInShapes.md) - All built-in block shapes and custom shape authoring.
 - [TiledConverter](docs/TiledConverter.md) - Converting Tiled `.tmj` exports to `VoxelWorldJSON`.
+
+## 🔥 Troubleshooting
+
+If something isn't working as expected, enable verbose logging to get detailed runtime output:
+
+```ts
+// Enable debug logs for the entire runtime
+const { world } = runtime;
+world.logger.setLevel("debug");
+world.logger.enableNamespace("*");
+```
+
+Alternatively, pass a custom `Logger` instance to `VoxelRenderer`:
+
+```ts
+import { Systems } from "@jolly-pixel/engine";
+import { VoxelRenderer } from "@jolly-pixel/voxel.renderer";
+
+const vr = new VoxelRenderer({
+  logger: new Systems.Logger({
+    level: "trace",
+    namespaces: ["*"]
+  })
+});
+```
+
+Quick tips
+
+- **Tileset missing:** verify the `src` path and ensure the image is being served (check browser Network tab and CORS).
+- **Cutout/transparent textures look wrong:** increase or decrease `alphaTest` (for example `alphaTest: 0.1`) to tune cutout thresholds.
+- **Physics not working:** make sure Rapier is initialized (`await Rapier.init()`) and you pass a Rapier `World` via the `rapier` option.
+- **Chunks not updating or faces missing:** face culling hides faces between adjacent solid voxels; confirm neighboring voxels are placed correctly.
+
+Reporting issues
+
+- When opening an issue, include package and runtime versions, reproduction steps, and enable debug logs (see above). A minimal repro or screenshot speeds up investigation.
 
 ## Contributors guide
 
