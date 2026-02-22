@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "N/A",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "build": "npm run build --ws --if-present",
     "test": "npm run test --ws --if-present",
