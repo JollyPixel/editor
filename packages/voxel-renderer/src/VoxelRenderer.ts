@@ -43,6 +43,9 @@ import { VoxelChunk } from "./world/VoxelChunk.ts";
 import type { VoxelEntry, VoxelCoord } from "./world/types.ts";
 import { packTransform, type FACE } from "./utils/math.ts";
 import { FACE_OFFSETS } from "./mesh/math.ts";
+import type {
+  VoxelLayerHookListener
+} from "./hooks.ts";
 
 type MaterialCustomizerFn = (
   material: THREE.MeshLambertMaterial | THREE.MeshStandardMaterial,
@@ -131,6 +134,12 @@ export interface VoxelRendererOptions {
    * Uses the engine's default logger if not provided.
    */
   logger?: Systems.Logger;
+
+  /**
+   * Optional callback that is called whenever a layer is added, removed, or updated.
+   * Useful for synchronizing external systems with changes to the voxel world.
+   */
+  onLayerUpdated?: VoxelLayerHookListener;
 }
 
 /**
@@ -172,6 +181,7 @@ export class VoxelRenderer extends ActorComponent {
   #alphaTest: number;
 
   #logger: Systems.Logger;
+  #onLayerUpdated?: VoxelLayerHookListener;
 
   constructor(
     actor: Actor<any>,
@@ -191,12 +201,14 @@ export class VoxelRenderer extends ActorComponent {
       blocks = [],
       shapes = [],
       alphaTest = 0.1,
-      logger = actor.world.logger
+      logger = actor.world.logger,
+      onLayerUpdated
     } = options;
 
     this.#materialType = material;
     this.#materialCustomizer = materialCustomizer;
     this.#alphaTest = alphaTest;
+    this.#onLayerUpdated = onLayerUpdated;
     this.#logger = logger.child({
       namespace: "VoxelRenderer"
     });
@@ -304,6 +316,11 @@ export class VoxelRenderer extends ActorComponent {
       position,
       { blockId, transform }
     );
+    this.#onLayerUpdated?.({
+      action: "voxel-set",
+      layerName,
+      metadata: { position, blockId, rotation, flipX, flipZ }
+    });
   }
 
   removeVoxel(
@@ -311,6 +328,11 @@ export class VoxelRenderer extends ActorComponent {
     options: VoxelRemoveOptions
   ): void {
     this.world.removeVoxelAt(layerName, options.position);
+    this.#onLayerUpdated?.({
+      action: "voxel-removed",
+      layerName,
+      metadata: { position: options.position }
+    });
   }
 
   getVoxel(position: THREE.Vector3Like): VoxelEntry | undefined;
@@ -359,13 +381,45 @@ export class VoxelRenderer extends ActorComponent {
     name: string,
     options: VoxelLayerConfigurableOptions = {}
   ): VoxelLayer {
-    return this.world.addLayer(name, options);
+    const layer = this.world.addLayer(name, options);
+    this.#onLayerUpdated?.({
+      action: "added",
+      layerName: name,
+      metadata: { options }
+    });
+
+    return layer;
+  }
+
+  updateLayer(
+    name: string,
+    options: Partial<VoxelLayerConfigurableOptions>
+  ): boolean {
+    const result = this.world.updateLayer(name, options);
+    if (result) {
+      this.#onLayerUpdated?.({
+        action: "updated",
+        layerName: name,
+        metadata: { options }
+      });
+    }
+
+    return result;
   }
 
   removeLayer(
     name: string
   ): boolean {
-    return this.world.removeLayer(name);
+    const result = this.world.removeLayer(name);
+    if (result) {
+      this.#onLayerUpdated?.({
+        action: "removed",
+        layerName: name,
+        metadata: {}
+      });
+    }
+
+    return result;
   }
 
   setLayerOffset(
@@ -373,6 +427,11 @@ export class VoxelRenderer extends ActorComponent {
     offset: VoxelCoord
   ): void {
     this.world.setLayerOffset(name, offset);
+    this.#onLayerUpdated?.({
+      action: "offset-updated",
+      layerName: name,
+      metadata: { offset }
+    });
   }
 
   translateLayer(
@@ -380,6 +439,11 @@ export class VoxelRenderer extends ActorComponent {
     delta: VoxelCoord
   ): void {
     this.world.translateLayer(name, delta);
+    this.#onLayerUpdated?.({
+      action: "offset-updated",
+      layerName: name,
+      metadata: { delta }
+    });
   }
 
   async loadTileset(
