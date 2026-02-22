@@ -69,7 +69,9 @@ export {
 } from "./tileset/TilesetManager.ts";
 
 // World
-export { VoxelWorld } from "./world/VoxelWorld.ts";
+export {
+  VoxelWorld
+} from "./world/VoxelWorld.ts";
 export {
   VoxelLayer,
   type VoxelEntryKey,

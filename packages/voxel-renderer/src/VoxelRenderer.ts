@@ -256,16 +256,23 @@ export class VoxelRenderer extends ActorComponent {
   update(
     _deltaTime: number
   ): void {
+    for (const { layer, chunk } of this.world.getAllChunksToBeRemoved()) {
+      this.#removeChunk(layer, chunk);
+    }
+
     // Rebuild only chunks that have been modified since the last frame.
     for (const { layer, chunk } of this.world.getAllDirtyChunks()) {
       if (!layer.visible) {
+        if (layer.wasVisible) {
+          this.#removeChunk(layer, chunk);
+        }
+
         continue;
       }
 
-      this.#logger.debug(
-        `Layer with name '${layer.name}' is dirty and will be rebuilt.`,
-        { source: "update" }
-      );
+      if (layer.visible) {
+        this.#removeChunk(layer, chunk);
+      }
       this.#rebuildChunk(layer, chunk);
       chunk.dirty = false;
     }
@@ -560,13 +567,13 @@ export class VoxelRenderer extends ActorComponent {
     return material;
   }
 
-  #rebuildChunk(
+  #removeChunk(
     layer: VoxelLayer,
     chunk: VoxelChunk
-  ): void {
+  ) {
     const chunkKeyBase = `${layer.id}:${chunk.toString()}`;
     this.#logger.debug(
-      `Rebuilding chunk '${chunkKeyBase}' with layer name '${layer.name}'`
+      `Removing chunk '${chunkKeyBase}' with layer name '${layer.name}'`
     );
 
     // Remove all existing meshes for this chunk (rebuilt per tileset below).
@@ -583,6 +590,16 @@ export class VoxelRenderer extends ActorComponent {
 
     // Remove any existing collider for this chunk.
     this.#chunkColliders.delete(chunkKeyBase);
+  }
+
+  #rebuildChunk(
+    layer: VoxelLayer,
+    chunk: VoxelChunk
+  ): void {
+    const chunkKeyBase = `${layer.id}:${chunk.toString()}`;
+    this.#logger.debug(
+      `Rebuilding chunk '${chunkKeyBase}' with layer name '${layer.name}'`
+    );
 
     const geometries = this.#meshBuilder.buildChunkGeometries(chunk, layer);
     if (!geometries) {
