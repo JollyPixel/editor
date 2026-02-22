@@ -473,10 +473,13 @@ export class VoxelRenderer extends ActorComponent {
   save(): VoxelWorldJSON {
     this.#logger.debug("Serializing world to JSON...");
 
-    return this.serializer.serialize(
-      this.world,
-      this.tilesetManager
-    );
+    return {
+      ...this.serializer.serialize(
+        this.world,
+        this.tilesetManager
+      ),
+      blocks: [...this.blockRegistry.getAll()]
+    };
   }
 
   async load(
