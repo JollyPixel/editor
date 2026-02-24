@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
+import { ViewHelper } from "three/addons/helpers/ViewHelper.js";
 
 // Import Internal Dependencies
 import type { BlockShape } from "../../src/blocks/BlockShape.ts";
@@ -180,7 +181,7 @@ function buildGeometry(shape: BlockShape): THREE.BufferGeometry {
 
 const canvas = document.querySelector("canvas") as HTMLCanvasElement;
 const renderer = createRenderer(canvas);
-
+renderer.autoClear = false;
 // ── Scene & camera ─────────────────────────────────────────────────────────────
 
 const scene = createScene();
@@ -194,6 +195,9 @@ const { camera, controls } = createOrbitCamera(
   { x: kCenterX, y: 6, z: kCenterZ + 10 },
   { x: kCenterX, y: 0.5, z: kCenterZ }
 );
+
+const helper = new ViewHelper(camera, renderer.domElement);
+helper.setLabels("X", "Y", "Z");
 
 // ── Lighting ───────────────────────────────────────────────────────────────────
 
@@ -253,4 +257,6 @@ for (let i = 0; i < kShapes.length; i++) {
 // ── Animation loop ─────────────────────────────────────────────────────────────
 
 createExamplesMenu();
-startLoop(renderer, scene, camera, controls, labelEntries);
+startLoop(renderer, scene, camera, controls, labelEntries, () => {
+  helper.render(renderer);
+});

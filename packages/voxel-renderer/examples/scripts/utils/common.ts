@@ -150,10 +150,11 @@ export function startLoop(
 
   function animate(): void {
     requestAnimationFrame(animate);
+    renderer.clear();
     controls.update();
-    onFrame?.();
     updateLabels(labelEntries, camera);
     renderer.render(scene, camera);
+    onFrame?.();
   }
 
   animate();

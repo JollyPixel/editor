@@ -89,8 +89,8 @@ describe("StairCornerInner", () => {
     assert.equal(shape.collisionHint, "trimesh");
   });
 
-  it("has 10 faces", () => {
-    assert.equal(shape.faces.length, 10);
+  it("has 12 faces", () => {
+    assert.equal(shape.faces.length, 12);
   });
 
   it("occludes NegY, PosZ, PosX", () => {
@@ -219,7 +219,7 @@ describe("StairCornerInnerFlip", () => {
   });
 
   it("has 10 faces", () => {
-    assert.equal(shape.faces.length, 10);
+    assert.equal(shape.faces.length, 12);
   });
 
   it("occludes PosY, PosZ, PosX", () => {
