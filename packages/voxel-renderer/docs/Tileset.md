@@ -114,6 +114,24 @@ Returns the shared texture for a tileset. Defaults to `defaultTilesetId`.
 
 Returns all registered tileset definitions with `cols` and `rows` resolved from the image.
 
+#### `getDefaultBlocks(tilesetId: string | null, options?: TilesetDefaultBlockOptions): BlockDefinition[]`
+
+Returns a default Array of `BlockDefinition` mapped to the given **tilesetId** (or default one if not provided).
+
+```ts
+interface TilesetDefaultBlockOptions {
+  /**
+   * Maximum block ID to generate (inclusive).
+   * @default 255.
+   **/
+  limit?: number;
+  /**
+   * Function to map block IDs to custom block definitions.
+   */
+  map?: (blockId: number, col: number, row: number) => Omit<BlockDefinition, "id">;
+}
+```
+
 #### `dispose(): void`
 
 Disposes all textures and materials and clears the registry.

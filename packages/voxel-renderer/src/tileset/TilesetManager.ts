@@ -6,11 +6,24 @@ import type {
   TileRef,
   TilesetDefinition
 } from "./types.ts";
+import type { BlockDefinition } from "../blocks/BlockDefinition.ts";
 
 export type {
   TileRef,
   TilesetDefinition
 };
+
+export interface TilesetDefaultBlockOptions {
+  /**
+   * Maximum block ID to generate (inclusive).
+   * @default 255.
+   **/
+  limit?: number;
+  /**
+   * Function to map block IDs to custom block definitions.
+   */
+  map?: (blockId: number, col: number, row: number) => Omit<BlockDefinition, "id">;
+}
 
 /** Precomputed UV region for a specific tile in the atlas. */
 export interface TilesetUVRegion {
@@ -144,6 +157,58 @@ export class TilesetManager {
     return [
       ...this.#tilesets.values()
     ].map((tileSetEntry) => tileSetEntry.def);
+  }
+
+  getDefaultBlocks(
+    tilesetId = this.#defaultTilesetId,
+    options: TilesetDefaultBlockOptions = {}
+  ): BlockDefinition[] {
+    const {
+      limit = 255,
+      map
+    } = options;
+    const blocks: BlockDefinition[] = [];
+
+    if (!tilesetId) {
+      return blocks;
+    }
+
+    const entry = this.#tilesets.get(tilesetId);
+    if (!entry) {
+      return blocks;
+    }
+
+    const { tileSize } = entry.def;
+    const imgW = entry.texture.image.width;
+    const imgH = entry.texture.image.height;
+    const cols = Math.floor(imgW / tileSize);
+    const rows = Math.floor(imgH / tileSize);
+
+    let blockId = 1;
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        if (blockId > limit) {
+          return blocks;
+        }
+
+        blocks.push({
+          id: blockId,
+          name: `Block ${blockId}`,
+          shapeId: "cube",
+          collidable: false,
+          faceTextures: {},
+          defaultTexture: {
+            tilesetId,
+            col,
+            row
+          },
+          ...map?.(blockId, col, row)
+        });
+        blockId++;
+      }
+    }
+
+    return blocks;
   }
 
   get defaultTilesetId(): string | null {
