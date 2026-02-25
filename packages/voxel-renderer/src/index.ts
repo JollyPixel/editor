@@ -63,6 +63,7 @@ export {
 // Tileset
 export {
   TilesetManager,
+  type TilesetDefaultBlockOptions,
   type TilesetUVRegion,
   type TileRef,
   type TilesetDefinition
