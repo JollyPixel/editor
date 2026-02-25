@@ -190,6 +190,10 @@ Adds `delta` to the layer's current offset. Equivalent to `setLayerOffset` with
 
 Swaps `order` with the neighbouring layer in the given direction.
 
+#### `getLayerCenter(name: string): Vector3 | null`
+
+Returns the world-space center of all voxels in the given layer
+
 #### `setVoxel(layerName: string, options: VoxelSetOptions): void`
 
 Places a voxel at a world-space position.
