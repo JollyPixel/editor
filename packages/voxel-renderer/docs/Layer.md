@@ -126,6 +126,11 @@ Remove the voxel at the given world-space `position`. If the containing chunk be
 layer.removeVoxelAt({ x: 0, y: 0, z: 0 });
 ```
 
+### centerToWorld(): Vector3
+
+Returns the world-space center of all voxels in the given layer, accounting for the layer offset.
+When the layer has no voxels the layer offset itself is returned as a Vector3.
+
 ### markChunkDirty(cx: number, cy: number, cz: number): void
 
 Mark the chunk at the given chunk coordinates as dirty so it will be rebuilt.

@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { Vector3Like } from "three";
+import { Vector3, type Vector3Like } from "three";
 
 // Import Internal Dependencies
 import { VoxelChunk } from "./VoxelChunk.ts";
@@ -236,6 +236,72 @@ export class VoxelLayer {
         this.#createChunkKey(cx, cy, cz)
       );
     }
+  }
+
+  /**
+   * Returns the world-space center of all voxels in the given layer,
+   * accounting for the layer offset. When the layer has no voxels the layer
+   * offset itself is returned as a Vector3.
+   */
+  centerToWorld(): Vector3 | null {
+    const { offset } = this;
+
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    let minZ = Infinity;
+    let maxZ = -Infinity;
+
+    for (const chunk of this.getChunks()) {
+      const ox = chunk.cx * this.#chunkSize;
+      const oy = chunk.cy * this.#chunkSize;
+      const oz = chunk.cz * this.#chunkSize;
+
+      for (const [linearIdx] of chunk.entries()) {
+        const { lx, ly, lz } = chunk.fromLinearIndex(linearIdx);
+        const x = ox + lx;
+        const y = oy + ly;
+        const z = oz + lz;
+
+        if (x < minX) {
+          minX = x;
+        }
+        if (x > maxX) {
+          maxX = x;
+        }
+        if (y < minY) {
+          minY = y;
+        }
+        if (y > maxY) {
+          maxY = y;
+        }
+        if (z < minZ) {
+          minZ = z;
+        }
+        if (z > maxZ) {
+          maxZ = z;
+        }
+      }
+    }
+
+    if (minX === Infinity) {
+      // No voxels — local center is the layer origin.
+      return new Vector3(offset.x, offset.y, offset.z);
+    }
+
+    // +1 so the center accounts for the full unit-cube extent of each voxel.
+    const localCenter = new Vector3(
+      (minX + maxX + 1) / 2,
+      (minY + maxY + 1) / 2,
+      (minZ + maxZ + 1) / 2
+    );
+
+    return new Vector3(
+      localCenter.x + offset.x,
+      localCenter.y + offset.y,
+      localCenter.z + offset.z
+    );
   }
 
   markChunkDirty(

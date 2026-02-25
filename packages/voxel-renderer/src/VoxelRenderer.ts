@@ -466,6 +466,17 @@ export class VoxelRenderer extends ActorComponent {
     });
   }
 
+  getLayerCenter(
+    name: string
+  ): THREE.Vector3 | null {
+    const layer = this.world.getLayer(name);
+    if (!layer) {
+      return null;
+    }
+
+    return layer.centerToWorld();
+  }
+
   async loadTileset(
     def: TilesetDefinition
   ): Promise<void> {
