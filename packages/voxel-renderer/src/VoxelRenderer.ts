@@ -453,6 +453,19 @@ export class VoxelRenderer extends ActorComponent {
     });
   }
 
+  moveLayer(
+    name: string,
+    direction: "up" | "down"
+  ): void {
+    this.world.moveLayer(name, direction);
+    this.markAllChunksDirty("moveLayer");
+    this.#onLayerUpdated?.({
+      action: "reordered",
+      layerName: name,
+      metadata: { direction }
+    });
+  }
+
   async loadTileset(
     def: TilesetDefinition
   ): Promise<void> {
@@ -473,7 +486,7 @@ export class VoxelRenderer extends ActorComponent {
     this.#materials.delete(def.id);
 
     // Force all chunks to rebuild geometry (UV offsets may have changed).
-    this.#markAllChunksDirty("loadTileset");
+    this.markAllChunksDirty("loadTileset");
   }
 
   // --- Serialization --- //
@@ -705,7 +718,7 @@ export class VoxelRenderer extends ActorComponent {
     }
   }
 
-  #markAllChunksDirty(
+  markAllChunksDirty(
     source?: string
   ): void {
     this.#logger.debug("Marking all chunks dirty...", { source });
