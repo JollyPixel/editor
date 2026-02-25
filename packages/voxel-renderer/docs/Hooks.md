@@ -31,7 +31,8 @@ export type VoxelLayerHookAction =
   | "updated"
   | "offset-updated"
   | "voxel-set"
-  | "voxel-removed";
+  | "voxel-removed"
+  | "reordered";
 
 // Describes a change related to a layer.
 export interface VoxelLayerHookEvent {

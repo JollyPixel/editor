@@ -186,6 +186,10 @@ is re-evaluated on the next frame. No-op if the layer is not found.
 Adds `delta` to the layer's current offset. Equivalent to `setLayerOffset` with
 `layer.offset + delta`. No-op if the layer is not found.
 
+#### `moveLayer(name: string, direction: "up" | "down"): void`
+
+Swaps `order` with the neighbouring layer in the given direction.
+
 #### `setVoxel(layerName: string, options: VoxelSetOptions): void`
 
 Places a voxel at a world-space position.
@@ -258,6 +262,10 @@ Serialises the full world state (layers, voxels, tileset metadata) to a plain JS
 
 Clears the current world, restores state from a JSON snapshot, and reloads any
 referenced tilesets that are not already loaded.
+
+#### `markAllChunksDirty(source?: string): void`
+
+Mark all the chunks as dirty and rebuild them in the next frame
 
 ### Hooks
 
