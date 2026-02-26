@@ -19,20 +19,14 @@ import { PoleY } from "../../src/blocks/shapes/PoleY.ts";
 import { Pole } from "../../src/blocks/shapes/Pole.ts";
 import { PoleCross } from "../../src/blocks/shapes/PoleCross.ts";
 import { Ramp } from "../../src/blocks/shapes/Ramp.ts";
-import { RampFlip } from "../../src/blocks/shapes/RampFlip.ts";
 import {
   RampCornerInner,
-  RampCornerOuter,
-  RampCornerInnerFlip,
-  RampCornerOuterFlip
+  RampCornerOuter
 } from "../../src/blocks/shapes/RampCorner.ts";
 import {
   Stair,
   StairCornerInner,
-  StairCornerOuter,
-  StairFlip,
-  StairCornerInnerFlip,
-  StairCornerOuterFlip
+  StairCornerOuter
 } from "../../src/blocks/shapes/Stair.ts";
 
 // CONSTANTS
@@ -92,11 +86,6 @@ const kShapes: ShapeEntry[] = [
     color: "#f5a623"
   },
   {
-    shape: new RampFlip(),
-    label: "rampFlip",
-    color: "#f9a825"
-  },
-  {
     shape: new RampCornerInner(),
     label: "rampCornerInner",
     color: "#e53935"
@@ -105,16 +94,6 @@ const kShapes: ShapeEntry[] = [
     shape: new RampCornerOuter(),
     label: "rampCornerOuter",
     color: "#9c27b0"
-  },
-  {
-    shape: new RampCornerInnerFlip(),
-    label: "rampCornerInnerFlip",
-    color: "#c62828"
-  },
-  {
-    shape: new RampCornerOuterFlip(),
-    label: "rampCornerOuterFlip",
-    color: "#6a1b9a"
   },
 
   // ── Stair ───────────────────────────────────────────────────────────────────
@@ -132,21 +111,6 @@ const kShapes: ShapeEntry[] = [
     shape: new StairCornerOuter(),
     label: "stairCornerOuter",
     color: "#00897b"
-  },
-  {
-    shape: new StairFlip(),
-    label: "stairFlip",
-    color: "#3949ab"
-  },
-  {
-    shape: new StairCornerInnerFlip(),
-    label: "stairCornerInnerFlip",
-    color: "#bf360c"
-  },
-  {
-    shape: new StairCornerOuterFlip(),
-    label: "stairCornerOuterFlip",
-    color: "#00695c"
   }
 ];
 

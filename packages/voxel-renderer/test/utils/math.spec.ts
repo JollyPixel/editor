@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { packTransform, unpackTransform, FACE } from "../../src/utils/math.ts";
 
 describe("packTransform / unpackTransform", () => {
-  it("round-trips all 16 rotation×flip combinations", () => {
+  it("round-trips all 16 rotation×flip combinations (no flipY)", () => {
     const rotations = [0, 1, 2, 3] as const;
     const bools = [false, true];
 
@@ -19,6 +19,28 @@ describe("packTransform / unpackTransform", () => {
           assert.equal(result.rotation, rotation, `rotation mismatch for ${rotation},${flipX},${flipZ}`);
           assert.equal(result.flipX, flipX, `flipX mismatch for ${rotation},${flipX},${flipZ}`);
           assert.equal(result.flipZ, flipZ, `flipZ mismatch for ${rotation},${flipX},${flipZ}`);
+          assert.equal(result.flipY, false, `flipY should be false for ${rotation},${flipX},${flipZ}`);
+        }
+      }
+    }
+  });
+
+  it("round-trips all 32 rotation×flip combinations (including flipY)", () => {
+    const rotations = [0, 1, 2, 3] as const;
+    const bools = [false, true];
+
+    for (const rotation of rotations) {
+      for (const flipX of bools) {
+        for (const flipZ of bools) {
+          for (const flipY of bools) {
+            const packed = packTransform(rotation, flipX, flipZ, flipY);
+            const result = unpackTransform(packed);
+
+            assert.equal(result.rotation, rotation, `rotation mismatch for ${rotation},${flipX},${flipZ},${flipY}`);
+            assert.equal(result.flipX, flipX, `flipX mismatch for ${rotation},${flipX},${flipZ},${flipY}`);
+            assert.equal(result.flipZ, flipZ, `flipZ mismatch for ${rotation},${flipX},${flipZ},${flipY}`);
+            assert.equal(result.flipY, flipY, `flipY mismatch for ${rotation},${flipX},${flipZ},${flipY}`);
+          }
         }
       }
     }
@@ -42,8 +64,13 @@ describe("packTransform / unpackTransform", () => {
     assert.equal(packTransform(0, false, true), 0b1000);
   });
 
+  it("encodes flipY in bit 4", () => {
+    assert.equal(packTransform(0, false, false, true), 0b10000);
+  });
+
   it("encodes all bits simultaneously", () => {
     assert.equal(packTransform(3, true, true), 0b1111);
+    assert.equal(packTransform(3, true, true, true), 0b11111);
   });
 
   it("unpackTransform treats unknown high bits as irrelevant", () => {

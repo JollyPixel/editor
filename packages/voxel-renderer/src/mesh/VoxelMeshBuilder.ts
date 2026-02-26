@@ -17,7 +17,8 @@ import {
   FACE_OPPOSITE,
   rotateFace,
   rotateVertex,
-  rotateNormal
+  rotateNormal,
+  flipYFace
 } from "./math.ts";
 import type { VoxelEntry } from "../world/types.ts";
 
@@ -118,11 +119,14 @@ export class VoxelMeshBuilder {
         continue;
       }
 
-      const { rotation, flipX, flipZ } = unpackTransform(entry.transform);
+      const { rotation, flipX, flipZ, flipY } = unpackTransform(entry.transform);
 
       for (const faceDef of shape.faces) {
         // Rotate the logical face direction to find the world-space neighbour.
-        const worldFace = rotateFace(faceDef.face, rotation);
+        let worldFace = rotateFace(faceDef.face, rotation);
+        if (flipY && worldFace !== undefined) {
+          worldFace = flipYFace(worldFace);
+        }
 
         // worldFace is undefined when faceDef.face is the sentinel value 6
         // (used by Stair/RampCorner shapes to mark "always emit" faces).
@@ -169,13 +173,15 @@ export class VoxelMeshBuilder {
         const uvRegion = this.#tilesetManager.getTileUV(tileRef);
 
         // Transform each vertex and emit position / normal / uv.
+        // When flipY is active, iterate vertices in reverse order to fix winding.
         const faceVertCount = faceDef.vertices.length;
         for (let i = 0; i < faceVertCount; i++) {
-          const localVert = faceDef.vertices[i];
+          const vi = flipY ? (faceVertCount - 1 - i) : i;
+          const localVert = faceDef.vertices[vi];
           const transformed = rotateVertex(
             localVert,
             rotation,
-            { x: flipX, z: flipZ }
+            { x: flipX, z: flipZ, y: flipY }
           );
 
           buf.positions.push(
@@ -188,11 +194,11 @@ export class VoxelMeshBuilder {
           const rotatedNormal = rotateNormal(
             faceDef.normal,
             rotation,
-            { flipX, flipZ }
+            { flipX, flipZ, flipY }
           );
           buf.normals.push(rotatedNormal[0], rotatedNormal[1], rotatedNormal[2]);
 
-          const tileUV = faceDef.uvs[i];
+          const tileUV = faceDef.uvs[vi];
           buf.uvs.push(
             uvRegion.offsetU + (uvRegion.scaleU * tileUV[0]),
             uvRegion.offsetV + (uvRegion.scaleV * tileUV[1])
@@ -263,9 +269,12 @@ export class VoxelMeshBuilder {
       }
 
       const oppFace = FACE_OPPOSITE[worldFace];
-      const neighbourRotation = unpackTransform(neighbourEntry.transform).rotation;
+      const { rotation: neighbourRotation, flipY: neighbourFlipY } = unpackTransform(neighbourEntry.transform);
       // Ask the neighbour: does its face that points BACK toward this voxel occlude?
-      const rotatedOppFace = rotateFace(oppFace, neighbourRotation);
+      let rotatedOppFace = rotateFace(oppFace, neighbourRotation);
+      if (neighbourFlipY) {
+        rotatedOppFace = flipYFace(rotatedOppFace);
+      }
       if (neighbourShape.occludes(rotatedOppFace)) {
         // Face is hidden — skip emission.
         return true;

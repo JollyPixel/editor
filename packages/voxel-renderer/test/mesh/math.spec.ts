@@ -9,7 +9,8 @@ import {
   FACE_OPPOSITE,
   rotateVertex,
   rotateFace,
-  rotateNormal
+  rotateNormal,
+  flipYFace
 } from "../../src/mesh/math.ts";
 import { FACE } from "../../src/utils/math.ts";
 
@@ -170,9 +171,29 @@ describe("rotateVertex", () => {
     assert.ok(approxEqual(result[2], 0.8));
   });
 
-  it("Y coordinate is always passed through unchanged", () => {
+  it("Y coordinate is unchanged when flipY is not set", () => {
     const result = rotateVertex([0.3, 0.7, 0.2], 3, { x: true, z: true });
     assert.ok(approxEqual(result[1], 0.7));
+  });
+});
+
+describe("rotateVertex with flipY", () => {
+  it("flipY mirrors y around 0.5", () => {
+    const result = rotateVertex([0.3, 0.7, 0.2], 0, { x: false, z: false, y: true });
+    assert.ok(approxEqual(result[0], 0.3));
+    assert.ok(approxEqual(result[1], 0.3));
+    assert.ok(approxEqual(result[2], 0.2));
+  });
+
+  it("block center [0.5,0.5,0.5] is invariant under flipY", () => {
+    const result = rotateVertex([0.5, 0.5, 0.5], 0, { x: false, z: false, y: true });
+    assert.ok(vecApproxEqual(result, [0.5, 0.5, 0.5]));
+  });
+
+  it("flipY composes with rotation: rot=1 then flipY", () => {
+    // rot=1: [0,0,0] → [0,0,1]; then flipY: y stays 0 → 1-0=1
+    const result = rotateVertex([0, 0, 0], 1, { x: false, z: false, y: true });
+    assert.ok(vecApproxEqual(result, [0, 1, 1]));
   });
 });
 
@@ -206,8 +227,40 @@ describe("rotateNormal", () => {
     assert.ok(vecApproxEqual(result, [0, 0, -1]));
   });
 
-  it("Y component is never modified", () => {
+  it("Y component is unchanged when flipY is not set", () => {
     const result = rotateNormal([0, 0.7, 0], 2, { flipX: true, flipZ: true });
     assert.ok(approxEqual(result[1], 0.7));
+  });
+});
+
+describe("rotateNormal with flipY", () => {
+  it("flipY negates ny component", () => {
+    const result = rotateNormal([0, 0.7, 0], 0, { flipX: false, flipZ: false, flipY: true });
+    assert.ok(approxEqual(result[0], 0));
+    assert.ok(approxEqual(result[1], -0.7));
+    assert.ok(approxEqual(result[2], 0));
+  });
+
+  it("X and Z components are unchanged by flipY alone", () => {
+    const result = rotateNormal([0.5, 0.3, 0.4], 0, { flipX: false, flipZ: false, flipY: true });
+    assert.ok(approxEqual(result[0], 0.5));
+    assert.ok(approxEqual(result[2], 0.4));
+  });
+});
+
+describe("flipYFace", () => {
+  it("PosY → NegY", () => {
+    assert.equal(flipYFace(FACE.PosY), FACE.NegY);
+  });
+
+  it("NegY → PosY", () => {
+    assert.equal(flipYFace(FACE.NegY), FACE.PosY);
+  });
+
+  it("all other faces pass through unchanged", () => {
+    assert.equal(flipYFace(FACE.PosX), FACE.PosX);
+    assert.equal(flipYFace(FACE.NegX), FACE.NegX);
+    assert.equal(flipYFace(FACE.PosZ), FACE.PosZ);
+    assert.equal(flipYFace(FACE.NegZ), FACE.NegZ);
   });
 });

@@ -8,7 +8,6 @@ import { Slab } from "../../../src/blocks/shapes/Slab.ts";
 import { Ramp } from "../../../src/blocks/shapes/Ramp.ts";
 import { RampCornerInner, RampCornerOuter } from "../../../src/blocks/shapes/RampCorner.ts";
 import { PoleY } from "../../../src/blocks/shapes/PoleY.ts";
-import { RampFlip } from "../../../src/blocks/shapes/RampFlip.ts";
 import { FACE } from "../../../src/utils/math.ts";
 
 const ALL_FACES = [FACE.PosX, FACE.NegX, FACE.PosY, FACE.NegY, FACE.PosZ, FACE.NegZ];
@@ -209,27 +208,3 @@ describe("PoleY", () => {
   });
 });
 
-describe("RampFlip", () => {
-  const rampFlip = new RampFlip();
-
-  it("default id is 'rampFlip'", () => {
-    assert.equal(rampFlip.id, "rampFlip");
-  });
-
-  it("collisionHint is 'trimesh'", () => {
-    assert.equal(rampFlip.collisionHint, "trimesh");
-  });
-
-  it("has 5 faces", () => {
-    assert.equal(rampFlip.faces.length, 5);
-  });
-
-  it("occludes PosY, NegY, and PosZ", () => {
-    assert.equal(rampFlip.occludes(FACE.PosY), true);
-    assert.equal(rampFlip.occludes(FACE.NegY), true);
-    assert.equal(rampFlip.occludes(FACE.PosZ), true);
-    assert.equal(rampFlip.occludes(FACE.PosX), false);
-    assert.equal(rampFlip.occludes(FACE.NegX), false);
-    assert.equal(rampFlip.occludes(FACE.NegZ), false);
-  });
-});

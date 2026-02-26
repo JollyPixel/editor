@@ -3,18 +3,14 @@ import type { BlockShape } from "./BlockShape.ts";
 import { Cube } from "./shapes/Cube.ts";
 import { Slab } from "./shapes/Slab.ts";
 import { Ramp } from "./shapes/Ramp.ts";
-import { RampCornerInner, RampCornerOuter, RampCornerInnerFlip, RampCornerOuterFlip } from "./shapes/RampCorner.ts";
+import { RampCornerInner, RampCornerOuter } from "./shapes/RampCorner.ts";
 import { PoleY } from "./shapes/PoleY.ts";
 import { Pole } from "./shapes/Pole.ts";
 import { PoleCross } from "./shapes/PoleCross.ts";
-import { RampFlip } from "./shapes/RampFlip.ts";
 import {
   Stair,
   StairCornerInner,
-  StairCornerOuter,
-  StairFlip,
-  StairCornerInnerFlip,
-  StairCornerOuterFlip
+  StairCornerOuter
 } from "./shapes/Stair.ts";
 
 /**
@@ -56,17 +52,11 @@ export class BlockShapeRegistry {
       .register(new Pole("z"))
       .register(new PoleCross())
       .register(new Ramp())
-      .register(new RampFlip())
       .register(new RampCornerInner())
       .register(new RampCornerOuter())
-      .register(new RampCornerInnerFlip())
-      .register(new RampCornerOuterFlip())
       .register(new Stair())
       .register(new StairCornerInner())
-      .register(new StairCornerOuter())
-      .register(new StairFlip())
-      .register(new StairCornerInnerFlip())
-      .register(new StairCornerOuterFlip());
+      .register(new StairCornerOuter());
 
     return registry;
   }

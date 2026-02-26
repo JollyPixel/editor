@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { Vec3, FACE } from "../utils/math.ts";
+import { type Vec3, FACE } from "../utils/math.ts";
 
 export const FACE_NORMALS: readonly Vec3[] = [
   // PosX
@@ -43,10 +43,10 @@ const kRotateFaceTable: readonly (readonly FACE[])[] = [
 export function rotateVertex(
   vec3: Vec3,
   rotation: number,
-  flip: { x: boolean; z: boolean; }
+  flip: { x: boolean; z: boolean; y?: boolean; }
 ): Vec3 {
   let x = vec3[0];
-  const y = vec3[1];
+  let y = vec3[1];
   let z = vec3[2];
 
   // Rotate around Y axis (center = 0.5)
@@ -76,6 +76,9 @@ export function rotateVertex(
   if (flip.z) {
     z = 1 - z;
   }
+  if (flip.y) {
+    y = 1 - y;
+  }
 
   return [x, y, z];
 }
@@ -94,12 +97,12 @@ export function rotateFace(
 export function rotateNormal(
   normal: Vec3,
   rotation: number,
-  flip: { flipX: boolean; flipZ: boolean; }
+  flip: { flipX: boolean; flipZ: boolean; flipY?: boolean; }
 ): Vec3 {
-  const { flipX, flipZ } = flip;
+  const { flipX, flipZ, flipY } = flip;
 
   let nx = normal[0];
-  const ny = normal[1];
+  let ny = normal[1];
   let nz = normal[2];
 
   // Y-axis rotation (same formula as rotateVertex but without translation).
@@ -127,6 +130,23 @@ export function rotateNormal(
   if (flipZ) {
     nz = -nz;
   }
+  if (flipY) {
+    ny = -ny;
+  }
 
   return [nx, ny, nz];
+}
+
+/** Swaps PosY ↔ NegY; all other faces pass through unchanged. */
+export function flipYFace(
+  face: FACE
+): FACE {
+  if (face === FACE.PosY) {
+    return FACE.NegY;
+  }
+  if (face === FACE.NegY) {
+    return FACE.PosY;
+  }
+
+  return face;
 }
