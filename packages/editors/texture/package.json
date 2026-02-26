@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/editor.texture",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "private": true,
   "scripts": {
@@ -17,7 +17,7 @@
   "dependencies": {
     "@jolly-pixel/engine": "2.5.0",
     "@jolly-pixel/fs-tree": "1.0.0",
-    "@jolly-pixel/runtime": "3.2.0",
+    "@jolly-pixel/runtime": "3.3.0",
     "lit": "3.3.2",
     "three": "0.182.0"
   }

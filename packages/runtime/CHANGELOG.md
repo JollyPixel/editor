@@ -1,5 +1,11 @@
 # @jolly-pixel/runtime
 
+## 3.3.0
+
+### Minor Changes
+
+- [#236](https://github.com/JollyPixel/editor/pull/236) [`dfff053`](https://github.com/JollyPixel/editor/commit/dfff05301b97c739b264b74515bb25f4ff3fbf38) Thanks [@fraxken](https://github.com/fraxken)! - Add a focusCanvas to disable permanent canvas focus listener
+
 ## 3.2.0
 
 ### Minor Changes
