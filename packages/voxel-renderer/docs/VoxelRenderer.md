@@ -234,6 +234,30 @@ interface VoxelRemoveOptions {
 }
 ```
 
+#### `setVoxelBulk(layerName: string, entries: VoxelSetOptions[]): void`
+
+Places multiple voxels in the specified layer in a single batch call.
+
+```ts
+voxelRenderer.setVoxelBulk("Ground", [
+  { position: { x: 0, y: 0, z: 0 }, blockId: 1 },
+  { position: { x: 1, y: 0, z: 0 }, blockId: 2, rotation: VoxelRotation.CW90 },
+]);
+```
+
+Each item in `entries` accepts the same fields as `VoxelSetOptions`.
+
+#### `removeVoxelBulk(layerName: string, entries: VoxelRemoveOptions[]): void`
+
+Removes multiple voxels from the specified layer in a single batch call.
+
+```ts
+voxelRenderer.removeVoxelBulk("Ground", [
+  { position: { x: 0, y: 0, z: 0 } },
+  { position: { x: 1, y: 0, z: 0 } },
+]);
+```
+
 #### `getVoxel` overloads
 
 ```ts
