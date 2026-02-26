@@ -5,9 +5,9 @@ import * as THREE from "three";
 import type { InputKeyboardAction } from "../../controls/types.ts";
 import type { MouseEventButton } from "../../controls/Input.class.ts";
 import { Actor } from "../../actor/Actor.ts";
-import { Behavior } from "../script/Behavior.ts";
+import { CameraComponent, type CameraOptions } from "./Camera.ts";
 
-export interface Camera3DControlsOptions {
+export interface Camera3DControlsOptions extends CameraOptions {
   bindings?: {
     forward?: InputKeyboardAction;
     backward?: InputKeyboardAction;
@@ -15,7 +15,10 @@ export interface Camera3DControlsOptions {
     right?: InputKeyboardAction;
     up?: InputKeyboardAction;
     down?: InputKeyboardAction;
-    lookAround?: Exclude<keyof typeof MouseEventButton, "scrollUp" | "scrollDown">;
+    lookAround?: Exclude<
+      keyof typeof MouseEventButton,
+      "scrollUp" | "scrollDown"
+    >;
   };
   maxRollUp?: number;
   maxRollDown?: number;
@@ -23,8 +26,7 @@ export interface Camera3DControlsOptions {
   speed?: number;
 }
 
-export class Camera3DControls extends Behavior {
-  camera: THREE.PerspectiveCamera;
+export class Camera3DControls extends CameraComponent<any> {
   #bindings: Required<NonNullable<Camera3DControlsOptions["bindings"]>>;
 
   maxRollUp: number;
@@ -36,27 +38,41 @@ export class Camera3DControls extends Behavior {
     actor: Actor<any>,
     options: Camera3DControlsOptions = {}
   ) {
-    super(actor);
+    super(actor, {
+      addAudioListener: true
+    });
 
-    this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
+    const {
+      bindings,
+      maxRollUp = Math.PI / 2,
+      maxRollDown = -Math.PI / 2,
+      rotationSpeed = 1,
+      speed = 7.5
+    } = options;
 
     this.#bindings = {
-      forward: options.bindings?.forward ?? "KeyW",
-      backward: options.bindings?.backward ?? "KeyS",
-      left: options.bindings?.left ?? "KeyA",
-      right: options.bindings?.right ?? "KeyD",
-      up: options.bindings?.up ?? "Space",
-      down: options.bindings?.down ?? "ShiftLeft",
-      lookAround: options.bindings?.lookAround ?? "middle"
+      forward: bindings?.forward ?? "KeyW",
+      backward: bindings?.backward ?? "KeyS",
+      left: bindings?.left ?? "KeyA",
+      right: bindings?.right ?? "KeyD",
+      up: bindings?.up ?? "Space",
+      down: bindings?.down ?? "ShiftLeft",
+      lookAround: bindings?.lookAround ?? "middle"
     };
 
-    this.maxRollUp = options.maxRollUp ?? Math.PI / 2;
-    this.maxRollDown = options.maxRollDown ?? -Math.PI / 2;
-    this.#rotationSpeed = options.rotationSpeed ?? 0.004;
-    this.#movementSpeed = options.speed ?? 20;
+    this.maxRollUp = maxRollUp;
+    this.maxRollDown = maxRollDown;
+    this.#rotationSpeed = rotationSpeed;
+    this.#movementSpeed = speed;
+  }
 
-    this.actor.world.renderer.addRenderComponent(this.camera);
-    this.camera.add(this.actor.world.audio.threeAudioListener);
+  get camera(): THREE.PerspectiveCamera {
+    return this.threeCamera as THREE.PerspectiveCamera;
+  }
+
+  override awake(): void {
+    super.awake();
+    this.needUpdate = true;
   }
 
   set speed(
@@ -85,7 +101,9 @@ export class Camera3DControls extends Behavior {
     this.camera.quaternion.setFromEuler(euler);
   }
 
-  update() {
+  update(
+    deltaTime: number
+  ) {
     const { input } = this.actor.world;
 
     const vector = new THREE.Vector3(0);
@@ -111,8 +129,11 @@ export class Camera3DControls extends Behavior {
     }
 
     const translation = new THREE.Vector3(vector.x, 0, vector.z);
-    this.camera.translateOnAxis(translation.normalize(), this.#movementSpeed);
-    this.camera.position.y += vector.y * this.#movementSpeed;
+    this.camera.translateOnAxis(
+      translation.normalize(),
+      this.#movementSpeed * deltaTime
+    );
+    this.camera.position.y += vector.y * this.#movementSpeed * deltaTime;
 
     if (input.isMouseButtonDown(this.#bindings.lookAround)) {
       // input.mouse.lock();
