@@ -46,9 +46,21 @@ interface VoxelLayerJSON {
  * and are loaded as if offset is {0,0,0} — identical to the previous behaviour.
  */
 
+/**
+ * Flat key/value bag for custom object properties.
+ * Only primitive scalars (string, number, boolean) survive the round-trip.
+ */
+type VoxelObjectProperties = Record<string, string | number | boolean>;
+
+/**
+ * A single named object placed in the world (spawn point, trigger zone, …).
+ * Coordinates are in voxel/tile space; floats are allowed for sub-tile precision.
+ * `y` is 0 for maps imported from a flat 2-D source.
+ */
 interface VoxelObjectJSON {
-  id: number;
+  id: string;
   name: string;
+  /** Optional semantic type tag (e.g. "SpawnPoint", "Trigger"). */
   type?: string;
   x: number;
   y: number;
@@ -60,15 +72,14 @@ interface VoxelObjectJSON {
   properties?: VoxelObjectProperties;
 }
 
+/** A named layer that holds placed objects rather than voxel data. */
 interface VoxelObjectLayerJSON {
-  id: number;
+  id: string;
   name: string;
   visible: boolean;
   order: number;
   objects: VoxelObjectJSON[];
 }
-
-type VoxelObjectProperties = Record<string, string | number | boolean>;
 
 interface VoxelWorldJSON {
   version: 1;
@@ -79,7 +90,11 @@ interface VoxelWorldJSON {
    * Auto-registered on load.
    **/
   blocks?: BlockDefinition[];
-  /** Object layers produced by converters from Tiled object layers. */
+  /**
+   * Named object layers (spawn points, triggers, etc.).
+   * Present in converter output and in files saved after object layers
+   * were added at runtime via VoxelRenderer.addObjectLayer().
+   */
   objectLayers?: VoxelObjectLayerJSON[];
 }
 ```
@@ -95,4 +110,5 @@ Converts the world and tileset metadata to a plain JSON-serialisable object.
 
 #### `deserialize(data: VoxelWorldJSON, world: VoxelWorld): void`
 
-Clears `world` and restores it from a snapshot. Throws if `data.version !== 1`.
+Clears `world` and restores it from a snapshot. Voxel layers and object layers are
+both restored. Throws if `data.version !== 1`.

@@ -10,9 +10,14 @@ import { VoxelChunk, DEFAULT_CHUNK_SIZE } from "./VoxelChunk.ts";
 import type { VoxelEntry, VoxelCoord } from "./types.ts";
 import { FACE_OFFSETS } from "../mesh/math.ts";
 import type { FACE } from "../utils/math.ts";
+import type {
+  VoxelObjectJSON,
+  VoxelObjectLayerJSON
+} from "../serialization/VoxelSerializer.ts";
 
 // CONSTANTS
 let kLayerIdCounter = 0;
+let kObjectLayerIdCounter = 0;
 
 export type IterableLayerChunk = {
   layer: VoxelLayer;
@@ -31,6 +36,7 @@ export class VoxelWorld {
 
   #layers: VoxelLayer[] = [];
   #layersToRemove: VoxelLayer[] = [];
+  #objectLayers: Map<string, VoxelObjectLayerJSON> = new Map();
 
   constructor(
     chunkSize: number = DEFAULT_CHUNK_SIZE
@@ -179,6 +185,113 @@ export class VoxelWorld {
     );
   }
 
+  // --- Object layer management --- //
+
+  addObjectLayer(
+    name: string,
+    options: Partial<Pick<VoxelObjectLayerJSON, "visible" | "order">> = {}
+  ): VoxelObjectLayerJSON {
+    const layer: VoxelObjectLayerJSON = {
+      id: `obj_layer_${kObjectLayerIdCounter++}`,
+      name,
+      visible: options.visible ?? true,
+      order: options.order ?? this.#objectLayers.size,
+      objects: []
+    };
+    this.#objectLayers.set(name, layer);
+
+    return layer;
+  }
+
+  removeObjectLayer(
+    name: string
+  ): boolean {
+    return this.#objectLayers.delete(name);
+  }
+
+  getObjectLayer(
+    name: string
+  ): VoxelObjectLayerJSON | undefined {
+    return this.#objectLayers.get(name);
+  }
+
+  getObjectLayers(): readonly VoxelObjectLayerJSON[] {
+    return [...this.#objectLayers.values()];
+  }
+
+  updateObjectLayer(
+    name: string,
+    patch: Partial<Pick<VoxelObjectLayerJSON, "visible">>
+  ): boolean {
+    const layer = this.#objectLayers.get(name);
+    if (!layer) {
+      return false;
+    }
+
+    if (patch.visible !== undefined) {
+      layer.visible = patch.visible;
+    }
+
+    return true;
+  }
+
+  addObjectToLayer(
+    layerName: string,
+    object: VoxelObjectJSON
+  ): boolean {
+    const layer = this.#objectLayers.get(layerName);
+    if (!layer) {
+      return false;
+    }
+
+    layer.objects.push(object);
+
+    return true;
+  }
+
+  removeObjectFromLayer(
+    layerName: string,
+    objectId: string
+  ): boolean {
+    const layer = this.#objectLayers.get(layerName);
+    if (!layer) {
+      return false;
+    }
+
+    const idx = layer.objects.findIndex(
+      (object) => object.id === objectId
+    );
+    if (idx === -1) {
+      return false;
+    }
+
+    layer.objects.splice(idx, 1);
+
+    return true;
+  }
+
+  updateObjectInLayer(
+    layerName: string,
+    objectId: string,
+    patch: Partial<VoxelObjectJSON>
+  ): boolean {
+    const layer = this.#objectLayers.get(layerName);
+    if (!layer) {
+      return false;
+    }
+
+    const obj = layer.objects.find(
+      (object) => object.id === objectId
+    );
+    if (!obj) {
+      return false;
+    }
+
+    Object.assign(obj, patch);
+
+    return true;
+  }
+
   // --- Composited voxel access --- //
 
   /**
@@ -290,6 +403,7 @@ export class VoxelWorld {
 
   clear(): void {
     this.#layers = [];
+    this.#objectLayers.clear();
   }
 
   #sortLayers(): void {

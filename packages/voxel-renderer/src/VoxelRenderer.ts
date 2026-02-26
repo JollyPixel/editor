@@ -28,7 +28,9 @@ import {
 import { VoxelMeshBuilder } from "./mesh/VoxelMeshBuilder.ts";
 import {
   VoxelSerializer,
-  type VoxelWorldJSON
+  type VoxelWorldJSON,
+  type VoxelObjectLayerJSON,
+  type VoxelObjectJSON
 } from "./serialization/VoxelSerializer.ts";
 import {
   TilesetManager,
@@ -475,6 +477,112 @@ export class VoxelRenderer extends ActorComponent {
     }
 
     return layer.centerToWorld();
+  }
+
+  // --- Object Layer API --- //
+
+  addObjectLayer(
+    name: string,
+    options?: Partial<Pick<VoxelObjectLayerJSON, "visible" | "order">>
+  ): VoxelObjectLayerJSON {
+    const layer = this.world.addObjectLayer(name, options);
+    this.#onLayerUpdated?.({
+      action: "object-layer-added",
+      layerName: name,
+      metadata: {}
+    });
+
+    return layer;
+  }
+
+  removeObjectLayer(
+    name: string
+  ): boolean {
+    const result = this.world.removeObjectLayer(name);
+    if (result) {
+      this.#onLayerUpdated?.({
+        action: "object-layer-removed",
+        layerName: name,
+        metadata: {}
+      });
+    }
+
+    return result;
+  }
+
+  getObjectLayer(
+    name: string
+  ): VoxelObjectLayerJSON | undefined {
+    return this.world.getObjectLayer(name);
+  }
+
+  getObjectLayers(): readonly VoxelObjectLayerJSON[] {
+    return this.world.getObjectLayers();
+  }
+
+  updateObjectLayer(
+    name: string,
+    patch: Partial<Pick<VoxelObjectLayerJSON, "visible">>
+  ): boolean {
+    const result = this.world.updateObjectLayer(name, patch);
+    if (result) {
+      this.#onLayerUpdated?.({
+        action: "object-layer-updated",
+        layerName: name,
+        metadata: { patch }
+      });
+    }
+
+    return result;
+  }
+
+  addObject(
+    layerName: string,
+    object: VoxelObjectJSON
+  ): boolean {
+    const result = this.world.addObjectToLayer(layerName, object);
+    if (result) {
+      this.#onLayerUpdated?.({
+        action: "object-added",
+        layerName,
+        metadata: { objectId: object.id }
+      });
+    }
+
+    return result;
+  }
+
+  removeObject(
+    layerName: string,
+    objectId: string
+  ): boolean {
+    const result = this.world.removeObjectFromLayer(layerName, objectId);
+    if (result) {
+      this.#onLayerUpdated?.({
+        action: "object-removed",
+        layerName,
+        metadata: { objectId }
+      });
+    }
+
+    return result;
+  }
+
+  updateObject(
+    layerName: string,
+    objectId: string,
+    patch: Partial<VoxelObjectJSON>
+  ): boolean {
+    const result = this.world.updateObjectInLayer(layerName, objectId, patch);
+    if (result) {
+      this.#onLayerUpdated?.({
+        action: "object-updated",
+        layerName,
+        metadata: { objectId, patch }
+      });
+    }
+
+    return result;
   }
 
   async loadTileset(

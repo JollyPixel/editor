@@ -110,5 +110,46 @@ Iterates over chunks whose `dirty` flag is set.
 
 #### `clear(): void`
 
-Removes all layers.
+Removes all voxel layers and object layers.
+
+### Object Layer Management
+
+Object layers hold placed objects (spawn points, trigger zones, etc.) rather than
+voxel data. They are stored by name and serialised as part of `VoxelWorldJSON`.
+
+#### `addObjectLayer(name: string, options?: { visible?: boolean; order?: number }): VoxelObjectLayerJSON`
+
+Creates a new object layer. `order` defaults to the current layer count (appended last).
+Returns the new layer descriptor.
+
+#### `removeObjectLayer(name: string): boolean`
+
+Deletes an object layer by name. Returns `false` if not found.
+
+#### `getObjectLayer(name: string): VoxelObjectLayerJSON | undefined`
+
+Returns the layer descriptor for `name`, or `undefined` if it does not exist.
+
+#### `getObjectLayers(): readonly VoxelObjectLayerJSON[]`
+
+Returns a snapshot array of all object layers in insertion order.
+
+#### `updateObjectLayer(name: string, patch: { visible?: boolean }): boolean`
+
+Applies a partial patch to a named object layer. Returns `false` if not found.
+
+#### `addObjectToLayer(layerName: string, object: VoxelObjectJSON): boolean`
+
+Appends an object to the named layer's `objects` array. Returns `false` if the layer
+does not exist.
+
+#### `removeObjectFromLayer(layerName: string, objectId: string): boolean`
+
+Removes the object with the given `id` from the layer. Returns `false` if the layer or
+object is not found.
+
+#### `updateObjectInLayer(layerName: string, objectId: string, patch: Partial<VoxelObjectJSON>): boolean`
+
+Merges `patch` into the matching object. Returns `false` if the layer or object is not
+found.
 

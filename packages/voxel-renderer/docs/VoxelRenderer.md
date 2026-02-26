@@ -271,6 +271,49 @@ referenced tilesets that are not already loaded.
 
 Mark all the chunks as dirty and rebuild them in the next frame
 
+### Object Layer API
+
+Object layers hold placed objects (spawn points, trigger zones, etc.) rather than voxel
+data. Each mutating method fires a `VoxelLayerHookEvent` so external systems stay in sync.
+
+#### `addObjectLayer(name: string, options?: { visible?: boolean; order?: number }): VoxelObjectLayerJSON`
+
+Creates a new object layer in the world and fires `"object-layer-added"`.
+Returns the new layer descriptor.
+
+#### `removeObjectLayer(name: string): boolean`
+
+Removes an object layer from the world. Fires `"object-layer-removed"` on success.
+Returns `false` if not found.
+
+#### `getObjectLayer(name: string): VoxelObjectLayerJSON | undefined`
+
+Returns the layer descriptor for `name`, or `undefined` if it does not exist.
+
+#### `getObjectLayers(): readonly VoxelObjectLayerJSON[]`
+
+Returns a snapshot array of all object layers in insertion order.
+
+#### `updateObjectLayer(name: string, patch: { visible?: boolean }): boolean`
+
+Applies a partial patch to a named object layer and fires `"object-layer-updated"`.
+Returns `false` if not found.
+
+#### `addObject(layerName: string, object: VoxelObjectJSON): boolean`
+
+Appends an object to the named layer and fires `"object-added"`.
+Returns `false` if the layer does not exist.
+
+#### `removeObject(layerName: string, objectId: string): boolean`
+
+Removes the object with the given `id` from the layer and fires `"object-removed"`.
+Returns `false` if the layer or object is not found.
+
+#### `updateObject(layerName: string, objectId: string, patch: Partial<VoxelObjectJSON>): boolean`
+
+Merges `patch` into the matching object and fires `"object-updated"`.
+Returns `false` if the layer or object is not found.
+
 ### Hooks
 
 See [Hooks](./Hooks.md) for more information

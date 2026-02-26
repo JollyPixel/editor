@@ -77,7 +77,8 @@ export class VoxelSerializer {
       tilesets: tilesetManager.getDefinitions(),
       layers: world
         .getLayers()
-        .map((layer) => layer.toJSON())
+        .map((layer) => layer.toJSON()),
+      objectLayers: [...world.getObjectLayers()]
     };
   }
 
@@ -132,6 +133,16 @@ export class VoxelSerializer {
         };
         layer.setVoxelAt({ x, y, z }, entry);
       }
+    }
+
+    for (const layerJSON of data.objectLayers ?? []) {
+      const layer = world.addObjectLayer(layerJSON.name, {
+        visible: layerJSON.visible,
+        order: layerJSON.order
+      });
+
+      layer.id = layerJSON.id;
+      layer.objects = [...layerJSON.objects];
     }
   }
 }
