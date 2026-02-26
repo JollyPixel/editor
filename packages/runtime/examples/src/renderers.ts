@@ -23,7 +23,7 @@ const { world } = runtime;
 world.renderer.setRenderMode("composer");
 
 world.createActor("camera")
-  .addComponent(Camera3DControls, { speed: 0.35, rotationSpeed: 0.45 }, (component) => {
+  .addComponent(Camera3DControls, { speed: 7.5, rotationSpeed: 1 }, (component) => {
     component.camera.position.set(10, 10, 5);
     component.camera.lookAt(0, 0, 0);
 
@@ -99,7 +99,7 @@ world.audio.observe(ab);
 
 canvasHTMLElement.addEventListener("click", async() => {
   await ab.play("boss.tech-space");
-});
+}, { once: true });
 
 loadRuntime(runtime)
   .catch(console.error);

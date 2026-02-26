@@ -70,7 +70,10 @@ export class ThreeRenderer<
   ): void {
     this.renderComponents.push(component);
     if (this.renderStrategy instanceof ComposerRenderStrategy) {
-      const renderPass = new RenderPass(this.sceneManager.getSource(), component);
+      const renderPass = new RenderPass(
+        this.sceneManager.getSource(),
+        component.threeCamera
+      );
       this.renderStrategy.addEffect(renderPass);
     }
   }
@@ -86,7 +89,7 @@ export class ThreeRenderer<
     if (this.renderStrategy instanceof ComposerRenderStrategy) {
       const composer = this.renderStrategy.getComposer();
       const renderPass = composer.passes.find(
-        (pass) => pass instanceof RenderPass && pass.camera === component
+        (pass) => pass instanceof RenderPass && pass.camera === component.threeCamera
       );
       if (renderPass) {
         this.renderStrategy.removeEffect(renderPass);
@@ -105,7 +108,10 @@ export class ThreeRenderer<
 
       const scene = this.sceneManager.getSource();
       for (const renderComponent of this.renderComponents) {
-        const renderPass = new RenderPass(scene, renderComponent);
+        const renderPass = new RenderPass(
+          scene,
+          renderComponent.threeCamera
+        );
         composer.addPass(renderPass);
       }
 
@@ -220,18 +226,6 @@ export class ThreeRenderer<
     }
 
     this.renderStrategy.resize(width, height);
-    for (const renderComponent of this.renderComponents) {
-      if (renderComponent instanceof THREE.PerspectiveCamera) {
-        renderComponent.aspect = width / height;
-      }
-      if (renderComponent instanceof THREE.OrthographicCamera) {
-        renderComponent.left = width / -2;
-        renderComponent.right = width / 2;
-        renderComponent.top = height / 2;
-        renderComponent.bottom = height / -2;
-      }
-      renderComponent.updateProjectionMatrix();
-    }
     this.emit("resize", { width, height });
   };
 
@@ -244,10 +238,13 @@ export class ThreeRenderer<
       return;
     }
 
-    this.clear();
     this.renderStrategy.render(
       this.sceneManager.getSource(),
-      this.renderComponents
+      {
+        components: this.renderComponents,
+        canvasWidth: this.#pendingResizeWidth,
+        canvasHeight: this.#pendingResizeHeight
+      }
     );
     this.emit("draw", { source: this.webGLRenderer });
   }

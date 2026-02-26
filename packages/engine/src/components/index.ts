@@ -1,3 +1,4 @@
+export * from "./camera/Camera.ts";
 export * from "./camera/Camera3DControls.ts";
 export * from "./renderers/index.ts";
 

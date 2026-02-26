@@ -7,6 +7,7 @@ import type { WorldDefaultContext } from "../systems/World.ts";
 import type { UINode } from "./UINode.ts";
 import { type Actor, ActorComponent } from "../actor/index.ts";
 import { UIRendererID } from "./common.ts";
+import type { RenderComponent } from "../systems/rendering/Renderer.ts";
 
 // CONSTANTS
 const kOrthographicCameraZIndex = 10;
@@ -25,6 +26,7 @@ export class UIRenderer<
   camera: THREE.OrthographicCamera;
   nodes: UINode<TContext>[] = [];
 
+  #renderComponent: RenderComponent;
   #cssRenderer: ThreeCSS2DRenderer;
   #boundDraw: () => void;
   #boundResize: () => void;
@@ -67,7 +69,16 @@ export class UIRenderer<
     const { width, height } = canvas.getBoundingClientRect();
     this.#cssRenderer.setSize(width, height);
 
-    world.renderer.addRenderComponent(this.camera);
+    const camera = this.camera;
+    this.#renderComponent = {
+      threeCamera: camera,
+      depth: kOrthographicCameraZIndex,
+      viewport: null,
+      prepareRender: () => {
+        // Sync camera world transform from actor's scene graph
+      }
+    };
+    world.renderer.addRenderComponent(this.#renderComponent);
 
     this.#boundResize = this.#onResize.bind(this);
     this.#boundDraw = this.#onDraw.bind(this);
@@ -115,7 +126,7 @@ export class UIRenderer<
     this.nodes = [];
 
     const { world } = this.actor;
-    world.renderer.removeRenderComponent(this.camera);
+    world.renderer.removeRenderComponent(this.#renderComponent);
     world.renderer.off("resize", this.#boundResize);
     world.renderer.off("draw", this.#boundDraw);
 
