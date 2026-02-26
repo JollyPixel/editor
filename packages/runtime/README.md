@@ -106,13 +106,21 @@ Bootstraps the runtime by detecting GPU capabilities, displaying a loading scree
 Returns a `Promise<void>` that resolves when loading completes, or shows an error on the loading screen if something fails.
 
 ```ts
-export interface LoadRuntimeOptions {
+interface LoadRuntimeOptions {
   /**
    * @default 850
    * Minimum delay (ms) before starting asset loading. Gives the loading UI time to render.
    */
   loadingDelay?: number;
+  /**
+   * Whether to automatically focus the game canvas when the user clicks anywhere on the page.
+   * This is important for games that require keyboard input,
+   * as it ensures that the canvas has focus and can receive keyboard events.
+   * @default true
+   */
+  focusCanvas?: boolean;
 }
+
 ```
 
 ### 🎨 Custom loader and splash screen
