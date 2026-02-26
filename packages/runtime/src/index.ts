@@ -3,16 +3,17 @@ import { Systems } from "@jolly-pixel/engine";
 import { getGPUTier } from "detect-gpu";
 
 // Import Internal Dependencies
-import { Loading } from "./components/Loading.ts";
 import * as timers from "./utils/timers.ts";
 import { getDevicePixelRatio } from "./utils/getDevicePixelRatio.ts";
-
 import { Runtime, type RuntimeOptions } from "./Runtime.ts";
+import { DefaultSplashScreen } from "./splash/DefaultSplashScreen.ts";
+import type { SplashScreen } from "./splash/SplashScreen.ts";
 
 export interface LoadRuntimeOptions {
   /**
    * @default 850
-   * Minimum delay (ms) before starting asset loading. Gives the loading UI time to render.
+   * Minimum delay (ms) before starting asset loading. Gives the splash screen
+   * at least one full render cycle before any heavy work begins.
    */
   loadingDelay?: number;
   /**
@@ -22,6 +23,20 @@ export interface LoadRuntimeOptions {
    * @default true
    */
   focusCanvas?: boolean;
+
+  /**
+   * Custom splash screen to use instead of the built-in DefaultSplashScreen.
+   * Pass either a SplashScreen instance or a factory function (created lazily,
+   * after Runtime is constructed).
+   *
+   * @example
+   * // Instance
+   * await loadRuntime(runtime, { splashScreen: new MyBrandedSplash() });
+   *
+   * // Factory (created lazily)
+   * await loadRuntime(runtime, { splashScreen: () => new MyBrandedSplash() });
+   */
+  splashScreen?: SplashScreen | (() => SplashScreen);
 }
 
 export async function loadRuntime(
@@ -30,38 +45,34 @@ export async function loadRuntime(
 ) {
   const {
     loadingDelay = 850,
-    focusCanvas = true
+    focusCanvas = true,
+    splashScreen: splashFactory
   } = options;
 
   const gpuTierPromise = getGPUTier();
 
-  runtime.canvas.style.opacity = "0";
-  runtime.canvas.style.transition = "opacity 0.5s ease-in";
-
-  let loadingElement = document.querySelector("jolly-loading");
-  if (loadingElement === null) {
-    loadingElement = document.createElement("jolly-loading");
-    document.body.appendChild(loadingElement);
+  let splash: SplashScreen;
+  if (splashFactory === undefined) {
+    splash = new DefaultSplashScreen();
   }
-  const loadingComponent = loadingElement as Loading;
-  loadingComponent.start();
+  else if (typeof splashFactory === "function") {
+    splash = splashFactory();
+  }
+  else {
+    splash = splashFactory;
+  }
 
-  let loadingComplete = false;
-  const loadingCompletePromise = new Promise((resolve) => {
-    runtime.manager.onProgress = (_, loaded, total) => {
-      loadingComponent.setProgress(loaded, total);
+  // Append the splash scene as an overlay so the engine lifecycle is available
+  // throughout loading, then start the animation loop immediately.
+  runtime.world.sceneManager.appendScene(splash.scene);
+  runtime.start();
 
-      if (loaded >= total && !loadingComplete) {
-        loadingComplete = true;
-
-        // Attendre un petit délai pour s'assurer que le DOM est mis à jour
-        setTimeout(() => void resolve(undefined), 100);
-      }
-    };
-  });
+  // Allow the splash scene's start() to run and let onSetup perform any
+  // world-connected setup (e.g. texture loading).
+  splash.onSetup(runtime.world);
 
   // Prevent keypress events from leaking out to a parent window
-  // They might trigger scrolling for instance
+  // (they might trigger scrolling for instance).
   runtime.canvas.addEventListener("keypress", (event) => {
     event.preventDefault();
   });
@@ -74,7 +85,20 @@ export async function loadRuntime(
   }
   document.addEventListener("click", focusCanvasHandler);
 
-  let initialized = false;
+  let loadingComplete = false;
+  const loadingCompletePromise = new Promise<void>((resolve) => {
+    runtime.manager.onProgress = (_, loaded, total) => {
+      splash.onProgress(loaded, total);
+
+      if (loaded >= total && !loadingComplete) {
+        loadingComplete = true;
+
+        // Short delay to ensure the DOM has updated before resolving.
+        setTimeout(() => resolve(), 100);
+      }
+    };
+  });
+
   try {
     if (loadingDelay > 0) {
       await timers.setTimeout(loadingDelay);
@@ -100,43 +124,41 @@ export async function loadRuntime(
       Systems.Assets.autoload = true;
       Systems.Assets.scheduleAutoload(context);
     });
-    const waitingAssetsCount = Systems.Assets.waiting.size;
-    if (waitingAssetsCount > 0) {
+
+    if (Systems.Assets.waiting.size > 0) {
       await Systems.Assets.loadAssets(
         context,
         {
-          onStart: loadingComponent.setAsset.bind(loadingComponent)
+          onStart: (asset) => splash.onAssetStart(asset)
         }
       );
 
-      // loadingCompletePromise resolves when the Three.js manager reports 100%.
+      // loadingCompletePromise resolves when the Three.js manager reports 100 %.
       // Loaders that bypass the manager (e.g. bare fetch) never trigger onProgress,
       // so we force completion manually rather than hanging indefinitely.
       if (loadingComplete) {
         await loadingCompletePromise;
       }
       else {
-        loadingComponent.setProgress(1, 1);
+        splash.onProgress(1, 1);
         await timers.setTimeout(100);
       }
     }
 
-    await loadingComponent.complete();
-    runtime.canvas.style.opacity = "1";
-    initialized = true;
+    splash.onLoadComplete();
+    await splash.waitForUserGesture();
+    await splash.complete();
   }
   catch (error: any) {
-    loadingComponent.error(error);
+    splash.onError(error);
   }
   finally {
     if (!focusCanvas) {
       document.removeEventListener("click", focusCanvasHandler);
     }
   }
-
-  if (initialized) {
-    runtime.start();
-  }
 }
 
 export { Runtime, type RuntimeOptions };
+export type { SplashScreen };
+export { DefaultSplashScreen };
