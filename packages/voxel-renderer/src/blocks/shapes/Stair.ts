@@ -6,8 +6,6 @@ import type {
   FaceDefinition
 } from "../BlockShape.ts";
 import {
-  type Vec2,
-  type Vec3,
   FACE
 } from "../../utils/math.ts";
 
@@ -266,30 +264,6 @@ const kStairCornerOuterFaces: readonly FaceDefinition[] = [
   }
 ];
 
-function yFlipFace(fd: FaceDefinition): FaceDefinition {
-  const flippedAndReversed = fd.vertices
-    .map(([x, y, z]) => [x, 1 - y, z] as Vec3)
-    .reverse() as Vec3[];
-  const reversedUvs = [...fd.uvs].reverse() as Vec2[];
-  let flippedFace: FACE;
-  if (fd.face === FACE.NegY) {
-    flippedFace = FACE.PosY;
-  }
-  else if (fd.face === FACE.PosY) {
-    flippedFace = FACE.NegY;
-  }
-  else {
-    flippedFace = fd.face;
-  }
-  const flippedNormal: Vec3 = [fd.normal[0], -fd.normal[1], fd.normal[2]];
-
-  return { face: flippedFace, normal: flippedNormal, vertices: flippedAndReversed, uvs: reversedUvs };
-}
-
-const kStairFlipFaces = kStairFaces.map(yFlipFace);
-const kStairCornerInnerFlipFaces = kStairCornerInnerFaces.map(yFlipFace);
-const kStairCornerOuterFlipFaces = kStairCornerOuterFaces.map(yFlipFace);
-
 /**
  * Stair — L-cross-section stair block.
  * Full bottom slab + upper half-block at back (z=0.5..1). High step at PosZ.
@@ -370,77 +344,3 @@ export class StairCornerOuter implements BlockShape {
   }
 }
 
-/**
- * StairFlip — Y-flipped Stair (hangs from ceiling at PosY).
- *
- * Occludes: PosY, PosZ.
- * collisionHint: trimesh.
- */
-export class StairFlip implements BlockShape {
-  readonly id: BlockShapeID;
-  readonly collisionHint: BlockCollisionHint = "trimesh";
-
-  constructor(
-    id: BlockShapeID = "stairFlip"
-  ) {
-    this.id = id;
-  }
-
-  readonly faces: readonly FaceDefinition[] = kStairFlipFaces;
-
-  occludes(
-    face: FACE
-  ): boolean {
-    return face === FACE.PosY || face === FACE.PosZ;
-  }
-}
-
-/**
- * StairCornerInnerFlip — Y-flipped StairCornerInner (hangs from ceiling).
- *
- * Occludes: PosY, PosZ, PosX.
- * collisionHint: trimesh.
- */
-export class StairCornerInnerFlip implements BlockShape {
-  readonly id: BlockShapeID;
-  readonly collisionHint: BlockCollisionHint = "trimesh";
-
-  constructor(
-    id: BlockShapeID = "stairCornerInnerFlip"
-  ) {
-    this.id = id;
-  }
-
-  readonly faces: readonly FaceDefinition[] = kStairCornerInnerFlipFaces;
-
-  occludes(
-    face: FACE
-  ): boolean {
-    return face === FACE.PosY || face === FACE.PosZ || face === FACE.PosX;
-  }
-}
-
-/**
- * StairCornerOuterFlip — Y-flipped StairCornerOuter (hangs from ceiling).
- *
- * Occludes: PosY only.
- * collisionHint: trimesh.
- */
-export class StairCornerOuterFlip implements BlockShape {
-  readonly id: BlockShapeID;
-  readonly collisionHint: BlockCollisionHint = "trimesh";
-
-  constructor(
-    id: BlockShapeID = "stairCornerOuterFlip"
-  ) {
-    this.id = id;
-  }
-
-  readonly faces: readonly FaceDefinition[] = kStairCornerOuterFlipFaces;
-
-  occludes(
-    face: FACE
-  ): boolean {
-    return face === FACE.PosY;
-  }
-}

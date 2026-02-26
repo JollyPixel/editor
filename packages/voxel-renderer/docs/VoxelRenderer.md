@@ -10,7 +10,7 @@ const vr = actor.addComponentAndGet(VoxelRenderer, {
     {
       id: 1,
       name: "Grass",
-      shapeId: "fullCube",
+      shapeId: "cube",
       collidable: true,
       faceTextures: {},
       defaultTexture: {
@@ -38,6 +38,12 @@ vr.setVoxel("Ground", {
   rotation: VoxelRotation.CW90,
   flipX: false,
   flipZ: false
+});
+
+vr.setVoxel("Ground", {
+  position: { x: 2, y: 0, z: 0 },
+  blockId: 1,
+  flipY: true
 });
 
 const entry = vr.getVoxel({
@@ -208,6 +214,8 @@ interface VoxelSetOptions {
   flipX?: boolean;
   /** Mirror the block on the Z axis. Default: `false`. */
   flipZ?: boolean;
+  /** Mirror the block geometry around y = 0.5 (upside-down). */
+  flipY?: boolean;
 }
 ```
 

@@ -14,17 +14,11 @@ const kDefaultShapeIds = [
   "poleZ",
   "poleCross",
   "ramp",
-  "rampFlip",
   "rampCornerInner",
   "rampCornerOuter",
-  "rampCornerInnerFlip",
-  "rampCornerOuterFlip",
   "stair",
   "stairCornerInner",
-  "stairCornerOuter",
-  "stairFlip",
-  "stairCornerInnerFlip",
-  "stairCornerOuterFlip"
+  "stairCornerOuter"
 ] as const;
 
 describe("BlockShapeRegistry (empty)", () => {
@@ -70,7 +64,7 @@ describe("BlockShapeRegistry.createDefault", () => {
     assert.ok(registry instanceof BlockShapeRegistry);
   });
 
-  it("contains all 19 built-in shape IDs", () => {
+  it("contains all 13 built-in shape IDs", () => {
     const registry = BlockShapeRegistry.createDefault();
     for (const id of kDefaultShapeIds) {
       assert.equal(registry.has(id), true, `expected shape "${id}" to be registered`);

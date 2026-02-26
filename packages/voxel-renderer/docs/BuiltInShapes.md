@@ -49,11 +49,8 @@ All ramp shapes use **collisionHint**: [trimesh](./Collision.md).
 | Shape ID | Occludes |
 |---:|---|
 | `ramp` | `-Y`, `+Z` |
-| `rampFlip` | `+Y`, `-Y`, `+Z` |
 | `rampCornerInner` | `-Y`, `+Z`, `+X` |
 | `rampCornerOuter` | `-Y` |
-| `rampCornerInnerFlip` | `+Y`, `+Z`, `+X` |
-| `rampCornerOuterFlip` | `+Y` |
 
 ### Stairs
 
@@ -64,9 +61,32 @@ All stair shapes use **collisionHint**: [trimesh](./Collision.md).
 | `stair` | `-Y`, `+Z` |
 | `stairCornerInner` | `-Y`, `+Z`, `+X` |
 | `stairCornerOuter` | `-Y` |
-| `stairFlip` | `+Y`, `+Z` |
-| `stairCornerInnerFlip` | `+Y`, `+Z`, `+X` |
-| `stairCornerOuterFlip` | `+Y` |
+
+### Inverted / Upside-Down Shapes (`flipY`)
+
+Ceiling ramps, inverted stairs, and similar shapes are produced by setting `flipY: true`
+on any voxel rather than using a dedicated shape class. `flipY` mirrors the block geometry
+around `y = 0.5`, reverses face winding to preserve correct lighting, and swaps
+the `+Y`/`-Y` occlusion directions so face culling against neighbours remains accurate.
+
+```ts
+// Ceiling ramp — same geometry as "ramp" but mounted upside-down
+vr.setVoxel("Ceiling", {
+  position: { x: 2, y: 4, z: 0 },
+  blockId: myRampBlock,
+  flipY: true
+});
+
+// Inverted inner-corner stair
+vr.setVoxel("Ceiling", {
+  position: { x: 3, y: 4, z: 0 },
+  blockId: myStairBlock,
+  rotation: VoxelRotation.CW90,
+  flipY: true
+});
+```
+
+`flipY` can be combined freely with `rotation`, `flipX`, and `flipZ`.
 
 ---
 

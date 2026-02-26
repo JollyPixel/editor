@@ -15,20 +15,14 @@ export { PoleY } from "./blocks/shapes/PoleY.ts";
 export { Pole, type PoleAxis } from "./blocks/shapes/Pole.ts";
 export { PoleCross } from "./blocks/shapes/PoleCross.ts";
 export { Ramp } from "./blocks/shapes/Ramp.ts";
-export { RampFlip } from "./blocks/shapes/RampFlip.ts";
 export {
   RampCornerInner,
-  RampCornerOuter,
-  RampCornerInnerFlip,
-  RampCornerOuterFlip
+  RampCornerOuter
 } from "./blocks/shapes/RampCorner.ts";
 export {
   Stair,
   StairCornerInner,
-  StairCornerOuter,
-  StairFlip,
-  StairCornerInnerFlip,
-  StairCornerOuterFlip
+  StairCornerOuter
 } from "./blocks/shapes/Stair.ts";
 
 // Blocks

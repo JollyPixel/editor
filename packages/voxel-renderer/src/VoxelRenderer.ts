@@ -74,6 +74,8 @@ export interface VoxelSetOptions {
   flipX?: boolean;
   /** Mirror the block around z = 0.5. Default: false */
   flipZ?: boolean;
+  /** Mirror the block around y = 0.5. Default: false */
+  flipY?: boolean;
 }
 
 export interface VoxelRemoveOptions {
@@ -316,9 +318,10 @@ export class VoxelRenderer extends ActorComponent {
       blockId,
       rotation = 0,
       flipX = false,
-      flipZ = false
+      flipZ = false,
+      flipY = false
     } = options;
-    const transform = packTransform(rotation, flipX, flipZ);
+    const transform = packTransform(rotation, flipX, flipZ, flipY);
 
     this.world.setVoxelAt(
       layerName,
@@ -328,7 +331,7 @@ export class VoxelRenderer extends ActorComponent {
     this.#onLayerUpdated?.({
       action: "voxel-set",
       layerName,
-      metadata: { position, blockId, rotation, flipX, flipZ }
+      metadata: { position, blockId, rotation, flipX, flipZ, flipY }
     });
   }
 
@@ -353,12 +356,13 @@ export class VoxelRenderer extends ActorComponent {
       blockId,
       rotation = 0,
       flipX = false,
-      flipZ = false
+      flipZ = false,
+      flipY = false
     } of entries) {
       this.world.setVoxelAt(
         layerName,
         position,
-        { blockId, transform: packTransform(rotation, flipX, flipZ) }
+        { blockId, transform: packTransform(rotation, flipX, flipZ, flipY) }
       );
     }
   }

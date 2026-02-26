@@ -31,17 +31,11 @@ export type BlockShapeID =
   | "poleZ"
   | "poleCross"
   | "ramp"
-  | "rampFlip"
   | "rampCornerInner"
   | "rampCornerOuter"
-  | "rampCornerInnerFlip"
-  | "rampCornerOuterFlip"
   | "stair"
   | "stairCornerInner"
   | "stairCornerOuter"
-  | "stairFlip"
-  | "stairCornerInnerFlip"
-  | "stairCornerOuterFlip"
   | (string & {});
 
 /**

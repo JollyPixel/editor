@@ -7,8 +7,6 @@ import type {
   FaceDefinition
 } from "../BlockShape.ts";
 import {
-  type Vec2,
-  type Vec3,
   FACE
 } from "../../utils/math.ts";
 import {
@@ -174,79 +172,3 @@ export class RampCornerOuter implements BlockShape {
   }
 }
 
-// -- Reverse variants (Y-flipped) -------------------------------------------
-
-function yFlipFace(fd: FaceDefinition): FaceDefinition {
-  const flippedAndReversed = fd.vertices
-    .map(([x, y, z]) => [x, 1 - y, z] as Vec3)
-    .reverse() as Vec3[];
-  const reversedUvs = [...fd.uvs].reverse() as Vec2[];
-
-  let flippedFace: FACE;
-  if (fd.face === FACE.NegY) {
-    flippedFace = FACE.PosY;
-  }
-  else if (fd.face === FACE.PosY) {
-    flippedFace = FACE.NegY;
-  }
-  else {
-    flippedFace = fd.face;
-  }
-
-  const flippedNormal: Vec3 = [fd.normal[0], -fd.normal[1], fd.normal[2]];
-
-  return { face: flippedFace, normal: flippedNormal, vertices: flippedAndReversed, uvs: reversedUvs };
-}
-
-const kRampCornerInnerFlipFaces = new RampCornerInner().faces.map(yFlipFace);
-const kRampCornerOuterFlipFaces = new RampCornerOuter().faces.map(yFlipFace);
-
-/**
- * RampCornerInnerFlip — Y-flipped RampCornerInner (hangs from ceiling).
- * Flat ceiling at PosY, full walls PosZ + PosX, diagonal slope descends downward.
- *
- * Occludes: PosY, PosZ, PosX.
- */
-export class RampCornerInnerFlip implements BlockShape {
-  readonly id: BlockShapeID;
-  readonly collisionHint: BlockCollisionHint = "trimesh";
-
-  constructor(
-    id: BlockShapeID = "rampCornerInnerFlip"
-  ) {
-    this.id = id;
-  }
-
-  readonly faces: readonly FaceDefinition[] = kRampCornerInnerFlipFaces;
-
-  occludes(
-    face: FACE
-  ): boolean {
-    return face === FACE.PosY || face === FACE.PosZ || face === FACE.PosX;
-  }
-}
-
-/**
- * RampCornerOuterFlip — Y-flipped RampCornerOuter (quarter-pyramid hanging from ceiling).
- * Flat ceiling at PosY, slope descends downward.
- *
- * Occludes: PosY only.
- */
-export class RampCornerOuterFlip implements BlockShape {
-  readonly id: BlockShapeID;
-  readonly collisionHint: BlockCollisionHint = "trimesh";
-
-  constructor(
-    id: BlockShapeID = "rampCornerOuterFlip"
-  ) {
-    this.id = id;
-  }
-
-  readonly faces: readonly FaceDefinition[] = kRampCornerOuterFlipFaces;
-
-  occludes(
-    face: FACE
-  ): boolean {
-    return face === FACE.PosY;
-  }
-}
