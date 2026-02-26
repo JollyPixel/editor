@@ -344,6 +344,34 @@ export class VoxelRenderer extends ActorComponent {
     });
   }
 
+  setVoxelBulk(
+    layerName: string,
+    entries: VoxelSetOptions[]
+  ): void {
+    for (const {
+      position,
+      blockId,
+      rotation = 0,
+      flipX = false,
+      flipZ = false
+    } of entries) {
+      this.world.setVoxelAt(
+        layerName,
+        position,
+        { blockId, transform: packTransform(rotation, flipX, flipZ) }
+      );
+    }
+  }
+
+  removeVoxelBulk(
+    layerName: string,
+    entries: VoxelRemoveOptions[]
+  ): void {
+    for (const { position } of entries) {
+      this.world.removeVoxelAt(layerName, position);
+    }
+  }
+
   getVoxel(position: THREE.Vector3Like): VoxelEntry | undefined;
   getVoxel(layerName: string, position: THREE.Vector3Like): VoxelEntry | undefined;
   getVoxel(
