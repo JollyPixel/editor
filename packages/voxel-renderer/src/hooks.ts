@@ -5,7 +5,13 @@ export type VoxelLayerHookAction =
   | "offset-updated"
   | "voxel-set"
   | "voxel-removed"
-  | "reordered";
+  | "reordered"
+  | "object-layer-added"
+  | "object-layer-removed"
+  | "object-layer-updated"
+  | "object-added"
+  | "object-removed"
+  | "object-updated";
 
 export interface VoxelLayerHookEvent {
   layerName: string;

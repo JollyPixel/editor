@@ -26,13 +26,21 @@ const vr = new VoxelRenderer({
 
 ```ts
 export type VoxelLayerHookAction =
-  | "added"
-  | "removed"
-  | "updated"
-  | "offset-updated"
-  | "voxel-set"
-  | "voxel-removed"
-  | "reordered";
+  // Voxel-layer actions
+  | "added"            // a voxel layer was created
+  | "removed"          // a voxel layer was deleted
+  | "updated"          // layer properties (visibility, …) changed
+  | "offset-updated"   // layer world offset changed
+  | "voxel-set"        // a voxel was placed in a layer
+  | "voxel-removed"    // a voxel was removed from a layer
+  | "reordered"        // layer render order changed
+  // Object-layer actions
+  | "object-layer-added"   // a new object layer was created
+  | "object-layer-removed" // an object layer was deleted
+  | "object-layer-updated" // object layer properties (e.g. visibility) changed
+  | "object-added"         // an object was added to an object layer
+  | "object-removed"       // an object was removed from an object layer
+  | "object-updated";      // an object's properties were patched
 
 // Describes a change related to a layer.
 export interface VoxelLayerHookEvent {
