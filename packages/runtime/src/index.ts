@@ -15,13 +15,23 @@ export interface LoadRuntimeOptions {
    * Minimum delay (ms) before starting asset loading. Gives the loading UI time to render.
    */
   loadingDelay?: number;
+  /**
+   * Whether to automatically focus the game canvas when the user clicks anywhere on the page.
+   * This is important for games that require keyboard input,
+   * as it ensures that the canvas has focus and can receive keyboard events.
+   * @default true
+   */
+  focusCanvas?: boolean;
 }
 
 export async function loadRuntime(
   runtime: Runtime<any>,
   options: LoadRuntimeOptions = {}
 ) {
-  const { loadingDelay = 850 } = options;
+  const {
+    loadingDelay = 850,
+    focusCanvas = true
+  } = options;
 
   const gpuTierPromise = getGPUTier();
 
@@ -57,7 +67,12 @@ export async function loadRuntime(
   });
 
   // Make sure the focus is always on the game canvas wherever we click on the game window
-  document.addEventListener("click", () => runtime.canvas.focus());
+  function focusCanvasHandler() {
+    if (document.activeElement !== runtime.canvas) {
+      runtime.canvas.focus();
+    }
+  }
+  document.addEventListener("click", focusCanvasHandler);
 
   let initialized = false;
   try {
@@ -112,6 +127,11 @@ export async function loadRuntime(
   }
   catch (error: any) {
     loadingComponent.error(error);
+  }
+  finally {
+    if (!focusCanvas) {
+      document.removeEventListener("click", focusCanvasHandler);
+    }
   }
 
   if (initialized) {
