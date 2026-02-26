@@ -269,12 +269,19 @@ export class VoxelMeshBuilder {
       }
 
       const oppFace = FACE_OPPOSITE[worldFace];
-      const { rotation: neighbourRotation, flipY: neighbourFlipY } = unpackTransform(neighbourEntry.transform);
-      // Ask the neighbour: does its face that points BACK toward this voxel occlude?
-      let rotatedOppFace = rotateFace(oppFace, neighbourRotation);
+      const {
+        rotation: neighbourRotation,
+        flipY: neighbourFlipY
+      } = unpackTransform(neighbourEntry.transform);
+
+      // oppFace is in world space; convert to the neighbour's local space using
+      // the INVERSE rotation (rotateFace is forward: local→world, so inverse is
+      // (4 - rotation) % 4 for discrete 90° Y steps).
+      let rotatedOppFace = rotateFace(oppFace, (4 - neighbourRotation) % 4);
       if (neighbourFlipY) {
         rotatedOppFace = flipYFace(rotatedOppFace);
       }
+
       if (neighbourShape.occludes(rotatedOppFace)) {
         // Face is hidden — skip emission.
         return true;
