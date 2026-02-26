@@ -23,7 +23,8 @@
     "packages/fs-tree-backend",
     "packages/editors/voxel-map",
     "packages/editors/texture",
-    "packages/voxel-renderer"
+    "packages/voxel-renderer",
+    "packages/pixel-draw-renderer"
   ],
   "repository": {
     "type": "git",

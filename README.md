@@ -38,6 +38,7 @@ Click on one of the links to access the documentation of the package:
 | engine | [@jolly-pixel/engine](./packages/engine) | ECS framework on top of Three.js |
 | runtime | [@jolly-pixel/runtime](./packages/runtime) | Runtime for the engine / ECS |
 | voxel-renderer | [@jolly-pixel/voxel.renderer](./packages/voxel-renderer) | Voxel Engine and Renderer |
+| pixel-draw-renderer | [@jolly-pixel/pixel-draw.renderer](./packages/pixel-draw-renderer) | Pixel Art draw renderer |
 | fs-tree | [@jolly-pixel/fs-tree](./packages/fs-tree) | Robust, stylable tree view widget for HTML5 apps with drag'n'drop support |
 
 These packages are available in the Node Package Repository and can be easily installed with [npm](https://docs.npmjs.com/getting-started/what-is-npm) or [yarn](https://yarnpkg.com).
