@@ -73,6 +73,7 @@ export class VoxelLayer {
   #visible: boolean;
   #chunks = new Map<string, VoxelChunk>();
   #chunkSize: number;
+  #pendingRemoval: VoxelChunk[] = [];
 
   constructor(
     options: VoxelLayerOptions
@@ -235,6 +236,7 @@ export class VoxelLayer {
       this.#chunks.delete(
         this.#createChunkKey(cx, cy, cz)
       );
+      this.#pendingRemoval.push(chunk);
     }
   }
 
@@ -318,6 +320,12 @@ export class VoxelLayer {
 
   * getChunks(): IterableIterator<VoxelChunk> {
     yield* this.#chunks.values();
+  }
+
+  * drainPendingRemovals(): IterableIterator<VoxelChunk> {
+    while (this.#pendingRemoval.length > 0) {
+      yield this.#pendingRemoval.pop()!;
+    }
   }
 
   get chunkCount(): number {
