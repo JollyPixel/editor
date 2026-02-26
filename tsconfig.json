@@ -24,6 +24,9 @@
     },
     {
       "path": "./packages/voxel-renderer"
+    },
+    {
+      "path": "./packages/pixel-draw-renderer"
     }
   ]
 }

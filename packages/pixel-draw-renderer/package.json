@@ -1,0 +1,44 @@
+{
+  "name": "@jolly-pixel/pixel-draw.renderer",
+  "description": "Jolly Pixel Pixel Art drawer and renderer",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "prepublish": "rimraf ./dist && tsc -b",
+    "build": "tsc",
+    "dev": "vite",
+    "test-only": "node --test \"test/**/*.spec.ts\"",
+    "test": "c8 -r html npm run test-only"
+  },
+  "private": true,
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JollyPixel/editor.git",
+    "directory": "packages/pixel-draw-renderer"
+  },
+  "keywords": [],
+  "files": [
+    "dist"
+  ],
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  },
+  "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@jolly-pixel/engine": "2.5.0",
+    "three": "0.182.0"
+  },
+  "devDependencies": {
+    "@jolly-pixel/runtime": "3.3.0",
+    "vanilla-picker": "2.12.3"
+  }
+}

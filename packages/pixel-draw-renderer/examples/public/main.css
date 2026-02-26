@@ -1,0 +1,117 @@
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  display: flex;
+  background: #333;
+}
+
+#canvas-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+}
+
+#canvas-container canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+}
+
+#draw-panel {
+  min-width: 400px;
+  width: 500px;
+  max-width: 700px;
+  height: 100%;
+  position: relative;
+  background-color: #242424;
+}
+
+#resize-handle {
+  width: 4px;
+  flex-shrink: 0;
+  background: #1a2228;
+  cursor: col-resize;
+  transition: background 0.15s;
+}
+
+#resize-handle:hover,
+#resize-handle.dragging {
+  background: #4488ff;
+}
+
+#toolbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 6px 12px;
+  background: #37474F;
+  color: #eee;
+  font-size: 12px;
+  font-family: sans-serif;
+  user-select: none;
+}
+
+.toolbar-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: default;
+}
+
+.mode-btn {
+  padding: 3px 10px;
+  border: 1px solid #555;
+  border-radius: 3px;
+  background: transparent;
+  color: #aaa;
+  font-size: 11px;
+  font-family: sans-serif;
+  cursor: pointer;
+}
+
+.mode-btn:hover {
+  background: #3a3a3a;
+  color: #eee;
+}
+
+.mode-btn.active {
+  background: #4488ff;
+  border-color: #4488ff;
+  color: #fff;
+}
+
+#color-swatch {
+  width: 26px;
+  height: 26px;
+  border: 2px solid #666;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0;
+  background: #000000;
+}
+
+.toolbar-item input[type="range"] {
+  width: 80px;
+  min-width: 48px;
+  flex-shrink: 1;
+  cursor: pointer;
+}
+
+.toolbar-item span {
+  width: 32px;
+  text-align: right;
+  font-size: 11px;
+  color: #ccc;
+}

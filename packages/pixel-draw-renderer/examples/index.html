@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pixel Draw Renderer</title>
+  <link rel="stylesheet" href="./main.css">
+</head>
+
+<body>
+  <div id="draw-panel">
+    <div id="toolbar">
+      <div class="toolbar-item">
+        <button class="mode-btn" id="mode-paint">Paint</button>
+        <button class="mode-btn" id="mode-move">Move</button>
+      </div>
+      <div class="toolbar-item">
+        <button id="color-swatch" title="Color"></button>
+      </div>
+      <label class="toolbar-item">
+        Size
+        <input type="range" id="brush-size" min="1" max="32" value="1">
+        <span id="brush-size-display">1px</span>
+      </label>
+    </div>
+  </div>
+  <div id="resize-handle"></div>
+  <div id="canvas-container">
+    <canvas tabindex="-1" id="three-canvas"></canvas>
+  </div>
+  <script type="module" src="./scripts/main.ts"></script>
+</body>
+
+</html>
