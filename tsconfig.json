@@ -17,16 +17,16 @@
       "path": "./packages/mcp-server"
     },
     {
-      "path": "./packages/editors/voxel-map"
-    },
-    {
-      "path": "./packages/editors/texture"
-    },
-    {
       "path": "./packages/voxel-renderer"
     },
     {
       "path": "./packages/pixel-draw-renderer"
+    },
+    {
+      "path": "./packages/editors/voxel-map"
+    },
+    {
+      "path": "./packages/editors/texture"
     }
   ]
 }

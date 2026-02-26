@@ -3,7 +3,7 @@ import { typescriptConfig, globals } from "@openally/config.eslint";
 export default [
   {
     ignores: [
-      "src/**/coverage"
+      "**/coverage/**"
     ],
     languageOptions: {
       sourceType: "module",

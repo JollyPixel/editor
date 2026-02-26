@@ -6,33 +6,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Voxel Map Editor</title>
   <link rel="stylesheet" href="./main.css">
-  <link rel="stylesheet" href="./tools.css">
-  <link rel="stylesheet" href="./tree.css">
 </head>
 
-<div id="tools-container">
-  <div class="box" id="settings-box">
-    <div class="box-title">Settings</div>
-    <div class="box-content">
-
-    </div>
+<body>
+  <editor-sidebar id="sidebar"></editor-sidebar>
+  <div id="resize-handle"></div>
+  <div id="game-container">
+    <canvas tabindex="-1"></canvas>
   </div>
-  <div class="box" id="layer-box">
-    <div class="box-title">Layers</div>
-    <div class="box-content">
-
-    </div>
-  </div>
-  <div class="box" id="cube-box">
-    <div class="box-title">Cubes</div>
-    <div class="box-content">
-
-    </div>
-  </div>
-</div>
-<div id="game-container">
-  <canvas tabindex="-1"></canvas>
-</div>
-<script type="module" src="./src/index.ts"></script>
+  <script type="module" src="./src/index.ts"></script>
+</body>
 
 </html>
