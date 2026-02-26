@@ -399,6 +399,14 @@ export class VoxelWorld {
         yield { layer, chunk };
       }
     } while (this.#layersToRemove.length > 0);
+
+    // Drain individual chunks that became empty this frame.
+    // Their Three.js meshes must be removed even though the layer is still active.
+    for (const layer of this.#layers) {
+      for (const chunk of layer.drainPendingRemovals()) {
+        yield { layer, chunk };
+      }
+    }
   }
 
   clear(): void {
