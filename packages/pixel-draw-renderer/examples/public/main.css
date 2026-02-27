@@ -32,7 +32,7 @@ body {
   background-color: #242424;
 }
 
-#resize-handle {
+.resize-handle.left {
   width: 4px;
   flex-shrink: 0;
   background: #1a2228;
@@ -40,9 +40,17 @@ body {
   transition: background 0.15s;
 }
 
-#resize-handle:hover,
-#resize-handle.dragging {
+.resize-handle.left:hover,
+html.handle-dragging.vertical .resize-handle.left {
   background: #4488ff;
+}
+
+html.handle-dragging.vertical {
+  cursor: col-resize;
+}
+
+html.handle-dragging.vertical * {
+  user-select: none;
 }
 
 #toolbar {

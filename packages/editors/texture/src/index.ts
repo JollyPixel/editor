@@ -1,12 +1,13 @@
+// Import Third-party Dependencies
+import { ResizeHandle } from "@jolly-pixel/resize-handle";
+
 // Import Internal Dependencies
 import ThreeSceneManager from "./three/ThreeSceneManager.ts";
 import "./components/LeftPanel.ts";
 import "./components/RightPanel.ts";
 import "./components/PopupManager.ts";
 import "./components/popups/index.ts";
-import "./components/Resizer.ts";
 
-const kBody = document.querySelector("body") as HTMLBodyElement;
 const leftPanel = document.querySelector("jolly-model-editor-left-panel") as HTMLElement;
 const rightPanel = document.querySelector("jolly-model-editor-right-panel") as HTMLElement;
 const popupManager = document.querySelector("jolly-popup-manager") as HTMLElement;
@@ -34,53 +35,56 @@ requestAnimationFrame(function updateLoop() {
   requestAnimationFrame(updateLoop);
 });
 
-kBody.addEventListener("resizer", (e: Event) => {
-  const customEvent = e as CustomEvent;
-  const { delta, name } = customEvent.detail;
+function triggerManagerResize() {
+  threeSceneManager.onResize();
 
-  function triggerManagerResize() {
-    threeSceneManager.onResize();
-
-    // Essayer d'abord via le getSharedCanvasManager
-    const sharedManager = (leftPanel as any).getSharedCanvasManager?.();
-    if (sharedManager) {
-      sharedManager.onResize();
-    }
-    // Sinon, essayer via activeComponent
-    else {
-      const activeComponent = (leftPanel as any).getActiveComponent();
-      if (activeComponent && activeComponent.canvasManagerInstance) {
-        activeComponent.canvasManagerInstance.onResize();
-      }
+  const sharedManager = (leftPanel as any).getSharedCanvasManager?.();
+  if (sharedManager) {
+    sharedManager.onResize();
+  }
+  else {
+    const activeComponent = (leftPanel as any).getActiveComponent();
+    if (activeComponent && activeComponent.canvasManagerInstance) {
+      activeComponent.canvasManagerInstance.onResize();
     }
   }
+}
 
-  if (name === "leftPanel-threejs") {
-    const leftWidth = parseInt(getComputedStyle(leftPanel).width, 10);
-    const sectionWidth = parseInt(getComputedStyle(kSection).width, 10);
-    const newLeftWidth = leftWidth + delta;
-    const newSectionWidth = sectionWidth - delta;
+// direction "left" → handle div inserted AFTER leftPanel (between leftPanel and threeRenderer)
+// dragging right → leftPanel.style.width increases
+const leftResizeHandle = new ResizeHandle(leftPanel, { direction: "left" });
 
-    if (newSectionWidth >= kMinWidth) {
-      leftPanel.style.width = `${newLeftWidth}px`;
-      triggerManagerResize();
-    }
+leftResizeHandle.addEventListener("drag", () => {
+  const sectionWidth = kSection.getBoundingClientRect().width;
+
+  if (sectionWidth < kMinWidth) {
+    const excess = kMinWidth - sectionWidth;
+    leftPanel.style.width = `${parseInt(getComputedStyle(leftPanel).width, 10) - excess}px`;
   }
-  else if (name === "threejs-rightPanel") {
-    const rightWidth = parseInt(getComputedStyle(rightPanel).width, 10);
-    const sectionWidth = parseInt(getComputedStyle(kSection).width, 10);
-    const newRightWidth = rightWidth - delta;
-    const newSectionWidth = sectionWidth + delta;
 
-    if (newSectionWidth >= kMinWidth && newRightWidth >= kMinWidth) {
-      rightPanel.style.width = `${newRightWidth}px`;
-      triggerManagerResize();
-    }
+  triggerManagerResize();
+});
+
+// direction "right" → handle div inserted BEFORE rightPanel (between threeRenderer and rightPanel)
+// dragging left → rightPanel.style.width increases
+const rightResizeHandle = new ResizeHandle(rightPanel, { direction: "right" });
+
+rightResizeHandle.addEventListener("drag", () => {
+  const sectionWidth = kSection.getBoundingClientRect().width;
+  const rightWidth = parseInt(getComputedStyle(rightPanel).width, 10);
+
+  if (sectionWidth < kMinWidth) {
+    const excess = kMinWidth - sectionWidth;
+    rightPanel.style.width = `${rightWidth - excess}px`;
   }
+  else if (rightWidth < kMinWidth) {
+    rightPanel.style.width = `${kMinWidth}px`;
+  }
+
+  triggerManagerResize();
 });
 
 rightPanel.addEventListener("addcube", (e: any) => {
   const { name } = e.detail;
   threeSceneManager.createCube(name);
 });
-

@@ -1,6 +1,5 @@
 {
-  "name": "@jolly-pixel/pixel-draw.renderer",
-  "description": "Jolly Pixel Pixel Art drawer and renderer",
+  "name": "@jolly-pixel/resize-handle",
   "version": "1.0.0",
   "type": "module",
   "main": "dist/index.js",
@@ -8,9 +7,11 @@
   "scripts": {
     "prepublish": "rimraf ./dist && tsc -b",
     "build": "tsc",
-    "dev": "vite",
-    "test-only": "node --test \"test/**/*.spec.ts\"",
+    "test-only": "node --test \"test/**/*.test.ts\"",
     "test": "c8 -r html npm run test-only"
+  },
+  "devDependencies": {
+    "happy-dom": "*"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
@@ -20,7 +21,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/JollyPixel/editor.git",
-    "directory": "packages/pixel-draw-renderer"
+    "directory": "packages/resize-handle"
   },
   "keywords": [],
   "files": [
@@ -31,12 +32,5 @@
     "test": "test"
   },
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
-  "license": "MIT",
-  "devDependencies": {
-    "@jolly-pixel/engine": "2.5.0",
-    "@jolly-pixel/resize-handle": "1.0.0",
-    "@jolly-pixel/runtime": "3.3.0",
-    "three": "0.182.0",
-    "vanilla-picker": "2.12.3"
-  }
+  "license": "MIT"
 }
