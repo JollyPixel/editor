@@ -2,13 +2,7 @@
 
 `CanvasManager` is the top-level coordinator for the pixel-draw renderer. It wires together the [`Viewport`](./Viewport.md), `TextureBuffer`, `CanvasRenderer`, `InputController`, and `SvgManager` into a single cohesive public API.
 
-## Import
-
-```ts
-import { CanvasManager } from "@jolly-pixel/pixel-draw.renderer";
-```
-
-## Constructor
+## Types
 
 ```ts
 new CanvasManager(options?: CanvasManagerOptions)

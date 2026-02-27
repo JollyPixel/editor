@@ -2,37 +2,41 @@
 
 `BrushManager` manages the current brush color, opacity, size, and highlight colors, and computes the list of texture-space pixels a brush stroke covers.
 
-## Import
-
-```ts
-import { BrushManager } from "@jolly-pixel/pixel-draw.renderer";
-```
-
-## Constructor
+## Types
 
 ```ts
 new BrushManager(options: BrushManagerOptions)
+
+export interface BrushManagerOptions {
+  /**
+   * Base color of the brush. Can be any valid CSS color string.
+   * Opacity can be controlled separately with the `opacity` property.
+   * @default "#000000"
+   */
+  color?: string;
+  /**
+   * Size of the brush in pixels. Must be a positive integer.
+   * The actual affected area will be a square of `size x size` pixels centered around the target pixel.
+   * @default 32
+   */
+  size?: number;
+  /**
+   * Maximum allowed size for the brush. This is used to constrain the `size` property.
+   * Must be a positive integer. If `size` is set higher than `maxSize`, it will be clamped to `maxSize`.
+   * @default 32
+   */
+  maxSize?: number;
+  /**
+   * Highlight colors for the brush preview.
+   * These colors are used to render the brush outline and fill when hovering over the canvas.
+   * @default { colorInline: "#FFF", colorOutline: "#000" }
+   */
+  highlight?: {
+    colorInline?: string;
+    colorOutline?: string;
+  };
+}
 ```
-
-### `BrushManagerOptions`
-
-| Property | Type | Default | Description |
-|---|---|---|---|
-| `color` | `string` | `"#000000"` | Initial brush color (CSS hex) |
-| `size` | `number` | `1` | Initial brush size in pixels |
-| `maxSize` | `number` | `32` | Upper bound for brush size |
-| `highlightColorInline` | `string` | `"#FFFFFF"` | SVG overlay inner stroke color |
-| `highlightColorOutline` | `string` | `"#000000"` | SVG overlay outer stroke color |
-
-## Properties
-
-| Property | Type | Description |
-|---|---|---|
-| `color` | `string` | Current brush color as a CSS hex string |
-| `opacity` | `number` | Current opacity in the range `[0, 1]` |
-| `size` | `number` | Current brush size in pixels |
-| `maxSize` | `number` | Maximum allowed brush size |
-| `r` / `g` / `b` | `number` | Current color channels in the range `[0, 255]` |
 
 ## Methods
 

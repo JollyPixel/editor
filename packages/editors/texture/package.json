@@ -17,6 +17,7 @@
   "dependencies": {
     "@jolly-pixel/engine": "2.5.0",
     "@jolly-pixel/fs-tree": "1.0.0",
+    "@jolly-pixel/pixel-draw.renderer": "1.0.0",
     "@jolly-pixel/runtime": "3.3.0",
     "lit": "3.3.2",
     "three": "0.182.0"

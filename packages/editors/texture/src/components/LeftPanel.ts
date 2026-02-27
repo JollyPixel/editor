@@ -1,9 +1,9 @@
 // Import Third-party Dependencies
 import { LitElement, css, html } from "lit";
 import { state, query } from "lit/decorators.js";
+import { CanvasManager } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import CanvasManager from "../texture/CanvasManager.ts";
 import "./tabs/Paint.ts";
 import "./tabs/Build.ts";
 

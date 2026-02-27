@@ -4,9 +4,9 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { TransformControls } from "three/examples/jsm/Addons.js";
 // import { ViewHelper } from 'three/addons/helpers/ViewHelper.js';
 import { Input } from "@jolly-pixel/engine";
+import type { CanvasManager } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import type CanvasManager from "../texture/CanvasManager.ts";
 import ModelManager from "./ModelManager.ts";
 import type GroupManager from "./GroupManager.ts";
 
