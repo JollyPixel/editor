@@ -8,7 +8,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 // Import Internal Dependencies
 import {
   Asset,
-  Assets,
+  AssetLoader,
   type AssetLoaderContext
 } from "../../../systems/index.ts";
 
@@ -17,12 +17,10 @@ export type Model = {
   animations: THREE.AnimationClip[];
 };
 
-Assets.registry.loader(
-  {
-    extensions: [".obj", ".fbx", ".glb", ".gltf"],
-    type: "model"
-  },
-  (asset, context) => {
+export const ModelAssetLoader = new AssetLoader<Model>({
+  type: "model",
+  extensions: [".obj", ".fbx", ".glb", ".gltf"],
+  load: (asset, context) => {
     switch (asset.ext) {
       case ".obj":
         return safeLoad(asset, objectLoader(asset, context));
@@ -35,8 +33,7 @@ Assets.registry.loader(
         throw new Error(`Unsupported model type: ${asset.ext}`);
     }
   }
-);
-export const model = Assets.lazyLoad<Model>();
+});
 
 async function objectLoader(
   asset: Asset,

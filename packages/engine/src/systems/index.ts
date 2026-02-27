@@ -1,15 +1,15 @@
 // Import Internal Dependencies
-import {
+export {
   AssetManager,
   type AssetOnProgressCallback
 } from "./asset/Manager.ts";
 
 export * from "./asset/Base.ts";
-export type {
-  AssetLoaderCallback,
-  AssetLoaderContext,
-  AssetLoaderOptions
-} from "./asset/Registry.ts";
+export {
+  AssetLoader,
+  type AssetLoaderContext,
+  type AssetLoaderCallback
+} from "./asset/Loader.ts";
 
 export {
   Logger,
@@ -24,9 +24,3 @@ export * from "./rendering/index.ts";
 export * from "./SceneManager.ts";
 export * from "./generators/IntegerIncrement.ts";
 export * from "./generators/PersistentIdIncrement.ts";
-
-export type {
-  AssetOnProgressCallback
-};
-
-export const Assets = new AssetManager();

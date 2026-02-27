@@ -68,4 +68,5 @@ export interface LazyAsset<
 > {
   asset: Asset<TReturn, TOptions>;
   get: () => TReturn;
+  getAsync: () => Promise<TReturn>;
 }

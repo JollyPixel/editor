@@ -4,7 +4,7 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import * as Systems from "../../../systems/index.ts";
 import { Actor, ActorComponent } from "../../../actor/index.ts";
-import { model, type Model } from "./loader.ts";
+import { type Model } from "./loader.ts";
 
 import {
   ModelAnimation,
@@ -49,7 +49,7 @@ export class ModelRenderer<
       typeName: "ModelRenderer"
     });
 
-    this.#asset = model(options.path);
+    this.#asset = actor.world.assetManager.load<Model>(options.path);
     this.#debug = options.debug ?? false;
 
     const { animations } = options;

@@ -6,8 +6,10 @@ import { EventEmitter } from "@posva/event-emitter";
 import type { World, WorldDefaultContext } from "./World.ts";
 import { IntegerIncrement } from "./generators/IntegerIncrement.ts";
 import type { Logger } from "./Logger.ts";
+import type { ComponentInitializeContext } from "../components/types.ts";
 
 export type SceneLifecycleEvents = {
+  initialize: [];
   awake: [];
   start: [];
   destroy: [];
@@ -43,6 +45,13 @@ export abstract class Scene<
 
     return this.#logger;
   }
+
+  /**
+   * Called once before awake(), asynchronously. Use this to declare asset dependencies
+   * via context.assetManager.load(). All declared assets will be fully loaded before
+   * awake() is called.
+   */
+  async initialize(_context: ComponentInitializeContext): Promise<void> {}
 
   /**
    * Called once when the scene is first activated (before the first start/update).

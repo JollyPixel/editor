@@ -11,7 +11,7 @@ import {
 } from "../../../src/index.ts";
 
 export class VoxelBehavior extends ActorComponent {
-  world = loadVoxelTiledMap("tilemap/brackeys-level.tmj", {
+  world = loadVoxelTiledMap(this.actor.world.assetManager, "tilemap/brackeys-level.tmj", {
     layerMode: "stacked"
   });
   // @ts-ignore

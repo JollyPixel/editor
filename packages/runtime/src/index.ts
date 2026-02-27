@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import { Systems } from "@jolly-pixel/engine";
 import { getGPUTier } from "detect-gpu";
 
 // Import Internal Dependencies
@@ -94,16 +93,16 @@ export async function loadRuntime(
       throw new Error("GPU is not powerful enough to run this game");
     }
 
-    const context = { manager: runtime.manager };
+    const assetManager = runtime.world.assetManager;
 
     setTimeout(() => {
-      Systems.Assets.autoload = true;
-      Systems.Assets.scheduleAutoload(context);
+      assetManager.autoload = true;
+      assetManager.scheduleAutoload(assetManager.context);
     });
-    const waitingAssetsCount = Systems.Assets.waiting.size;
+    const waitingAssetsCount = assetManager.waiting.size;
     if (waitingAssetsCount > 0) {
-      await Systems.Assets.loadAssets(
-        context,
+      await assetManager.loadAssets(
+        assetManager.context,
         {
           onStart: loadingComponent.setAsset.bind(loadingComponent)
         }

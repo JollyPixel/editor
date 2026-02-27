@@ -8,7 +8,7 @@ import {
   Text3D,
   type Text3DOptions
 } from "./Text3D.class.ts";
-import { font, type Font } from "./loader.ts";
+import { type Font } from "./loader.ts";
 
 export interface TextRendererOptions extends Omit<Text3DOptions, "font"> {
   path: string;
@@ -36,7 +36,7 @@ export class TextRenderer extends ActorComponent<any> {
       material = new THREE.MeshBasicMaterial()
     } = options;
 
-    this.#asset = font(path);
+    this.#asset = actor.world.assetManager.load<Font>(path);
     this.text = new Text3D({
       material,
       textGeometryOptions

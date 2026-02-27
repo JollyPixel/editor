@@ -41,7 +41,7 @@ scene.add(
 // Map is 30 × 20 tiles at Y = 0. Position camera above and behind the centre
 // so the full terrain is visible on load. Use WASD + mouse to navigate.
 world.createActor("camera")
-  .addComponent(Camera3DControls, { speed: 0.35, rotationSpeed: 0.5 }, (component) => {
+  .addComponent(Camera3DControls, {}, (component) => {
     component.camera.position.set(15, 25, 42);
     component.camera.lookAt(15, 0, 10);
   });
