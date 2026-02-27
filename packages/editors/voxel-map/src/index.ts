@@ -2,6 +2,7 @@
 import * as THREE from "three";
 import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
 import { VoxelRenderer } from "@jolly-pixel/voxel.renderer";
+import { ResizeHandle } from "@jolly-pixel/resize-handle";
 
 // Import Internal Dependencies
 import {
@@ -117,50 +118,14 @@ function initRuntime(): Runtime {
     sidebar.gridRenderer = gridRenderer;
   }
 
-  setupResizeHandle(sidebar, canvas, gridRenderer);
+  const resizeHandle = new ResizeHandle(sidebar, { direction: "left" });
+  resizeHandle.addEventListener("drag", () => {
+    gridRenderer.setResolution(canvas.clientWidth, canvas.clientHeight);
+  });
+  resizeHandle.addEventListener("dragEnd", () => {
+    gridRenderer.setResolution(canvas.clientWidth, canvas.clientHeight);
+  });
 
   return runtime;
-}
-
-function setupResizeHandle(
-  sidebar: EditorSidebar,
-  canvas: HTMLCanvasElement,
-  gridRenderer: GridRenderer
-): void {
-  const handle = document.getElementById("resize-handle")!;
-  let dragging = false;
-  let startX = 0;
-  let startWidth = 0;
-
-  handle.addEventListener("mousedown", (e) => {
-    dragging = true;
-    startX = e.clientX;
-    startWidth = sidebar.offsetWidth;
-    handle.classList.add("dragging");
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-  });
-
-  window.addEventListener("mousemove", (e) => {
-    if (!dragging) {
-      return;
-    }
-
-    const newWidth = Math.max(200, Math.min(600, startWidth + (e.clientX - startX)));
-    sidebar.style.width = `${newWidth}px`;
-    gridRenderer.setResolution(canvas.clientWidth, canvas.clientHeight);
-  });
-
-  window.addEventListener("mouseup", () => {
-    if (!dragging) {
-      return;
-    }
-
-    dragging = false;
-    handle.classList.remove("dragging");
-    document.body.style.cursor = "";
-    document.body.style.userSelect = "";
-    gridRenderer.setResolution(canvas.clientWidth, canvas.clientHeight);
-  });
 }
 

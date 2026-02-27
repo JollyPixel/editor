@@ -1,8 +1,8 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
+import { ResizeHandle } from "@jolly-pixel/resize-handle";
 import Picker from "vanilla-picker";
-// import "vanilla-picker/dist/vanilla-picker.csp.css";
 
 // Import Internal Dependencies
 import { CanvasManager } from "../../src/index.ts";
@@ -117,51 +117,13 @@ function initRuntime(): Runtime {
     canvasManager.onResize();
   });
 
-  setupResizeHandle(drawPanel, canvasManager);
+  const resizeHandle = new ResizeHandle(drawPanel, { direction: "left" });
+  resizeHandle.addEventListener("drag", () => {
+    canvasManager.onResize();
+  });
+  resizeHandle.addEventListener("dragEnd", () => {
+    canvasManager.onResize();
+  });
 
   return runtime;
-}
-
-function setupResizeHandle(
-  sidebar: HTMLDivElement,
-  canvasManager: CanvasManager
-): void {
-  const handle = document.getElementById("resize-handle")!;
-  let dragging = false;
-  let startX = 0;
-  let startWidth = 0;
-
-  handle.addEventListener("mousedown", (e) => {
-    dragging = true;
-    startX = e.clientX;
-    startWidth = sidebar.offsetWidth;
-    handle.classList.add("dragging");
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-  });
-
-  window.addEventListener("mousemove", (e) => {
-    if (!dragging) {
-      return;
-    }
-
-    const totalWidth = document.body.offsetWidth;
-    const minWidth = Math.round(totalWidth * 0.15);
-    const maxWidth = Math.round(totalWidth * 0.85);
-    const newWidth = Math.max(minWidth, Math.min(maxWidth, startWidth + (e.clientX - startX)));
-    sidebar.style.width = `${newWidth}px`;
-    canvasManager.onResize();
-  });
-
-  window.addEventListener("mouseup", () => {
-    if (!dragging) {
-      return;
-    }
-
-    dragging = false;
-    handle.classList.remove("dragging");
-    document.body.style.cursor = "";
-    document.body.style.userSelect = "";
-    canvasManager.onResize();
-  });
 }

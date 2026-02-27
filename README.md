@@ -38,6 +38,7 @@ Click on one of the links to access the documentation of the package:
 - [@jolly-pixel/voxel.renderer](./packages/voxel-renderer) - Voxel Engine and Renderer
 - [@jolly-pixel/pixel-draw.renderer](./packages/pixel-draw-renderer) - Pixel Art draw renderer 
 - [@jolly-pixel/fs-tree](./packages/fs-tree) - Robust, stylable tree view widget for HTML5 apps with drag'n'drop support
+- [@jolly-pixel/resize-handle](./packages/resize-handle) - Robust resize handles / splitters for your HTML5 apps and websites
 
 These packages are available in the Node Package Repository and can be easily installed with [npm](https://docs.npmjs.com/getting-started/what-is-npm) or [yarn](https://yarnpkg.com).
 ```bash

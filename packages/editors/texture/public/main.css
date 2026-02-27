@@ -29,11 +29,20 @@ nav {
   padding: 10px;
 }
 
-.resizer {
+.resize-handle {
+  flex-shrink: 0;
+}
+
+.resize-handle.left,
+.resize-handle.right {
   width: 5px;
   background: #aaa;
   cursor: col-resize;
-  height: 100%;
+}
+
+html.handle-dragging.vertical {
+  cursor: col-resize !important;
+  user-select: none;
 }
 
 #container {

@@ -21,6 +21,7 @@
     "packages/mcp-server",
     "packages/fs-tree",
     "packages/fs-tree-backend",
+    "packages/resize-handle",
     "packages/voxel-renderer",
     "packages/pixel-draw-renderer",
     "packages/editors/voxel-map",
