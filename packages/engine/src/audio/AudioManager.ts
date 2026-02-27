@@ -3,8 +3,8 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import {
-  type World,
-  Assets
+  AssetLoader,
+  type World
 } from "../systems/index.ts";
 import {
   type AudioListenerAdapter
@@ -17,6 +17,16 @@ import {
 // CONSTANTS
 const kDefaultVolume = 1;
 const kDefaultLoop = false;
+
+export const AudioAssetLoader = new AssetLoader<AudioBuffer>({
+  type: "audio",
+  extensions: [".mp3", ".ogg", ".wav", ".aac", ".flac"],
+  load: async(asset, context) => {
+    const loader = new THREE.AudioLoader(context.manager);
+
+    return loader.loadAsync(asset.toString());
+  }
+});
 
 export type AudioManager = {
   loadAudio: (url: string, options?: AudioLoadingOptions) => Promise<THREE.Audio>;
@@ -54,17 +64,7 @@ export class GlobalAudioManager implements AudioManager {
       listener: world.audio.listener
     });
 
-    Assets.registry.loader(
-      {
-        extensions: [".mp3", ".ogg", ".wav", ".aac", ".flac"],
-        type: "audio"
-      },
-      async(asset, context) => {
-        const loader = new THREE.AudioLoader(context.manager);
-
-        return loader.loadAsync(asset.toString());
-      }
-    );
+    world.assetManager.register(AudioAssetLoader);
 
     return audioManager;
   }

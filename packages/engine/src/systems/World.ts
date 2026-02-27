@@ -13,6 +13,9 @@ import {
 import {
   type SceneManager
 } from "./SceneManager.ts";
+import {
+  AssetManager
+} from "./asset/Manager.ts";
 import { Input } from "../controls/Input.class.ts";
 import { GlobalAudio } from "../audio/GlobalAudio.ts";
 import {
@@ -24,6 +27,9 @@ import {
   Logger,
   type LoggerOptions
 } from "./Logger.ts";
+import {
+  Loaders
+} from "../components/renderers/index.ts";
 
 export type WorldEvents = {
   beforeFixedUpdate: [number];
@@ -68,6 +74,7 @@ export class World<
   sceneManager: SceneManager<TContext>;
   audio: GlobalAudio;
   context: TContext;
+  assetManager: AssetManager;
 
   readonly loop: FixedTimeStep;
   readonly debug: boolean;
@@ -99,6 +106,13 @@ export class World<
         (options.logger?.namespaces ?? []),
       adapter: options.logger?.adapter
     });
+    this.assetManager = new AssetManager(this.logger);
+    this.assetManager.context = {
+      manager: this.loadingManager
+    };
+    this.assetManager.register(Loaders.model);
+    this.assetManager.register(Loaders.font);
+
     this.#worldLogger = this.logger.child({ namespace: "Systems.World" });
 
     this.renderer = renderer;
@@ -116,6 +130,9 @@ export class World<
     manager: THREE.LoadingManager
   ) {
     this.loadingManager = manager;
+    this.assetManager.context = {
+      manager
+    };
 
     return this;
   }

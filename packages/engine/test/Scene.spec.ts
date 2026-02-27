@@ -8,6 +8,8 @@ import { Logger } from "../src/systems/Logger.ts";
 import { Actor } from "../src/actor/index.ts";
 import { Scene } from "../src/systems/Scene.ts";
 import { SceneManager } from "../src/systems/SceneManager.ts";
+import { AssetManager } from "../src/systems/asset/Manager.ts";
+import type { ComponentInitializeContext } from "../src/components/types.ts";
 
 // CONSTANTS
 const kDeltaTime = 1 / 60;
@@ -18,6 +20,11 @@ class ConcreteScene extends Scene {
   updateSpy = mock.fn();
   fixedUpdateSpy = mock.fn();
   destroySpy = mock.fn();
+  initializeSpy = mock.fn();
+
+  override async initialize(context: ComponentInitializeContext): Promise<void> {
+    this.initializeSpy(context);
+  }
 
   override awake(): void {
     this.awakeSpy();
@@ -45,6 +52,7 @@ function createSceneSetup() {
   const world = {
     logger: new Logger(),
     sceneManager: sm,
+    assetManager: new AssetManager(),
     createActor(name: string) {
       return new Actor(this as any, { name });
     }
@@ -217,30 +225,30 @@ describe("Scene", () => {
   });
 
   describe("loadScene", () => {
-    test("does NOT swap scene immediately", () => {
+    test("does NOT swap scene immediately", async() => {
       const { sm } = createSceneSetup();
       const scene = new ConcreteScene("test");
 
-      sm.loadScene(scene);
+      await sm.loadScene(scene);
 
       assert.strictEqual(sm.currentScene, null);
       assert.strictEqual(scene.awakeSpy.mock.calls.length, 0);
     });
 
-    test("reports hasPendingScene as true after loadScene", () => {
+    test("reports hasPendingScene as true after loadScene", async() => {
       const { sm } = createSceneSetup();
       const scene = new ConcreteScene("test");
 
       assert.strictEqual(sm.hasPendingScene, false);
-      sm.loadScene(scene);
+      await sm.loadScene(scene);
       assert.strictEqual(sm.hasPendingScene, true);
     });
 
-    test("applies the pending scene at the start of the next beginFrame", () => {
+    test("applies the pending scene at the start of the next beginFrame", async() => {
       const { sm } = createSceneSetup();
       const scene = new ConcreteScene("test");
 
-      sm.loadScene(scene);
+      await sm.loadScene(scene);
       assert.strictEqual(sm.currentScene, null);
 
       sm.beginFrame();
@@ -248,26 +256,36 @@ describe("Scene", () => {
       assert.strictEqual(scene.awakeSpy.mock.calls.length, 1);
     });
 
-    test("clears hasPendingScene after beginFrame applies it", () => {
+    test("clears hasPendingScene after beginFrame applies it", async() => {
       const { sm } = createSceneSetup();
       const scene = new ConcreteScene("test");
 
-      sm.loadScene(scene);
+      await sm.loadScene(scene);
       sm.beginFrame();
 
       assert.strictEqual(sm.hasPendingScene, false);
     });
 
-    test("scene.start is called on the SAME beginFrame that applies the pending scene", () => {
+    test("scene.start is called on the SAME beginFrame that applies the pending scene", async() => {
       const { sm } = createSceneSetup();
       const scene = new ConcreteScene("test");
 
-      sm.loadScene(scene);
+      await sm.loadScene(scene);
       sm.beginFrame();
 
       // setScene is called inside beginFrame, which sets #sceneStartPending = true,
       // then the same beginFrame checks #sceneStartPending and calls start()
       assert.strictEqual(scene.startSpy.mock.calls.length, 1);
+    });
+
+    test("calls initialize() with the assetManager context", async() => {
+      const { sm, world } = createSceneSetup();
+      const scene = new ConcreteScene("test");
+
+      await sm.loadScene(scene);
+
+      assert.strictEqual(scene.initializeSpy.mock.calls.length, 1);
+      assert.strictEqual(scene.initializeSpy.mock.calls[0].arguments[0].assetManager, world.assetManager);
     });
   });
 
@@ -343,7 +361,7 @@ describe("Scene", () => {
   });
 
   describe("appendScene", () => {
-    test("injects world and calls awake immediately", () => {
+    test("injects world and calls awake immediately", async() => {
       const { sm, world } = createSceneSetup();
       const appended = new ConcreteScene("prefab");
 
@@ -352,48 +370,48 @@ describe("Scene", () => {
         worldAtAwakeTime = appended.world;
       });
 
-      sm.appendScene(appended);
+      await sm.appendScene(appended);
 
       assert.strictEqual(worldAtAwakeTime, world);
       assert.strictEqual(appended.awakeSpy.mock.calls.length, 1);
     });
 
-    test("emits sceneAppended with the scene", () => {
+    test("emits sceneAppended with the scene", async() => {
       const { sm } = createSceneSetup();
       const appended = new ConcreteScene("prefab");
       const listener = mock.fn();
 
       sm.on("sceneAppended", listener);
-      sm.appendScene(appended);
+      await sm.appendScene(appended);
 
       assert.strictEqual(listener.mock.calls.length, 1);
       assert.strictEqual(listener.mock.calls[0].arguments[0], appended);
     });
 
-    test("does NOT call scene.start() immediately", () => {
+    test("does NOT call scene.start() immediately", async() => {
       const { sm } = createSceneSetup();
       const appended = new ConcreteScene("prefab");
 
-      sm.appendScene(appended);
+      await sm.appendScene(appended);
 
       assert.strictEqual(appended.startSpy.mock.calls.length, 0);
     });
 
-    test("calls scene.start() on the next beginFrame", () => {
+    test("calls scene.start() on the next beginFrame", async() => {
       const { sm } = createSceneSetup();
       const appended = new ConcreteScene("prefab");
 
-      sm.appendScene(appended);
+      await sm.appendScene(appended);
       sm.beginFrame();
 
       assert.strictEqual(appended.startSpy.mock.calls.length, 1);
     });
 
-    test("only calls scene.start() once across multiple beginFrame calls", () => {
+    test("only calls scene.start() once across multiple beginFrame calls", async() => {
       const { sm } = createSceneSetup();
       const appended = new ConcreteScene("prefab");
 
-      sm.appendScene(appended);
+      await sm.appendScene(appended);
       sm.beginFrame();
       sm.beginFrame();
       sm.beginFrame();
@@ -401,7 +419,7 @@ describe("Scene", () => {
       assert.strictEqual(appended.startSpy.mock.calls.length, 1);
     });
 
-    test("tracks actors created during awake as owned actors", () => {
+    test("tracks actors created during awake as owned actors", async() => {
       const { sm, world } = createSceneSetup();
 
       class PrefabScene extends ConcreteScene {
@@ -413,7 +431,7 @@ describe("Scene", () => {
       }
 
       const appended = new PrefabScene("prefab");
-      sm.appendScene(appended);
+      await sm.appendScene(appended);
       assert.ok(sm.getActor("PrefabActorA") !== null);
       assert.ok(sm.getActor("PrefabActorB") !== null);
 
@@ -422,7 +440,7 @@ describe("Scene", () => {
       assert.strictEqual(sm.getActor("PrefabActorB"), null, "owned actors should be destroyed");
     });
 
-    test("does not destroy pre-existing actors when removed", () => {
+    test("does not destroy pre-existing actors when removed", async() => {
       const { sm, world } = createSceneSetup();
 
       class MainScene extends ConcreteScene {
@@ -440,20 +458,20 @@ describe("Scene", () => {
       }
 
       sm.setScene(new MainScene("main"));
-      sm.appendScene(new PrefabScene("prefab"));
+      await sm.appendScene(new PrefabScene("prefab"));
       sm.removeScene("prefab");
 
       assert.ok(sm.getActor("MainActor") !== null, "pre-existing actor should survive removeScene");
       assert.strictEqual(sm.getActor("PrefabActor"), null, "owned actor should be destroyed");
     });
 
-    test("multiple appended scenes run update and fixedUpdate each frame", () => {
+    test("multiple appended scenes run update and fixedUpdate each frame", async() => {
       const { sm } = createSceneSetup();
       const prefabA = new ConcreteScene("A");
       const prefabB = new ConcreteScene("B");
 
-      sm.appendScene(prefabA);
-      sm.appendScene(prefabB);
+      await sm.appendScene(prefabA);
+      await sm.appendScene(prefabB);
       sm.beginFrame();
       sm.update(kDeltaTime);
       sm.fixedUpdate(kDeltaTime);
@@ -464,11 +482,11 @@ describe("Scene", () => {
       assert.strictEqual(prefabB.fixedUpdateSpy.mock.calls.length, 1);
     });
 
-    test("getScene(id) returns the appended scene by id", () => {
+    test("getScene(id) returns the appended scene by id", async() => {
       const { sm } = createSceneSetup();
       const appended = new ConcreteScene("prefab");
 
-      sm.appendScene(appended);
+      await sm.appendScene(appended);
 
       assert.strictEqual(sm.getScene(appended.id), appended);
     });
@@ -479,58 +497,68 @@ describe("Scene", () => {
       assert.strictEqual(sm.getScene(9999), null);
     });
 
-    test("getScene(name) returns all appended scenes sharing that name", () => {
+    test("getScene(name) returns all appended scenes sharing that name", async() => {
       const { sm } = createSceneSetup();
       const a = new ConcreteScene("shared");
       const b = new ConcreteScene("shared");
       const c = new ConcreteScene("other");
 
-      sm.appendScene(a);
-      sm.appendScene(b);
-      sm.appendScene(c);
+      await sm.appendScene(a);
+      await sm.appendScene(b);
+      await sm.appendScene(c);
 
       const scenes = sm.getScene("shared");
       assert.strictEqual(scenes.length, 2);
       assert.ok(scenes.includes(a));
       assert.ok(scenes.includes(b));
     });
+
+    test("calls initialize() with the assetManager context", async() => {
+      const { sm, world } = createSceneSetup();
+      const appended = new ConcreteScene("prefab");
+
+      await sm.appendScene(appended);
+
+      assert.strictEqual(appended.initializeSpy.mock.calls.length, 1);
+      assert.strictEqual(appended.initializeSpy.mock.calls[0].arguments[0].assetManager, world.assetManager);
+    });
   });
 
   describe("removeScene", () => {
-    test("removeScene(name) calls destroy on the scene", () => {
+    test("removeScene(name) calls destroy on the scene", async() => {
       const { sm } = createSceneSetup();
       const appended = new ConcreteScene("prefab");
 
-      sm.appendScene(appended);
+      await sm.appendScene(appended);
       sm.removeScene("prefab");
 
       assert.strictEqual(appended.destroySpy.mock.calls.length, 1);
     });
 
-    test("removeScene(name) emits sceneRemoved", () => {
+    test("removeScene(name) emits sceneRemoved", async() => {
       const { sm } = createSceneSetup();
       const appended = new ConcreteScene("prefab");
       const listener = mock.fn();
 
       sm.on("sceneRemoved", listener);
-      sm.appendScene(appended);
+      await sm.appendScene(appended);
       sm.removeScene("prefab");
 
       assert.strictEqual(listener.mock.calls.length, 1);
       assert.strictEqual(listener.mock.calls[0].arguments[0], appended);
     });
 
-    test("removeScene(name) removes the entry from the registry", () => {
+    test("removeScene(name) removes the entry from the registry", async() => {
       const { sm } = createSceneSetup();
       const appended = new ConcreteScene("prefab");
 
-      sm.appendScene(appended);
+      await sm.appendScene(appended);
       sm.removeScene("prefab");
 
       assert.strictEqual(sm.getScene(appended.id), null);
     });
 
-    test("removeScene(name) destroys owned actors", () => {
+    test("removeScene(name) destroys owned actors", async() => {
       const { sm, world } = createSceneSetup();
 
       class PrefabScene extends ConcreteScene {
@@ -541,20 +569,20 @@ describe("Scene", () => {
       }
 
       const appended = new PrefabScene("prefab");
-      sm.appendScene(appended);
+      await sm.appendScene(appended);
 
       assert.ok(sm.getActor("PrefabActor") !== null, "actor should exist after append");
       sm.removeScene("prefab");
       assert.strictEqual(sm.getActor("PrefabActor"), null, "actor should be gone after remove");
     });
 
-    test("removeScene(name) removes ALL scenes sharing that name", () => {
+    test("removeScene(name) removes ALL scenes sharing that name", async() => {
       const { sm } = createSceneSetup();
       const a = new ConcreteScene("shared");
       const b = new ConcreteScene("shared");
 
-      sm.appendScene(a);
-      sm.appendScene(b);
+      await sm.appendScene(a);
+      await sm.appendScene(b);
       sm.removeScene("shared");
 
       assert.strictEqual(sm.getScene("shared").length, 0);
@@ -568,13 +596,13 @@ describe("Scene", () => {
       assert.doesNotThrow(() => sm.removeScene("nonexistent"));
     });
 
-    test("removeScene(scene) removes by scene instance", () => {
+    test("removeScene(scene) removes by scene instance", async() => {
       const { sm } = createSceneSetup();
       const a = new ConcreteScene("shared");
       const b = new ConcreteScene("shared");
 
-      sm.appendScene(a);
-      sm.appendScene(b);
+      await sm.appendScene(a);
+      await sm.appendScene(b);
       sm.removeScene(a);
 
       assert.strictEqual(sm.getScene(a.id), null);
@@ -583,11 +611,11 @@ describe("Scene", () => {
       assert.strictEqual(b.destroySpy.mock.calls.length, 0);
     });
 
-    test("removeScene(scene) stops calling update on removed scene", () => {
+    test("removeScene(scene) stops calling update on removed scene", async() => {
       const { sm } = createSceneSetup();
       const appended = new ConcreteScene("prefab");
 
-      sm.appendScene(appended);
+      await sm.appendScene(appended);
       sm.beginFrame();
       sm.update(kDeltaTime);
 
@@ -599,15 +627,15 @@ describe("Scene", () => {
   });
 
   describe("setScene clears appended scenes", () => {
-    test("setScene tears down all appended scenes", () => {
+    test("setScene tears down all appended scenes", async() => {
       const { sm } = createSceneSetup();
       const main = new ConcreteScene("main");
       const prefabA = new ConcreteScene("A");
       const prefabB = new ConcreteScene("B");
 
       sm.setScene(main);
-      sm.appendScene(prefabA);
-      sm.appendScene(prefabB);
+      await sm.appendScene(prefabA);
+      await sm.appendScene(prefabB);
       sm.setScene(new ConcreteScene("next"));
 
       assert.strictEqual(prefabA.destroySpy.mock.calls.length, 1);
@@ -616,7 +644,7 @@ describe("Scene", () => {
       assert.strictEqual(sm.getScene("B").length, 0);
     });
 
-    test("setScene emits sceneRemoved for each appended scene before teardown", () => {
+    test("setScene emits sceneRemoved for each appended scene before teardown", async() => {
       const { sm } = createSceneSetup();
       const main = new ConcreteScene("main");
       const prefab = new ConcreteScene("prefab");
@@ -624,7 +652,7 @@ describe("Scene", () => {
 
       sm.on("sceneRemoved", (s) => removed.push(s.name));
       sm.setScene(main);
-      sm.appendScene(prefab);
+      await sm.appendScene(prefab);
       sm.setScene(new ConcreteScene("next"));
 
       assert.deepEqual(removed, ["prefab"]);

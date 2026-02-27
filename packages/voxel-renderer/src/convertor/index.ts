@@ -4,6 +4,7 @@ export {
 } from "./tiled/TiledConverter.ts";
 
 export {
+  TiledMapAssetLoader,
   loadVoxelTiledMap,
   type VoxelTiledMapAsset
 } from "./tiled/loader.ts";

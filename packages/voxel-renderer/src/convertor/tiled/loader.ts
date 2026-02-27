@@ -20,22 +20,27 @@ type TiledLoaderConverterOptions = Omit<TiledConverterOptions, "resolveTilesetSr
 
 export type VoxelTiledMapAsset = Systems.Asset<VoxelWorldJSON, TiledLoaderConverterOptions>;
 
-Systems.Assets.registry.loader<VoxelWorldJSON, TiledLoaderConverterOptions>(
-  {
-    extensions: [".tmj"],
-    type: "tilemap"
-  },
-  (asset, _context, options) => {
-    switch (asset.ext) {
-      case ".tmj":
-        return tmjLoader(asset, options);
-      default:
-        throw new Error(`Unsupported model type: ${asset.ext}`);
-    }
-  }
-);
+export const TiledMapAssetLoader = new Systems.AssetLoader<
+  VoxelWorldJSON,
+  TiledLoaderConverterOptions
+>({
+  type: "tilemap",
+  extensions: [".tmj"],
+  load: (asset, _context, options) => tmjLoader(asset, options)
+});
 
-export const loadVoxelTiledMap = Systems.Assets.lazyLoad<VoxelWorldJSON, TiledLoaderConverterOptions>();
+export function loadVoxelTiledMap(
+  assetManager: Systems.AssetManager,
+  pathOrAsset: VoxelTiledMapAsset | string,
+  options?: TiledLoaderConverterOptions
+): Systems.LazyAsset<VoxelWorldJSON, TiledLoaderConverterOptions> {
+  assetManager.register(TiledMapAssetLoader);
+
+  return assetManager.load<VoxelWorldJSON, TiledLoaderConverterOptions>(
+    pathOrAsset,
+    options
+  );
+}
 
 async function tmjLoader(
   asset: VoxelTiledMapAsset,

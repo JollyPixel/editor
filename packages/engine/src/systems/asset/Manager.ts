@@ -8,9 +8,12 @@ import {
 } from "./Base.ts";
 import { AssetQueue } from "./Queue.ts";
 import {
-  AssetRegistry,
-  type AssetLoaderContext
+  AssetRegistry
 } from "./Registry.ts";
+import {
+  AssetLoader,
+  type AssetLoaderContext
+} from "./Loader.ts";
 import {
   Logger
 } from "../Logger.ts";
@@ -35,12 +38,21 @@ export class AssetManager {
   autoload = false;
   #hasAutoloadTimeout = false;
   #pendingOptions: Map<string, unknown> = new Map();
-  #logger = new Logger();
+  #pendingPromises: Map<string, Promise<void>> = new Map();
+  #logger: Logger;
 
-  useLogger(
-    logger: Logger
+  constructor(
+    logger?: Logger
   ) {
-    this.#logger = logger.child({ namespace: "Systems.AssetManager" });
+    this.#logger = (
+      logger ?? new Logger()
+    ).child({ namespace: "Systems.AssetManager" });
+  }
+
+  register(
+    loader: AssetLoader<any, any>
+  ): this {
+    this.registry.register(loader);
 
     return this;
   }
@@ -71,15 +83,59 @@ export class AssetManager {
 
     return {
       asset,
-      get: () => this.get<TReturn>(key)
+      get: () => this.get<TReturn>(key),
+      getAsync: () => this.loadAsync<TReturn, TOptions>(asset)
     };
   }
 
-  lazyLoad<TReturn = unknown, TOptions = unknown>(): (
-  assetOrPath: Asset<TReturn, TOptions> | string,
-  options?: TOptions
-  ) => LazyAsset<TReturn, TOptions> {
-    return (assetOrPath, options) => this.load<TReturn, TOptions>(assetOrPath, options);
+  async loadAsync<TReturn = unknown, TOptions = unknown>(
+    assetOrPath: Asset<TReturn, TOptions> | string,
+    options?: TOptions
+  ): Promise<TReturn> {
+    const asset = Asset.from(assetOrPath);
+    if (asset.type === "unknown") {
+      asset.type = this.registry.getTypeForExt(asset.longExt);
+    }
+
+    const key = asset.toString();
+
+    if (this.assets.has(key)) {
+      return this.get<TReturn>(key);
+    }
+
+    if (this.#pendingPromises.has(key)) {
+      await this.#pendingPromises.get(key)!;
+
+      return this.get<TReturn>(key);
+    }
+
+    if (options !== undefined && !this.#pendingOptions.has(key)) {
+      this.#pendingOptions.set(key, options);
+    }
+
+    const loader = this.registry.getLoaderForType<TReturn, TOptions>(asset.type);
+    if (!loader) {
+      throw new Error(`No loader registered for asset type: ${asset.type}`);
+    }
+
+    const pendingOptions = this.#pendingOptions.get(key) as TOptions | undefined;
+    this.#pendingOptions.delete(key);
+
+    const promise = loader(asset, this.context, pendingOptions)
+      .then((result) => {
+        this.assets.set(key, result);
+        this.#pendingPromises.delete(key);
+      })
+      .catch((cause) => {
+        this.#pendingPromises.delete(key);
+
+        throw new Error(`Failed to load asset "${key}"`, { cause });
+      });
+
+    this.#pendingPromises.set(key, promise);
+    await promise;
+
+    return this.get<TReturn>(key);
   }
 
   get<TReturn>(
@@ -128,10 +184,22 @@ export class AssetManager {
     });
 
     const loadAsset = async(asset: Asset): Promise<void> => {
+      const key = asset.toString();
+
+      if (this.assets.has(key)) {
+        return;
+      }
+
+      if (this.#pendingPromises.has(key)) {
+        await this.#pendingPromises.get(key)!;
+
+        return;
+      }
+
       const loader = this.registry.getLoaderForType(asset.type);
       if (!loader) {
         this.#logger.error(`No loader registered for asset type: ${asset.type}`, {
-          asset: asset.toString()
+          asset: key
         });
 
         throw new Error(`No loader registered for asset type: ${asset.type}`);
@@ -139,19 +207,23 @@ export class AssetManager {
 
       onStart?.(asset);
 
-      try {
-        const key = asset.toString();
-        const pendingOptions = this.#pendingOptions.get(key);
-        this.#pendingOptions.delete(key);
+      const pendingOptions = this.#pendingOptions.get(key);
+      this.#pendingOptions.delete(key);
 
-        const result = await loader(asset, context, pendingOptions);
-        this.assets.set(key, result);
-      }
-      catch (cause) {
-        this.#logger.error(`Failed to load asset "${asset.toString()}"`, { cause });
+      const promise = loader(asset, context, pendingOptions)
+        .then((result) => {
+          this.assets.set(key, result);
+          this.#pendingPromises.delete(key);
+        })
+        .catch((cause) => {
+          this.#pendingPromises.delete(key);
+          this.#logger.error(`Failed to load asset "${key}"`, { cause });
 
-        throw new Error(`Failed to load asset "${asset.toString()}"`, { cause });
-      }
+          throw new Error(`Failed to load asset "${key}"`, { cause });
+        });
+
+      this.#pendingPromises.set(key, promise);
+      await promise;
     };
 
     await Promise.all(

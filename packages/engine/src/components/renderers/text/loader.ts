@@ -5,23 +5,17 @@ import {
 } from "three/examples/jsm/loaders/FontLoader.js";
 
 // Import Internal Dependencies
-import {
-  Assets
-} from "../../../systems/index.ts";
+import { AssetLoader } from "../../../systems/index.ts";
 
-Assets.registry.loader(
-  {
-    extensions: [".typeface.json"],
-    type: "font"
-  },
-  (asset, context) => {
+export const FontAssetLoader = new AssetLoader<Font>({
+  type: "font",
+  extensions: [".typeface.json"],
+  load: (asset, context) => {
     const fontLoader = new FontLoader(context.manager)
       .setPath(asset.path);
 
     return fontLoader.loadAsync(asset.name + asset.ext);
   }
-);
-
-export const font = Assets.lazyLoad<Font>();
+});
 
 export type { Font };

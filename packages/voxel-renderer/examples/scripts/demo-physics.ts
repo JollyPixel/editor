@@ -55,7 +55,7 @@ scene.add(
 );
 
 world.createActor("camera")
-  .addComponent(Camera3DControls, { speed: 0.35, rotationSpeed: 0.50 }, (component) => {
+  .addComponent(Camera3DControls, {}, (component) => {
     component.camera.position.set(16, 22, 50);
     component.camera.lookAt(16, 1, 16);
   });

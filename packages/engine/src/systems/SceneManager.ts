@@ -8,8 +8,15 @@ import {
   ActorComponent,
   ActorTree
 } from "../actor/index.ts";
-import type { World, WorldDefaultContext } from "./World.ts";
-import type { Component } from "../components/types.ts";
+
+import type {
+  World,
+  WorldDefaultContext
+} from "./World.ts";
+import type {
+  Component,
+  ComponentInitializeContext
+} from "../components/types.ts";
 import type { Scene } from "./Scene.ts";
 import type { Logger } from "./Logger.ts";
 
@@ -137,21 +144,50 @@ export class SceneManager<
     this.emit("sceneChanged", scene);
   }
 
-  loadScene(
+  async #runInitialize(
     scene: Scene<TContext>
-  ): void {
+  ): Promise<void> {
+    if (!this.#world) {
+      return;
+    }
+
+    const context: ComponentInitializeContext = {
+      assetManager: this.#world.assetManager
+    };
+
+    await scene.initialize(context);
+    await this.#world.assetManager.loadAssets(
+      this.#world.assetManager.context
+    );
+  }
+
+  /**
+   * Queues a scene to be activated at the start of the next frame.
+   * Awaits the scene's `initialize()` lifecycle and any declared asset loads first.
+   *
+   * @remarks Callers that do not need async initialization may use `setScene()` instead,
+   * which is synchronous and skips the initialize phase.
+   */
+  async loadScene(
+    scene: Scene<TContext>
+  ): Promise<void> {
+    await this.#runInitialize(scene);
+
     this.#pendingScene = scene;
   }
 
   /**
    * Inserts a scene as a prefab into the current scene.
-   * The scene's awake() is called immediately; start() is deferred to the next beginFrame.
+   * Awaits the scene's `initialize()` lifecycle and any declared asset loads, then
+   * calls awake() immediately; start() is deferred to the next beginFrame.
    * All actors created during awake() are tracked and will be destroyed on removeScene().
    */
-  appendScene(
+  async appendScene(
     scene: Scene<TContext>
-  ): void {
+  ): Promise<void> {
     this.#logger.debug("Appending scene", { scene: scene.name });
+
+    await this.#runInitialize(scene);
 
     const snapshot = new Set(this.#registeredActors);
 

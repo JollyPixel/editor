@@ -4,17 +4,17 @@ export * from "./text/TextRenderer.class.ts";
 
 // Import Internal Dependencies
 import {
-  model,
+  ModelAssetLoader,
   type Model
 } from "./model/loader.ts";
 import {
-  font,
+  FontAssetLoader,
   type Font
 } from "./text/loader.ts";
 
 export const Loaders = {
-  model,
-  font
+  model: ModelAssetLoader,
+  font: FontAssetLoader
 } as const;
 
 export type {
