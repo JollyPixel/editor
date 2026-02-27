@@ -33,13 +33,11 @@
 
 Click on one of the links to access the documentation of the package:
 
-| name | package and link | description |
-| --- | --- | --- | 
-| engine | [@jolly-pixel/engine](./packages/engine) | ECS framework on top of Three.js |
-| runtime | [@jolly-pixel/runtime](./packages/runtime) | Runtime for the engine / ECS |
-| voxel-renderer | [@jolly-pixel/voxel.renderer](./packages/voxel-renderer) | Voxel Engine and Renderer |
-| pixel-draw-renderer | [@jolly-pixel/pixel-draw.renderer](./packages/pixel-draw-renderer) | Pixel Art draw renderer |
-| fs-tree | [@jolly-pixel/fs-tree](./packages/fs-tree) | Robust, stylable tree view widget for HTML5 apps with drag'n'drop support |
+- [@jolly-pixel/engine](./packages/engine) - ECS framework on top of Three.js
+- [@jolly-pixel/runtime](./packages/runtime) - Runtime for the engine / ECS
+- [@jolly-pixel/voxel.renderer](./packages/voxel-renderer) - Voxel Engine and Renderer
+- [@jolly-pixel/pixel-draw.renderer](./packages/pixel-draw-renderer) - Pixel Art draw renderer 
+- [@jolly-pixel/fs-tree](./packages/fs-tree) - Robust, stylable tree view widget for HTML5 apps with drag'n'drop support
 
 These packages are available in the Node Package Repository and can be easily installed with [npm](https://docs.npmjs.com/getting-started/what-is-npm) or [yarn](https://yarnpkg.com).
 ```bash
@@ -47,6 +45,11 @@ $ npm i @jolly-pixel/engine
 # or
 $ yarn add @jolly-pixel/engine
 ```
+
+## Available editors
+
+- [Voxel Map](./packages/editors/voxel-map/)
+- [model 3D](./packages/editors/texture/)
 
 ## Build
 To install and compile all workspaces, just run the following command at the root
