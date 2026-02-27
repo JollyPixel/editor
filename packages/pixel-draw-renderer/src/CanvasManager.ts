@@ -36,7 +36,10 @@ export interface CanvasManagerOptions {
   defaultMode?: Mode;
   texture?: {
     defaultColor?: string;
-    size?: { x: number; y?: number; };
+    size?: {
+      x: number;
+      y?: number;
+    };
     maxSize?: number;
     init?: HTMLCanvasElement;
   };

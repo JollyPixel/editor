@@ -13,7 +13,8 @@ export default defineConfig({
     nav: [
       { text: "Engine", link: "/engine/README", activeMatch: "^/engine/" },
       { text: "Runtime", link: "/runtime/README", activeMatch: "^/runtime/" },
-      { text: "Voxel Renderer", link: "/voxel-renderer/README", activeMatch: "^/voxel-renderer/" }
+      { text: "Voxel Renderer", link: "/voxel-renderer/README", activeMatch: "^/voxel-renderer/" },
+      { text: "Pixel Draw", link: "/pixel-draw-renderer/README", activeMatch: "^/pixel-draw-renderer/" }
     ],
     search: {
       provider: "local"
@@ -278,6 +279,33 @@ export default defineConfig({
                 {
                   text: "Hooks",
                   link: "/voxel-renderer/Hooks"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "/pixel-draw-renderer/": [
+        {
+          items: [
+            {
+              text: "Introduction",
+              link: "/pixel-draw-renderer/README"
+            },
+            {
+              text: "Core",
+              items: [
+                {
+                  text: "BrushManager",
+                  link: "/pixel-draw-renderer/BrushManager"
+                },
+                {
+                  text: "CanvasManager",
+                  link: "/pixel-draw-renderer/CanvasManager"
+                },
+                {
+                  text: "Viewport",
+                  link: "/pixel-draw-renderer/Viewport"
                 }
               ]
             }

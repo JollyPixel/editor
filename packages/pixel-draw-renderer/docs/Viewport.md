@@ -2,35 +2,41 @@
 
 `Viewport` encapsulates camera position, zoom level, canvas dimensions, and all coordinate-space conversions between canvas pixels and texture pixels.
 
-## Import
-
-```ts
-import { Viewport } from "@jolly-pixel/pixel-draw.renderer";
-```
-
-## Constructor
+## Types
 
 ```ts
 new Viewport(options: ViewportOptions)
+
+export interface ViewportOptions {
+  /**
+   * Size of the texture to display in the viewport.
+   * This is used to calculate the camera bounds and the zoom level.
+   */
+  textureSize: Vec2;
+  /**
+   * Default zoom level.
+   * Can be overridden by passing a texture with a different size than the default one.
+   * @default 4
+   */
+  zoom?: number;
+  /**
+   * Minimum zoom level. Must be under the max zoom level.
+   * @default 1
+   */
+  zoomMin?: number;
+  /**
+   * Maximum zoom level. Must be above the min zoom level.
+   * @default 32
+   */
+  zoomMax?: number;
+  /**
+   * Sensitivity of zooming when using the mouse wheel. The higher, the faster the zoom changes.
+   * If the zoom level is under 1, the sensitivity is divided by 10 to allow finer control.
+   * @default 0.1
+   */
+  zoomSensitivity?: number;
+}
 ```
-
-### `ViewportOptions`
-
-| Property | Type | Default | Description |
-|---|---|---|---|
-| `textureSize` | `number` | — | Initial texture size in pixels |
-| `zoom.range` | `[min, max]` | `[0.5, 40]` | Allowed zoom multiplier range |
-| `zoom.sensitivity` | `number` | `0.002` | Wheel-delta to zoom-multiplier conversion factor |
-
-## Properties
-
-| Property | Type | Description |
-|---|---|---|
-| `zoom` | `number` | Current zoom multiplier, clamped to `zoom.range` |
-| `camera` | `Vec2` | Current camera offset in canvas pixels |
-| `canvasWidth` | `number` | Tracked canvas width; updated by `setCanvasSize` |
-| `canvasHeight` | `number` | Tracked canvas height; updated by `setCanvasSize` |
-| `textureSize` | `number` | Current texture size in pixels |
 
 ## Methods
 
