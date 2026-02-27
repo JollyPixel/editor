@@ -1,5 +1,6 @@
 {
   "name": "@jolly-pixel/resize-handle",
+  "description": "Robust resize handles / splitters for your HTML5 apps and websites",
   "version": "1.0.0",
   "type": "module",
   "main": "dist/index.js",
