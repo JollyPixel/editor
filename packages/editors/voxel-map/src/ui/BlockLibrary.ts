@@ -18,6 +18,7 @@ import type {
   EventInput,
   EventSelect
 } from "./types.ts";
+import { showPrompt } from "./PromptDialog.ts";
 
 // CONSTANTS
 const kRotationOptions: { label: string; value: RotationMode; }[] = [
@@ -166,6 +167,17 @@ export class BlockLibrary extends LitElement {
       border-color: #4488ff;
       color: #4488ff;
     }
+    .rotation-bar .separator {
+      width: 1px;
+      background: #2a3540;
+      align-self: stretch;
+      margin: 0 3px;
+    }
+    .rotation-bar button.active-flip {
+      background: #3a1a5a;
+      border-color: #aa44ff;
+      color: #aa44ff;
+    }
   `;
 
   @property({ attribute: false }) declare vr: VoxelRenderer;
@@ -173,6 +185,7 @@ export class BlockLibrary extends LitElement {
   @state() private declare _selectedId: number | null;
   @state() private declare _selectedBlock: BlockDefinition | null;
   @state() private declare _rotationMode: RotationMode;
+  @state() private declare _flipY: boolean;
 
   constructor() {
     super();
@@ -180,6 +193,7 @@ export class BlockLibrary extends LitElement {
     this._selectedId = null;
     this._selectedBlock = null;
     this._rotationMode = editorState.rotationMode;
+    this._flipY = editorState.flipY;
   }
 
   #renderer: BlockLibraryRenderer | null = null;
@@ -203,12 +217,17 @@ export class BlockLibrary extends LitElement {
     this._rotationMode = editorState.rotationMode;
   };
 
+  readonly #onFlipYChange = () => {
+    this._flipY = editorState.flipY;
+  };
+
   override firstUpdated() {
     this.#viewportHost = this.shadowRoot!.querySelector<HTMLDivElement>(".viewport-host")!;
 
     editorState.addEventListener("selectedBlockChange", this.#onSelectedBlockChange);
     editorState.addEventListener("blockRegistryChanged", this.#onBlockRegistryChanged);
     editorState.addEventListener("rotationModeChange", this.#onRotationModeChange);
+    editorState.addEventListener("flipYChange", this.#onFlipYChange);
   }
 
   override disconnectedCallback() {
@@ -216,6 +235,7 @@ export class BlockLibrary extends LitElement {
     editorState.removeEventListener("selectedBlockChange", this.#onSelectedBlockChange);
     editorState.removeEventListener("blockRegistryChanged", this.#onBlockRegistryChanged);
     editorState.removeEventListener("rotationModeChange", this.#onRotationModeChange);
+    editorState.removeEventListener("flipYChange", this.#onFlipYChange);
     this.#renderer?.dispose();
     this.#renderer = null;
   }
@@ -283,6 +303,11 @@ export class BlockLibrary extends LitElement {
             @click=${() => editorState.setRotationMode(value)}
           >${label}</button>
         `)}
+        <div class="separator"></div>
+        <button
+          class=${this._flipY ? "active-flip" : ""}
+          @click=${() => editorState.setFlipY(!this._flipY)}
+        >Flip Y</button>
       </div>
 
       ${this._selectedBlock
@@ -366,13 +391,12 @@ export class BlockLibrary extends LitElement {
     }
   }
 
-  #addBlock(): void {
+  async #addBlock() {
     if (!this.vr) {
       return;
     }
 
-    // eslint-disable-next-line no-alert
-    const name = prompt("Block name:", "New Block");
+    const name = await showPrompt({ label: "Block name:", defaultValue: "New Block" });
     if (!name?.trim()) {
       return;
     }
@@ -387,6 +411,7 @@ export class BlockLibrary extends LitElement {
       faceTextures: {},
       defaultTexture: { tilesetId: defaultTilesetId, col: 0, row: 0 }
     });
+    editorState.dispatchBlockRegistryChanged();
     this.#refreshRenderer();
   }
 
@@ -488,6 +513,7 @@ export class BlockLibrary extends LitElement {
     this.vr.blockRegistry.register(updated);
     this._selectedBlock = updated;
     this.vr.markAllChunksDirty("BlockLibrary update");
+    editorState.dispatchBlockRegistryChanged();
     this.#refreshRenderer();
   }
 

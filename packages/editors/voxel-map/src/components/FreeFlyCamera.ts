@@ -52,7 +52,7 @@ export class FreeFlyCamera extends CameraComponent {
       moveSpeed = 12,
       mouseSensitivity = 0.003,
       maxPitch = Math.PI / 2 - 0.01,
-      scrollSpeed = 8,
+      scrollSpeed = 2.5,
       yaw = 0,
       pitch = -0.2,
       friction = 0.24
@@ -109,7 +109,6 @@ export class FreeFlyCamera extends CameraComponent {
     this.camera.getWorldDirection(this.#forward);
     this.#forward.y = 0;
     this.#forward.normalize();
-
     this.#right.crossVectors(this.#forward, this.#up).normalize();
 
     // --- Accumulate movement intent ---
