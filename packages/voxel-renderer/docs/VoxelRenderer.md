@@ -290,6 +290,10 @@ Composited (first overload) or restricted to a specific layer (second overload).
 Loads a tileset image via the actor's loading manager. The first loaded tileset becomes
 the default for `TileRef` values with no explicit `tilesetId`.
 
+#### `loadTilesetSync(def: TilesetDefinition, texture: THREE.Texture< HTMLImageElement >): void`
+
+Same as `loadTileset` but synchronous and you have to provide the texture.
+
 #### `save(): VoxelWorldJSON`
 
 Serialises the full world state (layers, voxels, tileset metadata) to a plain JSON object.
