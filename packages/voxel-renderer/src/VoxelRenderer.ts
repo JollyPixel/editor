@@ -617,6 +617,23 @@ export class VoxelRenderer extends ActorComponent {
     return result;
   }
 
+  loadTilesetSync(
+    def: TilesetDefinition,
+    texture: THREE.Texture<HTMLImageElement>
+  ): void {
+    this.tilesetManager.registerTexture(def, texture);
+    this.#logger.debug(`Loaded tileset '${def.id}' from '${def.src}' (synchronous)`);
+
+    // Invalidate the cached material for this tileset so it is recreated
+    // with the new texture.
+    const existingMaterial = this.#materials.get(def.id);
+    existingMaterial?.dispose();
+    this.#materials.delete(def.id);
+
+    // Force all chunks to rebuild geometry (UV offsets may have changed).
+    this.markAllChunksDirty("loadTilesetSync");
+  }
+
   async loadTileset(
     def: TilesetDefinition
   ): Promise<void> {
@@ -628,7 +645,7 @@ export class VoxelRenderer extends ActorComponent {
     );
 
     this.tilesetManager.registerTexture(def, texture);
-    this.#logger.debug(`Loaded tileset '${def.id}' from '${def.src}'`);
+    this.#logger.debug(`Loaded tileset '${def.id}' from '${def.src}' (asynchronous)`);
 
     // Invalidate the cached material for this tileset so it is recreated
     // with the new texture.
