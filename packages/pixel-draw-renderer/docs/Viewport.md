@@ -40,6 +40,17 @@ export interface ViewportOptions {
 
 ## Methods
 
+### `resizeCanvas`
+
+```ts
+resizeCanvas(width: number, height: number): void
+```
+
+Updates the canvas size while preserving the current camera position.
+Shifts the camera by half the size delta so the same world point stays at the center of the screen.
+
+---
+
 ### `applyZoom`
 
 ```ts

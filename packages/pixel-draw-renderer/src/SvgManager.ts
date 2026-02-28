@@ -146,6 +146,12 @@ export class SvgManager {
     this.#textureSize = size;
   }
 
+  destroy(): void {
+    if (this.#svg.parentElement) {
+      this.#svg.remove();
+    }
+  }
+
   reparentSvgTo(
     newParentElement: HTMLDivElement
   ): void {

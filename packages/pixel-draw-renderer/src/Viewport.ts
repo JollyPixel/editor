@@ -120,6 +120,24 @@ export class Viewport implements DefaultViewport {
     this.#camera.y = Math.max(minY, Math.min(maxY, this.#camera.y));
   }
 
+  /**
+   * Updates the canvas size while preserving the current camera position.
+   * Shifts the camera by half the size delta so the same world point stays
+   * at the center of the screen. Use this for interactive resizes.
+   */
+  resizeCanvas(
+    width: number,
+    height: number
+  ): void {
+    const dx = (width - this.#canvasWidth) / 2;
+    const dy = (height - this.#canvasHeight) / 2;
+    this.#canvasWidth = width;
+    this.#canvasHeight = height;
+    this.#camera.x += dx;
+    this.#camera.y += dy;
+    this.clampCamera();
+  }
+
   applyZoom(
     delta: number,
     mx: number,

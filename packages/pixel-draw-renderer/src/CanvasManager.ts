@@ -54,6 +54,11 @@ export interface CanvasManagerOptions {
     squareSize: number;
   };
   brush?: BrushManagerOptions;
+  /**
+   * Called after a draw stroke is committed to the master buffer.
+   * Use this hook to synchronize the edited texture with an external consumer.
+   */
+  onDrawEnd?: () => void;
 }
 
 export class CanvasManager {
@@ -149,6 +154,7 @@ export class CanvasManager {
         },
         onDrawEnd: () => {
           this.#textureBuffer.copyToMaster();
+          options.onDrawEnd?.();
         },
         onPanStart: (_mx, _my) => {
           // pan tracking is inside InputController
@@ -257,20 +263,30 @@ export class CanvasManager {
     }
 
     this.#renderer.resize(bounds.width, bounds.height);
-    this.#viewport.updateCanvasSize(bounds.width, bounds.height);
+    this.#viewport.resizeCanvas(bounds.width, bounds.height);
     this.#svgManager.updateSvgSize(bounds.width, bounds.height);
-    this.centerTexture();
+    this.#renderer.drawFrame();
   }
 
   getTextureCanvas(): HTMLCanvasElement {
     return this.#textureBuffer.getCanvas();
   }
 
+  destroy(): void {
+    this.#input.destroy();
+    const rendererCanvas = this.#renderer.getCanvas();
+    if (rendererCanvas.parentElement) {
+      rendererCanvas.remove();
+    }
+    this.#svgManager.destroy();
+  }
+
   setTexture(
-    canvas: HTMLCanvasElement
+    source: HTMLCanvasElement | HTMLImageElement
   ): void {
-    this.#textureBuffer.setTexture(canvas);
-    this.#viewport.setTextureSize({ x: canvas.width, y: canvas.height });
+    this.#textureBuffer.setTexture(source);
+    const size = this.#textureBuffer.getSize();
+    this.#viewport.setTextureSize(size);
     this.#renderer.drawFrame();
   }
 
