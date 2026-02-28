@@ -14,19 +14,28 @@
       <div class="toolbar-item">
         <button class="mode-btn" id="mode-paint">Paint</button>
         <button class="mode-btn" id="mode-move">Move</button>
+        <button class="mode-btn" id="mode-uv">UV</button>
       </div>
-      <div class="toolbar-item">
-        <button id="color-swatch" title="Color"></button>
+      <div id="paint-controls" class="toolbar-item-group">
+        <div class="toolbar-item">
+          <button id="color-swatch" title="Color"></button>
+        </div>
+        <label class="toolbar-item">
+          Size
+          <input type="range" id="brush-size" min="1" max="32" value="1">
+          <span id="brush-size-display">1px</span>
+        </label>
       </div>
-      <label class="toolbar-item">
-        Size
-        <input type="range" id="brush-size" min="1" max="32" value="1">
-        <span id="brush-size-display">1px</span>
-      </label>
     </div>
   </div>
   <div id="canvas-container">
     <canvas tabindex="-1" id="three-canvas"></canvas>
+    <aside id="uv-panel">
+      <div class="uv-panel-header">UV Regions</div>
+      <div id="uv-face-list"></div>
+      <div id="uv-coords"></div>
+      <p class="uv-hint">Drag to reposition · Del to delete</p>
+    </aside>
   </div>
   <script type="module" src="./scripts/main.ts"></script>
 </body>

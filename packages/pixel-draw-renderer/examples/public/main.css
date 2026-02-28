@@ -71,6 +71,12 @@ html.handle-dragging.vertical * {
   user-select: none;
 }
 
+.toolbar-item-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .toolbar-item {
   display: flex;
   align-items: center;
@@ -122,4 +128,104 @@ html.handle-dragging.vertical * {
   text-align: right;
   font-size: 11px;
   color: #ccc;
+}
+
+/* ─── UV Panel ──────────────────────────────────────────────────────────── */
+
+#uv-panel {
+  display: none;
+  flex-direction: column;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 160px;
+  background: rgba(20, 28, 36, 0.88);
+  border: 1px solid #334;
+  border-radius: 6px;
+  overflow: hidden;
+  font-family: sans-serif;
+  font-size: 12px;
+  color: #ccc;
+  z-index: 10;
+  backdrop-filter: blur(4px);
+}
+
+#uv-panel.visible {
+  display: flex;
+}
+
+.uv-panel-header {
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #aab;
+  background: rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom: 1px solid #334;
+}
+
+#uv-face-list {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  max-height: 220px;
+}
+
+.uv-face-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.uv-face-item:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.uv-face-item.active {
+  background: rgba(68, 136, 255, 0.2);
+  color: #fff;
+}
+
+.uv-face-color {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.uv-face-name {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#uv-coords {
+  display: none;
+  grid-template-columns: auto 1fr;
+  gap: 3px 8px;
+  padding: 6px 10px;
+  border-top: 1px solid #334;
+  font-size: 11px;
+  color: #aab;
+}
+
+.uv-coord-label {
+  color: #668;
+  font-weight: 600;
+}
+
+.uv-hint {
+  margin: 0;
+  padding: 6px 10px;
+  font-size: 10px;
+  color: #556;
+  border-top: 1px solid #334;
+  text-align: center;
 }

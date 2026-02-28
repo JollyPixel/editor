@@ -12,6 +12,14 @@ export interface InputActions {
   onZoom(delta: number, cx: number, cy: number): void;
   onColorPick(tx: number, ty: number): void;
   onMouseMove(cx: number, cy: number): void;
+  /** Called on left-button mousedown when mode is "uv". */
+  onUVMouseDown?(cx: number, cy: number, button: number): void;
+  /** Called on mousemove when mode is "uv". */
+  onUVMouseMove?(cx: number, cy: number): void;
+  /** Called on mouseup when mode is "uv". */
+  onUVMouseUp?(): void;
+  /** Called for keydown events (when provided). */
+  onKeyDown?(event: KeyboardEvent): void;
 }
 
 export interface InputControllerOptions {
@@ -47,6 +55,7 @@ export class InputController {
   #onContextMenu: (event: MouseEvent) => void;
   #onWindowMouseMove: (event: MouseEvent) => void;
   #onWindowMouseUp: (event: MouseEvent) => void;
+  #onKeyDown: ((event: KeyboardEvent) => void) | null = null;
 
   constructor(
     options: InputControllerOptions
@@ -80,6 +89,11 @@ export class InputController {
     this.#canvas.addEventListener("contextmenu", this.#onContextMenu);
     window.addEventListener("mousemove", this.#onWindowMouseMove);
     window.addEventListener("mouseup", this.#onWindowMouseUp);
+
+    if (actions.onKeyDown) {
+      this.#onKeyDown = (event) => actions.onKeyDown!(event);
+      window.addEventListener("keydown", this.#onKeyDown);
+    }
   }
 
   getMode(): Mode {
@@ -101,6 +115,9 @@ export class InputController {
     this.#canvas.removeEventListener("contextmenu", this.#onContextMenu);
     window.removeEventListener("mousemove", this.#onWindowMouseMove);
     window.removeEventListener("mouseup", this.#onWindowMouseUp);
+    if (this.#onKeyDown) {
+      window.removeEventListener("keydown", this.#onKeyDown);
+    }
   }
 
   #handleMouseDown(
@@ -114,6 +131,11 @@ export class InputController {
         this.#isDrawing = true;
         this.#actions.onDrawStart(pos.x, pos.y);
       }
+    }
+
+    if (this.#mode === "uv" && event.button === 0) {
+      const canvasPos = this.#viewport.getMouseCanvasPosition(event.clientX, event.clientY, bounds);
+      this.#actions.onUVMouseDown?.(canvasPos.x, canvasPos.y, event.button);
     }
 
     if (event.button === 1) {
@@ -142,6 +164,10 @@ export class InputController {
         this.#actions.onDrawMove(pos.x, pos.y);
       }
     }
+
+    if (this.#mode === "uv") {
+      this.#actions.onUVMouseMove?.(canvasPos.x, canvasPos.y);
+    }
   }
 
   #handleMouseLeave(
@@ -156,6 +182,10 @@ export class InputController {
     if (this.#isDrawing) {
       this.#isDrawing = false;
       this.#actions.onDrawEnd();
+    }
+
+    if (this.#mode === "uv") {
+      this.#actions.onUVMouseUp?.();
     }
   }
 
@@ -220,6 +250,10 @@ export class InputController {
     if (this.#isDrawing) {
       this.#isDrawing = false;
       this.#actions.onDrawEnd();
+    }
+
+    if (this.#mode === "uv") {
+      this.#actions.onUVMouseUp?.();
     }
   }
 }

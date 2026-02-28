@@ -28,9 +28,32 @@ export {
   Viewport,
   type ViewportOptions
 } from "./Viewport.ts";
+export {
+  UVRegion,
+  type UVRegionData
+} from "./UVRegion.ts";
+export {
+  UVMap,
+  type UVMapChangedDetail
+} from "./UVMap.ts";
+export {
+  UVHistory,
+  type UVCommand
+} from "./UVHistory.ts";
+export {
+  UVRenderer,
+  type UVRendererOptions
+} from "./UVRenderer.ts";
+export {
+  UVInputHandler,
+  type UVInputHandlerOptions,
+  type UVSnappingOptions
+} from "./UVInputHandler.ts";
 export type {
   Brush,
   DefaultViewport,
-  Vec2
+  Vec2,
+  UVHandle,
+  UVHandleType
 } from "./types.ts";
 export * from "./utils.ts";
