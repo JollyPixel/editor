@@ -28,11 +28,13 @@
   "dependencies": {
     "@jolly-pixel/engine": "^2.0.0",
     "@jolly-pixel/fs-tree": "^1.0.0",
+    "@jolly-pixel/pixel-draw.renderer": "1.0.0",
     "@jolly-pixel/resize-handle": "1.0.0",
     "@jolly-pixel/runtime": "^3.0.0",
     "@jolly-pixel/voxel.renderer": "1.4.0",
     "lit": "3.3.2",
-    "three": "^0.182.0"
+    "three": "^0.182.0",
+    "vanilla-picker": "2.12.3"
   },
   "devDependencies": {
     "@types/three": "^0.182.0"

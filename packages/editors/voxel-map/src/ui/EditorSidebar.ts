@@ -1,7 +1,6 @@
 // Import Third-party Dependencies
 import { LitElement, html, css } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { choose } from "lit/directives/choose.js";
 import type { VoxelRenderer } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -16,7 +15,7 @@ import "./LayerPanel.ts";
 import "./ObjectLayerPanel.ts";
 import "./BlockLibrary.ts";
 import "./TilesetManager.ts";
-import "./TextureEditorPlaceholder.ts";
+import "./TextureEditor.ts";
 import "./Vec3Input.ts";
 import "./Vec2Input.ts";
 
@@ -148,11 +147,15 @@ export class EditorSidebar extends LitElement {
       </div>
 
       <div class="content">
-        ${choose(this._tab, [
-          ["general", () => this.#renderGeneral()],
-          ["paint", () => this.#renderPaint()],
-          ["layers", () => this.#renderLayers()]
-        ])}
+        <div style=${this._tab === "general" ? "display:contents" : "display:none"}>
+          ${this.#renderGeneral()}
+        </div>
+        <div style=${this._tab === "paint" ? "display:contents" : "display:none"}>
+          ${this.#renderPaint()}
+        </div>
+        <div style=${this._tab === "layers" ? "display:contents" : "display:none"}>
+          ${this.#renderLayers()}
+        </div>
       </div>
     `;
   }
@@ -214,7 +217,7 @@ export class EditorSidebar extends LitElement {
       `)}
 
       ${this.#section("Texture Editor", html`
-        <texture-editor-placeholder></texture-editor-placeholder>
+        <texture-editor .vr=${this.vr} .active=${this._tab === "paint"}></texture-editor>
       `)}
     `;
   }
