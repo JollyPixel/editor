@@ -1,7 +1,7 @@
 {
   "name": "@jolly-pixel/pixel-draw.renderer",
   "description": "Jolly Pixel Pixel Art drawer and renderer",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -33,9 +33,9 @@
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
   "devDependencies": {
-    "@jolly-pixel/engine": "2.5.0",
+    "@jolly-pixel/engine": "3.0.0",
     "@jolly-pixel/resize-handle": "1.0.0",
-    "@jolly-pixel/runtime": "3.3.0",
+    "@jolly-pixel/runtime": "3.4.0",
     "three": "0.182.0",
     "vanilla-picker": "2.12.3"
   }

@@ -1,5 +1,14 @@
 # @jolly-pixel/editor.voxel-map
 
+## 1.0.3
+
+### Patch Changes
+
+- Updated dependencies [[`69f882e`](https://github.com/JollyPixel/editor/commit/69f882e4162ea379d53730c4f4b767e2b99e820c), [`a2ce2a2`](https://github.com/JollyPixel/editor/commit/a2ce2a2fd6fc536de358b0d5ad966cd53882245c), [`3380d96`](https://github.com/JollyPixel/editor/commit/3380d968dbad604dffa68eebc947e1f75919f9ef), [`8ab2ff7`](https://github.com/JollyPixel/editor/commit/8ab2ff79c026bfd78157b6a91cdad89bc43388db), [`727c3cd`](https://github.com/JollyPixel/editor/commit/727c3cd92b5cd2d7758665d08b280ccf3ab1b628)]:
+  - @jolly-pixel/voxel.renderer@1.5.0
+  - @jolly-pixel/engine@3.0.0
+  - @jolly-pixel/runtime@3.4.0
+
 ## 1.0.2
 
 ### Patch Changes

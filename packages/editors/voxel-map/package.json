@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/editor.voxel-map",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "type": "module",
   "scripts": {
     "prepublish": "rimraf ./dist && tsc -b",
@@ -26,11 +26,11 @@
     "dist"
   ],
   "dependencies": {
-    "@jolly-pixel/engine": "^2.0.0",
+    "@jolly-pixel/engine": "^3.0.0",
     "@jolly-pixel/fs-tree": "^1.0.0",
     "@jolly-pixel/resize-handle": "1.0.0",
-    "@jolly-pixel/runtime": "^3.0.0",
-    "@jolly-pixel/voxel.renderer": "1.4.0",
+    "@jolly-pixel/runtime": "^3.4.0",
+    "@jolly-pixel/voxel.renderer": "1.5.0",
     "lit": "3.3.2",
     "three": "^0.182.0"
   },
