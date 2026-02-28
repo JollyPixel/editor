@@ -77,7 +77,7 @@ Returns or changes the current texture size. `setSize` copies the master canvas 
 ### `setTexture`
 
 ```ts
-setTexture(img: HTMLImageElement): void
+setTexture(source: HTMLCanvasElement | HTMLImageElement): void
 ```
 
 Replaces the texture with the pixel data from `img`. The image is drawn into the master canvas and the working canvas is resized to match.
@@ -161,3 +161,9 @@ render(): void
 ```
 
 Forces an immediate redraw of the visible canvas from the current working texture.
+
+---
+
+### `destroy()`
+
+Destroy the canvas and all related elements (listeners etc)

@@ -117,11 +117,32 @@ export class TextureBuffer {
   }
 
   setTexture(
-    canvas: HTMLCanvasElement
+    source: HTMLCanvasElement | HTMLImageElement
   ): void {
+    let canvas: HTMLCanvasElement;
+    // HTMLCanvasElement has getContext(); HTMLImageElement does not.
+    if ("getContext" in source) {
+      canvas = source;
+    }
+    else {
+      const img = source;
+      canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth || img.width;
+      canvas.height = img.naturalHeight || img.height;
+      const ctx = canvas.getContext("2d", {
+        willReadFrequently: true
+      })!;
+      ctx.drawImage(source, 0, 0);
+    }
+
     this.#workingCanvas = canvas;
-    this.#workingCtx = canvas.getContext("2d", { willReadFrequently: true })!;
-    this.#textureSize = { x: canvas.width, y: canvas.height };
+    this.#workingCtx = canvas.getContext("2d", {
+      willReadFrequently: true
+    })!;
+    this.#textureSize = {
+      x: canvas.width,
+      y: canvas.height
+    };
   }
 
   getPixels(): Uint8ClampedArray {
