@@ -18,6 +18,14 @@ import {
 import {
   Viewport
 } from "./Viewport.ts";
+import {
+  UVRenderer
+} from "./UVRenderer.ts";
+import {
+  UVInputHandler,
+  type UVSnappingOptions
+} from "./UVInputHandler.ts";
+import type { UVMap } from "./UVMap.ts";
 import type {
   Brush,
   DefaultViewport,
@@ -59,6 +67,16 @@ export interface CanvasManagerOptions {
    * Use this hook to synchronize the edited texture with an external consumer.
    */
   onDrawEnd?: () => void;
+  /**
+   * UV editing options. When provided, a UVRenderer and UVInputHandler are
+   * created and wired to the canvas. The `uvMap` is externally owned — the
+   * consumer subscribes to its "changed" events for Three.js sync.
+   */
+  uv?: {
+    map: UVMap;
+    snapping?: Partial<UVSnappingOptions>;
+    onRegionSelected?: (id: string | null) => void;
+  };
 }
 
 export class CanvasManager {
@@ -68,6 +86,8 @@ export class CanvasManager {
   #renderer: CanvasRenderer;
   #input: InputController;
   #svgManager: SvgManager;
+  #uvRenderer: UVRenderer | null = null;
+  #uvInputHandler: UVInputHandler | null = null;
 
   readonly brush: BrushManager;
   readonly viewport: DefaultViewport;
@@ -141,6 +161,24 @@ export class CanvasManager {
       textureSize
     });
 
+    if (options.uv) {
+      this.#uvRenderer = new UVRenderer({
+        svg: this.#svgManager.getSvgElement(),
+        uvMap: options.uv.map,
+        viewport: viewportRef,
+        textureSize
+      });
+
+      this.#uvInputHandler = new UVInputHandler({
+        viewport: this.#viewport,
+        uvMap: options.uv.map,
+        uvRenderer: this.#uvRenderer,
+        textureSize,
+        snapping: options.uv.snapping,
+        onRegionSelected: options.uv.onRegionSelected
+      });
+    }
+
     this.#input = new InputController({
       canvas: this.#renderer.getCanvas(),
       viewport: this.#viewport,
@@ -162,6 +200,7 @@ export class CanvasManager {
         onPanMove: (dx, dy) => {
           this.#viewport.applyPan(dx, dy);
           this.#renderer.drawFrame();
+          this.#uvRenderer?.update();
         },
         onPanEnd: () => {
           // nothing extra needed
@@ -169,6 +208,7 @@ export class CanvasManager {
         onZoom: (delta, cx, cy) => {
           this.#viewport.applyZoom(delta, cx, cy);
           this.#renderer.drawFrame();
+          this.#uvRenderer?.update();
         },
         onColorPick: (tx, ty) => {
           const [r, g, b, a] = this.#textureBuffer.samplePixel(tx, ty);
@@ -184,7 +224,32 @@ export class CanvasManager {
           else if (this.#input.getMode() === "paint") {
             this.#svgManager.updateBrushHighlight(cx, cy);
           }
-        }
+        },
+        onUVMouseDown: (cx, cy, button) => {
+          this.#uvInputHandler?.onMouseDown(cx, cy, button);
+        },
+        onUVMouseMove: (cx, cy) => {
+          this.#uvInputHandler?.onMouseMove(cx, cy);
+        },
+        onUVMouseUp: () => {
+          this.#uvInputHandler?.onMouseUp();
+        },
+        onKeyDown: options.uv
+          ? (event) => {
+            if (this.#input.getMode() !== "uv") {
+              return;
+            }
+            if (event.ctrlKey && event.key === "z" && !event.shiftKey) {
+              options.uv!.map.undo();
+            }
+            else if (event.ctrlKey && (event.key === "y" || (event.shiftKey && event.key === "z"))) {
+              options.uv!.map.redo();
+            }
+            else if (event.key === "Delete" || event.key === "Backspace") {
+              this.#uvInputHandler?.onDeleteKey();
+            }
+          }
+          : undefined
       }
     });
 
@@ -199,7 +264,7 @@ export class CanvasManager {
     mode: Mode
   ): void {
     this.#input.setMode(mode);
-    if (mode === "move") {
+    if (mode === "move" || mode === "uv") {
       this.#svgManager.hideSvgHighlight();
     }
   }
@@ -240,6 +305,7 @@ export class CanvasManager {
     this.#viewport.setTextureSize(size);
     this.#svgManager.setTextureSize(size);
     this.#renderer.drawFrame();
+    this.#uvRenderer?.update();
   }
 
   getCamera(): Vec2 {
@@ -266,6 +332,7 @@ export class CanvasManager {
     this.#viewport.resizeCanvas(bounds.width, bounds.height);
     this.#svgManager.updateSvgSize(bounds.width, bounds.height);
     this.#renderer.drawFrame();
+    this.#uvRenderer?.update();
   }
 
   getTextureCanvas(): HTMLCanvasElement {
@@ -274,6 +341,8 @@ export class CanvasManager {
 
   destroy(): void {
     this.#input.destroy();
+    this.#uvInputHandler?.destroy();
+    this.#uvRenderer?.destroy();
     const rendererCanvas = this.#renderer.getCanvas();
     if (rendererCanvas.parentElement) {
       rendererCanvas.remove();
