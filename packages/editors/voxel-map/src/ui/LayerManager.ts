@@ -12,6 +12,7 @@ import type {
 // Import Internal Dependencies
 import { editorState } from "../EditorState.ts";
 import type { Icon } from "./Icon.ts";
+import { showPrompt } from "./PromptDialog.ts";
 
 @customElement("layer-manager")
 export class LayerManager extends LitElement {
@@ -338,26 +339,30 @@ export class LayerManager extends LitElement {
     });
   }
 
-  #addLayer(): void {
+  async #addLayer() {
     if (!this.vr) {
       return;
     }
 
-    // eslint-disable-next-line no-alert
-    const name = prompt("Layer name:", `Layer ${this.vr.world.getLayers().length + 1}`);
+    const name = await showPrompt({
+      label: "Layer name:",
+      defaultValue: `Layer ${this.vr.world.getLayers().length + 1}`
+    });
     if (!name?.trim()) {
       return;
     }
     this.vr.addLayer(name.trim());
   }
 
-  #addObjectLayer(): void {
+  async #addObjectLayer() {
     if (!this.vr) {
       return;
     }
 
-    // eslint-disable-next-line no-alert
-    const name = prompt("Object layer name:", `Objects ${this.vr.getObjectLayers().length + 1}`);
+    const name = await showPrompt({
+      label: "Object layer name:",
+      defaultValue: `Objects ${this.vr.getObjectLayers().length + 1}`
+    });
     if (!name?.trim()) {
       return;
     }

@@ -13,6 +13,7 @@ import { editorState } from "../EditorState.ts";
 import type { EventInput } from "./types.ts";
 import type { Vec3 } from "./Vec3Input.ts";
 import type { Vec2 } from "./Vec2Input.ts";
+import { showPrompt } from "./PromptDialog.ts";
 
 @customElement("object-layer-panel")
 export class ObjectLayerPanel extends LitElement {
@@ -429,13 +430,12 @@ export class ObjectLayerPanel extends LitElement {
     this.vr.removeObject(this.layerName, objId);
   }
 
-  #addObject(): void {
+  async #addObject() {
     if (!this.layerName) {
       return;
     }
 
-    // eslint-disable-next-line no-alert
-    const name = prompt("Object name:", "Object");
+    const name = await showPrompt({ label: "Object name:", defaultValue: "Object" });
     if (!name?.trim()) {
       return;
     }

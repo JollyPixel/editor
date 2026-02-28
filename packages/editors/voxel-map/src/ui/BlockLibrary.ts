@@ -18,6 +18,7 @@ import type {
   EventInput,
   EventSelect
 } from "./types.ts";
+import { showPrompt } from "./PromptDialog.ts";
 
 // CONSTANTS
 const kRotationOptions: { label: string; value: RotationMode; }[] = [
@@ -366,13 +367,12 @@ export class BlockLibrary extends LitElement {
     }
   }
 
-  #addBlock(): void {
+  async #addBlock() {
     if (!this.vr) {
       return;
     }
 
-    // eslint-disable-next-line no-alert
-    const name = prompt("Block name:", "New Block");
+    const name = await showPrompt({ label: "Block name:", defaultValue: "New Block" });
     if (!name?.trim()) {
       return;
     }

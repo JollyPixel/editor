@@ -8,3 +8,10 @@ export {
   SceneActorComponent,
   type ScenePropertyOptions
 } from "./script/BehaviorDecorators.ts";
+
+export type {
+  Component,
+  ComponentInitializeContext,
+  FreeComponentEnum,
+  StrictComponentEnum
+} from "./types.ts";
