@@ -1,5 +1,16 @@
 # @jolly-pixel/runtime
 
+## 3.4.0
+
+### Minor Changes
+
+- [#246](https://github.com/JollyPixel/editor/pull/246) [`a2ce2a2`](https://github.com/JollyPixel/editor/commit/a2ce2a2fd6fc536de358b0d5ad966cd53882245c) Thanks [@fraxken](https://github.com/fraxken)! - Major refactor of AssetManager and loaders
+
+### Patch Changes
+
+- Updated dependencies [[`a2ce2a2`](https://github.com/JollyPixel/editor/commit/a2ce2a2fd6fc536de358b0d5ad966cd53882245c), [`3380d96`](https://github.com/JollyPixel/editor/commit/3380d968dbad604dffa68eebc947e1f75919f9ef)]:
+  - @jolly-pixel/engine@3.0.0
+
 ## 3.3.0
 
 ### Minor Changes

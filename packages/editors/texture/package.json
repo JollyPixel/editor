@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/editor.texture",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "module",
   "private": true,
   "scripts": {
@@ -15,11 +15,11 @@
     "dist"
   ],
   "dependencies": {
-    "@jolly-pixel/engine": "2.5.0",
+    "@jolly-pixel/engine": "3.0.0",
     "@jolly-pixel/fs-tree": "1.0.0",
-    "@jolly-pixel/pixel-draw.renderer": "1.0.0",
+    "@jolly-pixel/pixel-draw.renderer": "1.1.0",
     "@jolly-pixel/resize-handle": "1.0.0",
-    "@jolly-pixel/runtime": "3.3.0",
+    "@jolly-pixel/runtime": "3.4.0",
     "lit": "3.3.2",
     "three": "0.182.0"
   }

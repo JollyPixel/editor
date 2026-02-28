@@ -1,5 +1,15 @@
 # @jolly-pixel/engine
 
+## 3.0.0
+
+### Major Changes
+
+- [#246](https://github.com/JollyPixel/editor/pull/246) [`a2ce2a2`](https://github.com/JollyPixel/editor/commit/a2ce2a2fd6fc536de358b0d5ad966cd53882245c) Thanks [@fraxken](https://github.com/fraxken)! - Major refactor of AssetManager and loaders
+
+### Minor Changes
+
+- [#242](https://github.com/JollyPixel/editor/pull/242) [`3380d96`](https://github.com/JollyPixel/editor/commit/3380d968dbad604dffa68eebc947e1f75919f9ef) Thanks [@fraxken](https://github.com/fraxken)! - Implement hybrid CameraComponent with viewport and depth support
+
 ## 2.5.0
 
 ### Minor Changes
