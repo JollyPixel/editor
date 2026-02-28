@@ -4,6 +4,10 @@ export interface TileRef {
   tilesetId?: string;
 }
 
+export type Coords = [col: number, row: number];
+
+export type TileRefIn = Coords | TileRef;
+
 export interface TilesetDefinition {
   id: string;
   src: string;
