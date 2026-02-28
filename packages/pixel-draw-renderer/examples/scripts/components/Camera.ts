@@ -16,7 +16,7 @@ export class CameraBehavior extends CameraComponent {
       far: 100
     });
 
-    this.threeCamera.position.set(0, 0, 8);
+    this.threeCamera.position.set(0, 0, 10);
   }
 
   get camera(): THREE.PerspectiveCamera {
