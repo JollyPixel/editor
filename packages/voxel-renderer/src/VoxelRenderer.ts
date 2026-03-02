@@ -782,6 +782,11 @@ export class VoxelRenderer extends ActorComponent {
       `Rebuilding chunk '${chunkKeyBase}' with layer name '${layer.name}'`
     );
 
+    // Remove any existing meshes for this chunk before adding new ones.
+    // This prevents orphaned Three.js objects when a chunk is rebuilt multiple
+    // times (e.g. load() followed by awake()).
+    this.#removeChunk(layer, chunk);
+
     const geometries = this.#meshBuilder.buildChunkGeometries(chunk, layer);
     if (!geometries) {
       return;
