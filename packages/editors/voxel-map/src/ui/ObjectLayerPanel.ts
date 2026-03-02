@@ -13,6 +13,7 @@ import { editorState } from "../EditorState.ts";
 import type { EventInput } from "./types.ts";
 import type { Vec3 } from "./Vec3Input.ts";
 import type { Vec2 } from "./Vec2Input.ts";
+import { showPrompt } from "./PromptDialog.ts";
 
 @customElement("object-layer-panel")
 export class ObjectLayerPanel extends LitElement {
@@ -20,7 +21,6 @@ export class ObjectLayerPanel extends LitElement {
     :host {
       display: block;
       background: #1a2228;
-      border-top: 1px solid #2a3540;
       padding: 8px;
       font-size: 13px;
       color: #ccc;
@@ -71,7 +71,6 @@ export class ObjectLayerPanel extends LitElement {
     }
     .object-card {
       background: #111a20;
-      border: 1px solid #2a3540;
       border-radius: 4px;
       padding: 6px;
       margin-bottom: 6px;
@@ -86,6 +85,16 @@ export class ObjectLayerPanel extends LitElement {
       flex: 1;
       font-weight: 600;
       font-size: 12px;
+    }
+    .object-name-input {
+      flex: 1;
+      font-weight: 600;
+      font-size: 12px;
+      background: #111a20;
+      border: 1px solid #4488ff;
+      color: #eee;
+      padding: 0 2px;
+      border-radius: 2px;
     }
     .object-type {
       font-size: 11px;
@@ -144,6 +153,8 @@ export class ObjectLayerPanel extends LitElement {
   @state() private declare _layer: VoxelObjectLayerJSON | null;
   @state() private declare _visible: boolean;
   @state() private declare _objects: VoxelObjectJSON[];
+  @state() private declare _editingObjectId: string | null;
+  @state() private declare _editingValue: string;
 
   constructor() {
     super();
@@ -151,6 +162,8 @@ export class ObjectLayerPanel extends LitElement {
     this._layer = null;
     this._visible = true;
     this._objects = [];
+    this._editingObjectId = null;
+    this._editingValue = "";
   }
 
   #onLayerUpdated = (event: Event) => {
@@ -233,7 +246,18 @@ export class ObjectLayerPanel extends LitElement {
     return html`
       <div class="object-card">
         <div class="object-header">
-          <span class="object-name">${obj.name}</span>
+          ${this._editingObjectId === obj.id
+            ? html`<input type="text" class="object-name-input"
+                .value=${this._editingValue}
+                @input=${(event: EventInput) => {
+                  this._editingValue = event.target.value;
+                }}
+                @keydown=${(event: KeyboardEvent) => this.#onRenameKeydown(obj.id, event)}
+                @blur=${() => this.#commitRename(obj.id)}
+              />`
+            : html`<span class="object-name"
+                @dblclick=${() => this.#startRename(obj)}
+              >${obj.name}</span>`}
           ${obj.type ? html`<span class="object-type">${obj.type}</span>` : null}
           <input
             type="checkbox"
@@ -419,6 +443,38 @@ export class ObjectLayerPanel extends LitElement {
     this.vr.updateObject(this.layerName, objId, { properties: props });
   }
 
+  #startRename(
+    obj: VoxelObjectJSON
+  ): void {
+    this._editingObjectId = obj.id;
+    this._editingValue = obj.name;
+    this.updateComplete.then(() => {
+      this.shadowRoot?.querySelector<HTMLInputElement>(".object-name-input")?.focus();
+    });
+  }
+
+  #commitRename(
+    objId: string
+  ): void {
+    const trimmed = this._editingValue.trim();
+    if (trimmed && this.layerName) {
+      this.vr.updateObject(this.layerName, objId, { name: trimmed });
+    }
+    this._editingObjectId = null;
+  }
+
+  #onRenameKeydown(
+    _objId: string,
+    event: KeyboardEvent
+  ): void {
+    if (event.key === "Enter") {
+      (event.target as HTMLInputElement).blur();
+    }
+    else if (event.key === "Escape") {
+      this._editingObjectId = null;
+    }
+  }
+
   #removeObject(
     objId: string
   ): void {
@@ -429,13 +485,12 @@ export class ObjectLayerPanel extends LitElement {
     this.vr.removeObject(this.layerName, objId);
   }
 
-  #addObject(): void {
+  async #addObject() {
     if (!this.layerName) {
       return;
     }
 
-    // eslint-disable-next-line no-alert
-    const name = prompt("Object name:", "Object");
+    const name = await showPrompt({ label: "Object name:", defaultValue: "Object" });
     if (!name?.trim()) {
       return;
     }

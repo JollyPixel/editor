@@ -146,15 +146,15 @@ export class GridRenderer extends ActorComponent {
   }
 
   #buildGrid(): void {
-    const e = this.#extent;
-    const bs = this.#blockSize;
+    const extent = this.#extent;
+    const blockSize = this.#blockSize;
     const positions: number[] = [];
 
-    for (let i = -e; i <= e; i += bs) {
+    for (let i = -extent; i <= extent; i += blockSize) {
       // Line parallel to X axis
-      positions.push(-e, 0, i, e, 0, i);
+      positions.push(-extent, 0, i, extent, 0, i);
       // Line parallel to Z axis
-      positions.push(i, 0, -e, i, 0, e);
+      positions.push(i, 0, -extent, i, 0, extent);
     }
 
     const geo = new LineSegmentsGeometry();

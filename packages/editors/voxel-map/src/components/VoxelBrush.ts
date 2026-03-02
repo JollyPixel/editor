@@ -179,6 +179,28 @@ export class VoxelBrush extends ActorComponent {
   }
 
   /**
+   * Returns true when the camera is looking upward (camera Y world-dir > 0).
+   * In "auto" mode this is computed from the camera; otherwise the explicit
+   * editorState.flipY toggle is used.
+   */
+  #resolveFlipY(): boolean {
+    // Explicit toggle always wins.
+    if (editorState.flipY) {
+      return true;
+    }
+
+    // In auto mode, derive flip from camera looking upward.
+    if (editorState.rotationMode === "auto") {
+      const dir = new THREE.Vector3();
+      this.#camera.getWorldDirection(dir);
+
+      return dir.y > 0;
+    }
+
+    return false;
+  }
+
+  /**
    * Aligns the block's front face toward the dominant camera viewing direction.
    * Maps the XZ look direction to one of 4 VoxelRotation values.
    */
@@ -217,13 +239,15 @@ export class VoxelBrush extends ActorComponent {
 
     const center = this.#hitToVoxelPos(hit, true);
     const rotation = this.#resolveRotation();
+    const flipY = this.#resolveFlipY();
     const layerName = editorState.selectedLayer!;
 
     for (const pos of this.#getBrushPositions(center)) {
       this.vr.setVoxel(layerName, {
         position: pos,
         blockId: editorState.selectedBlockId,
-        rotation
+        rotation,
+        flipY
       });
     }
   }

@@ -1,11 +1,14 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-import { Actor, ActorComponent } from "@jolly-pixel/engine";
-import { TransformControls } from "three/addons/controls/TransformControls.js";
-import type { VoxelRenderer, VoxelLayerHookEvent } from "@jolly-pixel/voxel.renderer";
+import { type Actor } from "@jolly-pixel/engine";
+import type {
+  VoxelRenderer,
+  VoxelLayerHookEvent
+} from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import { editorState } from "../EditorState.ts";
+import { TransformGizmoBase } from "./TransformGizmoBase.ts";
 
 export interface LayerGizmoOptions {
   vr: VoxelRenderer;
@@ -17,48 +20,33 @@ export interface LayerGizmoOptions {
  * Uses THREE.js TransformControls
  * Activate by calling setActiveLayer(name) from the Layer panel.
  */
-export class LayerGizmo extends ActorComponent {
-  #controls: TransformControls | null = null;
-  #helper: THREE.Object3D | null = null;
+export class LayerGizmo extends TransformGizmoBase {
   #pivot = new THREE.Object3D();
   #pivotOffset = new THREE.Vector3();
   #activeLayer: string | null = null;
   #vr: VoxelRenderer;
-  #camera: THREE.PerspectiveCamera;
 
   constructor(
     actor: Actor,
     options: LayerGizmoOptions
   ) {
-    super({
-      actor,
-      typeName: "LayerGizmo"
-    });
-
+    super(actor, options, "LayerGizmo");
     this.#vr = options.vr;
-    this.#camera = options.camera;
   }
 
-  awake() {
-    const canvas = this.actor.world.renderer.canvas;
-    const scene = this.actor.world.sceneManager.getSource();
+  override awake(): void {
+    super.awake();
+
+    this.controls!.setSpace("world");
+    this.controls!.setTranslationSnap(1);
 
     // Pivot is the object TransformControls manipulates.
-    scene.add(this.#pivot);
-
-    this.#controls = new TransformControls(this.#camera, canvas);
-    this.#controls.setMode("translate");
-    this.#controls.setSpace("world");
-    this.#controls.setTranslationSnap(1);
-
-    // getHelper() returns the Object3D that must live in the scene.
-    this.#helper = this.#controls.getHelper();
-    scene.add(this.#helper);
+    this.actor.addChildren(this.#pivot);
 
     // Apply offset when pivot is dragged.
     // The pivot sits at the voxel-content center, so subtract #pivotOffset
     // (center − original offset) to recover the true layer offset.
-    this.#controls.addEventListener("objectChange", () => {
+    this.controls!.addEventListener("objectChange", () => {
       if (!this.#activeLayer) {
         return;
       }
@@ -68,13 +56,6 @@ export class LayerGizmo extends ActorComponent {
         y: Math.round(p.y - this.#pivotOffset.y),
         z: Math.round(p.z - this.#pivotOffset.z)
       });
-    });
-
-    // Block voxel painting while a handle is being dragged.
-    this.#controls.addEventListener("dragging-changed", (event) => {
-      editorState.setGizmoDragging(
-        (event as THREE.Event & { value: boolean; }).value
-      );
     });
 
     // Show/hide the gizmo when the user toggles it from the layer list.
@@ -104,24 +85,24 @@ export class LayerGizmo extends ActorComponent {
   ): void {
     this.#activeLayer = name;
 
-    if (!this.#controls) {
+    if (!this.controls) {
       return;
     }
 
     if (!name) {
-      this.#controls.detach();
+      this.controls.detach();
 
       return;
     }
 
     if (!this.#vr.getLayer(name)) {
-      this.#controls.detach();
+      this.controls.detach();
 
       return;
     }
 
     this.#repositionPivot();
-    this.#controls.attach(this.#pivot);
+    this.controls.attach(this.#pivot);
   }
 
   #repositionPivot(): void {
@@ -141,21 +122,5 @@ export class LayerGizmo extends ActorComponent {
       center.z - layer.offset.z
     );
     this.#pivot.position.copy(center);
-  }
-
-  override destroy(): void {
-    const scene = this.actor.world.sceneManager.getSource();
-    if (this.#helper) {
-      scene.remove(this.#helper);
-    }
-
-    if (this.#controls) {
-      this.#controls.detach();
-      this.#controls.dispose();
-      this.#controls = null;
-    }
-    scene.remove(this.#pivot);
-
-    super.destroy();
   }
 }

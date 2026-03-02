@@ -17,6 +17,7 @@ export class EditorState extends EventTarget {
   #selectedBlockId: number = 1;
   #brushSize: number = 1;
   #rotationMode: RotationMode = "auto";
+  #flipY: boolean = false;
   #activeSidebarTab: SidebarTab = "general";
   #isGizmoDragging = false;
   #gizmoLayer: string | null = null;
@@ -39,6 +40,10 @@ export class EditorState extends EventTarget {
 
   get rotationMode(): RotationMode {
     return this.#rotationMode;
+  }
+
+  get flipY(): boolean {
+    return this.#flipY;
   }
 
   get activeSidebarTab(): SidebarTab {
@@ -147,6 +152,19 @@ export class EditorState extends EventTarget {
     this.#rotationMode = mode;
     this.dispatchEvent(
       new CustomEvent("rotationModeChange", { detail: mode })
+    );
+    this.dispatchEvent(new CustomEvent("change"));
+  }
+
+  setFlipY(
+    val: boolean
+  ): void {
+    if (this.#flipY === val) {
+      return;
+    }
+    this.#flipY = val;
+    this.dispatchEvent(
+      new CustomEvent("flipYChange", { detail: val })
     );
     this.dispatchEvent(new CustomEvent("change"));
   }

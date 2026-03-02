@@ -1,66 +1,27 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-import { TransformControls } from "three/addons/controls/TransformControls.js";
 import {
-  type Actor,
-  ActorComponent
+  type Actor
 } from "@jolly-pixel/engine";
 import type {
   VoxelRenderer,
-  VoxelObjectJSON,
   VoxelLayerHookEvent
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import { editorState } from "../EditorState.ts";
-
-// CONSTANTS
-const kLabelCanvasWidth = 256;
-const kLabelCanvasHeight = 64;
-const kLabelSpriteWidth = 2;
-const kLabelSpriteHeight = 0.5;
-
-function makeTextSprite(
-  text: string
-): THREE.Sprite {
-  const canvas = document.createElement("canvas");
-  canvas.width = kLabelCanvasWidth;
-  canvas.height = kLabelCanvasHeight;
-
-  const ctx = canvas.getContext("2d")!;
-  ctx.font = "bold 22px system-ui, sans-serif";
-  ctx.shadowColor = "#000";
-  ctx.shadowBlur = 6;
-  ctx.fillStyle = "white";
-  ctx.fillText(text, 8, 44);
-
-  const texture = new THREE.CanvasTexture(canvas);
-  const material = new THREE.SpriteMaterial({
-    map: texture,
-    depthTest: false,
-    transparent: true
-  });
-
-  const sprite = new THREE.Sprite(material);
-  sprite.renderOrder = 10;
-  sprite.scale.set(kLabelSpriteWidth, kLabelSpriteHeight, 1);
-
-  return sprite;
-}
+import { TransformGizmoBase } from "./TransformGizmoBase.ts";
+import { ObjectLayerVisuals } from "./ObjectLayerVisuals.ts";
 
 export interface ObjectLayerRendererOptions {
   vr: VoxelRenderer;
   camera: THREE.PerspectiveCamera;
 }
 
-export class ObjectLayerRenderer extends ActorComponent {
+export class ObjectLayerRenderer extends TransformGizmoBase {
   #vr: VoxelRenderer;
-  #camera: THREE.PerspectiveCamera;
+  #visuals: ObjectLayerVisuals;
 
-  #objectGroups: Map<string, THREE.Group> = new Map();
-
-  #controls: TransformControls | null = null;
-  #controlsHelper: THREE.Object3D | null = null;
   #selectedObjectKey: string | null = null;
   #initialObjDimensions: { w: number; h: number; } | null = null;
   #raycaster = new THREE.Raycaster();
@@ -73,49 +34,45 @@ export class ObjectLayerRenderer extends ActorComponent {
     actor: Actor,
     options: ObjectLayerRendererOptions
   ) {
-    super({
+    super(
       actor,
-      typeName: "ObjectLayerRenderer"
-    });
+      options,
+      "ObjectLayerRenderer"
+    );
     this.#vr = options.vr;
-    this.#camera = options.camera;
+    this.#visuals = this.actor.addComponentAndGet(ObjectLayerVisuals, {
+      vr: options.vr
+    });
   }
 
-  awake(): void {
-    const canvas = this.actor.world.renderer.canvas;
-
-    // --- TransformControls ---
-    this.#controls = new TransformControls(this.#camera, canvas);
-    this.#controls.setMode("translate");
-    this.#controlsHelper = this.#controls.getHelper();
-    this.actor.addChildren(this.#controlsHelper);
+  override awake(): void {
+    super.awake();
 
     // When the user presses down on a handle, mark that the next click
     // originating from the engine input system should be skipped for selection.
-    this.#controls.addEventListener("mouseDown", () => {
+    this.controls!.addEventListener("mouseDown", () => {
       this.#skipNextSelect = true;
     });
 
     // Flush position / scale to VoxelObjectJSON once the drag ends.
-    this.#controls.addEventListener("mouseUp", () => {
+    this.controls!.addEventListener("mouseUp", () => {
       this.#flushObjectTransform();
     });
 
-    this.#controls.addEventListener("dragging-changed", (event) => {
+    this.controls!.addEventListener("dragging-changed", (event) => {
       this.#isDragging = (event as THREE.Event & { value: boolean; }).value;
-      editorState.setGizmoDragging(this.#isDragging);
     });
 
     // In scale mode snap X/Z to 1-unit steps and lock Y to 1 (objects are
     // always 1 unit tall). The scale is clamped per-frame so the visual
     // feedback during drag already shows the snapped result.
-    this.#controls.addEventListener("objectChange", () => {
-      if (this.#controls?.mode !== "scale") {
+    this.controls!.addEventListener("objectChange", () => {
+      if (this.controls?.mode !== "scale") {
         return;
       }
 
       const group = this.#selectedObjectKey
-        ? this.#objectGroups.get(this.#selectedObjectKey)
+        ? this.#visuals.getGroup(this.#selectedObjectKey)
         : null;
       const dims = this.#initialObjDimensions;
 
@@ -139,8 +96,6 @@ export class ObjectLayerRenderer extends ActorComponent {
       }
     });
 
-    this.#rebuildAll();
-
     editorState.addEventListener("layerUpdated", (event) => {
       const evt = (event as CustomEvent<VoxelLayerHookEvent>).detail;
       if (
@@ -148,151 +103,54 @@ export class ObjectLayerRenderer extends ActorComponent {
         evt.action === "object-layer-removed" ||
         evt.action === "object-layer-updated"
       ) {
-        this.#rebuildAll();
+        this.#visuals.rebuildAll();
+        this.#detachControls();
       }
       else if (
         evt.action === "object-added" ||
         evt.action === "object-removed" ||
         evt.action === "object-updated"
       ) {
-        this.#rebuildLayer(evt.layerName);
+        this.#visuals.rebuildLayer(evt.layerName);
+        this.#reattachAfterRebuild(evt.layerName);
       }
     });
   }
 
-  #rebuildAll(): void {
-    this.#detachControls();
-    for (const group of this.#objectGroups.values()) {
-      this.#disposeGroup(group);
-    }
-    this.#objectGroups.clear();
-
-    for (const layer of this.#vr.getObjectLayers()) {
-      this.#rebuildLayer(layer.name);
-    }
-  }
-
-  #rebuildLayer(
+  #reattachAfterRebuild(
     layerName: string
   ): void {
-    const keysToRemove = [...this.#objectGroups.keys()].filter(
-      (k) => k.startsWith(`${layerName}:`)
-    );
-    for (const key of keysToRemove) {
-      this.#disposeGroup(this.#objectGroups.get(key)!);
-      this.#objectGroups.delete(key);
-    }
-
-    const layer = this.#vr.getObjectLayer(layerName);
-    if (!layer || !layer.visible) {
+    if (
+      !this.#selectedObjectKey?.startsWith(`${layerName}:`) ||
+      !this.controls
+    ) {
       return;
     }
 
-    for (const obj of layer.objects) {
-      if (obj.visible) {
-        this.#addObjectGroup(layerName, obj);
+    const newGroup = this.#visuals.getGroup(this.#selectedObjectKey);
+    if (newGroup) {
+      const objId = this.#selectedObjectKey.slice(layerName.length + 1);
+      const layer = this.#vr.getObjectLayer(layerName);
+      const obj = layer?.objects.find((o) => o.id === objId);
+      if (obj) {
+        this.#initialObjDimensions = { w: obj.width ?? 1, h: obj.height ?? 1 };
       }
+      this.controls.attach(newGroup);
     }
-
-    // Re-attach controls after a rebuild triggered by vr.updateObject so the
-    // gizmo tracks the freshly created group for the same selected object.
-    if (
-      this.#selectedObjectKey?.startsWith(`${layerName}:`) &&
-      this.#controls
-    ) {
-      const newGroup = this.#objectGroups.get(this.#selectedObjectKey);
-      if (newGroup) {
-        const objId = this.#selectedObjectKey.slice(layerName.length + 1);
-        const obj = layer.objects.find((o) => o.id === objId);
-        if (obj) {
-          this.#initialObjDimensions = { w: obj.width ?? 1, h: obj.height ?? 1 };
-        }
-        this.#controls.attach(newGroup);
-      }
-      else {
-        this.#detachControls();
-      }
+    else {
+      this.#detachControls();
     }
-  }
-
-  #addObjectGroup(
-    layerName: string,
-    obj: VoxelObjectJSON
-  ): void {
-    const w = obj.width ?? 1;
-    const h = obj.height ?? 1;
-
-    const group = new THREE.Group();
-    group.position.set(obj.x + w / 2, obj.y + 0.5, obj.z + h / 2);
-
-    const boxGeo = new THREE.BoxGeometry(w, 1, h);
-    const fillMesh = new THREE.Mesh(
-      boxGeo,
-      new THREE.MeshBasicMaterial({
-        color: 0x44aaff,
-        transparent: true,
-        opacity: 0.15,
-        depthWrite: false,
-        side: THREE.DoubleSide
-      })
-    );
-    group.add(fillMesh);
-
-    const edgesGeo = new THREE.EdgesGeometry(boxGeo);
-    const lines = new THREE.LineSegments(
-      edgesGeo,
-      new THREE.LineDashedMaterial({
-        color: 0x88ccff,
-        dashSize: 0.25,
-        gapSize: 0.1
-      })
-    );
-    lines.computeLineDistances();
-    group.add(lines);
-
-    const label = makeTextSprite(obj.name);
-    // Sit the label just above the top face of the bounding box.
-    label.position.set(0, 0.8, 0);
-    group.add(label);
-
-    this.actor.object3D.add(group);
-    this.#objectGroups.set(`${layerName}:${obj.id}`, group);
-  }
-
-  #disposeGroup(
-    group: THREE.Group
-  ): void {
-    this.actor.object3D.remove(group);
-    group.traverse((child) => {
-      if (child instanceof THREE.Mesh || child instanceof THREE.LineSegments) {
-        child.geometry.dispose();
-        if (Array.isArray(child.material)) {
-          child.material.forEach((m) => m.dispose());
-        }
-        else {
-          (child.material as THREE.Material).dispose();
-        }
-      }
-      else if (child instanceof THREE.Sprite) {
-        const mat = child.material as THREE.SpriteMaterial;
-        mat.map?.dispose();
-        mat.dispose();
-      }
-    });
   }
 
   #trySelectObject(): void {
     const { input } = this.actor.world;
-    this.#raycaster.setFromCamera(input.getMousePosition(), this.#camera);
+    this.#raycaster.setFromCamera(input.getMousePosition(), this.camera);
 
-    const fillMeshes: THREE.Mesh[] = [];
     const meshToKey = new Map<THREE.Mesh, string>();
-    for (const [key, group] of this.#objectGroups) {
-      const firstChild = group.children[0];
-      if (firstChild instanceof THREE.Mesh) {
-        fillMeshes.push(firstChild);
-        meshToKey.set(firstChild, key);
-      }
+    const fillMeshes: THREE.Mesh[] = [];
+    for (const { key, mesh } of this.#visuals.getFillMeshes()) {
+      fillMeshes.push(mesh);
+      meshToKey.set(mesh, key);
     }
 
     const hits = this.#raycaster.intersectObjects(fillMeshes, false);
@@ -324,18 +182,18 @@ export class ObjectLayerRenderer extends ActorComponent {
     this.#selectedObjectKey = key;
     this.#initialObjDimensions = { w: obj.width ?? 1, h: obj.height ?? 1 };
 
-    const group = this.#objectGroups.get(key)!;
-    this.#controls?.attach(group);
+    const group = this.#visuals.getGroup(key)!;
+    this.controls?.attach(group);
   }
 
   #detachControls(): void {
-    this.#controls?.detach();
+    this.controls?.detach();
     this.#selectedObjectKey = null;
     this.#initialObjDimensions = null;
   }
 
   #flushObjectTransform(): void {
-    if (!this.#selectedObjectKey || !this.#controls) {
+    if (!this.#selectedObjectKey || !this.controls) {
       return;
     }
 
@@ -345,13 +203,13 @@ export class ObjectLayerRenderer extends ActorComponent {
 
     const layer = this.#vr.getObjectLayer(layerName);
     const obj = layer?.objects.find((o) => o.id === objId);
-    const group = this.#objectGroups.get(this.#selectedObjectKey);
+    const group = this.#visuals.getGroup(this.#selectedObjectKey);
 
     if (!obj || !group) {
       return;
     }
 
-    if (this.#controls.mode === "translate") {
+    if (this.controls.mode === "translate") {
       const w = obj.width ?? 1;
       const h = obj.height ?? 1;
       this.#vr.updateObject(layerName, objId, {
@@ -360,14 +218,15 @@ export class ObjectLayerRenderer extends ActorComponent {
         z: Math.round(group.position.z - h / 2)
       });
     }
-    else if (this.#controls.mode === "scale") {
+    else if (this.controls.mode === "scale") {
       // Scale is already snapped to integer steps by the objectChange handler,
       // so Math.round here is just a safety net.
       const dims = this.#initialObjDimensions!;
-      this.#vr.updateObject(layerName, objId, {
-        width: Math.max(1, Math.round(dims.w * group.scale.x)),
-        height: Math.max(1, Math.round(dims.h * group.scale.z))
-      });
+      const newW = Math.max(1, Math.round(dims.w * group.scale.x));
+      const newH = Math.max(1, Math.round(dims.h * group.scale.z));
+      const newX = Math.round(obj.x + dims.w / 2 - newW / 2);
+      const newZ = Math.round(obj.z + dims.h / 2 - newH / 2);
+      this.#vr.updateObject(layerName, objId, { x: newX, z: newZ, width: newW, height: newH });
     }
   }
 
@@ -378,13 +237,16 @@ export class ObjectLayerRenderer extends ActorComponent {
 
     const { input } = this.actor.world;
 
-    // G = move (translate), S = scale — only when an object is selected.
-    if (this.#selectedObjectKey && this.#controls) {
+    // G = translate, Shift+S = scale — only when an object is selected.
+    if (this.#selectedObjectKey && this.controls) {
       if (input.wasKeyJustPressed("KeyG")) {
-        this.#controls.setMode("translate");
+        this.controls.setMode("translate");
       }
-      else if (input.wasKeyJustPressed("KeyS")) {
-        this.#controls.setMode("scale");
+      else if (
+        input.wasKeyJustPressed("KeyS") &&
+        (input.isKeyDown("ShiftLeft") || input.isKeyDown("ShiftRight"))
+      ) {
+        this.controls.setMode("scale");
       }
     }
 
@@ -397,19 +259,5 @@ export class ObjectLayerRenderer extends ActorComponent {
         this.#trySelectObject();
       }
     }
-  }
-
-  override destroy(): void {
-    if (this.#controls) {
-      this.#controls.detach();
-      this.#controls.dispose();
-      this.#controls = null;
-    }
-
-    for (const group of this.#objectGroups.values()) {
-      this.#disposeGroup(group);
-    }
-    this.#objectGroups.clear();
-    super.destroy();
   }
 }
