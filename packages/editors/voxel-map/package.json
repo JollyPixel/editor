@@ -32,7 +32,7 @@
     "@jolly-pixel/runtime": "^3.0.0",
     "@jolly-pixel/voxel.renderer": "1.4.0",
     "lit": "3.3.2",
-    "three": "^0.182.0"
+    "three": "^0.183.1"
   },
   "devDependencies": {
     "@types/three": "^0.182.0"
