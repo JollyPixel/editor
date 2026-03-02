@@ -11,7 +11,7 @@ import {
   BlockRegistry
 } from "./blocks/BlockRegistry.ts";
 import type {
-  BlockDefinition
+  BlockDefinitionIn
 } from "./blocks/BlockDefinition.ts";
 import {
   BlockShapeRegistry
@@ -119,7 +119,7 @@ export interface VoxelRendererOptions {
    * Optional initial block definitions to register.
    * Block ID 0 is reserved for air
    */
-  blocks?: BlockDefinition[];
+  blocks?: BlockDefinitionIn[];
   /**
    * Optional block shapes to register in addition to the default
    * shapes provided by BlockShapeRegistry.createDefault().

@@ -3,9 +3,11 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import type { BlockDefinitionIn } from "../../src/blocks/BlockDefinition.ts";
 import { BlockRegistry } from "../../src/blocks/BlockRegistry.ts";
+import { FACE } from "../../src/utils/math.ts";
 
-function makeDef(id: number, name = `Block${id}`) {
+function makeDef(id: number, name = `Block${id}`): BlockDefinitionIn {
   return {
     id,
     name,
@@ -69,6 +71,39 @@ describe("BlockRegistry.get", () => {
   it("returns undefined for unknown id", () => {
     const registry = new BlockRegistry();
     assert.equal(registry.get(99), undefined);
+  });
+
+  it("returns the registered def with transformed face textures", () => {
+    const registry = new BlockRegistry();
+    const def = makeDef(5);
+    def.faceTextures[FACE.NegY] = [1, 2];
+    def.faceTextures[FACE.NegZ] = [3, 4];
+    def.faceTextures[FACE.PosY] = { col: 5, row: 6 };
+    def.defaultTilesetId = "terrain";
+    def.defaultTexture = [5, 6];
+    registry.register(def);
+    assert.deepEqual(registry.get(5), {
+      ...makeDef(5),
+      defaultTexture: { col: 5, row: 6, tilesetId: "terrain" },
+      faceTextures: {
+        [FACE.NegY]: { col: 1, row: 2, tilesetId: "terrain" },
+        [FACE.NegZ]: { col: 3, row: 4, tilesetId: "terrain" },
+        [FACE.PosY]: { col: 5, row: 6, tilesetId: "terrain" }
+      }
+    });
+  });
+
+  it("should add default tile set id to default texture", () => {
+    const registry = new BlockRegistry();
+    const def = makeDef(5);
+    def.defaultTilesetId = "terrain";
+    def.defaultTexture = { col: 5, row: 6 };
+    registry.register(def);
+    assert.deepEqual(registry.get(5), {
+      ...makeDef(5),
+      defaultTexture: { col: 5, row: 6, tilesetId: "terrain" }
+
+    });
   });
 });
 
