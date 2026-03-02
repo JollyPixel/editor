@@ -35,7 +35,7 @@
   "dependencies": {
     "@dimforge/rapier3d": "0.19.3",
     "@jolly-pixel/engine": "2.5.0",
-    "three": "0.182.0"
+    "three": "0.183.1"
   },
   "devDependencies": {
     "@jolly-pixel/runtime": "3.3.0"
