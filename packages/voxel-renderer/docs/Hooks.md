@@ -13,8 +13,10 @@ import {
 function onLayerUpdated(
   event: VoxelLayerHookEvent
 ): void {
-  // Send information over the network
-  console.log(event);
+  // Narrow on `action` to get a fully-typed `metadata`.
+  if (event.action === "voxel-set") {
+    console.log(event.metadata.position, event.metadata.blockId);
+  }
 }
 
 const vr = new VoxelRenderer({
@@ -22,41 +24,25 @@ const vr = new VoxelRenderer({
 });
 ```
 
-## Types
+## Event reference
 
-```ts
-export type VoxelLayerHookAction =
-  // Voxel-layer actions
-  | "added"            // a voxel layer was created
-  | "removed"          // a voxel layer was deleted
-  | "updated"          // layer properties (visibility, …) changed
-  | "offset-updated"   // layer world offset changed
-  | "voxel-set"        // a voxel was placed in a layer
-  | "voxel-removed"    // a voxel was removed from a layer
-  | "reordered"        // layer render order changed
-  // Object-layer actions
-  | "object-layer-added"   // a new object layer was created
-  | "object-layer-removed" // an object layer was deleted
-  | "object-layer-updated" // object layer properties (e.g. visibility) changed
-  | "object-added"         // an object was added to an object layer
-  | "object-removed"       // an object was removed from an object layer
-  | "object-updated";      // an object's properties were patched
+`VoxelLayerHookEvent` is a discriminated union keyed on `action`. Narrowing on `action`
+gives you a precise `metadata` type with no casting required.
 
-// Describes a change related to a layer.
-export interface VoxelLayerHookEvent {
-  // The name of the affected layer.
-  layerName: string;
+| `action` | `metadata` shape |
+|---|---|
+| `"added"` | `{ options: VoxelLayerConfigurableOptions }` |
+| `"removed"` | `{}` |
+| `"updated"` | `{ options: Partial<VoxelLayerConfigurableOptions> }` |
+| `"offset-updated"` | `{ offset: VoxelCoord }` or `{ delta: VoxelCoord }` |
+| `"voxel-set"` | `{ position, blockId, rotation, flipX, flipZ, flipY }` |
+| `"voxel-removed"` | `{ position: Vector3Like }` |
+| `"reordered"` | `{ direction: "up" \| "down" }` |
+| `"object-layer-added"` | `{}` |
+| `"object-layer-removed"` | `{}` |
+| `"object-layer-updated"` | `{ patch: { visible?: boolean } }` |
+| `"object-added"` | `{ objectId: string }` |
+| `"object-removed"` | `{ objectId: string }` |
+| `"object-updated"` | `{ objectId: string; patch: Partial<VoxelObjectJSON> }` |
 
-  // The action that occurred on the layer.
-  action: VoxelLayerHookAction;
-
-  // Additional data related to the action.
-  // Use `unknown` to encourage callers
-  // to validate the payload before use.
-  metadata: Record<string, unknown>;
-}
-
-export type VoxelLayerHookListener = (
-  event: VoxelLayerHookEvent
-) => void;
-```
+`VoxelLayerHookAction` is a convenience alias for `VoxelLayerHookEvent["action"]`.
