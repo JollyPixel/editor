@@ -122,16 +122,17 @@ export class VoxelMeshBuilder {
       const { rotation, flipX, flipZ, flipY } = unpackTransform(entry.transform);
 
       for (const faceDef of shape.faces) {
-        // Rotate the logical face direction to find the world-space neighbour.
-        let worldFace = rotateFace(faceDef.face, rotation);
-        if (flipY && worldFace !== undefined) {
-          worldFace = flipYFace(worldFace);
-        }
+        // Determine the culling direction. An explicit `cull` field overrides
+        // the default (which is to use `face`). `null` means always emit.
+        const cullFace = faceDef.cull === undefined ? faceDef.face : faceDef.cull;
 
-        // worldFace is undefined when faceDef.face is the sentinel value 6
-        // (used by Stair/RampCorner shapes to mark "always emit" faces).
-        // In that case skip neighbour culling entirely.
-        if (worldFace !== undefined) {
+        if (cullFace !== null) {
+          // Rotate the culling direction to world space and check the neighbour.
+          let worldFace = rotateFace(cullFace, rotation);
+          if (flipY) {
+            worldFace = flipYFace(worldFace);
+          }
+
           const offset = FACE_OFFSETS[worldFace];
           const nx = wx + offset[0];
           const ny = wy + offset[1];
@@ -151,6 +152,7 @@ export class VoxelMeshBuilder {
         }
 
         // Resolve the tile reference for this face.
+        // face is always a valid FACE (0-5) so the texture slot lookup is safe.
         const tileRef = blockDef.faceTextures[faceDef.face] ?? blockDef.defaultTexture;
         if (!tileRef) {
           // No texture configured — skip.

@@ -81,11 +81,9 @@ export class RampCornerInner implements BlockShape {
       uvs: [[0, 0], [0, 1], [1, 1]]
     },
     {
-      // Diagonal slope face: rises from (0,0,0) to corner height.
-      // Vertices: (0,0,0), (0,1,1), (1,1,0) form the slope triangle.
-      // e1=[0,1,1], e2=[1,0,-1] → cross=[-1,1,-1] (points up-left-front, outward)
-      // Cull against PosY: hidden if block sits above.
-      face: 6 as FACE,
+      // Top cap triangle at y=1 closing the inner corner (always visible — interior face).
+      face: FACE.PosY,
+      cull: null,
       normal: [0, 1, 0],
       vertices: [[0, 1, 1], [1, 1, 1], [1, 1, 0]],
       uvs: [[0, 0], [0, 1], [1, 1]]
