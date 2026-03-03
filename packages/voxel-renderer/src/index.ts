@@ -12,8 +12,7 @@ export * from "./hooks.ts";
 export { Cube } from "./blocks/shapes/Cube.ts";
 export { Slab, type SlabType } from "./blocks/shapes/Slab.ts";
 export { PoleY } from "./blocks/shapes/PoleY.ts";
-export { Pole, type PoleAxis } from "./blocks/shapes/Pole.ts";
-export { PoleCross } from "./blocks/shapes/PoleCross.ts";
+export { Pole } from "./blocks/shapes/Pole.ts";
 export { Ramp } from "./blocks/shapes/Ramp.ts";
 export {
   RampCornerInner,
