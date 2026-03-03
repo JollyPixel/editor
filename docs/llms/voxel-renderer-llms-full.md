@@ -251,9 +251,7 @@ type BlockShapeID =
   | "slabBottom"
   | "slabTop"
   | "poleY"
-  | "poleX"
-  | "poleZ"
-  | "poleCross"
+  | "pole"
   | "ramp"
   | "rampFlip"
   | "rampCornerInner"
@@ -408,16 +406,9 @@ All pole shapes use `collisionHint: "trimesh"` and occlude no faces (sub-voxel c
 - **`PoleY`** — `shapeId: "poleY"`.
   Narrow vertical post (3/8–5/8 cross-section) running the full block height.
 
-- **`Pole`** — `shapeId: "poleX"`.
-  Narrow horizontal beam running along the X axis (full width, centered on Y/Z).
-
-- **`Pole`** — `shapeId: "poleZ"`.
+- **`Pole`** — `shapeId: "pole"`.
   Narrow horizontal beam running along the Z axis (full depth, centered on X/Y).
-
-- **`PoleCross`** — `shapeId: "poleCross"`.
-  Horizontal plus-connector at mid-height — X and Z beams merged at the centre.
-  Internal intersection faces are omitted to avoid overdraw.
-
+  
 ### Ramps
 
 All ramp shapes use `collisionHint: "trimesh"`.

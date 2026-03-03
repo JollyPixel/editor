@@ -31,16 +31,7 @@ All pole shapes use **collisionHint**: [trimesh](./Collision.md) and occlude no 
 | Shape ID | Occludes |
 |---:|---|
 | `poleY` | — |
-| `poleX` | — |
-| `poleZ` | — |
-| `poleCross` | — |
-
-```ts
-type PoleAxis = "x" | "z";
-```
-
-Passed to the `Pole` constructor to select the axis along which the beam runs.
-The default is `"z"`.
+| `pole` | — |
 
 ### Ramps
 

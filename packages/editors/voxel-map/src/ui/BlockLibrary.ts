@@ -34,7 +34,7 @@ const kAllShapeIds: BlockShapeID[] = [
   "slabBottom",
   "slabTop",
   "poleY",
-  "poleX",
+  "pole",
   "ramp",
   "rampCornerInner",
   "rampCornerOuter",

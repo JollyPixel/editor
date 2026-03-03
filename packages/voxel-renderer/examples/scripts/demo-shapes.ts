@@ -17,7 +17,6 @@ import { Cube } from "../../src/blocks/shapes/Cube.ts";
 import { Slab } from "../../src/blocks/shapes/Slab.ts";
 import { PoleY } from "../../src/blocks/shapes/PoleY.ts";
 import { Pole } from "../../src/blocks/shapes/Pole.ts";
-import { PoleCross } from "../../src/blocks/shapes/PoleCross.ts";
 import { Ramp } from "../../src/blocks/shapes/Ramp.ts";
 import {
   RampCornerInner,
@@ -64,19 +63,9 @@ const kShapes: ShapeEntry[] = [
     color: "#26c6da"
   },
   {
-    shape: new Pole("x"),
-    label: "poleX",
-    color: "#ff7043"
-  },
-  {
-    shape: new Pole("z"),
-    label: "poleZ",
+    shape: new Pole(),
+    label: "pole",
     color: "#ab47bc"
-  },
-  {
-    shape: new PoleCross(),
-    label: "poleCross",
-    color: "#66bb6a"
   },
 
   // ── Ramp ────────────────────────────────────────────────────────────────────

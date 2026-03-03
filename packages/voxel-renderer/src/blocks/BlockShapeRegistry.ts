@@ -6,7 +6,6 @@ import { Ramp } from "./shapes/Ramp.ts";
 import { RampCornerInner, RampCornerOuter } from "./shapes/RampCorner.ts";
 import { PoleY } from "./shapes/PoleY.ts";
 import { Pole } from "./shapes/Pole.ts";
-import { PoleCross } from "./shapes/PoleCross.ts";
 import {
   Stair,
   StairCornerInner,
@@ -48,9 +47,7 @@ export class BlockShapeRegistry {
       .register(new Slab("bottom"))
       .register(new Slab("top"))
       .register(new PoleY())
-      .register(new Pole("x"))
-      .register(new Pole("z"))
-      .register(new PoleCross())
+      .register(new Pole())
       .register(new Ramp())
       .register(new RampCornerInner())
       .register(new RampCornerOuter())
