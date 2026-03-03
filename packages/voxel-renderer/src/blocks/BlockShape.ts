@@ -11,8 +11,19 @@ import type {
  * 3 vertices = triangle, 4 vertices = quad (triangulated via [0,1,2] + [0,2,3]).
  */
 export interface FaceDefinition {
-  /** Axis-aligned culling direction used to find the neighbor to check. */
+  /**
+   * Texture slot: which of the block's 6 face textures to sample.
+   * Also used as the culling direction when `cull` is not specified.
+   */
   face: FACE;
+  /**
+   * Culling direction: which axis-aligned neighbor to check for occlusion.
+   * - Omitted → falls back to `face` (default behaviour).
+   * - `null`  → always emit; skip neighbor culling entirely (use for interior
+   *             faces such as stair risers that have no axis-aligned neighbor).
+   * - A `FACE` value → check that specific neighbor instead of `face`.
+   */
+  cull?: FACE | null;
   /** Outward-pointing surface normal (need not be axis-aligned). */
   normal: Vec3;
   /** 3 (triangle) or 4 (quad) positions in 0-1 block space. */

@@ -47,8 +47,9 @@ const kStairFaces: readonly FaceDefinition[] = [
     uvs: [[0, 0.5], [0, 1], [1, 1], [1, 0.5]]
   },
   {
-    // Inner riser at z=0.5, y=0.5..1, facing NegZ (always visible)
-    face: 6 as FACE,
+    // Inner riser at z=0.5, y=0.5..1, facing NegZ (always visible — interior face)
+    face: FACE.NegZ,
+    cull: null,
     normal: [0, 0, -1],
     vertices: [[1, 0.5, 0.5], [0, 0.5, 0.5], [0, 1, 0.5], [1, 1, 0.5]],
     uvs: [[1, 0], [0, 0], [0, 0.5], [1, 0.5]]
@@ -249,15 +250,17 @@ const kStairCornerOuterFaces: readonly FaceDefinition[] = [
     uvs: [[0.5, 0.5], [0.5, 1], [1, 1], [1, 0.5]]
   },
   {
-    // Inner riser at x=0.5, y=0.5..1, z=0..0.5 (right side of upper block, facing PosX, always visible)
-    face: 6 as FACE,
+    // Inner riser at x=0.5, y=0.5..1, z=0..0.5 (right side of upper block, facing PosX, always visible — interior face)
+    face: FACE.PosX,
+    cull: null,
     normal: [1, 0, 0],
     vertices: [[0.5, 0.5, 0.5], [0.5, 0.5, 0], [0.5, 1, 0], [0.5, 1, 0.5]],
     uvs: [[0.5, 0.5], [0, 0.5], [0, 1], [0.5, 1]]
   },
   {
-    // Inner riser at z=0.5, y=0.5..1, x=0..0.5 (back side of upper block, facing PosZ, always visible)
-    face: 6 as FACE,
+    // Inner riser at z=0.5, y=0.5..1, x=0..0.5 (back side of upper block, facing PosZ, always visible — interior face)
+    face: FACE.PosZ,
+    cull: null,
     normal: [0, 0, 1],
     vertices: [[0, 0.5, 0.5], [0.5, 0.5, 0.5], [0.5, 1, 0.5], [0, 1, 0.5]],
     uvs: [[0, 0.5], [0.5, 0.5], [0.5, 1], [0, 1]]
