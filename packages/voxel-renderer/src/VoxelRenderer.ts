@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 // Import Third-party Dependencies
 import * as THREE from "three";
 import {
@@ -46,8 +47,12 @@ import type { VoxelEntry, VoxelCoord } from "./world/types.ts";
 import { packTransform, type FACE } from "./utils/math.ts";
 import { FACE_OFFSETS } from "./mesh/math.ts";
 import type {
-  VoxelLayerHookListener
+  VoxelLayerHookListener,
+  VoxelLayerHookEvent
 } from "./hooks.ts";
+import type { VoxelSetOptions, VoxelRemoveOptions } from "./types.ts";
+
+export type { VoxelSetOptions, VoxelRemoveOptions };
 
 type MaterialCustomizerFn = (
   material: THREE.MeshLambertMaterial | THREE.MeshStandardMaterial,
@@ -64,23 +69,6 @@ export const VoxelRotation = {
   /** 270° counter-clockwise (= 90° clockwise) around the Y axis. */
   CW90: 3
 } as const;
-
-export interface VoxelSetOptions {
-  position: THREE.Vector3Like;
-  blockId: number;
-  /** Y-axis rotation. Use the `VoxelRotation` constants. Default: `VoxelRotation.None` */
-  rotation?: typeof VoxelRotation[keyof typeof VoxelRotation];
-  /** Mirror the block around x = 0.5. Default: false */
-  flipX?: boolean;
-  /** Mirror the block around z = 0.5. Default: false */
-  flipZ?: boolean;
-  /** Mirror the block around y = 0.5. Default: false */
-  flipY?: boolean;
-}
-
-export interface VoxelRemoveOptions {
-  position: THREE.Vector3Like;
-}
 
 export interface VoxelRendererOptions {
   /**
@@ -186,6 +174,12 @@ export class VoxelRenderer extends ActorComponent {
 
   #logger: Systems.Logger;
   #onLayerUpdated?: VoxelLayerHookListener;
+
+  /**
+   * When true, hook events are suppressed so that remote commands applied via
+   * `applyRemoteCommand` do not re-broadcast to the transport layer.
+   */
+  #isApplyingRemote = false;
 
   constructor(
     actor: Actor<any>,
@@ -303,6 +297,127 @@ export class VoxelRenderer extends ActorComponent {
     super.destroy();
   }
 
+  // --- Hook management --- //
+
+  /**
+   * Replace the hook listener after construction. Setting to `undefined` disables hooks.
+   * Used by `VoxelSyncClient` to inject itself.
+   */
+  set onLayerUpdated(fn: VoxelLayerHookListener | undefined) {
+    this.#onLayerUpdated = fn;
+  }
+
+  /**
+   * Emits a hook event unless a remote command is currently being applied.
+   */
+  #emitHook(event: VoxelLayerHookEvent): void {
+    if (this.#isApplyingRemote) {
+      return;
+    }
+    this.#onLayerUpdated?.(event);
+  }
+
+  /**
+   * Dispatches a hook event to the corresponding local mutation method.
+   * Called from `applyRemoteCommand` with `#isApplyingRemote = true` so
+   * the mutation does not re-fire the hook.
+   */
+  #dispatchCommand(event: VoxelLayerHookEvent): void {
+    switch (event.action) {
+      case "added":
+        this.addLayer(event.layerName, event.metadata.options);
+        break;
+
+      case "removed":
+        this.removeLayer(event.layerName);
+        break;
+
+      case "updated":
+        this.updateLayer(event.layerName, event.metadata.options);
+        break;
+
+      case "offset-updated":
+        if ("offset" in event.metadata) {
+          this.setLayerOffset(event.layerName, event.metadata.offset);
+        }
+        else {
+          this.translateLayer(event.layerName, event.metadata.delta);
+        }
+        break;
+
+      case "voxel-set": {
+        const { position, blockId, rotation, flipX, flipZ, flipY } = event.metadata;
+        this.setVoxel(event.layerName, {
+          position,
+          blockId,
+          rotation: rotation as 0 | 1 | 2 | 3,
+          flipX,
+          flipZ,
+          flipY
+        });
+        break;
+      }
+
+      case "voxel-removed":
+        this.removeVoxel(event.layerName, { position: event.metadata.position });
+        break;
+
+      case "voxels-set":
+        this.setVoxelBulk(event.layerName, event.metadata.entries);
+        break;
+
+      case "voxels-removed":
+        this.removeVoxelBulk(event.layerName, event.metadata.entries);
+        break;
+
+      case "reordered":
+        this.moveLayer(event.layerName, event.metadata.direction);
+        break;
+
+      case "object-layer-added":
+        this.addObjectLayer(event.layerName);
+        break;
+
+      case "object-layer-removed":
+        this.removeObjectLayer(event.layerName);
+        break;
+
+      case "object-layer-updated":
+        this.updateObjectLayer(event.layerName, event.metadata.patch);
+        break;
+
+      case "object-added":
+        this.addObject(event.layerName, event.metadata.object);
+        break;
+
+      case "object-removed":
+        this.removeObject(event.layerName, event.metadata.objectId);
+        break;
+
+      case "object-updated":
+        this.updateObject(
+          event.layerName,
+          event.metadata.objectId,
+          event.metadata.patch
+        );
+        break;
+    }
+  }
+
+  /**
+   * Applies a remote command (received from a network peer) to the local world
+   * without re-emitting the hook, preventing echo loops.
+   */
+  applyRemoteCommand(cmd: VoxelLayerHookEvent): void {
+    this.#isApplyingRemote = true;
+    try {
+      this.#dispatchCommand(cmd);
+    }
+    finally {
+      this.#isApplyingRemote = false;
+    }
+  }
+
   // --- API --- //
 
   /**
@@ -328,7 +443,7 @@ export class VoxelRenderer extends ActorComponent {
       position,
       { blockId, transform }
     );
-    this.#onLayerUpdated?.({
+    this.#emitHook({
       action: "voxel-set",
       layerName,
       metadata: { position, blockId, rotation, flipX, flipZ, flipY }
@@ -340,7 +455,7 @@ export class VoxelRenderer extends ActorComponent {
     options: VoxelRemoveOptions
   ): void {
     this.world.removeVoxelAt(layerName, options.position);
-    this.#onLayerUpdated?.({
+    this.#emitHook({
       action: "voxel-removed",
       layerName,
       metadata: { position: options.position }
@@ -365,6 +480,11 @@ export class VoxelRenderer extends ActorComponent {
         { blockId, transform: packTransform(rotation, flipX, flipZ, flipY) }
       );
     }
+    this.#emitHook({
+      action: "voxels-set",
+      layerName,
+      metadata: { entries }
+    });
   }
 
   removeVoxelBulk(
@@ -374,6 +494,11 @@ export class VoxelRenderer extends ActorComponent {
     for (const { position } of entries) {
       this.world.removeVoxelAt(layerName, position);
     }
+    this.#emitHook({
+      action: "voxels-removed",
+      layerName,
+      metadata: { entries }
+    });
   }
 
   getVoxel(position: THREE.Vector3Like): VoxelEntry | undefined;
@@ -423,7 +548,7 @@ export class VoxelRenderer extends ActorComponent {
     options: VoxelLayerConfigurableOptions = {}
   ): VoxelLayer {
     const layer = this.world.addLayer(name, options);
-    this.#onLayerUpdated?.({
+    this.#emitHook({
       action: "added",
       layerName: name,
       metadata: { options }
@@ -438,7 +563,7 @@ export class VoxelRenderer extends ActorComponent {
   ): boolean {
     const result = this.world.updateLayer(name, options);
     if (result) {
-      this.#onLayerUpdated?.({
+      this.#emitHook({
         action: "updated",
         layerName: name,
         metadata: { options }
@@ -453,7 +578,7 @@ export class VoxelRenderer extends ActorComponent {
   ): boolean {
     const result = this.world.removeLayer(name);
     if (result) {
-      this.#onLayerUpdated?.({
+      this.#emitHook({
         action: "removed",
         layerName: name,
         metadata: {}
@@ -468,7 +593,7 @@ export class VoxelRenderer extends ActorComponent {
     offset: VoxelCoord
   ): void {
     this.world.setLayerOffset(name, offset);
-    this.#onLayerUpdated?.({
+    this.#emitHook({
       action: "offset-updated",
       layerName: name,
       metadata: { offset }
@@ -480,7 +605,7 @@ export class VoxelRenderer extends ActorComponent {
     delta: VoxelCoord
   ): void {
     this.world.translateLayer(name, delta);
-    this.#onLayerUpdated?.({
+    this.#emitHook({
       action: "offset-updated",
       layerName: name,
       metadata: { delta }
@@ -493,7 +618,7 @@ export class VoxelRenderer extends ActorComponent {
   ): void {
     this.world.moveLayer(name, direction);
     this.markAllChunksDirty("moveLayer");
-    this.#onLayerUpdated?.({
+    this.#emitHook({
       action: "reordered",
       layerName: name,
       metadata: { direction }
@@ -518,7 +643,7 @@ export class VoxelRenderer extends ActorComponent {
     options?: Partial<Pick<VoxelObjectLayerJSON, "visible" | "order">>
   ): VoxelObjectLayerJSON {
     const layer = this.world.addObjectLayer(name, options);
-    this.#onLayerUpdated?.({
+    this.#emitHook({
       action: "object-layer-added",
       layerName: name,
       metadata: {}
@@ -532,7 +657,7 @@ export class VoxelRenderer extends ActorComponent {
   ): boolean {
     const result = this.world.removeObjectLayer(name);
     if (result) {
-      this.#onLayerUpdated?.({
+      this.#emitHook({
         action: "object-layer-removed",
         layerName: name,
         metadata: {}
@@ -558,7 +683,7 @@ export class VoxelRenderer extends ActorComponent {
   ): boolean {
     const result = this.world.updateObjectLayer(name, patch);
     if (result) {
-      this.#onLayerUpdated?.({
+      this.#emitHook({
         action: "object-layer-updated",
         layerName: name,
         metadata: { patch }
@@ -574,10 +699,10 @@ export class VoxelRenderer extends ActorComponent {
   ): boolean {
     const result = this.world.addObjectToLayer(layerName, object);
     if (result) {
-      this.#onLayerUpdated?.({
+      this.#emitHook({
         action: "object-added",
         layerName,
-        metadata: { objectId: object.id }
+        metadata: { object }
       });
     }
 
@@ -590,7 +715,7 @@ export class VoxelRenderer extends ActorComponent {
   ): boolean {
     const result = this.world.removeObjectFromLayer(layerName, objectId);
     if (result) {
-      this.#onLayerUpdated?.({
+      this.#emitHook({
         action: "object-removed",
         layerName,
         metadata: { objectId }
@@ -607,7 +732,7 @@ export class VoxelRenderer extends ActorComponent {
   ): boolean {
     const result = this.world.updateObjectInLayer(layerName, objectId, patch);
     if (result) {
-      this.#onLayerUpdated?.({
+      this.#emitHook({
         action: "object-updated",
         layerName,
         metadata: { objectId, patch }

@@ -8,6 +8,7 @@ import type {
   VoxelObjectLayerJSON,
   VoxelObjectJSON
 } from "./serialization/VoxelSerializer.ts";
+import type { VoxelSetOptions, VoxelRemoveOptions } from "./types.ts";
 
 export type VoxelLayerHookEvent =
   | {
@@ -54,6 +55,20 @@ export type VoxelLayerHookEvent =
     };
   }
   | {
+    action: "voxels-set";
+    layerName: string;
+    metadata: {
+      entries: VoxelSetOptions[];
+    };
+  }
+  | {
+    action: "voxels-removed";
+    layerName: string;
+    metadata: {
+      entries: VoxelRemoveOptions[];
+    };
+  }
+  | {
     action: "reordered";
     layerName: string;
     metadata: {
@@ -81,7 +96,7 @@ export type VoxelLayerHookEvent =
     action: "object-added";
     layerName: string;
     metadata: {
-      objectId: string;
+      object: VoxelObjectJSON;
     };
   }
   | {
