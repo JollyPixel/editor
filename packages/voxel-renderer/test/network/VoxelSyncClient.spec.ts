@@ -17,7 +17,7 @@ import type { VoxelRenderer } from "../../src/VoxelRenderer.ts";
 interface MockRenderer {
   onLayerUpdated: VoxelLayerHookListener | undefined;
   applyRemoteCommand(cmd: VoxelLayerHookEvent): void;
-  load(data: VoxelWorldJSON): Promise<void>;
+  load(data: VoxelWorldJSON): void;
   // Test helper: simulate a local mutation firing the hook
   triggerLocal(event: VoxelLayerHookEvent): void;
   appliedCommands: VoxelLayerHookEvent[];
@@ -41,8 +41,6 @@ function createMockRenderer(): MockRenderer {
     },
     load(data) {
       loadedSnapshots.push(data);
-
-      return Promise.resolve();
     },
     triggerLocal(event) {
       listener?.(event);

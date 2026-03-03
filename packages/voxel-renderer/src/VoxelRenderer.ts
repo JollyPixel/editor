@@ -37,6 +37,7 @@ import {
   TilesetManager,
   type TilesetDefinition
 } from "./tileset/TilesetManager.ts";
+import type { TilesetLoader } from "./tileset/TilesetLoader.ts";
 import { VoxelWorld } from "./world/VoxelWorld.ts";
 import {
   VoxelLayer,
@@ -132,17 +133,26 @@ export interface VoxelRendererOptions {
    * Useful for synchronizing external systems with changes to the voxel world.
    */
   onLayerUpdated?: VoxelLayerHookListener;
+
+  /**
+   * Optional pre-loaded tileset collection. All tilesets in the loader are
+   * registered synchronously during construction so no async is needed inside
+   * lifecycle methods. Use `TilesetLoader.fromTileDefinition()` or
+   * `TilesetLoader.fromWorld()` before constructing `VoxelRenderer`.
+   */
+  tilesetLoader?: TilesetLoader;
 }
 
 /**
  * ActorComponent that renders a layered voxel world as chunked THREE.js meshes.
  *
  * Usage:
- *   const vr = actor.addComponentAndGet(VoxelRenderer, { chunkSize: 16 });
- *   await vr.loadTileset({ id: "default", src: "tileset.png", tileSize: 16, cols: 16, rows: 16 });
- *   vr.blockRegistry.register({ id: 1, name: "Grass", shapeId: "fullCube", ... });
+ *   const loader = new TilesetLoader();
+ *   await loader.fromTileDefinition({ id: "default", src: "tileset.png", tileSize: 16 });
+ *   const vr = actor.addComponentAndGet(VoxelRenderer, { chunkSize: 16, tilesetLoader: loader });
+ *   vr.blockRegistry.register({ id: 1, name: "Grass", shapeId: "cube", ... });
  *   const layer = vr.addLayer("Ground");
- *   vr.setVoxel(layer.id, 0, 0, 0, 1);
+ *   vr.setVoxel(layer.id, { position: { x: 0, y: 0, z: 0 }, blockId: 1 });
  */
 export class VoxelRenderer extends ActorComponent {
   readonly world: VoxelWorld;
@@ -172,6 +182,7 @@ export class VoxelRenderer extends ActorComponent {
   #materialType: "lambert" | "standard";
   #alphaTest: number;
 
+  #tilesetLoader: TilesetLoader | null;
   #logger: Systems.Logger;
   #onLayerUpdated?: VoxelLayerHookListener;
 
@@ -200,7 +211,8 @@ export class VoxelRenderer extends ActorComponent {
       shapes = [],
       alphaTest = 0.1,
       logger = actor.world.logger,
-      onLayerUpdated
+      onLayerUpdated,
+      tilesetLoader
     } = options;
 
     this.#materialType = material;
@@ -224,6 +236,12 @@ export class VoxelRenderer extends ActorComponent {
     );
 
     this.tilesetManager = new TilesetManager();
+    this.#tilesetLoader = tilesetLoader ?? null;
+    if (tilesetLoader) {
+      for (const entry of tilesetLoader.tilesets.values()) {
+        this.tilesetManager.registerTexture(entry.def, entry.texture);
+      }
+    }
     this.serializer = new VoxelSerializer();
 
     this.#meshBuilder = new VoxelMeshBuilder({
@@ -742,35 +760,12 @@ export class VoxelRenderer extends ActorComponent {
     return result;
   }
 
-  loadTilesetSync(
+  loadTileset(
     def: TilesetDefinition,
     texture: THREE.Texture<HTMLImageElement>
   ): void {
     this.tilesetManager.registerTexture(def, texture);
-    this.#logger.debug(`Loaded tileset '${def.id}' from '${def.src}' (synchronous)`);
-
-    // Invalidate the cached material for this tileset so it is recreated
-    // with the new texture.
-    const existingMaterial = this.#materials.get(def.id);
-    existingMaterial?.dispose();
-    this.#materials.delete(def.id);
-
-    // Force all chunks to rebuild geometry (UV offsets may have changed).
-    this.markAllChunksDirty("loadTilesetSync");
-  }
-
-  async loadTileset(
-    def: TilesetDefinition
-  ): Promise<void> {
-    const textureLoader = new THREE.TextureLoader(
-      this.actor.world.loadingManager
-    );
-    const texture = await textureLoader.loadAsync(
-      def.src
-    );
-
-    this.tilesetManager.registerTexture(def, texture);
-    this.#logger.debug(`Loaded tileset '${def.id}' from '${def.src}' (asynchronous)`);
+    this.#logger.debug(`Loaded tileset '${def.id}' from '${def.src}'`);
 
     // Invalidate the cached material for this tileset so it is recreated
     // with the new texture.
@@ -795,9 +790,9 @@ export class VoxelRenderer extends ActorComponent {
     };
   }
 
-  async load(
+  load(
     data: VoxelWorldJSON
-  ): Promise<void> {
+  ): void {
     // Clear existing meshes before replacing world data.
     for (const mesh of this.#chunkMeshes.values()) {
       this.actor.object3D.remove(mesh);
@@ -818,15 +813,20 @@ export class VoxelRenderer extends ActorComponent {
 
     this.serializer.deserialize(data, this.world);
 
-    const textureLoader = new THREE.TextureLoader(
-      this.actor.world.loadingManager
-    );
-
-    // Reload any tilesets listed in the snapshot that are not already loaded.
+    // Register any tilesets in the snapshot that are not already loaded.
+    // Tilesets must have been pre-loaded via TilesetLoader before this call.
     for (const tilesetDef of data.tilesets) {
-      if (!this.tilesetManager.getTexture(tilesetDef.id)) {
-        await this.tilesetManager.loadTileset(tilesetDef, textureLoader);
+      if (this.tilesetManager.getTexture(tilesetDef.id)) {
+        continue;
       }
+      const entry = this.#tilesetLoader?.tilesets.get(tilesetDef.id);
+      if (!entry) {
+        throw new Error(
+          `VoxelRenderer.load(): tileset '${tilesetDef.id}' is not pre-loaded. ` +
+          "Call TilesetLoader.fromWorld() before constructing VoxelRenderer."
+        );
+      }
+      this.tilesetManager.registerTexture(entry.def, entry.texture);
     }
 
     // Dispose cached materials so they are recreated with the correct textures.

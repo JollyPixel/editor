@@ -4,14 +4,16 @@ Tileset loading, UV computation, and pixel-art texture management.
 `NearestFilter` and `SRGBColorSpace` are applied automatically to preserve pixel-art crispness.
 
 ```ts
-const vr = new VoxelRenderer({});
-
-await vr.loadTileset({
+// Pre-load tilesets using TilesetLoader, then pass the loader to VoxelRenderer.
+const loader = new TilesetLoader();
+await loader.fromTileDefinition({
   id: "default",
   src: "assets/tileset.png",
   tileSize: 16
   // cols and rows are optional — derived from the image at load time
 });
+
+const vr = actor.addComponentAndGet(VoxelRenderer, { tilesetLoader: loader });
 
 // Tile at column 2, row 0 — uses the default tileset
 const tileRef: TileRef = {
@@ -135,3 +137,70 @@ interface TilesetDefaultBlockOptions {
 #### `dispose(): void`
 
 Disposes all textures and materials and clears the registry.
+
+## TilesetLoader
+
+Pre-loading utility that fetches tileset textures asynchronously before a `VoxelRenderer`
+is constructed. Pass the populated loader via `VoxelRendererOptions.tilesetLoader` so all
+textures register synchronously during construction — no async code is needed inside
+lifecycle methods (`awake`, `start`, `update`).
+
+### TilesetLoaderOptions
+
+```ts
+interface TilesetLoaderOptions {
+  /**
+   * Optional THREE.LoadingManager to track load progress.
+   */
+  manager?: THREE.LoadingManager;
+  /**
+   * Custom loader implementation. For testing only.
+   */
+  loader?: { loadAsync(url: string): Promise<THREE.Texture<HTMLImageElement>> };
+}
+```
+
+### Properties
+
+```ts
+readonly tilesets: Map<string, TilesetEntry>;
+```
+
+Map from tileset ID to `{ def: TilesetDefinition, texture: THREE.Texture<HTMLImageElement> }`.
+Populated by `fromTileDefinition` and `fromWorld`.
+
+### Methods
+
+#### `fromTileDefinition(def: TilesetDefinition): Promise<void>`
+
+Loads the atlas image at `def.src` and stores the result in `tilesets`. Idempotent —
+calling with the same `def.id` a second time is a no-op (the loader is not invoked again).
+
+#### `fromWorld(data: VoxelWorldJSON): Promise<void>`
+
+Iterates `data.tilesets` and calls `fromTileDefinition` for each. Useful when restoring a
+saved world before constructing `VoxelRenderer`.
+
+### Usage examples
+
+**Single tileset:**
+
+```ts
+const loader = new TilesetLoader();
+await loader.fromTileDefinition({ id: "default", src: "tileset.png", tileSize: 16 });
+
+const vr = actor.addComponentAndGet(VoxelRenderer, { tilesetLoader: loader });
+```
+
+**Restoring a saved world (multi-tileset):**
+
+```ts
+const snapshot = JSON.parse(localStorage.getItem("world")!);
+
+const loader = new TilesetLoader({ manager: assetManager.context.manager });
+await loader.fromWorld(snapshot);                           // pre-load every tileset
+await loader.fromTileDefinition(defaultTilesetDef);        // idempotent if already loaded
+
+const vr = actor.addComponentAndGet(VoxelRenderer, { tilesetLoader: loader });
+vr.load(snapshot);                                         // fully synchronous
+```
