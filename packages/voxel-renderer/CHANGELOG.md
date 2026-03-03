@@ -1,5 +1,40 @@
 # @jolly-pixel/voxel.renderer
 
+## 2.0.0
+
+### Major Changes
+
+- [#268](https://github.com/JollyPixel/editor/pull/268) [`83b0dc4`](https://github.com/JollyPixel/editor/commit/83b0dc4b11cca367714ea9c90d43fb6830759d11) Thanks [@fraxken](https://github.com/fraxken)! - Implement new Network API to synchronize world between multiple clients
+
+- [#272](https://github.com/JollyPixel/editor/pull/272) [`4d08bcb`](https://github.com/JollyPixel/editor/commit/4d08bcbda01fd011c68bf18be8315ecbf48c5338) Thanks [@fraxken](https://github.com/fraxken)! - Introduce a new class to preload Tileset textures and remove async APIs from VoxelRenderer class
+
+### Minor Changes
+
+- [#266](https://github.com/JollyPixel/editor/pull/266) [`9bcd1e2`](https://github.com/JollyPixel/editor/commit/9bcd1e2f85d19898c92465c0bec44dc8170b7521) Thanks [@fraxken](https://github.com/fraxken)! - Refactor hooks to have type-safe metadata
+
+- [#269](https://github.com/JollyPixel/editor/pull/269) [`8989a96`](https://github.com/JollyPixel/editor/commit/8989a9640e13900817f0ecbabe1f814568495458) Thanks [@clemgbld](https://github.com/clemgbld)! - feat(voxel-renderer): Allow to copy (clone) an existing layer
+
+- [#246](https://github.com/JollyPixel/editor/pull/246) [`a2ce2a2`](https://github.com/JollyPixel/editor/commit/a2ce2a2fd6fc536de358b0d5ad966cd53882245c) Thanks [@fraxken](https://github.com/fraxken)! - Major refactor of AssetManager and loaders
+
+- [#256](https://github.com/JollyPixel/editor/pull/256) [`8ab2ff7`](https://github.com/JollyPixel/editor/commit/8ab2ff79c026bfd78157b6a91cdad89bc43388db) Thanks [@fraxken](https://github.com/fraxken)! - Load a tileset synchronously by providing the texture
+
+- [#238](https://github.com/JollyPixel/editor/pull/238) [`6e21474`](https://github.com/JollyPixel/editor/commit/6e214749382a3d62e7625885a2aab64afaffde32) Thanks [@clemgbld](https://github.com/clemgbld)! - refactor(voxel-renderer): improve BlockDefinition usability
+
+- [#271](https://github.com/JollyPixel/editor/pull/271) [`48766e8`](https://github.com/JollyPixel/editor/commit/48766e888ea738dfba674bfd6316ea1cd481e5c5) Thanks [@fraxken](https://github.com/fraxken)! - Remove PoleCross and PoleX shape and keep PoleZ as Pole
+
+- [#270](https://github.com/JollyPixel/editor/pull/270) [`6781b69`](https://github.com/JollyPixel/editor/commit/6781b69f66247f14f26d1086816f0573ae212c23) Thanks [@fraxken](https://github.com/fraxken)! - Refactor FaceDefinition to include culling in addition to face (properly splitting responsability between both)
+
+### Patch Changes
+
+- [#241](https://github.com/JollyPixel/editor/pull/241) [`69f882e`](https://github.com/JollyPixel/editor/commit/69f882e4162ea379d53730c4f4b767e2b99e820c) Thanks [@fraxken](https://github.com/fraxken)! - Avoid a bug with hidden face for shapes such as ramp or stair
+
+- [#264](https://github.com/JollyPixel/editor/pull/264) [`09c7b05`](https://github.com/JollyPixel/editor/commit/09c7b05ef32baf6c78756e6348e441d9f6f1aa47) Thanks [@fraxken](https://github.com/fraxken)! - Remove chunk before rebuilding it
+
+- [#239](https://github.com/JollyPixel/editor/pull/239) [`727c3cd`](https://github.com/JollyPixel/editor/commit/727c3cd92b5cd2d7758665d08b280ccf3ab1b628) Thanks [@fraxken](https://github.com/fraxken)! - Drain and remove empty VoxelLayer
+
+- Updated dependencies [[`a2ce2a2`](https://github.com/JollyPixel/editor/commit/a2ce2a2fd6fc536de358b0d5ad966cd53882245c), [`4d22d1a`](https://github.com/JollyPixel/editor/commit/4d22d1aadb71a087b1d7472924d5dfabbb05fe77), [`3380d96`](https://github.com/JollyPixel/editor/commit/3380d968dbad604dffa68eebc947e1f75919f9ef)]:
+  - @jolly-pixel/engine@3.0.0
+
 ## 1.4.0
 
 ### Minor Changes
