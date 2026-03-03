@@ -41,7 +41,8 @@ import type { TilesetLoader } from "./tileset/TilesetLoader.ts";
 import { VoxelWorld } from "./world/VoxelWorld.ts";
 import {
   VoxelLayer,
-  type VoxelLayerConfigurableOptions
+  type VoxelLayerConfigurableOptions,
+  type VoxelLayerOptions
 } from "./world/VoxelLayer.ts";
 import { VoxelChunk } from "./world/VoxelChunk.ts";
 import type { VoxelEntry, VoxelCoord } from "./world/types.ts";
@@ -51,7 +52,7 @@ import type {
   VoxelLayerHookListener,
   VoxelLayerHookEvent
 } from "./hooks.ts";
-import type { VoxelSetOptions, VoxelRemoveOptions } from "./types.ts";
+import type { VoxelSetOptions, VoxelRemoveOptions, PartialExcept } from "./types.ts";
 
 export type { VoxelSetOptions, VoxelRemoveOptions };
 
@@ -559,6 +560,21 @@ export class VoxelRenderer extends ActorComponent {
     name: string
   ): VoxelLayer | undefined {
     return this.world.getLayer(name);
+  }
+
+  cloneLayer(name: string, options: PartialExcept<VoxelLayerOptions, "name">): VoxelLayer | undefined {
+    const clone = this.world.cloneLayer(name, options);
+    if (!clone) {
+      return undefined;
+    }
+
+    this.#emitHook({
+      action: "cloned",
+      layerName: name,
+      metadata: { options }
+    });
+
+    return clone;
   }
 
   addLayer(

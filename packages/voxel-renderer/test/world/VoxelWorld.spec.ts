@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { VoxelWorld } from "../../src/world/VoxelWorld.ts";
+import { VoxelLayer } from "../../src/world/VoxelLayer.ts";
 import { FACE } from "../../src/utils/math.ts";
 
 function makeEntry(blockId = 1, transform = 0) {
@@ -297,4 +298,37 @@ describe("VoxelWorld chunkSize", () => {
     const world = new VoxelWorld(8);
     assert.equal(world.chunkSize, 8);
   });
+});
+
+describe("VoxelWorld clone", () => {
+  it("shouldn't clone a layer that doesn't exist", () => {
+    const world = new VoxelWorld(8);
+    assert.equal(world.cloneLayer("A", { name: "A_1" }), undefined);
+    assert.equal(world.getLayer("A"), undefined);
+  });
+  it("should clone a layer", () => {
+    const world = new VoxelWorld(8);
+    world.addLayer("A");
+    const layer = removeId(world.getLayer("A")!);
+    const expected = { ...layer, name: "A_1" };
+    const clone = removeId(world.cloneLayer("A", { name: "A_1" })!);
+    assert.deepEqual(clone, expected);
+    assert.deepEqual(removeId(world.getLayer("A_1")!), expected);
+  });
+
+  it("should be able to override or add properties", () => {
+    const world = new VoxelWorld(8);
+    world.addLayer("A");
+    const layer = removeId(world.getLayer("A")!);
+    const expected = { ...layer, name: "A_1", visible: false };
+    const clone = removeId(world.cloneLayer("A", { name: "A_1", visible: false })!);
+    assert.deepEqual(clone, expected);
+    assert.deepEqual(removeId(world.getLayer("A_1")!), expected);
+  });
+
+  function removeId(layer: VoxelLayer) {
+    const { id, ...rest } = layer.toJSON();
+
+    return rest;
+  }
 });

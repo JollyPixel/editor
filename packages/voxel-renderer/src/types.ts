@@ -17,3 +17,5 @@ export interface VoxelSetOptions {
 export interface VoxelRemoveOptions {
   position: Vector3Like;
 }
+
+export type PartialExcept<T, K extends keyof T> = Partial<Omit<T, K>> & Pick<T, K>;

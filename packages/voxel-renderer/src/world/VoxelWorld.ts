@@ -4,7 +4,8 @@ import type { Vector3Like } from "three";
 // Import Internal Dependencies
 import {
   VoxelLayer,
-  type VoxelLayerConfigurableOptions
+  type VoxelLayerConfigurableOptions,
+  type VoxelLayerOptions
 } from "./VoxelLayer.ts";
 import { VoxelChunk, DEFAULT_CHUNK_SIZE } from "./VoxelChunk.ts";
 import type { VoxelEntry, VoxelCoord } from "./types.ts";
@@ -14,6 +15,7 @@ import type {
   VoxelObjectJSON,
   VoxelObjectLayerJSON
 } from "../serialization/VoxelSerializer.ts";
+import type { PartialExcept } from "../types.ts";
 
 // CONSTANTS
 let kLayerIdCounter = 0;
@@ -183,6 +185,18 @@ export class VoxelWorld {
     return this.#layers.find(
       (layer) => layer.name === name
     );
+  }
+
+  cloneLayer(name: string, options: PartialExcept<VoxelLayerOptions, "name">): VoxelLayer | undefined {
+    const layer = this.getLayer(name);
+    if (!layer) {
+      return undefined;
+    }
+
+    const clone = layer.clone({ ...options, id: `${layer.id}_${kLayerIdCounter++}` });
+    this.#layers.push(clone);
+
+    return clone;
   }
 
   // --- Object layer management --- //

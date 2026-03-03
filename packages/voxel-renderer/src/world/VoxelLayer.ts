@@ -368,4 +368,12 @@ export class VoxelLayer {
       voxels: this.#exportVoxels()
     };
   }
+
+  clone(opts: Partial<VoxelLayerOptions> = {}): VoxelLayer {
+    return new VoxelLayer({
+      chunkSize: this.#chunkSize,
+      ...this.toJSON(),
+      ...opts
+    });
+  }
 }

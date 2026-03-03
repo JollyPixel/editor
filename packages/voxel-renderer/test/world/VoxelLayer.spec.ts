@@ -199,3 +199,20 @@ describe("getChunks", () => {
     assert.equal(chunks.length, 2);
   });
 });
+
+describe("clone", () => {
+  it("should clone a layer", () => {
+    const layer = makeLayer({ chunkSize: 4 });
+    const clone = layer.clone();
+    assert.deepEqual(clone.toJSON(), layer.toJSON());
+    assert.notEqual(clone, layer);
+  });
+
+  it("should be able to overide or add value on the fly", () => {
+    const layer = makeLayer({ chunkSize: 4 });
+    const clone = layer.clone({ visible: false, name: "Cloned" });
+    assert.deepEqual(clone.toJSON(), {
+      ...layer.toJSON(), visible: false, name: "Cloned"
+    });
+  });
+});
