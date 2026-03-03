@@ -5,6 +5,7 @@ import {
 } from "@jolly-pixel/engine";
 import {
   VoxelRenderer,
+  TilesetLoader,
   type TilesetDefinition,
   type VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
@@ -32,7 +33,7 @@ export interface EditorSceneOptions {
 }
 
 export class EditorScene extends Systems.Scene {
-  #texture: THREE.Texture<HTMLImageElement>;
+  #tilesetLoader!: TilesetLoader;
   #defaultLayerName: string;
   #defaultTileset: TilesetDefinition;
   #pendingLoad: VoxelWorldJSON | null = null;
@@ -47,15 +48,14 @@ export class EditorScene extends Systems.Scene {
   ): Promise<void> {
     const { assetManager } = context;
 
-    const textureLoader = new THREE.TextureLoader(
-      assetManager.context.manager
-    );
-    const texture = await textureLoader.loadAsync(
-      this.#defaultTileset.src
-    );
-
-    this.#texture = texture;
+    this.#tilesetLoader = new TilesetLoader({ manager: assetManager.context.manager });
     this.#pendingLoad = LocalStoragePersistence.load();
+
+    // Pre-load world tilesets first (if restoring), then default (idempotent if already loaded).
+    if (this.#pendingLoad !== null) {
+      await this.#tilesetLoader.fromWorld(this.#pendingLoad);
+    }
+    await this.#tilesetLoader.fromTileDefinition(this.#defaultTileset);
   }
 
   constructor(
@@ -104,12 +104,11 @@ export class EditorScene extends Systems.Scene {
           material.transparent = true;
         },
         alphaTest: 0,
-        onLayerUpdated: (evt) => this.editorState.dispatchLayerUpdated(evt)
+        onLayerUpdated: (evt) => this.editorState.dispatchLayerUpdated(evt),
+        tilesetLoader: this.#tilesetLoader
       });
     this.vr = vr;
     this.editorState.setSelectedLayer(this.#defaultLayerName);
-
-    vr.loadTilesetSync(this.#defaultTileset, this.#texture);
 
     // Skip default blocks when restoring a saved world — vr.load() will
     // register the persisted definitions (which carry user edits).
@@ -126,15 +125,12 @@ export class EditorScene extends Systems.Scene {
     persistence.start();
 
     if (this.#pendingLoad !== null) {
-      vr.load(this.#pendingLoad)
-        .then(() => {
-          this.editorState.dispatchBlockRegistryChanged();
-          const layers = vr.world.getLayers();
-          if (layers.length > 0) {
-            this.editorState.setSelectedLayer(layers[0].name);
-          }
-        })
-        .catch(console.error);
+      vr.load(this.#pendingLoad);
+      this.editorState.dispatchBlockRegistryChanged();
+      const layers = vr.world.getLayers();
+      if (layers.length > 0) {
+        this.editorState.setSelectedLayer(layers[0].name);
+      }
       this.#pendingLoad = null;
     }
 

@@ -4,7 +4,16 @@
 Each chunk is rebuilt only when its content changes, keeping GPU work proportional to edits rather than world size.
 
 ```ts
+// Pre-load tilesets before constructing VoxelRenderer (no async in lifecycle).
+const loader = new TilesetLoader();
+await loader.fromTileDefinition({
+  id: "default",
+  src: "tileset.png",
+  tileSize: 16
+});
+
 const vr = actor.addComponentAndGet(VoxelRenderer, {
+  tilesetLoader: loader,
   layers: ["Ground"],
   blocks: [
     {
@@ -19,12 +28,6 @@ const vr = actor.addComponentAndGet(VoxelRenderer, {
       }
     }
   ]
-});
-
-await vr.loadTileset({
-  id: "default",
-  src: "tileset.png",
-  tileSize: 16
 });
 
 vr.setVoxel("Ground", {
@@ -136,6 +139,13 @@ interface VoxelRendererOptions {
    * Useful for synchronizing external systems with changes to the voxel world.
    */
   onLayerUpdated?: VoxelLayerHookListener;
+
+  /**
+   * Optional pre-loaded tileset collection. All tilesets in the loader are
+   * registered synchronously during construction. Use `TilesetLoader.fromTileDefinition()`
+   * or `TilesetLoader.fromWorld()` to populate it before constructing `VoxelRenderer`.
+   */
+  tilesetLoader?: TilesetLoader;
 }
 ```
 
@@ -285,23 +295,22 @@ getVoxelNeighbour(layerName: string, position: VoxelCoord, face: Face): VoxelEnt
 Returns the voxel immediately adjacent to `position` in the given face direction.
 Composited (first overload) or restricted to a specific layer (second overload).
 
-#### `loadTileset(def: TilesetDefinition): Promise<void>`
+#### `loadTileset(def: TilesetDefinition, texture: THREE.Texture<HTMLImageElement>): void`
 
-Loads a tileset image via the actor's loading manager. The first loaded tileset becomes
-the default for `TileRef` values with no explicit `tilesetId`.
-
-#### `loadTilesetSync(def: TilesetDefinition, texture: THREE.Texture< HTMLImageElement >): void`
-
-Same as `loadTileset` but synchronous and you have to provide the texture.
+Registers an already-loaded texture for a tileset definition. The first registered tileset
+becomes the default for `TileRef` values with no explicit `tilesetId`.
+Prefer passing a `TilesetLoader` via `VoxelRendererOptions.tilesetLoader` for pre-loading;
+use this method only when adding a tileset after construction.
 
 #### `save(): VoxelWorldJSON`
 
 Serialises the full world state (layers, voxels, tileset metadata) to a plain JSON object.
 
-#### `load(data: VoxelWorldJSON): Promise<void>`
+#### `load(data: VoxelWorldJSON): void`
 
-Clears the current world, restores state from a JSON snapshot, and reloads any
-referenced tilesets that are not already loaded.
+Clears the current world and restores state from a JSON snapshot. All tilesets referenced
+by the snapshot must have been pre-loaded via `TilesetLoader` before this call — if a
+tileset is missing, an error is thrown. Already-registered tilesets are skipped.
 
 #### `markAllChunksDirty(source?: string): void`
 

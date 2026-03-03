@@ -53,7 +53,7 @@ export class VoxelSyncClient {
 
     // Load world snapshots received from the server.
     this.#transport.onSnapshot = (snapshot: VoxelWorldJSON) => {
-      void this.#renderer.load(snapshot);
+      this.#renderer.load(snapshot);
     };
   }
 

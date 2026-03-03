@@ -61,6 +61,11 @@ export {
   type TileRef,
   type TilesetDefinition
 } from "./tileset/TilesetManager.ts";
+export {
+  TilesetLoader,
+  type TilesetLoaderOptions,
+  type TilesetEntry
+} from "./tileset/TilesetLoader.ts";
 
 // World
 export {
