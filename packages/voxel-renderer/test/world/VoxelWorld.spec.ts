@@ -332,3 +332,104 @@ describe("VoxelWorld clone", () => {
     return rest;
   }
 });
+
+describe("VoxelWorld mergeLayer", () => {
+  it("returns false when source layer does not exist", () => {
+    const world = new VoxelWorld(4);
+    world.addLayer("Target");
+    assert.equal(world.mergeLayer("NoSuch", "Target"), false);
+  });
+
+  it("returns false when target layer does not exist", () => {
+    const world = new VoxelWorld(4);
+    world.addLayer("Source");
+    assert.equal(world.mergeLayer("Source", "NoSuch"), false);
+  });
+
+  it("copies voxels from source into target and returns true", () => {
+    const world = new VoxelWorld(4);
+    world.addLayer("Source");
+    world.addLayer("Target");
+    const entry = makeEntry(3, 0);
+    world.setVoxelAt("Source", { x: 1, y: 0, z: 0 }, entry);
+
+    const result = world.mergeLayer("Source", "Target");
+
+    assert.equal(result, true);
+    assert.equal(world.getLayer("Target")!.getVoxelAt({ x: 1, y: 0, z: 0 }), entry);
+  });
+
+  it("source layer voxels overwrite target voxels at the same position", () => {
+    const world = new VoxelWorld(4);
+    world.addLayer("Source");
+    world.addLayer("Target");
+    const srcEntry = makeEntry(9, 2);
+    const tgtEntry = makeEntry(1, 0);
+    world.setVoxelAt("Target", { x: 0, y: 0, z: 0 }, tgtEntry);
+    world.setVoxelAt("Source", { x: 0, y: 0, z: 0 }, srcEntry);
+
+    world.mergeLayer("Source", "Target");
+
+    assert.equal(world.getLayer("Target")!.getVoxelAt({ x: 0, y: 0, z: 0 }), srcEntry);
+  });
+});
+
+describe("VoxelWorld mergeAllLayers", () => {
+  it("returns null when there are no layers", () => {
+    const world = new VoxelWorld(4);
+    assert.equal(world.mergeAllLayers(), null);
+  });
+
+  it("returns the existing layer and is a no-op with one layer", () => {
+    const world = new VoxelWorld(4);
+    const layer = world.addLayer("Only");
+    const entry = makeEntry(2, 0);
+    world.setVoxelAt("Only", { x: 0, y: 0, z: 0 }, entry);
+
+    const result = world.mergeAllLayers();
+
+    assert.equal(result, layer);
+    assert.equal(world.getLayers().length, 1);
+    assert.equal(layer.getVoxelAt({ x: 0, y: 0, z: 0 }), entry);
+  });
+
+  it("collapses multiple layers into one", () => {
+    const world = new VoxelWorld(4);
+    world.addLayer("Base");
+    world.addLayer("Top");
+    world.setVoxelAt("Base", { x: 0, y: 0, z: 0 }, makeEntry(1, 0));
+    world.setVoxelAt("Top", { x: 1, y: 0, z: 0 }, makeEntry(2, 0));
+
+    const result = world.mergeAllLayers();
+
+    assert.equal(world.getLayers().length, 1);
+    assert.ok(result !== null);
+  });
+
+  it("higher-priority layer wins at conflict (compositor order)", () => {
+    const world = new VoxelWorld(4);
+    // Base has order 0, Top has order 1 (higher priority).
+    world.addLayer("Base");
+    world.addLayer("Top");
+    const basEntry = makeEntry(1, 0);
+    const topEntry = makeEntry(9, 0);
+    world.setVoxelAt("Base", { x: 0, y: 0, z: 0 }, basEntry);
+    world.setVoxelAt("Top", { x: 0, y: 0, z: 0 }, topEntry);
+
+    const result = world.mergeAllLayers()!;
+
+    // Higher priority (Top) should win.
+    assert.equal(result.getVoxelAt({ x: 0, y: 0, z: 0 }), topEntry);
+  });
+
+  it("only one layer remains after mergeAllLayers", () => {
+    const world = new VoxelWorld(4);
+    world.addLayer("A");
+    world.addLayer("B");
+    world.addLayer("C");
+
+    world.mergeAllLayers();
+
+    assert.equal(world.getLayers().length, 1);
+  });
+});

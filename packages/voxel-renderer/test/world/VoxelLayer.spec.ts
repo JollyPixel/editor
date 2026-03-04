@@ -216,3 +216,66 @@ describe("clone", () => {
     });
   });
 });
+
+describe("VoxelLayer mergeFrom", () => {
+  it("copies voxels at correct world positions (both layers at offset {0,0,0})", () => {
+    const source = makeLayer({ id: "src", name: "Source" });
+    const target = makeLayer({ id: "tgt", name: "Target" });
+    const entry = makeEntry(5, 2);
+    source.setVoxelAt({ x: 2, y: 1, z: 3 }, entry);
+
+    target.mergeFrom(source);
+
+    assert.equal(target.getVoxelAt({ x: 2, y: 1, z: 3 }), entry);
+  });
+
+  it("applies source offset: voxel at local (1,0,0) with source offset {5,0,0} lands at world (6,0,0)", () => {
+    const source = makeLayer({ id: "src", name: "Source", offset: { x: 5, y: 0, z: 0 } });
+    const target = makeLayer({ id: "tgt", name: "Target" });
+    const entry = makeEntry(3, 0);
+    // Local (1,0,0) → world (6,0,0)
+    source.setVoxelAt({ x: 6, y: 0, z: 0 }, entry);
+
+    target.mergeFrom(source);
+
+    assert.equal(target.getVoxelAt({ x: 6, y: 0, z: 0 }), entry);
+    assert.equal(target.getVoxelAt({ x: 1, y: 0, z: 0 }), undefined);
+  });
+
+  it("applies target offset: target with offset {3,0,0} stores world (6,0,0) at local (3,0,0)", () => {
+    const source = makeLayer({ id: "src", name: "Source", offset: { x: 5, y: 0, z: 0 } });
+    const target = makeLayer({ id: "tgt", name: "Target", offset: { x: 3, y: 0, z: 0 } });
+    const entry = makeEntry(7, 1);
+    source.setVoxelAt({ x: 6, y: 0, z: 0 }, entry);
+
+    target.mergeFrom(source);
+
+    // World (6,0,0) should be in target (local (3,0,0))
+    assert.equal(target.getVoxelAt({ x: 6, y: 0, z: 0 }), entry);
+  });
+
+  it("source voxel overwrites existing target voxel at same world position", () => {
+    const source = makeLayer({ id: "src", name: "Source" });
+    const target = makeLayer({ id: "tgt", name: "Target" });
+    const original = makeEntry(1, 0);
+    const overwrite = makeEntry(9, 3);
+    target.setVoxelAt({ x: 0, y: 0, z: 0 }, original);
+    source.setVoxelAt({ x: 0, y: 0, z: 0 }, overwrite);
+
+    target.mergeFrom(source);
+
+    assert.equal(target.getVoxelAt({ x: 0, y: 0, z: 0 }), overwrite);
+  });
+
+  it("source layer is not modified after merge", () => {
+    const source = makeLayer({ id: "src", name: "Source" });
+    const target = makeLayer({ id: "tgt", name: "Target" });
+    const entry = makeEntry(2, 0);
+    source.setVoxelAt({ x: 1, y: 1, z: 1 }, entry);
+
+    target.mergeFrom(source);
+
+    assert.equal(source.getVoxelAt({ x: 1, y: 1, z: 1 }), entry);
+    assert.equal(source.chunkCount, 1);
+  });
+});

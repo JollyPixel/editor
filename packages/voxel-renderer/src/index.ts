@@ -3,6 +3,7 @@ export {
   VoxelRenderer,
   VoxelRotation,
   type VoxelRendererOptions,
+  type VoxelLoadOptions,
   type VoxelSetOptions,
   type VoxelRemoveOptions
 } from "./VoxelRenderer.ts";

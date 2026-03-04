@@ -85,6 +85,10 @@ export function applyCommandToWorld(
       world.moveLayer(cmd.layerName, cmd.metadata.direction);
       break;
 
+    case "merged":
+      world.mergeLayer(cmd.layerName, cmd.metadata.targetLayerName);
+      break;
+
     case "object-layer-added":
       world.addObjectLayer(cmd.layerName);
       break;
