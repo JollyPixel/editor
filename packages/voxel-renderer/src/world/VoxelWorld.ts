@@ -199,6 +199,64 @@ export class VoxelWorld {
     return clone;
   }
 
+  /**
+   * Merges all voxels from `sourceName` into `targetName`.
+   * Source voxels overwrite target voxels at the same world position.
+   * Returns false if either layer does not exist.
+   */
+  mergeLayer(
+    sourceName: string,
+    targetName: string
+  ): boolean {
+    const source = this.getLayer(sourceName);
+    const target = this.getLayer(targetName);
+    if (!source || !target) {
+      return false;
+    }
+
+    target.mergeFrom(source);
+    this.#markLayerDirty(target);
+
+    return true;
+  }
+
+  /**
+   * Collapses all voxel layers into a single layer using compositor order
+   * (lowest-priority voxels are overwritten by higher-priority ones).
+   * All layers except the base (lowest order) are removed from the world.
+   * Returns null when there are no layers; returns the existing layer when
+   * there is only one.
+   */
+  mergeAllLayers(): VoxelLayer | null {
+    if (this.#layers.length === 0) {
+      return null;
+    }
+    if (this.#layers.length === 1) {
+      return this.#layers[0];
+    }
+
+    // Sort ascending so we merge from lowest to highest priority.
+    const sorted = [...this.#layers].sort((a, b) => a.order - b.order);
+    const target = sorted[0];
+
+    for (let i = 1; i < sorted.length; i++) {
+      target.mergeFrom(sorted[i]);
+    }
+
+    // Remove all but the target layer.
+    for (let i = 1; i < sorted.length; i++) {
+      const idx = this.#layers.findIndex((l) => l === sorted[i]);
+      if (idx !== -1) {
+        this.#layersToRemove.push(this.#layers[idx]);
+        this.#layers.splice(idx, 1);
+      }
+    }
+
+    this.#markLayerDirty(target);
+
+    return target;
+  }
+
   // --- Object layer management --- //
 
   addObjectLayer(

@@ -376,4 +376,20 @@ export class VoxelLayer {
       ...opts
     });
   }
+
+  mergeFrom(source: VoxelLayer): void {
+    for (const chunk of source.getChunks()) {
+      const wx0 = chunk.cx * chunk.size + source.offset.x;
+      const wy0 = chunk.cy * chunk.size + source.offset.y;
+      const wz0 = chunk.cz * chunk.size + source.offset.z;
+
+      for (const [idx, entry] of chunk.entries()) {
+        const { lx, ly, lz } = chunk.fromLinearIndex(idx);
+        this.setVoxelAt(
+          { x: wx0 + lx, y: wy0 + ly, z: wz0 + lz },
+          entry
+        );
+      }
+    }
+  }
 }
