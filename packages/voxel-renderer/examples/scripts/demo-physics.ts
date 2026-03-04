@@ -12,6 +12,7 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import {
   VoxelRenderer,
+  TilesetLoader,
   Face,
   type BlockDefinition
 } from "../../src/index.ts";
@@ -39,6 +40,15 @@ const rapierWorld = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
 const runtime = new Runtime(canvas, {
   includePerformanceStats: true
 });
+
+const tileDef = {
+  tileSize: 32,
+  src: "tileset/UV_cube.png",
+  id: "default"
+};
+
+const tilesetLoader = new TilesetLoader();
+await tilesetLoader.fromTileDefinition(tileDef);
 
 const { world } = runtime;
 world.logger.setLevel("debug");
@@ -120,7 +130,8 @@ const voxelMap = world.createActor("map")
         // Rapier namespace / World instance satisfy them without any cast.
         api: RAPIER as never,
         world: rapierWorld as never
-      }
+      },
+      tilesetLoader
     }
   );
 
@@ -179,13 +190,6 @@ world.on("beforeFixedUpdate", (_dt) => {
 // ── Sphere actor with keyboard controller ─────────────────────────────────────
 world.createActor("sphere")
   .addComponent(SphereBehavior, { body: sphereBody, mesh: sphereMesh });
-
-// ── Tileset + runtime start ───────────────────────────────────────────────────
-voxelMap.loadTileset({
-  tileSize: 32,
-  src: "tileset/UV_cube.png",
-  id: "default"
-}).catch(console.error);
 
 createExamplesMenu();
 loadRuntime(runtime).catch(console.error);

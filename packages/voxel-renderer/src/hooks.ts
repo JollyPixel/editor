@@ -38,6 +38,13 @@ export type VoxelLayerHookEvent =
     };
   }
   | {
+    action: "merged";
+    layerName: string;
+    metadata: {
+      targetLayerName: string;
+    };
+  }
+  | {
     action: "offset-updated";
     layerName: string;
     metadata: { offset: VoxelCoord; } | { delta: VoxelCoord; };
