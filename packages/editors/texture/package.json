@@ -21,6 +21,6 @@
     "@jolly-pixel/resize-handle": "1.0.0",
     "@jolly-pixel/runtime": "3.3.0",
     "lit": "3.3.2",
-    "three": "0.183.1"
+    "three": "0.183.2"
   }
 }
