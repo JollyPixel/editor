@@ -56,6 +56,15 @@ import type { VoxelSetOptions, VoxelRemoveOptions, PartialExcept } from "./types
 
 export type { VoxelSetOptions, VoxelRemoveOptions };
 
+export interface VoxelLoadOptions {
+  /**
+   * When true, all voxel layers are collapsed into one before rendering.
+   * Higher-priority layers overwrite lower ones at the same world position.
+   * Use this for runtime loading when multi-layer editing is not needed.
+   */
+  mergeLayers?: boolean;
+}
+
 type MaterialCustomizerFn = (
   material: THREE.MeshLambertMaterial | THREE.MeshStandardMaterial,
   tilesetId: string
@@ -577,6 +586,24 @@ export class VoxelRenderer extends ActorComponent {
     return clone;
   }
 
+  mergeLayer(
+    sourceLayerName: string,
+    targetLayerName: string
+  ): boolean {
+    const merged = this.world.mergeLayer(sourceLayerName, targetLayerName);
+    if (!merged) {
+      return false;
+    }
+
+    this.#emitHook({
+      action: "merged",
+      layerName: sourceLayerName,
+      metadata: { targetLayerName }
+    });
+
+    return true;
+  }
+
   addLayer(
     name: string,
     options: VoxelLayerConfigurableOptions = {}
@@ -807,7 +834,8 @@ export class VoxelRenderer extends ActorComponent {
   }
 
   load(
-    data: VoxelWorldJSON
+    data: VoxelWorldJSON,
+    options: VoxelLoadOptions = {}
   ): void {
     // Clear existing meshes before replacing world data.
     for (const mesh of this.#chunkMeshes.values()) {
@@ -850,6 +878,10 @@ export class VoxelRenderer extends ActorComponent {
       mat.dispose();
     }
     this.#materials.clear();
+
+    if (options.mergeLayers) {
+      this.world.mergeAllLayers();
+    }
 
     this.#rebuildAllChunks("load");
   }

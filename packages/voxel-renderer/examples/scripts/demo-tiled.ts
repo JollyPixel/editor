@@ -7,9 +7,6 @@ import {
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import {
-  VoxelRenderer
-} from "../../src/index.ts";
 import { VoxelBehavior } from "./components/VoxelMap.ts";
 import { createExamplesMenu } from "./utils/menu.ts";
 
@@ -49,15 +46,6 @@ world.createActor("camera")
 // ── VoxelRenderer ─────────────────────────────────────────────────────────────
 // No blocks or layers supplied here — load() will register them from the JSON.
 world.createActor("map")
-  .addComponent(VoxelRenderer, {
-    material: "lambert",
-    materialCustomizer: (material) => {
-      if (material instanceof THREE.MeshStandardMaterial) {
-        material.metalness = 0;
-        material.roughness = 0.85;
-      }
-    }
-  })
   .addComponent(VoxelBehavior);
 
 // ── Load runtime ────────────────────────────────────────────
