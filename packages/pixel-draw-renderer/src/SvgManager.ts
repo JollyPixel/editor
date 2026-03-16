@@ -128,6 +128,10 @@ export class SvgManager {
     this.#highlightElements.setAttribute("visibility", "visible");
   }
 
+  getSvgElement(): SVGElement {
+    return this.#svg;
+  }
+
   hideSvgHighlight(): void {
     this.#highlightElements.setAttribute("visibility", "hidden");
   }

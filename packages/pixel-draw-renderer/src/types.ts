@@ -3,7 +3,26 @@ export type Vec2 = {
   y: number;
 };
 
-export type Mode = "paint" | "move";
+export type Mode =
+  | "paint"
+  | "move"
+  | "uv";
+
+export type UVHandleType =
+  | "corner-tl"
+  | "corner-tr"
+  | "corner-bl"
+  | "corner-br"
+  | "edge-t"
+  | "edge-b"
+  | "edge-l"
+  | "edge-r"
+  | "body";
+
+export interface UVHandle {
+  readonly regionId: string;
+  readonly type: UVHandleType;
+}
 
 export interface DefaultViewport {
   readonly zoom: number;
