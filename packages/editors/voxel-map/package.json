@@ -36,6 +36,6 @@
     "vanilla-picker": "2.12.3"
   },
   "devDependencies": {
-    "@types/three": "^0.182.0"
+    "@types/three": "^0.183.1"
   }
 }
