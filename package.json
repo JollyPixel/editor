@@ -7,7 +7,7 @@
   "scripts": {
     "build": "npm run build --ws --if-present",
     "test": "npm run test --ws --if-present",
-    "lint": "npx eslint packages",
+    "lint": "eslint packages",
     "ci:publish": "changeset publish",
     "ci:version": "changeset version",
     "clear": "clear-ts-build",

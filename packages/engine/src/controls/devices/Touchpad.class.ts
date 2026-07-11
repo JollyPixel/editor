@@ -206,10 +206,7 @@ export class Touchpad extends EventEmitter<
 
 function* extractTouchPositions(
   event: TouchEvent
-): IterableIterator<{
-    touch: Touch;
-    position: TouchPosition;
-  }> {
+): IterableIterator<{ touch: Touch; position: TouchPosition; }> {
   if (!event.target) {
     return;
   }
