@@ -4,7 +4,6 @@
   "type": "module",
   "scripts": {
     "prepublish": "rimraf ./dist && tsc -b",
-    "check:ts": "tsc --noEmit",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"

@@ -97,15 +97,15 @@ export class Keyboard extends EventEmitter<
   }
 
   connect() {
-    this.#documentAdapter.addEventListener("keydown", this.onKeyDown);
-    this.#documentAdapter.addEventListener("keypress", this.onKeyPress);
-    this.#documentAdapter.addEventListener("keyup", this.onKeyUp);
+    this.#documentAdapter.addEventListener("keydown", this.#onKeyDown);
+    this.#documentAdapter.addEventListener("keypress", this.#onKeyPress);
+    this.#documentAdapter.addEventListener("keyup", this.#onKeyUp);
   }
 
   disconnect() {
-    this.#documentAdapter.removeEventListener("keydown", this.onKeyDown);
-    this.#documentAdapter.removeEventListener("keypress", this.onKeyPress);
-    this.#documentAdapter.removeEventListener("keyup", this.onKeyUp);
+    this.#documentAdapter.removeEventListener("keydown", this.#onKeyDown);
+    this.#documentAdapter.removeEventListener("keypress", this.#onKeyPress);
+    this.#documentAdapter.removeEventListener("keyup", this.#onKeyUp);
   }
 
   reset() {
@@ -116,7 +116,7 @@ export class Keyboard extends EventEmitter<
     this.autoRepeatedCode = null;
   }
 
-  private onKeyDown = (event: KeyboardEvent) => {
+  #onKeyDown = (event: KeyboardEvent) => {
     const isControlKey = kControlKeys.has(event.code);
     if (isControlKey) {
       event.preventDefault();
@@ -143,14 +143,14 @@ export class Keyboard extends EventEmitter<
     return !isControlKey;
   };
 
-  private onKeyPress = (event: KeyboardEvent) => {
+  #onKeyPress = (event: KeyboardEvent) => {
     if (event.key.length === 1 && event.key.charCodeAt(0) >= 32) {
       this.newChar += event.key;
       this.emit("press", event);
     }
   };
 
-  private onKeyUp = (event: KeyboardEvent) => {
+  #onKeyUp = (event: KeyboardEvent) => {
     this.buttonsDown.delete(event.code);
     this.emit("up", event);
   };

@@ -121,23 +121,23 @@ export class Mouse extends EventEmitter<
   }
 
   connect() {
-    this.#canvas.addEventListener("mousemove", this.onMouseMove);
-    this.#canvas.addEventListener("mousedown", this.onMouseDown);
-    this.#canvas.addEventListener("mouseup", this.onMouseUp);
-    this.#canvas.addEventListener("dblclick", this.onMouseDoubleClick);
-    this.#canvas.addEventListener("wheel", this.onMouseWheel);
-    this.#documentAdapter.addEventListener("pointerlockchange", this.onPointerLockChange, false);
-    this.#documentAdapter.addEventListener("pointerlockerror", this.onPointerLockError, false);
+    this.#canvas.addEventListener("mousemove", this.#onMouseMove);
+    this.#canvas.addEventListener("mousedown", this.#onMouseDown);
+    this.#canvas.addEventListener("mouseup", this.#onMouseUp);
+    this.#canvas.addEventListener("dblclick", this.#onMouseDoubleClick);
+    this.#canvas.addEventListener("wheel", this.#onMouseWheel);
+    this.#documentAdapter.addEventListener("pointerlockchange", this.#onPointerLockChange, false);
+    this.#documentAdapter.addEventListener("pointerlockerror", this.#onPointerLockError, false);
   }
 
   disconnect() {
-    this.#canvas.removeEventListener("mousemove", this.onMouseMove);
-    this.#canvas.removeEventListener("mousedown", this.onMouseDown);
-    this.#canvas.removeEventListener("mouseup", this.onMouseUp);
-    this.#canvas.removeEventListener("dblclick", this.onMouseDoubleClick);
-    this.#canvas.removeEventListener("wheel", this.onMouseWheel);
-    this.#documentAdapter.removeEventListener("pointerlockchange", this.onPointerLockChange, false);
-    this.#documentAdapter.removeEventListener("pointerlockerror", this.onPointerLockError, false);
+    this.#canvas.removeEventListener("mousemove", this.#onMouseMove);
+    this.#canvas.removeEventListener("mousedown", this.#onMouseDown);
+    this.#canvas.removeEventListener("mouseup", this.#onMouseUp);
+    this.#canvas.removeEventListener("dblclick", this.#onMouseDoubleClick);
+    this.#canvas.removeEventListener("wheel", this.#onMouseWheel);
+    this.#documentAdapter.removeEventListener("pointerlockchange", this.#onPointerLockChange, false);
+    this.#documentAdapter.removeEventListener("pointerlockerror", this.#onPointerLockError, false);
   }
 
   reset() {
@@ -275,7 +275,7 @@ export class Mouse extends EventEmitter<
     }
   }
 
-  private onMouseMove = (event: any) => {
+  #onMouseMove = (event: any) => {
     event.preventDefault();
 
     if (this.#wantsPointerLock) {
@@ -301,7 +301,7 @@ export class Mouse extends EventEmitter<
     this.emit("move", event);
   };
 
-  private onMouseDown = (event: MouseEvent) => {
+  #onMouseDown = (event: MouseEvent) => {
     event.preventDefault();
     this.#canvas.focus();
     this.buttonsDown[event.button] = true;
@@ -312,7 +312,7 @@ export class Mouse extends EventEmitter<
     this.emit("down", event);
   };
 
-  private onMouseUp = (event: MouseEvent) => {
+  #onMouseUp = (event: MouseEvent) => {
     if (this.buttonsDown[event.button]) {
       event.preventDefault();
     }
@@ -324,12 +324,12 @@ export class Mouse extends EventEmitter<
     this.emit("up", event);
   };
 
-  private onMouseDoubleClick = (event: MouseEvent) => {
+  #onMouseDoubleClick = (event: MouseEvent) => {
     event.preventDefault();
     this.buttons[event.button].doubleClicked = true;
   };
 
-  private onMouseWheel = (event: WheelEvent) => {
+  #onMouseWheel = (event: WheelEvent) => {
     event.preventDefault();
     const [deltaX, deltaY] = Mouse.getWheelDelta(event);
 
@@ -339,7 +339,7 @@ export class Mouse extends EventEmitter<
     return false;
   };
 
-  private onPointerLockChange = () => {
+  #onPointerLockChange = () => {
     const isPointerLocked = this.locked;
     if (this.#wasPointerLocked !== isPointerLocked) {
       this.emit("lockStateChange", isPointerLocked ? "locked" : "unlocked");
@@ -347,7 +347,7 @@ export class Mouse extends EventEmitter<
     }
   };
 
-  private onPointerLockError = () => {
+  #onPointerLockError = () => {
     if (this.#wasPointerLocked) {
       this.emit("lockStateChange", "unlocked");
       this.#wasPointerLocked = false;
