@@ -78,17 +78,17 @@ export class Touchpad extends EventEmitter<
   }
 
   connect() {
-    this.#canvas.addEventListener("touchstart", this.onTouchStart);
-    this.#canvas.addEventListener("touchend", this.onTouchEnd);
-    this.#canvas.addEventListener("touchmove", this.onTouchMove);
-    this.#canvas.addEventListener("touchcancel", this.onTouchCancel);
+    this.#canvas.addEventListener("touchstart", this.#onTouchStart);
+    this.#canvas.addEventListener("touchend", this.#onTouchEnd);
+    this.#canvas.addEventListener("touchmove", this.#onTouchMove);
+    this.#canvas.addEventListener("touchcancel", this.#onTouchCancel);
   }
 
   disconnect() {
-    this.#canvas.removeEventListener("touchstart", this.onTouchStart);
-    this.#canvas.removeEventListener("touchend", this.onTouchEnd);
-    this.#canvas.removeEventListener("touchmove", this.onTouchMove);
-    this.#canvas.removeEventListener("touchcancel", this.onTouchCancel);
+    this.#canvas.removeEventListener("touchstart", this.#onTouchStart);
+    this.#canvas.removeEventListener("touchend", this.#onTouchEnd);
+    this.#canvas.removeEventListener("touchmove", this.#onTouchMove);
+    this.#canvas.removeEventListener("touchcancel", this.#onTouchCancel);
   }
 
   get isOneFingerGesture(): boolean {
@@ -156,7 +156,7 @@ export class Touchpad extends EventEmitter<
     }
   }
 
-  private onTouchStart = (event: TouchEvent) => {
+  #onTouchStart = (event: TouchEvent) => {
     event.preventDefault();
 
     for (const { touch, position } of extractTouchPositions(event)) {
@@ -169,7 +169,7 @@ export class Touchpad extends EventEmitter<
     }
   };
 
-  private onTouchEnd = (event: TouchEvent) => {
+  #onTouchEnd = (event: TouchEvent) => {
     event.preventDefault();
 
     for (let i = 0; i < event.changedTouches.length; i++) {
@@ -180,7 +180,7 @@ export class Touchpad extends EventEmitter<
     }
   };
 
-  private onTouchCancel = (event: TouchEvent) => {
+  #onTouchCancel = (event: TouchEvent) => {
     event.preventDefault();
 
     for (let i = 0; i < event.changedTouches.length; i++) {
@@ -191,7 +191,7 @@ export class Touchpad extends EventEmitter<
     }
   };
 
-  private onTouchMove = (event: TouchEvent) => {
+  #onTouchMove = (event: TouchEvent) => {
     event.preventDefault();
 
     for (const { touch, position } of extractTouchPositions(event)) {

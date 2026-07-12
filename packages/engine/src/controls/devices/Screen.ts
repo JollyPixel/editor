@@ -45,12 +45,12 @@ export class Screen extends EventEmitter<
   connect() {
     this.#documentAdapter.addEventListener(
       "fullscreenchange",
-      this.onFullscreenChange,
+      this.#onFullscreenChange,
       false
     );
     this.#documentAdapter.addEventListener(
       "fullscreenerror",
-      this.onFullscreenError,
+      this.#onFullscreenError,
       false
     );
   }
@@ -58,12 +58,12 @@ export class Screen extends EventEmitter<
   disconnect() {
     this.#documentAdapter.removeEventListener(
       "fullscreenchange",
-      this.onFullscreenChange,
+      this.#onFullscreenChange,
       false
     );
     this.#documentAdapter.removeEventListener(
       "fullscreenerror",
-      this.onFullscreenError,
+      this.#onFullscreenError,
       false
     );
   }
@@ -84,7 +84,7 @@ export class Screen extends EventEmitter<
     }
   }
 
-  private onFullscreenChange = () => {
+  #onFullscreenChange = () => {
     const isFullscreen = this.#documentAdapter.fullscreenElement === (this.#canvas as any);
     if (this.wasFullscreen !== isFullscreen) {
       this.emit("stateChange", isFullscreen ? "active" : "suspended");
@@ -92,7 +92,7 @@ export class Screen extends EventEmitter<
     }
   };
 
-  private onFullscreenError = () => {
+  #onFullscreenError = () => {
     if (this.wasFullscreen) {
       this.emit("stateChange", "suspended");
       this.wasFullscreen = false;

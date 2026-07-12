@@ -164,13 +164,13 @@ export class Gamepad extends EventEmitter<GamepadEvents> implements InputControl
   }
 
   connect(): void {
-    this.#windowAdapter.addEventListener("gamepadconnected", this.onGamepadConnected);
-    this.#windowAdapter.addEventListener("gamepaddisconnected", this.onGamepadDisconnected);
+    this.#windowAdapter.addEventListener("gamepadconnected", this.#onGamepadConnected);
+    this.#windowAdapter.addEventListener("gamepaddisconnected", this.#onGamepadDisconnected);
   }
 
   disconnect(): void {
-    this.#windowAdapter.removeEventListener("gamepadconnected", this.onGamepadConnected);
-    this.#windowAdapter.removeEventListener("gamepaddisconnected", this.onGamepadDisconnected);
+    this.#windowAdapter.removeEventListener("gamepadconnected", this.#onGamepadConnected);
+    this.#windowAdapter.removeEventListener("gamepaddisconnected", this.#onGamepadDisconnected);
   }
 
   reset() {
@@ -398,12 +398,12 @@ export class Gamepad extends EventEmitter<GamepadEvents> implements InputControl
     }
   }
 
-  private onGamepadConnected = (event: GamepadEvent) => {
+  #onGamepadConnected = (event: GamepadEvent) => {
     this.connectedGamepads++;
     this.emit("connect", event.gamepad);
   };
 
-  private onGamepadDisconnected = (event: GamepadEvent) => {
+  #onGamepadDisconnected = (event: GamepadEvent) => {
     this.connectedGamepads--;
     this.emit("disconnect", event.gamepad);
   };

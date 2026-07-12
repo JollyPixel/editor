@@ -8,6 +8,7 @@
     "jolly-pixel-mcp": "./src/index.ts"
   },
   "scripts": {
+    "build": "tsc",
     "start": "node src/index.ts"
   },
   "dependencies": {

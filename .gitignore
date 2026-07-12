@@ -136,7 +136,7 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
-.claude
+.claude/settings.local.json
 
 nsecure-result.json
 temp/

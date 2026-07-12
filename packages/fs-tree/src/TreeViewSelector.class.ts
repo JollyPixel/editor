@@ -3,7 +3,7 @@ export interface TreeViewSelectorOptions {
 }
 
 export class TreeViewSelector {
-  private multipleSelection: boolean;
+  #multipleSelection: boolean;
 
   nodes: Element[] = [];
   firstSelectedNode: Element | null = null;
@@ -13,7 +13,7 @@ export class TreeViewSelector {
   ) {
     const { multipleSelection = true } = options;
 
-    this.multipleSelection = multipleSelection;
+    this.#multipleSelection = multipleSelection;
   }
 
   get size(): number {
@@ -77,7 +77,7 @@ export class TreeViewSelector {
     let selectionChanged = false;
 
     if (
-      (!this.multipleSelection || (!event.shiftKey && !event.ctrlKey)) &&
+      (!this.#multipleSelection || (!event.shiftKey && !event.ctrlKey)) &&
       this.nodes.length > 0
     ) {
       this.clear();
@@ -105,7 +105,7 @@ export class TreeViewSelector {
       return selectionChanged;
     }
 
-    if (this.multipleSelection && event.shiftKey && this.nodes.length > 0) {
+    if (this.#multipleSelection && event.shiftKey && this.nodes.length > 0) {
       const startElement = this.firstSelectedNode;
       const elements: Element[] = [];
       let inside = false;

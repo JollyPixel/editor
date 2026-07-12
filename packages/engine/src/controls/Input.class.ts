@@ -143,7 +143,7 @@ export class Input extends EventEmitter<InputEvents> {
     this.keyboard = new devices.Keyboard();
 
     if (enableOnExit) {
-      this.#windowAdapter.onbeforeunload = this.doExitCallback;
+      this.#windowAdapter.onbeforeunload = this.#doExitCallback;
     }
   }
 
@@ -159,15 +159,15 @@ export class Input extends EventEmitter<InputEvents> {
   connect() {
     [...this.#sourceInputs(), this.screen]
       .forEach((subscriber) => subscriber.connect?.());
-    this.#windowAdapter.addEventListener("blur", this.onBlur);
-    this.#windowAdapter.addEventListener("contextmenu", this.onContextMenu);
+    this.#windowAdapter.addEventListener("blur", this.#onBlur);
+    this.#windowAdapter.addEventListener("contextmenu", this.#onContextMenu);
   }
 
   disconnect() {
     [...this.#sourceInputs(), this.screen]
       .forEach((subscriber) => subscriber.disconnect?.());
-    this.#windowAdapter.removeEventListener("blur", this.onBlur);
-    this.#windowAdapter.removeEventListener("contextmenu", this.onContextMenu);
+    this.#windowAdapter.removeEventListener("blur", this.#onBlur);
+    this.#windowAdapter.removeEventListener("contextmenu", this.#onContextMenu);
   }
 
   getDevicePreference(): InputDevicePreference {
@@ -545,16 +545,16 @@ export class Input extends EventEmitter<InputEvents> {
     return this.gamepad.buttons[gamepad][finalizedButtonIndex].value;
   }
 
-  private onBlur = () => {
+  #onBlur = () => {
     this.#sourceInputs()
       .forEach((subscriber) => subscriber.reset());
   };
 
-  private onContextMenu = (event: MouseEvent) => {
+  #onContextMenu = (event: MouseEvent) => {
     event.preventDefault();
   };
 
-  private doExitCallback = () => {
+  #doExitCallback = () => {
     // NOTE: It seems window.onbeforeunload might be called twice
     // in some circumstances so we check if the callback was cleared already
     // http://stackoverflow.com/questions/8711393/onbeforeunload-fires-twice

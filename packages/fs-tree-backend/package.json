@@ -7,7 +7,8 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "prepublish": "rimraf ./dist && tsc -b",
-    "test": "node --test test/**/*.test.ts",
+    "test-only": "node --test test/**/*.test.ts",
+    "test": "c8 -r html npm run test-only",
     "build": "tsc",
     "start-server": "node ./scripts/socket-server.ts",
     "preview": "vite"
