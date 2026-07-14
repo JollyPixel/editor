@@ -144,6 +144,6 @@ export class GlobalAudioManager implements AudioManager {
       audio.stop();
     }
     audio.disconnect();
-    audio.buffer = null;
+    (audio as { buffer: AudioBuffer | null; }).buffer = null;
   }
 }

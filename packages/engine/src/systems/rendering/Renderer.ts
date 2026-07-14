@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-import type { Pass } from "three/addons/postprocessing/EffectComposer.js";
+import type { Pass } from "three/addons/postprocessing/Pass.js";
 import type {
   GenericEventMap,
   _Handler as Handler,
