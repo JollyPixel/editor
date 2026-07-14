@@ -103,6 +103,7 @@ export class VoxelSerializer {
     for (const layerJSON of sortedLayers) {
       const layer = world.addLayer(layerJSON.name, {
         visible: layerJSON.visible,
+        opacity: layerJSON.opacity,
         properties: layerJSON.properties
       });
 

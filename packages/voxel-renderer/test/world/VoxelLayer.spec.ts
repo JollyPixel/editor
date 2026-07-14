@@ -49,6 +49,75 @@ describe("VoxelLayer constructor", () => {
   });
 });
 
+describe("VoxelLayer opacity", () => {
+  it("defaults opacity to 1", () => {
+    assert.equal(makeLayer().opacity, 1);
+  });
+
+  it("respects explicit opacity", () => {
+    assert.equal(makeLayer({ opacity: 0.5 }).opacity, 0.5);
+  });
+
+  it("clamps a constructor opacity above 1 to 1", () => {
+    assert.equal(makeLayer({ opacity: 5 }).opacity, 1);
+  });
+
+  it("clamps a constructor opacity below 0 to 0", () => {
+    assert.equal(makeLayer({ opacity: -5 }).opacity, 0);
+  });
+
+  it("clamps a setter opacity above 1 to 1", () => {
+    const layer = makeLayer();
+    layer.opacity = 2;
+    assert.equal(layer.opacity, 1);
+  });
+
+  it("clamps a setter opacity below 0 to 0", () => {
+    const layer = makeLayer();
+    layer.opacity = -1;
+    assert.equal(layer.opacity, 0);
+  });
+
+  it("wasVisible flips true when opacity drops to 0 while visible", () => {
+    const layer = makeLayer();
+    assert.equal(layer.wasVisible, false);
+    layer.opacity = 0;
+    assert.equal(layer.wasVisible, true);
+  });
+
+  it("wasVisible flips back false when opacity rises above 0 again", () => {
+    const layer = makeLayer();
+    layer.opacity = 0;
+    assert.equal(layer.wasVisible, true);
+    layer.opacity = 1;
+    assert.equal(layer.wasVisible, false);
+  });
+
+  it("wasVisible is unaffected by opacity changes that stay above 0", () => {
+    const layer = makeLayer();
+    layer.opacity = 0.5;
+    assert.equal(layer.wasVisible, false);
+    layer.opacity = 0.8;
+    assert.equal(layer.wasVisible, false);
+  });
+
+  it("wasVisible does not flip again when opacity is already 0 and visible is toggled off too", () => {
+    const layer = makeLayer();
+    layer.opacity = 0;
+    assert.equal(layer.wasVisible, true);
+    layer.visible = false;
+    // Still effectively invisible before and after — no new transition.
+    assert.equal(layer.wasVisible, true);
+  });
+
+  it("setting visible=false while opacity=0 keeps wasVisible true (still effectively invisible)", () => {
+    const layer = makeLayer({ opacity: 0 });
+    assert.equal(layer.wasVisible, false);
+    layer.visible = false;
+    assert.equal(layer.wasVisible, false);
+  });
+});
+
 describe("setVoxelAt / getVoxelAt round-trip", () => {
   it("retrieves the entry at the same position", () => {
     const layer = makeLayer();
@@ -200,6 +269,17 @@ describe("getChunks", () => {
   });
 });
 
+describe("toJSON", () => {
+  it("includes opacity", () => {
+    const layer = makeLayer({ opacity: 0.5 });
+    assert.equal(layer.toJSON().opacity, 0.5);
+  });
+
+  it("defaults opacity to 1 when not set", () => {
+    assert.equal(makeLayer().toJSON().opacity, 1);
+  });
+});
+
 describe("clone", () => {
   it("should clone a layer", () => {
     const layer = makeLayer({ chunkSize: 4 });
@@ -214,6 +294,12 @@ describe("clone", () => {
     assert.deepEqual(clone.toJSON(), {
       ...layer.toJSON(), visible: false, name: "Cloned"
     });
+  });
+
+  it("preserves opacity", () => {
+    const layer = makeLayer({ chunkSize: 4, opacity: 0.3 });
+    const clone = layer.clone();
+    assert.equal(clone.opacity, 0.3);
   });
 });
 

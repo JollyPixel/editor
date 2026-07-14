@@ -20,6 +20,11 @@ const vr = actor.addComponentAndGet(VoxelRenderer, {
 
 Colliders are built and updated automatically alongside chunk meshes.
 
+> **Opacity note** — a layer's `opacity` (see [Layer](./Layer.md)) has no effect on
+> collision except at `opacity === 0`, which is treated like `visible: false` and removes
+> the layer's colliders entirely. A translucent layer (e.g. `opacity: 0.5` glass) is still
+> fully solid.
+
 ## Rapier Interfaces
 
 The library uses structural interfaces to avoid importing the Rapier WASM module at the

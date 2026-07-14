@@ -106,6 +106,57 @@ describe("VoxelMeshBuilder — isolated cube", () => {
   });
 });
 
+describe("VoxelMeshBuilder — opacity affects occlusion", () => {
+  it("a neighbour in a translucent layer (opacity < 1) does not occlude", () => {
+    const f = makeFixture();
+    const glass = f.world.addLayer("glass", { opacity: 0.5 });
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    glass.setVoxelAt({ x: 1, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+
+    // All 6 faces of the "test" cube are emitted — the glass neighbour never occludes.
+    assert.equal(countVertices(f), 24);
+  });
+
+  it("a neighbour in a fully opaque layer (opacity === 1) still occludes normally", () => {
+    const f = makeFixture();
+    const solid = f.world.addLayer("solid");
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    solid.setVoxelAt({ x: 1, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+
+    // PosX face of the "test" cube is hidden by the opaque neighbour: 5 faces = 20 verts.
+    assert.equal(countVertices(f), 20);
+  });
+});
+
+describe("VoxelMeshBuilder — vertex alpha baked from layer opacity", () => {
+  it("bakes alpha=1 (RGB white) for a fully opaque layer", () => {
+    const f = makeFixture();
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    const chunk = f.layer.getChunk(0, 0, 0)!;
+    const geometries = f.builder.buildChunkGeometries(chunk, f.layer)!;
+    const colors = [...geometries.values()][0].getAttribute("color");
+
+    assert.equal(colors.itemSize, 4);
+    assert.equal(colors.getX(0), 1);
+    assert.equal(colors.getY(0), 1);
+    assert.equal(colors.getZ(0), 1);
+    assert.equal(colors.getW(0), 1);
+  });
+
+  it("bakes the layer's opacity into every vertex's alpha", () => {
+    const f = makeFixture();
+    f.layer.opacity = 0.25;
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    const chunk = f.layer.getChunk(0, 0, 0)!;
+    const geometries = f.builder.buildChunkGeometries(chunk, f.layer)!;
+    const colors = [...geometries.values()][0].getAttribute("color");
+
+    for (let i = 0; i < colors.count; i++) {
+      assert.equal(colors.getW(i), 0.25);
+    }
+  });
+});
+
 describe("VoxelMeshBuilder — ramp(rot=0) base cases (no rotation bug)", () => {
   it("ramp back wall (PosZ) adjacent to cube NegZ: cube NegZ face is hidden", () => {
     // Ramp at (0,0,1) rot=0: its local PosZ back wall is at world z=2,

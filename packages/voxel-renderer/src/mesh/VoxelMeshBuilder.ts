@@ -33,6 +33,14 @@ interface TilesetBuffer {
   positions: number[];
   normals: number[];
   uvs: number[];
+  /**
+   * RGBA per vertex (4 floats). RGB is always white (1,1,1) so the texture
+   * map is unaffected; alpha carries the owning layer's opacity. Baked in at
+   * build time rather than set on the material so a future per-block opacity
+   * (e.g. windows) only needs to change what's written here, not how
+   * materials are keyed/shared.
+   */
+  colors: number[];
   indices: number[];
   vertexOffset: number;
 }
@@ -89,6 +97,7 @@ export class VoxelMeshBuilder {
     }
 
     const tilesetBuffers = new Map<string, TilesetBuffer>();
+    const layerOpacity = layer.opacity;
 
     const worldOriginX = chunk.cx * this.#world.chunkSize + layer.offset.x;
     const worldOriginY = chunk.cy * this.#world.chunkSize + layer.offset.y;
@@ -140,13 +149,14 @@ export class VoxelMeshBuilder {
 
           // Check whether the neighbour blocks this face.
           // We always query the world (not just the chunk) so cross-chunk culling
-          // is handled transparently.
-          const neighbourEntry = this.#world.getVoxelAt({
+          // is handled transparently. Layer is needed alongside the entry since
+          // a translucent layer (opacity < 1) never occludes, regardless of shape.
+          const neighbour = this.#world.getVoxelWithLayerAt({
             x: nx,
             y: ny,
             z: nz
           });
-          if (this.#isNeighbourFaceHidden(neighbourEntry, worldFace)) {
+          if (this.#isNeighbourFaceHidden(neighbour, worldFace)) {
             continue;
           }
         }
@@ -166,6 +176,7 @@ export class VoxelMeshBuilder {
             positions: [],
             normals: [],
             uvs: [],
+            colors: [],
             indices: [],
             vertexOffset: 0
           };
@@ -191,6 +202,8 @@ export class VoxelMeshBuilder {
             wy + transformed[1],
             wz + transformed[2]
           );
+
+          buf.colors.push(1, 1, 1, layerOpacity);
 
           // Rotate the surface normal as well (only Y and horizontal components).
           const rotatedNormal = rotateNormal(
@@ -240,6 +253,10 @@ export class VoxelMeshBuilder {
         "uv",
         new THREE.Float32BufferAttribute(buf.uvs, 2)
       );
+      geometry.setAttribute(
+        "color",
+        new THREE.Float32BufferAttribute(buf.colors, 4)
+      );
       geometry.setIndex(buf.indices);
 
       result.set(tilesetId, geometry);
@@ -249,19 +266,27 @@ export class VoxelMeshBuilder {
   }
 
   /**
-   * Returns true if the neighbour voxel exists and
-   * its shape occludes the face that points back toward this voxel.
-    * Returns false if the neighbour is empty or its shape does not occlude that face.
+   * Returns true if the neighbour voxel exists, belongs to a fully opaque
+   * layer (opacity 1), and its shape occludes the face that points back
+   * toward this voxel. Returns false if the neighbour is empty, its owning
+   * layer is translucent (opacity < 1, e.g. glass — never occludes), or its
+   * shape does not occlude that face.
    */
   #isNeighbourFaceHidden(
-    neighbourEntry: VoxelEntry | undefined,
+    neighbour: { entry: VoxelEntry; layer: VoxelLayer; } | undefined,
     worldFace: FACE
   ): boolean {
-    if (neighbourEntry === undefined) {
+    if (neighbour === undefined) {
       // No neighbour — face is visible.
       return false;
     }
 
+    if (neighbour.layer.opacity < 1) {
+      // Translucent layers never occlude neighbouring faces.
+      return false;
+    }
+
+    const neighbourEntry = neighbour.entry;
     const neighbourDef = this.#blockRegistry.get(neighbourEntry.blockId);
     if (neighbourDef) {
       const neighbourShape = this.#shapeRegistry.get(neighbourDef.shapeId);

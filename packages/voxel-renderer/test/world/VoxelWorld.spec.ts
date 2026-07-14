@@ -136,6 +136,66 @@ describe("VoxelWorld getVoxelAt compositing", () => {
   });
 });
 
+describe("VoxelWorld getVoxelAt opacity compositing", () => {
+  it("layer with opacity=0 is skipped, same as invisible", () => {
+    const world = new VoxelWorld(4);
+    const base = world.addLayer("Base");
+    const top = world.addLayer("Top");
+    const baseEntry = makeEntry(1);
+    const topEntry = makeEntry(2);
+    base.setVoxelAt({ x: 0, y: 0, z: 0 }, baseEntry);
+    top.setVoxelAt({ x: 0, y: 0, z: 0 }, topEntry);
+    top.opacity = 0;
+    assert.equal(world.getVoxelAt({ x: 0, y: 0, z: 0 }), baseEntry);
+  });
+
+  it("layer with partial opacity still wins compositing", () => {
+    const world = new VoxelWorld(4);
+    const base = world.addLayer("Base");
+    const top = world.addLayer("Top");
+    const baseEntry = makeEntry(1);
+    const topEntry = makeEntry(2);
+    base.setVoxelAt({ x: 0, y: 0, z: 0 }, baseEntry);
+    top.setVoxelAt({ x: 0, y: 0, z: 0 }, topEntry);
+    top.opacity = 0.5;
+    assert.equal(world.getVoxelAt({ x: 0, y: 0, z: 0 }), topEntry);
+  });
+});
+
+describe("VoxelWorld getVoxelWithLayerAt", () => {
+  it("returns undefined for empty world", () => {
+    const world = new VoxelWorld(4);
+    assert.equal(world.getVoxelWithLayerAt({ x: 0, y: 0, z: 0 }), undefined);
+  });
+
+  it("returns the winning entry alongside its owning layer", () => {
+    const world = new VoxelWorld(4);
+    const base = world.addLayer("Base");
+    const top = world.addLayer("Top");
+    const topEntry = makeEntry(2);
+    base.setVoxelAt({ x: 0, y: 0, z: 0 }, makeEntry(1));
+    top.setVoxelAt({ x: 0, y: 0, z: 0 }, topEntry);
+
+    const result = world.getVoxelWithLayerAt({ x: 0, y: 0, z: 0 });
+
+    assert.equal(result?.entry, topEntry);
+    assert.equal(result?.layer, top);
+  });
+
+  it("skips a layer with opacity=0", () => {
+    const world = new VoxelWorld(4);
+    const base = world.addLayer("Base");
+    const top = world.addLayer("Top");
+    base.setVoxelAt({ x: 0, y: 0, z: 0 }, makeEntry(1));
+    top.setVoxelAt({ x: 0, y: 0, z: 0 }, makeEntry(2));
+    top.opacity = 0;
+
+    const result = world.getVoxelWithLayerAt({ x: 0, y: 0, z: 0 });
+
+    assert.equal(result?.layer, base);
+  });
+});
+
 describe("VoxelWorld getVoxelNeighbour", () => {
   it("returns the voxel one step in the given face direction", () => {
     const world = new VoxelWorld(4);
@@ -193,12 +253,98 @@ describe("VoxelWorld moveLayer", () => {
   });
 });
 
+describe("VoxelWorld updateLayer", () => {
+  it("returns false for unknown layer name", () => {
+    const world = new VoxelWorld(4);
+    assert.equal(world.updateLayer("NoSuch", { opacity: 0.5 }), false);
+  });
+
+  it("updates opacity when provided", () => {
+    const world = new VoxelWorld(4);
+    world.addLayer("Ground");
+    const result = world.updateLayer("Ground", { opacity: 0.5 });
+    assert.equal(result, true);
+    assert.equal(world.getLayer("Ground")!.opacity, 0.5);
+  });
+
+  it("leaves opacity untouched when not provided", () => {
+    const world = new VoxelWorld(4);
+    const layer = world.addLayer("Ground", { opacity: 0.7 });
+    world.updateLayer("Ground", { visible: false });
+    assert.equal(layer.opacity, 0.7);
+  });
+});
+
 describe("VoxelWorld setLayerVisible", () => {
   it("sets layer.visible", () => {
     const world = new VoxelWorld(4);
     world.addLayer("Ground");
     world.setLayerVisible("Ground", false);
     assert.equal(world.getLayer("Ground")!.visible, false);
+  });
+});
+
+describe("VoxelWorld setLayerOpacity", () => {
+  it("sets layer.opacity", () => {
+    const world = new VoxelWorld(4);
+    world.addLayer("Ground");
+    world.setLayerOpacity("Ground", 0.5);
+    assert.equal(world.getLayer("Ground")!.opacity, 0.5);
+  });
+
+  it("does nothing for unknown layer name", () => {
+    const world = new VoxelWorld(4);
+    assert.doesNotThrow(() => world.setLayerOpacity("NoSuch", 0.5));
+  });
+
+  it("marks only the layer's own chunks dirty for a change that stays translucent (no boundary cross)", () => {
+    const world = new VoxelWorld(4);
+    const a = world.addLayer("A");
+    const b = world.addLayer("B");
+    world.setVoxelAt("A", { x: 0, y: 0, z: 0 }, makeEntry());
+    world.setVoxelAt("B", { x: 8, y: 0, z: 0 }, makeEntry());
+    a.opacity = 0.5;
+    for (const { chunk } of world.getAllChunks()) {
+      chunk.dirty = false;
+    }
+
+    world.setLayerOpacity("A", 0.8);
+
+    assert.equal(a.getChunk(0, 0, 0)!.dirty, true);
+    assert.equal(b.getChunk(2, 0, 0)!.dirty, false);
+  });
+
+  it("marks every layer's chunks dirty when opacity crosses the occlusion boundary (1 -> <1)", () => {
+    const world = new VoxelWorld(4);
+    const a = world.addLayer("A");
+    const b = world.addLayer("B");
+    world.setVoxelAt("A", { x: 0, y: 0, z: 0 }, makeEntry());
+    world.setVoxelAt("B", { x: 8, y: 0, z: 0 }, makeEntry());
+    for (const { chunk } of world.getAllChunks()) {
+      chunk.dirty = false;
+    }
+
+    world.setLayerOpacity("A", 0.9);
+
+    assert.equal(a.getChunk(0, 0, 0)!.dirty, true);
+    assert.equal(b.getChunk(2, 0, 0)!.dirty, true);
+  });
+
+  it("marks every layer's chunks dirty when opacity crosses the occlusion boundary (<1 -> 1)", () => {
+    const world = new VoxelWorld(4);
+    const a = world.addLayer("A");
+    const b = world.addLayer("B");
+    world.setVoxelAt("A", { x: 0, y: 0, z: 0 }, makeEntry());
+    world.setVoxelAt("B", { x: 8, y: 0, z: 0 }, makeEntry());
+    a.opacity = 0.5;
+    for (const { chunk } of world.getAllChunks()) {
+      chunk.dirty = false;
+    }
+
+    world.setLayerOpacity("A", 1);
+
+    assert.equal(a.getChunk(0, 0, 0)!.dirty, true);
+    assert.equal(b.getChunk(2, 0, 0)!.dirty, true);
   });
 });
 
