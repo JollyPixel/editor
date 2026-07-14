@@ -1,9 +1,16 @@
 // Import Third-party Dependencies
-import { Vector3, type Vector3Like } from "three";
+import {
+  Vector3,
+  type Vector3Like
+} from "three";
 
 // Import Internal Dependencies
+import { clamp } from "../utils/math.ts";
 import { VoxelChunk } from "./VoxelChunk.ts";
-import type { VoxelEntry, VoxelCoord } from "./types.ts";
+import type {
+  VoxelEntry,
+  VoxelCoord
+} from "./types.ts";
 
 /**
  * x,y,z voxel positions are serialised as "x,y,z" keys in a sparse map for
@@ -19,6 +26,11 @@ export interface VoxelLayerJSON {
   id: string;
   name: string;
   visible: boolean;
+  /**
+   * Rendered translucency, from `0` (fully transparent) to `1` (fully opaque).
+   * Absent in files serialized before this field existed; treat as `1`.
+   */
+  opacity?: number;
   order: number;
   offset?: { x: number; y: number; z: number; };
   properties?: Record<string, any>;
@@ -31,6 +43,13 @@ export interface VoxelLayerConfigurableOptions {
    * @default true
    */
   visible?: boolean;
+  /**
+   * Rendered translucency, from `0` (fully transparent) to `1` (fully opaque).
+   * Values are clamped to `[0, 1]`. A layer with `opacity < 1` no longer
+   * occludes neighbouring faces during mesh building (like glass).
+   * @default 1
+   */
+  opacity?: number;
   /**
    * Arbitrary layer properties.
    * @default {}
@@ -68,9 +87,15 @@ export class VoxelLayer {
   order: number;
   offset: VoxelCoord;
   properties: Record<string, any> = {};
+  /**
+   * Set to true the frame a layer stops being effectively visible
+   * (`visible` turning false, or `opacity` reaching `0`), so the renderer
+   * knows to remove its chunk meshes once. Cleared the following frame.
+   */
   wasVisible = false;
 
   #visible: boolean;
+  #opacity: number;
   #chunks = new Map<string, VoxelChunk>();
   #chunkSize: number;
   #pendingRemoval: VoxelChunk[] = [];
@@ -84,6 +109,7 @@ export class VoxelLayer {
       order,
       chunkSize,
       visible = true,
+      opacity = 1,
       offset = { x: 0, y: 0, z: 0 },
       properties = {}
     } = options;
@@ -93,6 +119,7 @@ export class VoxelLayer {
     this.order = order;
     this.#chunkSize = chunkSize;
     this.#visible = visible;
+    this.#opacity = clamp(0, 1, opacity);
     this.offset = structuredClone(offset);
     this.properties = structuredClone(properties);
   }
@@ -104,14 +131,40 @@ export class VoxelLayer {
   set visible(
     value: boolean
   ) {
-    if (this.#visible && !value) {
+    this.#trackEffectiveVisibilityChange(value, this.#opacity);
+    this.#visible = value;
+  }
+
+  get opacity() {
+    return this.#opacity;
+  }
+
+  set opacity(
+    value: number
+  ) {
+    const clamped = clamp(0, 1, value);
+    this.#trackEffectiveVisibilityChange(this.#visible, clamped);
+    this.#opacity = clamped;
+  }
+
+  /**
+   * Updates `wasVisible` when "effective visibility" (visible && opacity > 0)
+   * flips, regardless of whether `visible` or `opacity` triggered the flip.
+   * Must be called with the pre-mutation `#visible`/`#opacity` still in place.
+   */
+  #trackEffectiveVisibilityChange(
+    nextVisible: boolean,
+    nextOpacity: number
+  ): void {
+    const wasEffectivelyVisible = this.#visible && this.#opacity > 0;
+    const isEffectivelyVisible = nextVisible && nextOpacity > 0;
+
+    if (wasEffectivelyVisible && !isEffectivelyVisible) {
       this.wasVisible = true;
     }
-    else if (!this.#visible && value) {
+    else if (!wasEffectivelyVisible && isEffectivelyVisible) {
       this.wasVisible = false;
     }
-
-    this.#visible = value;
   }
 
   #createChunkKey(
@@ -362,6 +415,7 @@ export class VoxelLayer {
       id: this.id,
       name: this.name,
       visible: this.#visible,
+      opacity: this.#opacity,
       order: this.order,
       offset: { ...this.offset },
       properties: { ...this.properties },

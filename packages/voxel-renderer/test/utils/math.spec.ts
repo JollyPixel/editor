@@ -3,7 +3,9 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { packTransform, unpackTransform, FACE } from "../../src/utils/math.ts";
+import {
+  packTransform, unpackTransform, FACE, clamp
+} from "../../src/utils/math.ts";
 
 describe("packTransform / unpackTransform", () => {
   it("round-trips all 16 rotation×flip combinations (no flipY)", () => {
@@ -79,6 +81,25 @@ describe("packTransform / unpackTransform", () => {
     assert.equal(result.rotation, 3);
     assert.equal(result.flipX, true);
     assert.equal(result.flipZ, true);
+  });
+});
+
+describe("clamp", () => {
+  it("returns the value unchanged when within range", () => {
+    assert.equal(clamp(0, 1, 0.5), 0.5);
+  });
+
+  it("clamps a value above max down to max", () => {
+    assert.equal(clamp(0, 1, 5), 1);
+  });
+
+  it("clamps a value below min up to min", () => {
+    assert.equal(clamp(0, 1, -5), 0);
+  });
+
+  it("returns the boundary values unchanged", () => {
+    assert.equal(clamp(0, 1, 0), 0);
+    assert.equal(clamp(0, 1, 1), 1);
   });
 });
 

@@ -80,6 +80,9 @@ export class VoxelWorld {
     if (options.visible !== undefined) {
       this.#updateLayerVisibility(layer, options.visible);
     }
+    if (options.opacity !== undefined) {
+      this.#updateLayerOpacity(layer, options.opacity);
+    }
 
     return true;
   }
@@ -143,6 +146,37 @@ export class VoxelWorld {
   ): void {
     layer.visible = visible;
     this.#markLayerDirty(layer);
+  }
+
+  setLayerOpacity(
+    name: string,
+    opacity: number
+  ): void {
+    const layer = this.getLayer(name);
+    if (layer) {
+      this.#updateLayerOpacity(layer, opacity);
+    }
+  }
+
+  /**
+   * A layer only occludes neighbouring faces while fully opaque (opacity 1);
+   * crossing that boundary invalidates every layer's occlusion, not just this
+   * one's own geometry (which always needs rebuilding to re-bake its alpha).
+   */
+  #updateLayerOpacity(
+    layer: VoxelLayer,
+    opacity: number
+  ): void {
+    const wasOccluding = layer.opacity >= 1;
+    layer.opacity = opacity;
+    const isOccluding = layer.opacity >= 1;
+
+    if (wasOccluding === isOccluding) {
+      this.#markLayerDirty(layer);
+    }
+    else {
+      this.#markAllLayersDirty();
+    }
   }
 
   setLayerOffset(
@@ -376,14 +410,28 @@ export class VoxelWorld {
   getVoxelAt(
     position: Vector3Like
   ): VoxelEntry | undefined {
+    return this.getVoxelWithLayerAt(position)?.entry;
+  }
+
+  /**
+   * Same compositing rules as `getVoxelAt`, but also returns the owning
+   * layer so callers can inspect layer-level properties (e.g. `opacity`) of
+   * the resolved voxel — used by VoxelMeshBuilder to decide occlusion.
+   *
+   * A layer with `opacity === 0` is treated the same as `visible = false`:
+   * it neither wins compositing nor occludes lower layers.
+   */
+  getVoxelWithLayerAt(
+    position: Vector3Like
+  ): { entry: VoxelEntry; layer: VoxelLayer; } | undefined {
     // Iterate from highest to lowest order (already sorted descending).
     for (const layer of this.#layers) {
-      if (!layer.visible) {
+      if (!layer.visible || layer.opacity === 0) {
         continue;
       }
       const entry = layer.getVoxelAt(position);
       if (entry !== undefined) {
-        return entry;
+        return { entry, layer };
       }
     }
 

@@ -179,9 +179,19 @@ options is described by the following interface:
 ```ts
 interface VoxelLayerConfigurableOptions {
   visible?: boolean;
+  /**
+   * Rendered translucency, from `0` (fully transparent) to `1` (fully opaque).
+   * @default 1
+   */
+  opacity?: number;
   properties?: Record<string, any>;
 }
 ```
+
+> A layer with `opacity < 1` renders with real alpha blending and stops occluding
+> neighbouring faces (like glass); `opacity === 0` behaves exactly like `visible: false`.
+> See [Layer](./Layer.md) for the full semantics. Partial opacity does not affect
+> collision — see [Collision](./Collision.md).
 
 #### `updateLayer(name: string, options?: Partial< VoxelLayerConfigurableOptions >): boolean`
 

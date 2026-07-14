@@ -37,3 +37,11 @@ export function unpackTransform(
     flipY: (flags & 0b10000) !== 0
   };
 }
+
+export function clamp(
+  min: number,
+  max: number,
+  value: number
+): number {
+  return Math.min(max, Math.max(min, value));
+}

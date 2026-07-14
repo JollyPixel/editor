@@ -12,6 +12,12 @@ interface VoxelLayerConfigurableOptions {
    */
   visible?: boolean;
   /**
+   * Rendered translucency, from `0` (fully transparent) to `1` (fully opaque).
+   * Values are clamped to `[0, 1]`.
+   * @default 1
+   */
+  opacity?: number;
+  /**
    * Arbitrary layer properties.
    * @default {}
    */
@@ -46,6 +52,7 @@ class VoxelLayer {
   readonly name: string;
   readonly order: number;
   readonly visible: boolean;
+  readonly opacity: number;
   wasVisible: boolean;
 
   // number of currently allocated chunks
@@ -62,6 +69,15 @@ class VoxelLayer {
 > at `{offset.x, offset.y, offset.z}`. Use `VoxelWorld.setLayerOffset` or
 > `translateLayer` (preferred) so all dependent chunks are marked dirty automatically.
 
+> **Opacity semantics** — `opacity` is baked per-vertex into the layer's mesh (real alpha
+> blending), and also drives occlusion: a layer with `opacity < 1` (e.g. glass) never
+> hides the faces of neighbouring voxels, in any layer, the way a fully opaque layer does.
+> `opacity === 0` is treated exactly like `visible = false` — the layer stops winning
+> world compositing (`VoxelWorld.getVoxelAt`) and its chunk meshes/colliders are removed.
+> Partial opacity (`0 < opacity < 1`) does **not** affect collision — a translucent layer
+> is still solid. Use `VoxelWorld.setLayerOpacity` or `updateLayer(name, { opacity })`
+> so dependent chunks are marked dirty automatically.
+
 
 ## Methods
 
@@ -74,6 +90,7 @@ interface VoxelLayerJSON {
   id: string;
   name: string;
   visible: boolean;
+  opacity?: number;
   order: number;
   offset?: { x: number; y: number; z: number; };
   properties?: Record<string, any>;

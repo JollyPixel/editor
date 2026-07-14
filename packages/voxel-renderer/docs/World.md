@@ -31,8 +31,9 @@ interface VoxelEntry {
 ## VoxelWorld
 
 Top-level container for a layered voxel scene. Layers are composited from highest `order`
-to lowest — the first visible layer that has a voxel at a given position wins.
-This allows decorative layers to override base terrain non-destructively.
+to lowest — the first visible layer with `opacity > 0` that has a voxel at a given position
+wins. This allows decorative layers to override base terrain non-destructively.
+A layer with `opacity === 0` is skipped during compositing exactly like an invisible one.
 
 ### Constructor
 
@@ -64,6 +65,14 @@ Swaps `order` with the neighbouring layer in the given direction.
 
 Hidden layers are skipped during compositing and mesh rebuild.
 
+#### `setLayerOpacity(name: string, opacity: number): void`
+
+Sets a layer's rendered translucency (clamped to `[0, 1]`). A layer with `opacity < 1`
+stops occluding neighbouring faces during mesh building (like glass); `opacity === 0`
+is treated exactly like `visible = false`. Marks only the layer's own chunks dirty for a
+same-bucket change (e.g. `0.4 → 0.6`), or every layer's chunks when the change crosses the
+`opacity === 1` occlusion boundary. No-op if the layer is not found.
+
 #### `setLayerOffset(name: string, offset: VoxelCoord): void`
 
 Sets the world-space translation of a layer. All voxels in that layer are shifted by
@@ -84,8 +93,13 @@ All layers, sorted highest `order` first.
 
 #### `getVoxelAt(position: VoxelCoord): VoxelEntry | undefined`
 
-Composited read — returns the voxel from the highest-priority visible layer at that position.
-Returns `undefined` for air.
+Composited read — returns the voxel from the highest-priority visible layer (`opacity > 0`)
+at that position. Returns `undefined` for air.
+
+#### `getVoxelWithLayerAt(position: VoxelCoord): { entry: VoxelEntry; layer: VoxelLayer } | undefined`
+
+Same compositing rules as `getVoxelAt`, but also returns the owning `VoxelLayer` so callers
+can inspect layer-level properties (e.g. `opacity`) of the resolved voxel.
 
 #### `getVoxelNeighbour(position: VoxelCoord, face: Face): VoxelEntry | undefined`
 

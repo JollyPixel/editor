@@ -182,7 +182,10 @@ export class VoxelRenderer extends ActorComponent {
   #chunkColliders = new Map<string, RapierCollider>();
 
   /**
-   * One material per tileset ID. Created lazily; disposed on tileset reload or destroy.
+   * Up to two materials per tileset ID — one opaque, one translucent (keyed by
+   * "tilesetId:opaque" / "tilesetId:transparent") — so a layer with opacity < 1
+   * never forces an otherwise-fully-opaque layer sharing the same tileset onto
+   * the transparent render queue. Created lazily; disposed on tileset reload or destroy.
    */
   #materials = new Map<
     string,
@@ -288,7 +291,9 @@ export class VoxelRenderer extends ActorComponent {
 
     // Rebuild only chunks that have been modified since the last frame.
     for (const { layer, chunk } of this.world.getAllDirtyChunks()) {
-      if (!layer.visible) {
+      // opacity === 0 is treated the same as an invisible layer: no mesh,
+      // no collider, and the layer stops winning world compositing.
+      if (!layer.visible || layer.opacity === 0) {
         if (layer.wasVisible) {
           this.#removeChunk(layer, chunk);
         }
@@ -810,11 +815,13 @@ export class VoxelRenderer extends ActorComponent {
     this.tilesetManager.registerTexture(def, texture);
     this.#logger.debug(`Loaded tileset '${def.id}' from '${def.src}'`);
 
-    // Invalidate the cached material for this tileset so it is recreated
-    // with the new texture.
-    const existingMaterial = this.#materials.get(def.id);
-    existingMaterial?.dispose();
-    this.#materials.delete(def.id);
+    // Invalidate both cached material variants for this tileset so they are
+    // recreated with the new texture.
+    for (const transparent of [false, true]) {
+      const key = this.#materialKey(def.id, transparent);
+      this.#materials.get(key)?.dispose();
+      this.#materials.delete(key);
+    }
 
     // Force all chunks to rebuild geometry (UV offsets may have changed).
     this.markAllChunksDirty("loadTileset");
@@ -886,12 +893,27 @@ export class VoxelRenderer extends ActorComponent {
     this.#rebuildAllChunks("load");
   }
 
-  #getMaterial(
-    tilesetId: string
-  ): THREE.MeshLambertMaterial | THREE.MeshStandardMaterial {
-    this.#logger.debug(`Getting material for tileset '${tilesetId}'`);
+  #materialKey(
+    tilesetId: string,
+    transparent: boolean
+  ): string {
+    return `${tilesetId}:${transparent ? "transparent" : "opaque"}`;
+  }
 
-    let material = this.#materials.get(tilesetId);
+  /**
+   * `transparent` selects the material variant, not the actual alpha value —
+   * the real opacity is baked per-vertex by VoxelMeshBuilder (see its
+   * `colors` buffer) so it can vary per layer (and, later, per block)
+   * without multiplying the number of cached materials.
+   */
+  #getMaterial(
+    tilesetId: string,
+    transparent: boolean
+  ): THREE.MeshLambertMaterial | THREE.MeshStandardMaterial {
+    const key = this.#materialKey(tilesetId, transparent);
+    this.#logger.debug(`Getting material for tileset '${tilesetId}' (transparent=${transparent})`);
+
+    let material = this.#materials.get(key);
     if (material) {
       return material;
     }
@@ -900,23 +922,27 @@ export class VoxelRenderer extends ActorComponent {
       tilesetId
     ) ?? null;
 
+    const materialOptions = {
+      map: texture,
+      side: THREE.FrontSide,
+      alphaTest: this.#alphaTest,
+      vertexColors: true,
+      transparent,
+      // Translucent chunks must not write depth, otherwise nearer
+      // translucent faces would hide farther ones behind solid Z-rejection
+      // instead of blending.
+      depthWrite: !transparent
+    };
+
     if (this.#materialType === "standard") {
-      material = new THREE.MeshStandardMaterial({
-        map: texture,
-        side: THREE.FrontSide,
-        alphaTest: this.#alphaTest
-      });
+      material = new THREE.MeshStandardMaterial(materialOptions);
     }
     else {
-      material = new THREE.MeshLambertMaterial({
-        map: texture,
-        side: THREE.FrontSide,
-        alphaTest: this.#alphaTest
-      });
+      material = new THREE.MeshLambertMaterial(materialOptions);
     }
     this.#materialCustomizer?.(material, tilesetId);
 
-    this.#materials.set(tilesetId, material);
+    this.#materials.set(key, material);
 
     return material;
   }
@@ -965,10 +991,14 @@ export class VoxelRenderer extends ActorComponent {
       return;
     }
 
+    // Opacity is uniform across a layer, so every tileset mesh for this
+    // chunk shares the same opaque/transparent material variant.
+    const transparent = layer.opacity < 1;
+
     // Create one mesh per tileset so each can use the correct texture.
     for (const [tilesetId, geometry] of geometries) {
       const key = `${chunkKeyBase}:${tilesetId}`;
-      const mesh = new THREE.Mesh(geometry, this.#getMaterial(tilesetId));
+      const mesh = new THREE.Mesh(geometry, this.#getMaterial(tilesetId, transparent));
       mesh.name = `voxel_chunk_${key}`;
 
       this.actor.object3D.add(mesh);

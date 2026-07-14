@@ -59,6 +59,17 @@ describe("VoxelSerializer.serialize", () => {
     assert.equal(layerJson.voxels["3,2,1"]?.transform, 3);
   });
 
+  it("opacity is included in layer JSON", () => {
+    const world = new VoxelWorld(16);
+    const layer = world.addLayer("Ground", { opacity: 0.4 });
+
+    const serializer = new VoxelSerializer();
+    const json = serializer.serialize(world, emptyTilesetManager);
+
+    assert.equal(json.layers[0].opacity, layer.opacity);
+    assert.equal(json.layers[0].opacity, 0.4);
+  });
+
   it("offset is included in layer JSON", () => {
     const world = new VoxelWorld(16);
     const layer = world.addLayer("Ground");
@@ -106,6 +117,53 @@ describe("VoxelSerializer.deserialize", () => {
     );
 
     assert.equal(world.getLayers().length, 0);
+  });
+
+  it("defaults opacity to 1 when the field is absent (pre-opacity save file)", () => {
+    const world = new VoxelWorld(16);
+    const serializer = new VoxelSerializer();
+
+    serializer.deserialize(
+      {
+        version: 1,
+        chunkSize: 16,
+        tilesets: [],
+        layers: [{
+          id: "l1",
+          name: "Ground",
+          visible: true,
+          order: 0,
+          voxels: {}
+        }]
+      },
+      world
+    );
+
+    assert.equal(world.getLayer("Ground")!.opacity, 1);
+  });
+
+  it("restores an explicit opacity value", () => {
+    const world = new VoxelWorld(16);
+    const serializer = new VoxelSerializer();
+
+    serializer.deserialize(
+      {
+        version: 1,
+        chunkSize: 16,
+        tilesets: [],
+        layers: [{
+          id: "l1",
+          name: "Ground",
+          visible: true,
+          opacity: 0.6,
+          order: 0,
+          voxels: {}
+        }]
+      },
+      world
+    );
+
+    assert.equal(world.getLayer("Ground")!.opacity, 0.6);
   });
 
   it("skips malformed coordinate keys", () => {
@@ -188,6 +246,19 @@ describe("VoxelSerializer round-trip", () => {
     assert.ok(restoredDeco !== undefined);
     assert.equal(restoredBase.order, base.order);
     assert.equal(restoredDeco.visible, false);
+  });
+
+  it("layer opacity is preserved", () => {
+    const original = new VoxelWorld(16);
+    original.addLayer("Ground", { opacity: 0.7 });
+
+    const serializer = new VoxelSerializer();
+    const json = serializer.serialize(original, emptyTilesetManager);
+
+    const restored = new VoxelWorld(16);
+    serializer.deserialize(json, restored);
+
+    assert.equal(restored.getLayer("Ground")?.opacity, 0.7);
   });
 
   it("layer offset is preserved", () => {
