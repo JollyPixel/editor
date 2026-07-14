@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-import { EffectComposer, type Pass } from "three/addons/postprocessing/EffectComposer.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import type { Pass } from "three/addons/postprocessing/Pass.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { EventEmitter } from "@posva/event-emitter";
 
