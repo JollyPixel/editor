@@ -139,7 +139,7 @@ export class LayerPanel extends LitElement {
       return;
     }
 
-    const layer = this.vr.getLayer(this.layerName) ?? null;
+    const layer = this.vr.engine.getLayer(this.layerName) ?? null;
     this._layer = layer;
 
     if (layer) {
@@ -208,8 +208,8 @@ export class LayerPanel extends LitElement {
     }
 
     this._visible = event.target.checked;
-    this.vr.updateLayer(this.layerName, { visible: this._visible });
-    this.vr.markAllChunksDirty();
+    this.vr.engine.updateLayer(this.layerName, { visible: this._visible });
+    this.vr.engine.markAllChunksDirty();
   }
 
   #onOffsetChange(
@@ -220,8 +220,8 @@ export class LayerPanel extends LitElement {
     }
 
     this._offset = event.detail;
-    this.vr.setLayerOffset(this.layerName, this._offset);
-    this.vr.markAllChunksDirty();
+    this.vr.engine.setLayerOffset(this.layerName, this._offset);
+    this.vr.engine.markAllChunksDirty();
   }
 
   #onPropKeyChange(
@@ -265,7 +265,7 @@ export class LayerPanel extends LitElement {
         props[key.trim()] = value;
       }
     }
-    this.vr.updateLayer(this.layerName, { properties: props });
+    this.vr.engine.updateLayer(this.layerName, { properties: props });
   }
 }
 

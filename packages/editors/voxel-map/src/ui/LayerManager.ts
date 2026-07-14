@@ -173,7 +173,7 @@ export class LayerManager extends LitElement {
         const times = Math.abs(delta);
         const direction = delta > 0 ? "down" : "up";
         for (let i = 0; i < times; i++) {
-          this.vr.moveLayer(name, direction);
+          this.vr.engine.moveLayer(name, direction);
         }
 
         return true;
@@ -227,13 +227,13 @@ export class LayerManager extends LitElement {
     this.#objectItemMap.clear();
 
     const layers = [
-      ...this.vr.world.getLayers()
+      ...this.vr.engine.world.getLayers()
     ].reverse();
     for (const layer of layers) {
       this.#appendLayerItem(layer);
     }
 
-    for (const objectLayer of this.vr.getObjectLayers()) {
+    for (const objectLayer of this.vr.engine.getObjectLayers()) {
       this.#appendObjectLayerItem(objectLayer);
     }
 
@@ -319,7 +319,7 @@ export class LayerManager extends LitElement {
     editorState.addEventListener("layerUpdated", (event) => {
       const evt = (event as CustomEvent<VoxelLayerHookEvent>).detail;
       if (evt.action === "added") {
-        const layer = this.vr?.getLayer(evt.layerName);
+        const layer = this.vr?.engine.getLayer(evt.layerName);
         if (layer) {
           this.#appendLayerItem(layer);
         }
@@ -335,7 +335,7 @@ export class LayerManager extends LitElement {
         this.#populateFromVR();
       }
       else if (evt.action === "object-layer-added") {
-        const objectLayer = this.vr?.getObjectLayer(evt.layerName);
+        const objectLayer = this.vr?.engine.getObjectLayer(evt.layerName);
         if (objectLayer) {
           this.#appendObjectLayerItem(objectLayer);
         }
@@ -357,12 +357,12 @@ export class LayerManager extends LitElement {
 
     const name = await showPrompt({
       label: "Layer name:",
-      defaultValue: `Layer ${this.vr.world.getLayers().length + 1}`
+      defaultValue: `Layer ${this.vr.engine.world.getLayers().length + 1}`
     });
     if (!name?.trim()) {
       return;
     }
-    this.vr.addLayer(name.trim());
+    this.vr.engine.addLayer(name.trim());
   }
 
   async #addObjectLayer() {
@@ -372,12 +372,12 @@ export class LayerManager extends LitElement {
 
     const name = await showPrompt({
       label: "Object layer name:",
-      defaultValue: `Objects ${this.vr.getObjectLayers().length + 1}`
+      defaultValue: `Objects ${this.vr.engine.getObjectLayers().length + 1}`
     });
     if (!name?.trim()) {
       return;
     }
-    this.vr.addObjectLayer(name.trim());
+    this.vr.engine.addObjectLayer(name.trim());
   }
 
   #removeLayer(): void {
@@ -386,11 +386,11 @@ export class LayerManager extends LitElement {
     }
 
     if (this.#objectItemMap.has(this._selectedLayer)) {
-      this.vr.removeObjectLayer(this._selectedLayer);
+      this.vr.engine.removeObjectLayer(this._selectedLayer);
     }
     else {
-      this.vr.removeLayer(this._selectedLayer);
-      this.vr.markAllChunksDirty();
+      this.vr.engine.removeLayer(this._selectedLayer);
+      this.vr.engine.markAllChunksDirty();
     }
     this._selectedLayer = null;
     editorState.setSelectedLayer(null);
@@ -401,7 +401,7 @@ export class LayerManager extends LitElement {
       return;
     }
 
-    this.vr.moveLayer(this._selectedLayer, "up");
+    this.vr.engine.moveLayer(this._selectedLayer, "up");
   }
 
   #moveDown(): void {
@@ -409,7 +409,7 @@ export class LayerManager extends LitElement {
       return;
     }
 
-    this.vr.moveLayer(this._selectedLayer, "down");
+    this.vr.engine.moveLayer(this._selectedLayer, "down");
   }
 }
 

@@ -140,7 +140,7 @@ export class MapConfigPanel extends LitElement {
       return;
     }
 
-    const json = this.vr.save();
+    const json = this.vr.engine.save();
     const blob = new Blob([JSON.stringify(json, null, 2)], {
       type: "application/json"
     });
@@ -170,7 +170,7 @@ export class MapConfigPanel extends LitElement {
     try {
       const text = await file.text();
       const data = JSON.parse(text);
-      await this.vr.load(data);
+      await this.vr.engine.load(data);
 
       this.dispatchEvent(
         new CustomEvent("world-loaded", { bubbles: true, composed: true })

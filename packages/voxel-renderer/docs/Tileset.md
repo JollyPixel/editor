@@ -83,7 +83,7 @@ export interface TilesetUVRegion {
 
 ## TilesetManager
 
-Manages tileset textures and UV lookup. Accessible via `VoxelRenderer.tilesetManager`.
+Manages tileset textures and UV lookup. Accessible via `VoxelEngine.tilesetManager` (`vr.engine.tilesetManager`).
 
 ### Properties
 
@@ -141,7 +141,8 @@ Disposes all textures and materials and clears the registry.
 ## TilesetLoader
 
 Pre-loading utility that fetches tileset textures asynchronously before a `VoxelRenderer`
-is constructed. Pass the populated loader via `VoxelRendererOptions.tilesetLoader` so all
+(or a standalone `VoxelEngine`) is constructed. Pass the populated loader via
+`VoxelEngineOptions.tilesetLoader` so all
 textures register synchronously during construction — no async code is needed inside
 lifecycle methods (`awake`, `start`, `update`).
 
@@ -202,5 +203,5 @@ await loader.fromWorld(snapshot);                           // pre-load every ti
 await loader.fromTileDefinition(defaultTilesetDef);        // idempotent if already loaded
 
 const vr = actor.addComponentAndGet(VoxelRenderer, { tilesetLoader: loader });
-vr.load(snapshot);                                         // fully synchronous
+vr.engine.load(snapshot);                                  // fully synchronous
 ```

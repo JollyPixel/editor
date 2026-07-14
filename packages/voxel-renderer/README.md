@@ -8,7 +8,7 @@
 
 ## 📌 About
 
-Chunked voxel engine and renderer for Three.js and the JollyPixel [engine][engine] (ECS). Add `VoxelRenderer` to any scene and you get multi-layer voxel worlds with tileset textures, face culling, block transforms, JSON save/load, and optional Rapier3D physics.
+Chunked voxel engine and Three.js renderer. Use `VoxelEngine` directly, or `VoxelRenderer` to plug it into a JollyPixel [engine][engine] (ECS) scene. Either way you get multi-layer voxel worlds with tileset textures, face culling, block transforms, JSON save/load, and optional Rapier3D physics.
 
 ## 💡 Features
 
@@ -93,16 +93,16 @@ const voxelMap = world.createActor("map")
     blocks
   });
 
-voxelMap.loadTileset({
+voxelMap.engine.loadTileset({
   id: "default",
   src: "tileset/UV_cube.png",
   tileSize: 32
-}).catch(console.error);
+});
 
 // Place a flat 8×8 ground plane
 for (let x = 0; x < 8; x++) {
   for (let z = 0; z < 8; z++) {
-    voxelMap.setVoxel("Ground", {
+    voxelMap.engine.setVoxel("Ground", {
       position: { x, y: 0, z },
       blockId: 1
     });
@@ -132,7 +132,7 @@ const worldJson = new TiledConverter().convert(tiledMap, {
   layerMode: "stacked"
 });
 
-voxelMap.load(worldJson).catch(console.error);
+voxelMap.engine.load(worldJson);
 
 await loadRuntime(runtime);
 ```
@@ -182,7 +182,8 @@ All four examples use OrbitControls (left drag: rotate, right drag: pan, scroll:
 
 ## 📚 API
 
-- [VoxelRenderer](docs/VoxelRenderer.md) - Main `ActorComponent` — options, voxel placement, tileset loading, save/load.
+- [VoxelEngine](docs/VoxelEngine.md) - Engine-agnostic core — options, voxel placement, tileset loading, save/load. Usable standalone or via `VoxelRenderer`.
+- [VoxelRenderer](docs/VoxelRenderer.md) - `ActorComponent` wrapper around `VoxelEngine` for JollyPixel scenes.
 - [World](docs/World.md) - `VoxelWorld`, `VoxelLayer`, `VoxelChunk`, and related types.
 - [Blocks](docs/Blocks.md) - `BlockDefinition`, `BlockShape`, `BlockRegistry`, `BlockShapeRegistry`, and `Face`.
 - [Tileset](docs/Tileset.md) - `TilesetManager`, `TilesetDefinition`, `TileRef`, UV regions.

@@ -26,7 +26,7 @@ class VoxelChunk {
   // side length in voxels
   readonly size: number;
 
-  // set true on any write; cleared by VoxelRenderer after mesh rebuild
+  // set true on any write; cleared by VoxelEngine after mesh rebuild
   dirty: boolean;
 
   readonly voxelCount: number;

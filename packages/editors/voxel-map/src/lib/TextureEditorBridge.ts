@@ -58,12 +58,12 @@ export class TextureEditorBridge {
       return;
     }
 
-    const id = tilesetId ?? vr.tilesetManager.defaultTilesetId;
+    const id = tilesetId ?? vr.engine.tilesetManager.defaultTilesetId;
     if (!id) {
       return;
     }
 
-    const texture = vr.tilesetManager.getTexture(id);
+    const texture = vr.engine.tilesetManager.getTexture(id);
     if (!texture) {
       return;
     }

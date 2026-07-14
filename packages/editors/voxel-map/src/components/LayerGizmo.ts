@@ -51,7 +51,7 @@ export class LayerGizmo extends TransformGizmoBase {
         return;
       }
       const p = this.#pivot.position;
-      this.#vr.setLayerOffset(this.#activeLayer, {
+      this.#vr.engine.setLayerOffset(this.#activeLayer, {
         x: Math.round(p.x - this.#pivotOffset.x),
         y: Math.round(p.y - this.#pivotOffset.y),
         z: Math.round(p.z - this.#pivotOffset.z)
@@ -95,7 +95,7 @@ export class LayerGizmo extends TransformGizmoBase {
       return;
     }
 
-    if (!this.#vr.getLayer(name)) {
+    if (!this.#vr.engine.getLayer(name)) {
       this.controls.detach();
 
       return;
@@ -110,12 +110,12 @@ export class LayerGizmo extends TransformGizmoBase {
       return;
     }
 
-    const layer = this.#vr.getLayer(this.#activeLayer);
+    const layer = this.#vr.engine.getLayer(this.#activeLayer);
     if (!layer) {
       return;
     }
 
-    const center = this.#vr.getLayerCenter(this.#activeLayer)!;
+    const center = this.#vr.engine.getLayerCenter(this.#activeLayer)!;
     this.#pivotOffset.set(
       center.x - layer.offset.x,
       center.y - layer.offset.y,

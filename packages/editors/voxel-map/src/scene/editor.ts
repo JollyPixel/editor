@@ -115,8 +115,8 @@ export class EditorScene extends Systems.Scene {
     // Registering defaults first would cause load() to skip saved blocks
     // because of its "skip already-registered IDs" guard.
     if (!this.#pendingLoad?.blocks?.length) {
-      for (const block of vr.tilesetManager.getDefaultBlocks(void 0, { limit: 32 })) {
-        vr.blockRegistry.register(block);
+      for (const block of vr.engine.tilesetManager.getDefaultBlocks(void 0, { limit: 32 })) {
+        vr.engine.blockRegistry.register(block);
       }
     }
     this.editorState.dispatchBlockRegistryChanged();
@@ -125,9 +125,9 @@ export class EditorScene extends Systems.Scene {
     persistence.start();
 
     if (this.#pendingLoad !== null) {
-      vr.load(this.#pendingLoad);
+      vr.engine.load(this.#pendingLoad);
       this.editorState.dispatchBlockRegistryChanged();
-      const layers = vr.world.getLayers();
+      const layers = vr.engine.world.getLayers();
       if (layers.length > 0) {
         this.editorState.setSelectedLayer(layers[0].name);
       }

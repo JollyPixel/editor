@@ -114,7 +114,7 @@ must return `false` to avoid incorrect face culling.
 
 ## BlockRegistry
 
-Maps numeric block IDs to `BlockDefinition` objects. Accessible via `VoxelRenderer.blockRegistry`.
+Maps numeric block IDs to `BlockDefinition` objects. Accessible via `VoxelEngine.blockRegistry`.
 
 #### `register(def: BlockDefinition): this`
 
@@ -129,7 +129,7 @@ Registers a block definition. Throws if `def.id === 0`.
 ## BlockShapeRegistry
 
 Maps shape IDs to `BlockShape` implementations. Pre-populated with all built-in shapes
-by `VoxelRenderer`. Accessible via `VoxelRenderer.shapeRegistry`.
+by `VoxelEngine`. Accessible via `VoxelEngine.shapeRegistry`.
 
 #### `register(shape: BlockShape): this`
 

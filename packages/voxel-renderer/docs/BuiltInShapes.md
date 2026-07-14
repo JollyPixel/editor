@@ -1,6 +1,6 @@
 # Built-In Shapes
 
-All shapes below are registered automatically by `VoxelRenderer`. They are also available
+All shapes below are registered automatically by `VoxelEngine`. They are also available
 standalone via `BlockShapeRegistry.createDefault()`.
 
 ## Shape Reference
@@ -62,14 +62,14 @@ the `+Y`/`-Y` occlusion directions so face culling against neighbours remains ac
 
 ```ts
 // Ceiling ramp — same geometry as "ramp" but mounted upside-down
-vr.setVoxel("Ceiling", {
+engine.setVoxel("Ceiling", {
   position: { x: 2, y: 4, z: 0 },
   blockId: myRampBlock,
   flipY: true
 });
 
 // Inverted inner-corner stair
-vr.setVoxel("Ceiling", {
+engine.setVoxel("Ceiling", {
   position: { x: 3, y: 4, z: 0 },
   blockId: myStairBlock,
   rotation: VoxelRotation.CW90,
@@ -89,7 +89,7 @@ Implement `BlockShape` and register the instance via the `shapes` option or `sha
 
 ```ts
 import {
-  VoxelRenderer,
+  VoxelEngine,
   type BlockShape,
   type FaceDefinition,
   type Face
@@ -108,14 +108,14 @@ class MyShape implements BlockShape {
 }
 
 // Option A — at construction time
-const vr = new VoxelRenderer({
+const engine = new VoxelEngine({
   shapes: [
     new MyShape()
   ]
 });
 
 // Option B — at any time before voxels are placed
-vr.shapeRegistry.register(
+engine.shapeRegistry.register(
   new MyShape()
 );
 ```
@@ -123,7 +123,7 @@ vr.shapeRegistry.register(
 Then reference the shape in a `BlockDefinition`:
 
 ```ts
-vr.blockRegistry.register({
+engine.blockRegistry.register({
   id: 10,
   name: "Custom",
   shapeId: "myShape",

@@ -51,26 +51,6 @@ export interface VoxelSyncServerOptions {
  * 1. `connect(client)` — send current snapshot to the joining client.
  * 2. `receive(cmd)` — validate, apply to the world, and broadcast to all clients.
  * 3. `disconnect(clientId)` — remove the client and notify peers.
- *
- * @example
- * ```ts
- * const server = new VoxelSyncServer();
- *
- * wss.on("connection", (ws) => {
- *   const client: ClientHandle = {
- *     id: crypto.randomUUID(),
- *     send: (data) => ws.send(JSON.stringify(data))
- *   };
- *   server.connect(client);
- *
- *   ws.on("message", (raw) => {
- *     const cmd = JSON.parse(raw.toString()) as VoxelNetworkCommand;
- *     server.receive(cmd);
- *   });
- *
- *   ws.on("close", () => server.disconnect(client.id));
- * });
- * ```
  */
 export class VoxelSyncServer {
   readonly world: VoxelWorld;

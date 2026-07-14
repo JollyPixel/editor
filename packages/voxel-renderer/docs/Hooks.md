@@ -1,12 +1,12 @@
 # Hooks
 
-Hooks allow you to listen for changes in the `VoxelRenderer`, for example when a layer
+Hooks allow you to listen for changes in `VoxelEngine`, for example when a layer
 is added, removed or updated. They are particularly useful for synchronizing voxel-world
 changes between multiple clients or systems.
 
 ```ts
 import {
-  VoxelRenderer,
+  VoxelEngine,
   type VoxelLayerHookEvent
 } from "@jolly-pixel/voxel-renderer";
 
@@ -19,7 +19,7 @@ function onLayerUpdated(
   }
 }
 
-const vr = new VoxelRenderer({
+const engine = new VoxelEngine({
   onLayerUpdated,
 });
 ```
@@ -27,10 +27,12 @@ const vr = new VoxelRenderer({
 You can also set (or replace) the hook after construction:
 
 ```ts
-vr.onLayerUpdated = (event) => { /* ... */ };
+engine.onLayerUpdated = (event) => { /* ... */ };
 // Clear the hook:
-vr.onLayerUpdated = undefined;
+engine.onLayerUpdated = undefined;
 ```
+
+When wrapped by `VoxelRenderer`, the same hook lives at `vr.engine.onLayerUpdated`.
 
 ## Event reference
 

@@ -1,26 +1,26 @@
 # TiledConverter
 
-Converts a Tiled JSON map (`TiledMap`) to `VoxelWorldJSON` for import via `VoxelRenderer.load()`.
+Converts a Tiled JSON map (`TiledMap`) to `VoxelWorldJSON` for import via `VoxelEngine.load()`.
 
 - Tile layers become voxel layers.
 - Object layers become `VoxelObjectLayerJSON` entries with pixel-to-voxel coordinate conversion.
 - Group layers are flattened recursively.
 
 Block definitions derived from the tileset are embedded in `result.blocks` so they are
-auto-registered when passed to `VoxelRenderer.load()`.
+auto-registered when passed to `VoxelEngine.load()`.
 
 ```ts
 import { loadJSON } from "@jolly-pixel/engine";
 import {
   TiledConverter,
-  VoxelRenderer,
+  VoxelEngine,
   type TiledMap
 } from "@jolly-pixel/voxel.renderer";
 
 const tiledMap = loadJSON<TiledMap>("map.tmj");
 
-const vr = new VoxelRenderer({});
-vr.load(
+const engine = new VoxelEngine({});
+engine.load(
   new TiledConverter().convert(tiledMap, {
     resolveTilesetSrc: (_src, tilesetId) => `assets/${tilesetId}.png`,
     layerMode: "stacked"
@@ -81,7 +81,7 @@ interface TiledConverterOptions {
 
 #### `convert(map: TiledMap, options: TiledConverterOptions): VoxelWorldJSON`
 
-Converts the Tiled map to a `VoxelWorldJSON` object ready to pass to `VoxelRenderer.load()`.
+Converts the Tiled map to a `VoxelWorldJSON` object ready to pass to `VoxelEngine.load()`.
 
 ## TiledMap
 
@@ -129,9 +129,7 @@ export class VoxelBehavior extends ActorComponent {
       throw new Error("VoxelRenderer component not found on actor");
     }
     this.voxelRenderer = vr;
-    voxelRenderer
-      .load(world)
-      .catch(console.error);
+    this.voxelRenderer.engine.load(world);
   }
 }
 ```

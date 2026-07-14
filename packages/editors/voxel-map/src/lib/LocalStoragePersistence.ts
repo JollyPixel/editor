@@ -59,7 +59,7 @@ export class LocalStoragePersistence {
   }
 
   #save(): void {
-    const json = this.#vr.save();
+    const json = this.#vr.engine.save();
     localStorage.setItem(kStorageKey, JSON.stringify(json));
   }
 }
