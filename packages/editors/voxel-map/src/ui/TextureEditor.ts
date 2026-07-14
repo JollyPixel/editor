@@ -288,13 +288,13 @@ export class TextureEditor extends LitElement {
   }
 
   #onExport(): void {
-    const id = this.tilesetId || this.vr?.tilesetManager.defaultTilesetId || "texture";
+    const id = this.tilesetId || this.vr?.engine.tilesetManager.defaultTilesetId || "texture";
     this.#bridge.exportPng(`${id}.png`);
   }
 
   override render() {
-    const tilesetDefs = this.vr?.tilesetManager.getDefinitions() ?? [];
-    const currentTilesetId = this.tilesetId || this.vr?.tilesetManager.defaultTilesetId || "";
+    const tilesetDefs = this.vr?.engine.tilesetManager.getDefinitions() ?? [];
+    const currentTilesetId = this.tilesetId || this.vr?.engine.tilesetManager.defaultTilesetId || "";
 
     return html`
       <div class="toolbar">

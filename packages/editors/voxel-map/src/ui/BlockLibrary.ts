@@ -202,13 +202,13 @@ export class BlockLibrary extends LitElement {
   readonly #onSelectedBlockChange = () => {
     this._selectedId = editorState.selectedBlockId;
     this.#renderer?.setSelectedBlock(this._selectedId);
-    this._selectedBlock = this.vr?.blockRegistry.get(this._selectedId ?? 0) ?? null;
+    this._selectedBlock = this.vr?.engine.blockRegistry.get(this._selectedId ?? 0) ?? null;
   };
 
   readonly #onBlockRegistryChanged = () => {
     if (this.vr) {
       this._selectedId = editorState.selectedBlockId;
-      this._selectedBlock = this.vr.blockRegistry.get(this._selectedId ?? 0) ?? null;
+      this._selectedBlock = this.vr.engine.blockRegistry.get(this._selectedId ?? 0) ?? null;
     }
     this.#buildRenderer();
   };
@@ -245,7 +245,7 @@ export class BlockLibrary extends LitElement {
   ) {
     if (changed.has("vr") && this.vr) {
       this._selectedId = editorState.selectedBlockId;
-      this._selectedBlock = this.vr.blockRegistry.get(this._selectedId) ?? null;
+      this._selectedBlock = this.vr.engine.blockRegistry.get(this._selectedId) ?? null;
     }
   }
 
@@ -263,20 +263,20 @@ export class BlockLibrary extends LitElement {
     }
 
     this.#renderer?.dispose();
-    const blocks = [...this.vr.blockRegistry.getAll()];
+    const blocks = [...this.vr.engine.blockRegistry.getAll()];
     this.#renderer = new BlockLibraryRenderer(this.#viewportHost, {
-      shapeRegistry: this.vr.shapeRegistry,
-      tilesetManager: this.vr.tilesetManager,
+      shapeRegistry: this.vr.engine.shapeRegistry,
+      tilesetManager: this.vr.engine.tilesetManager,
       blocks
     });
     this.#renderer.setSelectedBlock(this._selectedId);
   }
 
   override render() {
-    const tilesetDefs = this.vr?.tilesetManager.getDefinitions() ?? [];
+    const tilesetDefs = this.vr?.engine.tilesetManager.getDefinitions() ?? [];
     const currentTilesetId =
       this._selectedBlock?.defaultTexture?.tilesetId ??
-      this.vr?.tilesetManager.defaultTilesetId ??
+      this.vr?.engine.tilesetManager.defaultTilesetId ??
       null;
     const currentCol = this._selectedBlock?.defaultTexture?.col ?? 0;
     const currentRow = this._selectedBlock?.defaultTexture?.row ?? 0;
@@ -400,10 +400,10 @@ export class BlockLibrary extends LitElement {
     if (!name?.trim()) {
       return;
     }
-    const existingIds = [...this.vr.blockRegistry.getAll()].map((b) => b.id);
+    const existingIds = [...this.vr.engine.blockRegistry.getAll()].map((b) => b.id);
     const newId = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
-    const defaultTilesetId = this.vr.tilesetManager.defaultTilesetId ?? undefined;
-    this.vr.blockRegistry.register({
+    const defaultTilesetId = this.vr.engine.tilesetManager.defaultTilesetId ?? undefined;
+    this.vr.engine.blockRegistry.register({
       id: newId,
       name: name.trim(),
       shapeId: "cube",
@@ -510,9 +510,9 @@ export class BlockLibrary extends LitElement {
   #applyBlockUpdate(
     updated: BlockDefinition
   ): void {
-    this.vr.blockRegistry.register(updated);
+    this.vr.engine.blockRegistry.register(updated);
     this._selectedBlock = updated;
-    this.vr.markAllChunksDirty("BlockLibrary update");
+    this.vr.engine.markAllChunksDirty("BlockLibrary update");
     editorState.dispatchBlockRegistryChanged();
     this.#refreshRenderer();
   }
@@ -522,7 +522,7 @@ export class BlockLibrary extends LitElement {
       return;
     }
 
-    const blocks = [...this.vr.blockRegistry.getAll()];
+    const blocks = [...this.vr.engine.blockRegistry.getAll()];
     this.#renderer.setBlocks(blocks);
   }
 }

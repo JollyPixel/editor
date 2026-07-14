@@ -130,7 +130,7 @@ export class ObjectLayerRenderer extends TransformGizmoBase {
     const newGroup = this.#visuals.getGroup(this.#selectedObjectKey);
     if (newGroup) {
       const objId = this.#selectedObjectKey.slice(layerName.length + 1);
-      const layer = this.#vr.getObjectLayer(layerName);
+      const layer = this.#vr.engine.getObjectLayer(layerName);
       const obj = layer?.objects.find((o) => o.id === objId);
       if (obj) {
         this.#initialObjDimensions = { w: obj.width ?? 1, h: obj.height ?? 1 };
@@ -173,7 +173,7 @@ export class ObjectLayerRenderer extends TransformGizmoBase {
     const layerName = key.slice(0, colonIdx);
     const objId = key.slice(colonIdx + 1);
 
-    const layer = this.#vr.getObjectLayer(layerName);
+    const layer = this.#vr.engine.getObjectLayer(layerName);
     const obj = layer?.objects.find((o) => o.id === objId);
     if (!obj) {
       return;
@@ -201,7 +201,7 @@ export class ObjectLayerRenderer extends TransformGizmoBase {
     const layerName = this.#selectedObjectKey.slice(0, colonIdx);
     const objId = this.#selectedObjectKey.slice(colonIdx + 1);
 
-    const layer = this.#vr.getObjectLayer(layerName);
+    const layer = this.#vr.engine.getObjectLayer(layerName);
     const obj = layer?.objects.find((o) => o.id === objId);
     const group = this.#visuals.getGroup(this.#selectedObjectKey);
 
@@ -212,7 +212,7 @@ export class ObjectLayerRenderer extends TransformGizmoBase {
     if (this.controls.mode === "translate") {
       const w = obj.width ?? 1;
       const h = obj.height ?? 1;
-      this.#vr.updateObject(layerName, objId, {
+      this.#vr.engine.updateObject(layerName, objId, {
         x: Math.round(group.position.x - w / 2),
         y: Math.round(group.position.y - 0.5),
         z: Math.round(group.position.z - h / 2)
@@ -226,7 +226,7 @@ export class ObjectLayerRenderer extends TransformGizmoBase {
       const newH = Math.max(1, Math.round(dims.h * group.scale.z));
       const newX = Math.round(obj.x + dims.w / 2 - newW / 2);
       const newZ = Math.round(obj.z + dims.h / 2 - newH / 2);
-      this.#vr.updateObject(layerName, objId, { x: newX, z: newZ, width: newW, height: newH });
+      this.#vr.engine.updateObject(layerName, objId, { x: newX, z: newZ, width: newW, height: newH });
     }
   }
 

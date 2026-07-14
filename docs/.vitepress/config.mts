@@ -235,6 +235,10 @@ export default defineConfig({
                   link: "/voxel-renderer/VoxelRenderer"
                 },
                 {
+                  text: "VoxelEngine",
+                  link: "/voxel-renderer/VoxelEngine"
+                },
+                {
                   text: "World",
                   link: "/voxel-renderer/World"
                 },

@@ -1,11 +1,18 @@
-// VoxelRenderer — public API
+// VoxelEngine — engine-agnostic core (no @jolly-pixel/engine dependency)
 export {
-  VoxelRenderer,
+  VoxelEngine,
   VoxelRotation,
-  type VoxelRendererOptions,
+  type VoxelEngineOptions,
   type VoxelLoadOptions,
   type VoxelSetOptions,
-  type VoxelRemoveOptions
+  type VoxelRemoveOptions,
+  type VoxelLogger
+} from "./VoxelEngine.ts";
+
+// VoxelRenderer — ActorComponent wrapper around VoxelEngine
+export {
+  VoxelRenderer,
+  type VoxelRendererOptions
 } from "./VoxelRenderer.ts";
 export * from "./hooks.ts";
 

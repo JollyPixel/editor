@@ -25,7 +25,11 @@ export interface ConflictResolver {
  * giving a deterministic total order without coordination.
  */
 export class LastWriteWinsResolver implements ConflictResolver {
-  resolve({ incoming, existing }: ConflictContext): "accept" | "reject" {
+  resolve(
+    ctx: ConflictContext
+  ): "accept" | "reject" {
+    const { incoming, existing } = ctx;
+
     if (!existing) {
       return "accept";
     }

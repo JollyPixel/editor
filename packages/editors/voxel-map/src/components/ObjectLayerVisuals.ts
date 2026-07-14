@@ -89,7 +89,7 @@ export class ObjectLayerVisuals extends ActorComponent {
     }
     this.#objectGroups.clear();
 
-    for (const layer of this.#vr.getObjectLayers()) {
+    for (const layer of this.#vr.engine.getObjectLayers()) {
       this.rebuildLayer(layer.name);
     }
     this.#updateObjectVisibility();
@@ -106,7 +106,7 @@ export class ObjectLayerVisuals extends ActorComponent {
       this.#objectGroups.delete(key);
     }
 
-    const layer = this.#vr.getObjectLayer(layerName);
+    const layer = this.#vr.engine.getObjectLayer(layerName);
     if (!layer || !layer.visible) {
       return;
     }

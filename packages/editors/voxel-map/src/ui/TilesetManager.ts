@@ -144,7 +144,7 @@ export class TilesetManager extends LitElement {
       return;
     }
 
-    this._definitions = this.vr.tilesetManager.getDefinitions();
+    this._definitions = this.vr.engine.tilesetManager.getDefinitions();
   }
 
   override render() {
@@ -228,7 +228,7 @@ export class TilesetManager extends LitElement {
     this._loading = true;
 
     try {
-      await this.vr.loadTileset({
+      await this.vr.engine.loadTileset({
         id,
         src,
         tileSize: this._newTileSize

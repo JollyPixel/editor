@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { VoxelRenderer } from "../VoxelRenderer.ts";
+import type { VoxelEngine } from "../VoxelEngine.ts";
 import type { VoxelLayerHookEvent } from "../hooks.ts";
 import type { VoxelWorldJSON } from "../serialization/VoxelSerializer.ts";
 import type { VoxelTransport } from "./VoxelTransport.ts";
@@ -7,10 +7,10 @@ import type { VoxelNetworkCommand } from "./types.ts";
 
 export interface VoxelSyncClientOptions {
   /**
-   * The local `VoxelRenderer` instance to synchronize.
+   * The local `VoxelEngine` instance to synchronize.
    * The client will replace its `onLayerUpdated` hook.
    */
-  renderer: VoxelRenderer;
+  engine: VoxelEngine;
   /** Transport implementation (WebSocket, WebRTC, etc.). */
   transport: VoxelTransport;
 }
@@ -18,42 +18,35 @@ export interface VoxelSyncClientOptions {
 /**
  * Client-side network orchestrator.
  *
- * Wires a `VoxelRenderer` to a `VoxelTransport` so that:
+ * Wires a `VoxelEngine` to a `VoxelTransport` so that:
  * - Local mutations are stamped and forwarded to the server.
  * - Remote commands received from the server are applied without re-emitting hooks.
- * - World snapshots from the server are loaded into the renderer.
- *
- * @example
- * ```ts
- * const client = new VoxelSyncClient({ renderer: vr, transport: myTransport });
- * // …later…
- * client.destroy();
- * ```
+ * - World snapshots from the server are loaded into the engine.
  */
 export class VoxelSyncClient {
-  #renderer: VoxelRenderer;
+  #engine: VoxelEngine;
   #transport: VoxelTransport;
   #seq = 0;
 
   constructor(
     options: VoxelSyncClientOptions
   ) {
-    this.#renderer = options.renderer;
+    this.#engine = options.engine;
     this.#transport = options.transport;
 
     // Intercept local mutations and forward them to the transport.
-    this.#renderer.onLayerUpdated = (event) => this.#handleLocal(event);
+    this.#engine.onLayerUpdated = (event) => this.#handleLocal(event);
 
     // Apply incoming commands from remote peers without re-emitting hooks.
     this.#transport.onCommand = (cmd) => {
       if (cmd.clientId !== this.#transport.localClientId) {
-        this.#renderer.applyRemoteCommand(cmd);
+        this.#engine.applyRemoteCommand(cmd);
       }
     };
 
     // Load world snapshots received from the server.
     this.#transport.onSnapshot = (snapshot: VoxelWorldJSON) => {
-      this.#renderer.load(snapshot);
+      this.#engine.load(snapshot);
     };
   }
 
@@ -71,10 +64,10 @@ export class VoxelSyncClient {
   }
 
   /**
-   * Detaches from the renderer and transport. Call when the session ends.
+   * Detaches from the engine and transport. Call when the session ends.
    */
   destroy(): void {
-    this.#renderer.onLayerUpdated = undefined;
+    this.#engine.onLayerUpdated = undefined;
     this.#transport.onCommand = null;
     this.#transport.onSnapshot = null;
   }

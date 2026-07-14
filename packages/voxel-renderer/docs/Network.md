@@ -1,13 +1,13 @@
 # Network Sync Layer
 
-The network sync layer adds **transport-agnostic, server-authoritative multiplayer** on top of the existing voxel renderer. It lets multiple clients share the same voxel world in real time without coupling the renderer to any specific transport technology.
+The network sync layer adds **transport-agnostic, server-authoritative multiplayer** on top of `VoxelEngine`. Multiple clients share the same voxel world in real time: `VoxelSyncClient` wires to a `VoxelEngine` instance (standalone or via `vr.engine`) and forwards mutations through your own `VoxelTransport`.
 
 ## Architecture overview
 
 ```
 ┌─────────────┐   local mutation   ┌──────────────────┐   sendCommand   ┌─────────────┐
-│VoxelRenderer│──────────────────▶│ VoxelSyncClient  │────────────────▶│  Transport  │
-│  (Three.js) │                   │                  │◀────────────────│ (WebSocket, │
+│ VoxelEngine │──────────────────▶│ VoxelSyncClient  │────────────────▶│  Transport  │
+│  (headless) │                   │                  │◀────────────────│ (WebSocket, │
 │             │◀──applyRemote──── │                  │   onCommand     │  WebRTC, …) │
 └─────────────┘                   └──────────────────┘                 └──────┬──────┘
                                                                               │  wire
@@ -24,7 +24,7 @@ The network sync layer adds **transport-agnostic, server-authoritative multiplay
 2. `VoxelSyncClient` intercepts the hook, stamps the command with `clientId / seq / timestamp`, and calls `transport.sendCommand(cmd)`.
 3. The transport sends the command over the wire to `VoxelSyncServer.receive()`.
 4. The server validates the command (LWW conflict resolution), applies it to its authoritative `VoxelWorld`, and broadcasts it to all connected clients.
-5. Each client's transport calls `onCommand(cmd)`, which `VoxelSyncClient` routes to `renderer.applyRemoteCommand(cmd)`.
+5. Each client's transport calls `onCommand(cmd)`, which `VoxelSyncClient` routes to `engine.applyRemoteCommand(cmd)`.
 6. `applyRemoteCommand` sets an internal flag so that the resulting hook event is **not** re-emitted — preventing infinite echo loops.
 
 ## VoxelTransport interface
@@ -89,13 +89,13 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 const client = new VoxelSyncClient({
-  renderer: vr,         // pre-constructed VoxelRenderer
+  engine: vr.engine,     // or a standalone, headless VoxelEngine
   transport: myTransport
 });
 ```
 
 The client:
-- Replaces `renderer.onLayerUpdated` with its own interceptor.
+- Replaces `engine.onLayerUpdated` with its own interceptor.
 - Wires `transport.onCommand` and `transport.onSnapshot`.
 
 ### Lifecycle
@@ -105,14 +105,14 @@ The client:
 client.destroy();
 ```
 
-`destroy()` clears `renderer.onLayerUpdated` and the transport callbacks so the renderer
+`destroy()` clears `engine.onLayerUpdated` and the transport callbacks so the engine
 reverts to standalone mode.
 
 ### Options
 
 | Option | Type | Description |
 |--------|------|-------------|
-| `renderer` | `VoxelRenderer` | The local renderer to synchronize. |
+| `engine` | `VoxelEngine` | The local engine to synchronize. |
 | `transport` | `VoxelTransport` | Your transport implementation. |
 
 ## VoxelSyncServer

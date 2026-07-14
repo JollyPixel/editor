@@ -8,16 +8,6 @@ import { packTransform } from "../utils/math.ts";
  *
  * Used by `VoxelSyncServer` (Node.js, no Three.js) and can be used standalone
  * for testing replay logic without a renderer.
- *
- * @example
- * ```ts
- * const world = new VoxelWorld(16);
- * applyCommandToWorld(world, {
- *   action: "added",
- *   layerName: "Ground",
- *   metadata: { options: {} }
- * });
- * ```
  */
 export function applyCommandToWorld(
   world: VoxelWorld,

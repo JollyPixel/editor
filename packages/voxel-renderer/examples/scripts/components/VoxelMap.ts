@@ -62,7 +62,7 @@ export class VoxelBehavior extends ActorComponent {
       tilesetLoader: this.tilesetLoader
     });
 
-    vr.load(this.world, {
+    vr.engine.load(this.world, {
       mergeLayers: true
     });
   }

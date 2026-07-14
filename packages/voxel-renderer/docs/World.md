@@ -108,7 +108,7 @@ Composited read of the voxel immediately adjacent to `position` in the given fac
 #### `setVoxelAt(layerName: string, position: VoxelCoord, entry: VoxelEntry): void`
 
 Writes a voxel directly and marks neighbouring chunks dirty for boundary face re-evaluation.
-Throws if the layer is not found. Prefer `VoxelRenderer.setVoxel` to handle rotation packing.
+Throws if the layer is not found. Prefer `VoxelEngine.setVoxel` to handle rotation packing.
 
 #### `removeVoxelAt(layerName: string, position: VoxelCoord): void`
 

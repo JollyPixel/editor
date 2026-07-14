@@ -5,15 +5,15 @@ keyed by `"x,y,z"` strings for human readability and easy diffing.
 Tileset metadata is embedded so the loader can restore textures automatically.
 
 ```ts
-const vr = new VoxelRenderer({});
+const engine = new VoxelEngine({});
 
 // Save
-const json = vr.save();
+const json = engine.save();
 localStorage.setItem("map", JSON.stringify(json));
 
 // Load
 const data = JSON.parse(localStorage.getItem("map")!) as VoxelWorldJSON;
-await vr.load(data);
+engine.load(data);
 ```
 
 ## Types
@@ -93,7 +93,7 @@ interface VoxelWorldJSON {
   /**
    * Named object layers (spawn points, triggers, etc.).
    * Present in converter output and in files saved after object layers
-   * were added at runtime via VoxelRenderer.addObjectLayer().
+   * were added at runtime via VoxelEngine.addObjectLayer().
    */
   objectLayers?: VoxelObjectLayerJSON[];
 }
@@ -101,8 +101,8 @@ interface VoxelWorldJSON {
 
 ## VoxelSerializer
 
-Low-level serialiser. Most users should prefer the higher-level `VoxelRenderer.save()` /
-`VoxelRenderer.load()`, which also handle material invalidation and chunk rebuilds.
+Low-level serialiser. Most users should prefer the higher-level `VoxelEngine.save()` /
+`VoxelEngine.load()`, which also handle material invalidation and chunk rebuilds.
 
 #### `serialize(world: VoxelWorld, tilesetManager: TilesetManager): VoxelWorldJSON`
 

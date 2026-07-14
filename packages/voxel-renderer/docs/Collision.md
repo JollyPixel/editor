@@ -5,7 +5,7 @@ required when physics is not needed.
 
 ## Setup
 
-Pass a `rapier` object to `VoxelRendererOptions` to enable collision shapes:
+Pass a `rapier` object to `VoxelEngineOptions` (a.k.a. `VoxelRendererOptions`) to enable collision shapes:
 
 ```ts
 import Rapier from "@dimforge/rapier3d-compat";
@@ -85,7 +85,7 @@ If **any** block in a chunk uses `"trimesh"`, the entire chunk gets a single tri
 ## VoxelColliderBuilder
 
 Builds Rapier collision shapes for individual `VoxelChunk`s. Managed internally by
-`VoxelRenderer`; most users do not need to call this directly.
+`VoxelEngine`; most users do not need to call this directly.
 
 ### VoxelColliderBuilderOptions
 

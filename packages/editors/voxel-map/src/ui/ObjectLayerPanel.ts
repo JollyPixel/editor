@@ -207,7 +207,7 @@ export class ObjectLayerPanel extends LitElement {
       return;
     }
 
-    const layer = this.vr.getObjectLayer(this.layerName) ?? null;
+    const layer = this.vr.engine.getObjectLayer(this.layerName) ?? null;
     this._layer = layer;
 
     if (layer) {
@@ -328,7 +328,7 @@ export class ObjectLayerPanel extends LitElement {
     }
 
     this._visible = event.target.checked;
-    this.vr.updateObjectLayer(this.layerName, { visible: this._visible });
+    this.vr.engine.updateObjectLayer(this.layerName, { visible: this._visible });
   }
 
   #onObjectVisibleChange(
@@ -339,7 +339,7 @@ export class ObjectLayerPanel extends LitElement {
       return;
     }
 
-    this.vr.updateObject(this.layerName, objId, { visible: event.target.checked });
+    this.vr.engine.updateObject(this.layerName, objId, { visible: event.target.checked });
   }
 
   #onObjectPosChange(
@@ -351,7 +351,7 @@ export class ObjectLayerPanel extends LitElement {
     }
 
     const { x, y, z } = event.detail;
-    this.vr.updateObject(this.layerName, objId, { x, y, z });
+    this.vr.engine.updateObject(this.layerName, objId, { x, y, z });
   }
 
   #onObjectSizeChange(
@@ -363,7 +363,7 @@ export class ObjectLayerPanel extends LitElement {
     }
 
     const { x: width, y: height } = event.detail;
-    this.vr.updateObject(this.layerName, objId, { width, height });
+    this.vr.engine.updateObject(this.layerName, objId, { width, height });
   }
 
   #onPropKeyChange(
@@ -388,7 +388,7 @@ export class ObjectLayerPanel extends LitElement {
     const props = { ...(obj.properties ?? {}) };
     props[newKey] = props[oldKey];
     delete props[oldKey];
-    this.vr.updateObject(this.layerName, objId, { properties: props });
+    this.vr.engine.updateObject(this.layerName, objId, { properties: props });
   }
 
   #onPropValueChange(
@@ -406,7 +406,7 @@ export class ObjectLayerPanel extends LitElement {
     }
 
     const props = { ...(obj.properties ?? {}), [key]: event.target.value };
-    this.vr.updateObject(this.layerName, objId, { properties: props });
+    this.vr.engine.updateObject(this.layerName, objId, { properties: props });
   }
 
   #addProp(
@@ -422,7 +422,7 @@ export class ObjectLayerPanel extends LitElement {
     }
 
     const props = { ...(obj.properties ?? {}), "": "" };
-    this.vr.updateObject(this.layerName, objId, { properties: props });
+    this.vr.engine.updateObject(this.layerName, objId, { properties: props });
   }
 
   #removeProp(
@@ -440,7 +440,7 @@ export class ObjectLayerPanel extends LitElement {
 
     const props = { ...(obj.properties ?? {}) };
     delete props[key];
-    this.vr.updateObject(this.layerName, objId, { properties: props });
+    this.vr.engine.updateObject(this.layerName, objId, { properties: props });
   }
 
   #startRename(
@@ -458,7 +458,7 @@ export class ObjectLayerPanel extends LitElement {
   ): void {
     const trimmed = this._editingValue.trim();
     if (trimmed && this.layerName) {
-      this.vr.updateObject(this.layerName, objId, { name: trimmed });
+      this.vr.engine.updateObject(this.layerName, objId, { name: trimmed });
     }
     this._editingObjectId = null;
   }
@@ -482,7 +482,7 @@ export class ObjectLayerPanel extends LitElement {
       return;
     }
 
-    this.vr.removeObject(this.layerName, objId);
+    this.vr.engine.removeObject(this.layerName, objId);
   }
 
   async #addObject() {
@@ -495,7 +495,7 @@ export class ObjectLayerPanel extends LitElement {
       return;
     }
 
-    this.vr.addObject(this.layerName, {
+    this.vr.engine.addObject(this.layerName, {
       id: crypto.randomUUID(),
       name: name.trim(),
       x: 0,
