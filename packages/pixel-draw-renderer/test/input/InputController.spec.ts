@@ -6,8 +6,8 @@ import assert from "node:assert/strict";
 import { Window } from "happy-dom";
 
 // Import Internal Dependencies
-import { InputController, type InputActions } from "../src/InputController.ts";
-import { Viewport } from "../src/Viewport.ts";
+import { InputController, type InputActions } from "../../src/input/InputController.ts";
+import { Viewport } from "../../src/rendering/Viewport.ts";
 
 // CONSTANTS
 const kEmulatedBrowserWindow = new Window();

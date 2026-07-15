@@ -1,14 +1,18 @@
+// Import Third-party Dependencies
+import Color from "colorjs.io";
+
 // Import Internal Dependencies
-import { getColorAsRGBA } from "./utils.ts";
-import type { Vec2 } from "./types.ts";
+import { getColorAsRGBA } from "../utils.ts";
+import type { ColorInput, Vec2 } from "../types.ts";
 
 export interface BrushManagerOptions {
   /**
-   * Base color of the brush. Can be any valid CSS color string.
-   * Opacity can be controlled separately with the `opacity` property.
+   * Base color of the brush. Can be any valid CSS color string or a
+   * colorjs.io `Color` instance. Opacity can be controlled separately with
+   * the `opacity` property.
    * @default "#000000"
    */
-  color?: string;
+  color?: ColorInput;
   /**
    * Size of the brush in pixels. Must be a positive integer.
    * The actual affected area will be a square of `size x size` pixels centered around the target pixel.
@@ -27,8 +31,8 @@ export interface BrushManagerOptions {
    * @default { colorInline: "#FFF", colorOutline: "#000" }
    */
   highlight?: {
-    colorInline?: string;
-    colorOutline?: string;
+    colorInline?: ColorInput;
+    colorOutline?: ColorInput;
   };
 }
 
@@ -37,8 +41,7 @@ export interface BrushManagerOptions {
  * Provides methods to set and get these properties, as well as to calculate the affected pixels based on the brush size.
  */
 export class BrushManager {
-  #color: string;
-  #colorHex: string;
+  #color: Color;
   #opacity: number;
   #size: number;
   #maxSize: number;
@@ -58,48 +61,43 @@ export class BrushManager {
       }
     } = options;
 
+    this.#opacity = 1;
     this.setColor(color);
     this.#maxSize = Math.max(maxSize, 1);
     this.setSize(size);
-    this.#opacity = 1;
 
-    this.setColorInline(highlight.colorInline || "#FFF");
-    this.setColorOutline(highlight.colorOutline || "#000");
+    this.setColorInline(highlight.colorInline ?? "#FFF");
+    this.setColorOutline(highlight.colorOutline ?? "#000");
   }
 
   setColor(
-    color: string
+    color: ColorInput
   ): void {
-    this.#colorHex = color;
-    const [r, g, b] = getColorAsRGBA(color);
-    this.#color = `rgba(${r}, ${g}, ${b}, ${this.#opacity})`;
+    this.#color = new Color(color);
   }
 
   setColorWithOpacity(
-    color: string,
+    color: ColorInput,
     opacity: number
   ): void {
-    this.#colorHex = color;
-    const [r, g, b] = getColorAsRGBA(color);
+    this.#color = new Color(color);
     this.#opacity = Math.max(0, Math.min(1, opacity));
-    this.#color = `rgba(${r}, ${g}, ${b}, ${this.#opacity})`;
   }
 
   getColor(): string {
-    return this.#color;
+    const [r, g, b] = getColorAsRGBA(this.#color);
+
+    return `rgba(${r}, ${g}, ${b}, ${this.#opacity})`;
   }
 
   getColorHex(): string {
-    return this.#colorHex;
+    return this.#color.toString({ format: "hex", collapse: false });
   }
 
   setOpacity(
     opacity: number
   ): void {
     this.#opacity = Math.max(0, Math.min(1, opacity));
-
-    const [r, g, b] = getColorAsRGBA(this.#colorHex);
-    this.#color = `rgba(${r}, ${g}, ${b}, ${this.#opacity})`;
   }
 
   getOpacity(): number {
@@ -107,7 +105,7 @@ export class BrushManager {
   }
 
   setColorInline(
-    color: string
+    color: ColorInput
   ): void {
     const [r, g, b] = getColorAsRGBA(color);
     this.#colorInline = `rgb(${r}, ${g}, ${b})`;
@@ -118,7 +116,7 @@ export class BrushManager {
   }
 
   setColorOutline(
-    color: string
+    color: ColorInput
   ): void {
     const [r, g, b] = getColorAsRGBA(color);
     this.#colorOutline = `rgb(${r}, ${g}, ${b})`;

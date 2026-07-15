@@ -1,25 +1,65 @@
+// Import Third-party Dependencies
+import Color from "colorjs.io";
+
+// Import Internal Dependencies
+import type { ColorInput, RGBA } from "./types.ts";
+
+function clamp255(
+  value: number
+): number {
+  return Math.max(0, Math.min(255, Math.round(value * 255)));
+}
+
+/**
+ * Parses any valid CSS color string (hex, rgb(), hsl(), named color, ...) or
+ * an existing colorjs.io `Color` instance into 0-255 RGBA components.
+ * Out-of-gamut sRGB values are clamped rather than gamut-mapped.
+ */
+export function getColorAsRGBA(
+  color: ColorInput
+): [number, number, number, number] {
+  const srgb = new Color(color).to("srgb");
+  const [r, g, b] = srgb.coords;
+  const a = srgb.alpha ?? 1;
+
+  return [clamp255(r ?? 0), clamp255(g ?? 0), clamp255(b ?? 0), clamp255(a)];
+}
+
+/**
+ * Resolves a color option that may already be a plain `RGBA` byte object
+ * (used internally by PixelBuffer/CanvasBuffer) or a `ColorInput` needing
+ * to be parsed.
+ */
+export function toRGBA(
+  color: RGBA | ColorInput
+): RGBA {
+  if (typeof color === "string" || color instanceof Color) {
+    const [r, g, b, a] = getColorAsRGBA(color);
+
+    return { r, g, b, a };
+  }
+
+  return color;
+}
+
+/**
+ * Returns a CSS-valid color string, ready to assign to a Canvas2D
+ * `fillStyle`/`strokeStyle`. Strings pass through untouched (Canvas already
+ * understands hex/rgb/hsl/named colors natively); `Color` instances are
+ * serialized to their own color-space syntax.
+ */
+export function toCssColor(
+  color: ColorInput
+): string {
+  return typeof color === "string" ? color : color.toString();
+}
+
 export function hexToRgb(
   hex: string
 ): { r: number; g: number; b: number; } {
-  const bigint = parseInt(hex.slice(1), 16);
+  const [r, g, b] = getColorAsRGBA(hex);
 
-  return {
-    r: (bigint >> 16) & 255,
-    g: (bigint >> 8) & 255,
-    b: bigint & 255
-  };
-}
-
-export function getColorAsRGBA(
-  color: string
-): [number, number, number, number] {
-  const ctx = document.createElement("canvas").getContext("2d", { willReadFrequently: true })!;
-  ctx.fillStyle = color;
-  ctx.fillRect(0, 0, 1, 1);
-
-  const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
-
-  return [r, g, b, a];
+  return { r, g, b };
 }
 
 export function rgbToHex(
@@ -31,7 +71,6 @@ export function rgbToHex(
     throw new Error("RGB values must be between 0 and 255.");
   }
 
-  const hexa = [r, g, b].map((val) => val.toString(16).padStart(2, "0"));
-
-  return `#${hexa[0]}${hexa[1]}${hexa[2]}`;
+  return new Color("srgb", [r / 255, g / 255, b / 255])
+    .toString({ format: "hex", collapse: false });
 }

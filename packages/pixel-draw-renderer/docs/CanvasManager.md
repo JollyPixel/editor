@@ -1,6 +1,6 @@
 # CanvasManager
 
-`CanvasManager` is the top-level coordinator for the pixel-draw renderer. It wires together the [`Viewport`](./Viewport.md), `TextureBuffer`, `CanvasRenderer`, `InputController`, and `SvgManager` into a single cohesive public API.
+`CanvasManager` is the top-level coordinator for the pixel-draw renderer. It wires together the [`Viewport`](./Viewport.md), `CanvasBuffer`, `CanvasRenderer`, `InputController`, and `SvgManager` into a single cohesive public API.
 
 ## Types
 
@@ -13,16 +13,20 @@ new CanvasManager(options?: CanvasManagerOptions)
 | Property | Type | Default | Description |
 |---|---|---|---|
 | `texture.size` | `number` | `64` | Initial texture size in pixels (square) |
-| `texture.defaultColor` | `{ r, g, b, a }` | transparent black | Fill color used when the texture is cleared |
+| `texture.defaultColor` | `ColorInput` | transparent black | Fill color used when the texture is cleared. Accepts a CSS color string or a colorjs.io `Color` instance |
 | `texture.maxSize` | `number` | `2048` | Maximum texture size; the master canvas is pre-allocated at this size |
 | `zoom.range` | `[min, max]` | `[0.5, 40]` | Minimum and maximum zoom multipliers |
 | `zoom.sensitivity` | `number` | `0.002` | Wheel-delta multiplier for zoom speed |
 | `background.size` | `number` | `8` | Checkerboard tile size in pixels |
-| `background.color1` | `string` | `"#FFFFFF"` | First checkerboard color |
-| `background.color2` | `string` | `"#CCCCCC"` | Second checkerboard color |
-| `brush.color` | `string` | `"#000000"` | Initial brush color (CSS hex) |
+| `background.color1` | `ColorInput` | `"#FFFFFF"` | First checkerboard color |
+| `background.color2` | `ColorInput` | `"#CCCCCC"` | Second checkerboard color |
+| `brush.color` | `ColorInput` | `"#000000"` | Initial brush color. Accepts a CSS color string or a colorjs.io `Color` instance |
 | `brush.size` | `number` | `1` | Initial brush size in pixels |
 | `brush.maxSize` | `number` | `32` | Maximum brush size |
+| `onDrawEnd` | `() => void` | — | Called after a draw stroke is committed to the master buffer |
+| `onBufferUpdated` | `PixelBufferHookListener` | — | Called for every local mutation (stroke, resize, texture replace); see [Network.md](./Network.md) |
+
+`ColorInput` (`type ColorInput = string | Color`) is used throughout the package wherever a color option is accepted: a CSS color string (hex, `rgb()`, `hsl()`, named color, ...) or a [colorjs.io](https://colorjs.io) `Color` instance.
 
 ## Properties
 
@@ -42,10 +46,10 @@ readonly viewport: Viewport
 
 The viewport instance. Use it to read zoom and camera position, or to call coordinate-conversion methods directly.
 
-### `textureBuffer`
+### `canvasBuffer`
 
 ```ts
-readonly textureBuffer: TextureBuffer
+readonly canvasBuffer: CanvasBuffer
 ```
 
 Direct access to the dual-canvas pixel storage. Useful for programmatic pixel drawing outside of user input.
@@ -167,3 +171,19 @@ Forces an immediate redraw of the visible canvas from the current working textur
 ### `destroy()`
 
 Destroy the canvas and all related elements (listeners etc)
+
+---
+
+### `onBufferUpdated` / `applyRemoteCommand` / `loadSnapshot`
+
+```ts
+set onBufferUpdated(fn: PixelBufferHookListener | undefined)
+applyRemoteCommand(event: PixelBufferHookEvent): void
+loadSnapshot(size: Vec2, pixels: Uint8ClampedArray): void
+```
+
+Network sync hooks, used by `PixelSyncSession` — see [Network.md](./Network.md).
+`onBufferUpdated` fires on every local mutation (stroke, resize, texture
+replace). `applyRemoteCommand` applies a mutation from a remote peer without
+re-firing `onBufferUpdated`. `loadSnapshot` hydrates the buffer from a network
+snapshot; it is never itself broadcast.

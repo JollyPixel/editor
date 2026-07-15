@@ -6,8 +6,8 @@ import assert from "node:assert/strict";
 import { Window } from "happy-dom";
 
 // Import Internal Dependencies
-import { SvgManager } from "../src/SvgManager.ts";
-import type { DefaultViewport } from "../src/types.ts";
+import { SvgManager } from "../../src/rendering/SvgManager.ts";
+import type { DefaultViewport } from "../../src/types.ts";
 
 // CONSTANTS
 const kEmulatedBrowserWindow = new Window();

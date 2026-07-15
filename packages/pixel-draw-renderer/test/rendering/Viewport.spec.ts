@@ -3,7 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { Viewport } from "../src/Viewport.ts";
+import { Viewport } from "../../src/rendering/Viewport.ts";
 
 describe("Viewport", () => {
   describe("constructor", () => {

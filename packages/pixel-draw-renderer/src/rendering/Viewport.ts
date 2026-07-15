@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { DefaultViewport, Vec2 } from "./types.ts";
+import type { DefaultViewport, Vec2 } from "../types.ts";
 
 export interface ViewportOptions {
   /**

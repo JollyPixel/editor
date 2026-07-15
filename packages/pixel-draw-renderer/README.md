@@ -14,6 +14,7 @@
 
 - **Zoom & pan** — smooth mouse-wheel zoom with configurable sensitivity and range; middle-click pan in any mode
 - **Brush painting** — configurable square brush with adjustable size, color, and opacity
+- **Flexible color input** — every color option accepts a CSS color string (hex, `rgb()`, `hsl()`, named color, ...) or a [colorjs.io](https://colorjs.io) `Color` instance
 - **Color picking** — right-click eyedropper that reads the master canvas pixel
 - **Transparency support** — configurable checkerboard background renders beneath transparent pixels
 - **SVG brush highlight** — grid-aligned SVG overlay tracks the cursor in real time
@@ -62,7 +63,7 @@ const manager = new CanvasManager({
 manager.reparentCanvasTo(document.body);
 
 // Draw a red pixel at texture position (10, 10)
-manager.textureBuffer.drawPixels(
+manager.canvasBuffer.drawPixels(
   [{ x: 10, y: 10 }],
   { r: 255, g: 0, b: 0, a: 255 }
 );
@@ -87,6 +88,15 @@ manager.brush.setOpacity(0.8);
 manager.brush.setSize(3);
 ```
 
+Color options accept a plain CSS string or a [colorjs.io](https://colorjs.io) `Color` instance:
+
+```ts
+import Color from "colorjs.io";
+
+manager.brush.setColor(new Color("oklch(70% 0.15 50)"));
+manager.brush.setColor("rebeccapurple");
+```
+
 ### Switching modes
 
 ```ts
@@ -109,7 +119,7 @@ Open `http://localhost:5173` to see the interactive demo.
 | [`CanvasManager`](./docs/CanvasManager.md) | Top-level coordinator — the primary public API |
 | [`Viewport`](./docs/Viewport.md) | Camera position, zoom level, and coordinate transforms |
 | [`BrushManager`](./docs/BrushManager.md) | Brush size, color, opacity, and affected-pixel computation |
-| `TextureBuffer` | Dual-canvas pixel storage and image-data access |
+| `CanvasBuffer` | Dual-canvas pixel storage and image-data access |
 | `CanvasRenderer` | Visible canvas drawing and checkerboard background |
 | `InputController` | Mouse event routing to drawing and pan actions |
 | `SvgManager` | SVG brush-highlight overlay |
@@ -123,7 +133,7 @@ Call `manager.resize()` after `reparentCanvasTo()` to let the renderer read the 
 Pass `{ bounds: canvas.getBoundingClientRect() }` when calling `viewport.getMouseTexturePosition()`. Stale bounding rects cause offset errors.
 
 **Master canvas is slow to initialize**
-`TextureBuffer` pre-allocates a canvas at `maxSize` (default `2048`). In test environments or when large textures are unnecessary, set `texture.maxSize` to a smaller value such as `64`.
+`CanvasBuffer` pre-allocates a canvas at `maxSize` (default `2048`). In test environments or when large textures are unnecessary, set `texture.maxSize` to a smaller value such as `64`.
 
 ## Contributors Guide
 

@@ -16,6 +16,7 @@
 
 - **Zoom & pan** — smooth mouse-wheel zoom with configurable sensitivity and range; middle-click pan in any mode
 - **Brush painting** — configurable square brush with adjustable size, color, and opacity
+- **Flexible color input** — every color option accepts a CSS color string (hex, `rgb()`, `hsl()`, named color, ...) or a [colorjs.io](https://colorjs.io) `Color` instance
 - **Color picking** — right-click eyedropper that reads the master canvas pixel
 - **Transparency support** — configurable checkerboard background renders beneath transparent pixels
 - **SVG brush highlight** — grid-aligned SVG overlay tracks the cursor in real time
@@ -64,7 +65,7 @@ const manager = new CanvasManager({
 manager.reparentCanvasTo(document.body);
 
 // Draw a red pixel at texture position (10, 10)
-manager.textureBuffer.drawPixels(
+manager.canvasBuffer.drawPixels(
   [{ x: 10, y: 10 }],
   { r: 255, g: 0, b: 0, a: 255 }
 );
@@ -89,6 +90,15 @@ manager.brush.setOpacity(0.8);
 manager.brush.setSize(3);
 ```
 
+Color options accept a plain CSS string or a [colorjs.io](https://colorjs.io) `Color` instance:
+
+```ts
+import Color from "colorjs.io";
+
+manager.brush.setColor(new Color("oklch(70% 0.15 50)"));
+manager.brush.setColor("rebeccapurple");
+```
+
 ### Switching modes
 
 ```ts
@@ -111,7 +121,7 @@ Open `http://localhost:5173` to see the interactive demo.
 | [`CanvasManager`](./docs/CanvasManager.md) | Top-level coordinator — the primary public API |
 | [`Viewport`](./docs/Viewport.md) | Camera position, zoom level, and coordinate transforms |
 | [`BrushManager`](./docs/BrushManager.md) | Brush size, color, opacity, and affected-pixel computation |
-| `TextureBuffer` | Dual-canvas pixel storage and image-data access |
+| `CanvasBuffer` | Dual-canvas pixel storage and image-data access |
 | `CanvasRenderer` | Visible canvas drawing and checkerboard background |
 | `InputController` | Mouse event routing to drawing and pan actions |
 | `SvgManager` | SVG brush-highlight overlay |
@@ -125,7 +135,7 @@ Call `manager.resize()` after `reparentCanvasTo()` to let the renderer read the 
 Pass `{ bounds: canvas.getBoundingClientRect() }` when calling `viewport.getMouseTexturePosition()`. Stale bounding rects cause offset errors.
 
 **Master canvas is slow to initialize**
-`TextureBuffer` pre-allocates a canvas at `maxSize` (default `2048`). In test environments or when large textures are unnecessary, set `texture.maxSize` to a smaller value such as `64`.
+`CanvasBuffer` pre-allocates a canvas at `maxSize` (default `2048`). In test environments or when large textures are unnecessary, set `texture.maxSize` to a smaller value such as `64`.
 
 ## Contributors Guide
 
@@ -163,13 +173,16 @@ MIT
 ```ts
 new BrushManager(options: BrushManagerOptions)
 
+export type ColorInput = string | Color; // Color is colorjs.io's Color class
+
 export interface BrushManagerOptions {
   /**
-   * Base color of the brush. Can be any valid CSS color string.
+   * Base color of the brush. Accepts a CSS color string (hex, rgb(), hsl(),
+   * named color, ...) or a colorjs.io `Color` instance.
    * Opacity can be controlled separately with the `opacity` property.
    * @default "#000000"
    */
-  color?: string;
+  color?: ColorInput;
   /**
    * Size of the brush in pixels. Must be a positive integer.
    * The actual affected area will be a square of `size x size` pixels centered around the target pixel.
@@ -188,8 +201,8 @@ export interface BrushManagerOptions {
    * @default { colorInline: "#FFF", colorOutline: "#000" }
    */
   highlight?: {
-    colorInline?: string;
-    colorOutline?: string;
+    colorInline?: ColorInput;
+    colorOutline?: ColorInput;
   };
 }
 ```
@@ -199,10 +212,10 @@ export interface BrushManagerOptions {
 ### `setColor`
 
 ```ts
-setColor(color: string): void
+setColor(color: ColorInput): void
 ```
 
-Sets the brush color from a CSS hex string (e.g. `"#FF0000"`). Updates the internal `r`, `g`, `b` components accordingly.
+Sets the brush color from a CSS color string (hex, rgb(), hsl(), named color, ...) or a colorjs.io `Color` instance. Internally stored as a `Color` instance; `getColorHex()` always serializes it back to a 6-digit hex string regardless of the input format.
 
 ---
 
@@ -230,7 +243,7 @@ Sets the brush size in pixels. Values are clamped to `[1, maxSize]`.
 
 ```ts
 getHighlightColorInline(): string
-setHighlightColorInline(color: string): void
+setHighlightColorInline(color: ColorInput): void
 ```
 
 Gets or sets the inner stroke color of the SVG brush cursor overlay.
@@ -241,7 +254,7 @@ Gets or sets the inner stroke color of the SVG brush cursor overlay.
 
 ```ts
 getHighlightColorOutline(): string
-setHighlightColorOutline(color: string): void
+setHighlightColorOutline(color: ColorInput): void
 ```
 
 Gets or sets the outer stroke color of the SVG brush cursor overlay.
@@ -264,7 +277,7 @@ Returns an array of texture-space `{ x, y }` coordinates for every pixel within 
 ```ts
 // size = 3 → 9 pixels around (10, 10)
 const pixels = brush.getAffectedPixels(10, 10);
-textureBuffer.drawPixels(pixels, { r: 255, g: 0, b: 0, a: 255 });
+canvasBuffer.drawPixels(pixels, { r: 255, g: 0, b: 0, a: 255 });
 ```
 
 
@@ -272,7 +285,7 @@ textureBuffer.drawPixels(pixels, { r: 255, g: 0, b: 0, a: 255 });
 
 # CanvasManager
 
-`CanvasManager` is the top-level coordinator for the pixel-draw renderer. It wires together the [`Viewport`](./Viewport.md), `TextureBuffer`, `CanvasRenderer`, `InputController`, and `SvgManager` into a single cohesive public API.
+`CanvasManager` is the top-level coordinator for the pixel-draw renderer. It wires together the [`Viewport`](./Viewport.md), `CanvasBuffer`, `CanvasRenderer`, `InputController`, and `SvgManager` into a single cohesive public API.
 
 ## Types
 
@@ -285,16 +298,20 @@ new CanvasManager(options?: CanvasManagerOptions)
 | Property | Type | Default | Description |
 |---|---|---|---|
 | `texture.size` | `number` | `64` | Initial texture size in pixels (square) |
-| `texture.defaultColor` | `{ r, g, b, a }` | transparent black | Fill color used when the texture is cleared |
+| `texture.defaultColor` | `ColorInput` | transparent black | Fill color used when the texture is cleared. Accepts a CSS color string or a colorjs.io `Color` instance |
 | `texture.maxSize` | `number` | `2048` | Maximum texture size; the master canvas is pre-allocated at this size |
 | `zoom.range` | `[min, max]` | `[0.5, 40]` | Minimum and maximum zoom multipliers |
 | `zoom.sensitivity` | `number` | `0.002` | Wheel-delta multiplier for zoom speed |
 | `background.size` | `number` | `8` | Checkerboard tile size in pixels |
-| `background.color1` | `string` | `"#FFFFFF"` | First checkerboard color |
-| `background.color2` | `string` | `"#CCCCCC"` | Second checkerboard color |
-| `brush.color` | `string` | `"#000000"` | Initial brush color (CSS hex) |
+| `background.color1` | `ColorInput` | `"#FFFFFF"` | First checkerboard color |
+| `background.color2` | `ColorInput` | `"#CCCCCC"` | Second checkerboard color |
+| `brush.color` | `ColorInput` | `"#000000"` | Initial brush color. Accepts a CSS color string or a colorjs.io `Color` instance |
 | `brush.size` | `number` | `1` | Initial brush size in pixels |
 | `brush.maxSize` | `number` | `32` | Maximum brush size |
+| `onDrawEnd` | `() => void` | — | Called after a draw stroke is committed to the master buffer |
+| `onBufferUpdated` | `PixelBufferHookListener` | — | Called for every local mutation (stroke, resize, texture replace); see [Network.md](./Network.md) |
+
+`ColorInput` (`type ColorInput = string | Color`) is used throughout the package wherever a color option is accepted: a CSS color string (hex, `rgb()`, `hsl()`, named color, ...) or a [colorjs.io](https://colorjs.io) `Color` instance.
 
 ## Properties
 
@@ -314,10 +331,10 @@ readonly viewport: Viewport
 
 The viewport instance. Use it to read zoom and camera position, or to call coordinate-conversion methods directly.
 
-### `textureBuffer`
+### `canvasBuffer`
 
 ```ts
-readonly textureBuffer: TextureBuffer
+readonly canvasBuffer: CanvasBuffer
 ```
 
 Direct access to the dual-canvas pixel storage. Useful for programmatic pixel drawing outside of user input.
@@ -349,7 +366,7 @@ Returns or changes the current texture size. `setSize` copies the master canvas 
 ### `setTexture`
 
 ```ts
-setTexture(img: HTMLImageElement): void
+setTexture(source: HTMLCanvasElement | HTMLImageElement): void
 ```
 
 Replaces the texture with the pixel data from `img`. The image is drawn into the master canvas and the working canvas is resized to match.
@@ -434,6 +451,306 @@ render(): void
 
 Forces an immediate redraw of the visible canvas from the current working texture.
 
+---
+
+### `destroy()`
+
+Destroy the canvas and all related elements (listeners etc)
+
+---
+
+### `onBufferUpdated` / `applyRemoteCommand` / `loadSnapshot`
+
+```ts
+set onBufferUpdated(fn: PixelBufferHookListener | undefined)
+applyRemoteCommand(event: PixelBufferHookEvent): void
+loadSnapshot(size: Vec2, pixels: Uint8ClampedArray): void
+```
+
+Network sync hooks, used by `PixelSyncSession` — see [Network.md](./Network.md).
+`onBufferUpdated` fires on every local mutation (stroke, resize, texture
+replace). `applyRemoteCommand` applies a mutation from a remote peer without
+re-firing `onBufferUpdated`. `loadSnapshot` hydrates the buffer from a network
+snapshot; it is never itself broadcast.
+
+
+# Network.md
+
+# Network Sync Layer
+
+Transport-agnostic, server-authoritative multiplayer for CanvasManager. Multiple
+clients can share the same texture(s) in real time. Structurally mirrors
+`@jolly-pixel/voxel.renderer`'s network layer but is an independent
+implementation — this package has no dependency on voxel-renderer.
+
+## Architecture
+
+```
+┌───────────────┐  onBufferUpdated   ┌──────────────────┐   sendCommand   ┌─────────────┐
+│ CanvasManager │───────────────────▶│ PixelSyncSession │────────────────▶│  Transport  │
+│  (per buffer) │                    │  (multi-buffer)  │◀────────────────│ (WebSocket, │
+│               │◀──applyRemote──────│                  │   onCommand     │  WebRTC, …) │
+└───────────────┘                    └──────────────────┘                 └──────┬──────┘
+                                                                                  │ wire
+                                                                                  ▼
+                                                                       ┌──────────────────┐
+                                                                       │  PixelSyncServer │
+                                                                       │    (headless)    │
+                                                                       │    PixelWorld    │
+                                                                       └──────────────────┘
+```
+
+A `CanvasManager` has no concept of a buffer identity — it owns exactly one
+texture. `PixelSyncSession` assigns that texture a `bufferId` and can attach
+several `CanvasManager` instances to the same transport connection (e.g. one
+per open tileset).
+
+**Flow:**
+1. A local mutation (a paint stroke, resize, or `setTexture`) fires
+   `CanvasManager.onBufferUpdated`.
+2. `PixelSyncSession` stamps the event with `bufferId / clientId / seq /
+   timestamp` and calls `transport.sendCommand(cmd)`.
+3. The transport delivers the command to `PixelSyncServer.receive()`.
+4. The server resolves conflicts, applies the command to its authoritative
+   `PixelWorld`, and broadcasts it to clients subscribed to that buffer.
+5. Each subscribed client's transport calls `onCommand(cmd)`, which
+   `PixelSyncSession` routes to the matching `CanvasManager.applyRemoteCommand()`.
+6. `applyRemoteCommand` suppresses `onBufferUpdated` while applying, so the
+   result is never re-broadcast — no echo loop.
+
+Buffers are not sent in bulk. A client receives a buffer's pixel data only
+when it subscribes to that specific `bufferId` (via `attach`/`createBuffer`).
+
+## PixelTransport interface
+
+```ts
+interface PixelTransport {
+  readonly localClientId: string;
+  sendCommand(cmd: PixelNetworkCommand): void;
+  subscribe(bufferId: string): void;
+  unsubscribe(bufferId: string): void;
+  onCommand: ((cmd: PixelNetworkCommand) => void) | null;
+  onSnapshot: ((bufferId: string, snapshot: PixelBufferSnapshot) => void) | null;
+  onPeerJoined: ((peerId: string) => void) | null;
+  onPeerLeft: ((peerId: string) => void) | null;
+}
+```
+
+### WebSocket example stub
+
+```ts
+import type {
+  PixelTransport,
+  PixelNetworkCommand,
+  PixelBufferSnapshot
+} from "@jolly-pixel/pixel-draw.renderer";
+
+class WebSocketTransport implements PixelTransport {
+  readonly localClientId = crypto.randomUUID();
+  onCommand: ((cmd: PixelNetworkCommand) => void) | null = null;
+  onSnapshot: ((bufferId: string, snapshot: PixelBufferSnapshot) => void) | null = null;
+  onPeerJoined: ((peerId: string) => void) | null = null;
+  onPeerLeft: ((peerId: string) => void) | null = null;
+
+  constructor(private ws: WebSocket) {
+    ws.addEventListener("message", (ev) => {
+      const msg = JSON.parse(ev.data as string);
+      switch (msg.type) {
+        case "snapshot": this.onSnapshot?.(msg.bufferId, msg.data); break;
+        case "command": this.onCommand?.(msg.data); break;
+        case "peer-joined": this.onPeerJoined?.(msg.peerId); break;
+        case "peer-left": this.onPeerLeft?.(msg.peerId); break;
+      }
+    });
+  }
+
+  sendCommand(cmd: PixelNetworkCommand): void {
+    this.ws.send(JSON.stringify({ type: "command", data: cmd }));
+  }
+
+  subscribe(bufferId: string): void {
+    this.ws.send(JSON.stringify({ type: "subscribe", bufferId }));
+  }
+
+  unsubscribe(bufferId: string): void {
+    this.ws.send(JSON.stringify({ type: "unsubscribe", bufferId }));
+  }
+}
+```
+
+## PixelSyncSession
+
+```ts
+import { fromUint8Array } from "js-base64";
+import {
+  PixelSyncSession
+} from "@jolly-pixel/pixel-draw.renderer";
+
+const session = new PixelSyncSession({ transport: myTransport });
+
+// Attach an existing texture, assumed to already exist on the server.
+// Subscribes and receives its snapshot asynchronously via onSnapshot.
+session.attach("tileset-1", canvasManager);
+
+// Attach AND announce a brand new buffer, seeding peers with its current pixels.
+session.createBuffer("tileset-2", otherCanvasManager, {
+  size: otherCanvasManager.getTextureSize(),
+  pixels: fromUint8Array(new Uint8Array(otherCanvasManager.getTexture()))
+});
+
+session.onBufferAdded = (bufferId, metadata) => {
+  // A peer created a new buffer this client hasn't attached to.
+};
+session.onBufferRemoved = (bufferId) => {
+  // A peer removed a buffer.
+};
+
+// Stop syncing a texture (e.g. the user closed that tab).
+session.detach("tileset-1");
+// Same, but also tells peers the buffer is gone.
+session.removeBuffer("tileset-2");
+
+session.destroy();
+```
+
+One `PixelSyncSession` per transport connection. Each `CanvasManager` is
+attached under exactly one `bufferId`.
+
+## PixelSyncServer
+
+Headless — no DOM/Canvas2D dependency. Runs in Node.js, Deno, or Bun.
+
+```ts
+import {
+  PixelSyncServer,
+  type ClientHandle
+} from "@jolly-pixel/pixel-draw.renderer";
+import { WebSocketServer } from "ws";
+
+const server = new PixelSyncServer();
+const wss = new WebSocketServer({ port: 3000 });
+
+wss.on("connection", (ws) => {
+  const client: ClientHandle = {
+    id: crypto.randomUUID(),
+    send: (data) => ws.send(JSON.stringify(data))
+  };
+
+  server.connect(client);
+
+  ws.on("message", (raw) => {
+    const msg = JSON.parse(raw.toString());
+    switch (msg.type) {
+      case "command": server.receive(msg.data); break;
+      case "subscribe": server.subscribe(client.id, msg.bufferId); break;
+      case "unsubscribe": server.unsubscribe(client.id, msg.bufferId); break;
+    }
+  });
+
+  ws.on("close", () => server.disconnect(client.id));
+});
+```
+
+| Method | Description |
+|---|---|
+| `connect(client)` | Registers the client, notifies existing peers. Sends no buffer data. |
+| `disconnect(clientId)` | Removes the client, notifies remaining peers. |
+| `subscribe(clientId, bufferId)` | Subscribes the client to a buffer's updates and sends its current snapshot, if it exists. |
+| `unsubscribe(clientId, bufferId)` | Stops broadcasting that buffer's updates to the client. |
+| `receive(cmd)` | Validates, applies, and broadcasts a command to that buffer's subscribers. |
+| `snapshot(bufferId)` | Returns the buffer's current state as `PixelBufferSnapshot`, or `undefined`. |
+| `world` | The authoritative `PixelWorld` instance. |
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `world` | `PixelWorld` | new world | Existing world to use as authoritative state. |
+| `conflictResolver` | `PixelConflictResolver` | `LastWriteWinsResolver` | Custom conflict strategy. |
+
+## PixelNetworkCommand — wire format
+
+```ts
+type PixelNetworkCommand = (PixelBufferHookEvent | PixelLifecycleEvent) & {
+  bufferId: string;
+  clientId: string;
+  seq: number;
+  timestamp: number;
+};
+```
+
+Five actions: `"buffer-added"`, `"buffer-removed"`, `"stroke"`, `"resized"`,
+`"texture-replaced"`. All pixel payloads (`stroke` positions excepted) are
+raw RGBA bytes, base64-encoded via `js-base64` — no image codec dependency, so
+`PixelSyncServer` stays headless. Commands are plain JSON-serializable
+objects.
+
+A `"stroke"` command carries one color and a deduped list of pixel
+positions for an entire paint stroke (mouse-down to mouse-up), not one
+command per brush stamp.
+
+## ConflictResolver
+
+Conflicts are resolved **per pixel**, not per command — a single stroke
+command can touch thousands of pixels, so a command is split: pixels that
+lose the race are dropped from the applied/broadcast copy, the rest are
+applied normally. `"buffer-added"`, `"buffer-removed"`, `"resized"`, and
+`"texture-replaced"` are structural and always accepted.
+
+### Default: LastWriteWinsResolver
+
+Higher `timestamp` wins. On a tie, the lexicographically greater `clientId`
+wins (deterministic without coordination).
+
+```ts
+import {
+  LastWriteWinsResolver
+} from "@jolly-pixel/pixel-draw.renderer";
+
+const server = new PixelSyncServer({
+  conflictResolver: new LastWriteWinsResolver() // default, no need to pass explicitly
+});
+```
+
+### Custom resolver
+
+```ts
+import type {
+  PixelConflictResolver,
+  PixelConflictContext
+} from "@jolly-pixel/pixel-draw.renderer";
+
+class FirstWriteWinsResolver implements PixelConflictResolver {
+  resolve({ existing }: PixelConflictContext): "accept" | "reject" {
+    return existing ? "reject" : "accept";
+  }
+}
+
+const server = new PixelSyncServer({ conflictResolver: new FirstWriteWinsResolver() });
+```
+
+## applyCommandToWorld — headless usage
+
+Replays a command against a bare `PixelWorld`, without a `CanvasManager`.
+Useful for server-side logic, unit tests, or offline editing tools.
+
+```ts
+import {
+  PixelWorld,
+  applyCommandToWorld
+} from "@jolly-pixel/pixel-draw.renderer";
+
+const world = new PixelWorld();
+applyCommandToWorld(world, {
+  action: "buffer-added",
+  bufferId: "tileset-1",
+  metadata: { size: { x: 64, y: 32 } },
+  clientId: "seed",
+  seq: 1,
+  timestamp: Date.now()
+});
+```
+
 
 # Viewport.md
 
@@ -478,6 +795,17 @@ export interface ViewportOptions {
 ```
 
 ## Methods
+
+### `resizeCanvas`
+
+```ts
+resizeCanvas(width: number, height: number): void
+```
+
+Updates the canvas size while preserving the current camera position.
+Shifts the camera by half the size delta so the same world point stays at the center of the screen.
+
+---
 
 ### `applyZoom`
 

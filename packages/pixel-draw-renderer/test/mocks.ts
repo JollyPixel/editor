@@ -150,6 +150,7 @@ export class MockCanvasElement {
   readonly _ctx: MockCanvas2DContext;
   style: Record<string, string> = {};
   parentElement: unknown = null;
+  #listeners = new Map<string, Set<(event: unknown) => void>>();
 
   constructor() {
     this._ctx = new MockCanvas2DContext(this);
@@ -192,13 +193,23 @@ export class MockCanvasElement {
     } as DOMRect;
   }
 
-  addEventListener(_type: string, _handler: unknown, _options?: unknown): void {
-    // No-op for testing
+  addEventListener(type: string, handler: unknown, _options?: unknown): void {
+    let set = this.#listeners.get(type);
+    if (!set) {
+      set = new Set();
+      this.#listeners.set(type, set);
+    }
+    set.add(handler as (event: unknown) => void);
   }
-  removeEventListener(_type: string, _handler: unknown): void {
-    // No-op for testing
+  removeEventListener(type: string, handler: unknown): void {
+    this.#listeners.get(type)?.delete(handler as (event: unknown) => void);
   }
-  dispatchEvent(_event: unknown): boolean {
+  dispatchEvent(event: unknown): boolean {
+    const type = (event as { type: string; }).type;
+    for (const handler of this.#listeners.get(type) ?? []) {
+      handler(event);
+    }
+
     return true;
   }
   remove(): void {

@@ -1,6 +1,6 @@
 // Import Internal Dependencies
-import type { Mode, Vec2 } from "./types.ts";
-import type { Viewport } from "./Viewport.ts";
+import type { Mode, Vec2 } from "../types.ts";
+import type { Viewport } from "../rendering/Viewport.ts";
 
 export interface InputActions {
   onDrawStart(tx: number, ty: number): void;
