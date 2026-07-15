@@ -38,5 +38,9 @@
     "@jolly-pixel/runtime": "3.3.0",
     "three": "0.185.1",
     "vanilla-picker": "2.12.3"
+  },
+  "dependencies": {
+    "colorjs.io": "0.6.1",
+    "js-base64": "3.8.1"
   }
 }

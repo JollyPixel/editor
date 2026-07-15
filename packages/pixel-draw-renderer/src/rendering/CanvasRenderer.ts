@@ -1,28 +1,31 @@
 // Import Internal Dependencies
-import type { DefaultViewport } from "./types.ts";
-import type { TextureBuffer } from "./TextureBuffer.ts";
+import { toCssColor } from "../utils.ts";
+import type { ColorInput, DefaultViewport } from "../types.ts";
+import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 
 export interface CanvasRendererOptions {
   viewport: DefaultViewport;
-  textureBuffer: TextureBuffer;
+  canvasBuffer: CanvasBuffer;
   /**
    * Size of the squares in the background checkerboard pattern. Should be a positive integer.
    * @default 8
    */
   bgSquareSize?: number;
   /**
-   * Colors used for the background checkerboard pattern. Should be valid CSS color strings.
+   * Colors used for the background checkerboard pattern. Accepts CSS color
+   * strings or colorjs.io `Color` instances.
    * @default { odd: "#999", even: "#666" }
    */
   bgColors?: {
-    odd: string;
-    even: string;
+    odd: ColorInput;
+    even: ColorInput;
   };
   /**
-   * Background color used when texture has transparent pixels. Should be a valid CSS color string.
+   * Background color used when texture has transparent pixels. Accepts a
+   * CSS color string or a colorjs.io `Color` instance.
    * @default "#555555"
    */
-  backgroundColor?: string;
+  backgroundColor?: ColorInput;
 }
 
 /**
@@ -39,24 +42,27 @@ export class CanvasRenderer {
   #bgColors: { odd: string; even: string; };
   #backgroundColor: string;
   #viewport: DefaultViewport;
-  #textureBuffer: TextureBuffer;
+  #canvasBuffer: CanvasBuffer;
 
   constructor(
     options: CanvasRendererOptions
   ) {
     const {
       viewport,
-      textureBuffer,
+      canvasBuffer,
       bgSquareSize = 8,
       bgColors = { odd: "#999", even: "#666" },
       backgroundColor = "#555555"
     } = options;
 
     this.#viewport = viewport;
-    this.#textureBuffer = textureBuffer;
+    this.#canvasBuffer = canvasBuffer;
     this.#bgSquareSize = bgSquareSize;
-    this.#bgColors = bgColors;
-    this.#backgroundColor = backgroundColor;
+    this.#bgColors = {
+      odd: toCssColor(bgColors.odd),
+      even: toCssColor(bgColors.even)
+    };
+    this.#backgroundColor = toCssColor(backgroundColor);
 
     this.#canvas = document.createElement("canvas");
     this.#ctx = this.#canvas.getContext("2d")!;
@@ -76,7 +82,7 @@ export class CanvasRenderer {
     }
 
     const { zoom, camera } = this.#viewport;
-    const texPx = this.#textureBuffer.getSize();
+    const texPx = this.#canvasBuffer.getSize();
     const texPixelW = texPx.x * zoom;
     const texPixelH = texPx.y * zoom;
 
@@ -93,7 +99,7 @@ export class CanvasRenderer {
     this.#ctx.drawImage(this.#bgCanvas, 0, 0);
 
     this.#ctx.setTransform(zoom, 0, 0, zoom, camera.x, camera.y);
-    this.#ctx.drawImage(this.#textureBuffer.getCanvas(), 0, 0);
+    this.#ctx.drawImage(this.#canvasBuffer.getCanvas(), 0, 0);
 
     this.#ctx.restore();
   }

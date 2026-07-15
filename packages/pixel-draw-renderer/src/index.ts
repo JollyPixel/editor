@@ -2,7 +2,11 @@
 export {
   BrushManager,
   type BrushManagerOptions
-} from "./BrushManager.ts";
+} from "./input/BrushManager.ts";
+export {
+  CanvasBuffer,
+  type CanvasBufferOptions
+} from "./buffer/CanvasBuffer.ts";
 export {
   CanvasManager,
   type CanvasManagerOptions,
@@ -11,26 +15,33 @@ export {
 export {
   CanvasRenderer,
   type CanvasRendererOptions
-} from "./CanvasRenderer.ts";
+} from "./rendering/CanvasRenderer.ts";
 export {
   InputController,
   type InputActions,
   type InputControllerOptions
-} from "./InputController.ts";
+} from "./input/InputController.ts";
+export {
+  PixelBuffer,
+  type PixelBufferOptions
+} from "./buffer/PixelBuffer.ts";
+export type {
+  PixelBufferHookAction,
+  PixelBufferHookEvent,
+  PixelBufferHookListener
+} from "./buffer/hooks.ts";
 export {
   SvgManager
-} from "./SvgManager.ts";
-export {
-  TextureBuffer,
-  type TextureBufferOptions
-} from "./TextureBuffer.ts";
+} from "./rendering/SvgManager.ts";
 export {
   Viewport,
   type ViewportOptions
-} from "./Viewport.ts";
+} from "./rendering/Viewport.ts";
 export type {
   Brush,
   DefaultViewport,
+  RGBA,
   Vec2
 } from "./types.ts";
 export * from "./utils.ts";
+export * from "./network/index.ts";

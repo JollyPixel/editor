@@ -1,29 +1,39 @@
+// Import Third-party Dependencies
+import { fromUint8Array, toUint8Array } from "js-base64";
+
 // Import Internal Dependencies
 import {
   BrushManager,
   type BrushManagerOptions
-} from "./BrushManager.ts";
+} from "./input/BrushManager.ts";
+import {
+  CanvasBuffer
+} from "./buffer/CanvasBuffer.ts";
 import {
   CanvasRenderer
-} from "./CanvasRenderer.ts";
+} from "./rendering/CanvasRenderer.ts";
 import {
   InputController
-} from "./InputController.ts";
+} from "./input/InputController.ts";
 import {
   SvgManager
-} from "./SvgManager.ts";
-import {
-  TextureBuffer
-} from "./TextureBuffer.ts";
+} from "./rendering/SvgManager.ts";
 import {
   Viewport
-} from "./Viewport.ts";
+} from "./rendering/Viewport.ts";
+import { getColorAsRGBA } from "./utils.ts";
 import type {
   Brush,
+  ColorInput,
   DefaultViewport,
   Mode,
+  RGBA,
   Vec2
 } from "./types.ts";
+import type {
+  PixelBufferHookEvent,
+  PixelBufferHookListener
+} from "./buffer/hooks.ts";
 
 export type { Mode };
 
@@ -35,7 +45,7 @@ export interface CanvasManagerOptions {
    */
   defaultMode?: Mode;
   texture?: {
-    defaultColor?: string;
+    defaultColor?: ColorInput;
     size?: {
       x: number;
       y?: number;
@@ -59,15 +69,25 @@ export interface CanvasManagerOptions {
    * Use this hook to synchronize the edited texture with an external consumer.
    */
   onDrawEnd?: () => void;
+  /**
+   * Called for every local mutation (stroke, resize, texture replace).
+   * Used by PixelSyncSession to forward mutations over the network.
+   */
+  onBufferUpdated?: PixelBufferHookListener;
 }
 
 export class CanvasManager {
   #parentHtmlElement: HTMLDivElement;
   #viewport: Viewport;
-  #textureBuffer: TextureBuffer;
+  #canvasBuffer: CanvasBuffer;
   #renderer: CanvasRenderer;
   #input: InputController;
   #svgManager: SvgManager;
+
+  #onBufferUpdated?: PixelBufferHookListener;
+  #isApplyingRemote = false;
+  #strokeDirty = new Map<string, Vec2>();
+  #strokeColor: RGBA | null = null;
 
   readonly brush: BrushManager;
   readonly viewport: DefaultViewport;
@@ -77,6 +97,7 @@ export class CanvasManager {
     options: CanvasManagerOptions = {}
   ) {
     this.#parentHtmlElement = parentHtmlElement;
+    this.#onBufferUpdated = options.onBufferUpdated;
 
     const textureSize: Vec2 = options.texture?.size
       ? { x: options.texture.size.x, y: options.texture.size.y ?? options.texture.size.x }
@@ -91,21 +112,21 @@ export class CanvasManager {
     });
     this.viewport = this.#viewport;
 
-    this.#textureBuffer = new TextureBuffer({
-      textureSize,
+    this.#canvasBuffer = new CanvasBuffer({
+      size: textureSize,
       defaultColor: options.texture?.defaultColor,
       maxSize: options.texture?.maxSize
     });
 
     if (options.texture?.init) {
-      this.#textureBuffer.setTexture(options.texture.init);
+      this.#canvasBuffer.setTexture(options.texture.init);
     }
 
     const backgroundColor = getComputedStyle(parentHtmlElement).backgroundColor || "#555555";
 
     this.#renderer = new CanvasRenderer({
       viewport: this.#viewport,
-      textureBuffer: this.#textureBuffer,
+      canvasBuffer: this.#canvasBuffer,
       bgSquareSize: options.backgroundTransparency?.squareSize,
       bgColors: options.backgroundTransparency?.colors,
       backgroundColor
@@ -153,7 +174,8 @@ export class CanvasManager {
           this.#drawColor(tx, ty);
         },
         onDrawEnd: () => {
-          this.#textureBuffer.copyToMaster();
+          this.#canvasBuffer.copyToMaster();
+          this.#commitStroke();
           options.onDrawEnd?.();
         },
         onPanStart: (_mx, _my) => {
@@ -171,11 +193,17 @@ export class CanvasManager {
           this.#renderer.drawFrame();
         },
         onColorPick: (tx, ty) => {
-          const [r, g, b, a] = this.#textureBuffer.samplePixel(tx, ty);
+          const [r, g, b, a] = this.#canvasBuffer.samplePixel(tx, ty);
           const hex = `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
           const opacity = a / 255;
           this.brush.setColorWithOpacity(hex, opacity);
-          this.#emitColorPickedEvent({ hex, opacity });
+
+          const event = new CustomEvent("colorpicked", {
+            detail: { hex, opacity },
+            bubbles: true,
+            composed: true
+          });
+          this.#renderer.getCanvas().dispatchEvent(event);
         },
         onMouseMove: (cx, cy) => {
           if (cx < 0 || cy < 0) {
@@ -224,7 +252,7 @@ export class CanvasManager {
   }
 
   getTextureSize(): Vec2 {
-    return this.#textureBuffer.getSize();
+    return this.#canvasBuffer.getSize();
   }
 
   setTextureSize(
@@ -236,10 +264,17 @@ export class CanvasManager {
       return;
     }
 
-    this.#textureBuffer.setSize(size);
+    this.#canvasBuffer.setSize(size);
     this.#viewport.setTextureSize(size);
     this.#svgManager.setTextureSize(size);
     this.#renderer.drawFrame();
+
+    this.#emitHook({
+      action: "resized",
+      metadata: {
+        size: structuredClone(size)
+      }
+    });
   }
 
   getCamera(): Vec2 {
@@ -269,7 +304,7 @@ export class CanvasManager {
   }
 
   getTextureCanvas(): HTMLCanvasElement {
-    return this.#textureBuffer.getCanvas();
+    return this.#canvasBuffer.getCanvas();
   }
 
   destroy(): void {
@@ -284,45 +319,136 @@ export class CanvasManager {
   setTexture(
     source: HTMLCanvasElement | HTMLImageElement
   ): void {
-    this.#textureBuffer.setTexture(source);
-    const size = this.#textureBuffer.getSize();
+    this.#canvasBuffer.setTexture(source);
+    const size = this.#canvasBuffer.getSize();
     this.#viewport.setTextureSize(size);
     this.#renderer.drawFrame();
+
+    this.#emitHook({
+      action: "texture-replaced",
+      metadata: {
+        size,
+        pixels: fromUint8Array(new Uint8Array(this.#canvasBuffer.getPixels()))
+      }
+    });
   }
 
   getTexture(): Uint8ClampedArray {
-    return this.#textureBuffer.getPixels();
+    return this.#canvasBuffer.getPixels();
+  }
+
+  /**
+   * Replace the settable hook after construction. Used by PixelSyncSession
+   * to attach itself to an already-constructed CanvasManager.
+   */
+  set onBufferUpdated(fn: PixelBufferHookListener | undefined) {
+    this.#onBufferUpdated = fn;
+  }
+
+  /**
+   * Applies a mutation received from a remote peer without re-emitting the
+   * onBufferUpdated hook, preventing an echo loop back to the network.
+   */
+  applyRemoteCommand(
+    event: PixelBufferHookEvent
+  ): void {
+    this.#isApplyingRemote = true;
+    try {
+      switch (event.action) {
+        case "stroke":
+          this.#canvasBuffer.drawPixels(event.metadata.positions, event.metadata.color);
+          this.#canvasBuffer.copyToMaster();
+          this.#renderer.drawFrame();
+          break;
+
+        case "resized":
+          this.setTextureSize(event.metadata.size);
+          break;
+
+        case "texture-replaced":
+          this.#applyPixelReplace(event.metadata.size, new Uint8ClampedArray(toUint8Array(event.metadata.pixels)));
+          break;
+      }
+    }
+    finally {
+      this.#isApplyingRemote = false;
+    }
+  }
+
+  /**
+   * Hydrates the buffer from a network snapshot (join flow). Unlike
+   * applyRemoteCommand, this is never itself broadcast as a command.
+   */
+  loadSnapshot(
+    size: Vec2,
+    pixels: Uint8ClampedArray
+  ): void {
+    this.#isApplyingRemote = true;
+    try {
+      this.#applyPixelReplace(size, pixels);
+    }
+    finally {
+      this.#isApplyingRemote = false;
+    }
+  }
+
+  #applyPixelReplace(
+    size: Vec2,
+    pixels: Uint8ClampedArray
+  ): void {
+    this.#canvasBuffer.setPixels(pixels, size);
+    this.#viewport.setTextureSize(size);
+    this.#svgManager.setTextureSize(size);
+    this.#renderer.drawFrame();
+  }
+
+  #emitHook(
+    event: PixelBufferHookEvent
+  ): void {
+    if (this.#isApplyingRemote || !this.#onBufferUpdated) {
+      return;
+    }
+
+    this.#onBufferUpdated(event);
+  }
+
+  #commitStroke(): void {
+    if (this.#strokeDirty.size === 0 || this.#strokeColor === null) {
+      this.#strokeDirty.clear();
+      this.#strokeColor = null;
+
+      return;
+    }
+
+    const positions = [...this.#strokeDirty.values()];
+    const color = this.#strokeColor;
+    this.#strokeDirty.clear();
+    this.#strokeColor = null;
+
+    this.#emitHook({
+      action: "stroke",
+      metadata: {
+        color,
+        positions
+      }
+    });
   }
 
   #drawColor(
     tx: number,
     ty: number,
-    color?: string
+    color?: ColorInput
   ): void {
     const pixelColor = color ?? this.brush.getColor();
-    const match = pixelColor.match(/rgba?\((\d+), (\d+), (\d+)(?:, ([\d.]+))?\)/);
-    if (!match) {
-      return;
-    }
-
-    const r = parseInt(match[1], 10);
-    const g = parseInt(match[2], 10);
-    const b = parseInt(match[3], 10);
-    const a = match[4] === undefined ? 255 : Math.floor(parseFloat(match[4]) * 255);
+    const [r, g, b, a] = getColorAsRGBA(pixelColor);
 
     const pixels = this.brush.getAffectedPixels(tx, ty);
-    this.#textureBuffer.drawPixels(pixels, { r, g, b, a });
+    this.#canvasBuffer.drawPixels(pixels, { r, g, b, a });
     this.#renderer.drawFrame();
-  }
 
-  #emitColorPickedEvent(
-    color: { hex: string; opacity: number; }
-  ): void {
-    const event = new CustomEvent("colorpicked", {
-      detail: color,
-      bubbles: true,
-      composed: true
-    });
-    this.#renderer.getCanvas().dispatchEvent(event);
+    this.#strokeColor ??= { r, g, b, a };
+    for (const pixel of pixels) {
+      this.#strokeDirty.set(`${pixel.x},${pixel.y}`, pixel);
+    }
   }
 }

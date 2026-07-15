@@ -4,10 +4,11 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { Window } from "happy-dom";
+import Color from "colorjs.io";
 
 // Import Internal Dependencies
-import { BrushManager } from "../src/BrushManager.ts";
-import { installCanvasMock } from "./mocks.ts";
+import { BrushManager } from "../../src/input/BrushManager.ts";
+import { installCanvasMock } from "../mocks.ts";
 
 // CONSTANTS
 const kEmulatedBrowserWindow = new Window();
@@ -33,6 +34,11 @@ describe("BrushManager", () => {
       const brush = new BrushManager();
       assert.strictEqual(brush.getOpacity(), 1);
     });
+
+    test("getColor() is a valid rgba() string right after construction", () => {
+      const brush = new BrushManager();
+      assert.match(brush.getColor(), /rgba\(0, 0, 0, 1\)/);
+    });
   });
 
   describe("setColor / getColor", () => {
@@ -48,6 +54,18 @@ describe("BrushManager", () => {
       brush.setColorWithOpacity("#0000ff", 0.5);
       assert.strictEqual(brush.getOpacity(), 0.5);
       assert.match(brush.getColor(), /rgba\(0, 0, 255, 0.5\)/);
+    });
+
+    test("setColor accepts a colorjs.io Color instance", () => {
+      const brush = new BrushManager();
+      brush.setColor(new Color("lime"));
+      assert.strictEqual(brush.getColorHex(), "#00ff00");
+      assert.match(brush.getColor(), /rgba\(0, 255, 0/);
+    });
+
+    test("constructor accepts a colorjs.io Color instance", () => {
+      const brush = new BrushManager({ color: new Color("blue") });
+      assert.strictEqual(brush.getColorHex(), "#0000ff");
     });
   });
 

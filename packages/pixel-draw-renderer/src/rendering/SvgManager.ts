@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { Brush, DefaultViewport, Vec2 } from "./types.ts";
+import type { Brush, DefaultViewport, Vec2 } from "../types.ts";
 
 // CONSTANTS
 const kSvgNs = "http://www.w3.org/2000/svg";
