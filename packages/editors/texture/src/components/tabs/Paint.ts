@@ -111,7 +111,7 @@ export class Paint extends LitElement {
     }
 
     this.brushSize = manager.brush.getSize();
-    this.brushColor = manager.brush.getColorHex();
+    this.brushColor = manager.brush.getColor("hex");
     this.brushOpacity = manager.brush.getOpacity();
   }
 

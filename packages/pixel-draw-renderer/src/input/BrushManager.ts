@@ -2,7 +2,7 @@
 import Color from "colorjs.io";
 
 // Import Internal Dependencies
-import { getColorAsRGBA } from "../utils.ts";
+import { getColorAsRGBA } from "../colors.ts";
 import type { ColorInput, Vec2 } from "../types.ts";
 
 export interface BrushManagerOptions {
@@ -42,7 +42,6 @@ export interface BrushManagerOptions {
  */
 export class BrushManager {
   #color: Color;
-  #opacity: number;
   #size: number;
   #maxSize: number;
   #colorInline: string;
@@ -61,7 +60,6 @@ export class BrushManager {
       }
     } = options;
 
-    this.#opacity = 1;
     this.setColor(color);
     this.#maxSize = Math.max(maxSize, 1);
     this.setSize(size);
@@ -71,37 +69,40 @@ export class BrushManager {
   }
 
   setColor(
-    color: ColorInput
-  ): void {
-    this.#color = new Color(color);
-  }
-
-  setColorWithOpacity(
     color: ColorInput,
-    opacity: number
+    opacity?: number
   ): void {
+    // Preserve the current opacity when none is given, mirroring the
+    // previous behavior where color and opacity were tracked separately.
+    const alpha = opacity === undefined ? (this.#color?.alpha ?? 1) : Math.max(0, Math.min(1, opacity));
     this.#color = new Color(color);
-    this.#opacity = Math.max(0, Math.min(1, opacity));
+    this.#color.alpha = alpha;
   }
 
-  getColor(): string {
+  getColor(
+    format: "rgba" | "hex" = "rgba"
+  ): string {
+    if (format === "hex") {
+      return this.#color.toString({
+        format: "hex",
+        collapse: false,
+        alpha: false
+      });
+    }
+
     const [r, g, b] = getColorAsRGBA(this.#color);
 
-    return `rgba(${r}, ${g}, ${b}, ${this.#opacity})`;
-  }
-
-  getColorHex(): string {
-    return this.#color.toString({ format: "hex", collapse: false });
+    return `rgba(${r}, ${g}, ${b}, ${this.#color.alpha})`;
   }
 
   setOpacity(
     opacity: number
   ): void {
-    this.#opacity = Math.max(0, Math.min(1, opacity));
+    this.#color.alpha = Math.max(0, Math.min(1, opacity));
   }
 
   getOpacity(): number {
-    return this.#opacity;
+    return this.#color.alpha;
   }
 
   setColorInline(

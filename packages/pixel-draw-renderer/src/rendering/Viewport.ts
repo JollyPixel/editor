@@ -75,6 +75,16 @@ export class Viewport implements DefaultViewport {
     return this.#zoom;
   }
 
+  get zoomSensitivity(): number {
+    return this.#zoomSensitivity;
+  }
+
+  setZoomSensitivity(
+    sensitivity: number
+  ): void {
+    this.#zoomSensitivity = Math.max(0.01, sensitivity);
+  }
+
   get camera(): Readonly<Vec2> {
     return this.#camera;
   }

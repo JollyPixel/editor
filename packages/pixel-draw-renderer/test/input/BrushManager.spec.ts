@@ -22,7 +22,7 @@ describe("BrushManager", () => {
   describe("constructor defaults", () => {
     test("default color is black", () => {
       const brush = new BrushManager();
-      assert.strictEqual(brush.getColorHex(), "#000000");
+      assert.strictEqual(brush.getColor("hex"), "#000000");
     });
 
     test("default size is 32", () => {
@@ -45,13 +45,13 @@ describe("BrushManager", () => {
     test("setColor updates hex and rgba string", () => {
       const brush = new BrushManager();
       brush.setColor("#ff0000");
-      assert.strictEqual(brush.getColorHex(), "#ff0000");
+      assert.strictEqual(brush.getColor("hex"), "#ff0000");
       assert.match(brush.getColor(), /rgba\(255, 0, 0/);
     });
 
-    test("setColorWithOpacity updates opacity and color", () => {
+    test("setColor with opacity argument updates opacity and color", () => {
       const brush = new BrushManager();
-      brush.setColorWithOpacity("#0000ff", 0.5);
+      brush.setColor("#0000ff", 0.5);
       assert.strictEqual(brush.getOpacity(), 0.5);
       assert.match(brush.getColor(), /rgba\(0, 0, 255, 0.5\)/);
     });
@@ -59,13 +59,13 @@ describe("BrushManager", () => {
     test("setColor accepts a colorjs.io Color instance", () => {
       const brush = new BrushManager();
       brush.setColor(new Color("lime"));
-      assert.strictEqual(brush.getColorHex(), "#00ff00");
+      assert.strictEqual(brush.getColor("hex"), "#00ff00");
       assert.match(brush.getColor(), /rgba\(0, 255, 0/);
     });
 
     test("constructor accepts a colorjs.io Color instance", () => {
       const brush = new BrushManager({ color: new Color("blue") });
-      assert.strictEqual(brush.getColorHex(), "#0000ff");
+      assert.strictEqual(brush.getColor("hex"), "#0000ff");
     });
   });
 
