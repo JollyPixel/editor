@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { toRGBA } from "../utils.ts";
+import { toRGBA } from "../colors.ts";
 import type { ColorInput, DefaultPixelBuffer, RGBA, Vec2 } from "../types.ts";
 
 export interface PixelBufferOptions {

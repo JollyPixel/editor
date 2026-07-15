@@ -77,7 +77,7 @@ function initRuntime(): Runtime {
     onChange: (color) => {
       const hex = color.hex.slice(0, 7);
       const alpha = color.rgba[3];
-      canvasManager.brush.setColorWithOpacity(hex, alpha);
+      canvasManager.brush.setColor(hex, alpha);
       colorSwatch.style.background = color.rgbaString;
     }
   });
@@ -97,10 +97,28 @@ function initRuntime(): Runtime {
   const brushSizeInput = document.getElementById("brush-size") as HTMLInputElement;
   const brushSizeDisplay = document.getElementById("brush-size-display") as HTMLSpanElement;
 
+  // Sync initial state with whatever brush.size was passed to CanvasManager
+  brushSizeInput.value = String(canvasManager.brush.getSize());
+  brushSizeDisplay.textContent = `${canvasManager.brush.getSize()}px`;
+
   brushSizeInput.addEventListener("input", () => {
     const size = parseInt(brushSizeInput.value, 10);
     canvasManager.brush.setSize(size);
     brushSizeDisplay.textContent = `${size}px`;
+  });
+
+  // === Zoom sensitivity ===
+  const zoomSensitivityInput = document.getElementById("zoom-sensitivity") as HTMLInputElement;
+  const zoomSensitivityDisplay = document.getElementById("zoom-sensitivity-display") as HTMLSpanElement;
+
+  // Sync initial state with whatever zoom.sensitivity was passed to CanvasManager
+  zoomSensitivityInput.value = String(canvasManager.getZoomSensitivity());
+  zoomSensitivityDisplay.textContent = canvasManager.getZoomSensitivity().toFixed(2);
+
+  zoomSensitivityInput.addEventListener("input", () => {
+    const sensitivity = parseFloat(zoomSensitivityInput.value);
+    canvasManager.setZoomSensitivity(sensitivity);
+    zoomSensitivityDisplay.textContent = sensitivity.toFixed(2);
   });
 
   const canvasTexture = new THREE.CanvasTexture(canvasManager.getTextureCanvas());

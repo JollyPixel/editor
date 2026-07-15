@@ -46,10 +46,20 @@ export interface BrushManagerOptions {
 ### `setColor`
 
 ```ts
-setColor(color: ColorInput): void
+setColor(color: ColorInput, opacity?: number): void
 ```
 
-Sets the brush color from a CSS color string (hex, rgb(), hsl(), named color, ...) or a colorjs.io `Color` instance. Internally stored as a `Color` instance; `getColorHex()` always serializes it back to a 6-digit hex string regardless of the input format.
+Sets the brush color from a CSS color string (hex, rgb(), hsl(), named color, ...) or a colorjs.io `Color` instance. If `opacity` is omitted, the current opacity is preserved; otherwise it's clamped to `[0, 1]` and applied alongside the new color.
+
+---
+
+### `getColor`
+
+```ts
+getColor(format?: "rgba" | "hex"): string
+```
+
+Returns the current brush color. Defaults to an `rgba(r, g, b, a)` string; pass `"hex"` to get a 6-digit hex string instead (opacity is not represented in hex output).
 
 ---
 

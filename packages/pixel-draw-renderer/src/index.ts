@@ -43,5 +43,5 @@ export type {
   RGBA,
   Vec2
 } from "./types.ts";
-export * from "./utils.ts";
+export * from "./colors.ts";
 export * from "./network/index.ts";

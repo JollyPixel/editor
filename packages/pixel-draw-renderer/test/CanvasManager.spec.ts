@@ -63,6 +63,28 @@ describe("CanvasManager", () => {
     });
   });
 
+  describe("zoom sensitivity", () => {
+    test("getZoomSensitivity returns the configured default", () => {
+      const manager = new CanvasManager(container, {
+        texture: { maxSize: 32, size: { x: 8, y: 8 } },
+        zoom: { default: 4, sensitivity: 0.25 }
+      });
+
+      assert.strictEqual(manager.getZoomSensitivity(), 0.25);
+      manager.destroy();
+    });
+
+    test("setZoomSensitivity updates the value returned by getZoomSensitivity", () => {
+      const manager = new CanvasManager(container, {
+        texture: { maxSize: 32, size: { x: 8, y: 8 } }
+      });
+
+      manager.setZoomSensitivity(0.5);
+      assert.strictEqual(manager.getZoomSensitivity(), 0.5);
+      manager.destroy();
+    });
+  });
+
   describe("destroy", () => {
     test("destroy() does not throw", () => {
       const manager = new CanvasManager(container, {

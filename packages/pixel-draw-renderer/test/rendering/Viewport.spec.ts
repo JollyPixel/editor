@@ -146,6 +146,25 @@ describe("Viewport", () => {
     });
   });
 
+  describe("setZoomSensitivity", () => {
+    test("updates zoomSensitivity", () => {
+      const vp = new Viewport({ textureSize: { x: 16, y: 16 } });
+      vp.setZoomSensitivity(0.5);
+      assert.strictEqual(vp.zoomSensitivity, 0.5);
+    });
+
+    test("clamps to a minimum of 0.01", () => {
+      const vp = new Viewport({ textureSize: { x: 16, y: 16 } });
+      vp.setZoomSensitivity(-5);
+      assert.strictEqual(vp.zoomSensitivity, 0.01);
+    });
+
+    test("defaults to 0.1", () => {
+      const vp = new Viewport({ textureSize: { x: 16, y: 16 } });
+      assert.strictEqual(vp.zoomSensitivity, 0.1);
+    });
+  });
+
   describe("setTextureSize", () => {
     test("updates texture pixel size after change", () => {
       const vp = new Viewport({ textureSize: { x: 8, y: 8 }, zoom: 2 });

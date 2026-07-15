@@ -21,7 +21,7 @@ import {
 import {
   Viewport
 } from "./rendering/Viewport.ts";
-import { getColorAsRGBA } from "./utils.ts";
+import { getColorAsRGBA } from "./colors.ts";
 import type {
   Brush,
   ColorInput,
@@ -196,7 +196,7 @@ export class CanvasManager {
           const [r, g, b, a] = this.#canvasBuffer.samplePixel(tx, ty);
           const hex = `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
           const opacity = a / 255;
-          this.brush.setColorWithOpacity(hex, opacity);
+          this.brush.setColor(hex, opacity);
 
           const event = new CustomEvent("colorpicked", {
             detail: { hex, opacity },
@@ -283,6 +283,16 @@ export class CanvasManager {
 
   getZoom(): number {
     return this.#viewport.zoom;
+  }
+
+  getZoomSensitivity(): number {
+    return this.#viewport.zoomSensitivity;
+  }
+
+  setZoomSensitivity(
+    sensitivity: number
+  ): void {
+    this.#viewport.setZoomSensitivity(sensitivity);
   }
 
   centerTexture(): void {

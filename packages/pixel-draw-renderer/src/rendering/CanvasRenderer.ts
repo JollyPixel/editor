@@ -1,5 +1,7 @@
+// Import Third-party Dependencies
+import Color from "colorjs.io";
+
 // Import Internal Dependencies
-import { toCssColor } from "../utils.ts";
 import type { ColorInput, DefaultViewport } from "../types.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 
@@ -59,10 +61,10 @@ export class CanvasRenderer {
     this.#canvasBuffer = canvasBuffer;
     this.#bgSquareSize = bgSquareSize;
     this.#bgColors = {
-      odd: toCssColor(bgColors.odd),
-      even: toCssColor(bgColors.even)
+      odd: new Color(bgColors.odd).toString(),
+      even: new Color(bgColors.even).toString()
     };
-    this.#backgroundColor = toCssColor(backgroundColor);
+    this.#backgroundColor = new Color(backgroundColor).toString();
 
     this.#canvas = document.createElement("canvas");
     this.#ctx = this.#canvas.getContext("2d")!;
