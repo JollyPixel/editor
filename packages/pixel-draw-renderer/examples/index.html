@@ -9,28 +9,7 @@
 </head>
 
 <body>
-  <div id="draw-panel">
-    <div id="toolbar">
-      <div class="toolbar-item">
-        <button class="mode-btn" id="mode-paint">Paint</button>
-        <button class="mode-btn" id="mode-fill">Fill</button>
-        <button class="mode-btn" id="mode-move">Move</button>
-      </div>
-      <div class="toolbar-item">
-        <button id="color-swatch" title="Color"></button>
-      </div>
-      <label class="toolbar-item">
-        Size
-        <input type="range" id="brush-size" min="1" max="32" value="8">
-        <span id="brush-size-display">8px</span>
-      </label>
-      <label class="toolbar-item">
-        Zoom Sensitivity
-        <input type="range" id="zoom-sensitivity" min="0.01" max="1" step="0.01" value="0.6">
-        <span id="zoom-sensitivity-display">0.60</span>
-      </label>
-    </div>
-  </div>
+  <pixel-draw-panel id="draw-panel"></pixel-draw-panel>
   <div id="canvas-container">
     <canvas tabindex="-1" id="three-canvas"></canvas>
   </div>

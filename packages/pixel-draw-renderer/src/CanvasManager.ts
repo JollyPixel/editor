@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import Color from "colorjs.io";
 import { fromUint8Array, toUint8Array } from "js-base64";
 
 // Import Internal Dependencies
@@ -142,7 +143,10 @@ export class CanvasManager {
       this.#canvasBuffer.setTexture(options.texture.init);
     }
 
-    const backgroundColor = getComputedStyle(parentHtmlElement).backgroundColor || "#555555";
+    const computedBackgroundColor = getComputedStyle(parentHtmlElement).backgroundColor;
+    const backgroundColor = computedBackgroundColor && new Color(computedBackgroundColor).alpha > 0
+      ? computedBackgroundColor
+      : "#555555";
 
     this.#renderer = new CanvasRenderer({
       viewport: this.#viewport,
