@@ -103,6 +103,7 @@ export class CanvasManager {
   #isStrokeActive = false;
   #lineTool = new LineTool();
   #lastCursorPos: Vec2 | null = null;
+  #isShiftHeld = false;
 
   readonly brush: BrushManager;
   readonly viewport: DefaultViewport;
@@ -252,6 +253,7 @@ export class CanvasManager {
           }
         },
         onShiftDown: () => {
+          this.#isShiftHeld = true;
           if (this.#input.getMode() !== "paint") {
             return;
           }
@@ -269,9 +271,11 @@ export class CanvasManager {
           this.#armLine("mousedown");
         },
         onShiftUp: () => {
+          this.#isShiftHeld = false;
           this.#cancelLineIfArmed();
         },
         onBlur: () => {
+          this.#isShiftHeld = false;
           this.#cancelLineIfArmed();
         }
       }
@@ -578,11 +582,22 @@ export class CanvasManager {
     this.#refreshLinePreview();
   }
 
+  /**
+   * Commits the armed segment. If Shift is still held afterwards, immediately
+   * re-arms from the just-committed endpoint (commitTrigger "mousedown") so
+   * the next click continues a connected polyline instead of requiring the
+   * user to release and re-press Shift to resume line drawing.
+   */
   #commitArmedLine(): void {
     const points = this.#lineTool.commit();
     this.#svgManager.clearPreviewLine();
     if (points) {
       this.commitLine(this.#stampLinePixels(points));
+
+      if (this.#isShiftHeld) {
+        this.#lineTool.arm(points.at(-1) ?? points[0], "mousedown");
+        this.#refreshLinePreview();
+      }
     }
   }
 

@@ -302,6 +302,63 @@ describe("CanvasManager", () => {
       manager.destroy();
     });
 
+    test("holding Shift through a commit re-arms the line from the committed endpoint (chained polyline)", () => {
+      const events: unknown[] = [];
+      const manager = makeManager((event) => events.push(event));
+      const canvas = manager.getCanvas();
+
+      moveTo(canvas, 100, 100);
+      window.dispatchEvent(shiftKeyDown());
+      moveTo(canvas, 128, 100);
+
+      canvas.dispatchEvent(new MouseEvent("mousedown", {
+        button: 0, buttons: 1, clientX: 128, clientY: 100, bubbles: true
+      }));
+
+      assert.strictEqual(events.length, 1, "first segment committed");
+
+      // Shift is still held (no keyup dispatched): moving and clicking again
+      // should chain a second segment starting where the first one ended,
+      // without requiring the user to release and re-press Shift.
+      moveTo(canvas, 128, 128);
+      canvas.dispatchEvent(new MouseEvent("mousedown", {
+        button: 0, buttons: 1, clientX: 128, clientY: 128, bubbles: true
+      }));
+
+      assert.strictEqual(events.length, 2, "second segment chained without re-pressing Shift");
+      const secondEvent = events[1] as { metadata: { positions: unknown[]; }; };
+      assert.strictEqual(secondEvent.metadata.positions.length, 8, "vertical 8px segment from the first segment's endpoint");
+      manager.destroy();
+    });
+
+    test("releasing Shift after a commit does not re-arm the line tool", () => {
+      const events: unknown[] = [];
+      const manager = makeManager((event) => events.push(event));
+      const canvas = manager.getCanvas();
+
+      moveTo(canvas, 100, 100);
+      window.dispatchEvent(shiftKeyDown());
+      moveTo(canvas, 128, 100);
+
+      canvas.dispatchEvent(new MouseEvent("mousedown", {
+        button: 0, buttons: 1, clientX: 128, clientY: 100, bubbles: true
+      }));
+      window.dispatchEvent(shiftKeyUp());
+
+      canvas.dispatchEvent(new MouseEvent("mousedown", {
+        button: 0, buttons: 1, clientX: 128, clientY: 128, bubbles: true
+      }));
+      canvas.dispatchEvent(new MouseEvent("mousemove", {
+        buttons: 1, clientX: 140, clientY: 128, bubbles: true
+      }));
+      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+
+      assert.strictEqual(events.length, 2, "first is the committed line, second is a normal freehand stroke");
+      const freehandEvent = events[1] as { metadata: { positions: unknown[]; }; };
+      assert.notStrictEqual(freehandEvent.metadata.positions.length, 8, "not a rasterized 8px line — a freehand stroke instead");
+      manager.destroy();
+    });
+
     test("Shift pressed mid-stroke commits the in-progress stroke, then commits the line on mouseup", () => {
       const events: unknown[] = [];
       const manager = makeManager((event) => events.push(event));
