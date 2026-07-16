@@ -6,7 +6,7 @@ export type Vec2 = {
   y: number;
 };
 
-export type Mode = "paint" | "move";
+export type Mode = "paint" | "move" | "fill";
 
 /**
  * Anything accepted as a color input across the package: a CSS color string

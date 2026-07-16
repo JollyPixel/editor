@@ -19,8 +19,9 @@
 - **Transparency support** — configurable checkerboard background renders beneath transparent pixels
 - **SVG brush highlight** — grid-aligned SVG overlay tracks the cursor in real time
 - **Shift-to-line drawing** — hold `Shift` in paint mode to preview a straight path from a fixed start point to the cursor, then commit it as a brush-stamped line
+- **Paint-bucket fill** — click in `"fill"` mode to flood-fill the connected region of same-colored pixels under the cursor, respecting the brush's current color and opacity
 - **Dual-canvas architecture** — a master canvas (full resolution, off-screen) and a working canvas (viewport-cropped, on-screen) maintain pixel-perfect fidelity at any zoom level
-- **Mode switching** — `"paint"` and `"move"` modes control how mouse events are interpreted
+- **Mode switching** — `"paint"`, `"move"`, and `"fill"` modes control how mouse events are interpreted
 
 ## Getting Started
 
@@ -109,6 +110,14 @@ manager.setMode("paint"); // left-click draws
 
 In `"paint"` mode, holding `Shift` arms a straight-line tool anchored at the cursor position when the key was pressed. Moving the mouse previews the path as a thin, outlined SVG line through the pixel centers (visible on any background); the next `mousedown` commits it as a brush-stamped, rasterized line in a single history entry. Releasing `Shift` before committing cancels the preview. This is wired up automatically — no extra setup is required beyond being in `"paint"` mode. See [LineTool.md](./docs/LineTool.md) for the underlying state machine.
 
+### Filling a region (paint bucket)
+
+```ts
+manager.setMode("fill");
+```
+
+In `"fill"` mode, a left-click flood-fills the 4-directionally connected region of pixels that share the clicked pixel's exact color with the brush's current color and opacity — the same behavior as the bucket tool in MS Paint/GIMP/Photoshop. A diagonal line of a different color blocks the fill from leaking through a diagonal gap. Clicking a region that's already the fill color is a no-op — nothing is drawn and no `"stroke"` event fires. See [FillTool.md](./docs/FillTool.md) for the underlying algorithm.
+
 ## Running the Examples
 
 ```bash
@@ -129,6 +138,7 @@ Open `http://localhost:5173` to see the interactive demo.
 | `InputController` | Translates raw mouse/keyboard events into semantic, coordinate-resolved actions — doesn't interpret what they mean for any tool |
 | `SvgManager` | SVG brush-highlight and line-preview overlay |
 | [`LineTool`](./docs/LineTool.md) | Shift-to-line armed-state machine and Bresenham rasterization |
+| [`FillTool`](./docs/FillTool.md) | Paint-bucket flood-fill algorithm |
 
 ## Troubleshooting
 

@@ -13,6 +13,9 @@ import {
   CanvasRenderer
 } from "./rendering/CanvasRenderer.ts";
 import {
+  FillTool
+} from "./input/FillTool.ts";
+import {
   InputController,
   type WindowLike
 } from "./input/InputController.ts";
@@ -45,8 +48,8 @@ export type { Mode };
 export interface CanvasManagerOptions {
   /**
    * Default interaction mode for the canvas.
-   * Can be either "paint" for drawing or "move" for panning.
-   * If not specified, the default mode will be "paint".
+   * "paint" for drawing, "move" for panning, or "fill" for the paint-bucket
+   * flood-fill tool. If not specified, the default mode will be "paint".
    */
   defaultMode?: Mode;
   /**
@@ -202,6 +205,9 @@ export class CanvasManager {
         },
         onDrawEnd: () => {
           this.#endStroke();
+        },
+        onFillStart: (tx, ty) => {
+          this.#fill(tx, ty);
         },
         onPanStart: (_mx, _my) => {
           // pan tracking is inside InputController
@@ -422,11 +428,12 @@ export class CanvasManager {
   }
 
   /**
-   * Commits an already brush-stamped pixel set as a single atomic edit
-   * (one draw call, one "stroke" hook emission). Used by the Shift-to-line
-   * tool to avoid redrawing the canvas once per rasterized point.
+   * Commits an already-computed pixel set as a single atomic edit (one draw
+   * call, one "stroke" hook emission). Used by the Shift-to-line tool (to
+   * avoid redrawing the canvas once per rasterized point) and the fill tool
+   * (to commit a flood-filled region in one shot).
    */
-  commitLine(
+  commitPixels(
     pixels: Vec2[]
   ): void {
     if (pixels.length === 0) {
@@ -592,7 +599,7 @@ export class CanvasManager {
     const points = this.#lineTool.commit();
     this.#svgManager.clearPreviewLine();
     if (points) {
-      this.commitLine(this.#stampLinePixels(points));
+      this.commitPixels(this.#stampLinePixels(points));
 
       if (this.#isShiftHeld) {
         this.#lineTool.arm(points.at(-1) ?? points[0], "mousedown");
@@ -622,6 +629,23 @@ export class CanvasManager {
         points.at(-1) ?? points[0]
       );
     }
+  }
+
+  /**
+   * Flood-fills the connected region of same-colored pixels reachable from
+   * (tx, ty) with the current brush color/opacity, committed as a single
+   * atomic edit. No-ops when the target position is out of bounds or already
+   * matches the fill color (see FillTool.floodFill).
+   */
+  #fill(
+    tx: number,
+    ty: number
+  ): void {
+    const [r, g, b, a] = getColorAsRGBA(this.brush.getColor());
+    const fillColor: RGBA = { r, g, b, a };
+
+    const positions = FillTool.floodFill(this.#canvasBuffer, { x: tx, y: ty }, fillColor);
+    this.commitPixels(positions);
   }
 
   #drawColor(

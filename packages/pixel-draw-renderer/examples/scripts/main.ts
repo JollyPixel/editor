@@ -5,7 +5,7 @@ import { ResizeHandle } from "@jolly-pixel/resize-handle";
 import Picker from "vanilla-picker";
 
 // Import Internal Dependencies
-import { CanvasManager } from "../../src/index.ts";
+import { CanvasManager, type Mode } from "../../src/index.ts";
 import { CameraBehavior } from "./components/Camera.ts";
 import { CubeBehavior } from "./components/Cube.ts";
 
@@ -51,11 +51,13 @@ function initRuntime(): Runtime {
   });
 
   const modePaintBtn = document.getElementById("mode-paint") as HTMLButtonElement;
+  const modeFillBtn = document.getElementById("mode-fill") as HTMLButtonElement;
   const modeMoveBtn = document.getElementById("mode-move") as HTMLButtonElement;
 
-  function setMode(mode: "paint" | "move"): void {
+  function setMode(mode: Mode): void {
     canvasManager.setMode(mode);
     modePaintBtn.classList.toggle("active", mode === "paint");
+    modeFillBtn.classList.toggle("active", mode === "fill");
     modeMoveBtn.classList.toggle("active", mode === "move");
   }
 
@@ -63,6 +65,7 @@ function initRuntime(): Runtime {
   setMode(canvasManager.getMode());
 
   modePaintBtn.addEventListener("click", () => setMode("paint"));
+  modeFillBtn.addEventListener("click", () => setMode("fill"));
   modeMoveBtn.addEventListener("click", () => setMode("move"));
 
   // === Color picker ===

@@ -116,6 +116,13 @@ export class CanvasBuffer implements DefaultPixelBuffer {
     return Uint8ClampedArray.from(this.#buffer.getPixels());
   }
 
+  /**
+   * Writes to the backing PixelBuffer, then syncs the working canvas with a
+   * single putImageData over the bounding box of the affected (in-bounds)
+   * positions — one DOM call regardless of how many pixels were touched,
+   * instead of one 1x1 putImageData per pixel (a real cost for large edits
+   * like a flood fill).
+   */
   drawPixels(
     pixels: Vec2[],
     color: RGBA
@@ -123,18 +130,39 @@ export class CanvasBuffer implements DefaultPixelBuffer {
     this.#buffer.drawPixels(pixels, color);
 
     const size = this.#buffer.getSize();
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
     for (const pixel of pixels) {
       if (pixel.x < 0 || pixel.x >= size.x || pixel.y < 0 || pixel.y >= size.y) {
         continue;
       }
 
-      const imageData = this.#workingCtx.createImageData(1, 1);
-      imageData.data[0] = color.r;
-      imageData.data[1] = color.g;
-      imageData.data[2] = color.b;
-      imageData.data[3] = color.a;
-      this.#workingCtx.putImageData(imageData, pixel.x, pixel.y);
+      minX = Math.min(minX, pixel.x);
+      minY = Math.min(minY, pixel.y);
+      maxX = Math.max(maxX, pixel.x);
+      maxY = Math.max(maxY, pixel.y);
     }
+
+    if (maxX < minX) {
+      return;
+    }
+
+    const rectWidth = maxX - minX + 1;
+    const rectHeight = maxY - minY + 1;
+    const imageData = this.#workingCtx.createImageData(rectWidth, rectHeight);
+    for (let y = 0; y < rectHeight; y++) {
+      for (let x = 0; x < rectWidth; x++) {
+        const [r, g, b, a] = this.#buffer.samplePixel(minX + x, minY + y);
+        const index = (y * rectWidth + x) * 4;
+        imageData.data[index] = r;
+        imageData.data[index + 1] = g;
+        imageData.data[index + 2] = b;
+        imageData.data[index + 3] = a;
+      }
+    }
+    this.#workingCtx.putImageData(imageData, minX, minY);
   }
 
   copyToMaster(): void {

@@ -7,7 +7,7 @@ import { Window } from "happy-dom";
 
 // Import Internal Dependencies
 import { CanvasBuffer } from "../../src/buffer/CanvasBuffer.ts";
-import { installCanvasMock } from "../mocks.ts";
+import { installCanvasMock, MockCanvasElement } from "../mocks.ts";
 
 // CONSTANTS
 const kEmulatedBrowserWindow = new Window();
@@ -56,6 +56,43 @@ describe("CanvasBuffer", () => {
         assert.strictEqual(b, 0);
         assert.strictEqual(a, 200);
       }
+    });
+
+    test("syncs the working canvas with a single putImageData call regardless of pixel count", () => {
+      const buf = new CanvasBuffer({ size: { x: 8, y: 8 }, maxSize: kTestMaxSize });
+      const ctx = (buf.getCanvas() as unknown as MockCanvasElement)._ctx;
+      const before = ctx.putImageDataCallCount;
+
+      const pixels = [
+        { x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 1 }, { x: 3, y: 2 }, { x: 4, y: 3 }
+      ];
+      buf.drawPixels(pixels, { r: 10, g: 20, b: 30, a: 255 });
+
+      assert.strictEqual(ctx.putImageDataCallCount - before, 1);
+    });
+
+    test("leaves pixels inside the bounding box but outside the drawn set untouched on the canvas mirror", () => {
+      const buf = new CanvasBuffer({ size: { x: 8, y: 8 }, maxSize: kTestMaxSize });
+      // Pre-existing pixel that sits strictly inside the bounding box of the
+      // upcoming sparse drawPixels call, but isn't one of the drawn positions.
+      buf.drawPixels([{ x: 2, y: 2 }], { r: 1, g: 2, b: 3, a: 4 });
+
+      // Sparse diagonal draw whose bounding box covers (2,2).
+      buf.drawPixels([{ x: 0, y: 0 }, { x: 4, y: 4 }], { r: 100, g: 100, b: 100, a: 255 });
+
+      assert.deepStrictEqual(buf.samplePixel(2, 2), [1, 2, 3, 4]);
+      assert.deepStrictEqual(buf.samplePixel(0, 0), [100, 100, 100, 255]);
+      assert.deepStrictEqual(buf.samplePixel(4, 4), [100, 100, 100, 255]);
+    });
+
+    test("skips the canvas sync entirely when every position is out of bounds", () => {
+      const buf = new CanvasBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
+      const ctx = (buf.getCanvas() as unknown as MockCanvasElement)._ctx;
+      const before = ctx.putImageDataCallCount;
+
+      assert.doesNotThrow(() => buf.drawPixels([{ x: -1, y: -1 }, { x: 99, y: 99 }], { r: 1, g: 1, b: 1, a: 1 }));
+
+      assert.strictEqual(ctx.putImageDataCallCount, before);
     });
   });
 
