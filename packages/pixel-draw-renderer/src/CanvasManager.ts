@@ -13,7 +13,8 @@ import {
   CanvasRenderer
 } from "./rendering/CanvasRenderer.ts";
 import {
-  InputController
+  InputController,
+  type WindowLike
 } from "./input/InputController.ts";
 import {
   LineTool,
@@ -48,6 +49,12 @@ export interface CanvasManagerOptions {
    * If not specified, the default mode will be "paint".
    */
   defaultMode?: Mode;
+  /**
+   * Global event target used by InputController for drag-continuation
+   * mouse tracking and keyboard/blur reporting.
+   * @default window
+   */
+  window?: WindowLike;
   texture?: {
     defaultColor?: ColorInput;
     size?: {
@@ -175,6 +182,7 @@ export class CanvasManager {
       canvas: this.#renderer.getCanvas(),
       viewport: this.#viewport,
       mode: options.defaultMode,
+      window: options.window,
       actions: {
         onDrawStart: (tx, ty) => {
           if (this.#lineTool.isArmed && this.#lineTool.commitTrigger === "mousedown") {
