@@ -19,7 +19,8 @@ export {
 export {
   InputController,
   type InputActions,
-  type InputControllerOptions
+  type InputControllerOptions,
+  type WindowLike
 } from "./input/InputController.ts";
 export {
   LineTool,

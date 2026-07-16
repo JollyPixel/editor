@@ -2,6 +2,12 @@
 import type { Mode, Vec2 } from "../types.ts";
 import type { Viewport } from "../rendering/Viewport.ts";
 
+// CONSTANTS
+const kEditableInputTypes = new Set([
+  "text", "search", "email", "url", "tel", "password", "number",
+  "date", "datetime-local", "month", "time", "week"
+]);
+
 export interface InputActions {
   /**
    * Called on left mousedown in paint mode. Return `false` to indicate the
@@ -40,7 +46,10 @@ export interface InputActions {
 
 /**
  * Prevents Shift from being reported while the user is typing in toolbar
- * UI (e.g. a brush-size field) elsewhere in the page.
+ * UI (e.g. a brush-size field) elsewhere in the page. Only text-entry
+ * inputs count as "typing" — a range/color input left focused after a drag
+ * (canvas has no tabindex, so clicking it can't steal focus back) must not
+ * keep swallowing Shift.
  */
 function isEditableTarget(
   target: EventTarget | null
@@ -49,7 +58,31 @@ function isEditableTarget(
     return false;
   }
 
-  return target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
+  if (target.isContentEditable || target.tagName === "TEXTAREA") {
+    return true;
+  }
+
+  return target.tagName === "INPUT" && kEditableInputTypes.has((target as HTMLInputElement).type);
+}
+
+/**
+ * Subset of the global `Window` used by InputController — global mouse
+ * tracking (for drag gestures that continue past the canvas edge) and
+ * keyboard/blur reporting. Narrowed to an interface so it can be injected
+ * (defaults to `window`), keeping the global out of the constructor and
+ * letting tests supply a fake instead of relying on a real DOM global.
+ */
+export interface WindowLike {
+  addEventListener(type: "mousemove", listener: (event: MouseEvent) => void): void;
+  addEventListener(type: "mouseup", listener: (event: MouseEvent) => void): void;
+  addEventListener(type: "keydown", listener: (event: KeyboardEvent) => void): void;
+  addEventListener(type: "keyup", listener: (event: KeyboardEvent) => void): void;
+  addEventListener(type: "blur", listener: () => void): void;
+  removeEventListener(type: "mousemove", listener: (event: MouseEvent) => void): void;
+  removeEventListener(type: "mouseup", listener: (event: MouseEvent) => void): void;
+  removeEventListener(type: "keydown", listener: (event: KeyboardEvent) => void): void;
+  removeEventListener(type: "keyup", listener: (event: KeyboardEvent) => void): void;
+  removeEventListener(type: "blur", listener: () => void): void;
 }
 
 export interface InputControllerOptions {
@@ -61,6 +94,12 @@ export interface InputControllerOptions {
    * @default "paint"
    */
   mode?: Mode;
+  /**
+   * Global event target used for drag-continuation mouse tracking and
+   * keyboard/blur reporting.
+   * @default window
+   */
+  window?: WindowLike;
 }
 
 /**
@@ -74,6 +113,7 @@ export class InputController {
   #viewport: Viewport;
   #actions: InputActions;
   #mode: Mode;
+  #window: WindowLike;
   #isPanning: boolean = false;
   #panStart: Vec2 = { x: 0, y: 0 };
   #isDrawing: boolean = false;
@@ -97,13 +137,15 @@ export class InputController {
       canvas,
       viewport,
       actions,
-      mode = "paint"
+      mode = "paint",
+      window: windowLike = window
     } = options;
 
     this.#canvas = canvas;
     this.#viewport = viewport;
     this.#actions = actions;
     this.#mode = mode;
+    this.#window = windowLike;
 
     this.#onMouseDown = (event) => this.#handleMouseDown(event);
     this.#onMouseMove = (event) => this.#handleMouseMove(event);
@@ -123,11 +165,11 @@ export class InputController {
     this.#canvas.addEventListener("mouseup", this.#onMouseUp);
     this.#canvas.addEventListener("wheel", this.#onWheel, { passive: false });
     this.#canvas.addEventListener("contextmenu", this.#onContextMenu);
-    window.addEventListener("mousemove", this.#onWindowMouseMove);
-    window.addEventListener("mouseup", this.#onWindowMouseUp);
-    window.addEventListener("keydown", this.#onKeyDown);
-    window.addEventListener("keyup", this.#onKeyUp);
-    window.addEventListener("blur", this.#onWindowBlur);
+    this.#window.addEventListener("mousemove", this.#onWindowMouseMove);
+    this.#window.addEventListener("mouseup", this.#onWindowMouseUp);
+    this.#window.addEventListener("keydown", this.#onKeyDown);
+    this.#window.addEventListener("keyup", this.#onKeyUp);
+    this.#window.addEventListener("blur", this.#onWindowBlur);
   }
 
   getMode(): Mode {
@@ -157,11 +199,11 @@ export class InputController {
     this.#canvas.removeEventListener("mouseup", this.#onMouseUp);
     this.#canvas.removeEventListener("wheel", this.#onWheel);
     this.#canvas.removeEventListener("contextmenu", this.#onContextMenu);
-    window.removeEventListener("mousemove", this.#onWindowMouseMove);
-    window.removeEventListener("mouseup", this.#onWindowMouseUp);
-    window.removeEventListener("keydown", this.#onKeyDown);
-    window.removeEventListener("keyup", this.#onKeyUp);
-    window.removeEventListener("blur", this.#onWindowBlur);
+    this.#window.removeEventListener("mousemove", this.#onWindowMouseMove);
+    this.#window.removeEventListener("mouseup", this.#onWindowMouseUp);
+    this.#window.removeEventListener("keydown", this.#onKeyDown);
+    this.#window.removeEventListener("keyup", this.#onKeyUp);
+    this.#window.removeEventListener("blur", this.#onWindowBlur);
   }
 
   #handleMouseDown(

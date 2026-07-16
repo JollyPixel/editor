@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { Window } from "happy-dom";
 
 // Import Internal Dependencies
-import { InputController, type InputActions } from "../../src/input/InputController.ts";
+import { InputController, type InputActions, type WindowLike } from "../../src/input/InputController.ts";
 import { Viewport } from "../../src/rendering/Viewport.ts";
 
 // CONSTANTS
@@ -51,6 +51,33 @@ function makeCanvas(): HTMLCanvasElement {
   };
 
   return canvas;
+}
+
+/**
+ * Minimal WindowLike fake — proves InputController never touches the real
+ * global `window` when one is injected via options.window.
+ */
+class FakeWindow implements WindowLike {
+  #listeners = new Map<string, Set<(event: any) => void>>();
+
+  addEventListener(type: string, listener: (event: any) => void): void {
+    let set = this.#listeners.get(type);
+    if (!set) {
+      set = new Set();
+      this.#listeners.set(type, set);
+    }
+    set.add(listener);
+  }
+
+  removeEventListener(type: string, listener: (event: any) => void): void {
+    this.#listeners.get(type)?.delete(listener);
+  }
+
+  dispatch(type: string, event: unknown = {}): void {
+    for (const listener of this.#listeners.get(type) ?? []) {
+      listener(event);
+    }
+  }
 }
 
 function makeActions(options: { onDrawStartReturns?: boolean; } = {}): {
@@ -356,7 +383,7 @@ describe("InputController", () => {
       ctrl.destroy();
     });
 
-    test("keydown while an input element has focus does not fire onShiftDown", () => {
+    test("keydown while a text input has focus does not fire onShiftDown", () => {
       const { actions, calls } = makeActions();
       const ctrl = new InputController({ canvas, viewport, actions, mode: "paint" });
 
@@ -366,6 +393,34 @@ describe("InputController", () => {
       input.dispatchEvent(shiftKeyDown());
 
       assert.strictEqual(calls.onShiftDown.length, 0);
+      ctrl.destroy();
+    });
+
+    test("keydown while a range input has focus still fires onShiftDown", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "paint" });
+
+      const input = kEmulatedBrowserWindow.document.createElement("input");
+      input.type = "range";
+      kEmulatedBrowserWindow.document.body.appendChild(input);
+
+      input.dispatchEvent(shiftKeyDown());
+
+      assert.strictEqual(calls.onShiftDown.length, 1);
+      ctrl.destroy();
+    });
+
+    test("keydown while a color input has focus still fires onShiftDown", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "paint" });
+
+      const input = kEmulatedBrowserWindow.document.createElement("input");
+      input.type = "color";
+      kEmulatedBrowserWindow.document.body.appendChild(input);
+
+      input.dispatchEvent(shiftKeyDown());
+
+      assert.strictEqual(calls.onShiftDown.length, 1);
       ctrl.destroy();
     });
 
@@ -401,6 +456,53 @@ describe("InputController", () => {
 
       assert.strictEqual(calls.onBlur.length, 1);
       ctrl.destroy();
+    });
+  });
+
+  describe("injected window", () => {
+    test("keydown/keyup/blur are read from the injected window, not the real global", () => {
+      const { actions, calls } = makeActions();
+      const fakeWindow = new FakeWindow();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "paint", window: fakeWindow });
+
+      window.dispatchEvent(shiftKeyDown());
+      assert.strictEqual(calls.onShiftDown.length, 0);
+
+      fakeWindow.dispatch("keydown", { key: "Shift", repeat: false, target: null });
+      assert.strictEqual(calls.onShiftDown.length, 1);
+
+      fakeWindow.dispatch("keyup", { key: "Shift" });
+      assert.strictEqual(calls.onShiftUp.length, 1);
+
+      fakeWindow.dispatch("blur");
+      assert.strictEqual(calls.onBlur.length, 1);
+
+      ctrl.destroy();
+    });
+
+    test("mouseup on the injected window ends an in-progress draw gesture", () => {
+      const { actions, calls } = makeActions();
+      const fakeWindow = new FakeWindow();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "paint", window: fakeWindow });
+
+      canvas.dispatchEvent(new MouseEvent("mousedown", {
+        button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
+      }));
+      fakeWindow.dispatch("mouseup");
+
+      assert.strictEqual(calls.onDrawEnd.length, 1);
+      ctrl.destroy();
+    });
+
+    test("destroy() detaches from the injected window", () => {
+      const { actions, calls } = makeActions();
+      const fakeWindow = new FakeWindow();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "paint", window: fakeWindow });
+
+      ctrl.destroy();
+      fakeWindow.dispatch("keydown", { key: "Shift", repeat: false, target: null });
+
+      assert.strictEqual(calls.onShiftDown.length, 0);
     });
   });
 });
