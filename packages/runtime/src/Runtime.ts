@@ -75,6 +75,10 @@ export class Runtime<
     return this.#isRunning;
   }
 
+  preloadAssets() {
+    return this.world.preloadSceneAssets();
+  }
+
   start() {
     if (this.#isRunning) {
       return;

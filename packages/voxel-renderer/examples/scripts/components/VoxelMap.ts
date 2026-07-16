@@ -1,26 +1,27 @@
 // Import Third-party Dependencies
 import {
   Actor,
-  ActorComponent
+  ActorComponent,
+  type ComponentInitializeContext
 } from "@jolly-pixel/engine";
 import * as THREE from "three";
 
 // Import Internal Dependencies
 import {
-  loadVoxelTiledMap,
   TilesetLoader,
   VoxelRenderer,
   type VoxelWorldJSON
 } from "../../../src/index.ts";
+import { loadVoxelTiledMap } from "../../../src/plugins/tiled/index.ts";
 
 export class VoxelBehavior extends ActorComponent {
   tilesetLoader = new TilesetLoader();
 
   world: VoxelWorldJSON | undefined;
 
-  async initialize({ assetManager }) {
-    console.log("initialize VoxelBehavior");
-
+  async initialize(
+    { assetManager }: ComponentInitializeContext
+  ) {
     this.tilesetLoader = new TilesetLoader({
       manager: assetManager.context.manager
     });
@@ -48,7 +49,7 @@ export class VoxelBehavior extends ActorComponent {
 
   awake() {
     if (!this.world) {
-      throw new Error("world is not initilized");
+      throw new Error("world is not initialized");
     }
 
     const vr = this.actor.addComponentAndGet(VoxelRenderer, {

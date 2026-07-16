@@ -432,6 +432,18 @@ describe("VoxelWorld clear", () => {
     world.clear();
     assert.equal(world.getLayers().length, 0);
   });
+
+  it("clears pending removed layers queue", () => {
+    const world = new VoxelWorld(4);
+    world.addLayer("A");
+    world.setVoxelAt("A", { x: 0, y: 0, z: 0 }, makeEntry());
+    world.removeLayer("A");
+
+    world.clear();
+
+    const chunksToRemove = [...world.getAllChunksToBeRemoved()];
+    assert.equal(chunksToRemove.length, 0);
+  });
 });
 
 describe("VoxelWorld chunkSize", () => {

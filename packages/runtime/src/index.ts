@@ -32,6 +32,8 @@ export async function loadRuntime(
     focusCanvas = true
   } = options;
 
+  await runtime.preloadAssets();
+
   const gpuTierPromise = getGPUTier();
 
   runtime.canvas.style.opacity = "0";

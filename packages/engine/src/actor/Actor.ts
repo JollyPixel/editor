@@ -194,7 +194,9 @@ export class Actor<
   }
 
   awake() {
-    this.components.forEach((component) => component.awake?.());
+    for (let i = 0; i < this.components.length; i++) {
+      this.components[i].awake?.();
+    }
   }
 
   update(

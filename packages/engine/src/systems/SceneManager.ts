@@ -52,6 +52,7 @@ export class SceneManager<
   #currentScene: Scene<TContext> | null = null;
   #pendingScene: Scene<TContext> | null = null;
   #sceneStartPending = false;
+  #preloadedAssets = false;
   #world: World<any, TContext> | null = null;
   #logger!: Logger;
 
@@ -87,6 +88,33 @@ export class SceneManager<
   ): void {
     this.#world = world;
     this.#logger = world.logger.child({ namespace: "Systems.SceneManager" });
+  }
+
+  async preloadAssets() {
+    if (this.#preloadedAssets) {
+      return;
+    }
+    if (!this.#world) {
+      throw new Error("SceneManager must be bound to a World before initialization.");
+    }
+
+    const context: ComponentInitializeContext = {
+      assetManager: this.#world.assetManager
+    };
+
+    for (const { actor } of this.tree.walk()) {
+      if (actor.components.length === 0) {
+        continue;
+      }
+
+      const toInitialize = actor.components.map((component) => component.initialize?.(context));
+      if (toInitialize.length === 0) {
+        continue;
+      }
+
+      await Promise.all(toInitialize);
+    }
+    this.#preloadedAssets = true;
   }
 
   awake() {

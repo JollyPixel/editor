@@ -1,5 +1,7 @@
 // Import Third-party Dependencies
-import { Camera3DControls } from "@jolly-pixel/engine";
+import {
+  Camera3DControls
+} from "@jolly-pixel/engine";
 import {
   Runtime,
   loadRuntime
@@ -23,7 +25,6 @@ const { world } = runtime;
 world.logger.setLevel("debug");
 world.logger.enableNamespace("*");
 
-// ── Scene ─────────────────────────────────────────────────────────────────────
 const scene = world.sceneManager.getSource();
 scene.background = new THREE.Color("#211331");
 
@@ -34,21 +35,15 @@ scene.add(
   dirLight
 );
 
-// ── Camera ────────────────────────────────────────────────────────────────────
-// Map is 30 × 20 tiles at Y = 0. Position camera above and behind the centre
-// so the full terrain is visible on load. Use WASD + mouse to navigate.
 world.createActor("camera")
   .addComponent(Camera3DControls, {}, (component) => {
     component.camera.position.set(15, 25, 42);
     component.camera.lookAt(15, 0, 10);
   });
 
-// ── VoxelRenderer ─────────────────────────────────────────────────────────────
-// No blocks or layers supplied here — load() will register them from the JSON.
 world.createActor("map")
   .addComponent(VoxelBehavior);
 
-// ── Load runtime ────────────────────────────────────────────
 await loadRuntime(runtime)
   .catch(console.error);
 
