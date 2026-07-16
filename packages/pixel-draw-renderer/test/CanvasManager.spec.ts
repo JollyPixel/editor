@@ -163,7 +163,7 @@ describe("CanvasManager", () => {
     });
   });
 
-  describe("commitLine", () => {
+  describe("commitPixels", () => {
     test("commits pixels as a single 'stroke' hook event", () => {
       const events: unknown[] = [];
       const manager = new CanvasManager(container, {
@@ -171,7 +171,7 @@ describe("CanvasManager", () => {
         onBufferUpdated: (event) => events.push(event)
       });
 
-      manager.commitLine([{ x: 1, y: 1 }, { x: 2, y: 1 }, { x: 3, y: 1 }]);
+      manager.commitPixels([{ x: 1, y: 1 }, { x: 2, y: 1 }, { x: 3, y: 1 }]);
 
       assert.strictEqual(events.length, 1);
       const event = events[0] as { action: string; metadata: { positions: unknown[]; }; };
@@ -187,7 +187,7 @@ describe("CanvasManager", () => {
         onBufferUpdated: (event) => events.push(event)
       });
 
-      manager.commitLine([]);
+      manager.commitPixels([]);
 
       assert.strictEqual(events.length, 0);
       manager.destroy();
@@ -202,7 +202,7 @@ describe("CanvasManager", () => {
         }
       });
 
-      manager.commitLine([{ x: 1, y: 1 }]);
+      manager.commitPixels([{ x: 1, y: 1 }]);
 
       assert.strictEqual(callCount, 1);
       manager.destroy();
@@ -443,6 +443,100 @@ describe("CanvasManager", () => {
 
       const event = events[0] as { metadata: { positions: unknown[]; }; };
       assert.strictEqual(event.metadata.positions.length, 8, "start should still be (8,8), not reset by the repeat event");
+      manager.destroy();
+    });
+  });
+
+  describe("fill mode", () => {
+    // 200x200 container, 16x16 texture, zoom 4 -> centered camera (68, 68).
+    // client(100,100) -> texture (8,8).
+
+    test("click flood-fills the connected region as a single stroke", () => {
+      const events: unknown[] = [];
+      const manager = new CanvasManager(container, {
+        texture: { maxSize: 32, size: { x: 16, y: 16 } },
+        zoom: { default: 4 },
+        defaultMode: "fill",
+        brush: { color: "#FF0000" },
+        onBufferUpdated: (event) => events.push(event)
+      });
+      const canvas = manager.getCanvas();
+
+      canvas.dispatchEvent(new MouseEvent("mousedown", {
+        button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
+      }));
+
+      assert.strictEqual(events.length, 1);
+      const event = events[0] as { action: string; metadata: { positions: unknown[]; }; };
+      assert.strictEqual(event.action, "stroke");
+      // Whole 16x16 texture is uniformly white by default except (0,0),
+      // which PixelBuffer always initializes fully transparent.
+      assert.strictEqual(event.metadata.positions.length, 16 * 16 - 1);
+      manager.destroy();
+    });
+
+    test("click does not arm a freehand drag stroke afterwards", () => {
+      const events: unknown[] = [];
+      const manager = new CanvasManager(container, {
+        texture: { maxSize: 32, size: { x: 16, y: 16 } },
+        zoom: { default: 4 },
+        defaultMode: "fill",
+        onBufferUpdated: (event) => events.push(event)
+      });
+      const canvas = manager.getCanvas();
+
+      canvas.dispatchEvent(new MouseEvent("mousedown", {
+        button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
+      }));
+      canvas.dispatchEvent(new MouseEvent("mousemove", {
+        buttons: 1, clientX: 110, clientY: 100, bubbles: true
+      }));
+      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+
+      assert.strictEqual(events.length, 1, "only the single fill click commits — no chained freehand stroke");
+      manager.destroy();
+    });
+
+    test("clicking a region already matching the brush color is a no-op", () => {
+      const events: unknown[] = [];
+      const manager = new CanvasManager(container, {
+        texture: { maxSize: 32, size: { x: 16, y: 16 } },
+        zoom: { default: 4 },
+        defaultMode: "fill",
+        brush: { color: "#FFFFFF" },
+        onBufferUpdated: (event) => events.push(event)
+      });
+      const canvas = manager.getCanvas();
+
+      canvas.dispatchEvent(new MouseEvent("mousedown", {
+        button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
+      }));
+
+      assert.strictEqual(events.length, 0, "fill color already matches the target region's color");
+      manager.destroy();
+    });
+
+    test("a second click after the first fill is also a no-op (region now matches fill color)", () => {
+      const events: unknown[] = [];
+      const manager = new CanvasManager(container, {
+        texture: { maxSize: 32, size: { x: 16, y: 16 } },
+        zoom: { default: 4 },
+        defaultMode: "fill",
+        brush: { color: "#FF0000" },
+        onBufferUpdated: (event) => events.push(event)
+      });
+      const canvas = manager.getCanvas();
+
+      function click(): void {
+        canvas.dispatchEvent(new MouseEvent("mousedown", {
+          button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
+        }));
+      }
+
+      click();
+      click();
+
+      assert.strictEqual(events.length, 1, "second click on the now-red region is a no-op");
       manager.destroy();
     });
   });

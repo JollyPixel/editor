@@ -85,7 +85,7 @@ function makeActions(options: { onDrawStartReturns?: boolean; } = {}): {
   calls: Record<string, unknown[][]>;
 } {
   const calls: Record<string, unknown[][]> = {
-    onDrawStart: [], onDrawMove: [], onDrawEnd: [],
+    onDrawStart: [], onDrawMove: [], onDrawEnd: [], onFillStart: [],
     onPanStart: [], onPanMove: [], onPanEnd: [],
     onZoom: [], onColorPick: [], onMouseMove: [],
     onCursorMove: [], onMouseUp: [],
@@ -100,6 +100,7 @@ function makeActions(options: { onDrawStartReturns?: boolean; } = {}): {
     },
     onDrawMove: (tx, ty) => calls.onDrawMove.push([tx, ty]),
     onDrawEnd: () => calls.onDrawEnd.push([]),
+    onFillStart: (tx, ty) => calls.onFillStart.push([tx, ty]),
     onPanStart: (mx, my) => calls.onPanStart.push([mx, my]),
     onPanMove: (dx, dy) => calls.onPanMove.push([dx, dy]),
     onPanEnd: () => calls.onPanEnd.push([]),
@@ -190,6 +191,48 @@ describe("InputController", () => {
       }));
 
       assert.strictEqual(calls.onDrawStart.length, 0);
+      ctrl.destroy();
+    });
+
+    test("mousedown (left button) in fill mode triggers onFillStart", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "fill" });
+
+      canvas.dispatchEvent(new MouseEvent("mousedown", {
+        button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
+      }));
+
+      assert.strictEqual(calls.onFillStart.length, 1);
+      assert.strictEqual(calls.onDrawStart.length, 0);
+      ctrl.destroy();
+    });
+
+    test("mousedown in fill mode does not arm a drag gesture (no onDrawMove/onDrawEnd)", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "fill" });
+
+      canvas.dispatchEvent(new MouseEvent("mousedown", {
+        button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
+      }));
+      canvas.dispatchEvent(new MouseEvent("mousemove", {
+        buttons: 1, clientX: 110, clientY: 100, bubbles: true
+      }));
+      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+
+      assert.strictEqual(calls.onDrawMove.length, 0);
+      assert.strictEqual(calls.onDrawEnd.length, 0);
+      ctrl.destroy();
+    });
+
+    test("mousedown in paint mode (left button) does NOT trigger onFillStart", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "paint" });
+
+      canvas.dispatchEvent(new MouseEvent("mousedown", {
+        button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
+      }));
+
+      assert.strictEqual(calls.onFillStart.length, 0);
       ctrl.destroy();
     });
 

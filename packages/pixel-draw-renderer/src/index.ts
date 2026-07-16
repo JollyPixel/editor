@@ -17,6 +17,9 @@ export {
   type CanvasRendererOptions
 } from "./rendering/CanvasRenderer.ts";
 export {
+  FillTool
+} from "./input/FillTool.ts";
+export {
   InputController,
   type InputActions,
   type InputControllerOptions,

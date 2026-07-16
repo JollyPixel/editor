@@ -43,6 +43,7 @@ class MockCanvas2DContext {
   fillStyle: string = "#000000";
   imageSmoothingEnabled: boolean = false;
   readonly canvas: MockCanvasElement;
+  putImageDataCallCount: number = 0;
 
   constructor(canvas: MockCanvasElement) {
     this.canvas = canvas;
@@ -116,6 +117,7 @@ class MockCanvas2DContext {
   }
 
   putImageData(imageData: MockImageData, x: number, y: number): void {
+    this.putImageDataCallCount++;
     const pixels = this.canvas._pixels;
     const cw = this.canvas.width;
     const ch = this.canvas.height;

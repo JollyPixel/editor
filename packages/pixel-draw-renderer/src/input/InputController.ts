@@ -17,6 +17,12 @@ export interface InputActions {
   onDrawStart(tx: number, ty: number): boolean | void;
   onDrawMove(tx: number, ty: number): void;
   onDrawEnd(): void;
+  /**
+   * Called on left mousedown in fill mode. Single-shot — unlike onDrawStart,
+   * there is no corresponding move/end pair; a fill click never arms a drag
+   * gesture.
+   */
+  onFillStart(tx: number, ty: number): void;
   onPanStart(mx: number, my: number): void;
   onPanMove(dx: number, dy: number): void;
   onPanEnd(): void;
@@ -90,7 +96,7 @@ export interface InputControllerOptions {
   viewport: Viewport;
   actions: InputActions;
   /**
-   * Initial interaction mode. Can be either "paint" or "move".
+   * Initial interaction mode. Can be "paint", "move", or "fill".
    * @default "paint"
    */
   mode?: Mode;
@@ -216,6 +222,13 @@ export class InputController {
       if (pos) {
         const handled = this.#actions.onDrawStart(pos.x, pos.y);
         this.#isDrawing = handled !== false;
+      }
+    }
+
+    if (this.#mode === "fill" && event.button === 0) {
+      const pos = this.#viewport.getMouseTexturePosition(event.clientX, event.clientY, { bounds });
+      if (pos) {
+        this.#actions.onFillStart(pos.x, pos.y);
       }
     }
 
