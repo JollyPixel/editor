@@ -9,7 +9,7 @@ import {
   FLIPPED_VERTICAL,
   FLIPPED_ANTI_DIAGONAL,
   TILED_FLIPPED_FLAGS
-} from "../../../src/convertor/tiled/TileSet.ts";
+} from "../../../src/plugins/tiled/TileSet.ts";
 
 // CONSTANTS
 const kEpsilon = 1e-10;

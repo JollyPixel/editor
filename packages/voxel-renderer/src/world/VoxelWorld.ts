@@ -531,6 +531,7 @@ export class VoxelWorld {
 
   clear(): void {
     this.#layers = [];
+    this.#layersToRemove = [];
     this.#objectLayers.clear();
   }
 

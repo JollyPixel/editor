@@ -31,6 +31,23 @@ describe("Actor", () => {
       assert.strictEqual(component.awake.mock.calls.length, 1);
     });
 
+    test("should awake components added during awake", () => {
+      const actor = new Actor(createWorld() as any, { name: "foobar" });
+
+      const secondAwake = mock.fn();
+      const firstComponent = {
+        awake: mock.fn(() => {
+          actor.components.push({ awake: secondAwake } as any);
+        })
+      };
+      actor.components.push(firstComponent as any);
+
+      actor.awake();
+
+      assert.strictEqual(firstComponent.awake.mock.calls.length, 1);
+      assert.strictEqual(secondAwake.mock.calls.length, 1);
+    });
+
     test("should call update on components requiring update", () => {
       const actor = new Actor(createWorld() as any, { name: "foobar" });
 

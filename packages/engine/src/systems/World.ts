@@ -147,6 +147,11 @@ export class World<
     });
   }
 
+  async preloadSceneAssets() {
+    this.#worldLogger.debug("Preloading scene assets");
+    await this.sceneManager.preloadAssets();
+  }
+
   connect() {
     this.#worldLogger.debug("Connecting world");
 

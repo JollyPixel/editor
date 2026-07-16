@@ -93,9 +93,6 @@ export type {
   VoxelEntry
 } from "./world/types.ts";
 
-// Convertor
-export * from "./convertor/index.ts";
-
 // Network
 export * from "./network/index.ts";
 
