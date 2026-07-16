@@ -87,4 +87,47 @@ describe("SvgManager", () => {
       assert.doesNotThrow(() => svgMgr.destroy());
     });
   });
+
+  describe("setPreviewLine / clearPreviewLine", () => {
+    test("setPreviewLine() shows two line elements through the pixel centers", () => {
+      const parent = makeParent();
+      const svgMgr = new SvgManager({
+        parent,
+        viewport: makeViewport(),
+        brush: makeBrush(),
+        textureSize: { x: 16, y: 16 }
+      });
+
+      svgMgr.setPreviewLine({ x: 1, y: 1 }, { x: 2, y: 1 });
+
+      const lines = parent.querySelectorAll("line");
+      assert.strictEqual(lines.length, 2, "one outline line + one inline line");
+      for (const line of lines) {
+        assert.strictEqual(line.getAttribute("visibility"), "visible");
+        // zoom 4, camera (0,0): center of (1,1) -> (6,6), center of (2,1) -> (10,6)
+        assert.strictEqual(line.getAttribute("x1"), "6");
+        assert.strictEqual(line.getAttribute("y1"), "6");
+        assert.strictEqual(line.getAttribute("x2"), "10");
+        assert.strictEqual(line.getAttribute("y2"), "6");
+      }
+    });
+
+    test("clearPreviewLine() hides an active preview", () => {
+      const parent = makeParent();
+      const svgMgr = new SvgManager({
+        parent,
+        viewport: makeViewport(),
+        brush: makeBrush(),
+        textureSize: { x: 16, y: 16 }
+      });
+
+      svgMgr.setPreviewLine({ x: 0, y: 0 }, { x: 0, y: 0 });
+      svgMgr.clearPreviewLine();
+
+      const lines = parent.querySelectorAll("line");
+      for (const line of lines) {
+        assert.strictEqual(line.getAttribute("visibility"), "hidden");
+      }
+    });
+  });
 });

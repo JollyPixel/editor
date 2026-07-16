@@ -27,6 +27,8 @@ export class SvgManager {
   #textureSize: Vec2;
   #svg: SVGElement;
   #highlightElements: SVGGElement;
+  #linePreviewOutline: SVGLineElement;
+  #linePreviewInline: SVGLineElement;
 
   constructor(
     options: SvgManagerOptions
@@ -38,6 +40,9 @@ export class SvgManager {
 
     this.#svg = this.#initSvgElement();
     this.#highlightElements = this.#initBrushHighlight();
+    const [outline, inline] = this.#initLinePreview();
+    this.#linePreviewOutline = outline;
+    this.#linePreviewInline = inline;
   }
 
   #initSvgElement(): SVGElement {
@@ -94,6 +99,64 @@ export class SvgManager {
     this.#svg.appendChild(highlightGroupElement);
 
     return highlightGroupElement;
+  }
+
+  /**
+   * A wider "casing" line (colorOutline) behind a narrower one (colorInline)
+   * on the same path — unlike the brush highlight's adjacent-border trick,
+   * a single segment needs differing stroke widths to read as a halo.
+   */
+  #initLinePreview(): [outline: SVGLineElement, inline: SVGLineElement] {
+    const defaultStyle = {
+      pointerEvents: "none",
+      fill: "none"
+    };
+
+    const outline = document.createElementNS(kSvgNs, "line");
+    Object.assign(outline.style, defaultStyle, { strokeWidth: 4 });
+    outline.setAttribute("stroke", this.#brush.colorOutline);
+    outline.setAttribute("vector-effect", "non-scaling-stroke");
+    outline.setAttribute("visibility", "hidden");
+    this.#svg.appendChild(outline);
+
+    const inline = document.createElementNS(kSvgNs, "line");
+    Object.assign(inline.style, defaultStyle, { strokeWidth: 2 });
+    inline.setAttribute("stroke", this.#brush.colorInline);
+    inline.setAttribute("vector-effect", "non-scaling-stroke");
+    inline.setAttribute("visibility", "hidden");
+    this.#svg.appendChild(inline);
+
+    return [outline, inline];
+  }
+
+  /**
+   * Renders the Shift-to-line preview as a single straight segment through
+   * the centers of the start/end texture pixels — a lightweight indicator
+   * of the line's path, not a preview of every pixel it will stamp.
+   */
+  setPreviewLine(
+    start: Vec2,
+    end: Vec2
+  ): void {
+    const zoom = this.#viewport.zoom;
+    const camera = this.#viewport.camera;
+    const x1 = (start.x + 0.5) * zoom + camera.x;
+    const y1 = (start.y + 0.5) * zoom + camera.y;
+    const x2 = (end.x + 0.5) * zoom + camera.x;
+    const y2 = (end.y + 0.5) * zoom + camera.y;
+
+    for (const line of [this.#linePreviewOutline, this.#linePreviewInline]) {
+      line.setAttribute("x1", String(x1));
+      line.setAttribute("y1", String(y1));
+      line.setAttribute("x2", String(x2));
+      line.setAttribute("y2", String(y2));
+      line.setAttribute("visibility", "visible");
+    }
+  }
+
+  clearPreviewLine(): void {
+    this.#linePreviewOutline.setAttribute("visibility", "hidden");
+    this.#linePreviewInline.setAttribute("visibility", "hidden");
   }
 
   updateBrushHighlight(

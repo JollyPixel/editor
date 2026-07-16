@@ -47,7 +47,7 @@ function initRuntime(): Runtime {
       max: 32,
       sensitivity: 0.6
     },
-    brush: { size: 8 }
+    brush: { size: 1 }
   });
 
   const modePaintBtn = document.getElementById("mode-paint") as HTMLButtonElement;

@@ -3,7 +3,12 @@ import type { Mode, Vec2 } from "../types.ts";
 import type { Viewport } from "../rendering/Viewport.ts";
 
 export interface InputActions {
-  onDrawStart(tx: number, ty: number): void;
+  /**
+   * Called on left mousedown in paint mode. Return `false` to indicate the
+   * click was fully handled elsewhere (e.g. committing an armed line tool)
+   * so InputController shouldn't track it as a freehand draw gesture.
+   */
+  onDrawStart(tx: number, ty: number): boolean | void;
   onDrawMove(tx: number, ty: number): void;
   onDrawEnd(): void;
   onPanStart(mx: number, my: number): void;
@@ -12,6 +17,39 @@ export interface InputActions {
   onZoom(delta: number, cx: number, cy: number): void;
   onColorPick(tx: number, ty: number): void;
   onMouseMove(cx: number, cy: number): void;
+  /**
+   * Resolved texture-space cursor position on every mousemove (bounds-
+   * limited), or null when outside the canvas/texture. Fired regardless of
+   * mode or drawing state.
+   */
+  onCursorMove(pos: Vec2 | null): void;
+  /**
+   * Fires on every mouseup (canvas or window), regardless of drawing/
+   * panning state — consumers decide what, if anything, it means for them.
+   */
+  onMouseUp(): void;
+  /**
+   * A non-repeat Shift keydown that isn't targeting editable UI. Carries no
+   * payload — consumers query whatever state they need (mode, last cursor
+   * position, ...) themselves.
+   */
+  onShiftDown(): void;
+  onShiftUp(): void;
+  onBlur(): void;
+}
+
+/**
+ * Prevents Shift from being reported while the user is typing in toolbar
+ * UI (e.g. a brush-size field) elsewhere in the page.
+ */
+function isEditableTarget(
+  target: EventTarget | null
+): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  return target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
 }
 
 export interface InputControllerOptions {
@@ -26,9 +64,10 @@ export interface InputControllerOptions {
 }
 
 /**
- * InputController handles user interactions with the canvas, including drawing, panning, zooming, and color picking.
- * It listens to mouse events on the canvas and translates them into actions that affect the viewport and texture.
- * The controller manages different interaction modes (paint and move) and ensures that the appropriate actions are triggered based on user input.
+ * InputController translates raw DOM mouse/keyboard events into semantic,
+ * coordinate-resolved actions (draw, pan, zoom, color pick, cursor/shift
+ * state). It does not interpret what those actions mean for any particular
+ * tool — that's left entirely to the consumer (see CanvasManager).
  */
 export class InputController {
   #canvas: HTMLCanvasElement;
@@ -47,6 +86,9 @@ export class InputController {
   #onContextMenu: (event: MouseEvent) => void;
   #onWindowMouseMove: (event: MouseEvent) => void;
   #onWindowMouseUp: (event: MouseEvent) => void;
+  #onKeyDown: (event: KeyboardEvent) => void;
+  #onKeyUp: (event: KeyboardEvent) => void;
+  #onWindowBlur: () => void;
 
   constructor(
     options: InputControllerOptions
@@ -71,6 +113,9 @@ export class InputController {
     this.#onContextMenu = (event) => this.#handleContextMenu(event);
     this.#onWindowMouseMove = (event) => this.#handleWindowMouseMove(event);
     this.#onWindowMouseUp = () => this.#handleWindowMouseUp();
+    this.#onKeyDown = (event) => this.#handleKeyDown(event);
+    this.#onKeyUp = (event) => this.#handleKeyUp(event);
+    this.#onWindowBlur = () => this.#actions.onBlur();
 
     this.#canvas.addEventListener("mousedown", this.#onMouseDown);
     this.#canvas.addEventListener("mousemove", this.#onMouseMove);
@@ -80,6 +125,9 @@ export class InputController {
     this.#canvas.addEventListener("contextmenu", this.#onContextMenu);
     window.addEventListener("mousemove", this.#onWindowMouseMove);
     window.addEventListener("mouseup", this.#onWindowMouseUp);
+    window.addEventListener("keydown", this.#onKeyDown);
+    window.addEventListener("keyup", this.#onKeyUp);
+    window.addEventListener("blur", this.#onWindowBlur);
   }
 
   getMode(): Mode {
@@ -92,6 +140,16 @@ export class InputController {
     this.#mode = mode;
   }
 
+  /**
+   * Stops tracking the current mouse-button-held draw gesture without
+   * firing onDrawEnd. Lets a consumer reinterpret an in-progress gesture
+   * (e.g. arming a line tool mid-stroke) without InputController fighting
+   * back with further onDrawMove calls.
+   */
+  stopDrawing(): void {
+    this.#isDrawing = false;
+  }
+
   destroy(): void {
     this.#canvas.removeEventListener("mousedown", this.#onMouseDown);
     this.#canvas.removeEventListener("mousemove", this.#onMouseMove);
@@ -101,6 +159,9 @@ export class InputController {
     this.#canvas.removeEventListener("contextmenu", this.#onContextMenu);
     window.removeEventListener("mousemove", this.#onWindowMouseMove);
     window.removeEventListener("mouseup", this.#onWindowMouseUp);
+    window.removeEventListener("keydown", this.#onKeyDown);
+    window.removeEventListener("keyup", this.#onKeyUp);
+    window.removeEventListener("blur", this.#onWindowBlur);
   }
 
   #handleMouseDown(
@@ -111,8 +172,8 @@ export class InputController {
     if (this.#mode === "paint" && event.button === 0) {
       const pos = this.#viewport.getMouseTexturePosition(event.clientX, event.clientY, { bounds });
       if (pos) {
-        this.#isDrawing = true;
-        this.#actions.onDrawStart(pos.x, pos.y);
+        const handled = this.#actions.onDrawStart(pos.x, pos.y);
+        this.#isDrawing = handled !== false;
       }
     }
 
@@ -132,6 +193,13 @@ export class InputController {
     const canvasPos = this.#viewport.getMouseCanvasPosition(event.clientX, event.clientY, bounds);
     this.#actions.onMouseMove(canvasPos.x, canvasPos.y);
 
+    const texturePos = this.#viewport.getMouseTexturePosition(
+      event.clientX,
+      event.clientY,
+      { bounds, limit: true }
+    );
+    this.#actions.onCursorMove(texturePos);
+
     if (this.#mode === "paint" && event.buttons === 1 && this.#isDrawing) {
       const pos = this.#viewport.getMouseTexturePosition(
         event.clientX,
@@ -148,6 +216,7 @@ export class InputController {
     _event: MouseEvent
   ): void {
     this.#actions.onMouseMove(-1, -1);
+    this.#actions.onCursorMove(null);
   }
 
   #handleMouseUp(
@@ -157,6 +226,8 @@ export class InputController {
       this.#isDrawing = false;
       this.#actions.onDrawEnd();
     }
+
+    this.#actions.onMouseUp();
   }
 
   #handleWheel(
@@ -221,5 +292,27 @@ export class InputController {
       this.#isDrawing = false;
       this.#actions.onDrawEnd();
     }
+
+    this.#actions.onMouseUp();
+  }
+
+  #handleKeyDown(
+    event: KeyboardEvent
+  ): void {
+    if (event.key !== "Shift" || event.repeat || isEditableTarget(event.target)) {
+      return;
+    }
+
+    this.#actions.onShiftDown();
+  }
+
+  #handleKeyUp(
+    event: KeyboardEvent
+  ): void {
+    if (event.key !== "Shift") {
+      return;
+    }
+
+    this.#actions.onShiftUp();
   }
 }

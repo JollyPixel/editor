@@ -18,7 +18,26 @@ before(() => {
   globalThis.window = kEmulatedBrowserWindow as unknown as Window & typeof globalThis;
   // Expose DOM event constructors from happy-dom into globalThis
   globalThis.MouseEvent = (kEmulatedBrowserWindow as unknown as Record<string, unknown>).MouseEvent as typeof MouseEvent;
+  globalThis.KeyboardEvent = (kEmulatedBrowserWindow as unknown as Record<string, unknown>).KeyboardEvent as typeof KeyboardEvent;
+  globalThis.HTMLElement = (kEmulatedBrowserWindow as unknown as Record<string, unknown>).HTMLElement as typeof HTMLElement;
+  globalThis.Event = (kEmulatedBrowserWindow as unknown as Record<string, unknown>).Event as typeof Event;
 });
+
+function shiftKeyDown(repeat = false): KeyboardEvent {
+  return new KeyboardEvent("keydown", { key: "Shift", bubbles: true, repeat });
+}
+
+function shiftKeyUp(): KeyboardEvent {
+  return new KeyboardEvent("keyup", { key: "Shift", bubbles: true });
+}
+
+function moveTo(
+  canvas: HTMLCanvasElement,
+  clientX: number,
+  clientY: number
+): void {
+  canvas.dispatchEvent(new MouseEvent("mousemove", { clientX, clientY, bubbles: true }));
+}
 
 function makeCanvas(): HTMLCanvasElement {
   const canvas = kEmulatedBrowserWindow.document.createElement("canvas") as unknown as HTMLCanvasElement;
@@ -34,18 +53,24 @@ function makeCanvas(): HTMLCanvasElement {
   return canvas;
 }
 
-function makeActions(): {
+function makeActions(options: { onDrawStartReturns?: boolean; } = {}): {
   actions: InputActions;
   calls: Record<string, unknown[][]>;
 } {
   const calls: Record<string, unknown[][]> = {
     onDrawStart: [], onDrawMove: [], onDrawEnd: [],
     onPanStart: [], onPanMove: [], onPanEnd: [],
-    onZoom: [], onColorPick: [], onMouseMove: []
+    onZoom: [], onColorPick: [], onMouseMove: [],
+    onCursorMove: [], onMouseUp: [],
+    onShiftDown: [], onShiftUp: [], onBlur: []
   };
 
   const actions: InputActions = {
-    onDrawStart: (tx, ty) => calls.onDrawStart.push([tx, ty]),
+    onDrawStart: (tx, ty) => {
+      calls.onDrawStart.push([tx, ty]);
+
+      return options.onDrawStartReturns;
+    },
     onDrawMove: (tx, ty) => calls.onDrawMove.push([tx, ty]),
     onDrawEnd: () => calls.onDrawEnd.push([]),
     onPanStart: (mx, my) => calls.onPanStart.push([mx, my]),
@@ -53,7 +78,12 @@ function makeActions(): {
     onPanEnd: () => calls.onPanEnd.push([]),
     onZoom: (d, cx, cy) => calls.onZoom.push([d, cx, cy]),
     onColorPick: (tx, ty) => calls.onColorPick.push([tx, ty]),
-    onMouseMove: (cx, cy) => calls.onMouseMove.push([cx, cy])
+    onMouseMove: (cx, cy) => calls.onMouseMove.push([cx, cy]),
+    onCursorMove: (pos) => calls.onCursorMove.push([pos]),
+    onMouseUp: () => calls.onMouseUp.push([]),
+    onShiftDown: () => calls.onShiftDown.push([]),
+    onShiftUp: () => calls.onShiftUp.push([]),
+    onBlur: () => calls.onBlur.push([])
   };
 
   return { actions, calls };
@@ -160,6 +190,217 @@ describe("InputController", () => {
       }));
 
       assert.strictEqual(calls.onDrawStart.length, 0);
+    });
+  });
+
+  describe("onCursorMove", () => {
+    // With this viewport (200x200 canvas, 16x16 texture, zoom 4), the
+    // texture is centered with camera = (68, 68). client(100,100) -> texture
+    // (8,8).
+
+    test("fires with the resolved texture position on mousemove", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "paint" });
+
+      moveTo(canvas, 100, 100);
+
+      assert.strictEqual(calls.onCursorMove.length, 1);
+      assert.deepStrictEqual(calls.onCursorMove[0][0], { x: 8, y: 8 });
+      ctrl.destroy();
+    });
+
+    test("fires with null when the cursor is outside texture bounds", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "paint" });
+
+      moveTo(canvas, 1000, 1000);
+
+      assert.strictEqual(calls.onCursorMove.length, 1);
+      assert.strictEqual(calls.onCursorMove[0][0], null);
+      ctrl.destroy();
+    });
+
+    test("fires with null on mouseleave", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "paint" });
+
+      moveTo(canvas, 100, 100);
+      canvas.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
+
+      assert.strictEqual(calls.onCursorMove.at(-1)?.[0], null);
+      ctrl.destroy();
+    });
+
+    test("fires regardless of the current mode", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "move" });
+
+      moveTo(canvas, 100, 100);
+
+      assert.strictEqual(calls.onCursorMove.length, 1);
+      ctrl.destroy();
+    });
+  });
+
+  describe("onMouseUp", () => {
+    test("fires on canvas mouseup even when nothing was being tracked", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "paint" });
+
+      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+
+      assert.strictEqual(calls.onMouseUp.length, 1);
+      ctrl.destroy();
+    });
+
+    test("fires on window mouseup", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "paint" });
+
+      window.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+
+      assert.strictEqual(calls.onMouseUp.length, 1);
+      ctrl.destroy();
+    });
+  });
+
+  describe("onDrawStart return value", () => {
+    test("returning false prevents onDrawMove/onDrawEnd from firing for that gesture", () => {
+      const { actions, calls } = makeActions({ onDrawStartReturns: false });
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "paint" });
+
+      canvas.dispatchEvent(new MouseEvent("mousedown", {
+        button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
+      }));
+      canvas.dispatchEvent(new MouseEvent("mousemove", {
+        buttons: 1, clientX: 110, clientY: 100, bubbles: true
+      }));
+      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+
+      assert.strictEqual(calls.onDrawStart.length, 1);
+      assert.strictEqual(calls.onDrawMove.length, 0);
+      assert.strictEqual(calls.onDrawEnd.length, 0);
+      ctrl.destroy();
+    });
+
+    test("returning undefined (default) tracks the gesture normally", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "paint" });
+
+      canvas.dispatchEvent(new MouseEvent("mousedown", {
+        button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
+      }));
+      canvas.dispatchEvent(new MouseEvent("mousemove", {
+        buttons: 1, clientX: 110, clientY: 100, bubbles: true
+      }));
+      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+
+      assert.strictEqual(calls.onDrawMove.length, 1);
+      assert.strictEqual(calls.onDrawEnd.length, 1);
+      ctrl.destroy();
+    });
+  });
+
+  describe("stopDrawing", () => {
+    test("stops tracking the current gesture — no further onDrawMove/onDrawEnd", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "paint" });
+
+      canvas.dispatchEvent(new MouseEvent("mousedown", {
+        button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
+      }));
+      ctrl.stopDrawing();
+
+      canvas.dispatchEvent(new MouseEvent("mousemove", {
+        buttons: 1, clientX: 110, clientY: 100, bubbles: true
+      }));
+      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+
+      assert.strictEqual(calls.onDrawMove.length, 0);
+      assert.strictEqual(calls.onDrawEnd.length, 0);
+      // onMouseUp is unconditional and still fires — consumers decide what it means.
+      assert.strictEqual(calls.onMouseUp.length, 1);
+      ctrl.destroy();
+    });
+  });
+
+  describe("Shift key reporting", () => {
+    test("a non-repeat Shift keydown fires onShiftDown", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "paint" });
+
+      window.dispatchEvent(shiftKeyDown());
+
+      assert.strictEqual(calls.onShiftDown.length, 1);
+      ctrl.destroy();
+    });
+
+    test("fires regardless of mode — mode relevance is left to the consumer", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "move" });
+
+      window.dispatchEvent(shiftKeyDown());
+
+      assert.strictEqual(calls.onShiftDown.length, 1);
+      ctrl.destroy();
+    });
+
+    test("OS key-repeat keydown does not fire onShiftDown again", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "paint" });
+
+      window.dispatchEvent(shiftKeyDown());
+      window.dispatchEvent(shiftKeyDown(true));
+
+      assert.strictEqual(calls.onShiftDown.length, 1);
+      ctrl.destroy();
+    });
+
+    test("keydown while an input element has focus does not fire onShiftDown", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "paint" });
+
+      const input = kEmulatedBrowserWindow.document.createElement("input");
+      kEmulatedBrowserWindow.document.body.appendChild(input);
+
+      input.dispatchEvent(shiftKeyDown());
+
+      assert.strictEqual(calls.onShiftDown.length, 0);
+      ctrl.destroy();
+    });
+
+    test("a non-Shift key does not fire onShiftDown/onShiftUp", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "paint" });
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Control", bubbles: true }));
+      window.dispatchEvent(new KeyboardEvent("keyup", { key: "Control", bubbles: true }));
+
+      assert.strictEqual(calls.onShiftDown.length, 0);
+      assert.strictEqual(calls.onShiftUp.length, 0);
+      ctrl.destroy();
+    });
+
+    test("Shift keyup fires onShiftUp", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "paint" });
+
+      window.dispatchEvent(shiftKeyUp());
+
+      assert.strictEqual(calls.onShiftUp.length, 1);
+      ctrl.destroy();
+    });
+  });
+
+  describe("onBlur", () => {
+    test("window blur fires onBlur", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "paint" });
+
+      window.dispatchEvent(new Event("blur"));
+
+      assert.strictEqual(calls.onBlur.length, 1);
+      ctrl.destroy();
     });
   });
 });

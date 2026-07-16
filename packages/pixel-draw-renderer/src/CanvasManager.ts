@@ -16,6 +16,10 @@ import {
   InputController
 } from "./input/InputController.ts";
 import {
+  LineTool,
+  type LineCommitTrigger
+} from "./input/LineTool.ts";
+import {
   SvgManager
 } from "./rendering/SvgManager.ts";
 import {
@@ -85,9 +89,13 @@ export class CanvasManager {
   #svgManager: SvgManager;
 
   #onBufferUpdated?: PixelBufferHookListener;
+  #onDrawEnd?: () => void;
   #isApplyingRemote = false;
   #strokeDirty = new Map<string, Vec2>();
   #strokeColor: RGBA | null = null;
+  #isStrokeActive = false;
+  #lineTool = new LineTool();
+  #lastCursorPos: Vec2 | null = null;
 
   readonly brush: BrushManager;
   readonly viewport: DefaultViewport;
@@ -98,6 +106,7 @@ export class CanvasManager {
   ) {
     this.#parentHtmlElement = parentHtmlElement;
     this.#onBufferUpdated = options.onBufferUpdated;
+    this.#onDrawEnd = options.onDrawEnd;
 
     const textureSize: Vec2 = options.texture?.size
       ? { x: options.texture.size.x, y: options.texture.size.y ?? options.texture.size.x }
@@ -168,15 +177,22 @@ export class CanvasManager {
       mode: options.defaultMode,
       actions: {
         onDrawStart: (tx, ty) => {
+          if (this.#lineTool.isArmed && this.#lineTool.commitTrigger === "mousedown") {
+            this.#commitArmedLine();
+
+            return false;
+          }
+
+          this.#isStrokeActive = true;
           this.#drawColor(tx, ty);
+
+          return true;
         },
         onDrawMove: (tx, ty) => {
           this.#drawColor(tx, ty);
         },
         onDrawEnd: () => {
-          this.#canvasBuffer.copyToMaster();
-          this.#commitStroke();
-          options.onDrawEnd?.();
+          this.#endStroke();
         },
         onPanStart: (_mx, _my) => {
           // pan tracking is inside InputController
@@ -184,6 +200,7 @@ export class CanvasManager {
         onPanMove: (dx, dy) => {
           this.#viewport.applyPan(dx, dy);
           this.#renderer.drawFrame();
+          this.#refreshLinePreview();
         },
         onPanEnd: () => {
           // nothing extra needed
@@ -191,6 +208,7 @@ export class CanvasManager {
         onZoom: (delta, cx, cy) => {
           this.#viewport.applyZoom(delta, cx, cy);
           this.#renderer.drawFrame();
+          this.#refreshLinePreview();
         },
         onColorPick: (tx, ty) => {
           const [r, g, b, a] = this.#canvasBuffer.samplePixel(tx, ty);
@@ -212,6 +230,41 @@ export class CanvasManager {
           else if (this.#input.getMode() === "paint") {
             this.#svgManager.updateBrushHighlight(cx, cy);
           }
+        },
+        onCursorMove: (pos) => {
+          this.#lastCursorPos = pos;
+          if (this.#lineTool.isArmed && pos) {
+            this.#lineTool.update(pos);
+            this.#refreshLinePreview();
+          }
+        },
+        onMouseUp: () => {
+          if (this.#lineTool.isArmed && this.#lineTool.commitTrigger === "mouseup") {
+            this.#commitArmedLine();
+          }
+        },
+        onShiftDown: () => {
+          if (this.#input.getMode() !== "paint") {
+            return;
+          }
+
+          if (this.#isStrokeActive) {
+            // Mouse button already held: no future mousedown to commit on,
+            // so the line commits on the eventual mouseup instead.
+            this.#input.stopDrawing();
+            this.#endStroke();
+            this.#armLine("mouseup");
+
+            return;
+          }
+
+          this.#armLine("mousedown");
+        },
+        onShiftUp: () => {
+          this.#cancelLineIfArmed();
+        },
+        onBlur: () => {
+          this.#cancelLineIfArmed();
         }
       }
     });
@@ -229,6 +282,7 @@ export class CanvasManager {
     this.#input.setMode(mode);
     if (mode === "move") {
       this.#svgManager.hideSvgHighlight();
+      this.#cancelLineIfArmed();
     }
   }
 
@@ -317,6 +371,14 @@ export class CanvasManager {
     return this.#canvasBuffer.getCanvas();
   }
 
+  /**
+   * The interactive (on-screen) canvas InputController listens on. Useful
+   * for attaching additional event listeners or overlays.
+   */
+  getCanvas(): HTMLCanvasElement {
+    return this.#renderer.getCanvas();
+  }
+
   destroy(): void {
     this.#input.destroy();
     const rendererCanvas = this.#renderer.getCanvas();
@@ -345,6 +407,35 @@ export class CanvasManager {
 
   getTexture(): Uint8ClampedArray {
     return this.#canvasBuffer.getPixels();
+  }
+
+  /**
+   * Commits an already brush-stamped pixel set as a single atomic edit
+   * (one draw call, one "stroke" hook emission). Used by the Shift-to-line
+   * tool to avoid redrawing the canvas once per rasterized point.
+   */
+  commitLine(
+    pixels: Vec2[]
+  ): void {
+    if (pixels.length === 0) {
+      return;
+    }
+
+    const [r, g, b, a] = getColorAsRGBA(this.brush.getColor());
+    const color: RGBA = { r, g, b, a };
+
+    this.#canvasBuffer.drawPixels(pixels, color);
+    this.#canvasBuffer.copyToMaster();
+    this.#renderer.drawFrame();
+
+    this.#emitHook({
+      action: "stroke",
+      metadata: {
+        color,
+        positions: pixels
+      }
+    });
+    this.#onDrawEnd?.();
   }
 
   /**
@@ -442,6 +533,72 @@ export class CanvasManager {
         positions
       }
     });
+  }
+
+  #endStroke(): void {
+    this.#canvasBuffer.copyToMaster();
+    this.#commitStroke();
+    this.#isStrokeActive = false;
+    this.#onDrawEnd?.();
+  }
+
+  /**
+   * Expands raw rasterized line points into brush-stamped, deduplicated
+   * texture pixels (LineTool has no brush awareness).
+   */
+  #stampLinePixels(
+    points: Vec2[]
+  ): Vec2[] {
+    const stamped = new Map<string, Vec2>();
+    for (const point of points) {
+      for (const pixel of this.brush.getAffectedPixels(point.x, point.y)) {
+        stamped.set(`${pixel.x},${pixel.y}`, pixel);
+      }
+    }
+
+    return [...stamped.values()];
+  }
+
+  #armLine(
+    commitTrigger: LineCommitTrigger
+  ): void {
+    if (!this.#lastCursorPos) {
+      return;
+    }
+
+    this.#lineTool.arm(this.#lastCursorPos, commitTrigger);
+    this.#refreshLinePreview();
+  }
+
+  #commitArmedLine(): void {
+    const points = this.#lineTool.commit();
+    this.#svgManager.clearPreviewLine();
+    if (points) {
+      this.commitLine(this.#stampLinePixels(points));
+    }
+  }
+
+  #cancelLineIfArmed(): void {
+    if (!this.#lineTool.isArmed) {
+      return;
+    }
+
+    this.#lineTool.cancel();
+    this.#svgManager.clearPreviewLine();
+  }
+
+  #refreshLinePreview(): void {
+    if (!this.#lineTool.isArmed) {
+      return;
+    }
+
+    const points = this.#lineTool.getPreviewPoints() ?? [];
+    if (points.length > 0) {
+      this.#svgManager.setPreviewLine(
+        points[0],
+        points.at(-1) ?? points[0]
+      );
+    }
   }
 
   #drawColor(
