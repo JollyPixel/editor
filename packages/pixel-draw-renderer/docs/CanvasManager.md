@@ -78,6 +78,16 @@ Returns or changes the current texture size. `setSize` copies the master canvas 
 
 ---
 
+### `commitLine`
+
+```ts
+commitLine(pixels: Vec2[]): void
+```
+
+Commits an already brush-stamped pixel set as a single atomic edit: one `drawPixels` call, one redraw, one `"stroke"` hook emission. Used internally by the Shift-to-line tool (see [LineTool.md](./LineTool.md)) to commit a whole rasterized line in one operation instead of redrawing once per point. A no-op when `pixels` is empty.
+
+---
+
 ### `setTexture`
 
 ```ts

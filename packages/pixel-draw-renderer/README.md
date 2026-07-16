@@ -18,6 +18,7 @@
 - **Color picking** — right-click eyedropper that reads the master canvas pixel
 - **Transparency support** — configurable checkerboard background renders beneath transparent pixels
 - **SVG brush highlight** — grid-aligned SVG overlay tracks the cursor in real time
+- **Shift-to-line drawing** — hold `Shift` in paint mode to preview a straight path from a fixed start point to the cursor, then commit it as a brush-stamped line
 - **Dual-canvas architecture** — a master canvas (full resolution, off-screen) and a working canvas (viewport-cropped, on-screen) maintain pixel-perfect fidelity at any zoom level
 - **Mode switching** — `"paint"` and `"move"` modes control how mouse events are interpreted
 
@@ -104,6 +105,10 @@ manager.setMode("move");  // left-click pans
 manager.setMode("paint"); // left-click draws
 ```
 
+### Drawing straight lines (Shift)
+
+In `"paint"` mode, holding `Shift` arms a straight-line tool anchored at the cursor position when the key was pressed. Moving the mouse previews the path as a thin, outlined SVG line through the pixel centers (visible on any background); the next `mousedown` commits it as a brush-stamped, rasterized line in a single history entry. Releasing `Shift` before committing cancels the preview. This is wired up automatically — no extra setup is required beyond being in `"paint"` mode. See [LineTool.md](./docs/LineTool.md) for the underlying state machine.
+
 ## Running the Examples
 
 ```bash
@@ -121,8 +126,9 @@ Open `http://localhost:5173` to see the interactive demo.
 | [`BrushManager`](./docs/BrushManager.md) | Brush size, color, opacity, and affected-pixel computation |
 | `CanvasBuffer` | Dual-canvas pixel storage and image-data access |
 | `CanvasRenderer` | Visible canvas drawing and checkerboard background |
-| `InputController` | Mouse event routing to drawing and pan actions |
-| `SvgManager` | SVG brush-highlight overlay |
+| `InputController` | Translates raw mouse/keyboard events into semantic, coordinate-resolved actions — doesn't interpret what they mean for any tool |
+| `SvgManager` | SVG brush-highlight and line-preview overlay |
+| [`LineTool`](./docs/LineTool.md) | Shift-to-line armed-state machine and Bresenham rasterization |
 
 ## Troubleshooting
 

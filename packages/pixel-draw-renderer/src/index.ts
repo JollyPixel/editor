@@ -22,6 +22,10 @@ export {
   type InputControllerOptions
 } from "./input/InputController.ts";
 export {
+  LineTool,
+  type LineCommitTrigger
+} from "./input/LineTool.ts";
+export {
   PixelBuffer,
   type PixelBufferOptions
 } from "./buffer/PixelBuffer.ts";
