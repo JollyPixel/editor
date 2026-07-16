@@ -14,7 +14,8 @@ export {
 } from "./CanvasManager.ts";
 export {
   CanvasRenderer,
-  type CanvasRendererOptions
+  type CanvasRendererOptions,
+  type FloatingOverlayOptions
 } from "./rendering/CanvasRenderer.ts";
 export {
   FillTool
@@ -39,6 +40,13 @@ export type {
   PixelBufferHookListener
 } from "./buffer/hooks.ts";
 export {
+  SelectTool,
+  type ClipboardSnapshot,
+  type MoveResult,
+  type PasteResult,
+  type SelectToolState
+} from "./input/SelectTool.ts";
+export {
   SvgManager
 } from "./rendering/SvgManager.ts";
 export {
@@ -49,6 +57,7 @@ export type {
   Brush,
   DefaultViewport,
   RGBA,
+  SelectionRect,
   Vec2
 } from "./types.ts";
 export * from "./colors.ts";

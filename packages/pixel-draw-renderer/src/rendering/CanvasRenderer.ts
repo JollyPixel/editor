@@ -2,8 +2,24 @@
 import Color from "colorjs.io";
 
 // Import Internal Dependencies
-import type { ColorInput, DefaultViewport } from "../types.ts";
+import type { ColorInput, DefaultViewport, RGBA, SelectionRect } from "../types.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
+
+export interface FloatingOverlayOptions {
+  /** The selection's original position, rendered as eraseColor while floating. */
+  sourceRect: SelectionRect;
+  /** Row-major pixel data (sourceRect.width * sourceRect.height long). */
+  pixels: RGBA[];
+  eraseColor: RGBA;
+  /**
+   * Whether to preview sourceRect as vacated (filled with eraseColor) while
+   * dragging. Set false for a just-pasted selection's first move, whose
+   * source still holds real content that dropping will NOT erase — blanking
+   * it during the drag would misleadingly hide that content.
+   * @default true
+   */
+  blankSource?: boolean;
+}
 
 export interface CanvasRendererOptions {
   viewport: DefaultViewport;
@@ -45,6 +61,11 @@ export class CanvasRenderer {
   #backgroundColor: string;
   #viewport: DefaultViewport;
   #canvasBuffer: CanvasBuffer;
+  #floatingCanvas: HTMLCanvasElement | null = null;
+  #floatingEraseCanvas: HTMLCanvasElement | null = null;
+  #floatingSourceRect: SelectionRect | null = null;
+  #floatingLiveRect: SelectionRect | null = null;
+  #floatingBlankSource: boolean = true;
 
   constructor(
     options: CanvasRendererOptions
@@ -103,7 +124,91 @@ export class CanvasRenderer {
     this.#ctx.setTransform(zoom, 0, 0, zoom, camera.x, camera.y);
     this.#ctx.drawImage(this.#canvasBuffer.getCanvas(), 0, 0);
 
+    if (this.#floatingCanvas && this.#floatingSourceRect && this.#floatingLiveRect) {
+      if (this.#floatingBlankSource && this.#floatingEraseCanvas) {
+        // Blitted (drawImage), not fillRect: fillRect anti-aliases its own
+        // edges under a scaled transform while drawImage (with smoothing
+        // off) doesn't, and mixing the two left a thin seam at the boundary
+        // whenever zoom/camera didn't land on whole device pixels.
+        const source = this.#floatingSourceRect;
+        this.#ctx.drawImage(this.#floatingEraseCanvas, 0, 0, 1, 1, source.x, source.y, source.width, source.height);
+      }
+
+      const live = this.#floatingLiveRect;
+      this.#ctx.drawImage(this.#floatingCanvas, live.x, live.y, live.width, live.height);
+    }
+
     this.#ctx.restore();
+  }
+
+  /**
+   * Renders a selection's captured pixels as a display-only overlay on top
+   * of the base texture, blanking its original position with `eraseColor`
+   * (so it doesn't look duplicated while floating). The real CanvasBuffer is
+   * never touched — CanvasManager commits the actual move/paste separately,
+   * once, on drop.
+   */
+  setFloatingOverlay(
+    options: FloatingOverlayOptions
+  ): void {
+    const { sourceRect, pixels, eraseColor, blankSource = true } = options;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = sourceRect.width;
+    canvas.height = sourceRect.height;
+    const ctx = canvas.getContext("2d")!;
+    ctx.imageSmoothingEnabled = false;
+
+    const imageData = ctx.createImageData(sourceRect.width, sourceRect.height);
+    for (let i = 0; i < pixels.length; i++) {
+      const { r, g, b, a } = pixels[i];
+      const index = i * 4;
+      imageData.data[index] = r;
+      imageData.data[index + 1] = g;
+      imageData.data[index + 2] = b;
+      imageData.data[index + 3] = a;
+    }
+    ctx.putImageData(imageData, 0, 0);
+
+    const eraseCanvas = document.createElement("canvas");
+    eraseCanvas.width = 1;
+    eraseCanvas.height = 1;
+    const eraseCtx = eraseCanvas.getContext("2d")!;
+    eraseCtx.imageSmoothingEnabled = false;
+    const eraseImageData = eraseCtx.createImageData(1, 1);
+    eraseImageData.data[0] = eraseColor.r;
+    eraseImageData.data[1] = eraseColor.g;
+    eraseImageData.data[2] = eraseColor.b;
+    eraseImageData.data[3] = eraseColor.a;
+    eraseCtx.putImageData(eraseImageData, 0, 0);
+
+    this.#floatingCanvas = canvas;
+    this.#floatingEraseCanvas = eraseCanvas;
+    this.#floatingSourceRect = sourceRect;
+    this.#floatingLiveRect = sourceRect;
+    this.#floatingBlankSource = blankSource;
+  }
+
+  /**
+   * Updates the floating overlay's live (drag) position without rebuilding
+   * its pixel content. No-op when no overlay is active.
+   */
+  updateFloatingOverlayPosition(
+    liveRect: SelectionRect
+  ): void {
+    if (!this.#floatingCanvas) {
+      return;
+    }
+
+    this.#floatingLiveRect = liveRect;
+  }
+
+  clearFloatingOverlay(): void {
+    this.#floatingCanvas = null;
+    this.#floatingEraseCanvas = null;
+    this.#floatingSourceRect = null;
+    this.#floatingLiveRect = null;
+    this.#floatingBlankSource = true;
   }
 
   resize(

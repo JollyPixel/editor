@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import { toRGBA } from "../colors.ts";
-import type { ColorInput, DefaultPixelBuffer, RGBA, Vec2 } from "../types.ts";
+import type { ColorInput, DefaultPixelBuffer, RGBA, SelectionRect, Vec2 } from "../types.ts";
 
 export interface PixelBufferOptions {
   size: Vec2;
@@ -108,6 +108,9 @@ export class PixelBuffer implements DefaultPixelBuffer {
     return this.#working;
   }
 
+  /**
+   * Replaces the pixel data wholesale, resizing the buffer to match.
+   */
   setPixels(
     pixels: Uint8ClampedArray,
     size: Vec2
@@ -117,6 +120,10 @@ export class PixelBuffer implements DefaultPixelBuffer {
     this.#working = Uint8ClampedArray.from(pixels);
   }
 
+  /**
+   * Stamps a single color across a list of positions; out-of-bounds
+   * positions are skipped.
+   */
   drawPixels(
     positions: Vec2[],
     color: RGBA
@@ -134,6 +141,33 @@ export class PixelBuffer implements DefaultPixelBuffer {
       this.#working[index + 1] = g;
       this.#working[index + 2] = b;
       this.#working[index + 3] = a;
+    }
+  }
+
+  /**
+   * Writes a rectangular block of per-pixel colors (row-major), unlike
+   * drawPixels which stamps one color across a list of positions.
+   * Out-of-bounds positions are skipped, same as drawPixels.
+   */
+  drawRegion(
+    rect: SelectionRect,
+    pixels: RGBA[]
+  ): void {
+    for (let ry = 0; ry < rect.height; ry++) {
+      for (let rx = 0; rx < rect.width; rx++) {
+        const x = rect.x + rx;
+        const y = rect.y + ry;
+        if (x < 0 || x >= this.#width || y < 0 || y >= this.#height) {
+          continue;
+        }
+
+        const { r, g, b, a } = pixels[ry * rect.width + rx];
+        const index = (y * this.#width + x) * 4;
+        this.#working[index] = r;
+        this.#working[index + 1] = g;
+        this.#working[index + 2] = b;
+        this.#working[index + 3] = a;
+      }
     }
   }
 

@@ -23,6 +23,15 @@ export interface InputActions {
    * gesture.
    */
   onFillStart(tx: number, ty: number): void;
+  /**
+   * Called on left mousedown in select mode — either starting a new
+   * selection rectangle or grabbing the existing one to move it, entirely up
+   * to the consumer to decide (InputController has no concept of a
+   * selection).
+   */
+  onSelectStart(tx: number, ty: number): void;
+  onSelectMove(tx: number, ty: number): void;
+  onSelectEnd(): void;
   onPanStart(mx: number, my: number): void;
   onPanMove(dx: number, dy: number): void;
   onPanEnd(): void;
@@ -48,6 +57,17 @@ export interface InputActions {
   onShiftDown(): void;
   onShiftUp(): void;
   onBlur(): void;
+  /**
+   * A non-repeat Ctrl/Cmd+C keydown that isn't targeting editable UI. Return
+   * `true` to indicate it was handled (InputController calls
+   * `preventDefault()` to suppress the OS copy) — return `false`/`void` to
+   * let the browser's default copy behavior proceed.
+   */
+  onCopy(): boolean | void;
+  /** Ctrl/Cmd+V counterpart to onCopy. */
+  onPaste(): boolean | void;
+  /** A non-repeat Delete keydown that isn't targeting editable UI. */
+  onDelete(): boolean | void;
 }
 
 /**
@@ -96,7 +116,7 @@ export interface InputControllerOptions {
   viewport: Viewport;
   actions: InputActions;
   /**
-   * Initial interaction mode. Can be "paint", "move", or "fill".
+   * Initial interaction mode. Can be "paint", "move", "fill", or "select".
    * @default "paint"
    */
   mode?: Mode;
@@ -122,7 +142,12 @@ export class InputController {
   #window: WindowLike;
   #isPanning: boolean = false;
   #panStart: Vec2 = { x: 0, y: 0 };
-  #isDrawing: boolean = false;
+  /**
+   * Tracks any mouse-button-held drag gesture that needs a matching end
+   * report on mouseup — driving onDrawStart/Move/End in "paint" mode and
+   * onSelectStart/Move/End in "select" mode.
+   */
+  #isDragging: boolean = false;
 
   #onMouseDown: (event: MouseEvent) => void;
   #onMouseMove: (event: MouseEvent) => void;
@@ -195,7 +220,7 @@ export class InputController {
    * back with further onDrawMove calls.
    */
   stopDrawing(): void {
-    this.#isDrawing = false;
+    this.#isDragging = false;
   }
 
   destroy(): void {
@@ -221,7 +246,7 @@ export class InputController {
       const pos = this.#viewport.getMouseTexturePosition(event.clientX, event.clientY, { bounds });
       if (pos) {
         const handled = this.#actions.onDrawStart(pos.x, pos.y);
-        this.#isDrawing = handled !== false;
+        this.#isDragging = handled !== false;
       }
     }
 
@@ -229,6 +254,14 @@ export class InputController {
       const pos = this.#viewport.getMouseTexturePosition(event.clientX, event.clientY, { bounds });
       if (pos) {
         this.#actions.onFillStart(pos.x, pos.y);
+      }
+    }
+
+    if (this.#mode === "select" && event.button === 0) {
+      const pos = this.#viewport.getMouseTexturePosition(event.clientX, event.clientY, { bounds });
+      if (pos) {
+        this.#actions.onSelectStart(pos.x, pos.y);
+        this.#isDragging = true;
       }
     }
 
@@ -255,7 +288,7 @@ export class InputController {
     );
     this.#actions.onCursorMove(texturePos);
 
-    if (this.#mode === "paint" && event.buttons === 1 && this.#isDrawing) {
+    if (this.#mode === "paint" && event.buttons === 1 && this.#isDragging) {
       const pos = this.#viewport.getMouseTexturePosition(
         event.clientX,
         event.clientY,
@@ -263,6 +296,17 @@ export class InputController {
       );
       if (pos) {
         this.#actions.onDrawMove(pos.x, pos.y);
+      }
+    }
+
+    if (this.#mode === "select" && event.buttons === 1 && this.#isDragging) {
+      const pos = this.#viewport.getMouseTexturePosition(
+        event.clientX,
+        event.clientY,
+        { bounds }
+      );
+      if (pos) {
+        this.#actions.onSelectMove(pos.x, pos.y);
       }
     }
   }
@@ -277,9 +321,14 @@ export class InputController {
   #handleMouseUp(
     _event: MouseEvent
   ): void {
-    if (this.#isDrawing) {
-      this.#isDrawing = false;
-      this.#actions.onDrawEnd();
+    if (this.#isDragging) {
+      this.#isDragging = false;
+      if (this.#mode === "select") {
+        this.#actions.onSelectEnd();
+      }
+      else {
+        this.#actions.onDrawEnd();
+      }
     }
 
     this.#actions.onMouseUp();
@@ -343,9 +392,14 @@ export class InputController {
       this.#actions.onPanEnd();
     }
 
-    if (this.#isDrawing) {
-      this.#isDrawing = false;
-      this.#actions.onDrawEnd();
+    if (this.#isDragging) {
+      this.#isDragging = false;
+      if (this.#mode === "select") {
+        this.#actions.onSelectEnd();
+      }
+      else {
+        this.#actions.onDrawEnd();
+      }
     }
 
     this.#actions.onMouseUp();
@@ -354,11 +408,44 @@ export class InputController {
   #handleKeyDown(
     event: KeyboardEvent
   ): void {
-    if (event.key !== "Shift" || event.repeat || isEditableTarget(event.target)) {
+    if (isEditableTarget(event.target)) {
       return;
     }
 
-    this.#actions.onShiftDown();
+    if (event.key === "Shift") {
+      if (!event.repeat) {
+        this.#actions.onShiftDown();
+      }
+
+      return;
+    }
+
+    if (event.repeat) {
+      return;
+    }
+
+    const isCtrlOrCmd = event.ctrlKey || event.metaKey;
+    if (isCtrlOrCmd && event.key.toLowerCase() === "c") {
+      if (this.#actions.onCopy()) {
+        event.preventDefault();
+      }
+
+      return;
+    }
+
+    if (isCtrlOrCmd && event.key.toLowerCase() === "v") {
+      if (this.#actions.onPaste()) {
+        event.preventDefault();
+      }
+
+      return;
+    }
+
+    if (event.key === "Delete") {
+      if (this.#actions.onDelete()) {
+        event.preventDefault();
+      }
+    }
   }
 
   #handleKeyUp(

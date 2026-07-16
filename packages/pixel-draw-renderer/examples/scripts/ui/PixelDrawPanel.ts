@@ -204,6 +204,12 @@ export class PixelDrawPanel extends LitElement {
             aria-pressed=${this.#mode === "move"}
             @click=${() => this.#setMode("move")}
           >Move</button>
+          <button
+            class="mode-btn ${this.#mode === "select" ? "active" : ""}"
+            part="mode-button"
+            aria-pressed=${this.#mode === "select"}
+            @click=${() => this.#setMode("select")}
+          >Select</button>
         </div>
 
         <div class="toolbar-item">

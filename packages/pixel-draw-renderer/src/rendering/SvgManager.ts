@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { Brush, DefaultViewport, Vec2 } from "../types.ts";
+import type { Brush, DefaultViewport, SelectionRect, Vec2 } from "../types.ts";
 
 // CONSTANTS
 const kSvgNs = "http://www.w3.org/2000/svg";
@@ -29,6 +29,8 @@ export class SvgManager {
   #highlightElements: SVGGElement;
   #linePreviewOutline: SVGLineElement;
   #linePreviewInline: SVGLineElement;
+  #selectionOutline: SVGRectElement;
+  #selectionInline: SVGRectElement;
 
   constructor(
     options: SvgManagerOptions
@@ -43,6 +45,9 @@ export class SvgManager {
     const [outline, inline] = this.#initLinePreview();
     this.#linePreviewOutline = outline;
     this.#linePreviewInline = inline;
+    const [selOutline, selInline] = this.#initSelectionRect();
+    this.#selectionOutline = selOutline;
+    this.#selectionInline = selInline;
   }
 
   #initSvgElement(): SVGElement {
@@ -127,6 +132,68 @@ export class SvgManager {
     this.#svg.appendChild(inline);
 
     return [outline, inline];
+  }
+
+  /**
+   * A two-color dashed rectangle border ("marching ants"): both rects share
+   * the same dash length, offset by half a cycle from each other, so the
+   * gaps in one are filled by the other's dashes instead of the background
+   * showing through.
+   */
+  #initSelectionRect(): [outline: SVGRectElement, inline: SVGRectElement] {
+    const defaultStyle = {
+      pointerEvents: "none",
+      fill: "none",
+      strokeWidth: 2
+    };
+
+    const outline = document.createElementNS(kSvgNs, "rect");
+    Object.assign(outline.style, defaultStyle);
+    outline.setAttribute("stroke", this.#brush.colorOutline);
+    outline.setAttribute("stroke-dasharray", "6 6");
+    outline.setAttribute("vector-effect", "non-scaling-stroke");
+    outline.setAttribute("visibility", "hidden");
+    this.#svg.appendChild(outline);
+
+    const inline = document.createElementNS(kSvgNs, "rect");
+    Object.assign(inline.style, defaultStyle);
+    inline.setAttribute("stroke", this.#brush.colorInline);
+    inline.setAttribute("stroke-dasharray", "6 6");
+    inline.setAttribute("stroke-dashoffset", "6");
+    inline.setAttribute("vector-effect", "non-scaling-stroke");
+    inline.setAttribute("visibility", "hidden");
+    this.#svg.appendChild(inline);
+
+    return [outline, inline];
+  }
+
+  /**
+   * Renders the current select-mode selection rectangle (texture-space
+   * `rect`, converted to screen space via zoom/camera like every other
+   * overlay here). Call again on every pan/zoom/drag update to reposition.
+   */
+  setSelectionRect(
+    rect: SelectionRect
+  ): void {
+    const zoom = this.#viewport.zoom;
+    const camera = this.#viewport.camera;
+    const x = rect.x * zoom + camera.x;
+    const y = rect.y * zoom + camera.y;
+    const width = rect.width * zoom;
+    const height = rect.height * zoom;
+
+    for (const el of [this.#selectionOutline, this.#selectionInline]) {
+      el.setAttribute("x", String(x));
+      el.setAttribute("y", String(y));
+      el.setAttribute("width", String(width));
+      el.setAttribute("height", String(height));
+      el.setAttribute("visibility", "visible");
+    }
+  }
+
+  clearSelectionRect(): void {
+    this.#selectionOutline.setAttribute("visibility", "hidden");
+    this.#selectionInline.setAttribute("visibility", "hidden");
   }
 
   /**
