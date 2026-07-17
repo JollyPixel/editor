@@ -1,6 +1,12 @@
 // Import Internal Dependencies
-import { toRGBA } from "../colors.ts";
-import type { ColorInput, DefaultPixelBuffer, RGBA, SelectionRect, Vec2 } from "../types.ts";
+import { toRGBA } from "../utils/colors.ts";
+import type {
+  ColorInput,
+  RGBA,
+  SelectionRect,
+  Vec2
+} from "../types.ts";
+import type { DefaultPixelBuffer } from "./types.ts";
 
 export interface PixelBufferOptions {
   size: Vec2;
@@ -19,7 +25,13 @@ export interface PixelBufferOptions {
   maxSize?: number;
 }
 
-const kDefaultColor: RGBA = { r: 255, g: 255, b: 255, a: 255 };
+// CONSTANTS
+const kDefaultColor: RGBA = {
+  r: 255,
+  g: 255,
+  b: 255,
+  a: 255
+};
 
 /**
  * PixelBuffer holds raw RGBA pixel data with no DOM dependency, so it can run
@@ -42,14 +54,12 @@ export class PixelBuffer implements DefaultPixelBuffer {
       maxSize = 2048
     } = options;
 
-    const { r, g, b, a } = toRGBA(defaultColor);
-
     this.#maxSize = maxSize;
     this.#width = size.x;
     this.#height = size.y;
     this.#master = new Uint8ClampedArray(maxSize * maxSize * 4);
     this.#working = new Uint8ClampedArray(size.x * size.y * 4);
-    this.#fill({ r, g, b, a });
+    this.#fill(toRGBA(defaultColor));
   }
 
   #fill(
@@ -76,7 +86,10 @@ export class PixelBuffer implements DefaultPixelBuffer {
   }
 
   getSize(): Vec2 {
-    return { x: this.#width, y: this.#height };
+    return {
+      x: this.#width,
+      y: this.#height
+    };
   }
 
   setSize(
@@ -125,14 +138,17 @@ export class PixelBuffer implements DefaultPixelBuffer {
    * positions are skipped.
    */
   drawPixels(
-    positions: Vec2[],
+    positions: Iterable<Vec2>,
     color: RGBA
   ): void {
     const { r, g, b, a } = color;
 
     for (const { x, y } of positions) {
       // Mirrors Canvas2D's implicit clipping of out-of-bounds putImageData calls.
-      if (x < 0 || x >= this.#width || y < 0 || y >= this.#height) {
+      if (
+        x < 0 || x >= this.#width ||
+        y < 0 || y >= this.#height
+      ) {
         continue;
       }
 
@@ -157,7 +173,10 @@ export class PixelBuffer implements DefaultPixelBuffer {
       for (let rx = 0; rx < rect.width; rx++) {
         const x = rect.x + rx;
         const y = rect.y + ry;
-        if (x < 0 || x >= this.#width || y < 0 || y >= this.#height) {
+        if (
+          x < 0 || x >= this.#width ||
+          y < 0 || y >= this.#height
+        ) {
           continue;
         }
 

@@ -1,6 +1,6 @@
 // Import Internal Dependencies
-import type { Mode, Vec2 } from "../types.ts";
-import type { Viewport } from "../rendering/Viewport.ts";
+import type { Vec2 } from "./types.ts";
+import type { Viewport } from "./rendering/Viewport.ts";
 
 // CONSTANTS
 const kEditableInputTypes = new Set([
@@ -10,32 +10,34 @@ const kEditableInputTypes = new Set([
 
 export interface InputActions {
   /**
-   * Called on left mousedown in paint mode. Return `false` to indicate the
-   * click was fully handled elsewhere (e.g. committing an armed line tool)
-   * so InputController shouldn't track it as a freehand draw gesture.
+   * Called on left mousedown, resolved to texture-space coordinates,
+   * regardless of interaction mode — InputController has no concept of
+   * "paint"/"fill"/"select"/etc, that's entirely up to the consumer. Return
+   * `false` to indicate the click was fully handled as a single-shot action
+   * (e.g. a flood fill) or elsewhere (e.g. committing an armed line tool),
+   * so InputController shouldn't track it as a drag gesture.
    */
-  onDrawStart(tx: number, ty: number): boolean | void;
-  onDrawMove(tx: number, ty: number): void;
-  onDrawEnd(): void;
+  onPrimaryDown(tx: number, ty: number): boolean | void;
   /**
-   * Called on left mousedown in fill mode. Single-shot — unlike onDrawStart,
-   * there is no corresponding move/end pair; a fill click never arms a drag
-   * gesture.
+   * Fires on every mousemove while the left button is held and the initial
+   * onPrimaryDown didn't return `false`.
    */
-  onFillStart(tx: number, ty: number): void;
+  onPrimaryMove(tx: number, ty: number): void;
   /**
-   * Called on left mousedown in select mode — either starting a new
-   * selection rectangle or grabbing the existing one to move it, entirely up
-   * to the consumer to decide (InputController has no concept of a
-   * selection).
+   * Fires once when a tracked primary-button drag gesture ends (canvas or
+   * window mouseup). Not fired for a gesture whose onPrimaryDown returned
+   * `false`.
    */
-  onSelectStart(tx: number, ty: number): void;
-  onSelectMove(tx: number, ty: number): void;
-  onSelectEnd(): void;
+  onPrimaryUp(): void;
   onPanStart(mx: number, my: number): void;
   onPanMove(dx: number, dy: number): void;
   onPanEnd(): void;
   onZoom(delta: number, cx: number, cy: number): void;
+  /**
+   * Right-click (contextmenu), resolved to texture-space coordinates and
+   * bounds-limited (null when outside the texture). Fires regardless of
+   * mode — consumers decide what, if anything, it means for them.
+   */
   onColorPick(tx: number, ty: number): void;
   onMouseMove(cx: number, cy: number): void;
   /**
@@ -88,7 +90,9 @@ function isEditableTarget(
     return true;
   }
 
-  return target.tagName === "INPUT" && kEditableInputTypes.has((target as HTMLInputElement).type);
+  return target.tagName === "INPUT" && kEditableInputTypes.has(
+    (target as HTMLInputElement).type
+  );
 }
 
 /**
@@ -116,11 +120,6 @@ export interface InputControllerOptions {
   viewport: Viewport;
   actions: InputActions;
   /**
-   * Initial interaction mode. Can be "paint", "move", "fill", or "select".
-   * @default "paint"
-   */
-  mode?: Mode;
-  /**
    * Global event target used for drag-continuation mouse tracking and
    * keyboard/blur reporting.
    * @default window
@@ -130,22 +129,21 @@ export interface InputControllerOptions {
 
 /**
  * InputController translates raw DOM mouse/keyboard events into semantic,
- * coordinate-resolved actions (draw, pan, zoom, color pick, cursor/shift
- * state). It does not interpret what those actions mean for any particular
- * tool — that's left entirely to the consumer (see CanvasManager).
+ * coordinate-resolved actions (primary drag, pan, zoom, color pick,
+ * cursor/shift state). It has no concept of interaction "modes" (paint,
+ * fill, select, ...) — that interpretation, including what a primary-button
+ * drag gesture means, is left entirely to the consumer (see CanvasManager).
  */
 export class InputController {
   #canvas: HTMLCanvasElement;
   #viewport: Viewport;
   #actions: InputActions;
-  #mode: Mode;
   #window: WindowLike;
   #isPanning: boolean = false;
   #panStart: Vec2 = { x: 0, y: 0 };
   /**
-   * Tracks any mouse-button-held drag gesture that needs a matching end
-   * report on mouseup — driving onDrawStart/Move/End in "paint" mode and
-   * onSelectStart/Move/End in "select" mode.
+   * Tracks any left-mouse-button-held drag gesture that needs a matching
+   * onPrimaryUp report — armed by a non-`false` onPrimaryDown return value.
    */
   #isDragging: boolean = false;
   /**
@@ -178,14 +176,12 @@ export class InputController {
       canvas,
       viewport,
       actions,
-      mode = "paint",
       window: windowLike = window
     } = options;
 
     this.#canvas = canvas;
     this.#viewport = viewport;
     this.#actions = actions;
-    this.#mode = mode;
     this.#window = windowLike;
 
     this.#onMouseDown = (event) => this.#handleMouseDown(event);
@@ -215,21 +211,11 @@ export class InputController {
     this.#window.addEventListener("blur", this.#onWindowBlur);
   }
 
-  getMode(): Mode {
-    return this.#mode;
-  }
-
-  setMode(
-    mode: Mode
-  ): void {
-    this.#mode = mode;
-  }
-
   /**
-   * Stops tracking the current mouse-button-held draw gesture without
-   * firing onDrawEnd. Lets a consumer reinterpret an in-progress gesture
-   * (e.g. arming a line tool mid-stroke) without InputController fighting
-   * back with further onDrawMove calls.
+   * Stops tracking the current primary-button drag gesture without firing
+   * onPrimaryUp. Lets a consumer reinterpret an in-progress gesture (e.g.
+   * arming a line tool mid-stroke) without InputController fighting back
+   * with further onPrimaryMove calls.
    */
   stopDrawing(): void {
     this.#isDragging = false;
@@ -250,39 +236,60 @@ export class InputController {
     this.#window.removeEventListener("blur", this.#onWindowBlur);
   }
 
+  /**
+   * Resolves a MouseEvent's client coordinates to texture space against the
+   * canvas's current bounds. Centralizes the bounds+viewport lookup shared
+   * by every handler that needs a texture-space position.
+   */
+  #resolveTexturePos(
+    event: MouseEvent,
+    parameters: { limit?: boolean; } = {}
+  ): Vec2 | null {
+    const bounds = this.#canvas.getBoundingClientRect();
+    const { clientX, clientY } = event;
+
+    return this.#viewport.getMouseTexturePosition(clientX, clientY, {
+      bounds,
+      limit: parameters.limit
+    });
+  }
+
+  /**
+   * Shared tail of #handleMouseUp/#handleWindowMouseUp: reports the end of
+   * any tracked primary-button drag, then unconditionally reports mouseup.
+   */
+  #endDragAndReportMouseUp(): void {
+    if (this.#isDragging) {
+      this.#isDragging = false;
+      this.#actions.onPrimaryUp();
+    }
+
+    this.#actions.onMouseUp();
+  }
+
   #handleMouseDown(
     event: MouseEvent
   ): void {
     this.#isHovering = true;
-    const bounds = this.#canvas.getBoundingClientRect();
 
-    if (this.#mode === "paint" && event.button === 0) {
-      const pos = this.#viewport.getMouseTexturePosition(event.clientX, event.clientY, { bounds });
+    if (event.button === 0) {
+      const pos = this.#resolveTexturePos(event);
       if (pos) {
-        const handled = this.#actions.onDrawStart(pos.x, pos.y);
+        const handled = this.#actions.onPrimaryDown(pos.x, pos.y);
         this.#isDragging = handled !== false;
-      }
-    }
-
-    if (this.#mode === "fill" && event.button === 0) {
-      const pos = this.#viewport.getMouseTexturePosition(event.clientX, event.clientY, { bounds });
-      if (pos) {
-        this.#actions.onFillStart(pos.x, pos.y);
-      }
-    }
-
-    if (this.#mode === "select" && event.button === 0) {
-      const pos = this.#viewport.getMouseTexturePosition(event.clientX, event.clientY, { bounds });
-      if (pos) {
-        this.#actions.onSelectStart(pos.x, pos.y);
-        this.#isDragging = true;
       }
     }
 
     if (event.button === 1) {
       this.#isPanning = true;
-      this.#panStart = { x: event.clientX, y: event.clientY };
-      this.#actions.onPanStart(event.clientX, event.clientY);
+      this.#panStart = {
+        x: event.clientX,
+        y: event.clientY
+      };
+      this.#actions.onPanStart(
+        event.clientX,
+        event.clientY
+      );
     }
   }
 
@@ -293,35 +300,20 @@ export class InputController {
     this.#isHovering = true;
 
     const bounds = this.#canvas.getBoundingClientRect();
-    const canvasPos = this.#viewport.getMouseCanvasPosition(event.clientX, event.clientY, bounds);
-    this.#actions.onMouseMove(canvasPos.x, canvasPos.y);
-
-    const texturePos = this.#viewport.getMouseTexturePosition(
+    const canvasPos = this.#viewport.getMouseCanvasPosition(
       event.clientX,
       event.clientY,
-      { bounds, limit: true }
+      bounds
     );
-    this.#actions.onCursorMove(texturePos);
+    this.#actions.onMouseMove(canvasPos.x, canvasPos.y);
+    this.#actions.onCursorMove(this.#resolveTexturePos(event, {
+      limit: true
+    }));
 
-    if (this.#mode === "paint" && event.buttons === 1 && this.#isDragging) {
-      const pos = this.#viewport.getMouseTexturePosition(
-        event.clientX,
-        event.clientY,
-        { bounds }
-      );
+    if (event.buttons === 1 && this.#isDragging) {
+      const pos = this.#resolveTexturePos(event);
       if (pos) {
-        this.#actions.onDrawMove(pos.x, pos.y);
-      }
-    }
-
-    if (this.#mode === "select" && event.buttons === 1 && this.#isDragging) {
-      const pos = this.#viewport.getMouseTexturePosition(
-        event.clientX,
-        event.clientY,
-        { bounds }
-      );
-      if (pos) {
-        this.#actions.onSelectMove(pos.x, pos.y);
+        this.#actions.onPrimaryMove(pos.x, pos.y);
       }
     }
   }
@@ -341,17 +333,7 @@ export class InputController {
   #handleMouseUp(
     _event: MouseEvent
   ): void {
-    if (this.#isDragging) {
-      this.#isDragging = false;
-      if (this.#mode === "select") {
-        this.#actions.onSelectEnd();
-      }
-      else {
-        this.#actions.onDrawEnd();
-      }
-    }
-
-    this.#actions.onMouseUp();
+    this.#endDragAndReportMouseUp();
   }
 
   #handleWheel(
@@ -365,11 +347,15 @@ export class InputController {
       event.clientY,
       bounds
     );
-    this.#actions.onZoom(event.deltaY, canvasPos.x, canvasPos.y);
-
-    if (this.#mode === "paint") {
-      this.#actions.onMouseMove(canvasPos.x, canvasPos.y);
-    }
+    this.#actions.onZoom(
+      event.deltaY,
+      canvasPos.x,
+      canvasPos.y
+    );
+    this.#actions.onMouseMove(
+      canvasPos.x,
+      canvasPos.y
+    );
   }
 
   #handleContextMenu(
@@ -377,16 +363,11 @@ export class InputController {
   ): void {
     event.preventDefault();
 
-    if (this.#mode === "paint" && event.button === 2) {
-      const bounds = this.#canvas.getBoundingClientRect();
-      const pos = this.#viewport.getMouseTexturePosition(
-        event.clientX,
-        event.clientY,
-        { bounds, limit: true }
-      );
-      if (pos) {
-        this.#actions.onColorPick(pos.x, pos.y);
-      }
+    const pos = this.#resolveTexturePos(event, {
+      limit: true
+    });
+    if (pos) {
+      this.#actions.onColorPick(pos.x, pos.y);
     }
   }
 
@@ -412,17 +393,7 @@ export class InputController {
       this.#actions.onPanEnd();
     }
 
-    if (this.#isDragging) {
-      this.#isDragging = false;
-      if (this.#mode === "select") {
-        this.#actions.onSelectEnd();
-      }
-      else {
-        this.#actions.onDrawEnd();
-      }
-    }
-
-    this.#actions.onMouseUp();
+    this.#endDragAndReportMouseUp();
   }
 
   #handleKeyDown(
@@ -449,7 +420,8 @@ export class InputController {
     }
 
     const isCtrlOrCmd = event.ctrlKey || event.metaKey;
-    if (isCtrlOrCmd && event.key.toLowerCase() === "c") {
+    const lowerKey = event.key.toLowerCase();
+    if (isCtrlOrCmd && lowerKey === "c") {
       if (this.#actions.onCopy()) {
         event.preventDefault();
       }
@@ -457,7 +429,7 @@ export class InputController {
       return;
     }
 
-    if (isCtrlOrCmd && event.key.toLowerCase() === "v") {
+    if (isCtrlOrCmd && lowerKey === "v") {
       if (this.#actions.onPaste()) {
         event.preventDefault();
       }

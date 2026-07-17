@@ -205,6 +205,24 @@ describe("CanvasManager — applyRemoteCommand", () => {
     manager.destroy();
   });
 
+  test("stroke: still calls onDrawEnd so external consumers can sync", () => {
+    let drawEndCalls = 0;
+    const manager = new CanvasManager(container, {
+      texture: { maxSize: 32, size: { x: 8, y: 8 } },
+      onDrawEnd: () => {
+        drawEndCalls++;
+      }
+    });
+
+    manager.applyRemoteCommand({
+      action: "stroke",
+      metadata: { color: { r: 9, g: 8, b: 7, a: 255 }, positions: [{ x: 0, y: 0 }] }
+    });
+
+    assert.strictEqual(drawEndCalls, 1);
+    manager.destroy();
+  });
+
   test("resized: delegates to setTextureSize without re-emitting onBufferUpdated", () => {
     const events: PixelBufferHookEvent[] = [];
     const manager = new CanvasManager(container, {

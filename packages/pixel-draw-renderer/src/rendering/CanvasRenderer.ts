@@ -2,8 +2,9 @@
 import Color from "colorjs.io";
 
 // Import Internal Dependencies
-import type { ColorInput, DefaultViewport, RGBA, SelectionRect } from "../types.ts";
+import type { ColorInput, RGBA, SelectionRect } from "../types.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
+import type { DefaultViewport } from "./Viewport.ts";
 
 export interface FloatingOverlayOptions {
   /** The selection's original position, rendered as eraseColor while floating. */
@@ -231,6 +232,7 @@ export class CanvasRenderer {
     for (let y = 0; y < this.#bgCanvas.height; y += sq) {
       for (let x = 0; x < this.#bgCanvas.width; x += sq) {
         const isLight = (Math.floor(x / sq) + Math.floor(y / sq)) % 2 === 0;
+
         this.#bgCtx.fillStyle = isLight ? colors.odd : colors.even;
         this.#bgCtx.fillRect(x, y, sq, sq);
       }

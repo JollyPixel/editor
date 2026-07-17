@@ -2,12 +2,16 @@
 import Color from "colorjs.io";
 
 // Import Internal Dependencies
-import type { ColorInput, RGBA } from "./types.ts";
+import { clamp } from "./math.ts";
+import type {
+  ColorInput,
+  RGBA
+} from "../types.ts";
 
 function clamp255(
   value: number
 ): number {
-  return Math.max(0, Math.min(255, Math.round(value * 255)));
+  return clamp(Math.round(value * 255), 0, 255);
 }
 
 /**
@@ -35,4 +39,16 @@ export function toRGBA(
   }
 
   return color;
+}
+
+/**
+ * Formats 0-255 RGB components as a lowercase 6-digit hex string
+ * (e.g. "#1a2b3c"). Alpha is not represented.
+ */
+export function rgbToHex(
+  r: number,
+  g: number,
+  b: number
+): string {
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
 }

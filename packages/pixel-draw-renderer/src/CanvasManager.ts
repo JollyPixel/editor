@@ -1,12 +1,18 @@
 // Import Third-party Dependencies
 import Color from "colorjs.io";
-import { fromUint8Array, toUint8Array } from "js-base64";
+import {
+  fromUint8Array,
+  toUint8Array
+} from "js-base64";
 
 // Import Internal Dependencies
 import {
-  BrushManager,
-  type BrushManagerOptions
-} from "./input/BrushManager.ts";
+  Brush,
+  type BrushOptions
+} from "./tools/Brush.ts";
+import {
+  BrushController
+} from "./tools/BrushController.ts";
 import {
   CanvasBuffer
 } from "./buffer/CanvasBuffer.ts";
@@ -14,33 +20,32 @@ import {
   CanvasRenderer
 } from "./rendering/CanvasRenderer.ts";
 import {
-  FillTool
-} from "./input/FillTool.ts";
+  Fill
+} from "./tools/Fill.ts";
 import {
   InputController,
+  type InputActions,
   type WindowLike
-} from "./input/InputController.ts";
+} from "./InputController.ts";
 import {
-  LineTool,
-  type LineCommitTrigger
-} from "./input/LineTool.ts";
+  LineController
+} from "./tools/LineController.ts";
 import {
-  SelectTool
-} from "./input/SelectTool.ts";
+  SelectController
+} from "./tools/SelectController.ts";
 import {
   SvgManager
 } from "./rendering/SvgManager.ts";
 import {
-  Viewport
+  Viewport,
+  type DefaultViewport
 } from "./rendering/Viewport.ts";
-import { getColorAsRGBA, toRGBA } from "./colors.ts";
+import { rgbToHex, toRGBA } from "./utils/colors.ts";
 import type {
-  Brush,
+  BrushHighlight,
   ColorInput,
-  DefaultViewport,
   Mode,
   RGBA,
-  SelectionRect,
   Vec2
 } from "./types.ts";
 import type {
@@ -82,7 +87,7 @@ export interface CanvasManagerOptions {
     colors: { odd: string; even: string; };
     squareSize: number;
   };
-  brush?: BrushManagerOptions;
+  brush?: BrushOptions;
   select?: {
     /**
      * Color used to fill the pixels vacated by a Delete or the source side
@@ -115,16 +120,12 @@ export class CanvasManager {
   #onBufferUpdated?: PixelBufferHookListener;
   #onDrawEnd?: () => void;
   #isApplyingRemote = false;
-  #strokeDirty = new Map<string, Vec2>();
-  #strokeColor: RGBA | null = null;
-  #isStrokeActive = false;
-  #lineTool = new LineTool();
-  #selectTool = new SelectTool();
-  #eraseColor: RGBA;
-  #lastCursorPos: Vec2 | null = null;
-  #isShiftHeld = false;
+  #mode: Mode;
+  #brushController: BrushController;
+  #lineController: LineController;
+  #selectController: SelectController;
 
-  readonly brush: BrushManager;
+  readonly brush: Brush;
   readonly viewport: DefaultViewport;
 
   constructor(
@@ -134,7 +135,8 @@ export class CanvasManager {
     this.#parentHtmlElement = parentHtmlElement;
     this.#onBufferUpdated = options.onBufferUpdated;
     this.#onDrawEnd = options.onDrawEnd;
-    this.#eraseColor = toRGBA(options.select?.eraseColor ?? "#FFFFFF");
+    this.#mode = options.defaultMode ?? "paint";
+    const eraseColor = toRGBA(options.select?.eraseColor ?? "#FFFFFF");
 
     const textureSize: Vec2 = options.texture?.size
       ? { x: options.texture.size.x, y: options.texture.size.y ?? options.texture.size.x }
@@ -178,12 +180,12 @@ export class CanvasManager {
     this.#renderer.resize(bounds.width, bounds.height);
     this.#viewport.updateCanvasSize(bounds.width, bounds.height);
 
-    this.brush = new BrushManager(options.brush);
+    this.brush = new Brush(options.brush);
 
     const brushRef = this.brush;
     const viewportRef: DefaultViewport = this.#viewport;
 
-    const brushAdapter: Brush = {
+    const brushAdapter: BrushHighlight = {
       get size() {
         return brushRef.getSize();
       },
@@ -198,146 +200,211 @@ export class CanvasManager {
     this.#svgManager = new SvgManager({
       parent: parentHtmlElement,
       viewport: viewportRef,
-      brush: brushAdapter,
-      textureSize
+      brush: brushAdapter
+    });
+
+    this.#brushController = new BrushController({
+      brush: this.brush,
+      canvasBuffer: this.#canvasBuffer,
+      renderer: this.#renderer,
+      onCommit: (pixels, color) => {
+        this.#emitHook({
+          action: "stroke",
+          metadata: { color, positions: pixels }
+        });
+        this.#onDrawEnd?.();
+      }
+    });
+
+    this.#lineController = new LineController({
+      brush: this.brush,
+      linePreview: this.#svgManager.linePreview,
+      onCommit: (pixels) => this.commitPixels(pixels)
+    });
+
+    this.#selectController = new SelectController({
+      canvasBuffer: this.#canvasBuffer,
+      renderer: this.#renderer,
+      selectionOverlay: this.#svgManager.selection,
+      eraseColor,
+      onCommit: () => this.#onDrawEnd?.()
     });
 
     this.#input = new InputController({
       canvas: this.#renderer.getCanvas(),
       viewport: this.#viewport,
-      mode: options.defaultMode,
       window: options.window,
-      actions: {
-        onDrawStart: (tx, ty) => {
-          if (this.#lineTool.isArmed && this.#lineTool.commitTrigger === "mousedown") {
-            this.#commitArmedLine();
-
-            return false;
-          }
-
-          this.#isStrokeActive = true;
-          this.#drawColor(tx, ty);
-
-          return true;
-        },
-        onDrawMove: (tx, ty) => {
-          this.#drawColor(tx, ty);
-        },
-        onDrawEnd: () => {
-          this.#endStroke();
-        },
-        onFillStart: (tx, ty) => {
-          this.#fill(tx, ty);
-        },
-        onSelectStart: (tx, ty) => {
-          this.#handleSelectStart({ x: tx, y: ty });
-        },
-        onSelectMove: (tx, ty) => {
-          this.#handleSelectMove({ x: tx, y: ty });
-        },
-        onSelectEnd: () => {
-          this.#handleSelectEnd();
-        },
-        onPanStart: (_mx, _my) => {
-          // pan tracking is inside InputController
-        },
-        onPanMove: (dx, dy) => {
-          this.#viewport.applyPan(dx, dy);
-          this.#renderer.drawFrame();
-          this.#refreshLinePreview();
-          this.#refreshSelectionOverlay();
-        },
-        onPanEnd: () => {
-          // nothing extra needed
-        },
-        onZoom: (delta, cx, cy) => {
-          this.#viewport.applyZoom(delta, cx, cy);
-          this.#renderer.drawFrame();
-          this.#refreshLinePreview();
-          this.#refreshSelectionOverlay();
-        },
-        onColorPick: (tx, ty) => {
-          const [r, g, b, a] = this.#canvasBuffer.samplePixel(tx, ty);
-          const hex = `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
-          const opacity = a / 255;
-          this.brush.setColor(hex, opacity);
-
-          const event = new CustomEvent("colorpicked", {
-            detail: { hex, opacity },
-            bubbles: true,
-            composed: true
-          });
-          this.#renderer.getCanvas().dispatchEvent(event);
-        },
-        onMouseMove: (cx, cy) => {
-          if (cx < 0 || cy < 0) {
-            this.#svgManager.updateBrushHighlight(null, null);
-          }
-          else if (this.#input.getMode() === "paint") {
-            this.#svgManager.updateBrushHighlight(cx, cy);
-          }
-        },
-        onCursorMove: (pos) => {
-          this.#lastCursorPos = pos;
-          if (this.#lineTool.isArmed && pos) {
-            this.#lineTool.update(pos);
-            this.#refreshLinePreview();
-          }
-        },
-        onMouseUp: () => {
-          if (this.#lineTool.isArmed && this.#lineTool.commitTrigger === "mouseup") {
-            this.#commitArmedLine();
-          }
-        },
-        onShiftDown: () => {
-          this.#isShiftHeld = true;
-          if (this.#input.getMode() !== "paint") {
-            return;
-          }
-
-          if (this.#isStrokeActive) {
-            // Mouse button already held: no future mousedown to commit on,
-            // so the line commits on the eventual mouseup instead.
-            this.#input.stopDrawing();
-            this.#endStroke();
-            this.#armLine("mouseup");
-
-            return;
-          }
-
-          this.#armLine("mousedown");
-        },
-        onShiftUp: () => {
-          this.#isShiftHeld = false;
-          this.#cancelLineIfArmed();
-        },
-        onBlur: () => {
-          this.#isShiftHeld = false;
-          this.#cancelLineIfArmed();
-        },
-        onCopy: () => this.#handleCopy(),
-        onPaste: () => this.#handlePaste(),
-        onDelete: () => this.#handleDelete()
-      }
+      actions: this.#buildInputActions()
     });
 
     this.centerTexture();
   }
 
+  /**
+   * Translates InputController's mode-agnostic pointer/keyboard actions into
+   * calls onto the brush/line/select controllers, routed by the current
+   * `Mode` — InputController itself has no concept of what a primary-button
+   * drag means. Broken out from the constructor purely to keep the
+   * constructor readable as a flat sequence of collaborator wiring.
+   */
+  #buildInputActions(): InputActions {
+    return {
+      onPrimaryDown: (tx, ty) => {
+        switch (this.#mode) {
+          case "paint":
+            if (
+              this.#lineController.isArmed &&
+              this.#lineController.commitTrigger === "mousedown"
+            ) {
+              this.#lineController.commit();
+
+              return false;
+            }
+
+            this.#brushController.startStroke(tx, ty);
+
+            return true;
+
+          case "fill":
+            this.#fill(tx, ty);
+
+            return false;
+
+          case "select":
+            this.#selectController.handleStart({ x: tx, y: ty });
+
+            return true;
+
+          default:
+            return false;
+        }
+      },
+      onPrimaryMove: (tx, ty) => {
+        switch (this.#mode) {
+          case "paint":
+            this.#brushController.continueStroke(tx, ty);
+            break;
+
+          case "select":
+            this.#selectController.handleMove({ x: tx, y: ty });
+            break;
+
+          default:
+        }
+      },
+      onPrimaryUp: () => {
+        switch (this.#mode) {
+          case "paint":
+            this.#brushController.endStroke();
+            break;
+
+          case "select":
+            this.#selectController.handleEnd();
+            break;
+
+          default:
+        }
+      },
+      onPanStart: (_mx, _my) => {
+        // pan tracking is inside InputController
+      },
+      onPanMove: (dx, dy) => {
+        this.#viewport.applyPan(dx, dy);
+        this.#renderer.drawFrame();
+        this.#lineController.refreshPreview();
+        this.#selectController.refreshOverlay();
+      },
+      onPanEnd: () => {
+        // nothing extra needed
+      },
+      onZoom: (delta, cx, cy) => {
+        this.#viewport.applyZoom(delta, cx, cy);
+        this.#renderer.drawFrame();
+        this.#lineController.refreshPreview();
+        this.#selectController.refreshOverlay();
+      },
+      onColorPick: (tx, ty) => {
+        if (this.#mode !== "paint") {
+          return;
+        }
+
+        const [r, g, b, a] = this.#canvasBuffer.samplePixel(tx, ty);
+        const hex = rgbToHex(r, g, b);
+        const opacity = a / 255;
+        this.brush.setColor(hex, opacity);
+
+        const event = new CustomEvent("colorpicked", {
+          detail: { hex, opacity },
+          bubbles: true,
+          composed: true
+        });
+        this.#renderer.getCanvas().dispatchEvent(event);
+      },
+      onMouseMove: (cx, cy) => {
+        if (cx < 0 || cy < 0) {
+          this.#svgManager.brushHighlight.update(null, null);
+        }
+        else if (this.#mode === "paint") {
+          this.#svgManager.brushHighlight.update(cx, cy);
+        }
+      },
+      onCursorMove: (pos) => {
+        this.#lineController.updateCursor(pos);
+      },
+      onMouseUp: () => {
+        if (
+          this.#lineController.isArmed &&
+          this.#lineController.commitTrigger === "mouseup"
+        ) {
+          this.#lineController.commit();
+        }
+      },
+      onShiftDown: () => {
+        this.#lineController.setShiftHeld(true);
+        if (this.#mode !== "paint") {
+          return;
+        }
+
+        if (this.#brushController.isActive) {
+          // Mouse button already held: no future mousedown to commit on,
+          // so the line commits on the eventual mouseup instead.
+          this.#input.stopDrawing();
+          this.#brushController.endStroke();
+          this.#lineController.arm("mouseup");
+
+          return;
+        }
+
+        this.#lineController.arm("mousedown");
+      },
+      onShiftUp: () => {
+        this.#lineController.setShiftHeld(false);
+        this.#lineController.cancelIfArmed();
+      },
+      onBlur: () => {
+        this.#lineController.setShiftHeld(false);
+        this.#lineController.cancelIfArmed();
+      },
+      onCopy: () => this.#selectController.handleCopy(),
+      onPaste: () => this.#selectController.handlePaste(),
+      onDelete: () => this.#selectController.handleDelete()
+    };
+  }
+
   getMode(): Mode {
-    return this.#input.getMode();
+    return this.#mode;
   }
 
   setMode(
     mode: Mode
   ): void {
-    this.#input.setMode(mode);
+    this.#mode = mode;
     if (mode === "move") {
-      this.#svgManager.hideSvgHighlight();
-      this.#cancelLineIfArmed();
+      this.#svgManager.brushHighlight.hide();
+      this.#lineController.cancelIfArmed();
     }
     if (mode !== "select") {
-      this.#clearSelection();
+      this.#selectController.clear();
     }
   }
 
@@ -367,7 +434,10 @@ export class CanvasManager {
   setTextureSize(
     size: Vec2
   ): void {
-    if (size.x <= 0 || size.y <= 0) {
+    if (
+      size.x <= 0 ||
+      size.y <= 0
+    ) {
       console.error("CanvasManager: Texture size must be positive");
 
       return;
@@ -375,7 +445,6 @@ export class CanvasManager {
 
     this.#canvasBuffer.setSize(size);
     this.#viewport.setTextureSize(size);
-    this.#svgManager.setTextureSize(size);
     this.#renderer.drawFrame();
 
     this.#emitHook({
@@ -412,7 +481,10 @@ export class CanvasManager {
   onResize(): void {
     const bounds = this.#parentHtmlElement.getBoundingClientRect();
 
-    if (bounds.width === 0 || bounds.height === 0) {
+    if (
+      bounds.width === 0 ||
+      bounds.height === 0
+    ) {
       return;
     }
 
@@ -455,7 +527,9 @@ export class CanvasManager {
       action: "texture-replaced",
       metadata: {
         size,
-        pixels: fromUint8Array(new Uint8Array(this.#canvasBuffer.getPixels()))
+        pixels: fromUint8Array(
+          new Uint8Array(this.#canvasBuffer.getPixels())
+        )
       }
     });
   }
@@ -477,12 +551,9 @@ export class CanvasManager {
       return;
     }
 
-    const [r, g, b, a] = getColorAsRGBA(this.brush.getColor());
-    const color: RGBA = { r, g, b, a };
+    const color = toRGBA(this.brush.getColor());
 
-    this.#canvasBuffer.drawPixels(pixels, color);
-    this.#canvasBuffer.copyToMaster();
-    this.#renderer.drawFrame();
+    this.#applyStroke(color, pixels);
 
     this.#emitHook({
       action: "stroke",
@@ -498,7 +569,9 @@ export class CanvasManager {
    * Replace the settable hook after construction. Used by PixelSyncSession
    * to attach itself to an already-constructed CanvasManager.
    */
-  set onBufferUpdated(fn: PixelBufferHookListener | undefined) {
+  set onBufferUpdated(
+    fn: PixelBufferHookListener | undefined
+  ) {
     this.#onBufferUpdated = fn;
   }
 
@@ -513,9 +586,11 @@ export class CanvasManager {
     try {
       switch (event.action) {
         case "stroke":
-          this.#canvasBuffer.drawPixels(event.metadata.positions, event.metadata.color);
-          this.#canvasBuffer.copyToMaster();
-          this.#renderer.drawFrame();
+          this.#applyStroke(
+            event.metadata.color,
+            event.metadata.positions
+          );
+          this.#onDrawEnd?.();
           break;
 
         case "resized":
@@ -523,7 +598,12 @@ export class CanvasManager {
           break;
 
         case "texture-replaced":
-          this.#applyPixelReplace(event.metadata.size, new Uint8ClampedArray(toUint8Array(event.metadata.pixels)));
+          this.#applyPixelReplace(
+            event.metadata.size,
+            new Uint8ClampedArray(
+              toUint8Array(event.metadata.pixels)
+            )
+          );
           break;
       }
     }
@@ -555,7 +635,19 @@ export class CanvasManager {
   ): void {
     this.#canvasBuffer.setPixels(pixels, size);
     this.#viewport.setTextureSize(size);
-    this.#svgManager.setTextureSize(size);
+    this.#renderer.drawFrame();
+  }
+
+  /**
+   * Shared buffer mutation used by both local stroke commits and remote
+   * "stroke" command replay, so the two paths can't drift apart.
+   */
+  #applyStroke(
+    color: RGBA,
+    positions: Vec2[]
+  ): void {
+    this.#canvasBuffer.drawPixels(positions, color);
+    this.#canvasBuffer.copyToMaster();
     this.#renderer.drawFrame();
   }
 
@@ -569,322 +661,23 @@ export class CanvasManager {
     this.#onBufferUpdated(event);
   }
 
-  #commitStroke(): void {
-    if (this.#strokeDirty.size === 0 || this.#strokeColor === null) {
-      this.#strokeDirty.clear();
-      this.#strokeColor = null;
-
-      return;
-    }
-
-    const positions = [...this.#strokeDirty.values()];
-    const color = this.#strokeColor;
-    this.#strokeDirty.clear();
-    this.#strokeColor = null;
-
-    this.#emitHook({
-      action: "stroke",
-      metadata: {
-        color,
-        positions
-      }
-    });
-  }
-
-  #endStroke(): void {
-    this.#canvasBuffer.copyToMaster();
-    this.#commitStroke();
-    this.#isStrokeActive = false;
-    this.#onDrawEnd?.();
-  }
-
-  /**
-   * Expands raw rasterized line points into brush-stamped, deduplicated
-   * texture pixels (LineTool has no brush awareness).
-   */
-  #stampLinePixels(
-    points: Vec2[]
-  ): Vec2[] {
-    const stamped = new Map<string, Vec2>();
-    for (const point of points) {
-      for (const pixel of this.brush.getAffectedPixels(point.x, point.y)) {
-        stamped.set(`${pixel.x},${pixel.y}`, pixel);
-      }
-    }
-
-    return [...stamped.values()];
-  }
-
-  #armLine(
-    commitTrigger: LineCommitTrigger
-  ): void {
-    if (!this.#lastCursorPos) {
-      return;
-    }
-
-    this.#lineTool.arm(this.#lastCursorPos, commitTrigger);
-    this.#refreshLinePreview();
-  }
-
-  /**
-   * Commits the armed segment. If Shift is still held afterwards, immediately
-   * re-arms from the just-committed endpoint (commitTrigger "mousedown") so
-   * the next click continues a connected polyline instead of requiring the
-   * user to release and re-press Shift to resume line drawing.
-   */
-  #commitArmedLine(): void {
-    const points = this.#lineTool.commit();
-    this.#svgManager.clearPreviewLine();
-    if (points) {
-      this.commitPixels(this.#stampLinePixels(points));
-
-      if (this.#isShiftHeld) {
-        this.#lineTool.arm(points.at(-1) ?? points[0], "mousedown");
-        this.#refreshLinePreview();
-      }
-    }
-  }
-
-  #cancelLineIfArmed(): void {
-    if (!this.#lineTool.isArmed) {
-      return;
-    }
-
-    this.#lineTool.cancel();
-    this.#svgManager.clearPreviewLine();
-  }
-
-  #refreshLinePreview(): void {
-    if (!this.#lineTool.isArmed) {
-      return;
-    }
-
-    const points = this.#lineTool.getPreviewPoints() ?? [];
-    if (points.length > 0) {
-      this.#svgManager.setPreviewLine(
-        points[0],
-        points.at(-1) ?? points[0]
-      );
-    }
-  }
-
   /**
    * Flood-fills the connected region of same-colored pixels reachable from
    * (tx, ty) with the current brush color/opacity, committed as a single
    * atomic edit. No-ops when the target position is out of bounds or already
-   * matches the fill color (see FillTool.floodFill).
+   * matches the fill color (see Fill.floodFill).
    */
   #fill(
     tx: number,
     ty: number
   ): void {
-    const [r, g, b, a] = getColorAsRGBA(this.brush.getColor());
-    const fillColor: RGBA = { r, g, b, a };
+    const fillColor = toRGBA(this.brush.getColor());
 
-    const positions = FillTool.floodFill(this.#canvasBuffer, { x: tx, y: ty }, fillColor);
+    const positions = Fill.floodFill(
+      this.#canvasBuffer,
+      { x: tx, y: ty },
+      fillColor
+    );
     this.commitPixels(positions);
-  }
-
-  #drawColor(
-    tx: number,
-    ty: number,
-    color?: ColorInput
-  ): void {
-    const pixelColor = color ?? this.brush.getColor();
-    const [r, g, b, a] = getColorAsRGBA(pixelColor);
-
-    const pixels = this.brush.getAffectedPixels(tx, ty);
-    this.#canvasBuffer.drawPixels(pixels, { r, g, b, a });
-    this.#renderer.drawFrame();
-
-    this.#strokeColor ??= { r, g, b, a };
-    for (const pixel of pixels) {
-      this.#strokeDirty.set(`${pixel.x},${pixel.y}`, pixel);
-    }
-  }
-
-  /**
-   * Left mousedown in "select" mode: grabs the existing selection to move it
-   * when `pos` falls inside it, otherwise discards any prior selection and
-   * starts dragging out a new rectangle.
-   */
-  #handleSelectStart(
-    pos: Vec2
-  ): void {
-    if (this.#selectTool.state === "selected" && this.#selectTool.hitTest(pos)) {
-      this.#selectTool.startMove(pos);
-
-      const rect = this.#selectTool.rect;
-      const snapshot = this.#selectTool.snapshot;
-      if (rect && snapshot) {
-        this.#renderer.setFloatingOverlay({
-          sourceRect: rect,
-          pixels: snapshot,
-          eraseColor: this.#eraseColor,
-          blankSource: !this.#selectTool.willSkipErase
-        });
-        this.#renderer.drawFrame();
-      }
-
-      return;
-    }
-
-    this.#clearSelection();
-    const rect = this.#selectTool.startCreate(pos);
-    this.#svgManager.setSelectionRect(rect);
-  }
-
-  #handleSelectMove(
-    pos: Vec2
-  ): void {
-    if (this.#selectTool.state === "creating") {
-      const rect = this.#selectTool.updateCreate(pos);
-      if (rect) {
-        this.#svgManager.setSelectionRect(rect);
-      }
-
-      return;
-    }
-
-    if (this.#selectTool.state === "moving") {
-      const rect = this.#selectTool.updateMove(pos);
-      if (rect) {
-        this.#svgManager.setSelectionRect(rect);
-        this.#renderer.updateFloatingOverlayPosition(rect);
-        this.#renderer.drawFrame();
-      }
-    }
-  }
-
-  #handleSelectEnd(): void {
-    if (this.#selectTool.state === "creating") {
-      const rect = this.#selectTool.rect;
-      if (rect) {
-        const snapshot = SelectTool.captureSnapshot(this.#canvasBuffer, rect);
-        this.#selectTool.finishCreate(snapshot);
-      }
-
-      return;
-    }
-
-    if (this.#selectTool.state === "moving") {
-      const snapshot = this.#selectTool.snapshot;
-      const result = this.#selectTool.finishMove();
-      this.#renderer.clearFloatingOverlay();
-
-      if (result && snapshot) {
-        if (!result.skipErase) {
-          this.#eraseRegion(result.source);
-        }
-        this.#paintRegion(result.dest, snapshot);
-      }
-
-      const rect = this.#selectTool.rect;
-      if (rect) {
-        this.#svgManager.setSelectionRect(rect);
-      }
-    }
-  }
-
-  /**
-   * Ctrl/Cmd+C: snapshots the active selection into SelectTool's clipboard.
-   * No-op (returns false, letting the browser's default copy proceed)
-   * unless a selection is currently active.
-   */
-  #handleCopy(): boolean {
-    if (this.#selectTool.state !== "selected") {
-      return false;
-    }
-
-    this.#selectTool.copy();
-
-    return true;
-  }
-
-  /**
-   * Ctrl/Cmd+V: stamps the clipboard snapshot back onto the buffer at the
-   * exact position it was copied from, and makes it the new active
-   * selection so the next drag relocates the duplicate.
-   */
-  #handlePaste(): boolean {
-    const result = this.#selectTool.paste();
-    if (!result) {
-      return false;
-    }
-
-    this.#paintRegion(result.rect, result.pixels);
-    this.#svgManager.setSelectionRect(result.rect);
-
-    return true;
-  }
-
-  /**
-   * Delete key: fills the active selection with the configured erase color.
-   * The selection stays active, now over blanked pixels.
-   */
-  #handleDelete(): boolean {
-    if (this.#selectTool.state !== "selected") {
-      return false;
-    }
-
-    const rect = this.#selectTool.rect;
-    if (!rect) {
-      return false;
-    }
-
-    this.#eraseRegion(rect);
-    this.#selectTool.markErased(this.#eraseColor);
-
-    return true;
-  }
-
-  #clearSelection(): void {
-    this.#selectTool.clear();
-    this.#svgManager.clearSelectionRect();
-    this.#renderer.clearFloatingOverlay();
-  }
-
-  #refreshSelectionOverlay(): void {
-    const rect = this.#selectTool.rect;
-    if (rect) {
-      this.#svgManager.setSelectionRect(rect);
-    }
-  }
-
-  /**
-   * Fills every position in `rect` with the configured erase color. Used to
-   * vacate a Delete'd or moved-away-from selection. Out-of-bounds positions
-   * are silently clipped by CanvasBuffer.drawPixels, same as every other
-   * paint path in this class.
-   */
-  #eraseRegion(
-    rect: SelectionRect
-  ): void {
-    const positions: Vec2[] = [];
-    for (let y = 0; y < rect.height; y++) {
-      for (let x = 0; x < rect.width; x++) {
-        positions.push({ x: rect.x + x, y: rect.y + y });
-      }
-    }
-
-    this.#canvasBuffer.drawPixels(positions, this.#eraseColor);
-    this.#canvasBuffer.copyToMaster();
-    this.#renderer.drawFrame();
-    this.#onDrawEnd?.();
-  }
-
-  /**
-   * Plain-overwrites `rect` with `pixels` (multi-colored, unlike
-   * #eraseRegion's uniform fill) — the commit step for a Move's destination
-   * or a Duplicate paste.
-   */
-  #paintRegion(
-    rect: SelectionRect,
-    pixels: RGBA[]
-  ): void {
-    this.#canvasBuffer.drawRegion(rect, pixels);
-    this.#canvasBuffer.copyToMaster();
-    this.#renderer.drawFrame();
-    this.#onDrawEnd?.();
   }
 }

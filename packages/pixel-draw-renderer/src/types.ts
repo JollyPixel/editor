@@ -28,22 +28,7 @@ export interface RGBA {
   a: number;
 }
 
-export interface DefaultViewport {
-  readonly zoom: number;
-  readonly camera: Readonly<Vec2>;
-}
-
-export interface DefaultPixelBuffer {
-  getSize(): Vec2;
-  setSize(size: Vec2): void;
-  getPixels(): Uint8ClampedArray;
-  setPixels(pixels: Uint8ClampedArray, size: Vec2): void;
-  drawPixels(positions: Vec2[], color: RGBA): void;
-  copyToMaster(): void;
-  samplePixel(x: number, y: number): [number, number, number, number];
-}
-
-export interface Brush {
+export interface BrushHighlight {
   readonly size: number;
   readonly colorInline: string;
   readonly colorOutline: string;

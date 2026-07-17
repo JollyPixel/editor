@@ -3,7 +3,12 @@ import {
   PixelBuffer,
   type PixelBufferOptions
 } from "./PixelBuffer.ts";
-import type { DefaultPixelBuffer, RGBA, SelectionRect, Vec2 } from "../types.ts";
+import type {
+  RGBA,
+  SelectionRect,
+  Vec2
+} from "../types.ts";
+import type { DefaultPixelBuffer } from "./types.ts";
 
 export type CanvasBufferOptions = PixelBufferOptions;
 
@@ -38,8 +43,14 @@ export class CanvasBuffer implements DefaultPixelBuffer {
 
   #syncCanvasFromBuffer(): void {
     const size = this.#buffer.getSize();
-    const imageData = this.#workingCtx.createImageData(size.x, size.y);
-    imageData.data.set(this.#buffer.getPixels());
+    const imageData = this.#workingCtx.createImageData(
+      size.x,
+      size.y
+    );
+
+    imageData.data.set(
+      this.#buffer.getPixels()
+    );
     this.#workingCtx.putImageData(imageData, 0, 0);
   }
 
@@ -57,6 +68,7 @@ export class CanvasBuffer implements DefaultPixelBuffer {
     this.#buffer.setSize(size);
     this.#workingCanvas.width = size.x;
     this.#workingCanvas.height = size.y;
+
     this.#syncCanvasFromBuffer();
   }
 
@@ -108,6 +120,7 @@ export class CanvasBuffer implements DefaultPixelBuffer {
     this.#buffer.setPixels(pixels, size);
     this.#workingCanvas.width = size.x;
     this.#workingCanvas.height = size.y;
+
     this.#syncCanvasFromBuffer();
   }
 
@@ -115,7 +128,9 @@ export class CanvasBuffer implements DefaultPixelBuffer {
    * Returns a copy — unlike PixelBuffer.getPixels, mutating it won't affect the canvas.
    */
   getPixels(): Uint8ClampedArray {
-    return Uint8ClampedArray.from(this.#buffer.getPixels());
+    return Uint8ClampedArray.from(
+      this.#buffer.getPixels()
+    );
   }
 
   /**
@@ -123,18 +138,22 @@ export class CanvasBuffer implements DefaultPixelBuffer {
    * instead of one per pixel (a real cost for large edits like a flood fill).
    */
   drawPixels(
-    pixels: Vec2[],
+    pixels: Iterable<Vec2>,
     color: RGBA
   ): void {
-    this.#buffer.drawPixels(pixels, color);
+    const positions = Array.isArray(pixels) ? pixels : [...pixels];
+    this.#buffer.drawPixels(positions, color);
 
     const size = this.#buffer.getSize();
     let minX = Infinity;
     let minY = Infinity;
     let maxX = -Infinity;
     let maxY = -Infinity;
-    for (const pixel of pixels) {
-      if (pixel.x < 0 || pixel.x >= size.x || pixel.y < 0 || pixel.y >= size.y) {
+    for (const pixel of positions) {
+      if (
+        pixel.x < 0 || pixel.x >= size.x ||
+        pixel.y < 0 || pixel.y >= size.y
+      ) {
         continue;
       }
 
@@ -150,17 +169,23 @@ export class CanvasBuffer implements DefaultPixelBuffer {
 
     const rectWidth = maxX - minX + 1;
     const rectHeight = maxY - minY + 1;
-    const imageData = this.#workingCtx.createImageData(rectWidth, rectHeight);
+    const imageData = this.#workingCtx.createImageData(
+      rectWidth,
+      rectHeight
+    );
+
     for (let y = 0; y < rectHeight; y++) {
       for (let x = 0; x < rectWidth; x++) {
         const [r, g, b, a] = this.#buffer.samplePixel(minX + x, minY + y);
         const index = (y * rectWidth + x) * 4;
+
         imageData.data[index] = r;
         imageData.data[index + 1] = g;
         imageData.data[index + 2] = b;
         imageData.data[index + 3] = a;
       }
     }
+
     this.#workingCtx.putImageData(imageData, minX, minY);
   }
 
@@ -185,17 +210,23 @@ export class CanvasBuffer implements DefaultPixelBuffer {
 
     const clipWidth = maxX - minX;
     const clipHeight = maxY - minY;
-    const imageData = this.#workingCtx.createImageData(clipWidth, clipHeight);
+    const imageData = this.#workingCtx.createImageData(
+      clipWidth,
+      clipHeight
+    );
+
     for (let y = 0; y < clipHeight; y++) {
       for (let x = 0; x < clipWidth; x++) {
         const [r, g, b, a] = this.#buffer.samplePixel(minX + x, minY + y);
         const index = (y * clipWidth + x) * 4;
+
         imageData.data[index] = r;
         imageData.data[index + 1] = g;
         imageData.data[index + 2] = b;
         imageData.data[index + 3] = a;
       }
     }
+
     this.#workingCtx.putImageData(imageData, minX, minY);
   }
 

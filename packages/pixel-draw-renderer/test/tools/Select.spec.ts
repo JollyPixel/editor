@@ -3,7 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { SelectTool } from "../../src/input/SelectTool.ts";
+import { Select } from "../../src/tools/Select.ts";
 import { PixelBuffer } from "../../src/buffer/PixelBuffer.ts";
 import type { RGBA } from "../../src/types.ts";
 
@@ -11,22 +11,22 @@ import type { RGBA } from "../../src/types.ts";
 const kTestMaxSize = 32;
 const kRed: RGBA = { r: 255, g: 0, b: 0, a: 255 };
 
-describe("SelectTool", () => {
+describe("Select", () => {
   describe("normalizeRect (static)", () => {
     test("a === b yields a 1x1 rect", () => {
       assert.deepStrictEqual(
-        SelectTool.normalizeRect({ x: 3, y: 3 }, { x: 3, y: 3 }),
+        Select.normalizeRect({ x: 3, y: 3 }, { x: 3, y: 3 }),
         { x: 3, y: 3, width: 1, height: 1 }
       );
     });
 
     test("normalizes regardless of drag direction", () => {
       assert.deepStrictEqual(
-        SelectTool.normalizeRect({ x: 5, y: 5 }, { x: 2, y: 1 }),
+        Select.normalizeRect({ x: 5, y: 5 }, { x: 2, y: 1 }),
         { x: 2, y: 1, width: 4, height: 5 }
       );
       assert.deepStrictEqual(
-        SelectTool.normalizeRect({ x: 2, y: 1 }, { x: 5, y: 5 }),
+        Select.normalizeRect({ x: 2, y: 1 }, { x: 5, y: 5 }),
         { x: 2, y: 1, width: 4, height: 5 }
       );
     });
@@ -37,7 +37,7 @@ describe("SelectTool", () => {
       const buf = new PixelBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
       buf.drawPixels([{ x: 1, y: 1 }], kRed);
 
-      const pixels = SelectTool.captureSnapshot(buf, { x: 1, y: 1, width: 2, height: 1 });
+      const pixels = Select.captureSnapshot(buf, { x: 1, y: 1, width: 2, height: 1 });
 
       assert.deepStrictEqual(pixels[0], kRed);
       assert.notDeepStrictEqual(pixels[1], kRed);
@@ -46,7 +46,7 @@ describe("SelectTool", () => {
     test("out-of-bounds positions sample as fully transparent", () => {
       const buf = new PixelBuffer({ size: { x: 2, y: 2 }, maxSize: kTestMaxSize });
 
-      const pixels = SelectTool.captureSnapshot(buf, { x: 1, y: 1, width: 2, height: 2 });
+      const pixels = Select.captureSnapshot(buf, { x: 1, y: 1, width: 2, height: 2 });
 
       // (2,1), (1,2), (2,2) are out of bounds; only (1,1) is real.
       assert.deepStrictEqual(pixels[1], { r: 0, g: 0, b: 0, a: 0 });
@@ -57,14 +57,14 @@ describe("SelectTool", () => {
 
   describe("create flow", () => {
     test("starts idle", () => {
-      const tool = new SelectTool();
+      const tool = new Select();
       assert.strictEqual(tool.state, "idle");
       assert.strictEqual(tool.rect, null);
       assert.strictEqual(tool.snapshot, null);
     });
 
     test("startCreate arms a 1x1 rect and enters 'creating'", () => {
-      const tool = new SelectTool();
+      const tool = new Select();
       const rect = tool.startCreate({ x: 2, y: 2 });
 
       assert.strictEqual(tool.state, "creating");
@@ -73,7 +73,7 @@ describe("SelectTool", () => {
     });
 
     test("updateCreate grows the rect from the fixed start corner", () => {
-      const tool = new SelectTool();
+      const tool = new Select();
       tool.startCreate({ x: 2, y: 2 });
       const rect = tool.updateCreate({ x: 4, y: 5 });
 
@@ -81,12 +81,12 @@ describe("SelectTool", () => {
     });
 
     test("updateCreate is a no-op while not creating", () => {
-      const tool = new SelectTool();
+      const tool = new Select();
       assert.strictEqual(tool.updateCreate({ x: 1, y: 1 }), null);
     });
 
     test("finishCreate stores the snapshot and enters 'selected'", () => {
-      const tool = new SelectTool();
+      const tool = new Select();
       tool.startCreate({ x: 0, y: 0 });
       tool.finishCreate([kRed]);
 
@@ -95,7 +95,7 @@ describe("SelectTool", () => {
     });
 
     test("finishCreate is a no-op while not creating", () => {
-      const tool = new SelectTool();
+      const tool = new Select();
       tool.finishCreate([kRed]);
       assert.strictEqual(tool.state, "idle");
     });
@@ -103,7 +103,7 @@ describe("SelectTool", () => {
 
   describe("hitTest", () => {
     test("true for a position inside the selected rect", () => {
-      const tool = new SelectTool();
+      const tool = new Select();
       tool.startCreate({ x: 0, y: 0 });
       tool.updateCreate({ x: 3, y: 3 });
       tool.finishCreate(new Array(16).fill(kRed));
@@ -112,7 +112,7 @@ describe("SelectTool", () => {
     });
 
     test("false for a position outside the rect", () => {
-      const tool = new SelectTool();
+      const tool = new Select();
       tool.startCreate({ x: 0, y: 0 });
       tool.finishCreate([kRed]);
 
@@ -120,7 +120,7 @@ describe("SelectTool", () => {
     });
 
     test("false while not 'selected'", () => {
-      const tool = new SelectTool();
+      const tool = new Select();
       tool.startCreate({ x: 0, y: 0 });
 
       assert.strictEqual(tool.hitTest({ x: 0, y: 0 }), false);
@@ -128,8 +128,8 @@ describe("SelectTool", () => {
   });
 
   describe("move flow", () => {
-    function makeSelected(): SelectTool {
-      const tool = new SelectTool();
+    function makeSelected(): Select {
+      const tool = new Select();
       tool.startCreate({ x: 0, y: 0 });
       tool.updateCreate({ x: 1, y: 1 });
       tool.finishCreate(new Array(4).fill(kRed));
@@ -138,7 +138,7 @@ describe("SelectTool", () => {
     }
 
     test("startMove requires 'selected'; no-op otherwise", () => {
-      const tool = new SelectTool();
+      const tool = new Select();
       tool.startMove({ x: 0, y: 0 });
       assert.strictEqual(tool.state, "idle");
     });
@@ -198,7 +198,7 @@ describe("SelectTool", () => {
     });
 
     test("a paste's first move has skipErase true — the original must survive", () => {
-      const tool = new SelectTool();
+      const tool = new Select();
       tool.startCreate({ x: 0, y: 0 });
       tool.finishCreate([kRed]);
       tool.copy();
@@ -212,7 +212,7 @@ describe("SelectTool", () => {
     });
 
     test("skipErase is consumed after the first real move — a second move erases normally", () => {
-      const tool = new SelectTool();
+      const tool = new Select();
       tool.startCreate({ x: 0, y: 0 });
       tool.finishCreate([kRed]);
       tool.copy();
@@ -230,7 +230,7 @@ describe("SelectTool", () => {
     });
 
     test("a click-only drag after a paste does not consume skipErase", () => {
-      const tool = new SelectTool();
+      const tool = new Select();
       tool.startCreate({ x: 0, y: 0 });
       tool.finishCreate([kRed]);
       tool.copy();
@@ -261,7 +261,7 @@ describe("SelectTool", () => {
 
   describe("clear", () => {
     test("resets to idle, dropping rect and snapshot but not the clipboard", () => {
-      const tool = new SelectTool();
+      const tool = new Select();
       tool.startCreate({ x: 0, y: 0 });
       tool.finishCreate([kRed]);
       tool.copy();
@@ -277,7 +277,7 @@ describe("SelectTool", () => {
 
   describe("markErased", () => {
     test("fills the snapshot with the given color, sized to the rect", () => {
-      const tool = new SelectTool();
+      const tool = new Select();
       tool.startCreate({ x: 0, y: 0 });
       tool.updateCreate({ x: 1, y: 0 });
       tool.finishCreate([kRed, kRed]);
@@ -291,18 +291,18 @@ describe("SelectTool", () => {
 
   describe("copy / paste", () => {
     test("copy is a no-op without a selection", () => {
-      const tool = new SelectTool();
+      const tool = new Select();
       tool.copy();
       assert.strictEqual(tool.hasClipboard, false);
     });
 
     test("paste returns null when the clipboard is empty", () => {
-      const tool = new SelectTool();
+      const tool = new Select();
       assert.strictEqual(tool.paste(), null);
     });
 
     test("paste restores the clipboard's rect/pixels and becomes the active selection", () => {
-      const tool = new SelectTool();
+      const tool = new Select();
       tool.startCreate({ x: 2, y: 2 });
       tool.finishCreate([kRed]);
       tool.copy();
@@ -316,7 +316,7 @@ describe("SelectTool", () => {
     });
 
     test("paste is repeatable — clipboard survives being pasted", () => {
-      const tool = new SelectTool();
+      const tool = new Select();
       tool.startCreate({ x: 0, y: 0 });
       tool.finishCreate([kRed]);
       tool.copy();

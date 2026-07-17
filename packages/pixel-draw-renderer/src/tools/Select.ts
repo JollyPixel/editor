@@ -1,7 +1,12 @@
 // Import Internal Dependencies
-import type { DefaultPixelBuffer, RGBA, SelectionRect, Vec2 } from "../types.ts";
+import type {
+  RGBA,
+  SelectionRect,
+  Vec2
+} from "../types.ts";
+import type { DefaultPixelBuffer } from "../buffer/types.ts";
 
-export type SelectToolState = "idle" | "creating" | "selected" | "moving";
+export type SelectState = "idle" | "creating" | "selected" | "moving";
 
 export interface ClipboardSnapshot {
   rect: SelectionRect;
@@ -23,8 +28,8 @@ export interface PasteResult {
  * Rectangle-selection state machine
  * (idle -> creating -> selected -> moving -> selected) + clipboard.
  */
-export class SelectTool {
-  #state: SelectToolState = "idle";
+export class Select {
+  #state: SelectState = "idle";
   #createStart: Vec2 | null = null;
   #rect: SelectionRect | null = null;
   #snapshot: RGBA[] | null = null;
@@ -39,7 +44,7 @@ export class SelectTool {
    */
   #skipNextErase = false;
 
-  get state(): SelectToolState {
+  get state(): SelectState {
     return this.#state;
   }
 
@@ -77,24 +82,30 @@ export class SelectTool {
    * Callers should already have ruled out a move via hitTest.
    */
   startCreate(
-    pos: Vec2
+    position: Vec2
   ): SelectionRect {
     this.#state = "creating";
-    this.#createStart = pos;
-    this.#rect = SelectTool.normalizeRect(pos, pos);
+    this.#createStart = position;
+    this.#rect = Select.normalizeRect(position, position);
     this.#skipNextErase = false;
 
     return this.#rect;
   }
 
   updateCreate(
-    pos: Vec2
+    position: Vec2
   ): SelectionRect | null {
-    if (this.#state !== "creating" || !this.#createStart) {
+    if (
+      this.#state !== "creating" ||
+      !this.#createStart
+    ) {
       return null;
     }
 
-    this.#rect = SelectTool.normalizeRect(this.#createStart, pos);
+    this.#rect = Select.normalizeRect(
+      this.#createStart,
+      position
+    );
 
     return this.#rect;
   }
@@ -123,37 +134,50 @@ export class SelectTool {
   hitTest(
     pos: Vec2
   ): boolean {
-    if (this.#state !== "selected" || !this.#rect) {
+    if (
+      this.#state !== "selected" ||
+      !this.#rect
+    ) {
       return false;
     }
 
     const r = this.#rect;
 
-    return pos.x >= r.x && pos.x < r.x + r.width && pos.y >= r.y && pos.y < r.y + r.height;
+    return pos.x >= r.x &&
+      pos.x < r.x + r.width &&
+      pos.y >= r.y &&
+      pos.y < r.y + r.height;
   }
 
   startMove(
-    pos: Vec2
+    position: Vec2
   ): void {
-    if (this.#state !== "selected" || !this.#rect) {
+    if (
+      this.#state !== "selected" ||
+      !this.#rect
+    ) {
       return;
     }
 
     this.#state = "moving";
-    this.#moveOrigin = pos;
+    this.#moveOrigin = position;
     this.#moveBaseRect = this.#rect;
     this.#liveRect = this.#rect;
   }
 
   updateMove(
-    pos: Vec2
+    position: Vec2
   ): SelectionRect | null {
-    if (this.#state !== "moving" || !this.#moveOrigin || !this.#moveBaseRect) {
+    if (
+      this.#state !== "moving" ||
+      !this.#moveOrigin ||
+      !this.#moveBaseRect
+    ) {
       return null;
     }
 
-    const dx = pos.x - this.#moveOrigin.x;
-    const dy = pos.y - this.#moveOrigin.y;
+    const dx = position.x - this.#moveOrigin.x;
+    const dy = position.y - this.#moveOrigin.y;
     this.#liveRect = {
       ...this.#moveBaseRect,
       x: this.#moveBaseRect.x + dx,
@@ -169,7 +193,11 @@ export class SelectTool {
    * means the caller must paint dest but not erase source (see #skipNextErase).
    */
   finishMove(): MoveResult | null {
-    if (this.#state !== "moving" || !this.#moveBaseRect || !this.#liveRect) {
+    if (
+      this.#state !== "moving" ||
+      !this.#moveBaseRect ||
+      !this.#liveRect
+    ) {
       return null;
     }
 
@@ -188,7 +216,11 @@ export class SelectTool {
     const skipErase = this.#skipNextErase;
     this.#skipNextErase = false;
 
-    return { source, dest, skipErase };
+    return {
+      source,
+      dest,
+      skipErase
+    };
   }
 
   /** Discards the current selection entirely. Does not clear the clipboard. */
@@ -215,7 +247,9 @@ export class SelectTool {
       return;
     }
 
-    this.#snapshot = new Array(this.#rect.width * this.#rect.height).fill(eraseColor);
+    this.#snapshot = new Array(
+      this.#rect.width * this.#rect.height
+    ).fill(eraseColor);
   }
 
   /** Snapshots the current selection into the clipboard. No-op with nothing selected. */
@@ -225,8 +259,12 @@ export class SelectTool {
     }
 
     this.#clipboard = {
-      rect: { ...this.#rect },
-      pixels: [...this.#snapshot]
+      rect: {
+        ...this.#rect
+      },
+      pixels: [
+        ...this.#snapshot
+      ]
     };
   }
 
@@ -239,12 +277,19 @@ export class SelectTool {
       return null;
     }
 
-    this.#rect = { ...this.#clipboard.rect };
-    this.#snapshot = [...this.#clipboard.pixels];
+    this.#rect = {
+      ...this.#clipboard.rect
+    };
+    this.#snapshot = [
+      ...this.#clipboard.pixels
+    ];
     this.#state = "selected";
     this.#skipNextErase = true;
 
-    return { rect: this.#rect, pixels: this.#snapshot };
+    return {
+      rect: this.#rect,
+      pixels: this.#snapshot
+    };
   }
 
   /**
@@ -280,7 +325,10 @@ export class SelectTool {
         const x = rect.x + rx;
         const y = rect.y + ry;
 
-        if (x < 0 || x >= size.x || y < 0 || y >= size.y) {
+        if (
+          x < 0 || x >= size.x ||
+          y < 0 || y >= size.y
+        ) {
           pixels.push({ r: 0, g: 0, b: 0, a: 0 });
           continue;
         }

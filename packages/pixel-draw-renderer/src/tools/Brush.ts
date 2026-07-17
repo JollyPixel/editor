@@ -2,10 +2,14 @@
 import Color from "colorjs.io";
 
 // Import Internal Dependencies
-import { getColorAsRGBA } from "../colors.ts";
-import type { ColorInput, Vec2 } from "../types.ts";
+import { getColorAsRGBA } from "../utils/colors.ts";
+import { clamp } from "../utils/math.ts";
+import type {
+  ColorInput,
+  Vec2
+} from "../types.ts";
 
-export interface BrushManagerOptions {
+export interface BrushOptions {
   /**
    * Base color of the brush. Can be any valid CSS color string or a
    * colorjs.io `Color` instance. Opacity can be controlled separately with
@@ -40,7 +44,7 @@ export interface BrushManagerOptions {
  * Manages brush properties such as color, size, and opacity for a pixel drawing application.
  * Provides methods to set and get these properties, as well as to calculate the affected pixels based on the brush size.
  */
-export class BrushManager {
+export class Brush {
   #color: Color;
   #size: number;
   #maxSize: number;
@@ -48,7 +52,7 @@ export class BrushManager {
   #colorOutline: string;
 
   constructor(
-    options: BrushManagerOptions = {}
+    options: BrushOptions = {}
   ) {
     const {
       color = "#000000",
@@ -74,7 +78,7 @@ export class BrushManager {
   ): void {
     // Preserve the current opacity when none is given, mirroring the
     // previous behavior where color and opacity were tracked separately.
-    const alpha = opacity === undefined ? (this.#color?.alpha ?? 1) : Math.max(0, Math.min(1, opacity));
+    const alpha = opacity === undefined ? (this.#color?.alpha ?? 1) : clamp(opacity, 0, 1);
     this.#color = new Color(color);
     this.#color.alpha = alpha;
   }
@@ -98,7 +102,7 @@ export class BrushManager {
   setOpacity(
     opacity: number
   ): void {
-    this.#color.alpha = Math.max(0, Math.min(1, opacity));
+    this.#color.alpha = clamp(opacity, 0, 1);
   }
 
   getOpacity(): number {
@@ -130,36 +134,32 @@ export class BrushManager {
   setSize(
     size: number
   ): void {
-    this.#size = Math.max(1, Math.min(this.#maxSize, size));
+    this.#size = clamp(size, 1, this.#maxSize);
   }
 
   getSize(): number {
     return this.#size;
   }
 
-  getAffectedPixels(
+  * getAffectedPixels(
     x: number,
     y: number
-  ): Vec2[] {
-    const pixels: Vec2[] = [];
-
+  ): IterableIterator<Vec2> {
     const half = Math.floor(this.#size / 2);
     if (this.#size % 2 === 0) {
       for (let dx = -half; dx < half; dx++) {
         for (let dy = -half; dy < half; dy++) {
-          pixels.push({ x: x + dx, y: y + dy });
+          yield { x: x + dx, y: y + dy };
         }
       }
 
-      return pixels;
+      return;
     }
 
     for (let dx = -half; dx <= half; dx++) {
       for (let dy = -half; dy <= half; dy++) {
-        pixels.push({ x: x + dx, y: y + dy });
+        yield { x: x + dx, y: y + dy };
       }
     }
-
-    return pixels;
   }
 }
