@@ -3,7 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { FillTool } from "../../src/input/FillTool.ts";
+import { Fill } from "../../src/tools/Fill.ts";
 import { PixelBuffer } from "../../src/buffer/PixelBuffer.ts";
 import type { RGBA, Vec2 } from "../../src/types.ts";
 
@@ -19,7 +19,7 @@ function sortPositions(
   return [...positions].sort((a, b) => (a.y - b.y) || (a.x - b.x));
 }
 
-describe("FillTool", () => {
+describe("Fill", () => {
   describe("floodFill", () => {
     test("fills a uniformly colored rectangle exactly (no under/over-fill)", () => {
       const buf = new PixelBuffer({ size: { x: 6, y: 6 }, maxSize: kTestMaxSize });
@@ -41,7 +41,7 @@ describe("FillTool", () => {
       }
       buf.drawPixels(rect, kColorB);
 
-      const positions = FillTool.floodFill(buf, { x: 2, y: 3 }, kFillColor);
+      const positions = Fill.floodFill(buf, { x: 2, y: 3 }, kFillColor);
 
       assert.deepStrictEqual(sortPositions(positions), sortPositions(rect));
     });
@@ -59,7 +59,7 @@ describe("FillTool", () => {
       buf.drawPixels(all, kColorB);
       buf.drawPixels([{ x: 0, y: 0 }, { x: 2, y: 0 }, { x: 0, y: 2 }, { x: 2, y: 2 }], kColorA);
 
-      const positions = FillTool.floodFill(buf, { x: 0, y: 0 }, kFillColor);
+      const positions = Fill.floodFill(buf, { x: 0, y: 0 }, kFillColor);
 
       assert.deepStrictEqual(positions, [{ x: 0, y: 0 }]);
     });
@@ -77,7 +77,7 @@ describe("FillTool", () => {
       buf.drawPixels([{ x: 0, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 0 }, { x: 1, y: 1 }], kColorA);
       buf.drawPixels([{ x: 3, y: 0 }, { x: 3, y: 1 }, { x: 4, y: 0 }, { x: 4, y: 1 }], kColorA);
 
-      const positions = FillTool.floodFill(buf, { x: 0, y: 0 }, kFillColor);
+      const positions = Fill.floodFill(buf, { x: 0, y: 0 }, kFillColor);
 
       assert.deepStrictEqual(
         sortPositions(positions),
@@ -88,7 +88,7 @@ describe("FillTool", () => {
     test("returns [] when the seed already matches fillColor (no-op)", () => {
       const buf = new PixelBuffer({ size: { x: 4, y: 4 }, defaultColor: kColorA, maxSize: kTestMaxSize });
 
-      const positions = FillTool.floodFill(buf, { x: 1, y: 1 }, kColorA);
+      const positions = Fill.floodFill(buf, { x: 1, y: 1 }, kColorA);
 
       assert.deepStrictEqual(positions, []);
     });
@@ -96,14 +96,14 @@ describe("FillTool", () => {
     test("returns [] when the seed is out of bounds", () => {
       const buf = new PixelBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
 
-      assert.deepStrictEqual(FillTool.floodFill(buf, { x: -1, y: 0 }, kFillColor), []);
-      assert.deepStrictEqual(FillTool.floodFill(buf, { x: 0, y: 4 }, kFillColor), []);
+      assert.deepStrictEqual(Fill.floodFill(buf, { x: -1, y: 0 }, kFillColor), []);
+      assert.deepStrictEqual(Fill.floodFill(buf, { x: 0, y: 4 }, kFillColor), []);
     });
 
     test("returns each position exactly once", () => {
       const buf = new PixelBuffer({ size: { x: 4, y: 4 }, defaultColor: kColorA, maxSize: kTestMaxSize });
 
-      const positions = FillTool.floodFill(buf, { x: 1, y: 1 }, kFillColor);
+      const positions = Fill.floodFill(buf, { x: 1, y: 1 }, kFillColor);
       const keys = positions.map((p) => `${p.x},${p.y}`);
 
       assert.strictEqual(keys.length, new Set(keys).size);
@@ -112,7 +112,7 @@ describe("FillTool", () => {
     test("excludes pixel (0,0) when it differs from the flood-filled region (PixelBuffer's always-transparent origin)", () => {
       const buf = new PixelBuffer({ size: { x: 3, y: 3 }, defaultColor: kColorA, maxSize: kTestMaxSize });
 
-      const positions = FillTool.floodFill(buf, { x: 1, y: 1 }, kFillColor);
+      const positions = Fill.floodFill(buf, { x: 1, y: 1 }, kFillColor);
 
       assert.strictEqual(positions.some((p) => p.x === 0 && p.y === 0), false);
       assert.strictEqual(positions.length, 8, "all pixels except the transparent origin");

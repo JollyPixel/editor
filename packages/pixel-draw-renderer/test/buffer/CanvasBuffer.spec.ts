@@ -85,6 +85,18 @@ describe("CanvasBuffer", () => {
       assert.deepStrictEqual(buf.samplePixel(4, 4), [100, 100, 100, 255]);
     });
 
+    test("accepts a lazy iterable (generator), not just an array", () => {
+      const buf = new CanvasBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
+      function* positions() {
+        yield { x: 1, y: 1 };
+        yield { x: 2, y: 2 };
+      }
+
+      buf.drawPixels(positions(), { r: 10, g: 20, b: 30, a: 255 });
+      assert.deepStrictEqual(buf.samplePixel(1, 1), [10, 20, 30, 255]);
+      assert.deepStrictEqual(buf.samplePixel(2, 2), [10, 20, 30, 255]);
+    });
+
     test("skips the canvas sync entirely when every position is out of bounds", () => {
       const buf = new CanvasBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
       const ctx = (buf.getCanvas() as unknown as MockCanvasElement)._ctx;

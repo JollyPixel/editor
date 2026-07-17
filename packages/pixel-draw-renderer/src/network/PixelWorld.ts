@@ -45,7 +45,7 @@ export class PixelWorld {
     return this.#buffers.has(bufferId);
   }
 
-  getBufferIds(): string[] {
-    return [...this.#buffers.keys()];
+  getBufferIds(): IterableIterator<string> {
+    return this.#buffers.keys();
   }
 }

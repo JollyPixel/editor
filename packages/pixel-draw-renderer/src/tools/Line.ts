@@ -1,5 +1,7 @@
 // Import Internal Dependencies
-import type { Vec2 } from "../types.ts";
+import type {
+  Vec2
+} from "../types.ts";
 
 export type LineCommitTrigger = "mousedown" | "mouseup";
 
@@ -9,7 +11,7 @@ export type LineCommitTrigger = "mousedown" | "mouseup";
  * Has no brush knowledge — callers expand the raw points into brush-stamped
  * pixels themselves (see CanvasManager).
  */
-export class LineTool {
+export class Line {
   #armed = false;
   #start: Vec2 | null = null;
   #end: Vec2 | null = null;
@@ -57,7 +59,7 @@ export class LineTool {
       return null;
     }
 
-    return LineTool.rasterize(this.#start, this.#end);
+    return Line.rasterize(this.#start, this.#end);
   }
 
   /**

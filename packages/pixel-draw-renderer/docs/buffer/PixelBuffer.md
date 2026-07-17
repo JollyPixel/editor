@@ -1,0 +1,101 @@
+# PixelBuffer
+
+`PixelBuffer` holds raw RGBA pixel data with no DOM dependency, so it can run in a headless environment (server, tests) as well as behind a Canvas2D adapter in the browser (used internally by `CanvasManager`). It's the buffer type used by [`PixelWorld`](../network/PixelWorld.md) for server-side pixel storage.
+
+It keeps two backing arrays: a `working` buffer at the current texture size, and a `master` buffer pre-allocated at `maxSize × maxSize` that only gets updated on `copyToMaster()`. Growing `working` back up (via `setSize`) reads from `master`, so previously committed content beyond a temporarily shrunk size isn't lost.
+
+## Types
+
+```ts
+new PixelBuffer(options: PixelBufferOptions)
+
+interface PixelBufferOptions {
+  size: Vec2;
+  /**
+   * Default fill color for newly created pixels. Accepts an RGBA object, a
+   * CSS color string (hex, rgb(), hsl(), named color, ...) or a colorjs.io
+   * `Color` instance.
+   * @default { r: 255, g: 255, b: 255, a: 255 }
+   */
+  defaultColor?: RGBA | ColorInput;
+  /**
+   * Size of the backing master buffer. The working buffer can be resized up
+   * to this limit without losing data previously committed via copyToMaster.
+   * @default 2048
+   */
+  maxSize?: number;
+}
+```
+
+Pixel `(0, 0)` is always initialized fully transparent regardless of `defaultColor`.
+
+## Methods
+
+### `getSize` / `setSize`
+
+```ts
+getSize(): Vec2
+setSize(size: Vec2): void
+```
+
+Returns the current working-buffer size, or resizes it. Content is read back from the master buffer at the new dimensions (clipped to `maxSize`).
+
+---
+
+### `getPixels`
+
+```ts
+getPixels(): Uint8ClampedArray
+```
+
+Returns the **live** working buffer, not a copy; mutating it mutates the buffer directly. Contrast with `CanvasBuffer.getPixels()`, which returns a copy.
+
+---
+
+### `setPixels`
+
+```ts
+setPixels(pixels: Uint8ClampedArray, size: Vec2): void
+```
+
+Replaces the pixel data wholesale, resizing the buffer to match. Used to hydrate from a network snapshot or a decoded image.
+
+---
+
+### `drawPixels`
+
+```ts
+drawPixels(positions: Iterable<Vec2>, color: RGBA): void
+```
+
+Stamps a single color across a list of positions. Out-of-bounds positions are silently skipped, mirroring Canvas2D's implicit clipping of out-of-bounds `putImageData` calls.
+
+---
+
+### `drawRegion`
+
+```ts
+drawRegion(rect: SelectionRect, pixels: RGBA[]): void
+```
+
+Writes a rectangular block of per-pixel colors (row-major, `rect.width * rect.height` entries), unlike `drawPixels` which stamps one color across a list of positions. Out-of-bounds positions are skipped, same as `drawPixels`.
+
+---
+
+### `copyToMaster`
+
+```ts
+copyToMaster(): void
+```
+
+Commits the current working buffer into the master buffer at `(0, 0)`.
+
+---
+
+### `samplePixel`
+
+```ts
+samplePixel(x: number, y: number): [number, number, number, number]
+```
+
+Returns the `[r, g, b, a]` of the working buffer at `(x, y)`. Out-of-bounds reads return `0` for each component rather than throwing.

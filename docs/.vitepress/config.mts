@@ -300,16 +300,66 @@ export default defineConfig({
               text: "Core",
               items: [
                 {
-                  text: "BrushManager",
-                  link: "/pixel-draw-renderer/BrushManager"
-                },
-                {
                   text: "CanvasManager",
                   link: "/pixel-draw-renderer/CanvasManager"
                 },
                 {
-                  text: "Viewport",
-                  link: "/pixel-draw-renderer/Viewport"
+                  text: "Brush",
+                  link: "/pixel-draw-renderer/tools/Brush"
+                },
+                {
+                  text: "Types",
+                  link: "/pixel-draw-renderer/types"
+                }
+              ]
+            },
+            {
+              text: "Buffer",
+              items: [
+                {
+                  text: "PixelBuffer",
+                  link: "/pixel-draw-renderer/buffer/PixelBuffer"
+                },
+                {
+                  text: "Hooks",
+                  link: "/pixel-draw-renderer/buffer/hooks"
+                }
+              ]
+            },
+            {
+              text: "Network",
+              items: [
+                {
+                  text: "Overview",
+                  link: "/pixel-draw-renderer/network/index"
+                },
+                {
+                  text: "PixelWorld",
+                  link: "/pixel-draw-renderer/network/PixelWorld"
+                },
+                {
+                  text: "PixelSyncServer",
+                  link: "/pixel-draw-renderer/network/PixelSyncServer"
+                },
+                {
+                  text: "PixelSyncSession",
+                  link: "/pixel-draw-renderer/network/PixelSyncSession"
+                },
+                {
+                  text: "PixelTransport",
+                  link: "/pixel-draw-renderer/network/PixelTransport"
+                },
+                {
+                  text: "ConflictResolver",
+                  link: "/pixel-draw-renderer/network/ConflictResolver"
+                },
+                {
+                  text: "PixelCommandApplier",
+                  link: "/pixel-draw-renderer/network/PixelCommandApplier"
+                },
+                {
+                  text: "Types",
+                  link: "/pixel-draw-renderer/network/types"
                 }
               ]
             }

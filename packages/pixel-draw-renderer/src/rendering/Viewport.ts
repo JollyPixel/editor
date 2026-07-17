@@ -1,5 +1,11 @@
 // Import Internal Dependencies
-import type { DefaultViewport, Vec2 } from "../types.ts";
+import { clamp } from "../utils/math.ts";
+import type { Vec2 } from "../types.ts";
+
+export interface DefaultViewport {
+  readonly zoom: number;
+  readonly camera: Readonly<Vec2>;
+}
 
 export interface ViewportOptions {
   /**
@@ -63,10 +69,12 @@ export class Viewport implements DefaultViewport {
     this.#zoomMax = zoomMax;
 
     if (this.#zoomMax < this.#zoomMin) {
-      throw new Error(`Max zoom (${this.#zoomMax}) can't be under min zoom (${this.#zoomMin})`);
+      throw new Error(
+        `Max zoom (${this.#zoomMax}) can't be under min zoom (${this.#zoomMin})`
+      );
     }
 
-    this.#zoom = Math.max(this.#zoomMin, Math.min(this.#zoomMax, zoom));
+    this.#zoom = clamp(zoom, this.#zoomMin, this.#zoomMax);
     this.#zoomSensitivity = zoomSensitivity;
     this.#textureSize = structuredClone(textureSize);
   }
@@ -114,6 +122,7 @@ export class Viewport implements DefaultViewport {
     const texPx = this.getTexturePixelSize();
     this.#camera.x = this.#canvasWidth / 2 - texPx.x / 2;
     this.#camera.y = this.#canvasHeight / 2 - texPx.y / 2;
+
     this.clampCamera();
   }
 
@@ -126,8 +135,8 @@ export class Viewport implements DefaultViewport {
     const minY = -texPx.y + margin;
     const maxY = this.#canvasHeight - margin;
 
-    this.#camera.x = Math.max(minX, Math.min(maxX, this.#camera.x));
-    this.#camera.y = Math.max(minY, Math.min(maxY, this.#camera.y));
+    this.#camera.x = clamp(this.#camera.x, minX, maxX);
+    this.#camera.y = clamp(this.#camera.y, minY, maxY);
   }
 
   /**
@@ -141,10 +150,12 @@ export class Viewport implements DefaultViewport {
   ): void {
     const dx = (width - this.#canvasWidth) / 2;
     const dy = (height - this.#canvasHeight) / 2;
+
     this.#canvasWidth = width;
     this.#canvasHeight = height;
     this.#camera.x += dx;
     this.#camera.y += dy;
+
     this.clampCamera();
   }
 
@@ -162,10 +173,7 @@ export class Viewport implements DefaultViewport {
         ? this.#zoomSensitivity / 10
         : this.#zoomSensitivity;
 
-    const newZoom = Math.max(
-      this.#zoomMin,
-      Math.min(this.#zoomMax, this.#zoom - signDelta * smoothSensitivity)
-    );
+    const newZoom = clamp(this.#zoom - signDelta * smoothSensitivity, this.#zoomMin, this.#zoomMax);
 
     this.#camera.x -= worldX * newZoom - worldX * this.#zoom;
     this.#camera.y -= worldY * newZoom - worldY * this.#zoom;
@@ -200,11 +208,15 @@ export class Viewport implements DefaultViewport {
     parameters: { bounds: DOMRect; limit?: boolean; }
   ): Vec2 | null {
     const { bounds, limit } = parameters;
+
     const x = Math.floor((mx - bounds.left - this.#camera.x) / this.#zoom);
     const y = Math.floor((my - bounds.top - this.#camera.y) / this.#zoom);
 
     if (limit) {
-      if (x < 0 || x >= this.#textureSize.x || y < 0 || y >= this.#textureSize.y) {
+      if (
+        x < 0 || x >= this.#textureSize.x ||
+        y < 0 || y >= this.#textureSize.y
+      ) {
         return null;
       }
     }

@@ -1,5 +1,9 @@
 // Import Internal Dependencies
-import type { DefaultPixelBuffer, RGBA, Vec2 } from "../types.ts";
+import type {
+  RGBA,
+  Vec2
+} from "../types.ts";
+import type { DefaultPixelBuffer } from "../buffer/types.ts";
 
 /**
  * Computes the connected region of same-colored pixels reachable from a seed
@@ -7,7 +11,7 @@ import type { DefaultPixelBuffer, RGBA, Vec2 } from "../types.ts";
  * callers own reading the seed color, committing the result to a buffer, and
  * any network/hook emission (see CanvasManager).
  */
-export class FillTool {
+export class Fill {
   /**
    * 4-directional (orthogonal) flood fill starting at `seed`, matching every
    * pixel whose RGBA exactly equals the seed pixel's current color. Returns

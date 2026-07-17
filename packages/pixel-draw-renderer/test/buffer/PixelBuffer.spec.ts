@@ -68,6 +68,18 @@ describe("PixelBuffer", () => {
         buf.drawPixels([{ x: -1, y: 0 }, { x: 4, y: 4 }], { r: 1, g: 2, b: 3, a: 4 });
       });
     });
+
+    test("accepts a lazy iterable (generator), not just an array", () => {
+      const buf = new PixelBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
+      function* positions() {
+        yield { x: 1, y: 1 };
+        yield { x: 2, y: 2 };
+      }
+
+      buf.drawPixels(positions(), { r: 255, g: 0, b: 0, a: 255 });
+      assert.deepStrictEqual(buf.samplePixel(1, 1), [255, 0, 0, 255]);
+      assert.deepStrictEqual(buf.samplePixel(2, 2), [255, 0, 0, 255]);
+    });
   });
 
   describe("setSize", () => {
