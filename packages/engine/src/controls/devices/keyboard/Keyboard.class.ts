@@ -74,6 +74,7 @@ export class Keyboard extends EventEmitter<
   #documentAdapter: DocumentAdapter;
 
   #wasActive = false;
+  #enabled = true;
   buttons = new Map<string, KeyState>();
   buttonsDown = new Set<string>();
   autoRepeatedCode: string | null = null;
@@ -94,6 +95,24 @@ export class Keyboard extends EventEmitter<
 
   get wasActive() {
     return this.#wasActive;
+  }
+
+  get enabled() {
+    return this.#enabled;
+  }
+
+  /** Disabling resets held keys so polling consumers see them release, instead of getting stuck "down". */
+  setEnabled(
+    enabled: boolean
+  ) {
+    if (this.#enabled === enabled) {
+      return;
+    }
+
+    this.#enabled = enabled;
+    if (!enabled) {
+      this.reset();
+    }
   }
 
   connect() {
@@ -117,6 +136,10 @@ export class Keyboard extends EventEmitter<
   }
 
   #onKeyDown = (event: KeyboardEvent) => {
+    if (!this.#enabled) {
+      return;
+    }
+
     const isControlKey = kControlKeys.has(event.code);
     if (isControlKey) {
       event.preventDefault();
@@ -139,11 +162,13 @@ export class Keyboard extends EventEmitter<
     }
     this.emit("down", event);
     this.emit(event.code, event);
-
-    return !isControlKey;
   };
 
   #onKeyPress = (event: KeyboardEvent) => {
+    if (!this.#enabled) {
+      return;
+    }
+
     if (event.key.length === 1 && event.key.charCodeAt(0) >= 32) {
       this.newChar += event.key;
       this.emit("press", event);
@@ -151,6 +176,10 @@ export class Keyboard extends EventEmitter<
   };
 
   #onKeyUp = (event: KeyboardEvent) => {
+    if (!this.#enabled) {
+      return;
+    }
+
     this.buttonsDown.delete(event.code);
     this.emit("up", event);
   };

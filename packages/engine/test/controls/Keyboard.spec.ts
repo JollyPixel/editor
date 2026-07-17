@@ -177,6 +177,50 @@ describe("Controls.Keyboard", () => {
 
     assert.equal(keyboard.buttonsDown.has("KeyA"), false);
   });
+
+  describe("setEnabled", () => {
+    test("defaults to enabled", () => {
+      assert.equal(keyboard.enabled, true);
+    });
+
+    test("disabling ignores subsequent keydown/keyup events", () => {
+      keyboard.setEnabled(false);
+      documentAdapter.dispatchEvent("keydown", { code: "KeyA" });
+      keyboard.update();
+
+      assert.equal(keyboard.buttonsDown.has("KeyA"), false);
+      assert.equal(keyboard.buttons.size, 0);
+    });
+
+    test("disabling releases keys already held so polling consumers see them let go", () => {
+      documentAdapter.dispatchEvent("keydown", { code: "KeyW" });
+      keyboard.update();
+      assert.equal(keyboard.buttonsDown.has("KeyW"), true);
+
+      keyboard.setEnabled(false);
+
+      assert.equal(keyboard.buttonsDown.has("KeyW"), false);
+    });
+
+    test("re-enabling resumes tracking new keydown/keyup events", () => {
+      keyboard.setEnabled(false);
+      keyboard.setEnabled(true);
+
+      documentAdapter.dispatchEvent("keydown", { code: "KeyA" });
+      keyboard.update();
+
+      assert.equal(keyboard.buttonsDown.has("KeyA"), true);
+    });
+
+    test("is a no-op when already in the requested state", () => {
+      documentAdapter.dispatchEvent("keydown", { code: "KeyA" });
+      keyboard.update();
+
+      keyboard.setEnabled(true);
+
+      assert.equal(keyboard.buttonsDown.has("KeyA"), true);
+    });
+  });
 });
 
 interface EventData {

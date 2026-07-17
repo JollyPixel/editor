@@ -148,8 +148,18 @@ export class InputController {
    * onSelectStart/Move/End in "select" mode.
    */
   #isDragging: boolean = false;
+  /**
+   * Gates keydown handling (Shift/Copy/Paste/Delete) to only fire while the
+   * pointer is over this canvas, so these shortcuts don't collide with a
+   * host application's own document/window-wide keybinds (e.g. a 3D
+   * viewport's camera controls) when the user isn't actually interacting
+   * with this canvas. keyup is intentionally left ungated — see
+   * #handleKeyUp.
+   */
+  #isHovering: boolean = false;
 
   #onMouseDown: (event: MouseEvent) => void;
+  #onMouseEnter: (event: MouseEvent) => void;
   #onMouseMove: (event: MouseEvent) => void;
   #onMouseLeave: (event: MouseEvent) => void;
   #onMouseUp: (event: MouseEvent) => void;
@@ -179,6 +189,7 @@ export class InputController {
     this.#window = windowLike;
 
     this.#onMouseDown = (event) => this.#handleMouseDown(event);
+    this.#onMouseEnter = () => this.#handleMouseEnter();
     this.#onMouseMove = (event) => this.#handleMouseMove(event);
     this.#onMouseLeave = (event) => this.#handleMouseLeave(event);
     this.#onMouseUp = (event) => this.#handleMouseUp(event);
@@ -191,6 +202,7 @@ export class InputController {
     this.#onWindowBlur = () => this.#actions.onBlur();
 
     this.#canvas.addEventListener("mousedown", this.#onMouseDown);
+    this.#canvas.addEventListener("mouseenter", this.#onMouseEnter);
     this.#canvas.addEventListener("mousemove", this.#onMouseMove);
     this.#canvas.addEventListener("mouseleave", this.#onMouseLeave);
     this.#canvas.addEventListener("mouseup", this.#onMouseUp);
@@ -225,6 +237,7 @@ export class InputController {
 
   destroy(): void {
     this.#canvas.removeEventListener("mousedown", this.#onMouseDown);
+    this.#canvas.removeEventListener("mouseenter", this.#onMouseEnter);
     this.#canvas.removeEventListener("mousemove", this.#onMouseMove);
     this.#canvas.removeEventListener("mouseleave", this.#onMouseLeave);
     this.#canvas.removeEventListener("mouseup", this.#onMouseUp);
@@ -240,6 +253,7 @@ export class InputController {
   #handleMouseDown(
     event: MouseEvent
   ): void {
+    this.#isHovering = true;
     const bounds = this.#canvas.getBoundingClientRect();
 
     if (this.#mode === "paint" && event.button === 0) {
@@ -276,6 +290,7 @@ export class InputController {
     event: MouseEvent
   ): void {
     event.preventDefault();
+    this.#isHovering = true;
 
     const bounds = this.#canvas.getBoundingClientRect();
     const canvasPos = this.#viewport.getMouseCanvasPosition(event.clientX, event.clientY, bounds);
@@ -311,9 +326,14 @@ export class InputController {
     }
   }
 
+  #handleMouseEnter(): void {
+    this.#isHovering = true;
+  }
+
   #handleMouseLeave(
     _event: MouseEvent
   ): void {
+    this.#isHovering = false;
     this.#actions.onMouseMove(-1, -1);
     this.#actions.onCursorMove(null);
   }
@@ -408,6 +428,10 @@ export class InputController {
   #handleKeyDown(
     event: KeyboardEvent
   ): void {
+    if (!this.#isHovering) {
+      return;
+    }
+
     if (isEditableTarget(event.target)) {
       return;
     }
