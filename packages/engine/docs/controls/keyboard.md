@@ -86,6 +86,7 @@ interface Keyboard {
   char: string;
 
   readonly wasActive: boolean;
+  readonly enabled: boolean;
 }
 ```
 
@@ -98,5 +99,9 @@ interface Keyboard {
   disconnect(): void;
   reset(): void;
   update(): void;
+
+  // Disabling resets held keys so polling consumers see them release
+  // instead of getting stuck "down".
+  setEnabled(enabled: boolean): void;
 }
 ```

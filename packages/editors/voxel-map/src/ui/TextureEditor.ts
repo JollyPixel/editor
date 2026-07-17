@@ -9,6 +9,9 @@ import type { Mode } from "@jolly-pixel/pixel-draw.renderer";
 import { TextureEditorBridge } from "../lib/TextureEditorBridge.ts";
 import type { EventSelect } from "./types.ts";
 
+// CONSTANTS
+const kCanvasHoverChangeEvent = "canvas-hover-change";
+
 @customElement("texture-editor")
 export class TextureEditor extends LitElement {
   static override styles = css`
@@ -126,6 +129,8 @@ export class TextureEditor extends LitElement {
 
   override firstUpdated() {
     this.#canvasHost = this.shadowRoot!.querySelector<HTMLDivElement>(".canvas-host")!;
+    this.#canvasHost.addEventListener("mouseenter", this.#onCanvasHoverEnter);
+    this.#canvasHost.addEventListener("mouseleave", this.#onCanvasHoverLeave);
 
     this.#bridge.mount(this.#canvasHost, {
       defaultMode: this._mode,
@@ -223,6 +228,8 @@ export class TextureEditor extends LitElement {
   override disconnectedCallback() {
     super.disconnectedCallback();
     this.removeEventListener("colorpicked", this.#onColorPicked);
+    this.#canvasHost?.removeEventListener("mouseenter", this.#onCanvasHoverEnter);
+    this.#canvasHost?.removeEventListener("mouseleave", this.#onCanvasHoverLeave);
     this.#resizeObserver?.disconnect();
     this.#resizeObserver = null;
     if (this.#swatchClickHandler && this.#swatchEl) {
@@ -246,6 +253,30 @@ export class TextureEditor extends LitElement {
     this._mode = mode;
     this.#bridge.setMode(mode);
   }
+
+  /**
+   * Reports pointer hover over the drawing canvas so the host app can yield
+   * its own keyboard shortcuts (e.g. a 3D viewport's WASD camera) while the
+   * user is interacting with this canvas instead. `composed: true` lets it
+   * cross this component's shadow DOM boundary.
+   */
+  #dispatchHoverChange(
+    hovering: boolean
+  ): void {
+    this.dispatchEvent(new CustomEvent(kCanvasHoverChangeEvent, {
+      detail: { hovering },
+      bubbles: true,
+      composed: true
+    }));
+  }
+
+  readonly #onCanvasHoverEnter = (): void => {
+    this.#dispatchHoverChange(true);
+  };
+
+  readonly #onCanvasHoverLeave = (): void => {
+    this.#dispatchHoverChange(false);
+  };
 
   #onBrushSizeChange(
     event: Event

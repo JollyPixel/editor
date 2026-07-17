@@ -39,6 +39,10 @@ function moveTo(
   canvas.dispatchEvent(new MouseEvent("mousemove", { clientX, clientY, bubbles: true }));
 }
 
+function hoverCanvas(canvas: HTMLCanvasElement): void {
+  canvas.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
+}
+
 function makeCanvas(): HTMLCanvasElement {
   const canvas = kEmulatedBrowserWindow.document.createElement("canvas") as unknown as HTMLCanvasElement;
   canvas.width = 200;
@@ -490,10 +494,11 @@ describe("InputController", () => {
   });
 
   describe("Shift key reporting", () => {
-    test("a non-repeat Shift keydown fires onShiftDown", () => {
+    test("a non-repeat Shift keydown fires onShiftDown while hovering the canvas", () => {
       const { actions, calls } = makeActions();
       const ctrl = new InputController({ canvas, viewport, actions, mode: "paint" });
 
+      hoverCanvas(canvas);
       window.dispatchEvent(shiftKeyDown());
 
       assert.strictEqual(calls.onShiftDown.length, 1);
@@ -504,6 +509,7 @@ describe("InputController", () => {
       const { actions, calls } = makeActions();
       const ctrl = new InputController({ canvas, viewport, actions, mode: "move" });
 
+      hoverCanvas(canvas);
       window.dispatchEvent(shiftKeyDown());
 
       assert.strictEqual(calls.onShiftDown.length, 1);
@@ -514,6 +520,7 @@ describe("InputController", () => {
       const { actions, calls } = makeActions();
       const ctrl = new InputController({ canvas, viewport, actions, mode: "paint" });
 
+      hoverCanvas(canvas);
       window.dispatchEvent(shiftKeyDown());
       window.dispatchEvent(shiftKeyDown(true));
 
@@ -525,6 +532,7 @@ describe("InputController", () => {
       const { actions, calls } = makeActions();
       const ctrl = new InputController({ canvas, viewport, actions, mode: "paint" });
 
+      hoverCanvas(canvas);
       const input = kEmulatedBrowserWindow.document.createElement("input");
       kEmulatedBrowserWindow.document.body.appendChild(input);
 
@@ -538,6 +546,7 @@ describe("InputController", () => {
       const { actions, calls } = makeActions();
       const ctrl = new InputController({ canvas, viewport, actions, mode: "paint" });
 
+      hoverCanvas(canvas);
       const input = kEmulatedBrowserWindow.document.createElement("input");
       input.type = "range";
       kEmulatedBrowserWindow.document.body.appendChild(input);
@@ -552,6 +561,7 @@ describe("InputController", () => {
       const { actions, calls } = makeActions();
       const ctrl = new InputController({ canvas, viewport, actions, mode: "paint" });
 
+      hoverCanvas(canvas);
       const input = kEmulatedBrowserWindow.document.createElement("input");
       input.type = "color";
       kEmulatedBrowserWindow.document.body.appendChild(input);
@@ -566,6 +576,7 @@ describe("InputController", () => {
       const { actions, calls } = makeActions();
       const ctrl = new InputController({ canvas, viewport, actions, mode: "paint" });
 
+      hoverCanvas(canvas);
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "Control", bubbles: true }));
       window.dispatchEvent(new KeyboardEvent("keyup", { key: "Control", bubbles: true }));
 
@@ -594,6 +605,7 @@ describe("InputController", () => {
       const { actions, calls } = makeActions();
       const ctrl = new InputController({ canvas, viewport, actions, mode: "select" });
 
+      hoverCanvas(canvas);
       window.dispatchEvent(ctrlKeyDown("c"));
 
       assert.strictEqual(calls.onCopy.length, 1);
@@ -604,6 +616,7 @@ describe("InputController", () => {
       const { actions, calls } = makeActions();
       const ctrl = new InputController({ canvas, viewport, actions, mode: "select" });
 
+      hoverCanvas(canvas);
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "c", metaKey: true, bubbles: true, cancelable: true }));
 
       assert.strictEqual(calls.onCopy.length, 1);
@@ -614,6 +627,7 @@ describe("InputController", () => {
       const { actions } = makeActions({ onCopyReturns: true });
       const ctrl = new InputController({ canvas, viewport, actions, mode: "select" });
 
+      hoverCanvas(canvas);
       const event = ctrlKeyDown("c");
       window.dispatchEvent(event);
 
@@ -625,6 +639,7 @@ describe("InputController", () => {
       const { actions } = makeActions({ onCopyReturns: false });
       const ctrl = new InputController({ canvas, viewport, actions, mode: "select" });
 
+      hoverCanvas(canvas);
       const event = ctrlKeyDown("c");
       window.dispatchEvent(event);
 
@@ -636,6 +651,7 @@ describe("InputController", () => {
       const { actions, calls } = makeActions();
       const ctrl = new InputController({ canvas, viewport, actions, mode: "select" });
 
+      hoverCanvas(canvas);
       window.dispatchEvent(ctrlKeyDown("v"));
 
       assert.strictEqual(calls.onPaste.length, 1);
@@ -646,6 +662,7 @@ describe("InputController", () => {
       const { actions, calls } = makeActions();
       const ctrl = new InputController({ canvas, viewport, actions, mode: "select" });
 
+      hoverCanvas(canvas);
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true, cancelable: true }));
 
       assert.strictEqual(calls.onDelete.length, 1);
@@ -656,6 +673,7 @@ describe("InputController", () => {
       const { actions, calls } = makeActions();
       const ctrl = new InputController({ canvas, viewport, actions, mode: "select" });
 
+      hoverCanvas(canvas);
       window.dispatchEvent(ctrlKeyDown("c", true));
       window.dispatchEvent(ctrlKeyDown("v", true));
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true, cancelable: true, repeat: true }));
@@ -670,6 +688,7 @@ describe("InputController", () => {
       const { actions, calls } = makeActions();
       const ctrl = new InputController({ canvas, viewport, actions, mode: "select" });
 
+      hoverCanvas(canvas);
       const input = kEmulatedBrowserWindow.document.createElement("input");
       kEmulatedBrowserWindow.document.body.appendChild(input);
 
@@ -685,9 +704,70 @@ describe("InputController", () => {
       const { actions, calls } = makeActions();
       const ctrl = new InputController({ canvas, viewport, actions, mode: "paint" });
 
+      hoverCanvas(canvas);
       window.dispatchEvent(ctrlKeyDown("c"));
 
       assert.strictEqual(calls.onCopy.length, 1);
+      ctrl.destroy();
+    });
+  });
+
+  describe("keyboard shortcuts gated to canvas hover", () => {
+    test("Shift keydown before any mouseenter does not fire onShiftDown", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "paint" });
+
+      window.dispatchEvent(shiftKeyDown());
+
+      assert.strictEqual(calls.onShiftDown.length, 0);
+      ctrl.destroy();
+    });
+
+    test("Ctrl+C before any mouseenter does not fire onCopy", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "select" });
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "c", ctrlKey: true, bubbles: true, cancelable: true }));
+
+      assert.strictEqual(calls.onCopy.length, 0);
+      ctrl.destroy();
+    });
+
+    test("mouseleave stops keydown shortcuts from firing again", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "paint" });
+
+      hoverCanvas(canvas);
+      canvas.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
+      window.dispatchEvent(shiftKeyDown());
+
+      assert.strictEqual(calls.onShiftDown.length, 0);
+      ctrl.destroy();
+    });
+
+    test("re-entering the canvas after a mouseleave re-enables shortcuts", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "paint" });
+
+      hoverCanvas(canvas);
+      canvas.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
+      hoverCanvas(canvas);
+      window.dispatchEvent(shiftKeyDown());
+
+      assert.strictEqual(calls.onShiftDown.length, 1);
+      ctrl.destroy();
+    });
+
+    test("keyup (e.g. Shift release) is not gated by hover", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "paint" });
+
+      hoverCanvas(canvas);
+      window.dispatchEvent(shiftKeyDown());
+      canvas.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
+      window.dispatchEvent(shiftKeyUp());
+
+      assert.strictEqual(calls.onShiftUp.length, 1);
       ctrl.destroy();
     });
   });
@@ -709,6 +789,8 @@ describe("InputController", () => {
       const { actions, calls } = makeActions();
       const fakeWindow = new FakeWindow();
       const ctrl = new InputController({ canvas, viewport, actions, mode: "paint", window: fakeWindow });
+
+      hoverCanvas(canvas);
 
       window.dispatchEvent(shiftKeyDown());
       assert.strictEqual(calls.onShiftDown.length, 0);
