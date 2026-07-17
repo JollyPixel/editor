@@ -6,7 +6,14 @@ export type Vec2 = {
   y: number;
 };
 
-export type Mode = "paint" | "move" | "fill";
+export type Mode = "paint" | "move" | "fill" | "select";
+
+export interface SelectionRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
 
 /**
  * Anything accepted as a color input across the package: a CSS color string

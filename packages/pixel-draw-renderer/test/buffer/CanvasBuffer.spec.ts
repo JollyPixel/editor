@@ -159,4 +159,38 @@ describe("CanvasBuffer", () => {
       assert.strictEqual(pixels.length, 4 * 4 * 4);
     });
   });
+
+  describe("drawRegion", () => {
+    test("writes per-pixel colors and syncs the working canvas", () => {
+      const buf = new CanvasBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
+      const red = { r: 255, g: 0, b: 0, a: 255 };
+      const blue = { r: 0, g: 0, b: 255, a: 255 };
+
+      buf.drawRegion({ x: 0, y: 0, width: 2, height: 1 }, [red, blue]);
+
+      assert.deepStrictEqual(buf.samplePixel(0, 0), [255, 0, 0, 255]);
+      assert.deepStrictEqual(buf.samplePixel(1, 0), [0, 0, 255, 255]);
+    });
+
+    test("clips to the in-bounds intersection when the rect extends past the buffer edge", () => {
+      const buf = new CanvasBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
+      const color = { r: 9, g: 9, b: 9, a: 255 };
+
+      assert.doesNotThrow(() => {
+        buf.drawRegion({ x: 2, y: 2, width: 4, height: 4 }, new Array(16).fill(color));
+      });
+      assert.deepStrictEqual(buf.samplePixel(3, 3), [9, 9, 9, 255]);
+    });
+
+    test("no-ops without throwing when the rect is entirely out of bounds", () => {
+      const buf = new CanvasBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
+      const ctx = (buf.getCanvas() as unknown as MockCanvasElement)._ctx;
+      const before = ctx.putImageDataCallCount;
+
+      assert.doesNotThrow(() => {
+        buf.drawRegion({ x: 10, y: 10, width: 2, height: 2 }, new Array(4).fill({ r: 1, g: 1, b: 1, a: 1 }));
+      });
+      assert.strictEqual(ctx.putImageDataCallCount, before);
+    });
+  });
 });

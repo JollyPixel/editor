@@ -25,18 +25,22 @@ import {
   type LineCommitTrigger
 } from "./input/LineTool.ts";
 import {
+  SelectTool
+} from "./input/SelectTool.ts";
+import {
   SvgManager
 } from "./rendering/SvgManager.ts";
 import {
   Viewport
 } from "./rendering/Viewport.ts";
-import { getColorAsRGBA } from "./colors.ts";
+import { getColorAsRGBA, toRGBA } from "./colors.ts";
 import type {
   Brush,
   ColorInput,
   DefaultViewport,
   Mode,
   RGBA,
+  SelectionRect,
   Vec2
 } from "./types.ts";
 import type {
@@ -79,6 +83,15 @@ export interface CanvasManagerOptions {
     squareSize: number;
   };
   brush?: BrushManagerOptions;
+  select?: {
+    /**
+     * Color used to fill the pixels vacated by a Delete or the source side
+     * of a Move in "select" mode. Accepts a CSS color string or a colorjs.io
+     * `Color` instance.
+     * @default "#FFFFFF"
+     */
+    eraseColor?: ColorInput;
+  };
   /**
    * Called after a draw stroke is committed to the master buffer.
    * Use this hook to synchronize the edited texture with an external consumer.
@@ -106,6 +119,8 @@ export class CanvasManager {
   #strokeColor: RGBA | null = null;
   #isStrokeActive = false;
   #lineTool = new LineTool();
+  #selectTool = new SelectTool();
+  #eraseColor: RGBA;
   #lastCursorPos: Vec2 | null = null;
   #isShiftHeld = false;
 
@@ -119,6 +134,7 @@ export class CanvasManager {
     this.#parentHtmlElement = parentHtmlElement;
     this.#onBufferUpdated = options.onBufferUpdated;
     this.#onDrawEnd = options.onDrawEnd;
+    this.#eraseColor = toRGBA(options.select?.eraseColor ?? "#FFFFFF");
 
     const textureSize: Vec2 = options.texture?.size
       ? { x: options.texture.size.x, y: options.texture.size.y ?? options.texture.size.x }
@@ -213,6 +229,15 @@ export class CanvasManager {
         onFillStart: (tx, ty) => {
           this.#fill(tx, ty);
         },
+        onSelectStart: (tx, ty) => {
+          this.#handleSelectStart({ x: tx, y: ty });
+        },
+        onSelectMove: (tx, ty) => {
+          this.#handleSelectMove({ x: tx, y: ty });
+        },
+        onSelectEnd: () => {
+          this.#handleSelectEnd();
+        },
         onPanStart: (_mx, _my) => {
           // pan tracking is inside InputController
         },
@@ -220,6 +245,7 @@ export class CanvasManager {
           this.#viewport.applyPan(dx, dy);
           this.#renderer.drawFrame();
           this.#refreshLinePreview();
+          this.#refreshSelectionOverlay();
         },
         onPanEnd: () => {
           // nothing extra needed
@@ -228,6 +254,7 @@ export class CanvasManager {
           this.#viewport.applyZoom(delta, cx, cy);
           this.#renderer.drawFrame();
           this.#refreshLinePreview();
+          this.#refreshSelectionOverlay();
         },
         onColorPick: (tx, ty) => {
           const [r, g, b, a] = this.#canvasBuffer.samplePixel(tx, ty);
@@ -287,7 +314,10 @@ export class CanvasManager {
         onBlur: () => {
           this.#isShiftHeld = false;
           this.#cancelLineIfArmed();
-        }
+        },
+        onCopy: () => this.#handleCopy(),
+        onPaste: () => this.#handlePaste(),
+        onDelete: () => this.#handleDelete()
       }
     });
 
@@ -305,6 +335,9 @@ export class CanvasManager {
     if (mode === "move") {
       this.#svgManager.hideSvgHighlight();
       this.#cancelLineIfArmed();
+    }
+    if (mode !== "select") {
+      this.#clearSelection();
     }
   }
 
@@ -668,5 +701,190 @@ export class CanvasManager {
     for (const pixel of pixels) {
       this.#strokeDirty.set(`${pixel.x},${pixel.y}`, pixel);
     }
+  }
+
+  /**
+   * Left mousedown in "select" mode: grabs the existing selection to move it
+   * when `pos` falls inside it, otherwise discards any prior selection and
+   * starts dragging out a new rectangle.
+   */
+  #handleSelectStart(
+    pos: Vec2
+  ): void {
+    if (this.#selectTool.state === "selected" && this.#selectTool.hitTest(pos)) {
+      this.#selectTool.startMove(pos);
+
+      const rect = this.#selectTool.rect;
+      const snapshot = this.#selectTool.snapshot;
+      if (rect && snapshot) {
+        this.#renderer.setFloatingOverlay({
+          sourceRect: rect,
+          pixels: snapshot,
+          eraseColor: this.#eraseColor,
+          blankSource: !this.#selectTool.willSkipErase
+        });
+        this.#renderer.drawFrame();
+      }
+
+      return;
+    }
+
+    this.#clearSelection();
+    const rect = this.#selectTool.startCreate(pos);
+    this.#svgManager.setSelectionRect(rect);
+  }
+
+  #handleSelectMove(
+    pos: Vec2
+  ): void {
+    if (this.#selectTool.state === "creating") {
+      const rect = this.#selectTool.updateCreate(pos);
+      if (rect) {
+        this.#svgManager.setSelectionRect(rect);
+      }
+
+      return;
+    }
+
+    if (this.#selectTool.state === "moving") {
+      const rect = this.#selectTool.updateMove(pos);
+      if (rect) {
+        this.#svgManager.setSelectionRect(rect);
+        this.#renderer.updateFloatingOverlayPosition(rect);
+        this.#renderer.drawFrame();
+      }
+    }
+  }
+
+  #handleSelectEnd(): void {
+    if (this.#selectTool.state === "creating") {
+      const rect = this.#selectTool.rect;
+      if (rect) {
+        const snapshot = SelectTool.captureSnapshot(this.#canvasBuffer, rect);
+        this.#selectTool.finishCreate(snapshot);
+      }
+
+      return;
+    }
+
+    if (this.#selectTool.state === "moving") {
+      const snapshot = this.#selectTool.snapshot;
+      const result = this.#selectTool.finishMove();
+      this.#renderer.clearFloatingOverlay();
+
+      if (result && snapshot) {
+        if (!result.skipErase) {
+          this.#eraseRegion(result.source);
+        }
+        this.#paintRegion(result.dest, snapshot);
+      }
+
+      const rect = this.#selectTool.rect;
+      if (rect) {
+        this.#svgManager.setSelectionRect(rect);
+      }
+    }
+  }
+
+  /**
+   * Ctrl/Cmd+C: snapshots the active selection into SelectTool's clipboard.
+   * No-op (returns false, letting the browser's default copy proceed)
+   * unless a selection is currently active.
+   */
+  #handleCopy(): boolean {
+    if (this.#selectTool.state !== "selected") {
+      return false;
+    }
+
+    this.#selectTool.copy();
+
+    return true;
+  }
+
+  /**
+   * Ctrl/Cmd+V: stamps the clipboard snapshot back onto the buffer at the
+   * exact position it was copied from, and makes it the new active
+   * selection so the next drag relocates the duplicate.
+   */
+  #handlePaste(): boolean {
+    const result = this.#selectTool.paste();
+    if (!result) {
+      return false;
+    }
+
+    this.#paintRegion(result.rect, result.pixels);
+    this.#svgManager.setSelectionRect(result.rect);
+
+    return true;
+  }
+
+  /**
+   * Delete key: fills the active selection with the configured erase color.
+   * The selection stays active, now over blanked pixels.
+   */
+  #handleDelete(): boolean {
+    if (this.#selectTool.state !== "selected") {
+      return false;
+    }
+
+    const rect = this.#selectTool.rect;
+    if (!rect) {
+      return false;
+    }
+
+    this.#eraseRegion(rect);
+    this.#selectTool.markErased(this.#eraseColor);
+
+    return true;
+  }
+
+  #clearSelection(): void {
+    this.#selectTool.clear();
+    this.#svgManager.clearSelectionRect();
+    this.#renderer.clearFloatingOverlay();
+  }
+
+  #refreshSelectionOverlay(): void {
+    const rect = this.#selectTool.rect;
+    if (rect) {
+      this.#svgManager.setSelectionRect(rect);
+    }
+  }
+
+  /**
+   * Fills every position in `rect` with the configured erase color. Used to
+   * vacate a Delete'd or moved-away-from selection. Out-of-bounds positions
+   * are silently clipped by CanvasBuffer.drawPixels, same as every other
+   * paint path in this class.
+   */
+  #eraseRegion(
+    rect: SelectionRect
+  ): void {
+    const positions: Vec2[] = [];
+    for (let y = 0; y < rect.height; y++) {
+      for (let x = 0; x < rect.width; x++) {
+        positions.push({ x: rect.x + x, y: rect.y + y });
+      }
+    }
+
+    this.#canvasBuffer.drawPixels(positions, this.#eraseColor);
+    this.#canvasBuffer.copyToMaster();
+    this.#renderer.drawFrame();
+    this.#onDrawEnd?.();
+  }
+
+  /**
+   * Plain-overwrites `rect` with `pixels` (multi-colored, unlike
+   * #eraseRegion's uniform fill) — the commit step for a Move's destination
+   * or a Duplicate paste.
+   */
+  #paintRegion(
+    rect: SelectionRect,
+    pixels: RGBA[]
+  ): void {
+    this.#canvasBuffer.drawRegion(rect, pixels);
+    this.#canvasBuffer.copyToMaster();
+    this.#renderer.drawFrame();
+    this.#onDrawEnd?.();
   }
 }

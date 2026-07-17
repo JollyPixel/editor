@@ -23,6 +23,7 @@ new CanvasManager(options?: CanvasManagerOptions)
 | `brush.color` | `ColorInput` | `"#000000"` | Initial brush color. Accepts a CSS color string or a colorjs.io `Color` instance |
 | `brush.size` | `number` | `1` | Initial brush size in pixels |
 | `brush.maxSize` | `number` | `32` | Maximum brush size |
+| `select.eraseColor` | `ColorInput` | `"#FFFFFF"` | Color used to fill the pixels vacated by a Delete or the source side of a Move in `"select"` mode |
 | `onDrawEnd` | `() => void` | — | Called after a draw stroke is committed to the master buffer |
 | `onBufferUpdated` | `PixelBufferHookListener` | — | Called for every local mutation (stroke, resize, texture replace); see [Network.md](./Network.md) |
 
@@ -63,7 +64,9 @@ getMode(): Mode
 setMode(mode: Mode): void
 ```
 
-Returns or sets the current interaction mode. `"paint"` routes left-click events to brush drawing; `"move"` routes them to panning; `"fill"` routes a left-click to the paint-bucket flood fill (see [FillTool.md](./FillTool.md)).
+Returns or sets the current interaction mode. `"paint"` routes left-click events to brush drawing; `"move"` routes them to panning; `"fill"` routes a left-click to the paint-bucket flood fill (see [FillTool.md](./FillTool.md)); `"select"` routes them to the rectangle-selection tool (see [SelectTool.md](./SelectTool.md)) — drag to select or move, `Ctrl`/`Cmd`+`C`/`V` to copy/duplicate, `Delete` to erase.
+
+Switching away from `"select"` clears any active selection (mirroring how switching to `"move"` cancels an armed Shift-line).
 
 ---
 

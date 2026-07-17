@@ -122,4 +122,27 @@ describe("PixelBuffer", () => {
       assert.deepStrictEqual(buf.samplePixel(0, 0), [100, 150, 200, 255]);
     });
   });
+
+  describe("drawRegion", () => {
+    test("writes per-pixel colors in row-major order", () => {
+      const buf = new PixelBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
+      const red = { r: 255, g: 0, b: 0, a: 255 };
+      const blue = { r: 0, g: 0, b: 255, a: 255 };
+
+      buf.drawRegion({ x: 1, y: 1, width: 2, height: 1 }, [red, blue]);
+
+      assert.deepStrictEqual(buf.samplePixel(1, 1), [255, 0, 0, 255]);
+      assert.deepStrictEqual(buf.samplePixel(2, 1), [0, 0, 255, 255]);
+    });
+
+    test("ignores positions outside the buffer bounds", () => {
+      const buf = new PixelBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
+      const color = { r: 9, g: 9, b: 9, a: 255 };
+
+      assert.doesNotThrow(() => {
+        buf.drawRegion({ x: 2, y: 2, width: 4, height: 4 }, new Array(16).fill(color));
+      });
+      assert.deepStrictEqual(buf.samplePixel(3, 3), [9, 9, 9, 255]);
+    });
+  });
 });

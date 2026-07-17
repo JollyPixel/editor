@@ -130,4 +130,50 @@ describe("SvgManager", () => {
       }
     });
   });
+
+  describe("setSelectionRect / clearSelectionRect", () => {
+    test("setSelectionRect() shows a dashed outline+inline rect pair in screen space", () => {
+      const parent = makeParent();
+      const svgMgr = new SvgManager({
+        parent,
+        viewport: makeViewport(),
+        brush: makeBrush(),
+        textureSize: { x: 16, y: 16 }
+      });
+
+      // zoom 4, camera (0,0): rect (1,1,2,3) -> x=4, y=4, width=8, height=12
+      svgMgr.setSelectionRect({ x: 1, y: 1, width: 2, height: 3 });
+
+      // The brush highlight also uses two <rect> elements — isolate the
+      // dashed selection ones by their stroke-dasharray.
+      const rects = [...parent.querySelectorAll("rect")].filter((el) => el.hasAttribute("stroke-dasharray"));
+      assert.strictEqual(rects.length, 2, "one outline rect + one inline rect");
+      for (const rect of rects) {
+        assert.strictEqual(rect.getAttribute("visibility"), "visible");
+        assert.strictEqual(rect.getAttribute("x"), "4");
+        assert.strictEqual(rect.getAttribute("y"), "4");
+        assert.strictEqual(rect.getAttribute("width"), "8");
+        assert.strictEqual(rect.getAttribute("height"), "12");
+        assert.ok(rect.getAttribute("stroke-dasharray"), "should be dashed");
+      }
+    });
+
+    test("clearSelectionRect() hides the selection rect", () => {
+      const parent = makeParent();
+      const svgMgr = new SvgManager({
+        parent,
+        viewport: makeViewport(),
+        brush: makeBrush(),
+        textureSize: { x: 16, y: 16 }
+      });
+
+      svgMgr.setSelectionRect({ x: 0, y: 0, width: 1, height: 1 });
+      svgMgr.clearSelectionRect();
+
+      const rects = [...parent.querySelectorAll("rect")].filter((el) => el.hasAttribute("stroke-dasharray"));
+      for (const rect of rects) {
+        assert.strictEqual(rect.getAttribute("visibility"), "hidden");
+      }
+    });
+  });
 });

@@ -67,8 +67,74 @@ class MockCanvas2DContext {
   rect(..._args: unknown[]): void {
     // No-op for testing
   }
-  drawImage(..._args: unknown[]): void {
-    // No-op for testing
+  /**
+   * Nearest-neighbor blit supporting the 3/5/9-argument drawImage overloads,
+   * so tests can assert on rendered pixel output (e.g. CanvasRenderer's
+   * floating-selection overlay). Non-canvas sources (an HTMLImageElement-like
+   * mock has no `_pixels`) are silently no-op'd, matching prior behavior for
+   * CanvasBuffer.setTexture()'s image-source path.
+   */
+  drawImage(
+    image: unknown,
+    ...args: number[]
+  ): void {
+    const source = image as Partial<MockCanvasElement>;
+    if (!source || typeof (source as { _pixels?: unknown; })._pixels === "undefined") {
+      return;
+    }
+
+    let sx = 0;
+    let sy = 0;
+    let sw = source.width!;
+    let sh = source.height!;
+    let dx: number;
+    let dy: number;
+    let dw: number;
+    let dh: number;
+
+    if (args.length === 2) {
+      [dx, dy] = args;
+      dw = sw;
+      dh = sh;
+    }
+    else if (args.length === 4) {
+      [dx, dy, dw, dh] = args;
+    }
+    else if (args.length === 8) {
+      [sx, sy, sw, sh, dx, dy, dw, dh] = args;
+    }
+    else {
+      return;
+    }
+
+    const srcPixels = source._pixels!;
+    const srcWidth = source.width!;
+    const destPixels = this.canvas._pixels;
+    const destWidth = this.canvas.width;
+    const destHeight = this.canvas.height;
+
+    for (let py = 0; py < dh; py++) {
+      const destY = Math.floor(dy) + py;
+      if (destY < 0 || destY >= destHeight) {
+        continue;
+      }
+      const srcY = sy + Math.floor((py / dh) * sh);
+
+      for (let px = 0; px < dw; px++) {
+        const destX = Math.floor(dx) + px;
+        if (destX < 0 || destX >= destWidth) {
+          continue;
+        }
+        const srcX = sx + Math.floor((px / dw) * sw);
+
+        const srcIdx = (srcY * srcWidth + srcX) * 4;
+        const destIdx = (destY * destWidth + destX) * 4;
+        destPixels[destIdx] = srcPixels[srcIdx];
+        destPixels[destIdx + 1] = srcPixels[srcIdx + 1];
+        destPixels[destIdx + 2] = srcPixels[srcIdx + 2];
+        destPixels[destIdx + 3] = srcPixels[srcIdx + 3];
+      }
+    }
   }
 
   fillRect(x: number, y: number, w: number, h: number): void {

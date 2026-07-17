@@ -80,16 +80,23 @@ class FakeWindow implements WindowLike {
   }
 }
 
-function makeActions(options: { onDrawStartReturns?: boolean; } = {}): {
+function makeActions(options: {
+  onDrawStartReturns?: boolean;
+  onCopyReturns?: boolean;
+  onPasteReturns?: boolean;
+  onDeleteReturns?: boolean;
+} = {}): {
   actions: InputActions;
   calls: Record<string, unknown[][]>;
 } {
   const calls: Record<string, unknown[][]> = {
     onDrawStart: [], onDrawMove: [], onDrawEnd: [], onFillStart: [],
+    onSelectStart: [], onSelectMove: [], onSelectEnd: [],
     onPanStart: [], onPanMove: [], onPanEnd: [],
     onZoom: [], onColorPick: [], onMouseMove: [],
     onCursorMove: [], onMouseUp: [],
-    onShiftDown: [], onShiftUp: [], onBlur: []
+    onShiftDown: [], onShiftUp: [], onBlur: [],
+    onCopy: [], onPaste: [], onDelete: []
   };
 
   const actions: InputActions = {
@@ -101,6 +108,9 @@ function makeActions(options: { onDrawStartReturns?: boolean; } = {}): {
     onDrawMove: (tx, ty) => calls.onDrawMove.push([tx, ty]),
     onDrawEnd: () => calls.onDrawEnd.push([]),
     onFillStart: (tx, ty) => calls.onFillStart.push([tx, ty]),
+    onSelectStart: (tx, ty) => calls.onSelectStart.push([tx, ty]),
+    onSelectMove: (tx, ty) => calls.onSelectMove.push([tx, ty]),
+    onSelectEnd: () => calls.onSelectEnd.push([]),
     onPanStart: (mx, my) => calls.onPanStart.push([mx, my]),
     onPanMove: (dx, dy) => calls.onPanMove.push([dx, dy]),
     onPanEnd: () => calls.onPanEnd.push([]),
@@ -111,7 +121,22 @@ function makeActions(options: { onDrawStartReturns?: boolean; } = {}): {
     onMouseUp: () => calls.onMouseUp.push([]),
     onShiftDown: () => calls.onShiftDown.push([]),
     onShiftUp: () => calls.onShiftUp.push([]),
-    onBlur: () => calls.onBlur.push([])
+    onBlur: () => calls.onBlur.push([]),
+    onCopy: () => {
+      calls.onCopy.push([]);
+
+      return options.onCopyReturns;
+    },
+    onPaste: () => {
+      calls.onPaste.push([]);
+
+      return options.onPasteReturns;
+    },
+    onDelete: () => {
+      calls.onDelete.push([]);
+
+      return options.onDeleteReturns;
+    }
   };
 
   return { actions, calls };
@@ -245,6 +270,76 @@ describe("InputController", () => {
       assert.ok(last !== undefined);
       assert.strictEqual(last[0], -1);
       assert.strictEqual(last[1], -1);
+      ctrl.destroy();
+    });
+  });
+
+  describe("select mode", () => {
+    test("mousedown (left button) triggers onSelectStart", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "select" });
+
+      canvas.dispatchEvent(new MouseEvent("mousedown", {
+        button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
+      }));
+
+      assert.strictEqual(calls.onSelectStart.length, 1);
+      assert.strictEqual(calls.onDrawStart.length, 0);
+      ctrl.destroy();
+    });
+
+    test("mousedown does not arm onDrawStart/onFillStart", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "select" });
+
+      canvas.dispatchEvent(new MouseEvent("mousedown", {
+        button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
+      }));
+
+      assert.strictEqual(calls.onDrawStart.length, 0);
+      assert.strictEqual(calls.onFillStart.length, 0);
+      ctrl.destroy();
+    });
+
+    test("dragging after mousedown fires onSelectMove, not onDrawMove", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "select" });
+
+      canvas.dispatchEvent(new MouseEvent("mousedown", {
+        button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
+      }));
+      canvas.dispatchEvent(new MouseEvent("mousemove", {
+        buttons: 1, clientX: 110, clientY: 100, bubbles: true
+      }));
+
+      assert.strictEqual(calls.onSelectMove.length, 1);
+      assert.strictEqual(calls.onDrawMove.length, 0);
+      ctrl.destroy();
+    });
+
+    test("mouseup ends the gesture with onSelectEnd, not onDrawEnd", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "select" });
+
+      canvas.dispatchEvent(new MouseEvent("mousedown", {
+        button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
+      }));
+      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+
+      assert.strictEqual(calls.onSelectEnd.length, 1);
+      assert.strictEqual(calls.onDrawEnd.length, 0);
+      ctrl.destroy();
+    });
+
+    test("mousemove without a prior mousedown does not fire onSelectMove", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "select" });
+
+      canvas.dispatchEvent(new MouseEvent("mousemove", {
+        buttons: 0, clientX: 50, clientY: 50, bubbles: true
+      }));
+
+      assert.strictEqual(calls.onSelectMove.length, 0);
       ctrl.destroy();
     });
   });
@@ -486,6 +581,113 @@ describe("InputController", () => {
       window.dispatchEvent(shiftKeyUp());
 
       assert.strictEqual(calls.onShiftUp.length, 1);
+      ctrl.destroy();
+    });
+  });
+
+  describe("copy / paste / delete shortcuts", () => {
+    function ctrlKeyDown(key: string, repeat = false): KeyboardEvent {
+      return new KeyboardEvent("keydown", { key, ctrlKey: true, bubbles: true, cancelable: true, repeat });
+    }
+
+    test("Ctrl+C fires onCopy", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "select" });
+
+      window.dispatchEvent(ctrlKeyDown("c"));
+
+      assert.strictEqual(calls.onCopy.length, 1);
+      ctrl.destroy();
+    });
+
+    test("Cmd+C (metaKey) also fires onCopy", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "select" });
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "c", metaKey: true, bubbles: true, cancelable: true }));
+
+      assert.strictEqual(calls.onCopy.length, 1);
+      ctrl.destroy();
+    });
+
+    test("preventDefault is called when onCopy returns true", () => {
+      const { actions } = makeActions({ onCopyReturns: true });
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "select" });
+
+      const event = ctrlKeyDown("c");
+      window.dispatchEvent(event);
+
+      assert.strictEqual(event.defaultPrevented, true);
+      ctrl.destroy();
+    });
+
+    test("preventDefault is NOT called when onCopy returns false", () => {
+      const { actions } = makeActions({ onCopyReturns: false });
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "select" });
+
+      const event = ctrlKeyDown("c");
+      window.dispatchEvent(event);
+
+      assert.strictEqual(event.defaultPrevented, false);
+      ctrl.destroy();
+    });
+
+    test("Ctrl+V fires onPaste", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "select" });
+
+      window.dispatchEvent(ctrlKeyDown("v"));
+
+      assert.strictEqual(calls.onPaste.length, 1);
+      ctrl.destroy();
+    });
+
+    test("Delete key fires onDelete", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "select" });
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true, cancelable: true }));
+
+      assert.strictEqual(calls.onDelete.length, 1);
+      ctrl.destroy();
+    });
+
+    test("OS key-repeat does not re-fire onCopy/onPaste/onDelete", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "select" });
+
+      window.dispatchEvent(ctrlKeyDown("c", true));
+      window.dispatchEvent(ctrlKeyDown("v", true));
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true, cancelable: true, repeat: true }));
+
+      assert.strictEqual(calls.onCopy.length, 0);
+      assert.strictEqual(calls.onPaste.length, 0);
+      assert.strictEqual(calls.onDelete.length, 0);
+      ctrl.destroy();
+    });
+
+    test("keydown while a text input has focus does not fire onCopy/onPaste/onDelete", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "select" });
+
+      const input = kEmulatedBrowserWindow.document.createElement("input");
+      kEmulatedBrowserWindow.document.body.appendChild(input);
+
+      input.dispatchEvent(ctrlKeyDown("c"));
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true, cancelable: true }));
+
+      assert.strictEqual(calls.onCopy.length, 0);
+      assert.strictEqual(calls.onDelete.length, 0);
+      ctrl.destroy();
+    });
+
+    test("fires regardless of mode — mode relevance is left to the consumer", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions, mode: "paint" });
+
+      window.dispatchEvent(ctrlKeyDown("c"));
+
+      assert.strictEqual(calls.onCopy.length, 1);
       ctrl.destroy();
     });
   });

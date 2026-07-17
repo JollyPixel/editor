@@ -20,8 +20,9 @@
 - **SVG brush highlight** — grid-aligned SVG overlay tracks the cursor in real time
 - **Shift-to-line drawing** — hold `Shift` in paint mode to preview a straight path from a fixed start point to the cursor, then commit it as a brush-stamped line
 - **Paint-bucket fill** — click in `"fill"` mode to flood-fill the connected region of same-colored pixels under the cursor, respecting the brush's current color and opacity
+- **Rectangle select, move, copy, delete** — drag out a dashed selection in `"select"` mode to move it, `Ctrl`/`Cmd`+`C`/`V` to copy/duplicate, `Delete` to erase
 - **Dual-canvas architecture** — a master canvas (full resolution, off-screen) and a working canvas (viewport-cropped, on-screen) maintain pixel-perfect fidelity at any zoom level
-- **Mode switching** — `"paint"`, `"move"`, and `"fill"` modes control how mouse events are interpreted
+- **Mode switching** — `"paint"`, `"move"`, `"fill"`, and `"select"` modes control how mouse events are interpreted
 
 ## Getting Started
 
@@ -118,6 +119,14 @@ manager.setMode("fill");
 
 In `"fill"` mode, a left-click flood-fills the 4-directionally connected region of pixels that share the clicked pixel's exact color with the brush's current color and opacity — the same behavior as the bucket tool in MS Paint/GIMP/Photoshop. A diagonal line of a different color blocks the fill from leaking through a diagonal gap. Clicking a region that's already the fill color is a no-op — nothing is drawn and no `"stroke"` event fires. See [FillTool.md](./docs/FillTool.md) for the underlying algorithm.
 
+### Selecting, moving, copying, and deleting pixels
+
+```ts
+manager.setMode("select");
+```
+
+In `"select"` mode, drag out a dashed rectangle to select a region. Dragging inside an existing selection moves it (a live floating preview follows the cursor; the actual pixels are only committed on drop, vacating the source rect with the configured erase color). `Ctrl`/`Cmd`+`C` copies the selection, `Ctrl`/`Cmd`+`V` pastes the copy back at the exact position it was copied from (becoming the new active, movable selection), and `Delete` fills the selection with the erase color (`select.eraseColor`, default opaque `#FFFFFF`). Clicking outside the current selection discards it and starts a new one. Dragging a selection past the texture edge is allowed — pixels landing out of bounds are simply clipped. See [SelectTool.md](./docs/SelectTool.md) for the underlying state machine.
+
 ## Running the Examples
 
 ```bash
@@ -139,6 +148,7 @@ Open `http://localhost:5173` to see the interactive demo.
 | `SvgManager` | SVG brush-highlight and line-preview overlay |
 | [`LineTool`](./docs/LineTool.md) | Shift-to-line armed-state machine and Bresenham rasterization |
 | [`FillTool`](./docs/FillTool.md) | Paint-bucket flood-fill algorithm |
+| [`SelectTool`](./docs/SelectTool.md) | Rectangle-selection state machine, drag geometry, and clipboard |
 
 ## Troubleshooting
 

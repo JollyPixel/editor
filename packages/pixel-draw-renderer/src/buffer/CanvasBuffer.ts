@@ -3,7 +3,7 @@ import {
   PixelBuffer,
   type PixelBufferOptions
 } from "./PixelBuffer.ts";
-import type { DefaultPixelBuffer, RGBA, Vec2 } from "../types.ts";
+import type { DefaultPixelBuffer, RGBA, SelectionRect, Vec2 } from "../types.ts";
 
 export type CanvasBufferOptions = PixelBufferOptions;
 
@@ -98,9 +98,8 @@ export class CanvasBuffer implements DefaultPixelBuffer {
   }
 
   /**
-   * Wholesale-replaces the pixel data without touching #workingCanvas's
-   * identity — used to apply a network snapshot or a remote texture-replaced
-   * command, where there is no source canvas/image, only raw bytes.
+   * Replaces the pixel data in place, keeping #workingCanvas's identity —
+   * used to apply raw bytes (e.g. a network snapshot) with no source canvas/image.
    */
   setPixels(
     pixels: Uint8ClampedArray,
@@ -112,16 +111,16 @@ export class CanvasBuffer implements DefaultPixelBuffer {
     this.#syncCanvasFromBuffer();
   }
 
+  /**
+   * Returns a copy — unlike PixelBuffer.getPixels, mutating it won't affect the canvas.
+   */
   getPixels(): Uint8ClampedArray {
     return Uint8ClampedArray.from(this.#buffer.getPixels());
   }
 
   /**
-   * Writes to the backing PixelBuffer, then syncs the working canvas with a
-   * single putImageData over the bounding box of the affected (in-bounds)
-   * positions — one DOM call regardless of how many pixels were touched,
-   * instead of one 1x1 putImageData per pixel (a real cost for large edits
-   * like a flood fill).
+   * Syncs the canvas with one putImageData over the affected bounding box,
+   * instead of one per pixel (a real cost for large edits like a flood fill).
    */
   drawPixels(
     pixels: Vec2[],
@@ -156,6 +155,41 @@ export class CanvasBuffer implements DefaultPixelBuffer {
       for (let x = 0; x < rectWidth; x++) {
         const [r, g, b, a] = this.#buffer.samplePixel(minX + x, minY + y);
         const index = (y * rectWidth + x) * 4;
+        imageData.data[index] = r;
+        imageData.data[index + 1] = g;
+        imageData.data[index + 2] = b;
+        imageData.data[index + 3] = a;
+      }
+    }
+    this.#workingCtx.putImageData(imageData, minX, minY);
+  }
+
+  /**
+   * Syncs the canvas with one putImageData over the in-bounds intersection
+   * of `rect` — the multi-color counterpart to drawPixels.
+   */
+  drawRegion(
+    rect: SelectionRect,
+    pixels: RGBA[]
+  ): void {
+    this.#buffer.drawRegion(rect, pixels);
+
+    const size = this.#buffer.getSize();
+    const minX = Math.max(0, rect.x);
+    const minY = Math.max(0, rect.y);
+    const maxX = Math.min(size.x, rect.x + rect.width);
+    const maxY = Math.min(size.y, rect.y + rect.height);
+    if (maxX <= minX || maxY <= minY) {
+      return;
+    }
+
+    const clipWidth = maxX - minX;
+    const clipHeight = maxY - minY;
+    const imageData = this.#workingCtx.createImageData(clipWidth, clipHeight);
+    for (let y = 0; y < clipHeight; y++) {
+      for (let x = 0; x < clipWidth; x++) {
+        const [r, g, b, a] = this.#buffer.samplePixel(minX + x, minY + y);
+        const index = (y * clipWidth + x) * 4;
         imageData.data[index] = r;
         imageData.data[index + 1] = g;
         imageData.data[index + 2] = b;
