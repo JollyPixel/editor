@@ -16,6 +16,7 @@ Browser-based library for editing pixel-art textures. It provides zoom, pan, bru
 - **Shift-to-line drawing**: hold `Shift` in paint mode to draw a straight line
 - **Paint-bucket fill**: flood-fill a connected region of same-colored pixels
 - **Rectangle select, move, copy, delete**: `Ctrl`/`Cmd`+`C`/`V` to copy/duplicate, `Delete` to erase
+- **Undo/redo**: optional bounded history over strokes, resizes, and texture replaces; opt in via `history.enabled`
 - **Zoom & pan**: mouse-wheel zoom with configurable sensitivity and range; middle-click pan in any mode
 - **Transparency support**: checkerboard background renders beneath transparent pixels
 
@@ -100,6 +101,29 @@ manager.setKeybindings({ redo: "alt+shift+u" });
 
 See [utils/keybindings.md](./docs/utils/keybindings.md) for the combo string format and error handling.
 
+### Undo/redo
+
+Disabled by default. Enable it and (optionally) track button-enabled state:
+
+```ts
+const manager = new CanvasManager(container, {
+  history: {
+    enabled: true,
+    // limit defaults to 10
+    limit: 20
+  },
+  onHistoryChange: ({ canUndo, canRedo }) => {
+    undoButton.disabled = !canUndo;
+    redoButton.disabled = !canRedo;
+  }
+});
+
+manager.undo(); // false if history is disabled or there's nothing to undo
+manager.redo();
+```
+
+See [CanvasManager.md](./docs/CanvasManager.md#undo--redo--canundo--canredo) and [history/HistoryStack.md](./docs/history/HistoryStack.md).
+
 ## 🚀 Running the example
 
 ```bash
@@ -111,14 +135,13 @@ Open `http://localhost:5173` to see the interactive demo.
 ## 📚 API
 
 - [`CanvasManager`](./docs/CanvasManager.md): top-level coordinator, the primary public API
+  - [`types`](./docs/types.md): shared value types (`Vec2`, `RGBA`, `SelectionRect`, `Mode`)
 - [`Brush`](./docs/tools/Brush.md): brush size, color, opacity, and affected-pixel computation — read/write via `CanvasManager.brush`
 - [`PixelBuffer`](./docs/buffer/PixelBuffer.md): headless RGBA pixel storage, usable server-side with no DOM
-- [buffer hooks](./docs/buffer/hooks.md): `PixelBufferHookEvent`/`PixelBufferHookListener`, the local-mutation event shape used by `onBufferUpdated`/`applyRemoteCommand`
-- [keybindings](./docs/utils/keybindings.md): `Keybindings`/`Keybinding` types, `DEFAULT_KEYBINDINGS`, and the errors thrown by `setKeybindings()`
-- [Network Sync Layer](./docs/network/index.md): transport-agnostic, server-authoritative multiplayer for `CanvasManager`
-- [`types`](./docs/types.md): shared value types (`Vec2`, `RGBA`, `SelectionRect`, `Mode`)
-
-Line/fill/select drawing tools, the viewport, canvas renderer, SVG overlay, and input handling are internal implementation details wired together by `CanvasManager` — they aren't part of the public API.
+  - [`hooks`](./docs/buffer/hooks.md): `PixelBufferHookEvent`/`PixelBufferHookListener`, the local-mutation event shape used by `onBufferUpdated`/`applyRemoteCommand`
+- [`HistoryStack`](./docs/history/HistoryStack.md): bounded undo/redo stack backing `CanvasManager.undo()`/`redo()`
+- [`Keybindings`](./docs/utils/keybindings.md): `Keybindings`/`Keybinding` types, `DEFAULT_KEYBINDINGS`, and the errors thrown by `setKeybindings()`
+- [`Network`](./docs/network/index.md): transport-agnostic, server-authoritative multiplayer for `CanvasManager`
 
 ## Contributors Guide
 
