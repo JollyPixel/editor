@@ -1,6 +1,6 @@
 # Network Sync Layer
 
-Transport-agnostic, server-authoritative multiplayer for `CanvasManager`. Multiple
+Transport-agnostic, server-authoritative multiplayer for `PixelArtCanvas`. Multiple
 clients can share the same texture(s) in real time. Structurally mirrors
 `@jolly-pixel/voxel.renderer`'s network layer but is an independent
 implementation: this package has no dependency on voxel-renderer.
@@ -9,7 +9,7 @@ implementation: this package has no dependency on voxel-renderer.
 
 ```
 ┌───────────────┐  onBufferUpdated   ┌──────────────────┐   sendCommand   ┌─────────────┐
-│ CanvasManager │───────────────────▶│ PixelSyncSession │────────────────▶│  Transport  │
+│ PixelArtCanvas │───────────────────▶│ PixelSyncSession │────────────────▶│  Transport  │
 │  (per buffer) │                    │  (multi-buffer)  │◀────────────────│ (WebSocket, │
 │               │◀──applyRemote──────│                  │   onCommand     │  WebRTC, …) │
 └───────────────┘                    └──────────────────┘                 └──────┬──────┘
@@ -22,21 +22,21 @@ implementation: this package has no dependency on voxel-renderer.
                                                                        └──────────────────┘
 ```
 
-A `CanvasManager` has no concept of a buffer identity; it owns exactly one
+A `PixelArtCanvas` has no concept of a buffer identity; it owns exactly one
 texture. [`PixelSyncSession`](./PixelSyncSession.md) assigns that texture a `bufferId` and can attach
-several `CanvasManager` instances to the same transport connection (e.g. one
+several `PixelArtCanvas` instances to the same transport connection (e.g. one
 per open tileset).
 
 **Flow:**
-1. A local mutation (a paint stroke, fill, resize, or `setTexture`) fires
-   `CanvasManager.onBufferUpdated` (see [buffer/PixelBuffer.md](../buffer/PixelBuffer.md)).
+1. A local mutation (a paint stroke, fill, resize, or setting `texture`) fires
+   `PixelArtCanvas.onBufferUpdated` (see [buffer/PixelBuffer.md](../buffer/PixelBuffer.md)).
 2. `PixelSyncSession` stamps the event with `bufferId` / `clientId` / `seq` /
    `timestamp` and calls `transport.sendCommand(cmd)`.
 3. The transport delivers the command to [`PixelSyncServer.receive()`](./PixelSyncServer.md).
 4. The server resolves conflicts (see [ConflictResolver](./ConflictResolver.md)), applies the command to its authoritative
    [`PixelWorld`](./PixelWorld.md), and broadcasts it to clients subscribed to that buffer.
 5. Each subscribed client's transport calls `onCommand(cmd)`, which
-   `PixelSyncSession` routes to the matching `CanvasManager.applyRemoteCommand()`.
+   `PixelSyncSession` routes to the matching `PixelArtCanvas.applyRemoteCommand()`.
 6. `applyRemoteCommand` suppresses `onBufferUpdated` while applying, so the
    result is never re-broadcast: no echo loop.
 

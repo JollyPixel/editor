@@ -1,13 +1,18 @@
-# CanvasManager
+# PixelArtCanvas
 
-`CanvasManager` is the top-level coordinator for the pixel-draw renderer, and the package's primary public API. It wires together a viewport, canvas buffer, renderer, input handling, and SVG overlay — all internal implementation details — and owns the [`Brush`](./tools/Brush.md) tool, internal line/fill/select tools, and (when enabled) a [`HistoryStack`](./history/HistoryStack.md) for undo/redo.
+`PixelArtCanvas` is the top-level coordinator for the pixel-draw renderer, and the package's primary public API. It wires together a viewport, canvas buffer, renderer, input handling, and SVG overlay — all internal implementation details — and owns the [`Brush`](./tools/Brush.md) tool, internal line/fill/select tools, and an internal `HistoryController` that wraps a [`HistoryStack`](./history/HistoryStack.md) for undo/redo (constructed unconditionally; only records entries when `history.enabled` is passed).
 
 ## Types
 
 ```ts
-new CanvasManager(parentHtmlElement: HTMLDivElement, options?: CanvasManagerOptions)
+new PixelArtCanvas(parentHtmlElement: HTMLDivElement, options?: PixelArtCanvasOptions)
 
-interface CanvasManagerOptions {
+interface HistoryState {
+  canUndo: boolean;
+  canRedo: boolean;
+}
+
+interface PixelArtCanvasOptions {
   /**
    * Default interaction mode for the canvas.
    * "paint" for drawing, "move" for panning, or "fill" for the paint-bucket
@@ -67,12 +72,12 @@ interface CanvasManagerOptions {
     limit?: number;
   };
   /** Called whenever the undo/redo stack changes (after push, undo, redo, or clear). */
-  onHistoryChange?: (state: { canUndo: boolean; canRedo: boolean; }) => void;
+  onHistoryChange?: (state: HistoryState) => void;
   /**
    * Overrides for the copy/paste/undo/redo/delete key combos. Unspecified
    * actions keep their default binding. Shift (line-tool arm/disarm) is not
-   * configurable. Also settable/readable at runtime via `setKeybindings()` /
-   * `getKeybindings()`.
+   * configurable. Also settable/readable at runtime via `patchKeybindings()` /
+   * `keybindings`.
    */
   keybindings?: Partial<Keybindings>;
 }
@@ -80,7 +85,7 @@ interface CanvasManagerOptions {
 
 `Mode` is `"paint" | "move" | "fill" | "select"`. `ColorInput` (`string | Color`, where `Color` is [colorjs.io](https://colorjs.io)'s class) is used throughout the package wherever a color option is accepted: a CSS color string (hex, `rgb()`, `hsl()`, named color, ...) or a `Color` instance. `BrushOptions` is forwarded to the internal `Brush` instance, see [Brush.md](./tools/Brush.md). `PixelBufferHookListener` is described in [buffer/PixelBuffer.md](./buffer/PixelBuffer.md) and [network/index.md](./network/index.md). `Keybindings` is described in [utils/keybindings.md](./utils/keybindings.md).
 
-`history.enabled` (default `false`) creates an internal [`HistoryStack`](./history/HistoryStack.md) that records every stroke, resize, and texture replace, enabling `undo()`/`redo()`. Leaving it disabled skips that bookkeeping entirely — there's no per-edit cost paid for a feature that isn't used.
+`history.enabled` (default `false`) tells the internal `HistoryController` to back itself with a [`HistoryStack`](./history/HistoryStack.md) that records every stroke, resize, and texture replace, enabling `undo()`/`redo()`. Leaving it disabled skips that bookkeeping entirely — there's no per-edit cost paid for a feature that isn't used.
 
 Undocumented defaults: `texture.size` is `{ x: 64, y: 32 }` (`y` falls back to `x` when only `x` is given), `texture.maxSize` is `2048`, `zoom.default` is `4`, `zoom.min`/`zoom.max` are `1`/`32`, `zoom.sensitivity` is `0.1`, `backgroundTransparency.squareSize` is `8`, `backgroundTransparency.colors` is `{ odd: "#999", even: "#666" }`.
 
@@ -102,18 +107,18 @@ The brush instance. Use it to read or change the current brush color, opacity, a
 readonly viewport: DefaultViewport // { readonly zoom: number; readonly camera: Readonly<Vec2>; }
 ```
 
-Read-only camera/zoom state. Use `getCamera()`/`getZoom()` for copies, or the methods below for coordinate conversions and mutation.
+Read-only camera/zoom state. Use `camera`/`zoom` for copies, or the methods below for coordinate conversions and mutation.
 
 ## Methods
 
-### `getMode` / `setMode`
+### `mode`
 
 ```ts
-getMode(): Mode
-setMode(mode: Mode): void
+get mode(): Mode
+set mode(mode: Mode)
 ```
 
-Returns or sets the current interaction mode. `"paint"` routes left-click events to brush drawing (holding `Shift` arms a line tool); `"move"` routes them to panning; `"fill"` routes a left-click to a paint-bucket fill (contiguous region by default, or every same-colored pixel on the canvas when `getFillGlobal()` is `true` — see below); `"select"` routes them to a rectangle-selection tool: drag to select or move, `Ctrl`/`Cmd`+`C`/`V` to copy/duplicate, `Delete` to erase, `R` to rotate the selection 90° clockwise around its center (repeatable — press again for further rotation; no counterclockwise binding), `H`/`V` to flip the selection's content horizontally/vertically in place. The line/fill/select tools are internal implementation details with no public class of their own.
+Reads or sets the current interaction mode. `"paint"` routes left-click events to brush drawing (holding `Shift` arms a line tool); `"move"` routes them to panning; `"fill"` routes a left-click to a paint-bucket fill (contiguous region by default, or every same-colored pixel on the canvas when `fillGlobal` is `true` — see below); `"select"` routes them to a rectangle-selection tool: drag to select or move, `Ctrl`/`Cmd`+`C`/`V` to copy/duplicate, `Delete` to erase, `R` to rotate the selection 90° clockwise around its center (repeatable — press again for further rotation; no counterclockwise binding), `H`/`V` to flip the selection's content horizontally/vertically in place. The line/fill/select tools are internal implementation details with no public class of their own.
 
 Switching to `"move"` cancels an armed line. Switching away from `"select"` clears any active selection.
 
@@ -121,27 +126,27 @@ Right-click (color pick) and the SVG brush-cursor highlight are both active in `
 
 ---
 
-### `getFillGlobal` / `setFillGlobal`
+### `fillGlobal`
 
 ```ts
-getFillGlobal(): boolean
-setFillGlobal(global: boolean): void
+get fillGlobal(): boolean
+set fillGlobal(global: boolean)
 ```
 
-Returns or sets whether `"fill"` mode recolors every pixel matching the seed's color anywhere on the canvas (`true`) instead of only the seed's 4-directionally connected region (`false`, the default). Runtime-only — there is no constructor option — and the setting persists across mode switches, mirroring `brush`'s size/color.
+Reads or sets whether `"fill"` mode recolors every pixel matching the seed's color anywhere on the canvas (`true`) instead of only the seed's 4-directionally connected region (`false`, the default). Runtime-only — there is no constructor option — and the setting persists across mode switches, mirroring `brush`'s size/color.
 
 A global fill is still committed and undoable as a single atomic edit, but is broadcast over `onBufferUpdated`/the network layer as a compact `"global-fill"` event (`{ fromColor, toColor }`, no position list) rather than `"stroke"`, since it can touch a large fraction of the canvas — see [buffer/PixelBuffer.md](./buffer/PixelBuffer.md). Undoing/redoing a global fill falls back to a full-position `"stroke"` event.
 
 ---
 
-### `getTextureSize` / `setTextureSize`
+### `textureSize`
 
 ```ts
-getTextureSize(): Vec2
-setTextureSize(size: Vec2): void
+get textureSize(): Vec2
+set textureSize(size: Vec2)
 ```
 
-Returns or changes the current texture size. `setTextureSize` resizes the working buffer (content beyond the previous bounds is lost unless it was already committed to the master buffer) and emits a `"resized"` hook event.
+Reads or changes the current texture size. Setting it resizes the working buffer (content beyond the previous bounds is lost unless it was already committed to the master buffer) and emits a `"resized"` hook event.
 
 ---
 
@@ -164,9 +169,9 @@ canUndo(): boolean
 canRedo(): boolean
 ```
 
-Reverts/re-applies the most recent local edit (stroke, resize, or texture replace) via the internal [`HistoryStack`](./history/HistoryStack.md). `undo()`/`redo()` return `false` and do nothing when `history.enabled` wasn't passed at construction, or when the corresponding stack is empty; `canUndo()`/`canRedo()` report the same condition without mutating anything. Both bound to the configurable undo/redo keybindings by default, see [utils/keybindings.md](./utils/keybindings.md).
+Reverts/re-applies the most recent local edit (stroke, resize, or texture replace) via the internal `HistoryController`, which wraps a [`HistoryStack`](./history/HistoryStack.md). `undo()`/`redo()` return `false` and do nothing when `history.enabled` wasn't passed at construction, or when the corresponding stack is empty; `canUndo()`/`canRedo()` report the same condition without mutating anything. Both bound to the configurable undo/redo keybindings by default, see [utils/keybindings.md](./utils/keybindings.md).
 
-A successful `undo()`/`redo()` redraws the canvas, calls `onDrawEnd`, fires `onHistoryChange`, and — for a history-enabled `CanvasManager` attached to a `PixelSyncSession` — emits the reverted/re-applied state through `onBufferUpdated` so peers converge to the same result (see [buffer/PixelBuffer.md](./buffer/PixelBuffer.md) for how the replayed event's `originTimestamp` keeps that fair under conflict resolution). The one exception: undoing/redoing a `"select"`-mode edit (move/delete/paste/rotate/flip) never emits `onBufferUpdated`, since those edits aren't networked in the first place (see `setMode`/select-mode note above) — undo/redo for them is local-only.
+A successful `undo()`/`redo()` redraws the canvas, calls `onDrawEnd`, fires `onHistoryChange`, and — for a history-enabled `PixelArtCanvas` attached to a `PixelSyncSession` — emits the reverted/re-applied state through `onBufferUpdated` so peers converge to the same result (see [buffer/PixelBuffer.md](./buffer/PixelBuffer.md) for how the replayed event's `originTimestamp` keeps that fair under conflict resolution). The one exception: undoing/redoing a `"select"`-mode edit (move/delete/paste/rotate/flip) never emits `onBufferUpdated`, since those edits aren't networked in the first place (see `mode`/select-mode note above) — undo/redo for them is local-only.
 
 A remote resize, texture-replace, or snapshot load clears the local history stack (its recorded positions/sizes no longer describe the buffer), so `canUndo()`/`canRedo()` drop to `false` after one.
 
@@ -184,85 +189,76 @@ Programmatic equivalents of the `R`/`H`/`V` select-mode keybindings (e.g. for a 
 
 ---
 
-### `setTexture`
+### `texture`
 
 ```ts
-setTexture(source: HTMLCanvasElement | HTMLImageElement): void
+get texture(): Uint8ClampedArray
+set texture(source: HTMLCanvasElement | HTMLImageElement)
 ```
 
-Replaces the texture with the pixel data from `source`, resizing to match, and emits a `"texture-replaced"` hook event.
+Reads the current texture's raw RGBA pixel data (row-major, 4 bytes per pixel), or replaces the texture with the pixel data from `source`, resizing to match and emitting a `"texture-replaced"` hook event.
 
 ---
 
-### `getTexture`
+### `textureCanvas`
 
 ```ts
-getTexture(): Uint8ClampedArray
-```
-
-Returns the current texture's raw RGBA pixel data (row-major, 4 bytes per pixel).
-
----
-
-### `getTextureCanvas`
-
-```ts
-getTextureCanvas(): HTMLCanvasElement
+textureCanvas(): HTMLCanvasElement
 ```
 
 Returns the working (texture-resolution, off-screen) canvas backing the buffer.
 
 ---
 
-### `getCanvas`
+### `canvas`
 
 ```ts
-getCanvas(): HTMLCanvasElement
+canvas(): HTMLCanvasElement
 ```
 
 Returns the visible (viewport-cropped, on-screen) canvas element that `InputController` listens on. Useful for attaching additional event listeners or overlays.
 
 ---
 
-### `getCamera`
+### `camera`
 
 ```ts
-getCamera(): Vec2
+get camera(): Vec2
 ```
 
 Returns a copy of the current camera offset `{ x, y }` in viewport space.
 
 ---
 
-### `getZoom`
+### `zoom`
 
 ```ts
-getZoom(): number
+get zoom(): number
 ```
 
 Returns the current zoom multiplier.
 
 ---
 
-### `getZoomSensitivity` / `setZoomSensitivity`
+### `zoomSensitivity`
 
 ```ts
-getZoomSensitivity(): number
-setZoomSensitivity(sensitivity: number): void
+get zoomSensitivity(): number
+set zoomSensitivity(sensitivity: number)
 ```
 
-Returns or sets the mouse-wheel zoom sensitivity (clamped to a minimum of `0.01`).
+Reads or sets the mouse-wheel zoom sensitivity (clamped to a minimum of `0.01`).
 
 ---
 
-### `getKeybindings` / `setKeybindings`
+### `keybindings` / `patchKeybindings`
 
 ```ts
-getKeybindings(): Readonly<Keybindings>
-setKeybindings(patch: Partial<Keybindings>): void
+get keybindings(): Readonly<Keybindings>
+patchKeybindings(patch: Partial<Keybindings>): void
 ```
 
-Returns the currently effective keybindings, or merges `patch` onto them (actions not present in `patch` keep their current binding). Throws `InvalidKeybindingError` for a malformed combo string, or `KeybindingConflictError` if the result would bind two actions to the same combo — either way the previous keybindings remain in effect. See [utils/keybindings.md](./utils/keybindings.md).
+Reads the currently effective keybindings, or merges `patch` onto them (actions not present in `patch` keep their current binding). Throws `InvalidKeybindingError` for a malformed combo string, or `KeybindingConflictError` if the result would bind two actions to the same combo — either way the previous keybindings remain in effect. See [utils/keybindings.md](./utils/keybindings.md).
 
 ---
 
@@ -276,14 +272,14 @@ Pans and clamps the camera so the texture is centered in the current viewport.
 
 ---
 
-### `getParentHtmlElement` / `reparentCanvasTo`
+### `parentHtmlElement` / `reparentCanvasTo`
 
 ```ts
-getParentHtmlElement(): HTMLDivElement
+get parentHtmlElement(): HTMLDivElement
 reparentCanvasTo(newParentElement: HTMLDivElement): void
 ```
 
-Returns the current parent element, or moves the working canvas and the SVG overlay into a new one and re-reads its dimensions. Call `reparentCanvasTo` when mounting the editor into a new DOM container.
+Reads the current parent element, or call `reparentCanvasTo` to move the working canvas and the SVG overlay into a new one and re-read its dimensions. Call `reparentCanvasTo` when mounting the editor into a new DOM container.
 
 ---
 

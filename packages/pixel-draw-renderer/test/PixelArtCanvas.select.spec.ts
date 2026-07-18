@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { Window } from "happy-dom";
 
 // Import Internal Dependencies
-import { CanvasManager, type CanvasManagerOptions } from "../src/CanvasManager.ts";
+import { PixelArtCanvas, type PixelArtCanvasOptions } from "../src/PixelArtCanvas.ts";
 import { installCanvasMock, MockCanvasElement } from "./mocks.ts";
 
 // CONSTANTS
@@ -60,7 +60,7 @@ function mouseEvent(
   return new MouseEvent(type, { button: 0, buttons: 1, clientX, clientY, bubbles: true });
 }
 
-describe("CanvasManager — select mode", () => {
+describe("PixelArtCanvas — select mode", () => {
   let container: HTMLDivElement;
 
   beforeEach(() => {
@@ -71,8 +71,8 @@ describe("CanvasManager — select mode", () => {
   // client 84 + n*4 -> texture n, exactly (chosen to land on pixel starts,
   // no floor-rounding ambiguity).
 
-  function makeManager(options: CanvasManagerOptions = {}): CanvasManager {
-    return new CanvasManager(container, {
+  function makeManager(options: PixelArtCanvasOptions = {}): PixelArtCanvas {
+    return new PixelArtCanvas(container, {
       texture: { maxSize: 32, size: { x: 8, y: 8 } },
       zoom: { default: 4 },
       ...options
@@ -91,48 +91,48 @@ describe("CanvasManager — select mode", () => {
 
   test("dragging out a rectangle then Delete replaces it with the erase color (default opaque white)", () => {
     const manager = makeManager();
-    const canvas = manager.getCanvas();
+    const canvas = manager.canvas();
 
     manager.commitPixels([{ x: 2, y: 2 }, { x: 3, y: 2 }, { x: 2, y: 3 }, { x: 3, y: 3 }]);
     assert.deepStrictEqual(
-      readPixel(manager.getTexture(), { x: 2, y: 2 }, 8),
+      readPixel(manager.texture, { x: 2, y: 2 }, 8),
       [0, 0, 0, 255],
       "sanity: painted black before delete"
     );
 
-    manager.setMode("select");
+    manager.mode = "select";
     canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
     canvas.dispatchEvent(mouseEvent("mousemove", 96, 96));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
     window.dispatchEvent(deleteKey());
 
-    assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 2, y: 2 }, 8), [255, 255, 255, 255]);
-    assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 3, y: 3 }, 8), [255, 255, 255, 255]);
+    assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [255, 255, 255, 255]);
+    assert.deepStrictEqual(readPixel(manager.texture, { x: 3, y: 3 }, 8), [255, 255, 255, 255]);
     manager.destroy();
   });
 
   test("select.eraseColor overrides the default erase color", () => {
     const manager = makeManager({ select: { eraseColor: "#FF00FF" } });
-    const canvas = manager.getCanvas();
+    const canvas = manager.canvas();
 
     manager.commitPixels([{ x: 2, y: 2 }]);
-    manager.setMode("select");
+    manager.mode = "select";
     canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
     window.dispatchEvent(deleteKey());
 
-    assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 2, y: 2 }, 8), [255, 0, 255, 255]);
+    assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [255, 0, 255, 255]);
     manager.destroy();
   });
 
   test("dragging a real (non-pasted) selection previews the source as vacated mid-drag", () => {
     const manager = makeManager();
-    const canvas = manager.getCanvas();
+    const canvas = manager.canvas();
 
     manager.commitPixels([{ x: 2, y: 2 }]);
-    manager.setMode("select");
+    manager.mode = "select";
     canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
@@ -155,11 +155,11 @@ describe("CanvasManager — select mode", () => {
 
   test("dragging a just-pasted duplicate does NOT preview the original as vacated (regression)", () => {
     const manager = makeManager();
-    const canvas = manager.getCanvas();
+    const canvas = manager.canvas();
     const mockCanvas = canvas as unknown as MockCanvasElement;
 
     manager.commitPixels([{ x: 2, y: 2 }]);
-    manager.setMode("select");
+    manager.mode = "select";
     canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
@@ -190,10 +190,10 @@ describe("CanvasManager — select mode", () => {
 
   test("dragging the selection moves it: source is erased, destination gets the moved pixels", () => {
     const manager = makeManager();
-    const canvas = manager.getCanvas();
+    const canvas = manager.canvas();
 
     manager.commitPixels([{ x: 2, y: 2 }, { x: 3, y: 2 }, { x: 2, y: 3 }, { x: 3, y: 3 }]);
-    manager.setMode("select");
+    manager.mode = "select";
 
     // Create the selection over (2,2)-(3,3).
     canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
@@ -205,22 +205,22 @@ describe("CanvasManager — select mode", () => {
     canvas.dispatchEvent(mouseEvent("mousemove", 100, 100));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
-    assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 2, y: 2 }, 8), [255, 255, 255, 255], "source vacated");
+    assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [255, 255, 255, 255], "source vacated");
     assert.deepStrictEqual(
-      readPixel(manager.getTexture(), { x: 4, y: 4 }, 8),
+      readPixel(manager.texture, { x: 4, y: 4 }, 8),
       [0, 0, 0, 255],
       "destination got the moved pixel"
     );
-    assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 5, y: 5 }, 8), [0, 0, 0, 255]);
+    assert.deepStrictEqual(readPixel(manager.texture, { x: 5, y: 5 }, 8), [0, 0, 0, 255]);
     manager.destroy();
   });
 
   test("a click-only drag (no movement) commits nothing — the selection just stays put", () => {
     const manager = makeManager();
-    const canvas = manager.getCanvas();
+    const canvas = manager.canvas();
 
     manager.commitPixels([{ x: 2, y: 2 }]);
-    manager.setMode("select");
+    manager.mode = "select";
     canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
@@ -228,16 +228,16 @@ describe("CanvasManager — select mode", () => {
     canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
-    assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 2, y: 2 }, 8), [0, 0, 0, 255], "untouched — nothing to commit");
+    assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 255], "untouched — nothing to commit");
     manager.destroy();
   });
 
   test("Ctrl+C then Ctrl+V duplicates in place; moving the duplicate away leaves the original untouched", () => {
     const manager = makeManager();
-    const canvas = manager.getCanvas();
+    const canvas = manager.canvas();
 
     manager.commitPixels([{ x: 2, y: 2 }]);
-    manager.setMode("select");
+    manager.mode = "select";
     canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
@@ -254,12 +254,12 @@ describe("CanvasManager — select mode", () => {
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
     assert.deepStrictEqual(
-      readPixel(manager.getTexture(), { x: 2, y: 2 }, 8),
+      readPixel(manager.texture, { x: 2, y: 2 }, 8),
       [0, 0, 0, 255],
       "original survives the duplicate's first move"
     );
     assert.deepStrictEqual(
-      readPixel(manager.getTexture(), { x: 4, y: 4 }, 8),
+      readPixel(manager.texture, { x: 4, y: 4 }, 8),
       [0, 0, 0, 255],
       "duplicate landed at destination"
     );
@@ -268,10 +268,10 @@ describe("CanvasManager — select mode", () => {
 
   test("moving an already-relocated duplicate a second time erases its (now real) previous spot", () => {
     const manager = makeManager();
-    const canvas = manager.getCanvas();
+    const canvas = manager.canvas();
 
     manager.commitPixels([{ x: 2, y: 2 }]);
-    manager.setMode("select");
+    manager.mode = "select";
     canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
@@ -289,14 +289,14 @@ describe("CanvasManager — select mode", () => {
     canvas.dispatchEvent(mouseEvent("mousemove", 108, 108));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
-    assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 2, y: 2 }, 8), [0, 0, 0, 255], "original still untouched");
+    assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 255], "original still untouched");
     assert.deepStrictEqual(
-      readPixel(manager.getTexture(), { x: 4, y: 4 }, 8),
+      readPixel(manager.texture, { x: 4, y: 4 }, 8),
       [255, 255, 255, 255],
       "second move erases the duplicate's now-real previous spot"
     );
     assert.deepStrictEqual(
-      readPixel(manager.getTexture(), { x: 6, y: 6 }, 8),
+      readPixel(manager.texture, { x: 6, y: 6 }, 8),
       [0, 0, 0, 255],
       "duplicate landed at the new destination"
     );
@@ -305,20 +305,20 @@ describe("CanvasManager — select mode", () => {
 
   test("Ctrl+V without a prior Ctrl+C is a no-op", () => {
     const manager = makeManager();
-    const before = manager.getTexture().slice();
+    const before = manager.texture.slice();
 
     window.dispatchEvent(ctrlKey("v"));
 
-    assert.deepStrictEqual(manager.getTexture(), before);
+    assert.deepStrictEqual(manager.texture, before);
     manager.destroy();
   });
 
   test("clicking outside the current selection discards it and starts a new one", () => {
     const manager = makeManager();
-    const canvas = manager.getCanvas();
+    const canvas = manager.canvas();
 
     manager.commitPixels([{ x: 2, y: 2 }]);
-    manager.setMode("select");
+    manager.mode = "select";
     canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
@@ -328,25 +328,25 @@ describe("CanvasManager — select mode", () => {
 
     window.dispatchEvent(deleteKey());
 
-    assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 2, y: 2 }, 8), [0, 0, 0, 255], "old selection untouched");
-    assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 6, y: 6 }, 8), [255, 255, 255, 255], "new selection erased");
+    assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 255], "old selection untouched");
+    assert.deepStrictEqual(readPixel(manager.texture, { x: 6, y: 6 }, 8), [255, 255, 255, 255], "new selection erased");
     manager.destroy();
   });
 
   test("switching mode away from 'select' clears the active selection", () => {
     const manager = makeManager();
-    const canvas = manager.getCanvas();
+    const canvas = manager.canvas();
 
     manager.commitPixels([{ x: 2, y: 2 }]);
-    manager.setMode("select");
+    manager.mode = "select";
     canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
-    manager.setMode("paint");
+    manager.mode = "paint";
     window.dispatchEvent(deleteKey());
 
     assert.deepStrictEqual(
-      readPixel(manager.getTexture(), { x: 2, y: 2 }, 8),
+      readPixel(manager.texture, { x: 2, y: 2 }, 8),
       [0, 0, 0, 255],
       "cleared by the mode switch — Delete is a no-op"
     );
@@ -355,10 +355,10 @@ describe("CanvasManager — select mode", () => {
 
   test("dragging a selection out of texture bounds clips the paint; the source is still erased", () => {
     const manager = makeManager();
-    const canvas = manager.getCanvas();
+    const canvas = manager.canvas();
 
     manager.commitPixels([{ x: 1, y: 1 }]);
-    manager.setMode("select");
+    manager.mode = "select";
     canvas.dispatchEvent(mouseEvent("mousedown", 88, 88));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
@@ -369,7 +369,7 @@ describe("CanvasManager — select mode", () => {
     });
 
     assert.deepStrictEqual(
-      readPixel(manager.getTexture(), { x: 1, y: 1 }, 8),
+      readPixel(manager.texture, { x: 1, y: 1 }, 8),
       [255, 255, 255, 255],
       "source erased even though destination landed out of bounds"
     );
@@ -385,13 +385,13 @@ describe("CanvasManager — select mode", () => {
       },
       onBufferUpdated: (event) => events.push(event)
     });
-    const canvas = manager.getCanvas();
+    const canvas = manager.canvas();
 
     manager.commitPixels([{ x: 2, y: 2 }]);
     drawEndCount = 0;
     events.length = 0;
 
-    manager.setMode("select");
+    manager.mode = "select";
     canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
     window.dispatchEvent(deleteKey());
@@ -414,10 +414,10 @@ describe("CanvasManager — select mode", () => {
   }
 
   // A 2-wide x 1-tall selection over (2,2)-(3,2): black at (2,2), red at (3,2).
-  function paintHorizontalPair(manager: CanvasManager): void {
-    manager.brush.setColor("#000000");
+  function paintHorizontalPair(manager: PixelArtCanvas): void {
+    manager.brush.color("#000000");
     manager.commitPixels([{ x: 2, y: 2 }]);
-    manager.brush.setColor("#FF0000");
+    manager.brush.color("#FF0000");
     manager.commitPixels([{ x: 3, y: 2 }]);
   }
 
@@ -429,26 +429,26 @@ describe("CanvasManager — select mode", () => {
 
   test("R rotates a non-square selection 90deg clockwise around its center", () => {
     const manager = makeManager();
-    const canvas = manager.getCanvas();
+    const canvas = manager.canvas();
 
     paintHorizontalPair(manager);
-    manager.setMode("select");
+    manager.mode = "select";
     selectHorizontalPair(canvas);
 
     window.dispatchEvent(rotateKey());
 
     assert.deepStrictEqual(
-      readPixel(manager.getTexture(), { x: 2, y: 2 }, 8),
+      readPixel(manager.texture, { x: 2, y: 2 }, 8),
       [255, 255, 255, 255],
       "old footprint vacated"
     );
     assert.deepStrictEqual(
-      readPixel(manager.getTexture(), { x: 3, y: 2 }, 8),
+      readPixel(manager.texture, { x: 3, y: 2 }, 8),
       [0, 0, 0, 255],
       "rotated: the left pixel is now on top"
     );
     assert.deepStrictEqual(
-      readPixel(manager.getTexture(), { x: 3, y: 3 }, 8),
+      readPixel(manager.texture, { x: 3, y: 3 }, 8),
       [255, 0, 0, 255],
       "rotated: the right pixel is now on the bottom"
     );
@@ -457,21 +457,21 @@ describe("CanvasManager — select mode", () => {
 
   test("H flips the active selection's content left-right in place", () => {
     const manager = makeManager();
-    const canvas = manager.getCanvas();
+    const canvas = manager.canvas();
 
     paintHorizontalPair(manager);
-    manager.setMode("select");
+    manager.mode = "select";
     selectHorizontalPair(canvas);
 
     window.dispatchEvent(flipHorizontalKey());
 
     assert.deepStrictEqual(
-      readPixel(manager.getTexture(), { x: 2, y: 2 }, 8),
+      readPixel(manager.texture, { x: 2, y: 2 }, 8),
       [255, 0, 0, 255],
       "mirrored: red is now on the left"
     );
     assert.deepStrictEqual(
-      readPixel(manager.getTexture(), { x: 3, y: 2 }, 8),
+      readPixel(manager.texture, { x: 3, y: 2 }, 8),
       [0, 0, 0, 255],
       "mirrored: black is now on the right"
     );
@@ -480,14 +480,14 @@ describe("CanvasManager — select mode", () => {
 
   test("V flips the active selection's content top-bottom in place", () => {
     const manager = makeManager();
-    const canvas = manager.getCanvas();
+    const canvas = manager.canvas();
 
-    manager.brush.setColor("#000000");
+    manager.brush.color("#000000");
     manager.commitPixels([{ x: 2, y: 2 }]);
-    manager.brush.setColor("#FF0000");
+    manager.brush.color("#FF0000");
     manager.commitPixels([{ x: 2, y: 3 }]);
 
-    manager.setMode("select");
+    manager.mode = "select";
     canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
     canvas.dispatchEvent(mouseEvent("mousemove", 92, 96));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
@@ -495,12 +495,12 @@ describe("CanvasManager — select mode", () => {
     window.dispatchEvent(flipVerticalKey());
 
     assert.deepStrictEqual(
-      readPixel(manager.getTexture(), { x: 2, y: 2 }, 8),
+      readPixel(manager.texture, { x: 2, y: 2 }, 8),
       [255, 0, 0, 255],
       "mirrored: red is now on top"
     );
     assert.deepStrictEqual(
-      readPixel(manager.getTexture(), { x: 2, y: 3 }, 8),
+      readPixel(manager.texture, { x: 2, y: 3 }, 8),
       [0, 0, 0, 255],
       "mirrored: black is now on the bottom"
     );
@@ -509,7 +509,7 @@ describe("CanvasManager — select mode", () => {
 
   test("R/H/V are no-ops without an active selection", () => {
     const manager = makeManager();
-    const before = manager.getTexture().slice();
+    const before = manager.texture.slice();
 
     assert.doesNotThrow(() => {
       window.dispatchEvent(rotateKey());
@@ -517,25 +517,25 @@ describe("CanvasManager — select mode", () => {
       window.dispatchEvent(flipVerticalKey());
     });
 
-    assert.deepStrictEqual(manager.getTexture(), before);
+    assert.deepStrictEqual(manager.texture, before);
     manager.destroy();
   });
 
   test("public rotate/flip methods mirror the keybinding path, and no-op safely without a selection", () => {
     const manager = makeManager();
-    const canvas = manager.getCanvas();
+    const canvas = manager.canvas();
 
     assert.strictEqual(manager.rotateSelection(), false, "no selection yet");
     assert.strictEqual(manager.flipSelectionHorizontal(), false);
     assert.strictEqual(manager.flipSelectionVertical(), false);
 
     paintHorizontalPair(manager);
-    manager.setMode("select");
+    manager.mode = "select";
     selectHorizontalPair(canvas);
 
     assert.strictEqual(manager.flipSelectionHorizontal(), true);
-    assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 2, y: 2 }, 8), [255, 0, 0, 255]);
-    assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 3, y: 2 }, 8), [0, 0, 0, 255]);
+    assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [255, 0, 0, 255]);
+    assert.deepStrictEqual(readPixel(manager.texture, { x: 3, y: 2 }, 8), [0, 0, 0, 255]);
 
     assert.strictEqual(manager.rotateSelection(), true);
     manager.destroy();
@@ -550,13 +550,13 @@ describe("CanvasManager — select mode", () => {
       },
       onBufferUpdated: (event) => events.push(event)
     });
-    const canvas = manager.getCanvas();
+    const canvas = manager.canvas();
 
     paintHorizontalPair(manager);
     drawEndCount = 0;
     events.length = 0;
 
-    manager.setMode("select");
+    manager.mode = "select";
     selectHorizontalPair(canvas);
 
     window.dispatchEvent(rotateKey());
@@ -571,63 +571,63 @@ describe("CanvasManager — select mode", () => {
   describe("undo/redo", () => {
     test("undo/redo covers a Move", () => {
       const manager = makeManager({ history: { enabled: true } });
-      const canvas = manager.getCanvas();
+      const canvas = manager.canvas();
 
       manager.commitPixels([{ x: 2, y: 2 }]);
-      manager.setMode("select");
+      manager.mode = "select";
       canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
       canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
       canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
       canvas.dispatchEvent(mouseEvent("mousemove", 100, 100));
       canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
-      assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 2, y: 2 }, 8), [255, 255, 255, 255]);
-      assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 4, y: 4 }, 8), [0, 0, 0, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [255, 255, 255, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 4, y: 4 }, 8), [0, 0, 0, 255]);
 
       window.dispatchEvent(ctrlKey("z"));
       assert.deepStrictEqual(
-        readPixel(manager.getTexture(), { x: 2, y: 2 }, 8), [0, 0, 0, 255], "undo restores the source"
+        readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 255], "undo restores the source"
       );
       assert.deepStrictEqual(
-        readPixel(manager.getTexture(), { x: 4, y: 4 }, 8), [255, 255, 255, 255], "undo removes the destination"
+        readPixel(manager.texture, { x: 4, y: 4 }, 8), [255, 255, 255, 255], "undo removes the destination"
       );
 
       window.dispatchEvent(ctrlKey("y"));
-      assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 2, y: 2 }, 8), [255, 255, 255, 255]);
-      assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 4, y: 4 }, 8), [0, 0, 0, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [255, 255, 255, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 4, y: 4 }, 8), [0, 0, 0, 255]);
       manager.destroy();
     });
 
     test("undo/redo covers a Delete", () => {
       const manager = makeManager({ history: { enabled: true } });
-      const canvas = manager.getCanvas();
+      const canvas = manager.canvas();
 
       manager.commitPixels([{ x: 2, y: 2 }]);
-      manager.setMode("select");
+      manager.mode = "select";
       canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
       canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
       window.dispatchEvent(deleteKey());
-      assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 2, y: 2 }, 8), [255, 255, 255, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [255, 255, 255, 255]);
 
       window.dispatchEvent(ctrlKey("z"));
       assert.deepStrictEqual(
-        readPixel(manager.getTexture(), { x: 2, y: 2 }, 8), [0, 0, 0, 255], "undo restores the deleted pixel"
+        readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 255], "undo restores the deleted pixel"
       );
 
       window.dispatchEvent(ctrlKey("y"));
       assert.deepStrictEqual(
-        readPixel(manager.getTexture(), { x: 2, y: 2 }, 8), [255, 255, 255, 255], "redo re-applies the delete"
+        readPixel(manager.texture, { x: 2, y: 2 }, 8), [255, 255, 255, 255], "redo re-applies the delete"
       );
       manager.destroy();
     });
 
     test("undo/redo covers a Paste", () => {
       const manager = makeManager({ history: { enabled: true } });
-      const canvas = manager.getCanvas();
+      const canvas = manager.canvas();
 
       manager.commitPixels([{ x: 2, y: 2 }]);
-      manager.setMode("select");
+      manager.mode = "select";
       canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
       canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
@@ -638,66 +638,66 @@ describe("CanvasManager — select mode", () => {
       canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
       canvas.dispatchEvent(mouseEvent("mousemove", 100, 100));
       canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
-      assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 2, y: 2 }, 8), [255, 255, 255, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [255, 255, 255, 255]);
 
       window.dispatchEvent(ctrlKey("v"));
       assert.deepStrictEqual(
-        readPixel(manager.getTexture(), { x: 2, y: 2 }, 8), [0, 0, 0, 255], "paste restores content at (2,2)"
+        readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 255], "paste restores content at (2,2)"
       );
 
       window.dispatchEvent(ctrlKey("z"));
       assert.deepStrictEqual(
-        readPixel(manager.getTexture(), { x: 2, y: 2 }, 8), [255, 255, 255, 255], "undo removes the pasted content"
+        readPixel(manager.texture, { x: 2, y: 2 }, 8), [255, 255, 255, 255], "undo removes the pasted content"
       );
 
       window.dispatchEvent(ctrlKey("y"));
       assert.deepStrictEqual(
-        readPixel(manager.getTexture(), { x: 2, y: 2 }, 8), [0, 0, 0, 255], "redo re-applies the paste"
+        readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 255], "redo re-applies the paste"
       );
       manager.destroy();
     });
 
     test("undo/redo covers a Rotate", () => {
       const manager = makeManager({ history: { enabled: true } });
-      const canvas = manager.getCanvas();
+      const canvas = manager.canvas();
 
       paintHorizontalPair(manager);
-      manager.setMode("select");
+      manager.mode = "select";
       selectHorizontalPair(canvas);
 
       window.dispatchEvent(rotateKey());
       assert.deepStrictEqual(
-        readPixel(manager.getTexture(), { x: 3, y: 3 }, 8), [255, 0, 0, 255], "sanity: rotated"
+        readPixel(manager.texture, { x: 3, y: 3 }, 8), [255, 0, 0, 255], "sanity: rotated"
       );
 
       window.dispatchEvent(ctrlKey("z"));
       assert.deepStrictEqual(
-        readPixel(manager.getTexture(), { x: 2, y: 2 }, 8), [0, 0, 0, 255], "undo restores the pre-rotate layout"
+        readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 255], "undo restores the pre-rotate layout"
       );
-      assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 3, y: 2 }, 8), [255, 0, 0, 255]);
-      assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 3, y: 3 }, 8), [255, 255, 255, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 3, y: 2 }, 8), [255, 0, 0, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 3, y: 3 }, 8), [255, 255, 255, 255]);
 
       window.dispatchEvent(ctrlKey("y"));
-      assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 2, y: 2 }, 8), [255, 255, 255, 255]);
-      assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 3, y: 2 }, 8), [0, 0, 0, 255]);
-      assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 3, y: 3 }, 8), [255, 0, 0, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [255, 255, 255, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 3, y: 2 }, 8), [0, 0, 0, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 3, y: 3 }, 8), [255, 0, 0, 255]);
       manager.destroy();
     });
 
     test("undoing a Rotate resyncs the selection box, so a follow-up rotate doesn't corrupt pixels", () => {
       const manager = makeManager({ history: { enabled: true } });
-      const canvas = manager.getCanvas();
+      const canvas = manager.canvas();
 
       paintHorizontalPair(manager);
-      manager.setMode("select");
+      manager.mode = "select";
       selectHorizontalPair(canvas);
 
       window.dispatchEvent(rotateKey());
       window.dispatchEvent(ctrlKey("z"));
       assert.deepStrictEqual(
-        readPixel(manager.getTexture(), { x: 2, y: 2 }, 8), [0, 0, 0, 255], "sanity: undo restored the pre-rotate layout"
+        readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 255], "sanity: undo restored the pre-rotate layout"
       );
-      assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 3, y: 2 }, 8), [255, 0, 0, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 3, y: 2 }, 8), [255, 0, 0, 255]);
 
       // If the selection box hadn't resynced to the pre-rotate rect on undo,
       // this second rotate would erase/rotate from the stale post-rotate
@@ -705,38 +705,38 @@ describe("CanvasManager — select mode", () => {
       // was never part of the selection.
       window.dispatchEvent(rotateKey());
       assert.deepStrictEqual(
-        readPixel(manager.getTexture(), { x: 2, y: 2 }, 8), [255, 255, 255, 255], "the real pre-rotate footprint got erased"
+        readPixel(manager.texture, { x: 2, y: 2 }, 8), [255, 255, 255, 255], "the real pre-rotate footprint got erased"
       );
-      assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 3, y: 2 }, 8), [0, 0, 0, 255]);
-      assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 3, y: 3 }, 8), [255, 0, 0, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 3, y: 2 }, 8), [0, 0, 0, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 3, y: 3 }, 8), [255, 0, 0, 255]);
       assert.deepStrictEqual(
-        readPixel(manager.getTexture(), { x: 4, y: 3 }, 8), [255, 255, 255, 255], "unrelated pixel must stay untouched"
+        readPixel(manager.texture, { x: 4, y: 3 }, 8), [255, 255, 255, 255], "unrelated pixel must stay untouched"
       );
       manager.destroy();
     });
 
     test("undo/redo covers a Flip", () => {
       const manager = makeManager({ history: { enabled: true } });
-      const canvas = manager.getCanvas();
+      const canvas = manager.canvas();
 
       paintHorizontalPair(manager);
-      manager.setMode("select");
+      manager.mode = "select";
       selectHorizontalPair(canvas);
 
       window.dispatchEvent(flipHorizontalKey());
       assert.deepStrictEqual(
-        readPixel(manager.getTexture(), { x: 2, y: 2 }, 8), [255, 0, 0, 255], "sanity: flipped"
+        readPixel(manager.texture, { x: 2, y: 2 }, 8), [255, 0, 0, 255], "sanity: flipped"
       );
 
       window.dispatchEvent(ctrlKey("z"));
       assert.deepStrictEqual(
-        readPixel(manager.getTexture(), { x: 2, y: 2 }, 8), [0, 0, 0, 255], "undo restores the pre-flip layout"
+        readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 255], "undo restores the pre-flip layout"
       );
-      assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 3, y: 2 }, 8), [255, 0, 0, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 3, y: 2 }, 8), [255, 0, 0, 255]);
 
       window.dispatchEvent(ctrlKey("y"));
-      assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 2, y: 2 }, 8), [255, 0, 0, 255]);
-      assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 3, y: 2 }, 8), [0, 0, 0, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [255, 0, 0, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 3, y: 2 }, 8), [0, 0, 0, 255]);
       manager.destroy();
     });
   });

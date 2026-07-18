@@ -2,10 +2,10 @@
 import type { RGBA, Vec2 } from "../types.ts";
 
 export interface DefaultPixelBuffer {
-  getSize(): Vec2;
-  setSize(size: Vec2): void;
-  getPixels(): Uint8ClampedArray;
-  setPixels(
+  size(): Vec2;
+  resize(size: Vec2): void;
+  pixels(): Uint8ClampedArray;
+  replacePixels(
     pixels: Uint8ClampedArray,
     size: Vec2
   ): void;
@@ -18,4 +18,7 @@ export interface DefaultPixelBuffer {
     x: number,
     y: number
   ): [number, number, number, number];
+  samplePixels(
+    positions: Vec2[]
+  ): RGBA[];
 }

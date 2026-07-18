@@ -4,7 +4,6 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  groupPositionsByColor,
   HistoryStack
 } from "../../src/history/HistoryStack.ts";
 import { PixelBuffer } from "../../src/buffer/PixelBuffer.ts";
@@ -18,28 +17,6 @@ const kWhite: RGBA = { r: 255, g: 255, b: 255, a: 255 };
 function makeBuffer(): PixelBuffer {
   return new PixelBuffer({ size: { x: 4, y: 4 }, defaultColor: kWhite, maxSize: 8 });
 }
-
-describe("groupPositionsByColor", () => {
-  test("groups positions sharing an identical RGBA into one bucket", () => {
-    const positions = [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }];
-    const colors = [kRed, kBlue, kRed];
-
-    const groups = groupPositionsByColor(positions, colors);
-
-    assert.strictEqual(groups.length, 2);
-    const redGroup = groups.find((g) => g.color.r === 255);
-    const blueGroup = groups.find((g) => g.color.b === 255);
-    assert.deepStrictEqual(redGroup?.positions, [{ x: 0, y: 0 }, { x: 2, y: 0 }]);
-    assert.deepStrictEqual(blueGroup?.positions, [{ x: 1, y: 0 }]);
-  });
-
-  test("returns one group per position when every color is unique", () => {
-    const positions = [{ x: 0, y: 0 }, { x: 1, y: 0 }];
-    const colors = [kRed, kBlue];
-
-    assert.strictEqual(groupPositionsByColor(positions, colors).length, 2);
-  });
-});
 
 describe("HistoryStack", () => {
   describe("canUndo / canRedo", () => {
@@ -135,7 +112,9 @@ describe("HistoryStack", () => {
         action: "select-edit",
         positions: [{ x: 0, y: 0 }, { x: 1, y: 0 }],
         beforeColors: [kWhite, kWhite],
-        afterColors: [kRed, kBlue]
+        afterColors: [kRed, kBlue],
+        oldRect: { x: 0, y: 0, width: 2, height: 1 },
+        newRect: { x: 0, y: 0, width: 2, height: 1 }
       });
 
       stack.undo();
@@ -152,10 +131,10 @@ describe("HistoryStack", () => {
     test("undo restores the previous size and pixel content", () => {
       const buffer = makeBuffer();
       const stack = new HistoryStack(buffer);
-      const beforePixels = Uint8ClampedArray.from(buffer.getPixels());
+      const beforePixels = Uint8ClampedArray.from(buffer.pixels());
 
-      buffer.setSize({ x: 2, y: 2 });
-      const afterPixels = Uint8ClampedArray.from(buffer.getPixels());
+      buffer.resize({ x: 2, y: 2 });
+      const afterPixels = Uint8ClampedArray.from(buffer.pixels());
 
       stack.push({
         action: "resized",
@@ -166,10 +145,10 @@ describe("HistoryStack", () => {
       });
 
       stack.undo();
-      assert.deepStrictEqual(buffer.getSize(), { x: 4, y: 4 });
+      assert.deepStrictEqual(buffer.size(), { x: 4, y: 4 });
 
       stack.redo();
-      assert.deepStrictEqual(buffer.getSize(), { x: 2, y: 2 });
+      assert.deepStrictEqual(buffer.size(), { x: 2, y: 2 });
     });
   });
 

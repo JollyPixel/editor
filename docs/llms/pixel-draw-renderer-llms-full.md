@@ -8,22 +8,21 @@
   JollyPixel Pixel Art canvas renderer
 </p>
 
-## About
+## 📌 About
 
-`@jolly-pixel/pixel-draw.renderer` is a browser-based library for editing pixel-art textures. It provides zoom, pan, brush painting, right-click color picking, and an SVG cursor overlay, built around a SOLID-structured class architecture.
+Browser-based library for editing pixel-art textures. It provides zoom, pan, brush painting, right-click color picking, and an SVG cursor overlay.
 
-## Features
+## 💡 Features
 
-- **Zoom & pan** — smooth mouse-wheel zoom with configurable sensitivity and range; middle-click pan in any mode
-- **Brush painting** — configurable square brush with adjustable size, color, and opacity
-- **Flexible color input** — every color option accepts a CSS color string (hex, `rgb()`, `hsl()`, named color, ...) or a [colorjs.io](https://colorjs.io) `Color` instance
-- **Color picking** — right-click eyedropper that reads the master canvas pixel
-- **Transparency support** — configurable checkerboard background renders beneath transparent pixels
-- **SVG brush highlight** — grid-aligned SVG overlay tracks the cursor in real time
-- **Dual-canvas architecture** — a master canvas (full resolution, off-screen) and a working canvas (viewport-cropped, on-screen) maintain pixel-perfect fidelity at any zoom level
-- **Mode switching** — `"paint"` and `"move"` modes control how mouse events are interpreted
+- **Brush painting**: adjustable size, color, and opacity; color inputs accept a CSS string or a [colorjs.io][colorjs] `Color` instance; right-click eyedropper picks a color from the canvas
+- **Shift-to-line drawing**: hold `Shift` in paint mode to draw a straight line
+- **Paint-bucket fill**: flood-fill a connected region of same-colored pixels
+- **Rectangle select, move, copy, delete**: `Ctrl`/`Cmd`+`C`/`V` to copy/duplicate, `Delete` to erase
+- **Undo/redo**: optional bounded history over strokes, resizes, and texture replaces; opt in via `history.enabled`
+- **Zoom & pan**: mouse-wheel zoom with configurable sensitivity and range; middle-click pan in any mode
+- **Transparency support**: checkerboard background renders beneath transparent pixels
 
-## Getting Started
+## 💃 Getting Started
 
 This package is available in the Node Package Repository and can be easily installed with [npm][npm] or [yarn][yarn].
 
@@ -33,80 +32,103 @@ $ npm i @jolly-pixel/pixel-draw.renderer
 $ yarn add @jolly-pixel/pixel-draw.renderer
 ```
 
-## Usage Examples
-
-### Minimal setup
+## 👀 Usage Example
 
 ```ts
-import { CanvasManager } from "@jolly-pixel/pixel-draw.renderer";
-
-const manager = new CanvasManager({
-  texture: { size: 64 },
-  zoom: {
-    range: [0.5, 40],
-    sensitivity: 0.002
-  },
-});
+import { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 
 const container = document.getElementById("editor-container")!;
-manager.reparentCanvasTo(container);
-manager.resize();
-manager.centerTexture();
-```
-
-### Drawing pixels programmatically
-
-```ts
-import { CanvasManager } from "@jolly-pixel/pixel-draw.renderer";
-
-const manager = new CanvasManager({
-  texture: { size: 32 }
+const manager = new PixelArtCanvas(container, {
+  texture: {
+    size: { x: 64, y: 64 }
+  },
+  zoom: {
+    default: 4,
+    min: 0.5,
+    max: 40
+  }
 });
-manager.reparentCanvasTo(document.body);
 
-// Draw a red pixel at texture position (10, 10)
-manager.canvasBuffer.drawPixels(
-  [{ x: 10, y: 10 }],
-  { r: 255, g: 0, b: 0, a: 255 }
-);
-manager.render();
+manager.onResize();
+manager.centerTexture();
+
+manager.brush.color("#FF6600"); // CSS string or a colorjs.io `Color` instance
+manager.brush.opacity = 0.8;
+manager.brush.size = 3;
+
+manager.mode = "fill"; // "paint" | "move" | "fill" | "select", see Modes below
 ```
 
-### Loading an existing texture
+Loading an existing texture:
 
 ```ts
 const img = new Image();
 img.src = "/assets/sprite.png";
 await img.decode();
-
-manager.setTexture(img);
+manager.texture = img;
 ```
 
-### Configuring the brush
+### Modes
+
+`mode` selects how left-click/drag is interpreted. Read [PixelArtCanvas.md](./docs/PixelArtCanvas.md#mode) for the full behavior:
+
+- `"paint"`: draws with the [brush](./docs/tools/Brush.md); hold `Shift` for a straight line
+- `"move"`: pans the camera
+- `"fill"`: flood-fills the clicked region
+- `"select"`: drag to select/move; `Ctrl`/`Cmd`+`C`/`V` copy/paste, `Delete` erases
+
+Middle-click pans and right-click picks a color in any mode.
+
+### Keybinds
+
+Copy/paste/undo/redo/delete are configurable; Shift (line-tool arm/disarm) is not. Defaults:
+
+| Action | Default |
+|---|---|
+| Copy | `Ctrl`/`Cmd`+`C` |
+| Paste | `Ctrl`/`Cmd`+`V` |
+| Undo | `Ctrl`/`Cmd`+`Z` |
+| Redo | `Ctrl`/`Cmd`+`Y` or `Ctrl`/`Cmd`+`Shift`+`Z` |
+| Delete | `Delete` |
+
+Override at construction, or live via `patchKeybindings()`:
 
 ```ts
-manager.brush.setColor("#FF6600");
-manager.brush.setOpacity(0.8);
-manager.brush.setSize(3);
+const manager = new PixelArtCanvas(container, {
+  keybindings: { undo: "alt+u" } // unspecified actions keep their default
+});
+
+manager.patchKeybindings({ redo: "alt+shift+u" });
 ```
 
-Color options accept a plain CSS string or a [colorjs.io](https://colorjs.io) `Color` instance:
+> [!TIP]
+> Read [utils/keybindings.md](./docs/utils/keybindings.md) for the combo string format and error handling.
+
+### Undo/redo
+
+Disabled by default. Enable it and (optionally) track button-enabled state:
 
 ```ts
-import Color from "colorjs.io";
+const manager = new PixelArtCanvas(container, {
+  history: {
+    enabled: true,
+    // limit defaults to 10
+    limit: 20
+  },
+  onHistoryChange: ({ canUndo, canRedo }) => {
+    undoButton.disabled = !canUndo;
+    redoButton.disabled = !canRedo;
+  }
+});
 
-manager.brush.setColor(new Color("oklch(70% 0.15 50)"));
-manager.brush.setColor("rebeccapurple");
+manager.undo(); // false if history is disabled or there's nothing to undo
+manager.redo();
 ```
 
-### Switching modes
+> [!TIP]
+> Read [PixelArtCanvas.md](./docs/PixelArtCanvas.md#undo--redo--canundo--canredo) and [history/HistoryStack.md](./docs/history/HistoryStack.md).
 
-```ts
-manager.setMode("move");  // left-click pans
-manager.setMode("paint"); // left-click draws
-```
-
-## Running the Examples
+## 🚀 Running the example
 
 ```bash
 npm run dev -w @jolly-pixel/pixel-draw.renderer
@@ -114,28 +136,38 @@ npm run dev -w @jolly-pixel/pixel-draw.renderer
 
 Open `http://localhost:5173` to see the interactive demo.
 
-## API
+## 📚 API
 
-| Class | Description |
-|---|---|
-| [`CanvasManager`](./docs/CanvasManager.md) | Top-level coordinator — the primary public API |
-| [`Viewport`](./docs/Viewport.md) | Camera position, zoom level, and coordinate transforms |
-| [`BrushManager`](./docs/BrushManager.md) | Brush size, color, opacity, and affected-pixel computation |
-| `CanvasBuffer` | Dual-canvas pixel storage and image-data access |
-| `CanvasRenderer` | Visible canvas drawing and checkerboard background |
-| `InputController` | Mouse event routing to drawing and pan actions |
-| `SvgManager` | SVG brush-highlight overlay |
+- [`PixelArtCanvas`](./docs/PixelArtCanvas.md): top-level coordinator, the primary public API
+- [`Brush`](./docs/tools/Brush.md): brush size, color, opacity, and affected-pixel computation — read/write via `PixelArtCanvas.brush`
+- [`PixelBuffer`](./docs/buffer/PixelBuffer.md): headless RGBA pixel storage, usable server-side with no DOM (also documents the `onBufferUpdated`/`applyRemoteCommand` hook events)
+- [`HistoryStack`](./docs/history/HistoryStack.md): bounded undo/redo stack backing `PixelArtCanvas.undo()`/`redo()`
+- [`Keybindings`](./docs/utils/keybindings.md): `Keybindings`/`Keybinding` types, `DEFAULT_KEYBINDINGS`, and the errors thrown by `patchKeybindings()`
+- [`Network`](./docs/network/index.md): transport-agnostic, server-authoritative multiplayer for `PixelArtCanvas`
 
-## Troubleshooting
+## 🧩 Types
 
-**Canvas is blank after mounting**
-Call `manager.resize()` after `reparentCanvasTo()` to let the renderer read the parent element's dimensions, then call `manager.centerTexture()`.
+Shared value types used across the public API:
 
-**Pixels appear at the wrong position**
-Pass `{ bounds: canvas.getBoundingClientRect() }` when calling `viewport.getMouseTexturePosition()`. Stale bounding rects cause offset errors.
+```ts
+type Vec2 = {
+  x: number;
+  y: number;
+};
 
-**Master canvas is slow to initialize**
-`CanvasBuffer` pre-allocates a canvas at `maxSize` (default `2048`). In test environments or when large textures are unnecessary, set `texture.maxSize` to a smaller value such as `64`.
+type Mode = "paint" | "move" | "fill" | "select";
+
+interface SelectionRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+interface RGBA { r: number; g: number; b: number; a: number; }
+```
+
+`Vec2` is a texture- or canvas-space coordinate depending on context. `SelectionRect` is always texture-space, used by `PixelBuffer.drawRegion` and the built-in select tool. Color options also accept `ColorInput` (`string | Color`, [colorjs.io][colorjs]'s class) — a CSS color string or a `Color` instance — but that alias isn't itself exported by name.
 
 ## Contributors Guide
 
@@ -160,344 +192,341 @@ MIT
 [npm]: https://docs.npmjs.com/getting-started/what-is-npm
 [yarn]: https://yarnpkg.com
 [contributing]: ../../CONTRIBUTING.md
+[colorjs]: https://colorjs.io
 
 
-# BrushManager.md
+# PixelBuffer.md
 
-# BrushManager
+# PixelBuffer
 
-`BrushManager` manages the current brush color, opacity, size, and highlight colors, and computes the list of texture-space pixels a brush stroke covers.
+`PixelBuffer` holds raw RGBA pixel data with no DOM dependency, so it can run in a headless environment (server, tests) as well as behind a Canvas2D adapter in the browser (used internally by `PixelArtCanvas`). It's the buffer type used by [`PixelWorld`](../network/PixelWorld.md) for server-side pixel storage.
+
+It keeps two backing arrays: a `working` buffer at the current texture size, and a `master` buffer pre-allocated at `maxSize × maxSize` that only gets updated on `copyToMaster()`. Growing `working` back up (via `resize`) reads from `master`, so previously committed content beyond a temporarily shrunk size isn't lost.
 
 ## Types
 
 ```ts
-new BrushManager(options: BrushManagerOptions)
+new PixelBuffer(options: PixelBufferOptions)
 
-export type ColorInput = string | Color; // Color is colorjs.io's Color class
-
-export interface BrushManagerOptions {
+interface PixelBufferOptions {
+  size: Vec2;
   /**
-   * Base color of the brush. Accepts a CSS color string (hex, rgb(), hsl(),
-   * named color, ...) or a colorjs.io `Color` instance.
-   * Opacity can be controlled separately with the `opacity` property.
-   * @default "#000000"
+   * Default fill color for newly created pixels. Accepts an RGBA object, a
+   * CSS color string (hex, rgb(), hsl(), named color, ...) or a colorjs.io
+   * `Color` instance.
+   * @default { r: 255, g: 255, b: 255, a: 255 }
    */
-  color?: ColorInput;
+  defaultColor?: RGBA | ColorInput;
   /**
-   * Size of the brush in pixels. Must be a positive integer.
-   * The actual affected area will be a square of `size x size` pixels centered around the target pixel.
-   * @default 32
-   */
-  size?: number;
-  /**
-   * Maximum allowed size for the brush. This is used to constrain the `size` property.
-   * Must be a positive integer. If `size` is set higher than `maxSize`, it will be clamped to `maxSize`.
-   * @default 32
+   * Size of the backing master buffer. The working buffer can be resized up
+   * to this limit without losing data previously committed via copyToMaster.
+   * @default 2048
    */
   maxSize?: number;
-  /**
-   * Highlight colors for the brush preview.
-   * These colors are used to render the brush outline and fill when hovering over the canvas.
-   * @default { colorInline: "#FFF", colorOutline: "#000" }
-   */
-  highlight?: {
-    colorInline?: ColorInput;
-    colorOutline?: ColorInput;
-  };
 }
 ```
 
+Pixel `(0, 0)` is always initialized fully transparent regardless of `defaultColor`.
+
 ## Methods
 
-### `setColor`
+### `size` / `resize`
 
 ```ts
-setColor(color: ColorInput, opacity?: number): void
+size(): Vec2
+resize(size: Vec2): void
 ```
 
-Sets the brush color from a CSS color string (hex, rgb(), hsl(), named color, ...) or a colorjs.io `Color` instance. If `opacity` is omitted, the current opacity is preserved; otherwise it's clamped to `[0, 1]` and applied alongside the new color.
+Returns the current working-buffer size, or resizes it. Content is read back from the master buffer at the new dimensions (clipped to `maxSize`).
 
 ---
 
-### `getColor`
+### `pixels`
 
 ```ts
-getColor(format?: "rgba" | "hex"): string
+pixels(): Uint8ClampedArray
 ```
 
-Returns the current brush color. Defaults to an `rgba(r, g, b, a)` string; pass `"hex"` to get a 6-digit hex string instead (opacity is not represented in hex output).
+Returns the **live** working buffer, not a copy; mutating it mutates the buffer directly. Contrast with `CanvasBuffer.pixels()`, which returns a copy.
 
 ---
 
-### `setOpacity`
+### `replacePixels`
 
 ```ts
-setOpacity(opacity: number): void
+replacePixels(pixels: Uint8ClampedArray, size: Vec2): void
 ```
 
-Sets the brush opacity. Values are clamped to `[0, 1]`.
+Replaces the pixel data wholesale, resizing the buffer to match. Used to hydrate from a network snapshot or a decoded image.
 
 ---
 
-### `setSize`
+### `drawPixels`
 
 ```ts
-setSize(size: number): void
+drawPixels(positions: Iterable<Vec2>, color: RGBA): void
 ```
 
-Sets the brush size in pixels. Values are clamped to `[1, maxSize]`.
+Stamps a single color across a list of positions. Out-of-bounds positions are silently skipped, mirroring Canvas2D's implicit clipping of out-of-bounds `putImageData` calls.
 
 ---
 
-### `getHighlightColorInline` / `setHighlightColorInline`
+### `drawRegion`
 
 ```ts
-getHighlightColorInline(): string
-setHighlightColorInline(color: ColorInput): void
+drawRegion(rect: SelectionRect, pixels: RGBA[]): void
 ```
 
-Gets or sets the inner stroke color of the SVG brush cursor overlay.
+Writes a rectangular block of per-pixel colors (row-major, `rect.width * rect.height` entries), unlike `drawPixels` which stamps one color across a list of positions. Out-of-bounds positions are skipped, same as `drawPixels`.
 
 ---
 
-### `getHighlightColorOutline` / `setHighlightColorOutline`
+### `copyToMaster`
 
 ```ts
-getHighlightColorOutline(): string
-setHighlightColorOutline(color: ColorInput): void
+copyToMaster(): void
 ```
 
-Gets or sets the outer stroke color of the SVG brush cursor overlay.
+Commits the current working buffer into the master buffer at `(0, 0)`.
 
 ---
 
-### `getAffectedPixels`
+### `samplePixel`
 
 ```ts
-getAffectedPixels(cx: number, cy: number): Vec2[]
+samplePixel(x: number, y: number): [number, number, number, number]
 ```
 
-Returns an array of texture-space `{ x, y }` coordinates for every pixel within the current brush square centered at `(cx, cy)`.
+Returns the `[r, g, b, a]` of the working buffer at `(x, y)`. Out-of-bounds reads return `0` for each component rather than throwing.
 
-- For **odd** brush sizes the center pixel is exactly `(cx, cy)`.
-- For **even** brush sizes the brush is offset by `−0.5` to remain grid-aligned.
-
-**Example**
+## Hooks
 
 ```ts
-// size = 3 → 9 pixels around (10, 10)
-const pixels = brush.getAffectedPixels(10, 10);
-canvasBuffer.drawPixels(pixels, { r: 255, g: 0, b: 0, a: 255 });
+export type PixelBufferHookEvent =
+  | {
+    action: "stroke";
+    metadata: {
+      color: RGBA;
+      positions: Vec2[];
+    };
+    originTimestamp?: number;
+  }
+  | {
+    action: "resized";
+    metadata: {
+      size: Vec2;
+    };
+    originTimestamp?: number;
+  }
+  | {
+    action: "texture-replaced";
+    metadata: {
+      size: Vec2;
+      pixels: string;
+    };
+    originTimestamp?: number;
+  }
+  | {
+    action: "global-fill";
+    metadata: {
+      fromColor: RGBA;
+      toColor: RGBA;
+    };
+    originTimestamp?: number;
+  };
+
+type PixelBufferHookAction = PixelBufferHookEvent["action"];
+type PixelBufferHookListener = (event: PixelBufferHookEvent) => void;
 ```
 
+This is the shape of `PixelArtCanvas`'s `onBufferUpdated` local-mutation hook, and the vocabulary the [network layer](../network/index.md) is built on — every event is a valid network command payload once stamped with routing metadata. `"stroke"` covers a whole paint stroke or `commitPixels` call, not one event per brush stamp. `originTimestamp`, set only when `PixelArtCanvas.undo()`/`redo()` replay an edit, carries that edit's original timestamp so the network [conflict resolver](../network/ConflictResolver.md) re-races the replay fairly instead of it always winning by virtue of being freshly stamped; it's stripped before the command is sent over the wire.
 
-# CanvasManager.md
+`"global-fill"` (emitted by `PixelArtCanvas`'s fill tool when `setFillGlobal(true)`) is deliberately compact — no position list — since it can touch a large fraction of the canvas. Every applier (a remote peer via `applyRemoteCommand`, or [`PixelCommandApplier`](../network/PixelCommandApplier.md) on the server) recomputes the affected pixels itself by scanning its own buffer for `fromColor` and repainting them `toColor`, which is only correct because peers apply commands in the same order against an already-synced buffer. It also bypasses per-pixel conflict resolution (unlike `"stroke"`) — see [network/ConflictResolver.md](../network/ConflictResolver.md). Undoing/redoing a global fill locally still replays as an ordinary full-position `"stroke"` event, since exact undo requires knowing exactly which pixels were touched.
 
-# CanvasManager
 
-`CanvasManager` is the top-level coordinator for the pixel-draw renderer. It wires together the [`Viewport`](./Viewport.md), `CanvasBuffer`, `CanvasRenderer`, `InputController`, and `SvgManager` into a single cohesive public API.
+# HistoryStack.md
+
+# HistoryStack
+
+Bounded undo/redo stack over a `DefaultPixelBuffer` (`PixelBuffer` or `CanvasBuffer`) — no DOM or network dependency, so it runs identically headless or in the browser. `PixelArtCanvas`'s internal `HistoryController` owns one when constructed with `history.enabled: true` (see [PixelArtCanvas.md](../PixelArtCanvas.md#undo--redo--canundo--canredo)); most consumers drive undo/redo through `PixelArtCanvas.undo()`/`redo()` rather than this class directly.
+
+`HistoryStack` only owns the stack and replays before/after data against its buffer — capturing that before/after data on each edit is the caller's job (`PixelArtCanvas` does this internally for strokes, resizes, and texture replaces).
 
 ## Types
 
 ```ts
-new CanvasManager(options?: CanvasManagerOptions)
+new HistoryStack(buffer: DefaultPixelBuffer, options?: HistoryStackOptions)
+
+interface HistoryStackOptions {
+  /** @default 10 */
+  limit?: number;
+}
+
+type HistoryEntry =
+  | {
+    action: "stroke";
+    timestamp: number;
+    positions: Vec2[];
+    beforeColors: RGBA[];
+    afterColor: RGBA;
+  }
+  | {
+    action: "resized";
+    timestamp: number;
+    beforeSize: Vec2;
+    beforePixels: Uint8ClampedArray;
+    afterSize: Vec2;
+    afterPixels: Uint8ClampedArray;
+  }
+  | {
+    action: "texture-replaced";
+    timestamp: number;
+    beforeSize: Vec2;
+    beforePixels: Uint8ClampedArray;
+    afterSize: Vec2;
+    afterPixels: Uint8ClampedArray;
+  }
+  | {
+    action: "select-edit";
+    timestamp: number;
+    positions: Vec2[];
+    beforeColors: RGBA[];
+    afterColors: RGBA[];
+  };
+
+/** Same as HistoryEntry, minus `timestamp` — stamped by `push()`. */
+type HistoryEntryInput = Omit<HistoryEntry, "timestamp">;
 ```
 
-### `CanvasManagerOptions`
-
-| Property | Type | Default | Description |
-|---|---|---|---|
-| `texture.size` | `number` | `64` | Initial texture size in pixels (square) |
-| `texture.defaultColor` | `ColorInput` | transparent black | Fill color used when the texture is cleared. Accepts a CSS color string or a colorjs.io `Color` instance |
-| `texture.maxSize` | `number` | `2048` | Maximum texture size; the master canvas is pre-allocated at this size |
-| `zoom.range` | `[min, max]` | `[0.5, 40]` | Minimum and maximum zoom multipliers |
-| `zoom.sensitivity` | `number` | `0.002` | Wheel-delta multiplier for zoom speed |
-| `background.size` | `number` | `8` | Checkerboard tile size in pixels |
-| `background.color1` | `ColorInput` | `"#FFFFFF"` | First checkerboard color |
-| `background.color2` | `ColorInput` | `"#CCCCCC"` | Second checkerboard color |
-| `brush.color` | `ColorInput` | `"#000000"` | Initial brush color. Accepts a CSS color string or a colorjs.io `Color` instance |
-| `brush.size` | `number` | `1` | Initial brush size in pixels |
-| `brush.maxSize` | `number` | `32` | Maximum brush size |
-| `onDrawEnd` | `() => void` | — | Called after a draw stroke is committed to the master buffer |
-| `onBufferUpdated` | `PixelBufferHookListener` | — | Called for every local mutation (stroke, resize, texture replace); see [Network.md](./Network.md) |
-
-`ColorInput` (`type ColorInput = string | Color`) is used throughout the package wherever a color option is accepted: a CSS color string (hex, `rgb()`, `hsl()`, named color, ...) or a [colorjs.io](https://colorjs.io) `Color` instance.
+`limit` bounds the undo stack: pushing past it silently drops the oldest entry. A `"stroke"` entry's `beforeColors` is per-position (a stroke can cross pixels of different colors); `afterColor` is a single color since a stroke always paints one uniform color. `"resized"`/`"texture-replaced"` instead snapshot the whole buffer (`beforePixels`/`afterPixels`) since there's no cheaper diff to keep. `"select-edit"` covers every `"select"`-mode edit (move/delete/paste/rotate/flip) with a single entry shape: unlike `"stroke"`, both `beforeColors` and `afterColors` are per-position, since these operations paint heterogeneous, multi-colored regions rather than one uniform color. `positions` is the union of whatever footprint(s) the edit touched (e.g. a Move's source and destination, or a Rotate's pre/post footprint when a non-square selection's dimensions swap) — see [PixelArtCanvas.md](../PixelArtCanvas.md#undo--redo--canundo--canredo) for the network-sync caveat specific to this entry type.
 
 ## Properties
 
-### `brush`
+### `canUndo` / `canRedo`
 
 ```ts
-readonly brush: BrushManager
+get canUndo(): boolean
+get canRedo(): boolean
 ```
 
-The brush manager instance. Use it to read or change the current brush color, opacity, and size.
-
-### `viewport`
-
-```ts
-readonly viewport: Viewport
-```
-
-The viewport instance. Use it to read zoom and camera position, or to call coordinate-conversion methods directly.
-
-### `canvasBuffer`
-
-```ts
-readonly canvasBuffer: CanvasBuffer
-```
-
-Direct access to the dual-canvas pixel storage. Useful for programmatic pixel drawing outside of user input.
+Whether there's an entry to undo/redo.
 
 ## Methods
 
-### `getMode` / `setMode`
+### `push`
 
 ```ts
-getMode(): Mode
-setMode(mode: Mode): void
+push(entry: HistoryEntryInput): void
 ```
 
-Returns or sets the current interaction mode. `"paint"` routes left-click events to brush drawing; `"move"` routes them to panning.
+Stamps the entry with the current time (`Date.now()`) and pushes it onto the undo stack, clearing the redo stack. Drops the oldest undo entry once `limit` is exceeded. The timestamp is preserved across future undo/redo replays — see [buffer/PixelBuffer.md](../buffer/PixelBuffer.md) for why this matters over the network.
 
 ---
 
-### `getSize` / `setSize`
+### `undo`
 
 ```ts
-getSize(): number
-setSize(size: number): void
+undo(): HistoryEntry | null
 ```
 
-Returns or changes the current texture size. `setSize` copies the master canvas content at the new dimensions and resizes the working canvas.
+Reverts the most recent entry (applying its `before*` data to the buffer) and moves it to the redo stack. Returns `null` without touching the buffer when there's nothing to undo.
 
 ---
 
-### `setTexture`
+### `redo`
 
 ```ts
-setTexture(source: HTMLCanvasElement | HTMLImageElement): void
+redo(): HistoryEntry | null
 ```
 
-Replaces the texture with the pixel data from `img`. The image is drawn into the master canvas and the working canvas is resized to match.
+Re-applies the most recently undone entry (applying its `after*` data to the buffer) and moves it back to the undo stack. Returns `null` without touching the buffer when there's nothing to redo.
 
 ---
 
-### `getTexture`
+### `clear`
 
 ```ts
-getTexture(): HTMLImageElement
+clear(): void
 ```
 
-Returns an `HTMLImageElement` snapshot of the master canvas at the current texture size.
+Discards every recorded entry, both stacks. Call when the buffer is replaced wholesale from outside the stack's knowledge (e.g. a remote resize/texture-replace/snapshot — `PixelArtCanvas` does this automatically in `applyRemoteCommand`/`loadSnapshot`).
 
----
 
-### `getCanvas`
+# ConflictResolver.md
+
+# ConflictResolver
+
+Conflicts are resolved **per pixel**, not per command. A single stroke command can touch thousands of pixels, so [`PixelSyncServer`](./PixelSyncServer.md) splits a command: pixels that lose the race are dropped from the applied/broadcast copy, the rest are applied normally. `"buffer-added"`, `"buffer-removed"`, `"resized"`, `"texture-replaced"`, and `"global-fill"` are always accepted with no per-pixel arbitration; only `"stroke"` goes through a resolver. `"global-fill"` carries no position list to arbitrate against (see [buffer/PixelBuffer.md](../buffer/PixelBuffer.md)) — it's applied by recomputing matching pixels against the server's own authoritative buffer at receive-time, which is self-consistent as long as commands are applied in the order the server processes them.
+
+## Types
 
 ```ts
-getCanvas(): HTMLCanvasElement
+interface PixelConflictContext {
+  incoming: PixelNetworkCommandHeader;
+  /**
+   * Header of the last accepted command at the same pixel, if any.
+   * `undefined` means no prior command exists at that pixel → always accept.
+   */
+  existing: PixelNetworkCommandHeader | undefined;
+}
+
+/**
+ * Determines whether an incoming command should be accepted or rejected
+ * given the last known command header at the same pixel.
+ *
+ * Only the header is tracked (not the full stroke command) since a single
+ * stroke can touch thousands of pixels — keeping a full command per pixel
+ * would be wasteful.
+ */
+interface PixelConflictResolver {
+  resolve(ctx: PixelConflictContext): "accept" | "reject";
+}
 ```
 
-Returns the visible (working) canvas element. Useful for attaching additional event listeners or overlays.
+## `LastWriteWinsResolver`
 
----
-
-### `getCamera`
+The default resolver. Higher `timestamp` wins. On a timestamp tie, the lexicographically greater `clientId` wins, giving a deterministic total order without coordination.
 
 ```ts
-getCamera(): Vec2
+import { LastWriteWinsResolver } from "@jolly-pixel/pixel-draw.renderer";
+
+const server = new PixelSyncServer({
+  conflictResolver: new LastWriteWinsResolver() // default, no need to pass explicitly
+});
 ```
 
-Returns the current camera offset `{ x, y }` in viewport space.
-
----
-
-### `getZoom`
+## Custom resolver
 
 ```ts
-getZoom(): number
+import type {
+  PixelConflictResolver,
+  PixelConflictContext
+} from "@jolly-pixel/pixel-draw.renderer";
+
+class FirstWriteWinsResolver implements PixelConflictResolver {
+  resolve({ existing }: PixelConflictContext): "accept" | "reject" {
+    return existing ? "reject" : "accept";
+  }
+}
+
+const server = new PixelSyncServer({ conflictResolver: new FirstWriteWinsResolver() });
 ```
 
-Returns the current zoom multiplier.
 
----
-
-### `centerTexture`
-
-```ts
-centerTexture(): void
-```
-
-Pans and positions the camera so the texture is centered in the current viewport.
-
----
-
-### `reparentCanvasTo`
-
-```ts
-reparentCanvasTo(parent: HTMLElement): void
-```
-
-Moves the working canvas and the SVG overlay into `parent`. Call this when mounting the editor into a new DOM container.
-
----
-
-### `resize`
-
-```ts
-resize(): void
-```
-
-Reads the current dimensions of the parent element and resizes the working canvas to fill it. Call this after the parent element changes size (e.g. on `window.resize`).
-
----
-
-### `render`
-
-```ts
-render(): void
-```
-
-Forces an immediate redraw of the visible canvas from the current working texture.
-
----
-
-### `destroy()`
-
-Destroy the canvas and all related elements (listeners etc)
-
----
-
-### `onBufferUpdated` / `applyRemoteCommand` / `loadSnapshot`
-
-```ts
-set onBufferUpdated(fn: PixelBufferHookListener | undefined)
-applyRemoteCommand(event: PixelBufferHookEvent): void
-loadSnapshot(size: Vec2, pixels: Uint8ClampedArray): void
-```
-
-Network sync hooks, used by `PixelSyncSession` — see [Network.md](./Network.md).
-`onBufferUpdated` fires on every local mutation (stroke, resize, texture
-replace). `applyRemoteCommand` applies a mutation from a remote peer without
-re-firing `onBufferUpdated`. `loadSnapshot` hydrates the buffer from a network
-snapshot; it is never itself broadcast.
-
-
-# Network.md
+# index.md
 
 # Network Sync Layer
 
-Transport-agnostic, server-authoritative multiplayer for CanvasManager. Multiple
+Transport-agnostic, server-authoritative multiplayer for `PixelArtCanvas`. Multiple
 clients can share the same texture(s) in real time. Structurally mirrors
 `@jolly-pixel/voxel.renderer`'s network layer but is an independent
-implementation — this package has no dependency on voxel-renderer.
+implementation: this package has no dependency on voxel-renderer.
 
 ## Architecture
 
 ```
 ┌───────────────┐  onBufferUpdated   ┌──────────────────┐   sendCommand   ┌─────────────┐
-│ CanvasManager │───────────────────▶│ PixelSyncSession │────────────────▶│  Transport  │
+│ PixelArtCanvas │───────────────────▶│ PixelSyncSession │────────────────▶│  Transport  │
 │  (per buffer) │                    │  (multi-buffer)  │◀────────────────│ (WebSocket, │
 │               │◀──applyRemote──────│                  │   onCommand     │  WebRTC, …) │
 └───────────────┘                    └──────────────────┘                 └──────┬──────┘
@@ -510,43 +539,353 @@ implementation — this package has no dependency on voxel-renderer.
                                                                        └──────────────────┘
 ```
 
-A `CanvasManager` has no concept of a buffer identity — it owns exactly one
-texture. `PixelSyncSession` assigns that texture a `bufferId` and can attach
-several `CanvasManager` instances to the same transport connection (e.g. one
+A `PixelArtCanvas` has no concept of a buffer identity; it owns exactly one
+texture. [`PixelSyncSession`](./PixelSyncSession.md) assigns that texture a `bufferId` and can attach
+several `PixelArtCanvas` instances to the same transport connection (e.g. one
 per open tileset).
 
 **Flow:**
-1. A local mutation (a paint stroke, resize, or `setTexture`) fires
-   `CanvasManager.onBufferUpdated`.
-2. `PixelSyncSession` stamps the event with `bufferId / clientId / seq /
-   timestamp` and calls `transport.sendCommand(cmd)`.
-3. The transport delivers the command to `PixelSyncServer.receive()`.
-4. The server resolves conflicts, applies the command to its authoritative
-   `PixelWorld`, and broadcasts it to clients subscribed to that buffer.
+1. A local mutation (a paint stroke, fill, resize, or setting `texture`) fires
+   `PixelArtCanvas.onBufferUpdated` (see [buffer/PixelBuffer.md](../buffer/PixelBuffer.md)).
+2. `PixelSyncSession` stamps the event with `bufferId` / `clientId` / `seq` /
+   `timestamp` and calls `transport.sendCommand(cmd)`.
+3. The transport delivers the command to [`PixelSyncServer.receive()`](./PixelSyncServer.md).
+4. The server resolves conflicts (see [ConflictResolver](./ConflictResolver.md)), applies the command to its authoritative
+   [`PixelWorld`](./PixelWorld.md), and broadcasts it to clients subscribed to that buffer.
 5. Each subscribed client's transport calls `onCommand(cmd)`, which
-   `PixelSyncSession` routes to the matching `CanvasManager.applyRemoteCommand()`.
+   `PixelSyncSession` routes to the matching `PixelArtCanvas.applyRemoteCommand()`.
 6. `applyRemoteCommand` suppresses `onBufferUpdated` while applying, so the
-   result is never re-broadcast — no echo loop.
+   result is never re-broadcast: no echo loop.
 
 Buffers are not sent in bulk. A client receives a buffer's pixel data only
 when it subscribes to that specific `bufferId` (via `attach`/`createBuffer`).
 
-## PixelTransport interface
+## Pieces
+
+| Module | Description |
+|---|---|
+| [types](./types.md) | `PixelNetworkCommand` wire format and its constituent event types |
+| [PixelTransport](./PixelTransport.md) | Transport-agnostic interface consumers implement (WebSocket, WebRTC, ...) |
+| [PixelSyncSession](./PixelSyncSession.md) | Client-side, multi-buffer orchestrator |
+| [PixelSyncServer](./PixelSyncServer.md) | Headless, server-authoritative sync manager |
+| [PixelWorld](./PixelWorld.md) | Headless, multi-buffer pixel registry used by the server |
+| [PixelCommandApplier](./PixelCommandApplier.md) | `applyCommandToWorld`, headless command replay |
+| [ConflictResolver](./ConflictResolver.md) | Per-pixel conflict resolution strategy (`LastWriteWinsResolver` and custom resolvers) |
+
+
+# PixelCommandApplier.md
+
+# PixelCommandApplier
+
+## `applyCommandToWorld`
+
+```ts
+function applyCommandToWorld(world: PixelWorld, cmd: PixelNetworkCommand): void
+```
+
+Applies a single network command to a headless [`PixelWorld`](./PixelWorld.md) instance. Used internally by [`PixelSyncServer`](./PixelSyncServer.md) (Node.js, no DOM), and usable standalone for server-side logic, unit tests, or replaying a command log without a renderer.
+
+```ts
+import {
+  PixelWorld,
+  applyCommandToWorld
+} from "@jolly-pixel/pixel-draw.renderer";
+
+const world = new PixelWorld();
+applyCommandToWorld(world, {
+  action: "buffer-added",
+  bufferId: "tileset-1",
+  metadata: { size: { x: 64, y: 32 } },
+  clientId: "seed",
+  seq: 1,
+  timestamp: Date.now()
+});
+```
+
+
+# PixelSyncServer.md
+
+# PixelSyncServer
+
+Headless, server-authoritative pixel sync manager. Has no DOM/Canvas2D dependency and runs in Node.js, Deno, or Bun.
+
+Workflow:
+1. `connect(client)`: register a peer; notifies existing peers. Sends no buffer data.
+2. `subscribe(clientId, bufferId)`: sends that buffer's current snapshot, if it exists.
+3. `receive(cmd)`: validate, apply to the world, and broadcast to subscribers of that buffer.
+4. `disconnect(clientId)`: remove the client and notify peers.
+
+## Types
+
+```ts
+new PixelSyncServer(options?: PixelSyncServerOptions)
+
+interface PixelSyncServerOptions {
+  /**
+   * Existing PixelWorld to use as the authoritative state.
+   * A new (empty) world is created when omitted.
+   */
+  world?: PixelWorld;
+  /**
+   * Custom conflict resolver.
+   * Defaults to LastWriteWinsResolver.
+   */
+  conflictResolver?: PixelConflictResolver;
+}
+
+/**
+ * A connected client handle. The consumer creates these objects and passes
+ * them to PixelSyncServer.connect(). The server calls send() to transmit
+ * data back to the real network peer.
+ */
+interface ClientHandle {
+  readonly id: string;
+  /**
+   * Transmit data to this client over the underlying transport.
+   * The consumer is responsible for framing (JSON-stringify, etc.).
+   */
+  send(data: unknown): void;
+}
+
+type PixelStrokeCommand = Extract<PixelNetworkCommand, { action: "stroke"; }>;
+```
+
+## Properties
+
+### `world`
+
+```ts
+readonly world: PixelWorld
+```
+
+The authoritative [`PixelWorld`](./PixelWorld.md) instance.
+
+## Methods
+
+### `connect` / `disconnect`
+
+```ts
+connect(client: ClientHandle): void
+disconnect(clientId: string): void
+```
+
+`connect` registers the client and notifies existing peers (`{ type: "peer-joined", peerId }`); sends no buffer data. `disconnect` removes the client and notifies remaining peers (`{ type: "peer-left", peerId }`).
+
+---
+
+### `subscribe` / `unsubscribe`
+
+```ts
+subscribe(clientId: string, bufferId: string): void
+unsubscribe(clientId: string, bufferId: string): void
+```
+
+`subscribe` subscribes the client to a buffer's future updates and immediately sends its current snapshot (`{ type: "snapshot", bufferId, data }`), if the buffer already exists. `unsubscribe` stops broadcasting that buffer's updates to the client.
+
+---
+
+### `receive`
+
+```ts
+receive(cmd: PixelNetworkCommand): void
+```
+
+Processes an incoming command:
+- `"buffer-added"`: creates the buffer if it doesn't already exist, then broadcasts.
+- `"buffer-removed"`: deletes the buffer and its conflict-tracking state, then broadcasts.
+- `"stroke"`: resolves conflicts per-pixel (see [ConflictResolver](./ConflictResolver.md)); applies and broadcasts only the accepted pixels. Dropped entirely (no broadcast) if nothing was accepted.
+- `"resized"` / `"texture-replaced"` / `"global-fill"`: always accepted, applied, and broadcast — `"global-fill"` carries no position list, so it can't be arbitrated per pixel; see [ConflictResolver](./ConflictResolver.md).
+
+Commands targeting an unknown buffer (other than `"buffer-added"`) are dropped.
+
+---
+
+### `snapshot`
+
+```ts
+snapshot(bufferId: string): PixelBufferSnapshot | undefined
+```
+
+Returns the buffer's current state, or `undefined` if it doesn't exist.
+
+## Example
+
+```ts
+import {
+  PixelSyncServer,
+  type ClientHandle
+} from "@jolly-pixel/pixel-draw.renderer";
+import { WebSocketServer } from "ws";
+
+const server = new PixelSyncServer();
+const wss = new WebSocketServer({ port: 3000 });
+
+wss.on("connection", (ws) => {
+  const client: ClientHandle = {
+    id: crypto.randomUUID(),
+    send: (data) => ws.send(JSON.stringify(data))
+  };
+
+  server.connect(client);
+
+  ws.on("message", (raw) => {
+    const msg = JSON.parse(raw.toString());
+    switch (msg.type) {
+      case "command": server.receive(msg.data); break;
+      case "subscribe": server.subscribe(client.id, msg.bufferId); break;
+      case "unsubscribe": server.unsubscribe(client.id, msg.bufferId); break;
+    }
+  });
+
+  ws.on("close", () => server.disconnect(client.id));
+});
+```
+
+
+# PixelSyncSession.md
+
+# PixelSyncSession
+
+Client-side network orchestrator. A single `PixelSyncSession` multiplexes many buffers (textures/tilesets) over one [`PixelTransport`](./PixelTransport.md) connection. Each attached `PixelArtCanvas` still owns exactly one texture; the session just assigns it a `bufferId` for routing:
+
+- Local mutations from an attached `PixelArtCanvas` are stamped and forwarded.
+- Remote commands are routed to the matching `PixelArtCanvas` by `bufferId`.
+- Buffer lifecycle (add/remove) is announced/received at the session level.
+
+One `PixelSyncSession` per transport connection. Each `PixelArtCanvas` is attached under exactly one `bufferId`.
+
+## Types
+
+```ts
+new PixelSyncSession(options: PixelSyncSessionOptions)
+
+interface PixelSyncSessionOptions {
+  transport: PixelTransport;
+}
+```
+
+## Properties
+
+### `onBufferAdded` / `onBufferRemoved`
+
+```ts
+onBufferAdded: ((bufferId: string, metadata: { size: Vec2; pixels?: string; }) => void) | null
+onBufferRemoved: ((bufferId: string) => void) | null
+```
+
+Called when a **peer** creates or removes a buffer this session hasn't (yet) attached to itself.
+
+## Methods
+
+### `attach`
+
+```ts
+attach(bufferId: string, canvasManager: PixelArtCanvas): void
+```
+
+Attaches an existing `PixelArtCanvas` to sync as `bufferId`. Assumes the buffer already exists on the server; subscribes and awaits its snapshot via `transport.onSnapshot`. Throws if `bufferId` is already attached.
+
+---
+
+### `createBuffer`
+
+```ts
+createBuffer(bufferId: string, canvasManager: PixelArtCanvas, options: { size: Vec2; pixels?: string; }): void
+```
+
+Attaches a `PixelArtCanvas` **and** announces a brand new buffer to peers, carrying the manager's current pixel data as the initial shared state.
+
+---
+
+### `detach` / `removeBuffer`
+
+```ts
+detach(bufferId: string): void
+removeBuffer(bufferId: string): void
+```
+
+`detach` stops syncing a texture without announcing anything to peers (e.g. the user closed that tab). `removeBuffer` does the same, and also tells peers the buffer is gone.
+
+---
+
+### `destroy`
+
+```ts
+destroy(): void
+```
+
+Detaches every buffer and clears the transport's `onCommand`/`onSnapshot` callbacks. Call when the session ends.
+
+## Example
+
+```ts
+import { fromUint8Array } from "js-base64";
+import { PixelSyncSession } from "@jolly-pixel/pixel-draw.renderer";
+
+const session = new PixelSyncSession({ transport: myTransport });
+
+// Attach an existing texture, assumed to already exist on the server.
+// Subscribes and receives its snapshot asynchronously via onSnapshot.
+session.attach("tileset-1", canvasManager);
+
+// Attach AND announce a brand new buffer, seeding peers with its current pixels.
+session.createBuffer("tileset-2", otherPixelArtCanvas, {
+  size: otherPixelArtCanvas.textureSize,
+  pixels: fromUint8Array(new Uint8Array(otherPixelArtCanvas.texture))
+});
+
+session.onBufferAdded = (bufferId, metadata) => {
+  // A peer created a new buffer this client hasn't attached to.
+};
+session.onBufferRemoved = (bufferId) => {
+  // A peer removed a buffer.
+};
+
+// Stop syncing a texture (e.g. the user closed that tab).
+session.detach("tileset-1");
+// Same, but also tells peers the buffer is gone.
+session.removeBuffer("tileset-2");
+
+session.destroy();
+```
+
+
+# PixelTransport.md
+
+# PixelTransport
+
+Transport-agnostic interface for sending and receiving pixel network commands. Consumers implement it with a concrete transport layer (WebSocket, WebRTC, Partykit, BroadcastChannel, etc.) and pass an instance to [`PixelSyncSession`](./PixelSyncSession.md).
+
+## Types
 
 ```ts
 interface PixelTransport {
+  /** The client ID assigned to the local peer by the transport layer. */
   readonly localClientId: string;
-  sendCommand(cmd: PixelNetworkCommand): void;
+
+  /** Sends a local mutation or lifecycle command to the server / peers. */
+  sendCommand(command: PixelNetworkCommand): void;
   subscribe(bufferId: string): void;
   unsubscribe(bufferId: string): void;
-  onCommand: ((cmd: PixelNetworkCommand) => void) | null;
+
+  /**
+   * Called by the transport when a command arrives from a remote peer.
+   * Set this before connecting.
+   */
+  onCommand: ((command: PixelNetworkCommand) => void) | null;
+
+  /**
+   * Called by the transport when the server sends a buffer snapshot
+   * (in response to subscribe). Set this before connecting.
+   */
   onSnapshot: ((bufferId: string, snapshot: PixelBufferSnapshot) => void) | null;
+
   onPeerJoined: ((peerId: string) => void) | null;
   onPeerLeft: ((peerId: string) => void) | null;
 }
 ```
 
-### WebSocket example stub
+## WebSocket example stub
 
 ```ts
 import type {
@@ -588,328 +927,631 @@ class WebSocketTransport implements PixelTransport {
 }
 ```
 
-## PixelSyncSession
 
-```ts
-import { fromUint8Array } from "js-base64";
-import {
-  PixelSyncSession
-} from "@jolly-pixel/pixel-draw.renderer";
+# PixelWorld.md
 
-const session = new PixelSyncSession({ transport: myTransport });
+# PixelWorld
 
-// Attach an existing texture, assumed to already exist on the server.
-// Subscribes and receives its snapshot asynchronously via onSnapshot.
-session.attach("tileset-1", canvasManager);
-
-// Attach AND announce a brand new buffer, seeding peers with its current pixels.
-session.createBuffer("tileset-2", otherCanvasManager, {
-  size: otherCanvasManager.getTextureSize(),
-  pixels: fromUint8Array(new Uint8Array(otherCanvasManager.getTexture()))
-});
-
-session.onBufferAdded = (bufferId, metadata) => {
-  // A peer created a new buffer this client hasn't attached to.
-};
-session.onBufferRemoved = (bufferId) => {
-  // A peer removed a buffer.
-};
-
-// Stop syncing a texture (e.g. the user closed that tab).
-session.detach("tileset-1");
-// Same, but also tells peers the buffer is gone.
-session.removeBuffer("tileset-2");
-
-session.destroy();
-```
-
-One `PixelSyncSession` per transport connection. Each `CanvasManager` is
-attached under exactly one `bufferId`.
-
-## PixelSyncServer
-
-Headless — no DOM/Canvas2D dependency. Runs in Node.js, Deno, or Bun.
-
-```ts
-import {
-  PixelSyncServer,
-  type ClientHandle
-} from "@jolly-pixel/pixel-draw.renderer";
-import { WebSocketServer } from "ws";
-
-const server = new PixelSyncServer();
-const wss = new WebSocketServer({ port: 3000 });
-
-wss.on("connection", (ws) => {
-  const client: ClientHandle = {
-    id: crypto.randomUUID(),
-    send: (data) => ws.send(JSON.stringify(data))
-  };
-
-  server.connect(client);
-
-  ws.on("message", (raw) => {
-    const msg = JSON.parse(raw.toString());
-    switch (msg.type) {
-      case "command": server.receive(msg.data); break;
-      case "subscribe": server.subscribe(client.id, msg.bufferId); break;
-      case "unsubscribe": server.unsubscribe(client.id, msg.bufferId); break;
-    }
-  });
-
-  ws.on("close", () => server.disconnect(client.id));
-});
-```
-
-| Method | Description |
-|---|---|
-| `connect(client)` | Registers the client, notifies existing peers. Sends no buffer data. |
-| `disconnect(clientId)` | Removes the client, notifies remaining peers. |
-| `subscribe(clientId, bufferId)` | Subscribes the client to a buffer's updates and sends its current snapshot, if it exists. |
-| `unsubscribe(clientId, bufferId)` | Stops broadcasting that buffer's updates to the client. |
-| `receive(cmd)` | Validates, applies, and broadcasts a command to that buffer's subscribers. |
-| `snapshot(bufferId)` | Returns the buffer's current state as `PixelBufferSnapshot`, or `undefined`. |
-| `world` | The authoritative `PixelWorld` instance. |
-
-### Options
-
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `world` | `PixelWorld` | new world | Existing world to use as authoritative state. |
-| `conflictResolver` | `PixelConflictResolver` | `LastWriteWinsResolver` | Custom conflict strategy. |
-
-## PixelNetworkCommand — wire format
-
-```ts
-type PixelNetworkCommand = (PixelBufferHookEvent | PixelLifecycleEvent) & {
-  bufferId: string;
-  clientId: string;
-  seq: number;
-  timestamp: number;
-};
-```
-
-Five actions: `"buffer-added"`, `"buffer-removed"`, `"stroke"`, `"resized"`,
-`"texture-replaced"`. All pixel payloads (`stroke` positions excepted) are
-raw RGBA bytes, base64-encoded via `js-base64` — no image codec dependency, so
-`PixelSyncServer` stays headless. Commands are plain JSON-serializable
-objects.
-
-A `"stroke"` command carries one color and a deduped list of pixel
-positions for an entire paint stroke (mouse-down to mouse-up), not one
-command per brush stamp.
-
-## ConflictResolver
-
-Conflicts are resolved **per pixel**, not per command — a single stroke
-command can touch thousands of pixels, so a command is split: pixels that
-lose the race are dropped from the applied/broadcast copy, the rest are
-applied normally. `"buffer-added"`, `"buffer-removed"`, `"resized"`, and
-`"texture-replaced"` are structural and always accepted.
-
-### Default: LastWriteWinsResolver
-
-Higher `timestamp` wins. On a tie, the lexicographically greater `clientId`
-wins (deterministic without coordination).
-
-```ts
-import {
-  LastWriteWinsResolver
-} from "@jolly-pixel/pixel-draw.renderer";
-
-const server = new PixelSyncServer({
-  conflictResolver: new LastWriteWinsResolver() // default, no need to pass explicitly
-});
-```
-
-### Custom resolver
-
-```ts
-import type {
-  PixelConflictResolver,
-  PixelConflictContext
-} from "@jolly-pixel/pixel-draw.renderer";
-
-class FirstWriteWinsResolver implements PixelConflictResolver {
-  resolve({ existing }: PixelConflictContext): "accept" | "reject" {
-    return existing ? "reject" : "accept";
-  }
-}
-
-const server = new PixelSyncServer({ conflictResolver: new FirstWriteWinsResolver() });
-```
-
-## applyCommandToWorld — headless usage
-
-Replays a command against a bare `PixelWorld`, without a `CanvasManager`.
-Useful for server-side logic, unit tests, or offline editing tools.
-
-```ts
-import {
-  PixelWorld,
-  applyCommandToWorld
-} from "@jolly-pixel/pixel-draw.renderer";
-
-const world = new PixelWorld();
-applyCommandToWorld(world, {
-  action: "buffer-added",
-  bufferId: "tileset-1",
-  metadata: { size: { x: 64, y: 32 } },
-  clientId: "seed",
-  seq: 1,
-  timestamp: Date.now()
-});
-```
-
-
-# Viewport.md
-
-# Viewport
-
-`Viewport` encapsulates camera position, zoom level, canvas dimensions, and all coordinate-space conversions between canvas pixels and texture pixels.
+Headless, multi-buffer registry. Used by [`PixelSyncServer`](./PixelSyncServer.md) as the authoritative store for every buffer (texture) shared in a session. Has no DOM/Canvas2D dependency and runs in Node.js / Deno / Bun.
 
 ## Types
 
 ```ts
-new Viewport(options: ViewportOptions)
+new PixelWorld()
+```
 
-export interface ViewportOptions {
+No constructor options; buffers are added individually via `addBuffer`.
+
+## Methods
+
+### `addBuffer`
+
+```ts
+addBuffer(bufferId: string, options: PixelBufferOptions): PixelBuffer
+```
+
+Creates and registers a new [`PixelBuffer`](../buffer/PixelBuffer.md) under `bufferId`. Throws if `bufferId` already exists.
+
+---
+
+### `removeBuffer`
+
+```ts
+removeBuffer(bufferId: string): void
+```
+
+---
+
+### `getBuffer`
+
+```ts
+getBuffer(bufferId: string): PixelBuffer | undefined
+```
+
+---
+
+### `hasBuffer`
+
+```ts
+hasBuffer(bufferId: string): boolean
+```
+
+---
+
+### `getBufferIds`
+
+```ts
+getBufferIds(): IterableIterator<string>
+```
+
+
+# types.md
+
+# network/types
+
+Wire-format types for the [network sync layer](./index.md).
+
+## Types
+
+```ts
+/**
+ * Buffer create/destroy events. A PixelArtCanvas has no concept of a bufferId
+ * so these are never emitted from a PixelArtCanvas's onBufferUpdated hook —
+ * they are constructed directly by PixelSyncSession.createBuffer/removeBuffer.
+ */
+type PixelLifecycleEvent =
+  | {
+    action: "buffer-added";
+    metadata: {
+      size: Vec2;
+      /** Base64-encoded RGBA bytes for the buffer's initial content, if any. */
+      pixels?: string;
+    };
+  }
+  | {
+    action: "buffer-removed";
+    metadata: Record<string, never>;
+  };
+
+type PixelNetworkEvent = PixelBufferHookEvent | PixelLifecycleEvent;
+
+interface PixelNetworkCommandHeader {
+  bufferId: string;
+  clientId: string;
+  /** Monotonically increasing sequence number per client. */
+  seq: number;
+  /** Unix timestamp in milliseconds when the command was created. */
+  timestamp: number;
+}
+
+/**
+ * A network command is a buffer event enriched with routing metadata.
+ * It can be sent over any transport (WebSocket, WebRTC, Partykit, etc.).
+ */
+type PixelNetworkCommand = PixelNetworkEvent & PixelNetworkCommandHeader;
+
+interface PixelBufferSnapshot {
+  size: Vec2;
+  /** Base64-encoded RGBA bytes. */
+  pixels: string;
+}
+```
+
+`PixelBufferHookEvent` (the `"stroke"` / `"resized"` / `"texture-replaced"` / `"global-fill"` local-mutation events) is defined in [buffer/PixelBuffer.md](../buffer/PixelBuffer.md); a `PixelNetworkCommand` is that same event shape plus `PixelLifecycleEvent`, enriched with the header fields. Six actions total: `"buffer-added"`, `"buffer-removed"`, `"stroke"`, `"resized"`, `"texture-replaced"`, `"global-fill"`. All pixel payloads (`stroke` positions and `global-fill`'s colors excepted) are raw RGBA bytes, base64-encoded via `js-base64`: no image codec dependency, so `PixelSyncServer` stays headless. Commands are plain JSON-serializable objects.
+
+
+# PixelArtCanvas.md
+
+# PixelArtCanvas
+
+`PixelArtCanvas` is the top-level coordinator for the pixel-draw renderer, and the package's primary public API. It wires together a viewport, canvas buffer, renderer, input handling, and SVG overlay — all internal implementation details — and owns the [`Brush`](./tools/Brush.md) tool, internal line/fill/select tools, and an internal `HistoryController` that wraps a [`HistoryStack`](./history/HistoryStack.md) for undo/redo (constructed unconditionally; only records entries when `history.enabled` is passed).
+
+## Types
+
+```ts
+new PixelArtCanvas(parentHtmlElement: HTMLDivElement, options?: PixelArtCanvasOptions)
+
+interface HistoryState {
+  canUndo: boolean;
+  canRedo: boolean;
+}
+
+interface PixelArtCanvasOptions {
   /**
-   * Size of the texture to display in the viewport.
-   * This is used to calculate the camera bounds and the zoom level.
+   * Default interaction mode for the canvas.
+   * "paint" for drawing, "move" for panning, or "fill" for the paint-bucket
+   * flood-fill tool. If not specified, the default mode will be "paint".
    */
-  textureSize: Vec2;
+  defaultMode?: Mode;
   /**
-   * Default zoom level.
-   * Can be overridden by passing a texture with a different size than the default one.
-   * @default 4
+   * Global event target used by InputController for drag-continuation
+   * mouse tracking and keyboard/blur reporting.
+   * @default window
    */
-  zoom?: number;
+  window?: WindowLike;
+  texture?: {
+    defaultColor?: ColorInput;
+    size?: {
+      x: number;
+      y?: number;
+    };
+    maxSize?: number;
+    init?: HTMLCanvasElement;
+  };
+  zoom?: {
+    default: number;
+    sensitivity?: number;
+    min?: number;
+    max?: number;
+  };
+  backgroundTransparency?: {
+    colors: { odd: string; even: string; };
+    squareSize: number;
+  };
+  brush?: BrushOptions;
+  select?: {
+    /**
+     * Color used to fill the pixels vacated by a Delete, the source side of
+     * a Move, or the footprint a Rotate/Flip no longer occupies, in
+     * "select" mode. Accepts a CSS color string or a colorjs.io `Color`
+     * instance.
+     * @default "#FFFFFF"
+     */
+    eraseColor?: ColorInput;
+  };
   /**
-   * Minimum zoom level. Must be under the max zoom level.
-   * @default 1
+   * Called after a draw stroke is committed to the master buffer.
+   * Use this hook to synchronize the edited texture with an external consumer.
    */
-  zoomMin?: number;
+  onDrawEnd?: () => void;
   /**
-   * Maximum zoom level. Must be above the min zoom level.
+   * Called for every local mutation (stroke, resize, texture replace).
+   * Used by PixelSyncSession to forward mutations over the network.
+   */
+  onBufferUpdated?: PixelBufferHookListener;
+  /** Local undo/redo stack. Disabled by default. */
+  history?: {
+    enabled?: boolean;
+    /** @default 10 */
+    limit?: number;
+  };
+  /** Called whenever the undo/redo stack changes (after push, undo, redo, or clear). */
+  onHistoryChange?: (state: HistoryState) => void;
+  /**
+   * Overrides for the copy/paste/undo/redo/delete key combos. Unspecified
+   * actions keep their default binding. Shift (line-tool arm/disarm) is not
+   * configurable. Also settable/readable at runtime via `patchKeybindings()` /
+   * `keybindings`.
+   */
+  keybindings?: Partial<Keybindings>;
+}
+```
+
+`Mode` is `"paint" | "move" | "fill" | "select"`. `ColorInput` (`string | Color`, where `Color` is [colorjs.io](https://colorjs.io)'s class) is used throughout the package wherever a color option is accepted: a CSS color string (hex, `rgb()`, `hsl()`, named color, ...) or a `Color` instance. `BrushOptions` is forwarded to the internal `Brush` instance, see [Brush.md](./tools/Brush.md). `PixelBufferHookListener` is described in [buffer/PixelBuffer.md](./buffer/PixelBuffer.md) and [network/index.md](./network/index.md). `Keybindings` is described in [utils/keybindings.md](./utils/keybindings.md).
+
+`history.enabled` (default `false`) tells the internal `HistoryController` to back itself with a [`HistoryStack`](./history/HistoryStack.md) that records every stroke, resize, and texture replace, enabling `undo()`/`redo()`. Leaving it disabled skips that bookkeeping entirely — there's no per-edit cost paid for a feature that isn't used.
+
+Undocumented defaults: `texture.size` is `{ x: 64, y: 32 }` (`y` falls back to `x` when only `x` is given), `texture.maxSize` is `2048`, `zoom.default` is `4`, `zoom.min`/`zoom.max` are `1`/`32`, `zoom.sensitivity` is `0.1`, `backgroundTransparency.squareSize` is `8`, `backgroundTransparency.colors` is `{ odd: "#999", even: "#666" }`.
+
+The background color used behind transparent texture pixels is read from `getComputedStyle(parentHtmlElement).backgroundColor` at construction time (falling back to `#555555` if unset or fully transparent); it isn't a configurable option.
+
+## Properties
+
+### `brush`
+
+```ts
+readonly brush: Brush
+```
+
+The brush instance. Use it to read or change the current brush color, opacity, and size. See [Brush.md](./tools/Brush.md).
+
+### `viewport`
+
+```ts
+readonly viewport: DefaultViewport // { readonly zoom: number; readonly camera: Readonly<Vec2>; }
+```
+
+Read-only camera/zoom state. Use `camera`/`zoom` for copies, or the methods below for coordinate conversions and mutation.
+
+## Methods
+
+### `mode`
+
+```ts
+get mode(): Mode
+set mode(mode: Mode)
+```
+
+Reads or sets the current interaction mode. `"paint"` routes left-click events to brush drawing (holding `Shift` arms a line tool); `"move"` routes them to panning; `"fill"` routes a left-click to a paint-bucket fill (contiguous region by default, or every same-colored pixel on the canvas when `fillGlobal` is `true` — see below); `"select"` routes them to a rectangle-selection tool: drag to select or move, `Ctrl`/`Cmd`+`C`/`V` to copy/duplicate, `Delete` to erase, `R` to rotate the selection 90° clockwise around its center (repeatable — press again for further rotation; no counterclockwise binding), `H`/`V` to flip the selection's content horizontally/vertically in place. The line/fill/select tools are internal implementation details with no public class of their own.
+
+Switching to `"move"` cancels an armed line. Switching away from `"select"` clears any active selection.
+
+Right-click (color pick) and the SVG brush-cursor highlight are both active in `"paint"` and `"fill"` modes. In `"fill"`, the highlight is always a single pixel regardless of `brush`'s configured size, since a fill's seed is never brush-sized.
+
+---
+
+### `fillGlobal`
+
+```ts
+get fillGlobal(): boolean
+set fillGlobal(global: boolean)
+```
+
+Reads or sets whether `"fill"` mode recolors every pixel matching the seed's color anywhere on the canvas (`true`) instead of only the seed's 4-directionally connected region (`false`, the default). Runtime-only — there is no constructor option — and the setting persists across mode switches, mirroring `brush`'s size/color.
+
+A global fill is still committed and undoable as a single atomic edit, but is broadcast over `onBufferUpdated`/the network layer as a compact `"global-fill"` event (`{ fromColor, toColor }`, no position list) rather than `"stroke"`, since it can touch a large fraction of the canvas — see [buffer/PixelBuffer.md](./buffer/PixelBuffer.md). Undoing/redoing a global fill falls back to a full-position `"stroke"` event.
+
+---
+
+### `textureSize`
+
+```ts
+get textureSize(): Vec2
+set textureSize(size: Vec2)
+```
+
+Reads or changes the current texture size. Setting it resizes the working buffer (content beyond the previous bounds is lost unless it was already committed to the master buffer) and emits a `"resized"` hook event.
+
+---
+
+### `commitPixels`
+
+```ts
+commitPixels(pixels: Vec2[]): void
+```
+
+Commits an already-computed pixel set as a single atomic edit: one draw call, one redraw, one `"stroke"` hook emission. Used internally by the line tool to commit a whole rasterized line in one operation instead of redrawing once per point, and by the fill tool to commit a flood-filled region in one shot. A no-op when `pixels` is empty. The color used is the brush's current color/opacity.
+
+---
+
+### `undo` / `redo` / `canUndo` / `canRedo`
+
+```ts
+undo(): boolean
+redo(): boolean
+canUndo(): boolean
+canRedo(): boolean
+```
+
+Reverts/re-applies the most recent local edit (stroke, resize, or texture replace) via the internal `HistoryController`, which wraps a [`HistoryStack`](./history/HistoryStack.md). `undo()`/`redo()` return `false` and do nothing when `history.enabled` wasn't passed at construction, or when the corresponding stack is empty; `canUndo()`/`canRedo()` report the same condition without mutating anything. Both bound to the configurable undo/redo keybindings by default, see [utils/keybindings.md](./utils/keybindings.md).
+
+A successful `undo()`/`redo()` redraws the canvas, calls `onDrawEnd`, fires `onHistoryChange`, and — for a history-enabled `PixelArtCanvas` attached to a `PixelSyncSession` — emits the reverted/re-applied state through `onBufferUpdated` so peers converge to the same result (see [buffer/PixelBuffer.md](./buffer/PixelBuffer.md) for how the replayed event's `originTimestamp` keeps that fair under conflict resolution). The one exception: undoing/redoing a `"select"`-mode edit (move/delete/paste/rotate/flip) never emits `onBufferUpdated`, since those edits aren't networked in the first place (see `mode`/select-mode note above) — undo/redo for them is local-only.
+
+A remote resize, texture-replace, or snapshot load clears the local history stack (its recorded positions/sizes no longer describe the buffer), so `canUndo()`/`canRedo()` drop to `false` after one.
+
+---
+
+### `rotateSelection` / `flipSelectionHorizontal` / `flipSelectionVertical`
+
+```ts
+rotateSelection(): boolean
+flipSelectionHorizontal(): boolean
+flipSelectionVertical(): boolean
+```
+
+Programmatic equivalents of the `R`/`H`/`V` select-mode keybindings (e.g. for a toolbar button) — same underlying commit path, so keyboard and button can't drift apart. Each returns `false` and does nothing without an active `"select"`-mode selection.
+
+---
+
+### `texture`
+
+```ts
+get texture(): Uint8ClampedArray
+set texture(source: HTMLCanvasElement | HTMLImageElement)
+```
+
+Reads the current texture's raw RGBA pixel data (row-major, 4 bytes per pixel), or replaces the texture with the pixel data from `source`, resizing to match and emitting a `"texture-replaced"` hook event.
+
+---
+
+### `textureCanvas`
+
+```ts
+textureCanvas(): HTMLCanvasElement
+```
+
+Returns the working (texture-resolution, off-screen) canvas backing the buffer.
+
+---
+
+### `canvas`
+
+```ts
+canvas(): HTMLCanvasElement
+```
+
+Returns the visible (viewport-cropped, on-screen) canvas element that `InputController` listens on. Useful for attaching additional event listeners or overlays.
+
+---
+
+### `camera`
+
+```ts
+get camera(): Vec2
+```
+
+Returns a copy of the current camera offset `{ x, y }` in viewport space.
+
+---
+
+### `zoom`
+
+```ts
+get zoom(): number
+```
+
+Returns the current zoom multiplier.
+
+---
+
+### `zoomSensitivity`
+
+```ts
+get zoomSensitivity(): number
+set zoomSensitivity(sensitivity: number)
+```
+
+Reads or sets the mouse-wheel zoom sensitivity (clamped to a minimum of `0.01`).
+
+---
+
+### `keybindings` / `patchKeybindings`
+
+```ts
+get keybindings(): Readonly<Keybindings>
+patchKeybindings(patch: Partial<Keybindings>): void
+```
+
+Reads the currently effective keybindings, or merges `patch` onto them (actions not present in `patch` keep their current binding). Throws `InvalidKeybindingError` for a malformed combo string, or `KeybindingConflictError` if the result would bind two actions to the same combo — either way the previous keybindings remain in effect. See [utils/keybindings.md](./utils/keybindings.md).
+
+---
+
+### `centerTexture`
+
+```ts
+centerTexture(): void
+```
+
+Pans and clamps the camera so the texture is centered in the current viewport.
+
+---
+
+### `parentHtmlElement` / `reparentCanvasTo`
+
+```ts
+get parentHtmlElement(): HTMLDivElement
+reparentCanvasTo(newParentElement: HTMLDivElement): void
+```
+
+Reads the current parent element, or call `reparentCanvasTo` to move the working canvas and the SVG overlay into a new one and re-read its dimensions. Call `reparentCanvasTo` when mounting the editor into a new DOM container.
+
+---
+
+### `onResize`
+
+```ts
+onResize(): void
+```
+
+Reads the current dimensions of the parent element and resizes the visible canvas/SVG overlay to fill it. No-op if the parent has zero width or height (e.g. hidden via `display: none`). Call this after the parent element changes size (e.g. on `window.resize`).
+
+---
+
+### `destroy`
+
+```ts
+destroy(): void
+```
+
+Tears down `InputController`'s event listeners and removes the canvas and SVG overlay from the DOM.
+
+---
+
+### `onBufferUpdated` / `applyRemoteCommand` / `loadSnapshot`
+
+```ts
+set onBufferUpdated(fn: PixelBufferHookListener | undefined)
+applyRemoteCommand(event: PixelBufferHookEvent): void
+loadSnapshot(size: Vec2, pixels: Uint8ClampedArray): void
+```
+
+Network sync hooks, used by `PixelSyncSession`. See [network/index.md](./network/index.md). `onBufferUpdated` fires on every local mutation (stroke, resize, texture replace). `applyRemoteCommand` applies a mutation from a remote peer without re-firing `onBufferUpdated`. `loadSnapshot` hydrates the buffer from a network snapshot; it is never itself broadcast.
+
+There is no manual redraw method: every mutation (stroke, pan, zoom, resize, texture replace) triggers its own repaint internally.
+
+
+# Brush.md
+
+# Brush
+
+`Brush` manages the current brush color, opacity, size, and highlight colors, and computes the list of texture-space pixels a brush stroke covers.
+
+## Types
+
+```ts
+new Brush(options: BrushOptions)
+
+export type ColorInput = string | Color; // Color is colorjs.io's Color class
+
+export interface BrushOptions {
+  /**
+   * Base color of the brush. Accepts a CSS color string (hex, rgb(), hsl(),
+   * named color, ...) or a colorjs.io `Color` instance.
+   * Opacity can be controlled separately with the `opacity` property.
+   * @default "#000000"
+   */
+  color?: ColorInput;
+  /**
+   * Size of the brush in pixels. Must be a positive integer.
+   * The actual affected area will be a square of `size x size` pixels centered around the target pixel.
    * @default 32
    */
-  zoomMax?: number;
+  size?: number;
   /**
-   * Sensitivity of zooming when using the mouse wheel. The higher, the faster the zoom changes.
-   * If the zoom level is under 1, the sensitivity is divided by 10 to allow finer control.
-   * @default 0.1
+   * Maximum allowed size for the brush. This is used to constrain the `size` property.
+   * Must be a positive integer. If `size` is set higher than `maxSize`, it will be clamped to `maxSize`.
+   * @default 32
    */
-  zoomSensitivity?: number;
+  maxSize?: number;
+  /**
+   * Highlight colors for the brush preview.
+   * These colors are used to render the brush outline and fill when hovering over the canvas.
+   * @default { colorInline: "#FFF", colorOutline: "#000" }
+   */
+  highlight?: {
+    colorInline?: ColorInput;
+    colorOutline?: ColorInput;
+  };
 }
 ```
 
 ## Methods
 
-### `resizeCanvas`
+### `color`
 
 ```ts
-resizeCanvas(width: number, height: number): void
+color(color: ColorInput, opacity?: number): void
 ```
 
-Updates the canvas size while preserving the current camera position.
-Shifts the camera by half the size delta so the same world point stays at the center of the screen.
+Sets the brush color from a CSS color string (hex, rgb(), hsl(), named color, ...) or a colorjs.io `Color` instance. If `opacity` is omitted, the current opacity is preserved; otherwise it's clamped to `[0, 1]` and applied alongside the new color.
 
 ---
 
-### `applyZoom`
+### `colorAsString`
 
 ```ts
-applyZoom(delta: number, originX: number, originY: number): void
+colorAsString(format?: "rgba" | "hex"): string
 ```
 
-Adjusts the zoom level by `delta` (wheel units × sensitivity), keeping the point at `(originX, originY)` in canvas space fixed on screen.
+Returns the current brush color. Defaults to an `rgba(r, g, b, a)` string; pass `"hex"` to get a 6-digit hex string instead (opacity is not represented in hex output).
 
 ---
 
-### `applyPan`
+### `opacity`
 
 ```ts
-applyPan(dx: number, dy: number): void
+get opacity(): number
+set opacity(opacity: number)
 ```
 
-Translates the camera by `(dx, dy)` pixels in canvas space.
+The brush opacity. Assigned values are clamped to `[0, 1]`.
 
 ---
 
-### `setCanvasSize`
+### `size`
 
 ```ts
-setCanvasSize(width: number, height: number): void
+get size(): number
+set size(size: number)
 ```
 
-Updates the tracked canvas dimensions. Call this whenever the visible canvas is resized.
+The brush size in pixels. Assigned values are clamped to `[1, maxSize]`.
 
 ---
 
-### `setTextureSize`
+### `colorInline`
 
 ```ts
-setTextureSize(size: number): void
+get colorInline(): string
+set colorInline(color: ColorInput)
 ```
 
-Updates the tracked texture size used in UV and screen-rect computations.
+The inner stroke color of the SVG brush cursor overlay.
 
 ---
 
-### `center`
+### `colorOutline`
 
 ```ts
-center(): void
+get colorOutline(): string
+set colorOutline(color: ColorInput)
 ```
 
-Resets the camera so the texture is centered in the current canvas.
+The outer stroke color of the SVG brush cursor overlay.
 
 ---
 
-### `getMouseCanvasPosition`
+### `affectedPixels`
 
 ```ts
-getMouseCanvasPosition(mx: number, my: number): Vec2
+affectedPixels(cx: number, cy: number): IterableIterator<Vec2>
 ```
 
-Converts a raw mouse event position (relative to the page) to canvas-local coordinates by subtracting the canvas bounding-rect offset.
+A generator yielding texture-space `{ x, y }` coordinates for every pixel within the current brush square centered at `(cx, cy)`. Lazy and single-use: each call produces a fresh iterator; iterate it once (`for...of`, spread, or pass it directly to something that accepts an `Iterable<Vec2>`) rather than storing and re-reading it.
 
----
-
-### `getMouseTexturePosition`
-
-```ts
-getMouseTexturePosition(
-  mx: number,
-  my: number,
-  opts: { bounds: DOMRect; limit?: boolean }
-): Vec2
-```
-
-Converts a mouse position to texture-space pixel coordinates at the current zoom and camera offset.
-
-- `bounds` — the canvas `DOMRect` obtained from `canvas.getBoundingClientRect()`
-- `limit` — when `true`, clamps the result to `[0, textureSize - 1]`
+- For **odd** brush sizes the center pixel is exactly `(cx, cy)`.
+- For **even** brush sizes the brush is offset by `−0.5` to remain grid-aligned.
 
 **Example**
 
 ```ts
-canvas.addEventListener("mousemove", (e) => {
-  const bounds = canvas.getBoundingClientRect();
-  const pos = viewport.getMouseTexturePosition(e.clientX, e.clientY, { bounds, limit: true });
-  console.log(pos.x, pos.y); // texture-space coordinates
-});
+// size = 3 → 9 pixels around (10, 10)
+canvasBuffer.drawPixels(brush.affectedPixels(10, 10), { r: 255, g: 0, b: 0, a: 255 });
+
+// Or, if you need to consume the pixels more than once:
+const pixels = [...brush.affectedPixels(10, 10)];
 ```
 
----
 
-### `getTextureScreenRect`
+# keybindings.md
+
+# utils/keybindings
+
+Types, defaults, and errors for `PixelArtCanvas`'s configurable keyboard shortcuts (`PixelArtCanvasOptions.keybindings`, `PixelArtCanvas.patchKeybindings()` / `keybindings`, see [PixelArtCanvas.md](../PixelArtCanvas.md)).
+
+## Types
 
 ```ts
-getTextureScreenRect(): { x: number; y: number; width: number; height: number }
+type ModifierToken = "mod" | "shift" | "alt";
+
+type NamedKey =
+  | "Delete" | "Backspace" | "Enter" | "Escape" | "Tab" | "Space"
+  | "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight"
+  | "F1" | "F2" | "F3" | "F4" | "F5" | "F6" | "F7" | "F8" | "F9" | "F10" | "F11" | "F12";
+
+type Keybinding =
+  | NamedKey | (string & {})
+  | `${ModifierToken}+${NamedKey | (string & {})}`
+  | `${ModifierToken}+${ModifierToken}+${NamedKey | (string & {})}`
+  | `${ModifierToken}+${ModifierToken}+${ModifierToken}+${NamedKey | (string & {})}`;
+
+type KeybindingAction =
+  | "copy" | "paste" | "undo" | "redo" | "delete"
+  | "rotate" | "flipHorizontal" | "flipVertical";
+
+type Keybindings = Record<KeybindingAction, Keybinding | Keybinding[]>;
 ```
 
-Returns the screen-space rectangle occupied by the texture at the current zoom and camera position. Useful for rendering the checkerboard background clip region or positioning DOM overlays.
+A `Keybinding` is a `+`-separated combo string, e.g. `"mod+z"` or `"mod+shift+z"`. `"mod"` matches either Ctrl or Cmd, so a binding behaves the same on every platform. The key segment is matched against the character produced (`KeyboardEvent.key`, case-insensitive), not physical key position, so `"z"` means "whatever key produces the Z character on the user's layout" — correct on AZERTY/QWERTZ without the DSL needing to know about layouts. `NamedKey` lists the non-printable keys for editor autocomplete; any other string is still accepted.
+
+Only `copy`, `paste`, `undo`, `redo`, `delete`, `rotate`, `flipHorizontal`, and `flipVertical` are configurable. Shift (used to arm/disarm the line tool in `"paint"` mode) is not.
+
+## Constants
+
+```ts
+const DEFAULT_KEYBINDINGS: Keybindings = {
+  copy: "mod+c",
+  paste: "mod+v",
+  undo: "mod+z",
+  redo: ["mod+y", "mod+shift+z"],
+  delete: "Delete",
+  rotate: "r",
+  flipHorizontal: "h",
+  flipVertical: "v"
+};
+```
+
+The keybindings `PixelArtCanvas` uses when `keybindings` isn't passed to its options, and the base a partial override is merged onto. `redo` has two default triggers; any action may be given an array of alternate bindings. `rotate`/`flipHorizontal`/`flipVertical` only have an effect in `"select"` mode with an active selection (rotate is clockwise-only — press it multiple times for other angles).
+
+Matching is exact on modifiers: `"mod+c"` does **not** also match Ctrl+Shift+C, and the default `"Delete"` binding (no modifier) does not also match Ctrl+Delete.
+
+## Errors
+
+```ts
+class InvalidKeybindingError extends Error {}
+class KeybindingConflictError extends Error {}
+```
+
+Both are thrown synchronously from the constructor's `keybindings` option and from `patchKeybindings()` — never asynchronously, and never left as a silently-dropped binding. `InvalidKeybindingError` is thrown for a malformed combo string (unknown modifier token, empty/missing key segment). `KeybindingConflictError` is thrown when two different actions would resolve to the same combo.
 
 

@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import { LitElement, css, html } from "lit";
 import { state, query } from "lit/decorators.js";
-import { CanvasManager } from "@jolly-pixel/pixel-draw.renderer";
+import { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import "./tabs/Paint.ts";
@@ -28,7 +28,7 @@ export class LeftPanel extends LitElement {
   @query(kPaintComponentSelector)
   declare paintComponent: any;
 
-  private canvasManager: CanvasManager;
+  private canvasManager: PixelArtCanvas;
 
   private lastReparentedMode: "paint" | "build" | "animate" | null = null;
   private hasInitializedCenter: boolean = false;
@@ -95,11 +95,11 @@ export class LeftPanel extends LitElement {
     super();
     this.mode = "build";
 
-    // Create a temporary container for the CanvasManager
+    // Create a temporary container for the PixelArtCanvas
     const containerDiv = document.createElement("div");
 
-    // Initialize CanvasManager with the temporary container
-    this.canvasManager = new CanvasManager(containerDiv, {
+    // Initialize PixelArtCanvas with the temporary container
+    this.canvasManager = new PixelArtCanvas(containerDiv, {
       texture: { size: kTextureSize },
       defaultMode: "move",
       zoom: kDefaultZoom,
@@ -109,7 +109,7 @@ export class LeftPanel extends LitElement {
     });
   }
 
-  public getSharedCanvasManager(): CanvasManager {
+  public getSharedPixelArtCanvas(): PixelArtCanvas {
     return this.canvasManager;
   }
 
@@ -121,7 +121,7 @@ export class LeftPanel extends LitElement {
 
   private updateCanvasMode(): void {
     const newMode = (this.mode === "paint") ? "paint" : "move";
-    this.canvasManager.setMode(newMode);
+    this.canvasManager.mode = newMode;
   }
 
   private handleTabClick(tabMode: "paint" | "build" | "animate"): void {
@@ -129,7 +129,7 @@ export class LeftPanel extends LitElement {
   }
 
   private syncTextureSizeInputs(): void {
-    const textureSize = this.canvasManager.getTextureSize();
+    const textureSize = this.canvasManager.textureSize;
 
     if (!this.buildComponent) {
       return;
@@ -162,7 +162,7 @@ export class LeftPanel extends LitElement {
     // Reparent to the active component and center texture
     this.reparentCanvasToActiveTab();
 
-    // Synchronize texture size inputs with CanvasManager state
+    // Synchronize texture size inputs with PixelArtCanvas state
     this.syncTextureSizeInputs();
 
     this.hasInitialized = true;

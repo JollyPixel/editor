@@ -1,8 +1,8 @@
 # HistoryStack
 
-Bounded undo/redo stack over a `DefaultPixelBuffer` (`PixelBuffer` or `CanvasBuffer`) — no DOM or network dependency, so it runs identically headless or in the browser. `CanvasManager` owns one internally when constructed with `history.enabled: true` (see [CanvasManager.md](../CanvasManager.md#undo--redo--canundo--canredo)); most consumers drive undo/redo through `CanvasManager.undo()`/`redo()` rather than this class directly.
+Bounded undo/redo stack over a `DefaultPixelBuffer` (`PixelBuffer` or `CanvasBuffer`) — no DOM or network dependency, so it runs identically headless or in the browser. `PixelArtCanvas`'s internal `HistoryController` owns one when constructed with `history.enabled: true` (see [PixelArtCanvas.md](../PixelArtCanvas.md#undo--redo--canundo--canredo)); most consumers drive undo/redo through `PixelArtCanvas.undo()`/`redo()` rather than this class directly.
 
-`HistoryStack` only owns the stack and replays before/after data against its buffer — capturing that before/after data on each edit is the caller's job (`CanvasManager` does this internally for strokes, resizes, and texture replaces).
+`HistoryStack` only owns the stack and replays before/after data against its buffer — capturing that before/after data on each edit is the caller's job (`PixelArtCanvas` does this internally for strokes, resizes, and texture replaces).
 
 ## Types
 
@@ -48,14 +48,9 @@ type HistoryEntry =
 
 /** Same as HistoryEntry, minus `timestamp` — stamped by `push()`. */
 type HistoryEntryInput = Omit<HistoryEntry, "timestamp">;
-
-interface ColorGroup {
-  color: RGBA;
-  positions: Vec2[];
-}
 ```
 
-`limit` bounds the undo stack: pushing past it silently drops the oldest entry. A `"stroke"` entry's `beforeColors` is per-position (a stroke can cross pixels of different colors); `afterColor` is a single color since a stroke always paints one uniform color. `"resized"`/`"texture-replaced"` instead snapshot the whole buffer (`beforePixels`/`afterPixels`) since there's no cheaper diff to keep. `"select-edit"` covers every `"select"`-mode edit (move/delete/paste/rotate/flip) with a single entry shape: unlike `"stroke"`, both `beforeColors` and `afterColors` are per-position, since these operations paint heterogeneous, multi-colored regions rather than one uniform color. `positions` is the union of whatever footprint(s) the edit touched (e.g. a Move's source and destination, or a Rotate's pre/post footprint when a non-square selection's dimensions swap) — see [CanvasManager.md](../CanvasManager.md#undo--redo--canundo--canredo) for the network-sync caveat specific to this entry type.
+`limit` bounds the undo stack: pushing past it silently drops the oldest entry. A `"stroke"` entry's `beforeColors` is per-position (a stroke can cross pixels of different colors); `afterColor` is a single color since a stroke always paints one uniform color. `"resized"`/`"texture-replaced"` instead snapshot the whole buffer (`beforePixels`/`afterPixels`) since there's no cheaper diff to keep. `"select-edit"` covers every `"select"`-mode edit (move/delete/paste/rotate/flip) with a single entry shape: unlike `"stroke"`, both `beforeColors` and `afterColors` are per-position, since these operations paint heterogeneous, multi-colored regions rather than one uniform color. `positions` is the union of whatever footprint(s) the edit touched (e.g. a Move's source and destination, or a Rotate's pre/post footprint when a non-square selection's dimensions swap) — see [PixelArtCanvas.md](../PixelArtCanvas.md#undo--redo--canundo--canredo) for the network-sync caveat specific to this entry type.
 
 ## Properties
 
@@ -106,12 +101,4 @@ Re-applies the most recently undone entry (applying its `after*` data to the buf
 clear(): void
 ```
 
-Discards every recorded entry, both stacks. Call when the buffer is replaced wholesale from outside the stack's knowledge (e.g. a remote resize/texture-replace/snapshot — `CanvasManager` does this automatically in `applyRemoteCommand`/`loadSnapshot`).
-
-## `groupPositionsByColor`
-
-```ts
-function groupPositionsByColor(positions: Vec2[], colors: RGBA[]): ColorGroup[]
-```
-
-Buckets same-length `positions`/`colors` arrays by identical color, so a heterogeneous per-pixel restore (a stroke's `beforeColors`) can be applied as a few uniform-color `drawPixels` calls instead of one call per pixel. Exported standalone since it's also used by the (internal) undo/redo network-replay event builder.
+Discards every recorded entry, both stacks. Call when the buffer is replaced wholesale from outside the stack's knowledge (e.g. a remote resize/texture-replace/snapshot — `PixelArtCanvas` does this automatically in `applyRemoteCommand`/`loadSnapshot`).

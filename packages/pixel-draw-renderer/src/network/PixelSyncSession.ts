@@ -2,7 +2,7 @@
 import { toUint8Array } from "js-base64";
 
 // Import Internal Dependencies
-import type { CanvasManager } from "../CanvasManager.ts";
+import type { PixelArtCanvas } from "../PixelArtCanvas.ts";
 import type { PixelBufferHookEvent } from "../buffer/hooks.ts";
 import type { Vec2 } from "../types.ts";
 import type { PixelTransport } from "./PixelTransport.ts";
@@ -25,16 +25,16 @@ export interface OnBufferAddedEventMetadata {
  * Client-side network orchestrator.
  *
  * A single PixelSyncSession multiplexes many buffers (textures/tilesets)
- * over one transport connection. Each attached CanvasManager still owns
+ * over one transport connection. Each attached PixelArtCanvas still owns
  * exactly one texture — the session just assigns it a bufferId for routing,
  * so:
- * - Local mutations from an attached CanvasManager are stamped and forwarded.
- * - Remote commands are routed to the matching CanvasManager by bufferId.
+ * - Local mutations from an attached PixelArtCanvas are stamped and forwarded.
+ * - Remote commands are routed to the matching PixelArtCanvas by bufferId.
  * - Buffer lifecycle (add/remove) is announced/received at the session level.
  */
 export class PixelSyncSession {
   #transport: PixelTransport;
-  #managers = new Map<string, CanvasManager>();
+  #managers = new Map<string, PixelArtCanvas>();
   #seq = 0;
 
   onBufferAdded: (
@@ -55,12 +55,12 @@ export class PixelSyncSession {
   }
 
   /**
-   * Attaches an existing CanvasManager to sync as `bufferId`. Assumes the
+   * Attaches an existing PixelArtCanvas to sync as `bufferId`. Assumes the
    * buffer already exists on the server; subscribes and awaits its snapshot.
    */
   attach(
     bufferId: string,
-    canvasManager: CanvasManager
+    canvasManager: PixelArtCanvas
   ): void {
     if (this.#managers.has(bufferId)) {
       throw new Error(`Buffer "${bufferId}" is already attached`);
@@ -72,12 +72,12 @@ export class PixelSyncSession {
   }
 
   /**
-   * Attaches a CanvasManager AND announces a brand new buffer to peers,
+   * Attaches a PixelArtCanvas AND announces a brand new buffer to peers,
    * carrying the manager's current pixel data as the initial shared state.
    */
   createBuffer(
     bufferId: string,
-    canvasManager: CanvasManager,
+    canvasManager: PixelArtCanvas,
     options: { size: Vec2; pixels?: string; }
   ): void {
     this.attach(bufferId, canvasManager);
@@ -87,7 +87,7 @@ export class PixelSyncSession {
     }));
   }
 
-  /** Detaches a CanvasManager without announcing its removal to peers. */
+  /** Detaches a PixelArtCanvas without announcing its removal to peers. */
   detach(
     bufferId: string
   ): void {
@@ -101,7 +101,7 @@ export class PixelSyncSession {
     this.#transport.unsubscribe(bufferId);
   }
 
-  /** Detaches a CanvasManager and announces its removal to peers. */
+  /** Detaches a PixelArtCanvas and announces its removal to peers. */
   removeBuffer(
     bufferId: string
   ): void {

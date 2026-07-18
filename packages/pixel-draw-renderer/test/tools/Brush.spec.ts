@@ -22,115 +22,115 @@ describe("Brush", () => {
   describe("constructor defaults", () => {
     test("default color is black", () => {
       const brush = new Brush();
-      assert.strictEqual(brush.getColor("hex"), "#000000");
+      assert.strictEqual(brush.colorAsString("hex"), "#000000");
     });
 
     test("default size is 32", () => {
       const brush = new Brush();
-      assert.strictEqual(brush.getSize(), 32);
+      assert.strictEqual(brush.size, 32);
     });
 
     test("default opacity is 1", () => {
       const brush = new Brush();
-      assert.strictEqual(brush.getOpacity(), 1);
+      assert.strictEqual(brush.opacity, 1);
     });
 
-    test("getColor() is a valid rgba() string right after construction", () => {
+    test("colorAsString() is a valid rgba() string right after construction", () => {
       const brush = new Brush();
-      assert.match(brush.getColor(), /rgba\(0, 0, 0, 1\)/);
+      assert.match(brush.colorAsString(), /rgba\(0, 0, 0, 1\)/);
     });
   });
 
-  describe("setColor / getColor", () => {
-    test("setColor updates hex and rgba string", () => {
+  describe("color / colorAsString", () => {
+    test("color updates hex and rgba string", () => {
       const brush = new Brush();
-      brush.setColor("#ff0000");
-      assert.strictEqual(brush.getColor("hex"), "#ff0000");
-      assert.match(brush.getColor(), /rgba\(255, 0, 0/);
+      brush.color("#ff0000");
+      assert.strictEqual(brush.colorAsString("hex"), "#ff0000");
+      assert.match(brush.colorAsString(), /rgba\(255, 0, 0/);
     });
 
-    test("setColor with opacity argument updates opacity and color", () => {
+    test("color with opacity argument updates opacity and color", () => {
       const brush = new Brush();
-      brush.setColor("#0000ff", 0.5);
-      assert.strictEqual(brush.getOpacity(), 0.5);
-      assert.match(brush.getColor(), /rgba\(0, 0, 255, 0.5\)/);
+      brush.color("#0000ff", 0.5);
+      assert.strictEqual(brush.opacity, 0.5);
+      assert.match(brush.colorAsString(), /rgba\(0, 0, 255, 0.5\)/);
     });
 
-    test("setColor accepts a colorjs.io Color instance", () => {
+    test("color accepts a colorjs.io Color instance", () => {
       const brush = new Brush();
-      brush.setColor(new Color("lime"));
-      assert.strictEqual(brush.getColor("hex"), "#00ff00");
-      assert.match(brush.getColor(), /rgba\(0, 255, 0/);
+      brush.color(new Color("lime"));
+      assert.strictEqual(brush.colorAsString("hex"), "#00ff00");
+      assert.match(brush.colorAsString(), /rgba\(0, 255, 0/);
     });
 
     test("constructor accepts a colorjs.io Color instance", () => {
       const brush = new Brush({ color: new Color("blue") });
-      assert.strictEqual(brush.getColor("hex"), "#0000ff");
+      assert.strictEqual(brush.colorAsString("hex"), "#0000ff");
     });
   });
 
-  describe("setOpacity", () => {
+  describe("opacity", () => {
     test("clamps opacity below 0", () => {
       const brush = new Brush();
-      brush.setOpacity(-1);
-      assert.strictEqual(brush.getOpacity(), 0);
+      brush.opacity = -1;
+      assert.strictEqual(brush.opacity, 0);
     });
 
     test("clamps opacity above 1", () => {
       const brush = new Brush();
-      brush.setOpacity(2);
-      assert.strictEqual(brush.getOpacity(), 1);
+      brush.opacity = 2;
+      assert.strictEqual(brush.opacity, 1);
     });
 
-    test("re-derives RGB from stored hex on setOpacity", () => {
+    test("re-derives RGB from stored hex on opacity change", () => {
       const brush = new Brush({ color: "#ff0000" });
-      brush.setOpacity(0.25);
-      assert.match(brush.getColor(), /rgba\(255, 0, 0, 0.25\)/);
+      brush.opacity = 0.25;
+      assert.match(brush.colorAsString(), /rgba\(255, 0, 0, 0.25\)/);
     });
   });
 
-  describe("setSize / getSize", () => {
+  describe("size", () => {
     test("clamps size to at least 1", () => {
       const brush = new Brush({ size: 0, maxSize: 10 });
-      assert.strictEqual(brush.getSize(), 1);
+      assert.strictEqual(brush.size, 1);
     });
 
     test("clamps size to maxSize", () => {
       const brush = new Brush({ size: 100, maxSize: 8 });
-      assert.strictEqual(brush.getSize(), 8);
+      assert.strictEqual(brush.size, 8);
     });
   });
 
-  describe("getAffectedPixels", () => {
+  describe("affectedPixels", () => {
     test("returns an iterable, not an array", () => {
       const brush = new Brush({ size: 1, maxSize: 32 });
-      const result = brush.getAffectedPixels(5, 5);
+      const result = brush.affectedPixels(5, 5);
       assert.strictEqual(Array.isArray(result), false);
       assert.strictEqual(typeof result[Symbol.iterator], "function");
     });
 
     test("size 1 affects only the center pixel", () => {
       const brush = new Brush({ size: 1, maxSize: 32 });
-      const pixels = [...brush.getAffectedPixels(5, 5)];
+      const pixels = [...brush.affectedPixels(5, 5)];
       assert.strictEqual(pixels.length, 1);
       assert.deepStrictEqual(pixels[0], { x: 5, y: 5 });
     });
 
     test("size 2 affects 4 pixels (even, offset left/up)", () => {
       const brush = new Brush({ size: 2, maxSize: 32 });
-      const pixels = [...brush.getAffectedPixels(0, 0)];
+      const pixels = [...brush.affectedPixels(0, 0)];
       assert.strictEqual(pixels.length, 4);
     });
 
     test("size 3 affects 9 pixels", () => {
       const brush = new Brush({ size: 3, maxSize: 32 });
-      const pixels = [...brush.getAffectedPixels(5, 5)];
+      const pixels = [...brush.affectedPixels(5, 5)];
       assert.strictEqual(pixels.length, 9);
     });
 
     test("size 4 affects 16 pixels", () => {
       const brush = new Brush({ size: 4, maxSize: 32 });
-      const pixels = [...brush.getAffectedPixels(5, 5)];
+      const pixels = [...brush.affectedPixels(5, 5)];
       assert.strictEqual(pixels.length, 16);
     });
   });

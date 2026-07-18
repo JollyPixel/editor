@@ -1,12 +1,12 @@
 # PixelSyncSession
 
-Client-side network orchestrator. A single `PixelSyncSession` multiplexes many buffers (textures/tilesets) over one [`PixelTransport`](./PixelTransport.md) connection. Each attached `CanvasManager` still owns exactly one texture; the session just assigns it a `bufferId` for routing:
+Client-side network orchestrator. A single `PixelSyncSession` multiplexes many buffers (textures/tilesets) over one [`PixelTransport`](./PixelTransport.md) connection. Each attached `PixelArtCanvas` still owns exactly one texture; the session just assigns it a `bufferId` for routing:
 
-- Local mutations from an attached `CanvasManager` are stamped and forwarded.
-- Remote commands are routed to the matching `CanvasManager` by `bufferId`.
+- Local mutations from an attached `PixelArtCanvas` are stamped and forwarded.
+- Remote commands are routed to the matching `PixelArtCanvas` by `bufferId`.
 - Buffer lifecycle (add/remove) is announced/received at the session level.
 
-One `PixelSyncSession` per transport connection. Each `CanvasManager` is attached under exactly one `bufferId`.
+One `PixelSyncSession` per transport connection. Each `PixelArtCanvas` is attached under exactly one `bufferId`.
 
 ## Types
 
@@ -34,20 +34,20 @@ Called when a **peer** creates or removes a buffer this session hasn't (yet) att
 ### `attach`
 
 ```ts
-attach(bufferId: string, canvasManager: CanvasManager): void
+attach(bufferId: string, canvasManager: PixelArtCanvas): void
 ```
 
-Attaches an existing `CanvasManager` to sync as `bufferId`. Assumes the buffer already exists on the server; subscribes and awaits its snapshot via `transport.onSnapshot`. Throws if `bufferId` is already attached.
+Attaches an existing `PixelArtCanvas` to sync as `bufferId`. Assumes the buffer already exists on the server; subscribes and awaits its snapshot via `transport.onSnapshot`. Throws if `bufferId` is already attached.
 
 ---
 
 ### `createBuffer`
 
 ```ts
-createBuffer(bufferId: string, canvasManager: CanvasManager, options: { size: Vec2; pixels?: string; }): void
+createBuffer(bufferId: string, canvasManager: PixelArtCanvas, options: { size: Vec2; pixels?: string; }): void
 ```
 
-Attaches a `CanvasManager` **and** announces a brand new buffer to peers, carrying the manager's current pixel data as the initial shared state.
+Attaches a `PixelArtCanvas` **and** announces a brand new buffer to peers, carrying the manager's current pixel data as the initial shared state.
 
 ---
 
@@ -83,9 +83,9 @@ const session = new PixelSyncSession({ transport: myTransport });
 session.attach("tileset-1", canvasManager);
 
 // Attach AND announce a brand new buffer, seeding peers with its current pixels.
-session.createBuffer("tileset-2", otherCanvasManager, {
-  size: otherCanvasManager.getTextureSize(),
-  pixels: fromUint8Array(new Uint8Array(otherCanvasManager.getTexture()))
+session.createBuffer("tileset-2", otherPixelArtCanvas, {
+  size: otherPixelArtCanvas.textureSize,
+  pixels: fromUint8Array(new Uint8Array(otherPixelArtCanvas.texture))
 });
 
 session.onBufferAdded = (bufferId, metadata) => {

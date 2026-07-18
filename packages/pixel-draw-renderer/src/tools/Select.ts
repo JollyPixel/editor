@@ -396,7 +396,7 @@ export class Select {
     buffer: DefaultPixelBuffer,
     rect: SelectionRect
   ): RGBA[] {
-    const size = buffer.getSize();
+    const size = buffer.size();
     const pixels: RGBA[] = [];
 
     for (let ry = 0; ry < rect.height; ry++) {

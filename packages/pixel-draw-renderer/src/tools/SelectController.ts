@@ -70,7 +70,7 @@ export class SelectController {
       const rect = this.#select.rect;
       const snapshot = this.#select.snapshot;
       if (rect && snapshot) {
-        this.#renderer.setFloatingOverlay({
+        this.#renderer.floatingSelection.create({
           sourceRect: rect,
           pixels: snapshot,
           eraseColor: this.#eraseColor,
@@ -84,7 +84,7 @@ export class SelectController {
 
     this.clear();
     const rect = this.#select.startCreate(pos);
-    this.#selectionOverlay.setRect(rect);
+    this.#selectionOverlay.drawRect(rect);
   }
 
   handleMove(
@@ -93,7 +93,7 @@ export class SelectController {
     if (this.#select.state === "creating") {
       const rect = this.#select.updateCreate(pos);
       if (rect) {
-        this.#selectionOverlay.setRect(rect);
+        this.#selectionOverlay.drawRect(rect);
       }
 
       return;
@@ -102,8 +102,8 @@ export class SelectController {
     if (this.#select.state === "moving") {
       const rect = this.#select.updateMove(pos);
       if (rect) {
-        this.#selectionOverlay.setRect(rect);
-        this.#renderer.updateFloatingOverlayPosition(rect);
+        this.#selectionOverlay.drawRect(rect);
+        this.#renderer.floatingSelection.updatePosition(rect);
         this.#renderer.drawFrame();
       }
     }
@@ -123,7 +123,7 @@ export class SelectController {
     if (this.#select.state === "moving") {
       const snapshot = this.#select.snapshot;
       const result = this.#select.finishMove();
-      this.#renderer.clearFloatingOverlay();
+      this.#renderer.floatingSelection.clear();
 
       if (result && snapshot) {
         this.#commitFootprintChange({
@@ -136,7 +136,7 @@ export class SelectController {
 
       const rect = this.#select.rect;
       if (rect) {
-        this.#selectionOverlay.setRect(rect);
+        this.#selectionOverlay.drawRect(rect);
       }
     }
   }
@@ -173,7 +173,7 @@ export class SelectController {
       newContent: result.pixels,
       skipErase: true
     });
-    this.#selectionOverlay.setRect(result.rect);
+    this.#selectionOverlay.drawRect(result.rect);
 
     return true;
   }
@@ -220,7 +220,7 @@ export class SelectController {
       newContent: snapshot,
       skipErase: false
     });
-    this.#selectionOverlay.setRect(result.newRect);
+    this.#selectionOverlay.drawRect(result.newRect);
 
     return true;
   }
@@ -260,13 +260,13 @@ export class SelectController {
   clear(): void {
     this.#select.clear();
     this.#selectionOverlay.clear();
-    this.#renderer.clearFloatingOverlay();
+    this.#renderer.floatingSelection.clear();
   }
 
   refreshOverlay(): void {
     const rect = this.#select.rect;
     if (rect) {
-      this.#selectionOverlay.setRect(rect);
+      this.#selectionOverlay.drawRect(rect);
     }
   }
 
@@ -287,7 +287,7 @@ export class SelectController {
   ): void {
     const { oldRect, newRect, newContent, skipErase } = change;
     const positions = unionPositions(oldRect, newRect);
-    const beforeColors = this.#sampleColors(positions);
+    const beforeColors = this.#canvasBuffer.samplePixels(positions);
 
     if (!skipErase) {
       this.#canvasBuffer.drawPixels(rectPositions(oldRect), this.#eraseColor);
@@ -295,7 +295,7 @@ export class SelectController {
     this.#canvasBuffer.drawRegion(newRect, newContent);
     this.#canvasBuffer.copyToMaster();
 
-    const afterColors = this.#sampleColors(positions);
+    const afterColors = this.#canvasBuffer.samplePixels(positions);
     this.#renderer.drawFrame();
     this.#onCommit({
       positions,
@@ -318,31 +318,7 @@ export class SelectController {
   ): void {
     const snapshot = Select.captureSnapshot(this.#canvasBuffer, rect);
     this.#select.restoreRect(rect, snapshot);
-    this.#selectionOverlay.setRect(rect);
-  }
-
-  /**
-   * Samples `positions` from the buffer, treating out-of-bounds positions
-   * as fully transparent — mirrors Select.captureSnapshot, since
-   * CanvasBuffer.samplePixel doesn't itself bounds-check a negative x/y.
-   */
-  #sampleColors(
-    positions: Vec2[]
-  ): RGBA[] {
-    const size = this.#canvasBuffer.getSize();
-
-    return positions.map((pos) => {
-      if (
-        pos.x < 0 || pos.x >= size.x ||
-        pos.y < 0 || pos.y >= size.y
-      ) {
-        return { r: 0, g: 0, b: 0, a: 0 };
-      }
-
-      const [r, g, b, a] = this.#canvasBuffer.samplePixel(pos.x, pos.y);
-
-      return { r, g, b, a };
-    });
+    this.#selectionOverlay.drawRect(rect);
   }
 }
 

@@ -43,12 +43,12 @@ function makeBrush() {
 }
 
 describe("SelectionOverlay", () => {
-  test("setRect() shows a dashed outline+inline rect pair in screen space", () => {
+  test("drawRect() shows a dashed outline+inline rect pair in screen space", () => {
     const svg = makeSvg();
     const overlay = new SelectionOverlay(svg, makeViewport(), makeBrush());
 
     // zoom 4, camera (0,0): rect (1,1,2,3) -> x=4, y=4, width=8, height=12
-    overlay.setRect({ x: 1, y: 1, width: 2, height: 3 });
+    overlay.drawRect({ x: 1, y: 1, width: 2, height: 3 });
 
     const rects = svg.querySelectorAll("rect");
     assert.strictEqual(rects.length, 2, "one outline rect + one inline rect");
@@ -66,7 +66,7 @@ describe("SelectionOverlay", () => {
     const svg = makeSvg();
     const overlay = new SelectionOverlay(svg, makeViewport(), makeBrush());
 
-    overlay.setRect({ x: 0, y: 0, width: 1, height: 1 });
+    overlay.drawRect({ x: 0, y: 0, width: 1, height: 1 });
     overlay.clear();
 
     const rects = svg.querySelectorAll("rect");

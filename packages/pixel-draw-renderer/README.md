@@ -33,10 +33,10 @@ $ yarn add @jolly-pixel/pixel-draw.renderer
 ## 👀 Usage Example
 
 ```ts
-import { CanvasManager } from "@jolly-pixel/pixel-draw.renderer";
+import { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 
 const container = document.getElementById("editor-container")!;
-const manager = new CanvasManager(container, {
+const manager = new PixelArtCanvas(container, {
   texture: {
     size: { x: 64, y: 64 }
   },
@@ -50,11 +50,11 @@ const manager = new CanvasManager(container, {
 manager.onResize();
 manager.centerTexture();
 
-manager.brush.setColor("#FF6600"); // CSS string or a colorjs.io `Color` instance
-manager.brush.setOpacity(0.8);
-manager.brush.setSize(3);
+manager.brush.color("#FF6600"); // CSS string or a colorjs.io `Color` instance
+manager.brush.opacity = 0.8;
+manager.brush.size = 3;
 
-manager.setMode("fill"); // "paint" | "move" | "fill" | "select", see Modes below
+manager.mode = "fill"; // "paint" | "move" | "fill" | "select", see Modes below
 ```
 
 Loading an existing texture:
@@ -63,12 +63,12 @@ Loading an existing texture:
 const img = new Image();
 img.src = "/assets/sprite.png";
 await img.decode();
-manager.setTexture(img);
+manager.texture = img;
 ```
 
 ### Modes
 
-`setMode()` selects how left-click/drag is interpreted. Read [CanvasManager.md](./docs/CanvasManager.md#getmode--setmode) for the full behavior:
+`mode` selects how left-click/drag is interpreted. Read [PixelArtCanvas.md](./docs/PixelArtCanvas.md#mode) for the full behavior:
 
 - `"paint"`: draws with the [brush](./docs/tools/Brush.md); hold `Shift` for a straight line
 - `"move"`: pans the camera
@@ -89,14 +89,14 @@ Copy/paste/undo/redo/delete are configurable; Shift (line-tool arm/disarm) is no
 | Redo | `Ctrl`/`Cmd`+`Y` or `Ctrl`/`Cmd`+`Shift`+`Z` |
 | Delete | `Delete` |
 
-Override at construction, or live via `setKeybindings()`:
+Override at construction, or live via `patchKeybindings()`:
 
 ```ts
-const manager = new CanvasManager(container, {
+const manager = new PixelArtCanvas(container, {
   keybindings: { undo: "alt+u" } // unspecified actions keep their default
 });
 
-manager.setKeybindings({ redo: "alt+shift+u" });
+manager.patchKeybindings({ redo: "alt+shift+u" });
 ```
 
 > [!TIP]
@@ -107,7 +107,7 @@ manager.setKeybindings({ redo: "alt+shift+u" });
 Disabled by default. Enable it and (optionally) track button-enabled state:
 
 ```ts
-const manager = new CanvasManager(container, {
+const manager = new PixelArtCanvas(container, {
   history: {
     enabled: true,
     // limit defaults to 10
@@ -124,7 +124,7 @@ manager.redo();
 ```
 
 > [!TIP]
-> Read [CanvasManager.md](./docs/CanvasManager.md#undo--redo--canundo--canredo) and [history/HistoryStack.md](./docs/history/HistoryStack.md).
+> Read [PixelArtCanvas.md](./docs/PixelArtCanvas.md#undo--redo--canundo--canredo) and [history/HistoryStack.md](./docs/history/HistoryStack.md).
 
 ## 🚀 Running the example
 
@@ -136,12 +136,12 @@ Open `http://localhost:5173` to see the interactive demo.
 
 ## 📚 API
 
-- [`CanvasManager`](./docs/CanvasManager.md): top-level coordinator, the primary public API
-- [`Brush`](./docs/tools/Brush.md): brush size, color, opacity, and affected-pixel computation — read/write via `CanvasManager.brush`
+- [`PixelArtCanvas`](./docs/PixelArtCanvas.md): top-level coordinator, the primary public API
+- [`Brush`](./docs/tools/Brush.md): brush size, color, opacity, and affected-pixel computation — read/write via `PixelArtCanvas.brush`
 - [`PixelBuffer`](./docs/buffer/PixelBuffer.md): headless RGBA pixel storage, usable server-side with no DOM (also documents the `onBufferUpdated`/`applyRemoteCommand` hook events)
-- [`HistoryStack`](./docs/history/HistoryStack.md): bounded undo/redo stack backing `CanvasManager.undo()`/`redo()`
-- [`Keybindings`](./docs/utils/keybindings.md): `Keybindings`/`Keybinding` types, `DEFAULT_KEYBINDINGS`, and the errors thrown by `setKeybindings()`
-- [`Network`](./docs/network/index.md): transport-agnostic, server-authoritative multiplayer for `CanvasManager`
+- [`HistoryStack`](./docs/history/HistoryStack.md): bounded undo/redo stack backing `PixelArtCanvas.undo()`/`redo()`
+- [`Keybindings`](./docs/utils/keybindings.md): `Keybindings`/`Keybinding` types, `DEFAULT_KEYBINDINGS`, and the errors thrown by `patchKeybindings()`
+- [`Network`](./docs/network/index.md): transport-agnostic, server-authoritative multiplayer for `PixelArtCanvas`
 
 ## 🧩 Types
 

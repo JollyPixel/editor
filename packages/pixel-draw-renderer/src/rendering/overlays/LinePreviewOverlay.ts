@@ -57,7 +57,7 @@ export class LinePreviewOverlay {
     return [outline, inline];
   }
 
-  setLine(
+  drawLine(
     start: Vec2,
     end: Vec2
   ): void {

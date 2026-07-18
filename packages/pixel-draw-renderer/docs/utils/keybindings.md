@@ -1,6 +1,6 @@
 # utils/keybindings
 
-Types, defaults, and errors for `CanvasManager`'s configurable keyboard shortcuts (`CanvasManagerOptions.keybindings`, `CanvasManager.setKeybindings()` / `getKeybindings()`, see [CanvasManager.md](../CanvasManager.md)).
+Types, defaults, and errors for `PixelArtCanvas`'s configurable keyboard shortcuts (`PixelArtCanvasOptions.keybindings`, `PixelArtCanvas.patchKeybindings()` / `keybindings`, see [PixelArtCanvas.md](../PixelArtCanvas.md)).
 
 ## Types
 
@@ -44,7 +44,7 @@ const DEFAULT_KEYBINDINGS: Keybindings = {
 };
 ```
 
-The keybindings `CanvasManager` uses when `keybindings` isn't passed to its options, and the base a partial override is merged onto. `redo` has two default triggers; any action may be given an array of alternate bindings. `rotate`/`flipHorizontal`/`flipVertical` only have an effect in `"select"` mode with an active selection (rotate is clockwise-only — press it multiple times for other angles).
+The keybindings `PixelArtCanvas` uses when `keybindings` isn't passed to its options, and the base a partial override is merged onto. `redo` has two default triggers; any action may be given an array of alternate bindings. `rotate`/`flipHorizontal`/`flipVertical` only have an effect in `"select"` mode with an active selection (rotate is clockwise-only — press it multiple times for other angles).
 
 Matching is exact on modifiers: `"mod+c"` does **not** also match Ctrl+Shift+C, and the default `"Delete"` binding (no modifier) does not also match Ctrl+Delete.
 
@@ -55,4 +55,4 @@ class InvalidKeybindingError extends Error {}
 class KeybindingConflictError extends Error {}
 ```
 
-Both are thrown synchronously from the constructor's `keybindings` option and from `setKeybindings()` — never asynchronously, and never left as a silently-dropped binding. `InvalidKeybindingError` is thrown for a malformed combo string (unknown modifier token, empty/missing key segment). `KeybindingConflictError` is thrown when two different actions would resolve to the same combo.
+Both are thrown synchronously from the constructor's `keybindings` option and from `patchKeybindings()` — never asynchronously, and never left as a silently-dropped binding. `InvalidKeybindingError` is thrown for a malformed combo string (unknown modifier token, empty/missing key segment). `KeybindingConflictError` is thrown when two different actions would resolve to the same combo.

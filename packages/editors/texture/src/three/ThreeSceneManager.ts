@@ -4,7 +4,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { TransformControls } from "three/examples/jsm/Addons.js";
 // import { ViewHelper } from 'three/addons/helpers/ViewHelper.js';
 import { Input } from "@jolly-pixel/engine";
-import type { CanvasManager } from "@jolly-pixel/pixel-draw.renderer";
+import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import ModelManager from "./ModelManager.ts";
@@ -200,8 +200,8 @@ export default class ThreeSceneManager {
     this.orbitalControl.target.add(direction);
   }
 
-  public setCanvasTexture(canvasManager: CanvasManager): void {
-    const textureCanvas = canvasManager.getTextureCanvas();
+  public setCanvasTexture(canvasManager: PixelArtCanvas): void {
+    const textureCanvas = canvasManager.textureCanvas();
     this.texture = new THREE.CanvasTexture(textureCanvas);
     this.texture.magFilter = THREE.NearestFilter;
     this.texture.minFilter = THREE.NearestFilter;

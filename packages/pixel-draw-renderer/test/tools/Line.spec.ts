@@ -55,14 +55,14 @@ describe("Line", () => {
     test("starts unarmed", () => {
       const tool = new Line();
       assert.strictEqual(tool.isArmed, false);
-      assert.strictEqual(tool.getPreviewPoints(), null);
+      assert.strictEqual(tool.previewPoints, null);
     });
 
     test("arm() sets armed state with start === end", () => {
       const tool = new Line();
       tool.arm({ x: 1, y: 1 });
       assert.strictEqual(tool.isArmed, true);
-      assert.deepStrictEqual(tool.getPreviewPoints(), [{ x: 1, y: 1 }]);
+      assert.deepStrictEqual(tool.previewPoints, [{ x: 1, y: 1 }]);
     });
 
     test("arm() defaults commitTrigger to 'mousedown'", () => {
@@ -81,7 +81,7 @@ describe("Line", () => {
       const tool = new Line();
       tool.arm({ x: 0, y: 0 });
       tool.update({ x: 2, y: 0 });
-      assert.deepStrictEqual(tool.getPreviewPoints(), [
+      assert.deepStrictEqual(tool.previewPoints, [
         { x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }
       ]);
     });
@@ -89,7 +89,7 @@ describe("Line", () => {
     test("update() is a no-op while unarmed", () => {
       const tool = new Line();
       tool.update({ x: 9, y: 9 });
-      assert.strictEqual(tool.getPreviewPoints(), null);
+      assert.strictEqual(tool.previewPoints, null);
     });
 
     test("cancel() disarms and clears preview", () => {
@@ -98,7 +98,7 @@ describe("Line", () => {
       tool.update({ x: 5, y: 0 });
       tool.cancel();
       assert.strictEqual(tool.isArmed, false);
-      assert.strictEqual(tool.getPreviewPoints(), null);
+      assert.strictEqual(tool.previewPoints, null);
     });
 
     test("commit() returns the rasterized points and disarms", () => {
@@ -111,7 +111,7 @@ describe("Line", () => {
         { x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }
       ]);
       assert.strictEqual(tool.isArmed, false);
-      assert.strictEqual(tool.getPreviewPoints(), null);
+      assert.strictEqual(tool.previewPoints, null);
     });
 
     test("commit() returns null when not armed", () => {

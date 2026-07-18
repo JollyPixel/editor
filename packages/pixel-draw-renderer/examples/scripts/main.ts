@@ -52,7 +52,7 @@ async function initRuntime(): Promise<Runtime> {
     }
   });
 
-  const canvasTexture = new THREE.CanvasTexture(canvasManager.getTextureCanvas());
+  const canvasTexture = new THREE.CanvasTexture(canvasManager.textureCanvas());
   canvasTexture.magFilter = THREE.NearestFilter;
   canvasTexture.minFilter = THREE.NearestFilter;
 

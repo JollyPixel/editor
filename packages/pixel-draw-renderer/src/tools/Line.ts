@@ -9,7 +9,7 @@ export type LineCommitTrigger = "mousedown" | "mouseup";
  * Owns the Shift-to-line armed-state machine and the Bresenham rasterization
  * of the segment between its start and current end position.
  * Has no brush knowledge — callers expand the raw points into brush-stamped
- * pixels themselves (see CanvasManager).
+ * pixels themselves (see PixelArtCanvas).
  */
 export class Line {
   #armed = false;
@@ -54,8 +54,12 @@ export class Line {
   /**
    * Rasterizes the current start->end segment without changing armed state.
    */
-  getPreviewPoints(): Vec2[] | null {
-    if (!this.#armed || this.#start === null || this.#end === null) {
+  get previewPoints(): Vec2[] | null {
+    if (
+      !this.#armed ||
+      this.#start === null ||
+      this.#end === null
+    ) {
       return null;
     }
 
@@ -67,7 +71,7 @@ export class Line {
    * Returns null when the tool wasn't armed.
    */
   commit(): Vec2[] | null {
-    const points = this.getPreviewPoints();
+    const points = this.previewPoints;
     this.cancel();
 
     return points;

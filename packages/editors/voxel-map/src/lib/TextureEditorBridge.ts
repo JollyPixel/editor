@@ -1,24 +1,24 @@
 // Import Third-party Dependencies
 import type { VoxelRenderer } from "@jolly-pixel/voxel.renderer";
 import {
-  CanvasManager,
-  type CanvasManagerOptions
+  PixelArtCanvas,
+  type PixelArtCanvasOptions
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // CONSTANTS
 const kTextureKeyPrefix = "jolly-pixel-voxel-map-texture-";
 
 export interface TextureEditorBridgeOptions {
-  canvasManager?: CanvasManagerOptions;
+  canvasManager?: PixelArtCanvasOptions;
 }
 
 /**
- * Bridges the pixel-art CanvasManager with the Three.js tileset texture.
- * Call mount() once to create the CanvasManager, then loadTileset() each time
+ * Bridges the pixel-art PixelArtCanvas with the Three.js tileset texture.
+ * Call mount() once to create the PixelArtCanvas, then loadTileset() each time
  * the active tileset changes. destroy() cleans up all DOM and event state.
  */
 export class TextureEditorBridge {
-  #manager: CanvasManager | null = null;
+  #manager: PixelArtCanvas | null = null;
   #threeTexture: { image: unknown; needsUpdate: boolean; } | null = null;
   #options: TextureEditorBridgeOptions;
   #tilesetId: string | null = null;
@@ -35,19 +35,19 @@ export class TextureEditorBridge {
 
   mount(
     container: HTMLDivElement,
-    extraOptions?: CanvasManagerOptions
+    extraOptions?: PixelArtCanvasOptions
   ): void {
     if (this.#manager) {
       this.#manager.destroy();
     }
 
-    const managerOptions: CanvasManagerOptions = {
+    const managerOptions: PixelArtCanvasOptions = {
       ...this.#options.canvasManager,
       ...extraOptions,
       onDrawEnd: () => this.#syncToThree()
     };
 
-    this.#manager = new CanvasManager(container, managerOptions);
+    this.#manager = new PixelArtCanvas(container, managerOptions);
   }
 
   loadTileset(
@@ -75,13 +75,13 @@ export class TextureEditorBridge {
     if (saved) {
       const img = new Image();
       img.onload = () => {
-        this.#manager!.setTexture(img);
+        this.#manager!.texture = img;
         this.#syncToThree();
       };
       img.src = saved;
     }
     else {
-      this.#manager.setTexture(texture.image as HTMLImageElement);
+      this.#manager.texture = texture.image as HTMLImageElement;
     }
   }
 
@@ -90,7 +90,7 @@ export class TextureEditorBridge {
       return;
     }
 
-    const canvas = this.#manager.getTextureCanvas();
+    const canvas = this.#manager.textureCanvas();
     this.#threeTexture.image = canvas;
     this.#threeTexture.needsUpdate = true;
 
@@ -107,7 +107,7 @@ export class TextureEditorBridge {
       return;
     }
 
-    const canvas = this.#manager.getTextureCanvas();
+    const canvas = this.#manager.textureCanvas();
     const url = canvas.toDataURL("image/png");
     const anchor = document.createElement("a");
     anchor.href = url;
@@ -118,14 +118,16 @@ export class TextureEditorBridge {
   setMode(
     mode: import("@jolly-pixel/pixel-draw.renderer").Mode
   ): void {
-    this.#manager?.setMode(mode);
+    if (this.#manager) {
+      this.#manager.mode = mode;
+    }
   }
 
   setBrushSize(
     size: number
   ): void {
     if (this.#manager) {
-      this.#manager.brush.setSize(size);
+      this.#manager.brush.size = size;
     }
   }
 
@@ -134,7 +136,7 @@ export class TextureEditorBridge {
     opacity = 1
   ): void {
     if (this.#manager) {
-      this.#manager.brush.setColor(hex, opacity);
+      this.#manager.brush.color(hex, opacity);
     }
   }
 

@@ -44,9 +44,9 @@ export class LineController {
     return this.#line.commitTrigger;
   }
 
-  setShiftHeld(
+  set shiftHeld(
     held: boolean
-  ): void {
+  ) {
     this.#isShiftHeld = held;
   }
 
@@ -110,9 +110,9 @@ export class LineController {
       return;
     }
 
-    const points = this.#line.getPreviewPoints() ?? [];
+    const points = this.#line.previewPoints ?? [];
     if (points.length > 0) {
-      this.#linePreview.setLine(
+      this.#linePreview.drawLine(
         points[0],
         points.at(-1) ?? points[0]
       );
@@ -128,7 +128,7 @@ export class LineController {
   ): Vec2[] {
     const stamped = new Map<string, Vec2>();
     for (const point of points) {
-      for (const pixel of this.#brush.getAffectedPixels(point.x, point.y)) {
+      for (const pixel of this.#brush.affectedPixels(point.x, point.y)) {
         stamped.set(`${pixel.x},${pixel.y}`, pixel);
       }
     }

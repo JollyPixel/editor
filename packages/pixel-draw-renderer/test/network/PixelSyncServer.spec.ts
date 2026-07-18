@@ -369,7 +369,7 @@ describe("PixelSyncServer — receive: resized / texture-replaced", () => {
       timestamp: 1
     });
 
-    assert.deepStrictEqual(server.world.getBuffer("tex1")!.getSize(), { x: 8, y: 2 });
+    assert.deepStrictEqual(server.world.getBuffer("tex1")!.size(), { x: 8, y: 2 });
   });
 
   it("texture-replaced is always accepted and broadcast", () => {

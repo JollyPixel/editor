@@ -4,10 +4,11 @@ export {
   type BrushOptions
 } from "./tools/Brush.ts";
 export {
-  CanvasManager,
-  type CanvasManagerOptions,
+  PixelArtCanvas,
+  type HistoryState,
+  type PixelArtCanvasOptions,
   type Mode
-} from "./CanvasManager.ts";
+} from "./PixelArtCanvas.ts";
 export {
   PixelBuffer,
   type PixelBufferOptions
@@ -18,9 +19,7 @@ export type {
   PixelBufferHookListener
 } from "./buffer/hooks.ts";
 export {
-  groupPositionsByColor,
   HistoryStack,
-  type ColorGroup,
   type HistoryEntry,
   type HistoryEntryInput,
   type HistoryResizedEntry,

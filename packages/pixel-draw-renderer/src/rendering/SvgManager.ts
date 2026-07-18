@@ -32,7 +32,7 @@ export class SvgManager {
     options: SvgManagerOptions
   ) {
     this.#parentHtmlElement = options.parent;
-    this.#svg = this.#initSvgElement();
+    this.#svg = this.#init();
 
     this.brushHighlight = new BrushHighlightOverlay(
       this.#svg,
@@ -51,7 +51,7 @@ export class SvgManager {
     );
   }
 
-  #initSvgElement(): SVGElement {
+  #init(): SVGElement {
     const svg = document.createElementNS(SVG_NS, "svg");
 
     Object.assign(svg.style, {
@@ -73,7 +73,7 @@ export class SvgManager {
     return svg;
   }
 
-  updateSvgSize(
+  resize(
     width: number,
     height: number
   ): void {
@@ -87,7 +87,7 @@ export class SvgManager {
     }
   }
 
-  reparentSvgTo(
+  reparentTo(
     newParentElement: HTMLDivElement
   ): void {
     if (!this.#svg) {

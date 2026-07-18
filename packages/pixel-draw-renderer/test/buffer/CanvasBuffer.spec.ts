@@ -21,14 +21,14 @@ before(() => {
 
 describe("CanvasBuffer", () => {
   describe("constructor", () => {
-    test("getSize returns the initial size", () => {
+    test("size returns the initial size", () => {
       const buf = new CanvasBuffer({ size: { x: 16, y: 8 }, maxSize: kTestMaxSize });
-      assert.deepStrictEqual(buf.getSize(), { x: 16, y: 8 });
+      assert.deepStrictEqual(buf.size(), { x: 16, y: 8 });
     });
 
-    test("getCanvas returns a canvas with correct dimensions", () => {
+    test("canvas returns a canvas with correct dimensions", () => {
       const buf = new CanvasBuffer({ size: { x: 16, y: 16 }, maxSize: kTestMaxSize });
-      const canvas = buf.getCanvas();
+      const canvas = buf.canvas();
       assert.strictEqual(canvas.width, 16);
       assert.strictEqual(canvas.height, 16);
     });
@@ -60,7 +60,7 @@ describe("CanvasBuffer", () => {
 
     test("syncs the working canvas with a single putImageData call regardless of pixel count", () => {
       const buf = new CanvasBuffer({ size: { x: 8, y: 8 }, maxSize: kTestMaxSize });
-      const ctx = (buf.getCanvas() as unknown as MockCanvasElement)._ctx;
+      const ctx = (buf.canvas() as unknown as MockCanvasElement)._ctx;
       const before = ctx.putImageDataCallCount;
 
       const pixels = [
@@ -99,7 +99,7 @@ describe("CanvasBuffer", () => {
 
     test("skips the canvas sync entirely when every position is out of bounds", () => {
       const buf = new CanvasBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
-      const ctx = (buf.getCanvas() as unknown as MockCanvasElement)._ctx;
+      const ctx = (buf.canvas() as unknown as MockCanvasElement)._ctx;
       const before = ctx.putImageDataCallCount;
 
       assert.doesNotThrow(() => buf.drawPixels([{ x: -1, y: -1 }, { x: 99, y: 99 }], { r: 1, g: 1, b: 1, a: 1 }));
@@ -108,17 +108,17 @@ describe("CanvasBuffer", () => {
     });
   });
 
-  describe("setSize", () => {
-    test("updates getSize", () => {
+  describe("resize", () => {
+    test("updates size", () => {
       const buf = new CanvasBuffer({ size: { x: 8, y: 8 }, maxSize: kTestMaxSize });
-      buf.setSize({ x: 16, y: 4 });
-      assert.deepStrictEqual(buf.getSize(), { x: 16, y: 4 });
+      buf.resize({ x: 16, y: 4 });
+      assert.deepStrictEqual(buf.size(), { x: 16, y: 4 });
     });
 
     test("updates working canvas dimensions", () => {
       const buf = new CanvasBuffer({ size: { x: 8, y: 8 }, maxSize: kTestMaxSize });
-      buf.setSize({ x: 20, y: 10 });
-      const canvas = buf.getCanvas();
+      buf.resize({ x: 20, y: 10 });
+      const canvas = buf.canvas();
       assert.strictEqual(canvas.width, 20);
       assert.strictEqual(canvas.height, 10);
     });
@@ -129,7 +129,7 @@ describe("CanvasBuffer", () => {
       buf.drawPixels([{ x: 2, y: 2 }], { r: 10, g: 20, b: 30, a: 255 });
       buf.copyToMaster();
       // Resize to larger canvas — pixel at (2,2) should survive
-      buf.setSize({ x: 16, y: 16 });
+      buf.resize({ x: 16, y: 16 });
       const [r, g, b, a] = buf.samplePixel(2, 2);
       assert.strictEqual(r, 10);
       assert.strictEqual(g, 20);
@@ -139,11 +139,11 @@ describe("CanvasBuffer", () => {
   });
 
   describe("copyToMaster", () => {
-    test("persists working canvas data across setSize", () => {
+    test("persists working canvas data across resize", () => {
       const buf = new CanvasBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
       buf.drawPixels([{ x: 0, y: 0 }], { r: 100, g: 150, b: 200, a: 255 });
       buf.copyToMaster();
-      buf.setSize({ x: 4, y: 4 });
+      buf.resize({ x: 4, y: 4 });
       const [r, g, b, a] = buf.samplePixel(0, 0);
       assert.strictEqual(r, 100);
       assert.strictEqual(g, 150);
@@ -152,22 +152,22 @@ describe("CanvasBuffer", () => {
     });
   });
 
-  describe("setTexture", () => {
+  describe("loadTexture", () => {
     test("replaces working canvas with provided canvas", () => {
       const buf = new CanvasBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
       const externalCanvas = kEmulatedBrowserWindow.document.createElement("canvas") as unknown as HTMLCanvasElement;
       externalCanvas.width = 10;
       externalCanvas.height = 5;
-      buf.setTexture(externalCanvas);
-      assert.deepStrictEqual(buf.getSize(), { x: 10, y: 5 });
-      assert.strictEqual(buf.getCanvas(), externalCanvas);
+      buf.loadTexture(externalCanvas);
+      assert.deepStrictEqual(buf.size(), { x: 10, y: 5 });
+      assert.strictEqual(buf.canvas(), externalCanvas);
     });
   });
 
-  describe("getPixels", () => {
+  describe("pixels", () => {
     test("returns Uint8ClampedArray of the correct length", () => {
       const buf = new CanvasBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
-      const pixels = buf.getPixels();
+      const pixels = buf.pixels();
       assert.strictEqual(pixels.length, 4 * 4 * 4);
     });
   });
@@ -196,7 +196,7 @@ describe("CanvasBuffer", () => {
 
     test("no-ops without throwing when the rect is entirely out of bounds", () => {
       const buf = new CanvasBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
-      const ctx = (buf.getCanvas() as unknown as MockCanvasElement)._ctx;
+      const ctx = (buf.canvas() as unknown as MockCanvasElement)._ctx;
       const before = ctx.putImageDataCallCount;
 
       assert.doesNotThrow(() => {

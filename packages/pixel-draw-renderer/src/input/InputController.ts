@@ -5,157 +5,141 @@ import {
   mergeKeybindings,
   type KeybindingAction,
   type Keybindings
-} from "./utils/keybindings.ts";
-import type { Vec2 } from "./types.ts";
-import type { Viewport } from "./rendering/Viewport.ts";
-
-// CONSTANTS
-const kEditableInputTypes = new Set([
-  "text", "search", "email", "url", "tel", "password", "number",
-  "date", "datetime-local", "month", "time", "week"
-]);
+} from "../utils/keybindings.ts";
+import type { Vec2 } from "../types.ts";
+import type { Viewport } from "../rendering/Viewport.ts";
+import { isEditableTarget } from "./utils.ts";
 
 export interface InputActions {
   /**
-   * Called on left mousedown, resolved to texture-space coordinates,
-   * regardless of interaction mode — InputController has no concept of
-   * "paint"/"fill"/"select"/etc, that's entirely up to the consumer. Return
-   * `false` to indicate the click was fully handled as a single-shot action
-   * (e.g. a flood fill) or elsewhere (e.g. committing an armed line tool),
-   * so InputController shouldn't track it as a drag gesture.
+   * Starts a primary interaction at texture coordinates. Return `false` for
+   * single-shot actions that should not be tracked as drags.
    */
-  onPrimaryDown(tx: number, ty: number): boolean | void;
-  /**
-   * Fires on every mousemove while the left button is held and the initial
-   * onPrimaryDown didn't return `false`.
-   */
-  onPrimaryMove(tx: number, ty: number): void;
-  /**
-   * Fires once when a tracked primary-button drag gesture ends (canvas or
-   * window mouseup). Not fired for a gesture whose onPrimaryDown returned
-   * `false`.
-   */
+  onPrimaryDown(
+    tx: number,
+    ty: number
+  ): boolean | void;
+  /** Reports movement during a tracked primary drag. */
+  onPrimaryMove(
+    tx: number,
+    ty: number
+  ): void;
+  /** Ends a tracked primary drag. */
   onPrimaryUp(): void;
-  onPanStart(mx: number, my: number): void;
-  onPanMove(dx: number, dy: number): void;
+  onPanStart(
+    mx: number,
+    my: number
+  ): void;
+  onPanMove(
+    dx: number,
+    dy: number
+  ): void;
   onPanEnd(): void;
-  onZoom(delta: number, cx: number, cy: number): void;
-  /**
-   * Right-click (contextmenu), resolved to texture-space coordinates and
-   * bounds-limited (null when outside the texture). Fires regardless of
-   * mode — consumers decide what, if anything, it means for them.
-   */
-  onColorPick(tx: number, ty: number): void;
-  onMouseMove(cx: number, cy: number): void;
-  /**
-   * Resolved texture-space cursor position on every mousemove (bounds-
-   * limited), or null when outside the canvas/texture. Fired regardless of
-   * mode or drawing state.
-   */
+  onZoom(
+    delta: number,
+    cx: number,
+    cy: number
+  ): void;
+  /** Handles a right-click within the texture bounds. */
+  onColorPick(
+    tx: number,
+    ty: number
+  ): void;
+  onMouseMove(
+    cx: number,
+    cy: number
+  ): void;
+  /** Reports the bounded texture position, or `null` outside the texture. */
   onCursorMove(pos: Vec2 | null): void;
-  /**
-   * Fires on every mouseup (canvas or window), regardless of drawing/
-   * panning state — consumers decide what, if anything, it means for them.
-   */
+  /** Reports every canvas or window mouseup. */
   onMouseUp(): void;
-  /**
-   * A non-repeat Shift keydown that isn't targeting editable UI. Carries no
-   * payload — consumers query whatever state they need (mode, last cursor
-   * position, ...) themselves.
-   */
+  /** Reports a non-repeat Shift press outside editable UI. */
   onShiftDown(): void;
   onShiftUp(): void;
   onBlur(): void;
   /**
-   * A non-repeat Ctrl/Cmd+C keydown that isn't targeting editable UI. Return
-   * `true` to indicate it was handled (InputController calls
-   * `preventDefault()` to suppress the OS copy) — return `false`/`void` to
-   * let the browser's default copy behavior proceed.
+   * Return `true` to handle copy and suppress the browser default.
    */
   onCopy(): boolean | void;
-  /** Ctrl/Cmd+V counterpart to onCopy. */
+  /** Return `true` to handle paste and suppress the browser default. */
   onPaste(): boolean | void;
-  /** A non-repeat Delete keydown that isn't targeting editable UI. */
+  /** Return `true` to handle Delete and suppress the browser default. */
   onDelete(): boolean | void;
-  /** A non-repeat Ctrl/Cmd+Z keydown that isn't targeting editable UI. */
+  /** Return `true` to handle undo and suppress the browser default. */
   onUndo(): boolean | void;
-  /** A non-repeat Ctrl/Cmd+Y or Ctrl/Cmd+Shift+Z keydown that isn't targeting editable UI. */
+  /** Return `true` to handle redo and suppress the browser default. */
   onRedo(): boolean | void;
-  /** A non-repeat "R" keydown that isn't targeting editable UI. */
+  /** Return `true` to handle rotate and suppress the browser default. */
   onRotate(): boolean | void;
-  /** A non-repeat "H" keydown that isn't targeting editable UI. */
+  /** Return `true` to handle a horizontal flip and suppress the browser default. */
   onFlipHorizontal(): boolean | void;
-  /** A non-repeat "V" keydown that isn't targeting editable UI. */
+  /** Return `true` to handle a vertical flip and suppress the browser default. */
   onFlipVertical(): boolean | void;
 }
 
 /**
- * Prevents Shift from being reported while the user is typing in toolbar
- * UI (e.g. a brush-size field) elsewhere in the page. Only text-entry
- * inputs count as "typing" — a range/color input left focused after a drag
- * (canvas has no tabindex, so clicking it can't steal focus back) must not
- * keep swallowing Shift.
- */
-function isEditableTarget(
-  target: EventTarget | null
-): boolean {
-  if (!(target instanceof HTMLElement)) {
-    return false;
-  }
-
-  if (target.isContentEditable || target.tagName === "TEXTAREA") {
-    return true;
-  }
-
-  return target.tagName === "INPUT" && kEditableInputTypes.has(
-    (target as HTMLInputElement).type
-  );
-}
-
-/**
- * Subset of the global `Window` used by InputController — global mouse
- * tracking (for drag gestures that continue past the canvas edge) and
- * keyboard/blur reporting. Narrowed to an interface so it can be injected
- * (defaults to `window`), keeping the global out of the constructor and
- * letting tests supply a fake instead of relying on a real DOM global.
+ * Injectable subset of `Window` used for global pointer, keyboard, and blur events.
  */
 export interface WindowLike {
-  addEventListener(type: "mousemove", listener: (event: MouseEvent) => void): void;
-  addEventListener(type: "mouseup", listener: (event: MouseEvent) => void): void;
-  addEventListener(type: "keydown", listener: (event: KeyboardEvent) => void): void;
-  addEventListener(type: "keyup", listener: (event: KeyboardEvent) => void): void;
-  addEventListener(type: "blur", listener: () => void): void;
-  removeEventListener(type: "mousemove", listener: (event: MouseEvent) => void): void;
-  removeEventListener(type: "mouseup", listener: (event: MouseEvent) => void): void;
-  removeEventListener(type: "keydown", listener: (event: KeyboardEvent) => void): void;
-  removeEventListener(type: "keyup", listener: (event: KeyboardEvent) => void): void;
-  removeEventListener(type: "blur", listener: () => void): void;
+  addEventListener(
+    type: "mousemove",
+    listener: (event: MouseEvent) => void
+  ): void;
+  addEventListener(
+    type: "mouseup",
+    listener: (event: MouseEvent) => void
+  ): void;
+  addEventListener(
+    type: "keydown",
+    listener: (event: KeyboardEvent) => void
+  ): void;
+  addEventListener(
+    type: "keyup",
+    listener: (event: KeyboardEvent) => void
+  ): void;
+  addEventListener(
+    type: "blur",
+    listener: () => void
+  ): void;
+  removeEventListener(
+    type: "mousemove",
+    listener: (event: MouseEvent) => void
+  ): void;
+  removeEventListener(
+    type: "mouseup",
+    listener: (event: MouseEvent) => void
+  ): void;
+  removeEventListener(
+    type: "keydown",
+    listener: (event: KeyboardEvent) => void
+  ): void;
+  removeEventListener(
+    type: "keyup",
+    listener: (event: KeyboardEvent) => void
+  ): void;
+  removeEventListener(
+    type: "blur",
+    listener: () => void
+  ): void;
 }
 
 export interface InputControllerOptions {
   canvas: HTMLCanvasElement;
   viewport: Viewport;
   actions: InputActions;
-  /**
-   * Global event target used for drag-continuation mouse tracking and
-   * keyboard/blur reporting.
+  /** Global event target.
    * @default window
-   */
+   **/
   window?: WindowLike;
   /**
-   * Overrides for the copy/paste/undo/redo/delete/rotate/flipHorizontal/
-   * flipVertical key combos. Unspecified actions keep their default
-   * binding. Shift (line-tool arm/disarm) is not configurable.
+   * Keybinding overrides.
+   * Unspecified actions keep their defaults; Shift is fixed.
    */
   keybindings?: Partial<Keybindings>;
 }
 
 /**
- * InputController translates raw DOM mouse/keyboard events into semantic,
- * coordinate-resolved actions (primary drag, pan, zoom, color pick,
- * cursor/shift state). It has no concept of interaction "modes" (paint,
- * fill, select, ...) — that interpretation, including what a primary-button
- * drag gesture means, is left entirely to the consumer (see CanvasManager).
+ * Translates DOM input into coordinate-resolved canvas actions.
  */
 export class InputController {
   #canvas: HTMLCanvasElement;
@@ -163,20 +147,11 @@ export class InputController {
   #actions: InputActions;
   #window: WindowLike;
   #isPanning: boolean = false;
-  #panStart: Vec2 = { x: 0, y: 0 };
-  /**
-   * Tracks any left-mouse-button-held drag gesture that needs a matching
-   * onPrimaryUp report — armed by a non-`false` onPrimaryDown return value.
-   */
+  #panStart: Vec2 = {
+    x: 0,
+    y: 0
+  };
   #isDragging: boolean = false;
-  /**
-   * Gates keydown handling (Shift/Copy/Paste/Delete) to only fire while the
-   * pointer is over this canvas, so these shortcuts don't collide with a
-   * host application's own document/window-wide keybinds (e.g. a 3D
-   * viewport's camera controls) when the user isn't actually interacting
-   * with this canvas. keyup is intentionally left ungated — see
-   * #handleKeyUp.
-   */
   #isHovering: boolean = false;
   #keybindings: Keybindings;
 
@@ -237,28 +212,22 @@ export class InputController {
   }
 
   /**
-   * Stops tracking the current primary-button drag gesture without firing
-   * onPrimaryUp. Lets a consumer reinterpret an in-progress gesture (e.g.
-   * arming a line tool mid-stroke) without InputController fighting back
-   * with further onPrimaryMove calls.
+    * Cancels the active primary drag without calling `onPrimaryUp`.
    */
   stopDrawing(): void {
     this.#isDragging = false;
   }
 
   /**
-   * Merges a partial override onto the *current* keybindings (not the
-   * defaults) — only the actions present in `patch` change. Throws
-   * InvalidKeybindingError / KeybindingConflictError; on either, the
-   * previous keybindings remain in effect.
+    * Applies a partial keybinding update to the current bindings.
    */
-  setKeybindings(
+  patchKeybindings(
     patch: Partial<Keybindings>
   ): void {
     this.#keybindings = mergeKeybindings(this.#keybindings, patch);
   }
 
-  getKeybindings(): Readonly<Keybindings> {
+  get keybindings(): Readonly<Keybindings> {
     return { ...this.#keybindings };
   }
 
@@ -277,11 +246,6 @@ export class InputController {
     this.#window.removeEventListener("blur", this.#onWindowBlur);
   }
 
-  /**
-   * Resolves a MouseEvent's client coordinates to texture space against the
-   * canvas's current bounds. Centralizes the bounds+viewport lookup shared
-   * by every handler that needs a texture-space position.
-   */
   #resolveTexturePos(
     event: MouseEvent,
     parameters: { limit?: boolean; } = {}
@@ -289,16 +253,12 @@ export class InputController {
     const bounds = this.#canvas.getBoundingClientRect();
     const { clientX, clientY } = event;
 
-    return this.#viewport.getMouseTexturePosition(clientX, clientY, {
+    return this.#viewport.mouseTexturePosition(clientX, clientY, {
       bounds,
       limit: parameters.limit
     });
   }
 
-  /**
-   * Shared tail of #handleMouseUp/#handleWindowMouseUp: reports the end of
-   * any tracked primary-button drag, then unconditionally reports mouseup.
-   */
   #endDragAndReportMouseUp(): void {
     if (this.#isDragging) {
       this.#isDragging = false;
@@ -341,7 +301,7 @@ export class InputController {
     this.#isHovering = true;
 
     const bounds = this.#canvas.getBoundingClientRect();
-    const canvasPos = this.#viewport.getMouseCanvasPosition(
+    const canvasPos = this.#viewport.mouseCanvasPosition(
       event.clientX,
       event.clientY,
       bounds
@@ -383,7 +343,7 @@ export class InputController {
     event.preventDefault();
 
     const bounds = this.#canvas.getBoundingClientRect();
-    const canvasPos = this.#viewport.getMouseCanvasPosition(
+    const canvasPos = this.#viewport.mouseCanvasPosition(
       event.clientX,
       event.clientY,
       bounds

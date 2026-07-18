@@ -3,7 +3,7 @@ import { LitElement, css, html } from "lit";
 import { query } from "lit/decorators.js";
 
 // Import Internal Dependencies
-import { type CanvasManager } from "@jolly-pixel/pixel-draw.renderer";
+import { type PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 
 export class Build extends LitElement {
   @query("#texturePreview")
@@ -155,18 +155,18 @@ export class Build extends LitElement {
     return rootNode?.host;
   }
 
-  private getCanvasManager(): CanvasManager | null {
+  private getPixelArtCanvas(): PixelArtCanvas | null {
     const leftPanel = this.getLeftPanel();
 
-    if (!leftPanel || typeof leftPanel.getSharedCanvasManager !== "function") {
+    if (!leftPanel || typeof leftPanel.getSharedPixelArtCanvas !== "function") {
       return null;
     }
 
-    return leftPanel.getSharedCanvasManager();
+    return leftPanel.getSharedPixelArtCanvas();
   }
 
   private handleTextureSizeChange(): void {
-    const manager = this.getCanvasManager();
+    const manager = this.getPixelArtCanvas();
 
     if (!manager || !this.textureSizeXElement || !this.textureSizeYElement) {
       return;
@@ -175,11 +175,11 @@ export class Build extends LitElement {
     const x = parseInt(this.textureSizeXElement.value, 10);
     const y = parseInt(this.textureSizeYElement.value, 10);
 
-    manager.setTextureSize({ x, y });
+    manager.textureSize = { x, y };
   }
 
   override updated(): void {
-    const manager = this.getCanvasManager();
+    const manager = this.getPixelArtCanvas();
 
     if (!manager) {
       console.warn("Build: No canvas manager available");

@@ -2,11 +2,9 @@
 import { fromUint8Array } from "js-base64";
 
 // Import Internal Dependencies
-import {
-  groupPositionsByColor,
-  type HistoryEntry
-} from "./HistoryStack.ts";
+import type { HistoryEntry } from "./HistoryStack.ts";
 import type { PixelBufferHookEvent } from "../buffer/hooks.ts";
+import { groupPositionsByColor } from "./utils.ts";
 
 /**
  * Stamped with the entry's original timestamp (not "now") so the server's
