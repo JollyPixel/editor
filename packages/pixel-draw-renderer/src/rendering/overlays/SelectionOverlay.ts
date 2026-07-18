@@ -63,7 +63,7 @@ export class SelectionOverlay {
   drawRect(
     rect: SelectionRect
   ): void {
-    const zoom = this.#viewport.zoom;
+    const zoom = this.#viewport.zoom.value;
     const camera = this.#viewport.camera;
     const x = rect.x * zoom + camera.x;
     const y = rect.y * zoom + camera.y;

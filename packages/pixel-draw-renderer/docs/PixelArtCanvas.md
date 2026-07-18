@@ -104,10 +104,10 @@ The brush instance. Use it to read or change the current brush color, opacity, a
 ### `viewport`
 
 ```ts
-readonly viewport: DefaultViewport // { readonly zoom: number; readonly camera: Readonly<Vec2>; }
+readonly viewport: DefaultViewport // { readonly zoom: Zoom; readonly camera: Readonly<Vec2>; }
 ```
 
-Read-only camera/zoom state. Use `camera`/`zoom` for copies, or the methods below for coordinate conversions and mutation.
+Read-only camera/zoom state. `viewport.zoom` is a `Zoom` value object (`.value`, `.min`, `.max`, `.sensitivity`), not a plain number — use the top-level `zoom`/`zoomSensitivity` accessors below for the numeric level, or the methods below for coordinate conversions and mutation.
 
 ## Methods
 

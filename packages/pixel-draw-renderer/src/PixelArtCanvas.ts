@@ -47,6 +47,9 @@ import {
   Viewport,
   type DefaultViewport
 } from "./rendering/Viewport.ts";
+import type {
+  ZoomOptions
+} from "./rendering/Zoom.ts";
 import {
   SyncController
 } from "./sync/SyncController.ts";
@@ -86,12 +89,7 @@ export interface PixelArtCanvasOptions {
     maxSize?: number;
     init?: HTMLCanvasElement;
   };
-  zoom?: {
-    default: number;
-    sensitivity?: number;
-    min?: number;
-    max?: number;
-  };
+  zoom?: ZoomOptions;
   backgroundTransparency?: {
     colors: { odd: string; even: string; };
     squareSize: number;
@@ -400,17 +398,17 @@ export class PixelArtCanvas {
   }
 
   get zoom(): number {
-    return this.#viewport.zoom;
+    return this.#viewport.zoom.value;
   }
 
   get zoomSensitivity(): number {
-    return this.#viewport.zoomSensitivity;
+    return this.#viewport.zoom.sensitivity;
   }
 
   set zoomSensitivity(
     sensitivity: number
   ) {
-    this.#viewport.zoomSensitivity = sensitivity;
+    this.#viewport.zoom.sensitivity = sensitivity;
   }
 
   /**

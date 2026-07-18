@@ -30,6 +30,10 @@ export {
 export type {
   DefaultViewport
 } from "./rendering/Viewport.ts";
+export {
+  Zoom,
+  type ZoomOptions
+} from "./rendering/Zoom.ts";
 export type {
   RGBA,
   SelectionRect,

@@ -16,19 +16,19 @@ describe("Viewport", () => {
 
     test("clamps initial zoom to [min, max]", () => {
       const vp = new Viewport({ textureSize: { x: 16, y: 16 }, zoom: 100, zoomMin: 1, zoomMax: 32 });
-      assert.strictEqual(vp.zoom, 32);
+      assert.strictEqual(vp.zoom.value, 32);
     });
 
     test("defaults zoom to 4", () => {
       const vp = new Viewport({ textureSize: { x: 16, y: 16 } });
-      assert.strictEqual(vp.zoom, 4);
+      assert.strictEqual(vp.zoom.value, 4);
     });
   });
 
   describe("texture", () => {
     test("pixelSize returns textureSize * zoom", () => {
       const vp = new Viewport({ textureSize: { x: 10, y: 20 }, zoom: 3 });
-      assert.deepStrictEqual(vp.texture.pixelSize(vp.zoom), { x: 30, y: 60 });
+      assert.deepStrictEqual(vp.texture.pixelSize(vp.zoom.value), { x: 30, y: 60 });
     });
 
     test("resize clamps the camera when it goes out of bounds (wired via onResize)", () => {
@@ -37,8 +37,8 @@ describe("Viewport", () => {
       vp.centerTexture();
       // Shrinking the texture moves minX/maxX inward; camera must be re-clamped.
       vp.texture.resize({ x: 1, y: 1 });
-      const texPx = vp.texture.pixelSize(vp.zoom);
-      const margin = vp.zoom;
+      const texPx = vp.texture.pixelSize(vp.zoom.value);
+      const margin = vp.zoom.value;
       const minX = -texPx.x + margin;
       const maxX = 100 - margin;
       assert.ok(vp.camera.x >= minX && vp.camera.x <= maxX);
@@ -77,31 +77,31 @@ describe("Viewport", () => {
     test("zooms in (negative delta increases zoom)", () => {
       const vp = new Viewport({ textureSize: { x: 16, y: 16 }, zoom: 4 });
       vp.updateCanvasSize(200, 200);
-      const before = vp.zoom;
+      const before = vp.zoom.value;
       vp.applyZoom(-1, 100, 100);
-      assert.ok(vp.zoom > before, `zoom ${vp.zoom} should be greater than ${before}`);
+      assert.ok(vp.zoom.value > before, `zoom ${vp.zoom.value} should be greater than ${before}`);
     });
 
     test("zooms out (positive delta decreases zoom)", () => {
       const vp = new Viewport({ textureSize: { x: 16, y: 16 }, zoom: 4 });
       vp.updateCanvasSize(200, 200);
-      const before = vp.zoom;
+      const before = vp.zoom.value;
       vp.applyZoom(1, 100, 100);
-      assert.ok(vp.zoom < before, `zoom ${vp.zoom} should be less than ${before}`);
+      assert.ok(vp.zoom.value < before, `zoom ${vp.zoom.value} should be less than ${before}`);
     });
 
     test("clamps zoom to zoomMin", () => {
       const vp = new Viewport({ textureSize: { x: 16, y: 16 }, zoom: 1, zoomMin: 1 });
       vp.updateCanvasSize(200, 200);
       vp.applyZoom(100, 100, 100);
-      assert.strictEqual(vp.zoom, 1);
+      assert.strictEqual(vp.zoom.value, 1);
     });
 
     test("clamps zoom to zoomMax", () => {
       const vp = new Viewport({ textureSize: { x: 16, y: 16 }, zoom: 32, zoomMax: 32 });
       vp.updateCanvasSize(200, 200);
       vp.applyZoom(-100, 100, 100);
-      assert.strictEqual(vp.zoom, 32);
+      assert.strictEqual(vp.zoom.value, 32);
     });
   });
 
@@ -159,22 +159,22 @@ describe("Viewport", () => {
     });
   });
 
-  describe("zoomSensitivity setter", () => {
-    test("updates zoomSensitivity", () => {
+  describe("zoom.sensitivity setter", () => {
+    test("updates sensitivity", () => {
       const vp = new Viewport({ textureSize: { x: 16, y: 16 } });
-      vp.zoomSensitivity = 0.5;
-      assert.strictEqual(vp.zoomSensitivity, 0.5);
+      vp.zoom.sensitivity = 0.5;
+      assert.strictEqual(vp.zoom.sensitivity, 0.5);
     });
 
     test("clamps to a minimum of 0.01", () => {
       const vp = new Viewport({ textureSize: { x: 16, y: 16 } });
-      vp.zoomSensitivity = -5;
-      assert.strictEqual(vp.zoomSensitivity, 0.01);
+      vp.zoom.sensitivity = -5;
+      assert.strictEqual(vp.zoom.sensitivity, 0.01);
     });
 
     test("defaults to 0.1", () => {
       const vp = new Viewport({ textureSize: { x: 16, y: 16 } });
-      assert.strictEqual(vp.zoomSensitivity, 0.1);
+      assert.strictEqual(vp.zoom.sensitivity, 0.1);
     });
   });
 });

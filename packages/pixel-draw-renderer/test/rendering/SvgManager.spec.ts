@@ -10,6 +10,7 @@ import { SvgManager } from "../../src/rendering/SvgManager.ts";
 import { BrushHighlightOverlay } from "../../src/rendering/overlays/BrushHighlightOverlay.ts";
 import { LinePreviewOverlay } from "../../src/rendering/overlays/LinePreviewOverlay.ts";
 import { SelectionOverlay } from "../../src/rendering/overlays/SelectionOverlay.ts";
+import { Zoom } from "../../src/rendering/Zoom.ts";
 import type { DefaultViewport } from "../../src/rendering/Viewport.ts";
 
 // CONSTANTS
@@ -35,7 +36,7 @@ function makeParent(): HTMLDivElement {
 
 function makeViewport(): DefaultViewport {
   return {
-    zoom: 4,
+    zoom: new Zoom({ default: 4 }),
     camera: { x: 0, y: 0 }
   };
 }

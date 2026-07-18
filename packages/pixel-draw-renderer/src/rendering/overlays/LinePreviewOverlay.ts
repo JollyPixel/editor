@@ -61,7 +61,7 @@ export class LinePreviewOverlay {
     start: Vec2,
     end: Vec2
   ): void {
-    const zoom = this.#viewport.zoom;
+    const zoom = this.#viewport.zoom.value;
     const camera = this.#viewport.camera;
     const x1 = (start.x + 0.5) * zoom + camera.x;
     const y1 = (start.y + 0.5) * zoom + camera.y;
