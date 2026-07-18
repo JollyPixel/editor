@@ -9,13 +9,25 @@ import type {
   Vec2
 } from "../types.ts";
 
+export interface SelectEditEntry {
+  positions: Vec2[];
+  beforeColors: RGBA[];
+  afterColors: RGBA[];
+  oldRect: SelectionRect;
+  newRect: SelectionRect;
+}
+
 export interface SelectControllerOptions {
   canvasBuffer: CanvasBuffer;
   renderer: CanvasRenderer;
   selectionOverlay: SelectionOverlay;
   eraseColor: RGBA;
-  /** Called after a selection edit (delete/move/paste) is committed to the buffer. */
-  onCommit: () => void;
+  /**
+   * Called after a selection edit (delete/move/paste/rotate/flip) is
+   * committed to the buffer, reporting exactly what changed so the caller
+   * can record it for undo/redo.
+   */
+  onCommit: (entry: SelectEditEntry) => void;
 }
 
 /**
@@ -28,7 +40,7 @@ export class SelectController {
   #renderer: CanvasRenderer;
   #selectionOverlay: SelectionOverlay;
   #eraseColor: RGBA;
-  #onCommit: () => void;
+  #onCommit: (entry: SelectEditEntry) => void;
 
   constructor(
     options: SelectControllerOptions
@@ -114,10 +126,12 @@ export class SelectController {
       this.#renderer.clearFloatingOverlay();
 
       if (result && snapshot) {
-        if (!result.skipErase) {
-          this.#eraseRegion(result.source);
-        }
-        this.#paintRegion(result.dest, snapshot);
+        this.#commitFootprintChange({
+          oldRect: result.source,
+          newRect: result.dest,
+          newContent: snapshot,
+          skipErase: result.skipErase
+        });
       }
 
       const rect = this.#select.rect;
@@ -153,7 +167,12 @@ export class SelectController {
       return false;
     }
 
-    this.#paintRegion(result.rect, result.pixels);
+    this.#commitFootprintChange({
+      oldRect: result.rect,
+      newRect: result.rect,
+      newContent: result.pixels,
+      skipErase: true
+    });
     this.#selectionOverlay.setRect(result.rect);
 
     return true;
@@ -173,8 +192,67 @@ export class SelectController {
       return false;
     }
 
-    this.#eraseRegion(rect);
+    const eraseColors: RGBA[] = new Array(rect.width * rect.height).fill(this.#eraseColor);
+    this.#commitFootprintChange({ oldRect: rect, newRect: rect, newContent: eraseColors, skipErase: true });
     this.#select.markErased(this.#eraseColor);
+
+    return true;
+  }
+
+  /**
+   * "R": rotates the active selection 90 degrees clockwise around its
+   * center. No-op (returns false) unless a selection is currently active.
+   */
+  handleRotate(): boolean {
+    if (this.#select.state !== "selected") {
+      return false;
+    }
+
+    const result = this.#select.rotate();
+    const snapshot = this.#select.snapshot;
+    if (!result || !snapshot) {
+      return false;
+    }
+
+    this.#commitFootprintChange({
+      oldRect: result.oldRect,
+      newRect: result.newRect,
+      newContent: snapshot,
+      skipErase: false
+    });
+    this.#selectionOverlay.setRect(result.newRect);
+
+    return true;
+  }
+
+  /** "H": mirrors the active selection's content left-right in place. */
+  handleFlipHorizontal(): boolean {
+    return this.#handleFlip((select) => select.flipHorizontal());
+  }
+
+  /** "V": mirrors the active selection's content top-bottom in place. */
+  handleFlipVertical(): boolean {
+    return this.#handleFlip((select) => select.flipVertical());
+  }
+
+  /**
+   * Shared guard/commit tail for handleFlipHorizontal/handleFlipVertical —
+   * flipping never moves or resizes the rect, only its content.
+   */
+  #handleFlip(
+    flip: (select: Select) => SelectionRect | null
+  ): boolean {
+    if (this.#select.state !== "selected") {
+      return false;
+    }
+
+    const rect = flip(this.#select);
+    const snapshot = this.#select.snapshot;
+    if (!rect || !snapshot) {
+      return false;
+    }
+
+    this.#commitFootprintChange({ oldRect: rect, newRect: rect, newContent: snapshot, skipErase: false });
 
     return true;
   }
@@ -193,36 +271,78 @@ export class SelectController {
   }
 
   /**
-   * Fills every position in `rect` with the configured erase color. Used to
-   * vacate a Delete'd or moved-away-from selection. Out-of-bounds positions
-   * are silently clipped by CanvasBuffer.drawPixels, same as every other
-   * paint path in this class.
+   * Shared commit step for move/delete/paste/rotate/flip: vacates
+   * `oldRect` (unless `skipErase`), paints `newContent` into `newRect`, and
+   * reports the union of both footprints' before/after colors so the
+   * caller can record a single undo/redo entry. Out-of-bounds positions are
+   * silently clipped by CanvasBuffer, same as every other paint path here.
    */
-  #eraseRegion(
-    rect: SelectionRect
+  #commitFootprintChange(
+    change: {
+      oldRect: SelectionRect;
+      newRect: SelectionRect;
+      newContent: RGBA[];
+      skipErase: boolean;
+    }
   ): void {
-    this.#canvasBuffer.drawPixels(
-      rectPositions(rect),
-      this.#eraseColor
-    );
+    const { oldRect, newRect, newContent, skipErase } = change;
+    const positions = unionPositions(oldRect, newRect);
+    const beforeColors = this.#sampleColors(positions);
+
+    if (!skipErase) {
+      this.#canvasBuffer.drawPixels(rectPositions(oldRect), this.#eraseColor);
+    }
+    this.#canvasBuffer.drawRegion(newRect, newContent);
     this.#canvasBuffer.copyToMaster();
+
+    const afterColors = this.#sampleColors(positions);
     this.#renderer.drawFrame();
-    this.#onCommit();
+    this.#onCommit({
+      positions,
+      beforeColors,
+      afterColors,
+      oldRect,
+      newRect
+    });
   }
 
   /**
-   * Plain-overwrites `rect` with `pixels` (multi-colored, unlike
-   * #eraseRegion's uniform fill) — the commit step for a Move's destination
-   * or a Duplicate paste.
+   * Resyncs the selection box and cached content after a history undo/redo
+   * replay: `rect` is the footprint the selection should now cover
+   * (oldRect on undo, newRect on redo), and the content is re-sampled from
+   * the buffer — now the source of truth — rather than trusting whatever
+   * Select had cached before the replay.
    */
-  #paintRegion(
-    rect: SelectionRect,
-    pixels: RGBA[]
+  syncSelectionAfterHistory(
+    rect: SelectionRect
   ): void {
-    this.#canvasBuffer.drawRegion(rect, pixels);
-    this.#canvasBuffer.copyToMaster();
-    this.#renderer.drawFrame();
-    this.#onCommit();
+    const snapshot = Select.captureSnapshot(this.#canvasBuffer, rect);
+    this.#select.restoreRect(rect, snapshot);
+    this.#selectionOverlay.setRect(rect);
+  }
+
+  /**
+   * Samples `positions` from the buffer, treating out-of-bounds positions
+   * as fully transparent — mirrors Select.captureSnapshot, since
+   * CanvasBuffer.samplePixel doesn't itself bounds-check a negative x/y.
+   */
+  #sampleColors(
+    positions: Vec2[]
+  ): RGBA[] {
+    const size = this.#canvasBuffer.getSize();
+
+    return positions.map((pos) => {
+      if (
+        pos.x < 0 || pos.x >= size.x ||
+        pos.y < 0 || pos.y >= size.y
+      ) {
+        return { r: 0, g: 0, b: 0, a: 0 };
+      }
+
+      const [r, g, b, a] = this.#canvasBuffer.samplePixel(pos.x, pos.y);
+
+      return { r, g, b, a };
+    });
   }
 }
 
@@ -237,4 +357,28 @@ function* rectPositions(
       yield { x: rect.x + x, y: rect.y + y };
     }
   }
+}
+
+/**
+ * The deduplicated union of two rects' positions — a Move's source/dest can
+ * overlap, and a Rotate's old/new footprint can differ in shape entirely
+ * (non-square rect), so this can't be expressed as a single bounding rect
+ * without over-capturing untouched cells.
+ */
+function unionPositions(
+  a: SelectionRect,
+  b: SelectionRect
+): Vec2[] {
+  const seen = new Set<string>();
+  const result: Vec2[] = [];
+
+  for (const pos of [...rectPositions(a), ...rectPositions(b)]) {
+    const key = `${pos.x},${pos.y}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push(pos);
+    }
+  }
+
+  return result;
 }

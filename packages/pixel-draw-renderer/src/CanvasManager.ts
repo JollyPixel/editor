@@ -266,7 +266,13 @@ export class CanvasManager {
       renderer: this.#renderer,
       selectionOverlay: this.#svgManager.selection,
       eraseColor,
-      onCommit: () => this.#onDrawEnd?.()
+      onCommit: (entry) => {
+        this.#recordHistory({
+          action: "select-edit",
+          ...entry
+        });
+        this.#onDrawEnd?.();
+      }
     });
 
     this.#input = new InputController({
@@ -429,7 +435,10 @@ export class CanvasManager {
       onPaste: () => this.#selectController.handlePaste(),
       onDelete: () => this.#selectController.handleDelete(),
       onUndo: () => this.undo(),
-      onRedo: () => this.redo()
+      onRedo: () => this.redo(),
+      onRotate: () => this.#selectController.handleRotate(),
+      onFlipHorizontal: () => this.#selectController.handleFlipHorizontal(),
+      onFlipVertical: () => this.#selectController.handleFlipVertical()
     };
   }
 
@@ -542,6 +551,34 @@ export class CanvasManager {
 
   getKeybindings(): Readonly<Keybindings> {
     return this.#input.getKeybindings();
+  }
+
+  /**
+   * Rotates the active "select"-mode selection 90 degrees clockwise around
+   * its center. Same effect as the "rotate" keybinding (default `R`) — lets
+   * a toolbar button trigger the exact same path. Returns false when
+   * there's no active selection.
+   */
+  rotateSelection(): boolean {
+    return this.#selectController.handleRotate();
+  }
+
+  /**
+   * Mirrors the active "select"-mode selection's content left-right in
+   * place. Same effect as the "flipHorizontal" keybinding (default `H`).
+   * Returns false when there's no active selection.
+   */
+  flipSelectionHorizontal(): boolean {
+    return this.#selectController.handleFlipHorizontal();
+  }
+
+  /**
+   * Mirrors the active "select"-mode selection's content top-bottom in
+   * place. Same effect as the "flipVertical" keybinding (default `V`).
+   * Returns false when there's no active selection.
+   */
+  flipSelectionVertical(): boolean {
+    return this.#selectController.handleFlipVertical();
   }
 
   centerTexture(): void {
@@ -664,6 +701,9 @@ export class CanvasManager {
     }
 
     this.#refreshAfterHistoryApply();
+    if (entry.action === "select-edit") {
+      this.#selectController.syncSelectionAfterHistory(entry.oldRect);
+    }
     for (const event of buildUndoReplayEvents(entry)) {
       this.#emitHook(event);
     }
@@ -681,6 +721,9 @@ export class CanvasManager {
     }
 
     this.#refreshAfterHistoryApply();
+    if (entry.action === "select-edit") {
+      this.#selectController.syncSelectionAfterHistory(entry.newRect);
+    }
     for (const event of buildRedoReplayEvents(entry)) {
       this.#emitHook(event);
     }
