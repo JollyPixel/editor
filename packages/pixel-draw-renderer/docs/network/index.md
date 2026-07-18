@@ -29,7 +29,7 @@ per open tileset).
 
 **Flow:**
 1. A local mutation (a paint stroke, resize, or `setTexture`) fires
-   `CanvasManager.onBufferUpdated` (see [buffer/hooks.md](../buffer/hooks.md)).
+   `CanvasManager.onBufferUpdated` (see [buffer/PixelBuffer.md](../buffer/PixelBuffer.md)).
 2. `PixelSyncSession` stamps the event with `bufferId` / `clientId` / `seq` /
    `timestamp` and calls `transport.sendCommand(cmd)`.
 3. The transport delivers the command to [`PixelSyncServer.receive()`](./PixelSyncServer.md).

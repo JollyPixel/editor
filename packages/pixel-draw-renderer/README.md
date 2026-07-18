@@ -12,7 +12,7 @@ Browser-based library for editing pixel-art textures. It provides zoom, pan, bru
 
 ## 💡 Features
 
-- **Brush painting**: adjustable size, color, and opacity; color inputs accept a CSS string or a [colorjs.io](https://colorjs.io) `Color` instance; right-click eyedropper picks a color from the canvas
+- **Brush painting**: adjustable size, color, and opacity; color inputs accept a CSS string or a [colorjs.io][colorjs] `Color` instance; right-click eyedropper picks a color from the canvas
 - **Shift-to-line drawing**: hold `Shift` in paint mode to draw a straight line
 - **Paint-bucket fill**: flood-fill a connected region of same-colored pixels
 - **Rectangle select, move, copy, delete**: `Ctrl`/`Cmd`+`C`/`V` to copy/duplicate, `Delete` to erase
@@ -68,7 +68,7 @@ manager.setTexture(img);
 
 ### Modes
 
-`setMode()` selects how left-click/drag is interpreted. See [CanvasManager.md](./docs/CanvasManager.md#getmode--setmode) for the full behavior:
+`setMode()` selects how left-click/drag is interpreted. Read [CanvasManager.md](./docs/CanvasManager.md#getmode--setmode) for the full behavior:
 
 - `"paint"`: draws with the [brush](./docs/tools/Brush.md); hold `Shift` for a straight line
 - `"move"`: pans the camera
@@ -99,7 +99,8 @@ const manager = new CanvasManager(container, {
 manager.setKeybindings({ redo: "alt+shift+u" });
 ```
 
-See [utils/keybindings.md](./docs/utils/keybindings.md) for the combo string format and error handling.
+> [!TIP]
+> Read [utils/keybindings.md](./docs/utils/keybindings.md) for the combo string format and error handling.
 
 ### Undo/redo
 
@@ -122,7 +123,8 @@ manager.undo(); // false if history is disabled or there's nothing to undo
 manager.redo();
 ```
 
-See [CanvasManager.md](./docs/CanvasManager.md#undo--redo--canundo--canredo) and [history/HistoryStack.md](./docs/history/HistoryStack.md).
+> [!TIP]
+> Read [CanvasManager.md](./docs/CanvasManager.md#undo--redo--canundo--canredo) and [history/HistoryStack.md](./docs/history/HistoryStack.md).
 
 ## 🚀 Running the example
 
@@ -135,13 +137,35 @@ Open `http://localhost:5173` to see the interactive demo.
 ## 📚 API
 
 - [`CanvasManager`](./docs/CanvasManager.md): top-level coordinator, the primary public API
-  - [`types`](./docs/types.md): shared value types (`Vec2`, `RGBA`, `SelectionRect`, `Mode`)
 - [`Brush`](./docs/tools/Brush.md): brush size, color, opacity, and affected-pixel computation — read/write via `CanvasManager.brush`
-- [`PixelBuffer`](./docs/buffer/PixelBuffer.md): headless RGBA pixel storage, usable server-side with no DOM
-  - [`hooks`](./docs/buffer/hooks.md): `PixelBufferHookEvent`/`PixelBufferHookListener`, the local-mutation event shape used by `onBufferUpdated`/`applyRemoteCommand`
+- [`PixelBuffer`](./docs/buffer/PixelBuffer.md): headless RGBA pixel storage, usable server-side with no DOM (also documents the `onBufferUpdated`/`applyRemoteCommand` hook events)
 - [`HistoryStack`](./docs/history/HistoryStack.md): bounded undo/redo stack backing `CanvasManager.undo()`/`redo()`
 - [`Keybindings`](./docs/utils/keybindings.md): `Keybindings`/`Keybinding` types, `DEFAULT_KEYBINDINGS`, and the errors thrown by `setKeybindings()`
 - [`Network`](./docs/network/index.md): transport-agnostic, server-authoritative multiplayer for `CanvasManager`
+
+## 🧩 Types
+
+Shared value types used across the public API:
+
+```ts
+type Vec2 = {
+  x: number;
+  y: number;
+};
+
+type Mode = "paint" | "move" | "fill" | "select";
+
+interface SelectionRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+interface RGBA { r: number; g: number; b: number; a: number; }
+```
+
+`Vec2` is a texture- or canvas-space coordinate depending on context. `SelectionRect` is always texture-space, used by `PixelBuffer.drawRegion` and the built-in select tool. Color options also accept `ColorInput` (`string | Color`, [colorjs.io][colorjs]'s class) — a CSS color string or a `Color` instance — but that alias isn't itself exported by name.
 
 ## Contributors Guide
 
@@ -166,3 +190,4 @@ MIT
 [npm]: https://docs.npmjs.com/getting-started/what-is-npm
 [yarn]: https://yarnpkg.com
 [contributing]: ../../CONTRIBUTING.md
+[colorjs]: https://colorjs.io

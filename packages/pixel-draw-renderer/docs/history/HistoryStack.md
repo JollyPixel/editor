@@ -69,7 +69,7 @@ Whether there's an entry to undo/redo.
 push(entry: HistoryEntryInput): void
 ```
 
-Stamps the entry with the current time (`Date.now()`) and pushes it onto the undo stack, clearing the redo stack. Drops the oldest undo entry once `limit` is exceeded. The timestamp is preserved across future undo/redo replays — see [buffer/hooks.md](../buffer/hooks.md) for why this matters over the network.
+Stamps the entry with the current time (`Date.now()`) and pushes it onto the undo stack, clearing the redo stack. Drops the oldest undo entry once `limit` is exceeded. The timestamp is preserved across future undo/redo replays — see [buffer/PixelBuffer.md](../buffer/PixelBuffer.md) for why this matters over the network.
 
 ---
 
