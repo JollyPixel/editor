@@ -113,8 +113,14 @@ export class SelectController {
     if (this.#select.state === "creating") {
       const rect = this.#select.rect;
       if (rect) {
-        const snapshot = Select.captureSnapshot(this.#canvasBuffer, rect);
-        this.#select.finishCreate(snapshot);
+        if (rect.width === 1 && rect.height === 1) {
+          this.#select.clear();
+          this.#selectionOverlay.clear();
+        }
+        else {
+          const snapshot = Select.captureSnapshot(this.#canvasBuffer, rect);
+          this.#select.finishCreate(snapshot);
+        }
       }
 
       return;

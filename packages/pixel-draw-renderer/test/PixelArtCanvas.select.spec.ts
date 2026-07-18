@@ -119,6 +119,7 @@ describe("PixelArtCanvas — select mode", () => {
     manager.commitPixels([{ x: 2, y: 2 }]);
     manager.mode = "select";
     canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
+    canvas.dispatchEvent(mouseEvent("mousemove", 96, 92));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
     window.dispatchEvent(deleteKey());
@@ -134,6 +135,7 @@ describe("PixelArtCanvas — select mode", () => {
     manager.commitPixels([{ x: 2, y: 2 }]);
     manager.mode = "select";
     canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
+    canvas.dispatchEvent(mouseEvent("mousemove", 96, 92));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
     canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
@@ -161,6 +163,7 @@ describe("PixelArtCanvas — select mode", () => {
     manager.commitPixels([{ x: 2, y: 2 }]);
     manager.mode = "select";
     canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
+    canvas.dispatchEvent(mouseEvent("mousemove", 96, 92));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
     window.dispatchEvent(ctrlKey("c"));
@@ -215,13 +218,30 @@ describe("PixelArtCanvas — select mode", () => {
     manager.destroy();
   });
 
-  test("a click-only drag (no movement) commits nothing — the selection just stays put", () => {
+  test("a plain click (no drag) does not create a selection", () => {
     const manager = makeManager();
     const canvas = manager.canvas();
 
     manager.commitPixels([{ x: 2, y: 2 }]);
     manager.mode = "select";
     canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
+    canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+
+    // No selection was ever established, so Delete has nothing to act on.
+    window.dispatchEvent(deleteKey());
+
+    assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 255], "no selection — nothing erased");
+    manager.destroy();
+  });
+
+  test("a click-only drag (no movement) on an existing selection commits nothing — the selection just stays put", () => {
+    const manager = makeManager();
+    const canvas = manager.canvas();
+
+    manager.commitPixels([{ x: 2, y: 2 }]);
+    manager.mode = "select";
+    canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
+    canvas.dispatchEvent(mouseEvent("mousemove", 96, 92));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
     // mousedown-then-immediately-mouseup inside the (unmoved) selection
@@ -239,6 +259,7 @@ describe("PixelArtCanvas — select mode", () => {
     manager.commitPixels([{ x: 2, y: 2 }]);
     manager.mode = "select";
     canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
+    canvas.dispatchEvent(mouseEvent("mousemove", 96, 92));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
     window.dispatchEvent(ctrlKey("c"));
@@ -273,6 +294,7 @@ describe("PixelArtCanvas — select mode", () => {
     manager.commitPixels([{ x: 2, y: 2 }]);
     manager.mode = "select";
     canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
+    canvas.dispatchEvent(mouseEvent("mousemove", 96, 92));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
     window.dispatchEvent(ctrlKey("c"));
@@ -320,10 +342,12 @@ describe("PixelArtCanvas — select mode", () => {
     manager.commitPixels([{ x: 2, y: 2 }]);
     manager.mode = "select";
     canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
+    canvas.dispatchEvent(mouseEvent("mousemove", 96, 92));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
-    // Click far outside the first (1x1) selection: starts a fresh one at (6,6).
+    // Click+drag far outside the first selection: starts a fresh one at (6,6).
     canvas.dispatchEvent(mouseEvent("mousedown", 108, 108));
+    canvas.dispatchEvent(mouseEvent("mousemove", 112, 108));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
     window.dispatchEvent(deleteKey());
@@ -340,6 +364,7 @@ describe("PixelArtCanvas — select mode", () => {
     manager.commitPixels([{ x: 2, y: 2 }]);
     manager.mode = "select";
     canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
+    canvas.dispatchEvent(mouseEvent("mousemove", 96, 92));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
     manager.mode = "paint";
@@ -360,6 +385,7 @@ describe("PixelArtCanvas — select mode", () => {
     manager.commitPixels([{ x: 1, y: 1 }]);
     manager.mode = "select";
     canvas.dispatchEvent(mouseEvent("mousedown", 88, 88));
+    canvas.dispatchEvent(mouseEvent("mousemove", 92, 88));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
     assert.doesNotThrow(() => {
@@ -393,6 +419,7 @@ describe("PixelArtCanvas — select mode", () => {
 
     manager.mode = "select";
     canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
+    canvas.dispatchEvent(mouseEvent("mousemove", 96, 92));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
     window.dispatchEvent(deleteKey());
 
@@ -576,6 +603,7 @@ describe("PixelArtCanvas — select mode", () => {
       manager.commitPixels([{ x: 2, y: 2 }]);
       manager.mode = "select";
       canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
+      canvas.dispatchEvent(mouseEvent("mousemove", 96, 92));
       canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
       canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
@@ -605,6 +633,7 @@ describe("PixelArtCanvas — select mode", () => {
       manager.commitPixels([{ x: 2, y: 2 }]);
       manager.mode = "select";
       canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
+      canvas.dispatchEvent(mouseEvent("mousemove", 96, 92));
       canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
       window.dispatchEvent(deleteKey());
@@ -629,6 +658,7 @@ describe("PixelArtCanvas — select mode", () => {
       manager.commitPixels([{ x: 2, y: 2 }]);
       manager.mode = "select";
       canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
+      canvas.dispatchEvent(mouseEvent("mousemove", 96, 92));
       canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
       window.dispatchEvent(ctrlKey("c"));
