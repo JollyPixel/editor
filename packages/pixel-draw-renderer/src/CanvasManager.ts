@@ -23,6 +23,14 @@ import {
   Fill
 } from "./tools/Fill.ts";
 import {
+  HistoryStack,
+  type HistoryEntryInput
+} from "./history/HistoryStack.ts";
+import {
+  buildRedoReplayEvents,
+  buildUndoReplayEvents
+} from "./history/replayEvents.ts";
+import {
   InputController,
   type InputActions,
   type WindowLike
@@ -107,6 +115,14 @@ export interface CanvasManagerOptions {
    * Used by PixelSyncSession to forward mutations over the network.
    */
   onBufferUpdated?: PixelBufferHookListener;
+  /** Local undo/redo stack. Disabled by default. */
+  history?: {
+    enabled?: boolean;
+    /** @default 10 */
+    limit?: number;
+  };
+  /** Called whenever the undo/redo stack changes. */
+  onHistoryChange?: (state: { canUndo: boolean; canRedo: boolean; }) => void;
 }
 
 export class CanvasManager {
@@ -120,6 +136,8 @@ export class CanvasManager {
   #onBufferUpdated?: PixelBufferHookListener;
   #onDrawEnd?: () => void;
   #isApplyingRemote = false;
+  #history?: HistoryStack;
+  #onHistoryChange?: (state: { canUndo: boolean; canRedo: boolean; }) => void;
   #mode: Mode;
   #brushController: BrushController;
   #lineController: LineController;
@@ -135,6 +153,7 @@ export class CanvasManager {
     this.#parentHtmlElement = parentHtmlElement;
     this.#onBufferUpdated = options.onBufferUpdated;
     this.#onDrawEnd = options.onDrawEnd;
+    this.#onHistoryChange = options.onHistoryChange;
     this.#mode = options.defaultMode ?? "paint";
     const eraseColor = toRGBA(options.select?.eraseColor ?? "#FFFFFF");
 
@@ -159,6 +178,12 @@ export class CanvasManager {
 
     if (options.texture?.init) {
       this.#canvasBuffer.setTexture(options.texture.init);
+    }
+
+    if (options.history?.enabled) {
+      this.#history = new HistoryStack(this.#canvasBuffer, {
+        limit: options.history.limit
+      });
     }
 
     const computedBackgroundColor = getComputedStyle(parentHtmlElement).backgroundColor;
@@ -207,7 +232,13 @@ export class CanvasManager {
       brush: this.brush,
       canvasBuffer: this.#canvasBuffer,
       renderer: this.#renderer,
-      onCommit: (pixels, color) => {
+      onCommit: (pixels, color, beforeColors) => {
+        this.#recordHistory({
+          action: "stroke",
+          positions: pixels,
+          beforeColors,
+          afterColor: color
+        });
         this.#emitHook({
           action: "stroke",
           metadata: { color, positions: pixels }
@@ -387,7 +418,9 @@ export class CanvasManager {
       },
       onCopy: () => this.#selectController.handleCopy(),
       onPaste: () => this.#selectController.handlePaste(),
-      onDelete: () => this.#selectController.handleDelete()
+      onDelete: () => this.#selectController.handleDelete(),
+      onUndo: () => this.undo(),
+      onRedo: () => this.redo()
     };
   }
 
@@ -443,9 +476,22 @@ export class CanvasManager {
       return;
     }
 
+    const beforeSize = this.#canvasBuffer.getSize();
+    const beforePixels = this.#history ? Uint8ClampedArray.from(this.#canvasBuffer.getPixels()) : null;
+
     this.#canvasBuffer.setSize(size);
     this.#viewport.setTextureSize(size);
     this.#renderer.drawFrame();
+
+    if (beforePixels) {
+      this.#recordHistory({
+        action: "resized",
+        beforeSize,
+        beforePixels,
+        afterSize: structuredClone(size),
+        afterPixels: Uint8ClampedArray.from(this.#canvasBuffer.getPixels())
+      });
+    }
 
     this.#emitHook({
       action: "resized",
@@ -518,10 +564,23 @@ export class CanvasManager {
   setTexture(
     source: HTMLCanvasElement | HTMLImageElement
   ): void {
+    const beforeSize = this.#canvasBuffer.getSize();
+    const beforePixels = this.#history ? Uint8ClampedArray.from(this.#canvasBuffer.getPixels()) : null;
+
     this.#canvasBuffer.setTexture(source);
     const size = this.#canvasBuffer.getSize();
     this.#viewport.setTextureSize(size);
     this.#renderer.drawFrame();
+
+    if (beforePixels) {
+      this.#recordHistory({
+        action: "texture-replaced",
+        beforeSize,
+        beforePixels,
+        afterSize: size,
+        afterPixels: Uint8ClampedArray.from(this.#canvasBuffer.getPixels())
+      });
+    }
 
     this.#emitHook({
       action: "texture-replaced",
@@ -552,9 +611,16 @@ export class CanvasManager {
     }
 
     const color = toRGBA(this.brush.getColor());
+    const beforeColors = this.#history ? this.#sampleColors(pixels) : [];
 
     this.#applyStroke(color, pixels);
 
+    this.#recordHistory({
+      action: "stroke",
+      positions: pixels,
+      beforeColors,
+      afterColor: color
+    });
     this.#emitHook({
       action: "stroke",
       metadata: {
@@ -563,6 +629,48 @@ export class CanvasManager {
       }
     });
     this.#onDrawEnd?.();
+  }
+
+  /** Reverts the most recent local edit. Returns false when history is disabled or empty. */
+  undo(): boolean {
+    const entry = this.#history?.undo();
+    if (!entry) {
+      return false;
+    }
+
+    this.#refreshAfterHistoryApply();
+    for (const event of buildUndoReplayEvents(entry)) {
+      this.#emitHook(event);
+    }
+    this.#onDrawEnd?.();
+    this.#notifyHistoryChange();
+
+    return true;
+  }
+
+  /** Re-applies the most recently undone local edit. Returns false when history is disabled or empty. */
+  redo(): boolean {
+    const entry = this.#history?.redo();
+    if (!entry) {
+      return false;
+    }
+
+    this.#refreshAfterHistoryApply();
+    for (const event of buildRedoReplayEvents(entry)) {
+      this.#emitHook(event);
+    }
+    this.#onDrawEnd?.();
+    this.#notifyHistoryChange();
+
+    return true;
+  }
+
+  canUndo(): boolean {
+    return this.#history?.canUndo ?? false;
+  }
+
+  canRedo(): boolean {
+    return this.#history?.canRedo ?? false;
   }
 
   /**
@@ -595,6 +703,7 @@ export class CanvasManager {
 
         case "resized":
           this.setTextureSize(event.metadata.size);
+          this.#clearHistory();
           break;
 
         case "texture-replaced":
@@ -604,6 +713,7 @@ export class CanvasManager {
               toUint8Array(event.metadata.pixels)
             )
           );
+          this.#clearHistory();
           break;
       }
     }
@@ -623,6 +733,7 @@ export class CanvasManager {
     this.#isApplyingRemote = true;
     try {
       this.#applyPixelReplace(size, pixels);
+      this.#clearHistory();
     }
     finally {
       this.#isApplyingRemote = false;
@@ -659,6 +770,50 @@ export class CanvasManager {
     }
 
     this.#onBufferUpdated(event);
+  }
+
+  /** No-ops when history is disabled, or while replaying a remote mutation — the stack is local-only. */
+  #recordHistory(
+    entry: HistoryEntryInput
+  ): void {
+    if (this.#isApplyingRemote || !this.#history) {
+      return;
+    }
+
+    this.#history.push(entry);
+    this.#notifyHistoryChange();
+  }
+
+  /** Called on a remote resize/texture-replace/snapshot, since recorded positions/sizes no longer describe the buffer. */
+  #clearHistory(): void {
+    if (!this.#history) {
+      return;
+    }
+
+    this.#history.clear();
+    this.#notifyHistoryChange();
+  }
+
+  #notifyHistoryChange(): void {
+    this.#onHistoryChange?.({
+      canUndo: this.#history?.canUndo ?? false,
+      canRedo: this.#history?.canRedo ?? false
+    });
+  }
+
+  #sampleColors(
+    positions: Vec2[]
+  ): RGBA[] {
+    return positions.map((pos) => {
+      const [r, g, b, a] = this.#canvasBuffer.samplePixel(pos.x, pos.y);
+
+      return { r, g, b, a };
+    });
+  }
+
+  #refreshAfterHistoryApply(): void {
+    this.#viewport.setTextureSize(this.#canvasBuffer.getSize());
+    this.#renderer.drawFrame();
   }
 
   /**

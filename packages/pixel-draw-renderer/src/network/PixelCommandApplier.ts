@@ -21,9 +21,14 @@ export function applyCommandToWorld(
         break;
       }
 
-      const buffer = world.addBuffer(cmd.bufferId, { size: cmd.metadata.size });
+      const buffer = world.addBuffer(cmd.bufferId, {
+        size: cmd.metadata.size
+      });
       if (cmd.metadata.pixels) {
-        buffer.setPixels(new Uint8ClampedArray(toUint8Array(cmd.metadata.pixels)), cmd.metadata.size);
+        buffer.setPixels(
+          new Uint8ClampedArray(toUint8Array(cmd.metadata.pixels)),
+          cmd.metadata.size
+        );
       }
       break;
     }
@@ -38,7 +43,10 @@ export function applyCommandToWorld(
         break;
       }
 
-      buffer.drawPixels(cmd.metadata.positions, cmd.metadata.color);
+      buffer.drawPixels(
+        cmd.metadata.positions,
+        cmd.metadata.color
+      );
       buffer.copyToMaster();
       break;
     }
@@ -51,7 +59,10 @@ export function applyCommandToWorld(
 
     case "texture-replaced": {
       const buffer = world.getBuffer(cmd.bufferId);
-      buffer?.setPixels(new Uint8ClampedArray(toUint8Array(cmd.metadata.pixels)), cmd.metadata.size);
+      buffer?.setPixels(
+        new Uint8ClampedArray(toUint8Array(cmd.metadata.pixels)),
+        cmd.metadata.size
+      );
       break;
     }
   }

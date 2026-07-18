@@ -46,7 +46,10 @@ async function initRuntime(): Promise<Runtime> {
       max: 32,
       sensitivity: 0.6
     },
-    brush: { size: 1 }
+    brush: { size: 1 },
+    history: {
+      enabled: true
+    }
   });
 
   const canvasTexture = new THREE.CanvasTexture(canvasManager.getTextureCanvas());

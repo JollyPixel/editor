@@ -15,10 +15,12 @@ export type PixelLifecycleEvent =
       /** Base64-encoded RGBA bytes for the buffer's initial content, if any. */
       pixels?: string;
     };
+    originTimestamp?: number;
   }
   | {
     action: "buffer-removed";
     metadata: Record<string, never>;
+    originTimestamp?: number;
   };
 
 export type PixelNetworkEvent = PixelBufferHookEvent | PixelLifecycleEvent;

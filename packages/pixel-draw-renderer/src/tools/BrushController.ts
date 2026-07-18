@@ -10,12 +10,12 @@ export interface BrushControllerOptions {
   canvasBuffer: CanvasBuffer;
   renderer: CanvasRenderer;
   /**
-   * Called once per completed stroke (on endStroke) with the deduplicated
-   * set of pixels touched and the color they were stamped with. Mirrors the
-   * "stroke" hook shape emitted elsewhere in CanvasManager. Not called for a
-   * stroke that never touched any in-bounds pixel.
+   * Called once per completed stroke with the deduplicated pixels touched,
+   * their stamped color, and each pixel's color immediately before this
+   * stroke touched it (parallel to `pixels`, for undo history). Not called
+   * for a stroke that never touched any in-bounds pixel.
    */
-  onCommit: (pixels: Vec2[], color: RGBA) => void;
+  onCommit: (pixels: Vec2[], color: RGBA, beforeColors: RGBA[]) => void;
 }
 
 /**
@@ -28,9 +28,10 @@ export class BrushController {
   #brush: Brush;
   #canvasBuffer: CanvasBuffer;
   #renderer: CanvasRenderer;
-  #onCommit: (pixels: Vec2[], color: RGBA) => void;
+  #onCommit: (pixels: Vec2[], color: RGBA, beforeColors: RGBA[]) => void;
 
   #strokeDirty = new Map<string, Vec2>();
+  #strokeBefore = new Map<string, RGBA>();
   #strokeColor: RGBA | null = null;
   #isActive = false;
 
@@ -79,17 +80,24 @@ export class BrushController {
   ): void {
     const rgba = toRGBA(this.#brush.getColor());
 
-    // getAffectedPixels is a fresh, single-use generator each call, so it is
-    // called once per consumer rather than materialized into an array here.
-    this.#canvasBuffer.drawPixels(
-      this.#brush.getAffectedPixels(tx, ty), rgba
-    );
+    // Materialized once (unlike the rest of this class, which prefers
+    // re-calling the fresh generator over allocating) because the before-
+    // color of each newly touched pixel must be sampled before drawPixels
+    // overwrites it, then the same list is reused for the draw call.
+    const affected = [...this.#brush.getAffectedPixels(tx, ty)];
+    for (const pixel of affected) {
+      const key = `${pixel.x},${pixel.y}`;
+      if (!this.#strokeDirty.has(key)) {
+        const [r, g, b, a] = this.#canvasBuffer.samplePixel(pixel.x, pixel.y);
+        this.#strokeBefore.set(key, { r, g, b, a });
+      }
+      this.#strokeDirty.set(key, pixel);
+    }
+
+    this.#canvasBuffer.drawPixels(affected, rgba);
     this.#renderer.drawFrame();
 
     this.#strokeColor ??= rgba;
-    for (const pixel of this.#brush.getAffectedPixels(tx, ty)) {
-      this.#strokeDirty.set(`${pixel.x},${pixel.y}`, pixel);
-    }
   }
 
   #commit(): void {
@@ -98,16 +106,21 @@ export class BrushController {
       this.#strokeColor === null
     ) {
       this.#strokeDirty.clear();
+      this.#strokeBefore.clear();
       this.#strokeColor = null;
 
       return;
     }
 
     const positions = [...this.#strokeDirty.values()];
+    const beforeColors = positions.map(
+      (pixel) => this.#strokeBefore.get(`${pixel.x},${pixel.y}`)!
+    );
     const color = this.#strokeColor;
     this.#strokeDirty.clear();
+    this.#strokeBefore.clear();
     this.#strokeColor = null;
 
-    this.#onCommit(positions, color);
+    this.#onCommit(positions, color, beforeColors);
   }
 }

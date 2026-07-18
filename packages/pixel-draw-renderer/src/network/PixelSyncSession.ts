@@ -16,6 +16,11 @@ export interface PixelSyncSessionOptions {
   transport: PixelTransport;
 }
 
+export interface OnBufferAddedEventMetadata {
+  size: Vec2;
+  pixels?: string;
+}
+
 /**
  * Client-side network orchestrator.
  *
@@ -32,7 +37,9 @@ export class PixelSyncSession {
   #managers = new Map<string, CanvasManager>();
   #seq = 0;
 
-  onBufferAdded: ((bufferId: string, metadata: { size: Vec2; pixels?: string; }) => void) | null = null;
+  onBufferAdded: (
+    (bufferId: string, metadata: OnBufferAddedEventMetadata) => void
+  ) | null = null;
   onBufferRemoved: ((bufferId: string) => void) | null = null;
 
   constructor(
@@ -41,7 +48,10 @@ export class PixelSyncSession {
     this.#transport = options.transport;
 
     this.#transport.onCommand = (cmd) => this.#handleRemote(cmd);
-    this.#transport.onSnapshot = (bufferId, snapshot) => this.#handleSnapshot(bufferId, snapshot);
+    this.#transport.onSnapshot = (bufferId, snapshot) => this.#handleSnapshot(
+      bufferId,
+      snapshot
+    );
   }
 
   /**
@@ -106,20 +116,25 @@ export class PixelSyncSession {
     bufferId: string,
     event: PixelBufferHookEvent
   ): void {
-    this.#transport.sendCommand(this.#stamp(bufferId, event));
+    this.#transport.sendCommand(
+      this.#stamp(bufferId, event)
+    );
   }
 
+  /** `originTimestamp` (an undo/redo replay) is kept as the command's timestamp instead of "now"; never sent as-is over the wire. */
   #stamp(
     bufferId: string,
     event: PixelNetworkEvent
   ): PixelNetworkCommand {
+    const { originTimestamp, ...rest } = event;
+
     return {
-      ...event,
+      ...rest,
       bufferId,
       clientId: this.#transport.localClientId,
       seq: ++this.#seq,
-      timestamp: Date.now()
-    } as PixelNetworkCommand;
+      timestamp: originTimestamp ?? Date.now()
+    };
   }
 
   #handleRemote(
@@ -142,14 +157,19 @@ export class PixelSyncSession {
       return;
     }
 
-    this.#managers.get(cmd.bufferId)?.applyRemoteCommand(cmd);
+    this.#managers
+      .get(cmd.bufferId)
+      ?.applyRemoteCommand(cmd);
   }
 
   #handleSnapshot(
     bufferId: string,
     snapshot: PixelBufferSnapshot
   ): void {
-    this.#managers.get(bufferId)?.loadSnapshot(snapshot.size, new Uint8ClampedArray(toUint8Array(snapshot.pixels)));
+    this.#managers.get(bufferId)?.loadSnapshot(
+      snapshot.size,
+      new Uint8ClampedArray(toUint8Array(snapshot.pixels))
+    );
   }
 
   /**
