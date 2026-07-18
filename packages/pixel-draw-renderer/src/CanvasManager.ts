@@ -49,6 +49,7 @@ import {
   type DefaultViewport
 } from "./rendering/Viewport.ts";
 import { rgbToHex, toRGBA } from "./utils/colors.ts";
+import type { Keybindings } from "./utils/keybindings.ts";
 import type {
   BrushHighlight,
   ColorInput,
@@ -123,6 +124,13 @@ export interface CanvasManagerOptions {
   };
   /** Called whenever the undo/redo stack changes. */
   onHistoryChange?: (state: { canUndo: boolean; canRedo: boolean; }) => void;
+  /**
+   * Overrides for the copy/paste/undo/redo/delete key combos. Unspecified
+   * actions keep their default binding. Shift (line-tool arm/disarm) is not
+   * configurable. Also settable/readable at runtime via `setKeybindings()` /
+   * `getKeybindings()`.
+   */
+  keybindings?: Partial<Keybindings>;
 }
 
 export class CanvasManager {
@@ -265,7 +273,8 @@ export class CanvasManager {
       canvas: this.#renderer.getCanvas(),
       viewport: this.#viewport,
       window: options.window,
-      actions: this.#buildInputActions()
+      actions: this.#buildInputActions(),
+      keybindings: options.keybindings
     });
 
     this.centerTexture();
@@ -517,6 +526,22 @@ export class CanvasManager {
     sensitivity: number
   ): void {
     this.#viewport.setZoomSensitivity(sensitivity);
+  }
+
+  /**
+   * Merges a partial override onto the *current* keybindings (not the
+   * defaults) — only the actions present in `patch` change. Throws
+   * InvalidKeybindingError / KeybindingConflictError; on either, the
+   * previous keybindings remain in effect. Suitable for a live remap UI.
+   */
+  setKeybindings(
+    patch: Partial<Keybindings>
+  ): void {
+    this.#input.setKeybindings(patch);
+  }
+
+  getKeybindings(): Readonly<Keybindings> {
+    return this.#input.getKeybindings();
   }
 
   centerTexture(): void {

@@ -59,10 +59,17 @@ interface CanvasManagerOptions {
    * Used by PixelSyncSession to forward mutations over the network.
    */
   onBufferUpdated?: PixelBufferHookListener;
+  /**
+   * Overrides for the copy/paste/undo/redo/delete key combos. Unspecified
+   * actions keep their default binding. Shift (line-tool arm/disarm) is not
+   * configurable. Also settable/readable at runtime via `setKeybindings()` /
+   * `getKeybindings()`.
+   */
+  keybindings?: Partial<Keybindings>;
 }
 ```
 
-`Mode` is `"paint" | "move" | "fill" | "select"`. `ColorInput` (`string | Color`, where `Color` is [colorjs.io](https://colorjs.io)'s class) is used throughout the package wherever a color option is accepted: a CSS color string (hex, `rgb()`, `hsl()`, named color, ...) or a `Color` instance. `BrushOptions` is forwarded to the internal `Brush` instance, see [Brush.md](./tools/Brush.md). `PixelBufferHookListener` is described in [buffer/hooks.md](./buffer/hooks.md) and [network/index.md](./network/index.md).
+`Mode` is `"paint" | "move" | "fill" | "select"`. `ColorInput` (`string | Color`, where `Color` is [colorjs.io](https://colorjs.io)'s class) is used throughout the package wherever a color option is accepted: a CSS color string (hex, `rgb()`, `hsl()`, named color, ...) or a `Color` instance. `BrushOptions` is forwarded to the internal `Brush` instance, see [Brush.md](./tools/Brush.md). `PixelBufferHookListener` is described in [buffer/hooks.md](./buffer/hooks.md) and [network/index.md](./network/index.md). `Keybindings` is described in [utils/keybindings.md](./utils/keybindings.md).
 
 Undocumented defaults: `texture.size` is `{ x: 64, y: 32 }` (`y` falls back to `x` when only `x` is given), `texture.maxSize` is `2048`, `zoom.default` is `4`, `zoom.min`/`zoom.max` are `1`/`32`, `zoom.sensitivity` is `0.1`, `backgroundTransparency.squareSize` is `8`, `backgroundTransparency.colors` is `{ odd: "#999", even: "#666" }`.
 
@@ -190,6 +197,17 @@ setZoomSensitivity(sensitivity: number): void
 ```
 
 Returns or sets the mouse-wheel zoom sensitivity (clamped to a minimum of `0.01`).
+
+---
+
+### `getKeybindings` / `setKeybindings`
+
+```ts
+getKeybindings(): Readonly<Keybindings>
+setKeybindings(patch: Partial<Keybindings>): void
+```
+
+Returns the currently effective keybindings, or merges `patch` onto them (actions not present in `patch` keep their current binding). Throws `InvalidKeybindingError` for a malformed combo string, or `KeybindingConflictError` if the result would bind two actions to the same combo — either way the previous keybindings remain in effect. See [utils/keybindings.md](./utils/keybindings.md).
 
 ---
 

@@ -1,0 +1,53 @@
+# utils/keybindings
+
+Types, defaults, and errors for `CanvasManager`'s configurable keyboard shortcuts (`CanvasManagerOptions.keybindings`, `CanvasManager.setKeybindings()` / `getKeybindings()`, see [CanvasManager.md](../CanvasManager.md)).
+
+## Types
+
+```ts
+type ModifierToken = "mod" | "shift" | "alt";
+
+type NamedKey =
+  | "Delete" | "Backspace" | "Enter" | "Escape" | "Tab" | "Space"
+  | "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight"
+  | "F1" | "F2" | "F3" | "F4" | "F5" | "F6" | "F7" | "F8" | "F9" | "F10" | "F11" | "F12";
+
+type Keybinding =
+  | NamedKey | (string & {})
+  | `${ModifierToken}+${NamedKey | (string & {})}`
+  | `${ModifierToken}+${ModifierToken}+${NamedKey | (string & {})}`
+  | `${ModifierToken}+${ModifierToken}+${ModifierToken}+${NamedKey | (string & {})}`;
+
+type KeybindingAction = "copy" | "paste" | "undo" | "redo" | "delete";
+
+type Keybindings = Record<KeybindingAction, Keybinding | Keybinding[]>;
+```
+
+A `Keybinding` is a `+`-separated combo string, e.g. `"mod+z"` or `"mod+shift+z"`. `"mod"` matches either Ctrl or Cmd, so a binding behaves the same on every platform. The key segment is matched against the physical key (`KeyboardEvent.code`), not the character produced, so bindings work the same on every keyboard layout (e.g. AZERTY) — `"z"` always means the physical Z key. `NamedKey` lists the non-printable keys with a non-obvious `code` spelling, for editor autocomplete; any other string is still accepted.
+
+Only `copy`, `paste`, `undo`, `redo`, and `delete` are configurable. Shift (used to arm/disarm the line tool in `"paint"` mode) is not.
+
+## Constants
+
+```ts
+const DEFAULT_KEYBINDINGS: Keybindings = {
+  copy: "mod+c",
+  paste: "mod+v",
+  undo: "mod+z",
+  redo: ["mod+y", "mod+shift+z"],
+  delete: "Delete"
+};
+```
+
+The keybindings `CanvasManager` uses when `keybindings` isn't passed to its options, and the base a partial override is merged onto. `redo` has two default triggers; any action may be given an array of alternate bindings.
+
+Matching is exact on modifiers: `"mod+c"` does **not** also match Ctrl+Shift+C, and the default `"Delete"` binding (no modifier) does not also match Ctrl+Delete.
+
+## Errors
+
+```ts
+class InvalidKeybindingError extends Error {}
+class KeybindingConflictError extends Error {}
+```
+
+Both are thrown synchronously from the constructor's `keybindings` option and from `setKeybindings()` — never asynchronously, and never left as a silently-dropped binding. `InvalidKeybindingError` is thrown for a malformed combo string (unknown modifier token, empty/missing key segment). `KeybindingConflictError` is thrown when two different actions would resolve to the same combo.

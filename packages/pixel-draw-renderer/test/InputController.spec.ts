@@ -499,7 +499,9 @@ describe("InputController", () => {
 
   describe("copy / paste / delete shortcuts", () => {
     function ctrlKeyDown(key: string, repeat = false): KeyboardEvent {
-      return new KeyboardEvent("keydown", { key, ctrlKey: true, bubbles: true, cancelable: true, repeat });
+      return new KeyboardEvent("keydown", {
+        key, code: `Key${key.toUpperCase()}`, ctrlKey: true, bubbles: true, cancelable: true, repeat
+      });
     }
 
     test("Ctrl+C fires onCopy", () => {
@@ -518,7 +520,9 @@ describe("InputController", () => {
       const ctrl = new InputController({ canvas, viewport, actions });
 
       hoverCanvas(canvas);
-      window.dispatchEvent(new KeyboardEvent("keydown", { key: "c", metaKey: true, bubbles: true, cancelable: true }));
+      window.dispatchEvent(new KeyboardEvent("keydown", {
+        key: "c", code: "KeyC", metaKey: true, bubbles: true, cancelable: true
+      }));
 
       assert.strictEqual(calls.onCopy.length, 1);
       ctrl.destroy();
@@ -564,7 +568,7 @@ describe("InputController", () => {
       const ctrl = new InputController({ canvas, viewport, actions });
 
       hoverCanvas(canvas);
-      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true, cancelable: true }));
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", code: "Delete", bubbles: true, cancelable: true }));
 
       assert.strictEqual(calls.onDelete.length, 1);
       ctrl.destroy();
@@ -577,7 +581,9 @@ describe("InputController", () => {
       hoverCanvas(canvas);
       window.dispatchEvent(ctrlKeyDown("c", true));
       window.dispatchEvent(ctrlKeyDown("v", true));
-      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true, cancelable: true, repeat: true }));
+      window.dispatchEvent(new KeyboardEvent("keydown", {
+        key: "Delete", code: "Delete", bubbles: true, cancelable: true, repeat: true
+      }));
 
       assert.strictEqual(calls.onCopy.length, 0);
       assert.strictEqual(calls.onPaste.length, 0);
@@ -594,7 +600,7 @@ describe("InputController", () => {
       kEmulatedBrowserWindow.document.body.appendChild(input);
 
       input.dispatchEvent(ctrlKeyDown("c"));
-      input.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true, cancelable: true }));
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", code: "Delete", bubbles: true, cancelable: true }));
 
       assert.strictEqual(calls.onCopy.length, 0);
       assert.strictEqual(calls.onDelete.length, 0);
@@ -606,6 +612,7 @@ describe("InputController", () => {
     function ctrlKeyDown(key: string, parameters: { shiftKey?: boolean; repeat?: boolean; } = {}): KeyboardEvent {
       return new KeyboardEvent("keydown", {
         key,
+        code: `Key${key.toUpperCase()}`,
         ctrlKey: true,
         shiftKey: parameters.shiftKey ?? false,
         repeat: parameters.repeat ?? false,
@@ -631,7 +638,9 @@ describe("InputController", () => {
       const ctrl = new InputController({ canvas, viewport, actions });
 
       hoverCanvas(canvas);
-      window.dispatchEvent(new KeyboardEvent("keydown", { key: "z", metaKey: true, bubbles: true, cancelable: true }));
+      window.dispatchEvent(new KeyboardEvent("keydown", {
+        key: "z", code: "KeyZ", metaKey: true, bubbles: true, cancelable: true
+      }));
 
       assert.strictEqual(calls.onUndo.length, 1);
       ctrl.destroy();

@@ -76,6 +76,30 @@ manager.setTexture(img);
 
 Middle-click pans and right-click picks a color in any mode.
 
+### Keybinds
+
+Copy/paste/undo/redo/delete are configurable; Shift (line-tool arm/disarm) is not. Defaults:
+
+| Action | Default |
+|---|---|
+| Copy | `Ctrl`/`Cmd`+`C` |
+| Paste | `Ctrl`/`Cmd`+`V` |
+| Undo | `Ctrl`/`Cmd`+`Z` |
+| Redo | `Ctrl`/`Cmd`+`Y` or `Ctrl`/`Cmd`+`Shift`+`Z` |
+| Delete | `Delete` |
+
+Override at construction, or live via `setKeybindings()`:
+
+```ts
+const manager = new CanvasManager(container, {
+  keybindings: { undo: "alt+u" } // unspecified actions keep their default
+});
+
+manager.setKeybindings({ redo: "alt+shift+u" });
+```
+
+See [utils/keybindings.md](./docs/utils/keybindings.md) for the combo string format and error handling.
+
 ## 🚀 Running the example
 
 ```bash
@@ -90,6 +114,7 @@ Open `http://localhost:5173` to see the interactive demo.
 - [`Brush`](./docs/tools/Brush.md): brush size, color, opacity, and affected-pixel computation — read/write via `CanvasManager.brush`
 - [`PixelBuffer`](./docs/buffer/PixelBuffer.md): headless RGBA pixel storage, usable server-side with no DOM
 - [buffer hooks](./docs/buffer/hooks.md): `PixelBufferHookEvent`/`PixelBufferHookListener`, the local-mutation event shape used by `onBufferUpdated`/`applyRemoteCommand`
+- [keybindings](./docs/utils/keybindings.md): `Keybindings`/`Keybinding` types, `DEFAULT_KEYBINDINGS`, and the errors thrown by `setKeybindings()`
 - [Network Sync Layer](./docs/network/index.md): transport-agnostic, server-authoritative multiplayer for `CanvasManager`
 - [`types`](./docs/types.md): shared value types (`Vec2`, `RGBA`, `SelectionRect`, `Mode`)
 
