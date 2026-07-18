@@ -28,7 +28,7 @@ several `CanvasManager` instances to the same transport connection (e.g. one
 per open tileset).
 
 **Flow:**
-1. A local mutation (a paint stroke, resize, or `setTexture`) fires
+1. A local mutation (a paint stroke, fill, resize, or `setTexture`) fires
    `CanvasManager.onBufferUpdated` (see [buffer/PixelBuffer.md](../buffer/PixelBuffer.md)).
 2. `PixelSyncSession` stamps the event with `bufferId` / `clientId` / `seq` /
    `timestamp` and calls `transport.sendCommand(cmd)`.

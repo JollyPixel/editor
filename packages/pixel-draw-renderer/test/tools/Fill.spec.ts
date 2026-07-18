@@ -118,4 +118,54 @@ describe("Fill", () => {
       assert.strictEqual(positions.length, 8, "all pixels except the transparent origin");
     });
   });
+
+  describe("matchAll", () => {
+    test("matches every pixel of the given color, including disconnected regions", () => {
+      // Two 2x2 colorA blobs separated by a full-height colorB column —
+      // matchAll (unlike floodFill) should return both, connectivity aside.
+      const buf = new PixelBuffer({ size: { x: 5, y: 2 }, maxSize: kTestMaxSize });
+      const all: Vec2[] = [];
+      for (let y = 0; y < 2; y++) {
+        for (let x = 0; x < 5; x++) {
+          all.push({ x, y });
+        }
+      }
+      buf.drawPixels(all, kColorB);
+      buf.drawPixels([{ x: 0, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 0 }, { x: 1, y: 1 }], kColorA);
+      buf.drawPixels([{ x: 3, y: 0 }, { x: 3, y: 1 }, { x: 4, y: 0 }, { x: 4, y: 1 }], kColorA);
+
+      const positions = Fill.matchAll(buf, kColorA);
+
+      assert.deepStrictEqual(
+        sortPositions(positions),
+        sortPositions([
+          { x: 0, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 0 }, { x: 1, y: 1 },
+          { x: 3, y: 0 }, { x: 3, y: 1 }, { x: 4, y: 0 }, { x: 4, y: 1 }
+        ])
+      );
+    });
+
+    test("returns [] when no pixel matches the given color", () => {
+      const buf = new PixelBuffer({ size: { x: 4, y: 4 }, defaultColor: kColorA, maxSize: kTestMaxSize });
+
+      assert.deepStrictEqual(Fill.matchAll(buf, kColorB), []);
+    });
+
+    test("returns each position exactly once", () => {
+      const buf = new PixelBuffer({ size: { x: 4, y: 4 }, defaultColor: kColorA, maxSize: kTestMaxSize });
+
+      const positions = Fill.matchAll(buf, kColorA);
+      const keys = positions.map((p) => `${p.x},${p.y}`);
+
+      assert.strictEqual(keys.length, new Set(keys).size);
+    });
+
+    test("scans the whole buffer, including pixel (0,0) (PixelBuffer's always-transparent origin)", () => {
+      const buf = new PixelBuffer({ size: { x: 3, y: 3 }, defaultColor: kColorA, maxSize: kTestMaxSize });
+
+      const positions = Fill.matchAll(buf, { ...kColorA, a: 0 });
+
+      assert.deepStrictEqual(positions, [{ x: 0, y: 0 }]);
+    });
+  });
 });

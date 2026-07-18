@@ -32,6 +32,14 @@ export type PixelBufferHookEvent =
       pixels: string;
     };
     originTimestamp?: number;
+  }
+  | {
+    action: "global-fill";
+    metadata: {
+      fromColor: RGBA;
+      toColor: RGBA;
+    };
+    originTimestamp?: number;
   };
 
 export type PixelBufferHookAction = PixelBufferHookEvent["action"];

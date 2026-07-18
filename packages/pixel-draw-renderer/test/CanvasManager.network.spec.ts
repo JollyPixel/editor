@@ -157,6 +157,36 @@ describe("CanvasManager — onBufferUpdated", () => {
     });
   });
 
+  describe("global-fill", () => {
+    test("emits a compact 'global-fill' event (fromColor/toColor, no positions)", () => {
+      const events: PixelBufferHookEvent[] = [];
+      const manager = new CanvasManager(container, {
+        texture: { maxSize: 32, size: { x: 16, y: 16 } },
+        zoom: { default: 4 },
+        defaultMode: "fill",
+        brush: { color: "#FF0000" },
+        onBufferUpdated: (event) => events.push(event)
+      });
+      manager.setFillGlobal(true);
+      const canvas = children[0];
+
+      // 16x16 texture, zoom 4 -> centered camera (68,68); client(100,100) -> texture (8,8).
+      canvas.dispatchEvent(new MouseEvent("mousedown", {
+        button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
+      }));
+
+      assert.strictEqual(events.length, 1);
+      const event = events[0];
+      assert.strictEqual(event.action, "global-fill");
+      if (event.action !== "global-fill") {
+        return;
+      }
+      assert.deepStrictEqual(event.metadata.fromColor, { r: 255, g: 255, b: 255, a: 255 });
+      assert.deepStrictEqual(event.metadata.toColor, { r: 255, g: 0, b: 0, a: 255 });
+      manager.destroy();
+    });
+  });
+
   describe("texture-replaced", () => {
     test("setTexture emits a 'texture-replaced' event with decodable base64 pixels", () => {
       const events: PixelBufferHookEvent[] = [];
@@ -237,6 +267,50 @@ describe("CanvasManager — applyRemoteCommand", () => {
 
     assert.strictEqual(events.length, 0);
     assert.deepStrictEqual(manager.getTextureSize(), { x: 2, y: 2 });
+    manager.destroy();
+  });
+
+  test("global-fill: recomputes matching pixels from fromColor and repaints them toColor", () => {
+    const events: PixelBufferHookEvent[] = [];
+    const manager = new CanvasManager(container, {
+      texture: { maxSize: 32, size: { x: 4, y: 4 } },
+      onBufferUpdated: (event) => events.push(event)
+    });
+
+    manager.applyRemoteCommand({
+      action: "global-fill",
+      metadata: {
+        fromColor: { r: 255, g: 255, b: 255, a: 255 },
+        toColor: { r: 9, g: 8, b: 7, a: 255 }
+      }
+    });
+
+    assert.strictEqual(events.length, 0);
+    // Whole 4x4 texture is uniformly white by default except (0,0), which
+    // PixelBuffer always initializes fully transparent.
+    const [r, g, b, a] = manager.getTexture().subarray(4, 8);
+    assert.deepStrictEqual([r, g, b, a], [9, 8, 7, 255]);
+    manager.destroy();
+  });
+
+  test("global-fill: still calls onDrawEnd so external consumers can sync", () => {
+    let drawEndCalls = 0;
+    const manager = new CanvasManager(container, {
+      texture: { maxSize: 32, size: { x: 4, y: 4 } },
+      onDrawEnd: () => {
+        drawEndCalls++;
+      }
+    });
+
+    manager.applyRemoteCommand({
+      action: "global-fill",
+      metadata: {
+        fromColor: { r: 255, g: 255, b: 255, a: 255 },
+        toColor: { r: 9, g: 8, b: 7, a: 255 }
+      }
+    });
+
+    assert.strictEqual(drawEndCalls, 1);
     manager.destroy();
   });
 
