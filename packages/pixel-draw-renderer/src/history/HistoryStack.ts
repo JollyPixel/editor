@@ -1,5 +1,9 @@
 // Import Internal Dependencies
-import type { RGBA, Vec2 } from "../types.ts";
+import type {
+  RGBA,
+  SelectionRect,
+  Vec2
+} from "../types.ts";
 import type { DefaultPixelBuffer } from "../buffer/types.ts";
 
 export interface HistoryStrokeEntry {
@@ -28,15 +32,37 @@ export interface HistoryTextureReplacedEntry {
   afterPixels: Uint8ClampedArray;
 }
 
+/**
+ * A Select-tool edit (move/delete/paste/rotate/flip) — positions cover the
+ * union of whatever footprint(s) were touched, with a per-position
+ * before/after color since these operations paint heterogeneous, multi-
+ * colored regions (unlike a stroke's single afterColor). oldRect/newRect
+ * are the selection's footprint before/after the edit (identical for
+ * delete/paste/flip, which don't move or resize the box), so the caller
+ * can resync the selection tool's own rect/snapshot state on undo/redo —
+ * this stack only ever replays raw buffer pixels.
+ */
+export interface HistorySelectEditEntry {
+  action: "select-edit";
+  timestamp: number;
+  positions: Vec2[];
+  beforeColors: RGBA[];
+  afterColors: RGBA[];
+  oldRect: SelectionRect;
+  newRect: SelectionRect;
+}
+
 export type HistoryEntry =
   | HistoryStrokeEntry
   | HistoryResizedEntry
-  | HistoryTextureReplacedEntry;
+  | HistoryTextureReplacedEntry
+  | HistorySelectEditEntry;
 
 export type HistoryEntryInput =
   | Omit<HistoryStrokeEntry, "timestamp">
   | Omit<HistoryResizedEntry, "timestamp">
-  | Omit<HistoryTextureReplacedEntry, "timestamp">;
+  | Omit<HistoryTextureReplacedEntry, "timestamp">
+  | Omit<HistorySelectEditEntry, "timestamp">;
 
 export interface HistoryStackOptions {
   /** @default 10 */
@@ -167,6 +193,13 @@ export class HistoryStack {
         this.#buffer.copyToMaster();
         break;
 
+      case "select-edit":
+        for (const group of groupPositionsByColor(entry.positions, entry.beforeColors)) {
+          this.#buffer.drawPixels(group.positions, group.color);
+        }
+        this.#buffer.copyToMaster();
+        break;
+
       case "resized":
       case "texture-replaced":
         this.#buffer.setPixels(entry.beforePixels, entry.beforeSize);
@@ -180,6 +213,13 @@ export class HistoryStack {
     switch (entry.action) {
       case "stroke":
         this.#buffer.drawPixels(entry.positions, entry.afterColor);
+        this.#buffer.copyToMaster();
+        break;
+
+      case "select-edit":
+        for (const group of groupPositionsByColor(entry.positions, entry.afterColors)) {
+          this.#buffer.drawPixels(group.positions, group.color);
+        }
         this.#buffer.copyToMaster();
         break;
 

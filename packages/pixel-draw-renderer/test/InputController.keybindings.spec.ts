@@ -68,7 +68,8 @@ function makeActions(): {
     onCursorMove: [], onMouseUp: [],
     onShiftDown: [], onShiftUp: [], onBlur: [],
     onCopy: [], onPaste: [], onDelete: [],
-    onUndo: [], onRedo: []
+    onUndo: [], onRedo: [],
+    onRotate: [], onFlipHorizontal: [], onFlipVertical: []
   };
 
   const actions: InputActions = {
@@ -90,7 +91,10 @@ function makeActions(): {
     onPaste: () => calls.onPaste.push([]),
     onDelete: () => calls.onDelete.push([]),
     onUndo: () => calls.onUndo.push([]),
-    onRedo: () => calls.onRedo.push([])
+    onRedo: () => calls.onRedo.push([]),
+    onRotate: () => calls.onRotate.push([]),
+    onFlipHorizontal: () => calls.onFlipHorizontal.push([]),
+    onFlipVertical: () => calls.onFlipVertical.push([])
   };
 
   return { actions, calls };
@@ -200,6 +204,35 @@ describe("InputController custom keybindings", () => {
     window.dispatchEvent(keydown("c", "KeyC", { ctrlKey: true }));
 
     assert.strictEqual(calls.onCopy.length, 1);
+    ctrl.destroy();
+  });
+
+  test("default 'r'/'h'/'v' keys fire onRotate/onFlipHorizontal/onFlipVertical", () => {
+    const { actions, calls } = makeActions();
+    const ctrl = new InputController({ canvas, viewport, actions });
+
+    hoverCanvas(canvas);
+    window.dispatchEvent(keydown("r", "KeyR"));
+    window.dispatchEvent(keydown("h", "KeyH"));
+    window.dispatchEvent(keydown("v", "KeyV"));
+
+    assert.strictEqual(calls.onRotate.length, 1);
+    assert.strictEqual(calls.onFlipHorizontal.length, 1);
+    assert.strictEqual(calls.onFlipVertical.length, 1);
+    ctrl.destroy();
+  });
+
+  test("constructor keybindings option overrides the default rotate combo", () => {
+    const { actions, calls } = makeActions();
+    const ctrl = new InputController({
+      canvas, viewport, actions, keybindings: { rotate: "alt+r" }
+    });
+
+    hoverCanvas(canvas);
+    window.dispatchEvent(keydown("r", "KeyR"));
+    window.dispatchEvent(keydown("r", "KeyR", { altKey: true }));
+
+    assert.strictEqual(calls.onRotate.length, 1);
     ctrl.destroy();
   });
 

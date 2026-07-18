@@ -141,6 +141,31 @@ describe("matchKeybindingAction", () => {
       null
     );
   });
+
+  test("rotate matches a bare 'r' keydown, no modifier", () => {
+    assert.strictEqual(
+      matchKeybindingAction(DEFAULT_KEYBINDINGS, keydown({ key: "r" })),
+      "rotate"
+    );
+  });
+
+  test("flipHorizontal matches a bare 'h' keydown, flipVertical matches a bare 'v' keydown", () => {
+    assert.strictEqual(
+      matchKeybindingAction(DEFAULT_KEYBINDINGS, keydown({ key: "h" })),
+      "flipHorizontal"
+    );
+    assert.strictEqual(
+      matchKeybindingAction(DEFAULT_KEYBINDINGS, keydown({ key: "v" })),
+      "flipVertical"
+    );
+  });
+
+  test("rotate/flip do not match when a modifier is additionally held (exact-match)", () => {
+    assert.strictEqual(
+      matchKeybindingAction(DEFAULT_KEYBINDINGS, keydown({ key: "r", ctrlKey: true })),
+      null
+    );
+  });
 });
 
 describe("mergeKeybindings", () => {

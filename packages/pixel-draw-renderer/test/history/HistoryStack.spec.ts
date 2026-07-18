@@ -123,6 +123,31 @@ describe("HistoryStack", () => {
     });
   });
 
+  describe("select-edit undo/redo", () => {
+    test("undo restores heterogeneous before-colors; redo re-applies heterogeneous after-colors", () => {
+      const buffer = makeBuffer();
+      const stack = new HistoryStack(buffer);
+
+      buffer.drawPixels([{ x: 0, y: 0 }], kRed);
+      buffer.drawPixels([{ x: 1, y: 0 }], kBlue);
+
+      stack.push({
+        action: "select-edit",
+        positions: [{ x: 0, y: 0 }, { x: 1, y: 0 }],
+        beforeColors: [kWhite, kWhite],
+        afterColors: [kRed, kBlue]
+      });
+
+      stack.undo();
+      assert.deepStrictEqual(buffer.samplePixel(0, 0), [255, 255, 255, 255]);
+      assert.deepStrictEqual(buffer.samplePixel(1, 0), [255, 255, 255, 255]);
+
+      stack.redo();
+      assert.deepStrictEqual(buffer.samplePixel(0, 0), [255, 0, 0, 255]);
+      assert.deepStrictEqual(buffer.samplePixel(1, 0), [0, 0, 255, 255]);
+    });
+  });
+
   describe("resized / texture-replaced undo/redo", () => {
     test("undo restores the previous size and pixel content", () => {
       const buffer = makeBuffer();

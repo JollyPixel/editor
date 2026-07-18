@@ -42,9 +42,10 @@ interface CanvasManagerOptions {
   brush?: BrushOptions;
   select?: {
     /**
-     * Color used to fill the pixels vacated by a Delete or the source side
-     * of a Move in "select" mode. Accepts a CSS color string or a colorjs.io
-     * `Color` instance.
+     * Color used to fill the pixels vacated by a Delete, the source side of
+     * a Move, or the footprint a Rotate/Flip no longer occupies, in
+     * "select" mode. Accepts a CSS color string or a colorjs.io `Color`
+     * instance.
      * @default "#FFFFFF"
      */
     eraseColor?: ColorInput;
@@ -112,7 +113,7 @@ getMode(): Mode
 setMode(mode: Mode): void
 ```
 
-Returns or sets the current interaction mode. `"paint"` routes left-click events to brush drawing (holding `Shift` arms a line tool); `"move"` routes them to panning; `"fill"` routes a left-click to a paint-bucket flood fill; `"select"` routes them to a rectangle-selection tool: drag to select or move, `Ctrl`/`Cmd`+`C`/`V` to copy/duplicate, `Delete` to erase. The line/fill/select tools are internal implementation details with no public class of their own.
+Returns or sets the current interaction mode. `"paint"` routes left-click events to brush drawing (holding `Shift` arms a line tool); `"move"` routes them to panning; `"fill"` routes a left-click to a paint-bucket flood fill; `"select"` routes them to a rectangle-selection tool: drag to select or move, `Ctrl`/`Cmd`+`C`/`V` to copy/duplicate, `Delete` to erase, `R` to rotate the selection 90° clockwise around its center (repeatable — press again for further rotation; no counterclockwise binding), `H`/`V` to flip the selection's content horizontally/vertically in place. The line/fill/select tools are internal implementation details with no public class of their own.
 
 Switching to `"move"` cancels an armed line. Switching away from `"select"` clears any active selection.
 
@@ -150,9 +151,21 @@ canRedo(): boolean
 
 Reverts/re-applies the most recent local edit (stroke, resize, or texture replace) via the internal [`HistoryStack`](./history/HistoryStack.md). `undo()`/`redo()` return `false` and do nothing when `history.enabled` wasn't passed at construction, or when the corresponding stack is empty; `canUndo()`/`canRedo()` report the same condition without mutating anything. Both bound to the configurable undo/redo keybindings by default, see [utils/keybindings.md](./utils/keybindings.md).
 
-A successful `undo()`/`redo()` redraws the canvas, calls `onDrawEnd`, fires `onHistoryChange`, and — for a history-enabled `CanvasManager` attached to a `PixelSyncSession` — emits the reverted/re-applied state through `onBufferUpdated` so peers converge to the same result (see [buffer/PixelBuffer.md](./buffer/PixelBuffer.md) for how the replayed event's `originTimestamp` keeps that fair under conflict resolution).
+A successful `undo()`/`redo()` redraws the canvas, calls `onDrawEnd`, fires `onHistoryChange`, and — for a history-enabled `CanvasManager` attached to a `PixelSyncSession` — emits the reverted/re-applied state through `onBufferUpdated` so peers converge to the same result (see [buffer/PixelBuffer.md](./buffer/PixelBuffer.md) for how the replayed event's `originTimestamp` keeps that fair under conflict resolution). The one exception: undoing/redoing a `"select"`-mode edit (move/delete/paste/rotate/flip) never emits `onBufferUpdated`, since those edits aren't networked in the first place (see `setMode`/select-mode note above) — undo/redo for them is local-only.
 
 A remote resize, texture-replace, or snapshot load clears the local history stack (its recorded positions/sizes no longer describe the buffer), so `canUndo()`/`canRedo()` drop to `false` after one.
+
+---
+
+### `rotateSelection` / `flipSelectionHorizontal` / `flipSelectionVertical`
+
+```ts
+rotateSelection(): boolean
+flipSelectionHorizontal(): boolean
+flipSelectionVertical(): boolean
+```
+
+Programmatic equivalents of the `R`/`H`/`V` select-mode keybindings (e.g. for a toolbar button) — same underlying commit path, so keyboard and button can't drift apart. Each returns `false` and does nothing without an active `"select"`-mode selection.
 
 ---
 

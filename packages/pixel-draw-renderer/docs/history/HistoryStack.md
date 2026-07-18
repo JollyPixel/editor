@@ -37,6 +37,13 @@ type HistoryEntry =
     beforePixels: Uint8ClampedArray;
     afterSize: Vec2;
     afterPixels: Uint8ClampedArray;
+  }
+  | {
+    action: "select-edit";
+    timestamp: number;
+    positions: Vec2[];
+    beforeColors: RGBA[];
+    afterColors: RGBA[];
   };
 
 /** Same as HistoryEntry, minus `timestamp` — stamped by `push()`. */
@@ -48,7 +55,7 @@ interface ColorGroup {
 }
 ```
 
-`limit` bounds the undo stack: pushing past it silently drops the oldest entry. A `"stroke"` entry's `beforeColors` is per-position (a stroke can cross pixels of different colors); `afterColor` is a single color since a stroke always paints one uniform color. `"resized"`/`"texture-replaced"` instead snapshot the whole buffer (`beforePixels`/`afterPixels`) since there's no cheaper diff to keep.
+`limit` bounds the undo stack: pushing past it silently drops the oldest entry. A `"stroke"` entry's `beforeColors` is per-position (a stroke can cross pixels of different colors); `afterColor` is a single color since a stroke always paints one uniform color. `"resized"`/`"texture-replaced"` instead snapshot the whole buffer (`beforePixels`/`afterPixels`) since there's no cheaper diff to keep. `"select-edit"` covers every `"select"`-mode edit (move/delete/paste/rotate/flip) with a single entry shape: unlike `"stroke"`, both `beforeColors` and `afterColors` are per-position, since these operations paint heterogeneous, multi-colored regions rather than one uniform color. `positions` is the union of whatever footprint(s) the edit touched (e.g. a Move's source and destination, or a Rotate's pre/post footprint when a non-square selection's dimensions swap) — see [CanvasManager.md](../CanvasManager.md#undo--redo--canundo--canredo) for the network-sync caveat specific to this entry type.
 
 ## Properties
 

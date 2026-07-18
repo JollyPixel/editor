@@ -18,14 +18,16 @@ type Keybinding =
   | `${ModifierToken}+${ModifierToken}+${NamedKey | (string & {})}`
   | `${ModifierToken}+${ModifierToken}+${ModifierToken}+${NamedKey | (string & {})}`;
 
-type KeybindingAction = "copy" | "paste" | "undo" | "redo" | "delete";
+type KeybindingAction =
+  | "copy" | "paste" | "undo" | "redo" | "delete"
+  | "rotate" | "flipHorizontal" | "flipVertical";
 
 type Keybindings = Record<KeybindingAction, Keybinding | Keybinding[]>;
 ```
 
-A `Keybinding` is a `+`-separated combo string, e.g. `"mod+z"` or `"mod+shift+z"`. `"mod"` matches either Ctrl or Cmd, so a binding behaves the same on every platform. The key segment is matched against the physical key (`KeyboardEvent.code`), not the character produced, so bindings work the same on every keyboard layout (e.g. AZERTY) — `"z"` always means the physical Z key. `NamedKey` lists the non-printable keys with a non-obvious `code` spelling, for editor autocomplete; any other string is still accepted.
+A `Keybinding` is a `+`-separated combo string, e.g. `"mod+z"` or `"mod+shift+z"`. `"mod"` matches either Ctrl or Cmd, so a binding behaves the same on every platform. The key segment is matched against the character produced (`KeyboardEvent.key`, case-insensitive), not physical key position, so `"z"` means "whatever key produces the Z character on the user's layout" — correct on AZERTY/QWERTZ without the DSL needing to know about layouts. `NamedKey` lists the non-printable keys for editor autocomplete; any other string is still accepted.
 
-Only `copy`, `paste`, `undo`, `redo`, and `delete` are configurable. Shift (used to arm/disarm the line tool in `"paint"` mode) is not.
+Only `copy`, `paste`, `undo`, `redo`, `delete`, `rotate`, `flipHorizontal`, and `flipVertical` are configurable. Shift (used to arm/disarm the line tool in `"paint"` mode) is not.
 
 ## Constants
 
@@ -35,11 +37,14 @@ const DEFAULT_KEYBINDINGS: Keybindings = {
   paste: "mod+v",
   undo: "mod+z",
   redo: ["mod+y", "mod+shift+z"],
-  delete: "Delete"
+  delete: "Delete",
+  rotate: "r",
+  flipHorizontal: "h",
+  flipVertical: "v"
 };
 ```
 
-The keybindings `CanvasManager` uses when `keybindings` isn't passed to its options, and the base a partial override is merged onto. `redo` has two default triggers; any action may be given an array of alternate bindings.
+The keybindings `CanvasManager` uses when `keybindings` isn't passed to its options, and the base a partial override is merged onto. `redo` has two default triggers; any action may be given an array of alternate bindings. `rotate`/`flipHorizontal`/`flipVertical` only have an effect in `"select"` mode with an active selection (rotate is clockwise-only — press it multiple times for other angles).
 
 Matching is exact on modifiers: `"mod+c"` does **not** also match Ctrl+Shift+C, and the default `"Delete"` binding (no modifier) does not also match Ctrl+Delete.
 

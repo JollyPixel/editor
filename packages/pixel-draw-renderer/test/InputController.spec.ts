@@ -91,6 +91,9 @@ function makeActions(options: {
   onDeleteReturns?: boolean;
   onUndoReturns?: boolean;
   onRedoReturns?: boolean;
+  onRotateReturns?: boolean;
+  onFlipHorizontalReturns?: boolean;
+  onFlipVerticalReturns?: boolean;
 } = {}): {
   actions: InputActions;
   calls: Record<string, unknown[][]>;
@@ -102,7 +105,8 @@ function makeActions(options: {
     onCursorMove: [], onMouseUp: [],
     onShiftDown: [], onShiftUp: [], onBlur: [],
     onCopy: [], onPaste: [], onDelete: [],
-    onUndo: [], onRedo: []
+    onUndo: [], onRedo: [],
+    onRotate: [], onFlipHorizontal: [], onFlipVertical: []
   };
 
   const actions: InputActions = {
@@ -148,6 +152,21 @@ function makeActions(options: {
       calls.onRedo.push([]);
 
       return options.onRedoReturns;
+    },
+    onRotate: () => {
+      calls.onRotate.push([]);
+
+      return options.onRotateReturns;
+    },
+    onFlipHorizontal: () => {
+      calls.onFlipHorizontal.push([]);
+
+      return options.onFlipHorizontalReturns;
+    },
+    onFlipVertical: () => {
+      calls.onFlipVertical.push([]);
+
+      return options.onFlipVerticalReturns;
     }
   };
 

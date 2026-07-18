@@ -81,6 +81,12 @@ export interface InputActions {
   onUndo(): boolean | void;
   /** A non-repeat Ctrl/Cmd+Y or Ctrl/Cmd+Shift+Z keydown that isn't targeting editable UI. */
   onRedo(): boolean | void;
+  /** A non-repeat "R" keydown that isn't targeting editable UI. */
+  onRotate(): boolean | void;
+  /** A non-repeat "H" keydown that isn't targeting editable UI. */
+  onFlipHorizontal(): boolean | void;
+  /** A non-repeat "V" keydown that isn't targeting editable UI. */
+  onFlipVertical(): boolean | void;
 }
 
 /**
@@ -137,9 +143,9 @@ export interface InputControllerOptions {
    */
   window?: WindowLike;
   /**
-   * Overrides for the copy/paste/undo/redo/delete key combos. Unspecified
-   * actions keep their default binding. Shift (line-tool arm/disarm) is not
-   * configurable.
+   * Overrides for the copy/paste/undo/redo/delete/rotate/flipHorizontal/
+   * flipVertical key combos. Unspecified actions keep their default
+   * binding. Shift (line-tool arm/disarm) is not configurable.
    */
   keybindings?: Partial<Keybindings>;
 }
@@ -479,6 +485,12 @@ export class InputController {
         return this.#actions.onRedo();
       case "delete":
         return this.#actions.onDelete();
+      case "rotate":
+        return this.#actions.onRotate();
+      case "flipHorizontal":
+        return this.#actions.onFlipHorizontal();
+      case "flipVertical":
+        return this.#actions.onFlipVertical();
       default:
         return undefined;
     }

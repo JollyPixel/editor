@@ -223,6 +223,26 @@ export class Select {
     };
   }
 
+  /**
+   * Forcibly resyncs rect/snapshot/state to `rect`/`snapshot`, becoming
+   * "selected" regardless of prior state. Used to re-align the selection
+   * box and cached content with the buffer after a history undo/redo
+   * replay, which mutates the buffer directly without going through this
+   * class's own move/rotate/flip methods.
+   */
+  restoreRect(
+    rect: SelectionRect,
+    snapshot: RGBA[]
+  ): void {
+    this.#state = "selected";
+    this.#rect = rect;
+    this.#snapshot = snapshot;
+    this.#createStart = null;
+    this.#moveOrigin = null;
+    this.#moveBaseRect = null;
+    this.#liveRect = null;
+  }
+
   /** Discards the current selection entirely. Does not clear the clipboard. */
   clear(): void {
     this.#state = "idle";
@@ -293,6 +313,65 @@ export class Select {
   }
 
   /**
+   * Rotates the active selection 90 degrees clockwise, pivoting on its
+   * center (width/height swap, center point held fixed). No-op (null)
+   * unless "selected". Returns the pre/post rects so the caller can repaint
+   * the old footprint away and the new one in.
+   */
+  rotate(): { oldRect: SelectionRect; newRect: SelectionRect; } | null {
+    if (
+      this.#state !== "selected" ||
+      !this.#rect ||
+      !this.#snapshot
+    ) {
+      return null;
+    }
+
+    const oldRect = this.#rect;
+    const newRect = Select.rotateRectCW(oldRect);
+    this.#snapshot = Select.rotateSnapshotCW(this.#snapshot, oldRect.width, oldRect.height);
+    this.#rect = newRect;
+
+    return { oldRect, newRect };
+  }
+
+  /**
+   * Mirrors the active selection's content left-right in place (rect is
+   * unchanged). No-op (null) unless "selected".
+   */
+  flipHorizontal(): SelectionRect | null {
+    if (
+      this.#state !== "selected" ||
+      !this.#rect ||
+      !this.#snapshot
+    ) {
+      return null;
+    }
+
+    this.#snapshot = Select.flipSnapshotHorizontal(this.#snapshot, this.#rect.width, this.#rect.height);
+
+    return this.#rect;
+  }
+
+  /**
+   * Mirrors the active selection's content top-bottom in place (rect is
+   * unchanged). No-op (null) unless "selected".
+   */
+  flipVertical(): SelectionRect | null {
+    if (
+      this.#state !== "selected" ||
+      !this.#rect ||
+      !this.#snapshot
+    ) {
+      return null;
+    }
+
+    this.#snapshot = Select.flipSnapshotVertical(this.#snapshot, this.#rect.width, this.#rect.height);
+
+    return this.#rect;
+  }
+
+  /**
    * Normalizes two drag corners into a positive-size rect, inclusive of both
    * corner pixels (so a==b yields a 1x1 rect).
    */
@@ -339,5 +418,90 @@ export class Select {
     }
 
     return pixels;
+  }
+
+  /**
+   * Rotates `rect` 90 degrees clockwise around its center: width/height
+   * swap, center point held fixed (rounded, since positions are integer
+   * pixels — unavoidable drift when width/height parities differ).
+   */
+  static rotateRectCW(
+    rect: SelectionRect
+  ): SelectionRect {
+    const centerX = rect.x + rect.width / 2;
+    const centerY = rect.y + rect.height / 2;
+    const width = rect.height;
+    const height = rect.width;
+
+    return {
+      x: Math.round(centerX - width / 2),
+      y: Math.round(centerY - height / 2),
+      width,
+      height
+    };
+  }
+
+  /**
+   * Rotates a row-major `width`x`height` pixel array 90 degrees clockwise,
+   * returning a new `height`x`width` array.
+   */
+  static rotateSnapshotCW(
+    snapshot: RGBA[],
+    width: number,
+    height: number
+  ): RGBA[] {
+    const newWidth = height;
+    const newHeight = width;
+    const result: RGBA[] = new Array(newWidth * newHeight);
+
+    for (let y = 0; y < newHeight; y++) {
+      for (let x = 0; x < newWidth; x++) {
+        const oldX = y;
+        const oldY = height - 1 - x;
+        result[(y * newWidth) + x] = snapshot[(oldY * width) + oldX];
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Mirrors a row-major `width`x`height` pixel array left-right, same
+   * dimensions.
+   */
+  static flipSnapshotHorizontal(
+    snapshot: RGBA[],
+    width: number,
+    height: number
+  ): RGBA[] {
+    const result: RGBA[] = new Array(width * height);
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        result[(y * width) + x] = snapshot[(y * width) + (width - 1 - x)];
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Mirrors a row-major `width`x`height` pixel array top-bottom, same
+   * dimensions.
+   */
+  static flipSnapshotVertical(
+    snapshot: RGBA[],
+    width: number,
+    height: number
+  ): RGBA[] {
+    const result: RGBA[] = new Array(width * height);
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        result[(y * width) + x] = snapshot[((height - 1 - y) * width) + x];
+      }
+    }
+
+    return result;
   }
 }

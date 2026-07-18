@@ -10,6 +10,21 @@ import type { RGBA } from "../../src/types.ts";
 // CONSTANTS
 const kTestMaxSize = 32;
 const kRed: RGBA = { r: 255, g: 0, b: 0, a: 255 };
+const kColorA: RGBA = { r: 10, g: 0, b: 0, a: 255 };
+const kColorB: RGBA = { r: 20, g: 0, b: 0, a: 255 };
+const kColorC: RGBA = { r: 30, g: 0, b: 0, a: 255 };
+const kColorD: RGBA = { r: 40, g: 0, b: 0, a: 255 };
+const kColorE: RGBA = { r: 50, g: 0, b: 0, a: 255 };
+const kColorF: RGBA = { r: 60, g: 0, b: 0, a: 255 };
+// 2 wide x 3 tall, row-major:
+// A B
+// C D
+// E F
+const k2x3Snapshot: RGBA[] = [kColorA, kColorB, kColorC, kColorD, kColorE, kColorF];
+const kColorG: RGBA = { r: 70, g: 0, b: 0, a: 255 };
+const kColorH: RGBA = { r: 80, g: 0, b: 0, a: 255 };
+// 2 wide x 4 tall (even x even — no center-pivot rounding drift), row-major.
+const k2x4Snapshot: RGBA[] = [kColorA, kColorB, kColorC, kColorD, kColorE, kColorF, kColorG, kColorH];
 
 describe("Select", () => {
   describe("normalizeRect (static)", () => {
@@ -52,6 +67,148 @@ describe("Select", () => {
       assert.deepStrictEqual(pixels[1], { r: 0, g: 0, b: 0, a: 0 });
       assert.deepStrictEqual(pixels[2], { r: 0, g: 0, b: 0, a: 0 });
       assert.deepStrictEqual(pixels[3], { r: 0, g: 0, b: 0, a: 0 });
+    });
+  });
+
+  describe("rotate/flip transforms (static)", () => {
+    test("rotateRectCW swaps width/height and pivots on the rect's center (rounded)", () => {
+      assert.deepStrictEqual(
+        Select.rotateRectCW({ x: 5, y: 5, width: 2, height: 3 }),
+        { x: 5, y: 6, width: 3, height: 2 }
+      );
+    });
+
+    test("rotateRectCW on a square rect keeps the same footprint", () => {
+      assert.deepStrictEqual(
+        Select.rotateRectCW({ x: 3, y: 4, width: 5, height: 5 }),
+        { x: 3, y: 4, width: 5, height: 5 }
+      );
+    });
+
+    test("rotateSnapshotCW rotates a non-square grid 90 degrees clockwise", () => {
+      // A B      E C A
+      // C D  ->  F D B
+      // E F
+      assert.deepStrictEqual(
+        Select.rotateSnapshotCW(k2x3Snapshot, 2, 3),
+        [kColorE, kColorC, kColorA, kColorF, kColorD, kColorB]
+      );
+    });
+
+    test("rotateSnapshotCW applied 4 times returns the original grid", () => {
+      let snapshot = k2x3Snapshot;
+      let width = 2;
+      let height = 3;
+
+      for (let i = 0; i < 4; i++) {
+        snapshot = Select.rotateSnapshotCW(snapshot, width, height);
+        [width, height] = [height, width];
+      }
+
+      assert.deepStrictEqual(snapshot, k2x3Snapshot);
+      assert.strictEqual(width, 2);
+      assert.strictEqual(height, 3);
+    });
+
+    test("flipSnapshotHorizontal mirrors each row left-right", () => {
+      assert.deepStrictEqual(
+        Select.flipSnapshotHorizontal(k2x3Snapshot, 2, 3),
+        [kColorB, kColorA, kColorD, kColorC, kColorF, kColorE]
+      );
+    });
+
+    test("flipSnapshotVertical mirrors rows top-bottom", () => {
+      assert.deepStrictEqual(
+        Select.flipSnapshotVertical(k2x3Snapshot, 2, 3),
+        [kColorE, kColorF, kColorC, kColorD, kColorA, kColorB]
+      );
+    });
+  });
+
+  describe("rotate / flip (instance)", () => {
+    function makeSelectedWith(
+      rect: { x: number; y: number; width: number; height: number; },
+      snapshot: RGBA[]
+    ): Select {
+      const tool = new Select();
+      tool.startCreate({ x: rect.x, y: rect.y });
+      tool.updateCreate({ x: rect.x + rect.width - 1, y: rect.y + rect.height - 1 });
+      tool.finishCreate(snapshot);
+
+      return tool;
+    }
+
+    test("rotate is a no-op (null) outside 'selected'", () => {
+      const tool = new Select();
+      assert.strictEqual(tool.rotate(), null);
+    });
+
+    test("rotate swaps rect dimensions (center-pivoted) and rotates the snapshot", () => {
+      const tool = makeSelectedWith({ x: 5, y: 5, width: 2, height: 3 }, k2x3Snapshot);
+
+      const result = tool.rotate();
+
+      assert.deepStrictEqual(result, {
+        oldRect: { x: 5, y: 5, width: 2, height: 3 },
+        newRect: { x: 5, y: 6, width: 3, height: 2 }
+      });
+      assert.deepStrictEqual(tool.rect, result!.newRect);
+      assert.deepStrictEqual(tool.snapshot, [kColorE, kColorC, kColorA, kColorF, kColorD, kColorB]);
+      assert.strictEqual(tool.state, "selected");
+    });
+
+    test("rotate is repeatable — two rotations (180deg) reverse the row-major content", () => {
+      // Even x even dims: center-pivot rounding never drifts, so the rect
+      // returns to its exact original position/size after 2 rotations.
+      const tool = makeSelectedWith({ x: 0, y: 0, width: 2, height: 4 }, k2x4Snapshot);
+
+      tool.rotate();
+      const second = tool.rotate();
+
+      assert.deepStrictEqual(second!.newRect, { x: 0, y: 0, width: 2, height: 4 });
+      assert.deepStrictEqual(tool.snapshot, [...k2x4Snapshot].reverse());
+    });
+
+    test("rotate applied 4 times returns to the exact original rect and content", () => {
+      const tool = makeSelectedWith({ x: 5, y: 5, width: 2, height: 4 }, k2x4Snapshot);
+
+      let last;
+      for (let i = 0; i < 4; i++) {
+        last = tool.rotate();
+      }
+
+      assert.deepStrictEqual(last!.newRect, { x: 5, y: 5, width: 2, height: 4 });
+      assert.deepStrictEqual(tool.snapshot, k2x4Snapshot);
+    });
+
+    test("flipHorizontal is a no-op (null) outside 'selected'", () => {
+      const tool = new Select();
+      assert.strictEqual(tool.flipHorizontal(), null);
+    });
+
+    test("flipHorizontal mirrors content left-right and leaves the rect unchanged", () => {
+      const tool = makeSelectedWith({ x: 1, y: 1, width: 2, height: 3 }, k2x3Snapshot);
+
+      const rect = tool.flipHorizontal();
+
+      assert.deepStrictEqual(rect, { x: 1, y: 1, width: 2, height: 3 });
+      assert.deepStrictEqual(tool.rect, rect);
+      assert.deepStrictEqual(tool.snapshot, [kColorB, kColorA, kColorD, kColorC, kColorF, kColorE]);
+    });
+
+    test("flipVertical is a no-op (null) outside 'selected'", () => {
+      const tool = new Select();
+      assert.strictEqual(tool.flipVertical(), null);
+    });
+
+    test("flipVertical mirrors content top-bottom and leaves the rect unchanged", () => {
+      const tool = makeSelectedWith({ x: 1, y: 1, width: 2, height: 3 }, k2x3Snapshot);
+
+      const rect = tool.flipVertical();
+
+      assert.deepStrictEqual(rect, { x: 1, y: 1, width: 2, height: 3 });
+      assert.deepStrictEqual(tool.rect, rect);
+      assert.deepStrictEqual(tool.snapshot, [kColorE, kColorF, kColorC, kColorD, kColorA, kColorB]);
     });
   });
 

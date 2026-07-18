@@ -24,7 +24,9 @@ export type Keybinding =
   | `${ModifierToken}+${ModifierToken}+${KeyToken}`
   | `${ModifierToken}+${ModifierToken}+${ModifierToken}+${KeyToken}`;
 
-export type KeybindingAction = "copy" | "paste" | "undo" | "redo" | "delete";
+export type KeybindingAction =
+  | "copy" | "paste" | "undo" | "redo" | "delete"
+  | "rotate" | "flipHorizontal" | "flipVertical";
 
 export type Keybindings = Record<KeybindingAction, Keybinding | Keybinding[]>;
 
@@ -36,14 +38,20 @@ export interface ParsedKeybinding {
 }
 
 // CONSTANTS
-const kKeybindingActions: KeybindingAction[] = ["copy", "paste", "undo", "redo", "delete"];
+const kKeybindingActions: KeybindingAction[] = [
+  "copy", "paste", "undo", "redo", "delete",
+  "rotate", "flipHorizontal", "flipVertical"
+];
 
 export const DEFAULT_KEYBINDINGS: Keybindings = {
   copy: "mod+c",
   paste: "mod+v",
   undo: "mod+z",
   redo: ["mod+y", "mod+shift+z"],
-  delete: "Delete"
+  delete: "Delete",
+  rotate: "r",
+  flipHorizontal: "h",
+  flipVertical: "v"
 };
 
 export class InvalidKeybindingError extends Error {

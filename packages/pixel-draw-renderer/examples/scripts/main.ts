@@ -44,7 +44,7 @@ async function initRuntime(): Promise<Runtime> {
       default: 16,
       min: 1,
       max: 32,
-      sensitivity: 0.6
+      sensitivity: 1
     },
     brush: { size: 1 },
     history: {
