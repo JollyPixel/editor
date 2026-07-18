@@ -23,6 +23,9 @@ import {
   Fill
 } from "./tools/Fill.ts";
 import {
+  FillController
+} from "./tools/FillController.ts";
+import {
   HistoryStack,
   type HistoryEntryInput
 } from "./history/HistoryStack.ts";
@@ -148,6 +151,7 @@ export class CanvasManager {
   #onHistoryChange?: (state: { canUndo: boolean; canRedo: boolean; }) => void;
   #mode: Mode;
   #brushController: BrushController;
+  #fillController: FillController;
   #lineController: LineController;
   #selectController: SelectController;
 
@@ -217,10 +221,13 @@ export class CanvasManager {
 
     const brushRef = this.brush;
     const viewportRef: DefaultViewport = this.#viewport;
+    const self = this;
 
     const brushAdapter: BrushHighlight = {
       get size() {
-        return brushRef.getSize();
+        // Fill mode's highlight is always a single pixel — a flood/global
+        // fill's seed is never brush-sized, regardless of `brush.getSize()`.
+        return self.#mode === "fill" ? 1 : brushRef.getSize();
       },
       get colorInline() {
         return brushRef.getColorInline();
@@ -241,16 +248,20 @@ export class CanvasManager {
       canvasBuffer: this.#canvasBuffer,
       renderer: this.#renderer,
       onCommit: (pixels, color, beforeColors) => {
-        this.#recordHistory({
-          action: "stroke",
-          positions: pixels,
-          beforeColors,
-          afterColor: color
-        });
-        this.#emitHook({
-          action: "stroke",
-          metadata: { color, positions: pixels }
-        });
+        this.#recordHistory({ action: "stroke", positions: pixels, beforeColors, afterColor: color });
+        this.#emitHook({ action: "stroke", metadata: { color, positions: pixels } });
+        this.#onDrawEnd?.();
+      }
+    });
+
+    this.#fillController = new FillController({
+      brush: this.brush,
+      canvasBuffer: this.#canvasBuffer,
+      onCommit: (pixels) => this.commitPixels(pixels),
+      onGlobalCommit: ({ positions, beforeColors, fromColor, toColor }) => {
+        this.#applyStroke(toColor, positions);
+        this.#recordHistory({ action: "stroke", positions, beforeColors, afterColor: toColor });
+        this.#emitHook({ action: "global-fill", metadata: { fromColor, toColor } });
         this.#onDrawEnd?.();
       }
     });
@@ -312,7 +323,7 @@ export class CanvasManager {
             return true;
 
           case "fill":
-            this.#fill(tx, ty);
+            this.#fillController.run(tx, ty);
 
             return false;
 
@@ -370,7 +381,7 @@ export class CanvasManager {
         this.#selectController.refreshOverlay();
       },
       onColorPick: (tx, ty) => {
-        if (this.#mode !== "paint") {
+        if (this.#mode !== "paint" && this.#mode !== "fill") {
           return;
         }
 
@@ -390,7 +401,7 @@ export class CanvasManager {
         if (cx < 0 || cy < 0) {
           this.#svgManager.brushHighlight.update(null, null);
         }
-        else if (this.#mode === "paint") {
+        else if (this.#mode === "paint" || this.#mode === "fill") {
           this.#svgManager.brushHighlight.update(cx, cy);
         }
       },
@@ -457,6 +468,22 @@ export class CanvasManager {
     if (mode !== "select") {
       this.#selectController.clear();
     }
+  }
+
+  /**
+   * Whether "fill" mode recolors every pixel matching the seed's color
+   * anywhere on the canvas ("global"), instead of only the seed's connected
+   * region ("contiguous", the default). Runtime-only — there is no
+   * constructor option — and persists across mode switches.
+   */
+  getFillGlobal(): boolean {
+    return this.#fillController.global;
+  }
+
+  setFillGlobal(
+    global: boolean
+  ): void {
+    this.#fillController.setGlobal(global);
   }
 
   getParentHtmlElement(): HTMLDivElement {
@@ -677,19 +704,8 @@ export class CanvasManager {
 
     this.#applyStroke(color, pixels);
 
-    this.#recordHistory({
-      action: "stroke",
-      positions: pixels,
-      beforeColors,
-      afterColor: color
-    });
-    this.#emitHook({
-      action: "stroke",
-      metadata: {
-        color,
-        positions: pixels
-      }
-    });
+    this.#recordHistory({ action: "stroke", positions: pixels, beforeColors, afterColor: color });
+    this.#emitHook({ action: "stroke", metadata: { color, positions: pixels } });
     this.#onDrawEnd?.();
   }
 
@@ -783,6 +799,13 @@ export class CanvasManager {
           );
           this.#clearHistory();
           break;
+
+        case "global-fill": {
+          const positions = Fill.matchAll(this.#canvasBuffer, event.metadata.fromColor);
+          this.#applyStroke(event.metadata.toColor, positions);
+          this.#onDrawEnd?.();
+          break;
+        }
       }
     }
     finally {
@@ -882,25 +905,5 @@ export class CanvasManager {
   #refreshAfterHistoryApply(): void {
     this.#viewport.setTextureSize(this.#canvasBuffer.getSize());
     this.#renderer.drawFrame();
-  }
-
-  /**
-   * Flood-fills the connected region of same-colored pixels reachable from
-   * (tx, ty) with the current brush color/opacity, committed as a single
-   * atomic edit. No-ops when the target position is out of bounds or already
-   * matches the fill color (see Fill.floodFill).
-   */
-  #fill(
-    tx: number,
-    ty: number
-  ): void {
-    const fillColor = toRGBA(this.brush.getColor());
-
-    const positions = Fill.floodFill(
-      this.#canvasBuffer,
-      { x: tx, y: ty },
-      fillColor
-    );
-    this.commitPixels(positions);
   }
 }

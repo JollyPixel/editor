@@ -63,4 +63,29 @@ export class Fill {
 
     return positions;
   }
+
+  /**
+   * Scans the whole buffer for every pixel whose RGBA exactly equals `color`,
+   * regardless of connectivity — the "global fill" counterpart to
+   * `floodFill`'s contiguous region. Returns an empty array when nothing
+   * matches.
+   */
+  static matchAll(
+    buffer: DefaultPixelBuffer,
+    color: RGBA
+  ): Vec2[] {
+    const size = buffer.getSize();
+    const positions: Vec2[] = [];
+
+    for (let y = 0; y < size.y; y++) {
+      for (let x = 0; x < size.x; x++) {
+        const [r, g, b, a] = buffer.samplePixel(x, y);
+        if (r === color.r && g === color.g && b === color.b && a === color.a) {
+          positions.push({ x, y });
+        }
+      }
+    }
+
+    return positions;
+  }
 }

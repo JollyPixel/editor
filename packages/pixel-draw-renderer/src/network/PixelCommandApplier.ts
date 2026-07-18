@@ -2,6 +2,7 @@
 import { toUint8Array } from "js-base64";
 
 // Import Internal Dependencies
+import { Fill } from "../tools/Fill.ts";
 import { PixelWorld } from "./PixelWorld.ts";
 import type { PixelNetworkCommand } from "./types.ts";
 
@@ -63,6 +64,18 @@ export function applyCommandToWorld(
         new Uint8ClampedArray(toUint8Array(cmd.metadata.pixels)),
         cmd.metadata.size
       );
+      break;
+    }
+
+    case "global-fill": {
+      const buffer = world.getBuffer(cmd.bufferId);
+      if (!buffer) {
+        break;
+      }
+
+      const positions = Fill.matchAll(buffer, cmd.metadata.fromColor);
+      buffer.drawPixels(positions, cmd.metadata.toColor);
+      buffer.copyToMaster();
       break;
     }
   }

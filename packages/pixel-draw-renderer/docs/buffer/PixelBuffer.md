@@ -126,6 +126,14 @@ export type PixelBufferHookEvent =
       pixels: string;
     };
     originTimestamp?: number;
+  }
+  | {
+    action: "global-fill";
+    metadata: {
+      fromColor: RGBA;
+      toColor: RGBA;
+    };
+    originTimestamp?: number;
   };
 
 type PixelBufferHookAction = PixelBufferHookEvent["action"];
@@ -133,3 +141,5 @@ type PixelBufferHookListener = (event: PixelBufferHookEvent) => void;
 ```
 
 This is the shape of `CanvasManager`'s `onBufferUpdated` local-mutation hook, and the vocabulary the [network layer](../network/index.md) is built on — every event is a valid network command payload once stamped with routing metadata. `"stroke"` covers a whole paint stroke or `commitPixels` call, not one event per brush stamp. `originTimestamp`, set only when `CanvasManager.undo()`/`redo()` replay an edit, carries that edit's original timestamp so the network [conflict resolver](../network/ConflictResolver.md) re-races the replay fairly instead of it always winning by virtue of being freshly stamped; it's stripped before the command is sent over the wire.
+
+`"global-fill"` (emitted by `CanvasManager`'s fill tool when `setFillGlobal(true)`) is deliberately compact — no position list — since it can touch a large fraction of the canvas. Every applier (a remote peer via `applyRemoteCommand`, or [`PixelCommandApplier`](../network/PixelCommandApplier.md) on the server) recomputes the affected pixels itself by scanning its own buffer for `fromColor` and repainting them `toColor`, which is only correct because peers apply commands in the same order against an already-synced buffer. It also bypasses per-pixel conflict resolution (unlike `"stroke"`) — see [network/ConflictResolver.md](../network/ConflictResolver.md). Undoing/redoing a global fill locally still replays as an ordinary full-position `"stroke"` event, since exact undo requires knowing exactly which pixels were touched.

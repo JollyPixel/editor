@@ -145,6 +145,65 @@ describe("applyCommandToWorld — texture-replaced", () => {
   });
 });
 
+describe("applyCommandToWorld — global-fill", () => {
+  test("recomputes matching pixels from fromColor and repaints them toColor", () => {
+    const world = makeWorld();
+    world.addBuffer("tex1", { size: { x: 3, y: 1 } });
+    const buffer = world.getBuffer("tex1")!;
+    buffer.drawPixels([{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }], { r: 1, g: 2, b: 3, a: 255 });
+
+    applyCommandToWorld(world, {
+      ...kHeader,
+      bufferId: "tex1",
+      action: "global-fill",
+      metadata: {
+        fromColor: { r: 1, g: 2, b: 3, a: 255 },
+        toColor: { r: 9, g: 8, b: 7, a: 255 }
+      }
+    });
+
+    assert.deepStrictEqual(buffer.samplePixel(0, 0), [9, 8, 7, 255]);
+    assert.deepStrictEqual(buffer.samplePixel(1, 0), [9, 8, 7, 255]);
+    assert.deepStrictEqual(buffer.samplePixel(2, 0), [9, 8, 7, 255]);
+  });
+
+  test("only touches pixels currently matching fromColor, leaving others untouched", () => {
+    const world = makeWorld();
+    world.addBuffer("tex1", { size: { x: 2, y: 1 } });
+    const buffer = world.getBuffer("tex1")!;
+    buffer.drawPixels([{ x: 0, y: 0 }], { r: 1, g: 2, b: 3, a: 255 });
+    buffer.drawPixels([{ x: 1, y: 0 }], { r: 9, g: 9, b: 9, a: 255 });
+
+    applyCommandToWorld(world, {
+      ...kHeader,
+      bufferId: "tex1",
+      action: "global-fill",
+      metadata: {
+        fromColor: { r: 1, g: 2, b: 3, a: 255 },
+        toColor: { r: 0, g: 0, b: 0, a: 255 }
+      }
+    });
+
+    assert.deepStrictEqual(buffer.samplePixel(0, 0), [0, 0, 0, 255]);
+    assert.deepStrictEqual(buffer.samplePixel(1, 0), [9, 9, 9, 255]);
+  });
+
+  test("is a no-op for an unknown buffer", () => {
+    const world = makeWorld();
+    assert.doesNotThrow(() => {
+      applyCommandToWorld(world, {
+        ...kHeader,
+        bufferId: "no-such",
+        action: "global-fill",
+        metadata: {
+          fromColor: { r: 0, g: 0, b: 0, a: 255 },
+          toColor: { r: 1, g: 1, b: 1, a: 255 }
+        }
+      });
+    });
+  });
+});
+
 describe("applyCommandToWorld — all actions compile", () => {
   test("exhaustive switch: no TypeScript error for any action", () => {
     const actions: PixelNetworkCommand["action"][] = [
@@ -152,8 +211,9 @@ describe("applyCommandToWorld — all actions compile", () => {
       "buffer-removed",
       "stroke",
       "resized",
-      "texture-replaced"
+      "texture-replaced",
+      "global-fill"
     ];
-    assert.strictEqual(actions.length, 5);
+    assert.strictEqual(actions.length, 6);
   });
 });
