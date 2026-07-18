@@ -479,11 +479,13 @@ describe("CanvasManager", () => {
     }
 
     function deleteKey(): KeyboardEvent {
-      return new KeyboardEvent("keydown", { key: "Delete", bubbles: true, cancelable: true });
+      return new KeyboardEvent("keydown", { key: "Delete", code: "Delete", bubbles: true, cancelable: true });
     }
 
     function ctrlKey(key: string): KeyboardEvent {
-      return new KeyboardEvent("keydown", { key, ctrlKey: true, bubbles: true, cancelable: true });
+      return new KeyboardEvent("keydown", {
+        key, code: `Key${key.toUpperCase()}`, ctrlKey: true, bubbles: true, cancelable: true
+      });
     }
 
     test("dragging out a rectangle then Delete replaces it with the erase color (default opaque white)", () => {

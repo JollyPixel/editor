@@ -1,4 +1,11 @@
 // Import Internal Dependencies
+import {
+  DEFAULT_KEYBINDINGS,
+  matchKeybindingAction,
+  mergeKeybindings,
+  type KeybindingAction,
+  type Keybindings
+} from "./utils/keybindings.ts";
 import type { Vec2 } from "./types.ts";
 import type { Viewport } from "./rendering/Viewport.ts";
 
@@ -129,6 +136,12 @@ export interface InputControllerOptions {
    * @default window
    */
   window?: WindowLike;
+  /**
+   * Overrides for the copy/paste/undo/redo/delete key combos. Unspecified
+   * actions keep their default binding. Shift (line-tool arm/disarm) is not
+   * configurable.
+   */
+  keybindings?: Partial<Keybindings>;
 }
 
 /**
@@ -159,6 +172,7 @@ export class InputController {
    * #handleKeyUp.
    */
   #isHovering: boolean = false;
+  #keybindings: Keybindings;
 
   #onMouseDown: (event: MouseEvent) => void;
   #onMouseEnter: (event: MouseEvent) => void;
@@ -187,6 +201,7 @@ export class InputController {
     this.#viewport = viewport;
     this.#actions = actions;
     this.#window = windowLike;
+    this.#keybindings = mergeKeybindings(DEFAULT_KEYBINDINGS, options.keybindings ?? {});
 
     this.#onMouseDown = (event) => this.#handleMouseDown(event);
     this.#onMouseEnter = () => this.#handleMouseEnter();
@@ -223,6 +238,22 @@ export class InputController {
    */
   stopDrawing(): void {
     this.#isDragging = false;
+  }
+
+  /**
+   * Merges a partial override onto the *current* keybindings (not the
+   * defaults) — only the actions present in `patch` change. Throws
+   * InvalidKeybindingError / KeybindingConflictError; on either, the
+   * previous keybindings remain in effect.
+   */
+  setKeybindings(
+    patch: Partial<Keybindings>
+  ): void {
+    this.#keybindings = mergeKeybindings(this.#keybindings, patch);
+  }
+
+  getKeybindings(): Readonly<Keybindings> {
+    return { ...this.#keybindings };
   }
 
   destroy(): void {
@@ -423,45 +454,33 @@ export class InputController {
       return;
     }
 
-    const isCtrlOrCmd = event.ctrlKey || event.metaKey;
-    const lowerKey = event.key.toLowerCase();
-    if (isCtrlOrCmd && lowerKey === "c") {
-      if (this.#actions.onCopy()) {
-        event.preventDefault();
-      }
-
+    const action = matchKeybindingAction(this.#keybindings, event);
+    if (action === null) {
       return;
     }
 
-    if (isCtrlOrCmd && lowerKey === "v") {
-      if (this.#actions.onPaste()) {
-        event.preventDefault();
-      }
-
-      return;
+    const handled = this.#dispatchKeybindingAction(action);
+    if (handled) {
+      event.preventDefault();
     }
+  }
 
-    if (isCtrlOrCmd && lowerKey === "z") {
-      const handled = event.shiftKey ? this.#actions.onRedo() : this.#actions.onUndo();
-      if (handled) {
-        event.preventDefault();
-      }
-
-      return;
-    }
-
-    if (isCtrlOrCmd && lowerKey === "y") {
-      if (this.#actions.onRedo()) {
-        event.preventDefault();
-      }
-
-      return;
-    }
-
-    if (event.key === "Delete") {
-      if (this.#actions.onDelete()) {
-        event.preventDefault();
-      }
+  #dispatchKeybindingAction(
+    action: KeybindingAction
+  ): boolean | void {
+    switch (action) {
+      case "copy":
+        return this.#actions.onCopy();
+      case "paste":
+        return this.#actions.onPaste();
+      case "undo":
+        return this.#actions.onUndo();
+      case "redo":
+        return this.#actions.onRedo();
+      case "delete":
+        return this.#actions.onDelete();
+      default:
+        return undefined;
     }
   }
 

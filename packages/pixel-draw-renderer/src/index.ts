@@ -36,4 +36,12 @@ export type {
   SelectionRect,
   Vec2
 } from "./types.ts";
+export {
+  DEFAULT_KEYBINDINGS,
+  InvalidKeybindingError,
+  KeybindingConflictError,
+  type Keybinding,
+  type KeybindingAction,
+  type Keybindings
+} from "./utils/keybindings.ts";
 export * from "./network/index.ts";
