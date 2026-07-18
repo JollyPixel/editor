@@ -27,12 +27,19 @@ npm run ci:version        # Apply version bumps
 npm run ci:publish        # Publish to npm
 ```
 
-## Stack and Testing
+## Tech Stack
 
-- **Runtime**: Node.js >= v24 built-in `node:test` with `node:assert` (strict mode)
-- **Coverage**: `c8` (HTML reporter), wired through each package's `test` script — use `test-only` to skip it
-- **DOM mocking**: `happy-dom`
-- **Test files**: `*.spec.ts` or `*.test.ts` always under `test/`
+- Node.js >= v24 built-in `node:test` with `node:assert` (strict mode)
+- Language: TypeScript
+- Package Manager: npm (always use npm)
+
+## Testing Guidelines
+
+- Write unit tests for all new functionality
+- Mock external dependencies when appropriate (Make use of `happy-dom` library for DOM mocking)
+- Ensure tests are deterministic and isolated
+- `*.spec.ts` or `*.test.ts` always under `test/`
+- For coverage make use of `c8` (HTML reporter), wired through each package's `test` script — use `test-only` to skip it
 
 ## Conventions
 
@@ -40,6 +47,8 @@ npm run ci:publish        # Publish to npm
 - `.npmrc` sets `ignore-scripts=true` and `package-lock=false`: a plain `npm install` won't run lifecycle scripts or write a lockfile. CI mirrors this (`npm install --ignore-scripts`).
 - Only one ESLint config exists, at the root (`eslint.config.mjs`), covering every workspace.
 - Publishing/versioning uses Changesets (`.changeset/`); add one via `npx changeset add` for user-facing changes.
+- Run linting for all new functionality
+- Update API (markdown) documentation
 
 ## Coding Standards
 
