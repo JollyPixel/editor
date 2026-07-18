@@ -24,11 +24,12 @@ export class ColorSwatch extends LitElement {
     button {
       width: 26px;
       height: 26px;
-      border: 2px solid var(--color-swatch-border, #666);
+      border: 2px solid var(--color-swatch-border, #556067);
       border-radius: var(--color-swatch-radius, 4px);
       cursor: pointer;
       padding: 0;
       background: #000000;
+      box-sizing: border-box;
     }
 
     button:focus-visible {
@@ -152,21 +153,53 @@ export class ColorSwatch extends LitElement {
     }
   }
 
+  /**
+   * Closes the picker if open. Lets a container holding multiple swatches
+   * (e.g. foreground/background) enforce only one open at a time.
+   */
+  close(): void {
+    this.#setOpen(false);
+  }
+
   #setOpen(
     open: boolean
   ): void {
     this.#open = open;
     const portal = this.#portal!;
     if (open) {
-      const rect = this.#buttonEl!.getBoundingClientRect();
-      portal.style.left = `${rect.left}px`;
-      portal.style.top = `${rect.bottom + 4}px`;
       portal.style.display = "";
+      this.#positionPortal();
+      // Lets a container close sibling swatches so only one picker is open at a time.
+      this.dispatchEvent(new CustomEvent("swatch-opened", { bubbles: true, composed: true }));
     }
     else {
       portal.style.display = "none";
     }
     this.requestUpdate();
+  }
+
+  /**
+   * Flips the popup above the button when there isn't enough room below (and
+   * clamps both axes to the viewport) instead of letting it run off-screen.
+   * getBoundingClientRect() forces the layout needed to measure the portal's
+   * real size right after `display` is unhidden.
+   */
+  #positionPortal(): void {
+    const portal = this.#portal!;
+    const margin = 4;
+    const buttonRect = this.#buttonEl!.getBoundingClientRect();
+    const portalRect = portal.getBoundingClientRect();
+
+    const fitsBelow = window.innerHeight - buttonRect.bottom >= portalRect.height + margin;
+    const top = fitsBelow
+      ? buttonRect.bottom + margin
+      : Math.max(margin, buttonRect.top - portalRect.height - margin);
+
+    const maxLeft = window.innerWidth - portalRect.width - margin;
+    const left = Math.min(buttonRect.left, Math.max(margin, maxLeft));
+
+    portal.style.top = `${top}px`;
+    portal.style.left = `${left}px`;
   }
 
   readonly #onSwatchClick = (

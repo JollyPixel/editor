@@ -81,6 +81,13 @@ export interface PixelArtCanvasOptions {
     colors: { odd: string; even: string; };
     squareSize: number;
   };
+  /**
+   * Fill color for the canvas area outside the texture bounds (the "void"
+   * around the drawing surface). Defaults to the parent element's own CSS
+   * `background-color` if it's set and non-transparent, else `#424242`.
+   * Can also be changed after construction via the `backgroundColor` setter.
+   */
+  backgroundColor?: ColorInput;
   brush?: BrushOptions;
   select?: {
     /**
@@ -169,9 +176,11 @@ export class PixelArtCanvas {
     });
 
     const computedBackgroundColor = getComputedStyle(parentHtmlElement).backgroundColor;
-    const backgroundColor = computedBackgroundColor && new Color(computedBackgroundColor).alpha > 0
-      ? computedBackgroundColor
-      : "#555555";
+    const backgroundColor = options.backgroundColor ?? (
+      computedBackgroundColor && new Color(computedBackgroundColor).alpha > 0
+        ? computedBackgroundColor
+        : "#424242"
+    );
 
     this.#renderer = new CanvasRenderer({
       viewport: this.#viewport,
@@ -301,6 +310,21 @@ export class PixelArtCanvas {
     global: boolean
   ) {
     this.#tools.fill.global = global;
+  }
+
+  /**
+   * Fill color for the canvas area outside the texture bounds. See the
+   * `backgroundColor` constructor option for the initial-value fallback
+   * chain; this setter always applies immediately, no `drawFrame()` needed.
+   */
+  get backgroundColor(): string {
+    return this.#renderer.backgroundColor;
+  }
+
+  set backgroundColor(
+    color: ColorInput
+  ) {
+    this.#renderer.backgroundColor = color;
   }
 
   get parentHtmlElement(): HTMLDivElement {

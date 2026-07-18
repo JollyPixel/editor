@@ -33,16 +33,36 @@ body {
 }
 
 .resize-handle.left {
-  width: 4px;
+  position: relative;
+  width: 8px;
   flex-shrink: 0;
   background: #1a2228;
   cursor: col-resize;
   transition: background 0.15s;
 }
 
+.resize-handle.left::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 22px;
+  transform: translate(-50%, -50%);
+  background-image: radial-gradient(circle, #6d8794 1.1px, transparent 1.3px);
+  background-size: 100% 7px;
+  background-repeat: repeat-y;
+  pointer-events: none;
+}
+
 .resize-handle.left:hover,
 html.handle-dragging.vertical .resize-handle.left {
   background: #4488ff;
+}
+
+.resize-handle.left:hover::after,
+html.handle-dragging.vertical .resize-handle.left::after {
+  background-image: radial-gradient(circle, #ffffff 1.1px, transparent 1.3px);
 }
 
 html.handle-dragging.vertical {

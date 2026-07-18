@@ -37,16 +37,22 @@ async function initRuntime(): Promise<Runtime> {
   const drawPanel = document.querySelector<PixelDrawPanel>("pixel-draw-panel")!;
   const canvasManager = await drawPanel.initialize({
     texture: {
-      size: { x: 16, y: 16 }
+      size: {
+        x: 16,
+        y: 16
+      }
     },
     defaultMode: "paint",
+    backgroundColor: "#263238",
     zoom: {
       default: 16,
       min: 1,
       max: 32,
       sensitivity: 1
     },
-    brush: { size: 1 },
+    brush: {
+      size: 1
+    },
     history: {
       enabled: true
     }

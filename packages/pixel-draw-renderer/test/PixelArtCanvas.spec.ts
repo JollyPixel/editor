@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { Window } from "happy-dom";
+import Color from "colorjs.io";
 
 // Import Internal Dependencies
 import { PixelArtCanvas } from "../src/PixelArtCanvas.ts";
@@ -101,6 +102,37 @@ describe("PixelArtCanvas", () => {
 
       manager.zoomSensitivity = 0.5;
       assert.strictEqual(manager.zoomSensitivity, 0.5);
+      manager.destroy();
+    });
+  });
+
+  describe("backgroundColor", () => {
+    test("defaults to the parent element's computed CSS background-color", () => {
+      const manager = new PixelArtCanvas(container, {
+        texture: { maxSize: 32, size: { x: 8, y: 8 } }
+      });
+
+      assert.strictEqual(manager.backgroundColor, new Color("#555555").toString());
+      manager.destroy();
+    });
+
+    test("backgroundColor option overrides the CSS-inferred default", () => {
+      const manager = new PixelArtCanvas(container, {
+        texture: { maxSize: 32, size: { x: 8, y: 8 } },
+        backgroundColor: "#ff0000"
+      });
+
+      assert.strictEqual(manager.backgroundColor, new Color("#ff0000").toString());
+      manager.destroy();
+    });
+
+    test("setting backgroundColor updates the returned value", () => {
+      const manager = new PixelArtCanvas(container, {
+        texture: { maxSize: 32, size: { x: 8, y: 8 } }
+      });
+
+      manager.backgroundColor = "#00ff00";
+      assert.strictEqual(manager.backgroundColor, new Color("#00ff00").toString());
       manager.destroy();
     });
   });

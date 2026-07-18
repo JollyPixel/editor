@@ -44,6 +44,12 @@ interface PixelArtCanvasOptions {
     colors: { odd: string; even: string; };
     squareSize: number;
   };
+  /**
+   * Fill color for the canvas area outside the texture bounds (the "void"
+   * around the drawing surface). Defaults to the parent element's own CSS
+   * `background-color` if it's set and non-transparent, else `#424242`.
+   */
+  backgroundColor?: ColorInput;
   brush?: BrushOptions;
   select?: {
     /**
@@ -89,7 +95,7 @@ interface PixelArtCanvasOptions {
 
 Undocumented defaults: `texture.size` is `{ x: 64, y: 32 }` (`y` falls back to `x` when only `x` is given), `texture.maxSize` is `2048`, `zoom.default` is `4`, `zoom.min`/`zoom.max` are `1`/`32`, `zoom.sensitivity` is `0.1`, `backgroundTransparency.squareSize` is `8`, `backgroundTransparency.colors` is `{ odd: "#999", even: "#666" }`.
 
-The background color used behind transparent texture pixels is read from `getComputedStyle(parentHtmlElement).backgroundColor` at construction time (falling back to `#555555` if unset or fully transparent); it isn't a configurable option.
+The `backgroundColor` option, if given, wins outright. Otherwise it's read from `getComputedStyle(parentHtmlElement).backgroundColor` at construction time, falling back to `#424242` if that's unset or fully transparent. See the `backgroundColor` property below to change it after construction.
 
 ## Properties
 
@@ -138,6 +144,17 @@ set fillGlobal(global: boolean)
 Reads or sets whether `"fill"` mode recolors every pixel matching the seed's color anywhere on the canvas (`true`) instead of only the seed's 4-directionally connected region (`false`, the default). Runtime-only — there is no constructor option — and the setting persists across mode switches, mirroring `brush`'s size/color.
 
 A global fill is still committed and undoable as a single atomic edit, but is broadcast over `onBufferUpdated`/the network layer as a compact `"global-fill"` event (`{ fromColor, toColor }`, no position list) rather than `"stroke"`, since it can touch a large fraction of the canvas — see [buffer/PixelBuffer.md](./buffer/PixelBuffer.md). Undoing/redoing a global fill falls back to a full-position `"stroke"` event.
+
+---
+
+### `backgroundColor`
+
+```ts
+get backgroundColor(): string
+set backgroundColor(color: ColorInput)
+```
+
+Reads or changes the fill color for the canvas area outside the texture bounds — see the `backgroundColor` constructor option above for how the initial value is resolved. The setter takes effect immediately (redraws the canvas itself); no `drawFrame()` call needed.
 
 ---
 
