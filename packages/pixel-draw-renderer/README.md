@@ -138,7 +138,7 @@ Open `http://localhost:5173` to see the interactive demo.
 
 - [`PixelArtCanvas`](./docs/PixelArtCanvas.md): top-level coordinator, the primary public API
 - [`Brush`](./docs/tools/Brush.md): brush size, color, opacity, and affected-pixel computation — read/write via `PixelArtCanvas.brush`
-- [`PixelBuffer`](./docs/buffer/PixelBuffer.md): headless RGBA pixel storage, usable server-side with no DOM (also documents the `onBufferUpdated`/`applyRemoteCommand` hook events)
+- [`PixelBuffer`](./docs/buffer/PixelBuffer.md): headless RGBA pixel storage, usable server-side with no DOM
 - [`HistoryStack`](./docs/history/HistoryStack.md): bounded undo/redo stack backing `PixelArtCanvas.undo()`/`redo()`
 - [`Keybindings`](./docs/utils/keybindings.md): `Keybindings`/`Keybinding` types, `DEFAULT_KEYBINDINGS`, and the errors thrown by `patchKeybindings()`
 - [`Network`](./docs/network/index.md): transport-agnostic, server-authoritative multiplayer for `PixelArtCanvas`

@@ -1,11 +1,8 @@
 // Import Internal Dependencies
 import type { Brush } from "../tools/Brush.ts";
-import type { BrushController } from "../tools/BrushController.ts";
+import type { ToolControllers } from "../tools/ToolControllers.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import type { CanvasRenderer } from "../rendering/CanvasRenderer.ts";
-import type { FillController } from "../tools/FillController.ts";
-import type { LineController } from "../tools/LineController.ts";
-import type { SelectController } from "../tools/SelectController.ts";
 import type { SvgManager } from "../rendering/SvgManager.ts";
 import type { Viewport } from "../rendering/Viewport.ts";
 import { rgbToHex } from "../utils/colors.ts";
@@ -19,12 +16,7 @@ export interface CreateInputActionsOptions {
   renderer: CanvasRenderer;
   svgManager: SvgManager;
   viewport: Viewport;
-  brushController: BrushController;
-  fillController: FillController;
-  lineController: LineController;
-  selectController: SelectController;
-  undo: () => boolean;
-  redo: () => boolean;
+  tools: ToolControllers;
   /** Cancels the active primary drag without calling `onPrimaryUp`. */
   stopDrawing: () => void;
 }
@@ -35,7 +27,7 @@ export interface CreateInputActionsOptions {
  */
 export function createInputActions(
   options: CreateInputActionsOptions
-): InputActions {
+): Omit<InputActions, "onUndo" | "onRedo"> {
   const {
     getMode,
     brush,
@@ -43,12 +35,7 @@ export function createInputActions(
     renderer,
     svgManager,
     viewport,
-    brushController,
-    fillController,
-    lineController,
-    selectController,
-    undo,
-    redo,
+    tools,
     stopDrawing
   } = options;
 
@@ -57,25 +44,25 @@ export function createInputActions(
       switch (getMode()) {
         case "paint":
           if (
-            lineController.isArmed &&
-            lineController.commitTrigger === "mousedown"
+            tools.line.isArmed &&
+            tools.line.commitTrigger === "mousedown"
           ) {
-            lineController.commit();
+            tools.line.commit();
 
             return false;
           }
 
-          brushController.startStroke(tx, ty);
+          tools.brush.startStroke(tx, ty);
 
           return true;
 
         case "fill":
-          fillController.run(tx, ty);
+          tools.fill.run(tx, ty);
 
           return false;
 
         case "select":
-          selectController.handleStart({ x: tx, y: ty });
+          tools.select.handleStart({ x: tx, y: ty });
 
           return true;
 
@@ -86,11 +73,11 @@ export function createInputActions(
     onPrimaryMove: (tx, ty) => {
       switch (getMode()) {
         case "paint":
-          brushController.continueStroke(tx, ty);
+          tools.brush.continueStroke(tx, ty);
           break;
 
         case "select":
-          selectController.handleMove({ x: tx, y: ty });
+          tools.select.handleMove({ x: tx, y: ty });
           break;
 
         default:
@@ -99,11 +86,11 @@ export function createInputActions(
     onPrimaryUp: () => {
       switch (getMode()) {
         case "paint":
-          brushController.endStroke();
+          tools.brush.endStroke();
           break;
 
         case "select":
-          selectController.handleEnd();
+          tools.select.handleEnd();
           break;
 
         default:
@@ -115,8 +102,8 @@ export function createInputActions(
     onPanMove: (dx, dy) => {
       viewport.applyPan(dx, dy);
       renderer.drawFrame();
-      lineController.refreshPreview();
-      selectController.refreshOverlay();
+      tools.line.refreshPreview();
+      tools.select.refreshOverlay();
     },
     onPanEnd: () => {
       // No-op. The viewport handles panning internally.
@@ -124,8 +111,8 @@ export function createInputActions(
     onZoom: (delta, cx, cy) => {
       viewport.applyZoom(delta, cx, cy);
       renderer.drawFrame();
-      lineController.refreshPreview();
-      selectController.refreshOverlay();
+      tools.line.refreshPreview();
+      tools.select.refreshOverlay();
     },
     onColorPick: (tx, ty) => {
       const mode = getMode();
@@ -158,48 +145,46 @@ export function createInputActions(
       }
     },
     onCursorMove: (pos) => {
-      lineController.updateCursor(pos);
+      tools.line.updateCursor(pos);
     },
     onMouseUp: () => {
       if (
-        lineController.isArmed &&
-        lineController.commitTrigger === "mouseup"
+        tools.line.isArmed &&
+        tools.line.commitTrigger === "mouseup"
       ) {
-        lineController.commit();
+        tools.line.commit();
       }
     },
     onShiftDown: () => {
-      lineController.shiftHeld = true;
+      tools.line.shiftHeld = true;
       if (getMode() !== "paint") {
         return;
       }
 
-      if (brushController.isActive) {
+      if (tools.brush.isActive) {
         // A held pointer requires committing the line on mouseup.
         stopDrawing();
-        brushController.endStroke();
-        lineController.arm("mouseup");
+        tools.brush.endStroke();
+        tools.line.arm("mouseup");
 
         return;
       }
 
-      lineController.arm("mousedown");
+      tools.line.arm("mousedown");
     },
     onShiftUp: () => {
-      lineController.shiftHeld = false;
-      lineController.cancelIfArmed();
+      tools.line.shiftHeld = false;
+      tools.line.cancelIfArmed();
     },
     onBlur: () => {
-      lineController.shiftHeld = false;
-      lineController.cancelIfArmed();
+      tools.line.shiftHeld = false;
+      tools.line.cancelIfArmed();
     },
-    onCopy: () => selectController.handleCopy(),
-    onPaste: () => selectController.handlePaste(),
-    onDelete: () => selectController.handleDelete(),
-    onUndo: () => undo(),
-    onRedo: () => redo(),
-    onRotate: () => selectController.handleRotate(),
-    onFlipHorizontal: () => selectController.handleFlipHorizontal(),
-    onFlipVertical: () => selectController.handleFlipVertical()
+    onCopy: () => tools.select.handleCopy(),
+    onPaste: () => tools.select.handlePaste(),
+    onDelete: () => tools.select.handleDelete(),
+    onRotate: () => tools.select.handleRotate(),
+    onFlipHorizontal: () => tools.select.handleFlipHorizontal(),
+    onFlipVertical: () => tools.select.handleFlipVertical()
   };
 }

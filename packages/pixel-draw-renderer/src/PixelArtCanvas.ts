@@ -8,8 +8,8 @@ import {
   type BrushOptions
 } from "./tools/Brush.ts";
 import {
-  BrushController
-} from "./tools/BrushController.ts";
+  ToolControllers
+} from "./tools/ToolControllers.ts";
 import {
   CanvasBuffer
 } from "./buffer/CanvasBuffer.ts";
@@ -17,16 +17,9 @@ import {
   CanvasRenderer
 } from "./rendering/CanvasRenderer.ts";
 import {
-  FillController
-} from "./tools/FillController.ts";
-import {
   HistoryController,
   type HistoryState
 } from "./history/HistoryController.ts";
-import {
-  buildRedoReplayEvents,
-  buildUndoReplayEvents
-} from "./history/replayEvents.ts";
 import {
   createInputActions
 } from "./input/createInputActions.ts";
@@ -35,18 +28,15 @@ import {
   type WindowLike
 } from "./input/InputController.ts";
 import {
-  LineController
-} from "./tools/LineController.ts";
-import {
-  SelectController
-} from "./tools/SelectController.ts";
-import {
   SvgManager
 } from "./rendering/SvgManager.ts";
 import {
   Viewport,
   type DefaultViewport
 } from "./rendering/Viewport.ts";
+import type {
+  ZoomOptions
+} from "./rendering/Zoom.ts";
 import {
   SyncController
 } from "./sync/SyncController.ts";
@@ -86,12 +76,7 @@ export interface PixelArtCanvasOptions {
     maxSize?: number;
     init?: HTMLCanvasElement;
   };
-  zoom?: {
-    default: number;
-    sensitivity?: number;
-    min?: number;
-    max?: number;
-  };
+  zoom?: ZoomOptions;
   backgroundTransparency?: {
     colors: { odd: string; even: string; };
     squareSize: number;
@@ -140,10 +125,7 @@ export class PixelArtCanvas {
   #onDrawEnd?: () => void;
   #history: HistoryController;
   #mode: Mode;
-  #brushController: BrushController;
-  #fillController: FillController;
-  #lineController: LineController;
-  #selectController: SelectController;
+  #tools: ToolControllers;
 
   readonly brush: Brush;
   readonly viewport: DefaultViewport;
@@ -239,41 +221,26 @@ export class PixelArtCanvas {
       brush: brushAdapter
     });
 
-    this.#brushController = new BrushController({
+    this.#tools = new ToolControllers({
       brush: this.brush,
       canvasBuffer: this.#canvasBuffer,
       renderer: this.#renderer,
-      onCommit: (pixels, color, beforeColors) => {
+      linePreview: this.#svgManager.linePreview,
+      selectionOverlay: this.#svgManager.selection,
+      eraseColor,
+      onStrokeCommit: (pixels, color, beforeColors) => {
         this.#sync.recordHistory({ action: "stroke", positions: pixels, beforeColors, afterColor: color });
         this.#sync.emitHook({ action: "stroke", metadata: { color, positions: pixels } });
         this.#onDrawEnd?.();
-      }
-    });
-
-    this.#fillController = new FillController({
-      brush: this.brush,
-      canvasBuffer: this.#canvasBuffer,
-      onCommit: (pixels) => this.commitPixels(pixels),
-      onGlobalCommit: ({ positions, beforeColors, fromColor, toColor }) => {
+      },
+      onCommitPixels: (pixels) => this.commitPixels(pixels),
+      onGlobalFillCommit: ({ positions, beforeColors, fromColor, toColor }) => {
         this.#sync.applyStroke(toColor, positions);
         this.#sync.recordHistory({ action: "stroke", positions, beforeColors, afterColor: toColor });
         this.#sync.emitHook({ action: "global-fill", metadata: { fromColor, toColor } });
         this.#onDrawEnd?.();
-      }
-    });
-
-    this.#lineController = new LineController({
-      brush: this.brush,
-      linePreview: this.#svgManager.linePreview,
-      onCommit: (pixels) => this.commitPixels(pixels)
-    });
-
-    this.#selectController = new SelectController({
-      canvasBuffer: this.#canvasBuffer,
-      renderer: this.#renderer,
-      selectionOverlay: this.#svgManager.selection,
-      eraseColor,
-      onCommit: (entry) => {
+      },
+      onSelectCommit: (entry) => {
         this.#sync.recordHistory({
           action: "select-edit",
           ...entry
@@ -286,21 +253,20 @@ export class PixelArtCanvas {
       canvas: this.#renderer.canvas(),
       viewport: this.#viewport,
       window: options.window,
-      actions: createInputActions({
-        getMode: () => this.#mode,
-        brush: this.brush,
-        canvasBuffer: this.#canvasBuffer,
-        renderer: this.#renderer,
-        svgManager: this.#svgManager,
-        viewport: this.#viewport,
-        brushController: this.#brushController,
-        fillController: this.#fillController,
-        lineController: this.#lineController,
-        selectController: this.#selectController,
-        undo: () => this.undo(),
-        redo: () => this.redo(),
-        stopDrawing: () => this.#input.stopDrawing()
-      }),
+      actions: {
+        ...createInputActions({
+          getMode: () => this.#mode,
+          brush: this.brush,
+          canvasBuffer: this.#canvasBuffer,
+          renderer: this.#renderer,
+          svgManager: this.#svgManager,
+          viewport: this.#viewport,
+          tools: this.#tools,
+          stopDrawing: () => this.#input.stopDrawing()
+        }),
+        onUndo: () => this.undo(),
+        onRedo: () => this.redo()
+      },
       keybindings: options.keybindings
     });
 
@@ -317,10 +283,10 @@ export class PixelArtCanvas {
     this.#mode = mode;
     if (mode === "move") {
       this.#svgManager.brushHighlight.hide();
-      this.#lineController.cancelIfArmed();
+      this.#tools.line.cancelIfArmed();
     }
     if (mode !== "select") {
-      this.#selectController.clear();
+      this.#tools.select.clear();
     }
   }
 
@@ -328,13 +294,13 @@ export class PixelArtCanvas {
     * Whether fill recolors all matching pixels instead of only the connected region.
    */
   get fillGlobal(): boolean {
-    return this.#fillController.global;
+    return this.#tools.fill.global;
   }
 
   set fillGlobal(
     global: boolean
   ) {
-    this.#fillController.global = global;
+    this.#tools.fill.global = global;
   }
 
   get parentHtmlElement(): HTMLDivElement {
@@ -400,17 +366,17 @@ export class PixelArtCanvas {
   }
 
   get zoom(): number {
-    return this.#viewport.zoom;
+    return this.#viewport.zoom.value;
   }
 
   get zoomSensitivity(): number {
-    return this.#viewport.zoomSensitivity;
+    return this.#viewport.zoom.sensitivity;
   }
 
   set zoomSensitivity(
     sensitivity: number
   ) {
-    this.#viewport.zoomSensitivity = sensitivity;
+    this.#viewport.zoom.sensitivity = sensitivity;
   }
 
   /**
@@ -430,21 +396,21 @@ export class PixelArtCanvas {
     * Rotates the active selection clockwise. Returns `false` without a selection.
    */
   rotateSelection(): boolean {
-    return this.#selectController.handleRotate();
+    return this.#tools.select.handleRotate();
   }
 
   /**
     * Mirrors the active selection horizontally. Returns `false` without a selection.
    */
   flipSelectionHorizontal(): boolean {
-    return this.#selectController.handleFlipHorizontal();
+    return this.#tools.select.handleFlipHorizontal();
   }
 
   /**
     * Mirrors the active selection vertically. Returns `false` without a selection.
    */
   flipSelectionVertical(): boolean {
-    return this.#selectController.handleFlipVertical();
+    return this.#tools.select.handleFlipVertical();
   }
 
   centerTexture(): void {
@@ -535,16 +501,28 @@ export class PixelArtCanvas {
     }
 
     const color = toRGBA(this.brush.colorAsString());
-    const beforeColors = this.#history.enabled ? this.#canvasBuffer.samplePixels(pixels) : [];
+    const beforeColors = this.#history.enabled ?
+      this.#canvasBuffer.samplePixels(pixels) :
+      [];
 
     this.#sync.applyStroke(color, pixels);
 
-    this.#sync.recordHistory({ action: "stroke", positions: pixels, beforeColors, afterColor: color });
-    this.#sync.emitHook({ action: "stroke", metadata: { color, positions: pixels } });
+    this.#sync.recordHistory({
+      action: "stroke",
+      positions: pixels,
+      beforeColors,
+      afterColor: color
+    });
+    this.#sync.emitHook({
+      action: "stroke",
+      metadata: { color, positions: pixels }
+    });
     this.#onDrawEnd?.();
   }
 
-  /** Reverts the latest local edit. Returns `false` when history is unavailable. */
+  /**
+   * Reverts the latest local edit. Returns `false` when history is unavailable.
+   **/
   undo(): boolean {
     const entry = this.#history.undo();
     if (!entry) {
@@ -553,9 +531,9 @@ export class PixelArtCanvas {
 
     this.#refreshAfterHistoryApply();
     if (entry.action === "select-edit") {
-      this.#selectController.syncSelectionAfterHistory(entry.oldRect);
+      this.#tools.select.syncSelectionAfterHistory(entry.oldRect);
     }
-    for (const event of buildUndoReplayEvents(entry)) {
+    for (const event of HistoryController.buildUndoReplayEvents(entry)) {
       this.#sync.emitHook(event);
     }
     this.#onDrawEnd?.();
@@ -563,7 +541,9 @@ export class PixelArtCanvas {
     return true;
   }
 
-  /** Re-applies the latest undone edit. Returns `false` when history is unavailable. */
+  /**
+   * Re-applies the latest undone edit. Returns `false` when history is unavailable.
+   **/
   redo(): boolean {
     const entry = this.#history.redo();
     if (!entry) {
@@ -572,9 +552,9 @@ export class PixelArtCanvas {
 
     this.#refreshAfterHistoryApply();
     if (entry.action === "select-edit") {
-      this.#selectController.syncSelectionAfterHistory(entry.newRect);
+      this.#tools.select.syncSelectionAfterHistory(entry.newRect);
     }
-    for (const event of buildRedoReplayEvents(entry)) {
+    for (const event of HistoryController.buildRedoReplayEvents(entry)) {
       this.#sync.emitHook(event);
     }
     this.#onDrawEnd?.();

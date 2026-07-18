@@ -89,8 +89,8 @@ export class CanvasRenderer {
 
     const { zoom, camera } = this.#viewport;
     const texPx = this.#canvasBuffer.size();
-    const texPixelW = texPx.x * zoom;
-    const texPixelH = texPx.y * zoom;
+    const texPixelW = texPx.x * zoom.value;
+    const texPixelH = texPx.y * zoom.value;
 
     this.#ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.#ctx.fillStyle = this.#backgroundColor;
@@ -104,7 +104,7 @@ export class CanvasRenderer {
     this.#ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.#ctx.drawImage(this.#bgCanvas, 0, 0);
 
-    this.#ctx.setTransform(zoom, 0, 0, zoom, camera.x, camera.y);
+    this.#ctx.setTransform(zoom.value, 0, 0, zoom.value, camera.x, camera.y);
     this.#ctx.drawImage(this.#canvasBuffer.canvas(), 0, 0);
     this.floatingSelection.draw(this.#ctx);
 

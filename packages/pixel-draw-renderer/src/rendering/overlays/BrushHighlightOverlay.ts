@@ -72,7 +72,7 @@ export class BrushHighlightOverlay {
       return;
     }
 
-    const zoom = this.#viewport.zoom;
+    const zoom = this.#viewport.zoom.value;
     const camera = this.#viewport.camera;
     const brushSize = this.#brush.size;
     const highlightBrushSize = brushSize * zoom;
