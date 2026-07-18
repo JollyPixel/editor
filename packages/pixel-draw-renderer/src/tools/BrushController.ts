@@ -78,13 +78,13 @@ export class BrushController {
     tx: number,
     ty: number
   ): void {
-    const rgba = toRGBA(this.#brush.getColor());
+    const rgba = toRGBA(this.#brush.colorAsString());
 
     // Materialized once (unlike the rest of this class, which prefers
     // re-calling the fresh generator over allocating) because the before-
     // color of each newly touched pixel must be sampled before drawPixels
     // overwrites it, then the same list is reused for the draw call.
-    const affected = [...this.#brush.getAffectedPixels(tx, ty)];
+    const affected = [...this.#brush.affectedPixels(tx, ty)];
     for (const pixel of affected) {
       const key = `${pixel.x},${pixel.y}`;
       if (!this.#strokeDirty.has(key)) {

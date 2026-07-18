@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { Window } from "happy-dom";
 
 // Import Internal Dependencies
-import { CanvasManager } from "../src/CanvasManager.ts";
+import { PixelArtCanvas } from "../src/PixelArtCanvas.ts";
 import { installCanvasMock, MockCanvasElement } from "./mocks.ts";
 
 // CONSTANTS
@@ -58,7 +58,7 @@ function moveTo(
   canvas.dispatchEvent(new MouseEvent("mousemove", { clientX, clientY, bubbles: true }));
 }
 
-describe("CanvasManager", () => {
+describe("PixelArtCanvas", () => {
   let container: HTMLDivElement;
 
   beforeEach(() => {
@@ -70,7 +70,7 @@ describe("CanvasManager", () => {
       let callCount = 0;
 
       assert.doesNotThrow(() => {
-        const manager = new CanvasManager(container, {
+        const manager = new PixelArtCanvas(container, {
           texture: { maxSize: 32, size: { x: 8, y: 8 } },
           onDrawEnd: () => {
             callCount++;
@@ -84,30 +84,30 @@ describe("CanvasManager", () => {
   });
 
   describe("zoom sensitivity", () => {
-    test("getZoomSensitivity returns the configured default", () => {
-      const manager = new CanvasManager(container, {
+    test("zoomSensitivity returns the configured default", () => {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } },
         zoom: { default: 4, sensitivity: 0.25 }
       });
 
-      assert.strictEqual(manager.getZoomSensitivity(), 0.25);
+      assert.strictEqual(manager.zoomSensitivity, 0.25);
       manager.destroy();
     });
 
-    test("setZoomSensitivity updates the value returned by getZoomSensitivity", () => {
-      const manager = new CanvasManager(container, {
+    test("setting zoomSensitivity updates the returned value", () => {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } }
       });
 
-      manager.setZoomSensitivity(0.5);
-      assert.strictEqual(manager.getZoomSensitivity(), 0.5);
+      manager.zoomSensitivity = 0.5;
+      assert.strictEqual(manager.zoomSensitivity, 0.5);
       manager.destroy();
     });
   });
 
   describe("destroy", () => {
     test("destroy() does not throw", () => {
-      const manager = new CanvasManager(container, {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } }
       });
 
@@ -115,7 +115,7 @@ describe("CanvasManager", () => {
     });
 
     test("destroy() can be called after already destroyed", () => {
-      const manager = new CanvasManager(container, {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } }
       });
       manager.destroy();
@@ -125,23 +125,25 @@ describe("CanvasManager", () => {
     });
   });
 
-  describe("setTexture", () => {
-    test("setTexture with HTMLCanvasElement updates texture size", () => {
-      const manager = new CanvasManager(container, {
+  describe("texture setter", () => {
+    test("setting texture from an HTMLCanvasElement updates texture size", () => {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 4, y: 4 } }
       });
       const canvas = kEmulatedBrowserWindow.document.createElement("canvas") as unknown as HTMLCanvasElement;
       canvas.width = 10;
       canvas.height = 5;
 
-      assert.doesNotThrow(() => manager.setTexture(canvas));
-      assert.deepStrictEqual(manager.getTextureSize(), { x: 10, y: 5 });
+      assert.doesNotThrow(() => {
+        manager.texture = canvas;
+      });
+      assert.deepStrictEqual(manager.textureSize, { x: 10, y: 5 });
 
       manager.destroy();
     });
 
-    test("setTexture with image-like source (no getContext) copies into new canvas", () => {
-      const manager = new CanvasManager(container, {
+    test("setting texture from an image-like source (no getContext) copies into new canvas", () => {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } }
       });
 
@@ -155,10 +157,10 @@ describe("CanvasManager", () => {
       };
 
       assert.doesNotThrow(() => {
-        manager.setTexture(mockImage as unknown as HTMLImageElement);
+        manager.texture = mockImage as unknown as HTMLImageElement;
       });
 
-      assert.deepStrictEqual(manager.getTextureSize(), { x: 16, y: 16 });
+      assert.deepStrictEqual(manager.textureSize, { x: 16, y: 16 });
       manager.destroy();
     });
   });
@@ -166,7 +168,7 @@ describe("CanvasManager", () => {
   describe("commitPixels", () => {
     test("commits pixels as a single 'stroke' hook event", () => {
       const events: unknown[] = [];
-      const manager = new CanvasManager(container, {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } },
         onBufferUpdated: (event) => events.push(event)
       });
@@ -182,7 +184,7 @@ describe("CanvasManager", () => {
 
     test("empty pixel list is a no-op", () => {
       const events: unknown[] = [];
-      const manager = new CanvasManager(container, {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } },
         onBufferUpdated: (event) => events.push(event)
       });
@@ -195,7 +197,7 @@ describe("CanvasManager", () => {
 
     test("calls onDrawEnd once after committing", () => {
       let callCount = 0;
-      const manager = new CanvasManager(container, {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } },
         onDrawEnd: () => {
           callCount++;
@@ -209,23 +211,23 @@ describe("CanvasManager", () => {
     });
   });
 
-  describe("getTextureCanvas", () => {
+  describe("textureCanvas", () => {
     test("returns an HTMLCanvasElement", () => {
-      const manager = new CanvasManager(container, {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } }
       });
-      const canvas = manager.getTextureCanvas();
+      const canvas = manager.textureCanvas();
       assert.ok(canvas instanceof MockCanvasElement, "should be a canvas-like element");
       manager.destroy();
     });
   });
 
-  describe("getCanvas", () => {
+  describe("canvas", () => {
     test("returns the interactive (input-listening) canvas element", () => {
-      const manager = new CanvasManager(container, {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } }
       });
-      const canvas = manager.getCanvas();
+      const canvas = manager.canvas();
       assert.ok(canvas instanceof MockCanvasElement, "should be a canvas-like element");
       manager.destroy();
     });
@@ -235,8 +237,8 @@ describe("CanvasManager", () => {
     // 200x200 container, 16x16 texture, zoom 4 -> centered camera (68, 68).
     // client(100,100) -> texture (8,8); client(128,100) -> texture (15,8).
 
-    function makeManager(onBufferUpdated: (event: unknown) => void): CanvasManager {
-      return new CanvasManager(container, {
+    function makeManager(onBufferUpdated: (event: unknown) => void): PixelArtCanvas {
+      return new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 16, y: 16 } },
         zoom: { default: 4 },
         brush: { size: 1, maxSize: 1 },
@@ -247,7 +249,7 @@ describe("CanvasManager", () => {
     test("Shift-arm-then-mousedown commits a brush-stamped line as a single stroke", () => {
       const events: unknown[] = [];
       const manager = makeManager((event) => events.push(event));
-      const canvas = manager.getCanvas();
+      const canvas = manager.canvas();
 
       moveTo(canvas, 100, 100);
       window.dispatchEvent(shiftKeyDown());
@@ -267,7 +269,7 @@ describe("CanvasManager", () => {
     test("Shift then mousedown with no movement paints a single pixel (zero-length fallback)", () => {
       const events: unknown[] = [];
       const manager = makeManager((event) => events.push(event));
-      const canvas = manager.getCanvas();
+      const canvas = manager.canvas();
 
       moveTo(canvas, 100, 100);
       window.dispatchEvent(shiftKeyDown());
@@ -284,7 +286,7 @@ describe("CanvasManager", () => {
     test("committing via mousedown does not chain into a freehand stroke while still held", () => {
       const events: unknown[] = [];
       const manager = makeManager((event) => events.push(event));
-      const canvas = manager.getCanvas();
+      const canvas = manager.canvas();
 
       moveTo(canvas, 100, 100);
       window.dispatchEvent(shiftKeyDown());
@@ -305,7 +307,7 @@ describe("CanvasManager", () => {
     test("holding Shift through a commit re-arms the line from the committed endpoint (chained polyline)", () => {
       const events: unknown[] = [];
       const manager = makeManager((event) => events.push(event));
-      const canvas = manager.getCanvas();
+      const canvas = manager.canvas();
 
       moveTo(canvas, 100, 100);
       window.dispatchEvent(shiftKeyDown());
@@ -334,7 +336,7 @@ describe("CanvasManager", () => {
     test("releasing Shift after a commit does not re-arm the line tool", () => {
       const events: unknown[] = [];
       const manager = makeManager((event) => events.push(event));
-      const canvas = manager.getCanvas();
+      const canvas = manager.canvas();
 
       moveTo(canvas, 100, 100);
       window.dispatchEvent(shiftKeyDown());
@@ -362,7 +364,7 @@ describe("CanvasManager", () => {
     test("Shift pressed mid-stroke commits the in-progress stroke, then commits the line on mouseup", () => {
       const events: unknown[] = [];
       const manager = makeManager((event) => events.push(event));
-      const canvas = manager.getCanvas();
+      const canvas = manager.canvas();
 
       canvas.dispatchEvent(new MouseEvent("mousedown", {
         button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
@@ -384,7 +386,7 @@ describe("CanvasManager", () => {
     test("Shift keyup without mousedown cancels the line — nothing committed", () => {
       const events: unknown[] = [];
       const manager = makeManager((event) => events.push(event));
-      const canvas = manager.getCanvas();
+      const canvas = manager.canvas();
 
       moveTo(canvas, 100, 100);
       window.dispatchEvent(shiftKeyDown());
@@ -394,14 +396,14 @@ describe("CanvasManager", () => {
       manager.destroy();
     });
 
-    test("setMode away from 'paint' cancels an armed line", () => {
+    test("setting mode away from 'paint' cancels an armed line", () => {
       const events: unknown[] = [];
       const manager = makeManager((event) => events.push(event));
-      const canvas = manager.getCanvas();
+      const canvas = manager.canvas();
 
       moveTo(canvas, 100, 100);
       window.dispatchEvent(shiftKeyDown());
-      manager.setMode("move");
+      manager.mode = "move";
 
       canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
@@ -412,7 +414,7 @@ describe("CanvasManager", () => {
     test("window blur cancels an armed line", () => {
       const events: unknown[] = [];
       const manager = makeManager((event) => events.push(event));
-      const canvas = manager.getCanvas();
+      const canvas = manager.canvas();
 
       moveTo(canvas, 100, 100);
       window.dispatchEvent(shiftKeyDown());
@@ -430,7 +432,7 @@ describe("CanvasManager", () => {
     test("OS key-repeat keydown does not reset the armed startPosition", () => {
       const events: unknown[] = [];
       const manager = makeManager((event) => events.push(event));
-      const canvas = manager.getCanvas();
+      const canvas = manager.canvas();
 
       moveTo(canvas, 100, 100);
       window.dispatchEvent(shiftKeyDown());
@@ -453,14 +455,14 @@ describe("CanvasManager", () => {
 
     test("click flood-fills the connected region as a single stroke", () => {
       const events: unknown[] = [];
-      const manager = new CanvasManager(container, {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 16, y: 16 } },
         zoom: { default: 4 },
         defaultMode: "fill",
         brush: { color: "#FF0000" },
         onBufferUpdated: (event) => events.push(event)
       });
-      const canvas = manager.getCanvas();
+      const canvas = manager.canvas();
 
       canvas.dispatchEvent(new MouseEvent("mousedown", {
         button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
@@ -477,13 +479,13 @@ describe("CanvasManager", () => {
 
     test("click does not arm a freehand drag stroke afterwards", () => {
       const events: unknown[] = [];
-      const manager = new CanvasManager(container, {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 16, y: 16 } },
         zoom: { default: 4 },
         defaultMode: "fill",
         onBufferUpdated: (event) => events.push(event)
       });
-      const canvas = manager.getCanvas();
+      const canvas = manager.canvas();
 
       canvas.dispatchEvent(new MouseEvent("mousedown", {
         button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
@@ -499,14 +501,14 @@ describe("CanvasManager", () => {
 
     test("clicking a region already matching the brush color is a no-op", () => {
       const events: unknown[] = [];
-      const manager = new CanvasManager(container, {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 16, y: 16 } },
         zoom: { default: 4 },
         defaultMode: "fill",
         brush: { color: "#FFFFFF" },
         onBufferUpdated: (event) => events.push(event)
       });
-      const canvas = manager.getCanvas();
+      const canvas = manager.canvas();
 
       canvas.dispatchEvent(new MouseEvent("mousedown", {
         button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
@@ -518,14 +520,14 @@ describe("CanvasManager", () => {
 
     test("a second click after the first fill is also a no-op (region now matches fill color)", () => {
       const events: unknown[] = [];
-      const manager = new CanvasManager(container, {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 16, y: 16 } },
         zoom: { default: 4 },
         defaultMode: "fill",
         brush: { color: "#FF0000" },
         onBufferUpdated: (event) => events.push(event)
       });
-      const canvas = manager.getCanvas();
+      const canvas = manager.canvas();
 
       function click(): void {
         canvas.dispatchEvent(new MouseEvent("mousedown", {

@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import { clamp } from "../utils/math.ts";
+import { ViewportTexture } from "./ViewportTexture.ts";
 import type { Vec2 } from "../types.ts";
 
 export interface DefaultViewport {
@@ -50,7 +51,7 @@ export class Viewport implements DefaultViewport {
   #zoomMin: number;
   #zoomMax: number;
   #zoomSensitivity: number;
-  #textureSize: Vec2;
+  #texture: ViewportTexture;
   #canvasWidth: number = 0;
   #canvasHeight: number = 0;
 
@@ -76,7 +77,10 @@ export class Viewport implements DefaultViewport {
 
     this.#zoom = clamp(zoom, this.#zoomMin, this.#zoomMax);
     this.#zoomSensitivity = zoomSensitivity;
-    this.#textureSize = structuredClone(textureSize);
+    this.#texture = new ViewportTexture({
+      size: textureSize,
+      onResize: () => this.clampCamera()
+    });
   }
 
   get zoom(): number {
@@ -87,9 +91,9 @@ export class Viewport implements DefaultViewport {
     return this.#zoomSensitivity;
   }
 
-  setZoomSensitivity(
+  set zoomSensitivity(
     sensitivity: number
-  ): void {
+  ) {
     this.#zoomSensitivity = Math.max(0.01, sensitivity);
   }
 
@@ -97,11 +101,8 @@ export class Viewport implements DefaultViewport {
     return this.#camera;
   }
 
-  getTexturePixelSize(): Vec2 {
-    return {
-      x: this.#textureSize.x * this.#zoom,
-      y: this.#textureSize.y * this.#zoom
-    };
+  get texture(): ViewportTexture {
+    return this.#texture;
   }
 
   updateCanvasSize(
@@ -112,14 +113,8 @@ export class Viewport implements DefaultViewport {
     this.#canvasHeight = height;
   }
 
-  setTextureSize(
-    size: Vec2
-  ): void {
-    this.#textureSize = structuredClone(size);
-  }
-
   centerTexture(): void {
-    const texPx = this.getTexturePixelSize();
+    const texPx = this.#texture.pixelSize(this.#zoom);
     this.#camera.x = this.#canvasWidth / 2 - texPx.x / 2;
     this.#camera.y = this.#canvasHeight / 2 - texPx.y / 2;
 
@@ -127,7 +122,7 @@ export class Viewport implements DefaultViewport {
   }
 
   clampCamera(): void {
-    const texPx = this.getTexturePixelSize();
+    const texPx = this.#texture.pixelSize(this.#zoom);
     const margin = this.#zoom;
 
     const minX = -texPx.x + margin;
@@ -191,7 +186,7 @@ export class Viewport implements DefaultViewport {
     this.clampCamera();
   }
 
-  getMouseCanvasPosition(
+  mouseCanvasPosition(
     mx: number,
     my: number,
     bounds: DOMRect
@@ -202,7 +197,7 @@ export class Viewport implements DefaultViewport {
     };
   }
 
-  getMouseTexturePosition(
+  mouseTexturePosition(
     mx: number,
     my: number,
     parameters: { bounds: DOMRect; limit?: boolean; }
@@ -212,13 +207,8 @@ export class Viewport implements DefaultViewport {
     const x = Math.floor((mx - bounds.left - this.#camera.x) / this.#zoom);
     const y = Math.floor((my - bounds.top - this.#camera.y) / this.#zoom);
 
-    if (limit) {
-      if (
-        x < 0 || x >= this.#textureSize.x ||
-        y < 0 || y >= this.#textureSize.y
-      ) {
-        return null;
-      }
+    if (limit && !this.#texture.contains({ x, y })) {
+      return null;
     }
 
     return { x, y };

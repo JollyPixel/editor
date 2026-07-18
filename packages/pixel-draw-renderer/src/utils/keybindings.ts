@@ -134,7 +134,7 @@ function eventMatchesKeybinding(
 
 /**
  * Merges a partial override onto a base keybinding set (constructor options
- * and `setKeybindings()` both go through this), validating every binding
+ * and `patchKeybindings()` both go through this), validating every binding
  * (throws InvalidKeybindingError) and rejecting the result if two different
  * actions now resolve to the same combo (throws KeybindingConflictError).
  */

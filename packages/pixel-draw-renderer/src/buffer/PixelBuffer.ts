@@ -85,14 +85,14 @@ export class PixelBuffer implements DefaultPixelBuffer {
     }
   }
 
-  getSize(): Vec2 {
+  size(): Vec2 {
     return {
       x: this.#width,
       y: this.#height
     };
   }
 
-  setSize(
+  resize(
     size: Vec2
   ): void {
     const next = new Uint8ClampedArray(size.x * size.y * 4);
@@ -117,14 +117,14 @@ export class PixelBuffer implements DefaultPixelBuffer {
   /**
    * Returns the live working buffer (not a copy).
    */
-  getPixels(): Uint8ClampedArray {
+  pixels(): Uint8ClampedArray {
     return this.#working;
   }
 
   /**
    * Replaces the pixel data wholesale, resizing the buffer to match.
    */
-  setPixels(
+  replacePixels(
     pixels: Uint8ClampedArray,
     size: Vec2
   ): void {
@@ -216,5 +216,27 @@ export class PixelBuffer implements DefaultPixelBuffer {
       this.#working[index + 2] ?? 0,
       this.#working[index + 3] ?? 0
     ];
+  }
+
+  /**
+   * Batched samplePixel: out-of-bounds positions resolve to fully
+   * transparent rather than reading a neighboring row (samplePixel only
+   * guards negative indices, not x/y past width/height).
+   */
+  samplePixels(
+    positions: Vec2[]
+  ): RGBA[] {
+    return positions.map(({ x, y }) => {
+      if (
+        x < 0 || x >= this.#width ||
+        y < 0 || y >= this.#height
+      ) {
+        return { r: 0, g: 0, b: 0, a: 0 };
+      }
+
+      const [r, g, b, a] = this.samplePixel(x, y);
+
+      return { r, g, b, a };
+    });
   }
 }

@@ -25,10 +25,23 @@ describe("Viewport", () => {
     });
   });
 
-  describe("getTexturePixelSize", () => {
-    test("returns textureSize * zoom", () => {
+  describe("texture", () => {
+    test("pixelSize returns textureSize * zoom", () => {
       const vp = new Viewport({ textureSize: { x: 10, y: 20 }, zoom: 3 });
-      assert.deepStrictEqual(vp.getTexturePixelSize(), { x: 30, y: 60 });
+      assert.deepStrictEqual(vp.texture.pixelSize(vp.zoom), { x: 30, y: 60 });
+    });
+
+    test("resize clamps the camera when it goes out of bounds (wired via onResize)", () => {
+      const vp = new Viewport({ textureSize: { x: 8, y: 8 }, zoom: 4 });
+      vp.updateCanvasSize(100, 100);
+      vp.centerTexture();
+      // Shrinking the texture moves minX/maxX inward; camera must be re-clamped.
+      vp.texture.resize({ x: 1, y: 1 });
+      const texPx = vp.texture.pixelSize(vp.zoom);
+      const margin = vp.zoom;
+      const minX = -texPx.x + margin;
+      const maxX = 100 - margin;
+      assert.ok(vp.camera.x >= minX && vp.camera.x <= maxX);
     });
   });
 
@@ -105,17 +118,17 @@ describe("Viewport", () => {
     });
   });
 
-  describe("getMouseCanvasPosition", () => {
+  describe("mouseCanvasPosition", () => {
     test("subtracts bounding rect left/top", () => {
       const vp = new Viewport({ textureSize: { x: 16, y: 16 } });
       const bounds = { left: 50, top: 30 } as DOMRect;
-      const pos = vp.getMouseCanvasPosition(150, 80, bounds);
+      const pos = vp.mouseCanvasPosition(150, 80, bounds);
       assert.strictEqual(pos.x, 100);
       assert.strictEqual(pos.y, 50);
     });
   });
 
-  describe("getMouseTexturePosition", () => {
+  describe("mouseTexturePosition", () => {
     test("converts canvas coords to texture coords", () => {
       const vp = new Viewport({ textureSize: { x: 16, y: 16 }, zoom: 4 });
       vp.updateCanvasSize(200, 200);
@@ -123,7 +136,7 @@ describe("Viewport", () => {
       // camera should be (200/2 - 16*4/2) = 100-32 = 68
       const bounds = { left: 0, top: 0, right: 200, bottom: 200 } as DOMRect;
       // mouseX=68 → canvasX=68 → textureX = (68 - camera.x) / zoom = 0
-      const pos = vp.getMouseTexturePosition(vp.camera.x, vp.camera.y, { bounds });
+      const pos = vp.mouseTexturePosition(vp.camera.x, vp.camera.y, { bounds });
       assert.ok(pos !== null);
       assert.strictEqual(pos!.x, 0);
       assert.strictEqual(pos!.y, 0);
@@ -133,7 +146,7 @@ describe("Viewport", () => {
       const vp = new Viewport({ textureSize: { x: 16, y: 16 }, zoom: 4 });
       vp.updateCanvasSize(200, 200);
       const bounds = { left: 0, top: 0 } as DOMRect;
-      const pos = vp.getMouseTexturePosition(-1000, -1000, { bounds, limit: true });
+      const pos = vp.mouseTexturePosition(-1000, -1000, { bounds, limit: true });
       assert.strictEqual(pos, null);
     });
 
@@ -141,35 +154,27 @@ describe("Viewport", () => {
       const vp = new Viewport({ textureSize: { x: 16, y: 16 }, zoom: 4 });
       vp.updateCanvasSize(200, 200);
       const bounds = { left: 0, top: 0 } as DOMRect;
-      const pos = vp.getMouseTexturePosition(-1000, -1000, { bounds, limit: false });
+      const pos = vp.mouseTexturePosition(-1000, -1000, { bounds, limit: false });
       assert.ok(pos !== null);
     });
   });
 
-  describe("setZoomSensitivity", () => {
+  describe("zoomSensitivity setter", () => {
     test("updates zoomSensitivity", () => {
       const vp = new Viewport({ textureSize: { x: 16, y: 16 } });
-      vp.setZoomSensitivity(0.5);
+      vp.zoomSensitivity = 0.5;
       assert.strictEqual(vp.zoomSensitivity, 0.5);
     });
 
     test("clamps to a minimum of 0.01", () => {
       const vp = new Viewport({ textureSize: { x: 16, y: 16 } });
-      vp.setZoomSensitivity(-5);
+      vp.zoomSensitivity = -5;
       assert.strictEqual(vp.zoomSensitivity, 0.01);
     });
 
     test("defaults to 0.1", () => {
       const vp = new Viewport({ textureSize: { x: 16, y: 16 } });
       assert.strictEqual(vp.zoomSensitivity, 0.1);
-    });
-  });
-
-  describe("setTextureSize", () => {
-    test("updates texture pixel size after change", () => {
-      const vp = new Viewport({ textureSize: { x: 8, y: 8 }, zoom: 2 });
-      vp.setTextureSize({ x: 16, y: 32 });
-      assert.deepStrictEqual(vp.getTexturePixelSize(), { x: 32, y: 64 });
     });
   });
 });

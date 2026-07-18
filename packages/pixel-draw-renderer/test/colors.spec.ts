@@ -6,11 +6,11 @@ import assert from "node:assert/strict";
 import Color from "colorjs.io";
 
 // Import Internal Dependencies
-import { getColorAsRGBA, rgbToHex, toRGBA } from "../src/utils/colors.ts";
+import { colorAsRGBA, rgbToHex, toRGBA } from "../src/utils/colors.ts";
 
-describe("getColorAsRGBA", () => {
+describe("colorAsRGBA", () => {
   test("returns opaque white for #ffffff", () => {
-    const [r, g, b, a] = getColorAsRGBA("#ffffff");
+    const [r, g, b, a] = colorAsRGBA("#ffffff");
     assert.strictEqual(r, 255);
     assert.strictEqual(g, 255);
     assert.strictEqual(b, 255);
@@ -18,7 +18,7 @@ describe("getColorAsRGBA", () => {
   });
 
   test("returns opaque black for #000000", () => {
-    const [r, g, b, a] = getColorAsRGBA("#000000");
+    const [r, g, b, a] = colorAsRGBA("#000000");
     assert.strictEqual(r, 0);
     assert.strictEqual(g, 0);
     assert.strictEqual(b, 0);
@@ -26,47 +26,47 @@ describe("getColorAsRGBA", () => {
   });
 
   test("returns four components", () => {
-    const result = getColorAsRGBA("#ff0000");
+    const result = colorAsRGBA("#ff0000");
     assert.strictEqual(result.length, 4);
   });
 
   test("reads explicit alpha from #rrggbbaa", () => {
-    const result = getColorAsRGBA("#ff000080");
+    const result = colorAsRGBA("#ff000080");
     assert.deepStrictEqual(result, [255, 0, 0, 128]);
   });
 
   test("expands #rgb shorthand", () => {
-    const result = getColorAsRGBA("#0f0");
+    const result = colorAsRGBA("#0f0");
     assert.deepStrictEqual(result, [0, 255, 0, 255]);
   });
 
   test("expands #rgba shorthand", () => {
-    const result = getColorAsRGBA("#0f08");
+    const result = colorAsRGBA("#0f08");
     assert.deepStrictEqual(result, [0, 255, 0, 136]);
   });
 
   test("accepts a named CSS color", () => {
-    const result = getColorAsRGBA("red");
+    const result = colorAsRGBA("red");
     assert.deepStrictEqual(result, [255, 0, 0, 255]);
   });
 
   test("accepts an rgb() string", () => {
-    const result = getColorAsRGBA("rgb(0, 0, 255)");
+    const result = colorAsRGBA("rgb(0, 0, 255)");
     assert.deepStrictEqual(result, [0, 0, 255, 255]);
   });
 
   test("accepts an hsl() string with alpha", () => {
-    const result = getColorAsRGBA("hsl(0 100% 50% / 0.5)");
+    const result = colorAsRGBA("hsl(0 100% 50% / 0.5)");
     assert.deepStrictEqual(result, [255, 0, 0, 128]);
   });
 
   test("accepts a colorjs.io Color instance", () => {
-    const result = getColorAsRGBA(new Color("#00ff00"));
+    const result = colorAsRGBA(new Color("#00ff00"));
     assert.deepStrictEqual(result, [0, 255, 0, 255]);
   });
 
   test("clamps out-of-gamut rgb() components", () => {
-    const result = getColorAsRGBA("rgb(300, -10, 128)");
+    const result = colorAsRGBA("rgb(300, -10, 128)");
     assert.deepStrictEqual(result, [255, 0, 128, 255]);
   });
 });
@@ -99,8 +99,8 @@ describe("rgbToHex", () => {
     assert.strictEqual(rgbToHex(0, 15, 5), "#000f05");
   });
 
-  test("round-trips with getColorAsRGBA", () => {
-    const [r, g, b] = getColorAsRGBA("#1a2b3c");
+  test("round-trips with colorAsRGBA", () => {
+    const [r, g, b] = colorAsRGBA("#1a2b3c");
     assert.strictEqual(rgbToHex(r, g, b), "#1a2b3c");
   });
 });

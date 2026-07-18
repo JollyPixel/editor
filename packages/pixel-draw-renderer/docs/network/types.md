@@ -6,8 +6,8 @@ Wire-format types for the [network sync layer](./index.md).
 
 ```ts
 /**
- * Buffer create/destroy events. A CanvasManager has no concept of a bufferId
- * so these are never emitted from a CanvasManager's onBufferUpdated hook —
+ * Buffer create/destroy events. A PixelArtCanvas has no concept of a bufferId
+ * so these are never emitted from a PixelArtCanvas's onBufferUpdated hook —
  * they are constructed directly by PixelSyncSession.createBuffer/removeBuffer.
  */
 type PixelLifecycleEvent =

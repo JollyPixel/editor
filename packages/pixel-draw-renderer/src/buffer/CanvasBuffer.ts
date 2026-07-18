@@ -42,37 +42,37 @@ export class CanvasBuffer implements DefaultPixelBuffer {
   }
 
   #syncCanvasFromBuffer(): void {
-    const size = this.#buffer.getSize();
+    const size = this.#buffer.size();
     const imageData = this.#workingCtx.createImageData(
       size.x,
       size.y
     );
 
     imageData.data.set(
-      this.#buffer.getPixels()
+      this.#buffer.pixels()
     );
     this.#workingCtx.putImageData(imageData, 0, 0);
   }
 
-  getCanvas(): HTMLCanvasElement {
+  canvas(): HTMLCanvasElement {
     return this.#workingCanvas;
   }
 
-  getSize(): Vec2 {
-    return this.#buffer.getSize();
+  size(): Vec2 {
+    return this.#buffer.size();
   }
 
-  setSize(
+  resize(
     size: Vec2
   ): void {
-    this.#buffer.setSize(size);
+    this.#buffer.resize(size);
     this.#workingCanvas.width = size.x;
     this.#workingCanvas.height = size.y;
 
     this.#syncCanvasFromBuffer();
   }
 
-  setTexture(
+  loadTexture(
     source: HTMLCanvasElement | HTMLImageElement
   ): void {
     let canvas: HTMLCanvasElement;
@@ -106,18 +106,18 @@ export class CanvasBuffer implements DefaultPixelBuffer {
       size.x,
       size.y
     );
-    this.#buffer.setPixels(imageData.data, size);
+    this.#buffer.replacePixels(imageData.data, size);
   }
 
   /**
    * Replaces the pixel data in place, keeping #workingCanvas's identity —
    * used to apply raw bytes (e.g. a network snapshot) with no source canvas/image.
    */
-  setPixels(
+  replacePixels(
     pixels: Uint8ClampedArray,
     size: Vec2
   ): void {
-    this.#buffer.setPixels(pixels, size);
+    this.#buffer.replacePixels(pixels, size);
     this.#workingCanvas.width = size.x;
     this.#workingCanvas.height = size.y;
 
@@ -125,11 +125,11 @@ export class CanvasBuffer implements DefaultPixelBuffer {
   }
 
   /**
-   * Returns a copy — unlike PixelBuffer.getPixels, mutating it won't affect the canvas.
+   * Returns a copy — unlike PixelBuffer.pixels, mutating it won't affect the canvas.
    */
-  getPixels(): Uint8ClampedArray {
+  pixels(): Uint8ClampedArray {
     return Uint8ClampedArray.from(
-      this.#buffer.getPixels()
+      this.#buffer.pixels()
     );
   }
 
@@ -144,7 +144,7 @@ export class CanvasBuffer implements DefaultPixelBuffer {
     const positions = Array.isArray(pixels) ? pixels : [...pixels];
     this.#buffer.drawPixels(positions, color);
 
-    const size = this.#buffer.getSize();
+    const size = this.#buffer.size();
     let minX = Infinity;
     let minY = Infinity;
     let maxX = -Infinity;
@@ -199,7 +199,7 @@ export class CanvasBuffer implements DefaultPixelBuffer {
   ): void {
     this.#buffer.drawRegion(rect, pixels);
 
-    const size = this.#buffer.getSize();
+    const size = this.#buffer.size();
     const minX = Math.max(0, rect.x);
     const minY = Math.max(0, rect.y);
     const maxX = Math.min(size.x, rect.x + rect.width);
@@ -239,5 +239,11 @@ export class CanvasBuffer implements DefaultPixelBuffer {
     y: number
   ): [number, number, number, number] {
     return this.#buffer.samplePixel(x, y);
+  }
+
+  samplePixels(
+    positions: Vec2[]
+  ): RGBA[] {
+    return this.#buffer.samplePixels(positions);
   }
 }

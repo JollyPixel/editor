@@ -3,8 +3,8 @@ import type { PixelBufferHookEvent } from "../buffer/hooks.ts";
 import type { Vec2 } from "../types.ts";
 
 /**
- * Buffer create/destroy events. A CanvasManager has no concept of a bufferId
- * so these are never emitted from a CanvasManager's onBufferUpdated hook —
+ * Buffer create/destroy events. A PixelArtCanvas has no concept of a bufferId
+ * so these are never emitted from a PixelArtCanvas's onBufferUpdated hook —
  * they are constructed directly by PixelSyncSession.createBuffer/removeBuffer.
  */
 export type PixelLifecycleEvent =

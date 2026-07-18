@@ -27,7 +27,7 @@ describe("applyCommandToWorld — buffer-added", () => {
       metadata: { size: { x: 4, y: 4 } }
     });
     assert.ok(world.getBuffer("tex1"));
-    assert.deepStrictEqual(world.getBuffer("tex1")!.getSize(), { x: 4, y: 4 });
+    assert.deepStrictEqual(world.getBuffer("tex1")!.size(), { x: 4, y: 4 });
   });
 
   test("applies initial pixels when provided", () => {
@@ -53,7 +53,7 @@ describe("applyCommandToWorld — buffer-added", () => {
         metadata: { size: { x: 8, y: 8 } }
       });
     });
-    assert.deepStrictEqual(world.getBuffer("tex1")!.getSize(), { x: 4, y: 4 });
+    assert.deepStrictEqual(world.getBuffer("tex1")!.size(), { x: 4, y: 4 });
   });
 });
 
@@ -124,7 +124,7 @@ describe("applyCommandToWorld — resized", () => {
       action: "resized",
       metadata: { size: { x: 8, y: 2 } }
     });
-    assert.deepStrictEqual(world.getBuffer("tex1")!.getSize(), { x: 8, y: 2 });
+    assert.deepStrictEqual(world.getBuffer("tex1")!.size(), { x: 8, y: 2 });
   });
 });
 
@@ -140,7 +140,7 @@ describe("applyCommandToWorld — texture-replaced", () => {
       metadata: { size: { x: 2, y: 2 }, pixels: fromUint8Array(new Uint8Array(pixels)) }
     });
     const buffer = world.getBuffer("tex1")!;
-    assert.deepStrictEqual(buffer.getSize(), { x: 2, y: 2 });
+    assert.deepStrictEqual(buffer.size(), { x: 2, y: 2 });
     assert.deepStrictEqual(buffer.samplePixel(0, 0), [9, 9, 9, 9]);
   });
 });

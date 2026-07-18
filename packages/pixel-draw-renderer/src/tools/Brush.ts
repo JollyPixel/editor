@@ -2,7 +2,7 @@
 import Color from "colorjs.io";
 
 // Import Internal Dependencies
-import { getColorAsRGBA } from "../utils/colors.ts";
+import { colorAsRGBA } from "../utils/colors.ts";
 import { clamp } from "../utils/math.ts";
 import type {
   ColorInput,
@@ -41,8 +41,8 @@ export interface BrushOptions {
 }
 
 /**
- * Manages brush properties such as color, size, and opacity for a pixel drawing application.
- * Provides methods to set and get these properties, as well as to calculate the affected pixels based on the brush size.
+ * Manages brush properties such as color, size, and opacity for a pixel drawing application,
+ * and computes the affected pixels for a stroke centered at a given position.
  */
 export class Brush {
   #color: Color;
@@ -64,15 +64,19 @@ export class Brush {
       }
     } = options;
 
-    this.setColor(color);
+    this.color(color);
     this.#maxSize = Math.max(maxSize, 1);
-    this.setSize(size);
+    this.size = size;
 
-    this.setColorInline(highlight.colorInline ?? "#FFF");
-    this.setColorOutline(highlight.colorOutline ?? "#000");
+    this.colorInline = highlight.colorInline ?? "#FFF";
+    this.colorOutline = highlight.colorOutline ?? "#000";
   }
 
-  setColor(
+  /**
+   * Sets the brush color from a CSS color string or a colorjs.io `Color`
+   * instance. If `opacity` is omitted, the current opacity is preserved.
+   */
+  color(
     color: ColorInput,
     opacity?: number
   ): void {
@@ -83,7 +87,12 @@ export class Brush {
     this.#color.alpha = alpha;
   }
 
-  getColor(
+  /**
+   * Returns the current brush color as a string. Defaults to
+   * `rgba(r, g, b, a)`; pass `"hex"` for a 6-digit hex string (opacity is
+   * not represented in hex output).
+   */
+  colorAsString(
     format: "rgba" | "hex" = "rgba"
   ): string {
     if (format === "hex") {
@@ -94,54 +103,54 @@ export class Brush {
       });
     }
 
-    const [r, g, b] = getColorAsRGBA(this.#color);
+    const [r, g, b] = colorAsRGBA(this.#color);
 
     return `rgba(${r}, ${g}, ${b}, ${this.#color.alpha})`;
   }
 
-  setOpacity(
+  set opacity(
     opacity: number
-  ): void {
+  ) {
     this.#color.alpha = clamp(opacity, 0, 1);
   }
 
-  getOpacity(): number {
+  get opacity(): number {
     return this.#color.alpha;
   }
 
-  setColorInline(
+  set colorInline(
     color: ColorInput
-  ): void {
-    const [r, g, b] = getColorAsRGBA(color);
+  ) {
+    const [r, g, b] = colorAsRGBA(color);
     this.#colorInline = `rgb(${r}, ${g}, ${b})`;
   }
 
-  getColorInline(): string {
+  get colorInline(): string {
     return this.#colorInline;
   }
 
-  setColorOutline(
+  set colorOutline(
     color: ColorInput
-  ): void {
-    const [r, g, b] = getColorAsRGBA(color);
+  ) {
+    const [r, g, b] = colorAsRGBA(color);
     this.#colorOutline = `rgb(${r}, ${g}, ${b})`;
   }
 
-  getColorOutline(): string {
+  get colorOutline(): string {
     return this.#colorOutline;
   }
 
-  setSize(
+  set size(
     size: number
-  ): void {
+  ) {
     this.#size = clamp(size, 1, this.#maxSize);
   }
 
-  getSize(): number {
+  get size(): number {
     return this.#size;
   }
 
-  * getAffectedPixels(
+  * affectedPixels(
     x: number,
     y: number
   ): IterableIterator<Vec2> {

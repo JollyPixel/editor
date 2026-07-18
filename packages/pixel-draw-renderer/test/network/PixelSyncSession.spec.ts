@@ -6,8 +6,8 @@ import assert from "node:assert/strict";
 import { PixelSyncSession } from "../../src/network/PixelSyncSession.ts";
 import type { PixelTransport } from "../../src/network/PixelTransport.ts";
 import type { PixelNetworkCommand, PixelBufferSnapshot } from "../../src/network/types.ts";
-import type { PixelBufferHookEvent, PixelBufferHookListener } from "../../src/hooks.ts";
-import type { CanvasManager } from "../../src/CanvasManager.ts";
+import type { PixelBufferHookEvent, PixelBufferHookListener } from "../../src/buffer/hooks.ts";
+import type { PixelArtCanvas } from "../../src/PixelArtCanvas.ts";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -101,7 +101,7 @@ describe("PixelSyncSession — attach", () => {
     const session = new PixelSyncSession({ transport });
 
     assert.strictEqual(manager.onBufferUpdated, undefined);
-    session.attach("tex1", manager as unknown as CanvasManager);
+    session.attach("tex1", manager as unknown as PixelArtCanvas);
     assert.ok(manager.onBufferUpdated !== undefined);
   });
 
@@ -110,7 +110,7 @@ describe("PixelSyncSession — attach", () => {
     const transport = createMockTransport();
     const session = new PixelSyncSession({ transport });
 
-    session.attach("tex1", manager as unknown as CanvasManager);
+    session.attach("tex1", manager as unknown as PixelArtCanvas);
 
     assert.deepStrictEqual(transport.subscribedBuffers, ["tex1"]);
   });
@@ -118,9 +118,9 @@ describe("PixelSyncSession — attach", () => {
   it("throws when attaching the same bufferId twice", () => {
     const transport = createMockTransport();
     const session = new PixelSyncSession({ transport });
-    session.attach("tex1", createMockManager() as unknown as CanvasManager);
+    session.attach("tex1", createMockManager() as unknown as PixelArtCanvas);
 
-    assert.throws(() => session.attach("tex1", createMockManager() as unknown as CanvasManager));
+    assert.throws(() => session.attach("tex1", createMockManager() as unknown as PixelArtCanvas));
   });
 });
 
@@ -130,7 +130,7 @@ describe("PixelSyncSession — createBuffer", () => {
     const transport = createMockTransport("client-A");
     const session = new PixelSyncSession({ transport });
 
-    session.createBuffer("tex1", manager as unknown as CanvasManager, { size: { x: 4, y: 4 } });
+    session.createBuffer("tex1", manager as unknown as PixelArtCanvas, { size: { x: 4, y: 4 } });
 
     assert.strictEqual(transport.sentCommands.length, 1);
     const cmd = transport.sentCommands[0];
@@ -145,7 +145,7 @@ describe("PixelSyncSession — detach / removeBuffer", () => {
     const manager = createMockManager();
     const transport = createMockTransport();
     const session = new PixelSyncSession({ transport });
-    session.attach("tex1", manager as unknown as CanvasManager);
+    session.attach("tex1", manager as unknown as PixelArtCanvas);
 
     session.detach("tex1");
 
@@ -163,7 +163,7 @@ describe("PixelSyncSession — detach / removeBuffer", () => {
     const manager = createMockManager();
     const transport = createMockTransport("client-A");
     const session = new PixelSyncSession({ transport });
-    session.attach("tex1", manager as unknown as CanvasManager);
+    session.attach("tex1", manager as unknown as PixelArtCanvas);
 
     session.removeBuffer("tex1");
 
@@ -183,7 +183,7 @@ describe("PixelSyncSession — local mutations forwarded to transport", () => {
     const manager = createMockManager();
     const transport = createMockTransport("client-A");
     const session = new PixelSyncSession({ transport });
-    session.attach("tex1", manager as unknown as CanvasManager);
+    session.attach("tex1", manager as unknown as PixelArtCanvas);
 
     manager.triggerLocal({
       action: "stroke",
@@ -201,7 +201,7 @@ describe("PixelSyncSession — local mutations forwarded to transport", () => {
     const manager = createMockManager();
     const transport = createMockTransport("client-B");
     const session = new PixelSyncSession({ transport });
-    session.attach("tex1", manager as unknown as CanvasManager);
+    session.attach("tex1", manager as unknown as PixelArtCanvas);
 
     const before = Date.now();
     manager.triggerLocal({ action: "resized", metadata: { size: { x: 1, y: 1 } } });
@@ -217,8 +217,8 @@ describe("PixelSyncSession — local mutations forwarded to transport", () => {
     const managerB = createMockManager();
     const transport = createMockTransport();
     const session = new PixelSyncSession({ transport });
-    session.attach("tex1", managerA as unknown as CanvasManager);
-    session.attach("tex2", managerB as unknown as CanvasManager);
+    session.attach("tex1", managerA as unknown as PixelArtCanvas);
+    session.attach("tex2", managerB as unknown as PixelArtCanvas);
 
     managerB.triggerLocal({ action: "resized", metadata: { size: { x: 1, y: 1 } } });
 
@@ -236,7 +236,7 @@ describe("PixelSyncSession — remote commands", () => {
     const manager = createMockManager();
     const transport = createMockTransport("client-A");
     const session = new PixelSyncSession({ transport });
-    session.attach("tex1", manager as unknown as CanvasManager);
+    session.attach("tex1", manager as unknown as PixelArtCanvas);
 
     transport.simulateCommand({
       action: "stroke",
@@ -254,7 +254,7 @@ describe("PixelSyncSession — remote commands", () => {
     const manager = createMockManager();
     const transport = createMockTransport("client-A");
     const session = new PixelSyncSession({ transport });
-    session.attach("tex1", manager as unknown as CanvasManager);
+    session.attach("tex1", manager as unknown as PixelArtCanvas);
 
     transport.simulateCommand({
       action: "stroke",
@@ -307,7 +307,7 @@ describe("PixelSyncSession — remote commands", () => {
     const manager = createMockManager();
     const transport = createMockTransport("client-A");
     const session = new PixelSyncSession({ transport });
-    session.attach("tex1", manager as unknown as CanvasManager);
+    session.attach("tex1", manager as unknown as PixelArtCanvas);
     const removed: string[] = [];
     session.onBufferRemoved = (bufferId) => removed.push(bufferId);
 
@@ -334,7 +334,7 @@ describe("PixelSyncSession — snapshot loading", () => {
     const manager = createMockManager();
     const transport = createMockTransport();
     const session = new PixelSyncSession({ transport });
-    session.attach("tex1", manager as unknown as CanvasManager);
+    session.attach("tex1", manager as unknown as PixelArtCanvas);
 
     const pixels = new Uint8ClampedArray([1, 2, 3, 255]);
     const base64 = Buffer.from(pixels).toString("base64");
@@ -365,8 +365,8 @@ describe("PixelSyncSession — destroy", () => {
     const managerB = createMockManager();
     const transport = createMockTransport();
     const session = new PixelSyncSession({ transport });
-    session.attach("tex1", managerA as unknown as CanvasManager);
-    session.attach("tex2", managerB as unknown as CanvasManager);
+    session.attach("tex1", managerA as unknown as PixelArtCanvas);
+    session.attach("tex2", managerB as unknown as PixelArtCanvas);
 
     session.destroy();
 
@@ -380,7 +380,7 @@ describe("PixelSyncSession — destroy", () => {
     const manager = createMockManager();
     const transport = createMockTransport();
     const session = new PixelSyncSession({ transport });
-    session.attach("tex1", manager as unknown as CanvasManager);
+    session.attach("tex1", manager as unknown as PixelArtCanvas);
 
     session.destroy();
     manager.triggerLocal({ action: "resized", metadata: { size: { x: 1, y: 1 } } });

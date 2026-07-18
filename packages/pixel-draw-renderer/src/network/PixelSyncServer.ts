@@ -246,8 +246,8 @@ export class PixelSyncServer {
     }
 
     return {
-      size: buffer.getSize(),
-      pixels: fromUint8Array(new Uint8Array(buffer.getPixels()))
+      size: buffer.size(),
+      pixels: fromUint8Array(new Uint8Array(buffer.pixels()))
     };
   }
 }

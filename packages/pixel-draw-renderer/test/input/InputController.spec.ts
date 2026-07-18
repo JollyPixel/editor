@@ -6,8 +6,12 @@ import assert from "node:assert/strict";
 import { Window } from "happy-dom";
 
 // Import Internal Dependencies
-import { InputController, type InputActions, type WindowLike } from "../src/InputController.ts";
-import { Viewport } from "../src/rendering/Viewport.ts";
+import {
+  InputController,
+  type InputActions,
+  type WindowLike
+} from "../../src/input/InputController.ts";
+import { Viewport } from "../../src/rendering/Viewport.ts";
 
 // CONSTANTS
 const kEmulatedBrowserWindow = new Window();
@@ -456,6 +460,7 @@ describe("InputController", () => {
       const input = kEmulatedBrowserWindow.document.createElement("input");
       kEmulatedBrowserWindow.document.body.appendChild(input);
 
+      // @ts-expect-error
       input.dispatchEvent(shiftKeyDown());
 
       assert.strictEqual(calls.onShiftDown.length, 0);
@@ -471,6 +476,7 @@ describe("InputController", () => {
       input.type = "range";
       kEmulatedBrowserWindow.document.body.appendChild(input);
 
+      // @ts-expect-error
       input.dispatchEvent(shiftKeyDown());
 
       assert.strictEqual(calls.onShiftDown.length, 1);
@@ -486,6 +492,7 @@ describe("InputController", () => {
       input.type = "color";
       kEmulatedBrowserWindow.document.body.appendChild(input);
 
+      // @ts-expect-error
       input.dispatchEvent(shiftKeyDown());
 
       assert.strictEqual(calls.onShiftDown.length, 1);
@@ -618,7 +625,9 @@ describe("InputController", () => {
       const input = kEmulatedBrowserWindow.document.createElement("input");
       kEmulatedBrowserWindow.document.body.appendChild(input);
 
+      // @ts-expect-error
       input.dispatchEvent(ctrlKeyDown("c"));
+      // @ts-expect-error
       input.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", code: "Delete", bubbles: true, cancelable: true }));
 
       assert.strictEqual(calls.onCopy.length, 0);
@@ -746,6 +755,7 @@ describe("InputController", () => {
       const input = kEmulatedBrowserWindow.document.createElement("input");
       kEmulatedBrowserWindow.document.body.appendChild(input);
 
+      // @ts-expect-error
       input.dispatchEvent(ctrlKeyDown("z"));
 
       assert.strictEqual(calls.onUndo.length, 0);

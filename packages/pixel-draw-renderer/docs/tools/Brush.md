@@ -43,73 +43,74 @@ export interface BrushOptions {
 
 ## Methods
 
-### `setColor`
+### `color`
 
 ```ts
-setColor(color: ColorInput, opacity?: number): void
+color(color: ColorInput, opacity?: number): void
 ```
 
 Sets the brush color from a CSS color string (hex, rgb(), hsl(), named color, ...) or a colorjs.io `Color` instance. If `opacity` is omitted, the current opacity is preserved; otherwise it's clamped to `[0, 1]` and applied alongside the new color.
 
 ---
 
-### `getColor`
+### `colorAsString`
 
 ```ts
-getColor(format?: "rgba" | "hex"): string
+colorAsString(format?: "rgba" | "hex"): string
 ```
 
 Returns the current brush color. Defaults to an `rgba(r, g, b, a)` string; pass `"hex"` to get a 6-digit hex string instead (opacity is not represented in hex output).
 
 ---
 
-### `setOpacity` / `getOpacity`
+### `opacity`
 
 ```ts
-setOpacity(opacity: number): void
-getOpacity(): number
+get opacity(): number
+set opacity(opacity: number)
 ```
 
-Sets or returns the brush opacity. `setOpacity` values are clamped to `[0, 1]`.
+The brush opacity. Assigned values are clamped to `[0, 1]`.
 
 ---
 
-### `setSize`
+### `size`
 
 ```ts
-setSize(size: number): void
+get size(): number
+set size(size: number)
 ```
 
-Sets the brush size in pixels. Values are clamped to `[1, maxSize]`.
+The brush size in pixels. Assigned values are clamped to `[1, maxSize]`.
 
 ---
 
-### `getColorInline` / `setColorInline`
+### `colorInline`
 
 ```ts
-getColorInline(): string
-setColorInline(color: ColorInput): void
+get colorInline(): string
+set colorInline(color: ColorInput)
 ```
 
-Gets or sets the inner stroke color of the SVG brush cursor overlay.
+The inner stroke color of the SVG brush cursor overlay.
 
 ---
 
-### `getColorOutline` / `setColorOutline`
+### `colorOutline`
 
 ```ts
-getColorOutline(): string
-setColorOutline(color: ColorInput): void
+get colorOutline(): string
+set colorOutline(color: ColorInput)
 ```
 
-Gets or sets the outer stroke color of the SVG brush cursor overlay.
+The outer stroke color of the SVG brush cursor overlay.
 
 ---
 
-### `getAffectedPixels`
+### `affectedPixels`
 
 ```ts
-getAffectedPixels(cx: number, cy: number): IterableIterator<Vec2>
+affectedPixels(cx: number, cy: number): IterableIterator<Vec2>
 ```
 
 A generator yielding texture-space `{ x, y }` coordinates for every pixel within the current brush square centered at `(cx, cy)`. Lazy and single-use: each call produces a fresh iterator; iterate it once (`for...of`, spread, or pass it directly to something that accepts an `Iterable<Vec2>`) rather than storing and re-reading it.
@@ -121,8 +122,8 @@ A generator yielding texture-space `{ x, y }` coordinates for every pixel within
 
 ```ts
 // size = 3 → 9 pixels around (10, 10)
-canvasBuffer.drawPixels(brush.getAffectedPixels(10, 10), { r: 255, g: 0, b: 0, a: 255 });
+canvasBuffer.drawPixels(brush.affectedPixels(10, 10), { r: 255, g: 0, b: 0, a: 255 });
 
 // Or, if you need to consume the pixels more than once:
-const pixels = [...brush.getAffectedPixels(10, 10)];
+const pixels = [...brush.affectedPixels(10, 10)];
 ```

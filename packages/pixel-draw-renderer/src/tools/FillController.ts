@@ -20,7 +20,7 @@ export interface FillControllerOptions {
   /**
    * Commits a global fill (every pixel matching `fromColor` anywhere on the
    * canvas, recolored to `toColor`). `positions`/`beforeColors` are provided
-   * for the caller's own local history bookkeeping — see CanvasManager's
+   * for the caller's own local history bookkeeping — see PixelArtCanvas's
    * "global-fill" hook, which is deliberately compact and carries neither.
    */
   onGlobalCommit: (commit: FillGlobalCommit) => void;
@@ -51,9 +51,9 @@ export class FillController {
     return this.#global;
   }
 
-  setGlobal(
+  set global(
     global: boolean
-  ): void {
+  ) {
     this.#global = global;
   }
 
@@ -67,7 +67,7 @@ export class FillController {
       return;
     }
 
-    const fillColor = toRGBA(this.#brush.getColor());
+    const fillColor = toRGBA(this.#brush.colorAsString());
     const positions = Fill.floodFill(
       this.#canvasBuffer,
       { x: tx, y: ty },
@@ -87,7 +87,7 @@ export class FillController {
       b: sb,
       a: sa
     };
-    const toColor = toRGBA(this.#brush.getColor());
+    const toColor = toRGBA(this.#brush.colorAsString());
 
     if (
       fromColor.r === toColor.r &&

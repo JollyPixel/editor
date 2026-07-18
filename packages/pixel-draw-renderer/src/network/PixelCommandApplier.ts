@@ -26,7 +26,7 @@ export function applyCommandToWorld(
         size: cmd.metadata.size
       });
       if (cmd.metadata.pixels) {
-        buffer.setPixels(
+        buffer.replacePixels(
           new Uint8ClampedArray(toUint8Array(cmd.metadata.pixels)),
           cmd.metadata.size
         );
@@ -54,13 +54,13 @@ export function applyCommandToWorld(
 
     case "resized": {
       const buffer = world.getBuffer(cmd.bufferId);
-      buffer?.setSize(cmd.metadata.size);
+      buffer?.resize(cmd.metadata.size);
       break;
     }
 
     case "texture-replaced": {
       const buffer = world.getBuffer(cmd.bufferId);
-      buffer?.setPixels(
+      buffer?.replacePixels(
         new Uint8ClampedArray(toUint8Array(cmd.metadata.pixels)),
         cmd.metadata.size
       );

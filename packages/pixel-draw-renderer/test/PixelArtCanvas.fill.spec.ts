@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { Window } from "happy-dom";
 
 // Import Internal Dependencies
-import { CanvasManager } from "../src/CanvasManager.ts";
+import { PixelArtCanvas } from "../src/PixelArtCanvas.ts";
 import type { PixelBufferHookEvent } from "../src/buffer/hooks.ts";
 import { installCanvasMock, MockCanvasElement } from "./mocks.ts";
 
@@ -62,7 +62,7 @@ function readPixel(
   return [pixels[i], pixels[i + 1], pixels[i + 2], pixels[i + 3]];
 }
 
-describe("CanvasManager — fill mode", () => {
+describe("PixelArtCanvas — fill mode", () => {
   let container: HTMLDivElement;
   let children: MockCanvasElement[];
 
@@ -70,30 +70,30 @@ describe("CanvasManager — fill mode", () => {
     ({ container, children } = makeContainer());
   });
 
-  describe("getFillGlobal / setFillGlobal", () => {
+  describe("fillGlobal", () => {
     test("defaults to false (contiguous) and is not configurable at construction", () => {
-      const manager = new CanvasManager(container, {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } }
       });
 
-      assert.strictEqual(manager.getFillGlobal(), false);
+      assert.strictEqual(manager.fillGlobal, false);
       manager.destroy();
     });
 
-    test("setFillGlobal toggles the runtime state, persisting across mode switches", () => {
-      const manager = new CanvasManager(container, {
+    test("setting fillGlobal toggles the runtime state, persisting across mode switches", () => {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } }
       });
 
-      manager.setFillGlobal(true);
-      assert.strictEqual(manager.getFillGlobal(), true);
+      manager.fillGlobal = true;
+      assert.strictEqual(manager.fillGlobal, true);
 
-      manager.setMode("paint");
-      manager.setMode("fill");
-      assert.strictEqual(manager.getFillGlobal(), true, "toggle persists across mode switches");
+      manager.mode = "paint";
+      manager.mode = "fill";
+      assert.strictEqual(manager.fillGlobal, true, "toggle persists across mode switches");
 
-      manager.setFillGlobal(false);
-      assert.strictEqual(manager.getFillGlobal(), false);
+      manager.fillGlobal = false;
+      assert.strictEqual(manager.fillGlobal, false);
       manager.destroy();
     });
   });
@@ -101,7 +101,7 @@ describe("CanvasManager — fill mode", () => {
   describe("global fill behavior", () => {
     // 8x8 texture, zoom 1 -> centered camera (96, 96). client(96+x, 96+y) -> texture (x, y).
     test("recolors every disconnected same-colored pixel on the canvas, not just the seed's connected region", () => {
-      const manager = new CanvasManager(container, {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } },
         zoom: { default: 1 },
         brush: { size: 1, maxSize: 1, color: "#000000" }
@@ -113,24 +113,24 @@ describe("CanvasManager — fill mode", () => {
       paintOnePixel(canvas, 98, 98);
       // texture (6, 6)
       paintOnePixel(canvas, 102, 102);
-      assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 2, y: 2 }, 8), [0, 0, 0, 255]);
-      assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 6, y: 6 }, 8), [0, 0, 0, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 6, y: 6 }, 8), [0, 0, 0, 255]);
 
-      manager.setMode("fill");
-      manager.setFillGlobal(true);
-      manager.brush.setColor("#FF0000");
+      manager.mode = "fill";
+      manager.fillGlobal = true;
+      manager.brush.color("#FF0000");
       canvas.dispatchEvent(new MouseEvent("mousedown", {
         button: 0, buttons: 1, clientX: 98, clientY: 98, bubbles: true
       }));
 
-      assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 2, y: 2 }, 8), [255, 0, 0, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [255, 0, 0, 255]);
       assert.deepStrictEqual(
-        readPixel(manager.getTexture(), { x: 6, y: 6 }, 8),
+        readPixel(manager.texture, { x: 6, y: 6 }, 8),
         [255, 0, 0, 255],
         "the disconnected dot elsewhere on the canvas is recolored too"
       );
       assert.deepStrictEqual(
-        readPixel(manager.getTexture(), { x: 3, y: 3 }, 8),
+        readPixel(manager.texture, { x: 3, y: 3 }, 8),
         [255, 255, 255, 255],
         "untouched background stays white"
       );
@@ -139,14 +139,14 @@ describe("CanvasManager — fill mode", () => {
 
     test("is a no-op when the seed already matches the brush color", () => {
       const events: PixelBufferHookEvent[] = [];
-      const manager = new CanvasManager(container, {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } },
         zoom: { default: 1 },
         defaultMode: "fill",
         brush: { color: "#FFFFFF" },
         onBufferUpdated: (event) => events.push(event)
       });
-      manager.setFillGlobal(true);
+      manager.fillGlobal = true;
       const canvas = children[0];
 
       canvas.dispatchEvent(new MouseEvent("mousedown", {
@@ -160,7 +160,7 @@ describe("CanvasManager — fill mode", () => {
 
   describe("brush highlight", () => {
     test("paint mode uses the real brush size; fill mode forces the highlight to a single pixel", () => {
-      const manager = new CanvasManager(container, {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } },
         zoom: { default: 4 },
         brush: { size: 5, maxSize: 32 }
@@ -176,7 +176,7 @@ describe("CanvasManager — fill mode", () => {
         "paint mode: brush size 5 * zoom 4"
       );
 
-      manager.setMode("fill");
+      manager.mode = "fill";
       canvas.dispatchEvent(new MouseEvent("mousemove", { clientX: 101, clientY: 101, bubbles: true }));
       assert.ok(
         group!.getAttribute("transform")?.includes("scale(4)"),
@@ -189,7 +189,7 @@ describe("CanvasManager — fill mode", () => {
 
   describe("color pick", () => {
     test("right-click samples the canvas color and updates the brush in fill mode", () => {
-      const manager = new CanvasManager(container, {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } },
         zoom: { default: 4 },
         defaultMode: "fill",
@@ -197,8 +197,8 @@ describe("CanvasManager — fill mode", () => {
       });
       const canvas = children[0];
 
-      let detail: { hex: string; opacity: number; } | null = null;
-      canvas.addEventListener("colorpicked", (event: unknown) => {
+      let detail: any = null;
+      canvas.addEventListener("colorpicked", (event: Event) => {
         detail = (event as CustomEvent<{ hex: string; opacity: number; }>).detail;
       });
 
@@ -208,8 +208,8 @@ describe("CanvasManager — fill mode", () => {
       }));
 
       assert.ok(detail, "colorpicked event should fire in fill mode");
-      assert.strictEqual(detail!.hex, "#ffffff");
-      assert.strictEqual(manager.brush.getColor("hex"), "#ffffff");
+      assert.strictEqual(detail.hex, "#ffffff");
+      assert.strictEqual(manager.brush.colorAsString("hex"), "#ffffff");
       manager.destroy();
     });
   });

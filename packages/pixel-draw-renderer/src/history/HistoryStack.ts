@@ -5,6 +5,7 @@ import type {
   Vec2
 } from "../types.ts";
 import type { DefaultPixelBuffer } from "../buffer/types.ts";
+import { groupPositionsByColor } from "./utils.ts";
 
 export interface HistoryStrokeEntry {
   action: "stroke";
@@ -69,39 +70,8 @@ export interface HistoryStackOptions {
   limit?: number;
 }
 
-export interface ColorGroup {
-  color: RGBA;
-  positions: Vec2[];
-}
-
 // CONSTANTS
 const kDefaultLimit = 10;
-
-/**
- * Buckets positions by identical color, so a heterogeneous per-pixel
- * restore can be applied as a few uniform-color drawPixels calls instead of
- * one call per pixel.
- */
-export function groupPositionsByColor(
-  positions: Vec2[],
-  colors: RGBA[]
-): ColorGroup[] {
-  const groups = new Map<string, ColorGroup>();
-
-  for (let i = 0; i < positions.length; i++) {
-    const color = colors[i];
-    const key = `${color.r},${color.g},${color.b},${color.a}`;
-
-    let group = groups.get(key);
-    if (!group) {
-      group = { color, positions: [] };
-      groups.set(key, group);
-    }
-    group.positions.push(positions[i]);
-  }
-
-  return [...groups.values()];
-}
 
 /**
  * Bounded undo/redo stack over DefaultPixelBuffer — no DOM or network
@@ -202,7 +172,7 @@ export class HistoryStack {
 
       case "resized":
       case "texture-replaced":
-        this.#buffer.setPixels(entry.beforePixels, entry.beforeSize);
+        this.#buffer.replacePixels(entry.beforePixels, entry.beforeSize);
         break;
     }
   }
@@ -225,7 +195,7 @@ export class HistoryStack {
 
       case "resized":
       case "texture-replaced":
-        this.#buffer.setPixels(entry.afterPixels, entry.afterSize);
+        this.#buffer.replacePixels(entry.afterPixels, entry.afterSize);
         break;
     }
   }

@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { Window } from "happy-dom";
 
 // Import Internal Dependencies
-import { CanvasManager } from "../src/CanvasManager.ts";
+import { PixelArtCanvas, type HistoryState } from "../src/PixelArtCanvas.ts";
 import type { PixelBufferHookEvent } from "../src/buffer/hooks.ts";
 import { PixelSyncServer } from "../src/network/PixelSyncServer.ts";
 import { PixelSyncSession } from "../src/network/PixelSyncSession.ts";
@@ -73,7 +73,7 @@ function readPixel(
   return [pixels[i], pixels[i + 1], pixels[i + 2], pixels[i + 3]];
 }
 
-describe("CanvasManager — history (undo/redo)", () => {
+describe("PixelArtCanvas — history (undo/redo)", () => {
   let container: HTMLDivElement;
   let children: MockCanvasElement[];
 
@@ -83,7 +83,7 @@ describe("CanvasManager — history (undo/redo)", () => {
 
   describe("disabled by default", () => {
     test("undo()/redo() are no-ops and canUndo()/canRedo() stay false", () => {
-      const manager = new CanvasManager(container, {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } },
         brush: { size: 1, maxSize: 1 }
       });
@@ -101,7 +101,7 @@ describe("CanvasManager — history (undo/redo)", () => {
 
   describe("enabled — stroke round trip", () => {
     test("undo reverts a painted pixel; redo re-applies it", () => {
-      const manager = new CanvasManager(container, {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } },
         brush: { size: 1, maxSize: 1 },
         history: { enabled: true }
@@ -111,22 +111,22 @@ describe("CanvasManager — history (undo/redo)", () => {
       // (88,88) -> texture (1,1)
       paintOnePixel(canvas, [[88, 88]]);
       assert.strictEqual(manager.canUndo(), true);
-      assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 1, y: 1 }, 8), [0, 0, 0, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 1, y: 1 }, 8), [0, 0, 0, 255]);
 
       assert.strictEqual(manager.undo(), true);
-      assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 1, y: 1 }, 8), [255, 255, 255, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 1, y: 1 }, 8), [255, 255, 255, 255]);
       assert.strictEqual(manager.canUndo(), false);
       assert.strictEqual(manager.canRedo(), true);
 
       assert.strictEqual(manager.redo(), true);
-      assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 1, y: 1 }, 8), [0, 0, 0, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 1, y: 1 }, 8), [0, 0, 0, 255]);
       assert.strictEqual(manager.canRedo(), false);
       manager.destroy();
     });
 
     test("undo/redo re-emit onBufferUpdated so network sync stays consistent", () => {
       const events: PixelBufferHookEvent[] = [];
-      const manager = new CanvasManager(container, {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } },
         brush: { size: 1, maxSize: 1 },
         history: { enabled: true },
@@ -148,7 +148,7 @@ describe("CanvasManager — history (undo/redo)", () => {
     });
 
     test("a new edit after undo clears the redo stack", () => {
-      const manager = new CanvasManager(container, {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } },
         brush: { size: 1, maxSize: 1 },
         history: { enabled: true }
@@ -167,14 +167,14 @@ describe("CanvasManager — history (undo/redo)", () => {
 
   describe("global fill round trip", () => {
     test("undo reverts a global fill to the exact pre-fill colors; redo re-applies it", () => {
-      const manager = new CanvasManager(container, {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 4, y: 4 } },
         zoom: { default: 4 },
         defaultMode: "fill",
         brush: { color: "#FF0000" },
         history: { enabled: true }
       });
-      manager.setFillGlobal(true);
+      manager.fillGlobal = true;
       const canvas = children[0];
 
       // 4x4 texture, zoom 4 -> centered camera (92,92); client(100,100) -> texture (2,2).
@@ -182,20 +182,20 @@ describe("CanvasManager — history (undo/redo)", () => {
         button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
       }));
       assert.strictEqual(manager.canUndo(), true);
-      assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 2, y: 2 }, 4), [255, 0, 0, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 4), [255, 0, 0, 255]);
 
       assert.strictEqual(manager.undo(), true);
-      assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 2, y: 2 }, 4), [255, 255, 255, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 4), [255, 255, 255, 255]);
       assert.strictEqual(manager.canRedo(), true);
 
       assert.strictEqual(manager.redo(), true);
-      assert.deepStrictEqual(readPixel(manager.getTexture(), { x: 2, y: 2 }, 4), [255, 0, 0, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 4), [255, 0, 0, 255]);
       manager.destroy();
     });
 
     test("undo/redo of a global fill re-emit onBufferUpdated as a full-position 'stroke' event", () => {
       const events: PixelBufferHookEvent[] = [];
-      const manager = new CanvasManager(container, {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 4, y: 4 } },
         zoom: { default: 4 },
         defaultMode: "fill",
@@ -203,7 +203,7 @@ describe("CanvasManager — history (undo/redo)", () => {
         history: { enabled: true },
         onBufferUpdated: (event) => events.push(event)
       });
-      manager.setFillGlobal(true);
+      manager.fillGlobal = true;
       const canvas = children[0];
 
       canvas.dispatchEvent(new MouseEvent("mousedown", {
@@ -225,8 +225,8 @@ describe("CanvasManager — history (undo/redo)", () => {
 
   describe("onHistoryChange", () => {
     test("fires after a push, an undo, and a redo", () => {
-      const states: { canUndo: boolean; canRedo: boolean; }[] = [];
-      const manager = new CanvasManager(container, {
+      const states: HistoryState[] = [];
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } },
         brush: { size: 1, maxSize: 1 },
         history: { enabled: true },
@@ -248,7 +248,7 @@ describe("CanvasManager — history (undo/redo)", () => {
 
   describe("limit", () => {
     test("only the configured number of most-recent edits are undoable", () => {
-      const manager = new CanvasManager(container, {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } },
         brush: { size: 1, maxSize: 1 },
         history: { enabled: true, limit: 1 }
@@ -266,23 +266,23 @@ describe("CanvasManager — history (undo/redo)", () => {
 
   describe("resized / texture-replaced", () => {
     test("undo restores the previous texture size", () => {
-      const manager = new CanvasManager(container, {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } },
         history: { enabled: true }
       });
 
-      manager.setTextureSize({ x: 4, y: 4 });
-      assert.deepStrictEqual(manager.getTextureSize(), { x: 4, y: 4 });
+      manager.textureSize = { x: 4, y: 4 };
+      assert.deepStrictEqual(manager.textureSize, { x: 4, y: 4 });
 
       manager.undo();
-      assert.deepStrictEqual(manager.getTextureSize(), { x: 8, y: 8 });
+      assert.deepStrictEqual(manager.textureSize, { x: 8, y: 8 });
       manager.destroy();
     });
   });
 
   describe("clearing on remote structural changes", () => {
     test("a remote 'resized' command clears the local undo stack", () => {
-      const manager = new CanvasManager(container, {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } },
         brush: { size: 1, maxSize: 1 },
         history: { enabled: true }
@@ -298,7 +298,7 @@ describe("CanvasManager — history (undo/redo)", () => {
     });
 
     test("a remote 'texture-replaced' command clears the local undo stack", () => {
-      const manager = new CanvasManager(container, {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } },
         brush: { size: 1, maxSize: 1 },
         history: { enabled: true }
@@ -319,7 +319,7 @@ describe("CanvasManager — history (undo/redo)", () => {
     });
 
     test("loadSnapshot clears the local undo stack", () => {
-      const manager = new CanvasManager(container, {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } },
         brush: { size: 1, maxSize: 1 },
         history: { enabled: true }
@@ -335,7 +335,7 @@ describe("CanvasManager — history (undo/redo)", () => {
     });
 
     test("a remote 'stroke' command does NOT clear the local undo stack", () => {
-      const manager = new CanvasManager(container, {
+      const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } },
         brush: { size: 1, maxSize: 1 },
         history: { enabled: true }
@@ -425,7 +425,7 @@ function makeServerBackedTransport(
   return transport;
 }
 
-describe("CanvasManager — history + network collision handling", () => {
+describe("PixelArtCanvas — history + network collision handling", () => {
   let container: HTMLDivElement;
   let children: MockCanvasElement[];
 
@@ -437,7 +437,7 @@ describe("CanvasManager — history + network collision handling", () => {
     t.mock.timers.enable({ apis: ["Date"] });
 
     const server = new PixelSyncServer();
-    const manager = new CanvasManager(container, {
+    const manager = new PixelArtCanvas(container, {
       texture: { maxSize: 32, size: { x: 8, y: 8 } },
       brush: { size: 1, maxSize: 1 },
       history: { enabled: true }
@@ -468,7 +468,7 @@ describe("CanvasManager — history + network collision handling", () => {
     t.mock.timers.enable({ apis: ["Date"] });
 
     const server = new PixelSyncServer();
-    const manager = new CanvasManager(container, {
+    const manager = new PixelArtCanvas(container, {
       texture: { maxSize: 32, size: { x: 8, y: 8 } },
       brush: { size: 1, maxSize: 1 },
       history: { enabled: true }

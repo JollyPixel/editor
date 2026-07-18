@@ -3,7 +3,7 @@ import { LitElement, css, html } from "lit";
 import { query, state } from "lit/decorators.js";
 
 // Import Internal Dependencies
-import { type CanvasManager } from "@jolly-pixel/pixel-draw.renderer";
+import { type PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 
 export class Paint extends LitElement {
   @query("#texturePreview")
@@ -93,26 +93,26 @@ export class Paint extends LitElement {
     return rootNode?.host;
   }
 
-  private getCanvasManager(): CanvasManager | null {
+  private getPixelArtCanvas(): PixelArtCanvas | null {
     const leftPanel = this.getLeftPanel();
 
-    if (!leftPanel || typeof leftPanel.getSharedCanvasManager !== "function") {
+    if (!leftPanel || typeof leftPanel.getSharedPixelArtCanvas !== "function") {
       return null;
     }
 
-    return leftPanel.getSharedCanvasManager();
+    return leftPanel.getSharedPixelArtCanvas();
   }
 
   public syncBrushInputs(): void {
-    const manager = this.getCanvasManager();
+    const manager = this.getPixelArtCanvas();
 
     if (!manager) {
       return;
     }
 
-    this.brushSize = manager.brush.getSize();
-    this.brushColor = manager.brush.getColor("hex");
-    this.brushOpacity = manager.brush.getOpacity();
+    this.brushSize = manager.brush.size;
+    this.brushColor = manager.brush.colorAsString("hex");
+    this.brushOpacity = manager.brush.opacity;
   }
 
   protected override firstUpdated(): void {
@@ -122,13 +122,13 @@ export class Paint extends LitElement {
   }
 
   private setupColorPickListener(): void {
-    const manager = this.getCanvasManager();
+    const manager = this.getPixelArtCanvas();
 
     if (!manager) {
       return;
     }
 
-    const canvas = manager.getParentHtmlElement().querySelector("canvas");
+    const canvas = manager.parentHtmlElement.querySelector("canvas");
     if (!canvas) {
       return;
     }
@@ -142,7 +142,7 @@ export class Paint extends LitElement {
   }
 
   override updated(): void {
-    const manager = this.getCanvasManager();
+    const manager = this.getPixelArtCanvas();
 
     if (!manager) {
       console.warn("Paint: No canvas manager available");
@@ -167,10 +167,10 @@ export class Paint extends LitElement {
     const input = event.target as HTMLInputElement;
     this.brushColor = input.value;
 
-    const manager = this.getCanvasManager();
+    const manager = this.getPixelArtCanvas();
 
     if (manager) {
-      manager.brush.setColor(this.brushColor);
+      manager.brush.color(this.brushColor);
     }
   }
 
@@ -178,10 +178,10 @@ export class Paint extends LitElement {
     const input = event.target as HTMLInputElement;
     this.brushSize = parseInt(input.value, 10);
 
-    const manager = this.getCanvasManager();
+    const manager = this.getPixelArtCanvas();
 
     if (manager) {
-      manager.brush.setSize(this.brushSize);
+      manager.brush.size = this.brushSize;
     }
   }
 
@@ -189,18 +189,18 @@ export class Paint extends LitElement {
     const input = event.target as HTMLInputElement;
     this.brushOpacity = parseFloat(input.value);
 
-    const manager = this.getCanvasManager();
+    const manager = this.getPixelArtCanvas();
 
     if (manager) {
-      manager.brush.setOpacity(this.brushOpacity);
+      manager.brush.opacity = this.brushOpacity;
     }
   }
 
   public setCanvasTexture(canvas: HTMLCanvasElement): void {
-    const manager = this.getCanvasManager();
+    const manager = this.getPixelArtCanvas();
 
     if (manager) {
-      manager.setTexture(canvas);
+      manager.texture = canvas;
     }
   }
 

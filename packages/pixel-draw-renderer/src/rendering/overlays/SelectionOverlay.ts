@@ -12,7 +12,7 @@ import type {
  * as a two-color dashed rectangle border ("marching ants"): both rects share
  * the same dash length, offset by half a cycle from each other, so the gaps
  * in one are filled by the other's dashes instead of the background showing
- * through. Call `setRect` again on every pan/zoom/drag update to reposition.
+ * through. Call `drawRect` again on every pan/zoom/drag update to reposition.
  */
 export class SelectionOverlay {
   #viewport: DefaultViewport;
@@ -60,7 +60,7 @@ export class SelectionOverlay {
     return [outline, inline];
   }
 
-  setRect(
+  drawRect(
     rect: SelectionRect
   ): void {
     const zoom = this.#viewport.zoom;

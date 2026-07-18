@@ -6,9 +6,15 @@ import assert from "node:assert/strict";
 import { Window } from "happy-dom";
 
 // Import Internal Dependencies
-import { InputController, type InputActions } from "../src/InputController.ts";
-import { Viewport } from "../src/rendering/Viewport.ts";
-import { InvalidKeybindingError, KeybindingConflictError } from "../src/utils/keybindings.ts";
+import {
+  InputController,
+  type InputActions
+} from "../../src/input/InputController.ts";
+import { Viewport } from "../../src/rendering/Viewport.ts";
+import {
+  InvalidKeybindingError,
+  KeybindingConflictError
+} from "../../src/utils/keybindings.ts";
 
 // CONSTANTS
 const kEmulatedBrowserWindow = new Window();
@@ -73,28 +79,72 @@ function makeActions(): {
   };
 
   const actions: InputActions = {
-    onPrimaryDown: (tx, ty) => calls.onPrimaryDown.push([tx, ty]),
-    onPrimaryMove: (tx, ty) => calls.onPrimaryMove.push([tx, ty]),
-    onPrimaryUp: () => calls.onPrimaryUp.push([]),
-    onPanStart: (mx, my) => calls.onPanStart.push([mx, my]),
-    onPanMove: (dx, dy) => calls.onPanMove.push([dx, dy]),
-    onPanEnd: () => calls.onPanEnd.push([]),
-    onZoom: (d, cx, cy) => calls.onZoom.push([d, cx, cy]),
-    onColorPick: (tx, ty) => calls.onColorPick.push([tx, ty]),
-    onMouseMove: (cx, cy) => calls.onMouseMove.push([cx, cy]),
-    onCursorMove: (pos) => calls.onCursorMove.push([pos]),
-    onMouseUp: () => calls.onMouseUp.push([]),
-    onShiftDown: () => calls.onShiftDown.push([]),
-    onShiftUp: () => calls.onShiftUp.push([]),
-    onBlur: () => calls.onBlur.push([]),
-    onCopy: () => calls.onCopy.push([]),
-    onPaste: () => calls.onPaste.push([]),
-    onDelete: () => calls.onDelete.push([]),
-    onUndo: () => calls.onUndo.push([]),
-    onRedo: () => calls.onRedo.push([]),
-    onRotate: () => calls.onRotate.push([]),
-    onFlipHorizontal: () => calls.onFlipHorizontal.push([]),
-    onFlipVertical: () => calls.onFlipVertical.push([])
+    onPrimaryDown: (tx, ty) => {
+      calls.onPrimaryDown.push([tx, ty]);
+    },
+    onPrimaryMove: (tx, ty) => {
+      calls.onPrimaryMove.push([tx, ty]);
+    },
+    onPrimaryUp: () => {
+      calls.onPrimaryUp.push([]);
+    },
+    onPanStart: (mx, my) => {
+      calls.onPanStart.push([mx, my]);
+    },
+    onPanMove: (dx, dy) => {
+      calls.onPanMove.push([dx, dy]);
+    },
+    onPanEnd: () => {
+      calls.onPanEnd.push([]);
+    },
+    onZoom: (d, cx, cy) => {
+      calls.onZoom.push([d, cx, cy]);
+    },
+    onColorPick: (tx, ty) => {
+      calls.onColorPick.push([tx, ty]);
+    },
+    onMouseMove: (cx, cy) => {
+      calls.onMouseMove.push([cx, cy]);
+    },
+    onCursorMove: (pos) => {
+      calls.onCursorMove.push([pos]);
+    },
+    onMouseUp: () => {
+      calls.onMouseUp.push([]);
+    },
+    onShiftDown: () => {
+      calls.onShiftDown.push([]);
+    },
+    onShiftUp: () => {
+      calls.onShiftUp.push([]);
+    },
+    onBlur: () => {
+      calls.onBlur.push([]);
+    },
+    onCopy: () => {
+      calls.onCopy.push([]);
+    },
+    onPaste: () => {
+      calls.onPaste.push([]);
+    },
+    onDelete: () => {
+      calls.onDelete.push([]);
+    },
+    onUndo: () => {
+      calls.onUndo.push([]);
+    },
+    onRedo: () => {
+      calls.onRedo.push([]);
+    },
+    onRotate: () => {
+      calls.onRotate.push([]);
+    },
+    onFlipHorizontal: () => {
+      calls.onFlipHorizontal.push([]);
+    },
+    onFlipVertical: () => {
+      calls.onFlipVertical.push([]);
+    }
   };
 
   return { actions, calls };
@@ -168,24 +218,24 @@ describe("InputController custom keybindings", () => {
     );
   });
 
-  test("getKeybindings returns the effective (merged) set", () => {
+  test("keybindings returns the effective (merged) set", () => {
     const { actions } = makeActions();
     const ctrl = new InputController({
       canvas, viewport, actions, keybindings: { undo: "alt+u" }
     });
 
-    const current = ctrl.getKeybindings();
+    const current = ctrl.keybindings;
 
     assert.strictEqual(current.undo, "alt+u");
     assert.strictEqual(current.copy, "mod+c");
     ctrl.destroy();
   });
 
-  test("setKeybindings merges onto the current set at runtime", () => {
+  test("patchKeybindings merges onto the current set at runtime", () => {
     const { actions, calls } = makeActions();
     const ctrl = new InputController({ canvas, viewport, actions });
 
-    ctrl.setKeybindings({ copy: "alt+j" });
+    ctrl.patchKeybindings({ copy: "alt+j" });
     hoverCanvas(canvas);
     window.dispatchEvent(keydown("c", "KeyC", { ctrlKey: true }));
     window.dispatchEvent(keydown("j", "KeyJ", { altKey: true }));
@@ -194,11 +244,11 @@ describe("InputController custom keybindings", () => {
     ctrl.destroy();
   });
 
-  test("setKeybindings throws on conflict and leaves the previous keybindings in effect", () => {
+  test("patchKeybindings throws on conflict and leaves the previous keybindings in effect", () => {
     const { actions, calls } = makeActions();
     const ctrl = new InputController({ canvas, viewport, actions });
 
-    assert.throws(() => ctrl.setKeybindings({ delete: "mod+c" }), KeybindingConflictError);
+    assert.throws(() => ctrl.patchKeybindings({ delete: "mod+c" }), KeybindingConflictError);
 
     hoverCanvas(canvas);
     window.dispatchEvent(keydown("c", "KeyC", { ctrlKey: true }));

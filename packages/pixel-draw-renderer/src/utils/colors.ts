@@ -19,7 +19,7 @@ function clamp255(
  * an existing colorjs.io `Color` instance into 0-255 RGBA components.
  * Out-of-gamut sRGB values are clamped rather than gamut-mapped.
  */
-export function getColorAsRGBA(
+export function colorAsRGBA(
   color: ColorInput
 ): [number, number, number, number] {
   const srgb = new Color(color).to("srgb");
@@ -33,7 +33,7 @@ export function toRGBA(
   color: RGBA | ColorInput
 ): RGBA {
   if (typeof color === "string" || color instanceof Color) {
-    const [r, g, b, a] = getColorAsRGBA(color);
+    const [r, g, b, a] = colorAsRGBA(color);
 
     return { r, g, b, a };
   }

@@ -9,7 +9,7 @@ import type { DefaultPixelBuffer } from "../buffer/types.ts";
  * Computes the connected region of same-colored pixels reachable from a seed
  * point (paint-bucket flood fill). Pure algorithm with no DOM coupling —
  * callers own reading the seed color, committing the result to a buffer, and
- * any network/hook emission (see CanvasManager).
+ * any network/hook emission (see PixelArtCanvas).
  */
 export class Fill {
   /**
@@ -23,7 +23,7 @@ export class Fill {
     seed: Vec2,
     fillColor: RGBA
   ): Vec2[] {
-    const size = buffer.getSize();
+    const size = buffer.size();
     if (seed.x < 0 || seed.x >= size.x || seed.y < 0 || seed.y >= size.y) {
       return [];
     }
@@ -74,7 +74,7 @@ export class Fill {
     buffer: DefaultPixelBuffer,
     color: RGBA
   ): Vec2[] {
-    const size = buffer.getSize();
+    const size = buffer.size();
     const positions: Vec2[] = [];
 
     for (let y = 0; y < size.y; y++) {

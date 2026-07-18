@@ -4,8 +4,8 @@ import { customElement } from "lit/decorators.js";
 
 // Import Internal Dependencies
 import {
-  CanvasManager,
-  type CanvasManagerOptions,
+  PixelArtCanvas,
+  type PixelArtCanvasOptions,
   type Mode
 } from "../../../src/index.ts";
 import { type ColorSwatch, type ColorChangeDetail } from "./ColorSwatch.ts";
@@ -91,9 +91,9 @@ export class PixelDrawPanel extends LitElement {
   #mode: Mode = "paint";
   #brushSize = 1;
   #zoomSensitivity = 0.6;
-  #canvasManager: CanvasManager | null = null;
+  #canvasManager: PixelArtCanvas | null = null;
 
-  get canvasManager(): CanvasManager | null {
+  get canvasManager(): PixelArtCanvas | null {
     return this.#canvasManager;
   }
 
@@ -103,22 +103,22 @@ export class PixelDrawPanel extends LitElement {
   }
 
   /**
-   * Creates the CanvasManager against this component's shadow DOM. Must be
+   * Creates the PixelArtCanvas against this component's shadow DOM. Must be
    * called (and awaited) before the canvas/texture is usable, since the
    * canvas host only exists after the first Lit render.
    */
   async initialize(
-    options: CanvasManagerOptions = {}
-  ): Promise<CanvasManager> {
+    options: PixelArtCanvasOptions = {}
+  ): Promise<PixelArtCanvas> {
     await this.updateComplete;
 
     const canvasHostEl = this.shadowRoot!.querySelector<HTMLDivElement>(".canvas-host")!;
-    this.#canvasManager = new CanvasManager(canvasHostEl, options);
+    this.#canvasManager = new PixelArtCanvas(canvasHostEl, options);
 
     // Sync toolbar state with whatever defaults were passed in options.
-    this.#mode = this.#canvasManager.getMode();
-    this.#brushSize = this.#canvasManager.brush.getSize();
-    this.#zoomSensitivity = this.#canvasManager.getZoomSensitivity();
+    this.#mode = this.#canvasManager.mode;
+    this.#brushSize = this.#canvasManager.brush.size;
+    this.#zoomSensitivity = this.#canvasManager.zoomSensitivity;
     this.requestUpdate();
 
     return this.#canvasManager;
@@ -139,7 +139,9 @@ export class PixelDrawPanel extends LitElement {
     mode: Mode
   ): void {
     this.#mode = mode;
-    this.#canvasManager?.setMode(mode);
+    if (this.#canvasManager) {
+      this.#canvasManager.mode = mode;
+    }
     this.requestUpdate();
   }
 
@@ -148,7 +150,9 @@ export class PixelDrawPanel extends LitElement {
   ): void {
     const value = parseInt((event.target as HTMLInputElement).value, 10);
     this.#brushSize = value;
-    this.#canvasManager?.brush.setSize(value);
+    if (this.#canvasManager) {
+      this.#canvasManager.brush.size = value;
+    }
     this.requestUpdate();
   }
 
@@ -157,7 +161,9 @@ export class PixelDrawPanel extends LitElement {
   ): void {
     const value = parseFloat((event.target as HTMLInputElement).value);
     this.#zoomSensitivity = value;
-    this.#canvasManager?.setZoomSensitivity(value);
+    if (this.#canvasManager) {
+      this.#canvasManager.zoomSensitivity = value;
+    }
     this.requestUpdate();
   }
 
@@ -165,7 +171,7 @@ export class PixelDrawPanel extends LitElement {
     event: CustomEvent<ColorChangeDetail>
   ): void {
     const { hex, opacity } = event.detail;
-    this.#canvasManager?.brush.setColor(hex, opacity);
+    this.#canvasManager?.brush.color(hex, opacity);
   }
 
   /**

@@ -13,9 +13,9 @@ const kTestMaxSize = 32;
 
 describe("PixelBuffer", () => {
   describe("constructor", () => {
-    test("getSize returns the initial size", () => {
+    test("size returns the initial size", () => {
       const buf = new PixelBuffer({ size: { x: 16, y: 8 }, maxSize: kTestMaxSize });
-      assert.deepStrictEqual(buf.getSize(), { x: 16, y: 8 });
+      assert.deepStrictEqual(buf.size(), { x: 16, y: 8 });
     });
 
     test("fills the working buffer with defaultColor, except pixel (0,0)", () => {
@@ -82,55 +82,55 @@ describe("PixelBuffer", () => {
     });
   });
 
-  describe("setSize", () => {
-    test("updates getSize", () => {
+  describe("resize", () => {
+    test("updates size", () => {
       const buf = new PixelBuffer({ size: { x: 8, y: 8 }, maxSize: kTestMaxSize });
-      buf.setSize({ x: 16, y: 4 });
-      assert.deepStrictEqual(buf.getSize(), { x: 16, y: 4 });
+      buf.resize({ x: 16, y: 4 });
+      assert.deepStrictEqual(buf.size(), { x: 16, y: 4 });
     });
 
     test("preserves committed data across resize", () => {
       const buf = new PixelBuffer({ size: { x: 8, y: 8 }, maxSize: kTestMaxSize });
       buf.drawPixels([{ x: 2, y: 2 }], { r: 10, g: 20, b: 30, a: 255 });
       buf.copyToMaster();
-      buf.setSize({ x: 16, y: 16 });
+      buf.resize({ x: 16, y: 16 });
       assert.deepStrictEqual(buf.samplePixel(2, 2), [10, 20, 30, 255]);
     });
 
     test("does not preserve uncommitted data", () => {
       const buf = new PixelBuffer({ size: { x: 8, y: 8 }, maxSize: kTestMaxSize });
       buf.drawPixels([{ x: 2, y: 2 }], { r: 10, g: 20, b: 30, a: 255 });
-      buf.setSize({ x: 16, y: 16 });
+      buf.resize({ x: 16, y: 16 });
       assert.notDeepStrictEqual(buf.samplePixel(2, 2), [10, 20, 30, 255]);
     });
   });
 
-  describe("setPixels", () => {
+  describe("replacePixels", () => {
     test("replaces working data and size wholesale", () => {
       const buf = new PixelBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
       const pixels = new Uint8ClampedArray(2 * 2 * 4).fill(0);
       pixels[0] = 9;
       pixels[3] = 255;
-      buf.setPixels(pixels, { x: 2, y: 2 });
+      buf.replacePixels(pixels, { x: 2, y: 2 });
 
-      assert.deepStrictEqual(buf.getSize(), { x: 2, y: 2 });
+      assert.deepStrictEqual(buf.size(), { x: 2, y: 2 });
       assert.deepStrictEqual(buf.samplePixel(0, 0), [9, 0, 0, 255]);
     });
   });
 
-  describe("getPixels", () => {
+  describe("pixels", () => {
     test("returns a live view sized width*height*4", () => {
       const buf = new PixelBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
-      assert.strictEqual(buf.getPixels().length, 4 * 4 * 4);
+      assert.strictEqual(buf.pixels().length, 4 * 4 * 4);
     });
   });
 
   describe("copyToMaster", () => {
-    test("persists working data across setSize", () => {
+    test("persists working data across resize", () => {
       const buf = new PixelBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
       buf.drawPixels([{ x: 0, y: 0 }], { r: 100, g: 150, b: 200, a: 255 });
       buf.copyToMaster();
-      buf.setSize({ x: 4, y: 4 });
+      buf.resize({ x: 4, y: 4 });
       assert.deepStrictEqual(buf.samplePixel(0, 0), [100, 150, 200, 255]);
     });
   });

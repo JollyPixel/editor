@@ -300,8 +300,8 @@ export default defineConfig({
               text: "Core",
               items: [
                 {
-                  text: "CanvasManager",
-                  link: "/pixel-draw-renderer/CanvasManager"
+                  text: "PixelArtCanvas",
+                  link: "/pixel-draw-renderer/PixelArtCanvas"
                 },
                 {
                   text: "Brush",

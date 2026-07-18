@@ -72,7 +72,7 @@ class MockCanvas2DContext {
    * so tests can assert on rendered pixel output (e.g. CanvasRenderer's
    * floating-selection overlay). Non-canvas sources (an HTMLImageElement-like
    * mock has no `_pixels`) are silently no-op'd, matching prior behavior for
-   * CanvasBuffer.setTexture()'s image-source path.
+   * CanvasBuffer.loadTexture()'s image-source path.
    */
   drawImage(
     image: unknown,

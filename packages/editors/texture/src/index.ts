@@ -24,7 +24,7 @@ const threeSceneManager = new ThreeSceneManager(kSection);
 
 function updateCanvasTexture() {
   const leftPanelComponent = leftPanel as any;
-  const canvasManager = leftPanelComponent.getSharedCanvasManager();
+  const canvasManager = leftPanelComponent.getSharedPixelArtCanvas();
   if (canvasManager) {
     threeSceneManager.setCanvasTexture(canvasManager);
   }
@@ -38,7 +38,7 @@ requestAnimationFrame(function updateLoop() {
 function triggerManagerResize() {
   threeSceneManager.onResize();
 
-  const sharedManager = (leftPanel as any).getSharedCanvasManager?.();
+  const sharedManager = (leftPanel as any).getSharedPixelArtCanvas?.();
   if (sharedManager) {
     sharedManager.onResize();
   }
