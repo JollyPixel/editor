@@ -70,6 +70,10 @@ export interface InputActions {
   onPaste(): boolean | void;
   /** A non-repeat Delete keydown that isn't targeting editable UI. */
   onDelete(): boolean | void;
+  /** A non-repeat Ctrl/Cmd+Z keydown that isn't targeting editable UI. */
+  onUndo(): boolean | void;
+  /** A non-repeat Ctrl/Cmd+Y or Ctrl/Cmd+Shift+Z keydown that isn't targeting editable UI. */
+  onRedo(): boolean | void;
 }
 
 /**
@@ -431,6 +435,23 @@ export class InputController {
 
     if (isCtrlOrCmd && lowerKey === "v") {
       if (this.#actions.onPaste()) {
+        event.preventDefault();
+      }
+
+      return;
+    }
+
+    if (isCtrlOrCmd && lowerKey === "z") {
+      const handled = event.shiftKey ? this.#actions.onRedo() : this.#actions.onUndo();
+      if (handled) {
+        event.preventDefault();
+      }
+
+      return;
+    }
+
+    if (isCtrlOrCmd && lowerKey === "y") {
+      if (this.#actions.onRedo()) {
         event.preventDefault();
       }
 

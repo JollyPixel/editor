@@ -117,7 +117,11 @@ export class PixelSyncServer {
 
     const snapshot = this.snapshot(bufferId);
     if (snapshot) {
-      client.send({ type: "snapshot", bufferId, data: snapshot });
+      client.send({
+        type: "snapshot",
+        bufferId,
+        data: snapshot
+      });
     }
   }
 
@@ -185,7 +189,10 @@ export class PixelSyncServer {
     for (const position of cmd.metadata.positions) {
       const key = `${cmd.bufferId}:${position.x},${position.y}`;
       const existing = this.#lastHeaderByPixel.get(key);
-      const decision = this.#resolver.resolve({ incoming: cmd, existing });
+      const decision = this.#resolver.resolve({
+        incoming: cmd,
+        existing
+      });
 
       if (decision === "accept") {
         accepted.push(position);

@@ -89,6 +89,8 @@ function makeActions(options: {
   onCopyReturns?: boolean;
   onPasteReturns?: boolean;
   onDeleteReturns?: boolean;
+  onUndoReturns?: boolean;
+  onRedoReturns?: boolean;
 } = {}): {
   actions: InputActions;
   calls: Record<string, unknown[][]>;
@@ -99,7 +101,8 @@ function makeActions(options: {
     onZoom: [], onColorPick: [], onMouseMove: [],
     onCursorMove: [], onMouseUp: [],
     onShiftDown: [], onShiftUp: [], onBlur: [],
-    onCopy: [], onPaste: [], onDelete: []
+    onCopy: [], onPaste: [], onDelete: [],
+    onUndo: [], onRedo: []
   };
 
   const actions: InputActions = {
@@ -135,6 +138,16 @@ function makeActions(options: {
       calls.onDelete.push([]);
 
       return options.onDeleteReturns;
+    },
+    onUndo: () => {
+      calls.onUndo.push([]);
+
+      return options.onUndoReturns;
+    },
+    onRedo: () => {
+      calls.onRedo.push([]);
+
+      return options.onRedoReturns;
     }
   };
 
@@ -585,6 +598,139 @@ describe("InputController", () => {
 
       assert.strictEqual(calls.onCopy.length, 0);
       assert.strictEqual(calls.onDelete.length, 0);
+      ctrl.destroy();
+    });
+  });
+
+  describe("undo / redo shortcuts", () => {
+    function ctrlKeyDown(key: string, parameters: { shiftKey?: boolean; repeat?: boolean; } = {}): KeyboardEvent {
+      return new KeyboardEvent("keydown", {
+        key,
+        ctrlKey: true,
+        shiftKey: parameters.shiftKey ?? false,
+        repeat: parameters.repeat ?? false,
+        bubbles: true,
+        cancelable: true
+      });
+    }
+
+    test("Ctrl+Z fires onUndo", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions });
+
+      hoverCanvas(canvas);
+      window.dispatchEvent(ctrlKeyDown("z"));
+
+      assert.strictEqual(calls.onUndo.length, 1);
+      assert.strictEqual(calls.onRedo.length, 0);
+      ctrl.destroy();
+    });
+
+    test("Cmd+Z (metaKey) also fires onUndo", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions });
+
+      hoverCanvas(canvas);
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "z", metaKey: true, bubbles: true, cancelable: true }));
+
+      assert.strictEqual(calls.onUndo.length, 1);
+      ctrl.destroy();
+    });
+
+    test("Ctrl+Y fires onRedo", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions });
+
+      hoverCanvas(canvas);
+      window.dispatchEvent(ctrlKeyDown("y"));
+
+      assert.strictEqual(calls.onRedo.length, 1);
+      assert.strictEqual(calls.onUndo.length, 0);
+      ctrl.destroy();
+    });
+
+    test("Ctrl+Shift+Z fires onRedo, not onUndo", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions });
+
+      hoverCanvas(canvas);
+      window.dispatchEvent(ctrlKeyDown("z", { shiftKey: true }));
+
+      assert.strictEqual(calls.onRedo.length, 1);
+      assert.strictEqual(calls.onUndo.length, 0);
+      ctrl.destroy();
+    });
+
+    test("preventDefault is called when onUndo returns true", () => {
+      const { actions } = makeActions({ onUndoReturns: true });
+      const ctrl = new InputController({ canvas, viewport, actions });
+
+      hoverCanvas(canvas);
+      const event = ctrlKeyDown("z");
+      window.dispatchEvent(event);
+
+      assert.strictEqual(event.defaultPrevented, true);
+      ctrl.destroy();
+    });
+
+    test("preventDefault is NOT called when onUndo returns false", () => {
+      const { actions } = makeActions({ onUndoReturns: false });
+      const ctrl = new InputController({ canvas, viewport, actions });
+
+      hoverCanvas(canvas);
+      const event = ctrlKeyDown("z");
+      window.dispatchEvent(event);
+
+      assert.strictEqual(event.defaultPrevented, false);
+      ctrl.destroy();
+    });
+
+    test("preventDefault reflects onRedo's return value for Ctrl+Y", () => {
+      const { actions } = makeActions({ onRedoReturns: true });
+      const ctrl = new InputController({ canvas, viewport, actions });
+
+      hoverCanvas(canvas);
+      const event = ctrlKeyDown("y");
+      window.dispatchEvent(event);
+
+      assert.strictEqual(event.defaultPrevented, true);
+      ctrl.destroy();
+    });
+
+    test("OS key-repeat does not re-fire onUndo/onRedo", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions });
+
+      hoverCanvas(canvas);
+      window.dispatchEvent(ctrlKeyDown("z", { repeat: true }));
+      window.dispatchEvent(ctrlKeyDown("y", { repeat: true }));
+
+      assert.strictEqual(calls.onUndo.length, 0);
+      assert.strictEqual(calls.onRedo.length, 0);
+      ctrl.destroy();
+    });
+
+    test("keydown while a text input has focus does not fire onUndo/onRedo", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions });
+
+      hoverCanvas(canvas);
+      const input = kEmulatedBrowserWindow.document.createElement("input");
+      kEmulatedBrowserWindow.document.body.appendChild(input);
+
+      input.dispatchEvent(ctrlKeyDown("z"));
+
+      assert.strictEqual(calls.onUndo.length, 0);
+      ctrl.destroy();
+    });
+
+    test("Ctrl+Z before any mouseenter does not fire onUndo", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({ canvas, viewport, actions });
+
+      window.dispatchEvent(ctrlKeyDown("z"));
+
+      assert.strictEqual(calls.onUndo.length, 0);
       ctrl.destroy();
     });
   });

@@ -17,6 +17,17 @@ export type {
   PixelBufferHookEvent,
   PixelBufferHookListener
 } from "./buffer/hooks.ts";
+export {
+  groupPositionsByColor,
+  HistoryStack,
+  type ColorGroup,
+  type HistoryEntry,
+  type HistoryEntryInput,
+  type HistoryResizedEntry,
+  type HistoryStackOptions,
+  type HistoryStrokeEntry,
+  type HistoryTextureReplacedEntry
+} from "./history/HistoryStack.ts";
 export type {
   DefaultViewport
 } from "./rendering/Viewport.ts";
