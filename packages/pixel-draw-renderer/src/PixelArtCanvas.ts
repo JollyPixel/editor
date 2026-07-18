@@ -24,10 +24,6 @@ import {
   type HistoryState
 } from "./history/HistoryController.ts";
 import {
-  buildRedoReplayEvents,
-  buildUndoReplayEvents
-} from "./history/replayEvents.ts";
-import {
   createInputActions
 } from "./input/createInputActions.ts";
 import {
@@ -553,7 +549,7 @@ export class PixelArtCanvas {
     if (entry.action === "select-edit") {
       this.#selectController.syncSelectionAfterHistory(entry.oldRect);
     }
-    for (const event of buildUndoReplayEvents(entry)) {
+    for (const event of HistoryController.buildUndoReplayEvents(entry)) {
       this.#sync.emitHook(event);
     }
     this.#onDrawEnd?.();
@@ -572,7 +568,7 @@ export class PixelArtCanvas {
     if (entry.action === "select-edit") {
       this.#selectController.syncSelectionAfterHistory(entry.newRect);
     }
-    for (const event of buildRedoReplayEvents(entry)) {
+    for (const event of HistoryController.buildRedoReplayEvents(entry)) {
       this.#sync.emitHook(event);
     }
     this.#onDrawEnd?.();
