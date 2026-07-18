@@ -306,10 +306,6 @@ export default defineConfig({
                 {
                   text: "Brush",
                   link: "/pixel-draw-renderer/tools/Brush"
-                },
-                {
-                  text: "Types",
-                  link: "/pixel-draw-renderer/types"
                 }
               ]
             },
@@ -319,10 +315,6 @@ export default defineConfig({
                 {
                   text: "PixelBuffer",
                   link: "/pixel-draw-renderer/buffer/PixelBuffer"
-                },
-                {
-                  text: "Hooks",
-                  link: "/pixel-draw-renderer/buffer/hooks"
                 }
               ]
             },

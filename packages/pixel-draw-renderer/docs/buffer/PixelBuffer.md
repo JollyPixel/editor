@@ -99,3 +99,37 @@ samplePixel(x: number, y: number): [number, number, number, number]
 ```
 
 Returns the `[r, g, b, a]` of the working buffer at `(x, y)`. Out-of-bounds reads return `0` for each component rather than throwing.
+
+## Hooks
+
+```ts
+export type PixelBufferHookEvent =
+  | {
+    action: "stroke";
+    metadata: {
+      color: RGBA;
+      positions: Vec2[];
+    };
+    originTimestamp?: number;
+  }
+  | {
+    action: "resized";
+    metadata: {
+      size: Vec2;
+    };
+    originTimestamp?: number;
+  }
+  | {
+    action: "texture-replaced";
+    metadata: {
+      size: Vec2;
+      pixels: string;
+    };
+    originTimestamp?: number;
+  };
+
+type PixelBufferHookAction = PixelBufferHookEvent["action"];
+type PixelBufferHookListener = (event: PixelBufferHookEvent) => void;
+```
+
+This is the shape of `CanvasManager`'s `onBufferUpdated` local-mutation hook, and the vocabulary the [network layer](../network/index.md) is built on — every event is a valid network command payload once stamped with routing metadata. `"stroke"` covers a whole paint stroke or `commitPixels` call, not one event per brush stamp. `originTimestamp`, set only when `CanvasManager.undo()`/`redo()` replay an edit, carries that edit's original timestamp so the network [conflict resolver](../network/ConflictResolver.md) re-races the replay fairly instead of it always winning by virtue of being freshly stamped; it's stripped before the command is sent over the wire.

@@ -1,6 +1,6 @@
 # CanvasManager
 
-`CanvasManager` is the top-level coordinator for the pixel-draw renderer, and the package's primary public API. It wires together a viewport, canvas buffer, renderer, input handling, and SVG overlay — all internal implementation details — and owns the [`Brush`](./tools/Brush.md) tool plus internal line/fill/select tools.
+`CanvasManager` is the top-level coordinator for the pixel-draw renderer, and the package's primary public API. It wires together a viewport, canvas buffer, renderer, input handling, and SVG overlay — all internal implementation details — and owns the [`Brush`](./tools/Brush.md) tool, internal line/fill/select tools, and (when enabled) a [`HistoryStack`](./history/HistoryStack.md) for undo/redo.
 
 ## Types
 
@@ -59,6 +59,14 @@ interface CanvasManagerOptions {
    * Used by PixelSyncSession to forward mutations over the network.
    */
   onBufferUpdated?: PixelBufferHookListener;
+  /** Local undo/redo stack. Disabled by default. */
+  history?: {
+    enabled?: boolean;
+    /** @default 10 */
+    limit?: number;
+  };
+  /** Called whenever the undo/redo stack changes (after push, undo, redo, or clear). */
+  onHistoryChange?: (state: { canUndo: boolean; canRedo: boolean; }) => void;
   /**
    * Overrides for the copy/paste/undo/redo/delete key combos. Unspecified
    * actions keep their default binding. Shift (line-tool arm/disarm) is not
@@ -69,7 +77,9 @@ interface CanvasManagerOptions {
 }
 ```
 
-`Mode` is `"paint" | "move" | "fill" | "select"`. `ColorInput` (`string | Color`, where `Color` is [colorjs.io](https://colorjs.io)'s class) is used throughout the package wherever a color option is accepted: a CSS color string (hex, `rgb()`, `hsl()`, named color, ...) or a `Color` instance. `BrushOptions` is forwarded to the internal `Brush` instance, see [Brush.md](./tools/Brush.md). `PixelBufferHookListener` is described in [buffer/hooks.md](./buffer/hooks.md) and [network/index.md](./network/index.md). `Keybindings` is described in [utils/keybindings.md](./utils/keybindings.md).
+`Mode` is `"paint" | "move" | "fill" | "select"`. `ColorInput` (`string | Color`, where `Color` is [colorjs.io](https://colorjs.io)'s class) is used throughout the package wherever a color option is accepted: a CSS color string (hex, `rgb()`, `hsl()`, named color, ...) or a `Color` instance. `BrushOptions` is forwarded to the internal `Brush` instance, see [Brush.md](./tools/Brush.md). `PixelBufferHookListener` is described in [buffer/PixelBuffer.md](./buffer/PixelBuffer.md) and [network/index.md](./network/index.md). `Keybindings` is described in [utils/keybindings.md](./utils/keybindings.md).
+
+`history.enabled` (default `false`) creates an internal [`HistoryStack`](./history/HistoryStack.md) that records every stroke, resize, and texture replace, enabling `undo()`/`redo()`. Leaving it disabled skips that bookkeeping entirely — there's no per-edit cost paid for a feature that isn't used.
 
 Undocumented defaults: `texture.size` is `{ x: 64, y: 32 }` (`y` falls back to `x` when only `x` is given), `texture.maxSize` is `2048`, `zoom.default` is `4`, `zoom.min`/`zoom.max` are `1`/`32`, `zoom.sensitivity` is `0.1`, `backgroundTransparency.squareSize` is `8`, `backgroundTransparency.colors` is `{ odd: "#999", even: "#666" }`.
 
@@ -126,6 +136,23 @@ commitPixels(pixels: Vec2[]): void
 ```
 
 Commits an already-computed pixel set as a single atomic edit: one draw call, one redraw, one `"stroke"` hook emission. Used internally by the line tool to commit a whole rasterized line in one operation instead of redrawing once per point, and by the fill tool to commit a flood-filled region in one shot. A no-op when `pixels` is empty. The color used is the brush's current color/opacity.
+
+---
+
+### `undo` / `redo` / `canUndo` / `canRedo`
+
+```ts
+undo(): boolean
+redo(): boolean
+canUndo(): boolean
+canRedo(): boolean
+```
+
+Reverts/re-applies the most recent local edit (stroke, resize, or texture replace) via the internal [`HistoryStack`](./history/HistoryStack.md). `undo()`/`redo()` return `false` and do nothing when `history.enabled` wasn't passed at construction, or when the corresponding stack is empty; `canUndo()`/`canRedo()` report the same condition without mutating anything. Both bound to the configurable undo/redo keybindings by default, see [utils/keybindings.md](./utils/keybindings.md).
+
+A successful `undo()`/`redo()` redraws the canvas, calls `onDrawEnd`, fires `onHistoryChange`, and — for a history-enabled `CanvasManager` attached to a `PixelSyncSession` — emits the reverted/re-applied state through `onBufferUpdated` so peers converge to the same result (see [buffer/PixelBuffer.md](./buffer/PixelBuffer.md) for how the replayed event's `originTimestamp` keeps that fair under conflict resolution).
+
+A remote resize, texture-replace, or snapshot load clears the local history stack (its recorded positions/sizes no longer describe the buffer), so `canUndo()`/`canRedo()` drop to `false` after one.
 
 ---
 
