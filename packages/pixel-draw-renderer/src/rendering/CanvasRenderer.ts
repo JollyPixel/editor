@@ -82,6 +82,17 @@ export class CanvasRenderer {
     return this.#canvas;
   }
 
+  get backgroundColor(): string {
+    return this.#backgroundColor;
+  }
+
+  set backgroundColor(
+    color: ColorInput
+  ) {
+    this.#backgroundColor = new Color(color).toString();
+    this.drawFrame();
+  }
+
   drawFrame(): void {
     if (this.#canvas.width === 0 || this.#canvas.height === 0) {
       return;

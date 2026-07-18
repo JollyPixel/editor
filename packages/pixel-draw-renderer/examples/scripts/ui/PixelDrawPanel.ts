@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { LitElement, html, css } from "lit";
+import { LitElement, html, css, nothing } from "lit";
 import { customElement } from "lit/decorators.js";
 
 // Import Internal Dependencies
@@ -9,79 +9,233 @@ import {
   type Mode
 } from "../../../src/index.ts";
 import { type ColorSwatch, type ColorChangeDetail } from "./ColorSwatch.ts";
+import { renderIcon, type IconName } from "./icons.ts";
+
+// CONSTANTS
+const kModeItems: { mode: Mode; icon: IconName; label: string; }[] = [
+  { mode: "move", icon: "move", label: "Move" },
+  { mode: "paint", icon: "paint", label: "Paint" },
+  { mode: "fill", icon: "fill", label: "Fill" },
+  { mode: "select", icon: "select", label: "Select" }
+];
 
 @customElement("pixel-draw-panel")
 export class PixelDrawPanel extends LitElement {
   static override styles = css`
     :host {
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
       height: 100%;
     }
 
-    .toolbar {
+    .rail {
       position: relative;
-      z-index: 2;
+      z-index: 3;
       display: flex;
+      flex-direction: column;
       align-items: center;
-      flex-wrap: wrap;
-      gap: 4px 12px;
-      padding: 6px 12px;
+      justify-content: center;
+      width: 60px;
+      flex-shrink: 0;
+      padding: 10px 0;
+      gap: 10px;
       background: #37474F;
       color: #eee;
-      font-size: 12px;
       font-family: sans-serif;
       user-select: none;
-      flex-shrink: 0;
     }
 
-    .toolbar-item {
+    .rail-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex-shrink: 0;
+      gap: 4px;
+    }
+
+    .rail-divider {
+      width: 32px;
+      height: 1px;
+      flex-shrink: 0;
+      background: #4b5b63;
+    }
+
+    .rail-btn {
+      position: relative;
       display: flex;
       align-items: center;
-      gap: 6px;
-      cursor: default;
-    }
-
-    .mode-btn {
-      padding: 3px 10px;
-      border: 1px solid #555;
-      border-radius: 3px;
+      justify-content: center;
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      border: 1px solid transparent;
+      border-radius: 4px;
       background: transparent;
-      color: #aaa;
-      font-size: 11px;
-      font-family: sans-serif;
+      color: #ccc;
       cursor: pointer;
     }
-    .mode-btn:hover {
-      background: #3a3a3a;
-      color: #eee;
+    .rail-btn:hover:not(:disabled) {
+      color: #fff;
     }
-    .mode-btn.active {
+    .rail-btn.active {
       background: #4488ff;
       border-color: #4488ff;
       color: #fff;
     }
-
-    .toolbar-item input[type="range"] {
-      width: 80px;
-      min-width: 48px;
-      flex-shrink: 1;
-      cursor: pointer;
+    .rail-btn:disabled {
+      color: #556067;
+      cursor: default;
     }
 
-    .toolbar-item span {
-      width: 32px;
-      text-align: right;
+    .icon {
+      width: 21px;
+      height: 21px;
+      flex-shrink: 0;
+    }
+    .swap-btn .icon {
+      width: 11px;
+      height: 11px;
+    }
+
+    .tooltip {
+      position: absolute;
+      left: calc(100% + 8px);
+      top: 50%;
+      z-index: 10;
+      padding: 3px 8px;
+      border-radius: 3px;
+      background: #1d262b;
+      color: #eee;
       font-size: 11px;
-      color: #ccc;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-50%);
+      transition: opacity 0.1s ease;
+    }
+    .rail-btn:hover .tooltip {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .color-picker {
+      /*
+       * Self-contained box: fg/bg swatches and the swap button all stay
+       * within these bounds (no negative offsets), so the rail's own gap
+       * is the true, symmetric visual spacing above/below this element.
+       * flex-shrink:0 matters here specifically: its children are all
+       * position:absolute, so it has ~0 natural content height and would
+       * otherwise be the first thing the flex column crushes when the rail
+       * runs short on vertical space, leaving the swatches anchored to a
+       * collapsed box and overlapped by neighboring elements.
+       */
+      position: relative;
+      flex-shrink: 0;
+      width: 44px;
+      height: 44px;
+    }
+
+    .color-picker .swatch {
+      position: absolute;
+    }
+    .color-picker .swatch.fg {
+      top: 4px;
+      left: 0;
+      z-index: 2;
+    }
+    .color-picker .swatch.bg {
+      right: 0;
+      bottom: 0;
+      z-index: 1;
+    }
+    .color-picker .swatch::part(swatch) {
+      width: 24px;
+      height: 24px;
+    }
+
+    .swap-btn {
+      position: absolute;
+      top: 0;
+      right: 0;
+      z-index: 3;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      padding: 0;
+      border: none;
+      border-radius: 50%;
+      background: #546b76;
+      color: #fff;
+      font-size: 9px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .swap-btn:hover {
+      background: #4488ff;
+    }
+
+    .stage {
+      position: relative;
+      flex: 1;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
     }
 
     .canvas-host {
-      flex: 1;
-      position: relative;
-      overflow: hidden;
-      min-width: 0;
-      min-height: 0;
+      /*
+       * PixelArtCanvas.appendTo() sets this element's position to "relative"
+       * inline (higher specificity than this stylesheet), so sizing must
+       * come from width/height, not position:absolute + inset.
+       */
+      width: 100%;
+      height: 100%;
+    }
+
+    .tool-option-overlay {
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      background: rgba(30, 38, 43, 0.85);
+      color: #eee;
+      font-size: 11px;
+      font-family: sans-serif;
+      user-select: none;
+      transform: translateX(-50%);
+    }
+
+    .tool-option-overlay input[type="range"] {
+      width: 100px;
+      cursor: pointer;
+    }
+
+    .tool-option-overlay span {
+      width: 28px;
+      text-align: right;
+    }
+
+    .fill-toggle-btn {
+      padding: 2px 8px;
+      border: 1px solid #556067;
+      border-radius: 10px;
+      background: transparent;
+      color: #eee;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .fill-toggle-btn.active {
+      background: #4488ff;
+      border-color: #4488ff;
     }
   `;
 
@@ -90,7 +244,11 @@ export class PixelDrawPanel extends LitElement {
   // requestUpdate() instead of the decorator.
   #mode: Mode = "paint";
   #brushSize = 1;
-  #zoomSensitivity = 0.6;
+  #fillGlobal = false;
+  #foreground: ColorChangeDetail = { hex: "#000000", opacity: 1 };
+  #background: ColorChangeDetail = { hex: "#ffffff", opacity: 1 };
+  #canUndo = false;
+  #canRedo = false;
   #canvasManager: PixelArtCanvas | null = null;
 
   get canvasManager(): PixelArtCanvas | null {
@@ -100,6 +258,7 @@ export class PixelDrawPanel extends LitElement {
   override connectedCallback() {
     super.connectedCallback();
     this.addEventListener("colorpicked", this.#onColorPicked);
+    this.addEventListener("swatch-opened", this.#onSwatchOpened);
   }
 
   /**
@@ -113,13 +272,28 @@ export class PixelDrawPanel extends LitElement {
     await this.updateComplete;
 
     const canvasHostEl = this.shadowRoot!.querySelector<HTMLDivElement>(".canvas-host")!;
-    this.#canvasManager = new PixelArtCanvas(canvasHostEl, options);
+    this.#canvasManager = new PixelArtCanvas(canvasHostEl, {
+      ...options,
+      onHistoryChange: (state) => {
+        this.#canUndo = state.canUndo;
+        this.#canRedo = state.canRedo;
+        this.requestUpdate();
+        options.onHistoryChange?.(state);
+      }
+    });
 
-    // Sync toolbar state with whatever defaults were passed in options.
+    // Sync rail state with whatever defaults were passed in options.
     this.#mode = this.#canvasManager.mode;
     this.#brushSize = this.#canvasManager.brush.size;
-    this.#zoomSensitivity = this.#canvasManager.zoomSensitivity;
+    this.#fillGlobal = this.#canvasManager.fillGlobal;
+    this.#foreground = {
+      hex: this.#canvasManager.brush.colorAsString("hex"),
+      opacity: this.#canvasManager.brush.opacity
+    };
+    this.#canUndo = this.#canvasManager.canUndo();
+    this.#canRedo = this.#canvasManager.canRedo();
     this.requestUpdate();
+    this.#syncForegroundSwatch();
 
     return this.#canvasManager;
   }
@@ -131,6 +305,7 @@ export class PixelDrawPanel extends LitElement {
   override disconnectedCallback() {
     super.disconnectedCallback();
     this.removeEventListener("colorpicked", this.#onColorPicked);
+    this.removeEventListener("swatch-opened", this.#onSwatchOpened);
     this.#canvasManager?.destroy();
     this.#canvasManager = null;
   }
@@ -156,73 +331,98 @@ export class PixelDrawPanel extends LitElement {
     this.requestUpdate();
   }
 
-  #onZoomSensitivityChange(
-    event: Event
-  ): void {
-    const value = parseFloat((event.target as HTMLInputElement).value);
-    this.#zoomSensitivity = value;
+  #onFillGlobalToggle(): void {
+    this.#fillGlobal = !this.#fillGlobal;
     if (this.#canvasManager) {
-      this.#canvasManager.zoomSensitivity = value;
+      this.#canvasManager.fillGlobal = this.#fillGlobal;
     }
     this.requestUpdate();
   }
 
-  #onColorSwatchChange(
+  #onForegroundChange(
     event: CustomEvent<ColorChangeDetail>
   ): void {
-    const { hex, opacity } = event.detail;
-    this.#canvasManager?.brush.color(hex, opacity);
+    this.#foreground = event.detail;
+    this.#canvasManager?.brush.color(event.detail.hex, event.detail.opacity);
+  }
+
+  #onBackgroundChange(
+    event: CustomEvent<ColorChangeDetail>
+  ): void {
+    this.#background = event.detail;
   }
 
   /**
-   * Mirrors a color picked via the canvas eyedropper (right-click) back onto
-   * the color-swatch, without re-triggering its "color-change" event.
+   * Exchanges foreground/background, pushing the new foreground onto the
+   * brush. Background stays inert until it becomes the foreground.
+   */
+  #swapColors(): void {
+    [this.#foreground, this.#background] = [this.#background, this.#foreground];
+    this.#canvasManager?.brush.color(this.#foreground.hex, this.#foreground.opacity);
+    this.requestUpdate();
+    this.#syncForegroundSwatch();
+    this.#syncBackgroundSwatch();
+  }
+
+  /**
+   * ColorSwatch only paints its swatch/picker from `color`/`opacity` in
+   * firstUpdated() — later property changes made from here need an explicit
+   * setColor() to actually repaint it (mirrors #onColorPicked below).
+   */
+  #syncForegroundSwatch(): void {
+    this.shadowRoot?.querySelector<ColorSwatch>("color-swatch.fg")
+      ?.setColor(this.#foreground.hex, this.#foreground.opacity);
+  }
+
+  #syncBackgroundSwatch(): void {
+    this.shadowRoot?.querySelector<ColorSwatch>("color-swatch.bg")
+      ?.setColor(this.#background.hex, this.#background.opacity);
+  }
+
+  #onUndo(): void {
+    this.#canvasManager?.undo();
+  }
+
+  #onRedo(): void {
+    this.#canvasManager?.redo();
+  }
+
+  /**
+   * Mirrors a color picked via the canvas eyedropper (right-click) onto the
+   * foreground swatch, without re-triggering its "color-change" event.
    */
   readonly #onColorPicked = (
     event: Event
   ): void => {
     const { hex, opacity } = (
-      event as CustomEvent<{ hex: string; opacity: number; }>
+      event as CustomEvent<ColorChangeDetail>
     ).detail;
 
-    this.shadowRoot!.querySelector<ColorSwatch>("color-swatch")!.setColor(hex, opacity);
+    this.#foreground = { hex, opacity };
+    this.shadowRoot!.querySelector<ColorSwatch>("color-swatch.fg")!.setColor(hex, opacity);
   };
 
-  override render() {
-    return html`
-      <div class="toolbar" part="toolbar">
-        <div class="toolbar-item" role="group" aria-label="Drawing mode">
-          <button
-            class="mode-btn ${this.#mode === "paint" ? "active" : ""}"
-            part="mode-button"
-            aria-pressed=${this.#mode === "paint"}
-            @click=${() => this.#setMode("paint")}
-          >Paint</button>
-          <button
-            class="mode-btn ${this.#mode === "fill" ? "active" : ""}"
-            part="mode-button"
-            aria-pressed=${this.#mode === "fill"}
-            @click=${() => this.#setMode("fill")}
-          >Fill</button>
-          <button
-            class="mode-btn ${this.#mode === "move" ? "active" : ""}"
-            part="mode-button"
-            aria-pressed=${this.#mode === "move"}
-            @click=${() => this.#setMode("move")}
-          >Move</button>
-          <button
-            class="mode-btn ${this.#mode === "select" ? "active" : ""}"
-            part="mode-button"
-            aria-pressed=${this.#mode === "select"}
-            @click=${() => this.#setMode("select")}
-          >Select</button>
-        </div>
+  /**
+   * Closes the sibling swatch so foreground/background pickers can't both be
+   * open. Crossing the color-swatch's shadow boundary retargets event.target
+   * to this panel itself, so composedPath()[0] is used to find the actual
+   * swatch that opened.
+   */
+  readonly #onSwatchOpened = (
+    event: Event
+  ): void => {
+    const opened = event.composedPath()[0];
+    for (const swatch of this.shadowRoot!.querySelectorAll<ColorSwatch>("color-swatch")) {
+      if (swatch !== opened) {
+        swatch.close();
+      }
+    }
+  };
 
-        <div class="toolbar-item">
-          <color-swatch @color-change=${this.#onColorSwatchChange}></color-swatch>
-        </div>
-
-        <label class="toolbar-item">
+  #renderToolOptions() {
+    if (this.#mode === "paint") {
+      return html`
+        <div class="tool-option-overlay" part="brush-size-overlay">
           Size
           <input
             type="range" min="1" max="32"
@@ -230,20 +430,91 @@ export class PixelDrawPanel extends LitElement {
             @input=${this.#onBrushSizeChange}
           >
           <span>${this.#brushSize}px</span>
-        </label>
+        </div>
+      `;
+    }
 
-        <label class="toolbar-item">
-          Zoom Sensitivity
-          <input
-            type="range" min="0.01" max="1" step="0.01"
-            .value=${String(this.#zoomSensitivity)}
-            @input=${this.#onZoomSensitivityChange}
+    if (this.#mode === "fill") {
+      return html`
+        <div class="tool-option-overlay" part="fill-mode-overlay">
+          <button
+            class="fill-toggle-btn ${this.#fillGlobal ? "active" : ""}"
+            aria-pressed=${this.#fillGlobal}
+            @click=${this.#onFillGlobalToggle}
+          >${this.#fillGlobal ? "Global" : "Neighbor"}</button>
+        </div>
+      `;
+    }
+
+    return nothing;
+  }
+
+  override render() {
+    return html`
+      <div class="rail" part="rail">
+        <div class="rail-section" role="group" aria-label="Drawing mode">
+          ${kModeItems.map(({ mode, icon, label }) => html`
+            <button
+              class="rail-btn ${this.#mode === mode ? "active" : ""}"
+              part="mode-button"
+              aria-label=${label}
+              aria-pressed=${this.#mode === mode}
+              @click=${() => this.#setMode(mode)}
+            >
+              ${renderIcon(icon)}
+              <span class="tooltip">${label}</span>
+            </button>
+          `)}
+        </div>
+
+        <div class="rail-divider"></div>
+
+        <div class="color-picker" part="color-picker">
+          <color-swatch
+            class="swatch fg" part="fg-swatch"
+            .color=${this.#foreground.hex} .opacity=${this.#foreground.opacity}
+            @color-change=${this.#onForegroundChange}
+          ></color-swatch>
+          <color-swatch
+            class="swatch bg" part="bg-swatch"
+            .color=${this.#background.hex} .opacity=${this.#background.opacity}
+            @color-change=${this.#onBackgroundChange}
+          ></color-swatch>
+          <button
+            class="swap-btn" part="swap-button"
+            aria-label="Swap foreground and background colors"
+            @click=${this.#swapColors}
+          >${renderIcon("swap")}</button>
+        </div>
+
+        <div class="rail-divider"></div>
+
+        <div class="rail-section" role="group" aria-label="History">
+          <button
+            class="rail-btn" part="undo-button"
+            aria-label="Undo"
+            ?disabled=${!this.#canUndo}
+            @click=${this.#onUndo}
           >
-          <span>${this.#zoomSensitivity.toFixed(2)}</span>
-        </label>
+            ${renderIcon("undo")}
+            <span class="tooltip">Undo</span>
+          </button>
+          <button
+            class="rail-btn" part="redo-button"
+            aria-label="Redo"
+            ?disabled=${!this.#canRedo}
+            @click=${this.#onRedo}
+          >
+            ${renderIcon("redo")}
+            <span class="tooltip">Redo</span>
+          </button>
+        </div>
       </div>
 
-      <div class="canvas-host" part="canvas-host"></div>
+      <div class="stage" part="stage">
+        <div class="canvas-host" part="canvas-host"></div>
+        ${this.#renderToolOptions()}
+      </div>
     `;
   }
 }
