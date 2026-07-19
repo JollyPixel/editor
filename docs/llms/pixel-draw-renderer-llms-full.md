@@ -1158,7 +1158,7 @@ The brush instance. Use it to read or change the primary/secondary brush colors,
 readonly viewport: DefaultViewport // { readonly zoom: Zoom; readonly camera: Readonly<Vec2>; }
 ```
 
-Read-only camera/zoom state. `viewport.zoom` is a `Zoom` value object (`.value`, `.min`, `.max`, `.sensitivity`), not a plain number — use the top-level `zoom`/`zoomSensitivity` accessors below for the numeric level, or the methods below for coordinate conversions and mutation.
+Read-only camera/zoom state. `viewport.zoom` is the same `Zoom` value object as the top-level `zoom` accessor below (`.value`, `.min`, `.max`, `.sensitivity`); use `viewport` for coordinate conversions and mutation via the methods below.
 
 ## Methods
 
@@ -1315,21 +1315,10 @@ Returns a copy of the current camera offset `{ x, y }` in viewport space.
 ### `zoom`
 
 ```ts
-get zoom(): number
+get zoom(): Zoom
 ```
 
-Returns the current zoom multiplier.
-
----
-
-### `zoomSensitivity`
-
-```ts
-get zoomSensitivity(): number
-set zoomSensitivity(sensitivity: number)
-```
-
-Reads or sets the mouse-wheel zoom sensitivity (clamped to a minimum of `0.01`).
+Returns the `Zoom` value object (same instance as `viewport.zoom`): `.value` is the current multiplier, `.min`/`.max` are the configured bounds, `.sensitivity` reads or sets the mouse-wheel zoom sensitivity (clamped to a minimum of `0.01`).
 
 ---
 

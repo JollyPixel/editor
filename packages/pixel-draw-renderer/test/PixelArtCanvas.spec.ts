@@ -84,24 +84,24 @@ describe("PixelArtCanvas", () => {
     });
   });
 
-  describe("zoom sensitivity", () => {
-    test("zoomSensitivity returns the configured default", () => {
+  describe("zoom", () => {
+    test("zoom.sensitivity returns the configured default", () => {
       const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } },
         zoom: { default: 4, sensitivity: 0.25 }
       });
 
-      assert.strictEqual(manager.zoomSensitivity, 0.25);
+      assert.strictEqual(manager.zoom.sensitivity, 0.25);
       manager.destroy();
     });
 
-    test("setting zoomSensitivity updates the returned value", () => {
+    test("setting zoom.sensitivity updates the returned value", () => {
       const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } }
       });
 
-      manager.zoomSensitivity = 0.5;
-      assert.strictEqual(manager.zoomSensitivity, 0.5);
+      manager.zoom.sensitivity = 0.5;
+      assert.strictEqual(manager.zoom.sensitivity, 0.5);
       manager.destroy();
     });
   });
