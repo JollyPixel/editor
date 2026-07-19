@@ -25,7 +25,10 @@ type KeybindingAction =
 type Keybindings = Record<KeybindingAction, Keybinding | Keybinding[]>;
 ```
 
-A `Keybinding` is a `+`-separated combo string, e.g. `"mod+z"` or `"mod+shift+z"`. `"mod"` matches either Ctrl or Cmd, so a binding behaves the same on every platform. The key segment is matched against the character produced (`KeyboardEvent.key`, case-insensitive), not physical key position, so `"z"` means "whatever key produces the Z character on the user's layout" — correct on AZERTY/QWERTZ without the DSL needing to know about layouts. `NamedKey` lists the non-printable keys for editor autocomplete; any other string is still accepted.
+A `Keybinding` is a `+`-separated combo string, e.g. `"mod+z"` or `"mod+shift+z"`. `"mod"` matches either Ctrl or Cmd, so a binding behaves the same on every platform.
+
+> [!IMPORTANT]
+> The key segment is matched against the character produced (`KeyboardEvent.key`, case-insensitive), not physical key position. `"z"` means "whatever key produces the Z character on the user's layout," correct on AZERTY/QWERTZ without the DSL needing to know about layouts. `NamedKey` lists the non-printable keys for editor autocomplete; any other string is still accepted.
 
 Only `copy`, `paste`, `undo`, `redo`, `delete`, `rotate`, `flipHorizontal`, and `flipVertical` are configurable. Shift (used to arm/disarm the line tool in `"paint"` mode) is not.
 
@@ -44,7 +47,7 @@ const DEFAULT_KEYBINDINGS: Keybindings = {
 };
 ```
 
-The keybindings `PixelArtCanvas` uses when `keybindings` isn't passed to its options, and the base a partial override is merged onto. `redo` has two default triggers; any action may be given an array of alternate bindings. `rotate`/`flipHorizontal`/`flipVertical` only have an effect in `"select"` mode with an active selection (rotate is clockwise-only — press it multiple times for other angles).
+The keybindings `PixelArtCanvas` uses when `keybindings` isn't passed to its options, and the base a partial override is merged onto. `redo` has two default triggers; any action may be given an array of alternate bindings. `rotate`/`flipHorizontal`/`flipVertical` only have an effect in `"select"` mode with an active selection (rotate is clockwise-only; press it multiple times for other angles).
 
 Matching is exact on modifiers: `"mod+c"` does **not** also match Ctrl+Shift+C, and the default `"Delete"` binding (no modifier) does not also match Ctrl+Delete.
 
@@ -55,4 +58,4 @@ class InvalidKeybindingError extends Error {}
 class KeybindingConflictError extends Error {}
 ```
 
-Both are thrown synchronously from the constructor's `keybindings` option and from `patchKeybindings()` — never asynchronously, and never left as a silently-dropped binding. `InvalidKeybindingError` is thrown for a malformed combo string (unknown modifier token, empty/missing key segment). `KeybindingConflictError` is thrown when two different actions would resolve to the same combo.
+Both are thrown synchronously from the constructor's `keybindings` option and from `patchKeybindings()`: never asynchronously, and never left as a silently-dropped binding. `InvalidKeybindingError` is thrown for a malformed combo string (unknown modifier token, empty/missing key segment). `KeybindingConflictError` is thrown when two different actions would resolve to the same combo.

@@ -6,8 +6,8 @@ Wire-format types for the [network sync layer](./index.md).
 
 ```ts
 /**
- * Buffer create/destroy events. A PixelArtCanvas has no concept of a bufferId
- * so these are never emitted from a PixelArtCanvas's onBufferUpdated hook —
+ * Buffer create/destroy events. A PixelArtCanvas has no concept of a bufferId,
+ * so these are never emitted from a PixelArtCanvas's onBufferUpdated hook;
  * they are constructed directly by PixelSyncSession.createBuffer/removeBuffer.
  */
 type PixelLifecycleEvent =
@@ -18,10 +18,12 @@ type PixelLifecycleEvent =
       /** Base64-encoded RGBA bytes for the buffer's initial content, if any. */
       pixels?: string;
     };
+    originTimestamp?: number;
   }
   | {
     action: "buffer-removed";
     metadata: Record<string, never>;
+    originTimestamp?: number;
   };
 
 type PixelNetworkEvent = PixelBufferHookEvent | PixelLifecycleEvent;
@@ -49,3 +51,6 @@ interface PixelBufferSnapshot {
 ```
 
 `PixelBufferHookEvent` (the `"stroke"` / `"resized"` / `"texture-replaced"` / `"global-fill"` local-mutation events) is defined in [buffer/PixelBuffer.md](../buffer/PixelBuffer.md); a `PixelNetworkCommand` is that same event shape plus `PixelLifecycleEvent`, enriched with the header fields. Six actions total: `"buffer-added"`, `"buffer-removed"`, `"stroke"`, `"resized"`, `"texture-replaced"`, `"global-fill"`. All pixel payloads (`stroke` positions and `global-fill`'s colors excepted) are raw RGBA bytes, base64-encoded via `js-base64`: no image codec dependency, so `PixelSyncServer` stays headless. Commands are plain JSON-serializable objects.
+
+> [!IMPORTANT]
+> `PixelLifecycleEvent`'s `originTimestamp` exists only for structural symmetry with `PixelBufferHookEvent` (so the stamping logic in [`PixelSyncSession`](./PixelSyncSession.md) can handle every event uniformly). `"buffer-added"`/`"buffer-removed"` are never replayed through undo/redo, so it's always `undefined` in practice for these two actions.

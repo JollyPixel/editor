@@ -1,45 +1,36 @@
 // Import Internal Dependencies
-import type { RGBA, SelectionRect } from "../../types.ts";
+import type {
+  RGBA,
+  SelectionRect
+} from "../../types.ts";
 
 export interface FloatingOverlayOptions {
-  /** The selection's original position, rendered as eraseColor while floating. */
+  /**
+   * Original selection position.
+   */
   sourceRect: SelectionRect;
-  /** Row-major pixel data (sourceRect.width * sourceRect.height long). */
+  /**
+   * Row-major selection pixels.
+   */
   pixels: RGBA[];
   /**
-   * Rect-relative, row-major selection mask (same length as `pixels`).
-   * Omitted (or every cell true) means the whole rect is selected — the
-   * common rectangle-drag case, which skips the per-pixel erase canvas
-   * below in favor of a cheap 1x1-stretched fill. When some cells are
-   * false (a shape selection), both the content and erase canvases only
-   * show/blank the masked cells, leaving the rest of the bounding box's
-   * pixels visible/untouched.
+   * Row-major selection mask.
    */
   mask?: boolean[];
   eraseColor: RGBA;
   /**
-   * Whether to preview sourceRect as vacated (filled with eraseColor) while
-   * dragging. Set false for a just-pasted selection's first move, whose
-   * source still holds real content that dropping will NOT erase — blanking
-   * it during the drag would misleadingly hide that content.
+   * Whether to erase the source while dragging.
    * @default true
    */
   blankSource?: boolean;
 }
 
 /**
- * Renders a selection's captured pixels as a display-only overlay on top of
- * the base texture while it's being dragged (move/paste), blanking its
- * original position with `eraseColor` so it doesn't look duplicated. Owns no
- * canvas of its own to paint onto — CanvasRenderer calls draw(ctx) at the
- * point in its frame where the overlay should composite. The real
- * CanvasBuffer is never touched here — PixelArtCanvas commits the actual
- * move/paste separately, once, on drop.
+ * Renders a floating selection overlay.
  */
 export class FloatingSelectionOverlay {
   #canvas: HTMLCanvasElement | null = null;
   #eraseCanvas: HTMLCanvasElement | null = null;
-  /** Whether #eraseCanvas is a 1x1 swatch meant to be stretched (rect case) vs a full-size per-pixel mask (shape case). */
   #eraseIsUniform = true;
   #sourceRect: SelectionRect | null = null;
   #liveRect: SelectionRect | null = null;
@@ -78,7 +69,6 @@ export class FloatingSelectionOverlay {
     this.#blankSource = blankSource;
   }
 
-  /** A 1x1 canvas holding eraseColor, stretched over the whole rect at draw time. */
   static #buildUniformEraseCanvas(
     eraseColor: RGBA
   ): HTMLCanvasElement {
@@ -97,11 +87,6 @@ export class FloatingSelectionOverlay {
     return eraseCanvas;
   }
 
-  /**
-   * A full sourceRect-sized canvas: opaque eraseColor over masked cells,
-   * fully transparent (untouched when blitted) elsewhere — so blanking a
-   * shape selection's source only visually erases its actual cells.
-   */
   static #buildMaskedEraseCanvas(
     sourceRect: SelectionRect,
     mask: boolean[],
@@ -130,8 +115,7 @@ export class FloatingSelectionOverlay {
   }
 
   /**
-   * Updates the overlay's live (drag) position without rebuilding its pixel
-   * content. No-op when no overlay is active.
+   * Updates the floating selection position.
    */
   updatePosition(
     liveRect: SelectionRect
@@ -153,9 +137,7 @@ export class FloatingSelectionOverlay {
   }
 
   /**
-   * Composites the overlay onto `ctx` at its current live position. No-op
-   * when no overlay is active. Called by CanvasRenderer.drawFrame() after
-   * the base texture has been blitted, under the same zoom/camera transform.
+   * Draws the floating selection.
    */
   draw(
     ctx: CanvasRenderingContext2D
@@ -167,15 +149,9 @@ export class FloatingSelectionOverlay {
     if (this.#blankSource && this.#eraseCanvas) {
       const source = this.#sourceRect;
       if (this.#eraseIsUniform) {
-        // Blitted (drawImage), not fillRect: fillRect anti-aliases its own
-        // edges under a scaled transform while drawImage (with smoothing
-        // off) doesn't, and mixing the two left a thin seam at the boundary
-        // whenever zoom/camera didn't land on whole device pixels.
         ctx.drawImage(this.#eraseCanvas, 0, 0, 1, 1, source.x, source.y, source.width, source.height);
       }
       else {
-        // Already sourceRect-sized 1:1 (masked cells opaque, rest
-        // transparent) — a direct blit, no stretch needed.
         ctx.drawImage(this.#eraseCanvas, source.x, source.y);
       }
     }

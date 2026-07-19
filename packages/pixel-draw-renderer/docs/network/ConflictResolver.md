@@ -1,6 +1,11 @@
 # ConflictResolver
 
-Conflicts are resolved **per pixel**, not per command. A single stroke command can touch thousands of pixels, so [`PixelSyncServer`](./PixelSyncServer.md) splits a command: pixels that lose the race are dropped from the applied/broadcast copy, the rest are applied normally. `"buffer-added"`, `"buffer-removed"`, `"resized"`, `"texture-replaced"`, and `"global-fill"` are always accepted with no per-pixel arbitration; only `"stroke"` goes through a resolver. `"global-fill"` carries no position list to arbitrate against (see [buffer/PixelBuffer.md](../buffer/PixelBuffer.md)) — it's applied by recomputing matching pixels against the server's own authoritative buffer at receive-time, which is self-consistent as long as commands are applied in the order the server processes them.
+Conflicts are resolved **per pixel**, not per command. A single stroke command can touch thousands of pixels, so [`PixelSyncServer`](./PixelSyncServer.md) splits a command: pixels that lose the race are dropped from the applied/broadcast copy, the rest are applied normally.
+
+Only `"stroke"` goes through a resolver. `"buffer-added"`, `"buffer-removed"`, `"resized"`, `"texture-replaced"`, and `"global-fill"` are always accepted with no per-pixel arbitration.
+
+> [!IMPORTANT]
+> `"global-fill"` carries no position list to arbitrate against (see [buffer/PixelBuffer.md](../buffer/PixelBuffer.md)). It's applied by recomputing matching pixels against the server's own authoritative buffer at receive-time, which is self-consistent only because commands are applied in the order the server processes them.
 
 ## Types
 
@@ -19,7 +24,7 @@ interface PixelConflictContext {
  * given the last known command header at the same pixel.
  *
  * Only the header is tracked (not the full stroke command) since a single
- * stroke can touch thousands of pixels — keeping a full command per pixel
+ * stroke can touch thousands of pixels; keeping a full command per pixel
  * would be wasteful.
  */
 interface PixelConflictResolver {

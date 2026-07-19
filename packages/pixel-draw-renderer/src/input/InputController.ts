@@ -6,9 +6,15 @@ import {
   type KeybindingAction,
   type Keybindings
 } from "../utils/keybindings.ts";
-import type { Vec2 } from "../types.ts";
-import type { Viewport } from "../rendering/Viewport.ts";
-import { isEditableTarget } from "./utils.ts";
+import type {
+  Vec2
+} from "../types.ts";
+import type {
+  Viewport
+} from "../rendering/Viewport.ts";
+import {
+  isEditableTarget
+} from "./utils.ts";
 
 export interface InputActions {
   /**

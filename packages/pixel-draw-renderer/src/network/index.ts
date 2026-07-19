@@ -13,7 +13,9 @@ export type {
 export { LastWriteWinsResolver } from "./ConflictResolver.ts";
 export { applyCommandToWorld } from "./PixelCommandApplier.ts";
 export { PixelWorld } from "./PixelWorld.ts";
-export type { PixelSyncSessionOptions } from "./PixelSyncSession.ts";
+export type {
+  PixelSyncSessionOptions
+} from "./PixelSyncSession.ts";
 export { PixelSyncSession } from "./PixelSyncSession.ts";
 export type {
   ClientHandle,

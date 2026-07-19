@@ -1,8 +1,8 @@
 # HistoryStack
 
-Bounded undo/redo stack over a `DefaultPixelBuffer` (`PixelBuffer` or `CanvasBuffer`) — no DOM or network dependency, so it runs identically headless or in the browser. `PixelArtCanvas`'s internal `HistoryController` owns one when constructed with `history.enabled: true` (see [PixelArtCanvas.md](../PixelArtCanvas.md#undo--redo--canundo--canredo)); most consumers drive undo/redo through `PixelArtCanvas.undo()`/`redo()` rather than this class directly.
+Bounded undo/redo stack over a `DefaultPixelBuffer` (`PixelBuffer` or `CanvasBuffer`), with no DOM or network dependency, so it runs identically headless or in the browser. `PixelArtCanvas`'s internal `HistoryController` owns one when constructed with `history.enabled: true` (see [PixelArtCanvas.md](../PixelArtCanvas.md#undo--redo--canundo--canredo)); most consumers drive undo/redo through `PixelArtCanvas.undo()`/`redo()` rather than this class directly.
 
-`HistoryStack` only owns the stack and replays before/after data against its buffer — capturing that before/after data on each edit is the caller's job (`PixelArtCanvas` does this internally for strokes, resizes, and texture replaces).
+`HistoryStack` only owns the stack and replays before/after data against its buffer; capturing that before/after data on each edit is the caller's job (`PixelArtCanvas` does this internally for strokes, resizes, and texture replaces).
 
 ## Types
 
@@ -44,13 +44,28 @@ type HistoryEntry =
     positions: Vec2[];
     beforeColors: RGBA[];
     afterColors: RGBA[];
+    oldRect: SelectionRect;
+    newRect: SelectionRect;
+    oldMask: boolean[];
+    newMask: boolean[];
   };
 
-/** Same as HistoryEntry, minus `timestamp` — stamped by `push()`. */
+/** Same as HistoryEntry, minus `timestamp` (stamped by `push()`). */
 type HistoryEntryInput = Omit<HistoryEntry, "timestamp">;
 ```
 
-`limit` bounds the undo stack: pushing past it silently drops the oldest entry. A `"stroke"` entry's `beforeColors` is per-position (a stroke can cross pixels of different colors); `afterColor` is a single color since a stroke always paints one uniform color. `"resized"`/`"texture-replaced"` instead snapshot the whole buffer (`beforePixels`/`afterPixels`) since there's no cheaper diff to keep. `"select-edit"` covers every `"select"`-mode edit (move/delete/paste/rotate/flip) with a single entry shape: unlike `"stroke"`, both `beforeColors` and `afterColors` are per-position, since these operations paint heterogeneous, multi-colored regions rather than one uniform color. `positions` is the union of whatever footprint(s) the edit touched (e.g. a Move's source and destination, or a Rotate's pre/post footprint when a non-square selection's dimensions swap) — see [PixelArtCanvas.md](../PixelArtCanvas.md#undo--redo--canundo--canredo) for the network-sync caveat specific to this entry type.
+`limit` bounds the undo stack: pushing past it silently drops the oldest entry.
+
+| Action | Before | After |
+|---|---|---|
+| `"stroke"` | `beforeColors`: per-position (a stroke can cross pixels of different colors) | `afterColor`: single color (a stroke always paints one uniform color) |
+| `"resized"` / `"texture-replaced"` | `beforePixels`: whole-buffer snapshot | `afterPixels`: whole-buffer snapshot |
+| `"select-edit"` | `beforeColors`: per-position | `afterColors`: per-position (unlike `"stroke"`, since these operations paint heterogeneous, multi-colored regions) |
+
+`"resized"`/`"texture-replaced"` snapshot the whole buffer since there's no cheaper diff to keep. `"select-edit"` covers every `"select"`-mode edit (move/delete/paste/rotate/flip) with a single entry shape. `positions` is the union of whatever footprint(s) the edit touched (e.g. a Move's source and destination, or a Rotate's pre/post footprint when a non-square selection's dimensions swap). `oldRect`/`oldMask` and `newRect`/`newMask` capture the active selection's rectangle and shape mask before/after the edit, so undo/redo can restore the selection itself, not just the pixels.
+
+> [!IMPORTANT]
+> A `"select-edit"` entry's undo/redo is never broadcast over the network; see [PixelArtCanvas.md](../PixelArtCanvas.md#undo--redo--canundo--canredo) for why.
 
 ## Properties
 
@@ -71,7 +86,7 @@ Whether there's an entry to undo/redo.
 push(entry: HistoryEntryInput): void
 ```
 
-Stamps the entry with the current time (`Date.now()`) and pushes it onto the undo stack, clearing the redo stack. Drops the oldest undo entry once `limit` is exceeded. The timestamp is preserved across future undo/redo replays — see [buffer/PixelBuffer.md](../buffer/PixelBuffer.md) for why this matters over the network.
+Stamps the entry with the current time (`Date.now()`) and pushes it onto the undo stack, clearing the redo stack. Drops the oldest undo entry once `limit` is exceeded. The timestamp is preserved across future undo/redo replays; see [buffer/PixelBuffer.md](../buffer/PixelBuffer.md) for why this matters over the network.
 
 ---
 
@@ -101,4 +116,4 @@ Re-applies the most recently undone entry (applying its `after*` data to the buf
 clear(): void
 ```
 
-Discards every recorded entry, both stacks. Call when the buffer is replaced wholesale from outside the stack's knowledge (e.g. a remote resize/texture-replace/snapshot — `PixelArtCanvas` does this automatically in `applyRemoteCommand`/`loadSnapshot`).
+Discards every recorded entry, both stacks. Call when the buffer is replaced wholesale from outside the stack's knowledge (e.g. a remote resize/texture-replace/snapshot; `PixelArtCanvas` does this automatically in `applyRemoteCommand`/`loadSnapshot`).

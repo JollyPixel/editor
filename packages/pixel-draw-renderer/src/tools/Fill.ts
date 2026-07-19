@@ -6,17 +6,11 @@ import type {
 import type { DefaultPixelBuffer } from "../buffer/types.ts";
 
 /**
- * Computes the connected region of same-colored pixels reachable from a seed
- * point (paint-bucket flood fill). Pure algorithm with no DOM coupling —
- * callers own reading the seed color, committing the result to a buffer, and
- * any network/hook emission (see PixelArtCanvas).
+ * Computes pixel-fill regions.
  */
 export class Fill {
   /**
-   * 4-directional (orthogonal) flood fill starting at `seed`, matching every
-   * pixel whose RGBA exactly equals the seed pixel's current color. Returns
-   * an empty array when the seed is out of bounds or already matches
-   * `fillColor` (nothing would visibly change).
+    * Returns the connected region requiring a color change.
    */
   static floodFill(
     buffer: DefaultPixelBuffer,
@@ -24,12 +18,23 @@ export class Fill {
     fillColor: RGBA
   ): Vec2[] {
     const size = buffer.size();
-    if (seed.x < 0 || seed.x >= size.x || seed.y < 0 || seed.y >= size.y) {
+    if (
+      seed.x < 0 || seed.x >= size.x ||
+      seed.y < 0 || seed.y >= size.y
+    ) {
       return [];
     }
 
-    const [tr, tg, tb, ta] = buffer.samplePixel(seed.x, seed.y);
-    if (tr === fillColor.r && tg === fillColor.g && tb === fillColor.b && ta === fillColor.a) {
+    const [tr, tg, tb, ta] = buffer.samplePixel(
+      seed.x,
+      seed.y
+    );
+    if (
+      tr === fillColor.r &&
+      tg === fillColor.g &&
+      tb === fillColor.b &&
+      ta === fillColor.a
+    ) {
       return [];
     }
 
@@ -37,22 +42,24 @@ export class Fill {
   }
 
   /**
-   * The pure connectivity primitive behind floodFill: every position
-   * reachable from `seed` through 4-directional neighbors whose RGBA
-   * exactly matches the seed pixel's own color (no target-color bail-out).
-   * Reused by Select's magic-wand shape selection, which needs the region
-   * itself rather than a repaint.
+    * Returns the four-connected region at a seed.
    */
   static connectedRegion(
     buffer: DefaultPixelBuffer,
     seed: Vec2
   ): Vec2[] {
     const size = buffer.size();
-    if (seed.x < 0 || seed.x >= size.x || seed.y < 0 || seed.y >= size.y) {
+    if (
+      seed.x < 0 || seed.x >= size.x ||
+      seed.y < 0 || seed.y >= size.y
+    ) {
       return [];
     }
 
-    const [tr, tg, tb, ta] = buffer.samplePixel(seed.x, seed.y);
+    const [tr, tg, tb, ta] = buffer.samplePixel(
+      seed.x,
+      seed.y
+    );
 
     const visited = new Set<string>();
     const positions: Vec2[] = [];
@@ -64,12 +71,23 @@ export class Fill {
       if (visited.has(key)) {
         continue;
       }
-      if (point.x < 0 || point.x >= size.x || point.y < 0 || point.y >= size.y) {
+      if (
+        point.x < 0 || point.x >= size.x ||
+        point.y < 0 || point.y >= size.y
+      ) {
         continue;
       }
 
-      const [r, g, b, a] = buffer.samplePixel(point.x, point.y);
-      if (r !== tr || g !== tg || b !== tb || a !== ta) {
+      const [r, g, b, a] = buffer.samplePixel(
+        point.x,
+        point.y
+      );
+      if (
+        r !== tr ||
+        g !== tg ||
+        b !== tb ||
+        a !== ta
+      ) {
         continue;
       }
 
@@ -86,10 +104,7 @@ export class Fill {
   }
 
   /**
-   * Scans the whole buffer for every pixel whose RGBA exactly equals `color`,
-   * regardless of connectivity — the "global fill" counterpart to
-   * `floodFill`'s contiguous region. Returns an empty array when nothing
-   * matches.
+    * Returns all pixels matching a color.
    */
   static matchAll(
     buffer: DefaultPixelBuffer,
@@ -101,7 +116,12 @@ export class Fill {
     for (let y = 0; y < size.y; y++) {
       for (let x = 0; x < size.x; x++) {
         const [r, g, b, a] = buffer.samplePixel(x, y);
-        if (r === color.r && g === color.g && b === color.b && a === color.a) {
+        if (
+          r === color.r &&
+          g === color.g &&
+          b === color.b &&
+          a === color.a
+        ) {
           positions.push({ x, y });
         }
       }

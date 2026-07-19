@@ -6,10 +6,7 @@ import type {
 export type LineCommitTrigger = "mousedown" | "mouseup";
 
 /**
- * Owns the Shift-to-line armed-state machine and the Bresenham rasterization
- * of the segment between its start and current end position.
- * Has no brush knowledge — callers expand the raw points into brush-stamped
- * pixels themselves (see PixelArtCanvas).
+ * Manages line state and rasterization.
  */
 export class Line {
   #armed = false;
@@ -52,7 +49,7 @@ export class Line {
   }
 
   /**
-   * Rasterizes the current start->end segment without changing armed state.
+    * Returns rasterized points without disarming.
    */
   get previewPoints(): Vec2[] | null {
     if (
@@ -67,8 +64,7 @@ export class Line {
   }
 
   /**
-   * Rasterizes the current segment and disarms the tool.
-   * Returns null when the tool wasn't armed.
+    * Returns rasterized points and disarms.
    */
   commit(): Vec2[] | null {
     const points = this.previewPoints;
@@ -78,8 +74,7 @@ export class Line {
   }
 
   /**
-   * Bresenham's line algorithm. A zero-length segment (start === end)
-   * naturally rasterizes to a single point.
+    * Rasterizes a line with Bresenham's algorithm.
    */
   static rasterize(
     start: Vec2,

@@ -84,18 +84,14 @@ export interface PixelArtCanvasOptions {
     squareSize: number;
   };
   /**
-   * Fill color for the canvas area outside the texture bounds (the "void"
-   * around the drawing surface). Defaults to the parent element's own CSS
-   * `background-color` if it's set and non-transparent, else `#424242`.
-   * Can also be changed after construction via the `backgroundColor` setter.
+    * Canvas color outside texture bounds.
    */
   backgroundColor?: ColorInput;
   brush?: BrushOptions;
   select?: {
     /**
-     * Fill color for deleted pixels and the source of moved selections.
-     * Accepts a CSS color or `Color` instance.
-     * @default fully transparent
+     * Fill color for deleted pixels and moved selections.
+     * @default transparent
      */
     eraseColor?: ColorInput;
   };
@@ -107,17 +103,19 @@ export interface PixelArtCanvasOptions {
    * Called for local strokes, resizes, and texture replacements.
    */
   onBufferUpdated?: PixelBufferHookListener;
-  /** Local undo/redo stack. Disabled by default. */
+  /**
+   * History settings. If omitted, history is disabled.
+   */
   history?: {
     enabled?: boolean;
-    /** @default 10 */
+    /**
+     * @default 10
+     */
     limit?: number;
   };
-  /** Called whenever the undo/redo stack changes. */
   onHistoryChange?: (state: HistoryState) => void;
   /**
-    * Keybinding overrides. Unspecified actions keep their defaults; Shift is fixed.
-    * Can be updated with `patchKeybindings()`.
+   * Keybinding overrides.
    */
   keybindings?: Partial<Keybindings>;
 }
@@ -215,7 +213,6 @@ export class PixelArtCanvas {
 
     const brushAdapter: BrushHighlight = {
       get size() {
-        // Fill and an armed color-pick both target one seed pixel.
         return self.#mode === "fill" || self.#tools.brush.pickArmed ? 1 : brushRef.size;
       },
       get colorInline() {
@@ -304,10 +301,7 @@ export class PixelArtCanvas {
   }
 
   /**
-    * Whether the next paint-mode click picks a color from the canvas instead
-    * of painting, auto-clearing itself after a successful pick. Has no
-    * effect outside paint mode, and is cleared automatically when `mode` is
-    * set to anything other than `"paint"`.
+   * Whether the next paint action picks a color.
    */
   get pickColorArmed(): boolean {
     return this.#tools.brush.pickArmed;
@@ -320,9 +314,7 @@ export class PixelArtCanvas {
   }
 
   /**
-    * Samples the pixel at the given texture position and applies it to the
-    * brush color, regardless of the current mode. Returns the sampled
-    * color, or `null` if the position is outside the texture.
+   * Samples a texture pixel into the primary brush color.
    */
   pickColorAt(
     x: number,
@@ -332,7 +324,7 @@ export class PixelArtCanvas {
   }
 
   /**
-    * Whether fill recolors all matching pixels instead of only the connected region.
+   * Whether fills recolor all matching pixels.
    */
   get fillGlobal(): boolean {
     return this.#tools.fill.global;
@@ -345,9 +337,7 @@ export class PixelArtCanvas {
   }
 
   /**
-    * Whether a select-mode mousedown on empty space performs a magic-wand
-    * shape click-select (connected region + enclosed holes) instead of
-    * dragging out a rectangle. Changing it clears any active selection.
+   * Whether empty-space clicks create shape selections.
    */
   get selectShape(): boolean {
     return this.#tools.select.shape;
@@ -360,9 +350,7 @@ export class PixelArtCanvas {
   }
 
   /**
-   * Fill color for the canvas area outside the texture bounds. See the
-   * `backgroundColor` constructor option for the initial-value fallback
-   * chain; this setter always applies immediately, no `drawFrame()` needed.
+   * Canvas color outside texture bounds.
    */
   get backgroundColor(): string {
     return this.#renderer.backgroundColor;
@@ -451,7 +439,7 @@ export class PixelArtCanvas {
   }
 
   /**
-    * Applies a partial keybinding update to the current bindings.
+   * Applies keybinding overrides.
    */
   patchKeybindings(
     patch: Partial<Keybindings>
@@ -464,21 +452,21 @@ export class PixelArtCanvas {
   }
 
   /**
-    * Rotates the active selection clockwise. Returns `false` without a selection.
+   * Rotates the active selection clockwise.
    */
   rotateSelection(): boolean {
     return this.#tools.select.handleRotate();
   }
 
   /**
-    * Mirrors the active selection horizontally. Returns `false` without a selection.
+   * Mirrors the active selection horizontally.
    */
   flipSelectionHorizontal(): boolean {
     return this.#tools.select.handleFlipHorizontal();
   }
 
   /**
-    * Mirrors the active selection vertically. Returns `false` without a selection.
+   * Mirrors the active selection vertically.
    */
   flipSelectionVertical(): boolean {
     return this.#tools.select.handleFlipVertical();
@@ -509,9 +497,6 @@ export class PixelArtCanvas {
     return this.#canvasBuffer.canvas();
   }
 
-  /**
-    * Returns the interactive canvas used for input and overlays.
-   */
   canvas(): HTMLCanvasElement {
     return this.#renderer.canvas();
   }
@@ -562,7 +547,7 @@ export class PixelArtCanvas {
   }
 
   /**
-    * Commits pixels as one atomic stroke edit.
+   * Commits pixels as a stroke edit.
    */
   commitPixels(
     pixels: Vec2[],
@@ -593,8 +578,8 @@ export class PixelArtCanvas {
   }
 
   /**
-   * Reverts the latest local edit. Returns `false` when history is unavailable.
-   **/
+    * Reverts the latest local edit.
+    */
   undo(): boolean {
     const entry = this.#history.undo();
     if (!entry) {
@@ -614,8 +599,8 @@ export class PixelArtCanvas {
   }
 
   /**
-   * Re-applies the latest undone edit. Returns `false` when history is unavailable.
-   **/
+    * Reapplies the latest reverted edit.
+    */
   redo(): boolean {
     const entry = this.#history.redo();
     if (!entry) {
@@ -643,7 +628,7 @@ export class PixelArtCanvas {
   }
 
   /**
-    * Replaces the local buffer-mutation listener.
+   * Replaces the local buffer-mutation listener.
    */
   set onBufferUpdated(
     fn: PixelBufferHookListener | undefined
@@ -652,7 +637,7 @@ export class PixelArtCanvas {
   }
 
   /**
-    * Applies a remote mutation without emitting it again.
+   * Applies a remote mutation without emitting it.
    */
   applyRemoteCommand(
     event: PixelBufferHookEvent
@@ -661,7 +646,7 @@ export class PixelArtCanvas {
   }
 
   /**
-    * Replaces the buffer from a remote snapshot without emitting a mutation.
+   * Replaces the buffer from a remote snapshot.
    */
   loadSnapshot(
     size: Vec2,

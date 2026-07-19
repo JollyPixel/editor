@@ -33,7 +33,9 @@ $ yarn add @jolly-pixel/pixel-draw.renderer
 ## 👀 Usage Example
 
 ```ts
-import { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
+import {
+  PixelArtCanvas
+} from "@jolly-pixel/pixel-draw.renderer";
 
 const container = document.getElementById("editor-container")!;
 const manager = new PixelArtCanvas(container, {
@@ -50,12 +52,12 @@ const manager = new PixelArtCanvas(container, {
 manager.onResize();
 manager.centerTexture();
 
-manager.brush.primary.set("#FF6600"); // CSS string or a colorjs.io `Color` instance
+manager.brush.primary.set("#FF6600");
 manager.brush.primary.opacity = 0.8;
 manager.brush.secondary.set("#3366FF");
 manager.brush.size = 3;
 
-manager.mode = "fill"; // "paint" | "move" | "fill" | "select", see Modes below
+manager.mode = "fill";
 ```
 
 Loading an existing texture:
@@ -69,7 +71,7 @@ manager.texture = img;
 
 ### Modes
 
-`mode` selects how left-click/drag is interpreted. Read [PixelArtCanvas.md](./docs/PixelArtCanvas.md#mode) for the full behavior:
+`mode` selects how left-click/drag is interpreted.
 
 - `"paint"`: left-click draws with `brush.primary`, right-click draws with `brush.secondary` (mutually exclusive — one button's stroke blocks the other from starting); hold `Shift` for a straight line (always `primary`); `Ctrl`+right-click eyedroppers a color into `brush.primary`
 - `"move"`: pans the camera
@@ -77,6 +79,9 @@ manager.texture = img;
 - `"select"`: drag to select/move; `Ctrl`/`Cmd`+`C`/`V` copy/paste, `Delete` erases; right-click has no effect
 
 Middle-click pans in any mode.
+
+> [!TIP]
+> Read [PixelArtCanvas.md](./docs/PixelArtCanvas.md#mode) for the full behavior.
 
 ### Keybinds
 
@@ -94,10 +99,14 @@ Override at construction, or live via `patchKeybindings()`:
 
 ```ts
 const manager = new PixelArtCanvas(container, {
-  keybindings: { undo: "alt+u" } // unspecified actions keep their default
+  keybindings: {
+    undo: "alt+u"
+  } // unspecified actions keep their default
 });
 
-manager.patchKeybindings({ redo: "alt+shift+u" });
+manager.patchKeybindings({
+  redo: "alt+shift+u"
+});
 ```
 
 > [!TIP]

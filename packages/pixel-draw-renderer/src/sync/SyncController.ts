@@ -11,8 +11,8 @@ import type { HistoryController } from "../history/HistoryController.ts";
 import type { HistoryEntryInput } from "../history/HistoryStack.ts";
 import type { CanvasRenderer } from "../rendering/CanvasRenderer.ts";
 import type { Viewport } from "../rendering/Viewport.ts";
-import { Fill } from "../tools/Fill.ts";
 import type { RGBA, Vec2 } from "../types.ts";
+import { Fill } from "../tools/Fill.ts";
 
 export interface SyncControllerOptions {
   canvasBuffer: CanvasBuffer;
@@ -20,15 +20,14 @@ export interface SyncControllerOptions {
   renderer: CanvasRenderer;
   history: HistoryController;
   onBufferUpdated?: PixelBufferHookListener;
-  /** Called after every local or remote mutation that touches pixels. */
+  /**
+   * Called after a pixel mutation.
+   */
   onDrawEnd?: () => void;
 }
 
 /**
- * Applies pixel mutations to the shared CanvasBuffer and keeps history/hook
- * emission echo-safe: while a remote command or snapshot is being applied,
- * `recordHistory`/`emitHook` become no-ops so the mutation isn't re-recorded
- * or re-broadcast as if it were a local edit.
+ * Synchronizes canvas, rendering, history, and mutation hooks.
  */
 export class SyncController {
   #canvasBuffer: CanvasBuffer;
@@ -51,7 +50,7 @@ export class SyncController {
   }
 
   /**
-    * Replaces the local buffer-mutation listener.
+   * Replaces the local buffer-mutation listener.
    */
   set onBufferUpdated(
     fn: PixelBufferHookListener | undefined
@@ -59,7 +58,9 @@ export class SyncController {
     this.#onBufferUpdated = fn;
   }
 
-  /** Records a local edit when history is enabled, skipped while applying a remote command. */
+  /**
+   * Records a local history entry.
+   */
   recordHistory(
     entry: HistoryEntryInput
   ): void {
@@ -70,7 +71,9 @@ export class SyncController {
     this.#history.push(entry);
   }
 
-  /** Forwards a local mutation to the buffer-updated listener, skipped while applying a remote command. */
+  /**
+   * Emits a local buffer mutation.
+   */
   emitHook(
     event: PixelBufferHookEvent
   ): void {
@@ -108,7 +111,7 @@ export class SyncController {
   }
 
   /**
-    * Applies a remote mutation without emitting it again.
+   * Applies a remote mutation without emitting it.
    */
   applyRemoteCommand(
     event: PixelBufferHookEvent
@@ -153,7 +156,7 @@ export class SyncController {
   }
 
   /**
-    * Replaces the buffer from a remote snapshot without emitting a mutation.
+   * Replaces the buffer from a remote snapshot.
    */
   loadSnapshot(
     size: Vec2,

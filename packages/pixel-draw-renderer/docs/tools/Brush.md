@@ -54,7 +54,7 @@ readonly primary: BrushColor
 readonly secondary: BrushColor
 ```
 
-Each is a `BrushColor` value object — a color+opacity pair:
+Each is a `BrushColor` value object, a color+opacity pair:
 
 ```ts
 set(color: ColorInput, opacity?: number): void

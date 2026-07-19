@@ -10,9 +10,7 @@ export interface ColorGroup {
 }
 
 /**
- * Buckets positions by identical color, so a heterogeneous per-pixel
- * restore can be applied as a few uniform-color drawPixels calls instead of
- * one call per pixel.
+ * Groups positions by RGBA color.
  */
 export function groupPositionsByColor(
   positions: Vec2[],

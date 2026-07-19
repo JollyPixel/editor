@@ -1,5 +1,7 @@
 // Import Internal Dependencies
-import { clamp } from "../utils/math.ts";
+import {
+  clamp
+} from "../utils/math.ts";
 
 export interface ZoomOptions {
   /**
@@ -8,26 +10,24 @@ export interface ZoomOptions {
    */
   default?: number;
   /**
-   * Minimum zoom level. Must be under the max zoom level.
+   * Minimum zoom level.
    * @default 1
    */
   min?: number;
   /**
-   * Maximum zoom level. Must be above the min zoom level.
+   * Maximum zoom level.
    * @default 32
    */
   max?: number;
   /**
-   * Sensitivity of zooming when using the mouse wheel. The higher, the faster the zoom changes.
-   * If the zoom level is under 1, the sensitivity is divided by 10 to allow finer control.
+   * Mouse-wheel zoom sensitivity.
    * @default 0.1
    */
   sensitivity?: number;
 }
 
 /**
- * Zoom holds the current zoom level along with its bounds and wheel sensitivity,
- * and knows how to step itself in response to a wheel delta.
+ * Stores zoom state and bounds.
  */
 export class Zoom {
   #value: number;
@@ -54,7 +54,11 @@ export class Zoom {
       );
     }
 
-    this.#value = clamp(value, this.#min, this.#max);
+    this.#value = clamp(
+      value,
+      this.#min,
+      this.#max
+    );
     this.#sensitivity = sensitivity;
   }
 
@@ -80,11 +84,6 @@ export class Zoom {
     this.#sensitivity = Math.max(0.01, value);
   }
 
-  /**
-   * Steps the zoom level for a wheel `delta` and clamps the result to [min, max].
-   * Sensitivity is reduced near/under 1x so small pixel-art textures stay controllable.
-   * Returns the resulting value.
-   */
   applyDelta(
     delta: number
   ): number {
@@ -94,7 +93,11 @@ export class Zoom {
         ? this.#sensitivity / 10
         : this.#sensitivity;
 
-    this.#value = clamp(this.#value - signDelta * smoothSensitivity, this.#min, this.#max);
+    this.#value = clamp(
+      this.#value - signDelta * smoothSensitivity,
+      this.#min,
+      this.#max
+    );
 
     return this.#value;
   }

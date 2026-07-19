@@ -4,8 +4,12 @@ import type {
   SelectionRect,
   Vec2
 } from "../types.ts";
-import type { DefaultPixelBuffer } from "../buffer/types.ts";
-import { groupPositionsByColor } from "./utils.ts";
+import type {
+  DefaultPixelBuffer
+} from "../buffer/types.ts";
+import {
+  groupPositionsByColor
+} from "./utils.ts";
 
 export interface HistoryStrokeEntry {
   action: "stroke";
@@ -34,17 +38,7 @@ export interface HistoryTextureReplacedEntry {
 }
 
 /**
- * A Select-tool edit (move/delete/paste/rotate/flip) — positions cover the
- * union of whatever footprint(s) were actually selected (mask-true), with a
- * per-position before/after color since these operations paint
- * heterogeneous, multi-colored regions (unlike a stroke's single
- * afterColor). oldRect/newRect are the selection's footprint before/after
- * the edit (identical for delete/paste/flip, which don't move or resize the
- * box) and oldMask/newMask are its rect-relative selection mask before/
- * after, so the caller can resync the selection tool's own rect/snapshot/
- * mask state — including a shape selection's true outline, not just its
- * bounding box — on undo/redo. This stack only ever replays raw buffer
- * pixels; it has no mask awareness of its own.
+ * Stores pixels and selection state before and after a selection edit.
  */
 export interface HistorySelectEditEntry {
   action: "select-edit";
@@ -71,7 +65,9 @@ export type HistoryEntryInput =
   | Omit<HistorySelectEditEntry, "timestamp">;
 
 export interface HistoryStackOptions {
-  /** @default 10 */
+  /**
+   * @default 10
+   */
   limit?: number;
 }
 
@@ -79,10 +75,7 @@ export interface HistoryStackOptions {
 const kDefaultLimit = 10;
 
 /**
- * Bounded undo/redo stack over DefaultPixelBuffer — no DOM or network
- * dependency, so it runs identically over a headless PixelBuffer or a
- * DOM-backed CanvasBuffer. Capturing before/after data is the caller's job;
- * this class only owns the stack and the replay against its buffer.
+ * Replays a bounded undo/redo stack against a pixel buffer.
  */
 export class HistoryStack {
   #buffer: DefaultPixelBuffer;
@@ -107,9 +100,7 @@ export class HistoryStack {
   }
 
   /**
-   * Stamps the entry with the current time — preserved across future
-   * undo/redo replays for fair network conflict re-racing — and clears the
-   * redo stack.
+   * Records an entry with its creation timestamp.
    */
   push(
     entry: HistoryEntryInput
@@ -125,7 +116,6 @@ export class HistoryStack {
     this.#redoStack = [];
   }
 
-  /** Reverts the most recent entry, moving it to the redo stack. Null when there's nothing to undo. */
   undo(): HistoryEntry | null {
     const entry = this.#undoStack.pop();
     if (!entry) {
@@ -138,7 +128,6 @@ export class HistoryStack {
     return entry;
   }
 
-  /** Re-applies the most recently undone entry, moving it back to the undo stack. Null when there's nothing to redo. */
   redo(): HistoryEntry | null {
     const entry = this.#redoStack.pop();
     if (!entry) {
@@ -151,7 +140,6 @@ export class HistoryStack {
     return entry;
   }
 
-  /** Discards every recorded entry, e.g. when the buffer is replaced wholesale from outside the stack's knowledge. */
   clear(): void {
     this.#undoStack = [];
     this.#redoStack = [];

@@ -2,7 +2,9 @@
 import { clamp } from "../utils/math.ts";
 import { ViewportTexture } from "./ViewportTexture.ts";
 import { Zoom } from "./Zoom.ts";
-import type { Vec2 } from "../types.ts";
+import type {
+  Vec2
+} from "../types.ts";
 
 export interface DefaultViewport {
   readonly zoom: Zoom;
@@ -11,37 +13,33 @@ export interface DefaultViewport {
 
 export interface ViewportOptions {
   /**
-   * Size of the texture to display in the viewport.
-   * This is used to calculate the camera bounds and the zoom level.
+   * Displayed texture size.
    */
   textureSize: Vec2;
   /**
    * Default zoom level.
-   * Can be overridden by passing a texture with a different size than the default one.
    * @default 4
    */
   zoom?: number;
   /**
-   * Minimum zoom level. Must be under the max zoom level.
+   * Minimum zoom level.
    * @default 1
    */
   zoomMin?: number;
   /**
-   * Maximum zoom level. Must be above the min zoom level.
+   * Maximum zoom level.
    * @default 32
    */
   zoomMax?: number;
   /**
-   * Sensitivity of zooming when using the mouse wheel. The higher, the faster the zoom changes.
-   * If the zoom level is under 1, the sensitivity is divided by 10 to allow finer control.
+   * Mouse-wheel zoom sensitivity.
    * @default 0.1
    */
   zoomSensitivity?: number;
 }
 
 /**
- * Viewport manages the camera position and zoom level for a pixel drawing application.
- * It provides methods to convert between screen coordinates and texture coordinates, as well as to apply zooming and panning transformations.
+ * Manages viewport camera and zoom state.
  */
 export class Viewport implements DefaultViewport {
   #camera: Vec2 = {
@@ -94,7 +92,9 @@ export class Viewport implements DefaultViewport {
   }
 
   centerTexture(): void {
-    const texPx = this.#texture.pixelSize(this.zoom.value);
+    const texPx = this.#texture.pixelSize(
+      this.zoom.value
+    );
     this.#camera.x = this.#canvasWidth / 2 - texPx.x / 2;
     this.#camera.y = this.#canvasHeight / 2 - texPx.y / 2;
 
@@ -102,7 +102,9 @@ export class Viewport implements DefaultViewport {
   }
 
   clampCamera(): void {
-    const texPx = this.#texture.pixelSize(this.zoom.value);
+    const texPx = this.#texture.pixelSize(
+      this.zoom.value
+    );
     const margin = this.zoom.value;
 
     const minX = -texPx.x + margin;
@@ -115,16 +117,18 @@ export class Viewport implements DefaultViewport {
   }
 
   /**
-   * Updates the canvas size while preserving the current camera position.
-   * Shifts the camera by half the size delta so the same world point stays
-   * at the center of the screen. Use this for interactive resizes.
+   * Resizes the canvas while preserving its center point.
    */
   resizeCanvas(
     width: number,
     height: number
   ): void {
-    const dx = (width - this.#canvasWidth) / 2;
-    const dy = (height - this.#canvasHeight) / 2;
+    const dx = (
+      width - this.#canvasWidth
+    ) / 2;
+    const dy = (
+      height - this.#canvasHeight
+    ) / 2;
 
     this.#canvasWidth = width;
     this.#canvasHeight = height;
@@ -176,10 +180,17 @@ export class Viewport implements DefaultViewport {
     my: number,
     parameters: { bounds: DOMRect; limit?: boolean; }
   ): Vec2 | null {
-    const { bounds, limit } = parameters;
+    const {
+      bounds,
+      limit
+    } = parameters;
 
-    const x = Math.floor((mx - bounds.left - this.#camera.x) / this.zoom.value);
-    const y = Math.floor((my - bounds.top - this.#camera.y) / this.zoom.value);
+    const x = Math.floor(
+      (mx - bounds.left - this.#camera.x) / this.zoom.value
+    );
+    const y = Math.floor(
+      (my - bounds.top - this.#camera.y) / this.zoom.value
+    );
 
     if (limit && !this.#texture.contains({ x, y })) {
       return null;

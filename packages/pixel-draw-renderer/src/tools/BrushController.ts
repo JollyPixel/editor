@@ -10,25 +10,27 @@ export interface BrushControllerOptions {
   canvasBuffer: CanvasBuffer;
   renderer: CanvasRenderer;
   /**
-   * Called once per completed stroke with the deduplicated pixels touched,
-   * their stamped color, and each pixel's color immediately before this
-   * stroke touched it (parallel to `pixels`, for undo history). Not called
-   * for a stroke that never touched any in-bounds pixel.
+   * Commits a completed stroke.
    */
-  onCommit: (pixels: Vec2[], color: RGBA, beforeColors: RGBA[]) => void;
+  onCommit: (
+    pixels: Vec2[],
+    color: RGBA,
+    beforeColors: RGBA[]
+  ) => void;
 }
 
 /**
- * Glues the Brush model (pixel-stamping geometry) to the pixel buffer and
- * renderer, mirroring LineController/SelectController: owns the in-progress
- * stroke state (dirty pixels + color) and commits it as a single atomic edit
- * on endStroke.
+ * Applies brush strokes to the canvas.
  */
 export class BrushController {
   #brush: Brush;
   #canvasBuffer: CanvasBuffer;
   #renderer: CanvasRenderer;
-  #onCommit: (pixels: Vec2[], color: RGBA, beforeColors: RGBA[]) => void;
+  #onCommit: (
+    pixels: Vec2[],
+    color: RGBA,
+    beforeColors: RGBA[]
+  ) => void;
 
   #strokeDirty = new Map<string, Vec2>();
   #strokeBefore = new Map<string, RGBA>();
@@ -45,14 +47,15 @@ export class BrushController {
     this.#onCommit = options.onCommit;
   }
 
-  /** Which color slot is being dragged, or `false` when no stroke is active. */
+  /**
+   * Active brush color slot.
+   */
   get isActive(): BrushColorSlot | false {
     return this.#activeSlot ?? false;
   }
 
   /**
-   * Whether the next primary-down in paint mode should pick a color instead
-   * of starting a stroke. Cleared automatically by a successful `pick()`.
+   * Whether the next primary action picks a color.
    */
   get pickArmed(): boolean {
     return this.#pickArmed;
@@ -65,9 +68,7 @@ export class BrushController {
   }
 
   /**
-   * Samples the pixel at the given texture position, applies it to the
-   * brush's primary color, and disarms picking. Returns the sampled color,
-   * or `null` (leaving state untouched) if the position is outside the texture.
+   * Samples a pixel into the primary brush color.
    */
   pick(
     tx: number,
@@ -95,9 +96,7 @@ export class BrushController {
   }
 
   /**
-   * Starts a stroke stamping with the given color slot. Mutually exclusive
-   * with the other slot: callers should check `isActive` before starting a
-   * stroke on the other button.
+   * Starts a brush stroke.
    */
   startStroke(
     tx: number,
@@ -116,8 +115,7 @@ export class BrushController {
   }
 
   /**
-   * Ends the current stroke: copies the working buffer to master and emits
-   * the accumulated dirty pixels as a single "stroke" commit.
+   * Commits the current brush stroke.
    */
   endStroke(): void {
     this.#canvasBuffer.copyToMaster();
@@ -129,12 +127,10 @@ export class BrushController {
     tx: number,
     ty: number
   ): void {
-    const rgba = toRGBA(this.#brush[this.#activeSlot ?? "primary"].asString());
+    const rgba = toRGBA(
+      this.#brush[this.#activeSlot ?? "primary"].asString()
+    );
 
-    // Materialized once (unlike the rest of this class, which prefers
-    // re-calling the fresh generator over allocating) because the before-
-    // color of each newly touched pixel must be sampled before drawPixels
-    // overwrites it, then the same list is reused for the draw call.
     const affected = [...this.#brush.affectedPixels(tx, ty)];
     for (const pixel of affected) {
       const key = `${pixel.x},${pixel.y}`;

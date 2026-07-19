@@ -1,5 +1,8 @@
 // Import Internal Dependencies
-import type { RGBA, Vec2 } from "../types.ts";
+import type {
+  RGBA,
+  Vec2
+} from "../types.ts";
 
 export interface DefaultPixelBuffer {
   size(): Vec2;
