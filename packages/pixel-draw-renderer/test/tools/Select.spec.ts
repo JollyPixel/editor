@@ -467,7 +467,7 @@ describe("Select", () => {
       tool.clear();
       const result = tool.paste();
 
-      assert.deepStrictEqual(result, { rect: { x: 2, y: 2, width: 1, height: 1 }, pixels: [kRed] });
+      assert.deepStrictEqual(result, { rect: { x: 2, y: 2, width: 1, height: 1 }, pixels: [kRed], mask: [true] });
       assert.strictEqual(tool.state, "selected");
       assert.deepStrictEqual(tool.rect, { x: 2, y: 2, width: 1, height: 1 });
     });
@@ -481,7 +481,114 @@ describe("Select", () => {
       tool.paste();
       const second = tool.paste();
 
-      assert.deepStrictEqual(second, { rect: { x: 0, y: 0, width: 1, height: 1 }, pixels: [kRed] });
+      assert.deepStrictEqual(second, { rect: { x: 0, y: 0, width: 1, height: 1 }, pixels: [kRed], mask: [true] });
+    });
+  });
+
+  describe("shape (mask-aware) selection", () => {
+    // 2 wide x 2 tall selection where only the top-left/bottom-right cells
+    // are actually part of the shape (a checkerboard-ish mask, chosen so
+    // rotate/flip visibly move the "gap" around).
+    const kMask = [true, false, false, true];
+
+    test("mask defaults to all-true after a rectangle-drag finishCreate", () => {
+      const tool = new Select();
+      tool.startCreate({ x: 0, y: 0 });
+      tool.updateCreate({ x: 1, y: 0 });
+      tool.finishCreate([kRed, kRed]);
+
+      assert.deepStrictEqual(tool.mask, [true, true]);
+    });
+
+    test("mask is null while idle", () => {
+      const tool = new Select();
+      assert.strictEqual(tool.mask, null);
+    });
+
+    test("selectRegion enters 'selected' directly with the given rect/snapshot/mask", () => {
+      const tool = new Select();
+      tool.selectRegion({ x: 1, y: 1, width: 2, height: 2 }, k2x3Snapshot.slice(0, 4), kMask);
+
+      assert.strictEqual(tool.state, "selected");
+      assert.deepStrictEqual(tool.rect, { x: 1, y: 1, width: 2, height: 2 });
+      assert.deepStrictEqual(tool.mask, kMask);
+    });
+
+    test("hitTest is true anywhere in the bounding rect, regardless of mask — grabbable like a rectangle", () => {
+      const tool = new Select();
+      tool.selectRegion({ x: 0, y: 0, width: 2, height: 2 }, k2x3Snapshot.slice(0, 4), kMask);
+
+      assert.strictEqual(tool.hitTest({ x: 0, y: 0 }), true, "masked-in top-left");
+      assert.strictEqual(tool.hitTest({ x: 1, y: 0 }), true, "masked-out top-right — still a hit");
+      assert.strictEqual(tool.hitTest({ x: 0, y: 1 }), true, "masked-out bottom-left — still a hit");
+      assert.strictEqual(tool.hitTest({ x: 1, y: 1 }), true, "masked-in bottom-right");
+      assert.strictEqual(tool.hitTest({ x: 2, y: 0 }), false, "outside the bounding rect entirely");
+    });
+
+    test("markErased only overwrites masked-in cells, leaving masked-out cells untouched", () => {
+      const tool = new Select();
+      tool.selectRegion({ x: 0, y: 0, width: 2, height: 2 }, [kColorA, kColorB, kColorC, kColorD], kMask);
+
+      const eraseColor: RGBA = { r: 255, g: 255, b: 255, a: 255 };
+      tool.markErased(eraseColor);
+
+      assert.deepStrictEqual(tool.snapshot, [eraseColor, kColorB, kColorC, eraseColor]);
+    });
+
+    test("copy/paste round-trip the mask through the clipboard", () => {
+      const tool = new Select();
+      tool.selectRegion({ x: 3, y: 3, width: 2, height: 2 }, [kColorA, kColorB, kColorC, kColorD], kMask);
+      tool.copy();
+      tool.clear();
+
+      const result = tool.paste();
+
+      assert.deepStrictEqual(result!.mask, kMask);
+      assert.deepStrictEqual(tool.mask, kMask);
+    });
+
+    test("rotate transforms the mask the same way it transforms the snapshot", () => {
+      const tool = new Select();
+      // 2x1 mask: left cell selected, right cell not.
+      tool.selectRegion({ x: 0, y: 0, width: 2, height: 1 }, [kColorA, kColorB], [true, false]);
+
+      tool.rotate();
+
+      assert.deepStrictEqual(tool.rect!.width, 1);
+      assert.deepStrictEqual(tool.rect!.height, 2);
+      assert.deepStrictEqual(tool.mask, Select.rotateMaskCW([true, false], 2, 1));
+    });
+
+    test("flipHorizontal/flipVertical transform the mask the same way they transform the snapshot", () => {
+      const tool = new Select();
+      tool.selectRegion({ x: 0, y: 0, width: 2, height: 2 }, [kColorA, kColorB, kColorC, kColorD], kMask);
+
+      tool.flipHorizontal();
+      assert.deepStrictEqual(tool.mask, Select.flipMaskHorizontal(kMask, 2, 2));
+
+      tool.flipVertical();
+      assert.deepStrictEqual(
+        tool.mask,
+        Select.flipMaskVertical(Select.flipMaskHorizontal(kMask, 2, 2), 2, 2)
+      );
+    });
+  });
+
+  describe("grid transform helpers (static, generic)", () => {
+    test("rotateMaskCW rotates a boolean grid the same way rotateSnapshotCW rotates an RGBA grid", () => {
+      // Same layout as k2x3Snapshot (A..F), true where the letter is one of A/D/E.
+      const mask = [true, false, false, true, true, false];
+      // rotateSnapshotCW(k2x3Snapshot) === [E, C, A, F, D, B] — same permutation, as booleans.
+      assert.deepStrictEqual(
+        Select.rotateMaskCW(mask, 2, 3),
+        [true, false, true, false, true, false]
+      );
+    });
+
+    test("flipMaskHorizontal/flipMaskVertical mirror a boolean grid", () => {
+      const mask = [true, false, false, true];
+      assert.deepStrictEqual(Select.flipMaskHorizontal(mask, 2, 2), [false, true, true, false]);
+      assert.deepStrictEqual(Select.flipMaskVertical(mask, 2, 2), [false, true, true, false]);
     });
   });
 });

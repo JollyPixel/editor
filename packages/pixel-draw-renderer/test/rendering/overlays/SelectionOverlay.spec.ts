@@ -75,4 +75,87 @@ describe("SelectionOverlay", () => {
       assert.strictEqual(rect.getAttribute("visibility"), "hidden");
     }
   });
+
+  describe("drawMask", () => {
+    test("a full-true mask degenerates to the same rendering as drawRect", () => {
+      const svg = makeSvg();
+      const overlay = new SelectionOverlay(svg, makeViewport(), makeBrush());
+
+      overlay.drawMask({ x: 1, y: 1, width: 2, height: 3 }, new Array(6).fill(true));
+
+      const rects = svg.querySelectorAll("rect");
+      assert.strictEqual(rects.length, 2);
+      for (const rect of rects) {
+        assert.strictEqual(rect.getAttribute("visibility"), "visible");
+      }
+      const paths = svg.querySelectorAll("path");
+      for (const path of paths) {
+        assert.strictEqual(path.getAttribute("visibility"), "hidden");
+      }
+    });
+
+    test("a partial mask renders a visible path pair instead of the rect pair", () => {
+      const svg = makeSvg();
+      const overlay = new SelectionOverlay(svg, makeViewport(), makeBrush());
+
+      // 2x2 mask, only the top-left cell selected.
+      overlay.drawMask({ x: 0, y: 0, width: 2, height: 2 }, [true, false, false, false]);
+
+      const rects = svg.querySelectorAll("rect");
+      for (const rect of rects) {
+        assert.strictEqual(rect.getAttribute("visibility"), "hidden");
+      }
+      const paths = svg.querySelectorAll("path");
+      assert.strictEqual(paths.length, 2);
+      for (const path of paths) {
+        assert.strictEqual(path.getAttribute("visibility"), "visible");
+        assert.ok(path.getAttribute("d"), "path has geometry");
+      }
+    });
+
+    test("clear() also hides the path pair", () => {
+      const svg = makeSvg();
+      const overlay = new SelectionOverlay(svg, makeViewport(), makeBrush());
+
+      overlay.drawMask({ x: 0, y: 0, width: 2, height: 2 }, [true, false, false, false]);
+      overlay.clear();
+
+      for (const path of svg.querySelectorAll("path")) {
+        assert.strictEqual(path.getAttribute("visibility"), "hidden");
+      }
+    });
+  });
+
+  describe("traceContour (static)", () => {
+    test("a full rectangle mask traces its 4 corners, clockwise", () => {
+      const loops = SelectionOverlay.traceContour(2, 2, [true, true, true, true]);
+
+      assert.strictEqual(loops.length, 1);
+      assert.deepStrictEqual(loops[0], [{ x: 0, y: 0 }, { x: 2, y: 0 }, { x: 2, y: 2 }, { x: 0, y: 2 }]);
+    });
+
+    test("a single selected cell traces a unit square", () => {
+      const loops = SelectionOverlay.traceContour(1, 1, [true]);
+
+      assert.strictEqual(loops.length, 1);
+      assert.deepStrictEqual(loops[0], [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }]);
+    });
+
+    test("an L-shape traces its true concave outline (6 corners), not the bounding rect's 4", () => {
+      // X .
+      // X X
+      const loops = SelectionOverlay.traceContour(2, 2, [true, false, true, true]);
+
+      assert.strictEqual(loops.length, 1);
+      assert.strictEqual(loops[0].length, 6);
+    });
+
+    test("a mask with a fully enclosed hole traces two loops (outer + inner)", () => {
+      // 3x3 ring: every cell selected except the center.
+      const mask = [true, true, true, true, false, true, true, true, true];
+      const loops = SelectionOverlay.traceContour(3, 3, mask);
+
+      assert.strictEqual(loops.length, 2, "outer boundary + inner hole boundary");
+    });
+  });
 });

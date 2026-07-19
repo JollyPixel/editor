@@ -198,7 +198,32 @@ export class CanvasBuffer implements DefaultPixelBuffer {
     pixels: RGBA[]
   ): void {
     this.#buffer.drawRegion(rect, pixels);
+    this.#resyncCanvasRegion(rect);
+  }
 
+  /**
+   * Mask-aware counterpart to drawRegion, for non-rectangular (shape)
+   * selections: cells where `mask[i]` is false are left untouched instead
+   * of being overwritten with `pixels[i]`.
+   */
+  drawMaskedRegion(
+    rect: SelectionRect,
+    pixels: RGBA[],
+    mask: boolean[]
+  ): void {
+    this.#buffer.drawMaskedRegion(rect, pixels, mask);
+    this.#resyncCanvasRegion(rect);
+  }
+
+  /**
+   * Re-reads `rect`'s in-bounds intersection back from the buffer (now the
+   * source of truth) into the working canvas with one putImageData call —
+   * shared by drawRegion/drawMaskedRegion, since the buffer write already
+   * happened and only the untouched-vs-touched cells differ between them.
+   */
+  #resyncCanvasRegion(
+    rect: SelectionRect
+  ): void {
     const size = this.#buffer.size();
     const minX = Math.max(0, rect.x);
     const minY = Math.max(0, rect.y);
