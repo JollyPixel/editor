@@ -91,14 +91,14 @@ interface PixelArtCanvasOptions {
   /**
    * Overrides for the copy/paste/undo/redo/delete key combos. Unspecified
    * actions keep their default binding. Shift (line-tool arm/disarm) is not
-   * configurable. Also settable/readable at runtime via `patchKeybindings()` /
-   * `keybindings`.
+   * configurable. Also settable/readable at runtime via the `keybindings`
+   * property.
    */
-  keybindings?: Partial<Keybindings>;
+  keybindings?: Partial<KeybindingsMap>;
 }
 ```
 
-`Mode` is `"paint" | "move" | "fill" | "select"`. `ColorInput` (`string | Color`, where `Color` is [colorjs.io](https://colorjs.io)'s class) is used throughout the package wherever a color option is accepted: a CSS color string (hex, `rgb()`, `hsl()`, named color, ...) or a `Color` instance. `BrushOptions` is forwarded to the internal `Brush` instance, see [Brush.md](./tools/Brush.md). `PixelBufferHookListener` is described in [buffer/PixelBuffer.md](./buffer/PixelBuffer.md) and [network/index.md](./network/index.md). `Keybindings` is described in [utils/keybindings.md](./utils/keybindings.md).
+`Mode` is `"paint" | "move" | "fill" | "select"`. `ColorInput` (`string | Color`, where `Color` is [colorjs.io](https://colorjs.io)'s class) is used throughout the package wherever a color option is accepted: a CSS color string (hex, `rgb()`, `hsl()`, named color, ...) or a `Color` instance. `BrushOptions` is forwarded to the internal `Brush` instance, see [Brush.md](./tools/Brush.md). `PixelBufferHookListener` is described in [buffer/PixelBuffer.md](./buffer/PixelBuffer.md) and [network/index.md](./network/index.md). `KeybindingsMap` is described in [input/Keybindings.md](./input/Keybindings.md).
 
 `history.enabled` (default `false`) tells the internal `HistoryController` to back itself with a [`HistoryStack`](./history/HistoryStack.md) that records every stroke, resize, and texture replace, enabling `undo()`/`redo()`. Leaving it disabled skips that bookkeeping entirely: there's no per-edit cost paid for a feature that isn't used.
 
@@ -257,7 +257,7 @@ Reverts/re-applies the most recent local edit (stroke, resize, or texture replac
 
 - `undo()`/`redo()` return `false` and do nothing when `history.enabled` wasn't passed at construction, or when the corresponding stack is empty.
 - `canUndo()`/`canRedo()` report the same condition without mutating anything.
-- Both are bound to the configurable undo/redo keybindings by default; see [utils/keybindings.md](./utils/keybindings.md).
+- Both are bound to the configurable undo/redo keybindings by default; see [input/Keybindings.md](./input/Keybindings.md).
 
 A successful call redraws the canvas, calls `onDrawEnd`, and fires `onHistoryChange`.
 
@@ -330,14 +330,13 @@ Returns the `Zoom` value object (same instance as `viewport.zoom`): `.value` is 
 
 ---
 
-### `keybindings` / `patchKeybindings`
+### `keybindings`
 
 ```ts
-get keybindings(): Readonly<Keybindings>
-patchKeybindings(patch: Partial<Keybindings>): void
+get keybindings(): Keybindings
 ```
 
-Reads the currently effective keybindings, or merges `patch` onto them (actions not present in `patch` keep their current binding). Throws `InvalidKeybindingError` for a malformed combo string, or `KeybindingConflictError` if the result would bind two actions to the same combo; either way the previous keybindings remain in effect. See [utils/keybindings.md](./utils/keybindings.md).
+Returns the `Keybindings` value object (same instance the internal `InputController` matches keydown events against): `.bindings` reads the currently effective set, `.patch(patch)` merges overrides onto it at runtime (actions not present in `patch` keep their current binding). `patch()` throws `InvalidKeybindingError` for a malformed combo string, or `KeybindingConflictError` if the result would bind two actions to the same combo; either way the previous bindings remain in effect. See [input/Keybindings.md](./input/Keybindings.md).
 
 ---
 

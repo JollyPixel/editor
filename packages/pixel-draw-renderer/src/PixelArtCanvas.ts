@@ -28,6 +28,10 @@ import {
   InputController,
   type WindowLike
 } from "./input/InputController.ts";
+import type {
+  Keybindings,
+  KeybindingsMap
+} from "./input/Keybindings.ts";
 import {
   SvgManager
 } from "./rendering/SvgManager.ts";
@@ -43,7 +47,6 @@ import {
   SyncController
 } from "./sync/SyncController.ts";
 import { toRGBA } from "./utils/colors.ts";
-import type { Keybindings } from "./utils/keybindings.ts";
 import type {
   BrushHighlight,
   ColorInput,
@@ -118,7 +121,7 @@ export interface PixelArtCanvasOptions {
   /**
    * Keybinding overrides.
    */
-  keybindings?: Partial<Keybindings>;
+  keybindings?: Partial<KeybindingsMap>;
 }
 
 export class PixelArtCanvas {
@@ -450,16 +453,7 @@ export class PixelArtCanvas {
     return this.#viewport.zoom;
   }
 
-  /**
-   * Applies keybinding overrides.
-   */
-  patchKeybindings(
-    patch: Partial<Keybindings>
-  ): void {
-    this.#input.patchKeybindings(patch);
-  }
-
-  get keybindings(): Readonly<Keybindings> {
+  get keybindings(): Keybindings {
     return this.#input.keybindings;
   }
 
