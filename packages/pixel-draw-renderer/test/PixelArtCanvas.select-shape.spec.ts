@@ -113,8 +113,8 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
     click(canvas, 92, 92);
     window.dispatchEvent(deleteKey());
 
-    assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 0]);
-    assert.deepStrictEqual(readPixel(manager.texture, { x: 3, y: 2 }, 8), [0, 0, 0, 0]);
+    assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [255, 255, 255, 255]);
+    assert.deepStrictEqual(readPixel(manager.texture, { x: 3, y: 2 }, 8), [255, 255, 255, 255]);
     manager.destroy();
   });
 
@@ -158,8 +158,8 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
     for (const pos of [...border, { x: 3, y: 3 }]) {
       assert.deepStrictEqual(
         readPixel(manager.texture, pos, 8),
-        [0, 0, 0, 0],
-        `(${pos.x},${pos.y}) should be erased`
+        [255, 255, 255, 255],
+        `(${pos.x},${pos.y}) should be erased with the dominant (white) surrounding color`
       );
     }
     manager.destroy();

@@ -62,11 +62,14 @@ interface PixelArtCanvasOptions {
   brush?: BrushOptions;
   select?: {
     /**
-     * Color used to fill the pixels vacated by a Delete, the source side of
+     * Explicit color for the pixels vacated by a Delete, the source side of
      * a Move, or the footprint a Rotate/Flip no longer occupies, in
-     * "select" mode. Accepts a CSS color string or a colorjs.io `Color`
-     * instance.
-     * @default fully transparent
+     * "select" mode — overrides the smart default below. When omitted, the
+     * vacated area is instead filled with the most common color among its
+     * neighbors, so it blends into the surrounding artwork, falling back to
+     * fully transparent when there are no in-bounds neighbors. Accepts a
+     * CSS color string or a colorjs.io `Color` instance.
+     * @default dominant neighbor color, transparent as the ultimate fallback
      */
     eraseColor?: ColorInput;
   };

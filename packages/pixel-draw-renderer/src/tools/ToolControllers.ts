@@ -26,7 +26,7 @@ export interface ToolControllersOptions {
   renderer: CanvasRenderer;
   linePreview: LinePreviewOverlay;
   selectionOverlay: SelectionOverlay;
-  eraseColor: RGBA;
+  eraseColor: RGBA | null;
   onStrokeCommit: (pixels: Vec2[], color: RGBA, beforeColors: RGBA[]) => void;
   onCommitPixels: (pixels: Vec2[]) => void;
   onFillCommitPixels: (pixels: Vec2[], slot: BrushColorSlot) => void;

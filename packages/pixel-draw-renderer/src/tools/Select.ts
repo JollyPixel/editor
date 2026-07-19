@@ -394,6 +394,70 @@ export class Select {
     };
   }
 
+  /**
+   * Samples the ring of pixels immediately surrounding `rect` and returns
+   * the most common color among them, so a vacated footprint blends into
+   * its surroundings instead of leaving a flat erase-color hole. Falls
+   * back to `fallback` when `rect` has no in-bounds neighbors (e.g. it
+   * covers the whole texture).
+   */
+  static dominantBorderColor(
+    buffer: DefaultPixelBuffer,
+    rect: SelectionRect,
+    fallback: RGBA
+  ): RGBA {
+    const size = buffer.size();
+    const counts = new Map<string, { color: RGBA; count: number; }>();
+
+    function sample(
+      x: number,
+      y: number
+    ): void {
+      if (
+        x < 0 || x >= size.x ||
+        y < 0 || y >= size.y
+      ) {
+        return;
+      }
+
+      const [r, g, b, a] = buffer.samplePixel(x, y);
+      const key = `${r},${g},${b},${a}`;
+      const entry = counts.get(key);
+      if (entry) {
+        entry.count++;
+      }
+      else {
+        counts.set(
+          key,
+          {
+            color: { r, g, b, a },
+            count: 1
+          }
+        );
+      }
+    }
+
+    for (let x = rect.x - 1; x <= rect.x + rect.width; x++) {
+      sample(x, rect.y - 1);
+      sample(x, rect.y + rect.height);
+    }
+    for (let y = rect.y; y < rect.y + rect.height; y++) {
+      sample(rect.x - 1, y);
+      sample(rect.x + rect.width, y);
+    }
+
+    let best: RGBA | null = null;
+    let bestCount = 0;
+    for (const entry of counts.values()) {
+      if (entry.count > bestCount) {
+        bestCount = entry.count;
+        best = entry.color;
+      }
+    }
+
+    return best ?? fallback;
+  }
+
   static captureSnapshot(
     buffer: DefaultPixelBuffer,
     rect: SelectionRect

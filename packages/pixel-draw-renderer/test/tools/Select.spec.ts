@@ -70,6 +70,58 @@ describe("Select", () => {
     });
   });
 
+  describe("dominantBorderColor (static)", () => {
+    const kFallback: RGBA = { r: 1, g: 2, b: 3, a: 4 };
+    const kWhite: RGBA = { r: 255, g: 255, b: 255, a: 255 };
+
+    test("returns the canvas's own default fill when the rect's border is untouched", () => {
+      const buf = new PixelBuffer({ size: { x: 8, y: 8 }, maxSize: kTestMaxSize });
+
+      assert.deepStrictEqual(
+        Select.dominantBorderColor(buf, { x: 2, y: 2, width: 2, height: 2 }, kFallback),
+        kWhite
+      );
+    });
+
+    test("picks the most frequent color among the surrounding ring, ignoring the rect's own interior", () => {
+      const buf = new PixelBuffer({ size: { x: 8, y: 8 }, maxSize: kTestMaxSize });
+      // Paint the rect's interior red — must be ignored, it's not a neighbor.
+      buf.drawPixels([{ x: 2, y: 2 }, { x: 3, y: 2 }, { x: 2, y: 3 }, { x: 3, y: 3 }], kRed);
+      // The ring around a (2,2,2,2) rect has 12 cells; paint 7 of them blue,
+      // outnumbering the 5 still at the canvas's default white.
+      const blue: RGBA = { r: 0, g: 0, b: 255, a: 255 };
+      buf.drawPixels([
+        { x: 1, y: 1 }, { x: 2, y: 1 }, { x: 3, y: 1 }, { x: 4, y: 1 },
+        { x: 1, y: 4 }, { x: 2, y: 4 }, { x: 3, y: 4 }
+      ], blue);
+
+      assert.deepStrictEqual(
+        Select.dominantBorderColor(buf, { x: 2, y: 2, width: 2, height: 2 }, kFallback),
+        blue
+      );
+    });
+
+    test("falls back when the rect has no in-bounds neighbors (it spans the whole texture)", () => {
+      const buf = new PixelBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
+
+      assert.deepStrictEqual(
+        Select.dominantBorderColor(buf, { x: 0, y: 0, width: 4, height: 4 }, kFallback),
+        kFallback
+      );
+    });
+
+    test("samples clipped neighbors correctly when the rect touches the texture edge", () => {
+      const buf = new PixelBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
+
+      // Rect at the top-left corner: only its right and bottom borders have
+      // in-bounds neighbors, all still the canvas default (white).
+      assert.deepStrictEqual(
+        Select.dominantBorderColor(buf, { x: 0, y: 0, width: 2, height: 2 }, kFallback),
+        kWhite
+      );
+    });
+  });
+
   describe("rotate/flip transforms (static)", () => {
     test("rotateRectCW swaps width/height and pivots on the rect's center (rounded)", () => {
       assert.deepStrictEqual(

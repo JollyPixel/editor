@@ -24,11 +24,18 @@ export interface SelectEditEntry {
   newMask: boolean[];
 }
 
+const kTransparent: RGBA = { r: 0, g: 0, b: 0, a: 0 };
+
 export interface SelectControllerOptions {
   canvasBuffer: CanvasBuffer;
   renderer: CanvasRenderer;
   selectionOverlay: SelectionOverlay;
-  eraseColor: RGBA;
+  /**
+   * Explicit fill for a vacated footprint (Move/Rotate/Flip source, or
+   * Delete), overriding the smart default below. `null` when not
+   * configured by the consumer.
+   */
+  eraseColor: RGBA | null;
   /**
    * Commits a selection edit.
    */
@@ -43,7 +50,7 @@ export class SelectController {
   #canvasBuffer: CanvasBuffer;
   #renderer: CanvasRenderer;
   #selectionOverlay: SelectionOverlay;
-  #eraseColor: RGBA;
+  #eraseColor: RGBA | null;
   #onCommit: (entry: SelectEditEntry) => void;
   #shapeMode = false;
 
@@ -55,6 +62,22 @@ export class SelectController {
     this.#selectionOverlay = options.selectionOverlay;
     this.#eraseColor = options.eraseColor;
     this.#onCommit = options.onCommit;
+  }
+
+  /**
+   * Resolves the fill for a vacated footprint: the explicit `eraseColor`
+   * when configured, otherwise the most common color among the pixels
+   * surrounding `rect` (so it blends into the artwork), falling back to
+   * fully transparent when `rect` has no in-bounds neighbors.
+   */
+  #resolveEraseColor(
+    rect: SelectionRect
+  ): RGBA {
+    if (this.#eraseColor !== null) {
+      return this.#eraseColor;
+    }
+
+    return Select.dominantBorderColor(this.#canvasBuffer, rect, kTransparent);
   }
 
   get rect(): SelectionRect | null {
@@ -114,11 +137,12 @@ export class SelectController {
     const snapshot = this.#select.snapshot;
     const mask = this.#select.mask;
     if (rect && snapshot && mask) {
+      const eraseColor = this.#resolveEraseColor(rect);
       this.#renderer.floatingSelection.create({
         sourceRect: rect,
         pixels: snapshot,
         mask,
-        eraseColor: this.#eraseColor,
+        eraseColor,
         blankSource: !this.#select.willSkipErase
       });
       this.#renderer.drawFrame();
@@ -268,9 +292,10 @@ export class SelectController {
       return false;
     }
 
+    const eraseColor = this.#resolveEraseColor(rect);
     const eraseColors: RGBA[] = new Array(
       rect.width * rect.height
-    ).fill(this.#eraseColor);
+    ).fill(eraseColor);
     this.#commitFootprintChange({
       oldRect: rect,
       oldMask: mask,
@@ -279,7 +304,7 @@ export class SelectController {
       newContent: eraseColors,
       skipErase: true
     });
-    this.#select.markErased(this.#eraseColor);
+    this.#select.markErased(eraseColor);
 
     return true;
   }
@@ -393,9 +418,10 @@ export class SelectController {
     const beforeColors = this.#canvasBuffer.samplePixels(positions);
 
     if (!skipErase) {
+      const eraseColor = this.#resolveEraseColor(oldRect);
       this.#canvasBuffer.drawPixels(
         maskedPositions({ rect: oldRect, mask: oldMask }),
-        this.#eraseColor
+        eraseColor
       );
     }
     this.#canvasBuffer.drawMaskedRegion(

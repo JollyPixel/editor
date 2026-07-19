@@ -94,8 +94,12 @@ export interface PixelArtCanvasOptions {
   brush?: BrushOptions;
   select?: {
     /**
-     * Fill color for deleted pixels and moved selections.
-     * @default transparent
+     * Explicit fill for deleted pixels and vacated selection footprints
+     * (Move/Rotate/Flip), overriding the smart default. When omitted, the
+     * vacated area is instead filled with the most common color among its
+     * neighbors — so it blends into the surrounding artwork — falling
+     * back to fully transparent when there are no in-bounds neighbors.
+     * @default dominant neighbor color, transparent as the ultimate fallback
      */
     eraseColor?: ColorInput;
   };
@@ -148,9 +152,9 @@ export class PixelArtCanvas {
     this.#parentHtmlElement = parentHtmlElement;
     this.#onDrawEnd = options.onDrawEnd;
     this.#mode = options.defaultMode ?? "paint";
-    const eraseColor = toRGBA(
-      options.select?.eraseColor ?? { r: 0, g: 0, b: 0, a: 0 }
-    );
+    const eraseColor = options.select?.eraseColor === undefined ?
+      null :
+      toRGBA(options.select.eraseColor);
 
     const textureSize: Vec2 = options.texture?.size
       ? { x: options.texture.size.x, y: options.texture.size.y ?? options.texture.size.x }
