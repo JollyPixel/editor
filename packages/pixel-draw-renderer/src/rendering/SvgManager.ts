@@ -3,9 +3,11 @@ import { SVG_NS } from "./constants.ts";
 import { BrushHighlightOverlay } from "./overlays/BrushHighlightOverlay.ts";
 import { LinePreviewOverlay } from "./overlays/LinePreviewOverlay.ts";
 import { SelectionOverlay } from "./overlays/SelectionOverlay.ts";
+import { UVOverlay } from "./overlays/UVOverlay.ts";
 import type {
   DefaultViewport
 } from "./Viewport.ts";
+import type { UVMap } from "../uv/UVMap.ts";
 import type {
   BrushHighlight
 } from "../types.ts";
@@ -14,6 +16,7 @@ export interface SvgManagerOptions {
   parent: HTMLDivElement;
   viewport: DefaultViewport;
   brush: BrushHighlight;
+  uvMap: UVMap;
 }
 
 /**
@@ -26,6 +29,7 @@ export class SvgManager {
   readonly brushHighlight: BrushHighlightOverlay;
   readonly linePreview: LinePreviewOverlay;
   readonly selection: SelectionOverlay;
+  readonly uvOverlay: UVOverlay;
 
   constructor(
     options: SvgManagerOptions
@@ -47,6 +51,11 @@ export class SvgManager {
       this.#svg,
       options.viewport,
       options.brush
+    );
+    this.uvOverlay = new UVOverlay(
+      this.#svg,
+      options.viewport,
+      options.uvMap
     );
   }
 
@@ -93,6 +102,7 @@ export class SvgManager {
   }
 
   destroy(): void {
+    this.uvOverlay.destroy();
     if (this.#svg.parentElement) {
       this.#svg.remove();
     }

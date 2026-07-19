@@ -23,7 +23,9 @@ export function applyCommandToWorld(
       });
       if (cmd.metadata.pixels) {
         buffer.replacePixels(
-          new Uint8ClampedArray(toUint8Array(cmd.metadata.pixels)),
+          new Uint8ClampedArray(
+            toUint8Array(cmd.metadata.pixels)
+          ),
           cmd.metadata.size
         );
       }
@@ -57,7 +59,9 @@ export function applyCommandToWorld(
     case "texture-replaced": {
       const buffer = world.getBuffer(cmd.bufferId);
       buffer?.replacePixels(
-        new Uint8ClampedArray(toUint8Array(cmd.metadata.pixels)),
+        new Uint8ClampedArray(
+          toUint8Array(cmd.metadata.pixels)
+        ),
         cmd.metadata.size
       );
       break;
@@ -69,9 +73,40 @@ export function applyCommandToWorld(
         break;
       }
 
-      const positions = Fill.matchAll(buffer, cmd.metadata.fromColor);
+      const positions = Fill.matchAll(
+        buffer,
+        cmd.metadata.fromColor
+      );
       buffer.drawPixels(positions, cmd.metadata.toColor);
       buffer.copyToMaster();
+      break;
+    }
+
+    case "uv-region-created": {
+      const buffer = world.getBuffer(cmd.bufferId);
+      buffer?.uvRegions.set(cmd.metadata.region);
+      break;
+    }
+
+    case "uv-region-deleted": {
+      const buffer = world.getBuffer(cmd.bufferId);
+      buffer?.uvRegions.remove(cmd.metadata.id);
+      break;
+    }
+
+    case "uv-region-moved": {
+      const buffer = world.getBuffer(cmd.bufferId);
+      if (!buffer) {
+        break;
+      }
+
+      const existing = buffer.uvRegions.get(cmd.metadata.id);
+      if (existing) {
+        buffer.uvRegions.set({
+          ...existing,
+          rect: cmd.metadata.rect
+        });
+      }
       break;
     }
   }

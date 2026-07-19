@@ -85,8 +85,10 @@ receive(cmd: PixelNetworkCommand): void
 
 Processes an incoming command:
 - `"buffer-added"`: creates the buffer if it doesn't already exist, then broadcasts.
-- `"buffer-removed"`: deletes the buffer and its conflict-tracking state, then broadcasts.
+- `"buffer-removed"`: deletes the buffer and its pixel/region conflict-tracking state, then broadcasts.
 - `"stroke"`: resolves conflicts per-pixel (see [ConflictResolver](./ConflictResolver.md)); applies and broadcasts only the accepted pixels. Dropped entirely (no broadcast) if nothing was accepted.
+- `"uv-region-moved"` / `"uv-region-deleted"`: resolves conflicts per region id — the same `PixelConflictResolver` as strokes, keyed `${bufferId}:${regionId}` instead of `${bufferId}:${x},${y}`. Rejected entirely (no partial application; a region is one atomic unit, unlike a stroke's many pixels).
+- `"uv-region-created"`: always accepted, applied, and broadcast — ids are unique per creation, so there's nothing to arbitrate (parallel to `"buffer-added"`'s existence check).
 - `"resized"` / `"texture-replaced"` / `"global-fill"`: always accepted, applied, and broadcast. `"global-fill"` carries no position list, so it can't be arbitrated per pixel; see [ConflictResolver](./ConflictResolver.md).
 
 Commands targeting an unknown buffer (other than `"buffer-added"`) are dropped.
@@ -99,7 +101,7 @@ Commands targeting an unknown buffer (other than `"buffer-added"`) are dropped.
 snapshot(bufferId: string): PixelBufferSnapshot | undefined
 ```
 
-Returns the buffer's current state, or `undefined` if it doesn't exist.
+Returns the buffer's current state — pixels and its full current UV region set (`uvRegions`) — or `undefined` if it doesn't exist.
 
 ## Example
 

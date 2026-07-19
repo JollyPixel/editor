@@ -104,6 +104,86 @@ describe("PixelArtCanvas", () => {
       assert.strictEqual(manager.zoom.sensitivity, 0.5);
       manager.destroy();
     });
+
+    describe("default zoom fits the texture to the container", () => {
+      function makeSizedContainer(
+        width: number,
+        height: number
+      ): HTMLDivElement {
+        const div = kEmulatedBrowserWindow.document.createElement("div") as unknown as HTMLDivElement;
+        (div as any).getBoundingClientRect = () => {
+          return {
+            left: 0, top: 0, right: width, bottom: height, width, height
+          };
+        };
+        (div as any).style = {};
+        (div as any).appendChild = (_child: unknown) => {
+          // No-op
+        };
+
+        return div;
+      }
+
+      test("computes a fit-to-container zoom when zoom.default is omitted", () => {
+        // 200x200 container, 8x8 texture: min(200/8, 200/8) * 0.9 = 22.5 -> floor 22.
+        const manager = new PixelArtCanvas(container, {
+          texture: { maxSize: 32, size: { x: 8, y: 8 } }
+        });
+
+        assert.strictEqual(manager.zoom.value, 22);
+        manager.destroy();
+      });
+
+      test("an explicit zoom.default always wins over the fit computation", () => {
+        const manager = new PixelArtCanvas(container, {
+          texture: { maxSize: 32, size: { x: 8, y: 8 } },
+          zoom: { default: 4 }
+        });
+
+        assert.strictEqual(manager.zoom.value, 4);
+        manager.destroy();
+      });
+
+      test("clamps the computed fit zoom to zoomMax for a tiny texture in a large container", () => {
+        const manager = new PixelArtCanvas(container, {
+          texture: { maxSize: 32, size: { x: 2, y: 2 } },
+          zoom: { max: 5 }
+        });
+
+        assert.strictEqual(manager.zoom.value, 5);
+        manager.destroy();
+      });
+
+      test("clamps the computed fit zoom to zoomMin for a texture much larger than the container", () => {
+        const manager = new PixelArtCanvas(container, {
+          texture: { maxSize: 2048, size: { x: 1000, y: 1000 } }
+        });
+
+        assert.strictEqual(manager.zoom.value, 1);
+        manager.destroy();
+      });
+
+      test("falls back to Zoom's own default (4) when the container has no measurable size", () => {
+        const zeroSizeContainer = makeSizedContainer(0, 0);
+        const manager = new PixelArtCanvas(zeroSizeContainer, {
+          texture: { maxSize: 32, size: { x: 8, y: 8 } }
+        });
+
+        assert.strictEqual(manager.zoom.value, 4);
+        manager.destroy();
+      });
+
+      test("scales with a smaller container", () => {
+        // 100x100 container, 8x8 texture: min(100/8, 100/8) * 0.9 = 11.25 -> floor 11.
+        const smallContainer = makeSizedContainer(100, 100);
+        const manager = new PixelArtCanvas(smallContainer, {
+          texture: { maxSize: 32, size: { x: 8, y: 8 } }
+        });
+
+        assert.strictEqual(manager.zoom.value, 11);
+        manager.destroy();
+      });
+    });
   });
 
   describe("backgroundColor", () => {

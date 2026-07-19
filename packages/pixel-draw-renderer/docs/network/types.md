@@ -47,10 +47,11 @@ interface PixelBufferSnapshot {
   size: Vec2;
   /** Base64-encoded RGBA bytes. */
   pixels: string;
+  uvRegions: UVRegion[];
 }
 ```
 
-`PixelBufferHookEvent` (the `"stroke"` / `"resized"` / `"texture-replaced"` / `"global-fill"` local-mutation events) is defined in [buffer/PixelBuffer.md](../buffer/PixelBuffer.md); a `PixelNetworkCommand` is that same event shape plus `PixelLifecycleEvent`, enriched with the header fields. Six actions total: `"buffer-added"`, `"buffer-removed"`, `"stroke"`, `"resized"`, `"texture-replaced"`, `"global-fill"`. All pixel payloads (`stroke` positions and `global-fill`'s colors excepted) are raw RGBA bytes, base64-encoded via `js-base64`: no image codec dependency, so `PixelSyncServer` stays headless. Commands are plain JSON-serializable objects.
+`PixelBufferHookEvent` (the `"stroke"` / `"resized"` / `"texture-replaced"` / `"global-fill"` / `"uv-region-created"` / `"uv-region-deleted"` / `"uv-region-moved"` local-mutation events) is defined in [buffer/PixelBuffer.md](../buffer/PixelBuffer.md); a `PixelNetworkCommand` is that same event shape plus `PixelLifecycleEvent`, enriched with the header fields. Nine actions total: `"buffer-added"`, `"buffer-removed"`, `"stroke"`, `"resized"`, `"texture-replaced"`, `"global-fill"`, `"uv-region-created"`, `"uv-region-deleted"`, `"uv-region-moved"`. All pixel payloads (`stroke` positions and `global-fill`'s colors excepted) are raw RGBA bytes, base64-encoded via `js-base64`: no image codec dependency, so `PixelSyncServer` stays headless. Commands are plain JSON-serializable objects. `PixelBufferSnapshot.uvRegions` carries the buffer's full current UV region set, so a client subscribing mid-session learns about every region that already exists (see [uv/UVMap.md](../uv/UVMap.md)).
 
 > [!IMPORTANT]
 > `PixelLifecycleEvent`'s `originTimestamp` exists only for structural symmetry with `PixelBufferHookEvent` (so the stamping logic in [`PixelSyncSession`](./PixelSyncSession.md) can handle every event uniformly). `"buffer-added"`/`"buffer-removed"` are never replayed through undo/redo, so it's always `undefined` in practice for these two actions.

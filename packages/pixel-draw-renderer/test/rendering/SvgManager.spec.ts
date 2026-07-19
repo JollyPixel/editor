@@ -10,7 +10,9 @@ import { SvgManager } from "../../src/rendering/SvgManager.ts";
 import { BrushHighlightOverlay } from "../../src/rendering/overlays/BrushHighlightOverlay.ts";
 import { LinePreviewOverlay } from "../../src/rendering/overlays/LinePreviewOverlay.ts";
 import { SelectionOverlay } from "../../src/rendering/overlays/SelectionOverlay.ts";
+import { UVOverlay } from "../../src/rendering/overlays/UVOverlay.ts";
 import { Zoom } from "../../src/rendering/Zoom.ts";
+import { UVMap } from "../../src/uv/UVMap.ts";
 import type { DefaultViewport } from "../../src/rendering/Viewport.ts";
 
 // CONSTANTS
@@ -55,18 +57,26 @@ function makeBrush() {
   };
 }
 
+function makeUvMap(): UVMap {
+  return new UVMap({ getCanvasSize: () => {
+    return { x: 64, y: 32 };
+  } });
+}
+
 describe("SvgManager", () => {
   describe("overlays", () => {
     test("exposes the brush highlight, line preview, and selection overlays", () => {
       const svgMgr = new SvgManager({
         parent: makeParent(),
         viewport: makeViewport(),
-        brush: makeBrush()
+        brush: makeBrush(),
+        uvMap: makeUvMap()
       });
 
       assert.ok(svgMgr.brushHighlight instanceof BrushHighlightOverlay);
       assert.ok(svgMgr.linePreview instanceof LinePreviewOverlay);
       assert.ok(svgMgr.selection instanceof SelectionOverlay);
+      assert.ok(svgMgr.uvOverlay instanceof UVOverlay);
     });
   });
 
@@ -77,7 +87,8 @@ describe("SvgManager", () => {
       const svgMgr = new SvgManager({
         parent,
         viewport: makeViewport(),
-        brush: makeBrush()
+        brush: makeBrush(),
+        uvMap: makeUvMap()
       });
 
       // Before destroy: parent should have child SVG elements
@@ -96,7 +107,8 @@ describe("SvgManager", () => {
       const svgMgr = new SvgManager({
         parent,
         viewport: makeViewport(),
-        brush: makeBrush()
+        brush: makeBrush(),
+        uvMap: makeUvMap()
       });
 
       svgMgr.destroy();

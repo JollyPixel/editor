@@ -98,6 +98,16 @@ export class CanvasRenderer {
     this.drawFrame();
   }
 
+  get cursor(): string {
+    return this.#canvas.style.cursor;
+  }
+
+  set cursor(
+    value: string
+  ) {
+    this.#canvas.style.cursor = value;
+  }
+
   drawFrame(): void {
     if (
       this.#canvas.width === 0 ||

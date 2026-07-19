@@ -1,6 +1,7 @@
 // Import Internal Dependencies
 import type { ToolControllers } from "../tools/ToolControllers.ts";
 import type { CanvasRenderer } from "../rendering/CanvasRenderer.ts";
+import type { CursorController } from "../rendering/CursorController.ts";
 import type { SvgManager } from "../rendering/SvgManager.ts";
 import type { Viewport } from "../rendering/Viewport.ts";
 import type { Mode } from "../types.ts";
@@ -9,6 +10,7 @@ import type { InputActions } from "./InputController.ts";
 export interface CreateInputActionsOptions {
   getMode: () => Mode;
   renderer: CanvasRenderer;
+  cursor: CursorController;
   svgManager: SvgManager;
   viewport: Viewport;
   tools: ToolControllers;
@@ -26,6 +28,7 @@ export function createInputActions(
   const {
     getMode,
     renderer,
+    cursor,
     svgManager,
     viewport,
     tools,
@@ -66,6 +69,13 @@ export function createInputActions(
 
         case "select":
           tools.select.handleStart({ x: tx, y: ty });
+          cursor.refresh("select");
+
+          return true;
+
+        case "uv":
+          tools.uv.handleStart({ x: tx, y: ty });
+          cursor.refresh("uv");
 
           return true;
 
@@ -120,6 +130,10 @@ export function createInputActions(
           tools.select.handleMove({ x: tx, y: ty });
           break;
 
+        case "uv":
+          tools.uv.handleMove({ x: tx, y: ty });
+          break;
+
         default:
       }
     },
@@ -131,6 +145,12 @@ export function createInputActions(
 
         case "select":
           tools.select.handleEnd();
+          cursor.refresh("select");
+          break;
+
+        case "uv":
+          tools.uv.handleEnd();
+          cursor.refresh("uv");
           break;
 
         default:
@@ -144,6 +164,7 @@ export function createInputActions(
       renderer.drawFrame();
       tools.line.refreshPreview();
       tools.select.refreshOverlay();
+      svgManager.uvOverlay.refresh();
     },
     onPanEnd: () => {
       // No-op. The viewport handles panning internally.
@@ -153,6 +174,7 @@ export function createInputActions(
       renderer.drawFrame();
       tools.line.refreshPreview();
       tools.select.refreshOverlay();
+      svgManager.uvOverlay.refresh();
     },
     onMouseMove: (cx, cy) => {
       if (cx < 0 || cy < 0) {
@@ -207,10 +229,22 @@ export function createInputActions(
     onBlur: () => {
       tools.line.shiftHeld = false;
       tools.line.cancelIfArmed();
+      tools.uv.cancelDrag();
+      cursor.refresh(getMode());
     },
     onCopy: () => tools.select.handleCopy(),
     onPaste: () => tools.select.handlePaste(),
-    onDelete: () => tools.select.handleDelete(),
+    onDelete: () => {
+      const selectHandled = tools.select.handleDelete();
+      // Unlike `select`, a UV selection is NOT cleared on mode change (see
+      // uv/UVMap.md — visibility/selection persists across modes), so it
+      // must be explicitly mode-gated here, or Delete in any other mode
+      // would delete a UV region selected earlier (e.g. via a consumer's
+      // 3D-scene click) as a side effect.
+      const uvHandled = getMode() === "uv" && tools.uv.handleDelete();
+
+      return selectHandled || uvHandled;
+    },
     onRotate: () => tools.select.handleRotate(),
     onFlipHorizontal: () => tools.select.handleFlipHorizontal(),
     onFlipVertical: () => tools.select.handleFlipVertical()

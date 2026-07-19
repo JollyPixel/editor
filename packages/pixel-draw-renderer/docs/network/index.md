@@ -28,8 +28,9 @@ several `PixelArtCanvas` instances to the same transport connection (e.g. one
 per open tileset).
 
 **Flow:**
-1. A local mutation (a paint stroke, fill, resize, or setting `texture`) fires
-   `PixelArtCanvas.onBufferUpdated` (see [buffer/PixelBuffer.md](../buffer/PixelBuffer.md)).
+1. A local mutation (a paint stroke, fill, resize, setting `texture`, or a UV
+   region create/delete/move) fires `PixelArtCanvas.onBufferUpdated` (see
+   [buffer/PixelBuffer.md](../buffer/PixelBuffer.md)).
 2. `PixelSyncSession` stamps the event with `bufferId` / `clientId` / `seq` /
    `timestamp` and calls `transport.sendCommand(cmd)`.
 3. The transport delivers the command to [`PixelSyncServer.receive()`](./PixelSyncServer.md).

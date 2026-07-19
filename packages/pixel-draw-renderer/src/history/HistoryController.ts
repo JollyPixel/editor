@@ -3,10 +3,12 @@ import { fromUint8Array } from "js-base64";
 
 // Import Internal Dependencies
 import {
-  HistoryStack,
-  type HistoryEntry,
-  type HistoryEntryInput
+  HistoryStack
 } from "./HistoryStack.ts";
+import type {
+  HistoryEntry,
+  HistoryEntryInput
+} from "./HistoryStack.types.ts";
 import {
   groupPositionsByColor
 } from "./utils.ts";
@@ -16,6 +18,7 @@ import type {
 import type {
   PixelBufferHookEvent
 } from "../buffer/hooks.ts";
+import type { UVMap } from "../uv/UVMap.ts";
 
 export interface HistoryState {
   canUndo: boolean;
@@ -140,10 +143,11 @@ export class HistoryController {
 
   constructor(
     buffer: DefaultPixelBuffer,
+    uvMap: UVMap,
     options: HistoryControllerOptions = {}
   ) {
     if (options.enabled) {
-      this.#stack = new HistoryStack(buffer, {
+      this.#stack = new HistoryStack(buffer, uvMap, {
         limit: options.limit
       });
     }

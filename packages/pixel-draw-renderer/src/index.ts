@@ -20,13 +20,15 @@ export type {
 } from "./buffer/hooks.ts";
 export {
   HistoryStack,
-  type HistoryEntry,
-  type HistoryEntryInput,
-  type HistoryResizedEntry,
-  type HistoryStackOptions,
-  type HistoryStrokeEntry,
-  type HistoryTextureReplacedEntry
+  type HistoryStackOptions
 } from "./history/HistoryStack.ts";
+export type {
+  HistoryEntry,
+  HistoryEntryInput,
+  HistoryResizedEntry,
+  HistoryStrokeEntry,
+  HistoryTextureReplacedEntry
+} from "./history/HistoryStack.types.ts";
 export type {
   DefaultViewport
 } from "./rendering/Viewport.ts";
@@ -48,4 +50,13 @@ export {
   type KeybindingAction,
   type KeybindingsMap
 } from "./input/Keybindings.ts";
+export {
+  UVMap,
+  type UVMapEvent,
+  type UVMapEventType,
+  type UVMapListener,
+  type UVMapOptions,
+  type UVRegionCreateOptions
+} from "./uv/UVMap.ts";
+export type { UVRegion } from "./uv/UVRegion.ts";
 export * from "./network/index.ts";

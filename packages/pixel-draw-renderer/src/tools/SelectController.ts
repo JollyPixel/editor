@@ -85,6 +85,23 @@ export class SelectController {
   }
 
   /**
+   * Whether an existing selection is currently being dragged to a new
+   * position (as opposed to being drawn for the first time).
+   */
+  get isDragging(): boolean {
+    return this.#select.state === "moving";
+  }
+
+  /**
+   * Whether there's a committed selection to grab — idle ("selected") or
+   * actively being dragged ("moving"). `false` while a brand-new rectangle
+   * is still being drawn ("creating") or nothing is selected ("idle").
+   */
+  get hasSelection(): boolean {
+    return this.#select.state === "selected" || this.#select.state === "moving";
+  }
+
+  /**
    * Whether empty-space clicks create shape selections.
    */
   get shape(): boolean {

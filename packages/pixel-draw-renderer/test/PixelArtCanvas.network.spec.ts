@@ -73,6 +73,7 @@ describe("PixelArtCanvas — onBufferUpdated", () => {
       const events: PixelBufferHookEvent[] = [];
       const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } },
+        zoom: { default: 4 },
         brush: { size: 1, maxSize: 1 },
         onBufferUpdated: (event) => events.push(event)
       });

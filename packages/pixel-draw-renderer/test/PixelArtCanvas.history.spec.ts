@@ -103,6 +103,7 @@ describe("PixelArtCanvas — history (undo/redo)", () => {
     test("undo reverts a painted pixel; redo re-applies it", () => {
       const manager = new PixelArtCanvas(container, {
         texture: { maxSize: 32, size: { x: 8, y: 8 } },
+        zoom: { default: 4 },
         brush: { size: 1, maxSize: 1 },
         history: { enabled: true }
       });
@@ -439,6 +440,7 @@ describe("PixelArtCanvas — history + network collision handling", () => {
     const server = new PixelSyncServer();
     const manager = new PixelArtCanvas(container, {
       texture: { maxSize: 32, size: { x: 8, y: 8 } },
+      zoom: { default: 4 },
       brush: { size: 1, maxSize: 1 },
       history: { enabled: true }
     });
@@ -470,6 +472,7 @@ describe("PixelArtCanvas — history + network collision handling", () => {
     const server = new PixelSyncServer();
     const manager = new PixelArtCanvas(container, {
       texture: { maxSize: 32, size: { x: 8, y: 8 } },
+      zoom: { default: 4 },
       brush: { size: 1, maxSize: 1 },
       history: { enabled: true }
     });

@@ -338,7 +338,7 @@ describe("PixelSyncSession — snapshot loading", () => {
 
     const pixels = new Uint8ClampedArray([1, 2, 3, 255]);
     const base64 = Buffer.from(pixels).toString("base64");
-    transport.simulateSnapshot("tex1", { size: { x: 1, y: 1 }, pixels: base64 });
+    transport.simulateSnapshot("tex1", { size: { x: 1, y: 1 }, pixels: base64, uvRegions: [] });
 
     assert.strictEqual(manager.loadedSnapshots.length, 1);
     assert.deepStrictEqual(manager.loadedSnapshots[0].size, { x: 1, y: 1 });
@@ -350,7 +350,7 @@ describe("PixelSyncSession — snapshot loading", () => {
     new PixelSyncSession({ transport });
 
     assert.doesNotThrow(() => {
-      transport.simulateSnapshot("unknown", { size: { x: 1, y: 1 }, pixels: "" });
+      transport.simulateSnapshot("unknown", { size: { x: 1, y: 1 }, pixels: "", uvRegions: [] });
     });
   });
 });

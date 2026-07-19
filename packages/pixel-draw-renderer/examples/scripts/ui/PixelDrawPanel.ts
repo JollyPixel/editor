@@ -16,8 +16,13 @@ const kModeItems: { mode: Mode; icon: IconName; label: string; }[] = [
   { mode: "move", icon: "move", label: "Move" },
   { mode: "paint", icon: "paint", label: "Paint" },
   { mode: "fill", icon: "fill", label: "Fill" },
-  { mode: "select", icon: "select", label: "Select" }
+  { mode: "select", icon: "select", label: "Select" },
+  { mode: "uv", icon: "uv", label: "UV" }
 ];
+
+// Fixed creation size for the demo's "Create" button; the library itself
+// takes an arbitrary width/height via `uv.create({ width, height })`.
+const kUvCreateSize = { width: 16, height: 16 };
 
 @customElement("pixel-draw-panel")
 export class PixelDrawPanel extends LitElement {
@@ -237,6 +242,45 @@ export class PixelDrawPanel extends LitElement {
       background: #4488ff;
       border-color: #4488ff;
     }
+
+    .uv-toolbar {
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      background: rgba(30, 38, 43, 0.85);
+      color: #eee;
+      font-size: 11px;
+      font-family: sans-serif;
+      user-select: none;
+      transform: translateX(-50%);
+    }
+
+    .uv-toolbar button {
+      padding: 3px 10px;
+      border: 1px solid #556067;
+      border-radius: 10px;
+      background: transparent;
+      color: #eee;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .uv-toolbar button:disabled {
+      color: #556067;
+      cursor: default;
+    }
+
+    .uv-toolbar label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+    }
   `;
 
   // Plain private fields, not @state(): Lit's legacy decorators can't target
@@ -251,6 +295,8 @@ export class PixelDrawPanel extends LitElement {
   #background: ColorChangeDetail = { hex: "#ffffff", opacity: 1 };
   #canUndo = false;
   #canRedo = false;
+  #uvSelectedRegionId: string | null = null;
+  #uvShowAll = false;
   #canvasManager: PixelArtCanvas | null = null;
 
   get canvasManager(): PixelArtCanvas | null {
@@ -300,6 +346,16 @@ export class PixelDrawPanel extends LitElement {
     };
     this.#canUndo = this.#canvasManager.canUndo();
     this.#canRedo = this.#canvasManager.canRedo();
+    this.#uvSelectedRegionId = this.#canvasManager.uv.selectedRegionId;
+    this.#uvShowAll = this.#canvasManager.uv.showAll;
+    this.#canvasManager.uv.on("selection-changed", ({ selectedRegionId }) => {
+      this.#uvSelectedRegionId = selectedRegionId;
+      this.requestUpdate();
+    });
+    this.#canvasManager.uv.on("visibility-changed", ({ showAll }) => {
+      this.#uvShowAll = showAll;
+      this.requestUpdate();
+    });
     this.requestUpdate();
     this.#syncForegroundSwatch();
     this.#syncBackgroundSwatch();
@@ -375,6 +431,22 @@ export class PixelDrawPanel extends LitElement {
       this.#canvasManager.selectShape = this.#selectShape;
     }
     this.requestUpdate();
+  }
+
+  #onUvCreate(): void {
+    this.#canvasManager?.uv.create(kUvCreateSize);
+  }
+
+  #onUvDelete(): void {
+    if (this.#uvSelectedRegionId) {
+      this.#canvasManager?.uv.delete(this.#uvSelectedRegionId);
+    }
+  }
+
+  #onUvShowAllToggle(): void {
+    if (this.#canvasManager) {
+      this.#canvasManager.uv.showAll = !this.#canvasManager.uv.showAll;
+    }
   }
 
   #onForegroundChange(
@@ -504,6 +576,23 @@ export class PixelDrawPanel extends LitElement {
     return nothing;
   }
 
+  #renderUVToolbar() {
+    if (this.#mode !== "uv") {
+      return nothing;
+    }
+
+    return html`
+      <div class="uv-toolbar" part="uv-toolbar">
+        <button @click=${this.#onUvCreate}>Create</button>
+        <button ?disabled=${!this.#uvSelectedRegionId} @click=${this.#onUvDelete}>Delete</button>
+        <label>
+          <input type="checkbox" .checked=${this.#uvShowAll} @change=${this.#onUvShowAllToggle}>
+          Show all
+        </label>
+      </div>
+    `;
+  }
+
   override render() {
     return html`
       <div class="rail" part="rail">
@@ -581,6 +670,7 @@ export class PixelDrawPanel extends LitElement {
       <div class="stage" part="stage">
         <div class="canvas-host" part="canvas-host"></div>
         ${this.#renderToolOptions()}
+        ${this.#renderUVToolbar()}
       </div>
     `;
   }

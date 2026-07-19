@@ -164,7 +164,8 @@ export class PixelSyncSession {
   ): void {
     this.#managers.get(bufferId)?.loadSnapshot(
       snapshot.size,
-      new Uint8ClampedArray(toUint8Array(snapshot.pixels))
+      new Uint8ClampedArray(toUint8Array(snapshot.pixels)),
+      snapshot.uvRegions
     );
   }
 
