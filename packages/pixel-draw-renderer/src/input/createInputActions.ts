@@ -1,18 +1,13 @@
 // Import Internal Dependencies
-import type { Brush } from "../tools/Brush.ts";
 import type { ToolControllers } from "../tools/ToolControllers.ts";
-import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import type { CanvasRenderer } from "../rendering/CanvasRenderer.ts";
 import type { SvgManager } from "../rendering/SvgManager.ts";
 import type { Viewport } from "../rendering/Viewport.ts";
-import { rgbToHex } from "../utils/colors.ts";
 import type { Mode } from "../types.ts";
 import type { InputActions } from "./InputController.ts";
 
 export interface CreateInputActionsOptions {
   getMode: () => Mode;
-  brush: Brush;
-  canvasBuffer: CanvasBuffer;
   renderer: CanvasRenderer;
   svgManager: SvgManager;
   viewport: Viewport;
@@ -30,8 +25,6 @@ export function createInputActions(
 ): Omit<InputActions, "onUndo" | "onRedo"> {
   const {
     getMode,
-    brush,
-    canvasBuffer,
     renderer,
     svgManager,
     viewport,
@@ -43,6 +36,12 @@ export function createInputActions(
     onPrimaryDown: (tx, ty) => {
       switch (getMode()) {
         case "paint":
+          if (tools.brush.pickArmed) {
+            tools.brush.pick(tx, ty);
+
+            return false;
+          }
+
           if (
             tools.line.isArmed &&
             tools.line.commitTrigger === "mousedown"
@@ -113,24 +112,6 @@ export function createInputActions(
       renderer.drawFrame();
       tools.line.refreshPreview();
       tools.select.refreshOverlay();
-    },
-    onColorPick: (tx, ty) => {
-      const mode = getMode();
-      if (mode !== "paint" && mode !== "fill") {
-        return;
-      }
-
-      const [r, g, b, a] = canvasBuffer.samplePixel(tx, ty);
-      const hex = rgbToHex(r, g, b);
-      const opacity = a / 255;
-      brush.color(hex, opacity);
-
-      const event = new CustomEvent("colorpicked", {
-        detail: { hex, opacity },
-        bubbles: true,
-        composed: true
-      });
-      renderer.canvas().dispatchEvent(event);
     },
     onMouseMove: (cx, cy) => {
       if (cx < 0 || cy < 0) {

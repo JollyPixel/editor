@@ -40,11 +40,6 @@ export interface InputActions {
     cx: number,
     cy: number
   ): void;
-  /** Handles a right-click within the texture bounds. */
-  onColorPick(
-    tx: number,
-    ty: number
-  ): void;
   onMouseMove(
     cx: number,
     cy: number
@@ -362,14 +357,9 @@ export class InputController {
   #handleContextMenu(
     event: MouseEvent
   ): void {
+    // Reserved for a future secondary-color action; suppress the browser
+    // menu without dispatching anything for now.
     event.preventDefault();
-
-    const pos = this.#resolveTexturePos(event, {
-      limit: true
-    });
-    if (pos) {
-      this.#actions.onColorPick(pos.x, pos.y);
-    }
   }
 
   #handleWindowMouseMove(

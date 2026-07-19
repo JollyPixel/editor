@@ -70,7 +70,7 @@ function makeActions(): {
   const calls: Record<string, unknown[][]> = {
     onPrimaryDown: [], onPrimaryMove: [], onPrimaryUp: [],
     onPanStart: [], onPanMove: [], onPanEnd: [],
-    onZoom: [], onColorPick: [], onMouseMove: [],
+    onZoom: [], onMouseMove: [],
     onCursorMove: [], onMouseUp: [],
     onShiftDown: [], onShiftUp: [], onBlur: [],
     onCopy: [], onPaste: [], onDelete: [],
@@ -99,9 +99,6 @@ function makeActions(): {
     },
     onZoom: (d, cx, cy) => {
       calls.onZoom.push([d, cx, cy]);
-    },
-    onColorPick: (tx, ty) => {
-      calls.onColorPick.push([tx, ty]);
     },
     onMouseMove: (cx, cy) => {
       calls.onMouseMove.push([cx, cy]);

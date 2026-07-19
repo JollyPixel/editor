@@ -2,7 +2,7 @@
 // Import Third-party Dependencies
 import { svg, type SVGTemplateResult } from "lit";
 
-export type IconName = "move" | "paint" | "fill" | "select" | "undo" | "redo" | "swap";
+export type IconName = "move" | "paint" | "fill" | "select" | "undo" | "redo" | "swap" | "eyedropper";
 
 // CONSTANTS
 const kIcons: Record<IconName, SVGTemplateResult> = {
@@ -54,6 +54,12 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
     <path d="M13 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
     <path d="M21 16H8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
     <path d="M11 20l-4-4 4-4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+  `,
+  // Color-picker pen: angled tip touching down, ending in a small swatch square.
+  eyedropper: svg`
+    <path d="M11 7l6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M4 16 15.7 4.3a1 1 0 0 1 1.4 0l2.6 2.6a1 1 0 0 1 0 1.4L8 20H4v-4Z"
+      fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
   `
 };
 
