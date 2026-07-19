@@ -93,7 +93,7 @@ export interface PixelArtCanvasOptions {
     /**
      * Fill color for deleted pixels and the source of moved selections.
      * Accepts a CSS color or `Color` instance.
-     * @default "#FFFFFF"
+     * @default fully transparent
      */
     eraseColor?: ColorInput;
   };
@@ -144,7 +144,7 @@ export class PixelArtCanvas {
     this.#parentHtmlElement = parentHtmlElement;
     this.#onDrawEnd = options.onDrawEnd;
     this.#mode = options.defaultMode ?? "paint";
-    const eraseColor = toRGBA(options.select?.eraseColor ?? "#FFFFFF");
+    const eraseColor = toRGBA(options.select?.eraseColor ?? { r: 0, g: 0, b: 0, a: 0 });
 
     const textureSize: Vec2 = options.texture?.size
       ? { x: options.texture.size.x, y: options.texture.size.y ?? options.texture.size.x }
