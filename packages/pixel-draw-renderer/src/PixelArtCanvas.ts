@@ -313,6 +313,21 @@ export class PixelArtCanvas {
   }
 
   /**
+    * Whether a select-mode mousedown on empty space performs a magic-wand
+    * shape click-select (connected region + enclosed holes) instead of
+    * dragging out a rectangle. Changing it clears any active selection.
+   */
+  get selectShape(): boolean {
+    return this.#tools.select.shape;
+  }
+
+  set selectShape(
+    shape: boolean
+  ) {
+    this.#tools.select.shape = shape;
+  }
+
+  /**
    * Fill color for the canvas area outside the texture bounds. See the
    * `backgroundColor` constructor option for the initial-value fallback
    * chain; this setter always applies immediately, no `drawFrame()` needed.
@@ -555,7 +570,7 @@ export class PixelArtCanvas {
 
     this.#refreshAfterHistoryApply();
     if (entry.action === "select-edit") {
-      this.#tools.select.syncSelectionAfterHistory(entry.oldRect);
+      this.#tools.select.syncSelectionAfterHistory(entry.oldRect, entry.oldMask);
     }
     for (const event of HistoryController.buildUndoReplayEvents(entry)) {
       this.#sync.emitHook(event);
@@ -576,7 +591,7 @@ export class PixelArtCanvas {
 
     this.#refreshAfterHistoryApply();
     if (entry.action === "select-edit") {
-      this.#tools.select.syncSelectionAfterHistory(entry.newRect);
+      this.#tools.select.syncSelectionAfterHistory(entry.newRect, entry.newMask);
     }
     for (const event of HistoryController.buildRedoReplayEvents(entry)) {
       this.#sync.emitHook(event);

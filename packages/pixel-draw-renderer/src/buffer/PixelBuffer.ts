@@ -190,6 +190,43 @@ export class PixelBuffer implements DefaultPixelBuffer {
     }
   }
 
+  /**
+   * Like drawRegion, but skips any cell where `mask[i]` is false — used for
+   * non-rectangular (shape) selections, where the RGBA array is still a
+   * dense rect-sized grid but only some of its cells are actually part of
+   * the selection. Untouched cells keep whatever they held before.
+   */
+  drawMaskedRegion(
+    rect: SelectionRect,
+    pixels: RGBA[],
+    mask: boolean[]
+  ): void {
+    for (let ry = 0; ry < rect.height; ry++) {
+      for (let rx = 0; rx < rect.width; rx++) {
+        const localIndex = (ry * rect.width) + rx;
+        if (!mask[localIndex]) {
+          continue;
+        }
+
+        const x = rect.x + rx;
+        const y = rect.y + ry;
+        if (
+          x < 0 || x >= this.#width ||
+          y < 0 || y >= this.#height
+        ) {
+          continue;
+        }
+
+        const { r, g, b, a } = pixels[localIndex];
+        const index = (y * this.#width + x) * 4;
+        this.#working[index] = r;
+        this.#working[index + 1] = g;
+        this.#working[index + 2] = b;
+        this.#working[index + 3] = a;
+      }
+    }
+  }
+
   copyToMaster(): void {
     for (let y = 0; y < this.#height; y++) {
       for (let x = 0; x < this.#width; x++) {

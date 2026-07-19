@@ -205,4 +205,33 @@ describe("CanvasBuffer", () => {
       assert.strictEqual(ctx.putImageDataCallCount, before);
     });
   });
+
+  describe("drawMaskedRegion", () => {
+    test("writes only masked-true cells to both the buffer and its canvas mirror", () => {
+      const buf = new CanvasBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
+      buf.drawPixels([{ x: 1, y: 0 }], { r: 1, g: 2, b: 3, a: 4 });
+
+      const red = { r: 255, g: 0, b: 0, a: 255 };
+      const blue = { r: 0, g: 0, b: 255, a: 255 };
+      buf.drawMaskedRegion({ x: 0, y: 0, width: 2, height: 1 }, [red, blue], [true, false]);
+
+      assert.deepStrictEqual(buf.samplePixel(0, 0), [255, 0, 0, 255]);
+      assert.deepStrictEqual(buf.samplePixel(1, 0), [1, 2, 3, 4], "masked-false cell untouched");
+    });
+
+    test("no-ops without throwing when the rect is entirely out of bounds", () => {
+      const buf = new CanvasBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
+      const ctx = (buf.canvas() as unknown as MockCanvasElement)._ctx;
+      const before = ctx.putImageDataCallCount;
+
+      assert.doesNotThrow(() => {
+        buf.drawMaskedRegion(
+          { x: 10, y: 10, width: 2, height: 2 },
+          new Array(4).fill({ r: 1, g: 1, b: 1, a: 1 }),
+          new Array(4).fill(true)
+        );
+      });
+      assert.strictEqual(ctx.putImageDataCallCount, before);
+    });
+  });
 });

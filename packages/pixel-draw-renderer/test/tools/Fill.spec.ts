@@ -119,6 +119,31 @@ describe("Fill", () => {
     });
   });
 
+  describe("connectedRegion", () => {
+    test("matches floodFill's region exactly for a matching fillColor bail-out case bypassed", () => {
+      const buf = new PixelBuffer({ size: { x: 4, y: 4 }, defaultColor: kColorA, maxSize: kTestMaxSize });
+
+      const region = Fill.connectedRegion(buf, { x: 1, y: 1 });
+      const flooded = Fill.floodFill(buf, { x: 1, y: 1 }, kFillColor);
+
+      assert.deepStrictEqual(sortPositions(region), sortPositions(flooded));
+    });
+
+    test("has no fillColor bail-out — still returns the region even if it would already equal a hypothetical fillColor", () => {
+      const buf = new PixelBuffer({ size: { x: 4, y: 4 }, defaultColor: kColorA, maxSize: kTestMaxSize });
+
+      const region = Fill.connectedRegion(buf, { x: 1, y: 1 });
+
+      assert.strictEqual(region.length, 15, "all pixels except the transparent origin");
+    });
+
+    test("returns [] when the seed is out of bounds", () => {
+      const buf = new PixelBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
+
+      assert.deepStrictEqual(Fill.connectedRegion(buf, { x: -1, y: 0 }), []);
+    });
+  });
+
   describe("matchAll", () => {
     test("matches every pixel of the given color, including disconnected regions", () => {
       // Two 2x2 colorA blobs separated by a full-height colorB column —

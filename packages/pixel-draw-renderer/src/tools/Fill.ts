@@ -33,6 +33,27 @@ export class Fill {
       return [];
     }
 
+    return Fill.connectedRegion(buffer, seed);
+  }
+
+  /**
+   * The pure connectivity primitive behind floodFill: every position
+   * reachable from `seed` through 4-directional neighbors whose RGBA
+   * exactly matches the seed pixel's own color (no target-color bail-out).
+   * Reused by Select's magic-wand shape selection, which needs the region
+   * itself rather than a repaint.
+   */
+  static connectedRegion(
+    buffer: DefaultPixelBuffer,
+    seed: Vec2
+  ): Vec2[] {
+    const size = buffer.size();
+    if (seed.x < 0 || seed.x >= size.x || seed.y < 0 || seed.y >= size.y) {
+      return [];
+    }
+
+    const [tr, tg, tb, ta] = buffer.samplePixel(seed.x, seed.y);
+
     const visited = new Set<string>();
     const positions: Vec2[] = [];
     const stack: Vec2[] = [seed];

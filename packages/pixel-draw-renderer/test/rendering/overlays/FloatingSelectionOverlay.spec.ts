@@ -126,4 +126,53 @@ describe("FloatingSelectionOverlay", () => {
       assert.doesNotThrow(() => overlay.updatePosition({ x: 5, y: 5, width: 1, height: 1 }));
     });
   });
+
+  describe("mask", () => {
+    test("masked-false cells are transparent in the content canvas, masked-true cells show through", () => {
+      const overlay = new FloatingSelectionOverlay();
+      overlay.create({
+        sourceRect: { x: 2, y: 3, width: 2, height: 1 },
+        pixels: [kRed, kBlue],
+        mask: [true, false],
+        eraseColor: kErase
+      });
+
+      const dest = makeDest();
+      overlay.draw(dest._ctx as unknown as CanvasRenderingContext2D);
+
+      assert.deepStrictEqual(pixelAt(dest, 2, 3), [255, 0, 0, 255], "masked-true cell painted");
+      assert.strictEqual(pixelAt(dest, 3, 3)[3], 0, "masked-false cell is fully transparent (alpha 0)");
+    });
+
+    test("blanking the source only erases masked-true cells, leaving masked-false cells' underlying content", () => {
+      const overlay = new FloatingSelectionOverlay();
+      overlay.create({
+        sourceRect: { x: 0, y: 0, width: 2, height: 1 },
+        pixels: [kRed, kBlue],
+        mask: [true, false],
+        eraseColor: kErase
+      });
+      overlay.updatePosition({ x: 5, y: 5, width: 2, height: 1 });
+
+      const dest = makeDest();
+      overlay.draw(dest._ctx as unknown as CanvasRenderingContext2D);
+
+      assert.deepStrictEqual(pixelAt(dest, 0, 0), [9, 9, 9, 255], "masked-true source cell blanked");
+      assert.deepStrictEqual(pixelAt(dest, 1, 0), [0, 0, 0, 0], "masked-false source cell left alone (nothing drawn)");
+    });
+
+    test("omitting mask behaves exactly like an all-true mask (backward compatible)", () => {
+      const overlay = new FloatingSelectionOverlay();
+      overlay.create({
+        sourceRect: { x: 0, y: 0, width: 1, height: 1 },
+        pixels: [kRed],
+        eraseColor: kErase
+      });
+
+      const dest = makeDest();
+      overlay.draw(dest._ctx as unknown as CanvasRenderingContext2D);
+
+      assert.deepStrictEqual(pixelAt(dest, 0, 0), [255, 0, 0, 255]);
+    });
+  });
 });

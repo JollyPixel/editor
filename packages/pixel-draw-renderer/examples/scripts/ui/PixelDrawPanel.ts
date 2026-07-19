@@ -224,7 +224,7 @@ export class PixelDrawPanel extends LitElement {
       text-align: right;
     }
 
-    .fill-toggle-btn {
+    .tool-toggle-btn {
       padding: 2px 8px;
       border: 1px solid #556067;
       border-radius: 10px;
@@ -233,7 +233,7 @@ export class PixelDrawPanel extends LitElement {
       font-size: 11px;
       cursor: pointer;
     }
-    .fill-toggle-btn.active {
+    .tool-toggle-btn.active {
       background: #4488ff;
       border-color: #4488ff;
     }
@@ -245,6 +245,7 @@ export class PixelDrawPanel extends LitElement {
   #mode: Mode = "paint";
   #brushSize = 1;
   #fillGlobal = false;
+  #selectShape = false;
   #foreground: ColorChangeDetail = { hex: "#000000", opacity: 1 };
   #background: ColorChangeDetail = { hex: "#ffffff", opacity: 1 };
   #canUndo = false;
@@ -286,6 +287,7 @@ export class PixelDrawPanel extends LitElement {
     this.#mode = this.#canvasManager.mode;
     this.#brushSize = this.#canvasManager.brush.size;
     this.#fillGlobal = this.#canvasManager.fillGlobal;
+    this.#selectShape = this.#canvasManager.selectShape;
     this.#foreground = {
       hex: this.#canvasManager.brush.colorAsString("hex"),
       opacity: this.#canvasManager.brush.opacity
@@ -335,6 +337,14 @@ export class PixelDrawPanel extends LitElement {
     this.#fillGlobal = !this.#fillGlobal;
     if (this.#canvasManager) {
       this.#canvasManager.fillGlobal = this.#fillGlobal;
+    }
+    this.requestUpdate();
+  }
+
+  #onSelectShapeToggle(): void {
+    this.#selectShape = !this.#selectShape;
+    if (this.#canvasManager) {
+      this.#canvasManager.selectShape = this.#selectShape;
     }
     this.requestUpdate();
   }
@@ -438,10 +448,22 @@ export class PixelDrawPanel extends LitElement {
       return html`
         <div class="tool-option-overlay" part="fill-mode-overlay">
           <button
-            class="fill-toggle-btn ${this.#fillGlobal ? "active" : ""}"
+            class="tool-toggle-btn ${this.#fillGlobal ? "active" : ""}"
             aria-pressed=${this.#fillGlobal}
             @click=${this.#onFillGlobalToggle}
           >${this.#fillGlobal ? "Global" : "Neighbor"}</button>
+        </div>
+      `;
+    }
+
+    if (this.#mode === "select") {
+      return html`
+        <div class="tool-option-overlay" part="select-mode-overlay">
+          <button
+            class="tool-toggle-btn ${this.#selectShape ? "active" : ""}"
+            aria-pressed=${this.#selectShape}
+            @click=${this.#onSelectShapeToggle}
+          >${this.#selectShape ? "Shape" : "Rectangle"}</button>
         </div>
       `;
     }

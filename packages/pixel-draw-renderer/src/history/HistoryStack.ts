@@ -35,13 +35,16 @@ export interface HistoryTextureReplacedEntry {
 
 /**
  * A Select-tool edit (move/delete/paste/rotate/flip) — positions cover the
- * union of whatever footprint(s) were touched, with a per-position
- * before/after color since these operations paint heterogeneous, multi-
- * colored regions (unlike a stroke's single afterColor). oldRect/newRect
- * are the selection's footprint before/after the edit (identical for
- * delete/paste/flip, which don't move or resize the box), so the caller
- * can resync the selection tool's own rect/snapshot state on undo/redo —
- * this stack only ever replays raw buffer pixels.
+ * union of whatever footprint(s) were actually selected (mask-true), with a
+ * per-position before/after color since these operations paint
+ * heterogeneous, multi-colored regions (unlike a stroke's single
+ * afterColor). oldRect/newRect are the selection's footprint before/after
+ * the edit (identical for delete/paste/flip, which don't move or resize the
+ * box) and oldMask/newMask are its rect-relative selection mask before/
+ * after, so the caller can resync the selection tool's own rect/snapshot/
+ * mask state — including a shape selection's true outline, not just its
+ * bounding box — on undo/redo. This stack only ever replays raw buffer
+ * pixels; it has no mask awareness of its own.
  */
 export interface HistorySelectEditEntry {
   action: "select-edit";
@@ -51,6 +54,8 @@ export interface HistorySelectEditEntry {
   afterColors: RGBA[];
   oldRect: SelectionRect;
   newRect: SelectionRect;
+  oldMask: boolean[];
+  newMask: boolean[];
 }
 
 export type HistoryEntry =
