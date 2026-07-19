@@ -57,7 +57,7 @@ interface PixelArtCanvasOptions {
      * a Move, or the footprint a Rotate/Flip no longer occupies, in
      * "select" mode. Accepts a CSS color string or a colorjs.io `Color`
      * instance.
-     * @default "#FFFFFF"
+     * @default fully transparent
      */
     eraseColor?: ColorInput;
   };

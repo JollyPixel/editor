@@ -89,7 +89,7 @@ describe("PixelArtCanvas — select mode", () => {
     });
   }
 
-  test("dragging out a rectangle then Delete replaces it with the erase color (default opaque white)", () => {
+  test("dragging out a rectangle then Delete replaces it with the erase color (default fully transparent)", () => {
     const manager = makeManager();
     const canvas = manager.canvas();
 
@@ -107,8 +107,8 @@ describe("PixelArtCanvas — select mode", () => {
 
     window.dispatchEvent(deleteKey());
 
-    assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [255, 255, 255, 255]);
-    assert.deepStrictEqual(readPixel(manager.texture, { x: 3, y: 3 }, 8), [255, 255, 255, 255]);
+    assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 0]);
+    assert.deepStrictEqual(readPixel(manager.texture, { x: 3, y: 3 }, 8), [0, 0, 0, 0]);
     manager.destroy();
   });
 
@@ -147,7 +147,7 @@ describe("PixelArtCanvas — select mode", () => {
     const midDragPixels = (canvas as unknown as MockCanvasElement)._pixels;
     assert.deepStrictEqual(
       readPixel(midDragPixels, { x: 2, y: 2 }, canvas.width),
-      [255, 255, 255, 255],
+      [0, 0, 0, 0],
       "source previewed as vacated (erase color) while a real move is in progress"
     );
 
@@ -185,7 +185,7 @@ describe("PixelArtCanvas — select mode", () => {
     // skipped the actual erase).
     const midDrag = readPixel(mockCanvas._pixels, { x: 2, y: 2 }, canvas.width);
     assert.deepStrictEqual(midDrag, baseline, "unchanged from before the drag — nothing is actually being vacated");
-    assert.notDeepStrictEqual(midDrag, [255, 255, 255, 255], "must not show the erase color");
+    assert.notDeepStrictEqual(midDrag, [0, 0, 0, 0], "must not show the erase color");
 
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
     manager.destroy();
@@ -208,7 +208,7 @@ describe("PixelArtCanvas — select mode", () => {
     canvas.dispatchEvent(mouseEvent("mousemove", 100, 100));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
-    assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [255, 255, 255, 255], "source vacated");
+    assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 0], "source vacated");
     assert.deepStrictEqual(
       readPixel(manager.texture, { x: 4, y: 4 }, 8),
       [0, 0, 0, 255],
@@ -314,7 +314,7 @@ describe("PixelArtCanvas — select mode", () => {
     assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 255], "original still untouched");
     assert.deepStrictEqual(
       readPixel(manager.texture, { x: 4, y: 4 }, 8),
-      [255, 255, 255, 255],
+      [0, 0, 0, 0],
       "second move erases the duplicate's now-real previous spot"
     );
     assert.deepStrictEqual(
@@ -353,7 +353,7 @@ describe("PixelArtCanvas — select mode", () => {
     window.dispatchEvent(deleteKey());
 
     assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 255], "old selection untouched");
-    assert.deepStrictEqual(readPixel(manager.texture, { x: 6, y: 6 }, 8), [255, 255, 255, 255], "new selection erased");
+    assert.deepStrictEqual(readPixel(manager.texture, { x: 6, y: 6 }, 8), [0, 0, 0, 0], "new selection erased");
     manager.destroy();
   });
 
@@ -396,7 +396,7 @@ describe("PixelArtCanvas — select mode", () => {
 
     assert.deepStrictEqual(
       readPixel(manager.texture, { x: 1, y: 1 }, 8),
-      [255, 255, 255, 255],
+      [0, 0, 0, 0],
       "source erased even though destination landed out of bounds"
     );
     manager.destroy();
@@ -466,7 +466,7 @@ describe("PixelArtCanvas — select mode", () => {
 
     assert.deepStrictEqual(
       readPixel(manager.texture, { x: 2, y: 2 }, 8),
-      [255, 255, 255, 255],
+      [0, 0, 0, 0],
       "old footprint vacated"
     );
     assert.deepStrictEqual(
@@ -609,7 +609,7 @@ describe("PixelArtCanvas — select mode", () => {
       canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
       canvas.dispatchEvent(mouseEvent("mousemove", 100, 100));
       canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
-      assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [255, 255, 255, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 0]);
       assert.deepStrictEqual(readPixel(manager.texture, { x: 4, y: 4 }, 8), [0, 0, 0, 255]);
 
       window.dispatchEvent(ctrlKey("z"));
@@ -621,7 +621,7 @@ describe("PixelArtCanvas — select mode", () => {
       );
 
       window.dispatchEvent(ctrlKey("y"));
-      assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [255, 255, 255, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 0]);
       assert.deepStrictEqual(readPixel(manager.texture, { x: 4, y: 4 }, 8), [0, 0, 0, 255]);
       manager.destroy();
     });
@@ -637,7 +637,7 @@ describe("PixelArtCanvas — select mode", () => {
       canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
       window.dispatchEvent(deleteKey());
-      assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [255, 255, 255, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 0]);
 
       window.dispatchEvent(ctrlKey("z"));
       assert.deepStrictEqual(
@@ -646,7 +646,7 @@ describe("PixelArtCanvas — select mode", () => {
 
       window.dispatchEvent(ctrlKey("y"));
       assert.deepStrictEqual(
-        readPixel(manager.texture, { x: 2, y: 2 }, 8), [255, 255, 255, 255], "redo re-applies the delete"
+        readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 0], "redo re-applies the delete"
       );
       manager.destroy();
     });
@@ -668,7 +668,7 @@ describe("PixelArtCanvas — select mode", () => {
       canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
       canvas.dispatchEvent(mouseEvent("mousemove", 100, 100));
       canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
-      assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [255, 255, 255, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 0]);
 
       window.dispatchEvent(ctrlKey("v"));
       assert.deepStrictEqual(
@@ -677,7 +677,7 @@ describe("PixelArtCanvas — select mode", () => {
 
       window.dispatchEvent(ctrlKey("z"));
       assert.deepStrictEqual(
-        readPixel(manager.texture, { x: 2, y: 2 }, 8), [255, 255, 255, 255], "undo removes the pasted content"
+        readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 0], "undo removes the pasted content"
       );
 
       window.dispatchEvent(ctrlKey("y"));
@@ -708,7 +708,7 @@ describe("PixelArtCanvas — select mode", () => {
       assert.deepStrictEqual(readPixel(manager.texture, { x: 3, y: 3 }, 8), [255, 255, 255, 255]);
 
       window.dispatchEvent(ctrlKey("y"));
-      assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [255, 255, 255, 255]);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 0]);
       assert.deepStrictEqual(readPixel(manager.texture, { x: 3, y: 2 }, 8), [0, 0, 0, 255]);
       assert.deepStrictEqual(readPixel(manager.texture, { x: 3, y: 3 }, 8), [255, 0, 0, 255]);
       manager.destroy();
@@ -735,7 +735,7 @@ describe("PixelArtCanvas — select mode", () => {
       // was never part of the selection.
       window.dispatchEvent(rotateKey());
       assert.deepStrictEqual(
-        readPixel(manager.texture, { x: 2, y: 2 }, 8), [255, 255, 255, 255], "the real pre-rotate footprint got erased"
+        readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 0], "the real pre-rotate footprint got erased"
       );
       assert.deepStrictEqual(readPixel(manager.texture, { x: 3, y: 2 }, 8), [0, 0, 0, 255]);
       assert.deepStrictEqual(readPixel(manager.texture, { x: 3, y: 3 }, 8), [255, 0, 0, 255]);
