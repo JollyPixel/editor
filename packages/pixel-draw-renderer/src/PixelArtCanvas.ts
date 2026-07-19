@@ -46,6 +46,7 @@ import type {
   BrushHighlight,
   ColorInput,
   Mode,
+  RGBA,
   Vec2
 } from "./types.ts";
 import type {
@@ -213,8 +214,8 @@ export class PixelArtCanvas {
 
     const brushAdapter: BrushHighlight = {
       get size() {
-        // Fill interactions always target one seed pixel.
-        return self.#mode === "fill" ? 1 : brushRef.size;
+        // Fill and an armed color-pick both target one seed pixel.
+        return self.#mode === "fill" || self.#tools.brush.pickArmed ? 1 : brushRef.size;
       },
       get colorInline() {
         return brushRef.colorInline;
@@ -265,8 +266,6 @@ export class PixelArtCanvas {
       actions: {
         ...createInputActions({
           getMode: () => this.#mode,
-          brush: this.brush,
-          canvasBuffer: this.#canvasBuffer,
           renderer: this.#renderer,
           svgManager: this.#svgManager,
           viewport: this.#viewport,
@@ -297,6 +296,37 @@ export class PixelArtCanvas {
     if (mode !== "select") {
       this.#tools.select.clear();
     }
+    if (mode !== "paint") {
+      this.#tools.brush.pickArmed = false;
+    }
+  }
+
+  /**
+    * Whether the next paint-mode click picks a color from the canvas instead
+    * of painting, auto-clearing itself after a successful pick. Has no
+    * effect outside paint mode, and is cleared automatically when `mode` is
+    * set to anything other than `"paint"`.
+   */
+  get pickColorArmed(): boolean {
+    return this.#tools.brush.pickArmed;
+  }
+
+  set pickColorArmed(
+    armed: boolean
+  ) {
+    this.#tools.brush.pickArmed = armed;
+  }
+
+  /**
+    * Samples the pixel at the given texture position and applies it to the
+    * brush color, regardless of the current mode. Returns the sampled
+    * color, or `null` if the position is outside the texture.
+   */
+  pickColorAt(
+    x: number,
+    y: number
+  ): RGBA | null {
+    return this.#tools.brush.pick(x, y);
   }
 
   /**

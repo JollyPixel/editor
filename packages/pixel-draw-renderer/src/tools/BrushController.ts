@@ -2,7 +2,7 @@
 import type { Brush } from "./Brush.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import type { CanvasRenderer } from "../rendering/CanvasRenderer.ts";
-import { toRGBA } from "../utils/colors.ts";
+import { rgbToHex, toRGBA } from "../utils/colors.ts";
 import type { RGBA, Vec2 } from "../types.ts";
 
 export interface BrushControllerOptions {
@@ -34,6 +34,7 @@ export class BrushController {
   #strokeBefore = new Map<string, RGBA>();
   #strokeColor: RGBA | null = null;
   #isActive = false;
+  #pickArmed = false;
 
   constructor(
     options: BrushControllerOptions
@@ -47,6 +48,50 @@ export class BrushController {
   /** Whether a stroke is currently being dragged (mousedown held). */
   get isActive(): boolean {
     return this.#isActive;
+  }
+
+  /**
+   * Whether the next primary-down in paint mode should pick a color instead
+   * of starting a stroke. Cleared automatically by a successful `pick()`.
+   */
+  get pickArmed(): boolean {
+    return this.#pickArmed;
+  }
+
+  set pickArmed(
+    armed: boolean
+  ) {
+    this.#pickArmed = armed;
+  }
+
+  /**
+   * Samples the pixel at the given texture position, applies it to the
+   * brush color, and disarms picking. Returns the sampled color, or `null`
+   * (leaving state untouched) if the position is outside the texture.
+   */
+  pick(
+    tx: number,
+    ty: number
+  ): RGBA | null {
+    const size = this.#canvasBuffer.size();
+    if (tx < 0 || ty < 0 || tx >= size.x || ty >= size.y) {
+      return null;
+    }
+
+    const [r, g, b, a] = this.#canvasBuffer.samplePixel(tx, ty);
+    const hex = rgbToHex(r, g, b);
+    const opacity = a / 255;
+    this.#brush.color(hex, opacity);
+    this.#pickArmed = false;
+
+    const event = new CustomEvent("colorpicked", {
+      detail: { hex, opacity },
+      bubbles: true,
+      composed: true
+    });
+    this.#renderer.canvas().dispatchEvent(event);
+
+    return { r, g, b, a };
   }
 
   startStroke(

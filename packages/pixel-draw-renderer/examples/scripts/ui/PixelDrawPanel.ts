@@ -246,6 +246,7 @@ export class PixelDrawPanel extends LitElement {
   #brushSize = 1;
   #fillGlobal = false;
   #selectShape = false;
+  #pickColorArmed = false;
   #foreground: ColorChangeDetail = { hex: "#000000", opacity: 1 };
   #background: ColorChangeDetail = { hex: "#ffffff", opacity: 1 };
   #canUndo = false;
@@ -288,6 +289,7 @@ export class PixelDrawPanel extends LitElement {
     this.#brushSize = this.#canvasManager.brush.size;
     this.#fillGlobal = this.#canvasManager.fillGlobal;
     this.#selectShape = this.#canvasManager.selectShape;
+    this.#pickColorArmed = this.#canvasManager.pickColorArmed;
     this.#foreground = {
       hex: this.#canvasManager.brush.colorAsString("hex"),
       opacity: this.#canvasManager.brush.opacity
@@ -318,7 +320,28 @@ export class PixelDrawPanel extends LitElement {
     this.#mode = mode;
     if (this.#canvasManager) {
       this.#canvasManager.mode = mode;
+      // Leaving paint mode auto-disarms the picker on the canvas side; keep
+      // the toggle button's active state in sync with that.
+      this.#pickColorArmed = this.#canvasManager.pickColorArmed;
     }
+    this.requestUpdate();
+  }
+
+  /**
+   * Always forces paint mode first, so the picker predictably arms/disarms
+   * no matter which mode was active when the button was clicked.
+   */
+  #onPickColorToggle(): void {
+    if (!this.#canvasManager) {
+      return;
+    }
+
+    if (this.#mode !== "paint") {
+      this.#setMode("paint");
+    }
+
+    this.#canvasManager.pickColorArmed = !this.#canvasManager.pickColorArmed;
+    this.#pickColorArmed = this.#canvasManager.pickColorArmed;
     this.requestUpdate();
   }
 
@@ -398,8 +421,10 @@ export class PixelDrawPanel extends LitElement {
   }
 
   /**
-   * Mirrors a color picked via the canvas eyedropper (right-click) onto the
-   * foreground swatch, without re-triggering its "color-change" event.
+   * Mirrors a color picked via the canvas eyedropper onto the foreground
+   * swatch, without re-triggering its "color-change" event. The picker
+   * auto-disarms itself on the canvas side after a successful pick, so the
+   * toggle button's active state is resynced here too.
    */
   readonly #onColorPicked = (
     event: Event
@@ -409,7 +434,9 @@ export class PixelDrawPanel extends LitElement {
     ).detail;
 
     this.#foreground = { hex, opacity };
+    this.#pickColorArmed = false;
     this.shadowRoot!.querySelector<ColorSwatch>("color-swatch.fg")!.setColor(hex, opacity);
+    this.requestUpdate();
   };
 
   /**
@@ -486,6 +513,18 @@ export class PixelDrawPanel extends LitElement {
               ${renderIcon(icon)}
               <span class="tooltip">${label}</span>
             </button>
+            ${mode === "paint" ? html`
+              <button
+                class="rail-btn ${this.#pickColorArmed ? "active" : ""}"
+                part="pick-color-button"
+                aria-label="Pick color"
+                aria-pressed=${this.#pickColorArmed}
+                @click=${() => this.#onPickColorToggle()}
+              >
+                ${renderIcon("eyedropper")}
+                <span class="tooltip">Pick color</span>
+              </button>
+            ` : nothing}
           `)}
         </div>
 

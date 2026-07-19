@@ -105,7 +105,7 @@ function makeActions(options: {
   const calls: Record<string, unknown[][]> = {
     onPrimaryDown: [], onPrimaryMove: [], onPrimaryUp: [],
     onPanStart: [], onPanMove: [], onPanEnd: [],
-    onZoom: [], onColorPick: [], onMouseMove: [],
+    onZoom: [], onMouseMove: [],
     onCursorMove: [], onMouseUp: [],
     onShiftDown: [], onShiftUp: [], onBlur: [],
     onCopy: [], onPaste: [], onDelete: [],
@@ -125,7 +125,6 @@ function makeActions(options: {
     onPanMove: (dx, dy) => calls.onPanMove.push([dx, dy]),
     onPanEnd: () => calls.onPanEnd.push([]),
     onZoom: (d, cx, cy) => calls.onZoom.push([d, cx, cy]),
-    onColorPick: (tx, ty) => calls.onColorPick.push([tx, ty]),
     onMouseMove: (cx, cy) => calls.onMouseMove.push([cx, cy]),
     onCursorMove: (pos) => calls.onCursorMove.push([pos]),
     onMouseUp: () => calls.onMouseUp.push([]),
@@ -266,29 +265,27 @@ describe("InputController", () => {
     });
   });
 
-  describe("onColorPick", () => {
-    test("right-click (contextmenu) fires onColorPick with the resolved texture position", () => {
+  describe("contextmenu", () => {
+    test("right-click suppresses the browser context menu and triggers no action", () => {
       const { actions, calls } = makeActions();
       const ctrl = new InputController({ canvas, viewport, actions });
 
-      canvas.dispatchEvent(new MouseEvent("contextmenu", {
+      const event = new MouseEvent("contextmenu", {
         button: 2, clientX: 100, clientY: 100, bubbles: true, cancelable: true
-      }));
+      });
+      canvas.dispatchEvent(event);
 
-      assert.strictEqual(calls.onColorPick.length, 1);
-      assert.deepStrictEqual(calls.onColorPick[0], [8, 8]);
-      ctrl.destroy();
-    });
-
-    test("does not fire when outside texture bounds", () => {
-      const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
-
-      canvas.dispatchEvent(new MouseEvent("contextmenu", {
-        button: 2, clientX: 1000, clientY: 1000, bubbles: true, cancelable: true
-      }));
-
-      assert.strictEqual(calls.onColorPick.length, 0);
+      assert.strictEqual(event.defaultPrevented, true);
+      assert.deepStrictEqual(calls, {
+        onPrimaryDown: [], onPrimaryMove: [], onPrimaryUp: [],
+        onPanStart: [], onPanMove: [], onPanEnd: [],
+        onZoom: [], onMouseMove: [],
+        onCursorMove: [], onMouseUp: [],
+        onShiftDown: [], onShiftUp: [], onBlur: [],
+        onCopy: [], onPaste: [], onDelete: [],
+        onUndo: [], onRedo: [],
+        onRotate: [], onFlipHorizontal: [], onFlipVertical: []
+      });
       ctrl.destroy();
     });
   });

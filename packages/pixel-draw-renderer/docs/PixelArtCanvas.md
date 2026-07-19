@@ -130,7 +130,7 @@ A drag that never grows past its starting pixel (a plain click) does not create 
 
 Switching to `"move"` cancels an armed line. Switching away from `"select"` clears any active selection.
 
-Right-click (color pick) and the SVG brush-cursor highlight are both active in `"paint"` and `"fill"` modes. In `"fill"`, the highlight is always a single pixel regardless of `brush`'s configured size, since a fill's seed is never brush-sized.
+The SVG brush-cursor highlight is active in `"paint"` and `"fill"` modes. In `"fill"`, and in `"paint"` while `pickColorArmed` is `true`, the highlight is always a single pixel regardless of `brush`'s configured size, since neither a fill's seed nor a color pick is brush-sized.
 
 ---
 
@@ -144,6 +144,22 @@ set fillGlobal(global: boolean)
 Reads or sets whether `"fill"` mode recolors every pixel matching the seed's color anywhere on the canvas (`true`) instead of only the seed's 4-directionally connected region (`false`, the default). Runtime-only — there is no constructor option — and the setting persists across mode switches, mirroring `brush`'s size/color.
 
 A global fill is still committed and undoable as a single atomic edit, but is broadcast over `onBufferUpdated`/the network layer as a compact `"global-fill"` event (`{ fromColor, toColor }`, no position list) rather than `"stroke"`, since it can touch a large fraction of the canvas — see [buffer/PixelBuffer.md](./buffer/PixelBuffer.md). Undoing/redoing a global fill falls back to a full-position `"stroke"` event.
+
+---
+
+### `pickColorArmed` / `pickColorAt`
+
+```ts
+get pickColorArmed(): boolean
+set pickColorArmed(armed: boolean)
+pickColorAt(x: number, y: number): RGBA | null
+```
+
+`pickColorArmed` arms/disarms a one-shot color picker on top of `"paint"` mode — it is not a separate `Mode`. While armed, the next primary click in `"paint"` mode samples that pixel instead of painting, applies it to `brush`'s color (via `brush.color()`), and disarms itself. It has no effect in any other mode, and switching `mode` away from `"paint"` disarms it automatically. A click outside the texture bounds is ignored (no pick, stays armed) rather than sampling transparent black.
+
+`pickColorAt(x, y)` performs the same sample-and-apply immediately at the given texture position, independent of the current mode and of `pickColorArmed` — it's the direct/programmatic entry point, e.g. for a "pick color" toolbar button that should always work regardless of what mode is active. Returns the sampled `RGBA`, or `null` (brush left untouched) when `(x, y)` is outside the texture.
+
+Either path dispatches a `"colorpicked"` CustomEvent (`detail: { hex, opacity }`, bubbling and composed) on the element returned by `canvas()`, for UI that mirrors the pick onto a color swatch. There is no right-click/context-menu picker — right-click is reserved for a future secondary-color action and currently only suppresses the browser's context menu.
 
 ---
 
