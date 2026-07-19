@@ -105,7 +105,7 @@ The `backgroundColor` option, if given, wins outright. Otherwise it's read from 
 readonly brush: Brush
 ```
 
-The brush instance. Use it to read or change the current brush color, opacity, and size. See [Brush.md](./tools/Brush.md).
+The brush instance. Use it to read or change the primary/secondary brush colors, opacity, and size. See [Brush.md](./tools/Brush.md).
 
 ### `viewport`
 
@@ -124,7 +124,7 @@ get mode(): Mode
 set mode(mode: Mode)
 ```
 
-Reads or sets the current interaction mode. `"paint"` routes left-click events to brush drawing (holding `Shift` arms a line tool); `"move"` routes them to panning; `"fill"` routes a left-click to a paint-bucket fill (contiguous region by default, or every same-colored pixel on the canvas when `fillGlobal` is `true` — see below); `"select"` routes them to a rectangle-selection tool: drag to select or move, `Ctrl`/`Cmd`+`C`/`V` to copy/duplicate, `Delete` to erase, `R` to rotate the selection 90° clockwise around its center (repeatable — press again for further rotation; no counterclockwise binding), `H`/`V` to flip the selection's content horizontally/vertically in place. The line/fill/select tools are internal implementation details with no public class of their own.
+Reads or sets the current interaction mode. `"paint"` routes left-click events to brush drawing with `brush.primary` (holding `Shift` arms a line tool, always drawn in `primary`) and right-click events to brush drawing with `brush.secondary` — the two buttons paint mutually exclusively, a stroke already in progress on one button blocks the other from starting until it ends; `"move"` routes left-click to panning; `"fill"` routes a left-click to a paint-bucket fill with `brush.primary` and a right-click to the same fill with `brush.secondary` (contiguous region by default, or every same-colored pixel on the canvas when `fillGlobal` is `true` — see below; unlike `"paint"`, a fill click is single-shot and not tracked as a drag, so the two buttons aren't mutually exclusive the way brush strokes are); `"select"` routes them to a rectangle-selection tool: drag to select or move, `Ctrl`/`Cmd`+`C`/`V` to copy/duplicate, `Delete` to erase, `R` to rotate the selection 90° clockwise around its center (repeatable — press again for further rotation; no counterclockwise binding), `H`/`V` to flip the selection's content horizontally/vertically in place. The line/fill/select tools are internal implementation details with no public class of their own.
 
 A drag that never grows past its starting pixel (a plain click) does not create a selection.
 
@@ -155,11 +155,13 @@ set pickColorArmed(armed: boolean)
 pickColorAt(x: number, y: number): RGBA | null
 ```
 
-`pickColorArmed` arms/disarms a one-shot color picker on top of `"paint"` mode — it is not a separate `Mode`. While armed, the next primary click in `"paint"` mode samples that pixel instead of painting, applies it to `brush`'s color (via `brush.color()`), and disarms itself. It has no effect in any other mode, and switching `mode` away from `"paint"` disarms it automatically. A click outside the texture bounds is ignored (no pick, stays armed) rather than sampling transparent black.
+`pickColorArmed` arms/disarms a one-shot color picker on top of `"paint"` mode — it is not a separate `Mode`. While armed, the next left-click in `"paint"` mode samples that pixel instead of painting, applies it to `brush.primary`, and disarms itself. It has no effect in any other mode, and switching `mode` away from `"paint"` disarms it automatically. A click outside the texture bounds is ignored (no pick, stays armed) rather than sampling transparent black.
 
 `pickColorAt(x, y)` performs the same sample-and-apply immediately at the given texture position, independent of the current mode and of `pickColorArmed` — it's the direct/programmatic entry point, e.g. for a "pick color" toolbar button that should always work regardless of what mode is active. Returns the sampled `RGBA`, or `null` (brush left untouched) when `(x, y)` is outside the texture.
 
-Either path dispatches a `"colorpicked"` CustomEvent (`detail: { hex, opacity }`, bubbling and composed) on the element returned by `canvas()`, for UI that mirrors the pick onto a color swatch. There is no right-click/context-menu picker — right-click is reserved for a future secondary-color action and currently only suppresses the browser's context menu.
+`Ctrl`+right-click in `"paint"` mode is a third, always-available path to the same one-shot pick into `brush.primary`: it's a single-shot sample-and-apply at mousedown (not tracked as a drag, and does not start a `brush.secondary` stroke), independent of `pickColorArmed`.
+
+Every path dispatches a `"colorpicked"` CustomEvent (`detail: { hex, opacity }`, bubbling and composed) on the element returned by `canvas()`, for UI that mirrors the pick onto a color swatch. Plain right-click (no `Ctrl`) is not a picker — see `mode` above for what it does instead.
 
 ---
 
@@ -188,10 +190,10 @@ Reads or changes the current texture size. Setting it resizes the working buffer
 ### `commitPixels`
 
 ```ts
-commitPixels(pixels: Vec2[]): void
+commitPixels(pixels: Vec2[], slot?: BrushColorSlot): void
 ```
 
-Commits an already-computed pixel set as a single atomic edit: one draw call, one redraw, one `"stroke"` hook emission. Used internally by the line tool to commit a whole rasterized line in one operation instead of redrawing once per point, and by the fill tool to commit a flood-filled region in one shot. A no-op when `pixels` is empty. The color used is the brush's current color/opacity.
+Commits an already-computed pixel set as a single atomic edit: one draw call, one redraw, one `"stroke"` hook emission. Used internally by the line tool to commit a whole rasterized line in one operation instead of redrawing once per point (always `"primary"`, matching the line tool itself), and by the fill tool to commit a flood-filled region in one shot (`"primary"` for a left-click, `"secondary"` for a right-click). A no-op when `pixels` is empty. `slot` defaults to `"primary"`; the color used is that slot's current color/opacity.
 
 ---
 

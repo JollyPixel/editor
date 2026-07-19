@@ -136,7 +136,7 @@ export class TextureEditorBridge {
     opacity = 1
   ): void {
     if (this.#manager) {
-      this.#manager.brush.color(hex, opacity);
+      this.#manager.brush.primary.set(hex, opacity);
     }
   }
 

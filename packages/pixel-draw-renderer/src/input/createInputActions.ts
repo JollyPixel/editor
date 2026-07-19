@@ -51,12 +51,16 @@ export function createInputActions(
             return false;
           }
 
-          tools.brush.startStroke(tx, ty);
+          if (tools.brush.isActive === "secondary") {
+            return false;
+          }
+
+          tools.brush.startStroke(tx, ty, "primary");
 
           return true;
 
         case "fill":
-          tools.fill.run(tx, ty);
+          tools.fill.run(tx, ty, "primary");
 
           return false;
 
@@ -67,6 +71,43 @@ export function createInputActions(
 
         default:
           return false;
+      }
+    },
+    onSecondaryDown: (tx, ty, ctrlKey) => {
+      const mode = getMode();
+
+      if (mode === "fill") {
+        tools.fill.run(tx, ty, "secondary");
+
+        return false;
+      }
+
+      if (mode !== "paint") {
+        return false;
+      }
+
+      if (ctrlKey) {
+        tools.brush.pick(tx, ty);
+
+        return false;
+      }
+
+      if (tools.brush.isActive === "primary") {
+        return false;
+      }
+
+      tools.brush.startStroke(tx, ty, "secondary");
+
+      return true;
+    },
+    onSecondaryMove: (tx, ty) => {
+      if (getMode() === "paint") {
+        tools.brush.continueStroke(tx, ty);
+      }
+    },
+    onSecondaryUp: () => {
+      if (getMode() === "paint") {
+        tools.brush.endStroke();
       }
     },
     onPrimaryMove: (tx, ty) => {
@@ -142,12 +183,18 @@ export function createInputActions(
         return;
       }
 
-      if (tools.brush.isActive) {
+      if (tools.brush.isActive === "primary") {
         // A held pointer requires committing the line on mouseup.
         stopDrawing();
         tools.brush.endStroke();
         tools.line.arm("mouseup");
 
+        return;
+      }
+
+      if (tools.brush.isActive === "secondary") {
+        // The line tool only ever draws in the primary color; let the
+        // secondary-color drag keep painting uninterrupted.
         return;
       }
 

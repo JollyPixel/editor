@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { Brush } from "./Brush.ts";
+import type { Brush, BrushColorSlot } from "./Brush.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import type { CanvasRenderer } from "../rendering/CanvasRenderer.ts";
 import { rgbToHex, toRGBA } from "../utils/colors.ts";
@@ -33,7 +33,7 @@ export class BrushController {
   #strokeDirty = new Map<string, Vec2>();
   #strokeBefore = new Map<string, RGBA>();
   #strokeColor: RGBA | null = null;
-  #isActive = false;
+  #activeSlot: BrushColorSlot | null = null;
   #pickArmed = false;
 
   constructor(
@@ -45,9 +45,9 @@ export class BrushController {
     this.#onCommit = options.onCommit;
   }
 
-  /** Whether a stroke is currently being dragged (mousedown held). */
-  get isActive(): boolean {
-    return this.#isActive;
+  /** Which color slot is being dragged, or `false` when no stroke is active. */
+  get isActive(): BrushColorSlot | false {
+    return this.#activeSlot ?? false;
   }
 
   /**
@@ -66,8 +66,8 @@ export class BrushController {
 
   /**
    * Samples the pixel at the given texture position, applies it to the
-   * brush color, and disarms picking. Returns the sampled color, or `null`
-   * (leaving state untouched) if the position is outside the texture.
+   * brush's primary color, and disarms picking. Returns the sampled color,
+   * or `null` (leaving state untouched) if the position is outside the texture.
    */
   pick(
     tx: number,
@@ -81,7 +81,7 @@ export class BrushController {
     const [r, g, b, a] = this.#canvasBuffer.samplePixel(tx, ty);
     const hex = rgbToHex(r, g, b);
     const opacity = a / 255;
-    this.#brush.color(hex, opacity);
+    this.#brush.primary.set(hex, opacity);
     this.#pickArmed = false;
 
     const event = new CustomEvent("colorpicked", {
@@ -94,11 +94,17 @@ export class BrushController {
     return { r, g, b, a };
   }
 
+  /**
+   * Starts a stroke stamping with the given color slot. Mutually exclusive
+   * with the other slot: callers should check `isActive` before starting a
+   * stroke on the other button.
+   */
   startStroke(
     tx: number,
-    ty: number
+    ty: number,
+    slot: BrushColorSlot = "primary"
   ): void {
-    this.#isActive = true;
+    this.#activeSlot = slot;
     this.#stamp(tx, ty);
   }
 
@@ -116,14 +122,14 @@ export class BrushController {
   endStroke(): void {
     this.#canvasBuffer.copyToMaster();
     this.#commit();
-    this.#isActive = false;
+    this.#activeSlot = null;
   }
 
   #stamp(
     tx: number,
     ty: number
   ): void {
-    const rgba = toRGBA(this.#brush.colorAsString());
+    const rgba = toRGBA(this.#brush[this.#activeSlot ?? "primary"].asString());
 
     // Materialized once (unlike the rest of this class, which prefers
     // re-calling the fresh generator over allocating) because the before-

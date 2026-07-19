@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { Brush } from "./Brush.ts";
+import type { Brush, BrushColorSlot } from "./Brush.ts";
 import {
   BrushController
 } from "./BrushController.ts";
@@ -29,8 +29,10 @@ export interface ToolControllersOptions {
   eraseColor: RGBA;
   /** Forwarded to BrushController: a completed freehand stroke. */
   onStrokeCommit: (pixels: Vec2[], color: RGBA, beforeColors: RGBA[]) => void;
-  /** Shared by FillController (contiguous fill) and LineController. */
+  /** Forwarded to LineController: always commits in the primary color. */
   onCommitPixels: (pixels: Vec2[]) => void;
+  /** Forwarded to FillController: a contiguous fill, painted with the clicked button's color slot. */
+  onFillCommitPixels: (pixels: Vec2[], slot: BrushColorSlot) => void;
   onGlobalFillCommit: (commit: FillGlobalCommit) => void;
   onSelectCommit: (entry: SelectEditEntry) => void;
 }
@@ -59,7 +61,7 @@ export class ToolControllers {
     this.fill = new FillController({
       brush: options.brush,
       canvasBuffer: options.canvasBuffer,
-      onCommit: options.onCommitPixels,
+      onCommit: options.onFillCommitPixels,
       onGlobalCommit: options.onGlobalFillCommit
     });
 

@@ -8,11 +8,11 @@
 
 ## 📌 About
 
-Browser-based library for editing pixel-art textures. It provides zoom, pan, brush painting, right-click color picking, and an SVG cursor overlay.
+Browser-based library for editing pixel-art textures. It provides zoom, pan, primary/secondary brush painting, `Ctrl`+right-click color picking, and an SVG cursor overlay.
 
 ## 💡 Features
 
-- **Brush painting**: adjustable size, color, and opacity; color inputs accept a CSS string or a [colorjs.io][colorjs] `Color` instance; right-click eyedropper picks a color from the canvas
+- **Brush painting**: adjustable size, primary/secondary color, and opacity; color inputs accept a CSS string or a [colorjs.io][colorjs] `Color` instance; left-click paints `primary`, right-click paints `secondary`, `Ctrl`+right-click eyedroppers a color from the canvas into `primary`
 - **Shift-to-line drawing**: hold `Shift` in paint mode to draw a straight line
 - **Paint-bucket fill**: flood-fill a connected region of same-colored pixels
 - **Rectangle select, move, copy, delete**: `Ctrl`/`Cmd`+`C`/`V` to copy/duplicate, `Delete` to erase
@@ -50,8 +50,9 @@ const manager = new PixelArtCanvas(container, {
 manager.onResize();
 manager.centerTexture();
 
-manager.brush.color("#FF6600"); // CSS string or a colorjs.io `Color` instance
-manager.brush.opacity = 0.8;
+manager.brush.primary.set("#FF6600"); // CSS string or a colorjs.io `Color` instance
+manager.brush.primary.opacity = 0.8;
+manager.brush.secondary.set("#3366FF");
 manager.brush.size = 3;
 
 manager.mode = "fill"; // "paint" | "move" | "fill" | "select", see Modes below
@@ -70,12 +71,12 @@ manager.texture = img;
 
 `mode` selects how left-click/drag is interpreted. Read [PixelArtCanvas.md](./docs/PixelArtCanvas.md#mode) for the full behavior:
 
-- `"paint"`: draws with the [brush](./docs/tools/Brush.md); hold `Shift` for a straight line
+- `"paint"`: left-click draws with `brush.primary`, right-click draws with `brush.secondary` (mutually exclusive — one button's stroke blocks the other from starting); hold `Shift` for a straight line (always `primary`); `Ctrl`+right-click eyedroppers a color into `brush.primary`
 - `"move"`: pans the camera
-- `"fill"`: flood-fills the clicked region
-- `"select"`: drag to select/move; `Ctrl`/`Cmd`+`C`/`V` copy/paste, `Delete` erases
+- `"fill"`: flood-fills the clicked region with `brush.primary`; right-click has no effect
+- `"select"`: drag to select/move; `Ctrl`/`Cmd`+`C`/`V` copy/paste, `Delete` erases; right-click has no effect
 
-Middle-click pans and right-click picks a color in any mode.
+Middle-click pans in any mode.
 
 ### Keybinds
 
@@ -137,7 +138,7 @@ Open `http://localhost:5173` to see the interactive demo.
 ## 📚 API
 
 - [`PixelArtCanvas`](./docs/PixelArtCanvas.md): top-level coordinator, the primary public API
-- [`Brush`](./docs/tools/Brush.md): brush size, color, opacity, and affected-pixel computation — read/write via `PixelArtCanvas.brush`
+- [`Brush`](./docs/tools/Brush.md): brush size, primary/secondary color, opacity, and affected-pixel computation — read/write via `PixelArtCanvas.brush`
 - [`PixelBuffer`](./docs/buffer/PixelBuffer.md): headless RGBA pixel storage, usable server-side with no DOM
 - [`HistoryStack`](./docs/history/HistoryStack.md): bounded undo/redo stack backing `PixelArtCanvas.undo()`/`redo()`
 - [`Keybindings`](./docs/utils/keybindings.md): `Keybindings`/`Keybinding` types, `DEFAULT_KEYBINDINGS`, and the errors thrown by `patchKeybindings()`

@@ -442,9 +442,9 @@ describe("PixelArtCanvas — select mode", () => {
 
   // A 2-wide x 1-tall selection over (2,2)-(3,2): black at (2,2), red at (3,2).
   function paintHorizontalPair(manager: PixelArtCanvas): void {
-    manager.brush.color("#000000");
+    manager.brush.primary.set("#000000");
     manager.commitPixels([{ x: 2, y: 2 }]);
-    manager.brush.color("#FF0000");
+    manager.brush.primary.set("#FF0000");
     manager.commitPixels([{ x: 3, y: 2 }]);
   }
 
@@ -509,9 +509,9 @@ describe("PixelArtCanvas — select mode", () => {
     const manager = makeManager();
     const canvas = manager.canvas();
 
-    manager.brush.color("#000000");
+    manager.brush.primary.set("#000000");
     manager.commitPixels([{ x: 2, y: 2 }]);
-    manager.brush.color("#FF0000");
+    manager.brush.primary.set("#FF0000");
     manager.commitPixels([{ x: 2, y: 3 }]);
 
     manager.mode = "select";

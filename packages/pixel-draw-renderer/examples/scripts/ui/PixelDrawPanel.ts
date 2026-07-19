@@ -291,13 +291,18 @@ export class PixelDrawPanel extends LitElement {
     this.#selectShape = this.#canvasManager.selectShape;
     this.#pickColorArmed = this.#canvasManager.pickColorArmed;
     this.#foreground = {
-      hex: this.#canvasManager.brush.colorAsString("hex"),
-      opacity: this.#canvasManager.brush.opacity
+      hex: this.#canvasManager.brush.primary.asString("hex"),
+      opacity: this.#canvasManager.brush.primary.opacity
+    };
+    this.#background = {
+      hex: this.#canvasManager.brush.secondary.asString("hex"),
+      opacity: this.#canvasManager.brush.secondary.opacity
     };
     this.#canUndo = this.#canvasManager.canUndo();
     this.#canRedo = this.#canvasManager.canRedo();
     this.requestUpdate();
     this.#syncForegroundSwatch();
+    this.#syncBackgroundSwatch();
 
     return this.#canvasManager;
   }
@@ -376,22 +381,23 @@ export class PixelDrawPanel extends LitElement {
     event: CustomEvent<ColorChangeDetail>
   ): void {
     this.#foreground = event.detail;
-    this.#canvasManager?.brush.color(event.detail.hex, event.detail.opacity);
+    this.#canvasManager?.brush.primary.set(event.detail.hex, event.detail.opacity);
   }
 
   #onBackgroundChange(
     event: CustomEvent<ColorChangeDetail>
   ): void {
     this.#background = event.detail;
+    this.#canvasManager?.brush.secondary.set(event.detail.hex, event.detail.opacity);
   }
 
   /**
-   * Exchanges foreground/background, pushing the new foreground onto the
-   * brush. Background stays inert until it becomes the foreground.
+   * Exchanges foreground/background on both the panel's swatches and the
+   * brush's primary/secondary colors.
    */
   #swapColors(): void {
     [this.#foreground, this.#background] = [this.#background, this.#foreground];
-    this.#canvasManager?.brush.color(this.#foreground.hex, this.#foreground.opacity);
+    this.#canvasManager?.brush.swapColors();
     this.requestUpdate();
     this.#syncForegroundSwatch();
     this.#syncBackgroundSwatch();

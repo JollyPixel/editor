@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { Brush } from "./Brush.ts";
+import type { Brush, BrushColorSlot } from "./Brush.ts";
 import { Fill } from "./Fill.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import { toRGBA } from "../utils/colors.ts";
@@ -15,8 +15,11 @@ export interface FillGlobalCommit {
 export interface FillControllerOptions {
   brush: Brush;
   canvasBuffer: CanvasBuffer;
-  /** Commits a contiguous flood-fill region as an ordinary "stroke". */
-  onCommit: (pixels: Vec2[]) => void;
+  /**
+   * Commits a contiguous flood-fill region as an ordinary "stroke", painted
+   * with the given color slot.
+   */
+  onCommit: (pixels: Vec2[], slot: BrushColorSlot) => void;
   /**
    * Commits a global fill (every pixel matching `fromColor` anywhere on the
    * canvas, recolored to `toColor`). `positions`/`beforeColors` are provided
@@ -34,7 +37,7 @@ export interface FillControllerOptions {
 export class FillController {
   #brush: Brush;
   #canvasBuffer: CanvasBuffer;
-  #onCommit: (pixels: Vec2[]) => void;
+  #onCommit: (pixels: Vec2[], slot: BrushColorSlot) => void;
   #onGlobalCommit: (commit: FillGlobalCommit) => void;
   #global = false;
 
@@ -59,26 +62,28 @@ export class FillController {
 
   run(
     tx: number,
-    ty: number
+    ty: number,
+    slot: BrushColorSlot = "primary"
   ): void {
     if (this.#global) {
-      this.#runGlobal(tx, ty);
+      this.#runGlobal(tx, ty, slot);
 
       return;
     }
 
-    const fillColor = toRGBA(this.#brush.colorAsString());
+    const fillColor = toRGBA(this.#brush[slot].asString());
     const positions = Fill.floodFill(
       this.#canvasBuffer,
       { x: tx, y: ty },
       fillColor
     );
-    this.#onCommit(positions);
+    this.#onCommit(positions, slot);
   }
 
   #runGlobal(
     tx: number,
-    ty: number
+    ty: number,
+    slot: BrushColorSlot
   ): void {
     const [sr, sg, sb, sa] = this.#canvasBuffer.samplePixel(tx, ty);
     const fromColor: RGBA = {
@@ -87,7 +92,7 @@ export class FillController {
       b: sb,
       a: sa
     };
-    const toColor = toRGBA(this.#brush.colorAsString());
+    const toColor = toRGBA(this.#brush[slot].asString());
 
     if (
       fromColor.r === toColor.r &&

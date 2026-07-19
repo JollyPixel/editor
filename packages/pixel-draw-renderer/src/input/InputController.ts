@@ -26,6 +26,23 @@ export interface InputActions {
   ): void;
   /** Ends a tracked primary drag. */
   onPrimaryUp(): void;
+  /**
+   * Starts a secondary (right-click) interaction at texture coordinates.
+   * `ctrlKey` reports whether Ctrl was held at the time of the click. Return
+   * `false` for single-shot actions that should not be tracked as drags.
+   */
+  onSecondaryDown(
+    tx: number,
+    ty: number,
+    ctrlKey: boolean
+  ): boolean | void;
+  /** Reports movement during a tracked secondary drag. */
+  onSecondaryMove(
+    tx: number,
+    ty: number
+  ): void;
+  /** Ends a tracked secondary drag. */
+  onSecondaryUp(): void;
   onPanStart(
     mx: number,
     my: number
@@ -146,7 +163,8 @@ export class InputController {
     x: 0,
     y: 0
   };
-  #isDragging: boolean = false;
+  #isDraggingPrimary: boolean = false;
+  #isDraggingSecondary: boolean = false;
   #isHovering: boolean = false;
   #keybindings: Keybindings;
 
@@ -210,7 +228,7 @@ export class InputController {
     * Cancels the active primary drag without calling `onPrimaryUp`.
    */
   stopDrawing(): void {
-    this.#isDragging = false;
+    this.#isDraggingPrimary = false;
   }
 
   /**
@@ -255,9 +273,14 @@ export class InputController {
   }
 
   #endDragAndReportMouseUp(): void {
-    if (this.#isDragging) {
-      this.#isDragging = false;
+    if (this.#isDraggingPrimary) {
+      this.#isDraggingPrimary = false;
       this.#actions.onPrimaryUp();
+    }
+
+    if (this.#isDraggingSecondary) {
+      this.#isDraggingSecondary = false;
+      this.#actions.onSecondaryUp();
     }
 
     this.#actions.onMouseUp();
@@ -272,7 +295,15 @@ export class InputController {
       const pos = this.#resolveTexturePos(event);
       if (pos) {
         const handled = this.#actions.onPrimaryDown(pos.x, pos.y);
-        this.#isDragging = handled !== false;
+        this.#isDraggingPrimary = handled !== false;
+      }
+    }
+
+    if (event.button === 2) {
+      const pos = this.#resolveTexturePos(event);
+      if (pos) {
+        const handled = this.#actions.onSecondaryDown(pos.x, pos.y, event.ctrlKey);
+        this.#isDraggingSecondary = handled !== false;
       }
     }
 
@@ -306,10 +337,17 @@ export class InputController {
       limit: true
     }));
 
-    if (event.buttons === 1 && this.#isDragging) {
+    if (event.buttons === 1 && this.#isDraggingPrimary) {
       const pos = this.#resolveTexturePos(event);
       if (pos) {
         this.#actions.onPrimaryMove(pos.x, pos.y);
+      }
+    }
+
+    if ((event.buttons & 2) !== 0 && this.#isDraggingSecondary) {
+      const pos = this.#resolveTexturePos(event);
+      if (pos) {
+        this.#actions.onSecondaryMove(pos.x, pos.y);
       }
     }
   }
@@ -357,8 +395,8 @@ export class InputController {
   #handleContextMenu(
     event: MouseEvent
   ): void {
-    // Reserved for a future secondary-color action; suppress the browser
-    // menu without dispatching anything for now.
+    // Right-click drives the secondary-color stroke (see #handleMouseDown);
+    // always suppress the browser's own context menu for it.
     event.preventDefault();
   }
 
