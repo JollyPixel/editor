@@ -31,7 +31,7 @@ export type KeybindingAction =
   | "flipHorizontal"
   | "flipVertical";
 
-export type Keybindings = Record<KeybindingAction, Keybinding | Keybinding[]>;
+export type KeybindingsMap = Record<KeybindingAction, Keybinding | Keybinding[]>;
 
 export interface ParsedKeybinding {
   mod: boolean;
@@ -52,7 +52,7 @@ const kKeybindingActions: KeybindingAction[] = [
   "flipVertical"
 ];
 
-export const DEFAULT_KEYBINDINGS: Keybindings = {
+export const DEFAULT_KEYBINDINGS: KeybindingsMap = {
   copy: "mod+c",
   paste: "mod+v",
   undo: "mod+z",
@@ -69,6 +69,7 @@ export class InvalidKeybindingError extends Error {
     options?: { cause?: unknown; }
   ) {
     super(`Invalid keybinding: "${binding}"`, options);
+
     this.name = "InvalidKeybindingError";
   }
 }
@@ -80,6 +81,7 @@ export class KeybindingConflictError extends Error {
     actionB: KeybindingAction
   ) {
     super(`Keybinding "${binding}" is already assigned to "${actionA}" (conflicts with "${actionB}")`);
+
     this.name = "KeybindingConflictError";
   }
 }
@@ -141,14 +143,11 @@ function eventMatchesKeybinding(
   );
 }
 
-/**
- * Merges and validates keybinding overrides.
- */
-export function mergeKeybindings(
-  base: Keybindings,
-  patch: Partial<Keybindings>
-): Keybindings {
-  const merged: Keybindings = { ...base, ...patch };
+function mergeAndValidate(
+  base: KeybindingsMap,
+  patch: Partial<KeybindingsMap>
+): KeybindingsMap {
+  const merged: KeybindingsMap = { ...base, ...patch };
 
   const seenBy = new Map<string, KeybindingAction>();
   for (const action of kKeybindingActions) {
@@ -158,7 +157,11 @@ export function mergeKeybindings(
 
       const existingAction = seenBy.get(signature);
       if (existingAction && existingAction !== action) {
-        throw new KeybindingConflictError(binding, existingAction, action);
+        throw new KeybindingConflictError(
+          binding,
+          existingAction,
+          action
+        );
       }
       seenBy.set(signature, action);
     }
@@ -167,17 +170,55 @@ export function mergeKeybindings(
   return merged;
 }
 
-export function matchKeybindingAction(
-  keybindings: Keybindings,
-  event: KeyboardEvent
-): KeybindingAction | null {
-  for (const action of kKeybindingActions) {
-    for (const binding of flattenBindings(keybindings[action])) {
-      if (eventMatchesKeybinding(event, parseKeybinding(binding))) {
-        return action;
-      }
-    }
+/**
+ * Stores validated keybindings and matches keyboard events against them.
+ */
+export class Keybindings {
+  #bindings: KeybindingsMap;
+
+  constructor(
+    patch: Partial<KeybindingsMap> = {}
+  ) {
+    this.#bindings = mergeAndValidate(
+      DEFAULT_KEYBINDINGS,
+      patch
+    );
   }
 
-  return null;
+  get bindings(): Readonly<KeybindingsMap> {
+    return { ...this.#bindings };
+  }
+
+  /**
+   * Merges patch onto the current bindings. Validates the merged result
+   * first, so a conflicting or malformed patch leaves the previous
+   * bindings untouched.
+   */
+  patch(
+    patch: Partial<KeybindingsMap>
+  ): void {
+    this.#bindings = mergeAndValidate(
+      this.#bindings,
+      patch
+    );
+  }
+
+  match(
+    event: KeyboardEvent
+  ): KeybindingAction | null {
+    for (const action of kKeybindingActions) {
+      for (const binding of flattenBindings(this.#bindings[action])) {
+        const isMatching = eventMatchesKeybinding(
+          event,
+          parseKeybinding(binding)
+        );
+
+        if (isMatching) {
+          return action;
+        }
+      }
+    }
+
+    return null;
+  }
 }

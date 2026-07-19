@@ -95,7 +95,7 @@ Copy/paste/undo/redo/delete are configurable; Shift (line-tool arm/disarm) is no
 | Redo | `Ctrl`/`Cmd`+`Y` or `Ctrl`/`Cmd`+`Shift`+`Z` |
 | Delete | `Delete` |
 
-Override at construction, or live via `patchKeybindings()`:
+Override at construction, or live via `keybindings.patch()`:
 
 ```ts
 const manager = new PixelArtCanvas(container, {
@@ -104,13 +104,13 @@ const manager = new PixelArtCanvas(container, {
   } // unspecified actions keep their default
 });
 
-manager.patchKeybindings({
+manager.keybindings.patch({
   redo: "alt+shift+u"
 });
 ```
 
 > [!TIP]
-> Read [utils/keybindings.md](./docs/utils/keybindings.md) for the combo string format and error handling.
+> Read [input/Keybindings.md](./docs/input/Keybindings.md) for the combo string format and error handling.
 
 ### Undo/redo
 
@@ -150,7 +150,7 @@ Open `http://localhost:5173` to see the interactive demo.
 - [`Brush`](./docs/tools/Brush.md): brush size, primary/secondary color, opacity, and affected-pixel computation — read/write via `PixelArtCanvas.brush`
 - [`PixelBuffer`](./docs/buffer/PixelBuffer.md): headless RGBA pixel storage, usable server-side with no DOM
 - [`HistoryStack`](./docs/history/HistoryStack.md): bounded undo/redo stack backing `PixelArtCanvas.undo()`/`redo()`
-- [`Keybindings`](./docs/utils/keybindings.md): `Keybindings`/`Keybinding` types, `DEFAULT_KEYBINDINGS`, and the errors thrown by `patchKeybindings()`
+- [`Keybindings`](./docs/input/Keybindings.md): the `Keybindings` value object, `Keybinding`/`KeybindingsMap` types, `DEFAULT_KEYBINDINGS`, and the errors thrown by `patch()`
 - [`Network`](./docs/network/index.md): transport-agnostic, server-authoritative multiplayer for `PixelArtCanvas`
 
 ## 🧩 Types

@@ -43,8 +43,9 @@ export {
   DEFAULT_KEYBINDINGS,
   InvalidKeybindingError,
   KeybindingConflictError,
+  Keybindings,
   type Keybinding,
   type KeybindingAction,
-  type Keybindings
-} from "./utils/keybindings.ts";
+  type KeybindingsMap
+} from "./input/Keybindings.ts";
 export * from "./network/index.ts";

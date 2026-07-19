@@ -1,11 +1,9 @@
 // Import Internal Dependencies
 import {
-  DEFAULT_KEYBINDINGS,
-  matchKeybindingAction,
-  mergeKeybindings,
+  Keybindings,
   type KeybindingAction,
-  type Keybindings
-} from "../utils/keybindings.ts";
+  type KeybindingsMap
+} from "./Keybindings.ts";
 import type {
   Vec2
 } from "../types.ts";
@@ -153,7 +151,7 @@ export interface InputControllerOptions {
    * Keybinding overrides.
    * Unspecified actions keep their defaults; Shift is fixed.
    */
-  keybindings?: Partial<Keybindings>;
+  keybindings?: Partial<KeybindingsMap>;
 }
 
 /**
@@ -172,7 +170,8 @@ export class InputController {
   #isDraggingPrimary: boolean = false;
   #isDraggingSecondary: boolean = false;
   #isHovering: boolean = false;
-  #keybindings: Keybindings;
+
+  readonly keybindings: Keybindings;
 
   #onMouseDown: (event: MouseEvent) => void;
   #onMouseEnter: (event: MouseEvent) => void;
@@ -201,7 +200,7 @@ export class InputController {
     this.#viewport = viewport;
     this.#actions = actions;
     this.#window = windowLike;
-    this.#keybindings = mergeKeybindings(DEFAULT_KEYBINDINGS, options.keybindings ?? {});
+    this.keybindings = new Keybindings(options.keybindings);
 
     this.#onMouseDown = (event) => this.#handleMouseDown(event);
     this.#onMouseEnter = () => this.#handleMouseEnter();
@@ -235,19 +234,6 @@ export class InputController {
    */
   stopDrawing(): void {
     this.#isDraggingPrimary = false;
-  }
-
-  /**
-    * Applies a partial keybinding update to the current bindings.
-   */
-  patchKeybindings(
-    patch: Partial<Keybindings>
-  ): void {
-    this.#keybindings = mergeKeybindings(this.#keybindings, patch);
-  }
-
-  get keybindings(): Readonly<Keybindings> {
-    return { ...this.#keybindings };
   }
 
   destroy(): void {
@@ -454,7 +440,7 @@ export class InputController {
       return;
     }
 
-    const action = matchKeybindingAction(this.#keybindings, event);
+    const action = this.keybindings.match(event);
     if (action === null) {
       return;
     }

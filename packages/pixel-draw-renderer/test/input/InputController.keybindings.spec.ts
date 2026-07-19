@@ -14,7 +14,7 @@ import { Viewport } from "../../src/rendering/Viewport.ts";
 import {
   InvalidKeybindingError,
   KeybindingConflictError
-} from "../../src/utils/keybindings.ts";
+} from "../../src/input/Keybindings.ts";
 
 // CONSTANTS
 const kEmulatedBrowserWindow = new Window();
@@ -69,6 +69,7 @@ function makeActions(): {
 } {
   const calls: Record<string, unknown[][]> = {
     onPrimaryDown: [], onPrimaryMove: [], onPrimaryUp: [],
+    onSecondaryDown: [], onSecondaryMove: [], onSecondaryUp: [],
     onPanStart: [], onPanMove: [], onPanEnd: [],
     onZoom: [], onMouseMove: [],
     onCursorMove: [], onMouseUp: [],
@@ -87,6 +88,15 @@ function makeActions(): {
     },
     onPrimaryUp: () => {
       calls.onPrimaryUp.push([]);
+    },
+    onSecondaryDown: (tx, ty) => {
+      calls.onSecondaryDown.push([tx, ty]);
+    },
+    onSecondaryMove: (tx, ty) => {
+      calls.onSecondaryMove.push([tx, ty]);
+    },
+    onSecondaryUp: () => {
+      calls.onSecondaryUp.push([]);
     },
     onPanStart: (mx, my) => {
       calls.onPanStart.push([mx, my]);
@@ -221,18 +231,18 @@ describe("InputController custom keybindings", () => {
       canvas, viewport, actions, keybindings: { undo: "alt+u" }
     });
 
-    const current = ctrl.keybindings;
+    const current = ctrl.keybindings.bindings;
 
     assert.strictEqual(current.undo, "alt+u");
     assert.strictEqual(current.copy, "mod+c");
     ctrl.destroy();
   });
 
-  test("patchKeybindings merges onto the current set at runtime", () => {
+  test("keybindings.patch merges onto the current set at runtime", () => {
     const { actions, calls } = makeActions();
     const ctrl = new InputController({ canvas, viewport, actions });
 
-    ctrl.patchKeybindings({ copy: "alt+j" });
+    ctrl.keybindings.patch({ copy: "alt+j" });
     hoverCanvas(canvas);
     window.dispatchEvent(keydown("c", "KeyC", { ctrlKey: true }));
     window.dispatchEvent(keydown("j", "KeyJ", { altKey: true }));
@@ -241,11 +251,11 @@ describe("InputController custom keybindings", () => {
     ctrl.destroy();
   });
 
-  test("patchKeybindings throws on conflict and leaves the previous keybindings in effect", () => {
+  test("keybindings.patch throws on conflict and leaves the previous keybindings in effect", () => {
     const { actions, calls } = makeActions();
     const ctrl = new InputController({ canvas, viewport, actions });
 
-    assert.throws(() => ctrl.patchKeybindings({ delete: "mod+c" }), KeybindingConflictError);
+    assert.throws(() => ctrl.keybindings.patch({ delete: "mod+c" }), KeybindingConflictError);
 
     hoverCanvas(canvas);
     window.dispatchEvent(keydown("c", "KeyC", { ctrlKey: true }));
