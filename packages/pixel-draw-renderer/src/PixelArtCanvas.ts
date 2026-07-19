@@ -36,6 +36,7 @@ import {
   type DefaultViewport
 } from "./rendering/Viewport.ts";
 import type {
+  Zoom,
   ZoomOptions
 } from "./rendering/Zoom.ts";
 import {
@@ -144,7 +145,9 @@ export class PixelArtCanvas {
     this.#parentHtmlElement = parentHtmlElement;
     this.#onDrawEnd = options.onDrawEnd;
     this.#mode = options.defaultMode ?? "paint";
-    const eraseColor = toRGBA(options.select?.eraseColor ?? { r: 0, g: 0, b: 0, a: 0 });
+    const eraseColor = toRGBA(
+      options.select?.eraseColor ?? { r: 0, g: 0, b: 0, a: 0 }
+    );
 
     const textureSize: Vec2 = options.texture?.size
       ? { x: options.texture.size.x, y: options.texture.size.y ?? options.texture.size.x }
@@ -237,16 +240,31 @@ export class PixelArtCanvas {
       selectionOverlay: this.#svgManager.selection,
       eraseColor,
       onStrokeCommit: (pixels, color, beforeColors) => {
-        this.#sync.recordHistory({ action: "stroke", positions: pixels, beforeColors, afterColor: color });
-        this.#sync.emitHook({ action: "stroke", metadata: { color, positions: pixels } });
+        this.#sync.recordHistory({
+          action: "stroke",
+          positions: pixels,
+          beforeColors,
+          afterColor: color
+        });
+        this.#sync.emitHook({
+          action: "stroke",
+          metadata: { color, positions: pixels }
+        });
         this.#onDrawEnd?.();
       },
       onCommitPixels: (pixels) => this.commitPixels(pixels),
       onFillCommitPixels: (pixels, slot) => this.commitPixels(pixels, slot),
       onGlobalFillCommit: ({ positions, beforeColors, fromColor, toColor }) => {
         this.#sync.applyStroke(toColor, positions);
-        this.#sync.recordHistory({ action: "stroke", positions, beforeColors, afterColor: toColor });
-        this.#sync.emitHook({ action: "global-fill", metadata: { fromColor, toColor } });
+        this.#sync.recordHistory({
+          action: "stroke", positions,
+          beforeColors,
+          afterColor: toColor
+        });
+        this.#sync.emitHook({
+          action: "global-fill",
+          metadata: { fromColor, toColor }
+        });
         this.#onDrawEnd?.();
       },
       onSelectCommit: (entry) => {
@@ -398,7 +416,9 @@ export class PixelArtCanvas {
     }
 
     const beforeSize = this.#canvasBuffer.size();
-    const beforePixels = this.#history.enabled ? Uint8ClampedArray.from(this.#canvasBuffer.pixels()) : null;
+    const beforePixels = this.#history.enabled ?
+      Uint8ClampedArray.from(this.#canvasBuffer.pixels()) :
+      null;
 
     this.#sync.resizeTexture(size);
 
@@ -408,7 +428,9 @@ export class PixelArtCanvas {
         beforeSize,
         beforePixels,
         afterSize: structuredClone(size),
-        afterPixels: Uint8ClampedArray.from(this.#canvasBuffer.pixels())
+        afterPixels: Uint8ClampedArray.from(
+          this.#canvasBuffer.pixels()
+        )
       });
     }
 
@@ -424,18 +446,8 @@ export class PixelArtCanvas {
     return { ...this.#viewport.camera };
   }
 
-  get zoom(): number {
-    return this.#viewport.zoom.value;
-  }
-
-  get zoomSensitivity(): number {
-    return this.#viewport.zoom.sensitivity;
-  }
-
-  set zoomSensitivity(
-    sensitivity: number
-  ) {
-    this.#viewport.zoom.sensitivity = sensitivity;
+  get zoom(): Zoom {
+    return this.#viewport.zoom;
   }
 
   /**
@@ -514,7 +526,9 @@ export class PixelArtCanvas {
     source: HTMLCanvasElement | HTMLImageElement
   ) {
     const beforeSize = this.#canvasBuffer.size();
-    const beforePixels = this.#history.enabled ? Uint8ClampedArray.from(this.#canvasBuffer.pixels()) : null;
+    const beforePixels = this.#history.enabled ?
+      Uint8ClampedArray.from(this.#canvasBuffer.pixels()) :
+      null;
 
     this.#canvasBuffer.loadTexture(source);
     const size = this.#canvasBuffer.size();
@@ -527,7 +541,9 @@ export class PixelArtCanvas {
         beforeSize,
         beforePixels,
         afterSize: size,
-        afterPixels: Uint8ClampedArray.from(this.#canvasBuffer.pixels())
+        afterPixels: Uint8ClampedArray.from(
+          this.#canvasBuffer.pixels()
+        )
       });
     }
 
@@ -588,7 +604,10 @@ export class PixelArtCanvas {
 
     this.#refreshAfterHistoryApply();
     if (entry.action === "select-edit") {
-      this.#tools.select.syncSelectionAfterHistory(entry.oldRect, entry.oldMask);
+      this.#tools.select.syncSelectionAfterHistory(
+        entry.oldRect,
+        entry.oldMask
+      );
     }
     for (const event of HistoryController.buildUndoReplayEvents(entry)) {
       this.#sync.emitHook(event);
@@ -609,7 +628,10 @@ export class PixelArtCanvas {
 
     this.#refreshAfterHistoryApply();
     if (entry.action === "select-edit") {
-      this.#tools.select.syncSelectionAfterHistory(entry.newRect, entry.newMask);
+      this.#tools.select.syncSelectionAfterHistory(
+        entry.newRect,
+        entry.newMask
+      );
     }
     for (const event of HistoryController.buildRedoReplayEvents(entry)) {
       this.#sync.emitHook(event);
@@ -656,7 +678,9 @@ export class PixelArtCanvas {
   }
 
   #refreshAfterHistoryApply(): void {
-    this.#viewport.texture.resize(this.#canvasBuffer.size());
+    this.#viewport.texture.resize(
+      this.#canvasBuffer.size()
+    );
     this.#renderer.drawFrame();
   }
 }
