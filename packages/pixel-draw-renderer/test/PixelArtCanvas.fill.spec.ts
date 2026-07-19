@@ -118,7 +118,7 @@ describe("PixelArtCanvas — fill mode", () => {
 
       manager.mode = "fill";
       manager.fillGlobal = true;
-      manager.brush.color("#FF0000");
+      manager.brush.primary.set("#FF0000");
       canvas.dispatchEvent(new MouseEvent("mousedown", {
         button: 0, buttons: 1, clientX: 98, clientY: 98, bubbles: true
       }));
@@ -134,6 +134,28 @@ describe("PixelArtCanvas — fill mode", () => {
         [255, 255, 255, 255],
         "untouched background stays white"
       );
+      manager.destroy();
+    });
+
+    test("right-click recolors with the secondary color instead of primary", () => {
+      const manager = new PixelArtCanvas(container, {
+        texture: { maxSize: 32, size: { x: 8, y: 8 } },
+        zoom: { default: 1 },
+        brush: { size: 1, maxSize: 1, color: "#000000", secondaryColor: "#00FF00" }
+      });
+      const canvas = children[0];
+
+      // texture (2, 2)
+      paintOnePixel(canvas, 98, 98);
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 255]);
+
+      manager.mode = "fill";
+      manager.fillGlobal = true;
+      canvas.dispatchEvent(new MouseEvent("mousedown", {
+        button: 2, buttons: 2, clientX: 98, clientY: 98, bubbles: true
+      }));
+
+      assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 255, 0, 255]);
       manager.destroy();
     });
 
@@ -223,7 +245,7 @@ describe("PixelArtCanvas — fill mode", () => {
 
       assert.ok(detail, "colorpicked event should fire");
       assert.strictEqual(detail.hex, "#123456");
-      assert.strictEqual(manager.brush.colorAsString("hex"), "#123456");
+      assert.strictEqual(manager.brush.primary.asString("hex"), "#123456");
       assert.strictEqual(manager.pickColorArmed, false);
       manager.destroy();
     });
@@ -243,7 +265,7 @@ describe("PixelArtCanvas — fill mode", () => {
 
       assert.strictEqual(fired, false);
       assert.strictEqual(manager.pickColorArmed, true);
-      assert.strictEqual(manager.brush.colorAsString("hex"), "#000000");
+      assert.strictEqual(manager.brush.primary.asString("hex"), "#000000");
       manager.destroy();
     });
 
@@ -280,7 +302,7 @@ describe("PixelArtCanvas — fill mode", () => {
       const color = manager.pickColorAt(4, 4);
 
       assert.deepStrictEqual(color, { r: 0x12, g: 0x34, b: 0x56, a: 255 });
-      assert.strictEqual(manager.brush.colorAsString("hex"), "#123456");
+      assert.strictEqual(manager.brush.primary.asString("hex"), "#123456");
       manager.destroy();
     });
 
@@ -290,7 +312,7 @@ describe("PixelArtCanvas — fill mode", () => {
       const color = manager.pickColorAt(-1, -1);
 
       assert.strictEqual(color, null);
-      assert.strictEqual(manager.brush.colorAsString("hex"), "#000000");
+      assert.strictEqual(manager.brush.primary.asString("hex"), "#000000");
       manager.destroy();
     });
   });

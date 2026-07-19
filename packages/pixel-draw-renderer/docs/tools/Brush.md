@@ -1,6 +1,6 @@
 # Brush
 
-`Brush` manages the current brush color, opacity, size, and highlight colors, and computes the list of texture-space pixels a brush stroke covers.
+`Brush` manages the primary/secondary brush colors, size, and highlight colors, and computes the list of texture-space pixels a brush stroke covers. Left-click paints with `primary`; right-click paints with `secondary`.
 
 ## Types
 
@@ -8,15 +8,21 @@
 new Brush(options: BrushOptions)
 
 export type ColorInput = string | Color; // Color is colorjs.io's Color class
+export type BrushColorSlot = "primary" | "secondary";
 
 export interface BrushOptions {
   /**
-   * Base color of the brush. Accepts a CSS color string (hex, rgb(), hsl(),
+   * Base primary color of the brush. Accepts a CSS color string (hex, rgb(), hsl(),
    * named color, ...) or a colorjs.io `Color` instance.
-   * Opacity can be controlled separately with the `opacity` property.
+   * Opacity can be controlled separately with `primary.opacity`.
    * @default "#000000"
    */
   color?: ColorInput;
+  /**
+   * Base secondary color of the brush, applied by a right-click stroke.
+   * @default "#FFFFFF"
+   */
+  secondaryColor?: ColorInput;
   /**
    * Size of the brush in pixels. Must be a positive integer.
    * The actual affected area will be a square of `size x size` pixels centered around the target pixel.
@@ -41,36 +47,40 @@ export interface BrushOptions {
 }
 ```
 
-## Methods
-
-### `color`
+## `primary` / `secondary`
 
 ```ts
-color(color: ColorInput, opacity?: number): void
+readonly primary: BrushColor
+readonly secondary: BrushColor
 ```
 
-Sets the brush color from a CSS color string (hex, rgb(), hsl(), named color, ...) or a colorjs.io `Color` instance. If `opacity` is omitted, the current opacity is preserved; otherwise it's clamped to `[0, 1]` and applied alongside the new color.
+Each is a `BrushColor` value object — a color+opacity pair:
+
+```ts
+set(color: ColorInput, opacity?: number): void
+asString(format?: "rgba" | "hex"): string
+get/set opacity: number
+```
+
+- `set(color, opacity?)`: sets the color from a CSS color string or a colorjs.io `Color` instance. If `opacity` is omitted, the current opacity is preserved; otherwise it's clamped to `[0, 1]` and applied alongside the new color.
+- `asString(format?)`: returns the color. Defaults to an `rgba(r, g, b, a)` string; pass `"hex"` for a 6-digit hex string (opacity is not represented in hex output).
+- `opacity`: clamped to `[0, 1]` on assignment.
+
+```ts
+brush.primary.set("#FF6600");
+brush.primary.opacity = 0.8;
+brush.secondary.set("#3366FF", 1);
+```
 
 ---
 
-### `colorAsString`
+### `swapColors`
 
 ```ts
-colorAsString(format?: "rgba" | "hex"): string
+swapColors(): void
 ```
 
-Returns the current brush color. Defaults to an `rgba(r, g, b, a)` string; pass `"hex"` to get a 6-digit hex string instead (opacity is not represented in hex output).
-
----
-
-### `opacity`
-
-```ts
-get opacity(): number
-set opacity(opacity: number)
-```
-
-The brush opacity. Assigned values are clamped to `[0, 1]`.
+Exchanges `primary` and `secondary` (color and opacity both).
 
 ---
 

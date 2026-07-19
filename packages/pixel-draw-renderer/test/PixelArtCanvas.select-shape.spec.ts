@@ -171,9 +171,9 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
 
     // Two adjacent but differently-colored pixels: flood fill from (2,2)
     // only matches black, and has no same-colored neighbor.
-    manager.brush.color("#000000");
+    manager.brush.primary.set("#000000");
     manager.commitPixels([{ x: 2, y: 2 }]);
-    manager.brush.color("#FF0000");
+    manager.brush.primary.set("#FF0000");
     manager.commitPixels([{ x: 3, y: 2 }]);
 
     manager.mode = "select";
@@ -219,7 +219,7 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
     manager.commitPixels([{ x: 2, y: 2 }, { x: 2, y: 3 }, { x: 3, y: 3 }]);
     // A sentinel at the move's destination gap, to prove the paint step
     // skips masked-false destination cells too.
-    manager.brush.color("#0000FF");
+    manager.brush.primary.set("#0000FF");
     manager.commitPixels([{ x: 5, y: 4 }]);
 
     manager.mode = "select";

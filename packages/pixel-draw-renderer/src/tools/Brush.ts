@@ -9,14 +9,79 @@ import type {
   Vec2
 } from "../types.ts";
 
+/**
+ * A single color+opacity slot (e.g. a brush's primary or secondary color).
+ */
+export class BrushColor {
+  #color: Color;
+
+  constructor(
+    color: ColorInput,
+    opacity: number = 1
+  ) {
+    this.#color = new Color(color);
+    this.#color.alpha = clamp(opacity, 0, 1);
+  }
+
+  /**
+   * Sets the color from a CSS color string or a colorjs.io `Color` instance.
+   * If `opacity` is omitted, the current opacity is preserved.
+   */
+  set(
+    color: ColorInput,
+    opacity?: number
+  ): void {
+    const alpha = opacity === undefined ? this.#color.alpha : clamp(opacity, 0, 1);
+    this.#color = new Color(color);
+    this.#color.alpha = alpha;
+  }
+
+  /**
+   * Returns the color as a string. Defaults to `rgba(r, g, b, a)`; pass
+   * `"hex"` for a 6-digit hex string (opacity is not represented in hex output).
+   */
+  asString(
+    format: "rgba" | "hex" = "rgba"
+  ): string {
+    if (format === "hex") {
+      return this.#color.toString({
+        format: "hex",
+        collapse: false,
+        alpha: false
+      });
+    }
+
+    const [r, g, b] = colorAsRGBA(this.#color);
+
+    return `rgba(${r}, ${g}, ${b}, ${this.#color.alpha})`;
+  }
+
+  set opacity(
+    opacity: number
+  ) {
+    this.#color.alpha = clamp(opacity, 0, 1);
+  }
+
+  get opacity(): number {
+    return this.#color.alpha;
+  }
+}
+
+export type BrushColorSlot = "primary" | "secondary";
+
 export interface BrushOptions {
   /**
-   * Base color of the brush. Can be any valid CSS color string or a
+   * Base primary color of the brush. Can be any valid CSS color string or a
    * colorjs.io `Color` instance. Opacity can be controlled separately with
-   * the `opacity` property.
+   * `primary.opacity`.
    * @default "#000000"
    */
   color?: ColorInput;
+  /**
+   * Base secondary color of the brush, applied by a right-click stroke.
+   * @default "#FFFFFF"
+   */
+  secondaryColor?: ColorInput;
   /**
    * Size of the brush in pixels. Must be a positive integer.
    * The actual affected area will be a square of `size x size` pixels centered around the target pixel.
@@ -41,11 +106,13 @@ export interface BrushOptions {
 }
 
 /**
- * Manages brush properties such as color, size, and opacity for a pixel drawing application,
- * and computes the affected pixels for a stroke centered at a given position.
+ * Manages brush properties such as primary/secondary color, size, and
+ * highlight for a pixel drawing application, and computes the affected
+ * pixels for a stroke centered at a given position.
  */
 export class Brush {
-  #color: Color;
+  readonly primary: BrushColor;
+  readonly secondary: BrushColor;
   #size: number;
   #maxSize: number;
   #colorInline: string;
@@ -56,6 +123,7 @@ export class Brush {
   ) {
     const {
       color = "#000000",
+      secondaryColor = "#FFFFFF",
       size = 32,
       maxSize = 32,
       highlight = {
@@ -64,7 +132,8 @@ export class Brush {
       }
     } = options;
 
-    this.color(color);
+    this.primary = new BrushColor(color);
+    this.secondary = new BrushColor(secondaryColor);
     this.#maxSize = Math.max(maxSize, 1);
     this.size = size;
 
@@ -73,49 +142,14 @@ export class Brush {
   }
 
   /**
-   * Sets the brush color from a CSS color string or a colorjs.io `Color`
-   * instance. If `opacity` is omitted, the current opacity is preserved.
+   * Exchanges the primary and secondary colors (including their opacity).
    */
-  color(
-    color: ColorInput,
-    opacity?: number
-  ): void {
-    // Preserve the current opacity when none is given, mirroring the
-    // previous behavior where color and opacity were tracked separately.
-    const alpha = opacity === undefined ? (this.#color?.alpha ?? 1) : clamp(opacity, 0, 1);
-    this.#color = new Color(color);
-    this.#color.alpha = alpha;
-  }
+  swapColors(): void {
+    const primaryHex = this.primary.asString("hex");
+    const primaryOpacity = this.primary.opacity;
 
-  /**
-   * Returns the current brush color as a string. Defaults to
-   * `rgba(r, g, b, a)`; pass `"hex"` for a 6-digit hex string (opacity is
-   * not represented in hex output).
-   */
-  colorAsString(
-    format: "rgba" | "hex" = "rgba"
-  ): string {
-    if (format === "hex") {
-      return this.#color.toString({
-        format: "hex",
-        collapse: false,
-        alpha: false
-      });
-    }
-
-    const [r, g, b] = colorAsRGBA(this.#color);
-
-    return `rgba(${r}, ${g}, ${b}, ${this.#color.alpha})`;
-  }
-
-  set opacity(
-    opacity: number
-  ) {
-    this.#color.alpha = clamp(opacity, 0, 1);
-  }
-
-  get opacity(): number {
-    return this.#color.alpha;
+    this.primary.set(this.secondary.asString("hex"), this.secondary.opacity);
+    this.secondary.set(primaryHex, primaryOpacity);
   }
 
   set colorInline(

@@ -111,8 +111,8 @@ export class Paint extends LitElement {
     }
 
     this.brushSize = manager.brush.size;
-    this.brushColor = manager.brush.colorAsString("hex");
-    this.brushOpacity = manager.brush.opacity;
+    this.brushColor = manager.brush.primary.asString("hex");
+    this.brushOpacity = manager.brush.primary.opacity;
   }
 
   protected override firstUpdated(): void {
@@ -170,7 +170,7 @@ export class Paint extends LitElement {
     const manager = this.getPixelArtCanvas();
 
     if (manager) {
-      manager.brush.color(this.brushColor);
+      manager.brush.primary.set(this.brushColor);
     }
   }
 
@@ -192,7 +192,7 @@ export class Paint extends LitElement {
     const manager = this.getPixelArtCanvas();
 
     if (manager) {
-      manager.brush.opacity = this.brushOpacity;
+      manager.brush.primary.opacity = this.brushOpacity;
     }
   }
 

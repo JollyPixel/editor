@@ -5,6 +5,7 @@ import { fromUint8Array } from "js-base64";
 // Import Internal Dependencies
 import {
   Brush,
+  type BrushColorSlot,
   type BrushOptions
 } from "./tools/Brush.ts";
 import {
@@ -244,6 +245,7 @@ export class PixelArtCanvas {
         this.#onDrawEnd?.();
       },
       onCommitPixels: (pixels) => this.commitPixels(pixels),
+      onFillCommitPixels: (pixels, slot) => this.commitPixels(pixels, slot),
       onGlobalFillCommit: ({ positions, beforeColors, fromColor, toColor }) => {
         this.#sync.applyStroke(toColor, positions);
         this.#sync.recordHistory({ action: "stroke", positions, beforeColors, afterColor: toColor });
@@ -563,13 +565,14 @@ export class PixelArtCanvas {
     * Commits pixels as one atomic stroke edit.
    */
   commitPixels(
-    pixels: Vec2[]
+    pixels: Vec2[],
+    slot: BrushColorSlot = "primary"
   ): void {
     if (pixels.length === 0) {
       return;
     }
 
-    const color = toRGBA(this.brush.colorAsString());
+    const color = toRGBA(this.brush[slot].asString());
     const beforeColors = this.#history.enabled ?
       this.#canvasBuffer.samplePixels(pixels) :
       [];

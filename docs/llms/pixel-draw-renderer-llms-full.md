@@ -10,11 +10,11 @@
 
 ## 📌 About
 
-Browser-based library for editing pixel-art textures. It provides zoom, pan, brush painting, right-click color picking, and an SVG cursor overlay.
+Browser-based library for editing pixel-art textures. It provides zoom, pan, primary/secondary brush painting, `Ctrl`+right-click color picking, and an SVG cursor overlay.
 
 ## 💡 Features
 
-- **Brush painting**: adjustable size, color, and opacity; color inputs accept a CSS string or a [colorjs.io][colorjs] `Color` instance; right-click eyedropper picks a color from the canvas
+- **Brush painting**: adjustable size, primary/secondary color, and opacity; color inputs accept a CSS string or a [colorjs.io][colorjs] `Color` instance; left-click paints `primary`, right-click paints `secondary`, `Ctrl`+right-click eyedroppers a color from the canvas into `primary`
 - **Shift-to-line drawing**: hold `Shift` in paint mode to draw a straight line
 - **Paint-bucket fill**: flood-fill a connected region of same-colored pixels
 - **Rectangle select, move, copy, delete**: `Ctrl`/`Cmd`+`C`/`V` to copy/duplicate, `Delete` to erase
@@ -52,8 +52,9 @@ const manager = new PixelArtCanvas(container, {
 manager.onResize();
 manager.centerTexture();
 
-manager.brush.color("#FF6600"); // CSS string or a colorjs.io `Color` instance
-manager.brush.opacity = 0.8;
+manager.brush.primary.set("#FF6600"); // CSS string or a colorjs.io `Color` instance
+manager.brush.primary.opacity = 0.8;
+manager.brush.secondary.set("#3366FF");
 manager.brush.size = 3;
 
 manager.mode = "fill"; // "paint" | "move" | "fill" | "select", see Modes below
@@ -72,12 +73,12 @@ manager.texture = img;
 
 `mode` selects how left-click/drag is interpreted. Read [PixelArtCanvas.md](./docs/PixelArtCanvas.md#mode) for the full behavior:
 
-- `"paint"`: draws with the [brush](./docs/tools/Brush.md); hold `Shift` for a straight line
+- `"paint"`: left-click draws with `brush.primary`, right-click draws with `brush.secondary` (mutually exclusive — one button's stroke blocks the other from starting); hold `Shift` for a straight line (always `primary`); `Ctrl`+right-click eyedroppers a color into `brush.primary`
 - `"move"`: pans the camera
-- `"fill"`: flood-fills the clicked region
-- `"select"`: drag to select/move; `Ctrl`/`Cmd`+`C`/`V` copy/paste, `Delete` erases
+- `"fill"`: flood-fills the clicked region with `brush.primary`; right-click has no effect
+- `"select"`: drag to select/move; `Ctrl`/`Cmd`+`C`/`V` copy/paste, `Delete` erases; right-click has no effect
 
-Middle-click pans and right-click picks a color in any mode.
+Middle-click pans in any mode.
 
 ### Keybinds
 
@@ -139,8 +140,8 @@ Open `http://localhost:5173` to see the interactive demo.
 ## 📚 API
 
 - [`PixelArtCanvas`](./docs/PixelArtCanvas.md): top-level coordinator, the primary public API
-- [`Brush`](./docs/tools/Brush.md): brush size, color, opacity, and affected-pixel computation — read/write via `PixelArtCanvas.brush`
-- [`PixelBuffer`](./docs/buffer/PixelBuffer.md): headless RGBA pixel storage, usable server-side with no DOM (also documents the `onBufferUpdated`/`applyRemoteCommand` hook events)
+- [`Brush`](./docs/tools/Brush.md): brush size, primary/secondary color, opacity, and affected-pixel computation — read/write via `PixelArtCanvas.brush`
+- [`PixelBuffer`](./docs/buffer/PixelBuffer.md): headless RGBA pixel storage, usable server-side with no DOM
 - [`HistoryStack`](./docs/history/HistoryStack.md): bounded undo/redo stack backing `PixelArtCanvas.undo()`/`redo()`
 - [`Keybindings`](./docs/utils/keybindings.md): `Keybindings`/`Keybinding` types, `DEFAULT_KEYBINDINGS`, and the errors thrown by `patchKeybindings()`
 - [`Network`](./docs/network/index.md): transport-agnostic, server-authoritative multiplayer for `PixelArtCanvas`
@@ -1088,6 +1089,12 @@ interface PixelArtCanvasOptions {
     colors: { odd: string; even: string; };
     squareSize: number;
   };
+  /**
+   * Fill color for the canvas area outside the texture bounds (the "void"
+   * around the drawing surface). Defaults to the parent element's own CSS
+   * `background-color` if it's set and non-transparent, else `#424242`.
+   */
+  backgroundColor?: ColorInput;
   brush?: BrushOptions;
   select?: {
     /**
@@ -1095,7 +1102,7 @@ interface PixelArtCanvasOptions {
      * a Move, or the footprint a Rotate/Flip no longer occupies, in
      * "select" mode. Accepts a CSS color string or a colorjs.io `Color`
      * instance.
-     * @default "#FFFFFF"
+     * @default fully transparent
      */
     eraseColor?: ColorInput;
   };
@@ -1133,7 +1140,7 @@ interface PixelArtCanvasOptions {
 
 Undocumented defaults: `texture.size` is `{ x: 64, y: 32 }` (`y` falls back to `x` when only `x` is given), `texture.maxSize` is `2048`, `zoom.default` is `4`, `zoom.min`/`zoom.max` are `1`/`32`, `zoom.sensitivity` is `0.1`, `backgroundTransparency.squareSize` is `8`, `backgroundTransparency.colors` is `{ odd: "#999", even: "#666" }`.
 
-The background color used behind transparent texture pixels is read from `getComputedStyle(parentHtmlElement).backgroundColor` at construction time (falling back to `#555555` if unset or fully transparent); it isn't a configurable option.
+The `backgroundColor` option, if given, wins outright. Otherwise it's read from `getComputedStyle(parentHtmlElement).backgroundColor` at construction time, falling back to `#424242` if that's unset or fully transparent. See the `backgroundColor` property below to change it after construction.
 
 ## Properties
 
@@ -1143,15 +1150,15 @@ The background color used behind transparent texture pixels is read from `getCom
 readonly brush: Brush
 ```
 
-The brush instance. Use it to read or change the current brush color, opacity, and size. See [Brush.md](./tools/Brush.md).
+The brush instance. Use it to read or change the primary/secondary brush colors, opacity, and size. See [Brush.md](./tools/Brush.md).
 
 ### `viewport`
 
 ```ts
-readonly viewport: DefaultViewport // { readonly zoom: number; readonly camera: Readonly<Vec2>; }
+readonly viewport: DefaultViewport // { readonly zoom: Zoom; readonly camera: Readonly<Vec2>; }
 ```
 
-Read-only camera/zoom state. Use `camera`/`zoom` for copies, or the methods below for coordinate conversions and mutation.
+Read-only camera/zoom state. `viewport.zoom` is a `Zoom` value object (`.value`, `.min`, `.max`, `.sensitivity`), not a plain number — use the top-level `zoom`/`zoomSensitivity` accessors below for the numeric level, or the methods below for coordinate conversions and mutation.
 
 ## Methods
 
@@ -1162,11 +1169,13 @@ get mode(): Mode
 set mode(mode: Mode)
 ```
 
-Reads or sets the current interaction mode. `"paint"` routes left-click events to brush drawing (holding `Shift` arms a line tool); `"move"` routes them to panning; `"fill"` routes a left-click to a paint-bucket fill (contiguous region by default, or every same-colored pixel on the canvas when `fillGlobal` is `true` — see below); `"select"` routes them to a rectangle-selection tool: drag to select or move, `Ctrl`/`Cmd`+`C`/`V` to copy/duplicate, `Delete` to erase, `R` to rotate the selection 90° clockwise around its center (repeatable — press again for further rotation; no counterclockwise binding), `H`/`V` to flip the selection's content horizontally/vertically in place. The line/fill/select tools are internal implementation details with no public class of their own.
+Reads or sets the current interaction mode. `"paint"` routes left-click events to brush drawing with `brush.primary` (holding `Shift` arms a line tool, always drawn in `primary`) and right-click events to brush drawing with `brush.secondary` — the two buttons paint mutually exclusively, a stroke already in progress on one button blocks the other from starting until it ends; `"move"` routes left-click to panning; `"fill"` routes a left-click to a paint-bucket fill with `brush.primary` (contiguous region by default, or every same-colored pixel on the canvas when `fillGlobal` is `true` — see below; right-click has no effect in this mode); `"select"` routes them to a rectangle-selection tool: drag to select or move, `Ctrl`/`Cmd`+`C`/`V` to copy/duplicate, `Delete` to erase, `R` to rotate the selection 90° clockwise around its center (repeatable — press again for further rotation; no counterclockwise binding), `H`/`V` to flip the selection's content horizontally/vertically in place. The line/fill/select tools are internal implementation details with no public class of their own.
+
+A drag that never grows past its starting pixel (a plain click) does not create a selection.
 
 Switching to `"move"` cancels an armed line. Switching away from `"select"` clears any active selection.
 
-Right-click (color pick) and the SVG brush-cursor highlight are both active in `"paint"` and `"fill"` modes. In `"fill"`, the highlight is always a single pixel regardless of `brush`'s configured size, since a fill's seed is never brush-sized.
+The SVG brush-cursor highlight is active in `"paint"` and `"fill"` modes. In `"fill"`, and in `"paint"` while `pickColorArmed` is `true`, the highlight is always a single pixel regardless of `brush`'s configured size, since neither a fill's seed nor a color pick is brush-sized.
 
 ---
 
@@ -1180,6 +1189,35 @@ set fillGlobal(global: boolean)
 Reads or sets whether `"fill"` mode recolors every pixel matching the seed's color anywhere on the canvas (`true`) instead of only the seed's 4-directionally connected region (`false`, the default). Runtime-only — there is no constructor option — and the setting persists across mode switches, mirroring `brush`'s size/color.
 
 A global fill is still committed and undoable as a single atomic edit, but is broadcast over `onBufferUpdated`/the network layer as a compact `"global-fill"` event (`{ fromColor, toColor }`, no position list) rather than `"stroke"`, since it can touch a large fraction of the canvas — see [buffer/PixelBuffer.md](./buffer/PixelBuffer.md). Undoing/redoing a global fill falls back to a full-position `"stroke"` event.
+
+---
+
+### `pickColorArmed` / `pickColorAt`
+
+```ts
+get pickColorArmed(): boolean
+set pickColorArmed(armed: boolean)
+pickColorAt(x: number, y: number): RGBA | null
+```
+
+`pickColorArmed` arms/disarms a one-shot color picker on top of `"paint"` mode — it is not a separate `Mode`. While armed, the next left-click in `"paint"` mode samples that pixel instead of painting, applies it to `brush.primary`, and disarms itself. It has no effect in any other mode, and switching `mode` away from `"paint"` disarms it automatically. A click outside the texture bounds is ignored (no pick, stays armed) rather than sampling transparent black.
+
+`pickColorAt(x, y)` performs the same sample-and-apply immediately at the given texture position, independent of the current mode and of `pickColorArmed` — it's the direct/programmatic entry point, e.g. for a "pick color" toolbar button that should always work regardless of what mode is active. Returns the sampled `RGBA`, or `null` (brush left untouched) when `(x, y)` is outside the texture.
+
+`Ctrl`+right-click in `"paint"` mode is a third, always-available path to the same one-shot pick into `brush.primary`: it's a single-shot sample-and-apply at mousedown (not tracked as a drag, and does not start a `brush.secondary` stroke), independent of `pickColorArmed`.
+
+Every path dispatches a `"colorpicked"` CustomEvent (`detail: { hex, opacity }`, bubbling and composed) on the element returned by `canvas()`, for UI that mirrors the pick onto a color swatch. Plain right-click (no `Ctrl`) is not a picker — see `mode` above for what it does instead.
+
+---
+
+### `backgroundColor`
+
+```ts
+get backgroundColor(): string
+set backgroundColor(color: ColorInput)
+```
+
+Reads or changes the fill color for the canvas area outside the texture bounds — see the `backgroundColor` constructor option above for how the initial value is resolved. The setter takes effect immediately (redraws the canvas itself); no `drawFrame()` call needed.
 
 ---
 
@@ -1364,7 +1402,7 @@ There is no manual redraw method: every mutation (stroke, pan, zoom, resize, tex
 
 # Brush
 
-`Brush` manages the current brush color, opacity, size, and highlight colors, and computes the list of texture-space pixels a brush stroke covers.
+`Brush` manages the primary/secondary brush colors, size, and highlight colors, and computes the list of texture-space pixels a brush stroke covers. Left-click paints with `primary`; right-click paints with `secondary`.
 
 ## Types
 
@@ -1372,15 +1410,21 @@ There is no manual redraw method: every mutation (stroke, pan, zoom, resize, tex
 new Brush(options: BrushOptions)
 
 export type ColorInput = string | Color; // Color is colorjs.io's Color class
+export type BrushColorSlot = "primary" | "secondary";
 
 export interface BrushOptions {
   /**
-   * Base color of the brush. Accepts a CSS color string (hex, rgb(), hsl(),
+   * Base primary color of the brush. Accepts a CSS color string (hex, rgb(), hsl(),
    * named color, ...) or a colorjs.io `Color` instance.
-   * Opacity can be controlled separately with the `opacity` property.
+   * Opacity can be controlled separately with `primary.opacity`.
    * @default "#000000"
    */
   color?: ColorInput;
+  /**
+   * Base secondary color of the brush, applied by a right-click stroke.
+   * @default "#FFFFFF"
+   */
+  secondaryColor?: ColorInput;
   /**
    * Size of the brush in pixels. Must be a positive integer.
    * The actual affected area will be a square of `size x size` pixels centered around the target pixel.
@@ -1405,36 +1449,40 @@ export interface BrushOptions {
 }
 ```
 
-## Methods
-
-### `color`
+## `primary` / `secondary`
 
 ```ts
-color(color: ColorInput, opacity?: number): void
+readonly primary: BrushColor
+readonly secondary: BrushColor
 ```
 
-Sets the brush color from a CSS color string (hex, rgb(), hsl(), named color, ...) or a colorjs.io `Color` instance. If `opacity` is omitted, the current opacity is preserved; otherwise it's clamped to `[0, 1]` and applied alongside the new color.
+Each is a `BrushColor` value object — a color+opacity pair:
+
+```ts
+set(color: ColorInput, opacity?: number): void
+asString(format?: "rgba" | "hex"): string
+get/set opacity: number
+```
+
+- `set(color, opacity?)`: sets the color from a CSS color string or a colorjs.io `Color` instance. If `opacity` is omitted, the current opacity is preserved; otherwise it's clamped to `[0, 1]` and applied alongside the new color.
+- `asString(format?)`: returns the color. Defaults to an `rgba(r, g, b, a)` string; pass `"hex"` for a 6-digit hex string (opacity is not represented in hex output).
+- `opacity`: clamped to `[0, 1]` on assignment.
+
+```ts
+brush.primary.set("#FF6600");
+brush.primary.opacity = 0.8;
+brush.secondary.set("#3366FF", 1);
+```
 
 ---
 
-### `colorAsString`
+### `swapColors`
 
 ```ts
-colorAsString(format?: "rgba" | "hex"): string
+swapColors(): void
 ```
 
-Returns the current brush color. Defaults to an `rgba(r, g, b, a)` string; pass `"hex"` to get a 6-digit hex string instead (opacity is not represented in hex output).
-
----
-
-### `opacity`
-
-```ts
-get opacity(): number
-set opacity(opacity: number)
-```
-
-The brush opacity. Assigned values are clamped to `[0, 1]`.
+Exchanges `primary` and `secondary` (color and opacity both).
 
 ---
 

@@ -90,6 +90,7 @@ class FakeWindow implements WindowLike {
 
 function makeActions(options: {
   onPrimaryDownReturns?: boolean;
+  onSecondaryDownReturns?: boolean;
   onCopyReturns?: boolean;
   onPasteReturns?: boolean;
   onDeleteReturns?: boolean;
@@ -104,6 +105,7 @@ function makeActions(options: {
 } {
   const calls: Record<string, unknown[][]> = {
     onPrimaryDown: [], onPrimaryMove: [], onPrimaryUp: [],
+    onSecondaryDown: [], onSecondaryMove: [], onSecondaryUp: [],
     onPanStart: [], onPanMove: [], onPanEnd: [],
     onZoom: [], onMouseMove: [],
     onCursorMove: [], onMouseUp: [],
@@ -121,6 +123,13 @@ function makeActions(options: {
     },
     onPrimaryMove: (tx, ty) => calls.onPrimaryMove.push([tx, ty]),
     onPrimaryUp: () => calls.onPrimaryUp.push([]),
+    onSecondaryDown: (tx, ty, ctrlKey) => {
+      calls.onSecondaryDown.push([tx, ty, ctrlKey]);
+
+      return options.onSecondaryDownReturns;
+    },
+    onSecondaryMove: (tx, ty) => calls.onSecondaryMove.push([tx, ty]),
+    onSecondaryUp: () => calls.onSecondaryUp.push([]),
     onPanStart: (mx, my) => calls.onPanStart.push([mx, my]),
     onPanMove: (dx, dy) => calls.onPanMove.push([dx, dy]),
     onPanEnd: () => calls.onPanEnd.push([]),
@@ -278,6 +287,7 @@ describe("InputController", () => {
       assert.strictEqual(event.defaultPrevented, true);
       assert.deepStrictEqual(calls, {
         onPrimaryDown: [], onPrimaryMove: [], onPrimaryUp: [],
+        onSecondaryDown: [], onSecondaryMove: [], onSecondaryUp: [],
         onPanStart: [], onPanMove: [], onPanEnd: [],
         onZoom: [], onMouseMove: [],
         onCursorMove: [], onMouseUp: [],
