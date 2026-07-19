@@ -1,18 +1,21 @@
 // Import Internal Dependencies
-import type { PixelBufferSnapshot, PixelNetworkCommand } from "./types.ts";
+import type {
+  PixelBufferSnapshot,
+  PixelNetworkCommand
+} from "./types.ts";
 
 /**
- * Transport-agnostic interface for sending and receiving pixel network commands.
- *
- * Consumers implement this interface with a concrete transport layer
- * (WebSocket, WebRTC, Partykit, BroadcastChannel, etc.) and pass an instance
- * to PixelSyncSession.
+ * Sends and receives pixel network commands.
  */
 export interface PixelTransport {
-  /** The client ID assigned to the local peer by the transport layer. */
+  /**
+   * Identifies the local peer.
+   */
   readonly localClientId: string;
 
-  /** Sends a local mutation or lifecycle command to the server / peers. */
+  /**
+   * Sends a local command.
+   */
   sendCommand(
     command: PixelNetworkCommand
   ): void;
@@ -20,14 +23,12 @@ export interface PixelTransport {
   unsubscribe(bufferId: string): void;
 
   /**
-   * Called by the transport when a command arrives from a remote peer.
-   * Set this before connecting.
+   * Receives a command from a remote peer.
    */
   onCommand: ((command: PixelNetworkCommand) => void) | null;
 
   /**
-   * Called by the transport when the server sends a buffer snapshot
-   * (in response to subscribe). Set this before connecting.
+   * Receives a buffer snapshot.
    */
   onSnapshot: ((bufferId: string, snapshot: PixelBufferSnapshot) => void) | null;
 

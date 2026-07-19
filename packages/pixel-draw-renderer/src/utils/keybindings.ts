@@ -1,22 +1,19 @@
 export type ModifierToken = "mod" | "shift" | "alt";
 
 export type NamedKey =
-  | "Delete" | "Backspace" | "Enter" | "Escape" | "Tab" | "Space"
+  | "Delete"
+  | "Backspace"
+  | "Enter"
+  | "Escape"
+  | "Tab"
+  | "Space"
   | "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight"
   | "F1" | "F2" | "F3" | "F4" | "F5" | "F6" | "F7" | "F8" | "F9" | "F10" | "F11" | "F12";
 
 export type KeyToken = NamedKey | (string & {});
 
 /**
- * A single key combo, e.g. "mod+z" or "mod+shift+z". "mod" matches either
- * Ctrl or Cmd, so a default binding works the same on every platform. The
- * key segment is matched against the character produced (`KeyboardEvent.key`,
- * case-insensitive) rather than physical key position, so "z" means
- * "whatever key produces the Z character on the user's layout" — the same
- * convention every other app uses for Ctrl+Z/Ctrl+C-style shortcuts, and
- * correct on AZERTY/QWERTZ without the DSL needing to know about layouts.
- * Named, non-printable keys (Delete, ArrowUp, F1, ...) are listed for
- * autocomplete, but any string is accepted.
+ * Describes a keyboard shortcut.
  */
 export type Keybinding =
   | KeyToken
@@ -25,8 +22,14 @@ export type Keybinding =
   | `${ModifierToken}+${ModifierToken}+${ModifierToken}+${KeyToken}`;
 
 export type KeybindingAction =
-  | "copy" | "paste" | "undo" | "redo" | "delete"
-  | "rotate" | "flipHorizontal" | "flipVertical";
+  | "copy"
+  | "paste"
+  | "undo"
+  | "redo"
+  | "delete"
+  | "rotate"
+  | "flipHorizontal"
+  | "flipVertical";
 
 export type Keybindings = Record<KeybindingAction, Keybinding | Keybinding[]>;
 
@@ -39,8 +42,14 @@ export interface ParsedKeybinding {
 
 // CONSTANTS
 const kKeybindingActions: KeybindingAction[] = [
-  "copy", "paste", "undo", "redo", "delete",
-  "rotate", "flipHorizontal", "flipVertical"
+  "copy",
+  "paste",
+  "undo",
+  "redo",
+  "delete",
+  "rotate",
+  "flipHorizontal",
+  "flipVertical"
 ];
 
 export const DEFAULT_KEYBINDINGS: Keybindings = {
@@ -133,10 +142,7 @@ function eventMatchesKeybinding(
 }
 
 /**
- * Merges a partial override onto a base keybinding set (constructor options
- * and `patchKeybindings()` both go through this), validating every binding
- * (throws InvalidKeybindingError) and rejecting the result if two different
- * actions now resolve to the same combo (throws KeybindingConflictError).
+ * Merges and validates keybinding overrides.
  */
 export function mergeKeybindings(
   base: Keybindings,

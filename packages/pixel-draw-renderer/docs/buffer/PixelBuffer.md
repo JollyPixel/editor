@@ -82,6 +82,16 @@ Writes a rectangular block of per-pixel colors (row-major, `rect.width * rect.he
 
 ---
 
+### `drawMaskedRegion`
+
+```ts
+drawMaskedRegion(rect: SelectionRect, pixels: RGBA[], mask: boolean[]): void
+```
+
+Same as `drawRegion`, but skips any cell whose row-major `mask` entry is `false`. Used to paint a non-rectangular (e.g. shape-selected) region without touching the cells outside its mask. Out-of-bounds positions are skipped, same as `drawPixels`/`drawRegion`.
+
+---
+
 ### `copyToMaster`
 
 ```ts
@@ -99,6 +109,16 @@ samplePixel(x: number, y: number): [number, number, number, number]
 ```
 
 Returns the `[r, g, b, a]` of the working buffer at `(x, y)`. Out-of-bounds reads return `0` for each component rather than throwing.
+
+---
+
+### `samplePixels`
+
+```ts
+samplePixels(positions: Vec2[]): RGBA[]
+```
+
+Batch form of `samplePixel`: returns one `RGBA` per position, in order. Out-of-bounds positions sample as fully transparent black (`{ r: 0, g: 0, b: 0, a: 0 }`) rather than being skipped or throwing.
 
 ## Hooks
 
@@ -140,6 +160,8 @@ type PixelBufferHookAction = PixelBufferHookEvent["action"];
 type PixelBufferHookListener = (event: PixelBufferHookEvent) => void;
 ```
 
-This is the shape of `PixelArtCanvas`'s `onBufferUpdated` local-mutation hook, and the vocabulary the [network layer](../network/index.md) is built on — every event is a valid network command payload once stamped with routing metadata. `"stroke"` covers a whole paint stroke or `commitPixels` call, not one event per brush stamp. `originTimestamp`, set only when `PixelArtCanvas.undo()`/`redo()` replay an edit, carries that edit's original timestamp so the network [conflict resolver](../network/ConflictResolver.md) re-races the replay fairly instead of it always winning by virtue of being freshly stamped; it's stripped before the command is sent over the wire.
+This is the shape of `PixelArtCanvas`'s `onBufferUpdated` local-mutation hook, and the vocabulary the [network layer](../network/index.md) is built on: every event is a valid network command payload once stamped with routing metadata. `"stroke"` covers a whole paint stroke or `commitPixels` call, not one event per brush stamp.
 
-`"global-fill"` (emitted by `PixelArtCanvas`'s fill tool when `setFillGlobal(true)`) is deliberately compact — no position list — since it can touch a large fraction of the canvas. Every applier (a remote peer via `applyRemoteCommand`, or [`PixelCommandApplier`](../network/PixelCommandApplier.md) on the server) recomputes the affected pixels itself by scanning its own buffer for `fromColor` and repainting them `toColor`, which is only correct because peers apply commands in the same order against an already-synced buffer. It also bypasses per-pixel conflict resolution (unlike `"stroke"`) — see [network/ConflictResolver.md](../network/ConflictResolver.md). Undoing/redoing a global fill locally still replays as an ordinary full-position `"stroke"` event, since exact undo requires knowing exactly which pixels were touched.
+> [!IMPORTANT]
+> - `originTimestamp` is set only when `PixelArtCanvas.undo()`/`redo()` replay an edit. It carries the edit's original timestamp so the network [conflict resolver](../network/ConflictResolver.md) re-races the replay fairly instead of it always winning by virtue of being freshly stamped; it's stripped before the command is sent over the wire.
+> - `"global-fill"` (emitted by the fill tool when `setFillGlobal(true)`) is deliberately compact, with no position list, since it can touch a large fraction of the canvas. Every applier (a remote peer via `applyRemoteCommand`, or [`PixelCommandApplier`](../network/PixelCommandApplier.md) on the server) recomputes the affected pixels itself by scanning its own buffer for `fromColor` and repainting them `toColor`; this is only correct because peers apply commands in the same order against an already-synced buffer. It also bypasses per-pixel conflict resolution, unlike `"stroke"` (see [network/ConflictResolver.md](../network/ConflictResolver.md)). Undoing/redoing a global fill locally still replays as an ordinary full-position `"stroke"` event, since exact undo requires knowing exactly which pixels were touched.

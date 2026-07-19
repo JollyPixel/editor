@@ -8,8 +8,7 @@ import type {
 } from "../../types.ts";
 
 /**
- * Renders the paint-mode brush cursor as two overlaid rects (inline/outline)
- * so the highlight reads against both light and dark texture pixels.
+ * Renders the brush cursor overlay.
  */
 export class BrushHighlightOverlay {
   #viewport: DefaultViewport;

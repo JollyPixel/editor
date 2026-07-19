@@ -8,19 +8,7 @@ import type {
 } from "../../types.ts";
 
 /**
- * Renders the current select-mode selection (texture-space `rect`,
- * converted to screen space via zoom/camera like every other overlay here)
- * as a two-color dashed border ("marching ants"): both shapes share the
- * same dash length, offset by half a cycle from each other, so the gaps in
- * one are filled by the other's dashes instead of the background showing
- * through.
- *
- * A plain rectangle selection renders as two `<rect>` elements (drawRect) —
- * cheap, and exactly what earlier versions of this class always drew. A
- * non-rectangular (shape) selection renders as two `<path>` elements
- * tracing the selection mask's true outline (drawMask), falling back to
- * drawRect's cheaper rendering when the mask happens to be a full rectangle.
- * Call the appropriate one again on every pan/zoom/drag update to reposition.
+ * Renders rectangular and masked selection outlines.
  */
 export class SelectionOverlay {
   #viewport: DefaultViewport;
@@ -92,7 +80,9 @@ export class SelectionOverlay {
     el.setAttribute("visibility", "hidden");
   }
 
-  /** Plain-rectangle rendering: always the whole `rect`, no mask involved. */
+  /**
+   * Renders a rectangular selection outline.
+   */
   drawRect(
     rect: SelectionRect
   ): void {
@@ -116,9 +106,7 @@ export class SelectionOverlay {
   }
 
   /**
-   * Mask-aware rendering: traces `mask`'s true outline (in `rect`'s
-   * bounding box) as an SVG path. Degenerates to drawRect's cheaper
-   * rendering when every cell in `mask` is selected.
+   * Renders a masked selection outline.
    */
   drawMask(
     rect: SelectionRect,
@@ -137,7 +125,11 @@ export class SelectionOverlay {
       zoom: this.#viewport.zoom.value,
       camera: this.#viewport.camera
     };
-    const loops = SelectionOverlay.traceContour(rect.width, rect.height, mask);
+    const loops = SelectionOverlay.traceContour(
+      rect.width,
+      rect.height,
+      mask
+    );
     const d = loops
       .map((loop) => SelectionOverlay.#loopToPath(loop, rect, screen))
       .join(" ");
@@ -171,26 +163,17 @@ export class SelectionOverlay {
   }
 
   /**
-   * Traces the boundary of a row-major `width`x`height` selection mask into
-   * one or more closed polygon loops, in mask-local grid coordinates (cell
-   * (0,0)'s corners are (0,0)-(1,1), etc.) — pure geometry, no DOM/viewport
-   * involved.
-   *
-   * Every selected cell contributes a directed unit edge for each side that
-   * borders a non-selected (or out-of-grid) neighbor, oriented so the
-   * selected area stays on the edge's right (a clockwise walk in this
-   * y-down grid). Because every vertex has at most one outgoing boundary
-   * edge for the simply-connected masks this package ever produces (see
-   * ShapeSelect — flood-filled, then hole-filled), these edges chain
-   * head-to-tail into closed loops with no extra bookkeeping. Consecutive
-   * collinear points are merged to keep the resulting path compact.
+   * Traces a selection mask into closed contour loops.
    */
   static traceContour(
     width: number,
     height: number,
     mask: boolean[]
   ): Vec2[][] {
-    function isSelected(x: number, y: number): boolean {
+    function isSelected(
+      x: number,
+      y: number
+    ): boolean {
       return x >= 0 && x < width && y >= 0 && y < height && mask[(y * width) + x];
     }
 
@@ -224,7 +207,10 @@ export class SelectionOverlay {
     while (edges.size > 0) {
       const [startKey] = edges.keys();
       const [startX, startY] = startKey.split(",").map(Number);
-      let current: Vec2 = { x: startX, y: startY };
+      let current: Vec2 = {
+        x: startX,
+        y: startY
+      };
 
       const points: Vec2[] = [current];
       for (;;) {
@@ -243,7 +229,9 @@ export class SelectionOverlay {
     return loops;
   }
 
-  /** Drops points that sit strictly between two collinear neighbors. */
+  /**
+   * Removes collinear contour points.
+   */
   static #simplifyLoop(
     points: Vec2[]
   ): Vec2[] {

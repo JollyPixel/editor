@@ -7,9 +7,15 @@ import {
   type HistoryEntry,
   type HistoryEntryInput
 } from "./HistoryStack.ts";
-import { groupPositionsByColor } from "./utils.ts";
-import type { DefaultPixelBuffer } from "../buffer/types.ts";
-import type { PixelBufferHookEvent } from "../buffer/hooks.ts";
+import {
+  groupPositionsByColor
+} from "./utils.ts";
+import type {
+  DefaultPixelBuffer
+} from "../buffer/types.ts";
+import type {
+  PixelBufferHookEvent
+} from "../buffer/hooks.ts";
 
 export interface HistoryState {
   canUndo: boolean;
@@ -19,28 +25,24 @@ export interface HistoryState {
 export interface HistoryControllerOptions {
   /**
    * @default false
-   **/
+   */
   enabled?: boolean;
   /**
    * @default 10
    */
   limit?: number;
-  /** Called whenever the undo/redo stack changes (push, undo, redo, clear). */
+  /**
+   * Called when the history state changes.
+   */
   onChange?: (state: HistoryState) => void;
 }
 
 /**
- * Owns the optional HistoryStack and its change notifications. Callers stay
- * responsible for the side effects that go with undo/redo (buffer refresh,
- * hook replay, tool resync) — this class only tracks entries and reports
- * canUndo/canRedo state.
+ * Manages an optional history stack and change notifications.
  */
 export class HistoryController {
   /**
-   * Stamped with the entry's original timestamp (not "now") so the server's
-   * per-pixel conflict resolver re-races the replay fairly against a peer's
-   * edit made since. A stroke's before-state is usually heterogeneous, so
-   * it's split into uniform-color groups — "stroke" only carries one color.
+   * Builds hook events that restore an entry's prior state.
    */
   static buildUndoReplayEvents(
     entry: HistoryEntry
@@ -86,7 +88,9 @@ export class HistoryController {
     }
   }
 
-  /** A stroke's after-state is always one uniform color, so no grouping is needed here (unlike undo). */
+  /**
+   * Builds hook events that restore an entry's later state.
+   */
   static buildRedoReplayEvents(
     entry: HistoryEntry
   ): PixelBufferHookEvent[] {
@@ -187,7 +191,6 @@ export class HistoryController {
     return entry;
   }
 
-  /** Discards every recorded entry, e.g. after a remote structural change. */
   clear(): void {
     if (!this.#stack) {
       return;

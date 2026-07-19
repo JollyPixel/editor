@@ -87,7 +87,7 @@ Processes an incoming command:
 - `"buffer-added"`: creates the buffer if it doesn't already exist, then broadcasts.
 - `"buffer-removed"`: deletes the buffer and its conflict-tracking state, then broadcasts.
 - `"stroke"`: resolves conflicts per-pixel (see [ConflictResolver](./ConflictResolver.md)); applies and broadcasts only the accepted pixels. Dropped entirely (no broadcast) if nothing was accepted.
-- `"resized"` / `"texture-replaced"` / `"global-fill"`: always accepted, applied, and broadcast — `"global-fill"` carries no position list, so it can't be arbitrated per pixel; see [ConflictResolver](./ConflictResolver.md).
+- `"resized"` / `"texture-replaced"` / `"global-fill"`: always accepted, applied, and broadcast. `"global-fill"` carries no position list, so it can't be arbitrated per pixel; see [ConflictResolver](./ConflictResolver.md).
 
 Commands targeting an unknown buffer (other than `"buffer-added"`) are dropped.
 

@@ -5,19 +5,20 @@ import Color from "colorjs.io";
 import type { ColorInput } from "../types.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import type { DefaultViewport } from "./Viewport.ts";
-import { FloatingSelectionOverlay } from "./overlays/FloatingSelectionOverlay.ts";
+import {
+  FloatingSelectionOverlay
+} from "./overlays/FloatingSelectionOverlay.ts";
 
 export interface CanvasRendererOptions {
   viewport: DefaultViewport;
   canvasBuffer: CanvasBuffer;
   /**
-   * Size of the squares in the background checkerboard pattern. Should be a positive integer.
+   * Checkerboard square size.
    * @default 8
    */
   bgSquareSize?: number;
   /**
-   * Colors used for the background checkerboard pattern. Accepts CSS color
-   * strings or colorjs.io `Color` instances.
+   * Checkerboard colors.
    * @default { odd: "#999", even: "#666" }
    */
   bgColors?: {
@@ -25,17 +26,14 @@ export interface CanvasRendererOptions {
     even: ColorInput;
   };
   /**
-   * Background color used when texture has transparent pixels. Accepts a
-   * CSS color string or a colorjs.io `Color` instance.
+   * Transparent-pixel background color.
    * @default "#555555"
    */
   backgroundColor?: ColorInput;
 }
 
 /**
- * CanvasRenderer is responsible for rendering the pixel art canvas, including the texture and the background checkerboard pattern.
- * It manages an off-screen canvas for the background pattern and the main canvas for rendering the texture.
- * The renderer listens to changes in the viewport and texture buffer to update the display accordingly.
+ * Renders the texture and its background.
  */
 export class CanvasRenderer {
   #canvas: HTMLCanvasElement;
@@ -57,7 +55,10 @@ export class CanvasRenderer {
       viewport,
       canvasBuffer,
       bgSquareSize = 8,
-      bgColors = { odd: "#999", even: "#666" },
+      bgColors = {
+        odd: "#999",
+        even: "#666"
+      },
       backgroundColor = "#555555"
     } = options;
 
@@ -68,7 +69,9 @@ export class CanvasRenderer {
       odd: new Color(bgColors.odd).toString(),
       even: new Color(bgColors.even).toString()
     };
-    this.#backgroundColor = new Color(backgroundColor).toString();
+    this.#backgroundColor = new Color(
+      backgroundColor
+    ).toString();
 
     this.#canvas = document.createElement("canvas");
     this.#ctx = this.#canvas.getContext("2d")!;
@@ -89,12 +92,17 @@ export class CanvasRenderer {
   set backgroundColor(
     color: ColorInput
   ) {
-    this.#backgroundColor = new Color(color).toString();
+    this.#backgroundColor = new Color(
+      color
+    ).toString();
     this.drawFrame();
   }
 
   drawFrame(): void {
-    if (this.#canvas.width === 0 || this.#canvas.height === 0) {
+    if (
+      this.#canvas.width === 0 ||
+      this.#canvas.height === 0
+    ) {
       return;
     }
 
@@ -105,17 +113,34 @@ export class CanvasRenderer {
 
     this.#ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.#ctx.fillStyle = this.#backgroundColor;
-    this.#ctx.fillRect(0, 0, this.#canvas.width, this.#canvas.height);
+    this.#ctx.fillRect(
+      0,
+      0,
+      this.#canvas.width,
+      this.#canvas.height
+    );
 
     this.#ctx.save();
     this.#ctx.beginPath();
-    this.#ctx.rect(camera.x, camera.y, texPixelW, texPixelH);
+    this.#ctx.rect(
+      camera.x,
+      camera.y,
+      texPixelW,
+      texPixelH
+    );
     this.#ctx.clip();
 
     this.#ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.#ctx.drawImage(this.#bgCanvas, 0, 0);
 
-    this.#ctx.setTransform(zoom.value, 0, 0, zoom.value, camera.x, camera.y);
+    this.#ctx.setTransform(
+      zoom.value,
+      0,
+      0,
+      zoom.value,
+      camera.x,
+      camera.y
+    );
     this.#ctx.drawImage(this.#canvasBuffer.canvas(), 0, 0);
     this.floatingSelection.draw(this.#ctx);
 
@@ -175,6 +200,9 @@ export class CanvasRenderer {
     parent.appendChild(this.#canvas);
 
     const bounds = parent.getBoundingClientRect();
-    this.resize(bounds.width, bounds.height);
+    this.resize(
+      bounds.width,
+      bounds.height
+    );
   }
 }

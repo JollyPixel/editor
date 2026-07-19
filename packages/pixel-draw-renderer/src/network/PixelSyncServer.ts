@@ -17,42 +17,26 @@ import type {
 export type PixelStrokeCommand = Extract<PixelNetworkCommand, { action: "stroke"; }>;
 
 /**
- * A connected client handle. The consumer creates these objects and passes
- * them to PixelSyncServer.connect(). The server calls send() to transmit
- * data back to the real network peer.
+ * Represents a connected network client.
  */
 export interface ClientHandle {
   readonly id: string;
-  /**
-   * Transmit data to this client over the underlying transport.
-   * The consumer is responsible for framing (JSON-stringify, etc.).
-   */
   send(data: unknown): void;
 }
 
 export interface PixelSyncServerOptions {
   /**
-   * Existing PixelWorld to use as the authoritative state.
-   * A new (empty) world is created when omitted.
+   * Authoritative buffer store.
    */
   world?: PixelWorld;
   /**
-   * Custom conflict resolver.
-   * Defaults to LastWriteWinsResolver.
+   * Resolves conflicting pixel writes.
    */
   conflictResolver?: PixelConflictResolver;
 }
 
 /**
- * Headless, server-authoritative pixel sync manager.
- *
- * Has no DOM/Canvas2D dependency and runs in Node.js / Deno / Bun.
- *
- * Workflow:
- * 1. connect(client) — register a peer; notifies existing peers. Sends no buffer data.
- * 2. subscribe(clientId, bufferId) — sends that buffer's current snapshot, if it exists.
- * 3. receive(cmd) — validate, apply to the world, and broadcast to subscribers of that buffer.
- * 4. disconnect(clientId) — remove the client and notify peers.
+ * Manages authoritative pixel state and client synchronization.
  */
 export class PixelSyncServer {
   readonly world: PixelWorld;
@@ -69,15 +53,20 @@ export class PixelSyncServer {
     this.#resolver = options.conflictResolver ?? new LastWriteWinsResolver();
   }
 
-  /** Sends no buffer data — clients receive a buffer's data via subscribe(). */
   connect(
     client: ClientHandle
   ): void {
-    this.#clients.set(client.id, client);
+    this.#clients.set(
+      client.id,
+      client
+    );
 
     for (const [id, peer] of this.#clients) {
       if (id !== client.id) {
-        peer.send({ type: "peer-joined", peerId: client.id });
+        peer.send({
+          type: "peer-joined",
+          peerId: client.id
+        });
       }
     }
   }
@@ -91,13 +80,15 @@ export class PixelSyncServer {
     }
 
     for (const peer of this.#clients.values()) {
-      peer.send({ type: "peer-left", peerId: clientId });
+      peer.send({
+        type: "peer-left",
+        peerId: clientId
+      });
     }
   }
 
   /**
-   * Subscribes a client to a buffer's future updates and sends its current
-   * snapshot immediately, if the buffer already exists.
+   * Subscribes a client and sends the current buffer snapshot.
    */
   subscribe(
     clientId: string,
@@ -133,14 +124,7 @@ export class PixelSyncServer {
   }
 
   /**
-   * Processes an incoming command:
-   * - "buffer-added": creates the buffer if it doesn't already exist, then broadcasts.
-   * - "buffer-removed": deletes the buffer and its conflict-tracking state, then broadcasts.
-   * - "stroke": resolves conflicts per-pixel; applies and broadcasts only the accepted
-   *   pixels. Dropped entirely (no broadcast) if nothing was accepted.
-   * - "resized" / "texture-replaced": always accepted, applied, and broadcast.
-   *
-   * Commands targeting an unknown buffer (other than "buffer-added") are dropped.
+   * Applies and broadcasts an incoming command.
    */
   receive(
     cmd: PixelNetworkCommand
@@ -206,7 +190,10 @@ export class PixelSyncServer {
 
     const acceptedCmd: PixelStrokeCommand = {
       ...cmd,
-      metadata: { ...cmd.metadata, positions: accepted }
+      metadata: {
+        ...cmd.metadata,
+        positions: accepted
+      }
     };
 
     applyCommandToWorld(this.world, acceptedCmd);
@@ -233,7 +220,10 @@ export class PixelSyncServer {
     }
 
     for (const clientId of subs) {
-      this.#clients.get(clientId)?.send({ type: "command", data: cmd });
+      this.#clients.get(clientId)?.send({
+        type: "command",
+        data: cmd
+      });
     }
   }
 

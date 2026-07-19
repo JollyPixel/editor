@@ -5,10 +5,7 @@ import {
 } from "../buffer/PixelBuffer.ts";
 
 /**
- * Headless, multi-buffer registry. Used by PixelSyncServer as the
- * authoritative store for every buffer (texture) shared in a session.
- *
- * Has no DOM/Canvas2D dependency and runs in Node.js / Deno / Bun.
+ * Stores headless pixel buffers by ID.
  */
 export class PixelWorld {
   #buffers = new Map<string, PixelBuffer>();

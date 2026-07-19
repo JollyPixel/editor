@@ -1,7 +1,17 @@
 // CONSTANTS
 const kEditableInputTypes = new Set([
-  "text", "search", "email", "url", "tel", "password", "number",
-  "date", "datetime-local", "month", "time", "week"
+  "text",
+  "search",
+  "email",
+  "url",
+  "tel",
+  "password",
+  "number",
+  "date",
+  "datetime-local",
+  "month",
+  "time",
+  "week"
 ]);
 
 /**

@@ -1,9 +1,17 @@
 // Import Internal Dependencies
-import type { Brush, BrushColorSlot } from "./Brush.ts";
 import { Fill } from "./Fill.ts";
-import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import { toRGBA } from "../utils/colors.ts";
-import type { RGBA, Vec2 } from "../types.ts";
+import type {
+  Brush,
+  BrushColorSlot
+} from "./Brush.ts";
+import type {
+  CanvasBuffer
+} from "../buffer/CanvasBuffer.ts";
+import type {
+  RGBA,
+  Vec2
+} from "../types.ts";
 
 export interface FillGlobalCommit {
   positions: Vec2[];
@@ -16,23 +24,17 @@ export interface FillControllerOptions {
   brush: Brush;
   canvasBuffer: CanvasBuffer;
   /**
-   * Commits a contiguous flood-fill region as an ordinary "stroke", painted
-   * with the given color slot.
+    * Commits a contiguous fill.
    */
   onCommit: (pixels: Vec2[], slot: BrushColorSlot) => void;
   /**
-   * Commits a global fill (every pixel matching `fromColor` anywhere on the
-   * canvas, recolored to `toColor`). `positions`/`beforeColors` are provided
-   * for the caller's own local history bookkeeping — see PixelArtCanvas's
-   * "global-fill" hook, which is deliberately compact and carries neither.
+    * Commits a global fill.
    */
   onGlobalCommit: (commit: FillGlobalCommit) => void;
 }
 
 /**
- * Glues the Fill algorithms (pure, DOM-free) to the brush color and the
- * host's commit path, and owns the runtime-only contiguous/global toggle —
- * mirroring BrushController/LineController/SelectController.
+ * Runs contiguous and global fills.
  */
 export class FillController {
   #brush: Brush;

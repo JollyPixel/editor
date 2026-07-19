@@ -10,7 +10,7 @@ import type {
 } from "../types.ts";
 
 /**
- * A single color+opacity slot (e.g. a brush's primary or secondary color).
+ * Stores a color and opacity.
  */
 export class BrushColor {
   #color: Color;
@@ -24,21 +24,21 @@ export class BrushColor {
   }
 
   /**
-   * Sets the color from a CSS color string or a colorjs.io `Color` instance.
-   * If `opacity` is omitted, the current opacity is preserved.
+   * Sets the color and optional opacity.
    */
   set(
     color: ColorInput,
     opacity?: number
   ): void {
-    const alpha = opacity === undefined ? this.#color.alpha : clamp(opacity, 0, 1);
+    const alpha = opacity === undefined ?
+      this.#color.alpha :
+      clamp(opacity, 0, 1);
     this.#color = new Color(color);
     this.#color.alpha = alpha;
   }
 
   /**
-   * Returns the color as a string. Defaults to `rgba(r, g, b, a)`; pass
-   * `"hex"` for a 6-digit hex string (opacity is not represented in hex output).
+   * Returns the color in the requested format.
    */
   asString(
     format: "rgba" | "hex" = "rgba"
@@ -71,32 +71,27 @@ export type BrushColorSlot = "primary" | "secondary";
 
 export interface BrushOptions {
   /**
-   * Base primary color of the brush. Can be any valid CSS color string or a
-   * colorjs.io `Color` instance. Opacity can be controlled separately with
-   * `primary.opacity`.
+   * Primary brush color.
    * @default "#000000"
    */
   color?: ColorInput;
   /**
-   * Base secondary color of the brush, applied by a right-click stroke.
+   * Secondary brush color.
    * @default "#FFFFFF"
    */
   secondaryColor?: ColorInput;
   /**
-   * Size of the brush in pixels. Must be a positive integer.
-   * The actual affected area will be a square of `size x size` pixels centered around the target pixel.
+   * Brush size in pixels.
    * @default 32
    */
   size?: number;
   /**
-   * Maximum allowed size for the brush. This is used to constrain the `size` property.
-   * Must be a positive integer. If `size` is set higher than `maxSize`, it will be clamped to `maxSize`.
+   * Maximum brush size.
    * @default 32
    */
   maxSize?: number;
   /**
-   * Highlight colors for the brush preview.
-   * These colors are used to render the brush outline and fill when hovering over the canvas.
+   * Brush highlight colors.
    * @default { colorInline: "#FFF", colorOutline: "#000" }
    */
   highlight?: {
@@ -106,9 +101,7 @@ export interface BrushOptions {
 }
 
 /**
- * Manages brush properties such as primary/secondary color, size, and
- * highlight for a pixel drawing application, and computes the affected
- * pixels for a stroke centered at a given position.
+ * Stores brush colors, size, and highlight settings.
  */
 export class Brush {
   readonly primary: BrushColor;
@@ -142,13 +135,16 @@ export class Brush {
   }
 
   /**
-   * Exchanges the primary and secondary colors (including their opacity).
+   * Exchanges primary and secondary colors.
    */
   swapColors(): void {
     const primaryHex = this.primary.asString("hex");
     const primaryOpacity = this.primary.opacity;
 
-    this.primary.set(this.secondary.asString("hex"), this.secondary.opacity);
+    this.primary.set(
+      this.secondary.asString("hex"),
+      this.secondary.opacity
+    );
     this.secondary.set(primaryHex, primaryOpacity);
   }
 

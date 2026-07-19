@@ -2,7 +2,9 @@
 import Color from "colorjs.io";
 
 // Import Internal Dependencies
-import { clamp } from "./math.ts";
+import {
+  clamp
+} from "./math.ts";
 import type {
   ColorInput,
   RGBA

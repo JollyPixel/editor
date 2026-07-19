@@ -1,19 +1,15 @@
 // Import Internal Dependencies
 import { SVG_NS } from "../constants.ts";
-import type { DefaultViewport } from "../Viewport.ts";
+import type {
+  DefaultViewport
+} from "../Viewport.ts";
 import type {
   BrushHighlight,
   Vec2
 } from "../../types.ts";
 
 /**
- * Renders the Shift-to-line preview as a single straight segment through the
- * centers of the start/end texture pixels — a lightweight indicator of the
- * line's path, not a preview of every pixel it will stamp.
- *
- * A wider "casing" line (colorOutline) behind a narrower one (colorInline) on
- * the same path — unlike the brush highlight's adjacent-border trick, a
- * single segment needs differing stroke widths to read as a halo.
+ * Renders a line preview overlay.
  */
 export class LinePreviewOverlay {
   #viewport: DefaultViewport;

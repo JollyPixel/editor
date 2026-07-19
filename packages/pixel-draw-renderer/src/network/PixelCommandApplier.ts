@@ -4,14 +4,10 @@ import { toUint8Array } from "js-base64";
 // Import Internal Dependencies
 import { Fill } from "../tools/Fill.ts";
 import { PixelWorld } from "./PixelWorld.ts";
-import type { PixelNetworkCommand } from "./types.ts";
+import type {
+  PixelNetworkCommand
+} from "./types.ts";
 
-/**
- * Applies a single network command to a headless PixelWorld instance.
- *
- * Used by PixelSyncServer (Node.js, no DOM) and can be used standalone
- * for testing replay logic without a renderer.
- */
 export function applyCommandToWorld(
   world: PixelWorld,
   cmd: PixelNetworkCommand

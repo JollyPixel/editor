@@ -22,15 +22,7 @@ export interface OnBufferAddedEventMetadata {
 }
 
 /**
- * Client-side network orchestrator.
- *
- * A single PixelSyncSession multiplexes many buffers (textures/tilesets)
- * over one transport connection. Each attached PixelArtCanvas still owns
- * exactly one texture — the session just assigns it a bufferId for routing,
- * so:
- * - Local mutations from an attached PixelArtCanvas are stamped and forwarded.
- * - Remote commands are routed to the matching PixelArtCanvas by bufferId.
- * - Buffer lifecycle (add/remove) is announced/received at the session level.
+ * Synchronizes multiple canvases over one transport.
  */
 export class PixelSyncSession {
   #transport: PixelTransport;
@@ -55,8 +47,7 @@ export class PixelSyncSession {
   }
 
   /**
-   * Attaches an existing PixelArtCanvas to sync as `bufferId`. Assumes the
-   * buffer already exists on the server; subscribes and awaits its snapshot.
+   * Attaches a canvas to an existing buffer.
    */
   attach(
     bufferId: string,
@@ -72,8 +63,7 @@ export class PixelSyncSession {
   }
 
   /**
-   * Attaches a PixelArtCanvas AND announces a brand new buffer to peers,
-   * carrying the manager's current pixel data as the initial shared state.
+   * Attaches a canvas and creates its shared buffer.
    */
   createBuffer(
     bufferId: string,
@@ -87,7 +77,9 @@ export class PixelSyncSession {
     }));
   }
 
-  /** Detaches a PixelArtCanvas without announcing its removal to peers. */
+  /**
+   * Detaches a canvas without removing its shared buffer.
+   */
   detach(
     bufferId: string
   ): void {
@@ -101,7 +93,9 @@ export class PixelSyncSession {
     this.#transport.unsubscribe(bufferId);
   }
 
-  /** Detaches a PixelArtCanvas and announces its removal to peers. */
+  /**
+   * Detaches a canvas and removes its shared buffer.
+   */
   removeBuffer(
     bufferId: string
   ): void {
@@ -121,7 +115,9 @@ export class PixelSyncSession {
     );
   }
 
-  /** `originTimestamp` (an undo/redo replay) is kept as the command's timestamp instead of "now"; never sent as-is over the wire. */
+  /**
+   * Uses an event's origin timestamp when available.
+   */
   #stamp(
     bufferId: string,
     event: PixelNetworkEvent
@@ -173,8 +169,7 @@ export class PixelSyncSession {
   }
 
   /**
-   * Detaches every buffer and clears transport callbacks. Call when the
-   * session ends.
+   * Detaches all canvases and clears transport callbacks.
    */
   destroy(): void {
     for (const bufferId of [...this.#managers.keys()]) {

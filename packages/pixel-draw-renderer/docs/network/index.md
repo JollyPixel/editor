@@ -11,7 +11,7 @@ implementation: this package has no dependency on voxel-renderer.
 ┌───────────────┐  onBufferUpdated   ┌──────────────────┐   sendCommand   ┌─────────────┐
 │ PixelArtCanvas │───────────────────▶│ PixelSyncSession │────────────────▶│  Transport  │
 │  (per buffer) │                    │  (multi-buffer)  │◀────────────────│ (WebSocket, │
-│               │◀──applyRemote──────│                  │   onCommand     │  WebRTC, …) │
+│               │◀──applyRemote──────│                  │   onCommand     │ WebRTC, ...) │
 └───────────────┘                    └──────────────────┘                 └──────┬──────┘
                                                                                   │ wire
                                                                                   ▼

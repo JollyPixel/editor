@@ -8,23 +8,18 @@ import type { DefaultPixelBuffer } from "../buffer/types.ts";
 
 export interface ShapeSelection {
   rect: SelectionRect;
-  /** Row-major, rect-relative: true where the pixel is part of the shape. */
+  /**
+   * Row-major shape mask.
+   */
   mask: boolean[];
 }
 
 /**
- * Computes a magic-wand-style shape selection: the 4-connected region of
- * pixels exactly matching the clicked pixel's color (see
- * Fill.connectedRegion), plus every pixel fully enclosed by that region —
- * unreachable from the region's own bounding-box border without crossing it
- * — so clicking a hollow outline selects the whole shape, border and
- * interior alike. Pure algorithm, no DOM coupling.
+ * Computes a connected shape selection and enclosed holes.
  */
 export class ShapeSelect {
   /**
-   * Returns null when the seed has no matching neighbors and the resulting
-   * shape (after hole-filling) covers 1 or fewer pixels — mirrors the
-   * "not 1x1" discard of a zero-drag rectangle selection.
+   * Returns null for selections smaller than two pixels.
    */
   static compute(
     buffer: DefaultPixelBuffer,
@@ -36,9 +31,15 @@ export class ShapeSelect {
     }
 
     const rect = ShapeSelect.#boundingRect(region);
-    const mask = ShapeSelect.#fillEnclosedHoles(region, rect);
+    const mask = ShapeSelect.#fillEnclosedHoles(
+      region,
+      rect
+    );
 
-    const selectedCount = mask.reduce((count, selected) => count + (selected ? 1 : 0), 0);
+    const selectedCount = mask.reduce(
+      (count, selected) => count + (selected ? 1 : 0),
+      0
+    );
     if (selectedCount <= 1) {
       return null;
     }
@@ -69,24 +70,21 @@ export class ShapeSelect {
     };
   }
 
-  /**
-   * Builds the rect-relative mask: true for every region pixel, plus every
-   * non-region pixel inside `rect` that has no path to the rect's own
-   * border without crossing a region pixel (an enclosed hole). Flood-fills
-   * from the rect's border cells outward-in, treating region pixels as
-   * walls — whatever the border flood-fill never reaches is enclosed.
-   */
   static #fillEnclosedHoles(
     region: Vec2[],
     rect: SelectionRect
   ): boolean[] {
     const { width, height } = rect;
-    const isRegion = new Array<boolean>(width * height).fill(false);
+    const isRegion = new Array<boolean>(
+      width * height
+    ).fill(false);
     for (const { x, y } of region) {
       isRegion[((y - rect.y) * width) + (x - rect.x)] = true;
     }
 
-    const exteriorReachable = new Array<boolean>(width * height).fill(false);
+    const exteriorReachable = new Array<boolean>(
+      width * height
+    ).fill(false);
     const stack: Vec2[] = [];
     function seed(x: number, y: number): void {
       const idx = (y * width) + x;
@@ -122,6 +120,8 @@ export class ShapeSelect {
       }
     }
 
-    return isRegion.map((selected, i) => selected || !exteriorReachable[i]);
+    return isRegion.map(
+      (selected, i) => selected || !exteriorReachable[i]
+    );
   }
 }

@@ -10,20 +10,21 @@ import type { Vec2 } from "../types.ts";
 export interface LineControllerOptions {
   brush: Brush;
   linePreview: LinePreviewOverlay;
-  /** Commits the stamped pixels of a completed segment as a single atomic edit. */
-  onCommit: (pixels: Vec2[]) => void;
+  onCommit: (
+    pixels: Vec2[]
+  ) => void;
 }
 
 /**
- * Glues the Line state machine to the brush (pixel stamping), the SVG line
- * preview overlay, and the host's commit path. Also owns the Shift-held flag
- * and last known cursor position, both meaningless outside line-arming.
+ * Coordinates line state, preview, and commits.
  */
 export class LineController {
   #line = new Line();
   #brush: Brush;
   #linePreview: LinePreviewOverlay;
-  #onCommit: (pixels: Vec2[]) => void;
+  #onCommit: (
+    pixels: Vec2[]
+  ) => void;
 
   #lastCursorPos: Vec2 | null = null;
   #isShiftHeld = false;
@@ -51,8 +52,7 @@ export class LineController {
   }
 
   /**
-   * Tracks the latest cursor position for arm() to start from, and keeps an
-   * already-armed preview following the cursor.
+    * Updates the cursor position and line preview.
    */
   updateCursor(
     pos: Vec2 | null
@@ -71,15 +71,15 @@ export class LineController {
       return;
     }
 
-    this.#line.arm(this.#lastCursorPos, commitTrigger);
+    this.#line.arm(
+      this.#lastCursorPos,
+      commitTrigger
+    );
     this.refreshPreview();
   }
 
   /**
-   * Commits the armed segment. If Shift is still held afterwards, immediately
-   * re-arms from the just-committed endpoint (commitTrigger "mousedown") so
-   * the next click continues a connected polyline instead of requiring the
-   * user to release and re-press Shift to resume line drawing.
+    * Commits the armed line segment.
    */
   commit(): void {
     const points = this.#line.commit();
@@ -88,10 +88,15 @@ export class LineController {
       return;
     }
 
-    this.#onCommit(this.#stampLinePixels(points));
+    this.#onCommit(
+      this.#stampLinePixels(points)
+    );
 
     if (this.#isShiftHeld) {
-      this.#line.arm(points.at(-1) ?? points[0], "mousedown");
+      this.#line.arm(
+        points.at(-1) ?? points[0],
+        "mousedown"
+      );
       this.refreshPreview();
     }
   }
@@ -120,15 +125,19 @@ export class LineController {
   }
 
   /**
-   * Expands raw rasterized line points into brush-stamped, deduplicated
-   * texture pixels (Line has no brush awareness).
+    * Expands line points into unique brush pixels.
    */
   #stampLinePixels(
     points: Vec2[]
   ): Vec2[] {
     const stamped = new Map<string, Vec2>();
     for (const point of points) {
-      for (const pixel of this.#brush.affectedPixels(point.x, point.y)) {
+      const affectedPixels = this.#brush.affectedPixels(
+        point.x,
+        point.y
+      );
+
+      for (const pixel of affectedPixels) {
         stamped.set(`${pixel.x},${pixel.y}`, pixel);
       }
     }

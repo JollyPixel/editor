@@ -8,15 +8,14 @@ import type {
   SelectionRect,
   Vec2
 } from "../types.ts";
-import type { DefaultPixelBuffer } from "./types.ts";
+import type {
+  DefaultPixelBuffer
+} from "./types.ts";
 
 export type CanvasBufferOptions = PixelBufferOptions;
 
 /**
- * CanvasBuffer is a Canvas2D adapter over a headless PixelBuffer: PixelBuffer
- * is the canonical pixel data (usable server-side with no DOM), and this class
- * keeps a working HTMLCanvasElement in sync with it so CanvasRenderer can blit
- * it directly every frame instead of paying a putImageData cost per draw.
+ * Synchronizes a PixelBuffer with a canvas.
  */
 export class CanvasBuffer implements DefaultPixelBuffer {
   #buffer: PixelBuffer;
@@ -76,7 +75,6 @@ export class CanvasBuffer implements DefaultPixelBuffer {
     source: HTMLCanvasElement | HTMLImageElement
   ): void {
     let canvas: HTMLCanvasElement;
-    // HTMLCanvasElement has getContext(); HTMLImageElement does not.
     if ("getContext" in source) {
       canvas = source;
     }
@@ -110,8 +108,7 @@ export class CanvasBuffer implements DefaultPixelBuffer {
   }
 
   /**
-   * Replaces the pixel data in place, keeping #workingCanvas's identity —
-   * used to apply raw bytes (e.g. a network snapshot) with no source canvas/image.
+   * Replaces pixels and resizes the existing canvas.
    */
   replacePixels(
     pixels: Uint8ClampedArray,
@@ -125,7 +122,7 @@ export class CanvasBuffer implements DefaultPixelBuffer {
   }
 
   /**
-   * Returns a copy — unlike PixelBuffer.pixels, mutating it won't affect the canvas.
+   * Returns a copy of the pixel data.
    */
   pixels(): Uint8ClampedArray {
     return Uint8ClampedArray.from(
@@ -134,8 +131,7 @@ export class CanvasBuffer implements DefaultPixelBuffer {
   }
 
   /**
-   * Syncs the canvas with one putImageData over the affected bounding box,
-   * instead of one per pixel (a real cost for large edits like a flood fill).
+   * Writes one color to each in-bounds position and syncs the canvas.
    */
   drawPixels(
     pixels: Iterable<Vec2>,
@@ -190,8 +186,7 @@ export class CanvasBuffer implements DefaultPixelBuffer {
   }
 
   /**
-   * Syncs the canvas with one putImageData over the in-bounds intersection
-   * of `rect` — the multi-color counterpart to drawPixels.
+   * Writes row-major colors to in-bounds rectangle cells and syncs the canvas.
    */
   drawRegion(
     rect: SelectionRect,
@@ -202,9 +197,7 @@ export class CanvasBuffer implements DefaultPixelBuffer {
   }
 
   /**
-   * Mask-aware counterpart to drawRegion, for non-rectangular (shape)
-   * selections: cells where `mask[i]` is false are left untouched instead
-   * of being overwritten with `pixels[i]`.
+   * Writes only rectangle cells with a true mask value and syncs the canvas.
    */
   drawMaskedRegion(
     rect: SelectionRect,
@@ -215,12 +208,6 @@ export class CanvasBuffer implements DefaultPixelBuffer {
     this.#resyncCanvasRegion(rect);
   }
 
-  /**
-   * Re-reads `rect`'s in-bounds intersection back from the buffer (now the
-   * source of truth) into the working canvas with one putImageData call —
-   * shared by drawRegion/drawMaskedRegion, since the buffer write already
-   * happened and only the untouched-vs-touched cells differ between them.
-   */
   #resyncCanvasRegion(
     rect: SelectionRect
   ): void {
@@ -266,6 +253,9 @@ export class CanvasBuffer implements DefaultPixelBuffer {
     return this.#buffer.samplePixel(x, y);
   }
 
+  /**
+   * Returns transparent pixels for out-of-bounds positions.
+   */
   samplePixels(
     positions: Vec2[]
   ): RGBA[] {

@@ -27,20 +27,15 @@ export interface ToolControllersOptions {
   linePreview: LinePreviewOverlay;
   selectionOverlay: SelectionOverlay;
   eraseColor: RGBA;
-  /** Forwarded to BrushController: a completed freehand stroke. */
   onStrokeCommit: (pixels: Vec2[], color: RGBA, beforeColors: RGBA[]) => void;
-  /** Forwarded to LineController: always commits in the primary color. */
   onCommitPixels: (pixels: Vec2[]) => void;
-  /** Forwarded to FillController: a contiguous fill, painted with the clicked button's color slot. */
   onFillCommitPixels: (pixels: Vec2[], slot: BrushColorSlot) => void;
   onGlobalFillCommit: (commit: FillGlobalCommit) => void;
   onSelectCommit: (entry: SelectEditEntry) => void;
 }
 
 /**
- * Groups the four interaction-mode controllers (paint/fill/line/select)
- * behind one object, exposed as `brush`/`fill`/`line`/`select` so callers
- * don't repeat the "Controller" suffix.
+ * Groups drawing tool controllers.
  */
 export class ToolControllers {
   readonly brush: BrushController;

@@ -1,25 +1,26 @@
 // Import Internal Dependencies
-import { toRGBA } from "../utils/colors.ts";
+import {
+  toRGBA
+} from "../utils/colors.ts";
 import type {
   ColorInput,
   RGBA,
   SelectionRect,
   Vec2
 } from "../types.ts";
-import type { DefaultPixelBuffer } from "./types.ts";
+import type {
+  DefaultPixelBuffer
+} from "./types.ts";
 
 export interface PixelBufferOptions {
   size: Vec2;
   /**
-   * Default fill color for newly created pixels. Accepts an RGBA object, a
-   * CSS color string (hex, rgb(), hsl(), named color, ...) or a colorjs.io
-   * `Color` instance.
+   * Default fill color.
    * @default { r: 255, g: 255, b: 255, a: 255 }
    */
   defaultColor?: RGBA | ColorInput;
   /**
-   * Size of the backing master buffer. The working buffer can be resized up
-   * to this limit without losing data previously committed via copyToMaster.
+   * Maximum master-buffer dimension.
    * @default 2048
    */
   maxSize?: number;
@@ -34,9 +35,7 @@ const kDefaultColor: RGBA = {
 };
 
 /**
- * PixelBuffer holds raw RGBA pixel data with no DOM dependency, so it can run
- * in a headless environment (server, tests) as well as behind a Canvas2D
- * adapter (CanvasBuffer) in the browser.
+ * Stores raw RGBA pixel data without DOM APIs.
  */
 export class PixelBuffer implements DefaultPixelBuffer {
   #width: number;
@@ -68,8 +67,7 @@ export class PixelBuffer implements DefaultPixelBuffer {
     const { r, g, b, a } = color;
 
     for (let i = 0; i < this.#master.length; i += 4) {
-      // Pixel (0,0) is always initialized fully transparent, regardless of
-      // defaultColor — preserved from the original CanvasBuffer behavior.
+      // Preserve a transparent origin pixel.
       const alpha = i === 0 ? 0 : a;
       this.#master[i] = r;
       this.#master[i + 1] = g;
@@ -115,14 +113,14 @@ export class PixelBuffer implements DefaultPixelBuffer {
   }
 
   /**
-   * Returns the live working buffer (not a copy).
+   * Returns the mutable working buffer.
    */
   pixels(): Uint8ClampedArray {
     return this.#working;
   }
 
   /**
-   * Replaces the pixel data wholesale, resizing the buffer to match.
+   * Replaces pixels and resizes the buffer.
    */
   replacePixels(
     pixels: Uint8ClampedArray,
@@ -134,8 +132,7 @@ export class PixelBuffer implements DefaultPixelBuffer {
   }
 
   /**
-   * Stamps a single color across a list of positions; out-of-bounds
-   * positions are skipped.
+   * Writes one color to each in-bounds position.
    */
   drawPixels(
     positions: Iterable<Vec2>,
@@ -144,7 +141,6 @@ export class PixelBuffer implements DefaultPixelBuffer {
     const { r, g, b, a } = color;
 
     for (const { x, y } of positions) {
-      // Mirrors Canvas2D's implicit clipping of out-of-bounds putImageData calls.
       if (
         x < 0 || x >= this.#width ||
         y < 0 || y >= this.#height
@@ -161,9 +157,7 @@ export class PixelBuffer implements DefaultPixelBuffer {
   }
 
   /**
-   * Writes a rectangular block of per-pixel colors (row-major), unlike
-   * drawPixels which stamps one color across a list of positions.
-   * Out-of-bounds positions are skipped, same as drawPixels.
+   * Writes row-major colors to in-bounds rectangle cells.
    */
   drawRegion(
     rect: SelectionRect,
@@ -191,10 +185,7 @@ export class PixelBuffer implements DefaultPixelBuffer {
   }
 
   /**
-   * Like drawRegion, but skips any cell where `mask[i]` is false — used for
-   * non-rectangular (shape) selections, where the RGBA array is still a
-   * dense rect-sized grid but only some of its cells are actually part of
-   * the selection. Untouched cells keep whatever they held before.
+   * Writes only rectangle cells with a true mask value.
    */
   drawMaskedRegion(
     rect: SelectionRect,
@@ -256,9 +247,7 @@ export class PixelBuffer implements DefaultPixelBuffer {
   }
 
   /**
-   * Batched samplePixel: out-of-bounds positions resolve to fully
-   * transparent rather than reading a neighboring row (samplePixel only
-   * guards negative indices, not x/y past width/height).
+   * Returns transparent pixels for out-of-bounds positions.
    */
   samplePixels(
     positions: Vec2[]

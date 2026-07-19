@@ -3,8 +3,12 @@ import { SVG_NS } from "./constants.ts";
 import { BrushHighlightOverlay } from "./overlays/BrushHighlightOverlay.ts";
 import { LinePreviewOverlay } from "./overlays/LinePreviewOverlay.ts";
 import { SelectionOverlay } from "./overlays/SelectionOverlay.ts";
-import type { DefaultViewport } from "./Viewport.ts";
-import type { BrushHighlight } from "../types.ts";
+import type {
+  DefaultViewport
+} from "./Viewport.ts";
+import type {
+  BrushHighlight
+} from "../types.ts";
 
 export interface SvgManagerOptions {
   parent: HTMLDivElement;
@@ -13,12 +17,7 @@ export interface SvgManagerOptions {
 }
 
 /**
- * SvgManager owns the SVG overlay element stacked on top of the canvas and
- * its lifecycle (sizing, reparenting, teardown). Each visual aid (brush
- * highlight, line preview, selection rect, ...) is its own overlay class in
- * `./overlays/`, exposed directly here rather than mirrored through
- * pass-through methods — callers interact with e.g. `svgManager.selection`
- * instead of `svgManager.setSelectionRect(...)`.
+ * Manages SVG rendering overlays.
  */
 export class SvgManager {
   #parentHtmlElement: HTMLDivElement;
@@ -65,8 +64,14 @@ export class SvgManager {
     });
 
     const boundingRect = this.#parentHtmlElement.getBoundingClientRect();
-    svg.setAttribute("width", String(boundingRect.width));
-    svg.setAttribute("height", String(boundingRect.height));
+    svg.setAttribute(
+      "width",
+      String(boundingRect.width)
+    );
+    svg.setAttribute(
+      "height",
+      String(boundingRect.height)
+    );
 
     this.#parentHtmlElement.appendChild(svg);
 
@@ -77,8 +82,14 @@ export class SvgManager {
     width: number,
     height: number
   ): void {
-    this.#svg.setAttribute("width", String(width));
-    this.#svg.setAttribute("height", String(height));
+    this.#svg.setAttribute(
+      "width",
+      String(width)
+    );
+    this.#svg.setAttribute(
+      "height",
+      String(height)
+    );
   }
 
   destroy(): void {

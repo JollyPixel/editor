@@ -2,8 +2,12 @@
 import { Select } from "./Select.ts";
 import { ShapeSelect } from "./ShapeSelect.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
-import type { CanvasRenderer } from "../rendering/CanvasRenderer.ts";
-import type { SelectionOverlay } from "../rendering/overlays/SelectionOverlay.ts";
+import type {
+  CanvasRenderer
+} from "../rendering/CanvasRenderer.ts";
+import type {
+  SelectionOverlay
+} from "../rendering/overlays/SelectionOverlay.ts";
 import type {
   RGBA,
   SelectionRect,
@@ -26,16 +30,13 @@ export interface SelectControllerOptions {
   selectionOverlay: SelectionOverlay;
   eraseColor: RGBA;
   /**
-   * Called after a selection edit (delete/move/paste/rotate/flip) is
-   * committed to the buffer, reporting exactly what changed so the caller
-   * can record it for undo/redo.
+   * Commits a selection edit.
    */
   onCommit: (entry: SelectEditEntry) => void;
 }
 
 /**
- * Glues the Select state machine to the pixel buffer, renderer (floating
- * drag overlay + frame redraws) and the SVG selection-rect overlay.
+ * Coordinates selection state, rendering, and commits.
  */
 export class SelectController {
   #select = new Select();
@@ -61,12 +62,7 @@ export class SelectController {
   }
 
   /**
-   * Whether a mousedown on empty space starts a magic-wand shape selection
-   * (flood-filled connected region + enclosed holes, see ShapeSelect)
-   * instead of dragging out a rectangle. Mirrors FillController's own
-   * runtime-only toggle. Changing it clears any active selection, since a
-   * selection's meaning (rect-only vs. masked shape) shouldn't be
-   * reinterpreted mid-flight.
+   * Whether empty-space clicks create shape selections.
    */
   get shape(): boolean {
     return this.#shapeMode;
@@ -84,15 +80,15 @@ export class SelectController {
   }
 
   /**
-   * Left mousedown in "select" mode: grabs the existing selection to move it
-   * when `pos` falls inside its bounding rect, otherwise discards any prior
-   * selection and either starts dragging out a new rectangle or, in shape
-   * mode, performs a magic-wand click-select.
+   * Starts creating or moving a selection.
    */
   handleStart(
     pos: Vec2
   ): void {
-    if (this.#select.state === "selected" && this.#select.hitTest(pos)) {
+    if (
+      this.#select.state === "selected" &&
+      this.#select.hitTest(pos)
+    ) {
       this.#startMoveAt(pos);
 
       return;
@@ -137,8 +133,15 @@ export class SelectController {
       return;
     }
 
-    const snapshot = Select.captureSnapshot(this.#canvasBuffer, shape.rect);
-    this.#select.selectRegion(shape.rect, snapshot, shape.mask);
+    const snapshot = Select.captureSnapshot(
+      this.#canvasBuffer,
+      shape.rect
+    );
+    this.#select.selectRegion(
+      shape.rect,
+      snapshot,
+      shape.mask
+    );
     this.#selectionOverlay.drawMask(shape.rect, shape.mask);
   }
 
@@ -174,7 +177,10 @@ export class SelectController {
           this.#selectionOverlay.clear();
         }
         else {
-          const snapshot = Select.captureSnapshot(this.#canvasBuffer, rect);
+          const snapshot = Select.captureSnapshot(
+            this.#canvasBuffer,
+            rect
+          );
           this.#select.finishCreate(snapshot);
         }
       }
@@ -202,15 +208,16 @@ export class SelectController {
       const rect = this.#select.rect;
       const currentMask = this.#select.mask;
       if (rect && currentMask) {
-        this.#selectionOverlay.drawMask(rect, currentMask);
+        this.#selectionOverlay.drawMask(
+          rect,
+          currentMask
+        );
       }
     }
   }
 
   /**
-   * Ctrl/Cmd+C: snapshots the active selection into Select's clipboard.
-   * No-op (returns false, letting the browser's default copy proceed)
-   * unless a selection is currently active.
+   * Copies the active selection.
    */
   handleCopy(): boolean {
     if (this.#select.state !== "selected") {
@@ -223,9 +230,7 @@ export class SelectController {
   }
 
   /**
-   * Ctrl/Cmd+V: stamps the clipboard snapshot back onto the buffer at the
-   * exact position it was copied from, and makes it the new active
-   * selection so the next drag relocates the duplicate.
+   * Pastes the clipboard as the active selection.
    */
   handlePaste(): boolean {
     const result = this.#select.paste();
@@ -241,15 +246,16 @@ export class SelectController {
       newContent: result.pixels,
       skipErase: true
     });
-    this.#selectionOverlay.drawMask(result.rect, result.mask);
+    this.#selectionOverlay.drawMask(
+      result.rect,
+      result.mask
+    );
 
     return true;
   }
 
   /**
-   * Delete key: fills the active selection's masked cells with the
-   * configured erase color. The selection stays active, now over blanked
-   * pixels.
+   * Erases the active selection.
    */
   handleDelete(): boolean {
     if (this.#select.state !== "selected") {
@@ -262,7 +268,9 @@ export class SelectController {
       return false;
     }
 
-    const eraseColors: RGBA[] = new Array(rect.width * rect.height).fill(this.#eraseColor);
+    const eraseColors: RGBA[] = new Array(
+      rect.width * rect.height
+    ).fill(this.#eraseColor);
     this.#commitFootprintChange({
       oldRect: rect,
       oldMask: mask,
@@ -277,9 +285,7 @@ export class SelectController {
   }
 
   /**
-   * "R": rotates the active selection (content and mask) 90 degrees
-   * clockwise around its center. No-op (returns false) unless a selection
-   * is currently active.
+   * Rotates the active selection clockwise.
    */
   handleRotate(): boolean {
     if (this.#select.state !== "selected") {
@@ -302,25 +308,22 @@ export class SelectController {
       newContent: snapshot,
       skipErase: false
     });
-    this.#selectionOverlay.drawMask(result.newRect, newMask);
+    this.#selectionOverlay.drawMask(
+      result.newRect,
+      newMask
+    );
 
     return true;
   }
 
-  /** "H": mirrors the active selection's content (and mask) left-right in place. */
   handleFlipHorizontal(): boolean {
     return this.#handleFlip((select) => select.flipHorizontal());
   }
 
-  /** "V": mirrors the active selection's content (and mask) top-bottom in place. */
   handleFlipVertical(): boolean {
     return this.#handleFlip((select) => select.flipVertical());
   }
 
-  /**
-   * Shared guard/commit tail for handleFlipHorizontal/handleFlipVertical —
-   * flipping never moves or resizes the rect, only its content and mask.
-   */
   #handleFlip(
     flip: (select: Select) => SelectionRect | null
   ): boolean {
@@ -358,21 +361,12 @@ export class SelectController {
   refreshOverlay(): void {
     const rect = this.#select.rect;
     const mask = this.#select.mask;
+
     if (rect && mask) {
       this.#selectionOverlay.drawMask(rect, mask);
     }
   }
 
-  /**
-   * Shared commit step for move/delete/paste/rotate/flip: vacates
-   * `oldRect`'s masked cells (unless `skipErase`), paints `newContent`'s
-   * masked cells into `newRect`, and reports the union of both footprints'
-   * masked before/after colors so the caller can record a single undo/redo
-   * entry. Cells outside a mask are left completely untouched — not even
-   * blanked — which is what makes a non-rectangular shape selection behave
-   * like one. Out-of-bounds positions are silently clipped by CanvasBuffer,
-   * same as every other paint path here.
-   */
   #commitFootprintChange(
     change: {
       oldRect: SelectionRect;
@@ -383,14 +377,32 @@ export class SelectController {
       skipErase: boolean;
     }
   ): void {
-    const { oldRect, oldMask, newRect, newMask, newContent, skipErase } = change;
-    const positions = unionMaskedPositions({ rect: oldRect, mask: oldMask }, { rect: newRect, mask: newMask });
+    const {
+      oldRect,
+      oldMask,
+      newRect,
+      newMask,
+      newContent,
+      skipErase
+    } = change;
+
+    const positions = unionMaskedPositions(
+      { rect: oldRect, mask: oldMask },
+      { rect: newRect, mask: newMask }
+    );
     const beforeColors = this.#canvasBuffer.samplePixels(positions);
 
     if (!skipErase) {
-      this.#canvasBuffer.drawPixels(maskedPositions({ rect: oldRect, mask: oldMask }), this.#eraseColor);
+      this.#canvasBuffer.drawPixels(
+        maskedPositions({ rect: oldRect, mask: oldMask }),
+        this.#eraseColor
+      );
     }
-    this.#canvasBuffer.drawMaskedRegion(newRect, newContent, newMask);
+    this.#canvasBuffer.drawMaskedRegion(
+      newRect,
+      newContent,
+      newMask
+    );
     this.#canvasBuffer.copyToMaster();
 
     const afterColors = this.#canvasBuffer.samplePixels(positions);
@@ -407,17 +419,16 @@ export class SelectController {
   }
 
   /**
-   * Resyncs the selection box, cached content and mask after a history
-   * undo/redo replay: `rect`/`mask` are the footprint/shape the selection
-   * should now cover (old on undo, new on redo), and the content is
-   * re-sampled from the buffer — now the source of truth — rather than
-   * trusting whatever Select had cached before the replay.
+   * Restores selection state after a history replay.
    */
   syncSelectionAfterHistory(
     rect: SelectionRect,
     mask: boolean[]
   ): void {
-    const snapshot = Select.captureSnapshot(this.#canvasBuffer, rect);
+    const snapshot = Select.captureSnapshot(
+      this.#canvasBuffer,
+      rect
+    );
     this.#select.restoreRect(rect, snapshot, mask);
     this.#selectionOverlay.drawMask(rect, mask);
   }
@@ -428,10 +439,6 @@ interface MaskedFootprint {
   mask: boolean[];
 }
 
-/**
- * Enumerates every texture-space position covered by a footprint's masked
- * (selected) cells, row-major.
- */
 function* maskedPositions(
   footprint: MaskedFootprint
 ): IterableIterator<Vec2> {
@@ -446,12 +453,6 @@ function* maskedPositions(
   }
 }
 
-/**
- * The deduplicated union of two masked footprints' positions — a Move's
- * source/dest can overlap, and a Rotate's old/new footprint can differ in
- * shape entirely (non-square rect), so this can't be expressed as a single
- * bounding rect without over-capturing untouched cells.
- */
 function unionMaskedPositions(
   a: MaskedFootprint,
   b: MaskedFootprint

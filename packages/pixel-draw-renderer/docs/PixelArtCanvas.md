@@ -1,6 +1,15 @@
 # PixelArtCanvas
 
-`PixelArtCanvas` is the top-level coordinator for the pixel-draw renderer, and the package's primary public API. It wires together a viewport, canvas buffer, renderer, input handling, and SVG overlay — all internal implementation details — and owns the [`Brush`](./tools/Brush.md) tool, internal line/fill/select tools, and an internal `HistoryController` that wraps a [`HistoryStack`](./history/HistoryStack.md) for undo/redo (constructed unconditionally; only records entries when `history.enabled` is passed).
+`PixelArtCanvas` is the top-level coordinator for the pixel-draw renderer and the package's primary public API.
+
+It wires together a viewport, canvas buffer, renderer, input handling, and SVG overlay (all internal implementation details) and owns:
+
+- the [`Brush`](./tools/Brush.md) tool
+- internal line/fill/select tools (no public class of their own)
+- an internal `HistoryController` wrapping a [`HistoryStack`](./history/HistoryStack.md) for undo/redo
+
+> [!IMPORTANT]
+> `HistoryController` is constructed unconditionally, but only records entries when `history.enabled` is passed. Leaving it unset skips that bookkeeping entirely.
 
 ## Types
 
@@ -35,7 +44,7 @@ interface PixelArtCanvasOptions {
     init?: HTMLCanvasElement;
   };
   zoom?: {
-    default: number;
+    default?: number;
     sensitivity?: number;
     min?: number;
     max?: number;
@@ -91,7 +100,7 @@ interface PixelArtCanvasOptions {
 
 `Mode` is `"paint" | "move" | "fill" | "select"`. `ColorInput` (`string | Color`, where `Color` is [colorjs.io](https://colorjs.io)'s class) is used throughout the package wherever a color option is accepted: a CSS color string (hex, `rgb()`, `hsl()`, named color, ...) or a `Color` instance. `BrushOptions` is forwarded to the internal `Brush` instance, see [Brush.md](./tools/Brush.md). `PixelBufferHookListener` is described in [buffer/PixelBuffer.md](./buffer/PixelBuffer.md) and [network/index.md](./network/index.md). `Keybindings` is described in [utils/keybindings.md](./utils/keybindings.md).
 
-`history.enabled` (default `false`) tells the internal `HistoryController` to back itself with a [`HistoryStack`](./history/HistoryStack.md) that records every stroke, resize, and texture replace, enabling `undo()`/`redo()`. Leaving it disabled skips that bookkeeping entirely — there's no per-edit cost paid for a feature that isn't used.
+`history.enabled` (default `false`) tells the internal `HistoryController` to back itself with a [`HistoryStack`](./history/HistoryStack.md) that records every stroke, resize, and texture replace, enabling `undo()`/`redo()`. Leaving it disabled skips that bookkeeping entirely: there's no per-edit cost paid for a feature that isn't used.
 
 Undocumented defaults: `texture.size` is `{ x: 64, y: 32 }` (`y` falls back to `x` when only `x` is given), `texture.maxSize` is `2048`, `zoom.default` is `4`, `zoom.min`/`zoom.max` are `1`/`32`, `zoom.sensitivity` is `0.1`, `backgroundTransparency.squareSize` is `8`, `backgroundTransparency.colors` is `{ odd: "#999", even: "#666" }`.
 
@@ -113,7 +122,7 @@ The brush instance. Use it to read or change the primary/secondary brush colors,
 readonly viewport: DefaultViewport // { readonly zoom: Zoom; readonly camera: Readonly<Vec2>; }
 ```
 
-Read-only camera/zoom state. `viewport.zoom` is a `Zoom` value object (`.value`, `.min`, `.max`, `.sensitivity`), not a plain number — use the top-level `zoom`/`zoomSensitivity` accessors below for the numeric level, or the methods below for coordinate conversions and mutation.
+Read-only camera/zoom state. `viewport.zoom` is a `Zoom` value object (`.value`, `.min`, `.max`, `.sensitivity`), not a plain number; use the top-level `zoom`/`zoomSensitivity` accessors below for the numeric level, or the methods below for coordinate conversions and mutation.
 
 ## Methods
 
@@ -124,13 +133,23 @@ get mode(): Mode
 set mode(mode: Mode)
 ```
 
-Reads or sets the current interaction mode. `"paint"` routes left-click events to brush drawing with `brush.primary` (holding `Shift` arms a line tool, always drawn in `primary`) and right-click events to brush drawing with `brush.secondary` — the two buttons paint mutually exclusively, a stroke already in progress on one button blocks the other from starting until it ends; `"move"` routes left-click to panning; `"fill"` routes a left-click to a paint-bucket fill with `brush.primary` and a right-click to the same fill with `brush.secondary` (contiguous region by default, or every same-colored pixel on the canvas when `fillGlobal` is `true` — see below; unlike `"paint"`, a fill click is single-shot and not tracked as a drag, so the two buttons aren't mutually exclusive the way brush strokes are); `"select"` routes them to a rectangle-selection tool: drag to select or move, `Ctrl`/`Cmd`+`C`/`V` to copy/duplicate, `Delete` to erase, `R` to rotate the selection 90° clockwise around its center (repeatable — press again for further rotation; no counterclockwise binding), `H`/`V` to flip the selection's content horizontally/vertically in place. The line/fill/select tools are internal implementation details with no public class of their own.
+Reads or sets the current interaction mode.
 
-A drag that never grows past its starting pixel (a plain click) does not create a selection.
+| Mode | Left-click | Right-click |
+|---|---|---|
+| `"paint"` | Brush stroke with `brush.primary`. Hold `Shift` to arm a straight-line tool (always drawn in `primary`). | Brush stroke with `brush.secondary`. |
+| `"move"` | Pans the camera. | N/A |
+| `"fill"` | Paint-bucket fill from the clicked pixel with `brush.primary`. | Same fill with `brush.secondary`. |
+| `"select"` | Drag to select or move a rectangle. | N/A |
 
-Switching to `"move"` cancels an armed line. Switching away from `"select"` clears any active selection.
+- `"paint"`: the two buttons are mutually exclusive, a stroke already in progress on one button blocks the other from starting until it ends.
+- `"fill"`: fills the clicked pixel's contiguous region by default, or every same-colored pixel on the canvas when `fillGlobal` is `true` (see below). A fill click is single-shot and not tracked as a drag, so, unlike `"paint"`, the two buttons aren't mutually exclusive.
+- `"select"`: `Ctrl`/`Cmd`+`C`/`V` copies/duplicates, `Delete` erases, `R` rotates the selection 90° clockwise around its center (repeatable: press again for further rotation; no counterclockwise binding), `H`/`V` flips the selection's content horizontally/vertically in place. A drag that never grows past its starting pixel (a plain click) does not create a selection.
 
-The SVG brush-cursor highlight is active in `"paint"` and `"fill"` modes. In `"fill"`, and in `"paint"` while `pickColorArmed` is `true`, the highlight is always a single pixel regardless of `brush`'s configured size, since neither a fill's seed nor a color pick is brush-sized.
+> [!IMPORTANT]
+> - The line/fill/select tools are internal implementation details with no public class of their own.
+> - Switching to `"move"` cancels an armed line. Switching away from `"select"` clears any active selection.
+> - The SVG brush-cursor highlight is active only in `"paint"` and `"fill"`. In `"fill"`, and in `"paint"` while `pickColorArmed` is `true`, the highlight is always a single pixel regardless of `brush`'s configured size, since neither a fill's seed nor a color pick is brush-sized.
 
 ---
 
@@ -141,9 +160,28 @@ get fillGlobal(): boolean
 set fillGlobal(global: boolean)
 ```
 
-Reads or sets whether `"fill"` mode recolors every pixel matching the seed's color anywhere on the canvas (`true`) instead of only the seed's 4-directionally connected region (`false`, the default). Runtime-only — there is no constructor option — and the setting persists across mode switches, mirroring `brush`'s size/color.
+Reads or sets whether `"fill"` mode recolors every pixel matching the seed's color anywhere on the canvas (`true`), instead of only the seed's 4-directionally connected region (`false`, the default).
 
-A global fill is still committed and undoable as a single atomic edit, but is broadcast over `onBufferUpdated`/the network layer as a compact `"global-fill"` event (`{ fromColor, toColor }`, no position list) rather than `"stroke"`, since it can touch a large fraction of the canvas — see [buffer/PixelBuffer.md](./buffer/PixelBuffer.md). Undoing/redoing a global fill falls back to a full-position `"stroke"` event.
+Runtime-only: there is no constructor option. The setting persists across mode switches, mirroring `brush`'s size/color.
+
+> [!IMPORTANT]
+> A global fill still commits and undoes as a single atomic edit, but broadcasts over `onBufferUpdated`/the network layer as a compact `"global-fill"` event (`{ fromColor, toColor }`, no position list) instead of `"stroke"`, since it can touch a large fraction of the canvas; see [buffer/PixelBuffer.md](./buffer/PixelBuffer.md). Undoing/redoing a global fill replays as a full-position `"stroke"` event instead.
+
+---
+
+### `selectShape`
+
+```ts
+get selectShape(): boolean
+set selectShape(shape: boolean)
+```
+
+Reads or sets whether `"select"` mode's click-to-start (on empty space, not on top of an existing selection) computes a magic-wand shape selection around the clicked pixel's connected region (`true`), instead of starting a rectangle drag (`false`, the default).
+
+Runtime-only: there is no constructor option. Toggling this value clears any active selection.
+
+> [!IMPORTANT]
+> A connected region smaller than 2 pixels does not produce a selection; the click is a no-op.
 
 ---
 
@@ -155,13 +193,20 @@ set pickColorArmed(armed: boolean)
 pickColorAt(x: number, y: number): RGBA | null
 ```
 
-`pickColorArmed` arms/disarms a one-shot color picker on top of `"paint"` mode — it is not a separate `Mode`. While armed, the next left-click in `"paint"` mode samples that pixel instead of painting, applies it to `brush.primary`, and disarms itself. It has no effect in any other mode, and switching `mode` away from `"paint"` disarms it automatically. A click outside the texture bounds is ignored (no pick, stays armed) rather than sampling transparent black.
+Three independent paths sample a pixel color into `brush.primary`:
 
-`pickColorAt(x, y)` performs the same sample-and-apply immediately at the given texture position, independent of the current mode and of `pickColorArmed` — it's the direct/programmatic entry point, e.g. for a "pick color" toolbar button that should always work regardless of what mode is active. Returns the sampled `RGBA`, or `null` (brush left untouched) when `(x, y)` is outside the texture.
+| Path | Trigger | Scope |
+|---|---|---|
+| `pickColorArmed = true` | Next left-click in `"paint"` mode | Arms/disarms itself; no effect in any other mode |
+| `pickColorAt(x, y)` | Called directly, any time | Programmatic entry point (e.g. a toolbar button); independent of `mode`/`pickColorArmed` |
+| `Ctrl`+right-click | Mousedown, in `"paint"` mode | Always available; single-shot, independent of `pickColorArmed` |
 
-`Ctrl`+right-click in `"paint"` mode is a third, always-available path to the same one-shot pick into `brush.primary`: it's a single-shot sample-and-apply at mousedown (not tracked as a drag, and does not start a `brush.secondary` stroke), independent of `pickColorArmed`.
+- `pickColorArmed`: not a separate `Mode`, just a flag on top of `"paint"`. While armed, the next left-click samples that pixel instead of painting, applies it, and disarms itself. Switching `mode` away from `"paint"` disarms it automatically. A click outside the texture bounds is ignored (stays armed) rather than sampling transparent black.
+- `pickColorAt(x, y)`: returns the sampled `RGBA`, or `null` (brush left untouched) when `(x, y)` is outside the texture.
+- `Ctrl`+right-click: a single-shot sample-and-apply at mousedown, not tracked as a drag, and does not start a `brush.secondary` stroke. Plain right-click (no `Ctrl`) is not a picker; see `mode` above for what it does instead.
 
-Every path dispatches a `"colorpicked"` CustomEvent (`detail: { hex, opacity }`, bubbling and composed) on the element returned by `canvas()`, for UI that mirrors the pick onto a color swatch. Plain right-click (no `Ctrl`) is not a picker — see `mode` above for what it does instead.
+> [!IMPORTANT]
+> Every path dispatches a `"colorpicked"` CustomEvent (`detail: { hex, opacity }`, bubbling and composed) on the element returned by `canvas()`; use it to mirror the pick onto a UI color swatch.
 
 ---
 
@@ -172,7 +217,7 @@ get backgroundColor(): string
 set backgroundColor(color: ColorInput)
 ```
 
-Reads or changes the fill color for the canvas area outside the texture bounds — see the `backgroundColor` constructor option above for how the initial value is resolved. The setter takes effect immediately (redraws the canvas itself); no `drawFrame()` call needed.
+Reads or changes the fill color for the canvas area outside the texture bounds; see the `backgroundColor` constructor option above for how the initial value is resolved. The setter takes effect immediately (redraws the canvas itself); no `drawFrame()` call needed.
 
 ---
 
@@ -193,7 +238,9 @@ Reads or changes the current texture size. Setting it resizes the working buffer
 commitPixels(pixels: Vec2[], slot?: BrushColorSlot): void
 ```
 
-Commits an already-computed pixel set as a single atomic edit: one draw call, one redraw, one `"stroke"` hook emission. Used internally by the line tool to commit a whole rasterized line in one operation instead of redrawing once per point (always `"primary"`, matching the line tool itself), and by the fill tool to commit a flood-filled region in one shot (`"primary"` for a left-click, `"secondary"` for a right-click). A no-op when `pixels` is empty. `slot` defaults to `"primary"`; the color used is that slot's current color/opacity.
+Commits an already-computed pixel set as a single atomic edit: one draw call, one redraw, one `"stroke"` hook emission. A no-op when `pixels` is empty. `slot` defaults to `"primary"`; the color used is that slot's current color/opacity.
+
+Used internally by the line tool (a whole rasterized line committed in one operation instead of redrawing once per point, always `"primary"`) and the fill tool (a flood-filled region committed in one shot, `"primary"` for a left-click / `"secondary"` for a right-click).
 
 ---
 
@@ -206,11 +253,17 @@ canUndo(): boolean
 canRedo(): boolean
 ```
 
-Reverts/re-applies the most recent local edit (stroke, resize, or texture replace) via the internal `HistoryController`, which wraps a [`HistoryStack`](./history/HistoryStack.md). `undo()`/`redo()` return `false` and do nothing when `history.enabled` wasn't passed at construction, or when the corresponding stack is empty; `canUndo()`/`canRedo()` report the same condition without mutating anything. Both bound to the configurable undo/redo keybindings by default, see [utils/keybindings.md](./utils/keybindings.md).
+Reverts/re-applies the most recent local edit (stroke, resize, or texture replace) via the internal `HistoryController`, which wraps a [`HistoryStack`](./history/HistoryStack.md).
 
-A successful `undo()`/`redo()` redraws the canvas, calls `onDrawEnd`, fires `onHistoryChange`, and — for a history-enabled `PixelArtCanvas` attached to a `PixelSyncSession` — emits the reverted/re-applied state through `onBufferUpdated` so peers converge to the same result (see [buffer/PixelBuffer.md](./buffer/PixelBuffer.md) for how the replayed event's `originTimestamp` keeps that fair under conflict resolution). The one exception: undoing/redoing a `"select"`-mode edit (move/delete/paste/rotate/flip) never emits `onBufferUpdated`, since those edits aren't networked in the first place (see `mode`/select-mode note above) — undo/redo for them is local-only.
+- `undo()`/`redo()` return `false` and do nothing when `history.enabled` wasn't passed at construction, or when the corresponding stack is empty.
+- `canUndo()`/`canRedo()` report the same condition without mutating anything.
+- Both are bound to the configurable undo/redo keybindings by default; see [utils/keybindings.md](./utils/keybindings.md).
 
-A remote resize, texture-replace, or snapshot load clears the local history stack (its recorded positions/sizes no longer describe the buffer), so `canUndo()`/`canRedo()` drop to `false` after one.
+A successful call redraws the canvas, calls `onDrawEnd`, and fires `onHistoryChange`.
+
+> [!IMPORTANT]
+> - For a history-enabled `PixelArtCanvas` attached to a `PixelSyncSession`, a successful `undo()`/`redo()` also emits the reverted/re-applied state through `onBufferUpdated` so peers converge to the same result (the replayed event's `originTimestamp` keeps that fair under conflict resolution; see [buffer/PixelBuffer.md](./buffer/PixelBuffer.md)). **Exception:** undoing/redoing a `"select"`-mode edit (move/delete/paste/rotate/flip) never emits `onBufferUpdated`, since those edits aren't networked in the first place, so their undo/redo is local-only.
+> - A remote resize, texture-replace, or snapshot load clears the local history stack (its recorded positions/sizes no longer describe the buffer), so `canUndo()`/`canRedo()` drop to `false` afterward.
 
 ---
 
@@ -222,7 +275,7 @@ flipSelectionHorizontal(): boolean
 flipSelectionVertical(): boolean
 ```
 
-Programmatic equivalents of the `R`/`H`/`V` select-mode keybindings (e.g. for a toolbar button) — same underlying commit path, so keyboard and button can't drift apart. Each returns `false` and does nothing without an active `"select"`-mode selection.
+Programmatic equivalents of the `R`/`H`/`V` select-mode keybindings (e.g. for a toolbar button): same underlying commit path, so keyboard and button can't drift apart. Each returns `false` and does nothing without an active `"select"`-mode selection.
 
 ---
 
@@ -295,7 +348,7 @@ get keybindings(): Readonly<Keybindings>
 patchKeybindings(patch: Partial<Keybindings>): void
 ```
 
-Reads the currently effective keybindings, or merges `patch` onto them (actions not present in `patch` keep their current binding). Throws `InvalidKeybindingError` for a malformed combo string, or `KeybindingConflictError` if the result would bind two actions to the same combo — either way the previous keybindings remain in effect. See [utils/keybindings.md](./utils/keybindings.md).
+Reads the currently effective keybindings, or merges `patch` onto them (actions not present in `patch` keep their current binding). Throws `InvalidKeybindingError` for a malformed combo string, or `KeybindingConflictError` if the result would bind two actions to the same combo; either way the previous keybindings remain in effect. See [utils/keybindings.md](./utils/keybindings.md).
 
 ---
 
