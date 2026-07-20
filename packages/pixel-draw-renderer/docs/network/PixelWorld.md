@@ -2,6 +2,8 @@
 
 Headless, multi-buffer registry. Used by [`PixelSyncServer`](./PixelSyncServer.md) as the authoritative store for every buffer (texture) shared in a session. Has no DOM/Canvas2D dependency and runs in Node.js / Deno / Bun.
 
+Each registered [`PixelBuffer`](../buffer/PixelBuffer.md) also holds its own UV regions (see [uv/UVMap.md](../uv/UVMap.md)) — there is no separate "UV world".
+
 ## Types
 
 ```ts

@@ -1,0 +1,410 @@
+// Import Node.js Dependencies
+import { describe, test, before, beforeEach } from "node:test";
+import assert from "node:assert/strict";
+
+// Import Third-party Dependencies
+import { Window } from "happy-dom";
+
+// Import Internal Dependencies
+import { PixelArtCanvas, type PixelArtCanvasOptions } from "../src/PixelArtCanvas.ts";
+import type { PixelBufferHookEvent } from "../src/buffer/hooks.ts";
+import { installCanvasMock } from "./mocks.ts";
+
+// CONSTANTS
+const kEmulatedBrowserWindow = new Window();
+
+before(() => {
+  globalThis.document = kEmulatedBrowserWindow.document as unknown as Document;
+  // @ts-expect-error
+  globalThis.window = kEmulatedBrowserWindow as unknown as Window & typeof globalThis;
+  // @ts-expect-error
+  globalThis.getComputedStyle = (_el: unknown) => {
+    return { backgroundColor: "#555555" };
+  };
+  installCanvasMock(globalThis.document);
+  globalThis.MouseEvent = (kEmulatedBrowserWindow as unknown as Record<string, unknown>).MouseEvent as typeof MouseEvent;
+  globalThis.KeyboardEvent = (kEmulatedBrowserWindow as unknown as Record<string, unknown>).KeyboardEvent as typeof KeyboardEvent;
+  globalThis.HTMLElement = (kEmulatedBrowserWindow as unknown as Record<string, unknown>).HTMLElement as typeof HTMLElement;
+  globalThis.Event = (kEmulatedBrowserWindow as unknown as Record<string, unknown>).Event as typeof Event;
+});
+
+function makeContainer(): HTMLDivElement {
+  const div = kEmulatedBrowserWindow.document.createElement("div") as unknown as HTMLDivElement;
+  (div as any).getBoundingClientRect = () => {
+    return {
+      left: 0, top: 0, right: 200, bottom: 200, width: 200, height: 200
+    };
+  };
+  (div as any).style = {};
+  (div as any).appendChild = (_child: unknown) => {
+    // No-op
+  };
+
+  return div;
+}
+
+function mouseEvent(
+  type: string,
+  clientX: number,
+  clientY: number
+): MouseEvent {
+  return new MouseEvent(type, { button: 0, buttons: 1, clientX, clientY, bubbles: true });
+}
+
+function deleteKey(): KeyboardEvent {
+  return new KeyboardEvent("keydown", { key: "Delete", code: "Delete", bubbles: true, cancelable: true });
+}
+
+describe("PixelArtCanvas — uv mode", () => {
+  let container: HTMLDivElement;
+
+  beforeEach(() => {
+    container = makeContainer();
+  });
+
+  // 200x200 container, 8x8 texture, zoom 4 -> centered camera (84, 84).
+  // client 84 + n*4 -> texture n.
+
+  function makeManager(options: PixelArtCanvasOptions = {}): PixelArtCanvas {
+    return new PixelArtCanvas(container, {
+      texture: { maxSize: 32, size: { x: 8, y: 8 } },
+      zoom: { default: 4 },
+      history: { enabled: true },
+      ...options
+    });
+  }
+
+  test("uv.create() places a region and it is not visible by default", () => {
+    const manager = makeManager();
+    const region = manager.uv.create({ width: 4, height: 4 });
+
+    assert.strictEqual([...manager.uv.regions].length, 1);
+    assert.strictEqual(manager.uv.isVisible(region.id), false);
+  });
+
+  test("selecting a region makes it draggable in uv mode", () => {
+    const manager = makeManager();
+    manager.mode = "uv";
+    const region = manager.uv.create({ width: 4, height: 4 });
+    manager.uv.select(region.id);
+
+    const canvas = manager.canvas();
+    canvas.dispatchEvent(mouseEvent("mousedown", 84, 84));
+    canvas.dispatchEvent(mouseEvent("mousemove", 92, 92));
+    canvas.dispatchEvent(mouseEvent("mouseup", 92, 92));
+
+    assert.deepStrictEqual(manager.uv.get(region.id)!.rect, { x: 2, y: 2, width: 4, height: 4 });
+  });
+
+  test("Delete removes the selected region while in uv mode", () => {
+    const manager = makeManager();
+    manager.mode = "uv";
+    const region = manager.uv.create({ width: 4, height: 4 });
+    manager.uv.select(region.id);
+
+    // Keyboard shortcuts only dispatch while the canvas is hovered.
+    manager.canvas().dispatchEvent(mouseEvent("mouseenter", 84, 84));
+    globalThis.window.dispatchEvent(deleteKey());
+
+    assert.strictEqual(manager.uv.get(region.id), undefined);
+  });
+
+  test("Delete in select mode does not delete a UV region selected earlier (regression)", () => {
+    const manager = makeManager();
+
+    // Select a UV region from outside uv mode (e.g. a consumer's own
+    // 3D-scene click), then switch to select mode without ever entering
+    // uv mode. Selection persists across mode changes by design (see
+    // uv/UVMap.md), so it must NOT be treated as "the active uv delete
+    // target" once in a different mode.
+    const region = manager.uv.create({ width: 4, height: 4 });
+    manager.uv.select(region.id);
+
+    manager.mode = "select";
+    const canvas = manager.canvas();
+    canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
+    canvas.dispatchEvent(mouseEvent("mousemove", 96, 96));
+    canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+
+    globalThis.window.dispatchEvent(deleteKey());
+
+    assert.strictEqual(manager.canUndo(), true, "the select-mode delete should have committed an edit");
+    assert.ok(manager.uv.get(region.id), "the UV region must survive a Delete outside uv mode");
+  });
+
+  test("leaving uv mode cancels an in-progress drag without moving the region", () => {
+    const manager = makeManager();
+    manager.mode = "uv";
+    const region = manager.uv.create({ width: 4, height: 4 });
+    manager.uv.select(region.id);
+
+    const canvas = manager.canvas();
+    canvas.dispatchEvent(mouseEvent("mousedown", 84, 84));
+    canvas.dispatchEvent(mouseEvent("mousemove", 92, 92));
+    manager.mode = "paint";
+    canvas.dispatchEvent(mouseEvent("mouseup", 92, 92));
+
+    assert.deepStrictEqual(manager.uv.get(region.id)!.rect, region.rect);
+  });
+
+  test("leaving uv mode does not clear the current selection/visibility", () => {
+    const manager = makeManager();
+    const region = manager.uv.create({ width: 4, height: 4 });
+    manager.mode = "uv";
+    manager.uv.select(region.id);
+
+    manager.mode = "paint";
+
+    assert.strictEqual(manager.uv.selectedRegionId, region.id);
+    assert.strictEqual(manager.uv.isVisible(region.id), true);
+  });
+
+  describe("cursor", () => {
+    test("entering uv mode sets a grab cursor; leaving it resets to default", () => {
+      const manager = makeManager();
+      const canvas = manager.canvas();
+
+      manager.mode = "uv";
+      assert.strictEqual(canvas.style.cursor, "grab");
+
+      manager.mode = "paint";
+      assert.strictEqual(canvas.style.cursor, "");
+    });
+
+    test("dragging a region switches the cursor to grabbing, and back to grab on release", () => {
+      const manager = makeManager();
+      manager.mode = "uv";
+      const region = manager.uv.create({ width: 4, height: 4 });
+      manager.uv.select(region.id);
+
+      const canvas = manager.canvas();
+      canvas.dispatchEvent(mouseEvent("mousedown", 84, 84));
+      assert.strictEqual(canvas.style.cursor, "grabbing");
+
+      canvas.dispatchEvent(mouseEvent("mouseup", 92, 92));
+      assert.strictEqual(canvas.style.cursor, "grab");
+    });
+
+    test("clicking empty space (no drag started) keeps the idle grab cursor", () => {
+      const manager = makeManager();
+      manager.mode = "uv";
+
+      const canvas = manager.canvas();
+      canvas.dispatchEvent(mouseEvent("mousedown", 10, 10));
+
+      assert.strictEqual(canvas.style.cursor, "grab");
+    });
+  });
+
+  describe("history", () => {
+    test("undo/redo a create", () => {
+      const manager = makeManager();
+      const region = manager.uv.create({ width: 4, height: 4 });
+
+      assert.strictEqual(manager.canUndo(), true);
+      manager.undo();
+      assert.strictEqual(manager.uv.get(region.id), undefined);
+
+      manager.redo();
+      assert.deepStrictEqual(manager.uv.get(region.id), region);
+    });
+
+    test("undo/redo a delete", () => {
+      const manager = makeManager();
+      const region = manager.uv.create({ width: 4, height: 4 });
+      manager.uv.delete(region.id);
+
+      manager.undo();
+      assert.deepStrictEqual(manager.uv.get(region.id), region);
+
+      manager.redo();
+      assert.strictEqual(manager.uv.get(region.id), undefined);
+    });
+
+    test("undo/redo a move", () => {
+      const manager = makeManager();
+      const region = manager.uv.create({ width: 4, height: 4 });
+      manager.uv.move(region.id, { x: 3, y: 3, width: 4, height: 4 });
+
+      manager.undo();
+      assert.deepStrictEqual(manager.uv.get(region.id)!.rect, region.rect);
+
+      manager.redo();
+      assert.deepStrictEqual(manager.uv.get(region.id)!.rect, { x: 3, y: 3, width: 4, height: 4 });
+    });
+
+    test("undoing a create does not push a new entry (undo stack stays empty after)", () => {
+      const manager = makeManager();
+      manager.uv.create({ width: 4, height: 4 });
+
+      manager.undo();
+      assert.strictEqual(manager.canUndo(), false);
+      assert.strictEqual(manager.canRedo(), true);
+    });
+  });
+
+  describe("network hook", () => {
+    test("create/move/delete each emit exactly one hook event of the matching action", () => {
+      const events: PixelBufferHookEvent[] = [];
+      const manager = makeManager({ onBufferUpdated: (e) => events.push(e) });
+
+      const region = manager.uv.create({ width: 4, height: 4 });
+      manager.uv.move(region.id, { x: 1, y: 1, width: 4, height: 4 });
+      manager.uv.delete(region.id);
+
+      assert.deepStrictEqual(events.map((e) => e.action), [
+        "uv-region-created",
+        "uv-region-moved",
+        "uv-region-deleted"
+      ]);
+    });
+
+    test("undo of a move broadcasts the inverse uv-region-moved event", () => {
+      const events: PixelBufferHookEvent[] = [];
+      const manager = makeManager({ onBufferUpdated: (e) => events.push(e) });
+
+      const region = manager.uv.create({ width: 4, height: 4 });
+      manager.uv.move(region.id, { x: 5, y: 5, width: 4, height: 4 });
+      events.length = 0;
+
+      manager.undo();
+
+      assert.strictEqual(events.length, 1);
+      assert.strictEqual(events[0].action, "uv-region-moved");
+      if (events[0].action === "uv-region-moved") {
+        assert.deepStrictEqual(events[0].metadata.rect, region.rect);
+      }
+    });
+
+    test("applyRemoteCommand restores a remote region without re-broadcasting or recording history", () => {
+      const events: PixelBufferHookEvent[] = [];
+      const manager = makeManager({ onBufferUpdated: (e) => events.push(e) });
+
+      manager.applyRemoteCommand({
+        action: "uv-region-created",
+        metadata: {
+          region: { id: "remote-1", rect: { x: 0, y: 0, width: 4, height: 4 }, color: "#f00" }
+        }
+      });
+
+      assert.ok(manager.uv.get("remote-1"));
+      assert.strictEqual(events.length, 0, "remote application must not re-broadcast");
+      assert.strictEqual(manager.canUndo(), false, "remote application must not record local history");
+    });
+  });
+
+  describe("snapshot", () => {
+    test("loadSnapshot restores uv regions from a remote snapshot", () => {
+      const manager = makeManager();
+      manager.uv.create({ width: 4, height: 4 });
+
+      const remoteRegion = { id: "remote-1", rect: { x: 1, y: 1, width: 2, height: 2 }, color: "#00f" };
+      manager.loadSnapshot(
+        { x: 8, y: 8 },
+        new Uint8ClampedArray(8 * 8 * 4),
+        [remoteRegion]
+      );
+
+      assert.strictEqual([...manager.uv.regions].length, 1);
+      assert.deepStrictEqual(manager.uv.get("remote-1"), remoteRegion);
+    });
+  });
+});
+
+describe("PixelArtCanvas — onResize (SVG overlay refresh, regression)", () => {
+  // resizeCanvas() shifts the camera to keep content centered, so every
+  // overlay computed from the old camera position must redraw itself
+  // against the new one — same as after a pan/zoom. onResize() previously
+  // resized the SVG element itself but never told the overlays to redraw.
+
+  function makeResizableContainer(): {
+    container: HTMLDivElement;
+    children: unknown[];
+    setSize: (width: number, height: number) => void;
+  } {
+    let width = 200;
+    let height = 200;
+    const div = kEmulatedBrowserWindow.document.createElement("div") as unknown as HTMLDivElement;
+    const children: unknown[] = [];
+    (div as any).getBoundingClientRect = () => {
+      return {
+        left: 0, top: 0, right: width, bottom: height, width, height
+      };
+    };
+    (div as any).style = {};
+    (div as any).appendChild = (child: unknown) => {
+      children.push(child);
+    };
+
+    return {
+      container: div,
+      children,
+      setSize: (w, h) => {
+        width = w;
+        height = h;
+      }
+    };
+  }
+
+  test("the UV overlay follows the camera shift caused by a container resize", () => {
+    const { container, children, setSize } = makeResizableContainer();
+    const manager = new PixelArtCanvas(container, {
+      texture: { maxSize: 32, size: { x: 8, y: 8 } },
+      zoom: { default: 4 }
+    });
+
+    // First cascade position -> rect {x:0,y:0,...}. 200x200 container, zoom
+    // 4 -> centered camera (84, 84), so the overlay starts at screen (84, 84).
+    manager.uv.create({ width: 4, height: 4 });
+    manager.uv.showAll = true;
+
+    // Direct children only: excludes BrushHighlightOverlay's rects, which
+    // live nested inside their own <g> wrapper. Of the remaining direct
+    // rects (selection's outline/inline, always present but hidden, and
+    // this one visible UV region), the UV one is the only one with no
+    // "visibility" attribute at all (UVOverlay never sets one).
+    const svg = children.find((c) => !("getContext" in (c as object))) as unknown as SVGElement;
+    const rect = [...svg.querySelectorAll(":scope > rect")]
+      .find((el) => !el.hasAttribute("visibility"))!;
+    assert.strictEqual(rect.getAttribute("x"), "84");
+    assert.strictEqual(rect.getAttribute("y"), "84");
+
+    // Grow the container -> camera shifts by half the size delta (see
+    // Viewport.resizeCanvas): (300-200)/2 = 50 -> new camera (134, 134).
+    setSize(300, 300);
+    manager.onResize();
+
+    assert.strictEqual(rect.getAttribute("x"), "134", "the overlay must follow the camera shift from resizeCanvas");
+    assert.strictEqual(rect.getAttribute("y"), "134");
+    manager.destroy();
+  });
+
+  test("the select overlay follows the camera shift caused by a container resize", () => {
+    const { container, children, setSize } = makeResizableContainer();
+    const manager = new PixelArtCanvas(container, {
+      texture: { maxSize: 32, size: { x: 8, y: 8 } },
+      zoom: { default: 4 }
+    });
+
+    manager.mode = "select";
+    const canvas = children[0] as unknown as { dispatchEvent: (event: Event) => void; };
+    canvas.dispatchEvent(new MouseEvent("mousedown", { button: 0, buttons: 1, clientX: 92, clientY: 92, bubbles: true }));
+    canvas.dispatchEvent(new MouseEvent("mousemove", { buttons: 1, clientX: 96, clientY: 96, bubbles: true }));
+    canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+
+    // Direct children only, excluding BrushHighlightOverlay's nested rects;
+    // the selection outline is the direct rect explicitly marked visible.
+    const svg = children.find((c) => !("getContext" in (c as object))) as unknown as SVGElement;
+    const rect = [...svg.querySelectorAll(":scope > rect")]
+      .find((el) => el.getAttribute("visibility") === "visible")!;
+    // (2,2) texture -> screen (92, 92) at camera (84, 84).
+    assert.strictEqual(rect.getAttribute("x"), "92");
+
+    setSize(300, 300);
+    manager.onResize();
+
+    // Camera shifts to (134, 134) -> screen (2*4 + 134) = 142.
+    assert.strictEqual(rect.getAttribute("x"), "142", "the selection outline must follow the camera shift from resizeCanvas");
+    manager.destroy();
+  });
+});

@@ -2,6 +2,7 @@
 import {
   toRGBA
 } from "../utils/colors.ts";
+import { UVRegionCollection } from "../uv/UVRegionCollection.ts";
 import type {
   ColorInput,
   RGBA,
@@ -35,7 +36,7 @@ const kDefaultColor: RGBA = {
 };
 
 /**
- * Stores raw RGBA pixel data without DOM APIs.
+ * Stores raw RGBA pixel data and UV regions without DOM APIs.
  */
 export class PixelBuffer implements DefaultPixelBuffer {
   #width: number;
@@ -43,6 +44,8 @@ export class PixelBuffer implements DefaultPixelBuffer {
   #maxSize: number;
   #master: Uint8ClampedArray;
   #working: Uint8ClampedArray;
+
+  readonly uvRegions = new UVRegionCollection();
 
   constructor(
     options: PixelBufferOptions

@@ -170,9 +170,6 @@ function mergeAndValidate(
   return merged;
 }
 
-/**
- * Stores validated keybindings and matches keyboard events against them.
- */
 export class Keybindings {
   #bindings: KeybindingsMap;
 
@@ -186,14 +183,9 @@ export class Keybindings {
   }
 
   get bindings(): Readonly<KeybindingsMap> {
-    return { ...this.#bindings };
+    return structuredClone(this.#bindings);
   }
 
-  /**
-   * Merges patch onto the current bindings. Validates the merged result
-   * first, so a conflicting or malformed patch leaves the previous
-   * bindings untouched.
-   */
   patch(
     patch: Partial<KeybindingsMap>
   ): void {

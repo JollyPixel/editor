@@ -1,8 +1,8 @@
 # ConflictResolver
 
-Conflicts are resolved **per pixel**, not per command. A single stroke command can touch thousands of pixels, so [`PixelSyncServer`](./PixelSyncServer.md) splits a command: pixels that lose the race are dropped from the applied/broadcast copy, the rest are applied normally.
+Conflicts are resolved **per pixel** for strokes, not per command. A single stroke command can touch thousands of pixels, so [`PixelSyncServer`](./PixelSyncServer.md) splits a command: pixels that lose the race are dropped from the applied/broadcast copy, the rest are applied normally.
 
-Only `"stroke"` goes through a resolver. `"buffer-added"`, `"buffer-removed"`, `"resized"`, `"texture-replaced"`, and `"global-fill"` are always accepted with no per-pixel arbitration.
+`"stroke"` and `"uv-region-moved"`/`"uv-region-deleted"` go through the same resolver — the latter two keyed **per region id** instead of per pixel, and rejected/accepted as one atomic unit (no partial application, since a region isn't a list of independently-owned cells). `"buffer-added"`, `"buffer-removed"`, `"resized"`, `"texture-replaced"`, `"global-fill"`, and `"uv-region-created"` are always accepted with no arbitration.
 
 > [!IMPORTANT]
 > `"global-fill"` carries no position list to arbitrate against (see [buffer/PixelBuffer.md](../buffer/PixelBuffer.md)). It's applied by recomputing matching pixels against the server's own authoritative buffer at receive-time, which is self-consistent only because commands are applied in the order the server processes them.

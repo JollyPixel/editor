@@ -6,7 +6,7 @@ export type Vec2 = {
   y: number;
 };
 
-export type Mode = "paint" | "move" | "fill" | "select";
+export type Mode = "paint" | "move" | "fill" | "select" | "uv";
 
 export interface SelectionRect {
   x: number;

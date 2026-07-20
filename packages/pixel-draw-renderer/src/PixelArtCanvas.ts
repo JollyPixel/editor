@@ -18,6 +18,9 @@ import {
   CanvasRenderer
 } from "./rendering/CanvasRenderer.ts";
 import {
+  CursorController
+} from "./rendering/CursorController.ts";
+import {
   HistoryController,
   type HistoryState
 } from "./history/HistoryController.ts";
@@ -46,7 +49,10 @@ import type {
 import {
   SyncController
 } from "./sync/SyncController.ts";
+import { UVMap } from "./uv/UVMap.ts";
+import type { UVRegion } from "./uv/UVRegion.ts";
 import { toRGBA } from "./utils/colors.ts";
+import { clamp } from "./utils/math.ts";
 import type {
   BrushHighlight,
   ColorInput,
@@ -82,6 +88,12 @@ export interface PixelArtCanvasOptions {
     maxSize?: number;
     init?: HTMLCanvasElement;
   };
+  /**
+   * When `zoom.default` is omitted, it's computed to fit the whole texture
+   * inside the container's initial size instead of `Zoom`'s own flat
+   * default of 4 — a large texture in a small container no longer starts
+   * zoomed in past what's visible. Pass an explicit `default` to opt out.
+   */
   zoom?: ZoomOptions;
   backgroundTransparency?: {
     colors: { odd: string; even: string; };
@@ -141,9 +153,11 @@ export class PixelArtCanvas {
   #history: HistoryController;
   #mode: Mode;
   #tools: ToolControllers;
+  #cursor: CursorController;
 
   readonly brush: Brush;
   readonly viewport: DefaultViewport;
+  readonly uv: UVMap;
 
   constructor(
     parentHtmlElement: HTMLDivElement,
@@ -160,9 +174,16 @@ export class PixelArtCanvas {
       ? { x: options.texture.size.x, y: options.texture.size.y ?? options.texture.size.x }
       : { x: 64, y: 32 };
 
+    const initialBounds = parentHtmlElement.getBoundingClientRect();
+    const zoomDefault = options.zoom?.default ?? PixelArtCanvas.#computeFitZoom(
+      initialBounds,
+      textureSize,
+      { min: options.zoom?.min, max: options.zoom?.max }
+    );
+
     this.#viewport = new Viewport({
       textureSize,
-      zoom: options.zoom?.default,
+      zoom: zoomDefault,
       zoomMin: options.zoom?.min,
       zoomMax: options.zoom?.max,
       zoomSensitivity: options.zoom?.sensitivity
@@ -179,7 +200,11 @@ export class PixelArtCanvas {
       this.#canvasBuffer.loadTexture(options.texture.init);
     }
 
-    this.#history = new HistoryController(this.#canvasBuffer, {
+    this.uv = new UVMap({
+      getCanvasSize: () => this.#canvasBuffer.size()
+    });
+
+    this.#history = new HistoryController(this.#canvasBuffer, this.uv, {
       enabled: options.history?.enabled,
       limit: options.history?.limit,
       onChange: options.onHistoryChange
@@ -205,6 +230,7 @@ export class PixelArtCanvas {
       viewport: this.#viewport,
       renderer: this.#renderer,
       history: this.#history,
+      uvMap: this.uv,
       onBufferUpdated: options.onBufferUpdated,
       onDrawEnd: options.onDrawEnd
     });
@@ -236,7 +262,8 @@ export class PixelArtCanvas {
     this.#svgManager = new SvgManager({
       parent: parentHtmlElement,
       viewport: viewportRef,
-      brush: brushAdapter
+      brush: brushAdapter,
+      uvMap: this.uv
     });
 
     this.#tools = new ToolControllers({
@@ -246,6 +273,8 @@ export class PixelArtCanvas {
       linePreview: this.#svgManager.linePreview,
       selectionOverlay: this.#svgManager.selection,
       eraseColor,
+      uvMap: this.uv,
+      uvOverlay: this.#svgManager.uvOverlay,
       onStrokeCommit: (pixels, color, beforeColors) => {
         this.#sync.recordHistory({
           action: "stroke",
@@ -283,6 +312,11 @@ export class PixelArtCanvas {
       }
     });
 
+    this.#cursor = new CursorController({
+      renderer: this.#renderer,
+      tools: this.#tools
+    });
+
     this.#input = new InputController({
       canvas: this.#renderer.canvas(),
       viewport: this.#viewport,
@@ -291,6 +325,7 @@ export class PixelArtCanvas {
         ...createInputActions({
           getMode: () => this.#mode,
           renderer: this.#renderer,
+          cursor: this.#cursor,
           svgManager: this.#svgManager,
           viewport: this.#viewport,
           tools: this.#tools,
@@ -323,6 +358,10 @@ export class PixelArtCanvas {
     if (mode !== "paint") {
       this.#tools.brush.pickArmed = false;
     }
+    if (mode !== "uv") {
+      this.#tools.uv.cancelDrag();
+    }
+    this.#cursor.refresh(mode);
   }
 
   /**
@@ -500,6 +539,14 @@ export class PixelArtCanvas {
     this.#renderer.resize(bounds.width, bounds.height);
     this.#viewport.resizeCanvas(bounds.width, bounds.height);
     this.#svgManager.resize(bounds.width, bounds.height);
+
+    // resizeCanvas() shifts the camera to keep content centered; every SVG
+    // overlay computed from the old camera position must redraw itself
+    // against the new one, same as after a pan/zoom (see createInputActions).
+    this.#tools.line.refreshPreview();
+    this.#tools.select.refreshOverlay();
+    this.#svgManager.uvOverlay.refresh();
+
     this.#renderer.drawFrame();
   }
 
@@ -595,13 +642,13 @@ export class PixelArtCanvas {
     * Reverts the latest local edit.
     */
   undo(): boolean {
-    const entry = this.#history.undo();
+    const entry = this.#sync.runHistoryReplay(() => this.#history.undo());
     if (!entry) {
       return false;
     }
 
     this.#refreshAfterHistoryApply();
-    if (entry.action === "select-edit") {
+    if (entry.action === "select-edit" && this.#mode === "select") {
       this.#tools.select.syncSelectionAfterHistory(
         entry.oldRect,
         entry.oldMask
@@ -619,13 +666,16 @@ export class PixelArtCanvas {
     * Reapplies the latest reverted edit.
     */
   redo(): boolean {
-    const entry = this.#history.redo();
+    const entry = this.#sync.runHistoryReplay(() => this.#history.redo());
     if (!entry) {
       return false;
     }
 
     this.#refreshAfterHistoryApply();
-    if (entry.action === "select-edit") {
+    if (
+      entry.action === "select-edit" &&
+      this.#mode === "select"
+    ) {
       this.#tools.select.syncSelectionAfterHistory(
         entry.newRect,
         entry.newMask
@@ -670,9 +720,10 @@ export class PixelArtCanvas {
    */
   loadSnapshot(
     size: Vec2,
-    pixels: Uint8ClampedArray
+    pixels: Uint8ClampedArray,
+    uvRegions: UVRegion[] = []
   ): void {
-    this.#sync.loadSnapshot(size, pixels);
+    this.#sync.loadSnapshot(size, pixels, uvRegions);
   }
 
   #refreshAfterHistoryApply(): void {
@@ -680,5 +731,35 @@ export class PixelArtCanvas {
       this.#canvasBuffer.size()
     );
     this.#renderer.drawFrame();
+  }
+
+  /**
+   * Picks a default zoom that fits the whole texture inside the container's
+   * initial size, so a large texture in a small container doesn't start
+   * zoomed in past what's visible. Only used when `zoom.default` is
+   * omitted; an explicit value always wins. Falls back to `Zoom`'s own
+   * default (4) when the container has no measurable size yet (e.g.
+   * `display: none`).
+   */
+  static #computeFitZoom(
+    containerSize: { width: number; height: number; },
+    textureSize: Vec2,
+    zoomBounds: { min?: number; max?: number; }
+  ): number {
+    const zoomMin = zoomBounds.min ?? 1;
+    const zoomMax = zoomBounds.max ?? 32;
+
+    if (containerSize.width <= 0 || containerSize.height <= 0) {
+      return clamp(4, zoomMin, zoomMax);
+    }
+
+    // Leaves a small margin so the texture isn't flush against the edges.
+    const kFitPadding = 0.9;
+    const fit = Math.min(
+      containerSize.width / textureSize.x,
+      containerSize.height / textureSize.y
+    ) * kFitPadding;
+
+    return clamp(Math.floor(fit), zoomMin, zoomMax);
   }
 }

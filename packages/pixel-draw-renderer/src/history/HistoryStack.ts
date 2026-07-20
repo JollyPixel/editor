@@ -1,68 +1,18 @@
 // Import Internal Dependencies
 import type {
-  RGBA,
-  SelectionRect,
-  Vec2
-} from "../types.ts";
-import type {
   DefaultPixelBuffer
 } from "../buffer/types.ts";
+import type { UVMap } from "../uv/UVMap.ts";
+import type {
+  HistoryEntry,
+  HistoryEntryInput
+} from "./HistoryStack.types.ts";
 import {
   groupPositionsByColor
 } from "./utils.ts";
 
-export interface HistoryStrokeEntry {
-  action: "stroke";
-  timestamp: number;
-  positions: Vec2[];
-  beforeColors: RGBA[];
-  afterColor: RGBA;
-}
-
-export interface HistoryResizedEntry {
-  action: "resized";
-  timestamp: number;
-  beforeSize: Vec2;
-  beforePixels: Uint8ClampedArray;
-  afterSize: Vec2;
-  afterPixels: Uint8ClampedArray;
-}
-
-export interface HistoryTextureReplacedEntry {
-  action: "texture-replaced";
-  timestamp: number;
-  beforeSize: Vec2;
-  beforePixels: Uint8ClampedArray;
-  afterSize: Vec2;
-  afterPixels: Uint8ClampedArray;
-}
-
-/**
- * Stores pixels and selection state before and after a selection edit.
- */
-export interface HistorySelectEditEntry {
-  action: "select-edit";
-  timestamp: number;
-  positions: Vec2[];
-  beforeColors: RGBA[];
-  afterColors: RGBA[];
-  oldRect: SelectionRect;
-  newRect: SelectionRect;
-  oldMask: boolean[];
-  newMask: boolean[];
-}
-
-export type HistoryEntry =
-  | HistoryStrokeEntry
-  | HistoryResizedEntry
-  | HistoryTextureReplacedEntry
-  | HistorySelectEditEntry;
-
-export type HistoryEntryInput =
-  | Omit<HistoryStrokeEntry, "timestamp">
-  | Omit<HistoryResizedEntry, "timestamp">
-  | Omit<HistoryTextureReplacedEntry, "timestamp">
-  | Omit<HistorySelectEditEntry, "timestamp">;
+// CONSTANTS
+const kDefaultLimit = 10;
 
 export interface HistoryStackOptions {
   /**
@@ -71,23 +21,23 @@ export interface HistoryStackOptions {
   limit?: number;
 }
 
-// CONSTANTS
-const kDefaultLimit = 10;
-
 /**
  * Replays a bounded undo/redo stack against a pixel buffer.
  */
 export class HistoryStack {
   #buffer: DefaultPixelBuffer;
+  #uvMap: UVMap;
   #limit: number;
   #undoStack: HistoryEntry[] = [];
   #redoStack: HistoryEntry[] = [];
 
   constructor(
     buffer: DefaultPixelBuffer,
+    uvMap: UVMap,
     options: HistoryStackOptions = {}
   ) {
     this.#buffer = buffer;
+    this.#uvMap = uvMap;
     this.#limit = options.limit ?? kDefaultLimit;
   }
 
@@ -99,9 +49,6 @@ export class HistoryStack {
     return this.#redoStack.length > 0;
   }
 
-  /**
-   * Records an entry with its creation timestamp.
-   */
   push(
     entry: HistoryEntryInput
   ): void {
@@ -149,23 +96,59 @@ export class HistoryStack {
     entry: HistoryEntry
   ): void {
     switch (entry.action) {
-      case "stroke":
-        for (const group of groupPositionsByColor(entry.positions, entry.beforeColors)) {
-          this.#buffer.drawPixels(group.positions, group.color);
+      case "stroke": {
+        const groupedColors = groupPositionsByColor(
+          entry.positions,
+          entry.beforeColors
+        );
+        for (const group of groupedColors) {
+          this.#buffer.drawPixels(
+            group.positions,
+            group.color
+          );
         }
-        this.#buffer.copyToMaster();
-        break;
 
-      case "select-edit":
-        for (const group of groupPositionsByColor(entry.positions, entry.beforeColors)) {
-          this.#buffer.drawPixels(group.positions, group.color);
-        }
         this.#buffer.copyToMaster();
         break;
+      }
+
+      case "select-edit": {
+        const groupedColors = groupPositionsByColor(
+          entry.positions,
+          entry.beforeColors
+        );
+        for (const group of groupedColors) {
+          this.#buffer.drawPixels(
+            group.positions,
+            group.color
+          );
+        }
+
+        this.#buffer.copyToMaster();
+        break;
+      }
 
       case "resized":
       case "texture-replaced":
-        this.#buffer.replacePixels(entry.beforePixels, entry.beforeSize);
+        this.#buffer.replacePixels(
+          entry.beforePixels,
+          entry.beforeSize
+        );
+        break;
+
+      case "uv-create":
+        this.#uvMap.delete(entry.region.id);
+        break;
+
+      case "uv-delete":
+        this.#uvMap.restore(entry.region);
+        break;
+
+      case "uv-move":
+        this.#uvMap.move(
+          entry.id,
+          entry.oldRect
+        );
         break;
     }
   }
@@ -175,20 +158,50 @@ export class HistoryStack {
   ): void {
     switch (entry.action) {
       case "stroke":
-        this.#buffer.drawPixels(entry.positions, entry.afterColor);
+        this.#buffer.drawPixels(
+          entry.positions,
+          entry.afterColor
+        );
         this.#buffer.copyToMaster();
         break;
 
-      case "select-edit":
-        for (const group of groupPositionsByColor(entry.positions, entry.afterColors)) {
-          this.#buffer.drawPixels(group.positions, group.color);
+      case "select-edit": {
+        const groupedColors = groupPositionsByColor(
+          entry.positions,
+          entry.afterColors
+        );
+        for (const group of groupedColors) {
+          this.#buffer.drawPixels(
+            group.positions,
+            group.color
+          );
         }
+
         this.#buffer.copyToMaster();
         break;
+      }
 
       case "resized":
       case "texture-replaced":
-        this.#buffer.replacePixels(entry.afterPixels, entry.afterSize);
+        this.#buffer.replacePixels(
+          entry.afterPixels,
+          entry.afterSize
+        );
+        break;
+
+      case "uv-create":
+        this.#uvMap.restore(entry.region);
+        break;
+
+      case "uv-delete":
+        this.#uvMap.delete(entry.region.id);
+        break;
+
+      case "uv-move":
+        this.#uvMap.move(
+          entry.id,
+          entry.newRect
+        );
         break;
     }
   }

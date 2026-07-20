@@ -208,6 +208,71 @@ describe("PixelArtCanvas — select mode", () => {
     manager.destroy();
   });
 
+  describe("cursor", () => {
+    test("drawing a brand-new rectangle keeps the plain cursor (not a grab motion)", () => {
+      const manager = makeManager();
+      const canvas = manager.canvas();
+
+      manager.mode = "select";
+      canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
+      assert.strictEqual(canvas.style.cursor, "");
+
+      canvas.dispatchEvent(mouseEvent("mousemove", 96, 96));
+      assert.strictEqual(canvas.style.cursor, "");
+
+      manager.destroy();
+    });
+
+    test("a committed selection shows a grab cursor once idle", () => {
+      const manager = makeManager();
+      const canvas = manager.canvas();
+
+      manager.mode = "select";
+      canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
+      canvas.dispatchEvent(mouseEvent("mousemove", 96, 96));
+      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+
+      assert.strictEqual(canvas.style.cursor, "grab");
+      manager.destroy();
+    });
+
+    test("dragging an existing selection switches the cursor to grabbing, and back to grab on release", () => {
+      const manager = makeManager();
+      const canvas = manager.canvas();
+
+      manager.mode = "select";
+      canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
+      canvas.dispatchEvent(mouseEvent("mousemove", 96, 96));
+      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+      assert.strictEqual(canvas.style.cursor, "grab");
+
+      // Second mousedown lands inside the just-created selection -> moving it.
+      canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
+      assert.strictEqual(canvas.style.cursor, "grabbing");
+
+      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+      assert.strictEqual(canvas.style.cursor, "grab");
+
+      manager.destroy();
+    });
+
+    test("leaving select mode resets the cursor", () => {
+      const manager = makeManager();
+      const canvas = manager.canvas();
+
+      manager.mode = "select";
+      canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
+      canvas.dispatchEvent(mouseEvent("mousemove", 96, 96));
+      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+      assert.strictEqual(canvas.style.cursor, "grab");
+
+      manager.mode = "paint";
+      assert.strictEqual(canvas.style.cursor, "");
+
+      manager.destroy();
+    });
+  });
+
   test("dragging the selection moves it: source is erased, destination gets the moved pixels", () => {
     const manager = makeManager();
     const canvas = manager.canvas();
@@ -648,6 +713,43 @@ describe("PixelArtCanvas — select mode", () => {
       window.dispatchEvent(ctrlKey("y"));
       assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [255, 255, 255, 255]);
       assert.deepStrictEqual(readPixel(manager.texture, { x: 4, y: 4 }, 8), [0, 0, 0, 255]);
+      manager.destroy();
+    });
+
+    test("undoing a select-edit outside select mode restores the pixels but does not reactivate the selection", () => {
+      const manager = makeManager({ history: { enabled: true } });
+      const canvas = manager.canvas();
+
+      manager.commitPixels([{ x: 2, y: 2 }]);
+      manager.mode = "select";
+      canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
+      canvas.dispatchEvent(mouseEvent("mousemove", 96, 92));
+      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+
+      canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
+      canvas.dispatchEvent(mouseEvent("mousemove", 100, 100));
+      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+
+      // Leaving select mode clears the active selection.
+      manager.mode = "paint";
+
+      window.dispatchEvent(ctrlKey("z"));
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 255], "undo restores the source pixels regardless of mode"
+      );
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 4, y: 4 }, 8),
+        [255, 255, 255, 255],
+        "undo removes the destination pixels regardless of mode"
+      );
+
+      manager.mode = "select";
+      assert.strictEqual(
+        manager.rotateSelection(),
+        false,
+        "an undo that happened outside select mode must not resurrect the old selection once select mode is re-entered"
+      );
+
       manager.destroy();
     });
 

@@ -2,7 +2,7 @@
 // Import Third-party Dependencies
 import { svg, type SVGTemplateResult } from "lit";
 
-export type IconName = "move" | "paint" | "fill" | "select" | "undo" | "redo" | "swap" | "eyedropper";
+export type IconName = "move" | "paint" | "fill" | "select" | "uv" | "undo" | "redo" | "swap" | "eyedropper";
 
 // CONSTANTS
 const kIcons: Record<IconName, SVGTemplateResult> = {
@@ -38,6 +38,13 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
     <circle cx="19.5" cy="4.5" r="1.7" fill="currentColor"/>
     <circle cx="4.5" cy="19.5" r="1.7" fill="currentColor"/>
     <circle cx="19.5" cy="19.5" r="1.7" fill="currentColor"/>
+  `,
+  // UV grid: a 2x2 quad layout, two cells dashed to suggest placed regions.
+  uv: svg`
+    <rect x="4" y="4" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2.2"/>
+    <rect x="13" y="4" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2.2" stroke-dasharray="2.5 2.5"/>
+    <rect x="4" y="13" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2.2" stroke-dasharray="2.5 2.5"/>
+    <rect x="13" y="13" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2.2"/>
   `,
   undo: svg`
     <path d="M4 10h6a6 6 0 1 1-5.7 8"

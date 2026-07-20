@@ -14,6 +14,9 @@ import {
   SelectController,
   type SelectEditEntry
 } from "./SelectController.ts";
+import { UVController } from "../uv/UVController.ts";
+import type { UVMap } from "../uv/UVMap.ts";
+import type { UVOverlay } from "../rendering/overlays/UVOverlay.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import type { CanvasRenderer } from "../rendering/CanvasRenderer.ts";
 import type { LinePreviewOverlay } from "../rendering/overlays/LinePreviewOverlay.ts";
@@ -27,6 +30,8 @@ export interface ToolControllersOptions {
   linePreview: LinePreviewOverlay;
   selectionOverlay: SelectionOverlay;
   eraseColor: RGBA | null;
+  uvMap: UVMap;
+  uvOverlay: UVOverlay;
   onStrokeCommit: (pixels: Vec2[], color: RGBA, beforeColors: RGBA[]) => void;
   onCommitPixels: (pixels: Vec2[]) => void;
   onFillCommitPixels: (pixels: Vec2[], slot: BrushColorSlot) => void;
@@ -42,6 +47,7 @@ export class ToolControllers {
   readonly fill: FillController;
   readonly line: LineController;
   readonly select: SelectController;
+  readonly uv: UVController;
 
   constructor(
     options: ToolControllersOptions
@@ -72,6 +78,11 @@ export class ToolControllers {
       selectionOverlay: options.selectionOverlay,
       eraseColor: options.eraseColor,
       onCommit: options.onSelectCommit
+    });
+
+    this.uv = new UVController({
+      uvMap: options.uvMap,
+      overlay: options.uvOverlay
     });
   }
 }

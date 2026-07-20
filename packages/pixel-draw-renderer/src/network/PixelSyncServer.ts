@@ -15,6 +15,10 @@ import type {
 } from "./types.ts";
 
 export type PixelStrokeCommand = Extract<PixelNetworkCommand, { action: "stroke"; }>;
+export type PixelUvRegionCommand = Extract<
+  PixelNetworkCommand,
+  { action: "uv-region-moved" | "uv-region-deleted"; }
+>;
 
 /**
  * Represents a connected network client.
@@ -45,6 +49,7 @@ export class PixelSyncServer {
   #subscriptions = new Map<string, Set<string>>();
   #resolver: PixelConflictResolver;
   #lastHeaderByPixel = new Map<string, PixelNetworkCommandHeader>();
+  #lastHeaderByRegion = new Map<string, PixelNetworkCommandHeader>();
 
   constructor(
     options: PixelSyncServerOptions = {}
@@ -146,6 +151,7 @@ export class PixelSyncServer {
       applyCommandToWorld(this.world, cmd);
       this.#subscriptions.delete(cmd.bufferId);
       this.#clearPixelHistory(cmd.bufferId);
+      this.#clearRegionHistory(cmd.bufferId);
       this.#broadcast(cmd);
 
       return;
@@ -157,6 +163,15 @@ export class PixelSyncServer {
 
     if (cmd.action === "stroke") {
       this.#receiveStroke(cmd);
+
+      return;
+    }
+
+    if (
+      cmd.action === "uv-region-moved" ||
+      cmd.action === "uv-region-deleted"
+    ) {
+      this.#receiveUvRegionCommand(cmd);
 
       return;
     }
@@ -211,6 +226,41 @@ export class PixelSyncServer {
     }
   }
 
+  /**
+   * Resolves move/delete conflicts per region id (parallel to the
+   * per-pixel resolution strokes use). Create is idempotent by unique id
+   * and applies unconditionally via the generic path in `receive()`.
+   */
+  #receiveUvRegionCommand(
+    cmd: PixelUvRegionCommand
+  ): void {
+    const key = `${cmd.bufferId}:${cmd.metadata.id}`;
+    const existing = this.#lastHeaderByRegion.get(key);
+    const decision = this.#resolver.resolve({
+      incoming: cmd,
+      existing
+    });
+
+    if (decision === "reject") {
+      return;
+    }
+
+    this.#lastHeaderByRegion.set(key, cmd);
+    applyCommandToWorld(this.world, cmd);
+    this.#broadcast(cmd);
+  }
+
+  #clearRegionHistory(
+    bufferId: string
+  ): void {
+    const prefix = `${bufferId}:`;
+    for (const key of this.#lastHeaderByRegion.keys()) {
+      if (key.startsWith(prefix)) {
+        this.#lastHeaderByRegion.delete(key);
+      }
+    }
+  }
+
   #broadcast(
     cmd: PixelNetworkCommand
   ): void {
@@ -237,7 +287,10 @@ export class PixelSyncServer {
 
     return {
       size: buffer.size(),
-      pixels: fromUint8Array(new Uint8Array(buffer.pixels()))
+      pixels: fromUint8Array(
+        new Uint8Array(buffer.pixels())
+      ),
+      uvRegions: [...buffer.uvRegions]
     };
   }
 }

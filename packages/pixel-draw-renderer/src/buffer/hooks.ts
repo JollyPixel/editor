@@ -1,8 +1,10 @@
 // Import Internal Dependencies
 import type {
   RGBA,
+  SelectionRect,
   Vec2
 } from "../types.ts";
+import type { UVRegion } from "../uv/UVRegion.ts";
 
 /**
  * @notes
@@ -38,6 +40,28 @@ export type PixelBufferHookEvent =
     metadata: {
       fromColor: RGBA;
       toColor: RGBA;
+    };
+    originTimestamp?: number;
+  }
+  | {
+    action: "uv-region-created";
+    metadata: {
+      region: UVRegion;
+    };
+    originTimestamp?: number;
+  }
+  | {
+    action: "uv-region-deleted";
+    metadata: {
+      id: string;
+    };
+    originTimestamp?: number;
+  }
+  | {
+    action: "uv-region-moved";
+    metadata: {
+      id: string;
+      rect: SelectionRect;
     };
     originTimestamp?: number;
   };

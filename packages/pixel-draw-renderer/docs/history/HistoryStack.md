@@ -7,7 +7,7 @@ Bounded undo/redo stack over a `DefaultPixelBuffer` (`PixelBuffer` or `CanvasBuf
 ## Types
 
 ```ts
-new HistoryStack(buffer: DefaultPixelBuffer, options?: HistoryStackOptions)
+new HistoryStack(buffer: DefaultPixelBuffer, uvMap: UVMap, options?: HistoryStackOptions)
 
 interface HistoryStackOptions {
   /** @default 10 */
@@ -48,6 +48,23 @@ type HistoryEntry =
     newRect: SelectionRect;
     oldMask: boolean[];
     newMask: boolean[];
+  }
+  | {
+    action: "uv-create";
+    timestamp: number;
+    region: UVRegion;
+  }
+  | {
+    action: "uv-delete";
+    timestamp: number;
+    region: UVRegion;
+  }
+  | {
+    action: "uv-move";
+    timestamp: number;
+    id: string;
+    oldRect: SelectionRect;
+    newRect: SelectionRect;
   };
 
 /** Same as HistoryEntry, minus `timestamp` (stamped by `push()`). */
@@ -61,11 +78,16 @@ type HistoryEntryInput = Omit<HistoryEntry, "timestamp">;
 | `"stroke"` | `beforeColors`: per-position (a stroke can cross pixels of different colors) | `afterColor`: single color (a stroke always paints one uniform color) |
 | `"resized"` / `"texture-replaced"` | `beforePixels`: whole-buffer snapshot | `afterPixels`: whole-buffer snapshot |
 | `"select-edit"` | `beforeColors`: per-position | `afterColors`: per-position (unlike `"stroke"`, since these operations paint heterogeneous, multi-colored regions) |
+| `"uv-create"` / `"uv-delete"` | n/a (undo calls the inverse `UVMap` method) | `region`: full state, so a delete's undo can `restore()` it exactly |
+| `"uv-move"` | `oldRect` | `newRect` |
 
 `"resized"`/`"texture-replaced"` snapshot the whole buffer since there's no cheaper diff to keep. `"select-edit"` covers every `"select"`-mode edit (move/delete/paste/rotate/flip) with a single entry shape. `positions` is the union of whatever footprint(s) the edit touched (e.g. a Move's source and destination, or a Rotate's pre/post footprint when a non-square selection's dimensions swap). `oldRect`/`oldMask` and `newRect`/`newMask` capture the active selection's rectangle and shape mask before/after the edit, so undo/redo can restore the selection itself, not just the pixels.
 
+The `"uv-*"` entries replay by calling the corresponding [`UVMap`](../uv/UVMap.md) method directly (`delete`/`restore`/`move`) rather than touching `buffer`; see that method's own emitted event to see what a consumer observes during the replay.
+
 > [!IMPORTANT]
-> A `"select-edit"` entry's undo/redo is never broadcast over the network; see [PixelArtCanvas.md](../PixelArtCanvas.md#undo--redo--canundo--canredo) for why.
+> - A `"select-edit"` entry's undo/redo is never broadcast over the network; see [PixelArtCanvas.md](../PixelArtCanvas.md#undo--redo--canundo--canredo) for why.
+> - A `"uv-*"` entry's undo/redo **is** broadcast (unlike `"select-edit"`), since UV regions are per-buffer network state; see [uv/UVMap.md](../uv/UVMap.md#history--network).
 
 ## Properties
 

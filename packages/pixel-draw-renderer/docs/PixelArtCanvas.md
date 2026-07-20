@@ -5,6 +5,7 @@
 It wires together a viewport, canvas buffer, renderer, input handling, and SVG overlay (all internal implementation details) and owns:
 
 - the [`Brush`](./tools/Brush.md) tool
+- the [`UVMap`](./uv/UVMap.md) value object (`"uv"` mode)
 - internal line/fill/select tools (no public class of their own)
 - an internal `HistoryController` wrapping a [`HistoryStack`](./history/HistoryStack.md) for undo/redo
 
@@ -101,11 +102,11 @@ interface PixelArtCanvasOptions {
 }
 ```
 
-`Mode` is `"paint" | "move" | "fill" | "select"`. `ColorInput` (`string | Color`, where `Color` is [colorjs.io](https://colorjs.io)'s class) is used throughout the package wherever a color option is accepted: a CSS color string (hex, `rgb()`, `hsl()`, named color, ...) or a `Color` instance. `BrushOptions` is forwarded to the internal `Brush` instance, see [Brush.md](./tools/Brush.md). `PixelBufferHookListener` is described in [buffer/PixelBuffer.md](./buffer/PixelBuffer.md) and [network/index.md](./network/index.md). `KeybindingsMap` is described in [input/Keybindings.md](./input/Keybindings.md).
+`Mode` is `"paint" | "move" | "fill" | "select" | "uv"`. `ColorInput` (`string | Color`, where `Color` is [colorjs.io](https://colorjs.io)'s class) is used throughout the package wherever a color option is accepted: a CSS color string (hex, `rgb()`, `hsl()`, named color, ...) or a `Color` instance. `BrushOptions` is forwarded to the internal `Brush` instance, see [Brush.md](./tools/Brush.md). `PixelBufferHookListener` is described in [buffer/PixelBuffer.md](./buffer/PixelBuffer.md) and [network/index.md](./network/index.md). `KeybindingsMap` is described in [input/Keybindings.md](./input/Keybindings.md).
 
 `history.enabled` (default `false`) tells the internal `HistoryController` to back itself with a [`HistoryStack`](./history/HistoryStack.md) that records every stroke, resize, and texture replace, enabling `undo()`/`redo()`. Leaving it disabled skips that bookkeeping entirely: there's no per-edit cost paid for a feature that isn't used.
 
-Undocumented defaults: `texture.size` is `{ x: 64, y: 32 }` (`y` falls back to `x` when only `x` is given), `texture.maxSize` is `2048`, `zoom.default` is `4`, `zoom.min`/`zoom.max` are `1`/`32`, `zoom.sensitivity` is `0.1`, `backgroundTransparency.squareSize` is `8`, `backgroundTransparency.colors` is `{ odd: "#999", even: "#666" }`.
+Undocumented defaults: `texture.size` is `{ x: 64, y: 32 }` (`y` falls back to `x` when only `x` is given), `texture.maxSize` is `2048`, `zoom.default` fits the texture to the container (see above; falls back to `4` if the container has no measurable size yet), `zoom.min`/`zoom.max` are `1`/`32`, `zoom.sensitivity` is `0.1`, `backgroundTransparency.squareSize` is `8`, `backgroundTransparency.colors` is `{ odd: "#999", even: "#666" }`.
 
 The `backgroundColor` option, if given, wins outright. Otherwise it's read from `getComputedStyle(parentHtmlElement).backgroundColor` at construction time, falling back to `#424242` if that's unset or fully transparent. See the `backgroundColor` property below to change it after construction.
 
@@ -127,6 +128,14 @@ readonly viewport: DefaultViewport // { readonly zoom: Zoom; readonly camera: Re
 
 Read-only camera/zoom state. `viewport.zoom` is the same `Zoom` value object as the top-level `zoom` accessor below (`.value`, `.min`, `.max`, `.sensitivity`); use `viewport` for coordinate conversions and mutation via the methods below.
 
+### `uv`
+
+```ts
+readonly uv: UVMap
+```
+
+The `UVMap` value object managing this texture's UV regions (create/delete/move/select, visibility, and a typed event emitter). See [uv/UVMap.md](./uv/UVMap.md).
+
 ## Methods
 
 ### `mode`
@@ -144,14 +153,16 @@ Reads or sets the current interaction mode.
 | `"move"` | Pans the camera. | N/A |
 | `"fill"` | Paint-bucket fill from the clicked pixel with `brush.primary`. | Same fill with `brush.secondary`. |
 | `"select"` | Drag to select or move a rectangle. | N/A |
+| `"uv"` | Click a visible UV region to select/drag it. `Delete` deletes the selected region. | N/A |
 
 - `"paint"`: the two buttons are mutually exclusive, a stroke already in progress on one button blocks the other from starting until it ends.
 - `"fill"`: fills the clicked pixel's contiguous region by default, or every same-colored pixel on the canvas when `fillGlobal` is `true` (see below). A fill click is single-shot and not tracked as a drag, so, unlike `"paint"`, the two buttons aren't mutually exclusive.
-- `"select"`: `Ctrl`/`Cmd`+`C`/`V` copies/duplicates, `Delete` erases, `R` rotates the selection 90° clockwise around its center (repeatable: press again for further rotation; no counterclockwise binding), `H`/`V` flips the selection's content horizontally/vertically in place. A drag that never grows past its starting pixel (a plain click) does not create a selection.
+- `"select"`: `Ctrl`/`Cmd`+`C`/`V` copies/duplicates, `Delete` erases, `R` rotates the selection 90° clockwise around its center (repeatable: press again for further rotation; no counterclockwise binding), `H`/`V` flips the selection's content horizontally/vertically in place. A drag that never grows past its starting pixel (a plain click) does not create a selection. Like `"uv"`, the cursor is `"grab"` once a selection exists (idle) and `"grabbing"` while it's being dragged to a new position — drawing a brand-new rectangle keeps the plain cursor, since that isn't a grab motion.
+- `"uv"`: there is no click-to-create gesture — regions are created via `uv.create(...)` (see [uv/UVMap.md](./uv/UVMap.md)). Only *visible* regions (per `uv.showAll`/`uv.selectedRegionId`) can be hit-tested; clicking empty canvas space (or an invisible region) deselects. The canvas cursor is `"grab"` while idle in this mode and `"grabbing"` while a region is actively being dragged, reverting to the browser default in any other mode. `Delete` only deletes the selected UV region while actually in `"uv"` mode — since a UV selection, unlike a `"select"`-mode selection, persists across mode changes (see the note below), `Delete` pressed in another mode acts only on that mode's own selection, if any, and leaves the UV region alone.
 
 > [!IMPORTANT]
 > - The line/fill/select tools are internal implementation details with no public class of their own.
-> - Switching to `"move"` cancels an armed line. Switching away from `"select"` clears any active selection.
+> - Switching to `"move"` cancels an armed line. Switching away from `"select"` clears any active selection. Switching away from `"uv"` cancels an in-progress drag but, unlike `"select"`, does **not** clear the UV selection/visibility — see [uv/UVMap.md](./uv/UVMap.md).
 > - The SVG brush-cursor highlight is active only in `"paint"` and `"fill"`. In `"fill"`, and in `"paint"` while `pickColorArmed` is `true`, the highlight is always a single pixel regardless of `brush`'s configured size, since neither a fill's seed nor a color pick is brush-sized.
 
 ---
@@ -256,7 +267,7 @@ canUndo(): boolean
 canRedo(): boolean
 ```
 
-Reverts/re-applies the most recent local edit (stroke, resize, or texture replace) via the internal `HistoryController`, which wraps a [`HistoryStack`](./history/HistoryStack.md).
+Reverts/re-applies the most recent local edit (stroke, resize, texture replace, or UV region create/delete/move) via the internal `HistoryController`, which wraps a [`HistoryStack`](./history/HistoryStack.md).
 
 - `undo()`/`redo()` return `false` and do nothing when `history.enabled` wasn't passed at construction, or when the corresponding stack is empty.
 - `canUndo()`/`canRedo()` report the same condition without mutating anything.
@@ -265,7 +276,7 @@ Reverts/re-applies the most recent local edit (stroke, resize, or texture replac
 A successful call redraws the canvas, calls `onDrawEnd`, and fires `onHistoryChange`.
 
 > [!IMPORTANT]
-> - For a history-enabled `PixelArtCanvas` attached to a `PixelSyncSession`, a successful `undo()`/`redo()` also emits the reverted/re-applied state through `onBufferUpdated` so peers converge to the same result (the replayed event's `originTimestamp` keeps that fair under conflict resolution; see [buffer/PixelBuffer.md](./buffer/PixelBuffer.md)). **Exception:** undoing/redoing a `"select"`-mode edit (move/delete/paste/rotate/flip) never emits `onBufferUpdated`, since those edits aren't networked in the first place, so their undo/redo is local-only.
+> - For a history-enabled `PixelArtCanvas` attached to a `PixelSyncSession`, a successful `undo()`/`redo()` also emits the reverted/re-applied state through `onBufferUpdated` so peers converge to the same result (the replayed event's `originTimestamp` keeps that fair under conflict resolution; see [buffer/PixelBuffer.md](./buffer/PixelBuffer.md)). **Exception:** undoing/redoing a `"select"`-mode edit (move/delete/paste/rotate/flip) never emits `onBufferUpdated`, since those edits aren't networked in the first place, so their undo/redo is local-only. A UV region create/delete/move **is** networked: undo/redo just calls the matching `UVMap` method, which emits the same event a live change would, and that's what feeds `onBufferUpdated`; see [uv/UVMap.md](./uv/UVMap.md#history--network).
 > - A remote resize, texture-replace, or snapshot load clears the local history stack (its recorded positions/sizes no longer describe the buffer), so `canUndo()`/`canRedo()` drop to `false` afterward.
 
 ---
@@ -389,9 +400,9 @@ Tears down `InputController`'s event listeners and removes the canvas and SVG ov
 ```ts
 set onBufferUpdated(fn: PixelBufferHookListener | undefined)
 applyRemoteCommand(event: PixelBufferHookEvent): void
-loadSnapshot(size: Vec2, pixels: Uint8ClampedArray): void
+loadSnapshot(size: Vec2, pixels: Uint8ClampedArray, uvRegions?: UVRegion[]): void
 ```
 
-Network sync hooks, used by `PixelSyncSession`. See [network/index.md](./network/index.md). `onBufferUpdated` fires on every local mutation (stroke, resize, texture replace). `applyRemoteCommand` applies a mutation from a remote peer without re-firing `onBufferUpdated`. `loadSnapshot` hydrates the buffer from a network snapshot; it is never itself broadcast.
+Network sync hooks, used by `PixelSyncSession`. See [network/index.md](./network/index.md). `onBufferUpdated` fires on every local mutation (stroke, resize, texture replace, UV region create/delete/move). `applyRemoteCommand` applies a mutation from a remote peer without re-firing `onBufferUpdated`. `loadSnapshot` hydrates the buffer (and, via `uvRegions`, the `UVMap`) from a network snapshot; it is never itself broadcast.
 
 There is no manual redraw method: every mutation (stroke, pan, zoom, resize, texture replace) triggers its own repaint internally.

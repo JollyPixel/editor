@@ -204,6 +204,104 @@ describe("applyCommandToWorld — global-fill", () => {
   });
 });
 
+describe("applyCommandToWorld — uv-region-created", () => {
+  test("stores the region on the buffer", () => {
+    const world = makeWorld();
+    world.addBuffer("tex1", { size: { x: 4, y: 4 } });
+    applyCommandToWorld(world, {
+      ...kHeader,
+      bufferId: "tex1",
+      action: "uv-region-created",
+      metadata: {
+        region: { id: "r1", rect: { x: 0, y: 0, width: 2, height: 2 }, color: "#f00" }
+      }
+    });
+
+    const buffer = world.getBuffer("tex1")!;
+    assert.deepStrictEqual(buffer.uvRegions.get("r1"), {
+      id: "r1", rect: { x: 0, y: 0, width: 2, height: 2 }, color: "#f00"
+    });
+  });
+
+  test("is a no-op for an unknown buffer", () => {
+    const world = makeWorld();
+    assert.doesNotThrow(() => {
+      applyCommandToWorld(world, {
+        ...kHeader,
+        bufferId: "no-such",
+        action: "uv-region-created",
+        metadata: {
+          region: { id: "r1", rect: { x: 0, y: 0, width: 2, height: 2 }, color: "#f00" }
+        }
+      });
+    });
+  });
+});
+
+describe("applyCommandToWorld — uv-region-deleted", () => {
+  test("removes the region from the buffer", () => {
+    const world = makeWorld();
+    world.addBuffer("tex1", { size: { x: 4, y: 4 } });
+    const buffer = world.getBuffer("tex1")!;
+    buffer.uvRegions.set({ id: "r1", rect: { x: 0, y: 0, width: 2, height: 2 }, color: "#f00" });
+
+    applyCommandToWorld(world, {
+      ...kHeader,
+      bufferId: "tex1",
+      action: "uv-region-deleted",
+      metadata: { id: "r1" }
+    });
+
+    assert.strictEqual(buffer.uvRegions.get("r1"), undefined);
+  });
+
+  test("is a no-op for an unknown region", () => {
+    const world = makeWorld();
+    world.addBuffer("tex1", { size: { x: 4, y: 4 } });
+    assert.doesNotThrow(() => {
+      applyCommandToWorld(world, {
+        ...kHeader,
+        bufferId: "tex1",
+        action: "uv-region-deleted",
+        metadata: { id: "no-such-region" }
+      });
+    });
+  });
+});
+
+describe("applyCommandToWorld — uv-region-moved", () => {
+  test("updates the region's rect, preserving its color", () => {
+    const world = makeWorld();
+    world.addBuffer("tex1", { size: { x: 8, y: 8 } });
+    const buffer = world.getBuffer("tex1")!;
+    buffer.uvRegions.set({ id: "r1", rect: { x: 0, y: 0, width: 2, height: 2 }, color: "#f00" });
+
+    applyCommandToWorld(world, {
+      ...kHeader,
+      bufferId: "tex1",
+      action: "uv-region-moved",
+      metadata: { id: "r1", rect: { x: 4, y: 4, width: 2, height: 2 } }
+    });
+
+    assert.deepStrictEqual(buffer.uvRegions.get("r1"), {
+      id: "r1", rect: { x: 4, y: 4, width: 2, height: 2 }, color: "#f00"
+    });
+  });
+
+  test("is a no-op for an unknown region", () => {
+    const world = makeWorld();
+    world.addBuffer("tex1", { size: { x: 8, y: 8 } });
+    assert.doesNotThrow(() => {
+      applyCommandToWorld(world, {
+        ...kHeader,
+        bufferId: "tex1",
+        action: "uv-region-moved",
+        metadata: { id: "no-such-region", rect: { x: 0, y: 0, width: 1, height: 1 } }
+      });
+    });
+  });
+});
+
 describe("applyCommandToWorld — all actions compile", () => {
   test("exhaustive switch: no TypeScript error for any action", () => {
     const actions: PixelNetworkCommand["action"][] = [
@@ -212,8 +310,11 @@ describe("applyCommandToWorld — all actions compile", () => {
       "stroke",
       "resized",
       "texture-replaced",
-      "global-fill"
+      "global-fill",
+      "uv-region-created",
+      "uv-region-deleted",
+      "uv-region-moved"
     ];
-    assert.strictEqual(actions.length, 6);
+    assert.strictEqual(actions.length, 9);
   });
 });
