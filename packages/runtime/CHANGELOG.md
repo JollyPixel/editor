@@ -1,5 +1,20 @@
 # @jolly-pixel/runtime
 
+## 3.4.0
+
+### Minor Changes
+
+- [#310](https://github.com/JollyPixel/editor/pull/310) [`6447779`](https://github.com/JollyPixel/editor/commit/64477791f5dae06af2f420d61d872c3c2d97103e) Thanks [@fraxken](https://github.com/fraxken)! - Expose TMJ loading as a plugins in voxel.renderer and fix the TMJ example by preloading scene assets in engine and runtime
+
+- [#246](https://github.com/JollyPixel/editor/pull/246) [`a2ce2a2`](https://github.com/JollyPixel/editor/commit/a2ce2a2fd6fc536de358b0d5ad966cd53882245c) Thanks [@fraxken](https://github.com/fraxken)! - Major refactor of AssetManager and loaders
+
+### Patch Changes
+
+- [#297](https://github.com/JollyPixel/editor/pull/297) [`0ac82f3`](https://github.com/JollyPixel/editor/commit/0ac82f3532ceae21b62421cf15dc60eeb4bd26c8) Thanks [@fraxken](https://github.com/fraxken)! - Bump the `three` peer dependency from `0.182.0` to `^0.185.1` to match the rest of the monorepo. The mismatched pin caused npm to install two separate copies of three.js, which broke `WebGLRenderer.renderBufferDirect` (`object.matrixWorld.determinantAffine is not a function`) whenever objects built by the engine's copy of three were rendered through a renderer/helper (e.g. `ViewHelper`) created from the other copy.
+
+- Updated dependencies [[`6447779`](https://github.com/JollyPixel/editor/commit/64477791f5dae06af2f420d61d872c3c2d97103e), [`a9e412a`](https://github.com/JollyPixel/editor/commit/a9e412a6933a84fbecf390483ea35c857acec926), [`a2ce2a2`](https://github.com/JollyPixel/editor/commit/a2ce2a2fd6fc536de358b0d5ad966cd53882245c), [`4d22d1a`](https://github.com/JollyPixel/editor/commit/4d22d1aadb71a087b1d7472924d5dfabbb05fe77), [`3380d96`](https://github.com/JollyPixel/editor/commit/3380d968dbad604dffa68eebc947e1f75919f9ef), [`0ac82f3`](https://github.com/JollyPixel/editor/commit/0ac82f3532ceae21b62421cf15dc60eeb4bd26c8), [`0d913de`](https://github.com/JollyPixel/editor/commit/0d913de782055a6636b441a66f9c59461f343b3c)]:
+  - @jolly-pixel/engine@3.0.0
+
 ## 3.3.0
 
 ### Minor Changes

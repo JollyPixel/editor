@@ -1,0 +1,7 @@
+# @jolly-pixel/fs-tree
+
+## 1.0.1
+
+### Patch Changes
+
+- [#291](https://github.com/JollyPixel/editor/pull/291) [`0d913de`](https://github.com/JollyPixel/editor/commit/0d913de782055a6636b441a66f9c59461f343b3c) Thanks [@fraxken](https://github.com/fraxken)! - Use private # symbol instead of TypeScript only private reserved keyword
