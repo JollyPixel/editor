@@ -25,7 +25,7 @@ export interface HistoryState {
   canRedo: boolean;
 }
 
-export interface HistoryControllerOptions {
+export interface HistoryOptions {
   /**
    * @default false
    */
@@ -43,7 +43,7 @@ export interface HistoryControllerOptions {
 /**
  * Manages an optional history stack and change notifications.
  */
-export class HistoryController {
+export class History {
   /**
    * Builds hook events that restore an entry's prior state.
    */
@@ -144,7 +144,7 @@ export class HistoryController {
   constructor(
     buffer: DefaultPixelBuffer,
     uvMap: UVMap,
-    options: HistoryControllerOptions = {}
+    options: HistoryOptions = {}
   ) {
     if (options.enabled) {
       this.#stack = new HistoryStack(buffer, uvMap, {

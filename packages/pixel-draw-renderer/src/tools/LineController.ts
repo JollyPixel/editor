@@ -4,15 +4,14 @@ import {
   type LineCommitTrigger
 } from "./Line.ts";
 import type { Brush } from "./Brush.ts";
+import type { EditPipeline } from "../sync/EditPipeline.ts";
 import type { LinePreviewOverlay } from "../rendering/overlays/LinePreviewOverlay.ts";
 import type { Vec2 } from "../types.ts";
 
 export interface LineControllerOptions {
   brush: Brush;
   linePreview: LinePreviewOverlay;
-  onCommit: (
-    pixels: Vec2[]
-  ) => void;
+  pipeline: EditPipeline;
 }
 
 /**
@@ -22,9 +21,7 @@ export class LineController {
   #line = new Line();
   #brush: Brush;
   #linePreview: LinePreviewOverlay;
-  #onCommit: (
-    pixels: Vec2[]
-  ) => void;
+  #pipeline: EditPipeline;
 
   #lastCursorPos: Vec2 | null = null;
   #isShiftHeld = false;
@@ -34,7 +31,7 @@ export class LineController {
   ) {
     this.#brush = options.brush;
     this.#linePreview = options.linePreview;
-    this.#onCommit = options.onCommit;
+    this.#pipeline = options.pipeline;
   }
 
   get isArmed(): boolean {
@@ -88,7 +85,7 @@ export class LineController {
       return;
     }
 
-    this.#onCommit(
+    this.#pipeline.commitPixels(
       this.#stampLinePixels(points)
     );
 

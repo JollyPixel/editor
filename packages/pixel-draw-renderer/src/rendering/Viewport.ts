@@ -2,6 +2,7 @@
 import { clamp } from "../utils/math.ts";
 import { ViewportTexture } from "./ViewportTexture.ts";
 import { Zoom } from "./Zoom.ts";
+import { TypedEventEmitter } from "../utils/EventEmitter.ts";
 import type {
   Vec2
 } from "../types.ts";
@@ -9,6 +10,25 @@ import type {
 export interface DefaultViewport {
   readonly zoom: Zoom;
   readonly camera: Readonly<Vec2>;
+}
+
+/**
+ * Fired after a camera or canvas-size change (`applyPan` / `applyZoom` /
+ * `resizeCanvas` / `centerTexture`). Emitted at the public-method level, never
+ * from the internal `clampCamera` those methods share.
+ */
+export type ViewportEvent = { type: "changed"; };
+
+export interface MouseTexturePositionOptions {
+  /**
+   * The bounding rectangle of the canvas.
+   */
+  bounds: DOMRect;
+  /**
+   * Whether to limit the returned position to the texture bounds.
+   * @default false
+   */
+  limit?: boolean;
 }
 
 export interface ViewportOptions {
@@ -41,7 +61,9 @@ export interface ViewportOptions {
 /**
  * Manages viewport camera and zoom state.
  */
-export class Viewport implements DefaultViewport {
+export class Viewport extends TypedEventEmitter<
+  ViewportEvent
+> implements DefaultViewport {
   #camera: Vec2 = {
     x: 0,
     y: 0
@@ -55,6 +77,8 @@ export class Viewport implements DefaultViewport {
   constructor(
     options: ViewportOptions
   ) {
+    super();
+
     const {
       zoom,
       zoomMin,
@@ -99,6 +123,9 @@ export class Viewport implements DefaultViewport {
     this.#camera.y = this.#canvasHeight / 2 - texPx.y / 2;
 
     this.clampCamera();
+    this.emit({
+      type: "changed"
+    });
   }
 
   clampCamera(): void {
@@ -136,6 +163,9 @@ export class Viewport implements DefaultViewport {
     this.#camera.y += dy;
 
     this.clampCamera();
+    this.emit({
+      type: "changed"
+    });
   }
 
   applyZoom(
@@ -153,6 +183,9 @@ export class Viewport implements DefaultViewport {
     this.#camera.y -= worldY * newZoom - worldY * oldZoom;
 
     this.clampCamera();
+    this.emit({
+      type: "changed"
+    });
   }
 
   applyPan(
@@ -162,6 +195,9 @@ export class Viewport implements DefaultViewport {
     this.#camera.x += dx;
     this.#camera.y += dy;
     this.clampCamera();
+    this.emit({
+      type: "changed"
+    });
   }
 
   mouseCanvasPosition(
@@ -178,7 +214,7 @@ export class Viewport implements DefaultViewport {
   mouseTexturePosition(
     mx: number,
     my: number,
-    parameters: { bounds: DOMRect; limit?: boolean; }
+    parameters: MouseTexturePositionOptions
   ): Vec2 | null {
     const {
       bounds,

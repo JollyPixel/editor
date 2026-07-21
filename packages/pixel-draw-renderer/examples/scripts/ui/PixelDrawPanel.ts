@@ -333,9 +333,9 @@ export class PixelDrawPanel extends LitElement {
     // Sync rail state with whatever defaults were passed in options.
     this.#mode = this.#canvasManager.mode;
     this.#brushSize = this.#canvasManager.brush.size;
-    this.#fillGlobal = this.#canvasManager.fillGlobal;
-    this.#selectShape = this.#canvasManager.selectShape;
-    this.#pickColorArmed = this.#canvasManager.pickColorArmed;
+    this.#fillGlobal = this.#canvasManager.tools.fill.global;
+    this.#selectShape = this.#canvasManager.tools.select.shape;
+    this.#pickColorArmed = this.#canvasManager.tools.brush.pickArmed;
     this.#foreground = {
       hex: this.#canvasManager.brush.primary.asString("hex"),
       opacity: this.#canvasManager.brush.primary.opacity
@@ -383,7 +383,7 @@ export class PixelDrawPanel extends LitElement {
       this.#canvasManager.mode = mode;
       // Leaving paint mode auto-disarms the picker on the canvas side; keep
       // the toggle button's active state in sync with that.
-      this.#pickColorArmed = this.#canvasManager.pickColorArmed;
+      this.#pickColorArmed = this.#canvasManager.tools.brush.pickArmed;
     }
     this.requestUpdate();
   }
@@ -401,8 +401,8 @@ export class PixelDrawPanel extends LitElement {
       this.#setMode("paint");
     }
 
-    this.#canvasManager.pickColorArmed = !this.#canvasManager.pickColorArmed;
-    this.#pickColorArmed = this.#canvasManager.pickColorArmed;
+    this.#canvasManager.tools.brush.pickArmed = !this.#canvasManager.tools.brush.pickArmed;
+    this.#pickColorArmed = this.#canvasManager.tools.brush.pickArmed;
     this.requestUpdate();
   }
 
@@ -420,7 +420,7 @@ export class PixelDrawPanel extends LitElement {
   #onFillGlobalToggle(): void {
     this.#fillGlobal = !this.#fillGlobal;
     if (this.#canvasManager) {
-      this.#canvasManager.fillGlobal = this.#fillGlobal;
+      this.#canvasManager.tools.fill.global = this.#fillGlobal;
     }
     this.requestUpdate();
   }
@@ -428,7 +428,7 @@ export class PixelDrawPanel extends LitElement {
   #onSelectShapeToggle(): void {
     this.#selectShape = !this.#selectShape;
     if (this.#canvasManager) {
-      this.#canvasManager.selectShape = this.#selectShape;
+      this.#canvasManager.tools.select.shape = this.#selectShape;
     }
     this.requestUpdate();
   }

@@ -3,6 +3,7 @@ import {
   PixelBuffer,
   type PixelBufferOptions
 } from "./PixelBuffer.ts";
+import { TypedEventEmitter } from "../utils/EventEmitter.ts";
 import type {
   RGBA,
   SelectionRect,
@@ -15,9 +16,16 @@ import type {
 export type CanvasBufferOptions = PixelBufferOptions;
 
 /**
+ * Fired after a pixel mutation that changes the visible working canvas
+ */
+export type CanvasBufferEvent = { type: "changed"; };
+
+/**
  * Synchronizes a PixelBuffer with a canvas.
  */
-export class CanvasBuffer implements DefaultPixelBuffer {
+export class CanvasBuffer extends TypedEventEmitter<
+  CanvasBufferEvent
+> implements DefaultPixelBuffer {
   #buffer: PixelBuffer;
   #workingCanvas: HTMLCanvasElement;
   #workingCtx: CanvasRenderingContext2D;
@@ -25,6 +33,8 @@ export class CanvasBuffer implements DefaultPixelBuffer {
   constructor(
     options: CanvasBufferOptions
   ) {
+    super();
+
     const { size } = options;
 
     this.#buffer = new PixelBuffer(options);
@@ -183,6 +193,9 @@ export class CanvasBuffer implements DefaultPixelBuffer {
     }
 
     this.#workingCtx.putImageData(imageData, minX, minY);
+    this.emit({
+      type: "changed"
+    });
   }
 
   /**
@@ -194,6 +207,9 @@ export class CanvasBuffer implements DefaultPixelBuffer {
   ): void {
     this.#buffer.drawRegion(rect, pixels);
     this.#resyncCanvasRegion(rect);
+    this.emit({
+      type: "changed"
+    });
   }
 
   /**
@@ -206,6 +222,9 @@ export class CanvasBuffer implements DefaultPixelBuffer {
   ): void {
     this.#buffer.drawMaskedRegion(rect, pixels, mask);
     this.#resyncCanvasRegion(rect);
+    this.emit({
+      type: "changed"
+    });
   }
 
   #resyncCanvasRegion(

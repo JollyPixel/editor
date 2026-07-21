@@ -3,11 +3,12 @@ import { Select } from "./Select.ts";
 import { ShapeSelect } from "./ShapeSelect.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import type {
-  CanvasRenderer
-} from "../rendering/CanvasRenderer.ts";
+  FloatingSelectionOverlay
+} from "../rendering/overlays/FloatingSelectionOverlay.ts";
 import type {
   SelectionOverlay
 } from "../rendering/overlays/SelectionOverlay.ts";
+import type { EditPipeline } from "../sync/EditPipeline.ts";
 import type {
   RGBA,
   SelectionRect,
@@ -28,7 +29,8 @@ const kTransparent: RGBA = { r: 0, g: 0, b: 0, a: 0 };
 
 export interface SelectControllerOptions {
   canvasBuffer: CanvasBuffer;
-  renderer: CanvasRenderer;
+  /** The floating overlay that renders a selection while it is dragged. */
+  floatingSelection: FloatingSelectionOverlay;
   selectionOverlay: SelectionOverlay;
   /**
    * Explicit fill for a vacated footprint (Move/Rotate/Flip source, or
@@ -36,32 +38,45 @@ export interface SelectControllerOptions {
    * configured by the consumer.
    */
   eraseColor: RGBA | null;
-  /**
-   * Commits a selection edit.
-   */
-  onCommit: (entry: SelectEditEntry) => void;
+  pipeline: EditPipeline;
+}
+
+/**
+ * Public select-tool surface (`PixelArtCanvas.tools.select`).
+ */
+export interface SelectTool {
+  /** Whether empty-space clicks create shape (magic-wand) selections. */
+  shape: boolean;
+  /** Whether a committed selection exists to transform. */
+  readonly hasSelection: boolean;
+  /** Rotates the active selection clockwise; `false` when none. */
+  rotate(): boolean;
+  /** Mirrors the active selection horizontally; `false` when none. */
+  flipHorizontal(): boolean;
+  /** Mirrors the active selection vertically; `false` when none. */
+  flipVertical(): boolean;
 }
 
 /**
  * Coordinates selection state, rendering, and commits.
  */
-export class SelectController {
+export class SelectController implements SelectTool {
   #select = new Select();
   #canvasBuffer: CanvasBuffer;
-  #renderer: CanvasRenderer;
+  #floatingSelection: FloatingSelectionOverlay;
   #selectionOverlay: SelectionOverlay;
   #eraseColor: RGBA | null;
-  #onCommit: (entry: SelectEditEntry) => void;
+  #pipeline: EditPipeline;
   #shapeMode = false;
 
   constructor(
     options: SelectControllerOptions
   ) {
     this.#canvasBuffer = options.canvasBuffer;
-    this.#renderer = options.renderer;
+    this.#floatingSelection = options.floatingSelection;
     this.#selectionOverlay = options.selectionOverlay;
     this.#eraseColor = options.eraseColor;
-    this.#onCommit = options.onCommit;
+    this.#pipeline = options.pipeline;
   }
 
   /**
@@ -155,14 +170,13 @@ export class SelectController {
     const mask = this.#select.mask;
     if (rect && snapshot && mask) {
       const eraseColor = this.#resolveEraseColor(rect);
-      this.#renderer.floatingSelection.create({
+      this.#floatingSelection.create({
         sourceRect: rect,
         pixels: snapshot,
         mask,
         eraseColor,
         blankSource: !this.#select.willSkipErase
       });
-      this.#renderer.drawFrame();
     }
   }
 
@@ -203,8 +217,7 @@ export class SelectController {
       const mask = this.#select.mask;
       if (rect && mask) {
         this.#selectionOverlay.drawMask(rect, mask);
-        this.#renderer.floatingSelection.updatePosition(rect);
-        this.#renderer.drawFrame();
+        this.#floatingSelection.updatePosition(rect);
       }
     }
   }
@@ -233,7 +246,7 @@ export class SelectController {
       const snapshot = this.#select.snapshot;
       const mask = this.#select.mask;
       const result = this.#select.finishMove();
-      this.#renderer.floatingSelection.clear();
+      this.#floatingSelection.clear();
 
       if (result && snapshot && mask) {
         this.#commitFootprintChange({
@@ -329,7 +342,7 @@ export class SelectController {
   /**
    * Rotates the active selection clockwise.
    */
-  handleRotate(): boolean {
+  rotate(): boolean {
     if (this.#select.state !== "selected") {
       return false;
     }
@@ -358,11 +371,11 @@ export class SelectController {
     return true;
   }
 
-  handleFlipHorizontal(): boolean {
+  flipHorizontal(): boolean {
     return this.#handleFlip((select) => select.flipHorizontal());
   }
 
-  handleFlipVertical(): boolean {
+  flipVertical(): boolean {
     return this.#handleFlip((select) => select.flipVertical());
   }
 
@@ -397,7 +410,7 @@ export class SelectController {
   clear(): void {
     this.#select.clear();
     this.#selectionOverlay.clear();
-    this.#renderer.floatingSelection.clear();
+    this.#floatingSelection.clear();
   }
 
   refreshOverlay(): void {
@@ -448,9 +461,11 @@ export class SelectController {
     );
     this.#canvasBuffer.copyToMaster();
 
+    // drawPixels / drawMaskedRegion above each emit "changed"; the view has
+    // already repainted. afterColors is sampled from the buffer, not the
+    // display, so it is unaffected by repaint timing.
     const afterColors = this.#canvasBuffer.samplePixels(positions);
-    this.#renderer.drawFrame();
-    this.#onCommit({
+    this.#pipeline.commitSelectionEdit({
       positions,
       beforeColors,
       afterColors,

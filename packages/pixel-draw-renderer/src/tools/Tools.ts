@@ -1,29 +1,31 @@
 // Import Internal Dependencies
-import type { Brush, BrushColorSlot } from "./Brush.ts";
+import type { Brush } from "./Brush.ts";
 import {
-  BrushController
+  BrushController,
+  type BrushTool
 } from "./BrushController.ts";
 import {
   FillController,
-  type FillGlobalCommit
+  type FillTool
 } from "./FillController.ts";
 import {
   LineController
 } from "./LineController.ts";
 import {
   SelectController,
-  type SelectEditEntry
+  type SelectTool
 } from "./SelectController.ts";
 import { UVController } from "../uv/UVController.ts";
 import type { UVMap } from "../uv/UVMap.ts";
 import type { UVOverlay } from "../rendering/overlays/UVOverlay.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import type { CanvasRenderer } from "../rendering/CanvasRenderer.ts";
+import type { EditPipeline } from "../sync/EditPipeline.ts";
 import type { LinePreviewOverlay } from "../rendering/overlays/LinePreviewOverlay.ts";
 import type { SelectionOverlay } from "../rendering/overlays/SelectionOverlay.ts";
-import type { RGBA, Vec2 } from "../types.ts";
+import type { RGBA } from "../types.ts";
 
-export interface ToolControllersOptions {
+export interface ToolsOptions {
   brush: Brush;
   canvasBuffer: CanvasBuffer;
   renderer: CanvasRenderer;
@@ -32,17 +34,24 @@ export interface ToolControllersOptions {
   eraseColor: RGBA | null;
   uvMap: UVMap;
   uvOverlay: UVOverlay;
-  onStrokeCommit: (pixels: Vec2[], color: RGBA, beforeColors: RGBA[]) => void;
-  onCommitPixels: (pixels: Vec2[]) => void;
-  onFillCommitPixels: (pixels: Vec2[], slot: BrushColorSlot) => void;
-  onGlobalFillCommit: (commit: FillGlobalCommit) => void;
-  onSelectCommit: (entry: SelectEditEntry) => void;
+  pipeline: EditPipeline;
 }
 
 /**
- * Groups drawing tool controllers.
+ * Public view of the drawing tools (`PixelArtCanvas.tools`). `line`/`uv` are
+ * internal; the UV model is on `PixelArtCanvas.uv`.
  */
-export class ToolControllers {
+export interface Toolset {
+  brush: BrushTool;
+  fill: FillTool;
+  select: SelectTool;
+}
+
+/**
+ * Groups the drawing tool controllers. The concrete container behind the
+ * public `Toolset` view (`PixelArtCanvas.tools`).
+ */
+export class Tools {
   readonly brush: BrushController;
   readonly fill: FillController;
   readonly line: LineController;
@@ -50,34 +59,33 @@ export class ToolControllers {
   readonly uv: UVController;
 
   constructor(
-    options: ToolControllersOptions
+    options: ToolsOptions
   ) {
     this.brush = new BrushController({
       brush: options.brush,
       canvasBuffer: options.canvasBuffer,
-      renderer: options.renderer,
-      onCommit: options.onStrokeCommit
+      canvas: options.renderer.canvas(),
+      pipeline: options.pipeline
     });
 
     this.fill = new FillController({
       brush: options.brush,
       canvasBuffer: options.canvasBuffer,
-      onCommit: options.onFillCommitPixels,
-      onGlobalCommit: options.onGlobalFillCommit
+      pipeline: options.pipeline
     });
 
     this.line = new LineController({
       brush: options.brush,
       linePreview: options.linePreview,
-      onCommit: options.onCommitPixels
+      pipeline: options.pipeline
     });
 
     this.select = new SelectController({
       canvasBuffer: options.canvasBuffer,
-      renderer: options.renderer,
+      floatingSelection: options.renderer.floatingSelection,
       selectionOverlay: options.selectionOverlay,
       eraseColor: options.eraseColor,
-      onCommit: options.onSelectCommit
+      pipeline: options.pipeline
     });
 
     this.uv = new UVController({

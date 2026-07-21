@@ -34,7 +34,7 @@ function click(
 
 /**
  * Tests for `select` mode's shape (magic-wand) sub-mode, toggled via
- * PixelArtCanvas#selectShape — see PixelArtCanvas.select.spec.ts for the
+ * PixelArtCanvas#tools.select.shape — see PixelArtCanvas.select.spec.ts for the
  * default rectangle-drag behavior these build on.
  */
 describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
@@ -68,7 +68,7 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
       { x: 3, y: 2 }
     ]);
     manager.mode = "select";
-    manager.selectShape = true;
+    manager.tools.select.shape = true;
 
     // texture (2,2), part of the black pair.
     click(canvas, 92, 92);
@@ -93,7 +93,7 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
       { x: 2, y: 2 }
     ]);
     manager.mode = "select";
-    manager.selectShape = true;
+    manager.tools.select.shape = true;
 
     click(canvas, 92, 92);
     window.dispatchEvent(deleteKey());
@@ -129,7 +129,7 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
     ];
     manager.commitPixels(border);
     manager.mode = "select";
-    manager.selectShape = true;
+    manager.tools.select.shape = true;
 
     // texture (2,2), a border pixel.
     click(canvas, 92, 92);
@@ -157,7 +157,7 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
     manager.commitPixels([{ x: 3, y: 2 }]);
 
     manager.mode = "select";
-    manager.selectShape = true;
+    manager.tools.select.shape = true;
 
     canvas.dispatchEvent(
       mouseEvent("mousedown", 92, 92)
@@ -191,7 +191,7 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
     manager.destroy();
   });
 
-  test("toggling selectShape clears the active selection", () => {
+  test("toggling tools.select.shape clears the active selection", () => {
     const manager = makeManager();
     const canvas = manager.canvas();
 
@@ -200,10 +200,10 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
       { x: 3, y: 2 }
     ]);
     manager.mode = "select";
-    manager.selectShape = true;
+    manager.tools.select.shape = true;
     click(canvas, 92, 92);
 
-    manager.selectShape = false;
+    manager.tools.select.shape = false;
     window.dispatchEvent(deleteKey());
 
     assert.deepStrictEqual(
@@ -235,7 +235,7 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
     manager.commitPixels([{ x: 5, y: 4 }]);
 
     manager.mode = "select";
-    manager.selectShape = true;
+    manager.tools.select.shape = true;
     // texture (2,2).
     click(canvas, 92, 92);
 
@@ -302,7 +302,7 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
       { x: 3, y: 3 }
     ]);
     manager.mode = "select";
-    manager.selectShape = true;
+    manager.tools.select.shape = true;
     click(canvas, 92, 92);
 
     canvas.dispatchEvent(

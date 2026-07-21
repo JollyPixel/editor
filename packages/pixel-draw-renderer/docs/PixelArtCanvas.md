@@ -7,10 +7,10 @@ It wires together a viewport, canvas buffer, renderer, input handling, and SVG o
 - the [`Brush`](./tools/Brush.md) tool
 - the [`UVMap`](./uv/UVMap.md) value object (`"uv"` mode)
 - internal line/fill/select tools (no public class of their own)
-- an internal `HistoryController` wrapping a [`HistoryStack`](./history/HistoryStack.md) for undo/redo
+- an internal `History` wrapping a [`HistoryStack`](./history/HistoryStack.md) for undo/redo
 
 > [!IMPORTANT]
-> `HistoryController` is constructed unconditionally, but only records entries when `history.enabled` is passed. Leaving it unset skips that bookkeeping entirely.
+> `History` is constructed unconditionally, but only records entries when `history.enabled` is passed. Leaving it unset skips that bookkeeping entirely.
 
 ## Types
 
@@ -104,7 +104,7 @@ interface PixelArtCanvasOptions {
 
 `Mode` is `"paint" | "move" | "fill" | "select" | "uv"`. `ColorInput` (`string | Color`, where `Color` is [colorjs.io](https://colorjs.io)'s class) is used throughout the package wherever a color option is accepted: a CSS color string (hex, `rgb()`, `hsl()`, named color, ...) or a `Color` instance. `BrushOptions` is forwarded to the internal `Brush` instance, see [Brush.md](./tools/Brush.md). `PixelBufferHookListener` is described in [buffer/PixelBuffer.md](./buffer/PixelBuffer.md) and [network/index.md](./network/index.md). `KeybindingsMap` is described in [input/Keybindings.md](./input/Keybindings.md).
 
-`history.enabled` (default `false`) tells the internal `HistoryController` to back itself with a [`HistoryStack`](./history/HistoryStack.md) that records every stroke, resize, and texture replace, enabling `undo()`/`redo()`. Leaving it disabled skips that bookkeeping entirely: there's no per-edit cost paid for a feature that isn't used.
+`history.enabled` (default `false`) tells the internal `History` to back itself with a [`HistoryStack`](./history/HistoryStack.md) that records every stroke, resize, and texture replace, enabling `undo()`/`redo()`. Leaving it disabled skips that bookkeeping entirely: there's no per-edit cost paid for a feature that isn't used.
 
 Undocumented defaults: `texture.size` is `{ x: 64, y: 32 }` (`y` falls back to `x` when only `x` is given), `texture.maxSize` is `2048`, `zoom.default` fits the texture to the container (see above; falls back to `4` if the container has no measurable size yet), `zoom.min`/`zoom.max` are `1`/`32`, `zoom.sensitivity` is `0.1`, `backgroundTransparency.squareSize` is `8`, `backgroundTransparency.colors` is `{ odd: "#999", even: "#666" }`.
 
@@ -156,71 +156,30 @@ Reads or sets the current interaction mode.
 | `"uv"` | Click a visible UV region to select/drag it. `Delete` deletes the selected region. | N/A |
 
 - `"paint"`: the two buttons are mutually exclusive, a stroke already in progress on one button blocks the other from starting until it ends.
-- `"fill"`: fills the clicked pixel's contiguous region by default, or every same-colored pixel on the canvas when `fillGlobal` is `true` (see below). A fill click is single-shot and not tracked as a drag, so, unlike `"paint"`, the two buttons aren't mutually exclusive.
+- `"fill"`: fills the clicked pixel's contiguous region by default, or every same-colored pixel on the canvas when `tools.fill.global` is `true` (see below). A fill click is single-shot and not tracked as a drag, so, unlike `"paint"`, the two buttons aren't mutually exclusive.
 - `"select"`: `Ctrl`/`Cmd`+`C`/`V` copies/duplicates, `Delete` erases, `R` rotates the selection 90° clockwise around its center (repeatable: press again for further rotation; no counterclockwise binding), `H`/`V` flips the selection's content horizontally/vertically in place. A drag that never grows past its starting pixel (a plain click) does not create a selection. Like `"uv"`, the cursor is `"grab"` once a selection exists (idle) and `"grabbing"` while it's being dragged to a new position — drawing a brand-new rectangle keeps the plain cursor, since that isn't a grab motion.
 - `"uv"`: there is no click-to-create gesture — regions are created via `uv.create(...)` (see [uv/UVMap.md](./uv/UVMap.md)). Only *visible* regions (per `uv.showAll`/`uv.selectedRegionId`) can be hit-tested; clicking empty canvas space (or an invisible region) deselects. The canvas cursor is `"grab"` while idle in this mode and `"grabbing"` while a region is actively being dragged, reverting to the browser default in any other mode. `Delete` only deletes the selected UV region while actually in `"uv"` mode — since a UV selection, unlike a `"select"`-mode selection, persists across mode changes (see the note below), `Delete` pressed in another mode acts only on that mode's own selection, if any, and leaves the UV region alone.
 
 > [!IMPORTANT]
-> - The line/fill/select tools are internal implementation details with no public class of their own.
+> - The line tool and UV drag handling stay internal; the brush, fill, and select tools expose a narrow public surface via [`tools`](#tools).
 > - Switching to `"move"` cancels an armed line. Switching away from `"select"` clears any active selection. Switching away from `"uv"` cancels an in-progress drag but, unlike `"select"`, does **not** clear the UV selection/visibility — see [uv/UVMap.md](./uv/UVMap.md).
-> - The SVG brush-cursor highlight is active only in `"paint"` and `"fill"`. In `"fill"`, and in `"paint"` while `pickColorArmed` is `true`, the highlight is always a single pixel regardless of `brush`'s configured size, since neither a fill's seed nor a color pick is brush-sized.
+> - The SVG brush-cursor highlight is active only in `"paint"` and `"fill"`. In `"fill"`, and in `"paint"` while `tools.brush.pickArmed` is `true`, the highlight is always a single pixel regardless of `brush`'s configured size, since neither a fill's seed nor a color pick is brush-sized.
 
 ---
 
-### `fillGlobal`
+### `tools`
 
 ```ts
-get fillGlobal(): boolean
-set fillGlobal(global: boolean)
+readonly tools: Toolset  // { brush: BrushTool; fill: FillTool; select: SelectTool }
 ```
 
-Reads or sets whether `"fill"` mode recolors every pixel matching the seed's color anywhere on the canvas (`true`), instead of only the seed's 4-directionally connected region (`false`, the default).
+Narrow public view of the drawing tools — the single source of truth for runtime tool state that has no constructor option (each setting persists across mode switches, mirroring `brush`'s size/color). Documented per tool:
 
-Runtime-only: there is no constructor option. The setting persists across mode switches, mirroring `brush`'s size/color.
+- [`tools.brush`](./tools/BrushTool.md) — color picking: `pickArmed`, `pick(x, y)`.
+- [`tools.fill`](./tools/FillTool.md) — contiguous vs. global fill: `global`.
+- [`tools.select`](./tools/SelectTool.md) — shape sub-mode and transforms: `shape`, `hasSelection`, `rotate()`, `flipHorizontal()`, `flipVertical()`.
 
-> [!IMPORTANT]
-> A global fill still commits and undoes as a single atomic edit, but broadcasts over `onBufferUpdated`/the network layer as a compact `"global-fill"` event (`{ fromColor, toColor }`, no position list) instead of `"stroke"`, since it can touch a large fraction of the canvas; see [buffer/PixelBuffer.md](./buffer/PixelBuffer.md). Undoing/redoing a global fill replays as a full-position `"stroke"` event instead.
-
----
-
-### `selectShape`
-
-```ts
-get selectShape(): boolean
-set selectShape(shape: boolean)
-```
-
-Reads or sets whether `"select"` mode's click-to-start (on empty space, not on top of an existing selection) computes a magic-wand shape selection around the clicked pixel's connected region (`true`), instead of starting a rectangle drag (`false`, the default).
-
-Runtime-only: there is no constructor option. Toggling this value clears any active selection.
-
-> [!IMPORTANT]
-> A connected region smaller than 2 pixels does not produce a selection; the click is a no-op.
-
----
-
-### `pickColorArmed` / `pickColorAt`
-
-```ts
-get pickColorArmed(): boolean
-set pickColorArmed(armed: boolean)
-pickColorAt(x: number, y: number): RGBA | null
-```
-
-Three independent paths sample a pixel color into `brush.primary`:
-
-| Path | Trigger | Scope |
-|---|---|---|
-| `pickColorArmed = true` | Next left-click in `"paint"` mode | Arms/disarms itself; no effect in any other mode |
-| `pickColorAt(x, y)` | Called directly, any time | Programmatic entry point (e.g. a toolbar button); independent of `mode`/`pickColorArmed` |
-| `Ctrl`+right-click | Mousedown, in `"paint"` mode | Always available; single-shot, independent of `pickColorArmed` |
-
-- `pickColorArmed`: not a separate `Mode`, just a flag on top of `"paint"`. While armed, the next left-click samples that pixel instead of painting, applies it, and disarms itself. Switching `mode` away from `"paint"` disarms it automatically. A click outside the texture bounds is ignored (stays armed) rather than sampling transparent black.
-- `pickColorAt(x, y)`: returns the sampled `RGBA`, or `null` (brush left untouched) when `(x, y)` is outside the texture.
-- `Ctrl`+right-click: a single-shot sample-and-apply at mousedown, not tracked as a drag, and does not start a `brush.secondary` stroke. Plain right-click (no `Ctrl`) is not a picker; see `mode` above for what it does instead.
-
-> [!IMPORTANT]
-> Every path dispatches a `"colorpicked"` CustomEvent (`detail: { hex, opacity }`, bubbling and composed) on the element returned by `canvas()`; use it to mirror the pick onto a UI color swatch.
+The line tool and UV drag handling stay internal; the UV *model* is exposed separately as [`uv`](./uv/UVMap.md).
 
 ---
 
@@ -267,7 +226,7 @@ canUndo(): boolean
 canRedo(): boolean
 ```
 
-Reverts/re-applies the most recent local edit (stroke, resize, texture replace, or UV region create/delete/move) via the internal `HistoryController`, which wraps a [`HistoryStack`](./history/HistoryStack.md).
+Reverts/re-applies the most recent local edit (stroke, resize, texture replace, or UV region create/delete/move) via the internal `History`, which wraps a [`HistoryStack`](./history/HistoryStack.md).
 
 - `undo()`/`redo()` return `false` and do nothing when `history.enabled` wasn't passed at construction, or when the corresponding stack is empty.
 - `canUndo()`/`canRedo()` report the same condition without mutating anything.
@@ -278,18 +237,6 @@ A successful call redraws the canvas, calls `onDrawEnd`, and fires `onHistoryCha
 > [!IMPORTANT]
 > - For a history-enabled `PixelArtCanvas` attached to a `PixelSyncSession`, a successful `undo()`/`redo()` also emits the reverted/re-applied state through `onBufferUpdated` so peers converge to the same result (the replayed event's `originTimestamp` keeps that fair under conflict resolution; see [buffer/PixelBuffer.md](./buffer/PixelBuffer.md)). **Exception:** undoing/redoing a `"select"`-mode edit (move/delete/paste/rotate/flip) never emits `onBufferUpdated`, since those edits aren't networked in the first place, so their undo/redo is local-only. A UV region create/delete/move **is** networked: undo/redo just calls the matching `UVMap` method, which emits the same event a live change would, and that's what feeds `onBufferUpdated`; see [uv/UVMap.md](./uv/UVMap.md#history--network).
 > - A remote resize, texture-replace, or snapshot load clears the local history stack (its recorded positions/sizes no longer describe the buffer), so `canUndo()`/`canRedo()` drop to `false` afterward.
-
----
-
-### `rotateSelection` / `flipSelectionHorizontal` / `flipSelectionVertical`
-
-```ts
-rotateSelection(): boolean
-flipSelectionHorizontal(): boolean
-flipSelectionVertical(): boolean
-```
-
-Programmatic equivalents of the `R`/`H`/`V` select-mode keybindings (e.g. for a toolbar button): same underlying commit path, so keyboard and button can't drift apart. Each returns `false` and does nothing without an active `"select"`-mode selection.
 
 ---
 

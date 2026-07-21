@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { SvgManager } from "#src/rendering/SvgManager.ts";
+import { OverlayLayer } from "#src/rendering/OverlayLayer.ts";
 import { BrushHighlightOverlay } from "#src/rendering/overlays/BrushHighlightOverlay.ts";
 import { LinePreviewOverlay } from "#src/rendering/overlays/LinePreviewOverlay.ts";
 import { SelectionOverlay } from "#src/rendering/overlays/SelectionOverlay.ts";
@@ -26,10 +26,10 @@ function makeParent(): HTMLDivElement {
   return div;
 }
 
-describe("SvgManager", () => {
+describe("OverlayLayer", () => {
   describe("overlays", () => {
     test("exposes the brush highlight, line preview, and selection overlays", () => {
-      const svgMgr = new SvgManager({
+      const overlays = new OverlayLayer({
         parent: makeParent(),
         viewport: makeViewport(),
         brush: makeBrush(),
@@ -37,19 +37,19 @@ describe("SvgManager", () => {
       });
 
       assert.ok(
-        svgMgr.brushHighlight instanceof BrushHighlightOverlay,
+        overlays.brushHighlight instanceof BrushHighlightOverlay,
         "brushHighlight should be an instance of BrushHighlightOverlay"
       );
       assert.ok(
-        svgMgr.linePreview instanceof LinePreviewOverlay,
+        overlays.linePreview instanceof LinePreviewOverlay,
         "linePreview should be an instance of LinePreviewOverlay"
       );
       assert.ok(
-        svgMgr.selection instanceof SelectionOverlay,
+        overlays.selection instanceof SelectionOverlay,
         "selection should be an instance of SelectionOverlay"
       );
       assert.ok(
-        svgMgr.uvOverlay instanceof UVOverlay,
+        overlays.uvOverlay instanceof UVOverlay,
         "uvOverlay should be an instance of UVOverlay"
       );
     });
@@ -59,7 +59,7 @@ describe("SvgManager", () => {
     test("destroy() removes the SVG from parent", () => {
       const parent = makeParent();
 
-      const svgMgr = new SvgManager({
+      const overlays = new OverlayLayer({
         parent,
         viewport: makeViewport(),
         brush: makeBrush(),
@@ -73,7 +73,7 @@ describe("SvgManager", () => {
         "parent should contain the SVG element after construction"
       );
 
-      svgMgr.destroy();
+      overlays.destroy();
 
       const childrenAfter = parent.childElementCount;
       assert.strictEqual(
@@ -86,15 +86,15 @@ describe("SvgManager", () => {
     test("destroy() can be called again without throwing", () => {
       const parent = makeParent();
 
-      const svgMgr = new SvgManager({
+      const overlays = new OverlayLayer({
         parent,
         viewport: makeViewport(),
         brush: makeBrush(),
         uvMap: makeUvMap()
       });
 
-      svgMgr.destroy();
-      assert.doesNotThrow(() => svgMgr.destroy());
+      overlays.destroy();
+      assert.doesNotThrow(() => overlays.destroy());
     });
   });
 });

@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { toUint8Array } from "js-base64";
+import { fromUint8Array, toUint8Array } from "js-base64";
 
 // Import Internal Dependencies
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
@@ -7,7 +7,7 @@ import type {
   PixelBufferHookEvent,
   PixelBufferHookListener
 } from "../buffer/hooks.ts";
-import type { HistoryController } from "../history/HistoryController.ts";
+import type { History } from "../history/History.ts";
 import type { HistoryEntryInput } from "../history/HistoryStack.types.ts";
 import type { CanvasRenderer } from "../rendering/CanvasRenderer.ts";
 import type { Viewport } from "../rendering/Viewport.ts";
@@ -19,12 +19,20 @@ import type {
   Vec2
 } from "../types.ts";
 import { Fill } from "../tools/Fill.ts";
+import type {
+  Brush,
+  BrushColorSlot
+} from "../tools/Brush.ts";
+import type { FillGlobalCommit } from "../tools/FillController.ts";
+import type { SelectEditEntry } from "../tools/SelectController.ts";
+import { toRGBA } from "../utils/colors.ts";
 
-export interface SyncControllerOptions {
+export interface EditPipelineOptions {
+  brush: Brush;
   canvasBuffer: CanvasBuffer;
   viewport: Viewport;
   renderer: CanvasRenderer;
-  history: HistoryController;
+  history: History;
   uvMap: UVMap;
   onBufferUpdated?: PixelBufferHookListener;
   /**
@@ -34,13 +42,18 @@ export interface SyncControllerOptions {
 }
 
 /**
- * Synchronizes canvas, rendering, history, and mutation hooks.
+ * The single place where an edit becomes buffer mutation + history + hook +
+ * `onDrawEnd`. Tools call one intent method per edit kind
+ * (`commitStroke`, `commitPixels`, `commitGlobalFill`, `commitSelectionEdit`)
+ * and `PixelArtCanvas` calls `resize` / `replaceTexture`; none of them have
+ * to sequence the underlying primitives themselves.
  */
-export class SyncController {
+export class EditPipeline {
+  #brush: Brush;
   #canvasBuffer: CanvasBuffer;
   #viewport: Viewport;
   #renderer: CanvasRenderer;
-  #history: HistoryController;
+  #history: History;
   #uvMap: UVMap;
   #onBufferUpdated?: PixelBufferHookListener;
   #onDrawEnd?: () => void;
@@ -48,8 +61,9 @@ export class SyncController {
   #isReplayingHistory = false;
 
   constructor(
-    options: SyncControllerOptions
+    options: EditPipelineOptions
   ) {
+    this.#brush = options.brush;
     this.#canvasBuffer = options.canvasBuffer;
     this.#viewport = options.viewport;
     this.#renderer = options.renderer;
@@ -82,20 +96,166 @@ export class SyncController {
   }
 
   /**
-   * Records a local history entry.
+   * Commits an already-applied stroke (the buffer is mutated live as the
+   * brush stamps, so this only records + emits + signals draw-end).
    */
-  recordHistory(
-    entry: HistoryEntryInput
+  commitStroke(
+    pixels: Vec2[],
+    color: RGBA,
+    beforeColors: RGBA[]
   ): void {
-    if (this.#isApplyingRemote) {
-      return;
-    }
-
-    this.#history.push(entry);
+    this.#recordHistory({
+      action: "stroke",
+      positions: pixels,
+      beforeColors,
+      afterColor: color
+    });
+    this.emitHook({
+      action: "stroke",
+      metadata: { color, positions: pixels }
+    });
+    this.#onDrawEnd?.();
   }
 
   /**
-   * Emits a local buffer mutation.
+   * Commits pixels as a stroke edit, resolving the color from the brush and
+   * applying them to the buffer first (used by line, fill, and the public
+   * `PixelArtCanvas.commitPixels`, where the buffer is not yet mutated).
+   */
+  commitPixels(
+    pixels: Vec2[],
+    slot: BrushColorSlot = "primary"
+  ): void {
+    if (pixels.length === 0) {
+      return;
+    }
+
+    const color = toRGBA(this.#brush[slot].asString());
+    const beforeColors = this.#history.enabled ?
+      this.#canvasBuffer.samplePixels(pixels) :
+      [];
+
+    this.#applyStroke(color, pixels);
+    this.commitStroke(pixels, color, beforeColors);
+  }
+
+  /**
+   * Commits a global fill (recolors all matching pixels).
+   */
+  commitGlobalFill(
+    commit: FillGlobalCommit
+  ): void {
+    const { positions, beforeColors, fromColor, toColor } = commit;
+
+    this.#applyStroke(toColor, positions);
+    this.#recordHistory({
+      action: "stroke",
+      positions,
+      beforeColors,
+      afterColor: toColor
+    });
+    this.emitHook({
+      action: "global-fill",
+      metadata: { fromColor, toColor }
+    });
+    this.#onDrawEnd?.();
+  }
+
+  /**
+   * Commits a selection edit (move / rotate / flip / paste / delete).
+   *
+   * NOTE: unlike `commitStroke` / `commitGlobalFill`, a selection edit emits
+   * no network hook. This asymmetry is preserved from the pre-`EditPipeline`
+   * behavior; it now lives in one place should selection edits ever need to
+   * sync over the network.
+   */
+  commitSelectionEdit(
+    entry: SelectEditEntry
+  ): void {
+    this.#recordHistory({
+      action: "select-edit",
+      ...entry
+    });
+    this.#onDrawEnd?.();
+  }
+
+  /**
+   * Resizes the texture, recording the before/after snapshots and emitting a
+   * `resized` hook.
+   */
+  resize(
+    size: Vec2
+  ): void {
+    const beforeSize = this.#canvasBuffer.size();
+    const beforePixels = this.#history.enabled ?
+      Uint8ClampedArray.from(this.#canvasBuffer.pixels()) :
+      null;
+
+    this.#resizeTexture(size);
+
+    if (beforePixels) {
+      this.#recordHistory({
+        action: "resized",
+        beforeSize,
+        beforePixels,
+        afterSize: structuredClone(size),
+        afterPixels: Uint8ClampedArray.from(
+          this.#canvasBuffer.pixels()
+        )
+      });
+    }
+
+    this.emitHook({
+      action: "resized",
+      metadata: {
+        size: structuredClone(size)
+      }
+    });
+  }
+
+  /**
+   * Replaces the whole texture from an image/canvas source, recording the
+   * before/after snapshots and emitting a `texture-replaced` hook.
+   */
+  replaceTexture(
+    source: HTMLCanvasElement | HTMLImageElement
+  ): void {
+    const beforeSize = this.#canvasBuffer.size();
+    const beforePixels = this.#history.enabled ?
+      Uint8ClampedArray.from(this.#canvasBuffer.pixels()) :
+      null;
+
+    this.#canvasBuffer.loadTexture(source);
+    const size = this.#canvasBuffer.size();
+    this.#viewport.texture.resize(size);
+    this.#renderer.drawFrame();
+
+    if (beforePixels) {
+      this.#recordHistory({
+        action: "texture-replaced",
+        beforeSize,
+        beforePixels,
+        afterSize: size,
+        afterPixels: Uint8ClampedArray.from(
+          this.#canvasBuffer.pixels()
+        )
+      });
+    }
+
+    this.emitHook({
+      action: "texture-replaced",
+      metadata: {
+        size,
+        pixels: fromUint8Array(
+          new Uint8Array(this.#canvasBuffer.pixels())
+        )
+      }
+    });
+  }
+
+  /**
+   * Emits a local buffer mutation. Public because undo/redo replay their
+   * hook events through it.
    */
   emitHook(
     event: PixelBufferHookEvent
@@ -107,16 +267,27 @@ export class SyncController {
     this.#onBufferUpdated(event);
   }
 
-  applyStroke(
+  #recordHistory(
+    entry: HistoryEntryInput
+  ): void {
+    if (this.#isApplyingRemote) {
+      return;
+    }
+
+    this.#history.push(entry);
+  }
+
+  #applyStroke(
     color: RGBA,
     positions: Vec2[]
   ): void {
+    // drawPixels emits "changed"; the view repaints. copyToMaster persists the
+    // stroke to the master buffer (no visible change, so no repaint).
     this.#canvasBuffer.drawPixels(positions, color);
     this.#canvasBuffer.copyToMaster();
-    this.#renderer.drawFrame();
   }
 
-  resizeTexture(
+  #resizeTexture(
     size: Vec2
   ): void {
     this.#canvasBuffer.resize(size);
@@ -124,7 +295,7 @@ export class SyncController {
     this.#renderer.drawFrame();
   }
 
-  replacePixels(
+  #replacePixels(
     size: Vec2,
     pixels: Uint8ClampedArray
   ): void {
@@ -143,7 +314,7 @@ export class SyncController {
     try {
       switch (event.action) {
         case "stroke":
-          this.applyStroke(
+          this.#applyStroke(
             event.metadata.color,
             event.metadata.positions
           );
@@ -151,12 +322,12 @@ export class SyncController {
           break;
 
         case "resized":
-          this.resizeTexture(event.metadata.size);
+          this.#resizeTexture(event.metadata.size);
           this.#history.clear();
           break;
 
         case "texture-replaced":
-          this.replacePixels(
+          this.#replacePixels(
             event.metadata.size,
             new Uint8ClampedArray(
               toUint8Array(event.metadata.pixels)
@@ -170,7 +341,7 @@ export class SyncController {
             this.#canvasBuffer,
             event.metadata.fromColor
           );
-          this.applyStroke(
+          this.#applyStroke(
             event.metadata.toColor,
             positions
           );
@@ -209,7 +380,7 @@ export class SyncController {
   ): void {
     this.#isApplyingRemote = true;
     try {
-      this.replacePixels(size, pixels);
+      this.#replacePixels(size, pixels);
       this.#uvMap.clear();
       for (const region of uvRegions) {
         this.#uvMap.restore(region);

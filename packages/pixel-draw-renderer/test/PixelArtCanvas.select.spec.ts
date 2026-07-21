@@ -602,7 +602,7 @@ describe("PixelArtCanvas — select mode", () => {
 
       manager.mode = "select";
       assert.ok(
-        !manager.rotateSelection(),
+        !manager.tools.select.rotate(),
         "an undo that happened outside select mode must not resurrect the old selection once select mode is re-entered"
       );
 

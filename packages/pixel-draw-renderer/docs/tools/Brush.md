@@ -2,6 +2,8 @@
 
 `Brush` manages the primary/secondary brush colors, size, and highlight colors, and computes the list of texture-space pixels a brush stroke covers. Left-click paints with `primary`; right-click paints with `secondary`.
 
+> Reached via `PixelArtCanvas.brush`. For the color-picking behavior (`pickArmed` / `pick`), see [BrushTool.md](./BrushTool.md) (`PixelArtCanvas.tools.brush`).
+
 ## Types
 
 ```ts

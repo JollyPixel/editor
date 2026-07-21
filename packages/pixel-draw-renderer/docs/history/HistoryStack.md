@@ -1,6 +1,6 @@
 # HistoryStack
 
-Bounded undo/redo stack over a `DefaultPixelBuffer` (`PixelBuffer` or `CanvasBuffer`), with no DOM or network dependency, so it runs identically headless or in the browser. `PixelArtCanvas`'s internal `HistoryController` owns one when constructed with `history.enabled: true` (see [PixelArtCanvas.md](../PixelArtCanvas.md#undo--redo--canundo--canredo)); most consumers drive undo/redo through `PixelArtCanvas.undo()`/`redo()` rather than this class directly.
+Bounded undo/redo stack over a `DefaultPixelBuffer` (`PixelBuffer` or `CanvasBuffer`), with no DOM or network dependency, so it runs identically headless or in the browser. `PixelArtCanvas`'s internal `History` owns one when constructed with `history.enabled: true` (see [PixelArtCanvas.md](../PixelArtCanvas.md#undo--redo--canundo--canredo)); most consumers drive undo/redo through `PixelArtCanvas.undo()`/`redo()` rather than this class directly.
 
 `HistoryStack` only owns the stack and replays before/after data against its buffer; capturing that before/after data on each edit is the caller's job (`PixelArtCanvas` does this internally for strokes, resizes, and texture replaces).
 

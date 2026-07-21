@@ -1,36 +1,36 @@
 // Import Internal Dependencies
 import type { Brush, BrushColorSlot } from "./Brush.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
-import type { CanvasRenderer } from "../rendering/CanvasRenderer.ts";
+import type { EditPipeline } from "../sync/EditPipeline.ts";
 import { rgbToHex, toRGBA } from "../utils/colors.ts";
 import type { RGBA, Vec2 } from "../types.ts";
 
 export interface BrushControllerOptions {
   brush: Brush;
   canvasBuffer: CanvasBuffer;
-  renderer: CanvasRenderer;
-  /**
-   * Commits a completed stroke.
-   */
-  onCommit: (
-    pixels: Vec2[],
-    color: RGBA,
-    beforeColors: RGBA[]
-  ) => void;
+  /** The display canvas the `colorpicked` event is dispatched on. */
+  canvas: HTMLCanvasElement;
+  pipeline: EditPipeline;
+}
+
+/**
+ * Public brush-tool surface (`PixelArtCanvas.tools.brush`).
+ */
+export interface BrushTool {
+  /** Whether the next primary action picks a color instead of painting. */
+  pickArmed: boolean;
+  /** Samples a texture pixel into the primary brush color. */
+  pick(x: number, y: number): RGBA | null;
 }
 
 /**
  * Applies brush strokes to the canvas.
  */
-export class BrushController {
+export class BrushController implements BrushTool {
   #brush: Brush;
   #canvasBuffer: CanvasBuffer;
-  #renderer: CanvasRenderer;
-  #onCommit: (
-    pixels: Vec2[],
-    color: RGBA,
-    beforeColors: RGBA[]
-  ) => void;
+  #canvas: HTMLCanvasElement;
+  #pipeline: EditPipeline;
 
   #strokeDirty = new Map<string, Vec2>();
   #strokeBefore = new Map<string, RGBA>();
@@ -43,8 +43,8 @@ export class BrushController {
   ) {
     this.#brush = options.brush;
     this.#canvasBuffer = options.canvasBuffer;
-    this.#renderer = options.renderer;
-    this.#onCommit = options.onCommit;
+    this.#canvas = options.canvas;
+    this.#pipeline = options.pipeline;
   }
 
   /**
@@ -90,7 +90,7 @@ export class BrushController {
       bubbles: true,
       composed: true
     });
-    this.#renderer.canvas().dispatchEvent(event);
+    this.#canvas.dispatchEvent(event);
 
     return { r, g, b, a };
   }
@@ -142,7 +142,6 @@ export class BrushController {
     }
 
     this.#canvasBuffer.drawPixels(affected, rgba);
-    this.#renderer.drawFrame();
 
     this.#strokeColor ??= rgba;
   }
@@ -168,6 +167,6 @@ export class BrushController {
     this.#strokeBefore.clear();
     this.#strokeColor = null;
 
-    this.#onCommit(positions, color, beforeColors);
+    this.#pipeline.commitStroke(positions, color, beforeColors);
   }
 }

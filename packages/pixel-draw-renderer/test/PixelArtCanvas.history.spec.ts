@@ -189,7 +189,7 @@ describe("PixelArtCanvas — history (undo/redo)", () => {
           enabled: true
         }
       });
-      manager.fillGlobal = true;
+      manager.tools.fill.global = true;
 
       // 4x4 texture, zoom 4 -> centered camera (92,92); client(100,100) -> texture (2,2).
       canvas.dispatchEvent(new MouseEvent("mousedown", {
@@ -232,7 +232,7 @@ describe("PixelArtCanvas — history (undo/redo)", () => {
         },
         onBufferUpdated: (event) => events.push(event)
       });
-      manager.fillGlobal = true;
+      manager.tools.fill.global = true;
 
       canvas.dispatchEvent(new MouseEvent("mousedown", {
         button: 0,

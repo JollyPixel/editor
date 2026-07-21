@@ -46,7 +46,6 @@ npm run ci:publish        # Publish to npm
 - Relative imports need an explicit `.ts` extension (never `.js`). The shared `tsconfig.base.json` (`@openally/config.typescript/esm-ts-next`) enforces `erasableSyntaxOnly` (no `enum`, no constructor parameter properties, no `namespace`/`module`) and `verbatimModuleSyntax` (type-only imports must use `import type`); `noImplicitAny` is deliberately off while the rest of `strict` is on.
 - `.npmrc` sets `ignore-scripts=true` and `package-lock=false`: a plain `npm install` won't run lifecycle scripts or write a lockfile. CI mirrors this (`npm install --ignore-scripts`).
 - Only one ESLint config exists, at the root (`eslint.config.mjs`), covering every workspace.
-- Publishing/versioning uses Changesets (`.changeset/`); add one via `npx changeset add` for user-facing changes.
 - Run linting for all new functionality
 - Update API (markdown) documentation
 
