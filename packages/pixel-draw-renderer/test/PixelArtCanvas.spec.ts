@@ -655,4 +655,50 @@ describe("PixelArtCanvas", () => {
       manager.destroy();
     });
   });
+
+  describe("move mode navigation", () => {
+    function drag(
+      canvas: HTMLCanvasElement
+    ): void {
+      canvas.dispatchEvent(new MouseEvent("mousedown", {
+        button: 0,
+        buttons: 1,
+        clientX: 100,
+        clientY: 100,
+        bubbles: true
+      }));
+      window.dispatchEvent(new MouseEvent("mousemove", {
+        buttons: 1,
+        clientX: 130,
+        clientY: 120,
+        bubbles: true
+      }));
+      window.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    }
+
+    test("a plain left-drag pans the camera in move mode", () => {
+      const { manager, canvas } = createPixelArtCanvas();
+      manager.onResize();
+      manager.centerTexture();
+      manager.mode = "move";
+
+      const before = manager.camera;
+      drag(canvas);
+
+      assert.notDeepStrictEqual(manager.camera, before);
+      manager.destroy();
+    });
+
+    test("a left-drag does not pan in paint mode", () => {
+      const { manager, canvas } = createPixelArtCanvas();
+      manager.onResize();
+      manager.centerTexture();
+
+      const before = manager.camera;
+      drag(canvas);
+
+      assert.deepStrictEqual(manager.camera, before);
+      manager.destroy();
+    });
+  });
 });

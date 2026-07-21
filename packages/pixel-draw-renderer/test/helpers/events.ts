@@ -17,6 +17,48 @@ export function shiftKeyUp(): KeyboardEvent {
   );
 }
 
+export function spaceKeyDown(
+  repeat = false
+): KeyboardEvent {
+  return new KeyboardEvent("keydown", {
+    key: " ",
+    code: "Space",
+    bubbles: true,
+    cancelable: true,
+    repeat
+  });
+}
+
+export function spaceKeyUp(): KeyboardEvent {
+  return new KeyboardEvent("keyup", {
+    key: " ",
+    code: "Space",
+    bubbles: true
+  });
+}
+
+export interface WheelOptions {
+  deltaY?: number;
+  deltaMode?: number;
+  ctrlKey?: boolean;
+  clientX?: number;
+  clientY?: number;
+}
+
+export function wheel(
+  options: WheelOptions = {}
+): WheelEvent {
+  return new WheelEvent("wheel", {
+    deltaY: options.deltaY ?? 0,
+    deltaMode: options.deltaMode ?? 0,
+    ctrlKey: options.ctrlKey ?? false,
+    clientX: options.clientX ?? 0,
+    clientY: options.clientY ?? 0,
+    bubbles: true,
+    cancelable: true
+  });
+}
+
 export function moveTo(
   canvas: HTMLCanvasElement,
   clientX: number,

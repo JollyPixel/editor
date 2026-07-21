@@ -21,7 +21,8 @@ export interface InteractionRouterOptions {
  * Holds the active `InteractionMode` and forwards `InputActions` to it. A mode
  * switch runs the leaving mode's `onExit` then the entering mode's `onEnter`,
  * and re-resolves the cursor. Pan, zoom and undo/redo are mode-independent and
- * handled here rather than by any mode.
+ * handled here rather than by any mode. The pan gesture (middle-drag, or
+ * Space+left-drag) shows a `grab`/`grabbing` cursor.
  */
 export class InteractionRouter implements InputActions {
   #modes: Map<Mode, InteractionMode>;
@@ -30,6 +31,7 @@ export class InteractionRouter implements InputActions {
   #setCursor: (cursor: string) => void;
   #onUndo: () => boolean | void;
   #onRedo: () => boolean | void;
+  #panModifierHeld: boolean = false;
 
   constructor(
     options: InteractionRouterOptions
@@ -143,7 +145,7 @@ export class InteractionRouter implements InputActions {
     _mx: number,
     _my: number
   ): void {
-    // No-op. The viewport handles panning internally.
+    this.#setCursor("grabbing");
   }
 
   onPanMove(
@@ -154,7 +156,15 @@ export class InteractionRouter implements InputActions {
   }
 
   onPanEnd(): void {
-    // No-op. The viewport handles panning internally.
+    // Fall back to grab while the Space modifier is still held, otherwise
+    // restore the active mode's own cursor.
+    if (this.#panModifierHeld) {
+      this.#setCursor("grab");
+
+      return;
+    }
+
+    this.#syncCursor();
   }
 
   onZoom(
@@ -188,6 +198,16 @@ export class InteractionRouter implements InputActions {
 
   onShiftUp(): void {
     this.#active.onShiftUp();
+  }
+
+  onSpaceDown(): void {
+    this.#panModifierHeld = true;
+    this.#setCursor("grab");
+  }
+
+  onSpaceUp(): void {
+    this.#panModifierHeld = false;
+    this.#syncCursor();
   }
 
   onBlur(): void {
