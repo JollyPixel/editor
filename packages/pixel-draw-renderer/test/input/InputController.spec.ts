@@ -228,6 +228,8 @@ describe("InputController", () => {
         onMouseUp: [],
         onShiftDown: [],
         onShiftUp: [],
+        onSpaceDown: [],
+        onSpaceUp: [],
         onBlur: [],
         onCopy: [],
         onPaste: [],

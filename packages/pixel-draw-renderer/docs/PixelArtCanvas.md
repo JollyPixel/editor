@@ -150,7 +150,7 @@ Reads or sets the current interaction mode.
 | Mode | Left-click | Right-click |
 |---|---|---|
 | `"paint"` | Brush stroke with `brush.primary`. Hold `Shift` to arm a straight-line tool (always drawn in `primary`). | Brush stroke with `brush.secondary`. |
-| `"move"` | Pans the camera. | N/A |
+| `"move"` | Drag to pan the camera (single-finger, no modifier). | N/A |
 | `"fill"` | Paint-bucket fill from the clicked pixel with `brush.primary`. | Same fill with `brush.secondary`. |
 | `"select"` | Drag to select or move a rectangle. | N/A |
 | `"uv"` | Click a visible UV region to select/drag it. `Delete` deletes the selected region. | N/A |
@@ -158,6 +158,8 @@ Reads or sets the current interaction mode.
 - `"paint"`: the two buttons are mutually exclusive, a stroke already in progress on one button blocks the other from starting until it ends.
 - `"fill"`: fills the clicked pixel's contiguous region by default, or every same-colored pixel on the canvas when `tools.fill.global` is `true` (see below). A fill click is single-shot and not tracked as a drag, so, unlike `"paint"`, the two buttons aren't mutually exclusive.
 - `"select"`: `Ctrl`/`Cmd`+`C`/`V` copies/duplicates, `Delete` erases, `R` rotates the selection 90° clockwise around its center (repeatable: press again for further rotation; no counterclockwise binding), `H`/`V` flips the selection's content horizontally/vertically in place. A drag that never grows past its starting pixel (a plain click) does not create a selection. Like `"uv"`, the cursor is `"grab"` once a selection exists (idle) and `"grabbing"` while it's being dragged to a new position — drawing a brand-new rectangle keeps the plain cursor, since that isn't a grab motion.
+- `"move"`: navigation-only — a plain left-drag pans (single-finger, no keyboard chord, so it works comfortably on a trackpad). The cursor is `"grab"` while idle and `"grabbing"` mid-drag.
+- **Navigation** (any mode): the wheel zooms toward the cursor — a trackpad pinch (Ctrl+wheel) zooms the same way, and finer deltas zoom in proportionally smaller steps. Pan from any mode by middle-dragging, or by holding `Space` and left-dragging; the cursor shows `"grab"` while `Space` is held and `"grabbing"` during the drag. (The `Space` chord is easy with a mouse but awkward one-handed on a trackpad — prefer `"move"` mode there.)
 - `"uv"`: there is no click-to-create gesture — regions are created via `uv.create(...)` (see [uv/UVMap.md](./uv/UVMap.md)). Only *visible* regions (per `uv.showAll`/`uv.selectedRegionId`) can be hit-tested; clicking empty canvas space (or an invisible region) deselects. The canvas cursor is `"grab"` while idle in this mode and `"grabbing"` while a region is actively being dragged, reverting to the browser default in any other mode. `Delete` only deletes the selected UV region while actually in `"uv"` mode — since a UV selection, unlike a `"select"`-mode selection, persists across mode changes (see the note below), `Delete` pressed in another mode acts only on that mode's own selection, if any, and leaves the UV region alone.
 
 > [!IMPORTANT]
