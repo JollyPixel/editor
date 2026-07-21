@@ -1,27 +1,26 @@
 // Import Internal Dependencies
-import type { Brush, BrushColorSlot } from "./Brush.ts";
+import type { Brush } from "./Brush.ts";
 import {
   BrushController
 } from "./BrushController.ts";
 import {
-  FillController,
-  type FillGlobalCommit
+  FillController
 } from "./FillController.ts";
 import {
   LineController
 } from "./LineController.ts";
 import {
-  SelectController,
-  type SelectEditEntry
+  SelectController
 } from "./SelectController.ts";
 import { UVController } from "../uv/UVController.ts";
 import type { UVMap } from "../uv/UVMap.ts";
 import type { UVOverlay } from "../rendering/overlays/UVOverlay.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import type { CanvasRenderer } from "../rendering/CanvasRenderer.ts";
+import type { EditPipeline } from "../sync/EditPipeline.ts";
 import type { LinePreviewOverlay } from "../rendering/overlays/LinePreviewOverlay.ts";
 import type { SelectionOverlay } from "../rendering/overlays/SelectionOverlay.ts";
-import type { RGBA, Vec2 } from "../types.ts";
+import type { RGBA } from "../types.ts";
 
 export interface ToolControllersOptions {
   brush: Brush;
@@ -32,11 +31,7 @@ export interface ToolControllersOptions {
   eraseColor: RGBA | null;
   uvMap: UVMap;
   uvOverlay: UVOverlay;
-  onStrokeCommit: (pixels: Vec2[], color: RGBA, beforeColors: RGBA[]) => void;
-  onCommitPixels: (pixels: Vec2[]) => void;
-  onFillCommitPixels: (pixels: Vec2[], slot: BrushColorSlot) => void;
-  onGlobalFillCommit: (commit: FillGlobalCommit) => void;
-  onSelectCommit: (entry: SelectEditEntry) => void;
+  pipeline: EditPipeline;
 }
 
 /**
@@ -56,20 +51,19 @@ export class ToolControllers {
       brush: options.brush,
       canvasBuffer: options.canvasBuffer,
       renderer: options.renderer,
-      onCommit: options.onStrokeCommit
+      pipeline: options.pipeline
     });
 
     this.fill = new FillController({
       brush: options.brush,
       canvasBuffer: options.canvasBuffer,
-      onCommit: options.onFillCommitPixels,
-      onGlobalCommit: options.onGlobalFillCommit
+      pipeline: options.pipeline
     });
 
     this.line = new LineController({
       brush: options.brush,
       linePreview: options.linePreview,
-      onCommit: options.onCommitPixels
+      pipeline: options.pipeline
     });
 
     this.select = new SelectController({
@@ -77,7 +71,7 @@ export class ToolControllers {
       renderer: options.renderer,
       selectionOverlay: options.selectionOverlay,
       eraseColor: options.eraseColor,
-      onCommit: options.onSelectCommit
+      pipeline: options.pipeline
     });
 
     this.uv = new UVController({

@@ -2,6 +2,7 @@
 import type { Brush, BrushColorSlot } from "./Brush.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import type { CanvasRenderer } from "../rendering/CanvasRenderer.ts";
+import type { EditPipeline } from "../sync/EditPipeline.ts";
 import { rgbToHex, toRGBA } from "../utils/colors.ts";
 import type { RGBA, Vec2 } from "../types.ts";
 
@@ -9,14 +10,7 @@ export interface BrushControllerOptions {
   brush: Brush;
   canvasBuffer: CanvasBuffer;
   renderer: CanvasRenderer;
-  /**
-   * Commits a completed stroke.
-   */
-  onCommit: (
-    pixels: Vec2[],
-    color: RGBA,
-    beforeColors: RGBA[]
-  ) => void;
+  pipeline: EditPipeline;
 }
 
 /**
@@ -26,11 +20,7 @@ export class BrushController {
   #brush: Brush;
   #canvasBuffer: CanvasBuffer;
   #renderer: CanvasRenderer;
-  #onCommit: (
-    pixels: Vec2[],
-    color: RGBA,
-    beforeColors: RGBA[]
-  ) => void;
+  #pipeline: EditPipeline;
 
   #strokeDirty = new Map<string, Vec2>();
   #strokeBefore = new Map<string, RGBA>();
@@ -44,7 +34,7 @@ export class BrushController {
     this.#brush = options.brush;
     this.#canvasBuffer = options.canvasBuffer;
     this.#renderer = options.renderer;
-    this.#onCommit = options.onCommit;
+    this.#pipeline = options.pipeline;
   }
 
   /**
@@ -168,6 +158,6 @@ export class BrushController {
     this.#strokeBefore.clear();
     this.#strokeColor = null;
 
-    this.#onCommit(positions, color, beforeColors);
+    this.#pipeline.commitStroke(positions, color, beforeColors);
   }
 }

@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import Color from "colorjs.io";
-import { fromUint8Array } from "js-base64";
 
 // Import Internal Dependencies
 import {
@@ -47,8 +46,8 @@ import type {
   ZoomOptions
 } from "./rendering/Zoom.ts";
 import {
-  SyncController
-} from "./sync/SyncController.ts";
+  EditPipeline
+} from "./sync/EditPipeline.ts";
 import { UVMap } from "./uv/UVMap.ts";
 import type { UVRegion } from "./uv/UVRegion.ts";
 import { toRGBA } from "./utils/colors.ts";
@@ -148,7 +147,7 @@ export class PixelArtCanvas {
   #input: InputController;
   #svgManager: SvgManager;
 
-  #sync: SyncController;
+  #edits: EditPipeline;
   #onDrawEnd?: () => void;
   #history: HistoryController;
   #mode: Mode;
@@ -225,7 +224,10 @@ export class PixelArtCanvas {
       backgroundColor
     });
 
-    this.#sync = new SyncController({
+    this.brush = new Brush(options.brush);
+
+    this.#edits = new EditPipeline({
+      brush: this.brush,
       canvasBuffer: this.#canvasBuffer,
       viewport: this.#viewport,
       renderer: this.#renderer,
@@ -240,8 +242,6 @@ export class PixelArtCanvas {
     const bounds = parentHtmlElement.getBoundingClientRect();
     this.#renderer.resize(bounds.width, bounds.height);
     this.#viewport.updateCanvasSize(bounds.width, bounds.height);
-
-    this.brush = new Brush(options.brush);
 
     const brushRef = this.brush;
     const viewportRef: DefaultViewport = this.#viewport;
@@ -275,41 +275,7 @@ export class PixelArtCanvas {
       eraseColor,
       uvMap: this.uv,
       uvOverlay: this.#svgManager.uvOverlay,
-      onStrokeCommit: (pixels, color, beforeColors) => {
-        this.#sync.recordHistory({
-          action: "stroke",
-          positions: pixels,
-          beforeColors,
-          afterColor: color
-        });
-        this.#sync.emitHook({
-          action: "stroke",
-          metadata: { color, positions: pixels }
-        });
-        this.#onDrawEnd?.();
-      },
-      onCommitPixels: (pixels) => this.commitPixels(pixels),
-      onFillCommitPixels: (pixels, slot) => this.commitPixels(pixels, slot),
-      onGlobalFillCommit: ({ positions, beforeColors, fromColor, toColor }) => {
-        this.#sync.applyStroke(toColor, positions);
-        this.#sync.recordHistory({
-          action: "stroke", positions,
-          beforeColors,
-          afterColor: toColor
-        });
-        this.#sync.emitHook({
-          action: "global-fill",
-          metadata: { fromColor, toColor }
-        });
-        this.#onDrawEnd?.();
-      },
-      onSelectCommit: (entry) => {
-        this.#sync.recordHistory({
-          action: "select-edit",
-          ...entry
-        });
-        this.#onDrawEnd?.();
-      }
+      pipeline: this.#edits
     });
 
     this.#cursor = new CursorController({
@@ -461,31 +427,7 @@ export class PixelArtCanvas {
       return;
     }
 
-    const beforeSize = this.#canvasBuffer.size();
-    const beforePixels = this.#history.enabled ?
-      Uint8ClampedArray.from(this.#canvasBuffer.pixels()) :
-      null;
-
-    this.#sync.resizeTexture(size);
-
-    if (beforePixels) {
-      this.#sync.recordHistory({
-        action: "resized",
-        beforeSize,
-        beforePixels,
-        afterSize: structuredClone(size),
-        afterPixels: Uint8ClampedArray.from(
-          this.#canvasBuffer.pixels()
-        )
-      });
-    }
-
-    this.#sync.emitHook({
-      action: "resized",
-      metadata: {
-        size: structuredClone(size)
-      }
-    });
+    this.#edits.resize(size);
   }
 
   get camera(): Vec2 {
@@ -570,37 +512,7 @@ export class PixelArtCanvas {
   set texture(
     source: HTMLCanvasElement | HTMLImageElement
   ) {
-    const beforeSize = this.#canvasBuffer.size();
-    const beforePixels = this.#history.enabled ?
-      Uint8ClampedArray.from(this.#canvasBuffer.pixels()) :
-      null;
-
-    this.#canvasBuffer.loadTexture(source);
-    const size = this.#canvasBuffer.size();
-    this.#viewport.texture.resize(size);
-    this.#renderer.drawFrame();
-
-    if (beforePixels) {
-      this.#sync.recordHistory({
-        action: "texture-replaced",
-        beforeSize,
-        beforePixels,
-        afterSize: size,
-        afterPixels: Uint8ClampedArray.from(
-          this.#canvasBuffer.pixels()
-        )
-      });
-    }
-
-    this.#sync.emitHook({
-      action: "texture-replaced",
-      metadata: {
-        size,
-        pixels: fromUint8Array(
-          new Uint8Array(this.#canvasBuffer.pixels())
-        )
-      }
-    });
+    this.#edits.replaceTexture(source);
   }
 
   get texture(): Uint8ClampedArray {
@@ -614,35 +526,14 @@ export class PixelArtCanvas {
     pixels: Vec2[],
     slot: BrushColorSlot = "primary"
   ): void {
-    if (pixels.length === 0) {
-      return;
-    }
-
-    const color = toRGBA(this.brush[slot].asString());
-    const beforeColors = this.#history.enabled ?
-      this.#canvasBuffer.samplePixels(pixels) :
-      [];
-
-    this.#sync.applyStroke(color, pixels);
-
-    this.#sync.recordHistory({
-      action: "stroke",
-      positions: pixels,
-      beforeColors,
-      afterColor: color
-    });
-    this.#sync.emitHook({
-      action: "stroke",
-      metadata: { color, positions: pixels }
-    });
-    this.#onDrawEnd?.();
+    this.#edits.commitPixels(pixels, slot);
   }
 
   /**
     * Reverts the latest local edit.
     */
   undo(): boolean {
-    const entry = this.#sync.runHistoryReplay(() => this.#history.undo());
+    const entry = this.#edits.runHistoryReplay(() => this.#history.undo());
     if (!entry) {
       return false;
     }
@@ -655,7 +546,7 @@ export class PixelArtCanvas {
       );
     }
     for (const event of HistoryController.buildUndoReplayEvents(entry)) {
-      this.#sync.emitHook(event);
+      this.#edits.emitHook(event);
     }
     this.#onDrawEnd?.();
 
@@ -666,7 +557,7 @@ export class PixelArtCanvas {
     * Reapplies the latest reverted edit.
     */
   redo(): boolean {
-    const entry = this.#sync.runHistoryReplay(() => this.#history.redo());
+    const entry = this.#edits.runHistoryReplay(() => this.#history.redo());
     if (!entry) {
       return false;
     }
@@ -682,7 +573,7 @@ export class PixelArtCanvas {
       );
     }
     for (const event of HistoryController.buildRedoReplayEvents(entry)) {
-      this.#sync.emitHook(event);
+      this.#edits.emitHook(event);
     }
     this.#onDrawEnd?.();
 
@@ -703,7 +594,7 @@ export class PixelArtCanvas {
   set onBufferUpdated(
     fn: PixelBufferHookListener | undefined
   ) {
-    this.#sync.onBufferUpdated = fn;
+    this.#edits.onBufferUpdated = fn;
   }
 
   /**
@@ -712,7 +603,7 @@ export class PixelArtCanvas {
   applyRemoteCommand(
     event: PixelBufferHookEvent
   ): void {
-    this.#sync.applyRemoteCommand(event);
+    this.#edits.applyRemoteCommand(event);
   }
 
   /**
@@ -723,7 +614,7 @@ export class PixelArtCanvas {
     pixels: Uint8ClampedArray,
     uvRegions: UVRegion[] = []
   ): void {
-    this.#sync.loadSnapshot(size, pixels, uvRegions);
+    this.#edits.loadSnapshot(size, pixels, uvRegions);
   }
 
   #refreshAfterHistoryApply(): void {

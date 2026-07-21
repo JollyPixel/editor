@@ -11,6 +11,18 @@ export interface DefaultViewport {
   readonly camera: Readonly<Vec2>;
 }
 
+export interface MouseTexturePositionOptions {
+  /**
+   * The bounding rectangle of the canvas.
+   */
+  bounds: DOMRect;
+  /**
+   * Whether to limit the returned position to the texture bounds.
+   * @default false
+   */
+  limit?: boolean;
+}
+
 export interface ViewportOptions {
   /**
    * Displayed texture size.
@@ -178,7 +190,7 @@ export class Viewport implements DefaultViewport {
   mouseTexturePosition(
     mx: number,
     my: number,
-    parameters: { bounds: DOMRect; limit?: boolean; }
+    parameters: MouseTexturePositionOptions
   ): Vec2 | null {
     const {
       bounds,

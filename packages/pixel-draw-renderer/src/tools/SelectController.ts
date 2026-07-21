@@ -8,6 +8,7 @@ import type {
 import type {
   SelectionOverlay
 } from "../rendering/overlays/SelectionOverlay.ts";
+import type { EditPipeline } from "../sync/EditPipeline.ts";
 import type {
   RGBA,
   SelectionRect,
@@ -36,10 +37,7 @@ export interface SelectControllerOptions {
    * configured by the consumer.
    */
   eraseColor: RGBA | null;
-  /**
-   * Commits a selection edit.
-   */
-  onCommit: (entry: SelectEditEntry) => void;
+  pipeline: EditPipeline;
 }
 
 /**
@@ -51,7 +49,7 @@ export class SelectController {
   #renderer: CanvasRenderer;
   #selectionOverlay: SelectionOverlay;
   #eraseColor: RGBA | null;
-  #onCommit: (entry: SelectEditEntry) => void;
+  #pipeline: EditPipeline;
   #shapeMode = false;
 
   constructor(
@@ -61,7 +59,7 @@ export class SelectController {
     this.#renderer = options.renderer;
     this.#selectionOverlay = options.selectionOverlay;
     this.#eraseColor = options.eraseColor;
-    this.#onCommit = options.onCommit;
+    this.#pipeline = options.pipeline;
   }
 
   /**
@@ -450,7 +448,7 @@ export class SelectController {
 
     const afterColors = this.#canvasBuffer.samplePixels(positions);
     this.#renderer.drawFrame();
-    this.#onCommit({
+    this.#pipeline.commitSelectionEdit({
       positions,
       beforeColors,
       afterColors,

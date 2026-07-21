@@ -139,6 +139,11 @@ export interface WindowLike {
   ): void;
 }
 
+export interface ResolveTexturePositionOptions {
+  /** Whether to clamp the returned texture position to the texture bounds. */
+  limit?: boolean;
+}
+
 export interface InputControllerOptions {
   canvas: HTMLCanvasElement;
   viewport: Viewport;
@@ -253,7 +258,7 @@ export class InputController {
 
   #resolveTexturePos(
     event: MouseEvent,
-    parameters: { limit?: boolean; } = {}
+    parameters: ResolveTexturePositionOptions = {}
   ): Vec2 | null {
     const bounds = this.#canvas.getBoundingClientRect();
     const { clientX, clientY } = event;

@@ -8,6 +8,7 @@ import type {
 import type {
   CanvasBuffer
 } from "../buffer/CanvasBuffer.ts";
+import type { EditPipeline } from "../sync/EditPipeline.ts";
 import type {
   RGBA,
   Vec2
@@ -23,14 +24,7 @@ export interface FillGlobalCommit {
 export interface FillControllerOptions {
   brush: Brush;
   canvasBuffer: CanvasBuffer;
-  /**
-    * Commits a contiguous fill.
-   */
-  onCommit: (pixels: Vec2[], slot: BrushColorSlot) => void;
-  /**
-    * Commits a global fill.
-   */
-  onGlobalCommit: (commit: FillGlobalCommit) => void;
+  pipeline: EditPipeline;
 }
 
 /**
@@ -39,8 +33,7 @@ export interface FillControllerOptions {
 export class FillController {
   #brush: Brush;
   #canvasBuffer: CanvasBuffer;
-  #onCommit: (pixels: Vec2[], slot: BrushColorSlot) => void;
-  #onGlobalCommit: (commit: FillGlobalCommit) => void;
+  #pipeline: EditPipeline;
   #global = false;
 
   constructor(
@@ -48,8 +41,7 @@ export class FillController {
   ) {
     this.#brush = options.brush;
     this.#canvasBuffer = options.canvasBuffer;
-    this.#onCommit = options.onCommit;
-    this.#onGlobalCommit = options.onGlobalCommit;
+    this.#pipeline = options.pipeline;
   }
 
   get global(): boolean {
@@ -79,7 +71,7 @@ export class FillController {
       { x: tx, y: ty },
       fillColor
     );
-    this.#onCommit(positions, slot);
+    this.#pipeline.commitPixels(positions, slot);
   }
 
   #runGlobal(
@@ -111,7 +103,7 @@ export class FillController {
     }
 
     const beforeColors = positions.map(() => fromColor);
-    this.#onGlobalCommit({
+    this.#pipeline.commitGlobalFill({
       positions,
       beforeColors,
       fromColor,
