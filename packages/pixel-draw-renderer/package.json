@@ -11,6 +11,7 @@
   "scripts": {
     "prepublish": "rimraf ./dist && tsc -b",
     "build": "tsc",
+    "bench": "node bench/index.ts",
     "dev": "vite",
     "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
     "test": "c8 -r html npm run test-only"
@@ -41,6 +42,7 @@
     "@jolly-pixel/runtime": "3.4.0",
     "lit": "3.3.3",
     "three": "0.185.1",
+    "tinybench": "6.0.2",
     "vanilla-picker": "2.12.3"
   },
   "dependencies": {
