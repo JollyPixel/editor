@@ -1,9 +1,17 @@
 // Import Node.js Dependencies
-import { describe, test } from "node:test";
+import {
+  describe,
+  test
+} from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { clamp, clampRectPosition, clampRectSize, pointInRect } from "../../src/utils/math.ts";
+import {
+  clamp,
+  clampRectPosition,
+  clampRectSize,
+  pointInRect
+} from "#src/utils/math.ts";
 
 describe("clamp", () => {
   test("returns the value unchanged when within range", () => {
@@ -34,7 +42,10 @@ describe("clamp", () => {
 describe("clampRectSize", () => {
   test("leaves a rect unchanged when it already fits", () => {
     const rect = { x: 2, y: 3, width: 4, height: 5 };
-    assert.deepStrictEqual(clampRectSize(rect, { x: 10, y: 10 }), rect);
+    assert.deepStrictEqual(
+      clampRectSize(rect, { x: 10, y: 10 }),
+      rect
+    );
   });
 
   test("shrinks width/height to fit within size", () => {
@@ -65,7 +76,10 @@ describe("clampRectSize", () => {
 describe("clampRectPosition", () => {
   test("leaves a rect unchanged when it already fits", () => {
     const rect = { x: 2, y: 3, width: 4, height: 5 };
-    assert.deepStrictEqual(clampRectPosition(rect, { x: 10, y: 10 }), rect);
+    assert.deepStrictEqual(
+      clampRectPosition(rect, { x: 10, y: 10 }),
+      rect
+    );
   });
 
   test("clamps position to keep the rect within bounds without resizing it", () => {
@@ -86,21 +100,26 @@ describe("clampRectPosition", () => {
 });
 
 describe("pointInRect", () => {
-  const rect = { x: 2, y: 3, width: 4, height: 5 };
+  const rect = {
+    x: 2,
+    y: 3,
+    width: 4,
+    height: 5
+  };
 
   test("returns true for a point inside the rect", () => {
-    assert.strictEqual(pointInRect({ x: 3, y: 4 }, rect), true);
+    assert.ok(pointInRect({ x: 3, y: 4 }, rect));
   });
 
   test("is inclusive of the top-left edge", () => {
-    assert.strictEqual(pointInRect({ x: 2, y: 3 }, rect), true);
+    assert.ok(pointInRect({ x: 2, y: 3 }, rect));
   });
 
   test("is exclusive of the bottom-right edge", () => {
-    assert.strictEqual(pointInRect({ x: 6, y: 8 }, rect), false);
+    assert.ok(!pointInRect({ x: 6, y: 8 }, rect));
   });
 
   test("returns false for a point outside the rect", () => {
-    assert.strictEqual(pointInRect({ x: 0, y: 0 }, rect), false);
+    assert.ok(!pointInRect({ x: 0, y: 0 }, rect));
   });
 });

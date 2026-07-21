@@ -1,72 +1,35 @@
 // Import Node.js Dependencies
-import { describe, test, before, beforeEach } from "node:test";
+import {
+  describe,
+  test,
+  beforeEach
+} from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import { Window } from "happy-dom";
-
 // Import Internal Dependencies
-import { PixelArtCanvas, type PixelArtCanvasOptions } from "../src/PixelArtCanvas.ts";
-import { installCanvasMock } from "./mocks.ts";
-
-// CONSTANTS
-const kEmulatedBrowserWindow = new Window();
-
-before(() => {
-  globalThis.document = kEmulatedBrowserWindow.document as unknown as Document;
-  // @ts-expect-error
-  globalThis.window = kEmulatedBrowserWindow as unknown as Window & typeof globalThis;
-  // @ts-expect-error
-  globalThis.getComputedStyle = (_el: unknown) => {
-    return { backgroundColor: "#555555" };
-  };
-  installCanvasMock(globalThis.document);
-  globalThis.MouseEvent = (kEmulatedBrowserWindow as unknown as Record<string, unknown>).MouseEvent as typeof MouseEvent;
-  globalThis.KeyboardEvent = (kEmulatedBrowserWindow as unknown as Record<string, unknown>).KeyboardEvent as typeof KeyboardEvent;
-  globalThis.HTMLElement = (kEmulatedBrowserWindow as unknown as Record<string, unknown>).HTMLElement as typeof HTMLElement;
-  globalThis.Event = (kEmulatedBrowserWindow as unknown as Record<string, unknown>).Event as typeof Event;
-});
-
-function makeContainer(): HTMLDivElement {
-  const div = kEmulatedBrowserWindow.document.createElement("div") as unknown as HTMLDivElement;
-  (div as any).getBoundingClientRect = () => {
-    return {
-      left: 0, top: 0, right: 200, bottom: 200, width: 200, height: 200
-    };
-  };
-  (div as any).style = {};
-  (div as any).appendChild = (_child: unknown) => {
-    // No-op
-  };
-
-  return div;
-}
-
-function readPixel(
-  pixels: Uint8ClampedArray,
-  pos: { x: number; y: number; },
-  width: number
-): [number, number, number, number] {
-  const i = (pos.y * width + pos.x) * 4;
-
-  return [pixels[i], pixels[i + 1], pixels[i + 2], pixels[i + 3]];
-}
-
-function mouseEvent(
-  type: string,
-  clientX: number,
-  clientY: number
-): MouseEvent {
-  return new MouseEvent(type, { button: 0, buttons: 1, clientX, clientY, bubbles: true });
-}
+import {
+  PixelArtCanvas,
+  type PixelArtCanvasOptions
+} from "#src/PixelArtCanvas.ts";
+import { makeContainer } from "./helpers/dom.ts";
+import { readPixel } from "./fixtures/canvas.ts";
+import {
+  mouseEvent,
+  deleteKey,
+  ctrlKey
+} from "./helpers/events.ts";
 
 function click(
   canvas: HTMLCanvasElement,
   clientX: number,
   clientY: number
 ): void {
-  canvas.dispatchEvent(mouseEvent("mousedown", clientX, clientY));
-  canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+  canvas.dispatchEvent(
+    mouseEvent("mousedown", clientX, clientY)
+  );
+  canvas.dispatchEvent(
+    new MouseEvent("mouseup", { bubbles: true })
+  );
 }
 
 /**
@@ -78,26 +41,21 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
   let container: HTMLDivElement;
 
   beforeEach(() => {
-    container = makeContainer();
+    ({ container } = makeContainer());
   });
 
   // Same 200x200/8x8/zoom-4 setup as PixelArtCanvas.select.spec.ts: client
   // 84 + n*4 -> texture n.
-  function makeManager(options: PixelArtCanvasOptions = {}): PixelArtCanvas {
+  function makeManager(
+    options: PixelArtCanvasOptions = {}
+  ): PixelArtCanvas {
     return new PixelArtCanvas(container, {
-      texture: { maxSize: 32, size: { x: 8, y: 8 } },
+      texture: {
+        maxSize: 32,
+        size: { x: 8, y: 8 }
+      },
       zoom: { default: 4 },
       ...options
-    });
-  }
-
-  function deleteKey(): KeyboardEvent {
-    return new KeyboardEvent("keydown", { key: "Delete", code: "Delete", bubbles: true, cancelable: true });
-  }
-
-  function ctrlKey(key: string): KeyboardEvent {
-    return new KeyboardEvent("keydown", {
-      key, code: `Key${key.toUpperCase()}`, ctrlKey: true, bubbles: true, cancelable: true
     });
   }
 
@@ -105,7 +63,10 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
     const manager = makeManager();
     const canvas = manager.canvas();
 
-    manager.commitPixels([{ x: 2, y: 2 }, { x: 3, y: 2 }]);
+    manager.commitPixels([
+      { x: 2, y: 2 },
+      { x: 3, y: 2 }
+    ]);
     manager.mode = "select";
     manager.selectShape = true;
 
@@ -113,8 +74,14 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
     click(canvas, 92, 92);
     window.dispatchEvent(deleteKey());
 
-    assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [255, 255, 255, 255]);
-    assert.deepStrictEqual(readPixel(manager.texture, { x: 3, y: 2 }, 8), [255, 255, 255, 255]);
+    assert.deepStrictEqual(
+      readPixel(manager.texture, { x: 2, y: 2 }, 8),
+      [255, 255, 255, 255]
+    );
+    assert.deepStrictEqual(
+      readPixel(manager.texture, { x: 3, y: 2 }, 8),
+      [255, 255, 255, 255]
+    );
     manager.destroy();
   });
 
@@ -122,7 +89,9 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
     const manager = makeManager();
     const canvas = manager.canvas();
 
-    manager.commitPixels([{ x: 2, y: 2 }]);
+    manager.commitPixels([
+      { x: 2, y: 2 }
+    ]);
     manager.mode = "select";
     manager.selectShape = true;
 
@@ -130,7 +99,13 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
     window.dispatchEvent(deleteKey());
 
     assert.deepStrictEqual(
-      readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 255], "no selection — nothing erased"
+      readPixel(
+        manager.texture,
+        { x: 2, y: 2 },
+        8
+      ),
+      [0, 0, 0, 255],
+      "no selection — nothing erased"
     );
     manager.destroy();
   });
@@ -143,9 +118,14 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
     // the canvas's own default (opaque white) — a different color than
     // the border, so it reads as an enclosed hole to fill.
     const border = [
-      { x: 2, y: 2 }, { x: 3, y: 2 }, { x: 4, y: 2 },
-      { x: 2, y: 3 }, { x: 4, y: 3 },
-      { x: 2, y: 4 }, { x: 3, y: 4 }, { x: 4, y: 4 }
+      { x: 2, y: 2 },
+      { x: 3, y: 2 },
+      { x: 4, y: 2 },
+      { x: 2, y: 3 },
+      { x: 4, y: 3 },
+      { x: 2, y: 4 },
+      { x: 3, y: 4 },
+      { x: 4, y: 4 }
     ];
     manager.commitPixels(border);
     manager.mode = "select";
@@ -179,16 +159,35 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
     manager.mode = "select";
     manager.selectShape = true;
 
-    canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
-    canvas.dispatchEvent(mouseEvent("mousemove", 96, 92));
-    canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    canvas.dispatchEvent(
+      mouseEvent("mousedown", 92, 92)
+    );
+    canvas.dispatchEvent(
+      mouseEvent("mousemove", 96, 92)
+    );
+    canvas.dispatchEvent(
+      new MouseEvent("mouseup", { bubbles: true })
+    );
 
     window.dispatchEvent(deleteKey());
 
     assert.deepStrictEqual(
-      readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 255], "no rectangle got created — nothing erased"
+      readPixel(
+        manager.texture,
+        { x: 2, y: 2 },
+        8
+      ),
+      [0, 0, 0, 255],
+      "no rectangle got created — nothing erased"
     );
-    assert.deepStrictEqual(readPixel(manager.texture, { x: 3, y: 2 }, 8), [255, 0, 0, 255]);
+    assert.deepStrictEqual(
+      readPixel(
+        manager.texture,
+        { x: 3, y: 2 },
+        8
+      ),
+      [255, 0, 0, 255]
+    );
     manager.destroy();
   });
 
@@ -196,7 +195,10 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
     const manager = makeManager();
     const canvas = manager.canvas();
 
-    manager.commitPixels([{ x: 2, y: 2 }, { x: 3, y: 2 }]);
+    manager.commitPixels([
+      { x: 2, y: 2 },
+      { x: 3, y: 2 }
+    ]);
     manager.mode = "select";
     manager.selectShape = true;
     click(canvas, 92, 92);
@@ -205,7 +207,13 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
     window.dispatchEvent(deleteKey());
 
     assert.deepStrictEqual(
-      readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 255], "cleared by the toggle — Delete is a no-op"
+      readPixel(
+        manager.texture,
+        { x: 2, y: 2 },
+        8
+      ),
+      [0, 0, 0, 255],
+      "cleared by the toggle — Delete is a no-op"
     );
     manager.destroy();
   });
@@ -216,7 +224,11 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
 
     // L-shape within a 2x2 bounding box: (2,2)-(2,3)-(3,3) are black;
     // (3,2) is deliberately left out (the concave "gap").
-    manager.commitPixels([{ x: 2, y: 2 }, { x: 2, y: 3 }, { x: 3, y: 3 }]);
+    manager.commitPixels([
+      { x: 2, y: 2 },
+      { x: 2, y: 3 },
+      { x: 3, y: 3 }
+    ]);
     // A sentinel at the move's destination gap, to prove the paint step
     // skips masked-false destination cells too.
     manager.brush.primary.set("#0000FF");
@@ -228,21 +240,47 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
     click(canvas, 92, 92);
 
     // Drag by (+2, +2): (2,2)-(2,3)-(3,3) -> (4,4)-(4,5)-(5,5).
-    canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
-    canvas.dispatchEvent(mouseEvent("mousemove", 100, 100));
-    canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    canvas.dispatchEvent(
+      mouseEvent("mousedown", 92, 92)
+    );
+    canvas.dispatchEvent(
+      mouseEvent("mousemove", 100, 100)
+    );
+    canvas.dispatchEvent(
+      new MouseEvent("mouseup", { bubbles: true })
+    );
 
     assert.deepStrictEqual(
       readPixel(manager.texture, { x: 3, y: 2 }, 8),
       [255, 255, 255, 255],
       "the L-shape's own gap was never selected — untouched, not the erase color"
     );
-    assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [255, 0, 255, 255], "source erased");
-    assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 3 }, 8), [255, 0, 255, 255]);
-    assert.deepStrictEqual(readPixel(manager.texture, { x: 3, y: 3 }, 8), [255, 0, 255, 255]);
-    assert.deepStrictEqual(readPixel(manager.texture, { x: 4, y: 4 }, 8), [0, 0, 0, 255], "destination painted");
-    assert.deepStrictEqual(readPixel(manager.texture, { x: 4, y: 5 }, 8), [0, 0, 0, 255]);
-    assert.deepStrictEqual(readPixel(manager.texture, { x: 5, y: 5 }, 8), [0, 0, 0, 255]);
+    assert.deepStrictEqual(
+      readPixel(manager.texture, { x: 2, y: 2 }, 8),
+      [255, 0, 255, 255],
+      "source erased"
+    );
+    assert.deepStrictEqual(
+      readPixel(manager.texture, { x: 2, y: 3 }, 8),
+      [255, 0, 255, 255]
+    );
+    assert.deepStrictEqual(
+      readPixel(manager.texture, { x: 3, y: 3 }, 8),
+      [255, 0, 255, 255]
+    );
+    assert.deepStrictEqual(
+      readPixel(manager.texture, { x: 4, y: 4 }, 8),
+      [0, 0, 0, 255],
+      "destination painted"
+    );
+    assert.deepStrictEqual(
+      readPixel(manager.texture, { x: 4, y: 5 }, 8),
+      [0, 0, 0, 255]
+    );
+    assert.deepStrictEqual(
+      readPixel(manager.texture, { x: 5, y: 5 }, 8),
+      [0, 0, 0, 255]
+    );
     assert.deepStrictEqual(
       readPixel(manager.texture, { x: 5, y: 4 }, 8),
       [0, 0, 255, 255],
@@ -252,21 +290,36 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
   });
 
   test("undoing a shape move resyncs the selection's true mask, not its bounding rect", () => {
-    const manager = makeManager({ select: { eraseColor: "#FF00FF" }, history: { enabled: true } });
+    const manager = makeManager({
+      select: { eraseColor: "#FF00FF" },
+      history: { enabled: true }
+    });
     const canvas = manager.canvas();
 
-    manager.commitPixels([{ x: 2, y: 2 }, { x: 2, y: 3 }, { x: 3, y: 3 }]);
+    manager.commitPixels([
+      { x: 2, y: 2 },
+      { x: 2, y: 3 },
+      { x: 3, y: 3 }
+    ]);
     manager.mode = "select";
     manager.selectShape = true;
     click(canvas, 92, 92);
 
-    canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
-    canvas.dispatchEvent(mouseEvent("mousemove", 100, 100));
-    canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    canvas.dispatchEvent(
+      mouseEvent("mousedown", 92, 92)
+    );
+    canvas.dispatchEvent(
+      mouseEvent("mousemove", 100, 100)
+    );
+    canvas.dispatchEvent(
+      new MouseEvent("mouseup", { bubbles: true })
+    );
 
     window.dispatchEvent(ctrlKey("z"));
     assert.deepStrictEqual(
-      readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 255], "sanity: undo restored the L-shape"
+      readPixel(manager.texture, { x: 2, y: 2 }, 8),
+      [0, 0, 0, 255],
+      "sanity: undo restored the L-shape"
     );
 
     // If the resynced selection had degraded to a solid 2x2 rect instead of
@@ -274,9 +327,15 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
     // resynced oldRect/oldMask) would also vacate (3,2) — which was never
     // part of the shape. The destination is chosen far away so the paint
     // step can't independently touch (3,2) and confound the assertion.
-    canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
-    canvas.dispatchEvent(mouseEvent("mousemove", 108, 108));
-    canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    canvas.dispatchEvent(
+      mouseEvent("mousedown", 92, 92)
+    );
+    canvas.dispatchEvent(
+      mouseEvent("mousemove", 108, 108)
+    );
+    canvas.dispatchEvent(
+      new MouseEvent("mouseup", { bubbles: true })
+    );
 
     assert.deepStrictEqual(
       readPixel(manager.texture, { x: 3, y: 2 }, 8),

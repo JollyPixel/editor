@@ -1,9 +1,9 @@
 // Import Node.js Dependencies
-import { describe, test, before } from "node:test";
+import {
+  describe,
+  test
+} from "node:test";
 import assert from "node:assert/strict";
-
-// Import Third-party Dependencies
-import { Window } from "happy-dom";
 
 // Import Internal Dependencies
 import {
@@ -12,17 +12,17 @@ import {
   KeybindingConflictError,
   Keybindings,
   parseKeybinding
-} from "../../src/input/Keybindings.ts";
-
-// CONSTANTS
-const kEmulatedBrowserWindow = new Window();
-
-before(() => {
-  globalThis.KeyboardEvent = (kEmulatedBrowserWindow as unknown as Record<string, unknown>).KeyboardEvent as typeof KeyboardEvent;
-});
+} from "#src/input/Keybindings.ts";
 
 function keydown(
-  parameters: { key: string; code?: string; ctrlKey?: boolean; metaKey?: boolean; shiftKey?: boolean; altKey?: boolean; }
+  parameters: {
+    key: string;
+    code?: string;
+    ctrlKey?: boolean;
+    metaKey?: boolean;
+    shiftKey?: boolean;
+    altKey?: boolean;
+  }
 ): KeyboardEvent {
   return new KeyboardEvent("keydown", {
     key: parameters.key,
@@ -38,40 +38,64 @@ function keydown(
 describe("parseKeybinding", () => {
   test("parses a single-modifier combo", () => {
     assert.deepStrictEqual(parseKeybinding("mod+z"), {
-      mod: true, shift: false, alt: false, key: "z"
+      mod: true,
+      shift: false,
+      alt: false,
+      key: "z"
     });
   });
 
   test("parses a multi-modifier combo", () => {
     assert.deepStrictEqual(parseKeybinding("mod+shift+z"), {
-      mod: true, shift: true, alt: false, key: "z"
+      mod: true,
+      shift: true,
+      alt: false,
+      key: "z"
     });
   });
 
   test("parses a bare key with no modifier", () => {
     assert.deepStrictEqual(parseKeybinding("Delete"), {
-      mod: false, shift: false, alt: false, key: "delete"
+      mod: false,
+      shift: false,
+      alt: false,
+      key: "delete"
     });
   });
 
   test("lowercases the key token", () => {
-    assert.strictEqual(parseKeybinding("mod+ArrowUp").key, "arrowup");
+    assert.strictEqual(
+      parseKeybinding("mod+ArrowUp").key,
+      "arrowup"
+    );
   });
 
   test("throws InvalidKeybindingError on an unknown modifier", () => {
-    assert.throws(() => parseKeybinding("ctl+z"), InvalidKeybindingError);
+    assert.throws(
+      () => parseKeybinding("ctl+z"),
+      InvalidKeybindingError
+    );
   });
 
   test("throws InvalidKeybindingError on a missing key segment", () => {
-    assert.throws(() => parseKeybinding("mod+"), InvalidKeybindingError);
+    assert.throws(
+      () => parseKeybinding("mod+"),
+      InvalidKeybindingError
+    );
   });
 
   test("throws InvalidKeybindingError on an empty string", () => {
-    assert.throws(() => parseKeybinding(""), InvalidKeybindingError);
+    assert.throws(
+      () => parseKeybinding(""),
+      InvalidKeybindingError
+    );
   });
 
   test("throws InvalidKeybindingError on doubled separators", () => {
-    assert.throws(() => parseKeybinding("mod++z"), InvalidKeybindingError);
+    assert.throws(
+      () => parseKeybinding("mod++z"),
+      InvalidKeybindingError
+    );
   });
 });
 
@@ -80,11 +104,17 @@ describe("Keybindings.match", () => {
     const keybindings = new Keybindings();
 
     assert.strictEqual(
-      keybindings.match(keydown({ key: "c", ctrlKey: true })),
+      keybindings.match(keydown({
+        key: "c",
+        ctrlKey: true
+      })),
       "copy"
     );
     assert.strictEqual(
-      keybindings.match(keydown({ key: "c", metaKey: true })),
+      keybindings.match(keydown({
+        key: "c",
+        metaKey: true
+      })),
       "copy"
     );
   });
@@ -93,7 +123,11 @@ describe("Keybindings.match", () => {
     const keybindings = new Keybindings();
 
     assert.strictEqual(
-      keybindings.match(keydown({ key: "c", ctrlKey: true, shiftKey: true })),
+      keybindings.match(keydown({
+        key: "c",
+        ctrlKey: true,
+        shiftKey: true
+      })),
       null
     );
   });
@@ -102,11 +136,18 @@ describe("Keybindings.match", () => {
     const keybindings = new Keybindings();
 
     assert.strictEqual(
-      keybindings.match(keydown({ key: "z", ctrlKey: true })),
+      keybindings.match(keydown({
+        key: "z",
+        ctrlKey: true
+      })),
       "undo"
     );
     assert.strictEqual(
-      keybindings.match(keydown({ key: "Z", ctrlKey: true, shiftKey: true })),
+      keybindings.match(keydown({
+        key: "Z",
+        ctrlKey: true,
+        shiftKey: true
+      })),
       "redo"
     );
   });
@@ -115,7 +156,10 @@ describe("Keybindings.match", () => {
     const keybindings = new Keybindings();
 
     assert.strictEqual(
-      keybindings.match(keydown({ key: "y", ctrlKey: true })),
+      keybindings.match(keydown({
+        key: "y",
+        ctrlKey: true
+      })),
       "redo"
     );
   });
@@ -124,7 +168,9 @@ describe("Keybindings.match", () => {
     const keybindings = new Keybindings();
 
     assert.strictEqual(
-      keybindings.match(keydown({ key: "Delete" })),
+      keybindings.match(keydown({
+        key: "Delete"
+      })),
       "delete"
     );
   });
@@ -133,7 +179,10 @@ describe("Keybindings.match", () => {
     const keybindings = new Keybindings();
 
     assert.strictEqual(
-      keybindings.match(keydown({ key: "Delete", ctrlKey: true })),
+      keybindings.match(keydown({
+        key: "Delete",
+        ctrlKey: true
+      })),
       null
     );
   });
@@ -142,7 +191,11 @@ describe("Keybindings.match", () => {
     // AZERTY: the physical key that produces the "z" character sits where
     // QWERTY has "W", so the browser reports key: "z", code: "KeyW".
     const keybindings = new Keybindings();
-    const azertyZ = keydown({ key: "z", code: "KeyW", ctrlKey: true });
+    const azertyZ = keydown({
+      key: "z",
+      code: "KeyW",
+      ctrlKey: true
+    });
 
     assert.strictEqual(keybindings.match(azertyZ), "undo");
   });
@@ -151,7 +204,10 @@ describe("Keybindings.match", () => {
     const keybindings = new Keybindings();
 
     assert.strictEqual(
-      keybindings.match(keydown({ key: "q", ctrlKey: true })),
+      keybindings.match(keydown({
+        key: "q",
+        ctrlKey: true
+      })),
       null
     );
   });
@@ -182,7 +238,10 @@ describe("Keybindings.match", () => {
     const keybindings = new Keybindings();
 
     assert.strictEqual(
-      keybindings.match(keydown({ key: "r", ctrlKey: true })),
+      keybindings.match(keydown({
+        key: "r",
+        ctrlKey: true
+      })),
       null
     );
   });
@@ -192,32 +251,47 @@ describe("Keybindings construction and patch", () => {
   test("constructor with no patch uses the defaults", () => {
     const keybindings = new Keybindings();
 
-    assert.deepStrictEqual(keybindings.bindings, DEFAULT_KEYBINDINGS);
+    assert.deepStrictEqual(
+      keybindings.bindings,
+      DEFAULT_KEYBINDINGS
+    );
   });
 
   test("overridden actions take the new binding, others keep the default", () => {
     const keybindings = new Keybindings({ undo: "alt+z" });
 
-    assert.strictEqual(keybindings.bindings.undo, "alt+z");
-    assert.strictEqual(keybindings.bindings.copy, DEFAULT_KEYBINDINGS.copy);
+    assert.strictEqual(
+      keybindings.bindings.undo,
+      "alt+z"
+    );
+    assert.strictEqual(
+      keybindings.bindings.copy,
+      DEFAULT_KEYBINDINGS.copy
+    );
   });
 
   test("constructor throws KeybindingConflictError when two actions resolve to the same combo", () => {
     assert.throws(
-      () => new Keybindings({ delete: DEFAULT_KEYBINDINGS.copy as string }),
+      () => new Keybindings({
+        delete: DEFAULT_KEYBINDINGS.copy as string
+      }),
       KeybindingConflictError
     );
   });
 
   test("constructor throws InvalidKeybindingError when the patch contains a malformed binding", () => {
     assert.throws(
-      () => new Keybindings({ undo: "ctl+z" as never }),
+      () => new Keybindings({
+        undo: "ctl+z" as never
+      }),
       InvalidKeybindingError
     );
   });
 
   test("re-binding an action to one of its own alternate triggers is not a self-conflict", () => {
-    const keybindings = new Keybindings({ redo: "mod+y" });
+    const keybindings = new Keybindings({
+      redo: "mod+y"
+    });
 
     assert.strictEqual(keybindings.bindings.redo, "mod+y");
   });
@@ -226,14 +300,26 @@ describe("Keybindings construction and patch", () => {
     const keybindings = new Keybindings();
     keybindings.patch({ copy: "alt+j" });
 
-    assert.strictEqual(keybindings.bindings.copy, "alt+j");
-    assert.strictEqual(keybindings.bindings.undo, DEFAULT_KEYBINDINGS.undo);
+    assert.strictEqual(
+      keybindings.bindings.copy,
+      "alt+j"
+    );
+    assert.strictEqual(
+      keybindings.bindings.undo,
+      DEFAULT_KEYBINDINGS.undo
+    );
   });
 
   test("patch throws on conflict and leaves the previous bindings in effect", () => {
     const keybindings = new Keybindings();
 
-    assert.throws(() => keybindings.patch({ delete: "mod+c" }), KeybindingConflictError);
-    assert.strictEqual(keybindings.bindings.delete, DEFAULT_KEYBINDINGS.delete);
+    assert.throws(
+      () => keybindings.patch({ delete: "mod+c" }),
+      KeybindingConflictError
+    );
+    assert.strictEqual(
+      keybindings.bindings.delete,
+      DEFAULT_KEYBINDINGS.delete
+    );
   });
 });

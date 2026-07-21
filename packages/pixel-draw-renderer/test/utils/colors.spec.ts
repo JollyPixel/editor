@@ -1,12 +1,19 @@
 // Import Node.js Dependencies
-import { describe, test } from "node:test";
+import {
+  describe,
+  test
+} from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import Color from "colorjs.io";
 
 // Import Internal Dependencies
-import { colorAsRGBA, rgbToHex, toRGBA } from "../src/utils/colors.ts";
+import {
+  colorAsRGBA,
+  rgbToHex,
+  toRGBA
+} from "#src/utils/colors.ts";
 
 describe("colorAsRGBA", () => {
   test("returns opaque white for #ffffff", () => {
@@ -78,29 +85,47 @@ describe("toRGBA", () => {
   });
 
   test("parses a CSS color string into an RGBA object", () => {
-    assert.deepStrictEqual(toRGBA("#ff0000"), { r: 255, g: 0, b: 0, a: 255 });
+    assert.deepStrictEqual(
+      toRGBA("#ff0000"),
+      { r: 255, g: 0, b: 0, a: 255 }
+    );
   });
 
   test("parses a colorjs.io Color instance into an RGBA object", () => {
-    assert.deepStrictEqual(toRGBA(new Color("blue")), { r: 0, g: 0, b: 255, a: 255 });
+    assert.deepStrictEqual(
+      toRGBA(new Color("blue")),
+      { r: 0, g: 0, b: 255, a: 255 }
+    );
   });
 });
 
 describe("rgbToHex", () => {
   test("formats white", () => {
-    assert.strictEqual(rgbToHex(255, 255, 255), "#ffffff");
+    assert.strictEqual(
+      rgbToHex(255, 255, 255),
+      "#ffffff"
+    );
   });
 
   test("formats black", () => {
-    assert.strictEqual(rgbToHex(0, 0, 0), "#000000");
+    assert.strictEqual(
+      rgbToHex(0, 0, 0),
+      "#000000"
+    );
   });
 
   test("zero-pads components that would otherwise be short", () => {
-    assert.strictEqual(rgbToHex(0, 15, 5), "#000f05");
+    assert.strictEqual(
+      rgbToHex(0, 15, 5),
+      "#000f05"
+    );
   });
 
   test("round-trips with colorAsRGBA", () => {
     const [r, g, b] = colorAsRGBA("#1a2b3c");
-    assert.strictEqual(rgbToHex(r, g, b), "#1a2b3c");
+    assert.strictEqual(
+      rgbToHex(r, g, b),
+      "#1a2b3c"
+    );
   });
 });

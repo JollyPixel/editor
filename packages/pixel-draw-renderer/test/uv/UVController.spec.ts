@@ -1,12 +1,21 @@
 // Import Node.js Dependencies
-import { describe, it } from "node:test";
+import {
+  describe,
+  test
+} from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { UVMap, type UVMapEvent } from "../../src/uv/UVMap.ts";
-import { UVController } from "../../src/uv/UVController.ts";
-import type { SelectionRect } from "../../src/types.ts";
+import {
+  UVMap,
+  type UVMapEvent
+} from "#src/uv/UVMap.ts";
+import { UVController } from "#src/uv/UVController.ts";
+import type { UVOverlay } from "#src/rendering/overlays/UVOverlay.ts";
+import type { SelectionRect } from "#src/types.ts";
 
+// UVController only calls overlay.setLiveOverride; FakeOverlay implements that
+// structural subset and is cast to UVOverlay at the single injection site.
 class FakeOverlay {
   overrides: { id: string; rect: SelectionRect | null; }[] = [];
 
@@ -23,13 +32,16 @@ function makeSetup(
 ): { map: UVMap; overlay: FakeOverlay; controller: UVController; } {
   const map = new UVMap({ getCanvasSize: () => size });
   const overlay = new FakeOverlay();
-  const controller = new UVController({ uvMap: map, overlay: overlay as any });
+  const controller = new UVController({
+    uvMap: map,
+    overlay: overlay as unknown as UVOverlay
+  });
 
   return { map, overlay, controller };
 }
 
 describe("UVController — hit-test / select on miss", () => {
-  it("selects a visible region hit by handleStart", () => {
+  test("selects a visible region hit by handleStart", () => {
     const { map, controller } = makeSetup();
     const region = map.create({ width: 8, height: 8 });
     map.showAll = true;
@@ -39,7 +51,7 @@ describe("UVController — hit-test / select on miss", () => {
     assert.strictEqual(map.selectedRegionId, region.id);
   });
 
-  it("cannot hit an invisible region", () => {
+  test("cannot hit an invisible region", () => {
     const { map, controller } = makeSetup();
     map.create({ width: 8, height: 8 });
 
@@ -48,7 +60,7 @@ describe("UVController — hit-test / select on miss", () => {
     assert.strictEqual(map.selectedRegionId, null);
   });
 
-  it("deselects on a miss", () => {
+  test("deselects on a miss", () => {
     const { map, controller } = makeSetup();
     const region = map.create({ width: 8, height: 8 });
     map.showAll = true;
@@ -62,7 +74,7 @@ describe("UVController — hit-test / select on miss", () => {
 });
 
 describe("UVController — drag to move", () => {
-  it("does not commit the move until handleEnd", () => {
+  test("does not commit the move until handleEnd", () => {
     const { map, controller } = makeSetup();
     const region = map.create({ width: 8, height: 8 });
     map.showAll = true;
@@ -70,10 +82,13 @@ describe("UVController — drag to move", () => {
     controller.handleStart({ x: 2, y: 2 });
     controller.handleMove({ x: 6, y: 6 });
 
-    assert.deepStrictEqual(map.get(region.id)!.rect, region.rect);
+    assert.deepStrictEqual(
+      map.get(region.id)!.rect,
+      region.rect
+    );
   });
 
-  it("commits the accumulated delta on handleEnd", () => {
+  test("commits the accumulated delta on handleEnd", () => {
     const { map, controller } = makeSetup();
     const region = map.create({ width: 8, height: 8 });
     map.showAll = true;
@@ -85,7 +100,7 @@ describe("UVController — drag to move", () => {
     assert.deepStrictEqual(map.get(region.id)!.rect, { x: 4, y: 4, width: 8, height: 8 });
   });
 
-  it("does not move the region for a click without dragging", () => {
+  test("does not move the region for a click without dragging", () => {
     const { map, controller } = makeSetup();
     const region = map.create({ width: 8, height: 8 });
     map.showAll = true;
@@ -93,11 +108,17 @@ describe("UVController — drag to move", () => {
     controller.handleStart({ x: 2, y: 2 });
     controller.handleEnd();
 
-    assert.deepStrictEqual(map.get(region.id)!.rect, region.rect);
+    assert.deepStrictEqual(
+      map.get(region.id)!.rect,
+      region.rect
+    );
   });
 
-  it("clamps the live drag preview to canvas bounds", () => {
-    const { map, overlay, controller } = makeSetup({ x: 16, y: 16 });
+  test("clamps the live drag preview to canvas bounds", () => {
+    const { map, overlay, controller } = makeSetup({
+      x: 16,
+      y: 16
+    });
     map.create({ width: 8, height: 8 });
     map.showAll = true;
 
@@ -105,10 +126,13 @@ describe("UVController — drag to move", () => {
     controller.handleMove({ x: 100, y: 100 });
 
     const last = overlay.overrides.at(-1)!;
-    assert.deepStrictEqual(last.rect, { x: 8, y: 8, width: 8, height: 8 });
+    assert.deepStrictEqual(
+      last.rect,
+      { x: 8, y: 8, width: 8, height: 8 }
+    );
   });
 
-  it("clears the live override on handleEnd", () => {
+  test("clears the live override on handleEnd", () => {
     const { controller, overlay, map } = makeSetup();
     map.create({ width: 8, height: 8 });
     map.showAll = true;
@@ -117,10 +141,13 @@ describe("UVController — drag to move", () => {
     controller.handleMove({ x: 6, y: 6 });
     controller.handleEnd();
 
-    assert.strictEqual(overlay.overrides.at(-1)!.rect, null);
+    assert.strictEqual(
+      overlay.overrides.at(-1)!.rect,
+      null
+    );
   });
 
-  it("cancelDrag discards the in-progress drag without committing", () => {
+  test("cancelDrag discards the in-progress drag without committing", () => {
     const { map, controller, overlay } = makeSetup();
     const region = map.create({ width: 8, height: 8 });
     map.showAll = true;
@@ -130,11 +157,17 @@ describe("UVController — drag to move", () => {
     controller.cancelDrag();
     controller.handleEnd();
 
-    assert.deepStrictEqual(map.get(region.id)!.rect, region.rect);
-    assert.strictEqual(overlay.overrides.at(-1)!.rect, null);
+    assert.deepStrictEqual(
+      map.get(region.id)!.rect,
+      region.rect
+    );
+    assert.strictEqual(
+      overlay.overrides.at(-1)!.rect,
+      null
+    );
   });
 
-  it("handleMove/handleEnd are no-ops without an active drag", () => {
+  test("handleMove/handleEnd are no-ops without an active drag", () => {
     const { controller } = makeSetup();
 
     assert.doesNotThrow(() => {
@@ -144,7 +177,7 @@ describe("UVController — drag to move", () => {
   });
 
   describe("live drag preview (region-dragging)", () => {
-    it("handleMove emits a live preview via UVMap on every move, without committing", () => {
+    test("handleMove emits a live preview via UVMap on every move, without committing", () => {
       const { map, controller } = makeSetup();
       const region = map.create({ width: 8, height: 8 });
       map.showAll = true;
@@ -159,10 +192,14 @@ describe("UVController — drag to move", () => {
         { x: 4, y: 4, width: 8, height: 8 },
         { x: 5, y: 5, width: 8, height: 8 }
       ]);
-      assert.deepStrictEqual(map.get(region.id)!.rect, region.rect, "not committed yet");
+      assert.deepStrictEqual(
+        map.get(region.id)!.rect,
+        region.rect,
+        "not committed yet"
+      );
     });
 
-    it("cancelDrag reverts the preview to the region's actual (unchanged) rect", () => {
+    test("cancelDrag reverts the preview to the region's actual (unchanged) rect", () => {
       const { map, controller } = makeSetup();
       const region = map.create({ width: 8, height: 8 });
       map.showAll = true;
@@ -173,35 +210,38 @@ describe("UVController — drag to move", () => {
       controller.handleMove({ x: 6, y: 6 });
       controller.cancelDrag();
 
-      assert.deepStrictEqual(events.at(-1)!.rect, region.rect);
+      assert.deepStrictEqual(
+        events.at(-1)!.rect,
+        region.rect
+      );
     });
   });
 });
 
 describe("UVController — isDragging", () => {
-  it("is false until a drag starts, true while dragging, false again after handleEnd", () => {
+  test("is false until a drag starts, true while dragging, false again after handleEnd", () => {
     const { map, controller } = makeSetup();
     map.create({ width: 8, height: 8 });
     map.showAll = true;
 
-    assert.strictEqual(controller.isDragging, false);
+    assert.ok(!controller.isDragging);
 
     controller.handleStart({ x: 2, y: 2 });
-    assert.strictEqual(controller.isDragging, true);
+    assert.ok(controller.isDragging);
 
     controller.handleEnd();
-    assert.strictEqual(controller.isDragging, false);
+    assert.ok(!controller.isDragging);
   });
 
-  it("stays false when handleStart misses (no drag to track)", () => {
+  test("stays false when handleStart misses (no drag to track)", () => {
     const { controller } = makeSetup();
 
     controller.handleStart({ x: 2, y: 2 });
 
-    assert.strictEqual(controller.isDragging, false);
+    assert.ok(!controller.isDragging);
   });
 
-  it("is false again after cancelDrag", () => {
+  test("is false again after cancelDrag", () => {
     const { map, controller } = makeSetup();
     map.create({ width: 8, height: 8 });
     map.showAll = true;
@@ -209,25 +249,25 @@ describe("UVController — isDragging", () => {
     controller.handleStart({ x: 2, y: 2 });
     controller.cancelDrag();
 
-    assert.strictEqual(controller.isDragging, false);
+    assert.ok(!controller.isDragging);
   });
 });
 
 describe("UVController — handleDelete", () => {
-  it("deletes the selected region and returns true", () => {
+  test("deletes the selected region and returns true", () => {
     const { map, controller } = makeSetup();
     const region = map.create({ width: 8, height: 8 });
     map.select(region.id);
 
     const result = controller.handleDelete();
 
-    assert.strictEqual(result, true);
+    assert.ok(result);
     assert.strictEqual(map.get(region.id), undefined);
   });
 
-  it("returns false when nothing is selected", () => {
+  test("returns false when nothing is selected", () => {
     const { controller } = makeSetup();
 
-    assert.strictEqual(controller.handleDelete(), false);
+    assert.ok(!controller.handleDelete());
   });
 });

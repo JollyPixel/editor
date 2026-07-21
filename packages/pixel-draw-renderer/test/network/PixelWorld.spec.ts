@@ -1,17 +1,23 @@
 // Import Node.js Dependencies
-import { describe, test } from "node:test";
+import {
+  describe,
+  test
+} from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { PixelWorld } from "../../src/network/PixelWorld.ts";
+import { PixelWorld } from "#src/network/PixelWorld.ts";
 
 describe("PixelWorld", () => {
   describe("addBuffer / getBuffer / hasBuffer", () => {
     test("registers a buffer retrievable by id", () => {
       const world = new PixelWorld();
-      const buffer = world.addBuffer("tex1", { size: { x: 4, y: 4 } });
+      const buffer = world.addBuffer(
+        "tex1",
+        { size: { x: 4, y: 4 } }
+      );
 
-      assert.strictEqual(world.hasBuffer("tex1"), true);
+      assert.ok(world.hasBuffer("tex1"));
       assert.strictEqual(world.getBuffer("tex1"), buffer);
     });
 
@@ -19,7 +25,10 @@ describe("PixelWorld", () => {
       const world = new PixelWorld();
       world.addBuffer("tex1", { size: { x: 4, y: 4 } });
 
-      assert.throws(() => world.addBuffer("tex1", { size: { x: 4, y: 4 } }));
+      assert.throws(() => world.addBuffer(
+        "tex1",
+        { size: { x: 4, y: 4 } }
+      ));
     });
 
     test("getBuffer returns undefined for an unknown id", () => {
@@ -31,10 +40,13 @@ describe("PixelWorld", () => {
   describe("removeBuffer", () => {
     test("removes a registered buffer", () => {
       const world = new PixelWorld();
-      world.addBuffer("tex1", { size: { x: 4, y: 4 } });
+      world.addBuffer(
+        "tex1",
+        { size: { x: 4, y: 4 } }
+      );
       world.removeBuffer("tex1");
 
-      assert.strictEqual(world.hasBuffer("tex1"), false);
+      assert.ok(!world.hasBuffer("tex1"));
     });
 
     test("is a no-op for an unknown id", () => {
@@ -46,18 +58,27 @@ describe("PixelWorld", () => {
   describe("getBufferIds", () => {
     test("returns a lazy iterable over every registered id, not an array", () => {
       const world = new PixelWorld();
-      world.addBuffer("tex1", { size: { x: 4, y: 4 } });
-      world.addBuffer("tex2", { size: { x: 4, y: 4 } });
+      world.addBuffer(
+        "tex1",
+        { size: { x: 4, y: 4 } }
+      );
+      world.addBuffer(
+        "tex2",
+        { size: { x: 4, y: 4 } }
+      );
 
       const ids = world.getBufferIds();
-      assert.strictEqual(Array.isArray(ids), false);
+      assert.ok(!Array.isArray(ids));
       assert.strictEqual(typeof ids[Symbol.iterator], "function");
       assert.deepStrictEqual([...ids].sort(), ["tex1", "tex2"]);
     });
 
     test("reflects removals", () => {
       const world = new PixelWorld();
-      world.addBuffer("tex1", { size: { x: 4, y: 4 } });
+      world.addBuffer(
+        "tex1",
+        { size: { x: 4, y: 4 } }
+      );
       world.removeBuffer("tex1");
 
       assert.deepStrictEqual([...world.getBufferIds()], []);

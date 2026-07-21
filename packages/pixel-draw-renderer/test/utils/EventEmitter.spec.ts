@@ -1,9 +1,12 @@
 // Import Node.js Dependencies
-import { describe, test } from "node:test";
+import {
+  describe,
+  test
+} from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { TypedEventEmitter } from "../../src/utils/EventEmitter.ts";
+import { TypedEventEmitter } from "#src/utils/EventEmitter.ts";
 
 type TestEvent =
   | { type: "foo"; value: number; }
@@ -29,7 +32,10 @@ describe("TypedEventEmitter", () => {
 
     emitter.trigger({ type: "foo", value: 1 });
 
-    assert.deepStrictEqual(events, [{ type: "foo", value: 1 }]);
+    assert.deepStrictEqual(
+      events,
+      [{ type: "foo", value: 1 }]
+    );
   });
 
   test("does not invoke listeners registered for a different event type", () => {
@@ -83,13 +89,17 @@ describe("TypedEventEmitter", () => {
       // never registered, never expected to run
     }
 
-    assert.doesNotThrow(() => emitter.off("foo", listener));
+    assert.doesNotThrow(
+      () => emitter.off("foo", listener)
+    );
   });
 
   test("emit() with no listeners registered is a no-op", () => {
     const emitter = new TestEmitter();
 
-    assert.doesNotThrow(() => emitter.trigger({ type: "foo", value: 1 }));
+    assert.doesNotThrow(
+      () => emitter.trigger({ type: "foo", value: 1 })
+    );
   });
 
   test("a listener removing itself mid-emit does not affect the current dispatch", () => {

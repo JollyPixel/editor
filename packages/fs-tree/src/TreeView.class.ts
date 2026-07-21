@@ -291,20 +291,22 @@ export class TreeView extends EventTarget {
         walkUp = true;
       }
 
-      if (walkUp && node) {
-        if (node.parentElement && node.parentElement.classList.contains("children")) {
-          let target = node.parentElement;
-          while (target.nextElementSibling === null) {
-            target = target.parentElement!;
-            if (!target.classList.contains("children")) {
-              return;
-            }
+      if (!walkUp || !node) {
+        return;
+      }
+
+      if (
+        node.parentElement &&
+        node.parentElement.classList.contains("children")
+      ) {
+        let target = node.parentElement;
+        while (target.nextElementSibling === null) {
+          target = target.parentElement!;
+          if (!target.classList.contains("children")) {
+            return;
           }
-          node = target.nextElementSibling;
         }
-        else {
-          return;
-        }
+        node = target.nextElementSibling;
       }
     }
 
