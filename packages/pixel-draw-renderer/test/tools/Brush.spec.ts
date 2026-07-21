@@ -1,33 +1,32 @@
 // Import Node.js Dependencies
-import { describe, test, before } from "node:test";
+import {
+  describe,
+  test
+} from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { Window } from "happy-dom";
 import Color from "colorjs.io";
 
 // Import Internal Dependencies
-import { Brush } from "../../src/tools/Brush.ts";
-import { installCanvasMock } from "../mocks.ts";
-
-// CONSTANTS
-const kEmulatedBrowserWindow = new Window();
-
-before(() => {
-  globalThis.document = kEmulatedBrowserWindow.document as unknown as Document;
-  installCanvasMock(globalThis.document);
-});
+import { Brush } from "#src/tools/Brush.ts";
 
 describe("Brush", () => {
   describe("constructor defaults", () => {
     test("default primary color is black", () => {
       const brush = new Brush();
-      assert.strictEqual(brush.primary.asString("hex"), "#000000");
+      assert.strictEqual(
+        brush.primary.asString("hex"),
+        "#000000"
+      );
     });
 
     test("default secondary color is white", () => {
       const brush = new Brush();
-      assert.strictEqual(brush.secondary.asString("hex"), "#ffffff");
+      assert.strictEqual(
+        brush.secondary.asString("hex"),
+        "#ffffff"
+      );
     });
 
     test("default size is 32", () => {
@@ -47,12 +46,20 @@ describe("Brush", () => {
 
     test("primary.asString() is a valid rgba() string right after construction", () => {
       const brush = new Brush();
-      assert.match(brush.primary.asString(), /rgba\(0, 0, 0, 1\)/);
+      assert.match(
+        brush.primary.asString(),
+        /rgba\(0, 0, 0, 1\)/
+      );
     });
 
     test("constructor accepts a secondaryColor option", () => {
-      const brush = new Brush({ secondaryColor: "#00ff00" });
-      assert.strictEqual(brush.secondary.asString("hex"), "#00ff00");
+      const brush = new Brush({
+        secondaryColor: "#00ff00"
+      });
+      assert.strictEqual(
+        brush.secondary.asString("hex"),
+        "#00ff00"
+      );
     });
   });
 
@@ -60,27 +67,45 @@ describe("Brush", () => {
     test("set updates hex and rgba string", () => {
       const brush = new Brush();
       brush.primary.set("#ff0000");
-      assert.strictEqual(brush.primary.asString("hex"), "#ff0000");
-      assert.match(brush.primary.asString(), /rgba\(255, 0, 0/);
+      assert.strictEqual(
+        brush.primary.asString("hex"),
+        "#ff0000"
+      );
+      assert.match(
+        brush.primary.asString(),
+        /rgba\(255, 0, 0/
+      );
     });
 
     test("set with opacity argument updates opacity and color", () => {
       const brush = new Brush();
       brush.primary.set("#0000ff", 0.5);
       assert.strictEqual(brush.primary.opacity, 0.5);
-      assert.match(brush.primary.asString(), /rgba\(0, 0, 255, 0.5\)/);
+      assert.match(
+        brush.primary.asString(),
+        /rgba\(0, 0, 255, 0.5\)/
+      );
     });
 
     test("set accepts a colorjs.io Color instance", () => {
       const brush = new Brush();
       brush.primary.set(new Color("lime"));
-      assert.strictEqual(brush.primary.asString("hex"), "#00ff00");
-      assert.match(brush.primary.asString(), /rgba\(0, 255, 0/);
+      assert.strictEqual(
+        brush.primary.asString("hex"),
+        "#00ff00"
+      );
+      assert.match(
+        brush.primary.asString(),
+        /rgba\(0, 255, 0/
+      );
     });
 
     test("constructor accepts a colorjs.io Color instance", () => {
       const brush = new Brush({ color: new Color("blue") });
-      assert.strictEqual(brush.primary.asString("hex"), "#0000ff");
+      assert.strictEqual(
+        brush.primary.asString("hex"),
+        "#0000ff"
+      );
     });
   });
 
@@ -100,7 +125,10 @@ describe("Brush", () => {
     test("re-derives RGB from stored hex on opacity change", () => {
       const brush = new Brush({ color: "#ff0000" });
       brush.primary.opacity = 0.25;
-      assert.match(brush.primary.asString(), /rgba\(255, 0, 0, 0.25\)/);
+      assert.match(
+        brush.primary.asString(),
+        /rgba\(255, 0, 0, 0.25\)/
+      );
     });
 
     test("secondary opacity is independent from primary", () => {
@@ -113,26 +141,41 @@ describe("Brush", () => {
 
   describe("swapColors", () => {
     test("exchanges primary and secondary color and opacity", () => {
-      const brush = new Brush({ color: "#ff0000", secondaryColor: "#0000ff" });
+      const brush = new Brush({
+        color: "#ff0000",
+        secondaryColor: "#0000ff"
+      });
       brush.secondary.opacity = 0.5;
 
       brush.swapColors();
 
-      assert.strictEqual(brush.primary.asString("hex"), "#0000ff");
+      assert.strictEqual(
+        brush.primary.asString("hex"),
+        "#0000ff"
+      );
       assert.strictEqual(brush.primary.opacity, 0.5);
-      assert.strictEqual(brush.secondary.asString("hex"), "#ff0000");
+      assert.strictEqual(
+        brush.secondary.asString("hex"),
+        "#ff0000"
+      );
       assert.strictEqual(brush.secondary.opacity, 1);
     });
   });
 
   describe("size", () => {
     test("clamps size to at least 1", () => {
-      const brush = new Brush({ size: 0, maxSize: 10 });
+      const brush = new Brush({
+        size: 0,
+        maxSize: 10
+      });
       assert.strictEqual(brush.size, 1);
     });
 
     test("clamps size to maxSize", () => {
-      const brush = new Brush({ size: 100, maxSize: 8 });
+      const brush = new Brush({
+        size: 100,
+        maxSize: 8
+      });
       assert.strictEqual(brush.size, 8);
     });
   });
@@ -141,8 +184,11 @@ describe("Brush", () => {
     test("returns an iterable, not an array", () => {
       const brush = new Brush({ size: 1, maxSize: 32 });
       const result = brush.affectedPixels(5, 5);
-      assert.strictEqual(Array.isArray(result), false);
-      assert.strictEqual(typeof result[Symbol.iterator], "function");
+      assert.ok(!Array.isArray(result));
+      assert.strictEqual(
+        typeof result[Symbol.iterator],
+        "function"
+      );
     });
 
     test("size 1 affects only the center pixel", () => {

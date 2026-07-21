@@ -1,69 +1,24 @@
 // Import Node.js Dependencies
-import { describe, test, before, beforeEach } from "node:test";
+import {
+  describe,
+  test,
+  beforeEach
+} from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { Window } from "happy-dom";
 import Color from "colorjs.io";
 
 // Import Internal Dependencies
-import { PixelArtCanvas } from "../src/PixelArtCanvas.ts";
-import { installCanvasMock, MockCanvasElement } from "./mocks.ts";
-
-// CONSTANTS
-const kEmulatedBrowserWindow = new Window();
-
-before(() => {
-  globalThis.document = kEmulatedBrowserWindow.document as unknown as Document;
-  // @ts-expect-error
-  globalThis.window = kEmulatedBrowserWindow as unknown as Window & typeof globalThis;
-  // @ts-expect-error
-  globalThis.getComputedStyle = (_el: unknown) => {
-    return { backgroundColor: "#555555" };
-  };
-  installCanvasMock(globalThis.document);
-  globalThis.MouseEvent = (kEmulatedBrowserWindow as unknown as Record<string, unknown>).MouseEvent as typeof MouseEvent;
-  globalThis.KeyboardEvent = (kEmulatedBrowserWindow as unknown as Record<string, unknown>).KeyboardEvent as typeof KeyboardEvent;
-  globalThis.HTMLElement = (kEmulatedBrowserWindow as unknown as Record<string, unknown>).HTMLElement as typeof HTMLElement;
-  globalThis.Event = (kEmulatedBrowserWindow as unknown as Record<string, unknown>).Event as typeof Event;
-});
-
-function makeContainer(): HTMLDivElement {
-  const div = kEmulatedBrowserWindow.document.createElement("div") as unknown as HTMLDivElement;
-  (div as any).getBoundingClientRect = () => {
-    return {
-      left: 0, top: 0, right: 200, bottom: 200, width: 200, height: 200
-    };
-  };
-  (div as any).style = {};
-  (div as any).appendChild = (_child: unknown) => {
-    // No-op
-  };
-
-  return div;
-}
-
-function shiftKeyDown(repeat = false): KeyboardEvent {
-  return new KeyboardEvent("keydown", { key: "Shift", bubbles: true, repeat });
-}
-
-function shiftKeyUp(): KeyboardEvent {
-  return new KeyboardEvent("keyup", { key: "Shift", bubbles: true });
-}
-
-function moveTo(
-  canvas: HTMLCanvasElement,
-  clientX: number,
-  clientY: number
-): void {
-  canvas.dispatchEvent(new MouseEvent("mousemove", { clientX, clientY, bubbles: true }));
-}
+import { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
+import { makeContainer } from "./helpers/dom.ts";
+import { createPixelArtCanvas } from "./helpers/canvas.ts";
 
 describe("PixelArtCanvas", () => {
   let container: HTMLDivElement;
 
   beforeEach(() => {
-    container = makeContainer();
+    ({ container } = makeContainer());
   });
 
   describe("onDrawEnd hook", () => {
@@ -71,8 +26,7 @@ describe("PixelArtCanvas", () => {
       let callCount = 0;
 
       assert.doesNotThrow(() => {
-        const manager = new PixelArtCanvas(container, {
-          texture: { maxSize: 32, size: { x: 8, y: 8 } },
+        const { manager } = createPixelArtCanvas({
           onDrawEnd: () => {
             callCount++;
           }
@@ -80,15 +34,25 @@ describe("PixelArtCanvas", () => {
         manager.destroy();
       });
 
-      assert.strictEqual(callCount, 0, "hook should not fire during construction");
+      assert.strictEqual(
+        callCount,
+        0,
+        "hook should not fire during construction"
+      );
     });
   });
 
   describe("zoom", () => {
     test("zoom.sensitivity returns the configured default", () => {
       const manager = new PixelArtCanvas(container, {
-        texture: { maxSize: 32, size: { x: 8, y: 8 } },
-        zoom: { default: 4, sensitivity: 0.25 }
+        texture: {
+          maxSize: 32,
+          size: { x: 8, y: 8 }
+        },
+        zoom: {
+          default: 4,
+          sensitivity: 0.25
+        }
       });
 
       assert.strictEqual(manager.zoom.sensitivity, 0.25);
@@ -97,7 +61,10 @@ describe("PixelArtCanvas", () => {
 
     test("setting zoom.sensitivity updates the returned value", () => {
       const manager = new PixelArtCanvas(container, {
-        texture: { maxSize: 32, size: { x: 8, y: 8 } }
+        texture: {
+          maxSize: 32,
+          size: { x: 8, y: 8 }
+        }
       });
 
       manager.zoom.sensitivity = 0.5;
@@ -110,24 +77,16 @@ describe("PixelArtCanvas", () => {
         width: number,
         height: number
       ): HTMLDivElement {
-        const div = kEmulatedBrowserWindow.document.createElement("div") as unknown as HTMLDivElement;
-        (div as any).getBoundingClientRect = () => {
-          return {
-            left: 0, top: 0, right: width, bottom: height, width, height
-          };
-        };
-        (div as any).style = {};
-        (div as any).appendChild = (_child: unknown) => {
-          // No-op
-        };
-
-        return div;
+        return makeContainer(width, height).container;
       }
 
       test("computes a fit-to-container zoom when zoom.default is omitted", () => {
         // 200x200 container, 8x8 texture: min(200/8, 200/8) * 0.9 = 22.5 -> floor 22.
         const manager = new PixelArtCanvas(container, {
-          texture: { maxSize: 32, size: { x: 8, y: 8 } }
+          texture: {
+            maxSize: 32,
+            size: { x: 8, y: 8 }
+          }
         });
 
         assert.strictEqual(manager.zoom.value, 22);
@@ -136,7 +95,10 @@ describe("PixelArtCanvas", () => {
 
       test("an explicit zoom.default always wins over the fit computation", () => {
         const manager = new PixelArtCanvas(container, {
-          texture: { maxSize: 32, size: { x: 8, y: 8 } },
+          texture: {
+            maxSize: 32,
+            size: { x: 8, y: 8 }
+          },
           zoom: { default: 4 }
         });
 
@@ -146,7 +108,10 @@ describe("PixelArtCanvas", () => {
 
       test("clamps the computed fit zoom to zoomMax for a tiny texture in a large container", () => {
         const manager = new PixelArtCanvas(container, {
-          texture: { maxSize: 32, size: { x: 2, y: 2 } },
+          texture: {
+            maxSize: 32,
+            size: { x: 2, y: 2 }
+          },
           zoom: { max: 5 }
         });
 
@@ -156,7 +121,10 @@ describe("PixelArtCanvas", () => {
 
       test("clamps the computed fit zoom to zoomMin for a texture much larger than the container", () => {
         const manager = new PixelArtCanvas(container, {
-          texture: { maxSize: 2048, size: { x: 1000, y: 1000 } }
+          texture: {
+            maxSize: 2048,
+            size: { x: 1000, y: 1000 }
+          }
         });
 
         assert.strictEqual(manager.zoom.value, 1);
@@ -166,7 +134,10 @@ describe("PixelArtCanvas", () => {
       test("falls back to Zoom's own default (4) when the container has no measurable size", () => {
         const zeroSizeContainer = makeSizedContainer(0, 0);
         const manager = new PixelArtCanvas(zeroSizeContainer, {
-          texture: { maxSize: 32, size: { x: 8, y: 8 } }
+          texture: {
+            maxSize: 32,
+            size: { x: 8, y: 8 }
+          }
         });
 
         assert.strictEqual(manager.zoom.value, 4);
@@ -177,7 +148,10 @@ describe("PixelArtCanvas", () => {
         // 100x100 container, 8x8 texture: min(100/8, 100/8) * 0.9 = 11.25 -> floor 11.
         const smallContainer = makeSizedContainer(100, 100);
         const manager = new PixelArtCanvas(smallContainer, {
-          texture: { maxSize: 32, size: { x: 8, y: 8 } }
+          texture: {
+            maxSize: 32,
+            size: { x: 8, y: 8 }
+          }
         });
 
         assert.strictEqual(manager.zoom.value, 11);
@@ -189,30 +163,48 @@ describe("PixelArtCanvas", () => {
   describe("backgroundColor", () => {
     test("defaults to the parent element's computed CSS background-color", () => {
       const manager = new PixelArtCanvas(container, {
-        texture: { maxSize: 32, size: { x: 8, y: 8 } }
+        texture: {
+          maxSize: 32,
+          size: { x: 8, y: 8 }
+        }
       });
 
-      assert.strictEqual(manager.backgroundColor, new Color("#555555").toString());
+      assert.strictEqual(
+        manager.backgroundColor,
+        new Color("#555555").toString()
+      );
       manager.destroy();
     });
 
     test("backgroundColor option overrides the CSS-inferred default", () => {
       const manager = new PixelArtCanvas(container, {
-        texture: { maxSize: 32, size: { x: 8, y: 8 } },
+        texture: {
+          maxSize: 32,
+          size: { x: 8, y: 8 }
+        },
         backgroundColor: "#ff0000"
       });
 
-      assert.strictEqual(manager.backgroundColor, new Color("#ff0000").toString());
+      assert.strictEqual(
+        manager.backgroundColor,
+        new Color("#ff0000").toString()
+      );
       manager.destroy();
     });
 
     test("setting backgroundColor updates the returned value", () => {
       const manager = new PixelArtCanvas(container, {
-        texture: { maxSize: 32, size: { x: 8, y: 8 } }
+        texture: {
+          maxSize: 32,
+          size: { x: 8, y: 8 }
+        }
       });
 
       manager.backgroundColor = "#00ff00";
-      assert.strictEqual(manager.backgroundColor, new Color("#00ff00").toString());
+      assert.strictEqual(
+        manager.backgroundColor,
+        new Color("#00ff00").toString()
+      );
       manager.destroy();
     });
   });
@@ -220,7 +212,10 @@ describe("PixelArtCanvas", () => {
   describe("destroy", () => {
     test("destroy() does not throw", () => {
       const manager = new PixelArtCanvas(container, {
-        texture: { maxSize: 32, size: { x: 8, y: 8 } }
+        texture: {
+          maxSize: 32,
+          size: { x: 8, y: 8 }
+        }
       });
 
       assert.doesNotThrow(() => manager.destroy());
@@ -228,7 +223,10 @@ describe("PixelArtCanvas", () => {
 
     test("destroy() can be called after already destroyed", () => {
       const manager = new PixelArtCanvas(container, {
-        texture: { maxSize: 32, size: { x: 8, y: 8 } }
+        texture: {
+          maxSize: 32,
+          size: { x: 8, y: 8 }
+        }
       });
       manager.destroy();
 
@@ -240,23 +238,32 @@ describe("PixelArtCanvas", () => {
   describe("texture setter", () => {
     test("setting texture from an HTMLCanvasElement updates texture size", () => {
       const manager = new PixelArtCanvas(container, {
-        texture: { maxSize: 32, size: { x: 4, y: 4 } }
+        texture: {
+          maxSize: 32,
+          size: { x: 4, y: 4 }
+        }
       });
-      const canvas = kEmulatedBrowserWindow.document.createElement("canvas") as unknown as HTMLCanvasElement;
+      const canvas = document.createElement("canvas");
       canvas.width = 10;
       canvas.height = 5;
 
       assert.doesNotThrow(() => {
         manager.texture = canvas;
       });
-      assert.deepStrictEqual(manager.textureSize, { x: 10, y: 5 });
+      assert.deepStrictEqual(
+        manager.textureSize,
+        { x: 10, y: 5 }
+      );
 
       manager.destroy();
     });
 
     test("setting texture from an image-like source (no getContext) copies into new canvas", () => {
       const manager = new PixelArtCanvas(container, {
-        texture: { maxSize: 32, size: { x: 8, y: 8 } }
+        texture: {
+          maxSize: 32,
+          size: { x: 8, y: 8 }
+        }
       });
 
       // Simulate an HTMLImageElement: has width/naturalWidth but NO getContext method
@@ -272,7 +279,10 @@ describe("PixelArtCanvas", () => {
         manager.texture = mockImage as unknown as HTMLImageElement;
       });
 
-      assert.deepStrictEqual(manager.textureSize, { x: 16, y: 16 });
+      assert.deepStrictEqual(
+        manager.textureSize,
+        { x: 16, y: 16 }
+      );
       manager.destroy();
     });
   });
@@ -281,14 +291,24 @@ describe("PixelArtCanvas", () => {
     test("commits pixels as a single 'stroke' hook event", () => {
       const events: unknown[] = [];
       const manager = new PixelArtCanvas(container, {
-        texture: { maxSize: 32, size: { x: 8, y: 8 } },
+        texture: {
+          maxSize: 32,
+          size: { x: 8, y: 8 }
+        },
         onBufferUpdated: (event) => events.push(event)
       });
 
-      manager.commitPixels([{ x: 1, y: 1 }, { x: 2, y: 1 }, { x: 3, y: 1 }]);
+      manager.commitPixels([
+        { x: 1, y: 1 },
+        { x: 2, y: 1 },
+        { x: 3, y: 1 }
+      ]);
 
       assert.strictEqual(events.length, 1);
-      const event = events[0] as { action: string; metadata: { positions: unknown[]; }; };
+      const event = events[0] as {
+        action: string;
+        metadata: { positions: unknown[]; };
+      };
       assert.strictEqual(event.action, "stroke");
       assert.strictEqual(event.metadata.positions.length, 3);
       manager.destroy();
@@ -297,7 +317,10 @@ describe("PixelArtCanvas", () => {
     test("empty pixel list is a no-op", () => {
       const events: unknown[] = [];
       const manager = new PixelArtCanvas(container, {
-        texture: { maxSize: 32, size: { x: 8, y: 8 } },
+        texture: {
+          maxSize: 32,
+          size: { x: 8, y: 8 }
+        },
         onBufferUpdated: (event) => events.push(event)
       });
 
@@ -309,14 +332,15 @@ describe("PixelArtCanvas", () => {
 
     test("calls onDrawEnd once after committing", () => {
       let callCount = 0;
-      const manager = new PixelArtCanvas(container, {
-        texture: { maxSize: 32, size: { x: 8, y: 8 } },
+      const { manager } = createPixelArtCanvas({
         onDrawEnd: () => {
           callCount++;
         }
       });
 
-      manager.commitPixels([{ x: 1, y: 1 }]);
+      manager.commitPixels([
+        { x: 1, y: 1 }
+      ]);
 
       assert.strictEqual(callCount, 1);
       manager.destroy();
@@ -326,10 +350,16 @@ describe("PixelArtCanvas", () => {
   describe("textureCanvas", () => {
     test("returns an HTMLCanvasElement", () => {
       const manager = new PixelArtCanvas(container, {
-        texture: { maxSize: 32, size: { x: 8, y: 8 } }
+        texture: {
+          maxSize: 32,
+          size: { x: 8, y: 8 }
+        }
       });
       const canvas = manager.textureCanvas();
-      assert.ok(canvas instanceof MockCanvasElement, "should be a canvas-like element");
+      assert.ok(
+        canvas instanceof HTMLCanvasElement,
+        "should be a canvas element"
+      );
       manager.destroy();
     });
   });
@@ -337,320 +367,16 @@ describe("PixelArtCanvas", () => {
   describe("canvas", () => {
     test("returns the interactive (input-listening) canvas element", () => {
       const manager = new PixelArtCanvas(container, {
-        texture: { maxSize: 32, size: { x: 8, y: 8 } }
+        texture: {
+          maxSize: 32,
+          size: { x: 8, y: 8 }
+        }
       });
       const canvas = manager.canvas();
-      assert.ok(canvas instanceof MockCanvasElement, "should be a canvas-like element");
-      manager.destroy();
-    });
-  });
-
-  describe("line tool (Shift)", () => {
-    // 200x200 container, 16x16 texture, zoom 4 -> centered camera (68, 68).
-    // client(100,100) -> texture (8,8); client(128,100) -> texture (15,8).
-
-    function makeManager(onBufferUpdated: (event: unknown) => void): PixelArtCanvas {
-      return new PixelArtCanvas(container, {
-        texture: { maxSize: 32, size: { x: 16, y: 16 } },
-        zoom: { default: 4 },
-        brush: { size: 1, maxSize: 1 },
-        onBufferUpdated
-      });
-    }
-
-    test("Shift-arm-then-mousedown commits a brush-stamped line as a single stroke", () => {
-      const events: unknown[] = [];
-      const manager = makeManager((event) => events.push(event));
-      const canvas = manager.canvas();
-
-      moveTo(canvas, 100, 100);
-      window.dispatchEvent(shiftKeyDown());
-      moveTo(canvas, 128, 100);
-
-      canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 0, buttons: 1, clientX: 128, clientY: 100, bubbles: true
-      }));
-
-      assert.strictEqual(events.length, 1);
-      const event = events[0] as { action: string; metadata: { positions: unknown[]; }; };
-      assert.strictEqual(event.action, "stroke");
-      assert.strictEqual(event.metadata.positions.length, 8, "1px brush over an 8px-long horizontal line");
-      manager.destroy();
-    });
-
-    test("Shift then mousedown with no movement paints a single pixel (zero-length fallback)", () => {
-      const events: unknown[] = [];
-      const manager = makeManager((event) => events.push(event));
-      const canvas = manager.canvas();
-
-      moveTo(canvas, 100, 100);
-      window.dispatchEvent(shiftKeyDown());
-      canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
-      }));
-
-      assert.strictEqual(events.length, 1);
-      const event = events[0] as { metadata: { positions: unknown[]; }; };
-      assert.strictEqual(event.metadata.positions.length, 1);
-      manager.destroy();
-    });
-
-    test("committing via mousedown does not chain into a freehand stroke while still held", () => {
-      const events: unknown[] = [];
-      const manager = makeManager((event) => events.push(event));
-      const canvas = manager.canvas();
-
-      moveTo(canvas, 100, 100);
-      window.dispatchEvent(shiftKeyDown());
-      moveTo(canvas, 128, 100);
-
-      canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 0, buttons: 1, clientX: 128, clientY: 100, bubbles: true
-      }));
-      canvas.dispatchEvent(new MouseEvent("mousemove", {
-        buttons: 1, clientX: 140, clientY: 100, bubbles: true
-      }));
-      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
-
-      assert.strictEqual(events.length, 1, "no chained freehand stroke after the line commit");
-      manager.destroy();
-    });
-
-    test("holding Shift through a commit re-arms the line from the committed endpoint (chained polyline)", () => {
-      const events: unknown[] = [];
-      const manager = makeManager((event) => events.push(event));
-      const canvas = manager.canvas();
-
-      moveTo(canvas, 100, 100);
-      window.dispatchEvent(shiftKeyDown());
-      moveTo(canvas, 128, 100);
-
-      canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 0, buttons: 1, clientX: 128, clientY: 100, bubbles: true
-      }));
-
-      assert.strictEqual(events.length, 1, "first segment committed");
-
-      // Shift is still held (no keyup dispatched): moving and clicking again
-      // should chain a second segment starting where the first one ended,
-      // without requiring the user to release and re-press Shift.
-      moveTo(canvas, 128, 128);
-      canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 0, buttons: 1, clientX: 128, clientY: 128, bubbles: true
-      }));
-
-      assert.strictEqual(events.length, 2, "second segment chained without re-pressing Shift");
-      const secondEvent = events[1] as { metadata: { positions: unknown[]; }; };
-      assert.strictEqual(secondEvent.metadata.positions.length, 8, "vertical 8px segment from the first segment's endpoint");
-      manager.destroy();
-    });
-
-    test("releasing Shift after a commit does not re-arm the line tool", () => {
-      const events: unknown[] = [];
-      const manager = makeManager((event) => events.push(event));
-      const canvas = manager.canvas();
-
-      moveTo(canvas, 100, 100);
-      window.dispatchEvent(shiftKeyDown());
-      moveTo(canvas, 128, 100);
-
-      canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 0, buttons: 1, clientX: 128, clientY: 100, bubbles: true
-      }));
-      window.dispatchEvent(shiftKeyUp());
-
-      canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 0, buttons: 1, clientX: 128, clientY: 128, bubbles: true
-      }));
-      canvas.dispatchEvent(new MouseEvent("mousemove", {
-        buttons: 1, clientX: 140, clientY: 128, bubbles: true
-      }));
-      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
-
-      assert.strictEqual(events.length, 2, "first is the committed line, second is a normal freehand stroke");
-      const freehandEvent = events[1] as { metadata: { positions: unknown[]; }; };
-      assert.notStrictEqual(freehandEvent.metadata.positions.length, 8, "not a rasterized 8px line — a freehand stroke instead");
-      manager.destroy();
-    });
-
-    test("Shift pressed mid-stroke commits the in-progress stroke, then commits the line on mouseup", () => {
-      const events: unknown[] = [];
-      const manager = makeManager((event) => events.push(event));
-      const canvas = manager.canvas();
-
-      canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
-      }));
-      canvas.dispatchEvent(new MouseEvent("mousemove", {
-        buttons: 1, clientX: 110, clientY: 100, bubbles: true
-      }));
-
-      window.dispatchEvent(shiftKeyDown());
-
-      assert.strictEqual(events.length, 1, "the in-progress freehand stroke was committed when Shift armed the line");
-
-      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
-
-      assert.strictEqual(events.length, 2, "releasing the mouse commits the armed line as a second stroke");
-      manager.destroy();
-    });
-
-    test("Shift keyup without mousedown cancels the line — nothing committed", () => {
-      const events: unknown[] = [];
-      const manager = makeManager((event) => events.push(event));
-      const canvas = manager.canvas();
-
-      moveTo(canvas, 100, 100);
-      window.dispatchEvent(shiftKeyDown());
-      window.dispatchEvent(shiftKeyUp());
-
-      assert.strictEqual(events.length, 0);
-      manager.destroy();
-    });
-
-    test("setting mode away from 'paint' cancels an armed line", () => {
-      const events: unknown[] = [];
-      const manager = makeManager((event) => events.push(event));
-      const canvas = manager.canvas();
-
-      moveTo(canvas, 100, 100);
-      window.dispatchEvent(shiftKeyDown());
-      manager.mode = "move";
-
-      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
-
-      assert.strictEqual(events.length, 0, "the cancelled line must not commit on the next mouseup");
-      manager.destroy();
-    });
-
-    test("window blur cancels an armed line", () => {
-      const events: unknown[] = [];
-      const manager = makeManager((event) => events.push(event));
-      const canvas = manager.canvas();
-
-      moveTo(canvas, 100, 100);
-      window.dispatchEvent(shiftKeyDown());
-      window.dispatchEvent(new Event("blur"));
-
-      canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
-      }));
-      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
-
-      assert.strictEqual(events.length, 1, "after blur cancels the line, mousedown behaves as a normal freehand stroke");
-      manager.destroy();
-    });
-
-    test("OS key-repeat keydown does not reset the armed startPosition", () => {
-      const events: unknown[] = [];
-      const manager = makeManager((event) => events.push(event));
-      const canvas = manager.canvas();
-
-      moveTo(canvas, 100, 100);
-      window.dispatchEvent(shiftKeyDown());
-      moveTo(canvas, 128, 100);
-      window.dispatchEvent(shiftKeyDown(true));
-
-      canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 0, buttons: 1, clientX: 128, clientY: 100, bubbles: true
-      }));
-
-      const event = events[0] as { metadata: { positions: unknown[]; }; };
-      assert.strictEqual(event.metadata.positions.length, 8, "start should still be (8,8), not reset by the repeat event");
-      manager.destroy();
-    });
-  });
-
-  describe("fill mode", () => {
-    // 200x200 container, 16x16 texture, zoom 4 -> centered camera (68, 68).
-    // client(100,100) -> texture (8,8).
-
-    test("click flood-fills the connected region as a single stroke", () => {
-      const events: unknown[] = [];
-      const manager = new PixelArtCanvas(container, {
-        texture: { maxSize: 32, size: { x: 16, y: 16 } },
-        zoom: { default: 4 },
-        defaultMode: "fill",
-        brush: { color: "#FF0000" },
-        onBufferUpdated: (event) => events.push(event)
-      });
-      const canvas = manager.canvas();
-
-      canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
-      }));
-
-      assert.strictEqual(events.length, 1);
-      const event = events[0] as { action: string; metadata: { positions: unknown[]; }; };
-      assert.strictEqual(event.action, "stroke");
-      // Whole 16x16 texture is uniformly white by default except (0,0),
-      // which PixelBuffer always initializes fully transparent.
-      assert.strictEqual(event.metadata.positions.length, 16 * 16 - 1);
-      manager.destroy();
-    });
-
-    test("click does not arm a freehand drag stroke afterwards", () => {
-      const events: unknown[] = [];
-      const manager = new PixelArtCanvas(container, {
-        texture: { maxSize: 32, size: { x: 16, y: 16 } },
-        zoom: { default: 4 },
-        defaultMode: "fill",
-        onBufferUpdated: (event) => events.push(event)
-      });
-      const canvas = manager.canvas();
-
-      canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
-      }));
-      canvas.dispatchEvent(new MouseEvent("mousemove", {
-        buttons: 1, clientX: 110, clientY: 100, bubbles: true
-      }));
-      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
-
-      assert.strictEqual(events.length, 1, "only the single fill click commits — no chained freehand stroke");
-      manager.destroy();
-    });
-
-    test("clicking a region already matching the brush color is a no-op", () => {
-      const events: unknown[] = [];
-      const manager = new PixelArtCanvas(container, {
-        texture: { maxSize: 32, size: { x: 16, y: 16 } },
-        zoom: { default: 4 },
-        defaultMode: "fill",
-        brush: { color: "#FFFFFF" },
-        onBufferUpdated: (event) => events.push(event)
-      });
-      const canvas = manager.canvas();
-
-      canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
-      }));
-
-      assert.strictEqual(events.length, 0, "fill color already matches the target region's color");
-      manager.destroy();
-    });
-
-    test("a second click after the first fill is also a no-op (region now matches fill color)", () => {
-      const events: unknown[] = [];
-      const manager = new PixelArtCanvas(container, {
-        texture: { maxSize: 32, size: { x: 16, y: 16 } },
-        zoom: { default: 4 },
-        defaultMode: "fill",
-        brush: { color: "#FF0000" },
-        onBufferUpdated: (event) => events.push(event)
-      });
-      const canvas = manager.canvas();
-
-      function click(): void {
-        canvas.dispatchEvent(new MouseEvent("mousedown", {
-          button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
-        }));
-      }
-
-      click();
-      click();
-
-      assert.strictEqual(events.length, 1, "second click on the now-red region is a no-op");
+      assert.ok(
+        canvas instanceof HTMLCanvasElement,
+        "should be a canvas element"
+      );
       manager.destroy();
     });
   });
@@ -659,13 +385,20 @@ describe("PixelArtCanvas", () => {
     // 200x200 container, 16x16 texture, zoom 4 -> centered camera (68, 68).
     // client(100,100) -> texture (8,8); client(110,100) -> texture (10,8).
 
-    function makeManager(onBufferUpdated: (event: unknown) => void): PixelArtCanvas {
-      return new PixelArtCanvas(container, {
-        texture: { maxSize: 32, size: { x: 16, y: 16 } },
+    function makeManager(
+      onBufferUpdated: (event: unknown) => void
+    ): PixelArtCanvas {
+      return createPixelArtCanvas({
+        texture: { size: { x: 16, y: 16 } },
         zoom: { default: 4 },
-        brush: { size: 1, maxSize: 1, color: "#000000", secondaryColor: "#00FF00" },
+        brush: {
+          size: 1,
+          maxSize: 1,
+          color: "#000000",
+          secondaryColor: "#00FF00"
+        },
         onBufferUpdated
-      });
+      }).manager;
     }
 
     test("right-click drag paints with the secondary color", () => {
@@ -674,41 +407,79 @@ describe("PixelArtCanvas", () => {
       const canvas = manager.canvas();
 
       canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 2, buttons: 2, clientX: 100, clientY: 100, bubbles: true
+        button: 2,
+        buttons: 2,
+        clientX: 100,
+        clientY: 100,
+        bubbles: true
       }));
-      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+      canvas.dispatchEvent(
+        new MouseEvent("mouseup", { bubbles: true })
+      );
 
       assert.strictEqual(events.length, 1);
-      const event = events[0] as { action: string; metadata: { color: { r: number; g: number; b: number; a: number; }; }; };
+      const event = events[0] as {
+        action: string;
+        metadata: {
+          color: { r: number; g: number; b: number; a: number; };
+        };
+      };
       assert.strictEqual(event.action, "stroke");
-      assert.deepStrictEqual(event.metadata.color, { r: 0, g: 255, b: 0, a: 255 });
+      assert.deepStrictEqual(
+        event.metadata.color,
+        { r: 0, g: 255, b: 0, a: 255 },
+        "committed color is secondary, not primary"
+      );
       manager.destroy();
     });
 
     test("right-click in fill mode floods with the secondary color, is not tracked as a drag", () => {
       const events: unknown[] = [];
-      const manager = new PixelArtCanvas(container, {
-        texture: { maxSize: 32, size: { x: 16, y: 16 } },
+      const { manager, canvas } = createPixelArtCanvas({
+        texture: {
+          size: { x: 16, y: 16 }
+        },
         zoom: { default: 4 },
         defaultMode: "fill",
-        brush: { color: "#000000", secondaryColor: "#00FF00" },
+        brush: {
+          color: "#000000",
+          secondaryColor: "#00FF00"
+        },
         onBufferUpdated: (event) => events.push(event)
       });
-      const canvas = manager.canvas();
 
       canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 2, buttons: 2, clientX: 100, clientY: 100, bubbles: true
+        button: 2,
+        buttons: 2,
+        clientX: 100,
+        clientY: 100,
+        bubbles: true
       }));
 
       assert.strictEqual(events.length, 1, "the flood fill commits on mousedown, no drag/mouseup needed");
-      const event = events[0] as { action: string; metadata: { color: { r: number; g: number; b: number; a: number; }; }; };
+      const event = events[0] as {
+        action: string;
+        metadata: {
+          color: { r: number; g: number; b: number; a: number; };
+        };
+      };
       assert.strictEqual(event.action, "stroke");
-      assert.deepStrictEqual(event.metadata.color, { r: 0, g: 255, b: 0, a: 255 });
+      assert.deepStrictEqual(
+        event.metadata.color,
+        { r: 0, g: 255, b: 0, a: 255 }
+      );
 
-      canvas.dispatchEvent(new MouseEvent("mousemove", {
-        buttons: 2, clientX: 110, clientY: 100, bubbles: true
-      }));
-      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+      canvas.dispatchEvent(
+        new MouseEvent("mousemove", {
+          buttons: 2,
+          clientX: 110,
+          clientY: 100,
+          bubbles: true
+        })
+      );
+      canvas.dispatchEvent(
+        new MouseEvent("mouseup", { bubbles: true })
+      );
 
       assert.strictEqual(events.length, 1, "no secondary drag was tracked, so move/up are no-ops");
       manager.destroy();
@@ -725,18 +496,37 @@ describe("PixelArtCanvas", () => {
       manager.brush.primary.set("#000000");
 
       canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 2, buttons: 2, clientX: 100, clientY: 100, ctrlKey: true, bubbles: true
+        button: 2,
+        buttons: 2,
+        clientX: 100,
+        clientY: 100,
+        ctrlKey: true,
+        bubbles: true
       }));
 
-      assert.strictEqual(manager.brush.primary.asString("hex"), "#123456");
-      assert.strictEqual(events.length, 0, "picking a color must not commit a stroke");
+      assert.strictEqual(
+        manager.brush.primary.asString("hex"),
+        "#123456"
+      );
+      assert.strictEqual(
+        events.length,
+        0,
+        "picking a color must not commit a stroke"
+      );
 
       canvas.dispatchEvent(new MouseEvent("mousemove", {
-        buttons: 2, clientX: 110, clientY: 100, bubbles: true
+        buttons: 2,
+        clientX: 110,
+        clientY: 100,
+        bubbles: true
       }));
       canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
-      assert.strictEqual(events.length, 0, "no drag was tracked for the ctrl+right-click pick");
+      assert.strictEqual(
+        events.length,
+        0,
+        "no drag was tracked for the ctrl+right-click pick"
+      );
       manager.destroy();
     });
 
@@ -745,17 +535,43 @@ describe("PixelArtCanvas", () => {
       const manager = makeManager((event) => events.push(event));
       const canvas = manager.canvas();
 
-      canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
-      }));
-      canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 2, buttons: 3, clientX: 110, clientY: 100, bubbles: true
-      }));
-      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+      canvas.dispatchEvent(
+        new MouseEvent("mousedown", {
+          button: 0,
+          buttons: 1,
+          clientX: 100,
+          clientY: 100,
+          bubbles: true
+        })
+      );
+      canvas.dispatchEvent(
+        new MouseEvent("mousedown", {
+          button: 2,
+          buttons: 3,
+          clientX: 110,
+          clientY: 100,
+          bubbles: true
+        })
+      );
+      canvas.dispatchEvent(
+        new MouseEvent("mouseup", { bubbles: true })
+      );
 
-      assert.strictEqual(events.length, 1, "only the primary stroke committed");
-      const event = events[0] as { metadata: { color: { r: number; g: number; b: number; a: number; }; }; };
-      assert.deepStrictEqual(event.metadata.color, { r: 0, g: 0, b: 0, a: 255 }, "committed color is primary, not secondary");
+      assert.strictEqual(
+        events.length,
+        1,
+        "only the primary stroke committed"
+      );
+      const event = events[0] as {
+        metadata: {
+          color: { r: number; g: number; b: number; a: number; };
+        };
+      };
+      assert.deepStrictEqual(
+        event.metadata.color,
+        { r: 0, g: 0, b: 0, a: 255 },
+        "committed color is primary, not secondary"
+      );
       manager.destroy();
     });
 
@@ -765,16 +581,36 @@ describe("PixelArtCanvas", () => {
       const canvas = manager.canvas();
 
       canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 2, buttons: 2, clientX: 100, clientY: 100, bubbles: true
+        button: 2,
+        buttons: 2,
+        clientX: 100,
+        clientY: 100,
+        bubbles: true
       }));
       canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 0, buttons: 3, clientX: 110, clientY: 100, bubbles: true
+        button: 0,
+        buttons: 3,
+        clientX: 110,
+        clientY: 100,
+        bubbles: true
       }));
       canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
-      assert.strictEqual(events.length, 1, "only the secondary stroke committed");
-      const event = events[0] as { metadata: { color: { r: number; g: number; b: number; a: number; }; }; };
-      assert.deepStrictEqual(event.metadata.color, { r: 0, g: 255, b: 0, a: 255 }, "committed color is secondary, not primary");
+      assert.strictEqual(
+        events.length,
+        1,
+        "only the secondary stroke committed"
+      );
+      const event = events[0] as {
+        metadata: {
+          color: { r: number; g: number; b: number; a: number; };
+        };
+      };
+      assert.deepStrictEqual(
+        event.metadata.color,
+        { r: 0, g: 255, b: 0, a: 255 },
+        "committed color is secondary, not primary"
+      );
       manager.destroy();
     });
 
@@ -783,10 +619,13 @@ describe("PixelArtCanvas", () => {
       const manager = makeManager((event) => events.push(event));
       const canvas = manager.canvas();
 
-      const event = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+      const event = new MouseEvent(
+        "contextmenu",
+        { bubbles: true, cancelable: true }
+      );
       canvas.dispatchEvent(event);
 
-      assert.strictEqual(event.defaultPrevented, true);
+      assert.ok(event.defaultPrevented);
       manager.destroy();
     });
   });

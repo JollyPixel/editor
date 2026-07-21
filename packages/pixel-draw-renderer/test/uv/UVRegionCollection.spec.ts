@@ -1,25 +1,32 @@
 // Import Node.js Dependencies
-import { describe, it } from "node:test";
+import {
+  describe,
+  test
+} from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { UVRegionCollection } from "../../src/uv/UVRegionCollection.ts";
-import type { UVRegion } from "../../src/uv/UVRegion.ts";
+import { UVRegionCollection } from "#src/uv/UVRegionCollection.ts";
+import type { UVRegion } from "#src/uv/UVRegion.ts";
 
 function makeRegion(
   id: string
 ): UVRegion {
-  return { id, rect: { x: 0, y: 0, width: 2, height: 2 }, color: "#f00" };
+  return {
+    id,
+    rect: { x: 0, y: 0, width: 2, height: 2 },
+    color: "#f00"
+  };
 }
 
 describe("UVRegionCollection", () => {
-  it("get returns undefined for an unknown id", () => {
+  test("get returns undefined for an unknown id", () => {
     const collection = new UVRegionCollection();
 
     assert.strictEqual(collection.get("r1"), undefined);
   });
 
-  it("set stores a copy, keyed by region.id", () => {
+  test("set stores a copy, keyed by region.id", () => {
     const collection = new UVRegionCollection();
     const region = makeRegion("r1");
     collection.set(region);
@@ -28,7 +35,7 @@ describe("UVRegionCollection", () => {
     assert.notStrictEqual(collection.get("r1"), region);
   });
 
-  it("set upserts an existing id", () => {
+  test("set upserts an existing id", () => {
     const collection = new UVRegionCollection();
     collection.set(makeRegion("r1"));
     collection.set({ ...makeRegion("r1"), color: "#00f" });
@@ -36,25 +43,36 @@ describe("UVRegionCollection", () => {
     assert.strictEqual(collection.get("r1")!.color, "#00f");
   });
 
-  it("remove deletes an existing region", () => {
+  test("remove deletes an existing region", () => {
     const collection = new UVRegionCollection();
     collection.set(makeRegion("r1"));
     collection.remove("r1");
 
-    assert.strictEqual(collection.get("r1"), undefined);
+    assert.strictEqual(
+      collection.get("r1"),
+      undefined,
+      "collection must yield r1 and r2"
+    );
   });
 
-  it("remove is a no-op for an unknown id", () => {
+  test("remove is a no-op for an unknown id", () => {
     const collection = new UVRegionCollection();
 
-    assert.doesNotThrow(() => collection.remove("no-such"));
+    assert.doesNotThrow(
+      () => collection.remove("no-such"),
+      "remove must not throw for an unknown id"
+    );
   });
 
-  it("is iterable, yielding every stored region", () => {
+  test("is iterable, yielding every stored region", () => {
     const collection = new UVRegionCollection();
     collection.set(makeRegion("r1"));
     collection.set(makeRegion("r2"));
 
-    assert.deepStrictEqual([...collection], [makeRegion("r1"), makeRegion("r2")]);
+    assert.deepStrictEqual(
+      [...collection],
+      [makeRegion("r1"), makeRegion("r2")],
+      "collection must yield r1 and r2"
+    );
   });
 });

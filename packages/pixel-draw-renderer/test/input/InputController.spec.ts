@@ -1,65 +1,25 @@
 // Import Node.js Dependencies
-import { describe, test, before, beforeEach } from "node:test";
+import {
+  describe,
+  test,
+  beforeEach
+} from "node:test";
 import assert from "node:assert/strict";
-
-// Import Third-party Dependencies
-import { Window } from "happy-dom";
 
 // Import Internal Dependencies
 import {
   InputController,
-  type InputActions,
   type WindowLike
-} from "../../src/input/InputController.ts";
-import { Viewport } from "../../src/rendering/Viewport.ts";
-
-// CONSTANTS
-const kEmulatedBrowserWindow = new Window();
-
-before(() => {
-  globalThis.document = kEmulatedBrowserWindow.document as unknown as Document;
-  // @ts-expect-error
-  globalThis.window = kEmulatedBrowserWindow as unknown as Window & typeof globalThis;
-  // Expose DOM event constructors from happy-dom into globalThis
-  globalThis.MouseEvent = (kEmulatedBrowserWindow as unknown as Record<string, unknown>).MouseEvent as typeof MouseEvent;
-  globalThis.KeyboardEvent = (kEmulatedBrowserWindow as unknown as Record<string, unknown>).KeyboardEvent as typeof KeyboardEvent;
-  globalThis.HTMLElement = (kEmulatedBrowserWindow as unknown as Record<string, unknown>).HTMLElement as typeof HTMLElement;
-  globalThis.Event = (kEmulatedBrowserWindow as unknown as Record<string, unknown>).Event as typeof Event;
-});
-
-function shiftKeyDown(repeat = false): KeyboardEvent {
-  return new KeyboardEvent("keydown", { key: "Shift", bubbles: true, repeat });
-}
-
-function shiftKeyUp(): KeyboardEvent {
-  return new KeyboardEvent("keyup", { key: "Shift", bubbles: true });
-}
-
-function moveTo(
-  canvas: HTMLCanvasElement,
-  clientX: number,
-  clientY: number
-): void {
-  canvas.dispatchEvent(new MouseEvent("mousemove", { clientX, clientY, bubbles: true }));
-}
-
-function hoverCanvas(canvas: HTMLCanvasElement): void {
-  canvas.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
-}
-
-function makeCanvas(): HTMLCanvasElement {
-  const canvas = kEmulatedBrowserWindow.document.createElement("canvas") as unknown as HTMLCanvasElement;
-  canvas.width = 200;
-  canvas.height = 200;
-  // Provide a mock getBoundingClientRect
-  (canvas as any).getBoundingClientRect = () => {
-    return {
-      left: 0, top: 0, right: 200, bottom: 200, width: 200, height: 200
-    };
-  };
-
-  return canvas;
-}
+} from "#src/input/InputController.ts";
+import { Viewport } from "#src/rendering/Viewport.ts";
+import { makeActions } from "../helpers/input-actions.ts";
+import { makeCanvas } from "../helpers/dom.ts";
+import {
+  shiftKeyDown,
+  shiftKeyUp,
+  moveTo,
+  hoverCanvas
+} from "../helpers/events.ts";
 
 /**
  * Minimal WindowLike fake — proves InputController never touches the real
@@ -68,7 +28,10 @@ function makeCanvas(): HTMLCanvasElement {
 class FakeWindow implements WindowLike {
   #listeners = new Map<string, Set<(event: any) => void>>();
 
-  addEventListener(type: string, listener: (event: any) => void): void {
+  addEventListener(
+    type: string,
+    listener: (event: any) => void
+  ): void {
     let set = this.#listeners.get(type);
     if (!set) {
       set = new Set();
@@ -77,7 +40,10 @@ class FakeWindow implements WindowLike {
     set.add(listener);
   }
 
-  removeEventListener(type: string, listener: (event: any) => void): void {
+  removeEventListener(
+    type: string,
+    listener: (event: any) => void
+  ): void {
     this.#listeners.get(type)?.delete(listener);
   }
 
@@ -88,110 +54,16 @@ class FakeWindow implements WindowLike {
   }
 }
 
-function makeActions(options: {
-  onPrimaryDownReturns?: boolean;
-  onSecondaryDownReturns?: boolean;
-  onCopyReturns?: boolean;
-  onPasteReturns?: boolean;
-  onDeleteReturns?: boolean;
-  onUndoReturns?: boolean;
-  onRedoReturns?: boolean;
-  onRotateReturns?: boolean;
-  onFlipHorizontalReturns?: boolean;
-  onFlipVerticalReturns?: boolean;
-} = {}): {
-  actions: InputActions;
-  calls: Record<string, unknown[][]>;
-} {
-  const calls: Record<string, unknown[][]> = {
-    onPrimaryDown: [], onPrimaryMove: [], onPrimaryUp: [],
-    onSecondaryDown: [], onSecondaryMove: [], onSecondaryUp: [],
-    onPanStart: [], onPanMove: [], onPanEnd: [],
-    onZoom: [], onMouseMove: [],
-    onCursorMove: [], onMouseUp: [],
-    onShiftDown: [], onShiftUp: [], onBlur: [],
-    onCopy: [], onPaste: [], onDelete: [],
-    onUndo: [], onRedo: [],
-    onRotate: [], onFlipHorizontal: [], onFlipVertical: []
-  };
-
-  const actions: InputActions = {
-    onPrimaryDown: (tx, ty) => {
-      calls.onPrimaryDown.push([tx, ty]);
-
-      return options.onPrimaryDownReturns;
-    },
-    onPrimaryMove: (tx, ty) => calls.onPrimaryMove.push([tx, ty]),
-    onPrimaryUp: () => calls.onPrimaryUp.push([]),
-    onSecondaryDown: (tx, ty, ctrlKey) => {
-      calls.onSecondaryDown.push([tx, ty, ctrlKey]);
-
-      return options.onSecondaryDownReturns;
-    },
-    onSecondaryMove: (tx, ty) => calls.onSecondaryMove.push([tx, ty]),
-    onSecondaryUp: () => calls.onSecondaryUp.push([]),
-    onPanStart: (mx, my) => calls.onPanStart.push([mx, my]),
-    onPanMove: (dx, dy) => calls.onPanMove.push([dx, dy]),
-    onPanEnd: () => calls.onPanEnd.push([]),
-    onZoom: (d, cx, cy) => calls.onZoom.push([d, cx, cy]),
-    onMouseMove: (cx, cy) => calls.onMouseMove.push([cx, cy]),
-    onCursorMove: (pos) => calls.onCursorMove.push([pos]),
-    onMouseUp: () => calls.onMouseUp.push([]),
-    onShiftDown: () => calls.onShiftDown.push([]),
-    onShiftUp: () => calls.onShiftUp.push([]),
-    onBlur: () => calls.onBlur.push([]),
-    onCopy: () => {
-      calls.onCopy.push([]);
-
-      return options.onCopyReturns;
-    },
-    onPaste: () => {
-      calls.onPaste.push([]);
-
-      return options.onPasteReturns;
-    },
-    onDelete: () => {
-      calls.onDelete.push([]);
-
-      return options.onDeleteReturns;
-    },
-    onUndo: () => {
-      calls.onUndo.push([]);
-
-      return options.onUndoReturns;
-    },
-    onRedo: () => {
-      calls.onRedo.push([]);
-
-      return options.onRedoReturns;
-    },
-    onRotate: () => {
-      calls.onRotate.push([]);
-
-      return options.onRotateReturns;
-    },
-    onFlipHorizontal: () => {
-      calls.onFlipHorizontal.push([]);
-
-      return options.onFlipHorizontalReturns;
-    },
-    onFlipVertical: () => {
-      calls.onFlipVertical.push([]);
-
-      return options.onFlipVerticalReturns;
-    }
-  };
-
-  return { actions, calls };
-}
-
 describe("InputController", () => {
   let viewport: Viewport;
   let canvas: HTMLCanvasElement;
 
   beforeEach(() => {
     canvas = makeCanvas();
-    viewport = new Viewport({ textureSize: { x: 16, y: 16 }, zoom: 4 });
+    viewport = new Viewport({
+      textureSize: { x: 16, y: 16 },
+      zoom: 4
+    });
     viewport.updateCanvasSize(200, 200);
     viewport.centerTexture();
   });
@@ -199,10 +71,18 @@ describe("InputController", () => {
   describe("mouse events", () => {
     test("mousedown (left button) triggers onPrimaryDown with the resolved texture position", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions
+      });
 
       canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
+        button: 0,
+        buttons: 1,
+        clientX: 100,
+        clientY: 100,
+        bubbles: true
       }));
 
       assert.strictEqual(calls.onPrimaryDown.length, 1);
@@ -211,10 +91,17 @@ describe("InputController", () => {
 
     test("mousemove does NOT trigger onPrimaryMove when not dragging", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions
+      });
 
       canvas.dispatchEvent(new MouseEvent("mousemove", {
-        buttons: 0, clientX: 50, clientY: 50, bubbles: true
+        buttons: 0,
+        clientX: 50,
+        clientY: 50,
+        bubbles: true
       }));
 
       assert.strictEqual(calls.onPrimaryMove.length, 0);
@@ -223,13 +110,24 @@ describe("InputController", () => {
 
     test("dragging after mousedown fires onPrimaryMove", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions
+      });
 
       canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
+        button: 0,
+        buttons: 1,
+        clientX: 100,
+        clientY: 100,
+        bubbles: true
       }));
       canvas.dispatchEvent(new MouseEvent("mousemove", {
-        buttons: 1, clientX: 110, clientY: 100, bubbles: true
+        buttons: 1,
+        clientX: 110,
+        clientY: 100,
+        bubbles: true
       }));
 
       assert.strictEqual(calls.onPrimaryMove.length, 1);
@@ -238,10 +136,18 @@ describe("InputController", () => {
 
     test("mouseup ends a tracked gesture with onPrimaryUp", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions
+      });
 
       canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
+        button: 0,
+        buttons: 1,
+        clientX: 100,
+        clientY: 100,
+        bubbles: true
       }));
       canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
@@ -251,10 +157,17 @@ describe("InputController", () => {
 
     test("mousedown with middle button triggers pan", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions
+      });
 
       canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 1, clientX: 10, clientY: 10, bubbles: true
+        button: 1,
+        clientX: 10,
+        clientY: 10,
+        bubbles: true
       }));
 
       assert.strictEqual(calls.onPanStart.length, 1);
@@ -263,9 +176,15 @@ describe("InputController", () => {
 
     test("mouseleave triggers onMouseMove(-1, -1)", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions
+      });
 
-      canvas.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
+      canvas.dispatchEvent(
+        new MouseEvent("mouseleave", { bubbles: true })
+      );
       const last = calls.onMouseMove.at(-1);
       assert.ok(last !== undefined);
       assert.strictEqual(last[0], -1);
@@ -277,24 +196,47 @@ describe("InputController", () => {
   describe("contextmenu", () => {
     test("right-click suppresses the browser context menu and triggers no action", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions
+      });
 
       const event = new MouseEvent("contextmenu", {
-        button: 2, clientX: 100, clientY: 100, bubbles: true, cancelable: true
+        button: 2,
+        clientX: 100,
+        clientY: 100,
+        bubbles: true,
+        cancelable: true
       });
       canvas.dispatchEvent(event);
 
-      assert.strictEqual(event.defaultPrevented, true);
+      assert.ok(event.defaultPrevented);
       assert.deepStrictEqual(calls, {
-        onPrimaryDown: [], onPrimaryMove: [], onPrimaryUp: [],
-        onSecondaryDown: [], onSecondaryMove: [], onSecondaryUp: [],
-        onPanStart: [], onPanMove: [], onPanEnd: [],
-        onZoom: [], onMouseMove: [],
-        onCursorMove: [], onMouseUp: [],
-        onShiftDown: [], onShiftUp: [], onBlur: [],
-        onCopy: [], onPaste: [], onDelete: [],
-        onUndo: [], onRedo: [],
-        onRotate: [], onFlipHorizontal: [], onFlipVertical: []
+        onPrimaryDown: [],
+        onPrimaryMove: [],
+        onPrimaryUp: [],
+        onSecondaryDown: [],
+        onSecondaryMove: [],
+        onSecondaryUp: [],
+        onPanStart: [],
+        onPanMove: [],
+        onPanEnd: [],
+        onZoom: [],
+        onMouseMove: [],
+        onCursorMove: [],
+        onMouseUp: [],
+        onShiftDown: [],
+        onShiftUp: [],
+        onBlur: [],
+        onCopy: [],
+        onPaste: [],
+        onDelete: [],
+        onUndo: [],
+        onRedo: [],
+        onRotate: [],
+        onFlipHorizontal: [],
+        onFlipVertical: []
       });
       ctrl.destroy();
     });
@@ -303,11 +245,19 @@ describe("InputController", () => {
   describe("destroy", () => {
     test("removes event listeners — no callbacks after destroy", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions
+      });
       ctrl.destroy();
 
       canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
+        button: 0,
+        buttons: 1,
+        clientX: 100,
+        clientY: 100,
+        bubbles: true
       }));
 
       assert.strictEqual(calls.onPrimaryDown.length, 0);
@@ -321,34 +271,63 @@ describe("InputController", () => {
 
     test("fires with the resolved texture position on mousemove", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions
+      });
 
       moveTo(canvas, 100, 100);
 
-      assert.strictEqual(calls.onCursorMove.length, 1);
-      assert.deepStrictEqual(calls.onCursorMove[0][0], { x: 8, y: 8 });
+      assert.strictEqual(
+        calls.onCursorMove.length,
+        1
+      );
+      assert.deepStrictEqual(
+        calls.onCursorMove[0][0],
+        { x: 8, y: 8 }
+      );
       ctrl.destroy();
     });
 
     test("fires with null when the cursor is outside texture bounds", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions
+      });
 
       moveTo(canvas, 1000, 1000);
 
-      assert.strictEqual(calls.onCursorMove.length, 1);
-      assert.strictEqual(calls.onCursorMove[0][0], null);
+      assert.strictEqual(
+        calls.onCursorMove.length,
+        1
+      );
+      assert.strictEqual(
+        calls.onCursorMove[0][0],
+        null
+      );
       ctrl.destroy();
     });
 
     test("fires with null on mouseleave", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions
+      });
 
       moveTo(canvas, 100, 100);
-      canvas.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
+      canvas.dispatchEvent(
+        new MouseEvent("mouseleave", { bubbles: true })
+      );
 
-      assert.strictEqual(calls.onCursorMove.at(-1)?.[0], null);
+      assert.strictEqual(
+        calls.onCursorMove.at(-1)?.[0],
+        null
+      );
       ctrl.destroy();
     });
   });
@@ -356,9 +335,15 @@ describe("InputController", () => {
   describe("onMouseUp", () => {
     test("fires on canvas mouseup even when nothing was being tracked", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions
+      });
 
-      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+      canvas.dispatchEvent(
+        new MouseEvent("mouseup", { bubbles: true })
+      );
 
       assert.strictEqual(calls.onMouseUp.length, 1);
       ctrl.destroy();
@@ -366,9 +351,15 @@ describe("InputController", () => {
 
     test("fires on window mouseup", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions
+      });
 
-      window.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+      window.dispatchEvent(
+        new MouseEvent("mouseup", { bubbles: true })
+      );
 
       assert.strictEqual(calls.onMouseUp.length, 1);
       ctrl.destroy();
@@ -378,15 +369,32 @@ describe("InputController", () => {
   describe("onPrimaryDown return value", () => {
     test("returning false prevents onPrimaryMove/onPrimaryUp from firing for that gesture", () => {
       const { actions, calls } = makeActions({ onPrimaryDownReturns: false });
-      const ctrl = new InputController({ canvas, viewport, actions });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions
+      });
 
-      canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
-      }));
-      canvas.dispatchEvent(new MouseEvent("mousemove", {
-        buttons: 1, clientX: 110, clientY: 100, bubbles: true
-      }));
-      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+      canvas.dispatchEvent(
+        new MouseEvent("mousedown", {
+          button: 0,
+          buttons: 1,
+          clientX: 100,
+          clientY: 100,
+          bubbles: true
+        })
+      );
+      canvas.dispatchEvent(
+        new MouseEvent("mousemove", {
+          buttons: 1,
+          clientX: 110,
+          clientY: 100,
+          bubbles: true
+        })
+      );
+      canvas.dispatchEvent(
+        new MouseEvent("mouseup", { bubbles: true })
+      );
 
       assert.strictEqual(calls.onPrimaryDown.length, 1);
       assert.strictEqual(calls.onPrimaryMove.length, 0);
@@ -396,15 +404,32 @@ describe("InputController", () => {
 
     test("returning undefined (default) tracks the gesture normally", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions
+      });
 
-      canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
-      }));
-      canvas.dispatchEvent(new MouseEvent("mousemove", {
-        buttons: 1, clientX: 110, clientY: 100, bubbles: true
-      }));
-      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+      canvas.dispatchEvent(
+        new MouseEvent("mousedown", {
+          button: 0,
+          buttons: 1,
+          clientX: 100,
+          clientY: 100,
+          bubbles: true
+        })
+      );
+      canvas.dispatchEvent(
+        new MouseEvent("mousemove", {
+          buttons: 1,
+          clientX: 110,
+          clientY: 100,
+          bubbles: true
+        })
+      );
+      canvas.dispatchEvent(
+        new MouseEvent("mouseup", { bubbles: true })
+      );
 
       assert.strictEqual(calls.onPrimaryMove.length, 1);
       assert.strictEqual(calls.onPrimaryUp.length, 1);
@@ -415,17 +440,34 @@ describe("InputController", () => {
   describe("stopDrawing", () => {
     test("stops tracking the current gesture — no further onPrimaryMove/onPrimaryUp", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions
+      });
 
-      canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
-      }));
+      canvas.dispatchEvent(
+        new MouseEvent("mousedown", {
+          button: 0,
+          buttons: 1,
+          clientX: 100,
+          clientY: 100,
+          bubbles: true
+        })
+      );
       ctrl.stopDrawing();
 
-      canvas.dispatchEvent(new MouseEvent("mousemove", {
-        buttons: 1, clientX: 110, clientY: 100, bubbles: true
-      }));
-      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+      canvas.dispatchEvent(
+        new MouseEvent("mousemove", {
+          buttons: 1,
+          clientX: 110,
+          clientY: 100,
+          bubbles: true
+        })
+      );
+      canvas.dispatchEvent(
+        new MouseEvent("mouseup", { bubbles: true })
+      );
 
       assert.strictEqual(calls.onPrimaryMove.length, 0);
       assert.strictEqual(calls.onPrimaryUp.length, 0);
@@ -438,7 +480,11 @@ describe("InputController", () => {
   describe("Shift key reporting", () => {
     test("a non-repeat Shift keydown fires onShiftDown while hovering the canvas", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions
+      });
 
       hoverCanvas(canvas);
       window.dispatchEvent(shiftKeyDown());
@@ -449,7 +495,11 @@ describe("InputController", () => {
 
     test("OS key-repeat keydown does not fire onShiftDown again", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions
+      });
 
       hoverCanvas(canvas);
       window.dispatchEvent(shiftKeyDown());
@@ -461,13 +511,16 @@ describe("InputController", () => {
 
     test("keydown while a text input has focus does not fire onShiftDown", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions
+      });
 
       hoverCanvas(canvas);
-      const input = kEmulatedBrowserWindow.document.createElement("input");
-      kEmulatedBrowserWindow.document.body.appendChild(input);
+      const input = document.createElement("input");
+      document.body.appendChild(input);
 
-      // @ts-expect-error
       input.dispatchEvent(shiftKeyDown());
 
       assert.strictEqual(calls.onShiftDown.length, 0);
@@ -476,14 +529,17 @@ describe("InputController", () => {
 
     test("keydown while a range input has focus still fires onShiftDown", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions
+      });
 
       hoverCanvas(canvas);
-      const input = kEmulatedBrowserWindow.document.createElement("input");
+      const input = document.createElement("input");
       input.type = "range";
-      kEmulatedBrowserWindow.document.body.appendChild(input);
+      document.body.appendChild(input);
 
-      // @ts-expect-error
       input.dispatchEvent(shiftKeyDown());
 
       assert.strictEqual(calls.onShiftDown.length, 1);
@@ -492,14 +548,17 @@ describe("InputController", () => {
 
     test("keydown while a color input has focus still fires onShiftDown", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions
+      });
 
       hoverCanvas(canvas);
-      const input = kEmulatedBrowserWindow.document.createElement("input");
+      const input = document.createElement("input");
       input.type = "color";
-      kEmulatedBrowserWindow.document.body.appendChild(input);
+      document.body.appendChild(input);
 
-      // @ts-expect-error
       input.dispatchEvent(shiftKeyDown());
 
       assert.strictEqual(calls.onShiftDown.length, 1);
@@ -508,11 +567,25 @@ describe("InputController", () => {
 
     test("a non-Shift key does not fire onShiftDown/onShiftUp", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions
+      });
 
       hoverCanvas(canvas);
-      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Control", bubbles: true }));
-      window.dispatchEvent(new KeyboardEvent("keyup", { key: "Control", bubbles: true }));
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Control",
+          bubbles: true
+        })
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", {
+          key: "Control",
+          bubbles: true
+        })
+      );
 
       assert.strictEqual(calls.onShiftDown.length, 0);
       assert.strictEqual(calls.onShiftUp.length, 0);
@@ -521,7 +594,11 @@ describe("InputController", () => {
 
     test("Shift keyup fires onShiftUp", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions
+      });
 
       window.dispatchEvent(shiftKeyUp());
 
@@ -530,260 +607,14 @@ describe("InputController", () => {
     });
   });
 
-  describe("copy / paste / delete shortcuts", () => {
-    function ctrlKeyDown(key: string, repeat = false): KeyboardEvent {
-      return new KeyboardEvent("keydown", {
-        key, code: `Key${key.toUpperCase()}`, ctrlKey: true, bubbles: true, cancelable: true, repeat
-      });
-    }
-
-    test("Ctrl+C fires onCopy", () => {
-      const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
-
-      hoverCanvas(canvas);
-      window.dispatchEvent(ctrlKeyDown("c"));
-
-      assert.strictEqual(calls.onCopy.length, 1);
-      ctrl.destroy();
-    });
-
-    test("Cmd+C (metaKey) also fires onCopy", () => {
-      const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
-
-      hoverCanvas(canvas);
-      window.dispatchEvent(new KeyboardEvent("keydown", {
-        key: "c", code: "KeyC", metaKey: true, bubbles: true, cancelable: true
-      }));
-
-      assert.strictEqual(calls.onCopy.length, 1);
-      ctrl.destroy();
-    });
-
-    test("preventDefault is called when onCopy returns true", () => {
-      const { actions } = makeActions({ onCopyReturns: true });
-      const ctrl = new InputController({ canvas, viewport, actions });
-
-      hoverCanvas(canvas);
-      const event = ctrlKeyDown("c");
-      window.dispatchEvent(event);
-
-      assert.strictEqual(event.defaultPrevented, true);
-      ctrl.destroy();
-    });
-
-    test("preventDefault is NOT called when onCopy returns false", () => {
-      const { actions } = makeActions({ onCopyReturns: false });
-      const ctrl = new InputController({ canvas, viewport, actions });
-
-      hoverCanvas(canvas);
-      const event = ctrlKeyDown("c");
-      window.dispatchEvent(event);
-
-      assert.strictEqual(event.defaultPrevented, false);
-      ctrl.destroy();
-    });
-
-    test("Ctrl+V fires onPaste", () => {
-      const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
-
-      hoverCanvas(canvas);
-      window.dispatchEvent(ctrlKeyDown("v"));
-
-      assert.strictEqual(calls.onPaste.length, 1);
-      ctrl.destroy();
-    });
-
-    test("Delete key fires onDelete", () => {
-      const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
-
-      hoverCanvas(canvas);
-      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", code: "Delete", bubbles: true, cancelable: true }));
-
-      assert.strictEqual(calls.onDelete.length, 1);
-      ctrl.destroy();
-    });
-
-    test("OS key-repeat does not re-fire onCopy/onPaste/onDelete", () => {
-      const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
-
-      hoverCanvas(canvas);
-      window.dispatchEvent(ctrlKeyDown("c", true));
-      window.dispatchEvent(ctrlKeyDown("v", true));
-      window.dispatchEvent(new KeyboardEvent("keydown", {
-        key: "Delete", code: "Delete", bubbles: true, cancelable: true, repeat: true
-      }));
-
-      assert.strictEqual(calls.onCopy.length, 0);
-      assert.strictEqual(calls.onPaste.length, 0);
-      assert.strictEqual(calls.onDelete.length, 0);
-      ctrl.destroy();
-    });
-
-    test("keydown while a text input has focus does not fire onCopy/onPaste/onDelete", () => {
-      const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
-
-      hoverCanvas(canvas);
-      const input = kEmulatedBrowserWindow.document.createElement("input");
-      kEmulatedBrowserWindow.document.body.appendChild(input);
-
-      // @ts-expect-error
-      input.dispatchEvent(ctrlKeyDown("c"));
-      // @ts-expect-error
-      input.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", code: "Delete", bubbles: true, cancelable: true }));
-
-      assert.strictEqual(calls.onCopy.length, 0);
-      assert.strictEqual(calls.onDelete.length, 0);
-      ctrl.destroy();
-    });
-  });
-
-  describe("undo / redo shortcuts", () => {
-    function ctrlKeyDown(key: string, parameters: { shiftKey?: boolean; repeat?: boolean; } = {}): KeyboardEvent {
-      return new KeyboardEvent("keydown", {
-        key,
-        code: `Key${key.toUpperCase()}`,
-        ctrlKey: true,
-        shiftKey: parameters.shiftKey ?? false,
-        repeat: parameters.repeat ?? false,
-        bubbles: true,
-        cancelable: true
-      });
-    }
-
-    test("Ctrl+Z fires onUndo", () => {
-      const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
-
-      hoverCanvas(canvas);
-      window.dispatchEvent(ctrlKeyDown("z"));
-
-      assert.strictEqual(calls.onUndo.length, 1);
-      assert.strictEqual(calls.onRedo.length, 0);
-      ctrl.destroy();
-    });
-
-    test("Cmd+Z (metaKey) also fires onUndo", () => {
-      const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
-
-      hoverCanvas(canvas);
-      window.dispatchEvent(new KeyboardEvent("keydown", {
-        key: "z", code: "KeyZ", metaKey: true, bubbles: true, cancelable: true
-      }));
-
-      assert.strictEqual(calls.onUndo.length, 1);
-      ctrl.destroy();
-    });
-
-    test("Ctrl+Y fires onRedo", () => {
-      const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
-
-      hoverCanvas(canvas);
-      window.dispatchEvent(ctrlKeyDown("y"));
-
-      assert.strictEqual(calls.onRedo.length, 1);
-      assert.strictEqual(calls.onUndo.length, 0);
-      ctrl.destroy();
-    });
-
-    test("Ctrl+Shift+Z fires onRedo, not onUndo", () => {
-      const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
-
-      hoverCanvas(canvas);
-      window.dispatchEvent(ctrlKeyDown("z", { shiftKey: true }));
-
-      assert.strictEqual(calls.onRedo.length, 1);
-      assert.strictEqual(calls.onUndo.length, 0);
-      ctrl.destroy();
-    });
-
-    test("preventDefault is called when onUndo returns true", () => {
-      const { actions } = makeActions({ onUndoReturns: true });
-      const ctrl = new InputController({ canvas, viewport, actions });
-
-      hoverCanvas(canvas);
-      const event = ctrlKeyDown("z");
-      window.dispatchEvent(event);
-
-      assert.strictEqual(event.defaultPrevented, true);
-      ctrl.destroy();
-    });
-
-    test("preventDefault is NOT called when onUndo returns false", () => {
-      const { actions } = makeActions({ onUndoReturns: false });
-      const ctrl = new InputController({ canvas, viewport, actions });
-
-      hoverCanvas(canvas);
-      const event = ctrlKeyDown("z");
-      window.dispatchEvent(event);
-
-      assert.strictEqual(event.defaultPrevented, false);
-      ctrl.destroy();
-    });
-
-    test("preventDefault reflects onRedo's return value for Ctrl+Y", () => {
-      const { actions } = makeActions({ onRedoReturns: true });
-      const ctrl = new InputController({ canvas, viewport, actions });
-
-      hoverCanvas(canvas);
-      const event = ctrlKeyDown("y");
-      window.dispatchEvent(event);
-
-      assert.strictEqual(event.defaultPrevented, true);
-      ctrl.destroy();
-    });
-
-    test("OS key-repeat does not re-fire onUndo/onRedo", () => {
-      const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
-
-      hoverCanvas(canvas);
-      window.dispatchEvent(ctrlKeyDown("z", { repeat: true }));
-      window.dispatchEvent(ctrlKeyDown("y", { repeat: true }));
-
-      assert.strictEqual(calls.onUndo.length, 0);
-      assert.strictEqual(calls.onRedo.length, 0);
-      ctrl.destroy();
-    });
-
-    test("keydown while a text input has focus does not fire onUndo/onRedo", () => {
-      const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
-
-      hoverCanvas(canvas);
-      const input = kEmulatedBrowserWindow.document.createElement("input");
-      kEmulatedBrowserWindow.document.body.appendChild(input);
-
-      // @ts-expect-error
-      input.dispatchEvent(ctrlKeyDown("z"));
-
-      assert.strictEqual(calls.onUndo.length, 0);
-      ctrl.destroy();
-    });
-
-    test("Ctrl+Z before any mouseenter does not fire onUndo", () => {
-      const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
-
-      window.dispatchEvent(ctrlKeyDown("z"));
-
-      assert.strictEqual(calls.onUndo.length, 0);
-      ctrl.destroy();
-    });
-  });
-
   describe("keyboard shortcuts gated to canvas hover", () => {
     test("Shift keydown before any mouseenter does not fire onShiftDown", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions
+      });
 
       window.dispatchEvent(shiftKeyDown());
 
@@ -793,9 +624,20 @@ describe("InputController", () => {
 
     test("Ctrl+C before any mouseenter does not fire onCopy", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions
+      });
 
-      window.dispatchEvent(new KeyboardEvent("keydown", { key: "c", ctrlKey: true, bubbles: true, cancelable: true }));
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "c",
+          ctrlKey: true,
+          bubbles: true,
+          cancelable: true
+        })
+      );
 
       assert.strictEqual(calls.onCopy.length, 0);
       ctrl.destroy();
@@ -803,10 +645,16 @@ describe("InputController", () => {
 
     test("mouseleave stops keydown shortcuts from firing again", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions
+      });
 
       hoverCanvas(canvas);
-      canvas.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
+      canvas.dispatchEvent(
+        new MouseEvent("mouseleave", { bubbles: true })
+      );
       window.dispatchEvent(shiftKeyDown());
 
       assert.strictEqual(calls.onShiftDown.length, 0);
@@ -815,10 +663,16 @@ describe("InputController", () => {
 
     test("re-entering the canvas after a mouseleave re-enables shortcuts", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions
+      });
 
       hoverCanvas(canvas);
-      canvas.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
+      canvas.dispatchEvent(
+        new MouseEvent("mouseleave", { bubbles: true })
+      );
       hoverCanvas(canvas);
       window.dispatchEvent(shiftKeyDown());
 
@@ -828,11 +682,17 @@ describe("InputController", () => {
 
     test("keyup (e.g. Shift release) is not gated by hover", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions
+      });
 
       hoverCanvas(canvas);
       window.dispatchEvent(shiftKeyDown());
-      canvas.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
+      canvas.dispatchEvent(
+        new MouseEvent("mouseleave", { bubbles: true })
+      );
       window.dispatchEvent(shiftKeyUp());
 
       assert.strictEqual(calls.onShiftUp.length, 1);
@@ -843,9 +703,15 @@ describe("InputController", () => {
   describe("onBlur", () => {
     test("window blur fires onBlur", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new InputController({ canvas, viewport, actions });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions
+      });
 
-      window.dispatchEvent(new Event("blur"));
+      window.dispatchEvent(
+        new Event("blur")
+      );
 
       assert.strictEqual(calls.onBlur.length, 1);
       ctrl.destroy();
@@ -856,20 +722,33 @@ describe("InputController", () => {
     test("keydown/keyup/blur are read from the injected window, not the real global", () => {
       const { actions, calls } = makeActions();
       const fakeWindow = new FakeWindow();
-      const ctrl = new InputController({ canvas, viewport, actions, window: fakeWindow });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions,
+        window: fakeWindow
+      });
 
       hoverCanvas(canvas);
 
       window.dispatchEvent(shiftKeyDown());
       assert.strictEqual(calls.onShiftDown.length, 0);
 
-      fakeWindow.dispatch("keydown", { key: "Shift", repeat: false, target: null });
+      fakeWindow.dispatch(
+        "keydown",
+        { key: "Shift", repeat: false, target: null }
+      );
       assert.strictEqual(calls.onShiftDown.length, 1);
 
-      fakeWindow.dispatch("keyup", { key: "Shift" });
+      fakeWindow.dispatch(
+        "keyup",
+        { key: "Shift" }
+      );
       assert.strictEqual(calls.onShiftUp.length, 1);
 
-      fakeWindow.dispatch("blur");
+      fakeWindow.dispatch(
+        "blur"
+      );
       assert.strictEqual(calls.onBlur.length, 1);
 
       ctrl.destroy();
@@ -878,11 +757,22 @@ describe("InputController", () => {
     test("mouseup on the injected window ends an in-progress gesture", () => {
       const { actions, calls } = makeActions();
       const fakeWindow = new FakeWindow();
-      const ctrl = new InputController({ canvas, viewport, actions, window: fakeWindow });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions,
+        window: fakeWindow
+      });
 
-      canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
-      }));
+      canvas.dispatchEvent(
+        new MouseEvent("mousedown", {
+          button: 0,
+          buttons: 1,
+          clientX: 100,
+          clientY: 100,
+          bubbles: true
+        })
+      );
       fakeWindow.dispatch("mouseup");
 
       assert.strictEqual(calls.onPrimaryUp.length, 1);
@@ -892,10 +782,18 @@ describe("InputController", () => {
     test("destroy() detaches from the injected window", () => {
       const { actions, calls } = makeActions();
       const fakeWindow = new FakeWindow();
-      const ctrl = new InputController({ canvas, viewport, actions, window: fakeWindow });
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions,
+        window: fakeWindow
+      });
 
       ctrl.destroy();
-      fakeWindow.dispatch("keydown", { key: "Shift", repeat: false, target: null });
+      fakeWindow.dispatch(
+        "keydown",
+        { key: "Shift", repeat: false, target: null }
+      );
 
       assert.strictEqual(calls.onShiftDown.length, 0);
     });

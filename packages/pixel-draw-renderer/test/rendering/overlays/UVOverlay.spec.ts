@@ -1,40 +1,17 @@
 // Import Node.js Dependencies
-import { describe, test, before } from "node:test";
+import {
+  describe,
+  test
+} from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import { Window } from "happy-dom";
-
 // Import Internal Dependencies
-import { UVOverlay } from "../../../src/rendering/overlays/UVOverlay.ts";
-import { UVMap } from "../../../src/uv/UVMap.ts";
-import { SVG_NS } from "../../../src/rendering/constants.ts";
-import { Zoom } from "../../../src/rendering/Zoom.ts";
-import type { DefaultViewport } from "../../../src/rendering/Viewport.ts";
-
-// CONSTANTS
-const kEmulatedBrowserWindow = new Window();
-
-before(() => {
-  globalThis.document = kEmulatedBrowserWindow.document as unknown as Document;
-});
-
-function makeSvg(): SVGElement {
-  return kEmulatedBrowserWindow.document.createElementNS(SVG_NS, "svg") as unknown as SVGElement;
-}
-
-function makeViewport(): DefaultViewport {
-  return {
-    zoom: new Zoom({ default: 4 }),
-    camera: { x: 0, y: 0 }
-  };
-}
-
-function makeUvMap(): UVMap {
-  return new UVMap({ getCanvasSize: () => {
-    return { x: 64, y: 64 };
-  } });
-}
+import { UVOverlay } from "#src/rendering/overlays/UVOverlay.ts";
+import {
+  makeSvg,
+  makeViewport,
+  makeUvMap
+} from "../../helpers/overlay.ts";
 
 describe("UVOverlay — visibility follows UVMap state", () => {
   test("renders nothing for a region that isn't selected or shown", () => {
@@ -45,7 +22,11 @@ describe("UVOverlay — visibility follows UVMap state", () => {
 
     map.create({ width: 4, height: 4 });
 
-    assert.strictEqual(svg.querySelectorAll("rect").length, 0);
+    assert.strictEqual(
+      svg.querySelectorAll("rect").length,
+      0,
+      "no rects when map is not selected or shown"
+    );
   });
 
   test("renders a solid border rect once its region is selected", () => {
@@ -54,7 +35,12 @@ describe("UVOverlay — visibility follows UVMap state", () => {
 
     new UVOverlay(svg, makeViewport(), map);
 
-    const region = map.create({ width: 2, height: 3, id: "r1", color: "#123456" });
+    const region = map.create({
+      width: 2,
+      height: 3,
+      id: "r1",
+      color: "#123456"
+    });
     map.select(region.id);
 
     const rects = svg.querySelectorAll("rect");
@@ -65,7 +51,7 @@ describe("UVOverlay — visibility follows UVMap state", () => {
     assert.strictEqual(rects[0].getAttribute("width"), "8");
     assert.strictEqual(rects[0].getAttribute("height"), "12");
     assert.strictEqual(rects[0].getAttribute("stroke"), "#123456");
-    assert.strictEqual(rects[0].hasAttribute("stroke-dasharray"), false, "solid, not dashed");
+    assert.ok(!rects[0].hasAttribute("stroke-dasharray"), "solid, not dashed");
   });
 
   test("showAll renders every region regardless of selection", () => {
@@ -78,7 +64,11 @@ describe("UVOverlay — visibility follows UVMap state", () => {
     map.create({ width: 2, height: 2 });
     map.showAll = true;
 
-    assert.strictEqual(svg.querySelectorAll("rect").length, 2);
+    assert.strictEqual(
+      svg.querySelectorAll("rect").length,
+      2,
+      "two rects when showAll is true"
+    );
   });
 
   test("removes the rect once its region is deselected", () => {
@@ -89,10 +79,18 @@ describe("UVOverlay — visibility follows UVMap state", () => {
 
     const region = map.create({ width: 2, height: 2 });
     map.select(region.id);
-    assert.strictEqual(svg.querySelectorAll("rect").length, 1);
+    assert.strictEqual(
+      svg.querySelectorAll("rect").length,
+      1,
+      "one rect when region is selected"
+    );
 
     map.select(null);
-    assert.strictEqual(svg.querySelectorAll("rect").length, 0);
+    assert.strictEqual(
+      svg.querySelectorAll("rect").length,
+      0,
+      "no rect when region is deselected"
+    );
   });
 
   test("removes the rect once its region is deleted", () => {
@@ -101,12 +99,23 @@ describe("UVOverlay — visibility follows UVMap state", () => {
 
     new UVOverlay(svg, makeViewport(), map);
 
-    const region = map.create({ width: 2, height: 2 });
+    const region = map.create({
+      width: 2,
+      height: 2
+    });
     map.showAll = true;
-    assert.strictEqual(svg.querySelectorAll("rect").length, 1);
+    assert.strictEqual(
+      svg.querySelectorAll("rect").length,
+      1,
+      "one rect when showAll is true"
+    );
 
     map.delete(region.id);
-    assert.strictEqual(svg.querySelectorAll("rect").length, 0);
+    assert.strictEqual(
+      svg.querySelectorAll("rect").length,
+      0,
+      "no rect when region is deleted"
+    );
   });
 
   test("moving a visible region updates its screen position", () => {
@@ -115,9 +124,15 @@ describe("UVOverlay — visibility follows UVMap state", () => {
 
     new UVOverlay(svg, makeViewport(), map);
 
-    const region = map.create({ width: 2, height: 2 });
+    const region = map.create({
+      width: 2,
+      height: 2
+    });
     map.showAll = true;
-    map.move(region.id, { x: 5, y: 5, width: 2, height: 2 });
+    map.move(
+      region.id,
+      { x: 5, y: 5, width: 2, height: 2 }
+    );
 
     const rect = svg.querySelector("rect")!;
     assert.strictEqual(rect.getAttribute("x"), "20");
@@ -129,12 +144,19 @@ describe("UVOverlay — setLiveOverride", () => {
   test("renders the override rect instead of the stored one", () => {
     const svg = makeSvg();
     const map = makeUvMap();
-    const overlay = new UVOverlay(svg, makeViewport(), map);
+    const overlay = new UVOverlay(
+      svg,
+      makeViewport(),
+      map
+    );
 
     const region = map.create({ width: 2, height: 2 });
     map.showAll = true;
 
-    overlay.setLiveOverride(region.id, { x: 9, y: 9, width: 2, height: 2 });
+    overlay.setLiveOverride(
+      region.id,
+      { x: 9, y: 9, width: 2, height: 2 }
+    );
 
     const rect = svg.querySelector("rect")!;
     assert.strictEqual(rect.getAttribute("x"), "36");
@@ -153,12 +175,27 @@ describe("UVOverlay — destroy", () => {
 
     const region = map.create({ width: 2, height: 2 });
     map.showAll = true;
-    assert.strictEqual(svg.querySelectorAll("rect").length, 1);
+    assert.strictEqual(
+      svg.querySelectorAll("rect").length,
+      1,
+      "one rect when showAll is true"
+    );
 
     overlay.destroy();
-    assert.strictEqual(svg.querySelectorAll("rect").length, 0);
+    assert.strictEqual(
+      svg.querySelectorAll("rect").length,
+      0,
+      "no rect after destroy"
+    );
 
-    map.move(region.id, { x: 1, y: 1, width: 2, height: 2 });
-    assert.strictEqual(svg.querySelectorAll("rect").length, 0);
+    map.move(
+      region.id,
+      { x: 1, y: 1, width: 2, height: 2 }
+    );
+    assert.strictEqual(
+      svg.querySelectorAll("rect").length,
+      0,
+      "no rect after move"
+    );
   });
 });

@@ -1,22 +1,29 @@
 // Import Node.js Dependencies
-import { describe, test } from "node:test";
+import {
+  describe,
+  test
+} from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
   HistoryController,
   type HistoryState
-} from "../../src/history/HistoryController.ts";
-import { PixelBuffer } from "../../src/buffer/PixelBuffer.ts";
-import { UVMap } from "../../src/uv/UVMap.ts";
-import type { RGBA } from "../../src/types.ts";
+} from "#src/history/HistoryController.ts";
+import { PixelBuffer } from "#src/buffer/PixelBuffer.ts";
+import { UVMap } from "#src/uv/UVMap.ts";
+import type { RGBA } from "#src/types.ts";
 
 // CONSTANTS
 const kRed: RGBA = { r: 255, g: 0, b: 0, a: 255 };
 const kWhite: RGBA = { r: 255, g: 255, b: 255, a: 255 };
 
 function makeBuffer(): PixelBuffer {
-  return new PixelBuffer({ size: { x: 4, y: 4 }, defaultColor: kWhite, maxSize: 8 });
+  return new PixelBuffer({
+    size: { x: 4, y: 4 },
+    defaultColor: kWhite,
+    maxSize: 8
+  });
 }
 
 function makeUvMap(): UVMap {
@@ -28,7 +35,10 @@ function makeUvMap(): UVMap {
 describe("HistoryController", () => {
   describe("disabled (default)", () => {
     test("push/undo/redo are no-ops and canUndo/canRedo stay false", () => {
-      const controller = new HistoryController(makeBuffer(), makeUvMap());
+      const controller = new HistoryController(
+        makeBuffer(),
+        makeUvMap()
+      );
 
       controller.push({
         action: "stroke",
@@ -37,10 +47,10 @@ describe("HistoryController", () => {
         afterColor: kRed
       });
 
-      assert.strictEqual(controller.enabled, false);
-      assert.strictEqual(controller.canUndo, false);
+      assert.ok(!controller.enabled);
+      assert.ok(!controller.canUndo);
       assert.strictEqual(controller.undo(), null);
-      assert.strictEqual(controller.canRedo, false);
+      assert.ok(!controller.canRedo);
       assert.strictEqual(controller.redo(), null);
     });
   });
@@ -48,7 +58,11 @@ describe("HistoryController", () => {
   describe("enabled", () => {
     test("push records an entry that undo/redo replay against the buffer", () => {
       const buffer = makeBuffer();
-      const controller = new HistoryController(buffer, makeUvMap(), { enabled: true });
+      const controller = new HistoryController(
+        buffer,
+        makeUvMap(),
+        { enabled: true }
+      );
 
       buffer.drawPixels([{ x: 0, y: 0 }], kRed);
       controller.push({
@@ -57,22 +71,32 @@ describe("HistoryController", () => {
         beforeColors: [kWhite],
         afterColor: kRed
       });
-      assert.strictEqual(controller.canUndo, true);
+      assert.ok(controller.canUndo);
 
       const undone = controller.undo();
       assert.strictEqual(undone?.action, "stroke");
-      assert.deepStrictEqual(buffer.samplePixel(0, 0), [255, 255, 255, 255]);
-      assert.strictEqual(controller.canUndo, false);
-      assert.strictEqual(controller.canRedo, true);
+      assert.deepStrictEqual(
+        buffer.samplePixel(0, 0),
+        [255, 255, 255, 255]
+      );
+      assert.ok(!controller.canUndo);
+      assert.ok(controller.canRedo);
 
       const redone = controller.redo();
       assert.strictEqual(redone?.action, "stroke");
-      assert.deepStrictEqual(buffer.samplePixel(0, 0), [255, 0, 0, 255]);
-      assert.strictEqual(controller.canRedo, false);
+      assert.deepStrictEqual(
+        buffer.samplePixel(0, 0),
+        [255, 0, 0, 255]
+      );
+      assert.ok(!controller.canRedo);
     });
 
     test("clear discards both stacks", () => {
-      const controller = new HistoryController(makeBuffer(), makeUvMap(), { enabled: true });
+      const controller = new HistoryController(
+        makeBuffer(),
+        makeUvMap(),
+        { enabled: true }
+      );
 
       controller.push({
         action: "stroke",
@@ -81,16 +105,20 @@ describe("HistoryController", () => {
         afterColor: kRed
       });
       controller.undo();
-      assert.strictEqual(controller.canRedo, true);
+      assert.ok(controller.canRedo);
 
       controller.clear();
-      assert.strictEqual(controller.canUndo, false);
-      assert.strictEqual(controller.canRedo, false);
+      assert.ok(!controller.canUndo);
+      assert.ok(!controller.canRedo);
     });
 
     test("limit bounds the undo stack", () => {
       const buffer = makeBuffer();
-      const controller = new HistoryController(buffer, makeUvMap(), { enabled: true, limit: 1 });
+      const controller = new HistoryController(
+        buffer,
+        makeUvMap(),
+        { enabled: true, limit: 1 }
+      );
 
       controller.push({
         action: "stroke",
@@ -124,16 +152,28 @@ describe("HistoryController", () => {
         beforeColors: [kWhite],
         afterColor: kRed
       });
-      assert.deepStrictEqual(states.at(-1), { canUndo: true, canRedo: false });
+      assert.deepStrictEqual(
+        states.at(-1),
+        { canUndo: true, canRedo: false }
+      );
 
       controller.undo();
-      assert.deepStrictEqual(states.at(-1), { canUndo: false, canRedo: true });
+      assert.deepStrictEqual(
+        states.at(-1),
+        { canUndo: false, canRedo: true }
+      );
 
       controller.redo();
-      assert.deepStrictEqual(states.at(-1), { canUndo: true, canRedo: false });
+      assert.deepStrictEqual(
+        states.at(-1),
+        { canUndo: true, canRedo: false }
+      );
 
       controller.clear();
-      assert.deepStrictEqual(states.at(-1), { canUndo: false, canRedo: false });
+      assert.deepStrictEqual(
+        states.at(-1),
+        { canUndo: false, canRedo: false }
+      );
 
       assert.strictEqual(states.length, 4);
 
