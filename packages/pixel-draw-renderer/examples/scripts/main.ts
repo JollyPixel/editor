@@ -5,9 +5,11 @@ import { ResizeHandle } from "@jolly-pixel/resize-handle";
 
 // Import Internal Dependencies
 import { CameraBehavior } from "./components/Camera.ts";
-import { CubeBehavior } from "./components/Cube.ts";
+import { CubeFactory } from "./components/CubeFactory.ts";
 import { OrbitControlsBehavior } from "./components/OrbitControlsBehavior.ts";
 import { type PixelDrawPanel } from "./ui/PixelDrawPanel.ts";
+import { CubeGallery } from "./CubeGallery.ts";
+import { CubePicker } from "./CubePicker.ts";
 
 const runtime = await initRuntime();
 loadRuntime(runtime, {
@@ -84,94 +86,28 @@ async function initRuntime(): Promise<Runtime> {
     maxDistance: 30
   });
 
-  // One test cube per UV region, so placement/move can be visually verified.
-  // Face assignment is out of scope for this version: a region's rect is
-  // applied uniformly to all 6 faces (see CubeBehavior.applyRegionUV).
-  const cubes = new Map<string, CubeBehavior>();
+  // One test cube per UV region, kept in sync via the uv event stream (see
+  // CubeGallery.ts). Actor creation/teardown is delegated to CubeFactory, and
+  // click-to-select raycasting to CubePicker, so CubeGallery itself only
+  // owns the region↔cube mirroring/layout — not the ECS world or 3D input.
+  const cubeFactory = new CubeFactory({ world, canvasTexture });
+  const cubeGallery = new CubeGallery({ cubeFactory, canvasManager });
+  new CubePicker({
+    uv: canvasManager.uv,
+    camera: cameraBehavior.camera,
+    canvas,
+    getMeshes: () => cubeGallery.meshes
+  });
 
-  // Recomputes every cube's target position as a centered, near-square
-  // grid — re-run on every create/delete so the cluster (1 cube or many)
-  // always sits centered on the origin, not just column-centered against
-  // a fixed column count. CubeBehavior eases toward the new target itself
-  // (see setTargetPosition), so a reflow reads as a smooth glide.
-  const kGridSpacing = 2.4;
-
-  function relayoutCubes(): void {
-    const entries = [...cubes.values()];
-    if (entries.length === 0) {
-      return;
+  canvasManager.onBufferUpdated = (event) => {
+    if (event.action === "texture-replaced") {
+      canvasTexture.image = canvasManager.textureCanvas();
+      canvasTexture.needsUpdate = true;
+      cubeGallery.refreshTextureSize();
     }
+  };
 
-    const columns = Math.max(1, Math.ceil(Math.sqrt(entries.length)));
-    const rows = Math.ceil(entries.length / columns);
-    const centerCol = (columns - 1) / 2;
-    const centerRow = (rows - 1) / 2;
-
-    entries.forEach((cube, index) => {
-      const col = index % columns;
-      const row = Math.floor(index / columns);
-      cube.setTargetPosition(new THREE.Vector3(
-        (col - centerCol) * kGridSpacing,
-        (centerRow - row) * kGridSpacing,
-        0
-      ));
-    });
-  }
-
-  canvasManager.uv.on("region-created", ({ region }) => {
-    const cube = world.createActor(`uv-cube-${region.id}`).addComponentAndGet(CubeBehavior, {
-      canvasTexture,
-      region,
-      textureSize: canvasManager.textureSize
-    });
-    cubes.set(region.id, cube);
-    relayoutCubes();
-  });
-  canvasManager.uv.on("region-deleted", ({ region }) => {
-    cubes.get(region.id)?.actor.destroy();
-    cubes.delete(region.id);
-    relayoutCubes();
-  });
-  canvasManager.uv.on("region-moved", ({ region }) => {
-    cubes.get(region.id)?.updateRect(region.rect, canvasManager.textureSize);
-  });
-  // Fires continuously while a drag is in progress (never recorded to
-  // history or broadcast — see UVMap.previewMove), so the cube's texture
-  // mapping updates live instead of only snapping into place on drop.
-  canvasManager.uv.on("region-dragging", ({ id, rect }) => {
-    cubes.get(id)?.updateRect(rect, canvasManager.textureSize);
-  });
-  canvasManager.uv.on("selection-changed", ({ selectedRegionId }) => {
-    for (const [regionId, cube] of cubes) {
-      cube.setSelected(regionId === selectedRegionId);
-    }
-  });
-
-  // Seed one region (and its cube) so there's something to see/test
-  // immediately, instead of starting from an empty scene.
-  const initialRegion = canvasManager.uv.create({ width: 16, height: 16 });
-  canvasManager.uv.select(initialRegion.id);
-
-  // Clicking a cube in the 3D scene reveals its UV region on the 2D canvas,
-  // regardless of the canvas's current mode (see uv/UVMap.md — visibility
-  // is independent of mode). Clicking empty space in the 3D scene deselects,
-  // mirroring a miss-click on the 2D canvas in "uv" mode.
-  const raycaster = new THREE.Raycaster();
-  const pointerNdc = new THREE.Vector2();
-  canvas.addEventListener("click", (event) => {
-    const bounds = canvas.getBoundingClientRect();
-    pointerNdc.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
-    pointerNdc.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
-
-    raycaster.setFromCamera(pointerNdc, cameraBehavior.camera);
-    const meshes = [...cubes.values()].map((cube) => cube.mesh);
-    const [hit] = raycaster.intersectObjects(meshes);
-    canvasManager.uv.select(hit ? hit.object.userData.regionId as string : null);
-  });
-
-  world.renderer.on("resize", () => {
-    drawPanel.onResize();
-  });
+  world.renderer.on("resize", () => drawPanel.onResize());
 
   const resizeHandle = new ResizeHandle(drawPanel, { direction: "left" });
   resizeHandle.addEventListener("drag", () => {
