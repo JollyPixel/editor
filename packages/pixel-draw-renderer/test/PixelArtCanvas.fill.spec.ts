@@ -36,7 +36,7 @@ describe("PixelArtCanvas — fill mode", () => {
     ({ container, children } = makeContainer());
   });
 
-  describe("fillGlobal", () => {
+  describe("tools.fill.global", () => {
     test("defaults to false (contiguous) and is not configurable at construction", () => {
       const manager = new PixelArtCanvas(container, {
         texture: {
@@ -45,11 +45,11 @@ describe("PixelArtCanvas — fill mode", () => {
         }
       });
 
-      assert.ok(!manager.fillGlobal);
+      assert.ok(!manager.tools.fill.global);
       manager.destroy();
     });
 
-    test("setting fillGlobal toggles the runtime state, persisting across mode switches", () => {
+    test("setting tools.fill.global toggles the runtime state, persisting across mode switches", () => {
       const manager = new PixelArtCanvas(container, {
         texture: {
           maxSize: 32,
@@ -57,15 +57,15 @@ describe("PixelArtCanvas — fill mode", () => {
         }
       });
 
-      manager.fillGlobal = true;
-      assert.ok(manager.fillGlobal);
+      manager.tools.fill.global = true;
+      assert.ok(manager.tools.fill.global);
 
       manager.mode = "paint";
       manager.mode = "fill";
-      assert.ok(manager.fillGlobal, "toggle persists across mode switches");
+      assert.ok(manager.tools.fill.global, "toggle persists across mode switches");
 
-      manager.fillGlobal = false;
-      assert.ok(!manager.fillGlobal);
+      manager.tools.fill.global = false;
+      assert.ok(!manager.tools.fill.global);
       manager.destroy();
     });
   });
@@ -220,7 +220,7 @@ describe("PixelArtCanvas — fill mode", () => {
       );
 
       manager.mode = "fill";
-      manager.fillGlobal = true;
+      manager.tools.fill.global = true;
       manager.brush.primary.set("#FF0000");
       canvas.dispatchEvent(new MouseEvent("mousedown", {
         button: 0,
@@ -271,7 +271,7 @@ describe("PixelArtCanvas — fill mode", () => {
       );
 
       manager.mode = "fill";
-      manager.fillGlobal = true;
+      manager.tools.fill.global = true;
       canvas.dispatchEvent(new MouseEvent("mousedown", {
         button: 2,
         buttons: 2,
@@ -295,7 +295,7 @@ describe("PixelArtCanvas — fill mode", () => {
         brush: { color: "#FFFFFF" },
         onBufferUpdated: (event) => events.push(event)
       });
-      manager.fillGlobal = true;
+      manager.tools.fill.global = true;
 
       canvas.dispatchEvent(new MouseEvent("mousedown", {
         button: 0,
@@ -351,7 +351,7 @@ describe("PixelArtCanvas — fill mode", () => {
       );
 
       manager.mode = "paint";
-      manager.pickColorArmed = true;
+      manager.tools.brush.pickArmed = true;
       canvas.dispatchEvent(
         new MouseEvent("mousemove", {
           clientX: 102,
@@ -387,7 +387,7 @@ describe("PixelArtCanvas — fill mode", () => {
         detail = (event as CustomEvent<{ hex: string; opacity: number; }>).detail;
       });
 
-      manager.pickColorArmed = true;
+      manager.tools.brush.pickArmed = true;
       canvas.dispatchEvent(new MouseEvent("mousedown", {
         button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
       }));
@@ -398,7 +398,7 @@ describe("PixelArtCanvas — fill mode", () => {
         manager.brush.primary.asString("hex"),
         "#123456"
       );
-      assert.ok(!manager.pickColorArmed);
+      assert.ok(!manager.tools.brush.pickArmed);
       manager.destroy();
     });
 
@@ -410,7 +410,7 @@ describe("PixelArtCanvas — fill mode", () => {
         fired = true;
       });
 
-      manager.pickColorArmed = true;
+      manager.tools.brush.pickArmed = true;
       canvas.dispatchEvent(new MouseEvent("mousedown", {
         button: 0,
         buttons: 1,
@@ -420,7 +420,7 @@ describe("PixelArtCanvas — fill mode", () => {
       }));
 
       assert.ok(!fired);
-      assert.ok(manager.pickColorArmed);
+      assert.ok(manager.tools.brush.pickArmed);
       assert.strictEqual(
         manager.brush.primary.asString("hex"),
         "#000000"
@@ -451,18 +451,18 @@ describe("PixelArtCanvas — fill mode", () => {
     test("switching away from paint mode auto-disarms the picker", () => {
       const { manager } = makeManager();
 
-      manager.pickColorArmed = true;
+      manager.tools.brush.pickArmed = true;
       manager.mode = "fill";
 
-      assert.ok(!manager.pickColorArmed);
+      assert.ok(!manager.tools.brush.pickArmed);
       manager.destroy();
     });
 
-    test("pickColorAt samples directly regardless of mode, ignoring the armed flag", () => {
+    test("tools.brush.pick samples directly regardless of mode, ignoring the armed flag", () => {
       const { manager } = makeManager();
       manager.mode = "select";
 
-      const color = manager.pickColorAt(4, 4);
+      const color = manager.tools.brush.pick(4, 4);
 
       assert.deepStrictEqual(
         color,
@@ -475,10 +475,10 @@ describe("PixelArtCanvas — fill mode", () => {
       manager.destroy();
     });
 
-    test("pickColorAt returns null and leaves the brush untouched outside the texture", () => {
+    test("tools.brush.pick returns null and leaves the brush untouched outside the texture", () => {
       const { manager } = makeManager();
 
-      const color = manager.pickColorAt(-1, -1);
+      const color = manager.tools.brush.pick(-1, -1);
 
       assert.strictEqual(color, null);
       assert.strictEqual(

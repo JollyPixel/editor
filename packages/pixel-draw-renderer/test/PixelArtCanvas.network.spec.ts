@@ -177,7 +177,7 @@ describe("PixelArtCanvas — onBufferUpdated", () => {
         brush: { color: "#FF0000" },
         onBufferUpdated: (event) => events.push(event)
       });
-      manager.fillGlobal = true;
+      manager.tools.fill.global = true;
 
       // 16x16 texture, zoom 4 -> centered camera (68,68); client(100,100) -> texture (8,8).
       canvas.dispatchEvent(new MouseEvent("mousedown", {

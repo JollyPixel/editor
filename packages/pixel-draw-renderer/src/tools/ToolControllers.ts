@@ -1,16 +1,19 @@
 // Import Internal Dependencies
 import type { Brush } from "./Brush.ts";
 import {
-  BrushController
+  BrushController,
+  type BrushTool
 } from "./BrushController.ts";
 import {
-  FillController
+  FillController,
+  type FillTool
 } from "./FillController.ts";
 import {
   LineController
 } from "./LineController.ts";
 import {
-  SelectController
+  SelectController,
+  type SelectTool
 } from "./SelectController.ts";
 import { UVController } from "../uv/UVController.ts";
 import type { UVMap } from "../uv/UVMap.ts";
@@ -32,6 +35,16 @@ export interface ToolControllersOptions {
   uvMap: UVMap;
   uvOverlay: UVOverlay;
   pipeline: EditPipeline;
+}
+
+/**
+ * Public view of the drawing tools (`PixelArtCanvas.tools`). `line`/`uv` are
+ * internal; the UV model is on `PixelArtCanvas.uv`.
+ */
+export interface Toolset {
+  brush: BrushTool;
+  fill: FillTool;
+  select: SelectTool;
 }
 
 /**

@@ -8,7 +8,8 @@ import {
   type BrushOptions
 } from "./tools/Brush.ts";
 import {
-  ToolControllers
+  ToolControllers,
+  type Toolset
 } from "./tools/ToolControllers.ts";
 import {
   CanvasBuffer
@@ -56,7 +57,6 @@ import type {
   BrushHighlight,
   ColorInput,
   Mode,
-  RGBA,
   Vec2
 } from "./types.ts";
 import type {
@@ -157,6 +157,8 @@ export class PixelArtCanvas {
   readonly brush: Brush;
   readonly viewport: DefaultViewport;
   readonly uv: UVMap;
+  /** Public view of the drawing tools: `tools.brush`, `tools.fill`, `tools.select`. */
+  readonly tools: Toolset;
 
   constructor(
     parentHtmlElement: HTMLDivElement,
@@ -277,6 +279,7 @@ export class PixelArtCanvas {
       uvOverlay: this.#svgManager.uvOverlay,
       pipeline: this.#edits
     });
+    this.tools = this.#tools;
 
     this.#cursor = new CursorController({
       renderer: this.#renderer,
@@ -328,55 +331,6 @@ export class PixelArtCanvas {
       this.#tools.uv.cancelDrag();
     }
     this.#cursor.refresh(mode);
-  }
-
-  /**
-   * Whether the next paint action picks a color.
-   */
-  get pickColorArmed(): boolean {
-    return this.#tools.brush.pickArmed;
-  }
-
-  set pickColorArmed(
-    armed: boolean
-  ) {
-    this.#tools.brush.pickArmed = armed;
-  }
-
-  /**
-   * Samples a texture pixel into the primary brush color.
-   */
-  pickColorAt(
-    x: number,
-    y: number
-  ): RGBA | null {
-    return this.#tools.brush.pick(x, y);
-  }
-
-  /**
-   * Whether fills recolor all matching pixels.
-   */
-  get fillGlobal(): boolean {
-    return this.#tools.fill.global;
-  }
-
-  set fillGlobal(
-    global: boolean
-  ) {
-    this.#tools.fill.global = global;
-  }
-
-  /**
-   * Whether empty-space clicks create shape selections.
-   */
-  get selectShape(): boolean {
-    return this.#tools.select.shape;
-  }
-
-  set selectShape(
-    shape: boolean
-  ) {
-    this.#tools.select.shape = shape;
   }
 
   /**
@@ -440,27 +394,6 @@ export class PixelArtCanvas {
 
   get keybindings(): Keybindings {
     return this.#input.keybindings;
-  }
-
-  /**
-   * Rotates the active selection clockwise.
-   */
-  rotateSelection(): boolean {
-    return this.#tools.select.handleRotate();
-  }
-
-  /**
-   * Mirrors the active selection horizontally.
-   */
-  flipSelectionHorizontal(): boolean {
-    return this.#tools.select.handleFlipHorizontal();
-  }
-
-  /**
-   * Mirrors the active selection vertically.
-   */
-  flipSelectionVertical(): boolean {
-    return this.#tools.select.handleFlipVertical();
   }
 
   centerTexture(): void {

@@ -146,15 +146,15 @@ describe("PixelArtCanvas — select mode rotate/flip", () => {
     const manager = makeManager();
     const canvas = manager.canvas();
 
-    assert.ok(!manager.rotateSelection(), "no selection yet");
-    assert.ok(!manager.flipSelectionHorizontal());
-    assert.ok(!manager.flipSelectionVertical());
+    assert.ok(!manager.tools.select.rotate(), "no selection yet");
+    assert.ok(!manager.tools.select.flipHorizontal());
+    assert.ok(!manager.tools.select.flipVertical());
 
     paintHorizontalPair(manager);
     manager.mode = "select";
     selectHorizontalPair(canvas);
 
-    assert.ok(manager.flipSelectionHorizontal());
+    assert.ok(manager.tools.select.flipHorizontal());
     assert.deepStrictEqual(
       readPixel(manager.texture, { x: 2, y: 2 }, 8),
       [255, 0, 0, 255]
@@ -164,7 +164,7 @@ describe("PixelArtCanvas — select mode rotate/flip", () => {
       [0, 0, 0, 255]
     );
 
-    assert.ok(manager.rotateSelection());
+    assert.ok(manager.tools.select.rotate());
     manager.destroy();
   });
 

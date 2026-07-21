@@ -41,9 +41,25 @@ export interface SelectControllerOptions {
 }
 
 /**
+ * Public select-tool surface (`PixelArtCanvas.tools.select`).
+ */
+export interface SelectTool {
+  /** Whether empty-space clicks create shape (magic-wand) selections. */
+  shape: boolean;
+  /** Whether a committed selection exists to transform. */
+  readonly hasSelection: boolean;
+  /** Rotates the active selection clockwise; `false` when none. */
+  rotate(): boolean;
+  /** Mirrors the active selection horizontally; `false` when none. */
+  flipHorizontal(): boolean;
+  /** Mirrors the active selection vertically; `false` when none. */
+  flipVertical(): boolean;
+}
+
+/**
  * Coordinates selection state, rendering, and commits.
  */
-export class SelectController {
+export class SelectController implements SelectTool {
   #select = new Select();
   #canvasBuffer: CanvasBuffer;
   #renderer: CanvasRenderer;
@@ -327,7 +343,7 @@ export class SelectController {
   /**
    * Rotates the active selection clockwise.
    */
-  handleRotate(): boolean {
+  rotate(): boolean {
     if (this.#select.state !== "selected") {
       return false;
     }
@@ -356,11 +372,11 @@ export class SelectController {
     return true;
   }
 
-  handleFlipHorizontal(): boolean {
+  flipHorizontal(): boolean {
     return this.#handleFlip((select) => select.flipHorizontal());
   }
 
-  handleFlipVertical(): boolean {
+  flipVertical(): boolean {
     return this.#handleFlip((select) => select.flipVertical());
   }
 

@@ -245,8 +245,8 @@ export function createInputActions(
 
       return selectHandled || uvHandled;
     },
-    onRotate: () => tools.select.handleRotate(),
-    onFlipHorizontal: () => tools.select.handleFlipHorizontal(),
-    onFlipVertical: () => tools.select.handleFlipVertical()
+    onRotate: () => tools.select.rotate(),
+    onFlipHorizontal: () => tools.select.flipHorizontal(),
+    onFlipVertical: () => tools.select.flipVertical()
   };
 }

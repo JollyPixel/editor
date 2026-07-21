@@ -127,9 +127,24 @@ This is the change that most directly kills the "maintain references between
 objects" complaint, and it's mechanical because the behavior already exists —
 you relocate it rather than redesign it.
 
-### ⭐ R2 — Expose tools as public fields; delete the delegation getters
+### ⭐ R2 — Expose tools as public fields; delete the delegation getters ✅ DONE
 
 **Value: high surface reduction. Effort: low. Breaking API change.**
+
+> **Status: implemented.** `PixelArtCanvas` now exposes a `readonly tools`
+> field typed as a narrow `Toolset` interface (`{ brush: BrushTool; fill:
+> FillTool; select: SelectTool }`) rather than the concrete `ToolControllers`,
+> so the controllers' internal lifecycle methods never leak and the classes
+> stay unexported (`SelectController implements SelectTool`, etc. — sidestepping
+> R5's naming problem). `line`/`uv` are deliberately omitted from the public
+> view (no user-facing config; the UV model is already on `PixelArtCanvas.uv`).
+> The seven facade members (`fillGlobal`, `selectShape`, `pickColorArmed`,
+> `pickColorAt`, `rotateSelection`, `flipSelectionHorizontal/Vertical`) are
+> deleted; `SelectController.handleRotate/handleFlip*` were renamed to
+> `rotate/flipHorizontal/flipVertical` to satisfy `SelectTool`. `SelectTool`
+> additionally exposes a read-only `hasSelection` (beyond strict parity) for
+> toolbar enable/disable. Docs moved to `docs/tools/{BrushTool,FillTool,
+> SelectTool}.md`. All 644 tests pass.
 
 This is already done for `brush`, `viewport`, `uv`, and it matches the recorded
 preference (expose the object, not a re-wrapped getter/setter pair). Apply it to

@@ -14,9 +14,19 @@ export interface BrushControllerOptions {
 }
 
 /**
+ * Public brush-tool surface (`PixelArtCanvas.tools.brush`).
+ */
+export interface BrushTool {
+  /** Whether the next primary action picks a color instead of painting. */
+  pickArmed: boolean;
+  /** Samples a texture pixel into the primary brush color. */
+  pick(x: number, y: number): RGBA | null;
+}
+
+/**
  * Applies brush strokes to the canvas.
  */
-export class BrushController {
+export class BrushController implements BrushTool {
   #brush: Brush;
   #canvasBuffer: CanvasBuffer;
   #renderer: CanvasRenderer;

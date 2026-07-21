@@ -150,6 +150,7 @@ Open `http://localhost:5173` to see the interactive demo.
 
 - [`PixelArtCanvas`](./docs/PixelArtCanvas.md): top-level coordinator, the primary public API
 - [`Brush`](./docs/tools/Brush.md): brush size, primary/secondary color, opacity, and affected-pixel computation — read/write via `PixelArtCanvas.brush`
+- [`BrushTool`](./docs/tools/BrushTool.md) / [`FillTool`](./docs/tools/FillTool.md) / [`SelectTool`](./docs/tools/SelectTool.md): the per-tool runtime state exposed via `PixelArtCanvas.tools.{brush,fill,select}`
 - [`PixelBuffer`](./docs/buffer/PixelBuffer.md): headless RGBA pixel storage, usable server-side with no DOM
 - [`UVMap`](./docs/uv/UVMap.md): UV region create/delete/move, selection, and visibility — read/write via `PixelArtCanvas.uv`
 - [`HistoryStack`](./docs/history/HistoryStack.md): bounded undo/redo stack backing `PixelArtCanvas.undo()`/`redo()`

@@ -3,6 +3,10 @@ export {
   Brush,
   type BrushOptions
 } from "./tools/Brush.ts";
+export type { BrushTool } from "./tools/BrushController.ts";
+export type { FillTool } from "./tools/FillController.ts";
+export type { SelectTool } from "./tools/SelectController.ts";
+export type { Toolset } from "./tools/ToolControllers.ts";
 export {
   PixelArtCanvas,
   type HistoryState,
