@@ -162,7 +162,7 @@ Reads or sets the current interaction mode.
 
 > [!IMPORTANT]
 > - The line tool and UV drag handling stay internal; the brush, fill, and select tools expose a narrow public surface via [`tools`](#tools).
-> - Switching to `"move"` cancels an armed line. Switching away from `"select"` clears any active selection. Switching away from `"uv"` cancels an in-progress drag but, unlike `"select"`, does **not** clear the UV selection/visibility — see [uv/UVMap.md](./uv/UVMap.md).
+> - Leaving `"paint"` cancels an armed line. Leaving `"select"` clears any active selection. Leaving `"uv"` cancels an in-progress drag but, unlike `"select"`, does **not** clear the UV selection/visibility — see [uv/UVMap.md](./uv/UVMap.md).
 > - The SVG brush-cursor highlight is active only in `"paint"` and `"fill"`. In `"fill"`, and in `"paint"` while `tools.brush.pickArmed` is `true`, the highlight is always a single pixel regardless of `brush`'s configured size, since neither a fill's seed nor a color pick is brush-sized.
 
 ---
