@@ -1,11 +1,11 @@
 // Import Internal Dependencies
-import type { ToolControllers } from "../tools/ToolControllers.ts";
+import type { Tools } from "../tools/Tools.ts";
 import type { Mode } from "../types.ts";
 import type { CanvasRenderer } from "./CanvasRenderer.ts";
 
 export interface CursorControllerOptions {
   renderer: CanvasRenderer;
-  tools: ToolControllers;
+  tools: Tools;
 }
 
 /**
@@ -14,7 +14,7 @@ export interface CursorControllerOptions {
  */
 export class CursorController {
   #renderer: CanvasRenderer;
-  #tools: ToolControllers;
+  #tools: Tools;
 
   constructor(
     options: CursorControllerOptions

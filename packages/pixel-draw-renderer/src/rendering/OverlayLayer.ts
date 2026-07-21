@@ -12,7 +12,7 @@ import type {
   BrushHighlight
 } from "../types.ts";
 
-export interface SvgManagerOptions {
+export interface OverlayLayerOptions {
   parent: HTMLDivElement;
   viewport: DefaultViewport;
   brush: BrushHighlight;
@@ -20,9 +20,10 @@ export interface SvgManagerOptions {
 }
 
 /**
- * Manages SVG rendering overlays.
+ * Owns the SVG element and the four camera-aligned overlays drawn over the
+ * canvas (brush highlight, line preview, selection, UV).
  */
-export class SvgManager {
+export class OverlayLayer {
   #parentHtmlElement: HTMLDivElement;
   #svg: SVGElement;
 
@@ -32,7 +33,7 @@ export class SvgManager {
   readonly uvOverlay: UVOverlay;
 
   constructor(
-    options: SvgManagerOptions
+    options: OverlayLayerOptions
   ) {
     this.#parentHtmlElement = options.parent;
     this.#svg = this.#init();

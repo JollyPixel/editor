@@ -1,6 +1,3 @@
-// Import Third-party Dependencies
-import Color from "colorjs.io";
-
 // Import Internal Dependencies
 import {
   Brush,
@@ -8,22 +5,16 @@ import {
   type BrushOptions
 } from "./tools/Brush.ts";
 import {
-  ToolControllers,
+  Tools,
   type Toolset
-} from "./tools/ToolControllers.ts";
-import {
-  CanvasBuffer
-} from "./buffer/CanvasBuffer.ts";
-import {
-  CanvasRenderer
-} from "./rendering/CanvasRenderer.ts";
+} from "./tools/Tools.ts";
 import {
   CursorController
 } from "./rendering/CursorController.ts";
 import {
-  HistoryController,
+  History,
   type HistoryState
-} from "./history/HistoryController.ts";
+} from "./history/History.ts";
 import {
   createInputActions
 } from "./input/createInputActions.ts";
@@ -35,12 +26,8 @@ import type {
   Keybindings,
   KeybindingsMap
 } from "./input/Keybindings.ts";
-import {
-  SvgManager
-} from "./rendering/SvgManager.ts";
-import {
-  Viewport,
-  type DefaultViewport
+import type {
+  DefaultViewport
 } from "./rendering/Viewport.ts";
 import type {
   Zoom,
@@ -49,10 +36,15 @@ import type {
 import {
   EditPipeline
 } from "./sync/EditPipeline.ts";
-import { UVMap } from "./uv/UVMap.ts";
+import {
+  PixelDocument
+} from "./PixelDocument.ts";
+import {
+  CanvasView
+} from "./CanvasView.ts";
+import type { UVMap } from "./uv/UVMap.ts";
 import type { UVRegion } from "./uv/UVRegion.ts";
 import { toRGBA } from "./utils/colors.ts";
-import { clamp } from "./utils/math.ts";
 import type {
   BrushHighlight,
   ColorInput,
@@ -141,17 +133,14 @@ export interface PixelArtCanvasOptions {
 
 export class PixelArtCanvas {
   #parentHtmlElement: HTMLDivElement;
-  #viewport: Viewport;
-  #canvasBuffer: CanvasBuffer;
-  #renderer: CanvasRenderer;
+  #doc: PixelDocument;
+  #view: CanvasView;
   #input: InputController;
-  #svgManager: SvgManager;
 
   #edits: EditPipeline;
   #onDrawEnd?: () => void;
-  #history: HistoryController;
   #mode: Mode;
-  #tools: ToolControllers;
+  #tools: Tools;
   #cursor: CursorController;
 
   readonly brush: Brush;
@@ -175,78 +164,22 @@ export class PixelArtCanvas {
       ? { x: options.texture.size.x, y: options.texture.size.y ?? options.texture.size.x }
       : { x: 64, y: 32 };
 
-    const initialBounds = parentHtmlElement.getBoundingClientRect();
-    const zoomDefault = options.zoom?.default ?? PixelArtCanvas.#computeFitZoom(
-      initialBounds,
-      textureSize,
-      { min: options.zoom?.min, max: options.zoom?.max }
-    );
-
-    this.#viewport = new Viewport({
-      textureSize,
-      zoom: zoomDefault,
-      zoomMin: options.zoom?.min,
-      zoomMax: options.zoom?.max,
-      zoomSensitivity: options.zoom?.sensitivity
-    });
-    this.viewport = this.#viewport;
-
-    this.#canvasBuffer = new CanvasBuffer({
+    this.#doc = new PixelDocument({
       size: textureSize,
       defaultColor: options.texture?.defaultColor,
-      maxSize: options.texture?.maxSize
+      maxSize: options.texture?.maxSize,
+      init: options.texture?.init,
+      history: {
+        enabled: options.history?.enabled,
+        limit: options.history?.limit,
+        onChange: options.onHistoryChange
+      }
     });
-
-    if (options.texture?.init) {
-      this.#canvasBuffer.loadTexture(options.texture.init);
-    }
-
-    this.uv = new UVMap({
-      getCanvasSize: () => this.#canvasBuffer.size()
-    });
-
-    this.#history = new HistoryController(this.#canvasBuffer, this.uv, {
-      enabled: options.history?.enabled,
-      limit: options.history?.limit,
-      onChange: options.onHistoryChange
-    });
-
-    const computedBackgroundColor = getComputedStyle(parentHtmlElement).backgroundColor;
-    const backgroundColor = options.backgroundColor ?? (
-      computedBackgroundColor && new Color(computedBackgroundColor).alpha > 0
-        ? computedBackgroundColor
-        : "#424242"
-    );
-
-    this.#renderer = new CanvasRenderer({
-      viewport: this.#viewport,
-      canvasBuffer: this.#canvasBuffer,
-      bgSquareSize: options.backgroundTransparency?.squareSize,
-      bgColors: options.backgroundTransparency?.colors,
-      backgroundColor
-    });
+    this.uv = this.#doc.uv;
 
     this.brush = new Brush(options.brush);
 
-    this.#edits = new EditPipeline({
-      brush: this.brush,
-      canvasBuffer: this.#canvasBuffer,
-      viewport: this.#viewport,
-      renderer: this.#renderer,
-      history: this.#history,
-      uvMap: this.uv,
-      onBufferUpdated: options.onBufferUpdated,
-      onDrawEnd: options.onDrawEnd
-    });
-
-    this.#renderer.appendTo(parentHtmlElement);
-
-    const bounds = parentHtmlElement.getBoundingClientRect();
-    this.#renderer.resize(bounds.width, bounds.height);
-    this.#viewport.updateCanvasSize(bounds.width, bounds.height);
-
     const brushRef = this.brush;
-    const viewportRef: DefaultViewport = this.#viewport;
     const self = this;
 
     const brushAdapter: BrushHighlight = {
@@ -261,42 +194,64 @@ export class PixelArtCanvas {
       }
     };
 
-    this.#svgManager = new SvgManager({
+    this.#view = new CanvasView(this.#doc, {
       parent: parentHtmlElement,
-      viewport: viewportRef,
-      brush: brushAdapter,
-      uvMap: this.uv
+      zoom: options.zoom,
+      background: options.backgroundColor,
+      backgroundTransparency: options.backgroundTransparency,
+      brushHighlight: brushAdapter
+    });
+    this.viewport = this.#view.viewport;
+
+    this.#edits = new EditPipeline({
+      brush: this.brush,
+      canvasBuffer: this.#doc.buffer,
+      viewport: this.#view.viewport,
+      renderer: this.#view.renderer,
+      history: this.#doc.history,
+      uvMap: this.#doc.uv,
+      onBufferUpdated: options.onBufferUpdated,
+      onDrawEnd: options.onDrawEnd
     });
 
-    this.#tools = new ToolControllers({
+    this.#tools = new Tools({
       brush: this.brush,
-      canvasBuffer: this.#canvasBuffer,
-      renderer: this.#renderer,
-      linePreview: this.#svgManager.linePreview,
-      selectionOverlay: this.#svgManager.selection,
+      canvasBuffer: this.#doc.buffer,
+      renderer: this.#view.renderer,
+      linePreview: this.#view.overlays.linePreview,
+      selectionOverlay: this.#view.overlays.selection,
       eraseColor,
-      uvMap: this.uv,
-      uvOverlay: this.#svgManager.uvOverlay,
+      uvMap: this.#doc.uv,
+      uvOverlay: this.#view.overlays.uvOverlay,
       pipeline: this.#edits
     });
     this.tools = this.#tools;
 
+    // Camera changes (pan / zoom / canvas-resize / center) repaint the canvas
+    // and re-place every camera-dependent overlay. One subscriber replaces the
+    // three identical blocks previously copied across onResize/onPanMove/onZoom.
+    this.#view.viewport.on("changed", () => {
+      this.#view.drawFrame();
+      this.#tools.line.refreshPreview();
+      this.#tools.select.refreshOverlay();
+      this.#view.overlays.uvOverlay.refresh();
+    });
+
     this.#cursor = new CursorController({
-      renderer: this.#renderer,
+      renderer: this.#view.renderer,
       tools: this.#tools
     });
 
     this.#input = new InputController({
-      canvas: this.#renderer.canvas(),
-      viewport: this.#viewport,
+      canvas: this.#view.renderer.canvas(),
+      viewport: this.#view.viewport,
       window: options.window,
       actions: {
         ...createInputActions({
           getMode: () => this.#mode,
-          renderer: this.#renderer,
           cursor: this.#cursor,
-          svgManager: this.#svgManager,
-          viewport: this.#viewport,
+          overlays: this.#view.overlays,
+          viewport: this.#view.viewport,
           tools: this.#tools,
           stopDrawing: () => this.#input.stopDrawing()
         }),
@@ -318,7 +273,7 @@ export class PixelArtCanvas {
   ) {
     this.#mode = mode;
     if (mode === "move") {
-      this.#svgManager.brushHighlight.hide();
+      this.#view.overlays.brushHighlight.hide();
       this.#tools.line.cancelIfArmed();
     }
     if (mode !== "select") {
@@ -337,13 +292,13 @@ export class PixelArtCanvas {
    * Canvas color outside texture bounds.
    */
   get backgroundColor(): string {
-    return this.#renderer.backgroundColor;
+    return this.#view.backgroundColor;
   }
 
   set backgroundColor(
     color: ColorInput
   ) {
-    this.#renderer.backgroundColor = color;
+    this.#view.backgroundColor = color;
   }
 
   get parentHtmlElement(): HTMLDivElement {
@@ -359,14 +314,13 @@ export class PixelArtCanvas {
       return;
     }
 
-    this.#renderer.reparentTo(newParentElement);
-    this.#svgManager.reparentTo(newParentElement);
+    this.#view.reparentTo(newParentElement);
     this.#parentHtmlElement = newParentElement;
     this.onResize();
   }
 
   get textureSize(): Vec2 {
-    return this.#canvasBuffer.size();
+    return this.#doc.buffer.size();
   }
 
   set textureSize(
@@ -385,11 +339,11 @@ export class PixelArtCanvas {
   }
 
   get camera(): Vec2 {
-    return { ...this.#viewport.camera };
+    return { ...this.#view.viewport.camera };
   }
 
   get zoom(): Zoom {
-    return this.#viewport.zoom;
+    return this.#view.viewport.zoom;
   }
 
   get keybindings(): Keybindings {
@@ -397,8 +351,7 @@ export class PixelArtCanvas {
   }
 
   centerTexture(): void {
-    this.#viewport.centerTexture();
-    this.#renderer.drawFrame();
+    this.#view.centerTexture();
   }
 
   onResize(): void {
@@ -411,35 +364,22 @@ export class PixelArtCanvas {
       return;
     }
 
-    this.#renderer.resize(bounds.width, bounds.height);
-    this.#viewport.resizeCanvas(bounds.width, bounds.height);
-    this.#svgManager.resize(bounds.width, bounds.height);
-
-    // resizeCanvas() shifts the camera to keep content centered; every SVG
-    // overlay computed from the old camera position must redraw itself
-    // against the new one, same as after a pan/zoom (see createInputActions).
-    this.#tools.line.refreshPreview();
-    this.#tools.select.refreshOverlay();
-    this.#svgManager.uvOverlay.refresh();
-
-    this.#renderer.drawFrame();
+    // view.resize() ends by resizing the viewport, whose "changed" signal
+    // repaints and re-places the camera-dependent overlays.
+    this.#view.resize(bounds.width, bounds.height);
   }
 
   textureCanvas(): HTMLCanvasElement {
-    return this.#canvasBuffer.canvas();
+    return this.#doc.buffer.canvas();
   }
 
   canvas(): HTMLCanvasElement {
-    return this.#renderer.canvas();
+    return this.#view.canvas();
   }
 
   destroy(): void {
     this.#input.destroy();
-    const rendererCanvas = this.#renderer.canvas();
-    if (rendererCanvas.parentElement) {
-      rendererCanvas.remove();
-    }
-    this.#svgManager.destroy();
+    this.#view.destroy();
   }
 
   set texture(
@@ -449,7 +389,7 @@ export class PixelArtCanvas {
   }
 
   get texture(): Uint8ClampedArray {
-    return this.#canvasBuffer.pixels();
+    return this.#doc.buffer.pixels();
   }
 
   /**
@@ -466,7 +406,7 @@ export class PixelArtCanvas {
     * Reverts the latest local edit.
     */
   undo(): boolean {
-    const entry = this.#edits.runHistoryReplay(() => this.#history.undo());
+    const entry = this.#edits.runHistoryReplay(() => this.#doc.history.undo());
     if (!entry) {
       return false;
     }
@@ -478,7 +418,7 @@ export class PixelArtCanvas {
         entry.oldMask
       );
     }
-    for (const event of HistoryController.buildUndoReplayEvents(entry)) {
+    for (const event of History.buildUndoReplayEvents(entry)) {
       this.#edits.emitHook(event);
     }
     this.#onDrawEnd?.();
@@ -490,7 +430,7 @@ export class PixelArtCanvas {
     * Reapplies the latest reverted edit.
     */
   redo(): boolean {
-    const entry = this.#edits.runHistoryReplay(() => this.#history.redo());
+    const entry = this.#edits.runHistoryReplay(() => this.#doc.history.redo());
     if (!entry) {
       return false;
     }
@@ -505,7 +445,7 @@ export class PixelArtCanvas {
         entry.newMask
       );
     }
-    for (const event of HistoryController.buildRedoReplayEvents(entry)) {
+    for (const event of History.buildRedoReplayEvents(entry)) {
       this.#edits.emitHook(event);
     }
     this.#onDrawEnd?.();
@@ -514,11 +454,11 @@ export class PixelArtCanvas {
   }
 
   canUndo(): boolean {
-    return this.#history.canUndo;
+    return this.#doc.history.canUndo;
   }
 
   canRedo(): boolean {
-    return this.#history.canRedo;
+    return this.#doc.history.canRedo;
   }
 
   /**
@@ -551,39 +491,9 @@ export class PixelArtCanvas {
   }
 
   #refreshAfterHistoryApply(): void {
-    this.#viewport.texture.resize(
-      this.#canvasBuffer.size()
+    this.#view.viewport.texture.resize(
+      this.#doc.buffer.size()
     );
-    this.#renderer.drawFrame();
-  }
-
-  /**
-   * Picks a default zoom that fits the whole texture inside the container's
-   * initial size, so a large texture in a small container doesn't start
-   * zoomed in past what's visible. Only used when `zoom.default` is
-   * omitted; an explicit value always wins. Falls back to `Zoom`'s own
-   * default (4) when the container has no measurable size yet (e.g.
-   * `display: none`).
-   */
-  static #computeFitZoom(
-    containerSize: { width: number; height: number; },
-    textureSize: Vec2,
-    zoomBounds: { min?: number; max?: number; }
-  ): number {
-    const zoomMin = zoomBounds.min ?? 1;
-    const zoomMax = zoomBounds.max ?? 32;
-
-    if (containerSize.width <= 0 || containerSize.height <= 0) {
-      return clamp(4, zoomMin, zoomMax);
-    }
-
-    // Leaves a small margin so the texture isn't flush against the edges.
-    const kFitPadding = 0.9;
-    const fit = Math.min(
-      containerSize.width / textureSize.x,
-      containerSize.height / textureSize.y
-    ) * kFitPadding;
-
-    return clamp(Math.floor(fit), zoomMin, zoomMax);
+    this.#view.drawFrame();
   }
 }

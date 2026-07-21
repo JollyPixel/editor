@@ -7,9 +7,9 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  HistoryController,
+  History,
   type HistoryState
-} from "#src/history/HistoryController.ts";
+} from "#src/history/History.ts";
 import { PixelBuffer } from "#src/buffer/PixelBuffer.ts";
 import { UVMap } from "#src/uv/UVMap.ts";
 import type { RGBA } from "#src/types.ts";
@@ -32,10 +32,10 @@ function makeUvMap(): UVMap {
   } });
 }
 
-describe("HistoryController", () => {
+describe("History", () => {
   describe("disabled (default)", () => {
     test("push/undo/redo are no-ops and canUndo/canRedo stay false", () => {
-      const controller = new HistoryController(
+      const controller = new History(
         makeBuffer(),
         makeUvMap()
       );
@@ -58,7 +58,7 @@ describe("HistoryController", () => {
   describe("enabled", () => {
     test("push records an entry that undo/redo replay against the buffer", () => {
       const buffer = makeBuffer();
-      const controller = new HistoryController(
+      const controller = new History(
         buffer,
         makeUvMap(),
         { enabled: true }
@@ -92,7 +92,7 @@ describe("HistoryController", () => {
     });
 
     test("clear discards both stacks", () => {
-      const controller = new HistoryController(
+      const controller = new History(
         makeBuffer(),
         makeUvMap(),
         { enabled: true }
@@ -114,7 +114,7 @@ describe("HistoryController", () => {
 
     test("limit bounds the undo stack", () => {
       const buffer = makeBuffer();
-      const controller = new HistoryController(
+      const controller = new History(
         buffer,
         makeUvMap(),
         { enabled: true, limit: 1 }
@@ -141,7 +141,7 @@ describe("HistoryController", () => {
   describe("onChange", () => {
     test("fires after push, undo, redo, and clear — never on a no-op", () => {
       const states: HistoryState[] = [];
-      const controller = new HistoryController(makeBuffer(), makeUvMap(), {
+      const controller = new History(makeBuffer(), makeUvMap(), {
         enabled: true,
         onChange: (state) => states.push(state)
       });
@@ -184,7 +184,7 @@ describe("HistoryController", () => {
 
     test("does not fire on a disabled controller", () => {
       const states: HistoryState[] = [];
-      const controller = new HistoryController(makeBuffer(), makeUvMap(), {
+      const controller = new History(makeBuffer(), makeUvMap(), {
         enabled: false,
         onChange: (state) => states.push(state)
       });

@@ -1,5 +1,5 @@
 // Factories shared across the SVG overlay specs (BrushHighlight, LinePreview,
-// Selection, UV) and SvgManager.
+// Selection, UV) and OverlayLayer.
 
 // Import Internal Dependencies
 import { SVG_NS } from "#src/rendering/constants.ts";

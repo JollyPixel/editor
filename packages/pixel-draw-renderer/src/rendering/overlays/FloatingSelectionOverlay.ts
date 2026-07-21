@@ -1,4 +1,5 @@
 // Import Internal Dependencies
+import { TypedEventEmitter } from "../../utils/EventEmitter.ts";
 import type {
   RGBA,
   SelectionRect
@@ -26,9 +27,17 @@ export interface FloatingOverlayOptions {
 }
 
 /**
+ * Fired after the floating selection appears, moves, or clears — a view
+ * change the pixel buffer knows nothing about, so the view repaints on it.
+ */
+export type FloatingSelectionEvent = { type: "changed"; };
+
+/**
  * Renders a floating selection overlay.
  */
-export class FloatingSelectionOverlay {
+export class FloatingSelectionOverlay extends TypedEventEmitter<
+  FloatingSelectionEvent
+> {
   #canvas: HTMLCanvasElement | null = null;
   #eraseCanvas: HTMLCanvasElement | null = null;
   #eraseIsUniform = true;
@@ -67,6 +76,7 @@ export class FloatingSelectionOverlay {
     this.#sourceRect = sourceRect;
     this.#liveRect = sourceRect;
     this.#blankSource = blankSource;
+    this.emit({ type: "changed" });
   }
 
   static #buildUniformEraseCanvas(
@@ -97,7 +107,10 @@ export class FloatingSelectionOverlay {
     eraseCanvas.height = sourceRect.height;
     const eraseCtx = eraseCanvas.getContext("2d")!;
     eraseCtx.imageSmoothingEnabled = false;
-    const eraseImageData = eraseCtx.createImageData(sourceRect.width, sourceRect.height);
+    const eraseImageData = eraseCtx.createImageData(
+      sourceRect.width,
+      sourceRect.height
+    );
 
     for (let i = 0; i < mask.length; i++) {
       if (!mask[i]) {
@@ -125,15 +138,22 @@ export class FloatingSelectionOverlay {
     }
 
     this.#liveRect = liveRect;
+    this.emit({ type: "changed" });
   }
 
   clear(): void {
+    const wasActive = this.#canvas !== null;
+
     this.#canvas = null;
     this.#eraseCanvas = null;
     this.#eraseIsUniform = true;
     this.#sourceRect = null;
     this.#liveRect = null;
     this.#blankSource = true;
+
+    if (wasActive) {
+      this.emit({ type: "changed" });
+    }
   }
 
   /**

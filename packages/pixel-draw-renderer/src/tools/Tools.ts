@@ -25,7 +25,7 @@ import type { LinePreviewOverlay } from "../rendering/overlays/LinePreviewOverla
 import type { SelectionOverlay } from "../rendering/overlays/SelectionOverlay.ts";
 import type { RGBA } from "../types.ts";
 
-export interface ToolControllersOptions {
+export interface ToolsOptions {
   brush: Brush;
   canvasBuffer: CanvasBuffer;
   renderer: CanvasRenderer;
@@ -48,9 +48,10 @@ export interface Toolset {
 }
 
 /**
- * Groups drawing tool controllers.
+ * Groups the drawing tool controllers. The concrete container behind the
+ * public `Toolset` view (`PixelArtCanvas.tools`).
  */
-export class ToolControllers {
+export class Tools {
   readonly brush: BrushController;
   readonly fill: FillController;
   readonly line: LineController;
@@ -58,12 +59,12 @@ export class ToolControllers {
   readonly uv: UVController;
 
   constructor(
-    options: ToolControllersOptions
+    options: ToolsOptions
   ) {
     this.brush = new BrushController({
       brush: options.brush,
       canvasBuffer: options.canvasBuffer,
-      renderer: options.renderer,
+      canvas: options.renderer.canvas(),
       pipeline: options.pipeline
     });
 
@@ -81,7 +82,7 @@ export class ToolControllers {
 
     this.select = new SelectController({
       canvasBuffer: options.canvasBuffer,
-      renderer: options.renderer,
+      floatingSelection: options.renderer.floatingSelection,
       selectionOverlay: options.selectionOverlay,
       eraseColor: options.eraseColor,
       pipeline: options.pipeline

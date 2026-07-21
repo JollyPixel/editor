@@ -1,7 +1,6 @@
 // Import Internal Dependencies
 import type { Brush, BrushColorSlot } from "./Brush.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
-import type { CanvasRenderer } from "../rendering/CanvasRenderer.ts";
 import type { EditPipeline } from "../sync/EditPipeline.ts";
 import { rgbToHex, toRGBA } from "../utils/colors.ts";
 import type { RGBA, Vec2 } from "../types.ts";
@@ -9,7 +8,8 @@ import type { RGBA, Vec2 } from "../types.ts";
 export interface BrushControllerOptions {
   brush: Brush;
   canvasBuffer: CanvasBuffer;
-  renderer: CanvasRenderer;
+  /** The display canvas the `colorpicked` event is dispatched on. */
+  canvas: HTMLCanvasElement;
   pipeline: EditPipeline;
 }
 
@@ -29,7 +29,7 @@ export interface BrushTool {
 export class BrushController implements BrushTool {
   #brush: Brush;
   #canvasBuffer: CanvasBuffer;
-  #renderer: CanvasRenderer;
+  #canvas: HTMLCanvasElement;
   #pipeline: EditPipeline;
 
   #strokeDirty = new Map<string, Vec2>();
@@ -43,7 +43,7 @@ export class BrushController implements BrushTool {
   ) {
     this.#brush = options.brush;
     this.#canvasBuffer = options.canvasBuffer;
-    this.#renderer = options.renderer;
+    this.#canvas = options.canvas;
     this.#pipeline = options.pipeline;
   }
 
@@ -90,7 +90,7 @@ export class BrushController implements BrushTool {
       bubbles: true,
       composed: true
     });
-    this.#renderer.canvas().dispatchEvent(event);
+    this.#canvas.dispatchEvent(event);
 
     return { r, g, b, a };
   }
@@ -142,7 +142,6 @@ export class BrushController implements BrushTool {
     }
 
     this.#canvasBuffer.drawPixels(affected, rgba);
-    this.#renderer.drawFrame();
 
     this.#strokeColor ??= rgba;
   }

@@ -397,4 +397,66 @@ describe("CanvasBuffer", () => {
       assert.strictEqual(ctx.putImageDataCallCount, before);
     });
   });
+
+  describe("changed signal", () => {
+    function countChanges(
+      buf: CanvasBuffer
+    ): () => number {
+      let count = 0;
+      buf.on("changed", () => {
+        count++;
+      });
+
+      return () => count;
+    }
+
+    test("emits once per drawPixels", () => {
+      const buf = new CanvasBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
+      const changes = countChanges(buf);
+
+      buf.drawPixels([{ x: 1, y: 1 }], { r: 1, g: 2, b: 3, a: 4 });
+
+      assert.strictEqual(changes(), 1);
+    });
+
+    test("emits once per drawRegion", () => {
+      const buf = new CanvasBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
+      const changes = countChanges(buf);
+
+      buf.drawRegion(
+        { x: 0, y: 0, width: 2, height: 2 },
+        new Array(4).fill({ r: 1, g: 1, b: 1, a: 1 })
+      );
+
+      assert.strictEqual(changes(), 1);
+    });
+
+    test("emits once per drawMaskedRegion", () => {
+      const buf = new CanvasBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
+      const changes = countChanges(buf);
+
+      buf.drawMaskedRegion(
+        { x: 0, y: 0, width: 2, height: 2 },
+        new Array(4).fill({ r: 1, g: 1, b: 1, a: 1 }),
+        new Array(4).fill(true)
+      );
+
+      assert.strictEqual(changes(), 1);
+    });
+
+    test("does not emit on size-changing ops or copyToMaster", () => {
+      const buf = new CanvasBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
+      const changes = countChanges(buf);
+
+      buf.copyToMaster();
+      buf.resize({ x: 8, y: 8 });
+      buf.replacePixels(new Uint8ClampedArray(4 * 4 * 4), { x: 4, y: 4 });
+
+      assert.strictEqual(
+        changes(),
+        0,
+        "callers repaint these explicitly after resizing the viewport texture"
+      );
+    });
+  });
 });

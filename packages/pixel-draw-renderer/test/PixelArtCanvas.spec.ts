@@ -13,6 +13,7 @@ import Color from "colorjs.io";
 import { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
 import { makeContainer } from "./helpers/dom.ts";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
+import { mockContextOf } from "./fixtures/canvas.ts";
 
 describe("PixelArtCanvas", () => {
   let container: HTMLDivElement;
@@ -626,6 +627,31 @@ describe("PixelArtCanvas", () => {
       canvas.dispatchEvent(event);
 
       assert.ok(event.defaultPrevented);
+      manager.destroy();
+    });
+  });
+
+  describe("repaint (no double-paint)", () => {
+    test("a committed stroke repaints exactly once", () => {
+      const { manager, canvas } = createPixelArtCanvas();
+      const displayCtx = mockContextOf(canvas);
+
+      // Baseline: one drawFrame's worth of display drawImage calls.
+      displayCtx.drawImageCallCount = 0;
+      manager.centerTexture();
+      const perFrame = displayCtx.drawImageCallCount;
+      assert.ok(perFrame > 0, "centerTexture should repaint once");
+
+      // A single buffer mutation must drive exactly one drawFrame via the
+      // CanvasBuffer "changed" signal — not two (a leftover explicit call).
+      displayCtx.drawImageCallCount = 0;
+      manager.commitPixels([{ x: 1, y: 1 }, { x: 2, y: 2 }]);
+
+      assert.strictEqual(
+        displayCtx.drawImageCallCount,
+        perFrame,
+        "one committed stroke should paint exactly one frame"
+      );
       manager.destroy();
     });
   });

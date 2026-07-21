@@ -67,6 +67,7 @@ export class MockCanvas2DContext {
   fillStyle = "#000000";
   imageSmoothingEnabled = false;
   putImageDataCallCount = 0;
+  drawImageCallCount = 0;
   readonly canvas: HTMLCanvasElement;
 
   #pixels: Uint8ClampedArray;
@@ -141,6 +142,7 @@ export class MockCanvas2DContext {
     image: unknown,
     ...args: number[]
   ): void {
+    this.drawImageCallCount++;
     if (!isCanvasSource(image)) {
       return;
     }

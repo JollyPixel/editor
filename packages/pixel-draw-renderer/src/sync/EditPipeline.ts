@@ -7,7 +7,7 @@ import type {
   PixelBufferHookEvent,
   PixelBufferHookListener
 } from "../buffer/hooks.ts";
-import type { HistoryController } from "../history/HistoryController.ts";
+import type { History } from "../history/History.ts";
 import type { HistoryEntryInput } from "../history/HistoryStack.types.ts";
 import type { CanvasRenderer } from "../rendering/CanvasRenderer.ts";
 import type { Viewport } from "../rendering/Viewport.ts";
@@ -32,7 +32,7 @@ export interface EditPipelineOptions {
   canvasBuffer: CanvasBuffer;
   viewport: Viewport;
   renderer: CanvasRenderer;
-  history: HistoryController;
+  history: History;
   uvMap: UVMap;
   onBufferUpdated?: PixelBufferHookListener;
   /**
@@ -53,7 +53,7 @@ export class EditPipeline {
   #canvasBuffer: CanvasBuffer;
   #viewport: Viewport;
   #renderer: CanvasRenderer;
-  #history: HistoryController;
+  #history: History;
   #uvMap: UVMap;
   #onBufferUpdated?: PixelBufferHookListener;
   #onDrawEnd?: () => void;
@@ -281,9 +281,10 @@ export class EditPipeline {
     color: RGBA,
     positions: Vec2[]
   ): void {
+    // drawPixels emits "changed"; the view repaints. copyToMaster persists the
+    // stroke to the master buffer (no visible change, so no repaint).
     this.#canvasBuffer.drawPixels(positions, color);
     this.#canvasBuffer.copyToMaster();
-    this.#renderer.drawFrame();
   }
 
   #resizeTexture(

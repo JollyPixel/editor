@@ -1,19 +1,17 @@
 // Import Internal Dependencies
-import type { ToolControllers } from "../tools/ToolControllers.ts";
-import type { CanvasRenderer } from "../rendering/CanvasRenderer.ts";
+import type { Tools } from "../tools/Tools.ts";
 import type { CursorController } from "../rendering/CursorController.ts";
-import type { SvgManager } from "../rendering/SvgManager.ts";
+import type { OverlayLayer } from "../rendering/OverlayLayer.ts";
 import type { Viewport } from "../rendering/Viewport.ts";
 import type { Mode } from "../types.ts";
 import type { InputActions } from "./InputController.ts";
 
 export interface CreateInputActionsOptions {
   getMode: () => Mode;
-  renderer: CanvasRenderer;
   cursor: CursorController;
-  svgManager: SvgManager;
+  overlays: OverlayLayer;
   viewport: Viewport;
-  tools: ToolControllers;
+  tools: Tools;
   /** Cancels the active primary drag without calling `onPrimaryUp`. */
   stopDrawing: () => void;
 }
@@ -27,9 +25,8 @@ export function createInputActions(
 ): Omit<InputActions, "onUndo" | "onRedo"> {
   const {
     getMode,
-    renderer,
     cursor,
-    svgManager,
+    overlays,
     viewport,
     tools,
     stopDrawing
@@ -160,32 +157,26 @@ export function createInputActions(
       // No-op. The viewport handles panning internally.
     },
     onPanMove: (dx, dy) => {
+      // applyPan emits "changed"; the coordinator repaints + refreshes overlays.
       viewport.applyPan(dx, dy);
-      renderer.drawFrame();
-      tools.line.refreshPreview();
-      tools.select.refreshOverlay();
-      svgManager.uvOverlay.refresh();
     },
     onPanEnd: () => {
       // No-op. The viewport handles panning internally.
     },
     onZoom: (delta, cx, cy) => {
+      // applyZoom emits "changed"; the coordinator repaints + refreshes overlays.
       viewport.applyZoom(delta, cx, cy);
-      renderer.drawFrame();
-      tools.line.refreshPreview();
-      tools.select.refreshOverlay();
-      svgManager.uvOverlay.refresh();
     },
     onMouseMove: (cx, cy) => {
       if (cx < 0 || cy < 0) {
-        svgManager.brushHighlight.update(null, null);
+        overlays.brushHighlight.update(null, null);
 
         return;
       }
 
       const mode = getMode();
       if (mode === "paint" || mode === "fill") {
-        svgManager.brushHighlight.update(cx, cy);
+        overlays.brushHighlight.update(cx, cy);
       }
     },
     onCursorMove: (pos) => {

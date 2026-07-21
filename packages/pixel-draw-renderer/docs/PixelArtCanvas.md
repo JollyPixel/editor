@@ -7,10 +7,10 @@ It wires together a viewport, canvas buffer, renderer, input handling, and SVG o
 - the [`Brush`](./tools/Brush.md) tool
 - the [`UVMap`](./uv/UVMap.md) value object (`"uv"` mode)
 - internal line/fill/select tools (no public class of their own)
-- an internal `HistoryController` wrapping a [`HistoryStack`](./history/HistoryStack.md) for undo/redo
+- an internal `History` wrapping a [`HistoryStack`](./history/HistoryStack.md) for undo/redo
 
 > [!IMPORTANT]
-> `HistoryController` is constructed unconditionally, but only records entries when `history.enabled` is passed. Leaving it unset skips that bookkeeping entirely.
+> `History` is constructed unconditionally, but only records entries when `history.enabled` is passed. Leaving it unset skips that bookkeeping entirely.
 
 ## Types
 
@@ -104,7 +104,7 @@ interface PixelArtCanvasOptions {
 
 `Mode` is `"paint" | "move" | "fill" | "select" | "uv"`. `ColorInput` (`string | Color`, where `Color` is [colorjs.io](https://colorjs.io)'s class) is used throughout the package wherever a color option is accepted: a CSS color string (hex, `rgb()`, `hsl()`, named color, ...) or a `Color` instance. `BrushOptions` is forwarded to the internal `Brush` instance, see [Brush.md](./tools/Brush.md). `PixelBufferHookListener` is described in [buffer/PixelBuffer.md](./buffer/PixelBuffer.md) and [network/index.md](./network/index.md). `KeybindingsMap` is described in [input/Keybindings.md](./input/Keybindings.md).
 
-`history.enabled` (default `false`) tells the internal `HistoryController` to back itself with a [`HistoryStack`](./history/HistoryStack.md) that records every stroke, resize, and texture replace, enabling `undo()`/`redo()`. Leaving it disabled skips that bookkeeping entirely: there's no per-edit cost paid for a feature that isn't used.
+`history.enabled` (default `false`) tells the internal `History` to back itself with a [`HistoryStack`](./history/HistoryStack.md) that records every stroke, resize, and texture replace, enabling `undo()`/`redo()`. Leaving it disabled skips that bookkeeping entirely: there's no per-edit cost paid for a feature that isn't used.
 
 Undocumented defaults: `texture.size` is `{ x: 64, y: 32 }` (`y` falls back to `x` when only `x` is given), `texture.maxSize` is `2048`, `zoom.default` fits the texture to the container (see above; falls back to `4` if the container has no measurable size yet), `zoom.min`/`zoom.max` are `1`/`32`, `zoom.sensitivity` is `0.1`, `backgroundTransparency.squareSize` is `8`, `backgroundTransparency.colors` is `{ odd: "#999", even: "#666" }`.
 
@@ -226,7 +226,7 @@ canUndo(): boolean
 canRedo(): boolean
 ```
 
-Reverts/re-applies the most recent local edit (stroke, resize, texture replace, or UV region create/delete/move) via the internal `HistoryController`, which wraps a [`HistoryStack`](./history/HistoryStack.md).
+Reverts/re-applies the most recent local edit (stroke, resize, texture replace, or UV region create/delete/move) via the internal `History`, which wraps a [`HistoryStack`](./history/HistoryStack.md).
 
 - `undo()`/`redo()` return `false` and do nothing when `history.enabled` wasn't passed at construction, or when the corresponding stack is empty.
 - `canUndo()`/`canRedo()` report the same condition without mutating anything.

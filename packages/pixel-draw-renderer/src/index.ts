@@ -6,7 +6,7 @@ export {
 export type { BrushTool } from "./tools/BrushController.ts";
 export type { FillTool } from "./tools/FillController.ts";
 export type { SelectTool } from "./tools/SelectController.ts";
-export type { Toolset } from "./tools/ToolControllers.ts";
+export type { Toolset } from "./tools/Tools.ts";
 export {
   PixelArtCanvas,
   type HistoryState,

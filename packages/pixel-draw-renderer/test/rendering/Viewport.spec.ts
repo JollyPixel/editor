@@ -360,4 +360,72 @@ describe("Viewport", () => {
       assert.strictEqual(vp.zoom.sensitivity, 0.1);
     });
   });
+
+  describe("changed signal", () => {
+    function makeViewport(): Viewport {
+      const vp = new Viewport({
+        textureSize: { x: 16, y: 16 },
+        zoom: 4
+      });
+      vp.updateCanvasSize(100, 100);
+
+      return vp;
+    }
+
+    function countChanges(
+      vp: Viewport
+    ): () => number {
+      let count = 0;
+      vp.on("changed", () => {
+        count++;
+      });
+
+      return () => count;
+    }
+
+    test("emits once per applyPan", () => {
+      const vp = makeViewport();
+      const changes = countChanges(vp);
+
+      vp.applyPan(5, 5);
+
+      assert.strictEqual(changes(), 1);
+    });
+
+    test("emits once per applyZoom", () => {
+      const vp = makeViewport();
+      const changes = countChanges(vp);
+
+      vp.applyZoom(1, 50, 50);
+
+      assert.strictEqual(changes(), 1);
+    });
+
+    test("emits once per resizeCanvas", () => {
+      const vp = makeViewport();
+      const changes = countChanges(vp);
+
+      vp.resizeCanvas(200, 200);
+
+      assert.strictEqual(changes(), 1);
+    });
+
+    test("emits once per centerTexture", () => {
+      const vp = makeViewport();
+      const changes = countChanges(vp);
+
+      vp.centerTexture();
+
+      assert.strictEqual(changes(), 1);
+    });
+
+    test("does not emit from updateCanvasSize", () => {
+      const vp = makeViewport();
+      const changes = countChanges(vp);
+
+      vp.updateCanvasSize(120, 120);
+
+      assert.strictEqual(changes(), 0);
+    });
+  });
 });
