@@ -209,6 +209,35 @@ describe("InteractionRouter", () => {
     assert.deepStrictEqual(modes[0].calls, []);
   });
 
+  test("a pan gesture shows grabbing, then restores the mode cursor on end", () => {
+    const { router, recorder } = makeRouter({
+      modes: [new FakeMode("paint", "crosshair")],
+      defaultMode: "paint"
+    });
+
+    router.onPanStart(0, 0);
+    router.onPanEnd();
+
+    assert.deepStrictEqual(recorder.cursor, ["grabbing", "crosshair"]);
+  });
+
+  test("Space arms a grab cursor and a pan restores to grab while it stays held", () => {
+    const { router, recorder } = makeRouter({
+      modes: [new FakeMode("paint", "crosshair")],
+      defaultMode: "paint"
+    });
+
+    router.onSpaceDown();
+    router.onPanStart(0, 0);
+    router.onPanEnd();
+    router.onSpaceUp();
+
+    assert.deepStrictEqual(
+      recorder.cursor,
+      ["grab", "grabbing", "grab", "crosshair"]
+    );
+  });
+
   test("delegates undo/redo to the injected callbacks", () => {
     let undo = 0;
     let redo = 0;

@@ -268,7 +268,9 @@ export class PixelArtCanvas {
       viewport: this.#view.viewport,
       window: options.window,
       actions: this.#router,
-      keybindings: options.keybindings
+      keybindings: options.keybindings,
+      // In "move" mode a plain left-drag pans (single-finger, trackpad-friendly).
+      shouldPanOnPrimary: () => this.#router.mode === "move"
     });
 
     this.centerTexture();

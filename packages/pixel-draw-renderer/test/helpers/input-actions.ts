@@ -49,6 +49,8 @@ export function makeActions(
     onMouseUp: [],
     onShiftDown: [],
     onShiftUp: [],
+    onSpaceDown: [],
+    onSpaceUp: [],
     onBlur: [],
     onCopy: [],
     onPaste: [],
@@ -113,6 +115,12 @@ export function makeActions(
     },
     onShiftUp: () => {
       calls.onShiftUp.push([]);
+    },
+    onSpaceDown: () => {
+      calls.onSpaceDown.push([]);
+    },
+    onSpaceUp: () => {
+      calls.onSpaceUp.push([]);
     },
     onBlur: () => {
       calls.onBlur.push([]);

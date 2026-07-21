@@ -18,7 +18,7 @@ Browser-based library for editing pixel-art textures. It provides zoom, pan, pri
 - **Rectangle select, move, copy, delete**: `Ctrl`/`Cmd`+`C`/`V` to copy/duplicate, `Delete` to erase
 - **UV regions**: create/move/delete rectangular UV regions independently of painting, via the `uv` value object; hidden by default, revealed by selection or an opt-in "show all"
 - **Undo/redo**: optional bounded history over strokes, resizes, texture replaces, and UV region changes; opt in via `history.enabled`
-- **Zoom & pan**: mouse-wheel zoom with configurable sensitivity and range; middle-click pan in any mode
+- **Zoom & pan**: mouse-wheel and trackpad-pinch zoom with configurable sensitivity and range; pan by middle-drag or `Space`+left-drag (trackpad-friendly) in any mode
 - **Transparency support**: checkerboard background renders beneath transparent pixels
 
 ## 💃 Getting Started
@@ -75,19 +75,19 @@ manager.texture = img;
 `mode` selects how left-click/drag is interpreted.
 
 - `"paint"`: left-click draws with `brush.primary`, right-click draws with `brush.secondary` (mutually exclusive — one button's stroke blocks the other from starting); hold `Shift` for a straight line (always `primary`); `Ctrl`+right-click eyedroppers a color into `brush.primary`
-- `"move"`: pans the camera
+- `"move"`: drag to pan the camera (single-finger, no modifier — the trackpad-friendly way to move around)
 - `"fill"`: flood-fills the clicked region with `brush.primary`; right-click has no effect
 - `"select"`: drag to select/move; `Ctrl`/`Cmd`+`C`/`V` copy/paste, `Delete` erases; right-click has no effect. Cursor is `grab`/`grabbing` while a selection exists/is being dragged.
 - `"uv"`: click a visible UV region to select/drag it; `Delete` deletes the selected region. There's no click-to-create — create regions via `manager.uv.create(...)`. The cursor is `grab`/`grabbing` in this mode.
 
-Middle-click pans in any mode.
+Switch to `"move"` mode and drag to pan with a single finger — the trackpad-friendly way to move around. From any mode you can also pan by middle-dragging or by holding `Space` and left-dragging (the `Space` chord is easy with a mouse, awkward one-handed on a trackpad). The mouse wheel and trackpad pinch both zoom toward the cursor.
 
 > [!TIP]
 > Read [PixelArtCanvas.md](./docs/PixelArtCanvas.md#mode) for the full behavior.
 
 ### Keybinds
 
-Copy/paste/undo/redo/delete are configurable; Shift (line-tool arm/disarm) is not. Defaults:
+Copy/paste/undo/redo/delete are configurable; `Shift` (line-tool arm/disarm) and `Space` (pan modifier) are not. Defaults:
 
 | Action | Default |
 |---|---|

@@ -14,6 +14,13 @@ import {
   isEditableTarget
 } from "./utils.ts";
 
+// CONSTANTS
+// Approximate pixels per WheelEvent.deltaMode unit (LINE = 1, PAGE = 2), so
+// line/page-based wheels (e.g. Firefox mouse) yield a pixel delta comparable
+// to pixel-based ones (trackpads, most mouse wheels).
+const kWheelLineHeight = 16;
+const kWheelPageHeight = 100;
+
 export interface InputActions {
   /**
    * Starts a primary interaction at texture coordinates. Return `false` for
@@ -72,6 +79,12 @@ export interface InputActions {
   /** Reports a non-repeat Shift press outside editable UI. */
   onShiftDown(): void;
   onShiftUp(): void;
+  /**
+   * Reports a non-repeat Space press (pan modifier) while hovering the canvas.
+   * While it's held, a left-drag pans instead of triggering the primary action.
+   */
+  onSpaceDown(): void;
+  onSpaceUp(): void;
   onBlur(): void;
   /**
    * Return `true` to handle copy and suppress the browser default.
@@ -157,6 +170,13 @@ export interface InputControllerOptions {
    * Unspecified actions keep their defaults; Shift is fixed.
    */
   keybindings?: Partial<KeybindingsMap>;
+  /**
+   * When it returns `true`, a plain left-drag pans instead of triggering the
+   * primary action — used to make navigation modes (e.g. `"move"`) pan with a
+   * single-finger drag, no Space chord needed. Space+drag pans regardless.
+   * @default () => false
+   */
+  shouldPanOnPrimary?: () => boolean;
 }
 
 /**
@@ -175,6 +195,8 @@ export class InputController {
   #isDraggingPrimary: boolean = false;
   #isDraggingSecondary: boolean = false;
   #isHovering: boolean = false;
+  #spaceHeld: boolean = false;
+  #shouldPanOnPrimary: () => boolean;
 
   readonly keybindings: Keybindings;
 
@@ -205,6 +227,7 @@ export class InputController {
     this.#viewport = viewport;
     this.#actions = actions;
     this.#window = windowLike;
+    this.#shouldPanOnPrimary = options.shouldPanOnPrimary ?? (() => false);
     this.keybindings = new Keybindings(options.keybindings);
 
     this.#onMouseDown = (event) => this.#handleMouseDown(event);
@@ -218,7 +241,7 @@ export class InputController {
     this.#onWindowMouseUp = () => this.#handleWindowMouseUp();
     this.#onKeyDown = (event) => this.#handleKeyDown(event);
     this.#onKeyUp = (event) => this.#handleKeyUp(event);
-    this.#onWindowBlur = () => this.#actions.onBlur();
+    this.#onWindowBlur = () => this.#handleWindowBlur();
 
     this.#canvas.addEventListener("mousedown", this.#onMouseDown);
     this.#canvas.addEventListener("mouseenter", this.#onMouseEnter);
@@ -283,10 +306,33 @@ export class InputController {
     this.#actions.onMouseUp();
   }
 
+  #beginPan(
+    event: MouseEvent
+  ): void {
+    this.#isPanning = true;
+    this.#panStart = {
+      x: event.clientX,
+      y: event.clientY
+    };
+    this.#actions.onPanStart(
+      event.clientX,
+      event.clientY
+    );
+  }
+
   #handleMouseDown(
     event: MouseEvent
   ): void {
     this.#isHovering = true;
+
+    // A left-drag pans (over the primary action) when Space is held or the
+    // active mode navigates (e.g. "move") — both trackpad-friendly, no middle
+    // button needed.
+    if (event.button === 0 && (this.#spaceHeld || this.#shouldPanOnPrimary())) {
+      this.#beginPan(event);
+
+      return;
+    }
 
     if (event.button === 0) {
       const pos = this.#resolveTexturePos(event);
@@ -305,15 +351,7 @@ export class InputController {
     }
 
     if (event.button === 1) {
-      this.#isPanning = true;
-      this.#panStart = {
-        x: event.clientX,
-        y: event.clientY
-      };
-      this.#actions.onPanStart(
-        event.clientX,
-        event.clientY
-      );
+      this.#beginPan(event);
     }
   }
 
@@ -367,9 +405,26 @@ export class InputController {
     this.#endDragAndReportMouseUp();
   }
 
+  // Converts a wheel delta to an approximate pixel amount regardless of
+  // deltaMode, so zoom steps are consistent across browsers and devices.
+  #normalizeWheelDelta(
+    event: WheelEvent
+  ): number {
+    if (event.deltaMode === 1) {
+      return event.deltaY * kWheelLineHeight;
+    }
+    if (event.deltaMode === 2) {
+      return event.deltaY * kWheelPageHeight;
+    }
+
+    return event.deltaY;
+  }
+
   #handleWheel(
     event: WheelEvent
   ): void {
+    // Also suppresses the browser's pinch page-zoom, which arrives here as a
+    // ctrlKey wheel event and drives the canvas zoom instead.
     event.preventDefault();
 
     const bounds = this.#canvas.getBoundingClientRect();
@@ -379,7 +434,7 @@ export class InputController {
       bounds
     );
     this.#actions.onZoom(
-      event.deltaY,
+      this.#normalizeWheelDelta(event),
       canvasPos.x,
       canvasPos.y
     );
@@ -422,6 +477,25 @@ export class InputController {
     this.#endDragAndReportMouseUp();
   }
 
+  #endPanModifier(): void {
+    if (!this.#spaceHeld) {
+      return;
+    }
+
+    this.#spaceHeld = false;
+    this.#actions.onSpaceUp();
+  }
+
+  #handleWindowBlur(): void {
+    if (this.#isPanning) {
+      this.#isPanning = false;
+      this.#actions.onPanEnd();
+    }
+
+    this.#endPanModifier();
+    this.#actions.onBlur();
+  }
+
   #handleKeyDown(
     event: KeyboardEvent
   ): void {
@@ -436,6 +510,17 @@ export class InputController {
     if (event.key === "Shift") {
       if (!event.repeat) {
         this.#actions.onShiftDown();
+      }
+
+      return;
+    }
+
+    if (event.code === "Space") {
+      // Suppress the page from scrolling while Space arms the pan modifier.
+      event.preventDefault();
+      if (!event.repeat && !this.#spaceHeld) {
+        this.#spaceHeld = true;
+        this.#actions.onSpaceDown();
       }
 
       return;
@@ -484,10 +569,14 @@ export class InputController {
   #handleKeyUp(
     event: KeyboardEvent
   ): void {
-    if (event.key !== "Shift") {
+    if (event.key === "Shift") {
+      this.#actions.onShiftUp();
+
       return;
     }
 
-    this.#actions.onShiftUp();
+    if (event.code === "Space") {
+      this.#endPanModifier();
+    }
   }
 }
