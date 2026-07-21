@@ -9,15 +9,17 @@ import {
   type Toolset
 } from "./tools/Tools.ts";
 import {
-  CursorController
-} from "./rendering/CursorController.ts";
-import {
   History,
   type HistoryState
 } from "./history/History.ts";
 import {
-  createInputActions
-} from "./input/createInputActions.ts";
+  InteractionRouter
+} from "./input/InteractionRouter.ts";
+import { PaintMode } from "./input/modes/PaintMode.ts";
+import { FillMode } from "./input/modes/FillMode.ts";
+import { SelectMode } from "./input/modes/SelectMode.ts";
+import { UVMode } from "./input/modes/UVMode.ts";
+import { MoveMode } from "./input/modes/MoveMode.ts";
 import {
   InputController,
   type WindowLike
@@ -139,9 +141,8 @@ export class PixelArtCanvas {
 
   #edits: EditPipeline;
   #onDrawEnd?: () => void;
-  #mode: Mode;
+  #router: InteractionRouter;
   #tools: Tools;
-  #cursor: CursorController;
 
   readonly brush: Brush;
   readonly viewport: DefaultViewport;
@@ -155,7 +156,7 @@ export class PixelArtCanvas {
   ) {
     this.#parentHtmlElement = parentHtmlElement;
     this.#onDrawEnd = options.onDrawEnd;
-    this.#mode = options.defaultMode ?? "paint";
+    const defaultMode: Mode = options.defaultMode ?? "paint";
     const eraseColor = options.select?.eraseColor === undefined ?
       null :
       toRGBA(options.select.eraseColor);
@@ -184,7 +185,7 @@ export class PixelArtCanvas {
 
     const brushAdapter: BrushHighlight = {
       get size() {
-        return self.#mode === "fill" || self.#tools.brush.pickArmed ? 1 : brushRef.size;
+        return self.#router.highlightBrushSize(brushRef.size);
       },
       get colorInline() {
         return brushRef.colorInline;
@@ -237,27 +238,36 @@ export class PixelArtCanvas {
       this.#view.overlays.uvOverlay.refresh();
     });
 
-    this.#cursor = new CursorController({
-      renderer: this.#view.renderer,
-      tools: this.#tools
+    this.#router = new InteractionRouter({
+      defaultMode,
+      viewport: this.#view.viewport,
+      setCursor: (cursor) => {
+        this.#view.renderer.cursor = cursor;
+      },
+      onUndo: () => this.undo(),
+      onRedo: () => this.redo(),
+      modes: [
+        new PaintMode({
+          brush: this.#tools.brush,
+          line: this.#tools.line,
+          highlight: this.#view.overlays.brushHighlight,
+          stopDrawing: () => this.#input.stopDrawing()
+        }),
+        new FillMode({
+          fill: this.#tools.fill,
+          highlight: this.#view.overlays.brushHighlight
+        }),
+        new SelectMode({ select: this.#tools.select }),
+        new UVMode({ uv: this.#tools.uv }),
+        new MoveMode()
+      ]
     });
 
     this.#input = new InputController({
       canvas: this.#view.renderer.canvas(),
       viewport: this.#view.viewport,
       window: options.window,
-      actions: {
-        ...createInputActions({
-          getMode: () => this.#mode,
-          cursor: this.#cursor,
-          overlays: this.#view.overlays,
-          viewport: this.#view.viewport,
-          tools: this.#tools,
-          stopDrawing: () => this.#input.stopDrawing()
-        }),
-        onUndo: () => this.undo(),
-        onRedo: () => this.redo()
-      },
+      actions: this.#router,
       keybindings: options.keybindings
     });
 
@@ -265,27 +275,13 @@ export class PixelArtCanvas {
   }
 
   get mode(): Mode {
-    return this.#mode;
+    return this.#router.mode;
   }
 
   set mode(
     mode: Mode
   ) {
-    this.#mode = mode;
-    if (mode === "move") {
-      this.#view.overlays.brushHighlight.hide();
-      this.#tools.line.cancelIfArmed();
-    }
-    if (mode !== "select") {
-      this.#tools.select.clear();
-    }
-    if (mode !== "paint") {
-      this.#tools.brush.pickArmed = false;
-    }
-    if (mode !== "uv") {
-      this.#tools.uv.cancelDrag();
-    }
-    this.#cursor.refresh(mode);
+    this.#router.mode = mode;
   }
 
   /**
@@ -412,7 +408,7 @@ export class PixelArtCanvas {
     }
 
     this.#refreshAfterHistoryApply();
-    if (entry.action === "select-edit" && this.#mode === "select") {
+    if (entry.action === "select-edit" && this.#router.mode === "select") {
       this.#tools.select.syncSelectionAfterHistory(
         entry.oldRect,
         entry.oldMask
@@ -438,7 +434,7 @@ export class PixelArtCanvas {
     this.#refreshAfterHistoryApply();
     if (
       entry.action === "select-edit" &&
-      this.#mode === "select"
+      this.#router.mode === "select"
     ) {
       this.#tools.select.syncSelectionAfterHistory(
         entry.newRect,
