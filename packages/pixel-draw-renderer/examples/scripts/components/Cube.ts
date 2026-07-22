@@ -63,9 +63,13 @@ export class CubeBehavior extends ActorComponent {
     this.regionId = region.id;
     this.canvasTexture = canvasTexture;
 
-    const geometry = new THREE.BoxGeometry(kCubeSize, kCubeSize, kCubeSize);
+    const geometry = new THREE.BoxGeometry(
+      kCubeSize,
+      kCubeSize,
+      kCubeSize
+    );
     this.#baseUV = Float32Array.from(
-      (geometry.attributes.uv as THREE.BufferAttribute).array
+      geometry.attributes.uv.array
     );
 
     this.mesh = new THREE.Mesh(
@@ -156,7 +160,7 @@ export class CubeBehavior extends ActorComponent {
     rect: SelectionRect,
     textureSize: Vec2
   ): void {
-    const uvAttr = this.mesh.geometry.attributes.uv as THREE.BufferAttribute;
+    const uvAttr = this.mesh.geometry.attributes.uv;
     const u0 = rect.x / textureSize.x;
     const u1 = (rect.x + rect.width) / textureSize.x;
     const v0 = 1 - ((rect.y + rect.height) / textureSize.y);

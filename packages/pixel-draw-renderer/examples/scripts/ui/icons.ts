@@ -1,8 +1,22 @@
 /* eslint-disable @stylistic/max-len */
 // Import Third-party Dependencies
-import { svg, type SVGTemplateResult } from "lit";
+import {
+  svg,
+  type SVGTemplateResult
+} from "lit";
 
-export type IconName = "move" | "paint" | "fill" | "select" | "uv" | "undo" | "redo" | "swap" | "eyedropper";
+export type IconName =
+  | "move"
+  | "paint"
+  | "fill"
+  | "select"
+  | "uv"
+  | "undo"
+  | "redo"
+  | "swap"
+  | "eyedropper"
+  | "import"
+  | "export";
 
 // CONSTANTS
 const kIcons: Record<IconName, SVGTemplateResult> = {
@@ -67,13 +81,23 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
     <path d="M11 7l6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
     <path d="M4 16 15.7 4.3a1 1 0 0 1 1.4 0l2.6 2.6a1 1 0 0 1 0 1.4L8 20H4v-4Z"
       fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+  `,
+  // Upload arrow into a tray: loading a texture file into the canvas.
+  import: svg`
+    <path d="M12 15V4" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M7.5 8.5 12 4l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+  `,
+  // Download arrow into a tray: saving the texture out to a PNG file.
+  export: svg`
+    <path d="M12 4v11" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M7.5 10.5 12 15l4.5-4.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
   `
 };
 
 /**
- * Renders a named icon as a self-contained <svg>. Colors follow the
- * button's CSS `color` via `currentColor`, so hover/active states need no
- * icon-specific styling.
+ * Renders a named icon as a self-contained <svg>.
  */
 export function renderIcon(
   name: IconName
