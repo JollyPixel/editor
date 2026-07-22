@@ -480,7 +480,7 @@ describe("PixelArtCanvas — select mode", () => {
     manager.destroy();
   });
 
-  test("onDrawEnd fires after a select-mode commit, but onBufferUpdated (network hook) does not", () => {
+  test("onDrawEnd fires after a select-mode commit, and onBufferUpdated emits a 'select-edit' network hook", () => {
     let drawEndCount = 0;
     const events: PixelBufferHookEvent[] = [];
     const manager = makeManager({
@@ -504,11 +504,8 @@ describe("PixelArtCanvas — select mode", () => {
     window.dispatchEvent(deleteKey());
 
     assert.strictEqual(drawEndCount, 1);
-    assert.strictEqual(
-      events.length,
-      0,
-      "select-mode ops have no network hook (out of scope for this feature)"
-    );
+    assert.strictEqual(events.length, 1);
+    assert.strictEqual(events[0].action, "select-edit");
     manager.destroy();
   });
 

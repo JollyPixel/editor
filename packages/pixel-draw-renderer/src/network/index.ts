@@ -1,6 +1,5 @@
 export type {
   PixelBufferSnapshot,
-  PixelLifecycleEvent,
   PixelNetworkCommand,
   PixelNetworkCommandHeader,
   PixelNetworkEvent
@@ -11,8 +10,7 @@ export type {
   PixelConflictResolver
 } from "./ConflictResolver.ts";
 export { LastWriteWinsResolver } from "./ConflictResolver.ts";
-export { applyCommandToWorld } from "./PixelCommandApplier.ts";
-export { PixelWorld } from "./PixelWorld.ts";
+export { applyCommandToBuffer } from "./PixelCommandApplier.ts";
 export type {
   PixelSyncSessionOptions
 } from "./PixelSyncSession.ts";

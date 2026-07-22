@@ -86,6 +86,18 @@ export class History {
           }
         ];
 
+      case "select-edit":
+        return [
+          {
+            action: "select-edit",
+            metadata: {
+              positions: entry.positions,
+              colors: entry.beforeColors
+            },
+            originTimestamp: timestamp
+          }
+        ];
+
       default:
         return [];
     }
@@ -128,6 +140,18 @@ export class History {
             metadata: {
               size: entry.afterSize,
               pixels: fromUint8Array(new Uint8Array(entry.afterPixels))
+            },
+            originTimestamp: timestamp
+          }
+        ];
+
+      case "select-edit":
+        return [
+          {
+            action: "select-edit",
+            metadata: {
+              positions: entry.positions,
+              colors: entry.afterColors
             },
             originTimestamp: timestamp
           }

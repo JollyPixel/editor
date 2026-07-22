@@ -26,6 +26,7 @@ import type {
 import type { FillGlobalCommit } from "../tools/FillController.ts";
 import type { SelectEditEntry } from "../tools/SelectController.ts";
 import { toRGBA } from "../utils/colors.ts";
+import { groupPositionsByColor } from "../history/utils.ts";
 
 export interface EditPipelineOptions {
   brush: Brush;
@@ -84,6 +85,13 @@ export class EditPipeline {
       "region-moved",
       (event) => this.#handleUvMoved(event.region, event.previousRect)
     );
+  }
+
+  /**
+   * The current local buffer-mutation listener.
+   */
+  get onBufferUpdated(): PixelBufferHookListener | undefined {
+    return this.#onBufferUpdated;
   }
 
   /**
@@ -164,10 +172,10 @@ export class EditPipeline {
   /**
    * Commits a selection edit (move / rotate / flip / paste / delete).
    *
-   * NOTE: unlike `commitStroke` / `commitGlobalFill`, a selection edit emits
-   * no network hook. This asymmetry is preserved from the pre-`EditPipeline`
-   * behavior; it now lives in one place should selection edits ever need to
-   * sync over the network.
+   * The hook carries `positions` + final per-pixel `colors` (not a single
+   * uniform color like `stroke`) since a footprint change can vacate one
+   * rect and paint another with arbitrary content — the same shape
+   * `HistoryStack` already replays for local undo/redo.
    */
   commitSelectionEdit(
     entry: SelectEditEntry
@@ -175,6 +183,13 @@ export class EditPipeline {
     this.#recordHistory({
       action: "select-edit",
       ...entry
+    });
+    this.emitHook({
+      action: "select-edit",
+      metadata: {
+        positions: entry.positions,
+        colors: entry.afterColors
+      }
     });
     this.#onDrawEnd?.();
   }
@@ -287,6 +302,16 @@ export class EditPipeline {
     this.#canvasBuffer.copyToMaster();
   }
 
+  #applySelectEdit(
+    positions: Vec2[],
+    colors: RGBA[]
+  ): void {
+    for (const group of groupPositionsByColor(positions, colors)) {
+      this.#canvasBuffer.drawPixels(group.positions, group.color);
+    }
+    this.#canvasBuffer.copyToMaster();
+  }
+
   #resizeTexture(
     size: Vec2
   ): void {
@@ -348,6 +373,14 @@ export class EditPipeline {
           this.#onDrawEnd?.();
           break;
         }
+
+        case "select-edit":
+          this.#applySelectEdit(
+            event.metadata.positions,
+            event.metadata.colors
+          );
+          this.#onDrawEnd?.();
+          break;
 
         case "uv-region-created":
           this.#uvMap.restore(event.metadata.region);

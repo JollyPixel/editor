@@ -2,7 +2,7 @@
 
 Conflicts are resolved **per pixel** for strokes, not per command. A single stroke command can touch thousands of pixels, so [`PixelSyncServer`](./PixelSyncServer.md) splits a command: pixels that lose the race are dropped from the applied/broadcast copy, the rest are applied normally.
 
-`"stroke"` and `"uv-region-moved"`/`"uv-region-deleted"` go through the same resolver — the latter two keyed **per region id** instead of per pixel, and rejected/accepted as one atomic unit (no partial application, since a region isn't a list of independently-owned cells). `"buffer-added"`, `"buffer-removed"`, `"resized"`, `"texture-replaced"`, `"global-fill"`, and `"uv-region-created"` are always accepted with no arbitration.
+`"stroke"` and `"select-edit"` share the same per-pixel history — they compete for the same pixels the way two strokes would. `"uv-region-moved"`/`"uv-region-deleted"` go through the same resolver — keyed **per region id** instead of per pixel, and rejected/accepted as one atomic unit (no partial application, since a region isn't a list of independently-owned cells). `"resized"`, `"texture-replaced"`, `"global-fill"`, and `"uv-region-created"` are always accepted with no arbitration.
 
 > [!IMPORTANT]
 > `"global-fill"` carries no position list to arbitrate against (see [buffer/PixelBuffer.md](../buffer/PixelBuffer.md)). It's applied by recomputing matching pixels against the server's own authoritative buffer at receive-time, which is self-consistent only because commands are applied in the order the server processes them.
@@ -34,7 +34,10 @@ interface PixelConflictResolver {
 
 ## `LastWriteWinsResolver`
 
-The default resolver. Higher `timestamp` wins. On a timestamp tie, the lexicographically greater `clientId` wins, giving a deterministic total order without coordination.
+The default resolver. A command from the **same client** as the pixel's last accepted command always wins, regardless of timestamp — see below. Otherwise, higher `timestamp` wins; on a timestamp tie, the lexicographically greater `clientId` wins, giving a deterministic total order without coordination.
+
+> [!IMPORTANT]
+> The same-client short-circuit exists for undo/redo replay. A replayed edit is stamped with its *original* commit's timestamp (`originTimestamp`, see [buffer/PixelBuffer.md](../buffer/PixelBuffer.md)) instead of "now", so it fairly re-races against another client's edit at that pixel. But `undo()` unwinds history newest-entry-first: two overlapping edits from the *same* client replay with a newer timestamp first, then an older one — and a plain timestamp comparison would reject that second, older-timestamped replay as stale, even though it's the same client legitimately continuing to unwind its own history. Since one client's commands always arrive in the order it sent them (single WebSocket connection, TCP-ordered), trusting the latest one it sends is always safe — the timestamp comparison only needs to arbitrate between genuinely different clients.
 
 ```ts
 import { LastWriteWinsResolver } from "@jolly-pixel/pixel-draw.renderer";

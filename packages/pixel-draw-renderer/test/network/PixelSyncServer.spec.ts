@@ -13,7 +13,7 @@ import {
   PixelSyncServer,
   type ClientHandle
 } from "#src/network/PixelSyncServer.ts";
-import { PixelWorld } from "#src/network/PixelWorld.ts";
+import { PixelBuffer } from "#src/buffer/PixelBuffer.ts";
 import type { PixelNetworkCommand } from "#src/network/types.ts";
 
 // ---------------------------------------------------------------------------
@@ -36,19 +36,38 @@ function createClient(id: string): MockClient {
   };
 }
 
+function makeServer(
+  size = { x: 4, y: 4 }
+): PixelSyncServer {
+  return new PixelSyncServer({
+    buffer: new PixelBuffer({ size })
+  });
+}
+
+/**
+ * Connects a client and wires the server's broadcast function (normally
+ * provided by NetworkServer.register()) to forward straight to it — the
+ * single-client fake a unit test needs to observe `receive()`'s broadcasts.
+ */
+function observe(
+  server: PixelSyncServer,
+  client: MockClient
+): void {
+  server.onClientConnect(client);
+  server.attach((payload) => client.send(payload));
+}
+
 function strokeCmd(
   opts: {
     clientId?: string;
     seq?: number;
     timestamp?: number;
-    bufferId?: string;
     positions?: { x: number; y: number; }[];
     color?: { r: number; g: number; b: number; a: number; };
   } = {}
 ): PixelNetworkCommand {
   return {
     action: "stroke",
-    bufferId: opts.bufferId ?? "tex1",
     metadata: {
       color: opts.color ?? { r: 1, g: 2, b: 3, a: 255 },
       positions: opts.positions ?? [{ x: 0, y: 0 }]
@@ -59,17 +78,28 @@ function strokeCmd(
   };
 }
 
-function bufferAddedCmd(
-  bufferId: string,
-  clientId = "client-A"
+function selectEditCmd(
+  opts: {
+    clientId?: string;
+    seq?: number;
+    timestamp?: number;
+    positions?: { x: number; y: number; }[];
+    colors?: { r: number; g: number; b: number; a: number; }[];
+  } = {}
 ): PixelNetworkCommand {
+  const positions = opts.positions ?? [{ x: 0, y: 0 }];
+
   return {
-    action: "buffer-added",
-    bufferId,
-    metadata: { size: { x: 4, y: 4 } },
-    clientId,
-    seq: 1,
-    timestamp: 1000
+    action: "select-edit",
+    metadata: {
+      positions,
+      colors: opts.colors ?? positions.map(() => {
+        return { r: 1, g: 2, b: 3, a: 255 };
+      })
+    },
+    clientId: opts.clientId ?? "client-A",
+    seq: opts.seq ?? 1,
+    timestamp: opts.timestamp ?? 1000
   };
 }
 
@@ -85,7 +115,6 @@ function uvCreatedCmd(
       };
       color: string;
     };
-    bufferId?: string;
     clientId?: string;
     seq?: number;
     timestamp?: number;
@@ -93,7 +122,6 @@ function uvCreatedCmd(
 ): PixelNetworkCommand {
   return {
     action: "uv-region-created",
-    bufferId: opts.bufferId ?? "tex1",
     metadata: { region: opts.region },
     clientId: opts.clientId ?? "client-A",
     seq: opts.seq ?? 1,
@@ -102,227 +130,41 @@ function uvCreatedCmd(
 }
 
 // ---------------------------------------------------------------------------
-// connect / disconnect (presence only)
+// connect / disconnect
+//
+// Peer-joined/peer-left notifications are now a NetworkServer concern (see
+// @jolly-pixel/network's NetworkServer.spec.ts) — PixelSyncServer no longer
+// broadcasts them itself.
 // ---------------------------------------------------------------------------
 
 describe("PixelSyncServer — connect", () => {
-  test("sends no buffer data on connect", () => {
-    const server = new PixelSyncServer();
+  test("sends the buffer's current snapshot immediately on connect", () => {
+    const server = makeServer();
     const client = createClient("A");
-    server.connect(client);
-    assert.strictEqual(client.received.length, 0);
-  });
-
-  test("notifies existing peers when a new client joins", () => {
-    const server = new PixelSyncServer();
-    const clientA = createClient("A");
-    const clientB = createClient("B");
-
-    server.connect(clientA);
-    server.connect(clientB);
-
-    assert.strictEqual(clientA.received.length, 1);
-    const notification = clientA.received[0] as {
-      type: string;
-      peerId: string;
-    };
-    assert.strictEqual(notification.type, "peer-joined");
-    assert.strictEqual(notification.peerId, "B");
-  });
-});
-
-describe("PixelSyncServer — disconnect", () => {
-  test("notifies remaining peers when a client leaves", () => {
-    const server = new PixelSyncServer();
-    const clientA = createClient("A");
-    const clientB = createClient("B");
-    server.connect(clientA);
-    server.connect(clientB);
-    clientA.received.length = 0;
-
-    server.disconnect("B");
-
-    assert.strictEqual(clientA.received.length, 1);
-    const msg = clientA.received[0] as {
-      type: string;
-      peerId: string;
-    };
-    assert.strictEqual(msg.type, "peer-left");
-    assert.strictEqual(msg.peerId, "B");
-  });
-
-  test("stops broadcasting to a disconnected client's subscriptions", () => {
-    const server = new PixelSyncServer();
-    server.world.addBuffer(
-      "tex1",
-      { size: { x: 4, y: 4 } }
-    );
-    const clientA = createClient("A");
-    server.connect(clientA);
-    server.subscribe("A", "tex1");
-    server.disconnect("A");
-    clientA.received.length = 0;
-
-    server.receive(strokeCmd({ clientId: "other" }));
-
-    assert.strictEqual(clientA.received.length, 0);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// subscribe / unsubscribe
-// ---------------------------------------------------------------------------
-
-describe("PixelSyncServer — subscribe", () => {
-  test("sends the buffer's current snapshot to the subscriber", () => {
-    const server = new PixelSyncServer();
-    server.world.addBuffer(
-      "tex1",
-      { size: { x: 4, y: 4 } }
-    );
-    const client = createClient("A");
-    server.connect(client);
-
-    server.subscribe("A", "tex1");
+    server.onClientConnect(client);
 
     assert.strictEqual(client.received.length, 1);
     const msg = client.received[0] as {
       type: string;
-      bufferId: string;
-      data: { size: unknown; pixels: string; };
+      data: { size: unknown; };
     };
     assert.strictEqual(msg.type, "snapshot");
-    assert.strictEqual(msg.bufferId, "tex1");
-    assert.deepStrictEqual(
-      msg.data.size,
-      { x: 4, y: 4 }
-    );
-  });
-
-  test("sends nothing when the buffer does not exist yet", () => {
-    const server = new PixelSyncServer();
-    const client = createClient("A");
-    server.connect(client);
-
-    server.subscribe("A", "no-such");
-
-    assert.strictEqual(client.received.length, 0);
-  });
-
-  test("only broadcasts to subscribers of that buffer", () => {
-    const server = new PixelSyncServer();
-    server.world.addBuffer(
-      "tex1",
-      { size: { x: 4, y: 4 } }
-    );
-    server.world.addBuffer(
-      "tex2",
-      { size: { x: 4, y: 4 } }
-    );
-
-    const clientA = createClient("A");
-    const clientB = createClient("B");
-    server.connect(clientA);
-    server.connect(clientB);
-    server.subscribe("A", "tex1");
-    server.subscribe("B", "tex2");
-    clientA.received.length = 0;
-    clientB.received.length = 0;
-
-    server.receive(strokeCmd({
-      bufferId: "tex1",
-      clientId: "X"
-    }));
-
-    assert.strictEqual(clientA.received.length, 1);
-    assert.strictEqual(clientB.received.length, 0);
-  });
-
-  test("unsubscribe stops future broadcasts for that buffer", () => {
-    const server = new PixelSyncServer();
-    server.world.addBuffer(
-      "tex1",
-      { size: { x: 4, y: 4 } }
-    );
-    const client = createClient("A");
-    server.connect(client);
-    server.subscribe("A", "tex1");
-    server.unsubscribe("A", "tex1");
-    client.received.length = 0;
-
-    server.receive(strokeCmd({
-      clientId: "other"
-    }));
-
-    assert.strictEqual(client.received.length, 0);
+    assert.deepStrictEqual(msg.data.size, { x: 4, y: 4 });
   });
 });
 
-// ---------------------------------------------------------------------------
-// receive: buffer lifecycle
-// ---------------------------------------------------------------------------
-
-describe("PixelSyncServer — receive: buffer-added", () => {
-  test("creates the buffer and broadcasts to subscribers", () => {
-    const server = new PixelSyncServer();
-    server.receive(bufferAddedCmd("tex1"));
-    assert.ok(server.world.hasBuffer("tex1"));
-  });
-
-  test("is a no-op if the buffer already exists (no duplicate broadcast)", () => {
-    const server = new PixelSyncServer();
-    const client = createClient("A");
-    server.connect(client);
-    server.receive(bufferAddedCmd("tex1"));
-    server.subscribe("A", "tex1");
-    client.received.length = 0;
-
-    server.receive(bufferAddedCmd("tex1"));
-
-    assert.strictEqual(client.received.length, 0);
-  });
-});
-
-describe("PixelSyncServer — receive: buffer-removed", () => {
-  test("removes the buffer and clears its conflict-tracking state", () => {
-    const server = new PixelSyncServer();
-    server.receive(bufferAddedCmd("tex1"));
-    server.receive(strokeCmd({ timestamp: 500 }));
-
-    server.receive({
-      action: "buffer-removed",
-      bufferId: "tex1",
-      metadata: {},
-      clientId: "A",
-      seq: 2,
-      timestamp: 900
-    });
-
-    assert.ok(!server.world.hasBuffer("tex1"));
-
-    // Re-creating the buffer and replaying an old-timestamp stroke should be
-    // accepted again — proves the per-pixel history was cleared.
-    server.receive(bufferAddedCmd("tex1"));
-    server.receive(strokeCmd({
-      timestamp: 100,
-      color: { r: 9, g: 9, b: 9, a: 255 }
-    }));
-    const buffer = server.world.getBuffer("tex1")!;
-    assert.deepStrictEqual(
-      buffer.samplePixel(0, 0),
-      [9, 9, 9, 255]
-    );
-  });
-});
+// Broadcast delivery to disconnected/left clients is now entirely a
+// NetworkServer concern (see @jolly-pixel/network's NetworkServer.spec.ts,
+// "broadcast stops reaching a client that left or disconnected") —
+// PixelSyncServer no longer tracks its own client list.
 
 // ---------------------------------------------------------------------------
 // receive: stroke — per-pixel LWW conflict resolution
 // ---------------------------------------------------------------------------
 
 describe("PixelSyncServer — receive: stroke conflict resolution", () => {
-  test("applies the command to the world", () => {
-    const server = new PixelSyncServer();
-    server.receive(bufferAddedCmd("tex1"));
+  test("applies the command to the buffer", () => {
+    const server = makeServer();
 
     server.receive(strokeCmd({
       positions: [
@@ -331,16 +173,14 @@ describe("PixelSyncServer — receive: stroke conflict resolution", () => {
       color: { r: 7, g: 7, b: 7, a: 255 }
     }));
 
-    const buffer = server.world.getBuffer("tex1")!;
     assert.deepStrictEqual(
-      buffer.samplePixel(2, 0),
+      server.buffer.samplePixel(2, 0),
       [7, 7, 7, 255]
     );
   });
 
   test("accepts a later timestamp at the same pixel", () => {
-    const server = new PixelSyncServer();
-    server.receive(bufferAddedCmd("tex1"));
+    const server = makeServer();
 
     server.receive(strokeCmd({
       timestamp: 500,
@@ -359,16 +199,14 @@ describe("PixelSyncServer — receive: stroke conflict resolution", () => {
       clientId: "B"
     }));
 
-    const buffer = server.world.getBuffer("tex1")!;
     assert.deepStrictEqual(
-      buffer.samplePixel(0, 0),
+      server.buffer.samplePixel(0, 0),
       [2, 2, 2, 255]
     );
   });
 
   test("rejects a stale command at a pixel already written by a newer one", () => {
-    const server = new PixelSyncServer();
-    server.receive(bufferAddedCmd("tex1"));
+    const server = makeServer();
 
     server.receive(strokeCmd({
       timestamp: 900,
@@ -387,16 +225,14 @@ describe("PixelSyncServer — receive: stroke conflict resolution", () => {
       clientId: "B"
     }));
 
-    const buffer = server.world.getBuffer("tex1")!;
     assert.deepStrictEqual(
-      buffer.samplePixel(0, 0),
+      server.buffer.samplePixel(0, 0),
       [2, 2, 2, 255]
     );
   });
 
   test("splits a stroke: accepts pixels that don't conflict, rejects the one that does", () => {
-    const server = new PixelSyncServer();
-    server.receive(bufferAddedCmd("tex1"));
+    const server = makeServer();
 
     // (0,0) is claimed by a later command first.
     server.receive(strokeCmd({
@@ -409,8 +245,7 @@ describe("PixelSyncServer — receive: stroke conflict resolution", () => {
     }));
 
     const client = createClient("A");
-    server.connect(client);
-    server.subscribe("A", "tex1");
+    observe(server, client);
     client.received.length = 0;
 
     // A stale stroke touching both (0,0) [conflict] and (1,1) [no conflict].
@@ -424,14 +259,13 @@ describe("PixelSyncServer — receive: stroke conflict resolution", () => {
       clientId: "B"
     }));
 
-    const buffer = server.world.getBuffer("tex1")!;
     // (0,0) keeps the winning color, (1,1) got the new stroke's color.
     assert.deepStrictEqual(
-      buffer.samplePixel(0, 0),
+      server.buffer.samplePixel(0, 0),
       [9, 9, 9, 255]
     );
     assert.deepStrictEqual(
-      buffer.samplePixel(1, 1),
+      server.buffer.samplePixel(1, 1),
       [1, 1, 1, 255]
     );
 
@@ -452,34 +286,190 @@ describe("PixelSyncServer — receive: stroke conflict resolution", () => {
   });
 
   test("drops a stroke entirely (no broadcast) when every pixel is rejected", () => {
-    const server = new PixelSyncServer();
-    server.receive(bufferAddedCmd("tex1"));
+    const server = makeServer();
     server.receive(strokeCmd({
       timestamp: 900,
-      positions: [{ x: 0, y: 0 }]
+      positions: [{ x: 0, y: 0 }],
+      clientId: "A"
     }));
 
     const client = createClient("A");
-    server.connect(client);
-    server.subscribe("A", "tex1");
+    observe(server, client);
     client.received.length = 0;
 
+    // Different client than the one that claimed (0,0): a same-client stale
+    // timestamp would be trusted (see ConflictResolver's same-client
+    // short-circuit), so this must come from someone else to be rejected.
     server.receive(strokeCmd({
       timestamp: 500,
-      positions: [{ x: 0, y: 0 }]
+      positions: [{ x: 0, y: 0 }],
+      clientId: "B"
     }));
 
     assert.strictEqual(client.received.length, 0);
   });
 
-  test("commands targeting an unknown buffer are dropped", () => {
-    const server = new PixelSyncServer();
-    assert.doesNotThrow(() => {
-      server.receive(strokeCmd({
-        bufferId: "no-such"
-      }));
-    });
-    assert.ok(!server.world.hasBuffer("no-such"));
+  test("regression: undoing two overlapping same-client strokes newest-first fully reverts the shared pixel", () => {
+    // Reproduces a chained-line undo: segment 1 (t=100) then segment 2
+    // (t=200) both touch (0,0) — the joint pixel. Undo replays newest-first
+    // (LIFO) and preserves each entry's *original* timestamp as
+    // originTimestamp (see buffer/hooks.ts), so the replay of segment 2
+    // (t=200) arrives before the replay of segment 1 (t=100) — an older
+    // timestamp arriving after a newer one at the same pixel, from the same
+    // client. Both must be accepted for the pixel to fully unwind.
+    const server = makeServer();
+
+    // Segment 1: (0,0) painted from background to color A.
+    server.receive(strokeCmd({
+      timestamp: 100,
+      positions: [{ x: 0, y: 0 }],
+      color: { r: 1, g: 1, b: 1, a: 255 },
+      clientId: "A"
+    }));
+    // Segment 2: (0,0) repainted from color A to color B (the chained
+    // line's joint pixel).
+    server.receive(strokeCmd({
+      timestamp: 200,
+      positions: [{ x: 0, y: 0 }],
+      color: { r: 2, g: 2, b: 2, a: 255 },
+      clientId: "A"
+    }));
+
+    assert.deepStrictEqual(server.buffer.samplePixel(0, 0), [2, 2, 2, 255]);
+
+    // Undo segment 2 first (LIFO): replay restores color A, stamped with
+    // segment 2's own original timestamp (200).
+    server.receive(strokeCmd({
+      timestamp: 200,
+      positions: [{ x: 0, y: 0 }],
+      color: { r: 1, g: 1, b: 1, a: 255 },
+      clientId: "A"
+    }));
+    assert.deepStrictEqual(server.buffer.samplePixel(0, 0), [1, 1, 1, 255]);
+
+    // Undo segment 1 second: replay restores the background, stamped with
+    // segment 1's own (older) original timestamp (100). Without the
+    // same-client short-circuit this would be rejected as "stale" against
+    // the (200)-stamped state the previous undo just wrote.
+    server.receive(strokeCmd({
+      timestamp: 100,
+      positions: [{ x: 0, y: 0 }],
+      color: { r: 0, g: 0, b: 0, a: 0 },
+      clientId: "A"
+    }));
+    assert.deepStrictEqual(server.buffer.samplePixel(0, 0), [0, 0, 0, 0]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// receive: select-edit — per-pixel LWW conflict resolution
+// ---------------------------------------------------------------------------
+
+describe("PixelSyncServer — receive: select-edit conflict resolution", () => {
+  test("applies each position's own color to the buffer", () => {
+    const server = makeServer();
+
+    server.receive(selectEditCmd({
+      positions: [
+        { x: 0, y: 0 },
+        { x: 1, y: 0 }
+      ],
+      colors: [
+        { r: 7, g: 7, b: 7, a: 255 },
+        { r: 8, g: 8, b: 8, a: 255 }
+      ]
+    }));
+
+    assert.deepStrictEqual(
+      server.buffer.samplePixel(0, 0),
+      [7, 7, 7, 255]
+    );
+    assert.deepStrictEqual(
+      server.buffer.samplePixel(1, 0),
+      [8, 8, 8, 255]
+    );
+  });
+
+  test("splits a select-edit: accepts positions that don't conflict, rejects (and filters colors for) the one that does", () => {
+    const server = makeServer();
+
+    // (0,0) is claimed by a later command first.
+    server.receive(strokeCmd({
+      timestamp: 900,
+      positions: [{ x: 0, y: 0 }],
+      color: { r: 9, g: 9, b: 9, a: 255 },
+      clientId: "A"
+    }));
+
+    const client = createClient("A");
+    observe(server, client);
+    client.received.length = 0;
+
+    // A stale select-edit touching both (0,0) [conflict] and (1,1) [no conflict].
+    server.receive(selectEditCmd({
+      timestamp: 500,
+      positions: [
+        { x: 0, y: 0 },
+        { x: 1, y: 1 }
+      ],
+      colors: [
+        { r: 1, g: 1, b: 1, a: 255 },
+        { r: 2, g: 2, b: 2, a: 255 }
+      ],
+      clientId: "B"
+    }));
+
+    // (0,0) keeps the stroke's winning color, (1,1) got the select-edit's color.
+    assert.deepStrictEqual(
+      server.buffer.samplePixel(0, 0),
+      [9, 9, 9, 255]
+    );
+    assert.deepStrictEqual(
+      server.buffer.samplePixel(1, 1),
+      [2, 2, 2, 255]
+    );
+
+    // Broadcast carries only the accepted position/color pair, in lockstep.
+    assert.strictEqual(client.received.length, 1);
+    const msg = client.received[0] as {
+      type: string;
+      data: PixelNetworkCommand;
+    };
+    assert.strictEqual(msg.data.action, "select-edit");
+    if (msg.data.action === "select-edit") {
+      assert.deepStrictEqual(
+        msg.data.metadata.positions,
+        [{ x: 1, y: 1 }]
+      );
+      assert.deepStrictEqual(
+        msg.data.metadata.colors,
+        [{ r: 2, g: 2, b: 2, a: 255 }]
+      );
+    }
+  });
+
+  test("drops a select-edit entirely (no broadcast) when every position is rejected", () => {
+    const server = makeServer();
+    server.receive(strokeCmd({
+      timestamp: 900,
+      positions: [{ x: 0, y: 0 }],
+      clientId: "A"
+    }));
+
+    const client = createClient("A");
+    observe(server, client);
+    client.received.length = 0;
+
+    // Different client than the one that claimed (0,0): a same-client stale
+    // timestamp would be trusted (see ConflictResolver's same-client
+    // short-circuit), so this must come from someone else to be rejected.
+    server.receive(selectEditCmd({
+      timestamp: 500,
+      positions: [{ x: 0, y: 0 }],
+      clientId: "B"
+    }));
+
+    assert.strictEqual(client.received.length, 0);
   });
 });
 
@@ -489,12 +479,10 @@ describe("PixelSyncServer — receive: stroke conflict resolution", () => {
 
 describe("PixelSyncServer — receive: resized / texture-replaced", () => {
   test("resized is always accepted and broadcast", () => {
-    const server = new PixelSyncServer();
-    server.receive(bufferAddedCmd("tex1"));
+    const server = makeServer();
 
     server.receive({
       action: "resized",
-      bufferId: "tex1",
       metadata: {
         size: { x: 8, y: 2 }
       },
@@ -504,23 +492,20 @@ describe("PixelSyncServer — receive: resized / texture-replaced", () => {
     });
 
     assert.deepStrictEqual(
-      server.world.getBuffer("tex1")!.size(),
+      server.buffer.size(),
       { x: 8, y: 2 }
     );
   });
 
   test("texture-replaced is always accepted and broadcast", () => {
-    const server = new PixelSyncServer();
-    server.receive(bufferAddedCmd("tex1"));
+    const server = makeServer();
 
     const client = createClient("A");
-    server.connect(client);
-    server.subscribe("A", "tex1");
+    observe(server, client);
     client.received.length = 0;
 
     server.receive({
       action: "texture-replaced",
-      bufferId: "tex1",
       metadata: {
         size: { x: 2, y: 2 },
         pixels: ""
@@ -539,26 +524,14 @@ describe("PixelSyncServer — receive: resized / texture-replaced", () => {
 // ---------------------------------------------------------------------------
 
 describe("PixelSyncServer — snapshot", () => {
-  test("returns undefined for an unknown buffer", () => {
-    const server = new PixelSyncServer();
-    assert.strictEqual(
-      server.snapshot("no-such"),
-      undefined
-    );
-  });
-
   test("returns decodable pixel data reflecting the buffer's current state", () => {
-    const server = new PixelSyncServer();
-    server.world.addBuffer(
-      "tex1",
-      { size: { x: 2, y: 2 } }
-    );
+    const server = makeServer({ x: 2, y: 2 });
     server.receive(strokeCmd({
       positions: [{ x: 0, y: 0 }],
       color: { r: 5, g: 6, b: 7, a: 255 }
     }));
 
-    const snap = server.snapshot("tex1")!;
+    const snap = server.snapshot();
     assert.deepStrictEqual(
       snap.size,
       { x: 2, y: 2 }
@@ -573,8 +546,7 @@ describe("PixelSyncServer — snapshot", () => {
   });
 
   test("includes the buffer's current UV regions, for late-joining clients", () => {
-    const server = new PixelSyncServer();
-    server.receive(bufferAddedCmd("tex1"));
+    const server = makeServer();
     server.receive(uvCreatedCmd({
       region: {
         id: "r1",
@@ -588,7 +560,7 @@ describe("PixelSyncServer — snapshot", () => {
       }
     }));
 
-    const snap = server.snapshot("tex1")!;
+    const snap = server.snapshot();
     assert.deepStrictEqual(
       snap.uvRegions,
       [
@@ -602,16 +574,19 @@ describe("PixelSyncServer — snapshot", () => {
   });
 });
 
-describe("PixelSyncServer — custom world", () => {
-  test("accepts an existing PixelWorld in options", () => {
-    const world = new PixelWorld();
-    world.addBuffer(
-      "pre-existing",
-      { size: { x: 4, y: 4 } }
-    );
+describe("PixelSyncServer — custom buffer / namespace", () => {
+  test("accepts an existing PixelBuffer in options", () => {
+    const buffer = new PixelBuffer({ size: { x: 4, y: 4 } });
 
-    const server = new PixelSyncServer({ world });
-    assert.strictEqual(server.world, world);
-    assert.ok(server.world.hasBuffer("pre-existing"));
+    const server = new PixelSyncServer({ buffer });
+    assert.strictEqual(server.buffer, buffer);
+  });
+
+  test("defaults to the \"pixel-draw\" namespace, overridable per instance", () => {
+    assert.strictEqual(new PixelSyncServer().namespace, "pixel-draw");
+    assert.strictEqual(
+      new PixelSyncServer({ namespace: "pixel-draw:tex1" }).namespace,
+      "pixel-draw:tex1"
+    );
   });
 });

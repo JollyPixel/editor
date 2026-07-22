@@ -5,31 +5,9 @@ import type {
 import type { UVRegion } from "../uv/UVRegion.ts";
 import type { Vec2 } from "../types.ts";
 
-/**
- * Describes buffer lifecycle events.
- */
-export type PixelLifecycleEvent =
-  | {
-    action: "buffer-added";
-    metadata: {
-      size: Vec2;
-      /**
-       * Base64-encoded initial RGBA data.
-       */
-      pixels?: string;
-    };
-    originTimestamp?: number;
-  }
-  | {
-    action: "buffer-removed";
-    metadata: Record<string, never>;
-    originTimestamp?: number;
-  };
-
-export type PixelNetworkEvent = PixelBufferHookEvent | PixelLifecycleEvent;
+export type PixelNetworkEvent = PixelBufferHookEvent;
 
 export interface PixelNetworkCommandHeader {
-  bufferId: string;
   clientId: string;
   /**
    * Client-local command sequence number.

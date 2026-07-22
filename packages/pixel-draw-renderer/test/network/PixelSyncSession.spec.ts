@@ -77,24 +77,18 @@ function asHost(
 
 interface MockTransport extends PixelTransport {
   sentCommands: PixelNetworkCommand[];
-  subscribedBuffers: string[];
-  unsubscribedBuffers: string[];
   simulateCommand(cmd: PixelNetworkCommand): void;
-  simulateSnapshot(bufferId: string, snapshot: PixelBufferSnapshot): void;
+  simulateSnapshot(snapshot: PixelBufferSnapshot): void;
 }
 
 function createMockTransport(
   clientId = "client-A"
 ): MockTransport {
   const sentCommands: PixelNetworkCommand[] = [];
-  const subscribedBuffers: string[] = [];
-  const unsubscribedBuffers: string[] = [];
 
   return {
     localClientId: clientId,
     sentCommands,
-    subscribedBuffers,
-    unsubscribedBuffers,
     onCommand: null,
     onSnapshot: null,
     onPeerJoined: null,
@@ -102,23 +96,17 @@ function createMockTransport(
     sendCommand(cmd) {
       sentCommands.push(cmd);
     },
-    subscribe(bufferId) {
-      subscribedBuffers.push(bufferId);
-    },
-    unsubscribe(bufferId) {
-      unsubscribedBuffers.push(bufferId);
-    },
     simulateCommand(cmd) {
       this.onCommand?.(cmd);
     },
-    simulateSnapshot(bufferId, snapshot) {
-      this.onSnapshot?.(bufferId, snapshot);
+    simulateSnapshot(snapshot) {
+      this.onSnapshot?.(snapshot);
     }
   };
 }
 
 // ---------------------------------------------------------------------------
-// attach / createBuffer / detach / removeBuffer
+// attach / detach
 // ---------------------------------------------------------------------------
 
 describe("PixelSyncSession — attach", () => {
@@ -128,80 +116,65 @@ describe("PixelSyncSession — attach", () => {
     const session = new PixelSyncSession({ transport });
 
     assert.strictEqual(manager.onBufferUpdated, undefined);
-    session.attach("tex1", asHost(manager));
+    session.attach(asHost(manager));
     assert.ok(manager.onBufferUpdated !== undefined);
   });
 
-  test("subscribes to the buffer via the transport", () => {
-    const manager = createMockManager();
+  test("throws when a canvas is already attached", () => {
     const transport = createMockTransport();
     const session = new PixelSyncSession({ transport });
+    session.attach(asHost(createMockManager()));
 
-    session.attach("tex1", asHost(manager));
-
-    assert.deepStrictEqual(transport.subscribedBuffers, ["tex1"]);
-  });
-
-  test("throws when attaching the same bufferId twice", () => {
-    const transport = createMockTransport();
-    const session = new PixelSyncSession({ transport });
-    session.attach("tex1", asHost(createMockManager()));
-
-    assert.throws(() => session.attach("tex1", asHost(createMockManager())));
+    assert.throws(() => session.attach(asHost(createMockManager())));
   });
 });
 
-describe("PixelSyncSession — createBuffer", () => {
-  test("attaches and sends a buffer-added command", () => {
+describe("PixelSyncSession — chaining onBufferUpdated", () => {
+  test("attach preserves an existing local handler instead of replacing it", () => {
     const manager = createMockManager();
+    const received: PixelBufferHookEvent[] = [];
+    manager.onBufferUpdated = (event) => received.push(event);
+
     const transport = createMockTransport("client-A");
     const session = new PixelSyncSession({ transport });
+    session.attach(asHost(manager));
 
-    session.createBuffer(
-      "tex1",
-      asHost(manager),
-      { size: { x: 4, y: 4 } }
-    );
+    manager.triggerLocal({
+      action: "resized",
+      metadata: { size: { x: 1, y: 1 } }
+    });
 
+    assert.strictEqual(received.length, 1);
     assert.strictEqual(transport.sentCommands.length, 1);
-    const cmd = transport.sentCommands[0];
-    assert.strictEqual(cmd.action, "buffer-added");
-    assert.strictEqual(cmd.bufferId, "tex1");
-    assert.strictEqual(cmd.clientId, "client-A");
   });
-});
 
-describe("PixelSyncSession — detach / removeBuffer", () => {
-  test("detach clears manager.onBufferUpdated and unsubscribes", () => {
+  test("detach restores the handler that was present before attach", () => {
     const manager = createMockManager();
+    const received: PixelBufferHookEvent[] = [];
+    function original(event: PixelBufferHookEvent): void {
+      received.push(event);
+    }
+    manager.onBufferUpdated = original;
+
     const transport = createMockTransport();
     const session = new PixelSyncSession({ transport });
-    session.attach("tex1", asHost(manager));
+    session.attach(asHost(manager));
+    session.detach();
 
-    session.detach("tex1");
+    assert.strictEqual(manager.onBufferUpdated, original);
 
-    assert.strictEqual(manager.onBufferUpdated, undefined);
-    assert.deepStrictEqual(transport.unsubscribedBuffers, ["tex1"]);
+    manager.triggerLocal({
+      action: "resized",
+      metadata: { size: { x: 1, y: 1 } }
+    });
+    assert.strictEqual(received.length, 1);
+    assert.strictEqual(transport.sentCommands.length, 0);
   });
 
-  test("detach on an unattached bufferId is a no-op", () => {
+  test("detach without an attached manager is a no-op", () => {
     const transport = createMockTransport();
     const session = new PixelSyncSession({ transport });
-    assert.doesNotThrow(() => session.detach("no-such"));
-  });
-
-  test("removeBuffer detaches and sends a buffer-removed command", () => {
-    const manager = createMockManager();
-    const transport = createMockTransport("client-A");
-    const session = new PixelSyncSession({ transport });
-    session.attach("tex1", asHost(manager));
-
-    session.removeBuffer("tex1");
-
-    assert.strictEqual(manager.onBufferUpdated, undefined);
-    const cmd = transport.sentCommands[0];
-    assert.strictEqual(cmd.action, "buffer-removed");
-    assert.strictEqual(cmd.bufferId, "tex1");
+    assert.doesNotThrow(() => session.detach());
   });
 });
 
@@ -214,7 +187,7 @@ describe("PixelSyncSession — local mutations forwarded to transport", () => {
     const manager = createMockManager();
     const transport = createMockTransport("client-A");
     const session = new PixelSyncSession({ transport });
-    session.attach("tex1", asHost(manager));
+    session.attach(asHost(manager));
 
     manager.triggerLocal({
       action: "stroke",
@@ -229,7 +202,6 @@ describe("PixelSyncSession — local mutations forwarded to transport", () => {
     assert.strictEqual(transport.sentCommands.length, 1);
     const cmd = transport.sentCommands[0];
     assert.strictEqual(cmd.action, "stroke");
-    assert.strictEqual(cmd.bufferId, "tex1");
     assert.strictEqual(cmd.clientId, "client-A");
   });
 
@@ -237,7 +209,7 @@ describe("PixelSyncSession — local mutations forwarded to transport", () => {
     const manager = createMockManager();
     const transport = createMockTransport("client-B");
     const session = new PixelSyncSession({ transport });
-    session.attach("tex1", asHost(manager));
+    session.attach(asHost(manager));
 
     const before = Date.now();
     manager.triggerLocal({
@@ -257,41 +229,21 @@ describe("PixelSyncSession — local mutations forwarded to transport", () => {
     assert.strictEqual(transport.sentCommands[1].seq, 2);
     assert.ok(transport.sentCommands[0].timestamp >= before);
   });
-
-  test("routes events from different managers to their own bufferId", () => {
-    const managerA = createMockManager();
-    const managerB = createMockManager();
-    const transport = createMockTransport();
-    const session = new PixelSyncSession({ transport });
-    session.attach("tex1", asHost(managerA));
-    session.attach("tex2", asHost(managerB));
-
-    managerB.triggerLocal({
-      action: "resized",
-      metadata: {
-        size: { x: 1, y: 1 }
-      }
-    });
-
-    assert.strictEqual(transport.sentCommands.length, 1);
-    assert.strictEqual(transport.sentCommands[0].bufferId, "tex2");
-  });
 });
 
 // ---------------------------------------------------------------------------
-// Remote commands routed by bufferId
+// Remote commands
 // ---------------------------------------------------------------------------
 
 describe("PixelSyncSession — remote commands", () => {
-  test("routes a mutation command to the matching manager", () => {
+  test("routes a mutation command to the attached manager", () => {
     const manager = createMockManager();
     const transport = createMockTransport("client-A");
     const session = new PixelSyncSession({ transport });
-    session.attach("tex1", asHost(manager));
+    session.attach(asHost(manager));
 
     transport.simulateCommand({
       action: "stroke",
-      bufferId: "tex1",
       metadata: {
         color: { r: 1, g: 1, b: 1, a: 255 },
         positions: [{ x: 0, y: 0 }]
@@ -308,11 +260,10 @@ describe("PixelSyncSession — remote commands", () => {
     const manager = createMockManager();
     const transport = createMockTransport("client-A");
     const session = new PixelSyncSession({ transport });
-    session.attach("tex1", asHost(manager));
+    session.attach(asHost(manager));
 
     transport.simulateCommand({
       action: "stroke",
-      bufferId: "tex1",
       metadata: {
         color: { r: 1, g: 1, b: 1, a: 255 },
         positions: [{ x: 0, y: 0 }]
@@ -325,14 +276,13 @@ describe("PixelSyncSession — remote commands", () => {
     assert.strictEqual(manager.appliedCommands.length, 0);
   });
 
-  test("ignores commands for a bufferId with no attached manager", () => {
+  test("ignores commands when no manager is attached", () => {
     const transport = createMockTransport("client-A");
     new PixelSyncSession({ transport });
 
     assert.doesNotThrow(() => {
       transport.simulateCommand({
         action: "stroke",
-        bufferId: "unknown",
         metadata: {
           color: { r: 1, g: 1, b: 1, a: 255 },
           positions: [{ x: 0, y: 0 }]
@@ -342,49 +292,6 @@ describe("PixelSyncSession — remote commands", () => {
         timestamp: Date.now()
       });
     });
-  });
-
-  test("routes buffer-added to onBufferAdded instead of a manager", () => {
-    const transport = createMockTransport("client-A");
-    const session = new PixelSyncSession({ transport });
-    const received: { bufferId: string; size: unknown; }[] = [];
-    session.onBufferAdded = (bufferId, metadata) => received.push({
-      bufferId,
-      size: metadata.size
-    });
-
-    transport.simulateCommand({
-      action: "buffer-added",
-      bufferId: "tex1",
-      metadata: { size: { x: 4, y: 4 } },
-      clientId: "client-B",
-      seq: 1,
-      timestamp: Date.now()
-    });
-
-    assert.strictEqual(received.length, 1);
-    assert.strictEqual(received[0].bufferId, "tex1");
-  });
-
-  test("routes buffer-removed to onBufferRemoved and detaches the manager", () => {
-    const manager = createMockManager();
-    const transport = createMockTransport("client-A");
-    const session = new PixelSyncSession({ transport });
-    session.attach("tex1", asHost(manager));
-    const removed: string[] = [];
-    session.onBufferRemoved = (bufferId) => removed.push(bufferId);
-
-    transport.simulateCommand({
-      action: "buffer-removed",
-      bufferId: "tex1",
-      metadata: {},
-      clientId: "client-B",
-      seq: 1,
-      timestamp: Date.now()
-    });
-
-    assert.deepStrictEqual(removed, ["tex1"]);
-    assert.strictEqual(manager.onBufferUpdated, undefined);
   });
 });
 
@@ -397,18 +304,15 @@ describe("PixelSyncSession — snapshot loading", () => {
     const manager = createMockManager();
     const transport = createMockTransport();
     const session = new PixelSyncSession({ transport });
-    session.attach("tex1", asHost(manager));
+    session.attach(asHost(manager));
 
     const pixels = new Uint8ClampedArray([1, 2, 3, 255]);
     const base64 = Buffer.from(pixels).toString("base64");
-    transport.simulateSnapshot(
-      "tex1",
-      {
-        size: { x: 1, y: 1 },
-        pixels: base64,
-        uvRegions: []
-      }
-    );
+    transport.simulateSnapshot({
+      size: { x: 1, y: 1 },
+      pixels: base64,
+      uvRegions: []
+    });
 
     assert.strictEqual(manager.loadedSnapshots.length, 1);
     assert.deepStrictEqual(
@@ -421,13 +325,12 @@ describe("PixelSyncSession — snapshot loading", () => {
     );
   });
 
-  test("ignores a snapshot for a bufferId with no attached manager", () => {
+  test("ignores a snapshot when no manager is attached", () => {
     const transport = createMockTransport();
     new PixelSyncSession({ transport });
 
     assert.doesNotThrow(() => {
       transport.simulateSnapshot(
-        "unknown",
         { size: { x: 1, y: 1 }, pixels: "", uvRegions: [] }
       );
     });
@@ -439,18 +342,15 @@ describe("PixelSyncSession — snapshot loading", () => {
 // ---------------------------------------------------------------------------
 
 describe("PixelSyncSession — destroy", () => {
-  test("detaches every buffer and clears transport callbacks", () => {
-    const managerA = createMockManager();
-    const managerB = createMockManager();
+  test("detaches the canvas and clears transport callbacks", () => {
+    const manager = createMockManager();
     const transport = createMockTransport();
     const session = new PixelSyncSession({ transport });
-    session.attach("tex1", asHost(managerA));
-    session.attach("tex2", asHost(managerB));
+    session.attach(asHost(manager));
 
     session.destroy();
 
-    assert.strictEqual(managerA.onBufferUpdated, undefined);
-    assert.strictEqual(managerB.onBufferUpdated, undefined);
+    assert.strictEqual(manager.onBufferUpdated, undefined);
     assert.strictEqual(transport.onCommand, null);
     assert.strictEqual(transport.onSnapshot, null);
   });
@@ -459,7 +359,7 @@ describe("PixelSyncSession — destroy", () => {
     const manager = createMockManager();
     const transport = createMockTransport();
     const session = new PixelSyncSession({ transport });
-    session.attach("tex1", asHost(manager));
+    session.attach(asHost(manager));
 
     session.destroy();
     manager.triggerLocal({

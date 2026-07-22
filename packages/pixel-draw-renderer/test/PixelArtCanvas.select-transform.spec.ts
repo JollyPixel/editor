@@ -11,6 +11,7 @@ import {
   PixelArtCanvas,
   type PixelArtCanvasOptions
 } from "#src/PixelArtCanvas.ts";
+import type { PixelBufferHookEvent } from "#src/buffer/hooks.ts";
 import { readPixel } from "./fixtures/canvas.ts";
 import { makeContainer } from "./helpers/dom.ts";
 import { mouseEvent } from "./helpers/events.ts";
@@ -168,9 +169,9 @@ describe("PixelArtCanvas — select mode rotate/flip", () => {
     manager.destroy();
   });
 
-  test("rotate/flip fire onDrawEnd but not onBufferUpdated (network hook), same as move/delete/paste", () => {
+  test("rotate/flip fire onDrawEnd and a 'select-edit' onBufferUpdated (network hook) each, same as move/delete/paste", () => {
     let drawEndCount = 0;
-    const events: unknown[] = [];
+    const events: PixelBufferHookEvent[] = [];
     const manager = makeManager({
       onDrawEnd: () => {
         drawEndCount++;
@@ -191,11 +192,10 @@ describe("PixelArtCanvas — select mode rotate/flip", () => {
     window.dispatchEvent(flipVerticalKey());
 
     assert.strictEqual(drawEndCount, 3);
-    assert.strictEqual(
-      events.length,
-      0,
-      "rotate/flip have no network hook either — Select edits stay local-only"
-    );
+    assert.strictEqual(events.length, 3);
+    for (const event of events) {
+      assert.strictEqual(event.action, "select-edit");
+    }
     manager.destroy();
   });
 });

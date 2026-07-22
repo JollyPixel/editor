@@ -5,7 +5,7 @@ import type {
 } from "./types.ts";
 
 /**
- * Sends and receives pixel network commands.
+ * Sends and receives pixel network commands for a single buffer.
  */
 export interface PixelTransport {
   /**
@@ -19,8 +19,6 @@ export interface PixelTransport {
   sendCommand(
     command: PixelNetworkCommand
   ): void;
-  subscribe(bufferId: string): void;
-  unsubscribe(bufferId: string): void;
 
   /**
    * Receives a command from a remote peer.
@@ -28,9 +26,10 @@ export interface PixelTransport {
   onCommand: ((command: PixelNetworkCommand) => void) | null;
 
   /**
-   * Receives a buffer snapshot.
+   * Receives the buffer's current snapshot, sent once by the server right
+   * after connecting.
    */
-  onSnapshot: ((bufferId: string, snapshot: PixelBufferSnapshot) => void) | null;
+  onSnapshot: ((snapshot: PixelBufferSnapshot) => void) | null;
 
   onPeerJoined: ((peerId: string) => void) | null;
   onPeerLeft: ((peerId: string) => void) | null;
