@@ -2,7 +2,9 @@
 import type { VoxelRenderer } from "@jolly-pixel/voxel.renderer";
 import {
   PixelArtCanvas,
-  type PixelArtCanvasOptions
+  PixelSyncSession,
+  type PixelArtCanvasOptions,
+  type PixelTransport
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // CONSTANTS
@@ -19,6 +21,7 @@ export interface TextureEditorBridgeOptions {
  */
 export class TextureEditorBridge {
   #manager: PixelArtCanvas | null = null;
+  #session: PixelSyncSession | null = null;
   #threeTexture: { image: unknown; needsUpdate: boolean; } | null = null;
   #options: TextureEditorBridgeOptions;
   #tilesetId: string | null = null;
@@ -35,9 +38,12 @@ export class TextureEditorBridge {
 
   mount(
     container: HTMLDivElement,
-    extraOptions?: PixelArtCanvasOptions
+    extraOptions?: PixelArtCanvasOptions,
+    transport?: PixelTransport
   ): void {
     if (this.#manager) {
+      this.#session?.destroy();
+      this.#session = null;
       this.#manager.destroy();
     }
 
@@ -48,6 +54,11 @@ export class TextureEditorBridge {
     };
 
     this.#manager = new PixelArtCanvas(container, managerOptions);
+
+    if (transport) {
+      this.#session = new PixelSyncSession({ transport });
+      this.#session.attach(this.#manager);
+    }
   }
 
   loadTileset(
@@ -145,6 +156,8 @@ export class TextureEditorBridge {
   }
 
   destroy(): void {
+    this.#session?.destroy();
+    this.#session = null;
     this.#manager?.destroy();
     this.#manager = null;
     this.#threeTexture = null;

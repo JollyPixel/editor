@@ -31,6 +31,19 @@ function createClient(id: string): MockClient {
   };
 }
 
+/**
+ * Connects a client and wires the server's broadcast function (normally
+ * provided by NetworkServer.register()) to forward straight to it — the
+ * single-client fake a unit test needs to observe `receive()`'s broadcasts.
+ */
+function observe(
+  server: VoxelSyncServer,
+  client: MockClient
+): void {
+  server.onClientConnect(client);
+  server.attach((payload) => client.send(payload));
+}
+
 function voxelSetCmd(
   opts: {
     clientId?: string;
@@ -87,75 +100,23 @@ describe("VoxelSyncServer — snapshot", () => {
 });
 
 // ---------------------------------------------------------------------------
-// connect()
+// onClientConnect
+//
+// Peer-joined/peer-left notifications and client-list bookkeeping are now a
+// NetworkServer concern (see @jolly-pixel/network's NetworkServer.spec.ts) —
+// VoxelSyncServer no longer tracks its own client list.
 // ---------------------------------------------------------------------------
 
-describe("VoxelSyncServer — connect", () => {
+describe("VoxelSyncServer — onClientConnect", () => {
   it("sends a snapshot to the newly connected client", () => {
     const server = new VoxelSyncServer();
     const client = createClient("A");
-    server.connect(client);
+    server.onClientConnect(client);
 
     assert.equal(client.received.length, 1);
-    const snap = client.received[0] as VoxelWorldJSON;
-    assert.equal(snap.version, 1);
-  });
-
-  it("notifies existing peers when a new client joins", () => {
-    const server = new VoxelSyncServer();
-    const clientA = createClient("A");
-    const clientB = createClient("B");
-
-    server.connect(clientA);
-    // A: 1 snapshot
-    assert.equal(clientA.received.length, 1);
-
-    server.connect(clientB);
-    // B: 1 snapshot
-    assert.equal(clientB.received.length, 1);
-    // A notified about B
-    assert.equal(clientA.received.length, 2);
-    const notification = clientA.received[1] as { type: string; peerId: string; };
-    assert.equal(notification.type, "peer-joined");
-    assert.equal(notification.peerId, "B");
-  });
-
-  it("does NOT notify the joining client about itself", () => {
-    const server = new VoxelSyncServer();
-    const client = createClient("A");
-    server.connect(client);
-    // Only the snapshot, no self-notification
-    assert.equal(client.received.length, 1);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// disconnect()
-// ---------------------------------------------------------------------------
-
-describe("VoxelSyncServer — disconnect", () => {
-  it("notifies remaining peers when a client leaves", () => {
-    const server = new VoxelSyncServer();
-    const clientA = createClient("A");
-    const clientB = createClient("B");
-
-    server.connect(clientA);
-    server.connect(clientB);
-
-    // Clear received so far
-    clientA.received.length = 0;
-    clientB.received.length = 0;
-
-    server.disconnect("B");
-
-    // A is notified
-    assert.equal(clientA.received.length, 1);
-    const msg = clientA.received[0] as { type: string; peerId: string; };
-    assert.equal(msg.type, "peer-left");
-    assert.equal(msg.peerId, "B");
-
-    // B no longer receives anything
-    assert.equal(clientB.received.length, 0);
+    const msg = client.received[0] as { type: string; data: VoxelWorldJSON; };
+    assert.equal(msg.type, "snapshot");
+    assert.equal(msg.data.version, 1);
   });
 });
 
@@ -175,30 +136,27 @@ describe("VoxelSyncServer — receive: apply + broadcast", () => {
     assert.equal(entry.blockId, 7);
   });
 
-  it("broadcasts the command to all connected clients", () => {
+  it("broadcasts the command to observing clients", () => {
     const server = new VoxelSyncServer();
     server.world.addLayer("Ground");
 
-    const clientA = createClient("A");
-    const clientB = createClient("B");
-    server.connect(clientA);
-    server.connect(clientB);
-    clientA.received.length = 0;
-    clientB.received.length = 0;
+    const client = createClient("A");
+    observe(server, client);
+    client.received.length = 0;
 
     server.receive(voxelSetCmd());
 
-    assert.equal(clientA.received.length, 1);
-    assert.equal(clientB.received.length, 1);
-    const msg = clientA.received[0] as VoxelNetworkCommand;
-    assert.equal(msg.action, "voxel-set");
+    assert.equal(client.received.length, 1);
+    const msg = client.received[0] as { type: string; data: VoxelNetworkCommand; };
+    assert.equal(msg.type, "command");
+    assert.equal(msg.data.action, "voxel-set");
   });
 
-  it("broadcasts structural commands (no key) to all clients", () => {
+  it("broadcasts structural commands (no key)", () => {
     const server = new VoxelSyncServer();
-    const clientA = createClient("A");
-    server.connect(clientA);
-    clientA.received.length = 0;
+    const client = createClient("A");
+    observe(server, client);
+    client.received.length = 0;
 
     const cmd: VoxelNetworkCommand = {
       action: "added",
@@ -211,7 +169,7 @@ describe("VoxelSyncServer — receive: apply + broadcast", () => {
 
     server.receive(cmd);
 
-    assert.equal(clientA.received.length, 1);
+    assert.equal(client.received.length, 1);
     assert.ok(server.world.getLayer("Deco"));
   });
 });
@@ -257,17 +215,17 @@ describe("VoxelSyncServer — receive: LWW conflict resolution", () => {
     const server = new VoxelSyncServer();
     server.world.addLayer("Ground");
 
-    const clientA = createClient("A");
-    server.connect(clientA);
-    clientA.received.length = 0;
+    const client = createClient("A");
+    observe(server, client);
+    client.received.length = 0;
 
     server.receive(voxelSetCmd({ timestamp: 900, x: 0, y: 0, z: 0, blockId: 2 }));
-    clientA.received.length = 0;
+    client.received.length = 0;
 
     server.receive(voxelSetCmd({ timestamp: 500, x: 0, y: 0, z: 0, blockId: 1 }));
 
     // Rejected command — no broadcast
-    assert.equal(clientA.received.length, 0);
+    assert.equal(client.received.length, 0);
   });
 
   it("resolves tie by lexicographic clientId", () => {
@@ -286,9 +244,9 @@ describe("VoxelSyncServer — receive: LWW conflict resolution", () => {
 
   it("does not conflict-check non-voxel commands", () => {
     const server = new VoxelSyncServer();
-    const clientA = createClient("A");
-    server.connect(clientA);
-    clientA.received.length = 0;
+    const client = createClient("A");
+    observe(server, client);
+    client.received.length = 0;
 
     const cmd1: VoxelNetworkCommand = {
       action: "added",
@@ -311,52 +269,46 @@ describe("VoxelSyncServer — receive: LWW conflict resolution", () => {
     server.receive(cmd2);
 
     // Both accepted, both broadcast
-    assert.equal(clientA.received.length, 2);
+    assert.equal(client.received.length, 2);
   });
 });
 
-describe("VoxelSyncServer — multiple clients receive broadcasts", () => {
-  it("all connected clients receive the command", () => {
+describe("VoxelSyncServer — receive: invalid commands are dropped, not thrown", () => {
+  it("does not throw when a command targets a layer the server doesn't know about", () => {
     const server = new VoxelSyncServer();
-    server.world.addLayer("Ground");
+    // No "Ground" layer created — the server world is empty.
 
-    const clients = ["A", "B", "C"].map(createClient);
-    for (const c of clients) {
-      server.connect(c);
-    }
-    // Clear all snapshot + peer-joined notifications accumulated during connect
-    for (const c of clients) {
-      c.received.length = 0;
-    }
-
-    server.receive(voxelSetCmd());
-
-    for (const c of clients) {
-      assert.equal(c.received.length, 1, `client ${c.id} should receive the broadcast`);
-    }
+    assert.doesNotThrow(() => {
+      server.receive(voxelSetCmd({ layerName: "Ground" }));
+    });
   });
 
-  it("disconnected client does not receive subsequent broadcasts", () => {
+  it("does not broadcast a command that fails to apply", () => {
+    const server = new VoxelSyncServer();
+
+    const client = createClient("A");
+    observe(server, client);
+    client.received.length = 0;
+
+    server.receive(voxelSetCmd({ layerName: "Unknown" }));
+
+    assert.equal(client.received.length, 0);
+  });
+
+  it("keeps the server usable for subsequent valid commands after dropping an invalid one", () => {
     const server = new VoxelSyncServer();
     server.world.addLayer("Ground");
 
-    const clientA = createClient("A");
-    const clientB = createClient("B");
-    server.connect(clientA);
-    server.connect(clientB);
+    server.receive(voxelSetCmd({ layerName: "Unknown" }));
+    server.receive(voxelSetCmd({ layerName: "Ground", x: 1, y: 2, z: 3, blockId: 5 }));
 
-    server.disconnect("B");
-    clientA.received.length = 0;
-    clientB.received.length = 0;
-
-    server.receive(voxelSetCmd());
-
-    assert.equal(clientA.received.length, 1);
-    assert.equal(clientB.received.length, 0);
+    const entry = server.world.getLayer("Ground")!.getVoxelAt({ x: 1, y: 2, z: 3 });
+    assert.ok(entry);
+    assert.equal(entry.blockId, 5);
   });
 });
 
-describe("VoxelSyncServer — custom world", () => {
+describe("VoxelSyncServer — custom world / namespace", () => {
   it("accepts an existing VoxelWorld in options", () => {
     const world = new VoxelWorld(8);
     world.addLayer("PreExisting");
@@ -367,5 +319,13 @@ describe("VoxelSyncServer — custom world", () => {
     const snap = server.snapshot();
     assert.equal(snap.layers.length, 1);
     assert.equal(snap.layers[0].name, "PreExisting");
+  });
+
+  it("defaults to the \"voxel-map\" namespace, overridable per instance", () => {
+    assert.equal(new VoxelSyncServer().namespace, "voxel-map");
+    assert.equal(
+      new VoxelSyncServer({ namespace: "voxel-map:world-2" }).namespace,
+      "voxel-map:world-2"
+    );
   });
 });

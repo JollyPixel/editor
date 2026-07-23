@@ -1,22 +1,15 @@
 // Import Internal Dependencies
 import type { VoxelNetworkCommand } from "./types.ts";
 
-export interface ConflictContext {
-  /** The incoming command to evaluate. */
+export interface VoxelConflictContext {
   incoming: VoxelNetworkCommand;
-  /**
-   * The last accepted command at the same position, if any.
-   * `undefined` means no prior command exists → always accept.
-   */
   existing: VoxelNetworkCommand | undefined;
 }
 
-/**
- * Determines whether an incoming command should be accepted or rejected
- * given the last known command at the same world position.
- */
-export interface ConflictResolver {
-  resolve(ctx: ConflictContext): "accept" | "reject";
+export interface VoxelConflictResolver {
+  resolve(
+    ctx: VoxelConflictContext
+  ): "accept" | "reject";
 }
 
 /**
@@ -24,9 +17,9 @@ export interface ConflictResolver {
  * On a timestamp tie, the lexicographically greater `clientId` wins,
  * giving a deterministic total order without coordination.
  */
-export class LastWriteWinsResolver implements ConflictResolver {
+export class LastWriteWinsResolver implements VoxelConflictResolver {
   resolve(
-    ctx: ConflictContext
+    ctx: VoxelConflictContext
   ): "accept" | "reject" {
     const { incoming, existing } = ctx;
 

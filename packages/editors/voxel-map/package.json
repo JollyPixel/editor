@@ -26,6 +26,7 @@
   "dependencies": {
     "@jolly-pixel/engine": "^3.0.0",
     "@jolly-pixel/fs-tree": "^1.0.1",
+    "@jolly-pixel/network": "*",
     "@jolly-pixel/pixel-draw.renderer": "2.0.0",
     "@jolly-pixel/resize-handle": "1.0.0",
     "@jolly-pixel/runtime": "^3.4.0",

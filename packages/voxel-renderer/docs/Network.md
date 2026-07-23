@@ -1,165 +1,124 @@
 # Network Sync Layer
 
-The network sync layer adds **transport-agnostic, server-authoritative multiplayer** on top of `VoxelEngine`. Multiple clients share the same voxel world in real time: `VoxelSyncClient` wires to a `VoxelEngine` instance (standalone or via `vr.engine`) and forwards mutations through your own `VoxelTransport`.
+The network sync layer adds **server-authoritative multiplayer** on top of `VoxelEngine`, built directly on `@jolly-pixel/network`'s transport-agnostic primitives (`NetworkServer` / `NetworkPlugin` / `NetworkClient` / `NetworkChannel`). Multiple clients share the same voxel world in real time: `VoxelSyncSession` wires a `VoxelEngine` instance (standalone or via `vr.engine`) to a `NetworkChannel`-shaped transport, and `VoxelSyncServer` is a `NetworkPlugin` that owns the authoritative `VoxelWorld`.
+
+This mirrors `@jolly-pixel/pixel-draw.renderer`'s network layer (`PixelSyncSession`/`PixelSyncServer`) — both packages share the same wire discipline and dev-server wiring pattern.
 
 ## Architecture overview
 
 ```
-┌─────────────┐   local mutation   ┌──────────────────┐   sendCommand   ┌─────────────┐
-│ VoxelEngine │──────────────────▶│ VoxelSyncClient  │────────────────▶│  Transport  │
-│  (headless) │                   │                  │◀────────────────│ (WebSocket, │
-│             │◀──applyRemote──── │                  │   onCommand     │  WebRTC, …) │
-└─────────────┘                   └──────────────────┘                 └──────┬──────┘
-                                                                              │  wire
-                                                                              ▼
-                                                                   ┌─────────────────┐
-                                                                   │ VoxelSyncServer │
-                                                                   │  (headless)     │
-                                                                   │  VoxelWorld     │
-                                                                   └─────────────────┘
+┌─────────────┐   local mutation   ┌───────────────────┐   send(cmd)     ┌─────────────────┐
+│ VoxelEngine │──────────────────▶│ VoxelSyncSession  │────────────────▶│ NetworkChannel  │
+│  (headless) │                   │                   │◀────────────────│ (NetworkClient) │
+│             │◀──applyRemote──── │                   │   onMessage     │                 │
+└─────────────┘                   └───────────────────┘                 └────────┬────────┘
+                                                                                  │  wire (ws)
+                                                                                  ▼
+                                                                     ┌─────────────────────┐
+                                                                     │     NetworkServer   │
+                                                                     │  (namespace router) │
+                                                                     └──────────┬──────────┘
+                                                                                │ register()
+                                                                                ▼
+                                                                     ┌─────────────────────┐
+                                                                     │  VoxelSyncServer    │
+                                                                     │  (NetworkPlugin,    │
+                                                                     │  headless, owns     │
+                                                                     │  VoxelWorld)        │
+                                                                     └─────────────────────┘
 ```
 
 **Flow:**
 1. A local mutation (e.g. `setVoxel`) fires the `onLayerUpdated` hook.
-2. `VoxelSyncClient` intercepts the hook, stamps the command with `clientId / seq / timestamp`, and calls `transport.sendCommand(cmd)`.
-3. The transport sends the command over the wire to `VoxelSyncServer.receive()`.
-4. The server validates the command (LWW conflict resolution), applies it to its authoritative `VoxelWorld`, and broadcasts it to all connected clients.
-5. Each client's transport calls `onCommand(cmd)`, which `VoxelSyncClient` routes to `engine.applyRemoteCommand(cmd)`.
+2. `VoxelSyncSession` chains onto the hook, stamps the command with `clientId` / `seq` / `timestamp`, and calls `transport.send(cmd)`.
+3. `NetworkClient` forwards it over one shared WebSocket, tagged with the session's namespace.
+4. `NetworkServer` routes it to the registered `VoxelSyncServer` instance for that namespace, which validates the command (LWW conflict resolution), applies it to its authoritative `VoxelWorld`, and broadcasts it to every client joined to that namespace.
+5. Each client's channel calls `onMessage({ type: "command", data: cmd })`, which `VoxelSyncSession` routes to `engine.applyRemoteCommand(cmd)` (skipping its own echoed commands by `clientId`).
 6. `applyRemoteCommand` sets an internal flag so that the resulting hook event is **not** re-emitted — preventing infinite echo loops.
 
 ## VoxelTransport interface
 
-You must supply a concrete transport implementation. The interface is minimal:
+Shaped to match `@jolly-pixel/network`'s `NetworkChannel` exactly, so `NetworkClient.channel(namespace)` can be passed in directly — no adapter needed:
 
 ```ts
 interface VoxelTransport {
   readonly localClientId: string;
-  sendCommand(cmd: VoxelNetworkCommand): void;
-  requestSnapshot(): void;
-  onCommand: ((cmd: VoxelNetworkCommand) => void) | null;
-  onSnapshot: ((snapshot: VoxelWorldJSON) => void) | null;
+  send(cmd: VoxelNetworkCommand): void;
+  onMessage: ((message: VoxelServerMessage) => void) | null;
   onPeerJoined: ((peerId: string) => void) | null;
   onPeerLeft: ((peerId: string) => void) | null;
 }
 ```
 
-### WebSocket example stub
+## Client setup
 
 ```ts
-import type { VoxelTransport, VoxelNetworkCommand } from "@jolly-pixel/voxel.renderer";
-import type { VoxelWorldJSON } from "@jolly-pixel/voxel.renderer";
-
-class WebSocketTransport implements VoxelTransport {
-  readonly localClientId = crypto.randomUUID();
-  onCommand: ((cmd: VoxelNetworkCommand) => void) | null = null;
-  onSnapshot: ((snapshot: VoxelWorldJSON) => void) | null = null;
-  onPeerJoined: ((peerId: string) => void) | null = null;
-  onPeerLeft: ((peerId: string) => void) | null = null;
-
-  constructor(private ws: WebSocket) {
-    ws.addEventListener("message", (ev) => {
-      const msg = JSON.parse(ev.data as string);
-      switch (msg.type) {
-        case "snapshot": this.onSnapshot?.(msg.data); break;
-        case "command":  this.onCommand?.(msg.data);  break;
-        case "peer-joined": this.onPeerJoined?.(msg.peerId); break;
-        case "peer-left":   this.onPeerLeft?.(msg.peerId);   break;
-      }
-    });
-  }
-
-  sendCommand(cmd: VoxelNetworkCommand): void {
-    this.ws.send(JSON.stringify({ type: "command", data: cmd }));
-  }
-
-  requestSnapshot(): void {
-    this.ws.send(JSON.stringify({ type: "snapshot-request" }));
-  }
-}
-```
-
-## VoxelSyncClient
-
-### Setup
-
-```ts
+import { NetworkClient } from "@jolly-pixel/network";
 import {
-  VoxelSyncClient,
-  type VoxelSyncClientOptions
+  VoxelSyncSession,
+  type VoxelNetworkCommand,
+  type VoxelServerMessage
 } from "@jolly-pixel/voxel.renderer";
 
-const client = new VoxelSyncClient({
-  engine: vr.engine,     // or a standalone, headless VoxelEngine
-  transport: myTransport
-});
+const wsProtocol = location.protocol === "https:" ? "wss:" : "ws:";
+const client = new NetworkClient({ url: `${wsProtocol}//${location.host}/ws-sync` });
+const transport = client.channel<VoxelNetworkCommand, VoxelServerMessage>("voxel-map:world");
+
+const session = new VoxelSyncSession({ transport });
+session.attach(vr.engine); // or a standalone, headless VoxelEngine
 ```
 
-The client:
-- Replaces `engine.onLayerUpdated` with its own interceptor.
-- Wires `transport.onCommand` and `transport.onSnapshot`.
+`attach()` **chains** onto any existing `engine.onLayerUpdated` handler instead of replacing it — a handler set at `VoxelEngine`/`VoxelRenderer` construction time keeps firing. `detach()` restores whatever handler was present before `attach()` was called.
 
 ### Lifecycle
 
 ```ts
 // When the session ends:
-client.destroy();
+session.destroy(); // detach() + clears transport.onMessage
 ```
 
-`destroy()` clears `engine.onLayerUpdated` and the transport callbacks so the engine
-reverts to standalone mode.
+## Server setup — Vite dev server
 
-### Options
-
-| Option | Type | Description |
-|--------|------|-------------|
-| `engine` | `VoxelEngine` | The local engine to synchronize. |
-| `transport` | `VoxelTransport` | Your transport implementation. |
-
-## VoxelSyncServer
-
-The server runs **headlessly** (no Three.js dependency) and can be used in Node.js, Deno, or Bun.
-
-### Setup
+`VoxelSyncServer` is a `NetworkPlugin`, registered onto a `NetworkServer` via `@jolly-pixel/network`'s `createWebSocketNetworkPlugin` Vite plugin — the same pattern `pixel-draw-renderer` uses. A single `vite dev` process then serves both the static app and the WebSocket sync endpoint:
 
 ```ts
-import { VoxelSyncServer, type ClientHandle } from "@jolly-pixel/voxel.renderer";
+// vite.config.ts
+import { defineConfig } from "vite";
+import { createWebSocketNetworkPlugin } from "@jolly-pixel/network/plugins/vite.ts";
+import { VoxelSyncServer } from "@jolly-pixel/voxel.renderer";
 
-const server = new VoxelSyncServer();
-// Optionally pass an existing world:
-// const server = new VoxelSyncServer({ world: existingVoxelWorld });
-```
-
-### WebSocket server example
-
-```ts
-import { WebSocketServer } from "ws";
-
-const wss = new WebSocketServer({ port: 3000 });
-
-wss.on("connection", (ws) => {
-  const client: ClientHandle = {
-    id: crypto.randomUUID(),
-    send: (data) => ws.send(JSON.stringify(data))
-  };
-
-  server.connect(client);     // sends snapshot to new client
-
-  ws.on("message", (raw) => {
-    const cmd = JSON.parse(raw.toString());
-    server.receive(cmd);      // validate → apply → broadcast
-  });
-
-  ws.on("close", () => server.disconnect(client.id));
+export default defineConfig({
+  plugins: [
+    createWebSocketNetworkPlugin({
+      plugins: [
+        // Must match the client's namespace above.
+        new VoxelSyncServer({ namespace: "voxel-map:world" })
+      ]
+    })
+  ]
 });
 ```
+
+Multiple `VoxelSyncServer` instances (one per world) can be registered side by side, each under its own namespace — and alongside a `PixelSyncServer` for texture sync, since both extend the same `NetworkPlugin` base and share one `NetworkServer`/WebSocket.
+
+> **Pre-seed the server's world to match the client's initial state.** A client typically creates a default layer locally (e.g. `VoxelEngine`'s `layers` constructor option) before its `VoxelSyncSession` has attached — that layer is never sent to the server. If the server starts with an empty `VoxelWorld`, the *first* snapshot it sends back will have zero layers, and `engine.load()` on the client wipes its local default layer out to match. Pass a pre-populated `world` (with the same layer name(s) the client bootstraps) so every client's first snapshot is already consistent — the same reason `PixelSyncServer` is typically constructed with a pre-sized `PixelBuffer` rather than a blank one:
+> ```ts
+> const world = new VoxelWorld(16);
+> world.addLayer("Ground");
+> new VoxelSyncServer({ namespace: "voxel-map:world", world });
+> ```
+>
+> `receive()` never lets a bad command crash the server: applying a command that references a layer the server doesn't know about (e.g. a stale command from before a reconnect) is caught, logged, and dropped instead of propagating the underlying `VoxelWorld` exception (`setVoxelAt`/`removeVoxelAt` etc. throw by design for local/programmatic misuse, which would otherwise take down the shared session for every connected client over one bad command).
 
 ### API
 
 | Method | Description |
 |--------|-------------|
-| `connect(client)` | Registers client; sends current snapshot; notifies peers. |
-| `disconnect(clientId)` | Removes client; notifies remaining peers. |
-| `receive(cmd)` | Validates, applies, and broadcasts a command. |
+| `onClientConnect(client)` | Sends the current snapshot to a newly joined client (called by `NetworkServer`). |
+| `onClientDisconnect(clientId)` | No-op — `NetworkServer` owns membership bookkeeping. |
+| `attach(broadcast)` | Called by `NetworkServer.register()` to wire the broadcast function. |
+| `onMessage(clientId, payload)` | Validates and routes an incoming payload to `receive()`. |
+| `receive(cmd)` | Validates, applies, and broadcasts a command directly (useful in tests). |
 | `snapshot()` | Returns the current world as `VoxelWorldJSON`. |
 | `world` | The authoritative `VoxelWorld` instance. |
 
@@ -167,9 +126,10 @@ wss.on("connection", (ws) => {
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
+| `namespace` | `string` | `"voxel-map"` | `NetworkPlugin` namespace this server is registered under. |
 | `world` | `VoxelWorld` | new world | Existing world to use as authoritative state. |
 | `chunkSize` | `number` | `16` | Chunk size when creating a new world. |
-| `conflictResolver` | `ConflictResolver` | `LastWriteWinsResolver` | Custom conflict strategy. |
+| `conflictResolver` | `VoxelConflictResolver` | `LastWriteWinsResolver` | Custom conflict strategy. |
 
 ## VoxelNetworkCommand — wire format
 
@@ -183,9 +143,15 @@ type VoxelNetworkCommand = VoxelLayerHookEvent & {
 };
 ```
 
-Commands are plain JSON-serializable objects — no special framing required.
+Commands and snapshots are wrapped in a `VoxelServerMessage` envelope delivered to `VoxelTransport.onMessage`:
 
-## ConflictResolver
+```ts
+type VoxelServerMessage =
+  | { type: "snapshot"; data: VoxelWorldJSON; }
+  | { type: "command"; data: VoxelNetworkCommand; };
+```
+
+## VoxelConflictResolver
 
 ### Default: LastWriteWinsResolver
 
@@ -203,14 +169,14 @@ const server = new VoxelSyncServer({
 
 ### Custom resolver
 
-Implement `ConflictResolver` for custom strategies (e.g. first-write-wins, priority by
+Implement `VoxelConflictResolver` for custom strategies (e.g. first-write-wins, priority by
 role, etc.):
 
 ```ts
-import type { ConflictResolver, ConflictContext } from "@jolly-pixel/voxel.renderer";
+import type { VoxelConflictResolver, VoxelConflictContext } from "@jolly-pixel/voxel.renderer";
 
-class FirstWriteWinsResolver implements ConflictResolver {
-  resolve({ existing }: ConflictContext): "accept" | "reject" {
+class FirstWriteWinsResolver implements VoxelConflictResolver {
+  resolve({ existing }: VoxelConflictContext): "accept" | "reject" {
     // Accept only if no prior command exists at this position
     return existing ? "reject" : "accept";
   }
@@ -221,7 +187,9 @@ const server = new VoxelSyncServer({ conflictResolver: new FirstWriteWinsResolve
 
 > **Note:** Conflict resolution only applies to per-position voxel operations (`"voxel-set"`,
 > `"voxel-removed"`). Structural layer operations (`"added"`, `"removed"`, `"reordered"`, etc.)
-> are always accepted.
+> are always accepted. Unlike `pixel-draw-renderer`'s resolver, there is no "same client always
+> wins" special case — that rule exists to keep undo/redo replay from being rejected as stale,
+> and `VoxelEngine` has no undo/redo or origin-timestamp concept to protect.
 
 ## VoxelCommandApplier — headless usage
 
