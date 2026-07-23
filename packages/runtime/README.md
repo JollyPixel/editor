@@ -85,12 +85,12 @@ loadRuntime(runtime)
   .catch(console.error);
 ```
 
-For a more comprehensive illustration, we have created a mini game for [Brackeys 15][brackeys-2026-1]. The official JollyPixel documentation also come with an [Hello World](https://jollypixel.github.io/editor/engine/guides/hello-world.html) guide.
+For a more comprehensive illustration, we have created a mini game for [Brackeys 15][brackeys-2026-1]. The official JollyPixel documentation also come with an [Hello World](https://jollypixel.github.io/editor/engine/docs/guides/hello-world.html) guide.
 
 Please refer to the dedicated guides below for additional information specific to your target:
 
-- [Desktop](./docs/platforms/electron.md)
-- [Web](./docs/platforms/vite.md)
+- [Desktop](./docs/platforms/desktop.md)
+- [Web](./docs/platforms/web.md)
 
 > [!NOTE]
 > The Vite web runtime and the Electron desktop runtime share the exact same HTML file and application code. Only the shell that loads `dist/index.html` differs.
