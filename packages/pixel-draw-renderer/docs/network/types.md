@@ -29,6 +29,14 @@ interface PixelBufferSnapshot {
   pixels: string;
   uvRegions: UVRegion[];
 }
+
+/**
+ * Wire envelope a transport delivers to `PixelTransport.onMessage`: either
+ * the buffer's initial snapshot, or a live command from a peer.
+ */
+type PixelServerMessage =
+  | { type: "snapshot"; data: PixelBufferSnapshot; }
+  | { type: "command"; data: PixelNetworkCommand; };
 ```
 
-`PixelBufferHookEvent` (the `"stroke"` / `"resized"` / `"texture-replaced"` / `"global-fill"` / `"uv-region-created"` / `"uv-region-deleted"` / `"uv-region-moved"` local-mutation events) is defined in [buffer/PixelBuffer.md](../buffer/PixelBuffer.md); a `PixelNetworkCommand` is that same event shape enriched with the header fields. Eight actions total. All pixel payloads (`stroke` positions and `global-fill`'s colors excepted) are raw RGBA bytes, base64-encoded via `js-base64`: no image codec dependency, so `PixelSyncServer` stays headless. Commands are plain JSON-serializable objects. `PixelBufferSnapshot.uvRegions` carries the buffer's full current UV region set, so a client connecting mid-session learns about every region that already exists (see [uv/UVMap.md](../uv/UVMap.md)).
+`PixelBufferHookEvent` (the `"stroke"` / `"resized"` / `"texture-replaced"` / `"global-fill"` / `"uv-region-created"` / `"uv-region-deleted"` / `"uv-region-moved"` local-mutation events) is defined in [buffer/PixelBuffer.md](../buffer/PixelBuffer.md); a `PixelNetworkCommand` is that same event shape enriched with the header fields. Eight actions total. All pixel payloads (`stroke` positions and `global-fill`'s colors excepted) are raw RGBA bytes, base64-encoded via `js-base64`: no image codec dependency, so `PixelSyncServer` stays headless. Commands are plain JSON-serializable objects. `PixelBufferSnapshot.uvRegions` carries the buffer's full current UV region set, so a client connecting mid-session learns about every region that already exists (see [uv/UVMap.md](../uv/UVMap.md)). `PixelServerMessage` is the discriminated union `PixelTransport.onMessage` receives — see [PixelTransport](./PixelTransport.md).

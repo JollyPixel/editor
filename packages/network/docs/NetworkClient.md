@@ -12,6 +12,16 @@ interface NetworkClientOptions {
 }
 ```
 
+## Properties
+
+### `clientId`
+
+```ts
+readonly clientId: string
+```
+
+Identifies this client across every channel it joins. Generated once per connection (`crypto.randomUUID()`), so consumers don't each need to invent their own peer id. Mirrored onto every `NetworkChannel` this client creates as `channel.localClientId`.
+
 ## Methods
 
 ### `channel`

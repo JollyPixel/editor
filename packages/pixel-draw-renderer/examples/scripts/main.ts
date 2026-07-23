@@ -2,17 +2,21 @@
 import * as THREE from "three";
 import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
 import { ResizeHandle } from "@jolly-pixel/resize-handle";
+import { NetworkClient } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import type { PixelArtCanvas } from "../../src/index.ts";
-import { PixelSyncSession } from "../../src/network/index.ts";
+import {
+  PixelSyncSession,
+  type PixelNetworkCommand,
+  type PixelServerMessage
+} from "../../src/network/index.ts";
 import { CameraBehavior } from "./components/Camera.ts";
 import { CubeFactory } from "./components/CubeFactory.ts";
 import { OrbitControlsBehavior } from "./components/OrbitControlsBehavior.ts";
 import { type PixelDrawPanel } from "./ui/PixelDrawPanel.ts";
 import { CubeGallery } from "./CubeGallery.ts";
 import { CubePicker } from "./CubePicker.ts";
-import { WebSocketPixelTransport } from "./WebSocketPixelTransport.ts";
 
 // Every tab that opens this demo joins the same namespace, so pointing a
 // collaborator at the same URL joins them onto the same canvas. Must match
@@ -141,21 +145,20 @@ async function initRuntime(): Promise<Runtime> {
   return runtime;
 }
 
-// PixelSyncSession.attach() chains onto whatever local `onBufferUpdated`
-// handler the canvas already has
+// PixelSyncSession.attach() chains onto whatever local `onBufferUpdated` handler the canvas already has.
 function initializeWebsocketTransport(
   canvasManager: PixelArtCanvas
 ) {
   const wsProtocol = location.protocol === "https:" ? "wss:" : "ws:";
-  const transport = new WebSocketPixelTransport({
-    url: `${wsProtocol}//${location.host}/ws-sync`,
-    namespace: DEMO_NAMESPACE
+  const client = new NetworkClient({
+    url: `${wsProtocol}//${location.host}/ws-sync`
   });
+  const transport = client.channel<PixelNetworkCommand, PixelServerMessage>(
+    DEMO_NAMESPACE
+  );
   transport.onPeerJoined = (peerId) => console.log(`[pixel-sync] peer joined: ${peerId}`);
   transport.onPeerLeft = (peerId) => console.log(`[pixel-sync] peer left: ${peerId}`);
 
-  const syncSession = new PixelSyncSession({
-    transport
-  });
-  syncSession.attach(canvasManager);
+  const session = new PixelSyncSession({ transport });
+  session.attach(canvasManager);
 }

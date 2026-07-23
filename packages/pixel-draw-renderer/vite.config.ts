@@ -10,9 +10,6 @@ import checker from "vite-plugin-checker";
 import { PixelSyncServer } from "./src/network/index.ts";
 import { PixelBuffer } from "./src/buffer/PixelBuffer.ts";
 
-// Must match the client's namespace in examples/scripts/main.ts.
-const DEMO_NAMESPACE = "pixel-draw:demo-canvas";
-
 // https://vitejs.dev/config/
 export default defineConfig({
   root: "examples",
@@ -29,8 +26,14 @@ export default defineConfig({
       // e.g. `new PixelSyncServer({ namespace: "pixel-draw:tileset-2", ... })`.
       plugins: [
         new PixelSyncServer({
-          namespace: DEMO_NAMESPACE,
-          buffer: new PixelBuffer({ size: { x: 80, y: 80 } })
+          // Must match the client's namespace in examples/scripts/main.ts.
+          namespace: "pixel-draw:demo-canvas",
+          buffer: new PixelBuffer({
+            size: {
+              x: 80,
+              y: 80
+            }
+          })
         })
       ]
     })

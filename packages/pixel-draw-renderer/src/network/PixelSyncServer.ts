@@ -56,11 +56,7 @@ export interface PixelSyncServerOptions {
 }
 
 /**
- * Manages authoritative state for a single pixel buffer and its client
- * synchronization. Injected into a `NetworkServer` under its own namespace,
- * so it only ever sees clients that explicitly joined it. Peer presence
- * (join/leave notifications for other clients) is handled by `NetworkServer`
- * itself, not here.
+ * Manages authoritative state for a single pixel buffer and its client synchronization.
  */
 export class PixelSyncServer extends NetworkPlugin {
   readonly namespace: string;
@@ -82,14 +78,10 @@ export class PixelSyncServer extends NetworkPlugin {
     this.#resolver = options.conflictResolver ?? new LastWriteWinsResolver();
   }
 
-  /**
-   * Sends the buffer's current snapshot to the newly connected peer.
-   * Delivery to other clients is handled by the broadcast function `attach()`
-   * provides — this server doesn't track its own client list.
-   */
   onClientConnect(
     client: ClientHandle
   ): void {
+    // Sends the buffer's current snapshot to the newly connected peer.
     client.send({
       type: "snapshot",
       data: this.snapshot()
@@ -102,10 +94,6 @@ export class PixelSyncServer extends NetworkPlugin {
     // No client-list bookkeeping to clean up — NetworkServer owns that.
   }
 
-  /**
-   * Receives the function `NetworkServer` uses to fan a payload out to every
-   * client currently joined to this server's namespace.
-   */
   attach(
     broadcast: (payload: unknown) => void
   ): void {
@@ -123,35 +111,24 @@ export class PixelSyncServer extends NetworkPlugin {
     this.receive(payload);
   }
 
-  /**
-   * Applies and broadcasts an incoming command.
-   */
   receive(
     cmd: PixelNetworkCommand
   ): void {
-    if (cmd.action === "stroke") {
-      this.#receiveStroke(cmd);
-
-      return;
+    switch (cmd.action) {
+      case "stroke":
+        this.#receiveStroke(cmd);
+        break;
+      case "select-edit":
+        this.#receiveSelectEdit(cmd);
+        break;
+      case "uv-region-moved":
+      case "uv-region-deleted":
+        this.#receiveUvRegionCommand(cmd);
+        break;
+      default:
+        applyCommandToBuffer(this.buffer, cmd);
+        this.#broadcast(cmd);
     }
-
-    if (cmd.action === "select-edit") {
-      this.#receiveSelectEdit(cmd);
-
-      return;
-    }
-
-    if (
-      cmd.action === "uv-region-moved" ||
-      cmd.action === "uv-region-deleted"
-    ) {
-      this.#receiveUvRegionCommand(cmd);
-
-      return;
-    }
-
-    applyCommandToBuffer(this.buffer, cmd);
-    this.#broadcast(cmd);
   }
 
   #receiveStroke(
@@ -190,11 +167,7 @@ export class PixelSyncServer extends NetworkPlugin {
   }
 
   /**
-   * Resolves per-pixel like `#receiveStroke`, sharing the same
-   * `#lastHeaderByPixel` history — a select-edit and a concurrent stroke
-   * touching the same pixel compete for it just like two strokes would.
-   * Unlike a stroke's single uniform color, accepted positions and their
-   * per-pixel colors must be filtered in lockstep.
+   * Resolves per-pixel like `#receiveStroke`, sharing the same `#lastHeaderByPixel` history
    */
   #receiveSelectEdit(
     cmd: PixelSelectEditCommand
@@ -229,14 +202,16 @@ export class PixelSyncServer extends NetworkPlugin {
       }
     };
 
-    applyCommandToBuffer(this.buffer, acceptedCmd);
+    applyCommandToBuffer(
+      this.buffer,
+      acceptedCmd
+    );
     this.#broadcast(acceptedCmd);
   }
 
   /**
    * Resolves move/delete conflicts per region id (parallel to the
-   * per-pixel resolution strokes use). Create is idempotent by unique id
-   * and applies unconditionally via the generic path in `receive()`.
+   * per-pixel resolution strokes use).
    */
   #receiveUvRegionCommand(
     cmd: PixelUvRegionCommand
@@ -253,7 +228,10 @@ export class PixelSyncServer extends NetworkPlugin {
     }
 
     this.#lastHeaderByRegion.set(key, cmd);
-    applyCommandToBuffer(this.buffer, cmd);
+    applyCommandToBuffer(
+      this.buffer,
+      cmd
+    );
     this.#broadcast(cmd);
   }
 

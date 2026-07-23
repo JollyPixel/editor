@@ -2,7 +2,8 @@ export type {
   PixelBufferSnapshot,
   PixelNetworkCommand,
   PixelNetworkCommandHeader,
-  PixelNetworkEvent
+  PixelNetworkEvent,
+  PixelServerMessage
 } from "./types.ts";
 export type { PixelTransport } from "./PixelTransport.ts";
 export type {

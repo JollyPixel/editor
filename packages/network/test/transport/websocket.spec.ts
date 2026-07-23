@@ -90,6 +90,10 @@ describe("WebsocketTransport + NetworkClient (integration)", () => {
     const client = new NetworkClient({ url: `ws://127.0.0.1:${port}/ws-sync` });
     const channel = client.channel("test-ns");
 
+    assert.equal(typeof client.clientId, "string");
+    assert.ok(client.clientId.length > 0);
+    assert.equal(channel.localClientId, client.clientId);
+
     await waitFor(() => plugin.connected.length === 1);
 
     let received: unknown;
@@ -127,6 +131,8 @@ describe("WebsocketTransport + NetworkClient (integration)", () => {
 
     const clientB = new NetworkClient({ url: `ws://127.0.0.1:${port}/ws-sync-peers` });
     clientB.channel("test-ns");
+
+    assert.notEqual(clientA.clientId, clientB.clientId);
 
     await waitFor(() => joined.length === 1);
     assert.deepEqual(joined, [plugin.connected[1].id]);

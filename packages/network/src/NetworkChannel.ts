@@ -11,6 +11,7 @@ export interface NetworkChannel<
   ServerPayload = unknown
 > {
   readonly namespace: string;
+  readonly localClientId: string;
 
   send(
     payload: ClientPayload

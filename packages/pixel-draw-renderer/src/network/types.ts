@@ -32,3 +32,11 @@ export interface PixelBufferSnapshot {
   pixels: string;
   uvRegions: UVRegion[];
 }
+
+/**
+ * Wire envelope a transport delivers to `PixelTransport.onMessage`: either
+ * the buffer's initial snapshot, or a live command from a peer.
+ */
+export type PixelServerMessage =
+  | { type: "snapshot"; data: PixelBufferSnapshot; }
+  | { type: "command"; data: PixelNetworkCommand; };

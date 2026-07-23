@@ -89,18 +89,17 @@ function createMockTransport(
   return {
     localClientId: clientId,
     sentCommands,
-    onCommand: null,
-    onSnapshot: null,
+    onMessage: null,
     onPeerJoined: null,
     onPeerLeft: null,
-    sendCommand(cmd) {
+    send(cmd) {
       sentCommands.push(cmd);
     },
     simulateCommand(cmd) {
-      this.onCommand?.(cmd);
+      this.onMessage?.({ type: "command", data: cmd });
     },
     simulateSnapshot(snapshot) {
-      this.onSnapshot?.(snapshot);
+      this.onMessage?.({ type: "snapshot", data: snapshot });
     }
   };
 }
@@ -351,8 +350,7 @@ describe("PixelSyncSession — destroy", () => {
     session.destroy();
 
     assert.strictEqual(manager.onBufferUpdated, undefined);
-    assert.strictEqual(transport.onCommand, null);
-    assert.strictEqual(transport.onSnapshot, null);
+    assert.strictEqual(transport.onMessage, null);
   });
 
   test("stops forwarding local mutations after destroy", () => {

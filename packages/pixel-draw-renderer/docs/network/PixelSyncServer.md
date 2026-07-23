@@ -13,7 +13,7 @@ Workflow, driven by `NetworkServer` once a client joins this server's namespace:
 4. `receive(cmd)`: validates, resolves conflicts, applies the command to the buffer, and broadcasts it via the function from `attach()`.
 5. `onClientDisconnect(clientId)`: no-op — there's no per-client state to clean up.
 
-Peer presence (`peer-joined`/`peer-left` notifications for other clients on the same namespace) is handled by `NetworkServer` itself, before/after these hooks run — `PixelSyncServer` never sees or sends that traffic. Consumers hook it via `NetworkChannel.onPeerJoined`/`onPeerLeft` client-side (`WebSocketPixelTransport.onPeerJoined`/`onPeerLeft` forward them).
+Peer presence (`peer-joined`/`peer-left` notifications for other clients on the same namespace) is handled by `NetworkServer` itself, before/after these hooks run — `PixelSyncServer` never sees or sends that traffic. Consumers hook it via `NetworkChannel.onPeerJoined`/`onPeerLeft` client-side (a `NetworkChannel` already satisfies `PixelTransport.onPeerJoined`/`onPeerLeft`, see [PixelTransport](./PixelTransport.md)).
 
 ## Types
 
