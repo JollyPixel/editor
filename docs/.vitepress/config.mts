@@ -11,10 +11,15 @@ export default defineConfig({
   ],
   themeConfig: {
     nav: [
-      { text: "Engine", link: "/engine/README", activeMatch: "^/engine/" },
-      { text: "Runtime", link: "/runtime/README", activeMatch: "^/runtime/" },
-      { text: "Voxel Renderer", link: "/voxel-renderer/README", activeMatch: "^/voxel-renderer/" },
-      { text: "Pixel Draw", link: "/pixel-draw-renderer/README", activeMatch: "^/pixel-draw-renderer/" }
+      {
+        text: "Packages",
+        items: [
+          { text: "Engine", link: "/engine/README", activeMatch: "^/engine/" },
+          { text: "Runtime", link: "/runtime/README", activeMatch: "^/runtime/" },
+          { text: "Voxel Renderer", link: "/voxel-renderer/README", activeMatch: "^/voxel-renderer/" },
+          { text: "Pixel Draw", link: "/pixel-draw-renderer/README", activeMatch: "^/pixel-draw-renderer/" }
+        ]
+      }
     ],
     search: {
       provider: "local"
@@ -28,7 +33,7 @@ export default defineConfig({
               items: [
                 {
                   text: "Hello World",
-                  link: "/engine/guides/hello-world"
+                  link: "/engine/docs/guides/hello-world"
                 }
               ]
             },
@@ -37,19 +42,19 @@ export default defineConfig({
               items: [
                 {
                   text: "Actor",
-                  link: "/engine/actor/actor"
+                  link: "/engine/docs/actor/actor"
                 },
                 {
                   text: "ActorComponents",
-                  link: "/engine/actor/actor-component"
+                  link: "/engine/docs/actor/actor-component"
                 },
                 {
                   text: "ActorTransform",
-                  link: "/engine/actor/actor-transform"
+                  link: "/engine/docs/actor/actor-transform"
                 },
                 {
                   text: "ActorTree",
-                  link: "/engine/actor/actor-tree"
+                  link: "/engine/docs/actor/actor-tree"
                 }
               ]
             },
@@ -58,15 +63,15 @@ export default defineConfig({
               items: [
                 {
                   text: "Audio",
-                  link: "/engine/audio/audio"
+                  link: "/engine/docs/audio/audio"
                 },
                 {
                   text: "AudioBackground",
-                  link: "/engine/audio/audio-background"
+                  link: "/engine/docs/audio/audio-background"
                 },
                 {
                   text: "AudioLibrary",
-                  link: "/engine/audio/audio-library"
+                  link: "/engine/docs/audio/audio-library"
                 }
               ]
             },
@@ -75,19 +80,19 @@ export default defineConfig({
               items: [
                 {
                   text: "Behavior",
-                  link: "/engine/components/behavior"
+                  link: "/engine/docs/components/behavior"
                 },
                 {
                   text: "Camera3DControls",
-                  link: "/engine/components/camera-3d-controls"
+                  link: "/engine/docs/components/camera-3d-controls"
                 },
                 {
                   text: "Renderers",
-                  link: "/engine/components/renderers"
+                  link: "/engine/docs/components/renderers"
                 },
                 {
                   text: "Signal",
-                  link: "/engine/components/signal"
+                  link: "/engine/docs/components/signal"
                 }
               ]
             },
@@ -96,31 +101,31 @@ export default defineConfig({
               items: [
                 {
                   text: "CombinedInput",
-                  link: "/engine/controls/combinedinput"
+                  link: "/engine/docs/controls/combinedinput"
                 },
                 {
                   text: "Gamepad",
-                  link: "/engine/controls/gamepad"
+                  link: "/engine/docs/controls/gamepad"
                 },
                 {
                   text: "Input",
-                  link: "/engine/controls/input"
+                  link: "/engine/docs/controls/input"
                 },
                 {
                   text: "Keyboard",
-                  link: "/engine/controls/keyboard"
+                  link: "/engine/docs/controls/keyboard"
                 },
                 {
                   text: "Mouse",
-                  link: "/engine/controls/mouse"
+                  link: "/engine/docs/controls/mouse"
                 },
                 {
                   text: "Screen",
-                  link: "/engine/controls/screen"
+                  link: "/engine/docs/controls/screen"
                 },
                 {
                   text: "Touchpad",
-                  link: "/engine/controls/touchpad"
+                  link: "/engine/docs/controls/touchpad"
                 }
               ]
             },
@@ -129,15 +134,15 @@ export default defineConfig({
               items: [
                 {
                   text: "Renderer",
-                  link: "/engine/systems/renderer"
+                  link: "/engine/docs/systems/renderer"
                 },
                 {
                   text: "SceneManager",
-                  link: "/engine/systems/scene-manager"
+                  link: "/engine/docs/systems/scene-manager"
                 },
                 {
                   text: "World",
-                  link: "/engine/systems/world"
+                  link: "/engine/docs/systems/world"
                 }
               ]
             },
@@ -146,15 +151,15 @@ export default defineConfig({
               items: [
                 {
                   text: "UINode",
-                  link: "/engine/ui/ui-node"
+                  link: "/engine/docs/ui/ui-node"
                 },
                 {
                   text: "UIRenderer",
-                  link: "/engine/ui/ui-renderer"
+                  link: "/engine/docs/ui/ui-renderer"
                 },
                 {
                   text: "UISprite",
-                  link: "/engine/ui/ui-sprite"
+                  link: "/engine/docs/ui/ui-sprite"
                 }
               ]
             },
@@ -163,15 +168,15 @@ export default defineConfig({
               items: [
                 {
                   text: "Adapters",
-                  link: "/engine/internals/adapters"
+                  link: "/engine/docs/internals/adapters"
                 },
                 {
                   text: "Audio",
-                  link: "/engine/internals/audio"
+                  link: "/engine/docs/internals/audio"
                 },
                 {
                   text: "FixedTimeStep",
-                  link: "/engine/internals/fixed-time-step"
+                  link: "/engine/docs/internals/fixed-time-step"
                 }
               ]
             },
@@ -180,7 +185,7 @@ export default defineConfig({
               items: [
                 {
                   text: "Asset",
-                  link: "/engine/asset"
+                  link: "/engine/docs/asset"
                 }
               ]
             }
@@ -199,7 +204,7 @@ export default defineConfig({
               items: [
                 {
                   text: "Runtime",
-                  link: "/runtime/Runtime"
+                  link: "/runtime/docs/Runtime"
                 }
               ]
             },
@@ -208,11 +213,11 @@ export default defineConfig({
               items: [
                 {
                   text: "Desktop",
-                  link: "/runtime/platforms/desktop"
+                  link: "/runtime/docs/platforms/desktop"
                 },
                 {
                   text: "Web",
-                  link: "/runtime/platforms/web"
+                  link: "/runtime/docs/platforms/web"
                 }
               ]
             },
@@ -232,23 +237,23 @@ export default defineConfig({
               items: [
                 {
                   text: "VoxelRenderer",
-                  link: "/voxel-renderer/VoxelRenderer"
+                  link: "/voxel-renderer/docs/VoxelRenderer"
                 },
                 {
                   text: "VoxelEngine",
-                  link: "/voxel-renderer/VoxelEngine"
+                  link: "/voxel-renderer/docs/VoxelEngine"
                 },
                 {
                   text: "World",
-                  link: "/voxel-renderer/World"
+                  link: "/voxel-renderer/docs/World"
                 },
                 {
                   text: "Layer",
-                  link: "/voxel-renderer/Layer"
+                  link: "/voxel-renderer/docs/Layer"
                 },
                 {
                   text: "Blocks",
-                  link: "/voxel-renderer/Blocks"
+                  link: "/voxel-renderer/docs/Blocks"
                 }
               ]
             },
@@ -257,15 +262,15 @@ export default defineConfig({
               items: [
                 {
                   text: "Tileset",
-                  link: "/voxel-renderer/Tileset"
+                  link: "/voxel-renderer/docs/Tileset"
                 },
                 {
                   text: "Built-In Shapes",
-                  link: "/voxel-renderer/BuiltInShapes"
+                  link: "/voxel-renderer/docs/BuiltInShapes"
                 },
                 {
                   text: "TiledConverter",
-                  link: "/voxel-renderer/TiledConverter"
+                  link: "/voxel-renderer/docs/TiledConverter"
                 }
               ]
             },
@@ -274,15 +279,15 @@ export default defineConfig({
               items: [
                 {
                   text: "Collision",
-                  link: "/voxel-renderer/Collision"
+                  link: "/voxel-renderer/docs/Collision"
                 },
                 {
                   text: "Serialization",
-                  link: "/voxel-renderer/Serialization"
+                  link: "/voxel-renderer/docs/Serialization"
                 },
                 {
                   text: "Hooks",
-                  link: "/voxel-renderer/Hooks"
+                  link: "/voxel-renderer/docs/Hooks"
                 }
               ]
             }
@@ -301,7 +306,7 @@ export default defineConfig({
               items: [
                 {
                   text: "PixelArtCanvas",
-                  link: "/pixel-draw-renderer/PixelArtCanvas"
+                  link: "/pixel-draw-renderer/docs/PixelArtCanvas"
                 }
               ]
             },
@@ -310,19 +315,19 @@ export default defineConfig({
               items: [
                 {
                   text: "Brush",
-                  link: "/pixel-draw-renderer/tools/Brush"
+                  link: "/pixel-draw-renderer/docs/tools/Brush"
                 },
                 {
                   text: "BrushTool",
-                  link: "/pixel-draw-renderer/tools/BrushTool"
+                  link: "/pixel-draw-renderer/docs/tools/BrushTool"
                 },
                 {
                   text: "FillTool",
-                  link: "/pixel-draw-renderer/tools/FillTool"
+                  link: "/pixel-draw-renderer/docs/tools/FillTool"
                 },
                 {
                   text: "SelectTool",
-                  link: "/pixel-draw-renderer/tools/SelectTool"
+                  link: "/pixel-draw-renderer/docs/tools/SelectTool"
                 }
               ]
             },
@@ -331,7 +336,7 @@ export default defineConfig({
               items: [
                 {
                   text: "PixelBuffer",
-                  link: "/pixel-draw-renderer/buffer/PixelBuffer"
+                  link: "/pixel-draw-renderer/docs/buffer/PixelBuffer"
                 }
               ]
             },
@@ -340,7 +345,7 @@ export default defineConfig({
               items: [
                 {
                   text: "Keybindings",
-                  link: "/pixel-draw-renderer/input/Keybindings"
+                  link: "/pixel-draw-renderer/docs/input/Keybindings"
                 }
               ]
             },
@@ -349,15 +354,15 @@ export default defineConfig({
               items: [
                 {
                   text: "Overview",
-                  link: "/pixel-draw-renderer/network/index"
+                  link: "/pixel-draw-renderer/docs/network/index"
                 },
                 {
                   text: "PixelSyncSession",
-                  link: "/pixel-draw-renderer/network/PixelSyncSession"
+                  link: "/pixel-draw-renderer/docs/network/PixelSyncSession"
                 },
                 {
                   text: "PixelSyncServer",
-                  link: "/pixel-draw-renderer/network/PixelSyncServer"
+                  link: "/pixel-draw-renderer/docs/network/PixelSyncServer"
                 }
               ]
             },
@@ -366,11 +371,11 @@ export default defineConfig({
               items: [
                 {
                   text: "UVMap",
-                  link: "/pixel-draw-renderer/uv/UVMap"
+                  link: "/pixel-draw-renderer/docs/uv/UVMap"
                 },
                 {
                   text: "HistoryStack",
-                  link: "/pixel-draw-renderer/history/HistoryStack"
+                  link: "/pixel-draw-renderer/docs/history/HistoryStack"
                 }
               ]
             }
@@ -383,9 +388,14 @@ export default defineConfig({
     ]
   },
   base: "/editor/",
-  rewrites: {
-    ":packages/docs/(.*)": ":packages/(.*)"
-  },
   srcDir: "../packages",
-  ignoreDeadLinks: true
+  ignoreDeadLinks: true,
+  vite: {
+    optimizeDeps: {
+      // `srcDir` makes the whole `packages/` tree the Vite root, so the default
+      // `**/*.html` dependency scan picks up unrelated apps (editors, examples)
+      // whose Lit decorators esbuild's scanner can't parse. Disable the crawl.
+      entries: []
+    }
+  }
 });
