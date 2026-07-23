@@ -4,6 +4,15 @@ import {
   loadRuntime
 } from "@jolly-pixel/runtime";
 import { ResizeHandle } from "@jolly-pixel/resize-handle";
+import { NetworkClient } from "@jolly-pixel/network";
+import type {
+  PixelNetworkCommand,
+  PixelServerMessage
+} from "@jolly-pixel/pixel-draw.renderer";
+import type {
+  VoxelNetworkCommand,
+  VoxelServerMessage
+} from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import { editorState } from "./EditorState.ts";
@@ -23,6 +32,19 @@ const runtime = new Runtime(canvas, {
 });
 const { world } = runtime;
 
+// One shared WebSocket (matching vite.config.ts's createWebSocketNetworkPlugin),
+// multiplexing the texture (pixel-draw) and world (voxel) sync namespaces.
+const wsProtocol = location.protocol === "https:" ? "wss:" : "ws:";
+const networkClient = new NetworkClient({
+  url: `${wsProtocol}//${location.host}/ws-sync`
+});
+const textureTransport = networkClient.channel<PixelNetworkCommand, PixelServerMessage>(
+  "voxel-map:texture"
+);
+const worldTransport = networkClient.channel<VoxelNetworkCommand, VoxelServerMessage>(
+  "voxel-map:world"
+);
+
 const editorScene = new EditorScene(
   editorState,
   {
@@ -31,12 +53,15 @@ const editorScene = new EditorScene(
       id: "default",
       src: "textures/tileset.png",
       tileSize: 32
-    }
+    },
+    voxelTransport: worldTransport
   }
 );
 
 const sidebar = document.querySelector<EditorSidebar>("#sidebar")!;
 if (sidebar) {
+  sidebar.textureTransport = textureTransport;
+
   // editorScene.vr / gridRenderer are assigned inside awake(), which runs
   // after loadScene(). Defer propagating them to the sidebar until the block
   // registry is fully populated (dispatched at the end of awake()).

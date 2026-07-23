@@ -5,9 +5,11 @@ import {
 } from "@jolly-pixel/engine";
 import {
   VoxelRenderer,
+  VoxelSyncSession,
   TilesetLoader,
   type TilesetDefinition,
-  type VoxelWorldJSON
+  type VoxelWorldJSON,
+  type VoxelTransport
 } from "@jolly-pixel/voxel.renderer";
 import * as THREE from "three";
 
@@ -30,12 +32,16 @@ export interface EditorSceneOptions {
    */
   defaultLayerName?: string;
   defaultTileset: TilesetDefinition;
+  /** Optional transport to synchronize the voxel world over the network. */
+  voxelTransport?: VoxelTransport;
 }
 
 export class EditorScene extends Systems.Scene {
   #tilesetLoader!: TilesetLoader;
   #defaultLayerName: string;
   #defaultTileset: TilesetDefinition;
+  #voxelTransport: VoxelTransport | undefined;
+  #voxelSyncSession: VoxelSyncSession | undefined;
   #pendingLoad: VoxelWorldJSON | null = null;
 
   editorState: EditorState;
@@ -66,11 +72,13 @@ export class EditorScene extends Systems.Scene {
 
     const {
       defaultLayerName = "Ground",
-      defaultTileset
+      defaultTileset,
+      voxelTransport
     } = options;
 
     this.#defaultLayerName = defaultLayerName;
     this.#defaultTileset = defaultTileset;
+    this.#voxelTransport = voxelTransport;
     this.editorState = editorState;
   }
 
@@ -109,6 +117,11 @@ export class EditorScene extends Systems.Scene {
       });
     this.vr = vr;
     this.editorState.setSelectedLayer(this.#defaultLayerName);
+
+    if (this.#voxelTransport) {
+      this.#voxelSyncSession = new VoxelSyncSession({ transport: this.#voxelTransport });
+      this.#voxelSyncSession.attach(vr.engine);
+    }
 
     // Skip default blocks when restoring a saved world — vr.load() will
     // register the persisted definitions (which carry user edits).
@@ -160,5 +173,10 @@ export class EditorScene extends Systems.Scene {
 
     world.createActor("perf-hud")
       .addComponent(PerformanceHUD);
+  }
+
+  override destroy(): void {
+    this.#voxelSyncSession?.destroy();
+    this.#voxelSyncSession = undefined;
   }
 }

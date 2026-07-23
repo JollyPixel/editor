@@ -3,7 +3,7 @@ import { LitElement, html, css } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import Picker from "vanilla-picker";
 import type { VoxelRenderer } from "@jolly-pixel/voxel.renderer";
-import type { Mode } from "@jolly-pixel/pixel-draw.renderer";
+import type { Mode, PixelTransport } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import { TextureEditorBridge } from "../lib/TextureEditorBridge.ts";
@@ -99,6 +99,7 @@ export class TextureEditor extends LitElement {
   `;
 
   @property({ attribute: false }) declare vr: VoxelRenderer | undefined;
+  @property({ attribute: false }) declare transport: PixelTransport | undefined;
   @property({ type: String }) declare tilesetId: string;
   @property({ type: Boolean }) declare active: boolean;
 
@@ -147,7 +148,7 @@ export class TextureEditor extends LitElement {
       texture: {
         maxSize: 512
       }
-    });
+    }, this.transport);
 
     if (this.vr) {
       this.#bridge.loadTileset(this.vr, this.tilesetId || null);

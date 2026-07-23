@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { VoxelSyncClient } from "../../src/network/VoxelSyncClient.ts";
+import { VoxelSyncSession } from "../../src/network/VoxelSyncSession.ts";
 import type { VoxelTransport } from "../../src/network/VoxelTransport.ts";
 import type { VoxelNetworkCommand } from "../../src/network/types.ts";
 import type { VoxelLayerHookEvent, VoxelLayerHookListener } from "../../src/hooks.ts";
@@ -52,11 +52,15 @@ function createMockEngine(): MockEngine {
   return engine;
 }
 
+function asEngine(
+  engine: MockEngine
+): VoxelEngine {
+  return engine as unknown as VoxelEngine;
+}
+
 interface MockTransport extends VoxelTransport {
   sentCommands: VoxelNetworkCommand[];
-  // Test helper: simulate receiving a command from a remote peer
   simulateCommand(cmd: VoxelNetworkCommand): void;
-  // Test helper: simulate receiving a snapshot from the server
   simulateSnapshot(snapshot: VoxelWorldJSON): void;
 }
 
@@ -66,21 +70,17 @@ function createMockTransport(clientId = "client-A"): MockTransport {
   return {
     localClientId: clientId,
     sentCommands,
-    onCommand: null,
-    onSnapshot: null,
+    onMessage: null,
     onPeerJoined: null,
     onPeerLeft: null,
-    sendCommand(cmd) {
+    send(cmd) {
       sentCommands.push(cmd);
     },
-    requestSnapshot() {
-      /* no-op */
-    },
     simulateCommand(cmd) {
-      this.onCommand?.(cmd);
+      this.onMessage?.({ type: "command", data: cmd });
     },
     simulateSnapshot(snapshot) {
-      this.onSnapshot?.(snapshot);
+      this.onMessage?.({ type: "snapshot", data: snapshot });
     }
   };
 }
@@ -90,45 +90,82 @@ function makeEmptySnapshot(): VoxelWorldJSON {
 }
 
 // ---------------------------------------------------------------------------
-// Tests
+// attach / detach
 // ---------------------------------------------------------------------------
 
-describe("VoxelSyncClient — constructor", () => {
-  it("sets engine.onLayerUpdated in the constructor", () => {
+describe("VoxelSyncSession — attach", () => {
+  it("sets engine.onLayerUpdated", () => {
     const engine = createMockEngine();
     const transport = createMockTransport();
+    const session = new VoxelSyncSession({ transport });
+
     assert.equal(engine.onLayerUpdated, undefined);
-
-    new VoxelSyncClient({
-      engine: engine as unknown as VoxelEngine,
-      transport
-    });
-
+    session.attach(asEngine(engine));
     assert.ok(engine.onLayerUpdated !== undefined);
   });
 
-  it("sets transport.onCommand in the constructor", () => {
-    const engine = createMockEngine();
+  it("throws when an engine is already attached", () => {
     const transport = createMockTransport();
-    assert.equal(transport.onCommand, null);
+    const session = new VoxelSyncSession({ transport });
+    session.attach(asEngine(createMockEngine()));
 
-    new VoxelSyncClient({
-      engine: engine as unknown as VoxelEngine,
-      transport
-    });
-
-    assert.ok(transport.onCommand !== null);
+    assert.throws(() => session.attach(asEngine(createMockEngine())));
   });
 });
 
-describe("VoxelSyncClient — local mutations forwarded to transport", () => {
-  it("sends a command when a local voxel-set fires", () => {
+describe("VoxelSyncSession — chaining onLayerUpdated", () => {
+  it("attach preserves an existing local handler instead of replacing it", () => {
+    const engine = createMockEngine();
+    const received: VoxelLayerHookEvent[] = [];
+    engine.onLayerUpdated = (event) => received.push(event);
+
+    const transport = createMockTransport("client-A");
+    const session = new VoxelSyncSession({ transport });
+    session.attach(asEngine(engine));
+
+    engine.triggerLocal({ action: "added", layerName: "L1", metadata: { options: {} } });
+
+    assert.equal(received.length, 1);
+    assert.equal(transport.sentCommands.length, 1);
+  });
+
+  it("detach restores the handler that was present before attach", () => {
+    const engine = createMockEngine();
+    const received: VoxelLayerHookEvent[] = [];
+    function original(event: VoxelLayerHookEvent): void {
+      received.push(event);
+    }
+    engine.onLayerUpdated = original;
+
+    const transport = createMockTransport();
+    const session = new VoxelSyncSession({ transport });
+    session.attach(asEngine(engine));
+    session.detach();
+
+    assert.equal(engine.onLayerUpdated, original);
+
+    engine.triggerLocal({ action: "added", layerName: "L1", metadata: { options: {} } });
+    assert.equal(received.length, 1);
+    assert.equal(transport.sentCommands.length, 0);
+  });
+
+  it("detach without an attached engine is a no-op", () => {
+    const transport = createMockTransport();
+    const session = new VoxelSyncSession({ transport });
+    assert.doesNotThrow(() => session.detach());
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Local mutations forwarded to transport
+// ---------------------------------------------------------------------------
+
+describe("VoxelSyncSession — local mutations forwarded to transport", () => {
+  it("sends a command when an attached engine fires a voxel-set", () => {
     const engine = createMockEngine();
     const transport = createMockTransport("client-A");
-    new VoxelSyncClient({
-      engine: engine as unknown as VoxelEngine,
-      transport
-    });
+    const session = new VoxelSyncSession({ transport });
+    session.attach(asEngine(engine));
 
     engine.triggerLocal({
       action: "voxel-set",
@@ -152,16 +189,10 @@ describe("VoxelSyncClient — local mutations forwarded to transport", () => {
     const engine = createMockEngine();
     const transport = createMockTransport("client-B");
     const before = Date.now();
-    new VoxelSyncClient({
-      engine: engine as unknown as VoxelEngine,
-      transport
-    });
+    const session = new VoxelSyncSession({ transport });
+    session.attach(asEngine(engine));
 
-    engine.triggerLocal({
-      action: "added",
-      layerName: "Layer1",
-      metadata: { options: {} }
-    });
+    engine.triggerLocal({ action: "added", layerName: "Layer1", metadata: { options: {} } });
 
     const cmd = transport.sentCommands[0];
     assert.equal(cmd.clientId, "client-B");
@@ -172,10 +203,8 @@ describe("VoxelSyncClient — local mutations forwarded to transport", () => {
   it("increments seq per outbound command", () => {
     const engine = createMockEngine();
     const transport = createMockTransport();
-    new VoxelSyncClient({
-      engine: engine as unknown as VoxelEngine,
-      transport
-    });
+    const session = new VoxelSyncSession({ transport });
+    session.attach(asEngine(engine));
 
     engine.triggerLocal({ action: "added", layerName: "L1", metadata: { options: {} } });
     engine.triggerLocal({ action: "added", layerName: "L2", metadata: { options: {} } });
@@ -187,14 +216,16 @@ describe("VoxelSyncClient — local mutations forwarded to transport", () => {
   });
 });
 
-describe("VoxelSyncClient — remote commands applied without re-emitting", () => {
+// ---------------------------------------------------------------------------
+// Remote commands
+// ---------------------------------------------------------------------------
+
+describe("VoxelSyncSession — remote commands applied without re-emitting", () => {
   it("applies commands from a different client to the engine", () => {
     const engine = createMockEngine();
     const transport = createMockTransport("client-A");
-    new VoxelSyncClient({
-      engine: engine as unknown as VoxelEngine,
-      transport
-    });
+    const session = new VoxelSyncSession({ transport });
+    session.attach(asEngine(engine));
 
     const remoteCmd: VoxelNetworkCommand = {
       action: "voxel-set",
@@ -221,10 +252,8 @@ describe("VoxelSyncClient — remote commands applied without re-emitting", () =
   it("does NOT apply commands from the local client (echo prevention)", () => {
     const engine = createMockEngine();
     const transport = createMockTransport("client-A");
-    new VoxelSyncClient({
-      engine: engine as unknown as VoxelEngine,
-      transport
-    });
+    const session = new VoxelSyncSession({ transport });
+    session.attach(asEngine(engine));
 
     const echoCmd: VoxelNetworkCommand = {
       action: "voxel-set",
@@ -247,40 +276,33 @@ describe("VoxelSyncClient — remote commands applied without re-emitting", () =
     assert.equal(engine.appliedCommands.length, 0);
   });
 
-  it("does not forward remote commands back to the transport (no loop)", () => {
-    const engine = createMockEngine();
+  it("ignores commands when no engine is attached", () => {
     const transport = createMockTransport("client-A");
-    new VoxelSyncClient({
-      engine: engine as unknown as VoxelEngine,
-      transport
+    new VoxelSyncSession({ transport });
+
+    assert.doesNotThrow(() => {
+      transport.simulateCommand({
+        action: "added",
+        layerName: "Ground",
+        metadata: { options: {} },
+        clientId: "client-B",
+        seq: 1,
+        timestamp: Date.now()
+      });
     });
-
-    const remoteCmd: VoxelNetworkCommand = {
-      action: "added",
-      layerName: "Ground",
-      metadata: { options: {} },
-      clientId: "client-B",
-      seq: 1,
-      timestamp: Date.now()
-    };
-
-    transport.simulateCommand(remoteCmd);
-
-    // applyRemoteCommand was called — but that doesn't trigger onLayerUpdated
-    // since #isApplyingRemote suppresses hooks.  The mock doesn't simulate
-    // that suppression, but the absence of extra sentCommands proves no loop.
-    assert.equal(transport.sentCommands.length, 0);
   });
 });
 
-describe("VoxelSyncClient — snapshot loading", () => {
+// ---------------------------------------------------------------------------
+// Snapshot loading
+// ---------------------------------------------------------------------------
+
+describe("VoxelSyncSession — snapshot loading", () => {
   it("calls engine.load when a snapshot arrives", () => {
     const engine = createMockEngine();
     const transport = createMockTransport();
-    new VoxelSyncClient({
-      engine: engine as unknown as VoxelEngine,
-      transport
-    });
+    const session = new VoxelSyncSession({ transport });
+    session.attach(asEngine(engine));
 
     const snapshot = makeEmptySnapshot();
     transport.simulateSnapshot(snapshot);
@@ -288,49 +310,42 @@ describe("VoxelSyncClient — snapshot loading", () => {
     assert.equal(engine.loadedSnapshots.length, 1);
     assert.equal(engine.loadedSnapshots[0], snapshot);
   });
+
+  it("ignores a snapshot when no engine is attached", () => {
+    const transport = createMockTransport();
+    new VoxelSyncSession({ transport });
+
+    assert.doesNotThrow(() => {
+      transport.simulateSnapshot(makeEmptySnapshot());
+    });
+  });
 });
 
-describe("VoxelSyncClient — destroy", () => {
-  it("clears engine.onLayerUpdated", () => {
+// ---------------------------------------------------------------------------
+// destroy
+// ---------------------------------------------------------------------------
+
+describe("VoxelSyncSession — destroy", () => {
+  it("detaches the engine and clears transport callbacks", () => {
     const engine = createMockEngine();
     const transport = createMockTransport();
-    const client = new VoxelSyncClient({
-      engine: engine as unknown as VoxelEngine,
-      transport
-    });
+    const session = new VoxelSyncSession({ transport });
+    session.attach(asEngine(engine));
 
-    client.destroy();
+    session.destroy();
 
     assert.equal(engine.onLayerUpdated, undefined);
-  });
-
-  it("clears transport.onCommand", () => {
-    const engine = createMockEngine();
-    const transport = createMockTransport();
-    const client = new VoxelSyncClient({
-      engine: engine as unknown as VoxelEngine,
-      transport
-    });
-
-    client.destroy();
-
-    assert.equal(transport.onCommand, null);
+    assert.equal(transport.onMessage, null);
   });
 
   it("stops forwarding local mutations after destroy", () => {
     const engine = createMockEngine();
     const transport = createMockTransport();
-    const client = new VoxelSyncClient({
-      engine: engine as unknown as VoxelEngine,
-      transport
-    });
+    const session = new VoxelSyncSession({ transport });
+    session.attach(asEngine(engine));
 
-    client.destroy();
-    engine.triggerLocal({
-      action: "added",
-      layerName: "L",
-      metadata: { options: {} }
-    });
+    session.destroy();
+    engine.triggerLocal({ action: "added", layerName: "L", metadata: { options: {} } });
 
     assert.equal(transport.sentCommands.length, 0);
   });
