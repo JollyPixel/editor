@@ -19,7 +19,6 @@
     "packages/engine",
     "packages/runtime",
     "packages/network",
-    "packages/mcp-server",
     "packages/fs-tree",
     "packages/fs-tree-backend",
     "packages/resize-handle",
