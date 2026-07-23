@@ -29,7 +29,7 @@
       "path": "./packages/editors/voxel-map"
     },
     {
-      "path": "./packages/editors/texture"
+      "path": "./packages/editors/voxel-model"
     }
   ]
 }

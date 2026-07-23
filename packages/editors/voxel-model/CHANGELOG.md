@@ -1,4 +1,4 @@
-# @jolly-pixel/editor.texture
+# @jolly-pixel/editor.voxel-model
 
 ## 1.0.2
 

@@ -10,21 +10,6 @@
   Monorepo for the collaborative 3D HTML5 game maker
 </p>
 
-<p align="center">
-  <a href="https://github.com/JollyPixel/editor">
-    <img src="https://img.shields.io/github/license/JollyPixel/editor?style=for-the-badge" alt="license">
-  </a>
-  <a href="https://github.com/JollyPixel/editor">
-    <img src="https://img.shields.io/maintenance/yes/2025?style=for-the-badge" alt="maintained">
-  </a>
-  <a href="https://github.com/JollyPixel/editor">
-    <img src="https://img.shields.io/badge/Typescript-294E80.svg?style=for-the-badge&logo=typescript" alt="typescript">
-  </a>
-  <a href="https://github.com/JollyPixel/editor">
-    <img src="https://img.shields.io/static/v1?&label=module&message=ESM%20and%20CJS&color=9cf&style=for-the-badge" alt="esm-cjs">
-  </a>
-</p>
-
 ## Requirements
 - [Node.js](https://nodejs.org/en/) version 24 or higher
 - npm v7+ for [workspaces](https://docs.npmjs.com/cli/v7/using-npm/workspaces)
@@ -50,8 +35,8 @@ $ yarn add @jolly-pixel/engine
 
 ## Available editors
 
-- [Voxel Map](./packages/editors/voxel-map/)
-- [model 3D](./packages/editors/texture/)
+- [Voxel Map](./packages/editors/voxel-map/): 3D Voxel Terrain editor
+- [Voxel Model](./packages/editors/voxel-model/): Low-poly/voxel 3D model editor
 
 ## Build
 To install and compile all workspaces, just run the following command at the root
