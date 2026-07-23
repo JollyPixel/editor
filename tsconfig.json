@@ -20,9 +20,6 @@
       "path": "./packages/resize-handle"
     },
     {
-      "path": "./packages/mcp-server"
-    },
-    {
       "path": "./packages/voxel-renderer"
     },
     {
