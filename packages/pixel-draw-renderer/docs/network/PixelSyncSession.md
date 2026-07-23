@@ -1,68 +1,124 @@
 # PixelSyncSession
 
-Client-side network orchestrator for a single buffer. A `PixelSyncSession` pairs one attached `PixelArtCanvas` with one [`PixelTransport`](./PixelTransport.md) connection, which is already scoped to that buffer's `PixelSyncServer` namespace:
+Client-side sync controller.
 
-- Local mutations from the attached `PixelArtCanvas` are stamped and forwarded.
-- Remote commands are routed to the attached `PixelArtCanvas`.
-- The buffer's snapshot is applied as soon as the transport receives it (pushed by the server on connect).
+It connects one `PixelArtCanvas` to one transport channel.
 
-Syncing several buffers (e.g. multiple open tilesets) means one `PixelSyncSession`/transport pair per buffer, each joined to that buffer's own namespace.
+## Transport Shape
 
-## Types
+Use a namespace-scoped channel with this shape:
+
+```ts
+interface PixelTransport {
+	readonly localClientId: string;
+	send(command: PixelNetworkCommand): void;
+	onMessage: ((message: PixelServerMessage) => void) | null;
+	onPeerJoined: ((peerId: string) => void) | null;
+	onPeerLeft: ((peerId: string) => void) | null;
+}
+
+interface PixelNetworkCommandHeader {
+	clientId: string;
+	seq: number;
+	timestamp: number;
+}
+
+type PixelNetworkCommand = PixelBufferHookEvent & PixelNetworkCommandHeader;
+
+interface PixelBufferSnapshot {
+	size: Vec2;
+	pixels: string; // base64 RGBA
+	uvRegions: UVRegion[];
+}
+
+type PixelServerMessage =
+	| { type: "snapshot"; data: PixelBufferSnapshot; }
+	| { type: "command"; data: PixelNetworkCommand; };
+```
+
+`PixelNetworkCommand` actions come from `PixelBufferHookEvent` (`stroke`, `resized`, `texture-replaced`, `global-fill`, `select-edit`, and `uv-region-*`).
+
+## Types Used By Session
 
 ```ts
 new PixelSyncSession(options: PixelSyncSessionOptions)
 
 interface PixelSyncSessionOptions {
-  transport: PixelTransport;
+	transport: PixelTransport;
+}
+
+interface PixelNetworkCommandHeader {
+	clientId: string;
+	seq: number;
+	timestamp: number;
 }
 ```
 
-## Methods
+`PixelSyncSession` stamps local buffer events with these header fields before sending.
 
-### `attach`
+## Recommended Transport
+
+Use `NetworkClient.channel()` from `@jolly-pixel/network` directly.
 
 ```ts
-attach(canvasManager: PixelArtCanvas): void
+import { NetworkClient } from "@jolly-pixel/network";
+import type {
+	PixelNetworkCommand,
+	PixelServerMessage
+} from "@jolly-pixel/pixel-draw.renderer";
+
+const wsProtocol = location.protocol === "https:" ? "wss:" : "ws:";
+const client = new NetworkClient({ url: `${wsProtocol}//${location.host}/ws-sync` });
+const transport = client.channel<PixelNetworkCommand, PixelServerMessage>(
+	"pixel-draw:main"
+);
 ```
 
-Attaches a `PixelArtCanvas` to sync over the transport. Throws if a canvas is already attached.
+No adapter required.
 
-Chains onto the canvas's existing `onBufferUpdated` handler (if any) instead of replacing it — a consumer's own local reaction keeps firing, followed by the forward-to-transport step. `detach()` restores that original handler.
-
----
-
-### `detach`
+## Use It Like This
 
 ```ts
-detach(): void
-```
+import {
+  PixelSyncSession
+} from "@jolly-pixel/pixel-draw.renderer";
 
-Stops syncing the attached canvas without announcing anything to peers, restoring whatever `onBufferUpdated` handler was present before `attach()`. A no-op if nothing is attached.
+const session = new PixelSyncSession({ transport });
+session.attach(canvas);
 
----
-
-### `destroy`
-
-```ts
-destroy(): void
-```
-
-Detaches the canvas and clears the transport's `onMessage` callback. Call when the session ends.
-
-## Example
-
-```ts
-import { PixelSyncSession } from "@jolly-pixel/pixel-draw.renderer";
-
-const session = new PixelSyncSession({ transport: myTransport });
-
-// Attaches the canvas; the buffer's snapshot arrives asynchronously via
-// transport.onMessage once the underlying connection is up.
-session.attach(canvasManager);
-
-// Stop syncing (e.g. the user closed this tab/panel).
-session.detach();
-
+// Later
 session.destroy();
 ```
+
+## What It Does
+
+1. Watches local canvas edits and sends them.
+2. Applies server snapshot on connect.
+3. Applies remote commands from peers.
+4. Ignores your own echoed commands.
+
+## Lifecycle
+
+### `attach(canvas)`
+
+- Attaches exactly one canvas.
+- Throws if you call `attach` twice without `detach`.
+- Chains onto the current `canvas.onBufferUpdated` handler instead of replacing it.
+
+### `detach()`
+
+- Stops sync for the attached canvas.
+- Restores the previous `onBufferUpdated` handler.
+- Safe to call when nothing is attached.
+
+### `destroy()`
+
+- Calls `detach()`.
+- Clears `transport.onMessage`.
+- Use this when the view/tab/session is done.
+
+## Common Mistakes
+
+1. Reusing one session for multiple canvases.
+2. Forgetting `destroy()` when unmounting UI.
+3. Attaching before transport points to the right namespace.

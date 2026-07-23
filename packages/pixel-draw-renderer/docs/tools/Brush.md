@@ -1,8 +1,8 @@
 # Brush
 
-`Brush` manages the primary/secondary brush colors, size, and highlight colors, and computes the list of texture-space pixels a brush stroke covers. Left-click paints with `primary`; right-click paints with `secondary`.
+Manages primary/secondary colors, brush size, and highlight colors. Computes texture-space pixels covered per stroke. Left-click → `primary`; right-click → `secondary`.
 
-> Reached via `PixelArtCanvas.brush`. For the color-picking behavior (`pickArmed` / `pick`), see [BrushTool.md](./BrushTool.md) (`PixelArtCanvas.tools.brush`).
+> Reached via `PixelArtCanvas.brush`. For color-picking (`pickArmed` / `pick`), see [BrushTool.md](./BrushTool.md).
 
 ## Types
 
@@ -56,7 +56,7 @@ readonly primary: BrushColor
 readonly secondary: BrushColor
 ```
 
-Each is a `BrushColor` value object, a color+opacity pair:
+Color+opacity pair. API:
 
 ```ts
 set(color: ColorInput, opacity?: number): void
@@ -65,8 +65,9 @@ get/set opacity: number
 ```
 
 - `set(color, opacity?)`: sets the color from a CSS color string or a colorjs.io `Color` instance. If `opacity` is omitted, the current opacity is preserved; otherwise it's clamped to `[0, 1]` and applied alongside the new color.
-- `asString(format?)`: returns the color. Defaults to an `rgba(r, g, b, a)` string; pass `"hex"` for a 6-digit hex string (opacity is not represented in hex output).
-- `opacity`: clamped to `[0, 1]` on assignment.
+- `set`: color from CSS string or colorjs.io `Color`. Omit `opacity` to preserve it; otherwise clamped to `[0, 1]`.
+- `asString`: defaults to `rgba(r,g,b,a)`; pass `"hex"` for 6-digit hex (no opacity).
+- `opacity`: clamped to `[0, 1]` on write.
 
 ```ts
 brush.primary.set("#FF6600");
@@ -82,7 +83,7 @@ brush.secondary.set("#3366FF", 1);
 swapColors(): void
 ```
 
-Exchanges `primary` and `secondary` (color and opacity both).
+Swaps `primary` ↔ `secondary` (color and opacity).
 
 ---
 
@@ -93,7 +94,7 @@ get size(): number
 set size(size: number)
 ```
 
-The brush size in pixels. Assigned values are clamped to `[1, maxSize]`.
+Brush size in pixels. Clamped to `[1, maxSize]`.
 
 ---
 
@@ -104,7 +105,7 @@ get colorInline(): string
 set colorInline(color: ColorInput)
 ```
 
-The inner stroke color of the SVG brush cursor overlay.
+Inner stroke color of the SVG brush cursor overlay.
 
 ---
 
@@ -115,7 +116,7 @@ get colorOutline(): string
 set colorOutline(color: ColorInput)
 ```
 
-The outer stroke color of the SVG brush cursor overlay.
+Outer stroke color of the SVG brush cursor overlay.
 
 ---
 
@@ -125,17 +126,14 @@ The outer stroke color of the SVG brush cursor overlay.
 affectedPixels(cx: number, cy: number): IterableIterator<Vec2>
 ```
 
-A generator yielding texture-space `{ x, y }` coordinates for every pixel within the current brush square centered at `(cx, cy)`. Lazy and single-use: each call produces a fresh iterator; iterate it once (`for...of`, spread, or pass it directly to something that accepts an `Iterable<Vec2>`) rather than storing and re-reading it.
+Yields texture-space `{ x, y }` coords for every pixel in the brush square at `(cx, cy)`. Single-use: iterate once or spread into an array.
 
-- For **odd** brush sizes the center pixel is exactly `(cx, cy)`.
-- For **even** brush sizes the brush is offset by `−0.5` to remain grid-aligned.
-
-**Example**
+- Odd size: center is exactly `(cx, cy)`.
+- Even size: offset by `-0.5` to stay grid-aligned.
 
 ```ts
 // size = 3 → 9 pixels around (10, 10)
 canvasBuffer.drawPixels(brush.affectedPixels(10, 10), { r: 255, g: 0, b: 0, a: 255 });
-
-// Or, if you need to consume the pixels more than once:
+// Reuse:
 const pixels = [...brush.affectedPixels(10, 10)];
 ```

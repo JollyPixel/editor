@@ -1,64 +1,79 @@
-# Network Sync Layer
+# Network Sync
 
-Transport-agnostic, server-authoritative multiplayer for `PixelArtCanvas`. Multiple
-clients can share the same texture in real time. Structurally mirrors
-`@jolly-pixel/voxel.renderer`'s network layer but is an independent
-implementation: this package has no dependency on voxel-renderer.
+Multiplayer sync for one `PixelArtCanvas` per session, with server-authoritative state.
 
-## Architecture
+## Read This First
 
+1. One `PixelSyncServer` owns one `PixelBuffer`.
+2. One `PixelSyncSession` owns one `PixelArtCanvas`.
+3. One namespace maps to one shared buffer.
+
+If you sync 3 canvases, run 3 namespaces.
+
+## 60-Second Setup
+
+### Server
+
+```ts
+import { defineConfig } from "vite";
+import {
+  createWebSocketNetworkPlugin
+} from "@jolly-pixel/network/plugins/vite.ts";
+import {
+  PixelBuffer,
+  PixelSyncServer
+} from "@jolly-pixel/pixel-draw.renderer";
+
+export default defineConfig({
+   plugins: [
+      createWebSocketNetworkPlugin({
+         plugins: [
+            new PixelSyncServer({
+               namespace: "pixel-draw:main",
+               buffer: new PixelBuffer({
+                size: { x: 80, y: 80 }
+              })
+            })
+         ]
+      })
+   ]
+});
 ```
-┌───────────────┐  onBufferUpdated   ┌──────────────────┐      send       ┌─────────────┐
-│ PixelArtCanvas │───────────────────▶│ PixelSyncSession │────────────────▶│  Transport  │
-│               │                    │  (one buffer)    │◀────────────────│ (WebSocket, │
-│               │◀──applyRemote──────│                  │    onMessage    │ WebRTC, ...) │
-└───────────────┘                    └──────────────────┘                 └──────┬──────┘
-                                                                                  │ wire
-                                                                                  ▼
-                                                                       ┌──────────────────┐
-                                                                       │  PixelSyncServer │
-                                                                       │    (headless)    │
-                                                                       │   one PixelBuffer│
-                                                                       └──────────────────┘
+
+### Client
+
+```ts
+import { NetworkClient } from "@jolly-pixel/network";
+import {
+   PixelSyncSession,
+   type PixelNetworkCommand,
+   type PixelServerMessage
+} from "@jolly-pixel/pixel-draw.renderer";
+
+const wsProtocol = location.protocol === "https:" ? "wss:" : "ws:";
+const client = new NetworkClient({
+  url: `${wsProtocol}//${location.host}/ws-sync`
+});
+const transport = client.channel<PixelNetworkCommand, PixelServerMessage>(
+   "pixel-draw:main"
+);
+
+const session = new PixelSyncSession({ transport });
+session.attach(canvas);
 ```
 
-Each `PixelSyncServer` owns exactly one [`PixelBuffer`](../buffer/PixelBuffer.md)
-and is registered under its own `NetworkPlugin` namespace. A `PixelArtCanvas`
-has no concept of a buffer identity either — it owns exactly one texture, and
-[`PixelSyncSession`](./PixelSyncSession.md) attaches it to a transport that is
-already scoped to that one buffer's namespace. Syncing several buffers (e.g.
-multiple open tilesets) means running one `PixelSyncServer` instance and one
-transport/session pair per buffer, each under its own namespace — see
-[`PixelSyncServer`](./PixelSyncServer.md) for how namespaces are assigned.
-Registration is currently static (instances are constructed up front); dynamic
-buffer creation/discovery is a future extension.
+## How It Behaves
 
-**Flow:**
-1. A local mutation (a paint stroke, fill, resize, setting `texture`, or a UV
-   region create/delete/move) fires `PixelArtCanvas.onBufferUpdated` (see
-   [buffer/PixelBuffer.md](../buffer/PixelBuffer.md)). `attach()` chains onto
-   whatever handler was already set on the canvas rather than replacing it, so
-   a consumer's own local reaction keeps firing once sync is layered on.
-2. `PixelSyncSession` stamps the event with `clientId` / `seq` / `timestamp`
-   and calls `transport.send(cmd)`.
-3. The transport delivers the command to [`PixelSyncServer.receive()`](./PixelSyncServer.md).
-4. The server resolves conflicts (see [ConflictResolver](./ConflictResolver.md)), applies the command to its authoritative
-   `PixelBuffer`, and broadcasts it to every client connected to that namespace.
-5. Each connected client's transport calls `onMessage({ type: "command", data: cmd })`,
-   which `PixelSyncSession` routes to `PixelArtCanvas.applyRemoteCommand()`.
-6. `applyRemoteCommand` suppresses `onBufferUpdated` while applying, so the
-   result is never re-broadcast: no echo loop.
+1. Local edits on the canvas emit buffer events.
+2. `PixelSyncSession` stamps `clientId`, `seq`, and `timestamp` and sends.
+3. `PixelSyncServer` validates, resolves conflicts, applies, then broadcasts.
+4. Clients apply remote commands without re-broadcasting, so no echo loop.
 
-A client receives the buffer's pixel data as soon as it connects: `PixelSyncServer`
-pushes a snapshot immediately in `onClientConnect`, before any command flows.
+On connect, the server immediately sends a snapshot so late joiners catch up.
 
-## Pieces
+## What To Read Next
 
-| Module | Description |
+| File | Use it when |
 |---|---|
-| [types](./types.md) | `PixelNetworkCommand` wire format and its constituent event types |
-| [PixelTransport](./PixelTransport.md) | Transport-agnostic interface consumers implement (WebSocket, WebRTC, ...) |
-| [PixelSyncSession](./PixelSyncSession.md) | Client-side orchestrator for one buffer |
-| [PixelSyncServer](./PixelSyncServer.md) | Headless, server-authoritative sync manager for one buffer |
-| [PixelCommandApplier](./PixelCommandApplier.md) | `applyCommandToBuffer`, headless command replay |
-| [ConflictResolver](./ConflictResolver.md) | Per-pixel conflict resolution strategy (`LastWriteWinsResolver` and custom resolvers) |
+| [PixelSyncSession](./PixelSyncSession.md) | You are wiring client lifecycle (`attach`/`detach`/`destroy`) |
+| [PixelSyncServer](./PixelSyncServer.md) | You are wiring server namespaces and authoritative buffers |
