@@ -19,8 +19,8 @@ export const panelStyles = css`
     flex-shrink: 0;
     padding: 20px 0;
     gap: 10px;
-    background: #37474F;
-    color: #eee;
+    background: var(--color-bg-surface);
+    color: var(--color-text);
     font-family: sans-serif;
     user-select: none;
   }
@@ -29,7 +29,7 @@ export const panelStyles = css`
     width: 32px;
     height: 1px;
     flex-shrink: 0;
-    background: #4b5b63;
+    background: var(--color-divider);
   }
 
   .stage {
@@ -60,8 +60,8 @@ export const panelStyles = css`
     gap: 6px;
     padding: 4px 10px;
     border-radius: 12px;
-    background: rgba(30, 38, 43, 0.85);
-    color: #eee;
+    background: var(--color-bg-overlay);
+    color: var(--color-text);
     font-size: 11px;
     font-family: sans-serif;
     user-select: none;
@@ -80,16 +80,16 @@ export const panelStyles = css`
 
   .tool-toggle-btn {
     padding: 2px 8px;
-    border: 1px solid #556067;
+    border: 1px solid var(--color-border);
     border-radius: 10px;
     background: transparent;
-    color: #eee;
+    color: var(--color-text);
     font-size: 11px;
     cursor: pointer;
   }
   .tool-toggle-btn.active {
-    background: #4488ff;
-    border-color: #4488ff;
+    background: var(--color-accent);
+    border-color: var(--color-accent);
   }
 
   .uv-toolbar {
@@ -102,8 +102,8 @@ export const panelStyles = css`
     gap: 8px;
     padding: 4px 10px;
     border-radius: 12px;
-    background: rgba(30, 38, 43, 0.85);
-    color: #eee;
+    background: var(--color-bg-overlay);
+    color: var(--color-text);
     font-size: 11px;
     font-family: sans-serif;
     user-select: none;
@@ -112,15 +112,15 @@ export const panelStyles = css`
 
   .uv-toolbar button {
     padding: 3px 10px;
-    border: 1px solid #556067;
+    border: 1px solid var(--color-border);
     border-radius: 10px;
     background: transparent;
-    color: #eee;
+    color: var(--color-text);
     font-size: 11px;
     cursor: pointer;
   }
   .uv-toolbar button:disabled {
-    color: #556067;
+    color: var(--color-border);
     cursor: default;
   }
 

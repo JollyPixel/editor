@@ -12,6 +12,7 @@ import { type ColorChangeDetail } from "./ColorSwatch.ts";
 import { panelStyles } from "./PixelDrawPanel.styles.ts";
 import { railButtonStyles } from "./rail-button.styles.ts";
 import { iconStyles } from "./icon.styles.ts";
+import { themeStyles } from "./theme.ts";
 import { renderIcon } from "./icons.ts";
 
 // Bare imports: only used via their custom element tags below, so nothing
@@ -26,7 +27,7 @@ const kUvCreateSize = { width: 16, height: 16 };
 
 @customElement("pixel-draw-panel")
 export class PixelDrawPanel extends LitElement {
-  static override styles = [iconStyles, railButtonStyles, panelStyles];
+  static override styles = [themeStyles, iconStyles, railButtonStyles, panelStyles];
 
   // Plain private fields, not @state(): Lit's legacy decorators can't target
   // true #private fields (TS1206), so reactivity here is driven manually via

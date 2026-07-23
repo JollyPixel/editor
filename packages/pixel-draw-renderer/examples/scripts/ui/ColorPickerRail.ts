@@ -71,14 +71,14 @@ export class ColorPickerRail extends LitElement {
       padding: 0;
       border: none;
       border-radius: 50%;
-      background: #546b76;
-      color: #fff;
+      background: var(--color-bg-control);
+      color: var(--color-text-emphasis);
       font-size: 9px;
       line-height: 1;
       cursor: pointer;
     }
     .swap-btn:hover {
-      background: #4488ff;
+      background: var(--color-accent);
     }
     .swap-btn .icon {
       width: 11px;
