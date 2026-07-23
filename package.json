@@ -25,7 +25,7 @@
     "packages/voxel-renderer",
     "packages/pixel-draw-renderer",
     "packages/editors/voxel-map",
-    "packages/editors/texture"
+    "packages/editors/voxel-model"
   ],
   "repository": {
     "type": "git",

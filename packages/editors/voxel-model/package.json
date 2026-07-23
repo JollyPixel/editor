@@ -1,5 +1,5 @@
 {
-  "name": "@jolly-pixel/editor.texture",
+  "name": "@jolly-pixel/editor.voxel-model",
   "version": "1.0.2",
   "type": "module",
   "private": true,

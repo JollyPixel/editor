@@ -16,7 +16,7 @@ packages/
   pixel-draw-renderer/ @jolly-pixel/pixel-draw.renderer  – Pixel-art canvas library (public)
   editors/
     voxel-map/         @jolly-pixel/editor.voxel-map     – Voxel map editor (private)
-    texture/           @jolly-pixel/editor.texture       – Texture/pixel-art editor (private)
+    voxel-model/       @jolly-pixel/editor.voxel-model   – Low-poly/voxel 3D model editor (private)
 ```
 
 Library packages (engine, runtime, fs-tree, resize-handle, voxel-renderer, pixel-draw-renderer) compile with `tsc`. Editor/frontend packages (`editors/*`) use Vite.

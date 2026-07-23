@@ -7,7 +7,7 @@ export default defineConfig({
   description: "The collaborative 3D HTML5 game maker",
   srcExclude: [
     "**/public/**",
-    "packages/editors/texture/src/components/**"
+    "packages/editors/voxel-model/src/components/**"
   ],
   themeConfig: {
     nav: [
