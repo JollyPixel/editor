@@ -1,6 +1,6 @@
 # FillTool
 
-The public surface of `"fill"` mode's paint-bucket tool, reached via [`PixelArtCanvas.tools.fill`](../PixelArtCanvas.md#tools).
+Paint-bucket tool for `"fill"` mode, reached via [`PixelArtCanvas.tools.fill`](../PixelArtCanvas.md#tools).
 
 ```ts
 export interface FillTool {
@@ -10,9 +10,10 @@ export interface FillTool {
 
 ## `global`
 
-Reads or sets whether `"fill"` mode recolors every pixel matching the seed's color anywhere on the canvas (`true`), instead of only the seed's 4-directionally connected region (`false`, the default).
+- `false` (default): floods the 4-connected region from the seed pixel.
+- `true`: recolors every matching pixel on the canvas.
 
-Runtime-only: there is no constructor option. The setting persists across mode switches, mirroring `brush`'s size/color.
+Runtime-only: no constructor option. Persists across mode switches.
 
 > [!IMPORTANT]
-> A global fill still commits and undoes as a single atomic edit, but broadcasts over `onBufferUpdated`/the network layer as a compact `"global-fill"` event (`{ fromColor, toColor }`, no position list) instead of `"stroke"`, since it can touch a large fraction of the canvas; see [buffer/PixelBuffer.md](../buffer/PixelBuffer.md). Undoing/redoing a global fill replays as a full-position `"stroke"` event instead.
+> A global fill commits as a single atomic edit and broadcasts a compact `"global-fill"` event (`{ fromColor, toColor }`) instead of `"stroke"`. Undo/redo replays it as a full `"stroke"`.

@@ -1,6 +1,6 @@
 # SelectTool
 
-The public surface of `"select"` mode, reached via [`PixelArtCanvas.tools.select`](../PixelArtCanvas.md#tools). Covers the shape sub-mode toggle, a read-only selection flag, and the programmatic transforms. The rectangle-drag / move / copy / paste / delete gestures are driven by input and keybindings (see [PixelArtCanvas.md](../PixelArtCanvas.md#mode) and [input/Keybindings.md](../input/Keybindings.md)).
+Public API for `"select"` mode, reached via [`PixelArtCanvas.tools.select`](../PixelArtCanvas.md#tools).
 
 ```ts
 export interface SelectTool {
@@ -14,17 +14,26 @@ export interface SelectTool {
 
 ## `shape`
 
-Reads or sets whether `"select"` mode's click-to-start (on empty space, not on top of an existing selection) computes a magic-wand shape selection around the clicked pixel's connected region (`true`), instead of starting a rectangle drag (`false`, the default).
+Controls selection start behavior:
 
-Runtime-only: there is no constructor option. Toggling this value clears any active selection.
+- `false` (default): start rectangle selection.
+- `true`: magic-wand selection from the clicked connected region.
+
+Runtime-only (no constructor option). Changing it clears the current selection.
 
 > [!IMPORTANT]
 > A connected region smaller than 2 pixels does not produce a selection; the click is a no-op.
 
 ## `hasSelection`
 
-Read-only. `true` when a committed selection exists to transform — idle or actively being dragged — and `false` while a rectangle is still being drawn or when nothing is selected. Use it to enable/disable transform controls without side effects.
+Read-only. `true` when there is a committed selection to transform; otherwise `false`.
 
 ## `rotate` / `flipHorizontal` / `flipVertical`
 
-Programmatic equivalents of the `R`/`H`/`V` select-mode keybindings (e.g. for a toolbar button): same underlying commit path, so keyboard and button can't drift apart. `rotate()` turns the selection 90° clockwise around its center; the flips mirror its content in place. Each returns `false` and does nothing without an active `"select"`-mode selection (i.e. `hasSelection === false`).
+Programmatic transforms for the active selection.
+
+- `rotate()`: rotate 90 degrees clockwise around selection center.
+- `flipHorizontal()`: mirror selection horizontally.
+- `flipVertical()`: mirror selection vertically.
+
+Each method returns `false` and does nothing when there is no active selection.

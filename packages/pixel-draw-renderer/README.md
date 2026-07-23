@@ -8,18 +8,18 @@
 
 ## 📌 About
 
-Browser-based library for editing pixel-art textures. It provides zoom, pan, primary/secondary brush painting, `Ctrl`+right-click color picking, and an SVG cursor overlay.
+Browser-based library for editing pixel-art textures: brush, fill, select, and UV region tools, undo/redo, zoom/pan, and optional real-time multiplayer sync, all behind a single `PixelArtCanvas` API.
 
 ## 💡 Features
 
-- **Brush painting**: adjustable size, primary/secondary color, and opacity; color inputs accept a CSS string or a [colorjs.io][colorjs] `Color` instance; left-click paints `primary`, right-click paints `secondary`, `Ctrl`+right-click eyedroppers a color from the canvas into `primary`
-- **Shift-to-line drawing**: hold `Shift` in paint mode to draw a straight line
+- **Brush painting**: adjustable size, opacity, and primary/secondary color (CSS string or a [colorjs.io][colorjs] `Color` instance)
 - **Paint-bucket fill**: flood-fill a connected region of same-colored pixels
-- **Rectangle select, move, copy, delete**: `Ctrl`/`Cmd`+`C`/`V` to copy/duplicate, `Delete` to erase
-- **UV regions**: create/move/delete rectangular UV regions independently of painting, via the `uv` value object; hidden by default, revealed by selection or an opt-in "show all"
-- **Undo/redo**: optional bounded history over strokes, resizes, texture replaces, and UV region changes; opt in via `history.enabled`
-- **Zoom & pan**: mouse-wheel and trackpad-pinch zoom with configurable sensitivity and range; pan by middle-drag or `Space`+left-drag (trackpad-friendly) in any mode
+- **Rectangle select**: drag to select a region
+- **UV regions**: create/move/delete rectangular UV regions independently of painting, via the `uv` value object;
+- **Undo/redo**: optional bounded history over strokes, resizes, texture replaces, and UV region changes;
+- **Zoom & pan**: mouse-wheel and trackpad-pinch zoom with configurable sensitivity and range;
 - **Transparency support**: checkerboard background renders beneath transparent pixels
+- **Network sync**: transport-agnostic, server-authoritative multiplayer. Multiple clients can paint the same texture in real time
 
 ## 💃 Getting Started
 
@@ -43,21 +43,26 @@ const manager = new PixelArtCanvas(container, {
   texture: {
     size: { x: 64, y: 64 }
   },
+  defaultMode: "paint",
+  backgroundColor: "#263238",
   zoom: {
-    default: 4,
-    min: 0.5,
-    max: 40
+    // No `default`: computed to fit the whole texture inside `container`.
+    min: 1,
+    max: 32
+  },
+  brush: {
+    size: 3
+  },
+  history: {
+    enabled: true
   }
 });
 
 manager.onResize();
 manager.centerTexture();
 
-manager.brush.primary.set("#FF6600");
-manager.brush.primary.opacity = 0.8;
+manager.brush.primary.set("#FF6600", 0.8);
 manager.brush.secondary.set("#3366FF");
-manager.brush.size = 3;
-
 manager.mode = "fill";
 ```
 
@@ -70,24 +75,26 @@ await img.decode();
 manager.texture = img;
 ```
 
+> See [`examples/`](./examples) for a full demo (a Lit-based toolbar panel driving `PixelArtCanvas` and painting a live Three.js texture).
+
 ### Modes
 
 `mode` selects how left-click/drag is interpreted.
 
-- `"paint"`: left-click draws with `brush.primary`, right-click draws with `brush.secondary` (mutually exclusive — one button's stroke blocks the other from starting); hold `Shift` for a straight line (always `primary`); `Ctrl`+right-click eyedroppers a color into `brush.primary`
-- `"move"`: drag to pan the camera (single-finger, no modifier — the trackpad-friendly way to move around)
-- `"fill"`: flood-fills the clicked region with `brush.primary`; right-click has no effect
-- `"select"`: drag to select/move; `Ctrl`/`Cmd`+`C`/`V` copy/paste, `Delete` erases; right-click has no effect. Cursor is `grab`/`grabbing` while a selection exists/is being dragged.
-- `"uv"`: click a visible UV region to select/drag it; `Delete` deletes the selected region. There's no click-to-create — create regions via `manager.uv.create(...)`. The cursor is `grab`/`grabbing` in this mode.
+- `"paint"`: draw with the brush
+- `"move"`: pan the camera
+- `"fill"`: flood-fill the clicked region
+- `"select"`: select, move, copy, and delete a rectangular region
+- `"uv"`: select and drag UV regions; regions are created programmatically via `manager.uv.create(...)`, not by clicking
 
-Switch to `"move"` mode and drag to pan with a single finger — the trackpad-friendly way to move around. From any mode you can also pan by middle-dragging or by holding `Space` and left-dragging (the `Space` chord is easy with a mouse, awkward one-handed on a trackpad). The mouse wheel and trackpad pinch both zoom toward the cursor.
+Panning and zooming (mouse wheel, trackpad pinch/drag) work from any mode, regardless of the current `mode`.
 
 > [!TIP]
-> Read [PixelArtCanvas.md](./docs/PixelArtCanvas.md#mode) for the full behavior.
+> Read [PixelArtCanvas.md](./docs/PixelArtCanvas.md#mode) for the full behavior, and the [Keybinds](#keybinds) section below for exact shortcuts.
 
 ### Keybinds
 
-Copy/paste/undo/redo/delete are configurable; `Shift` (line-tool arm/disarm) and `Space` (pan modifier) are not. Defaults:
+`Shift` (line draw) and `Space` (pan) are not **configurable** but everything below is:
 
 | Action | Default |
 |---|---|
@@ -96,6 +103,9 @@ Copy/paste/undo/redo/delete are configurable; `Shift` (line-tool arm/disarm) and
 | Undo | `Ctrl`/`Cmd`+`Z` |
 | Redo | `Ctrl`/`Cmd`+`Y` or `Ctrl`/`Cmd`+`Shift`+`Z` |
 | Delete | `Delete` |
+| Rotate selection | `R` |
+| Flip selection horizontal | `H` |
+| Flip selection vertical | `V` |
 
 Override at construction, or live via `keybindings.patch()`:
 
@@ -148,14 +158,21 @@ Open `http://localhost:5173` to see the interactive demo.
 
 ## 📚 API
 
-- [`PixelArtCanvas`](./docs/PixelArtCanvas.md): top-level coordinator, the primary public API
-- [`Brush`](./docs/tools/Brush.md): brush size, primary/secondary color, opacity, and affected-pixel computation — read/write via `PixelArtCanvas.brush`
-- [`BrushTool`](./docs/tools/BrushTool.md) / [`FillTool`](./docs/tools/FillTool.md) / [`SelectTool`](./docs/tools/SelectTool.md): the per-tool runtime state exposed via `PixelArtCanvas.tools.{brush,fill,select}`
-- [`PixelBuffer`](./docs/buffer/PixelBuffer.md): headless RGBA pixel storage, usable server-side with no DOM
-- [`UVMap`](./docs/uv/UVMap.md): UV region create/delete/move, selection, and visibility — read/write via `PixelArtCanvas.uv`
-- [`HistoryStack`](./docs/history/HistoryStack.md): bounded undo/redo stack backing `PixelArtCanvas.undo()`/`redo()`
-- [`Keybindings`](./docs/input/Keybindings.md): the `Keybindings` value object, `Keybinding`/`KeybindingsMap` types, `DEFAULT_KEYBINDINGS`, and the errors thrown by `patch()`
-- [`Network`](./docs/network/index.md): transport-agnostic, server-authoritative multiplayer for `PixelArtCanvas`
+- [`PixelArtCanvas`](./docs/PixelArtCanvas.md)
+  - [`Brush`](./docs/tools/Brush.md)
+  - [`BrushTool`](./docs/tools/BrushTool.md)
+  - [`FillTool`](./docs/tools/FillTool.md)
+  - [`SelectTool`](./docs/tools/SelectTool.md)
+- [`PixelBuffer`](./docs/buffer/PixelBuffer.md)
+- [`Keybindings`](./docs/input/Keybindings.md)
+- [`Network`](./docs/network/index.md)
+
+### Advanced / Internal
+
+Useful, but generally more internal-facing APIs:
+
+- [`UVMap`](./docs/uv/UVMap.md)
+- [`HistoryStack`](./docs/history/HistoryStack.md)
 
 ## 🧩 Types
 

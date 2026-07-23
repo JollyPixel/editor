@@ -302,10 +302,27 @@ export default defineConfig({
                 {
                   text: "PixelArtCanvas",
                   link: "/pixel-draw-renderer/PixelArtCanvas"
-                },
+                }
+              ]
+            },
+            {
+              text: "Tools",
+              items: [
                 {
                   text: "Brush",
                   link: "/pixel-draw-renderer/tools/Brush"
+                },
+                {
+                  text: "BrushTool",
+                  link: "/pixel-draw-renderer/tools/BrushTool"
+                },
+                {
+                  text: "FillTool",
+                  link: "/pixel-draw-renderer/tools/FillTool"
+                },
+                {
+                  text: "SelectTool",
+                  link: "/pixel-draw-renderer/tools/SelectTool"
                 }
               ]
             },
@@ -319,6 +336,15 @@ export default defineConfig({
               ]
             },
             {
+              text: "Input",
+              items: [
+                {
+                  text: "Keybindings",
+                  link: "/pixel-draw-renderer/input/Keybindings"
+                }
+              ]
+            },
+            {
               text: "Network",
               items: [
                 {
@@ -326,32 +352,25 @@ export default defineConfig({
                   link: "/pixel-draw-renderer/network/index"
                 },
                 {
-                  text: "PixelWorld",
-                  link: "/pixel-draw-renderer/network/PixelWorld"
-                },
-                {
-                  text: "PixelSyncServer",
-                  link: "/pixel-draw-renderer/network/PixelSyncServer"
-                },
-                {
                   text: "PixelSyncSession",
                   link: "/pixel-draw-renderer/network/PixelSyncSession"
                 },
                 {
-                  text: "PixelTransport",
-                  link: "/pixel-draw-renderer/network/PixelTransport"
+                  text: "PixelSyncServer",
+                  link: "/pixel-draw-renderer/network/PixelSyncServer"
+                }
+              ]
+            },
+            {
+              text: "Advanced",
+              items: [
+                {
+                  text: "UVMap",
+                  link: "/pixel-draw-renderer/uv/UVMap"
                 },
                 {
-                  text: "ConflictResolver",
-                  link: "/pixel-draw-renderer/network/ConflictResolver"
-                },
-                {
-                  text: "PixelCommandApplier",
-                  link: "/pixel-draw-renderer/network/PixelCommandApplier"
-                },
-                {
-                  text: "Types",
-                  link: "/pixel-draw-renderer/network/types"
+                  text: "HistoryStack",
+                  link: "/pixel-draw-renderer/history/HistoryStack"
                 }
               ]
             }
