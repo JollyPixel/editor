@@ -8,10 +8,10 @@ implementation: this package has no dependency on voxel-renderer.
 ## Architecture
 
 ```
-┌───────────────┐  onBufferUpdated   ┌──────────────────┐   sendCommand   ┌─────────────┐
+┌───────────────┐  onBufferUpdated   ┌──────────────────┐      send       ┌─────────────┐
 │ PixelArtCanvas │───────────────────▶│ PixelSyncSession │────────────────▶│  Transport  │
 │               │                    │  (one buffer)    │◀────────────────│ (WebSocket, │
-│               │◀──applyRemote──────│                  │   onCommand     │ WebRTC, ...) │
+│               │◀──applyRemote──────│                  │    onMessage    │ WebRTC, ...) │
 └───────────────┘                    └──────────────────┘                 └──────┬──────┘
                                                                                   │ wire
                                                                                   ▼
@@ -40,12 +40,12 @@ buffer creation/discovery is a future extension.
    whatever handler was already set on the canvas rather than replacing it, so
    a consumer's own local reaction keeps firing once sync is layered on.
 2. `PixelSyncSession` stamps the event with `clientId` / `seq` / `timestamp`
-   and calls `transport.sendCommand(cmd)`.
+   and calls `transport.send(cmd)`.
 3. The transport delivers the command to [`PixelSyncServer.receive()`](./PixelSyncServer.md).
 4. The server resolves conflicts (see [ConflictResolver](./ConflictResolver.md)), applies the command to its authoritative
    `PixelBuffer`, and broadcasts it to every client connected to that namespace.
-5. Each connected client's transport calls `onCommand(cmd)`, which
-   `PixelSyncSession` routes to `PixelArtCanvas.applyRemoteCommand()`.
+5. Each connected client's transport calls `onMessage({ type: "command", data: cmd })`,
+   which `PixelSyncSession` routes to `PixelArtCanvas.applyRemoteCommand()`.
 6. `applyRemoteCommand` suppresses `onBufferUpdated` while applying, so the
    result is never re-broadcast: no echo loop.
 

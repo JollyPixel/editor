@@ -12,6 +12,12 @@ export interface NetworkClientOptions {
  * Relies on the global `WebSocket` (available in both environments)
  */
 export class NetworkClient {
+  /**
+   * Identifies this client across every channel it joins. Generated once per
+   * connection so consumers don't each need to invent their own peer id.
+   */
+  readonly clientId: string = crypto.randomUUID();
+
   #socket: WebSocket;
   #ready = false;
   // Messages sent before the socket finishes opening are queued and flushed on `open`.
@@ -45,6 +51,7 @@ export class NetworkClient {
 
     const channel: NetworkChannel<ClientPayload, ServerPayload> = {
       namespace,
+      localClientId: this.clientId,
       onMessage: null,
       onPeerJoined: null,
       onPeerLeft: null,

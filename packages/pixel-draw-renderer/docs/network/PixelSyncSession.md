@@ -48,7 +48,7 @@ Stops syncing the attached canvas without announcing anything to peers, restorin
 destroy(): void
 ```
 
-Detaches the canvas and clears the transport's `onCommand`/`onSnapshot` callbacks. Call when the session ends.
+Detaches the canvas and clears the transport's `onMessage` callback. Call when the session ends.
 
 ## Example
 
@@ -58,7 +58,7 @@ import { PixelSyncSession } from "@jolly-pixel/pixel-draw.renderer";
 const session = new PixelSyncSession({ transport: myTransport });
 
 // Attaches the canvas; the buffer's snapshot arrives asynchronously via
-// transport.onSnapshot once the underlying connection is up.
+// transport.onMessage once the underlying connection is up.
 session.attach(canvasManager);
 
 // Stop syncing (e.g. the user closed this tab/panel).

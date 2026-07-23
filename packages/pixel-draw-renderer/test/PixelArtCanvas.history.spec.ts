@@ -17,8 +17,8 @@ import { PixelSyncServer } from "#src/network/PixelSyncServer.ts";
 import { PixelSyncSession } from "#src/network/PixelSyncSession.ts";
 import type { PixelTransport } from "#src/network/PixelTransport.ts";
 import type {
-  PixelBufferSnapshot,
-  PixelNetworkCommand
+  PixelNetworkCommand,
+  PixelServerMessage
 } from "#src/network/types.ts";
 import { makeContainer } from "./helpers/dom.ts";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
@@ -478,19 +478,15 @@ interface RecordingTransport extends PixelTransport {
   sentCommands: PixelNetworkCommand[];
 }
 
-type ServerMessage =
-  | { type: "command"; data: PixelNetworkCommand; }
-  | { type: "snapshot"; data: PixelBufferSnapshot; };
-
-function isServerMessage(value: unknown): value is ServerMessage {
+function isServerMessage(value: unknown): value is PixelServerMessage {
   return typeof value === "object" && value !== null && "type" in value;
 }
 
 /**
  * Wires a PixelTransport straight into a real PixelSyncServer in-process —
- * sendCommand feeds server.receive() directly, and the server's broadcast
- * back to this same client is routed back into transport.onCommand, exactly
- * as a real relay would.
+ * send feeds server.receive() directly, and the server's broadcast back to
+ * this same client is routed back into transport.onMessage, exactly as a
+ * real relay would.
  */
 function makeServerBackedTransport(
   server: PixelSyncServer,
@@ -501,11 +497,10 @@ function makeServerBackedTransport(
   const transport: RecordingTransport = {
     localClientId: clientId,
     sentCommands,
-    onCommand: null,
-    onSnapshot: null,
+    onMessage: null,
     onPeerJoined: null,
     onPeerLeft: null,
-    sendCommand(cmd) {
+    send(cmd) {
       sentCommands.push(cmd);
       server.receive(cmd);
     }
@@ -516,12 +511,7 @@ function makeServerBackedTransport(
       return;
     }
 
-    if (data.type === "command") {
-      transport.onCommand?.(data.data);
-    }
-    else if (data.type === "snapshot") {
-      transport.onSnapshot?.(data.data);
-    }
+    transport.onMessage?.(data);
   }
 
   server.onClientConnect({

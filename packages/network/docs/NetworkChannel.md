@@ -15,6 +15,7 @@ type NetworkChannelPeerListener = (
 
 interface NetworkChannel<ClientPayload = unknown, ServerPayload = unknown> {
   readonly namespace: string;
+  readonly localClientId: string;
 
   send(payload: ClientPayload): void;
   leave(): void;
@@ -34,6 +35,14 @@ readonly namespace: string
 ```
 
 The namespace this channel is joined to.
+
+### `localClientId`
+
+```ts
+readonly localClientId: string
+```
+
+Identifies the local peer, copied from the owning [`NetworkClient.clientId`](./NetworkClient.md#clientid). The same value across every channel a given client opens.
 
 ## Methods
 
