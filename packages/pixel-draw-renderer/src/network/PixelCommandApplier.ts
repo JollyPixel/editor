@@ -2,77 +2,40 @@
 import { toUint8Array } from "js-base64";
 
 // Import Internal Dependencies
+import { groupPositionsByColor } from "../history/utils.ts";
 import { Fill } from "../tools/Fill.ts";
-import { PixelWorld } from "./PixelWorld.ts";
+import type { PixelBuffer } from "../buffer/PixelBuffer.ts";
 import type {
   PixelNetworkCommand
 } from "./types.ts";
 
-export function applyCommandToWorld(
-  world: PixelWorld,
+export function applyCommandToBuffer(
+  buffer: PixelBuffer,
   cmd: PixelNetworkCommand
 ): void {
   switch (cmd.action) {
-    case "buffer-added": {
-      if (world.hasBuffer(cmd.bufferId)) {
-        break;
-      }
-
-      const buffer = world.addBuffer(cmd.bufferId, {
-        size: cmd.metadata.size
-      });
-      if (cmd.metadata.pixels) {
-        buffer.replacePixels(
-          new Uint8ClampedArray(
-            toUint8Array(cmd.metadata.pixels)
-          ),
-          cmd.metadata.size
-        );
-      }
-      break;
-    }
-
-    case "buffer-removed":
-      world.removeBuffer(cmd.bufferId);
-      break;
-
-    case "stroke": {
-      const buffer = world.getBuffer(cmd.bufferId);
-      if (!buffer) {
-        break;
-      }
-
+    case "stroke":
       buffer.drawPixels(
         cmd.metadata.positions,
         cmd.metadata.color
       );
       buffer.copyToMaster();
       break;
-    }
 
-    case "resized": {
-      const buffer = world.getBuffer(cmd.bufferId);
-      buffer?.resize(cmd.metadata.size);
+    case "resized":
+      buffer.resize(cmd.metadata.size);
       break;
-    }
 
-    case "texture-replaced": {
-      const buffer = world.getBuffer(cmd.bufferId);
-      buffer?.replacePixels(
+    case "texture-replaced":
+      buffer.replacePixels(
         new Uint8ClampedArray(
           toUint8Array(cmd.metadata.pixels)
         ),
         cmd.metadata.size
       );
       break;
-    }
 
     case "global-fill": {
-      const buffer = world.getBuffer(cmd.bufferId);
-      if (!buffer) {
-        break;
-      }
-
       const positions = Fill.matchAll(
         buffer,
         cmd.metadata.fromColor
@@ -82,24 +45,30 @@ export function applyCommandToWorld(
       break;
     }
 
-    case "uv-region-created": {
-      const buffer = world.getBuffer(cmd.bufferId);
-      buffer?.uvRegions.set(cmd.metadata.region);
+    case "select-edit": {
+      const groupedColors = groupPositionsByColor(
+        cmd.metadata.positions,
+        cmd.metadata.colors
+      );
+      for (const group of groupedColors) {
+        buffer.drawPixels(
+          group.positions,
+          group.color
+        );
+      }
+      buffer.copyToMaster();
       break;
     }
 
-    case "uv-region-deleted": {
-      const buffer = world.getBuffer(cmd.bufferId);
-      buffer?.uvRegions.remove(cmd.metadata.id);
+    case "uv-region-created":
+      buffer.uvRegions.set(cmd.metadata.region);
       break;
-    }
+
+    case "uv-region-deleted":
+      buffer.uvRegions.remove(cmd.metadata.id);
+      break;
 
     case "uv-region-moved": {
-      const buffer = world.getBuffer(cmd.bufferId);
-      if (!buffer) {
-        break;
-      }
-
       const existing = buffer.uvRegions.get(cmd.metadata.id);
       if (existing) {
         buffer.uvRegions.set({

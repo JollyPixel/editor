@@ -166,6 +166,14 @@ export type PixelBufferHookEvent =
     originTimestamp?: number;
   }
   | {
+    action: "select-edit";
+    metadata: {
+      positions: Vec2[];
+      colors: RGBA[];
+    };
+    originTimestamp?: number;
+  }
+  | {
     action: "uv-region-created";
     metadata: {
       region: UVRegion;
@@ -196,5 +204,6 @@ This is the shape of `PixelArtCanvas`'s `onBufferUpdated` local-mutation hook, a
 
 > [!IMPORTANT]
 > - `originTimestamp` is set only when `PixelArtCanvas.undo()`/`redo()` replay an edit. It carries the edit's original timestamp so the network [conflict resolver](../network/ConflictResolver.md) re-races the replay fairly instead of it always winning by virtue of being freshly stamped; it's stripped before the command is sent over the wire.
+> - `"select-edit"` (a select-tool move/rotate/flip/paste/delete commit) carries `positions` and their final per-pixel `colors`, unlike `"stroke"`'s single uniform `color` — a footprint change can vacate one rect and paint arbitrary content into another. Applying it groups positions by color and replays each group as a `drawPixels` call (see [`PixelCommandApplier`](../network/PixelCommandApplier.md)). It goes through the same per-pixel conflict resolution as `"stroke"`, sharing the same per-pixel history (see [network/ConflictResolver.md](../network/ConflictResolver.md)).
 > - `"global-fill"` (emitted by the fill tool when `setFillGlobal(true)`) is deliberately compact, with no position list, since it can touch a large fraction of the canvas. Every applier (a remote peer via `applyRemoteCommand`, or [`PixelCommandApplier`](../network/PixelCommandApplier.md) on the server) recomputes the affected pixels itself by scanning its own buffer for `fromColor` and repainting them `toColor`; this is only correct because peers apply commands in the same order against an already-synced buffer. It also bypasses per-pixel conflict resolution, unlike `"stroke"` (see [network/ConflictResolver.md](../network/ConflictResolver.md)). Undoing/redoing a global fill locally still replays as an ordinary full-position `"stroke"` event, since exact undo requires knowing exactly which pixels were touched.
 > - `"uv-region-*"` events fire whenever [`UVMap`](../uv/UVMap.md) creates/deletes/moves a region — locally, via undo/redo replay, or via `applyRemoteCommand` (which suppresses re-emission). `"uv-region-created"` carries the full `region` (a remote peer has never seen it); `"uv-region-deleted"`/`"uv-region-moved"` carry only `id` (+ `rect` for a move) since the peer already has the rest. `PixelSyncServer` resolves move/delete conflicts per region id, parallel to `"stroke"`'s per-pixel resolution; see [network/PixelSyncServer.md](../network/PixelSyncServer.md).

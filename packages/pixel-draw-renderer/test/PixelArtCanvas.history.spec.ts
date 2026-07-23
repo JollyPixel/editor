@@ -12,6 +12,7 @@ import {
   type HistoryState
 } from "#src/PixelArtCanvas.ts";
 import type { PixelBufferHookEvent } from "#src/buffer/hooks.ts";
+import { PixelBuffer } from "#src/buffer/PixelBuffer.ts";
 import { PixelSyncServer } from "#src/network/PixelSyncServer.ts";
 import { PixelSyncSession } from "#src/network/PixelSyncSession.ts";
 import type { PixelTransport } from "#src/network/PixelTransport.ts";
@@ -22,6 +23,7 @@ import type {
 import { makeContainer } from "./helpers/dom.ts";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
 import { readPixel } from "./fixtures/canvas.ts";
+import { mouseEvent, deleteKey } from "./helpers/events.ts";
 
 function paintOnePixel(
   canvas: HTMLCanvasElement,
@@ -477,10 +479,8 @@ interface RecordingTransport extends PixelTransport {
 }
 
 type ServerMessage =
-  | { type: "peer-joined"; peerId: string; }
-  | { type: "peer-left"; peerId: string; }
   | { type: "command"; data: PixelNetworkCommand; }
-  | { type: "snapshot"; bufferId: string; data: PixelBufferSnapshot; };
+  | { type: "snapshot"; data: PixelBufferSnapshot; };
 
 function isServerMessage(value: unknown): value is ServerMessage {
   return typeof value === "object" && value !== null && "type" in value;
@@ -508,30 +508,30 @@ function makeServerBackedTransport(
     sendCommand(cmd) {
       sentCommands.push(cmd);
       server.receive(cmd);
-    },
-    subscribe(bufferId) {
-      server.subscribe(clientId, bufferId);
-    },
-    unsubscribe(bufferId) {
-      server.unsubscribe(clientId, bufferId);
     }
   };
 
-  server.connect({
-    id: clientId,
-    send(data) {
-      if (!isServerMessage(data)) {
-        return;
-      }
-
-      if (data.type === "command") {
-        transport.onCommand?.(data.data);
-      }
-      else if (data.type === "snapshot") {
-        transport.onSnapshot?.(data.bufferId, data.data);
-      }
+  function handleFromServer(data: unknown): void {
+    if (!isServerMessage(data)) {
+      return;
     }
+
+    if (data.type === "command") {
+      transport.onCommand?.(data.data);
+    }
+    else if (data.type === "snapshot") {
+      transport.onSnapshot?.(data.data);
+    }
+  }
+
+  server.onClientConnect({
+    id: clientId,
+    send: handleFromServer
   });
+  // Normally provided by NetworkServer.register() — this single-client fake
+  // just forwards straight back to the same client, mirroring `observe()` in
+  // PixelSyncServer.spec.ts.
+  server.attach(handleFromServer);
 
   return transport;
 }
@@ -540,7 +540,9 @@ describe("PixelArtCanvas — history + network collision handling", () => {
   test("undo replays through onBufferUpdated stamped with the original stroke's timestamp, not now", (t) => {
     t.mock.timers.enable({ apis: ["Date"] });
 
-    const server = new PixelSyncServer();
+    const server = new PixelSyncServer({
+      buffer: new PixelBuffer({ size: { x: 8, y: 8 } })
+    });
     const { manager, canvas } = createPixelArtCanvas({
       zoom: {
         default: 4
@@ -555,11 +557,7 @@ describe("PixelArtCanvas — history + network collision handling", () => {
     });
     const transport = makeServerBackedTransport(server, "A");
     const session = new PixelSyncSession({ transport });
-    session.createBuffer(
-      "tex1",
-      manager,
-      { size: { x: 8, y: 8 } }
-    );
+    session.attach(manager);
 
     t.mock.timers.tick(1000);
     paintOnePixel(canvas, [[88, 88]]);
@@ -581,7 +579,9 @@ describe("PixelArtCanvas — history + network collision handling", () => {
   test("a peer's edit made after the original stroke survives an undo of that stroke", (t) => {
     t.mock.timers.enable({ apis: ["Date"] });
 
-    const server = new PixelSyncServer();
+    const server = new PixelSyncServer({
+      buffer: new PixelBuffer({ size: { x: 8, y: 8 } })
+    });
     const { manager, canvas } = createPixelArtCanvas({
       zoom: {
         default: 4
@@ -596,24 +596,19 @@ describe("PixelArtCanvas — history + network collision handling", () => {
     });
     const transport = makeServerBackedTransport(server, "A");
     const session = new PixelSyncSession({ transport });
-    session.createBuffer(
-      "tex1",
-      manager,
-      { size: { x: 8, y: 8 } }
-    );
+    session.attach(manager);
 
     // A paints texture pixel (1,1) red at t=1000.
     t.mock.timers.tick(1000);
     paintOnePixel(canvas, [[88, 88]]);
     assert.deepStrictEqual(
-      server.world.getBuffer("tex1")!.samplePixel(1, 1),
+      server.buffer.samplePixel(1, 1),
       [0, 0, 0, 255]
     );
 
     // B paints the SAME pixel blue at t=2000 — after A's original stroke.
     server.receive({
       action: "stroke",
-      bufferId: "tex1",
       clientId: "B",
       seq: 1,
       timestamp: 2000,
@@ -623,7 +618,7 @@ describe("PixelArtCanvas — history + network collision handling", () => {
       }
     });
     assert.deepStrictEqual(
-      server.world.getBuffer("tex1")!.samplePixel(1, 1),
+      server.buffer.samplePixel(1, 1),
       [0, 0, 255, 255]
     );
 
@@ -634,9 +629,102 @@ describe("PixelArtCanvas — history + network collision handling", () => {
     manager.undo();
 
     assert.deepStrictEqual(
-      server.world.getBuffer("tex1")!.samplePixel(1, 1),
+      server.buffer.samplePixel(1, 1),
       [0, 0, 255, 255],
       "B's newer edit must survive A's undo of an older, now-contested stroke"
+    );
+
+    manager.destroy();
+  });
+
+  test("select-edit: undo propagates to the server, not just the local buffer", () => {
+    const server = new PixelSyncServer({
+      buffer: new PixelBuffer({ size: { x: 8, y: 8 } })
+    });
+    const { manager, canvas } = createPixelArtCanvas({
+      zoom: { default: 4 },
+      brush: { size: 1, maxSize: 1 },
+      history: { enabled: true }
+    });
+    const transport = makeServerBackedTransport(server, "A");
+    const session = new PixelSyncSession({ transport });
+    session.attach(manager);
+
+    // texture (2,2) -> painted black, then selected and deleted (a
+    // "select-edit" commit, dominant-border-color erase -> white).
+    manager.commitPixels([{ x: 2, y: 2 }]);
+    manager.mode = "select";
+    canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
+    canvas.dispatchEvent(mouseEvent("mousemove", 96, 92));
+    canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    window.dispatchEvent(deleteKey());
+
+    assert.deepStrictEqual(
+      server.buffer.samplePixel(2, 2),
+      [255, 255, 255, 255],
+      "the delete's select-edit reached the server"
+    );
+
+    manager.undo();
+
+    assert.deepStrictEqual(
+      readPixel(manager.texture, { x: 2, y: 2 }, 8),
+      [0, 0, 0, 255],
+      "local buffer reverted"
+    );
+    assert.deepStrictEqual(
+      server.buffer.samplePixel(2, 2),
+      [0, 0, 0, 255],
+      "the undo's select-edit replay also reached the server — previously dropped entirely"
+    );
+
+    manager.destroy();
+  });
+
+  test("regression: undoing overlapping same-client strokes (a chained Line's joint pixel) reverts on the server", (t) => {
+    t.mock.timers.enable({ apis: ["Date"] });
+
+    const server = new PixelSyncServer({
+      buffer: new PixelBuffer({ size: { x: 8, y: 8 } })
+    });
+    const { manager, canvas } = createPixelArtCanvas({
+      zoom: { default: 4 },
+      brush: { size: 1, maxSize: 1 },
+      history: { enabled: true }
+    });
+    const transport = makeServerBackedTransport(server, "A");
+    const session = new PixelSyncSession({ transport });
+    session.attach(manager);
+
+    // Two overlapping strokes touching the same pixel, mirroring a
+    // shift-chained Line's shared joint point: segment 1 paints (1,1) at
+    // t=1000, segment 2 repaints the same pixel at t=2000.
+    t.mock.timers.tick(1000);
+    paintOnePixel(canvas, [[88, 88]]);
+    t.mock.timers.tick(1000);
+    paintOnePixel(canvas, [[88, 88]]);
+
+    assert.deepStrictEqual(
+      server.buffer.samplePixel(1, 1),
+      [0, 0, 0, 255]
+    );
+
+    // Undo is LIFO: segment 2 (t=2000) replays first, then segment 1
+    // (t=1000) — an older-timestamped replay arriving after a newer one, at
+    // the same pixel, from the same client.
+    t.mock.timers.tick(1000);
+    manager.undo();
+    manager.undo();
+
+    assert.deepStrictEqual(
+      readPixel(manager.texture, { x: 1, y: 1 }, 8),
+      [255, 255, 255, 255],
+      "local buffer fully reverted"
+    );
+    assert.deepStrictEqual(
+      server.buffer.samplePixel(1, 1),
+      [255, 255, 255, 255],
+      "the server must also fully revert — previously stuck at segment 1's color"
     );
 
     manager.destroy();

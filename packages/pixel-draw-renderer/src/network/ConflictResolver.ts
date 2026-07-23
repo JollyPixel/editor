@@ -30,6 +30,21 @@ export class LastWriteWinsResolver implements PixelConflictResolver {
       return "accept";
     }
 
+    // A client's own commands arrive in send order (one WebSocket
+    // connection, TCP-ordered) regardless of the wall-clock timestamp they
+    // carry. This matters for undo/redo replay, which deliberately stamps
+    // its command with the original edit's (now historical) timestamp
+    // instead of "now" — see `PixelBufferHookEvent.originTimestamp`. Undoing
+    // two overlapping edits touches the shared pixel with a newer-timestamped
+    // replay first (undo is LIFO) and an older-timestamped one second; a
+    // plain timestamp comparison would reject the second as "stale" even
+    // though it's the same client legitimately continuing to unwind its own
+    // history. Only a genuinely different client's edit needs to win by
+    // timestamp.
+    if (incoming.clientId === existing.clientId) {
+      return "accept";
+    }
+
     if (incoming.timestamp > existing.timestamp) {
       return "accept";
     }

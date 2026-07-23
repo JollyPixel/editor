@@ -1,12 +1,12 @@
 # PixelSyncSession
 
-Client-side network orchestrator. A single `PixelSyncSession` multiplexes many buffers (textures/tilesets) over one [`PixelTransport`](./PixelTransport.md) connection. Each attached `PixelArtCanvas` still owns exactly one texture; the session just assigns it a `bufferId` for routing:
+Client-side network orchestrator for a single buffer. A `PixelSyncSession` pairs one attached `PixelArtCanvas` with one [`PixelTransport`](./PixelTransport.md) connection, which is already scoped to that buffer's `PixelSyncServer` namespace:
 
-- Local mutations from an attached `PixelArtCanvas` are stamped and forwarded.
-- Remote commands are routed to the matching `PixelArtCanvas` by `bufferId`.
-- Buffer lifecycle (add/remove) is announced/received at the session level.
+- Local mutations from the attached `PixelArtCanvas` are stamped and forwarded.
+- Remote commands are routed to the attached `PixelArtCanvas`.
+- The buffer's snapshot is applied as soon as the transport receives it (pushed by the server on connect).
 
-One `PixelSyncSession` per transport connection. Each `PixelArtCanvas` is attached under exactly one `bufferId`.
+Syncing several buffers (e.g. multiple open tilesets) means one `PixelSyncSession`/transport pair per buffer, each joined to that buffer's own namespace.
 
 ## Types
 
@@ -18,47 +18,27 @@ interface PixelSyncSessionOptions {
 }
 ```
 
-## Properties
-
-### `onBufferAdded` / `onBufferRemoved`
-
-```ts
-onBufferAdded: ((bufferId: string, metadata: { size: Vec2; pixels?: string; }) => void) | null
-onBufferRemoved: ((bufferId: string) => void) | null
-```
-
-Called when a **peer** creates or removes a buffer this session hasn't (yet) attached to itself.
-
 ## Methods
 
 ### `attach`
 
 ```ts
-attach(bufferId: string, canvasManager: PixelArtCanvas): void
+attach(canvasManager: PixelArtCanvas): void
 ```
 
-Attaches an existing `PixelArtCanvas` to sync as `bufferId`. Assumes the buffer already exists on the server; subscribes and awaits its snapshot via `transport.onSnapshot`. Throws if `bufferId` is already attached.
+Attaches a `PixelArtCanvas` to sync over the transport. Throws if a canvas is already attached.
+
+Chains onto the canvas's existing `onBufferUpdated` handler (if any) instead of replacing it — a consumer's own local reaction keeps firing, followed by the forward-to-transport step. `detach()` restores that original handler.
 
 ---
 
-### `createBuffer`
+### `detach`
 
 ```ts
-createBuffer(bufferId: string, canvasManager: PixelArtCanvas, options: { size: Vec2; pixels?: string; }): void
+detach(): void
 ```
 
-Attaches a `PixelArtCanvas` **and** announces a brand new buffer to peers, carrying the manager's current pixel data as the initial shared state.
-
----
-
-### `detach` / `removeBuffer`
-
-```ts
-detach(bufferId: string): void
-removeBuffer(bufferId: string): void
-```
-
-`detach` stops syncing a texture without announcing anything to peers (e.g. the user closed that tab). `removeBuffer` does the same, and also tells peers the buffer is gone.
+Stops syncing the attached canvas without announcing anything to peers, restoring whatever `onBufferUpdated` handler was present before `attach()`. A no-op if nothing is attached.
 
 ---
 
@@ -68,37 +48,21 @@ removeBuffer(bufferId: string): void
 destroy(): void
 ```
 
-Detaches every buffer and clears the transport's `onCommand`/`onSnapshot` callbacks. Call when the session ends.
+Detaches the canvas and clears the transport's `onCommand`/`onSnapshot` callbacks. Call when the session ends.
 
 ## Example
 
 ```ts
-import { fromUint8Array } from "js-base64";
 import { PixelSyncSession } from "@jolly-pixel/pixel-draw.renderer";
 
 const session = new PixelSyncSession({ transport: myTransport });
 
-// Attach an existing texture, assumed to already exist on the server.
-// Subscribes and receives its snapshot asynchronously via onSnapshot.
-session.attach("tileset-1", canvasManager);
+// Attaches the canvas; the buffer's snapshot arrives asynchronously via
+// transport.onSnapshot once the underlying connection is up.
+session.attach(canvasManager);
 
-// Attach AND announce a brand new buffer, seeding peers with its current pixels.
-session.createBuffer("tileset-2", otherPixelArtCanvas, {
-  size: otherPixelArtCanvas.textureSize,
-  pixels: fromUint8Array(new Uint8Array(otherPixelArtCanvas.texture))
-});
-
-session.onBufferAdded = (bufferId, metadata) => {
-  // A peer created a new buffer this client hasn't attached to.
-};
-session.onBufferRemoved = (bufferId) => {
-  // A peer removed a buffer.
-};
-
-// Stop syncing a texture (e.g. the user closed that tab).
-session.detach("tileset-1");
-// Same, but also tells peers the buffer is gone.
-session.removeBuffer("tileset-2");
+// Stop syncing (e.g. the user closed this tab/panel).
+session.detach();
 
 session.destroy();
 ```

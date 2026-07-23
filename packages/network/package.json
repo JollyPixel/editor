@@ -1,0 +1,50 @@
+{
+  "name": "@jolly-pixel/network",
+  "description": "The shared wire for JollyPixel's multiplayer editors",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "imports": {
+    "#src/*": "./src/*"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./plugins/*.ts": "./dist/plugins/*.js",
+    "./transport/*.ts": "./dist/transport/*.js"
+  },
+  "scripts": {
+    "prepublish": "rimraf ./dist && tsc -b",
+    "build": "tsc",
+    "test-only": "node --test \"test/**/*.spec.ts\"",
+    "test": "c8 -r html npm run test-only"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JollyPixel/editor.git",
+    "directory": "packages/network"
+  },
+  "keywords": [],
+  "files": [
+    "dist"
+  ],
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  },
+  "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "pino": "10.3.1",
+    "vite": "8.1.5",
+    "ws": "8.21.1"
+  }
+}

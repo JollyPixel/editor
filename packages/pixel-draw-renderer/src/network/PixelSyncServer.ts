@@ -1,13 +1,17 @@
 // Import Third-party Dependencies
 import { fromUint8Array } from "js-base64";
+import {
+  NetworkPlugin,
+  type ClientHandle
+} from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import { applyCommandToWorld } from "./PixelCommandApplier.ts";
+import { applyCommandToBuffer } from "./PixelCommandApplier.ts";
 import {
   LastWriteWinsResolver,
   type PixelConflictResolver
 } from "./ConflictResolver.ts";
-import { PixelWorld } from "./PixelWorld.ts";
+import { PixelBuffer } from "../buffer/PixelBuffer.ts";
 import type {
   PixelBufferSnapshot,
   PixelNetworkCommand,
@@ -15,38 +19,54 @@ import type {
 } from "./types.ts";
 
 export type PixelStrokeCommand = Extract<PixelNetworkCommand, { action: "stroke"; }>;
+export type PixelSelectEditCommand = Extract<PixelNetworkCommand, { action: "select-edit"; }>;
 export type PixelUvRegionCommand = Extract<
   PixelNetworkCommand,
   { action: "uv-region-moved" | "uv-region-deleted"; }
 >;
 
-/**
- * Represents a connected network client.
- */
-export interface ClientHandle {
-  readonly id: string;
-  send(data: unknown): void;
+export type { ClientHandle };
+
+function isPixelNetworkCommand(
+  value: unknown
+): value is PixelNetworkCommand {
+  return typeof value === "object" && value !== null &&
+    "action" in value && "clientId" in value;
 }
 
 export interface PixelSyncServerOptions {
   /**
-   * Authoritative buffer store.
+   * NetworkPlugin namespace this server is registered under. A
+   * PixelSyncServer owns exactly one buffer, so a NetworkServer hosting
+   * several buffers needs one instance per buffer, each under its own
+   * namespace (e.g. `"pixel-draw:tileset-1"`).
+   * @default "pixel-draw"
    */
-  world?: PixelWorld;
+  namespace?: string;
   /**
-   * Resolves conflicting pixel writes.
+   * Existing PixelBuffer to use as the authoritative state.
+   * A new, blank 1x1 buffer is created when omitted.
+   */
+  buffer?: PixelBuffer;
+  /**
+   * Custom conflict resolver.
+   * Defaults to LastWriteWinsResolver.
    */
   conflictResolver?: PixelConflictResolver;
 }
 
 /**
- * Manages authoritative pixel state and client synchronization.
+ * Manages authoritative state for a single pixel buffer and its client
+ * synchronization. Injected into a `NetworkServer` under its own namespace,
+ * so it only ever sees clients that explicitly joined it. Peer presence
+ * (join/leave notifications for other clients) is handled by `NetworkServer`
+ * itself, not here.
  */
-export class PixelSyncServer {
-  readonly world: PixelWorld;
+export class PixelSyncServer extends NetworkPlugin {
+  readonly namespace: string;
+  readonly buffer: PixelBuffer;
 
-  #clients = new Map<string, ClientHandle>();
-  #subscriptions = new Map<string, Set<string>>();
+  #broadcastFn: ((payload: unknown) => void) | undefined;
   #resolver: PixelConflictResolver;
   #lastHeaderByPixel = new Map<string, PixelNetworkCommandHeader>();
   #lastHeaderByRegion = new Map<string, PixelNetworkCommandHeader>();
@@ -54,78 +74,53 @@ export class PixelSyncServer {
   constructor(
     options: PixelSyncServerOptions = {}
   ) {
-    this.world = options.world ?? new PixelWorld();
+    super();
+    this.namespace = options.namespace ?? "pixel-draw";
+    this.buffer = options.buffer ?? new PixelBuffer({
+      size: { x: 1, y: 1 }
+    });
     this.#resolver = options.conflictResolver ?? new LastWriteWinsResolver();
   }
 
-  connect(
+  /**
+   * Sends the buffer's current snapshot to the newly connected peer.
+   * Delivery to other clients is handled by the broadcast function `attach()`
+   * provides — this server doesn't track its own client list.
+   */
+  onClientConnect(
     client: ClientHandle
   ): void {
-    this.#clients.set(
-      client.id,
-      client
-    );
-
-    for (const [id, peer] of this.#clients) {
-      if (id !== client.id) {
-        peer.send({
-          type: "peer-joined",
-          peerId: client.id
-        });
-      }
-    }
+    client.send({
+      type: "snapshot",
+      data: this.snapshot()
+    });
   }
 
-  disconnect(
-    clientId: string
+  onClientDisconnect(
+    _clientId: string
   ): void {
-    this.#clients.delete(clientId);
-    for (const subs of this.#subscriptions.values()) {
-      subs.delete(clientId);
-    }
-
-    for (const peer of this.#clients.values()) {
-      peer.send({
-        type: "peer-left",
-        peerId: clientId
-      });
-    }
+    // No client-list bookkeeping to clean up — NetworkServer owns that.
   }
 
   /**
-   * Subscribes a client and sends the current buffer snapshot.
+   * Receives the function `NetworkServer` uses to fan a payload out to every
+   * client currently joined to this server's namespace.
    */
-  subscribe(
-    clientId: string,
-    bufferId: string
+  attach(
+    broadcast: (payload: unknown) => void
   ): void {
-    const client = this.#clients.get(clientId);
-    if (!client) {
+    this.#broadcastFn = broadcast;
+  }
+
+  onMessage(
+    _clientId: string,
+    payload: unknown
+  ): void {
+    if (!isPixelNetworkCommand(payload)) {
       return;
     }
 
-    let subs = this.#subscriptions.get(bufferId);
-    if (!subs) {
-      subs = new Set();
-      this.#subscriptions.set(bufferId, subs);
-    }
-    subs.add(clientId);
-
-    const snapshot = this.snapshot(bufferId);
-    if (snapshot) {
-      client.send({
-        type: "snapshot",
-        bufferId,
-        data: snapshot
-      });
-    }
-  }
-
-  unsubscribe(
-    clientId: string,
-    bufferId: string
-  ): void {
-    this.#subscriptions.get(bufferId)?.delete(clientId);
+    this.receive(payload);
   }
 
   /**
@@ -134,35 +129,14 @@ export class PixelSyncServer {
   receive(
     cmd: PixelNetworkCommand
   ): void {
-    if (cmd.action === "buffer-added") {
-      if (this.world.hasBuffer(cmd.bufferId)) {
-        return;
-      }
-      applyCommandToWorld(this.world, cmd);
-      this.#broadcast(cmd);
-
-      return;
-    }
-
-    if (cmd.action === "buffer-removed") {
-      if (!this.world.hasBuffer(cmd.bufferId)) {
-        return;
-      }
-      applyCommandToWorld(this.world, cmd);
-      this.#subscriptions.delete(cmd.bufferId);
-      this.#clearPixelHistory(cmd.bufferId);
-      this.#clearRegionHistory(cmd.bufferId);
-      this.#broadcast(cmd);
-
-      return;
-    }
-
-    if (!this.world.hasBuffer(cmd.bufferId)) {
-      return;
-    }
-
     if (cmd.action === "stroke") {
       this.#receiveStroke(cmd);
+
+      return;
+    }
+
+    if (cmd.action === "select-edit") {
+      this.#receiveSelectEdit(cmd);
 
       return;
     }
@@ -176,7 +150,7 @@ export class PixelSyncServer {
       return;
     }
 
-    applyCommandToWorld(this.world, cmd);
+    applyCommandToBuffer(this.buffer, cmd);
     this.#broadcast(cmd);
   }
 
@@ -186,7 +160,7 @@ export class PixelSyncServer {
     const accepted: PixelStrokeCommand["metadata"]["positions"] = [];
 
     for (const position of cmd.metadata.positions) {
-      const key = `${cmd.bufferId}:${position.x},${position.y}`;
+      const key = `${position.x},${position.y}`;
       const existing = this.#lastHeaderByPixel.get(key);
       const decision = this.#resolver.resolve({
         incoming: cmd,
@@ -211,19 +185,52 @@ export class PixelSyncServer {
       }
     };
 
-    applyCommandToWorld(this.world, acceptedCmd);
+    applyCommandToBuffer(this.buffer, acceptedCmd);
     this.#broadcast(acceptedCmd);
   }
 
-  #clearPixelHistory(
-    bufferId: string
+  /**
+   * Resolves per-pixel like `#receiveStroke`, sharing the same
+   * `#lastHeaderByPixel` history — a select-edit and a concurrent stroke
+   * touching the same pixel compete for it just like two strokes would.
+   * Unlike a stroke's single uniform color, accepted positions and their
+   * per-pixel colors must be filtered in lockstep.
+   */
+  #receiveSelectEdit(
+    cmd: PixelSelectEditCommand
   ): void {
-    const prefix = `${bufferId}:`;
-    for (const key of this.#lastHeaderByPixel.keys()) {
-      if (key.startsWith(prefix)) {
-        this.#lastHeaderByPixel.delete(key);
+    const acceptedPositions: PixelSelectEditCommand["metadata"]["positions"] = [];
+    const acceptedColors: PixelSelectEditCommand["metadata"]["colors"] = [];
+
+    cmd.metadata.positions.forEach((position, index) => {
+      const key = `${position.x},${position.y}`;
+      const existing = this.#lastHeaderByPixel.get(key);
+      const decision = this.#resolver.resolve({
+        incoming: cmd,
+        existing
+      });
+
+      if (decision === "accept") {
+        acceptedPositions.push(position);
+        acceptedColors.push(cmd.metadata.colors[index]);
+        this.#lastHeaderByPixel.set(key, cmd);
       }
+    });
+
+    if (acceptedPositions.length === 0) {
+      return;
     }
+
+    const acceptedCmd: PixelSelectEditCommand = {
+      ...cmd,
+      metadata: {
+        positions: acceptedPositions,
+        colors: acceptedColors
+      }
+    };
+
+    applyCommandToBuffer(this.buffer, acceptedCmd);
+    this.#broadcast(acceptedCmd);
   }
 
   /**
@@ -234,7 +241,7 @@ export class PixelSyncServer {
   #receiveUvRegionCommand(
     cmd: PixelUvRegionCommand
   ): void {
-    const key = `${cmd.bufferId}:${cmd.metadata.id}`;
+    const key = cmd.metadata.id;
     const existing = this.#lastHeaderByRegion.get(key);
     const decision = this.#resolver.resolve({
       incoming: cmd,
@@ -246,51 +253,26 @@ export class PixelSyncServer {
     }
 
     this.#lastHeaderByRegion.set(key, cmd);
-    applyCommandToWorld(this.world, cmd);
+    applyCommandToBuffer(this.buffer, cmd);
     this.#broadcast(cmd);
-  }
-
-  #clearRegionHistory(
-    bufferId: string
-  ): void {
-    const prefix = `${bufferId}:`;
-    for (const key of this.#lastHeaderByRegion.keys()) {
-      if (key.startsWith(prefix)) {
-        this.#lastHeaderByRegion.delete(key);
-      }
-    }
   }
 
   #broadcast(
     cmd: PixelNetworkCommand
   ): void {
-    const subs = this.#subscriptions.get(cmd.bufferId);
-    if (!subs) {
-      return;
-    }
-
-    for (const clientId of subs) {
-      this.#clients.get(clientId)?.send({
-        type: "command",
-        data: cmd
-      });
-    }
+    this.#broadcastFn?.({
+      type: "command",
+      data: cmd
+    });
   }
 
-  snapshot(
-    bufferId: string
-  ): PixelBufferSnapshot | undefined {
-    const buffer = this.world.getBuffer(bufferId);
-    if (!buffer) {
-      return undefined;
-    }
-
+  snapshot(): PixelBufferSnapshot {
     return {
-      size: buffer.size(),
+      size: this.buffer.size(),
       pixels: fromUint8Array(
-        new Uint8Array(buffer.pixels())
+        new Uint8Array(this.buffer.pixels())
       ),
-      uvRegions: [...buffer.uvRegions]
+      uvRegions: [...this.buffer.uvRegions]
     };
   }
 }

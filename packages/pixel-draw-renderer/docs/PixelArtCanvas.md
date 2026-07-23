@@ -237,7 +237,7 @@ Reverts/re-applies the most recent local edit (stroke, resize, texture replace, 
 A successful call redraws the canvas, calls `onDrawEnd`, and fires `onHistoryChange`.
 
 > [!IMPORTANT]
-> - For a history-enabled `PixelArtCanvas` attached to a `PixelSyncSession`, a successful `undo()`/`redo()` also emits the reverted/re-applied state through `onBufferUpdated` so peers converge to the same result (the replayed event's `originTimestamp` keeps that fair under conflict resolution; see [buffer/PixelBuffer.md](./buffer/PixelBuffer.md)). **Exception:** undoing/redoing a `"select"`-mode edit (move/delete/paste/rotate/flip) never emits `onBufferUpdated`, since those edits aren't networked in the first place, so their undo/redo is local-only. A UV region create/delete/move **is** networked: undo/redo just calls the matching `UVMap` method, which emits the same event a live change would, and that's what feeds `onBufferUpdated`; see [uv/UVMap.md](./uv/UVMap.md#history--network).
+> - For a history-enabled `PixelArtCanvas` attached to a `PixelSyncSession`, a successful `undo()`/`redo()` also emits the reverted/re-applied state through `onBufferUpdated` so peers converge to the same result (the replayed event's `originTimestamp` keeps that fair under conflict resolution; see [buffer/PixelBuffer.md](./buffer/PixelBuffer.md)). This includes a `"select"`-mode edit (move/delete/paste/rotate/flip): undo/redo emits a `"select-edit"` event carrying the entry's `positions` and per-pixel `beforeColors`/`afterColors`, mirroring how `commitSelectionEdit` networks the edit when it's first committed. A UV region create/delete/move **is** networked too: undo/redo just calls the matching `UVMap` method, which emits the same event a live change would, and that's what feeds `onBufferUpdated`; see [uv/UVMap.md](./uv/UVMap.md#history--network).
 > - A remote resize, texture-replace, or snapshot load clears the local history stack (its recorded positions/sizes no longer describe the buffer), so `canUndo()`/`canRedo()` drop to `false` afterward.
 
 ---
@@ -347,11 +347,12 @@ Tears down `InputController`'s event listeners and removes the canvas and SVG ov
 ### `onBufferUpdated` / `applyRemoteCommand` / `loadSnapshot`
 
 ```ts
+get onBufferUpdated(): PixelBufferHookListener | undefined
 set onBufferUpdated(fn: PixelBufferHookListener | undefined)
 applyRemoteCommand(event: PixelBufferHookEvent): void
 loadSnapshot(size: Vec2, pixels: Uint8ClampedArray, uvRegions?: UVRegion[]): void
 ```
 
-Network sync hooks, used by `PixelSyncSession`. See [network/index.md](./network/index.md). `onBufferUpdated` fires on every local mutation (stroke, resize, texture replace, UV region create/delete/move). `applyRemoteCommand` applies a mutation from a remote peer without re-firing `onBufferUpdated`. `loadSnapshot` hydrates the buffer (and, via `uvRegions`, the `UVMap`) from a network snapshot; it is never itself broadcast.
+Network sync hooks, used by `PixelSyncSession`. See [network/index.md](./network/index.md). `onBufferUpdated` fires on every local mutation (stroke, resize, texture replace, UV region create/delete/move); it's a single slot, still fully replaced by a plain assignment, but readable so a caller can chain onto an existing handler instead of clobbering it — which is exactly what `PixelSyncSession.attach()` does (see below). `applyRemoteCommand` applies a mutation from a remote peer without re-firing `onBufferUpdated`. `loadSnapshot` hydrates the buffer (and, via `uvRegions`, the `UVMap`) from a network snapshot; it is never itself broadcast.
 
 There is no manual redraw method: every mutation (stroke, pan, zoom, resize, texture replace) triggers its own repaint internally.

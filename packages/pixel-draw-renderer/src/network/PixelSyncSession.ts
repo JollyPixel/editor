@@ -3,36 +3,30 @@ import { toUint8Array } from "js-base64";
 
 // Import Internal Dependencies
 import type { PixelArtCanvas } from "../PixelArtCanvas.ts";
-import type { PixelBufferHookEvent } from "../buffer/hooks.ts";
-import type { Vec2 } from "../types.ts";
+import type {
+  PixelBufferHookEvent,
+  PixelBufferHookListener
+} from "../buffer/hooks.ts";
 import type { PixelTransport } from "./PixelTransport.ts";
 import type {
   PixelBufferSnapshot,
-  PixelNetworkCommand,
-  PixelNetworkEvent
+  PixelNetworkCommand
 } from "./types.ts";
 
 export interface PixelSyncSessionOptions {
   transport: PixelTransport;
 }
 
-export interface OnBufferAddedEventMetadata {
-  size: Vec2;
-  pixels?: string;
-}
-
 /**
- * Synchronizes multiple canvases over one transport.
+ * Synchronizes a single canvas over one transport connection. The transport
+ * is already scoped to one buffer (one namespace, one `PixelSyncServer`), so
+ * a session attaches at most one `PixelArtCanvas` at a time.
  */
 export class PixelSyncSession {
   #transport: PixelTransport;
-  #managers = new Map<string, PixelArtCanvas>();
+  #manager: PixelArtCanvas | undefined;
+  #previousHandler: PixelBufferHookListener | undefined;
   #seq = 0;
-
-  onBufferAdded: (
-    (bufferId: string, metadata: OnBufferAddedEventMetadata) => void
-  ) | null = null;
-  onBufferRemoved: ((bufferId: string) => void) | null = null;
 
   constructor(
     options: PixelSyncSessionOptions
@@ -40,78 +34,50 @@ export class PixelSyncSession {
     this.#transport = options.transport;
 
     this.#transport.onCommand = (cmd) => this.#handleRemote(cmd);
-    this.#transport.onSnapshot = (bufferId, snapshot) => this.#handleSnapshot(
-      bufferId,
-      snapshot
-    );
+    this.#transport.onSnapshot = (snapshot) => this.#handleSnapshot(snapshot);
   }
 
   /**
-   * Attaches a canvas to an existing buffer.
+   * Attaches a canvas to sync over the transport.
+   *
+   * Chains onto whatever local listener the canvas already had (e.g. a
+   * consumer reacting to its own edits) rather than replacing it, so sync
+   * can be layered onto a canvas that's already wired for local use.
    */
   attach(
-    bufferId: string,
     canvasManager: PixelArtCanvas
   ): void {
-    if (this.#managers.has(bufferId)) {
-      throw new Error(`Buffer "${bufferId}" is already attached`);
+    if (this.#manager) {
+      throw new Error("A canvas is already attached to this session");
     }
 
-    this.#managers.set(bufferId, canvasManager);
-    canvasManager.onBufferUpdated = (event) => this.#handleLocal(bufferId, event);
-    this.#transport.subscribe(bufferId);
+    this.#manager = canvasManager;
+    this.#previousHandler = canvasManager.onBufferUpdated;
+    canvasManager.onBufferUpdated = (event) => {
+      this.#previousHandler?.(event);
+      this.#handleLocal(event);
+    };
   }
 
   /**
-   * Attaches a canvas and creates its shared buffer.
+   * Detaches the canvas, restoring whatever local listener was present
+   * before `attach()`.
    */
-  createBuffer(
-    bufferId: string,
-    canvasManager: PixelArtCanvas,
-    options: { size: Vec2; pixels?: string; }
-  ): void {
-    this.attach(bufferId, canvasManager);
-    this.#transport.sendCommand(this.#stamp(bufferId, {
-      action: "buffer-added",
-      metadata: options
-    }));
-  }
-
-  /**
-   * Detaches a canvas without removing its shared buffer.
-   */
-  detach(
-    bufferId: string
-  ): void {
-    const manager = this.#managers.get(bufferId);
-    if (!manager) {
+  detach(): void {
+    if (!this.#manager) {
       return;
     }
 
-    manager.onBufferUpdated = undefined;
-    this.#managers.delete(bufferId);
-    this.#transport.unsubscribe(bufferId);
-  }
-
-  /**
-   * Detaches a canvas and removes its shared buffer.
-   */
-  removeBuffer(
-    bufferId: string
-  ): void {
-    this.detach(bufferId);
-    this.#transport.sendCommand(this.#stamp(bufferId, {
-      action: "buffer-removed",
-      metadata: {}
-    }));
+    this.#manager.onBufferUpdated = this.#previousHandler;
+    this.#previousHandler = undefined;
+    this.#manager = undefined;
   }
 
   #handleLocal(
-    bufferId: string,
     event: PixelBufferHookEvent
   ): void {
     this.#transport.sendCommand(
-      this.#stamp(bufferId, event)
+      this.#stamp(event)
     );
   }
 
@@ -119,14 +85,12 @@ export class PixelSyncSession {
    * Uses an event's origin timestamp when available.
    */
   #stamp(
-    bufferId: string,
-    event: PixelNetworkEvent
+    event: PixelBufferHookEvent
   ): PixelNetworkCommand {
     const { originTimestamp, ...rest } = event;
 
     return {
       ...rest,
-      bufferId,
       clientId: this.#transport.localClientId,
       seq: ++this.#seq,
       timestamp: originTimestamp ?? Date.now()
@@ -140,29 +104,13 @@ export class PixelSyncSession {
       return;
     }
 
-    if (cmd.action === "buffer-added") {
-      this.onBufferAdded?.(cmd.bufferId, cmd.metadata);
-
-      return;
-    }
-
-    if (cmd.action === "buffer-removed") {
-      this.detach(cmd.bufferId);
-      this.onBufferRemoved?.(cmd.bufferId);
-
-      return;
-    }
-
-    this.#managers
-      .get(cmd.bufferId)
-      ?.applyRemoteCommand(cmd);
+    this.#manager?.applyRemoteCommand(cmd);
   }
 
   #handleSnapshot(
-    bufferId: string,
     snapshot: PixelBufferSnapshot
   ): void {
-    this.#managers.get(bufferId)?.loadSnapshot(
+    this.#manager?.loadSnapshot(
       snapshot.size,
       new Uint8ClampedArray(toUint8Array(snapshot.pixels)),
       snapshot.uvRegions
@@ -170,12 +118,10 @@ export class PixelSyncSession {
   }
 
   /**
-   * Detaches all canvases and clears transport callbacks.
+   * Detaches the canvas and clears transport callbacks.
    */
   destroy(): void {
-    for (const bufferId of [...this.#managers.keys()]) {
-      this.detach(bufferId);
-    }
+    this.detach();
     this.#transport.onCommand = null;
     this.#transport.onSnapshot = null;
   }

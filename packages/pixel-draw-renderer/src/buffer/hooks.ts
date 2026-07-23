@@ -44,6 +44,14 @@ export type PixelBufferHookEvent =
     originTimestamp?: number;
   }
   | {
+    action: "select-edit";
+    metadata: {
+      positions: Vec2[];
+      colors: RGBA[];
+    };
+    originTimestamp?: number;
+  }
+  | {
     action: "uv-region-created";
     metadata: {
       region: UVRegion;

@@ -4,12 +4,20 @@ import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
 import { ResizeHandle } from "@jolly-pixel/resize-handle";
 
 // Import Internal Dependencies
+import type { PixelArtCanvas } from "../../src/index.ts";
+import { PixelSyncSession } from "../../src/network/index.ts";
 import { CameraBehavior } from "./components/Camera.ts";
 import { CubeFactory } from "./components/CubeFactory.ts";
 import { OrbitControlsBehavior } from "./components/OrbitControlsBehavior.ts";
 import { type PixelDrawPanel } from "./ui/PixelDrawPanel.ts";
 import { CubeGallery } from "./CubeGallery.ts";
 import { CubePicker } from "./CubePicker.ts";
+import { WebSocketPixelTransport } from "./WebSocketPixelTransport.ts";
+
+// Every tab that opens this demo joins the same namespace, so pointing a
+// collaborator at the same URL joins them onto the same canvas. Must match
+// the PixelSyncServer's namespace in vite.config.ts.
+const DEMO_NAMESPACE = "pixel-draw:demo-canvas";
 
 const runtime = await initRuntime();
 loadRuntime(runtime, {
@@ -86,18 +94,11 @@ async function initRuntime(): Promise<Runtime> {
     maxDistance: 30
   });
 
-  // One test cube per UV region, kept in sync via the uv event stream (see
-  // CubeGallery.ts). Actor creation/teardown is delegated to CubeFactory, and
-  // click-to-select raycasting to CubePicker, so CubeGallery itself only
-  // owns the region↔cube mirroring/layout — not the ECS world or 3D input.
-  const cubeFactory = new CubeFactory({ world, canvasTexture });
-  const cubeGallery = new CubeGallery({ cubeFactory, canvasManager });
-  new CubePicker({
-    uv: canvasManager.uv,
-    camera: cameraBehavior.camera,
-    canvas,
-    getMeshes: () => cubeGallery.meshes
-  });
+  // Forward-declared: the onBufferUpdated handler below closes over it, but
+  // only invokes it once "texture-replaced" fires, well after CubeGallery
+  // (assigned below) exists.
+  // eslint-disable-next-line prefer-const -- assigned once, after construction below
+  let cubeGallery: CubeGallery;
 
   canvasManager.onBufferUpdated = (event) => {
     if (event.action === "texture-replaced") {
@@ -106,6 +107,26 @@ async function initRuntime(): Promise<Runtime> {
       cubeGallery.refreshTextureSize();
     }
   };
+
+  // Must run before CubeGallery is constructed below: CubeGallery seeds an
+  // initial UV region synchronously, and EditPipeline forwards that as a
+  // "uv-region-created" onBufferUpdated event immediately (not queued) —
+  // if sync isn't attached yet, the event fires into a void and the region
+  // never reaches the server, so late-joining peers never see it either.
+  initializeWebsocketTransport(canvasManager);
+
+  // One test cube per UV region, kept in sync via the uv event stream (see
+  // CubeGallery.ts). Actor creation/teardown is delegated to CubeFactory, and
+  // click-to-select raycasting to CubePicker, so CubeGallery itself only
+  // owns the region↔cube mirroring/layout — not the ECS world or 3D input.
+  const cubeFactory = new CubeFactory({ world, canvasTexture });
+  cubeGallery = new CubeGallery({ cubeFactory, canvasManager });
+  new CubePicker({
+    uv: canvasManager.uv,
+    camera: cameraBehavior.camera,
+    canvas,
+    getMeshes: () => cubeGallery.meshes
+  });
 
   world.renderer.on("resize", () => drawPanel.onResize());
 
@@ -118,4 +139,23 @@ async function initRuntime(): Promise<Runtime> {
   });
 
   return runtime;
+}
+
+// PixelSyncSession.attach() chains onto whatever local `onBufferUpdated`
+// handler the canvas already has
+function initializeWebsocketTransport(
+  canvasManager: PixelArtCanvas
+) {
+  const wsProtocol = location.protocol === "https:" ? "wss:" : "ws:";
+  const transport = new WebSocketPixelTransport({
+    url: `${wsProtocol}//${location.host}/ws-sync`,
+    namespace: DEMO_NAMESPACE
+  });
+  transport.onPeerJoined = (peerId) => console.log(`[pixel-sync] peer joined: ${peerId}`);
+  transport.onPeerLeft = (peerId) => console.log(`[pixel-sync] peer left: ${peerId}`);
+
+  const syncSession = new PixelSyncSession({
+    transport
+  });
+  syncSession.attach(canvasManager);
 }

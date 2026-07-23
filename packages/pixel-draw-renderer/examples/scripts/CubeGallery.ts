@@ -74,14 +74,6 @@ export class CubeGallery {
         cube.setSelected(regionId === selectedRegionId);
       }
     });
-
-    // Seed one region (and its cube) so there's something to see/test
-    // immediately, instead of starting from an empty scene.
-    const initialRegion = uv.create({
-      width: 16,
-      height: 16
-    });
-    uv.select(initialRegion.id);
   }
 
   /**

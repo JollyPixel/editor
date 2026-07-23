@@ -86,8 +86,8 @@ type HistoryEntryInput = Omit<HistoryEntry, "timestamp">;
 The `"uv-*"` entries replay by calling the corresponding [`UVMap`](../uv/UVMap.md) method directly (`delete`/`restore`/`move`) rather than touching `buffer`; see that method's own emitted event to see what a consumer observes during the replay.
 
 > [!IMPORTANT]
-> - A `"select-edit"` entry's undo/redo is never broadcast over the network; see [PixelArtCanvas.md](../PixelArtCanvas.md#undo--redo--canundo--canredo) for why.
-> - A `"uv-*"` entry's undo/redo **is** broadcast (unlike `"select-edit"`), since UV regions are per-buffer network state; see [uv/UVMap.md](../uv/UVMap.md#history--network).
+> - A `"select-edit"` entry's undo/redo **is** broadcast: `History.buildUndoReplayEvents`/`buildRedoReplayEvents` turn it into a `"select-edit"` network event carrying the entry's `positions` and per-pixel `beforeColors`/`afterColors`, the same shape `commitSelectionEdit` emits when the edit is first committed; see [PixelArtCanvas.md](../PixelArtCanvas.md#undo--redo--canundo--canredo).
+> - A `"uv-*"` entry's undo/redo is also broadcast, since UV regions are per-buffer network state; see [uv/UVMap.md](../uv/UVMap.md#history--network).
 
 ## Properties
 

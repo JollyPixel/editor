@@ -43,6 +43,47 @@ describe("PixelArtCanvas", () => {
     });
   });
 
+  describe("onBufferUpdated getter/setter", () => {
+    test("is undefined by default", () => {
+      const { manager } = createPixelArtCanvas();
+
+      assert.strictEqual(manager.onBufferUpdated, undefined);
+      manager.destroy();
+    });
+
+    test("getter reflects the value passed to the constructor option", () => {
+      const events: unknown[] = [];
+      function handler(event: unknown): void {
+        events.push(event);
+      }
+      const { manager } = createPixelArtCanvas({
+        onBufferUpdated: handler
+      });
+
+      assert.strictEqual(manager.onBufferUpdated, handler);
+      manager.commitPixels([{ x: 0, y: 0 }]);
+      assert.strictEqual(events.length, 1);
+      manager.destroy();
+    });
+
+    test("getter reflects the handler most recently assigned via the setter", () => {
+      const { manager } = createPixelArtCanvas();
+      const events: unknown[] = [];
+      function handler(event: unknown): void {
+        events.push(event);
+      }
+
+      manager.onBufferUpdated = handler;
+      assert.strictEqual(manager.onBufferUpdated, handler);
+      manager.commitPixels([{ x: 0, y: 0 }]);
+      assert.strictEqual(events.length, 1);
+
+      manager.onBufferUpdated = undefined;
+      assert.strictEqual(manager.onBufferUpdated, undefined);
+      manager.destroy();
+    });
+  });
+
   describe("zoom", () => {
     test("zoom.sensitivity returns the configured default", () => {
       const manager = new PixelArtCanvas(container, {
