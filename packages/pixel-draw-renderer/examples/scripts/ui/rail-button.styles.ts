@@ -25,19 +25,19 @@ export const railButtonStyles = css`
     border: 1px solid transparent;
     border-radius: 4px;
     background: transparent;
-    color: #ccc;
+    color: var(--color-text-muted);
     cursor: pointer;
   }
   .rail-btn:hover:not(:disabled) {
-    color: #fff;
+    color: var(--color-text-emphasis);
   }
   .rail-btn.active {
-    background: #4488ff;
-    border-color: #4488ff;
-    color: #fff;
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: var(--color-text-emphasis);
   }
   .rail-btn:disabled {
-    color: #556067;
+    color: var(--color-border);
     cursor: default;
   }
 
@@ -48,8 +48,8 @@ export const railButtonStyles = css`
     z-index: 10;
     padding: 3px 8px;
     border-radius: 3px;
-    background: #1d262b;
-    color: #eee;
+    background: var(--color-bg-tooltip);
+    color: var(--color-text);
     font-size: 11px;
     white-space: nowrap;
     pointer-events: none;

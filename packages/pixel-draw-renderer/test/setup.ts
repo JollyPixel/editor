@@ -2,7 +2,9 @@
 import { Window } from "happy-dom";
 
 // Import Internal Dependencies
-import { installCanvasMock } from "./fixtures/canvas.ts";
+import {
+  installCanvasMock
+} from "./fixtures/canvas.ts";
 
 // CONSTANTS
 const kEmulatedBrowserWindow = new Window();
@@ -22,7 +24,9 @@ Object.assign(globalThis, {
   HTMLCanvasElement: kEmulatedBrowserWindow.HTMLCanvasElement,
   Event: kEmulatedBrowserWindow.Event,
   getComputedStyle: () => {
-    return { backgroundColor: "#555555" };
+    return {
+      backgroundColor: "#555555"
+    };
   }
 });
 
