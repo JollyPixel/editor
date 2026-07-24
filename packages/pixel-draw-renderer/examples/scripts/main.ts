@@ -12,10 +12,10 @@ import {
   type PixelNetworkCommand,
   type PixelServerMessage
 } from "../../src/network/index.ts";
+import { type PixelDrawPanel } from "../../src/ui/index.ts";
 import { CameraBehavior } from "./components/Camera.ts";
 import { CubeFactory } from "./components/CubeFactory.ts";
 import { OrbitControlsBehavior } from "./components/OrbitControlsBehavior.ts";
-import { type PixelDrawPanel } from "./ui/PixelDrawPanel.ts";
 import { CubeGallery } from "./CubeGallery.ts";
 import { CubePicker } from "./CubePicker.ts";
 

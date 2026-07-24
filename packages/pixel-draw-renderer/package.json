@@ -5,6 +5,16 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./ui": {
+      "types": "./dist/ui/index.d.ts",
+      "default": "./dist/ui/index.js"
+    }
+  },
   "imports": {
     "#src/*": "./src/*"
   },
@@ -41,14 +51,14 @@
     "@jolly-pixel/engine": "3.0.0",
     "@jolly-pixel/resize-handle": "1.0.0",
     "@jolly-pixel/runtime": "3.4.0",
-    "lit": "3.3.3",
     "three": "0.185.1",
-    "tinybench": "6.0.2",
-    "vanilla-picker": "2.12.3"
+    "tinybench": "6.0.2"
   },
   "dependencies": {
     "@jolly-pixel/network": "*",
     "colorjs.io": "0.7.0",
-    "js-base64": "3.9.0"
+    "js-base64": "3.9.0",
+    "lit": "3.3.3",
+    "vanilla-picker": "2.12.3"
   }
 }
