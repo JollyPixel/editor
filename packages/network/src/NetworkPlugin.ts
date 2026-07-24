@@ -1,11 +1,15 @@
 // Import Internal Dependencies
-import type { ClientHandle } from "./types.ts";
+import type {
+  ClientHandle,
+  PeerMetadata
+} from "./types.ts";
 
 export abstract class NetworkPlugin {
   abstract readonly namespace: string;
 
   abstract onClientConnect(
-    client: ClientHandle
+    client: ClientHandle,
+    identity: PeerMetadata
   ): void;
 
   abstract onClientDisconnect(

@@ -15,7 +15,10 @@ export function isNetworkEnvelope(
     value.kind === "join" ||
     value.kind === "leave" ||
     value.kind === "message" ||
+    value.kind === "presence" ||
+    value.kind === "sync" ||
     value.kind === "peer-joined" ||
-    value.kind === "peer-left"
+    value.kind === "peer-left" ||
+    value.kind === "peer-presence"
   );
 }

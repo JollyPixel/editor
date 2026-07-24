@@ -26,30 +26,36 @@ Browser                                  Server
 Every message travels wrapped in a `NetworkEnvelope`:
 
 ```ts
+type PeerMetadata = Record<string, unknown>;
+
 type NetworkEnvelope =
-  | { namespace: string; kind: "join"; }
+  | { namespace: string; kind: "join"; identity?: PeerMetadata; }
   | { namespace: string; kind: "leave"; }
   | { namespace: string; kind: "message"; payload: unknown; }
-  | { namespace: string; kind: "peer-joined"; clientId: string; }
-  | { namespace: string; kind: "peer-left"; clientId: string; };
+  | { namespace: string; kind: "presence"; patch: PeerMetadata; }
+  | { namespace: string; kind: "sync"; members: PeerInfo[]; }
+  | { namespace: string; kind: "peer-joined"; clientId: string; identity: PeerMetadata; }
+  | { namespace: string; kind: "peer-left"; clientId: string; }
+  | { namespace: string; kind: "peer-presence"; clientId: string; patch: PeerMetadata; };
 ```
 
-`join`/`leave`/`message` travel client → server; `peer-joined`/`peer-left` travel server → client.
+`join`/`leave`/`message`/`presence` travel client → server; `sync`/`peer-joined`/`peer-left`/`peer-presence` travel server → client (`sync` is unicast to the joining client only, the other three are broadcast).
 
-`NetworkServer` reads the envelope to route messages and track namespace membership; `NetworkClient` does the mirror job client-side.
+`join.identity` is connection-wide static metadata (e.g. a username), set once on `NetworkClient` and resent on every namespace it joins. `presence.patch` is per-namespace dynamic metadata (e.g. cursor position): shallow-merged into that client's stored state on the server, then relayed to the rest of the namespace as `peer-presence`. `sync` bootstraps a newly-joined client with every pre-existing member's current `{ identity, presence }`, so it doesn't have to wait for further events to know who's already there.
 
-A [`NetworkChannel`](./docs/NetworkChannel.md)/ [`NetworkPlugin`](./docs/NetworkPlugin.md) never sees the envelope itself, only `payload`.
+`NetworkServer` reads the envelope to route messages and track namespace membership + per-member identity/presence; `NetworkClient` does the mirror job client-side, exposing it as `channel.peers`.
+
+A [`NetworkChannel`](./docs/NetworkChannel.md)/ [`NetworkPlugin`](./docs/NetworkPlugin.md) never sees the envelope itself, only `payload`/`patch`/`identity`.
 
 ## Connection lifecycle
 
-1. `NetworkClient.channel(namespace)` sends a `"join"` envelope and returns a `NetworkChannel`.
-2. `NetworkServer` records the client as a member of that namespace,
-   broadcasts `"peer-joined"` to the namespace's other members, then calls
-   the matching `NetworkPlugin.onClientConnect()`.
+1. `NetworkClient.channel(namespace)` sends a `"join"` envelope (carrying the client's `identity`) and returns a `NetworkChannel`.
+2. `NetworkServer` broadcasts `"peer-joined"` to the namespace's other members, unicasts a `"sync"` snapshot of them back to the joiner, records the client as a member, then calls the matching `NetworkPlugin.onClientConnect()`.
 3. `channel.send(payload)` / `plugin`'s scoped `client.send(payload)`
    exchange `"message"` envelopes, routed by namespace.
-4. `channel.leave()` (or a socket disconnect) removes the client from the
-   namespace, broadcasts `"peer-left"`, and calls
+4. `channel.updatePresence(patch)` exchanges `"presence"`/`"peer-presence"` envelopes, merged and relayed by `NetworkServer` — plugins aren't involved.
+5. `channel.leave()` (or a socket disconnect) removes the client from the
+   namespace (discarding its identity/presence), broadcasts `"peer-left"`, and calls
    `NetworkPlugin.onClientDisconnect()`.
 
 See [docs/](./docs/) for per-module API reference.

@@ -1,14 +1,17 @@
 # NetworkClient
 
-Browser/Node counterpart to [`NetworkServer`](./NetworkServer.md). Relies on the global `WebSocket` (available in both environments). Owns one connection and hands out namespace-scoped [`NetworkChannel`](./NetworkChannel.md)s.
-
-## Types
+Browser/Node counterpart to [`NetworkServer`](./NetworkServer.md). Owns one socket connection and provides namespace-scoped [`NetworkChannel`](./NetworkChannel.md) instances.
 
 ```ts
 new NetworkClient(options: NetworkClientOptions)
 
 interface NetworkClientOptions {
   url: string;
+  /**
+   * Connection-wide static metadata, attached to every join.
+   * Example: { username: "alice" }
+   */
+  identity?: PeerMetadata;
 }
 ```
 
@@ -20,7 +23,7 @@ interface NetworkClientOptions {
 readonly clientId: string
 ```
 
-Identifies this client across every channel it joins. Generated once per connection (`crypto.randomUUID()`), so consumers don't each need to invent their own peer id. Mirrored onto every `NetworkChannel` this client creates as `channel.localClientId`.
+Stable id for this client connection (`crypto.randomUUID()`), reused across all opened channels.
 
 ## Methods
 
@@ -32,11 +35,11 @@ channel<ClientPayload = unknown, ServerPayload = unknown>(
 ): NetworkChannel<ClientPayload, ServerPayload>
 ```
 
-Returns the `NetworkChannel` for `namespace`, creating and joining it (sends a `"join"` envelope) on first call. Subsequent calls with the same namespace return the same instance.
+Returns the channel for `namespace`.
 
-Messages sent (via `channel.send()`) before the socket finishes opening are queued and flushed once it does.
-
----
+- First call creates channel and sends `"join"` with client `identity`.
+- Repeated calls for same namespace return the same channel instance.
+- Outbound messages queue until the socket `open` event, then flush.
 
 ### `destroy`
 
@@ -44,18 +47,31 @@ Messages sent (via `channel.send()`) before the socket finishes opening are queu
 destroy(): void
 ```
 
-Closes the underlying `WebSocket`.
+Closes the underlying WebSocket.
+
+## Usage Notes
+
+- `identity` is fixed for the connection lifetime. Reconnect to change it.
+- Use [`NetworkChannel.updatePresence()`](./NetworkChannel.md#updatepresence) for frequently changing per-namespace metadata.
+- Incoming envelopes for unknown/unopened namespaces are ignored.
 
 ## Example
 
 ```ts
 import { NetworkClient } from "@jolly-pixel/network";
 
-const client = new NetworkClient({ url: "ws://localhost:5173/ws-sync" });
+const client = new NetworkClient({
+  url: "ws://localhost:5173/ws-sync",
+  identity: {
+    username: "alice"
+  }
+});
+
 const channel = client.channel("echo");
 
 channel.onMessage = (payload) => console.log(payload);
-channel.onPeerJoined = (clientId) => console.log(`${clientId} joined`);
-channel.onPeerLeft = (clientId) => console.log(`${clientId} left`);
+channel.onPeerJoined = (peerId) => console.log(`${peerId} joined`);
+channel.onPeerLeft = (peerId) => console.log(`${peerId} left`);
+
 channel.send({ hello: "world" });
 ```
