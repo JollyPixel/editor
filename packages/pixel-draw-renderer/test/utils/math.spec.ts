@@ -10,7 +10,9 @@ import {
   clamp,
   clampRectPosition,
   clampRectSize,
-  pointInRect
+  isVec2,
+  pointInRect,
+  vec2Equal
 } from "#src/utils/math.ts";
 
 describe("clamp", () => {
@@ -121,5 +123,51 @@ describe("pointInRect", () => {
 
   test("returns false for a point outside the rect", () => {
     assert.ok(!pointInRect({ x: 0, y: 0 }, rect));
+  });
+});
+
+describe("isVec2", () => {
+  test("returns true for a plain {x, y} object of numbers", () => {
+    assert.ok(isVec2({ x: 1, y: 2 }));
+  });
+
+  test("returns false for null", () => {
+    assert.ok(!isVec2(null));
+  });
+
+  test("returns false for a non-object", () => {
+    assert.ok(!isVec2("not a vec2"));
+    assert.ok(!isVec2(42));
+    assert.ok(!isVec2(undefined));
+  });
+
+  test("returns false when x or y is missing", () => {
+    assert.ok(!isVec2({ x: 1 }));
+    assert.ok(!isVec2({ y: 2 }));
+    assert.ok(!isVec2({}));
+  });
+
+  test("returns false when x or y is not a number", () => {
+    assert.ok(!isVec2({ x: "1", y: 2 }));
+    assert.ok(!isVec2({ x: 1, y: "2" }));
+  });
+});
+
+describe("vec2Equal", () => {
+  test("returns true for two points with the same coordinates", () => {
+    assert.ok(vec2Equal({ x: 1, y: 2 }, { x: 1, y: 2 }));
+  });
+
+  test("returns false for two points with different coordinates", () => {
+    assert.ok(!vec2Equal({ x: 1, y: 2 }, { x: 1, y: 3 }));
+  });
+
+  test("returns true when both are null", () => {
+    assert.ok(vec2Equal(null, null));
+  });
+
+  test("returns false when only one side is null", () => {
+    assert.ok(!vec2Equal(null, { x: 0, y: 0 }));
+    assert.ok(!vec2Equal({ x: 0, y: 0 }, null));
   });
 });

@@ -8,6 +8,7 @@ import { NetworkClient } from "@jolly-pixel/network";
 import type { PixelArtCanvas } from "../../src/index.ts";
 import {
   PixelSyncSession,
+  PixelCursorSession,
   type PixelNetworkCommand,
   type PixelServerMessage
 } from "../../src/network/index.ts";
@@ -22,6 +23,7 @@ import { CubePicker } from "./CubePicker.ts";
 // collaborator at the same URL joins them onto the same canvas. Must match
 // the PixelSyncServer's namespace in vite.config.ts.
 const DEMO_NAMESPACE = "pixel-draw:demo-canvas";
+const USERNAME_STORAGE_KEY = "pixel-draw-demo:username";
 
 declare global {
   interface Window {
@@ -158,13 +160,34 @@ async function initRuntime(): Promise<Runtime> {
   return runtime;
 }
 
+/**
+ * Prompts once per browser session
+ */
+function resolveUsername(): string {
+  const cached = sessionStorage.getItem(USERNAME_STORAGE_KEY);
+  if (cached) {
+    return cached;
+  }
+
+  // eslint-disable-next-line no-alert -- example-only UX, no dedicated UI needed here
+  const entered = window.prompt("Choose a username for this session")?.trim();
+  const username = entered && entered.length > 0 ?
+    entered :
+    "Guest";
+
+  sessionStorage.setItem(USERNAME_STORAGE_KEY, username);
+
+  return username;
+}
+
 // PixelSyncSession.attach() chains onto whatever local `onBufferUpdated` handler the canvas already has.
 function initializeWebsocketTransport(
   canvasManager: PixelArtCanvas
 ) {
   const wsProtocol = location.protocol === "https:" ? "wss:" : "ws:";
   const client = new NetworkClient({
-    url: `${wsProtocol}//${location.host}/ws-sync`
+    url: `${wsProtocol}//${location.host}/ws-sync`,
+    identity: { username: resolveUsername() }
   });
   const transport = client.channel<PixelNetworkCommand, PixelServerMessage>(
     DEMO_NAMESPACE
@@ -172,8 +195,15 @@ function initializeWebsocketTransport(
   transport.onPeerJoined = (peerId) => console.log(`[pixel-sync] peer joined: ${peerId}`);
   transport.onPeerLeft = (peerId) => console.log(`[pixel-sync] peer left: ${peerId}`);
 
-  const session = new PixelSyncSession({ transport });
+  const session = new PixelSyncSession({
+    transport
+  });
   session.attach(canvasManager);
+
+  const cursorSession = new PixelCursorSession({
+    channel: transport
+  });
+  cursorSession.attach(canvasManager);
 
   // Chains onto whatever handler session.attach() just installed, mirroring
   // its own onBufferUpdated chaining above — loadSnapshot() (triggered by a

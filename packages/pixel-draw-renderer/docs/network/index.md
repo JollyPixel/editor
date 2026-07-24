@@ -71,9 +71,14 @@ session.attach(canvas);
 
 On connect, the server immediately sends a snapshot so late joiners catch up.
 
+## Cursor Tracking
+
+Multiplayer cursors ride the same channel, no server plugin needed — presence is relayed by `NetworkChannel` itself. See [PixelCursorSession](./PixelCursorSession.md).
+
 ## What To Read Next
 
 | File | Use it when |
 |---|---|
 | [PixelSyncSession](./PixelSyncSession.md) | You are wiring client lifecycle (`attach`/`detach`/`destroy`) |
 | [PixelSyncServer](./PixelSyncServer.md) | You are wiring server namespaces and authoritative buffers |
+| [PixelCursorSession](./PixelCursorSession.md) | You want to show peers' live cursors on the canvas |

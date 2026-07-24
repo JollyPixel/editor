@@ -40,3 +40,26 @@ export interface PixelBufferSnapshot {
 export type PixelServerMessage =
   | { type: "snapshot"; data: PixelBufferSnapshot; }
   | { type: "command"; data: PixelNetworkCommand; };
+
+export type PixelPeerIdentity = Record<string, unknown>;
+
+export type PixelPeerPresence = Record<string, unknown>;
+
+export interface PixelPeer {
+  readonly clientId: string;
+  readonly identity: PixelPeerIdentity;
+  readonly presence: PixelPeerPresence;
+}
+
+export interface PixelPresenceChannel {
+  readonly localClientId: string;
+  readonly peers: ReadonlyMap<string, PixelPeer>;
+
+  updatePresence(
+    patch: PixelPeerPresence
+  ): void;
+
+  onPeerJoined: ((clientId: string) => void) | null;
+  onPeerLeft: ((clientId: string) => void) | null;
+  onPeerPresence: ((clientId: string, patch: PixelPeerPresence) => void) | null;
+}

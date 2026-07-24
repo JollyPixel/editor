@@ -3,7 +3,11 @@ export type {
   PixelNetworkCommand,
   PixelNetworkCommandHeader,
   PixelNetworkEvent,
-  PixelServerMessage
+  PixelServerMessage,
+  PixelPeer,
+  PixelPeerIdentity,
+  PixelPeerPresence,
+  PixelPresenceChannel
 } from "./types.ts";
 export type { PixelTransport } from "./PixelTransport.ts";
 export type {
@@ -16,6 +20,10 @@ export type {
   PixelSyncSessionOptions
 } from "./PixelSyncSession.ts";
 export { PixelSyncSession } from "./PixelSyncSession.ts";
+export type {
+  PixelCursorSessionOptions
+} from "./PixelCursorSession.ts";
+export { PixelCursorSession } from "./PixelCursorSession.ts";
 export type {
   ClientHandle,
   PixelStrokeCommand,

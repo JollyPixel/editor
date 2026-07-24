@@ -13,7 +13,8 @@ import {
   type HistoryState
 } from "./history/History.ts";
 import {
-  InteractionRouter
+  InteractionRouter,
+  type ExternalCursorMoveListener
 } from "./input/InteractionRouter.ts";
 import { PaintMode } from "./input/modes/PaintMode.ts";
 import { FillMode } from "./input/modes/FillMode.ts";
@@ -46,6 +47,7 @@ import {
 } from "./CanvasView.ts";
 import type { UVMap } from "./uv/UVMap.ts";
 import type { UVRegion } from "./uv/UVRegion.ts";
+import type { PeerCursorOverlay } from "./rendering/overlays/PeerCursorOverlay.ts";
 import { toRGBA } from "./utils/colors.ts";
 import type {
   BrushHighlight,
@@ -147,8 +149,8 @@ export class PixelArtCanvas {
   readonly brush: Brush;
   readonly viewport: DefaultViewport;
   readonly uv: UVMap;
-  /** Public view of the drawing tools: `tools.brush`, `tools.fill`, `tools.select`. */
   readonly tools: Toolset;
+  readonly peerCursors: PeerCursorOverlay;
 
   constructor(
     parentHtmlElement: HTMLDivElement,
@@ -203,6 +205,7 @@ export class PixelArtCanvas {
       brushHighlight: brushAdapter
     });
     this.viewport = this.#view.viewport;
+    this.peerCursors = this.#view.overlays.peerCursors;
 
     this.#edits = new EditPipeline({
       brush: this.brush,
@@ -236,6 +239,7 @@ export class PixelArtCanvas {
       this.#tools.line.refreshPreview();
       this.#tools.select.refreshOverlay();
       this.#view.overlays.uvOverlay.refresh();
+      this.#view.overlays.peerCursors.refresh();
     });
 
     this.#router = new InteractionRouter({
@@ -475,6 +479,24 @@ export class PixelArtCanvas {
     fn: PixelBufferHookListener | undefined
   ) {
     this.#edits.onBufferUpdated = fn;
+  }
+
+  /**
+   * The current local cursor-move listener, readable so callers can chain onto an existing handler.
+   */
+  get onCursorMove(): ExternalCursorMoveListener | undefined {
+    return this.#router.onExternalCursorMove;
+  }
+
+  /**
+   * Replaces the local cursor-move listener. Reports the bounded texture
+   * position on every canvas mousemove, and `null` once the pointer leaves
+   * the canvas or the texture bounds.
+   */
+  set onCursorMove(
+    fn: ExternalCursorMoveListener | undefined
+  ) {
+    this.#router.onExternalCursorMove = fn;
   }
 
   /**
