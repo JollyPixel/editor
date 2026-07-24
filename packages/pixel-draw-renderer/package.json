@@ -14,7 +14,8 @@
     "bench": "node bench/index.ts",
     "dev": "vite",
     "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
-    "test": "c8 -r html npm run test-only"
+    "test": "c8 -r html npm run test-only",
+    "test:e2e": "playwright test"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",

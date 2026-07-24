@@ -142,3 +142,8 @@ nsecure-result.json
 temp/
 temp.js
 temp.mjs
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/

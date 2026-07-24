@@ -23,6 +23,19 @@ import { CubePicker } from "./CubePicker.ts";
 // the PixelSyncServer's namespace in vite.config.ts.
 const DEMO_NAMESPACE = "pixel-draw:demo-canvas";
 
+declare global {
+  interface Window {
+    /**
+     * Flips to `true` once the initial WS snapshot has been applied to the
+     * canvas. examples/ isn't published (see package.json's "files"), so
+     * this test-only hook is harmless to leave in: it lets the E2E suite
+     * wait for a deterministic starting point (the server's current shared
+     * buffer) before resetting it, instead of racing the snapshot.
+     */
+    __pixelSyncReady?: boolean;
+  }
+}
+
 const runtime = await initRuntime();
 loadRuntime(runtime, {
   focusCanvas: false
@@ -161,4 +174,16 @@ function initializeWebsocketTransport(
 
   const session = new PixelSyncSession({ transport });
   session.attach(canvasManager);
+
+  // Chains onto whatever handler session.attach() just installed, mirroring
+  // its own onBufferUpdated chaining above — loadSnapshot() (triggered by a
+  // "snapshot" message) bypasses onBufferUpdated entirely, so this is the
+  // only way to observe it without touching PixelSyncSession itself.
+  const previousOnMessage = transport.onMessage;
+  transport.onMessage = (message) => {
+    previousOnMessage?.(message);
+    if (message.type === "snapshot") {
+      window.__pixelSyncReady = true;
+    }
+  };
 }
