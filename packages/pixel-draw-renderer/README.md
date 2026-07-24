@@ -167,6 +167,10 @@ Open `http://localhost:5173` to see the interactive demo.
 - [`Keybindings`](./docs/input/Keybindings.md)
 - [`Network`](./docs/network/index.md)
 
+### 📱 UI 
+
+- [`PixelDrawPanel`](./docs/ui/PixelDrawPanel.md) drop-in UI, `@jolly-pixel/pixel-draw.renderer/ui`
+
 ### Advanced / Internal
 
 Useful, but generally more internal-facing APIs:
