@@ -25,7 +25,9 @@ import {
   NetworkPlugin,
   type ClientHandle
 } from "@jolly-pixel/network";
-import { createWebSocketNetworkPlugin } from "@jolly-pixel/network/plugins/vite.ts";
+import {
+  createWebSocketNetworkPlugin
+} from "@jolly-pixel/network/plugins/vite.ts";
 
 class EchoPlugin extends NetworkPlugin {
   readonly namespace = "echo";
@@ -51,9 +53,13 @@ export default {
 Browser:
 
 ```ts
-import { NetworkClient } from "@jolly-pixel/network";
+import {
+  NetworkClient
+} from "@jolly-pixel/network";
 
-const client = new NetworkClient({ url: "ws://localhost:5173/ws-sync" });
+const client = new NetworkClient({
+  url: "ws://localhost:5173/ws-sync
+});
 const channel = client.channel("echo");
 
 channel.onMessage = (payload) => console.log(payload);

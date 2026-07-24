@@ -188,8 +188,19 @@ describe("NetworkServer — peer presence", () => {
     assert.deepEqual(a.sent, []);
 
     server.handleMessage("B", { namespace: "pixel-draw", kind: "join" });
-    assert.deepEqual(a.sent, [{ namespace: "pixel-draw", kind: "peer-joined", clientId: "B" }]);
-    assert.deepEqual(b.sent, []);
+    assert.deepEqual(a.sent, [{
+      namespace: "pixel-draw",
+      kind: "peer-joined",
+      clientId: "B",
+      identity: Object.create(null)
+    }]);
+    assert.deepEqual(b.sent, [{
+      namespace: "pixel-draw",
+      kind: "sync",
+      members: [
+        { clientId: "A", identity: Object.create(null), presence: {} }
+      ]
+    }]);
   });
 
   test("notifies remaining members on explicit leave, but not the leaver", () => {
@@ -246,6 +257,159 @@ describe("NetworkServer — peer presence", () => {
     server.handleMessage("B", { namespace: "pixel-draw", kind: "join" });
 
     assert.deepEqual(a.sent, []);
+  });
+});
+
+describe("NetworkServer — peer metadata", () => {
+  test("peer-joined sent to existing members includes the joiner's identity", () => {
+    const server = new NetworkServer();
+    const plugin = new RecordingPlugin("pixel-draw");
+    server.register(plugin);
+
+    const a = createClient("A");
+    const b = createClient("B");
+    server.handleConnect(a.client);
+    server.handleConnect(b.client);
+    server.handleMessage("A", { namespace: "pixel-draw", kind: "join" });
+
+    server.handleMessage("B", {
+      namespace: "pixel-draw",
+      kind: "join",
+      identity: { username: "bob" }
+    });
+
+    assert.deepEqual(a.sent, [{
+      namespace: "pixel-draw",
+      kind: "peer-joined",
+      clientId: "B",
+      identity: { username: "bob" }
+    }]);
+  });
+
+  test("a joiner with no existing members receives no sync envelope", () => {
+    const server = new NetworkServer();
+    const plugin = new RecordingPlugin("pixel-draw");
+    server.register(plugin);
+
+    const { client, sent } = createClient("A");
+    server.handleConnect(client);
+
+    server.handleMessage("A", { namespace: "pixel-draw", kind: "join" });
+
+    assert.deepEqual(sent, []);
+  });
+
+  test("a joiner with existing members receives a sync snapshot of their identity and presence", () => {
+    const server = new NetworkServer();
+    const plugin = new RecordingPlugin("pixel-draw");
+    server.register(plugin);
+
+    const a = createClient("A");
+    const b = createClient("B");
+    server.handleConnect(a.client);
+    server.handleConnect(b.client);
+    server.handleMessage("A", {
+      namespace: "pixel-draw",
+      kind: "join",
+      identity: { username: "alice" }
+    });
+    server.handleMessage("A", {
+      namespace: "pixel-draw",
+      kind: "presence",
+      patch: { cursor: { x: 1, y: 2 } }
+    });
+    b.sent.length = 0;
+
+    server.handleMessage("B", { namespace: "pixel-draw", kind: "join" });
+
+    assert.deepEqual(b.sent, [{
+      namespace: "pixel-draw",
+      kind: "sync",
+      members: [{
+        clientId: "A",
+        identity: { username: "alice" },
+        presence: { cursor: { x: 1, y: 2 } }
+      }]
+    }]);
+  });
+
+  test("presence updates merge into stored state and broadcast to other members, excluding the sender", () => {
+    const server = new NetworkServer();
+    const plugin = new RecordingPlugin("pixel-draw");
+    server.register(plugin);
+
+    const a = createClient("A");
+    const b = createClient("B");
+    server.handleConnect(a.client);
+    server.handleConnect(b.client);
+    server.handleMessage("A", { namespace: "pixel-draw", kind: "join" });
+    server.handleMessage("B", { namespace: "pixel-draw", kind: "join" });
+    a.sent.length = 0;
+    b.sent.length = 0;
+
+    server.handleMessage("A", {
+      namespace: "pixel-draw",
+      kind: "presence",
+      patch: { cursor: { x: 5, y: 5 } }
+    });
+
+    assert.deepEqual(a.sent, []);
+    assert.deepEqual(b.sent, [{
+      namespace: "pixel-draw",
+      kind: "peer-presence",
+      clientId: "A",
+      patch: { cursor: { x: 5, y: 5 } }
+    }]);
+  });
+
+  test("presence from a client that hasn't joined the namespace is dropped", () => {
+    const server = new NetworkServer();
+    const plugin = new RecordingPlugin("pixel-draw");
+    server.register(plugin);
+
+    const a = createClient("A");
+    const b = createClient("B");
+    server.handleConnect(a.client);
+    server.handleConnect(b.client);
+    server.handleMessage("B", { namespace: "pixel-draw", kind: "join" });
+    b.sent.length = 0;
+
+    server.handleMessage("A", {
+      namespace: "pixel-draw",
+      kind: "presence",
+      patch: { cursor: { x: 5, y: 5 } }
+    });
+
+    assert.deepEqual(b.sent, []);
+  });
+
+  test("identity and presence are gone from the sync snapshot after leave/disconnect", () => {
+    const server = new NetworkServer();
+    const plugin = new RecordingPlugin("pixel-draw");
+    server.register(plugin);
+
+    const a = createClient("A");
+    const b = createClient("B");
+    const c = createClient("C");
+    server.handleConnect(a.client);
+    server.handleConnect(b.client);
+    server.handleConnect(c.client);
+    server.handleMessage("A", {
+      namespace: "pixel-draw",
+      kind: "join",
+      identity: { username: "alice" }
+    });
+    server.handleMessage("B", {
+      namespace: "pixel-draw",
+      kind: "join",
+      identity: { username: "bob" }
+    });
+    server.handleMessage("A", { namespace: "pixel-draw", kind: "leave" });
+    server.handleDisconnect("B");
+
+    server.handleMessage("C", { namespace: "pixel-draw", kind: "join" });
+
+    assert.deepEqual(c.sent, []);
   });
 });
 

@@ -1,27 +1,23 @@
 # transport/websocket
 
-Pure `ws`-server plumbing: forwards raw connect/disconnect/message events into a [`NetworkServer`](../NetworkServer.md). Carries no knowledge of namespaces or plugins.
-
-## Types
+`ws` transport adapter that forwards connect/disconnect/message events into [`NetworkServer`](../NetworkServer.md).
 
 ```ts
 new WebsocketTransport(options: WebsocketTransportOptions)
 
 interface WebsocketTransportOptions {
   /**
-   * WebSocket upgrade path, kept distinct from Vite's own HMR socket so both
-   * can share the dev server's HTTP port.
+   * WebSocket upgrade path.
    * @default "/ws-sync"
    */
   path?: string;
-
   httpServer: Server | Http2SecureServer;
   server: NetworkServer;
   logger?: Logger; // pino
 }
 ```
 
-## Properties
+## Static Properties
 
 ### `DefaultPath`
 
@@ -29,18 +25,41 @@ interface WebsocketTransportOptions {
 static DefaultPath: string // "/ws-sync"
 ```
 
-## Behavior
+## Runtime Behavior
 
-Attaches to `httpServer`'s `"upgrade"` event and filters by `path` (using `noServer: true` rather than passing `server`/`path` straight to `WebSocketServer`, so the socket can share Vite's HTTP server safely). Each accepted connection is assigned a `randomUUID()` client id and wrapped into a `ClientHandle` passed to `server.handleConnect()`; incoming frames are JSON-parsed and forwarded to `server.handleMessage()`; socket close forwards to `server.handleDisconnect()`.
+- Registers an `"upgrade"` listener on `httpServer`.
+- Accepts upgrades only when request pathname equals `path`.
+- Uses `WebSocketServer({ noServer: true })` so it can share Vite's HTTP server safely.
 
-On the underlying `httpServer`'s `"close"` event, this transport force-terminates any still-open clients and closes its `WebSocketServer` — needed because Vite restarts its HTTP server in place on config changes, and a lingering upgraded socket would otherwise keep the old server's port bound, causing the next `.listen()` to fail with `EADDRINUSE`.
+Per accepted socket:
+
+- Creates `clientId` via `randomUUID()`.
+- Calls `server.handleConnect(client)` with JSON-encoding send wrapper.
+- Parses incoming frames (`JSON.parse`) and forwards to `server.handleMessage(clientId, raw)`.
+- Calls `server.handleDisconnect(clientId)` on close.
+- Logs socket errors via `logger`.
+
+On `httpServer` close:
+
+- Removes upgrade listener.
+- Terminates all connected websocket clients.
+- Closes websocket server instance.
+
+This cleanup prevents stale upgraded connections from blocking a subsequent listen on the same port during Vite restarts.
 
 ## Example
 
 ```ts
-import { NetworkServer } from "@jolly-pixel/network";
-import { WebsocketTransport } from "@jolly-pixel/network/transport/websocket.ts";
+import {
+  NetworkServer
+} from "@jolly-pixel/network";
+import {
+  WebsocketTransport
+} from "@jolly-pixel/network/transport/websocket.ts";
 
 const server = new NetworkServer();
-new WebsocketTransport({ httpServer, server });
+new WebsocketTransport({
+  httpServer,
+  server
+});
 ```

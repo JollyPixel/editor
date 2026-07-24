@@ -1,14 +1,12 @@
 # NetworkPlugin
 
-Abstract base class for a server-side feature registered under one namespace on a [`NetworkServer`](./NetworkServer.md) (e.g. `PixelSyncServer` from `@jolly-pixel/pixel-draw.renderer`).
-
-## Types
+Abstract base class for namespace handlers registered on [`NetworkServer`](./NetworkServer.md).
 
 ```ts
 abstract class NetworkPlugin {
   abstract readonly namespace: string;
 
-  abstract onClientConnect(client: ClientHandle): void;
+  abstract onClientConnect(client: ClientHandle, identity: PeerMetadata): void;
   abstract onClientDisconnect(clientId: string): void;
   abstract onMessage(clientId: string, payload: unknown): void;
 
@@ -24,9 +22,9 @@ abstract class NetworkPlugin {
 abstract readonly namespace: string
 ```
 
-The namespace this plugin handles. `NetworkServer` keys registered plugins by this value — two instances can't share a namespace.
+Namespace key handled by this plugin. Must be unique in one `NetworkServer`.
 
-## Methods
+## Lifecycle Methods
 
 ### `attach`
 
@@ -34,20 +32,29 @@ The namespace this plugin handles. `NetworkServer` keys registered plugins by th
 attach?(broadcast: (payload: unknown) => void): void
 ```
 
-Optional. Called once by `NetworkServer.register()`, before any client connects. `broadcast` sends a payload to every client currently joined to this plugin's namespace — the plugin doesn't need to track membership itself.
+Optional one-time hook called during `server.register(plugin)`.
 
----
+- `broadcast(payload)` sends a namespace-scoped message to all joined members.
+- Useful for timers, server-driven events, or startup state pushes.
 
-### `onClientConnect` / `onClientDisconnect`
+### `onClientConnect`
 
 ```ts
-onClientConnect(client: ClientHandle): void
+onClientConnect(client: ClientHandle, identity: PeerMetadata): void
+```
+
+Called when a client joins this namespace.
+
+- `client.send(data)` sends a namespace-scoped `"message"` envelope.
+- `identity` comes from `NetworkClientOptions.identity`.
+
+### `onClientDisconnect`
+
+```ts
 onClientDisconnect(clientId: string): void
 ```
 
-Called by `NetworkServer` when a client joins/leaves this namespace. `client` is a scoped [`ClientHandle`](./NetworkServer.md#types): its `send()` auto-tags messages with this plugin's namespace, so the plugin never constructs a `NetworkEnvelope` itself.
-
----
+Called when a previously joined client leaves/disconnects this namespace.
 
 ### `onMessage`
 
@@ -55,20 +62,30 @@ Called by `NetworkServer` when a client joins/leaves this namespace. `client` is
 onMessage(clientId: string, payload: unknown): void
 ```
 
-Called for every `"message"` a joined client sends on this namespace. `payload` is whatever the client's `channel.send()` sent, envelope-free.
+Called for every `"message"` sent by joined clients on this namespace.
 
 ## Example
 
 ```ts
-import { NetworkPlugin, type ClientHandle } from "@jolly-pixel/network";
+import {
+  NetworkPlugin,
+  type ClientHandle
+} from "@jolly-pixel/network";
 
 class EchoPlugin extends NetworkPlugin {
   readonly namespace = "echo";
 
-  onClientConnect(client: ClientHandle) {}
-  onClientDisconnect(clientId: string) {}
+  onClientConnect(client: ClientHandle) {
+    client.send({ type: "ready" });
+  }
+
+  onClientDisconnect(clientId: string) {
+    clientId;
+  }
+
   onMessage(clientId: string, payload: unknown) {
-    // broadcast or reply
+    clientId;
+    payload;
   }
 }
 ```
