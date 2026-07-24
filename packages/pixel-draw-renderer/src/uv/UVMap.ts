@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import { clamp, clampRectSize } from "../utils/math.ts";
+import { ColorPalette } from "../utils/ColorPalette.ts";
 import {
   TypedEventEmitter,
   type EventListener
@@ -44,16 +45,6 @@ export interface UVRegionCreateOptions {
 }
 
 // CONSTANTS
-const kPalette = [
-  "#f94144",
-  "#f3722c",
-  "#f9c74f",
-  "#90be6d",
-  "#43aa8b",
-  "#4d908e",
-  "#577590",
-  "#277da1"
-];
 const kCascadeStep = 16;
 
 /**
@@ -67,7 +58,7 @@ export class UVMap extends TypedEventEmitter<UVMapEvent> implements Iterable<UVR
   #selectedRegionId: string | null = null;
   #showAll = false;
   #cascadeIndex = 0;
-  #paletteIndex = 0;
+  #palette = new ColorPalette();
 
   constructor(
     options: UVMapOptions
@@ -164,7 +155,7 @@ export class UVMap extends TypedEventEmitter<UVMapEvent> implements Iterable<UVR
     const region: UVRegion = {
       id: options.id ?? crypto.randomUUID(),
       rect: { x: position.x, y: position.y, width, height },
-      color: options.color ?? this.#nextPaletteColor()
+      color: options.color ?? this.#palette.next()
     };
 
     this.#regions.set(region.id, region);
@@ -280,14 +271,7 @@ export class UVMap extends TypedEventEmitter<UVMapEvent> implements Iterable<UVR
       this.delete(id);
     }
     this.#cascadeIndex = 0;
-    this.#paletteIndex = 0;
-  }
-
-  #nextPaletteColor(): string {
-    const color = kPalette[this.#paletteIndex % kPalette.length];
-    this.#paletteIndex++;
-
-    return color;
+    this.#palette.reset();
   }
 
   #nextCascadePosition(

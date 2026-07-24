@@ -4,6 +4,7 @@ import { BrushHighlightOverlay } from "./overlays/BrushHighlightOverlay.ts";
 import { LinePreviewOverlay } from "./overlays/LinePreviewOverlay.ts";
 import { SelectionOverlay } from "./overlays/SelectionOverlay.ts";
 import { UVOverlay } from "./overlays/UVOverlay.ts";
+import { PeerCursorOverlay } from "./overlays/PeerCursorOverlay.ts";
 import type {
   DefaultViewport
 } from "./Viewport.ts";
@@ -31,6 +32,7 @@ export class OverlayLayer {
   readonly linePreview: LinePreviewOverlay;
   readonly selection: SelectionOverlay;
   readonly uvOverlay: UVOverlay;
+  readonly peerCursors: PeerCursorOverlay;
 
   constructor(
     options: OverlayLayerOptions
@@ -57,6 +59,10 @@ export class OverlayLayer {
       this.#svg,
       options.viewport,
       options.uvMap
+    );
+    this.peerCursors = new PeerCursorOverlay(
+      this.#svg,
+      options.viewport
     );
   }
 
@@ -104,6 +110,7 @@ export class OverlayLayer {
 
   destroy(): void {
     this.uvOverlay.destroy();
+    this.peerCursors.destroy();
     if (this.#svg.parentElement) {
       this.#svg.remove();
     }

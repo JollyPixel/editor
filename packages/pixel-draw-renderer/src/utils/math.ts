@@ -60,3 +60,22 @@ export function pointInRect(
   return pos.x >= rect.x && pos.x < rect.x + rect.width &&
     pos.y >= rect.y && pos.y < rect.y + rect.height;
 }
+
+export function isVec2(
+  value: unknown
+): value is Vec2 {
+  return typeof value === "object" && value !== null &&
+    "x" in value && "y" in value &&
+    typeof value.x === "number" && typeof value.y === "number";
+}
+
+export function vec2Equal(
+  a: Vec2 | null,
+  b: Vec2 | null
+): boolean {
+  if (a === null || b === null) {
+    return a === b;
+  }
+
+  return a.x === b.x && a.y === b.y;
+}

@@ -17,12 +17,10 @@ export interface InteractionRouterOptions {
   onRedo: () => boolean | void;
 }
 
+export type ExternalCursorMoveListener = (pos: Vec2 | null) => void;
+
 /**
- * Holds the active `InteractionMode` and forwards `InputActions` to it. A mode
- * switch runs the leaving mode's `onExit` then the entering mode's `onEnter`,
- * and re-resolves the cursor. Pan, zoom and undo/redo are mode-independent and
- * handled here rather than by any mode. The pan gesture (middle-drag, or
- * Space+left-drag) shows a `grab`/`grabbing` cursor.
+ * Holds the active `InteractionMode` and forwards `InputActions` to it.
  */
 export class InteractionRouter implements InputActions {
   #modes: Map<Mode, InteractionMode>;
@@ -32,6 +30,7 @@ export class InteractionRouter implements InputActions {
   #onUndo: () => boolean | void;
   #onRedo: () => boolean | void;
   #panModifierHeld: boolean = false;
+  onExternalCursorMove: ExternalCursorMoveListener | undefined;
 
   constructor(
     options: InteractionRouterOptions
@@ -186,6 +185,7 @@ export class InteractionRouter implements InputActions {
     pos: Vec2 | null
   ): void {
     this.#active.onCursorMove(pos);
+    this.onExternalCursorMove?.(pos);
   }
 
   onMouseUp(): void {

@@ -130,6 +130,14 @@ readonly uv: UVMap
 
 UV regions: create/delete/move/select, visibility, typed events. See [uv/UVMap.md](./uv/UVMap.md).
 
+### `peerCursors`
+
+```ts
+readonly peerCursors: PeerCursorOverlay // { set, remove, refresh, destroy }
+```
+
+Renders remote peers' cursors over the canvas — used by `PixelCursorSession`. `set(clientId, { pos, color, label? })` hides the marker when `pos` is `null`. See [network/PixelCursorSession.md](./network/PixelCursorSession.md).
+
 ## Methods
 
 ### `mode`
@@ -328,3 +336,14 @@ loadSnapshot(size: Vec2, pixels: Uint8ClampedArray, uvRegions?: UVRegion[]): voi
 ```
 
 Network sync hooks — used by `PixelSyncSession`. `applyRemoteCommand` applies a remote mutation without re-firing `onBufferUpdated`. `loadSnapshot` hydrates buffer + UV from a snapshot (never broadcast). See [network/index.md](./network/index.md).
+
+---
+
+### `onCursorMove`
+
+```ts
+get onCursorMove(): ((pos: Vec2 | null) => void) | undefined
+set onCursorMove(fn: ((pos: Vec2 | null) => void) | undefined)
+```
+
+Fires on every canvas mousemove with the bounded texture position, and `null` once the pointer leaves the canvas or texture bounds — used by `PixelCursorSession` to broadcast the local cursor. See [network/PixelCursorSession.md](./network/PixelCursorSession.md).
