@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
-import {
-  NetworkPlugin,
-  type ClientHandle
-} from "@jolly-pixel/network";
+import * as network from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import { VoxelWorld } from "../world/VoxelWorld.ts";
@@ -15,7 +12,7 @@ import {
 } from "./ConflictResolver.ts";
 import type { VoxelNetworkCommand } from "./types.ts";
 
-export type { ClientHandle };
+export type ClientHandle = network.ClientHandle;
 
 function isVoxelNetworkCommand(
   value: unknown
@@ -26,12 +23,12 @@ function isVoxelNetworkCommand(
 
 export interface VoxelSyncServerOptions {
   /**
-   * NetworkPlugin namespace this server is registered under. A
-   * VoxelSyncServer owns exactly one world, so a NetworkServer hosting
-   * several worlds needs one instance per world, each under its own namespace.
+   * RoomAuthority id this server is registered under. A
+   * VoxelSyncServer owns exactly one world, so a Server hosting
+   * several worlds needs one instance per world, each under its own id.
    * @default "voxel-map"
    */
-  namespace?: string;
+  id?: string;
   /**
    * Existing `VoxelWorld` to use as the authoritative state.
    * A new world is created when omitted.
@@ -54,11 +51,10 @@ export interface VoxelSyncServerOptions {
  *
  * Has no Three.js dependency and runs in Node.js / Deno / Bun.
  */
-export class VoxelSyncServer extends NetworkPlugin {
-  readonly namespace: string;
+export class VoxelSyncServer extends network.RoomAuthority {
+  readonly id: string;
   readonly world: VoxelWorld;
 
-  #broadcastFn: ((payload: unknown) => void) | undefined;
   #resolver: VoxelConflictResolver;
   #lastCmdByKey = new Map<string, VoxelNetworkCommand>();
 
@@ -67,19 +63,19 @@ export class VoxelSyncServer extends NetworkPlugin {
   ) {
     super();
     const {
-      namespace = "voxel-map",
+      id = "voxel-map",
       world,
       chunkSize = 16,
       conflictResolver
     } = options;
 
-    this.namespace = namespace;
+    this.id = id;
     this.world = world ?? new VoxelWorld(chunkSize);
     this.#resolver = conflictResolver ?? new LastWriteWinsResolver();
   }
 
   onClientConnect(
-    client: ClientHandle
+    client: network.ClientHandle
   ): void {
     // Sends the world's current snapshot to the newly connected peer.
     client.send({
@@ -91,28 +87,24 @@ export class VoxelSyncServer extends NetworkPlugin {
   onClientDisconnect(
     _clientId: string
   ): void {
-    // No client-list bookkeeping to clean up — NetworkServer owns that.
-  }
-
-  attach(
-    broadcast: (payload: unknown) => void
-  ): void {
-    this.#broadcastFn = broadcast;
+    // No client-list bookkeeping to clean up — Server owns that.
   }
 
   onMessage(
     _clientId: string,
-    payload: unknown
+    payload: unknown,
+    room: network.RoomHandle
   ): void {
     if (!isVoxelNetworkCommand(payload)) {
       return;
     }
 
-    this.receive(payload);
+    this.receive(payload, room);
   }
 
   receive(
-    cmd: VoxelNetworkCommand
+    cmd: VoxelNetworkCommand,
+    room: network.RoomHandle
   ): void {
     const key = this.#cmdKey(cmd);
     const existing = key === null ?
@@ -145,13 +137,14 @@ export class VoxelSyncServer extends NetworkPlugin {
       this.#lastCmdByKey.set(key, cmd);
     }
 
-    this.#broadcast(cmd);
+    this.#broadcast(cmd, room);
   }
 
   #broadcast(
-    cmd: VoxelNetworkCommand
+    cmd: VoxelNetworkCommand,
+    room: network.RoomHandle
   ): void {
-    this.#broadcastFn?.({
+    room.broadcast({
       type: "command",
       data: cmd
     });

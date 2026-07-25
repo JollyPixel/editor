@@ -2,13 +2,13 @@
 
 Broadcasts the local cursor position and renders remote peers' cursors on `PixelArtCanvas.peerCursors`.
 
-No server plugin needed: presence is relayed by `NetworkChannel` itself (`updatePresence`/`onPeerPresence`), independent of `PixelSyncServer`. Reuse the same channel a `PixelSyncSession` already has open — one connection, two concerns.
+No server authority needed: presence is relayed by `network.Room` itself (`updatePresence`/`onPeerPresence`), independent of `PixelSyncServer`. Reuse the same room a `PixelSyncSession` already has open — one connection, two concerns.
 
 ## Channel Shape
 
 ```ts
 interface PixelPresenceChannel {
-	readonly localClientId: string;
+	readonly clientId: string;
 	readonly peers: ReadonlyMap<string, PixelPeer>;
 	updatePresence(patch: PixelPeerPresence): void;
 	onPeerJoined: ((clientId: string) => void) | null;
@@ -23,7 +23,7 @@ interface PixelPeer {
 }
 ```
 
-`NetworkClient.channel()` from `@jolly-pixel/network` satisfies this shape directly — no adapter required, and it's the very same object `PixelSyncSession` uses for buffer sync.
+`network.Client.room()` from `@jolly-pixel/network` satisfies this shape directly — no adapter required, and it's the very same object `PixelSyncSession` uses for buffer sync.
 
 ## Use It Like This
 
@@ -33,7 +33,7 @@ import {
   PixelCursorSession
 } from "@jolly-pixel/pixel-draw.renderer";
 
-const transport = client.channel<PixelNetworkCommand, PixelServerMessage>("pixel-draw:main");
+const transport = client.room<PixelNetworkCommand, PixelServerMessage>("pixel-draw:main");
 
 const syncSession = new PixelSyncSession({ transport });
 syncSession.attach(canvas);
@@ -45,7 +45,7 @@ cursorSession.attach(canvas);
 cursorSession.destroy();
 ```
 
-Pass an `identity: { username: "..." }` on `new NetworkClient({ url, identity })` to give each peer a display label — `PixelCursorSession` reads `identity.username` by default. Override with `getLabel` for a different identity shape:
+Pass an `identity: { username: "..." }` on `new network.Client({ url, identity })` to give each peer a display label — `PixelCursorSession` reads `identity.username` by default. Override with `getLabel` for a different identity shape:
 
 ```ts
 new PixelCursorSession({
@@ -85,5 +85,5 @@ A peer who joined (and hasn't moved since) before you attach won't show a cursor
 
 ## Common Mistakes
 
-1. Building a second `NetworkClient`/channel for cursors instead of reusing the sync one.
+1. Building a second `network.Client`/room for cursors instead of reusing the sync one.
 2. Setting `channel.onPeerJoined` etc. *after* constructing `PixelCursorSession` — set your own handlers first, then construct the session so it chains onto them.

@@ -6,6 +6,9 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import type { RoomHandle } from "@jolly-pixel/network";
+
 // Import Internal Dependencies
 import {
   PixelArtCanvas,
@@ -476,6 +479,8 @@ describe("PixelArtCanvas — history (undo/redo)", () => {
 
 interface RecordingTransport extends PixelTransport {
   sentCommands: PixelNetworkCommand[];
+  /** The RoomHandle wired into the backing server — lets a test simulate a peer sending directly. */
+  room: RoomHandle;
 }
 
 function isServerMessage(value: unknown): value is PixelServerMessage {
@@ -494,18 +499,6 @@ function makeServerBackedTransport(
 ): RecordingTransport {
   const sentCommands: PixelNetworkCommand[] = [];
 
-  const transport: RecordingTransport = {
-    localClientId: clientId,
-    sentCommands,
-    onMessage: null,
-    onPeerJoined: null,
-    onPeerLeft: null,
-    send(cmd) {
-      sentCommands.push(cmd);
-      server.receive(cmd);
-    }
-  };
-
   function handleFromServer(data: unknown): void {
     if (!isServerMessage(data)) {
       return;
@@ -514,14 +507,28 @@ function makeServerBackedTransport(
     transport.onMessage?.(data);
   }
 
+  // Normally provided by Server/ServerRoom — this single-client fake
+  // just forwards straight back to the same client, mirroring `observe()` in
+  // PixelSyncServer.spec.ts.
+  const room: RoomHandle = { broadcast: handleFromServer };
+
+  const transport: RecordingTransport = {
+    clientId,
+    sentCommands,
+    room,
+    onMessage: null,
+    onPeerJoined: null,
+    onPeerLeft: null,
+    send(cmd) {
+      sentCommands.push(cmd);
+      server.receive(cmd, room);
+    }
+  };
+
   server.onClientConnect({
     id: clientId,
     send: handleFromServer
   });
-  // Normally provided by NetworkServer.register() — this single-client fake
-  // just forwards straight back to the same client, mirroring `observe()` in
-  // PixelSyncServer.spec.ts.
-  server.attach(handleFromServer);
 
   return transport;
 }
@@ -606,7 +613,7 @@ describe("PixelArtCanvas — history + network collision handling", () => {
         color: { r: 0, g: 0, b: 255, a: 255 },
         positions: [{ x: 1, y: 1 }]
       }
-    });
+    }, transport.room);
     assert.deepStrictEqual(
       server.buffer.samplePixel(1, 1),
       [0, 0, 255, 255]

@@ -18,32 +18,32 @@ $ yarn add @jolly-pixel/network
 
 ## 👀 Usage example
 
+Import the package as a namespace  `network.Client`, `network.Server`, `network.RoomAuthority`, etc.  rather than pulling individual named exports. It reads clearly at the call site and keeps growing without more import churn.
+
 Server (Vite dev server):
 
 ```ts
-import {
-  NetworkPlugin,
-  type ClientHandle
-} from "@jolly-pixel/network";
+import * as network from "@jolly-pixel/network";
 import {
   createWebSocketNetworkPlugin
 } from "@jolly-pixel/network/plugins/vite.ts";
 
-class EchoPlugin extends NetworkPlugin {
-  readonly namespace = "echo";
+class EchoAuthority extends network.RoomAuthority {
+  readonly id = "echo";
 
-  onClientConnect(client: ClientHandle) {}
+  onClientConnect(client: network.ClientHandle) {}
   onClientDisconnect(clientId: string) {}
-  onMessage(clientId: string, payload: unknown) {
-    // payload is whatever the client's channel.send() sent, envelope-free
+  onMessage(clientId: string, payload: unknown, room: network.RoomHandle) {
+    // payload is whatever the client's room.send() sent, envelope-free
+    room.broadcast(payload);
   }
 }
 
 export default {
   plugins: [
     createWebSocketNetworkPlugin({
-      plugins: [
-        new EchoPlugin()
+      roomAuthorities: [
+        new EchoAuthority()
       ]
     })
   ]
@@ -53,26 +53,22 @@ export default {
 Browser:
 
 ```ts
-import {
-  NetworkClient
-} from "@jolly-pixel/network";
+import * as network from "@jolly-pixel/network";
 
-const client = new NetworkClient({
-  url: "ws://localhost:5173/ws-sync
-});
-const channel = client.channel("echo");
+const client = new network.Client();
+const room = client.room("echo");
 
-channel.onMessage = (payload) => console.log(payload);
-channel.onPeerJoined = (clientId) => console.log(`${clientId} joined`);
-channel.onPeerLeft = (clientId) => console.log(`${clientId} left`);
-channel.send({ hello: "world" });
+room.onMessage = (payload) => console.log(payload);
+room.onPeerJoined = (clientId) => console.log(`${clientId} joined`);
+room.onPeerLeft = (clientId) => console.log(`${clientId} left`);
+room.send({ hello: "world" });
 ```
 
 ## 📚 API
 
-- [`NetworkClient`](./docs/NetworkClient.md) / [`NetworkChannel`](./docs/NetworkChannel.md): browser/Node WebSocket client, namespace-scoped channels
-- [`NetworkServer`](./docs/NetworkServer.md) / [`NetworkPlugin`](./docs/NetworkPlugin.md): transport-agnostic namespace multiplexer and per-namespace plugin base class
-- [`WebsocketTransport`](./docs/transport/websocket.md): ws-server plumbing into a `NetworkServer`
+- [`Client`](./docs/Client.md) / [`Room`](./docs/Room.md): browser/Node WebSocket client, room-scoped handles
+- [`Server`](./docs/Server.md): transport-agnostic room multiplexer
+- [`WebsocketTransport`](./docs/transport/websocket.md): ws-server plumbing into a `Server`
 - [`createWebSocketNetworkPlugin`](./docs/plugins/vite.md): Vite dev-server wiring
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for the wire format and full connection lifecycle.

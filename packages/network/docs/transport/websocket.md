@@ -1,6 +1,6 @@
 # transport/websocket
 
-`ws` transport adapter that forwards connect/disconnect/message events into [`NetworkServer`](../NetworkServer.md).
+`ws` transport adapter that forwards connection events into [`Server`](../Server.md).
 
 ```ts
 new WebsocketTransport(options: WebsocketTransportOptions)
@@ -8,58 +8,29 @@ new WebsocketTransport(options: WebsocketTransportOptions)
 interface WebsocketTransportOptions {
   /**
    * WebSocket upgrade path.
-   * @default "/ws-sync"
    */
-  path?: string;
-  httpServer: Server | Http2SecureServer;
-  server: NetworkServer;
-  logger?: Logger; // pino
+  path: string;
+  httpServer: Server | Http2SecureServer; // node:http Server
+  server: Server; // @jolly-pixel/network Server
 }
 ```
 
-## Static Properties
+## Quick Use
 
-### `DefaultPath`
-
-```ts
-static DefaultPath: string // "/ws-sync"
-```
-
-## Runtime Behavior
-
-- Registers an `"upgrade"` listener on `httpServer`.
-- Accepts upgrades only when request pathname equals `path`.
-- Uses `WebSocketServer({ noServer: true })` so it can share Vite's HTTP server safely.
-
-Per accepted socket:
-
-- Creates `clientId` via `randomUUID()`.
-- Calls `server.handleConnect(client)` with JSON-encoding send wrapper.
-- Parses incoming frames (`JSON.parse`) and forwards to `server.handleMessage(clientId, raw)`.
-- Calls `server.handleDisconnect(clientId)` on close.
-- Logs socket errors via `logger`.
-
-On `httpServer` close:
-
-- Removes upgrade listener.
-- Terminates all connected websocket clients.
-- Closes websocket server instance.
-
-This cleanup prevents stale upgraded connections from blocking a subsequent listen on the same port during Vite restarts.
-
-## Example
+- Create a `Server` instance.
+- Create one `WebsocketTransport` with `httpServer`, `server`, and `path`.
+- Let the transport forward events into server handlers.
 
 ```ts
-import {
-  NetworkServer
-} from "@jolly-pixel/network";
+import * as network from "@jolly-pixel/network";
 import {
   WebsocketTransport
 } from "@jolly-pixel/network/transport/websocket.ts";
 
-const server = new NetworkServer();
+const server = new network.Server();
 new WebsocketTransport({
   httpServer,
-  server
+  server,
+  path: "/ws-sync"
 });
 ```

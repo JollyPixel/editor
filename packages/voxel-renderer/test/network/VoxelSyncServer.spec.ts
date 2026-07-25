@@ -2,6 +2,9 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import type { RoomHandle } from "@jolly-pixel/network";
+
 // Import Internal Dependencies
 import {
   VoxelSyncServer,
@@ -32,16 +35,28 @@ function createClient(id: string): MockClient {
 }
 
 /**
- * Connects a client and wires the server's broadcast function (normally
- * provided by NetworkServer.register()) to forward straight to it — the
- * single-client fake a unit test needs to observe `receive()`'s broadcasts.
+ * `receive()` no longer stashes a broadcast callback — the caller (normally
+ * `ServerRoom`, via `onMessage`) hands one in per call. Tests that don't care
+ * about broadcast delivery can pass this no-op.
+ */
+const noopRoom: RoomHandle = {
+  broadcast: () => {
+    // no observers
+  }
+};
+
+/**
+ * Connects a client and returns a RoomHandle that forwards broadcasts
+ * straight to it — the single-client fake a unit test needs to observe
+ * `receive()`'s broadcasts.
  */
 function observe(
   server: VoxelSyncServer,
   client: MockClient
-): void {
+): RoomHandle {
   server.onClientConnect(client);
-  server.attach((payload) => client.send(payload));
+
+  return { broadcast: (payload) => client.send(payload) };
 }
 
 function voxelSetCmd(
@@ -103,7 +118,7 @@ describe("VoxelSyncServer — snapshot", () => {
 // onClientConnect
 //
 // Peer-joined/peer-left notifications and client-list bookkeeping are now a
-// NetworkServer concern (see @jolly-pixel/network's NetworkServer.spec.ts) —
+// Server concern (see @jolly-pixel/network's Server.spec.ts) —
 // VoxelSyncServer no longer tracks its own client list.
 // ---------------------------------------------------------------------------
 
@@ -129,7 +144,7 @@ describe("VoxelSyncServer — receive: apply + broadcast", () => {
     const server = new VoxelSyncServer();
     server.world.addLayer("Ground");
 
-    server.receive(voxelSetCmd({ x: 2, y: 0, z: 3, blockId: 7 }));
+    server.receive(voxelSetCmd({ x: 2, y: 0, z: 3, blockId: 7 }), noopRoom);
 
     const entry = server.world.getLayer("Ground")!.getVoxelAt({ x: 2, y: 0, z: 3 });
     assert.ok(entry);
@@ -141,10 +156,10 @@ describe("VoxelSyncServer — receive: apply + broadcast", () => {
     server.world.addLayer("Ground");
 
     const client = createClient("A");
-    observe(server, client);
+    const room = observe(server, client);
     client.received.length = 0;
 
-    server.receive(voxelSetCmd());
+    server.receive(voxelSetCmd(), room);
 
     assert.equal(client.received.length, 1);
     const msg = client.received[0] as { type: string; data: VoxelNetworkCommand; };
@@ -155,7 +170,7 @@ describe("VoxelSyncServer — receive: apply + broadcast", () => {
   it("broadcasts structural commands (no key)", () => {
     const server = new VoxelSyncServer();
     const client = createClient("A");
-    observe(server, client);
+    const room = observe(server, client);
     client.received.length = 0;
 
     const cmd: VoxelNetworkCommand = {
@@ -167,7 +182,7 @@ describe("VoxelSyncServer — receive: apply + broadcast", () => {
       timestamp: 1000
     };
 
-    server.receive(cmd);
+    server.receive(cmd, room);
 
     assert.equal(client.received.length, 1);
     assert.ok(server.world.getLayer("Deco"));
@@ -179,7 +194,7 @@ describe("VoxelSyncServer — receive: LWW conflict resolution", () => {
     const server = new VoxelSyncServer();
     server.world.addLayer("Ground");
 
-    server.receive(voxelSetCmd({ timestamp: 500, x: 0, y: 0, z: 0, blockId: 1 }));
+    server.receive(voxelSetCmd({ timestamp: 500, x: 0, y: 0, z: 0, blockId: 1 }), noopRoom);
 
     const entry = server.world.getLayer("Ground")!.getVoxelAt({ x: 0, y: 0, z: 0 });
     assert.ok(entry);
@@ -190,8 +205,8 @@ describe("VoxelSyncServer — receive: LWW conflict resolution", () => {
     const server = new VoxelSyncServer();
     server.world.addLayer("Ground");
 
-    server.receive(voxelSetCmd({ timestamp: 500, x: 0, y: 0, z: 0, blockId: 1, clientId: "A" }));
-    server.receive(voxelSetCmd({ timestamp: 900, x: 0, y: 0, z: 0, blockId: 2, clientId: "B" }));
+    server.receive(voxelSetCmd({ timestamp: 500, x: 0, y: 0, z: 0, blockId: 1, clientId: "A" }), noopRoom);
+    server.receive(voxelSetCmd({ timestamp: 900, x: 0, y: 0, z: 0, blockId: 2, clientId: "B" }), noopRoom);
 
     const entry = server.world.getLayer("Ground")!.getVoxelAt({ x: 0, y: 0, z: 0 });
     assert.ok(entry);
@@ -202,8 +217,8 @@ describe("VoxelSyncServer — receive: LWW conflict resolution", () => {
     const server = new VoxelSyncServer();
     server.world.addLayer("Ground");
 
-    server.receive(voxelSetCmd({ timestamp: 900, x: 0, y: 0, z: 0, blockId: 2, clientId: "A" }));
-    server.receive(voxelSetCmd({ timestamp: 500, x: 0, y: 0, z: 0, blockId: 1, clientId: "B" }));
+    server.receive(voxelSetCmd({ timestamp: 900, x: 0, y: 0, z: 0, blockId: 2, clientId: "A" }), noopRoom);
+    server.receive(voxelSetCmd({ timestamp: 500, x: 0, y: 0, z: 0, blockId: 1, clientId: "B" }), noopRoom);
 
     const entry = server.world.getLayer("Ground")!.getVoxelAt({ x: 0, y: 0, z: 0 });
     assert.ok(entry);
@@ -216,13 +231,13 @@ describe("VoxelSyncServer — receive: LWW conflict resolution", () => {
     server.world.addLayer("Ground");
 
     const client = createClient("A");
-    observe(server, client);
+    const room = observe(server, client);
     client.received.length = 0;
 
-    server.receive(voxelSetCmd({ timestamp: 900, x: 0, y: 0, z: 0, blockId: 2 }));
+    server.receive(voxelSetCmd({ timestamp: 900, x: 0, y: 0, z: 0, blockId: 2 }), room);
     client.received.length = 0;
 
-    server.receive(voxelSetCmd({ timestamp: 500, x: 0, y: 0, z: 0, blockId: 1 }));
+    server.receive(voxelSetCmd({ timestamp: 500, x: 0, y: 0, z: 0, blockId: 1 }), room);
 
     // Rejected command — no broadcast
     assert.equal(client.received.length, 0);
@@ -234,8 +249,8 @@ describe("VoxelSyncServer — receive: LWW conflict resolution", () => {
 
     const ts = 1000;
     // "client-B" > "client-A" lexicographically
-    server.receive(voxelSetCmd({ timestamp: ts, x: 0, y: 0, z: 0, blockId: 1, clientId: "client-A" }));
-    server.receive(voxelSetCmd({ timestamp: ts, x: 0, y: 0, z: 0, blockId: 2, clientId: "client-B" }));
+    server.receive(voxelSetCmd({ timestamp: ts, x: 0, y: 0, z: 0, blockId: 1, clientId: "client-A" }), noopRoom);
+    server.receive(voxelSetCmd({ timestamp: ts, x: 0, y: 0, z: 0, blockId: 2, clientId: "client-B" }), noopRoom);
 
     const entry = server.world.getLayer("Ground")!.getVoxelAt({ x: 0, y: 0, z: 0 });
     assert.ok(entry);
@@ -245,7 +260,7 @@ describe("VoxelSyncServer — receive: LWW conflict resolution", () => {
   it("does not conflict-check non-voxel commands", () => {
     const server = new VoxelSyncServer();
     const client = createClient("A");
-    observe(server, client);
+    const room = observe(server, client);
     client.received.length = 0;
 
     const cmd1: VoxelNetworkCommand = {
@@ -265,8 +280,8 @@ describe("VoxelSyncServer — receive: LWW conflict resolution", () => {
       timestamp: 100
     };
 
-    server.receive(cmd1);
-    server.receive(cmd2);
+    server.receive(cmd1, room);
+    server.receive(cmd2, room);
 
     // Both accepted, both broadcast
     assert.equal(client.received.length, 2);
@@ -279,7 +294,7 @@ describe("VoxelSyncServer — receive: invalid commands are dropped, not thrown"
     // No "Ground" layer created — the server world is empty.
 
     assert.doesNotThrow(() => {
-      server.receive(voxelSetCmd({ layerName: "Ground" }));
+      server.receive(voxelSetCmd({ layerName: "Ground" }), noopRoom);
     });
   });
 
@@ -287,10 +302,10 @@ describe("VoxelSyncServer — receive: invalid commands are dropped, not thrown"
     const server = new VoxelSyncServer();
 
     const client = createClient("A");
-    observe(server, client);
+    const room = observe(server, client);
     client.received.length = 0;
 
-    server.receive(voxelSetCmd({ layerName: "Unknown" }));
+    server.receive(voxelSetCmd({ layerName: "Unknown" }), room);
 
     assert.equal(client.received.length, 0);
   });
@@ -299,8 +314,8 @@ describe("VoxelSyncServer — receive: invalid commands are dropped, not thrown"
     const server = new VoxelSyncServer();
     server.world.addLayer("Ground");
 
-    server.receive(voxelSetCmd({ layerName: "Unknown" }));
-    server.receive(voxelSetCmd({ layerName: "Ground", x: 1, y: 2, z: 3, blockId: 5 }));
+    server.receive(voxelSetCmd({ layerName: "Unknown" }), noopRoom);
+    server.receive(voxelSetCmd({ layerName: "Ground", x: 1, y: 2, z: 3, blockId: 5 }), noopRoom);
 
     const entry = server.world.getLayer("Ground")!.getVoxelAt({ x: 1, y: 2, z: 3 });
     assert.ok(entry);
@@ -308,7 +323,7 @@ describe("VoxelSyncServer — receive: invalid commands are dropped, not thrown"
   });
 });
 
-describe("VoxelSyncServer — custom world / namespace", () => {
+describe("VoxelSyncServer — custom world / id", () => {
   it("accepts an existing VoxelWorld in options", () => {
     const world = new VoxelWorld(8);
     world.addLayer("PreExisting");
@@ -321,10 +336,10 @@ describe("VoxelSyncServer — custom world / namespace", () => {
     assert.equal(snap.layers[0].name, "PreExisting");
   });
 
-  it("defaults to the \"voxel-map\" namespace, overridable per instance", () => {
-    assert.equal(new VoxelSyncServer().namespace, "voxel-map");
+  it("defaults to the \"voxel-map\" id, overridable per instance", () => {
+    assert.equal(new VoxelSyncServer().id, "voxel-map");
     assert.equal(
-      new VoxelSyncServer({ namespace: "voxel-map:world-2" }).namespace,
+      new VoxelSyncServer({ id: "voxel-map:world-2" }).id,
       "voxel-map:world-2"
     );
   });

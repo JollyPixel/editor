@@ -63,7 +63,7 @@ export class VoxelSyncSession {
   ): VoxelNetworkCommand {
     return {
       ...event,
-      clientId: this.#transport.localClientId,
+      clientId: this.#transport.clientId,
       seq: ++this.#seq,
       timestamp: Date.now()
     };
@@ -85,7 +85,7 @@ export class VoxelSyncSession {
   #handleRemote(
     cmd: VoxelNetworkCommand
   ): void {
-    if (cmd.clientId === this.#transport.localClientId) {
+    if (cmd.clientId === this.#transport.clientId) {
       return;
     }
 

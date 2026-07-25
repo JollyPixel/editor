@@ -1,32 +1,33 @@
 // Import Internal Dependencies
-import type { NetworkPlugin } from "./NetworkPlugin.ts";
+import { createDefaultLogger } from "./logger.ts";
+import type { RoomAuthority } from "./RoomAuthority.ts";
+import type { Envelope } from "./Envelope.ts";
 import type {
   ClientHandle,
-  NetworkEnvelope,
+  Logger,
   PeerMetadata
 } from "./types.ts";
 
 interface PeerRecord {
+  handle: ClientHandle;
   identity: PeerMetadata;
   presence: PeerMetadata;
 }
 
-type ResolveClient = (clientId: string) => ClientHandle | undefined;
+export class ServerRoom {
+  readonly id: string;
 
-export class NetworkServerNamespace {
-  readonly name: string;
-
-  #plugin: NetworkPlugin;
-  #resolveClient: ResolveClient;
+  #authority: RoomAuthority;
   #members = new Map<string, PeerRecord>();
+  #logger: Logger;
 
   constructor(
-    plugin: NetworkPlugin,
-    resolveClient: ResolveClient
+    authority: RoomAuthority,
+    logger: Logger = createDefaultLogger()
   ) {
-    this.name = plugin.namespace;
-    this.#plugin = plugin;
-    this.#resolveClient = resolveClient;
+    this.id = authority.id;
+    this.#authority = authority;
+    this.#logger = logger;
   }
 
   join(
@@ -35,7 +36,7 @@ export class NetworkServerNamespace {
     identity: PeerMetadata
   ): void {
     this.#send({
-      namespace: this.name,
+      room: this.id,
       kind: "peer-joined",
       clientId,
       identity
@@ -51,28 +52,31 @@ export class NetworkServerNamespace {
       });
 
       client.send({
-        namespace: this.name,
+        room: this.id,
         kind: "sync",
         members
       });
     }
 
     this.#members.set(clientId, {
+      handle: client,
       identity,
       presence: {}
     });
 
-    this.#plugin.onClientConnect(
+    this.#authority.onClientConnect(
       {
         id: client.id,
         send: (data) => client.send({
-          namespace: this.name,
+          room: this.id,
           kind: "message",
           payload: data
         })
       },
-      identity
+      identity,
+      this
     );
+    this.#logger.debug({ room: this.id, clientId }, "client joined room");
   }
 
   leave(
@@ -80,11 +84,12 @@ export class NetworkServerNamespace {
   ): void {
     this.#members.delete(clientId);
     this.#send({
-      namespace: this.name,
+      room: this.id,
       kind: "peer-left",
       clientId
     }, clientId);
-    this.#plugin.onClientDisconnect(clientId);
+    this.#authority.onClientDisconnect(clientId, this);
+    this.#logger.debug({ room: this.id, clientId }, "client left room");
   }
 
   updatePresence(
@@ -93,12 +98,14 @@ export class NetworkServerNamespace {
   ): void {
     const record = this.#members.get(clientId);
     if (!record) {
+      this.#logger.debug({ room: this.id, clientId }, "presence update ignored: client is not a member");
+
       return;
     }
 
     Object.assign(record.presence, patch);
     this.#send({
-      namespace: this.name,
+      room: this.id,
       kind: "peer-presence",
       clientId,
       patch
@@ -109,29 +116,29 @@ export class NetworkServerNamespace {
     clientId: string,
     payload: unknown
   ): void {
-    this.#plugin.onMessage(clientId, payload);
+    this.#authority.onMessage(clientId, payload, this);
   }
 
   broadcast(
     payload: unknown
   ): void {
     this.#send({
-      namespace: this.name,
+      room: this.id,
       kind: "message",
       payload
     });
   }
 
   #send(
-    envelope: NetworkEnvelope,
+    envelope: Envelope,
     excludeClientId?: string
   ): void {
-    for (const memberId of this.#members.keys()) {
+    for (const [memberId, record] of this.#members) {
       if (memberId === excludeClientId) {
         continue;
       }
 
-      this.#resolveClient(memberId)?.send(envelope);
+      record.handle.send(envelope);
     }
   }
 }

@@ -8,7 +8,7 @@ import type {
  * Transport-agnostic interface for sending and receiving voxel network commands.
  */
 export interface VoxelTransport {
-  readonly localClientId: string;
+  readonly clientId: string;
 
   send(cmd: VoxelNetworkCommand): void;
 

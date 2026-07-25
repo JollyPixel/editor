@@ -14,12 +14,12 @@ export default defineConfig({
   },
   plugins: [
     createWebSocketNetworkPlugin({
-      plugins: [
+      roomAuthorities: [
         new PixelSyncServer({
-          namespace: "voxel-map:texture"
+          id: "voxel-map:texture"
         }),
         new VoxelSyncServer({
-          namespace: "voxel-map:world",
+          id: "voxel-map:world",
           world
         })
       ]

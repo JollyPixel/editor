@@ -8,13 +8,13 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { NetworkClient } from "#src/NetworkClient.ts";
+import { Client } from "#src/Client.ts";
 
 type Listener = (event: any) => void;
 
 /**
  * Minimal WebSocket test double: no real networking, just enough of the
- * addEventListener/send/close surface NetworkClient relies on, plus
+ * addEventListener/send/close surface Client relies on, plus
  * `open()`/`receive()` helpers to drive it from tests.
  */
 class FakeWebSocket {
@@ -84,77 +84,109 @@ afterEach(() => {
 });
 
 function createOpenClient(
-  options: ConstructorParameters<typeof NetworkClient>[0] = { url: "ws://localhost/ws-sync" }
-): { client: NetworkClient; socket: FakeWebSocket; } {
-  const client = new NetworkClient(options);
+  options: ConstructorParameters<typeof Client>[0] = { url: "ws://localhost/ws-sync" }
+): { client: Client; socket: FakeWebSocket; } {
+  const client = new Client(options);
   const socket = FakeWebSocket.instances[0]!;
   socket.open();
 
   return { client, socket };
 }
 
-describe("NetworkClient — join identity", () => {
-  test("includes the connection's identity on every channel's join envelope", () => {
+describe("Client — ready", () => {
+  test("ready is false until the socket opens, then dispatches a \"ready\" event", () => {
+    const client = new Client({ url: "ws://localhost/ws-sync" });
+    const socket = FakeWebSocket.instances[0]!;
+
+    assert.equal(client.ready, false);
+
+    let fired = 0;
+    client.addEventListener("ready", () => {
+      fired++;
+    });
+    socket.open();
+
+    assert.equal(client.ready, true);
+    assert.equal(fired, 1);
+  });
+
+  test("queued messages flush before \"ready\" fires", () => {
+    const client = new Client({ url: "ws://localhost/ws-sync" });
+    const socket = FakeWebSocket.instances[0]!;
+    client.room("pixel-draw");
+
+    let sentBeforeReady = -1;
+    client.addEventListener("ready", () => {
+      sentBeforeReady = socket.sent.length;
+    });
+    socket.open();
+
+    assert.equal(sentBeforeReady, 1);
+  });
+});
+
+describe("Client — join identity", () => {
+  test("includes the connection's identity on every room's join envelope", () => {
     const { client, socket } = createOpenClient({
       url: "ws://localhost/ws-sync",
       identity: { username: "alice" }
     });
 
-    client.channel("pixel-draw");
-    client.channel("voxel-map");
+    client.room("pixel-draw");
+    client.room("voxel-map");
 
     const joins = socket.sent.map((raw) => JSON.parse(raw));
     assert.deepEqual(joins, [
-      { namespace: "pixel-draw", kind: "join", identity: { username: "alice" } },
-      { namespace: "voxel-map", kind: "join", identity: { username: "alice" } }
+      { room: "pixel-draw", kind: "join", identity: { username: "alice" } },
+      { room: "voxel-map", kind: "join", identity: { username: "alice" } }
     ]);
   });
 
   test("defaults to an empty identity when none is provided", () => {
     const { client, socket } = createOpenClient();
 
-    client.channel("pixel-draw");
+    client.room("pixel-draw");
 
     assert.deepEqual(
       JSON.parse(socket.sent[0]!),
-      { namespace: "pixel-draw", kind: "join", identity: {} }
+      { room: "pixel-draw", kind: "join", identity: {} }
     );
   });
 });
 
-describe("NetworkClient — peers mirror", () => {
+describe("Client — peers mirror", () => {
   test("populates peers from a sync envelope", () => {
     const { client, socket } = createOpenClient();
-    const channel = client.channel("pixel-draw");
+    const room = client.room("pixel-draw");
 
     socket.receive({
-      namespace: "pixel-draw",
+      room: "pixel-draw",
       kind: "sync",
       members: [
         { clientId: "B", identity: { username: "bob" }, presence: { cursor: { x: 1, y: 2 } } }
       ]
     });
 
-    assert.deepEqual([...channel.peers.entries()], [
+    assert.deepEqual([...room.peers.entries()], [
       ["B", { clientId: "B", identity: { username: "bob" }, presence: { cursor: { x: 1, y: 2 } } }]
     ]);
   });
 
   test("peer-joined adds to peers and fires onPeerJoined", () => {
     const { client, socket } = createOpenClient();
-    const channel = client.channel("pixel-draw");
+    const room = client.room("pixel-draw");
     const joined: string[] = [];
-    channel.onPeerJoined = (clientId) => joined.push(clientId);
+    room.onPeerJoined = (clientId) => joined.push(clientId);
 
     socket.receive({
-      namespace: "pixel-draw",
+      room: "pixel-draw",
       kind: "peer-joined",
       clientId: "B",
       identity: { username: "bob" }
     });
 
     assert.deepEqual(joined, ["B"]);
-    assert.deepEqual(channel.peers.get("B"), {
+    assert.deepEqual(room.peers.get("B"), {
       clientId: "B",
       identity: { username: "bob" },
       presence: {}
@@ -163,61 +195,89 @@ describe("NetworkClient — peers mirror", () => {
 
   test("peer-left removes from peers and fires onPeerLeft", () => {
     const { client, socket } = createOpenClient();
-    const channel = client.channel("pixel-draw");
+    const room = client.room("pixel-draw");
     const left: string[] = [];
-    channel.onPeerLeft = (clientId) => left.push(clientId);
+    room.onPeerLeft = (clientId) => left.push(clientId);
 
     socket.receive({
-      namespace: "pixel-draw",
+      room: "pixel-draw",
       kind: "peer-joined",
       clientId: "B",
       identity: {}
     });
     socket.receive({
-      namespace: "pixel-draw",
+      room: "pixel-draw",
       kind: "peer-left",
       clientId: "B"
     });
 
     assert.deepEqual(left, ["B"]);
-    assert.equal(channel.peers.has("B"), false);
+    assert.equal(room.peers.has("B"), false);
   });
 
   test("peer-presence merges into the existing peer's presence and fires onPeerPresence", () => {
     const { client, socket } = createOpenClient();
-    const channel = client.channel("pixel-draw");
+    const room = client.room("pixel-draw");
     const updates: { clientId: string; patch: unknown; }[] = [];
-    channel.onPeerPresence = (clientId, patch) => updates.push({ clientId, patch });
+    room.onPeerPresence = (clientId, patch) => updates.push({ clientId, patch });
 
     socket.receive({
-      namespace: "pixel-draw",
+      room: "pixel-draw",
       kind: "peer-joined",
       clientId: "B",
       identity: { username: "bob" }
     });
     socket.receive({
-      namespace: "pixel-draw",
+      room: "pixel-draw",
       kind: "peer-presence",
       clientId: "B",
       patch: { cursor: { x: 3, y: 4 } }
     });
 
     assert.deepEqual(updates, [{ clientId: "B", patch: { cursor: { x: 3, y: 4 } } }]);
-    assert.deepEqual(channel.peers.get("B")?.presence, { cursor: { x: 3, y: 4 } });
+    assert.deepEqual(room.peers.get("B")?.presence, { cursor: { x: 3, y: 4 } });
   });
 });
 
-describe("NetworkClient — updatePresence", () => {
+describe("Client — default url", () => {
+  const originalLocation = globalThis.location;
+
+  afterEach(() => {
+    globalThis.location = originalLocation;
+  });
+
+  test("derives a ws:// url from location when none is provided", () => {
+    // @ts-expect-error - partial Location stub, only protocol/host are read
+    globalThis.location = { protocol: "http:", host: "localhost:5173" };
+
+    new Client({});
+    const socket = FakeWebSocket.instances[0]!;
+
+    assert.equal(socket.url, "ws://localhost:5173/ws-sync");
+  });
+
+  test("derives a wss:// url from location when the page is https", () => {
+    // @ts-expect-error - partial Location stub, only protocol/host are read
+    globalThis.location = { protocol: "https:", host: "example.com" };
+
+    new Client({});
+    const socket = FakeWebSocket.instances[0]!;
+
+    assert.equal(socket.url, "wss://example.com/ws-sync");
+  });
+});
+
+describe("Client — updatePresence", () => {
   test("sends a presence envelope carrying the patch", () => {
     const { client, socket } = createOpenClient();
-    const channel = client.channel("pixel-draw");
+    const room = client.room("pixel-draw");
     socket.sent.length = 0;
 
-    channel.updatePresence({ cursor: { x: 9, y: 9 } });
+    room.updatePresence({ cursor: { x: 9, y: 9 } });
 
     assert.deepEqual(
       socket.sent.map((raw) => JSON.parse(raw)),
-      [{ namespace: "pixel-draw", kind: "presence", patch: { cursor: { x: 9, y: 9 } } }]
+      [{ room: "pixel-draw", kind: "presence", patch: { cursor: { x: 9, y: 9 } } }]
     );
   });
 });

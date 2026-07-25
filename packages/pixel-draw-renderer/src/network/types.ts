@@ -52,7 +52,7 @@ export interface PixelPeer {
 }
 
 export interface PixelPresenceChannel {
-  readonly localClientId: string;
+  readonly clientId: string;
   readonly peers: ReadonlyMap<string, PixelPeer>;
 
   updatePresence(

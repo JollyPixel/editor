@@ -1,7 +1,7 @@
 // Import Node.js Dependencies
 import {
   createServer,
-  type Server
+  type Server as HttpServer
 } from "node:http";
 import {
   after,
@@ -12,14 +12,15 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { NetworkServer } from "#src/NetworkServer.ts";
-import { NetworkPlugin } from "#src/NetworkPlugin.ts";
-import { NetworkClient } from "#src/NetworkClient.ts";
+import { Server } from "#src/Server.ts";
+import { RoomAuthority } from "#src/RoomAuthority.ts";
+import { Client } from "#src/Client.ts";
 import { WebsocketTransport } from "#src/transport/websocket.ts";
+import { DEFAULT_WEBSOCKET_PATH } from "#src/transport/constants.ts";
 import type { ClientHandle } from "#src/types.ts";
 
-class RecordingPlugin extends NetworkPlugin {
-  readonly namespace = "test-ns";
+class RecordingAuthority extends RoomAuthority {
+  readonly id = "test-ns";
   connected: ClientHandle[] = [];
   disconnected: string[] = [];
   messages: { clientId: string; payload: unknown; }[] = [];
@@ -59,8 +60,8 @@ async function waitFor(
   }
 }
 
-describe("WebsocketTransport + NetworkClient (integration)", () => {
-  let httpServer: Server;
+describe("WebsocketTransport + Client (integration)", () => {
+  let httpServer: HttpServer;
   let port: number;
 
   before(async() => {
@@ -81,78 +82,78 @@ describe("WebsocketTransport + NetworkClient (integration)", () => {
   });
 
   test("joins, exchanges messages, and leaves over a real WebSocket", async() => {
-    const server = new NetworkServer();
-    const plugin = new RecordingPlugin();
-    server.register(plugin);
+    const server = new Server();
+    const authority = new RecordingAuthority();
+    server.register(authority);
 
-    new WebsocketTransport({ httpServer, server });
+    new WebsocketTransport({ httpServer, server, path: DEFAULT_WEBSOCKET_PATH });
 
-    const client = new NetworkClient({ url: `ws://127.0.0.1:${port}/ws-sync` });
-    const channel = client.channel("test-ns");
+    const client = new Client({ url: `ws://127.0.0.1:${port}${DEFAULT_WEBSOCKET_PATH}` });
+    const room = client.room("test-ns");
 
-    assert.equal(typeof client.clientId, "string");
-    assert.ok(client.clientId.length > 0);
-    assert.equal(channel.localClientId, client.clientId);
+    assert.equal(typeof client.id, "string");
+    assert.ok(client.id.length > 0);
+    assert.equal(room.clientId, client.id);
 
-    await waitFor(() => plugin.connected.length === 1);
+    await waitFor(() => authority.connected.length === 1);
 
     let received: unknown;
-    channel.onMessage = (payload) => {
+    room.onMessage = (payload) => {
       received = payload;
     };
 
-    channel.send({ hello: "world" });
-    await waitFor(() => plugin.messages.length === 1);
-    assert.deepEqual(plugin.messages[0].payload, { hello: "world" });
+    room.send({ hello: "world" });
+    await waitFor(() => authority.messages.length === 1);
+    assert.deepEqual(authority.messages[0].payload, { hello: "world" });
 
-    plugin.connected[0].send({ type: "ack" });
+    authority.connected[0].send({ type: "ack" });
     await waitFor(() => received !== undefined);
     assert.deepEqual(received, { type: "ack" });
 
-    channel.leave();
-    await waitFor(() => plugin.disconnected.length === 1);
+    room.leave();
+    await waitFor(() => authority.disconnected.length === 1);
 
     client.destroy();
   });
 
   test("two real clients get peer-joined/peer-left over the wire", async() => {
-    const server = new NetworkServer();
-    const plugin = new RecordingPlugin();
-    server.register(plugin);
+    const server = new Server();
+    const authority = new RecordingAuthority();
+    server.register(authority);
 
     new WebsocketTransport({ httpServer, server, path: "/ws-sync-peers" });
 
-    const clientA = new NetworkClient({ url: `ws://127.0.0.1:${port}/ws-sync-peers` });
-    const channelA = clientA.channel("test-ns");
+    const clientA = new Client({ url: `ws://127.0.0.1:${port}/ws-sync-peers` });
+    const roomA = clientA.room("test-ns");
     const joined: string[] = [];
-    channelA.onPeerJoined = (peerId) => joined.push(peerId);
+    roomA.onPeerJoined = (peerId) => joined.push(peerId);
 
-    await waitFor(() => plugin.connected.length === 1);
+    await waitFor(() => authority.connected.length === 1);
 
-    const clientB = new NetworkClient({ url: `ws://127.0.0.1:${port}/ws-sync-peers` });
-    clientB.channel("test-ns");
+    const clientB = new Client({ url: `ws://127.0.0.1:${port}/ws-sync-peers` });
+    clientB.room("test-ns");
 
-    assert.notEqual(clientA.clientId, clientB.clientId);
+    assert.notEqual(clientA.id, clientB.id);
 
     await waitFor(() => joined.length === 1);
-    assert.deepEqual(joined, [plugin.connected[1].id]);
+    assert.deepEqual(joined, [authority.connected[1].id]);
 
     const left: string[] = [];
-    channelA.onPeerLeft = (peerId) => left.push(peerId);
+    roomA.onPeerLeft = (peerId) => left.push(peerId);
     clientB.destroy();
 
-    await waitFor(() => plugin.disconnected.length === 1);
+    await waitFor(() => authority.disconnected.length === 1);
     await waitFor(() => left.length === 1);
-    assert.deepEqual(left, [plugin.connected[1].id]);
+    assert.deepEqual(left, [authority.connected[1].id]);
 
     clientA.destroy();
   });
 
-  test("a namespace a client never joined never sees it", async() => {
-    const server = new NetworkServer();
-    const joined = new RecordingPlugin();
-    class UnusedPlugin extends NetworkPlugin {
-      readonly namespace = "unused";
+  test("a room a client never joined never sees it", async() => {
+    const server = new Server();
+    const joined = new RecordingAuthority();
+    class UnusedAuthority extends RoomAuthority {
+      readonly id = "unused";
       connected: ClientHandle[] = [];
       onClientConnect(client: ClientHandle): void {
         this.connected.push(client);
@@ -164,14 +165,14 @@ describe("WebsocketTransport + NetworkClient (integration)", () => {
         // unused in this test
       }
     }
-    const unused = new UnusedPlugin();
+    const unused = new UnusedAuthority();
     server.register(joined);
     server.register(unused);
 
     new WebsocketTransport({ httpServer, server, path: "/ws-sync-2" });
 
-    const client = new NetworkClient({ url: `ws://127.0.0.1:${port}/ws-sync-2` });
-    client.channel("test-ns");
+    const client = new Client({ url: `ws://127.0.0.1:${port}/ws-sync-2` });
+    client.room("test-ns");
 
     await waitFor(() => joined.connected.length === 1);
     assert.deepEqual(unused.connected, []);

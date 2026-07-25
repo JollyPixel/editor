@@ -2,7 +2,7 @@
 import * as THREE from "three";
 import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
 import { ResizeHandle } from "@jolly-pixel/resize-handle";
-import { NetworkClient } from "@jolly-pixel/network";
+import * as network from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import type { PixelArtCanvas } from "../../src/index.ts";
@@ -19,20 +19,21 @@ import { OrbitControlsBehavior } from "./components/OrbitControlsBehavior.ts";
 import { CubeGallery } from "./CubeGallery.ts";
 import { CubePicker } from "./CubePicker.ts";
 
-// Every tab that opens this demo joins the same namespace, so pointing a
+// Every tab that opens this demo joins the same room, so pointing a
 // collaborator at the same URL joins them onto the same canvas. Must match
-// the PixelSyncServer's namespace in vite.config.ts.
-const DEMO_NAMESPACE = "pixel-draw:demo-canvas";
+// the PixelSyncServer's room in vite.config.ts.
+const DEMO_ROOM = "pixel-draw:demo-canvas";
 const USERNAME_STORAGE_KEY = "pixel-draw-demo:username";
 
 declare global {
   interface Window {
     /**
-     * Flips to `true` once the initial WS snapshot has been applied to the
-     * canvas. examples/ isn't published (see package.json's "files"), so
-     * this test-only hook is harmless to leave in: it lets the E2E suite
-     * wait for a deterministic starting point (the server's current shared
-     * buffer) before resetting it, instead of racing the snapshot.
+     * Flips to `true` once PixelSyncSession's "ready" event fires (the
+     * initial WS snapshot has been applied to the canvas). examples/ isn't
+     * published (see package.json's "files"), so this test-only hook is
+     * harmless to leave in: it lets the E2E suite wait for a deterministic
+     * starting point (the server's current shared buffer) before resetting
+     * it, instead of racing the snapshot.
      */
     __pixelSyncReady?: boolean;
   }
@@ -184,13 +185,13 @@ function resolveUsername(): string {
 function initializeWebsocketTransport(
   canvasManager: PixelArtCanvas
 ) {
-  const wsProtocol = location.protocol === "https:" ? "wss:" : "ws:";
-  const client = new NetworkClient({
-    url: `${wsProtocol}//${location.host}/ws-sync`,
-    identity: { username: resolveUsername() }
+  const client = new network.Client({
+    identity: {
+      username: resolveUsername()
+    }
   });
-  const transport = client.channel<PixelNetworkCommand, PixelServerMessage>(
-    DEMO_NAMESPACE
+  const transport = client.room<PixelNetworkCommand, PixelServerMessage>(
+    DEMO_ROOM
   );
   transport.onPeerJoined = (peerId) => console.log(`[pixel-sync] peer joined: ${peerId}`);
   transport.onPeerLeft = (peerId) => console.log(`[pixel-sync] peer left: ${peerId}`);
@@ -199,21 +200,12 @@ function initializeWebsocketTransport(
     transport
   });
   session.attach(canvasManager);
+  session.addEventListener("ready", () => {
+    window.__pixelSyncReady = true;
+  });
 
   const cursorSession = new PixelCursorSession({
     channel: transport
   });
   cursorSession.attach(canvasManager);
-
-  // Chains onto whatever handler session.attach() just installed, mirroring
-  // its own onBufferUpdated chaining above — loadSnapshot() (triggered by a
-  // "snapshot" message) bypasses onBufferUpdated entirely, so this is the
-  // only way to observe it without touching PixelSyncSession itself.
-  const previousOnMessage = transport.onMessage;
-  transport.onMessage = (message) => {
-    previousOnMessage?.(message);
-    if (message.type === "snapshot") {
-      window.__pixelSyncReady = true;
-    }
-  };
 }

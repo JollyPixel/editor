@@ -4,7 +4,7 @@ import {
   loadRuntime
 } from "@jolly-pixel/runtime";
 import { ResizeHandle } from "@jolly-pixel/resize-handle";
-import { NetworkClient } from "@jolly-pixel/network";
+import * as network from "@jolly-pixel/network";
 import type {
   PixelNetworkCommand,
   PixelServerMessage
@@ -33,15 +33,15 @@ const runtime = new Runtime(canvas, {
 const { world } = runtime;
 
 // One shared WebSocket (matching vite.config.ts's createWebSocketNetworkPlugin),
-// multiplexing the texture (pixel-draw) and world (voxel) sync namespaces.
+// multiplexing the texture (pixel-draw) and world (voxel) sync rooms.
 const wsProtocol = location.protocol === "https:" ? "wss:" : "ws:";
-const networkClient = new NetworkClient({
+const networkClient = new network.Client({
   url: `${wsProtocol}//${location.host}/ws-sync`
 });
-const textureTransport = networkClient.channel<PixelNetworkCommand, PixelServerMessage>(
+const textureTransport = networkClient.room<PixelNetworkCommand, PixelServerMessage>(
   "voxel-map:texture"
 );
-const worldTransport = networkClient.channel<VoxelNetworkCommand, VoxelServerMessage>(
+const worldTransport = networkClient.room<VoxelNetworkCommand, VoxelServerMessage>(
   "voxel-map:world"
 );
 
