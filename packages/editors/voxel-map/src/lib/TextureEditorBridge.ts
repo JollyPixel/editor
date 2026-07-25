@@ -1,59 +1,35 @@
 // Import Third-party Dependencies
 import type { VoxelRenderer } from "@jolly-pixel/voxel.renderer";
 import {
-  PixelArtCanvas,
   PixelSyncSession,
-  type PixelArtCanvasOptions,
+  type PixelArtCanvas,
   type PixelTransport
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // CONSTANTS
 const kTextureKeyPrefix = "jolly-pixel-voxel-map-texture-";
 
-export interface TextureEditorBridgeOptions {
-  canvasManager?: PixelArtCanvasOptions;
-}
-
 /**
- * Bridges the pixel-art PixelArtCanvas with the Three.js tileset texture.
- * Call mount() once to create the PixelArtCanvas, then loadTileset() each time
- * the active tileset changes. destroy() cleans up all DOM and event state.
+ * Bridges a `PixelArtCanvas` owned by `<pixel-draw-panel>` with the Three.js
+ * tileset texture. Call attach() once the panel has finished initializing,
+ * then loadTileset() each time the active tileset changes. destroy() cleans
+ * up the sync session.
  */
 export class TextureEditorBridge {
   #manager: PixelArtCanvas | null = null;
   #session: PixelSyncSession | null = null;
   #threeTexture: { image: unknown; needsUpdate: boolean; } | null = null;
-  #options: TextureEditorBridgeOptions;
   #tilesetId: string | null = null;
-
-  constructor(
-    options: TextureEditorBridgeOptions = {}
-  ) {
-    this.#options = options;
-  }
 
   get isActive(): boolean {
     return this.#manager !== null;
   }
 
-  mount(
-    container: HTMLDivElement,
-    extraOptions?: PixelArtCanvasOptions,
+  attach(
+    canvas: PixelArtCanvas,
     transport?: PixelTransport
   ): void {
-    if (this.#manager) {
-      this.#session?.destroy();
-      this.#session = null;
-      this.#manager.destroy();
-    }
-
-    const managerOptions: PixelArtCanvasOptions = {
-      ...this.#options.canvasManager,
-      ...extraOptions,
-      onDrawEnd: () => this.#syncToThree()
-    };
-
-    this.#manager = new PixelArtCanvas(container, managerOptions);
+    this.#manager = canvas;
 
     if (transport) {
       this.#session = new PixelSyncSession({ transport });
@@ -87,7 +63,7 @@ export class TextureEditorBridge {
       const img = new Image();
       img.onload = () => {
         this.#manager!.texture = img;
-        this.#syncToThree();
+        this.syncToThree();
       };
       img.src = saved;
     }
@@ -96,7 +72,12 @@ export class TextureEditorBridge {
     }
   }
 
-  #syncToThree(): void {
+  /**
+   * Pushes the current texture canvas into the live Three.js texture and
+   * caches it to localStorage. Called from the `onDrawEnd` hook passed to
+   * `PixelDrawPanel.initialize()`.
+   */
+  syncToThree(): void {
     if (!this.#manager || !this.#threeTexture) {
       return;
     }
@@ -126,39 +107,9 @@ export class TextureEditorBridge {
     anchor.click();
   }
 
-  setMode(
-    mode: import("@jolly-pixel/pixel-draw.renderer").Mode
-  ): void {
-    if (this.#manager) {
-      this.#manager.mode = mode;
-    }
-  }
-
-  setBrushSize(
-    size: number
-  ): void {
-    if (this.#manager) {
-      this.#manager.brush.size = size;
-    }
-  }
-
-  setBrushColor(
-    hex: string,
-    opacity = 1
-  ): void {
-    if (this.#manager) {
-      this.#manager.brush.primary.set(hex, opacity);
-    }
-  }
-
-  onResize(): void {
-    this.#manager?.onResize();
-  }
-
   destroy(): void {
     this.#session?.destroy();
     this.#session = null;
-    this.#manager?.destroy();
     this.#manager = null;
     this.#threeTexture = null;
     this.#tilesetId = null;

@@ -1,12 +1,16 @@
 // Import Third-party Dependencies
 import { LitElement, html, css } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
-import Picker from "vanilla-picker";
+import { customElement, property } from "lit/decorators.js";
 import type { VoxelRenderer } from "@jolly-pixel/voxel.renderer";
-import type { Mode, PixelTransport } from "@jolly-pixel/pixel-draw.renderer";
+import type {
+  PixelArtCanvas,
+  PixelTransport
+} from "@jolly-pixel/pixel-draw.renderer";
+import { PixelDrawPanel } from "@jolly-pixel/pixel-draw.renderer/ui";
 
 // Import Internal Dependencies
 import { TextureEditorBridge } from "../lib/TextureEditorBridge.ts";
+import { BlockUvBridge } from "../lib/BlockUvBridge.ts";
 import type { EventSelect } from "./types.ts";
 
 // CONSTANTS
@@ -31,12 +35,14 @@ export class TextureEditor extends LitElement {
       flex-wrap: wrap;
     }
 
-    .toolbar label {
+    .toolbar select {
+      background: #111a20;
+      border: 1px solid #333;
+      color: #eee;
+      padding: 2px 4px;
+      border-radius: 3px;
       font-size: 11px;
-      color: #888;
-      display: flex;
-      align-items: center;
-      gap: 4px;
+      max-width: 100px;
     }
 
     .toolbar button {
@@ -52,49 +58,17 @@ export class TextureEditor extends LitElement {
       background: #243040;
       color: #ccc;
     }
-    .toolbar button.active {
-      background: #1a3a5a;
-      border-color: #4488ff;
-      color: #4488ff;
-    }
 
-    .toolbar input[type="number"] {
-      width: 40px;
-      background: #111a20;
-      border: 1px solid #333;
-      color: #eee;
-      padding: 2px 4px;
-      border-radius: 3px;
-      font-size: 11px;
-    }
-
-    .toolbar select {
-      background: #111a20;
-      border: 1px solid #333;
-      color: #eee;
-      padding: 2px 4px;
-      border-radius: 3px;
-      font-size: 11px;
-      max-width: 100px;
-    }
-
-    .color-swatch {
-      width: 26px;
-      height: 22px;
-      padding: 0;
-      border: 1px solid #333;
-      border-radius: 3px;
-      background: #000;
-      cursor: pointer;
-      flex-shrink: 0;
-    }
-
-    .canvas-host {
+    /*
+     * Deliberately no "display" override here: an outer-tree rule targeting
+     * a custom element wins over that element's own ":host { display }"
+     * regardless of specificity, and pixel-draw-panel's internal rail/stage
+     * layout depends on its own ":host { display: flex }" staying intact.
+     */
+    pixel-draw-panel {
       flex: 1;
+      min-width: 0;
       min-height: 350px;
-      position: relative;
-      overflow: hidden;
-      background: #0a1015;
     }
   `;
 
@@ -103,38 +77,24 @@ export class TextureEditor extends LitElement {
   @property({ type: String }) declare tilesetId: string;
   @property({ type: Boolean }) declare active: boolean;
 
-  @state() private declare _mode: Mode;
-  @state() private declare _brushSize: number;
-
   readonly #bridge = new TextureEditorBridge();
-  #canvasHost: HTMLDivElement | null = null;
+  #uvBridge: BlockUvBridge | null = null;
+  #canvas: PixelArtCanvas | null = null;
+  #panelEl: PixelDrawPanel | null = null;
+  #canvasHostEl: HTMLDivElement | null = null;
   #resizeObserver: ResizeObserver | null = null;
-  #picker: Picker | null = null;
-  #pickerPortal: HTMLDivElement | null = null;
-  #swatchEl: HTMLButtonElement | null = null;
-  #swatchClickHandler: ((e: MouseEvent) => void) | null = null;
-  #outsideClickHandler: ((e: MouseEvent) => void) | null = null;
 
   constructor() {
     super();
     this.tilesetId = "";
     this.active = false;
-    this._mode = "paint";
-    this._brushSize = 1;
   }
 
-  override connectedCallback() {
-    super.connectedCallback();
-    this.addEventListener("colorpicked", this.#onColorPicked);
-  }
+  override async firstUpdated() {
+    const panelEl = this.shadowRoot!.querySelector<PixelDrawPanel>("pixel-draw-panel")!;
+    this.#panelEl = panelEl;
 
-  override firstUpdated() {
-    this.#canvasHost = this.shadowRoot!.querySelector<HTMLDivElement>(".canvas-host")!;
-    this.#canvasHost.addEventListener("mouseenter", this.#onCanvasHoverEnter);
-    this.#canvasHost.addEventListener("mouseleave", this.#onCanvasHoverLeave);
-
-    this.#bridge.mount(this.#canvasHost, {
-      defaultMode: this._mode,
+    const canvas = await panelEl.initialize({
       zoom: {
         default: 1,
         min: 1,
@@ -142,72 +102,28 @@ export class TextureEditor extends LitElement {
         sensitivity: 0.6
       },
       brush: {
-        size: this._brushSize,
+        size: 1,
         color: "#000000"
       },
       texture: {
         maxSize: 512
-      }
-    }, this.transport);
+      },
+      onDrawEnd: () => this.#bridge.syncToThree()
+    });
+    this.#canvas = canvas;
+    this.#bridge.attach(canvas, this.transport);
 
     if (this.vr) {
-      this.#bridge.loadTileset(this.vr, this.tilesetId || null);
+      this.#uvBridge = new BlockUvBridge(canvas.uv, this.vr);
+      this.#applyTileset(this.tilesetId || null);
     }
 
-    // Portal: vanilla-picker injects CSS into <head>, which doesn't pierce
-    // Shadow DOM. Appending to document.body keeps it in the regular DOM
-    // where those styles apply.
-    const portal = document.createElement("div");
-    portal.style.cssText = "position:fixed;z-index:9999;display:none;";
-    document.body.appendChild(portal);
-    this.#pickerPortal = portal;
+    this.#canvasHostEl = panelEl.shadowRoot!.querySelector<HTMLDivElement>(".canvas-host");
+    this.#canvasHostEl?.addEventListener("mouseenter", this.#onCanvasHoverEnter);
+    this.#canvasHostEl?.addEventListener("mouseleave", this.#onCanvasHoverLeave);
 
-    const swatchEl = this.shadowRoot!.querySelector<HTMLButtonElement>(".color-swatch")!;
-    this.#swatchEl = swatchEl;
-
-    this.#picker = new Picker({
-      parent: portal,
-      popup: false,
-      alpha: true,
-      editor: true,
-      editorFormat: "hex",
-      color: "#000000ff",
-      onChange: (color) => {
-        const hex = color.hex.slice(0, 7);
-        const alpha = color.rgba[3];
-        this.#bridge.setBrushColor(hex, alpha);
-        swatchEl.style.background = color.rgbaString;
-      }
-    });
-
-    function swatchClickHandler(event: MouseEvent) {
-      // stopPropagation prevents the document click handler from immediately
-      // closing the portal on the same event tick.
-      event.stopPropagation();
-      if (portal.style.display === "none") {
-        const rect = swatchEl.getBoundingClientRect();
-        portal.style.left = `${rect.left}px`;
-        portal.style.top = `${rect.bottom + 4}px`;
-        portal.style.display = "";
-      }
-      else {
-        portal.style.display = "none";
-      }
-    }
-    swatchEl.addEventListener("click", swatchClickHandler);
-    this.#swatchClickHandler = swatchClickHandler;
-
-    function outsideClickHandler(event: MouseEvent) {
-      const path = event.composedPath();
-      if (!path.includes(portal) && !path.includes(swatchEl)) {
-        portal.style.display = "none";
-      }
-    }
-    document.addEventListener("click", outsideClickHandler);
-    this.#outsideClickHandler = outsideClickHandler;
-
-    this.#resizeObserver = new ResizeObserver(() => this.#bridge.onResize());
-    this.#resizeObserver.observe(this.#canvasHost);
+    this.#resizeObserver = new ResizeObserver(() => panelEl.onResize());
+    this.#resizeObserver.observe(panelEl);
   }
 
   override updated(
@@ -218,41 +134,50 @@ export class TextureEditor extends LitElement {
     }
 
     if (changed.has("active") && this.active) {
-      this.#bridge.onResize();
+      this.#panelEl?.onResize();
     }
 
     if ((changed.has("vr") || changed.has("tilesetId")) && this.vr) {
-      this.#bridge.loadTileset(this.vr, this.tilesetId || null);
+      if (!this.#uvBridge && this.#canvas) {
+        this.#uvBridge = new BlockUvBridge(this.#canvas.uv, this.vr);
+      }
+      this.#applyTileset(this.tilesetId || null);
     }
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
-    this.removeEventListener("colorpicked", this.#onColorPicked);
-    this.#canvasHost?.removeEventListener("mouseenter", this.#onCanvasHoverEnter);
-    this.#canvasHost?.removeEventListener("mouseleave", this.#onCanvasHoverLeave);
+    this.#canvasHostEl?.removeEventListener("mouseenter", this.#onCanvasHoverEnter);
+    this.#canvasHostEl?.removeEventListener("mouseleave", this.#onCanvasHoverLeave);
+    this.#canvasHostEl = null;
     this.#resizeObserver?.disconnect();
     this.#resizeObserver = null;
-    if (this.#swatchClickHandler && this.#swatchEl) {
-      this.#swatchEl.removeEventListener("click", this.#swatchClickHandler);
-      this.#swatchClickHandler = null;
-    }
-    if (this.#outsideClickHandler) {
-      document.removeEventListener("click", this.#outsideClickHandler);
-      this.#outsideClickHandler = null;
-    }
-    this.#picker?.destroy?.();
-    this.#picker = null;
-    this.#pickerPortal?.remove();
-    this.#pickerPortal = null;
+    this.#uvBridge?.dispose();
+    this.#uvBridge = null;
     this.#bridge.destroy();
+    this.#panelEl = null;
   }
 
-  #setMode(
-    mode: Mode
+  /**
+   * Loads the given tileset (or the engine's default) into both the
+   * texture-sync bridge and the block-driven UV region set.
+   */
+  #applyTileset(
+    tilesetId: string | null
   ): void {
-    this._mode = mode;
-    this.#bridge.setMode(mode);
+    if (!this.vr) {
+      return;
+    }
+
+    this.#bridge.loadTileset(this.vr, tilesetId);
+
+    const resolvedId = tilesetId ?? this.vr.engine.tilesetManager.defaultTilesetId;
+    const def = resolvedId
+      ? this.vr.engine.tilesetManager.getDefinitions().find((candidate) => candidate.id === resolvedId)
+      : undefined;
+    if (def) {
+      this.#uvBridge?.setActiveTileset(def.id, def.tileSize);
+    }
   }
 
   /**
@@ -279,44 +204,11 @@ export class TextureEditor extends LitElement {
     this.#dispatchHoverChange(false);
   };
 
-  #onBrushSizeChange(
-    event: Event
-  ): void {
-    const value = parseInt((event.target as HTMLInputElement).value, 10);
-    if (!Number.isNaN(value) && value > 0) {
-      this._brushSize = value;
-      this.#bridge.setBrushSize(value);
-    }
-  }
-
-  readonly #onColorPicked = (
-    event: Event
-  ): void => {
-    const { hex, opacity } = (
-      event as CustomEvent<{ hex: string; opacity: number; }>
-    ).detail;
-    if (!this.#picker) {
-      return;
-    }
-
-    const alphaHex = Math.round(opacity * 255).toString(16).padStart(2, "0");
-    this.#picker.setColor(`${hex}${alphaHex}`, true);
-    const swatchEl = this.#swatchEl;
-    if (swatchEl) {
-      const r = parseInt(hex.slice(1, 3), 16);
-      const g = parseInt(hex.slice(3, 5), 16);
-      const b = parseInt(hex.slice(5, 7), 16);
-      swatchEl.style.background = `rgba(${r}, ${g}, ${b}, ${opacity})`;
-    }
-  };
-
   #onTilesetChange(
     event: EventSelect
   ): void {
     this.tilesetId = event.target.value;
-    if (this.vr) {
-      this.#bridge.loadTileset(this.vr, this.tilesetId);
-    }
+    this.#applyTileset(this.tilesetId);
   }
 
   #onExport(): void {
@@ -330,30 +222,6 @@ export class TextureEditor extends LitElement {
 
     return html`
       <div class="toolbar">
-        <button
-          class=${this._mode === "paint" ? "active" : ""}
-          @click=${() => this.#setMode("paint")}
-          title="Paint mode"
-        >Paint</button>
-        <button
-          class=${this._mode === "move" ? "active" : ""}
-          @click=${() => this.#setMode("move")}
-          title="Pan mode"
-        >Pan</button>
-
-        <label>
-          Size
-          <input
-            type="number"
-            min="1"
-            max="32"
-            .value=${String(this._brushSize)}
-            @change=${this.#onBrushSizeChange}
-          />
-        </label>
-
-        <button class="color-swatch" title="Brush color"></button>
-
         ${tilesetDefs.length > 1 ? html`
           <select @change=${this.#onTilesetChange}>
             ${tilesetDefs.map((def) => html`
@@ -368,7 +236,7 @@ export class TextureEditor extends LitElement {
         <button @click=${this.#onExport}>Export</button>
       </div>
 
-      <div class="canvas-host"></div>
+      <pixel-draw-panel></pixel-draw-panel>
     `;
   }
 }
