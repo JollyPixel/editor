@@ -10,6 +10,7 @@ import {
 
 // Import Internal Dependencies
 import { BlockLibraryRenderer } from "../lib/BlockLibraryRenderer.ts";
+import { applyBlockUpdate } from "../lib/applyBlockUpdate.ts";
 import {
   editorState,
   type RotationMode
@@ -504,16 +505,14 @@ export class BlockLibrary extends LitElement {
   }
 
   /**
-   * Registers the updated definition, rebuilds placed voxels in the scene,
-   * and refreshes the preview grid. All block mutations route through here.
+   * Registers the updated definition via the shared applyBlockUpdate
+   * helper, then refreshes this component's own local state/preview grid.
    */
   #applyBlockUpdate(
     updated: BlockDefinition
   ): void {
-    this.vr.engine.blockRegistry.register(updated);
+    applyBlockUpdate(this.vr, updated);
     this._selectedBlock = updated;
-    this.vr.engine.markAllChunksDirty("BlockLibrary update");
-    editorState.dispatchBlockRegistryChanged();
     this.#refreshRenderer();
   }
 
