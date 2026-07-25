@@ -25,10 +25,10 @@ export default defineConfig({
       typescript: true
     }),
     createWebSocketNetworkPlugin({
-      plugins: [
+      roomAuthorities: [
         new PixelSyncServer({
-          // Must match the client's namespace in examples/scripts/main.ts.
-          namespace: "pixel-draw:demo-canvas",
+          // Must match the client's room id in examples/scripts/main.ts.
+          id: "pixel-draw:demo-canvas",
           buffer: new PixelBuffer({
             size: {
               x: 80,

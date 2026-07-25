@@ -8,7 +8,7 @@ import type {
  * Sends and receives pixel network commands for a single buffer.
  */
 export interface PixelTransport {
-  readonly localClientId: string;
+  readonly clientId: string;
 
   send(
     command: PixelNetworkCommand

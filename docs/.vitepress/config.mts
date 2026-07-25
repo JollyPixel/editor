@@ -17,7 +17,8 @@ export default defineConfig({
           { text: "Engine", link: "/engine/README", activeMatch: "^/engine/" },
           { text: "Runtime", link: "/runtime/README", activeMatch: "^/runtime/" },
           { text: "Voxel Renderer", link: "/voxel-renderer/README", activeMatch: "^/voxel-renderer/" },
-          { text: "Pixel Draw", link: "/pixel-draw-renderer/README", activeMatch: "^/pixel-draw-renderer/" }
+          { text: "Pixel Draw", link: "/pixel-draw-renderer/README", activeMatch: "^/pixel-draw-renderer/" },
+          { text: "Network", link: "/network/README", activeMatch: "^/network/" }
         ]
       }
     ],
@@ -376,6 +377,55 @@ export default defineConfig({
                 {
                   text: "HistoryStack",
                   link: "/pixel-draw-renderer/docs/history/HistoryStack"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "/network/": [
+        {
+          items: [
+            {
+              text: "Introduction",
+              link: "/network/README"
+            },
+            {
+              text: "Core",
+              items: [
+                {
+                  text: "Client",
+                  link: "/network/docs/Client"
+                },
+                {
+                  text: "Room",
+                  link: "/network/docs/Room"
+                },
+                {
+                  text: "Server",
+                  link: "/network/docs/Server"
+                },
+                {
+                  text: "ServerRoom",
+                  link: "/network/docs/ServerRoom"
+                }
+              ]
+            },
+            {
+              text: "Transport",
+              items: [
+                {
+                  text: "Websocket",
+                  link: "/network/docs/transport/websocket"
+                }
+              ]
+            },
+            {
+              text: "Plugins",
+              items: [
+                {
+                  text: "Vite",
+                  link: "/network/docs/plugins/vite"
                 }
               ]
             }

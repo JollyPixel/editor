@@ -22,17 +22,27 @@ export interface PixelSyncSessionOptions {
  * Synchronizes a single canvas over one transport connection.
  * The transport is scoped to one buffer
  */
-export class PixelSyncSession {
+export class PixelSyncSession extends EventTarget {
   #transport: PixelTransport;
   #manager: PixelArtCanvas | undefined;
   #previousHandler: PixelBufferHookListener | undefined;
   #seq = 0;
+  #ready = false;
 
   constructor(
     options: PixelSyncSessionOptions
   ) {
+    super();
     this.#transport = options.transport;
     this.#transport.onMessage = (message) => this.#handleMessage(message);
+  }
+
+  /**
+   * Whether the initial server snapshot has been applied.
+   * Fires the "ready" event exactly once, the moment this flips to `true`.
+   */
+  get ready(): boolean {
+    return this.#ready;
   }
 
   /**
@@ -78,7 +88,7 @@ export class PixelSyncSession {
 
     return {
       ...rest,
-      clientId: this.#transport.localClientId,
+      clientId: this.#transport.clientId,
       seq: ++this.#seq,
       timestamp: originTimestamp ?? Date.now()
     };
@@ -100,7 +110,7 @@ export class PixelSyncSession {
   #handleRemote(
     cmd: PixelNetworkCommand
   ): void {
-    if (cmd.clientId === this.#transport.localClientId) {
+    if (cmd.clientId === this.#transport.clientId) {
       return;
     }
 
@@ -117,6 +127,11 @@ export class PixelSyncSession {
       ),
       snapshot.uvRegions
     );
+
+    if (!this.#ready) {
+      this.#ready = true;
+      this.dispatchEvent(new Event("ready"));
+    }
   }
 
   destroy(): void {

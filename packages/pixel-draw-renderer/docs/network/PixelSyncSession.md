@@ -1,16 +1,16 @@
 # PixelSyncSession
 
-Client-side sync controller.
+Client-side sync controller. Extends `EventTarget`.
 
-It connects one `PixelArtCanvas` to one transport channel.
+It connects one `PixelArtCanvas` to one transport room.
 
 ## Transport Shape
 
-Use a namespace-scoped channel with this shape:
+Use a room-scoped transport with this shape:
 
 ```ts
 interface PixelTransport {
-	readonly localClientId: string;
+	readonly clientId: string;
 	send(command: PixelNetworkCommand): void;
 	onMessage: ((message: PixelServerMessage) => void) | null;
 	onPeerJoined: ((peerId: string) => void) | null;
@@ -58,18 +58,18 @@ interface PixelNetworkCommandHeader {
 
 ## Recommended Transport
 
-Use `NetworkClient.channel()` from `@jolly-pixel/network` directly.
+Use `network.Client.room()` from `@jolly-pixel/network` directly.
 
 ```ts
-import { NetworkClient } from "@jolly-pixel/network";
+import * as network from "@jolly-pixel/network";
 import type {
 	PixelNetworkCommand,
 	PixelServerMessage
 } from "@jolly-pixel/pixel-draw.renderer";
 
 const wsProtocol = location.protocol === "https:" ? "wss:" : "ws:";
-const client = new NetworkClient({ url: `${wsProtocol}//${location.host}/ws-sync` });
-const transport = client.channel<PixelNetworkCommand, PixelServerMessage>(
+const client = new network.Client({ url: `${wsProtocol}//${location.host}/ws-sync` });
+const transport = client.room<PixelNetworkCommand, PixelServerMessage>(
 	"pixel-draw:main"
 );
 ```
@@ -97,6 +97,28 @@ session.destroy();
 3. Applies remote commands from peers.
 4. Ignores your own echoed commands.
 
+## Properties
+
+### `ready`
+
+```ts
+readonly ready: boolean
+```
+
+Whether the initial server snapshot has been applied. `false` until the `"ready"` event fires.
+
+## Events
+
+### `"ready"`
+
+Dispatched once, the moment the first `"snapshot"` message is applied. Check `session.ready` for the current state instead of relying on the event if the snapshot may have already landed by the time you attach the listener.
+
+```ts
+session.addEventListener("ready", () => {
+  console.log("initial snapshot applied");
+});
+```
+
 ## Lifecycle
 
 ### `attach(canvas)`
@@ -121,4 +143,4 @@ session.destroy();
 
 1. Reusing one session for multiple canvases.
 2. Forgetting `destroy()` when unmounting UI.
-3. Attaching before transport points to the right namespace.
+3. Attaching before transport points to the right room.

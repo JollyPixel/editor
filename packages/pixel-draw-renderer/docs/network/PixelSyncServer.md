@@ -2,7 +2,7 @@
 
 Authoritative server for pixel sync.
 
-One instance manages one shared `PixelBuffer` under one namespace.
+One instance manages one shared `PixelBuffer` under one room.
 
 ```ts
 import { defineConfig } from "vite";
@@ -13,7 +13,7 @@ import {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 const mainTexture = new PixelSyncServer({
-  namespace: "pixel-draw:main",
+  id: "pixel-draw:main",
   buffer: new PixelBuffer({
     size: { x: 80, y: 80 }
   })
@@ -22,7 +22,7 @@ const mainTexture = new PixelSyncServer({
 export default defineConfig({
   plugins: [
     createWebSocketNetworkPlugin({
-      plugins: [mainTexture]
+      roomAuthorities: [mainTexture]
     })
   ]
 });
@@ -30,7 +30,7 @@ export default defineConfig({
 
 ## Important Rules
 
-1. Do not reuse a namespace across different buffers.
+1. Do not reuse a room across different buffers.
 2. Pre-size the server buffer to match expected client startup state.
 3. Register one `PixelSyncServer` per collaborative canvas.
 
@@ -40,7 +40,7 @@ export default defineConfig({
 2. Accepts incoming commands.
 3. Resolves conflicts.
 4. Applies accepted commands to authoritative buffer.
-5. Broadcasts accepted commands to clients in the same namespace.
+5. Broadcasts accepted commands to clients in the same room.
 
 ## Constructor Options
 
@@ -48,7 +48,7 @@ export default defineConfig({
 new PixelSyncServer(options?: PixelSyncServerOptions)
 
 interface PixelSyncServerOptions {
-  namespace?: string; // default: "pixel-draw"
+  id?: string; // default: "pixel-draw"
   buffer?: PixelBuffer; // default: blank 1x1
   conflictResolver?: PixelConflictResolver; // default: LastWriteWinsResolver
 }
@@ -78,24 +78,24 @@ You can override this with `conflictResolver` in `PixelSyncServerOptions` when y
 
 ## API You Might Actually Use
 
-- `server.namespace`: namespace key.
+- `server.id`: room key.
 - `server.buffer`: authoritative buffer.
-- `server.receive(cmd)`: useful in tests and replay tools.
+- `server.receive(cmd, room)`: useful in tests and replay tools.
 - `server.snapshot()`: exports current `PixelBufferSnapshot`.
 
-`attach`, `onClientConnect`, `onClientDisconnect`, and `onMessage` are `NetworkPlugin` lifecycle hooks invoked by `@jolly-pixel/network`.
+`onClientConnect`, `onClientDisconnect`, and `onMessage` are `network.RoomAuthority` lifecycle hooks invoked by `@jolly-pixel/network`. Each is handed a `room: network.RoomHandle` (whatever calls `onMessage` also has `broadcast()`, so it just passes itself) — `PixelSyncServer` never stores a broadcast function, it only ever uses the one it's handed for the event it's currently reacting to. For a push with no triggering client event, use `network.Server.broadcast(roomId, payload)`.
 
 ## Multi-Buffer Example
 
 ```ts
 createWebSocketNetworkPlugin({
-  plugins: [
+  roomAuthorities: [
     new PixelSyncServer({
-      namespace: "pixel-draw:characters",
+      id: "pixel-draw:characters",
       buffer: new PixelBuffer({ size: { x: 32, y: 32 } })
     }),
     new PixelSyncServer({
-      namespace: "pixel-draw:tiles",
+      id: "pixel-draw:tiles",
       buffer: new PixelBuffer({ size: { x: 128, y: 128 } })
     })
   ]

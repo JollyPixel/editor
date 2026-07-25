@@ -1,7 +1,7 @@
 // Import Node.js Dependencies
 import type {
   IncomingMessage,
-  Server
+  Server as HttpServer
 } from "node:http";
 import type { Http2SecureServer } from "node:http2";
 import type { Duplex } from "node:stream";
@@ -12,97 +12,87 @@ import {
   WebSocketServer,
   type WebSocket
 } from "ws";
-import pino, { type Logger } from "pino";
 
 // Import Internal Dependencies
-import type { NetworkServer } from "../NetworkServer.ts";
-import type { ClientHandle } from "../types.ts";
+import type { Server } from "../Server.ts";
+import type {
+  ClientHandle,
+  Logger
+} from "../types.ts";
 
 export interface WebsocketTransportOptions {
   /**
-   * WebSocket upgrade path, kept distinct from Vite's own HMR socket so both
-   * can share the dev server's HTTP port.
-   *
-   * @default "/ws-sync"
+   * WebSocket upgrade path, kept separate from Vite HMR.
    */
-  path?: string;
-
-  httpServer: Server | Http2SecureServer;
-  server: NetworkServer;
-  logger?: Logger;
+  path: string;
+  httpServer: HttpServer | Http2SecureServer;
+  server: Server;
 }
 
 /**
- * Pure ws-server plumbing: forwards raw connect/disconnect/message events
- * into a NetworkServer. Carries no knowledge of namespaces or plugins.
+ * Thin ws transport that forwards connect/disconnect/message events to Server.
  */
 export class WebsocketTransport {
-  static DefaultPath = "/ws-sync";
-
-  #server: NetworkServer;
+  #server: Server;
   #logger: Logger;
+  #path: string;
+  #wss: WebSocketServer;
 
   constructor(
     options: WebsocketTransportOptions
   ) {
     const {
-      path = WebsocketTransport.DefaultPath,
+      path,
       httpServer,
-      server,
-      logger = pino({ name: "network" })
+      server
     } = options;
     this.#server = server;
-    this.#logger = logger;
+    this.#logger = server.logger;
+    this.#path = path;
 
-    // `noServer: true` + a manually filtered "upgrade" listener (rather
-    // than passing `server` + `path` straight to WebSocketServer) is
-    // required to share Vite's httpServer safely.
-    const wss = new WebSocketServer({
+    // Use `noServer: true` so the shared dev server can filter upgrades manually.
+    this.#wss = new WebSocketServer({
       noServer: true
     });
+    this.#wss.on("error", (error) => this.#logger.error({ err: error }, "server error"));
+    this.#wss.on("connection", this.#onWebsocketClientConnect);
 
-    wss.on("error", (error) => this.#logger.error({ err: error }, "server error"));
-
-    function onUpgrade(
-      req: IncomingMessage,
-      socket: Duplex,
-      head: Buffer
-    ): void {
-      const queryIndex = (req.url ?? "").indexOf("?");
-      const pathname = queryIndex === -1 ? req.url : req.url?.slice(0, queryIndex);
-      if (pathname !== path) {
-        return;
-      }
-
-      wss.handleUpgrade(req, socket, head, (ws) => {
-        wss.emit("connection", ws, req);
-      });
-    }
-    httpServer.on("upgrade", onUpgrade);
-
-    wss.on("connection", this.#onWebsocketClientConnect.bind(this));
-
-    // Vite restarts its HTTP server in place on a config change (and
-    // reruns this hook against a fresh WebSocketServer each time). An
-    // open WebSocket upgrade counts as an active connection on the
-    // underlying http.Server, so leftover clients block `httpServer.close()`
-    // from ever completing — the next `.listen()` on the same port then
-    // fails with EADDRINUSE. Force-closing this server's own clients here
-    // guarantees the old server actually releases the port.
-    httpServer.once("close", () => {
-      httpServer.off("upgrade", onUpgrade);
-      for (const client of wss.clients) {
-        client.terminate();
-      }
-      wss.close();
-    });
+    httpServer.on("upgrade", this.#onUpgrade);
+    httpServer.once("close", () => this.#onHttpServerClose(httpServer));
 
     this.#logger.info(`WebSocket transport listening on ${path}`);
   }
 
-  #onWebsocketClientConnect(
-    socket: WebSocket
+  #onUpgrade = (
+    req: IncomingMessage,
+    socket: Duplex,
+    head: Buffer
+  ): void => {
+    const queryIndex = (req.url ?? "").indexOf("?");
+    const pathname = queryIndex === -1 ? req.url : req.url?.slice(0, queryIndex);
+    if (pathname !== this.#path) {
+      return;
+    }
+
+    this.#wss.handleUpgrade(req, socket, head, (ws) => {
+      this.#wss.emit("connection", ws, req);
+    });
+  };
+
+  // Close clients on shutdown so the shared port is released before restart.
+  #onHttpServerClose(
+    httpServer: HttpServer | Http2SecureServer
   ): void {
+    httpServer.off("upgrade", this.#onUpgrade);
+    for (const client of this.#wss.clients) {
+      client.terminate();
+    }
+    this.#wss.close();
+  }
+
+  #onWebsocketClientConnect = (
+    socket: WebSocket
+  ): void => {
     const clientId = randomUUID();
     const handle: ClientHandle = {
       id: clientId,
@@ -112,9 +102,9 @@ export class WebsocketTransport {
     this.#server.handleConnect(handle);
 
     socket.on("message", (raw) => {
-      this.#server.handleMessage(clientId, JSON.parse(raw.toString()));
+      this.#server.handleMessage(clientId, raw.toString());
     });
     socket.on("close", () => this.#server.handleDisconnect(clientId));
     socket.on("error", (error) => this.#logger.error({ err: error }, "client socket error"));
-  }
+  };
 }

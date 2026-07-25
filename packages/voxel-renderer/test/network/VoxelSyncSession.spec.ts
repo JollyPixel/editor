@@ -68,7 +68,7 @@ function createMockTransport(clientId = "client-A"): MockTransport {
   const sentCommands: VoxelNetworkCommand[] = [];
 
   return {
-    localClientId: clientId,
+    clientId,
     sentCommands,
     onMessage: null,
     onPeerJoined: null,

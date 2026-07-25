@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { toUint8Array } from "js-base64";
+import type { RoomHandle } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import {
@@ -45,16 +46,28 @@ function makeServer(
 }
 
 /**
- * Connects a client and wires the server's broadcast function (normally
- * provided by NetworkServer.register()) to forward straight to it — the
- * single-client fake a unit test needs to observe `receive()`'s broadcasts.
+ * `receive()` no longer stashes a broadcast callback — the caller (normally
+ * `ServerRoom`, via `onMessage`) hands one in per call. Tests that don't care
+ * about broadcast delivery can pass this no-op.
+ */
+const noopRoom: RoomHandle = {
+  broadcast: () => {
+    // no observers
+  }
+};
+
+/**
+ * Connects a client and returns a RoomHandle that forwards broadcasts
+ * straight to it — the single-client fake a unit test needs to observe
+ * `receive()`'s broadcasts.
  */
 function observe(
   server: PixelSyncServer,
   client: MockClient
-): void {
+): RoomHandle {
   server.onClientConnect(client);
-  server.attach((payload) => client.send(payload));
+
+  return { broadcast: (payload) => client.send(payload) };
 }
 
 function strokeCmd(
@@ -132,8 +145,8 @@ function uvCreatedCmd(
 // ---------------------------------------------------------------------------
 // connect / disconnect
 //
-// Peer-joined/peer-left notifications are now a NetworkServer concern (see
-// @jolly-pixel/network's NetworkServer.spec.ts) — PixelSyncServer no longer
+// Peer-joined/peer-left notifications are now a Server concern (see
+// @jolly-pixel/network's Server.spec.ts) — PixelSyncServer no longer
 // broadcasts them itself.
 // ---------------------------------------------------------------------------
 
@@ -154,7 +167,7 @@ describe("PixelSyncServer — connect", () => {
 });
 
 // Broadcast delivery to disconnected/left clients is now entirely a
-// NetworkServer concern (see @jolly-pixel/network's NetworkServer.spec.ts,
+// Server concern (see @jolly-pixel/network's Server.spec.ts,
 // "broadcast stops reaching a client that left or disconnected") —
 // PixelSyncServer no longer tracks its own client list.
 
@@ -171,7 +184,7 @@ describe("PixelSyncServer — receive: stroke conflict resolution", () => {
         { x: 2, y: 0 }
       ],
       color: { r: 7, g: 7, b: 7, a: 255 }
-    }));
+    }), noopRoom);
 
     assert.deepStrictEqual(
       server.buffer.samplePixel(2, 0),
@@ -189,7 +202,7 @@ describe("PixelSyncServer — receive: stroke conflict resolution", () => {
       ],
       color: { r: 1, g: 1, b: 1, a: 255 },
       clientId: "A"
-    }));
+    }), noopRoom);
     server.receive(strokeCmd({
       timestamp: 900,
       positions: [
@@ -197,7 +210,7 @@ describe("PixelSyncServer — receive: stroke conflict resolution", () => {
       ],
       color: { r: 2, g: 2, b: 2, a: 255 },
       clientId: "B"
-    }));
+    }), noopRoom);
 
     assert.deepStrictEqual(
       server.buffer.samplePixel(0, 0),
@@ -215,7 +228,7 @@ describe("PixelSyncServer — receive: stroke conflict resolution", () => {
       ],
       color: { r: 2, g: 2, b: 2, a: 255 },
       clientId: "A"
-    }));
+    }), noopRoom);
     server.receive(strokeCmd({
       timestamp: 500,
       positions: [
@@ -223,7 +236,7 @@ describe("PixelSyncServer — receive: stroke conflict resolution", () => {
       ],
       color: { r: 1, g: 1, b: 1, a: 255 },
       clientId: "B"
-    }));
+    }), noopRoom);
 
     assert.deepStrictEqual(
       server.buffer.samplePixel(0, 0),
@@ -242,10 +255,10 @@ describe("PixelSyncServer — receive: stroke conflict resolution", () => {
       ],
       color: { r: 9, g: 9, b: 9, a: 255 },
       clientId: "A"
-    }));
+    }), noopRoom);
 
     const client = createClient("A");
-    observe(server, client);
+    const room = observe(server, client);
     client.received.length = 0;
 
     // A stale stroke touching both (0,0) [conflict] and (1,1) [no conflict].
@@ -257,7 +270,7 @@ describe("PixelSyncServer — receive: stroke conflict resolution", () => {
       ],
       color: { r: 1, g: 1, b: 1, a: 255 },
       clientId: "B"
-    }));
+    }), room);
 
     // (0,0) keeps the winning color, (1,1) got the new stroke's color.
     assert.deepStrictEqual(
@@ -291,10 +304,10 @@ describe("PixelSyncServer — receive: stroke conflict resolution", () => {
       timestamp: 900,
       positions: [{ x: 0, y: 0 }],
       clientId: "A"
-    }));
+    }), noopRoom);
 
     const client = createClient("A");
-    observe(server, client);
+    const room = observe(server, client);
     client.received.length = 0;
 
     // Different client than the one that claimed (0,0): a same-client stale
@@ -304,7 +317,7 @@ describe("PixelSyncServer — receive: stroke conflict resolution", () => {
       timestamp: 500,
       positions: [{ x: 0, y: 0 }],
       clientId: "B"
-    }));
+    }), room);
 
     assert.strictEqual(client.received.length, 0);
   });
@@ -325,7 +338,7 @@ describe("PixelSyncServer — receive: stroke conflict resolution", () => {
       positions: [{ x: 0, y: 0 }],
       color: { r: 1, g: 1, b: 1, a: 255 },
       clientId: "A"
-    }));
+    }), noopRoom);
     // Segment 2: (0,0) repainted from color A to color B (the chained
     // line's joint pixel).
     server.receive(strokeCmd({
@@ -333,7 +346,7 @@ describe("PixelSyncServer — receive: stroke conflict resolution", () => {
       positions: [{ x: 0, y: 0 }],
       color: { r: 2, g: 2, b: 2, a: 255 },
       clientId: "A"
-    }));
+    }), noopRoom);
 
     assert.deepStrictEqual(server.buffer.samplePixel(0, 0), [2, 2, 2, 255]);
 
@@ -344,7 +357,7 @@ describe("PixelSyncServer — receive: stroke conflict resolution", () => {
       positions: [{ x: 0, y: 0 }],
       color: { r: 1, g: 1, b: 1, a: 255 },
       clientId: "A"
-    }));
+    }), noopRoom);
     assert.deepStrictEqual(server.buffer.samplePixel(0, 0), [1, 1, 1, 255]);
 
     // Undo segment 1 second: replay restores the background, stamped with
@@ -356,7 +369,7 @@ describe("PixelSyncServer — receive: stroke conflict resolution", () => {
       positions: [{ x: 0, y: 0 }],
       color: { r: 0, g: 0, b: 0, a: 0 },
       clientId: "A"
-    }));
+    }), noopRoom);
     assert.deepStrictEqual(server.buffer.samplePixel(0, 0), [0, 0, 0, 0]);
   });
 });
@@ -378,7 +391,7 @@ describe("PixelSyncServer — receive: select-edit conflict resolution", () => {
         { r: 7, g: 7, b: 7, a: 255 },
         { r: 8, g: 8, b: 8, a: 255 }
       ]
-    }));
+    }), noopRoom);
 
     assert.deepStrictEqual(
       server.buffer.samplePixel(0, 0),
@@ -399,10 +412,10 @@ describe("PixelSyncServer — receive: select-edit conflict resolution", () => {
       positions: [{ x: 0, y: 0 }],
       color: { r: 9, g: 9, b: 9, a: 255 },
       clientId: "A"
-    }));
+    }), noopRoom);
 
     const client = createClient("A");
-    observe(server, client);
+    const room = observe(server, client);
     client.received.length = 0;
 
     // A stale select-edit touching both (0,0) [conflict] and (1,1) [no conflict].
@@ -417,7 +430,7 @@ describe("PixelSyncServer — receive: select-edit conflict resolution", () => {
         { r: 2, g: 2, b: 2, a: 255 }
       ],
       clientId: "B"
-    }));
+    }), room);
 
     // (0,0) keeps the stroke's winning color, (1,1) got the select-edit's color.
     assert.deepStrictEqual(
@@ -454,10 +467,10 @@ describe("PixelSyncServer — receive: select-edit conflict resolution", () => {
       timestamp: 900,
       positions: [{ x: 0, y: 0 }],
       clientId: "A"
-    }));
+    }), noopRoom);
 
     const client = createClient("A");
-    observe(server, client);
+    const room = observe(server, client);
     client.received.length = 0;
 
     // Different client than the one that claimed (0,0): a same-client stale
@@ -467,7 +480,7 @@ describe("PixelSyncServer — receive: select-edit conflict resolution", () => {
       timestamp: 500,
       positions: [{ x: 0, y: 0 }],
       clientId: "B"
-    }));
+    }), room);
 
     assert.strictEqual(client.received.length, 0);
   });
@@ -489,7 +502,7 @@ describe("PixelSyncServer — receive: resized / texture-replaced", () => {
       clientId: "A",
       seq: 2,
       timestamp: 1
-    });
+    }, noopRoom);
 
     assert.deepStrictEqual(
       server.buffer.size(),
@@ -501,7 +514,7 @@ describe("PixelSyncServer — receive: resized / texture-replaced", () => {
     const server = makeServer();
 
     const client = createClient("A");
-    observe(server, client);
+    const room = observe(server, client);
     client.received.length = 0;
 
     server.receive({
@@ -513,7 +526,7 @@ describe("PixelSyncServer — receive: resized / texture-replaced", () => {
       clientId: "B",
       seq: 2,
       timestamp: 1
-    });
+    }, room);
 
     assert.strictEqual(client.received.length, 1);
   });
@@ -529,7 +542,7 @@ describe("PixelSyncServer — snapshot", () => {
     server.receive(strokeCmd({
       positions: [{ x: 0, y: 0 }],
       color: { r: 5, g: 6, b: 7, a: 255 }
-    }));
+    }), noopRoom);
 
     const snap = server.snapshot();
     assert.deepStrictEqual(
@@ -558,7 +571,7 @@ describe("PixelSyncServer — snapshot", () => {
         },
         color: "#f00"
       }
-    }));
+    }), noopRoom);
 
     const snap = server.snapshot();
     assert.deepStrictEqual(
@@ -574,7 +587,7 @@ describe("PixelSyncServer — snapshot", () => {
   });
 });
 
-describe("PixelSyncServer — custom buffer / namespace", () => {
+describe("PixelSyncServer — custom buffer / id", () => {
   test("accepts an existing PixelBuffer in options", () => {
     const buffer = new PixelBuffer({ size: { x: 4, y: 4 } });
 
@@ -582,10 +595,10 @@ describe("PixelSyncServer — custom buffer / namespace", () => {
     assert.strictEqual(server.buffer, buffer);
   });
 
-  test("defaults to the \"pixel-draw\" namespace, overridable per instance", () => {
-    assert.strictEqual(new PixelSyncServer().namespace, "pixel-draw");
+  test("defaults to the \"pixel-draw\" id, overridable per instance", () => {
+    assert.strictEqual(new PixelSyncServer().id, "pixel-draw");
     assert.strictEqual(
-      new PixelSyncServer({ namespace: "pixel-draw:tex1" }).namespace,
+      new PixelSyncServer({ id: "pixel-draw:tex1" }).id,
       "pixel-draw:tex1"
     );
   });

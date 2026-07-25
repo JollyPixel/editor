@@ -1,9 +1,6 @@
 // Import Third-party Dependencies
 import { fromUint8Array } from "js-base64";
-import {
-  NetworkPlugin,
-  type ClientHandle
-} from "@jolly-pixel/network";
+import * as network from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import { applyCommandToBuffer } from "./PixelCommandApplier.ts";
@@ -25,7 +22,7 @@ export type PixelUvRegionCommand = Extract<
   { action: "uv-region-moved" | "uv-region-deleted"; }
 >;
 
-export type { ClientHandle };
+export type ClientHandle = network.ClientHandle;
 
 function isPixelNetworkCommand(
   value: unknown
@@ -36,13 +33,13 @@ function isPixelNetworkCommand(
 
 export interface PixelSyncServerOptions {
   /**
-   * NetworkPlugin namespace this server is registered under. A
-   * PixelSyncServer owns exactly one buffer, so a NetworkServer hosting
+   * RoomAuthority id this server is registered under. A
+   * PixelSyncServer owns exactly one buffer, so a Server hosting
    * several buffers needs one instance per buffer, each under its own
-   * namespace (e.g. `"pixel-draw:tileset-1"`).
+   * id (e.g. `"pixel-draw:tileset-1"`).
    * @default "pixel-draw"
    */
-  namespace?: string;
+  id?: string;
   /**
    * Existing PixelBuffer to use as the authoritative state.
    * A new, blank 1x1 buffer is created when omitted.
@@ -58,11 +55,10 @@ export interface PixelSyncServerOptions {
 /**
  * Manages authoritative state for a single pixel buffer and its client synchronization.
  */
-export class PixelSyncServer extends NetworkPlugin {
-  readonly namespace: string;
+export class PixelSyncServer extends network.RoomAuthority {
+  readonly id: string;
   readonly buffer: PixelBuffer;
 
-  #broadcastFn: ((payload: unknown) => void) | undefined;
   #resolver: PixelConflictResolver;
   #lastHeaderByPixel = new Map<string, PixelNetworkCommandHeader>();
   #lastHeaderByRegion = new Map<string, PixelNetworkCommandHeader>();
@@ -71,7 +67,7 @@ export class PixelSyncServer extends NetworkPlugin {
     options: PixelSyncServerOptions = {}
   ) {
     super();
-    this.namespace = options.namespace ?? "pixel-draw";
+    this.id = options.id ?? "pixel-draw";
     this.buffer = options.buffer ?? new PixelBuffer({
       size: { x: 1, y: 1 }
     });
@@ -79,7 +75,7 @@ export class PixelSyncServer extends NetworkPlugin {
   }
 
   onClientConnect(
-    client: ClientHandle
+    client: network.ClientHandle
   ): void {
     // Sends the buffer's current snapshot to the newly connected peer.
     client.send({
@@ -91,48 +87,45 @@ export class PixelSyncServer extends NetworkPlugin {
   onClientDisconnect(
     _clientId: string
   ): void {
-    // No client-list bookkeeping to clean up — NetworkServer owns that.
-  }
-
-  attach(
-    broadcast: (payload: unknown) => void
-  ): void {
-    this.#broadcastFn = broadcast;
+    // No client-list bookkeeping to clean up — Server owns that.
   }
 
   onMessage(
     _clientId: string,
-    payload: unknown
+    payload: unknown,
+    room: network.RoomHandle
   ): void {
     if (!isPixelNetworkCommand(payload)) {
       return;
     }
 
-    this.receive(payload);
+    this.receive(payload, room);
   }
 
   receive(
-    cmd: PixelNetworkCommand
+    cmd: PixelNetworkCommand,
+    room: network.RoomHandle
   ): void {
     switch (cmd.action) {
       case "stroke":
-        this.#receiveStroke(cmd);
+        this.#receiveStroke(cmd, room);
         break;
       case "select-edit":
-        this.#receiveSelectEdit(cmd);
+        this.#receiveSelectEdit(cmd, room);
         break;
       case "uv-region-moved":
       case "uv-region-deleted":
-        this.#receiveUvRegionCommand(cmd);
+        this.#receiveUvRegionCommand(cmd, room);
         break;
       default:
         applyCommandToBuffer(this.buffer, cmd);
-        this.#broadcast(cmd);
+        this.#broadcast(cmd, room);
     }
   }
 
   #receiveStroke(
-    cmd: PixelStrokeCommand
+    cmd: PixelStrokeCommand,
+    room: network.RoomHandle
   ): void {
     const accepted: PixelStrokeCommand["metadata"]["positions"] = [];
 
@@ -163,14 +156,15 @@ export class PixelSyncServer extends NetworkPlugin {
     };
 
     applyCommandToBuffer(this.buffer, acceptedCmd);
-    this.#broadcast(acceptedCmd);
+    this.#broadcast(acceptedCmd, room);
   }
 
   /**
    * Resolves per-pixel like `#receiveStroke`, sharing the same `#lastHeaderByPixel` history
    */
   #receiveSelectEdit(
-    cmd: PixelSelectEditCommand
+    cmd: PixelSelectEditCommand,
+    room: network.RoomHandle
   ): void {
     const acceptedPositions: PixelSelectEditCommand["metadata"]["positions"] = [];
     const acceptedColors: PixelSelectEditCommand["metadata"]["colors"] = [];
@@ -206,7 +200,7 @@ export class PixelSyncServer extends NetworkPlugin {
       this.buffer,
       acceptedCmd
     );
-    this.#broadcast(acceptedCmd);
+    this.#broadcast(acceptedCmd, room);
   }
 
   /**
@@ -214,7 +208,8 @@ export class PixelSyncServer extends NetworkPlugin {
    * per-pixel resolution strokes use).
    */
   #receiveUvRegionCommand(
-    cmd: PixelUvRegionCommand
+    cmd: PixelUvRegionCommand,
+    room: network.RoomHandle
   ): void {
     const key = cmd.metadata.id;
     const existing = this.#lastHeaderByRegion.get(key);
@@ -232,13 +227,14 @@ export class PixelSyncServer extends NetworkPlugin {
       this.buffer,
       cmd
     );
-    this.#broadcast(cmd);
+    this.#broadcast(cmd, room);
   }
 
   #broadcast(
-    cmd: PixelNetworkCommand
+    cmd: PixelNetworkCommand,
+    room: network.RoomHandle
   ): void {
-    this.#broadcastFn?.({
+    room.broadcast({
       type: "command",
       data: cmd
     });

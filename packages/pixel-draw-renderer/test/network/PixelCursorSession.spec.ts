@@ -35,7 +35,7 @@ function createMockChannel(
   const presenceUpdates: PixelPeerPresence[] = [];
 
   const channel: MockChannel = {
-    localClientId: clientId,
+    clientId,
     peers: peersMap,
     onPeerJoined: null,
     onPeerLeft: null,

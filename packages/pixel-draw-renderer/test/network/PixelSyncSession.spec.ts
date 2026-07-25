@@ -87,7 +87,7 @@ function createMockTransport(
   const sentCommands: PixelNetworkCommand[] = [];
 
   return {
-    localClientId: clientId,
+    clientId,
     sentCommands,
     onMessage: null,
     onPeerJoined: null,
@@ -333,6 +333,46 @@ describe("PixelSyncSession — snapshot loading", () => {
         { size: { x: 1, y: 1 }, pixels: "", uvRegions: [] }
       );
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ready
+// ---------------------------------------------------------------------------
+
+describe("PixelSyncSession — ready", () => {
+  test("ready is false until the first snapshot, then dispatches a \"ready\" event", () => {
+    const manager = createMockManager();
+    const transport = createMockTransport();
+    const session = new PixelSyncSession({ transport });
+    session.attach(asHost(manager));
+
+    assert.strictEqual(session.ready, false);
+
+    let fired = 0;
+    session.addEventListener("ready", () => {
+      fired++;
+    });
+    transport.simulateSnapshot({ size: { x: 1, y: 1 }, pixels: "", uvRegions: [] });
+
+    assert.strictEqual(session.ready, true);
+    assert.strictEqual(fired, 1);
+  });
+
+  test("fires \"ready\" only once across multiple snapshots", () => {
+    const manager = createMockManager();
+    const transport = createMockTransport();
+    const session = new PixelSyncSession({ transport });
+    session.attach(asHost(manager));
+
+    let fired = 0;
+    session.addEventListener("ready", () => {
+      fired++;
+    });
+    transport.simulateSnapshot({ size: { x: 1, y: 1 }, pixels: "", uvRegions: [] });
+    transport.simulateSnapshot({ size: { x: 1, y: 1 }, pixels: "", uvRegions: [] });
+
+    assert.strictEqual(fired, 1);
   });
 });
 
