@@ -6,9 +6,14 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { ServerRoom } from "#src/ServerRoom.ts";
-import { RoomAuthority, type RoomHandle } from "#src/RoomAuthority.ts";
-import type { ClientHandle } from "#src/types.ts";
+import {
+  ServerRoom
+} from "#src/server/ServerRoom.ts";
+import {
+  RoomAuthority,
+  type ClientHandle,
+  type RoomHandle
+} from "#src/index.ts";
 
 class RecordingAuthority extends RoomAuthority {
   readonly id = "pixel-draw";

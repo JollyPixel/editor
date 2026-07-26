@@ -5,7 +5,7 @@ Multiplayer sync for one `PixelArtCanvas` per session, with server-authoritative
 ## Read This First
 
 1. One `PixelSyncServer` owns one `PixelBuffer`.
-2. One `PixelSyncSession` owns one `PixelArtCanvas`.
+2. One `PixelSyncClient` owns one `PixelArtCanvas`.
 3. One room maps to one shared buffer.
 
 If you sync 3 canvases, run 3 rooms.
@@ -45,27 +45,27 @@ export default defineConfig({
 ```ts
 import * as network from "@jolly-pixel/network";
 import {
-   PixelSyncSession,
+   PixelSyncClient,
    type PixelNetworkCommand,
    type PixelServerMessage
 } from "@jolly-pixel/pixel-draw.renderer";
 
 const wsProtocol = location.protocol === "https:" ? "wss:" : "ws:";
-const client = new network.Client({
+const networkClient = new network.Client({
   url: `${wsProtocol}//${location.host}/ws-sync`
 });
-const transport = client.room<PixelNetworkCommand, PixelServerMessage>(
+const room = networkClient.room<PixelNetworkCommand, PixelServerMessage>(
    "pixel-draw:main"
 );
 
-const session = new PixelSyncSession({ transport });
-session.attach(canvas);
+const syncClient = new PixelSyncClient({ room });
+syncClient.attach(canvas);
 ```
 
 ## How It Behaves
 
 1. Local edits on the canvas emit buffer events.
-2. `PixelSyncSession` stamps `clientId`, `seq`, and `timestamp` and sends.
+2. `PixelSyncClient` stamps `clientId`, `seq`, and `timestamp` and sends.
 3. `PixelSyncServer` validates, resolves conflicts, applies, then broadcasts.
 4. Clients apply remote commands without re-broadcasting, so no echo loop.
 
@@ -73,12 +73,12 @@ On connect, the server immediately sends a snapshot so late joiners catch up.
 
 ## Cursor Tracking
 
-Multiplayer cursors ride the same room, no server authority needed — presence is relayed by `network.Room` itself. See [PixelCursorSession](./PixelCursorSession.md).
+Multiplayer cursors ride the same room, no server authority needed — presence is relayed by `network.Room` itself. See [PixelCursorSync](./PixelCursorSync.md).
 
 ## What To Read Next
 
 | File | Use it when |
 |---|---|
-| [PixelSyncSession](./PixelSyncSession.md) | You are wiring client lifecycle (`attach`/`detach`/`destroy`) |
+| [PixelSyncClient](./PixelSyncClient.md) | You are wiring client lifecycle (`attach`/`detach`/`destroy`) |
 | [PixelSyncServer](./PixelSyncServer.md) | You are wiring server rooms and authoritative buffers |
-| [PixelCursorSession](./PixelCursorSession.md) | You want to show peers' live cursors on the canvas |
+| [PixelCursorSync](./PixelCursorSync.md) | You want to show peers' live cursors on the canvas |

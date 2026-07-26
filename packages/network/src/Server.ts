@@ -1,8 +1,8 @@
 // Import Internal Dependencies
-import { ServerRoom } from "./ServerRoom.ts";
+import { ServerRoom } from "./server/ServerRoom.ts";
 import { Envelope } from "./Envelope.ts";
-import { createDefaultLogger } from "./logger.ts";
-import type { RoomAuthority } from "./RoomAuthority.ts";
+import { createDefaultLogger } from "./server/logger.ts";
+import type { RoomAuthority } from "./server/RoomAuthority.ts";
 import type {
   ClientHandle,
   Logger

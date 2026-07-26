@@ -12,12 +12,16 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { Server } from "#src/Server.ts";
-import { RoomAuthority } from "#src/RoomAuthority.ts";
-import { Client } from "#src/Client.ts";
+import {
+  Server,
+  Client,
+  RoomAuthority,
+  type ClientHandle
+} from "#src/index.ts";
 import { WebsocketTransport } from "#src/transport/websocket.ts";
-import { DEFAULT_WEBSOCKET_PATH } from "#src/transport/constants.ts";
-import type { ClientHandle } from "#src/types.ts";
+import {
+  DEFAULT_WEBSOCKET_PATH
+} from "#src/transport/constants.ts";
 
 class RecordingAuthority extends RoomAuthority {
   readonly id = "test-ns";
@@ -90,6 +94,7 @@ describe("WebsocketTransport + Client (integration)", () => {
 
     const client = new Client({ url: `ws://127.0.0.1:${port}${DEFAULT_WEBSOCKET_PATH}` });
     const room = client.room("test-ns");
+    room.join();
 
     assert.equal(typeof client.id, "string");
     assert.ok(client.id.length > 0);
@@ -98,9 +103,9 @@ describe("WebsocketTransport + Client (integration)", () => {
     await waitFor(() => authority.connected.length === 1);
 
     let received: unknown;
-    room.onMessage = (payload) => {
-      received = payload;
-    };
+    room.addEventListener("message", (event) => {
+      received = event.detail;
+    });
 
     room.send({ hello: "world" });
     await waitFor(() => authority.messages.length === 1);
@@ -125,13 +130,14 @@ describe("WebsocketTransport + Client (integration)", () => {
 
     const clientA = new Client({ url: `ws://127.0.0.1:${port}/ws-sync-peers` });
     const roomA = clientA.room("test-ns");
+    roomA.join();
     const joined: string[] = [];
-    roomA.onPeerJoined = (peerId) => joined.push(peerId);
+    roomA.addEventListener("peer-joined", (event) => joined.push(event.detail.clientId));
 
     await waitFor(() => authority.connected.length === 1);
 
     const clientB = new Client({ url: `ws://127.0.0.1:${port}/ws-sync-peers` });
-    clientB.room("test-ns");
+    clientB.room("test-ns").join();
 
     assert.notEqual(clientA.id, clientB.id);
 
@@ -139,7 +145,7 @@ describe("WebsocketTransport + Client (integration)", () => {
     assert.deepEqual(joined, [authority.connected[1].id]);
 
     const left: string[] = [];
-    roomA.onPeerLeft = (peerId) => left.push(peerId);
+    roomA.addEventListener("peer-left", (event) => left.push(event.detail.clientId));
     clientB.destroy();
 
     await waitFor(() => authority.disconnected.length === 1);
@@ -172,7 +178,7 @@ describe("WebsocketTransport + Client (integration)", () => {
     new WebsocketTransport({ httpServer, server, path: "/ws-sync-2" });
 
     const client = new Client({ url: `ws://127.0.0.1:${port}/ws-sync-2` });
-    client.room("test-ns");
+    client.room("test-ns").join();
 
     await waitFor(() => joined.connected.length === 1);
     assert.deepEqual(unused.connected, []);

@@ -38,12 +38,14 @@ const wsProtocol = location.protocol === "https:" ? "wss:" : "ws:";
 const networkClient = new network.Client({
   url: `${wsProtocol}//${location.host}/ws-sync`
 });
-const textureTransport = networkClient.room<PixelNetworkCommand, PixelServerMessage>(
+const textureRoom = networkClient.room<PixelNetworkCommand, PixelServerMessage>(
   "voxel-map:texture"
 );
-const worldTransport = networkClient.room<VoxelNetworkCommand, VoxelServerMessage>(
+textureRoom.join();
+const worldRoom = networkClient.room<VoxelNetworkCommand, VoxelServerMessage>(
   "voxel-map:world"
 );
+worldRoom.join();
 
 const editorScene = new EditorScene(
   editorState,
@@ -54,13 +56,13 @@ const editorScene = new EditorScene(
       src: "textures/tileset.png",
       tileSize: 32
     },
-    voxelTransport: worldTransport
+    voxelRoom: worldRoom
   }
 );
 
 const sidebar = document.querySelector<EditorSidebar>("#sidebar")!;
 if (sidebar) {
-  sidebar.textureTransport = textureTransport;
+  sidebar.textureRoom = textureRoom;
 
   // editorScene.vr / gridRenderer are assigned inside awake(), which runs
   // after loadScene(). Defer propagating them to the sidebar until the block

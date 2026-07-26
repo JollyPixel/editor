@@ -6,9 +6,12 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { Server } from "#src/Server.ts";
-import { RoomAuthority, type RoomHandle } from "#src/RoomAuthority.ts";
-import type { ClientHandle } from "#src/types.ts";
+import {
+  Server,
+  RoomAuthority,
+  type ClientHandle,
+  type RoomHandle
+} from "#src/index.ts";
 
 class RecordingAuthority extends RoomAuthority {
   readonly id: string;

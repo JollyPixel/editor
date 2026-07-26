@@ -4,15 +4,10 @@ import * as network from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import { applyCommandToBuffer } from "./PixelCommandApplier.ts";
-import {
-  LastWriteWinsResolver,
-  type PixelConflictResolver
-} from "./ConflictResolver.ts";
 import { PixelBuffer } from "../buffer/PixelBuffer.ts";
 import type {
   PixelBufferSnapshot,
-  PixelNetworkCommand,
-  PixelNetworkCommandHeader
+  PixelNetworkCommand
 } from "./types.ts";
 
 export type PixelStrokeCommand = Extract<PixelNetworkCommand, { action: "stroke"; }>;
@@ -49,7 +44,7 @@ export interface PixelSyncServerOptions {
    * Custom conflict resolver.
    * Defaults to LastWriteWinsResolver.
    */
-  conflictResolver?: PixelConflictResolver;
+  conflictResolver?: network.ConflictResolver;
 }
 
 /**
@@ -59,9 +54,8 @@ export class PixelSyncServer extends network.RoomAuthority {
   readonly id: string;
   readonly buffer: PixelBuffer;
 
-  #resolver: PixelConflictResolver;
-  #lastHeaderByPixel = new Map<string, PixelNetworkCommandHeader>();
-  #lastHeaderByRegion = new Map<string, PixelNetworkCommandHeader>();
+  #pixelTracker: network.ConflictTracker;
+  #regionTracker: network.ConflictTracker;
 
   constructor(
     options: PixelSyncServerOptions = {}
@@ -71,7 +65,9 @@ export class PixelSyncServer extends network.RoomAuthority {
     this.buffer = options.buffer ?? new PixelBuffer({
       size: { x: 1, y: 1 }
     });
-    this.#resolver = options.conflictResolver ?? new LastWriteWinsResolver();
+    const resolver = options.conflictResolver ?? new network.LastWriteWinsResolver();
+    this.#pixelTracker = new network.ConflictTracker(resolver);
+    this.#regionTracker = new network.ConflictTracker(resolver);
   }
 
   onClientConnect(
@@ -119,7 +115,7 @@ export class PixelSyncServer extends network.RoomAuthority {
         break;
       default:
         applyCommandToBuffer(this.buffer, cmd);
-        this.#broadcast(cmd, room);
+        room.broadcast({ type: "command", data: cmd });
     }
   }
 
@@ -131,15 +127,10 @@ export class PixelSyncServer extends network.RoomAuthority {
 
     for (const position of cmd.metadata.positions) {
       const key = `${position.x},${position.y}`;
-      const existing = this.#lastHeaderByPixel.get(key);
-      const decision = this.#resolver.resolve({
-        incoming: cmd,
-        existing
-      });
 
-      if (decision === "accept") {
+      if (this.#pixelTracker.resolve(key, cmd) === "accept") {
         accepted.push(position);
-        this.#lastHeaderByPixel.set(key, cmd);
+        this.#pixelTracker.record(key, cmd);
       }
     }
 
@@ -156,11 +147,11 @@ export class PixelSyncServer extends network.RoomAuthority {
     };
 
     applyCommandToBuffer(this.buffer, acceptedCmd);
-    this.#broadcast(acceptedCmd, room);
+    room.broadcast({ type: "command", data: acceptedCmd });
   }
 
   /**
-   * Resolves per-pixel like `#receiveStroke`, sharing the same `#lastHeaderByPixel` history
+   * Resolves per-pixel like `#receiveStroke`, sharing the same `#pixelTracker` history
    */
   #receiveSelectEdit(
     cmd: PixelSelectEditCommand,
@@ -171,16 +162,11 @@ export class PixelSyncServer extends network.RoomAuthority {
 
     cmd.metadata.positions.forEach((position, index) => {
       const key = `${position.x},${position.y}`;
-      const existing = this.#lastHeaderByPixel.get(key);
-      const decision = this.#resolver.resolve({
-        incoming: cmd,
-        existing
-      });
 
-      if (decision === "accept") {
+      if (this.#pixelTracker.resolve(key, cmd) === "accept") {
         acceptedPositions.push(position);
         acceptedColors.push(cmd.metadata.colors[index]);
-        this.#lastHeaderByPixel.set(key, cmd);
+        this.#pixelTracker.record(key, cmd);
       }
     });
 
@@ -200,7 +186,7 @@ export class PixelSyncServer extends network.RoomAuthority {
       this.buffer,
       acceptedCmd
     );
-    this.#broadcast(acceptedCmd, room);
+    room.broadcast({ type: "command", data: acceptedCmd });
   }
 
   /**
@@ -212,32 +198,16 @@ export class PixelSyncServer extends network.RoomAuthority {
     room: network.RoomHandle
   ): void {
     const key = cmd.metadata.id;
-    const existing = this.#lastHeaderByRegion.get(key);
-    const decision = this.#resolver.resolve({
-      incoming: cmd,
-      existing
-    });
-
-    if (decision === "reject") {
+    if (this.#regionTracker.resolve(key, cmd) === "reject") {
       return;
     }
 
-    this.#lastHeaderByRegion.set(key, cmd);
+    this.#regionTracker.record(key, cmd);
     applyCommandToBuffer(
       this.buffer,
       cmd
     );
-    this.#broadcast(cmd, room);
-  }
-
-  #broadcast(
-    cmd: PixelNetworkCommand,
-    room: network.RoomHandle
-  ): void {
-    room.broadcast({
-      type: "command",
-      data: cmd
-    });
+    room.broadcast({ type: "command", data: cmd });
   }
 
   snapshot(): PixelBufferSnapshot {

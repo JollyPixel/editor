@@ -3,16 +3,20 @@
 Client-side handle to one room, obtained via [`Client.room()`](./Client.md#room). Do not construct directly.
 
 ```ts
-type RoomMessageListener<ServerMessage = unknown> = (
-  payload: ServerMessage
-) => void;
+interface RoomPeerEventDetail {
+  clientId: string;
+}
 
-type RoomPeerListener = (clientId: string) => void;
+interface RoomPeerPresenceEventDetail extends RoomPeerEventDetail {
+  patch: PeerMetadata;
+}
 
-type RoomPeerMetadataListener = (
-  clientId: string,
-  patch: PeerMetadata
-) => void;
+interface RoomEventMap<ServerMessage = unknown> {
+  message: CustomEvent<ServerMessage>;
+  "peer-joined": CustomEvent<RoomPeerEventDetail>;
+  "peer-left": CustomEvent<RoomPeerEventDetail>;
+  "peer-presence": CustomEvent<RoomPeerPresenceEventDetail>;
+}
 
 interface Peer {
   readonly clientId: string;
@@ -25,14 +29,21 @@ interface Room<ClientMessage = unknown, ServerMessage = unknown> {
   readonly clientId: string;
   readonly peers: ReadonlyMap<string, Peer>;
 
+  join(): void;
   send(payload: ClientMessage): void;
   updatePresence(patch: PeerMetadata): void;
   leave(): void;
 
-  onMessage: RoomMessageListener<ServerMessage> | null;
-  onPeerJoined: RoomPeerListener | null;
-  onPeerLeft: RoomPeerListener | null;
-  onPeerPresence: RoomPeerMetadataListener | null;
+  addEventListener<K extends keyof RoomEventMap<ServerMessage>>(
+    type: K,
+    listener: (event: RoomEventMap<ServerMessage>[K]) => void,
+    options?: boolean | AddEventListenerOptions
+  ): void;
+  removeEventListener<K extends keyof RoomEventMap<ServerMessage>>(
+    type: K,
+    listener: (event: RoomEventMap<ServerMessage>[K]) => void,
+    options?: boolean | EventListenerOptions
+  ): void;
 }
 ```
 
@@ -67,6 +78,14 @@ Current remote peers in this room (never includes local client), keyed by `clien
 
 ## Methods
 
+### `join`
+
+```ts
+join(): void
+```
+
+Sends `"join"` (carrying the client's identity) to actually join the room on the server. `Client.room()` no longer joins implicitly — call this when you're ready. Repeated calls are a no-op once already joined.
+
 ### `send`
 
 ```ts
@@ -91,36 +110,43 @@ leave(): void
 
 Sends `"leave"`, clears local peer cache, and removes the room from the client's room map.
 
-## Listener Properties
+## Events
 
-### `onMessage`
-
-```ts
-onMessage: RoomMessageListener<ServerMessage> | null
-```
-
-Fires for `"message"` events from this room.
-
-### `onPeerJoined`
+`Room` supports any number of listeners per event (like `EventTarget`) — unrelated consumers can each `addEventListener` on the same room without clobbering one another, and `removeEventListener` only removes the listener passed in.
 
 ```ts
-onPeerJoined: RoomPeerListener | null
+room.addEventListener("message", (event) => console.log(event.detail));
+room.addEventListener("peer-joined", (event) => console.log(event.detail.clientId));
 ```
 
-Fires when a remote peer joins after you are already joined.
-
-### `onPeerLeft`
+### `"message"`
 
 ```ts
-onPeerLeft: RoomPeerListener | null
+CustomEvent<ServerMessage>
 ```
 
-Fires when a remote peer leaves or disconnects.
+Dispatched for `"message"` envelopes from this room. Payload is `event.detail`.
 
-### `onPeerPresence`
+### `"peer-joined"`
 
 ```ts
-onPeerPresence: RoomPeerMetadataListener | null
+CustomEvent<{ clientId: string }>
 ```
 
-Fires when a remote presence patch arrives. `peers` is already updated before callback execution.
+Dispatched when a remote peer joins after you are already joined.
+
+### `"peer-left"`
+
+```ts
+CustomEvent<{ clientId: string }>
+```
+
+Dispatched when a remote peer leaves or disconnects.
+
+### `"peer-presence"`
+
+```ts
+CustomEvent<{ clientId: string; patch: PeerMetadata }>
+```
+
+Dispatched when a remote presence patch arrives. `peers` is already updated before the event fires.

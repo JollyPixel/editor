@@ -1,9 +1,11 @@
 // Import Third-party Dependencies
 import type { VoxelRenderer } from "@jolly-pixel/voxel.renderer";
+import type * as network from "@jolly-pixel/network";
 import {
-  PixelSyncSession,
+  PixelSyncClient,
   type PixelArtCanvas,
-  type PixelTransport
+  type PixelNetworkCommand,
+  type PixelServerMessage
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // CONSTANTS
@@ -13,11 +15,11 @@ const kTextureKeyPrefix = "jolly-pixel-voxel-map-texture-";
  * Bridges a `PixelArtCanvas` owned by `<pixel-draw-panel>` with the Three.js
  * tileset texture. Call attach() once the panel has finished initializing,
  * then loadTileset() each time the active tileset changes. destroy() cleans
- * up the sync session.
+ * up the sync client.
  */
 export class TextureEditorBridge {
   #manager: PixelArtCanvas | null = null;
-  #session: PixelSyncSession | null = null;
+  #syncClient: PixelSyncClient | null = null;
   #threeTexture: { image: unknown; needsUpdate: boolean; } | null = null;
   #tilesetId: string | null = null;
 
@@ -27,13 +29,13 @@ export class TextureEditorBridge {
 
   attach(
     canvas: PixelArtCanvas,
-    transport?: PixelTransport
+    room?: network.Room<PixelNetworkCommand, PixelServerMessage>
   ): void {
     this.#manager = canvas;
 
-    if (transport) {
-      this.#session = new PixelSyncSession({ transport });
-      this.#session.attach(this.#manager);
+    if (room) {
+      this.#syncClient = new PixelSyncClient({ room });
+      this.#syncClient.attach(this.#manager);
     }
   }
 
@@ -108,8 +110,8 @@ export class TextureEditorBridge {
   }
 
   destroy(): void {
-    this.#session?.destroy();
-    this.#session = null;
+    this.#syncClient?.destroy();
+    this.#syncClient = null;
     this.#manager = null;
     this.#threeTexture = null;
     this.#tilesetId = null;

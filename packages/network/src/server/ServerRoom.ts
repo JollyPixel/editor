@@ -1,12 +1,12 @@
 // Import Internal Dependencies
 import { createDefaultLogger } from "./logger.ts";
 import type { RoomAuthority } from "./RoomAuthority.ts";
-import type { Envelope } from "./Envelope.ts";
+import type { Envelope } from "../Envelope.ts";
 import type {
   ClientHandle,
   Logger,
   PeerMetadata
-} from "./types.ts";
+} from "../types.ts";
 
 interface PeerRecord {
   handle: ClientHandle;

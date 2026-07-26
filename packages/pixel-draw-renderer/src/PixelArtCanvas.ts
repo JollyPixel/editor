@@ -465,7 +465,7 @@ export class PixelArtCanvas {
 
   /**
    * The current local buffer-mutation listener, readable so callers (e.g.
-   * `PixelSyncSession`) can chain onto an existing handler instead of
+   * `PixelSyncClient`) can chain onto an existing handler instead of
    * silently replacing it.
    */
   get onBufferUpdated(): PixelBufferHookListener | undefined {

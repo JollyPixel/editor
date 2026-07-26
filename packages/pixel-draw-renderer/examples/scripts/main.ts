@@ -7,8 +7,8 @@ import * as network from "@jolly-pixel/network";
 // Import Internal Dependencies
 import type { PixelArtCanvas } from "../../src/index.ts";
 import {
-  PixelSyncSession,
-  PixelCursorSession,
+  PixelSyncClient,
+  PixelCursorSync,
   type PixelNetworkCommand,
   type PixelServerMessage
 } from "../../src/network/index.ts";
@@ -28,7 +28,7 @@ const USERNAME_STORAGE_KEY = "pixel-draw-demo:username";
 declare global {
   interface Window {
     /**
-     * Flips to `true` once PixelSyncSession's "ready" event fires (the
+     * Flips to `true` once PixelSyncClient's "ready" event fires (the
      * initial WS snapshot has been applied to the canvas). examples/ isn't
      * published (see package.json's "files"), so this test-only hook is
      * harmless to leave in: it lets the E2E suite wait for a deterministic
@@ -181,31 +181,31 @@ function resolveUsername(): string {
   return username;
 }
 
-// PixelSyncSession.attach() chains onto whatever local `onBufferUpdated` handler the canvas already has.
+// PixelSyncClient.attach() chains onto whatever local `onBufferUpdated` handler the canvas already has.
 function initializeWebsocketTransport(
   canvasManager: PixelArtCanvas
 ) {
-  const client = new network.Client({
+  const networkClient = new network.Client({
     identity: {
       username: resolveUsername()
     }
   });
-  const transport = client.room<PixelNetworkCommand, PixelServerMessage>(
+  const room = networkClient.room<PixelNetworkCommand, PixelServerMessage>(
     DEMO_ROOM
   );
-  transport.onPeerJoined = (peerId) => console.log(`[pixel-sync] peer joined: ${peerId}`);
-  transport.onPeerLeft = (peerId) => console.log(`[pixel-sync] peer left: ${peerId}`);
+  room.addEventListener("peer-joined", (event) => console.log(`[pixel-sync] peer joined: ${event.detail.clientId}`));
+  room.addEventListener("peer-left", (event) => console.log(`[pixel-sync] peer left: ${event.detail.clientId}`));
 
-  const session = new PixelSyncSession({
-    transport
+  const syncClient = new PixelSyncClient({
+    room
   });
-  session.attach(canvasManager);
-  session.addEventListener("ready", () => {
+  syncClient.attach(canvasManager);
+  syncClient.addEventListener("ready", () => {
     window.__pixelSyncReady = true;
   });
 
-  const cursorSession = new PixelCursorSession({
-    channel: transport
+  const cursorSync = new PixelCursorSync({
+    room
   });
-  cursorSession.attach(canvasManager);
+  cursorSync.attach(canvasManager);
 }

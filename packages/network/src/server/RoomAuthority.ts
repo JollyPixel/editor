@@ -2,7 +2,7 @@
 import type {
   ClientHandle,
   PeerMetadata
-} from "./types.ts";
+} from "../types.ts";
 
 export interface RoomHandle {
   broadcast(

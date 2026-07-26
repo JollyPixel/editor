@@ -8,7 +8,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { Client } from "#src/Client.ts";
+import { Client } from "#src/index.ts";
 
 type Listener = (event: any) => void;
 
@@ -113,7 +113,7 @@ describe("Client — ready", () => {
   test("queued messages flush before \"ready\" fires", () => {
     const client = new Client({ url: "ws://localhost/ws-sync" });
     const socket = FakeWebSocket.instances[0]!;
-    client.room("pixel-draw");
+    client.room("pixel-draw").join();
 
     let sentBeforeReady = -1;
     client.addEventListener("ready", () => {
@@ -132,8 +132,8 @@ describe("Client — join identity", () => {
       identity: { username: "alice" }
     });
 
-    client.room("pixel-draw");
-    client.room("voxel-map");
+    client.room("pixel-draw").join();
+    client.room("voxel-map").join();
 
     const joins = socket.sent.map((raw) => JSON.parse(raw));
     assert.deepEqual(joins, [
@@ -145,7 +145,7 @@ describe("Client — join identity", () => {
   test("defaults to an empty identity when none is provided", () => {
     const { client, socket } = createOpenClient();
 
-    client.room("pixel-draw");
+    client.room("pixel-draw").join();
 
     assert.deepEqual(
       JSON.parse(socket.sent[0]!),
@@ -172,11 +172,11 @@ describe("Client — peers mirror", () => {
     ]);
   });
 
-  test("peer-joined adds to peers and fires onPeerJoined", () => {
+  test("peer-joined adds to peers and fires \"peer-joined\"", () => {
     const { client, socket } = createOpenClient();
     const room = client.room("pixel-draw");
     const joined: string[] = [];
-    room.onPeerJoined = (clientId) => joined.push(clientId);
+    room.addEventListener("peer-joined", (event) => joined.push(event.detail.clientId));
 
     socket.receive({
       room: "pixel-draw",
@@ -193,11 +193,11 @@ describe("Client — peers mirror", () => {
     });
   });
 
-  test("peer-left removes from peers and fires onPeerLeft", () => {
+  test("peer-left removes from peers and fires \"peer-left\"", () => {
     const { client, socket } = createOpenClient();
     const room = client.room("pixel-draw");
     const left: string[] = [];
-    room.onPeerLeft = (clientId) => left.push(clientId);
+    room.addEventListener("peer-left", (event) => left.push(event.detail.clientId));
 
     socket.receive({
       room: "pixel-draw",
@@ -215,11 +215,14 @@ describe("Client — peers mirror", () => {
     assert.equal(room.peers.has("B"), false);
   });
 
-  test("peer-presence merges into the existing peer's presence and fires onPeerPresence", () => {
+  test("peer-presence merges into the existing peer's presence and fires \"peer-presence\"", () => {
     const { client, socket } = createOpenClient();
     const room = client.room("pixel-draw");
     const updates: { clientId: string; patch: unknown; }[] = [];
-    room.onPeerPresence = (clientId, patch) => updates.push({ clientId, patch });
+    room.addEventListener("peer-presence", (event) => updates.push({
+      clientId: event.detail.clientId,
+      patch: event.detail.patch
+    }));
 
     socket.receive({
       room: "pixel-draw",

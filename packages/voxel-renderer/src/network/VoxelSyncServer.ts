@@ -6,10 +6,6 @@ import { VoxelWorld } from "../world/VoxelWorld.ts";
 import type { VoxelWorldJSON } from "../serialization/VoxelSerializer.ts";
 import type { VoxelLayerHookEvent } from "../hooks.ts";
 import { applyCommandToWorld } from "./VoxelCommandApplier.ts";
-import {
-  LastWriteWinsResolver,
-  type VoxelConflictResolver
-} from "./ConflictResolver.ts";
 import type { VoxelNetworkCommand } from "./types.ts";
 
 export type ClientHandle = network.ClientHandle;
@@ -43,7 +39,7 @@ export interface VoxelSyncServerOptions {
    * Custom conflict resolver.
    * Defaults to `LastWriteWinsResolver`.
    */
-  conflictResolver?: VoxelConflictResolver;
+  conflictResolver?: network.ConflictResolver<VoxelNetworkCommand>;
 }
 
 /**
@@ -55,8 +51,7 @@ export class VoxelSyncServer extends network.RoomAuthority {
   readonly id: string;
   readonly world: VoxelWorld;
 
-  #resolver: VoxelConflictResolver;
-  #lastCmdByKey = new Map<string, VoxelNetworkCommand>();
+  #tracker: network.ConflictTracker<VoxelNetworkCommand>;
 
   constructor(
     options: VoxelSyncServerOptions = {}
@@ -71,7 +66,9 @@ export class VoxelSyncServer extends network.RoomAuthority {
 
     this.id = id;
     this.world = world ?? new VoxelWorld(chunkSize);
-    this.#resolver = conflictResolver ?? new LastWriteWinsResolver();
+    this.#tracker = new network.ConflictTracker(
+      conflictResolver ?? new network.LastWriteWinsResolver()
+    );
   }
 
   onClientConnect(
@@ -106,13 +103,8 @@ export class VoxelSyncServer extends network.RoomAuthority {
     cmd: VoxelNetworkCommand,
     room: network.RoomHandle
   ): void {
-    const key = this.#cmdKey(cmd);
-    const existing = key === null ?
-      undefined :
-      this.#lastCmdByKey.get(key);
-
-    const decision = this.#resolver.resolve({ incoming: cmd, existing });
-    if (decision === "reject") {
+    const key = VoxelSyncServer.#cmdKey(cmd);
+    if (this.#tracker.resolve(key, cmd) === "reject") {
       return;
     }
 
@@ -120,7 +112,9 @@ export class VoxelSyncServer extends network.RoomAuthority {
     // e.g. a stale command from before a reconnect resynced state. VoxelWorld
     // methods like setVoxelAt() throw in that case, which is correct for
     // local/programmatic use but must not crash the shared session for every
-    // connected client over one bad command from one client.
+    // connected client over one bad command from one client. Recording is
+    // deferred until here so a command that fails to apply never poisons the
+    // tracker for that key.
     try {
       applyCommandToWorld(this.world, cmd);
     }
@@ -133,10 +127,7 @@ export class VoxelSyncServer extends network.RoomAuthority {
       return;
     }
 
-    if (key !== null) {
-      this.#lastCmdByKey.set(key, cmd);
-    }
-
+    this.#tracker.record(key, cmd);
     this.#broadcast(cmd, room);
   }
 
@@ -164,7 +155,7 @@ export class VoxelSyncServer extends network.RoomAuthority {
    * Returns a stable key for per-position conflict tracking.
    * Returns `null` for structural operations that are always accepted.
    */
-  #cmdKey(
+  static #cmdKey(
     cmd: VoxelLayerHookEvent
   ): string | null {
     if (

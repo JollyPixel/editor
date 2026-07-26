@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import * as network from "@jolly-pixel/network";
+
 // Import Internal Dependencies
 import {
   createBench,
@@ -7,14 +10,7 @@ import {
 } from "./_harness.ts";
 import { applyCommandToBuffer } from "../src/network/PixelCommandApplier.ts";
 import { PixelBuffer } from "../src/buffer/PixelBuffer.ts";
-import {
-  LastWriteWinsResolver,
-  type PixelConflictContext
-} from "../src/network/ConflictResolver.ts";
-import type {
-  PixelNetworkCommand,
-  PixelNetworkCommandHeader
-} from "../src/network/types.ts";
+import type { PixelNetworkCommand } from "../src/network/types.ts";
 import type { RGBA, Vec2 } from "../src/types.ts";
 
 // CONSTANTS
@@ -50,7 +46,7 @@ export async function run(): Promise<void> {
     metadata: { fromColor: kWhite, toColor: kBlack }
   });
 
-  const resolver = new LastWriteWinsResolver();
+  const resolver = new network.LastWriteWinsResolver();
   const contexts = buildResolveContexts(kResolveBatch, rng);
 
   bench
@@ -94,16 +90,16 @@ function header(
 function buildResolveContexts(
   count: number,
   rng: () => number
-): PixelConflictContext[] {
-  const contexts: PixelConflictContext[] = new Array(count);
+): network.ConflictContext[] {
+  const contexts: network.ConflictContext[] = new Array(count);
 
   for (let i = 0; i < count; i++) {
-    const incoming: PixelNetworkCommandHeader = {
+    const incoming: network.NetworkCommandHeader = {
       clientId: `c${Math.floor(rng() * 8)}`,
       seq: i,
       timestamp: Math.floor(rng() * 1000)
     };
-    const existing: PixelNetworkCommandHeader | undefined = rng() < 0.5 ?
+    const existing: network.NetworkCommandHeader | undefined = rng() < 0.5 ?
       undefined :
       {
         clientId: `c${Math.floor(rng() * 8)}`,
