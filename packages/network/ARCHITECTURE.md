@@ -49,7 +49,7 @@ A [`Room`](./docs/Room.md)/`RoomAuthority` never sees the envelope itself, only 
 
 ## Connection lifecycle
 
-1. `Client.room(name)` sends a `"join"` envelope (carrying the client's `identity`) and returns a `Room`.
+1. `Client.room(name)` returns a `Room` without joining it. `room.join()` sends the `"join"` envelope (carrying the client's `identity`); repeated calls are a no-op once already joined.
 2. `Server` broadcasts `"peer-joined"` to the room's other members, unicasts a `"sync"` snapshot of them back to the joiner, records the client as a member, then calls the matching `RoomAuthority.onClientConnect()`.
 3. `room.send(payload)` / the authority's scoped `client.send(payload)`
    exchange `"message"` envelopes, routed by room.

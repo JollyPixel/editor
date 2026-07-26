@@ -55,3 +55,8 @@ export default defineConfig({
   ]
 });
 ```
+
+There is multiple workspaces with real-world usage such as:
+
+- [voxel-renderer](../../voxel-renderer/vite.config.ts)
+- [pixel-draw-renderer](../../pixel-draw-renderer/vite.config.ts)

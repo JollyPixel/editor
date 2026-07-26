@@ -6,12 +6,14 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { LastWriteWinsResolver } from "#src/network/ConflictResolver.ts";
-import type { PixelNetworkCommandHeader } from "#src/network/types.ts";
+import {
+  LastWriteWinsResolver,
+  type NetworkCommandHeader
+} from "#src/index.ts";
 
 function header(
-  overrides: Partial<PixelNetworkCommandHeader> = {}
-): PixelNetworkCommandHeader {
+  overrides: Partial<NetworkCommandHeader> = {}
+): NetworkCommandHeader {
   return {
     clientId: "A",
     seq: 1,

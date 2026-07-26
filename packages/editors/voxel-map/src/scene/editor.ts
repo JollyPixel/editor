@@ -5,12 +5,14 @@ import {
 } from "@jolly-pixel/engine";
 import {
   VoxelRenderer,
-  VoxelSyncSession,
+  VoxelSyncClient,
   TilesetLoader,
   type TilesetDefinition,
   type VoxelWorldJSON,
-  type VoxelTransport
+  type VoxelNetworkCommand,
+  type VoxelServerMessage
 } from "@jolly-pixel/voxel.renderer";
+import type * as network from "@jolly-pixel/network";
 import * as THREE from "three";
 
 // Import Internal Dependencies
@@ -32,16 +34,16 @@ export interface EditorSceneOptions {
    */
   defaultLayerName?: string;
   defaultTileset: TilesetDefinition;
-  /** Optional transport to synchronize the voxel world over the network. */
-  voxelTransport?: VoxelTransport;
+  /** Optional room to synchronize the voxel world over the network. */
+  voxelRoom?: network.Room<VoxelNetworkCommand, VoxelServerMessage>;
 }
 
 export class EditorScene extends Systems.Scene {
   #tilesetLoader!: TilesetLoader;
   #defaultLayerName: string;
   #defaultTileset: TilesetDefinition;
-  #voxelTransport: VoxelTransport | undefined;
-  #voxelSyncSession: VoxelSyncSession | undefined;
+  #voxelRoom: network.Room<VoxelNetworkCommand, VoxelServerMessage> | undefined;
+  #voxelSyncClient: VoxelSyncClient | undefined;
   #pendingLoad: VoxelWorldJSON | null = null;
 
   editorState: EditorState;
@@ -73,12 +75,12 @@ export class EditorScene extends Systems.Scene {
     const {
       defaultLayerName = "Ground",
       defaultTileset,
-      voxelTransport
+      voxelRoom
     } = options;
 
     this.#defaultLayerName = defaultLayerName;
     this.#defaultTileset = defaultTileset;
-    this.#voxelTransport = voxelTransport;
+    this.#voxelRoom = voxelRoom;
     this.editorState = editorState;
   }
 
@@ -118,9 +120,9 @@ export class EditorScene extends Systems.Scene {
     this.vr = vr;
     this.editorState.setSelectedLayer(this.#defaultLayerName);
 
-    if (this.#voxelTransport) {
-      this.#voxelSyncSession = new VoxelSyncSession({ transport: this.#voxelTransport });
-      this.#voxelSyncSession.attach(vr.engine);
+    if (this.#voxelRoom) {
+      this.#voxelSyncClient = new VoxelSyncClient({ room: this.#voxelRoom });
+      this.#voxelSyncClient.attach(vr.engine);
     }
 
     // Skip default blocks when restoring a saved world — vr.load() will
@@ -176,7 +178,7 @@ export class EditorScene extends Systems.Scene {
   }
 
   override destroy(): void {
-    this.#voxelSyncSession?.destroy();
-    this.#voxelSyncSession = undefined;
+    this.#voxelSyncClient?.destroy();
+    this.#voxelSyncClient = undefined;
   }
 }

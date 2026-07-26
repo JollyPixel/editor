@@ -18,9 +18,7 @@ $ yarn add @jolly-pixel/network
 
 ## 👀 Usage example
 
-Import the package as a namespace  `network.Client`, `network.Server`, `network.RoomAuthority`, etc.  rather than pulling individual named exports. It reads clearly at the call site and keeps growing without more import churn.
-
-Server (Vite dev server):
+Using vite
 
 ```ts
 import * as network from "@jolly-pixel/network";
@@ -58,20 +56,32 @@ import * as network from "@jolly-pixel/network";
 const client = new network.Client();
 const room = client.room("echo");
 
-room.onMessage = (payload) => console.log(payload);
-room.onPeerJoined = (clientId) => console.log(`${clientId} joined`);
-room.onPeerLeft = (clientId) => console.log(`${clientId} left`);
+room.addEventListener("message", (event) => console.log(event.detail));
+room.addEventListener("peer-joined", (event) => console.log(`${event.detail.clientId} joined`));
+room.addEventListener("peer-left", (event) => console.log(`${event.detail.clientId} left`));
+room.join();
 room.send({ hello: "world" });
 ```
 
 ## 📚 API
 
-- [`Client`](./docs/Client.md) / [`Room`](./docs/Room.md): browser/Node WebSocket client, room-scoped handles
+- [`Client`](./docs/Client.md)
+  - [`Room`](./docs/Room.md): room-scoped handles
+  - [`SyncAdapter`](./docs/sync/SyncAdapter.md): base class for a client-side sync session (stamping, echo-guarding, snapshot/ready bookkeeping)
 - [`Server`](./docs/Server.md): transport-agnostic room multiplexer
-- [`WebsocketTransport`](./docs/transport/websocket.md): ws-server plumbing into a `Server`
-- [`createWebSocketNetworkPlugin`](./docs/plugins/vite.md): Vite dev-server wiring
+  - [`ConflictResolver` / `LastWriteWinsResolver`](./docs/sync/ConflictResolver.md): server-side last-write-wins conflict resolution
+  - [`ConflictTracker`](./docs/sync/ConflictTracker.md): per-key last-accepted-command bookkeeping around a `ConflictResolver`
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for the wire format and full connection lifecycle.
+### 🚋 Transports
+
+- [`WebsocketTransport`](./docs/transport/websocket.md): ws-server plumbing into a `Server`
+
+> [!TIP]
+> As an end user or editor creator you should not worry too much about that
+
+### 📦 Plugins
+
+- [`createWebSocketNetworkPlugin`](./docs/plugins/vite.md): Vite dev-server wiring
 
 ## ✨ Contributors guide
 

@@ -50,7 +50,7 @@ new PixelSyncServer(options?: PixelSyncServerOptions)
 interface PixelSyncServerOptions {
   id?: string; // default: "pixel-draw"
   buffer?: PixelBuffer; // default: blank 1x1
-  conflictResolver?: PixelConflictResolver; // default: LastWriteWinsResolver
+  conflictResolver?: network.ConflictResolver; // default: network.LastWriteWinsResolver
 }
 
 interface PixelBufferSnapshot {
@@ -59,14 +59,12 @@ interface PixelBufferSnapshot {
   uvRegions: UVRegion[];
 }
 
-type PixelServerMessage =
-  | { type: "snapshot"; data: PixelBufferSnapshot; }
-  | { type: "command"; data: PixelNetworkCommand; };
+type PixelServerMessage = network.NetworkServerMessage<PixelNetworkCommand, PixelBufferSnapshot>;
 ```
 
 ## Conflict Policy (Minimal)
 
-By default, `PixelSyncServer` uses `LastWriteWinsResolver`.
+By default, `PixelSyncServer` uses `@jolly-pixel/network`'s [`LastWriteWinsResolver`](../../../network/docs/sync/ConflictResolver.md), keyed per pixel/region (not by full command), so pass `network.ConflictResolver` when supplying a custom one.
 
 What that means:
 1. `stroke` and `select-edit` conflicts resolve per pixel.

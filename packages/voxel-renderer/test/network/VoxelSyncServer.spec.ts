@@ -226,7 +226,7 @@ describe("VoxelSyncServer — receive: LWW conflict resolution", () => {
     assert.equal(entry.blockId, 2);
   });
 
-  it("rejects a stale command and does NOT broadcast it", () => {
+  it("rejects a stale command from a different client and does NOT broadcast it", () => {
     const server = new VoxelSyncServer();
     server.world.addLayer("Ground");
 
@@ -234,13 +234,32 @@ describe("VoxelSyncServer — receive: LWW conflict resolution", () => {
     const room = observe(server, client);
     client.received.length = 0;
 
-    server.receive(voxelSetCmd({ timestamp: 900, x: 0, y: 0, z: 0, blockId: 2 }), room);
+    server.receive(voxelSetCmd({ timestamp: 900, x: 0, y: 0, z: 0, blockId: 2, clientId: "client-A" }), room);
     client.received.length = 0;
 
-    server.receive(voxelSetCmd({ timestamp: 500, x: 0, y: 0, z: 0, blockId: 1 }), room);
+    server.receive(voxelSetCmd({ timestamp: 500, x: 0, y: 0, z: 0, blockId: 1, clientId: "client-B" }), room);
 
     // Rejected command — no broadcast
     assert.equal(client.received.length, 0);
+  });
+
+  it("accepts an older-timestamped command from the SAME client (undo/redo replay ordering) and broadcasts it", () => {
+    const server = new VoxelSyncServer();
+    server.world.addLayer("Ground");
+
+    const client = createClient("A");
+    const room = observe(server, client);
+    client.received.length = 0;
+
+    server.receive(voxelSetCmd({ timestamp: 900, x: 0, y: 0, z: 0, blockId: 2, clientId: "client-A" }), room);
+    client.received.length = 0;
+
+    server.receive(voxelSetCmd({ timestamp: 500, x: 0, y: 0, z: 0, blockId: 1, clientId: "client-A" }), room);
+
+    assert.equal(client.received.length, 1);
+    const entry = server.world.getLayer("Ground")!.getVoxelAt({ x: 0, y: 0, z: 0 });
+    assert.ok(entry);
+    assert.equal(entry.blockId, 1);
   });
 
   it("resolves tie by lexicographic clientId", () => {

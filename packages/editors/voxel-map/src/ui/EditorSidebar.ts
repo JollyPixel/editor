@@ -2,7 +2,11 @@
 import { LitElement, html, css } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import type { VoxelRenderer } from "@jolly-pixel/voxel.renderer";
-import type { PixelTransport } from "@jolly-pixel/pixel-draw.renderer";
+import type * as network from "@jolly-pixel/network";
+import type {
+  PixelNetworkCommand,
+  PixelServerMessage
+} from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import { editorState, type SidebarTab } from "../EditorState.ts";
@@ -103,7 +107,7 @@ export class EditorSidebar extends LitElement {
 
   @property({ attribute: false }) declare vr: VoxelRenderer | undefined;
   @property({ attribute: false }) declare gridRenderer: GridRenderer | undefined;
-  @property({ attribute: false }) declare textureTransport: PixelTransport | undefined;
+  @property({ attribute: false }) declare textureRoom: network.Room<PixelNetworkCommand, PixelServerMessage> | undefined;
 
   @state() private declare _tab: SidebarTab;
   @state() private declare _selectedLayer: string | null;
@@ -222,7 +226,7 @@ export class EditorSidebar extends LitElement {
         <texture-editor
           .vr=${this.vr}
           .active=${this._tab === "paint"}
-          .transport=${this.textureTransport}
+          .room=${this.textureRoom}
         ></texture-editor>
       `)}
     `;

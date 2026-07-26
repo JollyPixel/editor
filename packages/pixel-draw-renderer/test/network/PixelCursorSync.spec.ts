@@ -5,13 +5,14 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import type * as network from "@jolly-pixel/network";
+
 // Import Internal Dependencies
-import { PixelCursorSession } from "#src/network/PixelCursorSession.ts";
+import { PixelCursorSync } from "#src/network/PixelCursorSync.ts";
 import type {
-  PixelPeer,
-  PixelPeerIdentity,
-  PixelPeerPresence,
-  PixelPresenceChannel
+  PixelNetworkCommand,
+  PixelServerMessage
 } from "#src/network/types.ts";
 import type { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
 import type { Vec2 } from "#src/types.ts";
@@ -20,45 +21,59 @@ import type { Vec2 } from "#src/types.ts";
 // Helpers
 // ---------------------------------------------------------------------------
 
-interface MockChannel extends PixelPresenceChannel {
-  presenceUpdates: PixelPeerPresence[];
-  addPeer(clientId: string, identity?: PixelPeerIdentity, presence?: PixelPeerPresence): void;
+interface MockRoom extends network.Room<PixelNetworkCommand, PixelServerMessage> {
+  presenceUpdates: network.PeerMetadata[];
+  addPeer(clientId: string, identity?: network.PeerMetadata, presence?: network.PeerMetadata): void;
   simulateJoin(clientId: string): void;
   simulateLeave(clientId: string): void;
-  simulatePresence(clientId: string, patch: PixelPeerPresence): void;
+  simulatePresence(clientId: string, patch: network.PeerMetadata): void;
 }
 
-function createMockChannel(
+function createMockRoom(
   clientId = "local-A"
-): MockChannel {
-  const peersMap = new Map<string, PixelPeer>();
-  const presenceUpdates: PixelPeerPresence[] = [];
+): MockRoom {
+  const peersMap = new Map<string, network.Peer>();
+  const presenceUpdates: network.PeerMetadata[] = [];
+  const events = new EventTarget();
 
-  const channel: MockChannel = {
+  const room: MockRoom = {
+    id: "test-room",
     clientId,
     peers: peersMap,
-    onPeerJoined: null,
-    onPeerLeft: null,
-    onPeerPresence: null,
+    addEventListener: (type, listener, options) => events.addEventListener(type, listener as EventListener, options),
+    removeEventListener: (type, listener, options) => events.removeEventListener(
+      type,
+      listener as EventListener,
+      options
+    ),
     presenceUpdates,
+    join() {
+      // Unused by PixelCursorSync.
+    },
+    send() {
+      // Unused by PixelCursorSync.
+    },
     updatePresence(patch) {
       presenceUpdates.push(patch);
+    },
+    leave() {
+      // Unused by PixelCursorSync.
     },
     addPeer(id, identity = {}, presence = {}) {
       peersMap.set(id, { clientId: id, identity, presence });
     },
     simulateJoin(id) {
-      channel.onPeerJoined?.(id);
+      events.dispatchEvent(new CustomEvent("peer-joined", { detail: { clientId: id } }));
     },
     simulateLeave(id) {
-      channel.onPeerLeft?.(id);
+      events.dispatchEvent(new CustomEvent("peer-left", { detail: { clientId: id } }));
     },
     simulatePresence(id, patch) {
-      channel.onPeerPresence?.(id, patch);
+      events.dispatchEvent(new CustomEvent("peer-presence", { detail: { clientId: id, patch } }));
     }
   };
 
-  return channel;
+  return room;
 }
 
 interface PeerCursorCall {
@@ -103,7 +118,7 @@ function createMockCanvas(): MockCanvas {
   return canvas;
 }
 
-// PixelCursorSession is typed against the concrete PixelArtCanvas, but only
+// PixelCursorSync is typed against the concrete PixelArtCanvas, but only
 // uses the structural subset MockCanvas implements (onCursorMove, peerCursors).
 function asHost(
   canvas: MockCanvas
@@ -115,30 +130,30 @@ function asHost(
 // attach / detach
 // ---------------------------------------------------------------------------
 
-describe("PixelCursorSession — attach", () => {
+describe("PixelCursorSync — attach", () => {
   test("sets canvas.onCursorMove", () => {
     const canvas = createMockCanvas();
-    const session = new PixelCursorSession({ channel: createMockChannel() });
+    const sync = new PixelCursorSync({ room: createMockRoom() });
 
     assert.strictEqual(canvas.onCursorMove, undefined);
-    session.attach(asHost(canvas));
+    sync.attach(asHost(canvas));
     assert.ok(canvas.onCursorMove !== undefined);
   });
 
   test("throws when a canvas is already attached", () => {
-    const session = new PixelCursorSession({ channel: createMockChannel() });
-    session.attach(asHost(createMockCanvas()));
+    const sync = new PixelCursorSync({ room: createMockRoom() });
+    sync.attach(asHost(createMockCanvas()));
 
-    assert.throws(() => session.attach(asHost(createMockCanvas())));
+    assert.throws(() => sync.attach(asHost(createMockCanvas())));
   });
 
   test("seeds already-connected peers that already reported a cursor", () => {
-    const channel = createMockChannel();
-    channel.addPeer("peer-B", { username: "Bob" }, { cursor: { x: 3, y: 4 } });
+    const room = createMockRoom();
+    room.addPeer("peer-B", { username: "Bob" }, { cursor: { x: 3, y: 4 } });
 
     const canvas = createMockCanvas();
-    const session = new PixelCursorSession({ channel });
-    session.attach(asHost(canvas));
+    const sync = new PixelCursorSync({ room });
+    sync.attach(asHost(canvas));
 
     assert.strictEqual(canvas.setCalls.length, 1);
     assert.strictEqual(canvas.setCalls[0].clientId, "peer-B");
@@ -147,17 +162,17 @@ describe("PixelCursorSession — attach", () => {
   });
 });
 
-describe("PixelCursorSession — detach", () => {
+describe("PixelCursorSync — detach", () => {
   test("stops forwarding local cursor moves", () => {
-    const channel = createMockChannel();
+    const room = createMockRoom();
     const canvas = createMockCanvas();
-    const session = new PixelCursorSession({ channel });
-    session.attach(asHost(canvas));
+    const sync = new PixelCursorSync({ room });
+    sync.attach(asHost(canvas));
 
-    session.detach();
+    sync.detach();
     canvas.triggerCursorMove({ x: 1, y: 1 });
 
-    assert.strictEqual(channel.presenceUpdates.length, 0);
+    assert.strictEqual(room.presenceUpdates.length, 0);
   });
 });
 
@@ -165,42 +180,42 @@ describe("PixelCursorSession — detach", () => {
 // Local cursor -> presence
 // ---------------------------------------------------------------------------
 
-describe("PixelCursorSession — local cursor reporting", () => {
+describe("PixelCursorSync — local cursor reporting", () => {
   test("forwards a local cursor move as a presence update", () => {
-    const channel = createMockChannel();
+    const room = createMockRoom();
     const canvas = createMockCanvas();
-    const session = new PixelCursorSession({ channel });
-    session.attach(asHost(canvas));
+    const sync = new PixelCursorSync({ room });
+    sync.attach(asHost(canvas));
 
     canvas.triggerCursorMove({ x: 5, y: 6 });
 
-    assert.strictEqual(channel.presenceUpdates.length, 1);
-    assert.deepStrictEqual(channel.presenceUpdates[0], { cursor: { x: 5, y: 6 } });
+    assert.strictEqual(room.presenceUpdates.length, 1);
+    assert.deepStrictEqual(room.presenceUpdates[0], { cursor: { x: 5, y: 6 } });
   });
 
   test("dedupes consecutive identical positions", () => {
-    const channel = createMockChannel();
+    const room = createMockRoom();
     const canvas = createMockCanvas();
-    const session = new PixelCursorSession({ channel });
-    session.attach(asHost(canvas));
+    const sync = new PixelCursorSync({ room });
+    sync.attach(asHost(canvas));
 
     canvas.triggerCursorMove({ x: 5, y: 6 });
     canvas.triggerCursorMove({ x: 5, y: 6 });
 
-    assert.strictEqual(channel.presenceUpdates.length, 1);
+    assert.strictEqual(room.presenceUpdates.length, 1);
   });
 
   test("still reports leaving the canvas (null) after a real position", () => {
-    const channel = createMockChannel();
+    const room = createMockRoom();
     const canvas = createMockCanvas();
-    const session = new PixelCursorSession({ channel });
-    session.attach(asHost(canvas));
+    const sync = new PixelCursorSync({ room });
+    sync.attach(asHost(canvas));
 
     canvas.triggerCursorMove({ x: 5, y: 6 });
     canvas.triggerCursorMove(null);
 
-    assert.strictEqual(channel.presenceUpdates.length, 2);
-    assert.deepStrictEqual(channel.presenceUpdates[1], { cursor: null });
+    assert.strictEqual(room.presenceUpdates.length, 2);
+    assert.deepStrictEqual(room.presenceUpdates[1], { cursor: null });
   });
 });
 
@@ -208,16 +223,16 @@ describe("PixelCursorSession — local cursor reporting", () => {
 // Remote peers -> overlay
 // ---------------------------------------------------------------------------
 
-describe("PixelCursorSession — remote peers", () => {
+describe("PixelCursorSync — remote peers", () => {
   test("onPeerPresence with a cursor patch updates the overlay", () => {
-    const channel = createMockChannel();
+    const room = createMockRoom();
     const canvas = createMockCanvas();
-    const session = new PixelCursorSession({ channel });
-    session.attach(asHost(canvas));
+    const sync = new PixelCursorSync({ room });
+    sync.attach(asHost(canvas));
 
     // Added after attach() so the seeding loop doesn't produce an extra call.
-    channel.addPeer("peer-B", { username: "Bob" });
-    channel.simulatePresence("peer-B", { cursor: { x: 1, y: 2 } });
+    room.addPeer("peer-B", { username: "Bob" });
+    room.simulatePresence("peer-B", { cursor: { x: 1, y: 2 } });
 
     assert.strictEqual(canvas.setCalls.length, 1);
     assert.strictEqual(canvas.setCalls[0].clientId, "peer-B");
@@ -227,81 +242,81 @@ describe("PixelCursorSession — remote peers", () => {
   });
 
   test("ignores presence patches that don't touch the cursor field", () => {
-    const channel = createMockChannel();
+    const room = createMockRoom();
     const canvas = createMockCanvas();
-    const session = new PixelCursorSession({ channel });
-    session.attach(asHost(canvas));
+    const sync = new PixelCursorSync({ room });
+    sync.attach(asHost(canvas));
 
     // Added after attach() so the seeding loop doesn't produce an extra call.
-    channel.addPeer("peer-B");
-    channel.simulatePresence("peer-B", { somethingElse: true });
+    room.addPeer("peer-B");
+    room.simulatePresence("peer-B", { somethingElse: true });
 
     assert.strictEqual(canvas.setCalls.length, 0);
   });
 
   test("onPeerJoined syncs that peer's current presence", () => {
-    const channel = createMockChannel();
+    const room = createMockRoom();
     const canvas = createMockCanvas();
-    const session = new PixelCursorSession({ channel });
-    session.attach(asHost(canvas));
+    const sync = new PixelCursorSync({ room });
+    sync.attach(asHost(canvas));
 
-    channel.addPeer("peer-C", { username: "Cara" }, { cursor: { x: 7, y: 8 } });
-    channel.simulateJoin("peer-C");
+    room.addPeer("peer-C", { username: "Cara" }, { cursor: { x: 7, y: 8 } });
+    room.simulateJoin("peer-C");
 
     assert.strictEqual(canvas.setCalls.length, 1);
     assert.strictEqual(canvas.setCalls[0].label, "Cara");
   });
 
   test("onPeerLeft removes that peer's cursor from the overlay", () => {
-    const channel = createMockChannel();
+    const room = createMockRoom();
     const canvas = createMockCanvas();
-    const session = new PixelCursorSession({ channel });
-    session.attach(asHost(canvas));
+    const sync = new PixelCursorSync({ room });
+    sync.attach(asHost(canvas));
 
-    channel.simulateLeave("peer-B");
+    room.simulateLeave("peer-B");
 
     assert.deepStrictEqual(canvas.removedPeers, ["peer-B"]);
   });
 
   test("a custom getLabel option overrides the default identity.username lookup", () => {
-    const channel = createMockChannel();
-    channel.addPeer("peer-B", { displayName: "Bobby" });
+    const room = createMockRoom();
+    room.addPeer("peer-B", { displayName: "Bobby" });
 
     const canvas = createMockCanvas();
-    const session = new PixelCursorSession({
-      channel,
+    const sync = new PixelCursorSync({
+      room,
       getLabel: (identity) => identity.displayName as string
     });
-    session.attach(asHost(canvas));
+    sync.attach(asHost(canvas));
 
-    channel.simulatePresence("peer-B", { cursor: { x: 0, y: 0 } });
+    room.simulatePresence("peer-B", { cursor: { x: 0, y: 0 } });
 
     assert.strictEqual(canvas.setCalls[0].label, "Bobby");
   });
 });
 
 // ---------------------------------------------------------------------------
-// Chaining existing channel callbacks
+// Coexists with other room listeners
 // ---------------------------------------------------------------------------
 
-describe("PixelCursorSession — chains existing channel callbacks", () => {
-  test("preserves onPeerJoined/onPeerLeft/onPeerPresence set before construction", () => {
-    const channel = createMockChannel();
+describe("PixelCursorSync — coexists with other room listeners", () => {
+  test("doesn't clobber peer-joined/peer-left/peer-presence listeners registered before construction", () => {
+    const room = createMockRoom();
     const seenJoins: string[] = [];
     const seenLeaves: string[] = [];
     const seenPresence: string[] = [];
-    channel.onPeerJoined = (id) => seenJoins.push(id);
-    channel.onPeerLeft = (id) => seenLeaves.push(id);
-    channel.onPeerPresence = (id) => seenPresence.push(id);
+    room.addEventListener("peer-joined", (event) => seenJoins.push(event.detail.clientId));
+    room.addEventListener("peer-left", (event) => seenLeaves.push(event.detail.clientId));
+    room.addEventListener("peer-presence", (event) => seenPresence.push(event.detail.clientId));
 
     const canvas = createMockCanvas();
-    const session = new PixelCursorSession({ channel });
-    session.attach(asHost(canvas));
+    const sync = new PixelCursorSync({ room });
+    sync.attach(asHost(canvas));
 
-    channel.addPeer("peer-B");
-    channel.simulateJoin("peer-B");
-    channel.simulateLeave("peer-B");
-    channel.simulatePresence("peer-B", { cursor: null });
+    room.addPeer("peer-B");
+    room.simulateJoin("peer-B");
+    room.simulateLeave("peer-B");
+    room.simulatePresence("peer-B", { cursor: null });
 
     assert.deepStrictEqual(seenJoins, ["peer-B"]);
     assert.deepStrictEqual(seenLeaves, ["peer-B"]);
@@ -313,22 +328,24 @@ describe("PixelCursorSession — chains existing channel callbacks", () => {
 // destroy
 // ---------------------------------------------------------------------------
 
-describe("PixelCursorSession — destroy", () => {
-  test("restores the channel's previous callbacks and detaches the canvas", () => {
-    const channel = createMockChannel();
-    const originalJoins: string[] = [];
-    function originalOnPeerJoined(clientId: string): void {
-      originalJoins.push(clientId);
-    }
-    channel.onPeerJoined = originalOnPeerJoined;
+describe("PixelCursorSync — destroy", () => {
+  test("removes only its own listeners and detaches the canvas", () => {
+    const room = createMockRoom();
+    const otherJoins: string[] = [];
+    room.addEventListener("peer-joined", (event) => otherJoins.push(event.detail.clientId));
 
     const canvas = createMockCanvas();
-    const session = new PixelCursorSession({ channel });
-    session.attach(asHost(canvas));
+    const sync = new PixelCursorSync({ room });
+    sync.attach(asHost(canvas));
 
-    session.destroy();
+    sync.destroy();
+    room.addPeer("peer-B");
+    room.simulateJoin("peer-B");
 
-    assert.strictEqual(channel.onPeerJoined, originalOnPeerJoined);
     assert.strictEqual(canvas.onCursorMove, undefined);
+    // The other listener registered independently is unaffected by destroy().
+    assert.deepStrictEqual(otherJoins, ["peer-B"]);
+    // PixelCursorSync's own listener was removed, so the canvas overlay saw nothing.
+    assert.strictEqual(canvas.setCalls.length, 0);
   });
 });

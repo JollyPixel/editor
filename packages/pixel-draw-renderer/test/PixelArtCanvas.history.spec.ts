@@ -7,7 +7,10 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type { RoomHandle } from "@jolly-pixel/network";
+import type {
+  Room,
+  RoomHandle
+} from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import {
@@ -17,8 +20,7 @@ import {
 import type { PixelBufferHookEvent } from "#src/buffer/hooks.ts";
 import { PixelBuffer } from "#src/buffer/PixelBuffer.ts";
 import { PixelSyncServer } from "#src/network/PixelSyncServer.ts";
-import { PixelSyncSession } from "#src/network/PixelSyncSession.ts";
-import type { PixelTransport } from "#src/network/PixelTransport.ts";
+import { PixelSyncClient } from "#src/network/PixelSyncClient.ts";
 import type {
   PixelNetworkCommand,
   PixelServerMessage
@@ -477,10 +479,10 @@ describe("PixelArtCanvas — history (undo/redo)", () => {
 // fairly against a peer's edit made in between.
 // ---------------------------------------------------------------------------
 
-interface RecordingTransport extends PixelTransport {
+interface RecordingRoom extends Room<PixelNetworkCommand, PixelServerMessage> {
   sentCommands: PixelNetworkCommand[];
   /** The RoomHandle wired into the backing server — lets a test simulate a peer sending directly. */
-  room: RoomHandle;
+  serverRoom: RoomHandle;
 }
 
 function isServerMessage(value: unknown): value is PixelServerMessage {
@@ -488,40 +490,55 @@ function isServerMessage(value: unknown): value is PixelServerMessage {
 }
 
 /**
- * Wires a PixelTransport straight into a real PixelSyncServer in-process —
+ * Wires a network.Room straight into a real PixelSyncServer in-process —
  * send feeds server.receive() directly, and the server's broadcast back to
- * this same client is routed back into transport.onMessage, exactly as a
- * real relay would.
+ * this same client is dispatched as a "message" event on the room, exactly
+ * as a real relay would.
  */
-function makeServerBackedTransport(
+function makeServerBackedRoom(
   server: PixelSyncServer,
   clientId: string
-): RecordingTransport {
+): RecordingRoom {
   const sentCommands: PixelNetworkCommand[] = [];
+  const events = new EventTarget();
 
   function handleFromServer(data: unknown): void {
     if (!isServerMessage(data)) {
       return;
     }
 
-    transport.onMessage?.(data);
+    events.dispatchEvent(new CustomEvent("message", { detail: data }));
   }
 
   // Normally provided by Server/ServerRoom — this single-client fake
   // just forwards straight back to the same client, mirroring `observe()` in
   // PixelSyncServer.spec.ts.
-  const room: RoomHandle = { broadcast: handleFromServer };
+  const serverRoom: RoomHandle = { broadcast: handleFromServer };
 
-  const transport: RecordingTransport = {
+  const room: RecordingRoom = {
+    id: "test-room",
     clientId,
+    peers: new Map(),
     sentCommands,
-    room,
-    onMessage: null,
-    onPeerJoined: null,
-    onPeerLeft: null,
+    serverRoom,
+    addEventListener: (type, listener, options) => events.addEventListener(type, listener as EventListener, options),
+    removeEventListener: (type, listener, options) => events.removeEventListener(
+      type,
+      listener as EventListener,
+      options
+    ),
+    join() {
+      // Unused by these tests.
+    },
     send(cmd) {
       sentCommands.push(cmd);
-      server.receive(cmd, room);
+      server.receive(cmd, serverRoom);
+    },
+    updatePresence() {
+      // Unused by these tests.
+    },
+    leave() {
+      // Unused by these tests.
     }
   };
 
@@ -530,7 +547,7 @@ function makeServerBackedTransport(
     send: handleFromServer
   });
 
-  return transport;
+  return room;
 }
 
 describe("PixelArtCanvas — history + network collision handling", () => {
@@ -552,19 +569,19 @@ describe("PixelArtCanvas — history + network collision handling", () => {
         enabled: true
       }
     });
-    const transport = makeServerBackedTransport(server, "A");
-    const session = new PixelSyncSession({ transport });
-    session.attach(manager);
+    const room = makeServerBackedRoom(server, "A");
+    const client = new PixelSyncClient({ room });
+    client.attach(manager);
 
     t.mock.timers.tick(1000);
     paintOnePixel(canvas, [[88, 88]]);
-    const originalCmd = transport.sentCommands.at(-1)!;
+    const originalCmd = room.sentCommands.at(-1)!;
     assert.strictEqual(originalCmd.timestamp, 1000);
 
     // now = 3000
     t.mock.timers.tick(2000);
     manager.undo();
-    const undoCmd = transport.sentCommands.at(-1)!;
+    const undoCmd = room.sentCommands.at(-1)!;
 
     assert.strictEqual(undoCmd.action, "stroke");
     assert.strictEqual(undoCmd.timestamp, 1000);
@@ -591,9 +608,9 @@ describe("PixelArtCanvas — history + network collision handling", () => {
         enabled: true
       }
     });
-    const transport = makeServerBackedTransport(server, "A");
-    const session = new PixelSyncSession({ transport });
-    session.attach(manager);
+    const room = makeServerBackedRoom(server, "A");
+    const client = new PixelSyncClient({ room });
+    client.attach(manager);
 
     // A paints texture pixel (1,1) red at t=1000.
     t.mock.timers.tick(1000);
@@ -613,7 +630,7 @@ describe("PixelArtCanvas — history + network collision handling", () => {
         color: { r: 0, g: 0, b: 255, a: 255 },
         positions: [{ x: 1, y: 1 }]
       }
-    }, transport.room);
+    }, room.serverRoom);
     assert.deepStrictEqual(
       server.buffer.samplePixel(1, 1),
       [0, 0, 255, 255]
@@ -643,9 +660,9 @@ describe("PixelArtCanvas — history + network collision handling", () => {
       brush: { size: 1, maxSize: 1 },
       history: { enabled: true }
     });
-    const transport = makeServerBackedTransport(server, "A");
-    const session = new PixelSyncSession({ transport });
-    session.attach(manager);
+    const room = makeServerBackedRoom(server, "A");
+    const client = new PixelSyncClient({ room });
+    client.attach(manager);
 
     // texture (2,2) -> painted black, then selected and deleted (a
     // "select-edit" commit, dominant-border-color erase -> white).
@@ -689,9 +706,9 @@ describe("PixelArtCanvas — history + network collision handling", () => {
       brush: { size: 1, maxSize: 1 },
       history: { enabled: true }
     });
-    const transport = makeServerBackedTransport(server, "A");
-    const session = new PixelSyncSession({ transport });
-    session.attach(manager);
+    const room = makeServerBackedRoom(server, "A");
+    const client = new PixelSyncClient({ room });
+    client.attach(manager);
 
     // Two overlapping strokes touching the same pixel, mirroring a
     // shift-chained Line's shared joint point: segment 1 paints (1,1) at

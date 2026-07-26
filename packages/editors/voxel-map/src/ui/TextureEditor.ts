@@ -2,9 +2,11 @@
 import { LitElement, html, css } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import type { VoxelRenderer } from "@jolly-pixel/voxel.renderer";
+import type * as network from "@jolly-pixel/network";
 import type {
   PixelArtCanvas,
-  PixelTransport
+  PixelNetworkCommand,
+  PixelServerMessage
 } from "@jolly-pixel/pixel-draw.renderer";
 import { PixelDrawPanel } from "@jolly-pixel/pixel-draw.renderer/ui";
 
@@ -73,7 +75,7 @@ export class TextureEditor extends LitElement {
   `;
 
   @property({ attribute: false }) declare vr: VoxelRenderer | undefined;
-  @property({ attribute: false }) declare transport: PixelTransport | undefined;
+  @property({ attribute: false }) declare room: network.Room<PixelNetworkCommand, PixelServerMessage> | undefined;
   @property({ type: String }) declare tilesetId: string;
   @property({ type: Boolean }) declare active: boolean;
 
@@ -111,7 +113,7 @@ export class TextureEditor extends LitElement {
       onDrawEnd: () => this.#bridge.syncToThree()
     });
     this.#canvas = canvas;
-    this.#bridge.attach(canvas, this.transport);
+    this.#bridge.attach(canvas, this.room);
 
     if (this.vr) {
       this.#uvBridge = new BlockUvBridge(canvas.uv, this.vr);

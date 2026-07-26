@@ -78,7 +78,7 @@ interface PixelArtCanvasOptions {
   onDrawEnd?: () => void;
   /**
    * Called for every local mutation (stroke, resize, texture replace).
-   * Used by PixelSyncSession to forward mutations over the network.
+   * Used by PixelSyncClient to forward mutations over the network.
    */
   onBufferUpdated?: PixelBufferHookListener;
   /** Local undo/redo stack. Disabled by default. */
@@ -136,7 +136,7 @@ UV regions: create/delete/move/select, visibility, typed events. See [uv/UVMap.m
 readonly peerCursors: PeerCursorOverlay // { set, remove, refresh, destroy }
 ```
 
-Renders remote peers' cursors over the canvas — used by `PixelCursorSession`. `set(clientId, { pos, color, label? })` hides the marker when `pos` is `null`. See [network/PixelCursorSession.md](./network/PixelCursorSession.md).
+Renders remote peers' cursors over the canvas — used by `PixelCursorSync`. `set(clientId, { pos, color, label? })` hides the marker when `pos` is `null`. See [network/PixelCursorSync.md](./network/PixelCursorSync.md).
 
 ## Methods
 
@@ -335,7 +335,7 @@ applyRemoteCommand(event: PixelBufferHookEvent): void
 loadSnapshot(size: Vec2, pixels: Uint8ClampedArray, uvRegions?: UVRegion[]): void
 ```
 
-Network sync hooks — used by `PixelSyncSession`. `applyRemoteCommand` applies a remote mutation without re-firing `onBufferUpdated`. `loadSnapshot` hydrates buffer + UV from a snapshot (never broadcast). See [network/index.md](./network/index.md).
+Network sync hooks — used by `PixelSyncClient`. `applyRemoteCommand` applies a remote mutation without re-firing `onBufferUpdated`. `loadSnapshot` hydrates buffer + UV from a snapshot (never broadcast). See [network/index.md](./network/index.md).
 
 ---
 
@@ -346,4 +346,4 @@ get onCursorMove(): ((pos: Vec2 | null) => void) | undefined
 set onCursorMove(fn: ((pos: Vec2 | null) => void) | undefined)
 ```
 
-Fires on every canvas mousemove with the bounded texture position, and `null` once the pointer leaves the canvas or texture bounds — used by `PixelCursorSession` to broadcast the local cursor. See [network/PixelCursorSession.md](./network/PixelCursorSession.md).
+Fires on every canvas mousemove with the bounded texture position, and `null` once the pointer leaves the canvas or texture bounds — used by `PixelCursorSync` to broadcast the local cursor. See [network/PixelCursorSync.md](./network/PixelCursorSync.md).

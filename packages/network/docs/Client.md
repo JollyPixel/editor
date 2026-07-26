@@ -63,9 +63,8 @@ room<ClientMessage = unknown, ServerMessage = unknown>(
 ): Room<ClientMessage, ServerMessage>
 ```
 
-Returns the room handle for `name`.
+Returns the room handle for `name`. Call [`room.join()`](./Room.md#join) when you're ready to actually join it.
 
-- First call joins the room.
 - Repeated calls with the same room name return the same room instance.
 
 ### `destroy`
@@ -101,9 +100,10 @@ const client = new network.Client({
 
 const room = client.room("echo");
 
-room.onMessage = (payload) => console.log(payload);
-room.onPeerJoined = (peerId) => console.log(`${peerId} joined`);
-room.onPeerLeft = (peerId) => console.log(`${peerId} left`);
+room.addEventListener("message", (event) => console.log(event.detail));
+room.addEventListener("peer-joined", (event) => console.log(`${event.detail.clientId} joined`));
+room.addEventListener("peer-left", (event) => console.log(`${event.detail.clientId} left`));
 
+room.join();
 room.send({ hello: "world" });
 ```

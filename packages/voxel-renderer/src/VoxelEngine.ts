@@ -343,7 +343,7 @@ export class VoxelEngine {
   // --- Hook management --- //
 
   /**
-   * Current hook listener, if any. Lets callers (e.g. `VoxelSyncSession`) chain
+   * Current hook listener, if any. Lets callers (e.g. `VoxelSyncClient`) chain
    * onto an existing handler instead of silently replacing it.
    */
   get onLayerUpdated(): VoxelLayerHookListener | undefined {
@@ -352,7 +352,7 @@ export class VoxelEngine {
 
   /**
    * Replace the hook listener after construction. Setting to `undefined` disables hooks.
-   * Used by `VoxelSyncSession` to inject itself.
+   * Used by `VoxelSyncClient` to inject itself.
    */
   set onLayerUpdated(fn: VoxelLayerHookListener | undefined) {
     this.#onLayerUpdated = fn;

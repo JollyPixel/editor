@@ -3,9 +3,16 @@ export interface ClientHandle {
   send(data: unknown): void;
 }
 
-/**
- * Minimal, transport-agnostic logging surface.
- */
+export interface NetworkCommandHeader {
+  clientId: string;
+  seq: number;
+  timestamp: number;
+}
+
+export type NetworkServerMessage<Command, Snapshot> =
+  | { type: "snapshot"; data: Snapshot; }
+  | { type: "command"; data: Command; };
+
 export interface Logger {
   debug(...args: unknown[]): void;
   info(...args: unknown[]): void;

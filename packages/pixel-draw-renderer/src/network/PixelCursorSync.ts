@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import type * as network from "@jolly-pixel/network";
+
 // Import Internal Dependencies
 import { ColorPalette } from "../utils/ColorPalette.ts";
 import {
@@ -7,66 +10,65 @@ import {
 import type { PixelArtCanvas } from "../PixelArtCanvas.ts";
 import type { Vec2 } from "../types.ts";
 import type {
-  PixelPeerIdentity,
-  PixelPeerPresence,
-  PixelPresenceChannel
+  PixelNetworkCommand,
+  PixelServerMessage
 } from "./types.ts";
 
 // CONSTANTS
 const kPresenceCursorKey = "cursor";
 
-export interface PixelCursorSessionOptions {
-  channel: PixelPresenceChannel;
+export interface PixelCursorSyncOptions {
+  room: network.Room<PixelNetworkCommand, PixelServerMessage>;
   /**
    * Extracts a display label from a peer's identity.
    * @default reads `identity.username` when it's a string
    */
-  getLabel?: (identity: PixelPeerIdentity) => string | undefined;
+  getLabel?: (identity: network.PeerMetadata) => string | undefined;
 }
 
 function defaultGetLabel(
-  identity: PixelPeerIdentity
+  identity: network.PeerMetadata
 ): string | undefined {
   return typeof identity.username === "string" ? identity.username : undefined;
 }
 
 /**
- * Broadcasts the local cursor position over a presence channel and mirrors
- * remote peers' cursors onto the attached canvas's `peerCursors` overlay.
+ * Broadcasts the local cursor position over a `network.Room`'s presence
+ * channel and mirrors remote peers' cursors onto the attached canvas's
+ * `peerCursors` overlay.
  */
-export class PixelCursorSession {
-  #channel: PixelPresenceChannel;
-  #getLabel: (identity: PixelPeerIdentity) => string | undefined;
+export class PixelCursorSync {
+  #room: network.Room<PixelNetworkCommand, PixelServerMessage>;
+  #getLabel: (identity: network.PeerMetadata) => string | undefined;
   #palette = new ColorPalette();
   #canvas: PixelArtCanvas | undefined;
   #lastSent: Vec2 | null | undefined;
 
-  #previousOnPeerJoined: ((clientId: string) => void) | null;
-  #previousOnPeerLeft: ((clientId: string) => void) | null;
-  #previousOnPeerPresence: ((clientId: string, patch: PixelPeerPresence) => void) | null;
+  #onPeerJoined = (
+    event: CustomEvent<network.RoomPeerEventDetail>
+  ): void => {
+    this.#syncPeer(event.detail.clientId);
+  };
+  #onPeerLeft = (
+    event: CustomEvent<network.RoomPeerEventDetail>
+  ): void => {
+    this.#canvas?.peerCursors.remove(event.detail.clientId);
+  };
+  #onPeerPresence = (
+    event: CustomEvent<network.RoomPeerPresenceEventDetail>
+  ): void => {
+    this.#applyPresencePatch(event.detail.clientId, event.detail.patch);
+  };
 
   constructor(
-    options: PixelCursorSessionOptions
+    options: PixelCursorSyncOptions
   ) {
-    this.#channel = options.channel;
+    this.#room = options.room;
     this.#getLabel = options.getLabel ?? defaultGetLabel;
 
-    this.#previousOnPeerJoined = this.#channel.onPeerJoined;
-    this.#previousOnPeerLeft = this.#channel.onPeerLeft;
-    this.#previousOnPeerPresence = this.#channel.onPeerPresence;
-
-    this.#channel.onPeerJoined = (clientId) => {
-      this.#previousOnPeerJoined?.(clientId);
-      this.#syncPeer(clientId);
-    };
-    this.#channel.onPeerLeft = (clientId) => {
-      this.#previousOnPeerLeft?.(clientId);
-      this.#canvas?.peerCursors.remove(clientId);
-    };
-    this.#channel.onPeerPresence = (clientId, patch) => {
-      this.#previousOnPeerPresence?.(clientId, patch);
-      this.#applyPresencePatch(clientId, patch);
-    };
+    this.#room.addEventListener("peer-joined", this.#onPeerJoined);
+    this.#room.addEventListener("peer-left", this.#onPeerLeft);
+    this.#room.addEventListener("peer-presence", this.#onPeerPresence);
   }
 
   attach(
@@ -78,7 +80,7 @@ export class PixelCursorSession {
 
     this.#canvas = canvas;
     canvas.onCursorMove = (pos) => this.#reportLocal(pos);
-    for (const clientId of this.#channel.peers.keys()) {
+    for (const clientId of this.#room.peers.keys()) {
       this.#syncPeer(clientId);
     }
   }
@@ -95,9 +97,9 @@ export class PixelCursorSession {
 
   destroy(): void {
     this.detach();
-    this.#channel.onPeerJoined = this.#previousOnPeerJoined;
-    this.#channel.onPeerLeft = this.#previousOnPeerLeft;
-    this.#channel.onPeerPresence = this.#previousOnPeerPresence;
+    this.#room.removeEventListener("peer-joined", this.#onPeerJoined);
+    this.#room.removeEventListener("peer-left", this.#onPeerLeft);
+    this.#room.removeEventListener("peer-presence", this.#onPeerPresence);
   }
 
   #reportLocal(
@@ -111,7 +113,7 @@ export class PixelCursorSession {
     }
 
     this.#lastSent = pos;
-    this.#channel.updatePresence({
+    this.#room.updatePresence({
       [kPresenceCursorKey]: pos
     });
   }
@@ -119,7 +121,7 @@ export class PixelCursorSession {
   #syncPeer(
     clientId: string
   ): void {
-    const peer = this.#channel.peers.get(clientId);
+    const peer = this.#room.peers.get(clientId);
     if (!peer) {
       return;
     }
@@ -133,13 +135,13 @@ export class PixelCursorSession {
 
   #applyPresencePatch(
     clientId: string,
-    patch: PixelPeerPresence
+    patch: network.PeerMetadata
   ): void {
     if (!(kPresenceCursorKey in patch)) {
       return;
     }
 
-    const identity = this.#channel.peers.get(clientId)?.identity ?? {};
+    const identity = this.#room.peers.get(clientId)?.identity ?? {};
     this.#applyPeer(
       clientId,
       identity,
@@ -149,8 +151,8 @@ export class PixelCursorSession {
 
   #applyPeer(
     clientId: string,
-    identity: PixelPeerIdentity,
-    presence: PixelPeerPresence
+    identity: network.PeerMetadata,
+    presence: network.PeerMetadata
   ): void {
     if (!this.#canvas) {
       return;

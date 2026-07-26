@@ -3,7 +3,7 @@ import type { Plugin } from "vite";
 
 // Import Internal Dependencies
 import { Server } from "../Server.ts";
-import { RoomAuthority } from "../RoomAuthority.ts";
+import { RoomAuthority } from "../server/RoomAuthority.ts";
 import { WebsocketTransport } from "../transport/websocket.ts";
 import { DEFAULT_WEBSOCKET_PATH } from "../transport/constants.ts";
 

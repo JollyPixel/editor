@@ -8,7 +8,7 @@ import type {
 } from "./types.ts";
 import type {
   Room
-} from "./Room.ts";
+} from "./client/Room.ts";
 
 export interface ClientOptions {
   /**
@@ -53,6 +53,7 @@ export class Client extends EventTarget {
   // Buffer outbound messages until the socket opens.
   #queue: string[] = [];
   #rooms = new Map<string, Room<any, any>>();
+  #roomEvents = new Map<string, EventTarget>();
 
   constructor(
     options: ClientOptions
@@ -60,7 +61,9 @@ export class Client extends EventTarget {
     super();
     this.#identity = options.identity ?? {};
     this.#logger = options.logger ?? createConsoleLogger();
-    this.#socket = new WebSocket(options.url ?? getDefaultUrl());
+    this.#socket = new WebSocket(
+      options.url ?? getDefaultUrl()
+    );
 
     this.#socket.addEventListener("open", () => {
       this.#ready = true;
@@ -68,7 +71,9 @@ export class Client extends EventTarget {
         this.#socket.send(raw);
       }
       this.#queue = [];
-      this.dispatchEvent(new Event("ready"));
+      this.dispatchEvent(
+        new Event("ready")
+      );
     });
     this.#socket.addEventListener("message", (event) => {
       this.#handleMessage(event.data);
@@ -101,15 +106,34 @@ export class Client extends EventTarget {
     }
 
     const peers = new Map<string, Peer>();
+    const events = new EventTarget();
+    let joined = false;
 
     const room: Room<ClientMessage, ServerMessage> = {
       id: name,
       clientId: this.id,
       peers,
-      onMessage: null,
-      onPeerJoined: null,
-      onPeerLeft: null,
-      onPeerPresence: null,
+      addEventListener: (type, listener, options) => events.addEventListener(
+        type,
+        listener as EventListener,
+        options
+      ),
+      removeEventListener: (type, listener, options) => events.removeEventListener(
+        type,
+        listener as EventListener,
+        options
+      ),
+      join: () => {
+        if (joined) {
+          return;
+        }
+        joined = true;
+        this.#send({
+          room: name,
+          kind: "join",
+          identity: this.#identity
+        });
+      },
       send: (payload) => this.#send({
         room: name,
         kind: "message",
@@ -126,16 +150,13 @@ export class Client extends EventTarget {
           kind: "leave"
         });
         this.#rooms.delete(name);
+        this.#roomEvents.delete(name);
         peers.clear();
       }
     };
 
     this.#rooms.set(name, room);
-    this.#send({
-      room: name,
-      kind: "join",
-      identity: this.#identity
-    });
+    this.#roomEvents.set(name, events);
 
     return room;
   }
@@ -179,7 +200,8 @@ export class Client extends EventTarget {
     const envelope = result.data;
 
     const room = this.#rooms.get(envelope.room);
-    if (!room) {
+    const events = this.#roomEvents.get(envelope.room);
+    if (!room || !events) {
       this.#logger.warn({ room: envelope.room, kind: envelope.kind }, "dropped envelope for an unjoined room");
 
       return;
@@ -189,7 +211,9 @@ export class Client extends EventTarget {
 
     switch (envelope.kind) {
       case "message":
-        room.onMessage?.(envelope.payload);
+        events.dispatchEvent(
+          new CustomEvent("message", { detail: envelope.payload })
+        );
         break;
       case "sync":
         for (const member of envelope.members) {
@@ -206,18 +230,26 @@ export class Client extends EventTarget {
           identity: envelope.identity,
           presence: {}
         });
-        room.onPeerJoined?.(envelope.clientId);
+        events.dispatchEvent(
+          new CustomEvent("peer-joined", { detail: { clientId: envelope.clientId } })
+        );
         break;
       case "peer-left":
         peers.delete(envelope.clientId);
-        room.onPeerLeft?.(envelope.clientId);
+        events.dispatchEvent(
+          new CustomEvent("peer-left", { detail: { clientId: envelope.clientId } })
+        );
         break;
       case "peer-presence": {
         const peer = peers.get(envelope.clientId);
         if (peer) {
           Object.assign(peer.presence, envelope.patch);
         }
-        room.onPeerPresence?.(envelope.clientId, envelope.patch);
+        events.dispatchEvent(
+          new CustomEvent("peer-presence", {
+            detail: { clientId: envelope.clientId, patch: envelope.patch }
+          })
+        );
         break;
       }
     }

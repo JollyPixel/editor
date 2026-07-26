@@ -2,7 +2,7 @@
 import pino from "pino";
 
 // Import Internal Dependencies
-import type { Logger } from "./types.ts";
+import type { Logger } from "../types.ts";
 
 /**
  * Node-side default logger. Kept out of `types.ts` so browser consumers
