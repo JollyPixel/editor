@@ -57,7 +57,7 @@
   "dependencies": {
     "@jolly-pixel/network": "*",
     "colorjs.io": "0.7.0",
-    "js-base64": "3.9.0",
+    "js-base64": "3.9.1",
     "lit": "3.3.3",
     "vanilla-picker": "2.12.3"
   }
