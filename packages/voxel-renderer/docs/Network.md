@@ -103,6 +103,9 @@ Multiple `VoxelSyncServer` instances (one per world) can be registered side by s
 | `onClientConnect(client)` | Sends the current snapshot to a newly joined client (called by `network.Server`). |
 | `onClientDisconnect(clientId)` | No-op — `network.Server` owns membership bookkeeping. |
 | `onMessage(clientId, payload, room)` | Validates and routes an incoming payload to `receive()`. |
+| `getEventName(payload)` | Returns the command's `action` (or `"unknown"` for a non-`VoxelNetworkCommand` payload) — used by `network.ServerRoom` to look up rights when the server was constructed with one (see [Rights (RBAC)](#rights-rbac)). |
+| `name` | Always `"voxel.renderer"`, shared by every `VoxelSyncServer` instance regardless of `id` — the namespace a rights table keys its rules against (e.g. `"voxel.renderer.*"`). |
+| `events` | The full `VoxelLayerHookAction` vocabulary (`"voxel-set"`, `"object-added"`, ...) — a declarative catalog for whoever configures the server's rights table; `VoxelSyncServer` itself never decides who may use them. |
 | `receive(cmd, room)` | Validates, applies, and broadcasts a command via `room.broadcast()` (useful in tests). |
 | `snapshot()` | Returns the current world as `VoxelWorldJSON`. |
 | `world` | The authoritative `VoxelWorld` instance. |
@@ -117,6 +120,36 @@ Multiple `VoxelSyncServer` instances (one per world) can be registered side by s
 | `world` | `VoxelWorld` | new world | Existing world to use as authoritative state. |
 | `chunkSize` | `number` | `16` | Chunk size when creating a new world. |
 | `conflictResolver` | `network.ConflictResolver<VoxelNetworkCommand>` | `network.LastWriteWinsResolver` | Custom conflict strategy. |
+
+## Rights (RBAC)
+
+`VoxelSyncServer` never defines roles or a rights policy itself — it only exposes its type identity via `name` (always `"voxel.renderer"`) and its action vocabulary via `events`/`getEventName()`. The rights table (which role can do what) is entirely a `network.Server` concern, configured once wherever the server is actually wired up (e.g. `vite.config.ts`, alongside `createWebSocketNetworkPlugin`), and keyed by `name` rather than by each world's `id` — one rule set covers every `VoxelSyncServer` world registered on that server:
+
+```ts
+createWebSocketNetworkPlugin({
+  roomAuthorities: [
+    new VoxelSyncServer({ id: "voxel-map:world-1", world }),
+    new VoxelSyncServer({ id: "voxel-map:world-2" }) // same rights apply here too
+  ],
+  rights: {
+    viewer: {
+      "voxel.renderer.$join": "write",       // viewers may join...
+      "voxel.renderer.$presence": "write",   //  ...and share cursor/presence...
+      "voxel.renderer.voxel-set": "read",    //  ...and see edits...
+      "voxel.renderer.voxel-removed": "read",
+      "voxel.renderer.object-added": "read"
+      // any action not listed here fails open to "write" for "viewer" too —
+      // list every mutating action you actually want to restrict, or use a
+      // trailing "voxel.renderer.*" to catch everything not already matched.
+    },
+    editor: {
+      "voxel.renderer.$join": "write" // everything else falls through to the fail-open default (full write)
+    }
+  }
+});
+```
+
+A client with no `role` in its join `identity`, or a role that isn't a key in the table, falls open to full write access — matching `@jolly-pixel/network`'s "unrestricted by default" behavior (see [`RightsTable`](../../network/docs/RightsTable.md)). Role assignment here is **not authenticated** — `identity.role` is whatever the client sent at `room.join()`. If real access control is needed, resolve the role from a trusted session/auth layer before constructing that `identity` client-side.
 
 ## VoxelNetworkCommand — wire format
 

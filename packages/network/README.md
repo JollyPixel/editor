@@ -28,6 +28,7 @@ import {
 
 class EchoAuthority extends network.RoomAuthority {
   readonly id = "echo";
+  readonly name = "echo";
 
   onClientConnect(client: network.ClientHandle) {}
   onClientDisconnect(clientId: string) {}
@@ -56,9 +57,9 @@ import * as network from "@jolly-pixel/network";
 const client = new network.Client();
 const room = client.room("echo");
 
-room.addEventListener("message", (event) => console.log(event.detail));
-room.addEventListener("peer-joined", (event) => console.log(`${event.detail.clientId} joined`));
-room.addEventListener("peer-left", (event) => console.log(`${event.detail.clientId} left`));
+room.on("message", (payload) => console.log(payload));
+room.on("peer-joined", (event) => console.log(`${event.clientId} joined`));
+room.on("peer-left", (event) => console.log(`${event.clientId} left`));
 room.join();
 room.send({ hello: "world" });
 ```
@@ -69,6 +70,8 @@ room.send({ hello: "world" });
   - [`Room`](./docs/Room.md): room-scoped handles
   - [`SyncAdapter`](./docs/sync/SyncAdapter.md): base class for a client-side sync session (stamping, echo-guarding, snapshot/ready bookkeeping)
 - [`Server`](./docs/Server.md): transport-agnostic room multiplexer
+  - [`RoomAuthority`](./docs/RoomAuthority.md): per-room server logic — declares its type `name` and event vocabulary, never its own roles/rights
+  - [`RightsTable`](./docs/RightsTable.md): per-role `read`/`write`/`void` lookup, glob-matched against `${authority.name}.${event}`, configured once via `new Server({ rights })`
   - [`ConflictResolver` / `LastWriteWinsResolver`](./docs/sync/ConflictResolver.md): server-side last-write-wins conflict resolution
   - [`ConflictTracker`](./docs/sync/ConflictTracker.md): per-key last-accepted-command bookkeeping around a `ConflictResolver`
 

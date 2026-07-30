@@ -5,10 +5,14 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { Emitter } from "@openally/emitt";
+
 // Import Internal Dependencies
 import {
   SyncAdapter,
   type Room,
+  type RoomEventMap,
   type NetworkCommandHeader,
   type NetworkServerMessage
 } from "#src/index.ts";
@@ -93,23 +97,19 @@ function createMockRoom(
   clientId = "client-A"
 ): MockRoom {
   const sentCommands: TestCommand[] = [];
-  const events = new EventTarget();
+  const emitter = new Emitter<
+    RoomEventMap<NetworkServerMessage<TestCommand, TestSnapshot>>
+  >();
 
-  const room: MockRoom = {
+  const room: MockRoom = Object.assign(emitter, {
     id: "test-room",
     clientId,
     peers: new Map(),
     sentCommands,
-    addEventListener: (type, listener, options) => events.addEventListener(type, listener as EventListener, options),
-    removeEventListener: (type, listener, options) => events.removeEventListener(
-      type,
-      listener as EventListener,
-      options
-    ),
     join() {
       // Unused by SyncAdapter.
     },
-    send(cmd) {
+    send(cmd: TestCommand) {
       sentCommands.push(cmd);
     },
     updatePresence() {
@@ -118,13 +118,13 @@ function createMockRoom(
     leave() {
       // Unused by SyncAdapter.
     },
-    simulateCommand(cmd) {
-      events.dispatchEvent(new CustomEvent("message", { detail: { type: "command", data: cmd } }));
+    simulateCommand(cmd: TestCommand) {
+      emitter.emit("message", { type: "command", data: cmd });
     },
-    simulateSnapshot(snapshot) {
-      events.dispatchEvent(new CustomEvent("message", { detail: { type: "snapshot", data: snapshot } }));
+    simulateSnapshot(snapshot: TestSnapshot) {
+      emitter.emit("message", { type: "snapshot", data: snapshot });
     }
-  };
+  });
 
   return room;
 }
@@ -258,7 +258,7 @@ describe("SyncAdapter — snapshot loading", () => {
     client.attach(createTarget());
 
     let fired = 0;
-    client.addEventListener("ready", () => fired++);
+    client.on("ready", () => fired++);
 
     room.simulateSnapshot({ value: "a" });
     room.simulateSnapshot({ value: "b" });

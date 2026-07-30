@@ -101,7 +101,7 @@ describe("Client — ready", () => {
     assert.equal(client.ready, false);
 
     let fired = 0;
-    client.addEventListener("ready", () => {
+    client.on("ready", () => {
       fired++;
     });
     socket.open();
@@ -116,7 +116,7 @@ describe("Client — ready", () => {
     client.room("pixel-draw").join();
 
     let sentBeforeReady = -1;
-    client.addEventListener("ready", () => {
+    client.on("ready", () => {
       sentBeforeReady = socket.sent.length;
     });
     socket.open();
@@ -176,7 +176,7 @@ describe("Client — peers mirror", () => {
     const { client, socket } = createOpenClient();
     const room = client.room("pixel-draw");
     const joined: string[] = [];
-    room.addEventListener("peer-joined", (event) => joined.push(event.detail.clientId));
+    room.on("peer-joined", (event) => joined.push(event.clientId));
 
     socket.receive({
       room: "pixel-draw",
@@ -197,7 +197,7 @@ describe("Client — peers mirror", () => {
     const { client, socket } = createOpenClient();
     const room = client.room("pixel-draw");
     const left: string[] = [];
-    room.addEventListener("peer-left", (event) => left.push(event.detail.clientId));
+    room.on("peer-left", (event) => left.push(event.clientId));
 
     socket.receive({
       room: "pixel-draw",
@@ -219,9 +219,9 @@ describe("Client — peers mirror", () => {
     const { client, socket } = createOpenClient();
     const room = client.room("pixel-draw");
     const updates: { clientId: string; patch: unknown; }[] = [];
-    room.addEventListener("peer-presence", (event) => updates.push({
-      clientId: event.detail.clientId,
-      patch: event.detail.patch
+    room.on("peer-presence", (event) => updates.push({
+      clientId: event.clientId,
+      patch: event.patch
     }));
 
     socket.receive({
@@ -267,6 +267,27 @@ describe("Client — default url", () => {
     const socket = FakeWebSocket.instances[0]!;
 
     assert.equal(socket.url, "wss://example.com/ws-sync");
+  });
+});
+
+describe("Client — denied", () => {
+  test("fires \"denied\" with the event name and reason", () => {
+    const { client, socket } = createOpenClient();
+    const room = client.room("pixel-draw");
+    const denials: { event: string; reason: string; }[] = [];
+    room.on("denied", (event) => denials.push(event));
+
+    socket.receive({
+      room: "pixel-draw",
+      kind: "denied",
+      event: "$join",
+      reason: "role \"viewer\" is not permitted to join this room"
+    });
+
+    assert.deepEqual(denials, [{
+      event: "$join",
+      reason: "role \"viewer\" is not permitted to join this room"
+    }]);
   });
 });
 

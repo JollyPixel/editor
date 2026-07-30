@@ -1,9 +1,16 @@
+// Import Third-party Dependencies
+import { Emitter } from "@openally/emitt";
+
 // Import Internal Dependencies
 import type { Room } from "./Room.ts";
 import type {
   NetworkCommandHeader,
   NetworkServerMessage
 } from "../types.ts";
+
+export type SyncAdapterEventMap = {
+  ready: () => void;
+};
 
 /**
  * Syncs a local target over a `Room`,
@@ -14,7 +21,7 @@ export abstract class SyncAdapter<
   Event extends object,
   Command extends NetworkCommandHeader,
   Snapshot
-> extends EventTarget {
+> extends Emitter<SyncAdapterEventMap> {
   protected readonly room: Room<
     Command,
     NetworkServerMessage<Command, Snapshot>
@@ -25,9 +32,9 @@ export abstract class SyncAdapter<
   #seq = 0;
   #ready = false;
   #onMessage = (
-    event: CustomEvent<NetworkServerMessage<Command, Snapshot>>
+    message: NetworkServerMessage<Command, Snapshot>
   ): void => {
-    this.#handleMessage(event.detail);
+    this.#handleMessage(message);
   };
 
   constructor(
@@ -35,7 +42,7 @@ export abstract class SyncAdapter<
   ) {
     super();
     this.room = room;
-    this.room.addEventListener(
+    this.room.on(
       "message", this.#onMessage
     );
   }
@@ -76,7 +83,7 @@ export abstract class SyncAdapter<
 
   destroy(): void {
     this.detach();
-    this.room.removeEventListener(
+    this.room.off(
       "message", this.#onMessage
     );
   }
@@ -109,7 +116,7 @@ export abstract class SyncAdapter<
 
   protected abstract applyRemoteCommand(
     target: Target,
-    cmd: Command
+    command: Command
   ): void;
 
   #handleMessage(
@@ -126,14 +133,14 @@ export abstract class SyncAdapter<
   }
 
   #handleRemote(
-    cmd: Command
+    command: Command
   ): void {
-    if (cmd.clientId === this.room.clientId) {
+    if (command.clientId === this.room.clientId) {
       return;
     }
 
     if (this.#target) {
-      this.applyRemoteCommand(this.#target, cmd);
+      this.applyRemoteCommand(this.#target, command);
     }
   }
 
@@ -146,9 +153,7 @@ export abstract class SyncAdapter<
 
     if (!this.#ready) {
       this.#ready = true;
-      this.dispatchEvent(
-        new Event("ready")
-      );
+      this.emit("ready");
     }
   }
 }

@@ -1,9 +1,11 @@
+// Import Third-party Dependencies
+import { Emitter } from "@openally/emitt";
+
 // Import Internal Dependencies
 import {
   PixelBuffer,
   type PixelBufferOptions
 } from "./PixelBuffer.ts";
-import { TypedEventEmitter } from "../utils/EventEmitter.ts";
 import type {
   RGBA,
   SelectionRect,
@@ -18,12 +20,14 @@ export type CanvasBufferOptions = PixelBufferOptions;
 /**
  * Fired after a pixel mutation that changes the visible working canvas
  */
-export type CanvasBufferEvent = { type: "changed"; };
+export type CanvasBufferEvent = {
+  changed: () => void;
+};
 
 /**
  * Synchronizes a PixelBuffer with a canvas.
  */
-export class CanvasBuffer extends TypedEventEmitter<
+export class CanvasBuffer extends Emitter<
   CanvasBufferEvent
 > implements DefaultPixelBuffer {
   #buffer: PixelBuffer;
@@ -193,9 +197,7 @@ export class CanvasBuffer extends TypedEventEmitter<
     }
 
     this.#workingCtx.putImageData(imageData, minX, minY);
-    this.emit({
-      type: "changed"
-    });
+    this.emit("changed");
   }
 
   /**
@@ -207,9 +209,7 @@ export class CanvasBuffer extends TypedEventEmitter<
   ): void {
     this.#buffer.drawRegion(rect, pixels);
     this.#resyncCanvasRegion(rect);
-    this.emit({
-      type: "changed"
-    });
+    this.emit("changed");
   }
 
   /**
@@ -222,9 +222,7 @@ export class CanvasBuffer extends TypedEventEmitter<
   ): void {
     this.#buffer.drawMaskedRegion(rect, pixels, mask);
     this.#resyncCanvasRegion(rect);
-    this.emit({
-      type: "changed"
-    });
+    this.emit("changed");
   }
 
   #resyncCanvasRegion(

@@ -43,8 +43,15 @@
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
   "dependencies": {
+    "@loglayer/transport-pino": "3.3.0",
+    "@openally/emitt": "1.0.1",
+    "@openally/result": "2.0.0",
+    "loglayer": "9.4.0",
     "pino": "10.3.1",
-    "vite": "8.1.5",
+    "ts-pattern": "5.9.0",
     "ws": "8.21.1"
+  },
+  "devDependencies": {
+    "vite": "8.1.5"
   }
 }

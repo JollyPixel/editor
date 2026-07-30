@@ -193,14 +193,14 @@ function initializeWebsocketTransport(
   const room = networkClient.room<PixelNetworkCommand, PixelServerMessage>(
     DEMO_ROOM
   );
-  room.addEventListener("peer-joined", (event) => console.log(`[pixel-sync] peer joined: ${event.detail.clientId}`));
-  room.addEventListener("peer-left", (event) => console.log(`[pixel-sync] peer left: ${event.detail.clientId}`));
+  room.on("peer-joined", (event) => console.log(`[pixel-sync] peer joined: ${event.clientId}`));
+  room.on("peer-left", (event) => console.log(`[pixel-sync] peer left: ${event.clientId}`));
 
   const syncClient = new PixelSyncClient({
     room
   });
   syncClient.attach(canvasManager);
-  syncClient.addEventListener("ready", () => {
+  syncClient.on("ready", () => {
     window.__pixelSyncReady = true;
   });
 

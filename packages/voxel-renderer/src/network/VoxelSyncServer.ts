@@ -4,7 +4,7 @@ import * as network from "@jolly-pixel/network";
 // Import Internal Dependencies
 import { VoxelWorld } from "../world/VoxelWorld.ts";
 import type { VoxelWorldJSON } from "../serialization/VoxelSerializer.ts";
-import type { VoxelLayerHookEvent } from "../hooks.ts";
+import { VOXEL_LAYER_HOOK_ACTIONS, type VoxelLayerHookEvent } from "../hooks.ts";
 import { applyCommandToWorld } from "./VoxelCommandApplier.ts";
 import type { VoxelNetworkCommand } from "./types.ts";
 
@@ -49,7 +49,9 @@ export interface VoxelSyncServerOptions {
  */
 export class VoxelSyncServer extends network.RoomAuthority {
   readonly id: string;
+  readonly name = "voxel.renderer";
   readonly world: VoxelWorld;
+  readonly events: readonly string[] = VOXEL_LAYER_HOOK_ACTIONS;
 
   #tracker: network.ConflictTracker<VoxelNetworkCommand>;
 
@@ -85,6 +87,12 @@ export class VoxelSyncServer extends network.RoomAuthority {
     _clientId: string
   ): void {
     // No client-list bookkeeping to clean up — Server owns that.
+  }
+
+  getEventName(
+    payload: unknown
+  ): string {
+    return isVoxelNetworkCommand(payload) ? payload.action : "unknown";
   }
 
   onMessage(

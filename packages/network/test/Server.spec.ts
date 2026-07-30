@@ -15,6 +15,7 @@ import {
 
 class RecordingAuthority extends RoomAuthority {
   readonly id: string;
+  readonly name: string;
   connected: string[] = [];
   disconnected: string[] = [];
   messages: { clientId: string; payload: unknown; }[] = [];
@@ -22,10 +23,12 @@ class RecordingAuthority extends RoomAuthority {
   room: RoomHandle | undefined;
 
   constructor(
-    id: string
+    id: string,
+    name: string = id
   ) {
     super();
     this.id = id;
+    this.name = name;
   }
 
   onClientConnect(
@@ -53,6 +56,12 @@ class RecordingAuthority extends RoomAuthority {
   ): void {
     this.messages.push({ clientId, payload });
     this.room = room;
+  }
+
+  getEventName(
+    payload: unknown
+  ): string {
+    return (payload as { action: string; }).action;
   }
 }
 
@@ -518,5 +527,92 @@ describe("Server — external broadcast()", () => {
     const server = new Server();
 
     assert.doesNotThrow(() => server.broadcast("unknown", { hello: "world" }));
+  });
+});
+
+describe("Server — rights: denied join", () => {
+  test("a client denied at join is not tracked as a room member, so later messages/presence never reach the authority", () => {
+    const server = new Server({ rights: { viewer: { "pixel-draw.$join": "void" } } });
+    const authority = new RecordingAuthority("pixel-draw");
+    server.register(authority);
+
+    const { client, sent } = createClient("A");
+    server.handleConnect(client);
+    server.handleMessage("A", {
+      room: "pixel-draw",
+      kind: "join",
+      identity: { role: "viewer" }
+    });
+
+    assert.deepEqual(authority.connected, []);
+    assert.deepEqual(sent, [{
+      room: "pixel-draw",
+      kind: "denied",
+      event: "$join",
+      reason: "role \"viewer\" is not permitted to join this room"
+    }]);
+
+    server.handleMessage("A", {
+      room: "pixel-draw",
+      kind: "message",
+      payload: { hello: "world" }
+    });
+    server.handleMessage("A", {
+      room: "pixel-draw",
+      kind: "presence",
+      patch: { cursor: { x: 1, y: 1 } }
+    });
+
+    assert.deepEqual(authority.messages, []);
+  });
+
+  test("ServerOptions.rights gates message writes end-to-end, independent of the authority", () => {
+    const server = new Server({
+      rights: { viewer: { "pixel-draw.voxel-set": "read" } }
+    });
+    const authority = new RecordingAuthority("pixel-draw");
+    server.register(authority);
+
+    const { client, sent } = createClient("A");
+    server.handleConnect(client);
+    server.handleMessage("A", { room: "pixel-draw", kind: "join", identity: { role: "viewer" } });
+    sent.length = 0;
+
+    server.handleMessage("A", {
+      room: "pixel-draw",
+      kind: "message",
+      payload: { action: "voxel-set" }
+    });
+
+    assert.deepEqual(authority.messages, []);
+    assert.deepEqual(sent, [{
+      room: "pixel-draw",
+      kind: "denied",
+      event: "voxel-set",
+      reason: "role \"viewer\" cannot write \"voxel-set\""
+    }]);
+  });
+
+  test("one rule covers every room registered under the same authority name, regardless of distinct ids", () => {
+    const server = new Server({
+      rights: { viewer: { "voxel.renderer.voxel-set": "read" } }
+    });
+    const worldOne = new RecordingAuthority("voxel-map:world-1", "voxel.renderer");
+    const worldTwo = new RecordingAuthority("voxel-map:world-2", "voxel.renderer");
+    server.register(worldOne);
+    server.register(worldTwo);
+
+    const a = createClient("A");
+    const b = createClient("B");
+    server.handleConnect(a.client);
+    server.handleConnect(b.client);
+    server.handleMessage("A", { room: "voxel-map:world-1", kind: "join", identity: { role: "viewer" } });
+    server.handleMessage("B", { room: "voxel-map:world-2", kind: "join", identity: { role: "viewer" } });
+
+    server.handleMessage("A", { room: "voxel-map:world-1", kind: "message", payload: { action: "voxel-set" } });
+    server.handleMessage("B", { room: "voxel-map:world-2", kind: "message", payload: { action: "voxel-set" } });
+
+    assert.deepEqual(worldOne.messages, []);
+    assert.deepEqual(worldTwo.messages, []);
   });
 });

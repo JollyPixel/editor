@@ -34,18 +34,29 @@ function createMockRoom(
 ): MockRoom {
   const peersMap = new Map<string, network.Peer>();
   const presenceUpdates: network.PeerMetadata[] = [];
-  const events = new EventTarget();
+  const listeners = new Map<string, Set<(payload: any) => void>>();
+
+  function emit(type: string, payload: unknown): void {
+    for (const listener of listeners.get(type) ?? []) {
+      listener(payload);
+    }
+  }
 
   const room: MockRoom = {
     id: "test-room",
     clientId,
     peers: peersMap,
-    addEventListener: (type, listener, options) => events.addEventListener(type, listener as EventListener, options),
-    removeEventListener: (type, listener, options) => events.removeEventListener(
-      type,
-      listener as EventListener,
-      options
-    ),
+    on: (type, listener) => {
+      let set = listeners.get(type);
+      if (!set) {
+        set = new Set();
+        listeners.set(type, set);
+      }
+      set.add(listener);
+    },
+    off: (type, listener) => {
+      listeners.get(type)?.delete(listener);
+    },
     presenceUpdates,
     join() {
       // Unused by PixelCursorSync.
@@ -63,13 +74,13 @@ function createMockRoom(
       peersMap.set(id, { clientId: id, identity, presence });
     },
     simulateJoin(id) {
-      events.dispatchEvent(new CustomEvent("peer-joined", { detail: { clientId: id } }));
+      emit("peer-joined", { clientId: id });
     },
     simulateLeave(id) {
-      events.dispatchEvent(new CustomEvent("peer-left", { detail: { clientId: id } }));
+      emit("peer-left", { clientId: id });
     },
     simulatePresence(id, patch) {
-      events.dispatchEvent(new CustomEvent("peer-presence", { detail: { clientId: id, patch } }));
+      emit("peer-presence", { clientId: id, patch });
     }
   };
 
@@ -305,9 +316,9 @@ describe("PixelCursorSync — coexists with other room listeners", () => {
     const seenJoins: string[] = [];
     const seenLeaves: string[] = [];
     const seenPresence: string[] = [];
-    room.addEventListener("peer-joined", (event) => seenJoins.push(event.detail.clientId));
-    room.addEventListener("peer-left", (event) => seenLeaves.push(event.detail.clientId));
-    room.addEventListener("peer-presence", (event) => seenPresence.push(event.detail.clientId));
+    room.on("peer-joined", (event) => seenJoins.push(event.clientId));
+    room.on("peer-left", (event) => seenLeaves.push(event.clientId));
+    room.on("peer-presence", (event) => seenPresence.push(event.clientId));
 
     const canvas = createMockCanvas();
     const sync = new PixelCursorSync({ room });
@@ -332,7 +343,7 @@ describe("PixelCursorSync — destroy", () => {
   test("removes only its own listeners and detaches the canvas", () => {
     const room = createMockRoom();
     const otherJoins: string[] = [];
-    room.addEventListener("peer-joined", (event) => otherJoins.push(event.detail.clientId));
+    room.on("peer-joined", (event) => otherJoins.push(event.clientId));
 
     const canvas = createMockCanvas();
     const sync = new PixelCursorSync({ room });

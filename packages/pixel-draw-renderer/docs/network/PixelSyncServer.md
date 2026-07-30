@@ -77,6 +77,7 @@ You can override this with `conflictResolver` in `PixelSyncServerOptions` when y
 ## API You Might Actually Use
 
 - `server.id`: room key.
+- `server.name`: always `"pixel-draw.renderer"`, shared by every instance — the namespace a `network.Server`'s `rights` table would key its rules against (e.g. `"pixel-draw.renderer.*"`). Required by `network.RoomAuthority`, but `PixelSyncServer` doesn't implement `getEventName()` yet — configuring `rights` for this namespace on the server will throw on the first message until it does (see [`RoomAuthority`](../../../network/docs/RoomAuthority.md#rbac-minimal)).
 - `server.buffer`: authoritative buffer.
 - `server.receive(cmd, room)`: useful in tests and replay tools.
 - `server.snapshot()`: exports current `PixelBufferSnapshot`.

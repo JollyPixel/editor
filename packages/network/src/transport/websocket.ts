@@ -15,9 +15,9 @@ import {
 
 // Import Internal Dependencies
 import type { Server } from "../Server.ts";
+import type { Logger } from "../logger/types.ts";
 import type {
-  ClientHandle,
-  Logger
+  ClientHandle
 } from "../types.ts";
 
 export interface WebsocketTransportOptions {
@@ -54,7 +54,7 @@ export class WebsocketTransport {
     this.#wss = new WebSocketServer({
       noServer: true
     });
-    this.#wss.on("error", (error) => this.#logger.error({ err: error }, "server error"));
+    this.#wss.on("error", (error) => this.#logger.withError(error).error("server error"));
     this.#wss.on("connection", this.#onWebsocketClientConnect);
 
     httpServer.on("upgrade", this.#onUpgrade);
@@ -105,6 +105,6 @@ export class WebsocketTransport {
       this.#server.handleMessage(clientId, raw.toString());
     });
     socket.on("close", () => this.#server.handleDisconnect(clientId));
-    socket.on("error", (error) => this.#logger.error({ err: error }, "client socket error"));
+    socket.on("error", (error) => this.#logger.withError(error).error("client socket error"));
   };
 }

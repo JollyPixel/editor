@@ -4,20 +4,26 @@ import type {
   Peer
 } from "../types.ts";
 
-export interface RoomPeerEventDetail {
+export interface RoomPeerEvent {
   clientId: string;
 }
 
-export interface RoomPeerPresenceEventDetail extends RoomPeerEventDetail {
+export interface RoomPeerPresenceEvent extends RoomPeerEvent {
   patch: PeerMetadata;
 }
 
-export interface RoomEventMap<ServerMessage = unknown> {
-  message: CustomEvent<ServerMessage>;
-  "peer-joined": CustomEvent<RoomPeerEventDetail>;
-  "peer-left": CustomEvent<RoomPeerEventDetail>;
-  "peer-presence": CustomEvent<RoomPeerPresenceEventDetail>;
+export interface RoomDeniedEvent {
+  event: string;
+  reason: string;
 }
+
+export type RoomEventMap<ServerMessage = unknown> = {
+  message: (payload: ServerMessage) => void;
+  "peer-joined": (event: RoomPeerEvent) => void;
+  "peer-left": (event: RoomPeerEvent) => void;
+  "peer-presence": (event: RoomPeerPresenceEvent) => void;
+  denied: (event: RoomDeniedEvent) => void;
+};
 
 export interface Room<
   ClientMessage = unknown,
@@ -36,14 +42,12 @@ export interface Room<
   ): void;
   leave(): void;
 
-  addEventListener<K extends keyof RoomEventMap<ServerMessage>>(
+  on<K extends keyof RoomEventMap<ServerMessage>>(
     type: K,
-    listener: (event: RoomEventMap<ServerMessage>[K]) => void,
-    options?: boolean | AddEventListenerOptions
+    listener: RoomEventMap<ServerMessage>[K]
   ): void;
-  removeEventListener<K extends keyof RoomEventMap<ServerMessage>>(
+  off<K extends keyof RoomEventMap<ServerMessage>>(
     type: K,
-    listener: (event: RoomEventMap<ServerMessage>[K]) => void,
-    options?: boolean | EventListenerOptions
+    listener: RoomEventMap<ServerMessage>[K]
   ): void;
 }

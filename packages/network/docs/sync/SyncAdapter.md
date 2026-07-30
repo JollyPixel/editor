@@ -21,7 +21,7 @@ abstract class SyncAdapter<
   Command extends NetworkCommandHeader,
   Snapshot
 >
-  extends EventTarget {
+  extends Emitter<{ ready: () => void }> {
   constructor(
     room: Room<Command, NetworkServerMessage<Command, Snapshot>>
   );

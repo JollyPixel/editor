@@ -8,9 +8,12 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   UVMap,
-  type UVMapEvent
+  type UVMapEvent,
+  type UVMapEventType
 } from "#src/uv/UVMap.ts";
 import type { Vec2 } from "#src/types.ts";
+
+type EventPayload<T extends UVMapEventType> = Parameters<UVMapEvent[T]>[0];
 
 function makeMap(
   size: Vec2 = { x: 32, y: 32 }
@@ -72,7 +75,7 @@ describe("UVMap — create", () => {
 
   test("emits a region-created event", () => {
     const map = makeMap();
-    const events: UVMapEvent[] = [];
+    const events: EventPayload<"region-created">[] = [];
     map.on("region-created", (e) => events.push(e));
 
     const region = map.create({ width: 4, height: 4 });
@@ -80,7 +83,7 @@ describe("UVMap — create", () => {
     assert.strictEqual(events.length, 1);
     assert.deepStrictEqual(
       events[0],
-      { type: "region-created", region }
+      { region }
     );
   });
 });
@@ -88,7 +91,7 @@ describe("UVMap — create", () => {
 describe("UVMap — restore", () => {
   test("re-adds a region exactly as given and emits region-created", () => {
     const map = makeMap();
-    const events: UVMapEvent[] = [];
+    const events: EventPayload<"region-created">[] = [];
     map.on("region-created", (e) => events.push(e));
 
     const region = {
@@ -123,7 +126,7 @@ describe("UVMap — delete", () => {
   test("removes the region and emits region-deleted with its last-known state", () => {
     const map = makeMap();
     const region = map.create({ width: 4, height: 4 });
-    const events: UVMapEvent[] = [];
+    const events: EventPayload<"region-deleted">[] = [];
     map.on("region-deleted", (e) => events.push(e));
 
     const result = map.delete(region.id);
@@ -132,13 +135,13 @@ describe("UVMap — delete", () => {
     assert.strictEqual(map.get(region.id), undefined);
     assert.deepStrictEqual(
       events[0],
-      { type: "region-deleted", region }
+      { region }
     );
   });
 
   test("returns false for an unknown id and does not emit", () => {
     const map = makeMap();
-    const events: UVMapEvent[] = [];
+    const events: EventPayload<"region-deleted">[] = [];
     map.on("region-deleted", (e) => events.push(e));
 
     assert.ok(!map.delete("no-such"));
@@ -160,7 +163,7 @@ describe("UVMap — move", () => {
   test("updates the rect and emits region-moved with the previous rect", () => {
     const map = makeMap();
     const region = map.create({ width: 4, height: 4 });
-    const events: UVMapEvent[] = [];
+    const events: EventPayload<"region-moved">[] = [];
     map.on("region-moved", (e) => events.push(e));
 
     const result = map.move(
@@ -174,7 +177,6 @@ describe("UVMap — move", () => {
       { x: 10, y: 10, width: 4, height: 4 }
     );
     assert.deepStrictEqual(events[0], {
-      type: "region-moved",
       region: {
         ...region,
         rect: {
@@ -222,7 +224,7 @@ describe("UVMap — previewMove", () => {
   test("emits region-dragging with the clamped rect, without mutating the stored region", () => {
     const map = makeMap({ x: 16, y: 16 });
     const region = map.create({ width: 4, height: 4 });
-    const events: UVMapEvent[] = [];
+    const events: EventPayload<"region-dragging">[] = [];
     map.on("region-dragging", (e) => events.push(e));
 
     map.previewMove(
@@ -232,7 +234,6 @@ describe("UVMap — previewMove", () => {
 
     assert.deepStrictEqual(events, [
       {
-        type: "region-dragging",
         id: region.id,
         rect: { x: 12, y: 12, width: 4, height: 4 }
       }
@@ -247,7 +248,7 @@ describe("UVMap — previewMove", () => {
   test("does not record history or affect move()'s previousRect bookkeeping", () => {
     const map = makeMap();
     const region = map.create({ width: 4, height: 4 });
-    const moveEvents: Extract<UVMapEvent, { type: "region-moved"; }>[] = [];
+    const moveEvents: EventPayload<"region-moved">[] = [];
     map.on("region-moved", (e) => moveEvents.push(e));
 
     map.previewMove(
@@ -269,7 +270,7 @@ describe("UVMap — previewMove", () => {
 
   test("is a no-op for an unknown id", () => {
     const map = makeMap();
-    const events: UVMapEvent[] = [];
+    const events: EventPayload<"region-dragging">[] = [];
     map.on("region-dragging", (e) => events.push(e));
 
     map.previewMove(
@@ -330,7 +331,7 @@ describe("UVMap — select / isVisible / showAll", () => {
   test("emits selection-changed only when the selection actually changes", () => {
     const map = makeMap();
     const region = map.create({ width: 4, height: 4 });
-    const events: UVMapEvent[] = [];
+    const events: EventPayload<"selection-changed">[] = [];
     map.on("selection-changed", (e) => events.push(e));
 
     map.select(region.id);
@@ -342,7 +343,7 @@ describe("UVMap — select / isVisible / showAll", () => {
 
   test("emits visibility-changed only when showAll actually changes", () => {
     const map = makeMap();
-    const events: UVMapEvent[] = [];
+    const events: EventPayload<"visibility-changed">[] = [];
     map.on("visibility-changed", (e) => events.push(e));
 
     map.showAll = true;
@@ -374,9 +375,9 @@ describe("UVMap — clear", () => {
 describe("UVMap — on/off", () => {
   test("off() stops a listener from receiving further events", () => {
     const map = makeMap();
-    const events: UVMapEvent[] = [];
+    const events: EventPayload<"region-created">[] = [];
     function listener(
-      e: Extract<UVMapEvent, { type: "region-created"; }>
+      e: EventPayload<"region-created">
     ): void {
       events.push(e);
     }
