@@ -12,6 +12,17 @@ export interface RoomHandle {
 
 export abstract class RoomAuthority {
   abstract readonly id: string;
+  abstract readonly name: string;
+
+  readonly events: readonly string[] = [];
+
+  getEventName(
+    _payload: unknown
+  ): string {
+    throw new Error(
+      `${this.constructor.name}: getEventName() must be implemented to use a configured rights table`
+    );
+  }
 
   abstract onClientConnect(
     client: ClientHandle,

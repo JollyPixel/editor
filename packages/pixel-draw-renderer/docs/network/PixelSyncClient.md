@@ -86,10 +86,10 @@ Whether the initial server snapshot has been applied. `false` until the `"ready"
 
 ### `"ready"`
 
-Dispatched once, the moment the first `"snapshot"` message is applied. Check `syncClient.ready` for the current state instead of relying on the event if the snapshot may have already landed by the time you attach the listener.
+Fired once, the moment the first `"snapshot"` message is applied. Check `syncClient.ready` for the current state instead of relying on the event if the snapshot may have already landed by the time you attach the listener.
 
 ```ts
-syncClient.addEventListener("ready", () => {
+syncClient.on("ready", () => {
   console.log("initial snapshot applied");
 });
 ```

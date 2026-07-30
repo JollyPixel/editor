@@ -131,6 +131,26 @@ export type VoxelLayerHookEvent =
 
 export type VoxelLayerHookAction = VoxelLayerHookEvent["action"];
 
+export const VOXEL_LAYER_HOOK_ACTIONS: readonly VoxelLayerHookAction[] = [
+  "added",
+  "removed",
+  "updated",
+  "cloned",
+  "merged",
+  "offset-updated",
+  "voxel-set",
+  "voxel-removed",
+  "voxels-set",
+  "voxels-removed",
+  "reordered",
+  "object-layer-added",
+  "object-layer-removed",
+  "object-layer-updated",
+  "object-added",
+  "object-removed",
+  "object-updated"
+];
+
 export type VoxelLayerHookListener = (
   event: VoxelLayerHookEvent
 ) => void;

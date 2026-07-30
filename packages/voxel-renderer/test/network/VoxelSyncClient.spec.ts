@@ -72,7 +72,13 @@ interface MockRoom extends network.Room<VoxelNetworkCommand, VoxelServerMessage>
 
 function createMockRoom(clientId = "client-A"): MockRoom {
   const sentCommands: VoxelNetworkCommand[] = [];
-  const events = new EventTarget();
+  const listeners = new Map<string, Set<(payload: any) => void>>();
+
+  function emit(type: string, payload: unknown): void {
+    for (const listener of listeners.get(type) ?? []) {
+      listener(payload);
+    }
+  }
 
   const room: MockRoom = {
     id: "test-room",
@@ -80,12 +86,17 @@ function createMockRoom(clientId = "client-A"): MockRoom {
     peers: new Map(),
     sentCommands,
     left: false,
-    addEventListener: (type, listener, options) => events.addEventListener(type, listener as EventListener, options),
-    removeEventListener: (type, listener, options) => events.removeEventListener(
-      type,
-      listener as EventListener,
-      options
-    ),
+    on: (type, listener) => {
+      let set = listeners.get(type);
+      if (!set) {
+        set = new Set();
+        listeners.set(type, set);
+      }
+      set.add(listener);
+    },
+    off: (type, listener) => {
+      listeners.get(type)?.delete(listener);
+    },
     join() {
       // Unused by VoxelSyncClient.
     },
@@ -99,10 +110,10 @@ function createMockRoom(clientId = "client-A"): MockRoom {
       room.left = true;
     },
     simulateCommand(cmd) {
-      events.dispatchEvent(new CustomEvent("message", { detail: { type: "command", data: cmd } }));
+      emit("message", { type: "command", data: cmd });
     },
     simulateSnapshot(snapshot) {
-      events.dispatchEvent(new CustomEvent("message", { detail: { type: "snapshot", data: snapshot } }));
+      emit("message", { type: "snapshot", data: snapshot });
     }
   };
 

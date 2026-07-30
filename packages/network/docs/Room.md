@@ -3,19 +3,25 @@
 Client-side handle to one room, obtained via [`Client.room()`](./Client.md#room). Do not construct directly.
 
 ```ts
-interface RoomPeerEventDetail {
+interface RoomPeerEvent {
   clientId: string;
 }
 
-interface RoomPeerPresenceEventDetail extends RoomPeerEventDetail {
+interface RoomPeerPresenceEvent extends RoomPeerEvent {
   patch: PeerMetadata;
 }
 
+interface RoomDeniedEvent {
+  event: string;
+  reason: string;
+}
+
 interface RoomEventMap<ServerMessage = unknown> {
-  message: CustomEvent<ServerMessage>;
-  "peer-joined": CustomEvent<RoomPeerEventDetail>;
-  "peer-left": CustomEvent<RoomPeerEventDetail>;
-  "peer-presence": CustomEvent<RoomPeerPresenceEventDetail>;
+  message: (payload: ServerMessage) => void;
+  "peer-joined": (event: RoomPeerEvent) => void;
+  "peer-left": (event: RoomPeerEvent) => void;
+  "peer-presence": (event: RoomPeerPresenceEvent) => void;
+  denied: (event: RoomDeniedEvent) => void;
 }
 
 interface Peer {
@@ -34,15 +40,13 @@ interface Room<ClientMessage = unknown, ServerMessage = unknown> {
   updatePresence(patch: PeerMetadata): void;
   leave(): void;
 
-  addEventListener<K extends keyof RoomEventMap<ServerMessage>>(
+  on<K extends keyof RoomEventMap<ServerMessage>>(
     type: K,
-    listener: (event: RoomEventMap<ServerMessage>[K]) => void,
-    options?: boolean | AddEventListenerOptions
+    listener: RoomEventMap<ServerMessage>[K]
   ): void;
-  removeEventListener<K extends keyof RoomEventMap<ServerMessage>>(
+  off<K extends keyof RoomEventMap<ServerMessage>>(
     type: K,
-    listener: (event: RoomEventMap<ServerMessage>[K]) => void,
-    options?: boolean | EventListenerOptions
+    listener: RoomEventMap<ServerMessage>[K]
   ): void;
 }
 ```
@@ -112,41 +116,49 @@ Sends `"leave"`, clears local peer cache, and removes the room from the client's
 
 ## Events
 
-`Room` supports any number of listeners per event (like `EventTarget`) — unrelated consumers can each `addEventListener` on the same room without clobbering one another, and `removeEventListener` only removes the listener passed in.
+`Room` supports any number of listeners per event — unrelated consumers can each `on` the same room without clobbering one another, and `off` only removes the listener passed in. Listeners receive the payload directly (no `CustomEvent`/`.detail` wrapping).
 
 ```ts
-room.addEventListener("message", (event) => console.log(event.detail));
-room.addEventListener("peer-joined", (event) => console.log(event.detail.clientId));
+room.on("message", (payload) => console.log(payload));
+room.on("peer-joined", (event) => console.log(event.clientId));
 ```
 
 ### `"message"`
 
 ```ts
-CustomEvent<ServerMessage>
+ServerMessage
 ```
 
-Dispatched for `"message"` envelopes from this room. Payload is `event.detail`.
+Fired for `"message"` envelopes from this room. Payload is passed through as-is.
 
 ### `"peer-joined"`
 
 ```ts
-CustomEvent<{ clientId: string }>
+{ clientId: string }
 ```
 
-Dispatched when a remote peer joins after you are already joined.
+Fired when a remote peer joins after you are already joined.
 
 ### `"peer-left"`
 
 ```ts
-CustomEvent<{ clientId: string }>
+{ clientId: string }
 ```
 
-Dispatched when a remote peer leaves or disconnects.
+Fired when a remote peer leaves or disconnects.
 
 ### `"peer-presence"`
 
 ```ts
-CustomEvent<{ clientId: string; patch: PeerMetadata }>
+{ clientId: string; patch: PeerMetadata }
 ```
 
-Dispatched when a remote presence patch arrives. `peers` is already updated before the event fires.
+Fired when a remote presence patch arrives. `peers` is already updated before the event fires.
+
+### `"denied"`
+
+```ts
+{ event: string; reason: string }
+```
+
+Fired when the server rejects an action of this client's own — a join, a presence update, or a `send()` — because its role's [`RightsTable`](./RightsTable.md) right for `event` wasn't `"write"`. `event` is `"$join"`, `"$presence"`, or the domain event name the authority's `getEventName()` returned; `reason` is a human-readable message. See [`RoomAuthority`](./RoomAuthority.md#rbac-minimal) for the underlying RBAC model.

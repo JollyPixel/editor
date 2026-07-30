@@ -8,11 +8,14 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   UVMap,
-  type UVMapEvent
+  type UVMapEvent,
+  type UVMapEventType
 } from "#src/uv/UVMap.ts";
 import { UVController } from "#src/uv/UVController.ts";
 import type { UVOverlay } from "#src/rendering/overlays/UVOverlay.ts";
 import type { SelectionRect } from "#src/types.ts";
+
+type EventPayload<T extends UVMapEventType> = Parameters<UVMapEvent[T]>[0];
 
 // UVController only calls overlay.setLiveOverride; FakeOverlay implements that
 // structural subset and is cast to UVOverlay at the single injection site.
@@ -181,7 +184,7 @@ describe("UVController — drag to move", () => {
       const { map, controller } = makeSetup();
       const region = map.create({ width: 8, height: 8 });
       map.showAll = true;
-      const events: Extract<UVMapEvent, { type: "region-dragging"; }>[] = [];
+      const events: EventPayload<"region-dragging">[] = [];
       map.on("region-dragging", (e) => events.push(e));
 
       controller.handleStart({ x: 2, y: 2 });
@@ -203,7 +206,7 @@ describe("UVController — drag to move", () => {
       const { map, controller } = makeSetup();
       const region = map.create({ width: 8, height: 8 });
       map.showAll = true;
-      const events: Extract<UVMapEvent, { type: "region-dragging"; }>[] = [];
+      const events: EventPayload<"region-dragging">[] = [];
       map.on("region-dragging", (e) => events.push(e));
 
       controller.handleStart({ x: 2, y: 2 });

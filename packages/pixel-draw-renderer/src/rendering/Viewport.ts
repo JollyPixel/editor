@@ -1,8 +1,10 @@
+// Import Third-party Dependencies
+import { Emitter } from "@openally/emitt";
+
 // Import Internal Dependencies
 import { clamp } from "../utils/math.ts";
 import { ViewportTexture } from "./ViewportTexture.ts";
 import { Zoom } from "./Zoom.ts";
-import { TypedEventEmitter } from "../utils/EventEmitter.ts";
 import type {
   Vec2
 } from "../types.ts";
@@ -17,7 +19,9 @@ export interface DefaultViewport {
  * `resizeCanvas` / `centerTexture`). Emitted at the public-method level, never
  * from the internal `clampCamera` those methods share.
  */
-export type ViewportEvent = { type: "changed"; };
+export type ViewportEvent = {
+  changed: () => void;
+};
 
 export interface MouseTexturePositionOptions {
   /**
@@ -61,7 +65,7 @@ export interface ViewportOptions {
 /**
  * Manages viewport camera and zoom state.
  */
-export class Viewport extends TypedEventEmitter<
+export class Viewport extends Emitter<
   ViewportEvent
 > implements DefaultViewport {
   #camera: Vec2 = {
@@ -123,9 +127,7 @@ export class Viewport extends TypedEventEmitter<
     this.#camera.y = this.#canvasHeight / 2 - texPx.y / 2;
 
     this.clampCamera();
-    this.emit({
-      type: "changed"
-    });
+    this.emit("changed");
   }
 
   clampCamera(): void {
@@ -163,9 +165,7 @@ export class Viewport extends TypedEventEmitter<
     this.#camera.y += dy;
 
     this.clampCamera();
-    this.emit({
-      type: "changed"
-    });
+    this.emit("changed");
   }
 
   applyZoom(
@@ -183,9 +183,7 @@ export class Viewport extends TypedEventEmitter<
     this.#camera.y -= worldY * newZoom - worldY * oldZoom;
 
     this.clampCamera();
-    this.emit({
-      type: "changed"
-    });
+    this.emit("changed");
   }
 
   applyPan(
@@ -195,9 +193,7 @@ export class Viewport extends TypedEventEmitter<
     this.#camera.x += dx;
     this.#camera.y += dy;
     this.clampCamera();
-    this.emit({
-      type: "changed"
-    });
+    this.emit("changed");
   }
 
   mouseCanvasPosition(

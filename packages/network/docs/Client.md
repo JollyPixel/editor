@@ -1,6 +1,6 @@
 # Client
 
-Browser/Node counterpart to [`Server`](./Server.md). Owns one socket connection and provides room-scoped [`Room`](./Room.md) instances. Extends `EventTarget`.
+Browser/Node counterpart to [`Server`](./Server.md). Owns one socket connection and provides room-scoped [`Room`](./Room.md) instances. Extends `@openally/emitt`'s `Emitter<{ ready: () => void }>`.
 
 ```ts
 new Client(options: ClientOptions)
@@ -15,7 +15,7 @@ interface ClientOptions {
    */
   identity?: PeerMetadata;
   /**
-   * @default a `console`-backed logger
+   * @default a LogLayer instance backed by loglayer's `ConsoleTransport`
    */
   logger?: Logger;
 }
@@ -45,10 +45,10 @@ Whether the underlying socket has finished opening.
 
 ### `"ready"`
 
-Dispatched once when the socket opens.
+Fired once when the socket opens.
 
 ```ts
-client.addEventListener("ready", () => {
+client.on("ready", () => {
   console.log("connected");
 });
 ```
@@ -81,7 +81,7 @@ Closes the underlying socket.
 - Outgoing serialization failures are logged and dropped.
 - Messages sent before the connection opens are queued and flushed when ready.
 
-Defaults to a `console`-backed logger if `logger` is not provided.
+`Logger` is `loglayer`'s `ILogLayer` type; defaults to a `LogLayer` wrapping loglayer's own `ConsoleTransport` if `logger` is not provided. Being on `loglayer` (not a hand-rolled interface) means the same `Logger` type — and the same `.withMetadata()/.withError()` structured-logging API — is shared with the server side ([`Server`](./Server.md), [`ServerRoom`](./ServerRoom.md)).
 
 ## Quick Use
 
@@ -100,9 +100,9 @@ const client = new network.Client({
 
 const room = client.room("echo");
 
-room.addEventListener("message", (event) => console.log(event.detail));
-room.addEventListener("peer-joined", (event) => console.log(`${event.detail.clientId} joined`));
-room.addEventListener("peer-left", (event) => console.log(`${event.detail.clientId} left`));
+room.on("message", (payload) => console.log(payload));
+room.on("peer-joined", (event) => console.log(`${event.clientId} joined`));
+room.on("peer-left", (event) => console.log(`${event.clientId} left`));
 
 room.join();
 room.send({ hello: "world" });

@@ -1,5 +1,7 @@
+// Import Third-party Dependencies
+import { Emitter } from "@openally/emitt";
+
 // Import Internal Dependencies
-import { TypedEventEmitter } from "../../utils/EventEmitter.ts";
 import type {
   RGBA,
   SelectionRect
@@ -30,12 +32,14 @@ export interface FloatingOverlayOptions {
  * Fired after the floating selection appears, moves, or clears — a view
  * change the pixel buffer knows nothing about, so the view repaints on it.
  */
-export type FloatingSelectionEvent = { type: "changed"; };
+export type FloatingSelectionEvent = {
+  changed: () => void;
+};
 
 /**
  * Renders a floating selection overlay.
  */
-export class FloatingSelectionOverlay extends TypedEventEmitter<
+export class FloatingSelectionOverlay extends Emitter<
   FloatingSelectionEvent
 > {
   #canvas: HTMLCanvasElement | null = null;
@@ -76,7 +80,7 @@ export class FloatingSelectionOverlay extends TypedEventEmitter<
     this.#sourceRect = sourceRect;
     this.#liveRect = sourceRect;
     this.#blankSource = blankSource;
-    this.emit({ type: "changed" });
+    this.emit("changed");
   }
 
   static #buildUniformEraseCanvas(
@@ -138,7 +142,7 @@ export class FloatingSelectionOverlay extends TypedEventEmitter<
     }
 
     this.#liveRect = liveRect;
-    this.emit({ type: "changed" });
+    this.emit("changed");
   }
 
   clear(): void {
@@ -152,7 +156,7 @@ export class FloatingSelectionOverlay extends TypedEventEmitter<
     this.#blankSource = true;
 
     if (wasActive) {
-      this.emit({ type: "changed" });
+      this.emit("changed");
     }
   }
 

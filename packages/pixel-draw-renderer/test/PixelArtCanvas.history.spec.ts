@@ -500,14 +500,20 @@ function makeServerBackedRoom(
   clientId: string
 ): RecordingRoom {
   const sentCommands: PixelNetworkCommand[] = [];
-  const events = new EventTarget();
+  const listeners = new Map<string, Set<(payload: any) => void>>();
+
+  function emit(type: string, payload: unknown): void {
+    for (const listener of listeners.get(type) ?? []) {
+      listener(payload);
+    }
+  }
 
   function handleFromServer(data: unknown): void {
     if (!isServerMessage(data)) {
       return;
     }
 
-    events.dispatchEvent(new CustomEvent("message", { detail: data }));
+    emit("message", data);
   }
 
   // Normally provided by Server/ServerRoom — this single-client fake
@@ -521,12 +527,17 @@ function makeServerBackedRoom(
     peers: new Map(),
     sentCommands,
     serverRoom,
-    addEventListener: (type, listener, options) => events.addEventListener(type, listener as EventListener, options),
-    removeEventListener: (type, listener, options) => events.removeEventListener(
-      type,
-      listener as EventListener,
-      options
-    ),
+    on: (type, listener) => {
+      let set = listeners.get(type);
+      if (!set) {
+        set = new Set();
+        listeners.set(type, set);
+      }
+      set.add(listener);
+    },
+    off: (type, listener) => {
+      listeners.get(type)?.delete(listener);
+    },
     join() {
       // Unused by these tests.
     },

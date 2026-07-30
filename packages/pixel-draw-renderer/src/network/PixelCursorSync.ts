@@ -45,19 +45,19 @@ export class PixelCursorSync {
   #lastSent: Vec2 | null | undefined;
 
   #onPeerJoined = (
-    event: CustomEvent<network.RoomPeerEventDetail>
+    event: network.RoomPeerEvent
   ): void => {
-    this.#syncPeer(event.detail.clientId);
+    this.#syncPeer(event.clientId);
   };
   #onPeerLeft = (
-    event: CustomEvent<network.RoomPeerEventDetail>
+    event: network.RoomPeerEvent
   ): void => {
-    this.#canvas?.peerCursors.remove(event.detail.clientId);
+    this.#canvas?.peerCursors.remove(event.clientId);
   };
   #onPeerPresence = (
-    event: CustomEvent<network.RoomPeerPresenceEventDetail>
+    event: network.RoomPeerPresenceEvent
   ): void => {
-    this.#applyPresencePatch(event.detail.clientId, event.detail.patch);
+    this.#applyPresencePatch(event.clientId, event.patch);
   };
 
   constructor(
@@ -66,9 +66,9 @@ export class PixelCursorSync {
     this.#room = options.room;
     this.#getLabel = options.getLabel ?? defaultGetLabel;
 
-    this.#room.addEventListener("peer-joined", this.#onPeerJoined);
-    this.#room.addEventListener("peer-left", this.#onPeerLeft);
-    this.#room.addEventListener("peer-presence", this.#onPeerPresence);
+    this.#room.on("peer-joined", this.#onPeerJoined);
+    this.#room.on("peer-left", this.#onPeerLeft);
+    this.#room.on("peer-presence", this.#onPeerPresence);
   }
 
   attach(
@@ -97,9 +97,9 @@ export class PixelCursorSync {
 
   destroy(): void {
     this.detach();
-    this.#room.removeEventListener("peer-joined", this.#onPeerJoined);
-    this.#room.removeEventListener("peer-left", this.#onPeerLeft);
-    this.#room.removeEventListener("peer-presence", this.#onPeerPresence);
+    this.#room.off("peer-joined", this.#onPeerJoined);
+    this.#room.off("peer-left", this.#onPeerLeft);
+    this.#room.off("peer-presence", this.#onPeerPresence);
   }
 
   #reportLocal(

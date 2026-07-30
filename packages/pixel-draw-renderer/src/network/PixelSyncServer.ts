@@ -52,6 +52,7 @@ export interface PixelSyncServerOptions {
  */
 export class PixelSyncServer extends network.RoomAuthority {
   readonly id: string;
+  readonly name = "pixel-draw.renderer";
   readonly buffer: PixelBuffer;
 
   #pixelTracker: network.ConflictTracker;

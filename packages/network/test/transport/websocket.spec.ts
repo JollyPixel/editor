@@ -103,8 +103,8 @@ describe("WebsocketTransport + Client (integration)", () => {
     await waitFor(() => authority.connected.length === 1);
 
     let received: unknown;
-    room.addEventListener("message", (event) => {
-      received = event.detail;
+    room.on("message", (payload) => {
+      received = payload;
     });
 
     room.send({ hello: "world" });
@@ -132,7 +132,7 @@ describe("WebsocketTransport + Client (integration)", () => {
     const roomA = clientA.room("test-ns");
     roomA.join();
     const joined: string[] = [];
-    roomA.addEventListener("peer-joined", (event) => joined.push(event.detail.clientId));
+    roomA.on("peer-joined", (event) => joined.push(event.clientId));
 
     await waitFor(() => authority.connected.length === 1);
 
@@ -145,7 +145,7 @@ describe("WebsocketTransport + Client (integration)", () => {
     assert.deepEqual(joined, [authority.connected[1].id]);
 
     const left: string[] = [];
-    roomA.addEventListener("peer-left", (event) => left.push(event.detail.clientId));
+    roomA.on("peer-left", (event) => left.push(event.clientId));
     clientB.destroy();
 
     await waitFor(() => authority.disconnected.length === 1);

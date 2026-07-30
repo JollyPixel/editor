@@ -1,3 +1,11 @@
+// Import Third-party Dependencies
+import {
+  Ok,
+  Err,
+  wrap,
+  type Result
+} from "@openally/result";
+
 // Import Internal Dependencies
 import type {
   Peer,
@@ -12,11 +20,8 @@ export type Envelope =
   | { room: string; kind: "sync"; members: Peer[]; }
   | { room: string; kind: "peer-joined"; clientId: string; identity: PeerMetadata; }
   | { room: string; kind: "peer-left"; clientId: string; }
-  | { room: string; kind: "peer-presence"; clientId: string; patch: PeerMetadata; };
-
-export type EnvelopeResult<T> =
-  | { success: true; data: T; }
-  | { success: false; error: string; };
+  | { room: string; kind: "peer-presence"; clientId: string; patch: PeerMetadata; }
+  | { room: string; kind: "denied"; event: string; reason: string; };
 
 const ENVELOPE_KINDS = [
   "join",
@@ -26,7 +31,8 @@ const ENVELOPE_KINDS = [
   "sync",
   "peer-joined",
   "peer-left",
-  "peer-presence"
+  "peer-presence",
+  "denied"
 ] as const;
 
 function describeEnvelopeShapeError(
@@ -54,39 +60,29 @@ function describeEnvelopeShapeError(
 export const Envelope = {
   parse(
     raw: unknown
-  ): EnvelopeResult<Envelope> {
+  ): Result<Envelope, string> {
     let data: unknown = raw;
     if (typeof raw === "string") {
-      try {
-        data = JSON.parse(raw);
+      const parsed = wrap<unknown, Error>(() => JSON.parse(raw));
+      if (!parsed.ok) {
+        return Err(`invalid JSON: ${parsed.val.message}`);
       }
-      catch (error) {
-        return {
-          success: false,
-          error: `invalid JSON: ${error instanceof Error ? error.message : String(error)}`
-        };
-      }
+      data = parsed.unwrap();
     }
 
     const shapeError = describeEnvelopeShapeError(data);
     if (shapeError) {
-      return { success: false, error: shapeError };
+      return Err(shapeError);
     }
 
-    return { success: true, data: data as Envelope };
+    return Ok(data as Envelope);
   },
 
   stringify(
     envelope: Envelope
-  ): EnvelopeResult<string> {
-    try {
-      return { success: true, data: JSON.stringify(envelope) };
-    }
-    catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error)
-      };
-    }
+  ): Result<string, string> {
+    const result = wrap<string, Error>(() => JSON.stringify(envelope));
+
+    return result.ok ? result : Err(result.val.message);
   }
 };

@@ -10,6 +10,11 @@ function createWebSocketNetworkPlugin(
 interface WebsocketVitePluginOptions {
   roomAuthorities?: RoomAuthority[];
   /**
+   * Per-role rights table, forwarded to the underlying `Server` —
+   * see `ServerOptions.rights`. Shared by every authority in `roomAuthorities`.
+   */
+  rights?: RightsMap;
+  /**
    * Dedicated websocket path to avoid conflicting with Vite HMR.
    * @default DEFAULT_WEBSOCKET_PATH ("/ws-sync")
    */
@@ -53,6 +58,27 @@ export default defineConfig({
       ]
     })
   ]
+});
+```
+
+### Configuring rights
+
+Pass `rights` alongside `roomAuthorities` — it's forwarded straight to the underlying `Server`, so it applies to every authority registered, keyed by each authority's `name` (its type), not its `id` (`RoomAuthority` implementations never define this themselves, see [RBAC](../RoomAuthority.md#rbac-minimal)):
+
+```ts
+createWebSocketNetworkPlugin({
+  roomAuthorities: [
+    new VoxelSyncServer({ id: "voxel-map:world-1", world }),
+    new VoxelSyncServer({ id: "voxel-map:world-2" }) // same rules apply here too
+  ],
+  rights: {
+    viewer: {
+      "voxel.renderer.$join": "write",
+      "voxel.renderer.$presence": "write",
+      "voxel.renderer.voxel-set": "read"
+    },
+    editor: { "voxel.renderer.$join": "write" } // everything else fails open to "write"
+  }
 });
 ```
 

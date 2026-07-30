@@ -52,7 +52,7 @@ new PixelCursorSync({
 1. Watches `canvas.onCursorMove` and calls `room.updatePresence({ cursor: pos })`, deduped against the last position sent.
 2. On `"peer-presence"`/`"peer-joined"`, mirrors the peer's cursor onto `canvas.peerCursors` with a color hashed from their client id.
 3. On `"peer-left"`, removes that peer's marker.
-4. Registers its own `"peer-joined"`/`"peer-left"`/`"peer-presence"` listeners via `room.addEventListener` — since `Room` supports multiple listeners per event, this never clobbers other code (e.g. your own connect/disconnect logging) listening on the same room.
+4. Registers its own `"peer-joined"`/`"peer-left"`/`"peer-presence"` listeners via `room.on` — since `Room` supports multiple listeners per event, this never clobbers other code (e.g. your own connect/disconnect logging) listening on the same room.
 
 ## Lifecycle
 
@@ -70,7 +70,7 @@ new PixelCursorSync({
 ### `destroy()`
 
 - Calls `detach()`.
-- Removes its own `"peer-joined"`/`"peer-left"`/`"peer-presence"` listeners via `room.removeEventListener` — other listeners on the room are untouched.
+- Removes its own `"peer-joined"`/`"peer-left"`/`"peer-presence"` listeners via `room.off` — other listeners on the room are untouched.
 
 ## Known Limitation
 

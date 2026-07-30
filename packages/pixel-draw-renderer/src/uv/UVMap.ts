@@ -1,27 +1,27 @@
+// Import Third-party Dependencies
+import { Emitter } from "@openally/emitt";
+
 // Import Internal Dependencies
 import { clamp, clampRectSize } from "../utils/math.ts";
 import { ColorPalette } from "../utils/ColorPalette.ts";
-import {
-  TypedEventEmitter,
-  type EventListener
-} from "../utils/EventEmitter.ts";
 import type {
   SelectionRect,
   Vec2
 } from "../types.ts";
 import type { UVRegion } from "./UVRegion.ts";
 
-export type UVMapEvent =
-  | { type: "region-created"; region: UVRegion; }
-  | { type: "region-deleted"; region: UVRegion; }
-  | { type: "region-moved"; region: UVRegion; previousRect: SelectionRect; }
-  | { type: "region-dragging"; id: string; rect: SelectionRect; }
-  | { type: "selection-changed"; selectedRegionId: string | null; }
-  | { type: "visibility-changed"; showAll: boolean; };
+export type UVMapEvent = {
+  "region-created": (event: { region: UVRegion; }) => void;
+  "region-deleted": (event: { region: UVRegion; }) => void;
+  "region-moved": (event: { region: UVRegion; previousRect: SelectionRect; }) => void;
+  "region-dragging": (event: { id: string; rect: SelectionRect; }) => void;
+  "selection-changed": (event: { selectedRegionId: string | null; }) => void;
+  "visibility-changed": (event: { showAll: boolean; }) => void;
+};
 
-export type UVMapEventType = UVMapEvent["type"];
+export type UVMapEventType = keyof UVMapEvent;
 
-export type UVMapListener<T extends UVMapEventType = UVMapEventType> = EventListener<UVMapEvent, T>;
+export type UVMapListener<T extends UVMapEventType = UVMapEventType> = UVMapEvent[T];
 
 export interface UVMapOptions {
   /**
@@ -52,7 +52,7 @@ const kCascadeStep = 16;
  * selection/visibility state that governs which ones render, notifying
  * listeners of every change.
  */
-export class UVMap extends TypedEventEmitter<UVMapEvent> implements Iterable<UVRegion> {
+export class UVMap extends Emitter<UVMapEvent> implements Iterable<UVRegion> {
   #getCanvasSize: () => Vec2;
   #regions = new Map<string, UVRegion>();
   #selectedRegionId: string | null = null;
@@ -95,10 +95,7 @@ export class UVMap extends TypedEventEmitter<UVMapEvent> implements Iterable<UVR
     }
 
     this.#showAll = value;
-    this.emit({
-      type: "visibility-changed",
-      showAll: value
-    });
+    this.emit("visibility-changed", { showAll: value });
   }
 
   get(
@@ -135,10 +132,7 @@ export class UVMap extends TypedEventEmitter<UVMapEvent> implements Iterable<UVR
     }
 
     this.#selectedRegionId = id;
-    this.emit({
-      type: "selection-changed",
-      selectedRegionId: id
-    });
+    this.emit("selection-changed", { selectedRegionId: id });
   }
 
   /**
@@ -159,10 +153,7 @@ export class UVMap extends TypedEventEmitter<UVMapEvent> implements Iterable<UVR
     };
 
     this.#regions.set(region.id, region);
-    this.emit({
-      type: "region-created",
-      region
-    });
+    this.emit("region-created", { region });
 
     return region;
   }
@@ -180,10 +171,7 @@ export class UVMap extends TypedEventEmitter<UVMapEvent> implements Iterable<UVR
     };
     this.#regions.set(stored.id, stored);
 
-    this.emit({
-      type: "region-created",
-      region: stored
-    });
+    this.emit("region-created", { region: stored });
 
     return stored;
   }
@@ -200,10 +188,7 @@ export class UVMap extends TypedEventEmitter<UVMapEvent> implements Iterable<UVR
     if (this.#selectedRegionId === id) {
       this.#selectedRegionId = null;
     }
-    this.emit({
-      type: "region-deleted",
-      region
-    });
+    this.emit("region-deleted", { region });
 
     return true;
   }
@@ -228,11 +213,7 @@ export class UVMap extends TypedEventEmitter<UVMapEvent> implements Iterable<UVR
     };
     this.#regions.set(id, moved);
 
-    this.emit({
-      type: "region-moved",
-      region: moved,
-      previousRect
-    });
+    this.emit("region-moved", { region: moved, previousRect });
 
     return true;
   }
@@ -256,11 +237,7 @@ export class UVMap extends TypedEventEmitter<UVMapEvent> implements Iterable<UVR
       rect,
       this.#getCanvasSize()
     );
-    this.emit({
-      type: "region-dragging",
-      id,
-      rect: clamped
-    });
+    this.emit("region-dragging", { id, rect: clamped });
   }
 
   /**

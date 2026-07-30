@@ -1,14 +1,22 @@
+// Import Third-party Dependencies
+import { match } from "ts-pattern";
+import { Emitter } from "@openally/emitt";
+
 // Import Internal Dependencies
 import { Envelope } from "./Envelope.ts";
 import { DEFAULT_WEBSOCKET_PATH } from "./transport/constants.ts";
 import type {
-  Logger,
   Peer,
   PeerMetadata
 } from "./types.ts";
 import type {
-  Room
+  Room,
+  RoomEventMap
 } from "./client/Room.ts";
+import {
+  createLogger,
+  type Logger
+} from "./logger/console.ts";
 
 export interface ClientOptions {
   /**
@@ -25,22 +33,22 @@ export interface ClientOptions {
   logger?: Logger;
 }
 
+export type ClientEventMap = {
+  ready: () => void;
+};
+
+// Client's own view of a room: same public surface as `Room`, plus the `emit` used to
+// deliver incoming envelopes. `Room` deliberately omits `emit` so consumers can't fake events.
+type InternalRoom<ClientMessage = any, ServerMessage = any> =
+  Room<ClientMessage, ServerMessage> & Emitter<RoomEventMap<ServerMessage>>;
+
 function getDefaultUrl(): string {
   const protocol = location.protocol === "https:" ? "wss:" : "ws:";
 
   return `${protocol}//${location.host}${DEFAULT_WEBSOCKET_PATH}`;
 }
 
-function createConsoleLogger(): Logger {
-  return {
-    debug: (...args) => console.debug(...args),
-    info: (...args) => console.info(...args),
-    warn: (...args) => console.warn(...args),
-    error: (...args) => console.error(...args)
-  };
-}
-
-export class Client extends EventTarget {
+export class Client extends Emitter<ClientEventMap> {
   readonly id: string = crypto.randomUUID();
 
   #identity: PeerMetadata;
@@ -52,15 +60,14 @@ export class Client extends EventTarget {
   #destroyed = false;
   // Buffer outbound messages until the socket opens.
   #queue: string[] = [];
-  #rooms = new Map<string, Room<any, any>>();
-  #roomEvents = new Map<string, EventTarget>();
+  #rooms = new Map<string, InternalRoom>();
 
   constructor(
     options: ClientOptions
   ) {
     super();
     this.#identity = options.identity ?? {};
-    this.#logger = options.logger ?? createConsoleLogger();
+    this.#logger = options.logger ?? createLogger();
     this.#socket = new WebSocket(
       options.url ?? getDefaultUrl()
     );
@@ -71,9 +78,7 @@ export class Client extends EventTarget {
         this.#socket.send(raw);
       }
       this.#queue = [];
-      this.dispatchEvent(
-        new Event("ready")
-      );
+      this.emit("ready");
     });
     this.#socket.addEventListener("message", (event) => {
       this.#handleMessage(event.data);
@@ -85,10 +90,9 @@ export class Client extends EventTarget {
       this.#ready = false;
       this.#closed = true;
       if (!this.#destroyed) {
-        this.#logger.warn(
-          { code: event.code, reason: event.reason },
-          "WebSocket closed unexpectedly"
-        );
+        this.#logger
+          .withMetadata({ code: event.code, reason: event.reason })
+          .warn("WebSocket closed unexpectedly");
       }
     });
   }
@@ -106,57 +110,47 @@ export class Client extends EventTarget {
     }
 
     const peers = new Map<string, Peer>();
-    const events = new EventTarget();
     let joined = false;
 
-    const room: Room<ClientMessage, ServerMessage> = {
-      id: name,
-      clientId: this.id,
-      peers,
-      addEventListener: (type, listener, options) => events.addEventListener(
-        type,
-        listener as EventListener,
-        options
-      ),
-      removeEventListener: (type, listener, options) => events.removeEventListener(
-        type,
-        listener as EventListener,
-        options
-      ),
-      join: () => {
-        if (joined) {
-          return;
+    const room: InternalRoom<ClientMessage, ServerMessage> = Object.assign(
+      new Emitter<RoomEventMap<ServerMessage>>(),
+      {
+        id: name,
+        clientId: this.id,
+        peers,
+        join: () => {
+          if (joined) {
+            return;
+          }
+          joined = true;
+          this.#send({
+            room: name,
+            kind: "join",
+            identity: this.#identity
+          });
+        },
+        send: (payload: ClientMessage) => this.#send({
+          room: name,
+          kind: "message",
+          payload
+        }),
+        updatePresence: (patch: PeerMetadata) => this.#send({
+          room: name,
+          kind: "presence",
+          patch
+        }),
+        leave: () => {
+          this.#send({
+            room: name,
+            kind: "leave"
+          });
+          this.#rooms.delete(name);
+          peers.clear();
         }
-        joined = true;
-        this.#send({
-          room: name,
-          kind: "join",
-          identity: this.#identity
-        });
-      },
-      send: (payload) => this.#send({
-        room: name,
-        kind: "message",
-        payload
-      }),
-      updatePresence: (patch) => this.#send({
-        room: name,
-        kind: "presence",
-        patch
-      }),
-      leave: () => {
-        this.#send({
-          room: name,
-          kind: "leave"
-        });
-        this.#rooms.delete(name);
-        this.#roomEvents.delete(name);
-        peers.clear();
       }
-    };
+    );
 
     this.#rooms.set(name, room);
-    this.#roomEvents.set(name, events);
 
     return room;
   }
@@ -170,19 +164,23 @@ export class Client extends EventTarget {
     envelope: Envelope
   ): void {
     const result = Envelope.stringify(envelope);
-    if (!result.success) {
-      this.#logger.error({ envelope, error: result.error }, "failed to serialize outgoing envelope");
+    if (!result.ok) {
+      this.#logger
+        .withMetadata({ envelope, error: result.val })
+        .error("failed to serialize outgoing envelope");
 
       return;
     }
-    const raw = result.data;
+    const raw = result.unwrap();
 
     if (this.#ready) {
       this.#socket.send(raw);
     }
     else {
       if (this.#closed) {
-        this.#logger.warn({ envelope }, "queuing message on a closed socket; it will never be sent");
+        this.#logger
+          .withMetadata({ envelope })
+          .warn("queuing message on a closed socket; it will never be sent");
       }
       this.#queue.push(raw);
     }
@@ -192,66 +190,108 @@ export class Client extends EventTarget {
     raw: string
   ): void {
     const result = Envelope.parse(raw);
-    if (!result.success) {
-      this.#logger.warn({ raw, error: result.error }, "dropped malformed envelope");
+    if (!result.ok) {
+      this.#logger
+        .withMetadata({ raw, error: result.val })
+        .warn("dropped malformed envelope");
 
       return;
     }
-    const envelope = result.data;
+    const envelope = result.unwrap();
 
     const room = this.#rooms.get(envelope.room);
-    const events = this.#roomEvents.get(envelope.room);
-    if (!room || !events) {
-      this.#logger.warn({ room: envelope.room, kind: envelope.kind }, "dropped envelope for an unjoined room");
+    if (!room) {
+      this.#logger
+        .withMetadata({ room: envelope.room, kind: envelope.kind })
+        .warn("dropped envelope for an unjoined room");
 
       return;
     }
+
     // `room.peers` is readonly to consumers; Client mutates the backing map.
     const peers = room.peers as Map<string, Peer>;
 
-    switch (envelope.kind) {
-      case "message":
-        events.dispatchEvent(
-          new CustomEvent("message", { detail: envelope.payload })
-        );
-        break;
-      case "sync":
-        for (const member of envelope.members) {
-          peers.set(member.clientId, {
-            clientId: member.clientId,
-            identity: member.identity,
-            presence: member.presence
-          });
-        }
-        break;
-      case "peer-joined":
-        peers.set(envelope.clientId, {
-          clientId: envelope.clientId,
-          identity: envelope.identity,
-          presence: {}
-        });
-        events.dispatchEvent(
-          new CustomEvent("peer-joined", { detail: { clientId: envelope.clientId } })
-        );
-        break;
-      case "peer-left":
-        peers.delete(envelope.clientId);
-        events.dispatchEvent(
-          new CustomEvent("peer-left", { detail: { clientId: envelope.clientId } })
-        );
-        break;
-      case "peer-presence": {
-        const peer = peers.get(envelope.clientId);
-        if (peer) {
-          Object.assign(peer.presence, envelope.patch);
-        }
-        events.dispatchEvent(
-          new CustomEvent("peer-presence", {
-            detail: { clientId: envelope.clientId, patch: envelope.patch }
-          })
-        );
-        break;
-      }
+    match(envelope)
+      .with({ kind: "message" }, (envelope) => this.#handleRoomMessage(room, envelope))
+      .with({ kind: "sync" }, (envelope) => this.#handleSync(peers, envelope))
+      .with({ kind: "peer-joined" }, (envelope) => this.#handlePeerJoined(room, peers, envelope))
+      .with({ kind: "peer-left" }, (envelope) => this.#handlePeerLeft(room, peers, envelope))
+      .with({ kind: "peer-presence" }, (envelope) => this.#handlePeerPresence(room, peers, envelope))
+      .with({ kind: "denied" }, (envelope) => this.#handleDenied(room, envelope))
+      .otherwise(() => void 0);
+  }
+
+  #handleRoomMessage(
+    room: InternalRoom,
+    envelope: Extract<Envelope, { kind: "message"; }>
+  ): void {
+    room.emit("message", envelope.payload);
+  }
+
+  #handleSync(
+    peers: Map<string, Peer>,
+    envelope: Extract<Envelope, { kind: "sync"; }>
+  ): void {
+    for (const member of envelope.members) {
+      peers.set(member.clientId, {
+        clientId: member.clientId,
+        identity: member.identity,
+        presence: member.presence
+      });
     }
+  }
+
+  #handlePeerJoined(
+    room: InternalRoom,
+    peers: Map<string, Peer>,
+    envelope: Extract<Envelope, { kind: "peer-joined"; }>
+  ): void {
+    peers.set(envelope.clientId, {
+      clientId: envelope.clientId,
+      identity: envelope.identity,
+      presence: {}
+    });
+
+    room.emit("peer-joined", {
+      clientId: envelope.clientId
+    });
+  }
+
+  #handlePeerLeft(
+    room: InternalRoom,
+    peers: Map<string, Peer>,
+    envelope: Extract<Envelope, { kind: "peer-left"; }>
+  ): void {
+    peers.delete(envelope.clientId);
+
+    room.emit("peer-left", {
+      clientId: envelope.clientId
+    });
+  }
+
+  #handlePeerPresence(
+    room: InternalRoom,
+    peers: Map<string, Peer>,
+    envelope: Extract<Envelope, { kind: "peer-presence"; }>
+  ): void {
+    const peer = peers.get(envelope.clientId);
+    if (peer) {
+      Object.assign(peer.presence, envelope.patch);
+    }
+
+    room.emit("peer-presence", {
+      clientId: envelope.clientId,
+      patch: envelope.patch
+    });
+  }
+
+  #handleDenied(
+    room: InternalRoom,
+    envelope: Extract<Envelope, { kind: "denied"; }>
+  ): void {
+    room.emit("denied", {
+      event: envelope.event,
+      reason: envelope.reason
+    });
   }
 }

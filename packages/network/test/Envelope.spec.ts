@@ -12,9 +12,24 @@ describe("Envelope.parse", () => {
   test("parses a valid JSON string into an envelope", () => {
     const result = Envelope.parse(JSON.stringify({ room: "pixel-draw", kind: "leave" }));
 
-    assert.deepEqual(result, {
-      success: true,
-      data: { room: "pixel-draw", kind: "leave" }
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.val, { room: "pixel-draw", kind: "leave" });
+  });
+
+  test("accepts a \"denied\" envelope", () => {
+    const result = Envelope.parse({
+      room: "pixel-draw",
+      kind: "denied",
+      event: "$join",
+      reason: "role \"viewer\" is not permitted to join this room"
+    });
+
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.val, {
+      room: "pixel-draw",
+      kind: "denied",
+      event: "$join",
+      reason: "role \"viewer\" is not permitted to join this room"
     });
   });
 
@@ -25,67 +40,59 @@ describe("Envelope.parse", () => {
       payload: { hello: "world" }
     });
 
-    assert.deepEqual(result, {
-      success: true,
-      data: {
-        room: "pixel-draw",
-        kind: "message",
-        payload: { hello: "world" }
-      }
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.val, {
+      room: "pixel-draw",
+      kind: "message",
+      payload: { hello: "world" }
     });
   });
 
   test("fails with the JSON parse error message for malformed JSON", () => {
     const result = Envelope.parse("{not json");
 
-    assert.equal(result.success, false);
-    assert.match((result as { error: string; }).error, /invalid JSON/);
+    assert.equal(result.ok, false);
+    assert.match((result as { val: string; }).val, /invalid JSON/);
   });
 
   test("fails with a descriptive error for a JSON value that isn't an envelope shape", () => {
     const result = Envelope.parse(JSON.stringify({ hello: "world" }));
 
-    assert.deepEqual(result, {
-      success: false,
-      error: "missing \"room\" or \"kind\" property"
-    });
+    assert.equal(result.ok, false);
+    assert.equal((result as { val: string; }).val, "missing \"room\" or \"kind\" property");
   });
 
   test("fails with a descriptive error when kind is unrecognized", () => {
     const result = Envelope.parse({ room: "pixel-draw", kind: "unknown-kind" });
 
-    assert.deepEqual(result, {
-      success: false,
-      error: "unrecognized \"kind\": \"unknown-kind\""
-    });
+    assert.equal(result.ok, false);
+    assert.equal((result as { val: string; }).val, "unrecognized \"kind\": \"unknown-kind\"");
   });
 
   test("fails with a descriptive error when room is missing or not a string", () => {
-    assert.deepEqual(Envelope.parse({ kind: "leave" }), {
-      success: false,
-      error: "missing \"room\" or \"kind\" property"
-    });
-    assert.deepEqual(Envelope.parse({ room: 42, kind: "leave" }), {
-      success: false,
-      error: "\"room\" must be a string"
-    });
+    const missingRoom = Envelope.parse({ kind: "leave" });
+    assert.equal(missingRoom.ok, false);
+    assert.equal((missingRoom as { val: string; }).val, "missing \"room\" or \"kind\" property");
+
+    const invalidRoom = Envelope.parse({ room: 42, kind: "leave" });
+    assert.equal(invalidRoom.ok, false);
+    assert.equal((invalidRoom as { val: string; }).val, "\"room\" must be a string");
   });
 
   test("fails with a descriptive error for non-object input", () => {
-    assert.deepEqual(Envelope.parse(null), {
-      success: false,
-      error: "expected an object, received object"
-    });
-    assert.deepEqual(Envelope.parse(42), {
-      success: false,
-      error: "expected an object, received number"
-    });
+    const nullResult = Envelope.parse(null);
+    assert.equal(nullResult.ok, false);
+    assert.equal((nullResult as { val: string; }).val, "expected an object, received object");
+
+    const numberResult = Envelope.parse(42);
+    assert.equal(numberResult.ok, false);
+    assert.equal((numberResult as { val: string; }).val, "expected an object, received number");
 
     // A string is JSON.parse'd first, so an unparseable one fails as invalid JSON
     // rather than reaching the object-shape check.
     const result = Envelope.parse("just a string");
-    assert.equal(result.success, false);
-    assert.match((result as { error: string; }).error, /invalid JSON/);
+    assert.equal(result.ok, false);
+    assert.match((result as { val: string; }).val, /invalid JSON/);
   });
 });
 
@@ -94,10 +101,13 @@ describe("Envelope.stringify", () => {
     const envelope: Envelope = { room: "pixel-draw", kind: "leave" };
     const stringified = Envelope.stringify(envelope);
 
-    assert.equal(stringified.success, true);
-    const raw = (stringified as { data: string; }).data;
+    assert.equal(stringified.ok, true);
+    const raw = (stringified as { val: string; }).val;
     assert.equal(typeof raw, "string");
-    assert.deepEqual(Envelope.parse(raw), { success: true, data: envelope });
+
+    const parsed = Envelope.parse(raw);
+    assert.equal(parsed.ok, true);
+    assert.deepEqual(parsed.val, envelope);
   });
 
   test("fails with a descriptive error for a value JSON.stringify can't serialize", () => {
@@ -110,7 +120,7 @@ describe("Envelope.stringify", () => {
       payload: circular
     });
 
-    assert.equal(result.success, false);
-    assert.match((result as { error: string; }).error, /circular/i);
+    assert.equal(result.ok, false);
+    assert.match((result as { val: string; }).val, /circular/i);
   });
 });

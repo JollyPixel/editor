@@ -342,6 +342,33 @@ describe("VoxelSyncServer — receive: invalid commands are dropped, not thrown"
   });
 });
 
+describe("VoxelSyncServer — rights", () => {
+  it("exposes a stable name shared by every instance, for rights-table namespacing", () => {
+    assert.equal(new VoxelSyncServer({ id: "voxel-map:world-1" }).name, "voxel.renderer");
+    assert.equal(new VoxelSyncServer({ id: "voxel-map:world-2" }).name, "voxel.renderer");
+  });
+
+  it("exposes its full action vocabulary via events", () => {
+    const server = new VoxelSyncServer();
+
+    assert.ok(server.events.includes("voxel-set"));
+    assert.ok(server.events.includes("object-added"));
+    assert.equal(server.events.length, 17);
+  });
+
+  it("getEventName() reads the command's action", () => {
+    const server = new VoxelSyncServer();
+
+    assert.equal(server.getEventName(voxelSetCmd()), "voxel-set");
+  });
+
+  it("getEventName() returns \"unknown\" for a payload that isn't a VoxelNetworkCommand", () => {
+    const server = new VoxelSyncServer();
+
+    assert.equal(server.getEventName({ not: "a command" }), "unknown");
+  });
+});
+
 describe("VoxelSyncServer — custom world / id", () => {
   it("accepts an existing VoxelWorld in options", () => {
     const world = new VoxelWorld(8);
