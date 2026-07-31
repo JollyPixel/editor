@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import * as network from "@jolly-pixel/network";
+import * as network from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
 import type { VoxelEngine } from "../VoxelEngine.ts";

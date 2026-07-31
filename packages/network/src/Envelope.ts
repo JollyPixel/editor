@@ -21,9 +21,12 @@ export type Envelope =
   | { room: string; kind: "peer-joined"; clientId: string; identity: PeerMetadata; }
   | { room: string; kind: "peer-left"; clientId: string; }
   | { room: string; kind: "peer-presence"; clientId: string; patch: PeerMetadata; }
-  | { room: string; kind: "denied"; event: string; reason: string; };
+  | { room: string; kind: "denied"; event: string; reason: string; }
+  | { room: string; kind: "error"; event: string; reason: string; };
 
-const ENVELOPE_KINDS = [
+type EnvelopeCandidate = Record<string, unknown>;
+
+const ENVELOPE_KINDS: readonly Envelope["kind"][] = [
   "join",
   "leave",
   "message",
@@ -32,57 +35,74 @@ const ENVELOPE_KINDS = [
   "peer-joined",
   "peer-left",
   "peer-presence",
-  "denied"
+  "denied",
+  "error"
 ] as const;
 
-function describeEnvelopeShapeError(
-  value: unknown
-): string | null {
-  if (typeof value !== "object" || value === null) {
-    return `expected an object, received ${typeof value}`;
-  }
-  if (!("room" in value) || !("kind" in value)) {
-    return "missing \"room\" or \"kind\" property";
-  }
-  if (typeof value.room !== "string") {
-    return "\"room\" must be a string";
-  }
-  if (
-    typeof value.kind !== "string" ||
-    !(ENVELOPE_KINDS as readonly string[]).includes(value.kind)
-  ) {
-    return `unrecognized "kind": ${JSON.stringify(value.kind)}`;
+function parseJson(
+  raw: unknown
+): Result<unknown, string> {
+  if (typeof raw !== "string") {
+    return Ok(raw);
   }
 
-  return null;
+  return wrap<unknown, Error>(() => JSON.parse(raw))
+    .mapErr((error) => `invalid JSON: ${error.message}`);
+}
+
+function assertObject(
+  value: unknown
+): Result<EnvelopeCandidate, string> {
+  return typeof value === "object" && value !== null ?
+    Ok(value as EnvelopeCandidate) :
+    Err(`expected an object, received ${typeof value}`);
+}
+
+function assertHasRoomAndKind(
+  value: EnvelopeCandidate
+): Result<EnvelopeCandidate, string> {
+  return "room" in value && "kind" in value ?
+    Ok(value) :
+    Err("missing \"room\" or \"kind\" property");
+}
+
+function assertRoom(
+  value: EnvelopeCandidate
+): Result<EnvelopeCandidate, string> {
+  return typeof value.room === "string" ?
+    Ok(value) :
+    Err("\"room\" must be a string");
+}
+
+function isEnvelopeKind(
+  value: string
+): value is Envelope["kind"] {
+  return ENVELOPE_KINDS.some((kind) => kind === value);
+}
+
+function assertKind(
+  value: EnvelopeCandidate
+): Result<Envelope, string> {
+  return typeof value.kind === "string" && isEnvelopeKind(value.kind) ?
+    Ok(value as Envelope) :
+    Err(`unrecognized "kind": ${JSON.stringify(value.kind)}`);
 }
 
 export const Envelope = {
   parse(
     raw: unknown
   ): Result<Envelope, string> {
-    let data: unknown = raw;
-    if (typeof raw === "string") {
-      const parsed = wrap<unknown, Error>(() => JSON.parse(raw));
-      if (!parsed.ok) {
-        return Err(`invalid JSON: ${parsed.val.message}`);
-      }
-      data = parsed.unwrap();
-    }
-
-    const shapeError = describeEnvelopeShapeError(data);
-    if (shapeError) {
-      return Err(shapeError);
-    }
-
-    return Ok(data as Envelope);
+    return parseJson(raw)
+      .andThen(assertObject)
+      .andThen(assertHasRoomAndKind)
+      .andThen(assertRoom)
+      .andThen(assertKind);
   },
 
   stringify(
     envelope: Envelope
   ): Result<string, string> {
-    const result = wrap<string, Error>(() => JSON.stringify(envelope));
-
-    return result.ok ? result : Err(result.val.message);
+    return wrap<string, Error>(() => JSON.stringify(envelope))
+      .mapErr((error) => error.message);
   }
 };

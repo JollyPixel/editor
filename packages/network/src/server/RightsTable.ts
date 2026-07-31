@@ -20,7 +20,7 @@ interface Permission {
 }
 
 /**
- * Per-role access lookup by glob against `${authority.name}.${event}`.
+ * Per-role access lookup by glob against `${extension.name}.${event}`.
  * Missing table/role/no match defaults to "write".
  */
 export class RightsTable {

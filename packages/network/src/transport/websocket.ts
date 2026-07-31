@@ -14,8 +14,8 @@ import {
 } from "ws";
 
 // Import Internal Dependencies
-import type { Server } from "../Server.ts";
-import type { Logger } from "../logger/types.ts";
+import type { Server } from "../server/Server.ts";
+import type { Logger } from "../server/logger.ts";
 import type {
   ClientHandle
 } from "../types.ts";

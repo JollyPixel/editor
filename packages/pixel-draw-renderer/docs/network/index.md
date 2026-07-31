@@ -27,7 +27,7 @@ import {
 export default defineConfig({
    plugins: [
       createWebSocketNetworkPlugin({
-         roomAuthorities: [
+         extensions: [
             new PixelSyncServer({
                id: "pixel-draw:main",
                buffer: new PixelBuffer({
@@ -73,7 +73,7 @@ On connect, the server immediately sends a snapshot so late joiners catch up.
 
 ## Cursor Tracking
 
-Multiplayer cursors ride the same room, no server authority needed — presence is relayed by `network.Room` itself. See [PixelCursorSync](./PixelCursorSync.md).
+Multiplayer cursors ride the same room, no server extension needed — presence is relayed by `network.Room` itself. See [PixelCursorSync](./PixelCursorSync.md).
 
 ## What To Read Next
 

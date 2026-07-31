@@ -1,18 +1,27 @@
 // Import Third-party Dependencies
 import { match } from "ts-pattern";
+import {
+  Ok,
+  Err,
+  type Result
+} from "@openally/result";
+import * as EventStore from "@jolly-pixel/event-store";
 
 // Import Internal Dependencies
-import { ServerRoom } from "./server/ServerRoom.ts";
-import { Envelope } from "./Envelope.ts";
+import { ServerRoom } from "./ServerRoom.ts";
+import { Envelope } from "../Envelope.ts";
 import {
   createLogger,
   type Logger
-} from "./logger/pino.ts";
-import { RightsTable, type RightsMap } from "./server/RightsTable.ts";
-import type { RoomAuthority } from "./server/RoomAuthority.ts";
+} from "./logger.ts";
+import {
+  RightsTable,
+  type RightsMap
+} from "./RightsTable.ts";
+import type { Extension } from "./Extension.ts";
 import type {
   ClientHandle
-} from "./types.ts";
+} from "../types.ts";
 
 interface ClientRecord {
   handle: ClientHandle;
@@ -24,19 +33,38 @@ interface DispatchOutcome {
   reason?: string;
 }
 
+interface DispatchEvent {
+  clientId: string;
+  room: string;
+  kind: string;
+}
+
+interface DispatchContext {
+  clientId: string;
+  envelope: Envelope;
+  event: DispatchEvent;
+  record: ClientRecord;
+}
+
+interface RoomDispatchContext extends DispatchContext {
+  room: ServerRoom;
+}
+
 export interface ServerOptions {
   logger?: Logger;
   rights?: RightsMap;
+  eventStore?: EventStore.EventStore;
 }
 
 /**
  * Transport-agnostic multiplexer sitting between raw connections and
- * registered RoomAuthority instances.
+ * registered Extension instances.
  */
 export class Server {
   readonly logger: Logger;
 
   #rights: RightsTable;
+  #eventStore: EventStore.EventStore;
   #rooms = new Map<string, ServerRoom>();
   #clients = new Map<string, ClientRecord>();
 
@@ -47,28 +75,42 @@ export class Server {
     this.#rights = new RightsTable(
       options.rights
     );
+    this.#eventStore = options.eventStore ?? EventStore.persistence.memory();
+    this.#eventStore.writer.on("append", (event) => this.logger
+      .withMetadata({
+        assetType: event.assetType,
+        assetId: event.assetId,
+        eventType: event.eventType,
+        eventVersion: event.eventVersion
+      })
+      .debug("append event"));
+    this.#eventStore.writer.on("error", (error, input) => this.logger
+      .withMetadata({
+        assetType: input.assetType,
+        assetId: input.assetId,
+        eventType: input.eventType,
+        reason: error.message,
+        outcome: "failed"
+      })
+      .error("append event"));
   }
 
   register(
-    authority: RoomAuthority
+    extension: Extension
   ): void {
     const room = new ServerRoom(
-      authority,
+      extension,
       this.#rights,
-      this.logger
+      {
+        logger: this.logger,
+        eventStore: this.#eventStore
+      }
     );
 
-    this.#rooms.set(authority.id, room);
+    this.#rooms.set(extension.id, room);
     this.logger
-      .withMetadata({ room: authority.id })
+      .withMetadata({ room: extension.id })
       .info("room registered");
-  }
-
-  broadcast(
-    roomId: string,
-    payload: unknown
-  ): void {
-    this.#rooms.get(roomId)?.broadcast(payload);
   }
 
   handleConnect(
@@ -102,53 +144,66 @@ export class Server {
     clientId: string,
     raw: unknown
   ): void {
-    const result = Envelope.parse(raw);
-    if (!result.ok) {
-      this.logger
+    Envelope.parse(raw)
+      .orTee((error) => this.logger
         .withMetadata({
           clientId,
           outcome: "dropped",
           reason: "malformed envelope",
-          error: result.val
+          error
         })
-        .warn("envelope handled");
+        .warn("envelope handled"))
+      .andThen((envelope) => this.#resolveClient(clientId, envelope))
+      .andThen((context) => this.#resolveRoom(context))
+      .andTee((context) => this.#dispatchEnvelope(context));
+  }
 
-      return;
-    }
-    const envelope = result.unwrap();
-    const event = {
+  #resolveClient(
+    clientId: string,
+    envelope: Envelope
+  ): Result<DispatchContext, void> {
+    const event: DispatchEvent = {
       clientId,
       room: envelope.room,
       kind: envelope.kind
     };
-
     const record = this.#clients.get(clientId);
-    if (!record) {
-      this.logger
-        .withMetadata({
-          ...event,
-          outcome: "dropped",
-          reason: "unknown client"
-        })
-        .warn("envelope handled");
+    const result: Result<DispatchContext, void> = record ?
+      Ok({ clientId, envelope, event, record }) :
+      Err(undefined);
 
-      return;
-    }
+    return result.orTee(() => this.logger
+      .withMetadata({
+        ...event,
+        outcome: "dropped",
+        reason: "unknown client"
+      })
+      .warn("envelope handled"));
+  }
 
-    const room = this.#rooms.get(envelope.room);
-    if (!room) {
-      this.logger
-        .withMetadata({
-          ...event,
-          outcome: "dropped",
-          reason: "unregistered room"
-        })
-        .warn("envelope handled");
+  #resolveRoom(
+    context: DispatchContext
+  ): Result<RoomDispatchContext, void> {
+    const room = this.#rooms.get(context.event.room);
+    const result: Result<RoomDispatchContext, void> = room ?
+      Ok({ ...context, room }) :
+      Err(undefined);
 
-      return;
-    }
+    return result.orTee(() => this.logger
+      .withMetadata({
+        ...context.event,
+        outcome: "dropped",
+        reason: "unregistered room"
+      })
+      .warn("envelope handled"));
+  }
 
-    const dispatch = match(envelope)
+  #dispatchEnvelope(
+    context: RoomDispatchContext
+  ): void {
+    const { clientId, envelope, event, record, room } = context;
+
+    const outcome = match(envelope)
       .with({ kind: "join" }, (envelope) => this.#handleJoin(record, room, envelope))
       .with({ kind: "leave" }, (envelope) => this.#handleLeave(record, room, envelope))
       .with({ kind: "message" }, (envelope) => this.#handleMessage(clientId, room, envelope))
@@ -157,8 +212,11 @@ export class Server {
         return { outcome: "ignored" as const };
       });
 
-    const wideEvent = this.logger.withMetadata({ ...event, ...dispatch });
-    if (dispatch.outcome === "dropped") {
+    const wideEvent = this.logger.withMetadata({
+      ...event,
+      ...outcome
+    });
+    if (outcome.outcome === "dropped") {
       wideEvent.warn("envelope handled");
     }
     else {

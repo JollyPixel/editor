@@ -2,7 +2,7 @@
 
 Broadcasts the local cursor position and renders remote peers' cursors on `PixelArtCanvas.peerCursors`.
 
-No server authority needed: presence is relayed by `network.Room` itself (`updatePresence`/`onPeerPresence`), independent of `PixelSyncServer`. Reuse the same room a `PixelSyncClient` already has open — one connection, two concerns.
+No server extension needed: presence is relayed by `network.Room` itself (`updatePresence`/`onPeerPresence`), independent of `PixelSyncServer`. Reuse the same room a `PixelSyncClient` already has open — one connection, two concerns.
 
 ## Types Used By PixelCursorSync
 

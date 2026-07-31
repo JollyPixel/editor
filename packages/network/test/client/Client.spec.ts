@@ -291,6 +291,30 @@ describe("Client — denied", () => {
   });
 });
 
+describe("Client — error", () => {
+  test("fires \"error\" with the event name and reason, distinct from \"denied\"", () => {
+    const { client, socket } = createOpenClient();
+    const room = client.room("pixel-draw");
+    const errors: { event: string; reason: string; }[] = [];
+    const denials: { event: string; reason: string; }[] = [];
+    room.on("error", (event) => errors.push(event));
+    room.on("denied", (event) => denials.push(event));
+
+    socket.receive({
+      room: "pixel-draw",
+      kind: "error",
+      event: "pixel-set",
+      reason: "disk full"
+    });
+
+    assert.deepEqual(errors, [{
+      event: "pixel-set",
+      reason: "disk full"
+    }]);
+    assert.deepEqual(denials, []);
+  });
+});
+
 describe("Client — updatePresence", () => {
   test("sends a presence envelope carrying the patch", () => {
     const { client, socket } = createOpenClient();

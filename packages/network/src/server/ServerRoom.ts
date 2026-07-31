@@ -1,16 +1,23 @@
+// Import Third-party Dependencies
+import * as EventStore from "@jolly-pixel/event-store";
+
 // Import Internal Dependencies
 import {
   createLogger,
   type Logger
-} from "../logger/pino.ts";
-import type { RoomAuthority } from "./RoomAuthority.ts";
+} from "./logger.ts";
+import type {
+  Extension,
+  RoomBroadcast,
+  RoomContext
+} from "./Extension.ts";
 import {
   RightsTable,
   RightsGate,
   JOIN_EVENT,
   PRESENCE_EVENT
 } from "./RightsTable.ts";
-import type { Envelope } from "../Envelope.ts";
+import { RoomMembers } from "./RoomMembers.ts";
 import type {
   ClientHandle,
   PeerMetadata
@@ -19,38 +26,71 @@ import type {
 // CONSTANTS
 const kDefaultRole = "default";
 
-interface PeerRecord {
-  handle: ClientHandle;
-  identity: PeerMetadata;
-  presence: PeerMetadata;
-  role: string;
-}
-
 function resolveRole(
   identity: PeerMetadata
 ): string {
   return typeof identity.role === "string" ? identity.role : kDefaultRole;
 }
 
+export interface ServerRoomOptions {
+  logger?: Logger;
+  eventStore?: EventStore.EventStore;
+}
+
 export class ServerRoom {
   readonly id: string;
 
-  #authority: RoomAuthority;
+  #extension: Extension;
   #rights: RightsGate;
-  #members = new Map<string, PeerRecord>();
+  #members = new RoomMembers();
   #logger: Logger;
+  #eventStore: EventStore.EventStore;
+  #roomBroadcast: RoomBroadcast;
 
   constructor(
-    authority: RoomAuthority,
+    extension: Extension,
     rights: RightsTable = new RightsTable(),
-    logger: Logger = createLogger()
+    options: ServerRoomOptions = {}
   ) {
-    this.id = authority.id;
-    this.#authority = authority;
-    this.#rights = rights.scope(authority.name);
-    this.#logger = logger.withContext({
+    this.id = extension.id;
+    this.#extension = extension;
+    this.#rights = rights.scope(extension.name);
+    this.#logger = (options.logger ?? createLogger()).withContext({
       room: this.id
     });
+    this.#eventStore = options.eventStore ?? EventStore.persistence.memory();
+    this.#roomBroadcast = {
+      broadcast: (payload) => this.#broadcast(payload)
+    };
+  }
+
+  #context(
+    clientId: string
+  ): RoomContext {
+    return {
+      room: this.#roomBroadcast,
+      eventStore: {
+        append: (input) => this.#appendEvent(clientId, input),
+        list: (assetId, fromVersion) => this.#eventStore.reader.list(assetId, fromVersion)
+      }
+    };
+  }
+
+  #appendEvent(
+    clientId: string,
+    input: EventStore.AppendInput
+  ): boolean {
+    const result = this.#eventStore.writer.append(input);
+    if (!result.ok) {
+      this.#members.get(clientId)?.handle.send({
+        room: this.id,
+        kind: "error",
+        event: input.eventType,
+        reason: result.val.message
+      });
+    }
+
+    return result.ok;
   }
 
   #authorize(
@@ -98,21 +138,21 @@ export class ServerRoom {
       return false;
     }
 
-    this.#send({
+    this.#members.send({
       room: this.id,
       kind: "peer-joined",
       clientId,
       identity
-    }, clientId);
+    }, { excludeClientId: clientId });
     this.#sendSyncSnapshot(client);
-    this.#members.set(clientId, {
+    this.#members.add(clientId, {
       handle: client,
       identity,
       presence: {},
       role
     });
 
-    this.#authority.onClientConnect(
+    this.#extension.onClientConnect(
       {
         id: client.id,
         send: (data) => client.send({
@@ -122,7 +162,7 @@ export class ServerRoom {
         })
       },
       identity,
-      this
+      this.#context(clientId)
     );
     this.#logger
       .withMetadata({ clientId, role, outcome: "admitted" })
@@ -138,31 +178,23 @@ export class ServerRoom {
       return;
     }
 
-    const members = [...this.#members].map(([memberId, record]) => {
-      return {
-        clientId: memberId,
-        identity: record.identity,
-        presence: record.presence
-      };
-    });
-
     client.send({
       room: this.id,
       kind: "sync",
-      members
+      members: this.#members.snapshot()
     });
   }
 
   leave(
     clientId: string
   ): void {
-    this.#members.delete(clientId);
-    this.#send({
+    this.#members.remove(clientId);
+    this.#members.send({
       room: this.id,
       kind: "peer-left",
       clientId
-    }, clientId);
-    this.#authority.onClientDisconnect(clientId, this);
+    }, { excludeClientId: clientId });
+    this.#extension.onClientDisconnect(clientId, this.#context(clientId));
     this.#logger
       .withMetadata({ clientId })
       .debug("leave");
@@ -197,12 +229,15 @@ export class ServerRoom {
     }
 
     Object.assign(record.presence, patch);
-    this.#send({
+    this.#members.send({
       room: this.id,
       kind: "peer-presence",
       clientId,
       patch
-    }, clientId, PRESENCE_EVENT);
+    }, {
+      excludeClientId: clientId,
+      predicate: (role) => this.#rights.check(role, PRESENCE_EVENT) !== "void"
+    });
 
     this.#logger
       .withMetadata({
@@ -220,7 +255,7 @@ export class ServerRoom {
     const role = this.#members.get(clientId)?.role ?? kDefaultRole;
 
     if (this.#rights.configured) {
-      const event = this.#authority.getEventName(payload);
+      const event = this.#extension.getEventName(payload);
       if (!this.#authorize({
         clientId,
         role,
@@ -233,40 +268,22 @@ export class ServerRoom {
       }
     }
 
-    this.#authority.onMessage(clientId, payload, this);
+    this.#extension.onMessage(clientId, payload, this.#context(clientId));
   }
 
-  broadcast(
+  #broadcast(
     payload: unknown
   ): void {
     const event = this.#rights.configured ?
-      this.#authority.getEventName(payload) :
+      this.#extension.getEventName(payload) :
       undefined;
 
-    this.#send({
+    this.#members.send({
       room: this.id,
       kind: "message",
       payload
-    }, undefined, event);
-  }
-
-  #send(
-    envelope: Envelope,
-    excludeClientId?: string,
-    filterEvent?: string
-  ): void {
-    for (const [memberId, record] of this.#members) {
-      if (memberId === excludeClientId) {
-        continue;
-      }
-      if (
-        filterEvent &&
-        this.#rights.check(record.role, filterEvent) === "void"
-      ) {
-        continue;
-      }
-
-      record.handle.send(envelope);
-    }
+    }, {
+      predicate: event ? (role) => this.#rights.check(role, event) !== "void" : undefined
+    });
   }
 }

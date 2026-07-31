@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type * as network from "@jolly-pixel/network";
+import type * as network from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
 import { ColorPalette } from "../utils/ColorPalette.ts";

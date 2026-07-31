@@ -17,12 +17,19 @@ export interface RoomDeniedEvent {
   reason: string;
 }
 
+/** Distinct from RoomDeniedEvent: an infrastructure failure, not an RBAC rejection. */
+export interface RoomErrorEvent {
+  event: string;
+  reason: string;
+}
+
 export type RoomEventMap<ServerMessage = unknown> = {
   message: (payload: ServerMessage) => void;
   "peer-joined": (event: RoomPeerEvent) => void;
   "peer-left": (event: RoomPeerEvent) => void;
   "peer-presence": (event: RoomPeerPresenceEvent) => void;
   denied: (event: RoomDeniedEvent) => void;
+  error: (event: RoomErrorEvent) => void;
 };
 
 export interface Room<

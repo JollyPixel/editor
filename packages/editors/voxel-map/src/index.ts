@@ -4,7 +4,7 @@ import {
   loadRuntime
 } from "@jolly-pixel/runtime";
 import { ResizeHandle } from "@jolly-pixel/resize-handle";
-import * as network from "@jolly-pixel/network";
+import * as network from "@jolly-pixel/network/client";
 import type {
   PixelNetworkCommand,
   PixelServerMessage

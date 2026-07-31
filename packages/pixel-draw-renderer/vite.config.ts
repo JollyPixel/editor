@@ -25,7 +25,7 @@ export default defineConfig({
       typescript: true
     }),
     createWebSocketNetworkPlugin({
-      roomAuthorities: [
+      extensions: [
         new PixelSyncServer({
           // Must match the client's room id in examples/scripts/main.ts.
           id: "pixel-draw:demo-canvas",

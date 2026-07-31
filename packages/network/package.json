@@ -3,8 +3,6 @@
   "description": "The shared wire for JollyPixel's multiplayer editors",
   "version": "1.0.0",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "imports": {
     "#src/*": "./src/*"
   },
@@ -14,7 +12,8 @@
       "default": "./dist/index.js"
     },
     "./plugins/*.ts": "./dist/plugins/*.js",
-    "./transport/*.ts": "./dist/transport/*.js"
+    "./transport/*.ts": "./dist/transport/*.js",
+    "./client": "./dist/client/index.js"
   },
   "scripts": {
     "prepublish": "rimraf ./dist && tsc -b",
@@ -43,9 +42,10 @@
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
   "dependencies": {
+    "@jolly-pixel/event-store": "1.0.0",
     "@loglayer/transport-pino": "3.3.0",
     "@openally/emitt": "1.0.1",
-    "@openally/result": "2.0.0",
+    "@openally/result": "3.0.0",
     "loglayer": "9.4.0",
     "pino": "10.3.1",
     "ts-pattern": "5.9.0",

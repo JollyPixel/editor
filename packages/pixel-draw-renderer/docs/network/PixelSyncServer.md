@@ -22,7 +22,7 @@ const mainTexture = new PixelSyncServer({
 export default defineConfig({
   plugins: [
     createWebSocketNetworkPlugin({
-      roomAuthorities: [mainTexture]
+      extensions: [mainTexture]
     })
   ]
 });
@@ -64,7 +64,7 @@ type PixelServerMessage = network.NetworkServerMessage<PixelNetworkCommand, Pixe
 
 ## Conflict Policy (Minimal)
 
-By default, `PixelSyncServer` uses `@jolly-pixel/network`'s [`LastWriteWinsResolver`](../../../network/docs/sync/ConflictResolver.md), keyed per pixel/region (not by full command), so pass `network.ConflictResolver` when supplying a custom one.
+By default, `PixelSyncServer` uses `@jolly-pixel/network`'s [`LastWriteWinsResolver`](../../../network/docs/sync/Conflicts.md), keyed per pixel/region (not by full command), so pass `network.ConflictResolver` when supplying a custom one.
 
 What that means:
 1. `stroke` and `select-edit` conflicts resolve per pixel.
@@ -77,18 +77,18 @@ You can override this with `conflictResolver` in `PixelSyncServerOptions` when y
 ## API You Might Actually Use
 
 - `server.id`: room key.
-- `server.name`: always `"pixel-draw.renderer"`, shared by every instance — the namespace a `network.Server`'s `rights` table would key its rules against (e.g. `"pixel-draw.renderer.*"`). Required by `network.RoomAuthority`, but `PixelSyncServer` doesn't implement `getEventName()` yet — configuring `rights` for this namespace on the server will throw on the first message until it does (see [`RoomAuthority`](../../../network/docs/RoomAuthority.md#rbac-minimal)).
+- `server.name`: always `"pixel-draw.renderer"`, shared by every instance — the namespace a `network.Server`'s `rights` table would key its rules against (e.g. `"pixel-draw.renderer.*"`). Required by `network.Extension`, but `PixelSyncServer` doesn't implement `getEventName()` yet — configuring `rights` for this namespace on the server will throw on the first message until it does (see [Rights](../../../network/docs/Rights.md)).
 - `server.buffer`: authoritative buffer.
-- `server.receive(cmd, room)`: useful in tests and replay tools.
+- `server.receive(cmd, context)`: useful in tests and replay tools.
 - `server.snapshot()`: exports current `PixelBufferSnapshot`.
 
-`onClientConnect`, `onClientDisconnect`, and `onMessage` are `network.RoomAuthority` lifecycle hooks invoked by `@jolly-pixel/network`. Each is handed a `room: network.RoomHandle` (whatever calls `onMessage` also has `broadcast()`, so it just passes itself) — `PixelSyncServer` never stores a broadcast function, it only ever uses the one it's handed for the event it's currently reacting to. For a push with no triggering client event, use `network.Server.broadcast(roomId, payload)`.
+`onClientConnect`, `onClientDisconnect`, and `onMessage` are `network.Extension` lifecycle hooks invoked by `@jolly-pixel/network`. Each is handed a `context: network.RoomContext`, whose `context.room.broadcast()` is what `receive()` calls — `PixelSyncServer` never stores a broadcast function, it only ever uses the one it's handed for the event it's currently reacting to. For a push with no triggering client event, use `network.Server.broadcast(roomId, payload)`.
 
 ## Multi-Buffer Example
 
 ```ts
 createWebSocketNetworkPlugin({
-  roomAuthorities: [
+  extensions: [
     new PixelSyncServer({
       id: "pixel-draw:characters",
       buffer: new PixelBuffer({ size: { x: 32, y: 32 } })

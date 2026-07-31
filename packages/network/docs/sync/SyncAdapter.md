@@ -1,30 +1,15 @@
 # SyncAdapter
 
-Base class for client-side sync of one local target over one `Room`.
-It centralizes shared logic: local command stamping, echo-guarding, snapshot handling, and ready state.
-Domain implementations only define how to read/write the target mutation hook and apply snapshots/remote commands.
+Base class for client-side sync of one local target over one room. It owns command stamping, echo-guarding, snapshot handling and ready state; implementations only say how to read/write the target's mutation hook and how to apply incoming data.
 
 ```ts
-interface NetworkCommandHeader {
-  clientId: string;
-  seq: number;
-  timestamp: number;
-}
-
-type NetworkServerMessage<Command, Snapshot> =
-  | { type: "snapshot"; data: Snapshot; }
-  | { type: "command"; data: Command; };
-
 abstract class SyncAdapter<
   Target,
   Event extends object,
   Command extends NetworkCommandHeader,
   Snapshot
->
-  extends Emitter<{ ready: () => void }> {
-  constructor(
-    room: Room<Command, NetworkServerMessage<Command, Snapshot>>
-  );
+> extends Emitter<{ ready: () => void }> {
+  constructor(room: Room<Command, NetworkServerMessage<Command, Snapshot>>);
 
   readonly ready: boolean;
 
@@ -42,10 +27,12 @@ abstract class SyncAdapter<
 
 ## Usage
 
-Implement the four abstract hooks; `attach`, `detach`, `destroy`, stamping, and echo-guarding are inherited:
+Implement the four abstract hooks; everything else is inherited.
 
 ```ts
-class PixelSyncClient extends SyncAdapter<PixelArtCanvas, PixelBufferHookEvent, PixelNetworkCommand, PixelBufferSnapshot> {
+class PixelSyncClient extends SyncAdapter<
+  PixelArtCanvas, PixelBufferHookEvent, PixelNetworkCommand, PixelBufferSnapshot
+> {
   protected getHandler(canvas) { return canvas.onBufferUpdated; }
   protected setHandler(canvas, fn) { canvas.onBufferUpdated = fn; }
   protected applySnapshot(canvas, snapshot) { canvas.loadSnapshot(/* ... */); }
@@ -53,62 +40,15 @@ class PixelSyncClient extends SyncAdapter<PixelArtCanvas, PixelBufferHookEvent, 
 }
 ```
 
-## Properties
+## Lifecycle
 
-### `ready`
+- `attach(target)` — captures the current handler via `getHandler`, then installs a wrapper via `setHandler` that calls the original and forwards a stamped command to the room. Throws if a target is already attached.
+- `detach()` — restores the captured handler. No-op when nothing is attached.
+- `destroy()` — `detach()` plus removal of the room listener. Does **not** call `room.leave()`; override if the client owns the room's lifetime.
+- `ready` — whether the initial server snapshot has been applied. Emits `"ready"` once when it flips.
 
-```ts
-readonly ready: boolean
-```
+## Hooks
 
-Whether the initial server snapshot has been applied. Emits `"ready"` once when this becomes `true`.
-
-## Methods
-
-### `attach`
-
-```ts
-attach(target: Target): void
-```
-
-Reads the current local handler via `getHandler`, then installs a wrapper via `setHandler`.
-The wrapper calls the previous handler and forwards a stamped command to the room.
-Throws if a target is already attached.
-
-### `detach`
-
-```ts
-detach(): void
-```
-
-Restores the handler captured during `attach()`. No-op when no target is attached.
-
-### `destroy`
-
-```ts
-destroy(): void
-```
-
-Calls `detach()` and removes the `"message"` listener it registered on the room.
-Does **not** call `room.leave()`. Override if the client owns room lifetime.
-
-## Protected hooks
-
-### `stampCommand`
-
-```ts
-protected stampCommand(event: Event, timestamp?: number): Command
-```
-
-Builds `{ ...event, clientId, seq, timestamp }`.
-Uses an internal counter for `seq` and `Date.now()` for `timestamp` unless a timestamp is passed.
-Override when event time should be preserved (for example, replay flows).
-
-### `getHandler` / `setHandler`
-
-Abstract accessors for the target local-mutation hook (for example, `onBufferUpdated`).
-
-### `applySnapshot` / `applyRemoteCommand`
-
-Abstract sinks for the initial `"snapshot"` message and later `"command"` messages.
-Commands from the same `clientId` are filtered before `applyRemoteCommand`.
+- `getHandler` / `setHandler` — accessors for the target's local mutation hook (e.g. `onBufferUpdated`).
+- `applySnapshot` / `applyRemoteCommand` — sinks for the initial snapshot and later commands. Commands from the local `clientId` are filtered out before `applyRemoteCommand`.
+- `stampCommand(event, timestamp?)` — builds `{ ...event, clientId, seq, timestamp }`, using an internal counter and `Date.now()`. Override when the original event time must survive, as in replay flows.
