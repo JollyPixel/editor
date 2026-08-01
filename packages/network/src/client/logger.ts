@@ -1,11 +1,11 @@
 // Import Third-party Dependencies
 import {
   LogLayer,
-  ConsoleTransport
+  ConsoleTransport,
+  type ILogLayer
 } from "loglayer";
 
-// Import Internal Dependencies
-import type { Logger } from "./types.ts";
+export type Logger = ILogLayer;
 
 export function createLogger(): Logger {
   return new LogLayer({
@@ -14,5 +14,3 @@ export function createLogger(): Logger {
     })
   });
 }
-
-export type { Logger };

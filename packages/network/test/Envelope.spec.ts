@@ -33,6 +33,23 @@ describe("Envelope.parse", () => {
     });
   });
 
+  test("accepts an \"error\" envelope", () => {
+    const result = Envelope.parse({
+      room: "pixel-draw",
+      kind: "error",
+      event: "pixel-set",
+      reason: "disk full"
+    });
+
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.val, {
+      room: "pixel-draw",
+      kind: "error",
+      event: "pixel-set",
+      reason: "disk full"
+    });
+  });
+
   test("accepts an already-deserialized object", () => {
     const result = Envelope.parse({
       room: "pixel-draw",

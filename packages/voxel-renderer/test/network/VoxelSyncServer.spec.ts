@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type { RoomHandle } from "@jolly-pixel/network";
+import type { RoomContext, RoomEventStoreHandle } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import {
@@ -34,29 +34,41 @@ function createClient(id: string): MockClient {
   };
 }
 
+// receive() never touches eventStore, so every RoomContext in this file shares one unused stub.
+const unusedEventStore: RoomEventStoreHandle = {
+  append: () => true,
+  list: () => []
+};
+
 /**
  * `receive()` no longer stashes a broadcast callback — the caller (normally
  * `ServerRoom`, via `onMessage`) hands one in per call. Tests that don't care
  * about broadcast delivery can pass this no-op.
  */
-const noopRoom: RoomHandle = {
-  broadcast: () => {
-    // no observers
-  }
+const noopRoom: RoomContext = {
+  room: {
+    broadcast: () => {
+      // no observers
+    }
+  },
+  eventStore: unusedEventStore
 };
 
 /**
- * Connects a client and returns a RoomHandle that forwards broadcasts
+ * Connects a client and returns a RoomContext that forwards broadcasts
  * straight to it — the single-client fake a unit test needs to observe
  * `receive()`'s broadcasts.
  */
 function observe(
   server: VoxelSyncServer,
   client: MockClient
-): RoomHandle {
+): RoomContext {
   server.onClientConnect(client);
 
-  return { broadcast: (payload) => client.send(payload) };
+  return {
+    room: { broadcast: (payload) => client.send(payload) },
+    eventStore: unusedEventStore
+  };
 }
 
 function voxelSetCmd(

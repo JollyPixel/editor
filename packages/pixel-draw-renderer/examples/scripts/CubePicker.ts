@@ -2,7 +2,7 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { type UVMap } from "../../src/index.ts";
+import type { UVMap } from "../../src/index.ts";
 
 export interface CubePickerOptions {
   uv: UVMap;

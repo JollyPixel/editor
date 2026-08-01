@@ -3,7 +3,7 @@ import { LitElement, html, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
 // Import Internal Dependencies
-import { type Mode } from "../index.ts";
+import type { Mode } from "../PixelArtCanvas.ts";
 import { renderIcon, type IconName } from "./icons.ts";
 import { iconStyles } from "./icon.styles.ts";
 import { railButtonStyles } from "./rail-button.styles.ts";

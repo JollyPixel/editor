@@ -14,7 +14,7 @@ export default defineConfig({
   },
   plugins: [
     createWebSocketNetworkPlugin({
-      roomAuthorities: [
+      extensions: [
         new PixelSyncServer({
           id: "voxel-map:texture"
         }),

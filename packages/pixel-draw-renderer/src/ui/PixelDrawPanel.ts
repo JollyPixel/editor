@@ -7,8 +7,8 @@ import {
   PixelArtCanvas,
   type PixelArtCanvasOptions,
   type Mode
-} from "../index.ts";
-import { type ColorChangeDetail } from "./ColorSwatch.ts";
+} from "../PixelArtCanvas.ts";
+import type { ColorChangeDetail } from "./ColorSwatch.ts";
 import { panelStyles } from "./PixelDrawPanel.styles.ts";
 import { railButtonStyles } from "./rail-button.styles.ts";
 import { iconStyles } from "./icon.styles.ts";

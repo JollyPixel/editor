@@ -28,7 +28,7 @@ function isPixelNetworkCommand(
 
 export interface PixelSyncServerOptions {
   /**
-   * RoomAuthority id this server is registered under. A
+   * Extension id this server is registered under. A
    * PixelSyncServer owns exactly one buffer, so a Server hosting
    * several buffers needs one instance per buffer, each under its own
    * id (e.g. `"pixel-draw:tileset-1"`).
@@ -50,7 +50,7 @@ export interface PixelSyncServerOptions {
 /**
  * Manages authoritative state for a single pixel buffer and its client synchronization.
  */
-export class PixelSyncServer extends network.RoomAuthority {
+export class PixelSyncServer extends network.Extension {
   readonly id: string;
   readonly name = "pixel-draw.renderer";
   readonly buffer: PixelBuffer;
@@ -90,39 +90,39 @@ export class PixelSyncServer extends network.RoomAuthority {
   onMessage(
     _clientId: string,
     payload: unknown,
-    room: network.RoomHandle
+    context: network.RoomContext
   ): void {
     if (!isPixelNetworkCommand(payload)) {
       return;
     }
 
-    this.receive(payload, room);
+    this.receive(payload, context);
   }
 
   receive(
     cmd: PixelNetworkCommand,
-    room: network.RoomHandle
+    context: network.RoomContext
   ): void {
     switch (cmd.action) {
       case "stroke":
-        this.#receiveStroke(cmd, room);
+        this.#receiveStroke(cmd, context);
         break;
       case "select-edit":
-        this.#receiveSelectEdit(cmd, room);
+        this.#receiveSelectEdit(cmd, context);
         break;
       case "uv-region-moved":
       case "uv-region-deleted":
-        this.#receiveUvRegionCommand(cmd, room);
+        this.#receiveUvRegionCommand(cmd, context);
         break;
       default:
         applyCommandToBuffer(this.buffer, cmd);
-        room.broadcast({ type: "command", data: cmd });
+        context.room.broadcast({ type: "command", data: cmd });
     }
   }
 
   #receiveStroke(
     cmd: PixelStrokeCommand,
-    room: network.RoomHandle
+    context: network.RoomContext
   ): void {
     const accepted: PixelStrokeCommand["metadata"]["positions"] = [];
 
@@ -148,7 +148,7 @@ export class PixelSyncServer extends network.RoomAuthority {
     };
 
     applyCommandToBuffer(this.buffer, acceptedCmd);
-    room.broadcast({ type: "command", data: acceptedCmd });
+    context.room.broadcast({ type: "command", data: acceptedCmd });
   }
 
   /**
@@ -156,7 +156,7 @@ export class PixelSyncServer extends network.RoomAuthority {
    */
   #receiveSelectEdit(
     cmd: PixelSelectEditCommand,
-    room: network.RoomHandle
+    context: network.RoomContext
   ): void {
     const acceptedPositions: PixelSelectEditCommand["metadata"]["positions"] = [];
     const acceptedColors: PixelSelectEditCommand["metadata"]["colors"] = [];
@@ -187,7 +187,7 @@ export class PixelSyncServer extends network.RoomAuthority {
       this.buffer,
       acceptedCmd
     );
-    room.broadcast({ type: "command", data: acceptedCmd });
+    context.room.broadcast({ type: "command", data: acceptedCmd });
   }
 
   /**
@@ -196,7 +196,7 @@ export class PixelSyncServer extends network.RoomAuthority {
    */
   #receiveUvRegionCommand(
     cmd: PixelUvRegionCommand,
-    room: network.RoomHandle
+    context: network.RoomContext
   ): void {
     const key = cmd.metadata.id;
     if (this.#regionTracker.resolve(key, cmd) === "reject") {
@@ -208,7 +208,7 @@ export class PixelSyncServer extends network.RoomAuthority {
       this.buffer,
       cmd
     );
-    room.broadcast({ type: "command", data: cmd });
+    context.room.broadcast({ type: "command", data: cmd });
   }
 
   snapshot(): PixelBufferSnapshot {

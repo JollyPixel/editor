@@ -15,7 +15,7 @@ import assert from "node:assert/strict";
 import {
   Server,
   Client,
-  RoomAuthority,
+  Extension,
   type ClientHandle
 } from "#src/index.ts";
 import { WebsocketTransport } from "#src/transport/websocket.ts";
@@ -23,7 +23,7 @@ import {
   DEFAULT_WEBSOCKET_PATH
 } from "#src/transport/constants.ts";
 
-class RecordingAuthority extends RoomAuthority {
+class RecordingExtension extends Extension {
   readonly id = "test-ns";
   connected: ClientHandle[] = [];
   disconnected: string[] = [];
@@ -87,8 +87,8 @@ describe("WebsocketTransport + Client (integration)", () => {
 
   test("joins, exchanges messages, and leaves over a real WebSocket", async() => {
     const server = new Server();
-    const authority = new RecordingAuthority();
-    server.register(authority);
+    const extension = new RecordingExtension();
+    server.register(extension);
 
     new WebsocketTransport({ httpServer, server, path: DEFAULT_WEBSOCKET_PATH });
 
@@ -100,7 +100,7 @@ describe("WebsocketTransport + Client (integration)", () => {
     assert.ok(client.id.length > 0);
     assert.equal(room.clientId, client.id);
 
-    await waitFor(() => authority.connected.length === 1);
+    await waitFor(() => extension.connected.length === 1);
 
     let received: unknown;
     room.on("message", (payload) => {
@@ -108,23 +108,23 @@ describe("WebsocketTransport + Client (integration)", () => {
     });
 
     room.send({ hello: "world" });
-    await waitFor(() => authority.messages.length === 1);
-    assert.deepEqual(authority.messages[0].payload, { hello: "world" });
+    await waitFor(() => extension.messages.length === 1);
+    assert.deepEqual(extension.messages[0].payload, { hello: "world" });
 
-    authority.connected[0].send({ type: "ack" });
+    extension.connected[0].send({ type: "ack" });
     await waitFor(() => received !== undefined);
     assert.deepEqual(received, { type: "ack" });
 
     room.leave();
-    await waitFor(() => authority.disconnected.length === 1);
+    await waitFor(() => extension.disconnected.length === 1);
 
     client.destroy();
   });
 
   test("two real clients get peer-joined/peer-left over the wire", async() => {
     const server = new Server();
-    const authority = new RecordingAuthority();
-    server.register(authority);
+    const extension = new RecordingExtension();
+    server.register(extension);
 
     new WebsocketTransport({ httpServer, server, path: "/ws-sync-peers" });
 
@@ -134,7 +134,7 @@ describe("WebsocketTransport + Client (integration)", () => {
     const joined: string[] = [];
     roomA.on("peer-joined", (event) => joined.push(event.clientId));
 
-    await waitFor(() => authority.connected.length === 1);
+    await waitFor(() => extension.connected.length === 1);
 
     const clientB = new Client({ url: `ws://127.0.0.1:${port}/ws-sync-peers` });
     clientB.room("test-ns").join();
@@ -142,23 +142,23 @@ describe("WebsocketTransport + Client (integration)", () => {
     assert.notEqual(clientA.id, clientB.id);
 
     await waitFor(() => joined.length === 1);
-    assert.deepEqual(joined, [authority.connected[1].id]);
+    assert.deepEqual(joined, [extension.connected[1].id]);
 
     const left: string[] = [];
     roomA.on("peer-left", (event) => left.push(event.clientId));
     clientB.destroy();
 
-    await waitFor(() => authority.disconnected.length === 1);
+    await waitFor(() => extension.disconnected.length === 1);
     await waitFor(() => left.length === 1);
-    assert.deepEqual(left, [authority.connected[1].id]);
+    assert.deepEqual(left, [extension.connected[1].id]);
 
     clientA.destroy();
   });
 
   test("a room a client never joined never sees it", async() => {
     const server = new Server();
-    const joined = new RecordingAuthority();
-    class UnusedAuthority extends RoomAuthority {
+    const joined = new RecordingExtension();
+    class UnusedExtension extends Extension {
       readonly id = "unused";
       connected: ClientHandle[] = [];
       onClientConnect(client: ClientHandle): void {
@@ -171,7 +171,7 @@ describe("WebsocketTransport + Client (integration)", () => {
         // unused in this test
       }
     }
-    const unused = new UnusedAuthority();
+    const unused = new UnusedExtension();
     server.register(joined);
     server.register(unused);
 

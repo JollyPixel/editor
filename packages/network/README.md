@@ -26,23 +26,23 @@ import {
   createWebSocketNetworkPlugin
 } from "@jolly-pixel/network/plugins/vite.ts";
 
-class EchoAuthority extends network.RoomAuthority {
+class EchoExtension extends network.Extension {
   readonly id = "echo";
   readonly name = "echo";
 
   onClientConnect(client: network.ClientHandle) {}
   onClientDisconnect(clientId: string) {}
-  onMessage(clientId: string, payload: unknown, room: network.RoomHandle) {
+  onMessage(clientId: string, payload: unknown, context: network.RoomContext) {
     // payload is whatever the client's room.send() sent, envelope-free
-    room.broadcast(payload);
+    context.room.broadcast(payload);
   }
 }
 
 export default {
   plugins: [
     createWebSocketNetworkPlugin({
-      roomAuthorities: [
-        new EchoAuthority()
+      extensions: [
+        new EchoExtension()
       ]
     })
   ]
@@ -66,25 +66,14 @@ room.send({ hello: "world" });
 
 ## 📚 API
 
-- [`Client`](./docs/Client.md)
-  - [`Room`](./docs/Room.md): room-scoped handles
-  - [`SyncAdapter`](./docs/sync/SyncAdapter.md): base class for a client-side sync session (stamping, echo-guarding, snapshot/ready bookkeeping)
-- [`Server`](./docs/Server.md): transport-agnostic room multiplexer
-  - [`RoomAuthority`](./docs/RoomAuthority.md): per-room server logic — declares its type `name` and event vocabulary, never its own roles/rights
-  - [`RightsTable`](./docs/RightsTable.md): per-role `read`/`write`/`void` lookup, glob-matched against `${authority.name}.${event}`, configured once via `new Server({ rights })`
-  - [`ConflictResolver` / `LastWriteWinsResolver`](./docs/sync/ConflictResolver.md): server-side last-write-wins conflict resolution
-  - [`ConflictTracker`](./docs/sync/ConflictTracker.md): per-key last-accepted-command bookkeeping around a `ConflictResolver`
+- [Client](./docs/Client.md): client connection and room handles
+- [Server](./docs/Server.md): room multiplexer and the `Extension` base class
+- [Rights](./docs/Rights.md): role-based access control
+- [Transports](./docs/Transports.md): vite plugin and websocket wiring
+- [SyncAdapter](./docs/sync/SyncAdapter.md): client-side sync sessions
+- [Conflicts](./docs/sync/Conflicts.md): server-side conflict resolution
 
-### 🚋 Transports
-
-- [`WebsocketTransport`](./docs/transport/websocket.md): ws-server plumbing into a `Server`
-
-> [!TIP]
-> As an end user or editor creator you should not worry too much about that
-
-### 📦 Plugins
-
-- [`createWebSocketNetworkPlugin`](./docs/plugins/vite.md): Vite dev-server wiring
+[ARCHITECTURE.md](./ARCHITECTURE.md) covers the wire format and connection lifecycle.
 
 ## ✨ Contributors guide
 

@@ -1,0 +1,40 @@
+{
+  "name": "@jolly-pixel/event-store",
+  "description": "Append-only log for JollyPixel's events",
+  "version": "1.0.0",
+  "type": "module",
+  "imports": {
+    "#src/*": "./src/*"
+  },
+  "exports": "./dist/index.js",
+  "scripts": {
+    "prepublish": "rimraf ./dist && tsc && node scripts/copy-assets.mjs",
+    "build": "tsc && node scripts/copy-assets.mjs",
+    "test-only": "node --test \"test/**/*.spec.ts\"",
+    "test": "c8 -r html npm run test-only"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JollyPixel/editor.git",
+    "directory": "packages/event-store"
+  },
+  "keywords": [],
+  "files": [
+    "dist"
+  ],
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  },
+  "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@openally/emitt": "1.0.1",
+    "@openally/result": "3.0.0"
+  }
+}

@@ -1,6 +1,6 @@
 # Network Sync Layer
 
-The network sync layer adds **server-authoritative multiplayer** on top of `VoxelEngine`, built directly on `@jolly-pixel/network`'s primitives (`network.Server` / `network.RoomAuthority` / `network.Client` / `network.Room`). Multiple clients share the same voxel world in real time: `VoxelSyncClient` extends `network.SyncAdapter` to wire a `VoxelEngine` instance (standalone or via `vr.engine`) to a `network.Room`, and `VoxelSyncServer` is a `network.RoomAuthority` that owns the authoritative `VoxelWorld`.
+The network sync layer adds **server-authoritative multiplayer** on top of `VoxelEngine`, built directly on `@jolly-pixel/network`'s primitives (`network.Server` / `network.Extension` / `network.Client` / `network.Room`). Multiple clients share the same voxel world in real time: `VoxelSyncClient` extends `network.SyncAdapter` to wire a `VoxelEngine` instance (standalone or via `vr.engine`) to a `network.Room`, and `VoxelSyncServer` is a `network.Extension` that owns the authoritative `VoxelWorld`.
 
 This mirrors `@jolly-pixel/pixel-draw.renderer`'s network layer (`PixelSyncClient`/`PixelSyncServer`) — both packages share the same wire discipline and dev-server wiring pattern.
 
@@ -22,7 +22,7 @@ This mirrors `@jolly-pixel/pixel-draw.renderer`'s network layer (`PixelSyncClien
                                                                                 ▼
                                                                      ┌─────────────────────┐
                                                                      │  VoxelSyncServer    │
-                                                                     │(network.RoomAuthority│
+                                                                     │(network.Extension)  │
                                                                      │  headless, owns     │
                                                                      │  VoxelWorld)        │
                                                                      └─────────────────────┘
@@ -65,7 +65,7 @@ syncClient.destroy(); // detach() + removes its "message" listener + room.leave(
 
 ## Server setup — Vite dev server
 
-`VoxelSyncServer` is a `network.RoomAuthority`, registered onto a `network.Server` via `@jolly-pixel/network`'s `createWebSocketNetworkPlugin` Vite plugin — the same pattern `pixel-draw-renderer` uses. A single `vite dev` process then serves both the static app and the WebSocket sync endpoint:
+`VoxelSyncServer` is a `network.Extension`, registered onto a `network.Server` via `@jolly-pixel/network`'s `createWebSocketNetworkPlugin` Vite plugin — the same pattern `pixel-draw-renderer` uses. A single `vite dev` process then serves both the static app and the WebSocket sync endpoint:
 
 ```ts
 // vite.config.ts
@@ -76,7 +76,7 @@ import { VoxelSyncServer } from "@jolly-pixel/voxel.renderer";
 export default defineConfig({
   plugins: [
     createWebSocketNetworkPlugin({
-      roomAuthorities: [
+      extensions: [
         // Must match the client's room above.
         new VoxelSyncServer({ id: "voxel-map:world" })
       ]
@@ -85,7 +85,7 @@ export default defineConfig({
 });
 ```
 
-Multiple `VoxelSyncServer` instances (one per world) can be registered side by side, each under its own room — and alongside a `PixelSyncServer` for texture sync, since both extend the same `network.RoomAuthority` base and share one `network.Server`/WebSocket.
+Multiple `VoxelSyncServer` instances (one per world) can be registered side by side, each under its own room — and alongside a `PixelSyncServer` for texture sync, since both extend the same `network.Extension` base and share one `network.Server`/WebSocket.
 
 > **Pre-seed the server's world to match the client's initial state.** A client typically creates a default layer locally (e.g. `VoxelEngine`'s `layers` constructor option) before its `VoxelSyncClient` has attached — that layer is never sent to the server. If the server starts with an empty `VoxelWorld`, the *first* snapshot it sends back will have zero layers, and `engine.load()` on the client wipes its local default layer out to match. Pass a pre-populated `world` (with the same layer name(s) the client bootstraps) so every client's first snapshot is already consistent — the same reason `PixelSyncServer` is typically constructed with a pre-sized `PixelBuffer` rather than a blank one:
 > ```ts
@@ -102,21 +102,21 @@ Multiple `VoxelSyncServer` instances (one per world) can be registered side by s
 |--------|-------------|
 | `onClientConnect(client)` | Sends the current snapshot to a newly joined client (called by `network.Server`). |
 | `onClientDisconnect(clientId)` | No-op — `network.Server` owns membership bookkeeping. |
-| `onMessage(clientId, payload, room)` | Validates and routes an incoming payload to `receive()`. |
+| `onMessage(clientId, payload, context)` | Validates and routes an incoming payload to `receive()`. |
 | `getEventName(payload)` | Returns the command's `action` (or `"unknown"` for a non-`VoxelNetworkCommand` payload) — used by `network.ServerRoom` to look up rights when the server was constructed with one (see [Rights (RBAC)](#rights-rbac)). |
 | `name` | Always `"voxel.renderer"`, shared by every `VoxelSyncServer` instance regardless of `id` — the namespace a rights table keys its rules against (e.g. `"voxel.renderer.*"`). |
 | `events` | The full `VoxelLayerHookAction` vocabulary (`"voxel-set"`, `"object-added"`, ...) — a declarative catalog for whoever configures the server's rights table; `VoxelSyncServer` itself never decides who may use them. |
-| `receive(cmd, room)` | Validates, applies, and broadcasts a command via `room.broadcast()` (useful in tests). |
+| `receive(cmd, context)` | Validates, applies, and broadcasts a command via `context.room.broadcast()` (useful in tests). |
 | `snapshot()` | Returns the current world as `VoxelWorldJSON`. |
 | `world` | The authoritative `VoxelWorld` instance. |
 
-`room: network.RoomHandle` is handed in per call by `network.ServerRoom` — it's not stashed anywhere, so `VoxelSyncServer` never holds broadcast capability outside of reacting to an actual client event. A server-driven push with no triggering client event (a timer, an admin action) goes through `network.Server.broadcast(roomId, payload)` instead.
+`context: network.RoomContext` is handed in per call by `network.ServerRoom` — it's not stashed anywhere, so `VoxelSyncServer` never holds broadcast capability outside of reacting to an actual client event. A server-driven push with no triggering client event (a timer, an admin action) goes through `network.Server.broadcast(roomId, payload)` instead.
 
 ### Options
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `id` | `string` | `"voxel-map"` | `network.RoomAuthority` id this server is registered under. |
+| `id` | `string` | `"voxel-map"` | `network.Extension` id this server is registered under. |
 | `world` | `VoxelWorld` | new world | Existing world to use as authoritative state. |
 | `chunkSize` | `number` | `16` | Chunk size when creating a new world. |
 | `conflictResolver` | `network.ConflictResolver<VoxelNetworkCommand>` | `network.LastWriteWinsResolver` | Custom conflict strategy. |
@@ -127,7 +127,7 @@ Multiple `VoxelSyncServer` instances (one per world) can be registered side by s
 
 ```ts
 createWebSocketNetworkPlugin({
-  roomAuthorities: [
+  extensions: [
     new VoxelSyncServer({ id: "voxel-map:world-1", world }),
     new VoxelSyncServer({ id: "voxel-map:world-2" }) // same rights apply here too
   ],
@@ -149,7 +149,7 @@ createWebSocketNetworkPlugin({
 });
 ```
 
-A client with no `role` in its join `identity`, or a role that isn't a key in the table, falls open to full write access — matching `@jolly-pixel/network`'s "unrestricted by default" behavior (see [`RightsTable`](../../network/docs/RightsTable.md)). Role assignment here is **not authenticated** — `identity.role` is whatever the client sent at `room.join()`. If real access control is needed, resolve the role from a trusted session/auth layer before constructing that `identity` client-side.
+A client with no `role` in its join `identity`, or a role that isn't a key in the table, falls open to full write access — matching `@jolly-pixel/network`'s "unrestricted by default" behavior (see [Rights](../../network/docs/Rights.md)). Role assignment here is **not authenticated** — `identity.role` is whatever the client sent at `room.join()`. If real access control is needed, resolve the role from a trusted session/auth layer before constructing that `identity` client-side.
 
 ## VoxelNetworkCommand — wire format
 
@@ -181,7 +181,7 @@ position. On a tie, the lexicographically greater `clientId` wins (deterministic
 coordination). Commands from the *same* `clientId` as the last accepted one always win,
 regardless of timestamp ordering — this is what keeps replayed operations (e.g. an undo/redo
 system built on top of `VoxelEngine`) from being rejected as stale by their own historical
-timestamp. See [`ConflictResolver`](../../network/docs/sync/ConflictResolver.md) for the full
+timestamp. See [Conflicts](../../network/docs/sync/Conflicts.md) for the full
 rationale — the resolver is shared verbatim with `pixel-draw-renderer`.
 
 ```ts

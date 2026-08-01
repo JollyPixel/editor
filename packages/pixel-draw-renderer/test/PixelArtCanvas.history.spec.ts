@@ -9,7 +9,8 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import type {
   Room,
-  RoomHandle
+  RoomContext,
+  RoomEventStoreHandle
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
@@ -481,9 +482,15 @@ describe("PixelArtCanvas — history (undo/redo)", () => {
 
 interface RecordingRoom extends Room<PixelNetworkCommand, PixelServerMessage> {
   sentCommands: PixelNetworkCommand[];
-  /** The RoomHandle wired into the backing server — lets a test simulate a peer sending directly. */
-  serverRoom: RoomHandle;
+  /** The RoomContext wired into the backing server — lets a test simulate a peer sending directly. */
+  serverRoom: RoomContext;
 }
+
+// receive() never touches eventStore, so this fake room doesn't need a real one.
+const unusedEventStore: RoomEventStoreHandle = {
+  append: () => true,
+  list: () => []
+};
 
 function isServerMessage(value: unknown): value is PixelServerMessage {
   return typeof value === "object" && value !== null && "type" in value;
@@ -519,7 +526,10 @@ function makeServerBackedRoom(
   // Normally provided by Server/ServerRoom — this single-client fake
   // just forwards straight back to the same client, mirroring `observe()` in
   // PixelSyncServer.spec.ts.
-  const serverRoom: RoomHandle = { broadcast: handleFromServer };
+  const serverRoom: RoomContext = {
+    room: { broadcast: handleFromServer },
+    eventStore: unusedEventStore
+  };
 
   const room: RecordingRoom = {
     id: "test-room",

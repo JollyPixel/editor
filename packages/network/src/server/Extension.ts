@@ -1,16 +1,35 @@
+// Import Third-party Dependencies
+import * as EventStore from "@jolly-pixel/event-store";
+
 // Import Internal Dependencies
 import type {
   ClientHandle,
   PeerMetadata
 } from "../types.ts";
 
-export interface RoomHandle {
+export interface RoomBroadcast {
   broadcast(
     payload: unknown
   ): void;
 }
 
-export abstract class RoomAuthority {
+export interface RoomEventStoreHandle {
+  append(
+    input: EventStore.AppendInput
+  ): boolean;
+
+  list(
+    assetId: string,
+    fromVersion?: number
+  ): EventStore.Event[];
+}
+
+export interface RoomContext {
+  readonly room: RoomBroadcast;
+  readonly eventStore: RoomEventStoreHandle;
+}
+
+export abstract class Extension {
   abstract readonly id: string;
   abstract readonly name: string;
 
@@ -27,17 +46,17 @@ export abstract class RoomAuthority {
   abstract onClientConnect(
     client: ClientHandle,
     identity: PeerMetadata,
-    room: RoomHandle
+    context: RoomContext
   ): void;
 
   abstract onClientDisconnect(
     clientId: string,
-    room: RoomHandle
+    context: RoomContext
   ): void;
 
   abstract onMessage(
     clientId: string,
     payload: unknown,
-    room: RoomHandle
+    context: RoomContext
   ): void;
 }

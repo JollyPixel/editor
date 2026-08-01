@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import { toUint8Array } from "js-base64";
-import * as network from "@jolly-pixel/network";
+import * as network from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
 import type { PixelArtCanvas } from "../PixelArtCanvas.ts";

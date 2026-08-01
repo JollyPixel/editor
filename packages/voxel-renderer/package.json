@@ -40,7 +40,7 @@
   "dependencies": {
     "@dimforge/rapier3d": "0.19.3",
     "@jolly-pixel/engine": "3.0.0",
-    "@jolly-pixel/network": "*",
+    "@jolly-pixel/network": "1.0.0",
     "three": "0.185.1"
   },
   "devDependencies": {

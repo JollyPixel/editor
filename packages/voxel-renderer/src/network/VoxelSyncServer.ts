@@ -19,7 +19,7 @@ function isVoxelNetworkCommand(
 
 export interface VoxelSyncServerOptions {
   /**
-   * RoomAuthority id this server is registered under. A
+   * Extension id this server is registered under. A
    * VoxelSyncServer owns exactly one world, so a Server hosting
    * several worlds needs one instance per world, each under its own id.
    * @default "voxel-map"
@@ -47,7 +47,7 @@ export interface VoxelSyncServerOptions {
  *
  * Has no Three.js dependency and runs in Node.js / Deno / Bun.
  */
-export class VoxelSyncServer extends network.RoomAuthority {
+export class VoxelSyncServer extends network.Extension {
   readonly id: string;
   readonly name = "voxel.renderer";
   readonly world: VoxelWorld;
@@ -98,18 +98,18 @@ export class VoxelSyncServer extends network.RoomAuthority {
   onMessage(
     _clientId: string,
     payload: unknown,
-    room: network.RoomHandle
+    context: network.RoomContext
   ): void {
     if (!isVoxelNetworkCommand(payload)) {
       return;
     }
 
-    this.receive(payload, room);
+    this.receive(payload, context);
   }
 
   receive(
     cmd: VoxelNetworkCommand,
-    room: network.RoomHandle
+    context: network.RoomContext
   ): void {
     const key = VoxelSyncServer.#cmdKey(cmd);
     if (this.#tracker.resolve(key, cmd) === "reject") {
@@ -136,14 +136,14 @@ export class VoxelSyncServer extends network.RoomAuthority {
     }
 
     this.#tracker.record(key, cmd);
-    this.#broadcast(cmd, room);
+    this.#broadcast(cmd, context);
   }
 
   #broadcast(
     cmd: VoxelNetworkCommand,
-    room: network.RoomHandle
+    context: network.RoomContext
   ): void {
-    room.broadcast({
+    context.room.broadcast({
       type: "command",
       data: cmd
     });

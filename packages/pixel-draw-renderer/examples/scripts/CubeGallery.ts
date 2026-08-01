@@ -2,9 +2,9 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { type CubeBehavior } from "./components/Cube.ts";
-import { type CubeFactory } from "./components/CubeFactory.ts";
-import { type PixelArtCanvas } from "../../src/index.ts";
+import type { CubeBehavior } from "./components/Cube.ts";
+import type { CubeFactory } from "./components/CubeFactory.ts";
+import type { PixelArtCanvas } from "../../src/index.ts";
 
 export interface CubeGalleryOptions {
   cubeFactory: CubeFactory;

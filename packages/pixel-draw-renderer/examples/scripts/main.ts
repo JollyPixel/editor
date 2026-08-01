@@ -2,17 +2,17 @@
 import * as THREE from "three";
 import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
 import { ResizeHandle } from "@jolly-pixel/resize-handle";
-import * as network from "@jolly-pixel/network";
+// import * as network from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
-import type { PixelArtCanvas } from "../../src/index.ts";
-import {
-  PixelSyncClient,
-  PixelCursorSync,
-  type PixelNetworkCommand,
-  type PixelServerMessage
-} from "../../src/network/index.ts";
-import { type PixelDrawPanel } from "../../src/ui/index.ts";
+// import type { PixelArtCanvas } from "../../src/index.ts";
+// import {
+//   PixelSyncClient,
+//   PixelCursorSync,
+//   type PixelNetworkCommand,
+//   type PixelServerMessage
+// } from "../../src/network/client.ts";
+import { PixelDrawPanel } from "../../src/ui/index.ts";
 import { CameraBehavior } from "./components/Camera.ts";
 import { CubeFactory } from "./components/CubeFactory.ts";
 import { OrbitControlsBehavior } from "./components/OrbitControlsBehavior.ts";
@@ -22,8 +22,8 @@ import { CubePicker } from "./CubePicker.ts";
 // Every tab that opens this demo joins the same room, so pointing a
 // collaborator at the same URL joins them onto the same canvas. Must match
 // the PixelSyncServer's room in vite.config.ts.
-const DEMO_ROOM = "pixel-draw:demo-canvas";
-const USERNAME_STORAGE_KEY = "pixel-draw-demo:username";
+// const DEMO_ROOM = "pixel-draw:demo-canvas";
+// const USERNAME_STORAGE_KEY = "pixel-draw-demo:username";
 
 declare global {
   interface Window {
@@ -133,7 +133,7 @@ async function initRuntime(): Promise<Runtime> {
   // "uv-region-created" onBufferUpdated event immediately (not queued) —
   // if sync isn't attached yet, the event fires into a void and the region
   // never reaches the server, so late-joining peers never see it either.
-  initializeWebsocketTransport(canvasManager);
+  // initializeWebsocketTransport(canvasManager);
 
   // One test cube per UV region, kept in sync via the uv event stream (see
   // CubeGallery.ts). Actor creation/teardown is delegated to CubeFactory, and
@@ -164,48 +164,49 @@ async function initRuntime(): Promise<Runtime> {
 /**
  * Prompts once per browser session
  */
-function resolveUsername(): string {
-  const cached = sessionStorage.getItem(USERNAME_STORAGE_KEY);
-  if (cached) {
-    return cached;
-  }
+// function resolveUsername(): string {
+//   const cached = sessionStorage.getItem(USERNAME_STORAGE_KEY);
+//   if (cached) {
+//     return cached;
+//   }
 
-  // eslint-disable-next-line no-alert -- example-only UX, no dedicated UI needed here
-  const entered = window.prompt("Choose a username for this session")?.trim();
-  const username = entered && entered.length > 0 ?
-    entered :
-    "Guest";
+//   // eslint-disable-next-line no-alert -- example-only UX, no dedicated UI needed here
+//   const entered = window.prompt("Choose a username for this session")?.trim();
+//   const username = entered && entered.length > 0 ?
+//     entered :
+//     "Guest";
 
-  sessionStorage.setItem(USERNAME_STORAGE_KEY, username);
+//   sessionStorage.setItem(USERNAME_STORAGE_KEY, username);
 
-  return username;
-}
+//   return username;
+// }
 
 // PixelSyncClient.attach() chains onto whatever local `onBufferUpdated` handler the canvas already has.
-function initializeWebsocketTransport(
-  canvasManager: PixelArtCanvas
-) {
-  const networkClient = new network.Client({
-    identity: {
-      username: resolveUsername()
-    }
-  });
-  const room = networkClient.room<PixelNetworkCommand, PixelServerMessage>(
-    DEMO_ROOM
-  );
-  room.on("peer-joined", (event) => console.log(`[pixel-sync] peer joined: ${event.clientId}`));
-  room.on("peer-left", (event) => console.log(`[pixel-sync] peer left: ${event.clientId}`));
+// function initializeWebsocketTransport(
+//   canvasManager: PixelArtCanvas
+// ) {
+//   const networkClient = new network.Client({
+//     identity: {
+//       username: resolveUsername()
+//     }
+//   });
+//   const room = networkClient.room<PixelNetworkCommand, PixelServerMessage>(
+//     DEMO_ROOM
+//   );
+//   room.join();
+//   room.on("peer-joined", (event) => console.log(`[pixel-sync] peer joined: ${event.clientId}`));
+//   room.on("peer-left", (event) => console.log(`[pixel-sync] peer left: ${event.clientId}`));
 
-  const syncClient = new PixelSyncClient({
-    room
-  });
-  syncClient.attach(canvasManager);
-  syncClient.on("ready", () => {
-    window.__pixelSyncReady = true;
-  });
+//   const syncClient = new PixelSyncClient({
+//     room
+//   });
+//   syncClient.attach(canvasManager);
+//   syncClient.on("ready", () => {
+//     window.__pixelSyncReady = true;
+//   });
 
-  const cursorSync = new PixelCursorSync({
-    room
-  });
-  cursorSync.attach(canvasManager);
-}
+//   const cursorSync = new PixelCursorSync({
+//     room
+//   });
+//   cursorSync.attach(canvasManager);
+// }
