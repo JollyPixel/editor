@@ -8,7 +8,7 @@
 
 ## 📌 About
 
-Chunked voxel engine and Three.js renderer. Use `VoxelEngine` directly, or `VoxelRenderer` to plug it into a JollyPixel [engine][engine] (ECS) scene. Either way you get multi-layer voxel worlds with tileset textures, face culling, block transforms, JSON save/load, and optional Rapier3D physics.
+Chunked voxel engine and Three.js renderer. Use `VoxelEngine` directly, or `VoxelRenderer` to plug it into a JollyPixel [engine][engine] (ECS) scene. Either way you get multi-layer voxel worlds with tileset textures, face culling, block transforms, JSON save/load, and optional physics via a pluggable collider interface (Rapier3D included).
 
 ## 💡 Features
 
@@ -24,7 +24,7 @@ Chunked voxel engine and Three.js renderer. Use `VoxelEngine` directly, or `Voxe
 - Configurable `alphaTest` for foliage and sprite-style cutout blocks
 - `save()` / `load()` round-trips the full world state as plain JSON
 - `TiledConverter` to import Tiled `.tmj` maps in `"stacked"` or `"flat"` layer modes
-- Optional Rapier3D physics with `"box"` or `"trimesh"` colliders rebuilt per dirty chunk; zero extra dependency if omitted
+- Optional physics through the backend-agnostic `VoxelCollider` interface, with `"box"` or `"trimesh"` colliders rebuilt per dirty chunk and a Rapier3D plugin included; zero extra dependency if omitted
 - Compatible with JollyPixel engine logger
 
 > [!NOTE]
@@ -139,8 +139,11 @@ await loadRuntime(runtime);
 
 ### Rapier3D physics
 
+Physics is plugged in through the backend-agnostic `VoxelCollider` interface
+
 ```ts
 import Rapier from "@dimforge/rapier3d-compat";
+import { RapierVoxelCollider } from "@jolly-pixel/voxel.renderer/plugins/rapier/index.js";
 
 await Rapier.init();
 const rapierWorld = new Rapier.World({
@@ -157,7 +160,11 @@ const voxelMap = world.createActor("map")
     chunkSize: 16,
     layers: ["Ground"],
     blocks,
-    rapier: { api: Rapier, world: rapierWorld }
+    collider: (context) => new RapierVoxelCollider({
+      api: Rapier,
+      world: rapierWorld,
+      ...context
+    })
   });
 ```
 
@@ -188,7 +195,7 @@ All four examples use OrbitControls (left drag: rotate, right drag: pan, scroll:
 - [Blocks](docs/Blocks.md) - `BlockDefinition`, `BlockShape`, `BlockRegistry`, `BlockShapeRegistry`, and `Face`.
 - [Tileset](docs/Tileset.md) - `TilesetManager`, `TilesetDefinition`, `TileRef`, UV regions.
 - [Serialization](docs/Serialization.md) - `VoxelSerializer` and JSON snapshot types.
-- [Collision](docs/Collision.md) - Rapier3D integration, `VoxelColliderBuilder`, and physics interfaces.
+- [Collision](docs/Collision.md) - The `VoxelCollider` contract and the bundled `RapierVoxelCollider` plugin.
 - [Built-In Shapes](docs/BuiltInShapes.md) - All built-in block shapes and custom shape authoring.
 - [TiledConverter](docs/TiledConverter.md) - Converting Tiled `.tmj` exports to `VoxelWorldJSON`.
 
@@ -221,7 +228,7 @@ Quick tips
 
 - **Tileset missing:** verify the `src` path and ensure the image is being served (check browser Network tab and CORS).
 - **Cutout/transparent textures look wrong:** increase or decrease `alphaTest` (for example `alphaTest: 0.1`) to tune cutout thresholds.
-- **Physics not working:** make sure Rapier is initialized (`await Rapier.init()`) and you pass a Rapier `World` via the `rapier` option.
+- **Physics not working:** make sure Rapier is initialized (`await Rapier.init()`) and that your `collider` factory returns a `RapierVoxelCollider` built with that `World`.
 - **Chunks not updating or faces missing:** face culling hides faces between adjacent solid voxels; confirm neighboring voxels are placed correctly.
 
 Reporting issues

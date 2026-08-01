@@ -82,16 +82,11 @@ interface VoxelEngineOptions {
    */
   chunkSize?: number;
   /**
-   * Enables collision shapes when provided.
-   * disabled by default to avoid forcing Rapier
-   * as a dependency for users who don't need physics.
+   * Enables collision when provided, disabled by default so no physics backend
+   * is required. Called once during construction with the registries.
+   * See plugins/rapier for the bundled Rapier3D implementation.
    */
-  rapier?: {
-    /** Rapier3D module (static API) */
-    api: RapierAPI;
-    /** Rapier3D world instance */
-    world: RapierWorld;
-  };
+  collider?: VoxelColliderFactory;
   /**
    * @default "lambert"
    * The type of material to use for rendering chunks. "standard" supports

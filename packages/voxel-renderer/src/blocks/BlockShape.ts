@@ -67,7 +67,7 @@ export interface BlockShape {
   ): boolean;
 
   /**
-   * Hint to VoxelColliderBuilder for the collision strategy to use.
+   * Hint to the VoxelCollider for the collision strategy to use.
    * "box"     → cheapest; one cuboid per voxel in a compound shape.
    * "trimesh" → accurate; built from the actual emitted geometry triangles.
    * "none"    → no collision (triggers, decoration, etc.).

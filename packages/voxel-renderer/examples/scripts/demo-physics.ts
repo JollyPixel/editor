@@ -16,6 +16,7 @@ import {
   Face,
   type BlockDefinition
 } from "../../src/index.ts";
+import { RapierVoxelCollider } from "../../src/plugins/rapier/index.ts";
 import { SphereBehavior } from "./components/SphereController.ts";
 import { createExamplesMenu } from "./utils/menu.ts";
 
@@ -70,7 +71,7 @@ world.createActor("camera")
     component.camera.lookAt(16, 1, 16);
   });
 
-// One block type — collidable fullCube so VoxelColliderBuilder creates box
+// One block type — collidable fullCube so RapierVoxelCollider creates box
 // colliders for every voxel (compound cuboid strategy, one per solid block).
 const voxelBlocks: BlockDefinition[] = [
   {
@@ -113,9 +114,8 @@ const voxelBlocks: BlockDefinition[] = [
   }
 ];
 
-// VoxelRenderer with Rapier physics enabled.
-// The VoxelColliderBuilder will automatically build box colliders for every
-// collidable voxel chunk during awake() and on each subsequent dirty rebuild.
+// VoxelRenderer with Rapier physics enabled: RapierVoxelCollider builds box
+// colliders for every collidable chunk during awake() and each dirty rebuild.
 const voxelMap = world.createActor("map")
   .addComponentAndGet(
     VoxelRenderer,
@@ -125,12 +125,12 @@ const voxelMap = world.createActor("map")
       blocks: voxelBlocks,
       alphaTest: 0.5,
       material: "lambert",
-      rapier: {
-        // RapierAPI and RapierWorld are structural interfaces, so the real
-        // Rapier namespace / World instance satisfy them without any cast.
-        api: RAPIER as never,
-        world: rapierWorld as never
-      },
+      // VoxelEngine only sees the VoxelCollider interface; Rapier lives here.
+      collider: (context) => new RapierVoxelCollider({
+        api: RAPIER,
+        world: rapierWorld,
+        ...context
+      }),
       tilesetLoader
     }
   );

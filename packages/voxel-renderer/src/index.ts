@@ -43,14 +43,14 @@ export type {
   FaceDefinition
 } from "./blocks/BlockShape.ts";
 
-// Collision
+// Collision — physics-agnostic contract.
 export {
-  VoxelColliderBuilder,
-  type VoxelColliderBuilderOptions,
-  type RapierAPI,
-  type RapierWorld,
-  type RapierCollider
-} from "./collision/VoxelColliderBuilder.ts";
+  mergeChunkGeometries,
+  type VoxelCollider,
+  type VoxelChunkCollision,
+  type VoxelColliderContext,
+  type VoxelColliderFactory
+} from "./collision/index.ts";
 
 // Serialization
 export {
