@@ -1,0 +1,315 @@
+// Import Node.js Dependencies
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
+
+// Import Internal Dependencies
+import { RapierVoxelCollider } from "../../../src/plugins/rapier/RapierVoxelCollider.ts";
+import type { VoxelChunkCollision } from "../../../src/collision/VoxelCollider.ts";
+import { VoxelChunk } from "../../../src/world/VoxelChunk.ts";
+import { BlockRegistry } from "../../../src/blocks/BlockRegistry.ts";
+import { BlockShapeRegistry } from "../../../src/blocks/BlockShapeRegistry.ts";
+
+// CONSTANTS
+const kNoGeometries = new Map();
+
+function makeColliderDesc(hx: number, hy: number, hz: number) {
+  return {
+    hx, hy, hz,
+    _translation: null as null | { x: number; y: number; z: number; },
+    setTranslation(x: number, y: number, z: number) {
+      this._translation = { x, y, z };
+
+      return this;
+    }
+  };
+}
+
+function makeRigidBodyDesc() {
+  return {
+    _translation: null as null | { x: number; y: number; z: number; },
+    setTranslation(x: number, y: number, z: number) {
+      this._translation = { x, y, z };
+
+      return this;
+    }
+  };
+}
+
+function makeMockWorld() {
+  const rigidBodies: { handle: number; }[] = [];
+  const colliderCalls: { desc: any; parent: any; }[] = [];
+  const removedBodies: { handle: number; }[] = [];
+
+  return {
+    rigidBodies,
+    colliderCalls,
+    removedBodies,
+
+    /** Bodies still alive in the physics world. */
+    get liveBodies() {
+      return rigidBodies.filter((body) => !removedBodies.includes(body));
+    },
+
+    createRigidBody(_desc: any) {
+      const body = { handle: rigidBodies.length };
+      rigidBodies.push(body);
+
+      return body;
+    },
+    createCollider(desc: any, parent?: any) {
+      const handle = colliderCalls.length;
+      colliderCalls.push({ desc, parent });
+
+      return { handle };
+    },
+    removeCollider(_collider: any, _wakeUp: boolean) {
+      // no-op
+    },
+    removeRigidBody(body: any) {
+      removedBodies.push(body);
+    }
+  };
+}
+
+function makeMockRapier() {
+  const bodyDescs: ReturnType<typeof makeRigidBodyDesc>[] = [];
+
+  return {
+    bodyDescs,
+    RigidBodyDesc: {
+      fixed() {
+        const desc = makeRigidBodyDesc();
+        bodyDescs.push(desc);
+
+        return desc;
+      }
+    },
+    ColliderDesc: {
+      cuboid(hx: number, hy: number, hz: number) {
+        return makeColliderDesc(hx, hy, hz);
+      },
+      trimesh(vertices: Float32Array, indices: Uint32Array) {
+        return { vertices, indices };
+      }
+    }
+  };
+}
+
+function makeBlockDef(id: number, shapeId: string, collidable = true) {
+  return {
+    id,
+    name: `Block${id}`,
+    shapeId: shapeId as any,
+    faceTextures: {},
+    defaultTexture: { col: 0, row: 0, tilesetId: "atlas" },
+    collidable
+  };
+}
+
+function makeCollider(
+  blocks: ReturnType<typeof makeBlockDef>[] = []
+) {
+  const world = makeMockWorld();
+  const rapier = makeMockRapier();
+  const collider = new RapierVoxelCollider({
+    api: rapier as any,
+    world: world as any,
+    blockRegistry: new BlockRegistry(blocks),
+    shapeRegistry: BlockShapeRegistry.createDefault()
+  });
+
+  return { collider, world, rapier };
+}
+
+function collisionOf(
+  chunk: VoxelChunk,
+  geometries: VoxelChunkCollision["geometries"] = kNoGeometries,
+  layerOffset = { x: 0, y: 0, z: 0 }
+): VoxelChunkCollision {
+  return { chunk, geometries, layerOffset };
+}
+
+/** Stand-in for a built chunk geometry (one triangle). */
+function makeGeometry(vertexCount = 3) {
+  const positions = new Float32Array(vertexCount * 3).map((_, i) => i);
+  const indices = new Uint32Array(
+    Array.from({ length: vertexCount }, (_, i) => i)
+  );
+
+  return {
+    getAttribute(name: string) {
+      return name === "position"
+        ? { array: positions, count: vertexCount }
+        : null;
+    },
+    getIndex() {
+      return { array: indices };
+    },
+    dispose() {
+      // no-op
+    }
+  } as any;
+}
+
+describe("RapierVoxelCollider.rebuildChunk", () => {
+  it("creates no body for an empty chunk", () => {
+    const { collider, world } = makeCollider();
+
+    collider.rebuildChunk("a", collisionOf(new VoxelChunk([0, 0, 0], 4)));
+
+    assert.equal(world.rigidBodies.length, 0);
+  });
+
+  it("creates no body when the only block is not collidable", () => {
+    const chunk = new VoxelChunk([0, 0, 0], 4);
+    chunk.set([0, 0, 0], { blockId: 1, transform: 0 });
+    const { collider, world } = makeCollider([makeBlockDef(1, "cube", false)]);
+
+    collider.rebuildChunk("a", collisionOf(chunk));
+
+    assert.equal(world.rigidBodies.length, 0);
+  });
+
+  it("creates no body when the blockId is not registered", () => {
+    const chunk = new VoxelChunk([0, 0, 0], 4);
+    chunk.set([0, 0, 0], { blockId: 99, transform: 0 });
+    const { collider, world } = makeCollider();
+
+    collider.rebuildChunk("a", collisionOf(chunk));
+
+    assert.equal(world.rigidBodies.length, 0);
+  });
+
+  it("creates one body and one cuboid per box voxel", () => {
+    const chunk = new VoxelChunk([0, 0, 0], 4);
+    chunk.set([0, 0, 0], { blockId: 1, transform: 0 });
+    chunk.set([1, 0, 0], { blockId: 1, transform: 0 });
+    const { collider, world } = makeCollider([makeBlockDef(1, "cube")]);
+
+    collider.rebuildChunk("a", collisionOf(chunk));
+
+    assert.equal(world.rigidBodies.length, 1);
+    assert.equal(world.colliderCalls.length, 2);
+    assert.ok(
+      world.colliderCalls.every((call) => call.parent === world.rigidBodies[0]),
+      "every cuboid must be parented to the chunk body"
+    );
+  });
+
+  it("positions each cuboid at the voxel centre", () => {
+    const chunk = new VoxelChunk([0, 0, 0], 4);
+    chunk.set([2, 3, 1], { blockId: 1, transform: 0 });
+    const { collider, world } = makeCollider([makeBlockDef(1, "cube")]);
+
+    collider.rebuildChunk("a", collisionOf(chunk));
+
+    const [{ desc }] = world.colliderCalls;
+    assert.deepEqual(desc._translation, { x: 2.5, y: 3.5, z: 1.5 });
+    assert.deepEqual(
+      { hx: desc.hx, hy: desc.hy, hz: desc.hz },
+      { hx: 0.5, hy: 0.5, hz: 0.5 }
+    );
+  });
+
+  it("places the body at the chunk origin plus the layer offset", () => {
+    // cx=2, cy=0, cz=1 at size 4, offset x=8 → (2*4+8, 0, 1*4)
+    const chunk = new VoxelChunk([2, 0, 1], 4);
+    chunk.set([0, 0, 0], { blockId: 1, transform: 0 });
+    const { collider, rapier } = makeCollider([makeBlockDef(1, "cube")]);
+
+    collider.rebuildChunk(
+      "a",
+      collisionOf(chunk, kNoGeometries, { x: 8, y: 0, z: 0 })
+    );
+
+    assert.equal(rapier.bodyDescs.length, 1);
+    assert.deepEqual(rapier.bodyDescs[0]._translation, { x: 16, y: 0, z: 4 });
+  });
+
+  it("builds a single trimesh when a shape hints trimesh", () => {
+    const chunk = new VoxelChunk([0, 0, 0], 4);
+    chunk.set([0, 0, 0], { blockId: 1, transform: 0 });
+    chunk.set([1, 0, 0], { blockId: 1, transform: 0 });
+    const { collider, world } = makeCollider([makeBlockDef(1, "ramp")]);
+
+    collider.rebuildChunk(
+      "a",
+      collisionOf(chunk, new Map([["atlas", makeGeometry()]]))
+    );
+
+    assert.equal(world.rigidBodies.length, 1);
+    assert.equal(world.colliderCalls.length, 1, "one trimesh, not one per voxel");
+    assert.ok(world.colliderCalls[0].desc.vertices instanceof Float32Array);
+    assert.ok(world.colliderCalls[0].desc.indices instanceof Uint32Array);
+  });
+
+  it("falls back to cuboids when a trimesh shape has no geometry", () => {
+    const chunk = new VoxelChunk([0, 0, 0], 4);
+    chunk.set([0, 0, 0], { blockId: 1, transform: 0 });
+    const { collider, world } = makeCollider([makeBlockDef(1, "ramp")]);
+
+    collider.rebuildChunk("a", collisionOf(chunk));
+
+    assert.equal(world.colliderCalls.length, 1);
+    assert.deepEqual(
+      world.colliderCalls[0].desc._translation,
+      { x: 0.5, y: 0.5, z: 0.5 }
+    );
+  });
+
+  it("replaces the previous body instead of accumulating one per rebuild", () => {
+    const chunk = new VoxelChunk([0, 0, 0], 4);
+    chunk.set([0, 0, 0], { blockId: 1, transform: 0 });
+    const { collider, world } = makeCollider([makeBlockDef(1, "cube")]);
+
+    collider.rebuildChunk("a", collisionOf(chunk));
+    collider.rebuildChunk("a", collisionOf(chunk));
+    collider.rebuildChunk("a", collisionOf(chunk));
+
+    assert.equal(world.rigidBodies.length, 3);
+    assert.equal(world.removedBodies.length, 2, "earlier bodies must be removed");
+    assert.equal(world.liveBodies.length, 1);
+  });
+});
+
+describe("RapierVoxelCollider.removeChunk", () => {
+  it("removes the chunk's rigid body from the world", () => {
+    const chunk = new VoxelChunk([0, 0, 0], 4);
+    chunk.set([0, 0, 0], { blockId: 1, transform: 0 });
+    const { collider, world } = makeCollider([makeBlockDef(1, "cube")]);
+
+    collider.rebuildChunk("a", collisionOf(chunk));
+    collider.removeChunk("a");
+
+    assert.deepEqual(world.removedBodies, [world.rigidBodies[0]]);
+    assert.equal(world.liveBodies.length, 0);
+  });
+
+  it("is a no-op for an unknown or already removed key", () => {
+    const { collider, world } = makeCollider();
+
+    assert.doesNotThrow(() => {
+      collider.removeChunk("nope");
+      collider.removeChunk("nope");
+    });
+    assert.equal(world.removedBodies.length, 0);
+  });
+});
+
+describe("RapierVoxelCollider.dispose", () => {
+  it("removes every remaining chunk body", () => {
+    const chunk = new VoxelChunk([0, 0, 0], 4);
+    chunk.set([0, 0, 0], { blockId: 1, transform: 0 });
+    const { collider, world } = makeCollider([makeBlockDef(1, "cube")]);
+
+    collider.rebuildChunk("a", collisionOf(chunk));
+    collider.rebuildChunk("b", collisionOf(chunk));
+    collider.dispose();
+
+    assert.equal(world.liveBodies.length, 0);
+
+    // Bookkeeping is cleared, so a later removal cannot double-remove.
+    collider.removeChunk("a");
+    assert.equal(world.removedBodies.length, 2);
+  });
+});

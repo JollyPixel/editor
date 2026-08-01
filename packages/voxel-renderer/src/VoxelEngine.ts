@@ -15,12 +15,10 @@ import {
 import type {
   BlockShape
 } from "./blocks/BlockShape.ts";
-import {
-  VoxelColliderBuilder,
-  type RapierAPI,
-  type RapierCollider,
-  type RapierWorld
-} from "./collision/VoxelColliderBuilder.ts";
+import type {
+  VoxelCollider,
+  VoxelColliderFactory
+} from "./collision/VoxelCollider.ts";
 import { VoxelMeshBuilder } from "./mesh/VoxelMeshBuilder.ts";
 import {
   VoxelSerializer,
@@ -101,15 +99,11 @@ export interface VoxelEngineOptions {
    */
   chunkSize?: number;
   /**
-   * Enables collision shapes when provided.
-   * disabled by default to avoid forcing Rapier as a dependency for users who don't need physics.
+   * Enables collision when provided, disabled by default so no physics backend
+   * is required. Called once during construction with the registries.
+   * See `plugins/rapier` for the bundled Rapier3D implementation.
    */
-  rapier?: {
-    /** Rapier3D module (static API) */
-    api: RapierAPI;
-    /** Rapier3D world instance */
-    world: RapierWorld;
-  };
+  collider?: VoxelColliderFactory;
   /**
    * @default "lambert"
    * The type of material to use for rendering chunks. "standard" supports
@@ -185,14 +179,13 @@ export class VoxelEngine {
   readonly serializer: VoxelSerializer;
 
   #meshBuilder: VoxelMeshBuilder;
-  #colliderBuilder: VoxelColliderBuilder | null = null;
+  #collider: VoxelCollider | null = null;
 
   /**
    * "layerId:cx,cy,cz:tilesetId" → THREE.Mesh.
    * Each chunk may have one mesh per tileset (separate draw call per texture).
    **/
   #chunkMeshes = new Map<string, THREE.Mesh>();
-  #chunkColliders = new Map<string, RapierCollider>();
 
   /**
    * Up to two materials per tileset ID — one opaque, one translucent (keyed by
@@ -226,7 +219,7 @@ export class VoxelEngine {
       material = "lambert",
       materialCustomizer,
       layers = [],
-      rapier,
+      collider,
       blocks = [],
       shapes = [],
       alphaTest = 0.1,
@@ -273,16 +266,10 @@ export class VoxelEngine {
       tilesetManager: this.tilesetManager
     });
 
-    if (rapier) {
-      const { api, world } = rapier;
-
-      this.#colliderBuilder = new VoxelColliderBuilder({
-        rapier: api,
-        world,
-        blockRegistry: this.blockRegistry,
-        shapeRegistry: this.shapeRegistry
-      });
-    }
+    this.#collider = collider?.({
+      blockRegistry: this.blockRegistry,
+      shapeRegistry: this.shapeRegistry
+    }) ?? null;
   }
 
   // --- Lifecycle --- //
@@ -330,7 +317,7 @@ export class VoxelEngine {
       mesh.geometry.dispose();
     }
     this.#chunkMeshes.clear();
-    this.#chunkColliders.clear();
+    this.#collider?.dispose();
 
     for (const mat of this.#materials.values()) {
       mat.dispose();
@@ -986,8 +973,7 @@ export class VoxelEngine {
       this.#chunkMeshes.delete(key);
     }
 
-    // Remove any existing collider for this chunk.
-    this.#chunkColliders.delete(chunkKeyBase);
+    this.#collider?.removeChunk(chunkKeyBase);
   }
 
   #rebuildChunk(
@@ -1023,82 +1009,19 @@ export class VoxelEngine {
       this.#chunkMeshes.set(key, mesh);
     }
 
-    // Rebuild collision collider if physics is enabled.
-    if (this.#colliderBuilder) {
-      const offset = layer.offset;
+    if (this.#collider) {
+      const layerOffset = layer.offset;
       this.#logger.debug(
-        `Rebuilding chunk geometries collider '${chunkKeyBase}' with layer name '${layer.name}'`,
-        {
-          offset
-        }
+        `Rebuilding collision for chunk '${chunkKeyBase}' with layer name '${layer.name}'`,
+        { offset: layerOffset }
       );
 
-      const collider = this.#buildColliderFromGeometries(chunk, geometries, offset);
-      if (collider) {
-        this.#logger.debug(`Successfully built collider for chunk '${chunkKeyBase}'`);
-
-        this.#chunkColliders.set(chunkKeyBase, collider);
-      }
+      this.#collider.rebuildChunk(chunkKeyBase, {
+        chunk,
+        geometries,
+        layerOffset
+      });
     }
-  }
-
-  /**
-   * Merges all per-tileset geometries into a single combined shape for Rapier.
-   * Collision is texture-agnostic so the tileset split is irrelevant here.
-   */
-  #buildColliderFromGeometries(
-    chunk: VoxelChunk,
-    geometries: Map<string, THREE.BufferGeometry>,
-    layerOffset: { x: number; y: number; z: number; }
-  ): RapierCollider | null {
-    const colliderBuilder = this.#colliderBuilder;
-    if (!colliderBuilder) {
-      return null;
-    }
-
-    if (geometries.size === 1) {
-      // Fast path: single tileset — pass the geometry directly.
-      const [geometry] = geometries.values();
-
-      return colliderBuilder.buildChunkCollider(chunk, geometry, layerOffset);
-    }
-
-    // Merge position/index arrays from all tileset geometries.
-    const combinedPositions: number[] = [];
-    const combinedIndices: number[] = [];
-    let indexOffset = 0;
-
-    for (const geo of geometries.values()) {
-      const posAttr = geo.getAttribute("position");
-      const idxAttr = geo.index;
-      if (!idxAttr) {
-        continue;
-      }
-
-      for (let i = 0; i < posAttr.array.length; i++) {
-        combinedPositions.push(posAttr.array[i]);
-      }
-      for (let i = 0; i < idxAttr.array.length; i++) {
-        combinedIndices.push(idxAttr.array[i] + indexOffset);
-      }
-      indexOffset += posAttr.count;
-    }
-
-    if (combinedPositions.length === 0) {
-      return null;
-    }
-
-    const combinedGeo = new THREE.BufferGeometry();
-    combinedGeo.setAttribute(
-      "position",
-      new THREE.Float32BufferAttribute(combinedPositions, 3)
-    );
-    combinedGeo.setIndex(combinedIndices);
-
-    const collider = colliderBuilder.buildChunkCollider(chunk, combinedGeo, layerOffset);
-    combinedGeo.dispose();
-
-    return collider;
   }
 
   #rebuildAllChunks(

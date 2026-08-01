@@ -10,7 +10,7 @@
 
 ## 📌 About
 
-Chunked voxel engine and Three.js renderer. Use `VoxelEngine` directly, or `VoxelRenderer` to plug it into a JollyPixel [engine][engine] (ECS) scene. Either way you get multi-layer voxel worlds with tileset textures, face culling, block transforms, JSON save/load, and optional Rapier3D physics.
+Chunked voxel engine and Three.js renderer. Use `VoxelEngine` directly, or `VoxelRenderer` to plug it into a JollyPixel [engine][engine] (ECS) scene. Either way you get multi-layer voxel worlds with tileset textures, face culling, block transforms, JSON save/load, and optional physics via a pluggable collider interface (Rapier3D included).
 
 ## 💡 Features
 
@@ -26,7 +26,7 @@ Chunked voxel engine and Three.js renderer. Use `VoxelEngine` directly, or `Voxe
 - Configurable `alphaTest` for foliage and sprite-style cutout blocks
 - `save()` / `load()` round-trips the full world state as plain JSON
 - `TiledConverter` to import Tiled `.tmj` maps in `"stacked"` or `"flat"` layer modes
-- Optional Rapier3D physics with `"box"` or `"trimesh"` colliders rebuilt per dirty chunk; zero extra dependency if omitted
+- Optional physics through the backend-agnostic `VoxelCollider` interface, with `"box"` or `"trimesh"` colliders rebuilt per dirty chunk and a Rapier3D plugin included; zero extra dependency if omitted
 - Compatible with JollyPixel engine logger
 
 > [!NOTE]
@@ -141,8 +141,11 @@ await loadRuntime(runtime);
 
 ### Rapier3D physics
 
+Physics is plugged in through the backend-agnostic `VoxelCollider` interface
+
 ```ts
 import Rapier from "@dimforge/rapier3d-compat";
+import { RapierVoxelCollider } from "@jolly-pixel/voxel.renderer/plugins/rapier/index.js";
 
 await Rapier.init();
 const rapierWorld = new Rapier.World({
@@ -159,7 +162,11 @@ const voxelMap = world.createActor("map")
     chunkSize: 16,
     layers: ["Ground"],
     blocks,
-    rapier: { api: Rapier, world: rapierWorld }
+    collider: (context) => new RapierVoxelCollider({
+      api: Rapier,
+      world: rapierWorld,
+      ...context
+    })
   });
 ```
 
@@ -190,7 +197,7 @@ All four examples use OrbitControls (left drag: rotate, right drag: pan, scroll:
 - [Blocks](docs/Blocks.md) - `BlockDefinition`, `BlockShape`, `BlockRegistry`, `BlockShapeRegistry`, and `Face`.
 - [Tileset](docs/Tileset.md) - `TilesetManager`, `TilesetDefinition`, `TileRef`, UV regions.
 - [Serialization](docs/Serialization.md) - `VoxelSerializer` and JSON snapshot types.
-- [Collision](docs/Collision.md) - Rapier3D integration, `VoxelColliderBuilder`, and physics interfaces.
+- [Collision](docs/Collision.md) - The `VoxelCollider` contract and the bundled `RapierVoxelCollider` plugin.
 - [Built-In Shapes](docs/BuiltInShapes.md) - All built-in block shapes and custom shape authoring.
 - [TiledConverter](docs/TiledConverter.md) - Converting Tiled `.tmj` exports to `VoxelWorldJSON`.
 
@@ -223,7 +230,7 @@ Quick tips
 
 - **Tileset missing:** verify the `src` path and ensure the image is being served (check browser Network tab and CORS).
 - **Cutout/transparent textures look wrong:** increase or decrease `alphaTest` (for example `alphaTest: 0.1`) to tune cutout thresholds.
-- **Physics not working:** make sure Rapier is initialized (`await Rapier.init()`) and you pass a Rapier `World` via the `rapier` option.
+- **Physics not working:** make sure Rapier is initialized (`await Rapier.init()`) and that your `collider` factory returns a `RapierVoxelCollider` built with that `World`.
 - **Chunks not updating or faces missing:** face culling hides faces between adjacent solid voxels; confirm neighboring voxels are placed correctly.
 
 Reporting issues
@@ -630,73 +637,85 @@ Inverse of `linearIndex`.
 
 # Collision
 
-Optional [Rapier3D](https://rapier.rs/) physics integration. Disabled by default — no Rapier dependency is
-required when physics is not needed.
+Optional physics integration. Disabled by default — no physics dependency is required when
+collision is not needed.
+
+`VoxelEngine` knows nothing about any physics backend: it drives the `VoxelCollider`
+interface. A [Rapier3D](https://rapier.rs/) implementation ships in
+[`plugins/rapier`](#rapiervoxelcollider), and any other backend can be plugged in by
+implementing the same interface.
 
 ## Setup
 
-Pass a `rapier` object to `VoxelEngineOptions` (a.k.a. `VoxelRendererOptions`) to enable collision shapes:
+Pass a `collider` factory to `VoxelEngineOptions` (a.k.a. `VoxelRendererOptions`):
 
 ```ts
 import Rapier from "@dimforge/rapier3d-compat";
+import { RapierVoxelCollider } from "@jolly-pixel/voxel.renderer/plugins/rapier/index.js";
 
 await Rapier.init();
 const rapierWorld = new Rapier.World({ x: 0, y: -9.81, z: 0 });
 
 const vr = actor.addComponentAndGet(VoxelRenderer, {
-  rapier: { api: Rapier, world: rapierWorld }
+  collider: (context) => new RapierVoxelCollider({
+    api: Rapier,
+    world: rapierWorld,
+    ...context
+  })
 });
 ```
 
-Colliders are built and updated automatically alongside chunk meshes.
+The factory runs once during construction, after the block and shape registries exist —
+`context` carries both, spread into the options above.
+
+Colliders are built and updated automatically alongside chunk meshes, and released when a
+chunk is emptied, its layer hidden, or the engine disposed.
 
 > **Opacity note** — a layer's `opacity` (see [Layer](./Layer.md)) has no effect on
 > collision except at `opacity === 0`, which is treated like `visible: false` and removes
 > the layer's colliders entirely. A translucent layer (e.g. `opacity: 0.5` glass) is still
 > fully solid.
 
-## Rapier Interfaces
+## VoxelCollider
 
-The library uses structural interfaces to avoid importing the Rapier WASM module at the
-module level. Pass the already-initialised Rapier namespace as `api`.
+The contract between the engine and any physics backend. No physics handle crosses it: the
+engine identifies a chunk by an opaque `key` and implementations do their own bookkeeping.
 
 ```ts
-interface RapierAPI {
-  RigidBodyDesc: {
-    fixed(): RapierRigidBodyDesc;
-  };
-  ColliderDesc: {
-    cuboid(
-      hx: number,
-      hy: number,
-      hz: number
-    ): RapierColliderDesc;
-    trimesh(
-      vertices: Float32Array,
-      indices: Uint32Array
-    ): RapierColliderDesc;
-  };
+interface VoxelCollider {
+  /** Replaces anything previously registered under `key`. */
+  rebuildChunk(key: string, collision: VoxelChunkCollision): void;
+  /** No-op for unknown keys. */
+  removeChunk(key: string): void;
+  dispose(): void;
 }
 
-interface RapierWorld {
-  createRigidBody(
-    desc: RapierRigidBodyDesc
-  ): RapierRigidBody;
-  createCollider(
-    desc: RapierColliderDesc,
-    parent?: RapierRigidBody
-  ): RapierCollider;
-  removeCollider(
-    collider: RapierCollider,
-    wakeUp: boolean
-  ): void;
-  removeRigidBody(
-    body: RapierRigidBody
-  ): void;
+interface VoxelChunkCollision {
+  chunk: VoxelChunk;
+  /** Keyed by tileset id — collision is texture-agnostic. */
+  geometries: ReadonlyMap<string, THREE.BufferGeometry>;
+  layerOffset: VoxelCoord;
 }
 
-interface RapierCollider {
-  readonly handle: number;
+type VoxelColliderFactory = (context: {
+  blockRegistry: BlockRegistry;
+  shapeRegistry: BlockShapeRegistry;
+}) => VoxelCollider;
+```
+
+`geometries` is split per tileset because rendering needs one draw call per texture.
+Implementations needing a single mesh can merge them with `mergeChunkGeometries()`, which
+returns `null` when there is nothing to collide with and flags whether the caller owns
+(and must dispose) the result:
+
+```ts
+const merged = mergeChunkGeometries(collision.geometries);
+if (merged) {
+  const { geometry, owned } = merged;
+  // ...
+  if (owned) {
+    geometry.dispose();
+  }
 }
 ```
 
@@ -704,37 +723,54 @@ interface RapierCollider {
 
 The strategy is chosen per-chunk based on the `collisionHint` of each voxel's shape:
 
-- `"box"` — one 1×1×1 cuboid per solid voxel, parented to a static `RigidBody` at the
+- `"box"` — one 1×1×1 cuboid per solid voxel, parented to a static body at the
   chunk origin. Best for full-cube worlds.
-- `"trimesh"` — single trimesh built from the chunk's rendered `THREE.BufferGeometry`.
+- `"trimesh"` — single trimesh built from the chunk's rendered geometry.
   Accurate for sloped shapes; may ghost-collide on internal edges.
 - `"none"` — block is skipped entirely (triggers, decoration).
 
-If **any** block in a chunk uses `"trimesh"`, the entire chunk gets a single trimesh collider.
+If **any** block in a chunk uses `"trimesh"`, the entire chunk gets a single trimesh
+collider, falling back to cuboids when no geometry is available.
 
-## VoxelColliderBuilder
+## RapierVoxelCollider
 
-Builds Rapier collision shapes for individual `VoxelChunk`s. Managed internally by
-`VoxelEngine`; most users do not need to call this directly.
-
-### VoxelColliderBuilderOptions
+The bundled Rapier3D implementation, exported from `plugins/rapier`. It creates one static
+`RigidBody` per chunk and parents that chunk's colliders to it, so `removeChunk()` drops
+the whole chunk in a single `removeRigidBody()` call.
 
 ```ts
-interface VoxelColliderBuilderOptions {
-  rapier: RapierAPI;
+interface RapierVoxelColliderOptions {
+  /** Rapier3D module (static API). */
+  api: RapierAPI;
+  /** Rapier3D world instance. */
   world: RapierWorld;
   blockRegistry: BlockRegistry;
   shapeRegistry: BlockShapeRegistry;
 }
 ```
 
-### Methods
+`RapierAPI`, `RapierWorld`, `RapierCollider` and friends are structural interfaces declaring
+only the subset used here, so the package never imports the Rapier WASM module. Pass the
+already-initialised Rapier namespace — the real types satisfy the shapes without a cast.
 
-#### `buildChunkCollider(chunk: VoxelChunk, geometry: THREE.BufferGeometry | null): RapierCollider | null`
+```ts
+interface RapierAPI {
+  RigidBodyDesc: {
+    fixed(): RapierRigidBodyDesc;
+  };
+  ColliderDesc: {
+    cuboid(hx: number, hy: number, hz: number): RapierColliderDesc;
+    trimesh(vertices: Float32Array, indices: Uint32Array): RapierColliderDesc;
+  };
+}
 
-Builds or rebuilds the collider for a chunk. Returns `null` if the chunk contains no
-solid voxels. The caller is responsible for removing the existing collider (if any)
-before calling this.
+interface RapierWorld {
+  createRigidBody(desc: RapierRigidBodyDesc): RapierRigidBody;
+  createCollider(desc: RapierColliderDesc, parent?: RapierRigidBody): RapierCollider;
+  removeCollider(collider: RapierCollider, wakeUp: boolean): void;
+  removeRigidBody(body: RapierRigidBody): void;
+}
+```
 
 
 # Hooks.md
@@ -994,29 +1030,29 @@ for (const chunk of layer.getChunks()) {
 
 # Network Sync Layer
 
-The network sync layer adds **server-authoritative multiplayer** on top of `VoxelEngine`, built directly on `@jolly-pixel/network`'s transport-agnostic primitives (`NetworkServer` / `NetworkPlugin` / `NetworkClient` / `NetworkChannel`). Multiple clients share the same voxel world in real time: `VoxelSyncSession` wires a `VoxelEngine` instance (standalone or via `vr.engine`) to a `NetworkChannel`-shaped transport, and `VoxelSyncServer` is a `NetworkPlugin` that owns the authoritative `VoxelWorld`.
+The network sync layer adds **server-authoritative multiplayer** on top of `VoxelEngine`, built directly on `@jolly-pixel/network`'s primitives (`network.Server` / `network.Extension` / `network.Client` / `network.Room`). Multiple clients share the same voxel world in real time: `VoxelSyncClient` extends `network.SyncAdapter` to wire a `VoxelEngine` instance (standalone or via `vr.engine`) to a `network.Room`, and `VoxelSyncServer` is a `network.Extension` that owns the authoritative `VoxelWorld`.
 
-This mirrors `@jolly-pixel/pixel-draw.renderer`'s network layer (`PixelSyncSession`/`PixelSyncServer`) — both packages share the same wire discipline and dev-server wiring pattern.
+This mirrors `@jolly-pixel/pixel-draw.renderer`'s network layer (`PixelSyncClient`/`PixelSyncServer`) — both packages share the same wire discipline and dev-server wiring pattern.
 
 ## Architecture overview
 
 ```
 ┌─────────────┐   local mutation   ┌───────────────────┐   send(cmd)     ┌─────────────────┐
-│ VoxelEngine │──────────────────▶│ VoxelSyncSession  │────────────────▶│ NetworkChannel  │
-│  (headless) │                   │                   │◀────────────────│ (NetworkClient) │
+│ VoxelEngine │──────────────────▶│  VoxelSyncClient  │────────────────▶│  network.Room   │
+│  (headless) │                   │                   │◀────────────────│(network.Client) │
 │             │◀──applyRemote──── │                   │   onMessage     │                 │
 └─────────────┘                   └───────────────────┘                 └────────┬────────┘
                                                                                   │  wire (ws)
                                                                                   ▼
                                                                      ┌─────────────────────┐
-                                                                     │     NetworkServer   │
-                                                                     │  (namespace router) │
+                                                                     │    network.Server   │
+                                                                     │   (room router)     │
                                                                      └──────────┬──────────┘
                                                                                 │ register()
                                                                                 ▼
                                                                      ┌─────────────────────┐
                                                                      │  VoxelSyncServer    │
-                                                                     │  (NetworkPlugin,    │
+                                                                     │(network.Extension)  │
                                                                      │  headless, owns     │
                                                                      │  VoxelWorld)        │
                                                                      └─────────────────────┘
@@ -1024,42 +1060,28 @@ This mirrors `@jolly-pixel/pixel-draw.renderer`'s network layer (`PixelSyncSessi
 
 **Flow:**
 1. A local mutation (e.g. `setVoxel`) fires the `onLayerUpdated` hook.
-2. `VoxelSyncSession` chains onto the hook, stamps the command with `clientId` / `seq` / `timestamp`, and calls `transport.send(cmd)`.
-3. `NetworkClient` forwards it over one shared WebSocket, tagged with the session's namespace.
-4. `NetworkServer` routes it to the registered `VoxelSyncServer` instance for that namespace, which validates the command (LWW conflict resolution), applies it to its authoritative `VoxelWorld`, and broadcasts it to every client joined to that namespace.
-5. Each client's channel calls `onMessage({ type: "command", data: cmd })`, which `VoxelSyncSession` routes to `engine.applyRemoteCommand(cmd)` (skipping its own echoed commands by `clientId`).
+2. `VoxelSyncClient` chains onto the hook, stamps the command with `clientId` / `seq` / `timestamp`, and calls `room.send(cmd)`.
+3. `network.Client` forwards it over one shared WebSocket, tagged with the client's room.
+4. `network.Server` routes it to the registered `VoxelSyncServer` instance for that room, which validates the command (LWW conflict resolution), applies it to its authoritative `VoxelWorld`, and broadcasts it to every client joined to that room.
+5. Each client's room handle dispatches a `"message"` event with `{ type: "command", data: cmd }`, which `VoxelSyncClient` routes to `engine.applyRemoteCommand(cmd)` (skipping its own echoed commands by `clientId`).
 6. `applyRemoteCommand` sets an internal flag so that the resulting hook event is **not** re-emitted — preventing infinite echo loops.
-
-## VoxelTransport interface
-
-Shaped to match `@jolly-pixel/network`'s `NetworkChannel` exactly, so `NetworkClient.channel(namespace)` can be passed in directly — no adapter needed:
-
-```ts
-interface VoxelTransport {
-  readonly localClientId: string;
-  send(cmd: VoxelNetworkCommand): void;
-  onMessage: ((message: VoxelServerMessage) => void) | null;
-  onPeerJoined: ((peerId: string) => void) | null;
-  onPeerLeft: ((peerId: string) => void) | null;
-}
-```
 
 ## Client setup
 
 ```ts
-import { NetworkClient } from "@jolly-pixel/network";
+import * as network from "@jolly-pixel/network";
 import {
-  VoxelSyncSession,
+  VoxelSyncClient,
   type VoxelNetworkCommand,
   type VoxelServerMessage
 } from "@jolly-pixel/voxel.renderer";
 
 const wsProtocol = location.protocol === "https:" ? "wss:" : "ws:";
-const client = new NetworkClient({ url: `${wsProtocol}//${location.host}/ws-sync` });
-const transport = client.channel<VoxelNetworkCommand, VoxelServerMessage>("voxel-map:world");
+const client = new network.Client({ url: `${wsProtocol}//${location.host}/ws-sync` });
+const room = client.room<VoxelNetworkCommand, VoxelServerMessage>("voxel-map:world");
 
-const session = new VoxelSyncSession({ transport });
-session.attach(vr.engine); // or a standalone, headless VoxelEngine
+const syncClient = new VoxelSyncClient({ room });
+syncClient.attach(vr.engine); // or a standalone, headless VoxelEngine
 ```
 
 `attach()` **chains** onto any existing `engine.onLayerUpdated` handler instead of replacing it — a handler set at `VoxelEngine`/`VoxelRenderer` construction time keeps firing. `detach()` restores whatever handler was present before `attach()` was called.
@@ -1067,13 +1089,13 @@ session.attach(vr.engine); // or a standalone, headless VoxelEngine
 ### Lifecycle
 
 ```ts
-// When the session ends:
-session.destroy(); // detach() + clears transport.onMessage
+// When the sync client is no longer needed:
+syncClient.destroy(); // detach() + removes its "message" listener + room.leave()
 ```
 
 ## Server setup — Vite dev server
 
-`VoxelSyncServer` is a `NetworkPlugin`, registered onto a `NetworkServer` via `@jolly-pixel/network`'s `createWebSocketNetworkPlugin` Vite plugin — the same pattern `pixel-draw-renderer` uses. A single `vite dev` process then serves both the static app and the WebSocket sync endpoint:
+`VoxelSyncServer` is a `network.Extension`, registered onto a `network.Server` via `@jolly-pixel/network`'s `createWebSocketNetworkPlugin` Vite plugin — the same pattern `pixel-draw-renderer` uses. A single `vite dev` process then serves both the static app and the WebSocket sync endpoint:
 
 ```ts
 // vite.config.ts
@@ -1084,22 +1106,22 @@ import { VoxelSyncServer } from "@jolly-pixel/voxel.renderer";
 export default defineConfig({
   plugins: [
     createWebSocketNetworkPlugin({
-      plugins: [
-        // Must match the client's namespace above.
-        new VoxelSyncServer({ namespace: "voxel-map:world" })
+      extensions: [
+        // Must match the client's room above.
+        new VoxelSyncServer({ id: "voxel-map:world" })
       ]
     })
   ]
 });
 ```
 
-Multiple `VoxelSyncServer` instances (one per world) can be registered side by side, each under its own namespace — and alongside a `PixelSyncServer` for texture sync, since both extend the same `NetworkPlugin` base and share one `NetworkServer`/WebSocket.
+Multiple `VoxelSyncServer` instances (one per world) can be registered side by side, each under its own room — and alongside a `PixelSyncServer` for texture sync, since both extend the same `network.Extension` base and share one `network.Server`/WebSocket.
 
-> **Pre-seed the server's world to match the client's initial state.** A client typically creates a default layer locally (e.g. `VoxelEngine`'s `layers` constructor option) before its `VoxelSyncSession` has attached — that layer is never sent to the server. If the server starts with an empty `VoxelWorld`, the *first* snapshot it sends back will have zero layers, and `engine.load()` on the client wipes its local default layer out to match. Pass a pre-populated `world` (with the same layer name(s) the client bootstraps) so every client's first snapshot is already consistent — the same reason `PixelSyncServer` is typically constructed with a pre-sized `PixelBuffer` rather than a blank one:
+> **Pre-seed the server's world to match the client's initial state.** A client typically creates a default layer locally (e.g. `VoxelEngine`'s `layers` constructor option) before its `VoxelSyncClient` has attached — that layer is never sent to the server. If the server starts with an empty `VoxelWorld`, the *first* snapshot it sends back will have zero layers, and `engine.load()` on the client wipes its local default layer out to match. Pass a pre-populated `world` (with the same layer name(s) the client bootstraps) so every client's first snapshot is already consistent — the same reason `PixelSyncServer` is typically constructed with a pre-sized `PixelBuffer` rather than a blank one:
 > ```ts
 > const world = new VoxelWorld(16);
 > world.addLayer("Ground");
-> new VoxelSyncServer({ namespace: "voxel-map:world", world });
+> new VoxelSyncServer({ id: "voxel-map:world", world });
 > ```
 >
 > `receive()` never lets a bad command crash the server: applying a command that references a layer the server doesn't know about (e.g. a stale command from before a reconnect) is caught, logged, and dropped instead of propagating the underlying `VoxelWorld` exception (`setVoxelAt`/`removeVoxelAt` etc. throw by design for local/programmatic misuse, which would otherwise take down the shared session for every connected client over one bad command).
@@ -1108,69 +1130,109 @@ Multiple `VoxelSyncServer` instances (one per world) can be registered side by s
 
 | Method | Description |
 |--------|-------------|
-| `onClientConnect(client)` | Sends the current snapshot to a newly joined client (called by `NetworkServer`). |
-| `onClientDisconnect(clientId)` | No-op — `NetworkServer` owns membership bookkeeping. |
-| `attach(broadcast)` | Called by `NetworkServer.register()` to wire the broadcast function. |
-| `onMessage(clientId, payload)` | Validates and routes an incoming payload to `receive()`. |
-| `receive(cmd)` | Validates, applies, and broadcasts a command directly (useful in tests). |
+| `onClientConnect(client)` | Sends the current snapshot to a newly joined client (called by `network.Server`). |
+| `onClientDisconnect(clientId)` | No-op — `network.Server` owns membership bookkeeping. |
+| `onMessage(clientId, payload, context)` | Validates and routes an incoming payload to `receive()`. |
+| `getEventName(payload)` | Returns the command's `action` (or `"unknown"` for a non-`VoxelNetworkCommand` payload) — used by `network.ServerRoom` to look up rights when the server was constructed with one (see [Rights (RBAC)](#rights-rbac)). |
+| `name` | Always `"voxel.renderer"`, shared by every `VoxelSyncServer` instance regardless of `id` — the namespace a rights table keys its rules against (e.g. `"voxel.renderer.*"`). |
+| `events` | The full `VoxelLayerHookAction` vocabulary (`"voxel-set"`, `"object-added"`, ...) — a declarative catalog for whoever configures the server's rights table; `VoxelSyncServer` itself never decides who may use them. |
+| `receive(cmd, context)` | Validates, applies, and broadcasts a command via `context.room.broadcast()` (useful in tests). |
 | `snapshot()` | Returns the current world as `VoxelWorldJSON`. |
 | `world` | The authoritative `VoxelWorld` instance. |
+
+`context: network.RoomContext` is handed in per call by `network.ServerRoom` — it's not stashed anywhere, so `VoxelSyncServer` never holds broadcast capability outside of reacting to an actual client event. A server-driven push with no triggering client event (a timer, an admin action) goes through `network.Server.broadcast(roomId, payload)` instead.
 
 ### Options
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `namespace` | `string` | `"voxel-map"` | `NetworkPlugin` namespace this server is registered under. |
+| `id` | `string` | `"voxel-map"` | `network.Extension` id this server is registered under. |
 | `world` | `VoxelWorld` | new world | Existing world to use as authoritative state. |
 | `chunkSize` | `number` | `16` | Chunk size when creating a new world. |
-| `conflictResolver` | `VoxelConflictResolver` | `LastWriteWinsResolver` | Custom conflict strategy. |
+| `conflictResolver` | `network.ConflictResolver<VoxelNetworkCommand>` | `network.LastWriteWinsResolver` | Custom conflict strategy. |
+
+## Rights (RBAC)
+
+`VoxelSyncServer` never defines roles or a rights policy itself — it only exposes its type identity via `name` (always `"voxel.renderer"`) and its action vocabulary via `events`/`getEventName()`. The rights table (which role can do what) is entirely a `network.Server` concern, configured once wherever the server is actually wired up (e.g. `vite.config.ts`, alongside `createWebSocketNetworkPlugin`), and keyed by `name` rather than by each world's `id` — one rule set covers every `VoxelSyncServer` world registered on that server:
+
+```ts
+createWebSocketNetworkPlugin({
+  extensions: [
+    new VoxelSyncServer({ id: "voxel-map:world-1", world }),
+    new VoxelSyncServer({ id: "voxel-map:world-2" }) // same rights apply here too
+  ],
+  rights: {
+    viewer: {
+      "voxel.renderer.$join": "write",       // viewers may join...
+      "voxel.renderer.$presence": "write",   //  ...and share cursor/presence...
+      "voxel.renderer.voxel-set": "read",    //  ...and see edits...
+      "voxel.renderer.voxel-removed": "read",
+      "voxel.renderer.object-added": "read"
+      // any action not listed here fails open to "write" for "viewer" too —
+      // list every mutating action you actually want to restrict, or use a
+      // trailing "voxel.renderer.*" to catch everything not already matched.
+    },
+    editor: {
+      "voxel.renderer.$join": "write" // everything else falls through to the fail-open default (full write)
+    }
+  }
+});
+```
+
+A client with no `role` in its join `identity`, or a role that isn't a key in the table, falls open to full write access — matching `@jolly-pixel/network`'s "unrestricted by default" behavior (see [Rights](../../network/docs/Rights.md)). Role assignment here is **not authenticated** — `identity.role` is whatever the client sent at `room.join()`. If real access control is needed, resolve the role from a trusted session/auth layer before constructing that `identity` client-side.
 
 ## VoxelNetworkCommand — wire format
 
-A `VoxelNetworkCommand` is a `VoxelLayerHookEvent` extended with routing metadata:
+A `VoxelNetworkCommand` is a `VoxelLayerHookEvent` extended with `@jolly-pixel/network`'s routing header:
 
 ```ts
-type VoxelNetworkCommand = VoxelLayerHookEvent & {
-  clientId: string;   // originating client ID
-  seq: number;        // monotonically increasing per client
-  timestamp: number;  // Unix ms (Date.now()) at time of mutation
-};
+type VoxelNetworkCommand = VoxelLayerHookEvent & network.NetworkCommandHeader;
+// network.NetworkCommandHeader = {
+//   clientId: string;   // originating client ID
+//   seq: number;        // monotonically increasing per client
+//   timestamp: number;  // Unix ms (Date.now()) at time of mutation
+// }
 ```
 
-Commands and snapshots are wrapped in a `VoxelServerMessage` envelope delivered to `VoxelTransport.onMessage`:
+Commands and snapshots are wrapped in a `VoxelServerMessage` envelope delivered via `network.Room`'s `"message"` event:
 
 ```ts
-type VoxelServerMessage =
-  | { type: "snapshot"; data: VoxelWorldJSON; }
-  | { type: "command"; data: VoxelNetworkCommand; };
+type VoxelServerMessage = network.NetworkServerMessage<VoxelNetworkCommand, VoxelWorldJSON>;
 ```
 
-## VoxelConflictResolver
+Both `NetworkCommandHeader` and `NetworkServerMessage` live in `@jolly-pixel/network`, shared verbatim with `pixel-draw-renderer`'s `PixelNetworkCommand`/`PixelServerMessage` — see [`SyncAdapter`](../../network/docs/sync/SyncAdapter.md).
 
-### Default: LastWriteWinsResolver
+## Conflict resolution
+
+### Default: network.LastWriteWinsResolver
 
 The default resolver uses **timestamp** to determine which command wins at a given voxel
 position. On a tie, the lexicographically greater `clientId` wins (deterministic without
-coordination).
+coordination). Commands from the *same* `clientId` as the last accepted one always win,
+regardless of timestamp ordering — this is what keeps replayed operations (e.g. an undo/redo
+system built on top of `VoxelEngine`) from being rejected as stale by their own historical
+timestamp. See [Conflicts](../../network/docs/sync/Conflicts.md) for the full
+rationale — the resolver is shared verbatim with `pixel-draw-renderer`.
 
 ```ts
-import { LastWriteWinsResolver } from "@jolly-pixel/voxel.renderer";
+import * as network from "@jolly-pixel/network";
 
 const server = new VoxelSyncServer({
-  conflictResolver: new LastWriteWinsResolver() // default, no need to pass explicitly
+  conflictResolver: new network.LastWriteWinsResolver() // default, no need to pass explicitly
 });
 ```
 
 ### Custom resolver
 
-Implement `VoxelConflictResolver` for custom strategies (e.g. first-write-wins, priority by
+Implement `network.ConflictResolver<VoxelNetworkCommand>` for custom strategies (e.g. first-write-wins, priority by
 role, etc.):
 
 ```ts
-import type { VoxelConflictResolver, VoxelConflictContext } from "@jolly-pixel/voxel.renderer";
+import type * as network from "@jolly-pixel/network";
+import type { VoxelNetworkCommand } from "@jolly-pixel/voxel.renderer";
 
-class FirstWriteWinsResolver implements VoxelConflictResolver {
-  resolve({ existing }: VoxelConflictContext): "accept" | "reject" {
+class FirstWriteWinsResolver implements network.ConflictResolver<VoxelNetworkCommand> {
+  resolve({ existing }: network.ConflictContext<VoxelNetworkCommand>): "accept" | "reject" {
     // Accept only if no prior command exists at this position
     return existing ? "reject" : "accept";
   }
@@ -1181,9 +1243,7 @@ const server = new VoxelSyncServer({ conflictResolver: new FirstWriteWinsResolve
 
 > **Note:** Conflict resolution only applies to per-position voxel operations (`"voxel-set"`,
 > `"voxel-removed"`). Structural layer operations (`"added"`, `"removed"`, `"reordered"`, etc.)
-> are always accepted. Unlike `pixel-draw-renderer`'s resolver, there is no "same client always
-> wins" special case — that rule exists to keep undo/redo replay from being rejected as stale,
-> and `VoxelEngine` has no undo/redo or origin-timestamp concept to protect.
+> are always accepted.
 
 ## VoxelCommandApplier — headless usage
 
@@ -1768,16 +1828,11 @@ interface VoxelEngineOptions {
    */
   chunkSize?: number;
   /**
-   * Enables collision shapes when provided.
-   * disabled by default to avoid forcing Rapier
-   * as a dependency for users who don't need physics.
+   * Enables collision when provided, disabled by default so no physics backend
+   * is required. Called once during construction with the registries.
+   * See plugins/rapier for the bundled Rapier3D implementation.
    */
-  rapier?: {
-    /** Rapier3D module (static API) */
-    api: RapierAPI;
-    /** Rapier3D world instance */
-    world: RapierWorld;
-  };
+  collider?: VoxelColliderFactory;
   /**
    * @default "lambert"
    * The type of material to use for rendering chunks. "standard" supports
