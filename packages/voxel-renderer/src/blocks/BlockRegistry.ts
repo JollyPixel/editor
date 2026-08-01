@@ -8,6 +8,7 @@ import type { BlockDefinition, BlockDefinitionIn } from "./BlockDefinition.ts";
  */
 export class BlockRegistry {
   #blocks = new Map<number, BlockDefinition>();
+  #version = 0;
 
   constructor(
     defs: BlockDefinitionIn[] = []
@@ -56,8 +57,17 @@ export class BlockRegistry {
     delete def.defaultTilesetId;
 
     this.#blocks.set(def.id, def as BlockDefinition);
+    this.#version++;
 
     return this;
+  }
+
+  /**
+   * Incremented on every `register()`. Consumers that precompute data derived
+   * from block definitions (VoxelMeshBuilder) compare it to detect staleness.
+   */
+  get version(): number {
+    return this.#version;
   }
 
   #canAddDefaultTileSetId(ref: TileRef, defaultTilesetId: string | undefined) {

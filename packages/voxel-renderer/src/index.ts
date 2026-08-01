@@ -93,9 +93,6 @@ export type {
   VoxelEntry
 } from "./world/types.ts";
 
-// Network
-export * from "./network/index.ts";
-
 // Math
 export {
   FACE as Face

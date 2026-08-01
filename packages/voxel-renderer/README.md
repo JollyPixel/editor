@@ -170,7 +170,7 @@ const voxelMap = world.createActor("map")
 
 ## 🚀 Running the examples
 
-Four interactive examples live in the `examples/` directory and are served by Vite. Start the dev server from the package root:
+Five interactive examples live in the `examples/` directory and are served by Vite. Start the dev server from the package root:
 
 ```bash
 npm run dev -w @jolly-pixel/voxel.renderer
@@ -184,8 +184,38 @@ Then open one of these URLs in your browser:
 | `http://localhost:5173/tileset.html` | `demo-tileset.ts` | Every tile in `Tileset001.png` laid out as UV-mapped quads with col/row labels, plus a rotating textured cube |
 | `http://localhost:5173/shapes.html` | `demo-shapes.ts` | All 19 built-in block shapes rendered as coloured meshes with a wireframe overlay and labelled name |
 | `http://localhost:5173/tiled.html` | `demo-tiled.ts` | A multi-layer Tiled `.tmj` map imported via `TiledConverter` in `"stacked"` mode with WASD camera navigation |
+| `http://localhost:5173/noise-world.html` | `demo-noise-world.ts` | A Minecraft-like world generated from simplex noise, with a live performance HUD — the benchmark example |
 
-All four examples use OrbitControls (left drag: rotate, right drag: pan, scroll: zoom) except the physics demo which uses `Camera3DControls` (WASD + mouse).
+The shapes and tileset examples use OrbitControls (left drag: rotate, right drag: pan, scroll: zoom); the others use `Camera3DControls` (WASD + mouse).
+
+### Benchmarking with the noise world
+
+`noise-world.html` exists to measure the engine under load: it fills a heightmap
+world (only the visible shell, so the voxel count follows the surface area) and
+reports the two build costs separately — writing voxels through `setVoxel`, then
+meshing every dirty chunk — next to the live renderer statistics.
+
+| Key | Action |
+|---|---|
+| `WASD` / `Space` / `Shift` | Fly around, middle-drag to look |
+| `R` | Rebuild the world with the next seed (re-runs both measurements) |
+| `F3` | Hide the HUD |
+
+The world is configured from the query string, which is what makes it useful for
+comparing runs:
+
+```
+/noise-world.html?size=512&chunk=32&seed=42
+```
+
+| Param | Default | Range | Effect |
+|---|---|---|---|
+| `size` | `256` | 32 – 1024 | World width and depth in voxels (`size²` columns) |
+| `chunk` | `16` | 4 – 64 | `chunkSize` — trades draw calls against per-chunk rebuild cost |
+| `seed` | `1337` | ≥ 0 | Terrain seed; the same seed always yields the same world |
+
+The tileset is painted on a canvas at startup, so the example needs no image
+asset and every run renders exactly the same blocks.
 
 ## 📚 API
 

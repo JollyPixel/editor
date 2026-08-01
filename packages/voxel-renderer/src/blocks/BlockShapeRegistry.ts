@@ -18,13 +18,20 @@ import {
  */
 export class BlockShapeRegistry {
   #shapes = new Map<string, BlockShape>();
+  #version = 0;
 
   register(
     shape: BlockShape
   ): this {
     this.#shapes.set(shape.id, shape);
+    this.#version++;
 
     return this;
+  }
+
+  /** Incremented on every `register()`; see `BlockRegistry.version`. */
+  get version(): number {
+    return this.#version;
   }
 
   get(

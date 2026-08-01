@@ -126,6 +126,11 @@ Registers a block definition. Throws if `def.id === 0`.
 
 #### `getAll(): IterableIterator<BlockDefinition>`
 
+#### `readonly version: number`
+
+Incremented on every `register()`. The mesh builder precompiles geometry per
+block and uses this to notice that its cache went stale.
+
 ## BlockShapeRegistry
 
 Maps shape IDs to `BlockShape` implementations. Pre-populated with all built-in shapes
@@ -136,6 +141,10 @@ by `VoxelEngine`. Accessible via `VoxelEngine.shapeRegistry`.
 #### `get(id: BlockShapeID): BlockShape | undefined`
 
 #### `has(id: BlockShapeID): boolean`
+
+#### `readonly version: number`
+
+Incremented on every `register()`; see `BlockRegistry.version`.
 
 #### `static createDefault(): BlockShapeRegistry`
 

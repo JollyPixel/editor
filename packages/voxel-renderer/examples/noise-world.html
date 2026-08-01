@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Noise World — @jolly-pixel/voxel.renderer</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      height: 100%;
+      overflow: hidden;
+      background: #8ec5e8;
+    }
+
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      outline: none;
+    }
+
+    #title {
+      position: fixed;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #fff;
+      font: bold 15px monospace;
+      background: rgba(0, 0, 0, 0.55);
+      padding: 6px 16px;
+      border-radius: 4px;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    #hint {
+      position: fixed;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #fff;
+      font: 11px monospace;
+      background: rgba(0, 0, 0, 0.45);
+      padding: 4px 10px;
+      border-radius: 3px;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas tabindex="-1"></canvas>
+  <div id="title">Noise World &mdash; @jolly-pixel/voxel.renderer</div>
+  <div id="hint">
+    WASD: move &nbsp;·&nbsp; Space/Shift: up-down &nbsp;·&nbsp; Middle drag: look &nbsp;·&nbsp;
+    R: rebuild &nbsp;·&nbsp; F3: hide stats &nbsp;·&nbsp; <code>?size=512&amp;chunk=32&amp;seed=42</code>
+  </div>
+  <script type="module" src="./scripts/demo-noise-world.ts"></script>
+</body>
+
+</html>

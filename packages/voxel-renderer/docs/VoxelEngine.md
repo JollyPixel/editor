@@ -172,6 +172,26 @@ dispose(): void;                // disposes chunk meshes, materials, and tileset
 When wrapped by `VoxelRenderer`, these are called automatically from its
 `awake()`/`update()`/`destroy()`. Call them yourself when using `VoxelEngine` standalone.
 
+## Chunk geometry layout
+
+A chunk produces one `THREE.Mesh` per tileset it references, all parented to
+`root`. Their geometries are indexed and carry four attributes:
+
+| Attribute  | Type      | Items | Notes |
+|------------|-----------|-------|-------|
+| `position` | `float32` | 3     | world space, not chunk-local |
+| `normal`   | `float32` | 3     | not axis-aligned for ramps and corners |
+| `uv`       | `float32` | 2     | atlas coordinates, half-texel inset |
+| `color`    | `uint8`   | 4     | normalized; RGB is white, alpha is the layer opacity |
+
+Vertices are never shared between faces — each face needs its own UVs and
+normal — so a cube costs 24 vertices, not 8.
+
+Alpha is baked per vertex rather than set on the material so a future per-block
+opacity (e.g. windows) only changes what the builder writes, not how materials
+are keyed and shared. Being a normalized byte, it round-trips through
+`getW()` within `1/255` of the layer's `opacity`.
+
 ## Methods
 
 #### `getLayer(name: string): VoxelLayer`

@@ -5,13 +5,15 @@ import {
 } from "@jolly-pixel/engine";
 import {
   VoxelRenderer,
-  VoxelSyncClient,
   TilesetLoader,
   type TilesetDefinition,
-  type VoxelWorldJSON,
+  type VoxelWorldJSON
+} from "@jolly-pixel/voxel.renderer";
+import {
+  VoxelSyncClient,
   type VoxelNetworkCommand,
   type VoxelServerMessage
-} from "@jolly-pixel/voxel.renderer";
+} from "@jolly-pixel/voxel.renderer/network/client.ts";
 import type * as network from "@jolly-pixel/network";
 import * as THREE from "three";
 

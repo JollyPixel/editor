@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import type { VoxelRenderer, VoxelWorldJSON } from "@jolly-pixel/voxel.renderer";
+import type {
+  VoxelRenderer,
+  VoxelWorldJSON
+} from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import type { EditorState } from "../EditorState.ts";

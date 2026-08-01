@@ -12,7 +12,7 @@ import type {
 import type {
   VoxelNetworkCommand,
   VoxelServerMessage
-} from "@jolly-pixel/voxel.renderer";
+} from "@jolly-pixel/voxel.renderer/network/client.ts";
 
 // Import Internal Dependencies
 import { editorState } from "./EditorState.ts";

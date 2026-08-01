@@ -3,7 +3,8 @@ const kExamples = [
   { label: "Physics", path: "/" },
   { label: "Block Shapes", path: "/shapes.html" },
   { label: "Tileset UV", path: "/tileset.html" },
-  { label: "Tiled Map", path: "/tiled.html" }
+  { label: "Tiled Map", path: "/tiled.html" },
+  { label: "Noise World", path: "/noise-world.html" }
 ] as const;
 
 /**

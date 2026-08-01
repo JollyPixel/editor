@@ -25,6 +25,18 @@ export class VoxelChunk {
 
   #data = new Map<number, VoxelEntry>();
 
+  /**
+   * Conservative local-space bounds of the written voxels. Only widened, never
+   * shrunk on delete, so it always contains every entry — see `mayContain()`.
+   * An empty chunk keeps the inverted range, which contains nothing.
+   */
+  #minX: number;
+  #minY: number;
+  #minZ: number;
+  #maxX = -1;
+  #maxY = -1;
+  #maxZ = -1;
+
   constructor(
     [cx, cy, cz]: [number, number, number],
     size: number = DEFAULT_CHUNK_SIZE
@@ -33,6 +45,10 @@ export class VoxelChunk {
     this.cy = cy;
     this.cz = cz;
     this.size = size;
+
+    this.#minX = size;
+    this.#minY = size;
+    this.#minZ = size;
   }
 
   linearIndex(
@@ -59,6 +75,18 @@ export class VoxelChunk {
   ): VoxelEntry | undefined {
     const [lx, ly, lz] = coords;
 
+    return this.getAt(lx, ly, lz);
+  }
+
+  /**
+   * Same as `get()` without the tuple. Used on the mesh builder's hot path,
+   * where the array literal `get()` requires is allocated millions of times.
+   */
+  getAt(
+    lx: number,
+    ly: number,
+    lz: number
+  ): VoxelEntry | undefined {
     return this.#data.get(
       this.linearIndex(lx, ly, lz)
     );
@@ -75,6 +103,40 @@ export class VoxelChunk {
       entry
     );
     this.dirty = true;
+
+    if (lx < this.#minX) {
+      this.#minX = lx;
+    }
+    if (lx > this.#maxX) {
+      this.#maxX = lx;
+    }
+    if (ly < this.#minY) {
+      this.#minY = ly;
+    }
+    if (ly > this.#maxY) {
+      this.#maxY = ly;
+    }
+    if (lz < this.#minZ) {
+      this.#minZ = lz;
+    }
+    if (lz > this.#maxZ) {
+      this.#maxZ = lz;
+    }
+  }
+
+  /**
+   * False when the position is provably empty. A `true` result still needs a
+   * `getAt()` to confirm; the point is to answer the common "nowhere near any
+   * voxel" case with six comparisons instead of a hash lookup.
+   */
+  mayContain(
+    lx: number,
+    ly: number,
+    lz: number
+  ): boolean {
+    return lx >= this.#minX && lx <= this.#maxX &&
+      ly >= this.#minY && ly <= this.#maxY &&
+      lz >= this.#minZ && lz <= this.#maxZ;
   }
 
   delete(
