@@ -86,6 +86,21 @@ Internally this:
 game.disconnect();
 ```
 
+## Dispose
+
+`dispose()` stops the loop, disconnects, and releases the
+[renderer](renderer.md)'s WebGL context:
+
+```ts
+game.dispose();
+```
+
+Call it whenever a world is dropped — closing a scene in an editor,
+swapping a canvas. Browsers cap the number of live WebGL contexts
+(~16 in Chrome), so a world that is garbage-collected without being
+disposed leaks one, and a long session eventually stops rendering
+altogether. The world must not be used after disposal.
+
 ## Game loop
 
 The game loop is driven by a

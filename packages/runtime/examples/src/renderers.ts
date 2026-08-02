@@ -24,8 +24,9 @@ world.renderer.setRenderMode("composer");
 
 world.createActor("camera")
   .addComponent(Camera3DControls, {}, (component) => {
-    component.camera.position.set(10, 10, 5);
-    component.camera.lookAt(0, 0, 0);
+    component.actor.transform
+      .setLocalPosition({ x: 10, y: 10, z: 5 })
+      .lookAt({ x: 0, y: 0, z: 0 });
 
     createViewHelper(component.camera, world);
   });

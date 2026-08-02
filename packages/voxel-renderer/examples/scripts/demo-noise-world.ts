@@ -91,8 +91,9 @@ world.createActor("camera")
     far: settings.size * 4
   }, (component) => {
     const center = settings.size / 2;
-    component.camera.position.set(center, 70, center + (settings.size * 0.7));
-    component.camera.lookAt(center, 10, center);
+    component.actor.transform
+      .setLocalPosition({ x: center, y: 70, z: center + (settings.size * 0.7) })
+      .lookAt({ x: center, y: 10, z: center });
   });
 
 const voxelMap = world.createActor("map")

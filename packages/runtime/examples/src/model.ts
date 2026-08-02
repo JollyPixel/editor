@@ -20,13 +20,14 @@ function initRuntime() {
   });
   const { world } = runtime;
 
-  const { camera } = world.createActor("camera")
+  const cameraControls = world.createActor("camera")
     .addComponentAndGet(
       Camera3DControls,
       { speed: 0.25, rotationSpeed: 0.50 }
     );
-  camera.position.set(5, 5, 5);
-  camera.lookAt(0, 0, 0);
+  cameraControls.actor.transform
+    .setLocalPosition({ x: 5, y: 5, z: 5 })
+    .lookAt({ x: 0, y: 0, z: 0 });
 
   world.createActor("tinyWitchModel")
     .addComponent(ModelRenderer, {

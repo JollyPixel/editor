@@ -31,7 +31,8 @@ function createMockRenderer() {
     clear: mock.fn(),
     observeResize: mock.fn(),
     unobserveResize: mock.fn(),
-    getSource: mock.fn()
+    getSource: mock.fn(),
+    dispose: mock.fn()
   };
 }
 
@@ -197,6 +198,36 @@ describe("Systems.World", () => {
 
       // After stop, loop.tick becomes a no-op (but beginFrame/endFrame still called by world.tick)
       world.stop();
+    });
+  });
+
+  describe("dispose()", () => {
+    test("should release the renderer, which owns the WebGL context", () => {
+      world.dispose();
+
+      assert.strictEqual(renderer.dispose.mock.callCount(), 1);
+    });
+
+    test("should disconnect before releasing the renderer", () => {
+      world.connect();
+
+      world.dispose();
+
+      assert.strictEqual(input.disconnect.mock.callCount(), 1);
+      assert.strictEqual(renderer.unobserveResize.mock.callCount(), 1);
+    });
+
+    test("should stop the loop", () => {
+      world.start();
+
+      world.dispose();
+      world.tick();
+
+      assert.strictEqual(
+        sceneManager.update.mock.callCount(),
+        0,
+        "a stopped loop must not keep driving the scene"
+      );
     });
   });
 

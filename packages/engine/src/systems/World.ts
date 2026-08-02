@@ -185,6 +185,21 @@ export class World<
     return this;
   }
 
+  /**
+   * Stops the loop, disconnects, and releases the renderer's GPU resources.
+   * The world must not be used afterwards — browsers cap the number of live
+   * WebGL contexts, so a world that is dropped without disposing leaks one.
+   */
+  dispose() {
+    this.#worldLogger.debug("Disposing world");
+
+    this.stop();
+    this.disconnect();
+    this.renderer.dispose();
+
+    return this;
+  }
+
   setFps(
     fps: number,
     fixedFps?: number

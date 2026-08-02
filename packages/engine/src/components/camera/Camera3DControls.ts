@@ -34,12 +34,19 @@ export class Camera3DControls extends CameraComponent<any> {
   #rotationSpeed: number;
   #movementSpeed: number;
 
+  // Reused each frame — avoid allocations.
+  #orientation = new THREE.Quaternion();
+  #euler = new THREE.Euler(0, 0, 0, "YXZ");
+  #direction = new THREE.Vector3();
+  #translation = new THREE.Vector3();
+
   constructor(
     actor: Actor<any>,
     options: Camera3DControlsOptions = {}
   ) {
     super(actor, {
-      addAudioListener: true
+      ...options,
+      addAudioListener: options.addAudioListener ?? true
     });
 
     const {
@@ -66,6 +73,11 @@ export class Camera3DControls extends CameraComponent<any> {
     this.#movementSpeed = speed;
   }
 
+  /**
+   * The underlying THREE camera. Read-only as far as the transform goes:
+   * position and quaternion are overwritten from `actor.transform` every frame.
+   * Move the camera through `actor.transform` instead.
+   */
   get camera(): THREE.PerspectiveCamera {
     return this.threeCamera as THREE.PerspectiveCamera;
   }
@@ -88,17 +100,24 @@ export class Camera3DControls extends CameraComponent<any> {
   }
 
   #rotate() {
+    const { transform } = this.actor;
     const mouseDelta = this.actor.world.input.getMouseDelta(
       true
     );
-    const euler = new THREE.Euler(0, 0, 0, "YXZ");
 
-    euler.setFromQuaternion(this.camera.quaternion);
-    euler.y -= mouseDelta.x * this.#rotationSpeed;
-    euler.x += mouseDelta.y * this.#rotationSpeed;
-    euler.x = Math.max(this.maxRollDown, Math.min(this.maxRollUp, euler.x));
+    this.#euler.setFromQuaternion(
+      transform.getLocalOrientation(this.#orientation)
+    );
+    this.#euler.y -= mouseDelta.x * this.#rotationSpeed;
+    this.#euler.x += mouseDelta.y * this.#rotationSpeed;
+    this.#euler.x = Math.max(
+      this.maxRollDown,
+      Math.min(this.maxRollUp, this.#euler.x)
+    );
 
-    this.camera.quaternion.setFromEuler(euler);
+    transform.setLocalOrientation(
+      this.#orientation.setFromEuler(this.#euler)
+    );
   }
 
   update(
@@ -106,7 +125,7 @@ export class Camera3DControls extends CameraComponent<any> {
   ) {
     const { input } = this.actor.world;
 
-    const vector = new THREE.Vector3(0);
+    const vector = this.#direction.set(0, 0, 0);
     if (input.isKeyDown(this.#bindings.forward)) {
       vector.z -= 1;
     }
@@ -128,12 +147,20 @@ export class Camera3DControls extends CameraComponent<any> {
       vector.x -= 1;
     }
 
-    const translation = new THREE.Vector3(vector.x, 0, vector.z);
-    this.camera.translateOnAxis(
-      translation.normalize(),
-      this.#movementSpeed * deltaTime
+    const { transform } = this.actor;
+    const distance = this.#movementSpeed * deltaTime;
+
+    transform.moveOriented(
+      this.#translation
+        .set(vector.x, 0, vector.z)
+        .normalize()
+        .multiplyScalar(distance)
     );
-    this.camera.position.y += vector.y * this.#movementSpeed * deltaTime;
+    if (vector.y !== 0) {
+      transform.moveGlobal(
+        this.#translation.set(0, vector.y * distance, 0)
+      );
+    }
 
     if (input.isMouseButtonDown(this.#bindings.lookAround)) {
       // input.mouse.lock();

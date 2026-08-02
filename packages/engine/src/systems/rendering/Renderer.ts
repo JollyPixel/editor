@@ -68,6 +68,13 @@ export interface Renderer<
 
   addRenderComponent(component: RenderComponent): void;
   removeRenderComponent(component: RenderComponent): void;
+  /**
+   * Signals that a registered component swapped its `threeCamera` instance, so
+   * the renderer can rebind anything keyed on it (composer render passes).
+   */
+  updateRenderComponent(component: RenderComponent): void;
+  /** Signals that a registered component changed its `depth`. */
+  markRenderOrderDirty(): void;
 
   on<Key extends keyof Events>(
     type: Key,
@@ -90,4 +97,10 @@ export interface Renderer<
   draw(): void;
   onDraw(callback: (source: T) => void): void;
   clear(): void;
+
+  /**
+   * Releases every GPU resource held by the renderer and stops observing resize.
+   * The renderer must not be used afterwards.
+   */
+  dispose(): void;
 }
