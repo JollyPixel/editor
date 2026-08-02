@@ -164,6 +164,15 @@ export interface VoxelEngineOptions {
   debug?: VoxelDebuggerOptions;
 
   /**
+   * Texels of edge-replicated gutter added around every tile of an atlas before
+   * it is bound to a material. Prevents distant geometry from sampling
+   * neighbouring tiles, which MSAA causes by shading partially covered pixels
+   * outside the triangle. Set to 0 to render atlases untouched.
+   * @default half the tile size, clamped to 2..8
+   */
+  tilesetPadding?: number;
+
+  /**
    * Optional pre-loaded tileset collection. All tilesets in the loader are
    * registered synchronously during construction so no async is needed inside
    * lifecycle methods. Use `TilesetLoader.fromTileDefinition()` or
@@ -243,6 +252,7 @@ export class VoxelEngine {
       logger = kNoopLogger,
       onLayerUpdated,
       debug,
+      tilesetPadding,
       tilesetLoader
     } = options;
 
@@ -269,7 +279,7 @@ export class VoxelEngine {
       (shape) => this.shapeRegistry.register(shape)
     );
 
-    this.tilesetManager = new TilesetManager();
+    this.tilesetManager = new TilesetManager({ padding: tilesetPadding });
     this.#tilesetLoader = tilesetLoader ?? null;
     if (tilesetLoader) {
       for (const entry of tilesetLoader.tilesets.values()) {

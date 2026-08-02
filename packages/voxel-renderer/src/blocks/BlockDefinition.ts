@@ -35,7 +35,10 @@ interface BlockDefTextures<T extends TileRef | TileRefIn> {
 export interface BlockDefinition extends BlockDef, BlockDefTextures<TileRef> { }
 
 /**
- * A version of BlockDefinition that is easier to use than the later, used in the entry point of the voxel render
+ * Authoring form of `BlockDefinition`, accepted by `BlockRegistry.register()`
+ * and the engine's `blocks` option. Tile refs may be given as bare `[col, row]`
+ * tuples, and `defaultTilesetId` fills in any ref that omits a tileset.
+ * `register()` normalises both away and stores a plain `BlockDefinition`.
  */
 export interface BlockDefinitionIn extends BlockDef, BlockDefTextures<TileRefIn> {
   /** Fallback tile set id used for any tile ref that does not have a tileset id.*/

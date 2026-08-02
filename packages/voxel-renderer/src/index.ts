@@ -73,8 +73,10 @@ export {
 // Tileset
 export {
   TilesetManager,
+  type TilesetManagerOptions,
   type TilesetDefaultBlockOptions,
   type TilesetUVRegion,
+  type TilesetImage,
   type TileRef,
   type TilesetDefinition
 } from "./tileset/TilesetManager.ts";

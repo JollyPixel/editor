@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { VoxelRenderer } from "@jolly-pixel/voxel.renderer";
+import type { TilesetManager, VoxelRenderer } from "@jolly-pixel/voxel.renderer";
 import type * as network from "@jolly-pixel/network";
 import {
   PixelSyncClient,
@@ -20,7 +20,7 @@ const kTextureKeyPrefix = "jolly-pixel-voxel-map-texture-";
 export class TextureEditorBridge {
   #manager: PixelArtCanvas | null = null;
   #syncClient: PixelSyncClient | null = null;
-  #threeTexture: { image: unknown; needsUpdate: boolean; } | null = null;
+  #tilesetManager: TilesetManager | null = null;
   #tilesetId: string | null = null;
 
   get isActive(): boolean {
@@ -47,18 +47,20 @@ export class TextureEditorBridge {
       return;
     }
 
-    const id = tilesetId ?? vr.engine.tilesetManager.defaultTilesetId;
+    const { tilesetManager } = vr.engine;
+    const id = tilesetId ?? tilesetManager.defaultTilesetId;
     if (!id) {
       return;
     }
 
-    const texture = vr.engine.tilesetManager.getTexture(id);
+    // The unpadded atlas: its pixel grid is the one the editor draws on.
+    const texture = tilesetManager.getSourceTexture(id);
     if (!texture) {
       return;
     }
 
     this.#tilesetId = id;
-    this.#threeTexture = texture as { image: unknown; needsUpdate: boolean; };
+    this.#tilesetManager = tilesetManager;
 
     const saved = localStorage.getItem(kTextureKeyPrefix + id);
     if (saved) {
@@ -75,18 +77,17 @@ export class TextureEditorBridge {
   }
 
   /**
-   * Pushes the current texture canvas into the live Three.js texture and
-   * caches it to localStorage. Called from the `onDrawEnd` hook passed to
-   * `PixelDrawPanel.initialize()`.
+   * Pushes the current texture canvas back into the tileset — which repacks it
+   * with its gutter — and caches it to localStorage. Called from the
+   * `onDrawEnd` hook passed to `PixelDrawPanel.initialize()`.
    */
   syncToThree(): void {
-    if (!this.#manager || !this.#threeTexture) {
+    if (!this.#manager || !this.#tilesetManager) {
       return;
     }
 
     const canvas = this.#manager.textureCanvas();
-    this.#threeTexture.image = canvas;
-    this.#threeTexture.needsUpdate = true;
+    this.#tilesetManager.updateSourceImage(canvas, this.#tilesetId ?? undefined);
 
     if (this.#tilesetId) {
       localStorage.setItem(
@@ -113,7 +114,7 @@ export class TextureEditorBridge {
     this.#syncClient?.destroy();
     this.#syncClient = null;
     this.#manager = null;
-    this.#threeTexture = null;
+    this.#tilesetManager = null;
     this.#tilesetId = null;
   }
 }
