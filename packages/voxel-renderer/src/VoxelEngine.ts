@@ -19,6 +19,10 @@ import type {
   VoxelCollider,
   VoxelColliderFactory
 } from "./collision/VoxelCollider.ts";
+import {
+  VoxelDebugger,
+  type VoxelDebuggerOptions
+} from "./debug/VoxelDebugger.ts";
 import { VoxelMeshBuilder } from "./mesh/VoxelMeshBuilder.ts";
 import {
   VoxelSerializer,
@@ -153,6 +157,13 @@ export interface VoxelEngineOptions {
   onLayerUpdated?: VoxelLayerHookListener;
 
   /**
+   * Initial state of the debug inspector (`engine.debug`). Mesh counters are
+   * always collected; this only decides whether the wireframe is drawn from
+   * the start.
+   */
+  debug?: VoxelDebuggerOptions;
+
+  /**
    * Optional pre-loaded tileset collection. All tilesets in the loader are
    * registered synchronously during construction so no async is needed inside
    * lifecycle methods. Use `TilesetLoader.fromTileDefinition()` or
@@ -177,6 +188,12 @@ export class VoxelEngine {
   readonly shapeRegistry: BlockShapeRegistry;
   readonly tilesetManager: TilesetManager;
   readonly serializer: VoxelSerializer;
+
+  /**
+   * Live mesh statistics and wireframe visualization.
+   * See `debug.stats` and `debug.mode`.
+   */
+  readonly debug: VoxelDebugger;
 
   #meshBuilder: VoxelMeshBuilder;
   #collider: VoxelCollider | null = null;
@@ -225,10 +242,12 @@ export class VoxelEngine {
       alphaTest = 0.1,
       logger = kNoopLogger,
       onLayerUpdated,
+      debug,
       tilesetLoader
     } = options;
 
     this.root.name = "VoxelEngine";
+    this.debug = new VoxelDebugger(this.root, debug);
 
     this.#materialType = material;
     this.#materialCustomizer = materialCustomizer;
@@ -311,6 +330,7 @@ export class VoxelEngine {
     // Remove and dispose all chunk meshes individually (we own the geometries
     // but share materials per tileset, so we must NOT call removeChildren).
     this.#disposeChunkMeshes();
+    this.debug.dispose();
     this.#collider?.dispose();
 
     for (const mat of this.#materials.values()) {
@@ -947,6 +967,8 @@ export class VoxelEngine {
    * and owned by `#materials`, so they are deliberately left alone.
    */
   #disposeChunkMeshes(): void {
+    this.debug.clear();
+
     for (const meshes of this.#chunkMeshes.values()) {
       for (const mesh of meshes) {
         this.root.remove(mesh);
@@ -964,6 +986,8 @@ export class VoxelEngine {
     this.#logger.debug(
       `Removing chunk '${chunkKeyBase}' with layer name '${layer.name}'`
     );
+
+    this.debug.unregisterChunk(chunkKeyBase);
 
     // Remove all existing meshes for this chunk (rebuilt per tileset below).
     const meshes = this.#chunkMeshes.get(chunkKeyBase);
@@ -994,6 +1018,10 @@ export class VoxelEngine {
 
     const geometries = this.#meshBuilder.buildChunkGeometries(chunk, layer);
     if (!geometries) {
+      // Still recorded: a chunk whose faces are all culled has no mesh but
+      // its voxels count toward the debug statistics.
+      this.debug.registerChunk(chunkKeyBase, [], this.#meshBuilder.stats);
+
       return;
     }
 
@@ -1011,6 +1039,7 @@ export class VoxelEngine {
       meshes.push(mesh);
     }
     this.#chunkMeshes.set(chunkKeyBase, meshes);
+    this.debug.registerChunk(chunkKeyBase, meshes, this.#meshBuilder.stats);
 
     if (this.#collider) {
       const layerOffset = layer.offset;

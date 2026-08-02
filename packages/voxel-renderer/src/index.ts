@@ -16,6 +16,15 @@ export {
 } from "./VoxelRenderer.ts";
 export * from "./hooks.ts";
 
+// Debug — mesh statistics and wireframe visualization
+export {
+  VoxelDebugger,
+  type VoxelDebugMode,
+  type VoxelDebugStats,
+  type VoxelDebuggerOptions
+} from "./debug/VoxelDebugger.ts";
+export { MeshBuildStats } from "./mesh/MeshBuildStats.ts";
+
 // Built-in shapes
 export { Cube } from "./blocks/shapes/Cube.ts";
 export { Slab, type SlabType } from "./blocks/shapes/Slab.ts";

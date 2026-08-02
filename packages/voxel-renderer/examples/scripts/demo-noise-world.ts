@@ -7,6 +7,7 @@ import * as THREE from "three";
 import {
   TilesetLoader,
   VoxelRenderer,
+  type VoxelDebugger,
   type VoxelEngine
 } from "../../src/index.ts";
 import { PerformanceHUD, hudLine } from "./components/PerformanceHUD.ts";
@@ -109,7 +110,10 @@ let report: BuildReport | null = null;
 world.createActor("hud")
   .addComponent(PerformanceHUD, {
     title: "NOISE WORLD",
-    details: () => describeBuild(settings, report)
+    details: () => [
+      ...describeBuild(settings, report),
+      ...describeMesh(voxelMap.engine.debug)
+    ]
   });
 
 createExamplesMenu();
@@ -119,13 +123,18 @@ const { engine } = voxelMap;
 report = buildWorld(engine, settings);
 
 document.addEventListener("keydown", (event) => {
-  if (event.code !== "KeyR") {
+  if (event.code === "KeyR") {
+    settings.seed = (settings.seed + 1) % kSeedBounds.max;
+    resetLayers(engine);
+    report = buildWorld(engine, settings);
+
     return;
   }
 
-  settings.seed = (settings.seed + 1) % kSeedBounds.max;
-  resetLayers(engine);
-  report = buildWorld(engine, settings);
+  // off → wireframe over the textures → wireframe only.
+  if (event.code === "KeyG") {
+    console.log(`[noise-world] debug mode: ${engine.debug.nextMode()}`);
+  }
 });
 
 /**
@@ -210,6 +219,31 @@ function describeBuild(
     hudLine("Generate", `${generateMs.toFixed(1)} ms  (${voxelsPerMs}/ms)`),
     hudLine("Mesh Build", `${meshMs.toFixed(1)} ms`),
     hudLine("Seed", `${config.seed}  [R to rebuild]`)
+  ];
+}
+
+/**
+ * Geometry actually produced by the mesh builder, refreshed on every HUD tick
+ * so it follows chunk rebuilds.
+ */
+function describeMesh(
+  debug: VoxelDebugger
+): string[] {
+  const {
+    faces, culledFaces, triangles, vertices, meshes, chunks
+  } = debug.stats;
+
+  const candidates = faces + culledFaces;
+  const culled = candidates === 0 ? 0 : (culledFaces / candidates) * 100;
+
+  return [
+    hudLine("Faces", `${faces.toLocaleString("en-US")}  (${culled.toFixed(1)}% culled)`),
+    // Named apart from the renderer's own counters above: these cover every
+    // built chunk, not just what survived frustum culling this frame.
+    hudLine("Mesh Tris", triangles),
+    hudLine("Mesh Verts", vertices),
+    hudLine("Chunk Meshes", `${meshes.toLocaleString("en-US")} / ${chunks.toLocaleString("en-US")} chunks`),
+    hudLine("Debug Mesh", `${debug.mode}  [G to cycle]`)
   ];
 }
 

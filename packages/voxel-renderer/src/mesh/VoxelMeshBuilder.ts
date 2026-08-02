@@ -14,6 +14,7 @@ import {
 } from "./math.ts";
 import { BlockVariantCache } from "./BlockVariantCache.ts";
 import { GeometryBuffer } from "./GeometryBuffer.ts";
+import { MeshBuildStats } from "./MeshBuildStats.ts";
 import {
   ChunkNeighbourhood,
   type LayerChunkCache
@@ -51,6 +52,12 @@ export interface VoxelMeshBuilderOptions {
  * directly into typed arrays by `GeometryBuffer`.
  */
 export class VoxelMeshBuilder {
+  /**
+   * Counters for the most recent `buildChunkGeometries()` call. The instance is
+   * reused, so callers keeping the numbers around must `clone()` them.
+   */
+  readonly stats = new MeshBuildStats();
+
   #world: VoxelWorld;
   #tilesetManager: TilesetManager;
   #variants: BlockVariantCache;
@@ -82,12 +89,16 @@ export class VoxelMeshBuilder {
     chunk: VoxelChunk,
     layer: VoxelLayer
   ): Map<string, THREE.BufferGeometry> | null {
+    const { stats } = this;
+    stats.reset();
+
     // No tileset registered yet — cannot compute UVs. Return null so the
     // caller skips mesh creation; loadTileset() will mark chunks dirty and
     // trigger a rebuild once the texture is available.
     if (this.#tilesetManager.defaultTilesetId === null || chunk.voxelCount === 0) {
       return null;
     }
+    const startedAt = performance.now();
     this.#variants.refresh();
 
     const chunkSize = this.#world.chunkSize;
@@ -134,7 +145,9 @@ export class VoxelMeshBuilder {
       const wy = worldOriginY + ly;
       const wz = worldOriginZ + lz;
 
+      stats.voxels++;
       if (!this.#winsCompositing(layers, layerCount, selfIndex, entry, wx, wy, wz)) {
+        stats.hiddenVoxels++;
         continue;
       }
 
@@ -156,6 +169,7 @@ export class VoxelMeshBuilder {
             FACE_OPPOSITE[cull]
           );
           if (hidden) {
+            stats.culledFaces++;
             continue;
           }
         }
@@ -166,11 +180,15 @@ export class VoxelMeshBuilder {
           buffers[face.slot] = buffer;
         }
         buffer.addFace(face, wx, wy, wz, alpha);
+        stats.faces++;
         emitted = true;
       }
     }
 
-    return emitted ? this.#collectGeometries() : null;
+    const geometries = emitted ? this.#collectGeometries() : null;
+    stats.buildTimeMs = performance.now() - startedAt;
+
+    return geometries;
   }
 
   /**
@@ -250,6 +268,7 @@ export class VoxelMeshBuilder {
 
   #collectGeometries(): Map<string, THREE.BufferGeometry> | null {
     const result = new Map<string, THREE.BufferGeometry>();
+    const { stats } = this;
 
     for (let slot = 0; slot < this.#buffers.length; slot++) {
       const buffer = this.#buffers[slot];
@@ -257,6 +276,9 @@ export class VoxelMeshBuilder {
         continue;
       }
 
+      stats.vertices += buffer.vertexCount;
+      stats.triangles += buffer.indexCount / 3;
+      stats.geometries++;
       result.set(this.#variants.tilesetIdAt(slot), buffer.toGeometry());
     }
 
