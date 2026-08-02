@@ -8,6 +8,7 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./network/*.ts": "./dist/network/*.js",
     "./plugins/*": "./dist/plugins/*"
   },
   "scripts": {
@@ -15,6 +16,7 @@
     "build": "tsc",
     "dev": "vite",
     "test-only": "node --test \"test/**/*.spec.ts\"",
+    "bench": "node --max-old-space-size=8192 bench/mesh-build.bench.ts",
     "test": "c8 -r html npm run test-only"
   },
   "publishConfig": {
@@ -44,6 +46,7 @@
   },
   "devDependencies": {
     "@dimforge/rapier3d": "0.19.3",
-    "@jolly-pixel/runtime": "3.4.0"
+    "@jolly-pixel/runtime": "3.4.0",
+    "simplex-noise": "4.0.3"
   }
 }

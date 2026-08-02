@@ -211,3 +211,48 @@ describe("entries()", () => {
     assert.equal(collected.get(chunk.linearIndex(2, 1, 3)), e2);
   });
 });
+
+describe("getAt()", () => {
+  it("returns the same entry as get() without the tuple", () => {
+    const chunk = new VoxelChunk([0, 0, 0], 4);
+    const entry = makeEntry(7);
+    chunk.set([1, 2, 3], entry);
+
+    assert.equal(chunk.getAt(1, 2, 3), entry);
+    assert.equal(chunk.getAt(3, 2, 1), undefined);
+  });
+});
+
+describe("mayContain()", () => {
+  it("is false everywhere while the chunk is empty", () => {
+    const chunk = new VoxelChunk([0, 0, 0], 4);
+
+    assert.equal(chunk.mayContain(0, 0, 0), false);
+    assert.equal(chunk.mayContain(2, 2, 2), false);
+  });
+
+  it("covers every written voxel and rejects positions outside their box", () => {
+    const chunk = new VoxelChunk([0, 0, 0], 8);
+    chunk.set([2, 3, 4], makeEntry(1));
+    chunk.set([5, 3, 4], makeEntry(2));
+
+    assert.equal(chunk.mayContain(2, 3, 4), true);
+    assert.equal(chunk.mayContain(5, 3, 4), true);
+    // Inside the box but empty — a getAt() is still needed to confirm.
+    assert.equal(chunk.mayContain(3, 3, 4), true);
+
+    assert.equal(chunk.mayContain(1, 3, 4), false);
+    assert.equal(chunk.mayContain(2, 2, 4), false);
+    assert.equal(chunk.mayContain(2, 3, 5), false);
+  });
+
+  it("stays conservative after a delete rather than shrinking", () => {
+    const chunk = new VoxelChunk([0, 0, 0], 8);
+    chunk.set([1, 1, 1], makeEntry(1));
+    chunk.set([6, 6, 6], makeEntry(2));
+    chunk.delete([6, 6, 6]);
+
+    assert.equal(chunk.getAt(6, 6, 6), undefined);
+    assert.equal(chunk.mayContain(6, 6, 6), true);
+  });
+});

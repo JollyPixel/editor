@@ -56,7 +56,7 @@ function makeFixture() {
 
   const builder = new VoxelMeshBuilder({ world, blockRegistry, shapeRegistry, tilesetManager });
 
-  return { world, layer, builder };
+  return { world, layer, builder, blockRegistry, tilesetManager };
 }
 
 /**
@@ -151,8 +151,10 @@ describe("VoxelMeshBuilder — vertex alpha baked from layer opacity", () => {
     const geometries = f.builder.buildChunkGeometries(chunk, f.layer)!;
     const colors = [...geometries.values()][0].getAttribute("color");
 
+    // Colors are stored as normalized bytes, so alpha lands within one 8-bit
+    // step of the layer opacity.
     for (let i = 0; i < colors.count; i++) {
-      assert.equal(colors.getW(i), 0.25);
+      assert.ok(Math.abs(colors.getW(i) - 0.25) <= 1 / 255);
     }
   });
 });
@@ -279,5 +281,97 @@ describe("VoxelMeshBuilder — neighbour rotation inversion fix (rot=1 / rot=3)"
     // Ramp is in chunk (-1,0,0), only the cube chunk (0,0,0) is built here.
     // Cube: 5 faces (NegX correctly hidden by ramp back wall) = 20 verts.
     assert.equal(countVertices(f), 20);
+  });
+});
+
+describe("VoxelMeshBuilder — geometry attribute layout", () => {
+  it("emits float32 position/normal/uv and normalized uint8 color", () => {
+    const f = makeFixture();
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    const chunk = f.layer.getChunk(0, 0, 0)!;
+    const geometry = [...f.builder.buildChunkGeometries(chunk, f.layer)!.values()][0];
+
+    assert.ok(geometry.getAttribute("position").array instanceof Float32Array);
+    assert.ok(geometry.getAttribute("normal").array instanceof Float32Array);
+    assert.ok(geometry.getAttribute("uv").array instanceof Float32Array);
+
+    const colors = geometry.getAttribute("color");
+    assert.ok(colors.array instanceof Uint8Array);
+    assert.equal(colors.normalized, true);
+    assert.equal(colors.itemSize, 4);
+  });
+
+  it("indexes a small chunk with 16-bit values", () => {
+    const f = makeFixture();
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    const chunk = f.layer.getChunk(0, 0, 0)!;
+    const geometry = [...f.builder.buildChunkGeometries(chunk, f.layer)!.values()][0];
+
+    // 6 quads → 12 triangles.
+    assert.ok(geometry.getIndex()!.array instanceof Uint16Array);
+    assert.equal(geometry.getIndex()!.count, 36);
+  });
+});
+
+describe("VoxelMeshBuilder — buffers are reused between chunks", () => {
+  it("a second chunk's geometry contains only its own faces", () => {
+    const f = makeFixture();
+    // chunkSize is 4, so these land in chunk (0,0,0) and chunk (1,0,0).
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    f.world.setVoxelAt("test", { x: 4, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+
+    const first = f.builder.buildChunkGeometries(f.layer.getChunk(0, 0, 0)!, f.layer)!;
+    const second = f.builder.buildChunkGeometries(f.layer.getChunk(1, 0, 0)!, f.layer)!;
+
+    for (const geometries of [first, second]) {
+      const geometry = [...geometries.values()][0];
+      assert.equal(geometry.getAttribute("position").count, 24);
+      assert.equal(geometry.getIndex()!.count, 36);
+    }
+
+    // The isolated cubes must not have been merged into a shared buffer.
+    const positions = [...second.values()][0].getAttribute("position");
+    assert.equal(positions.getX(0), 5);
+  });
+});
+
+describe("VoxelMeshBuilder — precompiled geometry follows registry changes", () => {
+  it("picks up a block definition registered after a first build", () => {
+    const f = makeFixture();
+    const unknownId = 99;
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: unknownId, transform: 0 });
+    const chunk = f.layer.getChunk(0, 0, 0)!;
+
+    assert.equal(f.builder.buildChunkGeometries(chunk, f.layer), null);
+
+    f.blockRegistry.register({
+      id: unknownId,
+      name: "Late",
+      shapeId: "cube",
+      faceTextures: {},
+      defaultTexture: kDefaultTexture,
+      collidable: true
+    });
+
+    assert.equal(countVertices(f), 24);
+  });
+
+  it("recomputes UVs when a tileset is re-registered with a new tile size", () => {
+    const f = makeFixture();
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    const chunk = f.layer.getChunk(0, 0, 0)!;
+
+    const before = [...f.builder.buildChunkGeometries(chunk, f.layer)!.values()][0]
+      .getAttribute("uv").getX(1);
+
+    f.tilesetManager.registerTexture(
+      { id: "atlas", src: "/atlas.png", tileSize: 8, cols: 4, rows: 4 },
+      mockTexture()
+    );
+
+    const after = [...f.builder.buildChunkGeometries(chunk, f.layer)!.values()][0]
+      .getAttribute("uv").getX(1);
+
+    assert.notEqual(before, after);
   });
 });

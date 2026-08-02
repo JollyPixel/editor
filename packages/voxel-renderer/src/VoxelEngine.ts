@@ -182,10 +182,10 @@ export class VoxelEngine {
   #collider: VoxelCollider | null = null;
 
   /**
-   * "layerId:cx,cy,cz:tilesetId" → THREE.Mesh.
-   * Each chunk may have one mesh per tileset (separate draw call per texture).
+   * "layerId:cx,cy,cz" → one THREE.Mesh per tileset the chunk uses
+   * (separate draw call per texture).
    **/
-  #chunkMeshes = new Map<string, THREE.Mesh>();
+  #chunkMeshes = new Map<string, THREE.Mesh[]>();
 
   /**
    * Up to two materials per tileset ID — one opaque, one translucent (keyed by
@@ -300,9 +300,7 @@ export class VoxelEngine {
         continue;
       }
 
-      if (layer.visible) {
-        this.#removeChunk(layer, chunk);
-      }
+      // #rebuildChunk() drops the previous meshes itself.
       this.#rebuildChunk(layer, chunk);
       chunk.dirty = false;
     }
@@ -312,11 +310,7 @@ export class VoxelEngine {
     this.#logger.debug("Disposing VoxelEngine.");
     // Remove and dispose all chunk meshes individually (we own the geometries
     // but share materials per tileset, so we must NOT call removeChildren).
-    for (const mesh of this.#chunkMeshes.values()) {
-      this.root.remove(mesh);
-      mesh.geometry.dispose();
-    }
-    this.#chunkMeshes.clear();
+    this.#disposeChunkMeshes();
     this.#collider?.dispose();
 
     for (const mat of this.#materials.values()) {
@@ -850,11 +844,7 @@ export class VoxelEngine {
     options: VoxelLoadOptions = {}
   ): void {
     // Clear existing meshes before replacing world data.
-    for (const mesh of this.#chunkMeshes.values()) {
-      this.root.remove(mesh);
-      mesh.geometry.dispose();
-    }
-    this.#chunkMeshes.clear();
+    this.#disposeChunkMeshes();
     this.#logger.debug("Cleared existing chunk meshes while loading new world.");
 
     // Register block definitions embedded by a converter, if present.
@@ -952,6 +942,20 @@ export class VoxelEngine {
     return material;
   }
 
+  /**
+   * Detaches and disposes every chunk mesh. Materials are shared per tileset
+   * and owned by `#materials`, so they are deliberately left alone.
+   */
+  #disposeChunkMeshes(): void {
+    for (const meshes of this.#chunkMeshes.values()) {
+      for (const mesh of meshes) {
+        this.root.remove(mesh);
+        mesh.geometry.dispose();
+      }
+    }
+    this.#chunkMeshes.clear();
+  }
+
   #removeChunk(
     layer: VoxelLayer,
     chunk: VoxelChunk
@@ -962,15 +966,13 @@ export class VoxelEngine {
     );
 
     // Remove all existing meshes for this chunk (rebuilt per tileset below).
-    for (const key of this.#chunkMeshes.keys()) {
-      if (!key.startsWith(`${chunkKeyBase}:`)) {
-        continue;
+    const meshes = this.#chunkMeshes.get(chunkKeyBase);
+    if (meshes) {
+      for (const mesh of meshes) {
+        this.root.remove(mesh);
+        mesh.geometry.dispose();
       }
-
-      const mesh = this.#chunkMeshes.get(key)!;
-      this.root.remove(mesh);
-      mesh.geometry.dispose();
-      this.#chunkMeshes.delete(key);
+      this.#chunkMeshes.delete(chunkKeyBase);
     }
 
     this.#collider?.removeChunk(chunkKeyBase);
@@ -1000,14 +1002,15 @@ export class VoxelEngine {
     const transparent = layer.opacity < 1;
 
     // Create one mesh per tileset so each can use the correct texture.
+    const meshes: THREE.Mesh[] = [];
     for (const [tilesetId, geometry] of geometries) {
-      const key = `${chunkKeyBase}:${tilesetId}`;
       const mesh = new THREE.Mesh(geometry, this.#getMaterial(tilesetId, transparent));
-      mesh.name = `voxel_chunk_${key}`;
+      mesh.name = `voxel_chunk_${chunkKeyBase}:${tilesetId}`;
 
       this.root.add(mesh);
-      this.#chunkMeshes.set(key, mesh);
+      meshes.push(mesh);
     }
+    this.#chunkMeshes.set(chunkKeyBase, meshes);
 
     if (this.#collider) {
       const layerOffset = layer.offset;

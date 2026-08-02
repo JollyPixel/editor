@@ -86,3 +86,15 @@ describe("BlockShapeRegistry.createDefault", () => {
     assert.equal(r2.has("only_in_r1" as any), false);
   });
 });
+
+describe("BlockShapeRegistry version", () => {
+  it("starts at 0 and increments on every register", () => {
+    const registry = new BlockShapeRegistry();
+    assert.equal(registry.version, 0);
+
+    registry.register({
+      id: "custom" as const, collisionHint: "box" as const, faces: [], occludes: () => false
+    });
+    assert.equal(registry.version, 1);
+  });
+});

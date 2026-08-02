@@ -134,3 +134,28 @@ describe("BlockRegistry.getAll", () => {
     assert.equal(all.length, 0);
   });
 });
+
+describe("BlockRegistry version", () => {
+  it("starts at 0 and increments on every register", () => {
+    const registry = new BlockRegistry();
+    assert.equal(registry.version, 0);
+
+    registry.register({
+      id: 1, name: "A", shapeId: "cube", collidable: true, faceTextures: {}
+    });
+    assert.equal(registry.version, 1);
+
+    registry.register({
+      id: 2, name: "B", shapeId: "cube", collidable: true, faceTextures: {}
+    });
+    assert.equal(registry.version, 2);
+  });
+
+  it("counts definitions registered through the constructor", () => {
+    const registry = new BlockRegistry([
+      { id: 1, name: "A", shapeId: "cube", collidable: true, faceTextures: {} }
+    ]);
+
+    assert.equal(registry.version, 1);
+  });
+});

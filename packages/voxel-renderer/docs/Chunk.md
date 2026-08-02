@@ -41,7 +41,19 @@ type VoxelLinearCoords = [number, number, number];
 
 ### `get(coords: VoxelLinearCoords): VoxelEntry | undefined`
 
+### `getAt(lx: number, ly: number, lz: number): VoxelEntry | undefined`
+
+Same lookup as `get()` without the tuple, for hot paths that would otherwise
+allocate an array per call (the mesh builder does one lookup per voxel face).
+
 ### `set(coords: VoxelLinearCoords, entry: VoxelEntry): void`
+
+### `mayContain(lx: number, ly: number, lz: number): boolean`
+
+`false` when the position is provably empty, using a conservative bounding box
+of every written voxel. A `true` result still needs a `getAt()` to confirm.
+The box only ever grows — `delete()` never shrinks it — so it stays valid at
+the cost of being loose after erasures.
 
 ### `delete(coords: VoxelLinearCoords): void`
 

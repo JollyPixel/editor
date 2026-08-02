@@ -60,6 +60,7 @@ export interface TilesetEntry {
 export class TilesetManager {
   #tilesets = new Map<string, TilesetEntry>();
   #defaultTilesetId: string | null = null;
+  #version = 0;
 
   /**
    * Loads a tileset image and registers it under the given definition ID.
@@ -102,6 +103,15 @@ export class TilesetManager {
     if (this.#defaultTilesetId === null) {
       this.#defaultTilesetId = def.id;
     }
+    this.#version++;
+  }
+
+  /**
+   * Incremented whenever the registered tilesets change, invalidating any UV
+   * region a consumer has precomputed. See `BlockRegistry.version`.
+   */
+  get version(): number {
+    return this.#version;
   }
 
   /**
@@ -222,5 +232,6 @@ export class TilesetManager {
     }
     this.#tilesets.clear();
     this.#defaultTilesetId = null;
+    this.#version++;
   }
 }

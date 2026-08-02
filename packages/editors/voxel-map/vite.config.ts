@@ -2,7 +2,8 @@
 import { defineConfig } from "vite";
 import { createWebSocketNetworkPlugin } from "@jolly-pixel/network/plugins/vite.ts";
 import { PixelSyncServer } from "@jolly-pixel/pixel-draw.renderer";
-import { VoxelSyncServer, VoxelWorld } from "@jolly-pixel/voxel.renderer";
+import { VoxelSyncServer } from "@jolly-pixel/voxel.renderer/network/index.ts";
+import { VoxelWorld } from "@jolly-pixel/voxel.renderer";
 
 const world = new VoxelWorld(16);
 world.addLayer("Ground");

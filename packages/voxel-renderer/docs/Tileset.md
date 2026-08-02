@@ -89,6 +89,8 @@ Manages tileset textures and UV lookup. Accessible via `VoxelEngine.tilesetManag
 
 ```ts
 readonly defaultTilesetId: string | null; // ID of the first registered tileset
+// bumped whenever the registered tilesets change, invalidating precomputed UVs
+readonly version: number;
 ```
 
 ### Methods
