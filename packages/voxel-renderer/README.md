@@ -26,6 +26,7 @@ Chunked voxel engine and Three.js renderer. Use `VoxelEngine` directly, or `Voxe
 - `TiledConverter` to import Tiled `.tmj` maps in `"stacked"` or `"flat"` layer modes
 - Optional physics through the backend-agnostic `VoxelCollider` interface, with `"box"` or `"trimesh"` colliders rebuilt per dirty chunk and a Rapier3D plugin included; zero extra dependency if omitted
 - Compatible with JollyPixel engine logger
+- Debug mode (`engine.debug`) exposing live face/triangle counts and a wireframe view of the meshed chunks
 
 > [!NOTE]
 > The implementation and optimization are probably far from perfect. Feel free to open a PR to help us.
@@ -226,6 +227,7 @@ asset and every run renders exactly the same blocks.
 - [Tileset](docs/Tileset.md) - `TilesetManager`, `TilesetDefinition`, `TileRef`, UV regions.
 - [Serialization](docs/Serialization.md) - `VoxelSerializer` and JSON snapshot types.
 - [Collision](docs/Collision.md) - The `VoxelCollider` contract and the bundled `RapierVoxelCollider` plugin.
+- [Debug](docs/Debug.md) - `engine.debug`: live face/triangle statistics and wireframe visualization.
 - [Built-In Shapes](docs/BuiltInShapes.md) - All built-in block shapes and custom shape authoring.
 - [TiledConverter](docs/TiledConverter.md) - Converting Tiled `.tmj` exports to `VoxelWorldJSON`.
 

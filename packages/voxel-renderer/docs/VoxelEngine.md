@@ -140,6 +140,13 @@ interface VoxelEngineOptions {
   onLayerUpdated?: VoxelLayerHookListener;
 
   /**
+   * Initial state of the debug inspector (`engine.debug`). Mesh counters are
+   * always collected; this only decides whether the wireframe is drawn from
+   * the start. See [Debug](./Debug.md).
+   */
+  debug?: VoxelDebuggerOptions;
+
+  /**
    * Optional pre-loaded tileset collection. All tilesets in the loader are
    * registered synchronously during construction. Use `TilesetLoader.fromTileDefinition()`
    * or `TilesetLoader.fromWorld()` to populate it before constructing `VoxelEngine`.
@@ -158,6 +165,7 @@ class VoxelEngine {
   readonly shapeRegistry: BlockShapeRegistry;
   readonly tilesetManager: TilesetManager;
   readonly serializer: VoxelSerializer;
+  readonly debug: VoxelDebugger; // mesh statistics + wireframe, see ./Debug.md
 }
 ```
 

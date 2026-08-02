@@ -375,3 +375,65 @@ describe("VoxelMeshBuilder — precompiled geometry follows registry changes", (
     assert.notEqual(before, after);
   });
 });
+
+describe("VoxelMeshBuilder — build statistics", () => {
+  it("counts the voxels, faces and geometry of an isolated cube", () => {
+    const f = makeFixture();
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    const chunk = f.layer.getChunk(0, 0, 0)!;
+
+    f.builder.buildChunkGeometries(chunk, f.layer);
+    const { stats } = f.builder;
+
+    assert.equal(stats.voxels, 1);
+    assert.equal(stats.hiddenVoxels, 0);
+    assert.equal(stats.faces, 6);
+    assert.equal(stats.culledFaces, 0);
+    assert.equal(stats.vertices, 24);
+    assert.equal(stats.triangles, 12);
+    assert.equal(stats.geometries, 1);
+    assert.ok(stats.buildTimeMs >= 0);
+  });
+
+  it("counts the faces hidden by an opaque neighbour", () => {
+    const f = makeFixture();
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    f.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    const chunk = f.layer.getChunk(0, 0, 0)!;
+
+    f.builder.buildChunkGeometries(chunk, f.layer);
+    const { stats } = f.builder;
+
+    assert.equal(stats.voxels, 2);
+    // The two touching faces are culled, 10 of the 12 candidates remain.
+    assert.equal(stats.faces, 10);
+    assert.equal(stats.culledFaces, 2);
+  });
+
+  it("counts voxels covered by a higher-priority layer as hidden", () => {
+    const f = makeFixture();
+    const top = f.world.addLayer("top");
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    top.setVoxelAt({ x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+
+    f.builder.buildChunkGeometries(f.layer.getChunk(0, 0, 0)!, f.layer);
+    const { stats } = f.builder;
+
+    assert.equal(stats.voxels, 1);
+    assert.equal(stats.hiddenVoxels, 1);
+    assert.equal(stats.faces, 0);
+  });
+
+  it("resets the counters when a chunk emits nothing", () => {
+    const f = makeFixture();
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    const chunk = f.layer.getChunk(0, 0, 0)!;
+    f.builder.buildChunkGeometries(chunk, f.layer);
+
+    const empty = f.layer.getOrCreateChunk(2, 0, 0);
+    assert.equal(f.builder.buildChunkGeometries(empty, f.layer), null);
+
+    assert.equal(f.builder.stats.faces, 0);
+    assert.equal(f.builder.stats.vertices, 0);
+  });
+});
