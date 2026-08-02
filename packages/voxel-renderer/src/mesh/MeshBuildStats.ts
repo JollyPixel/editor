@@ -10,6 +10,12 @@ export class MeshBuildStats {
   faces = 0;
   /** Faces skipped because an opaque neighbour occludes them. */
   culledFaces = 0;
+  /**
+   * Voxel faces greedy meshing folded into a neighbour's quad, i.e. how many
+   * faces the chunk would have emitted on top of `faces` without it. Always 0
+   * when greedy meshing is off.
+   */
+  mergedFaces = 0;
   vertices = 0;
   triangles = 0;
   /** Geometries produced, i.e. one per tileset the chunk references. */
@@ -22,6 +28,7 @@ export class MeshBuildStats {
     this.hiddenVoxels = 0;
     this.faces = 0;
     this.culledFaces = 0;
+    this.mergedFaces = 0;
     this.vertices = 0;
     this.triangles = 0;
     this.geometries = 0;
@@ -35,6 +42,7 @@ export class MeshBuildStats {
     this.hiddenVoxels = source.hiddenVoxels;
     this.faces = source.faces;
     this.culledFaces = source.culledFaces;
+    this.mergedFaces = source.mergedFaces;
     this.vertices = source.vertices;
     this.triangles = source.triangles;
     this.geometries = source.geometries;

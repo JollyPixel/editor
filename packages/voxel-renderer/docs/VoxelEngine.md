@@ -156,6 +156,14 @@ interface VoxelEngineOptions {
   tilesetPadding?: number;
 
   /**
+   * Merge coplanar identical block faces into the largest quads possible
+   * instead of one quad per voxel face. Roughly 3x fewer triangles on terrain.
+   * See [Greedy meshing](#greedy-meshing).
+   * @default false
+   */
+  greedy?: boolean;
+
+  /**
    * Optional pre-loaded tileset collection. All tilesets in the loader are
    * registered synchronously during construction. Use `TilesetLoader.fromTileDefinition()`
    * or `TilesetLoader.fromWorld()` to populate it before constructing `VoxelEngine`.
@@ -175,6 +183,8 @@ class VoxelEngine {
   readonly tilesetManager: TilesetManager;
   readonly serializer: VoxelSerializer;
   readonly debug: VoxelDebugger; // mesh statistics + wireframe, see ./Debug.md
+
+  greedy: boolean; // read/write; assigning rebuilds every chunk
 }
 ```
 
@@ -208,6 +218,68 @@ Alpha is baked per vertex rather than set on the material so a future per-block
 opacity (e.g. windows) only changes what the builder writes, not how materials
 are keyed and shared. Being a normalized byte, it round-trips through
 `getW()` within `1/255` of the layer's `opacity`.
+
+## Greedy meshing
+
+With `greedy: true` the builder stops emitting one quad per voxel face and
+instead stretches each face over the largest rectangle of identical voxels it
+can find. On the bundled noise-terrain benchmark (512², chunk size 32) that
+takes 1,986,252 triangles down to 666,370 — a 3x cut — for roughly the same
+build time. Measure your own world with `npm run bench -- --greedy`.
+
+Two voxels share a quad when they resolve to the same `(blockId, transform)`
+pair and show the same world-space direction, which makes them identical in
+texture, normal, winding and tileset. Merging never crosses a chunk boundary, so
+rebuilds stay local to the chunk that changed.
+
+Only faces that are a **full unit quad flat on the block boundary** merge:
+every face of a cube or slab, and a ramp's base and back wall. Slopes, stair
+risers, poles and triangles keep the per-voxel path, so a chunk mixing shapes
+still meshes correctly — you simply get less merging. Rotated voxels never merge
+with unrotated ones, since the transform turns the tile sideways.
+
+### What it changes
+
+A merged quad has to repeat its tile rather than stretch it, which the shader
+does rather than the geometry. Chunk materials are therefore compiled through
+`enableTileWrapping()`, and chunk geometry carries two extra attributes:
+
+| Attribute    | Type      | Items | Notes |
+|--------------|-----------|-------|-------|
+| `uv`         | `float32` | 2     | **tile** space, `0..spanU` / `0..spanV` — not atlas space |
+| `tileRegion` | `float32` | 4     | the tile's atlas rect: `offsetU, offsetV, scaleU, scaleV` |
+| `tileRepeat` | `float32` | 2     | how many times the tile repeats on each axis |
+
+That costs 24 bytes per vertex on top of the usual 36, which the drop in vertex
+count more than pays for. It also means a `materialCustomizer` that overrides
+`onBeforeCompile` or remaps `map` UVs will fight the wrapping shader.
+
+The wrapping is safe here because atlases are sampled with `NearestFilter` and
+carry no mipmaps — the usual objection to folding UVs in the fragment shader is
+the derivative discontinuity at tile borders, which only matters once mip levels
+are picked from those derivatives. Cutout blocks that also cast shadows are the
+one gap: three builds its own depth material, which would sample the atlas with
+unwrapped UVs.
+
+### When not to use it
+
+Merging needs random access, so the chunk is scattered into a dense grid and
+swept per direction, bounded by the occupied box. That is cheap at chunk sizes
+16–64 (within noise of the naive builder on the benchmark) but grows with the
+cube of the chunk size: at `chunkSize: 256` the same world meshes about 35%
+slower. The scratch grid costs `chunkSize³ × 4` bytes too — 128 KB at 32, but
+64 MB at 256. Large chunks plus greedy meshing is the combination to avoid.
+
+Greedy meshing is also incompatible with per-vertex lighting or ambient
+occlusion, neither of which this renderer has today — vertex colors carry only
+the layer opacity, which is uniform per chunk build.
+
+```ts
+const engine = new VoxelEngine({ chunkSize: 32, greedy: true });
+
+// Toggling at runtime rebuilds every chunk and swaps the materials.
+engine.greedy = false;
+```
 
 ## Methods
 

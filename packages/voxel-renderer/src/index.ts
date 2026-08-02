@@ -85,6 +85,7 @@ export {
   type TilesetLoaderOptions,
   type TilesetEntry
 } from "./tileset/TilesetLoader.ts";
+export { enableTileWrapping } from "./tileset/tileWrapping.ts";
 
 // World
 export {

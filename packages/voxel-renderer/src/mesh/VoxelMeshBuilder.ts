@@ -15,35 +15,50 @@ import {
 import { BlockVariantCache } from "./BlockVariantCache.ts";
 import { GeometryBuffer } from "./GeometryBuffer.ts";
 import { MeshBuildStats } from "./MeshBuildStats.ts";
+import { GreedyMesher } from "./GreedyMesher.ts";
 import {
   ChunkNeighbourhood,
   type LayerChunkCache
 } from "./ChunkNeighbourhood.ts";
-import type { VoxelEntry } from "../world/types.ts";
+import {
+  isNeighbourFaceHidden,
+  winsCompositing
+} from "./occlusion.ts";
 
 export interface VoxelMeshBuilderOptions {
   world: VoxelWorld;
   blockRegistry: BlockRegistry;
   shapeRegistry: BlockShapeRegistry;
   tilesetManager: TilesetManager;
+  /**
+   * Merge coplanar identical faces into the largest quads possible instead of
+   * emitting one quad per voxel face. See `GreedyMesher`.
+   *
+   * Geometry built this way carries the extra `tileRegion` / `tileRepeat`
+   * attributes and needs a material prepared by `enableTileWrapping()`.
+   * @default false
+   */
+  greedy?: boolean;
 }
 
 /**
- * Builds per-tileset THREE.BufferGeometries for one chunk using naive face culling.
+ * Builds per-tileset THREE.BufferGeometries for one chunk.
  *
- * Algorithm: for each filled voxel, emit only the faces where the adjacent
- * voxel in the face's direction either does not exist or does not occlude.
- * Non-axis-aligned faces (slopes, corners) correctly rotate their culling
- * direction before the neighbour lookup.
+ * Default algorithm (naive face culling): for each filled voxel, emit only the
+ * faces where the adjacent voxel in the face's direction either does not exist
+ * or does not occlude. Non-axis-aligned faces (slopes, corners) correctly
+ * rotate their culling direction before the neighbour lookup.
+ *
+ * With `greedy` enabled, `GreedyMesher` takes over and stretches each cube-like
+ * face over the largest run of identical voxels it can, cutting the triangle
+ * count by roughly 3× on terrain. Faces it cannot stretch still go through the
+ * naive path, so mixed chunks keep working.
  *
  * Voxels at a position already occupied by a higher-priority layer are skipped
  * entirely (the higher layer's chunk will render that position instead).
  *
  * Geometry is split by tileset so each resulting mesh can be assigned the
  * correct material/texture when multiple tilesets are in use.
- *
- * Greedy meshing is intentionally omitted: it is incompatible with per-face UV
- * rotation and the non-cube shapes supported by this renderer.
  *
  * Everything that does not depend on a voxel's world position is hoisted out
  * of the per-voxel loop: rotated vertices, normals and atlas UVs are compiled
@@ -61,20 +76,54 @@ export class VoxelMeshBuilder {
   #world: VoxelWorld;
   #tilesetManager: TilesetManager;
   #variants: BlockVariantCache;
+  #greedyMesher: GreedyMesher;
+  #greedy: boolean;
 
   /** One reusable accumulator per tileset slot, kept across chunk builds. */
   #buffers: (GeometryBuffer | undefined)[] = [];
+
+  /**
+   * Bound once so the greedy pass allocates no closure per chunk.
+   */
+  #bufferFor = (slot: number): GeometryBuffer => {
+    let buffer = this.#buffers[slot];
+    if (buffer === undefined) {
+      buffer = new GeometryBuffer({ tiled: this.#greedy });
+      this.#buffers[slot] = buffer;
+    }
+
+    return buffer;
+  };
 
   constructor(
     options: VoxelMeshBuilderOptions
   ) {
     this.#world = options.world;
     this.#tilesetManager = options.tilesetManager;
+    this.#greedy = options.greedy ?? false;
     this.#variants = new BlockVariantCache({
       blockRegistry: options.blockRegistry,
       shapeRegistry: options.shapeRegistry,
       tilesetManager: options.tilesetManager
     });
+    this.#greedyMesher = new GreedyMesher(this.#variants);
+  }
+
+  get greedy(): boolean {
+    return this.#greedy;
+  }
+
+  /**
+   * Switching modes changes the attribute layout, so the accumulators are
+   * dropped rather than reused. Callers must rebuild every chunk afterwards.
+   */
+  set greedy(value: boolean) {
+    if (value === this.#greedy) {
+      return;
+    }
+
+    this.#greedy = value;
+    this.#buffers = [];
   }
 
   /**
@@ -114,11 +163,49 @@ export class VoxelMeshBuilder {
       worldOriginZ - 1
     );
     const { layers } = neighbourhood;
-    const layerCount = layers.length;
     const selfIndex = neighbourhood.indexOf(layer);
 
     const alpha = Math.round(layer.opacity * 255);
-    const buffers = this.#resetBuffers();
+    this.#resetBuffers();
+
+    const emitted = this.#greedy ?
+      this.#greedyMesher.mesh({
+        chunk,
+        layers,
+        selfIndex,
+        worldOriginX,
+        worldOriginY,
+        worldOriginZ,
+        alpha,
+        stats,
+        bufferFor: this.#bufferFor
+      }) :
+      this.#buildNaive(
+        chunk, layers, selfIndex, worldOriginX, worldOriginY, worldOriginZ, alpha
+      );
+
+    const geometries = emitted ? this.#collectGeometries() : null;
+    stats.buildTimeMs = performance.now() - startedAt;
+
+    return geometries;
+  }
+
+  /**
+   * One quad per visible voxel face. `layers` is the compositing order and
+   * `selfIndex` the rank of the layer being meshed within it.
+   */
+  // eslint-disable-next-line max-params
+  #buildNaive(
+    chunk: VoxelChunk,
+    layers: readonly LayerChunkCache[],
+    selfIndex: number,
+    worldOriginX: number,
+    worldOriginY: number,
+    worldOriginZ: number,
+    alpha: number
+  ): boolean {
+    const { stats } = this;
+    const layerCount = layers.length;
     const size = chunk.size;
     // Decoding the linear index costs two divisions and two modulos per voxel;
     // a power-of-two chunk size turns both into shifts and masks.
@@ -146,7 +233,7 @@ export class VoxelMeshBuilder {
       const wz = worldOriginZ + lz;
 
       stats.voxels++;
-      if (!this.#winsCompositing(layers, layerCount, selfIndex, entry, wx, wy, wz)) {
+      if (!winsCompositing(layers, layerCount, selfIndex, entry, wx, wy, wz)) {
         stats.hiddenVoxels++;
         continue;
       }
@@ -160,7 +247,8 @@ export class VoxelMeshBuilder {
         const { cull } = face;
         if (cull >= 0) {
           const offset = FACE_OFFSETS[cull];
-          const hidden = this.#isNeighbourFaceHidden(
+          const hidden = isNeighbourFaceHidden(
+            this.#variants,
             layers,
             layerCount,
             wx + offset[0],
@@ -174,96 +262,19 @@ export class VoxelMeshBuilder {
           }
         }
 
-        let buffer = buffers[face.slot];
-        if (buffer === undefined) {
-          buffer = new GeometryBuffer();
-          buffers[face.slot] = buffer;
-        }
-        buffer.addFace(face, wx, wy, wz, alpha);
+        this.#bufferFor(face.slot).addFace(face, wx, wy, wz, alpha);
         stats.faces++;
         emitted = true;
       }
     }
 
-    const geometries = emitted ? this.#collectGeometries() : null;
-    stats.buildTimeMs = performance.now() - startedAt;
-
-    return geometries;
+    return emitted;
   }
 
-  /**
-   * True when this chunk's `entry` is the voxel the world composites at
-   * (wx, wy, wz) — i.e. no higher-priority layer covers the position.
-   *
-   * `selfIndex` is the owning layer's rank among the effectively visible
-   * layers, so only the layers above it need a lookup. It is -1 when the layer
-   * is hidden or fully transparent, in which case another layer always wins
-   * and every voxel is skipped.
-   */
-  // eslint-disable-next-line max-params
-  #winsCompositing(
-    layers: readonly LayerChunkCache[],
-    layerCount: number,
-    selfIndex: number,
-    entry: VoxelEntry,
-    wx: number,
-    wy: number,
-    wz: number
-  ): boolean {
-    for (let i = 0; i < layerCount; i++) {
-      if (i === selfIndex) {
-        return true;
-      }
-
-      const found = layers[i].entryAt(wx, wy, wz);
-      if (found !== undefined) {
-        return found === entry;
-      }
-    }
-
-    return false;
-  }
-
-  /**
-   * Returns true if the neighbour voxel exists, belongs to a fully opaque
-   * layer (opacity 1), and its shape occludes `oppFace` — the world-space face
-   * pointing back toward this voxel. Returns false if the neighbour is empty,
-   * its owning layer is translucent (opacity < 1, e.g. glass — never
-   * occludes), or its shape does not occlude that face.
-   */
-  // eslint-disable-next-line max-params
-  #isNeighbourFaceHidden(
-    layers: readonly LayerChunkCache[],
-    layerCount: number,
-    nx: number,
-    ny: number,
-    nz: number,
-    oppFace: number
-  ): boolean {
-    for (let i = 0; i < layerCount; i++) {
-      const cache = layers[i];
-      const neighbour = cache.entryAt(nx, ny, nz);
-      if (neighbour === undefined) {
-        continue;
-      }
-      if (!cache.opaque) {
-        return false;
-      }
-
-      const variant = this.#variants.get(neighbour.blockId, neighbour.transform);
-
-      return variant !== null && (variant.occlusionMask & (1 << oppFace)) !== 0;
-    }
-
-    return false;
-  }
-
-  #resetBuffers(): (GeometryBuffer | undefined)[] {
+  #resetBuffers(): void {
     for (const buffer of this.#buffers) {
       buffer?.reset();
     }
-
-    return this.#buffers;
   }
 
   #collectGeometries(): Map<string, THREE.BufferGeometry> | null {

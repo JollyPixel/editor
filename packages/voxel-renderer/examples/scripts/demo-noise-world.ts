@@ -26,12 +26,12 @@ const kSkyColor = "#8ec5e8";
 const kCameraSpeed = 60;
 
 const kSizeBounds = {
-  default: 512,
+  default: 1024,
   min: 256,
   max: 1024
 };
 const kChunkBounds = {
-  default: 256,
+  default: 32,
   min: 16,
   max: 256
 };
@@ -98,6 +98,7 @@ world.createActor("camera")
 
 const voxelMap = world.createActor("map")
   .addComponentAndGet(VoxelRenderer, {
+    greedy: true,
     chunkSize: settings.chunkSize,
     layers: [kTerrainLayer, kWaterLayer],
     blocks: tileset.blocks,
@@ -113,7 +114,7 @@ world.createActor("hud")
     title: "NOISE WORLD",
     details: () => [
       ...describeBuild(settings, report),
-      ...describeMesh(voxelMap.engine.debug)
+      ...describeMesh(voxelMap.engine.debug, voxelMap.engine.greedy)
     ]
   });
 
@@ -135,6 +136,21 @@ document.addEventListener("keydown", (event) => {
   // off → wireframe over the textures → wireframe only.
   if (event.code === "KeyG") {
     console.log(`[noise-world] debug mode: ${engine.debug.nextMode()}`);
+
+    return;
+  }
+
+  // Rebuilds every chunk in the other meshing mode; the textures must look
+  // identical while the triangle count drops.
+  if (event.code === "KeyM") {
+    const meshStart = performance.now();
+    engine.greedy = !engine.greedy;
+    engine.tick(0);
+
+    if (report !== null) {
+      report.meshMs = performance.now() - meshStart;
+    }
+    console.log(`[noise-world] greedy meshing: ${engine.greedy}`);
   }
 });
 
@@ -228,17 +244,24 @@ function describeBuild(
  * so it follows chunk rebuilds.
  */
 function describeMesh(
-  debug: VoxelDebugger
+  debug: VoxelDebugger,
+  greedy: boolean
 ): string[] {
   const {
-    faces, culledFaces, triangles, vertices, meshes, chunks
+    faces, culledFaces, mergedFaces, triangles, vertices, meshes, chunks
   } = debug.stats;
 
   const candidates = faces + culledFaces;
   const culled = candidates === 0 ? 0 : (culledFaces / candidates) * 100;
+  const emitted = faces + mergedFaces;
+  const merged = emitted === 0 ? 0 : (mergedFaces / emitted) * 100;
 
   return [
     hudLine("Faces", `${faces.toLocaleString("en-US")}  (${culled.toFixed(1)}% culled)`),
+    hudLine(
+      "Greedy",
+      greedy ? `on  (${merged.toFixed(1)}% merged)  [M]` : "off  [M to toggle]"
+    ),
     // Named apart from the renderer's own counters above: these cover every
     // built chunk, not just what survived frustum culling this frame.
     hudLine("Mesh Tris", triangles),
