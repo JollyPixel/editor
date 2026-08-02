@@ -149,7 +149,7 @@ const kStairCornerInnerFaces: readonly FaceDefinition[] = [
     uvs: [[0.5, 0], [0, 0], [0, 0.5], [0.5, 0.5]]
   },
   {
-    // Inner riser at z=0.5, y=0.5..1, x=0..0.5 (facing NegZ, always visible)
+    // NegZ: upper front wall y=0.5..1, x=0.5..1 (right only — upper block)
     face: FACE.NegZ,
     normal: [0, 0, -1],
     vertices: [[1, 0.5, 0], [0.5, 0.5, 0], [0.5, 1, 0], [1, 1, 0]],
@@ -163,7 +163,7 @@ const kStairCornerInnerFaces: readonly FaceDefinition[] = [
     uvs: [[0, 0], [0.5, 0], [0.5, 0.5], [0, 0.5]]
   },
   {
-    // Inner riser at x=0.5, y=0.5..1, z=0..0.5 (facing NegX, always visible)
+    // NegX: upper left wall y=0.5..1, z=0.5..1 (back only — upper block)
     face: FACE.NegX,
     normal: [-1, 0, 0],
     vertices: [[0, 0.5, 1], [0, 1, 1], [0, 1, 0.5], [0, 0.5, 0.5]],

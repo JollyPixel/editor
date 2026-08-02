@@ -147,6 +147,15 @@ interface VoxelEngineOptions {
   debug?: VoxelDebuggerOptions;
 
   /**
+   * Texels of edge-replicated gutter added around every tile of an atlas before
+   * it is bound to a material. Prevents distant geometry from sampling
+   * neighbouring tiles. See [Tileset](./Tileset.md#atlas-padding).
+   * Set to 0 to render atlases untouched.
+   * @default half the tile size, clamped to 2..8
+   */
+  tilesetPadding?: number;
+
+  /**
    * Optional pre-loaded tileset collection. All tilesets in the loader are
    * registered synchronously during construction. Use `TilesetLoader.fromTileDefinition()`
    * or `TilesetLoader.fromWorld()` to populate it before constructing `VoxelEngine`.

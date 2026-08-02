@@ -23,6 +23,7 @@ function mockTexture(width: number, height: number): any {
     minFilter: 0,
     colorSpace: "",
     generateMipmaps: true,
+    needsUpdate: false,
     image: { width, height },
     dispose() {
       // No-op for testing; real THREE.Texture would release GPU resources here.
@@ -168,6 +169,85 @@ describe("TilesetManager.getTileUV", () => {
     const uv = manager.getTileUV({ col: 0, row: 0, tilesetId: "walls" });
     // walls is 2-col, 2-row → scaleU=(tileSize-1)/(cols*tileSize)=15/32
     assert.ok(approxEqual(uv.scaleU, 15 / 32));
+  });
+});
+
+describe("TilesetManager atlas padding", () => {
+  // node:test has no DOM, so padAtlas() cannot rasterize and every atlas is
+  // registered unpadded — which is exactly the fallback contract.
+  it("falls back to the source texture when the environment cannot rasterize", () => {
+    const manager = new TilesetManager({ padding: 4 });
+    const tex = mockTexture(64, 64);
+    manager.registerTexture(makeDef("terrain", 16, 4, 4), tex);
+
+    assert.equal(manager.getTexture(), tex);
+    assert.equal(manager.getSourceTexture(), tex);
+  });
+
+  it("UVs collapse to the raw atlas layout when padding is not applied", () => {
+    const manager = new TilesetManager({ padding: 4 });
+    manager.registerTexture(makeDef("terrain", 16, 4, 4), mockTexture(64, 64));
+
+    const uv = manager.getTileUV({ col: 0, row: 0 });
+    assert.ok(approxEqual(uv.offsetU, 0.0078125));
+    assert.ok(approxEqual(uv.scaleU, 15 / 64));
+  });
+
+  it("still applies the pixel-art texture settings", () => {
+    const manager = new TilesetManager();
+    const tex = mockTexture(64, 64);
+    manager.registerTexture(makeDef("terrain", 16, 4, 4), tex);
+
+    assert.equal(tex.generateMipmaps, false);
+    assert.equal(tex.colorSpace, "srgb");
+  });
+});
+
+describe("TilesetManager.updateSourceImage", () => {
+  it("replaces the source image and flags it for re-upload", () => {
+    const manager = new TilesetManager();
+    const tex = mockTexture(64, 64);
+    manager.registerTexture(makeDef("terrain", 16, 4, 4), tex);
+
+    const next = { width: 64, height: 64 } as any;
+    manager.updateSourceImage(next);
+
+    assert.equal(manager.getSourceTexture()!.image, next);
+    assert.equal(tex.needsUpdate, true);
+  });
+
+  it("is a no-op for an unknown tileset", () => {
+    const manager = new TilesetManager();
+    manager.registerTexture(makeDef("terrain", 16, 4, 4), mockTexture(64, 64));
+
+    assert.doesNotThrow(() => manager.updateSourceImage({} as any, "unknown"));
+  });
+
+  it("is a no-op when no tileset is registered", () => {
+    const manager = new TilesetManager();
+    assert.doesNotThrow(() => manager.updateSourceImage({} as any));
+  });
+});
+
+describe("TilesetManager.getDefaultBlocks", () => {
+  it("derives the grid from the resolved definition, not the render texture", () => {
+    const manager = new TilesetManager();
+    manager.registerTexture(makeDef("terrain", 16, 4, 2), mockTexture(64, 32));
+
+    const blocks = manager.getDefaultBlocks();
+    assert.equal(blocks.length, 8);
+    assert.deepEqual(blocks.at(-1)!.defaultTexture, {
+      tilesetId: "terrain",
+      col: 3,
+      row: 1
+    });
+  });
+
+  it("stops at the requested limit", () => {
+    const manager = new TilesetManager();
+    manager.registerTexture(makeDef("terrain", 16, 4, 4), mockTexture(64, 64));
+
+    assert.equal(manager.getDefaultBlocks(void 0, { limit: 3 }).length, 3);
   });
 });
 

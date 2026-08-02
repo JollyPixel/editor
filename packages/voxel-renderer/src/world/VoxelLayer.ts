@@ -13,7 +13,8 @@ import type {
 } from "./types.ts";
 
 /**
- * x,y,z voxel positions are serialised as "x,y,z" keys in a sparse map for
+ * Key of one voxel entry in a serialised layer: its world position as "x,y,z".
+ * The map is sparse, so unwritten positions are simply absent.
  */
 export type VoxelEntryKey = `${number},${number},${number}`;
 

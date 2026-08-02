@@ -14,11 +14,9 @@ const kW = 3 / 8;
 const kH = 5 / 8;
 
 /**
- * Pole — a narrow horizontal beam running along the X or Z axis.
- * Cross-section: 0.25×0.25 centered at 0.5, full length along the chosen axis.
+ * Pole — a narrow horizontal beam spanning the full depth of the Z axis.
+ * Cross-section: 0.25×0.25 centered at 0.5, so x and y both span [kW, kH].
  * Uses trimesh collision for accurate sub-voxel physics.
- *
- * "pole": z=[0,1], centered x=[kW,kH], y=[kW,kH]
  */
 export class Pole implements BlockShape {
   readonly id: BlockShapeID;

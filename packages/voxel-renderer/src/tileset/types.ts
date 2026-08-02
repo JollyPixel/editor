@@ -4,6 +4,14 @@ export interface TileRef {
   tilesetId?: string;
 }
 
+/** Precomputed UV region for a specific tile in the atlas. */
+export interface TilesetUVRegion {
+  offsetU: number;
+  offsetV: number;
+  scaleU: number;
+  scaleV: number;
+}
+
 export type Coords = [col: number, row: number];
 
 export type TileRefIn = Coords | TileRef;
