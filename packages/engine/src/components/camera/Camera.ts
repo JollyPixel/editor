@@ -62,6 +62,12 @@ export class CameraComponent<
   #projectionDirty = true;
   #lastCanvasWidth = 0;
   #lastCanvasHeight = 0;
+  #registered = false;
+
+  // Reused by prepareRender — avoid per-frame allocations.
+  #worldPosition = new THREE.Vector3();
+  #worldQuaternion = new THREE.Quaternion();
+  #worldScale = new THREE.Vector3();
 
   get threeCamera(): THREE.PerspectiveCamera | THREE.OrthographicCamera {
     return this.#threeCamera;
@@ -123,16 +129,29 @@ export class CameraComponent<
     this.#viewport = viewport;
     this.#depth = depth;
 
-    this.#threeCamera = this.#projectionMode === "orthographic"
-      ? new THREE.OrthographicCamera(-1, 1, 1, -1, this.#near, this.#far)
-      : new THREE.PerspectiveCamera(this.#fov, 1, this.#near, this.#far);
+    this.#threeCamera = this.#createThreeCamera();
     if (addAudioListener) {
       this.threeCamera.add(actor.world.audio.threeAudioListener);
     }
   }
 
+  /**
+   * The actor's transform is the single source of truth for the camera pose,
+   * so three must not recompose `matrixWorld` from the camera's own local
+   * transform after `prepareRender` wrote it.
+   */
+  #createThreeCamera(): THREE.PerspectiveCamera | THREE.OrthographicCamera {
+    const camera = this.#projectionMode === "orthographic"
+      ? new THREE.OrthographicCamera(-1, 1, 1, -1, this.#near, this.#far)
+      : new THREE.PerspectiveCamera(this.#fov, 1, this.#near, this.#far);
+    camera.matrixWorldAutoUpdate = false;
+
+    return camera;
+  }
+
   awake(): void {
     this.actor.world.renderer.addRenderComponent(this);
+    this.#registered = true;
   }
 
   /**
@@ -151,6 +170,23 @@ export class CameraComponent<
     this.#threeCamera.matrixWorldInverse
       .copy(this.#threeCamera.matrixWorld)
       .invert();
+
+    // Keep position/quaternion readable — the camera has no parent, so its
+    // local transform equals its world transform.
+    this.#threeCamera.matrixWorld.decompose(
+      this.#worldPosition,
+      this.#worldQuaternion,
+      this.#worldScale
+    );
+    this.#threeCamera.position.copy(this.#worldPosition);
+    this.#threeCamera.quaternion.copy(this.#worldQuaternion);
+    this.#threeCamera.scale.copy(this.#worldScale);
+
+    // matrixWorldAutoUpdate is off, so three never walks the camera's children;
+    // an attached AudioListener would otherwise stay at the origin.
+    for (const child of this.#threeCamera.children) {
+      child.updateMatrixWorld(true);
+    }
 
     // Update projection when canvas resizes or settings changed
     const canvasChanged = canvasWidth !== this.#lastCanvasWidth ||
@@ -234,6 +270,9 @@ export class CameraComponent<
     depth: number
   ): this {
     this.#depth = depth;
+    if (this.#registered) {
+      this.actor.world.renderer.markRenderOrderDirty();
+    }
 
     return this;
   }
@@ -245,17 +284,28 @@ export class CameraComponent<
       return this;
     }
 
+    const previous = this.#threeCamera;
     this.#projectionMode = mode;
-    this.#threeCamera = mode === "orthographic"
-      ? new THREE.OrthographicCamera(-1, 1, 1, -1, this.#near, this.#far)
-      : new THREE.PerspectiveCamera(this.#fov, 1, this.#near, this.#far);
+    this.#threeCamera = this.#createThreeCamera();
+
+    // Carry over what the discarded camera owned: attached objects (typically
+    // the AudioListener) and the layer mask.
+    if (previous.children.length > 0) {
+      this.#threeCamera.add(...previous.children);
+    }
+    this.#threeCamera.layers.mask = previous.layers.mask;
+
     this.#projectionDirty = true;
+    if (this.#registered) {
+      this.actor.world.renderer.updateRenderComponent(this);
+    }
 
     return this;
   }
 
   override destroy(): void {
     this.actor.world.renderer.removeRenderComponent(this);
+    this.#registered = false;
     super.destroy();
   }
 }

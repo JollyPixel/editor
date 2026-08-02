@@ -37,6 +37,9 @@ export class FreeFlyCamera extends CameraComponent {
   #right = new THREE.Vector3();
   #up = new THREE.Vector3(0, 1, 0);
   #move = new THREE.Vector3();
+  #offset = new THREE.Vector3();
+  #euler = new THREE.Euler(0, 0, 0, "YXZ");
+  #orientation = new THREE.Quaternion();
 
   constructor(
     actor: Actor,
@@ -66,16 +69,32 @@ export class FreeFlyCamera extends CameraComponent {
     this.#scrollSpeed = scrollSpeed;
     this.#friction = friction;
 
-    this.camera.rotation.order = "YXZ";
-    this.camera.rotation.y = this.#yaw;
-    this.camera.rotation.x = this.#pitch;
+    this.#applyOrientation();
+    this.actor.transform.setLocalPosition(
+      options.position ?? { x: 16, y: 20, z: 40 }
+    );
+  }
 
-    if (options.position) {
-      this.camera.position.copy(options.position);
-    }
-    else {
-      this.camera.position.set(16, 20, 40);
-    }
+  /**
+   * The actor transform drives the camera, so pose changes must go through it —
+   * writes to `camera.position` / `camera.rotation` are overwritten every frame.
+   */
+  #applyOrientation() {
+    this.actor.transform.setLocalOrientation(
+      this.#orientation.setFromEuler(
+        this.#euler.set(this.#pitch, this.#yaw, 0)
+      )
+    );
+  }
+
+  /** Moves along the full look direction, pitch included. */
+  #dolly(
+    transform: Actor["transform"],
+    distance: number
+  ) {
+    transform.moveGlobal(
+      transform.getForward(this.#offset).multiplyScalar(distance)
+    );
   }
 
   get camera() {
@@ -90,6 +109,7 @@ export class FreeFlyCamera extends CameraComponent {
     deltaTime: number
   ) {
     const { input } = this.actor.world;
+    const { transform } = this.actor;
 
     // --- Mouse look ---
     if (input.isMouseButtonDown("middle") && input.isMouseMoving()) {
@@ -101,12 +121,11 @@ export class FreeFlyCamera extends CameraComponent {
         Math.min(this.#maxPitch, this.#pitch)
       );
 
-      this.camera.rotation.y = this.#yaw;
-      this.camera.rotation.x = this.#pitch;
+      this.#applyOrientation();
     }
 
     // --- Compute camera orientation vectors ---
-    this.camera.getWorldDirection(this.#forward);
+    transform.getForward(this.#forward);
     this.#forward.y = 0;
     this.#forward.normalize();
     this.#right.crossVectors(this.#forward, this.#up).normalize();
@@ -142,18 +161,18 @@ export class FreeFlyCamera extends CameraComponent {
     const isCtrl = input.isKeyDown("ControlLeft") || input.isKeyDown("ControlRight");
     if (!isCtrl) {
       if (input.isMouseButtonDown("scrollUp")) {
-        this.camera.getWorldDirection(this.#forward);
-        this.camera.position.addScaledVector(this.#forward, this.#scrollSpeed);
+        this.#dolly(transform, this.#scrollSpeed);
       }
       if (input.isMouseButtonDown("scrollDown")) {
-        this.camera.getWorldDirection(this.#forward);
-        this.camera.position.addScaledVector(this.#forward, -this.#scrollSpeed);
+        this.#dolly(transform, -this.#scrollSpeed);
       }
     }
 
     // --- Apply velocity + friction ---
-    this.camera.position.addScaledVector(this.#vel, deltaTime);
-    this.#vel.lerp(new THREE.Vector3(0, 0, 0), this.#friction);
+    transform.moveGlobal(
+      this.#offset.copy(this.#vel).multiplyScalar(deltaTime)
+    );
+    this.#vel.multiplyScalar(1 - this.#friction);
 
     // Damp to exact zero when nearly stopped.
     if (this.#vel.lengthSq() < 0.0001) {

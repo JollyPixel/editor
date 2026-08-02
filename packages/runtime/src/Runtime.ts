@@ -117,4 +117,14 @@ export class Runtime<
 
     this.world.disconnect();
   }
+
+  /**
+   * Stops the runtime and releases the WebGL context. Call this when the
+   * canvas is torn down; the Runtime must not be started again afterwards.
+   */
+  dispose() {
+    this.stop();
+    this.stats?.dom.remove();
+    this.world.dispose();
+  }
 }

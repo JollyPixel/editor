@@ -9,8 +9,36 @@ import type { RenderComponent } from "./Renderer.ts";
 
 export type RenderMode = "direct" | "composer";
 
+/**
+ * Maps depth-sorted components onto their render passes and fixes the clear
+ * flags: a RenderPass clears by default, which would wipe the previous
+ * camera's output, so only the first one may clear the color buffer.
+ * Components without a pass are skipped.
+ */
+export function orderRenderPasses(
+  components: readonly RenderComponent[],
+  passes: ReadonlyMap<RenderComponent, RenderPass>
+): RenderPass[] {
+  const ordered: RenderPass[] = [];
+
+  for (const component of components) {
+    const pass = passes.get(component);
+    if (!pass) {
+      continue;
+    }
+
+    const isFirst = ordered.length === 0;
+    pass.clear = isFirst;
+    pass.clearDepth = !isFirst;
+    ordered.push(pass);
+  }
+
+  return ordered;
+}
+
 export interface RenderParameters {
-  components: RenderComponent[];
+  /** Pre-sorted by `depth` ascending — strategies must not re-sort. */
+  components: readonly RenderComponent[];
   canvasWidth: number;
   canvasHeight: number;
 }
@@ -24,6 +52,8 @@ export interface RenderStrategy {
     width: number,
     height: number
   ): void;
+  /** Releases GPU resources owned by the strategy. */
+  dispose(): void;
 }
 
 export class DirectRenderStrategy implements RenderStrategy {
@@ -40,12 +70,11 @@ export class DirectRenderStrategy implements RenderStrategy {
     parameters: RenderParameters
   ): void {
     const {
-      components: renderComponents,
+      components: sorted,
       canvasWidth,
       canvasHeight
     } = parameters;
 
-    const sorted = [...renderComponents].sort((a, b) => a.depth - b.depth);
     const hasViewports = sorted.some((rc) => rc.viewport !== null);
 
     if (!hasViewports) {
@@ -84,6 +113,10 @@ export class DirectRenderStrategy implements RenderStrategy {
     height: number
   ): void {
     this.#renderer.setSize(width, height, false);
+  }
+
+  dispose(): void {
+    // The WebGLRenderer is owned by ThreeRenderer, not by the strategy.
   }
 }
 
@@ -138,13 +171,37 @@ export class ComposerRenderStrategy implements RenderStrategy {
     this.#composer.addPass(pass);
   }
 
+  /** Detaches without disposing — callers own the pass lifetime. */
   removeEffect(
     pass: Pass
   ): void {
     this.#composer.removePass(pass);
   }
 
+  /**
+   * Rearranges the existing passes in place. Passes absent from `passes` keep
+   * their relative order after the ones listed.
+   */
+  setPassOrder(
+    passes: readonly Pass[]
+  ): void {
+    const remaining = this.#composer.passes.filter(
+      (pass) => !passes.includes(pass)
+    );
+    this.#composer.passes = [...passes, ...remaining];
+  }
+
   getComposer(): EffectComposer {
     return this.#composer;
+  }
+
+  dispose(): void {
+    // EffectComposer.dispose() only releases its own render targets and copy pass,
+    // so the passes it holds have to be disposed explicitly.
+    for (const pass of [...this.#composer.passes]) {
+      this.#composer.removePass(pass);
+      pass.dispose();
+    }
+    this.#composer.dispose();
   }
 }

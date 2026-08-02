@@ -37,8 +37,9 @@ scene.add(
 
 world.createActor("camera")
   .addComponent(Camera3DControls, {}, (component) => {
-    component.camera.position.set(15, 25, 42);
-    component.camera.lookAt(15, 0, 10);
+    component.actor.transform
+      .setLocalPosition({ x: 15, y: 25, z: 42 })
+      .lookAt({ x: 15, y: 0, z: 10 });
   });
 
 world.createActor("map")
