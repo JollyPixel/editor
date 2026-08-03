@@ -1,8 +1,7 @@
 // Import Third-party Dependencies
 import type { Page } from "@playwright/test";
 
-// Import Internal Dependencies
-import type { Mode } from "../../src/index.ts";
+import type { Mode } from "@jolly-pixel/pixel-draw.renderer";
 
 export interface PixelRGBA {
   r: number;

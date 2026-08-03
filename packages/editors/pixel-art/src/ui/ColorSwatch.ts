@@ -1,6 +1,13 @@
 // Import Third-party Dependencies
-import { LitElement, html, css } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import {
+  LitElement,
+  html,
+  css
+} from "lit";
+import {
+  customElement,
+  property
+} from "lit/decorators.js";
 import Picker from "vanilla-picker";
 
 export interface ColorChangeDetail {

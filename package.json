@@ -25,6 +25,7 @@
     "packages/resize-handle",
     "packages/voxel-renderer",
     "packages/pixel-draw-renderer",
+    "packages/editors/pixel-art",
     "packages/editors/voxel-map",
     "packages/editors/voxel-model"
   ],

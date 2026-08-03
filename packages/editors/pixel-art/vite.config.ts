@@ -6,11 +6,10 @@ import {
 
 import checker from "vite-plugin-checker";
 
-// Import Internal Dependencies
 import {
   PixelBuffer,
   PixelSyncServer
-} from "./src/index.ts";
+} from "@jolly-pixel/pixel-draw.renderer";
 
 // https://vitejs.dev/config/
 export default defineConfig({

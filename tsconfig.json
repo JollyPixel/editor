@@ -29,6 +29,9 @@
       "path": "./packages/pixel-draw-renderer"
     },
     {
+      "path": "./packages/editors/pixel-art"
+    },
+    {
       "path": "./packages/editors/voxel-map"
     },
     {

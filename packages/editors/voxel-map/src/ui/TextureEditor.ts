@@ -8,7 +8,7 @@ import type {
   PixelNetworkCommand,
   PixelServerMessage
 } from "@jolly-pixel/pixel-draw.renderer";
-import { PixelDrawPanel } from "@jolly-pixel/pixel-draw.renderer/ui";
+import { PixelDrawPanel } from "@jolly-pixel/editor.pixel-art";
 
 // Import Internal Dependencies
 import { TextureEditorBridge } from "../lib/TextureEditorBridge.ts";

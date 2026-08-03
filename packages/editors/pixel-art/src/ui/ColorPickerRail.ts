@@ -5,12 +5,16 @@ import {
   css,
   type PropertyValues
 } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import {
+  customElement,
+  property
+} from "lit/decorators.js";
 
 // Import Internal Dependencies
-// ColorSwatch is imported as a value (not `type`) so this statement isn't
-// elided — its module has to run once to register <color-swatch>.
-import { ColorSwatch, type ColorChangeDetail } from "./ColorSwatch.ts";
+import {
+  ColorSwatch,
+  type ColorChangeDetail
+} from "./ColorSwatch.ts";
 import { renderIcon } from "./icons.ts";
 import { iconStyles } from "./icon.styles.ts";
 

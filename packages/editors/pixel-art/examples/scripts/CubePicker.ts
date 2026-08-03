@@ -1,8 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-
-// Import Internal Dependencies
-import type { UVMap } from "../../src/index.ts";
+import type { UVMap } from "@jolly-pixel/pixel-draw.renderer";
 
 export interface CubePickerOptions {
   uv: UVMap;

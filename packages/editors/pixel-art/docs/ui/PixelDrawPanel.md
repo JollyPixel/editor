@@ -3,10 +3,10 @@
 Drop-in web component. Rail (mode buttons, colors, undo/redo, import/export) + canvas, wired to a `PixelArtCanvas` for you. This is what the `examples/` demo uses — grab it instead of rebuilding a toolbar around `PixelArtCanvas` yourself.
 
 ```ts
-import "@jolly-pixel/pixel-draw.renderer/ui";
+import "@jolly-pixel/editor.pixel-art";
 import type {
   PixelDrawPanel
-} from "@jolly-pixel/pixel-draw.renderer/ui";
+} from "@jolly-pixel/editor.pixel-art";
 ```
 
 ```html
@@ -21,7 +21,7 @@ const canvas = await panel.initialize({
 });
 ```
 
-`initialize(options?)` takes the same `PixelArtCanvasOptions` as `new PixelArtCanvas(...)` (see [PixelArtCanvas.md](../PixelArtCanvas.md)) and resolves with the created instance. Must `await` it — the canvas host div only exists after Lit's first render.
+`initialize(options?)` takes the same `PixelArtCanvasOptions` as `new PixelArtCanvas(...)` (see [PixelArtCanvas.md](../../../../pixel-draw-renderer/docs/PixelArtCanvas.md)) and resolves with the created instance. Must `await` it — the canvas host div only exists after Lit's first render.
 
 ## API
 
@@ -38,7 +38,7 @@ Destruction is automatic: `disconnectedCallback()` calls `canvasManager.destroy(
 
 ## Sub-elements
 
-Also exported from `@jolly-pixel/pixel-draw.renderer/ui`, in case you want to compose your own layout instead of the full panel: `ModeRail` (`<mode-rail>`), `ColorPickerRail` (`<color-picker-rail>`), `ColorSwatch` (`<color-swatch>`, wraps `vanilla-picker`). They're fully controlled (props in, events out) — see `PixelDrawPanel.ts` for how they're wired together.
+Also exported from `@jolly-pixel/editor.pixel-art`, in case you want to compose your own layout instead of the full panel: `ModeRail` (`<mode-rail>`), `ColorPickerRail` (`<color-picker-rail>`), `ColorSwatch` (`<color-swatch>`, wraps `vanilla-picker`). They're fully controlled (props in, events out) — see `PixelDrawPanel.ts` for how they're wired together.
 
 > [!IMPORTANT]
-> `lit` and `vanilla-picker` are real `dependencies` of this package (not dev-only) — they ship at runtime for anyone importing `./ui`.
+> `lit` and `vanilla-picker` are real `dependencies` of this package (not dev-only) — they ship at runtime for anyone importing it.

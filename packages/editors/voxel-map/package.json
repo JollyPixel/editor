@@ -25,6 +25,7 @@
     "dist"
   ],
   "dependencies": {
+    "@jolly-pixel/editor.pixel-art": "1.0.0",
     "@jolly-pixel/engine": "^3.0.0",
     "@jolly-pixel/fs-tree": "^1.0.1",
     "@jolly-pixel/network": "1.0.0",

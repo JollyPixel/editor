@@ -1,7 +1,7 @@
 {
-  "name": "@jolly-pixel/pixel-draw.renderer",
-  "description": "Jolly Pixel Pixel Art drawer and renderer",
-  "version": "2.0.0",
+  "name": "@jolly-pixel/editor.pixel-art",
+  "description": "Reusable pixel-art UI on top of @jolly-pixel/pixel-draw.renderer",
+  "version": "1.0.0",
   "type": "module",
   "exports": {
     ".": {
@@ -15,19 +15,13 @@
   "scripts": {
     "prepublish": "rimraf ./dist && tsc -b",
     "build": "tsc",
-    "bench": "node bench/index.ts",
-    "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
-    "test": "c8 -r html npm run test-only"
-  },
-  "publishConfig": {
-    "registry": "https://registry.npmjs.org",
-    "access": "public",
-    "provenance": true
+    "dev": "vite",
+    "test:e2e": "playwright test"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/JollyPixel/editor.git",
-    "directory": "packages/pixel-draw-renderer"
+    "directory": "packages/editors/pixel-art"
   },
   "keywords": [],
   "files": [
@@ -40,12 +34,15 @@
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
   "devDependencies": {
-    "tinybench": "6.0.2"
+    "@jolly-pixel/engine": "3.0.0",
+    "@jolly-pixel/resize-handle": "1.0.0",
+    "@jolly-pixel/runtime": "3.4.0",
+    "three": "0.185.1"
   },
   "dependencies": {
     "@jolly-pixel/network": "1.0.0",
-    "@openally/emitt": "1.0.1",
-    "colorjs.io": "0.7.1",
-    "js-base64": "3.9.2"
+    "@jolly-pixel/pixel-draw.renderer": "2.0.0",
+    "lit": "3.3.3",
+    "vanilla-picker": "2.12.3"
   }
 }
