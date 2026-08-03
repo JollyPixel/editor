@@ -8,6 +8,9 @@ import type { BlockVariantFace } from "./BlockVariantCache.ts";
 const kInitialVertices = 4096;
 // Above this vertex count a chunk can no longer be indexed with 16-bit values.
 const kUint16Limit = 65536;
+// Largest magnitude of a signed normalized byte, per the WebGL conversion rules.
+const kSnormMax = 127;
+const kUnormMax = 65535;
 
 export interface GeometryBufferOptions {
   /**
@@ -16,23 +19,19 @@ export interface GeometryBufferOptions {
   vertexCapacity?: number;
   /**
    * Emit the `tileRegion` / `tileRepeat` attributes and write `uv` in tile
-   * space instead of atlas space, so the material can repeat a tile across a
-   * merged quad. Required by greedy meshing, useless without it.
+   * space instead of atlas space so merged quads can repeat a tile. Required by
+   * greedy meshing, useless otherwise.
    * @default false
    */
   tiled?: boolean;
 }
 
 /**
- * Growable typed-array accumulator for the geometry of a single tileset.
+ * Growable typed-array accumulator for one tileset's geometry.
  *
- * Attributes are written straight into their final binary layout instead of
- * being staged in `number[]`, which removes both the per-value boxing and the
- * full double→float conversion pass `Float32BufferAttribute` would otherwise
- * run over millions of entries.
- *
- * Buffers are reused between chunks (see `reset()`), so a chunk only ever pays
- * for growth once.
+ * Values are written straight into typed arrays instead of `number[]`, avoiding
+ * boxing and the extra float conversion pass. Buffers are reused between chunks,
+ * so a chunk only pays for growth once.
  */
 export class GeometryBuffer {
   vertexCount = 0;
@@ -84,10 +83,9 @@ export class GeometryBuffer {
    * Appends one face, translated to the voxel's world position.
    * `alpha` is the owning layer's opacity as an 8-bit value.
    *
-   * Positional parameters rather than an options object: this runs once per
-   * emitted face, so the object would be allocated millions of times per world.
+   * Positional parameters are used instead of an options object to avoid
+   * allocations on the hot path.
    */
-  // eslint-disable-next-line max-params
   addFace(
     face: BlockVariantFace,
     wx: number,
@@ -100,7 +98,7 @@ export class GeometryBuffer {
 
   /**
    * Appends one face stretched over `spanU × spanV` voxels along its in-plane
-   * world axes, the quad a greedy sweep merged. Only valid on a `tiled` buffer:
+   * world axes. Only valid on a `tiled` buffer:
    * the UVs run past 1 and rely on the material folding them back into the
    * tile's atlas rect.
    */
@@ -137,9 +135,9 @@ export class GeometryBuffer {
   }
 
   /**
-   * Shared vertex writer. `sx/sy/sz` scale the block-local positions (1 for an
-   * unmerged face) and `repeatU/repeatV` scale the tile UVs. On a non-tiled
-   * buffer both are always 1, so the atlas UVs are copied verbatim.
+   * Shared vertex writer. `sx/sy/sz` scale the block-local positions and
+   * `repeatU/repeatV` scale the tile UVs. On a non-tiled buffer both are 1,
+   * so the atlas UVs are copied verbatim.
    */
   // eslint-disable-next-line max-params
   #write(
@@ -229,13 +227,11 @@ export class GeometryBuffer {
   }
 
   /**
-   * Copies the written range into exact-size attributes. Normals stay float32
-   * (shapes such as ramps have non-axis-aligned normals) while colors are
-   * stored as normalized bytes — the alpha they carry never has more than 8
-   * bits of meaning once rendered.
+   * Copies the written range into exact-size attributes. This narrows each one
+   * to the smallest type that can represent it without visible loss.
    */
   toGeometry(): THREE.BufferGeometry {
-    const { vertexCount } = this;
+    const { vertexCount, tiled } = this;
     const geometry = new THREE.BufferGeometry();
 
     geometry.setAttribute(
@@ -244,25 +240,27 @@ export class GeometryBuffer {
     );
     geometry.setAttribute(
       "normal",
-      new THREE.BufferAttribute(this.#normals.slice(0, vertexCount * 3), 3)
+      new THREE.BufferAttribute(toSnorm8(this.#normals, vertexCount * 3), 3, true)
     );
     geometry.setAttribute(
       "uv",
-      new THREE.BufferAttribute(this.#uvs.slice(0, vertexCount * 2), 2)
+      tiled ?
+        new THREE.BufferAttribute(this.#uvs.slice(0, vertexCount * 2), 2) :
+        new THREE.BufferAttribute(toUnorm16(this.#uvs, vertexCount * 2), 2, true)
     );
     geometry.setAttribute(
       "color",
       new THREE.BufferAttribute(this.#colors.slice(0, vertexCount * 4), 4, true)
     );
 
-    if (this.tiled) {
+    if (tiled) {
       geometry.setAttribute(
         "tileRegion",
-        new THREE.BufferAttribute(this.#regions.slice(0, vertexCount * 4), 4)
+        new THREE.BufferAttribute(toUnorm16(this.#regions, vertexCount * 4), 4, true)
       );
       geometry.setAttribute(
         "tileRepeat",
-        new THREE.BufferAttribute(this.#repeats.slice(0, vertexCount * 2), 2)
+        new THREE.BufferAttribute(toUint16(this.#repeats, vertexCount * 2), 2)
       );
     }
 
@@ -317,4 +315,63 @@ function grow<TArray extends Float32Array | Uint8Array | Uint32Array>(
   next.set(source);
 
   return next;
+}
+
+/** Unit-vector components to signed normalized bytes: `-1..1` → `-127..127`. */
+function toSnorm8(
+  source: Float32Array,
+  length: number
+): Int8Array {
+  const out = new Int8Array(length);
+
+  for (let i = 0; i < length; i++) {
+    out[i] = Math.round(clampUnit(source[i]) * kSnormMax);
+  }
+
+  return out;
+}
+
+/** Values already in `0..1` to unsigned normalized shorts. */
+function toUnorm16(
+  source: Float32Array,
+  length: number
+): Uint16Array {
+  const out = new Uint16Array(length);
+
+  for (let i = 0; i < length; i++) {
+    out[i] = Math.round(clampUnsigned(source[i]) * kUnormMax);
+  }
+
+  return out;
+}
+
+/** Integer counts, kept at face value rather than normalized. */
+function toUint16(
+  source: Float32Array,
+  length: number
+): Uint16Array {
+  const out = new Uint16Array(length);
+  out.set(source.subarray(0, length));
+
+  return out;
+}
+
+function clampUnit(
+  value: number
+): number {
+  if (value < -1) {
+    return -1;
+  }
+
+  return value > 1 ? 1 : value;
+}
+
+function clampUnsigned(
+  value: number
+): number {
+  if (value < 0) {
+    return 0;
+  }
+
+  return value > 1 ? 1 : value;
 }

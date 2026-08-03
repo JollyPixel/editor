@@ -67,6 +67,9 @@ for (let run = 0; run < runs; run++) {
   const meshMs = performance.now() - meshStart;
 
   const { triangles, vertices } = countGeometry(engine);
+  // Voxels live in typed arrays, geometry in THREE buffers: both land in
+  // `arrayBuffers`, not `heapUsed`. Reporting heap alone hides most of the cost.
+  const { heapUsed, arrayBuffers, rss } = process.memoryUsage();
   console.log(
     [
       `run ${run + 1}/${runs}`,
@@ -76,11 +79,19 @@ for (let run = 0; run < runs; run++) {
       `mesh ${meshMs.toFixed(1)}ms`,
       `tris ${triangles.toLocaleString("en-US")}`,
       `verts ${vertices.toLocaleString("en-US")}`,
-      `heap ${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(0)}MB`
+      `heap ${mb(heapUsed)}`,
+      `buffers ${mb(arrayBuffers)}`,
+      `rss ${mb(rss)}`
     ].join("  |  ")
   );
 
   engine.dispose();
+}
+
+function mb(
+  bytes: number
+): string {
+  return `${(bytes / 1024 / 1024).toFixed(0)}MB`;
 }
 
 function countGeometry(

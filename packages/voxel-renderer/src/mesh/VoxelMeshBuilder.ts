@@ -9,21 +9,21 @@ import type { BlockRegistry } from "../blocks/BlockRegistry.ts";
 import type { BlockShapeRegistry } from "../blocks/BlockShapeRegistry.ts";
 import type { TilesetManager } from "../tileset/TilesetManager.ts";
 import {
+  voxelBlockId,
+  voxelTransform
+} from "../world/packedVoxel.ts";
+import {
   FACE_OFFSETS,
   FACE_OPPOSITE
 } from "./math.ts";
 import { BlockVariantCache } from "./BlockVariantCache.ts";
 import { GeometryBuffer } from "./GeometryBuffer.ts";
 import { MeshBuildStats } from "./MeshBuildStats.ts";
-import { GreedyMesher } from "./GreedyMesher.ts";
 import {
-  ChunkNeighbourhood,
-  type LayerChunkCache
-} from "./ChunkNeighbourhood.ts";
-import {
-  isNeighbourFaceHidden,
-  winsCompositing
-} from "./occlusion.ts";
+  GreedyMesher,
+  type MeshPassOptions
+} from "./GreedyMesher.ts";
+import { ChunkNeighbourhood } from "./ChunkNeighbourhood.ts";
 
 export interface VoxelMeshBuilderOptions {
   world: VoxelWorld;
@@ -54,17 +54,8 @@ export interface VoxelMeshBuilderOptions {
  * count by roughly 3× on terrain. Faces it cannot stretch still go through the
  * naive path, so mixed chunks keep working.
  *
- * Voxels at a position already occupied by a higher-priority layer are skipped
- * entirely (the higher layer's chunk will render that position instead).
- *
- * Geometry is split by tileset so each resulting mesh can be assigned the
- * correct material/texture when multiple tilesets are in use.
- *
- * Everything that does not depend on a voxel's world position is hoisted out
- * of the per-voxel loop: rotated vertices, normals and atlas UVs are compiled
- * once per (block, transform) pair by `BlockVariantCache`, neighbour chunks are
- * resolved once per chunk by `ChunkNeighbourhood`, and vertex data is written
- * directly into typed arrays by `GeometryBuffer`.
+ * Voxels hidden by a higher-priority layer are skipped. Geometry is split by
+ * tileset so each mesh can use the correct texture.
  */
 export class VoxelMeshBuilder {
   /**
@@ -156,33 +147,30 @@ export class VoxelMeshBuilder {
     const worldOriginZ = (chunk.cz * chunkSize) + layer.offset.z;
 
     // Culling reads one voxel outside the chunk on every axis.
-    const neighbourhood = new ChunkNeighbourhood(
-      this.#world,
-      worldOriginX - 1,
-      worldOriginY - 1,
-      worldOriginZ - 1
-    );
-    const { layers } = neighbourhood;
-    const selfIndex = neighbourhood.indexOf(layer);
+    const neighbourhood = new ChunkNeighbourhood({
+      world: this.#world,
+      variants: this.#variants,
+      layer,
+      minWx: worldOriginX - 1,
+      minWy: worldOriginY - 1,
+      minWz: worldOriginZ - 1
+    });
 
-    const alpha = Math.round(layer.opacity * 255);
     this.#resetBuffers();
 
+    const pass: MeshPassOptions = {
+      chunk,
+      neighbourhood,
+      worldOriginX,
+      worldOriginY,
+      worldOriginZ,
+      alpha: Math.round(layer.opacity * 255),
+      stats,
+      bufferFor: this.#bufferFor
+    };
     const emitted = this.#greedy ?
-      this.#greedyMesher.mesh({
-        chunk,
-        layers,
-        selfIndex,
-        worldOriginX,
-        worldOriginY,
-        worldOriginZ,
-        alpha,
-        stats,
-        bufferFor: this.#bufferFor
-      }) :
-      this.#buildNaive(
-        chunk, layers, selfIndex, worldOriginX, worldOriginY, worldOriginZ, alpha
-      );
+      this.#greedyMesher.mesh(pass) :
+      this.#buildNaive(pass);
 
     const geometries = emitted ? this.#collectGeometries() : null;
     stats.buildTimeMs = performance.now() - startedAt;
@@ -191,29 +179,35 @@ export class VoxelMeshBuilder {
   }
 
   /**
-   * One quad per visible voxel face. `layers` is the compositing order and
-   * `selfIndex` the rank of the layer being meshed within it.
+   * One quad per visible voxel face. Takes the same options as the greedy pass
+   * so `buildChunkGeometries()` can hand either one the same object.
    */
-  // eslint-disable-next-line max-params
   #buildNaive(
-    chunk: VoxelChunk,
-    layers: readonly LayerChunkCache[],
-    selfIndex: number,
-    worldOriginX: number,
-    worldOriginY: number,
-    worldOriginZ: number,
-    alpha: number
+    options: MeshPassOptions
   ): boolean {
-    const { stats } = this;
-    const layerCount = layers.length;
+    const {
+      chunk,
+      neighbourhood,
+      worldOriginX,
+      worldOriginY,
+      worldOriginZ,
+      alpha,
+      stats
+    } = options;
     const size = chunk.size;
     // Decoding the linear index costs two divisions and two modulos per voxel;
     // a power-of-two chunk size turns both into shifts and masks.
     const shift = (size & (size - 1)) === 0 ? Math.log2(size) : -1;
     const mask = size - 1;
+    const { keys, values, capacity } = chunk.store;
     let emitted = false;
 
-    for (const [linearIdx, entry] of chunk.entries()) {
+    for (let slot = 0; slot < capacity; slot++) {
+      const linearIdx = keys[slot];
+      if (linearIdx < 0) {
+        continue;
+      }
+
       let lx: number;
       let ly: number;
       let lz: number;
@@ -233,12 +227,16 @@ export class VoxelMeshBuilder {
       const wz = worldOriginZ + lz;
 
       stats.voxels++;
-      if (!winsCompositing(layers, layerCount, selfIndex, entry, wx, wy, wz)) {
+      if (!neighbourhood.winsCompositing(wx, wy, wz)) {
         stats.hiddenVoxels++;
         continue;
       }
 
-      const variant = this.#variants.get(entry.blockId, entry.transform);
+      const packed = values[slot];
+      const variant = this.#variants.get(
+        voxelBlockId(packed),
+        voxelTransform(packed)
+      );
       if (variant === null) {
         continue;
       }
@@ -247,10 +245,7 @@ export class VoxelMeshBuilder {
         const { cull } = face;
         if (cull >= 0) {
           const offset = FACE_OFFSETS[cull];
-          const hidden = isNeighbourFaceHidden(
-            this.#variants,
-            layers,
-            layerCount,
+          const hidden = neighbourhood.isNeighbourFaceHidden(
             wx + offset[0],
             wy + offset[1],
             wz + offset[2],

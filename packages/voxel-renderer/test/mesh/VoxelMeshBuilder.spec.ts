@@ -285,20 +285,73 @@ describe("VoxelMeshBuilder — neighbour rotation inversion fix (rot=1 / rot=3)"
 });
 
 describe("VoxelMeshBuilder — geometry attribute layout", () => {
-  it("emits float32 position/normal/uv and normalized uint8 color", () => {
+  it("keeps position in float32 and narrows the rest", () => {
     const f = makeFixture();
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
     const chunk = f.layer.getChunk(0, 0, 0)!;
     const geometry = [...f.builder.buildChunkGeometries(chunk, f.layer)!.values()][0];
 
     assert.ok(geometry.getAttribute("position").array instanceof Float32Array);
-    assert.ok(geometry.getAttribute("normal").array instanceof Float32Array);
-    assert.ok(geometry.getAttribute("uv").array instanceof Float32Array);
+
+    const normals = geometry.getAttribute("normal");
+    assert.ok(normals.array instanceof Int8Array);
+    assert.equal(normals.normalized, true);
+    assert.equal(normals.itemSize, 3);
+
+    const uvs = geometry.getAttribute("uv");
+    assert.ok(uvs.array instanceof Uint16Array);
+    assert.equal(uvs.normalized, true);
+    assert.equal(uvs.itemSize, 2);
 
     const colors = geometry.getAttribute("color");
     assert.ok(colors.array instanceof Uint8Array);
     assert.equal(colors.normalized, true);
     assert.equal(colors.itemSize, 4);
+  });
+
+  it("round-trips axis-aligned normals exactly", () => {
+    const f = makeFixture();
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    const chunk = f.layer.getChunk(0, 0, 0)!;
+    const geometry = [...f.builder.buildChunkGeometries(chunk, f.layer)!.values()][0];
+    const normals = geometry.getAttribute("normal");
+
+    // A cube's six faces only ever point down an axis, so every component
+    // decodes back to exactly -1, 0 or 1.
+    for (let i = 0; i < normals.count; i++) {
+      for (const component of [normals.getX(i), normals.getY(i), normals.getZ(i)]) {
+        assert.ok(
+          component === -1 || component === 0 || component === 1,
+          `component ${component} at vertex ${i}`
+        );
+      }
+    }
+  });
+
+  it("keeps uv within one 16-bit step of the atlas rect", () => {
+    const f = makeFixture();
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    const chunk = f.layer.getChunk(0, 0, 0)!;
+    const geometry = [...f.builder.buildChunkGeometries(chunk, f.layer)!.values()][0];
+    const uvs = geometry.getAttribute("uv");
+
+    // Every vertex of a cube sits on a corner of its tile's atlas rect.
+    const region = f.tilesetManager.getTileUV(kDefaultTexture);
+    const step = 1 / 65535;
+
+    for (let i = 0; i < uvs.count; i++) {
+      const u = uvs.getX(i);
+      const v = uvs.getY(i);
+      const nearestU = u < region.offsetU + (region.scaleU / 2) ?
+        region.offsetU :
+        region.offsetU + region.scaleU;
+      const nearestV = v < region.offsetV + (region.scaleV / 2) ?
+        region.offsetV :
+        region.offsetV + region.scaleV;
+
+      assert.ok(Math.abs(u - nearestU) <= step, `u ${u} at vertex ${i}`);
+      assert.ok(Math.abs(v - nearestV) <= step, `v ${v} at vertex ${i}`);
+    }
   });
 
   it("indexes a small chunk with 16-bit values", () => {

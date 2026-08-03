@@ -2,18 +2,31 @@
 import type { VoxelWorld } from "../world/VoxelWorld.ts";
 import type { VoxelChunk } from "../world/VoxelChunk.ts";
 import type { VoxelLayer } from "../world/VoxelLayer.ts";
-import type { VoxelEntry } from "../world/types.ts";
+import type { BlockVariantCache } from "./BlockVariantCache.ts";
+import {
+  voxelBlockId,
+  voxelTransform,
+  VOXEL_ABSENT,
+  type PackedVoxel
+} from "../world/packedVoxel.ts";
 
 // CONSTANTS
 // A region one chunk wide plus a one-voxel border spans at most 3 chunks per axis.
 const kSpan = 3;
 
+export interface LayerChunkCacheOptions {
+  layer: VoxelLayer;
+  chunkSize: number;
+  minWx: number;
+  minWy: number;
+  minWz: number;
+}
+
 /**
  * Per-layer voxel lookup over a prefetched 3×3×3 block of chunks.
  *
- * `VoxelLayer.getVoxelAt()` builds a `"cx,cy,cz"` string and hashes it on every
- * call; the mesh builder makes one call per voxel face, so resolving the chunks
- * once up front turns the hot lookup into pure integer arithmetic.
+ * The mesh builder calls this for each face, so resolving the chunks once up
+ * front keeps the hot path simple.
  */
 export class LayerChunkCache {
   readonly layer: VoxelLayer;
@@ -33,14 +46,11 @@ export class LayerChunkCache {
   #baseCz: number;
   #chunks: (VoxelChunk | undefined)[] = [];
 
-  // eslint-disable-next-line max-params
   constructor(
-    layer: VoxelLayer,
-    chunkSize: number,
-    minWx: number,
-    minWy: number,
-    minWz: number
+    options: LayerChunkCacheOptions
   ) {
+    const { layer, chunkSize, minWx, minWy, minWz } = options;
+
     this.layer = layer;
     this.opaque = layer.opacity >= 1;
 
@@ -76,11 +86,12 @@ export class LayerChunkCache {
     }
   }
 
-  entryAt(
+  /** `VOXEL_ABSENT` (-1) when the position holds no voxel in this layer. */
+  packedAt(
     wx: number,
     wy: number,
     wz: number
-  ): VoxelEntry | undefined {
+  ): PackedVoxel {
     const size = this.#size;
     const shift = this.#shift;
     const x = wx - this.#offsetX;
@@ -123,40 +134,51 @@ export class LayerChunkCache {
       this.layer.getChunk(cx, cy, cz);
 
     if (chunk === undefined || !chunk.mayContain(lx, ly, lz)) {
-      return undefined;
+      return VOXEL_ABSENT;
     }
 
-    return chunk.getAt(lx, ly, lz);
+    return chunk.getPackedAt(lx, ly, lz);
   }
 }
 
+export interface ChunkNeighbourhoodOptions {
+  world: VoxelWorld;
+  variants: BlockVariantCache;
+  /** The layer being meshed, which fixes `selfIndex`. */
+  layer: VoxelLayer;
+  minWx: number;
+  minWy: number;
+  minWz: number;
+}
+
 /**
- * Every effectively visible layer of the world, in compositing order (highest
- * priority first), each prefetched around the chunk being built.
+ * Every effectively visible layer of the world, in compositing order.
  *
- * Mirrors the filtering `VoxelWorld.getVoxelWithLayerAt()` applies: a layer
- * that is hidden or fully transparent neither wins compositing nor occludes.
+ * It also answers the two occlusion checks the mesh builder uses.
  */
 export class ChunkNeighbourhood {
   readonly layers: readonly LayerChunkCache[];
+  /** Rank of the layer being meshed among `layers`, or -1 when it is hidden. */
+  readonly selfIndex: number;
 
-  // eslint-disable-next-line max-params
+  #variants: BlockVariantCache;
+  #layerCount: number;
+
   constructor(
-    world: VoxelWorld,
-    minWx: number,
-    minWy: number,
-    minWz: number
+    options: ChunkNeighbourhoodOptions
   ) {
+    const { world, variants, layer, minWx, minWy, minWz } = options;
     const layers: LayerChunkCache[] = [];
+    const { chunkSize } = world;
 
-    for (const layer of world.getLayers()) {
-      if (!layer.visible || layer.opacity === 0) {
+    for (const candidate of world.getLayers()) {
+      if (!candidate.visible || candidate.opacity === 0) {
         continue;
       }
 
-      const cache = new LayerChunkCache(
-        layer, world.chunkSize, minWx, minWy, minWz
-      );
+      const cache = new LayerChunkCache({
+        layer: candidate, chunkSize, minWx, minWy, minWz
+      });
       // A layer with no chunk in the window can neither win compositing nor
       // occlude anywhere the builder looks, so it is dropped from the walk.
       if (!cache.empty) {
@@ -165,13 +187,69 @@ export class ChunkNeighbourhood {
     }
 
     this.layers = layers;
-  }
-
-  indexOf(
-    layer: VoxelLayer
-  ): number {
-    return this.layers.findIndex(
+    this.selfIndex = layers.findIndex(
       (cache) => cache.layer === layer
     );
+
+    this.#variants = variants;
+    this.#layerCount = layers.length;
+  }
+
+  /**
+   * True when the layer being meshed owns what the world composites at
+   * `(wx, wy, wz)`, meaning no higher-priority layer covers the position.
+   */
+  winsCompositing(
+    wx: number,
+    wy: number,
+    wz: number
+  ): boolean {
+    const layers = this.layers;
+    const selfIndex = this.selfIndex;
+
+    for (let i = 0; i < this.#layerCount; i++) {
+      if (i === selfIndex) {
+        return true;
+      }
+
+      if (layers[i].packedAt(wx, wy, wz) !== VOXEL_ABSENT) {
+        return false;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * True when the neighbour voxel exists, belongs to an opaque layer and its
+   * shape occludes `oppFace`.
+   */
+  isNeighbourFaceHidden(
+    nx: number,
+    ny: number,
+    nz: number,
+    oppFace: number
+  ): boolean {
+    const layers = this.layers;
+
+    for (let i = 0; i < this.#layerCount; i++) {
+      const cache = layers[i];
+      const neighbour = cache.packedAt(nx, ny, nz);
+      if (neighbour === VOXEL_ABSENT) {
+        continue;
+      }
+      if (!cache.opaque) {
+        return false;
+      }
+
+      const variant = this.#variants.get(
+        voxelBlockId(neighbour),
+        voxelTransform(neighbour)
+      );
+
+      return variant !== null && (variant.occlusionMask & (1 << oppFace)) !== 0;
+    }
+
+    return false;
   }
 }

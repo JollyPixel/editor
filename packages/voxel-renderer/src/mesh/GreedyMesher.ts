@@ -3,15 +3,15 @@ import type { VoxelChunk } from "../world/VoxelChunk.ts";
 import type { BlockVariant, BlockVariantCache } from "./BlockVariantCache.ts";
 import type { GeometryBuffer } from "./GeometryBuffer.ts";
 import type { MeshBuildStats } from "./MeshBuildStats.ts";
-import type { LayerChunkCache } from "./ChunkNeighbourhood.ts";
+import type { ChunkNeighbourhood } from "./ChunkNeighbourhood.ts";
+import {
+  voxelBlockId,
+  voxelTransform
+} from "../world/packedVoxel.ts";
 import {
   FACE_OFFSETS,
   FACE_OPPOSITE
 } from "./math.ts";
-import {
-  isNeighbourFaceHidden,
-  winsCompositing
-} from "./occlusion.ts";
 
 // CONSTANTS
 const kDirections = 6;
@@ -32,30 +32,11 @@ function strideOf(
   return axis === 1 ? size : size * size;
 }
 
-/**
- * The Y coordinate of the cell at `(slice, u, v)`. X and Z are a single
- * comparison each; only Y depends on all three axes.
- */
-// eslint-disable-next-line max-params
-function localY(
-  axis: number,
-  slice: number,
-  u: number,
-  v: number
-): number {
-  if (axis === 0) {
-    return u;
-  }
-
-  return axis === 1 ? slice : v;
-}
-
-export interface GreedyMeshOptions {
+/** Options shared by both mesh passes, naive and greedy. */
+export interface MeshPassOptions {
   chunk: VoxelChunk;
-  /** Every effectively visible layer, in compositing order. */
-  layers: readonly LayerChunkCache[];
-  /** Rank of the layer being meshed among `layers`, or -1 when it is hidden. */
-  selfIndex: number;
+  /** Prefetched layers around the chunk, and the occlusion queries over them. */
+  neighbourhood: ChunkNeighbourhood;
   worldOriginX: number;
   worldOriginY: number;
   worldOriginZ: number;
@@ -106,9 +87,7 @@ export class GreedyMesher {
 
   // Per-chunk state, set by `mesh()` so the passes stay parameter-free.
   #chunk!: VoxelChunk;
-  #layers: readonly LayerChunkCache[] = [];
-  #layerCount = 0;
-  #selfIndex = -1;
+  #neighbourhood!: ChunkNeighbourhood;
   #originX = 0;
   #originY = 0;
   #originZ = 0;
@@ -119,6 +98,14 @@ export class GreedyMesher {
   #min = [0, 0, 0];
   #max = [-1, -1, -1];
   #emitted = false;
+
+  // The three world axes of the direction being swept: the one the slices are
+  // perpendicular to, plus the two in-plane axes the mask is indexed by. All
+  // derived from the direction, so `#sweep()` sets them once per pass rather
+  // than threading them through every slice.
+  #axis = 0;
+  #uAxis = 0;
+  #vAxis = 0;
 
   constructor(
     variants: BlockVariantCache
@@ -131,14 +118,12 @@ export class GreedyMesher {
    * Returns true when at least one face was emitted.
    */
   mesh(
-    options: GreedyMeshOptions
+    options: MeshPassOptions
   ): boolean {
     const { chunk } = options;
 
     this.#chunk = chunk;
-    this.#layers = options.layers;
-    this.#layerCount = options.layers.length;
-    this.#selfIndex = options.selfIndex;
+    this.#neighbourhood = options.neighbourhood;
     this.#originX = options.worldOriginX;
     this.#originY = options.worldOriginY;
     this.#originZ = options.worldOriginZ;
@@ -186,9 +171,15 @@ export class GreedyMesher {
     // A power-of-two chunk size turns the index decode into shifts and masks.
     const shift = (size & (size - 1)) === 0 ? Math.log2(size) : -1;
     const bits = size - 1;
+    const { keys, values, capacity } = this.#chunk.store;
     let filled = false;
 
-    for (const [linearIdx, entry] of this.#chunk.entries()) {
+    for (let slot = 0; slot < capacity; slot++) {
+      const linearIdx = keys[slot];
+      if (linearIdx < 0) {
+        continue;
+      }
+
       const lx = shift >= 0 ? linearIdx & bits : linearIdx % size;
       const ly = shift >= 0 ?
         (linearIdx >> shift) & bits :
@@ -201,16 +192,16 @@ export class GreedyMesher {
       const wz = this.#originZ + lz;
 
       stats.voxels++;
-      if (
-        !winsCompositing(
-          this.#layers, this.#layerCount, this.#selfIndex, entry, wx, wy, wz
-        )
-      ) {
+      if (!this.#neighbourhood.winsCompositing(wx, wy, wz)) {
         stats.hiddenVoxels++;
         continue;
       }
 
-      const variant = this.#variants.get(entry.blockId, entry.transform);
+      const packed = values[slot];
+      const variant = this.#variants.get(
+        voxelBlockId(packed),
+        voxelTransform(packed)
+      );
       if (variant === null) {
         continue;
       }
@@ -255,7 +246,6 @@ export class GreedyMesher {
    * Emits the faces of one voxel that no directional pass will pick up:
    * triangles, slopes and any face not flat on the block boundary.
    */
-  // eslint-disable-next-line max-params
   #emitUnmergeableFaces(
     variant: BlockVariant,
     wx: number,
@@ -272,10 +262,7 @@ export class GreedyMesher {
       const { cull } = face;
       if (cull >= 0) {
         const offset = FACE_OFFSETS[cull];
-        const hidden = isNeighbourFaceHidden(
-          this.#variants,
-          this.#layers,
-          this.#layerCount,
+        const hidden = this.#neighbourhood.isNeighbourFaceHidden(
           wx + offset[0],
           wy + offset[1],
           wz + offset[2],
@@ -321,13 +308,15 @@ export class GreedyMesher {
     direction: number
   ): void {
     const axis = direction >> 1;
-    const uAxis = axis === 0 ? 1 : 0;
-    const vAxis = axis === 2 ? 1 : 2;
+    this.#axis = axis;
+    this.#uAxis = axis === 0 ? 1 : 0;
+    this.#vAxis = axis === 2 ? 1 : 2;
+
     const last = this.#max[axis];
 
     for (let slice = this.#min[axis]; slice <= last; slice++) {
-      if (this.#buildMask(direction, axis, uAxis, vAxis, slice)) {
-        this.#mergeMask(direction, axis, uAxis, vAxis, slice);
+      if (this.#buildMask(direction, slice)) {
+        this.#mergeMask(direction, slice);
       }
     }
   }
@@ -337,14 +326,13 @@ export class GreedyMesher {
    * showing a visible mergeable face in `direction`, and 0 everywhere else.
    * Returns false when the slice has no such face.
    */
-  // eslint-disable-next-line max-params
   #buildMask(
     direction: number,
-    axis: number,
-    uAxis: number,
-    vAxis: number,
     slice: number
   ): boolean {
+    const axis = this.#axis;
+    const uAxis = this.#uAxis;
+    const vAxis = this.#vAxis;
     const size = this.#size;
     const mask = this.#mask;
     const grid = this.#grid;
@@ -372,14 +360,18 @@ export class GreedyMesher {
 
         if (cell !== 0 && this.#localVariants[cell - 1].mergeFaces[direction] !== undefined) {
           const lx = axis === 0 ? slice : u;
-          const ly = localY(axis, slice, u, v);
           const lz = axis === 2 ? slice : v;
+          // X and Z are a single comparison each; only Y depends on all three axes.
+          let ly = v;
+          if (axis === 0) {
+            ly = u;
+          }
+          else if (axis === 1) {
+            ly = slice;
+          }
 
           if (
-            isNeighbourFaceHidden(
-              this.#variants,
-              this.#layers,
-              this.#layerCount,
+            this.#neighbourhood.isNeighbourFaceHidden(
               this.#originX + lx + offset[0],
               this.#originY + ly + offset[1],
               this.#originZ + lz + offset[2],
@@ -406,14 +398,13 @@ export class GreedyMesher {
    * Rectangles grow along `vAxis` first (contiguous in the mask) and then along
    * `uAxis`, the usual greedy order.
    */
-  // eslint-disable-next-line max-params
   #mergeMask(
     direction: number,
-    axis: number,
-    uAxis: number,
-    vAxis: number,
     slice: number
   ): void {
+    const axis = this.#axis;
+    const uAxis = this.#uAxis;
+    const vAxis = this.#vAxis;
     const size = this.#size;
     const mask = this.#mask;
     const stats = this.#stats;
@@ -438,7 +429,7 @@ export class GreedyMesher {
         let spanU = 1;
         while (
           u + spanU <= uMax &&
-          this.#rowMatches((u + spanU) * size, v, spanV, cell)
+          this.#rowMatches(((u + spanU) * size) + v, spanV, cell)
         ) {
           spanU++;
         }
@@ -451,8 +442,15 @@ export class GreedyMesher {
         }
 
         const lx = axis === 0 ? slice : u;
-        const ly = localY(axis, slice, u, v);
         const lz = axis === 2 ? slice : v;
+        // X and Z are a single comparison each; only Y depends on all three axes.
+        let ly = v;
+        if (axis === 0) {
+          ly = u;
+        }
+        else if (axis === 1) {
+          ly = slice;
+        }
         const face = this.#localVariants[cell - 1].mergeFaces[direction]!;
 
         this.#bufferFor(face.slot).addMergedFace(
@@ -474,20 +472,18 @@ export class GreedyMesher {
   }
 
   /**
-   * True when `spanV` mask cells starting at `v` on the row beginning at
-   * `rowBase` all hold `cell` — the test that lets a rectangle grow one row.
+   * True when the `spanV` mask cells from `start` onward all hold `cell` — the
+   * test that lets a rectangle grow one row.
    */
-  // eslint-disable-next-line max-params
   #rowMatches(
-    rowBase: number,
-    v: number,
+    start: number,
     spanV: number,
     cell: number
   ): boolean {
     const mask = this.#mask;
 
     for (let k = 0; k < spanV; k++) {
-      if (mask[rowBase + v + k] !== cell) {
+      if (mask[start + k] !== cell) {
         return false;
       }
     }
@@ -501,9 +497,13 @@ export class GreedyMesher {
    */
   #clearGrid(): void {
     const grid = this.#grid;
+    const { keys, capacity } = this.#chunk.store;
 
-    for (const [linearIdx] of this.#chunk.entries()) {
-      grid[linearIdx] = 0;
+    for (let slot = 0; slot < capacity; slot++) {
+      const linearIdx = keys[slot];
+      if (linearIdx >= 0) {
+        grid[linearIdx] = 0;
+      }
     }
   }
 }

@@ -25,11 +25,11 @@ const kAllFaces: readonly FACE[] = [
 ];
 
 /**
- * How a mergeable face maps onto the world axes, so the greedy mesher can
+ * How a mergeable face maps onto the world axes so the greedy mesher can
  * stretch it over a run of identical voxels.
  *
- * Only faces that are a full unit quad lying flat on the block boundary can be
- * stretched; `BlockVariantCache` computes this once per (block, transform).
+ * Only full unit quads on a block boundary can be stretched; `BlockVariantCache`
+ * computes this once per (block, transform).
  */
 export interface BlockFaceMerge {
   /** World axis the face is perpendicular to (0 = x, 1 = y, 2 = z). */
@@ -45,9 +45,9 @@ export interface BlockFaceMerge {
 }
 
 /**
- * One emitted polygon of a block variant, fully resolved at compile time:
- * rotation, mirroring, atlas UV mapping and flip-Y winding are already baked
- * in, so emitting it is a copy plus a translation by the voxel position.
+ * One emitted polygon of a block variant, resolved at compile time.
+ * Rotation, mirroring, atlas UVs and flip-Y winding are baked in, so emitting
+ * it is a copy plus a translation by the voxel position.
  */
 export interface BlockVariantFace {
   /** World-space neighbour direction to test for occlusion, or -1 to always emit. */
@@ -96,12 +96,9 @@ export interface BlockVariantCacheOptions {
 /**
  * Compiles and memoizes the geometry of a (blockId, transform) pair.
  *
- * Without it the mesh builder redoes the same per-vertex rotation, mirroring
- * and atlas UV arithmetic for every voxel in the world; a terrain chunk holds
- * millions of voxels but only a handful of distinct variants.
- *
- * Entries are dropped as soon as the block, shape or tileset registries report
- * a new `version`, so runtime registration stays correct.
+ * This avoids recomputing per-vertex rotation, mirroring and atlas UV math for
+ * every voxel in the world. Entries are dropped when block, shape or tileset
+ * registries report a new version.
  */
 export class BlockVariantCache {
   #blockRegistry: BlockRegistry;
@@ -126,7 +123,7 @@ export class BlockVariantCache {
 
   /**
    * Drops every compiled variant when a registry has changed since the last
-   * call. Cheap enough (three integer comparisons) to run before each chunk.
+   * call. Cheap enough to run before each chunk.
    */
   refresh(): void {
     const blockVersion = this.#blockRegistry.version;
@@ -148,8 +145,8 @@ export class BlockVariantCache {
   }
 
   /**
-   * Returns null when the block or its shape is unknown — such a voxel emits
-   * no geometry and occludes nothing.
+   * Returns null when the block or its shape is unknown. Such a voxel emits no
+   * geometry and occludes nothing.
    */
   get(
     blockId: number,
@@ -267,7 +264,7 @@ export class BlockVariantCache {
           uvRegion.scaleU,
           uvRegion.scaleV
         ]),
-        merge: describeMerge(cull, vertexCount, positions, tileUvs),
+        merge: describeMerge(cull, positions, tileUvs),
         normalX: normal[0],
         normalY: normal[1],
         normalZ: normal[2]
@@ -340,19 +337,18 @@ function indexMergeFaces(
  * Describes how a face maps onto the world axes, or null when it cannot be
  * stretched over a run of voxels.
  *
- * A face qualifies only when it is a quad whose four corners are the corners of
- * the block's boundary square on `cull`'s axis, textured with the four corners
- * of the tile. Slopes, triangles and inset faces (stair risers, poles) all fail
- * one of those checks and keep the per-voxel path.
+ * A face qualifies only when it is a quad whose four corners match the block
+ * boundary and the tile corners. Slopes, triangles and inset faces fail and
+ * keep the per-voxel path.
  */
-// eslint-disable-next-line max-params
 function describeMerge(
   cull: number,
-  vertexCount: number,
   positions: Float32Array,
   tileUvs: Float32Array
 ): BlockFaceMerge | null {
-  if (vertexCount !== 4 || cull < 0) {
+  // `positions` is allocated as `vertexCount * 3`, so its length carries the
+  // vertex count already.
+  if (positions.length !== 12 || cull < 0) {
     return null;
   }
 

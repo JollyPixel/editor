@@ -80,7 +80,7 @@ describe("VoxelWorld setVoxelAt / removeVoxelAt", () => {
     world.addLayer("Ground");
     const entry = makeEntry(5);
     world.setVoxelAt("Ground", { x: 2, y: 1, z: 3 }, entry);
-    assert.equal(world.getVoxelAt({ x: 2, y: 1, z: 3 }), entry);
+    assert.deepEqual(world.getVoxelAt({ x: 2, y: 1, z: 3 }), entry);
   });
 
   it("removeVoxelAt removes the voxel", () => {
@@ -111,7 +111,7 @@ describe("VoxelWorld getVoxelAt compositing", () => {
     const topEntry = makeEntry(2);
     base.setVoxelAt({ x: 0, y: 0, z: 0 }, baseEntry);
     top.setVoxelAt({ x: 0, y: 0, z: 0 }, topEntry);
-    assert.equal(world.getVoxelAt({ x: 0, y: 0, z: 0 }), topEntry);
+    assert.deepEqual(world.getVoxelAt({ x: 0, y: 0, z: 0 }), topEntry);
   });
 
   it("lower-order layer is returned when higher-order has no voxel there", () => {
@@ -120,7 +120,7 @@ describe("VoxelWorld getVoxelAt compositing", () => {
     world.addLayer("Top");
     const baseEntry = makeEntry(1);
     base.setVoxelAt({ x: 5, y: 0, z: 0 }, baseEntry);
-    assert.equal(world.getVoxelAt({ x: 5, y: 0, z: 0 }), baseEntry);
+    assert.deepEqual(world.getVoxelAt({ x: 5, y: 0, z: 0 }), baseEntry);
   });
 
   it("invisible layer is skipped in compositing", () => {
@@ -132,7 +132,7 @@ describe("VoxelWorld getVoxelAt compositing", () => {
     base.setVoxelAt({ x: 0, y: 0, z: 0 }, baseEntry);
     top.setVoxelAt({ x: 0, y: 0, z: 0 }, topEntry);
     top.visible = false;
-    assert.equal(world.getVoxelAt({ x: 0, y: 0, z: 0 }), baseEntry);
+    assert.deepEqual(world.getVoxelAt({ x: 0, y: 0, z: 0 }), baseEntry);
   });
 });
 
@@ -146,7 +146,7 @@ describe("VoxelWorld getVoxelAt opacity compositing", () => {
     base.setVoxelAt({ x: 0, y: 0, z: 0 }, baseEntry);
     top.setVoxelAt({ x: 0, y: 0, z: 0 }, topEntry);
     top.opacity = 0;
-    assert.equal(world.getVoxelAt({ x: 0, y: 0, z: 0 }), baseEntry);
+    assert.deepEqual(world.getVoxelAt({ x: 0, y: 0, z: 0 }), baseEntry);
   });
 
   it("layer with partial opacity still wins compositing", () => {
@@ -158,7 +158,7 @@ describe("VoxelWorld getVoxelAt opacity compositing", () => {
     base.setVoxelAt({ x: 0, y: 0, z: 0 }, baseEntry);
     top.setVoxelAt({ x: 0, y: 0, z: 0 }, topEntry);
     top.opacity = 0.5;
-    assert.equal(world.getVoxelAt({ x: 0, y: 0, z: 0 }), topEntry);
+    assert.deepEqual(world.getVoxelAt({ x: 0, y: 0, z: 0 }), topEntry);
   });
 });
 
@@ -178,7 +178,7 @@ describe("VoxelWorld getVoxelWithLayerAt", () => {
 
     const result = world.getVoxelWithLayerAt({ x: 0, y: 0, z: 0 });
 
-    assert.equal(result?.entry, topEntry);
+    assert.deepEqual(result?.entry, topEntry);
     assert.equal(result?.layer, top);
   });
 
@@ -203,7 +203,7 @@ describe("VoxelWorld getVoxelNeighbour", () => {
     const entry = makeEntry(3);
     // Place voxel at (1,0,0) which is the PosX neighbour of (0,0,0)
     world.setVoxelAt("Ground", { x: 1, y: 0, z: 0 }, entry);
-    assert.equal(world.getVoxelNeighbour({ x: 0, y: 0, z: 0 }, FACE.PosX), entry);
+    assert.deepEqual(world.getVoxelNeighbour({ x: 0, y: 0, z: 0 }, FACE.PosX), entry);
   });
 
   it("returns undefined when neighbour position is empty", () => {
@@ -514,7 +514,7 @@ describe("VoxelWorld mergeLayer", () => {
     const result = world.mergeLayer("Source", "Target");
 
     assert.equal(result, true);
-    assert.equal(world.getLayer("Target")!.getVoxelAt({ x: 1, y: 0, z: 0 }), entry);
+    assert.deepEqual(world.getLayer("Target")!.getVoxelAt({ x: 1, y: 0, z: 0 }), entry);
   });
 
   it("source layer voxels overwrite target voxels at the same position", () => {
@@ -528,7 +528,7 @@ describe("VoxelWorld mergeLayer", () => {
 
     world.mergeLayer("Source", "Target");
 
-    assert.equal(world.getLayer("Target")!.getVoxelAt({ x: 0, y: 0, z: 0 }), srcEntry);
+    assert.deepEqual(world.getLayer("Target")!.getVoxelAt({ x: 0, y: 0, z: 0 }), srcEntry);
   });
 });
 
@@ -548,7 +548,7 @@ describe("VoxelWorld mergeAllLayers", () => {
 
     assert.equal(result, layer);
     assert.equal(world.getLayers().length, 1);
-    assert.equal(layer.getVoxelAt({ x: 0, y: 0, z: 0 }), entry);
+    assert.deepEqual(layer.getVoxelAt({ x: 0, y: 0, z: 0 }), entry);
   });
 
   it("collapses multiple layers into one", () => {
@@ -577,7 +577,7 @@ describe("VoxelWorld mergeAllLayers", () => {
     const result = world.mergeAllLayers()!;
 
     // Higher priority (Top) should win.
-    assert.equal(result.getVoxelAt({ x: 0, y: 0, z: 0 }), topEntry);
+    assert.deepEqual(result.getVoxelAt({ x: 0, y: 0, z: 0 }), topEntry);
   });
 
   it("only one layer remains after mergeAllLayers", () => {

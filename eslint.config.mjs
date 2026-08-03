@@ -15,7 +15,8 @@ export default [
   ...typescriptConfig({
     rules: {
       "@stylistic/no-mixed-operators": "off",
-      "max-classes-per-file": "off"
+      "max-classes-per-file": "off",
+      "max-params": ["error", { max: 5 }]
     }
   })
 ];

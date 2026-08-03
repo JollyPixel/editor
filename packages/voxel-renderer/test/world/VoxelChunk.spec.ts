@@ -90,7 +90,7 @@ describe("set / get", () => {
     const chunk = new VoxelChunk([0, 0, 0]);
     const entry = makeEntry(5, 2);
     chunk.set([1, 2, 3], entry);
-    assert.equal(chunk.get([1, 2, 3]), entry);
+    assert.deepEqual(chunk.get([1, 2, 3]), entry);
   });
 
   it("get returns undefined for a different coord", () => {
@@ -105,7 +105,7 @@ describe("set / get", () => {
     const second = makeEntry(2);
     chunk.set([0, 0, 0], first);
     chunk.set([0, 0, 0], second);
-    assert.equal(chunk.get([0, 0, 0]), second);
+    assert.deepEqual(chunk.get([0, 0, 0]), second);
   });
 });
 
@@ -207,8 +207,8 @@ describe("entries()", () => {
     }
 
     assert.equal(collected.size, 2);
-    assert.equal(collected.get(chunk.linearIndex(0, 0, 0)), e1);
-    assert.equal(collected.get(chunk.linearIndex(2, 1, 3)), e2);
+    assert.deepEqual(collected.get(chunk.linearIndex(0, 0, 0)), e1);
+    assert.deepEqual(collected.get(chunk.linearIndex(2, 1, 3)), e2);
   });
 });
 
@@ -218,7 +218,7 @@ describe("getAt()", () => {
     const entry = makeEntry(7);
     chunk.set([1, 2, 3], entry);
 
-    assert.equal(chunk.getAt(1, 2, 3), entry);
+    assert.deepEqual(chunk.getAt(1, 2, 3), entry);
     assert.equal(chunk.getAt(3, 2, 1), undefined);
   });
 });

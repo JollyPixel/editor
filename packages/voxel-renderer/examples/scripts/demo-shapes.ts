@@ -210,6 +210,13 @@ for (let i = 0; i < kShapes.length; i++) {
 // ── Animation loop ─────────────────────────────────────────────────────────────
 
 createExamplesMenu();
-startLoop(renderer, scene, camera, controls, labelEntries, () => {
-  helper.render(renderer);
+startLoop({
+  renderer,
+  scene,
+  camera,
+  controls,
+  labelEntries,
+  onFrame: () => {
+    helper.render(renderer);
+  }
 });

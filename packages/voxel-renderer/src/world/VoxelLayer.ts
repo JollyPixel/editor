@@ -7,6 +7,14 @@ import {
 // Import Internal Dependencies
 import { clamp } from "../utils/math.ts";
 import { VoxelChunk } from "./VoxelChunk.ts";
+import {
+  packVoxel,
+  unpackVoxel,
+  voxelBlockId,
+  voxelTransform,
+  VOXEL_ABSENT,
+  type PackedVoxel
+} from "./packedVoxel.ts";
 import type {
   VoxelEntry,
   VoxelCoord
@@ -33,7 +41,11 @@ export interface VoxelLayerJSON {
    */
   opacity?: number;
   order: number;
-  offset?: { x: number; y: number; z: number; };
+  offset?: {
+    x: number;
+    y: number;
+    z: number;
+  };
   properties?: Record<string, any>;
   voxels: Record<VoxelEntryKey, VoxelEntryJSON>;
 }
@@ -229,25 +241,44 @@ export class VoxelLayer {
   getVoxelAt(
     position: Vector3Like
   ): VoxelEntry | undefined {
+    const packed = this.getPackedVoxelAt(position);
+
+    return packed === VOXEL_ABSENT ? undefined : unpackVoxel(packed);
+  }
+
+  getPackedVoxelAt(
+    position: Vector3Like
+  ): PackedVoxel {
     const { x, y, z } = this.#toLocal(position);
-    const cx = this.#worldToChunk(x);
-    const cy = this.#worldToChunk(y);
-    const cz = this.#worldToChunk(z);
-    const chunk = this.getChunk(cx, cy, cz);
+    const chunk = this.getChunk(
+      this.#worldToChunk(x),
+      this.#worldToChunk(y),
+      this.#worldToChunk(z)
+    );
     if (!chunk) {
-      return undefined;
+      return VOXEL_ABSENT;
     }
 
-    return chunk.get([
+    return chunk.getPackedAt(
       this.#worldToLocal(x),
       this.#worldToLocal(y),
       this.#worldToLocal(z)
-    ]);
+    );
   }
 
   setVoxelAt(
     position: Vector3Like,
     entry: VoxelEntry
+  ): void {
+    this.setPackedVoxelAt(
+      position,
+      packVoxel(entry.blockId, entry.transform)
+    );
+  }
+
+  setPackedVoxelAt(
+    position: Vector3Like,
+    packed: PackedVoxel
   ): void {
     const { x, y, z } = this.#toLocal(position);
 
@@ -256,13 +287,11 @@ export class VoxelLayer {
     const cz = this.#worldToChunk(z);
     const chunk = this.getOrCreateChunk(cx, cy, cz);
 
-    chunk.set(
-      [
-        this.#worldToLocal(x),
-        this.#worldToLocal(y),
-        this.#worldToLocal(z)
-      ],
-      entry
+    chunk.setPackedAt(
+      this.#worldToLocal(x),
+      this.#worldToLocal(y),
+      this.#worldToLocal(z),
+      packed
     );
   }
 
@@ -314,7 +343,12 @@ export class VoxelLayer {
       const oy = chunk.cy * this.#chunkSize;
       const oz = chunk.cz * this.#chunkSize;
 
-      for (const [linearIdx] of chunk.entries()) {
+      const { keys, capacity } = chunk.store;
+      for (let slot = 0; slot < capacity; slot++) {
+        const linearIdx = keys[slot];
+        if (linearIdx < 0) {
+          continue;
+        }
         const { lx, ly, lz } = chunk.fromLinearIndex(linearIdx);
         const x = ox + lx;
         const y = oy + ly;
@@ -397,13 +431,13 @@ export class VoxelLayer {
       const wy0 = chunk.cy * this.#chunkSize + this.offset.y;
       const wz0 = chunk.cz * this.#chunkSize + this.offset.z;
 
-      for (const [idx, entry] of chunk.entries()) {
+      for (const [idx, packed] of chunk.packedEntries()) {
         const { lx, ly, lz } = chunk.fromLinearIndex(idx);
         const key: VoxelEntryKey = `${wx0 + lx},${wy0 + ly},${wz0 + lz}`;
 
         voxels[key] = {
-          block: entry.blockId,
-          transform: entry.transform
+          block: voxelBlockId(packed),
+          transform: voxelTransform(packed)
         };
       }
     }
@@ -442,11 +476,11 @@ export class VoxelLayer {
       const wy0 = chunk.cy * chunk.size + source.offset.y;
       const wz0 = chunk.cz * chunk.size + source.offset.z;
 
-      for (const [idx, entry] of chunk.entries()) {
+      for (const [idx, packed] of chunk.packedEntries()) {
         const { lx, ly, lz } = chunk.fromLinearIndex(idx);
-        this.setVoxelAt(
+        this.setPackedVoxelAt(
           { x: wx0 + lx, y: wy0 + ly, z: wz0 + lz },
-          entry
+          packed
         );
       }
     }

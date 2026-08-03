@@ -2,7 +2,7 @@
  * Counters gathered while meshing one chunk.
  */
 export class MeshBuildStats {
-  /** Voxels visited in the chunk (including those skipped afterwards). */
+  /** Voxels visited in the chunk, including those skipped afterwards. */
   voxels = 0;
   /** Voxels skipped because a higher-priority layer covers the position. */
   hiddenVoxels = 0;
@@ -11,14 +11,13 @@ export class MeshBuildStats {
   /** Faces skipped because an opaque neighbour occludes them. */
   culledFaces = 0;
   /**
-   * Voxel faces greedy meshing folded into a neighbour's quad, i.e. how many
-   * faces the chunk would have emitted on top of `faces` without it. Always 0
-   * when greedy meshing is off.
+   * Voxel faces greedy meshing folded into a neighbour's quad. Always 0 when
+   * greedy meshing is off.
    */
   mergedFaces = 0;
   vertices = 0;
   triangles = 0;
-  /** Geometries produced, i.e. one per tileset the chunk references. */
+  /** Geometries produced, one per tileset the chunk references. */
   geometries = 0;
   /** Wall-clock time spent in `buildChunkGeometries`. */
   buildTimeMs = 0;

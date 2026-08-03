@@ -17,7 +17,6 @@ export type FACE = typeof FACE[keyof typeof FACE];
 // bit 2: flipX (mirror around x=0.5)
 // bit 3: flipZ (mirror around z=0.5)
 // bit 4: flipY (mirror around y=0.5)
-// eslint-disable-next-line max-params
 export function packTransform(
   rotation: 0 | 1 | 2 | 3,
   flipX: boolean,

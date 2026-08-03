@@ -83,14 +83,17 @@ function build(
 }
 
 /** Fills a solid box of `blockId`, inclusive bounds. */
-// eslint-disable-next-line max-params
 function fill(
   fixture: Fixture,
-  from: [number, number, number],
-  to: [number, number, number],
-  blockId = kCubeId,
-  transform = 0
+  options: {
+    from: [number, number, number];
+    to: [number, number, number];
+    blockId?: number;
+    transform?: number;
+  }
 ): void {
+  const { from, to, blockId = kCubeId, transform = 0 } = options;
+
   for (let x = from[0]; x <= to[0]; x++) {
     for (let y = from[1]; y <= to[1]; y++) {
       for (let z = from[2]; z <= to[2]; z++) {
@@ -151,7 +154,7 @@ function surfaceArea(
 describe("GreedyMesher — merging", () => {
   it("collapses a flat plate into one quad per direction", () => {
     const f = makeFixture();
-    fill(f, [0, 0, 0], [3, 0, 3]);
+    fill(f, { from: [0, 0, 0], to: [3, 0, 3] });
 
     // 6 quads: top, bottom and the four 4×1 sides.
     assert.equal(countVertices(build(f)), 6 * 4);
@@ -159,7 +162,7 @@ describe("GreedyMesher — merging", () => {
 
   it("emits one quad per voxel face without greedy", () => {
     const f = makeFixture({ greedy: false });
-    fill(f, [0, 0, 0], [3, 0, 3]);
+    fill(f, { from: [0, 0, 0], to: [3, 0, 3] });
 
     // 16 top + 16 bottom + 4 sides × 4 = 48 faces.
     assert.equal(countVertices(build(f)), 48 * 4);
@@ -169,7 +172,7 @@ describe("GreedyMesher — merging", () => {
     const greedy = makeFixture();
     const naive = makeFixture({ greedy: false });
     for (const f of [greedy, naive]) {
-      fill(f, [0, 0, 0], [3, 2, 3]);
+      fill(f, { from: [0, 0, 0], to: [3, 2, 3] });
     }
 
     const area = surfaceArea(build(greedy));
@@ -180,7 +183,7 @@ describe("GreedyMesher — merging", () => {
 
   it("reports the folded faces in mergedFaces", () => {
     const f = makeFixture();
-    fill(f, [0, 0, 0], [3, 0, 3]);
+    fill(f, { from: [0, 0, 0], to: [3, 0, 3] });
     build(f);
 
     // 48 voxel faces became 6 quads.
@@ -190,7 +193,7 @@ describe("GreedyMesher — merging", () => {
 
   it("leaves mergedFaces at zero without greedy", () => {
     const f = makeFixture({ greedy: false });
-    fill(f, [0, 0, 0], [3, 0, 3]);
+    fill(f, { from: [0, 0, 0], to: [3, 0, 3] });
     build(f);
 
     assert.equal(f.builder.stats.faces, 48);
@@ -199,7 +202,7 @@ describe("GreedyMesher — merging", () => {
 
   it("merges a run into a single stretched quad", () => {
     const f = makeFixture();
-    fill(f, [0, 0, 0], [3, 0, 0]);
+    fill(f, { from: [0, 0, 0], to: [3, 0, 0] });
     const geometries = build(f);
 
     // A 4×1 strip: top, bottom, two 4-long sides and two 1×1 ends.
@@ -217,11 +220,11 @@ describe("GreedyMesher — merging", () => {
 describe("GreedyMesher — merge boundaries", () => {
   it("does not merge different blocks", () => {
     const uniform = makeFixture();
-    fill(uniform, [0, 0, 0], [3, 0, 0], kCubeId);
+    fill(uniform, { from: [0, 0, 0], to: [3, 0, 0], blockId: kCubeId });
 
     const mixed = makeFixture();
-    fill(mixed, [0, 0, 0], [1, 0, 0], kCubeId);
-    fill(mixed, [2, 0, 0], [3, 0, 0], kOtherCubeId);
+    fill(mixed, { from: [0, 0, 0], to: [1, 0, 0], blockId: kCubeId });
+    fill(mixed, { from: [2, 0, 0], to: [3, 0, 0], blockId: kOtherCubeId });
 
     // The uniform strip collapses to 6 quads. Splitting it in two halves stops
     // the merge at the block change, leaving each half with its own 5 quads —
@@ -232,8 +235,13 @@ describe("GreedyMesher — merge boundaries", () => {
 
   it("does not merge voxels with different transforms", () => {
     const f = makeFixture();
-    fill(f, [0, 0, 0], [1, 0, 0], kCubeId, 0);
-    fill(f, [2, 0, 0], [3, 0, 0], kCubeId, packTransform(1, false, false));
+    fill(f, { from: [0, 0, 0], to: [1, 0, 0], blockId: kCubeId, transform: 0 });
+    fill(f, {
+      from: [2, 0, 0],
+      to: [3, 0, 0],
+      blockId: kCubeId,
+      transform: packTransform(1, false, false)
+    });
 
     // A rotated cube turns its tile sideways, so it cannot share a quad with
     // an unrotated one even though both are the same block.
@@ -243,7 +251,7 @@ describe("GreedyMesher — merge boundaries", () => {
   it("does not merge across a chunk boundary", () => {
     const f = makeFixture();
     // Two voxels either side of the x = 4 chunk edge.
-    fill(f, [3, 0, 0], [4, 0, 0]);
+    fill(f, { from: [3, 0, 0], to: [4, 0, 0] });
 
     const first = countVertices(build(f, [0, 0, 0]));
     const second = countVertices(build(f, [1, 0, 0]));
@@ -255,7 +263,7 @@ describe("GreedyMesher — merge boundaries", () => {
 
   it("still culls faces hidden by an opaque neighbour", () => {
     const f = makeFixture();
-    fill(f, [0, 0, 0], [1, 0, 0]);
+    fill(f, { from: [0, 0, 0], to: [1, 0, 0] });
     build(f);
 
     // The two touching faces are culled, the other ten emitted as 6 quads.
@@ -276,7 +284,7 @@ describe("GreedyMesher — non-cube shapes", () => {
 
   it("merges only the full-quad faces of a ramp", () => {
     const f = makeFixture();
-    fill(f, [0, 0, 0], [3, 0, 0], kRampId);
+    fill(f, { from: [0, 0, 0], to: [3, 0, 0], blockId: kRampId });
     build(f);
 
     // A ramp's base (NegY) and back (PosZ) are full quads and merge over the
@@ -288,7 +296,7 @@ describe("GreedyMesher — non-cube shapes", () => {
     const greedy = makeFixture();
     const naive = makeFixture({ greedy: false });
     for (const f of [greedy, naive]) {
-      fill(f, [0, 0, 0], [3, 0, 0], kRampId);
+      fill(f, { from: [0, 0, 0], to: [3, 0, 0], blockId: kRampId });
     }
 
     assert.equal(
@@ -299,7 +307,7 @@ describe("GreedyMesher — non-cube shapes", () => {
 
   it("merges cubes sitting next to unmergeable shapes", () => {
     const f = makeFixture();
-    fill(f, [0, 0, 0], [2, 0, 0], kCubeId);
+    fill(f, { from: [0, 0, 0], to: [2, 0, 0], blockId: kCubeId });
     f.world.setVoxelAt("test", { x: 3, y: 0, z: 0 }, { blockId: kStairId, transform: 0 });
 
     const geometries = build(f);
@@ -314,7 +322,7 @@ describe("GreedyMesher — tile attributes", () => {
     const greedy = makeFixture();
     const naive = makeFixture({ greedy: false });
     for (const f of [greedy, naive]) {
-      fill(f, [0, 0, 0], [3, 0, 3]);
+      fill(f, { from: [0, 0, 0], to: [3, 0, 3] });
     }
 
     const [merged] = [...build(greedy)!.values()];
@@ -328,7 +336,7 @@ describe("GreedyMesher — tile attributes", () => {
 
   it("repeats the tile once per voxel across a merged quad", () => {
     const f = makeFixture();
-    fill(f, [0, 0, 0], [3, 0, 3]);
+    fill(f, { from: [0, 0, 0], to: [3, 0, 3] });
 
     const [geometry] = [...build(f)!.values()];
     const repeat = geometry.getAttribute("tileRepeat");
@@ -348,17 +356,19 @@ describe("GreedyMesher — tile attributes", () => {
 
   it("carries the tile's atlas rect on every vertex", () => {
     const f = makeFixture();
-    fill(f, [0, 0, 0], [1, 0, 1]);
+    fill(f, { from: [0, 0, 0], to: [1, 0, 1] });
 
     const expected = f.tilesetManager.getTileUV({ col: 0, row: 0 });
     const [geometry] = [...build(f)!.values()];
     const region = geometry.getAttribute("tileRegion");
+    // The rect is stored as normalized uint16, so it decodes to within a step.
+    const step = 1 / 65535;
 
     for (let i = 0; i < region.count; i++) {
-      assert.equal(region.getX(i), expected.offsetU);
-      assert.equal(region.getY(i), expected.offsetV);
-      assert.equal(region.getZ(i), expected.scaleU);
-      assert.equal(region.getW(i), expected.scaleV);
+      assert.ok(Math.abs(region.getX(i) - expected.offsetU) <= step);
+      assert.ok(Math.abs(region.getY(i) - expected.offsetV) <= step);
+      assert.ok(Math.abs(region.getZ(i) - expected.scaleU) <= step);
+      assert.ok(Math.abs(region.getW(i) - expected.scaleV) <= step);
     }
   });
 
@@ -381,7 +391,7 @@ describe("GreedyMesher — layers", () => {
   it("still skips voxels a higher-priority layer covers", () => {
     const f = makeFixture();
     const top = f.world.addLayer("top");
-    fill(f, [0, 0, 0], [3, 0, 3]);
+    fill(f, { from: [0, 0, 0], to: [3, 0, 3] });
     for (let x = 0; x <= 3; x++) {
       top.setVoxelAt({ x, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
     }
@@ -393,7 +403,7 @@ describe("GreedyMesher — layers", () => {
   it("bakes the layer opacity into the vertex colors", () => {
     const f = makeFixture();
     f.world.updateLayer("test", { opacity: 0.5 });
-    fill(f, [0, 0, 0], [3, 0, 3]);
+    fill(f, { from: [0, 0, 0], to: [3, 0, 3] });
 
     const [geometry] = [...build(f)!.values()];
     const color = geometry.getAttribute("color");
@@ -411,7 +421,7 @@ describe("VoxelMeshBuilder — greedy toggle", () => {
 
   it("switches meshing mode at runtime", () => {
     const f = makeFixture({ greedy: false });
-    fill(f, [0, 0, 0], [3, 0, 3]);
+    fill(f, { from: [0, 0, 0], to: [3, 0, 3] });
     assert.equal(countVertices(build(f)), 48 * 4);
 
     f.builder.greedy = true;
@@ -419,5 +429,65 @@ describe("VoxelMeshBuilder — greedy toggle", () => {
 
     f.builder.greedy = false;
     assert.equal(countVertices(build(f)), 48 * 4);
+  });
+});
+
+describe("GreedyMesher — tiled attribute layout", () => {
+  it("narrows tileRegion and tileRepeat but keeps tiled uv in float32", () => {
+    const f = makeFixture();
+    fill(f, { from: [0, 0, 0], to: [3, 0, 3] });
+
+    const [geometry] = [...build(f)!.values()];
+
+    // Tiled UVs are scaled by the merged span, so they run past 1 and cannot
+    // be stored normalized.
+    assert.ok(geometry.getAttribute("uv").array instanceof Float32Array);
+
+    const region = geometry.getAttribute("tileRegion");
+    assert.ok(region.array instanceof Uint16Array);
+    assert.equal(region.normalized, true);
+    assert.equal(region.itemSize, 4);
+
+    const repeat = geometry.getAttribute("tileRepeat");
+    assert.ok(repeat.array instanceof Uint16Array);
+    assert.equal(repeat.normalized, false);
+    assert.equal(repeat.itemSize, 2);
+  });
+
+  it("carries the merged span through tileRepeat unscaled", () => {
+    const f = makeFixture();
+    fill(f, { from: [0, 0, 0], to: [3, 0, 3] });
+
+    const [geometry] = [...build(f)!.values()];
+    const repeat = geometry.getAttribute("tileRepeat");
+
+    // A 4x4 slab merges into one quad per direction, so the top face repeats
+    // its tile 4 times on each axis.
+    let sawFullSpan = false;
+    for (let i = 0; i < repeat.count; i++) {
+      assert.ok(Number.isInteger(repeat.getX(i)), `u repeat ${repeat.getX(i)}`);
+      assert.ok(Number.isInteger(repeat.getY(i)), `v repeat ${repeat.getY(i)}`);
+      if (repeat.getX(i) === 4 && repeat.getY(i) === 4) {
+        sawFullSpan = true;
+      }
+    }
+    assert.ok(sawFullSpan, "expected a quad repeating 4x4");
+  });
+
+  it("keeps tileRegion within one 16-bit step of the atlas rect", () => {
+    const f = makeFixture();
+    fill(f, { from: [0, 0, 0], to: [3, 0, 3] });
+
+    const [geometry] = [...build(f)!.values()];
+    const attribute = geometry.getAttribute("tileRegion");
+    const expected = f.tilesetManager.getTileUV(kDefaultTexture);
+    const step = 1 / 65535;
+
+    for (let i = 0; i < attribute.count; i++) {
+      assert.ok(Math.abs(attribute.getX(i) - expected.offsetU) <= step, "offsetU");
+      assert.ok(Math.abs(attribute.getY(i) - expected.offsetV) <= step, "offsetV");
+      assert.ok(Math.abs(attribute.getZ(i) - expected.scaleU) <= step, "scaleU");
+      assert.ok(Math.abs(attribute.getW(i) - expected.scaleV) <= step, "scaleV");
+    }
   });
 });

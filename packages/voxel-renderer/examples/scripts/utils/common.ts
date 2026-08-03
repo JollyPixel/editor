@@ -137,15 +137,25 @@ export function createOrbitCamera(
  * optional onFrame callback, projects labels, and renders the scene.
  * Also registers the window resize handler so the caller doesn't have to.
  */
-// eslint-disable-next-line max-params
 export function startLoop(
-  renderer: THREE.WebGLRenderer,
-  scene: THREE.Scene,
-  camera: THREE.PerspectiveCamera,
-  controls: OrbitControls,
-  labelEntries: LabelEntry[] = [],
-  onFrame?: () => void
+  options: {
+    renderer: THREE.WebGLRenderer;
+    scene: THREE.Scene;
+    camera: THREE.PerspectiveCamera;
+    controls: OrbitControls;
+    labelEntries?: LabelEntry[];
+    onFrame?: () => void;
+  }
 ): void {
+  const {
+    renderer,
+    scene,
+    camera,
+    controls,
+    labelEntries = [],
+    onFrame
+  } = options;
+
   onWindowResize(camera, renderer);
 
   function animate(): void {

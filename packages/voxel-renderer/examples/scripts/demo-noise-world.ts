@@ -26,9 +26,9 @@ const kSkyColor = "#8ec5e8";
 const kCameraSpeed = 60;
 
 const kSizeBounds = {
-  default: 1024,
+  default: 256,
   min: 256,
-  max: 1024
+  max: 5120
 };
 const kChunkBounds = {
   default: 32,

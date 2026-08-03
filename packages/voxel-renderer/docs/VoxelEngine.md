@@ -204,20 +204,30 @@ When wrapped by `VoxelRenderer`, these are called automatically from its
 A chunk produces one `THREE.Mesh` per tileset it references, all parented to
 `root`. Their geometries are indexed and carry four attributes:
 
-| Attribute  | Type      | Items | Notes |
-|------------|-----------|-------|-------|
-| `position` | `float32` | 3     | world space, not chunk-local |
-| `normal`   | `float32` | 3     | not axis-aligned for ramps and corners |
-| `uv`       | `float32` | 2     | atlas coordinates, half-texel inset |
-| `color`    | `uint8`   | 4     | normalized; RGB is white, alpha is the layer opacity |
+| Attribute  | Type                | Items | Bytes | Notes |
+|------------|---------------------|-------|-------|-------|
+| `position` | `float32`           | 3     | 12    | world space, not chunk-local |
+| `normal`   | `int8` normalized   | 3     | 3     | not axis-aligned for ramps and corners |
+| `uv`       | `uint16` normalized | 2     | 4     | atlas coordinates, half-texel inset |
+| `color`    | `uint8` normalized  | 4     | 4     | RGB is white, alpha is the layer opacity |
 
 Vertices are never shared between faces — each face needs its own UVs and
-normal — so a cube costs 24 vertices, not 8.
+normal — so a cube costs 24 vertices, not 8. At 23 bytes per vertex a
+million-vertex chunk keeps 23 MB resident for as long as it is on screen, which
+is why every attribute is stored in the narrowest type that can carry it.
+
+`position` is the exception: it holds absolute world coordinates, and both
+`mergeChunkGeometries()` and raycasting read the array verbatim, so quantising it
+would silently distort colliders and hit tests.
+
+Reading an attribute back through `getX()`/`getW()` denormalizes it, so callers
+see the original range. Quantisation is lossy by design but below what the
+renderer can show: a unit normal lands within `1/127`, an atlas coordinate within
+`1/65535`, and alpha within `1/255` of the layer's `opacity`.
 
 Alpha is baked per vertex rather than set on the material so a future per-block
 opacity (e.g. windows) only changes what the builder writes, not how materials
-are keyed and shared. Being a normalized byte, it round-trips through
-`getW()` within `1/255` of the layer's `opacity`.
+are keyed and shared.
 
 ## Greedy meshing
 
@@ -244,13 +254,18 @@ A merged quad has to repeat its tile rather than stretch it, which the shader
 does rather than the geometry. Chunk materials are therefore compiled through
 `enableTileWrapping()`, and chunk geometry carries two extra attributes:
 
-| Attribute    | Type      | Items | Notes |
-|--------------|-----------|-------|-------|
-| `uv`         | `float32` | 2     | **tile** space, `0..spanU` / `0..spanV` — not atlas space |
-| `tileRegion` | `float32` | 4     | the tile's atlas rect: `offsetU, offsetV, scaleU, scaleV` |
-| `tileRepeat` | `float32` | 2     | how many times the tile repeats on each axis |
+| Attribute    | Type                | Items | Bytes | Notes |
+|--------------|---------------------|-------|-------|-------|
+| `uv`         | `float32`           | 2     | 8     | **tile** space, `0..spanU` / `0..spanV` — not atlas space |
+| `tileRegion` | `uint16` normalized | 4     | 8     | the tile's atlas rect: `offsetU, offsetV, scaleU, scaleV` |
+| `tileRepeat` | `uint16`            | 2     | 4     | how many times the tile repeats on each axis |
 
-That costs 24 bytes per vertex on top of the usual 36, which the drop in vertex
+A tiled `uv` is the one attribute that stays `float32`: greedy meshing scales it
+by the merged span, so it runs well past 1 and the shader's `fract()` needs the
+precision across the whole quad. `tileRepeat` holds integer counts and is
+therefore *not* normalized — the shader reads it at face value.
+
+That costs 20 bytes per vertex on top of the usual 23, which the drop in vertex
 count more than pays for. It also means a `materialCustomizer` that overrides
 `onBeforeCompile` or remaps `map` UVs will fight the wrapping shader.
 

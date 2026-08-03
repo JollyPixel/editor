@@ -37,8 +37,7 @@ const kRotateFaceTable: readonly (readonly FACE[])[] = [
 ];
 
 /**
- * Rotates a vertex position (in 0-1 block space) around the block center (0.5, 0.5, 0.5)
- * applying a Y-axis rotation and optional mirror flips.
+ * Rotates a vertex position in 0-1 block space around the block center.
  */
 export function rotateVertex(
   vec3: Vec3,
@@ -84,8 +83,7 @@ export function rotateVertex(
 }
 
 /**
- * Maps a block-local face direction to world-space after applying a Y-axis rotation.
- * Used by the mesh builder to find the correct neighbor to check for face culling.
+ * Maps a block-local face direction to world-space after a Y-axis rotation.
  */
 export function rotateFace(
   face: FACE,
