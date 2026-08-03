@@ -57,11 +57,14 @@ CQRS split: each backend factory returns a `writer` and a `reader` sharing the s
 import * as EventStore from "@jolly-pixel/event-store";
 
 EventStore.persistence.memory();
-EventStore.persistence.sqlite();
+await EventStore.persistence.sqlite();
 ```
 
 - [`Memory`](./docs/Memory.md)
 - [`Sqlite`](./docs/Sqlite.md)
+
+> [!NOTE]
+> `sqlite` is async, `memory` is not. See [Browser compatibility](#-browser-compatibility).
 
 Every factory returns the same `EventStore` shape
 
@@ -93,6 +96,16 @@ export interface EventStore {
   [Symbol.dispose](): void;
 }
 ```
+
+### 🌐 Browser compatibility
+
+The package entrypoint is safe to import from browser code: its eagerly-evaluated module graph contains no `node:` builtin. The SQLite backend is reachable but never loaded up front —
+
+- `persistence.sqlite` is a lazy loader that `import()`s the backend on first call, which is why it is async while `persistence.memory` stays synchronous.
+- The backend itself resolves `node:sqlite` through a dynamic `import()`, and its schema is an inlined string rather than a `node:fs` read.
+- `SqliteEventWriter` / `SqliteEventReader` are exported from the root as **types only**. Import them as values from `@jolly-pixel/event-store/sqlite` (Node-only).
+
+`test/browser-compat.spec.ts` enforces this by walking the eager module graph, so a stray static import fails the suite.
 
 ### 📡 Events
 
