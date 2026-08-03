@@ -1,11 +1,10 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 import { Systems } from "@jolly-pixel/engine";
+import type { UVRegion, Vec2 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import { CubeBehavior } from "./Cube.ts";
-import type { UVRegion } from "../../../src/uv/UVRegion.ts";
-import type { Vec2 } from "../../../src/types.ts";
 
 export interface CubeFactoryOptions {
   world: Systems.World;

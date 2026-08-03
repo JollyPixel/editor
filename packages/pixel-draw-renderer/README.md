@@ -75,7 +75,7 @@ await img.decode();
 manager.texture = img;
 ```
 
-> See [`examples/`](./examples) for a full demo (a Lit-based toolbar panel driving `PixelArtCanvas` and painting a live Three.js texture).
+> See [`@jolly-pixel/editor.pixel-art`](../editors/pixel-art) for the UI layer (a Lit-based toolbar panel driving `PixelArtCanvas`) and its `examples/` demo (painting a live Three.js texture).
 
 ### Modes
 
@@ -148,14 +148,6 @@ manager.redo();
 > [!TIP]
 > Read [PixelArtCanvas.md](./docs/PixelArtCanvas.md#undo--redo--canundo--canredo) and [history/HistoryStack.md](./docs/history/HistoryStack.md).
 
-## 🚀 Running the example
-
-```bash
-npm run dev -w @jolly-pixel/pixel-draw.renderer
-```
-
-Open `http://localhost:5173` to see the interactive demo.
-
 ## 📚 API
 
 - [`PixelArtCanvas`](./docs/PixelArtCanvas.md)
@@ -167,9 +159,8 @@ Open `http://localhost:5173` to see the interactive demo.
 - [`Keybindings`](./docs/input/Keybindings.md)
 - [`Network`](./docs/network/index.md)
 
-### 📱 UI 
-
-- [`PixelDrawPanel`](./docs/ui/PixelDrawPanel.md) drop-in UI, `@jolly-pixel/pixel-draw.renderer/ui`
+> [!NOTE]
+> Looking for a drop-in UI? See [`PixelDrawPanel`](../editors/pixel-art/docs/ui/PixelDrawPanel.md) in `@jolly-pixel/editor.pixel-art` — this package stays focused on the headless API.
 
 ### Advanced / Internal
 

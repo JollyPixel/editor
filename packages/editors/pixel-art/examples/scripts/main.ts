@@ -4,15 +4,16 @@ import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
 import { ResizeHandle } from "@jolly-pixel/resize-handle";
 // import * as network from "@jolly-pixel/network/client";
 
-// Import Internal Dependencies
-// import type { PixelArtCanvas } from "../../src/index.ts";
+// import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 // import {
 //   PixelSyncClient,
 //   PixelCursorSync,
 //   type PixelNetworkCommand,
 //   type PixelServerMessage
-// } from "../../src/network/client.ts";
-import { PixelDrawPanel } from "../../src/ui/index.ts";
+// } from "@jolly-pixel/pixel-draw.renderer";
+
+// Import Internal Dependencies
+import { PixelDrawPanel } from "../../src/index.ts";
 import { CameraBehavior } from "./components/Camera.ts";
 import { CubeFactory } from "./components/CubeFactory.ts";
 import { OrbitControlsBehavior } from "./components/OrbitControlsBehavior.ts";

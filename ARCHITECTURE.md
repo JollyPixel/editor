@@ -18,6 +18,7 @@ packages/
   editors/
     voxel-map/         @jolly-pixel/editor.voxel-map     – Voxel map editor (private)
     voxel-model/       @jolly-pixel/editor.voxel-model   – Low-poly/voxel 3D model editor (private)
+    pixel-art/         @jolly-pixel/editor.pixel-art     – Pixel-art UI (Lit panel) on top of pixel-draw-renderer, reused by other editors (private)
 ```
 
-Library packages (engine, runtime, event-store, network, fs-tree, resize-handle, voxel-renderer, pixel-draw-renderer) compile with `tsc`. Editor/frontend packages (`editors/*`) use Vite.
+Library packages (engine, runtime, event-store, network, fs-tree, resize-handle, voxel-renderer, pixel-draw-renderer) compile with `tsc`. Editor/frontend packages (`editors/*`) use Vite to build their app, except `editors/pixel-art`, which is a `tsc`-built, reusable UI library (like the other libraries) rather than a standalone app — Vite there only serves its `examples/` demo.

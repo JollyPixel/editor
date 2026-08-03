@@ -1,10 +1,10 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
+import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import type { CubeBehavior } from "./components/Cube.ts";
 import type { CubeFactory } from "./components/CubeFactory.ts";
-import type { PixelArtCanvas } from "../../src/index.ts";
 
 export interface CubeGalleryOptions {
   cubeFactory: CubeFactory;

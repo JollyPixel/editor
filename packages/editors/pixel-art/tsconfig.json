@@ -13,21 +13,6 @@
   ],
   "references": [
     {
-      "path": "../../engine"
-    },
-    {
-      "path": "../../runtime"
-    },
-    {
-      "path": "../../voxel-renderer"
-    },
-    {
-      "path": "../../network"
-    },
-    {
-      "path": "../pixel-art"
-    },
-    {
       "path": "../../pixel-draw-renderer"
     }
   ]

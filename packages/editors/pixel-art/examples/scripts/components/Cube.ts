@@ -4,10 +4,11 @@ import {
   ActorComponent
 } from "@jolly-pixel/engine";
 import * as THREE from "three";
-
-// Import Internal Dependencies
-import type { UVRegion } from "../../../src/uv/UVRegion.ts";
-import type { SelectionRect, Vec2 } from "../../../src/types.ts";
+import type {
+  UVRegion,
+  SelectionRect,
+  Vec2
+} from "@jolly-pixel/pixel-draw.renderer";
 
 export interface CubeBehaviorOptions {
   canvasTexture: THREE.CanvasTexture;

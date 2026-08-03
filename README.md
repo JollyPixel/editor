@@ -38,6 +38,7 @@ $ yarn add @jolly-pixel/engine
 
 - [Voxel Map](./packages/editors/voxel-map/): 3D Voxel Terrain editor
 - [Voxel Model](./packages/editors/voxel-model/): Low-poly/voxel 3D model editor
+- [Pixel Art](./packages/editors/pixel-art/): 2D Pixel-Art texturing editor
 
 ## Build
 To install and compile all workspaces, just run the following command at the root

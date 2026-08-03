@@ -1,13 +1,17 @@
 // Import Third-party Dependencies
-import { LitElement, html, nothing } from "lit";
+import {
+  LitElement,
+  html,
+  nothing
+} from "lit";
 import { customElement } from "lit/decorators.js";
-
-// Import Internal Dependencies
 import {
   PixelArtCanvas,
   type PixelArtCanvasOptions,
   type Mode
-} from "../PixelArtCanvas.ts";
+} from "@jolly-pixel/pixel-draw.renderer";
+
+// Import Internal Dependencies
 import type { ColorChangeDetail } from "./ColorSwatch.ts";
 import { panelStyles } from "./PixelDrawPanel.styles.ts";
 import { railButtonStyles } from "./rail-button.styles.ts";
