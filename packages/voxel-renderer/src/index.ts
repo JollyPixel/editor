@@ -85,6 +85,7 @@ export {
   type TilesetLoaderOptions,
   type TilesetEntry
 } from "./tileset/TilesetLoader.ts";
+export { enableTileWrapping } from "./tileset/tileWrapping.ts";
 
 // World
 export {
@@ -99,6 +100,16 @@ export {
   type VoxelLayerOptions
 } from "./world/VoxelLayer.ts";
 export { VoxelChunk, DEFAULT_CHUNK_SIZE } from "./world/VoxelChunk.ts";
+export { VoxelStore } from "./world/VoxelStore.ts";
+export {
+  packVoxel,
+  unpackVoxel,
+  voxelBlockId,
+  voxelTransform,
+  MAX_BLOCK_ID,
+  VOXEL_ABSENT,
+  type PackedVoxel
+} from "./world/packedVoxel.ts";
 export type {
   VoxelCoord,
   VoxelEntry

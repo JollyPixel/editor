@@ -8,6 +8,12 @@ import {
   type VoxelLayerOptions
 } from "./VoxelLayer.ts";
 import { VoxelChunk, DEFAULT_CHUNK_SIZE } from "./VoxelChunk.ts";
+import {
+  packVoxel,
+  unpackVoxel,
+  VOXEL_ABSENT,
+  type PackedVoxel
+} from "./packedVoxel.ts";
 import type { VoxelEntry, VoxelCoord } from "./types.ts";
 import { FACE_OFFSETS } from "../mesh/math.ts";
 import type { FACE } from "../utils/math.ts";
@@ -413,6 +419,22 @@ export class VoxelWorld {
     return this.getVoxelWithLayerAt(position)?.entry;
   }
 
+  getPackedVoxelAt(
+    position: Vector3Like
+  ): PackedVoxel {
+    for (const layer of this.#layers) {
+      if (!layer.visible || layer.opacity === 0) {
+        continue;
+      }
+      const packed = layer.getPackedVoxelAt(position);
+      if (packed !== VOXEL_ABSENT) {
+        return packed;
+      }
+    }
+
+    return VOXEL_ABSENT;
+  }
+
   /**
    * Same compositing rules as `getVoxelAt`, but also returns the owning
    * layer so callers can inspect layer-level properties (e.g. `opacity`) of
@@ -429,9 +451,9 @@ export class VoxelWorld {
       if (!layer.visible || layer.opacity === 0) {
         continue;
       }
-      const entry = layer.getVoxelAt(position);
-      if (entry !== undefined) {
-        return { entry, layer };
+      const packed = layer.getPackedVoxelAt(position);
+      if (packed !== VOXEL_ABSENT) {
+        return { entry: unpackVoxel(packed), layer };
       }
     }
 
@@ -456,12 +478,24 @@ export class VoxelWorld {
     position: Vector3Like,
     entry: VoxelEntry
   ): void {
+    this.setPackedVoxelAt(
+      layerName,
+      position,
+      packVoxel(entry.blockId, entry.transform)
+    );
+  }
+
+  setPackedVoxelAt(
+    layerName: string,
+    position: Vector3Like,
+    packed: PackedVoxel
+  ): void {
     const layer = this.getLayer(layerName);
     if (!layer) {
       throw new Error(`VoxelWorld: layer "${layerName}" does not exist.`);
     }
 
-    layer.setVoxelAt(position, entry);
+    layer.setPackedVoxelAt(position, packed);
 
     // Mark neighbouring chunks dirty when a boundary voxel changes so their
     // faces are re-evaluated at the next update.

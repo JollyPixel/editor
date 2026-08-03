@@ -78,7 +78,6 @@ export class Vec2Input extends LitElement {
     `;
   }
 
-  // eslint-disable-next-line max-params
   #renderAxis(
     axis: "x" | "y",
     value: number,

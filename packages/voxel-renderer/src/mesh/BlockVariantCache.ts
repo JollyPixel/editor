@@ -25,9 +25,29 @@ const kAllFaces: readonly FACE[] = [
 ];
 
 /**
- * One emitted polygon of a block variant, fully resolved at compile time:
- * rotation, mirroring, atlas UV mapping and flip-Y winding are already baked
- * in, so emitting it is a copy plus a translation by the voxel position.
+ * How a mergeable face maps onto the world axes so the greedy mesher can
+ * stretch it over a run of identical voxels.
+ *
+ * Only full unit quads on a block boundary can be stretched; `BlockVariantCache`
+ * computes this once per (block, transform).
+ */
+export interface BlockFaceMerge {
+  /** World axis the face is perpendicular to (0 = x, 1 = y, 2 = z). */
+  axis: number;
+  /** The two in-plane world axes, ascending. */
+  uAxis: number;
+  vAxis: number;
+  /**
+   * True when the tile's U runs along `vAxis` instead of `uAxis` — a rotated
+   * or mirrored block turns the tile sideways relative to the world axes.
+   */
+  swapped: boolean;
+}
+
+/**
+ * One emitted polygon of a block variant, resolved at compile time.
+ * Rotation, mirroring, atlas UVs and flip-Y winding are baked in, so emitting
+ * it is a copy plus a translation by the voxel position.
  */
 export interface BlockVariantFace {
   /** World-space neighbour direction to test for occlusion, or -1 to always emit. */
@@ -41,6 +61,16 @@ export interface BlockVariantFace {
   positions: Float32Array;
   /** `vertexCount × 2` atlas UVs. */
   uvs: Float32Array;
+  /**
+   * `vertexCount × 2` UVs in tile space (0-1 inside the tile), before the atlas
+   * rect is applied. Greedy meshing scales these past 1 to repeat the tile and
+   * lets the shader fold them back into `region`.
+   */
+  tileUvs: Float32Array;
+  /** The tile's atlas rect: `[offsetU, offsetV, scaleU, scaleV]`. */
+  region: Float32Array;
+  /** Non-null when the face can be stretched over a run of identical voxels. */
+  merge: BlockFaceMerge | null;
   normalX: number;
   normalY: number;
   normalZ: number;
@@ -50,6 +80,11 @@ export interface BlockVariant {
   faces: readonly BlockVariantFace[];
   /** Bit `f` is set when this variant fully covers world-space face `f`. */
   occlusionMask: number;
+  /**
+   * The mergeable face covering each world-space direction, indexed by `FACE`.
+   * Undefined where the variant has no full-quad face pointing that way.
+   */
+  mergeFaces: readonly (BlockVariantFace | undefined)[];
 }
 
 export interface BlockVariantCacheOptions {
@@ -61,12 +96,9 @@ export interface BlockVariantCacheOptions {
 /**
  * Compiles and memoizes the geometry of a (blockId, transform) pair.
  *
- * Without it the mesh builder redoes the same per-vertex rotation, mirroring
- * and atlas UV arithmetic for every voxel in the world; a terrain chunk holds
- * millions of voxels but only a handful of distinct variants.
- *
- * Entries are dropped as soon as the block, shape or tileset registries report
- * a new `version`, so runtime registration stays correct.
+ * This avoids recomputing per-vertex rotation, mirroring and atlas UV math for
+ * every voxel in the world. Entries are dropped when block, shape or tileset
+ * registries report a new version.
  */
 export class BlockVariantCache {
   #blockRegistry: BlockRegistry;
@@ -91,7 +123,7 @@ export class BlockVariantCache {
 
   /**
    * Drops every compiled variant when a registry has changed since the last
-   * call. Cheap enough (three integer comparisons) to run before each chunk.
+   * call. Cheap enough to run before each chunk.
    */
   refresh(): void {
     const blockVersion = this.#blockRegistry.version;
@@ -113,8 +145,8 @@ export class BlockVariantCache {
   }
 
   /**
-   * Returns null when the block or its shape is unknown — such a voxel emits
-   * no geometry and occludes nothing.
+   * Returns null when the block or its shape is unknown. Such a voxel emits no
+   * geometry and occludes nothing.
    */
   get(
     blockId: number,
@@ -190,6 +222,7 @@ export class BlockVariantCache {
       const vertexCount = faceDef.vertices.length;
       const positions = new Float32Array(vertexCount * 3);
       const uvs = new Float32Array(vertexCount * 2);
+      const tileUvs = new Float32Array(vertexCount * 2);
 
       for (let i = 0; i < vertexCount; i++) {
         // flipY mirrors the face, so vertices are stored in reverse order to
@@ -205,6 +238,8 @@ export class BlockVariantCache {
         positions[(i * 3) + 2] = vertex[2];
 
         const tileUV = faceDef.uvs[vi];
+        tileUvs[i * 2] = tileUV[0];
+        tileUvs[(i * 2) + 1] = tileUV[1];
         uvs[i * 2] = uvRegion.offsetU + (uvRegion.scaleU * tileUV[0]);
         uvs[(i * 2) + 1] = uvRegion.offsetV + (uvRegion.scaleV * tileUV[1]);
       }
@@ -222,6 +257,14 @@ export class BlockVariantCache {
         indexCount: vertexCount === 4 ? 6 : 3,
         positions,
         uvs,
+        tileUvs,
+        region: new Float32Array([
+          uvRegion.offsetU,
+          uvRegion.offsetV,
+          uvRegion.scaleU,
+          uvRegion.scaleV
+        ]),
+        merge: describeMerge(cull, positions, tileUvs),
         normalX: normal[0],
         normalY: normal[1],
         normalZ: normal[2]
@@ -230,7 +273,8 @@ export class BlockVariantCache {
 
     return {
       faces,
-      occlusionMask: this.#occlusionMask(shape, rotation, flipY)
+      occlusionMask: this.#occlusionMask(shape, rotation, flipY),
+      mergeFaces: indexMergeFaces(faces)
     };
   }
 
@@ -258,4 +302,109 @@ export class BlockVariantCache {
 
     return mask;
   }
+}
+
+/**
+ * Picks, per world-space direction, the face the greedy mesher may stretch.
+ *
+ * A shape could in principle declare two full quads pointing the same way (two
+ * coplanar halves, say); only the first is kept mergeable and the others fall
+ * back to the per-voxel path, which keeps `merge !== null` a reliable "the
+ * sweep owns this face" test.
+ */
+function indexMergeFaces(
+  faces: BlockVariantFace[]
+): (BlockVariantFace | undefined)[] {
+  const mergeFaces = new Array<BlockVariantFace | undefined>(6).fill(undefined);
+
+  for (const face of faces) {
+    if (face.merge === null) {
+      continue;
+    }
+
+    if (mergeFaces[face.cull] === undefined) {
+      mergeFaces[face.cull] = face;
+    }
+    else {
+      face.merge = null;
+    }
+  }
+
+  return mergeFaces;
+}
+
+/**
+ * Describes how a face maps onto the world axes, or null when it cannot be
+ * stretched over a run of voxels.
+ *
+ * A face qualifies only when it is a quad whose four corners match the block
+ * boundary and the tile corners. Slopes, triangles and inset faces fail and
+ * keep the per-voxel path.
+ */
+function describeMerge(
+  cull: number,
+  positions: Float32Array,
+  tileUvs: Float32Array
+): BlockFaceMerge | null {
+  // `positions` is allocated as `vertexCount * 3`, so its length carries the
+  // vertex count already.
+  if (positions.length !== 12 || cull < 0) {
+    return null;
+  }
+
+  // FACE packs direction as `axis * 2 + (negative ? 1 : 0)`.
+  const axis = cull >> 1;
+  const plane = (cull & 1) === 0 ? 1 : 0;
+  const uAxis = axis === 0 ? 1 : 0;
+  const vAxis = axis === 2 ? 1 : 2;
+
+  // Bit `(v << 1) | u` per visited corner; all four must show up exactly once
+  // in both position and tile space.
+  let cornerMask = 0;
+  let uvMask = 0;
+
+  for (let i = 0; i < 4; i++) {
+    if (positions[(i * 3) + axis] !== plane) {
+      return null;
+    }
+
+    const pu = positions[(i * 3) + uAxis];
+    const pv = positions[(i * 3) + vAxis];
+    const tu = tileUvs[i * 2];
+    const tv = tileUvs[(i * 2) + 1];
+    if (!isCorner(pu) || !isCorner(pv) || !isCorner(tu) || !isCorner(tv)) {
+      return null;
+    }
+
+    cornerMask |= 1 << ((pv << 1) | pu);
+    uvMask |= 1 << ((tv << 1) | tu);
+  }
+
+  if (cornerMask !== 0b1111 || uvMask !== 0b1111) {
+    return null;
+  }
+
+  // Walk from corner 0 to the corner reached by moving along uAxis alone: the
+  // tile coordinate that changes there is the one that follows uAxis.
+  for (let i = 1; i < 4; i++) {
+    if (
+      positions[(i * 3) + vAxis] === positions[vAxis] &&
+      positions[(i * 3) + uAxis] !== positions[uAxis]
+    ) {
+      return {
+        axis,
+        uAxis,
+        vAxis,
+        swapped: tileUvs[i * 2] === tileUvs[0]
+      };
+    }
+  }
+
+  return null;
+}
+
+function isCorner(
+  value: number
+): boolean {
+  return value === 0 || value === 1;
 }

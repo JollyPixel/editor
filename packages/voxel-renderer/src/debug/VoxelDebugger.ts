@@ -52,6 +52,8 @@ export interface VoxelDebugStats {
   hiddenVoxels: number;
   faces: number;
   culledFaces: number;
+  /** Voxel faces greedy meshing folded into a neighbour's quad; 0 when off. */
+  mergedFaces: number;
   vertices: number;
   triangles: number;
   /** Sum of the last build time of every live chunk, not a frame cost. */
@@ -151,6 +153,7 @@ export class VoxelDebugger {
       hiddenVoxels: 0,
       faces: 0,
       culledFaces: 0,
+      mergedFaces: 0,
       vertices: 0,
       triangles: 0,
       buildTimeMs: 0
@@ -163,6 +166,7 @@ export class VoxelDebugger {
       total.hiddenVoxels += stats.hiddenVoxels;
       total.faces += stats.faces;
       total.culledFaces += stats.culledFaces;
+      total.mergedFaces += stats.mergedFaces;
       total.vertices += stats.vertices;
       total.triangles += stats.triangles;
       total.buildTimeMs += stats.buildTimeMs;

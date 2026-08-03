@@ -1,5 +1,12 @@
 // Import Internal Dependencies
 import type { VoxelEntry } from "./types.ts";
+import { VoxelStore } from "./VoxelStore.ts";
+import {
+  packVoxel,
+  unpackVoxel,
+  VOXEL_ABSENT,
+  type PackedVoxel
+} from "./packedVoxel.ts";
 
 // CONSTANTS
 export const DEFAULT_CHUNK_SIZE = 16;
@@ -7,28 +14,33 @@ export const DEFAULT_CHUNK_SIZE = 16;
 export type VoxelLinearCoords = [number, number, number];
 
 /**
- * A fixed-size 3-D grid of voxel data.
+ * Fixed-size 3-D voxel grid.
  * Local coordinates run from [0, size) on each axis.
- * Internally uses a sparse Map so empty chunks carry no memory cost.
+ * Empty chunks stay cheap because storage is a sparse `VoxelStore`.
  *
- * `dirty` is set to true by any write and cleared by VoxelRenderer after
- * the chunk's mesh has been rebuilt.
+ * Voxels are stored as packed integers, not objects. `get()` and `entries()`
+ * rebuild a `VoxelEntry` each time, so they do not preserve object identity.
+ * Hot paths should use the packed variants.
  */
 export class VoxelChunk {
-  /** Chunk coordinates (not world coordinates) */
+  /** Chunk coordinates (not world coordinates). */
   readonly cx: number;
   readonly cy: number;
   readonly cz: number;
   readonly size: number;
 
+  /**
+   * Backing storage. Exposed so mesh builders can walk `store.keys` and
+   * `store.values` directly; not part of the stable API.
+   */
+  readonly store = new VoxelStore();
+
   dirty = true;
 
-  #data = new Map<number, VoxelEntry>();
-
   /**
-   * Conservative local-space bounds of the written voxels. Only widened, never
-   * shrunk on delete, so it always contains every entry — see `mayContain()`.
-   * An empty chunk keeps the inverted range, which contains nothing.
+   * Conservative local-space bounds of written voxels. Only widened, never
+   * shrunk on delete, so it always contains every entry. See `mayContain()`.
+   * Empty chunks keep an inverted range, which contains nothing.
    */
   #minX: number;
   #minY: number;
@@ -79,15 +91,24 @@ export class VoxelChunk {
   }
 
   /**
-   * Same as `get()` without the tuple. Used on the mesh builder's hot path,
-   * where the array literal `get()` requires is allocated millions of times.
+   * Same as `get()` without the tuple.
    */
   getAt(
     lx: number,
     ly: number,
     lz: number
   ): VoxelEntry | undefined {
-    return this.#data.get(
+    const packed = this.getPackedAt(lx, ly, lz);
+
+    return packed === VOXEL_ABSENT ? undefined : unpackVoxel(packed);
+  }
+
+  getPackedAt(
+    lx: number,
+    ly: number,
+    lz: number
+  ): PackedVoxel {
+    return this.store.get(
       this.linearIndex(lx, ly, lz)
     );
   }
@@ -98,9 +119,20 @@ export class VoxelChunk {
   ): void {
     const [lx, ly, lz] = coords;
 
-    this.#data.set(
+    this.setPackedAt(
+      lx, ly, lz, packVoxel(entry.blockId, entry.transform)
+    );
+  }
+
+  setPackedAt(
+    lx: number,
+    ly: number,
+    lz: number,
+    packed: PackedVoxel
+  ): void {
+    this.store.set(
       this.linearIndex(lx, ly, lz),
-      entry
+      packed
     );
     this.dirty = true;
 
@@ -126,8 +158,7 @@ export class VoxelChunk {
 
   /**
    * False when the position is provably empty. A `true` result still needs a
-   * `getAt()` to confirm; the point is to answer the common "nowhere near any
-   * voxel" case with six comparisons instead of a hash lookup.
+   * `getPackedAt()` to confirm, so this is a cheap pre-check.
    */
   mayContain(
     lx: number,
@@ -143,7 +174,7 @@ export class VoxelChunk {
     coords: VoxelLinearCoords
   ): boolean {
     const [lx, ly, lz] = coords;
-    const deleted = this.#data.delete(
+    const deleted = this.store.delete(
       this.linearIndex(lx, ly, lz)
     );
     if (deleted) {
@@ -154,15 +185,33 @@ export class VoxelChunk {
   }
 
   isEmpty(): boolean {
-    return this.#data.size === 0;
+    return this.store.size === 0;
   }
 
-  entries(): IterableIterator<[number, VoxelEntry]> {
-    return this.#data.entries();
+  * entries(): IterableIterator<[number, VoxelEntry]> {
+    const { keys, values, capacity } = this.store;
+
+    for (let slot = 0; slot < capacity; slot++) {
+      const key = keys[slot];
+      if (key >= 0) {
+        yield [key, unpackVoxel(values[slot])];
+      }
+    }
+  }
+
+  * packedEntries(): IterableIterator<[number, PackedVoxel]> {
+    const { keys, values, capacity } = this.store;
+
+    for (let slot = 0; slot < capacity; slot++) {
+      const key = keys[slot];
+      if (key >= 0) {
+        yield [key, values[slot]];
+      }
+    }
   }
 
   get voxelCount(): number {
-    return this.#data.size;
+    return this.store.size;
   }
 
   toString(): string {

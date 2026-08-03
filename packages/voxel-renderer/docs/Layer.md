@@ -121,11 +121,16 @@ if (!chunk) {}
 ### getVoxelAt(position: Vector3Like): VoxelEntry | undefined
 
 Read a voxel at world-space `position` (offset is applied).
-Returns the `VoxelEntry` or `undefined` if empty.
+Returns a freshly built `VoxelEntry`, or `undefined` if empty — see the
+[storage note](./Chunk.md#storage) on why the result is never `===` what was written.
 
 ```ts
 const entry = layer.getVoxelAt({ x: 10, y: 5, z: 0 });
 ```
+
+### getPackedVoxelAt(position: Vector3Like): PackedVoxel
+
+Allocation-free `getVoxelAt`, returning `VOXEL_ABSENT` (`-1`) for air.
 
 ### setVoxelAt(position: Vector3Like, entry: VoxelEntry): void
 
@@ -134,6 +139,10 @@ Set a voxel at world-space `position`. Allocates a chunk if necessary and marks 
 ```ts
 layer.setVoxelAt({ x: 0, y: 0, z: 0 }, { blockId: 3, transform: 0 });
 ```
+
+### setPackedVoxelAt(position: Vector3Like, packed: PackedVoxel): void
+
+Allocation-free `setVoxelAt`, taking the value `packVoxel()` produces.
 
 ### removeVoxelAt(position: Vector3Like): void
 

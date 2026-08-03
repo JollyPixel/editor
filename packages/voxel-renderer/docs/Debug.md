@@ -74,6 +74,8 @@ interface VoxelDebugStats {
   faces: number;
   /** Faces skipped because an opaque neighbour occludes them. */
   culledFaces: number;
+  /** Voxel faces greedy meshing folded into a neighbour's quad; 0 when off. */
+  mergedFaces: number;
   vertices: number;
   triangles: number;
   /** Sum of the last build time of every live chunk, not a frame cost. */
@@ -87,6 +89,16 @@ ratio directly readable:
 ```ts
 const { faces, culledFaces } = engine.debug.stats;
 const ratio = (culledFaces / (faces + culledFaces)) * 100;
+```
+
+With [greedy meshing](./VoxelEngine.md#greedy-meshing) on, `faces` counts quads
+rather than voxel faces, and `mergedFaces` is how many extra voxel faces those
+quads absorbed. `faces + mergedFaces` is therefore what the naive builder would
+have emitted, which makes the merge ratio readable the same way:
+
+```ts
+const { faces, mergedFaces } = engine.debug.stats;
+const ratio = (mergedFaces / (faces + mergedFaces)) * 100;
 ```
 
 Counters for a single chunk are available on the mesh builder itself as

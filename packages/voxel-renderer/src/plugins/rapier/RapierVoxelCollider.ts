@@ -10,6 +10,7 @@ import { mergeChunkGeometries } from "../../collision/mergeChunkGeometries.ts";
 import type { BlockRegistry } from "../../blocks/BlockRegistry.ts";
 import type { BlockShapeRegistry } from "../../blocks/BlockShapeRegistry.ts";
 import type { VoxelChunk } from "../../world/VoxelChunk.ts";
+import { voxelBlockId } from "../../world/packedVoxel.ts";
 import type { VoxelCoord } from "../../world/types.ts";
 import type {
   RapierAPI,
@@ -126,8 +127,8 @@ export class RapierVoxelCollider implements VoxelCollider {
     const solids: SolidVoxel[] = [];
     let hasTrimesh = false;
 
-    for (const [idx, entry] of chunk.entries()) {
-      const blockDef = this.#blockRegistry.get(entry.blockId);
+    for (const [idx, packed] of chunk.packedEntries()) {
+      const blockDef = this.#blockRegistry.get(voxelBlockId(packed));
       if (!blockDef?.collidable) {
         continue;
       }

@@ -94,8 +94,7 @@ export class ActorTree<
     const isLastPattern = patternIndex === patternParts.length - 1;
 
     const matchers = new Map<string, (name: string) => boolean>();
-    // eslint-disable-next-line func-style
-    const matchSinglePattern = (name: string, pattern: string) => {
+    function matchSinglePattern(name: string, pattern: string) {
       let matcher = matchers.get(pattern);
       if (!matcher) {
         matcher = pm(pattern);
@@ -103,7 +102,7 @@ export class ActorTree<
       }
 
       return matcher(name);
-    };
+    }
 
     if (currentPattern === "**") {
       if (isLastPattern) {

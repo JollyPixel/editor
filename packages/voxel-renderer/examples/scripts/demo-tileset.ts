@@ -140,4 +140,10 @@ for (let row = 0; row < kRows; row++) {
 // ── Animation loop ─────────────────────────────────────────────────────────────
 
 createExamplesMenu();
-startLoop(renderer, scene, camera, controls, labelEntries);
+startLoop({
+  renderer,
+  scene,
+  camera,
+  controls,
+  labelEntries
+});

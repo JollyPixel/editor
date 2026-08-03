@@ -21,12 +21,18 @@ interface VoxelCoord {
 
 interface VoxelEntry {
   // references BlockDefinition.id;
-  // 0 = air (never stored)
+  // 0 = air (never stored), capped at MAX_BLOCK_ID (2^23 - 1)
   blockId: number;
   // packed rotation + flip flags
   transform: number;
 }
 ```
+
+> [!IMPORTANT]
+> `VoxelEntry` is a value type, not a handle. Chunks store voxels as packed integers
+> (see [Chunk](./Chunk.md#storage)), so every read rebuilds the object: compare results
+> with a deep equality check, never `===`. Use the `Packed` accessors on hot paths to
+> skip the allocation entirely.
 
 ## VoxelWorld
 
@@ -96,6 +102,10 @@ All layers, sorted highest `order` first.
 Composited read — returns the voxel from the highest-priority visible layer (`opacity > 0`)
 at that position. Returns `undefined` for air.
 
+#### `getPackedVoxelAt(position: VoxelCoord): PackedVoxel`
+
+Allocation-free `getVoxelAt`, returning `VOXEL_ABSENT` (`-1`) for air.
+
 #### `getVoxelWithLayerAt(position: VoxelCoord): { entry: VoxelEntry; layer: VoxelLayer } | undefined`
 
 Same compositing rules as `getVoxelAt`, but also returns the owning `VoxelLayer` so callers
@@ -106,6 +116,8 @@ can inspect layer-level properties (e.g. `opacity`) of the resolved voxel.
 Composited read of the voxel immediately adjacent to `position` in the given face direction.
 
 #### `setVoxelAt(layerName: string, position: VoxelCoord, entry: VoxelEntry): void`
+
+#### `setPackedVoxelAt(layerName: string, position: VoxelCoord, packed: PackedVoxel): void`
 
 Writes a voxel directly and marks neighbouring chunks dirty for boundary face re-evaluation.
 Throws if the layer is not found. Prefer `VoxelEngine.setVoxel` to handle rotation packing.

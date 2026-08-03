@@ -21,14 +21,15 @@ const kCols = 4;
  * measured — voxel writes and mesh build — so a change here is directly
  * comparable to what the in-browser HUD shows.
  *
- * Usage: node bench/mesh-build.bench.ts [--size 1024] [--chunk 256] [--runs 3]
+ * Usage: node bench/mesh-build.bench.ts [--size 1024] [--chunk 256] [--runs 3] [--greedy]
  */
 const { values } = parseArgs({
   options: {
     size: { type: "string", default: "1024" },
     chunk: { type: "string", default: "256" },
     seed: { type: "string", default: "1337" },
-    runs: { type: "string", default: "3" }
+    runs: { type: "string", default: "3" },
+    greedy: { type: "boolean", default: false }
   }
 });
 
@@ -36,13 +37,15 @@ const size = Number(values.size);
 const chunkSize = Number(values.chunk);
 const seed = Number(values.seed);
 const runs = Number(values.runs);
+const greedy = values.greedy;
 
 for (let run = 0; run < runs; run++) {
   const engine = new VoxelEngine({
     chunkSize,
     layers: [kTerrainLayer, kWaterLayer],
     blocks: terrainBlocks(),
-    alphaTest: 0.5
+    alphaTest: 0.5,
+    greedy
   });
   engine.tilesetManager.registerTexture(
     { id: "terrain", src: "memory://terrain", tileSize: kTileSize, cols: kCols, rows: 2 },
@@ -64,19 +67,31 @@ for (let run = 0; run < runs; run++) {
   const meshMs = performance.now() - meshStart;
 
   const { triangles, vertices } = countGeometry(engine);
+  // Voxels live in typed arrays, geometry in THREE buffers: both land in
+  // `arrayBuffers`, not `heapUsed`. Reporting heap alone hides most of the cost.
+  const { heapUsed, arrayBuffers, rss } = process.memoryUsage();
   console.log(
     [
       `run ${run + 1}/${runs}`,
+      greedy ? "greedy" : "naive ",
       `voxels ${terrain.voxelCount.toLocaleString("en-US")}`,
       `generate ${generateMs.toFixed(1)}ms`,
       `mesh ${meshMs.toFixed(1)}ms`,
       `tris ${triangles.toLocaleString("en-US")}`,
       `verts ${vertices.toLocaleString("en-US")}`,
-      `heap ${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(0)}MB`
+      `heap ${mb(heapUsed)}`,
+      `buffers ${mb(arrayBuffers)}`,
+      `rss ${mb(rss)}`
     ].join("  |  ")
   );
 
   engine.dispose();
+}
+
+function mb(
+  bytes: number
+): string {
+  return `${(bytes / 1024 / 1024).toFixed(0)}MB`;
 }
 
 function countGeometry(

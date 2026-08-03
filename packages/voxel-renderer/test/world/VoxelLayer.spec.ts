@@ -123,7 +123,7 @@ describe("setVoxelAt / getVoxelAt round-trip", () => {
     const layer = makeLayer();
     const entry = makeEntry(7, 3);
     layer.setVoxelAt({ x: 2, y: 1, z: 3 }, entry);
-    assert.equal(layer.getVoxelAt({ x: 2, y: 1, z: 3 }), entry);
+    assert.deepEqual(layer.getVoxelAt({ x: 2, y: 1, z: 3 }), entry);
   });
 
   it("returns undefined for positions not set", () => {
@@ -153,7 +153,7 @@ describe("negative coordinates", () => {
     const layer = makeLayer();
     const entry = makeEntry(3);
     layer.setVoxelAt({ x: -1, y: 0, z: -1 }, entry);
-    assert.equal(layer.getVoxelAt({ x: -1, y: 0, z: -1 }), entry);
+    assert.deepEqual(layer.getVoxelAt({ x: -1, y: 0, z: -1 }), entry);
   });
 
   it("negative x=-1 lands in chunk cx=-1", () => {
@@ -171,8 +171,8 @@ describe("negative coordinates", () => {
     const entryPos = makeEntry(2);
     layer.setVoxelAt({ x: -1, y: 0, z: 0 }, entryNeg);
     layer.setVoxelAt({ x: 3, y: 0, z: 0 }, entryPos);
-    assert.equal(layer.getVoxelAt({ x: -1, y: 0, z: 0 }), entryNeg);
-    assert.equal(layer.getVoxelAt({ x: 3, y: 0, z: 0 }), entryPos);
+    assert.deepEqual(layer.getVoxelAt({ x: -1, y: 0, z: 0 }), entryNeg);
+    assert.deepEqual(layer.getVoxelAt({ x: 3, y: 0, z: 0 }), entryPos);
   });
 });
 
@@ -184,14 +184,14 @@ describe("offset arithmetic", () => {
     // local x = 8-8 = 0 → cx=0
     const chunk = layer.getChunk(0, 0, 0);
     assert.ok(chunk !== undefined);
-    assert.equal(layer.getVoxelAt({ x: 8, y: 0, z: 0 }), entry);
+    assert.deepEqual(layer.getVoxelAt({ x: 8, y: 0, z: 0 }), entry);
   });
 
   it("offset shifts all accesses by the same amount", () => {
     const layer = makeLayer({ chunkSize: 16, offset: { x: 100, y: 0, z: 0 } });
     const entry = makeEntry(42);
     layer.setVoxelAt({ x: 100, y: 0, z: 0 }, entry);
-    assert.equal(layer.getVoxelAt({ x: 100, y: 0, z: 0 }), entry);
+    assert.deepEqual(layer.getVoxelAt({ x: 100, y: 0, z: 0 }), entry);
     assert.equal(layer.getVoxelAt({ x: 99, y: 0, z: 0 }), undefined);
   });
 });
@@ -312,7 +312,7 @@ describe("VoxelLayer mergeFrom", () => {
 
     target.mergeFrom(source);
 
-    assert.equal(target.getVoxelAt({ x: 2, y: 1, z: 3 }), entry);
+    assert.deepEqual(target.getVoxelAt({ x: 2, y: 1, z: 3 }), entry);
   });
 
   it("applies source offset: voxel at local (1,0,0) with source offset {5,0,0} lands at world (6,0,0)", () => {
@@ -324,7 +324,7 @@ describe("VoxelLayer mergeFrom", () => {
 
     target.mergeFrom(source);
 
-    assert.equal(target.getVoxelAt({ x: 6, y: 0, z: 0 }), entry);
+    assert.deepEqual(target.getVoxelAt({ x: 6, y: 0, z: 0 }), entry);
     assert.equal(target.getVoxelAt({ x: 1, y: 0, z: 0 }), undefined);
   });
 
@@ -337,7 +337,7 @@ describe("VoxelLayer mergeFrom", () => {
     target.mergeFrom(source);
 
     // World (6,0,0) should be in target (local (3,0,0))
-    assert.equal(target.getVoxelAt({ x: 6, y: 0, z: 0 }), entry);
+    assert.deepEqual(target.getVoxelAt({ x: 6, y: 0, z: 0 }), entry);
   });
 
   it("source voxel overwrites existing target voxel at same world position", () => {
@@ -350,7 +350,7 @@ describe("VoxelLayer mergeFrom", () => {
 
     target.mergeFrom(source);
 
-    assert.equal(target.getVoxelAt({ x: 0, y: 0, z: 0 }), overwrite);
+    assert.deepEqual(target.getVoxelAt({ x: 0, y: 0, z: 0 }), overwrite);
   });
 
   it("source layer is not modified after merge", () => {
@@ -361,7 +361,7 @@ describe("VoxelLayer mergeFrom", () => {
 
     target.mergeFrom(source);
 
-    assert.equal(source.getVoxelAt({ x: 1, y: 1, z: 1 }), entry);
+    assert.deepEqual(source.getVoxelAt({ x: 1, y: 1, z: 1 }), entry);
     assert.equal(source.chunkCount, 1);
   });
 });

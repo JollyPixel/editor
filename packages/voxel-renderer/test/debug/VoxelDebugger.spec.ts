@@ -120,6 +120,7 @@ describe("VoxelDebugger — statistics", () => {
       hiddenVoxels: 0,
       faces: 0,
       culledFaces: 0,
+      mergedFaces: 0,
       vertices: 0,
       triangles: 0,
       buildTimeMs: 0

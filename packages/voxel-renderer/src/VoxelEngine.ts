@@ -35,6 +35,7 @@ import {
   type TilesetDefinition
 } from "./tileset/TilesetManager.ts";
 import type { TilesetLoader } from "./tileset/TilesetLoader.ts";
+import { enableTileWrapping } from "./tileset/tileWrapping.ts";
 import { VoxelWorld } from "./world/VoxelWorld.ts";
 import {
   VoxelLayer,
@@ -173,6 +174,24 @@ export interface VoxelEngineOptions {
   tilesetPadding?: number;
 
   /**
+   * Merge coplanar identical block faces into the largest quads possible
+   * (greedy meshing) instead of emitting one quad per voxel face. Cuts the
+   * triangle count by roughly 3× on terrain-like worlds; the win grows with how
+   * flat and uniform the world is.
+   *
+   * Only faces that are a full unit quad on the block boundary merge — cubes,
+   * slabs, the base and back of a ramp. Slopes, stair risers and poles keep
+   * emitting one quad per voxel, so mixed worlds render identically either way.
+   *
+   * Chunk materials are compiled with a shader that repeats a single atlas tile
+   * across a merged quad, which makes this incompatible with a
+   * `materialCustomizer` that overrides `onBeforeCompile` or swaps `map` UVs.
+   * Can be toggled at runtime through `engine.greedy`.
+   * @default false
+   */
+  greedy?: boolean;
+
+  /**
    * Optional pre-loaded tileset collection. All tilesets in the loader are
    * registered synchronously during construction so no async is needed inside
    * lifecycle methods. Use `TilesetLoader.fromTileDefinition()` or
@@ -253,7 +272,8 @@ export class VoxelEngine {
       onLayerUpdated,
       debug,
       tilesetPadding,
-      tilesetLoader
+      tilesetLoader,
+      greedy = false
     } = options;
 
     this.root.name = "VoxelEngine";
@@ -292,7 +312,8 @@ export class VoxelEngine {
       world: this.world,
       blockRegistry: this.blockRegistry,
       shapeRegistry: this.shapeRegistry,
-      tilesetManager: this.tilesetManager
+      tilesetManager: this.tilesetManager,
+      greedy
     });
 
     this.#collider = collider?.({
@@ -349,6 +370,33 @@ export class VoxelEngine {
     this.#materials.clear();
 
     this.tilesetManager.dispose();
+  }
+
+  /**
+   * Whether chunks are meshed with greedy face merging.
+   * See `VoxelEngineOptions.greedy`.
+   */
+  get greedy(): boolean {
+    return this.#meshBuilder.greedy;
+  }
+
+  /**
+   * Switches meshing mode and rebuilds the world. Geometry and materials are
+   * both mode-specific, so the cached materials are dropped along with the
+   * meshes.
+   */
+  set greedy(value: boolean) {
+    if (value === this.#meshBuilder.greedy) {
+      return;
+    }
+
+    this.#meshBuilder.greedy = value;
+    for (const material of this.#materials.values()) {
+      material.dispose();
+    }
+    this.#materials.clear();
+    this.#disposeChunkMeshes();
+    this.markAllChunksDirty("greedy");
   }
 
   // --- Hook management --- //
@@ -964,6 +1012,12 @@ export class VoxelEngine {
     }
     else {
       material = new THREE.MeshLambertMaterial(materialOptions);
+    }
+
+    // Greedy meshing emits quads spanning several voxels; without this the tile
+    // would stretch across the whole quad instead of repeating over it.
+    if (this.#meshBuilder.greedy) {
+      enableTileWrapping(material);
     }
     this.#materialCustomizer?.(material, tilesetId);
 
