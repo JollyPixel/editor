@@ -11,12 +11,13 @@ import {
 import {
   FACE_OFFSETS,
   FACE_OPPOSITE
-} from "./math.ts";
+} from "../utils/math.ts";
 
 // CONSTANTS
 const kDirections = 6;
 /** Marks a variant that owns no mergeable face, so the sweep can skip it. */
 const kNotMergeable = -1;
+const kInitialLocalVariants = 16;
 
 export type GeometryBufferFactory = (slot: number) => GeometryBuffer;
 
@@ -32,6 +33,28 @@ function strideOf(
   return axis === 1 ? size : size * size;
 }
 
+/** Grows one slice's `(u, v)` extents to contain a newly written cell. */
+function widenSlice(
+  min: Int32Array,
+  max: Int32Array,
+  bound: number,
+  u: number,
+  v: number
+): void {
+  if (u < min[bound]) {
+    min[bound] = u;
+  }
+  if (u > max[bound]) {
+    max[bound] = u;
+  }
+  if (v < min[bound + 1]) {
+    min[bound + 1] = v;
+  }
+  if (v > max[bound + 1]) {
+    max[bound + 1] = v;
+  }
+}
+
 /** Options shared by both mesh passes, naive and greedy. */
 export interface MeshPassOptions {
   chunk: VoxelChunk;
@@ -40,8 +63,6 @@ export interface MeshPassOptions {
   worldOriginX: number;
   worldOriginY: number;
   worldOriginZ: number;
-  /** The owning layer's opacity as an 8-bit value. */
-  alpha: number;
   stats: MeshBuildStats;
   bufferFor: GeometryBufferFactory;
 }
@@ -83,7 +104,14 @@ export class GreedyMesher {
    * resolve a cell with an array read instead of a hash lookup.
    */
   #localVariants: BlockVariant[] = [];
-  #localIndices = new Map<BlockVariant, number>();
+  /**
+   * Bit `d` set when the local variant at that index owns a mergeable face in
+   * direction `d`. Lifts the per-cell `mergeFaces[direction]` probe out of the
+   * mask-building loop.
+   */
+  #mergeableDirections = new Uint8Array(kInitialLocalVariants);
+  /** Bumped per chunk; stamps `BlockVariant.sweepEpoch` in place of a Map. */
+  #epoch = 0;
 
   // Per-chunk state, set by `mesh()` so the passes stay parameter-free.
   #chunk!: VoxelChunk;
@@ -91,13 +119,29 @@ export class GreedyMesher {
   #originX = 0;
   #originY = 0;
   #originZ = 0;
-  #alpha = 255;
   #stats!: MeshBuildStats;
   #bufferFor!: GeometryBufferFactory;
 
   #min = [0, 0, 0];
   #max = [-1, -1, -1];
   #emitted = false;
+
+  /**
+   * Per-slice in-plane extents, one pair of arrays per world axis, each holding
+   * `(u, v)` per slice. The chunk's whole bounding box is a poor proxy for one
+   * slice of it — a terrain chunk is nearly empty in most of its box — so the
+   * sweep reads these instead. Filled by `#fillGrid()`, which already visits
+   * every voxel.
+   */
+  #sliceMin: Int32Array[] = [];
+  #sliceMax: Int32Array[] = [];
+
+  // Extents of the slice being swept, set by `#sweep()` so the two passes over
+  // it agree without recomputing them.
+  #uMin = 0;
+  #uMax = -1;
+  #vMin = 0;
+  #vMax = -1;
 
   // The three world axes of the direction being swept: the one the slices are
   // perpendicular to, plus the two in-plane axes the mask is indexed by. All
@@ -127,14 +171,13 @@ export class GreedyMesher {
     this.#originX = options.worldOriginX;
     this.#originY = options.worldOriginY;
     this.#originZ = options.worldOriginZ;
-    this.#alpha = options.alpha;
     this.#stats = options.stats;
     this.#bufferFor = options.bufferFor;
     this.#emitted = false;
 
     this.#resize(chunk.size);
     this.#localVariants.length = 0;
-    this.#localIndices.clear();
+    this.#epoch++;
 
     if (this.#fillGrid()) {
       for (let direction = 0; direction < kDirections; direction++) {
@@ -156,6 +199,16 @@ export class GreedyMesher {
     this.#size = size;
     this.#grid = new Int32Array(size * size * size);
     this.#mask = new Int32Array(size * size);
+    this.#sliceMin = [
+      new Int32Array(size * 2),
+      new Int32Array(size * 2),
+      new Int32Array(size * 2)
+    ];
+    this.#sliceMax = [
+      new Int32Array(size * 2),
+      new Int32Array(size * 2),
+      new Int32Array(size * 2)
+    ];
   }
 
   /**
@@ -164,14 +217,19 @@ export class GreedyMesher {
    * which lets `mesh()` skip all six passes.
    */
   #fillGrid(): boolean {
-    const { size } = this.#chunk;
+    const { size, shift, mask } = this.#chunk;
+    const shiftZ = shift * 2;
     const stats = this.#stats;
     const min = [size, size, size];
     const max = [-1, -1, -1];
-    // A power-of-two chunk size turns the index decode into shifts and masks.
-    const shift = (size & (size - 1)) === 0 ? Math.log2(size) : -1;
-    const bits = size - 1;
     const { keys, values, capacity } = this.#chunk.store;
+    // Inverted ranges: a slice nothing writes to stays "empty" and is skipped.
+    const sliceMinX = this.#sliceMin[0].fill(size);
+    const sliceMaxX = this.#sliceMax[0].fill(-1);
+    const sliceMinY = this.#sliceMin[1].fill(size);
+    const sliceMaxY = this.#sliceMax[1].fill(-1);
+    const sliceMinZ = this.#sliceMin[2].fill(size);
+    const sliceMaxZ = this.#sliceMax[2].fill(-1);
     let filled = false;
 
     for (let slot = 0; slot < capacity; slot++) {
@@ -180,13 +238,9 @@ export class GreedyMesher {
         continue;
       }
 
-      const lx = shift >= 0 ? linearIdx & bits : linearIdx % size;
-      const ly = shift >= 0 ?
-        (linearIdx >> shift) & bits :
-        ((linearIdx / size) | 0) % size;
-      const lz = shift >= 0 ?
-        linearIdx >> (shift * 2) :
-        (linearIdx / (size * size)) | 0;
+      const lx = linearIdx & mask;
+      const ly = (linearIdx >> shift) & mask;
+      const lz = linearIdx >> shiftZ;
       const wx = this.#originX + lx;
       const wy = this.#originY + ly;
       const wz = this.#originZ + lz;
@@ -215,6 +269,12 @@ export class GreedyMesher {
 
       this.#grid[linearIdx] = local + 1;
       filled = true;
+
+      // Slices perpendicular to X are indexed by lx and spanned by (ly, lz);
+      // the other two axes follow the same (uAxis, vAxis) order `#sweep()` uses.
+      widenSlice(sliceMinX, sliceMaxX, lx * 2, ly, lz);
+      widenSlice(sliceMinY, sliceMaxY, ly * 2, lx, lz);
+      widenSlice(sliceMinZ, sliceMaxZ, lz * 2, lx, ly);
 
       if (lx < min[0]) {
         min[0] = lx;
@@ -274,7 +334,7 @@ export class GreedyMesher {
         }
       }
 
-      this.#bufferFor(face.slot).addFace(face, wx, wy, wz, this.#alpha);
+      this.#bufferFor(face.slot).addFace(face, wx, wy, wz);
       stats.faces++;
       this.#emitted = true;
     }
@@ -285,18 +345,39 @@ export class GreedyMesher {
    * sweep can stretch (a stair, for instance).
    *
    * `BlockVariantCache` memoizes one object per (block, transform), so the
-   * variant itself is the key — no need to re-derive how the cache packs one.
+   * answer is stamped onto the variant under the current epoch rather than kept
+   * in a side map keyed by it.
    */
   #localIndexOf(
     variant: BlockVariant
   ): number {
-    let local = this.#localIndices.get(variant);
-    if (local === undefined) {
-      local = variant.mergeFaces.some((face) => face !== undefined) ?
-        this.#localVariants.push(variant) - 1 :
-        kNotMergeable;
-      this.#localIndices.set(variant, local);
+    if (variant.sweepEpoch === this.#epoch) {
+      return variant.sweepIndex;
     }
+    variant.sweepEpoch = this.#epoch;
+
+    const { mergeFaces } = variant;
+    let directions = 0;
+    for (let direction = 0; direction < kDirections; direction++) {
+      if (mergeFaces[direction] !== undefined) {
+        directions |= 1 << direction;
+      }
+    }
+
+    if (directions === 0) {
+      variant.sweepIndex = kNotMergeable;
+
+      return kNotMergeable;
+    }
+
+    const local = this.#localVariants.push(variant) - 1;
+    if (local >= this.#mergeableDirections.length) {
+      const grown = new Uint8Array(this.#mergeableDirections.length * 2);
+      grown.set(this.#mergeableDirections);
+      this.#mergeableDirections = grown;
+    }
+    this.#mergeableDirections[local] = directions;
+    variant.sweepIndex = local;
 
     return local;
   }
@@ -312,9 +393,23 @@ export class GreedyMesher {
     this.#uAxis = axis === 0 ? 1 : 0;
     this.#vAxis = axis === 2 ? 1 : 2;
 
+    const sliceMin = this.#sliceMin[axis];
+    const sliceMax = this.#sliceMax[axis];
     const last = this.#max[axis];
 
     for (let slice = this.#min[axis]; slice <= last; slice++) {
+      const bound = slice * 2;
+      const uMin = sliceMin[bound];
+      const uMax = sliceMax[bound];
+      if (uMax < uMin) {
+        continue;
+      }
+
+      this.#uMin = uMin;
+      this.#uMax = uMax;
+      this.#vMin = sliceMin[bound + 1];
+      this.#vMax = sliceMax[bound + 1];
+
       if (this.#buildMask(direction, slice)) {
         this.#mergeMask(direction, slice);
       }
@@ -337,6 +432,8 @@ export class GreedyMesher {
     const mask = this.#mask;
     const grid = this.#grid;
     const stats = this.#stats;
+    const mergeable = this.#mergeableDirections;
+    const directionBit = 1 << direction;
     const offset = FACE_OFFSETS[direction];
     const opposite = FACE_OPPOSITE[direction];
     // Walking the grid by stride keeps the (u, v) → linear index mapping out of
@@ -344,10 +441,10 @@ export class GreedyMesher {
     const strideU = strideOf(uAxis, size);
     const strideV = strideOf(vAxis, size);
     const sliceBase = slice * strideOf(axis, size);
-    const uMin = this.#min[uAxis];
-    const uMax = this.#max[uAxis];
-    const vMin = this.#min[vAxis];
-    const vMax = this.#max[vAxis];
+    const uMin = this.#uMin;
+    const uMax = this.#uMax;
+    const vMin = this.#vMin;
+    const vMax = this.#vMax;
     let found = false;
 
     for (let u = uMin; u <= uMax; u++) {
@@ -358,7 +455,7 @@ export class GreedyMesher {
         const cell = grid[rowBase + (v * strideV)];
         let value = 0;
 
-        if (cell !== 0 && this.#localVariants[cell - 1].mergeFaces[direction] !== undefined) {
+        if (cell !== 0 && (mergeable[cell - 1] & directionBit) !== 0) {
           const lx = axis === 0 ? slice : u;
           const lz = axis === 2 ? slice : v;
           // X and Z are a single comparison each; only Y depends on all three axes.
@@ -403,39 +500,38 @@ export class GreedyMesher {
     slice: number
   ): void {
     const axis = this.#axis;
-    const uAxis = this.#uAxis;
-    const vAxis = this.#vAxis;
     const size = this.#size;
     const mask = this.#mask;
     const stats = this.#stats;
-    const uMin = this.#min[uAxis];
-    const uMax = this.#max[uAxis];
-    const vMin = this.#min[vAxis];
-    const vMax = this.#max[vAxis];
+    const uMin = this.#uMin;
+    const uMax = this.#uMax;
+    const vMin = this.#vMin;
+    const vMax = this.#vMax;
 
     for (let u = uMin; u <= uMax; u++) {
+      const rowBase = u * size;
+
       for (let v = vMin; v <= vMax;) {
-        const cell = mask[(u * size) + v];
+        const cell = mask[rowBase + v];
         if (cell === 0) {
           v++;
           continue;
         }
 
         let spanV = 1;
-        while (v + spanV <= vMax && mask[(u * size) + v + spanV] === cell) {
+        while (v + spanV <= vMax && mask[rowBase + v + spanV] === cell) {
           spanV++;
         }
 
         let spanU = 1;
         while (
           u + spanU <= uMax &&
-          this.#rowMatches(((u + spanU) * size) + v, spanV, cell)
+          this.#rowMatches(rowBase + (spanU * size) + v, spanV, cell)
         ) {
           spanU++;
         }
 
-        for (let a = 0; a < spanU; a++) {
-          const row = (u + a) * size;
+        for (let a = 0, row = rowBase; a < spanU; a++, row += size) {
           for (let b = 0; b < spanV; b++) {
             mask[row + v + b] = 0;
           }
@@ -458,7 +554,6 @@ export class GreedyMesher {
           this.#originX + lx,
           this.#originY + ly,
           this.#originZ + lz,
-          this.#alpha,
           spanU,
           spanV
         );

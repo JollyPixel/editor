@@ -78,6 +78,10 @@ interface VoxelDebugStats {
   mergedFaces: number;
   vertices: number;
   triangles: number;
+  /** faces / (voxels - hiddenVoxels). Falls 3-20x under greedy meshing. */
+  facesPerSolidVoxel: number;
+  /** Vertex attributes emitted, in bytes per vertex; indices excluded. */
+  bytesPerVertex: number;
   /** Sum of the last build time of every live chunk, not a frame cost. */
   buildTimeMs: number;
 }
@@ -100,6 +104,16 @@ have emitted, which makes the merge ratio readable the same way:
 const { faces, mergedFaces } = engine.debug.stats;
 const ratio = (mergedFaces / (faces + mergedFaces)) * 100;
 ```
+
+The two derived figures are the ones worth watching for regressions:
+
+- `facesPerSolidVoxel` should drop 3-20x the moment greedy meshing is on. If it
+  does not, a merge predicate has become too strict and the sweep is silently
+  falling back to the per-voxel path.
+- `bytesPerVertex` is read off the emitted geometries, not off a constant, so an
+  attribute that quietly widens (or a dropped one that comes back) shows up here
+  with no code change needed. Expect 19 naive, 35 with greedy meshing, whose
+  `tileRegion`/`tileRepeat` attributes and float tile UVs cost the difference.
 
 Counters for a single chunk are available on the mesh builder itself as
 `MeshBuildStats`; `VoxelDebugger` keeps a copy per chunk key and aggregates them

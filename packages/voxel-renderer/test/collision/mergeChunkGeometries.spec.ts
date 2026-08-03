@@ -113,3 +113,29 @@ describe("mergeChunkGeometries", () => {
     assert.equal(merged, null);
   });
 });
+
+describe("mergeChunkGeometries — buffer types", () => {
+  it("allocates typed arrays rather than boxed number arrays", () => {
+    const merged = mergeChunkGeometries(new Map([
+      ["a", makeTriangle(0)],
+      ["b", makeTriangle(10)]
+    ]));
+
+    assert.ok(merged);
+    assert.ok(merged.geometry.getAttribute("position").array instanceof Float32Array);
+    assert.ok(merged.geometry.getIndex()!.array instanceof Uint32Array);
+  });
+
+  it("preserves every vertex of every source geometry", () => {
+    const merged = mergeChunkGeometries(new Map([
+      ["a", makeTriangle(0)],
+      ["b", makeTriangle(10)]
+    ]));
+
+    assert.ok(merged);
+    assert.deepEqual(
+      [...merged.geometry.getAttribute("position").array],
+      [0, 0, 0, 1, 0, 0, 0, 1, 0, 10, 0, 0, 11, 0, 0, 10, 1, 0]
+    );
+  });
+});

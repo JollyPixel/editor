@@ -15,7 +15,7 @@ import {
 import {
   FACE_OFFSETS,
   FACE_OPPOSITE
-} from "./math.ts";
+} from "../utils/math.ts";
 import { BlockVariantCache } from "./BlockVariantCache.ts";
 import { GeometryBuffer } from "./GeometryBuffer.ts";
 import { MeshBuildStats } from "./MeshBuildStats.ts";
@@ -164,7 +164,6 @@ export class VoxelMeshBuilder {
       worldOriginX,
       worldOriginY,
       worldOriginZ,
-      alpha: Math.round(layer.opacity * 255),
       stats,
       bufferFor: this.#bufferFor
     };
@@ -191,14 +190,10 @@ export class VoxelMeshBuilder {
       worldOriginX,
       worldOriginY,
       worldOriginZ,
-      alpha,
       stats
     } = options;
-    const size = chunk.size;
-    // Decoding the linear index costs two divisions and two modulos per voxel;
-    // a power-of-two chunk size turns both into shifts and masks.
-    const shift = (size & (size - 1)) === 0 ? Math.log2(size) : -1;
-    const mask = size - 1;
+    const { shift, mask } = chunk;
+    const shiftZ = shift * 2;
     const { keys, values, capacity } = chunk.store;
     let emitted = false;
 
@@ -208,19 +203,9 @@ export class VoxelMeshBuilder {
         continue;
       }
 
-      let lx: number;
-      let ly: number;
-      let lz: number;
-      if (shift >= 0) {
-        lx = linearIdx & mask;
-        ly = (linearIdx >> shift) & mask;
-        lz = linearIdx >> (shift * 2);
-      }
-      else {
-        lx = linearIdx % size;
-        ly = ((linearIdx / size) | 0) % size;
-        lz = (linearIdx / (size * size)) | 0;
-      }
+      const lx = linearIdx & mask;
+      const ly = (linearIdx >> shift) & mask;
+      const lz = linearIdx >> shiftZ;
 
       const wx = worldOriginX + lx;
       const wy = worldOriginY + ly;
@@ -257,7 +242,7 @@ export class VoxelMeshBuilder {
           }
         }
 
-        this.#bufferFor(face.slot).addFace(face, wx, wy, wz, alpha);
+        this.#bufferFor(face.slot).addFace(face, wx, wy, wz);
         stats.faces++;
         emitted = true;
       }
@@ -282,12 +267,30 @@ export class VoxelMeshBuilder {
         continue;
       }
 
+      const geometry = buffer.toGeometry();
       stats.vertices += buffer.vertexCount;
       stats.triangles += buffer.indexCount / 3;
       stats.geometries++;
-      result.set(this.#variants.tilesetIdAt(slot), buffer.toGeometry());
+      stats.bytesPerVertex = bytesPerVertex(geometry);
+      result.set(this.#variants.tilesetIdAt(slot), geometry);
     }
 
     return result.size > 0 ? result : null;
   }
+}
+
+/**
+ * Bytes of vertex attributes one vertex of `geometry` occupies. Every geometry
+ * of one build shares a layout, so the caller can simply take the last.
+ */
+function bytesPerVertex(
+  geometry: THREE.BufferGeometry
+): number {
+  let total = 0;
+
+  for (const attribute of Object.values(geometry.attributes)) {
+    total += attribute.itemSize * attribute.array.BYTES_PER_ELEMENT;
+  }
+
+  return total;
 }

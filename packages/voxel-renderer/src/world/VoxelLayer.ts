@@ -5,7 +5,7 @@ import {
 } from "three";
 
 // Import Internal Dependencies
-import { clamp } from "../utils/math.ts";
+import { assertPowerOfTwoChunkSize, clamp } from "../utils/math.ts";
 import { VoxelChunk } from "./VoxelChunk.ts";
 import {
   packVoxel,
@@ -19,6 +19,46 @@ import type {
   VoxelEntry,
   VoxelCoord
 } from "./types.ts";
+
+// CONSTANTS
+// Chunk coordinates are packed into a single int32 so the chunk map keeps
+// Smi keys — 11 bits for X and Z, 10 for Y, since voxel worlds are far wider
+// than they are tall. Creating a chunk outside that range throws rather than
+// aliasing onto another one.
+const kChunkBitsY = 10;
+const kChunkBitsXZ = 11;
+const kChunkBiasY = 1 << (kChunkBitsY - 1);
+const kChunkBiasXZ = 1 << (kChunkBitsXZ - 1);
+const kChunkSpanY = 1 << kChunkBitsY;
+const kChunkSpanXZ = 1 << kChunkBitsXZ;
+
+/**
+ * Biased bit-pack of the chunk coordinates into one int32. The three fields
+ * are disjoint, so the mapping is one-to-one and the result stays a Smi —
+ * unlike the template string this replaces, it allocates nothing.
+ *
+ * Callers must have cleared `inChunkRange()` first.
+ */
+function packChunkKey(
+  cx: number,
+  cy: number,
+  cz: number
+): number {
+  return ((cx + kChunkBiasXZ) << (kChunkBitsY + kChunkBitsXZ)) |
+    ((cy + kChunkBiasY) << kChunkBitsXZ) |
+    (cz + kChunkBiasXZ);
+}
+
+/** Unsigned compares catch both ends of each range in one test. */
+function inChunkRange(
+  cx: number,
+  cy: number,
+  cz: number
+): boolean {
+  return (cx + kChunkBiasXZ) >>> 0 < kChunkSpanXZ &&
+    (cy + kChunkBiasY) >>> 0 < kChunkSpanY &&
+    (cz + kChunkBiasXZ) >>> 0 < kChunkSpanXZ;
+}
 
 /**
  * Key of one voxel entry in a serialised layer: its world position as "x,y,z".
@@ -109,9 +149,18 @@ export class VoxelLayer {
 
   #visible: boolean;
   #opacity: number;
-  #chunks = new Map<string, VoxelChunk>();
+  #chunks = new Map<number, VoxelChunk>();
   #chunkSize: number;
+  #chunkShift: number;
+  #chunkMask: number;
   #pendingRemoval: VoxelChunk[] = [];
+
+  /**
+   * Last chunk resolved by key. Terrain generation and brush strokes stay
+   * inside one chunk for long runs, so this absorbs most of the map lookups.
+   */
+  #lastChunkKey = 0;
+  #lastChunk: VoxelChunk | null = null;
 
   constructor(
     options: VoxelLayerOptions
@@ -127,10 +176,14 @@ export class VoxelLayer {
       properties = {}
     } = options;
 
+    assertPowerOfTwoChunkSize(chunkSize, "VoxelLayer");
+
     this.id = id;
     this.name = name;
     this.order = order;
     this.#chunkSize = chunkSize;
+    this.#chunkShift = Math.log2(chunkSize);
+    this.#chunkMask = chunkSize - 1;
     this.#visible = visible;
     this.#opacity = clamp(0, 1, opacity);
     this.offset = structuredClone(offset);
@@ -180,24 +233,16 @@ export class VoxelLayer {
     }
   }
 
-  #createChunkKey(
-    cx: number,
-    cy: number,
-    cz: number
-  ): string {
-    return `${cx},${cy},${cz}`;
-  }
-
   #worldToChunk(
     w: number
   ): number {
-    return Math.floor(w / this.#chunkSize);
+    return w >> this.#chunkShift;
   }
 
   #worldToLocal(
     w: number
   ): number {
-    return ((w % this.#chunkSize) + this.#chunkSize) % this.#chunkSize;
+    return w & this.#chunkMask;
   }
 
   #toLocal(
@@ -215,7 +260,18 @@ export class VoxelLayer {
     cy: number,
     cz: number
   ): VoxelChunk {
-    const key = this.#createChunkKey(cx, cy, cz);
+    if (!inChunkRange(cx, cy, cz)) {
+      throw new RangeError(
+        `VoxelLayer: chunk (${cx}, ${cy}, ${cz}) is out of range ` +
+        `(±${kChunkBiasXZ} on X/Z, ±${kChunkBiasY} on Y).`
+      );
+    }
+
+    const key = packChunkKey(cx, cy, cz);
+    if (this.#lastChunk !== null && this.#lastChunkKey === key) {
+      return this.#lastChunk;
+    }
+
     let chunk = this.#chunks.get(key);
     if (!chunk) {
       chunk = new VoxelChunk(
@@ -224,6 +280,8 @@ export class VoxelLayer {
       );
       this.#chunks.set(key, chunk);
     }
+    this.#lastChunkKey = key;
+    this.#lastChunk = chunk;
 
     return chunk;
   }
@@ -233,9 +291,24 @@ export class VoxelLayer {
     cy: number,
     cz: number
   ): VoxelChunk | undefined {
-    return this.#chunks.get(
-      this.#createChunkKey(cx, cy, cz)
-    );
+    // No chunk can exist outside the packable range, so this answers rather
+    // than throwing — `markChunkDirty` walks past the edge of the world.
+    if (!inChunkRange(cx, cy, cz)) {
+      return undefined;
+    }
+
+    const key = packChunkKey(cx, cy, cz);
+    if (this.#lastChunk !== null && this.#lastChunkKey === key) {
+      return this.#lastChunk;
+    }
+
+    const chunk = this.#chunks.get(key);
+    if (chunk !== undefined) {
+      this.#lastChunkKey = key;
+      this.#lastChunk = chunk;
+    }
+
+    return chunk;
   }
 
   getVoxelAt(
@@ -316,9 +389,9 @@ export class VoxelLayer {
 
     // Remove the chunk entirely if it is now empty to keep memory usage low.
     if (chunk.isEmpty()) {
-      this.#chunks.delete(
-        this.#createChunkKey(cx, cy, cz)
-      );
+      // `getChunk` returned it, so the coordinates are known to be in range.
+      this.#chunks.delete(packChunkKey(cx, cy, cz));
+      this.#lastChunk = null;
       this.#pendingRemoval.push(chunk);
     }
   }

@@ -591,3 +591,12 @@ describe("VoxelWorld mergeAllLayers", () => {
     assert.equal(world.getLayers().length, 1);
   });
 });
+
+describe("VoxelWorld chunkSize validation", () => {
+  it("rejects a non power-of-two chunkSize", () => {
+    assert.throws(
+      () => new VoxelWorld(10),
+      /chunkSize must be a power of two, received 10/
+    );
+  });
+});

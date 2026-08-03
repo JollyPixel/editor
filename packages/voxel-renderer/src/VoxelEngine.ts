@@ -44,8 +44,11 @@ import {
 } from "./world/VoxelLayer.ts";
 import { VoxelChunk } from "./world/VoxelChunk.ts";
 import type { VoxelEntry, VoxelCoord } from "./world/types.ts";
-import { packTransform, type FACE } from "./utils/math.ts";
-import { FACE_OFFSETS } from "./mesh/math.ts";
+import {
+  packTransform,
+  FACE_OFFSETS,
+  type FACE
+} from "./utils/math.ts";
 import type {
   VoxelLayerHookListener,
   VoxelLayerHookEvent
@@ -53,6 +56,13 @@ import type {
 import type { VoxelSetOptions, VoxelRemoveOptions, PartialExcept } from "./types.ts";
 
 export type { VoxelSetOptions, VoxelRemoveOptions };
+
+// CONSTANTS
+/**
+ * Distinct layer opacities a tileset's materials are bucketed into, plus one
+ * reserved bucket for fully opaque. Caps the material cache at 33 per tileset.
+ */
+const kOpacitySteps = 32;
 
 export interface VoxelLoadOptions {
   /**
@@ -198,6 +208,24 @@ export interface VoxelEngineOptions {
    * `TilesetLoader.fromWorld()` before constructing `VoxelEngine`.
    */
   tilesetLoader?: TilesetLoader;
+
+  /**
+   * Milliseconds `tick()` may spend rebuilding dirty chunks before deferring
+   * the rest to the next frame. A single edit dirties a handful of chunks, but
+   * a layer offset drag or an opacity change dirties the whole world, which
+   * without a budget lands as one multi-second stall.
+   *
+   * Set to 0 to rebuild every dirty chunk in the same tick. `flush()` ignores
+   * the budget regardless.
+   * @default 8
+   */
+  rebuildBudgetMs?: number;
+}
+
+/** One chunk waiting to be rebuilt, in the order `tick()` will get to it. */
+interface PendingRebuild {
+  layer: VoxelLayer;
+  chunk: VoxelChunk;
 }
 
 /**
@@ -223,8 +251,25 @@ export class VoxelEngine {
    */
   readonly debug: VoxelDebugger;
 
+  /**
+   * World-space point rebuilds are ordered around, nearest first — set it to
+   * the camera position so what the user is looking at reappears first. Left
+   * null the queue keeps world order.
+   */
+  rebuildFocus: THREE.Vector3Like | null = null;
+
   #meshBuilder: VoxelMeshBuilder;
   #collider: VoxelCollider | null = null;
+
+  /**
+   * Chunks whose rebuild has been deferred, and the set of chunks already in
+   * it. The set is authoritative: `#removeChunk` drops entries from it and the
+   * drain skips array entries it no longer holds, so a chunk unloaded while
+   * queued is never rebuilt.
+   */
+  #rebuildQueue: PendingRebuild[] = [];
+  #queuedChunks = new Set<VoxelChunk>();
+  #rebuildBudgetMs: number;
 
   /**
    * "layerId:cx,cy,cz" → one THREE.Mesh per tileset the chunk uses
@@ -273,7 +318,8 @@ export class VoxelEngine {
       debug,
       tilesetPadding,
       tilesetLoader,
-      greedy = false
+      greedy = false,
+      rebuildBudgetMs = 8
     } = options;
 
     this.root.name = "VoxelEngine";
@@ -282,6 +328,7 @@ export class VoxelEngine {
     this.#materialType = material;
     this.#materialCustomizer = materialCustomizer;
     this.#alphaTest = alphaTest;
+    this.#rebuildBudgetMs = rebuildBudgetMs;
     this.#onLayerUpdated = onLayerUpdated;
     this.#logger = logger.child({
       namespace: "VoxelEngine"
@@ -338,8 +385,38 @@ export class VoxelEngine {
       this.#removeChunk(layer, chunk);
     }
 
-    // Rebuild only chunks that have been modified since the last frame.
+    this.#enqueueDirtyChunks();
+    this.#drainRebuildQueue(this.#rebuildBudgetMs);
+  }
+
+  /**
+   * Rebuilds every queued and dirty chunk right now, ignoring the per-tick
+   * budget. Use it when the meshes must exist before the next line runs — a
+   * screenshot, a test assertion, an export.
+   */
+  flush(): void {
+    this.#enqueueDirtyChunks();
+    this.#drainRebuildQueue(0);
+  }
+
+  /** Chunks waiting on a deferred rebuild. 0 once the world is up to date. */
+  get pendingRebuilds(): number {
+    return this.#queuedChunks.size;
+  }
+
+  /**
+   * Moves dirty chunks onto the rebuild queue, clearing the flag as it goes.
+   *
+   * The flag is cleared here rather than after the rebuild so an edit landing
+   * between now and the rebuild re-dirties the chunk and is picked up next
+   * tick, instead of being swallowed by the clear.
+   */
+  #enqueueDirtyChunks(): void {
+    const before = this.#rebuildQueue.length;
+
     for (const { layer, chunk } of this.world.getAllDirtyChunks()) {
+      chunk.dirty = false;
+
       // opacity === 0 is treated the same as an invisible layer: no mesh,
       // no collider, and the layer stops winning world compositing.
       if (!layer.visible || layer.opacity === 0) {
@@ -350,14 +427,66 @@ export class VoxelEngine {
         continue;
       }
 
+      if (!this.#queuedChunks.has(chunk)) {
+        this.#queuedChunks.add(chunk);
+        this.#rebuildQueue.push({ layer, chunk });
+      }
+    }
+
+    if (this.rebuildFocus !== null && this.#rebuildQueue.length !== before) {
+      this.#sortRebuildQueue();
+    }
+  }
+
+  /**
+   * Rebuilds queued chunks until `budgetMs` is spent. A budget of 0 (or less)
+   * drains the queue completely.
+   *
+   * The first chunk is always rebuilt, so a budget smaller than one chunk's
+   * build time still makes progress instead of deadlocking the queue.
+   */
+  #drainRebuildQueue(
+    budgetMs: number
+  ): void {
+    const queue = this.#rebuildQueue;
+    if (queue.length === 0) {
+      return;
+    }
+
+    const deadline = budgetMs > 0 ? performance.now() + budgetMs : Infinity;
+    let index = 0;
+
+    while (index < queue.length) {
+      const { layer, chunk } = queue[index++];
+      // Absent from the set means the chunk was unloaded while queued.
+      if (!this.#queuedChunks.delete(chunk)) {
+        continue;
+      }
+
       // #rebuildChunk() drops the previous meshes itself.
       this.#rebuildChunk(layer, chunk);
-      chunk.dirty = false;
+
+      if (performance.now() >= deadline) {
+        break;
+      }
     }
+
+    this.#rebuildQueue = index < queue.length ? queue.slice(index) : [];
+  }
+
+  #sortRebuildQueue(): void {
+    const focus = this.rebuildFocus!;
+    const { chunkSize } = this.world;
+    const half = chunkSize / 2;
+
+    this.#rebuildQueue.sort((a, b) => squaredDistance(a, focus, chunkSize, half) -
+      squaredDistance(b, focus, chunkSize, half));
   }
 
   dispose(): void {
     this.#logger.debug("Disposing VoxelEngine.");
+    this.#rebuildQueue = [];
+    this.#queuedChunks.clear();
     // Remove and dispose all chunk meshes individually (we own the geometries
     // but share materials per tileset, so we must NOT call removeChildren).
     this.#disposeChunkMeshes();
@@ -892,12 +1021,14 @@ export class VoxelEngine {
     this.tilesetManager.registerTexture(def, texture);
     this.#logger.debug(`Loaded tileset '${def.id}' from '${def.src}'`);
 
-    // Invalidate both cached material variants for this tileset so they are
+    // Invalidate every cached opacity variant for this tileset so they are
     // recreated with the new texture.
-    for (const transparent of [false, true]) {
-      const key = this.#materialKey(def.id, transparent);
-      this.#materials.get(key)?.dispose();
-      this.#materials.delete(key);
+    const prefix = `${def.id}:`;
+    for (const [key, material] of this.#materials) {
+      if (key.startsWith(prefix)) {
+        material.dispose();
+        this.#materials.delete(key);
+      }
     }
 
     // Force all chunks to rebuild geometry (UV offsets may have changed).
@@ -966,25 +1097,38 @@ export class VoxelEngine {
     this.#rebuildAllChunks("load");
   }
 
-  #materialKey(
-    tilesetId: string,
-    transparent: boolean
-  ): string {
-    return `${tilesetId}:${transparent ? "transparent" : "opaque"}`;
+  /**
+   * Opacity is quantised into `kOpacitySteps` buckets so dragging an opacity
+   * slider cannot mint an unbounded number of materials. The top bucket is
+   * reserved for fully opaque layers, which keeps an opacity of `0.999` from
+   * being rounded into the opaque variant.
+   */
+  #opacityBucket(
+    opacity: number
+  ): number {
+    if (opacity >= 1) {
+      return kOpacitySteps;
+    }
+
+    return Math.min(
+      kOpacitySteps - 1,
+      Math.max(0, Math.round(opacity * kOpacitySteps))
+    );
   }
 
   /**
-   * `transparent` selects the material variant, not the actual alpha value —
-   * the real opacity is baked per-vertex by VoxelMeshBuilder (see its
-   * `colors` buffer) so it can vary per layer (and, later, per block)
-   * without multiplying the number of cached materials.
+   * The layer's opacity rides on the material rather than on a per-vertex
+   * color, which is 4 constant bytes saved on every vertex. Three multiplies
+   * `material.opacity` into `diffuseColor.a` exactly where the vertex alpha
+   * used to land, so alpha testing and blending are unchanged.
    */
   #getMaterial(
     tilesetId: string,
-    transparent: boolean
+    opacity: number
   ): THREE.MeshLambertMaterial | THREE.MeshStandardMaterial {
-    const key = this.#materialKey(tilesetId, transparent);
-    this.#logger.debug(`Getting material for tileset '${tilesetId}' (transparent=${transparent})`);
+    const bucket = this.#opacityBucket(opacity);
+    const key = `${tilesetId}:${bucket}`;
+    this.#logger.debug(`Getting material for tileset '${tilesetId}' (opacity=${opacity})`);
 
     let material = this.#materials.get(key);
     if (material) {
@@ -994,12 +1138,14 @@ export class VoxelEngine {
     const texture = this.tilesetManager.getTexture(
       tilesetId
     ) ?? null;
+    const transparent = bucket < kOpacitySteps;
 
     const materialOptions = {
       map: texture,
       side: THREE.FrontSide,
       alphaTest: this.#alphaTest,
-      vertexColors: true,
+      // The bucketed value, not the raw one, so the material matches its key.
+      opacity: bucket / kOpacitySteps,
       transparent,
       // Translucent chunks must not write depth, otherwise nearer
       // translucent faces would hide farther ones behind solid Z-rejection
@@ -1046,6 +1192,8 @@ export class VoxelEngine {
     layer: VoxelLayer,
     chunk: VoxelChunk
   ) {
+    this.#queuedChunks.delete(chunk);
+
     const chunkKeyBase = `${layer.id}:${chunk.toString()}`;
     this.#logger.debug(
       `Removing chunk '${chunkKeyBase}' with layer name '${layer.name}'`
@@ -1090,13 +1238,13 @@ export class VoxelEngine {
     }
 
     // Opacity is uniform across a layer, so every tileset mesh for this
-    // chunk shares the same opaque/transparent material variant.
-    const transparent = layer.opacity < 1;
+    // chunk shares the same material variant.
+    const { opacity } = layer;
 
     // Create one mesh per tileset so each can use the correct texture.
     const meshes: THREE.Mesh[] = [];
     for (const [tilesetId, geometry] of geometries) {
-      const mesh = new THREE.Mesh(geometry, this.#getMaterial(tilesetId, transparent));
+      const mesh = new THREE.Mesh(geometry, this.#getMaterial(tilesetId, opacity));
       mesh.name = `voxel_chunk_${chunkKeyBase}:${tilesetId}`;
 
       this.root.add(mesh);
@@ -1125,9 +1273,13 @@ export class VoxelEngine {
   ): void {
     this.#logger.debug("Rebuilding all chunks...", { source });
 
+    // Everything is about to be rebuilt, so anything already queued is stale.
+    this.#rebuildQueue = [];
+    this.#queuedChunks.clear();
+
     for (const { layer, chunk } of this.world.getAllChunks()) {
-      this.#rebuildChunk(layer, chunk);
       chunk.dirty = false;
+      this.#rebuildChunk(layer, chunk);
     }
   }
 
@@ -1140,4 +1292,19 @@ export class VoxelEngine {
       chunk.dirty = true;
     }
   }
+}
+
+/** Squared distance from `focus` to the centre of a queued chunk. */
+function squaredDistance(
+  pending: PendingRebuild,
+  focus: THREE.Vector3Like,
+  chunkSize: number,
+  half: number
+): number {
+  const { chunk, layer } = pending;
+  const dx = (chunk.cx * chunkSize) + half + layer.offset.x - focus.x;
+  const dy = (chunk.cy * chunkSize) + half + layer.offset.y - focus.y;
+  const dz = (chunk.cz * chunkSize) + half + layer.offset.z - focus.z;
+
+  return (dx * dx) + (dy * dy) + (dz * dz);
 }

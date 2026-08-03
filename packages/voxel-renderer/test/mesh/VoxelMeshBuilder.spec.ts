@@ -128,34 +128,36 @@ describe("VoxelMeshBuilder — opacity affects occlusion", () => {
   });
 });
 
-describe("VoxelMeshBuilder — vertex alpha baked from layer opacity", () => {
-  it("bakes alpha=1 (RGB white) for a fully opaque layer", () => {
-    const f = makeFixture();
-    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
-    const chunk = f.layer.getChunk(0, 0, 0)!;
-    const geometries = f.builder.buildChunkGeometries(chunk, f.layer)!;
-    const colors = [...geometries.values()][0].getAttribute("color");
+describe("VoxelMeshBuilder — layer opacity is not a vertex attribute", () => {
+  it("emits no color attribute, whatever the layer opacity", () => {
+    for (const opacity of [1, 0.25]) {
+      const f = makeFixture();
+      f.layer.opacity = opacity;
+      f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+      const chunk = f.layer.getChunk(0, 0, 0)!;
+      const geometries = f.builder.buildChunkGeometries(chunk, f.layer)!;
+      const [geometry] = [...geometries.values()];
 
-    assert.equal(colors.itemSize, 4);
-    assert.equal(colors.getX(0), 1);
-    assert.equal(colors.getY(0), 1);
-    assert.equal(colors.getZ(0), 1);
-    assert.equal(colors.getW(0), 1);
+      assert.equal(geometry.getAttribute("color"), undefined);
+    }
   });
 
-  it("bakes the layer's opacity into every vertex's alpha", () => {
-    const f = makeFixture();
-    f.layer.opacity = 0.25;
-    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
-    const chunk = f.layer.getChunk(0, 0, 0)!;
-    const geometries = f.builder.buildChunkGeometries(chunk, f.layer)!;
-    const colors = [...geometries.values()][0].getAttribute("color");
+  it("emits identical geometry for an opaque and a translucent layer", () => {
+    const opaque = makeFixture();
+    opaque.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    const translucent = makeFixture();
+    translucent.layer.opacity = 0.25;
+    translucent.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
 
-    // Colors are stored as normalized bytes, so alpha lands within one 8-bit
-    // step of the layer opacity.
-    for (let i = 0; i < colors.count; i++) {
-      assert.ok(Math.abs(colors.getW(i) - 0.25) <= 1 / 255);
-    }
+    const [a] = [...opaque.builder.buildChunkGeometries(
+      opaque.layer.getChunk(0, 0, 0)!, opaque.layer
+    )!.values()];
+    const [b] = [...translucent.builder.buildChunkGeometries(
+      translucent.layer.getChunk(0, 0, 0)!, translucent.layer
+    )!.values()];
+
+    assert.deepEqual(a.getAttribute("position").array, b.getAttribute("position").array);
+    assert.deepEqual(a.getAttribute("uv").array, b.getAttribute("uv").array);
   });
 });
 
@@ -303,10 +305,8 @@ describe("VoxelMeshBuilder — geometry attribute layout", () => {
     assert.equal(uvs.normalized, true);
     assert.equal(uvs.itemSize, 2);
 
-    const colors = geometry.getAttribute("color");
-    assert.ok(colors.array instanceof Uint8Array);
-    assert.equal(colors.normalized, true);
-    assert.equal(colors.itemSize, 4);
+    // Layer opacity rides on the material, so there is no color attribute.
+    assert.equal(geometry.getAttribute("color"), undefined);
   });
 
   it("round-trips axis-aligned normals exactly", () => {
@@ -488,5 +488,79 @@ describe("VoxelMeshBuilder — build statistics", () => {
 
     assert.equal(f.builder.stats.faces, 0);
     assert.equal(f.builder.stats.vertices, 0);
+  });
+});
+
+describe("VoxelMeshBuilder — derived stats", () => {
+  it("reports faces per solid voxel", () => {
+    const f = makeFixture();
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    f.builder.buildChunkGeometries(f.layer.getChunk(0, 0, 0)!, f.layer);
+
+    // One isolated cube: six visible faces, one solid voxel.
+    assert.equal(f.builder.stats.voxels, 1);
+    assert.equal(f.builder.stats.hiddenVoxels, 0);
+    assert.equal(f.builder.stats.facesPerSolidVoxel, 6);
+  });
+
+  it("reports 0 faces per solid voxel when nothing is solid", () => {
+    const f = makeFixture();
+
+    assert.equal(f.builder.stats.facesPerSolidVoxel, 0);
+  });
+
+  it("reports the emitted vertex size in bytes", () => {
+    const f = makeFixture();
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    f.builder.buildChunkGeometries(f.layer.getChunk(0, 0, 0)!, f.layer);
+
+    // position 3×f32 + normal 3×i8 + uv 2×u16.
+    assert.equal(f.builder.stats.bytesPerVertex, 12 + 3 + 4);
+  });
+});
+
+describe("VoxelMeshBuilder — neighbour lookups across chunks and layer offsets", () => {
+  it("culls against an opaque layer whose offset shifts it onto a different chunk grid", () => {
+    const f = makeFixture();
+    // Offset by 2 on X, so this layer's chunk boundaries sit mid-way through
+    // the meshed layer's — the neighbour lookup cannot assume a shared grid.
+    const shifted = f.world.addLayer("shifted");
+    shifted.offset = { x: 2, y: 0, z: 0 };
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    shifted.setVoxelAt({ x: 5, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+
+    // Not adjacent: all 6 faces emitted.
+    assert.equal(countVertices(f), 24);
+
+    // World x=1 is adjacent, but the offset puts it in the shifted layer's
+    // chunk (-1,0,0) — a different grid cell than the chunk being meshed.
+    shifted.setVoxelAt({ x: 1, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+
+    assert.equal(countVertices(f), 20);
+  });
+
+  it("culls a face against a neighbour one chunk over", () => {
+    const f = makeFixture();
+    // chunkSize is 4: x=3 is the last column of chunk 0, x=4 the first of chunk 1.
+    f.world.setVoxelAt("test", { x: 3, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    f.world.setVoxelAt("test", { x: 4, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+
+    const chunk = f.layer.getChunk(0, 0, 0)!;
+    f.builder.buildChunkGeometries(chunk, f.layer);
+
+    assert.equal(f.builder.stats.culledFaces, 1);
+    assert.equal(f.builder.stats.faces, 5);
+  });
+
+  it("culls a face against a neighbour one chunk below on the negative side", () => {
+    const f = makeFixture();
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    f.world.setVoxelAt("test", { x: -1, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+
+    const chunk = f.layer.getChunk(0, 0, 0)!;
+    f.builder.buildChunkGeometries(chunk, f.layer);
+
+    assert.equal(f.builder.stats.culledFaces, 1);
+    assert.equal(f.builder.stats.faces, 5);
   });
 });

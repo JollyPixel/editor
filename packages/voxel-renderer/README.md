@@ -12,13 +12,13 @@ Chunked voxel engine and Three.js renderer. Use `VoxelEngine` directly, or `Voxe
 
 ## 💡 Features
 
-- Chunked world (default 16³) — only dirty chunks are rebuilt each frame, the rest are left alone
+- Chunked world (default 16³) - only dirty chunks are rebuilt each frame, the rest are left alone
 - Named layers composited top-down; decorative layers override base terrain without Z-fighting
 - Toggle visibility, reorder, add/remove layers, and move them in world space
 - Face culling between adjacent solid voxels to keep triangle counts low
-- Optional greedy meshing (`greedy: true`) merging coplanar identical faces — about 3x fewer triangles on terrain
+- Optional greedy meshing (`greedy: true`) merging coplanar identical faces - about 3x fewer triangles on terrain
 - Many built-in block shapes (cube, slabs, ramp, corners, pole, stairs) and a `BlockShape` interface for custom geometry
-- Per-block transforms via a packed byte — 90° Y rotations and X/Z flips without duplicating definitions
+- Per-block transforms via a packed byte - 90° Y rotations and X/Z flips without duplicating definitions
 - Multiple tilesets at different resolutions; tiles referenced by `{ tilesetId, col, row }`
 - Per-face texture overrides on any block definition
 - `"lambert"` (default) or `"standard"` (PBR) material modes
@@ -44,7 +44,7 @@ $ yarn add @jolly-pixel/voxel.renderer
 
 ## 👀 Usage example
 
-### Basic — place voxels manually
+### Basic - place voxels manually
 
 ```ts
 const blocks: BlockDefinition[] = [
@@ -112,7 +112,7 @@ for (let x = 0; x < 8; x++) {
 }
 ```
 
-### Tiled import — convert a `.tmj` map
+### Tiled import - convert a `.tmj` map
 
 ```ts
 import { loadJSON } from "@jolly-pixel/engine";
@@ -122,7 +122,7 @@ import {
   type TiledMap
 } from "@jolly-pixel/voxel.renderer";
 
-// No blocks or layers needed here — load() restores them from the JSON snapshot
+// No blocks or layers needed here - load() restores them from the JSON snapshot
 const voxelMap = world.createActor("map")
   .addComponentAndGet(VoxelRenderer, { alphaTest: 0.1, material: "lambert" });
 
@@ -186,42 +186,13 @@ Then open one of these URLs in your browser:
 | `http://localhost:5173/tileset.html` | `demo-tileset.ts` | Every tile in `Tileset001.png` laid out as UV-mapped quads with col/row labels, plus a rotating textured cube |
 | `http://localhost:5173/shapes.html` | `demo-shapes.ts` | All 19 built-in block shapes rendered as coloured meshes with a wireframe overlay and labelled name |
 | `http://localhost:5173/tiled.html` | `demo-tiled.ts` | A multi-layer Tiled `.tmj` map imported via `TiledConverter` in `"stacked"` mode with WASD camera navigation |
-| `http://localhost:5173/noise-world.html` | `demo-noise-world.ts` | A Minecraft-like world generated from simplex noise, with a live performance HUD — the benchmark example |
+| `http://localhost:5173/noise-world.html` | `demo-noise-world.ts` | A Minecraft-like world generated from simplex noise, with a live performance HUD - the benchmark example |
 
 The shapes and tileset examples use OrbitControls (left drag: rotate, right drag: pan, scroll: zoom); the others use `Camera3DControls` (WASD + mouse).
 
-### Benchmarking with the noise world
-
-`noise-world.html` exists to measure the engine under load: it fills a heightmap
-world (only the visible shell, so the voxel count follows the surface area) and
-reports the two build costs separately — writing voxels through `setVoxel`, then
-meshing every dirty chunk — next to the live renderer statistics.
-
-| Key | Action |
-|---|---|
-| `WASD` / `Space` / `Shift` | Fly around, middle-drag to look |
-| `R` | Rebuild the world with the next seed (re-runs both measurements) |
-| `F3` | Hide the HUD |
-
-The world is configured from the query string, which is what makes it useful for
-comparing runs:
-
-```
-/noise-world.html?size=512&chunk=32&seed=42
-```
-
-| Param | Default | Range | Effect |
-|---|---|---|---|
-| `size` | `256` | 32 – 1024 | World width and depth in voxels (`size²` columns) |
-| `chunk` | `16` | 4 – 64 | `chunkSize` — trades draw calls against per-chunk rebuild cost |
-| `seed` | `1337` | ≥ 0 | Terrain seed; the same seed always yields the same world |
-
-The tileset is painted on a canvas at startup, so the example needs no image
-asset and every run renders exactly the same blocks.
-
 ## 📚 API
 
-- [VoxelEngine](docs/VoxelEngine.md) - Engine-agnostic core — options, voxel placement, tileset loading, save/load. Usable standalone or via `VoxelRenderer`.
+- [VoxelEngine](docs/VoxelEngine.md) - Engine-agnostic core - options, voxel placement, tileset loading, save/load. Usable standalone or via `VoxelRenderer`.
 - [VoxelRenderer](docs/VoxelRenderer.md) - `ActorComponent` wrapper around `VoxelEngine` for JollyPixel scenes.
 - [World](docs/World.md) - `VoxelWorld`, `VoxelLayer`, `VoxelChunk`, and related types.
 - [Blocks](docs/Blocks.md) - `BlockDefinition`, `BlockShape`, `BlockRegistry`, `BlockShapeRegistry`, and `Face`.
@@ -231,6 +202,38 @@ asset and every run renders exactly the same blocks.
 - [Debug](docs/Debug.md) - `engine.debug`: live face/triangle statistics and wireframe visualization.
 - [Built-In Shapes](docs/BuiltInShapes.md) - All built-in block shapes and custom shape authoring.
 - [TiledConverter](docs/TiledConverter.md) - Converting Tiled `.tmj` exports to `VoxelWorldJSON`.
+
+## 🧪 Benchmarks
+
+### Noise-world benchmark
+
+Use `noise-world.html` to measure the renderer under load. It builds a heightmap world from simplex noise and reports two separate costs: voxel writes via `setVoxel` and chunk meshing for dirty chunks.
+
+It is configurable from the query string:
+
+```text
+/noise-world.html?size=512&chunk=32&seed=42
+```
+
+| Param | Default | Effect |
+|---|---:|---|
+| `size` | `256` | World width/depth in voxels (`size²` columns) |
+| `chunk` | `16` | `chunkSize`; trades draw calls against rebuild cost |
+| `seed` | `1337` | Terrain seed; the same seed always yields the same world |
+
+Controls: `WASD` / `Space` / `Shift` to fly, `R` to rebuild with the next seed, `F3` to hide the HUD.
+
+### Headless benchmark
+
+The browser HUD is only a sanity check; Vite's checker inflates timings. Run headless instead:
+
+```bash
+npm run bench
+npm run bench -- --greedy
+npm run bench:compare
+```
+
+Use the minimum of three runs when comparing numbers, since single runs can drift a lot on a throttled machine.
 
 ## 🔥 Troubleshooting
 

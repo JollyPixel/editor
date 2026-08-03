@@ -8,9 +8,6 @@ import type { BlockVariantFace } from "./BlockVariantCache.ts";
 const kInitialVertices = 4096;
 // Above this vertex count a chunk can no longer be indexed with 16-bit values.
 const kUint16Limit = 65536;
-// Largest magnitude of a signed normalized byte, per the WebGL conversion rules.
-const kSnormMax = 127;
-const kUnormMax = 65535;
 
 export interface GeometryBufferOptions {
   /**
@@ -32,6 +29,10 @@ export interface GeometryBufferOptions {
  * Values are written straight into typed arrays instead of `number[]`, avoiding
  * boxing and the extra float conversion pass. Buffers are reused between chunks,
  * so a chunk only pays for growth once.
+ *
+ * Every attribute except tiled `uv` is staged in the precision it is emitted
+ * as — `BlockVariantCache` quantises normals, atlas UVs and tile rects once per
+ * variant — so `toGeometry()` is a copy with no conversion pass.
  */
 export class GeometryBuffer {
   vertexCount = 0;
@@ -40,14 +41,16 @@ export class GeometryBuffer {
   readonly tiled: boolean;
 
   #positions: Float32Array;
-  #normals: Float32Array;
-  #uvs: Float32Array;
-  #colors: Uint8Array;
+  #normals: Int8Array;
+  /** `vertexCount × 2` tile-space UVs; empty unless `tiled`. */
+  #tileUvs: Float32Array;
+  /** `vertexCount × 2` unorm16 atlas UVs; empty when `tiled`. */
+  #atlasUvs: Uint16Array;
   #indices: Uint32Array;
-  /** `vertexCount × 4` atlas rects; empty unless `tiled`. */
-  #regions: Float32Array;
+  /** `vertexCount × 4` unorm16 atlas rects; empty unless `tiled`. */
+  #regions: Uint16Array;
   /** `vertexCount × 2` tile repeat counts; empty unless `tiled`. */
-  #repeats: Float32Array;
+  #repeats: Uint16Array;
 
   #vertexCapacity: number;
   #indexCapacity: number;
@@ -66,12 +69,12 @@ export class GeometryBuffer {
     this.#indexCapacity = (vertexCapacity * 3) >> 1;
 
     this.#positions = new Float32Array(vertexCapacity * 3);
-    this.#normals = new Float32Array(vertexCapacity * 3);
-    this.#uvs = new Float32Array(vertexCapacity * 2);
-    this.#colors = new Uint8Array(vertexCapacity * 4);
+    this.#normals = new Int8Array(vertexCapacity * 3);
     this.#indices = new Uint32Array(this.#indexCapacity);
-    this.#regions = new Float32Array(tiled ? vertexCapacity * 4 : 0);
-    this.#repeats = new Float32Array(tiled ? vertexCapacity * 2 : 0);
+    this.#tileUvs = new Float32Array(tiled ? vertexCapacity * 2 : 0);
+    this.#atlasUvs = new Uint16Array(tiled ? 0 : vertexCapacity * 2);
+    this.#regions = new Uint16Array(tiled ? vertexCapacity * 4 : 0);
+    this.#repeats = new Uint16Array(tiled ? vertexCapacity * 2 : 0);
   }
 
   reset(): void {
@@ -81,7 +84,6 @@ export class GeometryBuffer {
 
   /**
    * Appends one face, translated to the voxel's world position.
-   * `alpha` is the owning layer's opacity as an 8-bit value.
    *
    * Positional parameters are used instead of an options object to avoid
    * allocations on the hot path.
@@ -90,10 +92,9 @@ export class GeometryBuffer {
     face: BlockVariantFace,
     wx: number,
     wy: number,
-    wz: number,
-    alpha: number
+    wz: number
   ): void {
-    this.#write(face, wx, wy, wz, alpha, 1, 1, 1, 1, 1);
+    this.#write(face, wx, wy, wz, 1, 1, 1, 1, 1);
   }
 
   /**
@@ -108,7 +109,6 @@ export class GeometryBuffer {
     wx: number,
     wy: number,
     wz: number,
-    alpha: number,
     spanU: number,
     spanV: number
   ): void {
@@ -131,7 +131,7 @@ export class GeometryBuffer {
     const repeatU = merge.swapped ? spanV : spanU;
     const repeatV = merge.swapped ? spanU : spanV;
 
-    this.#write(face, wx, wy, wz, alpha, sx, sy, sz, repeatU, repeatV);
+    this.#write(face, wx, wy, wz, sx, sy, sz, repeatU, repeatV);
   }
 
   /**
@@ -145,7 +145,6 @@ export class GeometryBuffer {
     wx: number,
     wy: number,
     wz: number,
-    alpha: number,
     sx: number,
     sy: number,
     sz: number,
@@ -164,17 +163,17 @@ export class GeometryBuffer {
     const base = this.vertexCount;
     const positions = this.#positions;
     const normals = this.#normals;
-    const uvs = this.#uvs;
-    const colors = this.#colors;
+    const tileUvs = this.#tileUvs;
+    const atlasUvs = this.#atlasUvs;
     const regions = this.#regions;
     const repeats = this.#repeats;
     const localPositions = face.positions;
-    const localUvs = tiled ? face.tileUvs : face.uvs;
+    const localTileUvs = face.tileUvs;
+    const localAtlasUvs = face.uvs;
     const { region, normalX, normalY, normalZ } = face;
 
     let p = base * 3;
     let u = base * 2;
-    let c = base * 4;
     for (let i = 0; i < vertexCount; i++) {
       const i3 = i * 3;
       positions[p] = wx + (localPositions[i3] * sx);
@@ -186,10 +185,9 @@ export class GeometryBuffer {
       p += 3;
 
       const i2 = i * 2;
-      uvs[u] = localUvs[i2] * repeatU;
-      uvs[u + 1] = localUvs[i2 + 1] * repeatV;
-
       if (tiled) {
+        tileUvs[u] = localTileUvs[i2] * repeatU;
+        tileUvs[u + 1] = localTileUvs[i2 + 1] * repeatV;
         repeats[u] = repeatU;
         repeats[u + 1] = repeatV;
 
@@ -199,15 +197,11 @@ export class GeometryBuffer {
         regions[r + 2] = region[2];
         regions[r + 3] = region[3];
       }
+      else {
+        atlasUvs[u] = localAtlasUvs[i2];
+        atlasUvs[u + 1] = localAtlasUvs[i2 + 1];
+      }
       u += 2;
-
-      // RGB stays white so the texture map is unaffected; alpha carries the
-      // owning layer's opacity.
-      colors[c] = 255;
-      colors[c + 1] = 255;
-      colors[c + 2] = 255;
-      colors[c + 3] = alpha;
-      c += 4;
     }
 
     // Triangulate via fan from vertex 0: [0,1,2] and (if quad) [0,2,3].
@@ -240,27 +234,22 @@ export class GeometryBuffer {
     );
     geometry.setAttribute(
       "normal",
-      new THREE.BufferAttribute(toSnorm8(this.#normals, vertexCount * 3), 3, true)
+      new THREE.BufferAttribute(this.#normals.slice(0, vertexCount * 3), 3, true)
     );
     geometry.setAttribute(
       "uv",
       tiled ?
-        new THREE.BufferAttribute(this.#uvs.slice(0, vertexCount * 2), 2) :
-        new THREE.BufferAttribute(toUnorm16(this.#uvs, vertexCount * 2), 2, true)
+        new THREE.BufferAttribute(this.#tileUvs.slice(0, vertexCount * 2), 2) :
+        new THREE.BufferAttribute(this.#atlasUvs.slice(0, vertexCount * 2), 2, true)
     );
-    geometry.setAttribute(
-      "color",
-      new THREE.BufferAttribute(this.#colors.slice(0, vertexCount * 4), 4, true)
-    );
-
     if (tiled) {
       geometry.setAttribute(
         "tileRegion",
-        new THREE.BufferAttribute(toUnorm16(this.#regions, vertexCount * 4), 4, true)
+        new THREE.BufferAttribute(this.#regions.slice(0, vertexCount * 4), 4, true)
       );
       geometry.setAttribute(
         "tileRepeat",
-        new THREE.BufferAttribute(toUint16(this.#repeats, vertexCount * 2), 2)
+        new THREE.BufferAttribute(this.#repeats.slice(0, vertexCount * 2), 2)
       );
     }
 
@@ -285,11 +274,13 @@ export class GeometryBuffer {
 
     this.#positions = grow(this.#positions, capacity * 3);
     this.#normals = grow(this.#normals, capacity * 3);
-    this.#uvs = grow(this.#uvs, capacity * 2);
-    this.#colors = grow(this.#colors, capacity * 4);
     if (this.tiled) {
+      this.#tileUvs = grow(this.#tileUvs, capacity * 2);
       this.#regions = grow(this.#regions, capacity * 4);
       this.#repeats = grow(this.#repeats, capacity * 2);
+    }
+    else {
+      this.#atlasUvs = grow(this.#atlasUvs, capacity * 2);
     }
     this.#vertexCapacity = capacity;
   }
@@ -307,7 +298,9 @@ export class GeometryBuffer {
   }
 }
 
-function grow<TArray extends Float32Array | Uint8Array | Uint32Array>(
+function grow<
+  TArray extends Float32Array | Int8Array | Uint8Array | Uint16Array | Uint32Array
+>(
   source: TArray,
   length: number
 ): TArray {
@@ -315,63 +308,4 @@ function grow<TArray extends Float32Array | Uint8Array | Uint32Array>(
   next.set(source);
 
   return next;
-}
-
-/** Unit-vector components to signed normalized bytes: `-1..1` → `-127..127`. */
-function toSnorm8(
-  source: Float32Array,
-  length: number
-): Int8Array {
-  const out = new Int8Array(length);
-
-  for (let i = 0; i < length; i++) {
-    out[i] = Math.round(clampUnit(source[i]) * kSnormMax);
-  }
-
-  return out;
-}
-
-/** Values already in `0..1` to unsigned normalized shorts. */
-function toUnorm16(
-  source: Float32Array,
-  length: number
-): Uint16Array {
-  const out = new Uint16Array(length);
-
-  for (let i = 0; i < length; i++) {
-    out[i] = Math.round(clampUnsigned(source[i]) * kUnormMax);
-  }
-
-  return out;
-}
-
-/** Integer counts, kept at face value rather than normalized. */
-function toUint16(
-  source: Float32Array,
-  length: number
-): Uint16Array {
-  const out = new Uint16Array(length);
-  out.set(source.subarray(0, length));
-
-  return out;
-}
-
-function clampUnit(
-  value: number
-): number {
-  if (value < -1) {
-    return -1;
-  }
-
-  return value > 1 ? 1 : value;
-}
-
-function clampUnsigned(
-  value: number
-): number {
-  if (value < 0) {
-    return 0;
-  }
-
-  return value > 1 ? 1 : value;
 }

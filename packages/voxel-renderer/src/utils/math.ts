@@ -12,6 +12,27 @@ export const FACE = {
 } as const;
 export type FACE = typeof FACE[keyof typeof FACE];
 
+export const FACE_NORMALS: readonly Vec3[] = [
+  // PosX
+  [1, 0, 0],
+  // NegX
+  [-1, 0, 0],
+  // PosY
+  [0, 1, 0],
+  // NegY
+  [0, -1, 0],
+  // PosZ
+  [0, 0, 1],
+  // NegZ
+  [0, 0, -1]
+];
+
+// Neighbor offset per face direction (same as normals for axis-aligned faces)
+export const FACE_OFFSETS: readonly Vec3[] = FACE_NORMALS;
+
+// Maps each face to the face pointing in the opposite direction
+export const FACE_OPPOSITE: readonly FACE[] = [1, 0, 3, 2, 5, 4];
+
 // Packs Y-axis rotation (0–3) and flip flags into a single number.
 // bits 0-1: Y rotation steps (0=0°, 1=90° CCW, 2=180°, 3=270° CCW)
 // bit 2: flipX (mirror around x=0.5)
@@ -43,4 +64,25 @@ export function clamp(
   value: number
 ): number {
   return Math.min(max, Math.max(min, value));
+}
+
+export function isPowerOfTwo(
+  value: number
+): boolean {
+  return Number.isInteger(value) && value > 0 && (value & (value - 1)) === 0;
+}
+
+/**
+ * Chunk sizes must be powers of two so every chunk-space coordinate conversion
+ * is a shift and a mask rather than a division.
+ */
+export function assertPowerOfTwoChunkSize(
+  value: number,
+  origin: string
+): void {
+  if (!isPowerOfTwo(value)) {
+    throw new RangeError(
+      `${origin}: chunkSize must be a power of two, received ${value}.`
+    );
+  }
 }

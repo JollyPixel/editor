@@ -15,8 +15,11 @@ import {
   type PackedVoxel
 } from "./packedVoxel.ts";
 import type { VoxelEntry, VoxelCoord } from "./types.ts";
-import { FACE_OFFSETS } from "../mesh/math.ts";
-import type { FACE } from "../utils/math.ts";
+import {
+  assertPowerOfTwoChunkSize,
+  FACE_OFFSETS,
+  type FACE
+} from "../utils/math.ts";
 import type {
   VoxelObjectJSON,
   VoxelObjectLayerJSON
@@ -45,11 +48,17 @@ export class VoxelWorld {
   #layers: VoxelLayer[] = [];
   #layersToRemove: VoxelLayer[] = [];
   #objectLayers: Map<string, VoxelObjectLayerJSON> = new Map();
+  #chunkShift: number;
+  #chunkMask: number;
 
   constructor(
     chunkSize: number = DEFAULT_CHUNK_SIZE
   ) {
+    assertPowerOfTwoChunkSize(chunkSize, "VoxelWorld");
+
     this.chunkSize = chunkSize;
+    this.#chunkShift = Math.log2(chunkSize);
+    this.#chunkMask = chunkSize - 1;
   }
 
   // --- Layer management --- //
@@ -597,18 +606,20 @@ export class VoxelWorld {
     position: Vector3Like
   ): void {
     const s = this.chunkSize;
+    const shift = this.#chunkShift;
+    const mask = this.#chunkMask;
     // Subtract layer offset to get local-space position for chunk index math.
     const x = position.x - layer.offset.x;
     const y = position.y - layer.offset.y;
     const z = position.z - layer.offset.z;
 
-    const cx = Math.floor(x / s);
-    const cy = Math.floor(y / s);
-    const cz = Math.floor(z / s);
+    const cx = x >> shift;
+    const cy = y >> shift;
+    const cz = z >> shift;
 
-    const lx = ((x % s) + s) % s;
-    const ly = ((y % s) + s) % s;
-    const lz = ((z % s) + s) % s;
+    const lx = x & mask;
+    const ly = y & mask;
+    const lz = z & mask;
 
     if (lx === 0) {
       layer.markChunkDirty(cx - 1, cy, cz);

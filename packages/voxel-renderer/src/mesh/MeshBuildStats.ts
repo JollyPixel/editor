@@ -19,8 +19,25 @@ export class MeshBuildStats {
   triangles = 0;
   /** Geometries produced, one per tileset the chunk references. */
   geometries = 0;
+  /**
+   * Vertex attributes emitted, in bytes per vertex — indices excluded. Read
+   * off the geometries themselves, so shrinking or widening an attribute shows
+   * up here whether or not anyone remembered to update the docs.
+   */
+  bytesPerVertex = 0;
   /** Wall-clock time spent in `buildChunkGeometries`. */
   buildTimeMs = 0;
+
+  /**
+   * Faces emitted per voxel that actually contributed geometry. Greedy meshing
+   * drives this 3–20× below the naive path on terrain; if it does not, a merge
+   * predicate has become too strict.
+   */
+  get facesPerSolidVoxel(): number {
+    const solidVoxels = this.voxels - this.hiddenVoxels;
+
+    return solidVoxels === 0 ? 0 : this.faces / solidVoxels;
+  }
 
   reset(): void {
     this.voxels = 0;
@@ -31,6 +48,7 @@ export class MeshBuildStats {
     this.vertices = 0;
     this.triangles = 0;
     this.geometries = 0;
+    this.bytesPerVertex = 0;
     this.buildTimeMs = 0;
   }
 
@@ -45,6 +63,7 @@ export class MeshBuildStats {
     this.vertices = source.vertices;
     this.triangles = source.triangles;
     this.geometries = source.geometries;
+    this.bytesPerVertex = source.bytesPerVertex;
     this.buildTimeMs = source.buildTimeMs;
   }
 
