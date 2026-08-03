@@ -1,17 +1,23 @@
 // Import Internal Dependencies
+import type { EventStore } from "../EventStore.ts";
 import { createMemoryEventStore } from "./memory/index.ts";
-import { createSqliteEventStore } from "./sqlite/index.ts";
 
 export const persistence = {
   memory: createMemoryEventStore,
-  sqlite: createSqliteEventStore
+  sqlite: async(
+    location?: string
+  ): Promise<EventStore> => {
+    const { createSqliteEventStore } = await import("./sqlite/index.ts");
+
+    return createSqliteEventStore(location);
+  }
 } as const;
 
 export {
   MemoryEventWriter,
   MemoryEventReader
 } from "./memory/index.ts";
-export {
+export type {
   SqliteEventWriter,
   SqliteEventReader
 } from "./sqlite/index.ts";

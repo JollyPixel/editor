@@ -1,26 +1,18 @@
-// Import Node.js Dependencies
-import { DatabaseSync } from "node:sqlite";
-import { readFileSync } from "node:fs";
-import path from "node:path";
-
 // Import Internal Dependencies
 import type { EventStore } from "../../EventStore.ts";
+import { SQL_SCHEMA } from "./schema.ts";
 import { SqliteEventWriter } from "./writer.ts";
 import { SqliteEventReader } from "./reader.ts";
 
-// CONSTANTS
-const kSQLSchema = readFileSync(
-  path.join(import.meta.dirname, "schema.sql"),
-  "utf8"
-);
-
-export function createSqliteEventStore(
+export async function createSqliteEventStore(
   location: string = ":memory:"
-): EventStore {
-  const db = new DatabaseSync(location);
-  db.exec(kSQLSchema);
+): Promise<EventStore> {
+  const { DatabaseSync } = await import("node:sqlite");
 
-  return {
+  const db = new DatabaseSync(location);
+  db.exec(SQL_SCHEMA);
+
+  const store: EventStore = {
     writer: new SqliteEventWriter(db),
     reader: new SqliteEventReader(db),
     close: () => db.close(),
@@ -28,7 +20,10 @@ export function createSqliteEventStore(
       this.close();
     }
   };
+
+  return store;
 }
 
+export { SQL_SCHEMA } from "./schema.ts";
 export { SqliteEventWriter } from "./writer.ts";
 export { SqliteEventReader } from "./reader.ts";

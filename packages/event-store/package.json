@@ -6,10 +6,19 @@
   "imports": {
     "#src/*": "./src/*"
   },
-  "exports": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./sqlite": {
+      "types": "./dist/persistence/sqlite/index.d.ts",
+      "default": "./dist/persistence/sqlite/index.js"
+    }
+  },
   "scripts": {
-    "prepublish": "rimraf ./dist && tsc && node scripts/copy-assets.mjs",
-    "build": "tsc && node scripts/copy-assets.mjs",
+    "prepublish": "rimraf ./dist && tsc",
+    "build": "tsc",
     "test-only": "node --test \"test/**/*.spec.ts\"",
     "test": "c8 -r html npm run test-only"
   },

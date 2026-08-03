@@ -1,3 +1,4 @@
+export const SQL_SCHEMA = `
 CREATE TABLE IF NOT EXISTS events (
   event_id INTEGER PRIMARY KEY AUTOINCREMENT,
   asset_type TEXT NOT NULL,
@@ -8,3 +9,4 @@ CREATE TABLE IF NOT EXISTS events (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_events_asset ON events (asset_id, event_version);
+`;
