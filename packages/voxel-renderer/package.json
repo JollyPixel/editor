@@ -17,6 +17,7 @@
     "dev": "vite",
     "test-only": "node --test \"test/**/*.spec.ts\"",
     "bench": "node --max-old-space-size=8192 bench/mesh-build.bench.ts",
+    "bench:compare": "node --max-old-space-size=8192 bench/mesh-compare.bench.ts",
     "test": "c8 -r html npm run test-only"
   },
   "publishConfig": {

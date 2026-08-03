@@ -31,7 +31,9 @@ new VoxelChunk(
 ```
 
 > [!NOTE]
-> Chunk has a default size of 16
+> Chunk has a default size of 16, and `size` must be a power of two —
+> `linearIndex()` composes the three local coordinates into disjoint bit fields
+> rather than multiplying. Anything else throws a `RangeError`.
 
 ## Properties
 
@@ -41,10 +43,14 @@ class VoxelChunk {
   readonly cy: number;
   readonly cz: number;
 
-  // side length in voxels
+  // side length in voxels, always a power of two
   readonly size: number;
+  // log2(size) and size - 1, for callers doing their own index math
+  readonly shift: number;
+  readonly mask: number;
 
-  // set true on any write; cleared by VoxelEngine after mesh rebuild
+  // set true on any write; cleared by VoxelEngine when the chunk is queued
+  // for rebuild, so an edit during the rebuild is not swallowed
   dirty: boolean;
 
   readonly voxelCount: number;

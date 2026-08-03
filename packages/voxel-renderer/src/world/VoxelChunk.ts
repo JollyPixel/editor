@@ -1,6 +1,7 @@
 // Import Internal Dependencies
 import type { VoxelEntry } from "./types.ts";
 import { VoxelStore } from "./VoxelStore.ts";
+import { assertPowerOfTwoChunkSize } from "../utils/math.ts";
 import {
   packVoxel,
   unpackVoxel,
@@ -27,7 +28,12 @@ export class VoxelChunk {
   readonly cx: number;
   readonly cy: number;
   readonly cz: number;
+  /** Always a power of two, which is what makes the index math shift/mask. */
   readonly size: number;
+  /** `log2(size)`, the stride shift between two consecutive Y planes. */
+  readonly shift: number;
+  /** `size - 1`, the local-coordinate mask. */
+  readonly mask: number;
 
   /**
    * Backing storage. Exposed so mesh builders can walk `store.keys` and
@@ -53,33 +59,44 @@ export class VoxelChunk {
     [cx, cy, cz]: [number, number, number],
     size: number = DEFAULT_CHUNK_SIZE
   ) {
+    assertPowerOfTwoChunkSize(size, "VoxelChunk");
+
     this.cx = cx;
     this.cy = cy;
     this.cz = cz;
     this.size = size;
+    this.shift = Math.log2(size);
+    this.mask = size - 1;
 
     this.#minX = size;
     this.#minY = size;
     this.#minZ = size;
   }
 
+  /**
+   * The three local coordinates occupy disjoint bit fields, so composing them
+   * is an OR rather than the two multiplies a mixed-radix index would need.
+   */
   linearIndex(
     lx: number,
     ly: number,
     lz: number
   ): number {
-    return lx + (this.size * (ly + (this.size * lz)));
+    const shift = this.shift;
+
+    return lx | (ly << shift) | (lz << (shift * 2));
   }
 
   fromLinearIndex(
     idx: number
   ): { lx: number; ly: number; lz: number; } {
-    const s = this.size;
-    const lx = idx % s;
-    const ly = Math.floor(idx / s) % s;
-    const lz = Math.floor(idx / (s * s));
+    const { shift, mask } = this;
 
-    return { lx, ly, lz };
+    return {
+      lx: idx & mask,
+      ly: (idx >> shift) & mask,
+      lz: idx >> (shift * 2)
+    };
   }
 
   get(

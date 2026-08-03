@@ -288,3 +288,184 @@ describe("VoxelEngine — chunk rebuild orchestration", () => {
     assert.equal(engine.root.children.length, 0);
   });
 });
+
+/**
+ * Fills `layer` with one voxel per chunk across `count` chunks, so a rebuild
+ * has more than one unit of work to spread over frames.
+ */
+function fillChunks(
+  engine: VoxelEngine,
+  layerName: string,
+  count: number
+): void {
+  for (let i = 0; i < count; i++) {
+    engine.setVoxel(layerName, { position: { x: i * 4, y: 0, z: 0 }, blockId: kCubeId });
+  }
+}
+
+describe("VoxelEngine — budgeted rebuild queue", () => {
+  it("rebuilds every dirty chunk in one tick when the budget is disabled", () => {
+    const engine = new VoxelEngine({ chunkSize: 4, rebuildBudgetMs: 0, blocks: [
+      { id: kCubeId, name: "Cube", shapeId: "cube", faceTextures: {}, defaultTexture: kDefaultTexture, collidable: true }
+    ] });
+    registerTileset(engine);
+    engine.addLayer("Ground");
+    fillChunks(engine, "Ground", 6);
+
+    engine.tick(0);
+
+    assert.equal(engine.pendingRebuilds, 0);
+    assert.equal(engine.root.children.length, 6);
+  });
+
+  it("defers the rest of the queue once the budget is spent", () => {
+    // A negative deadline is always already past, so only the first chunk of
+    // the queue is rebuilt per tick.
+    const engine = new VoxelEngine({ chunkSize: 4, rebuildBudgetMs: Number.MIN_VALUE, blocks: [
+      { id: kCubeId, name: "Cube", shapeId: "cube", faceTextures: {}, defaultTexture: kDefaultTexture, collidable: true }
+    ] });
+    registerTileset(engine);
+    engine.addLayer("Ground");
+    fillChunks(engine, "Ground", 6);
+
+    engine.tick(0);
+
+    assert.equal(engine.root.children.length, 1);
+    assert.equal(engine.pendingRebuilds, 5);
+  });
+
+  it("drains the deferred queue over subsequent ticks", () => {
+    const engine = new VoxelEngine({ chunkSize: 4, rebuildBudgetMs: Number.MIN_VALUE, blocks: [
+      { id: kCubeId, name: "Cube", shapeId: "cube", faceTextures: {}, defaultTexture: kDefaultTexture, collidable: true }
+    ] });
+    registerTileset(engine);
+    engine.addLayer("Ground");
+    fillChunks(engine, "Ground", 4);
+
+    for (let i = 0; i < 4; i++) {
+      engine.tick(0);
+    }
+
+    assert.equal(engine.pendingRebuilds, 0);
+    assert.equal(engine.root.children.length, 4);
+  });
+
+  it("flush() ignores the budget", () => {
+    const engine = new VoxelEngine({ chunkSize: 4, rebuildBudgetMs: Number.MIN_VALUE, blocks: [
+      { id: kCubeId, name: "Cube", shapeId: "cube", faceTextures: {}, defaultTexture: kDefaultTexture, collidable: true }
+    ] });
+    registerTileset(engine);
+    engine.addLayer("Ground");
+    fillChunks(engine, "Ground", 6);
+
+    engine.flush();
+
+    assert.equal(engine.pendingRebuilds, 0);
+    assert.equal(engine.root.children.length, 6);
+  });
+
+  it("keeps an edit that lands after the flag is cleared", () => {
+    const engine = makeEngine();
+    registerTileset(engine);
+    engine.addLayer("Ground");
+    engine.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
+    engine.tick(0);
+
+    // The chunk was meshed, so a further edit must dirty it again rather than
+    // being swallowed by the clear that ran before the mesh.
+    engine.setVoxel("Ground", { position: { x: 1, y: 0, z: 0 }, blockId: kCubeId });
+
+    assert.equal(engine.getLayer("Ground")!.getChunk(0, 0, 0)!.dirty, true);
+  });
+
+  it("rebuilds chunks nearest rebuildFocus first", () => {
+    const engine = new VoxelEngine({ chunkSize: 4, rebuildBudgetMs: Number.MIN_VALUE, blocks: [
+      { id: kCubeId, name: "Cube", shapeId: "cube", faceTextures: {}, defaultTexture: kDefaultTexture, collidable: true }
+    ] });
+    registerTileset(engine);
+    engine.addLayer("Ground");
+    fillChunks(engine, "Ground", 4);
+    engine.rebuildFocus = { x: 14, y: 2, z: 2 };
+
+    engine.tick(0);
+
+    assert.equal(engine.root.children.length, 1);
+    assert.match(engine.root.children[0].name, /:3,0,0:/);
+  });
+
+  it("does not rebuild a chunk unloaded while it was queued", () => {
+    const engine = new VoxelEngine({ chunkSize: 4, rebuildBudgetMs: Number.MIN_VALUE, blocks: [
+      { id: kCubeId, name: "Cube", shapeId: "cube", faceTextures: {}, defaultTexture: kDefaultTexture, collidable: true }
+    ] });
+    registerTileset(engine);
+    engine.addLayer("Ground");
+    fillChunks(engine, "Ground", 3);
+    engine.tick(0);
+    assert.equal(engine.pendingRebuilds, 2);
+
+    // Emptying a chunk drops it from the layer; the queue must let it go too.
+    engine.removeVoxel("Ground", { position: { x: 4, y: 0, z: 0 } });
+    engine.removeVoxel("Ground", { position: { x: 8, y: 0, z: 0 } });
+    engine.flush();
+
+    assert.equal(engine.pendingRebuilds, 0);
+    assert.equal(engine.root.children.length, 1);
+  });
+});
+
+describe("VoxelEngine — layer opacity on the material", () => {
+  it("renders a fully opaque layer with an opaque material", () => {
+    const engine = makeEngine();
+    registerTileset(engine);
+    engine.addLayer("Ground");
+    engine.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
+    engine.flush();
+
+    const material = (engine.root.children[0] as any).material;
+    assert.equal(material.transparent, false);
+    assert.equal(material.opacity, 1);
+    assert.equal(material.depthWrite, true);
+  });
+
+  it("carries the layer opacity on the material instead of the geometry", () => {
+    const engine = makeEngine();
+    registerTileset(engine);
+    engine.addLayer("Ground", { opacity: 0.5 });
+    engine.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
+    engine.flush();
+
+    const mesh = engine.root.children[0] as any;
+    assert.equal(mesh.geometry.getAttribute("color"), undefined);
+    assert.equal(mesh.material.transparent, true);
+    assert.equal(mesh.material.opacity, 0.5);
+    assert.equal(mesh.material.depthWrite, false);
+  });
+
+  it("keeps an almost-opaque layer out of the opaque material bucket", () => {
+    const engine = makeEngine();
+    registerTileset(engine);
+    engine.addLayer("Ground", { opacity: 0.999 });
+    engine.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
+    engine.flush();
+
+    const material = (engine.root.children[0] as any).material;
+    assert.equal(material.transparent, true);
+    assert.ok(material.opacity < 1);
+  });
+
+  it("shares one material between layers whose opacities land in one bucket", () => {
+    const engine = makeEngine();
+    registerTileset(engine);
+    engine.addLayer("A", { opacity: 0.5 });
+    engine.addLayer("B", { opacity: 0.5001 });
+    // Distinct positions, otherwise the higher-priority layer wins compositing
+    // and the other emits no mesh at all.
+    engine.setVoxel("A", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
+    engine.setVoxel("B", { position: { x: 8, y: 0, z: 0 }, blockId: kCubeId });
+    engine.flush();
+
+    const [first, second] = engine.root.children as any[];
+    assert.equal(engine.root.children.length, 2);
+    assert.equal(first.material, second.material);
+  });
+});

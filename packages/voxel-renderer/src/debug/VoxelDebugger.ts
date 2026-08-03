@@ -56,6 +56,16 @@ export interface VoxelDebugStats {
   mergedFaces: number;
   vertices: number;
   triangles: number;
+  /**
+   * Faces emitted per voxel that contributed geometry. Falls 3–20× when greedy
+   * meshing is on; if it does not, a merge predicate has become too strict.
+   */
+  facesPerSolidVoxel: number;
+  /**
+   * Vertex attributes emitted, in bytes per vertex — indices excluded.
+   * Averaged over live chunks, weighted by vertex count.
+   */
+  bytesPerVertex: number;
   /** Sum of the last build time of every live chunk, not a frame cost. */
   buildTimeMs: number;
 }
@@ -156,9 +166,12 @@ export class VoxelDebugger {
       mergedFaces: 0,
       vertices: 0,
       triangles: 0,
+      facesPerSolidVoxel: 0,
+      bytesPerVertex: 0,
       buildTimeMs: 0
     };
 
+    let vertexBytes = 0;
     for (const { meshes, stats } of this.#chunks.values()) {
       total.chunks++;
       total.meshes += meshes.length;
@@ -170,6 +183,15 @@ export class VoxelDebugger {
       total.vertices += stats.vertices;
       total.triangles += stats.triangles;
       total.buildTimeMs += stats.buildTimeMs;
+      vertexBytes += stats.bytesPerVertex * stats.vertices;
+    }
+
+    const solidVoxels = total.voxels - total.hiddenVoxels;
+    if (solidVoxels > 0) {
+      total.facesPerSolidVoxel = total.faces / solidVoxels;
+    }
+    if (total.vertices > 0) {
+      total.bytesPerVertex = vertexBytes / total.vertices;
     }
 
     return total;

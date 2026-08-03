@@ -26,7 +26,9 @@ export interface LayerChunkCacheOptions {
  * Per-layer voxel lookup over a prefetched 3×3×3 block of chunks.
  *
  * The mesh builder calls this for each face, so resolving the chunks once up
- * front keeps the hot path simple.
+ * front keeps the hot path simple. Most queries land in the window's centre
+ * chunk — every voxel of the chunk being meshed does, and only its one-voxel
+ * border does not — so that case is answered without any chunk-grid arithmetic.
  */
 export class LayerChunkCache {
   readonly layer: VoxelLayer;
@@ -36,15 +38,22 @@ export class LayerChunkCache {
   readonly empty: boolean = true;
 
   #size: number;
-  /** log2(size) when the chunk size is a power of two, -1 otherwise. */
   #shift: number;
+  #mask: number;
   #offsetX: number;
   #offsetY: number;
   #offsetZ: number;
   #baseCx: number;
   #baseCy: number;
   #baseCz: number;
-  #chunks: (VoxelChunk | undefined)[] = [];
+  /** Pre-filled with `null` rather than left holey, so reads stay monomorphic. */
+  #chunks: (VoxelChunk | null)[] = new Array(kSpan ** 3).fill(null);
+
+  /** World-space origin of the window's centre chunk, and the chunk itself. */
+  #centreWx: number;
+  #centreWy: number;
+  #centreWz: number;
+  #centreChunk: VoxelChunk | null = null;
 
   constructor(
     options: LayerChunkCacheOptions
@@ -54,36 +63,41 @@ export class LayerChunkCache {
     this.layer = layer;
     this.opaque = layer.opacity >= 1;
 
+    const shift = Math.log2(chunkSize);
     this.#size = chunkSize;
-    this.#shift = (chunkSize & (chunkSize - 1)) === 0 ?
-      Math.log2(chunkSize) :
-      -1;
+    this.#shift = shift;
+    this.#mask = chunkSize - 1;
 
     const { offset } = layer;
     this.#offsetX = offset.x;
     this.#offsetY = offset.y;
     this.#offsetZ = offset.z;
 
-    this.#baseCx = Math.floor((minWx - offset.x) / chunkSize);
-    this.#baseCy = Math.floor((minWy - offset.y) / chunkSize);
-    this.#baseCz = Math.floor((minWz - offset.z) / chunkSize);
+    const baseCx = (minWx - offset.x) >> shift;
+    const baseCy = (minWy - offset.y) >> shift;
+    const baseCz = (minWz - offset.z) >> shift;
+    this.#baseCx = baseCx;
+    this.#baseCy = baseCy;
+    this.#baseCz = baseCz;
 
     for (let dx = 0; dx < kSpan; dx++) {
       for (let dy = 0; dy < kSpan; dy++) {
         for (let dz = 0; dz < kSpan; dz++) {
-          const chunk = layer.getChunk(
-            this.#baseCx + dx,
-            this.#baseCy + dy,
-            this.#baseCz + dz
-          );
-          this.#chunks[(dx * 9) + (dy * kSpan) + dz] = chunk;
-
-          if (chunk !== undefined) {
-            this.empty = false;
+          const chunk = layer.getChunk(baseCx + dx, baseCy + dy, baseCz + dz);
+          if (chunk === undefined) {
+            continue;
           }
+
+          this.#chunks[(dx * kSpan * kSpan) + (dy * kSpan) + dz] = chunk;
+          this.empty = false;
         }
       }
     }
+
+    this.#centreWx = ((baseCx + 1) * chunkSize) + offset.x;
+    this.#centreWy = ((baseCy + 1) * chunkSize) + offset.y;
+    this.#centreWz = ((baseCz + 1) * chunkSize) + offset.z;
+    this.#centreChunk = this.#chunks[(kSpan * kSpan) + kSpan + 1];
   }
 
   /** `VOXEL_ABSENT` (-1) when the position holds no voxel in this layer. */
@@ -93,51 +107,59 @@ export class LayerChunkCache {
     wz: number
   ): PackedVoxel {
     const size = this.#size;
+    const lx = wx - this.#centreWx;
+    const ly = wy - this.#centreWy;
+    const lz = wz - this.#centreWz;
+
+    if ((lx | ly | lz) >= 0 && lx < size && ly < size && lz < size) {
+      const chunk = this.#centreChunk;
+
+      return chunk === null || !chunk.mayContain(lx, ly, lz) ?
+        VOXEL_ABSENT :
+        chunk.getPackedAt(lx, ly, lz);
+    }
+
+    return this.#packedOutsideCentre(wx, wy, wz);
+  }
+
+  /**
+   * The window's 26 outer chunks, plus the fallback for a caller reaching past
+   * the one-voxel border the cache was built for.
+   */
+  #packedOutsideCentre(
+    wx: number,
+    wy: number,
+    wz: number
+  ): PackedVoxel {
     const shift = this.#shift;
+    const mask = this.#mask;
     const x = wx - this.#offsetX;
     const y = wy - this.#offsetY;
     const z = wz - this.#offsetZ;
 
-    let cx: number;
-    let cy: number;
-    let cz: number;
-    let lx: number;
-    let ly: number;
-    let lz: number;
-
-    if (shift >= 0) {
-      const mask = size - 1;
-      cx = x >> shift;
-      cy = y >> shift;
-      cz = z >> shift;
-      lx = x & mask;
-      ly = y & mask;
-      lz = z & mask;
-    }
-    else {
-      cx = Math.floor(x / size);
-      cy = Math.floor(y / size);
-      cz = Math.floor(z / size);
-      lx = x - (cx * size);
-      ly = y - (cy * size);
-      lz = z - (cz * size);
-    }
+    const cx = x >> shift;
+    const cy = y >> shift;
+    const cz = z >> shift;
 
     const dx = cx - this.#baseCx;
     const dy = cy - this.#baseCy;
     const dz = cz - this.#baseCz;
 
-    // Outside the prefetched window only when a caller queries beyond the
-    // one-voxel border the cache was built for; fall back to the layer.
     const chunk = (dx | dy | dz) >= 0 && dx < kSpan && dy < kSpan && dz < kSpan ?
-      this.#chunks[(dx * 9) + (dy * kSpan) + dz] :
-      this.layer.getChunk(cx, cy, cz);
+      this.#chunks[(dx * kSpan * kSpan) + (dy * kSpan) + dz] :
+      this.layer.getChunk(cx, cy, cz) ?? null;
 
-    if (chunk === undefined || !chunk.mayContain(lx, ly, lz)) {
+    if (chunk === null) {
       return VOXEL_ABSENT;
     }
 
-    return chunk.getPackedAt(lx, ly, lz);
+    const lx = x & mask;
+    const ly = y & mask;
+    const lz = z & mask;
+
+    return chunk.mayContain(lx, ly, lz) ?
+      chunk.getPackedAt(lx, ly, lz) :
+      VOXEL_ABSENT;
   }
 }
 
@@ -242,12 +264,12 @@ export class ChunkNeighbourhood {
         return false;
       }
 
-      const variant = this.#variants.get(
+      const occlusionMask = this.#variants.occlusionMaskOf(
         voxelBlockId(neighbour),
         voxelTransform(neighbour)
       );
 
-      return variant !== null && (variant.occlusionMask & (1 << oppFace)) !== 0;
+      return (occlusionMask & (1 << oppFace)) !== 0;
     }
 
     return false;

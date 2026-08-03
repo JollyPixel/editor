@@ -62,8 +62,11 @@ for (let run = 0; run < runs; run++) {
   );
   const generateMs = performance.now() - generateStart;
 
+  // `flush()` rather than `tick()`: the tick budget would spread the rebuild
+  // over hundreds of frames, which is the point of the budget but not of this
+  // measurement.
   const meshStart = performance.now();
-  engine.tick(0);
+  engine.flush();
   const meshMs = performance.now() - meshStart;
 
   const { triangles, vertices } = countGeometry(engine);

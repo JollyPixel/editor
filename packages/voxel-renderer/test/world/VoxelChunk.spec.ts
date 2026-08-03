@@ -256,3 +256,37 @@ describe("mayContain()", () => {
     assert.equal(chunk.mayContain(6, 6, 6), true);
   });
 });
+
+describe("VoxelChunk power-of-two size", () => {
+  it("exposes shift and mask matching the size", () => {
+    const chunk = new VoxelChunk([0, 0, 0], 32);
+    assert.equal(chunk.shift, 5);
+    assert.equal(chunk.mask, 31);
+  });
+
+  it("rejects a non power-of-two size", () => {
+    assert.throws(
+      () => new VoxelChunk([0, 0, 0], 6),
+      /chunkSize must be a power of two, received 6/
+    );
+  });
+
+  it("rejects a zero or negative size", () => {
+    assert.throws(() => new VoxelChunk([0, 0, 0], 0), RangeError);
+    assert.throws(() => new VoxelChunk([0, 0, 0], -8), RangeError);
+  });
+
+  it("round-trips every local coordinate through the linear index", () => {
+    const size = 8;
+    const chunk = new VoxelChunk([0, 0, 0], size);
+
+    for (let lz = 0; lz < size; lz++) {
+      for (let ly = 0; ly < size; ly++) {
+        for (let lx = 0; lx < size; lx++) {
+          const idx = chunk.linearIndex(lx, ly, lz);
+          assert.deepEqual(chunk.fromLinearIndex(idx), { lx, ly, lz });
+        }
+      }
+    }
+  });
+});

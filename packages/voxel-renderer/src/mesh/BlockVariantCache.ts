@@ -9,7 +9,11 @@ import {
   rotateVertex,
   rotateNormal,
   flipYFace
-} from "./math.ts";
+} from "./rotation.ts";
+import {
+  toSnorm8,
+  toUnorm16
+} from "./quantize.ts";
 
 // CONSTANTS
 // A packed transform uses bits 0-4, so a block has at most 32 variants.
@@ -23,6 +27,14 @@ const kAllFaces: readonly FACE[] = [
   FACE.PosZ,
   FACE.NegZ
 ];
+/** Occlusion table slot holding no compiled mask yet. */
+const kOcclusionUnknown = -1;
+/**
+ * Ceiling on the flat occlusion table, in slots. 64k slots (256 KB) covers
+ * block ids 0-2047; ids above that fall back to the variant map, which is
+ * simply the behaviour before the table existed.
+ */
+const kOcclusionMaxSlots = 1 << 16;
 
 /**
  * How a mergeable face maps onto the world axes so the greedy mesher can
@@ -59,18 +71,25 @@ export interface BlockVariantFace {
   indexCount: number;
   /** `vertexCount × 3` block-local positions in 0-1 space. */
   positions: Float32Array;
-  /** `vertexCount × 2` atlas UVs. */
-  uvs: Float32Array;
+  /**
+   * `vertexCount × 2` atlas UVs, already unsigned-normalized. Emitted verbatim
+   * on the non-tiled path, so the mesher never re-quantises them.
+   */
+  uvs: Uint16Array;
   /**
    * `vertexCount × 2` UVs in tile space (0-1 inside the tile), before the atlas
    * rect is applied. Greedy meshing scales these past 1 to repeat the tile and
-   * lets the shader fold them back into `region`.
+   * lets the shader fold them back into `region`, so they stay float.
    */
   tileUvs: Float32Array;
-  /** The tile's atlas rect: `[offsetU, offsetV, scaleU, scaleV]`. */
-  region: Float32Array;
+  /**
+   * The tile's atlas rect `[offsetU, offsetV, scaleU, scaleV]`, unsigned
+   * normalized like `uvs`.
+   */
+  region: Uint16Array;
   /** Non-null when the face can be stretched over a run of identical voxels. */
   merge: BlockFaceMerge | null;
+  /** Face normal, signed-normalized to the byte the attribute is emitted as. */
   normalX: number;
   normalY: number;
   normalZ: number;
@@ -85,6 +104,13 @@ export interface BlockVariant {
    * Undefined where the variant has no full-quad face pointing that way.
    */
   mergeFaces: readonly (BlockVariantFace | undefined)[];
+  /**
+   * Scratch slot owned by the single `GreedyMesher` sweeping this cache: the
+   * variant's compact index in the chunk being meshed. Only meaningful while
+   * `sweepEpoch` matches that mesher's current epoch.
+   */
+  sweepIndex: number;
+  sweepEpoch: number;
 }
 
 export interface BlockVariantCacheOptions {
@@ -108,6 +134,13 @@ export class BlockVariantCache {
   #variants = new Map<number, BlockVariant | null>();
   #slots = new Map<string, number>();
   #tilesetIds: string[] = [];
+
+  /**
+   * `occlusionMask` per (blockId, transform), `kOcclusionUnknown` where not yet
+   * compiled. The mesh builder asks for this bitmask once per face test, so it
+   * gets a flat array read instead of a hash lookup.
+   */
+  #occlusion = new Int32Array(0);
 
   #blockVersion = -1;
   #shapeVersion = -1;
@@ -142,6 +175,7 @@ export class BlockVariantCache {
     this.#shapeVersion = shapeVersion;
     this.#tilesetVersion = tilesetVersion;
     this.#variants.clear();
+    this.#occlusion.fill(kOcclusionUnknown);
   }
 
   /**
@@ -161,6 +195,51 @@ export class BlockVariantCache {
     }
 
     return variant;
+  }
+
+  /**
+   * Bit `f` of the returned mask is set when the variant fully covers
+   * world-space face `f`. Returns 0 for an unknown block, which occludes
+   * nothing — same answer `get()` would produce, without the Map lookup or the
+   * `BlockVariant` the caller does not need.
+   */
+  occlusionMaskOf(
+    blockId: number,
+    transform: number
+  ): number {
+    const key = (blockId * kTransformCount) + (transform & kTransformMask);
+    // Unsigned so a negative key (never produced by a packed voxel, but cheap
+    // to rule out) misses the table instead of reading `undefined`.
+    if (key >>> 0 < this.#occlusion.length) {
+      const cached = this.#occlusion[key];
+      if (cached !== kOcclusionUnknown) {
+        return cached;
+      }
+    }
+
+    return this.#compileOcclusion(key, blockId, transform);
+  }
+
+  #compileOcclusion(
+    key: number,
+    blockId: number,
+    transform: number
+  ): number {
+    const variant = this.get(blockId, transform);
+    const mask = variant === null ? 0 : variant.occlusionMask;
+
+    if (key >= 0 && key < kOcclusionMaxSlots) {
+      if (key >= this.#occlusion.length) {
+        const grown = new Int32Array(
+          Math.min(kOcclusionMaxSlots, nextPowerOfTwo(key + 1))
+        ).fill(kOcclusionUnknown);
+        grown.set(this.#occlusion);
+        this.#occlusion = grown;
+      }
+      this.#occlusion[key] = mask;
+    }
+
+    return mask;
   }
 
   tilesetIdAt(
@@ -221,7 +300,7 @@ export class BlockVariantCache {
       const uvRegion = this.#tilesetManager.getTileUV(tileRef);
       const vertexCount = faceDef.vertices.length;
       const positions = new Float32Array(vertexCount * 3);
-      const uvs = new Float32Array(vertexCount * 2);
+      const uvs = new Uint16Array(vertexCount * 2);
       const tileUvs = new Float32Array(vertexCount * 2);
 
       for (let i = 0; i < vertexCount; i++) {
@@ -240,8 +319,14 @@ export class BlockVariantCache {
         const tileUV = faceDef.uvs[vi];
         tileUvs[i * 2] = tileUV[0];
         tileUvs[(i * 2) + 1] = tileUV[1];
-        uvs[i * 2] = uvRegion.offsetU + (uvRegion.scaleU * tileUV[0]);
-        uvs[(i * 2) + 1] = uvRegion.offsetV + (uvRegion.scaleV * tileUV[1]);
+        // `fround` reproduces the float32 staging buffer these used to pass
+        // through, so the quantised result is unchanged.
+        uvs[i * 2] = toUnorm16(
+          Math.fround(uvRegion.offsetU + (uvRegion.scaleU * tileUV[0]))
+        );
+        uvs[(i * 2) + 1] = toUnorm16(
+          Math.fround(uvRegion.offsetV + (uvRegion.scaleV * tileUV[1]))
+        );
       }
 
       const normal = rotateNormal(
@@ -258,23 +343,27 @@ export class BlockVariantCache {
         positions,
         uvs,
         tileUvs,
-        region: new Float32Array([
-          uvRegion.offsetU,
-          uvRegion.offsetV,
-          uvRegion.scaleU,
-          uvRegion.scaleV
+        region: new Uint16Array([
+          toUnorm16(Math.fround(uvRegion.offsetU)),
+          toUnorm16(Math.fround(uvRegion.offsetV)),
+          toUnorm16(Math.fround(uvRegion.scaleU)),
+          toUnorm16(Math.fround(uvRegion.scaleV))
         ]),
         merge: describeMerge(cull, positions, tileUvs),
-        normalX: normal[0],
-        normalY: normal[1],
-        normalZ: normal[2]
+        normalX: toSnorm8(normal[0]),
+        normalY: toSnorm8(normal[1]),
+        normalZ: toSnorm8(normal[2])
       });
     }
 
     return {
       faces,
       occlusionMask: this.#occlusionMask(shape, rotation, flipY),
-      mergeFaces: indexMergeFaces(faces)
+      mergeFaces: indexMergeFaces(faces),
+      sweepIndex: 0,
+      // No mesher epoch is ever negative, so a freshly compiled variant always
+      // reads as "not yet seen in this chunk".
+      sweepEpoch: -1
     };
   }
 
@@ -407,4 +496,10 @@ function isCorner(
   value: number
 ): boolean {
   return value === 0 || value === 1;
+}
+
+function nextPowerOfTwo(
+  value: number
+): number {
+  return 2 ** Math.ceil(Math.log2(value));
 }

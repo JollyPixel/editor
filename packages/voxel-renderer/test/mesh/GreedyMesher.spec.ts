@@ -400,16 +400,14 @@ describe("GreedyMesher — layers", () => {
     assert.equal(f.builder.stats.hiddenVoxels, 4);
   });
 
-  it("bakes the layer opacity into the vertex colors", () => {
+  it("keeps layer opacity off the geometry", () => {
     const f = makeFixture();
     f.world.updateLayer("test", { opacity: 0.5 });
     fill(f, { from: [0, 0, 0], to: [3, 0, 3] });
 
     const [geometry] = [...build(f)!.values()];
-    const color = geometry.getAttribute("color");
 
-    // Colors are stored as normalized bytes.
-    assert.equal(Math.round(color.getW(0) * 255), 128);
+    assert.equal(geometry.getAttribute("color"), undefined);
   });
 });
 

@@ -27,8 +27,29 @@ export function mergeChunkGeometries(
     };
   }
 
-  const positions: number[] = [];
-  const indices: number[] = [];
+  // Sizing the output up front keeps this to two allocations instead of the
+  // repeated reallocation (and boxed doubles) a `number[]` would cost.
+  let positionLength = 0;
+  let indexLength = 0;
+  for (const geometry of geometries.values()) {
+    const position = geometry.getAttribute("position");
+    const index = geometry.getIndex();
+    if (!position || !index) {
+      continue;
+    }
+
+    positionLength += position.array.length;
+    indexLength += index.array.length;
+  }
+
+  if (positionLength === 0) {
+    return null;
+  }
+
+  const positions = new Float32Array(positionLength);
+  const indices = new Uint32Array(indexLength);
+  let positionCursor = 0;
+  let indexCursor = 0;
   let indexOffset = 0;
 
   for (const geometry of geometries.values()) {
@@ -38,25 +59,25 @@ export function mergeChunkGeometries(
       continue;
     }
 
-    for (let i = 0; i < position.array.length; i++) {
-      positions.push(position.array[i]);
-    }
-    for (let i = 0; i < index.array.length; i++) {
-      indices.push(index.array[i] + indexOffset);
-    }
-    indexOffset += position.count;
-  }
+    positions.set(position.array, positionCursor);
+    positionCursor += position.array.length;
 
-  if (positions.length === 0) {
-    return null;
+    // Indices are rebased onto the merged vertex range, so they cannot be
+    // copied verbatim the way positions can.
+    const source = index.array;
+    for (let i = 0; i < source.length; i++) {
+      indices[indexCursor + i] = source[i] + indexOffset;
+    }
+    indexCursor += source.length;
+    indexOffset += position.count;
   }
 
   const merged = new THREE.BufferGeometry();
   merged.setAttribute(
     "position",
-    new THREE.Float32BufferAttribute(positions, 3)
+    new THREE.BufferAttribute(positions, 3)
   );
-  merged.setIndex(indices);
+  merged.setIndex(new THREE.BufferAttribute(indices, 1));
 
   return {
     geometry: merged,

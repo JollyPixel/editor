@@ -47,6 +47,11 @@ A layer with `opacity === 0` is skipped during compositing exactly like an invis
 new VoxelWorld(chunkSize?: number) // default: 16
 ```
 
+`chunkSize` must be a power of two. Every world-to-chunk conversion — on the
+write path, in the mesher, and in the neighbour lookups — is a shift and a mask,
+so a size that is not a power of two throws a `RangeError` rather than falling
+back to division.
+
 ### Properties
 
 ```ts

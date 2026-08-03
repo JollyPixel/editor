@@ -365,3 +365,72 @@ describe("VoxelLayer mergeFrom", () => {
     assert.equal(source.chunkCount, 1);
   });
 });
+
+describe("VoxelLayer chunk keys", () => {
+  it("rejects a non power-of-two chunkSize", () => {
+    assert.throws(
+      () => makeLayer({ chunkSize: 12 }),
+      /chunkSize must be a power of two, received 12/
+    );
+  });
+
+  it("keeps negative chunk coordinates distinct", () => {
+    const layer = makeLayer({ chunkSize: 4 });
+    layer.setVoxelAt({ x: -1, y: -1, z: -1 }, makeEntry(1));
+    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeEntry(2));
+
+    assert.equal(layer.chunkCount, 2);
+    assert.equal(layer.getVoxelAt({ x: -1, y: -1, z: -1 })!.blockId, 1);
+    assert.equal(layer.getVoxelAt({ x: 0, y: 0, z: 0 })!.blockId, 2);
+  });
+
+  it("does not alias two chunks onto one key", () => {
+    const layer = makeLayer({ chunkSize: 4 });
+    const seen = new Set<number>();
+
+    for (const cx of [-3, 0, 5]) {
+      for (const cy of [-2, 0, 7]) {
+        for (const cz of [-1, 0, 9]) {
+          const chunk = layer.getOrCreateChunk(cx, cy, cz);
+          assert.equal(seen.has(chunk.cx * 1e6 + chunk.cy * 1e3 + chunk.cz), false);
+          seen.add(chunk.cx * 1e6 + chunk.cy * 1e3 + chunk.cz);
+        }
+      }
+    }
+    assert.equal(layer.chunkCount, 27);
+  });
+
+  it("throws rather than aliasing a chunk beyond the packable range", () => {
+    const layer = makeLayer({ chunkSize: 4 });
+
+    assert.throws(() => layer.getOrCreateChunk(1 << 20, 0, 0), RangeError);
+    assert.throws(() => layer.getOrCreateChunk(0, 1 << 20, 0), RangeError);
+  });
+
+  it("forgets the memoized chunk once it is dropped", () => {
+    const layer = makeLayer({ chunkSize: 4 });
+    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeEntry());
+    // Warms the memo.
+    assert.ok(layer.getChunk(0, 0, 0));
+
+    layer.removeVoxelAt({ x: 0, y: 0, z: 0 });
+
+    assert.equal(layer.getChunk(0, 0, 0), undefined);
+    assert.equal(layer.chunkCount, 0);
+  });
+});
+
+describe("VoxelLayer chunk range edges", () => {
+  it("answers undefined rather than throwing for a chunk past the range", () => {
+    const layer = makeLayer({ chunkSize: 4 });
+
+    assert.equal(layer.getChunk(1 << 20, 0, 0), undefined);
+    assert.equal(layer.getChunk(0, -(1 << 20), 0), undefined);
+  });
+
+  it("marks a neighbour past the edge of the world without throwing", () => {
+    const layer = makeLayer({ chunkSize: 4 });
+
+    assert.doesNotThrow(() => layer.markChunkDirty(-99999, 0, 0));
+  });
+});

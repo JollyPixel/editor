@@ -78,9 +78,17 @@ type MaterialCustomizerFn = (
 
 interface VoxelEngineOptions {
   /**
+   * Must be a power of two — every world-to-chunk conversion is a shift and a
+   * mask. Anything else throws a RangeError.
    * @default 16
    */
   chunkSize?: number;
+  /**
+   * Milliseconds tick() may spend rebuilding dirty chunks before deferring the
+   * rest to the next frame. 0 rebuilds everything in the same tick.
+   * @default 8
+   */
+  rebuildBudgetMs?: number;
   /**
    * Enables collision when provided, disabled by default so no physics backend
    * is required. Called once during construction with the registries.
@@ -192,28 +200,53 @@ class VoxelEngine {
 
 ```ts
 init(): void;                   // builds meshes for any voxels already present (e.g. after deserialize)
-tick(deltaTime: number): void;  // rebuilds dirty chunks; call once per frame
+tick(deltaTime: number): void;  // rebuilds dirty chunks within a time budget; call once per frame
+flush(): void;                  // rebuilds every pending chunk now, ignoring the budget
 dispose(): void;                // disposes chunk meshes, materials, and tileset textures
 ```
 
 When wrapped by `VoxelRenderer`, these are called automatically from its
 `awake()`/`update()`/`destroy()`. Call them yourself when using `VoxelEngine` standalone.
 
+### Rebuild budget
+
+`tick()` spends at most `rebuildBudgetMs` (default 8) rebuilding chunks and
+defers the rest to the next frame. One edit dirties a handful of chunks and
+finishes in the same tick; a layer offset drag or an opacity change dirties the
+whole world, and without a budget that lands as one multi-second freeze.
+
+```ts
+const engine = new VoxelEngine({ rebuildBudgetMs: 8 });
+
+// Order the queue around what the user is looking at.
+engine.rebuildFocus = camera.position;
+
+engine.pendingRebuilds; // chunks still waiting; 0 once the world is up to date
+```
+
+Set `rebuildBudgetMs: 0` to rebuild everything in the same tick, which is the
+behaviour before the budget existed. `init()` and `load()` are unaffected — they
+rebuild the whole world synchronously. Use `flush()` when meshes must exist
+before the next statement runs: a screenshot, an export, a test assertion.
+
+A chunk's dirty flag is cleared when it enters the queue, not after it is
+meshed, so an edit landing in between re-dirties it and is picked up next tick
+instead of being swallowed.
+
 ## Chunk geometry layout
 
 A chunk produces one `THREE.Mesh` per tileset it references, all parented to
-`root`. Their geometries are indexed and carry four attributes:
+`root`. Their geometries are indexed and carry three attributes:
 
 | Attribute  | Type                | Items | Bytes | Notes |
 |------------|---------------------|-------|-------|-------|
 | `position` | `float32`           | 3     | 12    | world space, not chunk-local |
 | `normal`   | `int8` normalized   | 3     | 3     | not axis-aligned for ramps and corners |
 | `uv`       | `uint16` normalized | 2     | 4     | atlas coordinates, half-texel inset |
-| `color`    | `uint8` normalized  | 4     | 4     | RGB is white, alpha is the layer opacity |
 
 Vertices are never shared between faces — each face needs its own UVs and
-normal — so a cube costs 24 vertices, not 8. At 23 bytes per vertex a
-million-vertex chunk keeps 23 MB resident for as long as it is on screen, which
+normal — so a cube costs 24 vertices, not 8. At 19 bytes per vertex a
+million-vertex chunk keeps 19 MB resident for as long as it is on screen, which
 is why every attribute is stored in the narrowest type that can carry it.
 
 `position` is the exception: it holds absolute world coordinates, and both
@@ -222,12 +255,17 @@ would silently distort colliders and hit tests.
 
 Reading an attribute back through `getX()`/`getW()` denormalizes it, so callers
 see the original range. Quantisation is lossy by design but below what the
-renderer can show: a unit normal lands within `1/127`, an atlas coordinate within
-`1/65535`, and alpha within `1/255` of the layer's `opacity`.
+renderer can show: a unit normal lands within `1/127` and an atlas coordinate
+within `1/65535`.
 
-Alpha is baked per vertex rather than set on the material so a future per-block
-opacity (e.g. windows) only changes what the builder writes, not how materials
-are keyed and shared.
+Layer opacity is **not** a vertex attribute. It rides on the material instead,
+where three multiplies it into `diffuseColor.a` at exactly the point a vertex
+alpha would have landed — same blending, same alpha testing, four constant bytes
+saved per vertex. Materials are cached per `(tilesetId, opacity bucket)` with
+opacity quantised into 32 steps, so dragging an opacity slider cannot mint an
+unbounded number of them. `engine.debug.stats.bytesPerVertex` reports the live
+figure straight off the geometries, which is the cheapest way to catch an
+attribute quietly growing back.
 
 ## Greedy meshing
 

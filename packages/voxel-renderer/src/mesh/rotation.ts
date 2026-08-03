@@ -1,27 +1,7 @@
 // Import Internal Dependencies
 import { type Vec3, FACE } from "../utils/math.ts";
 
-export const FACE_NORMALS: readonly Vec3[] = [
-  // PosX
-  [1, 0, 0],
-  // NegX
-  [-1, 0, 0],
-  // PosY
-  [0, 1, 0],
-  // NegY
-  [0, -1, 0],
-  // PosZ
-  [0, 0, 1],
-  // NegZ
-  [0, 0, -1]
-];
-
-// Neighbor offset per face direction (same as normals for axis-aligned faces)
-export const FACE_OFFSETS: readonly Vec3[] = FACE_NORMALS as Vec3[];
-
-// Maps each face to the face pointing in the opposite direction
-export const FACE_OPPOSITE: readonly FACE[] = [1, 0, 3, 2, 5, 4];
-
+// CONSTANTS
 // Precomputed rotation table: kRotateFaceTable[rotation][face] = rotatedFace
 // Positive rotation = CCW around +Y axis when viewed from above.
 // rot=1 (90° CCW): PosX→NegZ, NegX→PosZ, PosZ→PosX, NegZ→NegX

@@ -69,8 +69,9 @@ class VoxelLayer {
 > at `{offset.x, offset.y, offset.z}`. Use `VoxelWorld.setLayerOffset` or
 > `translateLayer` (preferred) so all dependent chunks are marked dirty automatically.
 
-> **Opacity semantics** — `opacity` is baked per-vertex into the layer's mesh (real alpha
-> blending), and also drives occlusion: a layer with `opacity < 1` (e.g. glass) never
+> **Opacity semantics** — `opacity` is carried by the layer's material (real alpha
+> blending), quantised into 32 buckets so the material cache stays bounded, and also
+> drives occlusion: a layer with `opacity < 1` (e.g. glass) never
 > hides the faces of neighbouring voxels, in any layer, the way a fully opaque layer does.
 > `opacity === 0` is treated exactly like `visible = false` — the layer stops winning
 > world compositing (`VoxelWorld.getVoxelAt`) and its chunk meshes/colliders are removed.

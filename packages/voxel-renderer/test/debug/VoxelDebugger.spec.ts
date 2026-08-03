@@ -123,6 +123,8 @@ describe("VoxelDebugger — statistics", () => {
       mergedFaces: 0,
       vertices: 0,
       triangles: 0,
+      facesPerSolidVoxel: 0,
+      bytesPerVertex: 0,
       buildTimeMs: 0
     });
   });
