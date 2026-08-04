@@ -16,6 +16,7 @@
     "docs:preview": "vitepress preview docs"
   },
   "workspaces": [
+    "packages/ui",
     "packages/engine",
     "packages/runtime",
     "packages/event-store",
