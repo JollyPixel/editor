@@ -48,6 +48,7 @@
   "devDependencies": {
     "@dimforge/rapier3d": "0.19.3",
     "@jolly-pixel/runtime": "3.4.0",
-    "simplex-noise": "4.0.3"
+    "simplex-noise": "4.0.3",
+    "tweakpane": "4.0.5"
   }
 }

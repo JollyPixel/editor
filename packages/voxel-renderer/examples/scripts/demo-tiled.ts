@@ -10,7 +10,10 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { VoxelBehavior } from "./components/VoxelMap.ts";
-import { createExamplesMenu } from "./utils/menu.ts";
+import {
+  PANE_RUNTIME_OPTIONS,
+  createExamplePane
+} from "./utils/pane.ts";
 
 const canvas = document.querySelector("canvas") as HTMLCanvasElement | null;
 if (!canvas) {
@@ -45,8 +48,8 @@ world.createActor("camera")
 world.createActor("map")
   .addComponent(VoxelBehavior);
 
-await loadRuntime(runtime)
+await loadRuntime(runtime, PANE_RUNTIME_OPTIONS)
   .catch(console.error);
 
-createExamplesMenu();
+createExamplePane();
 

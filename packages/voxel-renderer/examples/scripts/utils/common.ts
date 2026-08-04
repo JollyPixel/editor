@@ -8,7 +8,7 @@ const kDefaultLabelStyle: Partial<CSSStyleDeclaration> = {
   color: "#fff",
   fontSize: "11px",
   fontFamily: "monospace",
-  background: "rgba(0,0,0,0.65)",
+  background: "rgba(26, 26, 26, 0.95)",
   padding: "2px 7px",
   borderRadius: "3px",
   pointerEvents: "none",

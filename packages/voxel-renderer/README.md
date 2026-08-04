@@ -172,7 +172,7 @@ const voxelMap = world.createActor("map")
 
 ## 🚀 Running the examples
 
-Five interactive examples live in the `examples/` directory and are served by Vite. Start the dev server from the package root:
+Six interactive examples live in the `examples/` directory and are served by Vite. Start the dev server from the package root:
 
 ```bash
 npm run dev -w @jolly-pixel/voxel.renderer
@@ -186,7 +186,8 @@ Then open one of these URLs in your browser:
 | `http://localhost:5173/tileset.html` | `demo-tileset.ts` | Every tile in `Tileset001.png` laid out as UV-mapped quads with col/row labels, plus a rotating textured cube |
 | `http://localhost:5173/shapes.html` | `demo-shapes.ts` | All 19 built-in block shapes rendered as coloured meshes with a wireframe overlay and labelled name |
 | `http://localhost:5173/tiled.html` | `demo-tiled.ts` | A multi-layer Tiled `.tmj` map imported via `TiledConverter` in `"stacked"` mode with WASD camera navigation |
-| `http://localhost:5173/noise-world.html` | `demo-noise-world.ts` | A Minecraft-like world generated from simplex noise, with a live performance HUD - the benchmark example |
+| `http://localhost:5173/noise-world.html` | `demo-noise-world.ts` | A Minecraft-like world generated from simplex noise, with live renderer and mesh counters - the benchmark example |
+| `http://localhost:5173/flat-world.html` | `demo-flat-world.ts` | A server-authoritative flat world edited by several browsers at once, with peer brushes over the room's presence channel |
 
 The shapes and tileset examples use OrbitControls (left drag: rotate, right drag: pan, scroll: zoom); the others use `Camera3DControls` (WASD + mouse).
 

@@ -14,7 +14,7 @@ import {
   createOrbitCamera,
   startLoop
 } from "./utils/common.ts";
-import { createExamplesMenu } from "./utils/menu.ts";
+import { createExamplePane } from "./utils/pane.ts";
 
 // CONSTANTS
 const kTileSrc = "/tileset/UV_cube.png";
@@ -139,7 +139,7 @@ for (let row = 0; row < kRows; row++) {
 
 // ── Animation loop ─────────────────────────────────────────────────────────────
 
-createExamplesMenu();
+createExamplePane();
 startLoop({
   renderer,
   scene,

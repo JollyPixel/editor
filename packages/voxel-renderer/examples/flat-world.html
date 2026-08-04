@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flat World (Sync) &mdash; @jolly-pixel/voxel.renderer</title>
+  <link rel="stylesheet" href="/main.css">
+  <style>
+    /* Presence panel — specific to this example; kept clear of the pane. */
+    #session {
+      top: 48px;
+      left: 12px;
+      min-width: 170px;
+    }
+
+    #status {
+      color: rgba(249, 251, 231, 0.65);
+    }
+
+    #status.failed {
+      color: #f9c74f;
+    }
+
+    #peers {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .peer {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .swatch {
+      display: inline-block;
+      width: 9px;
+      height: 9px;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+
+<body class="sky">
+  <canvas tabindex="-1"></canvas>
+  <div id="title">Flat World (Sync) &mdash; @jolly-pixel/voxel.renderer</div>
+  <div id="session" class="panel">
+    <div id="status">connecting&hellip;</div>
+    <div id="peers"></div>
+  </div>
+  <div id="hint">
+    Left click: add &nbsp;·&nbsp; Right click: remove &nbsp;·&nbsp; WASD + Space/Shift: move &nbsp;·&nbsp; Middle drag: look
+  </div>
+  <script type="module" src="./scripts/demo-flat-world.ts"></script>
+</body>
+
+</html>
