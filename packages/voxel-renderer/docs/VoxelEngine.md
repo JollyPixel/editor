@@ -210,122 +210,46 @@ When wrapped by `VoxelRenderer`, these are called automatically from its
 
 ### Rebuild budget
 
-`tick()` spends at most `rebuildBudgetMs` (default 8) rebuilding chunks and
-defers the rest to the next frame. One edit dirties a handful of chunks and
-finishes in the same tick; a layer offset drag or an opacity change dirties the
-whole world, and without a budget that lands as one multi-second freeze.
+`tick()` spends at most `rebuildBudgetMs` (default `8` ms) per frame and defers the rest. Set to `0` to rebuild everything synchronously. `init()` and `load()` always rebuild the whole world synchronously regardless. Use `flush()` when meshes must be ready before the next line runs.
 
 ```ts
 const engine = new VoxelEngine({ rebuildBudgetMs: 8 });
 
-// Order the queue around what the user is looking at.
-engine.rebuildFocus = camera.position;
-
-engine.pendingRebuilds; // chunks still waiting; 0 once the world is up to date
+engine.rebuildFocus = camera.position; // prioritize chunks near the camera
+engine.pendingRebuilds;                // 0 once the world is up to date
 ```
-
-Set `rebuildBudgetMs: 0` to rebuild everything in the same tick, which is the
-behaviour before the budget existed. `init()` and `load()` are unaffected — they
-rebuild the whole world synchronously. Use `flush()` when meshes must exist
-before the next statement runs: a screenshot, an export, a test assertion.
-
-A chunk's dirty flag is cleared when it enters the queue, not after it is
-meshed, so an edit landing in between re-dirties it and is picked up next tick
-instead of being swallowed.
 
 ## Chunk geometry layout
 
-A chunk produces one `THREE.Mesh` per tileset it references, all parented to
-`root`. Their geometries are indexed and carry three attributes:
+One `THREE.Mesh` per tileset per chunk, parented to `root`. 19 bytes per vertex:
 
 | Attribute  | Type                | Items | Bytes | Notes |
 |------------|---------------------|-------|-------|-------|
-| `position` | `float32`           | 3     | 12    | world space, not chunk-local |
-| `normal`   | `int8` normalized   | 3     | 3     | not axis-aligned for ramps and corners |
-| `uv`       | `uint16` normalized | 2     | 4     | atlas coordinates, half-texel inset |
+| `position` | `float32`           | 3     | 12    | absolute world space |
+| `normal`   | `int8` normalized   | 3     | 3     | non-axis-aligned for ramps/corners |
+| `uv`       | `uint16` normalized | 2     | 4     | atlas coordinates |
 
-Vertices are never shared between faces — each face needs its own UVs and
-normal — so a cube costs 24 vertices, not 8. At 19 bytes per vertex a
-million-vertex chunk keeps 19 MB resident for as long as it is on screen, which
-is why every attribute is stored in the narrowest type that can carry it.
-
-`position` is the exception: it holds absolute world coordinates, and both
-`mergeChunkGeometries()` and raycasting read the array verbatim, so quantising it
-would silently distort colliders and hit tests.
-
-Reading an attribute back through `getX()`/`getW()` denormalizes it, so callers
-see the original range. Quantisation is lossy by design but below what the
-renderer can show: a unit normal lands within `1/127` and an atlas coordinate
-within `1/65535`.
-
-Layer opacity is **not** a vertex attribute. It rides on the material instead,
-where three multiplies it into `diffuseColor.a` at exactly the point a vertex
-alpha would have landed — same blending, same alpha testing, four constant bytes
-saved per vertex. Materials are cached per `(tilesetId, opacity bucket)` with
-opacity quantised into 32 steps, so dragging an opacity slider cannot mint an
-unbounded number of them. `engine.debug.stats.bytesPerVertex` reports the live
-figure straight off the geometries, which is the cheapest way to catch an
-attribute quietly growing back.
+Vertices are not shared between faces (a cube = 24 vertices). `position` stays `float32`; it is read verbatim by raycasting and `mergeChunkGeometries()`. Layer opacity lives on the material, not on vertices; materials are cached in 32 opacity buckets so an opacity slider never mints unbounded instances.
 
 ## Greedy meshing
 
-With `greedy: true` the builder stops emitting one quad per voxel face and
-instead stretches each face over the largest rectangle of identical voxels it
-can find. On the bundled noise-terrain benchmark (512², chunk size 32) that
-takes 1,986,252 triangles down to 666,370 — a 3x cut — for roughly the same
-build time. Measure your own world with `npm run bench -- --greedy`.
-
-Two voxels share a quad when they resolve to the same `(blockId, transform)`
-pair and show the same world-space direction, which makes them identical in
-texture, normal, winding and tileset. Merging never crosses a chunk boundary, so
-rebuilds stay local to the chunk that changed.
-
-Only faces that are a **full unit quad flat on the block boundary** merge:
-every face of a cube or slab, and a ramp's base and back wall. Slopes, stair
-risers, poles and triangles keep the per-voxel path, so a chunk mixing shapes
-still meshes correctly — you simply get less merging. Rotated voxels never merge
-with unrotated ones, since the transform turns the tile sideways.
+With `greedy: true` adjacent identical faces are merged into the largest rectangle possible — roughly 3x fewer triangles on flat terrain. Merging only happens within the same chunk and only for full flat faces (cubes, slabs); slopes, poles, and rotated voxels are left as-is.
 
 ### What it changes
 
-A merged quad has to repeat its tile rather than stretch it, which the shader
-does rather than the geometry. Chunk materials are therefore compiled through
-`enableTileWrapping()`, and chunk geometry carries two extra attributes:
+Greedy mode adds two extra vertex attributes (+20 bytes/vertex) and enables tile-repeating in the shader:
 
 | Attribute    | Type                | Items | Bytes | Notes |
 |--------------|---------------------|-------|-------|-------|
-| `uv`         | `float32`           | 2     | 8     | **tile** space, `0..spanU` / `0..spanV` — not atlas space |
-| `tileRegion` | `uint16` normalized | 4     | 8     | the tile's atlas rect: `offsetU, offsetV, scaleU, scaleV` |
-| `tileRepeat` | `uint16`            | 2     | 4     | how many times the tile repeats on each axis |
+| `uv`         | `float32`           | 2     | 8     | tile space (`0..span`), not atlas space |
+| `tileRegion` | `uint16` normalized | 4     | 8     | atlas rect: `offsetU, offsetV, scaleU, scaleV` |
+| `tileRepeat` | `uint16`            | 2     | 4     | tile repeat count per axis |
 
-A tiled `uv` is the one attribute that stays `float32`: greedy meshing scales it
-by the merged span, so it runs well past 1 and the shader's `fract()` needs the
-precision across the whole quad. `tileRepeat` holds integer counts and is
-therefore *not* normalized — the shader reads it at face value.
-
-That costs 20 bytes per vertex on top of the usual 23, which the drop in vertex
-count more than pays for. It also means a `materialCustomizer` that overrides
-`onBeforeCompile` or remaps `map` UVs will fight the wrapping shader.
-
-The wrapping is safe here because atlases are sampled with `NearestFilter` and
-carry no mipmaps — the usual objection to folding UVs in the fragment shader is
-the derivative discontinuity at tile borders, which only matters once mip levels
-are picked from those derivatives. Cutout blocks that also cast shadows are the
-one gap: three builds its own depth material, which would sample the atlas with
-unwrapped UVs.
+> A `materialCustomizer` that overrides `onBeforeCompile` or remaps `map` UVs will conflict with the tile-wrapping shader.
 
 ### When not to use it
 
-Merging needs random access, so the chunk is scattered into a dense grid and
-swept per direction, bounded by the occupied box. That is cheap at chunk sizes
-16–64 (within noise of the naive builder on the benchmark) but grows with the
-cube of the chunk size: at `chunkSize: 256` the same world meshes about 35%
-slower. The scratch grid costs `chunkSize³ × 4` bytes too — 128 KB at 32, but
-64 MB at 256. Large chunks plus greedy meshing is the combination to avoid.
-
-Greedy meshing is also incompatible with per-vertex lighting or ambient
-occlusion, neither of which this renderer has today — vertex colors carry only
-the layer opacity, which is uniform per chunk build.
+Avoid combining greedy meshing with large chunk sizes. The scratch grid scales with `chunkSize³`: fine at 16–64, but at `chunkSize: 256` it uses 64 MB and meshes ~35% slower. It is also incompatible with per-vertex lighting or ambient occlusion.
 
 ```ts
 const engine = new VoxelEngine({ chunkSize: 32, greedy: true });

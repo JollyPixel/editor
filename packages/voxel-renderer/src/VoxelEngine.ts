@@ -24,6 +24,7 @@ import {
   type VoxelDebuggerOptions
 } from "./debug/VoxelDebugger.ts";
 import { VoxelMeshBuilder } from "./mesh/VoxelMeshBuilder.ts";
+import { parseChunkGeometryKey } from "./mesh/chunkGeometryKey.ts";
 import {
   VoxelSerializer,
   type VoxelWorldJSON,
@@ -278,10 +279,11 @@ export class VoxelEngine {
   #chunkMeshes = new Map<string, THREE.Mesh[]>();
 
   /**
-   * Up to two materials per tileset ID — one opaque, one translucent (keyed by
-   * "tilesetId:opaque" / "tilesetId:transparent") — so a layer with opacity < 1
-   * never forces an otherwise-fully-opaque layer sharing the same tileset onto
-   * the transparent render queue. Created lazily; disposed on tileset reload or dispose.
+   * Materials per `"tilesetId:opacityBucket"`, plus a `":cutout"` variant of
+   * each — so a layer with opacity < 1 never forces an otherwise-fully-opaque
+   * layer sharing the same tileset onto the transparent render queue, and the
+   * faces of `transparent` blocks can be double-sided on their own.
+   * Created lazily; disposed on tileset reload or dispose.
    */
   #materials = new Map<
     string,
@@ -1124,10 +1126,11 @@ export class VoxelEngine {
    */
   #getMaterial(
     tilesetId: string,
-    opacity: number
+    opacity: number,
+    cutout = false
   ): THREE.MeshLambertMaterial | THREE.MeshStandardMaterial {
     const bucket = this.#opacityBucket(opacity);
-    const key = `${tilesetId}:${bucket}`;
+    const key = `${tilesetId}:${bucket}${cutout ? ":cutout" : ""}`;
     this.#logger.debug(`Getting material for tileset '${tilesetId}' (opacity=${opacity})`);
 
     let material = this.#materials.get(key);
@@ -1142,7 +1145,13 @@ export class VoxelEngine {
 
     const materialOptions = {
       map: texture,
-      side: THREE.FrontSide,
+      // Anything you can see through shows both of its surfaces: the one
+      // facing the camera and, through it, the one facing away — the far side
+      // of a window frame seen through its own opening. Back-face culling
+      // would drop the second, and would empty the screen entirely once the
+      // camera moves inside the volume, under water or into a glass room.
+      // Solid geometry keeps it, where a back face is never visible anyway.
+      side: transparent || cutout ? THREE.DoubleSide : THREE.FrontSide,
       alphaTest: this.#alphaTest,
       // The bucketed value, not the raw one, so the material matches its key.
       opacity: bucket / kOpacitySteps,
@@ -1241,11 +1250,16 @@ export class VoxelEngine {
     // chunk shares the same material variant.
     const { opacity } = layer;
 
-    // Create one mesh per tileset so each can use the correct texture.
+    // Create one mesh per tileset so each can use the correct texture, plus
+    // one more per tileset that has cutout blocks in this chunk.
     const meshes: THREE.Mesh[] = [];
-    for (const [tilesetId, geometry] of geometries) {
-      const mesh = new THREE.Mesh(geometry, this.#getMaterial(tilesetId, opacity));
-      mesh.name = `voxel_chunk_${chunkKeyBase}:${tilesetId}`;
+    for (const [key, geometry] of geometries) {
+      const { tilesetId, cutout } = parseChunkGeometryKey(key);
+      const mesh = new THREE.Mesh(
+        geometry,
+        this.#getMaterial(tilesetId, opacity, cutout)
+      );
+      mesh.name = `voxel_chunk_${chunkKeyBase}:${key}`;
 
       this.root.add(mesh);
       meshes.push(mesh);

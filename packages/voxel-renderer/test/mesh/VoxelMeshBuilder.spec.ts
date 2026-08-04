@@ -14,6 +14,7 @@ import { packTransform } from "../../src/utils/math.ts";
 const kCubeId = 1;
 const kRampId = 2;
 const kStairId = 3;
+const kLeavesId = 4;
 const kDefaultTexture = { col: 0, row: 0 };
 
 /**
@@ -125,6 +126,81 @@ describe("VoxelMeshBuilder — opacity affects occlusion", () => {
 
     // PosX face of the "test" cube is hidden by the opaque neighbour: 5 faces = 20 verts.
     assert.equal(countVertices(f), 20);
+  });
+});
+
+describe("VoxelMeshBuilder — transparent blocks never occlude", () => {
+  /**
+   * A cutout tile (leaves, a grate, a window) is opaque as far as the mesher
+   * can tell, so without the flag its neighbours are culled and the holes look
+   * into geometry that was never emitted.
+   */
+  function withLeaves(
+    transparent: boolean
+  ) {
+    const f = makeFixture();
+    f.blockRegistry.register({
+      id: kLeavesId,
+      name: "Leaves",
+      shapeId: "cube",
+      transparent,
+      faceTextures: {},
+      defaultTexture: kDefaultTexture,
+      collidable: true
+    });
+
+    return f;
+  }
+
+  it("keeps the solid neighbour's face, which is the one seen through the holes", () => {
+    const f = withLeaves(true);
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    f.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
+
+    // The cube keeps all 6 faces; the leaves still lose the one the opaque
+    // cube covers, which nothing can see through anyway. 24 + 20.
+    assert.equal(countVertices(f), 44);
+  });
+
+  it("culls that face when the same block is not flagged transparent", () => {
+    const f = withLeaves(false);
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    f.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
+
+    // 5 faces each: the cube's face is dropped and the holes look into nothing.
+    assert.equal(countVertices(f), 40);
+  });
+
+  it("keeps every face between two transparent neighbours", () => {
+    const f = withLeaves(true);
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
+    f.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
+
+    // The canopy case: 6 faces each, nothing culled.
+    assert.equal(countVertices(f), 48);
+  });
+
+  it("splits their faces into a cutout geometry of the same tileset", () => {
+    const f = withLeaves(true);
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    f.world.setVoxelAt("test", { x: 2, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
+
+    const chunk = f.layer.getChunk(0, 0, 0)!;
+    const geometries = f.builder.buildChunkGeometries(chunk, f.layer)!;
+
+    assert.deepEqual([...geometries.keys()], ["atlas", "atlas:cutout"]);
+    assert.equal(geometries.get("atlas")!.getAttribute("position").count, 24);
+    assert.equal(geometries.get("atlas:cutout")!.getAttribute("position").count, 24);
+  });
+
+  it("emits a single geometry when no block is transparent", () => {
+    const f = withLeaves(false);
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
+
+    const chunk = f.layer.getChunk(0, 0, 0)!;
+    const geometries = f.builder.buildChunkGeometries(chunk, f.layer)!;
+
+    assert.deepEqual([...geometries.keys()], ["atlas"]);
   });
 });
 

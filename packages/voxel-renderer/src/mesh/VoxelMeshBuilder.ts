@@ -17,6 +17,7 @@ import {
   FACE_OPPOSITE
 } from "../utils/math.ts";
 import { BlockVariantCache } from "./BlockVariantCache.ts";
+import { chunkGeometryKey } from "./chunkGeometryKey.ts";
 import { GeometryBuffer } from "./GeometryBuffer.ts";
 import { MeshBuildStats } from "./MeshBuildStats.ts";
 import {
@@ -123,7 +124,9 @@ export class VoxelMeshBuilder {
    *
    * Each entry in the returned Map is a separate geometry containing only the
    * faces whose tile references belong to that tileset, allowing the caller to
-   * bind the correct texture per draw call.
+   * bind the correct texture per draw call. The faces of `transparent` blocks
+   * form their own entry, keyed by `chunkGeometryKey()`, so they can be drawn
+   * double-sided without the rest of the chunk paying for it.
    */
   buildChunkGeometries(
     chunk: VoxelChunk,
@@ -272,7 +275,13 @@ export class VoxelMeshBuilder {
       stats.triangles += buffer.indexCount / 3;
       stats.geometries++;
       stats.bytesPerVertex = bytesPerVertex(geometry);
-      result.set(this.#variants.tilesetIdAt(slot), geometry);
+      result.set(
+        chunkGeometryKey(
+          this.#variants.tilesetIdAt(slot),
+          this.#variants.isCutoutAt(slot)
+        ),
+        geometry
+      );
     }
 
     return result.size > 0 ? result : null;
