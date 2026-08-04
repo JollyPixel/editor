@@ -16,6 +16,12 @@ export interface BlockDef {
   shapeId: BlockShapeID;
   /** If false, the mesh builder will not emit collision geometry for this block. */
   collidable: boolean;
+  /**
+   * Set it on any block you can see through.
+   * A transparent block never hides a neighbouring face.
+   * @default false
+   */
+  transparent?: boolean;
 }
 
 interface BlockDefTextures<T extends TileRef | TileRefIn> {

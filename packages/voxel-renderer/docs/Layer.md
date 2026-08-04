@@ -64,21 +64,11 @@ class VoxelLayer {
 }
 ```
 
-> **Offset semantics** — `offset` shifts where voxels appear in world space without
-> changing the underlying chunk storage. A voxel set at local position `{0,0,0}` renders
-> at `{offset.x, offset.y, offset.z}`. Use `VoxelWorld.setLayerOffset` or
-> `translateLayer` (preferred) so all dependent chunks are marked dirty automatically.
+> **`offset`** - shifts where voxels render in world space; does not move chunk storage. Always use `VoxelWorld.setLayerOffset` or `translateLayer` so chunks are marked dirty.
 
-> **Opacity semantics** — `opacity` is carried by the layer's material (real alpha
-> blending), quantised into 32 buckets so the material cache stays bounded, and also
-> drives occlusion: a layer with `opacity < 1` (e.g. glass) never
-> hides the faces of neighbouring voxels, in any layer, the way a fully opaque layer does.
-> `opacity === 0` is treated exactly like `visible = false` — the layer stops winning
-> world compositing (`VoxelWorld.getVoxelAt`) and its chunk meshes/colliders are removed.
-> Partial opacity (`0 < opacity < 1`) does **not** affect collision — a translucent layer
-> is still solid. Use `VoxelWorld.setLayerOpacity` or `updateLayer(name, { opacity })`
-> so dependent chunks are marked dirty automatically.
+> **`opacity`** - `1` = fully opaque (default), `0` = hidden (same as `visible = false`). Values below `0` or above `1` are clamped. Semi-transparent layers (`0 < opacity < 1`) skip face occlusion but are still solid for collision. Always use `VoxelWorld.setLayerOpacity` or `updateLayer` to apply changes.
 
+> **`opacity` + `alphaTest`** - if `opacity` drops to or below `alphaTest` (default `0.1`) the layer disappears entirely instead of fading.
 
 ## Methods
 

@@ -2,12 +2,16 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import * as THREE from "three";
+
 // Import Internal Dependencies
 import { VoxelEngine } from "../src/VoxelEngine.ts";
 import type { VoxelLayerHookEvent } from "../src/hooks.ts";
 
 // CONSTANTS
 const kCubeId = 1;
+const kLeavesId = 2;
 const kDefaultTexture = { col: 0, row: 0 };
 
 /**
@@ -425,6 +429,8 @@ describe("VoxelEngine — layer opacity on the material", () => {
     assert.equal(material.transparent, false);
     assert.equal(material.opacity, 1);
     assert.equal(material.depthWrite, true);
+    // Nothing can be seen through it, so its back faces stay culled.
+    assert.equal(material.side, THREE.FrontSide);
   });
 
   it("carries the layer opacity on the material instead of the geometry", () => {
@@ -439,6 +445,43 @@ describe("VoxelEngine — layer opacity on the material", () => {
     assert.equal(mesh.material.transparent, true);
     assert.equal(mesh.material.opacity, 0.5);
     assert.equal(mesh.material.depthWrite, false);
+    // Both surfaces of a translucent block are visible through each other, and
+    // the camera may end up inside the volume.
+    assert.equal(mesh.material.side, THREE.DoubleSide);
+  });
+
+  it("gives transparent blocks their own double-sided mesh on an opaque layer", () => {
+    const engine = new VoxelEngine({
+      chunkSize: 4,
+      blocks: [
+        {
+          id: kCubeId, name: "Cube", shapeId: "cube",
+          faceTextures: {}, defaultTexture: kDefaultTexture, collidable: true
+        },
+        {
+          id: kLeavesId, name: "Leaves", shapeId: "cube", transparent: true,
+          faceTextures: {}, defaultTexture: kDefaultTexture, collidable: true
+        }
+      ]
+    });
+    registerTileset(engine);
+    engine.addLayer("Ground");
+    engine.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
+    engine.setVoxel("Ground", { position: { x: 2, y: 0, z: 0 }, blockId: kLeavesId });
+    engine.flush();
+
+    const meshes = engine.root.children as any[];
+    const solid = meshes.find((mesh) => !mesh.name.endsWith(":cutout"));
+    const cutout = meshes.find((mesh) => mesh.name.endsWith(":cutout"));
+    assert.equal(meshes.length, 2);
+    assert.ok(solid && cutout);
+    // Same texture and render queue, opposite sides: the solid pass keeps its
+    // back faces culled, the cutout one shows them through its own holes.
+    assert.equal(solid.material.map, cutout.material.map);
+    assert.equal(solid.material.transparent, false);
+    assert.equal(cutout.material.transparent, false);
+    assert.equal(solid.material.side, THREE.FrontSide);
+    assert.equal(cutout.material.side, THREE.DoubleSide);
   });
 
   it("keeps an almost-opaque layer out of the opaque material bucket", () => {

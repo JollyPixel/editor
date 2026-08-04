@@ -3,6 +3,7 @@ import type { BlockRegistry } from "../blocks/BlockRegistry.ts";
 import type { BlockShape } from "../blocks/BlockShape.ts";
 import type { BlockShapeRegistry } from "../blocks/BlockShapeRegistry.ts";
 import type { TilesetManager } from "../tileset/TilesetManager.ts";
+import { chunkGeometryKey } from "./chunkGeometryKey.ts";
 import { FACE } from "../utils/math.ts";
 import {
   rotateFace,
@@ -132,8 +133,10 @@ export class BlockVariantCache {
   #tilesetManager: TilesetManager;
 
   #variants = new Map<number, BlockVariant | null>();
+  /** Slot per `(tilesetId, cutout)`, and the two properties of each slot. */
   #slots = new Map<string, number>();
   #tilesetIds: string[] = [];
+  #cutouts: boolean[] = [];
 
   /**
    * `occlusionMask` per (blockId, transform), `kOcclusionUnknown` where not yet
@@ -248,14 +251,25 @@ export class BlockVariantCache {
     return this.#tilesetIds[slot];
   }
 
+  /** True when the slot holds the faces of `transparent` blocks. */
+  isCutoutAt(
+    slot: number
+  ): boolean {
+    return this.#cutouts[slot];
+  }
+
   #slotFor(
-    tilesetId: string
+    tilesetId: string,
+    cutout: boolean
   ): number {
-    let slot = this.#slots.get(tilesetId);
+    const key = chunkGeometryKey(tilesetId, cutout);
+
+    let slot = this.#slots.get(key);
     if (slot === undefined) {
       slot = this.#tilesetIds.length;
       this.#tilesetIds.push(tilesetId);
-      this.#slots.set(tilesetId, slot);
+      this.#cutouts.push(cutout);
+      this.#slots.set(key, slot);
     }
 
     return slot;
@@ -275,6 +289,7 @@ export class BlockVariantCache {
       return null;
     }
 
+    const cutout = blockDef.transparent === true;
     const rotation = transform & 0b11;
     const flipX = (transform & 0b100) !== 0;
     const flipZ = (transform & 0b1000) !== 0;
@@ -337,7 +352,10 @@ export class BlockVariantCache {
 
       faces.push({
         cull,
-        slot: this.#slotFor(tileRef.tilesetId ?? this.#tilesetManager.defaultTilesetId!),
+        slot: this.#slotFor(
+          tileRef.tilesetId ?? this.#tilesetManager.defaultTilesetId!,
+          cutout
+        ),
         vertexCount,
         indexCount: vertexCount === 4 ? 6 : 3,
         positions,
@@ -358,7 +376,8 @@ export class BlockVariantCache {
 
     return {
       faces,
-      occlusionMask: this.#occlusionMask(shape, rotation, flipY),
+      // A see-through block covers nothing, whatever its shape says.
+      occlusionMask: cutout ? 0 : this.#occlusionMask(shape, rotation, flipY),
       mergeFaces: indexMergeFaces(faces),
       sweepIndex: 0,
       // No mesher epoch is ever negative, so a freshly compiled variant always

@@ -13,6 +13,7 @@ import { packTransform } from "../../src/utils/math.ts";
 const kCubeId = 1;
 const kRampId = 2;
 const kSlabId = 3;
+const kLeavesId = 4;
 const kDefaultTexture = { col: 0, row: 0 };
 
 function mockTexture(): any {
@@ -97,5 +98,22 @@ describe("BlockVariantCache.occlusionMaskOf", () => {
       cache.occlusionMaskOf(kRampId, transform),
       cache.occlusionMaskOf(kRampId, transform + 32)
     );
+  });
+
+  it("returns 0 for a transparent block, whatever its shape covers", () => {
+    const { cache, blockRegistry } = makeCache();
+
+    // Same shape as the reference cube, which occludes all six faces.
+    assert.equal(cache.occlusionMaskOf(kCubeId, 0), 0b111111);
+
+    blockRegistry.register({
+      id: kLeavesId, name: "Leaves", shapeId: "cube", transparent: true,
+      faceTextures: {}, defaultTexture: kDefaultTexture, collidable: true
+    });
+    cache.refresh();
+
+    for (let transform = 0; transform < 32; transform++) {
+      assert.equal(cache.occlusionMaskOf(kLeavesId, transform), 0, `transform ${transform}`);
+    }
   });
 });

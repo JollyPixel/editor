@@ -12,7 +12,8 @@ const kExamples: Record<string, string> = {
   "Tileset UV": "/tileset.html",
   "Tiled Map": "/tiled.html",
   "Noise World": "/noise-world.html",
-  "Flat World (Sync)": "/flat-world.html"
+  "Flat World (Sync)": "/flat-world.html",
+  "Transparency & Light": "/transparency.html"
 };
 
 /**
