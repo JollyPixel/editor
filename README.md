@@ -18,6 +18,7 @@
 
 Click on one of the links to access the documentation of the package:
 
+- [@jolly-pixel/ui](./packages/ui) - Common and System's UI for JollyPixel's editors
 - [@jolly-pixel/engine](./packages/engine) - ECS framework on top of Three.js
 - [@jolly-pixel/runtime](./packages/runtime) - Runtime for the engine / ECS
 - [@jolly-pixel/event-store](./packages/event-store) - Append-only log for JollyPixel's events
@@ -32,8 +33,7 @@ These packages are available in the Node Package Repository and can be easily in
 $ npm i @jolly-pixel/engine
 # or
 $ yarn add @jolly-pixel/engine
-```
-
+```s
 ## Available editors
 
 - [Voxel Map](./packages/editors/voxel-map/): 3D Voxel Terrain editor

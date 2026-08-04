@@ -1,0 +1,34 @@
+{
+  "name": "@jolly-pixel/ui",
+  "description": "Common and System's UI for JollyPixel's editors",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": "./dist/index.js",
+  "scripts": {
+    "prepublish": "rimraf ./dist && tsc -b",
+    "build": "tsc",
+    "test-only": "node --test \"test/**/*.test.ts\"",
+    "test": "c8 -r html npm run test-only",
+    "preview": "vite"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JollyPixel/editor.git",
+    "directory": "packages/ui"
+  },
+  "keywords": [],
+  "files": [
+    "dist"
+  ],
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  },
+  "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
+  "license": "MIT"
+}
