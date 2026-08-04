@@ -80,7 +80,7 @@ function createClient(
 }
 
 describe("Server", () => {
-  test("does not notify an extension until the client joins its room", () => {
+  test("does not notify an extension until the client joins its room", async() => {
     const server = new Server();
     const extension = new RecordingExtension("pixel-draw");
     server.register(extension);
@@ -89,11 +89,11 @@ describe("Server", () => {
     server.handleConnect(client);
     assert.deepEqual(extension.connected, []);
 
-    server.handleMessage("A", { room: "pixel-draw", kind: "join" });
+    await server.handleMessage("A", { room: "pixel-draw", kind: "join" });
     assert.deepEqual(extension.connected, ["A"]);
   });
 
-  test("routes messages only to the joined extension", () => {
+  test("routes messages only to the joined extension", async() => {
     const server = new Server();
     const pixel = new RecordingExtension("pixel-draw");
     const voxel = new RecordingExtension("voxel");
@@ -102,13 +102,13 @@ describe("Server", () => {
 
     const { client } = createClient("A");
     server.handleConnect(client);
-    server.handleMessage("A", { room: "pixel-draw", kind: "join" });
-    server.handleMessage("A", {
+    await server.handleMessage("A", { room: "pixel-draw", kind: "join" });
+    await server.handleMessage("A", {
       room: "pixel-draw",
       kind: "message",
       payload: { hello: "world" }
     });
-    server.handleMessage("A", {
+    await server.handleMessage("A", {
       room: "voxel",
       kind: "message",
       payload: { should: "be dropped" }
@@ -118,14 +118,14 @@ describe("Server", () => {
     assert.deepEqual(voxel.messages, []);
   });
 
-  test("scoped client.send() auto-tags outgoing payloads with the room", () => {
+  test("scoped client.send() auto-tags outgoing payloads with the room", async() => {
     const server = new Server();
     const extension = new RecordingExtension("pixel-draw");
     server.register(extension);
 
     const { client, sent } = createClient("A");
     server.handleConnect(client);
-    server.handleMessage("A", { room: "pixel-draw", kind: "join" });
+    await server.handleMessage("A", { room: "pixel-draw", kind: "join" });
 
     extension.handles.get("A")?.send({ type: "snapshot" });
 
@@ -136,16 +136,16 @@ describe("Server", () => {
     }]);
   });
 
-  test("leave notifies the extension once and stops routing further messages", () => {
+  test("leave notifies the extension once and stops routing further messages", async() => {
     const server = new Server();
     const extension = new RecordingExtension("pixel-draw");
     server.register(extension);
 
     const { client } = createClient("A");
     server.handleConnect(client);
-    server.handleMessage("A", { room: "pixel-draw", kind: "join" });
-    server.handleMessage("A", { room: "pixel-draw", kind: "leave" });
-    server.handleMessage("A", {
+    await server.handleMessage("A", { room: "pixel-draw", kind: "join" });
+    await server.handleMessage("A", { room: "pixel-draw", kind: "leave" });
+    await server.handleMessage("A", {
       room: "pixel-draw",
       kind: "message",
       payload: {}
@@ -155,7 +155,7 @@ describe("Server", () => {
     assert.deepEqual(extension.messages, []);
   });
 
-  test("disconnect notifies only extensions the client had joined", () => {
+  test("disconnect notifies only extensions the client had joined", async() => {
     const server = new Server();
     const pixel = new RecordingExtension("pixel-draw");
     const voxel = new RecordingExtension("voxel");
@@ -164,14 +164,14 @@ describe("Server", () => {
 
     const { client } = createClient("A");
     server.handleConnect(client);
-    server.handleMessage("A", { room: "pixel-draw", kind: "join" });
-    server.handleDisconnect("A");
+    await server.handleMessage("A", { room: "pixel-draw", kind: "join" });
+    await server.handleDisconnect("A");
 
     assert.deepEqual(pixel.disconnected, ["A"]);
     assert.deepEqual(voxel.disconnected, []);
   });
 
-  test("ignores malformed envelopes and unknown rooms", () => {
+  test("ignores malformed envelopes and unknown rooms", async() => {
     const server = new Server();
     const extension = new RecordingExtension("pixel-draw");
     server.register(extension);
@@ -179,10 +179,10 @@ describe("Server", () => {
     const { client } = createClient("A");
     server.handleConnect(client);
 
-    assert.doesNotThrow(() => {
-      server.handleMessage("A", "not an envelope");
-      server.handleMessage("A", { room: "unknown", kind: "join" });
-      server.handleMessage("A", { room: "pixel-draw", kind: "message", payload: {} });
+    await assert.doesNotReject(async() => {
+      await server.handleMessage("A", "not an envelope");
+      await server.handleMessage("A", { room: "unknown", kind: "join" });
+      await server.handleMessage("A", { room: "pixel-draw", kind: "message", payload: {} });
     });
     assert.deepEqual(extension.connected, []);
     assert.deepEqual(extension.messages, []);
@@ -190,7 +190,7 @@ describe("Server", () => {
 });
 
 describe("Server — peer presence", () => {
-  test("notifies existing room members when a new client joins, but not the joiner itself", () => {
+  test("notifies existing room members when a new client joins, but not the joiner itself", async() => {
     const server = new Server();
     const extension = new RecordingExtension("pixel-draw");
     server.register(extension);
@@ -200,10 +200,10 @@ describe("Server — peer presence", () => {
     server.handleConnect(a.client);
     server.handleConnect(b.client);
 
-    server.handleMessage("A", { room: "pixel-draw", kind: "join" });
+    await server.handleMessage("A", { room: "pixel-draw", kind: "join" });
     assert.deepEqual(a.sent, []);
 
-    server.handleMessage("B", { room: "pixel-draw", kind: "join" });
+    await server.handleMessage("B", { room: "pixel-draw", kind: "join" });
     assert.deepEqual(a.sent, [{
       room: "pixel-draw",
       kind: "peer-joined",
@@ -219,7 +219,7 @@ describe("Server — peer presence", () => {
     }]);
   });
 
-  test("notifies remaining members on explicit leave, but not the leaver", () => {
+  test("notifies remaining members on explicit leave, but not the leaver", async() => {
     const server = new Server();
     const extension = new RecordingExtension("pixel-draw");
     server.register(extension);
@@ -228,18 +228,18 @@ describe("Server — peer presence", () => {
     const b = createClient("B");
     server.handleConnect(a.client);
     server.handleConnect(b.client);
-    server.handleMessage("A", { room: "pixel-draw", kind: "join" });
-    server.handleMessage("B", { room: "pixel-draw", kind: "join" });
+    await server.handleMessage("A", { room: "pixel-draw", kind: "join" });
+    await server.handleMessage("B", { room: "pixel-draw", kind: "join" });
     a.sent.length = 0;
     b.sent.length = 0;
 
-    server.handleMessage("B", { room: "pixel-draw", kind: "leave" });
+    await server.handleMessage("B", { room: "pixel-draw", kind: "leave" });
 
     assert.deepEqual(a.sent, [{ room: "pixel-draw", kind: "peer-left", clientId: "B" }]);
     assert.deepEqual(b.sent, []);
   });
 
-  test("notifies remaining members when a client disconnects", () => {
+  test("notifies remaining members when a client disconnects", async() => {
     const server = new Server();
     const extension = new RecordingExtension("pixel-draw");
     server.register(extension);
@@ -248,16 +248,16 @@ describe("Server — peer presence", () => {
     const b = createClient("B");
     server.handleConnect(a.client);
     server.handleConnect(b.client);
-    server.handleMessage("A", { room: "pixel-draw", kind: "join" });
-    server.handleMessage("B", { room: "pixel-draw", kind: "join" });
+    await server.handleMessage("A", { room: "pixel-draw", kind: "join" });
+    await server.handleMessage("B", { room: "pixel-draw", kind: "join" });
     a.sent.length = 0;
 
-    server.handleDisconnect("B");
+    await server.handleDisconnect("B");
 
     assert.deepEqual(a.sent, [{ room: "pixel-draw", kind: "peer-left", clientId: "B" }]);
   });
 
-  test("does not leak peer events across rooms", () => {
+  test("does not leak peer events across rooms", async() => {
     const server = new Server();
     const pixel = new RecordingExtension("pixel-draw");
     const voxel = new RecordingExtension("voxel");
@@ -268,16 +268,16 @@ describe("Server — peer presence", () => {
     const b = createClient("B");
     server.handleConnect(a.client);
     server.handleConnect(b.client);
-    server.handleMessage("A", { room: "voxel", kind: "join" });
+    await server.handleMessage("A", { room: "voxel", kind: "join" });
 
-    server.handleMessage("B", { room: "pixel-draw", kind: "join" });
+    await server.handleMessage("B", { room: "pixel-draw", kind: "join" });
 
     assert.deepEqual(a.sent, []);
   });
 });
 
 describe("Server — peer metadata", () => {
-  test("peer-joined sent to existing members includes the joiner's identity", () => {
+  test("peer-joined sent to existing members includes the joiner's identity", async() => {
     const server = new Server();
     const extension = new RecordingExtension("pixel-draw");
     server.register(extension);
@@ -286,9 +286,9 @@ describe("Server — peer metadata", () => {
     const b = createClient("B");
     server.handleConnect(a.client);
     server.handleConnect(b.client);
-    server.handleMessage("A", { room: "pixel-draw", kind: "join" });
+    await server.handleMessage("A", { room: "pixel-draw", kind: "join" });
 
-    server.handleMessage("B", {
+    await server.handleMessage("B", {
       room: "pixel-draw",
       kind: "join",
       identity: { username: "bob" }
@@ -302,7 +302,7 @@ describe("Server — peer metadata", () => {
     }]);
   });
 
-  test("a joiner with no existing members receives no sync envelope", () => {
+  test("a joiner with no existing members receives no sync envelope", async() => {
     const server = new Server();
     const extension = new RecordingExtension("pixel-draw");
     server.register(extension);
@@ -310,12 +310,12 @@ describe("Server — peer metadata", () => {
     const { client, sent } = createClient("A");
     server.handleConnect(client);
 
-    server.handleMessage("A", { room: "pixel-draw", kind: "join" });
+    await server.handleMessage("A", { room: "pixel-draw", kind: "join" });
 
     assert.deepEqual(sent, []);
   });
 
-  test("a joiner with existing members receives a sync snapshot of their identity and presence", () => {
+  test("a joiner with existing members receives a sync snapshot of their identity and presence", async() => {
     const server = new Server();
     const extension = new RecordingExtension("pixel-draw");
     server.register(extension);
@@ -324,19 +324,19 @@ describe("Server — peer metadata", () => {
     const b = createClient("B");
     server.handleConnect(a.client);
     server.handleConnect(b.client);
-    server.handleMessage("A", {
+    await server.handleMessage("A", {
       room: "pixel-draw",
       kind: "join",
       identity: { username: "alice" }
     });
-    server.handleMessage("A", {
+    await server.handleMessage("A", {
       room: "pixel-draw",
       kind: "presence",
       patch: { cursor: { x: 1, y: 2 } }
     });
     b.sent.length = 0;
 
-    server.handleMessage("B", { room: "pixel-draw", kind: "join" });
+    await server.handleMessage("B", { room: "pixel-draw", kind: "join" });
 
     assert.deepEqual(b.sent, [{
       room: "pixel-draw",
@@ -349,7 +349,7 @@ describe("Server — peer metadata", () => {
     }]);
   });
 
-  test("presence updates merge into stored state and broadcast to other members, excluding the sender", () => {
+  test("presence updates merge into stored state and broadcast to other members, excluding the sender", async() => {
     const server = new Server();
     const extension = new RecordingExtension("pixel-draw");
     server.register(extension);
@@ -358,12 +358,12 @@ describe("Server — peer metadata", () => {
     const b = createClient("B");
     server.handleConnect(a.client);
     server.handleConnect(b.client);
-    server.handleMessage("A", { room: "pixel-draw", kind: "join" });
-    server.handleMessage("B", { room: "pixel-draw", kind: "join" });
+    await server.handleMessage("A", { room: "pixel-draw", kind: "join" });
+    await server.handleMessage("B", { room: "pixel-draw", kind: "join" });
     a.sent.length = 0;
     b.sent.length = 0;
 
-    server.handleMessage("A", {
+    await server.handleMessage("A", {
       room: "pixel-draw",
       kind: "presence",
       patch: { cursor: { x: 5, y: 5 } }
@@ -378,7 +378,7 @@ describe("Server — peer metadata", () => {
     }]);
   });
 
-  test("presence from a client that hasn't joined the room is dropped", () => {
+  test("presence from a client that hasn't joined the room is dropped", async() => {
     const server = new Server();
     const extension = new RecordingExtension("pixel-draw");
     server.register(extension);
@@ -387,10 +387,10 @@ describe("Server — peer metadata", () => {
     const b = createClient("B");
     server.handleConnect(a.client);
     server.handleConnect(b.client);
-    server.handleMessage("B", { room: "pixel-draw", kind: "join" });
+    await server.handleMessage("B", { room: "pixel-draw", kind: "join" });
     b.sent.length = 0;
 
-    server.handleMessage("A", {
+    await server.handleMessage("A", {
       room: "pixel-draw",
       kind: "presence",
       patch: { cursor: { x: 5, y: 5 } }
@@ -399,7 +399,7 @@ describe("Server — peer metadata", () => {
     assert.deepEqual(b.sent, []);
   });
 
-  test("identity and presence are gone from the sync snapshot after leave/disconnect", () => {
+  test("identity and presence are gone from the sync snapshot after leave/disconnect", async() => {
     const server = new Server();
     const extension = new RecordingExtension("pixel-draw");
     server.register(extension);
@@ -410,93 +410,99 @@ describe("Server — peer metadata", () => {
     server.handleConnect(a.client);
     server.handleConnect(b.client);
     server.handleConnect(c.client);
-    server.handleMessage("A", {
+    await server.handleMessage("A", {
       room: "pixel-draw",
       kind: "join",
       identity: { username: "alice" }
     });
-    server.handleMessage("B", {
+    await server.handleMessage("B", {
       room: "pixel-draw",
       kind: "join",
       identity: { username: "bob" }
     });
-    server.handleMessage("A", { room: "pixel-draw", kind: "leave" });
-    server.handleDisconnect("B");
+    await server.handleMessage("A", { room: "pixel-draw", kind: "leave" });
+    await server.handleDisconnect("B");
 
-    server.handleMessage("C", { room: "pixel-draw", kind: "join" });
+    await server.handleMessage("C", { room: "pixel-draw", kind: "join" });
 
     assert.deepEqual(c.sent, []);
   });
 });
 
 describe("Server — extension broadcast via RoomContext", () => {
-  test("onMessage receives a RoomContext whose room.broadcast reaches every member, envelope-wrapped like a scoped send", () => {
-    const server = new Server();
-    const extension = new RecordingExtension("pixel-draw");
-    server.register(extension);
+  test(
+    "onMessage receives a RoomContext whose room.broadcast reaches every member, envelope-wrapped like a scoped send",
+    async() => {
+      const server = new Server();
+      const extension = new RecordingExtension("pixel-draw");
+      server.register(extension);
 
-    const a = createClient("A");
-    const b = createClient("B");
-    server.handleConnect(a.client);
-    server.handleConnect(b.client);
-    server.handleMessage("A", { room: "pixel-draw", kind: "join" });
-    server.handleMessage("B", { room: "pixel-draw", kind: "join" });
-    server.handleMessage("A", { room: "pixel-draw", kind: "message", payload: {} });
-    a.sent.length = 0;
-    b.sent.length = 0;
+      const a = createClient("A");
+      const b = createClient("B");
+      server.handleConnect(a.client);
+      server.handleConnect(b.client);
+      await server.handleMessage("A", { room: "pixel-draw", kind: "join" });
+      await server.handleMessage("B", { room: "pixel-draw", kind: "join" });
+      await server.handleMessage("A", { room: "pixel-draw", kind: "message", payload: {} });
+      a.sent.length = 0;
+      b.sent.length = 0;
 
-    extension.context?.room.broadcast({ hello: "world" });
+      extension.context?.room.broadcast({ hello: "world" });
 
-    assert.deepEqual(a.sent, [{
-      room: "pixel-draw",
-      kind: "message",
-      payload: { hello: "world" }
-    }]);
-    assert.deepEqual(b.sent, [{
-      room: "pixel-draw",
-      kind: "message",
-      payload: { hello: "world" }
-    }]);
-  });
+      assert.deepEqual(a.sent, [{
+        room: "pixel-draw",
+        kind: "message",
+        payload: { hello: "world" }
+      }]);
+      assert.deepEqual(b.sent, [{
+        room: "pixel-draw",
+        kind: "message",
+        payload: { hello: "world" }
+      }]);
+    }
+  );
 });
 
 describe("Server — rights: denied join", () => {
-  test("a client denied at join is not tracked as a room member, so later messages/presence never reach the extension", () => {
-    const server = new Server({ rights: { viewer: { "pixel-draw.$join": "void" } } });
-    const extension = new RecordingExtension("pixel-draw");
-    server.register(extension);
+  test(
+    "a client denied at join is not tracked as a room member, so later messages/presence never reach the extension",
+    async() => {
+      const server = new Server({ rights: { viewer: { "pixel-draw.$join": "void" } } });
+      const extension = new RecordingExtension("pixel-draw");
+      server.register(extension);
 
-    const { client, sent } = createClient("A");
-    server.handleConnect(client);
-    server.handleMessage("A", {
-      room: "pixel-draw",
-      kind: "join",
-      identity: { role: "viewer" }
-    });
+      const { client, sent } = createClient("A");
+      server.handleConnect(client);
+      await server.handleMessage("A", {
+        room: "pixel-draw",
+        kind: "join",
+        identity: { role: "viewer" }
+      });
 
-    assert.deepEqual(extension.connected, []);
-    assert.deepEqual(sent, [{
-      room: "pixel-draw",
-      kind: "denied",
-      event: "$join",
-      reason: "role \"viewer\" is not permitted to join this room"
-    }]);
+      assert.deepEqual(extension.connected, []);
+      assert.deepEqual(sent, [{
+        room: "pixel-draw",
+        kind: "denied",
+        event: "$join",
+        reason: "role \"viewer\" is not permitted to join this room"
+      }]);
 
-    server.handleMessage("A", {
-      room: "pixel-draw",
-      kind: "message",
-      payload: { hello: "world" }
-    });
-    server.handleMessage("A", {
-      room: "pixel-draw",
-      kind: "presence",
-      patch: { cursor: { x: 1, y: 1 } }
-    });
+      await server.handleMessage("A", {
+        room: "pixel-draw",
+        kind: "message",
+        payload: { hello: "world" }
+      });
+      await server.handleMessage("A", {
+        room: "pixel-draw",
+        kind: "presence",
+        patch: { cursor: { x: 1, y: 1 } }
+      });
 
-    assert.deepEqual(extension.messages, []);
-  });
+      assert.deepEqual(extension.messages, []);
+    }
+  );
 
-  test("ServerOptions.rights gates message writes end-to-end, independent of the extension", () => {
+  test("ServerOptions.rights gates message writes end-to-end, independent of the extension", async() => {
     const server = new Server({
       rights: { viewer: { "pixel-draw.voxel-set": "read" } }
     });
@@ -505,10 +511,10 @@ describe("Server — rights: denied join", () => {
 
     const { client, sent } = createClient("A");
     server.handleConnect(client);
-    server.handleMessage("A", { room: "pixel-draw", kind: "join", identity: { role: "viewer" } });
+    await server.handleMessage("A", { room: "pixel-draw", kind: "join", identity: { role: "viewer" } });
     sent.length = 0;
 
-    server.handleMessage("A", {
+    await server.handleMessage("A", {
       room: "pixel-draw",
       kind: "message",
       payload: { action: "voxel-set" }
@@ -523,7 +529,7 @@ describe("Server — rights: denied join", () => {
     }]);
   });
 
-  test("one rule covers every room registered under the same extension name, regardless of distinct ids", () => {
+  test("one rule covers every room registered under the same extension name, regardless of distinct ids", async() => {
     const server = new Server({
       rights: { viewer: { "voxel.renderer.voxel-set": "read" } }
     });
@@ -536,11 +542,11 @@ describe("Server — rights: denied join", () => {
     const b = createClient("B");
     server.handleConnect(a.client);
     server.handleConnect(b.client);
-    server.handleMessage("A", { room: "voxel-map:world-1", kind: "join", identity: { role: "viewer" } });
-    server.handleMessage("B", { room: "voxel-map:world-2", kind: "join", identity: { role: "viewer" } });
+    await server.handleMessage("A", { room: "voxel-map:world-1", kind: "join", identity: { role: "viewer" } });
+    await server.handleMessage("B", { room: "voxel-map:world-2", kind: "join", identity: { role: "viewer" } });
 
-    server.handleMessage("A", { room: "voxel-map:world-1", kind: "message", payload: { action: "voxel-set" } });
-    server.handleMessage("B", { room: "voxel-map:world-2", kind: "message", payload: { action: "voxel-set" } });
+    await server.handleMessage("A", { room: "voxel-map:world-1", kind: "message", payload: { action: "voxel-set" } });
+    await server.handleMessage("B", { room: "voxel-map:world-2", kind: "message", payload: { action: "voxel-set" } });
 
     assert.deepEqual(worldOne.messages, []);
     assert.deepEqual(worldTwo.messages, []);
@@ -548,7 +554,7 @@ describe("Server — rights: denied join", () => {
 });
 
 describe("Server — event store", () => {
-  test("defaults to an in-memory store shared by every registered room", () => {
+  test("defaults to an in-memory store shared by every registered room", async() => {
     const server = new Server();
     const pixel = new RecordingExtension("pixel-draw");
     const voxel = new RecordingExtension("voxel");
@@ -559,21 +565,21 @@ describe("Server — event store", () => {
     const b = createClient("B");
     server.handleConnect(a.client);
     server.handleConnect(b.client);
-    server.handleMessage("A", { room: "pixel-draw", kind: "join" });
-    server.handleMessage("B", { room: "voxel", kind: "join" });
+    await server.handleMessage("A", { room: "pixel-draw", kind: "join" });
+    await server.handleMessage("B", { room: "voxel", kind: "join" });
 
-    pixel.context?.eventStore.append({
+    await pixel.context?.eventStore.append({
       assetType: "texture", assetId: "asset-1", eventType: "pixel-set", eventData: { x: 1 }
     });
 
     // Read back through the *other* room's context: same Server, one shared EventStore.
     assert.deepEqual(
-      voxel.context?.eventStore.list("asset-1").map((event) => event.eventData),
+      (await voxel.context?.eventStore.list("asset-1"))?.map((event) => event.eventData),
       [{ x: 1 }]
     );
   });
 
-  test("uses the EventStore passed via ServerOptions instead of the default", () => {
+  test("uses the EventStore passed via ServerOptions instead of the default", async() => {
     const eventStore = EventStore.persistence.memory();
     const server = new Server({ eventStore });
     const extension = new RecordingExtension("pixel-draw");
@@ -581,9 +587,9 @@ describe("Server — event store", () => {
 
     const { client } = createClient("A");
     server.handleConnect(client);
-    server.handleMessage("A", { room: "pixel-draw", kind: "join" });
+    await server.handleMessage("A", { room: "pixel-draw", kind: "join" });
 
-    extension.context?.eventStore.append({
+    await extension.context?.eventStore.append({
       assetType: "texture", assetId: "asset-1", eventType: "pixel-set", eventData: { x: 1 }
     });
 

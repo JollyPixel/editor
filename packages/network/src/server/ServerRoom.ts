@@ -59,8 +59,14 @@ export class ServerRoom {
       room: this.id
     });
     this.#eventStore = options.eventStore ?? EventStore.persistence.memory();
+
     this.#roomBroadcast = {
-      broadcast: (payload) => this.#broadcast(payload)
+      broadcast: (payload) => this.#broadcast(payload),
+      sendTo: (clientId, payload) => this.#members.get(clientId)?.handle.send({
+        room: this.id,
+        kind: "message",
+        payload
+      })
     };
   }
 
@@ -71,15 +77,17 @@ export class ServerRoom {
       room: this.#roomBroadcast,
       eventStore: {
         append: (input) => this.#appendEvent(clientId, input),
-        list: (assetId, fromVersion) => this.#eventStore.reader.list(assetId, fromVersion)
+        list: (assetId, fromVersion) => Promise.resolve(
+          this.#eventStore.reader.list(assetId, fromVersion)
+        )
       }
     };
   }
 
-  #appendEvent(
+  async #appendEvent(
     clientId: string,
     input: EventStore.AppendInput
-  ): boolean {
+  ): Promise<boolean> {
     const result = this.#eventStore.writer.append(input);
     if (!result.ok) {
       this.#members.get(clientId)?.handle.send({
@@ -121,11 +129,11 @@ export class ServerRoom {
     return false;
   }
 
-  join(
+  async join(
     clientId: string,
     client: ClientHandle,
     identity: PeerMetadata
-  ): boolean {
+  ): Promise<boolean> {
     const role = resolveRole(identity);
     if (!this.#authorize({
       clientId,
@@ -152,7 +160,7 @@ export class ServerRoom {
       role
     });
 
-    this.#extension.onClientConnect(
+    await this.#extension.onClientConnect(
       {
         id: client.id,
         send: (data) => client.send({
@@ -185,16 +193,20 @@ export class ServerRoom {
     });
   }
 
-  leave(
+  async leave(
     clientId: string
-  ): void {
+  ): Promise<void> {
     this.#members.remove(clientId);
     this.#members.send({
       room: this.id,
       kind: "peer-left",
       clientId
     }, { excludeClientId: clientId });
-    this.#extension.onClientDisconnect(clientId, this.#context(clientId));
+
+    await this.#extension.onClientDisconnect(
+      clientId,
+      this.#context(clientId)
+    );
     this.#logger
       .withMetadata({ clientId })
       .debug("leave");
@@ -248,10 +260,10 @@ export class ServerRoom {
       .debug("presence update");
   }
 
-  message(
+  async message(
     clientId: string,
     payload: unknown
-  ): void {
+  ): Promise<void> {
     const role = this.#members.get(clientId)?.role ?? kDefaultRole;
 
     if (this.#rights.configured) {
@@ -268,7 +280,11 @@ export class ServerRoom {
       }
     }
 
-    this.#extension.onMessage(clientId, payload, this.#context(clientId));
+    await this.#extension.onMessage(
+      clientId,
+      payload,
+      this.#context(clientId)
+    );
   }
 
   #broadcast(

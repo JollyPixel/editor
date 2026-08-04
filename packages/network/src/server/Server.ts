@@ -18,7 +18,11 @@ import {
   RightsTable,
   type RightsMap
 } from "./RightsTable.ts";
-import type { Extension } from "./Extension.ts";
+import {
+  Extension,
+  type WorkerExtensionDescriptor
+} from "./Extension.ts";
+import { WorkerExtensionProxy } from "./worker/WorkerExtensionProxy.ts";
 import type {
   ClientHandle
 } from "../types.ts";
@@ -56,6 +60,12 @@ export interface ServerOptions {
   eventStore?: EventStore.EventStore;
 }
 
+function errorMessage(
+  error: unknown
+): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 /**
  * Transport-agnostic multiplexer sitting between raw connections and
  * registered Extension instances.
@@ -67,6 +77,8 @@ export class Server {
   #eventStore: EventStore.EventStore;
   #rooms = new Map<string, ServerRoom>();
   #clients = new Map<string, ClientRecord>();
+  #clientQueues = new Map<string, Promise<void>>();
+  #workerProxies: WorkerExtensionProxy[] = [];
 
   constructor(
     options: ServerOptions = {}
@@ -96,10 +108,18 @@ export class Server {
   }
 
   register(
-    extension: Extension
+    extension: Extension | WorkerExtensionDescriptor
   ): void {
+    const resolvedExtension = extension instanceof Extension ?
+      extension :
+      new WorkerExtensionProxy(extension, { logger: this.logger });
+
+    if (resolvedExtension instanceof WorkerExtensionProxy) {
+      this.#workerProxies.push(resolvedExtension);
+    }
+
     const room = new ServerRoom(
-      extension,
+      resolvedExtension,
       this.#rights,
       {
         logger: this.logger,
@@ -107,10 +127,20 @@ export class Server {
       }
     );
 
-    this.#rooms.set(extension.id, room);
+    this.#rooms.set(resolvedExtension.id, room);
     this.logger
-      .withMetadata({ room: extension.id })
+      .withMetadata({ room: resolvedExtension.id })
       .info("room registered");
+  }
+
+  async close(): Promise<void> {
+    await Promise.allSettled(
+      this.#workerProxies.map((proxy) => proxy.close())
+    );
+  }
+
+  async [Symbol.asyncDispose](): Promise<void> {
+    await this.close();
   }
 
   handleConnect(
@@ -127,11 +157,62 @@ export class Server {
 
   handleDisconnect(
     clientId: string
-  ): void {
+  ): Promise<void> {
+    return this.#enqueueForClient(
+      clientId,
+      () => this.#processDisconnect(clientId)
+    );
+  }
+
+  handleMessage(
+    clientId: string,
+    raw: unknown
+  ): Promise<void> {
+    return this.#enqueueForClient(
+      clientId,
+      () => this.#processMessage(clientId, raw)
+    );
+  }
+
+  /**
+   * Chains dispatch for a given clientId onto its previous one, so message N+1
+   * never starts until message N (including any worker round-trip) has settled.
+   */
+  #enqueueForClient(
+    clientId: string,
+    task: () => Promise<void>
+  ): Promise<void> {
+    const previous = this.#clientQueues.get(
+      clientId
+    ) ?? Promise.resolve();
+    const next = previous.then(task, task);
+
+    this.#clientQueues.set(
+      clientId,
+      next.catch(() => void 0)
+    );
+
+    return next;
+  }
+
+  async #processDisconnect(
+    clientId: string
+  ): Promise<void> {
     const record = this.#clients.get(clientId);
     const rooms = record ? [...record.rooms] : [];
     for (const roomName of rooms) {
-      this.#rooms.get(roomName)?.leave(clientId);
+      try {
+        await this.#rooms.get(roomName)?.leave(clientId);
+      }
+      catch (error) {
+        this.logger
+          .withMetadata({
+            clientId,
+            room: roomName,
+            reason: errorMessage(error)
+          })
+          .error("disconnect handling failed");
+      }
     }
 
     this.#clients.delete(clientId);
@@ -140,11 +221,11 @@ export class Server {
       .debug("client disconnected");
   }
 
-  handleMessage(
+  async #processMessage(
     clientId: string,
     raw: unknown
-  ): void {
-    Envelope.parse(raw)
+  ): Promise<void> {
+    const result = Envelope.parse(raw)
       .orTee((error) => this.logger
         .withMetadata({
           clientId,
@@ -154,8 +235,24 @@ export class Server {
         })
         .warn("envelope handled"))
       .andThen((envelope) => this.#resolveClient(clientId, envelope))
-      .andThen((context) => this.#resolveRoom(context))
-      .andTee((context) => this.#dispatchEnvelope(context));
+      .andThen((context) => this.#resolveRoom(context));
+
+    if (!result.ok) {
+      return;
+    }
+
+    try {
+      await this.#dispatchEnvelope(result.val);
+    }
+    catch (error) {
+      this.logger
+        .withMetadata({
+          clientId,
+          outcome: "dropped",
+          reason: errorMessage(error)
+        })
+        .error("envelope handled");
+    }
   }
 
   #resolveClient(
@@ -198,12 +295,12 @@ export class Server {
       .warn("envelope handled"));
   }
 
-  #dispatchEnvelope(
+  async #dispatchEnvelope(
     context: RoomDispatchContext
-  ): void {
+  ): Promise<void> {
     const { clientId, envelope, event, record, room } = context;
 
-    const outcome = match(envelope)
+    const outcome = await match(envelope)
       .with({ kind: "join" }, (envelope) => this.#handleJoin(record, room, envelope))
       .with({ kind: "leave" }, (envelope) => this.#handleLeave(record, room, envelope))
       .with({ kind: "message" }, (envelope) => this.#handleMessage(clientId, room, envelope))
@@ -224,11 +321,11 @@ export class Server {
     }
   }
 
-  #handleJoin(
+  async #handleJoin(
     record: ClientRecord,
     room: ServerRoom,
     envelope: Extract<Envelope, { kind: "join"; }>
-  ): DispatchOutcome {
+  ): Promise<DispatchOutcome> {
     if (record.rooms.has(envelope.room)) {
       return {
         outcome: "ignored",
@@ -236,7 +333,7 @@ export class Server {
       };
     }
 
-    const admitted = room.join(
+    const admitted = await room.join(
       record.handle.id,
       record.handle,
       envelope.identity ?? Object.create(null)
@@ -253,11 +350,11 @@ export class Server {
     return { outcome: "joined" };
   }
 
-  #handleLeave(
+  async #handleLeave(
     record: ClientRecord,
     room: ServerRoom,
     envelope: Extract<Envelope, { kind: "leave"; }>
-  ): DispatchOutcome {
+  ): Promise<DispatchOutcome> {
     if (!record.rooms.delete(envelope.room)) {
       return {
         outcome: "ignored",
@@ -265,16 +362,16 @@ export class Server {
       };
     }
 
-    room.leave(record.handle.id);
+    await room.leave(record.handle.id);
 
     return { outcome: "left" };
   }
 
-  #handleMessage(
+  async #handleMessage(
     clientId: string,
     room: ServerRoom,
     envelope: Extract<Envelope, { kind: "message"; }>
-  ): DispatchOutcome {
+  ): Promise<DispatchOutcome> {
     if (!this.#hasJoined(clientId, envelope.room)) {
       return {
         outcome: "dropped",
@@ -282,7 +379,7 @@ export class Server {
       };
     }
 
-    room.message(
+    await room.message(
       clientId,
       envelope.payload
     );

@@ -11,17 +11,21 @@ export interface RoomBroadcast {
   broadcast(
     payload: unknown
   ): void;
+  sendTo(
+    clientId: string,
+    payload: unknown
+  ): void;
 }
 
 export interface RoomEventStoreHandle {
   append(
     input: EventStore.AppendInput
-  ): boolean;
+  ): Promise<boolean>;
 
   list(
     assetId: string,
     fromVersion?: number
-  ): EventStore.Event[];
+  ): Promise<EventStore.Event[]>;
 }
 
 export interface RoomContext {
@@ -47,16 +51,31 @@ export abstract class Extension {
     client: ClientHandle,
     identity: PeerMetadata,
     context: RoomContext
-  ): void;
+  ): void | Promise<void>;
 
   abstract onClientDisconnect(
     clientId: string,
     context: RoomContext
-  ): void;
+  ): void | Promise<void>;
 
   abstract onMessage(
     clientId: string,
     payload: unknown,
     context: RoomContext
-  ): void;
+  ): void | Promise<void>;
+}
+
+/**
+ * Describes an Extension that must run inside a dedicated thread
+ */
+export interface WorkerExtensionDescriptor {
+  id: string;
+  name: string;
+  getEventName?: (payload: unknown) => string;
+  modulePath: string | URL;
+  exportName?: string;
+  workerData?: unknown;
+  rpcTimeoutMs?: number;
+  maxRestarts?: number;
+  restartWindowMs?: number;
 }
