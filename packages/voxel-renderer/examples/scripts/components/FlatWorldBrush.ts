@@ -9,9 +9,9 @@ import {
 import type { VoxelEngine } from "../../../src/VoxelEngine.ts";
 import type { VoxelCoord } from "../../../src/world/types.ts";
 import {
+  type HighlightBox,
   createHighlightBox,
-  moveHighlight,
-  LOCAL_BRUSH_COLOR
+  moveHighlight
 } from "../utils/brushHighlight.ts";
 import {
   FLOOR_SIZE,
@@ -23,6 +23,8 @@ import { coordEqual } from "../utils/presence.ts";
 export interface FlatWorldBrushOptions {
   engine: VoxelEngine;
   camera: THREE.PerspectiveCamera;
+  /** Own highlight color, matched to how peers render this user (see `peerColor()`). */
+  color: THREE.ColorRepresentation;
 }
 
 /**
@@ -37,7 +39,7 @@ export class FlatWorldBrush extends ActorComponent {
   #camera: THREE.PerspectiveCamera;
   #raycaster = new THREE.Raycaster();
   #plane: THREE.Mesh;
-  #highlight: THREE.Group;
+  #highlight: HighlightBox;
   #position: VoxelCoord | null = null;
 
   constructor(
@@ -62,35 +64,46 @@ export class FlatWorldBrush extends ActorComponent {
     );
     this.#plane.name = "flat_world_ground_plane";
 
-    this.#highlight = createHighlightBox(LOCAL_BRUSH_COLOR, { fill: true });
+    this.#highlight = createHighlightBox(options.color, { fill: true });
     this.actor.addChildren(this.#plane, this.#highlight);
+
+    this.actor.world.renderer.on("resize", ({ width, height }) => {
+      this.#highlight.setResolution(width, height);
+    });
   }
 
   update(): void {
     const hit = this.#castRay();
     if (hit === null) {
       this.#setPosition(null);
+      this.#highlight.setFace(null);
 
       return;
     }
 
-    const target = FlatWorldBrush.#hitToVoxelPos(hit, true);
-    this.#setPosition(target);
+    // The ground plane has no voxel behind it, so there's nothing to sit the
+    // highlight over: fall back to the placement cell, same as a real hit.
+    const isGroundHit = hit.object === this.#plane;
+    const placeTarget = FlatWorldBrush.#hitToVoxelPos(hit, true);
+    const hitTarget = isGroundHit ? placeTarget : FlatWorldBrush.#hitToVoxelPos(hit, false);
+
+    this.#setPosition(hitTarget);
+    this.#highlight.setFace(isGroundHit ? null : (hit.face?.normal ?? null));
 
     const { input } = this.actor.world;
     if (input.wasMouseButtonJustPressed("left")) {
       this.#engine.setVoxel(GROUND_LAYER, {
-        position: target,
+        position: placeTarget,
         blockId: PLACED_BLOCK_ID
       });
     }
     // Only a chunk hit has a voxel behind it; the ground plane has none.
     else if (
       input.wasMouseButtonJustPressed("right") &&
-      hit.object !== this.#plane
+      !isGroundHit
     ) {
       this.#engine.removeVoxel(GROUND_LAYER, {
-        position: FlatWorldBrush.#hitToVoxelPos(hit, false)
+        position: hitTarget
       });
     }
   }

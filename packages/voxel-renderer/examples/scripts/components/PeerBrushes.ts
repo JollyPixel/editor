@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import * as THREE from "three";
 import {
   Actor,
   ActorComponent
@@ -13,9 +12,9 @@ import type {
 } from "../../../src/network/types.ts";
 import type { VoxelCoord } from "../../../src/world/types.ts";
 import {
+  type HighlightBox,
   createHighlightBox,
-  moveHighlight,
-  LOCAL_BRUSH_COLOR
+  moveHighlight
 } from "../utils/brushHighlight.ts";
 import {
   coordEqual,
@@ -43,7 +42,7 @@ export class PeerBrushes extends ActorComponent {
   #room: network.Room<VoxelNetworkCommand, VoxelServerMessage>;
   #username: string;
   #legend: HTMLElement;
-  #boxes = new Map<string, THREE.Group>();
+  #boxes = new Map<string, HighlightBox>();
   #lastSent: VoxelCoord | null | undefined;
   /** Identity of the rendered legend, so the DOM is only rebuilt on change. */
   #legendKey = "";
@@ -60,6 +59,12 @@ export class PeerBrushes extends ActorComponent {
     this.#room = options.room;
     this.#username = options.username;
     this.#legend = options.legend;
+
+    this.actor.world.renderer.on("resize", ({ width, height }) => {
+      for (const box of this.#boxes.values()) {
+        box.setResolution(width, height);
+      }
+    });
   }
 
   /**
@@ -91,7 +96,7 @@ export class PeerBrushes extends ActorComponent {
     for (const [clientId, peer] of this.#room.peers) {
       seen.add(clientId);
       moveHighlight(
-        this.#boxFor(clientId),
+        this.#boxFor(clientId, readUsername(peer.identity)),
         readBrushCoord(peer.presence[kPresenceBrushKey])
       );
     }
@@ -115,14 +120,15 @@ export class PeerBrushes extends ActorComponent {
   }
 
   #boxFor(
-    clientId: string
-  ): THREE.Group {
+    clientId: string,
+    username: string
+  ): HighlightBox {
     const existing = this.#boxes.get(clientId);
     if (existing) {
       return existing;
     }
 
-    const box = createHighlightBox(peerColor(clientId));
+    const box = createHighlightBox(peerColor(username));
     this.#boxes.set(clientId, box);
     this.actor.addChildren(box);
 
@@ -144,19 +150,17 @@ export class PeerBrushes extends ActorComponent {
   #renderLegend(
     peerIds: ReadonlySet<string>
   ): void {
-    // `room.clientId` is the Client's own UUID, while peers are keyed by the
-    // one the transport mints per connection — the two never match, so a local
-    // color derived from it would disagree with the box peers actually see.
-    // The local brush has its own reserved color instead.
     const entries = [
       {
-        color: LOCAL_BRUSH_COLOR,
+        color: peerColor(this.#username),
         label: `${this.#username} (you)`
       },
       ...[...peerIds].sort().map((clientId) => {
+        const username = readUsername(this.#room.peers.get(clientId)?.identity ?? {});
+
         return {
-          color: peerColor(clientId),
-          label: readUsername(this.#room.peers.get(clientId)?.identity ?? {})
+          color: peerColor(username),
+          label: username
         };
       })
     ];
