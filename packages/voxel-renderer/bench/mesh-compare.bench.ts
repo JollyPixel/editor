@@ -2,27 +2,15 @@
 import { parseArgs } from "node:util";
 
 // Import Internal Dependencies
-import { VoxelEngine } from "../src/VoxelEngine.ts";
 import { VoxelMeshBuilder } from "../src/mesh/VoxelMeshBuilder.ts";
-import type { BlockDefinitionIn } from "../src/blocks/BlockDefinition.ts";
-import {
-  TerrainBlock,
-  generateTerrain
-} from "../examples/scripts/utils/terrain.ts";
-
-// CONSTANTS
-const kTerrainLayer = "Terrain";
-const kWaterLayer = "Water";
-const kTileSize = 8;
-const kCols = 4;
+import { createBenchEngine, populateTerrain } from "./common.ts";
 
 /**
  * Naive vs greedy on one world, interleaved inside a single process.
  *
- * Separate `npm run bench` invocations drift by 50-120% on a thermally
- * throttling machine, which swamps anything under ~20%. Alternating the two
- * builders over the same chunks makes them share whatever the machine is doing,
- * and reporting the minimum discards the runs that were interrupted.
+ * Separate process runs can drift heavily under thermal throttling. Alternating
+ * variants on the same chunks cancels most machine drift; reporting min keeps
+ * the least-interrupted sample.
  *
  * Usage: node bench/mesh-compare.bench.ts [--size 512] [--chunk 256] [--rounds 5]
  */
@@ -37,27 +25,13 @@ const { values } = parseArgs({
 
 const size = Number(values.size);
 const chunkSize = Number(values.chunk);
-const seed = Number(values.seed);
 const rounds = Number(values.rounds);
 
-const engine = new VoxelEngine({
-  chunkSize,
-  layers: [kTerrainLayer, kWaterLayer],
-  blocks: terrainBlocks(),
-  alphaTest: 0.5
+const engine = createBenchEngine(chunkSize);
+const terrain = populateTerrain(engine, {
+  seed: Number(values.seed),
+  size
 });
-engine.tilesetManager.registerTexture(
-  { id: "terrain", src: "memory://terrain", tileSize: kTileSize, cols: kCols, rows: 2 },
-  mockTexture()
-);
-
-const terrain = generateTerrain(
-  (position, blockId) => engine.setVoxel(
-    blockId === TerrainBlock.Water ? kWaterLayer : kTerrainLayer,
-    { position, blockId }
-  ),
-  { seed, size }
-);
 
 const shared = {
   world: engine.world,
@@ -66,11 +40,19 @@ const shared = {
   tilesetManager: engine.tilesetManager
 };
 const variants = [
-  { name: "naive ", builder: new VoxelMeshBuilder({ ...shared, greedy: false }), times: [] as number[] },
-  { name: "greedy", builder: new VoxelMeshBuilder({ ...shared, greedy: true }), times: [] as number[] }
-];
+  {
+    name: "naive",
+    builder: new VoxelMeshBuilder({ ...shared, greedy: false }),
+    times: [] as number[]
+  },
+  {
+    name: "greedy",
+    builder: new VoxelMeshBuilder({ ...shared, greedy: true }),
+    times: [] as number[]
+  }
+] satisfies { name: string; builder: VoxelMeshBuilder; times: number[]; }[];
 
-// One untimed round so both builders enter the loop already optimised.
+// Warmup pass so both builders start timed rounds in optimized code paths.
 for (const { builder } of variants) {
   meshAll(builder);
 }
@@ -92,7 +74,7 @@ for (const { name, builder, times } of variants) {
   console.log(
     [
       name,
-      `min ${min(times).toFixed(1)}ms`,
+      `min ${Math.min(...times).toFixed(1)}ms`,
       `median ${median(times).toFixed(1)}ms`,
       `tris ${triangles.toLocaleString("en-US")}`,
       `verts ${vertices.toLocaleString("en-US")}`,
@@ -117,7 +99,7 @@ function meshAll(
     triangles += builder.stats.triangles;
     vertices += builder.stats.vertices;
     bytesPerVertex = builder.stats.bytesPerVertex;
-    // The buffers are reused for the next chunk; only the geometries are new.
+    // Builder buffers are reused; dispose per-chunk geometries to avoid accumulation.
     for (const geometry of geometries.values()) {
       geometry.dispose();
     }
@@ -126,46 +108,10 @@ function meshAll(
   return { triangles, vertices, bytesPerVertex };
 }
 
-function min(
-  values: number[]
-): number {
-  return Math.min(...values);
-}
-
 function median(
   values: number[]
 ): number {
   const sorted = [...values].sort((a, b) => a - b);
 
   return sorted[sorted.length >> 1];
-}
-
-function terrainBlocks(): BlockDefinitionIn[] {
-  return Object.values(TerrainBlock).map((id, index) => {
-    return {
-      id,
-      name: `Block ${id}`,
-      shapeId: "cube",
-      collidable: true,
-      faceTextures: {},
-      defaultTexture: {
-        tilesetId: "terrain",
-        col: index % kCols,
-        row: Math.floor(index / kCols)
-      }
-    };
-  });
-}
-
-function mockTexture(): any {
-  return {
-    magFilter: 0,
-    minFilter: 0,
-    colorSpace: "",
-    generateMipmaps: true,
-    image: { width: kCols * kTileSize, height: 2 * kTileSize },
-    dispose() {
-      // no-op
-    }
-  };
 }

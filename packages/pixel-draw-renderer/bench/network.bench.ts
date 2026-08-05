@@ -20,9 +20,8 @@ const kBlack: RGBA = { r: 0, g: 0, b: 0, a: 255 };
 const kResolveBatch = 1000;
 
 /**
- * Headless server-side command application: `applyCommandToBuffer` for a stroke
- * and a full-canvas `global-fill` (matchAll + drawPixels + copyToMaster), plus
- * `LastWriteWinsResolver.resolve` throughput under mixed conflicts.
+ * Benchmarks command application (`stroke`, `global-fill`) and
+ * `LastWriteWinsResolver.resolve` under mixed conflicts.
  */
 export async function run(): Promise<void> {
   const bench = createBench("Network (network/*)");
@@ -56,8 +55,7 @@ export async function run(): Promise<void> {
     .add("applyCommandToBuffer / global-fill 256x256", () => {
       applyCommandToBuffer(fillBuffer, fillCommand);
     }, {
-      // Fill recolors white -> black; reset to white before each iteration so
-      // matchAll keeps hitting the whole canvas (worst case).
+      // Reset white before each run so `global-fill` keeps worst-case coverage.
       beforeEach() {
         fillBuffer.replacePixels(whitePixels, size);
       }

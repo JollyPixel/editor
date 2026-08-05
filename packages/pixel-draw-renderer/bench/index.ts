@@ -15,8 +15,8 @@ const kSuites = [
 ];
 
 /**
- * Runs every headless benchmark suite sequentially. Individual files are also
- * runnable on their own (`node bench/flood-fill.bench.ts`).
+ * Runs all headless suites sequentially.
+ * Individual suites remain directly runnable.
  */
 for (const suite of kSuites) {
   await suite();

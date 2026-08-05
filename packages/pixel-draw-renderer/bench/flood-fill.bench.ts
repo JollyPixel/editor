@@ -12,8 +12,7 @@ const kWhite: RGBA = { r: 255, g: 255, b: 255, a: 255 };
 const kBlack: RGBA = { r: 0, g: 0, b: 0, a: 255 };
 
 /**
- * A uniform (single-color) buffer whose master is sized to the canvas, so the
- * fixture construction cost stays proportional to the region under test.
+ * Uniform buffer fixture with `maxSize` pinned to canvas size.
  */
 function uniformBuffer(
   side: number
@@ -26,10 +25,8 @@ function uniformBuffer(
 }
 
 /**
- * `Fill` is read-only (it returns positions, it does not mutate), so a single
- * fixture per size can be reused across every iteration. Seeds sit at the
- * center: `PixelBuffer.#fill` forces the origin pixel transparent, so seeding
- * at (0,0) would flood a degenerate 1-pixel region instead of the canvas.
+ * `Fill` is read-only, so per-size fixtures are reused across iterations.
+ * Seed at center: `(0,0)` is forced transparent by `PixelBuffer.#fill`.
  */
 export async function run(): Promise<void> {
   const bench = createBench("Flood fill (tools/Fill)");
