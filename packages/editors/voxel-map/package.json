@@ -35,8 +35,5 @@
     "@jolly-pixel/voxel.renderer": "2.0.0",
     "lit": "3.3.3",
     "three": "^0.185.1"
-  },
-  "devDependencies": {
-    "@types/three": "^0.185.0"
   }
 }

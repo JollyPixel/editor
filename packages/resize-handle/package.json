@@ -11,9 +11,6 @@
     "test-only": "node --test \"test/**/*.test.ts\"",
     "test": "c8 -r html npm run test-only"
   },
-  "devDependencies": {
-    "happy-dom": "*"
-  },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
     "access": "public",
