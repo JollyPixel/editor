@@ -3,7 +3,7 @@
 </h1>
 
 <p align="center">
-  Robust resize handles / splitters for your HTML5 apps and websites
+  A modern and robust resize-handle / splitter library for your HTML5 apps and websites, inspired by <a href="https://github.com/sparklinlabs/resize-handle">sparklinlabs/resize-handle</a>
 </p>
 
 ## 💃 Getting Started

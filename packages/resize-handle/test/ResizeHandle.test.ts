@@ -19,7 +19,8 @@ describe("constructor", () => {
     const target = makeTarget(container);
 
     assert.throws(
-      () => new ResizeHandle(target, { direction: "invalid" as any }),
+      // @ts-expect-error Testing invalid direction
+      () => new ResizeHandle(target, { direction: "invalid" }),
       /Invalid direction/
     );
   });
@@ -100,7 +101,10 @@ describe("constructor", () => {
   test("collapsable: true adds collapsable CSS class", () => {
     const container = makeContainer();
     const target = makeTarget(container);
-    const rh = new ResizeHandle(target, { direction: "left", collapsable: true });
+    const rh = new ResizeHandle(target, {
+      direction: "left",
+      collapsable: true
+    });
 
     assert.ok(rh.handleElt.classList.contains("collapsable"));
   });
@@ -109,7 +113,7 @@ describe("constructor", () => {
     const container = makeContainer();
     const target = makeTarget(container);
 
-    const existingHandle = document.createElement("div") as unknown as HTMLElement;
+    const existingHandle = document.createElement("div");
     existingHandle.classList.add("resize-handle");
     container.appendChild(existingHandle);
 
@@ -121,7 +125,7 @@ describe("constructor", () => {
   test("reuses existing sibling div.resize-handle for end directions", () => {
     const container = makeContainer();
 
-    const existingHandle = document.createElement("div") as unknown as HTMLElement;
+    const existingHandle = document.createElement("div");
     existingHandle.classList.add("resize-handle");
     container.appendChild(existingHandle);
 
@@ -136,7 +140,10 @@ describe("double-click — collapse / expand", () => {
   test("no-op when event.button !== 0", () => {
     const container = makeContainer();
     const target = makeTarget(container);
-    const rh = new ResizeHandle(target, { direction: "left", collapsable: true });
+    const rh = new ResizeHandle(target, {
+      direction: "left",
+      collapsable: true
+    });
 
     fireMouseEvent(rh.handleElt, "dblclick", { button: 1 });
 
@@ -156,7 +163,10 @@ describe("double-click — collapse / expand", () => {
   test('collapse horizontal ("left"): saves width, sets display:none, sets width:0px', () => {
     const container = makeContainer();
     const target = makeTarget(container, 200, 150);
-    const rh = new ResizeHandle(target, { direction: "left", collapsable: true });
+    const rh = new ResizeHandle(target, {
+      direction: "left",
+      collapsable: true
+    });
 
     fireMouseEvent(rh.handleElt, "dblclick", { button: 0 });
 
@@ -167,7 +177,10 @@ describe("double-click — collapse / expand", () => {
   test("expand horizontal: restores saved width, clears display", () => {
     const container = makeContainer();
     const target = makeTarget(container, 200, 150);
-    const rh = new ResizeHandle(target, { direction: "left", collapsable: true });
+    const rh = new ResizeHandle(target, {
+      direction: "left",
+      collapsable: true
+    });
 
     // Collapse first (width=200 > 0 → collapse path)
     fireMouseEvent(rh.handleElt, "dblclick", { button: 0 });
@@ -183,7 +196,10 @@ describe("double-click — collapse / expand", () => {
   test('collapse vertical ("top"): saves height, sets display:none, sets height:0px', () => {
     const container = makeContainer();
     const target = makeTarget(container, 200, 150);
-    const rh = new ResizeHandle(target, { direction: "top", collapsable: true });
+    const rh = new ResizeHandle(target, {
+      direction: "top",
+      collapsable: true
+    });
 
     fireMouseEvent(rh.handleElt, "dblclick", { button: 0 });
 
@@ -194,7 +210,10 @@ describe("double-click — collapse / expand", () => {
   test("expand vertical: restores saved height, clears display", () => {
     const container = makeContainer();
     const target = makeTarget(container, 200, 150);
-    const rh = new ResizeHandle(target, { direction: "top", collapsable: true });
+    const rh = new ResizeHandle(target, {
+      direction: "top",
+      collapsable: true
+    });
 
     // Collapse first (height=150 > 0 → collapse path)
     fireMouseEvent(rh.handleElt, "dblclick", { button: 0 });
@@ -211,7 +230,10 @@ describe("double-click — collapse / expand", () => {
     const container = makeContainer();
     // Target starts with zero size → first dblclick goes straight to expand path
     const target = makeTarget(container, 0, 0);
-    const rh = new ResizeHandle(target, { direction: "left", collapsable: true });
+    const rh = new ResizeHandle(target, {
+      direction: "left",
+      collapsable: true
+    });
 
     fireMouseEvent(rh.handleElt, "dblclick", { button: 0 });
 
@@ -232,7 +254,10 @@ describe("pointer drag", () => {
       dragStartFired = true;
     });
 
-    firePointerEvent(rh.handleElt, "pointerdown", { button: 1, pointerId: 1 });
+    firePointerEvent(rh.handleElt, "pointerdown", {
+      button: 1,
+      pointerId: 1
+    });
 
     assert.strictEqual(dragStartFired, false);
   });
@@ -249,7 +274,10 @@ describe("pointer drag", () => {
     });
 
     installPointerCaptureMock(rh.handleElt);
-    firePointerEvent(rh.handleElt, "pointerdown", { button: 0, pointerId: 1 });
+    firePointerEvent(rh.handleElt, "pointerdown", {
+      button: 0,
+      pointerId: 1
+    });
 
     assert.strictEqual(dragStartFired, false);
   });
@@ -266,7 +294,10 @@ describe("pointer drag", () => {
     });
 
     installPointerCaptureMock(rh.handleElt);
-    firePointerEvent(rh.handleElt, "pointerdown", { button: 0, pointerId: 1 });
+    firePointerEvent(rh.handleElt, "pointerdown", {
+      button: 0,
+      pointerId: 1
+    });
 
     assert.strictEqual(dragStartFired, false);
   });
@@ -282,7 +313,10 @@ describe("pointer drag", () => {
     });
 
     installPointerCaptureMock(rh.handleElt);
-    firePointerEvent(rh.handleElt, "pointerdown", { button: 0, pointerId: 1 });
+    firePointerEvent(rh.handleElt, "pointerdown", {
+      button: 0,
+      pointerId: 1
+    });
 
     assert.strictEqual(dragStartFired, true);
   });
@@ -293,7 +327,10 @@ describe("pointer drag", () => {
     const rh = new ResizeHandle(target, { direction: "left" });
 
     const state = installPointerCaptureMock(rh.handleElt);
-    firePointerEvent(rh.handleElt, "pointerdown", { button: 0, pointerId: 7 });
+    firePointerEvent(rh.handleElt, "pointerdown", {
+      button: 0,
+      pointerId: 7
+    });
 
     assert.strictEqual(state.captured, 7);
   });
@@ -304,7 +341,10 @@ describe("pointer drag", () => {
     const rh = new ResizeHandle(target, { direction: "left" });
 
     installPointerCaptureMock(rh.handleElt);
-    firePointerEvent(rh.handleElt, "pointerdown", { button: 0, pointerId: 1 });
+    firePointerEvent(rh.handleElt, "pointerdown", {
+      button: 0,
+      pointerId: 1
+    });
 
     assert.ok(document.documentElement.classList.contains("handle-dragging"));
   });
@@ -315,7 +355,10 @@ describe("pointer drag", () => {
     const rh = new ResizeHandle(target, { direction: "left" });
 
     installPointerCaptureMock(rh.handleElt);
-    firePointerEvent(rh.handleElt, "pointerdown", { button: 0, pointerId: 1 });
+    firePointerEvent(rh.handleElt, "pointerdown", {
+      button: 0,
+      pointerId: 1
+    });
 
     assert.ok(document.documentElement.classList.contains("vertical"));
   });
@@ -326,7 +369,10 @@ describe("pointer drag", () => {
     const rh = new ResizeHandle(target, { direction: "top" });
 
     installPointerCaptureMock(rh.handleElt);
-    firePointerEvent(rh.handleElt, "pointerdown", { button: 0, pointerId: 1 });
+    firePointerEvent(rh.handleElt, "pointerdown", {
+      button: 0,
+      pointerId: 1
+    });
 
     assert.ok(document.documentElement.classList.contains("horizontal"));
   });
@@ -338,9 +384,15 @@ describe("pointer drag", () => {
 
     installPointerCaptureMock(rh.handleElt);
     // startDrag = clientX=100, initialSize=200
-    firePointerEvent(rh.handleElt, "pointerdown", { button: 0, pointerId: 1, clientX: 100 });
+    firePointerEvent(rh.handleElt, "pointerdown", {
+      button: 0,
+      pointerId: 1,
+      clientX: 100
+    });
     // delta=150, size = 200 + (150 - 100) = 250
-    firePointerEvent(rh.handleElt, "pointermove", { clientX: 150 });
+    firePointerEvent(rh.handleElt, "pointermove", {
+      clientX: 150
+    });
 
     assert.strictEqual(target.style.width, "250px");
   });
@@ -352,9 +404,15 @@ describe("pointer drag", () => {
 
     installPointerCaptureMock(rh.handleElt);
     // startDrag = clientX=100, initialSize=200
-    firePointerEvent(rh.handleElt, "pointerdown", { button: 0, pointerId: 1, clientX: 100 });
+    firePointerEvent(rh.handleElt, "pointerdown", {
+      button: 0,
+      pointerId: 1,
+      clientX: 100
+    });
     // delta=50, size = 200 + (100 - 50) = 250
-    firePointerEvent(rh.handleElt, "pointermove", { clientX: 50 });
+    firePointerEvent(rh.handleElt, "pointermove", {
+      clientX: 50
+    });
 
     assert.strictEqual(target.style.width, "250px");
   });
@@ -366,9 +424,15 @@ describe("pointer drag", () => {
 
     installPointerCaptureMock(rh.handleElt);
     // startDrag = clientY=50, initialSize=150
-    firePointerEvent(rh.handleElt, "pointerdown", { button: 0, pointerId: 1, clientY: 50 });
+    firePointerEvent(rh.handleElt, "pointerdown", {
+      button: 0,
+      pointerId: 1,
+      clientY: 50
+    });
     // delta=100, size = 150 + (100 - 50) = 200
-    firePointerEvent(rh.handleElt, "pointermove", { clientY: 100 });
+    firePointerEvent(rh.handleElt, "pointermove", {
+      clientY: 100
+    });
 
     assert.strictEqual(target.style.height, "200px");
   });
@@ -380,9 +444,15 @@ describe("pointer drag", () => {
 
     installPointerCaptureMock(rh.handleElt);
     // startDrag = clientY=100, initialSize=150
-    firePointerEvent(rh.handleElt, "pointerdown", { button: 0, pointerId: 1, clientY: 100 });
+    firePointerEvent(rh.handleElt, "pointerdown", {
+      button: 0,
+      pointerId: 1,
+      clientY: 100
+    });
     // delta=50, size = 150 + (100 - 50) = 200
-    firePointerEvent(rh.handleElt, "pointermove", { clientY: 50 });
+    firePointerEvent(rh.handleElt, "pointermove", {
+      clientY: 50
+    });
 
     assert.strictEqual(target.style.height, "200px");
   });
@@ -398,9 +468,17 @@ describe("pointer drag", () => {
     });
 
     installPointerCaptureMock(rh.handleElt);
-    firePointerEvent(rh.handleElt, "pointerdown", { button: 0, pointerId: 1, clientX: 100 });
-    firePointerEvent(rh.handleElt, "pointermove", { clientX: 120 });
-    firePointerEvent(rh.handleElt, "pointermove", { clientX: 140 });
+    firePointerEvent(rh.handleElt, "pointerdown", {
+      button: 0,
+      pointerId: 1,
+      clientX: 100
+    });
+    firePointerEvent(rh.handleElt, "pointermove", {
+      clientX: 120
+    });
+    firePointerEvent(rh.handleElt, "pointermove", {
+      clientX: 140
+    });
 
     assert.strictEqual(dragCount, 2);
   });
@@ -416,8 +494,13 @@ describe("pointer drag", () => {
     });
 
     installPointerCaptureMock(rh.handleElt);
-    firePointerEvent(rh.handleElt, "pointerdown", { button: 0, pointerId: 1 });
-    firePointerEvent(rh.handleElt, "pointerup", { pointerId: 1 });
+    firePointerEvent(rh.handleElt, "pointerdown", {
+      button: 0,
+      pointerId: 1
+    });
+    firePointerEvent(rh.handleElt, "pointerup", {
+      pointerId: 1
+    });
 
     assert.strictEqual(dragEndFired, true);
   });
@@ -428,10 +511,15 @@ describe("pointer drag", () => {
     const rh = new ResizeHandle(target, { direction: "left" });
 
     const state = installPointerCaptureMock(rh.handleElt);
-    firePointerEvent(rh.handleElt, "pointerdown", { button: 0, pointerId: 3 });
+    firePointerEvent(rh.handleElt, "pointerdown", {
+      button: 0,
+      pointerId: 3
+    });
     assert.strictEqual(state.captured, 3);
 
-    firePointerEvent(rh.handleElt, "pointerup", { pointerId: 3 });
+    firePointerEvent(rh.handleElt, "pointerup", {
+      pointerId: 3
+    });
 
     assert.strictEqual(state.captured, null);
   });
@@ -442,7 +530,10 @@ describe("pointer drag", () => {
     const rh = new ResizeHandle(target, { direction: "left" });
 
     installPointerCaptureMock(rh.handleElt);
-    firePointerEvent(rh.handleElt, "pointerdown", { button: 0, pointerId: 1 });
+    firePointerEvent(rh.handleElt, "pointerdown", {
+      button: 0,
+      pointerId: 1
+    });
 
     assert.ok(document.documentElement.classList.contains("handle-dragging"));
     assert.ok(document.documentElement.classList.contains("vertical"));
@@ -464,14 +555,22 @@ describe("pointer drag", () => {
     });
 
     installPointerCaptureMock(rh.handleElt);
-    firePointerEvent(rh.handleElt, "pointerdown", { button: 0, pointerId: 1, clientX: 100 });
-    firePointerEvent(rh.handleElt, "pointermove", { clientX: 120 });
+    firePointerEvent(rh.handleElt, "pointerdown", {
+      button: 0,
+      pointerId: 1,
+      clientX: 100
+    });
+    firePointerEvent(rh.handleElt, "pointermove", {
+      clientX: 120
+    });
     assert.strictEqual(dragCount, 1);
 
     firePointerEvent(rh.handleElt, "pointerup");
 
     // Additional moves after cleanup should not fire drag
-    firePointerEvent(rh.handleElt, "pointermove", { clientX: 140 });
+    firePointerEvent(rh.handleElt, "pointermove", {
+      clientX: 140
+    });
 
     assert.strictEqual(dragCount, 1);
   });
@@ -487,7 +586,10 @@ describe("pointer drag", () => {
     });
 
     const state = installPointerCaptureMock(rh.handleElt);
-    firePointerEvent(rh.handleElt, "pointerdown", { button: 0, pointerId: 1 });
+    firePointerEvent(rh.handleElt, "pointerdown", {
+      button: 0,
+      pointerId: 1
+    });
 
     assert.ok(document.documentElement.classList.contains("handle-dragging"));
 
