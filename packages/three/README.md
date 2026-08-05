@@ -18,11 +18,19 @@ $ yarn add @jolly-pixel/three
 
 ## 👀 Usage example
 
-TBC
+```ts
+import { Grid } from "@jolly-pixel/three";
+
+const grid = new Grid({
+  cellSize: 1,
+  sectionSize: 10
+});
+scene.add(grid); // self-updating: no manual .update() call needed
+```
 
 ## 📚 API
 
-TBC
+- [Grid](docs/Grid.md) - Infinite, camera-following ground-plane grid mesh (TSL, `THREE.WebGPURenderer`).
 
 ## ✨ Contributors guide
 

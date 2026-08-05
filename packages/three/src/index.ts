@@ -1,1 +1,2 @@
-console.log("hello world");
+export * from "./grid/Grid.ts";
+export * from "./types.ts";
