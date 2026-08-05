@@ -14,9 +14,8 @@ import {
 const kBatch = 256;
 
 /**
- * Color parsing goes through colorjs.io, which is comparatively expensive and
- * runs once per stroke (`EditPipeline` resolves the brush color via `toRGBA`).
- * Inputs are batched so the colorjs.io cost dominates the harness overhead.
+ * `toRGBA`/`colorAsRGBA` route through colorjs.io, so inputs are batched to
+ * keep parser cost above harness overhead.
  */
 export async function run(): Promise<void> {
   const bench = createBench("Colors (utils/colors)");

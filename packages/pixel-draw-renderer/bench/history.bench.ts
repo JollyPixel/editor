@@ -18,9 +18,8 @@ const kSide = 256;
 const kGroupCount = 4096;
 
 /**
- * Exercises the undo/redo replay path (each `undo`/`redo` re-draws the stroke
- * and runs `copyToMaster`) plus `groupPositionsByColor`, the per-replay helper
- * whose cost scales with the number of distinct colors.
+ * Benchmarks undo/redo replay and `groupPositionsByColor`.
+ * Grouping cost scales with distinct color count.
  */
 export async function run(): Promise<void> {
   const bench = createBench("History (history/HistoryStack)");

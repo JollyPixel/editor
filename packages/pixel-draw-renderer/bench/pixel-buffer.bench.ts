@@ -13,9 +13,8 @@ import type { RGBA } from "../src/types.ts";
 const kBlack: RGBA = { r: 0, g: 0, b: 0, a: 255 };
 
 /**
- * Covers the primitives an edit round-trip leans on: buffer construction (the
- * `#fill` over `maxSize²`), `copyToMaster` (run on every stroke commit),
- * `drawPixels`, `resize`, and the full-buffer snapshot clones history takes.
+ * Covers edit-path primitives: construction (`#fill` over `maxSize²`),
+ * `copyToMaster`, `drawPixels`, `resize`, and snapshot clone cost.
  */
 export async function run(): Promise<void> {
   const bench = createBench("PixelBuffer (buffer/PixelBuffer)");
