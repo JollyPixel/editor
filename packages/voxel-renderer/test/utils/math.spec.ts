@@ -12,9 +12,7 @@ import {
   FACE_OFFSETS,
   FACE_OPPOSITE
 } from "../../src/utils/math.ts";
-
-// CONSTANTS
-const kEpsilon = 1e-10;
+import { EPSILON } from "../helpers/math.ts";
 
 describe("packTransform / unpackTransform", () => {
   it("round-trips all 16 rotation×flip combinations (no flipY)", () => {
@@ -128,7 +126,7 @@ describe("FACE_NORMALS", () => {
   it("each entry is a unit vector", () => {
     for (const [i, n] of FACE_NORMALS.entries()) {
       const len = Math.sqrt(n[0] ** 2 + n[1] ** 2 + n[2] ** 2);
-      assert.ok(Math.abs(len - 1) < kEpsilon, `FACE_NORMALS[${i}] is not a unit vector`);
+      assert.ok(Math.abs(len - 1) < EPSILON, `FACE_NORMALS[${i}] is not a unit vector`);
     }
   });
 

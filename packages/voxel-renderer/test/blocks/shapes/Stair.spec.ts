@@ -4,13 +4,18 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { FACE } from "../../../src/utils/math.ts";
+import type { FaceDefinition } from "../../../src/blocks/BlockShape.ts";
 import {
   Stair,
   StairCornerInner,
   StairCornerOuter
 } from "../../../src/blocks/shapes/Stair.ts";
+import { BlockShapeRegistry } from "../../../src/blocks/BlockShapeRegistry.ts";
 
-function checkNormalMagnitudes(shapeName: string, faces: any[]): void {
+function checkNormalMagnitudes(
+  shapeName: string,
+  faces: readonly FaceDefinition[]
+): void {
   for (let i = 0; i < faces.length; i++) {
     const { normal } = faces[i];
     const mag = Math.sqrt(normal[0] ** 2 + normal[1] ** 2 + normal[2] ** 2);
@@ -21,7 +26,10 @@ function checkNormalMagnitudes(shapeName: string, faces: any[]): void {
   }
 }
 
-function checkVertexCounts(shapeName: string, faces: any[]): void {
+function checkVertexCounts(
+  shapeName: string,
+  faces: readonly FaceDefinition[]
+): void {
   for (let i = 0; i < faces.length; i++) {
     const count = faces[i].vertices.length;
     assert.ok(
@@ -44,7 +52,7 @@ describe("Stair", () => {
     assert.equal(stair.collisionHint, "trimesh");
   });
 
-  it("has 10 faces", () => {
+  it("has 10 faces (9 boundary quads + 1 interior riser quad)", () => {
     assert.equal(stair.faces.length, 10);
   });
 
@@ -61,11 +69,11 @@ describe("Stair", () => {
   });
 
   it("each face has 3 or 4 vertices", () => {
-    checkVertexCounts("Stair", stair.faces as any[]);
+    checkVertexCounts("Stair", stair.faces);
   });
 
   it("each face has a unit normal", () => {
-    checkNormalMagnitudes("Stair", stair.faces as any[]);
+    checkNormalMagnitudes("Stair", stair.faces);
   });
 });
 
@@ -82,7 +90,7 @@ describe("StairCornerInner", () => {
     assert.equal(shape.collisionHint, "trimesh");
   });
 
-  it("has 12 faces", () => {
+  it("has 12 faces (10 boundary quads + 2 interior riser quads)", () => {
     assert.equal(shape.faces.length, 12);
   });
 
@@ -99,11 +107,11 @@ describe("StairCornerInner", () => {
   });
 
   it("each face has 3 or 4 vertices", () => {
-    checkVertexCounts("StairCornerInner", shape.faces as any[]);
+    checkVertexCounts("StairCornerInner", shape.faces);
   });
 
   it("each face has a unit normal", () => {
-    checkNormalMagnitudes("StairCornerInner", shape.faces as any[]);
+    checkNormalMagnitudes("StairCornerInner", shape.faces);
   });
 });
 
@@ -120,31 +128,41 @@ describe("StairCornerOuter", () => {
     assert.equal(shape.collisionHint, "trimesh");
   });
 
-  it("has 13 faces", () => {
+  it("has 13 faces (11 boundary quads + 2 interior riser quads)", () => {
     assert.equal(shape.faces.length, 13);
   });
 
   it("occludes only NegY", () => {
     assert.equal(shape.occludes(FACE.NegY), true);
-    for (const face of [FACE.PosX, FACE.NegX, FACE.PosY, FACE.PosZ, FACE.NegZ]) {
-      assert.equal(shape.occludes(face), false, `expected occludes(${face}) to be false`);
+    const faces = [
+      FACE.PosX,
+      FACE.NegX,
+      FACE.PosY,
+      FACE.PosZ,
+      FACE.NegZ
+    ];
+    for (const face of faces) {
+      assert.equal(
+        shape.occludes(face),
+        false,
+        `expected occludes(${face}) to be false`
+      );
     }
   });
 
   it("each face has 3 or 4 vertices", () => {
-    checkVertexCounts("StairCornerOuter", shape.faces as any[]);
+    checkVertexCounts("StairCornerOuter", shape.faces);
   });
 
   it("each face has a unit normal", () => {
-    checkNormalMagnitudes("StairCornerOuter", shape.faces as any[]);
+    checkNormalMagnitudes("StairCornerOuter", shape.faces);
   });
 });
 
 // ── BlockShapeRegistry integration ──────────────────────────────────────────
 
 describe("BlockShapeRegistry — stair shapes registered", () => {
-  it("all 3 stair shapes are present in createDefault()", async() => {
-    const { BlockShapeRegistry } = await import("../../../src/blocks/BlockShapeRegistry.ts");
+  it("all 3 stair shapes are present in createDefault()", () => {
     const registry = BlockShapeRegistry.createDefault();
     const ids = [
       "stair",

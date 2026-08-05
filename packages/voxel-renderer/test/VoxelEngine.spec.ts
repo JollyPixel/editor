@@ -8,35 +8,22 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import { VoxelEngine } from "../src/VoxelEngine.ts";
 import type { VoxelLayerHookEvent } from "../src/hooks.ts";
+import { mockTexture } from "./helpers/mockTexture.ts";
+import { makeBlockDef } from "./helpers/blocks.ts";
 
 // CONSTANTS
 const kCubeId = 1;
 const kLeavesId = 2;
 const kDefaultTexture = { col: 0, row: 0 };
 
-/**
- * Minimal mock texture; registerTexture() assigns magFilter/etc then reads
- * image.width / image.height only when cols/rows are omitted from the def.
- * By supplying explicit cols + rows we avoid any DOM image dependency.
- */
-function mockTexture(): any {
-  return {
-    magFilter: 0,
-    minFilter: 0,
-    colorSpace: "",
-    generateMipmaps: true,
-    image: { width: 64, height: 64 },
-    dispose() {
-      // no-op
-    }
-  };
-}
+/** The material variants VoxelEngine's chunk meshes are built with. */
+type ChunkMesh = THREE.Mesh<THREE.BufferGeometry, THREE.MeshLambertMaterial | THREE.MeshStandardMaterial>;
 
 function makeEngine(onLayerUpdated?: (event: VoxelLayerHookEvent) => void) {
   return new VoxelEngine({
     chunkSize: 4,
     blocks: [
-      { id: kCubeId, name: "Cube", shapeId: "cube", faceTextures: {}, defaultTexture: kDefaultTexture, collidable: true }
+      makeBlockDef(kCubeId, "cube", { name: "Cube" })
     ],
     onLayerUpdated
   });
@@ -310,7 +297,7 @@ function fillChunks(
 describe("VoxelEngine — budgeted rebuild queue", () => {
   it("rebuilds every dirty chunk in one tick when the budget is disabled", () => {
     const engine = new VoxelEngine({ chunkSize: 4, rebuildBudgetMs: 0, blocks: [
-      { id: kCubeId, name: "Cube", shapeId: "cube", faceTextures: {}, defaultTexture: kDefaultTexture, collidable: true }
+      makeBlockDef(kCubeId, "cube", { name: "Cube" })
     ] });
     registerTileset(engine);
     engine.addLayer("Ground");
@@ -323,10 +310,11 @@ describe("VoxelEngine — budgeted rebuild queue", () => {
   });
 
   it("defers the rest of the queue once the budget is spent", () => {
-    // A negative deadline is always already past, so only the first chunk of
-    // the queue is rebuilt per tick.
+    // Number.MIN_VALUE is the smallest positive double, so the budget is
+    // effectively zero: it's exhausted after the first unit of work, leaving
+    // only the first chunk of the queue rebuilt per tick.
     const engine = new VoxelEngine({ chunkSize: 4, rebuildBudgetMs: Number.MIN_VALUE, blocks: [
-      { id: kCubeId, name: "Cube", shapeId: "cube", faceTextures: {}, defaultTexture: kDefaultTexture, collidable: true }
+      makeBlockDef(kCubeId, "cube", { name: "Cube" })
     ] });
     registerTileset(engine);
     engine.addLayer("Ground");
@@ -340,7 +328,7 @@ describe("VoxelEngine — budgeted rebuild queue", () => {
 
   it("drains the deferred queue over subsequent ticks", () => {
     const engine = new VoxelEngine({ chunkSize: 4, rebuildBudgetMs: Number.MIN_VALUE, blocks: [
-      { id: kCubeId, name: "Cube", shapeId: "cube", faceTextures: {}, defaultTexture: kDefaultTexture, collidable: true }
+      makeBlockDef(kCubeId, "cube", { name: "Cube" })
     ] });
     registerTileset(engine);
     engine.addLayer("Ground");
@@ -356,7 +344,7 @@ describe("VoxelEngine — budgeted rebuild queue", () => {
 
   it("flush() ignores the budget", () => {
     const engine = new VoxelEngine({ chunkSize: 4, rebuildBudgetMs: Number.MIN_VALUE, blocks: [
-      { id: kCubeId, name: "Cube", shapeId: "cube", faceTextures: {}, defaultTexture: kDefaultTexture, collidable: true }
+      makeBlockDef(kCubeId, "cube", { name: "Cube" })
     ] });
     registerTileset(engine);
     engine.addLayer("Ground");
@@ -384,7 +372,7 @@ describe("VoxelEngine — budgeted rebuild queue", () => {
 
   it("rebuilds chunks nearest rebuildFocus first", () => {
     const engine = new VoxelEngine({ chunkSize: 4, rebuildBudgetMs: Number.MIN_VALUE, blocks: [
-      { id: kCubeId, name: "Cube", shapeId: "cube", faceTextures: {}, defaultTexture: kDefaultTexture, collidable: true }
+      makeBlockDef(kCubeId, "cube", { name: "Cube" })
     ] });
     registerTileset(engine);
     engine.addLayer("Ground");
@@ -399,7 +387,7 @@ describe("VoxelEngine — budgeted rebuild queue", () => {
 
   it("does not rebuild a chunk unloaded while it was queued", () => {
     const engine = new VoxelEngine({ chunkSize: 4, rebuildBudgetMs: Number.MIN_VALUE, blocks: [
-      { id: kCubeId, name: "Cube", shapeId: "cube", faceTextures: {}, defaultTexture: kDefaultTexture, collidable: true }
+      makeBlockDef(kCubeId, "cube", { name: "Cube" })
     ] });
     registerTileset(engine);
     engine.addLayer("Ground");
@@ -425,7 +413,7 @@ describe("VoxelEngine — layer opacity on the material", () => {
     engine.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
     engine.flush();
 
-    const material = (engine.root.children[0] as any).material;
+    const material = (engine.root.children[0] as ChunkMesh).material;
     assert.equal(material.transparent, false);
     assert.equal(material.opacity, 1);
     assert.equal(material.depthWrite, true);
@@ -440,7 +428,7 @@ describe("VoxelEngine — layer opacity on the material", () => {
     engine.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
     engine.flush();
 
-    const mesh = engine.root.children[0] as any;
+    const mesh = engine.root.children[0] as ChunkMesh;
     assert.equal(mesh.geometry.getAttribute("color"), undefined);
     assert.equal(mesh.material.transparent, true);
     assert.equal(mesh.material.opacity, 0.5);
@@ -454,10 +442,7 @@ describe("VoxelEngine — layer opacity on the material", () => {
     const engine = new VoxelEngine({
       chunkSize: 4,
       blocks: [
-        {
-          id: kCubeId, name: "Cube", shapeId: "cube",
-          faceTextures: {}, defaultTexture: kDefaultTexture, collidable: true
-        },
+        makeBlockDef(kCubeId, "cube", { name: "Cube" }),
         {
           id: kLeavesId, name: "Leaves", shapeId: "cube", transparent: true,
           faceTextures: {}, defaultTexture: kDefaultTexture, collidable: true
@@ -470,7 +455,7 @@ describe("VoxelEngine — layer opacity on the material", () => {
     engine.setVoxel("Ground", { position: { x: 2, y: 0, z: 0 }, blockId: kLeavesId });
     engine.flush();
 
-    const meshes = engine.root.children as any[];
+    const meshes = engine.root.children as ChunkMesh[];
     const solid = meshes.find((mesh) => !mesh.name.endsWith(":cutout"));
     const cutout = meshes.find((mesh) => mesh.name.endsWith(":cutout"));
     assert.equal(meshes.length, 2);
@@ -491,7 +476,7 @@ describe("VoxelEngine — layer opacity on the material", () => {
     engine.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
     engine.flush();
 
-    const material = (engine.root.children[0] as any).material;
+    const material = (engine.root.children[0] as ChunkMesh).material;
     assert.equal(material.transparent, true);
     assert.ok(material.opacity < 1);
   });
@@ -507,7 +492,7 @@ describe("VoxelEngine — layer opacity on the material", () => {
     engine.setVoxel("B", { position: { x: 8, y: 0, z: 0 }, blockId: kCubeId });
     engine.flush();
 
-    const [first, second] = engine.root.children as any[];
+    const [first, second] = engine.root.children as ChunkMesh[];
     assert.equal(engine.root.children.length, 2);
     assert.equal(first.material, second.material);
   });

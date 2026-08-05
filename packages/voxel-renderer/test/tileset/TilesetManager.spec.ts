@@ -1,35 +1,11 @@
 // Import Node.js Dependencies
-import { describe, it } from "node:test";
+import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { TilesetManager } from "../../src/tileset/TilesetManager.ts";
-
-// CONSTANTS
-const kEpsilon = 1e-10;
-
-function approxEqual(a: number, b: number): boolean {
-  return Math.abs(a - b) < kEpsilon;
-}
-
-/**
- * Creates a minimal mock THREE.Texture with a synthetic image.
- * registerTexture() sets magFilter/minFilter/colorSpace/generateMipmaps on the object,
- * then reads image.width and image.height. A plain object with those properties is sufficient.
- */
-function mockTexture(width: number, height: number): any {
-  return {
-    magFilter: 0,
-    minFilter: 0,
-    colorSpace: "",
-    generateMipmaps: true,
-    needsUpdate: false,
-    image: { width, height },
-    dispose() {
-      // No-op for testing; real THREE.Texture would release GPU resources here.
-    }
-  };
-}
+import { mockTexture } from "../helpers/mockTexture.ts";
+import { approxEqual } from "../helpers/math.ts";
 
 /**
  * Minimal tileset definition.
@@ -105,8 +81,12 @@ describe("TilesetManager.getTileUV", () => {
   });
 
   describe("UV computation — 4-col 4-row atlas (tileSize=16, image=64×64)", () => {
-    const manager = new TilesetManager();
-    manager.registerTexture(makeDef({ id: "terrain", tileSize: 16, cols: 4, rows: 4 }), mockTexture(64, 64));
+    let manager: TilesetManager;
+
+    beforeEach(() => {
+      manager = new TilesetManager();
+      manager.registerTexture(makeDef({ id: "terrain", tileSize: 16, cols: 4, rows: 4 }), mockTexture(64, 64));
+    });
 
     it("tile (col=0, row=0): offsetU/offsetV/scale (inset by half-texel)", () => {
       // halfTexel = 0.5 / (cols*tileSize) = 0.5 / 64 = 0.0078125
@@ -144,8 +124,12 @@ describe("TilesetManager.getTileUV", () => {
   });
 
   describe("UV computation — 2-col 2-row atlas (tileSize=16, image=32×32)", () => {
-    const manager = new TilesetManager();
-    manager.registerTexture(makeDef({ id: "small", tileSize: 16, cols: 2, rows: 2 }), mockTexture(32, 32));
+    let manager: TilesetManager;
+
+    beforeEach(() => {
+      manager = new TilesetManager();
+      manager.registerTexture(makeDef({ id: "small", tileSize: 16, cols: 2, rows: 2 }), mockTexture(32, 32));
+    });
 
     it("scaleU = scaleV (inset by half-texel)", () => {
       // cols=2, tileSize=16 => imgW=32, halfTexel=0.5/32=0.015625

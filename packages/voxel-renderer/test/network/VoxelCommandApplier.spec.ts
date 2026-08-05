@@ -6,10 +6,27 @@ import assert from "node:assert/strict";
 import { VoxelWorld } from "../../src/world/VoxelWorld.ts";
 import { applyCommandToWorld } from "../../src/network/VoxelCommandApplier.ts";
 import { packTransform } from "../../src/utils/math.ts";
-import type { VoxelLayerHookEvent } from "../../src/hooks.ts";
+import { VOXEL_LAYER_HOOK_ACTIONS, type VoxelLayerHookEvent } from "../../src/hooks.ts";
+import type { VoxelObjectJSON } from "../../src/serialization/VoxelSerializer.ts";
+import { makeVoxelEntry } from "../helpers/voxelEntry.ts";
+import { makeAddedCommand } from "../helpers/networkCommands.ts";
 
 function makeWorld() {
   return new VoxelWorld(4);
+}
+
+function makeSpawnObject(
+  overrides: Partial<VoxelObjectJSON> = {}
+): VoxelObjectJSON {
+  return {
+    id: "obj1",
+    name: "Spawn",
+    x: 0,
+    y: 0,
+    z: 0,
+    visible: true,
+    ...overrides
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -19,11 +36,7 @@ function makeWorld() {
 describe("applyCommandToWorld — added", () => {
   it("creates a new layer in the world", () => {
     const world = makeWorld();
-    applyCommandToWorld(world, {
-      action: "added",
-      layerName: "Ground",
-      metadata: { options: {} }
-    });
+    applyCommandToWorld(world, makeAddedCommand("Ground"));
     assert.ok(world.getLayer("Ground"));
   });
 
@@ -84,7 +97,8 @@ describe("applyCommandToWorld — offset-updated (absolute)", () => {
       layerName: "Ground",
       metadata: { offset: { x: 5, y: 0, z: 3 } }
     });
-    const layer = world.getLayer("Ground")!;
+    const layer = world.getLayer("Ground");
+    assert.ok(layer !== undefined);
     assert.deepEqual(layer.offset, { x: 5, y: 0, z: 3 });
   });
 });
@@ -99,15 +113,17 @@ describe("applyCommandToWorld — offset-updated (delta)", () => {
       layerName: "Ground",
       metadata: { delta: { x: 3, y: 1, z: 0 } }
     });
-    assert.deepEqual(world.getLayer("Ground")!.offset, { x: 5, y: 1, z: 0 });
+    const updatedLayer = world.getLayer("Ground");
+    assert.ok(updatedLayer !== undefined);
+    assert.deepEqual(updatedLayer.offset, { x: 5, y: 1, z: 0 });
   });
 });
 
 describe("applyCommandToWorld — reordered", () => {
   it("moves a layer to higher priority", () => {
     const world = makeWorld();
-    const l0 = world.addLayer("Base");
-    const l1 = world.addLayer("Top");
+    world.addLayer("Base");
+    world.addLayer("Top");
     // After sort (descending): [Top(order=1), Base(order=0)]
     // Move Base "down" in array index = higher priority (swaps with Top)
     applyCommandToWorld(world, {
@@ -119,8 +135,6 @@ describe("applyCommandToWorld — reordered", () => {
     const layers = world.getLayers();
     assert.equal(layers[0].name, "Base");
     assert.equal(layers[1].name, "Top");
-    // reference check to avoid unused-var lint
-    assert.ok(l0 && l1);
   });
 });
 
@@ -144,7 +158,9 @@ describe("applyCommandToWorld — voxel-set", () => {
         flipY: false
       }
     });
-    const entry = world.getLayer("Ground")!.getVoxelAt({ x: 0, y: 0, z: 0 });
+    const layer = world.getLayer("Ground");
+    assert.ok(layer !== undefined);
+    const entry = layer.getVoxelAt({ x: 0, y: 0, z: 0 });
     assert.ok(entry);
     assert.equal(entry.blockId, 1);
   });
@@ -164,7 +180,9 @@ describe("applyCommandToWorld — voxel-set", () => {
         flipY: false
       }
     });
-    const entry = world.getLayer("Ground")!.getVoxelAt({ x: 1, y: 0, z: 0 });
+    const layer = world.getLayer("Ground");
+    assert.ok(layer !== undefined);
+    const entry = layer.getVoxelAt({ x: 1, y: 0, z: 0 });
     assert.ok(entry);
     assert.equal(entry.transform, packTransform(1, true, false, false));
   });
@@ -174,14 +192,16 @@ describe("applyCommandToWorld — voxel-removed", () => {
   it("removes the voxel at the given position", () => {
     const world = makeWorld();
     world.addLayer("Ground");
-    world.setVoxelAt("Ground", { x: 0, y: 0, z: 0 }, { blockId: 1, transform: 0 });
+    world.setVoxelAt("Ground", { x: 0, y: 0, z: 0 }, makeVoxelEntry(1, 0));
     applyCommandToWorld(world, {
       action: "voxel-removed",
       layerName: "Ground",
       metadata: { position: { x: 0, y: 0, z: 0 } }
     });
+    const layer = world.getLayer("Ground");
+    assert.ok(layer !== undefined);
     assert.equal(
-      world.getLayer("Ground")!.getVoxelAt({ x: 0, y: 0, z: 0 }),
+      layer.getVoxelAt({ x: 0, y: 0, z: 0 }),
       undefined
     );
   });
@@ -201,7 +221,8 @@ describe("applyCommandToWorld — voxels-set (bulk)", () => {
       layerName: "Ground",
       metadata: { entries }
     });
-    const layer = world.getLayer("Ground")!;
+    const layer = world.getLayer("Ground");
+    assert.ok(layer !== undefined);
     assert.equal(layer.getVoxelAt({ x: 0, y: 0, z: 0 })?.blockId, 1);
     assert.equal(layer.getVoxelAt({ x: 1, y: 0, z: 0 })?.blockId, 2);
     assert.equal(layer.getVoxelAt({ x: 2, y: 0, z: 0 })?.blockId, 3);
@@ -215,7 +236,9 @@ describe("applyCommandToWorld — voxels-set (bulk)", () => {
       layerName: "Ground",
       metadata: { entries: [{ position: { x: 0, y: 0, z: 0 }, blockId: 5 }] }
     });
-    const entry = world.getLayer("Ground")!.getVoxelAt({ x: 0, y: 0, z: 0 });
+    const layer = world.getLayer("Ground");
+    assert.ok(layer !== undefined);
+    const entry = layer.getVoxelAt({ x: 0, y: 0, z: 0 });
     assert.ok(entry);
     assert.equal(entry.transform, packTransform(0, false, false, false));
   });
@@ -225,8 +248,8 @@ describe("applyCommandToWorld — voxels-removed (bulk)", () => {
   it("removes all specified positions", () => {
     const world = makeWorld();
     world.addLayer("Ground");
-    world.setVoxelAt("Ground", { x: 0, y: 0, z: 0 }, { blockId: 1, transform: 0 });
-    world.setVoxelAt("Ground", { x: 1, y: 0, z: 0 }, { blockId: 2, transform: 0 });
+    world.setVoxelAt("Ground", { x: 0, y: 0, z: 0 }, makeVoxelEntry(1, 0));
+    world.setVoxelAt("Ground", { x: 1, y: 0, z: 0 }, makeVoxelEntry(2, 0));
     applyCommandToWorld(world, {
       action: "voxels-removed",
       layerName: "Ground",
@@ -237,7 +260,8 @@ describe("applyCommandToWorld — voxels-removed (bulk)", () => {
         ]
       }
     });
-    const layer = world.getLayer("Ground")!;
+    const layer = world.getLayer("Ground");
+    assert.ok(layer !== undefined);
     assert.equal(layer.getVoxelAt({ x: 0, y: 0, z: 0 }), undefined);
     assert.equal(layer.getVoxelAt({ x: 1, y: 0, z: 0 }), undefined);
   });
@@ -289,14 +313,7 @@ describe("applyCommandToWorld — object-added", () => {
   it("adds an object to the layer", () => {
     const world = makeWorld();
     world.addObjectLayer("Spawns");
-    const obj = {
-      id: "obj1",
-      name: "Spawn Point",
-      x: 5,
-      y: 0,
-      z: 3,
-      visible: true
-    };
+    const obj = makeSpawnObject({ name: "Spawn Point", x: 5, y: 0, z: 3 });
     applyCommandToWorld(world, {
       action: "object-added",
       layerName: "Spawns",
@@ -312,14 +329,7 @@ describe("applyCommandToWorld — object-removed", () => {
   it("removes an object from the layer", () => {
     const world = makeWorld();
     world.addObjectLayer("Spawns");
-    world.addObjectToLayer("Spawns", {
-      id: "obj1",
-      name: "Spawn",
-      x: 0,
-      y: 0,
-      z: 0,
-      visible: true
-    });
+    world.addObjectToLayer("Spawns", makeSpawnObject());
     applyCommandToWorld(world, {
       action: "object-removed",
       layerName: "Spawns",
@@ -333,14 +343,7 @@ describe("applyCommandToWorld — object-updated", () => {
   it("patches an object in the layer", () => {
     const world = makeWorld();
     world.addObjectLayer("Spawns");
-    world.addObjectToLayer("Spawns", {
-      id: "obj1",
-      name: "Spawn",
-      x: 0,
-      y: 0,
-      z: 0,
-      visible: true
-    });
+    world.addObjectToLayer("Spawns", makeSpawnObject());
     applyCommandToWorld(world, {
       action: "object-updated",
       layerName: "Spawns",
@@ -358,25 +361,11 @@ describe("applyCommandToWorld — object-updated", () => {
 
 describe("applyCommandToWorld — all VoxelLayerHookEvent actions compile", () => {
   it("exhaustive switch: no TypeScript error for any action", () => {
-    // This test confirms TypeScript's exhaustive check works at compile time.
-    // At runtime we just verify the function is callable without errors.
-    const actions: VoxelLayerHookEvent["action"][] = [
-      "added",
-      "removed",
-      "updated",
-      "offset-updated",
-      "voxel-set",
-      "voxel-removed",
-      "voxels-set",
-      "voxels-removed",
-      "reordered",
-      "object-layer-added",
-      "object-layer-removed",
-      "object-layer-updated",
-      "object-added",
-      "object-removed",
-      "object-updated"
-    ];
-    assert.equal(actions.length, 15);
+    // Ties this check to the real source of truth instead of a hand-rolled
+    // list, so a new/renamed action can't silently drop out of coverage.
+    const actions: readonly VoxelLayerHookEvent["action"][] = VOXEL_LAYER_HOOK_ACTIONS;
+    assert.equal(actions.length, 17);
+    assert.ok(actions.includes("cloned"));
+    assert.ok(actions.includes("merged"));
   });
 });

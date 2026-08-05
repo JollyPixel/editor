@@ -14,6 +14,7 @@ import type {
 import type { VoxelLayerHookEvent, VoxelLayerHookListener } from "../../src/hooks.ts";
 import type { VoxelWorldJSON } from "../../src/serialization/VoxelSerializer.ts";
 import type { VoxelEngine } from "../../src/VoxelEngine.ts";
+import { makeAddedCommand, voxelSetCmd } from "../helpers/networkCommands.ts";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -72,7 +73,7 @@ interface MockRoom extends network.Room<VoxelNetworkCommand, VoxelServerMessage>
 
 function createMockRoom(clientId = "client-A"): MockRoom {
   const sentCommands: VoxelNetworkCommand[] = [];
-  const listeners = new Map<string, Set<(payload: any) => void>>();
+  const listeners = new Map<string, Set<(payload: unknown) => void>>();
 
   function emit(type: string, payload: unknown): void {
     for (const listener of listeners.get(type) ?? []) {
@@ -92,10 +93,10 @@ function createMockRoom(clientId = "client-A"): MockRoom {
         set = new Set();
         listeners.set(type, set);
       }
-      set.add(listener);
+      set.add(listener as (payload: unknown) => void);
     },
     off: (type, listener) => {
-      listeners.get(type)?.delete(listener);
+      listeners.get(type)?.delete(listener as (payload: unknown) => void);
     },
     join() {
       // Unused by VoxelSyncClient.
@@ -158,7 +159,7 @@ describe("VoxelSyncClient — chaining onLayerUpdated", () => {
     const client = new VoxelSyncClient({ room });
     client.attach(asEngine(engine));
 
-    engine.triggerLocal({ action: "added", layerName: "L1", metadata: { options: {} } });
+    engine.triggerLocal(makeAddedCommand("L1"));
 
     assert.equal(received.length, 1);
     assert.equal(room.sentCommands.length, 1);
@@ -179,7 +180,7 @@ describe("VoxelSyncClient — chaining onLayerUpdated", () => {
 
     assert.equal(engine.onLayerUpdated, original);
 
-    engine.triggerLocal({ action: "added", layerName: "L1", metadata: { options: {} } });
+    engine.triggerLocal(makeAddedCommand("L1"));
     assert.equal(received.length, 1);
     assert.equal(room.sentCommands.length, 0);
   });
@@ -227,7 +228,7 @@ describe("VoxelSyncClient — local mutations forwarded to the room", () => {
     const client = new VoxelSyncClient({ room });
     client.attach(asEngine(engine));
 
-    engine.triggerLocal({ action: "added", layerName: "Layer1", metadata: { options: {} } });
+    engine.triggerLocal(makeAddedCommand("Layer1"));
 
     const cmd = room.sentCommands[0];
     assert.equal(cmd.clientId, "client-B");
@@ -241,9 +242,9 @@ describe("VoxelSyncClient — local mutations forwarded to the room", () => {
     const client = new VoxelSyncClient({ room });
     client.attach(asEngine(engine));
 
-    engine.triggerLocal({ action: "added", layerName: "L1", metadata: { options: {} } });
-    engine.triggerLocal({ action: "added", layerName: "L2", metadata: { options: {} } });
-    engine.triggerLocal({ action: "added", layerName: "L3", metadata: { options: {} } });
+    engine.triggerLocal(makeAddedCommand("L1"));
+    engine.triggerLocal(makeAddedCommand("L2"));
+    engine.triggerLocal(makeAddedCommand("L3"));
 
     assert.equal(room.sentCommands[0].seq, 1);
     assert.equal(room.sentCommands[1].seq, 2);
@@ -262,21 +263,15 @@ describe("VoxelSyncClient — remote commands applied without re-emitting", () =
     const client = new VoxelSyncClient({ room });
     client.attach(asEngine(engine));
 
-    const remoteCmd: VoxelNetworkCommand = {
-      action: "voxel-set",
-      layerName: "Ground",
-      metadata: {
-        position: { x: 5, y: 0, z: 5 },
-        blockId: 2,
-        rotation: 0,
-        flipX: false,
-        flipZ: false,
-        flipY: false
-      },
+    const remoteCmd: VoxelNetworkCommand = voxelSetCmd({
+      x: 5,
+      y: 0,
+      z: 5,
+      blockId: 2,
       clientId: "client-B",
       seq: 1,
       timestamp: Date.now()
-    };
+    });
 
     room.simulateCommand(remoteCmd);
 
@@ -290,21 +285,11 @@ describe("VoxelSyncClient — remote commands applied without re-emitting", () =
     const client = new VoxelSyncClient({ room });
     client.attach(asEngine(engine));
 
-    const echoCmd: VoxelNetworkCommand = {
-      action: "voxel-set",
-      layerName: "Ground",
-      metadata: {
-        position: { x: 0, y: 0, z: 0 },
-        blockId: 1,
-        rotation: 0,
-        flipX: false,
-        flipZ: false,
-        flipY: false
-      },
+    const echoCmd: VoxelNetworkCommand = voxelSetCmd({
       clientId: "client-A",
       seq: 1,
       timestamp: Date.now()
-    };
+    });
 
     room.simulateCommand(echoCmd);
 
@@ -317,9 +302,7 @@ describe("VoxelSyncClient — remote commands applied without re-emitting", () =
 
     assert.doesNotThrow(() => {
       room.simulateCommand({
-        action: "added",
-        layerName: "Ground",
-        metadata: { options: {} },
+        ...makeAddedCommand("Ground"),
         clientId: "client-B",
         seq: 1,
         timestamp: Date.now()
@@ -382,7 +365,7 @@ describe("VoxelSyncClient — destroy", () => {
     client.attach(asEngine(engine));
 
     client.destroy();
-    engine.triggerLocal({ action: "added", layerName: "L", metadata: { options: {} } });
+    engine.triggerLocal(makeAddedCommand("L"));
 
     assert.equal(room.sentCommands.length, 0);
   });

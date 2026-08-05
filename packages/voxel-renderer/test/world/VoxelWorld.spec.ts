@@ -4,11 +4,30 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { VoxelWorld } from "../../src/world/VoxelWorld.ts";
-import { VoxelLayer } from "../../src/world/VoxelLayer.ts";
+import type { VoxelLayer } from "../../src/world/VoxelLayer.ts";
 import { FACE } from "../../src/utils/math.ts";
+import { makeVoxelEntry } from "../helpers/voxelEntry.ts";
 
-function makeEntry(blockId = 1, transform = 0) {
-  return { blockId, transform };
+function removeId(layer: VoxelLayer) {
+  const { id, ...rest } = layer.toJSON();
+
+  return rest;
+}
+
+function clearAllDirty(world: VoxelWorld): void {
+  for (const { chunk } of world.getAllChunks()) {
+    chunk.dirty = false;
+  }
+}
+
+function makeTwoLayerWorld() {
+  const world = new VoxelWorld(4);
+  const a = world.addLayer("A");
+  const b = world.addLayer("B");
+  world.setVoxelAt("A", { x: 0, y: 0, z: 0 }, makeVoxelEntry());
+  world.setVoxelAt("B", { x: 8, y: 0, z: 0 }, makeVoxelEntry());
+
+  return { world, a, b };
 }
 
 describe("VoxelWorld addLayer / getLayers / getLayer", () => {
@@ -70,7 +89,7 @@ describe("VoxelWorld setVoxelAt / removeVoxelAt", () => {
   it("setVoxelAt throws for unknown layer name", () => {
     const world = new VoxelWorld(4);
     assert.throws(
-      () => world.setVoxelAt("NoSuch", { x: 0, y: 0, z: 0 }, makeEntry()),
+      () => world.setVoxelAt("NoSuch", { x: 0, y: 0, z: 0 }, makeVoxelEntry()),
       /layer "NoSuch" does not exist/
     );
   });
@@ -78,7 +97,7 @@ describe("VoxelWorld setVoxelAt / removeVoxelAt", () => {
   it("setVoxelAt + getVoxelAt round-trip", () => {
     const world = new VoxelWorld(4);
     world.addLayer("Ground");
-    const entry = makeEntry(5);
+    const entry = makeVoxelEntry(5);
     world.setVoxelAt("Ground", { x: 2, y: 1, z: 3 }, entry);
     assert.deepEqual(world.getVoxelAt({ x: 2, y: 1, z: 3 }), entry);
   });
@@ -86,7 +105,7 @@ describe("VoxelWorld setVoxelAt / removeVoxelAt", () => {
   it("removeVoxelAt removes the voxel", () => {
     const world = new VoxelWorld(4);
     world.addLayer("Ground");
-    world.setVoxelAt("Ground", { x: 0, y: 0, z: 0 }, makeEntry());
+    world.setVoxelAt("Ground", { x: 0, y: 0, z: 0 }, makeVoxelEntry());
     world.removeVoxelAt("Ground", { x: 0, y: 0, z: 0 });
     assert.equal(world.getVoxelAt({ x: 0, y: 0, z: 0 }), undefined);
   });
@@ -107,8 +126,8 @@ describe("VoxelWorld getVoxelAt compositing", () => {
     const world = new VoxelWorld(4);
     const base = world.addLayer("Base");
     const top = world.addLayer("Top");
-    const baseEntry = makeEntry(1);
-    const topEntry = makeEntry(2);
+    const baseEntry = makeVoxelEntry(1);
+    const topEntry = makeVoxelEntry(2);
     base.setVoxelAt({ x: 0, y: 0, z: 0 }, baseEntry);
     top.setVoxelAt({ x: 0, y: 0, z: 0 }, topEntry);
     assert.deepEqual(world.getVoxelAt({ x: 0, y: 0, z: 0 }), topEntry);
@@ -118,7 +137,7 @@ describe("VoxelWorld getVoxelAt compositing", () => {
     const world = new VoxelWorld(4);
     const base = world.addLayer("Base");
     world.addLayer("Top");
-    const baseEntry = makeEntry(1);
+    const baseEntry = makeVoxelEntry(1);
     base.setVoxelAt({ x: 5, y: 0, z: 0 }, baseEntry);
     assert.deepEqual(world.getVoxelAt({ x: 5, y: 0, z: 0 }), baseEntry);
   });
@@ -127,8 +146,8 @@ describe("VoxelWorld getVoxelAt compositing", () => {
     const world = new VoxelWorld(4);
     const base = world.addLayer("Base");
     const top = world.addLayer("Top");
-    const baseEntry = makeEntry(1);
-    const topEntry = makeEntry(2);
+    const baseEntry = makeVoxelEntry(1);
+    const topEntry = makeVoxelEntry(2);
     base.setVoxelAt({ x: 0, y: 0, z: 0 }, baseEntry);
     top.setVoxelAt({ x: 0, y: 0, z: 0 }, topEntry);
     top.visible = false;
@@ -141,8 +160,8 @@ describe("VoxelWorld getVoxelAt opacity compositing", () => {
     const world = new VoxelWorld(4);
     const base = world.addLayer("Base");
     const top = world.addLayer("Top");
-    const baseEntry = makeEntry(1);
-    const topEntry = makeEntry(2);
+    const baseEntry = makeVoxelEntry(1);
+    const topEntry = makeVoxelEntry(2);
     base.setVoxelAt({ x: 0, y: 0, z: 0 }, baseEntry);
     top.setVoxelAt({ x: 0, y: 0, z: 0 }, topEntry);
     top.opacity = 0;
@@ -153,8 +172,8 @@ describe("VoxelWorld getVoxelAt opacity compositing", () => {
     const world = new VoxelWorld(4);
     const base = world.addLayer("Base");
     const top = world.addLayer("Top");
-    const baseEntry = makeEntry(1);
-    const topEntry = makeEntry(2);
+    const baseEntry = makeVoxelEntry(1);
+    const topEntry = makeVoxelEntry(2);
     base.setVoxelAt({ x: 0, y: 0, z: 0 }, baseEntry);
     top.setVoxelAt({ x: 0, y: 0, z: 0 }, topEntry);
     top.opacity = 0.5;
@@ -172,8 +191,8 @@ describe("VoxelWorld getVoxelWithLayerAt", () => {
     const world = new VoxelWorld(4);
     const base = world.addLayer("Base");
     const top = world.addLayer("Top");
-    const topEntry = makeEntry(2);
-    base.setVoxelAt({ x: 0, y: 0, z: 0 }, makeEntry(1));
+    const topEntry = makeVoxelEntry(2);
+    base.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(1));
     top.setVoxelAt({ x: 0, y: 0, z: 0 }, topEntry);
 
     const result = world.getVoxelWithLayerAt({ x: 0, y: 0, z: 0 });
@@ -186,8 +205,8 @@ describe("VoxelWorld getVoxelWithLayerAt", () => {
     const world = new VoxelWorld(4);
     const base = world.addLayer("Base");
     const top = world.addLayer("Top");
-    base.setVoxelAt({ x: 0, y: 0, z: 0 }, makeEntry(1));
-    top.setVoxelAt({ x: 0, y: 0, z: 0 }, makeEntry(2));
+    base.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(1));
+    top.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(2));
     top.opacity = 0;
 
     const result = world.getVoxelWithLayerAt({ x: 0, y: 0, z: 0 });
@@ -200,7 +219,7 @@ describe("VoxelWorld getVoxelNeighbour", () => {
   it("returns the voxel one step in the given face direction", () => {
     const world = new VoxelWorld(4);
     world.addLayer("Ground");
-    const entry = makeEntry(3);
+    const entry = makeVoxelEntry(3);
     // Place voxel at (1,0,0) which is the PosX neighbour of (0,0,0)
     world.setVoxelAt("Ground", { x: 1, y: 0, z: 0 }, entry);
     assert.deepEqual(world.getVoxelNeighbour({ x: 0, y: 0, z: 0 }, FACE.PosX), entry);
@@ -264,7 +283,9 @@ describe("VoxelWorld updateLayer", () => {
     world.addLayer("Ground");
     const result = world.updateLayer("Ground", { opacity: 0.5 });
     assert.equal(result, true);
-    assert.equal(world.getLayer("Ground")!.opacity, 0.5);
+    const layer = world.getLayer("Ground");
+    assert.ok(layer !== undefined);
+    assert.equal(layer.opacity, 0.5);
   });
 
   it("leaves opacity untouched when not provided", () => {
@@ -280,7 +301,9 @@ describe("VoxelWorld setLayerVisible", () => {
     const world = new VoxelWorld(4);
     world.addLayer("Ground");
     world.setLayerVisible("Ground", false);
-    assert.equal(world.getLayer("Ground")!.visible, false);
+    const layer = world.getLayer("Ground");
+    assert.ok(layer !== undefined);
+    assert.equal(layer.visible, false);
   });
 });
 
@@ -289,7 +312,9 @@ describe("VoxelWorld setLayerOpacity", () => {
     const world = new VoxelWorld(4);
     world.addLayer("Ground");
     world.setLayerOpacity("Ground", 0.5);
-    assert.equal(world.getLayer("Ground")!.opacity, 0.5);
+    const layer = world.getLayer("Ground");
+    assert.ok(layer !== undefined);
+    assert.equal(layer.opacity, 0.5);
   });
 
   it("does nothing for unknown layer name", () => {
@@ -298,53 +323,47 @@ describe("VoxelWorld setLayerOpacity", () => {
   });
 
   it("marks only the layer's own chunks dirty for a change that stays translucent (no boundary cross)", () => {
-    const world = new VoxelWorld(4);
-    const a = world.addLayer("A");
-    const b = world.addLayer("B");
-    world.setVoxelAt("A", { x: 0, y: 0, z: 0 }, makeEntry());
-    world.setVoxelAt("B", { x: 8, y: 0, z: 0 }, makeEntry());
+    const { world, a, b } = makeTwoLayerWorld();
     a.opacity = 0.5;
-    for (const { chunk } of world.getAllChunks()) {
-      chunk.dirty = false;
-    }
+    clearAllDirty(world);
 
     world.setLayerOpacity("A", 0.8);
 
-    assert.equal(a.getChunk(0, 0, 0)!.dirty, true);
-    assert.equal(b.getChunk(2, 0, 0)!.dirty, false);
+    const chunkA = a.getChunk(0, 0, 0);
+    assert.ok(chunkA !== undefined);
+    assert.equal(chunkA.dirty, true);
+    const chunkB = b.getChunk(2, 0, 0);
+    assert.ok(chunkB !== undefined);
+    assert.equal(chunkB.dirty, false);
   });
 
   it("marks every layer's chunks dirty when opacity crosses the occlusion boundary (1 -> <1)", () => {
-    const world = new VoxelWorld(4);
-    const a = world.addLayer("A");
-    const b = world.addLayer("B");
-    world.setVoxelAt("A", { x: 0, y: 0, z: 0 }, makeEntry());
-    world.setVoxelAt("B", { x: 8, y: 0, z: 0 }, makeEntry());
-    for (const { chunk } of world.getAllChunks()) {
-      chunk.dirty = false;
-    }
+    const { world, a, b } = makeTwoLayerWorld();
+    clearAllDirty(world);
 
     world.setLayerOpacity("A", 0.9);
 
-    assert.equal(a.getChunk(0, 0, 0)!.dirty, true);
-    assert.equal(b.getChunk(2, 0, 0)!.dirty, true);
+    const chunkA = a.getChunk(0, 0, 0);
+    assert.ok(chunkA !== undefined);
+    assert.equal(chunkA.dirty, true);
+    const chunkB = b.getChunk(2, 0, 0);
+    assert.ok(chunkB !== undefined);
+    assert.equal(chunkB.dirty, true);
   });
 
   it("marks every layer's chunks dirty when opacity crosses the occlusion boundary (<1 -> 1)", () => {
-    const world = new VoxelWorld(4);
-    const a = world.addLayer("A");
-    const b = world.addLayer("B");
-    world.setVoxelAt("A", { x: 0, y: 0, z: 0 }, makeEntry());
-    world.setVoxelAt("B", { x: 8, y: 0, z: 0 }, makeEntry());
+    const { world, a, b } = makeTwoLayerWorld();
     a.opacity = 0.5;
-    for (const { chunk } of world.getAllChunks()) {
-      chunk.dirty = false;
-    }
+    clearAllDirty(world);
 
     world.setLayerOpacity("A", 1);
 
-    assert.equal(a.getChunk(0, 0, 0)!.dirty, true);
-    assert.equal(b.getChunk(2, 0, 0)!.dirty, true);
+    const chunkA = a.getChunk(0, 0, 0);
+    assert.ok(chunkA !== undefined);
+    assert.equal(chunkA.dirty, true);
+    const chunkB = b.getChunk(2, 0, 0);
+    assert.ok(chunkB !== undefined);
+    assert.equal(chunkB.dirty, true);
   });
 });
 
@@ -353,14 +372,19 @@ describe("VoxelWorld setLayerOffset / translateLayer", () => {
     const world = new VoxelWorld(4);
     world.addLayer("Ground");
     world.setLayerOffset("Ground", { x: 16, y: 0, z: -8 });
-    assert.deepEqual(world.getLayer("Ground")!.offset, { x: 16, y: 0, z: -8 });
+    const layer = world.getLayer("Ground");
+    assert.ok(layer !== undefined);
+    assert.deepEqual(layer.offset, { x: 16, y: 0, z: -8 });
   });
 
   it("setLayerOffset marks all chunks dirty", () => {
     const world = new VoxelWorld(4);
     world.addLayer("Ground");
-    world.setVoxelAt("Ground", { x: 0, y: 0, z: 0 }, makeEntry());
-    const chunk = world.getLayer("Ground")!.getChunk(0, 0, 0)!;
+    world.setVoxelAt("Ground", { x: 0, y: 0, z: 0 }, makeVoxelEntry());
+    const layer = world.getLayer("Ground");
+    assert.ok(layer !== undefined);
+    const chunk = layer.getChunk(0, 0, 0);
+    assert.ok(chunk !== undefined);
     chunk.dirty = false;
     world.setLayerOffset("Ground", { x: 4, y: 0, z: 0 });
     assert.equal(chunk.dirty, true);
@@ -371,7 +395,9 @@ describe("VoxelWorld setLayerOffset / translateLayer", () => {
     world.addLayer("Ground");
     world.setLayerOffset("Ground", { x: 4, y: 0, z: 0 });
     world.translateLayer("Ground", { x: 4, y: 0, z: 2 });
-    assert.deepEqual(world.getLayer("Ground")!.offset, { x: 8, y: 0, z: 2 });
+    const layer = world.getLayer("Ground");
+    assert.ok(layer !== undefined);
+    assert.deepEqual(layer.offset, { x: 8, y: 0, z: 2 });
   });
 });
 
@@ -379,7 +405,7 @@ describe("VoxelWorld getAllDirtyChunks / getAllChunks", () => {
   it("getAllDirtyChunks yields chunks with dirty=true", () => {
     const world = new VoxelWorld(4);
     world.addLayer("Ground");
-    world.setVoxelAt("Ground", { x: 0, y: 0, z: 0 }, makeEntry());
+    world.setVoxelAt("Ground", { x: 0, y: 0, z: 0 }, makeVoxelEntry());
     const dirty = [...world.getAllDirtyChunks()];
     assert.equal(dirty.length, 1);
     assert.equal(dirty[0].chunk.dirty, true);
@@ -388,8 +414,12 @@ describe("VoxelWorld getAllDirtyChunks / getAllChunks", () => {
   it("chunk cleared of dirty is not yielded", () => {
     const world = new VoxelWorld(4);
     world.addLayer("Ground");
-    world.setVoxelAt("Ground", { x: 0, y: 0, z: 0 }, makeEntry());
-    world.getLayer("Ground")!.getChunk(0, 0, 0)!.dirty = false;
+    world.setVoxelAt("Ground", { x: 0, y: 0, z: 0 }, makeVoxelEntry());
+    const layer = world.getLayer("Ground");
+    assert.ok(layer !== undefined);
+    const chunk = layer.getChunk(0, 0, 0);
+    assert.ok(chunk !== undefined);
+    chunk.dirty = false;
     const dirty = [...world.getAllDirtyChunks()];
     assert.equal(dirty.length, 0);
   });
@@ -398,12 +428,9 @@ describe("VoxelWorld getAllDirtyChunks / getAllChunks", () => {
     const world = new VoxelWorld(4);
     world.addLayer("Ground");
     world.addLayer("Deco");
-    world.setVoxelAt("Ground", { x: 0, y: 0, z: 0 }, makeEntry());
-    world.setVoxelAt("Deco", { x: 0, y: 0, z: 0 }, makeEntry());
-    // Clear dirty
-    for (const { chunk } of world.getAllChunks()) {
-      chunk.dirty = false;
-    }
+    world.setVoxelAt("Ground", { x: 0, y: 0, z: 0 }, makeVoxelEntry());
+    world.setVoxelAt("Deco", { x: 0, y: 0, z: 0 }, makeVoxelEntry());
+    clearAllDirty(world);
     const all = [...world.getAllChunks()];
     assert.equal(all.length, 2);
   });
@@ -414,11 +441,13 @@ describe("VoxelWorld markNeighbourChunksDirty (via setVoxelAt)", () => {
     // Use chunkSize=4; a voxel at x=3 (last column) should dirty the chunk at cx+1
     const world = new VoxelWorld(4);
     world.addLayer("Ground");
+    const layer = world.getLayer("Ground");
+    assert.ok(layer !== undefined);
     // First create the adjacent chunk
-    world.getLayer("Ground")!.getOrCreateChunk(1, 0, 0).dirty = false;
+    layer.getOrCreateChunk(1, 0, 0).dirty = false;
     // Now place a voxel at the right boundary of chunk 0
-    world.setVoxelAt("Ground", { x: 3, y: 0, z: 0 }, makeEntry());
-    const adjChunk = world.getLayer("Ground")!.getChunk(1, 0, 0);
+    world.setVoxelAt("Ground", { x: 3, y: 0, z: 0 }, makeVoxelEntry());
+    const adjChunk = layer.getChunk(1, 0, 0);
     assert.ok(adjChunk !== undefined);
     assert.equal(adjChunk.dirty, true);
   });
@@ -436,7 +465,7 @@ describe("VoxelWorld clear", () => {
   it("clears pending removed layers queue", () => {
     const world = new VoxelWorld(4);
     world.addLayer("A");
-    world.setVoxelAt("A", { x: 0, y: 0, z: 0 }, makeEntry());
+    world.setVoxelAt("A", { x: 0, y: 0, z: 0 }, makeVoxelEntry());
     world.removeLayer("A");
 
     world.clear();
@@ -467,28 +496,34 @@ describe("VoxelWorld clone", () => {
   it("should clone a layer", () => {
     const world = new VoxelWorld(8);
     world.addLayer("A");
-    const layer = removeId(world.getLayer("A")!);
+    const original = world.getLayer("A");
+    assert.ok(original !== undefined);
+    const layer = removeId(original);
     const expected = { ...layer, name: "A_1" };
-    const clone = removeId(world.cloneLayer("A", { name: "A_1" })!);
+    const clonedLayer = world.cloneLayer("A", { name: "A_1" });
+    assert.ok(clonedLayer !== undefined);
+    const clone = removeId(clonedLayer);
     assert.deepEqual(clone, expected);
-    assert.deepEqual(removeId(world.getLayer("A_1")!), expected);
+    const stored = world.getLayer("A_1");
+    assert.ok(stored !== undefined);
+    assert.deepEqual(removeId(stored), expected);
   });
 
   it("should be able to override or add properties", () => {
     const world = new VoxelWorld(8);
     world.addLayer("A");
-    const layer = removeId(world.getLayer("A")!);
+    const original = world.getLayer("A");
+    assert.ok(original !== undefined);
+    const layer = removeId(original);
     const expected = { ...layer, name: "A_1", visible: false };
-    const clone = removeId(world.cloneLayer("A", { name: "A_1", visible: false })!);
+    const clonedLayer = world.cloneLayer("A", { name: "A_1", visible: false });
+    assert.ok(clonedLayer !== undefined);
+    const clone = removeId(clonedLayer);
     assert.deepEqual(clone, expected);
-    assert.deepEqual(removeId(world.getLayer("A_1")!), expected);
+    const stored = world.getLayer("A_1");
+    assert.ok(stored !== undefined);
+    assert.deepEqual(removeId(stored), expected);
   });
-
-  function removeId(layer: VoxelLayer) {
-    const { id, ...rest } = layer.toJSON();
-
-    return rest;
-  }
 });
 
 describe("VoxelWorld mergeLayer", () => {
@@ -508,27 +543,31 @@ describe("VoxelWorld mergeLayer", () => {
     const world = new VoxelWorld(4);
     world.addLayer("Source");
     world.addLayer("Target");
-    const entry = makeEntry(3, 0);
+    const entry = makeVoxelEntry(3, 0);
     world.setVoxelAt("Source", { x: 1, y: 0, z: 0 }, entry);
 
     const result = world.mergeLayer("Source", "Target");
 
     assert.equal(result, true);
-    assert.deepEqual(world.getLayer("Target")!.getVoxelAt({ x: 1, y: 0, z: 0 }), entry);
+    const target = world.getLayer("Target");
+    assert.ok(target !== undefined);
+    assert.deepEqual(target.getVoxelAt({ x: 1, y: 0, z: 0 }), entry);
   });
 
   it("source layer voxels overwrite target voxels at the same position", () => {
     const world = new VoxelWorld(4);
     world.addLayer("Source");
     world.addLayer("Target");
-    const srcEntry = makeEntry(9, 2);
-    const tgtEntry = makeEntry(1, 0);
+    const srcEntry = makeVoxelEntry(9, 2);
+    const tgtEntry = makeVoxelEntry(1, 0);
     world.setVoxelAt("Target", { x: 0, y: 0, z: 0 }, tgtEntry);
     world.setVoxelAt("Source", { x: 0, y: 0, z: 0 }, srcEntry);
 
     world.mergeLayer("Source", "Target");
 
-    assert.deepEqual(world.getLayer("Target")!.getVoxelAt({ x: 0, y: 0, z: 0 }), srcEntry);
+    const target = world.getLayer("Target");
+    assert.ok(target !== undefined);
+    assert.deepEqual(target.getVoxelAt({ x: 0, y: 0, z: 0 }), srcEntry);
   });
 });
 
@@ -541,7 +580,7 @@ describe("VoxelWorld mergeAllLayers", () => {
   it("returns the existing layer and is a no-op with one layer", () => {
     const world = new VoxelWorld(4);
     const layer = world.addLayer("Only");
-    const entry = makeEntry(2, 0);
+    const entry = makeVoxelEntry(2, 0);
     world.setVoxelAt("Only", { x: 0, y: 0, z: 0 }, entry);
 
     const result = world.mergeAllLayers();
@@ -555,8 +594,8 @@ describe("VoxelWorld mergeAllLayers", () => {
     const world = new VoxelWorld(4);
     world.addLayer("Base");
     world.addLayer("Top");
-    world.setVoxelAt("Base", { x: 0, y: 0, z: 0 }, makeEntry(1, 0));
-    world.setVoxelAt("Top", { x: 1, y: 0, z: 0 }, makeEntry(2, 0));
+    world.setVoxelAt("Base", { x: 0, y: 0, z: 0 }, makeVoxelEntry(1, 0));
+    world.setVoxelAt("Top", { x: 1, y: 0, z: 0 }, makeVoxelEntry(2, 0));
 
     const result = world.mergeAllLayers();
 
@@ -569,12 +608,13 @@ describe("VoxelWorld mergeAllLayers", () => {
     // Base has order 0, Top has order 1 (higher priority).
     world.addLayer("Base");
     world.addLayer("Top");
-    const basEntry = makeEntry(1, 0);
-    const topEntry = makeEntry(9, 0);
+    const basEntry = makeVoxelEntry(1, 0);
+    const topEntry = makeVoxelEntry(9, 0);
     world.setVoxelAt("Base", { x: 0, y: 0, z: 0 }, basEntry);
     world.setVoxelAt("Top", { x: 0, y: 0, z: 0 }, topEntry);
 
-    const result = world.mergeAllLayers()!;
+    const result = world.mergeAllLayers();
+    assert.ok(result !== null);
 
     // Higher priority (Top) should win.
     assert.deepEqual(result.getVoxelAt({ x: 0, y: 0, z: 0 }), topEntry);

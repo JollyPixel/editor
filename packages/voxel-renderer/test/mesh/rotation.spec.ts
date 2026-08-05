@@ -14,19 +14,24 @@ import { FACE } from "../../src/utils/math.ts";
 // CONSTANTS
 const kEpsilon = 1e-10;
 
-function approxEqual(a: number, b: number): boolean {
+function approxEqual(
+  a: number,
+  b: number
+): boolean {
   return Math.abs(a - b) < kEpsilon;
 }
 
-function vecApproxEqual(a: readonly number[], b: readonly number[]): boolean {
+function vecApproxEqual(
+  a: readonly number[],
+  b: readonly number[]
+): boolean {
   return a.length === b.length && a.every((v, i) => approxEqual(v, b[i]));
 }
 
 describe("rotateFace", () => {
   it("rotation 0 is identity for every face", () => {
-    for (let f = 0; f < 6; f++) {
-      // @ts-expect-error
-      assert.equal(rotateFace(f, 0), f);
+    for (const face of Object.values(FACE)) {
+      assert.equal(rotateFace(face, 0), face);
     }
   });
 
@@ -57,9 +62,8 @@ describe("rotateFace", () => {
   });
 
   it("rot=4 wraps to identity (& 0b11 masking)", () => {
-    for (let f = 0; f < 6; f++) {
-      // @ts-expect-error
-      assert.equal(rotateFace(f, 4), rotateFace(f, 0));
+    for (const face of Object.values(FACE)) {
+      assert.equal(rotateFace(face, 4), rotateFace(face, 0));
     }
   });
 });

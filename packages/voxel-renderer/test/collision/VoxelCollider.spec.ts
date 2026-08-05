@@ -9,6 +9,8 @@ import type {
   VoxelChunkCollision,
   VoxelColliderContext
 } from "../../src/collision/VoxelCollider.ts";
+import { mockTexture } from "../helpers/mockTexture.ts";
+import { DEFAULT_TEXTURE, makeBlockDef } from "../helpers/blocks.ts";
 
 // CONSTANTS
 const kCubeId = 1;
@@ -42,19 +44,6 @@ function makeFakeCollider() {
   };
 }
 
-function mockTexture(): any {
-  return {
-    magFilter: 0,
-    minFilter: 0,
-    colorSpace: "",
-    generateMipmaps: true,
-    image: { width: 64, height: 64 },
-    dispose() {
-      // no-op
-    }
-  };
-}
-
 function makeEngine(
   collider?: (context: VoxelColliderContext) => VoxelCollider
 ) {
@@ -62,19 +51,24 @@ function makeEngine(
     chunkSize: 4,
     layers: ["Ground"],
     blocks: [
-      {
-        id: kCubeId,
+      makeBlockDef(kCubeId, "cube", {
         name: "Cube",
-        shapeId: "cube",
-        faceTextures: {},
-        defaultTexture: { col: 0, row: 0, tilesetId: "atlas" },
-        collidable: true
-      }
+        defaultTexture: {
+          ...DEFAULT_TEXTURE,
+          tilesetId: "atlas"
+        }
+      })
     ],
     collider
   });
   engine.loadTileset(
-    { id: "atlas", src: "/atlas.png", tileSize: 16, cols: 4, rows: 4 },
+    {
+      id: "atlas",
+      src: "/atlas.png",
+      tileSize: 16,
+      cols: 4,
+      rows: 4
+    },
     mockTexture()
   );
 
@@ -84,7 +78,10 @@ function makeEngine(
 describe("VoxelEngine — collider wiring", () => {
   it("never calls the factory when no collider option is given", () => {
     const engine = makeEngine();
-    engine.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
+    engine.setVoxel("Ground", {
+      position: { x: 0, y: 0, z: 0 },
+      blockId: kCubeId
+    });
 
     assert.doesNotThrow(() => {
       engine.init();
@@ -112,9 +109,16 @@ describe("VoxelEngine — collider wiring", () => {
     const fake = makeFakeCollider();
     const engine = makeEngine(() => fake.collider);
 
-    engine.setLayerOffset("Ground", { x: 8, y: 0, z: 4 });
+    engine.setLayerOffset("Ground", {
+      x: 8,
+      y: 0,
+      z: 4
+    });
     // Placed at the offset origin, so it lands in the layer-local chunk 0,0,0.
-    engine.setVoxel("Ground", { position: { x: 8, y: 0, z: 4 }, blockId: kCubeId });
+    engine.setVoxel("Ground", {
+      position: { x: 8, y: 0, z: 4 },
+      blockId: kCubeId
+    });
     engine.tick(0);
 
     assert.equal(fake.rebuilt.length, 1);
@@ -122,14 +126,20 @@ describe("VoxelEngine — collider wiring", () => {
     const [{ key, collision }] = fake.rebuilt;
     assert.match(key, /:0,0,0$/, "key should identify layer + chunk coords");
     assert.deepEqual(collision.layerOffset, { x: 8, y: 0, z: 4 });
-    assert.ok(collision.geometries.size > 0, "expected at least one geometry");
+    assert.ok(
+      collision.geometries.size > 0,
+      "expected at least one geometry"
+    );
   });
 
   it("removes collision when a layer is hidden, without rebuilding it", () => {
     const fake = makeFakeCollider();
     const engine = makeEngine(() => fake.collider);
 
-    engine.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
+    engine.setVoxel("Ground", {
+      position: { x: 0, y: 0, z: 0 },
+      blockId: kCubeId
+    });
     engine.tick(0);
 
     const rebuiltWhileVisible = fake.rebuilt.length;
@@ -150,12 +160,17 @@ describe("VoxelEngine — collider wiring", () => {
     const fake = makeFakeCollider();
     const engine = makeEngine(() => fake.collider);
 
-    engine.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
+    engine.setVoxel("Ground", {
+      position: { x: 0, y: 0, z: 0 },
+      blockId: kCubeId
+    });
     engine.tick(0);
 
     const [{ key }] = fake.rebuilt;
 
-    engine.removeVoxel("Ground", { position: { x: 0, y: 0, z: 0 } });
+    engine.removeVoxel("Ground", {
+      position: { x: 0, y: 0, z: 0 }
+    });
     engine.tick(0);
 
     assert.ok(
@@ -168,7 +183,10 @@ describe("VoxelEngine — collider wiring", () => {
     const fake = makeFakeCollider();
     const engine = makeEngine(() => fake.collider);
 
-    engine.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
+    engine.setVoxel("Ground", {
+      position: { x: 0, y: 0, z: 0 },
+      blockId: kCubeId
+    });
     engine.tick(0);
     engine.dispose();
 

@@ -5,23 +5,21 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { VoxelSerializer } from "../../src/serialization/VoxelSerializer.ts";
 import { VoxelWorld } from "../../src/world/VoxelWorld.ts";
-
-function makeEntry(blockId = 1, transform = 0) {
-  return { blockId, transform };
-}
+import type { TilesetManager } from "../../src/tileset/TilesetManager.ts";
+import { makeVoxelEntry } from "../helpers/voxelEntry.ts";
 
 // Minimal TilesetManager stub — serialize() only calls getDefinitions()
 const emptyTilesetManager = {
   getDefinitions() {
     return [];
   }
-} as any;
+} as unknown as TilesetManager;
 
 const tilesetManagerWithOne = {
   getDefinitions() {
     return [{ id: "atlas", src: "/atlas.png", tileSize: 16, cols: 4, rows: 4 }];
   }
-} as any;
+} as unknown as TilesetManager;
 
 describe("VoxelSerializer.serialize", () => {
   it("empty world serializes to version=1 with empty layers", () => {
@@ -47,7 +45,7 @@ describe("VoxelSerializer.serialize", () => {
   it("serializes a single voxel correctly", () => {
     const world = new VoxelWorld(16);
     const layer = world.addLayer("Ground");
-    layer.setVoxelAt({ x: 3, y: 2, z: 1 }, makeEntry(5, 3));
+    layer.setVoxelAt({ x: 3, y: 2, z: 1 }, makeVoxelEntry(5, 3));
 
     const serializer = new VoxelSerializer();
     const json = serializer.serialize(world, emptyTilesetManager);
@@ -86,7 +84,7 @@ describe("VoxelSerializer.serialize", () => {
     const world = new VoxelWorld(16);
     const layer = world.addLayer("Ground");
     layer.offset = { x: 16, y: 0, z: 0 };
-    layer.setVoxelAt({ x: 16, y: 0, z: 0 }, makeEntry(1));
+    layer.setVoxelAt({ x: 16, y: 0, z: 0 }, makeVoxelEntry(1));
 
     const serializer = new VoxelSerializer();
     const json = serializer.serialize(world, emptyTilesetManager);
@@ -139,7 +137,9 @@ describe("VoxelSerializer.deserialize", () => {
       world
     );
 
-    assert.equal(world.getLayer("Ground")!.opacity, 1);
+    const layer = world.getLayer("Ground");
+    assert.ok(layer !== undefined);
+    assert.equal(layer.opacity, 1);
   });
 
   it("restores an explicit opacity value", () => {
@@ -163,7 +163,9 @@ describe("VoxelSerializer.deserialize", () => {
       world
     );
 
-    assert.equal(world.getLayer("Ground")!.opacity, 0.6);
+    const layer = world.getLayer("Ground");
+    assert.ok(layer !== undefined);
+    assert.equal(layer.opacity, 0.6);
   });
 
   it("skips malformed coordinate keys", () => {
@@ -200,9 +202,9 @@ describe("VoxelSerializer round-trip", () => {
   it("single layer with multiple voxels", () => {
     const original = new VoxelWorld(16);
     const layer = original.addLayer("Ground");
-    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeEntry(1, 0));
-    layer.setVoxelAt({ x: 5, y: 3, z: 2 }, makeEntry(2, 1));
-    layer.setVoxelAt({ x: -1, y: 0, z: -1 }, makeEntry(3, 2));
+    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(1, 0));
+    layer.setVoxelAt({ x: 5, y: 3, z: 2 }, makeVoxelEntry(2, 1));
+    layer.setVoxelAt({ x: -1, y: 0, z: -1 }, makeVoxelEntry(3, 2));
 
     const serializer = new VoxelSerializer();
     const json = serializer.serialize(original, emptyTilesetManager);
@@ -265,7 +267,7 @@ describe("VoxelSerializer round-trip", () => {
     const original = new VoxelWorld(16);
     const layer = original.addLayer("Ground");
     layer.offset = { x: 32, y: 0, z: -16 };
-    layer.setVoxelAt({ x: 32, y: 0, z: 0 }, makeEntry(1));
+    layer.setVoxelAt({ x: 32, y: 0, z: 0 }, makeVoxelEntry(1));
 
     const serializer = new VoxelSerializer();
     const json = serializer.serialize(original, emptyTilesetManager);

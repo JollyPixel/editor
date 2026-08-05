@@ -6,14 +6,21 @@ import assert from "node:assert/strict";
 import type { BlockDefinitionIn } from "../../src/blocks/BlockDefinition.ts";
 import { BlockRegistry } from "../../src/blocks/BlockRegistry.ts";
 import { FACE } from "../../src/utils/math.ts";
+import { DEFAULT_TEXTURE } from "../helpers/blocks.ts";
 
-function makeDef(id: number, name = `Block${id}`): BlockDefinitionIn {
+function makeDef(
+  id: number,
+  name = `Block${id}`
+): BlockDefinitionIn {
   return {
     id,
     name,
-    shapeId: "fullCube" as const,
+    shapeId: "fullCube",
     faceTextures: {},
-    defaultTexture: { col: 0, row: 0, tilesetId: "atlas" },
+    defaultTexture: {
+      ...DEFAULT_TEXTURE,
+      tilesetId: "atlas"
+    },
     collidable: true
   };
 }
@@ -25,13 +32,19 @@ describe("BlockRegistry constructor", () => {
   });
 
   it("registers defs provided in constructor", () => {
-    const registry = new BlockRegistry([makeDef(1), makeDef(2)]);
+    const registry = new BlockRegistry([
+      makeDef(1),
+      makeDef(2)
+    ]);
     assert.equal(registry.has(1), true);
     assert.equal(registry.has(2), true);
   });
 
   it("silently skips id=0 in constructor defs", () => {
-    const registry = new BlockRegistry([makeDef(0), makeDef(1)]);
+    const registry = new BlockRegistry([
+      makeDef(0),
+      makeDef(1)
+    ]);
     assert.equal(registry.has(0), false);
     assert.equal(registry.has(1), true);
   });
@@ -84,32 +97,55 @@ describe("BlockRegistry.get", () => {
     registry.register(def);
     assert.deepEqual(registry.get(5), {
       ...makeDef(5),
-      defaultTexture: { col: 5, row: 6, tilesetId: "terrain" },
+      defaultTexture: {
+        col: 5,
+        row: 6,
+        tilesetId: "terrain"
+      },
       faceTextures: {
-        [FACE.NegY]: { col: 1, row: 2, tilesetId: "terrain" },
-        [FACE.NegZ]: { col: 3, row: 4, tilesetId: "terrain" },
-        [FACE.PosY]: { col: 5, row: 6, tilesetId: "terrain" }
+        [FACE.NegY]: {
+          col: 1,
+          row: 2,
+          tilesetId: "terrain"
+        },
+        [FACE.NegZ]: {
+          col: 3,
+          row: 4,
+          tilesetId: "terrain"
+        },
+        [FACE.PosY]: {
+          col: 5,
+          row: 6,
+          tilesetId: "terrain"
+        }
       }
     });
   });
 
   it("should add default tile set id to default texture", () => {
     const registry = new BlockRegistry();
+
     const def = makeDef(5);
     def.defaultTilesetId = "terrain";
     def.defaultTexture = { col: 5, row: 6 };
+
     registry.register(def);
     assert.deepEqual(registry.get(5), {
       ...makeDef(5),
-      defaultTexture: { col: 5, row: 6, tilesetId: "terrain" }
-
+      defaultTexture: {
+        col: 5,
+        row: 6,
+        tilesetId: "terrain"
+      }
     });
   });
 });
 
 describe("BlockRegistry.has", () => {
   it("returns true for registered id", () => {
-    const registry = new BlockRegistry([makeDef(3)]);
+    const registry = new BlockRegistry([
+      makeDef(3)
+    ]);
     assert.equal(registry.has(3), true);
   });
 
@@ -121,10 +157,16 @@ describe("BlockRegistry.has", () => {
 
 describe("BlockRegistry.getAll", () => {
   it("iterates all registered defs", () => {
-    const registry = new BlockRegistry([makeDef(1), makeDef(2), makeDef(3)]);
+    const registry = new BlockRegistry([
+      makeDef(1),
+      makeDef(2),
+      makeDef(3)
+    ]);
+
     const all = [...registry.getAll()];
     assert.equal(all.length, 3);
-    const ids = new Set(all.map((d) => d.id));
+
+    const ids = new Set(all.map((definition) => definition.id));
     assert.deepEqual(ids, new Set([1, 2, 3]));
   });
 
@@ -141,19 +183,33 @@ describe("BlockRegistry version", () => {
     assert.equal(registry.version, 0);
 
     registry.register({
-      id: 1, name: "A", shapeId: "cube", collidable: true, faceTextures: {}
+      id: 1,
+      name: "A",
+      shapeId: "cube",
+      collidable: true,
+      faceTextures: {}
     });
     assert.equal(registry.version, 1);
 
     registry.register({
-      id: 2, name: "B", shapeId: "cube", collidable: true, faceTextures: {}
+      id: 2,
+      name: "B",
+      shapeId: "cube",
+      collidable: true,
+      faceTextures: {}
     });
     assert.equal(registry.version, 2);
   });
 
   it("counts definitions registered through the constructor", () => {
     const registry = new BlockRegistry([
-      { id: 1, name: "A", shapeId: "cube", collidable: true, faceTextures: {} }
+      {
+        id: 1,
+        name: "A",
+        shapeId: "cube",
+        collidable: true,
+        faceTextures: {}
+      }
     ]);
 
     assert.equal(registry.version, 1);

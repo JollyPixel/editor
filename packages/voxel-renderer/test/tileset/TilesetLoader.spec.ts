@@ -4,11 +4,11 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  TilesetLoader,
-  type TilesetEntry
+  TilesetLoader
 } from "../../src/tileset/TilesetLoader.ts";
 import type { TilesetDefinition } from "../../src/tileset/TilesetManager.ts";
 import type { VoxelWorldJSON } from "../../src/serialization/VoxelSerializer.ts";
+import { mockTexture } from "../helpers/mockTexture.ts";
 
 // CONSTANTS
 const kDefaultTilesetDef: TilesetDefinition = {
@@ -34,13 +34,7 @@ function makeMockLoader(
     async loadAsync(url: string) {
       loadCalls.push(url);
 
-      return {
-        magFilter: 0,
-        minFilter: 0,
-        colorSpace: "",
-        generateMipmaps: true,
-        image: { width: 256, height: 256 }
-      };
+      return mockTexture(256, 256);
     }
   };
 }
@@ -79,7 +73,7 @@ describe("TilesetLoader.fromTileDefinition", () => {
     await loader.fromTileDefinition(kDefaultTilesetDef);
 
     assert.equal(loader.tilesets.size, 1);
-    const entry = loader.tilesets.get("default") as TilesetEntry;
+    const entry = loader.tilesets.get("default");
     assert.ok(entry !== undefined);
     assert.equal(entry.def.id, "default");
     assert.ok(entry.texture !== undefined);

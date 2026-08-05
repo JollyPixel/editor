@@ -11,25 +11,25 @@ import {
   type ClientHandle
 } from "../../src/network/VoxelSyncServer.ts";
 import { VoxelWorld } from "../../src/world/VoxelWorld.ts";
-import type { VoxelNetworkCommand } from "../../src/network/types.ts";
-import type { VoxelWorldJSON } from "../../src/serialization/VoxelSerializer.ts";
+import type { VoxelNetworkCommand, VoxelServerMessage } from "../../src/network/types.ts";
+import { makeAddedCommand, voxelSetCmd } from "../helpers/networkCommands.ts";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 interface MockClient extends ClientHandle {
-  received: unknown[];
+  received: VoxelServerMessage[];
 }
 
 function createClient(id: string): MockClient {
-  const received: unknown[] = [];
+  const received: VoxelServerMessage[] = [];
 
   return {
     id,
     received,
     send(data) {
-      received.push(data);
+      received.push(data as VoxelServerMessage);
     }
   };
 }
@@ -68,35 +68,6 @@ function observe(
   return {
     room: { broadcast: (payload) => client.send(payload) },
     eventStore: unusedEventStore
-  };
-}
-
-function voxelSetCmd(
-  opts: {
-    clientId?: string;
-    seq?: number;
-    timestamp?: number;
-    x?: number;
-    y?: number;
-    z?: number;
-    blockId?: number;
-    layerName?: string;
-  } = {}
-): VoxelNetworkCommand {
-  return {
-    action: "voxel-set",
-    layerName: opts.layerName ?? "Ground",
-    metadata: {
-      position: { x: opts.x ?? 0, y: opts.y ?? 0, z: opts.z ?? 0 },
-      blockId: opts.blockId ?? 1,
-      rotation: 0,
-      flipX: false,
-      flipZ: false,
-      flipY: false
-    },
-    clientId: opts.clientId ?? "client-A",
-    seq: opts.seq ?? 1,
-    timestamp: opts.timestamp ?? 1000
   };
 }
 
@@ -141,7 +112,7 @@ describe("VoxelSyncServer — onClientConnect", () => {
     server.onClientConnect(client);
 
     assert.equal(client.received.length, 1);
-    const msg = client.received[0] as { type: string; data: VoxelWorldJSON; };
+    const msg = client.received[0];
     assert.equal(msg.type, "snapshot");
     assert.equal(msg.data.version, 1);
   });
@@ -158,7 +129,9 @@ describe("VoxelSyncServer — receive: apply + broadcast", () => {
 
     server.receive(voxelSetCmd({ x: 2, y: 0, z: 3, blockId: 7 }), noopRoom);
 
-    const entry = server.world.getLayer("Ground")!.getVoxelAt({ x: 2, y: 0, z: 3 });
+    const layer = server.world.getLayer("Ground");
+    assert.ok(layer !== undefined);
+    const entry = layer.getVoxelAt({ x: 2, y: 0, z: 3 });
     assert.ok(entry);
     assert.equal(entry.blockId, 7);
   });
@@ -174,7 +147,7 @@ describe("VoxelSyncServer — receive: apply + broadcast", () => {
     server.receive(voxelSetCmd(), room);
 
     assert.equal(client.received.length, 1);
-    const msg = client.received[0] as { type: string; data: VoxelNetworkCommand; };
+    const msg = client.received[0];
     assert.equal(msg.type, "command");
     assert.equal(msg.data.action, "voxel-set");
   });
@@ -186,9 +159,7 @@ describe("VoxelSyncServer — receive: apply + broadcast", () => {
     client.received.length = 0;
 
     const cmd: VoxelNetworkCommand = {
-      action: "added",
-      layerName: "Deco",
-      metadata: { options: {} },
+      ...makeAddedCommand("Deco"),
       clientId: "client-X",
       seq: 1,
       timestamp: 1000
@@ -208,7 +179,9 @@ describe("VoxelSyncServer — receive: LWW conflict resolution", () => {
 
     server.receive(voxelSetCmd({ timestamp: 500, x: 0, y: 0, z: 0, blockId: 1 }), noopRoom);
 
-    const entry = server.world.getLayer("Ground")!.getVoxelAt({ x: 0, y: 0, z: 0 });
+    const layer = server.world.getLayer("Ground");
+    assert.ok(layer !== undefined);
+    const entry = layer.getVoxelAt({ x: 0, y: 0, z: 0 });
     assert.ok(entry);
     assert.equal(entry.blockId, 1);
   });
@@ -220,7 +193,9 @@ describe("VoxelSyncServer — receive: LWW conflict resolution", () => {
     server.receive(voxelSetCmd({ timestamp: 500, x: 0, y: 0, z: 0, blockId: 1, clientId: "A" }), noopRoom);
     server.receive(voxelSetCmd({ timestamp: 900, x: 0, y: 0, z: 0, blockId: 2, clientId: "B" }), noopRoom);
 
-    const entry = server.world.getLayer("Ground")!.getVoxelAt({ x: 0, y: 0, z: 0 });
+    const layer = server.world.getLayer("Ground");
+    assert.ok(layer !== undefined);
+    const entry = layer.getVoxelAt({ x: 0, y: 0, z: 0 });
     assert.ok(entry);
     assert.equal(entry.blockId, 2);
   });
@@ -232,7 +207,9 @@ describe("VoxelSyncServer — receive: LWW conflict resolution", () => {
     server.receive(voxelSetCmd({ timestamp: 900, x: 0, y: 0, z: 0, blockId: 2, clientId: "A" }), noopRoom);
     server.receive(voxelSetCmd({ timestamp: 500, x: 0, y: 0, z: 0, blockId: 1, clientId: "B" }), noopRoom);
 
-    const entry = server.world.getLayer("Ground")!.getVoxelAt({ x: 0, y: 0, z: 0 });
+    const layer = server.world.getLayer("Ground");
+    assert.ok(layer !== undefined);
+    const entry = layer.getVoxelAt({ x: 0, y: 0, z: 0 });
     assert.ok(entry);
     // stale command with blockId 1 was rejected — blockId 2 should remain
     assert.equal(entry.blockId, 2);
@@ -269,7 +246,9 @@ describe("VoxelSyncServer — receive: LWW conflict resolution", () => {
     server.receive(voxelSetCmd({ timestamp: 500, x: 0, y: 0, z: 0, blockId: 1, clientId: "client-A" }), room);
 
     assert.equal(client.received.length, 1);
-    const entry = server.world.getLayer("Ground")!.getVoxelAt({ x: 0, y: 0, z: 0 });
+    const layer = server.world.getLayer("Ground");
+    assert.ok(layer !== undefined);
+    const entry = layer.getVoxelAt({ x: 0, y: 0, z: 0 });
     assert.ok(entry);
     assert.equal(entry.blockId, 1);
   });
@@ -283,7 +262,9 @@ describe("VoxelSyncServer — receive: LWW conflict resolution", () => {
     server.receive(voxelSetCmd({ timestamp: ts, x: 0, y: 0, z: 0, blockId: 1, clientId: "client-A" }), noopRoom);
     server.receive(voxelSetCmd({ timestamp: ts, x: 0, y: 0, z: 0, blockId: 2, clientId: "client-B" }), noopRoom);
 
-    const entry = server.world.getLayer("Ground")!.getVoxelAt({ x: 0, y: 0, z: 0 });
+    const layer = server.world.getLayer("Ground");
+    assert.ok(layer !== undefined);
+    const entry = layer.getVoxelAt({ x: 0, y: 0, z: 0 });
     assert.ok(entry);
     assert.equal(entry.blockId, 2);
   });
@@ -295,17 +276,13 @@ describe("VoxelSyncServer — receive: LWW conflict resolution", () => {
     client.received.length = 0;
 
     const cmd1: VoxelNetworkCommand = {
-      action: "added",
-      layerName: "Layer",
-      metadata: { options: {} },
+      ...makeAddedCommand("Layer"),
       clientId: "X",
       seq: 1,
       timestamp: 900
     };
     const cmd2: VoxelNetworkCommand = {
-      action: "added",
-      layerName: "Layer2",
-      metadata: { options: {} },
+      ...makeAddedCommand("Layer2"),
       clientId: "Y",
       seq: 1,
       timestamp: 100
@@ -348,7 +325,9 @@ describe("VoxelSyncServer — receive: invalid commands are dropped, not thrown"
     server.receive(voxelSetCmd({ layerName: "Unknown" }), noopRoom);
     server.receive(voxelSetCmd({ layerName: "Ground", x: 1, y: 2, z: 3, blockId: 5 }), noopRoom);
 
-    const entry = server.world.getLayer("Ground")!.getVoxelAt({ x: 1, y: 2, z: 3 });
+    const layer = server.world.getLayer("Ground");
+    assert.ok(layer !== undefined);
+    const entry = layer.getVoxelAt({ x: 1, y: 2, z: 3 });
     assert.ok(entry);
     assert.equal(entry.blockId, 5);
   });

@@ -23,7 +23,9 @@ function makeGeometry(
 }
 
 // One triangle, 3 vertices.
-function makeTriangle(offset = 0): THREE.BufferGeometry {
+function makeTriangle(
+  offset = 0
+): THREE.BufferGeometry {
   return makeGeometry(
     [offset, 0, 0, offset + 1, 0, 0, offset, 1, 0],
     [0, 1, 2]
@@ -63,8 +65,10 @@ describe("mergeChunkGeometries", () => {
     ]));
 
     assert.ok(merged);
+    const index = merged.geometry.getIndex();
+    assert.ok(index);
     assert.deepEqual(
-      [...merged.geometry.getIndex()!.array],
+      [...index.array],
       [0, 1, 2, 3, 4, 5],
       "second triangle's indices must be shifted by 3"
     );
@@ -72,7 +76,10 @@ describe("mergeChunkGeometries", () => {
 
   it("keeps only collision-relevant attributes", () => {
     const first = makeTriangle(0);
-    first.setAttribute("uv", new THREE.Float32BufferAttribute([0, 0, 1, 0, 0, 1], 2));
+    first.setAttribute(
+      "uv",
+      new THREE.Float32BufferAttribute([0, 0, 1, 0, 0, 1], 2)
+    );
 
     const merged = mergeChunkGeometries(new Map([
       ["a", first],
@@ -101,9 +108,15 @@ describe("mergeChunkGeometries", () => {
 
   it("returns null when every geometry is skipped", () => {
     const nonIndexed = new THREE.BufferGeometry();
-    nonIndexed.setAttribute("position", new THREE.Float32BufferAttribute([0, 0, 0], 3));
+    nonIndexed.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute([0, 0, 0], 3)
+    );
     const other = new THREE.BufferGeometry();
-    other.setAttribute("position", new THREE.Float32BufferAttribute([1, 1, 1], 3));
+    other.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute([1, 1, 1], 3)
+    );
 
     const merged = mergeChunkGeometries(new Map([
       ["a", nonIndexed],
@@ -122,8 +135,12 @@ describe("mergeChunkGeometries — buffer types", () => {
     ]));
 
     assert.ok(merged);
-    assert.ok(merged.geometry.getAttribute("position").array instanceof Float32Array);
-    assert.ok(merged.geometry.getIndex()!.array instanceof Uint32Array);
+    const index = merged.geometry.getIndex();
+    assert.ok(index);
+    assert.ok(
+      merged.geometry.getAttribute("position").array instanceof Float32Array
+    );
+    assert.ok(index.array instanceof Uint32Array);
   });
 
   it("preserves every vertex of every source geometry", () => {
