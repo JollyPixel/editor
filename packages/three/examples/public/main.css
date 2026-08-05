@@ -15,3 +15,13 @@ body {
   flex-direction: column;
   background-color: #eee;
 }
+
+/*
+ * Tweakpane's default wrapper
+ */
+body .tp-dfwv {
+  top: 12px;
+  right: 12px;
+  width: 350px;
+  z-index: 1001;
+}

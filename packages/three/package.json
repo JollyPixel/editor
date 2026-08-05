@@ -4,12 +4,15 @@
   "version": "1.0.0",
   "type": "module",
   "exports": "./dist/index.js",
+  "imports": {
+    "#src/*": "./src/*"
+  },
   "scripts": {
     "prepublish": "rimraf ./dist && tsc -b",
     "build": "tsc",
     "test-only": "node --test \"test/**/*.test.ts\"",
     "test": "c8 -r html npm run test-only",
-    "preview": "vite"
+    "dev": "vite"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
@@ -33,5 +36,9 @@
   "license": "MIT",
   "dependencies": {
     "three": "0.185.1"
+  },
+  "devDependencies": {
+    "@tweakpane/core": "2.0.5",
+    "tweakpane": "4.0.5"
   }
 }
