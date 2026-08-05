@@ -46,6 +46,7 @@
     "@loglayer/transport-pino": "3.3.0",
     "@openally/emitt": "1.0.1",
     "@openally/result": "3.0.0",
+    "hyperid": "4.0.0",
     "loglayer": "9.4.0",
     "pino": "10.3.1",
     "ts-pattern": "5.9.0",

@@ -67,7 +67,8 @@ room.send({ hello: "world" });
 ## 📚 API
 
 - [Client](./docs/Client.md): client connection and room handles
-- [Server](./docs/Server.md): room multiplexer and the `Extension` base class
+- [Server](./docs/Server.md): room multiplexer
+- [Extension](./docs/Extension.md): room-side base class, including worker-mode extensions
 - [Rights](./docs/Rights.md): role-based access control
 - [Transports](./docs/Transports.md): vite plugin and websocket wiring
 - [SyncAdapter](./docs/sync/SyncAdapter.md): client-side sync sessions
