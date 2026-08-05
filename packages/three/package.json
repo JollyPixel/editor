@@ -1,0 +1,37 @@
+{
+  "name": "@jolly-pixel/three",
+  "description": "Common Three.js utilities and components for JollyPixel's workspaces and editors",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": "./dist/index.js",
+  "scripts": {
+    "prepublish": "rimraf ./dist && tsc -b",
+    "build": "tsc",
+    "test-only": "node --test \"test/**/*.test.ts\"",
+    "test": "c8 -r html npm run test-only",
+    "preview": "vite"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JollyPixel/editor.git",
+    "directory": "packages/three"
+  },
+  "keywords": [],
+  "files": [
+    "dist"
+  ],
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  },
+  "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "three": "0.185.1"
+  }
+}
