@@ -3,7 +3,7 @@ import type { VoxelCoord } from "../../../src/world/types.ts";
 
 // CONSTANTS
 const kUsernameStorageKey = "voxel-flat-world:username";
-/** One color per peer, picked deterministically so every tab agrees. */
+/** One color per username, picked deterministically so every tab agrees. */
 const kPeerColors = [
   "#f94144",
   "#f3722c",
@@ -36,12 +36,17 @@ export function resolveUsername(): string {
   return username;
 }
 
+/**
+ * Hashed from the username rather than the connection's clientId: the id a
+ * transport mints is per-connection, so a peer reconnecting (or joining from
+ * a second tab) would otherwise pick up a different color each time.
+ */
 export function peerColor(
-  clientId: string
+  username: string
 ): string {
   let hash = 0;
-  for (let i = 0; i < clientId.length; i++) {
-    hash = ((hash * 31) + clientId.charCodeAt(i)) | 0;
+  for (let i = 0; i < username.length; i++) {
+    hash = ((hash * 31) + username.charCodeAt(i)) | 0;
   }
 
   return kPeerColors[Math.abs(hash) % kPeerColors.length];

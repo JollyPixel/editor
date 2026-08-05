@@ -19,7 +19,7 @@ import {
   FLAT_WORLD_ROOM,
   FLOOR_SIZE
 } from "./utils/flatWorld.ts";
-import { resolveUsername } from "./utils/presence.ts";
+import { peerColor, resolveUsername } from "./utils/presence.ts";
 import { createTerrainTileset } from "./utils/terrainAtlas.ts";
 import {
   PANE_RUNTIME_OPTIONS,
@@ -27,7 +27,7 @@ import {
 } from "./utils/pane.ts";
 
 // CONSTANTS
-const kSkyColor = "#8ec5e8";
+const kSkyColor = "#c2e7ff";
 const kCenter = FLOOR_SIZE / 2;
 
 const canvas = document.querySelector("canvas");
@@ -54,12 +54,12 @@ scene.background = new THREE.Color(kSkyColor);
 const sun = new THREE.DirectionalLight(new THREE.Color("#fff6e0"), 2.2);
 sun.position.set(FLOOR_SIZE, FLOOR_SIZE * 1.5, FLOOR_SIZE * 0.5);
 scene.add(
-  new THREE.AmbientLight(new THREE.Color("#c6dcff"), 1.7),
+  new THREE.AmbientLight(new THREE.Color("#eef4ff"), 1.7),
   sun
 );
 
 // Sits just above the floor's top face, aligned to voxel boundaries.
-const grid = new THREE.GridHelper(FLOOR_SIZE, FLOOR_SIZE, "#54707f", "#54707f");
+const grid = new THREE.GridHelper(FLOOR_SIZE, FLOOR_SIZE, "#183d03", "#183d03");
 grid.position.set(kCenter, 1.001, kCenter);
 scene.add(grid);
 
@@ -86,7 +86,8 @@ const peers = world.createActor("peers")
 const brush = world.createActor("brush")
   .addComponentAndGet(FlatWorldBrush, {
     engine: voxelMap.engine,
-    camera: camera.camera
+    camera: camera.camera,
+    color: peerColor(username)
   });
 brush.onBrushMoved = (position) => peers.report(position);
 
