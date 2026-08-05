@@ -29,11 +29,13 @@ Click on one of the links to access the documentation of the package:
 - [@jolly-pixel/resize-handle](./packages/resize-handle) - Robust resize handles / splitters for your HTML5 apps and websites
 
 These packages are available in the Node Package Repository and can be easily installed with [npm](https://docs.npmjs.com/getting-started/what-is-npm) or [yarn](https://yarnpkg.com).
+
 ```bash
 $ npm i @jolly-pixel/engine
 # or
 $ yarn add @jolly-pixel/engine
-```s
+```
+
 ## Available editors
 
 - [Voxel Map](./packages/editors/voxel-map/): 3D Voxel Terrain editor
