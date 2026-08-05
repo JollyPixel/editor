@@ -11,7 +11,6 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import { VoxelBehavior } from "./components/VoxelMap.ts";
 import {
-  PANE_RUNTIME_OPTIONS,
   createExamplePane
 } from "./utils/pane.ts";
 
@@ -48,7 +47,7 @@ world.createActor("camera")
 world.createActor("map")
   .addComponent(VoxelBehavior);
 
-await loadRuntime(runtime, PANE_RUNTIME_OPTIONS)
+await loadRuntime(runtime, { focusCanvas: false })
   .catch(console.error);
 
 createExamplePane();

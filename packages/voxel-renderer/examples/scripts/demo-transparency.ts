@@ -16,10 +16,7 @@ import {
   startLoop
 } from "./utils/common.ts";
 import {
-  addMonitors,
-  createExamplePane,
-  formatCount,
-  formatPercent
+  createExamplePane
 } from "./utils/pane.ts";
 import { createTransparencyTileset } from "./utils/transparencyAtlas.ts";
 import {
@@ -34,12 +31,6 @@ const kCenter = WORLD_SIZE / 2;
 const kSunRadius = WORLD_SIZE * 1.8;
 /** Mirrors `VoxelEngine`'s own quantisation, so the alpha warning is exact. */
 const kOpacitySteps = 32;
-const kToneMappings: Record<string, THREE.ToneMapping> = {
-  none: THREE.NoToneMapping,
-  linear: THREE.LinearToneMapping,
-  aces: THREE.ACESFilmicToneMapping,
-  neutral: THREE.NeutralToneMapping
-};
 
 type ChunkMaterial = THREE.MeshLambertMaterial | THREE.MeshStandardMaterial;
 
@@ -167,41 +158,6 @@ for (const layer of layerState) {
     .on("change", ({ value }) => updateLayer(layer.name, { opacity: value }));
 }
 
-const materialFolder = pane.addFolder({ title: `Material (${materialType})` });
-materialFolder
-  .addBinding(materialState, "alphaTest", { label: "alphaTest", min: 0, max: 1, step: 0.01 })
-  .on("change", refreshMaterials);
-// Right under the slider that causes it: a layer at or below the threshold is
-// discarded in full rather than faded.
-addMonitors(materialFolder, alphaState, {
-  hidden: { label: "α ≤ test → gone" }
-});
-materialFolder
-  .addBinding(materialState, "flatShading", { label: "flatShading" })
-  .on("change", refreshMaterials);
-materialFolder
-  .addBinding(materialState, "depthWrite", { label: "depthWrite (α)" })
-  .on("change", refreshMaterials);
-if (materialType === "standard") {
-  materialFolder
-    .addBinding(materialState, "roughness", { label: "roughness", min: 0, max: 1, step: 0.01 })
-    .on("change", refreshMaterials);
-  materialFolder
-    .addBinding(materialState, "metalness", { label: "metalness", min: 0, max: 1, step: 0.01 })
-    .on("change", refreshMaterials);
-}
-materialFolder
-  .addBinding({ type: materialType }, "type", {
-    label: "type",
-    options: { lambert: "lambert", standard: "standard" }
-  })
-  .on("change", ({ value }) => {
-    // The material class is fixed at construction, so the page is reloaded.
-    if (value !== materialType) {
-      window.location.search = `?material=${value}`;
-    }
-  });
-
 const lightFolder = pane.addFolder({ title: "Light" });
 lightFolder
   .addBinding(lightState, "background", { label: "background", view: "color" })
@@ -210,40 +166,13 @@ lightFolder
   .addBinding(lightState, "ambient", { label: "ambient", min: 0, max: 4, step: 0.05 })
   .on("change", ({ value }) => (ambient.intensity = value));
 lightFolder
-  .addBinding(lightState, "ambientColor", { label: "ambient col", view: "color" })
-  .on("change", ({ value }) => ambient.color.set(value));
-lightFolder
   .addBinding(lightState, "hemisphere", { label: "hemisphere", min: 0, max: 4, step: 0.05 })
   .on("change", ({ value }) => (hemisphere.intensity = value));
 lightFolder
   .addBinding(lightState, "sun", { label: "sun", min: 0, max: 6, step: 0.05 })
   .on("change", ({ value }) => (sun.intensity = value));
-lightFolder
-  .addBinding(lightState, "sunColor", { label: "sun col", view: "color" })
-  .on("change", ({ value }) => sun.color.set(value));
-lightFolder
-  .addBinding(lightState, "azimuth", { label: "azimuth", min: 0, max: 360, step: 1 })
-  .on("change", updateSun);
-lightFolder
-  .addBinding(lightState, "elevation", { label: "elevation", min: -10, max: 90, step: 1 })
-  .on("change", updateSun);
-lightFolder.addBinding(lightState, "spin", { label: "spin sun" });
-lightFolder
-  .addBinding(lightState, "tone", {
-    label: "tone map",
-    options: { none: "none", linear: "linear", aces: "aces", neutral: "neutral" }
-  })
-  .on("change", ({ value }) => (renderer.toneMapping = kToneMappings[value] ?? THREE.NoToneMapping));
-lightFolder
-  .addBinding(lightState, "exposure", { label: "exposure", min: 0.1, max: 3, step: 0.05 })
-  .on("change", ({ value }) => (renderer.toneMappingExposure = value));
 
 const meshFolder = pane.addFolder({ title: "Mesh" });
-addMonitors(meshFolder, meshState, {
-  faces: { label: "faces", format: formatCount },
-  culled: { label: "culled", format: formatPercent },
-  triangles: { label: "triangles", format: formatCount }
-});
 meshFolder
   .addBinding(debugState, "greedy", { label: "greedy [M]" })
   .on("change", ({ value }) => setGreedy(value));
@@ -318,14 +247,6 @@ function applyMaterialState(
   material.needsUpdate = true;
 }
 
-function refreshMaterials(): void {
-  for (const material of materials) {
-    applyMaterialState(material);
-  }
-
-  syncStats();
-}
-
 function updateLayer(
   name: string,
   options: { visible?: boolean; opacity?: number; }
@@ -391,7 +312,6 @@ function syncStats(): void {
     .map(({ name }) => name);
   alphaState.hidden = hidden.length === 0 ? "—" : hidden.join(", ");
 
-  materialFolder.refresh();
   meshFolder.refresh();
 }
 

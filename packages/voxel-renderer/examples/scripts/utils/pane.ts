@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import { Pane, type FolderApi } from "tweakpane";
-import type { LoadRuntimeOptions } from "@jolly-pixel/runtime";
 
 // CONSTANTS
 const kDefaultTitle = "voxel.renderer";
@@ -14,15 +13,6 @@ const kExamples: Record<string, string> = {
   "Noise World": "/noise-world.html",
   "Flat World (Sync)": "/flat-world.html",
   "Transparency & Light": "/transparency.html"
-};
-
-/**
- * `loadRuntime` otherwise refocuses the canvas on every document click, which
- * takes focus away from the pane and closes its dropdowns on the first click.
- * Nothing is lost: the engine listens for key events on `document`.
- */
-export const PANE_RUNTIME_OPTIONS: LoadRuntimeOptions = {
-  focusCanvas: false
 };
 
 export interface ExamplePaneOptions {

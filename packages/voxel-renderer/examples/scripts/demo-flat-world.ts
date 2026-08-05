@@ -22,7 +22,6 @@ import {
 import { peerColor, resolveUsername } from "./utils/presence.ts";
 import { createTerrainTileset } from "./utils/terrainAtlas.ts";
 import {
-  PANE_RUNTIME_OPTIONS,
   createExamplePane
 } from "./utils/pane.ts";
 
@@ -92,7 +91,7 @@ const brush = world.createActor("brush")
 brush.onBrushMoved = (position) => peers.report(position);
 
 createExamplePane();
-await loadRuntime(runtime, PANE_RUNTIME_OPTIONS);
+await loadRuntime(runtime, { focusCanvas: false });
 
 /**
  * Voxel edits ride the engine hook into `VoxelSyncClient`; brush positions ride

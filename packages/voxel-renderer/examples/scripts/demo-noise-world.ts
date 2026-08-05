@@ -19,7 +19,6 @@ import {
 import { createTerrainTileset } from "./utils/terrainAtlas.ts";
 import {
   addMonitors,
-  PANE_RUNTIME_OPTIONS,
   createExamplePane,
   formatCount,
   formatMilliseconds,
@@ -196,7 +195,7 @@ controlsFolder
 world.createActor("hud")
   .addComponent(PerformancePanel, { pane, onRefresh: syncStats });
 
-await loadRuntime(runtime, PANE_RUNTIME_OPTIONS);
+await loadRuntime(runtime, { focusCanvas: false });
 
 report = buildWorld(engine, settings);
 syncStats();

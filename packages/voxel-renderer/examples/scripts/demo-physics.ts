@@ -19,7 +19,6 @@ import {
 import { RapierVoxelCollider } from "../../src/plugins/rapier/index.ts";
 import { SphereBehavior } from "./components/SphereController.ts";
 import {
-  PANE_RUNTIME_OPTIONS,
   createExamplePane
 } from "./utils/pane.ts";
 
@@ -196,4 +195,4 @@ world.createActor("sphere")
   .addComponent(SphereBehavior, { body: sphereBody, mesh: sphereMesh });
 
 createExamplePane();
-loadRuntime(runtime, PANE_RUNTIME_OPTIONS).catch(console.error);
+loadRuntime(runtime, { focusCanvas: false }).catch(console.error);

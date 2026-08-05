@@ -61,7 +61,6 @@ export const SCENE_LABELS: readonly SceneLabel[] = [
   { text: "glass · layer opacity", x: 15, y: 7.2, z: 18 },
   { text: "cutout WITHOUT transparent: true", x: 6, y: 9.6, z: 5 },
   { text: "same cutout, transparent: true", x: 15, y: 9.6, z: 5 },
-  { text: "alphaTest probe (alpha 0 → 1)", x: 20.5, y: 5, z: 11.5 },
   { text: "shapes · sun angle", x: 4, y: 4, z: 11 },
   { text: "cutout in a solid wall", x: 20.5, y: 5.6, z: 21 }
 ];
@@ -135,7 +134,6 @@ function buildGround(
   walls(engine, Ground, TransparencyBlock.Plank, { ...pool, y0: 2, y1: 3 });
 
   buildShapeCluster(engine);
-  buildAlphaProbes(engine);
   buildWindowWall(engine);
 }
 
@@ -169,20 +167,6 @@ function buildShapeCluster(
   engine.setVoxel(Ground, {
     position: { x: 6, y: 2, z: z + 2 },
     blockId: TransparencyBlock.StonePole
-  });
-}
-
-/** Four cubes of the alpha-gradient tile, on a plank pedestal. */
-function buildAlphaProbes(
-  engine: VoxelEngine
-): void {
-  const { Ground } = TransparencyLayer;
-
-  fill(engine, Ground, TransparencyBlock.Plank, {
-    x0: 19, x1: 22, y0: 2, y1: 2, z0: 11, z1: 12
-  });
-  fill(engine, Ground, TransparencyBlock.AlphaRamp, {
-    x0: 19, x1: 22, y0: 3, y1: 3, z0: 11, z1: 12
   });
 }
 
