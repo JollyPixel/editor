@@ -7,23 +7,13 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { VoxelEngine } from "../../src/VoxelEngine.ts";
+import { mockTexture } from "../helpers/mockTexture.ts";
+import { makeBlockDef } from "../helpers/blocks.ts";
+import { makeAtlasDef } from "../helpers/atlas.ts";
 
 // CONSTANTS
 const kCubeId = 1;
 const kLayer = "Ground";
-
-function mockTexture(): any {
-  return {
-    magFilter: 0,
-    minFilter: 0,
-    colorSpace: "",
-    generateMipmaps: true,
-    image: { width: 64, height: 64 },
-    dispose() {
-      // no-op
-    }
-  };
-}
 
 function makeEngine(
   greedy: boolean
@@ -33,25 +23,21 @@ function makeEngine(
     layers: [kLayer],
     greedy,
     blocks: [
-      {
-        id: kCubeId,
-        name: "Cube",
-        shapeId: "cube",
-        faceTextures: {},
-        defaultTexture: { col: 0, row: 0 },
-        collidable: true
-      }
+      makeBlockDef(kCubeId, "cube", { name: "Cube" })
     ]
   });
   engine.loadTileset(
-    { id: "atlas", src: "/atlas.png", tileSize: 16, cols: 4, rows: 4 },
+    makeAtlasDef(),
     mockTexture()
   );
 
   // A 4×4 plate, which merges into 6 quads.
   for (let x = 0; x < 4; x++) {
     for (let z = 0; z < 4; z++) {
-      engine.setVoxel(kLayer, { position: { x, y: 0, z }, blockId: kCubeId });
+      engine.setVoxel(kLayer, {
+        position: { x, y: 0, z },
+        blockId: kCubeId
+      });
     }
   }
   engine.tick(0);
@@ -64,8 +50,9 @@ function triangles(
 ): number {
   let count = 0;
   engine.root.traverse((object) => {
-    const { geometry } = object as THREE.Mesh;
-    count += geometry?.getIndex()?.count ?? 0;
+    if (object instanceof THREE.Mesh) {
+      count += object.geometry.getIndex()?.count ?? 0;
+    }
   });
 
   return count / 3;
@@ -76,9 +63,8 @@ function materials(
 ): THREE.Material[] {
   const found: THREE.Material[] = [];
   engine.root.traverse((object) => {
-    const { material } = object as THREE.Mesh;
-    if (material instanceof THREE.Material) {
-      found.push(material);
+    if (object instanceof THREE.Mesh && object.material instanceof THREE.Material) {
+      found.push(object.material);
     }
   });
 
@@ -136,7 +122,10 @@ describe("VoxelEngine — greedy meshing", () => {
     engine.tick(0);
 
     for (const material of materials(engine)) {
-      assert.notEqual(material.customProgramCacheKey(), "jolly-pixel:tile-wrap");
+      assert.notEqual(
+        material.customProgramCacheKey(),
+        "jolly-pixel:tile-wrap"
+      );
     }
   });
 });

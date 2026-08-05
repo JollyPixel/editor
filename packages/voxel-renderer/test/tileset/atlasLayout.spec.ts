@@ -10,16 +10,14 @@ import {
   tileUVRegion,
   type AtlasLayout
 } from "../../src/tileset/atlasLayout.ts";
-
-// CONSTANTS
-const kEpsilon = 1e-10;
+import { approxEqual } from "../helpers/math.ts";
 
 function assertClose(
   actual: number,
   expected: number
 ): void {
   assert.ok(
-    Math.abs(actual - expected) < kEpsilon,
+    approxEqual(actual, expected),
     `expected ${actual} to be close to ${expected}`
   );
 }

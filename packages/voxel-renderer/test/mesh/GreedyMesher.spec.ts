@@ -12,24 +12,16 @@ import { BlockShapeRegistry } from "../../src/blocks/BlockShapeRegistry.ts";
 import { TilesetManager } from "../../src/tileset/TilesetManager.ts";
 import { VoxelMeshBuilder } from "../../src/mesh/VoxelMeshBuilder.ts";
 import { packTransform } from "../../src/utils/math.ts";
+import { mockTexture } from "../helpers/mockTexture.ts";
+import { DEFAULT_TEXTURE, makeBlockDef } from "../helpers/blocks.ts";
+import { makeAtlasDef } from "../helpers/atlas.ts";
 
 // CONSTANTS
 const kCubeId = 1;
 const kRampId = 2;
 const kStairId = 3;
 const kOtherCubeId = 4;
-const kDefaultTexture = { col: 0, row: 0 };
 const kChunkSize = 4;
-
-function mockTexture(): any {
-  return {
-    magFilter: 0,
-    minFilter: 0,
-    colorSpace: "",
-    generateMipmaps: true,
-    image: { width: 64, height: 64 }
-  };
-}
 
 function makeFixture(
   options: { greedy?: boolean; chunkSize?: number; } = {}
@@ -40,24 +32,14 @@ function makeFixture(
   const layer = world.addLayer("test");
 
   const blockRegistry = new BlockRegistry([
-    { id: kCubeId, name: "Cube", shapeId: "cube", faceTextures: {}, defaultTexture: kDefaultTexture, collidable: true },
-    { id: kRampId, name: "Ramp", shapeId: "ramp", faceTextures: {}, defaultTexture: kDefaultTexture, collidable: true },
-    { id: kStairId, name: "Stair", shapeId: "stair", faceTextures: {}, defaultTexture: kDefaultTexture, collidable: true },
-    {
-      id: kOtherCubeId,
-      name: "Other",
-      shapeId: "cube",
-      faceTextures: {},
-      defaultTexture: { col: 1, row: 0 },
-      collidable: true
-    }
+    makeBlockDef(kCubeId, "cube", { name: "Cube" }),
+    makeBlockDef(kRampId, "ramp", { name: "Ramp" }),
+    makeBlockDef(kStairId, "stair", { name: "Stair" }),
+    makeBlockDef(kOtherCubeId, "cube", { name: "Other", defaultTexture: { col: 1, row: 0 } })
   ]);
 
   const tilesetManager = new TilesetManager();
-  tilesetManager.registerTexture(
-    { id: "atlas", src: "/atlas.png", tileSize: 16, cols: 4, rows: 4 },
-    mockTexture()
-  );
+  tilesetManager.registerTexture(makeAtlasDef(), mockTexture());
 
   const builder = new VoxelMeshBuilder({
     world,
@@ -478,7 +460,7 @@ describe("GreedyMesher — tiled attribute layout", () => {
 
     const [geometry] = [...build(f)!.values()];
     const attribute = geometry.getAttribute("tileRegion");
-    const expected = f.tilesetManager.getTileUV(kDefaultTexture);
+    const expected = f.tilesetManager.getTileUV(DEFAULT_TEXTURE);
     const step = 1 / 65535;
 
     for (let i = 0; i < attribute.count; i++) {

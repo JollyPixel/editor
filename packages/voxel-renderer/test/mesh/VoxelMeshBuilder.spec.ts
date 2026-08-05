@@ -2,6 +2,9 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import type * as THREE from "three";
+
 // Import Internal Dependencies
 import { VoxelWorld } from "../../src/world/VoxelWorld.ts";
 import { BlockRegistry } from "../../src/blocks/BlockRegistry.ts";
@@ -9,28 +12,16 @@ import { BlockShapeRegistry } from "../../src/blocks/BlockShapeRegistry.ts";
 import { TilesetManager } from "../../src/tileset/TilesetManager.ts";
 import { VoxelMeshBuilder } from "../../src/mesh/VoxelMeshBuilder.ts";
 import { packTransform } from "../../src/utils/math.ts";
+import type { VoxelChunk } from "../../src/world/VoxelChunk.ts";
+import { mockTexture } from "../helpers/mockTexture.ts";
+import { DEFAULT_TEXTURE, makeBlockDef } from "../helpers/blocks.ts";
+import { makeAtlasDef } from "../helpers/atlas.ts";
 
 // CONSTANTS
 const kCubeId = 1;
 const kRampId = 2;
 const kStairId = 3;
 const kLeavesId = 4;
-const kDefaultTexture = { col: 0, row: 0 };
-
-/**
- * Minimal mock texture; registerTexture() assigns magFilter/etc then reads
- * image.width / image.height only when cols/rows are omitted from the def.
- * By supplying explicit cols + rows we avoid any DOM image dependency.
- */
-function mockTexture(): any {
-  return {
-    magFilter: 0,
-    minFilter: 0,
-    colorSpace: "",
-    generateMipmaps: true,
-    image: { width: 64, height: 64 }
-  };
-}
 
 /**
  * Builds a fully functional (non-rendering) fixture: world (chunkSize=4),
@@ -42,18 +33,15 @@ function makeFixture() {
   const layer = world.addLayer("test");
 
   const blockRegistry = new BlockRegistry([
-    { id: kCubeId, name: "Cube", shapeId: "cube", faceTextures: {}, defaultTexture: kDefaultTexture, collidable: true },
-    { id: kRampId, name: "Ramp", shapeId: "ramp", faceTextures: {}, defaultTexture: kDefaultTexture, collidable: true },
-    { id: kStairId, name: "Stair", shapeId: "stair", faceTextures: {}, defaultTexture: kDefaultTexture, collidable: true }
+    makeBlockDef(kCubeId, "cube", { name: "Cube" }),
+    makeBlockDef(kRampId, "ramp", { name: "Ramp" }),
+    makeBlockDef(kStairId, "stair", { name: "Stair" })
   ]);
 
   const shapeRegistry = BlockShapeRegistry.createDefault();
 
   const tilesetManager = new TilesetManager();
-  tilesetManager.registerTexture(
-    { id: "atlas", src: "/atlas.png", tileSize: 16, cols: 4, rows: 4 },
-    mockTexture()
-  );
+  tilesetManager.registerTexture(makeAtlasDef(), mockTexture());
 
   const builder = new VoxelMeshBuilder({ world, blockRegistry, shapeRegistry, tilesetManager });
 
@@ -82,6 +70,43 @@ function countVertices(fixture: ReturnType<typeof makeFixture>): number {
   }
 
   return total;
+}
+
+/** Fetches the chunk at `chunkCoords`, asserting it exists. */
+function getChunk(
+  fixture: ReturnType<typeof makeFixture>,
+  chunkCoords: [number, number, number] = [0, 0, 0]
+): VoxelChunk {
+  const chunk = fixture.layer.getChunk(...chunkCoords);
+  assert.ok(chunk);
+
+  return chunk;
+}
+
+/**
+ * Builds the chunk at `chunkCoords`, asserting it produced geometries. Most
+ * tests below have a visible voxel and expect a non-null result; the few that
+ * exercise the null path (empty/hidden/unregistered) call the builder
+ * directly instead of going through this helper.
+ */
+function buildGeometries(
+  fixture: ReturnType<typeof makeFixture>,
+  chunkCoords: [number, number, number] = [0, 0, 0]
+): Map<string, THREE.BufferGeometry> {
+  const geometries = fixture.builder.buildChunkGeometries(getChunk(fixture, chunkCoords), fixture.layer);
+  assert.ok(geometries);
+
+  return geometries;
+}
+
+/** Same as `buildGeometries`, narrowed to the single geometry callers expect. */
+function firstGeometry(
+  fixture: ReturnType<typeof makeFixture>,
+  chunkCoords: [number, number, number] = [0, 0, 0]
+): THREE.BufferGeometry {
+  const [geometry] = [...buildGeometries(fixture, chunkCoords).values()];
+
+  return geometry;
 }
 
 // ---------------------------------------------------------------------------
@@ -139,15 +164,7 @@ describe("VoxelMeshBuilder — transparent blocks never occlude", () => {
     transparent: boolean
   ) {
     const f = makeFixture();
-    f.blockRegistry.register({
-      id: kLeavesId,
-      name: "Leaves",
-      shapeId: "cube",
-      transparent,
-      faceTextures: {},
-      defaultTexture: kDefaultTexture,
-      collidable: true
-    });
+    f.blockRegistry.register(makeBlockDef(kLeavesId, "cube", { name: "Leaves", transparent }));
 
     return f;
   }
@@ -185,20 +202,22 @@ describe("VoxelMeshBuilder — transparent blocks never occlude", () => {
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
     f.world.setVoxelAt("test", { x: 2, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
 
-    const chunk = f.layer.getChunk(0, 0, 0)!;
-    const geometries = f.builder.buildChunkGeometries(chunk, f.layer)!;
+    const geometries = buildGeometries(f);
 
     assert.deepEqual([...geometries.keys()], ["atlas", "atlas:cutout"]);
-    assert.equal(geometries.get("atlas")!.getAttribute("position").count, 24);
-    assert.equal(geometries.get("atlas:cutout")!.getAttribute("position").count, 24);
+    const atlas = geometries.get("atlas");
+    const cutout = geometries.get("atlas:cutout");
+    assert.ok(atlas);
+    assert.ok(cutout);
+    assert.equal(atlas.getAttribute("position").count, 24);
+    assert.equal(cutout.getAttribute("position").count, 24);
   });
 
   it("emits a single geometry when no block is transparent", () => {
     const f = withLeaves(false);
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
 
-    const chunk = f.layer.getChunk(0, 0, 0)!;
-    const geometries = f.builder.buildChunkGeometries(chunk, f.layer)!;
+    const geometries = buildGeometries(f);
 
     assert.deepEqual([...geometries.keys()], ["atlas"]);
   });
@@ -210,9 +229,7 @@ describe("VoxelMeshBuilder — layer opacity is not a vertex attribute", () => {
       const f = makeFixture();
       f.layer.opacity = opacity;
       f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
-      const chunk = f.layer.getChunk(0, 0, 0)!;
-      const geometries = f.builder.buildChunkGeometries(chunk, f.layer)!;
-      const [geometry] = [...geometries.values()];
+      const [geometry] = [...buildGeometries(f).values()];
 
       assert.equal(geometry.getAttribute("color"), undefined);
     }
@@ -225,43 +242,28 @@ describe("VoxelMeshBuilder — layer opacity is not a vertex attribute", () => {
     translucent.layer.opacity = 0.25;
     translucent.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
 
-    const [a] = [...opaque.builder.buildChunkGeometries(
-      opaque.layer.getChunk(0, 0, 0)!, opaque.layer
-    )!.values()];
-    const [b] = [...translucent.builder.buildChunkGeometries(
-      translucent.layer.getChunk(0, 0, 0)!, translucent.layer
-    )!.values()];
+    const [a] = [...buildGeometries(opaque).values()];
+    const [b] = [...buildGeometries(translucent).values()];
 
     assert.deepEqual(a.getAttribute("position").array, b.getAttribute("position").array);
     assert.deepEqual(a.getAttribute("uv").array, b.getAttribute("uv").array);
   });
 });
 
-describe("VoxelMeshBuilder — ramp(rot=0) base cases (no rotation bug)", () => {
+describe("VoxelMeshBuilder — ramp rotation base cases (rot=0, rot=2)", () => {
   it("ramp back wall (PosZ) adjacent to cube NegZ: cube NegZ face is hidden", () => {
-    // Ramp at (0,0,1) rot=0: its local PosZ back wall is at world z=2,
-    // but that is not adjacent to cube at (0,0,0). Instead we place the
-    // ramp at (1,0,0) rot=0 and check the cube's PosX face.
-    // For the original orientation check: ramp(rot=2) has back wall facing NegZ.
-    // rot=2: rotateFace(PosZ,2)=NegZ → back wall faces world NegZ.
-    // Ramp at (0,0,1) rot=2: back wall now faces NegZ → adjacent to cube(0,0,0)'s PosZ.
+    // rot=2 (180°) turns the ramp's back wall to face world NegZ, so placing
+    // the ramp at (0,0,1) puts that wall against the cube's PosZ face.
     const f = makeFixture();
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
-    // rot=2 (180°): packTransform(2, false, false)
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 1 }, {
       blockId: kRampId,
       transform: packTransform(2, false, false)
     });
 
-    // Cube: 5 faces (PosZ hidden by ramp back wall) = 20 verts
-    // Ramp(rot=2): faces — NegY(4), PosZ→NegZ world faces cube→NOT EMITTED, NegX(3), PosX(3), slope(4)
-    //   ramp NegX face: rotateFace(NegX=1,2)=PosX → check (1,0,1) empty → 3 verts
-    //   ramp PosX face: rotateFace(PosX=0,2)=NegX → check (-1,0,1) empty → 3 verts
-    //   ramp PosZ back wall: rotateFace(PosZ=4,2)=NegZ → check (0,0,0)=cube → NOT EMITTED
-    //   ramp NegY: check (0,-1,1) → 4 verts
-    //   ramp slope(PosY): check (0,1,1) → 4 verts
-    // Ramp total: 4+3+3+4 = 14 verts
-    // Total: 20+14 = 34
+    // Cube: 5 faces (PosZ hidden by the ramp's back wall) = 20 verts.
+    // Ramp(rot=2): 14 verts — NegY, NegX, PosX and the slope; the back wall
+    // is culled against the cube.
     assert.equal(countVertices(f), 34);
   });
 
@@ -274,9 +276,8 @@ describe("VoxelMeshBuilder — ramp(rot=0) base cases (no rotation bug)", () => 
       transform: packTransform(0, false, false)
     });
 
-    // Cube: 6 faces (PosZ not hidden, ramp has no NegZ geometry) = 24 verts
-    // Ramp(rot=0): NegY(4), PosZ back wall → check (0,0,2) empty(4), NegX(3), PosX(3), slope(4) = 18
-    // Total: 24+18 = 42
+    // The ramp's open front (rot=0) has no NegZ geometry, so it never
+    // occludes the cube's PosZ face: 24 cube verts + 18 ramp verts = 42.
     assert.equal(countVertices(f), 42);
   });
 });
@@ -294,11 +295,8 @@ describe("VoxelMeshBuilder — neighbour rotation inversion fix (rot=1 / rot=3)"
       transform: packTransform(1, false, false)
     });
 
-    // Cube: 6 faces = 24 verts
-    // Ramp(rot=1): no face points toward cube(0,0,0) → all 5 faces emitted = 18 verts
-    //   NegY(4), PosZ→world PosX→check(2,0,0) empty(4), NegX→world PosZ→check(1,0,1)(3),
-    //   PosX→world NegZ→check(1,0,-1)(3), slope(4) = 18
-    // Total: 42
+    // Cube keeps all 6 faces (24 verts); the ramp's open front (rot=1) faces
+    // away from the cube, so none of its 5 faces are culled either (18 verts).
     assert.equal(countVertices(f), 42);
   });
 
@@ -314,10 +312,8 @@ describe("VoxelMeshBuilder — neighbour rotation inversion fix (rot=1 / rot=3)"
       transform: packTransform(3, false, false)
     });
 
-    // Cube: 5 faces (PosX hidden by ramp back wall) = 20 verts
-    // Ramp(rot=3): back wall(PosZ→world NegX)→check(0,0,0)=cube→cube.occludes(PosX)=true→NOT EMITTED
-    //   NegY(4), NegX→world NegZ→check(1,0,-1)(3), PosX→world PosZ→check(1,0,1)(3), slope(4) = 14
-    // Total: 34
+    // Cube's PosX face is hidden by the ramp's back wall (rot=3 turns it to
+    // face NegX): 20 cube verts + the ramp's remaining 14 = 34.
     assert.equal(countVertices(f), 34);
   });
 
@@ -333,14 +329,9 @@ describe("VoxelMeshBuilder — neighbour rotation inversion fix (rot=1 / rot=3)"
       transform: packTransform(1, false, false)
     });
 
-    // Cube: 6 faces = 24 verts
-    // Stair(rot=1) faces (10 total):
-    //   NegY(4), PosZ→world PosX(4), NegZ→world NegX→cube.occludes(PosX)=true→NOT EMITTED,
-    //   PosY step(4), PosY back top(4), inner riser sentinel(4),
-    //   PosX lower→world NegZ(4), PosX upper back→world NegZ(4),
-    //   NegX lower→world PosZ(4), NegX upper back→world PosZ(4)
-    //   = 4+4+0+4+4+4+4+4+4+4 = 36 verts
-    // Total: 24+36 = 60
+    // Cube keeps all 6 faces (24 verts). Of the stair's 10 constituent faces,
+    // 9 are emitted at 4 verts each (36 verts) — the tenth is culled where it
+    // meets the cube.
     assert.equal(countVertices(f), 60);
   });
 
@@ -366,8 +357,7 @@ describe("VoxelMeshBuilder — geometry attribute layout", () => {
   it("keeps position in float32 and narrows the rest", () => {
     const f = makeFixture();
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
-    const chunk = f.layer.getChunk(0, 0, 0)!;
-    const geometry = [...f.builder.buildChunkGeometries(chunk, f.layer)!.values()][0];
+    const geometry = firstGeometry(f);
 
     assert.ok(geometry.getAttribute("position").array instanceof Float32Array);
 
@@ -388,8 +378,7 @@ describe("VoxelMeshBuilder — geometry attribute layout", () => {
   it("round-trips axis-aligned normals exactly", () => {
     const f = makeFixture();
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
-    const chunk = f.layer.getChunk(0, 0, 0)!;
-    const geometry = [...f.builder.buildChunkGeometries(chunk, f.layer)!.values()][0];
+    const geometry = firstGeometry(f);
     const normals = geometry.getAttribute("normal");
 
     // A cube's six faces only ever point down an axis, so every component
@@ -407,12 +396,11 @@ describe("VoxelMeshBuilder — geometry attribute layout", () => {
   it("keeps uv within one 16-bit step of the atlas rect", () => {
     const f = makeFixture();
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
-    const chunk = f.layer.getChunk(0, 0, 0)!;
-    const geometry = [...f.builder.buildChunkGeometries(chunk, f.layer)!.values()][0];
+    const geometry = firstGeometry(f);
     const uvs = geometry.getAttribute("uv");
 
     // Every vertex of a cube sits on a corner of its tile's atlas rect.
-    const region = f.tilesetManager.getTileUV(kDefaultTexture);
+    const region = f.tilesetManager.getTileUV(DEFAULT_TEXTURE);
     const step = 1 / 65535;
 
     for (let i = 0; i < uvs.count; i++) {
@@ -433,12 +421,13 @@ describe("VoxelMeshBuilder — geometry attribute layout", () => {
   it("indexes a small chunk with 16-bit values", () => {
     const f = makeFixture();
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
-    const chunk = f.layer.getChunk(0, 0, 0)!;
-    const geometry = [...f.builder.buildChunkGeometries(chunk, f.layer)!.values()][0];
+    const geometry = firstGeometry(f);
+    const index = geometry.getIndex();
+    assert.ok(index);
 
     // 6 quads → 12 triangles.
-    assert.ok(geometry.getIndex()!.array instanceof Uint16Array);
-    assert.equal(geometry.getIndex()!.count, 36);
+    assert.ok(index.array instanceof Uint16Array);
+    assert.equal(index.count, 36);
   });
 });
 
@@ -449,13 +438,16 @@ describe("VoxelMeshBuilder — buffers are reused between chunks", () => {
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
     f.world.setVoxelAt("test", { x: 4, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
 
-    const first = f.builder.buildChunkGeometries(f.layer.getChunk(0, 0, 0)!, f.layer)!;
-    const second = f.builder.buildChunkGeometries(f.layer.getChunk(1, 0, 0)!, f.layer)!;
+    const first = buildGeometries(f, [0, 0, 0]);
+    const second = buildGeometries(f, [1, 0, 0]);
 
     for (const geometries of [first, second]) {
       const geometry = [...geometries.values()][0];
+      const index = geometry.getIndex();
+      assert.ok(index);
+
       assert.equal(geometry.getAttribute("position").count, 24);
-      assert.equal(geometry.getIndex()!.count, 36);
+      assert.equal(index.count, 36);
     }
 
     // The isolated cubes must not have been merged into a shared buffer.
@@ -469,18 +461,11 @@ describe("VoxelMeshBuilder — precompiled geometry follows registry changes", (
     const f = makeFixture();
     const unknownId = 99;
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: unknownId, transform: 0 });
-    const chunk = f.layer.getChunk(0, 0, 0)!;
+    const chunk = getChunk(f);
 
     assert.equal(f.builder.buildChunkGeometries(chunk, f.layer), null);
 
-    f.blockRegistry.register({
-      id: unknownId,
-      name: "Late",
-      shapeId: "cube",
-      faceTextures: {},
-      defaultTexture: kDefaultTexture,
-      collidable: true
-    });
+    f.blockRegistry.register(makeBlockDef(unknownId, "cube", { name: "Late" }));
 
     assert.equal(countVertices(f), 24);
   });
@@ -488,18 +473,12 @@ describe("VoxelMeshBuilder — precompiled geometry follows registry changes", (
   it("recomputes UVs when a tileset is re-registered with a new tile size", () => {
     const f = makeFixture();
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
-    const chunk = f.layer.getChunk(0, 0, 0)!;
 
-    const before = [...f.builder.buildChunkGeometries(chunk, f.layer)!.values()][0]
-      .getAttribute("uv").getX(1);
+    const before = firstGeometry(f).getAttribute("uv").getX(1);
 
-    f.tilesetManager.registerTexture(
-      { id: "atlas", src: "/atlas.png", tileSize: 8, cols: 4, rows: 4 },
-      mockTexture()
-    );
+    f.tilesetManager.registerTexture(makeAtlasDef({ tileSize: 8 }), mockTexture());
 
-    const after = [...f.builder.buildChunkGeometries(chunk, f.layer)!.values()][0]
-      .getAttribute("uv").getX(1);
+    const after = firstGeometry(f).getAttribute("uv").getX(1);
 
     assert.notEqual(before, after);
   });
@@ -509,9 +488,8 @@ describe("VoxelMeshBuilder — build statistics", () => {
   it("counts the voxels, faces and geometry of an isolated cube", () => {
     const f = makeFixture();
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
-    const chunk = f.layer.getChunk(0, 0, 0)!;
 
-    f.builder.buildChunkGeometries(chunk, f.layer);
+    buildGeometries(f);
     const { stats } = f.builder;
 
     assert.equal(stats.voxels, 1);
@@ -528,9 +506,8 @@ describe("VoxelMeshBuilder — build statistics", () => {
     const f = makeFixture();
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
     f.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
-    const chunk = f.layer.getChunk(0, 0, 0)!;
 
-    f.builder.buildChunkGeometries(chunk, f.layer);
+    buildGeometries(f);
     const { stats } = f.builder;
 
     assert.equal(stats.voxels, 2);
@@ -545,7 +522,8 @@ describe("VoxelMeshBuilder — build statistics", () => {
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
     top.setVoxelAt({ x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
 
-    f.builder.buildChunkGeometries(f.layer.getChunk(0, 0, 0)!, f.layer);
+    const chunk = getChunk(f);
+    f.builder.buildChunkGeometries(chunk, f.layer);
     const { stats } = f.builder;
 
     assert.equal(stats.voxels, 1);
@@ -556,8 +534,7 @@ describe("VoxelMeshBuilder — build statistics", () => {
   it("resets the counters when a chunk emits nothing", () => {
     const f = makeFixture();
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
-    const chunk = f.layer.getChunk(0, 0, 0)!;
-    f.builder.buildChunkGeometries(chunk, f.layer);
+    buildGeometries(f);
 
     const empty = f.layer.getOrCreateChunk(2, 0, 0);
     assert.equal(f.builder.buildChunkGeometries(empty, f.layer), null);
@@ -571,7 +548,7 @@ describe("VoxelMeshBuilder — derived stats", () => {
   it("reports faces per solid voxel", () => {
     const f = makeFixture();
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
-    f.builder.buildChunkGeometries(f.layer.getChunk(0, 0, 0)!, f.layer);
+    buildGeometries(f);
 
     // One isolated cube: six visible faces, one solid voxel.
     assert.equal(f.builder.stats.voxels, 1);
@@ -588,7 +565,7 @@ describe("VoxelMeshBuilder — derived stats", () => {
   it("reports the emitted vertex size in bytes", () => {
     const f = makeFixture();
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
-    f.builder.buildChunkGeometries(f.layer.getChunk(0, 0, 0)!, f.layer);
+    buildGeometries(f);
 
     // position 3×f32 + normal 3×i8 + uv 2×u16.
     assert.equal(f.builder.stats.bytesPerVertex, 12 + 3 + 4);
@@ -621,8 +598,7 @@ describe("VoxelMeshBuilder — neighbour lookups across chunks and layer offsets
     f.world.setVoxelAt("test", { x: 3, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
     f.world.setVoxelAt("test", { x: 4, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
 
-    const chunk = f.layer.getChunk(0, 0, 0)!;
-    f.builder.buildChunkGeometries(chunk, f.layer);
+    buildGeometries(f);
 
     assert.equal(f.builder.stats.culledFaces, 1);
     assert.equal(f.builder.stats.faces, 5);
@@ -633,8 +609,7 @@ describe("VoxelMeshBuilder — neighbour lookups across chunks and layer offsets
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
     f.world.setVoxelAt("test", { x: -1, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
 
-    const chunk = f.layer.getChunk(0, 0, 0)!;
-    f.builder.buildChunkGeometries(chunk, f.layer);
+    buildGeometries(f);
 
     assert.equal(f.builder.stats.culledFaces, 1);
     assert.equal(f.builder.stats.faces, 5);

@@ -8,44 +8,40 @@ import { BlockShapeRegistry } from "../../src/blocks/BlockShapeRegistry.ts";
 import { TilesetManager } from "../../src/tileset/TilesetManager.ts";
 import { BlockVariantCache } from "../../src/mesh/BlockVariantCache.ts";
 import { packTransform } from "../../src/utils/math.ts";
+import { mockTexture } from "../helpers/mockTexture.ts";
+import { DEFAULT_TEXTURE, makeBlockDef } from "../helpers/blocks.ts";
+import { makeAtlasDef } from "../helpers/atlas.ts";
 
 // CONSTANTS
 const kCubeId = 1;
 const kRampId = 2;
 const kSlabId = 3;
 const kLeavesId = 4;
-const kDefaultTexture = { col: 0, row: 0 };
-
-function mockTexture(): any {
-  return {
-    magFilter: 0,
-    minFilter: 0,
-    colorSpace: "",
-    generateMipmaps: true,
-    image: { width: 64, height: 64 }
-  };
-}
 
 function makeCache() {
   const blockRegistry = new BlockRegistry([
-    { id: kCubeId, name: "Cube", shapeId: "cube", faceTextures: {}, defaultTexture: kDefaultTexture, collidable: true },
-    { id: kRampId, name: "Ramp", shapeId: "ramp", faceTextures: {}, defaultTexture: kDefaultTexture, collidable: true },
-    { id: kSlabId, name: "Slab", shapeId: "slab", faceTextures: {}, defaultTexture: kDefaultTexture, collidable: true }
+    makeBlockDef(kCubeId, "cube", { name: "Cube" }),
+    makeBlockDef(kRampId, "ramp", { name: "Ramp" }),
+    makeBlockDef(kSlabId, "slab", { name: "Slab" })
   ]);
   const shapeRegistry = BlockShapeRegistry.createDefault();
   const tilesetManager = new TilesetManager();
   tilesetManager.registerTexture(
-    { id: "atlas", src: "/atlas.png", tileSize: 16, cols: 4, rows: 4 },
+    makeAtlasDef(),
     mockTexture()
   );
 
-  const cache = new BlockVariantCache({ blockRegistry, shapeRegistry, tilesetManager });
+  const cache = new BlockVariantCache({
+    blockRegistry,
+    shapeRegistry,
+    tilesetManager
+  });
   cache.refresh();
 
   return { cache, blockRegistry };
 }
 
-describe("BlockVariantCache.occlusionMaskOf", () => {
+describe("BlockVariantCache — occlusionMaskOf", () => {
   it("agrees with the compiled variant for every block and transform", () => {
     const { cache } = makeCache();
 
@@ -81,13 +77,20 @@ describe("BlockVariantCache.occlusionMaskOf", () => {
 
     // Re-registering the id as a full cube changes which faces it occludes.
     blockRegistry.register({
-      id: kSlabId, name: "Now a cube", shapeId: "cube",
-      faceTextures: {}, defaultTexture: kDefaultTexture, collidable: true
+      id: kSlabId,
+      name: "Now a cube",
+      shapeId: "cube",
+      faceTextures: {},
+      defaultTexture: DEFAULT_TEXTURE,
+      collidable: true
     });
     cache.refresh();
 
     assert.notEqual(cache.occlusionMaskOf(kSlabId, 0), before);
-    assert.equal(cache.occlusionMaskOf(kSlabId, 0), cache.occlusionMaskOf(kCubeId, 0));
+    assert.equal(
+      cache.occlusionMaskOf(kSlabId, 0),
+      cache.occlusionMaskOf(kCubeId, 0)
+    );
   });
 
   it("masks the transform to the five bits a packed voxel carries", () => {
@@ -106,14 +109,17 @@ describe("BlockVariantCache.occlusionMaskOf", () => {
     // Same shape as the reference cube, which occludes all six faces.
     assert.equal(cache.occlusionMaskOf(kCubeId, 0), 0b111111);
 
-    blockRegistry.register({
-      id: kLeavesId, name: "Leaves", shapeId: "cube", transparent: true,
-      faceTextures: {}, defaultTexture: kDefaultTexture, collidable: true
-    });
+    blockRegistry.register(
+      makeBlockDef(kLeavesId, "cube", { name: "Leaves", transparent: true })
+    );
     cache.refresh();
 
     for (let transform = 0; transform < 32; transform++) {
-      assert.equal(cache.occlusionMaskOf(kLeavesId, transform), 0, `transform ${transform}`);
+      assert.equal(
+        cache.occlusionMaskOf(kLeavesId, transform),
+        0,
+        `transform ${transform}`
+      );
     }
   });
 });

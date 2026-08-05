@@ -10,16 +10,14 @@ import {
   FLIPPED_ANTI_DIAGONAL,
   TILED_FLIPPED_FLAGS
 } from "../../../src/plugins/tiled/TileSet.ts";
-
-// CONSTANTS
-const kEpsilon = 1e-10;
-
-function approxEqual(a: number, b: number): boolean {
-  return Math.abs(a - b) < kEpsilon;
-}
+import type { TiledMapTileset } from "../../../src/plugins/tiled/types.ts";
+import { approxEqual } from "../../helpers/math.ts";
 
 // A 4-column, 2-row tileset starting at GID 1 (8 tiles total)
-function makeTileset(firstgid = 1) {
+function makeTileset(
+  firstgid = 1,
+  overrides: Partial<TiledMapTileset> = {}
+): TileSet {
   return new TileSet({
     firstgid,
     name: "terrain",
@@ -27,8 +25,9 @@ function makeTileset(firstgid = 1) {
     columns: 4,
     tilewidth: 16,
     tileheight: 16,
-    source: "terrain.tsx"
-  } as any);
+    source: "terrain.tsx",
+    ...overrides
+  });
 }
 
 describe("TileSet constants", () => {
@@ -150,33 +149,35 @@ describe("TileSet.getTileProperties — UV math", () => {
   it("first tile (GID=1, local=0) → col=0, row=0", () => {
     const props = ts.getTileProperties(1);
     assert.ok(props !== null);
-    assert.equal(props!.coords.x, 0);
-    assert.equal(props!.coords.y, 0);
+    assert.equal(props.coords.x, 0);
+    assert.equal(props.coords.y, 0);
   });
 
   it("GID=2 (local=1) → col=1, row=0", () => {
     const props = ts.getTileProperties(2);
     assert.ok(props !== null);
-    assert.equal(props!.coords.x, 1);
-    assert.equal(props!.coords.y, 0);
+    assert.equal(props.coords.x, 1);
+    assert.equal(props.coords.y, 0);
   });
 
   it("GID=5 (local=4) → col=0, row=1", () => {
     const props = ts.getTileProperties(5);
     assert.ok(props !== null);
-    assert.equal(props!.coords.x, 0);
-    assert.equal(props!.coords.y, 1);
+    assert.equal(props.coords.x, 0);
+    assert.equal(props.coords.y, 1);
   });
 
   it("UV size is 1/cols × 1/rows", () => {
-    const props = ts.getTileProperties(1)!;
+    const props = ts.getTileProperties(1);
+    assert.ok(props !== null);
     assert.ok(approxEqual(props.uv.size.x, 1 / 4));
     assert.ok(approxEqual(props.uv.size.y, 1 / 2));
   });
 
   it("UV offset for (col=0, row=0) → offsetU=0, offsetV=0.5 (Y-flipped)", () => {
     // Y-flip: offsetV = 1 - (row+1)/rows = 1 - 1/2 = 0.5
-    const props = ts.getTileProperties(1)!;
+    const props = ts.getTileProperties(1);
+    assert.ok(props !== null);
     assert.ok(approxEqual(props.uv.offset.x, 0));
     assert.ok(approxEqual(props.uv.offset.y, 0.5));
   });
@@ -184,7 +185,8 @@ describe("TileSet.getTileProperties — UV math", () => {
   it("UV offset for (col=2, row=1) → offsetU=0.5, offsetV=0", () => {
     // col=2 → offsetU = 2/4 = 0.5
     // row=1 → offsetV = 1 - (1+1)/2 = 0
-    const props = ts.getTileProperties(7)!;
+    const props = ts.getTileProperties(7);
+    assert.ok(props !== null);
     assert.ok(approxEqual(props.uv.offset.x, 0.5));
     assert.ok(approxEqual(props.uv.offset.y, 0));
   });
@@ -196,7 +198,8 @@ describe("TileSet.getTileProperties — UV math", () => {
 
   it("flip bits are correctly decoded", () => {
     const gid = 1 | FLIPPED_HORIZONTAL | FLIPPED_ANTI_DIAGONAL;
-    const props = ts.getTileProperties(gid)!;
+    const props = ts.getTileProperties(gid);
+    assert.ok(props !== null);
     assert.equal(props.flippedX, true);
     assert.equal(props.flippedY, false);
     assert.equal(props.flippedAD, true);
@@ -207,14 +210,14 @@ describe("TileSet.find", () => {
   it("returns the tileset containing the GID", () => {
     // GIDs 1–8
     const ts1 = makeTileset(1);
-    const ts2 = new TileSet({ firstgid: 9, name: "walls", tilecount: 4, columns: 2, tilewidth: 16, tileheight: 16 } as any);
+    const ts2 = makeTileset(9, { name: "walls", tilecount: 4, columns: 2 });
     const found = TileSet.find([ts1, ts2], 10);
     assert.equal(found, ts2);
   });
 
   it("returns the first tileset for GIDs in its range", () => {
     const ts1 = makeTileset(1);
-    const ts2 = new TileSet({ firstgid: 9, name: "walls", tilecount: 4, columns: 2, tilewidth: 16, tileheight: 16 } as any);
+    const ts2 = makeTileset(9, { name: "walls", tilecount: 4, columns: 2 });
     // Deliberately unordered input
     const found = TileSet.find([ts2, ts1], 3);
     assert.equal(found, ts1);

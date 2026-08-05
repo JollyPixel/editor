@@ -8,14 +8,27 @@ import type { VoxelChunkCollision } from "../../../src/collision/VoxelCollider.t
 import { VoxelChunk } from "../../../src/world/VoxelChunk.ts";
 import { BlockRegistry } from "../../../src/blocks/BlockRegistry.ts";
 import { BlockShapeRegistry } from "../../../src/blocks/BlockShapeRegistry.ts";
+import type {
+  RapierAPI,
+  RapierCollider,
+  RapierColliderDesc,
+  RapierRigidBody,
+  RapierRigidBodyDesc
+} from "../../../src/plugins/rapier/RapierVoxelCollider.types.ts";
+import type { BlockDefinitionIn } from "../../../src/blocks/BlockDefinition.ts";
 
 // CONSTANTS
 const kNoGeometries = new Map();
 
-function makeColliderDesc(hx: number, hy: number, hz: number) {
+function makeColliderDesc(hx: number, hy: number, hz: number): RapierColliderDesc & {
+  hx: number;
+  hy: number;
+  hz: number;
+  _translation: { x: number; y: number; z: number; } | null;
+} {
   return {
     hx, hy, hz,
-    _translation: null as null | { x: number; y: number; z: number; },
+    _translation: null,
     setTranslation(x: number, y: number, z: number) {
       this._translation = { x, y, z };
 
@@ -24,9 +37,11 @@ function makeColliderDesc(hx: number, hy: number, hz: number) {
   };
 }
 
-function makeRigidBodyDesc() {
+function makeRigidBodyDesc(): RapierRigidBodyDesc & {
+  _translation: { x: number; y: number; z: number; } | null;
+} {
   return {
-    _translation: null as null | { x: number; y: number; z: number; },
+    _translation: null,
     setTranslation(x: number, y: number, z: number) {
       this._translation = { x, y, z };
 
@@ -36,9 +51,9 @@ function makeRigidBodyDesc() {
 }
 
 function makeMockWorld() {
-  const rigidBodies: { handle: number; }[] = [];
-  const colliderCalls: { desc: any; parent: any; }[] = [];
-  const removedBodies: { handle: number; }[] = [];
+  const rigidBodies: RapierRigidBody[] = [];
+  const colliderCalls: { desc: any; parent: RapierRigidBody | undefined; }[] = [];
+  const removedBodies: RapierRigidBody[] = [];
 
   return {
     rigidBodies,
@@ -50,22 +65,22 @@ function makeMockWorld() {
       return rigidBodies.filter((body) => !removedBodies.includes(body));
     },
 
-    createRigidBody(_desc: any) {
+    createRigidBody(_desc: RapierRigidBodyDesc): RapierRigidBody {
       const body = { handle: rigidBodies.length };
       rigidBodies.push(body);
 
       return body;
     },
-    createCollider(desc: any, parent?: any) {
+    createCollider(desc: RapierColliderDesc, parent?: RapierRigidBody): RapierCollider {
       const handle = colliderCalls.length;
       colliderCalls.push({ desc, parent });
 
       return { handle };
     },
-    removeCollider(_collider: any, _wakeUp: boolean) {
+    removeCollider(_collider: RapierCollider, _wakeUp: boolean): void {
       // no-op
     },
-    removeRigidBody(body: any) {
+    removeRigidBody(body: RapierRigidBody): void {
       removedBodies.push(body);
     }
   };
@@ -89,17 +104,23 @@ function makeMockRapier() {
         return makeColliderDesc(hx, hy, hz);
       },
       trimesh(vertices: Float32Array, indices: Uint32Array) {
-        return { vertices, indices };
+        return {
+          vertices,
+          indices,
+          setTranslation(_x: number, _y: number, _z: number): void {
+            // no-op — trimesh translation is baked into vertex data instead.
+          }
+        };
       }
     }
   };
 }
 
-function makeBlockDef(id: number, shapeId: string, collidable = true) {
+function makeBlockDef(id: number, shapeId: string, collidable = true): BlockDefinitionIn {
   return {
     id,
     name: `Block${id}`,
-    shapeId: shapeId as any,
+    shapeId,
     faceTextures: {},
     defaultTexture: { col: 0, row: 0, tilesetId: "atlas" },
     collidable
@@ -112,8 +133,10 @@ function makeCollider(
   const world = makeMockWorld();
   const rapier = makeMockRapier();
   const collider = new RapierVoxelCollider({
-    api: rapier as any,
-    world: world as any,
+    // trimesh()'s no-op setTranslation() returns void, not `this`, so the mock
+    // does not structurally satisfy RapierColliderDesc — narrow instead of `any`.
+    api: rapier as unknown as RapierAPI,
+    world,
     blockRegistry: new BlockRegistry(blocks),
     shapeRegistry: BlockShapeRegistry.createDefault()
   });

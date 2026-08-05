@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { TiledConverter } from "../../../src/plugins/tiled/TiledConverter.ts";
+import type { TiledMap } from "../../../src/plugins/tiled/types.ts";
 
 // Simple resolver that returns the tileset name as the src path
 function simpleSrc(_src: string, id: string) {
@@ -11,8 +12,16 @@ function simpleSrc(_src: string, id: string) {
 }
 
 // Minimal 2×2 tile map with a single tileset (4 tiles: 2 cols, 2 rows)
-function makeMinimalMap(data: number[] | string = [1, 2, 0, 3]) {
+function makeMinimalMap(
+  data: number[] | string = [1, 2, 0, 3],
+  overrides: Partial<TiledMap> = {}
+): TiledMap {
   return {
+    version: "1.10",
+    infinite: false,
+    orientation: "orthogonal",
+    nextlayerid: 2,
+    nextobjectid: 1,
     width: 2,
     height: 2,
     tilewidth: 16,
@@ -31,11 +40,15 @@ function makeMinimalMap(data: number[] | string = [1, 2, 0, 3]) {
       id: 1,
       name: "Ground",
       visible: true,
+      opacity: 1,
+      x: 0,
+      y: 0,
       data,
       width: 2,
       height: 2
-    }]
-  } as any;
+    }],
+    ...overrides
+  };
 }
 
 describe("TiledConverter.convert — output structure", () => {
@@ -104,13 +117,16 @@ describe("TiledConverter.convert — layerMode", () => {
   const converter = new TiledConverter();
 
   it("flat mode places all layers at Y=0", () => {
-    const map = {
-      ...makeMinimalMap([1, 0, 0, 0]),
+    const map = makeMinimalMap([1, 0, 0, 0], {
       layers: [
-        { type: "tilelayer", id: 1, name: "L0", visible: true, data: [1, 0, 0, 0], width: 2 },
-        { type: "tilelayer", id: 2, name: "L1", visible: true, data: [1, 0, 0, 0], width: 2 }
+        {
+          type: "tilelayer", id: 1, name: "L0", visible: true, opacity: 1, x: 0, y: 0, data: [1, 0, 0, 0], width: 2, height: 2
+        },
+        {
+          type: "tilelayer", id: 2, name: "L1", visible: true, opacity: 1, x: 0, y: 0, data: [1, 0, 0, 0], width: 2, height: 2
+        }
       ]
-    } as any;
+    });
 
     const result = converter.convert(map, { resolveTilesetSrc: simpleSrc, layerMode: "flat" });
     const y0 = Object.keys(result.layers[0].voxels)[0].split(",")[1];
@@ -120,13 +136,16 @@ describe("TiledConverter.convert — layerMode", () => {
   });
 
   it("stacked mode places layer N at Y=N", () => {
-    const map = {
-      ...makeMinimalMap([1, 0, 0, 0]),
+    const map = makeMinimalMap([1, 0, 0, 0], {
       layers: [
-        { type: "tilelayer", id: 1, name: "L0", visible: true, data: [1, 0, 0, 0], width: 2 },
-        { type: "tilelayer", id: 2, name: "L1", visible: true, data: [1, 0, 0, 0], width: 2 }
+        {
+          type: "tilelayer", id: 1, name: "L0", visible: true, opacity: 1, x: 0, y: 0, data: [1, 0, 0, 0], width: 2, height: 2
+        },
+        {
+          type: "tilelayer", id: 2, name: "L1", visible: true, opacity: 1, x: 0, y: 0, data: [1, 0, 0, 0], width: 2, height: 2
+        }
       ]
-    } as any;
+    });
 
     const result = converter.convert(map, { resolveTilesetSrc: simpleSrc, layerMode: "stacked" });
     const y0 = Object.keys(result.layers[0].voxels)[0].split(",")[1];
@@ -140,26 +159,31 @@ describe("TiledConverter.convert — group layers", () => {
   const converter = new TiledConverter();
 
   it("tile layers nested in a group are flattened into the output", () => {
-    const map = {
-      width: 2,
+    const map = makeMinimalMap(undefined, {
       height: 1,
-      tilewidth: 16,
-      tileheight: 16,
       tilesets: [{ firstgid: 1, name: "t", tilecount: 4, columns: 2, tilewidth: 16, tileheight: 16 }],
       layers: [{
         type: "group",
         id: 10,
         name: "GroupA",
+        visible: true,
+        opacity: 1,
+        x: 0,
+        y: 0,
         layers: [{
           type: "tilelayer",
           id: 1,
           name: "Nested",
           visible: true,
+          opacity: 1,
+          x: 0,
+          y: 0,
           data: [1, 2],
-          width: 2
+          width: 2,
+          height: 1
         }]
       }]
-    } as any;
+    });
 
     const result = converter.convert(map, { resolveTilesetSrc: simpleSrc });
     assert.equal(result.layers.length, 1);
@@ -191,21 +215,24 @@ describe("TiledConverter.convert — error paths", () => {
   const converter = new TiledConverter();
 
   it("throws for infinite (chunked) maps", () => {
-    const map = {
+    const map = makeMinimalMap([], {
       width: 0,
       height: 0,
-      tilewidth: 16,
-      tileheight: 16,
       tilesets: [],
       layers: [{
         type: "tilelayer",
         id: 1,
         name: "Infinite",
         visible: true,
-        data: [] as number[],
+        opacity: 1,
+        x: 0,
+        y: 0,
+        data: [],
+        width: 0,
+        height: 0,
         chunks: [{ data: [1], x: 0, y: 0, width: 1, height: 1 }]
       }]
-    } as any;
+    });
 
     assert.throws(
       () => converter.convert(map, { resolveTilesetSrc: simpleSrc }),
@@ -214,21 +241,22 @@ describe("TiledConverter.convert — error paths", () => {
   });
 
   it("throws for compressed data", () => {
-    const map = {
-      width: 2,
-      height: 2,
-      tilewidth: 16,
-      tileheight: 16,
+    const map = makeMinimalMap("abc", {
       tilesets: [],
       layers: [{
         type: "tilelayer",
         id: 1,
         name: "Compressed",
         visible: true,
+        opacity: 1,
+        x: 0,
+        y: 0,
         data: "abc",
+        width: 2,
+        height: 2,
         compression: "zlib"
       }]
-    } as any;
+    });
 
     assert.throws(
       () => converter.convert(map, { resolveTilesetSrc: simpleSrc }),
@@ -241,17 +269,18 @@ describe("TiledConverter.convert — object layers", () => {
   const converter = new TiledConverter();
 
   it("object layers are included in objectLayers", () => {
-    const map = {
+    const map = makeMinimalMap(undefined, {
       width: 10,
       height: 10,
-      tilewidth: 16,
-      tileheight: 16,
       tilesets: [],
       layers: [{
         type: "objectgroup",
         id: 2,
         name: "Spawns",
         visible: true,
+        opacity: 1,
+        x: 0,
+        y: 0,
         objects: [{
           id: 1,
           name: "PlayerStart",
@@ -264,7 +293,7 @@ describe("TiledConverter.convert — object layers", () => {
           properties: [{ name: "team", type: "string", value: "blue" }]
         }]
       }]
-    } as any;
+    });
 
     const result = converter.convert(map, { resolveTilesetSrc: simpleSrc });
     assert.ok(result.objectLayers !== undefined);

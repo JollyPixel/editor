@@ -4,10 +4,10 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { VoxelLayer } from "../../src/world/VoxelLayer.ts";
+import { makeVoxelEntry } from "../helpers/voxelEntry.ts";
 
-function makeEntry(blockId = 1, transform = 0) {
-  return { blockId, transform };
-}
+// CONSTANTS
+const kOutOfRangeCoord = 1 << 20;
 
 function makeLayer(opts?: Partial<ConstructorParameters<typeof VoxelLayer>[0]>) {
   return new VoxelLayer({
@@ -118,47 +118,47 @@ describe("VoxelLayer opacity", () => {
   });
 });
 
-describe("setVoxelAt / getVoxelAt round-trip", () => {
+describe("VoxelLayer setVoxelAt / getVoxelAt round-trip", () => {
   it("retrieves the entry at the same position", () => {
     const layer = makeLayer();
-    const entry = makeEntry(7, 3);
+    const entry = makeVoxelEntry(7, 3);
     layer.setVoxelAt({ x: 2, y: 1, z: 3 }, entry);
     assert.deepEqual(layer.getVoxelAt({ x: 2, y: 1, z: 3 }), entry);
   });
 
   it("returns undefined for positions not set", () => {
     const layer = makeLayer();
-    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeEntry());
+    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
     assert.equal(layer.getVoxelAt({ x: 1, y: 0, z: 0 }), undefined);
   });
 
   it("creates one chunk when first voxel is set in it", () => {
     const layer = makeLayer();
     assert.equal(layer.chunkCount, 0);
-    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeEntry());
+    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
     assert.equal(layer.chunkCount, 1);
   });
 
   it("creates a second chunk for a voxel in a different chunk", () => {
     const layer = makeLayer({ chunkSize: 4 });
-    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeEntry());
+    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
     // cx=1
-    layer.setVoxelAt({ x: 4, y: 0, z: 0 }, makeEntry());
+    layer.setVoxelAt({ x: 4, y: 0, z: 0 }, makeVoxelEntry());
     assert.equal(layer.chunkCount, 2);
   });
 });
 
-describe("negative coordinates", () => {
+describe("VoxelLayer negative coordinates", () => {
   it("setVoxelAt / getVoxelAt work for negative positions", () => {
     const layer = makeLayer();
-    const entry = makeEntry(3);
+    const entry = makeVoxelEntry(3);
     layer.setVoxelAt({ x: -1, y: 0, z: -1 }, entry);
     assert.deepEqual(layer.getVoxelAt({ x: -1, y: 0, z: -1 }), entry);
   });
 
   it("negative x=-1 lands in chunk cx=-1", () => {
     const layer = makeLayer({ chunkSize: 4 });
-    layer.setVoxelAt({ x: -1, y: 0, z: 0 }, makeEntry());
+    layer.setVoxelAt({ x: -1, y: 0, z: 0 }, makeVoxelEntry());
     // Chunk cx for x=-1 is floor(-1/4) = -1
     const chunk = layer.getChunk(-1, 0, 0);
     assert.ok(chunk !== undefined, "chunk at cx=-1 should exist");
@@ -167,8 +167,8 @@ describe("negative coordinates", () => {
 
   it("does not conflate x=-1 with x=3 in a size-4 chunk", () => {
     const layer = makeLayer({ chunkSize: 4 });
-    const entryNeg = makeEntry(1);
-    const entryPos = makeEntry(2);
+    const entryNeg = makeVoxelEntry(1);
+    const entryPos = makeVoxelEntry(2);
     layer.setVoxelAt({ x: -1, y: 0, z: 0 }, entryNeg);
     layer.setVoxelAt({ x: 3, y: 0, z: 0 }, entryPos);
     assert.deepEqual(layer.getVoxelAt({ x: -1, y: 0, z: 0 }), entryNeg);
@@ -176,10 +176,10 @@ describe("negative coordinates", () => {
   });
 });
 
-describe("offset arithmetic", () => {
+describe("VoxelLayer offset arithmetic", () => {
   it("with offset {x:8}, world pos {x:8,y:0,z:0} lands in chunk 0 of the layer", () => {
     const layer = makeLayer({ chunkSize: 4, offset: { x: 8, y: 0, z: 0 } });
-    const entry = makeEntry();
+    const entry = makeVoxelEntry();
     layer.setVoxelAt({ x: 8, y: 0, z: 0 }, entry);
     // local x = 8-8 = 0 → cx=0
     const chunk = layer.getChunk(0, 0, 0);
@@ -189,17 +189,17 @@ describe("offset arithmetic", () => {
 
   it("offset shifts all accesses by the same amount", () => {
     const layer = makeLayer({ chunkSize: 16, offset: { x: 100, y: 0, z: 0 } });
-    const entry = makeEntry(42);
+    const entry = makeVoxelEntry(42);
     layer.setVoxelAt({ x: 100, y: 0, z: 0 }, entry);
     assert.deepEqual(layer.getVoxelAt({ x: 100, y: 0, z: 0 }), entry);
     assert.equal(layer.getVoxelAt({ x: 99, y: 0, z: 0 }), undefined);
   });
 });
 
-describe("removeVoxelAt", () => {
+describe("VoxelLayer removeVoxelAt", () => {
   it("removes an existing voxel", () => {
     const layer = makeLayer();
-    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeEntry());
+    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
     layer.removeVoxelAt({ x: 0, y: 0, z: 0 });
     assert.equal(layer.getVoxelAt({ x: 0, y: 0, z: 0 }), undefined);
   });
@@ -211,7 +211,7 @@ describe("removeVoxelAt", () => {
 
   it("deletes the chunk when it becomes empty", () => {
     const layer = makeLayer();
-    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeEntry());
+    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
     assert.equal(layer.chunkCount, 1);
     layer.removeVoxelAt({ x: 0, y: 0, z: 0 });
     assert.equal(layer.chunkCount, 0);
@@ -219,14 +219,14 @@ describe("removeVoxelAt", () => {
 
   it("does not delete the chunk when another voxel remains", () => {
     const layer = makeLayer();
-    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeEntry());
-    layer.setVoxelAt({ x: 1, y: 0, z: 0 }, makeEntry());
+    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
+    layer.setVoxelAt({ x: 1, y: 0, z: 0 }, makeVoxelEntry());
     layer.removeVoxelAt({ x: 0, y: 0, z: 0 });
     assert.equal(layer.chunkCount, 1);
   });
 });
 
-describe("getOrCreateChunk", () => {
+describe("VoxelLayer getOrCreateChunk", () => {
   it("creates a new chunk on first call", () => {
     const layer = makeLayer();
     const chunk = layer.getOrCreateChunk(2, 3, 4);
@@ -243,11 +243,12 @@ describe("getOrCreateChunk", () => {
   });
 });
 
-describe("markChunkDirty", () => {
+describe("VoxelLayer markChunkDirty", () => {
   it("sets dirty=true on an existing chunk", () => {
     const layer = makeLayer();
-    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeEntry());
-    const chunk = layer.getChunk(0, 0, 0)!;
+    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
+    const chunk = layer.getChunk(0, 0, 0);
+    assert.ok(chunk !== undefined);
     chunk.dirty = false;
     layer.markChunkDirty(0, 0, 0);
     assert.equal(chunk.dirty, true);
@@ -259,17 +260,17 @@ describe("markChunkDirty", () => {
   });
 });
 
-describe("getChunks", () => {
+describe("VoxelLayer getChunks", () => {
   it("yields all live chunks", () => {
     const layer = makeLayer({ chunkSize: 4 });
-    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeEntry());
-    layer.setVoxelAt({ x: 4, y: 0, z: 0 }, makeEntry());
+    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
+    layer.setVoxelAt({ x: 4, y: 0, z: 0 }, makeVoxelEntry());
     const chunks = [...layer.getChunks()];
     assert.equal(chunks.length, 2);
   });
 });
 
-describe("toJSON", () => {
+describe("VoxelLayer toJSON", () => {
   it("includes opacity", () => {
     const layer = makeLayer({ opacity: 0.5 });
     assert.equal(layer.toJSON().opacity, 0.5);
@@ -280,7 +281,7 @@ describe("toJSON", () => {
   });
 });
 
-describe("clone", () => {
+describe("VoxelLayer clone", () => {
   it("should clone a layer", () => {
     const layer = makeLayer({ chunkSize: 4 });
     const clone = layer.clone();
@@ -307,7 +308,7 @@ describe("VoxelLayer mergeFrom", () => {
   it("copies voxels at correct world positions (both layers at offset {0,0,0})", () => {
     const source = makeLayer({ id: "src", name: "Source" });
     const target = makeLayer({ id: "tgt", name: "Target" });
-    const entry = makeEntry(5, 2);
+    const entry = makeVoxelEntry(5, 2);
     source.setVoxelAt({ x: 2, y: 1, z: 3 }, entry);
 
     target.mergeFrom(source);
@@ -318,7 +319,7 @@ describe("VoxelLayer mergeFrom", () => {
   it("applies source offset: voxel at local (1,0,0) with source offset {5,0,0} lands at world (6,0,0)", () => {
     const source = makeLayer({ id: "src", name: "Source", offset: { x: 5, y: 0, z: 0 } });
     const target = makeLayer({ id: "tgt", name: "Target" });
-    const entry = makeEntry(3, 0);
+    const entry = makeVoxelEntry(3, 0);
     // Local (1,0,0) → world (6,0,0)
     source.setVoxelAt({ x: 6, y: 0, z: 0 }, entry);
 
@@ -331,7 +332,7 @@ describe("VoxelLayer mergeFrom", () => {
   it("applies target offset: target with offset {3,0,0} stores world (6,0,0) at local (3,0,0)", () => {
     const source = makeLayer({ id: "src", name: "Source", offset: { x: 5, y: 0, z: 0 } });
     const target = makeLayer({ id: "tgt", name: "Target", offset: { x: 3, y: 0, z: 0 } });
-    const entry = makeEntry(7, 1);
+    const entry = makeVoxelEntry(7, 1);
     source.setVoxelAt({ x: 6, y: 0, z: 0 }, entry);
 
     target.mergeFrom(source);
@@ -343,8 +344,8 @@ describe("VoxelLayer mergeFrom", () => {
   it("source voxel overwrites existing target voxel at same world position", () => {
     const source = makeLayer({ id: "src", name: "Source" });
     const target = makeLayer({ id: "tgt", name: "Target" });
-    const original = makeEntry(1, 0);
-    const overwrite = makeEntry(9, 3);
+    const original = makeVoxelEntry(1, 0);
+    const overwrite = makeVoxelEntry(9, 3);
     target.setVoxelAt({ x: 0, y: 0, z: 0 }, original);
     source.setVoxelAt({ x: 0, y: 0, z: 0 }, overwrite);
 
@@ -356,7 +357,7 @@ describe("VoxelLayer mergeFrom", () => {
   it("source layer is not modified after merge", () => {
     const source = makeLayer({ id: "src", name: "Source" });
     const target = makeLayer({ id: "tgt", name: "Target" });
-    const entry = makeEntry(2, 0);
+    const entry = makeVoxelEntry(2, 0);
     source.setVoxelAt({ x: 1, y: 1, z: 1 }, entry);
 
     target.mergeFrom(source);
@@ -376,12 +377,16 @@ describe("VoxelLayer chunk keys", () => {
 
   it("keeps negative chunk coordinates distinct", () => {
     const layer = makeLayer({ chunkSize: 4 });
-    layer.setVoxelAt({ x: -1, y: -1, z: -1 }, makeEntry(1));
-    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeEntry(2));
+    layer.setVoxelAt({ x: -1, y: -1, z: -1 }, makeVoxelEntry(1));
+    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(2));
 
     assert.equal(layer.chunkCount, 2);
-    assert.equal(layer.getVoxelAt({ x: -1, y: -1, z: -1 })!.blockId, 1);
-    assert.equal(layer.getVoxelAt({ x: 0, y: 0, z: 0 })!.blockId, 2);
+    const negEntry = layer.getVoxelAt({ x: -1, y: -1, z: -1 });
+    assert.ok(negEntry !== undefined);
+    assert.equal(negEntry.blockId, 1);
+    const originEntry = layer.getVoxelAt({ x: 0, y: 0, z: 0 });
+    assert.ok(originEntry !== undefined);
+    assert.equal(originEntry.blockId, 2);
   });
 
   it("does not alias two chunks onto one key", () => {
@@ -403,13 +408,13 @@ describe("VoxelLayer chunk keys", () => {
   it("throws rather than aliasing a chunk beyond the packable range", () => {
     const layer = makeLayer({ chunkSize: 4 });
 
-    assert.throws(() => layer.getOrCreateChunk(1 << 20, 0, 0), RangeError);
-    assert.throws(() => layer.getOrCreateChunk(0, 1 << 20, 0), RangeError);
+    assert.throws(() => layer.getOrCreateChunk(kOutOfRangeCoord, 0, 0), RangeError);
+    assert.throws(() => layer.getOrCreateChunk(0, kOutOfRangeCoord, 0), RangeError);
   });
 
   it("forgets the memoized chunk once it is dropped", () => {
     const layer = makeLayer({ chunkSize: 4 });
-    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeEntry());
+    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
     // Warms the memo.
     assert.ok(layer.getChunk(0, 0, 0));
 
@@ -424,13 +429,13 @@ describe("VoxelLayer chunk range edges", () => {
   it("answers undefined rather than throwing for a chunk past the range", () => {
     const layer = makeLayer({ chunkSize: 4 });
 
-    assert.equal(layer.getChunk(1 << 20, 0, 0), undefined);
-    assert.equal(layer.getChunk(0, -(1 << 20), 0), undefined);
+    assert.equal(layer.getChunk(kOutOfRangeCoord, 0, 0), undefined);
+    assert.equal(layer.getChunk(0, -kOutOfRangeCoord, 0), undefined);
   });
 
   it("marks a neighbour past the edge of the world without throwing", () => {
     const layer = makeLayer({ chunkSize: 4 });
 
-    assert.doesNotThrow(() => layer.markChunkDirty(-99999, 0, 0));
+    assert.doesNotThrow(() => layer.markChunkDirty(-kOutOfRangeCoord, 0, 0));
   });
 });

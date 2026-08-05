@@ -29,18 +29,24 @@ describe("Cube", () => {
 
   it("occludes() returns true for every face", () => {
     for (const face of ALL_FACES) {
-      assert.equal(cube.occludes(face), true, `expected occludes(${face}) to be true`);
+      assert.ok(
+        cube.occludes(face),
+        `expected occludes(${face}) to be true`
+      );
     }
   });
 
   it("accepts a custom id", () => {
-    const custom = new Cube("myCustomCube" as any);
+    const custom = new Cube("myCustomCube");
     assert.equal(custom.id, "myCustomCube");
   });
 
   it("each face has 4 vertices (quad)", () => {
     for (const fd of cube.faces) {
-      assert.ok(fd.vertices.length === 3 || fd.vertices.length === 4, "expected 3 or 4 vertices");
+      assert.ok(
+        fd.vertices.length === 3 || fd.vertices.length === 4,
+        "expected 3 or 4 vertices"
+      );
     }
   });
 });
@@ -95,18 +101,30 @@ describe("Slab (top)", () => {
 describe("Slab — occludes() id-string contract (bug documentation)", () => {
   it("custom id containing 'Bottom' is treated as bottom slab", () => {
     // The check is: this.id.includes("Bottom") || this.id === "slabBottom"
-    const slab = new Slab("bottom", "myBottomSlab" as any);
-    assert.equal(slab.occludes(FACE.NegY), true, "NegY should occlude when id contains 'Bottom'");
-    assert.equal(slab.occludes(FACE.PosY), false);
+    const slab = new Slab("bottom", "myBottomSlab");
+    assert.ok(
+      slab.occludes(FACE.NegY),
+      "NegY should occlude when id contains 'Bottom'"
+    );
+    assert.ok(
+      !slab.occludes(FACE.PosY),
+      "PosY should not occlude when id contains 'Bottom'"
+    );
   });
 
   it("custom id NOT containing 'Bottom' and not 'slabBottom' uses top logic (known quirk)", () => {
     // A bottom slab with a custom id like "slab" will incorrectly behave as a top slab.
     // This test documents the current (imperfect) behaviour.
-    const slab = new Slab("bottom", "slab" as any);
+    const slab = new Slab("bottom", "slab");
     // Neither "slab".includes("Bottom") nor "slab" === "slabBottom" → uses top path
-    assert.equal(slab.occludes(FACE.PosY), true, "quirk: custom id falls through to top-slab logic");
-    assert.equal(slab.occludes(FACE.NegY), false);
+    assert.ok(
+      slab.occludes(FACE.PosY),
+      "quirk: custom id falls through to top-slab logic"
+    );
+    assert.ok(
+      !slab.occludes(FACE.NegY),
+      "quirk: custom id falls through to top-slab logic"
+    );
   });
 });
 
@@ -181,7 +199,11 @@ describe("RampCornerOuter", () => {
   it("occludes only NegY", () => {
     assert.equal(corner.occludes(FACE.NegY), true);
     for (const face of [FACE.PosX, FACE.NegX, FACE.PosY, FACE.PosZ, FACE.NegZ]) {
-      assert.equal(corner.occludes(face), false, `expected occludes(${face}) to be false`);
+      assert.equal(
+        corner.occludes(face),
+        false,
+        `expected occludes(${face}) to be false`
+      );
     }
   });
 });
@@ -203,7 +225,11 @@ describe("PoleY", () => {
 
   it("occludes no faces (sub-voxel shape)", () => {
     for (const face of ALL_FACES) {
-      assert.equal(pillar.occludes(face), false, `expected poleY.occludes(${face}) to be false`);
+      assert.equal(
+        pillar.occludes(face),
+        false,
+        `expected poleY.occludes(${face}) to be false`
+      );
     }
   });
 });

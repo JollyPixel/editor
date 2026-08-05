@@ -8,27 +8,11 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import { VoxelEngine } from "../../src/VoxelEngine.ts";
 import type { VoxelDebuggerOptions } from "../../src/debug/VoxelDebugger.ts";
+import { mockTexture } from "../helpers/mockTexture.ts";
 
 // CONSTANTS
 const kCubeId = 1;
 const kDefaultTexture = { col: 0, row: 0 };
-
-/**
- * Minimal mock texture; registerTexture() reads image.width / image.height only
- * when cols/rows are omitted from the definition, so no DOM is needed.
- */
-function mockTexture(): any {
-  return {
-    magFilter: 0,
-    minFilter: 0,
-    colorSpace: "",
-    generateMipmaps: true,
-    image: { width: 64, height: 64 },
-    dispose() {
-      // no-op
-    }
-  };
-}
 
 /**
  * Engine with one tileset registered and, unless `voxels` is empty, a meshed
@@ -55,12 +39,21 @@ function makeEngine(
     debug
   });
   engine.loadTileset(
-    { id: "atlas", src: "/atlas.png", tileSize: 16, cols: 4, rows: 4 },
+    {
+      id: "atlas",
+      src: "/atlas.png",
+      tileSize: 16,
+      cols: 4,
+      rows: 4
+    },
     mockTexture()
   );
 
   for (let x = 0; x < voxels; x++) {
-    engine.setVoxel("Ground", { position: { x, y: 0, z: 0 }, blockId: kCubeId });
+    engine.setVoxel("Ground", {
+      position: { x, y: 0, z: 0 },
+      blockId: kCubeId
+    });
   }
   engine.tick(0);
 
@@ -111,7 +104,10 @@ function wireframeMaterial(
 
 describe("VoxelDebugger — statistics", () => {
   it("reports nothing before any chunk is meshed", () => {
-    const engine = new VoxelEngine({ chunkSize: 4, layers: ["Ground"] });
+    const engine = new VoxelEngine({
+      chunkSize: 4,
+      layers: ["Ground"]
+    });
 
     assert.deepEqual(engine.debug.stats, {
       chunks: 0,
@@ -189,7 +185,9 @@ describe("VoxelDebugger — modes", () => {
     assert.equal(overlays.length, 1);
     assert.equal(mesh.visible, true);
     assert.equal(overlays[0].geometry, mesh.geometry);
-    assert.equal(wireframeMaterial(overlays[0]).wireframe, true);
+    assert.ok(
+      wireframeMaterial(overlays[0]).wireframe
+    );
   });
 
   it("hides the textured meshes in wireframe mode and restores them when off", () => {
@@ -208,7 +206,10 @@ describe("VoxelDebugger — modes", () => {
     const engine = makeEngine();
     engine.debug.mode = "wireframe";
 
-    engine.setVoxel("Ground", { position: { x: 0, y: 8, z: 0 }, blockId: kCubeId });
+    engine.setVoxel("Ground", {
+      position: { x: 0, y: 8, z: 0 },
+      blockId: kCubeId
+    });
     engine.tick(0);
 
     assert.equal(debugGroup(engine).children.length, 2);
@@ -226,11 +227,20 @@ describe("VoxelDebugger — modes", () => {
 
     const overlays = overlayMeshes(engine);
     assert.equal(overlays.length, 1);
-    assert.equal(overlays[0].geometry, chunkMeshes(engine)[0].geometry);
+    assert.equal(
+      overlays[0].geometry,
+      chunkMeshes(engine)[0].geometry
+    );
   });
 
   it("starts in the mode passed through the engine options", () => {
-    const engine = makeEngine({ debug: { mode: "overlay", color: 0xFF0000, opacity: 1 } });
+    const engine = makeEngine({
+      debug: {
+        mode: "overlay",
+        color: 0xFF0000,
+        opacity: 1
+      }
+    });
 
     assert.equal(engine.debug.enabled, true);
     const material = wireframeMaterial(overlayMeshes(engine)[0]);
@@ -253,7 +263,9 @@ describe("VoxelDebugger — modes", () => {
   });
 
   it("detaches the wireframe group on dispose", () => {
-    const engine = makeEngine({ debug: { mode: "overlay" } });
+    const engine = makeEngine({
+      debug: { mode: "overlay" }
+    });
     engine.dispose();
 
     assert.equal(findDebugGroup(engine), undefined);
