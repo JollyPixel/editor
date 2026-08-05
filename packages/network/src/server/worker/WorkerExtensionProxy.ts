@@ -43,9 +43,12 @@ export interface WorkerExtensionProxyOptions {
 }
 
 function resolveHostEntryUrl(): URL {
-  const extension = import.meta.url.endsWith(".ts") ? ".ts" : ".js";
-
-  return new URL(`./WorkerExtensionHost${extension}`, import.meta.url);
+  // Static literals (not a template) so bundlers resolve this as a single
+  // asset import rather than a directory glob over "./WorkerExtensionHost.*"
+  // (which would also pick up sibling .d.ts/.map files).
+  return import.meta.url.endsWith(".ts") ?
+    new URL("./WorkerExtensionHost.ts", import.meta.url) :
+    new URL("./WorkerExtensionHost.js", import.meta.url);
 }
 
 function errorMessage(

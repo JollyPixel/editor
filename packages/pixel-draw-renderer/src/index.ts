@@ -63,4 +63,21 @@ export {
   type UVRegionCreateOptions
 } from "./uv/UVMap.ts";
 export type { UVRegion } from "./uv/UVRegion.ts";
-export * from "./network/index.ts";
+// PixelSyncServer is deliberately not re-exported here: it value-imports
+// @jolly-pixel/network's server root (worker_threads and friends), and this
+// barrel is consumed by browser bundles. Import it from
+// "@jolly-pixel/pixel-draw.renderer/network/index.ts" instead.
+export type {
+  PixelBufferSnapshot,
+  PixelNetworkCommand,
+  PixelServerMessage
+} from "./network/types.ts";
+export { applyCommandToBuffer } from "./network/PixelCommandApplier.ts";
+export type {
+  PixelSyncClientOptions
+} from "./network/PixelSyncClient.ts";
+export { PixelSyncClient } from "./network/PixelSyncClient.ts";
+export type {
+  PixelCursorSyncOptions
+} from "./network/PixelCursorSync.ts";
+export { PixelCursorSync } from "./network/PixelCursorSync.ts";

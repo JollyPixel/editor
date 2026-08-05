@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import { defineConfig } from "vite";
 import { createWebSocketNetworkPlugin } from "@jolly-pixel/network/plugins/vite.ts";
-import { PixelSyncServer } from "@jolly-pixel/pixel-draw.renderer";
+import { PixelSyncServer } from "@jolly-pixel/pixel-draw.renderer/network/index.ts";
 import { VoxelSyncServer } from "@jolly-pixel/voxel.renderer/network/index.ts";
 import { VoxelWorld } from "@jolly-pixel/voxel.renderer";
 
