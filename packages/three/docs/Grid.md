@@ -16,6 +16,13 @@ const grid = new Grid({
 scene.add(grid); // self-updating: no manual .update() call needed
 ```
 
+Rendering notes:
+
+- Requires `THREE.WebGPURenderer` and a `NodeMaterial`-capable pipeline (TSL). Not usable with `THREE.WebGLRenderer`.
+- `frustumCulled` is always `false` because the mesh follows the camera every frame.
+- The underlying material has `transparent: true` and `depthWrite: false`.
+
+
 ## GridOptions
 
 ```ts
@@ -237,9 +244,3 @@ grid.xAxisColor.value = "#e54b4b";
 | `enabled` | Yes | Same as `grid.visible`. |
 
 Everything else in the class block (`cellSize`, `sectionSize`, thickness, fade, axes visibility, `offset`) is mutable and applies immediately.
-
-## Rendering notes
-
-- Requires `THREE.WebGPURenderer` and a `NodeMaterial`-capable pipeline (TSL). Not usable with `THREE.WebGLRenderer`.
-- `frustumCulled` is always `false` because the mesh follows the camera every frame.
-- The underlying material has `transparent: true` and `depthWrite: false`.
