@@ -7,7 +7,8 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    }
+    },
+    "./network/*.ts": "./dist/network/*.js"
   },
   "imports": {
     "#src/*": "./src/*"
