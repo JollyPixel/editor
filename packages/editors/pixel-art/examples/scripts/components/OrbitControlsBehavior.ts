@@ -8,6 +8,10 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 export interface OrbitControlsBehaviorOptions {
   camera: THREE.Camera;
+  /**
+  * Actor that owns `camera`; receives the orbited pose each frame.
+   */
+  cameraActor: Actor;
   /** @default (0, 0, 0) */
   target?: THREE.Vector3;
   /** @default 3 */
@@ -17,14 +21,15 @@ export interface OrbitControlsBehaviorOptions {
 }
 
 /**
- * Damped drag-to-orbit / scroll-to-zoom camera control, so every face of
- * the test cubes can actually be inspected (the camera used to be static).
- * A short, no-movement click still reaches the canvas as a native "click"
- * event afterwards, so cube picking (see main.ts) keeps working alongside
- * a drag-to-rotate gesture.
+ * Damped drag-orbit and scroll-zoom controls.
+ *
+ * OrbitControls mutates `camera` directly, but CameraComponent rewrites
+ * camera pose from the actor transform each render. The computed pose is
+ * written back to `cameraActor.transform` every frame to keep controls active.
  */
 export class OrbitControlsBehavior extends ActorComponent {
   readonly controls: OrbitControls;
+  #cameraActor: Actor;
 
   constructor(
     actor: Actor,
@@ -34,6 +39,15 @@ export class OrbitControlsBehavior extends ActorComponent {
       actor,
       typeName: "OrbitControlsBehavior"
     });
+
+    this.#cameraActor = options.cameraActor;
+
+    options.camera.position.copy(
+      this.#cameraActor.transform.getLocalPosition()
+    );
+    options.camera.quaternion.copy(
+      this.#cameraActor.transform.getLocalOrientation()
+    );
 
     this.controls = new OrbitControls(
       options.camera,
@@ -47,10 +61,23 @@ export class OrbitControlsBehavior extends ActorComponent {
       this.controls.target.copy(options.target);
     }
     this.controls.update();
+    this.#writebackPose();
   }
 
   update(): void {
     this.controls.update();
+    this.#writebackPose();
+  }
+
+  #writebackPose(): void {
+    const { object } = this.controls;
+
+    this.#cameraActor.transform.setLocalPosition(
+      object.position
+    );
+    this.#cameraActor.transform.setLocalOrientation(
+      object.quaternion
+    );
   }
 
   override destroy(): void {

@@ -2,7 +2,7 @@
 import { mock } from "node:test";
 
 // Import Third-party Dependencies
-import * as THREE from "three";
+import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import type {
@@ -34,10 +34,10 @@ export function createRenderComponent(
 }
 
 /**
- * Records the WebGLRenderer calls the strategies make. Enough surface for
- * EffectComposer to be constructed, which never touches GL until it renders.
+ * Records the WebGPURenderer calls DirectRenderStrategy makes. No real GPU
+ * context is needed since these are hand-shaped spies, not a real renderer.
  */
-export function createWebGLRendererSpy() {
+export function createRendererSpy() {
   return {
     setViewport: mock.fn(),
     setScissor: mock.fn(),
@@ -48,23 +48,8 @@ export function createWebGLRendererSpy() {
     dispose: mock.fn(),
     getSize: (target: THREE.Vector2) => target.set(800, 600),
     getPixelRatio: () => 1,
-    getContext: () => {
-      return { getParameter: () => 0 };
-    },
     getRenderTarget: () => null,
     setRenderTarget: mock.fn(),
     outputColorSpace: THREE.SRGBColorSpace
-  };
-}
-
-/**
- * Minimal RenderPass stand-in — orderRenderPasses only reads/writes the clear
- * flags, so no GL resources are needed.
- */
-export function createRenderPassStub() {
-  return {
-    clear: true,
-    clearDepth: false,
-    dispose: mock.fn()
   };
 }

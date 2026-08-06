@@ -1,89 +1,19 @@
 // Import Node.js Dependencies
-import { describe, test, mock } from "node:test";
+import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import * as THREE from "three";
-import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
-import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import {
-  DirectRenderStrategy,
-  ComposerRenderStrategy,
-  orderRenderPasses
+  DirectRenderStrategy
 } from "../../../src/systems/rendering/RenderStrategy.ts";
 import type { RenderComponent } from "../../../src/systems/rendering/Renderer.ts";
 import {
   createRenderComponent,
-  createRenderPassStub,
-  createWebGLRendererSpy
+  createRendererSpy
 } from "./helpers.ts";
-
-describe("Systems.Rendering.orderRenderPasses", () => {
-  test("should follow the component order it is given", () => {
-    const [first, second] = [createRenderComponent(), createRenderComponent()];
-    const passes = new Map([
-      [first, createRenderPassStub()],
-      [second, createRenderPassStub()]
-    ]);
-
-    const ordered = orderRenderPasses([second, first], passes as any);
-
-    assert.deepStrictEqual(ordered, [passes.get(second), passes.get(first)]);
-  });
-
-  test("should only let the first pass clear the color buffer", () => {
-    const components = [
-      createRenderComponent(),
-      createRenderComponent(),
-      createRenderComponent()
-    ];
-    const passes = new Map(
-      components.map((component) => [component, createRenderPassStub()])
-    );
-
-    orderRenderPasses(components, passes as any);
-
-    assert.deepStrictEqual(
-      components.map((component) => passes.get(component)!.clear),
-      [true, false, false],
-      "a clearing second pass would wipe the first camera's output"
-    );
-  });
-
-  test("should clear depth on every pass but the first, so cameras layer", () => {
-    const components = [createRenderComponent(), createRenderComponent()];
-    const passes = new Map(
-      components.map((component) => [component, createRenderPassStub()])
-    );
-
-    orderRenderPasses(components, passes as any);
-
-    assert.deepStrictEqual(
-      components.map((component) => passes.get(component)!.clearDepth),
-      [false, true]
-    );
-  });
-
-  test("should skip components that have no pass", () => {
-    const [withPass, withoutPass] = [
-      createRenderComponent(),
-      createRenderComponent()
-    ];
-    const pass = createRenderPassStub();
-    const passes = new Map([[withPass, pass]]);
-
-    const ordered = orderRenderPasses([withoutPass, withPass], passes as any);
-
-    assert.deepStrictEqual(ordered, [pass]);
-    assert.strictEqual(pass.clear, true, "the only pass is the first one");
-  });
-
-  test("should return an empty list when nothing is registered", () => {
-    assert.deepStrictEqual(orderRenderPasses([], new Map()), []);
-  });
-});
 
 describe("Systems.Rendering.DirectRenderStrategy", () => {
   const scene = new THREE.Scene();
@@ -91,7 +21,7 @@ describe("Systems.Rendering.DirectRenderStrategy", () => {
   function render(
     components: RenderComponent[]
   ) {
-    const renderer = createWebGLRendererSpy();
+    const renderer = createRendererSpy();
     const strategy = new DirectRenderStrategy(renderer as any);
 
     strategy.render(scene, {
@@ -168,7 +98,7 @@ describe("Systems.Rendering.DirectRenderStrategy", () => {
   });
 
   test("should resize the canvas without touching its CSS size", () => {
-    const renderer = createWebGLRendererSpy();
+    const renderer = createRendererSpy();
 
     new DirectRenderStrategy(renderer as any).resize(1024, 768);
 
@@ -179,113 +109,10 @@ describe("Systems.Rendering.DirectRenderStrategy", () => {
   });
 
   test("should not dispose the renderer it borrows", () => {
-    const renderer = createWebGLRendererSpy();
+    const renderer = createRendererSpy();
 
     new DirectRenderStrategy(renderer as any).dispose();
 
     assert.strictEqual(renderer.dispose.mock.callCount(), 0);
-  });
-});
-
-describe("Systems.Rendering.ComposerRenderStrategy", () => {
-  const scene = new THREE.Scene();
-
-  function createStrategy() {
-    const renderer = createWebGLRendererSpy();
-    const composer = new EffectComposer(renderer as any);
-    // The composer's own render loop needs a GL context; the strategy tests
-    // only cover pass bookkeeping.
-    mock.method(composer, "render", () => void 0);
-
-    return {
-      renderer,
-      composer,
-      strategy: new ComposerRenderStrategy(renderer as any, composer)
-    };
-  }
-
-  test("should rebind RenderPass scenes to the active scene", () => {
-    const { composer, strategy } = createStrategy();
-    const pass = new RenderPass(new THREE.Scene(), new THREE.PerspectiveCamera());
-    strategy.addEffect(pass);
-
-    strategy.render(scene, { components: [], canvasWidth: 1, canvasHeight: 1 });
-
-    assert.strictEqual(pass.scene, scene);
-    assert.strictEqual(composer.passes.includes(pass), true);
-  });
-
-  test("should prepare every component before rendering", () => {
-    const { strategy } = createStrategy();
-    const component = createRenderComponent();
-
-    strategy.render(scene, {
-      components: [component],
-      canvasWidth: 640,
-      canvasHeight: 480
-    });
-
-    assert.deepStrictEqual(
-      component.prepareRender.mock.calls[0].arguments,
-      [640, 480]
-    );
-  });
-
-  test("should detach a pass without disposing it", () => {
-    const { composer, strategy } = createStrategy();
-    const pass = new RenderPass(scene, new THREE.PerspectiveCamera());
-    const dispose = mock.method(pass, "dispose");
-    strategy.addEffect(pass);
-
-    strategy.removeEffect(pass);
-
-    assert.strictEqual(composer.passes.includes(pass), false);
-    assert.strictEqual(
-      dispose.mock.callCount(),
-      0,
-      "reordering relies on removeEffect leaving the pass usable"
-    );
-  });
-
-  test("should reorder the listed passes and keep the rest behind them", () => {
-    const { composer, strategy } = createStrategy();
-    const camera = new THREE.PerspectiveCamera();
-    const first = new RenderPass(scene, camera);
-    const second = new RenderPass(scene, camera);
-    const effect = new RenderPass(scene, camera);
-    strategy.addEffect(first);
-    strategy.addEffect(second);
-    strategy.addEffect(effect);
-
-    strategy.setPassOrder([second, first]);
-
-    assert.deepStrictEqual(composer.passes, [second, first, effect]);
-  });
-
-  test("should resize the canvas before the composer targets", () => {
-    const { renderer, composer, strategy } = createStrategy();
-    const order: string[] = [];
-    renderer.setSize.mock.mockImplementation(() => order.push("renderer"));
-    mock.method(composer, "setSize", () => order.push("composer"));
-
-    strategy.resize(320, 240);
-
-    assert.deepStrictEqual(
-      order,
-      ["renderer", "composer"],
-      "the final pass renders into a zero viewport if the canvas is sized last"
-    );
-  });
-
-  test("should dispose every pass it holds, not just the composer targets", () => {
-    const { composer, strategy } = createStrategy();
-    const pass = new RenderPass(scene, new THREE.PerspectiveCamera());
-    const dispose = mock.method(pass, "dispose");
-    strategy.addEffect(pass);
-
-    strategy.dispose();
-
-    assert.strictEqual(dispose.mock.callCount(), 1);
-    assert.deepStrictEqual(composer.passes, []);
   });
 });

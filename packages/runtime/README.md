@@ -70,7 +70,7 @@ import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
 
 const canvas = document.querySelector("canvas")!;
 
-const runtime = new Runtime(canvas, {
+const runtime = await Runtime.create(canvas, {
   // Displays a stats.js FPS panel — useful during development
   includePerformanceStats: true
 });

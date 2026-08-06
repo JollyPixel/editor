@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
-import * as THREE from "three";
-import type { Pass } from "three/addons/postprocessing/Pass.js";
+import * as THREE from "three/webgpu";
 import type {
   GenericEventMap,
   _Handler as Handler,
@@ -51,7 +50,7 @@ export type RendererEvents = {
     { width: number; height: number; }
   ];
   draw: [
-    { source: THREE.WebGLRenderer; }
+    { source: THREE.WebGPURenderer; }
   ];
 };
 
@@ -64,7 +63,6 @@ export interface Renderer<
   getSource(): T;
   setRenderMode(mode: RenderMode): this;
   setRatio(ratio: number | null): this;
-  setEffects(...effects: Pass[]): this;
 
   addRenderComponent(component: RenderComponent): void;
   removeRenderComponent(component: RenderComponent): void;

@@ -100,7 +100,7 @@ if (!canvas) {
   throw new Error("HTMLCanvasElement not found");
 }
 
-const runtime = new Runtime(canvas, {
+const runtime = await Runtime.create(canvas, {
   includePerformanceStats: true
 });
 

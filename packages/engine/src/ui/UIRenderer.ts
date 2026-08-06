@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import * as THREE from "three";
+import * as THREE from "three/webgpu";
 import { CSS2DRenderer as ThreeCSS2DRenderer } from "three/addons/renderers/CSS2DRenderer.js";
 
 // Import Internal Dependencies

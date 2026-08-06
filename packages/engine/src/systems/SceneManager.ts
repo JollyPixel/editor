@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import * as THREE from "three";
+import * as THREE from "three/webgpu";
 import { EventEmitter } from "@posva/event-emitter";
 
 // Import Internal Dependencies

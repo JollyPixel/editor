@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import Stats from "stats.js";
-import * as THREE from "three";
+import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import {
@@ -30,7 +30,7 @@ export interface RuntimeOptions<
 export class Runtime<
   TContext = Systems.WorldDefaultContext
 > {
-  world: Systems.World<THREE.WebGLRenderer, TContext>;
+  world: Systems.World<THREE.WebGPURenderer, TContext>;
 
   canvas: HTMLCanvasElement;
   stats?: Stats;
@@ -38,24 +38,14 @@ export class Runtime<
 
   #isRunning = false;
 
-  constructor(
+  private constructor(
     canvas: HTMLCanvasElement,
-    options: RuntimeOptions<TContext> = Object.create(null)
+    renderer: Systems.Renderer<any>,
+    sceneManager: Systems.SceneManager<TContext>,
+    options: RuntimeOptions<TContext>
   ) {
-    if (!canvas) {
-      throw new Error("Canvas element is required to create a Runtime instance.");
-    }
-
     this.canvas = canvas;
-    const sceneManager = new Systems.SceneManager<TContext>();
-    const renderer: Systems.Renderer<any> = new Systems.ThreeRenderer(
-      canvas,
-      {
-        sceneManager,
-        renderMode: "direct"
-      }
-    );
-    this.world = new Systems.World<THREE.WebGLRenderer, TContext>(renderer, {
+    this.world = new Systems.World<THREE.WebGPURenderer, TContext>(renderer, {
       enableOnExit: true,
       sceneManager,
       context: options.context,
@@ -69,6 +59,33 @@ export class Runtime<
       this.stats.dom.removeAttribute("style");
       this.stats.dom.classList.add("stats");
     }
+  }
+
+  /**
+   * Builds a `Runtime`. `ThreeRenderer` requires an asynchronous `init()`
+   * before first use (see `ThreeRenderer.create`), so `Runtime` construction
+   * is async too.
+   */
+  static async create<
+    TContext = Systems.WorldDefaultContext
+  >(
+    canvas: HTMLCanvasElement,
+    options: RuntimeOptions<TContext> = Object.create(null)
+  ): Promise<Runtime<TContext>> {
+    if (!canvas) {
+      throw new Error("Canvas element is required to create a Runtime instance.");
+    }
+
+    const sceneManager = new Systems.SceneManager<TContext>();
+    const renderer: Systems.Renderer<any> = await Systems.ThreeRenderer.create(
+      canvas,
+      {
+        sceneManager,
+        renderMode: "direct"
+      }
+    );
+
+    return new Runtime(canvas, renderer, sceneManager, options);
   }
 
   get running() {
@@ -119,7 +136,7 @@ export class Runtime<
   }
 
   /**
-   * Stops the runtime and releases the WebGL context. Call this when the
+   * Stops the runtime and releases the GPU context. Call this when the
    * canvas is torn down; the Runtime must not be started again afterwards.
    */
   dispose() {

@@ -195,6 +195,16 @@ export class LayerManager extends LitElement {
     editorState.addEventListener("gizmoLayerChange", () => {
       this.#updateGizmoButtonStates();
     });
+    editorState.addEventListener("worldReset", () => {
+      this.#populateFromVR();
+    });
+    // Keeps the tree's highlight (and button enabled-state) in sync when the
+    // selection changes from outside a row click — e.g. EditorScene selecting
+    // the first layer once a network snapshot lands.
+    editorState.addEventListener("selectedLayerChange", () => {
+      this._selectedLayer = editorState.selectedLayer;
+      this.#syncSelectionHighlight();
+    });
 
     document.addEventListener("pointerdown", this.#onDocumentPointerDown);
   }
@@ -238,11 +248,21 @@ export class LayerManager extends LitElement {
     }
 
     // Restore the visual selection highlight after the list is rebuilt.
+    this.#syncSelectionHighlight();
+  }
+
+  /** Moves the tree's visual highlight to match `this._selectedLayer`. */
+  #syncSelectionHighlight(): void {
+    if (!this.#treeView) {
+      return;
+    }
+
+    this.#treeView.selector.clear();
     if (this._selectedLayer) {
       const li = this.#itemMap.get(this._selectedLayer) ??
         this.#objectItemMap.get(this._selectedLayer);
       if (li) {
-        this.#treeView!.selector.add(li);
+        this.#treeView.selector.add(li);
       }
     }
   }

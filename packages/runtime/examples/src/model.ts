@@ -9,13 +9,13 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import { PlayerBehavior } from "./components/PlayerBehavior.ts";
 
-const runtime = initRuntime();
+const runtime = await initRuntime();
 loadRuntime(runtime)
   .catch(console.error);
 
-function initRuntime() {
+async function initRuntime() {
   const canvasHTMLElement = document.querySelector("canvas") as HTMLCanvasElement;
-  const runtime = new Runtime(canvasHTMLElement, {
+  const runtime = await Runtime.create(canvasHTMLElement, {
     includePerformanceStats: true
   });
   const { world } = runtime;

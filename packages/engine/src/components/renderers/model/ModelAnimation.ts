@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import * as THREE from "three";
+import * as THREE from "three/webgpu";
 
 export type ModelAnimationClipNameRewriter = (clipName: string) => string;
 export type ModelAnimationState = "idle" | "playing" | "paused" | "stopped";

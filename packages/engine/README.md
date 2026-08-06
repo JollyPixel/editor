@@ -51,8 +51,7 @@ each frame.
 
 - [World](./docs/systems/world.md) — top-level orchestrator that ties the renderer, scene,
   input, and audio into a unified game loop.
-  - [Renderer](./docs/systems/renderer.md) — abstracts the Three.js render pipeline and supports
-    direct and post-processing render strategies.
+  - [Renderer](./docs/systems/renderer.md) — abstracts the Three.js WebGPU render pipeline.
   - [SceneManager](./docs/systems/scene-manager.md) — the ECS world manager that owns the actor tree and drives
     per-frame lifecycle (awake → start → update → destroy).
 - [Asset](./docs/asset.md) — lazy-loading asset pipeline with a
@@ -65,7 +64,7 @@ each frame.
 import { Systems, Actor } from "@jolly-pixel/engine";
 
 const sceneManager = new Systems.SceneManager();
-const renderer = new Systems.ThreeRenderer(canvas, {
+const renderer = await Systems.ThreeRenderer.create(canvas, {
   sceneManager,
   renderMode: "direct"
 });

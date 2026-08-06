@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import timers from "node:timers/promises";
 
 // Import Third-party Dependencies
-import type * as THREE from "three";
+import type * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import {

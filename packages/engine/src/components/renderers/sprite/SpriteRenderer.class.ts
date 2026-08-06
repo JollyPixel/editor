@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import * as THREE from "three";
+import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import { Actor, ActorComponent } from "../../../actor/index.ts";

@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import { LitElement, html, css } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import type { VoxelRenderer } from "@jolly-pixel/voxel.renderer";
+import type { VoxelRenderer, VoxelWorldJSON } from "@jolly-pixel/voxel.renderer";
 import type * as network from "@jolly-pixel/network";
 import type {
   PixelNetworkCommand,
@@ -108,6 +108,7 @@ export class EditorSidebar extends LitElement {
   @property({ attribute: false }) declare vr: VoxelRenderer | undefined;
   @property({ attribute: false }) declare gridRenderer: GridRenderer | undefined;
   @property({ attribute: false }) declare textureRoom: network.Room<PixelNetworkCommand, PixelServerMessage> | undefined;
+  @property({ attribute: false }) declare onLoadWorld: ((data: VoxelWorldJSON) => void) | undefined;
 
   @state() private declare _tab: SidebarTab;
   @state() private declare _selectedLayer: string | null;
@@ -172,6 +173,7 @@ export class EditorSidebar extends LitElement {
         <map-config-panel
           .vr=${this.vr}
           .gridRenderer=${this.gridRenderer}
+          .onLoadWorld=${this.onLoadWorld}
           @world-loaded=${() => this.requestUpdate()}
         ></map-config-panel>
       `)}

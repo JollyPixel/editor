@@ -42,7 +42,7 @@ const tileset = createTerrainTileset();
 const tilesetLoader = new TilesetLoader();
 await tilesetLoader.fromTileDefinition(tileset.definition);
 
-const runtime = new Runtime(canvas, {
+const runtime = await Runtime.create(canvas, {
   includePerformanceStats: false
 });
 const { world } = runtime;

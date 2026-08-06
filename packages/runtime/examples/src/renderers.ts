@@ -16,11 +16,12 @@ import * as THREE from "three";
 // import { SpriteRenderer } from "./components/sprite/SpriteRenderer.class.ts";
 
 const canvasHTMLElement = document.querySelector("canvas") as HTMLCanvasElement;
-const runtime = new Runtime(canvasHTMLElement, {
+const runtime = await Runtime.create(canvasHTMLElement, {
   includePerformanceStats: true
 });
 const { world } = runtime;
-world.renderer.setRenderMode("composer");
+// Composer/post-processing render mode is pending a rebuild on WebGPURenderer's
+// node-based PostProcessing API — "direct" (the default) is the only mode today.
 
 world.createActor("camera")
   .addComponent(Camera3DControls, {}, (component) => {

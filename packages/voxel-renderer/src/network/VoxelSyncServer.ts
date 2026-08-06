@@ -3,7 +3,7 @@ import * as network from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import { VoxelWorld } from "../world/VoxelWorld.ts";
-import type { VoxelWorldJSON } from "../serialization/VoxelSerializer.ts";
+import { VoxelSerializer, type VoxelWorldJSON } from "../serialization/VoxelSerializer.ts";
 import { VOXEL_LAYER_HOOK_ACTIONS, type VoxelLayerHookEvent } from "../hooks.ts";
 import { applyCommandToWorld } from "./VoxelCommandApplier.ts";
 import type { VoxelNetworkCommand } from "./types.ts";
@@ -54,6 +54,7 @@ export class VoxelSyncServer extends network.Extension {
   readonly events: readonly string[] = VOXEL_LAYER_HOOK_ACTIONS;
 
   #tracker: network.ConflictTracker<VoxelNetworkCommand>;
+  #serializer = new VoxelSerializer();
 
   constructor(
     options: VoxelSyncServerOptions = {}
@@ -111,6 +112,20 @@ export class VoxelSyncServer extends network.Extension {
     cmd: VoxelNetworkCommand,
     context: network.RoomContext
   ): void {
+    // Out-of-band admin action: replaces the whole world and re-snapshots
+    // every connected client (including the sender) rather than diffing
+    // against the current one via applyCommandToWorld(). Bypasses the LWW
+    // tracker entirely — a full-world replace always wins.
+    if (cmd.action === "world-replace") {
+      this.#serializer.deserialize(cmd.data, this.world);
+      context.room.broadcast({
+        type: "snapshot",
+        data: this.snapshot()
+      });
+
+      return;
+    }
+
     const key = VoxelSyncServer.#cmdKey(cmd);
     if (this.#tracker.resolve(key, cmd) === "reject") {
       return;

@@ -296,6 +296,23 @@ describe("VoxelSyncClient — remote commands applied without re-emitting", () =
     assert.equal(engine.appliedCommands.length, 0);
   });
 
+  it("ignores a world-replace command (arrives as a snapshot instead, not a command)", () => {
+    const engine = createMockEngine();
+    const room = createMockRoom("client-A");
+    const client = new VoxelSyncClient({ room });
+    client.attach(asEngine(engine));
+
+    room.simulateCommand({
+      action: "world-replace",
+      data: makeEmptySnapshot(),
+      clientId: "client-B",
+      seq: 1,
+      timestamp: Date.now()
+    });
+
+    assert.equal(engine.appliedCommands.length, 0);
+  });
+
   it("ignores commands when no engine is attached", () => {
     const room = createMockRoom("client-A");
     new VoxelSyncClient({ room });
@@ -336,6 +353,34 @@ describe("VoxelSyncClient — snapshot loading", () => {
     assert.doesNotThrow(() => {
       room.simulateSnapshot(makeEmptySnapshot());
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// replaceWorld
+// ---------------------------------------------------------------------------
+
+describe("VoxelSyncClient — replaceWorld", () => {
+  it("sends a stamped world-replace command carrying the data", () => {
+    const room = createMockRoom("client-A");
+    const client = new VoxelSyncClient({ room });
+
+    const data = makeEmptySnapshot();
+    client.replaceWorld(data);
+
+    assert.equal(room.sentCommands.length, 1);
+    const cmd = room.sentCommands[0];
+    assert.equal(cmd.action, "world-replace");
+    assert.equal(cmd.clientId, "client-A");
+    assert.ok(cmd.seq >= 1);
+    assert.ok("data" in cmd && cmd.data === data);
+  });
+
+  it("does not require an attached engine", () => {
+    const room = createMockRoom();
+    const client = new VoxelSyncClient({ room });
+
+    assert.doesNotThrow(() => client.replaceWorld(makeEmptySnapshot()));
   });
 });
 
