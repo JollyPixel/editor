@@ -6,7 +6,8 @@ import type { BladeApi } from "tweakpane";
 import {
   Grid,
   type GridPlane,
-  type GridStyle
+  type GridStyle,
+  type GridFadeFrom
 } from "../../src/index.ts";
 import {
   createRenderer,
@@ -65,9 +66,17 @@ function bindGridControls(
       })
       .on("change", ({ value }) => rebuildGrid({ plane: value as GridPlane })),
     gridFolder.addBinding(target, "crossSize", { min: 0.05, max: 0.5, step: 0.01 }),
+    gridFolder.addBinding(target, "offset", { min: -5, max: 5, step: 0.1 }),
+    gridFolder.addBinding(target, "followCamera"),
+    gridFolder.addBlade({ view: "separator" }),
+    gridFolder
+      .addBinding({ fadeFrom: target.fadeFrom }, "fadeFrom", {
+        label: "fadeFrom",
+        options: { camera: "camera", origin: "origin" }
+      })
+      .on("change", ({ value }) => rebuildGrid({ fadeFrom: value as GridFadeFrom })),
     gridFolder.addBinding(target, "fadeDistance", { min: 10, max: 500, step: 5 }),
     gridFolder.addBinding(target, "fadeStrength", { min: 0.1, max: 5, step: 0.1 }),
-    gridFolder.addBinding(target, "offset", { min: -5, max: 5, step: 0.1 }),
     gridFolder.addBlade({ view: "separator" }),
     gridFolder
       .addBinding({ cellStyle: target.cellStyle.value }, "cellStyle", {
@@ -104,6 +113,7 @@ interface GridOverrides {
   plane?: GridPlane;
   cellStyle?: GridStyle;
   sectionStyle?: GridStyle;
+  fadeFrom?: GridFadeFrom;
 }
 
 function rebuildGrid(
@@ -128,8 +138,11 @@ function rebuildGrid(
     crossSize: grid.crossSize,
     hideCellOnSection: grid.hideCellOnSection,
     hideCellOnSectionFadeWidth: grid.hideCellOnSectionFadeWidth,
-    fadeDistance: grid.fadeDistance,
-    fadeStrength: grid.fadeStrength,
+    fade: {
+      from: overrides.fadeFrom ?? grid.fadeFrom,
+      distance: grid.fadeDistance,
+      strength: grid.fadeStrength
+    },
     axes: {
       show: grid.showAxes,
       thickness: grid.axisThickness,
@@ -138,7 +151,8 @@ function rebuildGrid(
       zColor: grid.zAxisColor.value
     },
     offset: grid.offset,
-    enabled: grid.enabled
+    enabled: grid.enabled,
+    followCamera: grid.followCamera
   });
   scene.add(grid);
   bindGridControls(grid);

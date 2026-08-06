@@ -72,6 +72,26 @@ export interface GridSectionOptions {
   thickness?: number;
 }
 
+export interface GridFadeOptions {
+  /**
+   * Distance-fade anchor: `"camera"` fades the grid out around the camera's
+   * in-plane position; `"origin"` fades it out around the plane's world
+   * origin, ignoring the camera entirely.
+   * @default "camera"
+   */
+  from?: GridFadeFrom;
+  /**
+   * Fade-out distance.
+   * @default 100
+   */
+  distance?: number;
+  /**
+   * Fade falloff exponent.
+   * @default 1
+   */
+  strength?: number;
+}
+
 export interface GridAxesOptions {
   /**
    * Whether axis lines are drawn.
@@ -141,15 +161,9 @@ export interface GridOptions {
    */
   hideCellOnSectionFadeWidth?: number;
   /**
-   * Fade-out distance.
-   * @default 100
+   * Distance-fade options.
    */
-  fadeDistance?: number;
-  /**
-   * Fade falloff exponent.
-   * @default 1
-   */
-  fadeStrength?: number;
+  fade?: GridFadeOptions;
   /**
    * Axis-line options.
    */
@@ -165,6 +179,15 @@ export interface GridOptions {
    * @default true
    */
   enabled?: boolean;
+  /**
+   * Whether the grid mesh re-centers under the camera every frame to
+   * maintain the infinite-plane illusion. When `false`, the mesh stays
+   * fixed on its plane at the world origin (offset by `offset` along the
+   * normal) — useful for a bounded, non-infinite reference grid, typically
+   * paired with `fade: { from: "origin" }`. Live-tunable.
+   * @default fade.from === "camera"
+   */
+  followCamera?: boolean;
 }
 ```
 
@@ -180,6 +203,7 @@ class Grid extends THREE.Mesh {
   readonly xAxisColor: GridColor;
   readonly yAxisColor: GridColor;
   readonly zAxisColor: GridColor;
+  readonly fadeFrom: GridFadeFrom;
 
   cellSize: number;
   sectionSize: number;
@@ -194,6 +218,7 @@ class Grid extends THREE.Mesh {
   axisThickness: number;
   offset: number;
   enabled: boolean;
+  followCamera: boolean;
 }
 
 class GridPlaneValue {
@@ -220,7 +245,8 @@ class GridColor {
 
 ## Usage notes
 
-- `plane`, `cellStyle`, and `sectionStyle` are fixed at construction time. To change them, create a new `Grid`.
+- `plane`, `cellStyle`, `sectionStyle`, and `fade.from` are fixed at construction time. To change them, create a new `Grid`.
+- `fade: { from: "origin" }` + `followCamera: false` (the default pairing) gives a bounded reference grid, fixed in place at the world origin — the opposite of the default infinite, camera-following behavior.
 - Colors are edited through `.value` on each color property:
 
 ```ts
@@ -242,5 +268,12 @@ grid.xAxisColor.value = "#e54b4b";
 | `extent` | Constructor only (`GridOptions`) | Set in options only; not exposed as a live `Grid` property. |
 | `xAxisColor`, `yAxisColor`, `zAxisColor` | Yes (via `.value`) | Only in-plane axes are visible. |
 | `enabled` | Yes | Same as `grid.visible`. |
+| `fadeFrom` (from `fade.from`) | No | Set once in `new Grid({ fade })`. Baked into the shader. |
+| `followCamera` | Yes | Defaults to `fade.from === "camera"`. When `false`, the mesh stays pinned to the world origin on its plane. |
 
 Everything else in the class block (`cellSize`, `sectionSize`, thickness, fade, axes visibility, `offset`) is mutable and applies immediately.
+
+## Additional resources to learn
+
+- [The Best Darn Grid Shader (Yet)](https://bgolus.medium.com/the-best-darn-grid-shader-yet-727f9278b9d8)
+- [Infinite Grid Shader](https://willofindie.com/proj/infinite-grid-shader)

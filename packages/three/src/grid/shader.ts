@@ -41,6 +41,12 @@ const kDiscardThreshold = 0.003;
  */
 export type GridStyle = "lines" | "cross";
 
+/**
+ * `"camera"` fades the grid out around the camera's in-plane position.
+ * `"origin"` fades the grid out around the plane's world origin, ignoring the camera entirely.
+ */
+export type GridFadeFrom = "camera" | "origin";
+
 export interface GridUniformOptions {
   cellSize: number;
   sectionSize: number;
@@ -240,7 +246,8 @@ export function buildGridMaterial(
   plane: GridPlane,
   cellStyle: GridStyle,
   sectionStyle: GridStyle,
-  uniforms: GridUniforms
+  uniforms: GridUniforms,
+  fadeFrom: GridFadeFrom
 ): THREE.MeshBasicNodeMaterial {
   const {
     u, v, camU, camV, uAxisColor, vAxisColor
@@ -297,7 +304,9 @@ export function buildGridMaterial(
     const finalColor = mix(withUAxis, vAxisColor, vAxisMask);
     const maskWithAxes = max(gridMask, max(uAxisMask, vAxisMask));
 
-    const dist = length(vec2(u.sub(camU), v.sub(camV)));
+    const dist = fadeFrom === "origin" ?
+      length(vec2(u, v)) :
+      length(vec2(u.sub(camU), v.sub(camV)));
     const fade = pow(
       saturate(float(1).sub(dist.div(uniforms.fadeDistance))),
       uniforms.fadeStrength

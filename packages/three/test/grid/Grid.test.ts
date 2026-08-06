@@ -96,6 +96,21 @@ describe("constructor", () => {
     assert.strictEqual(grid.zAxisColor.value, "#4b7bc9");
     assert.strictEqual(grid.enabled, true);
     assert.strictEqual(grid.visible, true);
+    assert.strictEqual(grid.fadeFrom, "camera");
+    assert.strictEqual(grid.followCamera, true);
+  });
+
+  test("fade: { from: \"origin\" } defaults followCamera to false", () => {
+    const grid = new Grid({ fade: { from: "origin" } });
+
+    assert.strictEqual(grid.fadeFrom, "origin");
+    assert.strictEqual(grid.followCamera, false);
+  });
+
+  test("followCamera explicit option overrides the fade.from-derived default", () => {
+    const grid = new Grid({ fade: { from: "origin" }, followCamera: true });
+
+    assert.strictEqual(grid.followCamera, true);
   });
 
   test("enabled: false hides the grid from construction", () => {
@@ -123,8 +138,11 @@ describe("constructor", () => {
       crossSize: 0.3,
       hideCellOnSection: true,
       hideCellOnSectionFadeWidth: 1.5,
-      fadeDistance: 50,
-      fadeStrength: 2,
+      fade: {
+        from: "origin",
+        distance: 50,
+        strength: 2
+      },
       axes: {
         show: false,
         thickness: 5,
@@ -147,6 +165,7 @@ describe("constructor", () => {
     assert.strictEqual(grid.crossSize, 0.3);
     assert.strictEqual(grid.hideCellOnSection, true);
     assert.strictEqual(grid.hideCellOnSectionFadeWidth, 1.5);
+    assert.strictEqual(grid.fadeFrom, "origin");
     assert.strictEqual(grid.fadeDistance, 50);
     assert.strictEqual(grid.fadeStrength, 2);
     assert.strictEqual(grid.showAxes, false);
@@ -234,6 +253,16 @@ describe("accessors", () => {
     assert.strictEqual(grid.enabled, false);
   });
 
+  test("followCamera round-trips true/false", () => {
+    const grid = new Grid();
+    grid.followCamera = false;
+
+    assert.strictEqual(grid.followCamera, false);
+
+    grid.followCamera = true;
+    assert.strictEqual(grid.followCamera, true);
+  });
+
   test("hideCellOnSection round-trips true/false", () => {
     const grid = new Grid();
     grid.hideCellOnSection = true;
@@ -285,5 +314,35 @@ describe("camera-following via onBeforeRender", () => {
     grid.onBeforeRender(undefined, undefined, camera, undefined, undefined, undefined);
 
     assert.strictEqual(grid.position.y, 2.5);
+  });
+
+  test("followCamera: false keeps the grid pinned to the origin plane regardless of camera position", () => {
+    const grid = new Grid({ plane: "xz", followCamera: false, offset: 3 });
+    const camera = new THREE.PerspectiveCamera();
+    camera.position.set(10, 6, -4);
+
+    // @ts-expect-error onBeforeRender's unused params aren't exercised here
+    grid.onBeforeRender(undefined, undefined, camera, undefined, undefined, undefined);
+
+    assert.strictEqual(grid.position.x, 0);
+    assert.strictEqual(grid.position.y, 3);
+    assert.strictEqual(grid.position.z, 0);
+  });
+
+  test("followCamera can be toggled live", () => {
+    const grid = new Grid({ plane: "xz" });
+    const camera = new THREE.PerspectiveCamera();
+    camera.position.set(5, 0, 5);
+
+    // @ts-expect-error onBeforeRender's unused params aren't exercised here
+    grid.onBeforeRender(undefined, undefined, camera, undefined, undefined, undefined);
+    assert.strictEqual(grid.position.x, 5);
+    assert.strictEqual(grid.position.z, 5);
+
+    grid.followCamera = false;
+    // @ts-expect-error onBeforeRender's unused params aren't exercised here
+    grid.onBeforeRender(undefined, undefined, camera, undefined, undefined, undefined);
+    assert.strictEqual(grid.position.x, 0);
+    assert.strictEqual(grid.position.z, 0);
   });
 });

@@ -9,13 +9,14 @@ import {
 import {
   createGridUniforms,
   buildGridMaterial,
-  type GridStyle
+  type GridStyle,
+  type GridFadeFrom
 } from "./shader.ts";
 import { GridColor } from "./GridColor.ts";
 import { GridStyleValue } from "./GridStyleValue.ts";
 
 export type { GridPlane } from "./GridPlaneValue.ts";
-export type { GridStyle } from "./shader.ts";
+export type { GridStyle, GridFadeFrom } from "./shader.ts";
 
 // CONSTANTS
 const kDefaultCellSize = 1;
@@ -38,6 +39,7 @@ const kDefaultYAxisColor = "#4bc94b";
 const kDefaultZAxisColor = "#4b7bc9";
 const kDefaultOffset = 0;
 const kDefaultEnabled = true;
+const kDefaultFadeFrom: GridFadeFrom = "camera";
 const kMinExtent = 200;
 const kExtentFadeMultiplier = 4;
 
@@ -110,6 +112,29 @@ export interface GridSectionOptions {
    * @default 2
    */
   thickness?: number;
+}
+
+/**
+ * Distance-fade options.
+ */
+export interface GridFadeOptions {
+  /**
+   * Distance-fade anchor: `"camera"` fades the grid out around the camera's
+   * in-plane position; `"origin"` fades it out around the plane's world
+   * origin, ignoring the camera entirely.
+   * @default "camera"
+   */
+  from?: GridFadeFrom;
+  /**
+   * Fade-out distance.
+   * @default 100
+   */
+  distance?: number;
+  /**
+   * Fade falloff exponent.
+   * @default 1
+   */
+  strength?: number;
 }
 
 /**
@@ -187,15 +212,9 @@ export interface GridOptions {
    */
   hideCellOnSectionFadeWidth?: number;
   /**
-   * Fade-out distance.
-   * @default 100
+   * Distance-fade options.
    */
-  fadeDistance?: number;
-  /**
-   * Fade falloff exponent.
-   * @default 1
-   */
-  fadeStrength?: number;
+  fade?: GridFadeOptions;
   /**
    * Axis-line options.
    */
@@ -211,6 +230,12 @@ export interface GridOptions {
    * @default true
    */
   enabled?: boolean;
+  /**
+   * Whether the grid mesh re-centers under the camera every frame to
+   * maintain the infinite-plane illusion.
+   * @default fade.from === "camera"
+   */
+  followCamera?: boolean;
 }
 
 /**
@@ -247,7 +272,9 @@ export class Grid extends THREE.Mesh {
   readonly xAxisColor: GridColor;
   readonly yAxisColor: GridColor;
   readonly zAxisColor: GridColor;
+  readonly fadeFrom: GridFadeFrom;
   offset: number;
+  followCamera: boolean;
 
   constructor(
     options: GridOptions = {}
@@ -255,6 +282,7 @@ export class Grid extends THREE.Mesh {
     const cell = options.cell ?? {};
     const section = options.section ?? {};
     const axes = options.axes ?? {};
+    const fadeOptions = options.fade ?? {};
 
     const plane = new GridPlaneValue(
       options.plane ?? "xz"
@@ -266,7 +294,7 @@ export class Grid extends THREE.Mesh {
       section.style ?? kDefaultSectionStyle, "sectionStyle"
     );
 
-    const fadeDistance = options.fadeDistance ?? kDefaultFadeDistance;
+    const fadeDistance = fadeOptions.distance ?? kDefaultFadeDistance;
     const extent = options.extent ?? Math.max(
       fadeDistance * kExtentFadeMultiplier,
       kMinExtent
@@ -286,18 +314,20 @@ export class Grid extends THREE.Mesh {
       hideCellOnSection: options.hideCellOnSection ?? kDefaultHideCellOnSection,
       hideCellOnSectionFadeWidth: options.hideCellOnSectionFadeWidth ?? kDefaultHideCellOnSectionFadeWidth,
       fadeDistance,
-      fadeStrength: options.fadeStrength ?? kDefaultFadeStrength,
+      fadeStrength: fadeOptions.strength ?? kDefaultFadeStrength,
       showAxes: axes.show ?? kDefaultShowAxes,
       axisThickness: axes.thickness ?? kDefaultAxisThickness,
       xAxisColor: axes.xColor ?? kDefaultXAxisColor,
       yAxisColor: axes.yColor ?? kDefaultYAxisColor,
       zAxisColor: axes.zColor ?? kDefaultZAxisColor
     });
+    const fadeFrom = fadeOptions.from ?? kDefaultFadeFrom;
     const material = buildGridMaterial(
       plane.value,
       cellStyle.value,
       sectionStyle.value,
-      uniforms
+      uniforms,
+      fadeFrom
     );
 
     super(geometry, material);
@@ -310,7 +340,9 @@ export class Grid extends THREE.Mesh {
     this.xAxisColor = new GridColor(uniforms.xAxisColor.value);
     this.yAxisColor = new GridColor(uniforms.yAxisColor.value);
     this.zAxisColor = new GridColor(uniforms.zAxisColor.value);
+    this.fadeFrom = fadeFrom;
     this.offset = options.offset ?? kDefaultOffset;
+    this.followCamera = options.followCamera ?? (fadeFrom === "camera");
     this.frustumCulled = false;
     this.visible = options.enabled ?? kDefaultEnabled;
 
@@ -339,8 +371,11 @@ export class Grid extends THREE.Mesh {
       _scene: unknown,
       camera: THREE.Camera
     ): void => {
+      const source = this.followCamera ?
+        camera.position :
+        { x: 0, y: 0, z: 0 };
       const next = this.plane.followPosition(
-        camera.position,
+        source,
         this.offset
       );
 
