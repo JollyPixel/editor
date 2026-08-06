@@ -30,7 +30,7 @@ scene.add(grid); // self-updating: no manual .update() call needed
 
 ## 📚 API
 
-- [Grid](docs/Grid.md) - Infinite, camera-following ground-plane grid mesh (TSL, `THREE.WebGPURenderer`).
+- [Grid](docs/Grid.md) - Ground-plane grid mesh. (TSL, `THREE.WebGPURenderer`).
 
 ## ✨ Contributors guide
 

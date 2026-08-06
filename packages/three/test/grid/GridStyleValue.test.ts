@@ -19,4 +19,14 @@ describe("GridStyleValue", () => {
 
     assert.strictEqual(style.value, "cross");
   });
+
+  describe("clone", () => {
+    test("returns a distinct instance with the same value", () => {
+      const style = new GridStyleValue("cross", "cellStyle");
+      const cloned = style.clone();
+
+      assert.notStrictEqual(cloned, style);
+      assert.strictEqual(cloned.value, "cross");
+    });
+  });
 });

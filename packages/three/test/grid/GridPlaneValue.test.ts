@@ -23,6 +23,16 @@ describe("GridPlaneValue", () => {
     assert.strictEqual(plane.value, "yz");
   });
 
+  describe("clone", () => {
+    test("returns a distinct instance with the same value", () => {
+      const plane = new GridPlaneValue("yz");
+      const cloned = plane.clone();
+
+      assert.notStrictEqual(cloned, plane);
+      assert.strictEqual(cloned.value, "yz");
+    });
+  });
+
   describe("followPosition", () => {
     test("\"xz\" pins the normal axis (y) to the offset", () => {
       const plane = new GridPlaneValue("xz");

@@ -6,7 +6,7 @@ import type { Vector3Like } from "../types.ts";
 
 export type GridPlane = "xz" | "xy" | "yz";
 
-interface PlaneAxes {
+export interface PlaneAxes {
   u: "x" | "y" | "z";
   v: "x" | "y" | "z";
   normal: "x" | "y" | "z";
@@ -20,6 +20,12 @@ const kPlaneAxes: Record<GridPlane, PlaneAxes> = {
   yz: { u: "y", v: "z", normal: "x" }
 };
 
+export function getPlaneAxes(
+  plane: GridPlane
+): PlaneAxes {
+  return kPlaneAxes[plane];
+}
+
 export class GridPlaneValue {
   readonly value: GridPlane;
 
@@ -30,6 +36,10 @@ export class GridPlaneValue {
       throw new Error(`Invalid plane "${value}"`);
     }
     this.value = value;
+  }
+
+  clone(): GridPlaneValue {
+    return new GridPlaneValue(this.value);
   }
 
   orientGeometry(
@@ -48,10 +58,6 @@ export class GridPlaneValue {
     }
   }
 
-  /**
-   * Keeps a position centered under the camera on this plane's two in-plane
-   * axes, pinning the normal axis to `normalOffset`.
-   */
   followPosition(
     cameraPosition: Vector3Like,
     normalOffset: number
