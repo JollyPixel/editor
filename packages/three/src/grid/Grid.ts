@@ -22,7 +22,9 @@ import {
 import {
   GridFadeValue
 } from "./GridFadeValue.ts";
-import type { Vector3Like } from "../types.ts";
+import type {
+  Vector3Like
+} from "../types.ts";
 
 // CONSTANTS
 const kInfiniteGridQuadSize = 2;
@@ -253,10 +255,7 @@ export interface GridExtentDefaults {
 }
 
 /**
- * Global fallbacks consumed by `new Grid()` whenever the matching `GridOptions`
- * field is omitted. Mutate in place (e.g. `Grid.Defaults.cell.color = "#222"`)
- * to change the fallback for every `Grid` created afterward; already-constructed
- * instances are unaffected.
+ * Global fallbacks consumed by `new Grid()` whenever the matching `GridOptions` field is omitted.
  */
 export interface GridDefaults {
   plane: GridPlaneValue;
@@ -297,7 +296,7 @@ export interface Grid {
  * @note
  * Uses TSL and requires `THREE.WebGPURenderer`;
  */
-export class Grid extends THREE.Mesh {
+export class Grid extends THREE.Mesh<THREE.PlaneGeometry> {
   static readonly Defaults: GridDefaults = {
     plane: new GridPlaneValue("xz"),
     cell: {
@@ -465,7 +464,9 @@ export class Grid extends THREE.Mesh {
   ): void => {
     // Runs even in infinite mode: repositioning is skipped below, but the fragment
     // shader's fade calc reads `uniforms.targetPosition` directly every frame.
-    this.fade.trackTarget(this.#uniforms.targetPosition.value);
+    this.fade.trackTarget(
+      this.#uniforms.targetPosition.value
+    );
 
     // Infinite mode skips per-frame repositioning; the fragment shader unprojects every pixel.
     if (this.infiniteGrid) {
@@ -498,6 +499,17 @@ export class Grid extends THREE.Mesh {
     value: boolean
   ) {
     this.visible = value;
+  }
+
+  dispose(): void {
+    this.geometry.dispose();
+
+    const materials = Array.isArray(
+      this.material
+    ) ? this.material : [this.material];
+    for (const material of materials) {
+      material.dispose();
+    }
   }
 }
 
