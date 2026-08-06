@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
-import { LitElement, html, css } from "lit";
+import { LitElement, html, css, type PropertyValues } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import type { VoxelRenderer } from "@jolly-pixel/voxel.renderer";
+import type { VoxelRenderer, VoxelWorldJSON } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import type { GridRenderer } from "../components/GridRenderer.ts";
@@ -74,29 +74,27 @@ export class MapConfigPanel extends LitElement {
 
   @property({ attribute: false }) declare vr: VoxelRenderer;
   @property({ attribute: false }) declare gridRenderer: GridRenderer | undefined;
+  @property({ attribute: false }) declare onLoadWorld: ((data: VoxelWorldJSON) => void) | undefined;
 
-  @state() private declare _gridExtent: number;
   @state() private declare _gridVisible: boolean;
 
   constructor() {
     super();
-    this._gridExtent = 64;
     this._gridVisible = true;
+  }
+
+  override willUpdate(
+    changedProperties: PropertyValues<this>
+  ): void {
+    if (changedProperties.has("gridRenderer") && this.gridRenderer) {
+      this._gridVisible = this.gridRenderer.visible;
+    }
   }
 
   override render() {
     return html`
       <div class="section">
         <div class="section-title">Grid Settings</div>
-        <div class="row">
-          <label>Extent</label>
-          <input
-            type="number"
-            .value=${this._gridExtent}
-            min="8" max="512"
-            @change=${(event: EventInput) => this.#onExtentChange(event)}
-          />
-        </div>
         <div class="row">
           <label>Visible</label>
           <input
@@ -116,16 +114,6 @@ export class MapConfigPanel extends LitElement {
         <input type="file" id="file-input" accept=".json" @change=${this.#onFileSelected} />
       </div>
     `;
-  }
-
-  #onExtentChange(
-    event: EventInput
-  ): void {
-    const val = parseInt(event.target.value, 10);
-    if (!Number.isNaN(val) && val > 0) {
-      this._gridExtent = val;
-      this.gridRenderer?.setExtent(val);
-    }
   }
 
   #onGridVisibleChange(
@@ -163,14 +151,14 @@ export class MapConfigPanel extends LitElement {
     event: EventInput
   ): Promise<void> {
     const file = event.target.files?.[0];
-    if (!file || !this.vr) {
+    if (!file) {
       return;
     }
 
     try {
       const text = await file.text();
-      const data = JSON.parse(text);
-      await this.vr.engine.load(data);
+      const data = JSON.parse(text) as VoxelWorldJSON;
+      this.onLoadWorld?.(data);
 
       this.dispatchEvent(
         new CustomEvent("world-loaded", { bubbles: true, composed: true })

@@ -360,6 +360,68 @@ describe("VoxelSyncServer — rights", () => {
   });
 });
 
+describe("VoxelSyncServer — receive: world-replace", () => {
+  it("replaces the world's layers entirely", () => {
+    const server = new VoxelSyncServer();
+    server.world.addLayer("Stale");
+
+    server.receive({
+      action: "world-replace",
+      data: { version: 1, chunkSize: 16, tilesets: [], layers: [
+        { id: "layer_1", name: "Fresh", order: 0, visible: true, opacity: 1, voxels: {} }
+      ] },
+      clientId: "client-A",
+      seq: 1,
+      timestamp: 1000
+    }, noopRoom);
+
+    const layers = server.world.getLayers();
+    assert.equal(layers.length, 1);
+    assert.equal(layers[0].name, "Fresh");
+    assert.equal(server.world.getLayer("Stale"), undefined);
+  });
+
+  it("broadcasts a fresh snapshot (not a command) to observing clients", () => {
+    const server = new VoxelSyncServer();
+
+    const client = createClient("A");
+    const room = observe(server, client);
+    client.received.length = 0;
+
+    server.receive({
+      action: "world-replace",
+      data: { version: 1, chunkSize: 16, tilesets: [], layers: [] },
+      clientId: "client-A",
+      seq: 1,
+      timestamp: 1000
+    }, room);
+
+    assert.equal(client.received.length, 1);
+    const msg = client.received[0];
+    assert.equal(msg.type, "snapshot");
+    assert.equal(msg.data.version, 1);
+  });
+
+  it("is accepted regardless of prior LWW-tracked state (no conflict check)", () => {
+    const server = new VoxelSyncServer();
+    server.world.addLayer("Ground");
+
+    server.receive(voxelSetCmd({ timestamp: 900, x: 0, y: 0, z: 0, blockId: 2 }), noopRoom);
+
+    assert.doesNotThrow(() => {
+      server.receive({
+        action: "world-replace",
+        data: { version: 1, chunkSize: 16, tilesets: [], layers: [] },
+        clientId: "client-B",
+        seq: 1,
+        timestamp: 500
+      }, noopRoom);
+    });
+
+    assert.equal(server.world.getLayers().length, 0);
+  });
+});
+
 describe("VoxelSyncServer — custom world / id", () => {
   it("accepts an existing VoxelWorld in options", () => {
     const world = new VoxelWorld(8);

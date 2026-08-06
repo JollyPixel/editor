@@ -27,7 +27,7 @@ if (!canvas) {
   throw new Error("Canvas element not found");
 }
 
-const runtime = new Runtime(canvas, {
+const runtime = await Runtime.create(canvas, {
   includePerformanceStats: true
 });
 const { world } = runtime;
@@ -63,6 +63,7 @@ const editorScene = new EditorScene(
 const sidebar = document.querySelector<EditorSidebar>("#sidebar")!;
 if (sidebar) {
   sidebar.textureRoom = textureRoom;
+  sidebar.onLoadWorld = (data) => editorScene.loadWorld(data);
 
   // editorScene.vr / gridRenderer are assigned inside awake(), which runs
   // after loadScene(). Defer propagating them to the sidebar until the block

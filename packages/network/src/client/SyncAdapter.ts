@@ -10,6 +10,7 @@ import type {
 
 export type SyncAdapterEventMap = {
   ready: () => void;
+  snapshot: () => void;
 };
 
 /**
@@ -90,14 +91,27 @@ export abstract class SyncAdapter<
 
   protected stampCommand(
     event: Event,
+    timestamp?: number
+  ): Command;
+  /**
+   * Stamps a payload shaped differently from `Event` (e.g. a one-off,
+   * non-hook admin command) with the same `clientId`/`seq`/`timestamp`
+   * envelope, without exposing the private `#seq` counter to subclasses.
+   */
+  protected stampCommand<E extends object>(
+    event: E,
+    timestamp?: number
+  ): E & NetworkCommandHeader;
+  protected stampCommand(
+    event: object,
     timestamp: number = Date.now()
-  ): Command {
+  ): object {
     return {
       ...event,
       clientId: this.room.clientId,
       seq: ++this.#seq,
       timestamp
-    } as unknown as Command;
+    };
   }
 
   protected abstract getHandler(
@@ -150,6 +164,14 @@ export abstract class SyncAdapter<
     if (this.#target) {
       this.applySnapshot(this.#target, snapshot);
     }
+
+    // "ready" fires once, for "the initial connection is established".
+    // "snapshot" fires every time — applySnapshot() replaces the target's
+    // state wholesale (bypassing whatever per-mutation hooks the target
+    // normally emits), so anything mirroring that state (a layer list, a
+    // selection) needs its own signal to know a full refresh is due, not
+    // just the first one.
+    this.emit("snapshot");
 
     if (!this.#ready) {
       this.#ready = true;

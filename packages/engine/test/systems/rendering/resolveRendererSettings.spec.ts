@@ -3,17 +3,17 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import * as THREE from "three";
+import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import { resolveRendererSettings } from "../../../src/systems/rendering/ThreeRenderer.ts";
 
 describe("Systems.Rendering.resolveRendererSettings", () => {
-  describe("webgl parameters", () => {
+  describe("webgpu parameters", () => {
     test("should default to antialiasing, alpha and the discrete GPU", () => {
-      const { webgl } = resolveRendererSettings({}, 1);
+      const { webgpu } = resolveRendererSettings({}, 1);
 
-      assert.deepStrictEqual(webgl, {
+      assert.deepStrictEqual(webgpu, {
         antialias: true,
         alpha: true,
         powerPreference: "high-performance"
@@ -21,23 +21,23 @@ describe("Systems.Rendering.resolveRendererSettings", () => {
     });
 
     test("should let the caller disable antialiasing", () => {
-      const { webgl } = resolveRendererSettings(
-        { webgl: { antialias: false } },
+      const { webgpu } = resolveRendererSettings(
+        { webgpu: { antialias: false } },
         1
       );
 
-      assert.strictEqual(webgl.antialias, false);
-      assert.strictEqual(webgl.alpha, true);
+      assert.strictEqual(webgpu.antialias, false);
+      assert.strictEqual(webgpu.alpha, true);
     });
 
     test("should forward unknown context parameters untouched", () => {
-      const { webgl } = resolveRendererSettings(
-        { webgl: { logarithmicDepthBuffer: true, stencil: false } },
+      const { webgpu } = resolveRendererSettings(
+        { webgpu: { logarithmicDepthBuffer: true, stencil: false } },
         1
       );
 
-      assert.strictEqual(webgl.logarithmicDepthBuffer, true);
-      assert.strictEqual(webgl.stencil, false);
+      assert.strictEqual(webgpu.logarithmicDepthBuffer, true);
+      assert.strictEqual(webgpu.stencil, false);
     });
   });
 

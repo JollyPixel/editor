@@ -193,6 +193,17 @@ export class EditorState extends EventTarget {
   dispatchBlockRegistryChanged(): void {
     this.dispatchEvent(new CustomEvent("blockRegistryChanged"));
   }
+
+  /**
+   * Signals that the world's layers were replaced wholesale (a network
+   * snapshot or a JSON load) rather than through the usual per-mutation
+   * hooks — listeners that mirror the layer list (e.g. LayerManager's tree)
+   * need to fully re-read it from `vr.engine.world`, since no individual
+   * "added"/"removed" events were emitted for the change.
+   */
+  dispatchWorldReset(): void {
+    this.dispatchEvent(new CustomEvent("worldReset"));
+  }
 }
 
 export const editorState = new EditorState();

@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
-import * as THREE from "three";
-import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
-import type { Pass } from "three/addons/postprocessing/Pass.js";
-import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import * as THREE from "three/webgpu";
 import { EventEmitter } from "@posva/event-emitter";
 
 // Import Internal Dependencies
@@ -16,20 +13,16 @@ import type { SceneManager } from "../SceneManager.ts";
 import {
   type RenderMode,
   type RenderStrategy,
-  DirectRenderStrategy,
-  ComposerRenderStrategy,
-  orderRenderPasses
+  DirectRenderStrategy
 } from "./RenderStrategy.ts";
-import { Logger } from "../Logger.ts";
 
 // CONSTANTS
 const kDefaultMaxPixelRatio = 2;
-const kLoggerNamespace = "Systems.Renderer";
 
 export type ThreeRendererEvents = RendererEvents;
 
 /**
- * Mutable `WebGLRenderer` state, applied after the GL context exists.
+ * Mutable `WebGPURenderer` state, applied after the GPU context exists.
  */
 export interface ThreeRendererOutputOptions {
   /**
@@ -73,21 +66,16 @@ export interface ThreeRendererOptions<
    */
   renderMode?: RenderMode;
   /**
-   * Forwarded to `new THREE.WebGLRenderer()`. These can only be chosen when the
-   * GL context is created — `antialias`, `powerPreference`, `alpha`,
-   * `logarithmicDepthBuffer`, `stencil`, …
+   * Forwarded to `new THREE.WebGPURenderer()`. These can only be chosen when the
+   * GPU context is created — `antialias`, `powerPreference`, `alpha`,
+   * `logarithmicDepthBuffer`, `stencil`, `forceWebGL`, …
    */
-  webgl?: Omit<THREE.WebGLRendererParameters, "canvas" | "context">;
+  webgpu?: Omit<THREE.WebGPURendererParameters, "canvas" | "context">;
   output?: ThreeRendererOutputOptions;
-  /**
-   * Destination for renderer warnings. Defaults to a logger that prints
-   * warnings; pass an application logger to route or silence them.
-   */
-  logger?: Logger;
 }
 
 export interface ResolvedRendererSettings {
-  webgl: Omit<THREE.WebGLRendererParameters, "canvas" | "context">;
+  webgpu: Omit<THREE.WebGPURendererParameters, "canvas" | "context">;
   pixelRatio: number;
   shadows: {
     enabled: boolean;
@@ -100,13 +88,13 @@ export interface ResolvedRendererSettings {
 
 /**
  * Merges renderer options with the engine defaults. Pure and DOM-free so the
- * resulting configuration can be asserted without a GL context.
+ * resulting configuration can be asserted without a GPU context.
  */
 export function resolveRendererSettings(
-  options: Pick<ThreeRendererOptions, "webgl" | "output"> = {},
+  options: Pick<ThreeRendererOptions, "webgpu" | "output"> = {},
   devicePixelRatio: number = globalThis.window?.devicePixelRatio ?? 1
 ): ResolvedRendererSettings {
-  const { webgl = {}, output = {} } = options;
+  const { webgpu = {}, output = {} } = options;
   const {
     maxPixelRatio = kDefaultMaxPixelRatio,
     pixelRatio = Math.min(devicePixelRatio, maxPixelRatio),
@@ -117,11 +105,11 @@ export function resolveRendererSettings(
   } = output;
 
   return {
-    webgl: {
+    webgpu: {
       antialias: true,
       alpha: true,
       powerPreference: "high-performance",
-      ...webgl
+      ...webgpu
     },
     pixelRatio,
     shadows: {
@@ -137,51 +125,58 @@ export function resolveRendererSettings(
 export class ThreeRenderer<
   TContext = WorldDefaultContext
 > extends EventEmitter<ThreeRendererEvents> implements Renderer {
-  webGLRenderer: THREE.WebGLRenderer;
+  webGPURenderer: THREE.WebGPURenderer;
   renderComponents: RenderComponent[] = [];
   renderStrategy: RenderStrategy;
   ratio: number | null = null;
   sceneManager: SceneManager<TContext>;
 
-  readonly #logger: Logger;
-  /**
-   * RenderPass owned by this renderer for each component, keyed by component so
-   * a component swapping its `threeCamera` does not orphan its pass.
-   */
-  #passes = new Map<RenderComponent, RenderPass>();
   #sortedComponents: readonly RenderComponent[] = [];
   #renderOrderDirty = true;
-  #viewportWarningIssued = false;
 
   #resizeObserver: ResizeObserver | null = null;
   #pendingResizeWidth = 0;
   #pendingResizeHeight = 0;
   #resizeDirty = true;
 
-  constructor(
-    canvas: HTMLCanvasElement,
+  private constructor(
+    webGPURenderer: THREE.WebGPURenderer,
     options: ThreeRendererOptions<TContext>
   ) {
     super();
     const { sceneManager, renderMode = "direct" } = options;
 
     this.sceneManager = sceneManager;
-    this.#logger = (
-      options.logger ?? new Logger({ level: "warn", namespaces: ["*"] })
-    ).child({ namespace: kLoggerNamespace });
-    this.webGLRenderer = createWebGLRenderer(
-      canvas,
-      resolveRendererSettings(options)
-    );
+    this.webGPURenderer = webGPURenderer;
     this.setRenderMode(renderMode);
   }
 
+  /**
+   * Builds and initializes a `ThreeRenderer`. `THREE.WebGPURenderer` requires
+   * an asynchronous `init()` call before first use (it negotiates a WebGPU
+   * adapter, falling back to a WebGL2 backend when WebGPU isn't available) —
+   * this factory is the only way to obtain a ready-to-use instance.
+   */
+  static async create<
+    TContext = WorldDefaultContext
+  >(
+    canvas: HTMLCanvasElement,
+    options: ThreeRendererOptions<TContext>
+  ): Promise<ThreeRenderer<TContext>> {
+    const webGPURenderer = await createWebGPURenderer(
+      canvas,
+      resolveRendererSettings(options)
+    );
+
+    return new ThreeRenderer(webGPURenderer, options);
+  }
+
   get canvas() {
-    return this.webGLRenderer.domElement;
+    return this.webGPURenderer.domElement;
   }
 
   getSource() {
-    return this.webGLRenderer;
+    return this.webGPURenderer;
   }
 
   addRenderComponent(
@@ -193,16 +188,6 @@ export class ThreeRenderer<
 
     this.renderComponents.push(component);
     this.markRenderOrderDirty();
-
-    if (this.renderStrategy instanceof ComposerRenderStrategy) {
-      const renderPass = new RenderPass(
-        this.sceneManager.getSource(),
-        component.threeCamera
-      );
-      this.#passes.set(component, renderPass);
-      this.renderStrategy.addEffect(renderPass);
-      this.#refreshRenderOrder();
-    }
   }
 
   removeRenderComponent(
@@ -213,25 +198,18 @@ export class ThreeRenderer<
       this.renderComponents.splice(index, 1);
       this.markRenderOrderDirty();
     }
-
-    const renderPass = this.#passes.get(component);
-    if (renderPass) {
-      this.#passes.delete(component);
-      if (this.renderStrategy instanceof ComposerRenderStrategy) {
-        this.renderStrategy.removeEffect(renderPass);
-        this.#refreshRenderOrder();
-      }
-      renderPass.dispose();
-    }
   }
 
+  /**
+   * No-op in "direct" mode — direct rendering reads `threeCamera` fresh every
+   * frame instead of caching a per-component render pass. Kept on the public
+   * API so `CameraComponent.setProjectionMode` doesn't need to know whether
+   * the active render mode cares.
+   */
   updateRenderComponent(
-    component: RenderComponent
+    _component: RenderComponent
   ): void {
-    const renderPass = this.#passes.get(component);
-    if (renderPass) {
-      renderPass.camera = component.threeCamera;
-    }
+    // Nothing to rebind in direct mode.
   }
 
   markRenderOrderDirty(): void {
@@ -241,26 +219,16 @@ export class ThreeRenderer<
   setRenderMode(
     mode: RenderMode
   ): this {
-    this.renderStrategy?.dispose();
-    this.#passes.clear();
-
-    if (mode === "direct") {
-      this.renderStrategy = new DirectRenderStrategy(this.webGLRenderer);
-    }
-    else {
-      const strategy = new ComposerRenderStrategy(
-        this.webGLRenderer,
-        new EffectComposer(this.webGLRenderer)
+    if (mode !== "direct") {
+      throw new Error(
+        `ThreeRenderer: render mode "${mode}" is not supported yet — ` +
+        "composer/post-processing needs to be rebuilt on WebGPURenderer's " +
+        "node-based PostProcessing API. Use \"direct\"."
       );
-
-      const scene = this.sceneManager.getSource();
-      for (const renderComponent of this.renderComponents) {
-        const renderPass = new RenderPass(scene, renderComponent.threeCamera);
-        this.#passes.set(renderComponent, renderPass);
-        strategy.addEffect(renderPass);
-      }
-      this.renderStrategy = strategy;
     }
+
+    this.renderStrategy?.dispose();
+    this.renderStrategy = new DirectRenderStrategy(this.webGPURenderer);
 
     this.markRenderOrderDirty();
     this.#refreshRenderOrder();
@@ -279,34 +247,6 @@ export class ThreeRenderer<
     return this;
   }
 
-  setEffects(
-    ...effects: Pass[]
-  ): this {
-    if (!(this.renderStrategy instanceof ComposerRenderStrategy)) {
-      this.#logger.warn(
-        "setEffects called in direct render mode — effects are ignored. Call setRenderMode(\"composer\") first."
-      );
-
-      return this;
-    }
-
-    // Drop every pass except the RenderPasses this renderer owns for its components.
-    const owned = new Set<Pass>(this.#passes.values());
-    const composer = this.renderStrategy.getComposer();
-    for (const pass of [...composer.passes]) {
-      if (!owned.has(pass)) {
-        this.renderStrategy.removeEffect(pass);
-        pass.dispose();
-      }
-    }
-
-    for (const pass of effects) {
-      this.renderStrategy.addEffect(pass);
-    }
-
-    return this;
-  }
-
   setRatio(
     ratio: number | null = null
   ) {
@@ -315,7 +255,7 @@ export class ThreeRenderer<
     const styles = this.ratio ?
       { margin: "0", flex: "1" } :
       { margin: "auto", flex: "none" };
-    Object.assign(this.webGLRenderer.domElement.style, styles);
+    Object.assign(this.webGPURenderer.domElement.style, styles);
     this.resize();
 
     return this;
@@ -328,7 +268,7 @@ export class ThreeRenderer<
 
     const target = this.ratio ?
       document.body :
-      this.webGLRenderer.domElement.parentElement ?? this.webGLRenderer.domElement;
+      this.webGPURenderer.domElement.parentElement ?? this.webGPURenderer.domElement;
 
     this.#resizeObserver = new ResizeObserver((entries) => {
       const entry = entries[0];
@@ -400,29 +340,27 @@ export class ThreeRenderer<
         canvasHeight: this.#pendingResizeHeight
       }
     );
-    this.emit("draw", { source: this.webGLRenderer });
+    this.emit("draw", { source: this.webGPURenderer });
   }
 
   onDraw(
-    callback: (event: { source: THREE.WebGLRenderer; }) => void
+    callback: (event: { source: THREE.WebGPURenderer; }) => void
   ) {
     this.on("draw", callback);
   }
 
   clear() {
-    this.webGLRenderer.clear();
+    this.webGPURenderer.clear();
   }
 
   dispose() {
     this.unobserveResize();
     this.renderStrategy.dispose();
-    this.#passes.clear();
     this.renderComponents.length = 0;
     this.#sortedComponents = [];
 
-    this.webGLRenderer.setAnimationLoop(null);
-    this.webGLRenderer.dispose();
-    this.webGLRenderer.forceContextLoss();
+    this.webGPURenderer.setAnimationLoop(null);
+    this.webGPURenderer.dispose();
   }
 
   #refreshRenderOrder(): void {
@@ -430,47 +368,18 @@ export class ThreeRenderer<
       (a, b) => a.depth - b.depth
     );
     this.#renderOrderDirty = false;
-
-    if (this.renderStrategy instanceof ComposerRenderStrategy) {
-      this.#syncComposerPasses(this.renderStrategy);
-    }
-  }
-
-  #syncComposerPasses(
-    strategy: ComposerRenderStrategy
-  ): void {
-    strategy.setPassOrder(
-      orderRenderPasses(this.#sortedComponents, this.#passes)
-    );
-
-    for (const component of this.#sortedComponents) {
-      this.#warnUnsupportedViewport(component);
-    }
-  }
-
-  #warnUnsupportedViewport(
-    component: RenderComponent
-  ): void {
-    if (component.viewport === null || this.#viewportWarningIssued) {
-      return;
-    }
-
-    this.#viewportWarningIssued = true;
-    this.#logger.warn(
-      "composer mode ignores per-camera viewports and renders full-canvas. " +
-      "Use renderMode \"direct\" for split-screen or layered viewport cameras."
-    );
   }
 }
 
-function createWebGLRenderer(
+async function createWebGPURenderer(
   canvas: HTMLCanvasElement,
   settings: ResolvedRendererSettings
-): THREE.WebGLRenderer {
-  const renderer = new THREE.WebGLRenderer({
-    ...settings.webgl,
+): Promise<THREE.WebGPURenderer> {
+  const renderer = new THREE.WebGPURenderer({
+    ...settings.webgpu,
     canvas
   });
+  await renderer.init();
 
   renderer.setPixelRatio(settings.pixelRatio);
   renderer.shadowMap.enabled = settings.shadows.enabled;

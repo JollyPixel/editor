@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import { ActorComponent, type Actor } from "@jolly-pixel/engine";
-import * as THREE from "three";
+import type * as THREE from "three/webgpu";
 
 // CONSTANTS
 const kRefreshInterval = 0.2;
@@ -20,7 +20,7 @@ const kHudStyle = [
 
 export class PerformanceHUD extends ActorComponent {
   #el: HTMLDivElement | null = null;
-  #renderer: THREE.WebGLRenderer | null = null;
+  #renderer: THREE.WebGPURenderer | null = null;
   #visible = true;
   #elapsed = 0;
   // Stored so the listener can be removed in destroy()
@@ -46,7 +46,7 @@ export class PerformanceHUD extends ActorComponent {
   }
 
   awake() {
-    this.#renderer = this.actor.world.renderer.getSource() as THREE.WebGLRenderer;
+    this.#renderer = this.actor.world.renderer.getSource() as THREE.WebGPURenderer;
 
     const container = document.querySelector<HTMLElement>("#game-container")!;
     this.#el = document.createElement("div");

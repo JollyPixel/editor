@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-import { LineSegments2 } from "three/addons/lines/LineSegments2.js";
-import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js";
-import { LineMaterial } from "three/addons/lines/LineMaterial.js";
 import {
   Actor,
   ActorComponent
@@ -25,11 +22,6 @@ export interface VoxelBrushOptions {
    */
   borderColor?: THREE.ColorRepresentation;
   /**
-   * Width of the border lines in CSS pixels.
-   * @default 1.5
-   */
-  borderWidth?: number;
-  /**
    * Dash length in world units.
    * @default 0.2
    */
@@ -43,7 +35,14 @@ export interface VoxelBrushOptions {
 
 /**
  * Renders a ghost-preview of the brush footprint using InstancedMesh
- * plus a dotted LineSegments2 border outline around each preview cube.
+ * plus a dotted LineSegments border outline around each preview cube.
+ *
+ * Uses core `THREE.LineSegments`/`LineDashedMaterial` rather than the
+ * three/addons fat-line technique (`Line2`/`LineMaterial`) — the latter
+ * patches raw GLSL via `onBeforeCompile`, which WebGPURenderer's NodeBuilder
+ * cannot process. The tradeoff is losing configurable pixel line width
+ * (browsers largely ignore `LineBasicMaterial.linewidth` too, so this isn't
+ * a practical regression).
  */
 export class VoxelBrushPreview extends ActorComponent {
   static Max = 512;
@@ -53,7 +52,7 @@ export class VoxelBrushPreview extends ActorComponent {
   #previewMesh: THREE.InstancedMesh;
   #dummy = new THREE.Object3D();
 
-  #borderMesh: LineSegments2;
+  #borderMesh: THREE.LineSegments;
 
   constructor(
     actor: Actor,
@@ -68,7 +67,6 @@ export class VoxelBrushPreview extends ActorComponent {
       color = 0x4488ff,
       opacity = 0.15,
       borderColor = 0x88ccff,
-      borderWidth = 1.5,
       borderDashSize = 0.2,
       borderGapSize = 0.12
     } = options;
@@ -93,25 +91,22 @@ export class VoxelBrushPreview extends ActorComponent {
     this.#previewMesh.renderOrder = 1;
     this.#previewMesh.frustumCulled = false;
 
-    const borderGeo = new LineSegmentsGeometry();
-    const borderMat = new LineMaterial({
+    const borderGeo = new THREE.BufferGeometry();
+    // Seed a (possibly empty) "position" attribute so LineSegments.raycast's
+    // computeBoundingSphere() has something to read before the first
+    // updateFromPositions() call — an attribute-less BufferGeometry throws.
+    borderGeo.setAttribute("position", new THREE.Float32BufferAttribute([], 3));
+    const borderMat = new THREE.LineDashedMaterial({
       color: borderColor,
-      linewidth: borderWidth,
-      dashed: true,
       dashSize: borderDashSize,
       gapSize: borderGapSize,
-      depthWrite: false,
-      resolution: new THREE.Vector2(window.innerWidth, window.innerHeight)
+      depthWrite: false
     });
 
-    this.#borderMesh = new LineSegments2(borderGeo, borderMat);
+    this.#borderMesh = new THREE.LineSegments(borderGeo, borderMat);
     this.#borderMesh.renderOrder = 2;
     this.#borderMesh.frustumCulled = false;
     this.#borderMesh.visible = false;
-
-    this.actor.world.renderer.on("resize", ({ width, height }) => {
-      this.#borderMesh.material.resolution.set(width, height);
-    });
   }
 
   awake() {
@@ -123,7 +118,7 @@ export class VoxelBrushPreview extends ActorComponent {
     this.#previewMesh.geometry.dispose();
     (this.#previewMesh.material as THREE.Material).dispose();
     this.#borderMesh.geometry.dispose();
-    this.#borderMesh.material.dispose();
+    (this.#borderMesh.material as THREE.Material).dispose();
     super.destroy();
   }
 
@@ -167,8 +162,9 @@ export class VoxelBrushPreview extends ActorComponent {
       return;
     }
 
-    this.#borderMesh.geometry.setPositions(
-      this.#buildBorderPositions(positions, count)
+    this.#borderMesh.geometry.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(this.#buildBorderPositions(positions, count), 3)
     );
     this.#borderMesh.computeLineDistances();
     this.#borderMesh.visible = true;
@@ -176,7 +172,8 @@ export class VoxelBrushPreview extends ActorComponent {
 
   /**
    * Returns a flat positions array (start/end pairs) for the 12 edges
-   * of each preview cube, suitable for LineSegmentsGeometry.setPositions().
+   * of each preview cube, suitable for a `LineSegments` BufferGeometry
+   * "position" attribute.
    */
   #buildBorderPositions(
     positions: THREE.Vector3[],

@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import * as THREE from "three";
+import * as THREE from "three/webgpu";
 import { EventEmitter } from "@posva/event-emitter";
 
 // Import Internal Dependencies
@@ -65,7 +65,7 @@ export interface WorldDefaultContext {
 }
 
 export class World<
-  T = THREE.WebGLRenderer,
+  T = THREE.WebGPURenderer,
   TContext = WorldDefaultContext
 > extends EventEmitter<WorldEvents> {
   renderer: Renderer<T>;

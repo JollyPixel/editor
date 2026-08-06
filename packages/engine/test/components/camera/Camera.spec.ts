@@ -3,7 +3,7 @@ import { describe, test, beforeEach, mock } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import * as THREE from "three";
+import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import { CameraComponent } from "../../../src/components/camera/Camera.ts";

@@ -40,7 +40,7 @@ attach the camera actor to another actor and it follows.
 Mechanically, the component sets `matrixWorldAutoUpdate = false` on
 its `THREE.Camera`. Without it, three recomposes `matrixWorld` from
 the camera's own local transform right before drawing
-(`WebGLRenderer` does this for any camera whose `parent` is `null`),
+(`WebGPURenderer` does this for any camera whose `parent` is `null`),
 throwing away what `prepareRender` wrote. As a consequence three
 never walks the camera's children either, so the component updates
 them itself — that is what keeps an attached `AudioListener`

@@ -2,15 +2,14 @@
 import * as THREE from "three";
 import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
 import { ResizeHandle } from "@jolly-pixel/resize-handle";
-// import * as network from "@jolly-pixel/network/client";
-
-// import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
-// import {
-//   PixelSyncClient,
-//   PixelCursorSync,
-//   type PixelNetworkCommand,
-//   type PixelServerMessage
-// } from "@jolly-pixel/pixel-draw.renderer";
+import * as network from "@jolly-pixel/network/client";
+import {
+  PixelSyncClient,
+  PixelCursorSync,
+  type PixelNetworkCommand,
+  type PixelServerMessage,
+  type PixelArtCanvas
+} from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import { PixelDrawPanel } from "../../src/index.ts";
@@ -20,21 +19,14 @@ import { OrbitControlsBehavior } from "./components/OrbitControlsBehavior.ts";
 import { CubeGallery } from "./CubeGallery.ts";
 import { CubePicker } from "./CubePicker.ts";
 
-// Every tab that opens this demo joins the same room, so pointing a
-// collaborator at the same URL joins them onto the same canvas. Must match
-// the PixelSyncServer's room in vite.config.ts.
-// const DEMO_ROOM = "pixel-draw:demo-canvas";
-// const USERNAME_STORAGE_KEY = "pixel-draw-demo:username";
+// Shared room config for multi-tab collaboration. Must match vite.config.ts.
+const DEMO_ROOM = "pixel-draw:demo-canvas";
+const USERNAME_STORAGE_KEY = "pixel-draw-demo:username";
 
 declare global {
   interface Window {
     /**
-     * Flips to `true` once PixelSyncClient's "ready" event fires (the
-     * initial WS snapshot has been applied to the canvas). examples/ isn't
-     * published (see package.json's "files"), so this test-only hook is
-     * harmless to leave in: it lets the E2E suite wait for a deterministic
-     * starting point (the server's current shared buffer) before resetting
-     * it, instead of racing the snapshot.
+     * Test hook: true after PixelSyncClient "ready" applies the initial snapshot.
      */
     __pixelSyncReady?: boolean;
   }
@@ -50,7 +42,7 @@ async function initRuntime(): Promise<Runtime> {
     "#canvas-container > canvas"
   )!;
 
-  const runtime = new Runtime(canvas, {
+  const runtime = await Runtime.create(canvas, {
     includePerformanceStats: false
   });
 
@@ -62,9 +54,7 @@ async function initRuntime(): Promise<Runtime> {
   const keyLight = new THREE.DirectionalLight(0xffffff, 1.8);
   keyLight.position.set(5, 10, 7);
 
-  // Cool-toned fill from the opposite side, so faces facing away from the
-  // key light aren't flat black — matters now that orbiting lets every
-  // face be seen (see OrbitControlsBehavior).
+  // Cool fill light to keep non-key-facing cube faces readable while orbiting.
   const fillLight = new THREE.DirectionalLight(0xaeccff, 0.5);
   fillLight.position.set(-6, 3, -4);
 
@@ -85,8 +75,7 @@ async function initRuntime(): Promise<Runtime> {
     defaultMode: "paint",
     backgroundColor: "#263238",
     zoom: {
-      // No `default`: PixelArtCanvas computes one that fits the whole
-      // texture inside the panel's initial size (see PixelArtCanvas.md).
+      // No `default`: PixelArtCanvas computes a fit-to-panel initial zoom.
       min: 1,
       max: 32,
       sensitivity: 1
@@ -106,18 +95,16 @@ async function initRuntime(): Promise<Runtime> {
   const cameraBehavior = world.createActor("camera")
     .addComponentAndGet(CameraBehavior);
 
-  // Drag to orbit, scroll to zoom — lets every face of a cube actually be
-  // inspected instead of only the two the static camera used to show.
+  // Drag orbit + scroll zoom camera controls.
   world.createActor("orbit-controls").addComponentAndGet(OrbitControlsBehavior, {
     camera: cameraBehavior.camera,
+    cameraActor: cameraBehavior.actor,
     target: new THREE.Vector3(0, 0, 0),
     minDistance: 3,
     maxDistance: 30
   });
 
-  // Forward-declared: the onBufferUpdated handler below closes over it, but
-  // only invokes it once "texture-replaced" fires, well after CubeGallery
-  // (assigned below) exists.
+  // Forward declaration for onBufferUpdated closure.
   // eslint-disable-next-line prefer-const -- assigned once, after construction below
   let cubeGallery: CubeGallery;
 
@@ -129,17 +116,10 @@ async function initRuntime(): Promise<Runtime> {
     }
   };
 
-  // Must run before CubeGallery is constructed below: CubeGallery seeds an
-  // initial UV region synchronously, and EditPipeline forwards that as a
-  // "uv-region-created" onBufferUpdated event immediately (not queued) —
-  // if sync isn't attached yet, the event fires into a void and the region
-  // never reaches the server, so late-joining peers never see it either.
-  // initializeWebsocketTransport(canvasManager);
+  // Attach sync before CubeGallery so initial UV region events are captured.
+  initializeWebsocketTransport(canvasManager);
 
-  // One test cube per UV region, kept in sync via the uv event stream (see
-  // CubeGallery.ts). Actor creation/teardown is delegated to CubeFactory, and
-  // click-to-select raycasting to CubePicker, so CubeGallery itself only
-  // owns the region↔cube mirroring/layout — not the ECS world or 3D input.
+  // One cube per UV region; CubeGallery mirrors region state to scene meshes.
   const cubeFactory = new CubeFactory({ world, canvasTexture });
   cubeGallery = new CubeGallery({ cubeFactory, canvasManager });
   new CubePicker({
@@ -165,49 +145,49 @@ async function initRuntime(): Promise<Runtime> {
 /**
  * Prompts once per browser session
  */
-// function resolveUsername(): string {
-//   const cached = sessionStorage.getItem(USERNAME_STORAGE_KEY);
-//   if (cached) {
-//     return cached;
-//   }
+function resolveUsername(): string {
+  const cached = sessionStorage.getItem(USERNAME_STORAGE_KEY);
+  if (cached) {
+    return cached;
+  }
 
-//   // eslint-disable-next-line no-alert -- example-only UX, no dedicated UI needed here
-//   const entered = window.prompt("Choose a username for this session")?.trim();
-//   const username = entered && entered.length > 0 ?
-//     entered :
-//     "Guest";
+  // eslint-disable-next-line no-alert -- example-only UX, no dedicated UI needed here
+  const entered = window.prompt("Choose a username for this session")?.trim();
+  const username = entered && entered.length > 0 ?
+    entered :
+    "Guest";
 
-//   sessionStorage.setItem(USERNAME_STORAGE_KEY, username);
+  sessionStorage.setItem(USERNAME_STORAGE_KEY, username);
 
-//   return username;
-// }
+  return username;
+}
 
-// PixelSyncClient.attach() chains onto whatever local `onBufferUpdated` handler the canvas already has.
-// function initializeWebsocketTransport(
-//   canvasManager: PixelArtCanvas
-// ) {
-//   const networkClient = new network.Client({
-//     identity: {
-//       username: resolveUsername()
-//     }
-//   });
-//   const room = networkClient.room<PixelNetworkCommand, PixelServerMessage>(
-//     DEMO_ROOM
-//   );
-//   room.join();
-//   room.on("peer-joined", (event) => console.log(`[pixel-sync] peer joined: ${event.clientId}`));
-//   room.on("peer-left", (event) => console.log(`[pixel-sync] peer left: ${event.clientId}`));
+// PixelSyncClient.attach() chains onto the current canvas onBufferUpdated handler.
+function initializeWebsocketTransport(
+  canvasManager: PixelArtCanvas
+) {
+  const networkClient = new network.Client({
+    identity: {
+      username: resolveUsername()
+    }
+  });
+  const room = networkClient.room<PixelNetworkCommand, PixelServerMessage>(
+    DEMO_ROOM
+  );
+  room.join();
+  room.on("peer-joined", (event) => console.log(`[pixel-sync] peer joined: ${event.clientId}`));
+  room.on("peer-left", (event) => console.log(`[pixel-sync] peer left: ${event.clientId}`));
 
-//   const syncClient = new PixelSyncClient({
-//     room
-//   });
-//   syncClient.attach(canvasManager);
-//   syncClient.on("ready", () => {
-//     window.__pixelSyncReady = true;
-//   });
+  const syncClient = new PixelSyncClient({
+    room
+  });
+  syncClient.attach(canvasManager);
+  syncClient.on("ready", () => {
+    window.__pixelSyncReady = true;
+  });
 
-//   const cursorSync = new PixelCursorSync({
-//     room
-//   });
-//   cursorSync.attach(canvasManager);
-// }
+  const cursorSync = new PixelCursorSync({
+    room
+  });
+  cursorSync.attach(canvasManager);
+}

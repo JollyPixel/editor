@@ -228,7 +228,7 @@ export class TilesetManager extends LitElement {
     this._loading = true;
 
     try {
-      await this.vr.engine.loadTileset({
+      await this.vr.engine.tilesetManager.loadTileset({
         id,
         src,
         tileSize: this._newTileSize

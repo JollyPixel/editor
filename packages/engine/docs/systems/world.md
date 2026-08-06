@@ -21,7 +21,7 @@ import {
 
 const canvas = document.querySelector("canvas")!;
 const sceneManager = new SceneManager();
-const renderer = new ThreeRenderer(canvas, { sceneManager });
+const renderer = await ThreeRenderer.create(canvas, { sceneManager });
 
 const game = new World(renderer, { sceneManager });
 ```

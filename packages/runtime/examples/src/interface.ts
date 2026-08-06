@@ -6,7 +6,7 @@ import {
 import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
 
 const canvasHTMLElement = document.querySelector("canvas") as HTMLCanvasElement;
-const runtime = new Runtime(canvasHTMLElement, {
+const runtime = await Runtime.create(canvasHTMLElement, {
   includePerformanceStats: true
 });
 const { world } = runtime;

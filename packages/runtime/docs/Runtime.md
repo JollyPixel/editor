@@ -49,7 +49,9 @@ class Runtime<
 ```
 
 > [!NOTE]
-> The constructor throws an `Error` if `canvas` is falsy.
+> `Runtime.create()` throws an `Error` if `canvas` is falsy. Construction is
+> async because the underlying `ThreeRenderer` negotiates a WebGPU (or
+> WebGL2 fallback) adapter before it can be used.
 
 ## Usage
 
@@ -57,7 +59,7 @@ class Runtime<
 import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
 
 const canvas = document.querySelector("canvas")!;
-const runtime = new Runtime(canvas, {
+const runtime = await Runtime.create(canvas, {
   includePerformanceStats: true
 });
 

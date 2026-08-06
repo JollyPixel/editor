@@ -40,7 +40,7 @@ if (!canvas) {
 // from pre-bundling (see vite.config.ts → optimizeDeps.exclude).
 const rapierWorld = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
 
-const runtime = new Runtime(canvas, {
+const runtime = await Runtime.create(canvas, {
   includePerformanceStats: true
 });
 
