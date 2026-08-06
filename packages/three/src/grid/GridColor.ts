@@ -1,9 +1,6 @@
 // Import Third-party Dependencies
 import type * as THREE from "three/webgpu";
 
-/**
- * Hex-string accessor over a live `THREE.Color`.
- */
 export class GridColor {
   readonly #color: THREE.Color;
 

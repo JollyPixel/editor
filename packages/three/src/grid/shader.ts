@@ -4,7 +4,11 @@ import {
   Fn,
   uniform,
   positionWorld,
+  positionView,
+  positionLocal,
   cameraPosition,
+  cameraWorldMatrix,
+  normalize,
   vec2,
   vec4,
   float,
@@ -30,22 +34,26 @@ import {
 import type { Node } from "three/webgpu";
 
 // Import Internal Dependencies
-import type { GridPlane } from "./GridPlaneValue.ts";
+import {
+  type GridPlane,
+  getPlaneAxes
+} from "./GridPlaneValue.ts";
 
 // CONSTANTS
 const kDiscardThreshold = 0.003;
 
 /**
  * `"lines"` draws continuous grid lines.
- * `"cross"` draws short plus-shaped marks at intersections.
+ * `"cross"` draws short plus marks at intersections.
  */
 export type GridStyle = "lines" | "cross";
 
 /**
- * `"camera"` fades the grid out around the camera's in-plane position.
- * `"origin"` fades the grid out around the plane's world origin, ignoring the camera entirely.
+ * `"camera"` fades around the camera's in-plane position.
+ * `"origin"` fades around the plane origin.
+ * `"target"` fades around `GridFadeOptions.target`'s world position, updated every frame.
  */
-export type GridFadeFrom = "camera" | "origin";
+export type GridFadeFrom = "camera" | "origin" | "target";
 
 export interface GridUniformOptions {
   cellSize: number;
@@ -64,10 +72,11 @@ export interface GridUniformOptions {
   xAxisColor: THREE.ColorRepresentation;
   yAxisColor: THREE.ColorRepresentation;
   zAxisColor: THREE.ColorRepresentation;
+  offset: number;
 }
 
 /**
- * Creates uniforms for the live-tunable `Grid` properties.
+ * Builds uniforms for the live `Grid` properties.
  */
 export function createGridUniforms(
   options: GridUniformOptions
@@ -88,15 +97,18 @@ export function createGridUniforms(
     axisThickness: uniform(options.axisThickness, "float"),
     xAxisColor: uniform(new THREE.Color(options.xAxisColor)),
     yAxisColor: uniform(new THREE.Color(options.yAxisColor)),
-    zAxisColor: uniform(new THREE.Color(options.zAxisColor))
+    zAxisColor: uniform(new THREE.Color(options.zAxisColor)),
+    offset: uniform(options.offset, "float"),
+    // Only written to when `fadeFrom` is "target"; updated each frame from `Grid.fade.target`.
+    targetPosition: uniform(new THREE.Vector3())
   };
 }
 
 export type GridUniforms = ReturnType<typeof createGridUniforms>;
 
 /**
- * AA grid-line test from Bgolus's "pristine grid".
- * `uv` is pre-divided by cell size; `lineWidthPx` is in screen pixels.
+ * AA grid-line test from Bgolus's "Pristine Grid".
+ * `uv` is cell-scaled; `lineWidthPx` is in pixels.
  */
 const pristineGrid = Fn(([uv, lineWidthPx]: [Node<"vec2">, Node<"float">]) => {
   const uvDeriv = vec2(
@@ -108,20 +120,25 @@ const pristineGrid = Fn(([uv, lineWidthPx]: [Node<"vec2">, Node<"float">]) => {
   const lineAA = max(uvDeriv.mul(1.5), vec2(0.0001));
   const gridUV = abs(fract(uv).mul(2).sub(1));
   const invGrid = float(1).sub(gridUV);
-  const line = smoothstep(drawWidth.add(lineAA), drawWidth.sub(lineAA), invGrid)
+  const line = smoothstep(
+    drawWidth.add(lineAA),
+    drawWidth.sub(lineAA),
+    invGrid
+  )
     .mul(saturate(targetWidth.div(drawWidth)));
 
-  // Below one derivative pixel, blend toward a flat fill instead of aliasing.
+  // Below one derivative pixel, blend toward a flat fill.
   const blendFactor = saturate(uvDeriv.mul(2).sub(1));
-  const blended = line.add(targetWidth.sub(line).mul(blendFactor));
+  const blended = line.add(
+    targetWidth.sub(line).mul(blendFactor)
+  );
 
   return max(blended.x, blended.y);
 });
 
 /**
  * Cross variant of `pristineGrid`.
- * Each line is windowed to short arms around lattice points; `armLength` is
- * the half-length of each arm as a fraction of a cell (0-0.5).
+ * `armLength` is the half-arm length in cell units (0-0.5).
  */
 const pristineCross = Fn(([uv, lineWidthPx, armLength]: [Node<"vec2">, Node<"float">, Node<"float">]) => {
   const uvDeriv = vec2(
@@ -133,35 +150,49 @@ const pristineCross = Fn(([uv, lineWidthPx, armLength]: [Node<"vec2">, Node<"flo
   const lineAA = max(uvDeriv.mul(1.5), vec2(0.0001));
   const gridUV = abs(fract(uv).mul(2).sub(1));
   const invGrid = float(1).sub(gridUV);
-  const line = smoothstep(drawWidth.add(lineAA), drawWidth.sub(lineAA), invGrid)
+  const line = smoothstep(
+    drawWidth.add(lineAA),
+    drawWidth.sub(lineAA),
+    invGrid
+  )
     .mul(saturate(targetWidth.div(drawWidth)));
 
   const blendFactor = saturate(uvDeriv.mul(2).sub(1));
-  const blended = line.add(targetWidth.sub(line).mul(blendFactor));
+  const blended = line.add(
+    targetWidth.sub(line).mul(blendFactor)
+  );
 
-  // Reuse `gridUV` on the opposite axis to window each line to a short arm.
+  // Window each line to a short arm.
   const armAA = max(uvDeriv.mul(1.5), vec2(0.0001));
   const armEdge = vec2(float(1).sub(armLength.mul(2)));
-  const arm = smoothstep(armEdge.sub(armAA), armEdge.add(armAA), gridUV);
+  const arm = smoothstep(
+    armEdge.sub(armAA),
+    armEdge.add(armAA),
+    gridUV
+  );
 
-  return max(blended.x.mul(arm.y), blended.y.mul(arm.x));
+  return max(
+    blended.x.mul(arm.y),
+    blended.y.mul(arm.x)
+  );
 });
 
 /**
- * 1D AA line test used for axis highlighting.
+ * 1D AA line test for axis highlighting.
  */
 const axisLine = Fn(([coord, widthPx]: [Node<"float">, Node<"float">]) => {
-  const halfWidth = max(fwidth(coord).mul(widthPx).mul(0.5), 0.0001);
+  const halfWidth = max(
+    fwidth(coord).mul(widthPx).mul(0.5),
+    0.0001
+  );
 
-  return float(1).sub(smoothstep(0, halfWidth, abs(coord)));
+  return float(1).sub(
+    smoothstep(0, halfWidth, abs(coord))
+  );
 });
 
 /**
- * Hard per-cell cutoff for `hideCellOnSection`: 1 when this fragment's cell
- * column/row sits on the section lattice, 0 otherwise. Used for `"cross"`
- * cell style — the arms are short, isolated marks, so a smooth falloff only
- * smears them into a visible artifact instead of cleanly erasing the ones
- * that overlap a section mark.
+ * Hard per-cell cutoff for `hideCellOnSection` on cross cells.
  */
 const hardLatticeMask = Fn(([cellIndex, sectionSize]: [Node<"vec2">, Node<"float">]) => {
   const onLattice = or(
@@ -169,20 +200,24 @@ const hardLatticeMask = Fn(([cellIndex, sectionSize]: [Node<"vec2">, Node<"float
     abs(mod(round(cellIndex.y), sectionSize)).lessThan(0.5)
   );
 
-  return select(onLattice, float(1), float(0));
+  return select(
+    onLattice,
+    float(1),
+    float(0)
+  );
 });
 
 /**
- * Smooth per-cell falloff for `hideCellOnSection`: 1 at the section
- * lattice, ramping to 0 over `fadeWidth` cells. Used for `"lines"` cell
- * style, whose continuous strokes look better fading out than vanishing
- * edge-on. `fadeWidth` is clamped to half a section so the ramp never
- * overshoots into the neighboring section line.
+ * Soft per-cell falloff for `hideCellOnSection` on line cells.
  */
 const softLatticeMask = Fn(([cellIndex, sectionSize, fadeWidth]: [Node<"vec2">, Node<"float">, Node<"float">]) => {
   const halfSection = sectionSize.mul(0.5);
-  const distToLatticeX = abs(mod(cellIndex.x.add(halfSection), sectionSize).sub(halfSection));
-  const distToLatticeY = abs(mod(cellIndex.y.add(halfSection), sectionSize).sub(halfSection));
+  const distToLatticeX = abs(
+    mod(cellIndex.x.add(halfSection), sectionSize).sub(halfSection)
+  );
+  const distToLatticeY = abs(
+    mod(cellIndex.y.add(halfSection), sectionSize).sub(halfSection)
+  );
   const width = clamp(fadeWidth, 0.0001, halfSection);
 
   return max(
@@ -194,66 +229,137 @@ const softLatticeMask = Fn(([cellIndex, sectionSize, fadeWidth]: [Node<"vec2">, 
 interface PlaneComponents {
   u: Node<"float">;
   v: Node<"float">;
-  camU: Node<"float">;
-  camV: Node<"float">;
-  /** Line color along `u` (drawn where `v` crosses zero). */
+  /** Fade anchor's `u`/`v` (camera or `Grid.fade.target`, per `fadeFrom`). */
+  anchorU: Node<"float">;
+  anchorV: Node<"float">;
+  /** Color along `u` (drawn where `v` crosses zero). */
   uAxisColor: GridUniforms["xAxisColor"];
-  /** Line color along `v` (drawn where `u` crosses zero). */
+  /** Color along `v` (drawn where `u` crosses zero). */
   vAxisColor: GridUniforms["xAxisColor"];
+}
+
+function pickAxisComponent(
+  node: Node<"vec3">,
+  axis: "x" | "y" | "z"
+): Node<"float"> {
+  switch (axis) {
+    case "x":
+      return node.x;
+    case "y":
+      return node.y;
+    case "z":
+    default:
+      return node.z;
+  }
+}
+
+function axisColorUniform(
+  uniforms: GridUniforms,
+  axis: "x" | "y" | "z"
+): GridUniforms["xAxisColor"] {
+  switch (axis) {
+    case "x":
+      return uniforms.xAxisColor;
+    case "y":
+      return uniforms.yAxisColor;
+    case "z":
+    default:
+      return uniforms.zAxisColor;
+  }
 }
 
 function pickPlaneComponents(
   plane: GridPlane,
-  uniforms: GridUniforms
+  uniforms: GridUniforms,
+  positionSource: Node<"vec3">,
+  anchor: Node<"vec3">
 ): PlaneComponents {
-  switch (plane) {
-    case "xz":
-      return {
-        u: positionWorld.x,
-        v: positionWorld.z,
-        camU: cameraPosition.x,
-        camV: cameraPosition.z,
-        uAxisColor: uniforms.xAxisColor,
-        vAxisColor: uniforms.zAxisColor
-      };
-    case "xy":
-      return {
-        u: positionWorld.x,
-        v: positionWorld.y,
-        camU: cameraPosition.x,
-        camV: cameraPosition.y,
-        uAxisColor: uniforms.xAxisColor,
-        vAxisColor: uniforms.yAxisColor
-      };
-    case "yz":
-    default:
-      return {
-        u: positionWorld.y,
-        v: positionWorld.z,
-        camU: cameraPosition.y,
-        camV: cameraPosition.z,
-        uAxisColor: uniforms.yAxisColor,
-        vAxisColor: uniforms.zAxisColor
-      };
-  }
+  const { u, v } = getPlaneAxes(plane);
+
+  return {
+    u: pickAxisComponent(positionSource, u),
+    v: pickAxisComponent(positionSource, v),
+    anchorU: pickAxisComponent(anchor, u),
+    anchorV: pickAxisComponent(anchor, v),
+    uAxisColor: axisColorUniform(uniforms, u),
+    vAxisColor: axisColorUniform(uniforms, v)
+  };
 }
 
 /**
- * Builds the grid material: fine and section lines, axis highlighting,
- * and distance fade-out.
+ * Reconstructs the world hit point for `infiniteGrid`.
+ */
+function buildInfiniteWorldHit(
+  plane: GridPlane,
+  uniforms: GridUniforms
+): Node<"vec3"> {
+  const { normal } = getPlaneAxes(plane);
+
+  const worldPos = cameraWorldMatrix.mul(
+    vec4(positionView, float(1))
+  ).xyz;
+  const rayDir = normalize(
+    worldPos.sub(cameraPosition)
+  );
+
+  const camNormal = pickAxisComponent(
+    cameraPosition,
+    normal
+  );
+  const rayNormal = pickAxisComponent(
+    rayDir,
+    normal
+  );
+  const t = uniforms.offset
+    .sub(camNormal)
+    .div(rayNormal);
+
+  If(t.lessThanEqual(0), () => {
+    Discard();
+  });
+
+  return cameraPosition.add(rayDir.mul(t));
+}
+
+export interface BuildGridMaterialOptions {
+  plane: GridPlane;
+  cellStyle: GridStyle;
+  sectionStyle: GridStyle;
+  uniforms: GridUniforms;
+  fadeFrom: GridFadeFrom;
+  infiniteGrid: boolean;
+}
+
+/**
+ * Builds the grid material.
  */
 export function buildGridMaterial(
-  plane: GridPlane,
-  cellStyle: GridStyle,
-  sectionStyle: GridStyle,
-  uniforms: GridUniforms,
-  fadeFrom: GridFadeFrom
+  options: BuildGridMaterialOptions
 ): THREE.MeshBasicNodeMaterial {
   const {
-    u, v, camU, camV, uAxisColor, vAxisColor
-  } = pickPlaneComponents(plane, uniforms);
+    plane, cellStyle, sectionStyle, uniforms, fadeFrom, infiniteGrid
+  } = options;
+
+  const material = new THREE.MeshBasicNodeMaterial();
+
+  if (infiniteGrid) {
+    // Full-viewport quad in clip space.
+    material.vertexNode = vec4(
+      positionLocal.xy,
+      float(1),
+      float(1)
+    );
+  }
 
   const colorNode = Fn(() => {
+    const positionSource = infiniteGrid ?
+      buildInfiniteWorldHit(plane, uniforms) :
+      positionWorld;
+    const anchor = fadeFrom === "target" ? uniforms.targetPosition : cameraPosition;
+    const {
+      u, v, anchorU, anchorV, uAxisColor, vAxisColor
+    } = pickPlaneComponents(plane, uniforms, positionSource, anchor);
+
     const worldUV = vec2(u, v);
 
     const fineLine = cellStyle === "cross" ?
@@ -277,38 +383,56 @@ export function buildGridMaterial(
         uniforms.sectionThickness
       );
 
-    // Fade out the fine grid once its cells go sub-pixel.
+    // Fade out the fine grid once it goes sub-pixel.
     const fineDeriv = fwidth(worldUV.div(uniforms.cellSize));
-    const fineFade = saturate(float(1).sub(max(fineDeriv.x, fineDeriv.y)));
+    const fineFade = saturate(
+      float(1).sub(max(fineDeriv.x, fineDeriv.y))
+    );
 
-    // Whether/how much this fragment's fine cell column/row coincides with a
-    // section line, tested at cell-index granularity rather than by reusing
-    // `sectionLine`'s AA'd pixel footprint — that footprint is only a couple
-    // of screen pixels wide, far too thin to catch a "cross" cell style's
-    // arms poking out past the section line they're centered on.
+    // Test section overlap at cell granularity.
     const cellIndex = worldUV.div(uniforms.cellSize);
     const sectionLatticeMask = cellStyle === "cross" ?
       hardLatticeMask(cellIndex, uniforms.sectionSize) :
-      softLatticeMask(cellIndex, uniforms.sectionSize, uniforms.hideCellOnSectionFadeWidth);
+      softLatticeMask(
+        cellIndex,
+        uniforms.sectionSize,
+        uniforms.hideCellOnSectionFadeWidth
+      );
 
-    // Hide the fine grid where the section grid already covers it.
-    const fineSectionMask = mix(float(1), float(1).sub(sectionLatticeMask), uniforms.hideCellOnSection);
-    const fadedFine = fineLine.mul(fineFade).mul(fineSectionMask);
+    // Hide the fine grid where the section grid covers it.
+    const fineSectionMask = mix(
+      float(1),
+      float(1).sub(sectionLatticeMask),
+      uniforms.hideCellOnSection
+    );
+    const fadedFine = fineLine
+      .mul(fineFade)
+      .mul(fineSectionMask);
 
     const gridMask = max(fadedFine, sectionLine);
-    const gridColor = mix(uniforms.cellColor, uniforms.sectionColor, sectionLine);
+    const gridColor = mix(
+      uniforms.cellColor,
+      uniforms.sectionColor,
+      sectionLine
+    );
 
-    const uAxisMask = axisLine(v, uniforms.axisThickness).mul(uniforms.showAxes);
-    const vAxisMask = axisLine(u, uniforms.axisThickness).mul(uniforms.showAxes);
+    const uAxisMask = axisLine(v, uniforms.axisThickness)
+      .mul(uniforms.showAxes);
+    const vAxisMask = axisLine(u, uniforms.axisThickness)
+      .mul(uniforms.showAxes);
     const withUAxis = mix(gridColor, uAxisColor, uAxisMask);
     const finalColor = mix(withUAxis, vAxisColor, vAxisMask);
-    const maskWithAxes = max(gridMask, max(uAxisMask, vAxisMask));
+    const maskWithAxes = max(
+      gridMask, max(uAxisMask, vAxisMask)
+    );
 
     const dist = fadeFrom === "origin" ?
       length(vec2(u, v)) :
-      length(vec2(u.sub(camU), v.sub(camV)));
+      length(vec2(u.sub(anchorU), v.sub(anchorV)));
     const fade = pow(
-      saturate(float(1).sub(dist.div(uniforms.fadeDistance))),
+      saturate(
+        float(1).sub(dist.div(uniforms.fadeDistance))
+      ),
       uniforms.fadeStrength
     );
     const alpha = maskWithAxes.mul(fade);
@@ -320,7 +444,6 @@ export function buildGridMaterial(
     return vec4(finalColor, alpha);
   })();
 
-  const material = new THREE.MeshBasicNodeMaterial();
   material.colorNode = colorNode;
   material.transparent = true;
   material.depthWrite = false;

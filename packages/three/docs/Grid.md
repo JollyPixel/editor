@@ -1,10 +1,18 @@
 # Grid
 
-An infinite, camera-following ground-plane grid mesh, using screen-space-derivative
-anti-aliased lines with two-level LOD blending (fine cell grid + coarse section
-grid) and axis highlighting. Implements the technique from
-[Bgolus's "The Best Darn Grid Shader (Yet)"](https://bgolus.medium.com/the-best-darn-grid-shader-yet-727f9278b9d8),
-built with TSL.
+A camera-following ground-plane grid mesh with anti-aliased lines, two-level
+LOD blending (fine cells + coarse sections), and axis highlighting. Built with
+TSL, based on
+[Bgolus's "The Best Darn Grid Shader (Yet)"](https://bgolus.medium.com/the-best-darn-grid-shader-yet-727f9278b9d8).
+
+> [!NOTE]
+> By default, the grid approximates infinity with a large finite quad
+> that recenters under the camera and fades with distance (`GridOptions.fade`).
+> Set `infiniteGrid: true` for a truly boundless plane. This mode draws a
+> full-viewport quad, unprojects each pixel into a camera ray, and intersects
+> that ray with the grid plane so no edge is visible. See
+> [Infinite Grid Shader](https://willofindie.com/proj/infinite-grid-shader)
+> for the underlying technique.
 
 ```ts
 import { Grid } from "@jolly-pixel/three";
@@ -28,7 +36,7 @@ Rendering notes:
 ```ts
 export interface GridCellOptions {
   /**
-   * Fine grid style.
+   * Grid style.
    * @default "lines"
    */
   style?: GridStyle;
@@ -43,7 +51,7 @@ export interface GridCellOptions {
    */
   color?: THREE.ColorRepresentation;
   /**
-   * Fine grid line width, in pixels.
+   * Line width, in pixels.
    * @default 1
    */
   thickness?: number;
@@ -51,12 +59,12 @@ export interface GridCellOptions {
 
 export interface GridSectionOptions {
   /**
-   * Section grid style.
+   * Grid style.
    * @default "lines"
    */
   style?: GridStyle;
   /**
-   * Cells per section line.
+   * Cells per section.
    * @default 10
    */
   size?: number;
@@ -66,7 +74,7 @@ export interface GridSectionOptions {
    */
   color?: THREE.ColorRepresentation;
   /**
-   * Section grid line width, in pixels.
+   * Line width, in pixels.
    * @default 2
    */
   thickness?: number;
@@ -74,19 +82,22 @@ export interface GridSectionOptions {
 
 export interface GridFadeOptions {
   /**
-   * Distance-fade anchor: `"camera"` fades the grid out around the camera's
-   * in-plane position; `"origin"` fades it out around the plane's world
-   * origin, ignoring the camera entirely.
+   * Fade anchor.
    * @default "camera"
    */
   from?: GridFadeFrom;
   /**
-   * Fade-out distance.
+   * World-space object to fade (and, by default, recenter) around.
+   * Required when `from` is `"target"`; read via `getWorldPosition()` every frame.
+   */
+  target?: THREE.Object3D;
+  /**
+   * Fade distance.
    * @default 100
    */
   distance?: number;
   /**
-   * Fade falloff exponent.
+   * Fade strength.
    * @default 1
    */
   strength?: number;
@@ -94,12 +105,12 @@ export interface GridFadeOptions {
 
 export interface GridAxesOptions {
   /**
-   * Whether axis lines are drawn.
+   * Show axes.
    * @default true
    */
   show?: boolean;
   /**
-   * Axis line width, in pixels.
+   * Line width, in pixels.
    * @default 2
    */
   thickness?: number;
@@ -120,6 +131,11 @@ export interface GridAxesOptions {
   zColor?: THREE.ColorRepresentation;
 }
 
+/**
+ * Every `@default` here (and on `GridCellOptions`, `GridSectionOptions`,
+ * `GridFadeOptions`, `GridAxesOptions`) is `Grid.Defaults`' out-of-the-box
+ * value — mutate `Grid.Defaults` to change it process-wide.
+ */
 export interface GridOptions {
   /**
    * Grid plane.
@@ -127,45 +143,39 @@ export interface GridOptions {
    */
   plane?: GridPlane;
   /**
-   * Camera-following quad edge length.
+   * Quad edge length.
    * @default Math.max(fadeDistance * 4, 200)
    */
   extent?: number;
   /**
-   * Fine cell grid options.
+   * Fine grid settings.
    */
   cell?: GridCellOptions;
   /**
-   * Coarse section grid options.
+   * Section grid settings.
    */
   section?: GridSectionOptions;
   /**
-   * Half-arm length for `"cross"` style, as a fraction of a cell (0-0.5).
-   * Ignored when both grid styles are `"lines"`.
+   * Cross half-length as a fraction of a cell.
    * @default 0.2
    */
   crossSize?: number;
   /**
-   * Fades out the fine cell grid over the cell straddling each section
-   * line — otherwise a `"cross"` cell style pokes its arms out past a
-   * section line at every intersection the two share.
+   * Fade out cells across section lines.
    * @default false
    */
   hideCellOnSection?: boolean;
   /**
-   * Width, in cells, of the `hideCellOnSection` fade-out ramp for a
-   * `"lines"` cell style — larger values fade out earlier and over more
-   * cells. Clamped to half a section. Ignored for a `"cross"` cell style,
-   * which always uses a hard cutoff.
+   * Fade width in cells.
    * @default 0.5
    */
   hideCellOnSectionFadeWidth?: number;
   /**
-   * Distance-fade options.
+   * Fade settings.
    */
   fade?: GridFadeOptions;
   /**
-   * Axis-line options.
+   * Axis settings.
    */
   axes?: GridAxesOptions;
   /**
@@ -174,21 +184,76 @@ export interface GridOptions {
    */
   offset?: number;
   /**
-   * Whether the grid is visible. Backed by `THREE.Object3D.visible`; exposed
-   * here under a domain-appropriate name for editor on/off toggles.
+   * Visible state.
    * @default true
    */
   enabled?: boolean;
   /**
-   * Whether the grid mesh re-centers under the camera every frame to
-   * maintain the infinite-plane illusion. When `false`, the mesh stays
-   * fixed on its plane at the world origin (offset by `offset` along the
-   * normal) — useful for a bounded, non-infinite reference grid, typically
-   * paired with `fade: { from: "origin" }`. Live-tunable.
-   * @default fade.from === "camera"
+   * Recenter under the camera (or `fade.target`, when `fade.from` is `"target"`) each frame.
+   * @default fade.from !== "origin"
    */
   followCamera?: boolean;
+  /**
+   * Render a boundless plane.
+   * @default false
+   */
+  infiniteGrid?: boolean;
 }
+```
+
+## Grid.Defaults
+
+Global fallbacks consumed by `new Grid()` whenever the matching `GridOptions` field is omitted.
+
+Already-constructed instances are unaffected.
+
+```ts
+class Grid extends THREE.Mesh {
+  static readonly Defaults: {
+    plane: GridPlaneValue;
+    cell: {
+      style: GridStyleValue;
+      size: number;
+      color: THREE.ColorRepresentation;
+      thickness: number;
+    };
+    section: {
+      style: GridStyleValue;
+      size: number;
+      color: THREE.ColorRepresentation;
+      thickness: number;
+    };
+    crossSize: number;
+    hideCellOnSection: boolean;
+    hideCellOnSectionFadeWidth: number;
+    fade: {
+      from: GridFadeFrom;
+      distance: number;
+      strength: number;
+    };
+    axes: {
+      show: boolean;
+      thickness: number;
+      xColor: THREE.ColorRepresentation;
+      yColor: THREE.ColorRepresentation;
+      zColor: THREE.ColorRepresentation;
+    };
+    offset: number;
+    enabled: boolean;
+    infiniteGrid: boolean;
+    extent: {
+      minimum: number;
+      fadeMultiplier: number;
+    };
+  };
+}
+```
+
+```ts
+Grid.Defaults.cell.color = "#2a2a2a";
+Grid.Defaults.plane = new GridPlaneValue("xy");
+
+const grid = new Grid(); // picks up both defaults
 ```
 
 ## Properties
@@ -203,7 +268,7 @@ class Grid extends THREE.Mesh {
   readonly xAxisColor: GridColor;
   readonly yAxisColor: GridColor;
   readonly zAxisColor: GridColor;
-  readonly fadeFrom: GridFadeFrom;
+  readonly fade: GridFadeValue;
 
   cellSize: number;
   sectionSize: number;
@@ -219,6 +284,7 @@ class Grid extends THREE.Mesh {
   offset: number;
   enabled: boolean;
   followCamera: boolean;
+  readonly infiniteGrid: boolean;
 }
 
 class GridPlaneValue {
@@ -236,6 +302,12 @@ class GridStyleValue {
   readonly value: "lines" | "cross";
 }
 
+class GridFadeValue {
+  readonly from: GridFadeFrom;
+  // required when `from` is "target" (throws otherwise); reassignable afterward
+  target: THREE.Object3D | null;
+}
+
 class GridColor {
   // normalized hex, e.g. "#393939";
   // settable with any THREE.ColorRepresentation
@@ -245,8 +317,20 @@ class GridColor {
 
 ## Usage notes
 
-- `plane`, `cellStyle`, `sectionStyle`, and `fade.from` are fixed at construction time. To change them, create a new `Grid`.
-- `fade: { from: "origin" }` + `followCamera: false` (the default pairing) gives a bounded reference grid, fixed in place at the world origin — the opposite of the default infinite, camera-following behavior.
+- `plane`, `cellStyle`, `sectionStyle`, `fade.from`, and `infiniteGrid` are constructor-only. Change them by creating a new `Grid`.
+- `fade: { from: "origin" }` with `followCamera: false` gives a bounded reference grid pinned at world origin (opposite the default camera-following mode). This combination has no effect with `infiniteGrid: true`, which ignores `followCamera`.
+- `fade: { from: "target", target }` fades around `target`'s live world position instead of the camera. Unless `followCamera: false`, recentering also uses `target`:
+
+```ts
+const grid = new Grid({
+  fade: {
+    from: "target",
+    target: player
+  }
+});
+```
+
+  `target` is required when `from` is `"target"` (the constructor throws otherwise). It is read via `target.getWorldPosition()` each frame, so parented objects work correctly. You can reassign `grid.fade.target` later (or set it to `null`) to retarget or fall back to the camera. `grid.fade.from` remains fixed.
 - Colors are edited through `.value` on each color property:
 
 ```ts
@@ -254,7 +338,7 @@ grid.cellColor.value = "#ff0000";
 grid.xAxisColor.value = "#e54b4b";
 ```
 
-- Most numeric/boolean properties (`cellSize`, `fadeDistance`, `showAxes`, `offset`, etc.) are live and can be updated anytime.
+- Most numeric/boolean properties (`cellSize`, `fadeDistance`, `showAxes`, `offset`, etc.) are live and apply immediately.
 
 ## Mutability at a glance
 
@@ -268,12 +352,9 @@ grid.xAxisColor.value = "#e54b4b";
 | `extent` | Constructor only (`GridOptions`) | Set in options only; not exposed as a live `Grid` property. |
 | `xAxisColor`, `yAxisColor`, `zAxisColor` | Yes (via `.value`) | Only in-plane axes are visible. |
 | `enabled` | Yes | Same as `grid.visible`. |
-| `fadeFrom` (from `fade.from`) | No | Set once in `new Grid({ fade })`. Baked into the shader. |
-| `followCamera` | Yes | Defaults to `fade.from === "camera"`. When `false`, the mesh stays pinned to the world origin on its plane. |
+| `fade.from` | No | Set once in `new Grid({ fade })`. Baked into the shader. |
+| `fade.target` | Yes | Required at construction when `fade.from` is `"target"`; reassignable (or nullable) afterward. Ignored for other `fade.from` values. |
+| `followCamera` | Yes | Defaults to `fade.from !== "origin"`. `true` recenters under the camera (or `fade.target` when `fade.from` is `"target"`). `false` pins the mesh to world origin on its plane. Ignored when `infiniteGrid` is true. |
+| `infiniteGrid` | No | Set once in `new Grid({ infiniteGrid })`. `true` renders a boundless ground plane (full-viewport ray-plane intersection) instead of the default finite camera-following quad. `extent` and `followCamera` are ignored when true. |
 
 Everything else in the class block (`cellSize`, `sectionSize`, thickness, fade, axes visibility, `offset`) is mutable and applies immediately.
-
-## Additional resources to learn
-
-- [The Best Darn Grid Shader (Yet)](https://bgolus.medium.com/the-best-darn-grid-shader-yet-727f9278b9d8)
-- [Infinite Grid Shader](https://willofindie.com/proj/infinite-grid-shader)

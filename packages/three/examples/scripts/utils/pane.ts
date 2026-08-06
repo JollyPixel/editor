@@ -17,21 +17,20 @@ export interface ExamplePaneOptions {
 }
 
 /**
- * Panel shared by every example page: an example switcher on top, then whatever
- * folders the demo attaches to the returned pane. `F3` toggles the whole panel.
+ * Shared example panel with a page switcher. `F3` toggles visibility.
  */
 export function createExamplePane(
   options: ExamplePaneOptions = {}
 ): Pane {
   const { title = kDefaultTitle } = options;
 
-  const pane = new Pane({ title });
+  const pane = new Pane({
+    title
+  });
   const current = currentExample();
 
   pane
     .addBinding({ example: current }, "example", {
-      // A list binding is used over `addBlade({ view: "list" })`: it keeps the
-      // change payload typed instead of returning a bare BladeApi.
       options: kExamples,
       label: "example"
     })
@@ -53,9 +52,7 @@ export function createExamplePane(
   return pane;
 }
 
-/**
- * `/index.html` and `/` are the same page; the switcher only knows the latter.
- */
+// `/index.html` and `/` are the same page.
 function currentExample(): string {
   const { pathname } = window.location;
 
