@@ -101,6 +101,7 @@ export interface StartLoopOptions {
   camera: THREE.PerspectiveCamera;
   controls: OrbitControls;
   onFrame?: () => void;
+  onAfterRender?: () => void;
 }
 
 /**
@@ -114,7 +115,8 @@ export function startLoop(
     scene,
     camera,
     controls,
-    onFrame
+    onFrame,
+    onAfterRender
   } = options;
 
   onWindowResize(camera, renderer);
@@ -123,5 +125,6 @@ export function startLoop(
     controls.update();
     onFrame?.();
     renderer.render(scene, camera);
+    onAfterRender?.();
   });
 }

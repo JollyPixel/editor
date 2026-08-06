@@ -9,6 +9,7 @@ import {
   type GridStyle,
   type GridFadeFrom
 } from "../../src/index.ts";
+import { PerformancePanel } from "./components/PerformancePanel.ts";
 import {
   createRenderer,
   createScene,
@@ -64,6 +65,8 @@ function updateReferenceCube(): void {
 }
 
 const pane = createExamplePane();
+
+const performancePanel = new PerformancePanel({ pane, renderer });
 
 const gridFolder = pane.addFolder({
   title: "Grid"
@@ -251,6 +254,7 @@ function rebuildGridNow(
   overrides: GridOverrides
 ): void {
   scene.remove(grid);
+  grid.dispose();
   extentValue = overrides.extent ?? extentValue;
 
   grid = new Grid({
@@ -303,5 +307,6 @@ startLoop({
   scene,
   camera,
   controls,
-  onFrame: updateReferenceCube
+  onFrame: updateReferenceCube,
+  onAfterRender: () => performancePanel.update()
 });
