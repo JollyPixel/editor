@@ -245,6 +245,16 @@ The off-screen canvas backing the buffer.
 
 ---
 
+### `hasTransparency`
+
+```ts
+hasTransparency(rect: SelectionRect): boolean
+```
+
+Whether any pixel in `rect` (buffer pixel coordinates) isn't fully opaque. A rect extending out of bounds counts as transparent.
+
+---
+
 ### `canvas`
 
 ```ts
