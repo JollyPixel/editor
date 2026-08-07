@@ -235,7 +235,7 @@ export class EditorScene extends Systems.Scene {
       });
 
     world.createActor("perf-hud")
-      .addComponent(PerformanceHUD);
+      .addComponent(PerformanceHUD, { vr });
   }
 
   /**

@@ -34,7 +34,9 @@
     "@jolly-pixel/runtime": "^3.4.0",
     "@jolly-pixel/three": "1.0.0",
     "@jolly-pixel/voxel.renderer": "2.0.0",
+    "@tweakpane/core": "2.0.5",
     "lit": "3.3.3",
-    "three": "^0.185.1"
+    "three": "^0.185.1",
+    "tweakpane": "4.0.5"
   }
 }
