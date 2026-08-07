@@ -1,9 +1,6 @@
 // Import Third-party Dependencies
 import { css } from "lit";
 
-// Shared by ModeRail (mode buttons) and PixelDrawPanel (undo/redo buttons) —
-// both render `.rail-btn` entries inside a `.rail-section` group, in
-// separate shadow roots.
 export const railButtonStyles = css`
   .rail-section {
     display: flex;

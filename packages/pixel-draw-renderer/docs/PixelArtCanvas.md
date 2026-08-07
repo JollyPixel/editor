@@ -342,7 +342,7 @@ Removes event listeners and unmounts canvas + overlay from the DOM.
 get onBufferUpdated(): PixelBufferHookListener | undefined
 set onBufferUpdated(fn: PixelBufferHookListener | undefined)
 applyRemoteCommand(event: PixelBufferHookEvent): void
-loadSnapshot(size: Vec2, pixels: Uint8ClampedArray, uvRegions?: UVRegion[]): void
+loadSnapshot(size: Vec2, pixels: Uint8ClampedArray, uvRegions?: (UVRegion | UVRegionData)[]): void
 ```
 
 Network sync hooks — used by `PixelSyncClient`. `applyRemoteCommand` applies a remote mutation without re-firing `onBufferUpdated`. `loadSnapshot` hydrates buffer + UV from a snapshot (never broadcast). See [network/index.md](./network/index.md).

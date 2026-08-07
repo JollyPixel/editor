@@ -4,7 +4,10 @@ import {
   pointInRect
 } from "../utils/math.ts";
 import type { UVMap } from "./UVMap.ts";
-import type { UVRegion } from "./UVRegion.ts";
+import type {
+  UVFace,
+  UVRegion
+} from "./UVRegion.ts";
 import type {
   UVOverlay
 } from "../rendering/overlays/UVOverlay.ts";
@@ -20,19 +23,52 @@ export interface UVControllerOptions {
 
 interface DragState {
   id: string;
+  face: UVFace | null;
   origin: Vec2;
   baseRect: SelectionRect;
   liveRect: SelectionRect;
 }
 
 /**
- * Routes canvas interaction (hit-test, drag-to-move, delete) to a `UVMap`.
- * Creation is API-only (see `UVMap.create`) and has no canvas gesture.
+ * One hit-testable rect: a collapsed region (`face: null`) or one face of
+ * an uncollapsed one.
+ */
+interface HitCandidate {
+  region: UVRegion;
+  face: UVFace | null;
+  rect: SelectionRect;
+}
+
+/**
+ * Last click location; identifies the stack to advance instead of re-picking.
+ */
+interface PickState {
+  /**
+   * Identifies the stack itself to detect repeat clicks.
+   */
+  key: string;
+  index: number;
+  regionId: string;
+  face: UVFace | null;
+}
+
+function stackKey(
+  candidates: HitCandidate[]
+): string {
+  return candidates
+    .map((candidate) => `${candidate.region.id}:${candidate.face ?? "*"}`)
+    .join("|");
+}
+
+/**
+ * Routes canvas interaction (hit-test, drag, delete) to UVMap.
+ * Repeat clicks advance through overlapping stacks.
  */
 export class UVController {
   #uvMap: UVMap;
   #overlay: UVOverlay;
   #drag: DragState | null = null;
+  #pick: PickState | null = null;
 
   constructor(
     options: UVControllerOptions
@@ -49,24 +85,38 @@ export class UVController {
   }
 
   /**
-   * Selects the hit region, or deselects on a miss.
+   * Advances through an overlapping stack on repeat clicks.
    */
   handleStart(
     pos: Vec2
   ): void {
-    const hit = this.#hitTest(pos);
-    if (!hit) {
+    const candidates = this.#hitStack(pos);
+    if (candidates.length === 0) {
+      this.#pick = null;
       this.#uvMap.select(null);
 
       return;
     }
 
-    this.#uvMap.select(hit.id);
+    const key = stackKey(candidates);
+    const index = this.#shouldAdvance(key) ?
+      (this.#pick!.index + 1) % candidates.length :
+      0;
+    const { region, face, rect } = candidates[index];
+
+    this.#uvMap.select(region.id, face ?? undefined);
+    this.#pick = {
+      key,
+      index,
+      regionId: this.#uvMap.selectedRegionId!,
+      face: this.#uvMap.selectedFace
+    };
     this.#drag = {
-      id: hit.id,
+      id: region.id,
+      face,
       origin: pos,
-      baseRect: { ...hit.rect },
-      liveRect: { ...hit.rect }
+      baseRect: { ...rect },
+      liveRect: { ...rect }
     };
   }
 
@@ -91,11 +141,13 @@ export class UVController {
     this.#drag.liveRect = rect;
     this.#overlay.setLiveOverride(
       this.#drag.id,
+      this.#drag.face,
       rect
     );
     this.#uvMap.previewMove(
       this.#drag.id,
-      rect
+      rect,
+      this.#drag.face ?? undefined
     );
   }
 
@@ -104,39 +156,40 @@ export class UVController {
       return;
     }
 
-    const { id, baseRect, liveRect } = this.#drag;
+    const { id, face, baseRect, liveRect } = this.#drag;
     this.#drag = null;
 
     if (
       liveRect.x !== baseRect.x ||
       liveRect.y !== baseRect.y
     ) {
-      this.#uvMap.move(id, liveRect);
+      this.#uvMap.move(id, liveRect, face ?? undefined);
     }
     this.#overlay.setLiveOverride(
       id,
+      face,
       null
     );
   }
 
   /**
-   * Cancels an in-progress drag without committing the move. Reverts any
-   * live drag-preview back to the region's actual (unchanged) rect, so a
-   * consumer following `"region-dragging"` doesn't stay stuck showing an
-   * uncommitted position.
+   * Cancels the drag; reverts live preview to the actual rect.
    */
   cancelDrag(): void {
+    this.#pick = null;
     if (!this.#drag) {
       return;
     }
 
     this.#overlay.setLiveOverride(
       this.#drag.id,
+      this.#drag.face,
       null
     );
     this.#uvMap.previewMove(
       this.#drag.id,
-      this.#drag.baseRect
+      this.#drag.baseRect,
+      this.#drag.face ?? undefined
     );
     this.#drag = null;
   }
@@ -150,21 +203,45 @@ export class UVController {
       return false;
     }
 
+    this.#pick = null;
+
     return this.#uvMap.delete(id);
   }
 
-  #hitTest(
+  /**
+   * Advances only if this stack was just clicked and selection hasn't changed.
+   */
+  #shouldAdvance(
+    key: string
+  ): boolean {
+    if (this.#pick === null || this.#pick.key !== key) {
+      return false;
+    }
+
+    return this.#uvMap.selectedRegionId === this.#pick.regionId &&
+      this.#uvMap.selectedFace === this.#pick.face;
+  }
+
+  /**
+   * All visible rects under pos, topmost first (independent of selection).
+   */
+  #hitStack(
     pos: Vec2
-  ): UVRegion | null {
+  ): HitCandidate[] {
+    const candidates: HitCandidate[] = [];
+
     for (const region of this.#uvMap.regions) {
       if (!this.#uvMap.isVisible(region.id)) {
         continue;
       }
-      if (pointInRect(pos, region.rect)) {
-        return region;
+
+      for (const { face, rect } of region.facesOf()) {
+        if (pointInRect(pos, rect)) {
+          candidates.push({ region, face, rect });
+        }
       }
     }
 
-    return null;
+    return candidates;
   }
 }

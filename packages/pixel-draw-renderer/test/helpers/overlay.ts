@@ -17,10 +17,12 @@ export function makeSvg(): SVGElement {
   return document.createElementNS(SVG_NS, "svg");
 }
 
-export function makeViewport(): DefaultViewport {
+export function makeViewport(
+  zoom = 4
+): DefaultViewport {
   return {
     zoom: new Zoom({
-      default: 4
+      default: zoom
     }),
     camera: { x: 0, y: 0 }
   };

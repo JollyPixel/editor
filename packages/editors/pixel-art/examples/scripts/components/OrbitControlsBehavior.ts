@@ -8,9 +8,6 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 export interface OrbitControlsBehaviorOptions {
   camera: THREE.Camera;
-  /**
-  * Actor that owns `camera`; receives the orbited pose each frame.
-   */
   cameraActor: Actor;
   /** @default (0, 0, 0) */
   target?: THREE.Vector3;
@@ -22,10 +19,6 @@ export interface OrbitControlsBehaviorOptions {
 
 /**
  * Damped drag-orbit and scroll-zoom controls.
- *
- * OrbitControls mutates `camera` directly, but CameraComponent rewrites
- * camera pose from the actor transform each render. The computed pose is
- * written back to `cameraActor.transform` every frame to keep controls active.
  */
 export class OrbitControlsBehavior extends ActorComponent {
   readonly controls: OrbitControls;

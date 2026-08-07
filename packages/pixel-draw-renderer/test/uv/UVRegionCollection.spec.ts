@@ -7,13 +7,14 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { UVRegionCollection } from "#src/uv/UVRegionCollection.ts";
-import type { UVRegion } from "#src/uv/UVRegion.ts";
+import { UVRegion, type UVRegionData } from "#src/uv/UVRegion.ts";
 
 function makeRegion(
   id: string
-): UVRegion {
+): UVRegionData {
   return {
     id,
+    state: "collapsed",
     rect: { x: 0, y: 0, width: 2, height: 2 },
     color: "#f00"
   };
@@ -26,13 +27,29 @@ describe("UVRegionCollection", () => {
     assert.strictEqual(collection.get("r1"), undefined);
   });
 
-  test("set stores a copy, keyed by region.id", () => {
+  test("set stores an instance built from raw data, keyed by region.id", () => {
     const collection = new UVRegionCollection();
     const region = makeRegion("r1");
     collection.set(region);
 
-    assert.deepStrictEqual(collection.get("r1"), region);
-    assert.notStrictEqual(collection.get("r1"), region);
+    const stored = collection.get("r1")!;
+    assert.ok(stored instanceof UVRegion);
+    assert.deepStrictEqual(stored.toJSON(), region);
+  });
+
+  test("set keeps an instance as-is", () => {
+    const collection = new UVRegionCollection();
+    const region = new UVRegion(makeRegion("r1"));
+    collection.set(region);
+
+    assert.strictEqual(collection.get("r1"), region);
+  });
+
+  test("stores an uncollapsed region without flattening it", () => {
+    const collection = new UVRegionCollection();
+    collection.set(new UVRegion(makeRegion("r1")).uncollapse());
+
+    assert.strictEqual(collection.get("r1")!.state, "uncollapsed");
   });
 
   test("set upserts an existing id", () => {
@@ -70,7 +87,7 @@ describe("UVRegionCollection", () => {
     collection.set(makeRegion("r2"));
 
     assert.deepStrictEqual(
-      [...collection],
+      [...collection].map((region) => region.toJSON()),
       [makeRegion("r1"), makeRegion("r2")],
       "collection must yield r1 and r2"
     );

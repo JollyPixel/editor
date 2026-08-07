@@ -10,6 +10,10 @@ import type {
   RGBA
 } from "../types.ts";
 
+// CONSTANTS
+// Perceived brightness above which a color reads as light (0-255).
+const kLightBrightness = 140;
+
 function clamp255(
   value: number
 ): number {
@@ -41,6 +45,20 @@ export function toRGBA(
   }
 
   return color;
+}
+
+/**
+ * Black or white, whichever stands out against `color`. Alpha is ignored.
+ */
+export function contrastingColor(
+  color: ColorInput
+): string {
+  const [r, g, b] = colorAsRGBA(color);
+  // ITU-R BT.601 weights, applied to sRGB values as-is: a black-or-white
+  // verdict does not warrant linearizing.
+  const brightness = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+
+  return brightness > kLightBrightness ? "#000" : "#FFF";
 }
 
 /**

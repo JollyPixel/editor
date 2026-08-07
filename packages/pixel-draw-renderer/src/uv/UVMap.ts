@@ -8,14 +8,33 @@ import type {
   SelectionRect,
   Vec2
 } from "../types.ts";
-import type { UVRegion } from "./UVRegion.ts";
+import {
+  UVRegion,
+  type UVFace,
+  type UVRegionData
+} from "./UVRegion.ts";
 
 export type UVMapEvent = {
   "region-created": (event: { region: UVRegion; }) => void;
   "region-deleted": (event: { region: UVRegion; }) => void;
-  "region-moved": (event: { region: UVRegion; previousRect: SelectionRect; }) => void;
-  "region-dragging": (event: { id: string; rect: SelectionRect; }) => void;
-  "selection-changed": (event: { selectedRegionId: string | null; }) => void;
+  "region-moved": (event: {
+    region: UVRegion;
+    face: UVFace | null;
+    previousRect: SelectionRect;
+  }) => void;
+  "region-dragging": (event: {
+    id: string;
+    face: UVFace | null;
+    rect: SelectionRect;
+  }) => void;
+  "region-state-changed": (event: {
+    region: UVRegion;
+    previous: UVRegionData;
+  }) => void;
+  "selection-changed": (event: {
+    selectedRegionId: string | null;
+    selectedFace: UVFace | null;
+  }) => void;
   "visibility-changed": (event: { showAll: boolean; }) => void;
 };
 
@@ -46,16 +65,18 @@ export interface UVRegionCreateOptions {
 
 // CONSTANTS
 const kCascadeStep = 16;
+const kDefaultFace: UVFace = "front";
 
 /**
- * Owns a texture's UV regions (create/delete/move) and the
- * selection/visibility state that governs which ones render, notifying
- * listeners of every change.
+ * Manages UV regions: create/delete/move/collapse/uncollapse and selection/visibility state.
  */
-export class UVMap extends Emitter<UVMapEvent> implements Iterable<UVRegion> {
+export class UVMap extends Emitter<
+  UVMapEvent
+> implements Iterable<UVRegion> {
   #getCanvasSize: () => Vec2;
   #regions = new Map<string, UVRegion>();
   #selectedRegionId: string | null = null;
+  #selectedFace: UVFace | null = null;
   #showAll = false;
   #cascadeIndex = 0;
   #palette = new ColorPalette();
@@ -68,8 +89,7 @@ export class UVMap extends Emitter<UVMapEvent> implements Iterable<UVRegion> {
   }
 
   /**
-   * Every region, in insertion order. A live view over the internal store
-   * (no array copy) — spread it (`[...uv.regions]`) if you need a snapshot.
+   * All regions in insertion order (live view, spread for a snapshot).
    */
   get regions(): IterableIterator<UVRegion> {
     return this.#regions.values();
@@ -81,6 +101,13 @@ export class UVMap extends Emitter<UVMapEvent> implements Iterable<UVRegion> {
 
   get selectedRegionId(): string | null {
     return this.#selectedRegionId;
+  }
+
+  /**
+   * Selected face within the selected region (always `null` when collapsed).
+   */
+  get selectedFace(): UVFace | null {
+    return this.#selectedFace;
   }
 
   get showAll(): boolean {
@@ -108,36 +135,21 @@ export class UVMap extends Emitter<UVMapEvent> implements Iterable<UVRegion> {
     return this.#getCanvasSize();
   }
 
-  /**
-   * Whether a region should currently render.
-   */
   isVisible(
     id: string
   ): boolean {
     return this.#showAll || this.#selectedRegionId === id;
   }
 
-  /**
-   * Selects a region for editing/visibility, or `null` to deselect.
-   * Silently ignores unknown ids.
-   */
   select(
-    id: string | null
+    id: string | null,
+    face?: UVFace
   ): void {
-    if (id !== null && !this.#regions.has(id)) {
-      return;
+    if (this.#applySelection(id, face ?? null)) {
+      this.#emitSelectionChanged();
     }
-    if (this.#selectedRegionId === id) {
-      return;
-    }
-
-    this.#selectedRegionId = id;
-    this.emit("selection-changed", { selectedRegionId: id });
   }
 
-  /**
-   * Creates a region at a cascading position, clamped to canvas bounds.
-   */
   create(
     options: UVRegionCreateOptions
   ): UVRegion {
@@ -146,11 +158,12 @@ export class UVMap extends Emitter<UVMapEvent> implements Iterable<UVRegion> {
     const height = clamp(options.height, 1, Math.max(1, size.y));
     const position = this.#nextCascadePosition(width, height, size);
 
-    const region: UVRegion = {
+    const region = new UVRegion({
       id: options.id ?? crypto.randomUUID(),
-      rect: { x: position.x, y: position.y, width, height },
-      color: options.color ?? this.#palette.next()
-    };
+      color: options.color ?? this.#palette.next(),
+      state: "collapsed",
+      rect: { x: position.x, y: position.y, width, height }
+    });
 
     this.#regions.set(region.id, region);
     this.emit("region-created", { region });
@@ -158,17 +171,10 @@ export class UVMap extends Emitter<UVMapEvent> implements Iterable<UVRegion> {
     return region;
   }
 
-  /**
-   * Re-adds a region exactly as given, without cascading placement or
-   * palette assignment. Used to replay undo/redo, remote commands, and
-   * snapshots.
-   */
   restore(
-    region: UVRegion
+    region: UVRegion | UVRegionData
   ): UVRegion {
-    const stored: UVRegion = {
-      ...region
-    };
+    const stored = UVRegion.from(region);
     this.#regions.set(stored.id, stored);
 
     this.emit("region-created", { region: stored });
@@ -187,6 +193,7 @@ export class UVMap extends Emitter<UVMapEvent> implements Iterable<UVRegion> {
     this.#regions.delete(id);
     if (this.#selectedRegionId === id) {
       this.#selectedRegionId = null;
+      this.#selectedFace = null;
     }
     this.emit("region-deleted", { region });
 
@@ -195,41 +202,44 @@ export class UVMap extends Emitter<UVMapEvent> implements Iterable<UVRegion> {
 
   move(
     id: string,
-    rect: SelectionRect
+    rect: SelectionRect,
+    face?: UVFace
   ): boolean {
     const region = this.#regions.get(id);
     if (!region) {
       return false;
     }
 
-    const previousRect = region.rect;
+    const target = this.#resolveFace(region, face);
+    if (target === undefined) {
+      return false;
+    }
+
+    const previousRect = region.rectFor(target ?? kDefaultFace);
     const clamped = clampRectSize(
       rect,
       this.#getCanvasSize()
     );
-    const moved: UVRegion = {
-      ...region,
-      rect: clamped
-    };
+    const moved = region.withRect(clamped, target ?? undefined);
     this.#regions.set(id, moved);
 
-    this.emit("region-moved", { region: moved, previousRect });
+    this.emit("region-moved", { region: moved, face: target, previousRect });
 
     return true;
   }
 
-  /**
-   * Emits a transient drag-preview position for a region: no store
-   * mutation, no history entry, no network broadcast. Lets a consumer
-   * (e.g. a 3D mesh mirroring the region) update live while a canvas drag
-   * is in progress; the region's actual rect only changes once `move()`
-   * commits it on drag end. Silently ignores an unknown id.
-   */
   previewMove(
     id: string,
-    rect: SelectionRect
+    rect: SelectionRect,
+    face?: UVFace
   ): void {
-    if (!this.#regions.has(id)) {
+    const region = this.#regions.get(id);
+    if (!region) {
+      return;
+    }
+
+    const target = this.#resolveFace(region, face);
+    if (target === undefined) {
       return;
     }
 
@@ -237,18 +247,118 @@ export class UVMap extends Emitter<UVMapEvent> implements Iterable<UVRegion> {
       rect,
       this.#getCanvasSize()
     );
-    this.emit("region-dragging", { id, rect: clamped });
+    this.emit("region-dragging", { id, face: target, rect: clamped });
   }
 
-  /**
-   * Removes every region and resets cascading placement.
-   */
+  uncollapse(
+    id: string
+  ): boolean {
+    return this.#changeState(id, (region) => region.uncollapse());
+  }
+
+  collapse(
+    id: string,
+    face: UVFace = kDefaultFace
+  ): boolean {
+    return this.#changeState(id, (region) => region.collapse(face));
+  }
+
+  restoreState(
+    value: UVRegion | UVRegionData
+  ): boolean {
+    const next = UVRegion.from(value);
+
+    return this.#changeState(next.id, () => next);
+  }
+
   clear(): void {
     for (const id of this.#regions.keys()) {
       this.delete(id);
     }
     this.#cascadeIndex = 0;
     this.#palette.reset();
+  }
+
+  #changeState(
+    id: string,
+    transform: (region: UVRegion) => UVRegion
+  ): boolean {
+    const region = this.#regions.get(id);
+    if (!region) {
+      return false;
+    }
+
+    const next = transform(region);
+    if (next === region) {
+      return false;
+    }
+
+    const previous = region.toJSON();
+    this.#regions.set(id, next);
+
+    // Selection is normalized before events fire so listeners see a consistent state.
+    const selectionChanged = this.#applySelection(
+      this.#selectedRegionId,
+      this.#selectedFace
+    );
+
+    this.emit("region-state-changed", { region: next, previous });
+    if (selectionChanged) {
+      this.#emitSelectionChanged();
+    }
+
+    return true;
+  }
+
+  /**
+   * Normalizes face against the region's state: null when collapsed, face (or default) when uncollapsed.
+   */
+  #resolveFace(
+    region: UVRegion,
+    face: UVFace | undefined
+  ): UVFace | null | undefined {
+    if (region.state === "collapsed") {
+      return null;
+    }
+
+    return face ?? undefined;
+  }
+
+  /**
+   * Stores the normalized selection; returns whether anything changed.
+   */
+  #applySelection(
+    id: string | null,
+    face: UVFace | null
+  ): boolean {
+    if (id === null) {
+      const changed = this.#selectedRegionId !== null || this.#selectedFace !== null;
+      this.#selectedRegionId = null;
+      this.#selectedFace = null;
+
+      return changed;
+    }
+
+    const region = this.#regions.get(id);
+    if (!region) {
+      return false;
+    }
+
+    const nextFace = region.state === "collapsed" ?
+      null :
+      face ?? kDefaultFace;
+    const changed = this.#selectedRegionId !== id || this.#selectedFace !== nextFace;
+    this.#selectedRegionId = id;
+    this.#selectedFace = nextFace;
+
+    return changed;
+  }
+
+  #emitSelectionChanged(): void {
+    this.emit("selection-changed", {
+      selectedRegionId: this.#selectedRegionId,
+      selectedFace: this.#selectedFace
+    });
   }
 
   #nextCascadePosition(

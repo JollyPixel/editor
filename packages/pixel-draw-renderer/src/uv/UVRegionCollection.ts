@@ -1,8 +1,13 @@
 // Import Internal Dependencies
-import type {
-  UVRegion
+import {
+  UVRegion,
+  type UVRegionData
 } from "./UVRegion.ts";
 
+/**
+ * Id-keyed store mirroring the client's UVMap.
+ * Stores instances for reuse in command application.
+ */
 export class UVRegionCollection implements Iterable<UVRegion> {
   #regions = new Map<string, UVRegion>();
 
@@ -13,11 +18,13 @@ export class UVRegionCollection implements Iterable<UVRegion> {
   }
 
   set(
-    region: UVRegion
+    region: UVRegion | UVRegionData
   ): void {
-    this.#regions.set(region.id, {
-      ...region
-    });
+    const stored = UVRegion.from(region);
+    this.#regions.set(
+      stored.id,
+      stored
+    );
   }
 
   remove(

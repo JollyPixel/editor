@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import {
   BlockRegistry,
+  Face,
   type VoxelRenderer,
   type BlockDefinition
 } from "@jolly-pixel/voxel.renderer";
@@ -68,8 +69,8 @@ describe("BlockUvBridge.setActiveTileset", () => {
     try {
       bridge.setActiveTileset("atlas", 16);
 
-      assert.deepEqual(uv.get("block-1")?.rect, { x: 0, y: 0, width: 16, height: 16 });
-      assert.deepEqual(uv.get("block-2")?.rect, { x: 32, y: 16, width: 16, height: 16 });
+      assert.deepEqual(uv.get("block-1")?.rectFor("front"), { x: 0, y: 0, width: 16, height: 16 });
+      assert.deepEqual(uv.get("block-2")?.rectFor("front"), { x: 32, y: 16, width: 16, height: 16 });
       assert.equal(uv.get("block-3"), undefined);
     }
     finally {
@@ -108,12 +109,12 @@ describe("BlockUvBridge / blockRegistryChanged", () => {
     const bridge = new BlockUvBridge(uv, vr);
     try {
       bridge.setActiveTileset("atlas", 16);
-      assert.deepEqual(uv.get("block-1")?.rect, { x: 0, y: 0, width: 16, height: 16 });
+      assert.deepEqual(uv.get("block-1")?.rectFor("front"), { x: 0, y: 0, width: 16, height: 16 });
 
       vr.engine.blockRegistry.register(makeBlock(1, { col: 3, row: 2, tilesetId: "atlas" }));
       editorState.dispatchBlockRegistryChanged();
 
-      assert.deepEqual(uv.get("block-1")?.rect, { x: 48, y: 32, width: 16, height: 16 });
+      assert.deepEqual(uv.get("block-1")?.rectFor("front"), { x: 48, y: 32, width: 16, height: 16 });
     }
     finally {
       bridge.dispose();
@@ -133,7 +134,7 @@ describe("BlockUvBridge / region-moved", () => {
 
       uv.move("block-1", { x: 30, y: 50, width: 16, height: 16 });
 
-      assert.deepEqual(uv.get("block-1")?.rect, { x: 30, y: 50, width: 16, height: 16 });
+      assert.deepEqual(uv.get("block-1")?.rectFor("front"), { x: 30, y: 50, width: 16, height: 16 });
       const updated = vr.engine.blockRegistry.get(1)!;
       assert.equal(updated.defaultTexture!.col, 1.875);
       assert.equal(updated.defaultTexture!.row, 3.125);
@@ -156,9 +157,145 @@ describe("BlockUvBridge / region-moved", () => {
 
       uv.move("custom-region", { x: 5, y: 5, width: 8, height: 8 });
 
-      assert.deepEqual(uv.get("custom-region")?.rect, { x: 5, y: 5, width: 8, height: 8 });
+      assert.deepEqual(uv.get("custom-region")?.rectFor("front"), { x: 5, y: 5, width: 8, height: 8 });
       assert.deepEqual(dirtyReasons, []);
       assert.equal(region.id, "custom-region");
+    }
+    finally {
+      bridge.dispose();
+    }
+  });
+});
+
+describe("BlockUvBridge / faceTextures round-trip", () => {
+  it("uncollapsing a block region writes all six faceTextures", () => {
+    const { vr } = makeFakeVoxelRenderer();
+    vr.engine.blockRegistry.register(makeBlock(1, { col: 1, row: 2, tilesetId: "atlas" }));
+
+    const uv = makeUv();
+    const bridge = new BlockUvBridge(uv, vr);
+    try {
+      bridge.setActiveTileset("atlas", 16);
+      uv.uncollapse("block-1");
+
+      const updated = vr.engine.blockRegistry.get(1)!;
+      assert.equal(
+        Object.keys(updated.faceTextures).length,
+        6,
+        "a populated faceTextures is what marks the block uncollapsed"
+      );
+      for (const tileRef of Object.values(updated.faceTextures)) {
+        assert.deepEqual(
+          { col: tileRef.col, row: tileRef.row },
+          { col: 1, row: 2 },
+          "uncollapsing must not move any face"
+        );
+      }
+    }
+    finally {
+      bridge.dispose();
+    }
+  });
+
+  it("moving one face updates only that face's tile", () => {
+    const { vr } = makeFakeVoxelRenderer();
+    vr.engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));
+
+    const uv = makeUv();
+    const bridge = new BlockUvBridge(uv, vr);
+    try {
+      bridge.setActiveTileset("atlas", 16);
+      uv.uncollapse("block-1");
+
+      uv.move("block-1", { x: 48, y: 32, width: 16, height: 16 }, "top");
+
+      const updated = vr.engine.blockRegistry.get(1)!;
+      assert.deepEqual(
+        { col: updated.faceTextures[Face.PosY]!.col, row: updated.faceTextures[Face.PosY]!.row },
+        { col: 3, row: 2 }
+      );
+      assert.deepEqual(
+        { col: updated.faceTextures[Face.PosZ]!.col, row: updated.faceTextures[Face.PosZ]!.row },
+        { col: 0, row: 0 },
+        "front must stay where it was"
+      );
+    }
+    finally {
+      bridge.dispose();
+    }
+  });
+
+  it("collapsing clears faceTextures and writes defaultTexture", () => {
+    const { vr } = makeFakeVoxelRenderer();
+    vr.engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));
+
+    const uv = makeUv();
+    const bridge = new BlockUvBridge(uv, vr);
+    try {
+      bridge.setActiveTileset("atlas", 16);
+      uv.uncollapse("block-1");
+      uv.move("block-1", { x: 48, y: 32, width: 16, height: 16 }, "top");
+
+      uv.collapse("block-1", "top");
+
+      const updated = vr.engine.blockRegistry.get(1)!;
+      assert.deepEqual(updated.faceTextures, {});
+      assert.deepEqual(
+        { col: updated.defaultTexture!.col, row: updated.defaultTexture!.row },
+        { col: 3, row: 2 },
+        "the surviving face becomes the block's single texture"
+      );
+    }
+    finally {
+      bridge.dispose();
+    }
+  });
+
+  it("an uncollapsed block survives a rebuild triggered from outside", () => {
+    const { vr } = makeFakeVoxelRenderer();
+    vr.engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));
+
+    const uv = makeUv();
+    const bridge = new BlockUvBridge(uv, vr);
+    try {
+      bridge.setActiveTileset("atlas", 16);
+      uv.uncollapse("block-1");
+      uv.move("block-1", { x: 48, y: 32, width: 16, height: 16 }, "top");
+
+      editorState.dispatchBlockRegistryChanged();
+
+      const region = uv.get("block-1")!;
+      assert.equal(region.state, "uncollapsed");
+      assert.deepEqual(
+        region.rectFor("top"),
+        { x: 48, y: 32, width: 16, height: 16 }
+      );
+    }
+    finally {
+      bridge.dispose();
+    }
+  });
+
+  it("a block authored with partial faceTextures rebuilds as uncollapsed, filling gaps from defaultTexture", () => {
+    const { vr } = makeFakeVoxelRenderer();
+    vr.engine.blockRegistry.register({
+      ...makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }),
+      faceTextures: { [Face.PosY]: { col: 2, row: 0, tilesetId: "atlas" } }
+    });
+
+    const uv = makeUv();
+    const bridge = new BlockUvBridge(uv, vr);
+    try {
+      bridge.setActiveTileset("atlas", 16);
+
+      const region = uv.get("block-1")!;
+      assert.equal(region.state, "uncollapsed");
+      assert.deepEqual(region.rectFor("top"), { x: 32, y: 0, width: 16, height: 16 });
+      assert.deepEqual(
+        region.rectFor("front"),
+        { x: 0, y: 0, width: 16, height: 16 },
+        "faces absent from faceTextures fall back to defaultTexture"
+      );
     }
     finally {
       bridge.dispose();

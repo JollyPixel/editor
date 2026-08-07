@@ -46,7 +46,10 @@ import {
   CanvasView
 } from "./CanvasView.ts";
 import type { UVMap } from "./uv/UVMap.ts";
-import type { UVRegion } from "./uv/UVRegion.ts";
+import type {
+  UVRegion,
+  UVRegionData
+} from "./uv/UVRegion.ts";
 import type { PeerCursorOverlay } from "./rendering/overlays/PeerCursorOverlay.ts";
 import { toRGBA } from "./utils/colors.ts";
 import type {
@@ -521,7 +524,7 @@ export class PixelArtCanvas {
   loadSnapshot(
     size: Vec2,
     pixels: Uint8ClampedArray,
-    uvRegions: UVRegion[] = []
+    uvRegions: (UVRegion | UVRegionData)[] = []
   ): void {
     this.#edits.loadSnapshot(size, pixels, uvRegions);
   }

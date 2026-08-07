@@ -12,7 +12,11 @@ import type { HistoryEntryInput } from "../history/HistoryStack.types.ts";
 import type { CanvasRenderer } from "../rendering/CanvasRenderer.ts";
 import type { Viewport } from "../rendering/Viewport.ts";
 import type { UVMap } from "../uv/UVMap.ts";
-import type { UVRegion } from "../uv/UVRegion.ts";
+import type {
+  UVFace,
+  UVRegion,
+  UVRegionData
+} from "../uv/UVRegion.ts";
 import type {
   RGBA,
   SelectionRect,
@@ -83,7 +87,11 @@ export class EditPipeline {
     );
     this.#uvMap.on(
       "region-moved",
-      (event) => this.#handleUvMoved(event.region, event.previousRect)
+      (event) => this.#handleUvMoved(event.region, event.face, event.previousRect)
+    );
+    this.#uvMap.on(
+      "region-state-changed",
+      (event) => this.#handleUvStateChanged(event.region, event.previous)
     );
   }
 
@@ -393,8 +401,13 @@ export class EditPipeline {
         case "uv-region-moved":
           this.#uvMap.move(
             event.metadata.id,
-            event.metadata.rect
+            event.metadata.rect,
+            event.metadata.face ?? undefined
           );
+          break;
+
+        case "uv-region-state-changed":
+          this.#uvMap.restoreState(event.metadata.region);
           break;
       }
     }
@@ -409,7 +422,7 @@ export class EditPipeline {
   loadSnapshot(
     size: Vec2,
     pixels: Uint8ClampedArray,
-    uvRegions: UVRegion[] = []
+    uvRegions: (UVRegion | UVRegionData)[] = []
   ): void {
     this.#isApplyingRemote = true;
     try {
@@ -448,15 +461,16 @@ export class EditPipeline {
     if (this.#isApplyingRemote) {
       return;
     }
+    const data = region.toJSON();
     if (!this.#isReplayingHistory) {
       this.#history.push({
         action: "uv-create",
-        region
+        region: data
       });
     }
     this.#onBufferUpdated?.({
       action: "uv-region-created",
-      metadata: { region }
+      metadata: { region: data }
     });
   }
 
@@ -469,7 +483,7 @@ export class EditPipeline {
     if (!this.#isReplayingHistory) {
       this.#history.push({
         action: "uv-delete",
-        region
+        region: region.toJSON()
       });
     }
     this.#onBufferUpdated?.({
@@ -482,25 +496,51 @@ export class EditPipeline {
 
   #handleUvMoved(
     region: UVRegion,
+    face: UVFace | null,
     previousRect: SelectionRect
   ): void {
     if (this.#isApplyingRemote) {
       return;
     }
+    const rect = region.rectFor(face ?? "front");
     if (!this.#isReplayingHistory) {
       this.#history.push({
         action: "uv-move",
         id: region.id,
+        face,
         oldRect: previousRect,
-        newRect: region.rect
+        newRect: rect
       });
     }
     this.#onBufferUpdated?.({
       action: "uv-region-moved",
       metadata: {
         id: region.id,
-        rect: region.rect
+        face,
+        rect
       }
+    });
+  }
+
+  #handleUvStateChanged(
+    region: UVRegion,
+    previous: UVRegionData
+  ): void {
+    if (this.#isApplyingRemote) {
+      return;
+    }
+    const data = region.toJSON();
+    if (!this.#isReplayingHistory) {
+      this.#history.push({
+        action: "uv-state",
+        id: region.id,
+        before: previous,
+        after: data
+      });
+    }
+    this.#onBufferUpdated?.({
+      action: "uv-region-state-changed",
+      metadata: { region: data }
     });
   }
 }

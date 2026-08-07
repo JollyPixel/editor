@@ -111,11 +111,11 @@ readonly uvRegions: UVRegionCollection
 
 Server-side UV region storage for this buffer. Included in [`PixelSyncServer.snapshot()`](../network/PixelSyncServer.md#snapshot) so late-joining clients receive existing regions.
 
-`UVRegionCollection` is an id-keyed map of `UVRegion`s. Entries are always keyed by `region.id` and stored as copies.
+`UVRegionCollection` is an id-keyed map of [`UVRegion`](../uv/UVRegion.md)s. It accepts instances or raw wire data and always stores instances, so `PixelCommandApplier` can reuse `withRect`/`collapse` rather than re-deriving region state server-side.
 
 ```ts
 uvRegions.get(id: string): UVRegion | undefined
-uvRegions.set(region: UVRegion): void   // upserts a copy by region.id
+uvRegions.set(region: UVRegion | UVRegionData): void   // upserts by region.id
 uvRegions.remove(id: string): void
 ```
 
@@ -132,9 +132,10 @@ The hook event shape is also the network command vocabulary - every event maps d
 | `"texture-replaced"` | `size`, `pixels` (base64) | |
 | `"global-fill"` | `fromColor`, `toColor` | No position list; peers recompute from their own buffer |
 | `"select-edit"` | `positions`, `colors` (per-pixel) | Unlike `"stroke"`, colors are heterogeneous |
-| `"uv-region-created"` | `region` (full) | |
+| `"uv-region-created"` | `region` (full `UVRegionData`) | |
 | `"uv-region-deleted"` | `id` | |
-| `"uv-region-moved"` | `id`, `rect` | |
+| `"uv-region-moved"` | `id`, `face`, `rect` | `face` is `null` for a collapsed region |
+| `"uv-region-state-changed"` | `region` (full `UVRegionData`) | A collapse/uncollapse; rewrites every face at once |
 
 All events carry an optional `originTimestamp`, set only during `undo()`/`redo()` replay so the network conflict policy (see [PixelSyncServer](../network/PixelSyncServer.md#conflict-policy-minimal)) re-races the edit at its original time instead of treating it as new.
 

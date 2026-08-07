@@ -56,7 +56,7 @@ interface PixelSyncServerOptions {
 interface PixelBufferSnapshot {
   size: Vec2;
   pixels: string; // base64 RGBA
-  uvRegions: UVRegion[];
+  uvRegions: UVRegionData[];
 }
 
 type PixelServerMessage = network.NetworkServerMessage<PixelNetworkCommand, PixelBufferSnapshot>;
@@ -68,9 +68,10 @@ By default, `PixelSyncServer` uses `@jolly-pixel/network`'s [`LastWriteWinsResol
 
 What that means:
 1. `stroke` and `select-edit` conflicts resolve per pixel.
-2. `uv-region-moved` and `uv-region-deleted` conflicts resolve per region id.
-3. `resized`, `texture-replaced`, `global-fill`, and `uv-region-created` are always accepted.
-4. For the same key, same-client commands are accepted in send order; otherwise newer `timestamp` wins (and `clientId` breaks ties).
+2. `uv-region-moved` conflicts resolve per **region face** (`<id>:<face>`, or `<id>:*` for a collapsed region), so two peers laying out different faces of the same region never reject each other.
+3. `uv-region-deleted` and `uv-region-state-changed` rewrite the whole region, so they resolve against *every* face key at once and are all-or-nothing: rejected by any one key, the command is not applied at all.
+4. `resized`, `texture-replaced`, `global-fill`, and `uv-region-created` are always accepted.
+5. For the same key, same-client commands are accepted in send order; otherwise newer `timestamp` wins (and `clientId` breaks ties).
 
 You can override this with `conflictResolver` in `PixelSyncServerOptions` when you need custom behavior.
 

@@ -147,8 +147,13 @@ export class HistoryStack {
       case "uv-move":
         this.#uvMap.move(
           entry.id,
-          entry.oldRect
+          entry.oldRect,
+          entry.face ?? undefined
         );
+        break;
+
+      case "uv-state":
+        this.#uvMap.restoreState(entry.before);
         break;
     }
   }
@@ -200,8 +205,13 @@ export class HistoryStack {
       case "uv-move":
         this.#uvMap.move(
           entry.id,
-          entry.newRect
+          entry.newRect,
+          entry.face ?? undefined
         );
+        break;
+
+      case "uv-state":
+        this.#uvMap.restoreState(entry.after);
         break;
     }
   }

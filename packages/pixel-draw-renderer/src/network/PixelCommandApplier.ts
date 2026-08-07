@@ -61,6 +61,7 @@ export function applyCommandToBuffer(
     }
 
     case "uv-region-created":
+    case "uv-region-state-changed":
       buffer.uvRegions.set(cmd.metadata.region);
       break;
 
@@ -71,10 +72,12 @@ export function applyCommandToBuffer(
     case "uv-region-moved": {
       const existing = buffer.uvRegions.get(cmd.metadata.id);
       if (existing) {
-        buffer.uvRegions.set({
-          ...existing,
-          rect: cmd.metadata.rect
-        });
+        buffer.uvRegions.set(
+          existing.withRect(
+            cmd.metadata.rect,
+            cmd.metadata.face ?? undefined
+          )
+        );
       }
       break;
     }
