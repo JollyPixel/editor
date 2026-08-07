@@ -93,6 +93,16 @@ samplePixels(positions: Vec2[]): RGBA[]
 
 Batch `samplePixel`. Out-of-bounds positions return `{ r: 0, g: 0, b: 0, a: 0 }`.
 
+### `hasTransparency(rect)`
+
+```ts
+hasTransparency(rect: SelectionRect): boolean
+```
+
+`true` if any pixel in `rect` isn't fully opaque (`a < 255`), including antialiased/semi-transparent pixels, not just fully-transparent ones. A `rect` extending outside the buffer counts as transparent, same as `samplePixel(s)`'s out-of-bounds convention. Uncached — rescans `rect` on every call.
+
+Also on `CanvasBuffer`, which delegates to this implementation.
+
 ### UV Regions
 
 ```ts

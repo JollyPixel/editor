@@ -1,6 +1,7 @@
 // Import Internal Dependencies
 import type {
   RGBA,
+  SelectionRect,
   Vec2
 } from "../types.ts";
 
@@ -24,4 +25,7 @@ export interface DefaultPixelBuffer {
   samplePixels(
     positions: Vec2[]
   ): RGBA[];
+  hasTransparency(
+    rect: SelectionRect
+  ): boolean;
 }
