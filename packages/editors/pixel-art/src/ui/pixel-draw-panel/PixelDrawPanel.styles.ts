@@ -42,9 +42,8 @@ export const panelStyles = css`
 
   .canvas-host {
     /*
-     * PixelArtCanvas.appendTo() sets this element's position to "relative"
-     * inline (higher specificity than this stylesheet), so sizing must
-     * come from width/height, not position:absolute + inset.
+     * PixelArtCanvas sets inline position:relative;
+     * size via width/height.
      */
     width: 100%;
     height: 100%;
@@ -129,6 +128,13 @@ export const panelStyles = css`
     align-items: center;
     gap: 4px;
     cursor: pointer;
+  }
+
+  .uv-toolbar .uv-face {
+    padding: 3px 8px;
+    border-radius: 10px;
+    background: var(--color-border);
+    font-family: monospace;
   }
 
   .file-input {

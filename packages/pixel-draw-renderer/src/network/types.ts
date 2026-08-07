@@ -5,7 +5,7 @@ import type * as network from "@jolly-pixel/network";
 import type {
   PixelBufferHookEvent
 } from "../buffer/hooks.ts";
-import type { UVRegion } from "../uv/UVRegion.ts";
+import type { UVRegionData } from "../uv/UVRegion.ts";
 import type { Vec2 } from "../types.ts";
 
 export interface PixelBufferSnapshot {
@@ -14,7 +14,7 @@ export interface PixelBufferSnapshot {
    * Base64-encoded RGBA data.
    */
   pixels: string;
-  uvRegions: UVRegion[];
+  uvRegions: UVRegionData[];
 }
 export type PixelNetworkCommand = PixelBufferHookEvent & network.NetworkCommandHeader;
 

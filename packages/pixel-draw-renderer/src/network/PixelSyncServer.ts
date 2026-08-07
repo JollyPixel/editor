@@ -5,6 +5,7 @@ import * as network from "@jolly-pixel/network";
 // Import Internal Dependencies
 import { applyCommandToBuffer } from "./PixelCommandApplier.ts";
 import { PixelBuffer } from "../buffer/PixelBuffer.ts";
+import { UV_FACES } from "../uv/UVRegion.ts";
 import type {
   PixelBufferSnapshot,
   PixelNetworkCommand
@@ -14,8 +15,29 @@ export type PixelStrokeCommand = Extract<PixelNetworkCommand, { action: "stroke"
 export type PixelSelectEditCommand = Extract<PixelNetworkCommand, { action: "select-edit"; }>;
 export type PixelUvRegionCommand = Extract<
   PixelNetworkCommand,
-  { action: "uv-region-moved" | "uv-region-deleted"; }
+  { action: "uv-region-moved" | "uv-region-deleted" | "uv-region-state-changed"; }
 >;
+
+/**
+ * Conflict keys for a UV command. Move affects only one face;
+ * delete/state changes affect all.
+ */
+function uvConflictKeys(
+  cmd: PixelUvRegionCommand
+): string[] {
+  if (cmd.action === "uv-region-moved") {
+    return [`${cmd.metadata.id}:${cmd.metadata.face ?? "*"}`];
+  }
+
+  const id = cmd.action === "uv-region-deleted" ?
+    cmd.metadata.id :
+    cmd.metadata.region.id;
+
+  return [
+    `${id}:*`,
+    ...UV_FACES.map((face) => `${id}:${face}`)
+  ];
+}
 
 export type ClientHandle = network.ClientHandle;
 
@@ -28,27 +50,22 @@ function isPixelNetworkCommand(
 
 export interface PixelSyncServerOptions {
   /**
-   * Extension id this server is registered under. A
-   * PixelSyncServer owns exactly one buffer, so a Server hosting
-   * several buffers needs one instance per buffer, each under its own
-   * id (e.g. `"pixel-draw:tileset-1"`).
+   * Extension id (one per buffer).
    * @default "pixel-draw"
    */
   id?: string;
   /**
-   * Existing PixelBuffer to use as the authoritative state.
-   * A new, blank 1x1 buffer is created when omitted.
+   * Authoritative buffer (creates a new 1x1 buffer if omitted).
    */
   buffer?: PixelBuffer;
   /**
-   * Custom conflict resolver.
-   * Defaults to LastWriteWinsResolver.
+   * Conflict resolver (defaults to LastWriteWinsResolver).
    */
   conflictResolver?: network.ConflictResolver;
 }
 
 /**
- * Manages authoritative state for a single pixel buffer and its client synchronization.
+ * Manages authoritative buffer state and client synchronization.
  */
 export class PixelSyncServer extends network.Extension {
   readonly id: string;
@@ -74,7 +91,7 @@ export class PixelSyncServer extends network.Extension {
   onClientConnect(
     client: network.ClientHandle
   ): void {
-    // Sends the buffer's current snapshot to the newly connected peer.
+    // Send the current buffer snapshot to the new client.
     client.send({
       type: "snapshot",
       data: this.snapshot()
@@ -112,6 +129,7 @@ export class PixelSyncServer extends network.Extension {
         break;
       case "uv-region-moved":
       case "uv-region-deleted":
+      case "uv-region-state-changed":
         this.#receiveUvRegionCommand(cmd, context);
         break;
       default:
@@ -191,19 +209,23 @@ export class PixelSyncServer extends network.Extension {
   }
 
   /**
-   * Resolves move/delete conflicts per region id (parallel to the
-   * per-pixel resolution strokes use).
+   * Resolves per-face like strokes (all-or-nothing: any key rejection blocks the whole command).
    */
   #receiveUvRegionCommand(
     cmd: PixelUvRegionCommand,
     context: network.RoomContext
   ): void {
-    const key = cmd.metadata.id;
-    if (this.#regionTracker.resolve(key, cmd) === "reject") {
+    const keys = uvConflictKeys(cmd);
+    const rejected = keys.some(
+      (key) => this.#regionTracker.resolve(key, cmd) === "reject"
+    );
+    if (rejected) {
       return;
     }
 
-    this.#regionTracker.record(key, cmd);
+    for (const key of keys) {
+      this.#regionTracker.record(key, cmd);
+    }
     applyCommandToBuffer(
       this.buffer,
       cmd
@@ -217,7 +239,7 @@ export class PixelSyncServer extends network.Extension {
       pixels: fromUint8Array(
         new Uint8Array(this.buffer.pixels())
       ),
-      uvRegions: [...this.buffer.uvRegions]
+      uvRegions: [...this.buffer.uvRegions].map((region) => region.toJSON())
     };
   }
 }

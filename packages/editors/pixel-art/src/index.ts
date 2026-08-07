@@ -1,8 +1,8 @@
-export { PixelDrawPanel } from "./ui/PixelDrawPanel.ts";
-export { ModeRail } from "./ui/ModeRail.ts";
-export { ColorPickerRail } from "./ui/ColorPickerRail.ts";
+export { PixelDrawPanel } from "./ui/pixel-draw-panel/PixelDrawPanel.ts";
+export { ModeRail } from "./ui/mode-rail/ModeRail.ts";
+export { ColorPickerRail } from "./ui/color/ColorPickerRail.ts";
 export {
   ColorSwatch,
   type ColorChangeDetail
-} from "./ui/ColorSwatch.ts";
-export type { IconName } from "./ui/icons.ts";
+} from "./ui/color/ColorSwatch.ts";
+export type { IconName } from "./ui/common/icons.ts";

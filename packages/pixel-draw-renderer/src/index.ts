@@ -62,7 +62,14 @@ export {
   type UVMapOptions,
   type UVRegionCreateOptions
 } from "./uv/UVMap.ts";
-export type { UVRegion } from "./uv/UVRegion.ts";
+export {
+  UVRegion,
+  UV_FACES,
+  type UVFace,
+  type UVRegionData,
+  type UVRegionFace,
+  type UVRegionState
+} from "./uv/UVRegion.ts";
 // PixelSyncServer is deliberately not re-exported here: it value-imports
 // @jolly-pixel/network's server root (worker_threads and friends), and this
 // barrel is consumed by browser bundles. Import it from

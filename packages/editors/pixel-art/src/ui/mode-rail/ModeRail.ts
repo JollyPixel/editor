@@ -8,18 +8,25 @@ import {
   customElement,
   property
 } from "lit/decorators.js";
+import { classMap } from "lit/directives/class-map.js";
 import type { Mode } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import {
   renderIcon,
   type IconName
-} from "./icons.ts";
-import { iconStyles } from "./icon.styles.ts";
+} from "../common/icons.ts";
+import { iconStyles } from "../common/icon.styles.ts";
 import { railButtonStyles } from "./rail-button.styles.ts";
 
+interface ModeItem {
+  mode: Mode;
+  icon: IconName;
+  label: string;
+}
+
 // CONSTANTS
-const kModeItems: { mode: Mode; icon: IconName; label: string; }[] = [
+const kModeItems: ModeItem[] = [
   { mode: "move", icon: "move", label: "Move" },
   { mode: "paint", icon: "paint", label: "Paint" },
   { mode: "fill", icon: "fill", label: "Fill" },
@@ -28,20 +35,24 @@ const kModeItems: { mode: Mode; icon: IconName; label: string; }[] = [
 ];
 
 /**
- * Drawing-mode button group plus the paint-mode eyedropper toggle. Fully
- * controlled by `mode`/`pickColorArmed` props — reports intent via
- * `mode-change`/`pick-color-toggle` events rather than mutating any canvas
- * state itself.
+ * Mode buttons plus paint eyedropper toggle.
+ * Controlled by props; emits intent events only.
  *
- * @fires {CustomEvent<Mode>} mode-change - Requests switching to the given mode.
- * @fires {CustomEvent<void>} pick-color-toggle - Requests toggling the eyedropper.
+ * @fires {CustomEvent<Mode>} mode-change
+ * @fires {CustomEvent<void>} pick-color-toggle
  */
 @customElement("mode-rail")
 export class ModeRail extends LitElement {
-  static override styles = [iconStyles, railButtonStyles];
+  static override styles = [
+    iconStyles,
+    railButtonStyles
+  ];
 
-  @property({ type: String }) declare mode: Mode;
-  @property({ type: Boolean }) declare pickColorArmed: boolean;
+  @property({ type: String })
+  declare mode: Mode;
+
+  @property({ type: Boolean })
+  declare pickColorArmed: boolean;
 
   constructor() {
     super();
@@ -52,18 +63,22 @@ export class ModeRail extends LitElement {
   #onModeClick(
     mode: Mode
   ): void {
-    this.dispatchEvent(new CustomEvent<Mode>("mode-change", {
+    const customEvent = new CustomEvent<Mode>("mode-change", {
       bubbles: true,
       composed: true,
       detail: mode
-    }));
+    });
+
+    this.dispatchEvent(customEvent);
   }
 
   #onPickColorClick(): void {
-    this.dispatchEvent(new CustomEvent("pick-color-toggle", {
+    const customEvent = new CustomEvent("pick-color-toggle", {
       bubbles: true,
       composed: true
-    }));
+    });
+
+    this.dispatchEvent(customEvent);
   }
 
   override render() {
@@ -71,7 +86,7 @@ export class ModeRail extends LitElement {
       <div class="rail-section" role="group" aria-label="Drawing mode">
         ${kModeItems.map(({ mode, icon, label }) => html`
           <button
-            class="rail-btn ${this.mode === mode ? "active" : ""}"
+            class=${classMap({ "rail-btn": true, active: this.mode === mode })}
             part="mode-button"
             aria-label=${label}
             aria-pressed=${this.mode === mode}
@@ -82,7 +97,7 @@ export class ModeRail extends LitElement {
           </button>
           ${mode === "paint" ? html`
             <button
-              class="rail-btn ${this.pickColorArmed ? "active" : ""}"
+              class=${classMap({ "rail-btn": true, active: this.pickColorArmed })}
               part="pick-color-button"
               aria-label="Pick color"
               aria-pressed=${this.pickColorArmed}

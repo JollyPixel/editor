@@ -12,9 +12,7 @@ export interface CubeFactoryOptions {
 }
 
 /**
- * Owns the ECS side of a UV region's cube: actor creation/teardown. Kept
- * separate from CubeGallery so that class only has to know "one cube per
- * region", not how a cube is actually spawned into the world.
+ * Owns the ECS side of a UV region's cube: actor creation/teardown.
  */
 export class CubeFactory {
   #world: Systems.World;
@@ -31,11 +29,12 @@ export class CubeFactory {
     region: UVRegion,
     textureSize: Vec2
   ): CubeBehavior {
-    return this.#world.createActor(`uv-cube-${region.id}`).addComponentAndGet(CubeBehavior, {
-      canvasTexture: this.#canvasTexture,
-      region,
-      textureSize
-    });
+    return this.#world.createActor(`uv-cube-${region.id}`)
+      .addComponentAndGet(CubeBehavior, {
+        canvasTexture: this.#canvasTexture,
+        region,
+        textureSize
+      });
   }
 
   destroy(

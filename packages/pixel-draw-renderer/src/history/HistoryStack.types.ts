@@ -4,7 +4,10 @@ import type {
   SelectionRect,
   Vec2
 } from "../types.ts";
-import type { UVRegion } from "../uv/UVRegion.ts";
+import type {
+  UVFace,
+  UVRegionData
+} from "../uv/UVRegion.ts";
 
 export interface HistoryStrokeEntry {
   action: "stroke";
@@ -50,21 +53,30 @@ export interface HistorySelectEditEntry {
 export interface HistoryUvCreateEntry {
   action: "uv-create";
   timestamp: number;
-  region: UVRegion;
+  region: UVRegionData;
 }
 
 export interface HistoryUvDeleteEntry {
   action: "uv-delete";
   timestamp: number;
-  region: UVRegion;
+  region: UVRegionData;
 }
 
 export interface HistoryUvMoveEntry {
   action: "uv-move";
   timestamp: number;
   id: string;
+  face: UVFace | null;
   oldRect: SelectionRect;
   newRect: SelectionRect;
+}
+
+export interface HistoryUvStateEntry {
+  action: "uv-state";
+  timestamp: number;
+  id: string;
+  before: UVRegionData;
+  after: UVRegionData;
 }
 
 export type HistoryEntry =
@@ -74,7 +86,8 @@ export type HistoryEntry =
   | HistorySelectEditEntry
   | HistoryUvCreateEntry
   | HistoryUvDeleteEntry
-  | HistoryUvMoveEntry;
+  | HistoryUvMoveEntry
+  | HistoryUvStateEntry;
 
 export type HistoryEntryInput =
   | Omit<HistoryStrokeEntry, "timestamp">
@@ -83,4 +96,5 @@ export type HistoryEntryInput =
   | Omit<HistorySelectEditEntry, "timestamp">
   | Omit<HistoryUvCreateEntry, "timestamp">
   | Omit<HistoryUvDeleteEntry, "timestamp">
-  | Omit<HistoryUvMoveEntry, "timestamp">;
+  | Omit<HistoryUvMoveEntry, "timestamp">
+  | Omit<HistoryUvStateEntry, "timestamp">;

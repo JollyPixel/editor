@@ -12,6 +12,7 @@ import {
   type UVMapEventType
 } from "#src/uv/UVMap.ts";
 import { UVController } from "#src/uv/UVController.ts";
+import { UV_FACES, type UVFace } from "#src/uv/UVRegion.ts";
 import type { UVOverlay } from "#src/rendering/overlays/UVOverlay.ts";
 import type { SelectionRect } from "#src/types.ts";
 
@@ -20,13 +21,14 @@ type EventPayload<T extends UVMapEventType> = Parameters<UVMapEvent[T]>[0];
 // UVController only calls overlay.setLiveOverride; FakeOverlay implements that
 // structural subset and is cast to UVOverlay at the single injection site.
 class FakeOverlay {
-  overrides: { id: string; rect: SelectionRect | null; }[] = [];
+  overrides: { id: string; face: UVFace | null; rect: SelectionRect | null; }[] = [];
 
   setLiveOverride(
     id: string,
+    face: UVFace | null,
     rect: SelectionRect | null
   ): void {
-    this.overrides.push({ id, rect });
+    this.overrides.push({ id, face, rect });
   }
 }
 
@@ -86,8 +88,8 @@ describe("UVController — drag to move", () => {
     controller.handleMove({ x: 6, y: 6 });
 
     assert.deepStrictEqual(
-      map.get(region.id)!.rect,
-      region.rect
+      map.get(region.id)!.rectFor("front"),
+      region.rectFor("front")
     );
   });
 
@@ -100,7 +102,10 @@ describe("UVController — drag to move", () => {
     controller.handleMove({ x: 6, y: 6 });
     controller.handleEnd();
 
-    assert.deepStrictEqual(map.get(region.id)!.rect, { x: 4, y: 4, width: 8, height: 8 });
+    assert.deepStrictEqual(
+      map.get(region.id)!.rectFor("front"),
+      { x: 4, y: 4, width: 8, height: 8 }
+    );
   });
 
   test("does not move the region for a click without dragging", () => {
@@ -112,8 +117,8 @@ describe("UVController — drag to move", () => {
     controller.handleEnd();
 
     assert.deepStrictEqual(
-      map.get(region.id)!.rect,
-      region.rect
+      map.get(region.id)!.rectFor("front"),
+      region.rectFor("front")
     );
   });
 
@@ -161,8 +166,8 @@ describe("UVController — drag to move", () => {
     controller.handleEnd();
 
     assert.deepStrictEqual(
-      map.get(region.id)!.rect,
-      region.rect
+      map.get(region.id)!.rectFor("front"),
+      region.rectFor("front")
     );
     assert.strictEqual(
       overlay.overrides.at(-1)!.rect,
@@ -196,8 +201,8 @@ describe("UVController — drag to move", () => {
         { x: 5, y: 5, width: 8, height: 8 }
       ]);
       assert.deepStrictEqual(
-        map.get(region.id)!.rect,
-        region.rect,
+        map.get(region.id)!.rectFor("front"),
+        region.rectFor("front"),
         "not committed yet"
       );
     });
@@ -215,9 +220,138 @@ describe("UVController — drag to move", () => {
 
       assert.deepStrictEqual(
         events.at(-1)!.rect,
-        region.rect
+        region.rectFor("front")
       );
     });
+  });
+});
+
+describe("UVController — cycling through an overlapping stack", () => {
+  test("a repeat click advances to the next face of the stack", () => {
+    const { map, controller } = makeSetup();
+    const region = map.create({ width: 8, height: 8 });
+    map.uncollapse(region.id);
+    map.showAll = true;
+
+    const picked: (string | null)[] = [];
+    for (let index = 0; index < UV_FACES.length; index++) {
+      controller.handleStart({ x: 2, y: 2 });
+      controller.handleEnd();
+      picked.push(map.selectedFace);
+    }
+
+    assert.deepStrictEqual(
+      picked,
+      [...UV_FACES],
+      "six stacked faces must each be reachable by clicking again"
+    );
+  });
+
+  test("wraps back to the first face after the last one", () => {
+    const { map, controller } = makeSetup();
+    const region = map.create({ width: 8, height: 8 });
+    map.uncollapse(region.id);
+    map.showAll = true;
+
+    for (let index = 0; index < UV_FACES.length; index++) {
+      controller.handleStart({ x: 2, y: 2 });
+      controller.handleEnd();
+    }
+    controller.handleStart({ x: 2, y: 2 });
+
+    assert.strictEqual(map.selectedFace, UV_FACES[0]);
+  });
+
+  test("dragging a face out of the stack changes the stack, resetting the cycle", () => {
+    const { map, controller } = makeSetup();
+    const region = map.create({ width: 8, height: 8 });
+    map.uncollapse(region.id);
+    map.showAll = true;
+
+    // Pick "front", then drag it away from the shared position.
+    controller.handleStart({ x: 2, y: 2 });
+    controller.handleMove({ x: 22, y: 22 });
+    controller.handleEnd();
+
+    // The remaining five still coincide, so this is a different stack.
+    controller.handleStart({ x: 2, y: 2 });
+
+    assert.strictEqual(map.selectedFace, "back");
+  });
+
+  test("an external selection change resets the cycle", () => {
+    const { map, controller } = makeSetup();
+    const region = map.create({ width: 8, height: 8 });
+    map.uncollapse(region.id);
+    map.showAll = true;
+
+    controller.handleStart({ x: 2, y: 2 });
+    controller.handleEnd();
+    assert.strictEqual(map.selectedFace, "front");
+
+    // e.g. a 3D picker, undo, or a peer selecting for us.
+    map.select(region.id, "top");
+    controller.handleStart({ x: 2, y: 2 });
+
+    assert.strictEqual(
+      map.selectedFace,
+      "front",
+      "the cycle restarts at the top of the stack, not where it left off"
+    );
+  });
+
+  test("a miss resets the cycle", () => {
+    const { map, controller } = makeSetup();
+    const region = map.create({ width: 8, height: 8 });
+    map.uncollapse(region.id);
+    map.showAll = true;
+
+    controller.handleStart({ x: 2, y: 2 });
+    controller.handleEnd();
+    controller.handleStart({ x: 30, y: 30 });
+    controller.handleEnd();
+    map.showAll = true;
+    controller.handleStart({ x: 2, y: 2 });
+
+    assert.strictEqual(map.selectedFace, "front");
+  });
+
+  test("dragging moves the face the cycle landed on", () => {
+    const { map, controller } = makeSetup();
+    const region = map.create({ width: 8, height: 8 });
+    map.uncollapse(region.id);
+    map.showAll = true;
+
+    controller.handleStart({ x: 2, y: 2 });
+    controller.handleEnd();
+    controller.handleStart({ x: 2, y: 2 });
+    controller.handleMove({ x: 6, y: 6 });
+    controller.handleEnd();
+
+    const stored = map.get(region.id)!;
+    assert.deepStrictEqual(
+      stored.rectFor("back"),
+      { x: 4, y: 4, width: 8, height: 8 },
+      "the second click selected back, so back is what moves"
+    );
+    assert.deepStrictEqual(
+      stored.rectFor("front"),
+      { x: 0, y: 0, width: 8, height: 8 },
+      "front must stay where it was"
+    );
+  });
+
+  test("a collapsed region is a single-entry stack, so repeat clicks keep it selected", () => {
+    const { map, controller } = makeSetup();
+    const region = map.create({ width: 8, height: 8 });
+    map.showAll = true;
+
+    controller.handleStart({ x: 2, y: 2 });
+    controller.handleEnd();
+    controller.handleStart({ x: 2, y: 2 });
+
+    assert.strictEqual(map.selectedRegionId, region.id);
+    assert.strictEqual(map.selectedFace, null);
   });
 });
 

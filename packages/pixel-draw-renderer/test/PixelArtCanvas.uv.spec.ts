@@ -60,7 +60,7 @@ describe("PixelArtCanvas — uv mode", () => {
     canvas.dispatchEvent(mouseEvent("mouseup", 92, 92));
 
     assert.deepStrictEqual(
-      manager.uv.get(region.id)!.rect,
+      manager.uv.get(region.id)!.rectFor("front"),
       { x: 2, y: 2, width: 4, height: 4 }
     );
   });
@@ -136,8 +136,8 @@ describe("PixelArtCanvas — uv mode", () => {
     canvas.dispatchEvent(mouseEvent("mouseup", 92, 92));
 
     assert.deepStrictEqual(
-      manager.uv.get(region.id)!.rect,
-      region.rect
+      manager.uv.get(region.id)!.rectFor("front"),
+      region.rectFor("front")
     );
   });
 
@@ -257,15 +257,63 @@ describe("PixelArtCanvas — uv mode", () => {
 
       manager.undo();
       assert.deepStrictEqual(
-        manager.uv.get(region.id)!.rect,
-        region.rect
+        manager.uv.get(region.id)!.rectFor("front"),
+        region.rectFor("front")
       );
 
       manager.redo();
       assert.deepStrictEqual(
-        manager.uv.get(region.id)!.rect,
+        manager.uv.get(region.id)!.rectFor("front"),
         { x: 3, y: 3, width: 4, height: 4 }
       );
+    });
+
+    test("undo/redo an uncollapse", () => {
+      const manager = makeManager();
+      const region = manager.uv.create({ width: 4, height: 4 });
+      manager.uv.uncollapse(region.id);
+
+      manager.undo();
+      assert.strictEqual(manager.uv.get(region.id)!.state, "collapsed");
+
+      manager.redo();
+      assert.strictEqual(manager.uv.get(region.id)!.state, "uncollapsed");
+    });
+
+    test("undoing a collapse brings back the faces it discarded", () => {
+      const manager = makeManager();
+      const region = manager.uv.create({ width: 4, height: 4 });
+      manager.uv.uncollapse(region.id);
+      manager.uv.move(region.id, { x: 3, y: 3, width: 4, height: 4 }, "top");
+      manager.uv.collapse(region.id);
+      assert.strictEqual(manager.uv.get(region.id)!.state, "collapsed");
+
+      manager.undo();
+
+      const restored = manager.uv.get(region.id)!;
+      assert.strictEqual(restored.state, "uncollapsed");
+      assert.deepStrictEqual(
+        restored.rectFor("top"),
+        { x: 3, y: 3, width: 4, height: 4 },
+        "collapse is lossy, so undo must replay the whole previous region"
+      );
+    });
+
+    test("undoing a collapse does not look like a region being recreated", () => {
+      const manager = makeManager();
+      const region = manager.uv.create({ width: 4, height: 4 });
+      manager.uv.uncollapse(region.id);
+      manager.uv.collapse(region.id);
+
+      const created: string[] = [];
+      const deleted: string[] = [];
+      manager.uv.on("region-created", (e) => created.push(e.region.id));
+      manager.uv.on("region-deleted", (e) => deleted.push(e.region.id));
+
+      manager.undo();
+
+      assert.deepStrictEqual(created, [], "a consumer would spawn a duplicate mesh");
+      assert.deepStrictEqual(deleted, []);
     });
 
     test("undoing a create does not push a new entry (undo stack stays empty after)", () => {
@@ -328,7 +376,7 @@ describe("PixelArtCanvas — uv mode", () => {
       if (events[0].action === "uv-region-moved") {
         assert.deepStrictEqual(
           events[0].metadata.rect,
-          region.rect
+          region.rectFor("front")
         );
       }
     });
@@ -377,8 +425,8 @@ describe("PixelArtCanvas — uv mode", () => {
 
       assert.strictEqual([...manager.uv.regions].length, 1);
       assert.deepStrictEqual(
-        manager.uv.get("remote-1"),
-        remoteRegion
+        manager.uv.get("remote-1")!.toJSON(),
+        { ...remoteRegion, state: "collapsed" }
       );
     });
   });
@@ -447,16 +495,14 @@ describe("PixelArtCanvas — onResize (SVG overlay refresh, regression)", () => 
     manager.uv.create({ width: 4, height: 4 });
     manager.uv.showAll = true;
 
-    // Direct children only: excludes BrushHighlightOverlay's rects, which
-    // live nested inside their own <g> wrapper. Of the remaining direct
-    // rects (selection's outline/inline, always present but hidden, and
-    // this one visible UV region), the UV one is the only one with no
-    // "visibility" attribute at all (UVOverlay never sets one).
+    // Each UV entry is a <g> of two rects: the inset casing, then the colored
+    // border on the region's own bounds — the one to measure. Every other
+    // overlay group — brush highlight, peer cursors — carries a "visibility"
+    // attribute, which UVOverlay never sets.
     const svg = children.find(
       (c) => !("getContext" in c)
     ) as SVGElement;
-    const rect = [...svg.querySelectorAll(":scope > rect")]
-      .find((el) => !el.hasAttribute("visibility"))!;
+    const rect = svg.querySelector("g:not([visibility]) > rect:last-child")!;
     assert.strictEqual(rect.getAttribute("x"), "84");
     assert.strictEqual(rect.getAttribute("y"), "84");
 

@@ -14,6 +14,7 @@ import {
   type ClientHandle
 } from "#src/network/PixelSyncServer.ts";
 import type { PixelNetworkCommand } from "#src/network/types.ts";
+import { UVRegion, type UVFace, type UVRegionData } from "#src/uv/UVRegion.ts";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -39,8 +40,8 @@ function createClient(
 
 // receive() never touches eventStore, so every RoomContext in this file shares one unused stub.
 const unusedEventStore: RoomEventStoreHandle = {
-  append: () => true,
-  list: () => []
+  append: async() => true,
+  list: () => Promise.resolve([])
 };
 
 /**
@@ -52,6 +53,9 @@ const noopRoom: RoomContext = {
   room: {
     broadcast: () => {
       // no observers
+    },
+    sendTo(): void {
+      throw new Error("Function not implemented.");
     }
   },
   eventStore: unusedEventStore
@@ -69,7 +73,12 @@ function observe(
   server.onClientConnect(client);
 
   return {
-    room: { broadcast: (payload) => client.send(payload) },
+    room: {
+      broadcast: (payload) => client.send(payload),
+      sendTo: () => {
+        throw new Error("Function not implemented.");
+      }
+    },
     eventStore: unusedEventStore
   };
 }
@@ -109,6 +118,7 @@ function uvMovedCmd(
       width: number;
       height: number;
     };
+    face?: UVFace | null;
     clientId?: string;
     seq?: number;
     timestamp?: number;
@@ -116,7 +126,7 @@ function uvMovedCmd(
 ): PixelNetworkCommand {
   return {
     action: "uv-region-moved",
-    metadata: { id: opts.id, rect: opts.rect },
+    metadata: { id: opts.id, face: opts.face ?? null, rect: opts.rect },
     clientId: opts.clientId ?? "client-A",
     seq: opts.seq ?? 1,
     timestamp: opts.timestamp ?? 1000
@@ -172,7 +182,7 @@ describe("PixelSyncServer — receive: uv-region-moved / uv-region-deleted confl
     }), noopRoom);
 
     assert.deepStrictEqual(
-      server.buffer.uvRegions.get("r1")!.rect,
+      server.buffer.uvRegions.get("r1")!.rectFor("front"),
       { x: 2, y: 2, width: 2, height: 2 }
     );
   });
@@ -200,7 +210,7 @@ describe("PixelSyncServer — receive: uv-region-moved / uv-region-deleted confl
     }), noopRoom);
 
     assert.deepStrictEqual(
-      server.buffer.uvRegions.get("r1")!.rect,
+      server.buffer.uvRegions.get("r1")!.rectFor("front"),
       { x: 2, y: 2, width: 2, height: 2 }
     );
   });
@@ -291,12 +301,141 @@ describe("PixelSyncServer — receive: uv-region-moved / uv-region-deleted confl
     }), noopRoom);
 
     assert.deepStrictEqual(
-      server.buffer.uvRegions.get("r1")!.rect,
+      server.buffer.uvRegions.get("r1")!.rectFor("front"),
       { x: 1, y: 1, width: 2, height: 2 }
     );
     assert.deepStrictEqual(
-      server.buffer.uvRegions.get("r2")!.rect,
+      server.buffer.uvRegions.get("r2")!.rectFor("front"),
       { x: 5, y: 5, width: 2, height: 2 }
     );
+  });
+});
+
+describe("PixelSyncServer — per-face conflict resolution", () => {
+  function uvStateCmd(
+    opts: {
+      region: UVRegionData;
+      clientId?: string;
+      timestamp?: number;
+    }
+  ): PixelNetworkCommand {
+    return {
+      action: "uv-region-state-changed",
+      metadata: { region: opts.region },
+      clientId: opts.clientId ?? "client-A",
+      seq: 1,
+      timestamp: opts.timestamp ?? 1000
+    };
+  }
+
+  function uncollapsed(
+    id: string
+  ): UVRegionData {
+    return new UVRegion({
+      id,
+      color: "#f00",
+      rect: { x: 0, y: 0, width: 2, height: 2 }
+    }).uncollapse().toJSON();
+  }
+
+  test("two peers moving different faces of one region do not reject each other", () => {
+    const server = new PixelSyncServer();
+    server.receive(uvCreatedCmd({
+      region: { id: "r1", rect: { x: 0, y: 0, width: 2, height: 2 }, color: "#f00" }
+    }), noopRoom);
+    server.receive(uvStateCmd({ region: uncollapsed("r1"), timestamp: 100 }), noopRoom);
+
+    server.receive(uvMovedCmd({
+      id: "r1",
+      face: "top",
+      rect: { x: 4, y: 4, width: 2, height: 2 },
+      timestamp: 900,
+      clientId: "A"
+    }), noopRoom);
+    // Earlier timestamp, but a different face — no shared key, so no conflict.
+    server.receive(uvMovedCmd({
+      id: "r1",
+      face: "bottom",
+      rect: { x: 6, y: 6, width: 2, height: 2 },
+      timestamp: 500,
+      clientId: "B"
+    }), noopRoom);
+
+    const region = server.buffer.uvRegions.get("r1")!;
+    assert.deepStrictEqual(region.rectFor("top"), { x: 4, y: 4, width: 2, height: 2 });
+    assert.deepStrictEqual(
+      region.rectFor("bottom"),
+      { x: 6, y: 6, width: 2, height: 2 },
+      "a disjoint face edit must not be dropped as stale"
+    );
+  });
+
+  test("a stale move on the same face is still rejected", () => {
+    const server = new PixelSyncServer();
+    server.receive(uvCreatedCmd({
+      region: { id: "r1", rect: { x: 0, y: 0, width: 2, height: 2 }, color: "#f00" }
+    }), noopRoom);
+    server.receive(uvStateCmd({ region: uncollapsed("r1"), timestamp: 100 }), noopRoom);
+
+    server.receive(uvMovedCmd({
+      id: "r1",
+      face: "top",
+      rect: { x: 4, y: 4, width: 2, height: 2 },
+      timestamp: 900,
+      clientId: "A"
+    }), noopRoom);
+    server.receive(uvMovedCmd({
+      id: "r1",
+      face: "top",
+      rect: { x: 8, y: 8, width: 2, height: 2 },
+      timestamp: 500,
+      clientId: "B"
+    }), noopRoom);
+
+    assert.deepStrictEqual(
+      server.buffer.uvRegions.get("r1")!.rectFor("top"),
+      { x: 4, y: 4, width: 2, height: 2 }
+    );
+  });
+
+  test("a state change rewrites the whole region, so a stale face move loses to it", () => {
+    const server = new PixelSyncServer();
+    server.receive(uvCreatedCmd({
+      region: { id: "r1", rect: { x: 0, y: 0, width: 2, height: 2 }, color: "#f00" }
+    }), noopRoom);
+    server.receive(uvStateCmd({
+      region: uncollapsed("r1"),
+      timestamp: 900,
+      clientId: "A"
+    }), noopRoom);
+
+    server.receive(uvMovedCmd({
+      id: "r1",
+      face: "left",
+      rect: { x: 8, y: 8, width: 2, height: 2 },
+      timestamp: 500,
+      clientId: "B"
+    }), noopRoom);
+
+    assert.deepStrictEqual(
+      server.buffer.uvRegions.get("r1")!.rectFor("left"),
+      { x: 0, y: 0, width: 2, height: 2 },
+      "the collapse/uncollapse took every face key, so the older move is stale"
+    );
+  });
+
+  test("a state change is applied and broadcast", () => {
+    const server = new PixelSyncServer();
+    const client = createClient("A");
+    const room = observe(server, client);
+    server.receive(uvCreatedCmd({
+      region: { id: "r1", rect: { x: 0, y: 0, width: 2, height: 2 }, color: "#f00" }
+    }), room);
+    client.received.length = 0;
+
+    server.receive(uvStateCmd({ region: uncollapsed("r1") }), room);
+
+    assert.strictEqual(server.buffer.uvRegions.get("r1")!.state, "uncollapsed");
+    assert.strictEqual(client.received.length, 1);
   });
 });

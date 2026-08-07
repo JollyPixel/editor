@@ -591,6 +591,7 @@ describe("PixelSyncServer — snapshot", () => {
       [
         {
           id: "r1",
+          state: "collapsed",
           rect: { x: 0, y: 0, width: 2, height: 2 },
           color: "#f00"
         }

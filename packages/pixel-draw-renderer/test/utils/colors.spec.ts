@@ -11,6 +11,7 @@ import Color from "colorjs.io";
 // Import Internal Dependencies
 import {
   colorAsRGBA,
+  contrastingColor,
   rgbToHex,
   toRGBA
 } from "#src/utils/colors.ts";
@@ -95,6 +96,36 @@ describe("toRGBA", () => {
     assert.deepStrictEqual(
       toRGBA(new Color("blue")),
       { r: 0, g: 0, b: 255, a: 255 }
+    );
+  });
+});
+
+describe("contrastingColor", () => {
+  test("returns black on white and white on black", () => {
+    assert.strictEqual(contrastingColor("#ffffff"), "#000");
+    assert.strictEqual(contrastingColor("#000000"), "#FFF");
+  });
+
+  test("weights green above red and blue at equal component values", () => {
+    // Pure green reads far brighter than pure blue, so they must not share a
+    // verdict just because both are fully saturated.
+    assert.strictEqual(contrastingColor("#00ff00"), "#000");
+    assert.strictEqual(contrastingColor("#0000ff"), "#FFF");
+  });
+
+  test("returns white for mid-gray", () => {
+    assert.strictEqual(contrastingColor("rgb(128, 128, 128)"), "#FFF");
+  });
+
+  test("accepts any CSS color notation", () => {
+    assert.strictEqual(contrastingColor("red"), "#FFF");
+    assert.strictEqual(contrastingColor("hsl(60 100% 50%)"), "#000");
+  });
+
+  test("ignores alpha", () => {
+    assert.strictEqual(
+      contrastingColor("#ffffff00"),
+      contrastingColor("#ffffff")
     );
   });
 });

@@ -5,6 +5,7 @@ import {
 } from "@jolly-pixel/engine";
 import * as THREE from "three";
 import type {
+  UVFace,
   UVRegion,
   SelectionRect,
   Vec2
@@ -17,12 +18,22 @@ export interface CubeBehaviorOptions {
 }
 
 /**
- * A rotating test cube mapped to one UV region, so region placement/move
- * can be visually verified. Face assignment is out of scope for this
- * version: the region's rect is applied uniformly to all 6 faces.
+ * Rotating test cube mapped to one UV region (one rect per face when uncollapsed).
  */
 // CONSTANTS
 const kCubeSize = 1.5;
+/**
+ * Maps face names to BoxGeometry vertex offsets (+X, -X, +Y, -Y, +Z, -Z order).
+ */
+const kFaceVertexOffset: Record<UVFace, number> = {
+  right: 0,
+  left: 4,
+  top: 8,
+  bottom: 12,
+  front: 16,
+  back: 20
+};
+const kVerticesPerFace = 4;
 const kHighlightScale = 1.06;
 // Both in rad/sec.
 const kRotationSpeedX = 0.3;
@@ -37,16 +48,12 @@ export class CubeBehavior extends ActorComponent {
 
   #highlightMesh: THREE.Mesh;
   /**
-   * Snapshot of BoxGeometry's pristine per-vertex UV (every component
-   * exactly 0 or 1), captured once before the first remap. Every later
-   * remap (e.g. after a move) derives corner identity from this snapshot,
-   * never from the geometry's current (already-remapped) UV attribute —
-   * which no longer contains exact 0/1 values after the first call.
+   * Pristine BoxGeometry UVs (0 or 1 per component). Remaps always derive
+   * corner identity from this snapshot, never from the live (remapped) attribute.
    */
   #baseUV: Float32Array;
   /**
-   * Where the actor eases toward each frame (see `setTargetPosition`),
-   * instead of snapping — set by the demo's grid layout in main.ts.
+   * Easing target for `#relayout` grid placement.
    */
   #targetPosition: THREE.Vector3;
 
@@ -81,17 +88,16 @@ export class CubeBehavior extends ActorComponent {
       })
     );
     this.mesh.userData.regionId = region.id;
-    this.#applyRegionUV(region.rect, textureSize);
+    this.applyRegion(region, textureSize);
 
-    // Backface-rendered, slightly larger shell: a cheap, always-visible
-    // "selected" outline that doesn't depend on the (possibly bright/white)
-    // texture for contrast, unlike an emissive tint would. Uses the
-    // region's own color (same one driving its 2D SVG overlay border), so
-    // a cube visually matches the region it maps — same reasoning as
-    // UVOverlay in the library itself.
+    // Backface shell: cheap always-visible outline using the region's own color.
     const highlightSize = kCubeSize * kHighlightScale;
     this.#highlightMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(highlightSize, highlightSize, highlightSize),
+      new THREE.BoxGeometry(
+        highlightSize,
+        highlightSize,
+        highlightSize
+      ),
       new THREE.MeshBasicMaterial({
         color: region.color,
         side: THREE.BackSide
@@ -104,9 +110,7 @@ export class CubeBehavior extends ActorComponent {
   }
 
   /**
-   * Eases the actor toward `position` over the next few frames instead of
-   * snapping, so the demo's grid re-centering (main.ts) reads as a smooth
-   * reflow rather than a jump cut.
+   * Eases toward `position` over the next few frames (smooth grid reflow).
    */
   setTargetPosition(
     position: THREE.Vector3
@@ -115,15 +119,43 @@ export class CubeBehavior extends ActorComponent {
   }
 
   /**
-   * Updates the mapped rect, either the region's committed position (on
-   * "region-moved") or a live drag preview (on "region-dragging") — both
-   * are a plain rect, so the same path drives live and committed updates.
+   * Remaps every face from the region's current state.
    */
-  updateRect(
+  applyRegion(
+    region: UVRegion,
+    textureSize: Vec2
+  ): void {
+    for (const { face, rect } of region.facesOf()) {
+      this.applyFace(face, rect, textureSize);
+    }
+  }
+
+  /**
+   * Remaps one face, or all faces when `face` is null (collapsed region).
+   */
+  applyFace(
+    face: UVFace | null,
     rect: SelectionRect,
     textureSize: Vec2
   ): void {
-    this.#applyRegionUV(rect, textureSize);
+    if (face === null) {
+      this.#applyRectToRange(
+        rect,
+        textureSize,
+        0,
+        this.#baseUV.length / 2
+      );
+    }
+    else {
+      this.#applyRectToRange(
+        rect,
+        textureSize,
+        kFaceVertexOffset[face],
+        kVerticesPerFace
+      );
+    }
+
+    this.mesh.geometry.attributes.uv.needsUpdate = true;
   }
 
   setSelected(
@@ -135,31 +167,29 @@ export class CubeBehavior extends ActorComponent {
   update(
     deltaTime: number
   ): void {
-    // Rotate the actor itself (not the mesh directly) so the highlight
-    // shell, a sibling under the same actor, spins in lockstep.
+    // Rotate the actor so the highlight shell (sibling) spins in lockstep.
     this.actor.object3D.rotation.x += kRotationSpeedX * deltaTime;
     this.actor.object3D.rotation.y += kRotationSpeedY * deltaTime;
 
-    // Exponential ease toward the target — frame-rate independent, unlike
-    // a flat `lerp(target, constant)` would be.
+    // Frame-rate-independent exponential ease.
     const alpha = 1 - Math.exp(-kPositionLerpRate * deltaTime);
-    this.actor.object3D.position.lerp(this.#targetPosition, alpha);
+    this.actor.object3D.position.lerp(
+      this.#targetPosition,
+      alpha
+    );
 
     this.canvasTexture.needsUpdate = true;
   }
 
   /**
-   * Remaps BoxGeometry's default per-face 0..1 UV unwrap onto the given
-   * rect (normalized against `textureSize`), using `#baseUV` (the pristine
-   * snapshot) to identify each vertex's corner — never the geometry's
-   * current UV attribute, which no longer holds exact 0/1 values after the
-   * first remap. Works regardless of vertex order this way, repeatably. V
-   * is flipped (canvas Y grows downward, texture V grows upward for a
-   * default-flipY CanvasTexture).
+   * Remaps BoxGeometry's 0..1 UVs onto the rect for `count` vertices from `start`.
+   * Uses `#baseUV` for corner identity; V is flipped for CanvasTexture's flipY.
    */
-  #applyRegionUV(
+  #applyRectToRange(
     rect: SelectionRect,
-    textureSize: Vec2
+    textureSize: Vec2,
+    start: number,
+    count: number
   ): void {
     const uvAttr = this.mesh.geometry.attributes.uv;
     const u0 = rect.x / textureSize.x;
@@ -167,11 +197,10 @@ export class CubeBehavior extends ActorComponent {
     const v0 = 1 - ((rect.y + rect.height) / textureSize.y);
     const v1 = 1 - (rect.y / textureSize.y);
 
-    for (let i = 0; i < uvAttr.count; i++) {
+    for (let i = start; i < start + count; i++) {
       const u = this.#baseUV[i * 2];
       const v = this.#baseUV[(i * 2) + 1];
       uvAttr.setXY(i, u === 0 ? u0 : u1, v === 0 ? v0 : v1);
     }
-    uvAttr.needsUpdate = true;
   }
 }

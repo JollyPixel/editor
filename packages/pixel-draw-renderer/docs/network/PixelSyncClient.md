@@ -12,7 +12,7 @@ type PixelNetworkCommand = PixelBufferHookEvent & network.NetworkCommandHeader;
 interface PixelBufferSnapshot {
 	size: Vec2;
 	pixels: string; // base64 RGBA
-	uvRegions: UVRegion[];
+	uvRegions: UVRegionData[];
 }
 
 type PixelServerMessage = network.NetworkServerMessage<PixelNetworkCommand, PixelBufferSnapshot>;

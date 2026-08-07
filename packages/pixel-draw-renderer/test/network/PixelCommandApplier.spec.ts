@@ -11,6 +11,7 @@ import { fromUint8Array } from "js-base64";
 // Import Internal Dependencies
 import { PixelBuffer } from "#src/buffer/PixelBuffer.ts";
 import { applyCommandToBuffer } from "#src/network/PixelCommandApplier.ts";
+import { UVRegion } from "#src/uv/UVRegion.ts";
 import type { PixelNetworkCommand } from "#src/network/types.ts";
 
 // CONSTANTS
@@ -195,8 +196,9 @@ describe("applyCommandToBuffer — uv-region-created", () => {
       }
     });
 
-    assert.deepStrictEqual(buffer.uvRegions.get("r1"), {
+    assert.deepStrictEqual(buffer.uvRegions.get("r1")!.toJSON(), {
       id: "r1",
+      state: "collapsed",
       rect: { x: 0, y: 0, width: 2, height: 2 },
       color: "#f00"
     });
@@ -250,15 +252,65 @@ describe("applyCommandToBuffer — uv-region-moved", () => {
       action: "uv-region-moved",
       metadata: {
         id: "r1",
+        face: null,
         rect: { x: 4, y: 4, width: 2, height: 2 }
       }
     });
 
-    assert.deepStrictEqual(buffer.uvRegions.get("r1"), {
+    assert.deepStrictEqual(buffer.uvRegions.get("r1")!.toJSON(), {
       id: "r1",
+      state: "collapsed",
       rect: { x: 4, y: 4, width: 2, height: 2 },
       color: "#f00"
     });
+  });
+
+  test("moves a single face of an uncollapsed region", () => {
+    const buffer = makeBuffer({ x: 8, y: 8 });
+    buffer.uvRegions.set(
+      new UVRegion({
+        id: "r1",
+        color: "#f00",
+        rect: { x: 0, y: 0, width: 2, height: 2 }
+      }).uncollapse()
+    );
+
+    applyCommandToBuffer(buffer, {
+      ...kHeader,
+      action: "uv-region-moved",
+      metadata: {
+        id: "r1",
+        face: "top",
+        rect: { x: 4, y: 4, width: 2, height: 2 }
+      }
+    });
+
+    const region = buffer.uvRegions.get("r1")!;
+    assert.deepStrictEqual(region.rectFor("top"), { x: 4, y: 4, width: 2, height: 2 });
+    assert.deepStrictEqual(region.rectFor("front"), { x: 0, y: 0, width: 2, height: 2 });
+  });
+
+  test("uv-region-state-changed replaces the stored region", () => {
+    const buffer = makeBuffer({ x: 8, y: 8 });
+    buffer.uvRegions.set({
+      id: "r1",
+      rect: { x: 0, y: 0, width: 2, height: 2 },
+      color: "#f00"
+    });
+
+    applyCommandToBuffer(buffer, {
+      ...kHeader,
+      action: "uv-region-state-changed",
+      metadata: {
+        region: new UVRegion({
+          id: "r1",
+          color: "#f00",
+          rect: { x: 0, y: 0, width: 2, height: 2 }
+        }).uncollapse().toJSON()
+      }
+    });
+
+    assert.strictEqual(buffer.uvRegions.get("r1")!.state, "uncollapsed");
   });
 
   test("is a no-op for an unknown region", () => {

@@ -4,7 +4,10 @@ import type {
   SelectionRect,
   Vec2
 } from "../types.ts";
-import type { UVRegion } from "../uv/UVRegion.ts";
+import type {
+  UVFace,
+  UVRegionData
+} from "../uv/UVRegion.ts";
 
 /**
  * @notes
@@ -54,7 +57,7 @@ export type PixelBufferHookEvent =
   | {
     action: "uv-region-created";
     metadata: {
-      region: UVRegion;
+      region: UVRegionData;
     };
     originTimestamp?: number;
   }
@@ -69,7 +72,15 @@ export type PixelBufferHookEvent =
     action: "uv-region-moved";
     metadata: {
       id: string;
+      face: UVFace | null;
       rect: SelectionRect;
+    };
+    originTimestamp?: number;
+  }
+  | {
+    action: "uv-region-state-changed";
+    metadata: {
+      region: UVRegionData;
     };
     originTimestamp?: number;
   };

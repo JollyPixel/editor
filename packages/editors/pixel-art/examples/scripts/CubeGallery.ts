@@ -11,18 +11,11 @@ export interface CubeGalleryOptions {
   canvasManager: PixelArtCanvas;
 }
 
-// Recomputes every cube's target position as a centered, near-square
-// grid — re-run on every create/delete so the cluster (1 cube or many)
-// always sits centered on the origin, not just column-centered against
-// a fixed column count. CubeBehavior eases toward the new target itself
-// (see setTargetPosition), so a reflow reads as a smooth glide.
+// Spacing for a centered near-square grid; cubes ease to new positions on relayout.
 const kGridSpacing = 2.4;
 
 /**
- * Mirrors a PixelArtCanvas's UV regions as 3D test cubes — one cube per
- * region, so placement/move can be visually verified. Face assignment is
- * out of scope for this demo: a region's rect is applied uniformly to all
- * 6 faces (see CubeBehavior.applyRegionUV).
+ * Mirrors UV regions as 3D cubes: one cube per region, collapsed or per-face.
  */
 export class CubeGallery {
   #cubeFactory: CubeFactory;
@@ -55,16 +48,26 @@ export class CubeGallery {
       this.#relayout();
     });
 
-    uv.on("region-moved", ({ region }) => {
-      this.#cubes.get(region.id)?.updateRect(
-        region.rect,
+    uv.on("region-moved", ({ region, face }) => {
+      this.#cubes.get(region.id)?.applyFace(
+        face,
+        region.rectFor(face ?? "front"),
         this.#canvasManager.textureSize
       );
     });
 
-    uv.on("region-dragging", ({ id, rect }) => {
-      this.#cubes.get(id)?.updateRect(
+    uv.on("region-dragging", ({ id, face, rect }) => {
+      this.#cubes.get(id)?.applyFace(
+        face,
         rect,
+        this.#canvasManager.textureSize
+      );
+    });
+
+    // Collapse/uncollapse rewrites every face; remap the whole cube.
+    uv.on("region-state-changed", ({ region }) => {
+      this.#cubes.get(region.id)?.applyRegion(
+        region,
         this.#canvasManager.textureSize
       );
     });
@@ -77,24 +80,20 @@ export class CubeGallery {
   }
 
   /**
-   * Current cube meshes, for a consumer (e.g. CubePicker) to raycast
-   * against without reaching into the underlying cube map.
+   * Cube meshes for raycasting.
    */
   get meshes(): THREE.Object3D[] {
     return [...this.#cubes.values()].map((cube) => cube.mesh);
   }
 
   /**
-   * Remaps every cube's UV against the canvas's current texture size.
-   * Region rects don't change on import/resize (only what they're
-   * normalized against does), so no "region-moved"/"region-dragging" event
-   * fires to drive this on its own — the caller must invoke this after
-   * replacing or resizing the texture.
+   * Remaps every cube's UV to the current texture size.
+   * Must be called after texture replace or resize (no event covers this).
    */
   refreshTextureSize(): void {
     const { textureSize } = this.#canvasManager;
     for (const region of this.#canvasManager.uv.regions) {
-      this.#cubes.get(region.id)?.updateRect(region.rect, textureSize);
+      this.#cubes.get(region.id)?.applyRegion(region, textureSize);
     }
   }
 

@@ -23,7 +23,8 @@ interface HistoryStackOptions {
 | `"resized"` / `"texture-replaced"` | Whole-buffer `beforePixels` / `afterPixels` snapshot |
 | `"select-edit"` | `beforeColors`/`afterColors` per-position + `oldRect`/`newRect`/`oldMask`/`newMask` for selection state |
 | `"uv-create"` / `"uv-delete"` | Full `region` (undo calls the inverse `UVMap` method) |
-| `"uv-move"` | `oldRect` / `newRect` |
+| `"uv-move"` | `face` (`null` when collapsed) + `oldRect` / `newRect` |
+| `"uv-state"` | Whole `before` / `after` regions — collapsing discards five rects, so only a full snapshot can undo it |
 
 > [!NOTE]
 > `"select-edit"` and `"uv-*"` undo/redo are broadcast over the network. See [uv/UVMap.md](../uv/UVMap.md#history--network).
