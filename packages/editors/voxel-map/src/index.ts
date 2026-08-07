@@ -28,7 +28,7 @@ if (!canvas) {
 }
 
 const runtime = await Runtime.create(canvas, {
-  includePerformanceStats: true
+  includePerformanceStats: false
 });
 const { world } = runtime;
 
