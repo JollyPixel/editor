@@ -275,9 +275,16 @@ export class VoxelBrush extends ActorComponent {
 
     const hit = this.#castRay();
     if (hit) {
-      const center = this.#hitToVoxelPos(hit, true);
+      // The ground plane has no voxel to superpose over: fall back to the
+      // placement cell, same as a real hit's face highlight has nothing to sit on.
+      const isGroundHit = hit.object === this.#plane;
+      const center = isGroundHit ?
+        this.#hitToVoxelPos(hit, true) :
+        this.#hitToVoxelPos(hit, false);
+
       this.#preview.updateFromPositions(
-        this.#getBrushPositions(center)
+        this.#getBrushPositions(center),
+        isGroundHit ? null : (hit.face?.normal ?? null)
       );
     }
     else {
