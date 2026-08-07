@@ -1,88 +1,62 @@
 // Import Third-party Dependencies
 import type * as THREE from "three";
+import {
+  attribute,
+  clamp,
+  float,
+  floor,
+  reference,
+  step,
+  texture,
+  uv,
+  vec2,
+  vec4
+} from "three/tsl";
 
-// CONSTANTS
-const kCacheKey = "jolly-pixel:tile-wrap";
-
-const kVertexPars = `
-attribute vec4 tileRegion;
-attribute vec2 tileRepeat;
-varying vec4 vTileRegion;
-varying vec2 vTileRepeat;
-`;
-
-const kFragmentPars = `
-varying vec4 vTileRegion;
-varying vec2 vTileRepeat;
-`;
-
-/**
- * Replaces three's `map_fragment`. `vMapUv` counts tiles rather than atlas
- * space, so it is folded back into 0-1 and then mapped onto the tile's rect.
- *
- * The clamp keeps multisampled fragments, whose interpolated coordinates can
- * land slightly outside the quad, from wrapping around to the opposite edge of
- * the tile — the artifact the atlas gutter exists to prevent. Snapping the far
- * edge to 1 covers the other end: there `fract()` would return 0 and sample the
- * first texel of the tile instead of the last.
- */
-const kMapFragment = `
-#ifdef USE_MAP
-
-	vec2 tileCoord = clamp( vMapUv, vec2( 0.0 ), vTileRepeat );
-	vec2 tileFrac = tileCoord - floor( tileCoord );
-	tileFrac = mix( tileFrac, vec2( 1.0 ), step( vTileRepeat, tileCoord ) );
-
-	vec4 sampledDiffuseColor = texture2D( map, vTileRegion.xy + tileFrac * vTileRegion.zw );
-	diffuseColor *= sampledDiffuseColor;
-
-#endif
-`;
+// TYPES
+export interface TileWrappedMaterial extends THREE.Material {
+  map?: THREE.Texture | null;
+  colorNode?: unknown;
+}
 
 /**
- * Teaches a material to repeat a single atlas tile across a quad larger than
- * one voxel, which is what makes greedy meshing possible on a tiled atlas:
- * without it a merged quad's UVs would run straight into the neighbouring tiles.
+ * Repeats one atlas tile across a larger quad for greedy-meshed geometry.
  *
- * Geometry must supply the `tileRegion` (the tile's atlas rect) and `tileRepeat`
- * (how many times it repeats on each axis) attributes `GeometryBuffer` writes in
- * `tiled` mode, and `uv` must be in tile space.
+ * Requires `tileRegion` and `tileRepeat` attributes, with `uv` in tile space.
+ * Uses TSL `colorNode` so it works with `WebGPURenderer`.
+ * Assumes nearest-filtered atlases without mipmaps.
  *
- * Safe with this package's atlases because they are sampled with
- * `NearestFilter` and carry no mipmaps: the usual objection to wrapping UVs in
- * the fragment shader is the derivative discontinuity at each tile border, which
- * only shows up once mip levels are selected from those derivatives.
- *
- * Known limitation: three builds its own depth material for shadow casting and
- * would sample the atlas with the unwrapped UVs. Chunk meshes do not cast
- * shadows by default; cutout blocks would need a matching depth material first.
+ * Limitation: shadow depth materials inherit the wrapped UVs.
  */
 export function enableTileWrapping(
-  material: THREE.Material
+  material: TileWrappedMaterial
 ): void {
-  material.onBeforeCompile = (shader) => {
-    shader.vertexShader = shader.vertexShader
-      .replace(
-        "#include <common>",
-        `#include <common>\n${kVertexPars}`
-      )
-      .replace(
-        "#include <uv_vertex>",
-        "#include <uv_vertex>\n\tvTileRegion = tileRegion;\n\tvTileRepeat = tileRepeat;"
-      );
+  const { map } = material;
+  if (!map) {
+    return;
+  }
 
-    shader.fragmentShader = shader.fragmentShader
-      .replace(
-        "#include <common>",
-        `#include <common>\n${kFragmentPars}`
-      )
-      .replace(
-        "#include <map_fragment>",
-        kMapFragment
-      );
-  };
+  const tileRegion = attribute<"vec4">("tileRegion", "vec4");
+  // Must be declared as `uvec2` then converted: the WebGPU backend uploads it as an
+  // integer attribute, so `vec2` would reinterpret the bits rather than convert them.
+  const tileRepeat = vec2(attribute<"uvec2">("tileRepeat", "uvec2"));
 
-  // Without this three would reuse the program it cached for an untouched
-  // material of the same type.
-  material.customProgramCacheKey = () => kCacheKey;
+  // Fold tile-space UVs into 0..1, while preserving the far edge.
+  const tileCoord = clamp(uv(), vec2(0), tileRepeat);
+  const tileFracBase = tileCoord.sub(floor(tileCoord));
+  // `mix()` only exposes a scalar TS overload, so the vec2 form is expanded manually.
+  const edgeMask = step(tileRepeat, tileCoord);
+  const tileFrac = tileFracBase.add(vec2(1).sub(tileFracBase).mul(edgeMask));
+
+  // Force LOD 0: the UV discontinuity at each repeat causes derivative spikes.
+  const sampledDiffuseColor = texture(
+    map,
+    tileRegion.xy.add(tileFrac.mul(tileRegion.zw))
+  ).level(float(0));
+
+  // `materialColor` re-samples the atlas at raw UVs; read material.color directly.
+  // Opacity is omitted: setupDiffuseColor() applies it after this node.
+  const tint = reference("color", "color", material);
+
+  material.colorNode = vec4(tint, float(1)).mul(sampledDiffuseColor);
 }

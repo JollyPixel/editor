@@ -210,13 +210,16 @@ for (let i = 0; i < kShapes.length; i++) {
 // ── Animation loop ─────────────────────────────────────────────────────────────
 
 createExamplePane();
-startLoop({
+await startLoop({
   renderer,
   scene,
   camera,
   controls,
   labelEntries,
   onFrame: () => {
-    helper.render(renderer);
+    // ViewHelper's runtime checks `renderer.isWebGPURenderer` and supports
+    // WebGPURenderer, but @types/three's declaration hasn't caught up and
+    // still narrows `render()` to WebGLRenderer only.
+    helper.render(renderer as unknown as Parameters<ViewHelper["render"]>[0]);
   }
 });

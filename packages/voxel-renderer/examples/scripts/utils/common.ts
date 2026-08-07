@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { WebGPURenderer } from "three/webgpu";
 
 // CONSTANTS
 const kDefaultLabelStyle: Partial<CSSStyleDeclaration> = {
@@ -68,14 +69,17 @@ export function updateLabels(
 }
 
 /**
- * Creates a WebGLRenderer fitted to the current window and sets the pixel
+ * Creates a WebGPURenderer fitted to the current window and sets the pixel
  * ratio. The caller is responsible for appending the canvas if needed.
+ *
+ * `startLoop()` awaits `renderer.init()`; a caller driving its own loop must do
+ * the same, as `render()` throws before the backend is up.
  */
 export function createRenderer(
   canvas: HTMLCanvasElement,
   antialias = true
-): THREE.WebGLRenderer {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias });
+): WebGPURenderer {
+  const renderer = new WebGPURenderer({ canvas, antialias });
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
 
@@ -88,7 +92,7 @@ export function createRenderer(
  */
 export function onWindowResize(
   camera: THREE.PerspectiveCamera,
-  renderer: THREE.WebGLRenderer
+  renderer: WebGPURenderer
 ): void {
   window.addEventListener("resize", () => {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -133,20 +137,21 @@ export function createOrbitCamera(
 }
 
 /**
- * Starts the render loop. Each frame it: updates OrbitControls, calls the
- * optional onFrame callback, projects labels, and renders the scene.
- * Also registers the window resize handler so the caller doesn't have to.
+ * Brings the WebGPU backend up, then starts the render loop. Each frame it:
+ * updates OrbitControls, calls the optional onFrame callback, projects labels,
+ * and renders the scene. Also registers the window resize handler so the caller
+ * doesn't have to.
  */
-export function startLoop(
+export async function startLoop(
   options: {
-    renderer: THREE.WebGLRenderer;
+    renderer: WebGPURenderer;
     scene: THREE.Scene;
     camera: THREE.PerspectiveCamera;
     controls: OrbitControls;
     labelEntries?: LabelEntry[];
     onFrame?: () => void;
   }
-): void {
+): Promise<void> {
   const {
     renderer,
     scene,
@@ -157,6 +162,7 @@ export function startLoop(
   } = options;
 
   onWindowResize(camera, renderer);
+  await renderer.init();
 
   function animate(): void {
     requestAnimationFrame(animate);
