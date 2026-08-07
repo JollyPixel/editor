@@ -1,8 +1,8 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-import { LineSegments2 } from "three/addons/lines/LineSegments2.js";
+import { LineSegments2 } from "three/addons/lines/webgpu/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js";
-import { LineMaterial } from "three/addons/lines/LineMaterial.js";
+import { Line2NodeMaterial } from "three/webgpu";
 
 // Import Internal Dependencies
 import type {
@@ -14,12 +14,12 @@ const kDefaultLineWidth = 3;
 const kDefaultFillOpacity = 0.2;
 const kFaceOpacity = 0.45;
 
-// Slightly larger than a voxel so the outline never z-fights with the faces it wraps.
+// Slightly larger than a voxel to avoid z-fighting.
 const kHalfSize = 0.51;
 const kEdgesGeometry = new LineSegmentsGeometry();
 kEdgesGeometry.setPositions(buildBoxEdgePositions(kHalfSize));
 const kFillGeometry = new THREE.BoxGeometry(1.02, 1.02, 1.02);
-// A quad matching the plane default normal (+Z), reoriented per-face at runtime.
+// Face quad, reoriented per hit face at runtime.
 const kFaceGeometry = new THREE.PlaneGeometry(0.9, 0.9);
 const kFaceDefaultNormal = new THREE.Vector3(0, 0, 1);
 
@@ -37,10 +37,8 @@ export interface HighlightBoxOptions {
 }
 
 /**
- * A wireframe (+ optional fill) cube used to mark a voxel cell. The outline
- * is drawn with `LineSegments2` so its width is a stable CSS-pixel value
- * instead of a 1px native GL line, which renders inconsistently (and often
- * near-invisibly) across GPUs/drivers.
+ * Wireframe voxel highlight with optional fill.
+ * Uses WebGPU line helpers so outline width stays stable in CSS pixels.
  */
 export class HighlightBox extends THREE.Group {
   #border: LineSegments2;
@@ -57,16 +55,14 @@ export class HighlightBox extends THREE.Group {
     this.name = "brush_highlight";
     this.visible = false;
 
-    const borderMaterial = new LineMaterial({
+    const borderMaterial = new Line2NodeMaterial({
       color,
       linewidth: lineWidth,
-      depthTest: false,
-      resolution: new THREE.Vector2(window.innerWidth, window.innerHeight)
+      depthTest: false
     });
     this.#border = new LineSegments2(kEdgesGeometry, borderMaterial);
     this.#border.frustumCulled = false;
-    // Drawn after the chunk meshes so the outline stays readable through them
-    // (Group.renderOrder is not inherited by children, so this must be set here).
+    // Draw after chunk meshes; child renderOrder is not inherited from the group.
     this.#border.renderOrder = 1;
     this.add(this.#border);
 
@@ -84,7 +80,7 @@ export class HighlightBox extends THREE.Group {
       this.add(fillMesh);
     }
 
-    // Marks the face the ray hit, so it's clear where a placed voxel will land.
+    // Marks the hit face.
     this.#face = new THREE.Mesh(
       kFaceGeometry,
       new THREE.MeshBasicMaterial({
@@ -102,8 +98,7 @@ export class HighlightBox extends THREE.Group {
   }
 
   /**
-   * Shows a subtle quad flush with the given face of the cell (in the box's
-   * local space), or hides it when `normal` is `null`.
+    * Shows the hit face, or hides it when `normal` is `null`.
    */
   setFace(
     normal: THREE.Vector3 | null
@@ -117,17 +112,6 @@ export class HighlightBox extends THREE.Group {
     this.#face.position.copy(normal).multiplyScalar(kHalfSize + 0.001);
     this.#face.quaternion.setFromUnitVectors(kFaceDefaultNormal, normal);
     this.#face.visible = true;
-  }
-
-  /**
-   * `LineMaterial` renders at a fixed CSS-pixel width via its `resolution`
-   * uniform, so it must be kept in sync with the canvas size on resize.
-   */
-  setResolution(
-    width: number,
-    height: number
-  ): void {
-    this.#border.material.resolution.set(width, height);
   }
 }
 
@@ -157,8 +141,7 @@ export function moveHighlight(
 }
 
 /**
- * Returns the 12 edges of a box centered on the origin, as start/end position
- * pairs suitable for `LineSegmentsGeometry.setPositions()`.
+ * Returns centered box edges for `LineSegmentsGeometry.setPositions()`.
  */
 function buildBoxEdgePositions(half: number): number[] {
   const corners: [number, number, number][] = [

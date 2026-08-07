@@ -59,12 +59,6 @@ export class PeerBrushes extends ActorComponent {
     this.#room = options.room;
     this.#username = options.username;
     this.#legend = options.legend;
-
-    this.actor.world.renderer.on("resize", ({ width, height }) => {
-      for (const box of this.#boxes.values()) {
-        box.setResolution(width, height);
-      }
-    });
   }
 
   /**

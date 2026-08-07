@@ -140,7 +140,7 @@ for (let row = 0; row < kRows; row++) {
 // ── Animation loop ─────────────────────────────────────────────────────────────
 
 createExamplePane();
-startLoop({
+await startLoop({
   renderer,
   scene,
   camera,

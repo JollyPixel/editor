@@ -200,7 +200,7 @@ syncStats();
 let lastTime = performance.now();
 let frame = 0;
 
-startLoop({
+await startLoop({
   renderer,
   scene,
   camera,

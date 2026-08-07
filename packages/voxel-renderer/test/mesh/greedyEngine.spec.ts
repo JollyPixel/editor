@@ -71,6 +71,13 @@ function materials(
   return found;
 }
 
+/** `enableTileWrapping` assigns `colorNode` (a TSL node, not `THREE.Material` API). */
+function colorNodeOf(
+  material: THREE.Material
+): unknown {
+  return (material as { colorNode?: unknown; }).colorNode;
+}
+
 describe("VoxelEngine — greedy meshing", () => {
   it("is off by default", () => {
     assert.equal(new VoxelEngine().greedy, false);
@@ -84,14 +91,13 @@ describe("VoxelEngine — greedy meshing", () => {
 
   it("prepares chunk materials to repeat a tile across a merged quad", () => {
     for (const material of materials(makeEngine(true))) {
-      assert.equal(typeof material.customProgramCacheKey, "function");
-      assert.equal(material.customProgramCacheKey(), "jolly-pixel:tile-wrap");
+      assert.notEqual(colorNodeOf(material), undefined);
     }
   });
 
   it("leaves the material untouched when off", () => {
     for (const material of materials(makeEngine(false))) {
-      assert.notEqual(material.customProgramCacheKey(), "jolly-pixel:tile-wrap");
+      assert.equal(colorNodeOf(material), undefined);
     }
   });
 

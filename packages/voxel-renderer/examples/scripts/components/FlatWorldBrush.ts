@@ -66,10 +66,6 @@ export class FlatWorldBrush extends ActorComponent {
 
     this.#highlight = createHighlightBox(options.color, { fill: true });
     this.actor.addChildren(this.#plane, this.#highlight);
-
-    this.actor.world.renderer.on("resize", ({ width, height }) => {
-      this.#highlight.setResolution(width, height);
-    });
   }
 
   update(): void {
