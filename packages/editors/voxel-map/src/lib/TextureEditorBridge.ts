@@ -8,6 +8,10 @@ import {
   type PixelServerMessage
 } from "@jolly-pixel/pixel-draw.renderer";
 
+// Import Internal Dependencies
+import { applyBlockUpdate } from "./applyBlockUpdate.ts";
+import { findBlocksReferencingTileset } from "./blockTextureTiles.ts";
+
 // CONSTANTS
 const kTextureKeyPrefix = "jolly-pixel-voxel-map-texture-";
 
@@ -22,6 +26,8 @@ export class TextureEditorBridge {
   #syncClient: PixelSyncClient | null = null;
   #tilesetManager: TilesetManager | null = null;
   #tilesetId: string | null = null;
+  #vr: VoxelRenderer | null = null;
+  #tileSize = 1;
 
   get isActive(): boolean {
     return this.#manager !== null;
@@ -61,6 +67,8 @@ export class TextureEditorBridge {
 
     this.#tilesetId = id;
     this.#tilesetManager = tilesetManager;
+    this.#vr = vr;
+    this.#tileSize = tilesetManager.getDefinitions().find((def) => def.id === id)?.tileSize ?? 1;
 
     const saved = localStorage.getItem(kTextureKeyPrefix + id);
     if (saved) {
@@ -95,6 +103,35 @@ export class TextureEditorBridge {
         canvas.toDataURL("image/png")
       );
     }
+
+    this.#syncTransparency();
+  }
+
+  /**
+   * Keeps `BlockDefinition.transparent` in sync with what the tile actually
+   * looks like: a block referencing a tile that just gained (or lost) alpha
+   * has its flag flipped, which re-registers it and rebuilds every chunk so
+   * culling/greedy meshing pick up the change immediately.
+   */
+  #syncTransparency(): void {
+    if (!this.#manager || !this.#vr || !this.#tilesetId) {
+      return;
+    }
+
+    const affected = findBlocksReferencingTileset(
+      this.#vr.engine.blockRegistry.getAll(),
+      this.#tilesetId,
+      this.#tileSize
+    );
+
+    for (const { block, rects } of affected) {
+      const transparent = rects.some((rect) => this.#manager!.hasTransparency(rect));
+      if (transparent === (block.transparent === true)) {
+        continue;
+      }
+
+      applyBlockUpdate(this.#vr, { ...block, transparent });
+    }
   }
 
   exportPng(filename: string): void {
@@ -116,5 +153,6 @@ export class TextureEditorBridge {
     this.#manager = null;
     this.#tilesetManager = null;
     this.#tilesetId = null;
+    this.#vr = null;
   }
 }

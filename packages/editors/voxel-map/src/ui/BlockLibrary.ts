@@ -337,6 +337,15 @@ export class BlockLibrary extends LitElement {
               </select>
             </div>
 
+            <div class="row">
+              <label>Transparent</label>
+              <input
+                type="checkbox"
+                .checked=${this._selectedBlock.transparent === true}
+                @change=${(event: EventInput) => this.#onTransparentChange(event.target.checked)}
+              />
+            </div>
+
             <div class="subsection-title">Texture</div>
 
             <div class="row">
@@ -451,6 +460,19 @@ export class BlockLibrary extends LitElement {
     this.#applyBlockUpdate({
       ...this._selectedBlock,
       shapeId
+    });
+  }
+
+  #onTransparentChange(
+    transparent: boolean
+  ): void {
+    if (!this._selectedBlock || !this.vr) {
+      return;
+    }
+
+    this.#applyBlockUpdate({
+      ...this._selectedBlock,
+      transparent
     });
   }
 

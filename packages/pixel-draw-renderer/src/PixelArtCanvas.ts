@@ -53,6 +53,7 @@ import type {
   BrushHighlight,
   ColorInput,
   Mode,
+  SelectionRect,
   Vec2
 } from "./types.ts";
 import type {
@@ -373,6 +374,12 @@ export class PixelArtCanvas {
 
   textureCanvas(): HTMLCanvasElement {
     return this.#doc.buffer.canvas();
+  }
+
+  hasTransparency(
+    rect: SelectionRect
+  ): boolean {
+    return this.#doc.buffer.hasTransparency(rect);
   }
 
   canvas(): HTMLCanvasElement {

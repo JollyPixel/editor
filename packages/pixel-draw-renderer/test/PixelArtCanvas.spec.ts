@@ -406,6 +406,56 @@ describe("PixelArtCanvas", () => {
     });
   });
 
+  describe("hasTransparency", () => {
+    test("returns false for a fully opaque region", () => {
+      const manager = new PixelArtCanvas(container, {
+        texture: {
+          maxSize: 32,
+          size: { x: 8, y: 8 }
+        }
+      });
+
+      manager.commitPixels([{ x: 2, y: 2 }]);
+
+      // Excludes (0,0): the buffer keeps that origin pixel transparent as a sentinel.
+      assert.strictEqual(
+        manager.hasTransparency({ x: 1, y: 1, width: 7, height: 7 }),
+        false
+      );
+      manager.destroy();
+    });
+
+    test("returns true once a transparent pixel is painted into the region", () => {
+      const { manager } = createPixelArtCanvas({
+        texture: { size: { x: 8, y: 8 } }
+      });
+
+      manager.brush.primary.set("#000000", 0);
+      manager.commitPixels([{ x: 2, y: 2 }]);
+
+      assert.strictEqual(
+        manager.hasTransparency({ x: 1, y: 1, width: 7, height: 7 }),
+        true
+      );
+      manager.destroy();
+    });
+
+    test("returns true when the rect extends out of bounds", () => {
+      const manager = new PixelArtCanvas(container, {
+        texture: {
+          maxSize: 32,
+          size: { x: 8, y: 8 }
+        }
+      });
+
+      assert.strictEqual(
+        manager.hasTransparency({ x: 4, y: 4, width: 8, height: 8 }),
+        true
+      );
+      manager.destroy();
+    });
+  });
+
   describe("canvas", () => {
     test("returns the interactive (input-listening) canvas element", () => {
       const manager = new PixelArtCanvas(container, {
