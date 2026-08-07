@@ -268,4 +268,32 @@ export class PixelBuffer implements DefaultPixelBuffer {
       return { r, g, b, a };
     });
   }
+
+  /**
+   * Whether any pixel in `rect` isn't fully opaque. Out-of-bounds cells
+   * count as transparent, same as samplePixel(s).
+   */
+  hasTransparency(
+    rect: SelectionRect
+  ): boolean {
+    for (let ry = 0; ry < rect.height; ry++) {
+      for (let rx = 0; rx < rect.width; rx++) {
+        const x = rect.x + rx;
+        const y = rect.y + ry;
+        if (
+          x < 0 || x >= this.#width ||
+          y < 0 || y >= this.#height
+        ) {
+          return true;
+        }
+
+        const [, , , a] = this.samplePixel(x, y);
+        if (a < 255) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
 }

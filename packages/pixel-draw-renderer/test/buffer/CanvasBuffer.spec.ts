@@ -398,6 +398,48 @@ describe("CanvasBuffer", () => {
     });
   });
 
+  describe("hasTransparency", () => {
+    test("returns false when every pixel in rect is fully opaque", () => {
+      const buf = new CanvasBuffer({
+        size: { x: 4, y: 4 },
+        defaultColor: { r: 1, g: 2, b: 3, a: 255 },
+        maxSize: kTestMaxSize
+      });
+
+      assert.strictEqual(
+        buf.hasTransparency({ x: 1, y: 1, width: 2, height: 2 }),
+        false
+      );
+    });
+
+    test("returns true when a pixel in rect isn't fully opaque", () => {
+      const buf = new CanvasBuffer({
+        size: { x: 4, y: 4 },
+        defaultColor: { r: 1, g: 2, b: 3, a: 255 },
+        maxSize: kTestMaxSize
+      });
+      buf.drawPixels([{ x: 2, y: 2 }], { r: 0, g: 0, b: 0, a: 0 });
+
+      assert.strictEqual(
+        buf.hasTransparency({ x: 1, y: 1, width: 2, height: 2 }),
+        true
+      );
+    });
+
+    test("treats a rect extending past the buffer edge as transparent", () => {
+      const buf = new CanvasBuffer({
+        size: { x: 4, y: 4 },
+        defaultColor: { r: 1, g: 2, b: 3, a: 255 },
+        maxSize: kTestMaxSize
+      });
+
+      assert.strictEqual(
+        buf.hasTransparency({ x: 2, y: 2, width: 4, height: 4 }),
+        true
+      );
+    });
+  });
+
   describe("changed signal", () => {
     function countChanges(
       buf: CanvasBuffer

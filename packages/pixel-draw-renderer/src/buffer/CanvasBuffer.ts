@@ -278,4 +278,10 @@ export class CanvasBuffer extends Emitter<
   ): RGBA[] {
     return this.#buffer.samplePixels(positions);
   }
+
+  hasTransparency(
+    rect: SelectionRect
+  ): boolean {
+    return this.#buffer.hasTransparency(rect);
+  }
 }

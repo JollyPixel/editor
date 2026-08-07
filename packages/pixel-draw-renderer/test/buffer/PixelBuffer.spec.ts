@@ -317,4 +317,74 @@ describe("PixelBuffer", () => {
       );
     });
   });
+
+  describe("hasTransparency", () => {
+    test("returns false when every pixel in rect is fully opaque", () => {
+      const buf = new PixelBuffer({
+        size: { x: 4, y: 4 },
+        defaultColor: { r: 1, g: 2, b: 3, a: 255 },
+        maxSize: kTestMaxSize
+      });
+
+      assert.strictEqual(
+        buf.hasTransparency({ x: 1, y: 1, width: 2, height: 2 }),
+        false
+      );
+    });
+
+    test("returns true when a pixel in rect is fully transparent", () => {
+      const buf = new PixelBuffer({
+        size: { x: 4, y: 4 },
+        defaultColor: { r: 1, g: 2, b: 3, a: 255 },
+        maxSize: kTestMaxSize
+      });
+      buf.drawPixels([{ x: 2, y: 2 }], { r: 0, g: 0, b: 0, a: 0 });
+
+      assert.strictEqual(
+        buf.hasTransparency({ x: 1, y: 1, width: 2, height: 2 }),
+        true
+      );
+    });
+
+    test("returns true when a pixel in rect is only partially transparent", () => {
+      const buf = new PixelBuffer({
+        size: { x: 4, y: 4 },
+        defaultColor: { r: 1, g: 2, b: 3, a: 255 },
+        maxSize: kTestMaxSize
+      });
+      buf.drawPixels([{ x: 2, y: 2 }], { r: 1, g: 2, b: 3, a: 254 });
+
+      assert.strictEqual(
+        buf.hasTransparency({ x: 1, y: 1, width: 2, height: 2 }),
+        true
+      );
+    });
+
+    test("ignores a non-opaque pixel outside rect", () => {
+      const buf = new PixelBuffer({
+        size: { x: 4, y: 4 },
+        defaultColor: { r: 1, g: 2, b: 3, a: 255 },
+        maxSize: kTestMaxSize
+      });
+      buf.drawPixels([{ x: 0, y: 0 }], { r: 0, g: 0, b: 0, a: 0 });
+
+      assert.strictEqual(
+        buf.hasTransparency({ x: 1, y: 1, width: 2, height: 2 }),
+        false
+      );
+    });
+
+    test("treats a rect extending past the buffer edge as transparent", () => {
+      const buf = new PixelBuffer({
+        size: { x: 4, y: 4 },
+        defaultColor: { r: 1, g: 2, b: 3, a: 255 },
+        maxSize: kTestMaxSize
+      });
+
+      assert.strictEqual(
+        buf.hasTransparency({ x: 2, y: 2, width: 4, height: 4 }),
+        true
+      );
+    });
+  });
 });
