@@ -1,14 +1,25 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
+import { LineSegments2 } from "three/addons/lines/webgpu/LineSegments2.js";
+import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js";
+import { Line2NodeMaterial } from "three/webgpu";
 import {
   Actor,
   ActorComponent
 } from "@jolly-pixel/engine";
 
-export interface VoxelBrushOptions {
+// CONSTANTS
+// Half-extent of a preview cube, slightly larger than a voxel (0.5) to avoid
+// z-fighting against the actual chunk mesh at the edge of the hit.
+const kHalfSize = 0.51;
+const kFaceMargin = 0.05;
+const kFaceOffset = 0.001;
+const kFaceDefaultNormal = new THREE.Vector3(0, 0, 1);
+
+export interface VoxelBrushPreviewOptions {
   /**
    * Color of the brush preview cubes.
-   * @default 0x4488ff
+   * @default 0x33e0ff
    */
   color?: THREE.ColorRepresentation;
   /**
@@ -17,46 +28,51 @@ export interface VoxelBrushOptions {
    */
   opacity?: number;
   /**
-   * Color of the dotted border outline drawn around each preview cube.
-   * @default 0x88ccff
+   * Color of the outline drawn around each preview cube.
+   * @default 0x9df6ff
    */
   borderColor?: THREE.ColorRepresentation;
   /**
-   * Dash length in world units.
-   * @default 0.2
+   * Outline width in CSS pixels.
+   * @default 2
    */
-  borderDashSize?: number;
+  borderLineWidth?: number;
   /**
-   * Gap length between dashes in world units.
-   * @default 0.12
+   * Color of the highlighted quad drawn on the hit face.
+   * @default 0x9df6ff
    */
-  borderGapSize?: number;
+  faceColor?: THREE.ColorRepresentation;
+  /**
+   * Opacity of the highlighted hit face.
+   * @default 0.45
+   */
+  faceOpacity?: number;
 }
 
 /**
- * Renders a ghost-preview of the brush footprint using InstancedMesh
- * plus a dotted LineSegments border outline around each preview cube.
+ * Renders a ghost-preview of the brush footprint using an InstancedMesh,
+ * a `LineSegments2` outline, and a highlighted quad on the hit face.
  *
- * Uses core `THREE.LineSegments`/`LineDashedMaterial` rather than the
- * three/addons fat-line technique (`Line2`/`LineMaterial`) — the latter
- * patches raw GLSL via `onBeforeCompile`, which WebGPURenderer's NodeBuilder
- * cannot process. The tradeoff is losing configurable pixel line width
- * (browsers largely ignore `LineBasicMaterial.linewidth` too, so this isn't
- * a practical regression).
+ * Uses WebGPU line helpers (`LineSegments2`/`Line2NodeMaterial`) rather than
+ * core `THREE.LineSegments`/`LineDashedMaterial` — `Line2NodeMaterial` is
+ * node-based (no `onBeforeCompile` GLSL patching), so it works with
+ * WebGPURenderer's NodeBuilder while keeping a stable pixel line width.
+ * Mirrors voxel-renderer's `examples/scripts/utils/brushHighlight.ts`.
  */
 export class VoxelBrushPreview extends ActorComponent {
   static Max = 512;
 
-  #color: THREE.ColorRepresentation;
-  #opacity: number;
   #previewMesh: THREE.InstancedMesh;
   #dummy = new THREE.Object3D();
 
-  #borderMesh: THREE.LineSegments;
+  #border: LineSegments2;
+
+  #faceMesh: THREE.InstancedMesh;
+  #faceQuaternion = new THREE.Quaternion();
 
   constructor(
     actor: Actor,
-    options: VoxelBrushOptions = {}
+    options: VoxelBrushPreviewOptions = {}
   ) {
     super({
       actor,
@@ -64,21 +80,20 @@ export class VoxelBrushPreview extends ActorComponent {
     });
 
     const {
-      color = 0x4488ff,
+      color = 0x33e0ff,
       opacity = 0.15,
-      borderColor = 0x88ccff,
-      borderDashSize = 0.2,
-      borderGapSize = 0.12
+      borderColor = 0x9df6ff,
+      borderLineWidth = 2,
+      faceColor = 0x9df6ff,
+      faceOpacity = 0.45
     } = options;
 
-    this.#color = color;
-    this.#opacity = opacity;
-
-    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    const inflatedSize = kHalfSize * 2;
+    const geometry = new THREE.BoxGeometry(inflatedSize, inflatedSize, inflatedSize);
     const material = new THREE.MeshBasicMaterial({
-      color: this.#color,
+      color,
       transparent: true,
-      opacity: this.#opacity,
+      opacity,
       depthWrite: false
     });
 
@@ -91,54 +106,81 @@ export class VoxelBrushPreview extends ActorComponent {
     this.#previewMesh.renderOrder = 1;
     this.#previewMesh.frustumCulled = false;
 
-    const borderGeo = new THREE.BufferGeometry();
-    // Seed a (possibly empty) "position" attribute so LineSegments.raycast's
-    // computeBoundingSphere() has something to read before the first
-    // updateFromPositions() call — an attribute-less BufferGeometry throws.
-    borderGeo.setAttribute("position", new THREE.Float32BufferAttribute([], 3));
-    const borderMat = new THREE.LineDashedMaterial({
+    const borderGeometry = new LineSegmentsGeometry();
+    borderGeometry.setPositions([]);
+    const borderMaterial = new Line2NodeMaterial({
       color: borderColor,
-      dashSize: borderDashSize,
-      gapSize: borderGapSize,
-      depthWrite: false
+      linewidth: borderLineWidth,
+      depthTest: false
     });
+    this.#border = new LineSegments2(borderGeometry, borderMaterial);
+    this.#border.renderOrder = 2;
+    this.#border.frustumCulled = false;
+    this.#border.visible = false;
 
-    this.#borderMesh = new THREE.LineSegments(borderGeo, borderMat);
-    this.#borderMesh.renderOrder = 2;
-    this.#borderMesh.frustumCulled = false;
-    this.#borderMesh.visible = false;
+    const faceGeometry = new THREE.PlaneGeometry(1 - kFaceMargin * 2, 1 - kFaceMargin * 2);
+    const faceMaterial = new THREE.MeshBasicMaterial({
+      color: faceColor,
+      opacity: faceOpacity,
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+    this.#faceMesh = new THREE.InstancedMesh(
+      faceGeometry,
+      faceMaterial,
+      VoxelBrushPreview.Max
+    );
+    this.#faceMesh.count = 0;
+    this.#faceMesh.renderOrder = 3;
+    this.#faceMesh.frustumCulled = false;
+    this.#faceMesh.visible = false;
   }
 
   awake() {
     this.actor.addChildren(this.#previewMesh);
-    this.actor.addChildren(this.#borderMesh);
+    this.actor.addChildren(this.#border);
+    this.actor.addChildren(this.#faceMesh);
   }
 
   override destroy(): void {
     this.#previewMesh.geometry.dispose();
     (this.#previewMesh.material as THREE.Material).dispose();
-    this.#borderMesh.geometry.dispose();
-    (this.#borderMesh.material as THREE.Material).dispose();
+    this.#border.geometry.dispose();
+    (this.#border.material as THREE.Material).dispose();
+    this.#faceMesh.geometry.dispose();
+    (this.#faceMesh.material as THREE.Material).dispose();
     super.destroy();
   }
 
   set count(value: number) {
     this.#previewMesh.count = value;
-    this.#borderMesh.visible = value > 0;
+    this.#border.visible = value > 0;
+    if (value === 0) {
+      this.#faceMesh.visible = false;
+    }
   }
 
   hide(): void {
     this.#previewMesh.visible = false;
-    this.#borderMesh.visible = false;
+    this.#border.visible = false;
+    this.#faceMesh.visible = false;
   }
 
   show(): void {
     this.#previewMesh.visible = true;
-    this.#borderMesh.visible = true;
+    this.#border.visible = true;
+    this.#faceMesh.visible = true;
   }
 
+  /**
+   * @param normal Hit face normal, in world space. Highlights the
+   * corresponding face of every preview cube; pass `null` to hide it.
+   */
   updateFromPositions(
-    positions: THREE.Vector3[]
+    positions: THREE.Vector3[],
+    normal: THREE.Vector3 | null = null
   ) {
     this.#previewMesh.visible = true;
     const count = Math.min(positions.length, VoxelBrushPreview.Max);
@@ -149,6 +191,7 @@ export class VoxelBrushPreview extends ActorComponent {
         positions[i].y + 0.5,
         positions[i].z + 0.5
       );
+      this.#dummy.quaternion.identity();
       this.#dummy.updateMatrix();
       this.#previewMesh.setMatrixAt(i, this.#dummy.matrix);
     }
@@ -157,23 +200,55 @@ export class VoxelBrushPreview extends ActorComponent {
     this.#previewMesh.instanceMatrix.needsUpdate = true;
 
     if (count === 0) {
-      this.#borderMesh.visible = false;
+      this.#border.visible = false;
+      this.#faceMesh.visible = false;
 
       return;
     }
 
-    this.#borderMesh.geometry.setAttribute(
-      "position",
-      new THREE.Float32BufferAttribute(this.#buildBorderPositions(positions, count), 3)
-    );
-    this.#borderMesh.computeLineDistances();
-    this.#borderMesh.visible = true;
+    this.#border.geometry.setPositions(this.#buildBorderPositions(positions, count));
+    this.#border.visible = true;
+
+    this.#updateFace(positions, count, normal);
+  }
+
+  /**
+   * Places a highlighted quad on the given face (`normal`) of every
+   * preview cube, offset outward by `kHalfSize` to sit flush on the surface.
+   */
+  #updateFace(
+    positions: THREE.Vector3[],
+    count: number,
+    normal: THREE.Vector3 | null
+  ): void {
+    if (normal === null) {
+      this.#faceMesh.visible = false;
+
+      return;
+    }
+
+    this.#faceQuaternion.setFromUnitVectors(kFaceDefaultNormal, normal);
+    const offset = kHalfSize + kFaceOffset;
+
+    for (let i = 0; i < count; i++) {
+      this.#dummy.position.set(
+        positions[i].x + 0.5 + normal.x * offset,
+        positions[i].y + 0.5 + normal.y * offset,
+        positions[i].z + 0.5 + normal.z * offset
+      );
+      this.#dummy.quaternion.copy(this.#faceQuaternion);
+      this.#dummy.updateMatrix();
+      this.#faceMesh.setMatrixAt(i, this.#dummy.matrix);
+    }
+
+    this.#faceMesh.count = count;
+    this.#faceMesh.instanceMatrix.needsUpdate = true;
+    this.#faceMesh.visible = true;
   }
 
   /**
    * Returns a flat positions array (start/end pairs) for the 12 edges
-   * of each preview cube, suitable for a `LineSegments` BufferGeometry
-   * "position" attribute.
+   * of each preview cube, suitable for `LineSegmentsGeometry.setPositions()`.
    */
   #buildBorderPositions(
     positions: THREE.Vector3[],
@@ -182,37 +257,38 @@ export class VoxelBrushPreview extends ActorComponent {
     const result: number[] = [];
 
     for (let i = 0; i < count; i++) {
-      const x = positions[i].x;
-      const y = positions[i].y;
-      const z = positions[i].z;
+      const x = positions[i].x + 0.5 - kHalfSize;
+      const y = positions[i].y + 0.5 - kHalfSize;
+      const z = positions[i].z + 0.5 - kHalfSize;
+      const size = kHalfSize * 2;
 
       // Bottom-face corners (y)
       const b0x = x;
       const b0y = y;
       const b0z = z;
-      const b1x = x + 1;
+      const b1x = x + size;
       const b1y = y;
       const b1z = z;
-      const b2x = x + 1;
+      const b2x = x + size;
       const b2y = y;
-      const b2z = z + 1;
+      const b2z = z + size;
       const b3x = x;
       const b3y = y;
-      const b3z = z + 1;
+      const b3z = z + size;
 
-      // Top-face corners (y+1)
+      // Top-face corners (y+size)
       const t0x = x;
-      const t0y = y + 1;
+      const t0y = y + size;
       const t0z = z;
-      const t1x = x + 1;
-      const t1y = y + 1;
+      const t1x = x + size;
+      const t1y = y + size;
       const t1z = z;
-      const t2x = x + 1;
-      const t2y = y + 1;
-      const t2z = z + 1;
+      const t2x = x + size;
+      const t2y = y + size;
+      const t2z = z + size;
       const t3x = x;
-      const t3y = y + 1;
-      const t3z = z + 1;
+      const t3y = y + size;
+      const t3z = z + size;
 
       // Bottom 4 edges
       result.push(b0x, b0y, b0z, b1x, b1y, b1z);
