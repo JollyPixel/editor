@@ -149,7 +149,7 @@ set mode(mode: Mode)
 
 | Mode | Left-click | Right-click |
 |---|---|---|
-| `"paint"` | Stroke with `brush.primary`. Hold `Shift` for straight-line. | Stroke with `brush.secondary`. |
+| `"paint"` | Stroke with `brush.primary`. Hold `Shift` for straight-line. | Stroke with `brush.secondary`. Hold `Shift` for straight-line. |
 | `"move"` | Pan camera. | — |
 | `"fill"` | Flood-fill with `brush.primary`. | Same with `brush.secondary`. |
 | `"select"` | Drag to select/move rectangle. `Ctrl+C/V` copy/paste, `Delete` erase, `R` rotate 90°, `H`/`V` flip. | — |

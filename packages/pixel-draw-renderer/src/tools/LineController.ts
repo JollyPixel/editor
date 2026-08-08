@@ -3,7 +3,10 @@ import {
   Line,
   type LineCommitTrigger
 } from "./Line.ts";
-import type { Brush } from "./Brush.ts";
+import type {
+  Brush,
+  BrushColorSlot
+} from "./Brush.ts";
 import type { EditPipeline } from "../sync/EditPipeline.ts";
 import type { LinePreviewOverlay } from "../rendering/overlays/LinePreviewOverlay.ts";
 import type { Vec2 } from "../types.ts";
@@ -25,6 +28,7 @@ export class LineController {
 
   #lastCursorPos: Vec2 | null = null;
   #isShiftHeld = false;
+  #colorSlot: BrushColorSlot = "primary";
 
   constructor(
     options: LineControllerOptions
@@ -62,7 +66,8 @@ export class LineController {
   }
 
   arm(
-    commitTrigger: LineCommitTrigger
+    commitTrigger: LineCommitTrigger,
+    colorSlot: BrushColorSlot = "primary"
   ): void {
     if (!this.#lastCursorPos) {
       return;
@@ -72,13 +77,16 @@ export class LineController {
       this.#lastCursorPos,
       commitTrigger
     );
+    this.#colorSlot = colorSlot;
     this.refreshPreview();
   }
 
   /**
     * Commits the armed line segment.
    */
-  commit(): void {
+  commit(
+    colorSlot: BrushColorSlot = this.#colorSlot
+  ): void {
     const points = this.#line.commit();
     this.#linePreview.clear();
     if (!points) {
@@ -86,7 +94,8 @@ export class LineController {
     }
 
     this.#pipeline.commitPixels(
-      this.#stampLinePixels(points)
+      this.#stampLinePixels(points),
+      colorSlot
     );
 
     if (this.#isShiftHeld) {
@@ -94,6 +103,7 @@ export class LineController {
         points.at(-1) ?? points[0],
         "mousedown"
       );
+      this.#colorSlot = colorSlot;
       this.refreshPreview();
     }
   }

@@ -66,6 +66,37 @@ describe("PixelArtCanvas — line tool (Shift)", () => {
     manager.destroy();
   });
 
+  test("Shift-arm-then-right-click commits a line with the secondary color", () => {
+    const events: PixelBufferHookEvent[] = [];
+    const manager = createPixelArtCanvas({
+      texture: { size: { x: 16, y: 16 } },
+      zoom: { default: 4 },
+      brush: {
+        size: 1,
+        maxSize: 1,
+        color: "#FF0000",
+        secondaryColor: "#00FF00"
+      },
+      onBufferUpdated: (event) => events.push(event)
+    }).manager;
+    const canvas = manager.canvas();
+
+    moveTo(canvas, 100, 100);
+    window.dispatchEvent(shiftKeyDown());
+    moveTo(canvas, 128, 100);
+
+    canvas.dispatchEvent(new MouseEvent("mousedown", {
+      button: 2, buttons: 2, clientX: 128, clientY: 100, bubbles: true
+    }));
+
+    assert.strictEqual(events.length, 1);
+    const event = events[0];
+    assert.strictEqual(event.action, "stroke");
+    assert.deepStrictEqual(event.metadata.color, { r: 0, g: 255, b: 0, a: 255 });
+    assert.strictEqual(event.metadata.positions.length, 8);
+    manager.destroy();
+  });
+
   test("committing via mousedown does not chain into a freehand stroke while still held", () => {
     const events: PixelBufferHookEvent[] = [];
     const manager = makeManager((event) => events.push(event));
