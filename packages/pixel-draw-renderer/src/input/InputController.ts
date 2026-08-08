@@ -177,6 +177,11 @@ export interface InputControllerOptions {
    * @default () => false
    */
   shouldPanOnPrimary?: () => boolean;
+  /**
+   * Handles Ctrl+wheel before zoom. Return `true` to suppress zoom.
+   * @default () => false
+   */
+  onCtrlWheel?: (delta: number) => boolean;
 }
 
 /**
@@ -197,6 +202,7 @@ export class InputController {
   #isHovering: boolean = false;
   #spaceHeld: boolean = false;
   #shouldPanOnPrimary: () => boolean;
+  #onCtrlWheel: (delta: number) => boolean;
 
   readonly keybindings: Keybindings;
 
@@ -228,6 +234,7 @@ export class InputController {
     this.#actions = actions;
     this.#window = windowLike;
     this.#shouldPanOnPrimary = options.shouldPanOnPrimary ?? (() => false);
+    this.#onCtrlWheel = options.onCtrlWheel ?? (() => false);
     this.keybindings = new Keybindings(options.keybindings);
 
     this.#onMouseDown = (event) => this.#handleMouseDown(event);
@@ -423,9 +430,12 @@ export class InputController {
   #handleWheel(
     event: WheelEvent
   ): void {
-    // Also suppresses the browser's pinch page-zoom, which arrives here as a
-    // ctrlKey wheel event and drives the canvas zoom instead.
     event.preventDefault();
+
+    const delta = this.#normalizeWheelDelta(event);
+    if (event.ctrlKey && this.#onCtrlWheel(delta)) {
+      return;
+    }
 
     const bounds = this.#canvas.getBoundingClientRect();
     const canvasPos = this.#viewport.mouseCanvasPosition(
@@ -434,7 +444,7 @@ export class InputController {
       bounds
     );
     this.#actions.onZoom(
-      this.#normalizeWheelDelta(event),
+      delta,
       canvasPos.x,
       canvasPos.y
     );

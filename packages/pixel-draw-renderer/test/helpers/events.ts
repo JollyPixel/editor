@@ -48,15 +48,20 @@ export interface WheelOptions {
 export function wheel(
   options: WheelOptions = {}
 ): WheelEvent {
-  return new WheelEvent("wheel", {
+  const event = new WheelEvent("wheel", {
     deltaY: options.deltaY ?? 0,
     deltaMode: options.deltaMode ?? 0,
-    ctrlKey: options.ctrlKey ?? false,
     clientX: options.clientX ?? 0,
     clientY: options.clientY ?? 0,
     bubbles: true,
     cancelable: true
   });
+  // happy-dom does not copy modifier keys from WheelEventInit.
+  Object.defineProperty(event, "ctrlKey", {
+    value: options.ctrlKey ?? false
+  });
+
+  return event;
 }
 
 export function moveTo(

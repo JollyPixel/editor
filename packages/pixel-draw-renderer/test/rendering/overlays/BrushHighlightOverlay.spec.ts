@@ -56,6 +56,29 @@ describe("BrushHighlightOverlay", () => {
     );
   });
 
+  test("refresh() redraws the current cursor position with the latest brush size", () => {
+    const svg = makeSvg();
+    let brushSize = 1;
+    const overlay = new BrushHighlightOverlay(
+      svg,
+      makeViewport(),
+      {
+        get size() {
+          return brushSize;
+        },
+        colorInline: "#fff",
+        colorOutline: "#000"
+      }
+    );
+
+    overlay.update(10, 10);
+    brushSize = 2;
+    overlay.refresh();
+
+    const group = svg.querySelector("g");
+    assert.ok(group?.getAttribute("transform")?.includes("scale(8)"));
+  });
+
   test("hide() hides the highlight", () => {
     const svg = makeSvg();
     const overlay = new BrushHighlightOverlay(
