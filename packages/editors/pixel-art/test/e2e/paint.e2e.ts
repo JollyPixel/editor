@@ -8,7 +8,8 @@ import {
   dragStroke,
   clickTexturePixel,
   textureToScreenPoint,
-  readPixel
+  readPixel,
+  setBrushColor
 } from "./utils.ts";
 
 // This file uses texture slice x:0-15, y:0-15 on the shared 80x80 canvas.
@@ -43,7 +44,9 @@ test("brush size widens the painted footprint", async({ page }) => {
   await sizeSlider.evaluate((el, value) => {
     const input = el as HTMLInputElement;
     input.value = String(value);
-    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(
+      new Event("input", { bubbles: true })
+    );
   }, 4);
 
   // Even-size brush shifts toward origin: size 4 at (6,6) covers 4..7.
@@ -81,5 +84,48 @@ test("Shift arms a straight line between two points", async({ page }) => {
     await expect.poll(
       () => readPixel(page, x, 10)
     ).toEqual({ r: 0, g: 0, b: 0, a: 255 });
+  }
+});
+
+test("right-click drags a stroke in the secondary color", async({ page }) => {
+  await setBrushColor(page, "secondary", "#0000ff");
+
+  await dragStroke(page, [
+    { x: 11, y: 2 },
+    { x: 11, y: 3 },
+    { x: 11, y: 4 }
+  ], "right");
+
+  for (let y = 2; y <= 4; y++) {
+    await expect.poll(
+      () => readPixel(page, 11, y)
+    ).toEqual({ r: 0, g: 0, b: 255, a: 255 });
+  }
+  // Neighbor column should stay empty.
+  await expect.poll(
+    () => readPixel(page, 12, 2)
+  ).toMatchObject({ a: 0 });
+});
+
+test("Shift + right-click commits a straight line in the secondary color", async({ page }) => {
+  await setBrushColor(page, "secondary", "#00ff00");
+
+  const start = { x: 11, y: 13 };
+  const end = { x: 13, y: 13 };
+
+  const startPoint = await textureToScreenPoint(page, start.x, start.y);
+  const endPoint = await textureToScreenPoint(page, end.x, end.y);
+
+  await page.mouse.move(startPoint.x, startPoint.y);
+  await page.keyboard.down("Shift");
+  await page.mouse.move(endPoint.x, endPoint.y);
+  await page.mouse.down({ button: "right" });
+  await page.mouse.up({ button: "right" });
+  await page.keyboard.up("Shift");
+
+  for (let x = start.x; x <= end.x; x++) {
+    await expect.poll(
+      () => readPixel(page, x, 13)
+    ).toEqual({ r: 0, g: 255, b: 0, a: 255 });
   }
 });

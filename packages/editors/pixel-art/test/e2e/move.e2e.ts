@@ -1,26 +1,24 @@
 // Import Third-party Dependencies
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 // Import Internal Dependencies
-import { gotoDemo, setMode, textureToScreenPoint } from "./utils.ts";
+import {
+  gotoDemo,
+  setMode,
+  textureToScreenPoint
+} from "./utils.ts";
+import type { PixelDrawPanel } from "../../src/index.ts";
 
-// Camera/zoom are per-page local state.
-// Fresh page load means fresh viewport each test.
+// Viewport state resets on each page load.
 
-async function readViewport(page: import("@playwright/test").Page) {
+async function readViewport(page: Page) {
   return page.evaluate(() => {
-    const panel = document.querySelector("pixel-draw-panel") as unknown as {
-      canvasManager: {
-        viewport: {
-          camera: { x: number; y: number; };
-          zoom: { value: number; };
-        };
-      };
-    };
+    const panel = document.querySelector<PixelDrawPanel>("pixel-draw-panel");
+    const { viewport } = panel!.canvasManager!;
 
     return {
-      camera: { ...panel.canvasManager.viewport.camera },
-      zoom: panel.canvasManager.viewport.zoom.value
+      camera: { ...viewport.camera },
+      zoom: viewport.zoom.value
     };
   });
 }
@@ -50,7 +48,7 @@ test("wheel zooms the viewport out", async({ page }) => {
   const anchor = await textureToScreenPoint(page, 40, 40);
 
   await page.mouse.move(anchor.x, anchor.y);
-  // Positive deltaY should zoom out.
+  // Positive deltaY zooms out.
   await page.mouse.wheel(0, 500);
 
   const after = await readViewport(page);

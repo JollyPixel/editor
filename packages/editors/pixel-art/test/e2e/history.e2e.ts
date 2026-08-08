@@ -2,10 +2,14 @@
 import { test, expect } from "@playwright/test";
 
 // Import Internal Dependencies
-import { gotoDemo, setMode, clickTexturePixel, readPixel } from "./utils.ts";
+import {
+  gotoDemo,
+  setMode,
+  clickTexturePixel,
+  readPixel
+} from "./utils.ts";
 
-// This file uses texture slice x:60-79, y:0-15 on the shared 80x80 canvas.
-// Undo/redo stack is local per page load; only pixels are shared.
+// Uses texture slice x:60-79, y:0-15; undo/redo is page-local.
 
 test.beforeEach(async({ page }) => {
   await gotoDemo(page);
@@ -43,7 +47,7 @@ test("mod+z / mod+y keyboard shortcuts undo and redo", async({ page }) => {
     () => readPixel(page, 67, 2)
   ).toEqual({ r: 0, g: 0, b: 0, a: 255 });
 
-  // Canvas is already hovered, so keyboard shortcuts are accepted.
+  // Canvas is already hovered, so shortcuts work.
   await page.keyboard.press("Control+z");
   await expect.poll(
     () => readPixel(page, 67, 2)

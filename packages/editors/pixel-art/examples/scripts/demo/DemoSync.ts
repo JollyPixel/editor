@@ -27,8 +27,11 @@ export function initializeDemoSync(
       username: resolveUsername()
     }
   });
+  // E2E tests override this via ?room=... so each Playwright worker gets
+  // its own isolated sync room instead of racing on the shared demo one.
+  const roomId = new URLSearchParams(window.location.search).get("room") ?? kDemoRoom;
   const room = networkClient.room<PixelNetworkCommand, PixelServerMessage>(
-    kDemoRoom
+    roomId
   );
   room.join();
   room.on("peer-joined", (event) => {

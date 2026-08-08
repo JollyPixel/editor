@@ -7,7 +7,8 @@ import { defineConfig } from "@playwright/test";
 // Import Internal Dependencies
 import {
   BASE_URL,
-  PORT
+  PORT,
+  WORKER_COUNT
 } from "./test/e2e/constants.ts";
 
 export default defineConfig({
@@ -16,8 +17,10 @@ export default defineConfig({
   // these files use ".e2e.ts" instead so the two runners never pick up each other's files.
   testMatch: "**/*.e2e.ts",
   globalSetup: "./test/e2e/global-setup.ts",
-  fullyParallel: false,
-  workers: 1,
+  // Each worker gets its own sync room (test/e2e/constants.ts, vite.config.ts)
+  // so tests can run fully in parallel instead of racing on shared canvas state.
+  fullyParallel: true,
+  workers: WORKER_COUNT,
   retries: process.env.CI ? 1 : 0,
   use: {
     baseURL: BASE_URL,

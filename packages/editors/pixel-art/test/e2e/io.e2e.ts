@@ -3,7 +3,12 @@ import { test, expect } from "@playwright/test";
 
 // Import Internal Dependencies
 import { TEXTURE_SIZE } from "./constants.ts";
-import { gotoDemo, setMode, clickTexturePixel, readPixel } from "./utils.ts";
+import {
+  gotoDemo,
+  setMode,
+  clickTexturePixel,
+  readPixel
+} from "./utils.ts";
 
 test.beforeEach(async({ page }) => {
   await gotoDemo(page);
@@ -11,7 +16,7 @@ test.beforeEach(async({ page }) => {
 
 test("Export downloads the texture as a PNG", async({ page }) => {
   await setMode(page, "paint");
-  // Paint one unique pixel so export is definitely non-empty.
+  // Paint one unique pixel so export is non-empty.
   await clickTexturePixel(page, 30, 25);
 
   const [download] = await Promise.all([
@@ -24,8 +29,7 @@ test("Export downloads the texture as a PNG", async({ page }) => {
 });
 
 test("Import replaces the texture from a PNG file", async({ page }) => {
-  // Import swaps the whole texture buffer.
-  // Use a signature pixel in the far corner so this stays isolated.
+  // Import replaces the whole buffer; corner pixel keeps it isolated.
   const dataUrl = await page.evaluate((size) => {
     const canvas = document.createElement("canvas");
     canvas.width = size.x;

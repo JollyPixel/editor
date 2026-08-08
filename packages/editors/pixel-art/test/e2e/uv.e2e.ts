@@ -4,6 +4,7 @@ import {
   expect,
   type Page
 } from "@playwright/test";
+import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import {
@@ -12,19 +13,15 @@ import {
   textureToScreenPoint,
   clickTexturePixel
 } from "./utils.ts";
+import type { PixelDrawPanel } from "../../src/index.ts";
 
-// UV regions carry no pixels, so this file claims no texture slice — but it
-// does share the room's region set, hence the reset in beforeEach.
+// UV regions carry no pixels; this file resets the shared region set.
 
-// Cycling needs one action per face, and each action costs a trace snapshot
-// over a live WebGL scene — enough to blow the default budget.
+// Cycling needs one action per face, so increase the timeout.
 test.describe.configure({ timeout: 90_000 });
 
 /**
- * Drags a region without `dragStroke`'s per-pixel interpolation: that exists
- * so paint strokes leave no gaps, and its `steps: distance * 4` would fire
- * 128 pointer moves for the drags below. A region only needs enough moves to
- * register as a drag rather than a click.
+ * Drag a region with minimal pointer steps.
  */
 async function dragRegion(
   page: Page,
@@ -47,38 +44,10 @@ interface UvSnapshot {
   faces: Record<string, { x: number; y: number; }>;
 }
 
-function uvPanel(): {
-  uv: {
-    clear(): void;
-    selectedRegionId: string | null;
-    selectedFace: string | null;
-    showAll: boolean;
-    regions: {
-      facesOf(): {
-        face: string | null;
-        geometry: {
-          shape?: string;
-          corner?: string;
-          rect?: { x: number; y: number; };
-          x?: number;
-          y?: number;
-        };
-      }[];
-    }[];
-    get(id: string): {
-      state: string;
-      facesOf(): {
-        face: string | null;
-        geometry: { x: number; y: number; } | { rect: { x: number; y: number; }; };
-      }[];
-    } | undefined;
-  };
-} {
-  const panel = document.querySelector("pixel-draw-panel") as unknown as {
-    canvasManager: ReturnType<typeof uvPanel>;
-  };
+function uvPanel(): PixelArtCanvas {
+  const panel = document.querySelector<PixelDrawPanel>("pixel-draw-panel");
 
-  return panel.canvasManager;
+  return panel!.canvasManager!;
 }
 
 async function resetRegions(
@@ -88,8 +57,7 @@ async function resetRegions(
 }
 
 /**
- * Reads selection plus the selected region's per-face positions, so a test
- * can assert which face actually moved.
+ * Read selection plus per-face positions.
  */
 async function uvSnapshot(
   page: Page
@@ -116,9 +84,9 @@ test.beforeEach(async({ page }) => {
   await gotoDemo(page);
   await resetRegions(page);
   await setMode(page, "uv");
-  // Regions are invisible (and so un-hittable) until selected or shown.
+  // Regions stay invisible and un-hittable until selected or shown.
   await page.getByRole("button", { name: "Show all" }).click();
-  // Cascading placement resets with clear(), so this lands at (0,0,16,16).
+  // clear() places the cube at (0,0,16,16).
   await page.getByRole("button", { name: "Create cube", exact: true }).click();
 });
 
@@ -157,7 +125,7 @@ test("the toolbar offers only the transition that applies", async({ page }) => {
   const uncollapse = page.getByRole("button", { name: "Uncollapse" });
   const collapse = page.getByRole("button", { name: "Collapse", exact: true });
 
-  // A region exists but nothing is selected yet.
+  // Region exists, but nothing is selected yet.
   await expect(uncollapse).toHaveCount(0);
   await expect(collapse).toHaveCount(0);
 
@@ -169,13 +137,12 @@ test("the toolbar offers only the transition that applies", async({ page }) => {
   await expect(collapse).toHaveCount(1);
   await expect(uncollapse).toHaveCount(0);
 
-  // Clicking empty space deselects.
+  // Clicking empty space clears selection.
   await clickTexturePixel(page, 70, 70);
   await expect(collapse).toHaveCount(0);
   await expect(uncollapse).toHaveCount(0);
 
-  // Deleting the selected region clears the selection without a
-  // "selection-changed" event, so the toolbar must follow "region-deleted".
+  // Deleting the selected region only emits "region-deleted".
   await clickTexturePixel(page, 8, 8);
   await expect(collapse).toHaveCount(1);
   await page.getByRole("button", { name: "Delete" }).click();
@@ -220,8 +187,7 @@ test("dragging moves only the face the press landed on", async({ page }) => {
   await clickTexturePixel(page, 8, 8);
   await page.getByRole("button", { name: "Uncollapse" }).click();
 
-  // Each press advances the cycle, including the press that begins a drag:
-  // click (front), click (back), then press-and-drag takes "left".
+  // Presses cycle faces; the drag starts on "left".
   await clickTexturePixel(page, 8, 8);
   await clickTexturePixel(page, 8, 8);
   await dragRegion(page, { x: 8, y: 8 }, { x: 40, y: 8 });
@@ -242,7 +208,7 @@ test("collapsing keeps the edited face, and undo brings the discarded ones back"
   expect(moved.selectedFace).toBe("front");
   expect(moved.faces.front).toEqual({ x: 32, y: 0 });
 
-  // The panel collapses onto the face being edited, not the library default.
+  // Collapse keeps the edited face.
   await page.getByRole("button", { name: "Collapse", exact: true }).click();
   const collapsed = await uvSnapshot(page);
   expect(collapsed.state).toBe("collapsed");
