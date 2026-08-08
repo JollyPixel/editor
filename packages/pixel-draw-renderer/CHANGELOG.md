@@ -1,5 +1,54 @@
 # @jolly-pixel/pixel-draw.renderer
 
+## 3.0.0
+
+### Major Changes
+
+- [#346](https://github.com/JollyPixel/editor/pull/346) [`2788a7e`](https://github.com/JollyPixel/editor/commit/2788a7e3c0d4f04ff22df415c4bd5270c3a1208a) Thanks [@fraxken](https://github.com/fraxken)! - Wire first implementation of @jolly-pixel/network
+
+- [#439](https://github.com/JollyPixel/editor/pull/439) [`e1ce8bb`](https://github.com/JollyPixel/editor/commit/e1ce8bb3e4257e8acce9083d047efd15861122a5) Thanks [@fraxken](https://github.com/fraxken)! - Implement support of Triangle shape and UV with custom faces
+
+- [#421](https://github.com/JollyPixel/editor/pull/421) [`02393d9`](https://github.com/JollyPixel/editor/commit/02393d9839607858a4083d0cab90a4cbc63b3000) Thanks [@fraxken](https://github.com/fraxken)! - UV regions can now map a different rect per cube face.
+
+- [#339](https://github.com/JollyPixel/editor/pull/339) [`5421766`](https://github.com/JollyPixel/editor/commit/5421766acf8d1c8dfa884c03f8fbda4732d4896b) Thanks [@fraxken](https://github.com/fraxken)! - Refactor APIs and reduce implementating coupling + references mixing
+
+- [#383](https://github.com/JollyPixel/editor/pull/383) [`62873b3`](https://github.com/JollyPixel/editor/commit/62873b348974dba8df26a829aa7eea2bfcfafb1b) Thanks [@fraxken](https://github.com/fraxken)! - Migrate pixel-draw-renderer UI inside a dedicated pixel-art editor and then re-use it inside voxel-map editor.
+
+### Minor Changes
+
+- [#341](https://github.com/JollyPixel/editor/pull/341) [`5dfb888`](https://github.com/JollyPixel/editor/commit/5dfb888a8611e0a8a048495e220273eb9c50f24f) Thanks [@fraxken](https://github.com/fraxken)! - Remove createInputActions factory for new Architecture resistant to scale with a better mode management"
+
+- [#438](https://github.com/JollyPixel/editor/pull/438) [`1fd567f`](https://github.com/JollyPixel/editor/commit/1fd567fcc5477a4863d3aa9026f0b97c179e19a0) Thanks [@fraxken](https://github.com/fraxken)! - Ctrl+scroll brush resizing with immediate overlay refresh.
+
+- [#358](https://github.com/JollyPixel/editor/pull/358) [`dbf64ee`](https://github.com/JollyPixel/editor/commit/dbf64eee82e367ddf67bc9f01186df5ab2cb4f43) Thanks [@fraxken](https://github.com/fraxken)! - Add multiplayer cursor tracking. `PixelArtCanvas` can now report your cursor with `onCursorMove` and show other players with `peerCursors`. `PixelCursorSession` sends and receives cursor updates over any compatible `NetworkChannel`, including one already used by `PixelSyncSession`. Peer colors and `UVMap` region colors now use the same `ColorPalette`.
+
+- [#369](https://github.com/JollyPixel/editor/pull/369) [`6f6594d`](https://github.com/JollyPixel/editor/commit/6f6594d9bea483ce53f61f3c92112c727d12bb7f) Thanks [@fraxken](https://github.com/fraxken)! - Implement minimal RBAC
+
+- [#347](https://github.com/JollyPixel/editor/pull/347) [`b568905`](https://github.com/JollyPixel/editor/commit/b56890527e918a637d41a17a7b41f1077268d04d) Thanks [@fraxken](https://github.com/fraxken)! - Improve network client API surface (reducing boilerplate required to setup a new client/connection).
+
+- [#370](https://github.com/JollyPixel/editor/pull/370) [`36c570c`](https://github.com/JollyPixel/editor/commit/36c570cf5bef538b7c59bb64b987b86f07cc91b9) Thanks [@fraxken](https://github.com/fraxken)! - Implement a minimalist Event Store workspace
+
+- [#364](https://github.com/JollyPixel/editor/pull/364) [`cd003c3`](https://github.com/JollyPixel/editor/commit/cd003c39463f09a0735d9a58a9ac7eea0217399d) Thanks [@fraxken](https://github.com/fraxken)! - Make the network implementation easier for workspaces
+
+- [#418](https://github.com/JollyPixel/editor/pull/418) [`f077f50`](https://github.com/JollyPixel/editor/commit/f077f50ca679d3198e96e735b8dda1bfbf074fa5) Thanks [@fraxken](https://github.com/fraxken)! - Add `hasTransparency(rect)` to `CanvasBuffer`/`PixelBuffer`, reporting whether any pixel in a rect isn't fully opaque. Out-of-bounds cells count as transparent, matching `samplePixel(s)`'s existing convention.
+
+- [#344](https://github.com/JollyPixel/editor/pull/344) [`b660781`](https://github.com/JollyPixel/editor/commit/b6607812584c20351ea06bc46f773b1792a08360) Thanks [@fraxken](https://github.com/fraxken)! - Improve trackpad navigation. In `"move"` mode a plain single-finger left-drag now pans the camera (no keyboard chord — the trackpad-friendly way to move around). Additionally: hold `Space` and left-drag to pan from any mode, trackpad pinch zooms toward the cursor, and wheel zoom now scales with delta magnitude (normalized across `deltaMode`) so fine-grained deltas zoom smoothly instead of jumping a full notch per event. Pan gestures (middle-drag, `Space`+drag, or a `"move"`-mode drag) show a `grab`/`grabbing` cursor.
+
+- [#419](https://github.com/JollyPixel/editor/pull/419) [`4bb203a`](https://github.com/JollyPixel/editor/commit/4bb203ac3c7c04a2a26c6610fa062b033ceae34a) Thanks [@fraxken](https://github.com/fraxken)! - Expose `hasTransparency(rect)` on `PixelArtCanvas`, delegating to the underlying buffer, so consumers can check for transparency without reaching into private internals.
+
+- [#361](https://github.com/JollyPixel/editor/pull/361) [`34c1d7b`](https://github.com/JollyPixel/editor/commit/34c1d7b85bdf25f89988160cfdee1edeb4f7cf2f) Thanks [@fraxken](https://github.com/fraxken)! - Re-implement the network stack
+
+- [#359](https://github.com/JollyPixel/editor/pull/359) [`4aa7e28`](https://github.com/JollyPixel/editor/commit/4aa7e28af054ceec2656c29966c8ab6259c74007) Thanks [@fraxken](https://github.com/fraxken)! - Move the demo's Lit UI (`PixelDrawPanel`, `ModeRail`, `ColorPickerRail`, `ColorSwatch`) from `examples/` into `src/ui/`, exported as `@jolly-pixel/pixel-draw.renderer/ui`. `<pixel-draw-panel>` is now a reusable drop-in component instead of demo-only code — see `docs/ui/PixelDrawPanel.md`. `lit` and `vanilla-picker` moved from `devDependencies` to `dependencies` accordingly.
+
+### Patch Changes
+
+- [#437](https://github.com/JollyPixel/editor/pull/437) [`bc16385`](https://github.com/JollyPixel/editor/commit/bc16385e3d8a2244c1d20a69424f9ffc1a6fa073) Thanks [@fraxken](https://github.com/fraxken)! - Implemented Shift+right-click line drawing with the secondary brush color.
+
+- [#350](https://github.com/JollyPixel/editor/pull/350) [`f1ca6fa`](https://github.com/JollyPixel/editor/commit/f1ca6facc3813b2b2ffbb4b03f14537d8931e735) Thanks [@fraxken](https://github.com/fraxken)! - Revamp markdown API documentation
+
+- Updated dependencies [[`2788a7e`](https://github.com/JollyPixel/editor/commit/2788a7e3c0d4f04ff22df415c4bd5270c3a1208a), [`6f6594d`](https://github.com/JollyPixel/editor/commit/6f6594d9bea483ce53f61f3c92112c727d12bb7f), [`1ead090`](https://github.com/JollyPixel/editor/commit/1ead09093bf7de77b56242d86693b49cae68b1e0), [`b568905`](https://github.com/JollyPixel/editor/commit/b56890527e918a637d41a17a7b41f1077268d04d), [`36c570c`](https://github.com/JollyPixel/editor/commit/36c570cf5bef538b7c59bb64b987b86f07cc91b9), [`cd003c3`](https://github.com/JollyPixel/editor/commit/cd003c39463f09a0735d9a58a9ac7eea0217399d), [`cd003c3`](https://github.com/JollyPixel/editor/commit/cd003c39463f09a0735d9a58a9ac7eea0217399d), [`53f66fa`](https://github.com/JollyPixel/editor/commit/53f66faee0df0be9c7500648c24e1f30918a8e32), [`34c1d7b`](https://github.com/JollyPixel/editor/commit/34c1d7b85bdf25f89988160cfdee1edeb4f7cf2f)]:
+  - @jolly-pixel/network@1.1.0
+
 ## 2.0.0
 
 ### Major Changes

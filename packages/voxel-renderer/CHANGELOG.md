@@ -1,5 +1,43 @@
 # @jolly-pixel/voxel.renderer
 
+## 3.0.0
+
+### Major Changes
+
+- [#373](https://github.com/JollyPixel/editor/pull/373) [`1e6ff52`](https://github.com/JollyPixel/editor/commit/1e6ff52068f9d82eb235ddb7f8194ba27b465d3d) Thanks [@fraxken](https://github.com/fraxken)! - Decouple `VoxelEngine` from Rapier3D behind a `VoxelCollider` interface.
+
+- [#348](https://github.com/JollyPixel/editor/pull/348) [`32edc9a`](https://github.com/JollyPixel/editor/commit/32edc9a425ae53881aa044f6104911f4ae70d526) Thanks [@fraxken](https://github.com/fraxken)! - Migrate the network sync layer onto `@jolly-pixel/network`'s `NetworkPlugin`/`NetworkChannel` primitives, mirroring `@jolly-pixel/pixel-draw.renderer`'s design: `VoxelSyncServer` now extends `NetworkPlugin`, `VoxelTransport` matches `NetworkChannel`'s shape (`send`/single `onMessage`), and `VoxelSyncClient` is renamed to `VoxelSyncSession` with a two-step `attach(engine)`/`detach()` API that chains onto an existing `onLayerUpdated` handler instead of replacing it. `ConflictResolver`/`ConflictContext` are renamed to `VoxelConflictResolver`/`VoxelConflictContext`. `VoxelSnapshotRequest` and `VoxelTransport.requestSnapshot`/`sendCommand`/`onCommand`/`onSnapshot` are removed in favor of the new `VoxelServerMessage` envelope.
+
+### Minor Changes
+
+- [#381](https://github.com/JollyPixel/editor/pull/381) [`cc387f1`](https://github.com/JollyPixel/editor/commit/cc387f12b308fffe6af62ae2b1b05084af7502c0) Thanks [@fraxken](https://github.com/fraxken)! - Performance pass over voxel storage and meshing. On the 1024² noise-terrain benchmark (3,050,267 voxels, chunk 256, minimum of three runs) voxel generation drops 614 → 436 ms and meshing 1637 → 998 ms naive / 2455 → 1656 ms greedy, with byte-identical geometry. Resident buffers fall 523 → 445 MB naive and 358 → 326 MB greedy.
+
+- [#369](https://github.com/JollyPixel/editor/pull/369) [`6f6594d`](https://github.com/JollyPixel/editor/commit/6f6594d9bea483ce53f61f3c92112c727d12bb7f) Thanks [@fraxken](https://github.com/fraxken)! - Implement minimal RBAC
+
+- [#380](https://github.com/JollyPixel/editor/pull/380) [`7d0f58b`](https://github.com/JollyPixel/editor/commit/7d0f58b9f9b3915732f8e13b5392b04d0fee0ff7) Thanks [@fraxken](https://github.com/fraxken)! - Add optional greedy meshing to `VoxelEngine`, merging coplanar identical block faces into the largest quads possible instead of emitting one quad per voxel face. On the bundled noise-terrain benchmark it cuts triangles from 1,986,252 to 666,370 (3x) for roughly the same build time.
+
+- [#370](https://github.com/JollyPixel/editor/pull/370) [`36c570c`](https://github.com/JollyPixel/editor/commit/36c570cf5bef538b7c59bb64b987b86f07cc91b9) Thanks [@fraxken](https://github.com/fraxken)! - Implement a minimalist Event Store workspace
+
+- [#364](https://github.com/JollyPixel/editor/pull/364) [`cd003c3`](https://github.com/JollyPixel/editor/commit/cd003c39463f09a0735d9a58a9ac7eea0217399d) Thanks [@fraxken](https://github.com/fraxken)! - Make the network implementation easier for workspaces
+
+- [#376](https://github.com/JollyPixel/editor/pull/376) [`a920533`](https://github.com/JollyPixel/editor/commit/a9205336bbcfd2e2684e13afa450136e9a07e579) Thanks [@fraxken](https://github.com/fraxken)! - Fix atlas bleeding that made distant voxels show white speckles and dark moiré bands.
+
+- [#374](https://github.com/JollyPixel/editor/pull/374) [`d7a9ee4`](https://github.com/JollyPixel/editor/commit/d7a9ee4efd8a4639589dcbc78bd9e8b8d035be84) Thanks [@fraxken](https://github.com/fraxken)! - Speed up chunk meshing by roughly 5× on large worlds (a 1024×1024 noise world with 3M voxels drops from ~19s to ~3.5s at `chunkSize: 256`, and from ~28s to ~2.5s at the default `chunkSize: 16`).
+
+- [#361](https://github.com/JollyPixel/editor/pull/361) [`34c1d7b`](https://github.com/JollyPixel/editor/commit/34c1d7b85bdf25f89988160cfdee1edeb4f7cf2f) Thanks [@fraxken](https://github.com/fraxken)! - Re-implement the network stack
+
+- [#375](https://github.com/JollyPixel/editor/pull/375) [`6bfb934`](https://github.com/JollyPixel/editor/commit/6bfb934ada24bacbb099fdc25fa0ce5f02e29099) Thanks [@fraxken](https://github.com/fraxken)! - Add a debug mode to `VoxelEngine`: `engine.debug` exposes live mesh statistics (faces, culled faces, triangles, vertices, chunk meshes) and a wireframe view of the meshed chunks, toggled at runtime through `debug.mode` (`"off"` / `"overlay"` / `"wireframe"`).
+
+### Patch Changes
+
+- [#413](https://github.com/JollyPixel/editor/pull/413) [`f205674`](https://github.com/JollyPixel/editor/commit/f2056748fad22b8af0c1318d108af66cc9ed6bd2) Thanks [@fraxken](https://github.com/fraxken)! - Fix WebGPU renderer issue with greedy meshing & examples
+
+- [#389](https://github.com/JollyPixel/editor/pull/389) [`8651b1b`](https://github.com/JollyPixel/editor/commit/8651b1b7e9f15d6c410156c1294a38e16cf00d00) Thanks [@fraxken](https://github.com/fraxken)! - Fix see-through blocks hiding the geometry behind them. `BlockDefinition` gains an optional `transparent` flag: such a block never occludes a neighbouring face, so a tile with alpha holes (leaves, a grate, a window) stops culling what you are meant to see through those holes.
+
+- Updated dependencies [[`2788a7e`](https://github.com/JollyPixel/editor/commit/2788a7e3c0d4f04ff22df415c4bd5270c3a1208a), [`6f6594d`](https://github.com/JollyPixel/editor/commit/6f6594d9bea483ce53f61f3c92112c727d12bb7f), [`1ead090`](https://github.com/JollyPixel/editor/commit/1ead09093bf7de77b56242d86693b49cae68b1e0), [`b568905`](https://github.com/JollyPixel/editor/commit/b56890527e918a637d41a17a7b41f1077268d04d), [`36c570c`](https://github.com/JollyPixel/editor/commit/36c570cf5bef538b7c59bb64b987b86f07cc91b9), [`cd003c3`](https://github.com/JollyPixel/editor/commit/cd003c39463f09a0735d9a58a9ac7eea0217399d), [`6dd2fc7`](https://github.com/JollyPixel/editor/commit/6dd2fc79cf5711b8b99e1fc85e0e8471ed8b7f31), [`cd003c3`](https://github.com/JollyPixel/editor/commit/cd003c39463f09a0735d9a58a9ac7eea0217399d), [`53f66fa`](https://github.com/JollyPixel/editor/commit/53f66faee0df0be9c7500648c24e1f30918a8e32), [`34c1d7b`](https://github.com/JollyPixel/editor/commit/34c1d7b85bdf25f89988160cfdee1edeb4f7cf2f), [`10fef00`](https://github.com/JollyPixel/editor/commit/10fef008eae61e8b8cb163a80c66c82ae68ab98e)]:
+  - @jolly-pixel/network@1.1.0
+  - @jolly-pixel/engine@4.0.0
+
 ## 2.0.0
 
 ### Major Changes

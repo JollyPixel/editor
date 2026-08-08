@@ -1,5 +1,14 @@
 # @jolly-pixel/editor.voxel-model
 
+## 1.0.3
+
+### Patch Changes
+
+- Updated dependencies [[`5dfb888`](https://github.com/JollyPixel/editor/commit/5dfb888a8611e0a8a048495e220273eb9c50f24f), [`1fd567f`](https://github.com/JollyPixel/editor/commit/1fd567fcc5477a4863d3aa9026f0b97c179e19a0), [`2788a7e`](https://github.com/JollyPixel/editor/commit/2788a7e3c0d4f04ff22df415c4bd5270c3a1208a), [`dbf64ee`](https://github.com/JollyPixel/editor/commit/dbf64eee82e367ddf67bc9f01186df5ab2cb4f43), [`6f6594d`](https://github.com/JollyPixel/editor/commit/6f6594d9bea483ce53f61f3c92112c727d12bb7f), [`b568905`](https://github.com/JollyPixel/editor/commit/b56890527e918a637d41a17a7b41f1077268d04d), [`e1ce8bb`](https://github.com/JollyPixel/editor/commit/e1ce8bb3e4257e8acce9083d047efd15861122a5), [`36c570c`](https://github.com/JollyPixel/editor/commit/36c570cf5bef538b7c59bb64b987b86f07cc91b9), [`02393d9`](https://github.com/JollyPixel/editor/commit/02393d9839607858a4083d0cab90a4cbc63b3000), [`cd003c3`](https://github.com/JollyPixel/editor/commit/cd003c39463f09a0735d9a58a9ac7eea0217399d), [`f077f50`](https://github.com/JollyPixel/editor/commit/f077f50ca679d3198e96e735b8dda1bfbf074fa5), [`b660781`](https://github.com/JollyPixel/editor/commit/b6607812584c20351ea06bc46f773b1792a08360), [`6dd2fc7`](https://github.com/JollyPixel/editor/commit/6dd2fc79cf5711b8b99e1fc85e0e8471ed8b7f31), [`4bb203a`](https://github.com/JollyPixel/editor/commit/4bb203ac3c7c04a2a26c6610fa062b033ceae34a), [`5421766`](https://github.com/JollyPixel/editor/commit/5421766acf8d1c8dfa884c03f8fbda4732d4896b), [`62873b3`](https://github.com/JollyPixel/editor/commit/62873b348974dba8df26a829aa7eea2bfcfafb1b), [`34c1d7b`](https://github.com/JollyPixel/editor/commit/34c1d7b85bdf25f89988160cfdee1edeb4f7cf2f), [`4aa7e28`](https://github.com/JollyPixel/editor/commit/4aa7e28af054ceec2656c29966c8ab6259c74007), [`bc16385`](https://github.com/JollyPixel/editor/commit/bc16385e3d8a2244c1d20a69424f9ffc1a6fa073), [`10fef00`](https://github.com/JollyPixel/editor/commit/10fef008eae61e8b8cb163a80c66c82ae68ab98e), [`f1ca6fa`](https://github.com/JollyPixel/editor/commit/f1ca6facc3813b2b2ffbb4b03f14537d8931e735)]:
+  - @jolly-pixel/pixel-draw.renderer@3.0.0
+  - @jolly-pixel/engine@4.0.0
+  - @jolly-pixel/runtime@4.0.0
+
 ## 1.0.2
 
 ### Patch Changes
