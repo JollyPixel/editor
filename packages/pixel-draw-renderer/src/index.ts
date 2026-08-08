@@ -66,9 +66,12 @@ export {
   UVRegion,
   UV_FACES,
   type UVFace,
+  type UVGeometry,
   type UVRegionData,
   type UVRegionFace,
-  type UVRegionState
+  type UVRegionState,
+  type UVTriangle,
+  type UVTriangleCorner
 } from "./uv/UVRegion.ts";
 // PixelSyncServer is deliberately not re-exported here: it value-imports
 // @jolly-pixel/network's server root (worker_threads and friends), and this

@@ -78,6 +78,39 @@ describe("BlockUvBridge.setActiveTileset", () => {
     }
   });
 
+  it("restores ramp sides as triangular geometry", () => {
+    const { vr } = makeFakeVoxelRenderer();
+    const ramp = {
+      ...makeBlock(1, { col: 2, row: 1, tilesetId: "atlas" }),
+      shapeId: "ramp"
+    } satisfies BlockDefinition;
+    vr.engine.blockRegistry.register(ramp);
+
+    const uv = makeUv();
+    const bridge = new BlockUvBridge(uv, vr);
+    try {
+      bridge.setActiveTileset("atlas", 16);
+
+      const region = uv.get("block-1")!;
+      assert.deepEqual(region.facesOf().map(({ face }) => face), [
+        "back", "left", "right", "top", "bottom"
+      ]);
+      assert.deepEqual(region.geometryFor("left"), {
+        shape: "triangle",
+        corner: "bottom-right",
+        rect: { x: 32, y: 16, width: 16, height: 16 }
+      });
+      assert.deepEqual(region.geometryFor("right"), {
+        shape: "triangle",
+        corner: "bottom-right",
+        rect: { x: 32, y: 16, width: 16, height: 16 }
+      });
+    }
+    finally {
+      bridge.dispose();
+    }
+  });
+
   it("rebuilds the region set when the active tileset switches", () => {
     const { vr } = makeFakeVoxelRenderer();
     vr.engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));

@@ -46,6 +46,60 @@ function makeSetup(
 }
 
 describe("UVController — hit-test / select on miss", () => {
+  test("does not select the empty half of a triangular face", () => {
+    const { map, controller } = makeSetup();
+    map.restore({
+      id: "ramp",
+      color: "#f00",
+      state: "uncollapsed",
+      activeFaces: ["left"],
+      faces: {
+        front: { x: 0, y: 0, width: 8, height: 8 },
+        back: { x: 0, y: 0, width: 8, height: 8 },
+        left: {
+          shape: "triangle",
+          corner: "top-right",
+          rect: { x: 0, y: 0, width: 8, height: 8 }
+        },
+        right: { x: 0, y: 0, width: 8, height: 8 },
+        top: { x: 0, y: 0, width: 8, height: 8 },
+        bottom: { x: 0, y: 0, width: 8, height: 8 }
+      }
+    });
+    map.showAll = true;
+
+    controller.handleStart({ x: 1, y: 6 });
+
+    assert.strictEqual(map.selectedRegionId, null);
+  });
+
+  test("does not select outside a triangle's bounding rect", () => {
+    const { map, controller } = makeSetup();
+    map.restore({
+      id: "triangle",
+      color: "#f00",
+      state: "uncollapsed",
+      activeFaces: ["left"],
+      faces: {
+        front: { x: 0, y: 0, width: 8, height: 8 },
+        back: { x: 0, y: 0, width: 8, height: 8 },
+        left: {
+          shape: "triangle",
+          corner: "top-right",
+          rect: { x: 0, y: 0, width: 8, height: 8 }
+        },
+        right: { x: 0, y: 0, width: 8, height: 8 },
+        top: { x: 0, y: 0, width: 8, height: 8 },
+        bottom: { x: 0, y: 0, width: 8, height: 8 }
+      }
+    });
+    map.showAll = true;
+
+    controller.handleStart({ x: 100, y: -100 });
+
+    assert.strictEqual(map.selectedRegionId, null);
+  });
+
   test("selects a visible region hit by handleStart", () => {
     const { map, controller } = makeSetup();
     const region = map.create({ width: 8, height: 8 });

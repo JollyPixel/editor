@@ -99,8 +99,31 @@ describe("UVRegion", () => {
     test("facesOf yields one null-faced entry when collapsed", () => {
       assert.deepStrictEqual(
         makeCollapsed().facesOf(),
-        [{ face: null, rect: kRect }]
+        [{ face: null, geometry: kRect }]
       );
+    });
+
+    test("keeps triangle geometry and its bounds separate", () => {
+      const region = new UVRegion({
+        id: "r1",
+        color: "#f00",
+        state: "uncollapsed",
+        activeFaces: ["left"],
+        faces: {
+          front: kRect,
+          back: kRect,
+          left: { shape: "triangle", corner: "top-right", rect: kRect },
+          right: kRect,
+          top: kRect,
+          bottom: kRect
+        }
+      });
+
+      assert.deepStrictEqual(region.rectFor("left"), kRect);
+      assert.deepStrictEqual(region.facesOf(), [{
+        face: "left",
+        geometry: { shape: "triangle", corner: "top-right", rect: kRect }
+      }]);
     });
 
     test("facesOf yields six entries in UV_FACES order when uncollapsed", () => {
@@ -176,6 +199,81 @@ describe("UVRegion", () => {
       const region = makeCollapsed();
 
       assert.strictEqual(region.collapse(), region);
+    });
+
+    test("prefers a rectangle when collapsing a mixed region", () => {
+      const region = new UVRegion({
+        id: "r1",
+        color: "#f00",
+        state: "uncollapsed",
+        activeFaces: ["left", "top"],
+        faces: {
+          front: kRect,
+          back: kRect,
+          left: { shape: "triangle", corner: "top-right", rect: kRect },
+          right: kRect,
+          top: { x: 9, y: 9, width: 1, height: 1 },
+          bottom: kRect
+        }
+      });
+
+      assert.deepStrictEqual(region.collapse("left").rectFor("front"), {
+        x: 9, y: 9, width: 1, height: 1
+      });
+    });
+
+    test("restores triangle topology after collapsing and uncollapsing", () => {
+      const ramp = new UVRegion({
+        id: "r1",
+        color: "#f00",
+        state: "uncollapsed",
+        activeFaces: ["back", "left", "right", "top", "bottom"],
+        faces: {
+          front: kRect,
+          back: kRect,
+          left: { shape: "triangle", corner: "top-right", rect: kRect },
+          right: { shape: "triangle", corner: "top-right", rect: kRect },
+          top: kRect,
+          bottom: kRect
+        }
+      });
+
+      const restored = ramp.collapse().uncollapse();
+
+      assert.deepStrictEqual(restored.facesOf().map(({ face }) => face), [
+        "back", "left", "right", "top", "bottom"
+      ]);
+      assert.deepStrictEqual(restored.geometryFor("left"), {
+        shape: "triangle", corner: "top-right", rect: kRect
+      });
+    });
+
+    test("resets retained ramp faces to the collapsed rect on uncollapse", () => {
+      const ramp = new UVRegion({
+        id: "r1",
+        color: "#f00",
+        state: "uncollapsed",
+        activeFaces: ["back", "left", "right", "top", "bottom"],
+        faces: {
+          front: kRect,
+          back: kRect,
+          left: {
+            shape: "triangle",
+            corner: "top-right",
+            rect: { x: 9, y: 9, width: 1, height: 1 }
+          },
+          right: { shape: "triangle", corner: "top-right", rect: kRect },
+          top: kRect,
+          bottom: kRect
+        }
+      });
+
+      const restored = ramp.collapse().uncollapse();
+
+      assert.deepStrictEqual(restored.rectFor("left"), kRect);
+      assert.deepStrictEqual(restored.geometryFor("left"), {
+        shape: "triangle", corner: "top-right", rect: kRect
+      });
     });
   });
 

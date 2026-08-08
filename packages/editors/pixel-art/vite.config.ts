@@ -24,7 +24,7 @@ export default defineConfig({
     createWebSocketNetworkPlugin({
       extensions: [
         new PixelSyncServer({
-          // Must match the client's room id in examples/scripts/main.ts.
+          // Must match examples/scripts/demo/DemoSync.ts.
           id: "pixel-draw:demo-canvas",
           buffer: new PixelBuffer({
             size: {

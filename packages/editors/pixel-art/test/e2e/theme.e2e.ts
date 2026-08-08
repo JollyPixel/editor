@@ -34,7 +34,7 @@ test("defaults to the \"auto\" theme", async({ page }) => {
   );
 });
 
-test("cube rotation is enabled by default and can be toggled", async({ page }) => {
+test("preview rotation is enabled by default and can be toggled", async({ page }) => {
   const rotationToggle = page.locator("#rotation-toggle");
 
   await expect(rotationToggle).toBeChecked();

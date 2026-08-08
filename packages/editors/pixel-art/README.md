@@ -51,7 +51,15 @@ const canvas = await panel.initialize({
 
 ## 🚀 Running the example
 
-`examples/` is a Lit toolbar panel driving `PixelArtCanvas` and painting a live Three.js texture, with multiplayer sync via `@jolly-pixel/network`.
+`examples/` is a Lit toolbar panel driving `PixelArtCanvas` and painting live
+Cube and Ramp previews in Three.js, with multiplayer sync via
+`@jolly-pixel/network`.
+
+The demo keeps application wiring in `examples/scripts/main.ts`, theme and
+collaboration integration in `examples/scripts/demo/`, and UV-driven Three.js
+rendering in `examples/scripts/preview/`. Shape-specific geometry lives under
+`preview/shapes/`; the gallery, picker, UV projection, and animation remain
+shape-neutral.
 
 ```bash
 npm run dev -w @jolly-pixel/editor.pixel-art
