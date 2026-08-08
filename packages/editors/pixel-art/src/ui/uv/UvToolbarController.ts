@@ -95,6 +95,17 @@ export class UvToolbarController implements ReactiveController {
     this.#canvas?.uv.create(kUvCreateSize);
   }
 
+  createRamp(): void {
+    this.#canvas?.uv.create({
+      ...kUvCreateSize,
+      activeFaces: ["back", "left", "right", "top", "bottom"],
+      faceGeometries: {
+        left: { shape: "triangle", corner: "bottom-right" },
+        right: { shape: "triangle", corner: "bottom-right" }
+      }
+    });
+  }
+
   delete(): void {
     if (this.#selectedRegionId) {
       this.#canvas?.uv.delete(this.#selectedRegionId);
@@ -154,11 +165,19 @@ export class UvToolbarController implements ReactiveController {
     return html`
       <button
         class="rail-btn" part="uv-create-button"
-        aria-label="Create"
+        aria-label="Create cube"
         @click=${() => this.create()}
       >
         ${renderIcon("add")}
-        <span class="tooltip">Create region</span>
+        <span class="tooltip">Create cube region</span>
+      </button>
+      <button
+        class="rail-btn" part="uv-create-ramp-button"
+        aria-label="Create ramp"
+        @click=${() => this.createRamp()}
+      >
+        ${renderIcon("add")}
+        <span class="tooltip">Create ramp region</span>
       </button>
       <button
         class="rail-btn" part="uv-delete-button"

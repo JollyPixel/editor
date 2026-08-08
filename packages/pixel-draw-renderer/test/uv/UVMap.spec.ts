@@ -23,6 +23,26 @@ function makeMap(
 }
 
 describe("UVMap — create", () => {
+  test("creates a five-face ramp with triangular sides", () => {
+    const map = makeMap();
+    const region = map.create({
+      width: 8,
+      height: 8,
+      activeFaces: ["back", "left", "right", "top", "bottom"],
+      faceGeometries: {
+        left: { shape: "triangle", corner: "bottom-right" },
+        right: { shape: "triangle", corner: "bottom-right" }
+      }
+    });
+
+    assert.strictEqual(region.state, "uncollapsed");
+    assert.deepStrictEqual(region.facesOf().map(({ face }) => face), [
+      "back", "left", "right", "top", "bottom"
+    ]);
+    assert.deepStrictEqual(region.geometryFor("left"), {
+      shape: "triangle", corner: "bottom-right", rect: { x: 0, y: 0, width: 8, height: 8 }
+    });
+  });
   test("creates a region with the requested size at the origin, with a palette color", () => {
     const map = makeMap();
     const region = map.create({ width: 8, height: 8 });
@@ -300,7 +320,8 @@ describe("UVMap — previewMove", () => {
       {
         id: region.id,
         face: null,
-        rect: { x: 12, y: 12, width: 4, height: 4 }
+        rect: { x: 12, y: 12, width: 4, height: 4 },
+        geometry: { x: 12, y: 12, width: 4, height: 4 }
       }
     ]);
     assert.deepStrictEqual(
@@ -320,6 +341,28 @@ describe("UVMap — previewMove", () => {
     map.previewMove(region.id, { x: 5, y: 5, width: 4, height: 4 }, "bottom");
 
     assert.strictEqual(events[0].face, "bottom");
+  });
+
+  test("carries moved triangle geometry without mutating its corner", () => {
+    const map = makeMap();
+    const region = map.create({
+      width: 4,
+      height: 4,
+      activeFaces: ["left"],
+      faceGeometries: {
+        left: { shape: "triangle", corner: "top-right" }
+      }
+    });
+    const events: EventPayload<"region-dragging">[] = [];
+    map.on("region-dragging", (event) => events.push(event));
+
+    map.previewMove(region.id, { x: 5, y: 6, width: 4, height: 4 }, "left");
+
+    assert.deepStrictEqual(events[0].geometry, {
+      shape: "triangle",
+      corner: "top-right",
+      rect: { x: 5, y: 6, width: 4, height: 4 }
+    });
   });
 
   test("does not record history or affect move()'s previousRect bookkeeping", () => {

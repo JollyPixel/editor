@@ -11,6 +11,7 @@ import {
   type UVMap,
   type UVMapListener,
   type UVFace,
+  type UVGeometry,
   type SelectionRect
 } from "@jolly-pixel/pixel-draw.renderer";
 
@@ -153,7 +154,7 @@ export class BlockUvBridge {
     const fallback = this.#rectOf(block.defaultTexture!);
     const faceTextures = block.faceTextures ?? {};
 
-    if (Object.keys(faceTextures).length === 0) {
+    if (Object.keys(faceTextures).length === 0 && block.shapeId !== "ramp") {
       return new UVRegion({
         id,
         color: kRegionColor,
@@ -162,17 +163,42 @@ export class BlockUvBridge {
       });
     }
 
-    const faces = {} as Record<UVFace, SelectionRect>;
-    for (const face of UV_FACES) {
+    const rectFor = (face: UVFace): SelectionRect => {
       const tileRef = faceTextures[kFaceToVoxel[face]];
-      faces[face] = tileRef ? this.#rectOf(tileRef) : fallback;
+
+      return tileRef ? this.#rectOf(tileRef) : fallback;
+    };
+    const rects = {
+      front: rectFor("front"),
+      back: rectFor("back"),
+      left: rectFor("left"),
+      right: rectFor("right"),
+      top: rectFor("top"),
+      bottom: rectFor("bottom")
+    } satisfies Record<UVFace, SelectionRect>;
+    const faces: Record<UVFace, UVGeometry> = { ...rects };
+
+    if (block.shapeId === "ramp") {
+      faces.left = {
+        shape: "triangle",
+        corner: "bottom-right",
+        rect: rects.left
+      };
+      faces.right = {
+        shape: "triangle",
+        corner: "bottom-right",
+        rect: rects.right
+      };
     }
 
     return new UVRegion({
       id,
       color: kRegionColor,
       state: "uncollapsed",
-      faces
+      faces,
+      activeFaces: block.shapeId === "ramp" ?
+        ["back", "left", "right", "top", "bottom"] :
+        [...UV_FACES]
     });
   }
 

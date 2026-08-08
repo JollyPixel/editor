@@ -2,7 +2,7 @@
 
 Manages a texture's UV regions. Exposed as `PixelArtCanvas.uv`.
 
-- **Creating** a region is API-only: call `uv.create(...)` (e.g. from a toolbar button). New regions are always collapsed.
+- **Creating** a region is API-only: call `uv.create(...)` (e.g. from a toolbar button). Cubes are collapsed; ramps use five active faces and triangular sides.
 - **Moving** is a canvas gesture: switch to `"uv"` mode, click a region, drag
 - **Collapse/uncollapse** is API-only: `uv.uncollapse(id)` / `uv.collapse(id, face?)`
 
@@ -18,6 +18,7 @@ interface UVMapOptions {
 interface UVRegionCreateOptions {
   width: number;
   height: number;
+  preset?: "cube" | "ramp";
   id?: string;    // default: crypto.randomUUID()
   color?: string; // default: next palette color
 }
@@ -30,7 +31,7 @@ interface UVRegionCreateOptions {
 | `"region-created"` | `region` |
 | `"region-deleted"` | `region` (last state before removal) |
 | `"region-moved"` | `region`, `face`, `previousRect` |
-| `"region-dragging"` | `id`, `face`, `rect` (transient, not committed) |
+| `"region-dragging"` | `id`, `face`, `rect`, `geometry` (transient, not committed) |
 | `"region-state-changed"` | `region`, `previous` (`UVRegionData`) |
 | `"selection-changed"` | `selectedRegionId`, `selectedFace` |
 | `"visibility-changed"` | `showAll` |
@@ -120,7 +121,7 @@ Returns `false` for an unknown id, and for an uncollapsed region when `face` is 
 previewMove(id: string, rect: SelectionRect, face?: UVFace): void
 ```
 
-Emits `"region-dragging"` with a transient rect — no store mutation, no history, no network broadcast. If a drag is cancelled, `UVController` calls this with the region's real rect to snap listeners back.
+Emits `"region-dragging"` with a transient rect and its rectangle or triangle `geometry` — no store mutation, no history, no network broadcast. If a drag is cancelled, `UVController` calls this with the region's real rect to snap listeners back.
 
 ### `uncollapse(id)` / `collapse(id, face?)`
 
@@ -208,8 +209,8 @@ canvas.uv.on("region-created", ({ region }) => spawnCubeFor(region));
 canvas.uv.on("region-deleted", ({ region }) => destroyCubeFor(region.id));
 canvas.uv.on("region-moved", ({ region, face }) =>
   updateCubeFace(region.id, face, region.rectFor(face ?? "front")));
-canvas.uv.on("region-dragging", ({ id, face, rect }) =>
-  updateCubeFace(id, face, rect));
+canvas.uv.on("region-dragging", ({ id, face, geometry }) =>
+  updateCubeFace(id, face, geometry));
 // collapse/uncollapse rewrites every face at once
 canvas.uv.on("region-state-changed", ({ region }) => remapCube(region.id, region));
 

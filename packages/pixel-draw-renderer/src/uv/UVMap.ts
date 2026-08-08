@@ -4,55 +4,34 @@ import { Emitter } from "@openally/emitt";
 // Import Internal Dependencies
 import { clamp, clampRectSize } from "../utils/math.ts";
 import { ColorPalette } from "../utils/ColorPalette.ts";
+import { geometryAt } from "./geometry.ts";
 import type {
   SelectionRect,
   Vec2
 } from "../types.ts";
 import {
+  UV_FACES,
   UVRegion,
   type UVFace,
   type UVRegionData
 } from "./UVRegion.ts";
+import type { UVMapEvent } from "./UVMap.events.ts";
 
-export type UVMapEvent = {
-  "region-created": (event: { region: UVRegion; }) => void;
-  "region-deleted": (event: { region: UVRegion; }) => void;
-  "region-moved": (event: {
-    region: UVRegion;
-    face: UVFace | null;
-    previousRect: SelectionRect;
-  }) => void;
-  "region-dragging": (event: {
-    id: string;
-    face: UVFace | null;
-    rect: SelectionRect;
-  }) => void;
-  "region-state-changed": (event: {
-    region: UVRegion;
-    previous: UVRegionData;
-  }) => void;
-  "selection-changed": (event: {
-    selectedRegionId: string | null;
-    selectedFace: UVFace | null;
-  }) => void;
-  "visibility-changed": (event: { showAll: boolean; }) => void;
-};
-
-export type UVMapEventType = keyof UVMapEvent;
-
-export type UVMapListener<T extends UVMapEventType = UVMapEventType> = UVMapEvent[T];
+export type {
+  UVMapEvent,
+  UVMapEventType,
+  UVMapListener
+} from "./UVMap.events.ts";
 
 export interface UVMapOptions {
-  /**
-   * Reports the current texture/canvas size, used to clamp region
-   * placement and size.
-   */
   getCanvasSize: () => Vec2;
 }
 
 export interface UVRegionCreateOptions {
   width: number;
   height: number;
+  activeFaces?: readonly UVFace[];
+  faceGeometries?: Partial<Record<UVFace, UVFaceGeometryTemplate>>;
   /**
    * @default a generated id
    */
@@ -62,6 +41,10 @@ export interface UVRegionCreateOptions {
    */
   color?: string;
 }
+
+export type UVFaceGeometryTemplate =
+  | { shape: "rectangle"; }
+  | { shape: "triangle"; corner: "top-left" | "top-right" | "bottom-left" | "bottom-right"; };
 
 // CONSTANTS
 const kCascadeStep = 16;
@@ -103,9 +86,6 @@ export class UVMap extends Emitter<
     return this.#selectedRegionId;
   }
 
-  /**
-   * Selected face within the selected region (always `null` when collapsed).
-   */
   get selectedFace(): UVFace | null {
     return this.#selectedFace;
   }
@@ -158,15 +138,36 @@ export class UVMap extends Emitter<
     const height = clamp(options.height, 1, Math.max(1, size.y));
     const position = this.#nextCascadePosition(width, height, size);
 
-    const region = new UVRegion({
+    const rect = {
+      x: position.x,
+      y: position.y,
+      width,
+      height
+    };
+    const identity = {
       id: options.id ?? crypto.randomUUID(),
-      color: options.color ?? this.#palette.next(),
-      state: "collapsed",
-      rect: { x: position.x, y: position.y, width, height }
-    });
+      color: options.color ?? this.#palette.next()
+    };
+    const region = options.activeFaces || options.faceGeometries ?
+      new UVRegion({
+        ...identity,
+        state: "uncollapsed",
+        activeFaces: [...(options.activeFaces ?? UV_FACES)],
+        faces: {
+          front: this.#geometryFrom(options.faceGeometries?.front, rect),
+          back: this.#geometryFrom(options.faceGeometries?.back, rect),
+          left: this.#geometryFrom(options.faceGeometries?.left, rect),
+          right: this.#geometryFrom(options.faceGeometries?.right, rect),
+          top: this.#geometryFrom(options.faceGeometries?.top, rect),
+          bottom: this.#geometryFrom(options.faceGeometries?.bottom, rect)
+        }
+      }) :
+      new UVRegion({ ...identity, state: "collapsed", rect });
 
     this.#regions.set(region.id, region);
-    this.emit("region-created", { region });
+    this.emit("region-created", {
+      region
+    });
 
     return region;
   }
@@ -177,7 +178,9 @@ export class UVMap extends Emitter<
     const stored = UVRegion.from(region);
     this.#regions.set(stored.id, stored);
 
-    this.emit("region-created", { region: stored });
+    this.emit("region-created", {
+      region: stored
+    });
 
     return stored;
   }
@@ -223,7 +226,11 @@ export class UVMap extends Emitter<
     const moved = region.withRect(clamped, target ?? undefined);
     this.#regions.set(id, moved);
 
-    this.emit("region-moved", { region: moved, face: target, previousRect });
+    this.emit("region-moved", {
+      region: moved,
+      face: target,
+      previousRect
+    });
 
     return true;
   }
@@ -247,20 +254,34 @@ export class UVMap extends Emitter<
       rect,
       this.#getCanvasSize()
     );
-    this.emit("region-dragging", { id, face: target, rect: clamped });
+    this.emit("region-dragging", {
+      id,
+      face: target,
+      rect: clamped,
+      geometry: geometryAt(
+        region.geometryFor(target ?? kDefaultFace),
+        clamped
+      )
+    });
   }
 
   uncollapse(
     id: string
   ): boolean {
-    return this.#changeState(id, (region) => region.uncollapse());
+    return this.#changeState(
+      id,
+      (region) => region.uncollapse()
+    );
   }
 
   collapse(
     id: string,
     face: UVFace = kDefaultFace
   ): boolean {
-    return this.#changeState(id, (region) => region.collapse(face));
+    return this.#changeState(
+      id,
+      (region) => region.collapse(face)
+    );
   }
 
   restoreState(
@@ -302,7 +323,10 @@ export class UVMap extends Emitter<
       this.#selectedFace
     );
 
-    this.emit("region-state-changed", { region: next, previous });
+    this.emit("region-state-changed", {
+      region: next,
+      previous
+    });
     if (selectionChanged) {
       this.#emitSelectionChanged();
     }
@@ -310,9 +334,6 @@ export class UVMap extends Emitter<
     return true;
   }
 
-  /**
-   * Normalizes face against the region's state: null when collapsed, face (or default) when uncollapsed.
-   */
   #resolveFace(
     region: UVRegion,
     face: UVFace | undefined
@@ -324,9 +345,6 @@ export class UVMap extends Emitter<
     return face ?? undefined;
   }
 
-  /**
-   * Stores the normalized selection; returns whether anything changed.
-   */
   #applySelection(
     id: string | null,
     face: UVFace | null
@@ -378,5 +396,14 @@ export class UVMap extends Emitter<
       x: clamp(col * kCascadeStep, 0, maxX),
       y: clamp(row * kCascadeStep, 0, maxY)
     };
+  }
+
+  #geometryFrom(
+    template: UVFaceGeometryTemplate | undefined,
+    rect: SelectionRect
+  ) {
+    return template?.shape === "triangle" ?
+      { shape: "triangle" as const, corner: template.corner, rect } :
+      rect;
   }
 }

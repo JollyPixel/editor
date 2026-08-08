@@ -1,11 +1,12 @@
 // Import Internal Dependencies
 import {
-  clampRectPosition,
-  pointInRect
+  clampRectPosition
 } from "../utils/math.ts";
+import { pointInGeometry } from "./geometry.ts";
 import type { UVMap } from "./UVMap.ts";
 import type {
   UVFace,
+  UVGeometry,
   UVRegion
 } from "./UVRegion.ts";
 import type {
@@ -36,7 +37,7 @@ interface DragState {
 interface HitCandidate {
   region: UVRegion;
   face: UVFace | null;
-  rect: SelectionRect;
+  geometry: UVGeometry;
 }
 
 /**
@@ -102,7 +103,8 @@ export class UVController {
     const index = this.#shouldAdvance(key) ?
       (this.#pick!.index + 1) % candidates.length :
       0;
-    const { region, face, rect } = candidates[index];
+    const { region, face, geometry } = candidates[index];
+    const rect = "shape" in geometry ? geometry.rect : geometry;
 
     this.#uvMap.select(region.id, face ?? undefined);
     this.#pick = {
@@ -235,9 +237,9 @@ export class UVController {
         continue;
       }
 
-      for (const { face, rect } of region.facesOf()) {
-        if (pointInRect(pos, rect)) {
-          candidates.push({ region, face, rect });
+      for (const { face, geometry } of region.facesOf()) {
+        if (pointInGeometry(pos, geometry)) {
+          candidates.push({ region, face, geometry });
         }
       }
     }

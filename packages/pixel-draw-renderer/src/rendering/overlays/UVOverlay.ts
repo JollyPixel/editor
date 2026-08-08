@@ -1,10 +1,12 @@
 // Import Internal Dependencies
 import { SVG_NS } from "../constants.ts";
 import { contrastingColor } from "../../utils/colors.ts";
+import { geometryAt, rectOf } from "../../uv/geometry.ts";
 import type { DefaultViewport } from "../Viewport.ts";
 import type { UVMap } from "../../uv/UVMap.ts";
 import type {
   UVFace,
+  UVGeometry,
   UVRegion
 } from "../../uv/UVRegion.ts";
 import type {
@@ -34,7 +36,7 @@ interface RenderEntry {
   key: string;
   region: UVRegion;
   face: UVFace | null;
-  rect: SelectionRect;
+  geometry: UVGeometry;
   selected: boolean;
 }
 
@@ -52,10 +54,15 @@ function entryKey(
   return `${id}:${face ?? "*"}`;
 }
 
-function rectKey(
-  rect: SelectionRect
+function geometryKey(
+  geometry: UVGeometry
 ): string {
-  return `${rect.x},${rect.y},${rect.width},${rect.height}`;
+  const rect = rectOf(geometry);
+  const { x, y, width, height } = rect;
+
+  return "shape" in geometry ?
+    `${geometry.shape}:${geometry.corner}:${x},${y},${width},${height}` :
+    `${x},${y},${width},${height}`;
 }
 
 /**
@@ -63,19 +70,26 @@ function rectKey(
  */
 class Border {
   #group: SVGGElement;
-  #casing: SVGRectElement;
-  #stroke: SVGRectElement;
+  #casing: SVGGeometryElement;
+  #stroke: SVGGeometryElement;
 
-  constructor() {
+  constructor(
+    geometry: UVGeometry
+  ) {
     this.#group = document.createElementNS(SVG_NS, "g");
     this.#group.style.pointerEvents = "none";
 
-    this.#casing = this.#group.appendChild(Border.#createRect());
-    this.#stroke = this.#group.appendChild(Border.#createRect());
+    this.#casing = this.#group.appendChild(Border.#createElement(geometry));
+    this.#stroke = this.#group.appendChild(Border.#createElement(geometry));
   }
 
-  static #createRect(): SVGRectElement {
-    const el = document.createElementNS(SVG_NS, "rect");
+  static #createElement(
+    geometry: UVGeometry
+  ): SVGGeometryElement {
+    const el = document.createElementNS(
+      SVG_NS,
+      "shape" in geometry ? "polygon" : "rect"
+    ) as SVGGeometryElement;
 
     el.style.fill = "none";
     el.setAttribute("vector-effect", "non-scaling-stroke");
@@ -84,21 +98,22 @@ class Border {
   }
 
   place(
-    rect: SelectionRect,
+    geometry: UVGeometry,
     zoom: number,
     camera: Vec2
   ): void {
+    const rect = rectOf(geometry);
     const screen = {
       x: rect.x * zoom + camera.x,
       y: rect.y * zoom + camera.y,
       width: rect.width * zoom,
       height: rect.height * zoom
     };
-    Border.#setGeometry(this.#stroke, screen);
+    Border.#placeGeometry(this.#stroke, geometry, screen);
 
     // Keep casing inside the rect; clamp prevents negative size on tiny rects.
     const inset = Math.min(kCasingInset, screen.width / 2, screen.height / 2);
-    Border.#setGeometry(this.#casing, {
+    Border.#placeGeometry(this.#casing, geometry, {
       x: screen.x + inset,
       y: screen.y + inset,
       width: screen.width - (2 * inset),
@@ -106,11 +121,28 @@ class Border {
     });
   }
 
-  static #setGeometry(
-    el: SVGRectElement,
-    geometry: SelectionRect
+  static #placeGeometry(
+    el: SVGGeometryElement,
+    uvGeometry: UVGeometry,
+    screen: SelectionRect
   ): void {
-    for (const [name, value] of Object.entries(geometry)) {
+    if ("shape" in uvGeometry) {
+      const corners = {
+        "top-left": [[screen.x, screen.y], [screen.x + screen.width, screen.y],
+          [screen.x, screen.y + screen.height]],
+        "top-right": [[screen.x, screen.y], [screen.x + screen.width, screen.y],
+          [screen.x + screen.width, screen.y + screen.height]],
+        "bottom-left": [[screen.x, screen.y], [screen.x, screen.y + screen.height],
+          [screen.x + screen.width, screen.y + screen.height]],
+        "bottom-right": [[screen.x + screen.width, screen.y], [screen.x, screen.y + screen.height],
+          [screen.x + screen.width, screen.y + screen.height]]
+      }[uvGeometry.corner];
+      el.setAttribute("points", corners.map((point) => point.join(",")).join(" "));
+
+      return;
+    }
+
+    for (const [name, value] of Object.entries(screen)) {
       el.setAttribute(name, String(value));
     }
   }
@@ -227,11 +259,11 @@ export class UVOverlay {
     const camera = this.#viewport.camera;
 
     for (const entry of painted) {
-      const border = this.#borders.get(entry.key) ?? this.#createBorder(entry.key);
+      const border = this.#borders.get(entry.key) ?? this.#createBorder(entry.key, entry.geometry);
       // Uncollapsed regions show emphasis (+stroke) only on selected faces.
       const uncollapsed = entry.region.state === "uncollapsed";
 
-      border.place(entry.rect, zoom, camera);
+      border.place(entry.geometry, zoom, camera);
       border.paint({
         color: entry.region.color,
         strokeWidth: uncollapsed && entry.selected ?
@@ -261,7 +293,7 @@ export class UVOverlay {
         continue;
       }
 
-      const key = `${entry.region.id}|${rectKey(entry.rect)}`;
+      const key = `${entry.region.id}|${geometryKey(entry.geometry)}`;
       const group = groups.get(key);
       if (group) {
         group.push(entry);
@@ -277,8 +309,8 @@ export class UVOverlay {
       const entry = group.find((candidate) => candidate.selected) ?? group[0];
 
       if (
-        entry.rect.width * zoom < kLabelMinScreenSize ||
-        entry.rect.height * zoom < kLabelMinScreenSize
+        rectOf(entry.geometry).width * zoom < kLabelMinScreenSize ||
+        rectOf(entry.geometry).height * zoom < kLabelMinScreenSize
       ) {
         continue;
       }
@@ -294,11 +326,12 @@ export class UVOverlay {
       el.setAttribute("fill", entry.region.color);
       // Border-like text casing, drawn under glyphs via paint-order.
       el.setAttribute("stroke", contrastingColor(entry.region.color));
-      el.setAttribute("x", String(entry.rect.x * zoom + camera.x + kLabelPadding));
-      el.setAttribute(
-        "y",
-        String(entry.rect.y * zoom + camera.y + kLabelPadding + kLabelFontSize)
-      );
+      const { x, y } = this.#labelPosition(entry.geometry, zoom, camera);
+      const rightAligned = "shape" in entry.geometry &&
+        (entry.geometry.corner === "top-right" || entry.geometry.corner === "bottom-right");
+      el.setAttribute("x", String(x));
+      el.setAttribute("y", String(y));
+      el.setAttribute("text-anchor", rightAligned ? "end" : "start");
       el.textContent = entry.face;
 
       // Append after rects so labels stay visible.
@@ -316,7 +349,7 @@ export class UVOverlay {
         continue;
       }
 
-      for (const { face, rect } of region.facesOf()) {
+      for (const { face, geometry } of region.facesOf()) {
         const override = this.#liveOverride;
         const overridden = override !== null &&
           override.id === region.id &&
@@ -326,7 +359,7 @@ export class UVOverlay {
           key: entryKey(region.id, face),
           region,
           face,
-          rect: overridden ? override.rect : rect,
+          geometry: overridden ? geometryAt(geometry, override.rect) : geometry,
           selected: region.id === selectedRegionId && face === selectedFace
         });
       }
@@ -367,12 +400,56 @@ export class UVOverlay {
   }
 
   #createBorder(
-    key: string
+    key: string,
+    geometry: UVGeometry
   ): Border {
-    const border = new Border();
+    const border = new Border(geometry);
     this.#borders.set(key, border);
 
     return border;
+  }
+
+  #labelPosition(
+    geometry: UVGeometry,
+    zoom: number,
+    camera: Vec2
+  ): Vec2 {
+    const rect = rectOf(geometry);
+    const screen = {
+      x: rect.x * zoom + camera.x,
+      y: rect.y * zoom + camera.y,
+      width: rect.width * zoom,
+      height: rect.height * zoom
+    };
+    if (!("shape" in geometry)) {
+      return {
+        x: screen.x + kLabelPadding,
+        y: screen.y + kLabelPadding + kLabelFontSize
+      };
+    }
+    if (geometry.corner === "top-right") {
+      return {
+        x: screen.x + screen.width - kLabelPadding,
+        y: screen.y + kLabelPadding + kLabelFontSize
+      };
+    }
+    if (geometry.corner === "bottom-left") {
+      return {
+        x: screen.x + kLabelPadding,
+        y: screen.y + screen.height - kLabelPadding
+      };
+    }
+    if (geometry.corner === "bottom-right") {
+      return {
+        x: screen.x + screen.width - kLabelPadding,
+        y: screen.y + screen.height - kLabelPadding
+      };
+    }
+
+    return {
+      x: screen.x + kLabelPadding,
+      y: screen.y + kLabelPadding + kLabelFontSize
+    };
   }
 
   #createLabel(

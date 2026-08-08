@@ -20,13 +20,22 @@ UVRegion.from(value: UVRegion | UVRegionData): UVRegion
 The serializable form — what crosses the network, sits in history entries, and appears in a `PixelBufferSnapshot`.
 
 ```ts
+type UVTriangle = {
+  shape: "triangle";
+  corner: "top-left" | "top-right" | "bottom-left" | "bottom-right";
+  rect: SelectionRect;
+};
+type UVGeometry = SelectionRect | UVTriangle;
+
 type UVRegionData =
   | { id: string; color: string; state?: "collapsed"; rect: SelectionRect }
   | { id: string; color: string; state: "uncollapsed";
-      faces: Record<UVFace, SelectionRect> };
+      faces: Record<UVFace, UVGeometry>; activeFaces?: UVFace[] };
 ```
 
 `state` is optional on the collapsed arm, so payloads predating multi-face support (`{ id, rect, color }`) still parse. `UVRegion.from()` accepts an existing instance unchanged, so a caller holding either shape needs no branch.
+
+Triangles are right triangles within `rect`; `corner` identifies their right-angle corner. `activeFaces` represents absent geometry (such as a ramp's open front); omitting it keeps every face active for compatibility.
 
 ## Properties
 
@@ -46,13 +55,21 @@ rectFor(face: UVFace): SelectionRect
 
 The rect `face` samples. A collapsed region returns its single rect for **every** face, so this never needs a state check.
 
+### `geometryFor(face)`
+
+```ts
+geometryFor(face: UVFace): UVGeometry
+```
+
+Returns the face's rectangle or triangle.
+
 ### `facesOf()`
 
 ```ts
-facesOf(): { face: UVFace | null; rect: SelectionRect }[]
+facesOf(): { face: UVFace | null; geometry: UVGeometry }[]
 ```
 
-Every distinct rect the region carries: one entry with `face: null` when collapsed, six in `UV_FACES` order when uncollapsed. This is what hit-testing and rendering iterate.
+Every active geometry the region carries: one entry with `face: null` when collapsed, otherwise active faces in `UV_FACES` order. This is what hit-testing and rendering iterate.
 
 ### `uncollapse()`
 
@@ -68,7 +85,7 @@ Gives every face its own rect, all equal to the current one — so uncollapsing 
 collapse(face: UVFace = "front"): UVRegion
 ```
 
-Keeps `face`'s rect and discards the other five. Lossy; `UVMap` records the full previous region so undo can restore them. Returns `this` if already collapsed.
+Keeps `face`'s rectangle and discards the other faces. When the chosen face is triangular, collapse prefers another active rectangle. Lossy; `UVMap` records the full previous region so undo can restore them. Returns `this` if already collapsed.
 
 ### `withRect(rect, face?)`
 

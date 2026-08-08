@@ -53,9 +53,24 @@ function uvPanel(): {
     selectedRegionId: string | null;
     selectedFace: string | null;
     showAll: boolean;
+    regions: {
+      facesOf(): {
+        face: string | null;
+        geometry: {
+          shape?: string;
+          corner?: string;
+          rect?: { x: number; y: number; };
+          x?: number;
+          y?: number;
+        };
+      }[];
+    }[];
     get(id: string): {
       state: string;
-      facesOf(): { face: string | null; rect: { x: number; y: number; }; }[];
+      facesOf(): {
+        face: string | null;
+        geometry: { x: number; y: number; } | { rect: { x: number; y: number; }; };
+      }[];
     } | undefined;
   };
 } {
@@ -84,7 +99,8 @@ async function uvSnapshot(
     const region = uv.selectedRegionId ? uv.get(uv.selectedRegionId) : undefined;
     const faces = {};
     for (const entry of region ? region.facesOf() : []) {
-      faces[entry.face ?? "*"] = { x: entry.rect.x, y: entry.rect.y };
+      const rect = "rect" in entry.geometry ? entry.geometry.rect : entry.geometry;
+      faces[entry.face ?? "*"] = { x: rect.x, y: rect.y };
     }
 
     return {
@@ -103,7 +119,29 @@ test.beforeEach(async({ page }) => {
   // Regions are invisible (and so un-hittable) until selected or shown.
   await page.getByRole("button", { name: "Show all" }).click();
   // Cascading placement resets with clear(), so this lands at (0,0,16,16).
-  await page.getByRole("button", { name: "Create", exact: true }).click();
+  await page.getByRole("button", { name: "Create cube", exact: true }).click();
+});
+
+test("the ramp preset creates triangular side faces", async({ page }) => {
+  await page.getByRole("button", { name: "Create ramp", exact: true }).click();
+
+  const faces = await page.evaluate(`(() => {
+    const regions = Array.from((${uvPanel.toString()})().uv.regions);
+    const region = regions[regions.length - 1];
+
+    return region.facesOf().map(({ face, geometry }) => ({
+      face,
+      shape: geometry.shape ?? "rect",
+      corner: geometry.corner ?? null
+    }));
+  })()`);
+  expect(faces).toEqual([
+    { face: "back", shape: "rect", corner: null },
+    { face: "left", shape: "triangle", corner: "bottom-right" },
+    { face: "right", shape: "triangle", corner: "bottom-right" },
+    { face: "top", shape: "rect", corner: null },
+    { face: "bottom", shape: "rect", corner: null }
+  ]);
 });
 
 test("a new region is collapsed and has no face", async({ page }) => {
