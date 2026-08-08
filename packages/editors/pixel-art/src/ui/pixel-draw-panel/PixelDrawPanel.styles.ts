@@ -8,6 +8,10 @@ export const panelStyles = css`
     height: 100%;
   }
 
+  :host(:not([data-ready])) {
+    visibility: hidden;
+  }
+
   .rail {
     position: relative;
     z-index: 3;

@@ -21,6 +21,8 @@ import { RegionPreviewPicker } from "./preview/RegionPreviewPicker.ts";
 // CONSTANTS
 const kStarterRegionId = "pixel-draw-demo:starter-region";
 const kStarterRegionSize = 16;
+const kRotationStorageKey = "pixel-draw-demo:rotation";
+const kThemeStorageKey = "pixel-draw-demo:theme";
 
 interface SceneAppearance {
   backgroundColor: THREE.ColorRepresentation;
@@ -38,28 +40,10 @@ const kSceneAppearances: Record<Exclude<ThemeMode, "auto">, SceneAppearance> = {
   }
 };
 
-const runtime = await initRuntime();
-loadRuntime(runtime, {
-  focusCanvas: false
-}).catch(console.error);
+await initRuntime();
 
-async function initRuntime(): Promise<Runtime> {
-  const canvas = document.querySelector<HTMLCanvasElement>(
-    "#canvas-container > canvas"
-  )!;
-
-  const runtime = await Runtime.create(canvas, {
-    includePerformanceStats: false
-  });
-
-  const { world } = runtime;
-
-  const scene = world.sceneManager.getSource();
-
-  scene.add(
-    new THREE.HemisphereLight(0xffffff, 0x76848c, 2.8)
-  );
-
+async function initRuntime(): Promise<void> {
+  const { rotationToggle, themeSelect } = restoreDemoPreferences();
   const drawPanel = document.querySelector<PixelDrawPanel>("pixel-draw-panel")!;
   const canvasManager = await drawPanel.initialize({
     texture: {
@@ -82,6 +66,36 @@ async function initRuntime(): Promise<Runtime> {
       enabled: true
     }
   });
+
+  const resizeHandle = new ResizeHandle(drawPanel, { direction: "left" });
+  resizeHandle.addEventListener("drag", () => {
+    drawPanel.onResize();
+  });
+  resizeHandle.addEventListener("dragEnd", () => {
+    drawPanel.onResize();
+  });
+
+  const canvas = document.querySelector<HTMLCanvasElement>(
+    "#canvas-container > canvas"
+  )!;
+  const canvasContainer = document.querySelector<HTMLDivElement>(
+    "#canvas-container"
+  )!;
+  const runtime = await Runtime.create(canvas, {
+    includePerformanceStats: false
+  });
+  const runtimeReady = loadRuntime(runtime, {
+    focusCanvas: false,
+    loadingContainer: canvasContainer
+  });
+
+  const { world } = runtime;
+
+  const scene = world.sceneManager.getSource();
+
+  scene.add(
+    new THREE.HemisphereLight(0xffffff, 0x76848c, 2.8)
+  );
 
   const canvasTexture = new THREE.CanvasTexture(canvasManager.textureCanvas());
   canvasTexture.magFilter = THREE.NearestFilter;
@@ -113,24 +127,19 @@ async function initRuntime(): Promise<Runtime> {
     }
   };
 
-  // Attach sync before the gallery so initial UV region events are captured.
-  const syncReady = initializeDemoSync(canvasManager);
-
   const previewFactory = new RegionPreviewFactory({ world, canvasTexture });
   previewGallery = new RegionPreviewGallery({
     previewFactory,
     canvasManager
   });
-  const rotationToggle = document.querySelector<HTMLInputElement>(
-    "#rotation-toggle"
-  )!;
   rotationToggle.addEventListener("change", () => {
     previewGallery.setRotating(rotationToggle.checked);
+    localStorage.setItem(kRotationStorageKey, String(rotationToggle.checked));
   });
   previewGallery.setRotating(rotationToggle.checked);
   const themeController = new ThemeController({
     drawPanel,
-    select: document.querySelector<HTMLSelectElement>("#theme-select")!,
+    select: themeSelect,
     onResolvedThemeChange: (theme) => {
       const appearance = kSceneAppearances[theme];
       scene.background = new THREE.Color(appearance.backgroundColor);
@@ -152,21 +161,67 @@ async function initRuntime(): Promise<Runtime> {
   }, {
     once: true
   });
+  themeSelect.addEventListener("change", () => {
+    localStorage.setItem(kThemeStorageKey, themeSelect.value);
+  });
 
+  await runtimeReady.catch(console.error);
+
+  // The gallery is listening before sync restores the initial UV regions.
+  const syncReady = initializeDemoSync(canvasManager);
   await syncReady;
   initializeStarterRegion(canvasManager);
 
   world.renderer.on("resize", () => drawPanel.onResize());
+}
 
-  const resizeHandle = new ResizeHandle(drawPanel, { direction: "left" });
-  resizeHandle.addEventListener("drag", () => {
-    drawPanel.onResize();
-  });
-  resizeHandle.addEventListener("dragEnd", () => {
-    drawPanel.onResize();
-  });
+function restoreDemoPreferences(): {
+  rotationToggle: HTMLInputElement;
+  themeSelect: HTMLSelectElement;
+} {
+  const rotationToggle = document.querySelector<HTMLInputElement>(
+    "#rotation-toggle"
+  )!;
+  const themeSelect = document.querySelector<HTMLSelectElement>(
+    "#theme-select"
+  )!;
+  const rotation = localStorage.getItem(kRotationStorageKey);
+  const theme = themeFromStorage(localStorage.getItem(kThemeStorageKey));
 
-  return runtime;
+  if (rotation === "true" || rotation === "false") {
+    rotationToggle.checked = rotation === "true";
+  }
+
+  if (theme !== null) {
+    themeSelect.value = theme;
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.dataset.resolvedTheme = resolveTheme(theme);
+  }
+
+  return { rotationToggle, themeSelect };
+}
+
+function themeFromStorage(
+  value: string | null
+): ThemeMode | null {
+  switch (value) {
+    case "light":
+    case "dark":
+    case "auto":
+      return value;
+    default:
+      return null;
+  }
+}
+
+function resolveTheme(
+  theme: ThemeMode
+): Exclude<ThemeMode, "auto"> {
+  if (theme !== "auto") {
+    return theme;
+  }
+
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 function initializeStarterRegion(

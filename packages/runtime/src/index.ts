@@ -21,6 +21,11 @@ export interface LoadRuntimeOptions {
    * @default true
    */
   focusCanvas?: boolean;
+  /**
+   * Element that contains the loading screen.
+   * @default document.body
+   */
+  loadingContainer?: HTMLElement;
 }
 
 export async function loadRuntime(
@@ -29,7 +34,8 @@ export async function loadRuntime(
 ) {
   const {
     loadingDelay = 850,
-    focusCanvas = true
+    focusCanvas = true,
+    loadingContainer = document.body
   } = options;
 
   await runtime.preloadAssets();
@@ -39,10 +45,10 @@ export async function loadRuntime(
   runtime.canvas.style.opacity = "0";
   runtime.canvas.style.transition = "opacity 0.5s ease-in";
 
-  let loadingElement = document.querySelector("jolly-loading");
+  let loadingElement = loadingContainer.querySelector(":scope > jolly-loading");
   if (loadingElement === null) {
     loadingElement = document.createElement("jolly-loading");
-    document.body.appendChild(loadingElement);
+    loadingContainer.appendChild(loadingElement);
   }
   const loadingComponent = loadingElement as Loading;
   loadingComponent.start();
