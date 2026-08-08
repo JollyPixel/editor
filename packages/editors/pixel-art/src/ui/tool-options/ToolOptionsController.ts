@@ -26,6 +26,7 @@ const kPreviewDotMaxPx = 22;
 export class ToolOptionsController implements ReactiveController {
   #host: ReactiveControllerHost;
   #canvas: PixelArtCanvas | null = null;
+  #canvasElement: HTMLCanvasElement | null = null;
 
   #mode: Mode = "paint";
   #brushSize = 1;
@@ -41,6 +42,8 @@ export class ToolOptionsController implements ReactiveController {
   }
 
   hostDisconnected(): void {
+    this.#canvasElement?.removeEventListener("wheel", this.#onCanvasWheel);
+    this.#canvasElement = null;
     this.#canvas = null;
   }
 
@@ -63,13 +66,27 @@ export class ToolOptionsController implements ReactiveController {
   attach(
     canvas: PixelArtCanvas
   ): void {
+    this.#canvasElement?.removeEventListener("wheel", this.#onCanvasWheel);
     this.#canvas = canvas;
+    this.#canvasElement = canvas.canvas();
+    this.#canvasElement.addEventListener("wheel", this.#onCanvasWheel);
     this.#mode = canvas.mode;
     this.#brushSize = canvas.brush.size;
     this.#fillGlobal = canvas.tools.fill.global;
     this.#selectShape = canvas.tools.select.shape;
     this.#pickColorArmed = canvas.tools.brush.pickArmed;
   }
+
+  readonly #onCanvasWheel = (
+    event: WheelEvent
+  ): void => {
+    if (!event.ctrlKey || this.#mode !== "paint" || !this.#canvas) {
+      return;
+    }
+
+    this.#brushSize = this.#canvas.brush.size;
+    this.#host.requestUpdate();
+  };
 
   setMode(
     mode: Mode

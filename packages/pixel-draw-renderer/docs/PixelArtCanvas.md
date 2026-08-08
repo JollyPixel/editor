@@ -155,7 +155,7 @@ set mode(mode: Mode)
 | `"select"` | Drag to select/move rectangle. `Ctrl+C/V` copy/paste, `Delete` erase, `R` rotate 90°, `H`/`V` flip. | — |
 | `"uv"` | Click visible region to select/drag. `Delete` removes it. Regions created via `uv.create(...)`. | — |
 
-Navigation works in any mode: wheel zooms, middle-drag or `Space`+left-drag pans.
+Navigation works in any mode: wheel zooms, middle-drag or `Space`+left-drag pans. In `"paint"` mode, `Ctrl`+wheel adjusts `brush.size` by one pixel per scroll direction instead of zooming.
 
 > [!IMPORTANT]
 > Leaving `"paint"` cancels an armed line. Leaving `"select"` clears the selection. Leaving `"uv"` cancels an in-progress drag but **does not** clear the UV selection.

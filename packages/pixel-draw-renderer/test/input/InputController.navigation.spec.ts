@@ -245,7 +245,7 @@ describe("InputController navigation", () => {
       ctrl.destroy();
     });
 
-    test("pinch (ctrl+wheel) drives zoom and suppresses the browser default", () => {
+    test("ctrl+wheel drives zoom when it is not otherwise handled", () => {
       const { actions, calls } = makeActions();
       const ctrl = new InputController({
         canvas,
@@ -258,6 +258,23 @@ describe("InputController navigation", () => {
 
       assert.strictEqual(calls.onZoom.length, 1);
       assert.strictEqual(calls.onZoom[0][0], -8);
+      assert.ok(event.defaultPrevented);
+      ctrl.destroy();
+    });
+
+    test("a handled ctrl+wheel suppresses zoom and the browser default", () => {
+      const { actions, calls } = makeActions();
+      const ctrl = new InputController({
+        canvas,
+        viewport,
+        actions,
+        onCtrlWheel: () => true
+      });
+
+      const event = wheel({ deltaY: -8, ctrlKey: true });
+      canvas.dispatchEvent(event);
+
+      assert.strictEqual(calls.onZoom.length, 0);
       assert.ok(event.defaultPrevented);
       ctrl.destroy();
     });

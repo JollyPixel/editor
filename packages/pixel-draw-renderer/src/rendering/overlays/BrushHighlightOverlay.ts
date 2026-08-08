@@ -14,6 +14,8 @@ export class BrushHighlightOverlay {
   #viewport: DefaultViewport;
   #brush: BrushHighlight;
   #group: SVGGElement;
+  #cursorX: number | null = null;
+  #cursorY: number | null = null;
 
   constructor(
     svg: SVGElement,
@@ -65,7 +67,14 @@ export class BrushHighlightOverlay {
     x: number | null,
     y: number | null
   ): void {
-    if (x === null || y === null) {
+    this.#cursorX = x;
+    this.#cursorY = y;
+    this.refresh();
+  }
+
+  /** Repaints the current cursor position using the latest brush size. */
+  refresh(): void {
+    if (this.#cursorX === null || this.#cursorY === null) {
       this.hide();
 
       return;
@@ -79,8 +88,8 @@ export class BrushHighlightOverlay {
     const offsetX = camera.x % zoom;
     const offsetY = camera.y % zoom;
 
-    const gridedX = x - (x - offsetX) % zoom;
-    const gridedY = y - (y - offsetY) % zoom;
+    const gridedX = this.#cursorX - (this.#cursorX - offsetX) % zoom;
+    const gridedY = this.#cursorY - (this.#cursorY - offsetY) % zoom;
 
     let translate = "translate";
     if (brushSize % 2 === 0) {

@@ -87,7 +87,7 @@ manager.texture = img;
 - `"select"`: select, move, copy, and delete a rectangular region
 - `"uv"`: select and drag UV regions; regions are created programmatically via `manager.uv.create(...)`, not by clicking
 
-Panning and zooming (mouse wheel, trackpad pinch/drag) work from any mode, regardless of the current `mode`.
+Panning and zooming (mouse wheel, trackpad pinch/drag) work from any mode, regardless of the current `mode`. In `"paint"` mode, hold `Ctrl` while scrolling to increase (scroll up) or decrease (scroll down) the brush size instead of zooming.
 
 > [!TIP]
 > Read [PixelArtCanvas.md](./docs/PixelArtCanvas.md#mode) for the full behavior, and the [Keybinds](#keybinds) section below for exact shortcuts.
