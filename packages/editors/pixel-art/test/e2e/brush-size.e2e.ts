@@ -1,16 +1,26 @@
 // Import Third-party Dependencies
-import { test, expect } from "@playwright/test";
+import {
+  test,
+  expect,
+  type Page
+} from "@playwright/test";
 
 // Import Internal Dependencies
-import { gotoDemo, textureToScreenPoint } from "./utils.ts";
+import {
+  gotoDemo,
+  textureToScreenPoint
+} from "./utils.ts";
+import type { PixelDrawPanel } from "../../src/index.ts";
 
-async function brushSize(page: import("@playwright/test").Page): Promise<number> {
+async function brushSize(
+  page: Page
+): Promise<number> {
   return page.evaluate(() => {
-    const panel = document.querySelector("pixel-draw-panel") as unknown as {
-      canvasManager: { brush: { size: number; }; };
-    };
+    const panel = document.querySelector<PixelDrawPanel>(
+      "pixel-draw-panel"
+    );
 
-    return panel.canvasManager.brush.size;
+    return panel!.canvasManager!.brush.size;
   });
 }
 
@@ -28,5 +38,7 @@ test("Ctrl+wheel adjusts the brush size in Paint mode", async({ page }) => {
   await page.keyboard.up("Control");
 
   await expect.poll(() => brushSize(page)).toBe(before + 1);
-  await expect(page.locator("pixel-draw-panel").getByText(`${before + 1}px`)).toBeVisible();
+  await expect(
+    page.locator("pixel-draw-panel").getByText(`${before + 1}px`)
+  ).toBeVisible();
 });

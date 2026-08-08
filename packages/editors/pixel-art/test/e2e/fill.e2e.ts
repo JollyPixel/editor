@@ -11,30 +11,23 @@ import {
   setMode,
   dragStroke,
   clickTexturePixel,
-  readPixel
+  readPixel,
+  setBrushColor
 } from "./utils.ts";
 
-// This file uses texture slice x:20-39, y:0-15 on the shared 80x80 canvas.
+// Uses texture slice x:20-39, y:0-15 on the shared 80x80 canvas.
 
 test.beforeEach(async({ page }) => {
   await gotoDemo(page);
 });
 
-function setBrushPrimary(
-  page: Page,
-  hex: string
-): Promise<void> {
-  return page.evaluate((color) => {
-    const panel = document.querySelector("pixel-draw-panel") as unknown as {
-      canvasManager: { brush: { primary: { set(hex: string, opacity?: number): void; }; }; };
-    };
-    panel.canvasManager.brush.primary.set(color, 1);
-  }, hex);
-}
-
 test("contiguous fill stays inside a painted boundary", async({ page }) => {
+  // Four dragStroke calls plus WebGL trace capture run close to the
+  // default budget; give it the same headroom as the other ring-boundary
+  // test below instead of risking a spurious timeout.
+  test.slow();
   await setMode(page, "paint");
-  // Build a ring wall first. Flood fill must stay boxed in.
+  // Build a ring boundary for flood-fill containment.
   await dragStroke(page, [{ x: 21, y: 1 }, { x: 28, y: 1 }]);
   await dragStroke(page, [{ x: 28, y: 1 }, { x: 28, y: 8 }]);
   await dragStroke(page, [{ x: 28, y: 8 }, { x: 21, y: 8 }]);
@@ -53,22 +46,18 @@ test("contiguous fill stays inside a painted boundary", async({ page }) => {
 });
 
 test("global fill recolors every matching pixel canvas-wide", async({ page }) => {
-  // Seed with a weird color so global fill only hits pixels we painted.
+  // Use a unique color so global fill only matches painted pixels.
   await setMode(page, "paint");
-  await setBrushPrimary(page, "#123456");
+  await setBrushColor(page, "primary", "#123456");
   await clickTexturePixel(page, 24, 10);
   await clickTexturePixel(page, 26, 12);
 
   await setMode(page, "fill");
-  // Flip mode: Neighbor -> Global, via the rail's hover flyout. The mouse is
-  // already resting on the Fill button from setMode's click above, and the
-  // mode click now closes its own flyout on click (so it isn't left open
-  // after selecting a mode) — move away first so hover below is a genuine
-  // mouseenter, not a same-position no-op.
+  // Move away first so hover opens the Global flyout cleanly.
   await page.mouse.move(0, 0);
   await page.getByRole("button", { name: "Fill", exact: true }).hover();
   await page.getByRole("button", { name: "Global", exact: true }).click();
-  await setBrushPrimary(page, "#654321");
+  await setBrushColor(page, "primary", "#654321");
   await clickTexturePixel(page, 24, 10);
 
   await expect.poll(
@@ -83,19 +72,37 @@ test("global fill recolors every matching pixel canvas-wide", async({ page }) =>
   ).toMatchObject({ a: 0 });
 });
 
+test("right-click fill uses the secondary color", async({ page }) => {
+  // Same cost profile as the ring-boundary test above.
+  test.slow();
+  await setMode(page, "paint");
+  // Build a small ring boundary for flood-fill containment.
+  await dragStroke(page, [{ x: 31, y: 1 }, { x: 34, y: 1 }]);
+  await dragStroke(page, [{ x: 34, y: 1 }, { x: 34, y: 4 }]);
+  await dragStroke(page, [{ x: 34, y: 4 }, { x: 31, y: 4 }]);
+  await dragStroke(page, [{ x: 31, y: 4 }, { x: 31, y: 1 }]);
+
+  await setMode(page, "fill");
+  await setBrushColor(page, "secondary", "#ff8800");
+  await clickTexturePixel(page, 32, 2, "right");
+
+  await expect.poll(
+    () => readPixel(page, 32, 2)
+  ).toEqual({ r: 0xff, g: 0x88, b: 0, a: 255 });
+  // Outside ring: should stay transparent.
+  await expect.poll(
+    () => readPixel(page, 37, 2)
+  ).toMatchObject({ a: 0 });
+});
+
 /**
- * The flyout's closed state is a `max-width: 0; overflow: hidden` collapse,
- * not a `display: none` — so the flyout button keeps its own layout box and
- * Playwright's toBeVisible()/toBeHidden() can't tell the two states apart.
- * Read the container's own collapsed width instead.
+ * Read flyout width; CSS collapse is not `display: none`.
  */
 function flyoutWidth(page: Page): Promise<number> {
   return page.evaluate(() => {
     const panel = document.querySelector("pixel-draw-panel");
     const modeRail = panel?.shadowRoot?.querySelector("mode-rail");
-    // Move/UV render no flyout at all, and Paint's is always present, so a
-    // bare ".rail-flyout" query can match the wrong item — target the one
-    // holding the "Global" button specifically.
+    // Target the flyout that contains the "Global" button.
     const flyout = modeRail?.shadowRoot?.querySelector('.rail-flyout:has(button[title="Global"])');
 
     return flyout ? flyout.getBoundingClientRect().width : -1;
@@ -105,14 +112,12 @@ function flyoutWidth(page: Page): Promise<number> {
 test("clicking a mode button does not leave its flyout open once the mouse moves away", async({ page }) => {
   const fillButton = page.getByRole("button", { name: "Fill", exact: true });
 
-  // Hover opens the flyout, then click the mode button itself (not the
-  // flyout button) — this both sets mode and focuses the button.
+  // Hover opens the flyout, then click the mode button itself.
   await fillButton.hover();
   await expect.poll(() => flyoutWidth(page)).toBeGreaterThan(0);
   await fillButton.click();
 
-  // Move the mouse away: a lingering :focus-within on the clicked button
-  // must not keep the flyout open on its own.
+  // Move away; :focus-within must not keep the flyout open.
   await page.mouse.move(0, 0);
   await expect.poll(() => flyoutWidth(page)).toBe(0);
 });

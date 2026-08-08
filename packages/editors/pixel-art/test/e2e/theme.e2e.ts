@@ -1,17 +1,15 @@
 // Import Third-party Dependencies
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 // Import Internal Dependencies
 import { gotoDemo } from "./utils.ts";
 
-// Custom-property values as authored in src/ui/theme.ts. Checked as raw
-// strings: getComputedStyle returns a CSS custom property verbatim, not
-// resolved to rgb().
+// Custom-property values are checked as raw strings.
 const kLightBgSurface = "#eef3f8";
 const kDarkBgSurface = "#131b24";
 
 async function readBgSurface(
-  page: import("@playwright/test").Page
+  page: Page
 ): Promise<string> {
   return page.evaluate(() => {
     const panel = document.querySelector("pixel-draw-panel")!;

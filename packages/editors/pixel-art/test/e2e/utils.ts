@@ -1,7 +1,13 @@
 // Import Third-party Dependencies
-import type { Page } from "@playwright/test";
-
+import {
+  test,
+  type Page
+} from "@playwright/test";
 import type { Mode } from "@jolly-pixel/pixel-draw.renderer";
+
+// Import Internal Dependencies
+import { testRoomId } from "./constants.ts";
+import type { PixelDrawPanel } from "../../src/index.ts";
 
 export interface PixelRGBA {
   r: number;
@@ -11,13 +17,13 @@ export interface PixelRGBA {
 }
 
 /**
- * Open demo, then wait for real interactivity.
- * The loading overlay can still block pointer events after sync is ready.
+ * Open the demo and wait for interactivity.
  */
 export async function gotoDemo(
-  page: Page
+  page: Page,
+  room: string = testRoomId(test.info().parallelIndex)
 ): Promise<void> {
-  await page.goto("/?empty=true");
+  await page.goto(`/?empty=true&room=${encodeURIComponent(room)}`);
   await page.locator("jolly-loading")
     .waitFor({ state: "attached", timeout: 2_000 })
     .catch(() => undefined);
@@ -37,7 +43,7 @@ const kModeLabel: Record<Mode, string> = {
 };
 
 /**
- * Switch mode via toolbar UI, not internal APIs.
+ * Switch mode via the toolbar UI.
  */
 export async function setMode(
   page: Page,
@@ -50,8 +56,7 @@ export async function setMode(
 }
 
 /**
- * Convert texture pixel coords to screen coords for mouse actions.
- * Uses live camera/zoom and targets pixel center.
+ * Convert texture pixels to screen coordinates.
  */
 export async function textureToScreenPoint(
   page: Page,
@@ -59,16 +64,8 @@ export async function textureToScreenPoint(
   ty: number
 ): Promise<{ x: number; y: number; }> {
   return page.evaluate(({ tx, ty }) => {
-    const panel = document.querySelector("pixel-draw-panel") as unknown as {
-      canvasManager: {
-        canvas(): HTMLCanvasElement;
-        viewport: {
-          camera: { x: number; y: number; };
-          zoom: { value: number; };
-        };
-      };
-    };
-    const canvasManager = panel.canvasManager;
+    const panel = document.querySelector<PixelDrawPanel>("pixel-draw-panel");
+    const canvasManager = panel!.canvasManager!;
     const bounds = canvasManager.canvas().getBoundingClientRect();
     const { camera, zoom } = canvasManager.viewport;
 
@@ -81,7 +78,6 @@ export async function textureToScreenPoint(
 
 /**
  * Read one pixel from the source texture canvas.
- * Ignores viewport pan/zoom.
  */
 export async function readPixel(
   page: Page,
@@ -89,10 +85,8 @@ export async function readPixel(
   y: number
 ): Promise<PixelRGBA> {
   return page.evaluate(({ x, y }) => {
-    const panel = document.querySelector("pixel-draw-panel") as unknown as {
-      canvasManager: { textureCanvas(): HTMLCanvasElement; };
-    };
-    const canvas = panel.canvasManager.textureCanvas();
+    const panel = document.querySelector<PixelDrawPanel>("pixel-draw-panel");
+    const canvas = panel!.canvasManager!.textureCanvas();
     const ctx = canvas.getContext("2d")!;
     const [r, g, b, a] = ctx.getImageData(x, y, 1, 1).data;
 
@@ -100,20 +94,22 @@ export async function readPixel(
   }, { x, y });
 }
 
+type MouseButton = "left" | "right" | "middle";
+
 /**
  * Draw a stroke across texture points.
- * Extra mouse steps prevent gaps between far-apart points.
  */
 export async function dragStroke(
   page: Page,
-  points: { x: number; y: number; }[]
+  points: { x: number; y: number; }[],
+  button: MouseButton = "left"
 ): Promise<void> {
   const screenPoints = await Promise.all(
     points.map((p) => textureToScreenPoint(page, p.x, p.y))
   );
 
   await page.mouse.move(screenPoints[0].x, screenPoints[0].y);
-  await page.mouse.down();
+  await page.mouse.down({ button });
   for (let i = 1; i < points.length; i++) {
     const distance = Math.max(
       Math.abs(points[i].x - points[i - 1].x),
@@ -123,20 +119,36 @@ export async function dragStroke(
       steps: Math.max(1, distance * 4)
     });
   }
-  await page.mouse.up();
+  await page.mouse.up({ button });
 }
 
 /**
- * Click one texture pixel, no drag.
- * Hover first so keyboard shortcuts still work right after.
+ * Click one texture pixel without dragging.
  */
 export async function clickTexturePixel(
   page: Page,
   x: number,
-  y: number
+  y: number,
+  button: MouseButton = "left"
 ): Promise<void> {
   const point = await textureToScreenPoint(page, x, y);
   await page.mouse.move(point.x, point.y);
-  await page.mouse.down();
-  await page.mouse.up();
+  await page.mouse.down({ button });
+  await page.mouse.up({ button });
+}
+
+/**
+ * Set the brush's primary or secondary color directly, bypassing the
+ * swatch UI (for tests that only need a known color as a starting point).
+ */
+export async function setBrushColor(
+  page: Page,
+  slot: "primary" | "secondary",
+  hex: string,
+  opacity = 1
+): Promise<void> {
+  await page.evaluate(({ slot: colorSlot, hex: color, opacity: alpha }) => {
+    const panel = document.querySelector<PixelDrawPanel>("pixel-draw-panel");
+    panel!.canvasManager!.brush[colorSlot].set(color, alpha);
+  }, { slot, hex, opacity });
 }
