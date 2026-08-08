@@ -1,8 +1,19 @@
 // Import Internal Dependencies
 import { clamp } from "../../utils/math.ts";
+import { colorSwatchPortalStyles } from "./ColorSwatchPortal.styles.ts";
 
 // Constants
-const kMargin = 4;
+const kMargin = 24;
+const kStyleElementId = "color-swatch-portal-theme";
+const kThemeProperties = [
+  "--color-bg-overlay",
+  "--color-bg-surface",
+  "--color-border",
+  "--color-divider",
+  "--color-text",
+  "--color-text-on-accent",
+  "--color-accent"
+];
 
 export interface ColorSwatchPortalOptions {
   anchor: HTMLElement;
@@ -28,7 +39,10 @@ export class ColorSwatchPortal {
     this.#anchor = options.anchor;
     this.#onDismiss = options.onDismiss;
 
+    ColorSwatchPortal.#ensureStylesInjected();
+
     const element = document.createElement("div");
+    element.className = "color-swatch-portal";
     element.style.cssText = "position:fixed;z-index:9999;display:none;";
     document.body.appendChild(element);
     this.element = element;
@@ -63,6 +77,7 @@ export class ColorSwatchPortal {
 
   open(): void {
     this.#isOpen = true;
+    this.#syncTheme();
     this.element.style.display = "";
     this.#reposition();
   }
@@ -84,27 +99,45 @@ export class ColorSwatchPortal {
     this.element.remove();
   }
 
-  /**
-    * Flip above if needed and clamp to the viewport.
-    * getBoundingClientRect() reads the size after unhide.
-   */
   #reposition(): void {
     const anchorRect = this.#anchor.getBoundingClientRect();
     const portalRect = this.element.getBoundingClientRect();
 
-    const fitsBelow = window.innerHeight - anchorRect.bottom >= portalRect.height + kMargin;
-    const top = fitsBelow
-      ? anchorRect.bottom + kMargin
-      : Math.max(kMargin, anchorRect.top - portalRect.height - kMargin);
+    const fitsRight = window.innerWidth - anchorRect.right >= portalRect.width + kMargin;
+    const left = fitsRight
+      ? anchorRect.right + kMargin
+      : Math.max(kMargin, anchorRect.left - portalRect.width - kMargin);
 
-    const maxLeft = window.innerWidth - portalRect.width - kMargin;
-    const left = clamp(
-      anchorRect.left,
+    const maxTop = window.innerHeight - portalRect.height - kMargin;
+    const top = clamp(
+      anchorRect.top,
       kMargin,
-      Math.max(kMargin, maxLeft)
+      Math.max(kMargin, maxTop)
     );
 
     this.element.style.top = `${top}px`;
     this.element.style.left = `${left}px`;
+  }
+
+  #syncTheme(): void {
+    const anchorStyle = getComputedStyle(this.#anchor);
+
+    for (const property of kThemeProperties) {
+      this.element.style.setProperty(
+        property,
+        anchorStyle.getPropertyValue(property)
+      );
+    }
+  }
+
+  static #ensureStylesInjected(): void {
+    if (document.getElementById(kStyleElementId)) {
+      return;
+    }
+
+    const style = document.createElement("style");
+    style.id = kStyleElementId;
+    style.textContent = colorSwatchPortalStyles;
+    document.head.appendChild(style);
   }
 }

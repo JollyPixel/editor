@@ -8,14 +8,21 @@ export type IconName =
   | "move"
   | "paint"
   | "fill"
+  | "fillGlobal"
   | "select"
+  | "wand"
   | "uv"
   | "undo"
   | "redo"
   | "swap"
   | "eyedropper"
   | "import"
-  | "export";
+  | "export"
+  | "add"
+  | "trash"
+  | "collapse"
+  | "expand"
+  | "eye";
 
 // CONSTANTS
 const kIcons: Record<IconName, SVGTemplateResult> = {
@@ -92,6 +99,14 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
     />
     <circle cx="18.5" cy="19.5" r="1.9" fill="currentColor" />
   `,
+  // Bucket's neighbor fill, generalized: every matching cell, not just the
+  // connected region.
+  fillGlobal: svg`
+    <rect x="4" y="4" width="7" height="7" rx="1.3" fill="currentColor" />
+    <rect x="13" y="4" width="7" height="7" rx="1.3" fill="currentColor" />
+    <rect x="4" y="13" width="7" height="7" rx="1.3" fill="currentColor" />
+    <rect x="13" y="13" width="7" height="7" rx="1.3" fill="currentColor" />
+  `,
   // Marquee selection.
   select: svg`
     <rect
@@ -109,6 +124,21 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
     <circle cx="19.5" cy="4.5" r="1.7" fill="currentColor" />
     <circle cx="4.5" cy="19.5" r="1.7" fill="currentColor" />
     <circle cx="19.5" cy="19.5" r="1.7" fill="currentColor" />
+  `,
+  // Magic wand: shape select follows same-color pixels, not a rectangle.
+  wand: svg`
+    <path
+      d="M5 19 15.5 8.5"
+      stroke="currentColor"
+      stroke-width="2.4"
+      stroke-linecap="round"
+    />
+    <path
+      d="M18 4l.9 2.1L21 7l-2.1.9L18 10l-.9-2.1L15 7l2.1-.9L18 4Z"
+      fill="currentColor"
+    />
+    <circle cx="12.5" cy="5" r="1" fill="currentColor" />
+    <circle cx="20" cy="12.5" r="1" fill="currentColor" />
   `,
   // UV grid.
   uv: svg`
@@ -289,6 +319,137 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
       stroke-linecap="round"
       stroke-linejoin="round"
     />
+  `,
+  add: svg`
+    <path
+      d="M12 5v14"
+      stroke="currentColor"
+      stroke-width="2.4"
+      stroke-linecap="round"
+    />
+    <path
+      d="M5 12h14"
+      stroke="currentColor"
+      stroke-width="2.4"
+      stroke-linecap="round"
+    />
+  `,
+  // Trash can.
+  trash: svg`
+    <path
+      d="M4 7h16"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linecap="round"
+    />
+    <path
+      d="M9 7V4.8c0-.44.36-.8.8-.8h4.4c.44 0 .8.36.8.8V7"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M6.5 7 7.3 19.2a2 2 0 0 0 2 1.8h5.4a2 2 0 0 0 2-1.8L17.5 7"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linejoin="round"
+      stroke-linecap="round"
+    />
+    <path
+      d="M10 11v6"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+    />
+    <path
+      d="M14 11v6"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+    />
+  `,
+  // Corners pointing inward: merge into one.
+  collapse: svg`
+    <path
+      d="M9 4v3.5A1.5 1.5 0 0 1 7.5 9H4"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M15 4v3.5A1.5 1.5 0 0 0 16.5 9H20"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M9 20v-3.5A1.5 1.5 0 0 0 7.5 15H4"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M15 20v-3.5A1.5 1.5 0 0 1 16.5 15H20"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  `,
+  // Corners pointing outward: split into faces.
+  expand: svg`
+    <path
+      d="M4 9V5.5A1.5 1.5 0 0 1 5.5 4H9"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M20 9V5.5A1.5 1.5 0 0 0 18.5 4H15"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M4 15v3.5A1.5 1.5 0 0 0 5.5 20H9"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M20 15v3.5a1.5 1.5 0 0 1-1.5 1.5H15"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  `,
+  eye: svg`
+    <path
+      d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linejoin="round"
+      stroke-linecap="round"
+    />
+    <circle cx="12" cy="12" r="2.6" fill="none" stroke="currentColor" stroke-width="2.2" />
   `
 };
 

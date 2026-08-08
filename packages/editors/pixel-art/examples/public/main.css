@@ -1,3 +1,49 @@
+/*
+ * Demo-only chrome (resize handle, theme select, page backdrop) is outside
+ * pixel-draw-panel's shadow DOM, so it can't see its CSS custom properties.
+ * Mirrors the same palette/resolution pattern as src/ui/theme.ts instead:
+ * bare :root is light, prefers-color-scheme overrides to dark, and
+ * :root[data-theme] forces one when the demo's #theme-select picks a value
+ * other than "auto" (see scripts/main.ts's wireThemeSelect).
+ */
+:root {
+  --demo-page-bg: #d7e3ee;
+  --demo-control-bg: #ffffff;
+  --demo-border: #6f8caa;
+  --demo-text: #16232f;
+  --demo-accent: #2f6fd8;
+  --demo-dot: #6f8caa;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --demo-page-bg: #0d151d;
+    --demo-control-bg: #1a2228;
+    --demo-border: #4a5c68;
+    --demo-text: #eee;
+    --demo-accent: #3a6fc2;
+    --demo-dot: #6d8794;
+  }
+}
+
+:root[data-theme="light"] {
+  --demo-page-bg: #d7e3ee;
+  --demo-control-bg: #ffffff;
+  --demo-border: #6f8caa;
+  --demo-text: #16232f;
+  --demo-accent: #2f6fd8;
+  --demo-dot: #6f8caa;
+}
+
+:root[data-theme="dark"] {
+  --demo-page-bg: #0d151d;
+  --demo-control-bg: #1a2228;
+  --demo-border: #4a5c68;
+  --demo-text: #eee;
+  --demo-accent: #3a6fc2;
+  --demo-dot: #6d8794;
+}
+
 html, body {
   height: 100%;
   margin: 0;
@@ -6,7 +52,7 @@ html, body {
 
 body {
   display: flex;
-  background: #333;
+  background: var(--demo-page-bg);
 }
 
 #canvas-container {
@@ -29,14 +75,28 @@ body {
   max-width: 700px;
   height: 100%;
   position: relative;
-  background-color: #242424;
+  background-color: var(--demo-control-bg);
+}
+
+#theme-select {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  padding: 4px 8px;
+  border: 1px solid var(--demo-border);
+  border-radius: 4px;
+  background: var(--demo-control-bg);
+  color: var(--demo-text);
+  font-size: 12px;
+  cursor: pointer;
 }
 
 .resize-handle.left {
   position: relative;
   width: 8px;
   flex-shrink: 0;
-  background: #1a2228;
+  background: var(--demo-control-bg);
   cursor: col-resize;
   transition: background 0.15s;
 }
@@ -49,7 +109,7 @@ body {
   width: 3px;
   height: 22px;
   transform: translate(-50%, -50%);
-  background-image: radial-gradient(circle, #6d8794 1.1px, transparent 1.3px);
+  background-image: radial-gradient(circle, var(--demo-dot) 1.1px, transparent 1.3px);
   background-size: 100% 7px;
   background-repeat: repeat-y;
   pointer-events: none;
@@ -57,7 +117,7 @@ body {
 
 .resize-handle.left:hover,
 html.handle-dragging.vertical .resize-handle.left {
-  background: #4488ff;
+  background: var(--demo-accent);
 }
 
 .resize-handle.left:hover::after,

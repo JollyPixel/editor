@@ -101,7 +101,7 @@ test.beforeEach(async({ page }) => {
   await resetRegions(page);
   await setMode(page, "uv");
   // Regions are invisible (and so un-hittable) until selected or shown.
-  await page.getByText("Show all").click();
+  await page.getByRole("button", { name: "Show all" }).click();
   // Cascading placement resets with clear(), so this lands at (0,0,16,16).
   await page.getByRole("button", { name: "Create", exact: true }).click();
 });
