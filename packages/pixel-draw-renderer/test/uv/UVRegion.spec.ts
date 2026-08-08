@@ -32,7 +32,19 @@ describe("UVRegion", () => {
       const region = new UVRegion({ id: "r1", color: "#f00", rect: kRect });
 
       assert.strictEqual(region.state, "collapsed");
+      assert.strictEqual(region.name, undefined);
       assert.deepStrictEqual(region.rectFor("front"), kRect);
+    });
+
+    test("keeps an optional name", () => {
+      const region = new UVRegion({
+        id: "r1",
+        name: "Grass block",
+        color: "#f00",
+        rect: kRect
+      });
+
+      assert.strictEqual(region.name, "Grass block");
     });
 
     test("parses an explicit uncollapsed payload", () => {
@@ -320,6 +332,22 @@ describe("UVRegion", () => {
 
       assert.deepStrictEqual(region.rectFor("left"), kRect);
     });
+
+    test("preserves the name through geometry and state changes", () => {
+      const region = new UVRegion({
+        id: "r1",
+        name: "Grass block",
+        color: "#f00",
+        rect: kRect
+      });
+
+      const changed = region
+        .uncollapse()
+        .withRect(nextRect, "front")
+        .collapse();
+
+      assert.strictEqual(changed.name, "Grass block");
+    });
   });
 
   describe("toJSON", () => {
@@ -340,6 +368,17 @@ describe("UVRegion", () => {
         Object.keys(data.state === "uncollapsed" ? data.faces : {}).sort(),
         [...UV_FACES].sort()
       );
+    });
+
+    test("includes the optional name", () => {
+      const data = new UVRegion({
+        id: "r1",
+        name: "Grass block",
+        color: "#f00",
+        rect: kRect
+      }).toJSON();
+
+      assert.strictEqual(data.name, "Grass block");
     });
 
     test("round-trips through JSON", () => {

@@ -31,6 +31,7 @@ export class BrushHighlightOverlay {
     svg: SVGElement
   ): SVGGElement {
     const highlightGroupElement = document.createElementNS(SVG_NS, "g");
+    highlightGroupElement.setAttribute("data-overlay", "brush-highlight");
 
     const defaultStyle = {
       pointerEvents: "none",

@@ -322,7 +322,7 @@ describe("PixelArtCanvas — fill mode", () => {
       });
       const canvas = children[0];
       const svg = children[1] as unknown as SVGElement;
-      const group = svg.querySelector("g");
+      const group = svg.querySelector('g[data-overlay="brush-highlight"]');
       assert.ok(group, "highlight group should exist");
 
       canvas.dispatchEvent(

@@ -21,8 +21,8 @@ export interface OverlayLayerOptions {
 }
 
 /**
- * Owns the SVG element and the four camera-aligned overlays drawn over the
- * canvas (brush highlight, line preview, selection, UV).
+ * Owns the SVG element and the camera-aligned overlays drawn over the canvas.
+ * UV is created first so tool overlays paint above its region borders.
  */
 export class OverlayLayer {
   #parentHtmlElement: HTMLDivElement;
@@ -40,6 +40,11 @@ export class OverlayLayer {
     this.#parentHtmlElement = options.parent;
     this.#svg = this.#init();
 
+    this.uvOverlay = new UVOverlay(
+      this.#svg,
+      options.viewport,
+      options.uvMap
+    );
     this.brushHighlight = new BrushHighlightOverlay(
       this.#svg,
       options.viewport,
@@ -54,11 +59,6 @@ export class OverlayLayer {
       this.#svg,
       options.viewport,
       options.brush
-    );
-    this.uvOverlay = new UVOverlay(
-      this.#svg,
-      options.viewport,
-      options.uvMap
     );
     this.peerCursors = new PeerCursorOverlay(
       this.#svg,

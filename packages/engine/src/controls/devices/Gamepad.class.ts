@@ -1,4 +1,3 @@
-/* eslint-disable max-params */
 // Import Third-party Dependencies
 import { EventEmitter } from "@posva/event-emitter";
 

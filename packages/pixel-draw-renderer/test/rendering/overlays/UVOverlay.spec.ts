@@ -31,7 +31,7 @@ function casings(
 function groups(
   svg: SVGElement
 ): SVGGElement[] {
-  return [...svg.querySelectorAll<SVGGElement>("g")];
+  return [...svg.querySelectorAll<SVGGElement>(":scope > g[data-overlay=\"uv\"] > g")];
 }
 
 describe("UVOverlay — visibility follows UVMap state", () => {
@@ -413,6 +413,12 @@ describe("UVOverlay — face labels", () => {
     return [...svg.querySelectorAll("text")].map((el) => el.textContent);
   }
 
+  function labelLines(
+    svg: SVGElement
+  ): string[] {
+    return [...svg.querySelectorAll("text tspan")].map((el) => el.textContent ?? "");
+  }
+
   test("names only the selected face while the whole stack coincides", () => {
     const { svg, map } = setup();
     const region = map.create({ width: kLabelSize, height: kLabelSize, id: "r1" });
@@ -478,7 +484,7 @@ describe("UVOverlay — face labels", () => {
 
     assert.deepStrictEqual(
       labels(svg).sort(),
-      ["front", "top"],
+      ["(r1)top", "(r2)front"],
       "r2's pile is named even though the selection lives in r1"
     );
   });
@@ -513,6 +519,82 @@ describe("UVOverlay — face labels", () => {
     const region = map.create({ width: kLabelSize, height: kLabelSize });
     map.select(region.id);
 
+    assert.deepStrictEqual(labels(svg), []);
+  });
+
+  test("shows a collapsed region name when region labels are enabled", () => {
+    const { svg, map } = setup();
+    const region = map.create({
+      width: kLabelSize,
+      height: kLabelSize,
+      id: "r1",
+      name: "Grass block"
+    });
+    map.select(region.id);
+
+    map.showRegionLabels = true;
+
+    assert.deepStrictEqual(labels(svg), ["(Grass block)"]);
+  });
+
+  test("falls back to the region id when the name is blank", () => {
+    const { svg, map } = setup();
+    const region = map.create({
+      width: kLabelSize,
+      height: kLabelSize,
+      id: "region-1",
+      name: "   "
+    });
+    map.select(region.id);
+
+    map.showRegionLabels = true;
+
+    assert.deepStrictEqual(labels(svg), ["(region-1)"]);
+  });
+
+  test("puts the region label above the face for an uncollapsed region", () => {
+    const { svg, map } = setup();
+    const region = map.create({
+      width: kLabelSize,
+      height: kLabelSize,
+      id: "r1",
+      name: "Grass block"
+    });
+    map.uncollapse(region.id);
+    map.select(region.id, "front");
+
+    map.showRegionLabels = true;
+
+    assert.deepStrictEqual(labelLines(svg), ["(Grass block)", "front"]);
+  });
+
+  test("truncates only the displayed region label to twenty characters", () => {
+    const { svg, map } = setup();
+    const region = map.create({
+      width: kLabelSize,
+      height: kLabelSize,
+      id: "r1",
+      name: "abcdefghijklmnopqrstuv"
+    });
+    map.select(region.id);
+
+    map.showRegionLabels = true;
+
+    assert.deepStrictEqual(labels(svg), ["(abcdefghijklmnopqrs…)"]);
+    assert.strictEqual(region.name, "abcdefghijklmnopqrstuv");
+  });
+
+  test("showAll forces labels without changing the stored preference", () => {
+    const { svg, map } = setup();
+    map.create({ width: kLabelSize, height: kLabelSize, id: "r1" });
+    map.create({ width: kLabelSize, height: kLabelSize, id: "r2" });
+
+    map.showAll = true;
+
+    assert.deepStrictEqual(labels(svg).sort(), ["(r1)", "(r2)"]);
+    assert.strictEqual(map.showRegionLabels, false);
+
+    map.showAll = false;
     assert.deepStrictEqual(labels(svg), []);
   });
 

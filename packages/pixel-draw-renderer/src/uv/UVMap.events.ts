@@ -30,6 +30,7 @@ export type UVMapEvent = {
     selectedFace: UVFace | null;
   }) => void;
   "visibility-changed": (event: { showAll: boolean; }) => void;
+  "label-visibility-changed": (event: { showRegionLabels: boolean; }) => void;
 };
 
 export type UVMapEventType = keyof UVMapEvent;

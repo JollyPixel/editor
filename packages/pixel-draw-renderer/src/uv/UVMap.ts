@@ -13,7 +13,8 @@ import {
   UV_FACES,
   UVRegion,
   type UVFace,
-  type UVRegionData
+  type UVRegionData,
+  type UVRegionState
 } from "./UVRegion.ts";
 import type { UVMapEvent } from "./UVMap.events.ts";
 
@@ -30,8 +31,13 @@ export interface UVMapOptions {
 export interface UVRegionCreateOptions {
   width: number;
   height: number;
+  name?: string;
   activeFaces?: readonly UVFace[];
   faceGeometries?: Partial<Record<UVFace, UVFaceGeometryTemplate>>;
+  /**
+   * @default "uncollapsed" for regions with topology, otherwise "collapsed"
+   */
+  state?: UVRegionState;
   /**
    * @default a generated id
    */
@@ -61,6 +67,7 @@ export class UVMap extends Emitter<
   #selectedRegionId: string | null = null;
   #selectedFace: UVFace | null = null;
   #showAll = false;
+  #showRegionLabels = false;
   #cascadeIndex = 0;
   #palette = new ColorPalette();
 
@@ -105,6 +112,21 @@ export class UVMap extends Emitter<
     this.emit("visibility-changed", { showAll: value });
   }
 
+  get showRegionLabels(): boolean {
+    return this.#showRegionLabels;
+  }
+
+  set showRegionLabels(
+    value: boolean
+  ) {
+    if (this.#showRegionLabels === value) {
+      return;
+    }
+
+    this.#showRegionLabels = value;
+    this.emit("label-visibility-changed", { showRegionLabels: value });
+  }
+
   get(
     id: string
   ): UVRegion | undefined {
@@ -146,23 +168,40 @@ export class UVMap extends Emitter<
     };
     const identity = {
       id: options.id ?? crypto.randomUUID(),
+      name: options.name,
       color: options.color ?? this.#palette.next()
     };
-    const region = options.activeFaces || options.faceGeometries ?
-      new UVRegion({
+    const hasTopology = options.activeFaces !== undefined || options.faceGeometries !== undefined;
+    const state = options.state ?? (hasTopology ? "uncollapsed" : "collapsed");
+    const faces = {
+      front: this.#geometryFrom(options.faceGeometries?.front, rect),
+      back: this.#geometryFrom(options.faceGeometries?.back, rect),
+      left: this.#geometryFrom(options.faceGeometries?.left, rect),
+      right: this.#geometryFrom(options.faceGeometries?.right, rect),
+      top: this.#geometryFrom(options.faceGeometries?.top, rect),
+      bottom: this.#geometryFrom(options.faceGeometries?.bottom, rect)
+    };
+    let region: UVRegion;
+    if (state === "uncollapsed") {
+      region = new UVRegion({
         ...identity,
-        state: "uncollapsed",
+        state,
         activeFaces: [...(options.activeFaces ?? UV_FACES)],
-        faces: {
-          front: this.#geometryFrom(options.faceGeometries?.front, rect),
-          back: this.#geometryFrom(options.faceGeometries?.back, rect),
-          left: this.#geometryFrom(options.faceGeometries?.left, rect),
-          right: this.#geometryFrom(options.faceGeometries?.right, rect),
-          top: this.#geometryFrom(options.faceGeometries?.top, rect),
-          bottom: this.#geometryFrom(options.faceGeometries?.bottom, rect)
-        }
-      }) :
-      new UVRegion({ ...identity, state: "collapsed", rect });
+        faces
+      });
+    }
+    else if (hasTopology) {
+      region = new UVRegion({
+        ...identity,
+        state,
+        rect,
+        activeFaces: [...(options.activeFaces ?? UV_FACES)],
+        faces
+      });
+    }
+    else {
+      region = new UVRegion({ ...identity, state, rect });
+    }
 
     this.#regions.set(region.id, region);
     this.emit("region-created", {

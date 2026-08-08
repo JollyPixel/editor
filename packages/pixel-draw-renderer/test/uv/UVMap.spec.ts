@@ -43,6 +43,27 @@ describe("UVMap — create", () => {
       shape: "triangle", corner: "bottom-right", rect: { x: 0, y: 0, width: 8, height: 8 }
     });
   });
+
+  test("creates a collapsed ramp when requested", () => {
+    const map = makeMap();
+    const region = map.create({
+      width: 8,
+      height: 8,
+      state: "collapsed",
+      activeFaces: ["back", "left", "right", "top", "bottom"],
+      faceGeometries: {
+        left: { shape: "triangle", corner: "bottom-right" },
+        right: { shape: "triangle", corner: "bottom-right" }
+      }
+    });
+
+    assert.strictEqual(region.state, "collapsed");
+    assert.deepStrictEqual(region.facesOf().map(({ face }) => face), [null]);
+    assert.deepStrictEqual(region.toJSON().activeFaces, ["back", "left", "right", "top", "bottom"]);
+    assert.deepStrictEqual(region.toJSON().faces?.left, {
+      shape: "triangle", corner: "bottom-right", rect: { x: 0, y: 0, width: 8, height: 8 }
+    });
+  });
   test("creates a region with the requested size at the origin, with a palette color", () => {
     const map = makeMap();
     const region = map.create({ width: 8, height: 8 });
@@ -98,6 +119,17 @@ describe("UVMap — create", () => {
 
     assert.strictEqual(region.id, "custom-id");
     assert.strictEqual(region.color, "#123456");
+  });
+
+  test("accepts an optional region name", () => {
+    const map = makeMap();
+    const region = map.create({
+      width: 4,
+      height: 4,
+      name: "Grass block"
+    });
+
+    assert.strictEqual(region.name, "Grass block");
   });
 
   test("emits a region-created event", () => {
@@ -578,7 +610,7 @@ describe("UVMap — selectedFace", () => {
   });
 });
 
-describe("UVMap — select / isVisible / showAll", () => {
+describe("UVMap — select / visibility", () => {
   test("nothing is visible by default", () => {
     const map = makeMap();
     const region = map.create({ width: 4, height: 4 });
@@ -647,6 +679,25 @@ describe("UVMap — select / isVisible / showAll", () => {
     map.showAll = false;
 
     assert.strictEqual(events.length, 2);
+  });
+
+  test("region labels are hidden by default", () => {
+    assert.strictEqual(makeMap().showRegionLabels, false);
+  });
+
+  test("emits label-visibility-changed only when the preference changes", () => {
+    const map = makeMap();
+    const events: EventPayload<"label-visibility-changed">[] = [];
+    map.on("label-visibility-changed", (e) => events.push(e));
+
+    map.showRegionLabels = true;
+    map.showRegionLabels = true;
+    map.showRegionLabels = false;
+
+    assert.deepStrictEqual(events, [
+      { showRegionLabels: true },
+      { showRegionLabels: false }
+    ]);
   });
 });
 

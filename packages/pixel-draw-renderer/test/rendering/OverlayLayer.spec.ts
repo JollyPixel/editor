@@ -53,6 +53,29 @@ describe("OverlayLayer", () => {
         "uvOverlay should be an instance of UVOverlay"
       );
     });
+
+    test("keeps tool overlays above the UV layer", () => {
+      const parent = makeParent();
+      const uvMap = makeUvMap();
+      const overlays = new OverlayLayer({
+        parent,
+        viewport: makeViewport(),
+        brush: makeBrush(),
+        uvMap
+      });
+      const svg = parent.querySelector("svg")!;
+
+      overlays.brushHighlight.update(20, 20);
+      const region = uvMap.create({ width: 4, height: 4 });
+      uvMap.select(region.id);
+
+      assert.strictEqual(svg.firstElementChild?.getAttribute("data-overlay"), "uv");
+      assert.notStrictEqual(
+        svg.lastElementChild?.getAttribute("data-overlay"),
+        "uv",
+        "a tool overlay must paint after the UV layer"
+      );
+    });
   });
 
   describe("destroy", () => {

@@ -179,6 +179,7 @@ function initializeStarterRegion(
   const [existingRegion] = canvasManager.uv.regions;
   const region = existingRegion ?? canvasManager.uv.create({
     id: kStarterRegionId,
+    name: "cube 0",
     width: kStarterRegionSize,
     height: kStarterRegionSize
   });

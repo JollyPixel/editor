@@ -2,6 +2,8 @@
 
 Drop-in web component. Rail (mode buttons, colors) + canvas, wired to a `PixelArtCanvas` for you. Undo/redo and import/export float in a toolbar at the bottom of the canvas, visible in every mode — same floating-pill style as the UV toolbar at the top. This is what the `examples/` demo uses — grab it instead of rebuilding a toolbar around `PixelArtCanvas` yourself.
 
+The UV toolbar includes independent toggles for region labels and showing every region. Labels display `(name)` or `(id)` inside collapsed UVs, with the face on a second line when uncollapsed. Show All forces labels while active and restores the prior label preference when disabled.
+
 ```ts
 import "@jolly-pixel/editor.pixel-art";
 import type {
