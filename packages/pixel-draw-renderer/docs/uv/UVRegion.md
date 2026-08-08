@@ -28,12 +28,14 @@ type UVTriangle = {
 type UVGeometry = SelectionRect | UVTriangle;
 
 type UVRegionData =
-  | { id: string; color: string; state?: "collapsed"; rect: SelectionRect }
-  | { id: string; color: string; state: "uncollapsed";
+  | { id: string; name?: string; color: string; state?: "collapsed"; rect: SelectionRect }
+  | { id: string; name?: string; color: string; state: "uncollapsed";
       faces: Record<UVFace, UVGeometry>; activeFaces?: UVFace[] };
 ```
 
 `state` is optional on the collapsed arm, so payloads predating multi-face support (`{ id, rect, color }`) still parse. `UVRegion.from()` accepts an existing instance unchanged, so a caller holding either shape needs no branch.
+
+`name` is optional and immutable with the rest of the region. When present, it is preserved through geometry/state changes, history entries, network commands and snapshots.
 
 Triangles are right triangles within `rect`; `corner` identifies their right-angle corner. `activeFaces` represents absent geometry (such as a ramp's open front); omitting it keeps every face active for compatibility.
 
@@ -42,6 +44,7 @@ Triangles are right triangles within `rect`; `corner` identifies their right-ang
 | Property | Type |
 |---|---|
 | `id` | `string` |
+| `name` | `string \| undefined` — optional human-readable label |
 | `color` | `string` — CSS color for the overlay border; its casing and selected tint derive from it |
 | `state` | `"collapsed" \| "uncollapsed"` |
 

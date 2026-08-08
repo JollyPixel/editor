@@ -93,23 +93,22 @@ test.beforeEach(async({ page }) => {
 test("the ramp preset creates triangular side faces", async({ page }) => {
   await page.getByRole("button", { name: "Create ramp", exact: true }).click();
 
-  const faces = await page.evaluate(`(() => {
+  const ramp = await page.evaluate(`(() => {
     const regions = Array.from((${uvPanel.toString()})().uv.regions);
     const region = regions[regions.length - 1];
+    const data = region.toJSON();
 
-    return region.facesOf().map(({ face, geometry }) => ({
-      face,
-      shape: geometry.shape ?? "rect",
-      corner: geometry.corner ?? null
-    }));
-  })()`);
-  expect(faces).toEqual([
-    { face: "back", shape: "rect", corner: null },
-    { face: "left", shape: "triangle", corner: "bottom-right" },
-    { face: "right", shape: "triangle", corner: "bottom-right" },
-    { face: "top", shape: "rect", corner: null },
-    { face: "bottom", shape: "rect", corner: null }
-  ]);
+    return {
+      state: region.state,
+      activeFaces: data.activeFaces,
+      left: data.faces.left,
+      right: data.faces.right
+    };
+  })()`) as any;
+  expect(ramp.state).toBe("collapsed");
+  expect(ramp.activeFaces).toEqual(["back", "left", "right", "top", "bottom"]);
+  expect(ramp.left).toMatchObject({ shape: "triangle", corner: "bottom-right" });
+  expect(ramp.right).toMatchObject({ shape: "triangle", corner: "bottom-right" });
 });
 
 test("a new region is collapsed and has no face", async({ page }) => {
@@ -148,6 +147,28 @@ test("the toolbar offers only the transition that applies", async({ page }) => {
   await page.getByRole("button", { name: "Delete" }).click();
   await expect(collapse).toHaveCount(0);
   await expect(uncollapse).toHaveCount(0);
+});
+
+test("Show all forces region labels without overwriting their preference", async({ page }) => {
+  const labels = page.getByRole("button", { name: "Show region labels" });
+  const showAll = page.getByRole("button", { name: "Show all" });
+
+  await expect(labels).toBeDisabled();
+  await expect(labels).toHaveAttribute("aria-pressed", "true");
+  await expect(labels).toHaveClass(/active/);
+
+  await showAll.click();
+  await expect(labels).toBeEnabled();
+  await expect(labels).toHaveAttribute("aria-pressed", "false");
+
+  await labels.click();
+  await expect(labels).toHaveAttribute("aria-pressed", "true");
+
+  await showAll.click();
+  await expect(labels).toBeDisabled();
+  await showAll.click();
+  await expect(labels).toBeEnabled();
+  await expect(labels).toHaveAttribute("aria-pressed", "true");
 });
 
 test("uncollapsing stacks six faces on the spot the region already occupied", async({ page }) => {

@@ -19,9 +19,12 @@ export type IconName =
   | "import"
   | "export"
   | "add"
+  | "cube"
+  | "triangle"
   | "trash"
   | "collapse"
   | "expand"
+  | "label"
   | "eye";
 
 // CONSTANTS
@@ -334,6 +337,33 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
       stroke-linecap="round"
     />
   `,
+  // Isometric cube.
+  cube: svg`
+    <path
+      d="m12 3 7 4v8l-7 4-7-4V7l7-4Z"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linejoin="round"
+    />
+    <path
+      d="m5 7 7 4 7-4M12 11v8"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linejoin="round"
+    />
+  `,
+  // Triangular ramp profile.
+  triangle: svg`
+    <path
+      d="M5 19 12 5l7 14H5Z"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linejoin="round"
+    />
+  `,
   // Trash can.
   trash: svg`
     <path
@@ -438,6 +468,26 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
       stroke-width="2.2"
       stroke-linecap="round"
       stroke-linejoin="round"
+    />
+  `,
+  // Text label inside a region frame.
+  label: svg`
+    <rect
+      x="3.5"
+      y="5"
+      width="17"
+      height="14"
+      rx="2"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+    />
+    <path
+      d="M7 9h10M7 13h6"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linecap="round"
     />
   `,
   eye: svg`

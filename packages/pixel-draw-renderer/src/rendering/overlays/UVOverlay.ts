@@ -14,7 +14,7 @@ import type {
   Vec2
 } from "../../types.ts";
 
-// Constants
+// CONSTANTS
 const kStrokeWidth = 2;
 const kSelectedStrokeWidth = 3;
 // Casing is this much wider than the main stroke.
@@ -28,6 +28,7 @@ const kLabelPadding = 3;
 const kLabelCasingWidth = "3";
 // Hide labels on tiny rects.
 const kLabelMinScreenSize = 40;
+const kLabelMaxLength = 20;
 
 /**
  * One rendered rect entry, with optional live-drag override applied.
@@ -63,6 +64,26 @@ function geometryKey(
   return "shape" in geometry ?
     `${geometry.shape}:${geometry.corner}:${x},${y},${width},${height}` :
     `${x},${y},${width},${height}`;
+}
+
+function truncateLabel(
+  value: string
+): string {
+  const characters = [...value];
+  if (characters.length <= kLabelMaxLength) {
+    return value;
+  }
+
+  return `${characters.slice(0, kLabelMaxLength - 1).join("")}…`;
+}
+
+function regionLabel(
+  region: UVRegion
+): string {
+  const name = region.name?.trim();
+  const value = name || region.id;
+
+  return `(${truncateLabel(value)})`;
 }
 
 /**
@@ -183,7 +204,7 @@ class Border {
 export class UVOverlay {
   #viewport: DefaultViewport;
   #uvMap: UVMap;
-  #svg: SVGElement;
+  #group: SVGGElement;
   #borders = new Map<string, Border>();
   #labels = new Map<string, SVGTextElement>();
   #liveOverride: { id: string; face: UVFace | null; rect: SelectionRect; } | null = null;
@@ -194,13 +215,14 @@ export class UVOverlay {
   #onRegionStateChanged = () => this.#render();
   #onSelectionChanged = () => this.#render();
   #onVisibilityChanged = () => this.#render();
+  #onLabelVisibilityChanged = () => this.#render();
 
   constructor(
     svg: SVGElement,
     viewport: DefaultViewport,
     uvMap: UVMap
   ) {
-    this.#svg = svg;
+    this.#group = this.#init(svg);
     this.#viewport = viewport;
     this.#uvMap = uvMap;
 
@@ -210,6 +232,7 @@ export class UVOverlay {
     this.#uvMap.on("region-state-changed", this.#onRegionStateChanged);
     this.#uvMap.on("selection-changed", this.#onSelectionChanged);
     this.#uvMap.on("visibility-changed", this.#onVisibilityChanged);
+    this.#uvMap.on("label-visibility-changed", this.#onLabelVisibilityChanged);
   }
 
   /**
@@ -238,6 +261,7 @@ export class UVOverlay {
     this.#uvMap.off("region-state-changed", this.#onRegionStateChanged);
     this.#uvMap.off("selection-changed", this.#onSelectionChanged);
     this.#uvMap.off("visibility-changed", this.#onVisibilityChanged);
+    this.#uvMap.off("label-visibility-changed", this.#onLabelVisibilityChanged);
 
     for (const border of this.#borders.values()) {
       border.remove();
@@ -247,6 +271,7 @@ export class UVOverlay {
       label.remove();
     }
     this.#labels.clear();
+    this.#group.remove();
   }
 
   #render(): void {
@@ -272,7 +297,7 @@ export class UVOverlay {
         selected: entry.selected,
         dimmed: uncollapsed && !entry.selected
       });
-      border.appendTo(this.#svg);
+      border.appendTo(this.#group);
     }
 
     this.#renderLabels(entries, zoom, camera);
@@ -287,9 +312,13 @@ export class UVOverlay {
     zoom: number,
     camera: Vec2
   ): void {
+    const showRegionLabels = this.#uvMap.showAll || this.#uvMap.showRegionLabels;
     const groups = new Map<string, RenderEntry[]>();
     for (const entry of entries) {
       if (entry.face === null) {
+        if (showRegionLabels) {
+          groups.set(entry.key, [entry]);
+        }
         continue;
       }
 
@@ -332,10 +361,16 @@ export class UVOverlay {
       el.setAttribute("x", String(x));
       el.setAttribute("y", String(y));
       el.setAttribute("text-anchor", rightAligned ? "end" : "start");
-      el.textContent = entry.face;
+      this.#setLabelContent(
+        el,
+        entry,
+        showRegionLabels,
+        x,
+        y
+      );
 
       // Append after rects so labels stay visible.
-      this.#svg.appendChild(el);
+      this.#group.appendChild(el);
     }
   }
 
@@ -409,6 +444,17 @@ export class UVOverlay {
     return border;
   }
 
+  #init(
+    svg: SVGElement
+  ): SVGGElement {
+    const group = document.createElementNS(SVG_NS, "g");
+
+    group.setAttribute("data-overlay", "uv");
+    svg.appendChild(group);
+
+    return group;
+  }
+
   #labelPosition(
     geometry: UVGeometry,
     zoom: number,
@@ -467,9 +513,47 @@ export class UVOverlay {
     el.setAttribute("stroke-width", kLabelCasingWidth);
     el.setAttribute("stroke-linejoin", "round");
 
-    this.#svg.appendChild(el);
+    this.#group.appendChild(el);
     this.#labels.set(key, el);
 
     return el;
+  }
+
+  #setLabelContent(
+    el: SVGTextElement,
+    entry: RenderEntry,
+    showRegionLabels: boolean,
+    x: number,
+    y: number
+  ): void {
+    if (!showRegionLabels) {
+      el.textContent = entry.face;
+
+      return;
+    }
+
+    if (entry.face === null) {
+      el.textContent = regionLabel(entry.region);
+
+      return;
+    }
+
+    el.replaceChildren();
+    const bottomAligned = "shape" in entry.geometry &&
+      (entry.geometry.corner === "bottom-left" ||
+        entry.geometry.corner === "bottom-right");
+    const firstY = bottomAligned ? y - kLabelFontSize : y;
+
+    const identity = document.createElementNS(SVG_NS, "tspan");
+    identity.setAttribute("x", String(x));
+    identity.setAttribute("y", String(firstY));
+    identity.textContent = regionLabel(entry.region);
+    el.appendChild(identity);
+
+    const face = document.createElementNS(SVG_NS, "tspan");
+    face.setAttribute("x", String(x));
+    face.setAttribute("y", String(firstY + kLabelFontSize));
+    face.textContent = entry.face;
+    el.appendChild(face);
   }
 }

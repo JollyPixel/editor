@@ -2,7 +2,7 @@
 
 Manages a texture's UV regions. Exposed as `PixelArtCanvas.uv`.
 
-- **Creating** a region is API-only: call `uv.create(...)` (e.g. from a toolbar button). Cubes are collapsed; ramps use five active faces and triangular sides.
+- **Creating** a region is API-only: call `uv.create(...)` (e.g. from a toolbar button). Pass `state` to choose whether a region starts collapsed or uncollapsed; ramps use five active faces and triangular sides.
 - **Moving** is a canvas gesture: switch to `"uv"` mode, click a region, drag
 - **Collapse/uncollapse** is API-only: `uv.uncollapse(id)` / `uv.collapse(id, face?)`
 
@@ -18,7 +18,9 @@ interface UVMapOptions {
 interface UVRegionCreateOptions {
   width: number;
   height: number;
-  preset?: "cube" | "ramp";
+  name?: string;
+  activeFaces?: readonly UVFace[];
+  faceGeometries?: Partial<Record<UVFace, UVFaceGeometryTemplate>>;
   id?: string;    // default: crypto.randomUUID()
   color?: string; // default: next palette color
 }
@@ -35,6 +37,7 @@ interface UVRegionCreateOptions {
 | `"region-state-changed"` | `region`, `previous` (`UVRegionData`) |
 | `"selection-changed"` | `selectedRegionId`, `selectedFace` |
 | `"visibility-changed"` | `showAll` |
+| `"label-visibility-changed"` | `showRegionLabels` |
 
 `face` is `null` for a collapsed region, whose single rect covers every face.
 
@@ -75,6 +78,15 @@ set showAll(value: boolean)
 
 `false` by default. See **Visibility** below.
 
+### `showRegionLabels`
+
+```ts
+get showRegionLabels(): boolean
+set showRegionLabels(value: boolean)
+```
+
+`false` by default. Shows each visible region's optional name, falling back to its id. `showAll` forces labels on without changing this stored preference, so disabling `showAll` restores the previous value.
+
 ## Visibility
 
 A region is visible (and hit-testable) only when:
@@ -87,6 +99,8 @@ Visibility is per **region**, not per face: a selected uncollapsed region shows 
 
 No region is visible by default. Switching `PixelArtCanvas.mode` away from `"uv"` does **not** change `selectedRegionId` or `showAll`.
 
+Region-label visibility is local view state and is not serialized, recorded in history or synchronized over the network.
+
 ## Methods
 
 ### `create(options)`
@@ -95,7 +109,7 @@ No region is visible by default. Switching `PixelArtCanvas.mode` away from `"uv"
 create(options: UVRegionCreateOptions): UVRegion
 ```
 
-Places a new collapsed region at a cascading offset (clamped to canvas bounds). Emits `"region-created"`.
+Places a new region at a cascading offset (clamped to canvas bounds). Regions without topology start collapsed; regions with `activeFaces` or `faceGeometries` start uncollapsed unless `state` explicitly selects the initial state. A collapsed region retains supplied topology for a later uncollapse. Emits `"region-created"`.
 
 ### `delete(id)`
 
@@ -185,7 +199,9 @@ Right after `uncollapse()`, all six rects coincide exactly. `UVController` handl
 - Paint order differs: `UVOverlay` raises the selected face to the top and dims the rest, so you can see what you grabbed even when it sits under `front`.
 - The cycle resets on a miss, on leaving `"uv"` mode, and whenever something outside the controller moves the selection (a 3D picker, undo, a peer).
 
-Each pile of coincident rects carries exactly one label — six names stacked on one pixel would be unreadable — naming the face a click would land on: the selected face when it belongs to that pile, otherwise the topmost in hit order. So dragging a face off a stack immediately reveals the next face's name, without having to click the remainder to find out what it is. A face whose rect is unique is always named. Labels are dropped below ~40 screen pixels.
+Each pile of coincident rects carries exactly one label — six labels stacked on one pixel would be unreadable — naming the face a click would land on: the selected face when it belongs to that pile, otherwise the topmost in hit order. So dragging a face off a stack immediately reveals the next face's name, without having to click the remainder to find out what it is. A face whose rect is unique is always named.
+
+When `showRegionLabels` is enabled (or forced by `showAll`), a collapsed region shows `(name)` or `(id)`. An uncollapsed face puts that identity on the first line and its face name on the second. Displayed identities longer than 20 characters are shortened with an ellipsis; the stored name is unchanged. Labels are dropped below ~40 screen pixels.
 
 ## Staying visible over the artwork
 
@@ -201,6 +217,8 @@ Undo/redo and network sync reuse the same events `create`/`delete`/`move`/`colla
 
 - **History:** `"uv-create"`/`"uv-delete"`/`"uv-move"`/`"uv-state"` entries in [`HistoryStack`](../history/HistoryStack.md). Undo calls the inverse method, which re-emits the matching event naturally. `"uv-state"` stores both whole regions rather than a delta, because collapsing discards five rects that only a full snapshot can restore.
 - **Network:** `onBufferUpdated` fires `"uv-region-*"` events for local changes. Conflicts resolve per **region face**, so two peers laying out different faces of the same region don't reject each other. See [buffer/PixelBuffer.md](../buffer/PixelBuffer.md) and [network/PixelSyncServer.md](../network/PixelSyncServer.md).
+
+The optional region name is part of `UVRegionData`, so it follows the same history and network paths as geometry. The `showRegionLabels` preference remains local.
 
 ## Example
 

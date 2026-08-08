@@ -50,7 +50,7 @@ describe("PixelArtCanvas — Ctrl+wheel brush size", () => {
     canvas.dispatchEvent(wheel({ deltaY: -100, ctrlKey: true }));
 
     const overlay = children[1] as unknown as SVGElement;
-    const highlight = overlay.querySelector("g");
+    const highlight = overlay.querySelector('g[data-overlay="brush-highlight"]');
     assert.ok(
       highlight?.getAttribute("transform")?.includes(`scale(${manager.zoom.value * 5})`)
     );

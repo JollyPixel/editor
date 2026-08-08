@@ -9,6 +9,7 @@ import { classMap } from "lit/directives/class-map.js";
 import type {
   PixelArtCanvas,
   UVFace,
+  UVMapListener,
   UVRegionState
 } from "@jolly-pixel/pixel-draw.renderer";
 
@@ -20,10 +21,6 @@ const kUvCreateSize = {
   width: 16,
   height: 16
 };
-
-interface UvVisibilityChangedDetail {
-  showAll: boolean;
-}
 
 /**
  * UV toolbar state (selection, region state, visibility).
@@ -37,10 +34,18 @@ export class UvToolbarController implements ReactiveController {
   #selectedFace: UVFace | null = null;
   #selectedState: UVRegionState | null = null;
   #showAll = false;
+  #showRegionLabels = false;
+  #uvNextId = 0;
 
   readonly #onUvChanged = (): void => this.#sync();
-  readonly #onVisibilityChanged = ({ showAll }: UvVisibilityChangedDetail): void => {
+  readonly #onVisibilityChanged: UVMapListener<"visibility-changed"> = ({ showAll }) => {
     this.#showAll = showAll;
+    this.#host.requestUpdate();
+  };
+  readonly #onLabelVisibilityChanged: UVMapListener<"label-visibility-changed"> = ({
+    showRegionLabels
+  }) => {
+    this.#showRegionLabels = showRegionLabels;
     this.#host.requestUpdate();
   };
 
@@ -74,7 +79,9 @@ export class UvToolbarController implements ReactiveController {
     canvas.uv.on("region-created", this.#onUvChanged);
     canvas.uv.on("region-deleted", this.#onUvChanged);
     canvas.uv.on("visibility-changed", this.#onVisibilityChanged);
+    canvas.uv.on("label-visibility-changed", this.#onLabelVisibilityChanged);
     this.#showAll = canvas.uv.showAll;
+    this.#showRegionLabels = canvas.uv.showRegionLabels;
     this.#sync();
   }
 
@@ -88,20 +95,32 @@ export class UvToolbarController implements ReactiveController {
     this.#canvas.uv.off("region-created", this.#onUvChanged);
     this.#canvas.uv.off("region-deleted", this.#onUvChanged);
     this.#canvas.uv.off("visibility-changed", this.#onVisibilityChanged);
+    this.#canvas.uv.off("label-visibility-changed", this.#onLabelVisibilityChanged);
     this.#canvas = null;
   }
 
   create(): void {
-    this.#canvas?.uv.create(kUvCreateSize);
+    this.#canvas?.uv.create({
+      name: `cube-${++this.#uvNextId}`,
+      ...kUvCreateSize
+    });
   }
 
   createRamp(): void {
     this.#canvas?.uv.create({
+      name: `ramp-${++this.#uvNextId}`,
       ...kUvCreateSize,
+      state: "collapsed",
       activeFaces: ["back", "left", "right", "top", "bottom"],
       faceGeometries: {
-        left: { shape: "triangle", corner: "bottom-right" },
-        right: { shape: "triangle", corner: "bottom-right" }
+        left: {
+          shape: "triangle",
+          corner: "bottom-right"
+        },
+        right: {
+          shape: "triangle",
+          corner: "bottom-right"
+        }
       }
     });
   }
@@ -115,6 +134,12 @@ export class UvToolbarController implements ReactiveController {
   toggleShowAll(): void {
     if (this.#canvas) {
       this.#canvas.uv.showAll = !this.#canvas.uv.showAll;
+    }
+  }
+
+  toggleShowRegionLabels(): void {
+    if (this.#canvas && !this.#canvas.uv.showAll) {
+      this.#canvas.uv.showRegionLabels = !this.#canvas.uv.showRegionLabels;
     }
   }
 
@@ -168,7 +193,10 @@ export class UvToolbarController implements ReactiveController {
         aria-label="Create cube"
         @click=${() => this.create()}
       >
-        ${renderIcon("add")}
+        <span class="icon-with-badge">
+          ${renderIcon("add")}
+          <span class="icon-badge">${renderIcon("cube")}</span>
+        </span>
         <span class="tooltip">Create cube region</span>
       </button>
       <button
@@ -176,7 +204,10 @@ export class UvToolbarController implements ReactiveController {
         aria-label="Create ramp"
         @click=${() => this.createRamp()}
       >
-        ${renderIcon("add")}
+        <span class="icon-with-badge">
+          ${renderIcon("add")}
+          <span class="icon-badge">${renderIcon("triangle")}</span>
+        </span>
         <span class="tooltip">Create ramp region</span>
       </button>
       <button
@@ -200,10 +231,23 @@ export class UvToolbarController implements ReactiveController {
       return nothing;
     }
 
+    const showRegionLabels = this.#showAll || this.#showRegionLabels;
+
     return html`
       <div class="overlay-toolbar top" part="uv-toolbar">
         ${allowCreateDelete ? this.#renderCreateDelete() : nothing}
         ${this.#renderStateButton()}
+        <button
+          class=${classMap({ "rail-btn": true, active: showRegionLabels })}
+          part="uv-show-region-labels-button"
+          aria-label="Show region labels"
+          aria-pressed=${showRegionLabels}
+          ?disabled=${this.#showAll}
+          @click=${() => this.toggleShowRegionLabels()}
+        >
+          ${renderIcon("label")}
+          <span class="tooltip">Show region labels</span>
+        </button>
         <button
           class=${classMap({ "rail-btn": true, active: this.#showAll })}
           part="uv-show-all-button"

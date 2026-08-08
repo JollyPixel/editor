@@ -87,6 +87,7 @@ function uvCreatedCmd(
   opts: {
     region: {
       id: string;
+      name?: string;
       rect: {
         x: number;
         y: number;
@@ -148,12 +149,13 @@ describe("PixelSyncServer — receive: uv-region-created", () => {
     server.receive(uvCreatedCmd({
       region: {
         id: "r1",
+        name: "Grass block",
         rect: { x: 0, y: 0, width: 2, height: 2 },
         color: "#f00"
       }
     }), room);
 
-    assert.ok(server.buffer.uvRegions.get("r1"));
+    assert.strictEqual(server.buffer.uvRegions.get("r1")?.name, "Grass block");
     assert.strictEqual(client.received.length, 1);
   });
 });

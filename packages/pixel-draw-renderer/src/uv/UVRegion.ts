@@ -51,6 +51,7 @@ export const UV_FACES: readonly UVFace[] = [
 
 interface UVRegionIdentity {
   id: string;
+  name?: string;
   color: string;
 }
 
@@ -107,6 +108,7 @@ function sharedFaces(
  */
 export class UVRegion {
   readonly id: string;
+  readonly name?: string;
   readonly color: string;
   readonly state: UVRegionState;
   readonly #faces: Record<UVFace, UVGeometry>;
@@ -123,6 +125,7 @@ export class UVRegion {
     data: UVRegionData
   ) {
     this.id = data.id;
+    this.name = data.name;
     this.color = data.color;
 
     if (data.state === "uncollapsed") {
@@ -177,6 +180,7 @@ export class UVRegion {
 
     return new UVRegion({
       id: this.id,
+      name: this.name,
       color: this.color,
       state: "collapsed",
       rect: rectOf(geometry),
@@ -192,6 +196,7 @@ export class UVRegion {
 
     return new UVRegion({
       id: this.id,
+      name: this.name,
       color: this.color,
       state: "uncollapsed",
       faces: this.#facesAt(this.#collapsedRect!),
@@ -206,6 +211,7 @@ export class UVRegion {
     if (this.state === "collapsed") {
       return new UVRegion({
         id: this.id,
+        name: this.name,
         color: this.color,
         state: "collapsed",
         rect,
@@ -226,6 +232,7 @@ export class UVRegion {
 
     return new UVRegion({
       id: this.id,
+      name: this.name,
       color: this.color,
       state: "uncollapsed",
       faces,
@@ -234,10 +241,17 @@ export class UVRegion {
   }
 
   toJSON(): UVRegionData {
+    const identity: UVRegionIdentity = {
+      id: this.id,
+      color: this.color
+    };
+    if (this.name !== undefined) {
+      identity.name = this.name;
+    }
+
     if (this.state === "uncollapsed") {
       return {
-        id: this.id,
-        color: this.color,
+        ...identity,
         state: "uncollapsed",
         faces: copyFaces(this.#faces),
         activeFaces: [...this.#activeFaces]
@@ -245,8 +259,7 @@ export class UVRegion {
     }
 
     const data: UVRegionData = {
-      id: this.id,
-      color: this.color,
+      ...identity,
       state: "collapsed",
       rect: copyRect(this.#collapsedRect!)
     };

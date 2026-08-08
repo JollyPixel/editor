@@ -45,6 +45,9 @@ export const railButtonStyles = css`
     color: var(--color-border);
     cursor: default;
   }
+  .rail-btn.active:disabled {
+    color: var(--color-text-on-accent);
+  }
 
   /* Small corner notch: hints a hover flyout is available without
      permanently spending rail space on a second button. */

@@ -181,6 +181,31 @@ export const panelStyles = css`
     height: 16px;
   }
 
+  .icon-with-badge {
+    position: relative;
+    display: flex;
+    width: 16px;
+    height: 16px;
+  }
+
+  .icon-badge {
+    position: absolute;
+    right: -3px;
+    bottom: -3px;
+    display: flex;
+    width: 10px;
+    height: 10px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 2px;
+    background: var(--color-bg-overlay);
+  }
+
+  .overlay-toolbar .icon-badge .icon {
+    width: 9px;
+    height: 9px;
+  }
+
   .overlay-toolbar.top .tooltip {
     left: 50%;
     top: calc(100% + 8px);

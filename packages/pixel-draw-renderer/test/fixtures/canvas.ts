@@ -1,4 +1,3 @@
-/* eslint-disable max-params */
 // Canvas 2D fixture. happy-dom provides real <canvas> elements (events,
 // sizing, DOM tree, style) but no 2D rendering context, so installCanvasMock
 // patches getContext("2d") to return a pixel-backed MockCanvas2DContext. Only
