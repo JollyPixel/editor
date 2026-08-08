@@ -66,7 +66,7 @@ export class PaintMode extends InteractionMode {
       this.#line.isArmed &&
       this.#line.commitTrigger === "mousedown"
     ) {
-      this.#line.commit();
+      this.#line.commit("primary");
 
       return false;
     }
@@ -96,6 +96,15 @@ export class PaintMode extends InteractionMode {
   ): boolean | void {
     if (ctrlKey) {
       this.#brush.pick(pos.x, pos.y);
+
+      return false;
+    }
+
+    if (
+      this.#line.isArmed &&
+      this.#line.commitTrigger === "mousedown"
+    ) {
+      this.#line.commit("secondary");
 
       return false;
     }
