@@ -18,12 +18,16 @@ export default async function globalSetup(): Promise<void> {
 
     await page.evaluate((size) => {
       const panel = document.querySelector("pixel-draw-panel") as unknown as {
-        canvasManager: { texture: HTMLCanvasElement; };
+        canvasManager: {
+          texture: HTMLCanvasElement;
+          uv: { clear(): void; };
+        };
       };
       const blank = document.createElement("canvas");
       blank.width = size.x;
       blank.height = size.y;
       panel.canvasManager.texture = blank;
+      panel.canvasManager.uv.clear();
     }, TEXTURE_SIZE);
   }
   finally {

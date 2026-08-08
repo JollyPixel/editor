@@ -12,11 +12,17 @@
   <pixel-draw-panel id="draw-panel" allow-uv-create-delete></pixel-draw-panel>
   <div id="canvas-container">
     <canvas tabindex="-1" id="three-canvas"></canvas>
-    <select id="theme-select" title="Panel theme">
-      <option value="auto" selected>Auto</option>
-      <option value="light">Light</option>
-      <option value="dark">Dark</option>
-    </select>
+    <div id="demo-controls">
+      <label id="rotation-control">
+        <input id="rotation-toggle" type="checkbox" checked>
+        Rotate
+      </label>
+      <select id="theme-select" title="Panel theme">
+        <option value="auto" selected>Auto</option>
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+      </select>
+    </div>
   </div>
   <script type="module" src="./scripts/main.ts"></script>
 </body>

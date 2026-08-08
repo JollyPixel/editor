@@ -11,6 +11,10 @@ export interface CubeGalleryOptions {
   canvasManager: PixelArtCanvas;
 }
 
+export interface CubeGalleryAppearance {
+  borderColor: THREE.ColorRepresentation;
+}
+
 // Spacing for a centered near-square grid; cubes ease to new positions on relayout.
 const kGridSpacing = 2.4;
 
@@ -21,6 +25,11 @@ export class CubeGallery {
   #cubeFactory: CubeFactory;
   #canvasManager: PixelArtCanvas;
   #cubes = new Map<string, CubeBehavior>();
+
+  #appearance: CubeGalleryAppearance = {
+    borderColor: "#101820"
+  };
+  #rotating = true;
 
   constructor(
     options: CubeGalleryOptions
@@ -35,8 +44,14 @@ export class CubeGallery {
         region,
         this.#canvasManager.textureSize
       );
+      const referenceCube = this.#cubes.values().next().value;
+      if (referenceCube) {
+        cube.setRotation(referenceCube.actor.object3D.rotation);
+      }
       this.#cubes.set(region.id, cube);
       this.#relayout();
+      cube.setBorderColor(this.#appearance.borderColor);
+      cube.setRotating(this.#rotating);
     });
 
     uv.on("region-deleted", ({ region }) => {
@@ -93,7 +108,27 @@ export class CubeGallery {
   refreshTextureSize(): void {
     const { textureSize } = this.#canvasManager;
     for (const region of this.#canvasManager.uv.regions) {
-      this.#cubes.get(region.id)?.applyRegion(region, textureSize);
+      this.#cubes
+        .get(region.id)
+        ?.applyRegion(region, textureSize);
+    }
+  }
+
+  setAppearance(
+    appearance: CubeGalleryAppearance
+  ): void {
+    this.#appearance = appearance;
+    for (const cube of this.#cubes.values()) {
+      cube.setBorderColor(appearance.borderColor);
+    }
+  }
+
+  setRotating(
+    rotating: boolean
+  ): void {
+    this.#rotating = rotating;
+    for (const cube of this.#cubes.values()) {
+      cube.setRotating(rotating);
     }
   }
 
