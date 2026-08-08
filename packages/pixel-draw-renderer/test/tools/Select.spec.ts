@@ -226,6 +226,22 @@ describe("Select", () => {
       assert.deepStrictEqual(tool.snapshot, [kRed]);
     });
 
+    test("finishCreate can replace the live rectangle with its final bounds", () => {
+      const tool = new Select();
+      tool.startCreate({ x: -2, y: -2 });
+      tool.updateCreate({ x: 4, y: 4 });
+      tool.finishCreate(
+        new Array(9).fill(kRed),
+        { x: 0, y: 0, width: 3, height: 3 }
+      );
+
+      assert.deepStrictEqual(
+        tool.rect,
+        { x: 0, y: 0, width: 3, height: 3 }
+      );
+      assert.strictEqual(tool.mask?.length, 9);
+    });
+
     test("finishCreate is a no-op while not creating", () => {
       const tool = new Select();
       tool.finishCreate([kRed]);

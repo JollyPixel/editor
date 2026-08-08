@@ -51,6 +51,30 @@ export function clampRectPosition(
 }
 
 /**
+ * Returns the portion of `rect` inside `size`, or `null` when they do not
+ * overlap.
+ */
+export function clipRectToBounds(
+  rect: SelectionRect,
+  size: Vec2
+): SelectionRect | null {
+  const minX = Math.max(0, rect.x);
+  const minY = Math.max(0, rect.y);
+  const maxX = Math.min(size.x, rect.x + rect.width);
+  const maxY = Math.min(size.y, rect.y + rect.height);
+  if (maxX <= minX || maxY <= minY) {
+    return null;
+  }
+
+  return {
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY
+  };
+}
+
+/**
  * Whether `pos` falls within `rect` (inclusive min, exclusive max).
  */
 export function pointInRect(

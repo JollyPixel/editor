@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   clamp,
+  clipRectToBounds,
   clampRectPosition,
   clampRectSize,
   isVec2,
@@ -97,6 +98,48 @@ describe("clampRectPosition", () => {
     assert.deepStrictEqual(
       clampRectPosition(rect, { x: 10, y: 10 }),
       { x: 0, y: 0, width: 4, height: 4 }
+    );
+  });
+});
+
+describe("clipRectToBounds", () => {
+  test("leaves a rectangle unchanged when it is already inside", () => {
+    assert.deepStrictEqual(
+      clipRectToBounds(
+        { x: 2, y: 3, width: 4, height: 5 },
+        { x: 10, y: 10 }
+      ),
+      { x: 2, y: 3, width: 4, height: 5 }
+    );
+  });
+
+  test("clips every side to the bounds", () => {
+    assert.deepStrictEqual(
+      clipRectToBounds(
+        { x: -2, y: -3, width: 15, height: 16 },
+        { x: 10, y: 10 }
+      ),
+      { x: 0, y: 0, width: 10, height: 10 }
+    );
+  });
+
+  test("preserves only the intersecting portion", () => {
+    assert.deepStrictEqual(
+      clipRectToBounds(
+        { x: -3, y: 2, width: 5, height: 4 },
+        { x: 10, y: 10 }
+      ),
+      { x: 0, y: 2, width: 2, height: 4 }
+    );
+  });
+
+  test("returns null when the rectangle is entirely outside", () => {
+    assert.strictEqual(
+      clipRectToBounds(
+        { x: -4, y: 2, width: 3, height: 4 },
+        { x: 10, y: 10 }
+      ),
+      null
     );
   });
 });

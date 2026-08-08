@@ -40,6 +40,8 @@ export class CanvasRenderer {
   #ctx: CanvasRenderingContext2D;
   #bgCanvas: HTMLCanvasElement;
   #bgCtx: CanvasRenderingContext2D;
+  #contentCanvas: HTMLCanvasElement;
+  #contentCtx: CanvasRenderingContext2D;
   #bgSquareSize: number;
   #bgColors: { odd: string; even: string; };
   #backgroundColor: string;
@@ -79,6 +81,10 @@ export class CanvasRenderer {
 
     this.#bgCanvas = document.createElement("canvas");
     this.#bgCtx = this.#bgCanvas.getContext("2d")!;
+
+    this.#contentCanvas = document.createElement("canvas");
+    this.#contentCtx = this.#contentCanvas.getContext("2d")!;
+    this.#contentCtx.imageSmoothingEnabled = false;
   }
 
   canvas(): HTMLCanvasElement {
@@ -151,10 +157,33 @@ export class CanvasRenderer {
       camera.x,
       camera.y
     );
-    this.#ctx.drawImage(this.#canvasBuffer.canvas(), 0, 0);
-    this.floatingSelection.draw(this.#ctx);
+    if (this.floatingSelection.isActive) {
+      this.#drawContent();
+      this.#ctx.drawImage(this.#contentCanvas, 0, 0);
+    }
+    else {
+      this.#ctx.drawImage(this.#canvasBuffer.canvas(), 0, 0);
+    }
 
     this.#ctx.restore();
+  }
+
+  #drawContent(): void {
+    const size = this.#canvasBuffer.size();
+    if (
+      this.#contentCanvas.width !== size.x ||
+      this.#contentCanvas.height !== size.y
+    ) {
+      this.#contentCanvas.width = size.x;
+      this.#contentCanvas.height = size.y;
+      this.#contentCtx.imageSmoothingEnabled = false;
+    }
+    else {
+      this.#contentCtx.clearRect(0, 0, size.x, size.y);
+    }
+
+    this.#contentCtx.drawImage(this.#canvasBuffer.canvas(), 0, 0);
+    this.floatingSelection.draw(this.#contentCtx);
   }
 
   resize(

@@ -1,6 +1,7 @@
 // Import Internal Dependencies
 import { Select } from "./Select.ts";
 import { ShapeSelect } from "./ShapeSelect.ts";
+import { clipRectToBounds } from "../utils/math.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import type {
   FloatingSelectionOverlay
@@ -225,19 +226,25 @@ export class SelectController implements SelectTool {
   handleEnd(): void {
     if (this.#select.state === "creating") {
       const rect = this.#select.rect;
-      if (rect) {
-        if (rect.width === 1 && rect.height === 1) {
-          this.#select.clear();
-          this.#selectionOverlay.clear();
-        }
-        else {
-          const snapshot = Select.captureSnapshot(
-            this.#canvasBuffer,
-            rect
-          );
-          this.#select.finishCreate(snapshot);
-        }
+      const finalRect = rect
+        ? clipRectToBounds(rect, this.#canvasBuffer.size())
+        : null;
+      if (
+        !finalRect ||
+        (finalRect.width === 1 && finalRect.height === 1)
+      ) {
+        this.#select.clear();
+        this.#selectionOverlay.clear();
+
+        return;
       }
+
+      const snapshot = Select.captureSnapshot(
+        this.#canvasBuffer,
+        finalRect
+      );
+      this.#select.finishCreate(snapshot, finalRect);
+      this.#selectionOverlay.drawRect(finalRect);
 
       return;
     }

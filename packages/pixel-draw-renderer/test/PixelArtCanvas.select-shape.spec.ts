@@ -12,7 +12,10 @@ import {
   type PixelArtCanvasOptions
 } from "#src/PixelArtCanvas.ts";
 import { makeContainer } from "./helpers/dom.ts";
-import { readPixel } from "./fixtures/canvas.ts";
+import {
+  canvasPixels,
+  readPixel
+} from "./fixtures/canvas.ts";
 import {
   mouseEvent,
   deleteKey,
@@ -285,6 +288,42 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
       readPixel(manager.texture, { x: 5, y: 4 }, 8),
       [0, 0, 255, 255],
       "destination's own gap (the sentinel) is untouched by the masked paint"
+    );
+    manager.destroy();
+  });
+
+  test("moving a shape with transparent erase does not leave its source edge in the drag preview", () => {
+    const manager = makeManager({
+      select: { eraseColor: "#00000000" }
+    });
+    const canvas = manager.canvas();
+
+    manager.brush.primary.set("#FF0000");
+    manager.commitPixels([
+      { x: 2, y: 2 },
+      { x: 3, y: 2 }
+    ]);
+    manager.mode = "select";
+    manager.tools.select.shape = true;
+    click(canvas, 92, 92);
+
+    canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
+    canvas.dispatchEvent(mouseEvent("mousemove", 96, 92));
+
+    const preview = canvasPixels(canvas);
+    assert.notDeepStrictEqual(
+      readPixel(preview, { x: 2, y: 2 }, canvas.width),
+      [255, 0, 0, 255],
+      "the vacated source edge must reveal the background before commit"
+    );
+    assert.deepStrictEqual(
+      readPixel(preview, { x: 3, y: 2 }, canvas.width),
+      [255, 0, 0, 255],
+      "the overlapping destination remains visible"
+    );
+
+    canvas.dispatchEvent(
+      new MouseEvent("mouseup", { bubbles: true })
     );
     manager.destroy();
   });

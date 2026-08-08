@@ -64,6 +64,7 @@ class MockImageData {
 // Mock 2D Context, backed by an RGBA buffer sized to the live canvas.
 export class MockCanvas2DContext {
   fillStyle = "#000000";
+  globalCompositeOperation: GlobalCompositeOperation = "source-over";
   imageSmoothingEnabled = false;
   putImageDataCallCount = 0;
   drawImageCallCount = 0;
@@ -72,6 +73,7 @@ export class MockCanvas2DContext {
   #pixels: Uint8ClampedArray;
   #width: number;
   #height: number;
+  #compositeStack: GlobalCompositeOperation[] = [];
 
   constructor(
     canvas: HTMLCanvasElement
@@ -119,10 +121,13 @@ export class MockCanvas2DContext {
     // No-op for testing
   }
   save(): void {
-    // No-op for testing
+    this.#compositeStack.push(this.globalCompositeOperation);
   }
   restore(): void {
-    // No-op for testing
+    const compositeOperation = this.#compositeStack.pop();
+    if (compositeOperation !== undefined) {
+      this.globalCompositeOperation = compositeOperation;
+    }
   }
   clip(): void {
     // No-op for testing
@@ -132,10 +137,9 @@ export class MockCanvas2DContext {
   }
 
   /**
-   * Nearest-neighbor blit supporting the 3/5/9-argument drawImage overloads,
-   * so tests can assert on rendered pixel output. Non-canvas sources (an
-   * HTMLImageElement-like mock has no getContext) are silently no-op'd,
-   * matching CanvasBuffer.loadTexture()'s image-source path.
+   * Nearest-neighbor blit supporting the 3/5/9-argument drawImage overloads
+   * and the compositing modes used by the renderer. Non-canvas sources are
+   * silently ignored, matching CanvasBuffer.loadTexture()'s image-source path.
    */
   drawImage(
     image: unknown,
@@ -194,10 +198,71 @@ export class MockCanvas2DContext {
 
         const srcIdx = (srcY * srcWidth + srcX) * 4;
         const destIdx = (destY * destWidth + destX) * 4;
-        destPixels[destIdx] = srcPixels[srcIdx];
-        destPixels[destIdx + 1] = srcPixels[srcIdx + 1];
-        destPixels[destIdx + 2] = srcPixels[srcIdx + 2];
-        destPixels[destIdx + 3] = srcPixels[srcIdx + 3];
+        this.#compositePixel(destPixels, destIdx, srcPixels, srcIdx);
+      }
+    }
+  }
+
+  #compositePixel(
+    destPixels: Uint8ClampedArray,
+    destIdx: number,
+    srcPixels: Uint8ClampedArray,
+    srcIdx: number
+  ): void {
+    const srcAlpha = srcPixels[srcIdx + 3] / 255;
+    const destAlpha = destPixels[destIdx + 3] / 255;
+
+    if (this.globalCompositeOperation === "destination-out") {
+      const outAlpha = destAlpha * (1 - srcAlpha);
+      destPixels[destIdx + 3] = Math.round(outAlpha * 255);
+      if (outAlpha === 0) {
+        destPixels[destIdx] = 0;
+        destPixels[destIdx + 1] = 0;
+        destPixels[destIdx + 2] = 0;
+      }
+
+      return;
+    }
+
+    const outAlpha = srcAlpha + destAlpha * (1 - srcAlpha);
+    if (outAlpha === 0) {
+      destPixels[destIdx] = 0;
+      destPixels[destIdx + 1] = 0;
+      destPixels[destIdx + 2] = 0;
+      destPixels[destIdx + 3] = 0;
+
+      return;
+    }
+
+    for (let channel = 0; channel < 3; channel++) {
+      const src = srcPixels[srcIdx + channel];
+      const dest = destPixels[destIdx + channel];
+      destPixels[destIdx + channel] = Math.round(
+        (
+          src * srcAlpha +
+          dest * destAlpha * (1 - srcAlpha)
+        ) / outAlpha
+      );
+    }
+    destPixels[destIdx + 3] = Math.round(outAlpha * 255);
+  }
+
+  clearRect(
+    x: number,
+    y: number,
+    width: number,
+    height: number
+  ): void {
+    this.#syncSize();
+    const minX = Math.max(0, x);
+    const minY = Math.max(0, y);
+    const maxX = Math.min(x + width, this.#width);
+    const maxY = Math.min(y + height, this.#height);
+
+    for (let py = minY; py < maxY; py++) {
+      for (let px = minX; px < maxX; px++) {
+        const index = (py * this.#width + px) * 4;
+        this.#pixels.fill(0, index, index + 4);
       }
     }
   }
