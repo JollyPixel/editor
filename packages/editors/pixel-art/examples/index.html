@@ -5,11 +5,27 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pixel Draw Renderer</title>
+  <script>
+    try {
+      const theme = localStorage.getItem("pixel-draw-demo:theme");
+      if (theme === "light" || theme === "dark" || theme === "auto") {
+        document.documentElement.dataset.theme = theme;
+      }
+    } catch {
+      // Storage can be unavailable in privacy-restricted contexts.
+    }
+  </script>
   <link rel="stylesheet" href="./main.css">
 </head>
 
 <body>
   <pixel-draw-panel id="draw-panel" allow-uv-create-delete></pixel-draw-panel>
+  <script>
+    const initialTheme = document.documentElement.dataset.theme;
+    if (initialTheme) {
+      document.querySelector("#draw-panel").setAttribute("theme", initialTheme);
+    }
+  </script>
   <div id="canvas-container">
     <canvas tabindex="-1" id="three-canvas"></canvas>
     <div id="demo-controls">

@@ -115,8 +115,10 @@ export class PixelDrawPanel extends LitElement {
       this.renderRoot.querySelector<HTMLDivElement>(".canvas-host"),
       "PixelDrawPanel: .canvas-host element not found"
     );
+    const backgroundColor = this.#canvasBackground();
     this.#canvasManager = new PixelArtCanvas(canvasHostEl, {
       ...options,
+      backgroundColor: backgroundColor || options.backgroundColor,
       onHistoryChange: (state) => {
         this.#historyFile.onHistoryChange(state);
         options.onHistoryChange?.(state);
@@ -129,6 +131,8 @@ export class PixelDrawPanel extends LitElement {
     this.#uvToolbar.attach(this.#canvasManager);
     this.#syncCanvasBackground();
     this.requestUpdate();
+    await this.updateComplete;
+    this.setAttribute("data-ready", "");
 
     return this.#canvasManager;
   }
@@ -165,10 +169,14 @@ export class PixelDrawPanel extends LitElement {
       return;
     }
 
-    const canvasBg = getComputedStyle(this).getPropertyValue("--color-canvas-bg").trim();
+    const canvasBg = this.#canvasBackground();
     if (canvasBg) {
       this.#canvasManager.backgroundColor = canvasBg;
     }
+  }
+
+  #canvasBackground(): string {
+    return getComputedStyle(this).getPropertyValue("--color-canvas-bg").trim();
   }
 
   /**
