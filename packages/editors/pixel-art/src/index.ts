@@ -6,3 +6,4 @@ export {
   type ColorChangeDetail
 } from "./ui/color/ColorSwatch.ts";
 export type { IconName } from "./ui/common/icons.ts";
+export type { ThemeMode } from "./ui/theme.ts";

@@ -9,12 +9,17 @@ export const colorSwatchStyles = css`
   button {
     width: 26px;
     height: 26px;
-    border: 2px solid var(--color-swatch-border, var(--color-border, #556067));
+    border: none;
     border-radius: var(--color-swatch-radius, 4px);
     cursor: pointer;
     padding: 0;
     background: #000000;
     box-sizing: border-box;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.25),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.2),
+      0 0 3px 0 var(--color-swatch-edge, transparent),
+      0 1px 2px rgba(0, 0, 0, 0.25);
   }
 
   button:focus-visible {

@@ -5,7 +5,6 @@ import {
   type ReactiveController,
   type ReactiveControllerHost
 } from "lit";
-import { classMap } from "lit/directives/class-map.js";
 import type {
   PixelArtCanvas,
   Mode
@@ -13,6 +12,12 @@ import type {
 
 // Import Internal Dependencies
 import { isInputElement } from "../../utils/dom.ts";
+
+// CONSTANTS
+const kBrushMin = 1;
+const kBrushMax = 32;
+const kPreviewDotMinPx = 6;
+const kPreviewDotMaxPx = 22;
 
 /**
  * Tool option state (mode, brush size, fill/select toggles, eyedropper).
@@ -45,6 +50,14 @@ export class ToolOptionsController implements ReactiveController {
 
   get pickColorArmed(): boolean {
     return this.#pickColorArmed;
+  }
+
+  get fillGlobal(): boolean {
+    return this.#fillGlobal;
+  }
+
+  get selectShape(): boolean {
+    return this.#selectShape;
   }
 
   attach(
@@ -106,70 +119,48 @@ export class ToolOptionsController implements ReactiveController {
     this.#host.requestUpdate();
   }
 
-  #toggleFillGlobal(): void {
-    this.#fillGlobal = !this.#fillGlobal;
+  setFillGlobal(
+    value: boolean
+  ): void {
+    this.#fillGlobal = value;
     if (this.#canvas) {
-      this.#canvas.tools.fill.global = this.#fillGlobal;
+      this.#canvas.tools.fill.global = value;
     }
     this.#host.requestUpdate();
   }
 
-  #toggleSelectShape(): void {
-    this.#selectShape = !this.#selectShape;
+  setSelectShape(
+    value: boolean
+  ): void {
+    this.#selectShape = value;
     if (this.#canvas) {
-      this.#canvas.tools.select.shape = this.#selectShape;
+      this.#canvas.tools.select.shape = value;
     }
     this.#host.requestUpdate();
   }
 
   #renderPaint() {
+    const fillPercent = ((this.#brushSize - kBrushMin) / (kBrushMax - kBrushMin)) * 100;
+    const dotSizePx = kPreviewDotMinPx +
+      ((this.#brushSize - kBrushMin) / (kBrushMax - kBrushMin) * (kPreviewDotMaxPx - kPreviewDotMinPx));
+
     return html`
       <div class="tool-option-overlay" part="brush-size-overlay">
-        Size
+        <span class="brush-preview" style="width: ${dotSizePx}px; height: ${dotSizePx}px"></span>
+        <span class="tool-option-label">Size</span>
         <input
-          type="range" min="1" max="32"
+          class="brush-size-slider"
+          type="range" min=${kBrushMin} max=${kBrushMax}
           .value=${String(this.#brushSize)}
+          style="--fill: ${fillPercent}%"
           @input=${(event: Event) => this.#onBrushSizeChange(event)}
         >
-        <span>${this.#brushSize}px</span>
-      </div>
-    `;
-  }
-
-  #renderFill() {
-    return html`
-      <div class="tool-option-overlay" part="fill-mode-overlay">
-        <button
-          class=${classMap({ "tool-toggle-btn": true, active: this.#fillGlobal })}
-          aria-pressed=${this.#fillGlobal}
-          @click=${() => this.#toggleFillGlobal()}
-        >${this.#fillGlobal ? "Global" : "Neighbor"}</button>
-      </div>
-    `;
-  }
-
-  #renderSelect() {
-    return html`
-      <div class="tool-option-overlay" part="select-mode-overlay">
-        <button
-          class=${classMap({ "tool-toggle-btn": true, active: this.#selectShape })}
-          aria-pressed=${this.#selectShape}
-          @click=${() => this.#toggleSelectShape()}
-        >${this.#selectShape ? "Shape" : "Rectangle"}</button>
+        <span class="tool-option-value">${this.#brushSize}px</span>
       </div>
     `;
   }
 
   render() {
-    switch (this.#mode) {
-      case "paint":
-        return this.#renderPaint();
-      case "fill":
-        return this.#renderFill();
-      case "select":
-        return this.#renderSelect();
-      default:
-        return nothing;
-    }
+    return this.#mode === "paint" ? this.#renderPaint() : nothing;
   }
 }

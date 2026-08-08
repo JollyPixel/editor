@@ -5,11 +5,15 @@ import {
   type ReactiveController,
   type ReactiveControllerHost
 } from "lit";
+import { classMap } from "lit/directives/class-map.js";
 import type {
   PixelArtCanvas,
   UVFace,
   UVRegionState
 } from "@jolly-pixel/pixel-draw.renderer";
+
+// Import Internal Dependencies
+import { renderIcon } from "../common/icons.ts";
 
 // UV "Create" button uses this preset size.
 const kUvCreateSize = {
@@ -124,32 +128,73 @@ export class UvToolbarController implements ReactiveController {
     }
 
     return this.#selectedState === "collapsed" ?
-      html`<button @click=${() => this.uncollapse()}>Uncollapse</button>` :
-      html`<button @click=${() => this.collapse()}>Collapse</button>`;
+      html`
+        <button
+          class="rail-btn" part="uv-uncollapse-button"
+          aria-label="Uncollapse"
+          @click=${() => this.uncollapse()}
+        >
+          ${renderIcon("expand")}
+          <span class="tooltip">Uncollapse</span>
+        </button>
+      ` :
+      html`
+        <button
+          class="rail-btn" part="uv-collapse-button"
+          aria-label="Collapse"
+          @click=${() => this.collapse()}
+        >
+          ${renderIcon("collapse")}
+          <span class="tooltip">Collapse</span>
+        </button>
+      `;
+  }
+
+  #renderCreateDelete() {
+    return html`
+      <button
+        class="rail-btn" part="uv-create-button"
+        aria-label="Create"
+        @click=${() => this.create()}
+      >
+        ${renderIcon("add")}
+        <span class="tooltip">Create region</span>
+      </button>
+      <button
+        class="rail-btn" part="uv-delete-button"
+        aria-label="Delete"
+        ?disabled=${!this.#selectedRegionId}
+        @click=${() => this.delete()}
+      >
+        ${renderIcon("trash")}
+        <span class="tooltip">Delete region</span>
+      </button>
+      <div class="overlay-toolbar-divider"></div>
+    `;
   }
 
   render(
-    active: boolean
+    active: boolean,
+    allowCreateDelete: boolean
   ) {
     if (!active) {
       return nothing;
     }
 
     return html`
-      <div class="uv-toolbar" part="uv-toolbar">
-        <button @click=${() => this.create()}>Create</button>
-        <button ?disabled=${!this.#selectedRegionId} @click=${() => this.delete()}>Delete</button>
+      <div class="overlay-toolbar top" part="uv-toolbar">
+        ${allowCreateDelete ? this.#renderCreateDelete() : nothing}
         ${this.#renderStateButton()}
-        ${this.#selectedFace ?
-          html`<span class="uv-face" part="uv-face">${this.#selectedFace}</span>` :
-          nothing}
-        <label>
-          <input
-            type="checkbox"
-            .checked=${this.#showAll}
-            @change=${() => this.toggleShowAll()}>
-          Show all
-        </label>
+        <button
+          class=${classMap({ "rail-btn": true, active: this.#showAll })}
+          part="uv-show-all-button"
+          aria-label="Show all"
+          aria-pressed=${this.#showAll}
+          @click=${() => this.toggleShowAll()}
+        >
+          ${renderIcon("eye")}
+          <span class="tooltip">Show all regions</span>
+        </button>
       </div>
     `;
   }

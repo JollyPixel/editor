@@ -12,7 +12,10 @@ import {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import { PixelDrawPanel } from "../../src/index.ts";
+import {
+  PixelDrawPanel,
+  type ThemeMode
+} from "../../src/index.ts";
 import { CameraBehavior } from "./components/Camera.ts";
 import { CubeFactory } from "./components/CubeFactory.ts";
 import { OrbitControlsBehavior } from "./components/OrbitControlsBehavior.ts";
@@ -32,10 +35,30 @@ declare global {
   }
 }
 
+wireThemeSelect();
+
 const runtime = await initRuntime();
 loadRuntime(runtime, {
   focusCanvas: false
 }).catch(console.error);
+
+/**
+ * Lets the demo exercise all three theme values live, independent of
+ * runtime/canvas init below. Also mirrors the choice onto <html data-theme>
+ * so demo-only chrome outside the panel's shadow DOM (resize handle, this
+ * select, the page backdrop — see public/main.css) follows along; that CSS
+ * can't see pixel-draw-panel's own custom properties.
+ */
+function wireThemeSelect(): void {
+  const themeSelect = document.querySelector<HTMLSelectElement>("#theme-select")!;
+  const drawPanel = document.querySelector<PixelDrawPanel>("pixel-draw-panel")!;
+
+  themeSelect.addEventListener("change", () => {
+    const theme = themeSelect.value as ThemeMode;
+    drawPanel.theme = theme;
+    document.documentElement.dataset.theme = theme;
+  });
+}
 
 async function initRuntime(): Promise<Runtime> {
   const canvas = document.querySelector<HTMLCanvasElement>(
@@ -73,7 +96,6 @@ async function initRuntime(): Promise<Runtime> {
       }
     },
     defaultMode: "paint",
-    backgroundColor: "#263238",
     zoom: {
       // No `default`: PixelArtCanvas computes a fit-to-panel initial zoom.
       min: 1,

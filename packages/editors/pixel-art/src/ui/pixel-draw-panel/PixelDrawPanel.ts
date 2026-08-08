@@ -1,9 +1,13 @@
 // Import Third-party Dependencies
 import {
   LitElement,
-  html
+  html,
+  type PropertyValues
 } from "lit";
-import { customElement } from "lit/decorators.js";
+import {
+  customElement,
+  property
+} from "lit/decorators.js";
 import {
   PixelArtCanvas,
   type PixelArtCanvasOptions,
@@ -15,18 +19,15 @@ import type { ColorChangeDetail } from "../color/ColorSwatch.ts";
 import { panelStyles } from "./PixelDrawPanel.styles.ts";
 import { railButtonStyles } from "../mode-rail/rail-button.styles.ts";
 import { iconStyles } from "../common/icon.styles.ts";
-import { renderIcon } from "../common/icons.ts";
-import { themeStyles } from "../theme.ts";
+import { themeStyles, type ThemeMode } from "../theme.ts";
 import { UvToolbarController } from "../uv/UvToolbarController.ts";
+import { HistoryFileToolbarController } from "../history-file/HistoryFileToolbarController.ts";
 import { ToolOptionsController } from "../tool-options/ToolOptionsController.ts";
 import { ColorController } from "../color/ColorController.ts";
-import {
-  assertElement,
-  isInputElement
-} from "../../utils/dom.ts";
+import { assertElement } from "../../utils/dom.ts";
 
-// Side-effect imports: register custom elements.
-import "../mode-rail/ModeRail.ts";
+// Side-effect imports: register custom elements (also carries ModeVariantDetail's type).
+import { type ModeVariantDetail } from "../mode-rail/ModeRail.ts";
 import "../color/ColorPickerRail.ts";
 
 @customElement("pixel-draw-panel")
@@ -38,15 +39,34 @@ export class PixelDrawPanel extends LitElement {
     panelStyles
   ];
 
-  // Not @state(): Lit can't decorate #private fields (TS1206); requestUpdate() drives rerenders.
-  #canUndo = false;
-  #canRedo = false;
+  /**
+   * Off by default: create/delete only suit authoring contexts (the
+   * package's own example), not embeddings over a fixed mesh (voxel-map).
+   */
+  @property({ type: Boolean, attribute: "allow-uv-create-delete" })
+  declare allowUvCreateDelete: boolean;
+
+  /**
+   * "auto" follows prefers-color-scheme (see theme.ts); "light"/"dark"
+   * force a palette regardless of the OS setting. Reflects to the `theme`
+   * attribute, which is what the CSS override selectors key off.
+   */
+  @property({ type: String, reflect: true })
+  declare theme: ThemeMode;
 
   readonly #uvToolbar = new UvToolbarController(this);
+  readonly #historyFile = new HistoryFileToolbarController(this);
   readonly #toolOptions = new ToolOptionsController(this);
   readonly #colors = new ColorController(this);
 
   #canvasManager: PixelArtCanvas | null = null;
+  #prefersDarkQuery: MediaQueryList | null = null;
+
+  constructor() {
+    super();
+    this.allowUvCreateDelete = false;
+    this.theme = "auto";
+  }
 
   get canvasManager(): PixelArtCanvas | null {
     return this.#canvasManager;
@@ -58,6 +78,11 @@ export class PixelDrawPanel extends LitElement {
       "colorpicked",
       this.#onColorPicked
     );
+    // "auto" resolves via CSS, but the canvas is JS-painted (see
+    // #syncCanvasBackground) — it needs its own live-toggle hookup to track
+    // an OS scheme change mid-session instead of the CSS cascade doing it.
+    this.#prefersDarkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    this.#prefersDarkQuery.addEventListener("change", this.#onPrefersColorSchemeChange);
   }
 
   override disconnectedCallback() {
@@ -66,8 +91,19 @@ export class PixelDrawPanel extends LitElement {
       "colorpicked",
       this.#onColorPicked
     );
+    this.#prefersDarkQuery?.removeEventListener("change", this.#onPrefersColorSchemeChange);
+    this.#prefersDarkQuery = null;
     this.#canvasManager?.destroy();
     this.#canvasManager = null;
+  }
+
+  override updated(
+    changedProperties: PropertyValues<this>
+  ): void {
+    super.updated(changedProperties);
+    if (changedProperties.has("theme")) {
+      this.#syncCanvasBackground();
+    }
   }
 
   async initialize(
@@ -82,18 +118,16 @@ export class PixelDrawPanel extends LitElement {
     this.#canvasManager = new PixelArtCanvas(canvasHostEl, {
       ...options,
       onHistoryChange: (state) => {
-        this.#canUndo = state.canUndo;
-        this.#canRedo = state.canRedo;
-        this.requestUpdate();
+        this.#historyFile.onHistoryChange(state);
         options.onHistoryChange?.(state);
       }
     });
 
     this.#toolOptions.attach(this.#canvasManager);
     this.#colors.attach(this.#canvasManager);
-    this.#canUndo = this.#canvasManager.canUndo();
-    this.#canRedo = this.#canvasManager.canRedo();
+    this.#historyFile.attach(this.#canvasManager);
     this.#uvToolbar.attach(this.#canvasManager);
+    this.#syncCanvasBackground();
     this.requestUpdate();
 
     return this.#canvasManager;
@@ -101,60 +135,6 @@ export class PixelDrawPanel extends LitElement {
 
   onResize(): void {
     this.#canvasManager?.onResize();
-  }
-
-  #onUndo(): void {
-    this.#canvasManager?.undo();
-  }
-
-  #onRedo(): void {
-    this.#canvasManager?.redo();
-  }
-
-  #onExportPng(): void {
-    if (!this.#canvasManager) {
-      return;
-    }
-
-    const url = this.#canvasManager
-      .textureCanvas()
-      .toDataURL("image/png");
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "texture.png";
-    anchor.click();
-  }
-
-  #onImportClick(): void {
-    const fileInput = assertElement(
-      this.renderRoot.querySelector<HTMLInputElement>(".file-input"),
-      "PixelDrawPanel: .file-input element not found"
-    );
-    fileInput.value = "";
-    fileInput.click();
-  }
-
-  #onImportFileSelected(
-    event: Event
-  ): void {
-    if (!isInputElement(event.target) || !this.#canvasManager) {
-      return;
-    }
-
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-
-    const canvasManager = this.#canvasManager;
-    const url = URL.createObjectURL(file);
-    const image = new Image();
-    image.onload = () => {
-      canvasManager.texture = image;
-      canvasManager.centerTexture();
-      URL.revokeObjectURL(url);
-    };
-    image.src = url;
   }
 
   /**
@@ -168,14 +148,57 @@ export class PixelDrawPanel extends LitElement {
     this.requestUpdate();
   };
 
+  readonly #onPrefersColorSchemeChange = (): void => {
+    if (this.theme === "auto") {
+      this.#syncCanvasBackground();
+    }
+  };
+
+  /**
+   * PixelArtCanvas paints its own void color on a <canvas> (not CSS), so it
+   * can't pick up --color-canvas-bg from the cascade on its own — read the
+   * resolved value and push it in, keeping the canvas one source of truth
+   * (theme.ts) instead of duplicating the palette in JS.
+   */
+  #syncCanvasBackground(): void {
+    if (!this.#canvasManager) {
+      return;
+    }
+
+    const canvasBg = getComputedStyle(this).getPropertyValue("--color-canvas-bg").trim();
+    if (canvasBg) {
+      this.#canvasManager.backgroundColor = canvasBg;
+    }
+  }
+
+  /**
+   * Picking a variant from the rail flyout (e.g. Fill > Global) implies
+   * switching to that mode too — the flyout works even when hovering a
+   * mode that isn't active yet.
+   */
+  #onModeVariantChange(
+    { mode, value }: ModeVariantDetail
+  ): void {
+    this.#toolOptions.setMode(mode);
+    if (mode === "fill") {
+      this.#toolOptions.setFillGlobal(value);
+    }
+    else if (mode === "select") {
+      this.#toolOptions.setSelectShape(value);
+    }
+  }
+
   override render() {
     return html`
       <div class="rail" part="rail">
         <mode-rail
           .mode=${this.#toolOptions.mode}
           .pickColorArmed=${this.#toolOptions.pickColorArmed}
+          .fillGlobal=${this.#toolOptions.fillGlobal}
+          .selectShape=${this.#toolOptions.selectShape}
           @mode-change=${(event: CustomEvent<Mode>) => this.#toolOptions.setMode(event.detail)}
           @pick-color-toggle=${() => this.#toolOptions.togglePickColor()}
+          @mode-variant-change=${(event: CustomEvent<ModeVariantDetail>) => this.#onModeVariantChange(event.detail)}
         ></mode-rail>
 
         <div class="rail-divider"></div>
@@ -188,62 +211,13 @@ export class PixelDrawPanel extends LitElement {
           @background-change=${(event: CustomEvent<ColorChangeDetail>) => this.#colors.onBackgroundChange(event)}
           @swap=${() => this.#colors.swap()}
         ></color-picker-rail>
-
-        <div class="rail-divider"></div>
-
-        <div class="rail-section" role="group" aria-label="History">
-          <button
-            class="rail-btn" part="undo-button"
-            aria-label="Undo"
-            ?disabled=${!this.#canUndo}
-            @click=${this.#onUndo}
-          >
-            ${renderIcon("undo")}
-            <span class="tooltip">Undo</span>
-          </button>
-          <button
-            class="rail-btn" part="redo-button"
-            aria-label="Redo"
-            ?disabled=${!this.#canRedo}
-            @click=${this.#onRedo}
-          >
-            ${renderIcon("redo")}
-            <span class="tooltip">Redo</span>
-          </button>
-        </div>
-
-        <div class="rail-divider"></div>
-
-        <div class="rail-section" role="group" aria-label="File">
-          <button
-            class="rail-btn" part="import-button"
-            aria-label="Import texture"
-            @click=${this.#onImportClick}
-          >
-            ${renderIcon("import")}
-            <span class="tooltip">Import</span>
-          </button>
-          <button
-            class="rail-btn" part="export-button"
-            aria-label="Export texture"
-            @click=${this.#onExportPng}
-          >
-            ${renderIcon("export")}
-            <span class="tooltip">Export</span>
-          </button>
-        </div>
       </div>
-
-      <input
-        class="file-input" part="file-input"
-        type="file" accept="image/png,image/*"
-        @change=${this.#onImportFileSelected}
-      >
 
       <div class="stage" part="stage">
         <div class="canvas-host" part="canvas-host"></div>
         ${this.#toolOptions.render()}
-        ${this.#uvToolbar.render(this.#toolOptions.mode === "uv")}
+        ${this.#uvToolbar.render(this.#toolOptions.mode === "uv", this.allowUvCreateDelete)}
+        ${this.#historyFile.render()}
       </div>
     `;
   }

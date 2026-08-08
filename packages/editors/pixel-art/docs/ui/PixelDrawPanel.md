@@ -1,6 +1,6 @@
 # PixelDrawPanel
 
-Drop-in web component. Rail (mode buttons, colors, undo/redo, import/export) + canvas, wired to a `PixelArtCanvas` for you. This is what the `examples/` demo uses — grab it instead of rebuilding a toolbar around `PixelArtCanvas` yourself.
+Drop-in web component. Rail (mode buttons, colors) + canvas, wired to a `PixelArtCanvas` for you. Undo/redo and import/export float in a toolbar at the bottom of the canvas, visible in every mode — same floating-pill style as the UV toolbar at the top. This is what the `examples/` demo uses — grab it instead of rebuilding a toolbar around `PixelArtCanvas` yourself.
 
 ```ts
 import "@jolly-pixel/editor.pixel-art";
@@ -30,11 +30,13 @@ const canvas = await panel.initialize({
 | `initialize(options?)` | Creates the `PixelArtCanvas`, returns it. Call once. |
 | `canvasManager` | The live `PixelArtCanvas`, or `null` before `initialize()`. |
 | `onResize()` | Call on container resize (ResizeObserver, split-pane drag, etc). |
+| `allow-uv-create-delete` attribute / `allowUvCreateDelete` property | Shows the Create/Delete buttons in the UV toolbar. Off by default: creating/deleting regions only makes sense when the panel owns the UV layout (the package's own example); embeddings over a fixed mesh (e.g. voxel-map) leave it off. |
+| `theme` attribute / property (`"light" \| "dark" \| "auto"`, default `"auto"`) | Selects the palette. `"auto"` follows `prefers-color-scheme`; `"light"`/`"dark"` force one regardless of the OS setting. Reflects to the attribute. |
 
 Destruction is automatic: `disconnectedCallback()` calls `canvasManager.destroy()` when the element leaves the DOM.
 
 > [!NOTE]
-> Everything is shadow-DOM scoped — no global CSS required. Theme is a handful of `:host` CSS custom properties (see `theme.ts`); override them on `pixel-draw-panel` from outside if you need a different palette.
+> Everything is shadow-DOM scoped — no global CSS required. Both palettes are `:host`-scoped CSS custom properties keyed off the `theme` attribute (see `theme.ts`); override the custom properties on `pixel-draw-panel` from outside if you need a different palette than the two built in.
 
 ## Sub-elements
 

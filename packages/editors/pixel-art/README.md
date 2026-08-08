@@ -3,7 +3,7 @@
 </h1>
 
 <p align="center">
-  Reusable pixel-art UI on top of @jolly-pixel/pixel-draw.renderer
+  Reusable pixel-art editor with UI on top of <a href="../../pixel-draw-renderer/">@jolly-pixel/pixel-draw.renderer</a>
 </p>
 
 ## 📌 About
@@ -12,21 +12,21 @@
 
 ## 💃 Getting Started
 
-This package is private and not published to npm. Add it as a workspace dependency instead:
+This package is available in the Node Package Repository and can be easily installed with [npm][npm] or [yarn][yarn].
 
-```json
-{
-  "dependencies": {
-    "@jolly-pixel/editor.pixel-art": "2.0.0"
-  }
-}
+```bash
+$ npm i @jolly-pixel/editor.pixel-art
+# or
+$ yarn add @jolly-pixel/editor.pixel-art
 ```
 
 ## 👀 Usage Example
 
 ```ts
 import "@jolly-pixel/editor.pixel-art";
-import type { PixelDrawPanel } from "@jolly-pixel/editor.pixel-art";
+import type {
+  PixelDrawPanel
+} from "@jolly-pixel/editor.pixel-art";
 ```
 
 ```html
@@ -37,23 +37,31 @@ import type { PixelDrawPanel } from "@jolly-pixel/editor.pixel-art";
 const panel = document.querySelector<PixelDrawPanel>("pixel-draw-panel")!;
 const canvas = await panel.initialize({
   texture: {
-    size: { x: 64, y: 64 }
+    size: {
+      x: 64,
+      y: 64
+    }
   },
   defaultMode: "paint"
 });
 ```
 
-See [PixelDrawPanel.md](./docs/ui/PixelDrawPanel.md) for the full API, including the individually-exported sub-elements (`ModeRail`, `ColorPickerRail`, `ColorSwatch`) if you want to compose your own layout instead of the full panel.
+> [!TIP]
+> See [Voxel-Map](../voxel-map/README.md) editor for a live integration on this editor.
 
 ## 🚀 Running the example
 
-`examples/` is a Lit toolbar panel driving `PixelArtCanvas` and painting a live Three.js texture, with optional multiplayer sync via `@jolly-pixel/network`.
+`examples/` is a Lit toolbar panel driving `PixelArtCanvas` and painting a live Three.js texture, with multiplayer sync via `@jolly-pixel/network`.
 
 ```bash
 npm run dev -w @jolly-pixel/editor.pixel-art
 ```
 
 Open `http://localhost:3000` to see the interactive demo.
+
+## 📚 API
+
+- [`PixelDrawPanel`](./docs/ui/PixelDrawPanel.md): drop-in UI (`<pixel-draw-panel>`)
 
 ## 🧪 Running the E2E tests
 
@@ -62,10 +70,6 @@ npm run test:e2e -w @jolly-pixel/editor.pixel-art
 ```
 
 Playwright drives the `examples/` demo (started automatically via `webServer`) and exercises paint, fill, select, move, colors, history, and import/export through the actual UI, not internal APIs.
-
-## 📚 API
-
-- [`PixelDrawPanel`](./docs/ui/PixelDrawPanel.md): drop-in UI (`<pixel-draw-panel>`)
 
 ## Contributors Guide
 
@@ -87,6 +91,8 @@ MIT
 
 <!-- Reference-style links for DRYness -->
 
+[npm]: https://docs.npmjs.com/getting-started/what-is-npm
+[yarn]: https://yarnpkg.com
 [contributing]: ../../../CONTRIBUTING.md
 [pixel-draw-renderer]: https://github.com/JollyPixel/editor/tree/main/packages/pixel-draw-renderer
 [voxel-map]: https://github.com/JollyPixel/editor/tree/main/packages/editors/voxel-map

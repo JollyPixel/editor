@@ -160,7 +160,7 @@ manager.redo();
 - [`Network`](./docs/network/index.md)
 
 > [!NOTE]
-> Looking for a drop-in UI? See [`PixelDrawPanel`](../editors/pixel-art/docs/ui/PixelDrawPanel.md) in `@jolly-pixel/editor.pixel-art` — this package stays focused on the headless API.
+> Looking for a drop-in UI? See [`PixelDrawPanel`](../editors/pixel-art/docs/ui/PixelDrawPanel.md) in `@jolly-pixel/editor.pixel-art`: this package stays focused on the headless API.
 
 ### Advanced / Internal
 
@@ -190,8 +190,6 @@ interface SelectionRect {
 
 interface RGBA { r: number; g: number; b: number; a: number; }
 ```
-
-`Vec2` is a texture- or canvas-space coordinate depending on context. `SelectionRect` is always texture-space, used by `PixelBuffer.drawRegion` and the built-in select tool. Color options also accept `ColorInput` (`string | Color`, [colorjs.io][colorjs]'s class) — a CSS color string or a `Color` instance — but that alias isn't itself exported by name.
 
 ## Contributors Guide
 
