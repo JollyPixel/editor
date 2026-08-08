@@ -95,12 +95,16 @@ export class Select {
   }
 
   finishCreate(
-    snapshot: RGBA[]
+    snapshot: RGBA[],
+    finalRect?: SelectionRect
   ): void {
     if (this.#state !== "creating") {
       return;
     }
 
+    if (finalRect) {
+      this.#rect = finalRect;
+    }
     this.#snapshot = snapshot;
     this.#mask = new Array(
       snapshot.length

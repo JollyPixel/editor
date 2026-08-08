@@ -24,6 +24,12 @@ Runtime-only (no constructor option). Changing it clears the current selection.
 > [!IMPORTANT]
 > A connected region smaller than 2 pixels does not produce a selection; the click is a no-op.
 
+## Rectangle bounds
+
+A rectangle selection may extend beyond the texture while it is being drawn.
+When the gesture ends, the selection is clipped to the texture bounds. A
+rectangle that does not overlap the texture is discarded.
+
 ## `hasSelection`
 
 Read-only. `true` when there is a committed selection to transform; otherwise `false`.

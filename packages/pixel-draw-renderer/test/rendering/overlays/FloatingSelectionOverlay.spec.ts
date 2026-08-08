@@ -34,6 +34,12 @@ const kErase: RGBA = {
   b: 9,
   a: 255
 };
+const kTransparent: RGBA = {
+  r: 0,
+  g: 0,
+  b: 0,
+  a: 0
+};
 
 function makeDest(): HTMLCanvasElement {
   const dest = document.createElement("canvas");
@@ -197,6 +203,47 @@ describe("FloatingSelectionOverlay", () => {
       assert.deepStrictEqual(
         pixelAt(dest, 5, 5),
         [255, 0, 0, 255]
+      );
+    });
+
+    test("a transparent erase color removes source pixels instead of compositing over them", () => {
+      const overlay = new FloatingSelectionOverlay();
+      overlay.create({
+        sourceRect: {
+          x: 0,
+          y: 0,
+          width: 2,
+          height: 1
+        },
+        pixels: [kRed, kRed],
+        eraseColor: kTransparent
+      });
+      overlay.updatePosition({
+        x: 1,
+        y: 0,
+        width: 2,
+        height: 1
+      });
+
+      const dest = makeDest();
+      const destCtx = mockContextOf(dest);
+      const initial = destCtx.createImageData(2, 1);
+      initial.data.set([
+        255, 0, 0, 255,
+        255, 0, 0, 255
+      ]);
+      destCtx.putImageData(initial, 0, 0);
+      overlay.draw(destCtx.asRenderingContext());
+
+      assert.deepStrictEqual(
+        pixelAt(dest, 0, 0),
+        [0, 0, 0, 0],
+        "the non-overlapping source edge is transparent during the drag"
+      );
+      assert.deepStrictEqual(
+        pixelAt(dest, 1, 0),
+        [255, 0, 0, 255],
+        "the moved selection is visible at its destination"
       );
     });
 

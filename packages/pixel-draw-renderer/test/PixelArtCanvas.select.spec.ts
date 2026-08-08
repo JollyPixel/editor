@@ -155,9 +155,8 @@ describe("PixelArtCanvas — select mode", () => {
     canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
     canvas.dispatchEvent(mouseEvent("mousemove", 100, 100));
 
-    // Mid-drag, before mouseup. MockCanvas2DContext.fillRect ignores canvas
-    // transforms, so the floating overlay's source-blank paints directly
-    // at raw pixel (sourceRect.x, sourceRect.y) on the interactive canvas.
+    // Mid-drag, before mouseup. The canvas mock ignores transforms, so texture
+    // positions map directly to raw pixels on the interactive canvas.
     const midDragPixels = canvasPixels(canvas);
     assert.deepStrictEqual(
       readPixel(midDragPixels, { x: 2, y: 2 }, canvas.width),
@@ -186,11 +185,7 @@ describe("PixelArtCanvas — select mode", () => {
     window.dispatchEvent(ctrlKey("c"));
     window.dispatchEvent(ctrlKey("v"));
 
-    // Baseline: whatever the render canvas shows at (2,2) right after the
-    // paste (background/checkerboard fill — the mock's drawImage is a
-    // no-op, so the actual texture content isn't reflected here either
-    // way; what matters is whether the erase-color blank gets applied on
-    // top of it during the drag).
+    // Baseline: the render canvas at (2,2) immediately after the paste.
     const baseline = readPixel(
       canvasPixels(canvas),
       { x: 2, y: 2 },
