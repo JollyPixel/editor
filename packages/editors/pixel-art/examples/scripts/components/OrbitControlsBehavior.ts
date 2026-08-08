@@ -6,6 +6,9 @@ import {
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
+// CONSTANTS
+const kDampingFactor = 0.2;
+
 export interface OrbitControlsBehaviorOptions {
   camera: THREE.Camera;
   cameraActor: Actor;
@@ -47,7 +50,7 @@ export class OrbitControlsBehavior extends ActorComponent {
       actor.world.renderer.canvas
     );
     this.controls.enableDamping = true;
-    this.controls.dampingFactor = 0.08;
+    this.controls.dampingFactor = kDampingFactor;
     this.controls.minDistance = options.minDistance ?? 3;
     this.controls.maxDistance = options.maxDistance ?? 30;
     if (options.target) {
@@ -57,8 +60,10 @@ export class OrbitControlsBehavior extends ActorComponent {
     this.#writebackPose();
   }
 
-  update(): void {
-    this.controls.update();
+  update(
+    deltaTime: number
+  ): void {
+    this.controls.update(deltaTime);
     this.#writebackPose();
   }
 

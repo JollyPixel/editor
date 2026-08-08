@@ -28,6 +28,18 @@ test("defaults to the \"auto\" theme", async({ page }) => {
   const panel = page.locator("pixel-draw-panel");
 
   await expect(panel).toHaveAttribute("theme", "auto");
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-resolved-theme",
+    /light|dark/
+  );
+});
+
+test("cube rotation is enabled by default and can be toggled", async({ page }) => {
+  const rotationToggle = page.locator("#rotation-toggle");
+
+  await expect(rotationToggle).toBeChecked();
+  await rotationToggle.uncheck();
+  await expect(rotationToggle).not.toBeChecked();
 });
 
 test("switching the demo select forces the light/dark palette", async({ page }) => {
@@ -36,10 +48,12 @@ test("switching the demo select forces the light/dark palette", async({ page }) 
 
   await themeSelect.selectOption("dark");
   await expect(panel).toHaveAttribute("theme", "dark");
+  await expect(page.locator("html")).toHaveAttribute("data-resolved-theme", "dark");
   await expect.poll(() => readBgSurface(page)).toBe(kDarkBgSurface);
 
   await themeSelect.selectOption("light");
   await expect(panel).toHaveAttribute("theme", "light");
+  await expect(page.locator("html")).toHaveAttribute("data-resolved-theme", "light");
   await expect.poll(() => readBgSurface(page)).toBe(kLightBgSurface);
 
   await themeSelect.selectOption("auto");

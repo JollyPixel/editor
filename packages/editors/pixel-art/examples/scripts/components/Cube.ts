@@ -10,6 +10,7 @@ import type {
   SelectionRect,
   Vec2
 } from "@jolly-pixel/pixel-draw.renderer";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 
 export interface CubeBehaviorOptions {
   canvasTexture: THREE.CanvasTexture;
@@ -34,7 +35,17 @@ const kFaceVertexOffset: Record<UVFace, number> = {
   back: 20
 };
 const kVerticesPerFace = 4;
-const kHighlightScale = 1.06;
+const kBorderRadius = 0.025;
+const kBorderRadialSegments = 8;
+const kBorderCapSegments = 4;
+const kFaceLabelCanvasWidth = 256;
+const kFaceLabelCanvasHeight = 64;
+const kFaceLabelWidth = 0.58;
+const kFaceLabelHeight = kFaceLabelWidth * (
+  kFaceLabelCanvasHeight / kFaceLabelCanvasWidth
+);
+const kFaceLabelMargin = 0.09;
+const kFaceLabelSurfaceOffset = 0.003;
 // Both in rad/sec.
 const kRotationSpeedX = 0.3;
 const kRotationSpeedY = 0.6;
@@ -46,7 +57,11 @@ export class CubeBehavior extends ActorComponent {
   canvasTexture: THREE.CanvasTexture;
   readonly regionId: string;
 
-  #highlightMesh: THREE.Mesh;
+  #borderMaterial: THREE.MeshBasicMaterial;
+  #borderColor = new THREE.Color(0x101820);
+  #selectionColor: THREE.Color;
+  #selected = false;
+  #rotating = true;
   /**
    * Pristine BoxGeometry UVs (0 or 1 per component). Remaps always derive
    * corner identity from this snapshot, never from the live (remapped) attribute.
@@ -90,22 +105,22 @@ export class CubeBehavior extends ActorComponent {
     this.mesh.userData.regionId = region.id;
     this.applyRegion(region, textureSize);
 
-    // Backface shell: cheap always-visible outline using the region's own color.
-    const highlightSize = kCubeSize * kHighlightScale;
-    this.#highlightMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(
-        highlightSize,
-        highlightSize,
-        highlightSize
-      ),
-      new THREE.MeshBasicMaterial({
-        color: region.color,
-        side: THREE.BackSide
-      })
+    this.#borderMaterial = new THREE.MeshBasicMaterial({
+      color: this.#borderColor,
+      toneMapped: false
+    });
+    const borderMesh = createRoundedBorder(
+      kCubeSize,
+      kBorderRadius,
+      this.#borderMaterial
     );
-    this.#highlightMesh.visible = false;
+    this.#selectionColor = new THREE.Color(region.color);
 
-    this.actor.addChildren(this.mesh, this.#highlightMesh);
+    this.actor.addChildren(
+      this.mesh,
+      borderMesh,
+      ...createFaceLabels()
+    );
     this.#targetPosition = this.actor.object3D.position.clone();
   }
 
@@ -161,15 +176,42 @@ export class CubeBehavior extends ActorComponent {
   setSelected(
     selected: boolean
   ): void {
-    this.#highlightMesh.visible = selected;
+    this.#selected = selected;
+    this.#syncBorderColor();
+  }
+
+  setBorderColor(
+    color: THREE.ColorRepresentation
+  ): void {
+    this.#borderColor.set(color);
+    this.#syncBorderColor();
+  }
+
+  setRotating(
+    rotating: boolean
+  ): void {
+    this.#rotating = rotating;
+  }
+
+  setRotation(
+    rotation: THREE.Euler
+  ): void {
+    this.actor.object3D.rotation.copy(rotation);
+  }
+
+  #syncBorderColor(): void {
+    this.#borderMaterial.color.copy(
+      this.#selected ? this.#selectionColor : this.#borderColor
+    );
   }
 
   update(
     deltaTime: number
   ): void {
-    // Rotate the actor so the highlight shell (sibling) spins in lockstep.
-    this.actor.object3D.rotation.x += kRotationSpeedX * deltaTime;
-    this.actor.object3D.rotation.y += kRotationSpeedY * deltaTime;
+    if (this.#rotating) {
+      this.actor.object3D.rotation.x += kRotationSpeedX * deltaTime;
+      this.actor.object3D.rotation.y += kRotationSpeedY * deltaTime;
+    }
 
     // Frame-rate-independent exponential ease.
     const alpha = 1 - Math.exp(-kPositionLerpRate * deltaTime);
@@ -203,4 +245,164 @@ export class CubeBehavior extends ActorComponent {
       uvAttr.setXY(i, u === 0 ? u0 : u1, v === 0 ? v0 : v1);
     }
   }
+}
+
+/**
+ * Creates face-attached labels that use each face's local top-left corner.
+ */
+function createFaceLabels(): THREE.Object3D[] {
+  return (Object.entries(kFaceVertexOffset) as [UVFace, number][])
+    .map(([face]) => {
+      const label = new THREE.Mesh(
+        new THREE.PlaneGeometry(kFaceLabelWidth, kFaceLabelHeight),
+        createFaceLabelMaterial(face)
+      );
+      const faceObject = new THREE.Object3D();
+      const halfSize = kCubeSize / 2;
+
+      label.position.set(
+        -halfSize + kFaceLabelMargin + (kFaceLabelWidth / 2),
+        halfSize - kFaceLabelMargin - (kFaceLabelHeight / 2),
+        halfSize + kFaceLabelSurfaceOffset
+      );
+      faceObject.rotation.copy(faceRotation(face));
+      faceObject.add(label);
+
+      return faceObject;
+    });
+}
+
+function createFaceLabelMaterial(
+  face: UVFace
+): THREE.MeshBasicMaterial {
+  const canvas = document.createElement("canvas");
+  canvas.width = kFaceLabelCanvasWidth;
+  canvas.height = kFaceLabelCanvasHeight;
+
+  const context = canvas.getContext("2d");
+  if (context === null) {
+    throw new Error("Unable to create face label canvas context");
+  }
+
+  context.font = "600 38px sans-serif";
+  context.textBaseline = "middle";
+  context.lineJoin = "round";
+  context.lineWidth = 8;
+  context.strokeStyle = "rgba(0, 0, 0, 0.8)";
+  context.fillStyle = "#ffffff";
+  context.strokeText(face.toUpperCase(), 12, kFaceLabelCanvasHeight / 2);
+  context.fillText(face.toUpperCase(), 12, kFaceLabelCanvasHeight / 2);
+
+  return new THREE.MeshBasicMaterial({
+    map: new THREE.CanvasTexture(canvas),
+    transparent: true,
+    depthWrite: false,
+    toneMapped: false
+  });
+}
+
+function faceRotation(
+  face: UVFace
+): THREE.Euler {
+  switch (face) {
+    case "right":
+      return new THREE.Euler(0, Math.PI / 2, 0);
+    case "left":
+      return new THREE.Euler(0, -Math.PI / 2, 0);
+    case "top":
+      return new THREE.Euler(-Math.PI / 2, 0, 0);
+    case "bottom":
+      return new THREE.Euler(Math.PI / 2, 0, 0);
+    case "back":
+      return new THREE.Euler(0, Math.PI, 0);
+    case "front":
+      return new THREE.Euler();
+    default:
+      throw new Error(`Unknown cube face: ${face}`);
+  }
+}
+
+function createRoundedBorder(
+  size: number,
+  radius: number,
+  material: THREE.MeshBasicMaterial
+): THREE.Mesh {
+  const halfSize = size / 2;
+  const edgeLength = size - (radius * 2);
+  const geometries: THREE.BufferGeometry[] = [];
+
+  for (const x of [-halfSize, halfSize]) {
+    for (const z of [-halfSize, halfSize]) {
+      geometries.push(createBorderEdgeGeometry(
+        edgeLength,
+        radius,
+        new THREE.Vector3(x, 0, z)
+      ));
+    }
+  }
+
+  for (const y of [-halfSize, halfSize]) {
+    for (const z of [-halfSize, halfSize]) {
+      geometries.push(createBorderEdgeGeometry(
+        edgeLength,
+        radius,
+        new THREE.Vector3(0, y, z),
+        new THREE.Euler(0, 0, Math.PI / 2)
+      ));
+    }
+  }
+
+  for (const x of [-halfSize, halfSize]) {
+    for (const y of [-halfSize, halfSize]) {
+      geometries.push(createBorderEdgeGeometry(
+        edgeLength,
+        radius,
+        new THREE.Vector3(x, y, 0),
+        new THREE.Euler(Math.PI / 2, 0, 0)
+      ));
+    }
+  }
+
+  for (const x of [-halfSize, halfSize]) {
+    for (const y of [-halfSize, halfSize]) {
+      for (const z of [-halfSize, halfSize]) {
+        const corner = new THREE.SphereGeometry(
+          radius,
+          kBorderRadialSegments,
+          kBorderCapSegments * 2
+        );
+        corner.translate(x, y, z);
+        geometries.push(corner);
+      }
+    }
+  }
+
+  const borderGeometry = mergeGeometries(geometries);
+  if (borderGeometry === null) {
+    throw new Error("Unable to merge cube border geometry");
+  }
+
+  return new THREE.Mesh(borderGeometry, material);
+}
+
+function createBorderEdgeGeometry(
+  length: number,
+  radius: number,
+  position: THREE.Vector3,
+  rotation = new THREE.Euler()
+): THREE.BufferGeometry {
+  const geometry = new THREE.CapsuleGeometry(
+    radius,
+    length,
+    kBorderCapSegments,
+    kBorderRadialSegments
+  );
+  const transform = new THREE.Matrix4().compose(
+    position,
+    new THREE.Quaternion().setFromEuler(rotation),
+    new THREE.Vector3(1, 1, 1)
+  );
+  geometry.applyMatrix4(transform);
+
+  return geometry;
 }

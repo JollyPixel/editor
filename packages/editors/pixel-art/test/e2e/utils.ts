@@ -17,7 +17,7 @@ export interface PixelRGBA {
 export async function gotoDemo(
   page: Page
 ): Promise<void> {
-  await page.goto("/");
+  await page.goto("/?empty=true");
   await page.locator("jolly-loading")
     .waitFor({ state: "attached", timeout: 2_000 })
     .catch(() => undefined);

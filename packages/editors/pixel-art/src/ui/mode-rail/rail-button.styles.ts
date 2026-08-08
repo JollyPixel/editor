@@ -57,13 +57,8 @@ export const railButtonStyles = css`
     height: 0;
     border-style: solid;
     border-width: 3px 0 3px 3.5px;
-    border-color: transparent transparent transparent var(--color-text-muted);
+    border-color: transparent transparent transparent currentColor;
     opacity: 0.8;
-  }
-
-  .rail-item.open .rail-btn.has-flyout::after,
-  .rail-item:focus-within .rail-btn.has-flyout::after {
-    opacity: 0;
   }
 
   .rail-item {

@@ -26,6 +26,25 @@ import { CubePicker } from "./CubePicker.ts";
 const DEMO_ROOM = "pixel-draw:demo-canvas";
 const USERNAME_STORAGE_KEY = "pixel-draw-demo:username";
 
+const kDarkThemeQuery = "(prefers-color-scheme: dark)";
+const kStarterRegionId = "pixel-draw-demo:starter-region";
+const kStarterRegionSize = 16;
+
+interface SceneAppearance {
+  backgroundColor: THREE.ColorRepresentation;
+  borderColor: THREE.ColorRepresentation;
+}
+
+const kSceneAppearances: Record<Exclude<ThemeMode, "auto">, SceneAppearance> = {
+  light: {
+    backgroundColor: "#eef3f7",
+    borderColor: "#101820"
+  },
+  dark: {
+    backgroundColor: "#161a1d",
+    borderColor: "#f2f5f7"
+  }
+};
 declare global {
   interface Window {
     /**
@@ -34,8 +53,6 @@ declare global {
     __pixelSyncReady?: boolean;
   }
 }
-
-wireThemeSelect();
 
 const runtime = await initRuntime();
 loadRuntime(runtime, {
@@ -49,15 +66,37 @@ loadRuntime(runtime, {
  * select, the page backdrop — see public/main.css) follows along; that CSS
  * can't see pixel-draw-panel's own custom properties.
  */
-function wireThemeSelect(): void {
+function wireThemeSelect(
+  onResolvedThemeChange: (theme: Exclude<ThemeMode, "auto">) => void
+): void {
   const themeSelect = document.querySelector<HTMLSelectElement>("#theme-select")!;
   const drawPanel = document.querySelector<PixelDrawPanel>("pixel-draw-panel")!;
+  const prefersDarkQuery = window.matchMedia(kDarkThemeQuery);
 
-  themeSelect.addEventListener("change", () => {
+  function applyTheme(): void {
     const theme = themeSelect.value as ThemeMode;
+    let resolvedTheme: Exclude<ThemeMode, "auto">;
+
+    if (theme === "auto") {
+      resolvedTheme = prefersDarkQuery.matches ? "dark" : "light";
+    }
+    else {
+      resolvedTheme = theme;
+    }
+
     drawPanel.theme = theme;
     document.documentElement.dataset.theme = theme;
+    document.documentElement.dataset.resolvedTheme = resolvedTheme;
+    onResolvedThemeChange(resolvedTheme);
+  }
+
+  themeSelect.addEventListener("change", applyTheme);
+  prefersDarkQuery.addEventListener("change", () => {
+    if (themeSelect.value === "auto") {
+      applyTheme();
+    }
   });
+  applyTheme();
 }
 
 async function initRuntime(): Promise<Runtime> {
@@ -72,8 +111,6 @@ async function initRuntime(): Promise<Runtime> {
   const { world } = runtime;
 
   const scene = world.sceneManager.getSource();
-  scene.background = new THREE.Color("#eef3f7");
-
   const keyLight = new THREE.DirectionalLight(0xffffff, 1.8);
   keyLight.position.set(5, 10, 7);
 
@@ -139,17 +176,34 @@ async function initRuntime(): Promise<Runtime> {
   };
 
   // Attach sync before CubeGallery so initial UV region events are captured.
-  initializeWebsocketTransport(canvasManager);
+  const syncReady = initializeWebsocketTransport(canvasManager);
 
   // One cube per UV region; CubeGallery mirrors region state to scene meshes.
   const cubeFactory = new CubeFactory({ world, canvasTexture });
   cubeGallery = new CubeGallery({ cubeFactory, canvasManager });
+  const rotationToggle = document.querySelector<HTMLInputElement>(
+    "#rotation-toggle"
+  )!;
+  rotationToggle.addEventListener("change", () => {
+    cubeGallery.setRotating(rotationToggle.checked);
+  });
+  cubeGallery.setRotating(rotationToggle.checked);
+  wireThemeSelect((theme) => {
+    const appearance = kSceneAppearances[theme];
+    scene.background = new THREE.Color(appearance.backgroundColor);
+    cubeGallery.setAppearance({
+      borderColor: appearance.borderColor
+    });
+  });
   new CubePicker({
     uv: canvasManager.uv,
     camera: cameraBehavior.camera,
     canvas,
     getMeshes: () => cubeGallery.meshes
   });
+
+  await syncReady;
+  initializeStarterRegion(canvasManager);
 
   world.renderer.on("resize", () => drawPanel.onResize());
 
@@ -162,6 +216,22 @@ async function initRuntime(): Promise<Runtime> {
   });
 
   return runtime;
+}
+
+function initializeStarterRegion(
+  canvasManager: PixelArtCanvas
+): void {
+  if (new URLSearchParams(window.location.search).has("empty")) {
+    return;
+  }
+
+  const [existingRegion] = canvasManager.uv.regions;
+  const region = existingRegion ?? canvasManager.uv.create({
+    id: kStarterRegionId,
+    width: kStarterRegionSize,
+    height: kStarterRegionSize
+  });
+  canvasManager.uv.select(region.id);
 }
 
 /**
@@ -187,7 +257,7 @@ function resolveUsername(): string {
 // PixelSyncClient.attach() chains onto the current canvas onBufferUpdated handler.
 function initializeWebsocketTransport(
   canvasManager: PixelArtCanvas
-) {
+): Promise<void> {
   const networkClient = new network.Client({
     identity: {
       username: resolveUsername()
@@ -204,12 +274,17 @@ function initializeWebsocketTransport(
     room
   });
   syncClient.attach(canvasManager);
-  syncClient.on("ready", () => {
-    window.__pixelSyncReady = true;
+  const syncReady = new Promise<void>((resolve) => {
+    syncClient.on("ready", () => {
+      window.__pixelSyncReady = true;
+      resolve();
+    });
   });
 
   const cursorSync = new PixelCursorSync({
     room
   });
   cursorSync.attach(canvasManager);
+
+  return syncReady;
 }
