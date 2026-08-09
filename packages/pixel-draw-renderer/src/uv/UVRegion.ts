@@ -86,6 +86,12 @@ function copyFaces(
   };
 }
 
+function normalizeActiveFaces(
+  activeFaces: readonly UVFace[]
+): readonly UVFace[] {
+  return UV_FACES.filter((face) => activeFaces.includes(face));
+}
+
 /**
  * Shares one rect across all faces (regions never mutate rects in place).
  */
@@ -131,13 +137,19 @@ export class UVRegion {
     if (data.state === "uncollapsed") {
       this.state = "uncollapsed";
       this.#faces = copyFaces(data.faces);
-      this.#activeFaces = data.activeFaces ?? UV_FACES;
+      this.#activeFaces = normalizeActiveFaces(
+        data.activeFaces ?? UV_FACES
+      );
       this.#collapsedRect = null;
     }
     else {
       this.state = "collapsed";
-      this.#faces = data.faces ? copyFaces(data.faces) : sharedFaces(data.rect);
-      this.#activeFaces = data.activeFaces ?? UV_FACES;
+      this.#faces = data.faces ?
+        copyFaces(data.faces) :
+        sharedFaces(data.rect);
+      this.#activeFaces = normalizeActiveFaces(
+        data.activeFaces ?? UV_FACES
+      );
       this.#collapsedRect = copyRect(data.rect);
     }
   }
@@ -145,22 +157,36 @@ export class UVRegion {
   rectFor(
     face: UVFace
   ): SelectionRect {
-    return this.#collapsedRect ?? rectOf(this.#faces[face]);
+    if (this.#collapsedRect) {
+      return copyRect(this.#collapsedRect);
+    }
+
+    return rectOf(this.#faces[face]);
   }
 
   geometryFor(
     face: UVFace
   ): UVGeometry {
-    return this.#collapsedRect ? this.#collapsedRect : this.#faces[face];
+    return copyGeometry(
+      this.#collapsedRect ?? this.#faces[face]
+    );
   }
 
   facesOf(): UVRegionFace[] {
     if (this.state === "collapsed") {
-      return [{ face: null, geometry: this.#collapsedRect! }];
+      return [
+        {
+          face: null,
+          geometry: copyRect(this.#collapsedRect!)
+        }
+      ];
     }
 
     return this.#activeFaces.map((face) => {
-      return { face, geometry: this.#faces[face] };
+      return {
+        face,
+        geometry: copyGeometry(this.#faces[face])
+      };
     });
   }
 

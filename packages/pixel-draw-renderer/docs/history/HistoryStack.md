@@ -24,7 +24,7 @@ interface HistoryStackOptions {
 | `"select-edit"` | `beforeColors`/`afterColors` per-position + `oldRect`/`newRect`/`oldMask`/`newMask` for selection state |
 | `"uv-create"` / `"uv-delete"` | Full `region` (undo calls the inverse `UVMap` method) |
 | `"uv-move"` | `face` (`null` when collapsed) + `oldRect` / `newRect` |
-| `"uv-state"` | Whole `before` / `after` regions — collapsing discards five rects, so only a full snapshot can undo it |
+| `"uv-state"` | Whole `before` / `after` regions. A normal uncollapse resets every face to the shared rectangle, so only a full snapshot restores the previous layout. |
 
 > [!NOTE]
 > `"select-edit"` and `"uv-*"` undo/redo are broadcast over the network. See [uv/UVMap.md](../uv/UVMap.md#history--network).

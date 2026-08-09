@@ -280,7 +280,7 @@ describe("PixelArtCanvas — uv mode", () => {
       assert.strictEqual(manager.uv.get(region.id)!.state, "uncollapsed");
     });
 
-    test("undoing a collapse brings back the faces it discarded", () => {
+    test("undoing a collapse restores the previous face layout", () => {
       const manager = makeManager();
       const region = manager.uv.create({ width: 4, height: 4 });
       manager.uv.uncollapse(region.id);

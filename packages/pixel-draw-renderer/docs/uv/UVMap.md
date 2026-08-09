@@ -1,12 +1,23 @@
 # UVMap
 
-Manages a texture's UV regions. Exposed as `PixelArtCanvas.uv`.
+Manages the texture's UV regions. The canvas exposes it as `PixelArtCanvas.uv`.
 
-- **Creating** a region is API-only: call `uv.create(...)` (e.g. from a toolbar button). Pass `state` to choose whether a region starts collapsed or uncollapsed; ramps use five active faces and triangular sides.
-- **Moving** is a canvas gesture: switch to `"uv"` mode, click a region, drag
-- **Collapse/uncollapse** is API-only: `uv.uncollapse(id)` / `uv.collapse(id, face?)`
+```ts
+const region = canvas.uv.create({
+  width: 16,
+  height: 16,
+  name: "Grass block"
+});
 
-See [`UVRegion`](./UVRegion.md) for the region type itself, and what collapsed/uncollapsed mean.
+canvas.mode = "uv";
+canvas.uv.select(region.id);
+```
+
+In UV mode, click a visible region to select it, drag it to move it, or press `Delete` to remove it. Create, collapse and uncollapse regions through this API.
+
+See [`UVRegion`](./UVRegion.md) for region geometry and serialized data.
+
+## Types
 
 ```ts
 new UVMap(options: UVMapOptions)
@@ -15,33 +26,43 @@ interface UVMapOptions {
   getCanvasSize: () => Vec2;
 }
 
+type UVFaceGeometryTemplate =
+  | { shape: "rectangle"; }
+  | {
+      shape: "triangle";
+      corner: "top-left" | "top-right" | "bottom-left" | "bottom-right";
+    };
+
 interface UVRegionCreateOptions {
   width: number;
   height: number;
   name?: string;
   activeFaces?: readonly UVFace[];
   faceGeometries?: Partial<Record<UVFace, UVFaceGeometryTemplate>>;
-  id?: string;    // default: crypto.randomUUID()
-  color?: string; // default: next palette color
+  state?: "collapsed" | "uncollapsed";
+  id?: string;
+  color?: string;
 }
 ```
+
+`width` and `height` are clamped to the canvas. The default `id` comes from `crypto.randomUUID()` and the default color comes from the built-in palette.
+
+A region with `activeFaces` or `faceGeometries` starts uncollapsed. Other regions start collapsed. Pass `state` to override that default.
 
 ## Events
 
 | Type | Payload |
 |---|---|
 | `"region-created"` | `region` |
-| `"region-deleted"` | `region` (last state before removal) |
+| `"region-deleted"` | `region` |
 | `"region-moved"` | `region`, `face`, `previousRect` |
-| `"region-dragging"` | `id`, `face`, `rect`, `geometry` (transient, not committed) |
-| `"region-state-changed"` | `region`, `previous` (`UVRegionData`) |
+| `"region-dragging"` | `id`, `face`, `rect`, `geometry` |
+| `"region-state-changed"` | `region`, `previous` |
 | `"selection-changed"` | `selectedRegionId`, `selectedFace` |
 | `"visibility-changed"` | `showAll` |
 | `"label-visibility-changed"` | `showRegionLabels` |
 
-`face` is `null` for a collapsed region, whose single rect covers every face.
-
-`"region-state-changed"` is deliberately **not** a delete followed by a create: a consumer mirroring regions as meshes must not tear its mesh down and rebuild it just because the region changed shape.
+`face` is `null` for a collapsed region. `"region-dragging"` is a preview event; it does not mutate the map.
 
 ## Properties
 
@@ -51,23 +72,16 @@ interface UVRegionCreateOptions {
 get regions(): IterableIterator<UVRegion>
 ```
 
-Live view in insertion order. `UVMap` is itself iterable (`for (const r of uv)`). Spread if you need an array.
+Live view in insertion order. `UVMap` is also iterable. Spread either value to take a snapshot.
 
-### `selectedRegionId`
+### `selectedRegionId` / `selectedFace`
 
 ```ts
 get selectedRegionId(): string | null
-```
-
-The currently selected region, or `null`. Set by clicking in `"uv"` mode or by `select(id)`.
-
-### `selectedFace`
-
-```ts
 get selectedFace(): UVFace | null
 ```
 
-The face being edited within the selected region. Normalized against the region's state: always `null` for a collapsed region, always a face for an uncollapsed one (defaulting to `"front"`). Renormalized automatically when the selected region collapses or uncollapses.
+The current selection. A collapsed region has no selected face. An uncollapsed region selects the requested active face or falls back to its first active face in `UV_FACES` order.
 
 ### `showAll`
 
@@ -76,7 +90,7 @@ get showAll(): boolean
 set showAll(value: boolean)
 ```
 
-`false` by default. See **Visibility** below.
+When `true`, every region is visible. The default is `false`.
 
 ### `showRegionLabels`
 
@@ -85,23 +99,25 @@ get showRegionLabels(): boolean
 set showRegionLabels(value: boolean)
 ```
 
-`false` by default. Shows each visible region's optional name, falling back to its id. `showAll` forces labels on without changing this stored preference, so disabling `showAll` restores the previous value.
+Shows each visible region's name, falling back to its id. The default is `false`. Enabling `showAll` also displays labels without changing this preference.
 
 ## Visibility
 
-A region is visible (and hit-testable) only when:
+A region is visible and hit-testable when `showAll` is enabled or its id matches `selectedRegionId`. An uncollapsed region displays all of its active faces.
 
-```ts
-showAll || region.id === selectedRegionId
-```
-
-Visibility is per **region**, not per face: a selected uncollapsed region shows all six of its faces. It has to — you cannot drag a stack apart without seeing it.
-
-No region is visible by default. Switching `PixelArtCanvas.mode` away from `"uv"` does **not** change `selectedRegionId` or `showAll`.
-
-Region-label visibility is local view state and is not serialized, recorded in history or synchronized over the network.
+Selection and visibility stay unchanged when the canvas leaves UV mode.
 
 ## Methods
+
+### `get(id)` / `canvasSize()` / `isVisible(id)`
+
+```ts
+get(id: string): UVRegion | undefined
+canvasSize(): Vec2
+isVisible(id: string): boolean
+```
+
+Read a region, the current canvas size, or the computed visibility of a region.
 
 ### `create(options)`
 
@@ -109,7 +125,7 @@ Region-label visibility is local view state and is not serialized, recorded in h
 create(options: UVRegionCreateOptions): UVRegion
 ```
 
-Places a new region at a cascading offset (clamped to canvas bounds). Regions without topology start collapsed; regions with `activeFaces` or `faceGeometries` start uncollapsed unless `state` explicitly selects the initial state. A collapsed region retains supplied topology for a later uncollapse. Emits `"region-created"`.
+Creates a region at a cascading position and emits `"region-created"`.
 
 ### `delete(id)`
 
@@ -117,7 +133,7 @@ Places a new region at a cascading offset (clamped to canvas bounds). Regions wi
 delete(id: string): boolean
 ```
 
-Removes a region. Emits `"region-deleted"`, clears selection if needed. Returns `false` for unknown id.
+Removes a region and emits `"region-deleted"`. Deleting the selected region also clears selection and emits `"selection-changed"`. Returns `false` for an unknown id.
 
 ### `move(id, rect, face?)`
 
@@ -125,9 +141,7 @@ Removes a region. Emits `"region-deleted"`, clears selection if needed. Returns 
 move(id: string, rect: SelectionRect, face?: UVFace): boolean
 ```
 
-Repositions a collapsed region's single rect, or one face of an uncollapsed one (clamped). Emits `"region-moved"`.
-
-Returns `false` for an unknown id, and for an uncollapsed region when `face` is omitted — moving every face at once is not supported yet.
+Moves the shared rectangle of a collapsed region or one face of an uncollapsed region. The rectangle is clamped to the canvas. Returns `false` when the id is unknown or an uncollapsed region has no `face`.
 
 ### `previewMove(id, rect, face?)`
 
@@ -135,7 +149,7 @@ Returns `false` for an unknown id, and for an uncollapsed region when `face` is 
 previewMove(id: string, rect: SelectionRect, face?: UVFace): void
 ```
 
-Emits `"region-dragging"` with a transient rect and its rectangle or triangle `geometry` — no store mutation, no history, no network broadcast. If a drag is cancelled, `UVController` calls this with the region's real rect to snap listeners back.
+Emits `"region-dragging"` with clamped preview geometry. The stored region, history and network state remain unchanged.
 
 ### `uncollapse(id)` / `collapse(id, face?)`
 
@@ -144,19 +158,11 @@ uncollapse(id: string): boolean
 collapse(id: string, face: UVFace = "front"): boolean
 ```
 
-Uncollapsing gives every face its own rect, all starting where the region already is, so the mapped mesh does not change appearance — the six rects land exactly on top of each other and the user drags them apart (see `UVController` cycling below).
+`collapse()` chooses one shared rectangle and retains custom face topology. If the requested face is triangular, it prefers the first active rectangular face.
 
-Collapsing keeps `face` and discards the other five. Pass the face explicitly if you want "collapse onto what the user was editing" (`uv.collapse(id, uv.selectedFace ?? undefined)`); the default is deterministic instead.
+`uncollapse()` restores the active faces and their shapes at the shared rectangle. It does not restore their previous layout; undo uses the saved region state for that.
 
-Both emit `"region-state-changed"` and return `false` for an unknown id or a redundant transition.
-
-### `restoreState(region)`
-
-```ts
-restoreState(region: UVRegion | UVRegionData): boolean
-```
-
-Replaces an existing region's geometry wholesale, emitting `"region-state-changed"` rather than `"region-created"`. This is how a collapse is undone — the five discarded rects cannot be recovered by uncollapsing, so the previous region is put back as-is. Returns `false` for an unknown id.
+Both methods emit `"region-state-changed"`. They return `false` for an unknown id or a redundant transition.
 
 ### `select(id, face?)`
 
@@ -164,15 +170,16 @@ Replaces an existing region's geometry wholesale, emitting `"region-state-change
 select(id: string | null, face?: UVFace): void
 ```
 
-Sets or clears the selection. `face` is ignored for a collapsed region and defaults to `"front"` for an uncollapsed one. Emits `"selection-changed"` only on change — including when only the face changes.
+Selects a region or clears selection with `null`. For an uncollapsed region, an omitted or inactive face falls back to the first active face. Repeated clicks on coincident faces cycle through them in `UV_FACES` order.
 
-### `restore(region)`
+### `restore(region)` / `restoreState(region)`
 
 ```ts
 restore(region: UVRegion | UVRegionData): UVRegion
+restoreState(region: UVRegion | UVRegionData): boolean
 ```
 
-Re-adds a region as-is (no cascading placement). Emits `"region-created"`. Used internally for undo/redo and network hydration.
+`restore()` adds a saved region without cascading placement and emits `"region-created"`. `restoreState()` replaces an existing region and emits `"region-state-changed"`. History and network hydration use these methods.
 
 ### `clear()`
 
@@ -180,7 +187,7 @@ Re-adds a region as-is (no cascading placement). Emits `"region-created"`. Used 
 clear(): void
 ```
 
-Deletes all regions (each emits `"region-deleted"`) and resets cascading placement.
+Deletes every region and resets cascading placement and the color palette.
 
 ### `on(type, listener)` / `off(type, listener)`
 
@@ -189,55 +196,6 @@ on<T extends UVMapEventType>(type: T, listener: UVMapListener<T>): void
 off<T extends UVMapEventType>(type: T, listener: UVMapListener<T>): void
 ```
 
-Typed pub/sub. Listeners get full type inference.
+Adds or removes a typed event listener.
 
-## Selecting a face in a stack
-
-Right after `uncollapse()`, all six rects coincide exactly. `UVController` handles this by **cycling**: clicking the same spot again advances to the next face under the cursor, wrapping around.
-
-- Hit order is always `UV_FACES` order (regions in insertion order, then faces), independent of selection — that is what makes the cycle deterministic.
-- Paint order differs: `UVOverlay` raises the selected face to the top and dims the rest, so you can see what you grabbed even when it sits under `front`.
-- The cycle resets on a miss, on leaving `"uv"` mode, and whenever something outside the controller moves the selection (a 3D picker, undo, a peer).
-
-Each pile of coincident rects carries exactly one label — six labels stacked on one pixel would be unreadable — naming the face a click would land on: the selected face when it belongs to that pile, otherwise the topmost in hit order. So dragging a face off a stack immediately reveals the next face's name, without having to click the remainder to find out what it is. A face whose rect is unique is always named.
-
-When `showRegionLabels` is enabled (or forced by `showAll`), a collapsed region shows `(name)` or `(id)`. An uncollapsed face puts that identity on the first line and its face name on the second. Displayed identities longer than 20 characters are shortened with an ellipsis; the stored name is unchanged. Labels are dropped below ~40 screen pixels.
-
-## Staying visible over the artwork
-
-A border drawn in the region color alone vanishes wherever the texture under it is painted in that same color — a red region over red pixels. So every border is drawn twice: a casing stroke, black or white depending on the region color's brightness, with the region color over it. A casing that contrasts with the region color also contrasts with whatever that color hides against, which is why no pixel is ever sampled and `region.color` still renders literally. Face labels get the same casing via `paint-order: stroke`.
-
-The casing is inset rather than straddling the colored stroke, so the two together cover exactly what the colored stroke alone used to. A straddling casing would spill past a region flush with the canvas edge and read as an extra pixel of canvas.
-
-The selected entry — one face, or the whole region when collapsed — also fills with its own color at 6% opacity: enough to tell which of several coincident borders a drag would carry, faint enough to leave the texture underneath readable.
-
-## History & network
-
-Undo/redo and network sync reuse the same events `create`/`delete`/`move`/`collapse`/`uncollapse` emit — no separate replay handling needed.
-
-- **History:** `"uv-create"`/`"uv-delete"`/`"uv-move"`/`"uv-state"` entries in [`HistoryStack`](../history/HistoryStack.md). Undo calls the inverse method, which re-emits the matching event naturally. `"uv-state"` stores both whole regions rather than a delta, because collapsing discards five rects that only a full snapshot can restore.
-- **Network:** `onBufferUpdated` fires `"uv-region-*"` events for local changes. Conflicts resolve per **region face**, so two peers laying out different faces of the same region don't reject each other. See [buffer/PixelBuffer.md](../buffer/PixelBuffer.md) and [network/PixelSyncServer.md](../network/PixelSyncServer.md).
-
-The optional region name is part of `UVRegionData`, so it follows the same history and network paths as geometry. The `showRegionLabels` preference remains local.
-
-## Example
-
-```ts
-canvas.uv.on("region-created", ({ region }) => spawnCubeFor(region));
-canvas.uv.on("region-deleted", ({ region }) => destroyCubeFor(region.id));
-canvas.uv.on("region-moved", ({ region, face }) =>
-  updateCubeFace(region.id, face, region.rectFor(face ?? "front")));
-canvas.uv.on("region-dragging", ({ id, face, geometry }) =>
-  updateCubeFace(id, face, geometry));
-// collapse/uncollapse rewrites every face at once
-canvas.uv.on("region-state-changed", ({ region }) => remapCube(region.id, region));
-
-createButton.onclick = () => canvas.uv.create({ width: 16, height: 16 });
-
-uncollapseButton.onclick = () => {
-  const id = canvas.uv.selectedRegionId;
-  if (id) canvas.uv.uncollapse(id);
-};
-
-onMeshClicked((regionId) => canvas.uv.select(regionId));
-```
+Undo, redo and network sync consume the same mutation events. See [`HistoryStack`](../history/HistoryStack.md), [`PixelBuffer`](../buffer/PixelBuffer.md) and [`PixelSyncServer`](../network/PixelSyncServer.md).

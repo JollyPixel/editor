@@ -65,6 +65,7 @@ export {
   type UVMapEventType,
   type UVMapListener,
   type UVMapOptions,
+  type UVFaceGeometryTemplate,
   type UVRegionCreateOptions
 } from "./uv/UVMap.ts";
 export {

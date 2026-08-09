@@ -158,7 +158,11 @@ export class UVMap extends Emitter<
     const size = this.#getCanvasSize();
     const width = clamp(options.width, 1, Math.max(1, size.x));
     const height = clamp(options.height, 1, Math.max(1, size.y));
-    const position = this.#nextCascadePosition(width, height, size);
+    const position = this.#nextCascadePosition(
+      width,
+      height,
+      size
+    );
 
     const rect = {
       x: position.x,
@@ -174,12 +178,30 @@ export class UVMap extends Emitter<
     const hasTopology = options.activeFaces !== undefined || options.faceGeometries !== undefined;
     const state = options.state ?? (hasTopology ? "uncollapsed" : "collapsed");
     const faces = {
-      front: this.#geometryFrom(options.faceGeometries?.front, rect),
-      back: this.#geometryFrom(options.faceGeometries?.back, rect),
-      left: this.#geometryFrom(options.faceGeometries?.left, rect),
-      right: this.#geometryFrom(options.faceGeometries?.right, rect),
-      top: this.#geometryFrom(options.faceGeometries?.top, rect),
-      bottom: this.#geometryFrom(options.faceGeometries?.bottom, rect)
+      front: this.#geometryFrom(
+        options.faceGeometries?.front,
+        rect
+      ),
+      back: this.#geometryFrom(
+        options.faceGeometries?.back,
+        rect
+      ),
+      left: this.#geometryFrom(
+        options.faceGeometries?.left,
+        rect
+      ),
+      right: this.#geometryFrom(
+        options.faceGeometries?.right,
+        rect
+      ),
+      top: this.#geometryFrom(
+        options.faceGeometries?.top,
+        rect
+      ),
+      bottom: this.#geometryFrom(
+        options.faceGeometries?.bottom,
+        rect
+      )
     };
     let region: UVRegion;
     if (state === "uncollapsed") {
@@ -195,12 +217,18 @@ export class UVMap extends Emitter<
         ...identity,
         state,
         rect,
-        activeFaces: [...(options.activeFaces ?? UV_FACES)],
+        activeFaces: [
+          ...(options.activeFaces ?? UV_FACES)
+        ],
         faces
       });
     }
     else {
-      region = new UVRegion({ ...identity, state, rect });
+      region = new UVRegion({
+        ...identity,
+        state,
+        rect
+      });
     }
 
     this.#regions.set(region.id, region);
@@ -233,11 +261,15 @@ export class UVMap extends Emitter<
     }
 
     this.#regions.delete(id);
-    if (this.#selectedRegionId === id) {
+    const selectionChanged = this.#selectedRegionId === id;
+    if (selectionChanged) {
       this.#selectedRegionId = null;
       this.#selectedFace = null;
     }
     this.emit("region-deleted", { region });
+    if (selectionChanged) {
+      this.#emitSelectionChanged();
+    }
 
     return true;
   }
@@ -401,9 +433,14 @@ export class UVMap extends Emitter<
       return false;
     }
 
-    const nextFace = region.state === "collapsed" ?
-      null :
-      face ?? kDefaultFace;
+    const activeFaces = region.facesOf()
+      .map(({ face: activeFace }) => activeFace)
+      .filter((activeFace) => activeFace !== null);
+    let nextFace: UVFace | null = null;
+    if (region.state === "uncollapsed") {
+      const firstActiveFace = activeFaces[0] ?? null;
+      nextFace = face !== null && activeFaces.includes(face) ? face : firstActiveFace;
+    }
     const changed = this.#selectedRegionId !== id || this.#selectedFace !== nextFace;
     this.#selectedRegionId = id;
     this.#selectedFace = nextFace;

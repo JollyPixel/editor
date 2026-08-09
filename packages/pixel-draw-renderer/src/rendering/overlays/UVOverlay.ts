@@ -50,11 +50,11 @@ export interface BorderStyle {
   strokeWidth: number;
   selected: boolean;
   dimmed: boolean;
-  /** Dashed stroke — used for a peer's in-progress (uncommitted) drag ghost. */
+  /** Dashed stroke used for a peer's in-progress (uncommitted) drag ghost. */
   dashed?: boolean;
   /**
    * Skips the contrasting (black/white) inner casing stroke, leaving just
-   * the plain colored line — a dashed ghost reads better as a single clean
+   * the plain colored line. A dashed ghost reads better as a single clean
    * stroke than doubled up with a high-contrast casing.
    * @default true
    */
@@ -283,7 +283,7 @@ export class UVOverlay {
 
   /**
    * Replaces the set of region/face entries currently shown as a peer's live
-   * drag ghost (`PeerUVGhosts`) — their classical rendering is suppressed
+   * drag ghost (`PeerUVGhosts`). Their classical rendering is suppressed
    * here so the ghost is the sole visual until it clears, instead of a
    * stale border sitting underneath it for the whole drag.
    */
@@ -376,7 +376,7 @@ export class UVOverlay {
 
     const labelled: RenderEntry[] = [];
     for (const group of groups.values()) {
-      // entries follows UV_FACES order; group[0] matches first hit target.
+      // Entries follow UV_FACES order; group[0] matches the first hit target.
       const entry = group.find((candidate) => candidate.selected) ?? group[0];
 
       if (
