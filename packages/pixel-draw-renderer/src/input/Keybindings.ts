@@ -1,3 +1,7 @@
+// Import Internal Dependencies
+import { InvalidKeybindingError } from "./errors/InvalidKeybindingError.ts";
+import { KeybindingConflictError } from "./errors/KeybindingConflictError.ts";
+
 export type ModifierToken = "mod" | "shift" | "alt";
 
 export type NamedKey =
@@ -62,29 +66,6 @@ export const DEFAULT_KEYBINDINGS: KeybindingsMap = {
   flipHorizontal: "h",
   flipVertical: "v"
 };
-
-export class InvalidKeybindingError extends Error {
-  constructor(
-    binding: string,
-    options?: { cause?: unknown; }
-  ) {
-    super(`Invalid keybinding: "${binding}"`, options);
-
-    this.name = "InvalidKeybindingError";
-  }
-}
-
-export class KeybindingConflictError extends Error {
-  constructor(
-    binding: string,
-    actionA: KeybindingAction,
-    actionB: KeybindingAction
-  ) {
-    super(`Keybinding "${binding}" is already assigned to "${actionA}" (conflicts with "${actionB}")`);
-
-    this.name = "KeybindingConflictError";
-  }
-}
 
 export function parseKeybinding(
   binding: string

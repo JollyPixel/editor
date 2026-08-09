@@ -59,13 +59,13 @@ export type {
 } from "./types.ts";
 export {
   DEFAULT_KEYBINDINGS,
-  InvalidKeybindingError,
-  KeybindingConflictError,
   Keybindings,
   type Keybinding,
   type KeybindingAction,
   type KeybindingsMap
 } from "./input/Keybindings.ts";
+export { InvalidKeybindingError } from "./input/errors/InvalidKeybindingError.ts";
+export { KeybindingConflictError } from "./input/errors/KeybindingConflictError.ts";
 export {
   UVMap,
   type UVMapEvent,

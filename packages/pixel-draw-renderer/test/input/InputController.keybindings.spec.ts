@@ -9,10 +9,8 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { InputController } from "#src/input/InputController.ts";
 import { Viewport } from "#src/rendering/Viewport.ts";
-import {
-  InvalidKeybindingError,
-  KeybindingConflictError
-} from "#src/input/Keybindings.ts";
+import { InvalidKeybindingError } from "#src/input/errors/InvalidKeybindingError.ts";
+import { KeybindingConflictError } from "#src/input/errors/KeybindingConflictError.ts";
 import { makeActions } from "../helpers/input-actions.ts";
 import { makeCanvas } from "../helpers/dom.ts";
 import { hoverCanvas } from "../helpers/events.ts";
