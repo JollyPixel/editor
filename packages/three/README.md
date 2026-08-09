@@ -31,6 +31,7 @@ scene.add(grid); // self-updating: no manual .update() call needed
 ## 📚 API
 
 - [Grid](docs/Grid.md) - Ground-plane grid mesh. (TSL, `THREE.WebGPURenderer`).
+- [PeerFrustum](docs/PeerFrustum.md) - Renders connected peers as lightweight camera frustums.
 
 ## ✨ Contributors guide
 

@@ -6,6 +6,7 @@ html,
 body {
   height: 100%;
   margin: 0;
+  overflow: hidden;
 }
 
 body {
@@ -16,12 +17,38 @@ body {
   background-color: #eee;
 }
 
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 /*
- * Tweakpane's default wrapper
+ * Tweakpane's default wrapper. Capped to the viewport height (minus the
+ * top/bottom insets) with its own scrollbar, so it stays usable on short
+ * screens once enough folders/bindings are added.
  */
 body .tp-dfwv {
   top: 12px;
   right: 12px;
   width: 350px;
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  overflow-x: hidden;
   z-index: 1001;
+}
+
+/*
+ * Pins the "example" page-switcher (see pane.ts) to the top of the
+ * scrollable panel above, so it's reachable no matter how far the rest of
+ * the content (peer folders, etc.) has been scrolled.
+ */
+body .tp-dfwv .tp-example-pin {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: var(--tp-base-background-color, hsl(230, 7%, 17%));
+  padding-top: 4px;
+  padding-bottom: 4px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
 }

@@ -4,9 +4,13 @@ import { Pane, type FolderApi } from "tweakpane";
 // CONSTANTS
 const kDefaultTitle = "three";
 const kToggleKey = "F3";
+// Targeted by main.css to pin the switcher to the top of the (scrollable)
+// panel — see the `.tp-example-pin` rule there.
+const kExamplePinClass = "tp-example-pin";
 /** Label → path, as consumed by the switcher's `options`. */
 const kExamples: Record<string, string> = {
-  Grid: "/"
+  Grid: "/",
+  "Peer Frustum": "/peer-frustum.html"
 };
 
 export interface ExamplePaneOptions {
@@ -29,7 +33,7 @@ export function createExamplePane(
   });
   const current = currentExample();
 
-  pane
+  const exampleBinding = pane
     .addBinding({ example: current }, "example", {
       options: kExamples,
       label: "example"
@@ -39,6 +43,7 @@ export function createExamplePane(
         window.location.assign(value);
       }
     });
+  exampleBinding.element.classList.add(kExamplePinClass);
 
   document.addEventListener("keydown", (event) => {
     if (event.key !== kToggleKey) {
