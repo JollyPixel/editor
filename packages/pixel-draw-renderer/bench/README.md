@@ -20,7 +20,7 @@ node bench/flood-fill.bench.ts                       # a single suite
 | File                     | Covers                                                              |
 | ------------------------ | ------------------------------------------------------------------- |
 | `flood-fill.bench.ts`    | `Fill.floodFill` / `connectedRegion` / `matchAll`                   |
-| `pixel-buffer.bench.ts`  | construction (`#fill`), `copyToMaster`, `drawPixels`, `resize`, snapshot clone |
+| `pixel-buffer.bench.ts`  | construction, drawing, transparency scans, resize, commit, snapshot clone    |
 | `history.bench.ts`       | `HistoryStack` undo/redo replay, `groupPositionsByColor`            |
 | `network.bench.ts`       | `applyCommandToWorld` (stroke / global-fill), `LastWriteWinsResolver` |
 | `colors.bench.ts`        | `colorAsRGBA` / `toRGBA` / `rgbToHex` (colorjs.io parsing)          |

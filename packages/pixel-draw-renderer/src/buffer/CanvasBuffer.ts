@@ -6,6 +6,7 @@ import {
   PixelBuffer,
   type PixelBufferOptions
 } from "./PixelBuffer.ts";
+import { RectArea } from "../utils/RectArea.ts";
 import type {
   RGBA,
   SelectionRect,
@@ -143,48 +144,12 @@ export class CanvasBuffer extends Emitter<
     this.#buffer.drawPixels(positions, color);
 
     const size = this.#buffer.size();
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-    for (const pixel of positions) {
-      if (
-        pixel.x < 0 || pixel.x >= size.x ||
-        pixel.y < 0 || pixel.y >= size.y
-      ) {
-        continue;
-      }
-
-      minX = Math.min(minX, pixel.x);
-      minY = Math.min(minY, pixel.y);
-      maxX = Math.max(maxX, pixel.x);
-      maxY = Math.max(maxY, pixel.y);
-    }
-
-    if (maxX < minX) {
+    const dirtyArea = RectArea.bounding(positions, size);
+    if (dirtyArea === null) {
       return;
     }
 
-    const rectWidth = maxX - minX + 1;
-    const rectHeight = maxY - minY + 1;
-    const imageData = this.#workingCtx.createImageData(
-      rectWidth,
-      rectHeight
-    );
-
-    for (let y = 0; y < rectHeight; y++) {
-      for (let x = 0; x < rectWidth; x++) {
-        const [r, g, b, a] = this.#buffer.samplePixel(minX + x, minY + y);
-        const index = (y * rectWidth + x) * 4;
-
-        imageData.data[index] = r;
-        imageData.data[index + 1] = g;
-        imageData.data[index + 2] = b;
-        imageData.data[index + 3] = a;
-      }
-    }
-
-    this.#workingCtx.putImageData(imageData, minX, minY);
+    this.#resyncCanvasRegion(dirtyArea.bounds);
     this.emit("changed");
   }
 
@@ -211,34 +176,30 @@ export class CanvasBuffer extends Emitter<
     rect: SelectionRect
   ): void {
     const size = this.#buffer.size();
-    const minX = Math.max(0, rect.x);
-    const minY = Math.max(0, rect.y);
-    const maxX = Math.min(size.x, rect.x + rect.width);
-    const maxY = Math.min(size.y, rect.y + rect.height);
-    if (maxX <= minX || maxY <= minY) {
+    const area = RectArea.from(rect);
+    const clipped = area.intersection(size);
+    if (clipped === null) {
       return;
     }
 
-    const clipWidth = maxX - minX;
-    const clipHeight = maxY - minY;
     const imageData = this.#workingCtx.createImageData(
-      clipWidth,
-      clipHeight
+      clipped.width,
+      clipped.height
     );
+    const pixels = this.#buffer.pixels();
+    let destinationIndex = 0;
 
-    for (let y = 0; y < clipHeight; y++) {
-      for (let x = 0; x < clipWidth; x++) {
-        const [r, g, b, a] = this.#buffer.samplePixel(minX + x, minY + y);
-        const index = (y * clipWidth + x) * 4;
-
-        imageData.data[index] = r;
-        imageData.data[index + 1] = g;
-        imageData.data[index + 2] = b;
-        imageData.data[index + 3] = a;
-      }
+    for (const row of area.rowsWithin(size)) {
+      const sourceIndex = row.indexInBounds * 4;
+      const byteLength = row.length * 4;
+      imageData.data.set(
+        pixels.subarray(sourceIndex, sourceIndex + byteLength),
+        destinationIndex
+      );
+      destinationIndex += byteLength;
     }
 
-    this.#workingCtx.putImageData(imageData, minX, minY);
+    this.#workingCtx.putImageData(imageData, clipped.x, clipped.y);
   }
 
   copyToMaster(): void {

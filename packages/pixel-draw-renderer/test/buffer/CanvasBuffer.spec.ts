@@ -7,7 +7,10 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { CanvasBuffer } from "#src/buffer/CanvasBuffer.ts";
-import { mockContextOf } from "../fixtures/canvas.ts";
+import {
+  mockContextOf,
+  readPixel
+} from "../fixtures/canvas.ts";
 
 // CONSTANTS
 // Small master canvas size for fast tests (real default is 2048)
@@ -319,6 +322,36 @@ describe("CanvasBuffer", () => {
       assert.deepStrictEqual(
         buf.samplePixel(3, 3),
         [9, 9, 9, 255]
+      );
+    });
+
+    test("syncs clipped top-left rows with their original source alignment", () => {
+      const buf = new CanvasBuffer({
+        size: { x: 2, y: 2 },
+        maxSize: kTestMaxSize
+      });
+      const pixels = Array.from({ length: 9 }, (_, index) => {
+        return {
+          r: index,
+          g: 0,
+          b: 0,
+          a: 255
+        };
+      });
+
+      buf.drawRegion(
+        { x: -1, y: -1, width: 3, height: 3 },
+        pixels
+      );
+
+      const canvasPixels = mockContextOf(buf.canvas()).pixels;
+      assert.deepStrictEqual(
+        readPixel(canvasPixels, { x: 0, y: 0 }, 2),
+        [4, 0, 0, 255]
+      );
+      assert.deepStrictEqual(
+        readPixel(canvasPixels, { x: 1, y: 1 }, 2),
+        [8, 0, 0, 255]
       );
     });
 
