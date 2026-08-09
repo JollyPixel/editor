@@ -5,7 +5,7 @@ import type { RGBA, SelectionRect } from "../../types.ts";
 /**
  * Rect-sized canvas filled with `color` only where `mask` is true.
  * Used for masked erase fill and destination-out stencils.
- * Shared by FloatingSelectionOverlay and PeerFloatingSelectionGhosts.
+ * Shared by FloatingSelection and PeerFloatingSelections.
  */
 export function buildMaskedFillCanvas(
   rect: SelectionRect,

@@ -8,13 +8,16 @@ import type {
   BrushColorSlot
 } from "./Brush.ts";
 import type { EditPipeline } from "../sync/EditPipeline.ts";
-import type { LinePreviewOverlay } from "../rendering/overlays/LinePreviewOverlay.ts";
+import type { LinePreview } from "../rendering/overlays/LinePreview.ts";
 import { toRGBA } from "../utils/colors.ts";
-import type { PeerStrokePixel, Vec2 } from "../types.ts";
+import type {
+  PeerStrokePixel,
+  Vec2
+} from "../types.ts";
 
 export interface LineControllerOptions {
   brush: Brush;
-  linePreview: LinePreviewOverlay;
+  linePreview: LinePreview;
   pipeline: EditPipeline;
   /** Called with the live drag's pixels as they change, for peer streaming. */
   onProgress?: (pixels: PeerStrokePixel[]) => void;
@@ -26,7 +29,7 @@ export interface LineControllerOptions {
 export class LineController {
   #line = new Line();
   #brush: Brush;
-  #linePreview: LinePreviewOverlay;
+  #linePreview: LinePreview;
   #pipeline: EditPipeline;
   #onProgress?: (pixels: PeerStrokePixel[]) => void;
 

@@ -91,14 +91,12 @@ readonly selectionEvents: Pick<
 
 Provides subscription-only access to `"selection-progress"`, `"selection-committed"` and `"selection-idle"`.
 
-## Peer overlays
+## Peer presence
 
 ```ts
-readonly peerCursors: PeerCursorOverlay
-readonly peerStrokeGhosts: PeerStrokeGhosts
-readonly peerUvGhosts: PeerUVGhosts
-readonly peerSelectionGhosts: PeerSelectionGhosts
-readonly peerFloatingSelectionGhosts: PeerFloatingSelectionGhosts
+readonly peerPresence: PeerPresence
 ```
 
-The presence sync helpers manage these overlays. Overlay state is visual only; it does not change the texture, UV map, selection or history.
+`peerPresence` groups the remote cursor, stroke, UV and selection previews. The provided presence sync helpers manage it. Custom transports can use its `cursors`, `strokes`, `uv`, `selectionOutlines` and `floatingSelections` members directly.
+
+Presence state is visual only. It does not change the texture, UV map, local selection or history.

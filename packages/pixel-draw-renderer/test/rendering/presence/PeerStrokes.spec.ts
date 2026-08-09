@@ -7,8 +7,8 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  PeerStrokeGhosts
-} from "#src/rendering/overlays/PeerStrokeGhosts.ts";
+  PeerStrokes
+} from "#src/rendering/presence/PeerStrokes.ts";
 import {
   mockContextOf
 } from "../../fixtures/canvas.ts";
@@ -42,10 +42,10 @@ function pixelAt(
   ];
 }
 
-describe("PeerStrokeGhosts", () => {
+describe("PeerStrokes", () => {
   describe("isActive", () => {
     test("is false with no peers, true after set, false after remove", () => {
-      const ghosts = new PeerStrokeGhosts();
+      const ghosts = new PeerStrokes();
       assert.strictEqual(ghosts.isActive, false);
 
       ghosts.set("peer-A", [kRed]);
@@ -58,7 +58,7 @@ describe("PeerStrokeGhosts", () => {
 
   describe("set + draw", () => {
     test("blits a peer's pixels at their own color", () => {
-      const ghosts = new PeerStrokeGhosts();
+      const ghosts = new PeerStrokes();
       ghosts.set("peer-A", [kRed, kBlue]);
 
       const dest = makeDest();
@@ -69,7 +69,7 @@ describe("PeerStrokeGhosts", () => {
     });
 
     test("composites pixels from multiple peers", () => {
-      const ghosts = new PeerStrokeGhosts();
+      const ghosts = new PeerStrokes();
       ghosts.set("peer-A", [kRed]);
       ghosts.set("peer-B", [kBlue]);
 
@@ -81,7 +81,7 @@ describe("PeerStrokeGhosts", () => {
     });
 
     test("a later set() for the same peer replaces their pixels entirely", () => {
-      const ghosts = new PeerStrokeGhosts();
+      const ghosts = new PeerStrokes();
       ghosts.set("peer-A", [kRed]);
       ghosts.set("peer-A", [kBlue]);
 
@@ -95,7 +95,7 @@ describe("PeerStrokeGhosts", () => {
 
   describe("remove", () => {
     test("drops that peer's pixels", () => {
-      const ghosts = new PeerStrokeGhosts();
+      const ghosts = new PeerStrokes();
       ghosts.set("peer-A", [kRed]);
       ghosts.remove("peer-A");
 
@@ -106,14 +106,14 @@ describe("PeerStrokeGhosts", () => {
     });
 
     test("is a no-op for an unknown peer", () => {
-      const ghosts = new PeerStrokeGhosts();
+      const ghosts = new PeerStrokes();
       assert.doesNotThrow(() => ghosts.remove("unknown"));
     });
   });
 
   describe("clearAll", () => {
     test("drops every peer's pixels", () => {
-      const ghosts = new PeerStrokeGhosts();
+      const ghosts = new PeerStrokes();
       ghosts.set("peer-A", [kRed]);
       ghosts.set("peer-B", [kBlue]);
       ghosts.clearAll();
@@ -124,7 +124,7 @@ describe("PeerStrokeGhosts", () => {
 
   describe("removeOverlapping", () => {
     test("clears whichever peer's ghost shares a pixel, regardless of clientId", () => {
-      const ghosts = new PeerStrokeGhosts();
+      const ghosts = new PeerStrokes();
       ghosts.set("peer-A", [kRed]);
 
       ghosts.removeOverlapping([{ x: 2, y: 3 }]);
@@ -133,7 +133,7 @@ describe("PeerStrokeGhosts", () => {
     });
 
     test("leaves peers with no overlapping pixel untouched", () => {
-      const ghosts = new PeerStrokeGhosts();
+      const ghosts = new PeerStrokes();
       ghosts.set("peer-A", [kRed]);
       ghosts.set("peer-B", [kBlue]);
 
@@ -146,7 +146,7 @@ describe("PeerStrokeGhosts", () => {
     });
 
     test("is a no-op for an empty or non-overlapping position list", () => {
-      const ghosts = new PeerStrokeGhosts();
+      const ghosts = new PeerStrokes();
       ghosts.set("peer-A", [kRed]);
 
       ghosts.removeOverlapping([]);
@@ -159,7 +159,7 @@ describe("PeerStrokeGhosts", () => {
 
   describe("changed signal", () => {
     test("emits on set and on remove of a known peer", () => {
-      const ghosts = new PeerStrokeGhosts();
+      const ghosts = new PeerStrokes();
       let count = 0;
       ghosts.on("changed", () => count++);
 
@@ -171,7 +171,7 @@ describe("PeerStrokeGhosts", () => {
     });
 
     test("does not emit removing an unknown peer", () => {
-      const ghosts = new PeerStrokeGhosts();
+      const ghosts = new PeerStrokes();
       let count = 0;
       ghosts.on("changed", () => count++);
 

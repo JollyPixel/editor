@@ -16,7 +16,7 @@ import type {
   UVGhostPayload
 } from "#src/network/types.ts";
 import type { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
-import type { PeerUVGhostState } from "#src/rendering/overlays/PeerUVGhosts.ts";
+import type { PeerUVPreviewState } from "#src/rendering/presence/PeerUVPreview.ts";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -154,20 +154,22 @@ function createMockUVMap(): MockUVMap {
 
 interface MockCanvas {
   uv: MockUVMap;
-  setCalls: { clientId: string; state: PeerUVGhostState; }[];
+  setCalls: { clientId: string; state: PeerUVPreviewState; }[];
   removedPeers: string[];
   clearAllCallCount: number;
   removeByRegionCalls: string[];
-  peerUvGhosts: {
-    set(clientId: string, state: PeerUVGhostState): void;
-    remove(clientId: string): void;
-    clearAll(): void;
-    removeByRegion(id: string): void;
+  peerPresence: {
+    uv: {
+      set(clientId: string, state: PeerUVPreviewState): void;
+      remove(clientId: string): void;
+      clearAll(): void;
+      removeByRegion(id: string): void;
+    };
   };
 }
 
 function createMockCanvas(): MockCanvas {
-  const setCalls: { clientId: string; state: PeerUVGhostState; }[] = [];
+  const setCalls: { clientId: string; state: PeerUVPreviewState; }[] = [];
   const removedPeers: string[] = [];
   const removeByRegionCalls: string[] = [];
 
@@ -177,18 +179,20 @@ function createMockCanvas(): MockCanvas {
     removedPeers,
     clearAllCallCount: 0,
     removeByRegionCalls,
-    peerUvGhosts: {
-      set(clientId, state) {
-        setCalls.push({ clientId, state });
-      },
-      remove(clientId) {
-        removedPeers.push(clientId);
-      },
-      clearAll() {
-        canvas.clearAllCallCount++;
-      },
-      removeByRegion(id) {
-        removeByRegionCalls.push(id);
+    peerPresence: {
+      uv: {
+        set(clientId, state) {
+          setCalls.push({ clientId, state });
+        },
+        remove(clientId) {
+          removedPeers.push(clientId);
+        },
+        clearAll() {
+          canvas.clearAllCallCount++;
+        },
+        removeByRegion(id) {
+          removeByRegionCalls.push(id);
+        }
       }
     }
   };
@@ -197,7 +201,7 @@ function createMockCanvas(): MockCanvas {
 }
 
 // UVGhostSync is typed against the concrete PixelArtCanvas, but only uses the
-// structural subset MockCanvas implements (uv, peerUvGhosts).
+// structural subset MockCanvas implements.
 function asHost(
   canvas: MockCanvas
 ): PixelArtCanvas {

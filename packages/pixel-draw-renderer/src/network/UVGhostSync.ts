@@ -43,7 +43,7 @@ function isUVGhostPayload(
 /**
  * Broadcasts the local in-progress UV region drag over a `network.Room`'s
  * presence channel and mirrors remote peers' drags onto the attached
- * canvas's `peerUvGhosts` overlay. It never touches `UVMap` state or history.
+ * canvas's `peerPresence.uv` preview. It never touches `UVMap` state or history.
  * A ghost clears when an authoritative command affects its region or after
  * a period of inactivity.
  */
@@ -101,7 +101,7 @@ export class UVGhostSync {
     }
     else if (message.type === "snapshot") {
       this.#ghostLeaser.clear();
-      this.#canvas?.peerUvGhosts.clearAll();
+      this.#canvas?.peerPresence.uv.clearAll();
     }
   };
 
@@ -161,7 +161,7 @@ export class UVGhostSync {
     this.#cancelPending();
     if (this.#enableGhostPreview) {
       this.#ghostLeaser.clear();
-      this.#canvas.peerUvGhosts.clearAll();
+      this.#canvas.peerPresence.uv.clearAll();
     }
     this.#canvas.uv.off(
       "region-dragging",
@@ -195,7 +195,7 @@ export class UVGhostSync {
   #removePeerGhost(
     clientId: string
   ): void {
-    this.#canvas?.peerUvGhosts.remove(clientId);
+    this.#canvas?.peerPresence.uv.remove(clientId);
   }
 
   #reportLocal(
@@ -235,12 +235,12 @@ export class UVGhostSync {
     switch (command.action) {
       case "uv-region-moved":
       case "uv-region-deleted":
-        this.#canvas.peerUvGhosts.removeByRegion(
+        this.#canvas.peerPresence.uv.removeByRegion(
           command.metadata.id
         );
         break;
       case "uv-region-state-changed":
-        this.#canvas.peerUvGhosts.removeByRegion(
+        this.#canvas.peerPresence.uv.removeByRegion(
           command.metadata.region.id
         );
         break;
@@ -259,7 +259,7 @@ export class UVGhostSync {
 
     const payload = patch[kPresenceUvKey];
     if (isUVGhostPayload(payload)) {
-      this.#canvas.peerUvGhosts.set(clientId, {
+      this.#canvas.peerPresence.uv.set(clientId, {
         ...payload,
         color: this.#palette.forKey(clientId)
       });

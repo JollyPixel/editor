@@ -5,7 +5,7 @@ import { Emitter } from "@openally/emitt";
 import {
   buildMaskedContentCanvas,
   buildMaskedFillCanvas
-} from "./maskedCanvas.ts";
+} from "../compositing/selectionCanvas.ts";
 import { Select } from "../../tools/Select.ts";
 import {
   positionKeySet,
@@ -44,7 +44,7 @@ interface PeerFloatingEntry {
   blankSource: boolean;
 }
 
-export type PeerFloatingSelectionGhostsEvent = {
+export type PeerFloatingSelectionsEvent = {
   changed: () => void;
 };
 
@@ -57,12 +57,12 @@ function rectKey(
 /**
  * Renders remote peers' in-progress selection moves: blanks the vacated
  * source footprint and redraws content at its live position.
- * Mirrors FloatingSelectionOverlay for the local user - so peers don't see
+ * Mirrors FloatingSelection for the local user - so peers don't see
  * pre-move content duplicated alongside the ghost.
  * Content/fill reproduced locally from the shared buffer; never commits.
  */
-export class PeerFloatingSelectionGhosts extends Emitter<
-  PeerFloatingSelectionGhostsEvent
+export class PeerFloatingSelections extends Emitter<
+  PeerFloatingSelectionsEvent
 > {
   #canvasBuffer: CanvasBuffer;
   #eraseColor: RGBA | null;
@@ -146,7 +146,7 @@ export class PeerFloatingSelectionGhosts extends Emitter<
   ): void {
     for (const entry of this.#entries.values()) {
       if (entry.blankSource) {
-        PeerFloatingSelectionGhosts.#clearMaskedRect(
+        PeerFloatingSelections.#clearMaskedRect(
           ctx,
           entry.maskCanvas,
           entry.sourceRect
@@ -158,7 +158,7 @@ export class PeerFloatingSelectionGhosts extends Emitter<
         );
       }
 
-      PeerFloatingSelectionGhosts.#clearMaskedRect(
+      PeerFloatingSelections.#clearMaskedRect(
         ctx,
         entry.maskCanvas,
         entry.liveRect

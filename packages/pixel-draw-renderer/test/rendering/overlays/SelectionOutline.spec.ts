@@ -7,18 +7,21 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  SelectionOverlay
-} from "#src/rendering/overlays/SelectionOverlay.ts";
+  SelectionOutline
+} from "#src/rendering/overlays/SelectionOutline.ts";
+import {
+  traceSelectionContour
+} from "#src/rendering/overlays/selectionContour.ts";
 import {
   makeSvg,
   makeViewport,
   makeBrush
 } from "../../helpers/overlay.ts";
 
-describe("SelectionOverlay", () => {
+describe("SelectionOutline", () => {
   test("drawRect() shows a dashed outline+inline rect pair in screen space", () => {
     const svg = makeSvg();
-    const overlay = new SelectionOverlay(
+    const overlay = new SelectionOutline(
       svg,
       makeViewport(),
       makeBrush()
@@ -53,7 +56,7 @@ describe("SelectionOverlay", () => {
 
   test("clear() hides the selection rect", () => {
     const svg = makeSvg();
-    const overlay = new SelectionOverlay(
+    const overlay = new SelectionOutline(
       svg,
       makeViewport(),
       makeBrush()
@@ -79,7 +82,7 @@ describe("SelectionOverlay", () => {
   describe("drawMask", () => {
     test("a full-true mask degenerates to the same rendering as drawRect", () => {
       const svg = makeSvg();
-      const overlay = new SelectionOverlay(
+      const overlay = new SelectionOutline(
         svg,
         makeViewport(),
         makeBrush()
@@ -113,7 +116,7 @@ describe("SelectionOverlay", () => {
 
     test("a partial mask renders a visible path pair instead of the rect pair", () => {
       const svg = makeSvg();
-      const overlay = new SelectionOverlay(
+      const overlay = new SelectionOutline(
         svg,
         makeViewport(),
         makeBrush()
@@ -141,7 +144,7 @@ describe("SelectionOverlay", () => {
 
     test("clear() also hides the path pair", () => {
       const svg = makeSvg();
-      const overlay = new SelectionOverlay(
+      const overlay = new SelectionOutline(
         svg,
         makeViewport(),
         makeBrush()
@@ -161,9 +164,9 @@ describe("SelectionOverlay", () => {
     });
   });
 
-  describe("traceContour (static)", () => {
+  describe("traceSelectionContour", () => {
     test("a full rectangle mask traces its 4 corners, clockwise", () => {
-      const loops = SelectionOverlay.traceContour(
+      const loops = traceSelectionContour(
         2,
         2,
         [true, true, true, true]
@@ -182,7 +185,7 @@ describe("SelectionOverlay", () => {
     });
 
     test("a single selected cell traces a unit square", () => {
-      const loops = SelectionOverlay.traceContour(
+      const loops = traceSelectionContour(
         1,
         1,
         [true]
@@ -203,7 +206,7 @@ describe("SelectionOverlay", () => {
     test("an L-shape traces its true concave outline (6 corners), not the bounding rect's 4", () => {
       // X .
       // X X
-      const loops = SelectionOverlay.traceContour(
+      const loops = traceSelectionContour(
         2,
         2,
         [true, false, true, true]
@@ -220,7 +223,7 @@ describe("SelectionOverlay", () => {
         true, false, true,
         true, true, true
       ];
-      const loops = SelectionOverlay.traceContour(3, 3, mask);
+      const loops = traceSelectionContour(3, 3, mask);
 
       assert.strictEqual(
         loops.length,

@@ -17,23 +17,26 @@ import {
 } from "./SelectController.ts";
 import { UVController } from "../uv/UVController.ts";
 import type { UVMap } from "../uv/UVMap.ts";
-import type { UVOverlay } from "../rendering/overlays/UVOverlay.ts";
+import type { UVRegionLayer } from "../rendering/overlays/UVRegions.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import type { CanvasRenderer } from "../rendering/CanvasRenderer.ts";
 import type { EditPipeline } from "../sync/EditPipeline.ts";
-import type { LinePreviewOverlay } from "../rendering/overlays/LinePreviewOverlay.ts";
-import type { SelectionOverlay } from "../rendering/overlays/SelectionOverlay.ts";
-import type { PeerStrokePixel, RGBA } from "../types.ts";
+import type { LinePreview } from "../rendering/overlays/LinePreview.ts";
+import type { SelectionOutline } from "../rendering/overlays/SelectionOutline.ts";
+import type {
+  PeerStrokePixel,
+  RGBA
+} from "../types.ts";
 
 export interface ToolsOptions {
   brush: Brush;
   canvasBuffer: CanvasBuffer;
   renderer: CanvasRenderer;
-  linePreview: LinePreviewOverlay;
-  selectionOverlay: SelectionOverlay;
+  linePreview: LinePreview;
+  selectionOverlay: SelectionOutline;
   eraseColor: RGBA | null;
   uvMap: UVMap;
-  uvOverlay: UVOverlay;
+  uvOverlay: UVRegionLayer;
   pipeline: EditPipeline;
   /**
    * Called with a tool's live in-progress pixels (brush stroke, line drag)

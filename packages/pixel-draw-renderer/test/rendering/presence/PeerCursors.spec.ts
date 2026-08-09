@@ -7,8 +7,8 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  PeerCursorOverlay
-} from "#src/rendering/overlays/PeerCursorOverlay.ts";
+  PeerCursors
+} from "#src/rendering/presence/PeerCursors.ts";
 import { Zoom } from "#src/rendering/Zoom.ts";
 import {
   makeSvg,
@@ -31,10 +31,10 @@ function makeMutableViewport(): MutableViewport {
   };
 }
 
-describe("PeerCursorOverlay — set", () => {
+describe("PeerCursors — set", () => {
   test("renders a visible arrow+label at the texture position, zoom 4 camera (0,0)", () => {
     const svg = makeSvg();
-    const overlay = new PeerCursorOverlay(
+    const overlay = new PeerCursors(
       svg,
       makeViewport()
     );
@@ -79,7 +79,7 @@ describe("PeerCursorOverlay — set", () => {
 
   test("renders an empty label when none is given", () => {
     const svg = makeSvg();
-    const overlay = new PeerCursorOverlay(
+    const overlay = new PeerCursors(
       svg,
       makeViewport()
     );
@@ -100,7 +100,7 @@ describe("PeerCursorOverlay — set", () => {
 
   test("a null pos hides the whole marker instead of removing it", () => {
     const svg = makeSvg();
-    const overlay = new PeerCursorOverlay(
+    const overlay = new PeerCursors(
       svg,
       makeViewport()
     );
@@ -132,7 +132,7 @@ describe("PeerCursorOverlay — set", () => {
 
   test("tracks multiple peers independently", () => {
     const svg = makeSvg();
-    const overlay = new PeerCursorOverlay(
+    const overlay = new PeerCursors(
       svg,
       makeViewport()
     );
@@ -159,10 +159,10 @@ describe("PeerCursorOverlay — set", () => {
   });
 });
 
-describe("PeerCursorOverlay — remove", () => {
+describe("PeerCursors — remove", () => {
   test("removes the peer's group from the svg", () => {
     const svg = makeSvg();
-    const overlay = new PeerCursorOverlay(
+    const overlay = new PeerCursors(
       svg,
       makeViewport()
     );
@@ -184,7 +184,7 @@ describe("PeerCursorOverlay — remove", () => {
 
   test("removing an unknown peer is a no-op", () => {
     const svg = makeSvg();
-    const overlay = new PeerCursorOverlay(
+    const overlay = new PeerCursors(
       svg,
       makeViewport()
     );
@@ -195,11 +195,11 @@ describe("PeerCursorOverlay — remove", () => {
   });
 });
 
-describe("PeerCursorOverlay — refresh", () => {
+describe("PeerCursors — refresh", () => {
   test("re-projects the stored position against a changed camera", () => {
     const svg = makeSvg();
     const viewport = makeMutableViewport();
-    const overlay = new PeerCursorOverlay(
+    const overlay = new PeerCursors(
       svg,
       viewport
     );
@@ -227,10 +227,10 @@ describe("PeerCursorOverlay — refresh", () => {
   });
 });
 
-describe("PeerCursorOverlay — destroy", () => {
+describe("PeerCursors — destroy", () => {
   test("removes every tracked peer's group", () => {
     const svg = makeSvg();
-    const overlay = new PeerCursorOverlay(
+    const overlay = new PeerCursors(
       svg,
       makeViewport()
     );
@@ -256,7 +256,7 @@ describe("PeerCursorOverlay — destroy", () => {
 
   test("removes the shadow filter's <defs>", () => {
     const svg = makeSvg();
-    const overlay = new PeerCursorOverlay(
+    const overlay = new PeerCursors(
       svg,
       makeViewport()
     );
@@ -270,10 +270,10 @@ describe("PeerCursorOverlay — destroy", () => {
   });
 });
 
-describe("PeerCursorOverlay — drop shadow", () => {
+describe("PeerCursors — drop shadow", () => {
   test("defines a feDropShadow filter and applies it to every peer's group", () => {
     const svg = makeSvg();
-    const overlay = new PeerCursorOverlay(
+    const overlay = new PeerCursors(
       svg,
       makeViewport()
     );
@@ -304,11 +304,11 @@ describe("PeerCursorOverlay — drop shadow", () => {
   test("two overlays sharing a page get distinct filter ids", () => {
     const svgA = makeSvg();
     const svgB = makeSvg();
-    new PeerCursorOverlay(
+    new PeerCursors(
       svgA,
       makeViewport()
     );
-    new PeerCursorOverlay(
+    new PeerCursors(
       svgB,
       makeViewport()
     );

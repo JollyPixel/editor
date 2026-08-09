@@ -5,6 +5,7 @@ import {
   geometryAt,
   rectOf
 } from "../../uv/geometry.ts";
+import { UVRegionBorder } from "./UVRegionBorder.ts";
 import type { DefaultViewport } from "../Viewport.ts";
 import type { UVMap } from "../../uv/UVMap.ts";
 import type {
@@ -20,13 +21,6 @@ import type {
 // CONSTANTS
 const kStrokeWidth = 2;
 const kSelectedStrokeWidth = 3;
-// Casing is this much wider than the main stroke.
-const kCasingWidth = 2;
-// Inset casing so it only shows inward.
-const kCasingInset = kCasingWidth / 2;
-const kDimOpacity = "0.45";
-const kDashArray = "6 4";
-const kSelectedFillOpacity = "0.06";
 const kLabelFontSize = 10;
 const kLabelPadding = 3;
 const kLabelCasingWidth = "3";
@@ -43,22 +37,6 @@ interface RenderEntry {
   face: UVFace | null;
   geometry: UVGeometry;
   selected: boolean;
-}
-
-export interface BorderStyle {
-  color: string;
-  strokeWidth: number;
-  selected: boolean;
-  dimmed: boolean;
-  /** Dashed stroke used for a peer's in-progress (uncommitted) drag ghost. */
-  dashed?: boolean;
-  /**
-   * Skips the contrasting (black/white) inner casing stroke, leaving just
-   * the plain colored line. A dashed ghost reads better as a single clean
-   * stroke than doubled up with a high-contrast casing.
-   * @default true
-   */
-  casing?: boolean;
 }
 
 function entryKey(
@@ -100,138 +78,14 @@ function regionLabel(
 }
 
 /**
- * Border = colored stroke + inner contrasting casing for visibility.
- */
-export class Border {
-  #group: SVGGElement;
-  #casing: SVGGeometryElement;
-  #stroke: SVGGeometryElement;
-
-  constructor(
-    geometry: UVGeometry
-  ) {
-    this.#group = document.createElementNS(SVG_NS, "g");
-    this.#group.style.pointerEvents = "none";
-
-    this.#casing = this.#group.appendChild(Border.#createElement(geometry));
-    this.#stroke = this.#group.appendChild(Border.#createElement(geometry));
-  }
-
-  static #createElement(
-    geometry: UVGeometry
-  ): SVGGeometryElement {
-    const el = document.createElementNS(
-      SVG_NS,
-      "shape" in geometry ? "polygon" : "rect"
-    ) as SVGGeometryElement;
-
-    el.style.fill = "none";
-    el.setAttribute("vector-effect", "non-scaling-stroke");
-
-    return el;
-  }
-
-  place(
-    geometry: UVGeometry,
-    zoom: number,
-    camera: Vec2
-  ): void {
-    const rect = rectOf(geometry);
-    const screen = {
-      x: rect.x * zoom + camera.x,
-      y: rect.y * zoom + camera.y,
-      width: rect.width * zoom,
-      height: rect.height * zoom
-    };
-    Border.#placeGeometry(this.#stroke, geometry, screen);
-
-    // Keep casing inside the rect; clamp prevents negative size on tiny rects.
-    const inset = Math.min(kCasingInset, screen.width / 2, screen.height / 2);
-    Border.#placeGeometry(this.#casing, geometry, {
-      x: screen.x + inset,
-      y: screen.y + inset,
-      width: screen.width - (2 * inset),
-      height: screen.height - (2 * inset)
-    });
-  }
-
-  static #placeGeometry(
-    el: SVGGeometryElement,
-    uvGeometry: UVGeometry,
-    screen: SelectionRect
-  ): void {
-    if ("shape" in uvGeometry) {
-      const corners = {
-        "top-left": [[screen.x, screen.y], [screen.x + screen.width, screen.y],
-          [screen.x, screen.y + screen.height]],
-        "top-right": [[screen.x, screen.y], [screen.x + screen.width, screen.y],
-          [screen.x + screen.width, screen.y + screen.height]],
-        "bottom-left": [[screen.x, screen.y], [screen.x, screen.y + screen.height],
-          [screen.x + screen.width, screen.y + screen.height]],
-        "bottom-right": [[screen.x + screen.width, screen.y], [screen.x, screen.y + screen.height],
-          [screen.x + screen.width, screen.y + screen.height]]
-      }[uvGeometry.corner];
-      el.setAttribute("points", corners.map((point) => point.join(",")).join(" "));
-
-      return;
-    }
-
-    for (const [name, value] of Object.entries(screen)) {
-      el.setAttribute(name, String(value));
-    }
-  }
-
-  paint(
-    style: BorderStyle
-  ): void {
-    const showCasing = style.casing ?? true;
-    this.#casing.style.display = showCasing ? "" : "none";
-    if (showCasing) {
-      this.#casing.setAttribute("stroke", contrastingColor(style.color));
-      this.#casing.style.strokeWidth = String(style.strokeWidth + kCasingWidth);
-    }
-
-    this.#stroke.setAttribute("stroke", style.color);
-    this.#stroke.style.strokeWidth = String(style.strokeWidth);
-    // Light fill marks the selected entry in stacked/similar rects.
-    this.#stroke.style.fill = style.selected ? style.color : "none";
-    this.#stroke.style.fillOpacity = style.selected ? kSelectedFillOpacity : "";
-
-    this.#group.style.opacity = style.dimmed ? kDimOpacity : "";
-
-    if (style.dashed) {
-      this.#stroke.setAttribute("stroke-dasharray", kDashArray);
-      this.#casing.setAttribute("stroke-dasharray", kDashArray);
-    }
-    else {
-      this.#stroke.removeAttribute("stroke-dasharray");
-      this.#casing.removeAttribute("stroke-dasharray");
-    }
-  }
-
-  /**
-    * Re-append to keep this border on top of older ones.
-   */
-  appendTo(
-    svg: SVGElement
-  ): void {
-    svg.appendChild(this.#group);
-  }
-
-  remove(): void {
-    this.#group.remove();
-  }
-}
-
-/**
  * Draws UV region overlays and updates on UVMap events.
  * Selected faces paint last; non-selected uncollapsed faces are dimmed.
  */
-export class UVOverlay {
+export class UVRegionLayer {
   #viewport: DefaultViewport;
   #uvMap: UVMap;
   #group: SVGGElement;
-  #borders = new Map<string, Border>();
+  #borders = new Map<string, UVRegionBorder>();
   #labels = new Map<string, SVGTextElement>();
   #liveOverride: { id: string; face: UVFace | null; rect: SelectionRect; } | null = null;
   #ghostSuppressed = new Set<string>();
@@ -283,7 +137,7 @@ export class UVOverlay {
 
   /**
    * Replaces the set of region/face entries currently shown as a peer's live
-   * drag ghost (`PeerUVGhosts`). Their classical rendering is suppressed
+   * drag ghost (`PeerUVPreview`). Their classical rendering is suppressed
    * here so the ghost is the sole visual until it clears, instead of a
    * stale border sitting underneath it for the whole drag.
    */
@@ -484,8 +338,8 @@ export class UVOverlay {
   #createBorder(
     key: string,
     geometry: UVGeometry
-  ): Border {
-    const border = new Border(geometry);
+  ): UVRegionBorder {
+    const border = new UVRegionBorder(geometry);
     this.#borders.set(key, border);
 
     return border;

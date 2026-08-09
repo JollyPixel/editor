@@ -4,7 +4,7 @@ import type { SelectionRect } from "../types.ts";
 /**
  * Live in-progress selection geometry for ghost-preview streaming.
  * `creating` is always a plain rect; `moving` carries the existing mask
- * and blankSource state mirroring FloatingOverlayOptions.blankSource.
+ * and blankSource state mirroring FloatingSelectionOptions.blankSource.
  */
 export type SelectionProgressEvent =
   | {

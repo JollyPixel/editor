@@ -6,17 +6,17 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { BrushHighlightOverlay } from "#src/rendering/overlays/BrushHighlightOverlay.ts";
+import { BrushHighlightView } from "#src/rendering/overlays/BrushHighlight.ts";
 import {
   makeSvg,
   makeViewport,
   makeBrush
 } from "../../helpers/overlay.ts";
 
-describe("BrushHighlightOverlay", () => {
+describe("BrushHighlightView", () => {
   test("update() shows the highlight group at the grid-snapped position", () => {
     const svg = makeSvg();
-    const overlay = new BrushHighlightOverlay(
+    const overlay = new BrushHighlightView(
       svg,
       makeViewport(),
       makeBrush(1)
@@ -39,7 +39,7 @@ describe("BrushHighlightOverlay", () => {
 
   test("update(null, null) hides the highlight", () => {
     const svg = makeSvg();
-    const overlay = new BrushHighlightOverlay(
+    const overlay = new BrushHighlightView(
       svg,
       makeViewport(),
       makeBrush(1)
@@ -59,7 +59,7 @@ describe("BrushHighlightOverlay", () => {
   test("refresh() redraws the current cursor position with the latest brush size", () => {
     const svg = makeSvg();
     let brushSize = 1;
-    const overlay = new BrushHighlightOverlay(
+    const overlay = new BrushHighlightView(
       svg,
       makeViewport(),
       {
@@ -84,7 +84,7 @@ describe("BrushHighlightOverlay", () => {
 
   test("hide() hides the highlight", () => {
     const svg = makeSvg();
-    const overlay = new BrushHighlightOverlay(
+    const overlay = new BrushHighlightView(
       svg,
       makeViewport(),
       makeBrush(1)

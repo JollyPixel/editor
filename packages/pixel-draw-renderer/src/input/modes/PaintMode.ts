@@ -3,8 +3,8 @@ import { InteractionMode } from "./InteractionMode.ts";
 import type { BrushController } from "../../tools/BrushController.ts";
 import type { LineController } from "../../tools/LineController.ts";
 import type {
-  BrushHighlightOverlay
-} from "../../rendering/overlays/BrushHighlightOverlay.ts";
+  BrushHighlightView
+} from "../../rendering/overlays/BrushHighlight.ts";
 import type {
   Mode,
   Vec2
@@ -13,7 +13,7 @@ import type {
 export interface PaintModeOptions {
   brush: BrushController;
   line: LineController;
-  highlight: BrushHighlightOverlay;
+  highlight: BrushHighlightView;
   /** Cancels the active primary drag without committing it. */
   stopDrawing: () => void;
 }
@@ -28,7 +28,7 @@ export class PaintMode extends InteractionMode {
 
   #brush: BrushController;
   #line: LineController;
-  #highlight: BrushHighlightOverlay;
+  #highlight: BrushHighlightView;
   #stopDrawing: () => void;
 
   constructor(

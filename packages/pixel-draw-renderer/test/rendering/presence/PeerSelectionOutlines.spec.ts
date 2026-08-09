@@ -7,16 +7,16 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  PeerSelectionGhosts,
-  type PeerSelectionGhostState
-} from "#src/rendering/overlays/PeerSelectionGhosts.ts";
+  PeerSelectionOutlines,
+  type PeerSelectionOutlineState
+} from "#src/rendering/presence/PeerSelectionOutlines.ts";
 import {
   makeSvg,
   makeViewport
 } from "../../helpers/overlay.ts";
 
 // CONSTANTS
-const kRectGhost: PeerSelectionGhostState = {
+const kRectGhost: PeerSelectionOutlineState = {
   rect: {
     x: 2,
     y: 3,
@@ -27,7 +27,7 @@ const kRectGhost: PeerSelectionGhostState = {
   color: "#ff0000"
 };
 // An L-shape: top row fully selected, bottom row only the left cell.
-const kMaskedGhost: PeerSelectionGhostState = {
+const kMaskedGhost: PeerSelectionOutlineState = {
   rect: {
     x: 0,
     y: 0,
@@ -38,11 +38,11 @@ const kMaskedGhost: PeerSelectionGhostState = {
   color: "#00ff00"
 };
 
-describe("PeerSelectionGhosts — set", () => {
+describe("PeerSelectionOutlines — set", () => {
   test("renders a dashed rect border at the projected screen position for a plain (unmasked) selection", () => {
     const svg = makeSvg();
     const viewport = makeViewport();
-    const ghosts = new PeerSelectionGhosts(svg, viewport);
+    const ghosts = new PeerSelectionOutlines(svg, viewport);
 
     ghosts.set("peer-A", kRectGhost);
 
@@ -71,7 +71,7 @@ describe("PeerSelectionGhosts — set", () => {
   test("a mask that is entirely true renders as the plain rect fast path", () => {
     const svg = makeSvg();
     const viewport = makeViewport();
-    const ghosts = new PeerSelectionGhosts(svg, viewport);
+    const ghosts = new PeerSelectionOutlines(svg, viewport);
 
     ghosts.set(
       "peer-A",
@@ -88,7 +88,7 @@ describe("PeerSelectionGhosts — set", () => {
   test("renders a traced contour path for a masked (shaped) selection", () => {
     const svg = makeSvg();
     const viewport = makeViewport();
-    const ghosts = new PeerSelectionGhosts(svg, viewport);
+    const ghosts = new PeerSelectionOutlines(svg, viewport);
 
     ghosts.set("peer-A", kMaskedGhost);
 
@@ -105,7 +105,7 @@ describe("PeerSelectionGhosts — set", () => {
   test("tracks multiple peers independently", () => {
     const svg = makeSvg();
     const viewport = makeViewport();
-    const ghosts = new PeerSelectionGhosts(svg, viewport);
+    const ghosts = new PeerSelectionOutlines(svg, viewport);
 
     ghosts.set("peer-A", kRectGhost);
     ghosts.set("peer-B", { ...kRectGhost, color: "#0000ff" });
@@ -119,7 +119,7 @@ describe("PeerSelectionGhosts — set", () => {
   test("a later set() for the same peer reuses its border elements (no duplicates)", () => {
     const svg = makeSvg();
     const viewport = makeViewport();
-    const ghosts = new PeerSelectionGhosts(svg, viewport);
+    const ghosts = new PeerSelectionOutlines(svg, viewport);
 
     ghosts.set("peer-A", kRectGhost);
     ghosts.set(
@@ -134,11 +134,11 @@ describe("PeerSelectionGhosts — set", () => {
   });
 });
 
-describe("PeerSelectionGhosts — remove", () => {
+describe("PeerSelectionOutlines — remove", () => {
   test("removes the peer's border from the svg", () => {
     const svg = makeSvg();
     const viewport = makeViewport();
-    const ghosts = new PeerSelectionGhosts(svg, viewport);
+    const ghosts = new PeerSelectionOutlines(svg, viewport);
 
     ghosts.set("peer-A", kRectGhost);
     ghosts.remove("peer-A");
@@ -156,17 +156,17 @@ describe("PeerSelectionGhosts — remove", () => {
   test("removing an unknown peer is a no-op", () => {
     const svg = makeSvg();
     const viewport = makeViewport();
-    const ghosts = new PeerSelectionGhosts(svg, viewport);
+    const ghosts = new PeerSelectionOutlines(svg, viewport);
 
     assert.doesNotThrow(() => ghosts.remove("nobody"));
   });
 });
 
-describe("PeerSelectionGhosts — removeOverlapping", () => {
+describe("PeerSelectionOutlines — removeOverlapping", () => {
   test("clears a peer's ghost sharing a pixel with the given positions", () => {
     const svg = makeSvg();
     const viewport = makeViewport();
-    const ghosts = new PeerSelectionGhosts(svg, viewport);
+    const ghosts = new PeerSelectionOutlines(svg, viewport);
 
     ghosts.set("peer-A", kRectGhost);
     ghosts.removeOverlapping([{ x: 2, y: 3 }]);
@@ -180,7 +180,7 @@ describe("PeerSelectionGhosts — removeOverlapping", () => {
   test("leaves a ghost untouched when positions don't overlap its rect", () => {
     const svg = makeSvg();
     const viewport = makeViewport();
-    const ghosts = new PeerSelectionGhosts(svg, viewport);
+    const ghosts = new PeerSelectionOutlines(svg, viewport);
 
     ghosts.set("peer-A", kRectGhost);
     ghosts.removeOverlapping([{ x: 100, y: 100 }]);
@@ -194,7 +194,7 @@ describe("PeerSelectionGhosts — removeOverlapping", () => {
   test("respects the mask — a position only in an unmasked cell doesn't overlap", () => {
     const svg = makeSvg();
     const viewport = makeViewport();
-    const ghosts = new PeerSelectionGhosts(svg, viewport);
+    const ghosts = new PeerSelectionOutlines(svg, viewport);
 
     // (1,1) is the mask's false cell (bottom-right of the L-shape).
     ghosts.set("peer-A", kMaskedGhost);
@@ -210,7 +210,7 @@ describe("PeerSelectionGhosts — removeOverlapping", () => {
   test("is a no-op for an empty positions array", () => {
     const svg = makeSvg();
     const viewport = makeViewport();
-    const ghosts = new PeerSelectionGhosts(svg, viewport);
+    const ghosts = new PeerSelectionOutlines(svg, viewport);
 
     ghosts.set("peer-A", kRectGhost);
     ghosts.removeOverlapping([]);
@@ -222,11 +222,11 @@ describe("PeerSelectionGhosts — removeOverlapping", () => {
   });
 });
 
-describe("PeerSelectionGhosts — clearAll", () => {
+describe("PeerSelectionOutlines — clearAll", () => {
   test("removes every peer's border", () => {
     const svg = makeSvg();
     const viewport = makeViewport();
-    const ghosts = new PeerSelectionGhosts(svg, viewport);
+    const ghosts = new PeerSelectionOutlines(svg, viewport);
 
     ghosts.set("peer-A", kRectGhost);
     ghosts.set("peer-B", kMaskedGhost);
@@ -243,11 +243,11 @@ describe("PeerSelectionGhosts — clearAll", () => {
   });
 });
 
-describe("PeerSelectionGhosts — refresh", () => {
+describe("PeerSelectionOutlines — refresh", () => {
   test("re-projects the stored rect against a changed camera", () => {
     const svg = makeSvg();
     const viewport = makeViewport();
-    const ghosts = new PeerSelectionGhosts(svg, viewport);
+    const ghosts = new PeerSelectionOutlines(svg, viewport);
 
     ghosts.set("peer-A", kRectGhost);
     viewport.camera.x = 5;
@@ -267,11 +267,11 @@ describe("PeerSelectionGhosts — refresh", () => {
   });
 });
 
-describe("PeerSelectionGhosts — destroy", () => {
+describe("PeerSelectionOutlines — destroy", () => {
   test("removes every tracked peer's border", () => {
     const svg = makeSvg();
     const viewport = makeViewport();
-    const ghosts = new PeerSelectionGhosts(svg, viewport);
+    const ghosts = new PeerSelectionOutlines(svg, viewport);
 
     ghosts.set("peer-A", kRectGhost);
     ghosts.set("peer-B", kMaskedGhost);

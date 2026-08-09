@@ -6,7 +6,7 @@ import { createCanvas2D } from "../Canvas2D.ts";
 import {
   buildMaskedContentCanvas,
   buildMaskedFillCanvas
-} from "./maskedCanvas.ts";
+} from "./selectionCanvas.ts";
 import type {
   RGBA,
   SelectionRect
@@ -20,7 +20,7 @@ const kOpaqueMask: RGBA = {
   a: 255
 };
 
-export interface FloatingOverlayOptions {
+export interface FloatingSelectionOptions {
   /**
    * Original selection position.
    */
@@ -52,7 +52,7 @@ export type FloatingSelectionEvent = {
 /**
  * Renders a floating selection overlay.
  */
-export class FloatingSelectionOverlay extends Emitter<
+export class FloatingSelection extends Emitter<
   FloatingSelectionEvent
 > {
   #canvas: HTMLCanvasElement | null = null;
@@ -64,7 +64,7 @@ export class FloatingSelectionOverlay extends Emitter<
   #blankSource: boolean = true;
 
   create(
-    options: FloatingOverlayOptions
+    options: FloatingSelectionOptions
   ): void {
     const {
       sourceRect,
@@ -84,12 +84,12 @@ export class FloatingSelectionOverlay extends Emitter<
     );
     this.#eraseCanvas = mask
       ? buildMaskedFillCanvas(sourceRect, mask, eraseColor)
-      : FloatingSelectionOverlay.#buildUniformEraseCanvas(
+      : FloatingSelection.#buildUniformEraseCanvas(
         eraseColor
       );
     this.#maskCanvas = mask
       ? buildMaskedFillCanvas(sourceRect, mask, kOpaqueMask)
-      : FloatingSelectionOverlay.#buildUniformEraseCanvas(
+      : FloatingSelection.#buildUniformEraseCanvas(
         kOpaqueMask
       );
     this.#eraseIsUniform = !mask;

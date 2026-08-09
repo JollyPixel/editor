@@ -31,13 +31,13 @@ const kLabelOffsetY = 9;
 /**
  * Renders one arrow-shaped cursor + colored name tag per remote peer
  */
-export class PeerCursorOverlay {
+export class PeerCursors {
   #svg: SVGElement;
   #viewport: DefaultViewport;
   #peers = new Map<string, PeerCursorState>();
   #elements = new Map<string, PeerCursorElements>();
   #defs: SVGDefsElement;
-  // Unique per instance so multiple PixelArtCanvas / PeerCursorOverlay pairs
+  // Unique per instance so multiple PixelArtCanvas / PeerCursors pairs
   // on the same page never collide on the filter's id.
   #shadowFilterId = `peer-cursor-shadow-${crypto.randomUUID()}`;
 

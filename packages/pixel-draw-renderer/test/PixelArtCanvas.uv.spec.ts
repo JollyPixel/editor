@@ -498,7 +498,7 @@ describe("PixelArtCanvas — onResize (SVG overlay refresh, regression)", () => 
     // Each UV entry is a <g> of two rects: the inset casing, then the colored
     // border on the region's own bounds — the one to measure. Every other
     // overlay group — brush highlight, peer cursors — carries a "visibility"
-    // attribute, which UVOverlay never sets.
+    // attribute, which UVRegionLayer never sets.
     const svg = children.find(
       (c) => !("getContext" in c)
     ) as SVGElement;
@@ -556,7 +556,7 @@ describe("PixelArtCanvas — onResize (SVG overlay refresh, regression)", () => 
       })
     );
 
-    // Direct children only, excluding BrushHighlightOverlay's nested rects;
+    // Direct children only, excluding BrushHighlightView's nested rects;
     // the selection outline is the direct rect explicitly marked visible.
     const svg = children.find((c) => !("getContext" in c)) as SVGElement;
     const rect = [...svg.querySelectorAll(":scope > rect")]

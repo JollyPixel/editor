@@ -84,7 +84,7 @@ export class PixelStrokeGhostSync {
     }
     else if (message.type === "snapshot") {
       this.#ghostLeaser.clear();
-      this.#canvas?.peerStrokeGhosts.clearAll();
+      this.#canvas?.peerPresence.strokes.clearAll();
     }
   };
 
@@ -138,7 +138,7 @@ export class PixelStrokeGhostSync {
     this.#cancelPending();
     if (this.#enableGhostPreview) {
       this.#ghostLeaser.clear();
-      this.#canvas.peerStrokeGhosts.clearAll();
+      this.#canvas.peerPresence.strokes.clearAll();
       this.#canvas.onStrokeProgress = this.#previousHandler;
     }
     this.#canvas = undefined;
@@ -165,7 +165,7 @@ export class PixelStrokeGhostSync {
   #removePeerGhost(
     clientId: string
   ): void {
-    this.#canvas?.peerStrokeGhosts.remove(clientId);
+    this.#canvas?.peerPresence.strokes.remove(clientId);
   }
 
   #reportLocal(
@@ -212,7 +212,7 @@ export class PixelStrokeGhostSync {
 
     switch (command.action) {
       case "stroke":
-        this.#canvas.peerStrokeGhosts.removeOverlapping(
+        this.#canvas.peerPresence.strokes.removeOverlapping(
           command.metadata.positions
         );
         break;
@@ -221,7 +221,7 @@ export class PixelStrokeGhostSync {
       case "texture-replaced":
         // Whole-canvas ops have no positions; clear all ghosts.
         this.#ghostLeaser.clear();
-        this.#canvas.peerStrokeGhosts.clearAll();
+        this.#canvas.peerPresence.strokes.clearAll();
         break;
       default:
         break;
@@ -238,7 +238,7 @@ export class PixelStrokeGhostSync {
 
     const pixels = patch[kPresenceStrokeKey];
     if (isPeerStrokePixels(pixels)) {
-      this.#canvas.peerStrokeGhosts.set(
+      this.#canvas.peerPresence.strokes.set(
         clientId,
         pixels
       );

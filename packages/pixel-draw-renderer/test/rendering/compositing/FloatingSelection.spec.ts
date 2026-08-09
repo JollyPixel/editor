@@ -7,8 +7,8 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  FloatingSelectionOverlay
-} from "#src/rendering/overlays/FloatingSelectionOverlay.ts";
+  FloatingSelection
+} from "#src/rendering/compositing/FloatingSelection.ts";
 import {
   canvasPixels,
   mockContextOf
@@ -65,10 +65,10 @@ function pixelAt(
   ];
 }
 
-describe("FloatingSelectionOverlay", () => {
+describe("FloatingSelection", () => {
   describe("draw", () => {
     test("is a no-op when nothing has been created", () => {
-      const overlay = new FloatingSelectionOverlay();
+      const overlay = new FloatingSelection();
       const dest = makeDest();
 
       assert.doesNotThrow(
@@ -84,7 +84,7 @@ describe("FloatingSelectionOverlay", () => {
     });
 
     test("is a no-op after clear()", () => {
-      const overlay = new FloatingSelectionOverlay();
+      const overlay = new FloatingSelection();
       overlay.create({
         sourceRect: {
           x: 0,
@@ -110,7 +110,7 @@ describe("FloatingSelectionOverlay", () => {
 
   describe("create + draw", () => {
     test("blits the captured pixels at sourceRect by default", () => {
-      const overlay = new FloatingSelectionOverlay();
+      const overlay = new FloatingSelection();
       overlay.create({
         sourceRect: {
           x: 2,
@@ -140,7 +140,7 @@ describe("FloatingSelectionOverlay", () => {
 
   describe("updatePosition", () => {
     test("moves the live overlay while leaving the source position blanked", () => {
-      const overlay = new FloatingSelectionOverlay();
+      const overlay = new FloatingSelection();
       overlay.create({
         sourceRect: {
           x: 0,
@@ -174,7 +174,7 @@ describe("FloatingSelectionOverlay", () => {
     });
 
     test("blankSource: false leaves the source position untouched", () => {
-      const overlay = new FloatingSelectionOverlay();
+      const overlay = new FloatingSelection();
       overlay.create({
         sourceRect: {
           x: 0,
@@ -207,7 +207,7 @@ describe("FloatingSelectionOverlay", () => {
     });
 
     test("a transparent erase color removes source pixels instead of compositing over them", () => {
-      const overlay = new FloatingSelectionOverlay();
+      const overlay = new FloatingSelection();
       overlay.create({
         sourceRect: {
           x: 0,
@@ -248,7 +248,7 @@ describe("FloatingSelectionOverlay", () => {
     });
 
     test("is a no-op when nothing has been created", () => {
-      const overlay = new FloatingSelectionOverlay();
+      const overlay = new FloatingSelection();
 
       assert.doesNotThrow(
         () => overlay.updatePosition({
@@ -263,7 +263,7 @@ describe("FloatingSelectionOverlay", () => {
 
   describe("mask", () => {
     test("masked-false cells are transparent in the content canvas, masked-true cells show through", () => {
-      const overlay = new FloatingSelectionOverlay();
+      const overlay = new FloatingSelection();
       overlay.create({
         sourceRect: {
           x: 2,
@@ -294,7 +294,7 @@ describe("FloatingSelectionOverlay", () => {
     });
 
     test("blanking the source only erases masked-true cells, leaving masked-false cells' underlying content", () => {
-      const overlay = new FloatingSelectionOverlay();
+      const overlay = new FloatingSelection();
       overlay.create({
         sourceRect: {
           x: 0,
@@ -331,7 +331,7 @@ describe("FloatingSelectionOverlay", () => {
     });
 
     test("omitting mask behaves exactly like an all-true mask (backward compatible)", () => {
-      const overlay = new FloatingSelectionOverlay();
+      const overlay = new FloatingSelection();
       overlay.create({
         sourceRect: {
           x: 0,
@@ -356,10 +356,10 @@ describe("FloatingSelectionOverlay", () => {
 
   describe("changed signal", () => {
     function makeCreated(): {
-      overlay: FloatingSelectionOverlay;
+      overlay: FloatingSelection;
       changes: () => number;
     } {
-      const overlay = new FloatingSelectionOverlay();
+      const overlay = new FloatingSelection();
       let count = 0;
       overlay.on("changed", () => {
         count++;

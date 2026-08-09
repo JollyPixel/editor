@@ -6,17 +6,17 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { OverlayLayer } from "#src/rendering/OverlayLayer.ts";
-import { BrushHighlightOverlay } from "#src/rendering/overlays/BrushHighlightOverlay.ts";
-import { LinePreviewOverlay } from "#src/rendering/overlays/LinePreviewOverlay.ts";
-import { SelectionOverlay } from "#src/rendering/overlays/SelectionOverlay.ts";
-import { UVOverlay } from "#src/rendering/overlays/UVOverlay.ts";
+import { OverlayLayer } from "#src/rendering/overlays/OverlayLayer.ts";
+import { BrushHighlightView } from "#src/rendering/overlays/BrushHighlight.ts";
+import { LinePreview } from "#src/rendering/overlays/LinePreview.ts";
+import { SelectionOutline } from "#src/rendering/overlays/SelectionOutline.ts";
+import { UVRegionLayer } from "#src/rendering/overlays/UVRegions.ts";
 import {
   makeViewport,
   makeBrush,
   makeUvMap
-} from "../helpers/overlay.ts";
-import { stubRect } from "../helpers/dom.ts";
+} from "../../helpers/overlay.ts";
+import { stubRect } from "../../helpers/dom.ts";
 
 function makeParent(): HTMLDivElement {
   // Use happy-dom's real document.body so parentElement tracking works correctly.
@@ -42,20 +42,20 @@ describe("OverlayLayer", () => {
       });
 
       assert.ok(
-        overlays.brushHighlight instanceof BrushHighlightOverlay,
-        "brushHighlight should be an instance of BrushHighlightOverlay"
+        overlays.brushHighlight instanceof BrushHighlightView,
+        "brushHighlight should be an instance of BrushHighlightView"
       );
       assert.ok(
-        overlays.linePreview instanceof LinePreviewOverlay,
-        "linePreview should be an instance of LinePreviewOverlay"
+        overlays.linePreview instanceof LinePreview,
+        "linePreview should be an instance of LinePreview"
       );
       assert.ok(
-        overlays.selection instanceof SelectionOverlay,
-        "selection should be an instance of SelectionOverlay"
+        overlays.selection instanceof SelectionOutline,
+        "selection should be an instance of SelectionOutline"
       );
       assert.ok(
-        overlays.uvOverlay instanceof UVOverlay,
-        "uvOverlay should be an instance of UVOverlay"
+        overlays.uvOverlay instanceof UVRegionLayer,
+        "uvOverlay should be an instance of UVRegionLayer"
       );
     });
 

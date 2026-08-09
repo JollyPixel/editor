@@ -53,7 +53,7 @@ export type SelectionGhostPayload =
     mask: boolean[];
     /**
      * Whether source footprint renders blanked during move - mirrors
-     * FloatingOverlayOptions.blankSource locally. Not derivable from
+     * FloatingSelectionOptions.blankSource locally. Not derivable from
      * geometry alone (depends on prior gesture history).
      */
     blankSource: boolean;

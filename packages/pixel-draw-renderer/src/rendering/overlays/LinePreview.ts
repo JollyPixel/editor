@@ -11,7 +11,7 @@ import type {
 /**
  * Renders a line preview overlay.
  */
-export class LinePreviewOverlay {
+export class LinePreview {
   #viewport: DefaultViewport;
   #outline: SVGLineElement;
   #inline: SVGLineElement;

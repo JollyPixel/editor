@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { UVOverlay } from "#src/rendering/overlays/UVOverlay.ts";
+import { UVRegionLayer } from "#src/rendering/overlays/UVRegions.ts";
 import { UV_FACES } from "#src/uv/UVRegion.ts";
 import {
   makeSvg,
@@ -34,12 +34,12 @@ function groups(
   return [...svg.querySelectorAll<SVGGElement>(":scope > g[data-overlay=\"uv\"] > g")];
 }
 
-describe("UVOverlay — visibility follows UVMap state", () => {
+describe("UVRegionLayer — visibility follows UVMap state", () => {
   test("renders nothing for a region that isn't selected or shown", () => {
     const svg = makeSvg();
     const map = makeUvMap();
 
-    new UVOverlay(svg, makeViewport(), map);
+    new UVRegionLayer(svg, makeViewport(), map);
 
     map.create({ width: 4, height: 4 });
 
@@ -54,7 +54,7 @@ describe("UVOverlay — visibility follows UVMap state", () => {
     const svg = makeSvg();
     const map = makeUvMap();
 
-    new UVOverlay(svg, makeViewport(), map);
+    new UVRegionLayer(svg, makeViewport(), map);
 
     const region = map.create({
       width: 2,
@@ -91,7 +91,7 @@ describe("UVOverlay — visibility follows UVMap state", () => {
     const svg = makeSvg();
     const map = makeUvMap();
 
-    new UVOverlay(svg, makeViewport(), map);
+    new UVRegionLayer(svg, makeViewport(), map);
 
     // The first cascade position is (0, 0) — flush with the canvas edge,
     // where a straddling casing would paint its outer half onto the page and
@@ -112,7 +112,7 @@ describe("UVOverlay — visibility follows UVMap state", () => {
     const svg = makeSvg();
     const map = makeUvMap();
 
-    new UVOverlay(svg, makeViewport(1), map);
+    new UVRegionLayer(svg, makeViewport(1), map);
 
     const region = map.create({
       width: 1,
@@ -130,7 +130,7 @@ describe("UVOverlay — visibility follows UVMap state", () => {
     const svg = makeSvg();
     const map = makeUvMap();
 
-    new UVOverlay(svg, makeViewport(), map);
+    new UVRegionLayer(svg, makeViewport(), map);
 
     map.create({
       width: 2,
@@ -153,7 +153,7 @@ describe("UVOverlay — visibility follows UVMap state", () => {
     const svg = makeSvg();
     const map = makeUvMap();
 
-    new UVOverlay(
+    new UVRegionLayer(
       svg,
       makeViewport(),
       map
@@ -182,7 +182,7 @@ describe("UVOverlay — visibility follows UVMap state", () => {
     const svg = makeSvg();
     const map = makeUvMap();
 
-    new UVOverlay(svg, makeViewport(), map);
+    new UVRegionLayer(svg, makeViewport(), map);
 
     const region = map.create({
       width: 2,
@@ -207,7 +207,7 @@ describe("UVOverlay — visibility follows UVMap state", () => {
     const svg = makeSvg();
     const map = makeUvMap();
 
-    new UVOverlay(svg, makeViewport(), map);
+    new UVRegionLayer(svg, makeViewport(), map);
 
     const region = map.create({
       width: 2,
@@ -225,11 +225,11 @@ describe("UVOverlay — visibility follows UVMap state", () => {
   });
 });
 
-describe("UVOverlay — setLiveOverride", () => {
+describe("UVRegionLayer — setLiveOverride", () => {
   test("renders the override rect instead of the stored one", () => {
     const svg = makeSvg();
     const map = makeUvMap();
-    const overlay = new UVOverlay(
+    const overlay = new UVRegionLayer(
       svg,
       makeViewport(),
       map
@@ -258,12 +258,12 @@ describe("UVOverlay — setLiveOverride", () => {
   });
 });
 
-describe("UVOverlay — uncollapsed regions", () => {
+describe("UVRegionLayer — uncollapsed regions", () => {
   test("renders one rect per face", () => {
     const svg = makeSvg();
     const map = makeUvMap();
 
-    new UVOverlay(svg, makeViewport(), map);
+    new UVRegionLayer(svg, makeViewport(), map);
 
     const region = map.create({ width: 4, height: 4, id: "r1" });
     map.uncollapse(region.id);
@@ -280,7 +280,7 @@ describe("UVOverlay — uncollapsed regions", () => {
     const svg = makeSvg();
     const map = makeUvMap();
 
-    new UVOverlay(svg, makeViewport(), map);
+    new UVRegionLayer(svg, makeViewport(), map);
 
     const region = map.create({
       width: 4,
@@ -307,7 +307,7 @@ describe("UVOverlay — uncollapsed regions", () => {
     const svg = makeSvg();
     const map = makeUvMap();
 
-    new UVOverlay(svg, makeViewport(), map);
+    new UVRegionLayer(svg, makeViewport(), map);
 
     const region = map.create({
       width: 4,
@@ -323,7 +323,7 @@ describe("UVOverlay — uncollapsed regions", () => {
   test("setLiveOverride moves only the dragged face", () => {
     const svg = makeSvg();
     const map = makeUvMap();
-    const overlay = new UVOverlay(svg, makeViewport(), map);
+    const overlay = new UVRegionLayer(svg, makeViewport(), map);
 
     const region = map.create({
       width: 4,
@@ -349,12 +349,12 @@ describe("UVOverlay — uncollapsed regions", () => {
   });
 });
 
-describe("UVOverlay — staying visible over the artwork", () => {
+describe("UVRegionLayer — staying visible over the artwork", () => {
   test("casings a light region color in black and a dark one in white", () => {
     const svg = makeSvg();
     const map = makeUvMap();
 
-    new UVOverlay(svg, makeViewport(), map);
+    new UVRegionLayer(svg, makeViewport(), map);
 
     map.create({
       width: 2,
@@ -381,7 +381,7 @@ describe("UVOverlay — staying visible over the artwork", () => {
     const svg = makeSvg();
     const map = makeUvMap();
 
-    new UVOverlay(svg, makeViewport(), map);
+    new UVRegionLayer(svg, makeViewport(), map);
 
     const region = map.create({
       width: 4,
@@ -405,7 +405,7 @@ describe("UVOverlay — staying visible over the artwork", () => {
     const svg = makeSvg();
     const map = makeUvMap();
 
-    new UVOverlay(svg, makeViewport(), map);
+    new UVRegionLayer(svg, makeViewport(), map);
 
     const region = map.create({
       width: 4,
@@ -437,7 +437,7 @@ describe("UVOverlay — staying visible over the artwork", () => {
     const svg = makeSvg();
     const map = makeUvMap();
 
-    new UVOverlay(svg, makeViewport(), map);
+    new UVRegionLayer(svg, makeViewport(), map);
 
     const region = map.create({
       width: 4,
@@ -459,7 +459,7 @@ describe("UVOverlay — staying visible over the artwork", () => {
     const svg = makeSvg();
     const map = makeUvMap();
 
-    new UVOverlay(svg, makeViewport(), map);
+    new UVRegionLayer(svg, makeViewport(), map);
 
     const region = map.create({
       width: 12,
@@ -481,7 +481,7 @@ describe("UVOverlay — staying visible over the artwork", () => {
   });
 });
 
-describe("UVOverlay — face labels", () => {
+describe("UVRegionLayer — face labels", () => {
   // makeViewport() zooms 4x and labels need 40 screen px, so a labelled
   // rect must be at least 10 texture px wide/tall.
   const kLabelSize = 12;
@@ -489,7 +489,7 @@ describe("UVOverlay — face labels", () => {
   function setup(): { svg: SVGElement; map: ReturnType<typeof makeUvMap>; } {
     const svg = makeSvg();
     const map = makeUvMap();
-    new UVOverlay(
+    new UVRegionLayer(
       svg,
       makeViewport(),
       map
@@ -770,11 +770,11 @@ describe("UVOverlay — face labels", () => {
   });
 });
 
-describe("UVOverlay — destroy", () => {
+describe("UVRegionLayer — destroy", () => {
   test("stops reacting to UVMap events and removes its rects", () => {
     const svg = makeSvg();
     const map = makeUvMap();
-    const overlay = new UVOverlay(svg, makeViewport(), map);
+    const overlay = new UVRegionLayer(svg, makeViewport(), map);
 
     const region = map.create({
       width: 2,

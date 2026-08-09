@@ -7,7 +7,7 @@ import type {
   Vec2
 } from "../../types.ts";
 
-export type PeerStrokeGhostsEvent = {
+export type PeerStrokesEvent = {
   changed: () => void;
 };
 
@@ -17,8 +17,8 @@ export type PeerStrokeGhostsEvent = {
  * document buffer. Never touches `CanvasBuffer`, `History`, or conflict
  * resolution. Sync owns commit and inactivity cleanup.
  */
-export class PeerStrokeGhosts extends Emitter<
-  PeerStrokeGhostsEvent
+export class PeerStrokes extends Emitter<
+  PeerStrokesEvent
 > {
   #pixels = new Map<string, PeerStrokePixel[]>();
 

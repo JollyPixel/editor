@@ -8,11 +8,11 @@ import type { SelectControllerEvent } from "./SelectController.events.ts";
 import { clipRectToBounds } from "../utils/math.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import type {
-  FloatingSelectionOverlay
-} from "../rendering/overlays/FloatingSelectionOverlay.ts";
+  FloatingSelection
+} from "../rendering/compositing/FloatingSelection.ts";
 import type {
-  SelectionOverlay
-} from "../rendering/overlays/SelectionOverlay.ts";
+  SelectionOutline
+} from "../rendering/overlays/SelectionOutline.ts";
 import type { EditPipeline } from "../sync/EditPipeline.ts";
 import type {
   RGBA,
@@ -38,8 +38,8 @@ export interface SelectEditEntry {
 export interface SelectControllerOptions {
   canvasBuffer: CanvasBuffer;
   /** The floating overlay that renders a selection while it is dragged. */
-  floatingSelection: FloatingSelectionOverlay;
-  selectionOverlay: SelectionOverlay;
+  floatingSelection: FloatingSelection;
+  selectionOverlay: SelectionOutline;
   /**
    * Explicit fill for a vacated footprint (Move/Rotate/Flip source, or
    * Delete), overriding the smart default below. `null` when not
@@ -71,8 +71,8 @@ export interface SelectTool {
 export class SelectController extends Emitter<SelectControllerEvent> implements SelectTool {
   #select = new Select();
   #canvasBuffer: CanvasBuffer;
-  #floatingSelection: FloatingSelectionOverlay;
-  #selectionOverlay: SelectionOverlay;
+  #floatingSelection: FloatingSelection;
+  #selectionOverlay: SelectionOutline;
   #eraseColor: RGBA | null;
   #pipeline: EditPipeline;
   #shapeMode = false;

@@ -2,8 +2,8 @@
 import { InteractionMode } from "./InteractionMode.ts";
 import type { FillController } from "../../tools/FillController.ts";
 import type {
-  BrushHighlightOverlay
-} from "../../rendering/overlays/BrushHighlightOverlay.ts";
+  BrushHighlightView
+} from "../../rendering/overlays/BrushHighlight.ts";
 import type {
   Mode,
   Vec2
@@ -11,7 +11,7 @@ import type {
 
 export interface FillModeOptions {
   fill: FillController;
-  highlight: BrushHighlightOverlay;
+  highlight: BrushHighlightView;
 }
 
 /**
@@ -21,7 +21,7 @@ export class FillMode extends InteractionMode {
   readonly id: Mode = "fill";
 
   #fill: FillController;
-  #highlight: BrushHighlightOverlay;
+  #highlight: BrushHighlightView;
 
   constructor(
     options: FillModeOptions

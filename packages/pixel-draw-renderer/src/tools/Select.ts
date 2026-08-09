@@ -464,7 +464,7 @@ export class Select {
 
   /**
    * Resolve fill for a vacated footprint: explicit eraseColor or dominantBorderColor.
-   * Shared by SelectController and PeerFloatingSelectionGhosts - both must
+   * Shared by SelectController and PeerFloatingSelections - both must
    * resolve to the same color given the same buffer state.
    */
   static resolveEraseColor(

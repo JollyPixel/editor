@@ -46,6 +46,7 @@ export type {
 export type {
   DefaultViewport
 } from "./rendering/Viewport.ts";
+export { PeerPresence } from "./rendering/presence/PeerPresence.ts";
 export {
   Zoom,
   type ZoomOptions

@@ -10,8 +10,8 @@ import type {
   UVRegion
 } from "./UVRegion.ts";
 import type {
-  UVOverlay
-} from "../rendering/overlays/UVOverlay.ts";
+  UVRegionLayer
+} from "../rendering/overlays/UVRegions.ts";
 import type {
   SelectionRect,
   Vec2
@@ -19,7 +19,7 @@ import type {
 
 export interface UVControllerOptions {
   uvMap: UVMap;
-  overlay: UVOverlay;
+  overlay: UVRegionLayer;
 }
 
 interface DragState {
@@ -67,7 +67,7 @@ function stackKey(
  */
 export class UVController {
   #uvMap: UVMap;
-  #overlay: UVOverlay;
+  #overlay: UVRegionLayer;
   #drag: DragState | null = null;
   #pick: PickState | null = null;
 

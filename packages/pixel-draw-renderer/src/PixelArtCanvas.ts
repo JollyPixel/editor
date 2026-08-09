@@ -54,11 +54,7 @@ import type {
   UVRegion,
   UVRegionData
 } from "./uv/UVRegion.ts";
-import type { PeerCursorOverlay } from "./rendering/overlays/PeerCursorOverlay.ts";
-import type { PeerStrokeGhosts } from "./rendering/overlays/PeerStrokeGhosts.ts";
-import type { PeerUVGhosts } from "./rendering/overlays/PeerUVGhosts.ts";
-import type { PeerSelectionGhosts } from "./rendering/overlays/PeerSelectionGhosts.ts";
-import type { PeerFloatingSelectionGhosts } from "./rendering/overlays/PeerFloatingSelectionGhosts.ts";
+import type { PeerPresence } from "./rendering/presence/PeerPresence.ts";
 import { toRGBA } from "./utils/colors.ts";
 import type {
   BrushHighlight,
@@ -154,16 +150,17 @@ export class PixelArtCanvas {
   #onStrokeProgress?: (pixels: PeerStrokePixel[]) => void;
   #router: InteractionRouter;
   #tools: Tools;
+  #onViewportChanged = () => {
+    this.#view.refresh();
+    this.#tools.line.refreshPreview();
+    this.#tools.select.refreshOverlay();
+  };
 
   readonly brush: Brush;
   readonly viewport: DefaultViewport;
   readonly uv: UVMap;
   readonly tools: Toolset;
-  readonly peerCursors: PeerCursorOverlay;
-  readonly peerStrokeGhosts: PeerStrokeGhosts;
-  readonly peerUvGhosts: PeerUVGhosts;
-  readonly peerSelectionGhosts: PeerSelectionGhosts;
-  readonly peerFloatingSelectionGhosts: PeerFloatingSelectionGhosts;
+  readonly peerPresence: PeerPresence;
   /**
    * Read-only subscription to the select tool's progress events.
    * Consumed by SelectionGhostSync; nothing outside sync should emit on it.
@@ -224,11 +221,7 @@ export class PixelArtCanvas {
       eraseColor
     });
     this.viewport = this.#view.viewport;
-    this.peerCursors = this.#view.overlays.peerCursors;
-    this.peerStrokeGhosts = this.#view.renderer.peerStrokeGhosts;
-    this.peerUvGhosts = this.#view.overlays.peerUvGhosts;
-    this.peerSelectionGhosts = this.#view.overlays.peerSelectionGhosts;
-    this.peerFloatingSelectionGhosts = this.#view.renderer.peerFloatingSelectionGhosts;
+    this.peerPresence = this.#view.peerPresence;
 
     this.#edits = new EditPipeline({
       brush: this.brush,
@@ -257,15 +250,7 @@ export class PixelArtCanvas {
     this.selectionEvents = this.#tools.select;
 
     // Camera changes repaint and re-place all camera-dependent overlays.
-    this.#view.viewport.on("changed", () => {
-      this.#view.drawFrame();
-      this.#tools.line.refreshPreview();
-      this.#tools.select.refreshOverlay();
-      this.#view.overlays.uvOverlay.refresh();
-      this.#view.overlays.peerCursors.refresh();
-      this.#view.overlays.peerUvGhosts.refresh();
-      this.#view.overlays.peerSelectionGhosts.refresh();
-    });
+    this.#view.viewport.on("changed", this.#onViewportChanged);
 
     this.#router = new InteractionRouter({
       defaultMode,
@@ -421,6 +406,7 @@ export class PixelArtCanvas {
 
   destroy(): void {
     this.#input.destroy();
+    this.#view.viewport.off("changed", this.#onViewportChanged);
     this.#view.destroy();
   }
 

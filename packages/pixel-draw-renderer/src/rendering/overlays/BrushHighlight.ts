@@ -10,7 +10,7 @@ import type {
 /**
  * Renders the brush cursor overlay.
  */
-export class BrushHighlightOverlay {
+export class BrushHighlightView {
   #viewport: DefaultViewport;
   #brush: BrushHighlight;
   #group: SVGGElement;

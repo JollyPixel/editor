@@ -109,11 +109,13 @@ interface MockCanvas {
   removedPeers: string[];
   clearAllCallCount: number;
   overlapCalls: Vec2[][];
-  peerStrokeGhosts: {
-    set(clientId: string, pixels: PeerStrokePixel[]): void;
-    remove(clientId: string): void;
-    clearAll(): void;
-    removeOverlapping(positions: Vec2[]): void;
+  peerPresence: {
+    strokes: {
+      set(clientId: string, pixels: PeerStrokePixel[]): void;
+      remove(clientId: string): void;
+      clearAll(): void;
+      removeOverlapping(positions: Vec2[]): void;
+    };
   };
   triggerProgress(pixels: PeerStrokePixel[]): void;
 }
@@ -129,18 +131,20 @@ function createMockCanvas(): MockCanvas {
     removedPeers,
     clearAllCallCount: 0,
     overlapCalls,
-    peerStrokeGhosts: {
-      set(clientId, pixels) {
-        setCalls.push({ clientId, pixels });
-      },
-      remove(clientId) {
-        removedPeers.push(clientId);
-      },
-      clearAll() {
-        canvas.clearAllCallCount++;
-      },
-      removeOverlapping(positions) {
-        overlapCalls.push(positions);
+    peerPresence: {
+      strokes: {
+        set(clientId, pixels) {
+          setCalls.push({ clientId, pixels });
+        },
+        remove(clientId) {
+          removedPeers.push(clientId);
+        },
+        clearAll() {
+          canvas.clearAllCallCount++;
+        },
+        removeOverlapping(positions) {
+          overlapCalls.push(positions);
+        }
       }
     },
     triggerProgress(pixels) {

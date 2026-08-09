@@ -1,6 +1,9 @@
 // Import Internal Dependencies
 import { SVG_NS } from "../constants.ts";
-import { SelectionOverlay } from "./SelectionOverlay.ts";
+import {
+  selectionContourPath,
+  traceSelectionContour
+} from "../overlays/selectionContour.ts";
 import {
   positionKeySet,
   rectOverlapsPositionKeys
@@ -15,7 +18,7 @@ import type {
 const kStrokeWidth = 2;
 const kDashArray = "6 4";
 
-export interface PeerSelectionGhostState {
+export interface PeerSelectionOutlineState {
   rect: SelectionRect;
   /** `null` for a plain rectangle (always the case while `creating`). */
   mask: boolean[] | null;
@@ -70,13 +73,13 @@ class PeerSelectionBorder {
 
     this.#rect.setAttribute("visibility", "hidden");
 
-    const loops = SelectionOverlay.traceContour(
+    const loops = traceSelectionContour(
       rect.width,
       rect.height,
       mask
     );
     const d = loops
-      .map((loop) => SelectionOverlay.loopToPath(
+      .map((loop) => selectionContourPath(
         loop,
         rect,
         { zoom, camera }
@@ -113,10 +116,10 @@ class PeerSelectionBorder {
  * Dashed per-peer-colored boundary for a remote peer's in-progress selection.
  * Purely visual - never touches selection state or history.
  */
-export class PeerSelectionGhosts {
+export class PeerSelectionOutlines {
   #svg: SVGElement;
   #viewport: DefaultViewport;
-  #ghosts = new Map<string, PeerSelectionGhostState>();
+  #ghosts = new Map<string, PeerSelectionOutlineState>();
   #borders = new Map<string, PeerSelectionBorder>();
 
   constructor(
@@ -129,7 +132,7 @@ export class PeerSelectionGhosts {
 
   set(
     clientId: string,
-    state: PeerSelectionGhostState
+    state: PeerSelectionOutlineState
   ): void {
     this.#ghosts.set(clientId, state);
     this.#render(clientId);
