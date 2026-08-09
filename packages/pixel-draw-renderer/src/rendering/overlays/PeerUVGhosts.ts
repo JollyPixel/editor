@@ -12,9 +12,6 @@ import type {
 
 // CONSTANTS
 const kStrokeWidth = 2;
-// A peer's ghost is dropped if no update for it arrives within this window
-// (tab frozen, disconnect without a clean "peer-left", network drop, ...).
-const kStaleTimeoutMs = 1500;
 
 export interface PeerUVGhostState {
   id: string;
@@ -39,7 +36,6 @@ export class PeerUVGhosts {
   #uvOverlay: UVOverlay;
   #ghosts = new Map<string, PeerUVGhostState>();
   #borders = new Map<string, PeerBorder>();
-  #staleTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   constructor(
     svg: SVGElement,
@@ -56,7 +52,6 @@ export class PeerUVGhosts {
     state: PeerUVGhostState
   ): void {
     this.#ghosts.set(clientId, state);
-    this.#resetStaleTimer(clientId);
     this.#render(clientId);
     this.#syncSuppression();
   }
@@ -65,8 +60,6 @@ export class PeerUVGhosts {
     clientId: string
   ): void {
     this.#ghosts.delete(clientId);
-    clearTimeout(this.#staleTimers.get(clientId));
-    this.#staleTimers.delete(clientId);
     this.#borders.get(clientId)?.border.remove();
     this.#borders.delete(clientId);
     this.#syncSuppression();
@@ -109,10 +102,6 @@ export class PeerUVGhosts {
   }
 
   destroy(): void {
-    for (const timer of this.#staleTimers.values()) {
-      clearTimeout(timer);
-    }
-    this.#staleTimers.clear();
     this.#ghosts.clear();
     for (const { border } of this.#borders.values()) {
       border.remove();
@@ -177,15 +166,5 @@ export class PeerUVGhosts {
     });
 
     return border;
-  }
-
-  #resetStaleTimer(
-    clientId: string
-  ): void {
-    clearTimeout(this.#staleTimers.get(clientId));
-    this.#staleTimers.set(
-      clientId,
-      setTimeout(() => this.remove(clientId), kStaleTimeoutMs)
-    );
   }
 }

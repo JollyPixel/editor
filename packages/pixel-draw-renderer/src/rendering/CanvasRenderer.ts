@@ -2,7 +2,10 @@
 import Color from "colorjs.io";
 
 // Import Internal Dependencies
-import type { ColorInput } from "../types.ts";
+import type {
+  ColorInput,
+  RGBA
+} from "../types.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import type { DefaultViewport } from "./Viewport.ts";
 import {
@@ -11,6 +14,9 @@ import {
 import {
   PeerStrokeGhosts
 } from "./overlays/PeerStrokeGhosts.ts";
+import {
+  PeerFloatingSelectionGhosts
+} from "./overlays/PeerFloatingSelectionGhosts.ts";
 
 export interface CanvasRendererOptions {
   viewport: DefaultViewport;
@@ -33,6 +39,13 @@ export interface CanvasRendererOptions {
    * @default "#555555"
    */
   backgroundColor?: ColorInput;
+  /**
+   * Explicit fill for a peer's vacated selection-move footprint, mirroring
+   * `PixelArtCanvasOptions.select.eraseColor` — so a peer's ghost blanks its
+   * source the same way the mover's own client does.
+   * @default null (dominant neighbor color)
+   */
+  eraseColor?: RGBA | null;
 }
 
 /**
@@ -53,6 +66,7 @@ export class CanvasRenderer {
 
   readonly floatingSelection: FloatingSelectionOverlay = new FloatingSelectionOverlay();
   readonly peerStrokeGhosts: PeerStrokeGhosts = new PeerStrokeGhosts();
+  readonly peerFloatingSelectionGhosts: PeerFloatingSelectionGhosts;
 
   constructor(
     options: CanvasRendererOptions
@@ -65,11 +79,16 @@ export class CanvasRenderer {
         odd: "#999",
         even: "#666"
       },
-      backgroundColor = "#555555"
+      backgroundColor = "#555555",
+      eraseColor = null
     } = options;
 
     this.#viewport = viewport;
     this.#canvasBuffer = canvasBuffer;
+    this.peerFloatingSelectionGhosts = new PeerFloatingSelectionGhosts(
+      canvasBuffer,
+      eraseColor
+    );
     this.#bgSquareSize = bgSquareSize;
     this.#bgColors = {
       odd: new Color(bgColors.odd).toString(),
@@ -163,13 +182,22 @@ export class CanvasRenderer {
     );
     if (
       this.floatingSelection.isActive ||
-      this.peerStrokeGhosts.isActive
+      this.peerStrokeGhosts.isActive ||
+      this.peerFloatingSelectionGhosts.isActive
     ) {
       this.#drawContent();
-      this.#ctx.drawImage(this.#contentCanvas, 0, 0);
+      this.#ctx.drawImage(
+        this.#contentCanvas,
+        0,
+        0
+      );
     }
     else {
-      this.#ctx.drawImage(this.#canvasBuffer.canvas(), 0, 0);
+      this.#ctx.drawImage(
+        this.#canvasBuffer.canvas(),
+        0,
+        0
+      );
     }
 
     this.#ctx.restore();
@@ -186,10 +214,20 @@ export class CanvasRenderer {
       this.#contentCtx.imageSmoothingEnabled = false;
     }
     else {
-      this.#contentCtx.clearRect(0, 0, size.x, size.y);
+      this.#contentCtx.clearRect(
+        0,
+        0,
+        size.x,
+        size.y
+      );
     }
 
-    this.#contentCtx.drawImage(this.#canvasBuffer.canvas(), 0, 0);
+    this.#contentCtx.drawImage(
+      this.#canvasBuffer.canvas(),
+      0,
+      0
+    );
+    this.peerFloatingSelectionGhosts.draw(this.#contentCtx);
     this.floatingSelection.draw(this.#contentCtx);
     this.peerStrokeGhosts.draw(this.#contentCtx);
   }
@@ -215,7 +253,7 @@ export class CanvasRenderer {
       for (let x = 0; x < this.#bgCanvas.width; x += sq) {
         const isLight = (Math.floor(x / sq) + Math.floor(y / sq)) % 2 === 0;
 
-        this.#bgCtx.fillStyle = isLight ? colors.odd : colors.even;
+        this.#bgCtx.fillStyle = colors[isLight ? "odd" : "even"];
         this.#bgCtx.fillRect(x, y, sq, sq);
       }
     }

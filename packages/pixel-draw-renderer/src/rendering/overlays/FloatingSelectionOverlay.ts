@@ -2,13 +2,23 @@
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
+import { createCanvas2D } from "../Canvas2D.ts";
+import {
+  buildMaskedContentCanvas,
+  buildMaskedFillCanvas
+} from "./maskedCanvas.ts";
 import type {
   RGBA,
   SelectionRect
 } from "../../types.ts";
 
 // CONSTANTS
-const kOpaqueMask: RGBA = { r: 0, g: 0, b: 0, a: 255 };
+const kOpaqueMask: RGBA = {
+  r: 0,
+  g: 0,
+  b: 0,
+  a: 255
+};
 
 export interface FloatingOverlayOptions {
   /**
@@ -56,36 +66,29 @@ export class FloatingSelectionOverlay extends Emitter<
   create(
     options: FloatingOverlayOptions
   ): void {
-    const { sourceRect, pixels, mask, eraseColor, blankSource = true } = options;
+    const {
+      sourceRect,
+      pixels,
+      mask,
+      eraseColor,
+      blankSource = true
+    } = options;
+    const effectiveMask = mask ?? new Array(
+      pixels.length
+    ).fill(true);
 
-    const canvas = document.createElement("canvas");
-    canvas.width = sourceRect.width;
-    canvas.height = sourceRect.height;
-    const ctx = canvas.getContext("2d")!;
-    ctx.imageSmoothingEnabled = false;
-
-    const imageData = ctx.createImageData(sourceRect.width, sourceRect.height);
-    for (let i = 0; i < pixels.length; i++) {
-      const { r, g, b, a } = pixels[i];
-      const index = i * 4;
-      const selected = mask ? mask[i] : true;
-      imageData.data[index] = r;
-      imageData.data[index + 1] = g;
-      imageData.data[index + 2] = b;
-      imageData.data[index + 3] = selected ? a : 0;
-    }
-    ctx.putImageData(imageData, 0, 0);
-
-    this.#canvas = canvas;
+    this.#canvas = buildMaskedContentCanvas(
+      sourceRect,
+      pixels,
+      effectiveMask
+    );
     this.#eraseCanvas = mask
-      ? FloatingSelectionOverlay.#buildMaskedEraseCanvas(sourceRect, mask, eraseColor)
-      : FloatingSelectionOverlay.#buildUniformEraseCanvas(eraseColor);
+      ? buildMaskedFillCanvas(sourceRect, mask, eraseColor)
+      : FloatingSelectionOverlay.#buildUniformEraseCanvas(
+        eraseColor
+      );
     this.#maskCanvas = mask
-      ? FloatingSelectionOverlay.#buildMaskedEraseCanvas(
-        sourceRect,
-        mask,
-        kOpaqueMask
-      )
+      ? buildMaskedFillCanvas(sourceRect, mask, kOpaqueMask)
       : FloatingSelectionOverlay.#buildUniformEraseCanvas(
         kOpaqueMask
       );
@@ -99,46 +102,17 @@ export class FloatingSelectionOverlay extends Emitter<
   static #buildUniformEraseCanvas(
     eraseColor: RGBA
   ): HTMLCanvasElement {
-    const eraseCanvas = document.createElement("canvas");
-    eraseCanvas.width = 1;
-    eraseCanvas.height = 1;
-    const eraseCtx = eraseCanvas.getContext("2d")!;
+    const {
+      canvas: eraseCanvas,
+      context: eraseCtx
+    } = createCanvas2D(1, 1);
     eraseCtx.imageSmoothingEnabled = false;
+
     const eraseImageData = eraseCtx.createImageData(1, 1);
     eraseImageData.data[0] = eraseColor.r;
     eraseImageData.data[1] = eraseColor.g;
     eraseImageData.data[2] = eraseColor.b;
     eraseImageData.data[3] = eraseColor.a;
-    eraseCtx.putImageData(eraseImageData, 0, 0);
-
-    return eraseCanvas;
-  }
-
-  static #buildMaskedEraseCanvas(
-    sourceRect: SelectionRect,
-    mask: boolean[],
-    eraseColor: RGBA
-  ): HTMLCanvasElement {
-    const eraseCanvas = document.createElement("canvas");
-    eraseCanvas.width = sourceRect.width;
-    eraseCanvas.height = sourceRect.height;
-    const eraseCtx = eraseCanvas.getContext("2d")!;
-    eraseCtx.imageSmoothingEnabled = false;
-    const eraseImageData = eraseCtx.createImageData(
-      sourceRect.width,
-      sourceRect.height
-    );
-
-    for (let i = 0; i < mask.length; i++) {
-      if (!mask[i]) {
-        continue;
-      }
-      const index = i * 4;
-      eraseImageData.data[index] = eraseColor.r;
-      eraseImageData.data[index + 1] = eraseColor.g;
-      eraseImageData.data[index + 2] = eraseColor.b;
-      eraseImageData.data[index + 3] = eraseColor.a;
-    }
     eraseCtx.putImageData(eraseImageData, 0, 0);
 
     return eraseCanvas;
@@ -180,21 +154,39 @@ export class FloatingSelectionOverlay extends Emitter<
   draw(
     ctx: CanvasRenderingContext2D
   ): void {
-    if (!this.#canvas || !this.#sourceRect || !this.#liveRect) {
+    if (
+      !this.#canvas ||
+      !this.#sourceRect ||
+      !this.#liveRect
+    ) {
       return;
     }
 
-    if (this.#blankSource && this.#eraseCanvas && this.#maskCanvas) {
+    if (
+      this.#blankSource &&
+      this.#eraseCanvas &&
+      this.#maskCanvas
+    ) {
       const source = this.#sourceRect;
       this.#clearMaskedRect(ctx, source);
-      this.#drawAt(ctx, this.#eraseCanvas, source);
+      this.#drawAt(
+        ctx,
+        this.#eraseCanvas,
+        source
+      );
     }
 
     const live = this.#liveRect;
     if (this.#maskCanvas) {
       this.#clearMaskedRect(ctx, live);
     }
-    ctx.drawImage(this.#canvas, live.x, live.y, live.width, live.height);
+    ctx.drawImage(
+      this.#canvas,
+      live.x,
+      live.y,
+      live.width,
+      live.height
+    );
   }
 
   get isActive(): boolean {
@@ -212,7 +204,11 @@ export class FloatingSelectionOverlay extends Emitter<
 
     ctx.save();
     ctx.globalCompositeOperation = "destination-out";
-    this.#drawAt(ctx, maskCanvas, rect);
+    this.#drawAt(
+      ctx,
+      maskCanvas,
+      rect
+    );
     ctx.restore();
   }
 
@@ -235,7 +231,11 @@ export class FloatingSelectionOverlay extends Emitter<
       );
     }
     else {
-      ctx.drawImage(canvas, rect.x, rect.y);
+      ctx.drawImage(
+        canvas,
+        rect.x,
+        rect.y
+      );
     }
   }
 }

@@ -36,9 +36,11 @@ export interface ToolsOptions {
   uvOverlay: UVOverlay;
   pipeline: EditPipeline;
   /**
-   * Called with a tool's live in-progress pixels (brush stroke, line drag,
-   * selection move) as they change, for streaming a ghost preview to peers.
-   * Never fires for the initial selection marquee or fill.
+   * Called with a tool's live in-progress pixels (brush stroke, line drag)
+   * as they change, for streaming a ghost preview to peers. Selection
+   * progress streams separately, through `SelectController`'s own emitter
+   * (see `SelectionGhostSync`) — its payload is geometry, not pixels. Never
+   * fires for fill.
    */
   onProgress?: (pixels: PeerStrokePixel[]) => void;
 }
@@ -93,8 +95,7 @@ export class Tools {
       floatingSelection: options.renderer.floatingSelection,
       selectionOverlay: options.selectionOverlay,
       eraseColor: options.eraseColor,
-      pipeline: options.pipeline,
-      onProgress: options.onProgress
+      pipeline: options.pipeline
     });
 
     this.uv = new UVController({

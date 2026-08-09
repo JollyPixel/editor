@@ -31,7 +31,10 @@ export class BrushHighlightOverlay {
     svg: SVGElement
   ): SVGGElement {
     const highlightGroupElement = document.createElementNS(SVG_NS, "g");
-    highlightGroupElement.setAttribute("data-overlay", "brush-highlight");
+    highlightGroupElement.setAttribute(
+      "data-overlay",
+      "brush-highlight"
+    );
 
     const defaultStyle = {
       pointerEvents: "none",
@@ -94,12 +97,21 @@ export class BrushHighlightOverlay {
 
     let translate = "translate";
     if (brushSize % 2 === 0) {
-      translate += `(${gridedX - highlightBrushSize / 2}, ${gridedY - highlightBrushSize / 2})`;
+      const translateX = gridedX - highlightBrushSize / 2;
+      const translateY = gridedY - highlightBrushSize / 2;
+
+      translate += `(${translateX}, ${translateY})`;
     }
     else {
-      translate += `(${gridedX - highlightBrushSize / 2 + zoom / 2}, ${gridedY - highlightBrushSize / 2 + zoom / 2})`;
+      const translateX = gridedX - highlightBrushSize / 2 + zoom / 2;
+      const translateY = gridedY - highlightBrushSize / 2 + zoom / 2;
+
+      translate += `(${translateX}, ${translateY})`;
     }
-    this.#group.setAttribute("transform", `${translate} scale(${highlightBrushSize})`);
+    this.#group.setAttribute(
+      "transform",
+      `${translate} scale(${highlightBrushSize})`
+    );
     this.#group.setAttribute("visibility", "visible");
   }
 

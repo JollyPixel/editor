@@ -4,6 +4,8 @@ Broadcasts the local in-progress stroke/drag pixels and renders remote peers' gh
 
 Purely ephemeral: never touches `History` or the authoritative buffer. A peer's ghost is cleared the moment any authoritative command from them arrives (or the whole document is replaced by a snapshot), or after ~1.5s of inactivity.
 
+The sync layer owns the per-client inactivity lease. Rendering overlays only store and draw the state they receive.
+
 No server extension needed: presence is relayed by `network.Room` itself (`updatePresence`/`onPeerPresence`), independent of `PixelSyncServer`. Reuse the same room a `PixelSyncClient` already has open — one connection, two concerns.
 
 ## Types Used By PixelStrokeGhostSync
@@ -65,12 +67,12 @@ new PixelStrokeGhostSync({ room, enableGhostPreview: false });
 ### `detach()`
 
 - Stops local stroke-progress broadcasts and cancels any pending animation-frame-scheduled send.
-- Leaves remote peers' ghosts in place; call `destroy()` to also stop reacting to them.
+- Clears remote peer ghosts and cancels their pending inactivity leases.
 
 ### `destroy()`
 
 - Calls `detach()`.
-- Removes its own `"peer-left"`/`"peer-presence"`/`"message"` listeners via `room.off` — other listeners on the room are untouched.
+- Removes its own `"peer-left"`/`"peer-presence"`/`"message"` listeners via `room.off`; other listeners on the room are untouched.
 
 ## Common Mistakes
 

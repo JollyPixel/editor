@@ -20,8 +20,13 @@ import { stubRect } from "../helpers/dom.ts";
 
 function makeParent(): HTMLDivElement {
   // Use happy-dom's real document.body so parentElement tracking works correctly.
-  const div = document.body.appendChild(document.createElement("div"));
-  stubRect(div, { width: 200, height: 200 });
+  const div = document.body.appendChild(
+    document.createElement("div")
+  );
+  stubRect(div, {
+    width: 200,
+    height: 200
+  });
 
   return div;
 }
@@ -66,10 +71,16 @@ describe("OverlayLayer", () => {
       const svg = parent.querySelector("svg")!;
 
       overlays.brushHighlight.update(20, 20);
-      const region = uvMap.create({ width: 4, height: 4 });
+      const region = uvMap.create({
+        width: 4,
+        height: 4
+      });
       uvMap.select(region.id);
 
-      assert.strictEqual(svg.firstElementChild?.getAttribute("data-overlay"), "uv");
+      assert.strictEqual(
+        svg.firstElementChild?.getAttribute("data-overlay"),
+        "uv"
+      );
       assert.notStrictEqual(
         svg.lastElementChild?.getAttribute("data-overlay"),
         "uv",

@@ -1,7 +1,10 @@
 // Import Internal Dependencies
 import { SVG_NS } from "../constants.ts";
 import { contrastingColor } from "../../utils/colors.ts";
-import { geometryAt, rectOf } from "../../uv/geometry.ts";
+import {
+  geometryAt,
+  rectOf
+} from "../../uv/geometry.ts";
 import type { DefaultViewport } from "../Viewport.ts";
 import type { UVMap } from "../../uv/UVMap.ts";
 import type {

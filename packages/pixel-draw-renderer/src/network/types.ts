@@ -10,7 +10,7 @@ import type {
   UVGeometry,
   UVRegionData
 } from "../uv/UVRegion.ts";
-import type { Vec2 } from "../types.ts";
+import type { SelectionRect, Vec2 } from "../types.ts";
 
 export interface PixelBufferSnapshot {
   size: Vec2;
@@ -28,11 +28,33 @@ export type PixelServerMessage = network.NetworkServerMessage<
 >;
 
 /**
- * A peer's in-progress (uncommitted) UV region drag — forwarded verbatim
- * from `UVMap`'s `"region-dragging"` event.
+ * A peer's in-progress UV region drag forwarded from UVMap "region-dragging".
  */
 export interface UVGhostPayload {
   id: string;
   face: UVFace | null;
   geometry: UVGeometry;
 }
+
+/**
+ * A peer's in-progress selection drag - geometry only, no pixel colors.
+ * Receivers sample moved-block colors from their own buffer at sourceRect,
+ * which is valid because both sides share the same buffer state until commit.
+ */
+export type SelectionGhostPayload =
+  | {
+    phase: "creating";
+    rect: SelectionRect;
+  }
+  | {
+    phase: "moving";
+    sourceRect: SelectionRect;
+    liveRect: SelectionRect;
+    mask: boolean[];
+    /**
+     * Whether source footprint renders blanked during move - mirrors
+     * FloatingOverlayOptions.blankSource locally. Not derivable from
+     * geometry alone (depends on prior gesture history).
+     */
+    blankSource: boolean;
+  };

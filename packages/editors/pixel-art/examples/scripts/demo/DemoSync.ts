@@ -4,6 +4,7 @@ import {
   PixelCursorSync,
   PixelStrokeGhostSync,
   PixelSyncClient,
+  SelectionGhostSync,
   UVGhostSync,
   type PixelArtCanvas,
   type PixelNetworkCommand,
@@ -31,7 +32,9 @@ export function initializeDemoSync(
   });
   // E2E tests override this via ?room=... so each Playwright worker gets
   // its own isolated sync room instead of racing on the shared demo one.
-  const roomId = new URLSearchParams(window.location.search).get("room") ?? kDemoRoom;
+  const roomId = new URLSearchParams(
+    window.location.search
+  ).get("room") ?? kDemoRoom;
   const room = networkClient.room<PixelNetworkCommand, PixelServerMessage>(
     roomId
   );
@@ -45,11 +48,13 @@ export function initializeDemoSync(
 
   const syncClient = new PixelSyncClient({ room });
   syncClient.attach(canvasManager);
-  const syncReady = new Promise<void>((resolve) => {
-    syncClient.on("ready", () => {
-      window.__pixelSyncReady = true;
-      resolve();
-    });
+  const {
+    promise: syncReady,
+    resolve: resolveSyncReady
+  } = Promise.withResolvers<void>();
+  syncClient.on("ready", () => {
+    window.__pixelSyncReady = true;
+    resolveSyncReady();
   });
 
   const cursorSync = new PixelCursorSync({ room });
@@ -61,6 +66,9 @@ export function initializeDemoSync(
   const uvGhostSync = new UVGhostSync({ room });
   uvGhostSync.attach(canvasManager);
 
+  const selectionGhostSync = new SelectionGhostSync({ room });
+  selectionGhostSync.attach(canvasManager);
+
   return syncReady;
 }
 
@@ -71,9 +79,14 @@ function resolveUsername(): string {
   }
 
   // eslint-disable-next-line no-alert -- example-only UX
-  const entered = window.prompt("Choose a username for this session")?.trim();
+  const entered = window.prompt(
+    "Choose a username for this session"
+  )?.trim();
   const username = entered && entered.length > 0 ? entered : "Guest";
-  sessionStorage.setItem(kUsernameStorageKey, username);
+  sessionStorage.setItem(
+    kUsernameStorageKey,
+    username
+  );
 
   return username;
 }

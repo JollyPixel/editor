@@ -285,6 +285,22 @@ describe("PixelStrokeGhostSync — remote peers", () => {
     assert.deepStrictEqual(canvas.setCalls[0].pixels, [kPixel]);
   });
 
+  test("expires a peer ghost after 1500ms without an update", (t) => {
+    t.mock.timers.enable({ apis: ["setTimeout"] });
+
+    const room = createMockRoom();
+    const canvas = createMockCanvas();
+    const sync = new PixelStrokeGhostSync({ room });
+    sync.attach(asHost(canvas));
+
+    room.simulatePresence("peer-B", { strokeGhost: [kPixel] });
+    t.mock.timers.tick(1499);
+    assert.deepStrictEqual(canvas.removedPeers, []);
+
+    t.mock.timers.tick(1);
+    assert.deepStrictEqual(canvas.removedPeers, ["peer-B"]);
+  });
+
   test("ignores presence patches that don't touch the strokeGhost field", () => {
     const room = createMockRoom();
     const canvas = createMockCanvas();

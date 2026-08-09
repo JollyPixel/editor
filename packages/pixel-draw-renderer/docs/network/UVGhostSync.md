@@ -4,6 +4,8 @@ Broadcasts the local in-progress UV region drag and renders remote peers' drags 
 
 Purely ephemeral: never touches `UVMap` state or history. A peer's ghost is cleared the moment any authoritative command from them arrives (or the whole document is replaced by a snapshot), or after ~1.5s of inactivity.
 
+The sync layer owns the per-client inactivity lease. Rendering overlays only store and draw the state they receive.
+
 No server extension needed: presence is relayed by `network.Room` itself (`updatePresence`/`onPeerPresence`), independent of `PixelSyncServer`. Reuse the same room a `PixelSyncClient` already has open — one connection, one more concern.
 
 Unlike `PixelStrokeGhostSync`, this taps `PixelArtCanvas.uv`'s `"region-dragging"` event directly — `UVMap` already emits it on every drag tick (`UVController` calls `uvMap.previewMove()` on each pointer move), so no extra hook needs to be wired into any tool controller.
@@ -67,12 +69,12 @@ new UVGhostSync({ room, enableGhostPreview: false });
 ### `detach()`
 
 - Stops local drag broadcasts and cancels any pending animation-frame-scheduled send.
-- Leaves remote peers' ghosts in place; call `destroy()` to also stop reacting to them.
+- Clears remote peer ghosts and cancels their pending inactivity leases.
 
 ### `destroy()`
 
 - Calls `detach()`.
-- Removes its own `"peer-left"`/`"peer-presence"`/`"message"` listeners via `room.off` — other listeners on the room are untouched.
+- Removes its own `"peer-left"`/`"peer-presence"`/`"message"` listeners via `room.off`; other listeners on the room are untouched.
 
 ## Common Mistakes
 

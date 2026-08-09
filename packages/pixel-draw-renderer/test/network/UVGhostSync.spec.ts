@@ -329,6 +329,22 @@ describe("UVGhostSync — remote peers", () => {
     assert.ok(canvas.setCalls[0].state.color.length > 0, "a peer color was hashed in");
   });
 
+  test("expires a peer ghost after 1500ms without an update", (t) => {
+    t.mock.timers.enable({ apis: ["setTimeout"] });
+
+    const room = createMockRoom();
+    const canvas = createMockCanvas();
+    const sync = new UVGhostSync({ room });
+    sync.attach(asHost(canvas));
+
+    room.simulatePresence("peer-B", { uvGhost: kPayload });
+    t.mock.timers.tick(1499);
+    assert.deepStrictEqual(canvas.removedPeers, []);
+
+    t.mock.timers.tick(1);
+    assert.deepStrictEqual(canvas.removedPeers, ["peer-B"]);
+  });
+
   test("ignores presence patches that don't touch the uvGhost field", () => {
     const room = createMockRoom();
     const canvas = createMockCanvas();

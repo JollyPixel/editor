@@ -28,20 +28,34 @@ function clamp255(
 export function colorAsRGBA(
   color: ColorInput
 ): [number, number, number, number] {
-  const srgb = new Color(color).to("srgb");
+  const srgb = new Color(
+    color
+  ).to("srgb");
   const [r, g, b] = srgb.coords;
-  const a = srgb.alpha ?? 1;
 
-  return [clamp255(r ?? 0), clamp255(g ?? 0), clamp255(b ?? 0), clamp255(a)];
+  return [
+    clamp255(r ?? 0),
+    clamp255(g ?? 0),
+    clamp255(b ?? 0),
+    clamp255(srgb.alpha ?? 1)
+  ];
 }
 
 export function toRGBA(
   color: RGBA | ColorInput
 ): RGBA {
-  if (typeof color === "string" || color instanceof Color) {
+  if (
+    typeof color === "string" ||
+    color instanceof Color
+  ) {
     const [r, g, b, a] = colorAsRGBA(color);
 
-    return { r, g, b, a };
+    return {
+      r,
+      g,
+      b,
+      a
+    };
   }
 
   return color;
@@ -58,7 +72,9 @@ export function contrastingColor(
   // verdict does not warrant linearizing.
   const brightness = ((r * 299) + (g * 587) + (b * 114)) / 1000;
 
-  return brightness > kLightBrightness ? "#000" : "#FFF";
+  return brightness > kLightBrightness ?
+    "#000" :
+    "#FFF";
 }
 
 /**
@@ -70,5 +86,7 @@ export function rgbToHex(
   g: number,
   b: number
 ): string {
-  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
+  return `#${((r << 16) | (g << 8) | b)
+    .toString(16)
+    .padStart(6, "0")}`;
 }

@@ -3,8 +3,13 @@ import type * as network from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
 import { isVec2 } from "../utils/math.ts";
-import type { PixelArtCanvas } from "../PixelArtCanvas.ts";
-import type { PeerStrokePixel } from "../types.ts";
+import { PeerGhostLeaser } from "./PeerGhostLeaser.ts";
+import type {
+  PixelArtCanvas
+} from "../PixelArtCanvas.ts";
+import type {
+  PeerStrokePixel
+} from "../types.ts";
 import type {
   PixelNetworkCommand,
   PixelServerMessage
@@ -16,9 +21,7 @@ const kPresenceStrokeKey = "strokeGhost";
 export interface PixelStrokeGhostSyncOptions {
   room: network.Room<PixelNetworkCommand, PixelServerMessage>;
   /**
-   * Streams a peer's in-progress pixels as they draw. Costs extra
-   * presence traffic and render work; disable for bandwidth-constrained
-   * sessions.
+   * Stream in-progress peer pixels; disable to reduce presence traffic.
    * @default true
    */
   enableGhostPreview?: boolean;
@@ -37,12 +40,9 @@ function isPeerStrokePixels(
 }
 
 /**
- * Broadcasts the local in-progress stroke/drag pixels over a `network.Room`'s
- * presence channel and mirrors remote peers' ghosts onto the attached
- * canvas's `peerStrokeGhosts` overlay. Purely ephemeral — never touches
- * history or the authoritative buffer; a peer's ghost is cleared the moment
- * any authoritative command from them arrives, or after a period of
- * inactivity.
+ * Streams local in-progress pixels via presence and renders remote ghosts.
+ * Ephemeral only - never touches history or the authoritative buffer.
+ * Ghosts clear on any authoritative command or inactivity.
  */
 export class PixelStrokeGhostSync {
   #room: network.Room<PixelNetworkCommand, PixelServerMessage>;
@@ -50,17 +50,24 @@ export class PixelStrokeGhostSync {
   #canvas: PixelArtCanvas | undefined;
   #pendingPixels: PeerStrokePixel[] | undefined;
   #rafHandle: number | undefined;
+  #ghostLeaser: PeerGhostLeaser;
 
   #onPeerLeft = (
     event: network.RoomPeerEvent
   ): void => {
-    this.#canvas?.peerStrokeGhosts.remove(event.clientId);
+    this.#ghostLeaser.cancel(event.clientId);
+    this.#removePeerGhost(event.clientId);
   };
+
   #onPeerPresence = (
     event: network.RoomPeerPresenceEvent
   ): void => {
-    this.#applyPresencePatch(event.clientId, event.patch);
+    this.#applyPresencePatch(
+      event.clientId,
+      event.patch
+    );
   };
+
   #onMessage = (
     message: PixelServerMessage
   ): void => {
@@ -68,6 +75,7 @@ export class PixelStrokeGhostSync {
       this.#reconcileCommand(message.data);
     }
     else if (message.type === "snapshot") {
+      this.#ghostLeaser.clear();
       this.#canvas?.peerStrokeGhosts.clearAll();
     }
   };
@@ -77,6 +85,9 @@ export class PixelStrokeGhostSync {
   ) {
     this.#room = options.room;
     this.#enableGhostPreview = options.enableGhostPreview ?? true;
+    this.#ghostLeaser = new PeerGhostLeaser({
+      onExpire: (clientId) => this.#removePeerGhost(clientId)
+    });
 
     if (this.#enableGhostPreview) {
       this.#room.on("peer-left", this.#onPeerLeft);
@@ -104,25 +115,42 @@ export class PixelStrokeGhostSync {
     }
 
     this.#cancelPending();
+    if (this.#enableGhostPreview) {
+      this.#ghostLeaser.clear();
+      this.#canvas.peerStrokeGhosts.clearAll();
+    }
     this.#canvas.onStrokeProgress = undefined;
     this.#canvas = undefined;
   }
 
   destroy(): void {
     this.detach();
-    this.#room.off("peer-left", this.#onPeerLeft);
-    this.#room.off("peer-presence", this.#onPeerPresence);
-    this.#room.off("message", this.#onMessage);
+    this.#ghostLeaser.clear();
+    this.#room.off(
+      "peer-left",
+      this.#onPeerLeft
+    );
+    this.#room.off(
+      "peer-presence",
+      this.#onPeerPresence
+    );
+    this.#room.off(
+      "message",
+      this.#onMessage
+    );
+  }
+
+  #removePeerGhost(
+    clientId: string
+  ): void {
+    this.#canvas?.peerStrokeGhosts.remove(clientId);
   }
 
   #reportLocal(
     pixels: PeerStrokePixel[]
   ): void {
-    // An empty array is the "gesture just committed" signal (see
-    // BrushController/LineController/SelectController): the authoritative
-    // command is already on its way to peers, synchronously, ahead of any
-    // rAF-queued pre-commit tick below — drop it instead of letting it
-    // resurrect the ghost peers just saw cleared.
+    // Empty = gesture committed; authoritative command already sent - drop
+    // to avoid resurrecting the ghost peers just saw cleared.
     if (pixels.length === 0) {
       this.#cancelPending();
 
@@ -153,31 +181,27 @@ export class PixelStrokeGhostSync {
   }
 
   /**
-   * Clears a ghost by matching the pixels the command affects, not the
-   * command's `clientId` — the server's connection-tracked peer id (what
-   * presence updates are keyed by) and a command's embedded `clientId`
-   * (self-asserted by the sending client) are not the same value, so
-   * matching by clientId here would silently never clear anything.
+   * Clear ghosts by pixel overlap, not clientId - presence keys and
+   * command clientIds are different values.
    */
   #reconcileCommand(
-    cmd: PixelNetworkCommand
+    command: PixelNetworkCommand
   ): void {
     if (!this.#canvas) {
       return;
     }
 
-    switch (cmd.action) {
+    switch (command.action) {
       case "stroke":
-        this.#canvas.peerStrokeGhosts.removeOverlapping(cmd.metadata.positions);
-        break;
-      case "select-edit":
-        this.#canvas.peerStrokeGhosts.removeOverlapping(cmd.metadata.positions);
+        this.#canvas.peerStrokeGhosts.removeOverlapping(
+          command.metadata.positions
+        );
         break;
       case "global-fill":
       case "resized":
       case "texture-replaced":
-        // Whole-canvas operations: no itemized positions, so any active
-        // ghost is stale.
+        // Whole-canvas ops have no positions; clear all ghosts.
+        this.#ghostLeaser.clear();
         this.#canvas.peerStrokeGhosts.clearAll();
         break;
       default:
@@ -195,7 +219,11 @@ export class PixelStrokeGhostSync {
 
     const pixels = patch[kPresenceStrokeKey];
     if (isPeerStrokePixels(pixels)) {
-      this.#canvas.peerStrokeGhosts.set(clientId, pixels);
+      this.#canvas.peerStrokeGhosts.set(
+        clientId,
+        pixels
+      );
+      this.#ghostLeaser.renew(clientId);
     }
   }
 }

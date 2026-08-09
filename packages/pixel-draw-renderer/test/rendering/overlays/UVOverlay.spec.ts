@@ -71,9 +71,20 @@ describe("UVOverlay — visibility follows UVMap state", () => {
     assert.strictEqual(rects[0].getAttribute("y"), "0");
     assert.strictEqual(rects[0].getAttribute("width"), "8");
     assert.strictEqual(rects[0].getAttribute("height"), "12");
-    assert.strictEqual(rects[0].getAttribute("stroke"), "#123456");
-    assert.ok(!rects[0].hasAttribute("stroke-dasharray"), "solid, not dashed");
-    assert.notStrictEqual(casings(svg)[0].style.display, "none", "the classical border keeps its contrasting casing");
+    assert.strictEqual(
+      rects[0].getAttribute("stroke"),
+      "#123456",
+      "the stroke color matches the region color"
+    );
+    assert.ok(
+      !rects[0].hasAttribute("stroke-dasharray"),
+      "solid, not dashed"
+    );
+    assert.notStrictEqual(
+      casings(svg)[0].style.display,
+      "none",
+      "the classical border keeps its contrasting casing"
+    );
   });
 
   test("insets the casing so it never paints outside the border", () => {
@@ -103,7 +114,11 @@ describe("UVOverlay — visibility follows UVMap state", () => {
 
     new UVOverlay(svg, makeViewport(1), map);
 
-    const region = map.create({ width: 1, height: 1, id: "r1" });
+    const region = map.create({
+      width: 1,
+      height: 1,
+      id: "r1"
+    });
     map.select(region.id);
 
     const [casing] = casings(svg);
@@ -117,8 +132,14 @@ describe("UVOverlay — visibility follows UVMap state", () => {
 
     new UVOverlay(svg, makeViewport(), map);
 
-    map.create({ width: 2, height: 2 });
-    map.create({ width: 2, height: 2 });
+    map.create({
+      width: 2,
+      height: 2
+    });
+    map.create({
+      width: 2,
+      height: 2
+    });
     map.showAll = true;
 
     assert.strictEqual(
@@ -132,9 +153,16 @@ describe("UVOverlay — visibility follows UVMap state", () => {
     const svg = makeSvg();
     const map = makeUvMap();
 
-    new UVOverlay(svg, makeViewport(), map);
+    new UVOverlay(
+      svg,
+      makeViewport(),
+      map
+    );
 
-    const region = map.create({ width: 2, height: 2 });
+    const region = map.create({
+      width: 2,
+      height: 2
+    });
     map.select(region.id);
     assert.strictEqual(
       borders(svg).length,
@@ -207,13 +235,18 @@ describe("UVOverlay — setLiveOverride", () => {
       map
     );
 
-    const region = map.create({ width: 2, height: 2 });
+    const region = map.create({
+      width: 2,
+      height: 2
+    });
     map.showAll = true;
 
     overlay.setLiveOverride(
       region.id,
       null,
-      { x: 9, y: 9, width: 2, height: 2 }
+      {
+        x: 9, y: 9, width: 2, height: 2
+      }
     );
 
     const [rect] = borders(svg);
@@ -249,12 +282,20 @@ describe("UVOverlay — uncollapsed regions", () => {
 
     new UVOverlay(svg, makeViewport(), map);
 
-    const region = map.create({ width: 4, height: 4, id: "r1" });
+    const region = map.create({
+      width: 4,
+      height: 4,
+      id: "r1"
+    });
     map.uncollapse(region.id);
     // "front" is first in UV_FACES, so raising it is a real reorder.
     map.select("r1", "front");
 
-    assert.strictEqual(borders(svg).at(-1)!.style.strokeWidth, "3");
+    assert.strictEqual(
+      borders(svg).at(-1)!.style.strokeWidth,
+      "3",
+      "selected face border should be thicker"
+    );
     assert.deepStrictEqual(
       groups(svg).slice(0, -1).map((group) => group.style.opacity),
       Array.from({ length: 5 }, () => "0.45"),
@@ -268,7 +309,10 @@ describe("UVOverlay — uncollapsed regions", () => {
 
     new UVOverlay(svg, makeViewport(), map);
 
-    const region = map.create({ width: 4, height: 4 });
+    const region = map.create({
+      width: 4,
+      height: 4
+    });
     map.select(region.id);
 
     const [rect] = borders(svg);
@@ -281,15 +325,27 @@ describe("UVOverlay — uncollapsed regions", () => {
     const map = makeUvMap();
     const overlay = new UVOverlay(svg, makeViewport(), map);
 
-    const region = map.create({ width: 4, height: 4, id: "r1" });
+    const region = map.create({
+      width: 4,
+      height: 4,
+      id: "r1"
+    });
     map.uncollapse(region.id);
     map.select("r1");
 
-    overlay.setLiveOverride("r1", "top", { x: 9, y: 9, width: 4, height: 4 });
+    overlay.setLiveOverride(
+      "r1",
+      "top",
+      { x: 9, y: 9, width: 4, height: 4 }
+    );
 
     const moved = borders(svg)
       .filter((rect) => rect.getAttribute("x") === "36");
-    assert.strictEqual(moved.length, 1, "only the dragged face follows the pointer");
+    assert.strictEqual(
+      moved.length,
+      1,
+      "only the dragged face follows the pointer"
+    );
   });
 });
 
@@ -300,8 +356,18 @@ describe("UVOverlay — staying visible over the artwork", () => {
 
     new UVOverlay(svg, makeViewport(), map);
 
-    map.create({ width: 2, height: 2, id: "light", color: "#ffe08a" });
-    map.create({ width: 2, height: 2, id: "dark", color: "#123456" });
+    map.create({
+      width: 2,
+      height: 2,
+      id: "light",
+      color: "#ffe08a"
+    });
+    map.create({
+      width: 2,
+      height: 2,
+      id: "dark",
+      color: "#123456"
+    });
     map.showAll = true;
 
     assert.deepStrictEqual(
@@ -317,14 +383,20 @@ describe("UVOverlay — staying visible over the artwork", () => {
 
     new UVOverlay(svg, makeViewport(), map);
 
-    const region = map.create({ width: 4, height: 4, id: "r1" });
+    const region = map.create({
+      width: 4,
+      height: 4,
+      id: "r1"
+    });
     map.uncollapse(region.id);
     map.select("r1", "front");
 
     // Selected face: 3px border, everything else 2px — each casing shows 1px
     // on either side of its border.
     assert.deepStrictEqual(
-      casings(svg).map((casing) => casing.style.strokeWidth).sort(),
+      casings(svg).map(
+        (casing) => casing.style.strokeWidth
+      ).sort(),
       ["4", "4", "4", "4", "4", "5"]
     );
   });
@@ -335,7 +407,12 @@ describe("UVOverlay — staying visible over the artwork", () => {
 
     new UVOverlay(svg, makeViewport(), map);
 
-    const region = map.create({ width: 4, height: 4, id: "r1", color: "#123456" });
+    const region = map.create({
+      width: 4,
+      height: 4,
+      id: "r1",
+      color: "#123456"
+    });
     map.uncollapse(region.id);
     map.select("r1", "front");
 
@@ -362,7 +439,11 @@ describe("UVOverlay — staying visible over the artwork", () => {
 
     new UVOverlay(svg, makeViewport(), map);
 
-    const region = map.create({ width: 4, height: 4, color: "#123456" });
+    const region = map.create({
+      width: 4,
+      height: 4,
+      color: "#123456"
+    });
     map.select(region.id);
     map.showAll = true;
     assert.strictEqual(borders(svg)[0].style.fill, "#123456");
@@ -380,7 +461,12 @@ describe("UVOverlay — staying visible over the artwork", () => {
 
     new UVOverlay(svg, makeViewport(), map);
 
-    const region = map.create({ width: 12, height: 12, id: "r1", color: "#123456" });
+    const region = map.create({
+      width: 12,
+      height: 12,
+      id: "r1",
+      color: "#123456"
+    });
     map.uncollapse(region.id);
     map.select("r1", "front");
 
@@ -403,7 +489,11 @@ describe("UVOverlay — face labels", () => {
   function setup(): { svg: SVGElement; map: ReturnType<typeof makeUvMap>; } {
     const svg = makeSvg();
     const map = makeUvMap();
-    new UVOverlay(svg, makeViewport(), map);
+    new UVOverlay(
+      svg,
+      makeViewport(),
+      map
+    );
 
     return { svg, map };
   }
@@ -411,18 +501,26 @@ describe("UVOverlay — face labels", () => {
   function labels(
     svg: SVGElement
   ): (string | null)[] {
-    return [...svg.querySelectorAll("text")].map((el) => el.textContent);
+    return [
+      ...svg.querySelectorAll("text")
+    ].map((el) => el.textContent);
   }
 
   function labelLines(
     svg: SVGElement
   ): string[] {
-    return [...svg.querySelectorAll("text tspan")].map((el) => el.textContent ?? "");
+    return [
+      ...svg.querySelectorAll("text tspan")
+    ].map((el) => el.textContent ?? "");
   }
 
   test("names only the selected face while the whole stack coincides", () => {
     const { svg, map } = setup();
-    const region = map.create({ width: kLabelSize, height: kLabelSize, id: "r1" });
+    const region = map.create({
+      width: kLabelSize,
+      height: kLabelSize,
+      id: "r1"
+    });
     map.uncollapse(region.id);
     map.select("r1", "left");
 
@@ -435,12 +533,20 @@ describe("UVOverlay — face labels", () => {
 
   test("names the next face as soon as the selected one is dragged off the pile", () => {
     const { svg, map } = setup();
-    const region = map.create({ width: kLabelSize, height: kLabelSize, id: "r1" });
+    const region = map.create({
+      width: kLabelSize,
+      height: kLabelSize,
+      id: "r1"
+    });
     map.uncollapse(region.id);
     map.select("r1", "front");
     assert.deepStrictEqual(labels(svg), ["front"]);
 
-    map.move("r1", { x: 40, y: 40, width: kLabelSize, height: kLabelSize }, "front");
+    map.move(
+      "r1",
+      { x: 40, y: 40, width: kLabelSize, height: kLabelSize },
+      "front"
+    );
 
     assert.deepStrictEqual(
       labels(svg).sort(),
@@ -451,7 +557,11 @@ describe("UVOverlay — face labels", () => {
 
   test("keeps naming the next face down as the pile is peeled apart", () => {
     const { svg, map } = setup();
-    const region = map.create({ width: kLabelSize, height: kLabelSize, id: "r1" });
+    const region = map.create({
+      width: kLabelSize,
+      height: kLabelSize,
+      id: "r1"
+    });
     map.uncollapse(region.id);
     map.select("r1", "front");
 
@@ -461,7 +571,12 @@ describe("UVOverlay — face labels", () => {
       map.select("r1", face);
       map.move(
         "r1",
-        { x: (index + 1) * kLabelSize * 2, y: 40, width: kLabelSize, height: kLabelSize },
+        {
+          x: (index + 1) * kLabelSize * 2,
+          y: 40,
+          width: kLabelSize,
+          height: kLabelSize
+        },
         face
       );
     });
@@ -475,11 +590,19 @@ describe("UVOverlay — face labels", () => {
 
   test("names a pile belonging to a region that is not the selected one", () => {
     const { svg, map } = setup();
-    const a = map.create({ width: kLabelSize, height: kLabelSize, id: "r1" });
+    const a = map.create({
+      width: kLabelSize,
+      height: kLabelSize,
+      id: "r1"
+    });
     map.uncollapse(a.id);
     map.select("r1", "top");
     // Show a second, unselected uncollapsed region alongside it.
-    const b = map.create({ width: kLabelSize, height: kLabelSize, id: "r2" });
+    const b = map.create({
+      width: kLabelSize,
+      height: kLabelSize,
+      id: "r2"
+    });
     map.uncollapse(b.id);
     map.showAll = true;
 
@@ -492,7 +615,11 @@ describe("UVOverlay — face labels", () => {
 
   test("names every face once their rects no longer coincide", () => {
     const { svg, map } = setup();
-    const region = map.create({ width: kLabelSize, height: kLabelSize, id: "r1" });
+    const region = map.create({
+      width: kLabelSize,
+      height: kLabelSize,
+      id: "r1"
+    });
     map.uncollapse(region.id);
     map.select("r1", "front");
 
@@ -517,7 +644,10 @@ describe("UVOverlay — face labels", () => {
 
   test("a collapsed region carries no label", () => {
     const { svg, map } = setup();
-    const region = map.create({ width: kLabelSize, height: kLabelSize });
+    const region = map.create({
+      width: kLabelSize,
+      height: kLabelSize
+    });
     map.select(region.id);
 
     assert.deepStrictEqual(labels(svg), []);
@@ -587,13 +717,24 @@ describe("UVOverlay — face labels", () => {
 
   test("showAll forces labels without changing the stored preference", () => {
     const { svg, map } = setup();
-    map.create({ width: kLabelSize, height: kLabelSize, id: "r1" });
-    map.create({ width: kLabelSize, height: kLabelSize, id: "r2" });
+    map.create({
+      width: kLabelSize,
+      height: kLabelSize,
+      id: "r1"
+    });
+    map.create({
+      width: kLabelSize,
+      height: kLabelSize,
+      id: "r2"
+    });
 
     map.showAll = true;
 
     assert.deepStrictEqual(labels(svg).sort(), ["(r1)", "(r2)"]);
-    assert.strictEqual(map.showRegionLabels, false);
+    assert.strictEqual(
+      map.showRegionLabels,
+      false
+    );
 
     map.showAll = false;
     assert.deepStrictEqual(labels(svg), []);
@@ -601,7 +742,11 @@ describe("UVOverlay — face labels", () => {
 
   test("drops the label when the rect is too small on screen to hold it", () => {
     const { svg, map } = setup();
-    const region = map.create({ width: 4, height: 4, id: "r1" });
+    const region = map.create({
+      width: 4,
+      height: 4,
+      id: "r1"
+    });
     map.uncollapse(region.id);
     map.select("r1", "front");
 
@@ -610,7 +755,11 @@ describe("UVOverlay — face labels", () => {
 
   test("removes labels once the region is collapsed again", () => {
     const { svg, map } = setup();
-    const region = map.create({ width: kLabelSize, height: kLabelSize, id: "r1" });
+    const region = map.create({
+      width: kLabelSize,
+      height: kLabelSize,
+      id: "r1"
+    });
     map.uncollapse(region.id);
     map.select("r1", "front");
     assert.strictEqual(labels(svg).length, 1);
@@ -627,7 +776,10 @@ describe("UVOverlay — destroy", () => {
     const map = makeUvMap();
     const overlay = new UVOverlay(svg, makeViewport(), map);
 
-    const region = map.create({ width: 2, height: 2 });
+    const region = map.create({
+      width: 2,
+      height: 2
+    });
     map.showAll = true;
     assert.strictEqual(
       borders(svg).length,

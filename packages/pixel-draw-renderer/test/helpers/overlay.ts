@@ -14,13 +14,15 @@ import type {
   Vec2
 } from "#src/types.ts";
 
+type MutableViewport = DefaultViewport & { camera: Vec2; };
+
 export function makeSvg(): SVGElement {
   return document.createElementNS(SVG_NS, "svg");
 }
 
 export function makeViewport(
   zoom = 4
-): DefaultViewport {
+): MutableViewport {
   return {
     zoom: new Zoom({
       default: zoom

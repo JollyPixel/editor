@@ -77,13 +77,20 @@ describe("Viewport", () => {
       vp.updateCanvasSize(100, 100);
       vp.centerTexture();
       // Shrinking the texture moves minX/maxX inward; camera must be re-clamped.
-      vp.texture.resize({ x: 1, y: 1 });
-      const texPx = vp.texture.pixelSize(vp.zoom.value);
+      vp.texture.resize({
+        x: 1,
+        y: 1
+      });
+      const texPx = vp.texture.pixelSize(
+        vp.zoom.value
+      );
       const margin = vp.zoom.value;
       const minX = -texPx.x + margin;
       const maxX = 100 - margin;
 
-      assert.ok(vp.camera.x >= minX && vp.camera.x <= maxX);
+      assert.ok(
+        vp.camera.x >= minX && vp.camera.x <= maxX
+      );
     });
   });
 
@@ -224,8 +231,14 @@ describe("Viewport", () => {
       const beforeY = vp.camera.y;
       vp.applyPan(10, 5);
 
-      assert.strictEqual(vp.camera.x, beforeX + 10);
-      assert.strictEqual(vp.camera.y, beforeY + 5);
+      assert.strictEqual(
+        vp.camera.x,
+        beforeX + 10
+      );
+      assert.strictEqual(
+        vp.camera.y,
+        beforeY + 5
+      );
     });
   });
 

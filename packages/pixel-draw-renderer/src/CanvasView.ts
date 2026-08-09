@@ -17,6 +17,7 @@ import { clamp } from "./utils/math.ts";
 import type {
   BrushHighlight,
   ColorInput,
+  RGBA,
   Vec2
 } from "./types.ts";
 
@@ -39,6 +40,11 @@ export interface CanvasViewOptions {
    * Highlight spec (size + colors) driving the brush/line/selection overlays.
    */
   brushHighlight: BrushHighlight;
+  /**
+   * Explicit fill for a peer's vacated selection footprint.
+   * @default null (dominant neighbor color)
+   */
+  eraseColor?: RGBA | null;
 }
 
 /**
@@ -84,7 +90,8 @@ export class CanvasView {
       canvasBuffer: doc.buffer,
       bgSquareSize: options.backgroundTransparency?.squareSize,
       bgColors: options.backgroundTransparency?.colors,
-      backgroundColor
+      backgroundColor,
+      eraseColor: options.eraseColor
     });
 
     this.renderer.appendTo(parent);
@@ -100,15 +107,17 @@ export class CanvasView {
       uvMap: doc.uv
     });
 
-    // The view repaints itself when the model's pixels change or the floating
-    // selection moves — neither is a camera change, so no overlay refresh is
-    // needed, just a redraw.
+    // Repaint on pixel/floating-selection changes; no overlay refresh needed.
     doc.onChange(() => this.renderer.drawFrame());
     this.renderer.floatingSelection.on(
       "changed",
       () => this.renderer.drawFrame()
     );
     this.renderer.peerStrokeGhosts.on(
+      "changed",
+      () => this.renderer.drawFrame()
+    );
+    this.renderer.peerFloatingSelectionGhosts.on(
       "changed",
       () => this.renderer.drawFrame()
     );
@@ -136,17 +145,14 @@ export class CanvasView {
     width: number,
     height: number
   ): void {
-    // Resize the canvas and SVG first, then the viewport — its "changed"
-    // signal drives the repaint + overlay refresh (see PixelArtCanvas), which
-    // must run against the already-resized surfaces.
+    // Resize surfaces first; viewport "changed" then drives repaint + refresh.
     this.renderer.resize(width, height);
     this.overlays.resize(width, height);
     this.viewport.resizeCanvas(width, height);
   }
 
   centerTexture(): void {
-    // viewport.centerTexture() emits "changed"; the coordinator subscriber
-    // repaints.
+    // viewport.centerTexture() emits "changed" to trigger repaint.
     this.viewport.centerTexture();
   }
 
@@ -164,15 +170,12 @@ export class CanvasView {
     }
     this.overlays.destroy();
     this.renderer.peerStrokeGhosts.destroy();
+    this.renderer.peerFloatingSelectionGhosts.destroy();
   }
 
   /**
-   * Picks a default zoom that fits the whole texture inside the container's
-   * initial size, so a large texture in a small container doesn't start
-   * zoomed in past what's visible. Only used when `zoom.default` is
-   * omitted; an explicit value always wins. Falls back to `Zoom`'s own
-   * default (4) when the container has no measurable size yet (e.g.
-   * `display: none`).
+   * Fit-zoom for initial display when `zoom.default` is omitted.
+   * Falls back to 4 when the container has no measurable size yet.
    */
   static #computeFitZoom(
     containerSize: { width: number; height: number; },

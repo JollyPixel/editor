@@ -154,6 +154,30 @@ readonly peerUvGhosts: PeerUVGhosts // { set, remove, clearAll, refresh, destroy
 
 Renders a dashed, per-peer-colored border for a remote peer's in-progress (uncommitted) UV region drag — used by `UVGhostSync`. Purely visual: never touches `UVMap` state or history. See [network/UVGhostSync.md](./network/UVGhostSync.md).
 
+### `peerSelectionGhosts`
+
+```ts
+readonly peerSelectionGhosts: PeerSelectionGhosts // { set, remove, clearAll, removeOverlapping, refresh, destroy }
+```
+
+Renders a dashed, per-peer-colored boundary for a remote peer's in-progress (uncommitted) selection: drawing a new marquee/shape or dragging an existing one. Traces the actual mask outline for a shaped selection, not just its bounding box. Purely visual: never touches selection state or history. See [network/SelectionGhostSync.md](./network/SelectionGhostSync.md).
+
+### `peerFloatingSelectionGhosts`
+
+```ts
+readonly peerFloatingSelectionGhosts: PeerFloatingSelectionGhosts // { set, remove, clearAll, removeOverlapping, destroy }
+```
+
+Renders remote peers' in-progress (uncommitted) selection moves: blanks each peer's vacated source footprint and redraws the moved content at its live position, mirroring what the local `FloatingSelectionOverlay` does for your own drag. This is what stops a peer's moved block from visually "duplicating" itself. Content and erase fill are sampled from your own `CanvasBuffer`, not streamed. Purely visual: never touches the authoritative buffer. See [network/SelectionGhostSync.md](./network/SelectionGhostSync.md).
+
+### `selectionEvents`
+
+```ts
+readonly selectionEvents: Pick<Emitter<SelectControllerEvent>, "on" | "off">
+```
+
+Subscription-only view onto the active selection tool's own progress events: `"selection-progress"`, `"selection-committed"`, `"selection-idle"`. Consumed by `SelectionGhostSync`. Narrower than a full `Emitter` on purpose: nothing outside a ghost sync should be able to `emit` on behalf of the tool. See [network/SelectionGhostSync.md](./network/SelectionGhostSync.md).
+
 ## Methods
 
 ### `mode`
@@ -383,4 +407,4 @@ get onStrokeProgress(): ((pixels: PeerStrokePixel[]) => void) | undefined
 set onStrokeProgress(fn: ((pixels: PeerStrokePixel[]) => void) | undefined)
 ```
 
-Fires with a tool's live in-progress pixels as they change — brush strokes, line drags, and the pixel-move phase of selection (not the initial marquee, not fill) — used by `PixelStrokeGhostSync` to broadcast a ghost preview to peers. See [network/PixelStrokeGhostSync.md](./network/PixelStrokeGhostSync.md).
+Fires with a tool's live in-progress pixels as they change: brush strokes and line drags (not fill). Used by `PixelStrokeGhostSync` to broadcast a ghost preview to peers. Selection progress streams separately; see `selectionEvents` above and [network/SelectionGhostSync.md](./network/SelectionGhostSync.md). See [network/PixelStrokeGhostSync.md](./network/PixelStrokeGhostSync.md).

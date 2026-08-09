@@ -5,7 +5,11 @@ export {
 } from "./tools/Brush.ts";
 export type { BrushTool } from "./tools/BrushController.ts";
 export type { FillTool } from "./tools/FillController.ts";
-export type { SelectTool } from "./tools/SelectController.ts";
+export type {
+  SelectControllerEvent,
+  SelectionProgressEvent,
+  SelectTool
+} from "./tools/SelectController.ts";
 export type { Toolset } from "./tools/Tools.ts";
 export {
   PixelArtCanvas,
@@ -82,6 +86,7 @@ export type {
   PixelBufferSnapshot,
   PixelNetworkCommand,
   PixelServerMessage,
+  SelectionGhostPayload,
   UVGhostPayload
 } from "./network/types.ts";
 export { applyCommandToBuffer } from "./network/PixelCommandApplier.ts";
@@ -101,3 +106,7 @@ export type {
   UVGhostSyncOptions
 } from "./network/UVGhostSync.ts";
 export { UVGhostSync } from "./network/UVGhostSync.ts";
+export type {
+  SelectionGhostSyncOptions
+} from "./network/SelectionGhostSync.ts";
+export { SelectionGhostSync } from "./network/SelectionGhostSync.ts";

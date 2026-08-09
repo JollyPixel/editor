@@ -77,7 +77,7 @@ Multiplayer cursors ride the same room, no server extension needed — presence 
 
 ## Ghost Preview Streaming
 
-Peers can watch brush strokes, line drags, and selection moves land pixel-by-pixel before they commit — also riding presence, no server extension needed, purely visual. See [PixelStrokeGhostSync](./PixelStrokeGhostSync.md). UV region drags stream the same way, as a dashed vector border instead of pixels — see [UVGhostSync](./UVGhostSync.md).
+Peers can watch brush strokes and line drags land pixel-by-pixel before they commit — also riding presence, no server extension needed, purely visual. See [PixelStrokeGhostSync](./PixelStrokeGhostSync.md). UV region drags stream the same way, as a dashed vector border instead of pixels — see [UVGhostSync](./UVGhostSync.md). Selections stream both: a dashed boundary while creating or moving, plus a blanked source + redrawn content while moving, so peers never see the moved block "duplicated". See [SelectionGhostSync](./SelectionGhostSync.md).
 
 ## What To Read Next
 
@@ -88,3 +88,4 @@ Peers can watch brush strokes, line drags, and selection moves land pixel-by-pix
 | [PixelCursorSync](./PixelCursorSync.md) | You want to show peers' live cursors on the canvas |
 | [PixelStrokeGhostSync](./PixelStrokeGhostSync.md) | You want peers to see each other draw in real time |
 | [UVGhostSync](./UVGhostSync.md) | You want peers to see each other drag UV regions in real time |
+| [SelectionGhostSync](./SelectionGhostSync.md) | You want peers to see each other create/move selections in real time |

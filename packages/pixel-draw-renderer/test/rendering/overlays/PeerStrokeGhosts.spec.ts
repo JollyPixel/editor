@@ -179,48 +179,4 @@ describe("PeerStrokeGhosts", () => {
       assert.strictEqual(count, 0);
     });
   });
-
-  describe("staleness TTL", () => {
-    test("a peer's ghost is cleared after 1500ms without an update", (t) => {
-      t.mock.timers.enable({ apis: ["setTimeout"] });
-
-      const ghosts = new PeerStrokeGhosts();
-      ghosts.set("peer-A", [kRed]);
-      assert.strictEqual(ghosts.isActive, true);
-
-      t.mock.timers.tick(1499);
-      assert.strictEqual(ghosts.isActive, true, "not stale yet");
-
-      t.mock.timers.tick(1);
-      assert.strictEqual(ghosts.isActive, false, "stale, cleared");
-    });
-
-    test("a fresh set() before the TTL resets the timer", (t) => {
-      t.mock.timers.enable({ apis: ["setTimeout"] });
-
-      const ghosts = new PeerStrokeGhosts();
-      ghosts.set("peer-A", [kRed]);
-
-      t.mock.timers.tick(1000);
-      ghosts.set("peer-A", [kBlue]);
-      t.mock.timers.tick(1000);
-
-      assert.strictEqual(ghosts.isActive, true, "reset by the second set()");
-    });
-
-    test("destroy() cancels pending TTL timers", (t) => {
-      t.mock.timers.enable({ apis: ["setTimeout"] });
-
-      const ghosts = new PeerStrokeGhosts();
-      let count = 0;
-      ghosts.on("changed", () => count++);
-
-      ghosts.set("peer-A", [kRed]);
-      ghosts.destroy();
-      count = 0;
-
-      assert.doesNotThrow(() => t.mock.timers.tick(1500));
-      assert.strictEqual(count, 0, "no changed event fires from a timer after destroy");
-    });
-  });
 });

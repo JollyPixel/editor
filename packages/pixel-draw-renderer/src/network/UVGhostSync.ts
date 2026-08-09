@@ -3,6 +3,7 @@ import type * as network from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
 import { ColorPalette } from "../utils/ColorPalette.ts";
+import { PeerGhostLeaser } from "./PeerGhostLeaser.ts";
 import type { PixelArtCanvas } from "../PixelArtCanvas.ts";
 import type { UVRegion } from "../uv/UVRegion.ts";
 import type {
@@ -53,6 +54,7 @@ export class UVGhostSync {
   #canvas: PixelArtCanvas | undefined;
   #pendingPayload: UVGhostPayload | undefined;
   #rafHandle: number | undefined;
+  #ghostLeaser: PeerGhostLeaser;
 
   #onRegionDragging = (
     event: UVGhostPayload
@@ -63,6 +65,7 @@ export class UVGhostSync {
       geometry: event.geometry
     });
   };
+
   #onRegionMoved = (
     event: { region: UVRegion; }
   ): void => {
@@ -73,16 +76,23 @@ export class UVGhostSync {
       this.#cancelPending();
     }
   };
+
   #onPeerLeft = (
     event: network.RoomPeerEvent
   ): void => {
-    this.#canvas?.peerUvGhosts.remove(event.clientId);
+    this.#ghostLeaser.cancel(event.clientId);
+    this.#removePeerGhost(event.clientId);
   };
+
   #onPeerPresence = (
     event: network.RoomPeerPresenceEvent
   ): void => {
-    this.#applyPresencePatch(event.clientId, event.patch);
+    this.#applyPresencePatch(
+      event.clientId,
+      event.patch
+    );
   };
+
   #onMessage = (
     message: PixelServerMessage
   ): void => {
@@ -90,6 +100,7 @@ export class UVGhostSync {
       this.#reconcileCommand(message.data);
     }
     else if (message.type === "snapshot") {
+      this.#ghostLeaser.clear();
       this.#canvas?.peerUvGhosts.clearAll();
     }
   };
@@ -99,11 +110,23 @@ export class UVGhostSync {
   ) {
     this.#room = options.room;
     this.#enableGhostPreview = options.enableGhostPreview ?? true;
+    this.#ghostLeaser = new PeerGhostLeaser({
+      onExpire: (clientId) => this.#removePeerGhost(clientId)
+    });
 
     if (this.#enableGhostPreview) {
-      this.#room.on("peer-left", this.#onPeerLeft);
-      this.#room.on("peer-presence", this.#onPeerPresence);
-      this.#room.on("message", this.#onMessage);
+      this.#room.on(
+        "peer-left",
+        this.#onPeerLeft
+      );
+      this.#room.on(
+        "peer-presence",
+        this.#onPeerPresence
+      );
+      this.#room.on(
+        "message",
+        this.#onMessage
+      );
     }
   }
 
@@ -116,8 +139,14 @@ export class UVGhostSync {
 
     this.#canvas = canvas;
     if (this.#enableGhostPreview) {
-      canvas.uv.on("region-dragging", this.#onRegionDragging);
-      canvas.uv.on("region-moved", this.#onRegionMoved);
+      canvas.uv.on(
+        "region-dragging",
+        this.#onRegionDragging
+      );
+      canvas.uv.on(
+        "region-moved",
+        this.#onRegionMoved
+      );
     }
   }
 
@@ -127,16 +156,43 @@ export class UVGhostSync {
     }
 
     this.#cancelPending();
-    this.#canvas.uv.off("region-dragging", this.#onRegionDragging);
-    this.#canvas.uv.off("region-moved", this.#onRegionMoved);
+    if (this.#enableGhostPreview) {
+      this.#ghostLeaser.clear();
+      this.#canvas.peerUvGhosts.clearAll();
+    }
+    this.#canvas.uv.off(
+      "region-dragging",
+      this.#onRegionDragging
+    );
+    this.#canvas.uv.off(
+      "region-moved",
+      this.#onRegionMoved
+    );
     this.#canvas = undefined;
   }
 
   destroy(): void {
     this.detach();
-    this.#room.off("peer-left", this.#onPeerLeft);
-    this.#room.off("peer-presence", this.#onPeerPresence);
-    this.#room.off("message", this.#onMessage);
+    this.#ghostLeaser.clear();
+
+    this.#room.off(
+      "peer-left",
+      this.#onPeerLeft
+    );
+    this.#room.off(
+      "peer-presence",
+      this.#onPeerPresence
+    );
+    this.#room.off(
+      "message",
+      this.#onMessage
+    );
+  }
+
+  #removePeerGhost(
+    clientId: string
+  ): void {
+    this.#canvas?.peerUvGhosts.remove(clientId);
   }
 
   #reportLocal(
@@ -173,19 +229,23 @@ export class UVGhostSync {
    * matching by clientId here would silently never clear anything.
    */
   #reconcileCommand(
-    cmd: PixelNetworkCommand
+    command: PixelNetworkCommand
   ): void {
     if (!this.#canvas) {
       return;
     }
 
-    switch (cmd.action) {
+    switch (command.action) {
       case "uv-region-moved":
       case "uv-region-deleted":
-        this.#canvas.peerUvGhosts.removeByRegion(cmd.metadata.id);
+        this.#canvas.peerUvGhosts.removeByRegion(
+          command.metadata.id
+        );
         break;
       case "uv-region-state-changed":
-        this.#canvas.peerUvGhosts.removeByRegion(cmd.metadata.region.id);
+        this.#canvas.peerUvGhosts.removeByRegion(
+          command.metadata.region.id
+        );
         break;
       default:
         break;
@@ -206,6 +266,7 @@ export class UVGhostSync {
         ...payload,
         color: this.#palette.forKey(clientId)
       });
+      this.#ghostLeaser.renew(clientId);
     }
   }
 }

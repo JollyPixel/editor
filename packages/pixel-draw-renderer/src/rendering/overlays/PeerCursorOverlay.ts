@@ -1,7 +1,11 @@
 // Import Internal Dependencies
 import { SVG_NS } from "../constants.ts";
-import type { DefaultViewport } from "../Viewport.ts";
-import type { Vec2 } from "../../types.ts";
+import type {
+  DefaultViewport
+} from "../Viewport.ts";
+import type {
+  Vec2
+} from "../../types.ts";
 
 export interface PeerCursorState {
   pos: Vec2 | null;
@@ -59,7 +63,10 @@ export class PeerCursorOverlay {
     filter.setAttribute("width", "200%");
     filter.setAttribute("height", "200%");
 
-    const dropShadow = document.createElementNS(SVG_NS, "feDropShadow");
+    const dropShadow = document.createElementNS(
+      SVG_NS,
+      "feDropShadow"
+    );
     dropShadow.setAttribute("dx", "0");
     dropShadow.setAttribute("dy", "1");
     dropShadow.setAttribute("stdDeviation", "1");
@@ -84,7 +91,9 @@ export class PeerCursorOverlay {
     clientId: string
   ): void {
     this.#peers.delete(clientId);
-    this.#elements.get(clientId)?.group.remove();
+    this.#elements.get(
+      clientId
+    )?.group.remove();
     this.#elements.delete(clientId);
   }
 
@@ -98,6 +107,7 @@ export class PeerCursorOverlay {
     for (const elements of this.#elements.values()) {
       elements.group.remove();
     }
+
     this.#peers.clear();
     this.#elements.clear();
     this.#defs.remove();
@@ -112,19 +122,26 @@ export class PeerCursorOverlay {
     }
 
     if (!state.pos) {
-      this.#elements.get(clientId)?.group.setAttribute("visibility", "hidden");
+      this.#elements.get(
+        clientId
+      )?.group.setAttribute("visibility", "hidden");
 
       return;
     }
 
-    const elements = this.#elements.get(clientId) ?? this.#createElements(clientId);
+    const elements = this.#elements.get(
+      clientId
+    ) ?? this.#createElements(clientId);
     const zoom = this.#viewport.zoom.value;
     const camera = this.#viewport.camera;
     const x = state.pos.x * zoom + camera.x;
     const y = state.pos.y * zoom + camera.y;
 
     elements.group.setAttribute("visibility", "visible");
-    elements.group.setAttribute("transform", `translate(${x}, ${y})`);
+    elements.group.setAttribute(
+      "transform",
+      `translate(${x}, ${y})`
+    );
     elements.arrow.setAttribute("fill", state.color);
     elements.labelText.setAttribute("fill", state.color);
     elements.labelText.textContent = state.label ?? "";
@@ -137,7 +154,10 @@ export class PeerCursorOverlay {
     Object.assign(group.style, {
       pointerEvents: "none"
     });
-    group.setAttribute("filter", `url(#${this.#shadowFilterId})`);
+    group.setAttribute(
+      "filter",
+      `url(#${this.#shadowFilterId})`
+    );
 
     const arrow = document.createElementNS(SVG_NS, "path");
     arrow.setAttribute("d", kArrowPath);
@@ -158,7 +178,11 @@ export class PeerCursorOverlay {
     group.appendChild(labelText);
 
     this.#svg.appendChild(group);
-    const elements: PeerCursorElements = { group, arrow, labelText };
+    const elements: PeerCursorElements = {
+      group,
+      arrow,
+      labelText
+    };
     this.#elements.set(clientId, elements);
 
     return elements;

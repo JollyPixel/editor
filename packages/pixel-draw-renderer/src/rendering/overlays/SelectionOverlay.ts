@@ -1,6 +1,8 @@
 // Import Internal Dependencies
 import { SVG_NS } from "../constants.ts";
-import type { DefaultViewport } from "../Viewport.ts";
+import type {
+  DefaultViewport
+} from "../Viewport.ts";
 import type {
   BrushHighlight,
   SelectionRect,
@@ -23,9 +25,11 @@ export class SelectionOverlay {
     brush: BrushHighlight
   ) {
     this.#viewport = viewport;
+
     const [outline, inline] = this.#initRects(svg, brush);
     this.#outline = outline;
     this.#inline = inline;
+
     const [outlinePath, inlinePath] = this.#initPaths(svg, brush);
     this.#outlinePath = outlinePath;
     this.#inlinePath = inlinePath;
@@ -36,11 +40,19 @@ export class SelectionOverlay {
     brush: BrushHighlight
   ): [outline: SVGRectElement, inline: SVGRectElement] {
     const outline = document.createElementNS(SVG_NS, "rect");
-    SelectionOverlay.#applyDashStyle(outline, brush.colorOutline, 0);
+    SelectionOverlay.#applyDashStyle(
+      outline,
+      brush.colorOutline,
+      0
+    );
     svg.appendChild(outline);
 
     const inline = document.createElementNS(SVG_NS, "rect");
-    SelectionOverlay.#applyDashStyle(inline, brush.colorInline, 6);
+    SelectionOverlay.#applyDashStyle(
+      inline,
+      brush.colorInline,
+      6
+    );
     svg.appendChild(inline);
 
     return [outline, inline];
@@ -51,11 +63,19 @@ export class SelectionOverlay {
     brush: BrushHighlight
   ): [outline: SVGPathElement, inline: SVGPathElement] {
     const outline = document.createElementNS(SVG_NS, "path");
-    SelectionOverlay.#applyDashStyle(outline, brush.colorOutline, 0);
+    SelectionOverlay.#applyDashStyle(
+      outline,
+      brush.colorOutline,
+      0
+    );
     svg.appendChild(outline);
 
     const inline = document.createElementNS(SVG_NS, "path");
-    SelectionOverlay.#applyDashStyle(inline, brush.colorInline, 6);
+    SelectionOverlay.#applyDashStyle(
+      inline,
+      brush.colorInline,
+      6
+    );
     svg.appendChild(inline);
 
     return [outline, inline];
@@ -131,7 +151,7 @@ export class SelectionOverlay {
       mask
     );
     const d = loops
-      .map((loop) => SelectionOverlay.#loopToPath(loop, rect, screen))
+      .map((loop) => SelectionOverlay.loopToPath(loop, rect, screen))
       .join(" ");
 
     for (const el of [this.#outlinePath, this.#inlinePath]) {
@@ -147,7 +167,13 @@ export class SelectionOverlay {
     this.#inlinePath.setAttribute("visibility", "hidden");
   }
 
-  static #loopToPath(
+  /**
+   * Converts one traced contour loop into an SVG path `d` fragment, applying
+   * `rect`'s offset and the current zoom/camera. Public so peer overlays
+   * (e.g. `PeerSelectionGhosts`) can render a remote mask outline the same
+   * way this class renders the local one.
+   */
+  static loopToPath(
     loop: Vec2[],
     rect: SelectionRect,
     screen: { zoom: number; camera: Vec2; }
@@ -174,7 +200,9 @@ export class SelectionOverlay {
       x: number,
       y: number
     ): boolean {
-      return x >= 0 && x < width && y >= 0 && y < height && mask[(y * width) + x];
+      return x >= 0 && x < width &&
+        y >= 0 && y < height &&
+        mask[(y * width) + x];
     }
 
     const edges = new Map<string, Vec2>();
@@ -189,16 +217,28 @@ export class SelectionOverlay {
         }
 
         if (!isSelected(x, y - 1)) {
-          setEdge({ x, y }, { x: x + 1, y });
+          setEdge(
+            { x, y },
+            { x: x + 1, y }
+          );
         }
         if (!isSelected(x + 1, y)) {
-          setEdge({ x: x + 1, y }, { x: x + 1, y: y + 1 });
+          setEdge(
+            { x: x + 1, y },
+            { x: x + 1, y: y + 1 }
+          );
         }
         if (!isSelected(x, y + 1)) {
-          setEdge({ x: x + 1, y: y + 1 }, { x, y: y + 1 });
+          setEdge(
+            { x: x + 1, y: y + 1 },
+            { x, y: y + 1 }
+          );
         }
         if (!isSelected(x - 1, y)) {
-          setEdge({ x, y: y + 1 }, { x, y });
+          setEdge(
+            { x, y: y + 1 },
+            { x, y }
+          );
         }
       }
     }
@@ -223,7 +263,9 @@ export class SelectionOverlay {
         current = next;
       }
 
-      loops.push(SelectionOverlay.#simplifyLoop(points));
+      loops.push(
+        SelectionOverlay.#simplifyLoop(points)
+      );
     }
 
     return loops;

@@ -26,6 +26,8 @@ export interface PasteResult {
   mask: boolean[];
 }
 
+const kTransparent: RGBA = { r: 0, g: 0, b: 0, a: 0 };
+
 /**
  * Manages rectangular and masked selection state.
  */
@@ -399,11 +401,9 @@ export class Select {
   }
 
   /**
-   * Samples the ring of pixels immediately surrounding `rect` and returns
-   * the most common color among them, so a vacated footprint blends into
-   * its surroundings instead of leaving a flat erase-color hole. Falls
-   * back to `fallback` when `rect` has no in-bounds neighbors (e.g. it
-   * covers the whole texture).
+   * Samples surrounding pixels and returns the most common color,
+   * so a vacated footprint blends in rather than leaving a flat hole.
+   * Falls back to `fallback` when rect has no in-bounds neighbors.
    */
   static dominantBorderColor(
     buffer: DefaultPixelBuffer,
@@ -460,6 +460,23 @@ export class Select {
     }
 
     return best ?? fallback;
+  }
+
+  /**
+   * Resolve fill for a vacated footprint: explicit eraseColor or dominantBorderColor.
+   * Shared by SelectController and PeerFloatingSelectionGhosts - both must
+   * resolve to the same color given the same buffer state.
+   */
+  static resolveEraseColor(
+    buffer: DefaultPixelBuffer,
+    rect: SelectionRect,
+    explicitEraseColor: RGBA | null
+  ): RGBA {
+    if (explicitEraseColor !== null) {
+      return explicitEraseColor;
+    }
+
+    return Select.dominantBorderColor(buffer, rect, kTransparent);
   }
 
   static captureSnapshot(

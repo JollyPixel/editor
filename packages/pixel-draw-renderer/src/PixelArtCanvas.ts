@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import type { Emitter } from "@openally/emitt";
+
 // Import Internal Dependencies
 import {
   Brush,
@@ -8,6 +11,7 @@ import {
   Tools,
   type Toolset
 } from "./tools/Tools.ts";
+import type { SelectControllerEvent } from "./tools/SelectController.events.ts";
 import {
   History,
   type HistoryState
@@ -53,6 +57,8 @@ import type {
 import type { PeerCursorOverlay } from "./rendering/overlays/PeerCursorOverlay.ts";
 import type { PeerStrokeGhosts } from "./rendering/overlays/PeerStrokeGhosts.ts";
 import type { PeerUVGhosts } from "./rendering/overlays/PeerUVGhosts.ts";
+import type { PeerSelectionGhosts } from "./rendering/overlays/PeerSelectionGhosts.ts";
+import type { PeerFloatingSelectionGhosts } from "./rendering/overlays/PeerFloatingSelectionGhosts.ts";
 import { toRGBA } from "./utils/colors.ts";
 import type {
   BrushHighlight,
@@ -91,10 +97,8 @@ export interface PixelArtCanvasOptions {
     init?: HTMLCanvasElement;
   };
   /**
-   * When `zoom.default` is omitted, it's computed to fit the whole texture
-   * inside the container's initial size instead of `Zoom`'s own flat
-   * default of 4 — a large texture in a small container no longer starts
-   * zoomed in past what's visible. Pass an explicit `default` to opt out.
+   * Zoom default: if omitted, computed to fit the texture in the container.
+   * Pass an explicit `default` to opt out.
    */
   zoom?: ZoomOptions;
   backgroundTransparency?: {
@@ -108,11 +112,8 @@ export interface PixelArtCanvasOptions {
   brush?: BrushOptions;
   select?: {
     /**
-     * Explicit fill for deleted pixels and vacated selection footprints
-     * (Move/Rotate/Flip), overriding the smart default. When omitted, the
-     * vacated area is instead filled with the most common color among its
-     * neighbors — so it blends into the surrounding artwork — falling
-     * back to fully transparent when there are no in-bounds neighbors.
+     * Explicit fill for deleted pixels and vacated selection footprints.
+     * Omit to use the dominant neighbor color (transparent as fallback).
      * @default dominant neighbor color, transparent as the ultimate fallback
      */
     eraseColor?: ColorInput;
@@ -161,6 +162,13 @@ export class PixelArtCanvas {
   readonly peerCursors: PeerCursorOverlay;
   readonly peerStrokeGhosts: PeerStrokeGhosts;
   readonly peerUvGhosts: PeerUVGhosts;
+  readonly peerSelectionGhosts: PeerSelectionGhosts;
+  readonly peerFloatingSelectionGhosts: PeerFloatingSelectionGhosts;
+  /**
+   * Read-only subscription to the select tool's progress events.
+   * Consumed by SelectionGhostSync; nothing outside sync should emit on it.
+   */
+  readonly selectionEvents: Pick<Emitter<SelectControllerEvent>, "on" | "off">;
 
   constructor(
     parentHtmlElement: HTMLDivElement,
@@ -212,12 +220,15 @@ export class PixelArtCanvas {
       zoom: options.zoom,
       background: options.backgroundColor,
       backgroundTransparency: options.backgroundTransparency,
-      brushHighlight: brushAdapter
+      brushHighlight: brushAdapter,
+      eraseColor
     });
     this.viewport = this.#view.viewport;
     this.peerCursors = this.#view.overlays.peerCursors;
     this.peerStrokeGhosts = this.#view.renderer.peerStrokeGhosts;
     this.peerUvGhosts = this.#view.overlays.peerUvGhosts;
+    this.peerSelectionGhosts = this.#view.overlays.peerSelectionGhosts;
+    this.peerFloatingSelectionGhosts = this.#view.renderer.peerFloatingSelectionGhosts;
 
     this.#edits = new EditPipeline({
       brush: this.brush,
@@ -243,10 +254,9 @@ export class PixelArtCanvas {
       onProgress: (pixels) => this.#onStrokeProgress?.(pixels)
     });
     this.tools = this.#tools;
+    this.selectionEvents = this.#tools.select;
 
-    // Camera changes (pan / zoom / canvas-resize / center) repaint the canvas
-    // and re-place every camera-dependent overlay. One subscriber replaces the
-    // three identical blocks previously copied across onResize/onPanMove/onZoom.
+    // Camera changes repaint and re-place all camera-dependent overlays.
     this.#view.viewport.on("changed", () => {
       this.#view.drawFrame();
       this.#tools.line.refreshPreview();
@@ -254,6 +264,7 @@ export class PixelArtCanvas {
       this.#view.overlays.uvOverlay.refresh();
       this.#view.overlays.peerCursors.refresh();
       this.#view.overlays.peerUvGhosts.refresh();
+      this.#view.overlays.peerSelectionGhosts.refresh();
     });
 
     this.#router = new InteractionRouter({
@@ -287,7 +298,7 @@ export class PixelArtCanvas {
       window: options.window,
       actions: this.#router,
       keybindings: options.keybindings,
-      // In "move" mode a plain left-drag pans (single-finger, trackpad-friendly).
+      // In "move" mode a plain left-drag pans.
       shouldPanOnPrimary: () => this.#router.mode === "move",
       onCtrlWheel: (delta) => {
         if (this.#router.mode !== "paint" || delta === 0) {
@@ -390,8 +401,7 @@ export class PixelArtCanvas {
       return;
     }
 
-    // view.resize() ends by resizing the viewport, whose "changed" signal
-    // repaints and re-places the camera-dependent overlays.
+    // view.resize() resizes the viewport last; its "changed" signal repaints.
     this.#view.resize(bounds.width, bounds.height);
   }
 
@@ -494,9 +504,7 @@ export class PixelArtCanvas {
   }
 
   /**
-   * The current local buffer-mutation listener, readable so callers (e.g.
-   * `PixelSyncClient`) can chain onto an existing handler instead of
-   * silently replacing it.
+   * Current buffer-mutation listener; readable so callers can chain on it.
    */
   get onBufferUpdated(): PixelBufferHookListener | undefined {
     return this.#edits.onBufferUpdated;
@@ -512,16 +520,15 @@ export class PixelArtCanvas {
   }
 
   /**
-   * The current local cursor-move listener, readable so callers can chain onto an existing handler.
+   * Current cursor-move listener; readable so callers can chain on it.
    */
   get onCursorMove(): ExternalCursorMoveListener | undefined {
     return this.#router.onExternalCursorMove;
   }
 
   /**
-   * Replaces the local cursor-move listener. Reports the bounded texture
-   * position on every canvas mousemove, and `null` once the pointer leaves
-   * the canvas or the texture bounds.
+   * Replaces the cursor-move listener. Reports bounded texture position on
+   * every mousemove, null when pointer leaves canvas or texture bounds.
    */
   set onCursorMove(
     fn: ExternalCursorMoveListener | undefined
@@ -530,18 +537,15 @@ export class PixelArtCanvas {
   }
 
   /**
-   * The current local stroke-progress listener, readable so callers can
-   * chain onto an existing handler.
+   * Current stroke-progress listener; readable so callers can chain on it.
    */
   get onStrokeProgress(): ((pixels: PeerStrokePixel[]) => void) | undefined {
     return this.#onStrokeProgress;
   }
 
   /**
-   * Replaces the local stroke-progress listener. Reports a tool's live
-   * in-progress pixels (brush stroke, line drag, selection move) as they
-   * change — for streaming a ghost preview to peers. Never fires for the
-   * initial selection marquee or fill.
+   * Replaces the stroke-progress listener. Reports live in-progress pixels
+   * for brush/line gestures
    */
   set onStrokeProgress(
     fn: ((pixels: PeerStrokePixel[]) => void) | undefined
