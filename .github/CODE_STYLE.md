@@ -29,3 +29,4 @@ Order: Node.js (`node:` prefix) → third-party → internal, each block headed 
 - Constants directly beneath imports, under a `// CONSTANTS` comment
 - Comments in the source code must bring value and when required they must be as compact and factual as possible
 - Avoid type cast as possible (use the skill `/typescript-magician` if facing a challenge).
+- Usage of — is prohibited inside comments and documentation

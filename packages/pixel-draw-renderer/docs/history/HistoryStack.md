@@ -20,14 +20,14 @@ interface HistoryStackOptions {
 | Action | What it records |
 |---|---|
 | `"stroke"` | `beforeColors` per-position, `afterColor` single color |
-| `"resized"` / `"texture-replaced"` | Whole-buffer `beforePixels` / `afterPixels` snapshot |
-| `"select-edit"` | `beforeColors`/`afterColors` per-position + `oldRect`/`newRect`/`oldMask`/`newMask` for selection state |
+| `"resized"` / `"texture-replaced"` | `beforeSize` / `afterSize` and whole-buffer `beforePixels` / `afterPixels` snapshots |
+| `"select-edit"` | Per-position `beforeColors` / `afterColors` and selection metadata used by `PixelArtCanvas` while select mode is active |
 | `"uv-create"` / `"uv-delete"` | Full `region` (undo calls the inverse `UVMap` method) |
-| `"uv-move"` | `face` (`null` when collapsed) + `oldRect` / `newRect` |
-| `"uv-state"` | Whole `before` / `after` regions — collapsing discards five rects, so only a full snapshot can undo it |
+| `"uv-move"` | Region `id`, `face` (`null` when collapsed), and `oldRect` / `newRect` |
+| `"uv-state"` | Region `id` and full `before` / `after` snapshots |
 
 > [!NOTE]
-> `"select-edit"` and `"uv-*"` undo/redo are broadcast over the network. See [uv/UVMap.md](../uv/UVMap.md#history--network).
+> When used through `PixelArtCanvas`, undo and redo emit mutation hooks. An attached sync client can propagate the resulting pixel and UV changes. See [uv/UVMap.md](../uv/UVMap.md#history--network).
 
 ## API
 

@@ -5,6 +5,8 @@ import { LinePreviewOverlay } from "./overlays/LinePreviewOverlay.ts";
 import { SelectionOverlay } from "./overlays/SelectionOverlay.ts";
 import { UVOverlay } from "./overlays/UVOverlay.ts";
 import { PeerCursorOverlay } from "./overlays/PeerCursorOverlay.ts";
+import { PeerUVGhosts } from "./overlays/PeerUVGhosts.ts";
+import { PeerSelectionGhosts } from "./overlays/PeerSelectionGhosts.ts";
 import type {
   DefaultViewport
 } from "./Viewport.ts";
@@ -33,6 +35,8 @@ export class OverlayLayer {
   readonly selection: SelectionOverlay;
   readonly uvOverlay: UVOverlay;
   readonly peerCursors: PeerCursorOverlay;
+  readonly peerUvGhosts: PeerUVGhosts;
+  readonly peerSelectionGhosts: PeerSelectionGhosts;
 
   constructor(
     options: OverlayLayerOptions
@@ -44,6 +48,11 @@ export class OverlayLayer {
       this.#svg,
       options.viewport,
       options.uvMap
+    );
+    this.peerUvGhosts = new PeerUVGhosts(
+      this.#svg,
+      options.viewport,
+      this.uvOverlay
     );
     this.brushHighlight = new BrushHighlightOverlay(
       this.#svg,
@@ -61,6 +70,10 @@ export class OverlayLayer {
       options.brush
     );
     this.peerCursors = new PeerCursorOverlay(
+      this.#svg,
+      options.viewport
+    );
+    this.peerSelectionGhosts = new PeerSelectionGhosts(
       this.#svg,
       options.viewport
     );
@@ -111,6 +124,8 @@ export class OverlayLayer {
   destroy(): void {
     this.uvOverlay.destroy();
     this.peerCursors.destroy();
+    this.peerUvGhosts.destroy();
+    this.peerSelectionGhosts.destroy();
     if (this.#svg.parentElement) {
       this.#svg.remove();
     }

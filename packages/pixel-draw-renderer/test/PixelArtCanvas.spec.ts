@@ -417,7 +417,6 @@ describe("PixelArtCanvas", () => {
 
       manager.commitPixels([{ x: 2, y: 2 }]);
 
-      // Excludes (0,0): the buffer keeps that origin pixel transparent as a sentinel.
       assert.strictEqual(
         manager.hasTransparency({ x: 1, y: 1, width: 7, height: 7 }),
         false

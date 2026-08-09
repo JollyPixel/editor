@@ -100,9 +100,7 @@ describe("PixelArtCanvas — fill mode", () => {
         metadata: { positions: unknown[]; };
       };
       assert.strictEqual(event.action, "stroke");
-      // Whole 16x16 texture is uniformly white by default except (0,0),
-      // which PixelBuffer always initializes fully transparent.
-      assert.strictEqual(event.metadata.positions.length, 16 * 16 - 1);
+      assert.strictEqual(event.metadata.positions.length, 16 * 16);
       manager.destroy();
     });
 

@@ -28,9 +28,16 @@ describe("LinePreviewOverlay", () => {
     );
 
     const lines = svg.querySelectorAll("line");
-    assert.strictEqual(lines.length, 2, "one outline line + one inline line");
+    assert.strictEqual(
+      lines.length,
+      2,
+      "one outline line + one inline line"
+    );
     lines.forEach((line) => {
-      assert.strictEqual(line.getAttribute("visibility"), "visible");
+      assert.strictEqual(
+        line.getAttribute("visibility"),
+        "visible"
+      );
       // zoom 4, camera (0,0): center of (1,1) -> (6,6), center of (2,1) -> (10,6)
       assert.strictEqual(line.getAttribute("x1"), "6");
       assert.strictEqual(line.getAttribute("y1"), "6");
@@ -55,7 +62,10 @@ describe("LinePreviewOverlay", () => {
 
     const lines = svg.querySelectorAll("line");
     lines.forEach((line) => {
-      assert.strictEqual(line.getAttribute("visibility"), "hidden");
+      assert.strictEqual(
+        line.getAttribute("visibility"),
+        "hidden"
+      );
     });
   });
 });

@@ -174,6 +174,36 @@ describe("PixelCursorSync — attach", () => {
 });
 
 describe("PixelCursorSync — detach", () => {
+  test("chains and restores an existing cursor listener", () => {
+    const room = createMockRoom();
+    const canvas = createMockCanvas();
+    const seen: (Vec2 | null)[] = [];
+    function previous(pos: Vec2 | null): void {
+      seen.push(pos);
+    }
+    canvas.onCursorMove = previous;
+    const sync = new PixelCursorSync({ room });
+    sync.attach(asHost(canvas));
+
+    canvas.triggerCursorMove({ x: 2, y: 3 });
+    sync.detach();
+
+    assert.deepStrictEqual(seen, [{ x: 2, y: 3 }]);
+    assert.strictEqual(canvas.onCursorMove, previous);
+  });
+
+  test("removes cursors rendered before detach", () => {
+    const room = createMockRoom();
+    room.addPeer("peer-B", {}, { cursor: { x: 1, y: 1 } });
+    const canvas = createMockCanvas();
+    const sync = new PixelCursorSync({ room });
+    sync.attach(asHost(canvas));
+
+    sync.detach();
+
+    assert.deepStrictEqual(canvas.removedPeers, ["peer-B"]);
+  });
+
   test("stops forwarding local cursor moves", () => {
     const room = createMockRoom();
     const canvas = createMockCanvas();

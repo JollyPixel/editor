@@ -6,7 +6,9 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { SelectionOverlay } from "#src/rendering/overlays/SelectionOverlay.ts";
+import {
+  SelectionOverlay
+} from "#src/rendering/overlays/SelectionOverlay.ts";
 import {
   makeSvg,
   makeViewport,
@@ -31,14 +33,21 @@ describe("SelectionOverlay", () => {
     });
 
     const rects = svg.querySelectorAll("rect");
-    assert.strictEqual(rects.length, 2, "one outline rect + one inline rect");
+    assert.strictEqual(
+      rects.length,
+      2,
+      "one outline rect + one inline rect"
+    );
     for (const rect of rects) {
       assert.strictEqual(rect.getAttribute("visibility"), "visible");
       assert.strictEqual(rect.getAttribute("x"), "4");
       assert.strictEqual(rect.getAttribute("y"), "4");
       assert.strictEqual(rect.getAttribute("width"), "8");
       assert.strictEqual(rect.getAttribute("height"), "12");
-      assert.ok(rect.getAttribute("stroke-dasharray"), "should be dashed");
+      assert.ok(
+        rect.getAttribute("stroke-dasharray"),
+        "should be dashed"
+      );
     }
   });
 
@@ -50,12 +59,20 @@ describe("SelectionOverlay", () => {
       makeBrush()
     );
 
-    overlay.drawRect({ x: 0, y: 0, width: 1, height: 1 });
+    overlay.drawRect({
+      x: 0,
+      y: 0,
+      width: 1,
+      height: 1
+    });
     overlay.clear();
 
     const rects = svg.querySelectorAll("rect");
     for (const rect of rects) {
-      assert.strictEqual(rect.getAttribute("visibility"), "hidden");
+      assert.strictEqual(
+        rect.getAttribute("visibility"),
+        "hidden"
+      );
     }
   });
 
@@ -78,11 +95,19 @@ describe("SelectionOverlay", () => {
       const rects = svg.querySelectorAll("rect");
       assert.strictEqual(rects.length, 2);
       for (const rect of rects) {
-        assert.strictEqual(rect.getAttribute("visibility"), "visible");
+        assert.strictEqual(
+          rect.getAttribute("visibility"),
+          "visible",
+          "visible rects"
+        );
       }
       const paths = svg.querySelectorAll("path");
       for (const path of paths) {
-        assert.strictEqual(path.getAttribute("visibility"), "hidden");
+        assert.strictEqual(
+          path.getAttribute("visibility"),
+          "hidden",
+          "hidden paths"
+        );
       }
     });
 
@@ -157,7 +182,11 @@ describe("SelectionOverlay", () => {
     });
 
     test("a single selected cell traces a unit square", () => {
-      const loops = SelectionOverlay.traceContour(1, 1, [true]);
+      const loops = SelectionOverlay.traceContour(
+        1,
+        1,
+        [true]
+      );
 
       assert.strictEqual(loops.length, 1);
       assert.deepStrictEqual(

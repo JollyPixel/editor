@@ -21,7 +21,7 @@ export interface PixelBufferOptions {
    */
   defaultColor?: RGBA | ColorInput;
   /**
-   * Maximum master-buffer dimension.
+   * Maximum buffer dimension.
    * @default 2048
    */
   maxSize?: number;
@@ -34,6 +34,32 @@ const kDefaultColor: RGBA = {
   b: 255,
   a: 255
 };
+
+function assertMaxSize(
+  maxSize: number
+): void {
+  if (!Number.isInteger(maxSize) || maxSize <= 0) {
+    throw new RangeError("PixelBuffer maxSize must be a positive integer");
+  }
+}
+
+function assertSize(
+  size: Vec2,
+  maxSize: number
+): void {
+  if (
+    !Number.isInteger(size.x) ||
+    !Number.isInteger(size.y) ||
+    size.x <= 0 ||
+    size.y <= 0 ||
+    size.x > maxSize ||
+    size.y > maxSize
+  ) {
+    throw new RangeError(
+      `PixelBuffer dimensions must be positive integers no greater than ${maxSize}`
+    );
+  }
+}
 
 /**
  * Stores raw RGBA pixel data and UV regions without DOM APIs.
@@ -56,11 +82,18 @@ export class PixelBuffer implements DefaultPixelBuffer {
       maxSize = 2048
     } = options;
 
+    assertMaxSize(maxSize);
+    assertSize(size, maxSize);
+
     this.#maxSize = maxSize;
     this.#width = size.x;
     this.#height = size.y;
-    this.#master = new Uint8ClampedArray(maxSize * maxSize * 4);
-    this.#working = new Uint8ClampedArray(size.x * size.y * 4);
+    this.#master = new Uint8ClampedArray(
+      maxSize * maxSize * 4
+    );
+    this.#working = new Uint8ClampedArray(
+      size.x * size.y * 4
+    );
     this.#fill(toRGBA(defaultColor));
   }
 
@@ -70,18 +103,16 @@ export class PixelBuffer implements DefaultPixelBuffer {
     const { r, g, b, a } = color;
 
     for (let i = 0; i < this.#master.length; i += 4) {
-      // Preserve a transparent origin pixel.
-      const alpha = i === 0 ? 0 : a;
       this.#master[i] = r;
       this.#master[i + 1] = g;
       this.#master[i + 2] = b;
-      this.#master[i + 3] = alpha;
+      this.#master[i + 3] = a;
 
       if (i < this.#working.length) {
         this.#working[i] = r;
         this.#working[i + 1] = g;
         this.#working[i + 2] = b;
-        this.#working[i + 3] = alpha;
+        this.#working[i + 3] = a;
       }
     }
   }
@@ -96,7 +127,11 @@ export class PixelBuffer implements DefaultPixelBuffer {
   resize(
     size: Vec2
   ): void {
-    const next = new Uint8ClampedArray(size.x * size.y * 4);
+    assertSize(size, this.#maxSize);
+
+    const next = new Uint8ClampedArray(
+      size.x * size.y * 4
+    );
 
     for (let y = 0; y < size.y; y++) {
       for (let x = 0; x < size.x; x++) {
@@ -129,9 +164,15 @@ export class PixelBuffer implements DefaultPixelBuffer {
     pixels: Uint8ClampedArray,
     size: Vec2
   ): void {
+    assertSize(size, this.#maxSize);
+
+    const expectedLength = size.x * size.y * 4;
     this.#width = size.x;
     this.#height = size.y;
-    this.#working = Uint8ClampedArray.from(pixels);
+    this.#working = new Uint8ClampedArray(expectedLength);
+    this.#working.set(pixels.subarray(0, expectedLength));
+    this.#master.fill(0);
+    this.copyToMaster();
   }
 
   /**
@@ -239,6 +280,15 @@ export class PixelBuffer implements DefaultPixelBuffer {
     x: number,
     y: number
   ): [number, number, number, number] {
+    if (
+      !Number.isInteger(x) ||
+      !Number.isInteger(y) ||
+      x < 0 || x >= this.#width ||
+      y < 0 || y >= this.#height
+    ) {
+      return [0, 0, 0, 0];
+    }
+
     const index = (y * this.#width + x) * 4;
 
     return [

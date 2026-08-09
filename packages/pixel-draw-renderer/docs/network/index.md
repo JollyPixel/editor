@@ -1,84 +1,50 @@
-# Network Sync
+# Network synchronization
 
-Multiplayer sync for one `PixelArtCanvas` per session, with server-authoritative state.
+The network API synchronizes one `PixelArtCanvas` through one `@jolly-pixel/network` room. `PixelSyncServer` owns the authoritative `PixelBuffer`; each browser uses a `PixelSyncClient` to apply snapshots and exchange committed edits.
 
-## Read This First
+Cursor and in-progress edit previews are optional. They use the room's presence channel and never change the authoritative buffer.
 
-1. One `PixelSyncServer` owns one `PixelBuffer`.
-2. One `PixelSyncClient` owns one `PixelArtCanvas`.
-3. One room maps to one shared buffer.
+## Guides
 
-If you sync 3 canvases, run 3 rooms.
+- [Set up synchronization](./guides/setup.md) covers the server, browser client, startup order, readiness and teardown.
+- [Add presence previews](./guides/presence.md) adds cursors, stroke ghosts, UV drags and selection previews to the same room.
 
-## 60-Second Setup
+Start with the setup guide. The API reference is useful when wrapping these classes in application lifecycle code or building a custom transport adapter.
 
-### Server
+## API reference
 
-```ts
-import { defineConfig } from "vite";
-import {
-  createWebSocketNetworkPlugin
-} from "@jolly-pixel/network/plugins/vite.ts";
-import {
-  PixelBuffer,
-  PixelSyncServer
-} from "@jolly-pixel/pixel-draw.renderer";
-
-export default defineConfig({
-   plugins: [
-      createWebSocketNetworkPlugin({
-         extensions: [
-            new PixelSyncServer({
-               id: "pixel-draw:main",
-               buffer: new PixelBuffer({
-                size: { x: 80, y: 80 }
-              })
-            })
-         ]
-      })
-   ]
-});
-```
-
-### Client
-
-```ts
-import * as network from "@jolly-pixel/network";
-import {
-   PixelSyncClient,
-   type PixelNetworkCommand,
-   type PixelServerMessage
-} from "@jolly-pixel/pixel-draw.renderer";
-
-const wsProtocol = location.protocol === "https:" ? "wss:" : "ws:";
-const networkClient = new network.Client({
-  url: `${wsProtocol}//${location.host}/ws-sync`
-});
-const room = networkClient.room<PixelNetworkCommand, PixelServerMessage>(
-   "pixel-draw:main"
-);
-
-const syncClient = new PixelSyncClient({ room });
-syncClient.attach(canvas);
-```
-
-## How It Behaves
-
-1. Local edits on the canvas emit buffer events.
-2. `PixelSyncClient` stamps `clientId`, `seq`, and `timestamp` and sends.
-3. `PixelSyncServer` validates, resolves conflicts, applies, then broadcasts.
-4. Clients apply remote commands without re-broadcasting, so no echo loop.
-
-On connect, the server immediately sends a snapshot so late joiners catch up.
-
-## Cursor Tracking
-
-Multiplayer cursors ride the same room, no server extension needed — presence is relayed by `network.Room` itself. See [PixelCursorSync](./PixelCursorSync.md).
-
-## What To Read Next
-
-| File | Use it when |
+| Page | API |
 |---|---|
-| [PixelSyncClient](./PixelSyncClient.md) | You are wiring client lifecycle (`attach`/`detach`/`destroy`) |
-| [PixelSyncServer](./PixelSyncServer.md) | You are wiring server rooms and authoritative buffers |
-| [PixelCursorSync](./PixelCursorSync.md) | You want to show peers' live cursors on the canvas |
+| [`PixelSyncClient`](./api/PixelSyncClient.md) | Client attachment, readiness and snapshot events |
+| [`PixelSyncServer`](./api/PixelSyncServer.md) | Authoritative state, validation and conflict resolution |
+| [Presence sync](./api/PresenceSync.md) | `PixelCursorSync`, `PixelStrokeGhostSync`, `UVGhostSync` and `SelectionGhostSync` |
+| [Canvas integration](./api/CanvasIntegration.md) | Hooks and remote-application methods used by custom adapters |
+
+## Supported imports
+
+Browser code can import the client classes and wire types from the package root:
+
+```ts
+import {
+  PixelCursorSync,
+  PixelStrokeGhostSync,
+  PixelSyncClient,
+  SelectionGhostSync,
+  UVGhostSync,
+  type PixelBufferSnapshot,
+  type PixelNetworkCommand,
+  type PixelServerMessage
+} from "@jolly-pixel/pixel-draw.renderer";
+```
+
+Server code uses the server-only entry point:
+
+```ts
+import {
+  PixelSyncServer,
+  applyCommandToBuffer,
+  type PixelSyncServerOptions
+} from "@jolly-pixel/pixel-draw.renderer/network/server.ts";
+```
+
+`PixelSyncServer` is excluded from the package root because it imports the Node.js side of `@jolly-pixel/network`.

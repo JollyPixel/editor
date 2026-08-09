@@ -3,7 +3,7 @@ import type { Brush, BrushColorSlot } from "./Brush.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import type { EditPipeline } from "../sync/EditPipeline.ts";
 import { rgbToHex, toRGBA } from "../utils/colors.ts";
-import type { RGBA, Vec2 } from "../types.ts";
+import type { PeerStrokePixel, RGBA, Vec2 } from "../types.ts";
 
 export interface BrushControllerOptions {
   brush: Brush;
@@ -11,6 +11,8 @@ export interface BrushControllerOptions {
   /** The display canvas the `colorpicked` event is dispatched on. */
   canvas: HTMLCanvasElement;
   pipeline: EditPipeline;
+  /** Called with the live stroke's pixels as they change, for peer streaming. */
+  onProgress?: (pixels: PeerStrokePixel[]) => void;
 }
 
 /**
@@ -31,6 +33,7 @@ export class BrushController implements BrushTool {
   #canvasBuffer: CanvasBuffer;
   #canvas: HTMLCanvasElement;
   #pipeline: EditPipeline;
+  #onProgress?: (pixels: PeerStrokePixel[]) => void;
 
   #strokeDirty = new Map<string, Vec2>();
   #strokeBefore = new Map<string, RGBA>();
@@ -45,6 +48,7 @@ export class BrushController implements BrushTool {
     this.#canvasBuffer = options.canvasBuffer;
     this.#canvas = options.canvas;
     this.#pipeline = options.pipeline;
+    this.#onProgress = options.onProgress;
   }
 
   /**
@@ -121,6 +125,8 @@ export class BrushController implements BrushTool {
     this.#canvasBuffer.copyToMaster();
     this.#commit();
     this.#activeSlot = null;
+    // Drops any rAF-queued pre-commit ghost tick — see PixelStrokeGhostSync.
+    this.#onProgress?.([]);
   }
 
   #stamp(
@@ -144,6 +150,18 @@ export class BrushController implements BrushTool {
     this.#canvasBuffer.drawPixels(affected, rgba);
 
     this.#strokeColor ??= rgba;
+    this.#onProgress?.(this.#currentStrokePixels());
+  }
+
+  #currentStrokePixels(): PeerStrokePixel[] {
+    const color = this.#strokeColor;
+    if (!color) {
+      return [];
+    }
+
+    return [...this.#strokeDirty.values()].map((pos) => {
+      return { ...pos, color };
+    });
   }
 
   #commit(): void {

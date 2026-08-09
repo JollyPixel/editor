@@ -9,12 +9,15 @@ import type {
 } from "./Brush.ts";
 import type { EditPipeline } from "../sync/EditPipeline.ts";
 import type { LinePreviewOverlay } from "../rendering/overlays/LinePreviewOverlay.ts";
-import type { Vec2 } from "../types.ts";
+import { toRGBA } from "../utils/colors.ts";
+import type { PeerStrokePixel, Vec2 } from "../types.ts";
 
 export interface LineControllerOptions {
   brush: Brush;
   linePreview: LinePreviewOverlay;
   pipeline: EditPipeline;
+  /** Called with the live drag's pixels as they change, for peer streaming. */
+  onProgress?: (pixels: PeerStrokePixel[]) => void;
 }
 
 /**
@@ -25,6 +28,7 @@ export class LineController {
   #brush: Brush;
   #linePreview: LinePreviewOverlay;
   #pipeline: EditPipeline;
+  #onProgress?: (pixels: PeerStrokePixel[]) => void;
 
   #lastCursorPos: Vec2 | null = null;
   #isShiftHeld = false;
@@ -36,6 +40,7 @@ export class LineController {
     this.#brush = options.brush;
     this.#linePreview = options.linePreview;
     this.#pipeline = options.pipeline;
+    this.#onProgress = options.onProgress;
   }
 
   get isArmed(): boolean {
@@ -97,6 +102,8 @@ export class LineController {
       this.#stampLinePixels(points),
       colorSlot
     );
+    // Drops any rAF-queued pre-commit ghost tick — see PixelStrokeGhostSync.
+    this.#onProgress?.([]);
 
     if (this.#isShiftHeld) {
       this.#line.arm(
@@ -127,6 +134,15 @@ export class LineController {
       this.#linePreview.drawLine(
         points[0],
         points.at(-1) ?? points[0]
+      );
+
+      const color = toRGBA(
+        this.#brush[this.#colorSlot].asString()
+      );
+      this.#onProgress?.(
+        this.#stampLinePixels(points).map((pos) => {
+          return { ...pos, color };
+        })
       );
     }
   }

@@ -22,7 +22,11 @@ export class LinePreviewOverlay {
     brush: BrushHighlight
   ) {
     this.#viewport = viewport;
-    const [outline, inline] = this.#init(svg, brush);
+
+    const [outline, inline] = this.#init(
+      svg,
+      brush
+    );
     this.#outline = outline;
     this.#inline = inline;
   }
@@ -37,14 +41,22 @@ export class LinePreviewOverlay {
     };
 
     const outline = document.createElementNS(SVG_NS, "line");
-    Object.assign(outline.style, defaultStyle, { strokeWidth: 4 });
+    Object.assign(
+      outline.style,
+      defaultStyle,
+      { strokeWidth: 4 }
+    );
     outline.setAttribute("stroke", brush.colorOutline);
     outline.setAttribute("vector-effect", "non-scaling-stroke");
     outline.setAttribute("visibility", "hidden");
     svg.appendChild(outline);
 
     const inline = document.createElementNS(SVG_NS, "line");
-    Object.assign(inline.style, defaultStyle, { strokeWidth: 2 });
+    Object.assign(
+      inline.style,
+      defaultStyle,
+      { strokeWidth: 2 }
+    );
     inline.setAttribute("stroke", brush.colorInline);
     inline.setAttribute("vector-effect", "non-scaling-stroke");
     inline.setAttribute("visibility", "hidden");
@@ -59,6 +71,7 @@ export class LinePreviewOverlay {
   ): void {
     const zoom = this.#viewport.zoom.value;
     const camera = this.#viewport.camera;
+
     const x1 = (start.x + 0.5) * zoom + camera.x;
     const y1 = (start.y + 0.5) * zoom + camera.y;
     const x2 = (end.x + 0.5) * zoom + camera.x;
@@ -74,7 +87,13 @@ export class LinePreviewOverlay {
   }
 
   clear(): void {
-    this.#outline.setAttribute("visibility", "hidden");
-    this.#inline.setAttribute("visibility", "hidden");
+    this.#outline.setAttribute(
+      "visibility",
+      "hidden"
+    );
+    this.#inline.setAttribute(
+      "visibility",
+      "hidden"
+    );
   }
 }

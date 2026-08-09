@@ -230,16 +230,22 @@ describe("UVMap — delete", () => {
     assert.strictEqual(events.length, 0);
   });
 
-  test("clears selectedRegionId and selectedFace when the selected region is deleted", () => {
+  test("clears selection and emits selection-changed when the selected region is deleted", () => {
     const map = makeMap();
     const region = map.create({ width: 4, height: 4 });
     map.uncollapse(region.id);
     map.select(region.id, "top");
+    const events: EventPayload<"selection-changed">[] = [];
+    map.on("selection-changed", (e) => events.push(e));
 
     map.delete(region.id);
 
     assert.strictEqual(map.selectedRegionId, null);
     assert.strictEqual(map.selectedFace, null);
+    assert.deepStrictEqual(events, [{
+      selectedRegionId: null,
+      selectedFace: null
+    }]);
   });
 });
 
@@ -465,7 +471,7 @@ describe("UVMap — uncollapse / collapse", () => {
     assert.deepStrictEqual(events[0].previous, region.toJSON());
   });
 
-  test("collapse keeps the requested face and discards the others", () => {
+  test("collapse uses the requested face as the shared rectangle", () => {
     const map = makeMap();
     const region = map.create({ width: 4, height: 4 });
     map.uncollapse(region.id);
@@ -520,7 +526,7 @@ describe("UVMap — uncollapse / collapse", () => {
     assert.deepStrictEqual(
       stored.rectFor("top"),
       { x: 12, y: 12, width: 4, height: 4 },
-      "a discarded face must come back"
+      "the previous face layout must come back"
     );
     assert.deepStrictEqual(created, [], "restoring state is not a creation");
   });
@@ -566,6 +572,32 @@ describe("UVMap — selectedFace", () => {
     map.select(region.id, "bottom");
 
     assert.strictEqual(map.selectedFace, "bottom");
+  });
+
+  test("defaults to the first active face for custom topology", () => {
+    const map = makeMap();
+    const region = map.create({
+      width: 4,
+      height: 4,
+      activeFaces: ["top", "left"]
+    });
+
+    map.select(region.id);
+
+    assert.strictEqual(map.selectedFace, "left");
+  });
+
+  test("replaces an inactive requested face with the first active face", () => {
+    const map = makeMap();
+    const region = map.create({
+      width: 4,
+      height: 4,
+      activeFaces: ["top", "left"]
+    });
+
+    map.select(region.id, "front");
+
+    assert.strictEqual(map.selectedFace, "left");
   });
 
   test("is renormalized when the selected region collapses", () => {

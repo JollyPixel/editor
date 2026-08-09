@@ -5,7 +5,11 @@ export {
 } from "./tools/Brush.ts";
 export type { BrushTool } from "./tools/BrushController.ts";
 export type { FillTool } from "./tools/FillController.ts";
-export type { SelectTool } from "./tools/SelectController.ts";
+export type {
+  SelectControllerEvent,
+  SelectionProgressEvent,
+  SelectTool
+} from "./tools/SelectController.ts";
 export type { Toolset } from "./tools/Tools.ts";
 export {
   PixelArtCanvas,
@@ -17,6 +21,7 @@ export {
   PixelBuffer,
   type PixelBufferOptions
 } from "./buffer/PixelBuffer.ts";
+export type { DefaultPixelBuffer } from "./buffer/types.ts";
 export type {
   PixelBufferHookAction,
   PixelBufferHookEvent,
@@ -30,8 +35,13 @@ export type {
   HistoryEntry,
   HistoryEntryInput,
   HistoryResizedEntry,
+  HistorySelectEditEntry,
   HistoryStrokeEntry,
-  HistoryTextureReplacedEntry
+  HistoryTextureReplacedEntry,
+  HistoryUvCreateEntry,
+  HistoryUvDeleteEntry,
+  HistoryUvMoveEntry,
+  HistoryUvStateEntry
 } from "./history/HistoryStack.types.ts";
 export type {
   DefaultViewport
@@ -41,6 +51,8 @@ export {
   type ZoomOptions
 } from "./rendering/Zoom.ts";
 export type {
+  ColorInput,
+  PeerStrokePixel,
   RGBA,
   SelectionRect,
   Vec2
@@ -60,6 +72,7 @@ export {
   type UVMapEventType,
   type UVMapListener,
   type UVMapOptions,
+  type UVFaceGeometryTemplate,
   type UVRegionCreateOptions
 } from "./uv/UVMap.ts";
 export {
@@ -73,6 +86,7 @@ export {
   type UVTriangle,
   type UVTriangleCorner
 } from "./uv/UVRegion.ts";
+export { UVRegionCollection } from "./uv/UVRegionCollection.ts";
 // PixelSyncServer is deliberately not re-exported here: it value-imports
 // @jolly-pixel/network's server root (worker_threads and friends), and this
 // barrel is consumed by browser bundles. Import it from
@@ -80,7 +94,9 @@ export {
 export type {
   PixelBufferSnapshot,
   PixelNetworkCommand,
-  PixelServerMessage
+  PixelServerMessage,
+  SelectionGhostPayload,
+  UVGhostPayload
 } from "./network/types.ts";
 export { applyCommandToBuffer } from "./network/PixelCommandApplier.ts";
 export type {
@@ -91,3 +107,15 @@ export type {
   PixelCursorSyncOptions
 } from "./network/PixelCursorSync.ts";
 export { PixelCursorSync } from "./network/PixelCursorSync.ts";
+export type {
+  PixelStrokeGhostSyncOptions
+} from "./network/PixelStrokeGhostSync.ts";
+export { PixelStrokeGhostSync } from "./network/PixelStrokeGhostSync.ts";
+export type {
+  UVGhostSyncOptions
+} from "./network/UVGhostSync.ts";
+export { UVGhostSync } from "./network/UVGhostSync.ts";
+export type {
+  SelectionGhostSyncOptions
+} from "./network/SelectionGhostSync.ts";
+export { SelectionGhostSync } from "./network/SelectionGhostSync.ts";

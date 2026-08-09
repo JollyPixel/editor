@@ -24,6 +24,8 @@ Object.assign(globalThis, {
   HTMLCanvasElement: kEmulatedBrowserWindow.HTMLCanvasElement,
   Event: kEmulatedBrowserWindow.Event,
   EventTarget: kEmulatedBrowserWindow.EventTarget,
+  requestAnimationFrame: kEmulatedBrowserWindow.requestAnimationFrame.bind(kEmulatedBrowserWindow),
+  cancelAnimationFrame: kEmulatedBrowserWindow.cancelAnimationFrame.bind(kEmulatedBrowserWindow),
   getComputedStyle: () => {
     return {
       backgroundColor: "#555555"

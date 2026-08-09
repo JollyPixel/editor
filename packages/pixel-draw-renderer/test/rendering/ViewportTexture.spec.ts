@@ -28,9 +28,15 @@ describe("ViewportTexture", () => {
   describe("resize", () => {
     test("replaces the size (defensive copy)", () => {
       const texture = new ViewportTexture({
-        size: { x: 8, y: 8 }
+        size: {
+          x: 8,
+          y: 8
+        }
       });
-      const size = { x: 16, y: 32 };
+      const size = {
+        x: 16,
+        y: 32
+      };
       texture.resize(size);
       size.x = 100;
 
@@ -117,9 +123,15 @@ describe("ViewportTexture", () => {
         }
       });
 
-      assert.ok(!texture.contains({ x: -1, y: 0 }));
-      assert.ok(!texture.contains({ x: 0, y: 16 }));
-      assert.ok(!texture.contains({ x: 16, y: 0 }));
+      assert.ok(
+        !texture.contains({ x: -1, y: 0 })
+      );
+      assert.ok(
+        !texture.contains({ x: 0, y: 16 })
+      );
+      assert.ok(
+        !texture.contains({ x: 16, y: 0 })
+      );
     });
   });
 });

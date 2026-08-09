@@ -1,139 +1,95 @@
 # Brush
 
-Manages primary/secondary colors, brush size, and highlight colors. Computes texture-space pixels covered per stroke. Left-click → `primary`; right-click → `secondary`.
+Stores the colors, size and highlight colors used by the drawing tools. `PixelArtCanvas` exposes it as `canvas.brush`.
 
-> Reached via `PixelArtCanvas.brush`. For color-picking (`pickArmed` / `pick`), see [BrushTool.md](./BrushTool.md).
+```ts
+canvas.brush.primary.set("#ff6600", 0.8);
+canvas.brush.secondary.set("#3366ff");
+canvas.brush.size = 3;
+```
+
+Paint mode uses `primary` for left-click strokes and `secondary` for right-click strokes. See [`BrushTool`](./BrushTool.md) for color picking.
 
 ## Types
 
 ```ts
-new Brush(options: BrushOptions)
+new Brush(options?: BrushOptions)
 
-export type ColorInput = string | Color; // Color is colorjs.io's Color class
-export type BrushColorSlot = "primary" | "secondary";
+type ColorInput = string | Color;
 
-export interface BrushOptions {
-  /**
-   * Base primary color of the brush. Accepts a CSS color string (hex, rgb(), hsl(),
-   * named color, ...) or a colorjs.io `Color` instance.
-   * Opacity can be controlled separately with `primary.opacity`.
-   * @default "#000000"
-   */
+interface BrushOptions {
   color?: ColorInput;
-  /**
-   * Base secondary color of the brush, applied by a right-click stroke.
-   * @default "#FFFFFF"
-   */
   secondaryColor?: ColorInput;
-  /**
-   * Size of the brush in pixels. Must be a positive integer.
-   * The actual affected area will be a square of `size x size` pixels centered around the target pixel.
-   * @default 32
-   */
   size?: number;
-  /**
-   * Maximum allowed size for the brush. This is used to constrain the `size` property.
-   * Must be a positive integer. If `size` is set higher than `maxSize`, it will be clamped to `maxSize`.
-   * @default 32
-   */
   maxSize?: number;
-  /**
-   * Highlight colors for the brush preview.
-   * These colors are used to render the brush outline and fill when hovering over the canvas.
-   * @default { colorInline: "#FFF", colorOutline: "#000" }
-   */
   highlight?: {
     colorInline?: ColorInput;
     colorOutline?: ColorInput;
   };
 }
+
+interface BrushColor {
+  set(color: ColorInput, opacity?: number): void;
+  asString(format?: "rgba" | "hex"): string;
+  get opacity(): number;
+  set opacity(value: number);
+}
 ```
 
-## `primary` / `secondary`
+`ColorInput` accepts a CSS color string or a [colorjs.io](https://colorjs.io) `Color` instance.
+
+The primary color defaults to `"#000000"` and the secondary color to `"#FFFFFF"`. Both `size` and `maxSize` default to `32`. Highlight colors default to a white inner stroke and black outer stroke.
+
+## Properties
+
+### `primary` / `secondary`
 
 ```ts
 readonly primary: BrushColor
 readonly secondary: BrushColor
 ```
 
-Color+opacity pair. API:
+Each slot stores a color and opacity. `set()` preserves the current opacity when its second argument is omitted. Opacity is clamped to `[0, 1]`.
 
-```ts
-set(color: ColorInput, opacity?: number): void
-asString(format?: "rgba" | "hex"): string
-get/set opacity: number
-```
-
-- `set(color, opacity?)`: sets the color from a CSS color string or a colorjs.io `Color` instance. If `opacity` is omitted, the current opacity is preserved; otherwise it's clamped to `[0, 1]` and applied alongside the new color.
-- `set`: color from CSS string or colorjs.io `Color`. Omit `opacity` to preserve it; otherwise clamped to `[0, 1]`.
-- `asString`: defaults to `rgba(r,g,b,a)`; pass `"hex"` for 6-digit hex (no opacity).
-- `opacity`: clamped to `[0, 1]` on write.
-
-```ts
-brush.primary.set("#FF6600");
-brush.primary.opacity = 0.8;
-brush.secondary.set("#3366FF", 1);
-```
-
----
-
-### `swapColors`
-
-```ts
-swapColors(): void
-```
-
-Swaps `primary` ↔ `secondary` (color and opacity).
-
----
+`asString()` returns `rgba(r, g, b, a)` by default. Pass `"hex"` for a six-digit hex color without opacity.
 
 ### `size`
 
 ```ts
 get size(): number
-set size(size: number)
+set size(value: number)
 ```
 
-Brush size in pixels. Clamped to `[1, maxSize]`.
+Brush size in pixels, clamped to `[1, maxSize]`. Values are not rounded, so use whole numbers for pixel-aligned brushes.
 
----
-
-### `colorInline`
+### `colorInline` / `colorOutline`
 
 ```ts
 get colorInline(): string
-set colorInline(color: ColorInput)
-```
+set colorInline(value: ColorInput)
 
-Inner stroke color of the SVG brush cursor overlay.
-
----
-
-### `colorOutline`
-
-```ts
 get colorOutline(): string
-set colorOutline(color: ColorInput)
+set colorOutline(value: ColorInput)
 ```
 
-Outer stroke color of the SVG brush cursor overlay.
+Colors for the inner and outer strokes of the brush cursor.
 
----
+## Methods
 
-### `affectedPixels`
+### `swapColors()`
 
 ```ts
-affectedPixels(cx: number, cy: number): IterableIterator<Vec2>
+swapColors(): void
 ```
 
-Yields texture-space `{ x, y }` coords for every pixel in the brush square at `(cx, cy)`. Single-use: iterate once or spread into an array.
+Exchanges the primary and secondary colors, including their opacity.
 
-- Odd size: center is exactly `(cx, cy)`.
-- Even size: offset by `-0.5` to stay grid-aligned.
+### `affectedPixels(x, y)`
 
 ```ts
-// size = 3 → 9 pixels around (10, 10)
-canvasBuffer.drawPixels(brush.affectedPixels(10, 10), { r: 255, g: 0, b: 0, a: 255 });
-// Reuse:
-const pixels = [...brush.affectedPixels(10, 10)];
+affectedPixels(x: number, y: number): IterableIterator<Vec2>
 ```
+
+Yields the coordinates covered by the brush square. Odd sizes are centered on `(x, y)`; even sizes place the extra half to the left and above. Coordinates are not clipped to the texture bounds.
+
+The returned iterator is single-use. Spread it into an array when the coordinates need to be reused.

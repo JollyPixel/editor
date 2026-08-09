@@ -13,8 +13,7 @@ export function clamp(
 }
 
 /**
- * Clamps a rect's width/height to `size` (minimum 1), then clamps its
- * position so the (possibly shrunk) rect stays within bounds.
+ * Clamps width/height to `size` (min 1) then clamps position to stay in bounds.
  */
 export function clampRectSize(
   rect: SelectionRect,
@@ -36,8 +35,7 @@ export function clampRectSize(
 }
 
 /**
- * Clamps a rect's position to keep it within `size`, leaving its
- * width/height untouched.
+ * Clamps rect position to stay within `size`, leaving width/height unchanged.
  */
 export function clampRectPosition(
   rect: SelectionRect,
@@ -51,8 +49,7 @@ export function clampRectPosition(
 }
 
 /**
- * Returns the portion of `rect` inside `size`, or `null` when they do not
- * overlap.
+ * Returns the portion of `rect` inside `size`, or `null` if no overlap.
  */
 export function clipRectToBounds(
   rect: SelectionRect,
@@ -62,7 +59,10 @@ export function clipRectToBounds(
   const minY = Math.max(0, rect.y);
   const maxX = Math.min(size.x, rect.x + rect.width);
   const maxY = Math.min(size.y, rect.y + rect.height);
-  if (maxX <= minX || maxY <= minY) {
+  if (
+    maxX <= minX ||
+    maxY <= minY
+  ) {
     return null;
   }
 
@@ -102,4 +102,42 @@ export function vec2Equal(
   }
 
   return a.x === b.x && a.y === b.y;
+}
+
+/**
+ * Position key set for cheap repeated membership checks.
+ * Build once per reconciliation pass, reuse across all peer ghosts.
+ */
+export function positionKeySet(
+  positions: Vec2[]
+): Set<string> {
+  return new Set(
+    positions.map(({ x, y }) => `${x},${y}`)
+  );
+}
+
+/**
+ * Whether any cell in `rect` (masked cells only when `mask` given) falls
+ * in `committed`. Content-based match because presence peer ids and command
+ * ids are not guaranteed to match.
+ */
+export function rectOverlapsPositionKeys(
+  rect: SelectionRect,
+  mask: boolean[] | null,
+  committed: Set<string>
+): boolean {
+  for (let y = 0; y < rect.height; y++) {
+    for (let x = 0; x < rect.width; x++) {
+      if (mask && !mask[(y * rect.width) + x]) {
+        continue;
+      }
+
+      const key = `${rect.x + x},${rect.y + y}`;
+      if (committed.has(key)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }

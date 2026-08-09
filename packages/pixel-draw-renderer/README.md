@@ -6,18 +6,22 @@
   JollyPixel Pixel Art canvas renderer
 </p>
 
+<p align="center">
+<img src="./docs/ui-preview.png">
+</p>
+
 ## 📌 About
 
 Browser-based library for editing pixel-art textures: brush, fill, select, and UV region tools, undo/redo, zoom/pan, and optional real-time multiplayer sync, all behind a single `PixelArtCanvas` API.
 
 ## 💡 Features
 
-- **Brush painting**: adjustable size, opacity, and primary/secondary color (CSS string or a [colorjs.io][colorjs] `Color` instance)
+- **Brush painting**: adjustable size, opacity, and primary/secondary color
 - **Paint-bucket fill**: flood-fill a connected region of same-colored pixels
-- **Rectangle select**: drag to select a region
+- **Rectangle and shape select**: drag out a rectangle or select a connected region
 - **UV regions**: create/move/delete rectangular UV regions independently of painting, via the `uv` value object;
 - **Undo/redo**: optional bounded history over strokes, resizes, texture replaces, and UV region changes;
-- **Zoom & pan**: mouse-wheel and trackpad-pinch zoom with configurable sensitivity and range;
+- **Zoom & pan**: wheel-based zoom with configurable sensitivity and range, plus middle-drag and `Space`+left-drag panning;
 - **Transparency support**: checkerboard background renders beneath transparent pixels
 - **Network sync**: transport-agnostic, server-authoritative multiplayer. Multiple clients can paint the same texture in real time
 
@@ -38,7 +42,11 @@ import {
   PixelArtCanvas
 } from "@jolly-pixel/pixel-draw.renderer";
 
-const container = document.getElementById("editor-container")!;
+const container = document.querySelector<HTMLDivElement>("#editor-container");
+if (!container) {
+  throw new Error("Missing #editor-container");
+}
+
 const manager = new PixelArtCanvas(container, {
   texture: {
     size: { x: 64, y: 64 }
@@ -84,10 +92,10 @@ manager.texture = img;
 - `"paint"`: draw with the brush
 - `"move"`: pan the camera
 - `"fill"`: flood-fill the clicked region
-- `"select"`: select, move, copy, and delete a rectangular region
+- `"select"`: select, move, copy, and delete a rectangular or shape-selected region; set `manager.tools.select.shape = true` for connected-region selection
 - `"uv"`: select and drag UV regions; regions are created programmatically via `manager.uv.create(...)`, not by clicking
 
-Panning and zooming (mouse wheel, trackpad pinch/drag) work from any mode, regardless of the current `mode`. In `"paint"` mode, hold `Ctrl` while scrolling to increase (scroll up) or decrease (scroll down) the brush size instead of zooming.
+Wheel input zooms from any mode unless it arrives with `Ctrl` in `"paint"` mode. Middle-drag or `Space`+left-drag pans from any mode; a plain left-drag pans only in `"move"` mode. In `"paint"` mode, `Ctrl`+wheel input increases (scroll up) or decreases (scroll down) the brush size. Any trackpad gesture reported as `Ctrl`+wheel input follows the same rule.
 
 > [!TIP]
 > Read [PixelArtCanvas.md](./docs/PixelArtCanvas.md#mode) for the full behavior, and the [Keybinds](#keybinds) section below for exact shortcuts.
@@ -159,14 +167,11 @@ manager.redo();
 - [`Keybindings`](./docs/input/Keybindings.md)
 - [`Network`](./docs/network/index.md)
 
-> [!NOTE]
-> Looking for a drop-in UI? See [`PixelDrawPanel`](../editors/pixel-art/docs/ui/PixelDrawPanel.md) in `@jolly-pixel/editor.pixel-art`: this package stays focused on the headless API.
+### Internal
 
-### Advanced / Internal
-
-Useful, but generally more internal-facing APIs:
-
-- [`UVMap`](./docs/uv/UVMap.md)
+- UV
+  - [`UVMap`](./docs/uv/UVMap.md)
+  - [`UVRegion`](./docs/uv/UVRegion.md)
 - [`HistoryStack`](./docs/history/HistoryStack.md)
 
 ## 🧩 Types
@@ -180,6 +185,7 @@ type Vec2 = {
 };
 
 type Mode = "paint" | "move" | "fill" | "select" | "uv";
+type ColorInput = string | Color;
 
 interface SelectionRect {
   x: number;
@@ -188,7 +194,12 @@ interface SelectionRect {
   height: number;
 }
 
-interface RGBA { r: number; g: number; b: number; a: number; }
+export interface RGBA {
+  r: number;
+  g: number;
+  b: number;
+  a: number;
+}
 ```
 
 ## Contributors Guide
@@ -199,7 +210,7 @@ Once you have finished your development, check that the tests (and linter) are s
 
 ```bash
 $ npm run test
-$ npm run lint
+$ npm run lint # run at the root of .git repository
 ```
 
 > [!CAUTION]

@@ -42,22 +42,36 @@ export class PixelCursorSync {
   #getLabel: (identity: network.PeerMetadata) => string | undefined;
   #palette = new ColorPalette();
   #canvas: PixelArtCanvas | undefined;
+  #previousHandler: ((pos: Vec2 | null) => void) | undefined;
   #lastSent: Vec2 | null | undefined;
+  #renderedPeers = new Set<string>();
+
+  #handleCursorMove = (
+    pos: Vec2 | null
+  ): void => {
+    this.#previousHandler?.(pos);
+    this.#reportLocal(pos);
+  };
 
   #onPeerJoined = (
     event: network.RoomPeerEvent
   ): void => {
     this.#syncPeer(event.clientId);
   };
+
   #onPeerLeft = (
     event: network.RoomPeerEvent
   ): void => {
-    this.#canvas?.peerCursors.remove(event.clientId);
+    this.#removePeer(event.clientId);
   };
+
   #onPeerPresence = (
     event: network.RoomPeerPresenceEvent
   ): void => {
-    this.#applyPresencePatch(event.clientId, event.patch);
+    this.#applyPresencePatch(
+      event.clientId,
+      event.patch
+    );
   };
 
   constructor(
@@ -66,9 +80,18 @@ export class PixelCursorSync {
     this.#room = options.room;
     this.#getLabel = options.getLabel ?? defaultGetLabel;
 
-    this.#room.on("peer-joined", this.#onPeerJoined);
-    this.#room.on("peer-left", this.#onPeerLeft);
-    this.#room.on("peer-presence", this.#onPeerPresence);
+    this.#room.on(
+      "peer-joined",
+      this.#onPeerJoined
+    );
+    this.#room.on(
+      "peer-left",
+      this.#onPeerLeft
+    );
+    this.#room.on(
+      "peer-presence",
+      this.#onPeerPresence
+    );
   }
 
   attach(
@@ -79,7 +102,8 @@ export class PixelCursorSync {
     }
 
     this.#canvas = canvas;
-    canvas.onCursorMove = (pos) => this.#reportLocal(pos);
+    this.#previousHandler = canvas.onCursorMove;
+    canvas.onCursorMove = this.#handleCursorMove;
     for (const clientId of this.#room.peers.keys()) {
       this.#syncPeer(clientId);
     }
@@ -90,16 +114,28 @@ export class PixelCursorSync {
       return;
     }
 
-    this.#canvas.onCursorMove = undefined;
+    this.#canvas.onCursorMove = this.#previousHandler;
+    this.#clearPeers();
     this.#canvas = undefined;
+    this.#previousHandler = undefined;
     this.#lastSent = undefined;
   }
 
   destroy(): void {
     this.detach();
-    this.#room.off("peer-joined", this.#onPeerJoined);
-    this.#room.off("peer-left", this.#onPeerLeft);
-    this.#room.off("peer-presence", this.#onPeerPresence);
+
+    this.#room.off(
+      "peer-joined",
+      this.#onPeerJoined
+    );
+    this.#room.off(
+      "peer-left",
+      this.#onPeerLeft
+    );
+    this.#room.off(
+      "peer-presence",
+      this.#onPeerPresence
+    );
   }
 
   #reportLocal(
@@ -164,5 +200,20 @@ export class PixelCursorSync {
       color: this.#palette.forKey(clientId),
       label: this.#getLabel(identity)
     });
+    this.#renderedPeers.add(clientId);
+  }
+
+  #removePeer(
+    clientId: string
+  ): void {
+    this.#canvas?.peerCursors.remove(clientId);
+    this.#renderedPeers.delete(clientId);
+  }
+
+  #clearPeers(): void {
+    for (const clientId of this.#renderedPeers) {
+      this.#canvas?.peerCursors.remove(clientId);
+    }
+    this.#renderedPeers.clear();
   }
 }

@@ -22,7 +22,7 @@ export interface PixelDocumentOptions {
    */
   defaultColor?: ColorInput;
   /**
-   * Maximum master-buffer dimension.
+   * Maximum buffer dimension.
    */
   maxSize?: number;
   /**

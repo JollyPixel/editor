@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import { fromUint8Array, toUint8Array } from "js-base64";
+import {
+  fromUint8Array,
+  toUint8Array
+} from "js-base64";
 
 // Import Internal Dependencies
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";

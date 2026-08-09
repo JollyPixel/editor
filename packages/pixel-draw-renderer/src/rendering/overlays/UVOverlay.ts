@@ -1,7 +1,10 @@
 // Import Internal Dependencies
 import { SVG_NS } from "../constants.ts";
 import { contrastingColor } from "../../utils/colors.ts";
-import { geometryAt, rectOf } from "../../uv/geometry.ts";
+import {
+  geometryAt,
+  rectOf
+} from "../../uv/geometry.ts";
 import type { DefaultViewport } from "../Viewport.ts";
 import type { UVMap } from "../../uv/UVMap.ts";
 import type {
@@ -22,6 +25,7 @@ const kCasingWidth = 2;
 // Inset casing so it only shows inward.
 const kCasingInset = kCasingWidth / 2;
 const kDimOpacity = "0.45";
+const kDashArray = "6 4";
 const kSelectedFillOpacity = "0.06";
 const kLabelFontSize = 10;
 const kLabelPadding = 3;
@@ -41,11 +45,20 @@ interface RenderEntry {
   selected: boolean;
 }
 
-interface BorderStyle {
+export interface BorderStyle {
   color: string;
   strokeWidth: number;
   selected: boolean;
   dimmed: boolean;
+  /** Dashed stroke used for a peer's in-progress (uncommitted) drag ghost. */
+  dashed?: boolean;
+  /**
+   * Skips the contrasting (black/white) inner casing stroke, leaving just
+   * the plain colored line. A dashed ghost reads better as a single clean
+   * stroke than doubled up with a high-contrast casing.
+   * @default true
+   */
+  casing?: boolean;
 }
 
 function entryKey(
@@ -89,7 +102,7 @@ function regionLabel(
 /**
  * Border = colored stroke + inner contrasting casing for visibility.
  */
-class Border {
+export class Border {
   #group: SVGGElement;
   #casing: SVGGeometryElement;
   #stroke: SVGGeometryElement;
@@ -171,8 +184,12 @@ class Border {
   paint(
     style: BorderStyle
   ): void {
-    this.#casing.setAttribute("stroke", contrastingColor(style.color));
-    this.#casing.style.strokeWidth = String(style.strokeWidth + kCasingWidth);
+    const showCasing = style.casing ?? true;
+    this.#casing.style.display = showCasing ? "" : "none";
+    if (showCasing) {
+      this.#casing.setAttribute("stroke", contrastingColor(style.color));
+      this.#casing.style.strokeWidth = String(style.strokeWidth + kCasingWidth);
+    }
 
     this.#stroke.setAttribute("stroke", style.color);
     this.#stroke.style.strokeWidth = String(style.strokeWidth);
@@ -181,6 +198,15 @@ class Border {
     this.#stroke.style.fillOpacity = style.selected ? kSelectedFillOpacity : "";
 
     this.#group.style.opacity = style.dimmed ? kDimOpacity : "";
+
+    if (style.dashed) {
+      this.#stroke.setAttribute("stroke-dasharray", kDashArray);
+      this.#casing.setAttribute("stroke-dasharray", kDashArray);
+    }
+    else {
+      this.#stroke.removeAttribute("stroke-dasharray");
+      this.#casing.removeAttribute("stroke-dasharray");
+    }
   }
 
   /**
@@ -208,6 +234,7 @@ export class UVOverlay {
   #borders = new Map<string, Border>();
   #labels = new Map<string, SVGTextElement>();
   #liveOverride: { id: string; face: UVFace | null; rect: SelectionRect; } | null = null;
+  #ghostSuppressed = new Set<string>();
 
   #onRegionCreated = () => this.#render();
   #onRegionDeleted = () => this.#render();
@@ -251,6 +278,21 @@ export class UVOverlay {
    * Re-renders the current viewport (pan/zoom).
    */
   refresh(): void {
+    this.#render();
+  }
+
+  /**
+   * Replaces the set of region/face entries currently shown as a peer's live
+   * drag ghost (`PeerUVGhosts`). Their classical rendering is suppressed
+   * here so the ghost is the sole visual until it clears, instead of a
+   * stale border sitting underneath it for the whole drag.
+   */
+  setGhostSuppressed(
+    entries: Iterable<{ id: string; face: UVFace | null; }>
+  ): void {
+    this.#ghostSuppressed = new Set(
+      [...entries].map(({ id, face }) => entryKey(id, face))
+    );
     this.#render();
   }
 
@@ -334,7 +376,7 @@ export class UVOverlay {
 
     const labelled: RenderEntry[] = [];
     for (const group of groups.values()) {
-      // entries follows UV_FACES order; group[0] matches first hit target.
+      // Entries follow UV_FACES order; group[0] matches the first hit target.
       const entry = group.find((candidate) => candidate.selected) ?? group[0];
 
       if (
@@ -385,13 +427,18 @@ export class UVOverlay {
       }
 
       for (const { face, geometry } of region.facesOf()) {
+        const key = entryKey(region.id, face);
+        if (this.#ghostSuppressed.has(key)) {
+          continue;
+        }
+
         const override = this.#liveOverride;
         const overridden = override !== null &&
           override.id === region.id &&
           override.face === face;
 
         entries.push({
-          key: entryKey(region.id, face),
+          key,
           region,
           face,
           geometry: overridden ? geometryAt(geometry, override.rect) : geometry,

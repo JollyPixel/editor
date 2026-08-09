@@ -368,7 +368,12 @@ describe("FloatingSelectionOverlay", () => {
       return { overlay, changes: () => count };
     }
 
-    const kSourceRect = { x: 0, y: 0, width: 1, height: 1 };
+    const kSourceRect = {
+      x: 0,
+      y: 0,
+      width: 1,
+      height: 1
+    };
 
     test("emits on create, updatePosition, and clear", () => {
       const { overlay, changes } = makeCreated();
@@ -380,7 +385,12 @@ describe("FloatingSelectionOverlay", () => {
       });
       assert.strictEqual(changes(), 1, "create");
 
-      overlay.updatePosition({ x: 2, y: 2, width: 1, height: 1 });
+      overlay.updatePosition({
+        x: 2,
+        y: 2,
+        width: 1,
+        height: 1
+      });
       assert.strictEqual(changes(), 2, "updatePosition");
 
       overlay.clear();
@@ -398,7 +408,12 @@ describe("FloatingSelectionOverlay", () => {
     test("updatePosition does not emit when nothing is floating", () => {
       const { overlay, changes } = makeCreated();
 
-      overlay.updatePosition({ x: 1, y: 1, width: 1, height: 1 });
+      overlay.updatePosition({
+        x: 1,
+        y: 1,
+        width: 1,
+        height: 1
+      });
 
       assert.strictEqual(changes(), 0);
     });

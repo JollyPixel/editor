@@ -76,7 +76,10 @@ describe("BrushHighlightOverlay", () => {
     overlay.refresh();
 
     const group = svg.querySelector("g");
-    assert.ok(group?.getAttribute("transform")?.includes("scale(8)"));
+    assert.ok(
+      group?.getAttribute("transform")?.includes("scale(8)"),
+      "brush highlight should be scaled by brush size"
+    );
   });
 
   test("hide() hides the highlight", () => {

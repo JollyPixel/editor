@@ -1,11 +1,24 @@
 // Import Third-party Dependencies
-import { fromUint8Array } from "js-base64";
+import {
+  fromUint8Array
+} from "js-base64";
 import * as network from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import { applyCommandToBuffer } from "./PixelCommandApplier.ts";
-import { PixelBuffer } from "../buffer/PixelBuffer.ts";
-import { UV_FACES } from "../uv/UVRegion.ts";
+import {
+  applyCommandToBuffer
+} from "./PixelCommandApplier.ts";
+import {
+  isPixelNetworkAction,
+  isPixelNetworkCommand,
+  PIXEL_NETWORK_ACTIONS
+} from "./PixelCommandValidator.ts";
+import {
+  PixelBuffer
+} from "../buffer/PixelBuffer.ts";
+import {
+  UV_FACES
+} from "../uv/UVRegion.ts";
 import type {
   PixelBufferSnapshot,
   PixelNetworkCommand
@@ -23,15 +36,17 @@ export type PixelUvRegionCommand = Extract<
  * delete/state changes affect all.
  */
 function uvConflictKeys(
-  cmd: PixelUvRegionCommand
+  command: PixelUvRegionCommand
 ): string[] {
-  if (cmd.action === "uv-region-moved") {
-    return [`${cmd.metadata.id}:${cmd.metadata.face ?? "*"}`];
+  if (command.action === "uv-region-moved") {
+    return [
+      `${command.metadata.id}:${command.metadata.face ?? "*"}`
+    ];
   }
 
-  const id = cmd.action === "uv-region-deleted" ?
-    cmd.metadata.id :
-    cmd.metadata.region.id;
+  const id = command.action === "uv-region-deleted" ?
+    command.metadata.id :
+    command.metadata.region.id;
 
   return [
     `${id}:*`,
@@ -40,13 +55,6 @@ function uvConflictKeys(
 }
 
 export type ClientHandle = network.ClientHandle;
-
-function isPixelNetworkCommand(
-  value: unknown
-): value is PixelNetworkCommand {
-  return typeof value === "object" && value !== null &&
-    "action" in value && "clientId" in value;
-}
 
 export interface PixelSyncServerOptions {
   /**
@@ -70,6 +78,7 @@ export interface PixelSyncServerOptions {
 export class PixelSyncServer extends network.Extension {
   readonly id: string;
   readonly name = "pixel-draw.renderer";
+  readonly events = PIXEL_NETWORK_ACTIONS;
   readonly buffer: PixelBuffer;
 
   #pixelTracker: network.ConflictTracker;
@@ -79,6 +88,7 @@ export class PixelSyncServer extends network.Extension {
     options: PixelSyncServerOptions = {}
   ) {
     super();
+
     this.id = options.id ?? "pixel-draw";
     this.buffer = options.buffer ?? new PixelBuffer({
       size: { x: 1, y: 1 }
@@ -101,11 +111,11 @@ export class PixelSyncServer extends network.Extension {
   onClientDisconnect(
     _clientId: string
   ): void {
-    // No client-list bookkeeping to clean up — Server owns that.
+    // Server owns client-list bookkeeping.
   }
 
   onMessage(
-    _clientId: string,
+    clientId: string,
     payload: unknown,
     context: network.RoomContext
   ): void {
@@ -113,43 +123,85 @@ export class PixelSyncServer extends network.Extension {
       return;
     }
 
-    this.receive(payload, context);
+    try {
+      this.receive({
+        ...payload,
+        clientId
+      }, context);
+    }
+    catch (error) {
+      if (error instanceof RangeError) {
+        return;
+      }
+
+      throw error;
+    }
+  }
+
+  override getEventName(
+    payload: unknown
+  ): string {
+    if (
+      typeof payload === "object" &&
+      payload !== null &&
+      "action" in payload &&
+      isPixelNetworkAction(payload.action)
+    ) {
+      return payload.action;
+    }
+
+    return "invalid";
   }
 
   receive(
-    cmd: PixelNetworkCommand,
+    command: PixelNetworkCommand,
     context: network.RoomContext
   ): void {
-    switch (cmd.action) {
+    switch (command.action) {
       case "stroke":
-        this.#receiveStroke(cmd, context);
+        this.#receiveStroke(
+          command,
+          context
+        );
         break;
       case "select-edit":
-        this.#receiveSelectEdit(cmd, context);
+        this.#receiveSelectEdit(
+          command,
+          context
+        );
         break;
       case "uv-region-moved":
       case "uv-region-deleted":
       case "uv-region-state-changed":
-        this.#receiveUvRegionCommand(cmd, context);
+        this.#receiveUvRegionCommand(
+          command,
+          context
+        );
         break;
       default:
-        applyCommandToBuffer(this.buffer, cmd);
-        context.room.broadcast({ type: "command", data: cmd });
+        applyCommandToBuffer(
+          this.buffer,
+          command
+        );
+        context.room.broadcast({
+          type: "command",
+          data: command
+        });
     }
   }
 
   #receiveStroke(
-    cmd: PixelStrokeCommand,
+    command: PixelStrokeCommand,
     context: network.RoomContext
   ): void {
     const accepted: PixelStrokeCommand["metadata"]["positions"] = [];
 
-    for (const position of cmd.metadata.positions) {
+    for (const position of command.metadata.positions) {
       const key = `${position.x},${position.y}`;
 
-      if (this.#pixelTracker.resolve(key, cmd) === "accept") {
+      if (this.#pixelTracker.resolve(key, command) === "accept") {
         accepted.push(position);
-        this.#pixelTracker.record(key, cmd);
+        this.#pixelTracker.record(key, command);
       }
     }
 
@@ -157,35 +209,43 @@ export class PixelSyncServer extends network.Extension {
       return;
     }
 
-    const acceptedCmd: PixelStrokeCommand = {
-      ...cmd,
+    const acceptedCommand: PixelStrokeCommand = {
+      ...command,
       metadata: {
-        ...cmd.metadata,
+        ...command.metadata,
         positions: accepted
       }
     };
 
-    applyCommandToBuffer(this.buffer, acceptedCmd);
-    context.room.broadcast({ type: "command", data: acceptedCmd });
+    applyCommandToBuffer(
+      this.buffer,
+      acceptedCommand
+    );
+    context.room.broadcast({
+      type: "command",
+      data: acceptedCommand
+    });
   }
 
   /**
    * Resolves per-pixel like `#receiveStroke`, sharing the same `#pixelTracker` history
    */
   #receiveSelectEdit(
-    cmd: PixelSelectEditCommand,
+    command: PixelSelectEditCommand,
     context: network.RoomContext
   ): void {
     const acceptedPositions: PixelSelectEditCommand["metadata"]["positions"] = [];
     const acceptedColors: PixelSelectEditCommand["metadata"]["colors"] = [];
 
-    cmd.metadata.positions.forEach((position, index) => {
+    command.metadata.positions.forEach((position, index) => {
       const key = `${position.x},${position.y}`;
 
-      if (this.#pixelTracker.resolve(key, cmd) === "accept") {
+      if (this.#pixelTracker.resolve(key, command) === "accept") {
         acceptedPositions.push(position);
-        acceptedColors.push(cmd.metadata.colors[index]);
-        this.#pixelTracker.record(key, cmd);
+        acceptedColors.push(
+          command.metadata.colors[index]
+        );
+        this.#pixelTracker.record(key, command);
       }
     });
 
@@ -193,8 +253,8 @@ export class PixelSyncServer extends network.Extension {
       return;
     }
 
-    const acceptedCmd: PixelSelectEditCommand = {
-      ...cmd,
+    const acceptedCommand: PixelSelectEditCommand = {
+      ...command,
       metadata: {
         positions: acceptedPositions,
         colors: acceptedColors
@@ -203,9 +263,12 @@ export class PixelSyncServer extends network.Extension {
 
     applyCommandToBuffer(
       this.buffer,
-      acceptedCmd
+      acceptedCommand
     );
-    context.room.broadcast({ type: "command", data: acceptedCmd });
+    context.room.broadcast({
+      type: "command",
+      data: acceptedCommand
+    });
   }
 
   /**
@@ -230,7 +293,10 @@ export class PixelSyncServer extends network.Extension {
       this.buffer,
       cmd
     );
-    context.room.broadcast({ type: "command", data: cmd });
+    context.room.broadcast({
+      type: "command",
+      data: cmd
+    });
   }
 
   snapshot(): PixelBufferSnapshot {
@@ -239,7 +305,9 @@ export class PixelSyncServer extends network.Extension {
       pixels: fromUint8Array(
         new Uint8Array(this.buffer.pixels())
       ),
-      uvRegions: [...this.buffer.uvRegions].map((region) => region.toJSON())
+      uvRegions: [
+        ...this.buffer.uvRegions
+      ].map((region) => region.toJSON())
     };
   }
 }

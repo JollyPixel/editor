@@ -1,6 +1,6 @@
 # PixelBuffer
 
-Headless RGBA pixel buffer (no DOM dependency).
+Headless RGBA pixel buffer with no DOM dependency. `PixelArtCanvas` uses an internal [`CanvasBuffer`](./CanvasBuffer.md) adapter to mirror it into an `HTMLCanvasElement`.
 
 Maintains two arrays: a `working` buffer at the current size, and a `master` buffer pre-allocated at `maxSize × maxSize`. `copyToMaster()` commits working into master; `resize()` reads back from master, so shrinking and growing again doesn't lose content.
 
@@ -16,7 +16,9 @@ interface PixelBufferOptions {
 }
 ```
 
-Pixel `(0, 0)` is always initialized fully transparent.
+The `size` dimensions and `maxSize` must be positive integers. Neither size dimension may exceed `maxSize`. Invalid values throw `RangeError`.
+
+The buffer is initialized with `defaultColor`.
 
 ## Methods
 
@@ -27,7 +29,7 @@ size(): Vec2
 resize(size: Vec2): void
 ```
 
-Returns the current working size, or resizes it (content restored from master, clipped to `maxSize`).
+Returns the current working size. `resize()` restores committed content from master. Dimensions above `maxSize` throw `RangeError`.
 
 ### `pixels()`
 
@@ -43,7 +45,7 @@ Returns the **live** working buffer (not a copy). Mutating it mutates the buffer
 replacePixels(pixels: Uint8ClampedArray, size: Vec2): void
 ```
 
-Replaces pixel data wholesale and resizes to match. Used for network snapshots and image decoding.
+Copies new pixel data into working and master storage, clears old master content, and changes the size. Missing bytes are transparent and extra bytes are ignored.
 
 ### `drawPixels(positions, color)`
 
@@ -59,7 +61,7 @@ Stamps one color across multiple positions. Out-of-bounds positions are silently
 drawRegion(rect: SelectionRect, pixels: RGBA[]): void
 ```
 
-Writes a rectangular block of per-pixel colors (row-major, `rect.width * rect.height` entries). Out-of-bounds positions skipped.
+Writes a rectangular block of row-major colors. The array contains `rect.width * rect.height` entries. Out-of-bounds positions are skipped.
 
 ### `drawMaskedRegion(rect, pixels, mask)`
 
@@ -99,46 +101,19 @@ Batch `samplePixel`. Out-of-bounds positions return `{ r: 0, g: 0, b: 0, a: 0 }`
 hasTransparency(rect: SelectionRect): boolean
 ```
 
-`true` if any pixel in `rect` isn't fully opaque (`a < 255`), including antialiased/semi-transparent pixels, not just fully-transparent ones. A `rect` extending outside the buffer counts as transparent, same as `samplePixel(s)`'s out-of-bounds convention. Uncached — rescans `rect` on every call.
+Returns `true` when `rect` contains an alpha value below `255` or extends outside the buffer. It scans the rectangle on every call.
 
-Also on `CanvasBuffer`, which delegates to this implementation.
-
-### UV Regions
+## UV regions
 
 ```ts
 readonly uvRegions: UVRegionCollection
 ```
 
-Server-side UV region storage for this buffer. Included in [`PixelSyncServer.snapshot()`](../network/PixelSyncServer.md#snapshot) so late-joining clients receive existing regions.
-
-`UVRegionCollection` is an id-keyed map of [`UVRegion`](../uv/UVRegion.md)s. It accepts instances or raw wire data and always stores instances, so `PixelCommandApplier` can reuse `withRect`/`collapse` rather than re-deriving region state server-side.
+Id-keyed [`UVRegion`](../uv/UVRegion.md) storage included in [`PixelSyncServer.snapshot()`](../network/api/PixelSyncServer.md#snapshot). `set()` accepts a `UVRegion` or raw `UVRegionData`, and the collection is iterable.
 
 ```ts
 uvRegions.get(id: string): UVRegion | undefined
-uvRegions.set(region: UVRegion | UVRegionData): void   // upserts by region.id
+uvRegions.set(region: UVRegion | UVRegionData): void
 uvRegions.remove(id: string): void
 ```
-
-Implements `Symbol.iterator`: use `[...uvRegions]` to get all regions (as `PixelSyncServer.snapshot()` does).
-
-## Hooks
-
-The hook event shape is also the network command vocabulary - every event maps directly to a network payload.
-
-| Action | Key fields | Notes |
-|---|---|---|
-| `"stroke"` | `color`, `positions` | Covers a full paint stroke, not per-stamp |
-| `"resized"` | `size` | |
-| `"texture-replaced"` | `size`, `pixels` (base64) | |
-| `"global-fill"` | `fromColor`, `toColor` | No position list; peers recompute from their own buffer |
-| `"select-edit"` | `positions`, `colors` (per-pixel) | Unlike `"stroke"`, colors are heterogeneous |
-| `"uv-region-created"` | `region` (full `UVRegionData`) | |
-| `"uv-region-deleted"` | `id` | |
-| `"uv-region-moved"` | `id`, `face`, `rect` | `face` is `null` for a collapsed region |
-| `"uv-region-state-changed"` | `region` (full `UVRegionData`) | A collapse/uncollapse; rewrites every face at once |
-
-All events carry an optional `originTimestamp`, set only during `undo()`/`redo()` replay so the network conflict policy (see [PixelSyncServer](../network/PixelSyncServer.md#conflict-policy-minimal)) re-races the edit at its original time instead of treating it as new.
-
-> [!NOTE]
-> `"global-fill"` bypasses per-pixel conflict resolution. Undoing it locally replays as a full-position `"stroke"` since exact undo requires knowing which pixels were touched.
 

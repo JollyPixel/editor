@@ -1,6 +1,10 @@
+// Import Third-party Dependencies
+import { Emitter } from "@openally/emitt";
+
 // Import Internal Dependencies
 import { Select } from "./Select.ts";
 import { ShapeSelect } from "./ShapeSelect.ts";
+import type { SelectControllerEvent } from "./SelectController.events.ts";
 import { clipRectToBounds } from "../utils/math.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import type {
@@ -16,6 +20,11 @@ import type {
   Vec2
 } from "../types.ts";
 
+export type {
+  SelectControllerEvent,
+  SelectionProgressEvent
+} from "./SelectController.events.ts";
+
 export interface SelectEditEntry {
   positions: Vec2[];
   beforeColors: RGBA[];
@@ -25,8 +34,6 @@ export interface SelectEditEntry {
   oldMask: boolean[];
   newMask: boolean[];
 }
-
-const kTransparent: RGBA = { r: 0, g: 0, b: 0, a: 0 };
 
 export interface SelectControllerOptions {
   canvasBuffer: CanvasBuffer;
@@ -61,7 +68,7 @@ export interface SelectTool {
 /**
  * Coordinates selection state, rendering, and commits.
  */
-export class SelectController implements SelectTool {
+export class SelectController extends Emitter<SelectControllerEvent> implements SelectTool {
   #select = new Select();
   #canvasBuffer: CanvasBuffer;
   #floatingSelection: FloatingSelectionOverlay;
@@ -69,10 +76,14 @@ export class SelectController implements SelectTool {
   #eraseColor: RGBA | null;
   #pipeline: EditPipeline;
   #shapeMode = false;
+  /** The dragged selection's origin rect + erase policy for progress ticks. */
+  #moveSourceRect: SelectionRect | null = null;
+  #moveBlankSource = true;
 
   constructor(
     options: SelectControllerOptions
   ) {
+    super();
     this.#canvasBuffer = options.canvasBuffer;
     this.#floatingSelection = options.floatingSelection;
     this.#selectionOverlay = options.selectionOverlay;
@@ -81,19 +92,13 @@ export class SelectController implements SelectTool {
   }
 
   /**
-   * Resolves the fill for a vacated footprint: the explicit `eraseColor`
-   * when configured, otherwise the most common color among the pixels
-   * surrounding `rect` (so it blends into the artwork), falling back to
-   * fully transparent when `rect` has no in-bounds neighbors.
+   * Resolve fill for a vacated footprint: explicit eraseColor or dominant
+   * surrounding color, falling back to transparent.
    */
   #resolveEraseColor(
     rect: SelectionRect
   ): RGBA {
-    if (this.#eraseColor !== null) {
-      return this.#eraseColor;
-    }
-
-    return Select.dominantBorderColor(this.#canvasBuffer, rect, kTransparent);
+    return Select.resolveEraseColor(this.#canvasBuffer, rect, this.#eraseColor);
   }
 
   get rect(): SelectionRect | null {
@@ -101,17 +106,14 @@ export class SelectController implements SelectTool {
   }
 
   /**
-   * Whether an existing selection is currently being dragged to a new
-   * position (as opposed to being drawn for the first time).
+   * Whether a committed selection is being dragged (not still being drawn).
    */
   get isDragging(): boolean {
     return this.#select.state === "moving";
   }
 
   /**
-   * Whether there's a committed selection to grab — idle ("selected") or
-   * actively being dragged ("moving"). `false` while a brand-new rectangle
-   * is still being drawn ("creating") or nothing is selected ("idle").
+   * Whether a committed selection exists - selected or moving, not creating.
    */
   get hasSelection(): boolean {
     return this.#select.state === "selected" || this.#select.state === "moving";
@@ -170,14 +172,17 @@ export class SelectController implements SelectTool {
     const snapshot = this.#select.snapshot;
     const mask = this.#select.mask;
     if (rect && snapshot && mask) {
+      const blankSource = !this.#select.willSkipErase;
       const eraseColor = this.#resolveEraseColor(rect);
       this.#floatingSelection.create({
         sourceRect: rect,
         pixels: snapshot,
         mask,
         eraseColor,
-        blankSource: !this.#select.willSkipErase
+        blankSource
       });
+      this.#moveSourceRect = rect;
+      this.#moveBlankSource = blankSource;
     }
   }
 
@@ -199,6 +204,8 @@ export class SelectController implements SelectTool {
       shape.mask
     );
     this.#selectionOverlay.drawMask(shape.rect, shape.mask);
+    // Shape-select resolves instantly with no command - clear peer ghost explicitly.
+    this.emit("selection-idle");
   }
 
   handleMove(
@@ -208,6 +215,7 @@ export class SelectController implements SelectTool {
       const rect = this.#select.updateCreate(pos);
       if (rect) {
         this.#selectionOverlay.drawRect(rect);
+        this.emit("selection-progress", { phase: "creating", rect });
       }
 
       return;
@@ -219,6 +227,15 @@ export class SelectController implements SelectTool {
       if (rect && mask) {
         this.#selectionOverlay.drawMask(rect, mask);
         this.#floatingSelection.updatePosition(rect);
+      }
+      if (rect && mask && this.#moveSourceRect) {
+        this.emit("selection-progress", {
+          phase: "moving",
+          sourceRect: this.#moveSourceRect,
+          liveRect: rect,
+          mask,
+          blankSource: this.#moveBlankSource
+        });
       }
     }
   }
@@ -235,6 +252,7 @@ export class SelectController implements SelectTool {
       ) {
         this.#select.clear();
         this.#selectionOverlay.clear();
+        this.emit("selection-idle");
 
         return;
       }
@@ -245,6 +263,8 @@ export class SelectController implements SelectTool {
       );
       this.#select.finishCreate(snapshot, finalRect);
       this.#selectionOverlay.drawRect(finalRect);
+      // Creation never commits a command - nothing to reconcile on peers.
+      this.emit("selection-idle");
 
       return;
     }
@@ -254,6 +274,7 @@ export class SelectController implements SelectTool {
       const mask = this.#select.mask;
       const result = this.#select.finishMove();
       this.#floatingSelection.clear();
+      this.#moveSourceRect = null;
 
       if (result && snapshot && mask) {
         this.#commitFootprintChange({
@@ -264,6 +285,12 @@ export class SelectController implements SelectTool {
           newContent: snapshot,
           skipErase: result.skipErase
         });
+        // Command already sent; drop pending ghost tick.
+        this.emit("selection-committed");
+      }
+      else {
+        // No-op drag (dropped on source) - same as creation: nothing to reconcile.
+        this.emit("selection-idle");
       }
 
       const rect = this.#select.rect;
@@ -415,9 +442,17 @@ export class SelectController implements SelectTool {
   }
 
   clear(): void {
+    const interruptedGesture = this.#select.state === "creating" || this.#select.state === "moving";
+
     this.#select.clear();
     this.#selectionOverlay.clear();
     this.#floatingSelection.clear();
+    this.#moveSourceRect = null;
+
+    // A mid-gesture interruption (e.g. mode switch) produces no command - nothing to reconcile.
+    if (interruptedGesture) {
+      this.emit("selection-idle");
+    }
   }
 
   refreshOverlay(): void {
@@ -468,9 +503,8 @@ export class SelectController implements SelectTool {
     );
     this.#canvasBuffer.copyToMaster();
 
-    // drawPixels / drawMaskedRegion above each emit "changed"; the view has
-    // already repainted. afterColors is sampled from the buffer, not the
-    // display, so it is unaffected by repaint timing.
+    // drawPixels/drawMaskedRegion already repainted; afterColors sampled
+    // from buffer, unaffected by repaint timing.
     const afterColors = this.#canvasBuffer.samplePixels(positions);
     this.#pipeline.commitSelectionEdit({
       positions,

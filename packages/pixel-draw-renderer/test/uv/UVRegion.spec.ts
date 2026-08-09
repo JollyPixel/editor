@@ -147,6 +147,59 @@ describe("UVRegion", () => {
         "iteration order drives hit-testing and paint order"
       );
     });
+
+    test("normalizes active faces to UV_FACES order", () => {
+      const rect = { ...kRect };
+      const region = new UVRegion({
+        id: "r1",
+        color: "#f00",
+        state: "uncollapsed",
+        activeFaces: ["top", "left", "top"],
+        faces: {
+          front: rect,
+          back: rect,
+          left: rect,
+          right: rect,
+          top: rect,
+          bottom: rect
+        }
+      });
+
+      assert.deepStrictEqual(
+        region.facesOf().map(({ face }) => face),
+        ["left", "top"]
+      );
+    });
+
+    test("geometryFor returns a copy", () => {
+      const region = makeCollapsed();
+      const geometry = region.geometryFor("front");
+      if ("shape" in geometry) {
+        assert.fail("expected rectangle geometry");
+      }
+      geometry.x = 99;
+
+      assert.strictEqual(region.rectFor("front").x, kRect.x);
+    });
+
+    test("rectFor returns a copy", () => {
+      const region = makeCollapsed();
+      const rect = region.rectFor("front");
+      rect.x = 99;
+
+      assert.strictEqual(region.rectFor("front").x, kRect.x);
+    });
+
+    test("facesOf returns geometry copies", () => {
+      const region = makeUncollapsed();
+      const [{ geometry }] = region.facesOf();
+      if ("shape" in geometry) {
+        assert.fail("expected rectangle geometry");
+      }
+      geometry.x = 99;
+
+      assert.strictEqual(region.rectFor("front").x, kRect.x);
+    });
   });
 
   describe("uncollapse", () => {
@@ -192,7 +245,7 @@ describe("UVRegion", () => {
       assert.deepStrictEqual(collapsed.rectFor("front"), kRect);
     });
 
-    test("keeps the requested face and discards the rest", () => {
+    test("uses the requested face as the shared rectangle", () => {
       const topRect = { x: 9, y: 9, width: 1, height: 1 };
       const collapsed = makeUncollapsed()
         .withRect(topRect, "top")
