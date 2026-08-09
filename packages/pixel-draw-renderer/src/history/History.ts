@@ -54,7 +54,10 @@ export class History {
 
     switch (entry.action) {
       case "stroke":
-        return groupPositionsByColor(entry.positions, entry.beforeColors).map((group) => {
+        return groupPositionsByColor(
+          entry.positions,
+          entry.beforeColors
+        ).map((group) => {
           return {
             action: "stroke",
             metadata: {
@@ -69,7 +72,9 @@ export class History {
         return [
           {
             action: "resized",
-            metadata: { size: entry.beforeSize },
+            metadata: {
+              size: entry.beforeSize
+            },
             originTimestamp: timestamp
           }
         ];
@@ -80,7 +85,9 @@ export class History {
             action: "texture-replaced",
             metadata: {
               size: entry.beforeSize,
-              pixels: fromUint8Array(new Uint8Array(entry.beforePixels))
+              pixels: fromUint8Array(
+                new Uint8Array(entry.beforePixels)
+              )
             },
             originTimestamp: timestamp
           }
@@ -128,7 +135,9 @@ export class History {
         return [
           {
             action: "resized",
-            metadata: { size: entry.afterSize },
+            metadata: {
+              size: entry.afterSize
+            },
             originTimestamp: timestamp
           }
         ];
@@ -139,7 +148,9 @@ export class History {
             action: "texture-replaced",
             metadata: {
               size: entry.afterSize,
-              pixels: fromUint8Array(new Uint8Array(entry.afterPixels))
+              pixels: fromUint8Array(
+                new Uint8Array(entry.afterPixels)
+              )
             },
             originTimestamp: timestamp
           }

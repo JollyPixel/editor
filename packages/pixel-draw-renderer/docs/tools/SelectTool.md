@@ -1,9 +1,16 @@
 # SelectTool
 
-Public API for `"select"` mode, reached via [`PixelArtCanvas.tools.select`](../PixelArtCanvas.md#tools).
+Configures selection behavior and transforms the current selection. `PixelArtCanvas` exposes it as `canvas.tools.select`.
 
 ```ts
-export interface SelectTool {
+canvas.mode = "select";
+canvas.tools.select.shape = true;
+```
+
+## Types
+
+```ts
+interface SelectTool {
   shape: boolean;
   readonly hasSelection: boolean;
   rotate(): boolean;
@@ -12,34 +19,41 @@ export interface SelectTool {
 }
 ```
 
-## `shape`
+## Properties
 
-Controls selection start behavior:
+### `shape`
 
-- `false` (default): start rectangle selection.
-- `true`: magic-wand selection from the clicked connected region.
+```ts
+get shape(): boolean
+set shape(value: boolean)
+```
 
-Runtime-only (no constructor option). Changing it clears the current selection.
+When `false`, dragging creates a rectangular selection. When `true`, clicking selects the four-connected region with the same RGBA value. Fully enclosed areas are included in a shape selection.
 
-> [!IMPORTANT]
-> A connected region smaller than 2 pixels does not produce a selection; the click is a no-op.
+The default is `false`. Changing the value clears the current selection.
 
-## Rectangle bounds
+### `hasSelection`
 
-A rectangle selection may extend beyond the texture while it is being drawn.
-When the gesture ends, the selection is clipped to the texture bounds. A
-rectangle that does not overlap the texture is discarded.
+```ts
+get hasSelection(): boolean
+```
 
-## `hasSelection`
+`true` when a completed selection exists, including while it is being moved.
 
-Read-only. `true` when there is a committed selection to transform; otherwise `false`.
+## Selection bounds
 
-## `rotate` / `flipHorizontal` / `flipVertical`
+A rectangular selection is clipped to the texture when the drag ends. A rectangle outside the texture is discarded. Rectangle and shape selections containing only one selected pixel are also discarded.
 
-Programmatic transforms for the active selection.
+## Methods
 
-- `rotate()`: rotate 90 degrees clockwise around selection center.
-- `flipHorizontal()`: mirror selection horizontally.
-- `flipVertical()`: mirror selection vertically.
+### `rotate()` / `flipHorizontal()` / `flipVertical()`
 
-Each method returns `false` and does nothing when there is no active selection.
+```ts
+rotate(): boolean
+flipHorizontal(): boolean
+flipVertical(): boolean
+```
+
+`rotate()` turns the selection 90 degrees clockwise around its center. The flip methods mirror it horizontally or vertically.
+
+Each method returns `true` when it applies the transform. It returns `false` when no selection is ready, including while a selection is being created or moved.

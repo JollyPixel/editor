@@ -1,21 +1,61 @@
 # BrushTool
 
-Color-picking surface of the brush, reached via [`PixelArtCanvas.tools.brush`](../PixelArtCanvas.md#tools). Distinct from [`Brush`](./Brush.md); only exposes the pick-into-`brush.primary` behavior.
+Controls color picking for the brush. `PixelArtCanvas` exposes it as `canvas.tools.brush`; picked colors are stored in `canvas.brush.primary`.
 
 ```ts
-export interface BrushTool {
+canvas.mode = "paint";
+canvas.tools.brush.pickArmed = true;
+```
+
+In paint mode, `Ctrl`+right-click also picks a color without starting a secondary-color stroke.
+
+## Types
+
+```ts
+interface BrushTool {
   pickArmed: boolean;
   pick(x: number, y: number): RGBA | null;
 }
 ```
 
-Three independent paths sample a pixel color into `brush.primary`:
+## Properties
 
-| Path | Trigger | Notes |
-|---|---|---|
-| `pickArmed = true` | Next left-click in `"paint"` mode | Single-shot; auto-disarms. Switching mode disarms it. |
-| `pick(x, y)` | Called directly, anytime | Returns `RGBA` or `null` if out-of-bounds |
-| `Ctrl`+right-click | Mousedown in `"paint"` mode | Single-shot; never starts a secondary stroke |
+### `pickArmed`
 
-> [!IMPORTANT]
-> All paths dispatch a `"colorpicked"` CustomEvent (`detail: { hex, opacity }`, bubbling and composed) on `canvas()`. Use it to sync a UI color swatch.
+```ts
+get pickArmed(): boolean
+set pickArmed(value: boolean)
+```
+
+When `true`, the next left-click inside the texture in paint mode picks a color instead of painting. A successful pick disarms it. Leaving paint mode also disarms it.
+
+## Methods
+
+### `pick(x, y)`
+
+```ts
+pick(x: number, y: number): RGBA | null
+```
+
+Samples a pixel at texture coordinates and assigns its color and opacity to `canvas.brush.primary`. It can be called in any mode. An out-of-bounds coordinate returns `null` without changing the brush or `pickArmed`.
+
+## Events
+
+### `"colorpicked"`
+
+Every successful pick dispatches a bubbling, composed `CustomEvent` from `canvas.canvas()` with this detail:
+
+```ts
+interface ColorPickedDetail {
+  hex: string;
+  opacity: number;
+}
+```
+
+```ts
+canvas.canvas().addEventListener("colorpicked", (event) => {
+  const { hex, opacity } = (
+    event as CustomEvent<ColorPickedDetail>
+  ).detail;
+});
+```

@@ -43,9 +43,9 @@ function isUVGhostPayload(
 /**
  * Broadcasts the local in-progress UV region drag over a `network.Room`'s
  * presence channel and mirrors remote peers' drags onto the attached
- * canvas's `peerUvGhosts` overlay. Purely ephemeral — never touches `UVMap`
- * state or history; a peer's ghost is cleared the moment any authoritative
- * command from them arrives, or after a period of inactivity.
+ * canvas's `peerUvGhosts` overlay. It never touches `UVMap` state or history.
+ * A ghost clears when an authoritative command affects its region or after
+ * a period of inactivity.
  */
 export class UVGhostSync {
   #room: network.Room<PixelNetworkCommand, PixelServerMessage>;
@@ -70,7 +70,7 @@ export class UVGhostSync {
     event: { region: UVRegion; }
   ): void => {
     // The commit for this region is already on its way to peers,
-    // synchronously, ahead of any rAF-queued pre-commit tick below — drop it
+    // synchronously, ahead of any rAF-queued pre-commit tick below. Drop it
     // instead of letting it resurrect the ghost peers just saw cleared.
     if (this.#pendingPayload?.id === event.region.id) {
       this.#cancelPending();
@@ -147,6 +147,9 @@ export class UVGhostSync {
         "region-moved",
         this.#onRegionMoved
       );
+      for (const [clientId, peer] of this.#room.peers) {
+        this.#applyPresencePatch(clientId, peer.presence);
+      }
     }
   }
 
@@ -221,13 +224,7 @@ export class UVGhostSync {
     this.#pendingPayload = undefined;
   }
 
-  /**
-   * Clears a ghost by matching the region the command affects, not the
-   * command's `clientId` — the server's connection-tracked peer id (what
-   * presence updates are keyed by) and a command's embedded `clientId`
-   * (self-asserted by the sending client) are not the same value, so
-   * matching by clientId here would silently never clear anything.
-   */
+  /** Clears ghosts for the region changed by an accepted command. */
   #reconcileCommand(
     command: PixelNetworkCommand
   ): void {

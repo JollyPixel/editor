@@ -1,19 +1,31 @@
 # FillTool
 
-Paint-bucket tool for `"fill"` mode, reached via [`PixelArtCanvas.tools.fill`](../PixelArtCanvas.md#tools).
+Configures the paint bucket used in fill mode. `PixelArtCanvas` exposes it as `canvas.tools.fill`.
 
 ```ts
-export interface FillTool {
+canvas.mode = "fill";
+canvas.tools.fill.global = true;
+```
+
+Left-click fills with `canvas.brush.primary`; right-click uses `canvas.brush.secondary`.
+
+## Types
+
+```ts
+interface FillTool {
   global: boolean;
 }
 ```
 
-## `global`
+## Properties
 
-- `false` (default): floods the 4-connected region from the seed pixel.
-- `true`: recolors every matching pixel on the canvas.
+### `global`
 
-Runtime-only: no constructor option. Persists across mode switches.
+```ts
+get global(): boolean
+set global(value: boolean)
+```
 
-> [!IMPORTANT]
-> A global fill commits as a single atomic edit and broadcasts a compact `"global-fill"` event (`{ fromColor, toColor }`) instead of `"stroke"`. Undo/redo replays it as a full `"stroke"`.
+When `false`, the fill covers the four-connected region containing the clicked pixel. When `true`, it recolors every pixel on the texture with the same RGBA value as the clicked pixel.
+
+The default is `false`. The value persists across mode changes.

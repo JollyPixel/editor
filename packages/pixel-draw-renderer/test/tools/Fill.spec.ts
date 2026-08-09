@@ -49,8 +49,7 @@ describe("Fill", () => {
         size: { x: 6, y: 6 },
         maxSize: kTestMaxSize
       });
-      // Overwrite the whole buffer with colorA, then a colorB rectangle
-      // inside it, to sidestep PixelBuffer's always-transparent (0,0) quirk.
+      // Overwrite the whole buffer with colorA, then a colorB rectangle.
       const all: Vec2[] = [];
       for (let y = 0; y < 6; y++) {
         for (let x = 0; x < 6; x++) {
@@ -201,12 +200,15 @@ describe("Fill", () => {
       assert.strictEqual(keys.length, new Set(keys).size);
     });
 
-    test("excludes pixel (0,0) when it differs from the flood-filled region (PixelBuffer's always-transparent origin)", () => {
+    test("excludes pixel (0,0) when it differs from the flood-filled region", () => {
       const buf = new PixelBuffer({
         size: { x: 3, y: 3 },
         defaultColor: kColorA,
         maxSize: kTestMaxSize
       });
+      buf.drawPixels([
+        { x: 0, y: 0 }
+      ], { ...kColorA, a: 0 });
 
       const positions = Fill.floodFill(
         buf,
@@ -215,7 +217,7 @@ describe("Fill", () => {
       );
 
       assert.ok(!positions.some((p) => p.x === 0 && p.y === 0));
-      assert.strictEqual(positions.length, 8, "all pixels except the transparent origin");
+      assert.strictEqual(positions.length, 8);
     });
   });
 
@@ -252,7 +254,7 @@ describe("Fill", () => {
         { x: 1, y: 1 }
       );
 
-      assert.strictEqual(region.length, 15, "all pixels except the transparent origin");
+      assert.strictEqual(region.length, 16);
     });
 
     test("returns [] when the seed is out of bounds", () => {
@@ -339,12 +341,15 @@ describe("Fill", () => {
       assert.strictEqual(keys.length, new Set(keys).size);
     });
 
-    test("scans the whole buffer, including pixel (0,0) (PixelBuffer's always-transparent origin)", () => {
+    test("scans the whole buffer, including pixel (0,0)", () => {
       const buf = new PixelBuffer({
         size: { x: 3, y: 3 },
         defaultColor: kColorA,
         maxSize: kTestMaxSize
       });
+      buf.drawPixels([
+        { x: 0, y: 0 }
+      ], { ...kColorA, a: 0 });
 
       const positions = Fill.matchAll(
         buf,

@@ -24,7 +24,7 @@ describe("PixelBuffer", () => {
       assert.deepStrictEqual(buf.size(), { x: 16, y: 8 });
     });
 
-    test("fills the working buffer with defaultColor, except pixel (0,0)", () => {
+    test("fills the working buffer with defaultColor", () => {
       const buf = new PixelBuffer({
         size: { x: 4, y: 4 },
         defaultColor: { r: 10, g: 20, b: 30, a: 255 },
@@ -37,7 +37,7 @@ describe("PixelBuffer", () => {
       );
       assert.deepStrictEqual(
         buf.samplePixel(0, 0),
-        [10, 20, 30, 0]
+        [10, 20, 30, 255]
       );
     });
 
@@ -77,6 +77,30 @@ describe("PixelBuffer", () => {
         [0, 0, 255, 255]
       );
     });
+
+    test("rejects invalid maxSize and dimensions", () => {
+      assert.throws(
+        () => new PixelBuffer({
+          size: { x: 1, y: 1 },
+          maxSize: 0
+        }),
+        RangeError
+      );
+      assert.throws(
+        () => new PixelBuffer({
+          size: { x: 33, y: 1 },
+          maxSize: kTestMaxSize
+        }),
+        RangeError
+      );
+      assert.throws(
+        () => new PixelBuffer({
+          size: { x: 1.5, y: 1 },
+          maxSize: kTestMaxSize
+        }),
+        RangeError
+      );
+    });
   });
 
   describe("drawPixels / samplePixel", () => {
@@ -105,6 +129,19 @@ describe("PixelBuffer", () => {
           { x: 4, y: 4 }
         ], { r: 1, g: 2, b: 3, a: 4 });
       });
+    });
+
+    test("samples out-of-bounds positions as transparent", () => {
+      const buf = new PixelBuffer({
+        size: { x: 2, y: 2 },
+        defaultColor: { r: 7, g: 8, b: 9, a: 255 },
+        maxSize: kTestMaxSize
+      });
+
+      assert.deepStrictEqual(buf.samplePixel(2, 0), [0, 0, 0, 0]);
+      assert.deepStrictEqual(buf.samplePixel(-1, 1), [0, 0, 0, 0]);
+      assert.deepStrictEqual(buf.samplePixel(0, -1), [0, 0, 0, 0]);
+      assert.deepStrictEqual(buf.samplePixel(1.5, 1), [0, 0, 0, 0]);
     });
 
     test("accepts a lazy iterable (generator), not just an array", () => {
@@ -179,6 +216,19 @@ describe("PixelBuffer", () => {
         [10, 20, 30, 255]
       );
     });
+
+    test("rejects dimensions larger than maxSize", () => {
+      const buf = new PixelBuffer({
+        size: { x: 8, y: 8 },
+        maxSize: kTestMaxSize
+      });
+
+      assert.throws(
+        () => buf.resize({ x: kTestMaxSize + 1, y: 8 }),
+        RangeError
+      );
+      assert.deepStrictEqual(buf.size(), { x: 8, y: 8 });
+    });
   });
 
   describe("replacePixels", () => {
@@ -200,6 +250,43 @@ describe("PixelBuffer", () => {
         buf.samplePixel(0, 0),
         [9, 0, 0, 255]
       );
+    });
+
+    test("replaces master data used by later resizes", () => {
+      const buf = new PixelBuffer({
+        size: { x: 4, y: 4 },
+        maxSize: kTestMaxSize
+      });
+      buf.drawPixels(
+        [{ x: 3, y: 3 }],
+        { r: 255, g: 0, b: 0, a: 255 }
+      );
+      buf.copyToMaster();
+
+      const pixels = new Uint8ClampedArray(2 * 2 * 4);
+      pixels.set([9, 8, 7, 255], 0);
+      buf.replacePixels(pixels, { x: 2, y: 2 });
+      buf.resize({ x: 4, y: 4 });
+
+      assert.deepStrictEqual(buf.samplePixel(0, 0), [9, 8, 7, 255]);
+      assert.deepStrictEqual(buf.samplePixel(3, 3), [0, 0, 0, 0]);
+    });
+
+    test("normalizes data length to match size", () => {
+      const buf = new PixelBuffer({
+        size: { x: 4, y: 4 },
+        maxSize: kTestMaxSize
+      });
+
+      buf.replacePixels(
+        new Uint8ClampedArray([1, 2, 3, 4]),
+        { x: 2, y: 2 }
+      );
+
+      assert.deepStrictEqual(buf.size(), { x: 2, y: 2 });
+      assert.strictEqual(buf.pixels().length, 2 * 2 * 4);
+      assert.deepStrictEqual(buf.samplePixel(0, 0), [1, 2, 3, 4]);
+      assert.deepStrictEqual(buf.samplePixel(1, 1), [0, 0, 0, 0]);
     });
   });
 

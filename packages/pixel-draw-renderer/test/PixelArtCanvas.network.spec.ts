@@ -393,8 +393,7 @@ describe("PixelArtCanvas — applyRemoteCommand", () => {
     });
 
     assert.strictEqual(events.length, 0);
-    // Whole 4x4 texture is uniformly white by default except (0,0), which
-    // PixelBuffer always initializes fully transparent.
+    // The whole 4x4 texture is uniformly white by default.
     const [r, g, b, a] = manager.texture.subarray(4, 8);
     assert.deepStrictEqual(
       [r, g, b, a],

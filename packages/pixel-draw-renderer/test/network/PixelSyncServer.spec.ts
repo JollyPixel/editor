@@ -616,3 +616,77 @@ describe("PixelSyncServer — custom buffer / id", () => {
     );
   });
 });
+
+describe("PixelSyncServer — incoming message validation", () => {
+  test("uses the connection id instead of a command's claimed client id", () => {
+    const server = makeServer();
+    const client = createClient("observer");
+    const room = observe(server, client);
+    client.received.length = 0;
+
+    server.onMessage(
+      "connection-A",
+      strokeCmd({ clientId: "spoofed" }),
+      room
+    );
+
+    assert.strictEqual(client.received.length, 1);
+    const message = client.received[0] as {
+      type: string;
+      data: PixelNetworkCommand;
+    };
+    assert.strictEqual(message.data.clientId, "connection-A");
+  });
+
+  test("drops malformed command metadata", () => {
+    const server = makeServer();
+    const client = createClient("observer");
+    const room = observe(server, client);
+    client.received.length = 0;
+
+    server.onMessage("connection-A", {
+      action: "select-edit",
+      metadata: {
+        positions: [{ x: 0, y: 0 }],
+        colors: []
+      },
+      clientId: "connection-A",
+      seq: 1,
+      timestamp: 1
+    }, room);
+
+    assert.strictEqual(client.received.length, 0);
+    assert.deepStrictEqual(
+      server.buffer.samplePixel(0, 0),
+      [255, 255, 255, 255]
+    );
+  });
+
+  test("drops commands with invalid headers", () => {
+    const server = makeServer();
+    const client = createClient("observer");
+    const room = observe(server, client);
+    client.received.length = 0;
+
+    server.onMessage("connection-A", {
+      ...strokeCmd(),
+      timestamp: Number.NaN
+    }, room);
+
+    assert.strictEqual(client.received.length, 0);
+  });
+
+  test("exposes command actions for rights lookup", () => {
+    const server = makeServer();
+
+    assert.ok(server.events.includes("stroke"));
+    assert.strictEqual(
+      server.getEventName(strokeCmd()),
+      "stroke"
+    );
+    assert.strictEqual(
+      server.getEventName({ unexpected: true }),
+      "invalid"
+    );
+  });
+});

@@ -42,15 +42,23 @@ function isPeerStrokePixels(
 /**
  * Streams local in-progress pixels via presence and renders remote ghosts.
  * Ephemeral only - never touches history or the authoritative buffer.
- * Ghosts clear on any authoritative command or inactivity.
+ * Ghosts clear when authoritative edits overlap them or after inactivity.
  */
 export class PixelStrokeGhostSync {
   #room: network.Room<PixelNetworkCommand, PixelServerMessage>;
   #enableGhostPreview: boolean;
   #canvas: PixelArtCanvas | undefined;
+  #previousHandler: ((pixels: PeerStrokePixel[]) => void) | undefined;
   #pendingPixels: PeerStrokePixel[] | undefined;
   #rafHandle: number | undefined;
   #ghostLeaser: PeerGhostLeaser;
+
+  #handleStrokeProgress = (
+    pixels: PeerStrokePixel[]
+  ): void => {
+    this.#previousHandler?.(pixels);
+    this.#reportLocal(pixels);
+  };
 
   #onPeerLeft = (
     event: network.RoomPeerEvent
@@ -90,9 +98,18 @@ export class PixelStrokeGhostSync {
     });
 
     if (this.#enableGhostPreview) {
-      this.#room.on("peer-left", this.#onPeerLeft);
-      this.#room.on("peer-presence", this.#onPeerPresence);
-      this.#room.on("message", this.#onMessage);
+      this.#room.on(
+        "peer-left",
+        this.#onPeerLeft
+      );
+      this.#room.on(
+        "peer-presence",
+        this.#onPeerPresence
+      );
+      this.#room.on(
+        "message",
+        this.#onMessage
+      );
     }
   }
 
@@ -105,7 +122,11 @@ export class PixelStrokeGhostSync {
 
     this.#canvas = canvas;
     if (this.#enableGhostPreview) {
-      canvas.onStrokeProgress = (pixels) => this.#reportLocal(pixels);
+      this.#previousHandler = canvas.onStrokeProgress;
+      canvas.onStrokeProgress = this.#handleStrokeProgress;
+      for (const [clientId, peer] of this.#room.peers) {
+        this.#applyPresencePatch(clientId, peer.presence);
+      }
     }
   }
 
@@ -118,9 +139,10 @@ export class PixelStrokeGhostSync {
     if (this.#enableGhostPreview) {
       this.#ghostLeaser.clear();
       this.#canvas.peerStrokeGhosts.clearAll();
+      this.#canvas.onStrokeProgress = this.#previousHandler;
     }
-    this.#canvas.onStrokeProgress = undefined;
     this.#canvas = undefined;
+    this.#previousHandler = undefined;
   }
 
   destroy(): void {
@@ -180,10 +202,7 @@ export class PixelStrokeGhostSync {
     this.#pendingPixels = undefined;
   }
 
-  /**
-   * Clear ghosts by pixel overlap, not clientId - presence keys and
-   * command clientIds are different values.
-   */
+  /** Clears ghosts touched by accepted command positions. */
   #reconcileCommand(
     command: PixelNetworkCommand
   ): void {

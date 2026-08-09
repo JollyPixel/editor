@@ -26,6 +26,7 @@ import type { PeerFloatingSelectionState } from "#src/rendering/overlays/PeerFlo
 
 interface MockRoom extends network.Room<PixelNetworkCommand, PixelServerMessage> {
   presenceUpdates: network.PeerMetadata[];
+  addPeer(clientId: string, presence: network.PeerMetadata): void;
   simulateLeave(clientId: string): void;
   simulatePresence(clientId: string, patch: network.PeerMetadata): void;
   simulateSelectEditCommand(positions: { x: number; y: number; }[]): void;
@@ -35,6 +36,7 @@ interface MockRoom extends network.Room<PixelNetworkCommand, PixelServerMessage>
 
 function createMockRoom(): MockRoom {
   const presenceUpdates: network.PeerMetadata[] = [];
+  const peers = new Map<string, network.Peer>();
   const listeners = new Map<string, Set<(payload: any) => void>>();
 
   function emit(type: string, payload: unknown): void {
@@ -46,7 +48,7 @@ function createMockRoom(): MockRoom {
   const room: MockRoom = {
     id: "test-room",
     clientId: "local-A",
-    peers: new Map(),
+    peers,
     on: (type, listener) => {
       let set = listeners.get(type);
       if (!set) {
@@ -70,6 +72,13 @@ function createMockRoom(): MockRoom {
     },
     leave() {
       // Unused by SelectionGhostSync.
+    },
+    addPeer(clientId, presence) {
+      peers.set(clientId, {
+        clientId,
+        identity: {},
+        presence
+      });
     },
     simulateLeave(clientId) {
       emit("peer-left", { clientId });
@@ -249,6 +258,21 @@ describe("SelectionGhostSync — attach", () => {
     sync.attach(asHost(createMockCanvas()));
 
     assert.throws(() => sync.attach(asHost(createMockCanvas())));
+  });
+
+  test("seeds ghost presence already stored on the room", () => {
+    const room = createMockRoom();
+    room.addPeer("peer-B", { selectionGhost: kCreating });
+    const canvas = createMockCanvas();
+    const sync = new SelectionGhostSync({ room });
+
+    sync.attach(asHost(canvas));
+
+    assert.strictEqual(canvas.selectionSetCalls.length, 1);
+    assert.strictEqual(
+      canvas.selectionSetCalls[0].clientId,
+      "peer-B"
+    );
   });
 
   test("enableGhostPreview: false never wires the selection-progress listener", async() => {

@@ -12,9 +12,9 @@ new Keybindings(patch?: Partial<KeybindingsMap>)
 
 A combo string of `+`-separated modifiers followed by a key: `"mod+z"`, `"mod+shift+z"`, `"Delete"`.
 
-- `mod`: Ctrl on Windows/Linux, Cmd on macOS
+- `mod`: Ctrl or Cmd/Meta on every platform; the matcher does not distinguish between them
 - Key is matched against `KeyboardEvent.key` (case-insensitive)
-- Modifier matching is exact: `"mod+c"` does **not** match Ctrl+Shift+C
+- Modifier matching is exact for `mod`, `shift`, and `alt`: `"mod+c"` does **not** match Ctrl+Shift+C
 
 ```ts
 type ModifierToken = "mod" | "shift" | "alt";
@@ -25,6 +25,12 @@ type Keybinding =
   | `${ModifierToken}+${ModifierToken}+${ModifierToken}+${KeyToken}`;
 type KeybindingsMap = Record<KeybindingAction, Keybinding | Keybinding[]>;
 ```
+
+## PixelArtCanvas routing
+
+`PixelArtCanvas` dispatches shortcuts only while the pointer is over its canvas. It ignores repeated keydown events and events from text-entry `<input>` elements, `<textarea>` elements, and `contenteditable` elements.
+
+`Shift` and `Space` are reserved for line drawing and panning. They are handled before configurable shortcuts, so a binding whose final key is `Shift` or `Space` is not dispatched by `PixelArtCanvas`. Calling `Keybindings.match()` directly does not apply these routing rules.
 
 ## Defaults
 

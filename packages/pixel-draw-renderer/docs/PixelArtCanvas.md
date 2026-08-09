@@ -1,6 +1,20 @@
 # PixelArtCanvas
 
-Top-level coordinator. Primary public API. Wires together viewport, canvas buffer, renderer, input, and SVG overlay. Owns the [`Brush`](./tools/Brush.md), [`UVMap`](./uv/UVMap.md), line/fill/select tools, and the undo/redo `History`.
+Creates an editable pixel-art texture inside a DOM element. It exposes drawing tools, texture data, view controls, UV regions and optional history.
+
+```ts
+const canvas = new PixelArtCanvas(parent, {
+  texture: {
+    size: { x: 64, y: 32 }
+  },
+  history: {
+    enabled: true
+  }
+});
+
+canvas.brush.primary.set("#ff6600");
+canvas.mode = "paint";
+```
 
 ## Constructor
 
@@ -11,244 +25,111 @@ new PixelArtCanvas(
 )
 ```
 
+The canvas and its overlays are mounted inside `parentHtmlElement`. See [`PixelArtCanvasOptions`](./PixelArtCanvasOptions.md) for constructor settings and defaults.
+
 ## Types
 
 ```ts
-interface HistoryState {
-  canUndo: boolean;
-  canRedo: boolean;
-}
-
-interface PixelArtCanvasOptions {
-  /**
-   * Default interaction mode for the canvas.
-   * "paint" for drawing, "move" for panning, or "fill" for the paint-bucket
-   * flood-fill tool. If not specified, the default mode will be "paint".
-   */
-  defaultMode?: Mode;
-  /**
-   * Global event target used by InputController for drag-continuation
-   * mouse tracking and keyboard/blur reporting.
-   * @default window
-   */
-  window?: WindowLike;
-  texture?: {
-    defaultColor?: ColorInput;
-    size?: {
-      x: number;
-      y?: number;   // falls back to x when omitted; default: { x: 64, y: 32 }
-    };
-    maxSize?: number;  // default: 2048
-    init?: HTMLCanvasElement;
-  };
-  zoom?: {
-    default?: number;   // fits texture to container; falls back to 4 if container has no size
-    sensitivity?: number;  // default: 0.1
-    min?: number;  // default: 1
-    max?: number;  // default: 32
-  };
-  backgroundTransparency?: {
-    colors: { odd: string; even: string; };  // default: { odd: "#999", even: "#666" }
-    squareSize: number;  // default: 8
-  };
-  /**
-   * Fill color for the canvas area outside the texture bounds (the "void"
-   * around the drawing surface). Defaults to the parent element''s own CSS
-   * `background-color` if it''s set and non-transparent, else `#424242`.
-   */
-  backgroundColor?: ColorInput;
-  brush?: BrushOptions;
-  select?: {
-    /**
-     * Explicit color for the pixels vacated by a Delete, the source side of
-     * a Move, or the footprint a Rotate/Flip no longer occupies, in
-     * "select" mode - overrides the smart default below. When omitted, the
-     * vacated area is instead filled with the most common color among its
-     * neighbors, so it blends into the surrounding artwork, falling back to
-     * fully transparent when there are no in-bounds neighbors. Accepts a
-     * CSS color string or a colorjs.io `Color` instance.
-     * @default dominant neighbor color, transparent as the ultimate fallback
-     */
-    eraseColor?: ColorInput;
-  };
-  /**
-   * Called after a draw stroke is committed to the master buffer.
-   * Use this hook to synchronize the edited texture with an external consumer.
-   */
-  onDrawEnd?: () => void;
-  /**
-   * Called for every local mutation (stroke, resize, texture replace).
-   * Used by PixelSyncClient to forward mutations over the network.
-   */
-  onBufferUpdated?: PixelBufferHookListener;
-  /** Local undo/redo stack. Disabled by default. */
-  history?: {
-    enabled?: boolean;
-    /** @default 10 */
-    limit?: number;
-  };
-  /** Called whenever the undo/redo stack changes (after push, undo, redo, or clear). */
-  onHistoryChange?: (state: HistoryState) => void;
-  /**
-   * Overrides for the copy/paste/undo/redo/delete key combos. Unspecified
-   * actions keep their default binding. Shift (line-tool arm/disarm) is not
-   * configurable. Also settable/readable at runtime via the `keybindings`
-   * property.
-   */
-  keybindings?: Partial<KeybindingsMap>;
-}
+type Mode = "paint" | "move" | "fill" | "select" | "uv";
 ```
 
-- `Mode` → `"paint" | "move" | "fill" | "select" | "uv"`. `ColorInput` → `string | Color` ([colorjs.io](https://colorjs.io)).
-- `BrushOptions` → [Brush.md](./tools/Brush.md).
-- `PixelBufferHookListener` → [buffer/PixelBuffer.md](./buffer/PixelBuffer.md).
-- `KeybindingsMap` → [input/Keybindings.md](./input/Keybindings.md).
-
-## Properties
-
-### `brush`
+## Core objects
 
 ```ts
 readonly brush: Brush
+readonly tools: Toolset
+readonly uv: UVMap
+readonly viewport: DefaultViewport
 ```
 
-Primary/secondary colors, opacity, size. See [Brush.md](./tools/Brush.md).
+### `brush`
 
-### `viewport`
+Stores the primary and secondary colors, opacity, brush size and cursor colors. See [`Brush`](./tools/Brush.md).
 
-```ts
-readonly viewport: DefaultViewport // { readonly zoom: Zoom; readonly camera: Readonly<Vec2>; }
-```
+### `tools`
 
-Read-only camera/zoom state. Same `Zoom` instance as the `zoom` accessor below.
+Runtime controls for color picking, fill behavior and selection transforms. See [`Toolset`](./tools/Toolset.md).
 
 ### `uv`
 
-```ts
-readonly uv: UVMap
-```
+Creates, moves and selects texture regions. See [`UVMap`](./uv/UVMap.md).
 
-UV regions: create/delete/move/select, visibility, typed events. See [uv/UVMap.md](./uv/UVMap.md).
+### `viewport`
 
-### `peerCursors`
+Read-only camera and zoom state:
 
 ```ts
-readonly peerCursors: PeerCursorOverlay // { set, remove, refresh, destroy }
+interface DefaultViewport {
+  readonly camera: Readonly<Vec2>;
+  readonly zoom: Zoom;
+}
 ```
 
-Renders remote peers' cursors over the canvas — used by `PixelCursorSync`. `set(clientId, { pos, color, label? })` hides the marker when `pos` is `null`. See [network/PixelCursorSync.md](./network/PixelCursorSync.md).
-
-### `peerStrokeGhosts`
-
-```ts
-readonly peerStrokeGhosts: PeerStrokeGhosts // { set, remove, clearAll, destroy }
-```
-
-Renders remote peers' in-progress (uncommitted) stroke pixels over the canvas — used by `PixelStrokeGhostSync`. Purely visual: never touches history or the authoritative buffer. See [network/PixelStrokeGhostSync.md](./network/PixelStrokeGhostSync.md).
-
-### `peerUvGhosts`
-
-```ts
-readonly peerUvGhosts: PeerUVGhosts // { set, remove, clearAll, refresh, destroy }
-```
-
-Renders a dashed, per-peer-colored border for a remote peer's in-progress (uncommitted) UV region drag — used by `UVGhostSync`. Purely visual: never touches `UVMap` state or history. See [network/UVGhostSync.md](./network/UVGhostSync.md).
-
-### `peerSelectionGhosts`
-
-```ts
-readonly peerSelectionGhosts: PeerSelectionGhosts // { set, remove, clearAll, removeOverlapping, refresh, destroy }
-```
-
-Renders a dashed, per-peer-colored boundary for a remote peer's in-progress (uncommitted) selection: drawing a new marquee/shape or dragging an existing one. Traces the actual mask outline for a shaped selection, not just its bounding box. Purely visual: never touches selection state or history. See [network/SelectionGhostSync.md](./network/SelectionGhostSync.md).
-
-### `peerFloatingSelectionGhosts`
-
-```ts
-readonly peerFloatingSelectionGhosts: PeerFloatingSelectionGhosts // { set, remove, clearAll, removeOverlapping, destroy }
-```
-
-Renders remote peers' in-progress (uncommitted) selection moves: blanks each peer's vacated source footprint and redraws the moved content at its live position, mirroring what the local `FloatingSelectionOverlay` does for your own drag. This is what stops a peer's moved block from visually "duplicating" itself. Content and erase fill are sampled from your own `CanvasBuffer`, not streamed. Purely visual: never touches the authoritative buffer. See [network/SelectionGhostSync.md](./network/SelectionGhostSync.md).
-
-### `selectionEvents`
-
-```ts
-readonly selectionEvents: Pick<Emitter<SelectControllerEvent>, "on" | "off">
-```
-
-Subscription-only view onto the active selection tool's own progress events: `"selection-progress"`, `"selection-committed"`, `"selection-idle"`. Consumed by `SelectionGhostSync`. Narrower than a full `Emitter` on purpose: nothing outside a ghost sync should be able to `emit` on behalf of the tool. See [network/SelectionGhostSync.md](./network/SelectionGhostSync.md).
-
-## Methods
+## Interaction
 
 ### `mode`
 
 ```ts
 get mode(): Mode
-set mode(mode: Mode)
+set mode(value: Mode)
 ```
 
 | Mode | Left-click | Right-click |
 |---|---|---|
-| `"paint"` | Stroke with `brush.primary`. Hold `Shift` for straight-line. | Stroke with `brush.secondary`. Hold `Shift` for straight-line. |
-| `"move"` | Pan camera. | — |
-| `"fill"` | Flood-fill with `brush.primary`. | Same with `brush.secondary`. |
-| `"select"` | Drag to select/move rectangle. `Ctrl+C/V` copy/paste, `Delete` erase, `R` rotate 90°, `H`/`V` flip. | — |
-| `"uv"` | Click visible region to select/drag. `Delete` removes it. Regions created via `uv.create(...)`. | — |
+| `"paint"` | Paint with `brush.primary`. Hold `Shift` for a straight line. | Paint with `brush.secondary`. `Ctrl`+right-click picks a color. |
+| `"move"` | Pan the view. | No action. |
+| `"fill"` | Fill with `brush.primary`. | Fill with `brush.secondary`. |
+| `"select"` | Create or move a selection. | No action. |
+| `"uv"` | Select or drag a visible UV region. | No action. |
 
-Navigation works in any mode: wheel zooms, middle-drag or `Space`+left-drag pans. In `"paint"` mode, `Ctrl`+wheel adjusts `brush.size` by one pixel per scroll direction instead of zooming.
+Wheel input zooms in every mode. Middle-drag or `Space`+left-drag pans the view. In paint mode, `Ctrl`+wheel changes `brush.size` by one pixel per scroll direction.
 
-> [!IMPORTANT]
-> Leaving `"paint"` cancels an armed line. Leaving `"select"` clears the selection. Leaving `"uv"` cancels an in-progress drag but **does not** clear the UV selection.
+Leaving paint mode cancels an armed line and color pick. Leaving select mode clears the selection. Leaving UV mode cancels the current drag and keeps the UV selection.
 
----
-
-### `tools`
+### `keybindings`
 
 ```ts
-readonly tools: Toolset  // { brush: BrushTool; fill: FillTool; select: SelectTool }
+get keybindings(): Keybindings
 ```
 
-Runtime tool state that has no constructor option. Persists across mode switches.
+Use `keybindings.bindings` to read the current bindings and `keybindings.patch()` to change them. Invalid or conflicting patches throw without changing the previous bindings. See [`Keybindings`](./input/Keybindings.md).
 
-- [`tools.brush`](./tools/BrushTool.md) — `pickArmed`, `pick(x, y)`
-- [`tools.fill`](./tools/FillTool.md) — `global` (contiguous vs. whole-canvas fill)
-- [`tools.select`](./tools/SelectTool.md) — `shape`, `hasSelection`, `rotate()`, `flipHorizontal()`, `flipVertical()`
-
----
-
-### `backgroundColor`
-
-```ts
-get backgroundColor(): string
-set backgroundColor(color: ColorInput)
-```
-
-Canvas void color. Redraws immediately on set.
-
----
-
-### `textureSize`
+## Texture
 
 ```ts
 get textureSize(): Vec2
-set textureSize(size: Vec2)
+set textureSize(value: Vec2)
+
+get texture(): Uint8ClampedArray
+set texture(source: HTMLCanvasElement | HTMLImageElement)
+
+commitPixels(
+  pixels: Vec2[],
+  slot?: "primary" | "secondary"
+): void
+
+hasTransparency(rect: SelectionRect): boolean
 ```
 
-Resize the working buffer. Content beyond previous bounds is lost. Emits `"resized"`.
+### `textureSize`
 
----
+Gets or resizes the texture. Shrinking hides committed pixels outside the new bounds; growing can restore pixels retained by the master buffer. Dimensions must be positive integers no greater than [`texture.maxSize`](./PixelArtCanvasOptions.md#texturemaxsize).
 
-### `commitPixels`
+### `texture`
 
-```ts
-commitPixels(pixels: Vec2[], slot?: BrushColorSlot): void
-```
+The getter returns a copy of the current RGBA pixel data. The setter replaces the texture and resizes it to the source image or canvas.
 
-Commits a pre-computed pixel set as one atomic edit. No-op when `pixels` is empty. `slot` defaults to `"primary"`.
+### `commitPixels()`
 
----
+Paints a precomputed set of texture coordinates as one edit. The color slot defaults to `"primary"`; an empty array does nothing.
 
-### `undo` / `redo` / `canUndo` / `canRedo`
+### `hasTransparency()`
+
+Returns `true` when any pixel in `rect` has alpha below `255`. Areas outside the texture count as transparent.
+
+## History
+
+### `undo()` / `redo()` / `canUndo()` / `canRedo()`
 
 ```ts
 undo(): boolean
@@ -257,154 +138,61 @@ canUndo(): boolean
 canRedo(): boolean
 ```
 
-Requires `history.enabled` at construction — returns `false` otherwise. A successful call redraws, calls `onDrawEnd`, and fires `onHistoryChange`.
+History must be enabled through [`PixelArtCanvasOptions.history`](./PixelArtCanvasOptions.md#history). Each method returns whether the requested operation is available or succeeded.
 
-> [!IMPORTANT]
-> A remote resize, texture-replace, or snapshot load clears the local history stack.
+A remote resize, remote texture replacement or snapshot load clears local history. See [`HistoryStack`](./history/HistoryStack.md) for recorded edit types and replay behavior.
 
----
-
-### `texture`
+## View and canvas elements
 
 ```ts
-get texture(): Uint8ClampedArray
-set texture(source: HTMLCanvasElement | HTMLImageElement)
-```
+get backgroundColor(): string
+set backgroundColor(value: ColorInput)
 
-Get raw RGBA pixel data, or replace the texture from a canvas/image (resizes to match, emits `"texture-replaced"`).
+get camera(): Vec2
+get zoom(): Zoom
 
----
-
-### `textureCanvas`
-
-```ts
+centerTexture(): void
+canvas(): HTMLCanvasElement
 textureCanvas(): HTMLCanvasElement
 ```
 
-The off-screen canvas backing the buffer.
+### `backgroundColor`
 
----
+Controls the area outside the texture and redraws the visible canvas when changed.
 
-### `hasTransparency`
+### `camera` / `zoom`
 
-```ts
-hasTransparency(rect: SelectionRect): boolean
-```
+Convenience accessors for `viewport.camera` and `viewport.zoom`. `camera` returns a copy; `zoom` returns the same `Zoom` instance as the viewport.
 
-Whether any pixel in `rect` (buffer pixel coordinates) isn't fully opaque. A rect extending out of bounds counts as transparent.
+### `centerTexture()`
 
----
+Centers the texture in the current viewport.
 
-### `canvas`
+### `canvas()` / `textureCanvas()`
 
-```ts
-canvas(): HTMLCanvasElement
-```
+`canvas()` returns the visible canvas. `textureCanvas()` returns the off-screen canvas containing the current texture. Direct writes to the texture canvas bypass history and mutation hooks.
 
-The visible on-screen canvas element. Useful for attaching extra event listeners.
-
----
-
-### `camera`
-
-```ts
-get camera(): Vec2
-```
-
-Current camera offset `{ x, y }` in viewport space.
-
----
-
-### `zoom`
-
-```ts
-get zoom(): Zoom
-```
-
-`Zoom` value object: `.value`, `.min`, `.max`, `.sensitivity` (min `0.01`). Same instance as `viewport.zoom`.
-
----
-
-### `keybindings`
-
-```ts
-get keybindings(): Keybindings
-```
-
-`.bindings` reads the current set; `.patch(patch)` merges overrides at runtime. Throws `InvalidKeybindingError` or `KeybindingConflictError` on bad input — previous bindings stay. See [input/Keybindings.md](./input/Keybindings.md).
-
----
-
-### `centerTexture`
-
-```ts
-centerTexture(): void
-```
-
-Centers the texture in the viewport.
-
----
-
-### `parentHtmlElement` / `reparentCanvasTo`
+## DOM lifecycle
 
 ```ts
 get parentHtmlElement(): HTMLDivElement
-reparentCanvasTo(newParentElement: HTMLDivElement): void
-```
-
-Read or move the canvas + SVG overlay into a new DOM container.
-
----
-
-### `onResize`
-
-```ts
+reparentCanvasTo(parent: HTMLDivElement): void
 onResize(): void
-```
-
-Re-reads parent dimensions and resizes the canvas/overlay to fill it. Call on `window.resize`. No-op if parent has zero size.
-
----
-
-### `destroy`
-
-```ts
 destroy(): void
 ```
 
-Removes event listeners and unmounts canvas + overlay from the DOM.
+### `parentHtmlElement` / `reparentCanvasTo()`
 
----
+Reads or changes the element containing the visible canvas and overlays. Reparenting also updates their dimensions.
 
-### `onBufferUpdated` / `applyRemoteCommand` / `loadSnapshot`
+### `onResize()`
 
-```ts
-get onBufferUpdated(): PixelBufferHookListener | undefined
-set onBufferUpdated(fn: PixelBufferHookListener | undefined)
-applyRemoteCommand(event: PixelBufferHookEvent): void
-loadSnapshot(size: Vec2, pixels: Uint8ClampedArray, uvRegions?: (UVRegion | UVRegionData)[]): void
-```
+Resizes the canvas and overlays to the current parent bounds. It does nothing when either parent dimension is zero. Call it when the containing layout changes.
 
-Network sync hooks — used by `PixelSyncClient`. `applyRemoteCommand` applies a remote mutation without re-firing `onBufferUpdated`. `loadSnapshot` hydrates buffer + UV from a snapshot (never broadcast). See [network/index.md](./network/index.md).
+### `destroy()`
 
----
+Removes input listeners and unmounts the canvas and overlays.
 
-### `onCursorMove`
+## Network integration
 
-```ts
-get onCursorMove(): ((pos: Vec2 | null) => void) | undefined
-set onCursorMove(fn: ((pos: Vec2 | null) => void) | undefined)
-```
-
-Fires on every canvas mousemove with the bounded texture position, and `null` once the pointer leaves the canvas or texture bounds — used by `PixelCursorSync` to broadcast the local cursor. See [network/PixelCursorSync.md](./network/PixelCursorSync.md).
-
----
-
-### `onStrokeProgress`
-
-```ts
-get onStrokeProgress(): ((pixels: PeerStrokePixel[]) => void) | undefined
-set onStrokeProgress(fn: ((pixels: PeerStrokePixel[]) => void) | undefined)
-```
-
-Fires with a tool's live in-progress pixels as they change: brush strokes and line drags (not fill). Used by `PixelStrokeGhostSync` to broadcast a ghost preview to peers. Selection progress streams separately; see `selectionEvents` above and [network/SelectionGhostSync.md](./network/SelectionGhostSync.md). See [network/PixelStrokeGhostSync.md](./network/PixelStrokeGhostSync.md).
+`PixelArtCanvas` also exposes mutation hooks, presence callbacks and peer overlays used by the multiplayer helpers. See [network integration](./network/api/CanvasIntegration.md) for those members and [network synchronization](./network/index.md) for setup.

@@ -9,6 +9,11 @@ import {
   applyCommandToBuffer
 } from "./PixelCommandApplier.ts";
 import {
+  isPixelNetworkAction,
+  isPixelNetworkCommand,
+  PIXEL_NETWORK_ACTIONS
+} from "./PixelCommandValidator.ts";
+import {
   PixelBuffer
 } from "../buffer/PixelBuffer.ts";
 import {
@@ -51,13 +56,6 @@ function uvConflictKeys(
 
 export type ClientHandle = network.ClientHandle;
 
-function isPixelNetworkCommand(
-  value: unknown
-): value is PixelNetworkCommand {
-  return typeof value === "object" && value !== null &&
-    "action" in value && "clientId" in value;
-}
-
 export interface PixelSyncServerOptions {
   /**
    * Extension id (one per buffer).
@@ -80,6 +78,7 @@ export interface PixelSyncServerOptions {
 export class PixelSyncServer extends network.Extension {
   readonly id: string;
   readonly name = "pixel-draw.renderer";
+  readonly events = PIXEL_NETWORK_ACTIONS;
   readonly buffer: PixelBuffer;
 
   #pixelTracker: network.ConflictTracker;
@@ -112,11 +111,11 @@ export class PixelSyncServer extends network.Extension {
   onClientDisconnect(
     _clientId: string
   ): void {
-    // No client-list bookkeeping to clean up — Server owns that.
+    // Server owns client-list bookkeeping.
   }
 
   onMessage(
-    _clientId: string,
+    clientId: string,
     payload: unknown,
     context: network.RoomContext
   ): void {
@@ -124,7 +123,34 @@ export class PixelSyncServer extends network.Extension {
       return;
     }
 
-    this.receive(payload, context);
+    try {
+      this.receive({
+        ...payload,
+        clientId
+      }, context);
+    }
+    catch (error) {
+      if (error instanceof RangeError) {
+        return;
+      }
+
+      throw error;
+    }
+  }
+
+  override getEventName(
+    payload: unknown
+  ): string {
+    if (
+      typeof payload === "object" &&
+      payload !== null &&
+      "action" in payload &&
+      isPixelNetworkAction(payload.action)
+    ) {
+      return payload.action;
+    }
+
+    return "invalid";
   }
 
   receive(

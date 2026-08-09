@@ -55,7 +55,7 @@ function isSelectionGhostPayload(
 /**
  * Streams local in-progress selection via presence and renders remote ghosts.
  * Ephemeral only - never touches history or the authoritative buffer.
- * Ghosts clear on any authoritative command, idle creation gesture, or inactivity.
+ * Ghosts clear on overlapping edits, idle gestures or inactivity.
  */
 export class SelectionGhostSync {
   #room: network.Room<PixelNetworkCommand, PixelServerMessage>;
@@ -161,6 +161,9 @@ export class SelectionGhostSync {
         "selection-idle",
         this.#onSelectionIdle
       );
+      for (const [clientId, peer] of this.#room.peers) {
+        this.#applyPresencePatch(clientId, peer.presence);
+      }
     }
   }
 
@@ -241,10 +244,7 @@ export class SelectionGhostSync {
     this.#pendingPayload = undefined;
   }
 
-  /**
-   * Clear ghosts by pixel overlap, not clientId - presence keys and
-   * command clientIds are different values.
-   */
+  /** Clears ghosts touched by accepted command positions. */
   #reconcileCommand(
     command: PixelNetworkCommand
   ): void {

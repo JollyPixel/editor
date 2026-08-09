@@ -24,6 +24,7 @@ import type { PeerUVGhostState } from "#src/rendering/overlays/PeerUVGhosts.ts";
 
 interface MockRoom extends network.Room<PixelNetworkCommand, PixelServerMessage> {
   presenceUpdates: network.PeerMetadata[];
+  addPeer(clientId: string, presence: network.PeerMetadata): void;
   simulateLeave(clientId: string): void;
   simulatePresence(clientId: string, patch: network.PeerMetadata): void;
   simulateMoveCommand(regionId: string): void;
@@ -34,6 +35,7 @@ interface MockRoom extends network.Room<PixelNetworkCommand, PixelServerMessage>
 
 function createMockRoom(): MockRoom {
   const presenceUpdates: network.PeerMetadata[] = [];
+  const peers = new Map<string, network.Peer>();
   const listeners = new Map<string, Set<(payload: any) => void>>();
 
   function emit(type: string, payload: unknown): void {
@@ -45,7 +47,7 @@ function createMockRoom(): MockRoom {
   const room: MockRoom = {
     id: "test-room",
     clientId: "local-A",
-    peers: new Map(),
+    peers,
     on: (type, listener) => {
       let set = listeners.get(type);
       if (!set) {
@@ -69,6 +71,13 @@ function createMockRoom(): MockRoom {
     },
     leave() {
       // Unused by UVGhostSync.
+    },
+    addPeer(clientId, presence) {
+      peers.set(clientId, {
+        clientId,
+        identity: {},
+        presence
+      });
     },
     simulateLeave(clientId) {
       emit("peer-left", { clientId });
@@ -217,6 +226,18 @@ describe("UVGhostSync — attach", () => {
     sync.attach(asHost(createMockCanvas()));
 
     assert.throws(() => sync.attach(asHost(createMockCanvas())));
+  });
+
+  test("seeds ghost presence already stored on the room", () => {
+    const room = createMockRoom();
+    room.addPeer("peer-B", { uvGhost: kPayload });
+    const canvas = createMockCanvas();
+    const sync = new UVGhostSync({ room });
+
+    sync.attach(asHost(canvas));
+
+    assert.strictEqual(canvas.setCalls.length, 1);
+    assert.strictEqual(canvas.setCalls[0].clientId, "peer-B");
   });
 
   test("enableGhostPreview: false never wires the region-dragging listener", async() => {
@@ -385,10 +406,8 @@ describe("UVGhostSync — remote peers", () => {
 // ---------------------------------------------------------------------------
 
 describe("UVGhostSync — reconciliation", () => {
-  // A command's embedded clientId is self-asserted by the sending client and
-  // never matches the server-tracked id presence updates use for the same
-  // peer, so reconciliation matches by the region id the command actually
-  // touched instead.
+  // Region identity remains the stable reconciliation key when a custom
+  // server produces commands without normalizing client identity.
   test("an incoming uv-region-moved command clears ghosts by region id, not by clientId", () => {
     const room = createMockRoom();
     const canvas = createMockCanvas();

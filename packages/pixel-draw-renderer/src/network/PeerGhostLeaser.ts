@@ -42,7 +42,9 @@ export class PeerGhostLeaser {
   cancel(
     clientId: string
   ): void {
-    clearTimeout(this.#timers.get(clientId));
+    clearTimeout(
+      this.#timers.get(clientId)
+    );
     this.#timers.delete(clientId);
   }
 

@@ -23,6 +23,7 @@ import type { PeerStrokePixel, Vec2 } from "#src/types.ts";
 
 interface MockRoom extends network.Room<PixelNetworkCommand, PixelServerMessage> {
   presenceUpdates: network.PeerMetadata[];
+  addPeer(clientId: string, presence: network.PeerMetadata): void;
   simulateLeave(clientId: string): void;
   simulatePresence(clientId: string, patch: network.PeerMetadata): void;
   simulateStrokeCommand(positions: Vec2[]): void;
@@ -32,6 +33,7 @@ interface MockRoom extends network.Room<PixelNetworkCommand, PixelServerMessage>
 
 function createMockRoom(): MockRoom {
   const presenceUpdates: network.PeerMetadata[] = [];
+  const peers = new Map<string, network.Peer>();
   const listeners = new Map<string, Set<(payload: any) => void>>();
 
   function emit(type: string, payload: unknown): void {
@@ -43,7 +45,7 @@ function createMockRoom(): MockRoom {
   const room: MockRoom = {
     id: "test-room",
     clientId: "local-A",
-    peers: new Map(),
+    peers,
     on: (type, listener) => {
       let set = listeners.get(type);
       if (!set) {
@@ -67,6 +69,13 @@ function createMockRoom(): MockRoom {
     },
     leave() {
       // Unused by PixelStrokeGhostSync.
+    },
+    addPeer(clientId, presence) {
+      peers.set(clientId, {
+        clientId,
+        identity: {},
+        presence
+      });
     },
     simulateLeave(clientId) {
       emit("peer-left", { clientId });
@@ -189,9 +198,56 @@ describe("PixelStrokeGhostSync — attach", () => {
     sync.attach(asHost(canvas));
     assert.strictEqual(canvas.onStrokeProgress, undefined);
   });
+
+  test("seeds ghost presence already stored on the room", () => {
+    const room = createMockRoom();
+    room.addPeer("peer-B", { strokeGhost: [kPixel] });
+    const canvas = createMockCanvas();
+    const sync = new PixelStrokeGhostSync({ room });
+
+    sync.attach(asHost(canvas));
+
+    assert.strictEqual(canvas.setCalls.length, 1);
+    assert.strictEqual(canvas.setCalls[0].clientId, "peer-B");
+  });
 });
 
 describe("PixelStrokeGhostSync — detach", () => {
+  test("chains and restores an existing progress listener", () => {
+    const room = createMockRoom();
+    const canvas = createMockCanvas();
+    const seen: PeerStrokePixel[][] = [];
+    function previous(pixels: PeerStrokePixel[]): void {
+      seen.push(pixels);
+    }
+    canvas.onStrokeProgress = previous;
+    const sync = new PixelStrokeGhostSync({ room });
+    sync.attach(asHost(canvas));
+
+    canvas.triggerProgress([kPixel]);
+    sync.detach();
+
+    assert.deepStrictEqual(seen, [[kPixel]]);
+    assert.strictEqual(canvas.onStrokeProgress, previous);
+  });
+
+  test("leaves an existing listener untouched when preview is disabled", () => {
+    const canvas = createMockCanvas();
+    function previous(): void {
+      // Existing application listener.
+    }
+    canvas.onStrokeProgress = previous;
+    const sync = new PixelStrokeGhostSync({
+      room: createMockRoom(),
+      enableGhostPreview: false
+    });
+    sync.attach(asHost(canvas));
+
+    sync.detach();
+
+    assert.strictEqual(canvas.onStrokeProgress, previous);
+  });
+
   test("stops forwarding local stroke progress", () => {
     const room = createMockRoom();
     const canvas = createMockCanvas();
@@ -342,10 +398,6 @@ describe("PixelStrokeGhostSync — remote peers", () => {
 
 describe("PixelStrokeGhostSync — reconciliation", () => {
   test("an incoming stroke command clears ghosts by overlapping pixel, not by clientId", () => {
-    // A command's embedded clientId is self-asserted by the sending client
-    // and never matches the server-tracked id presence updates use for the
-    // same peer, so reconciliation matches by the pixels the command
-    // actually touched instead.
     const room = createMockRoom();
     const canvas = createMockCanvas();
     const sync = new PixelStrokeGhostSync({ room });

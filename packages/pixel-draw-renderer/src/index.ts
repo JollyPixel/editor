@@ -21,6 +21,7 @@ export {
   PixelBuffer,
   type PixelBufferOptions
 } from "./buffer/PixelBuffer.ts";
+export type { DefaultPixelBuffer } from "./buffer/types.ts";
 export type {
   PixelBufferHookAction,
   PixelBufferHookEvent,
@@ -34,8 +35,13 @@ export type {
   HistoryEntry,
   HistoryEntryInput,
   HistoryResizedEntry,
+  HistorySelectEditEntry,
   HistoryStrokeEntry,
-  HistoryTextureReplacedEntry
+  HistoryTextureReplacedEntry,
+  HistoryUvCreateEntry,
+  HistoryUvDeleteEntry,
+  HistoryUvMoveEntry,
+  HistoryUvStateEntry
 } from "./history/HistoryStack.types.ts";
 export type {
   DefaultViewport
@@ -45,6 +51,7 @@ export {
   type ZoomOptions
 } from "./rendering/Zoom.ts";
 export type {
+  ColorInput,
   PeerStrokePixel,
   RGBA,
   SelectionRect,
@@ -79,6 +86,7 @@ export {
   type UVTriangle,
   type UVTriangleCorner
 } from "./uv/UVRegion.ts";
+export { UVRegionCollection } from "./uv/UVRegionCollection.ts";
 // PixelSyncServer is deliberately not re-exported here: it value-imports
 // @jolly-pixel/network's server root (worker_threads and friends), and this
 // barrel is consumed by browser bundles. Import it from
