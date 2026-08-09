@@ -33,9 +33,7 @@ function defaultGetLabel(
 }
 
 /**
- * Broadcasts the local cursor position over a `network.Room`'s presence
- * channel and mirrors remote peers' cursors onto the attached canvas's
- * `peerPresence.cursors`.
+ * Mirrors local and remote cursor state through room presence.
  */
 export class PixelCursorSync {
   #room: network.Room<PixelNetworkCommand, PixelServerMessage>;

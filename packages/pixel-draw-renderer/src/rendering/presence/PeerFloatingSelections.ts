@@ -55,11 +55,7 @@ function rectKey(
 }
 
 /**
- * Renders remote peers' in-progress selection moves: blanks the vacated
- * source footprint and redraws content at its live position.
- * Mirrors FloatingSelection for the local user - so peers don't see
- * pre-move content duplicated alongside the ghost.
- * Content/fill reproduced locally from the shared buffer; never commits.
+ * Recreates non-authoritative selection moves from the shared buffer.
  */
 export class PeerFloatingSelections extends Emitter<
   PeerFloatingSelectionsEvent
@@ -85,7 +81,7 @@ export class PeerFloatingSelections extends Emitter<
     const existing = this.#entries.get(clientId);
 
     if (existing && existing.sourceKey === sourceKey) {
-      // Same gesture, later tick - reposition only, no resampling.
+      // Reposition later ticks without resampling the shared buffer.
       existing.liveRect = state.liveRect;
       existing.blankSource = state.blankSource;
     }
@@ -173,9 +169,6 @@ export class PeerFloatingSelections extends Emitter<
     }
   }
 
-  /**
-   * Clear all ghosts when the document is replaced by a snapshot.
-   */
   clearAll(): void {
     for (const clientId of [...this.#entries.keys()]) {
       this.remove(clientId);
@@ -183,8 +176,7 @@ export class PeerFloatingSelections extends Emitter<
   }
 
   /**
-   * Clear ghosts overlapping `positions` on reconciliation.
-   * Content-based match because presence id and command id may differ.
+   * Matches content because presence and command peer ids may differ.
    */
   removeOverlapping(
     positions: Vec2[]

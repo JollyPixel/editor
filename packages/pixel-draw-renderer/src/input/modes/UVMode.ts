@@ -10,9 +10,6 @@ export interface UVModeOptions {
   uv: UVController;
 }
 
-/**
- * Selects and drags UV regions.
- */
 export class UVMode extends InteractionMode {
   readonly id: Mode = "uv";
 

@@ -14,9 +14,6 @@ export interface ShapeSelection {
   mask: boolean[];
 }
 
-/**
- * Computes a connected shape selection and enclosed holes.
- */
 export class ShapeSelect {
   /**
    * Returns null for selections smaller than two pixels.

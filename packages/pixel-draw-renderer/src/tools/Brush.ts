@@ -9,9 +9,6 @@ import type {
   Vec2
 } from "../types.ts";
 
-/**
- * Stores a color and opacity.
- */
 export class BrushColor {
   #color: Color;
 
@@ -23,9 +20,6 @@ export class BrushColor {
     this.#color.alpha = clamp(opacity, 0, 1);
   }
 
-  /**
-   * Sets the color and optional opacity.
-   */
   set(
     color: ColorInput,
     opacity?: number
@@ -37,9 +31,6 @@ export class BrushColor {
     this.#color.alpha = alpha;
   }
 
-  /**
-   * Returns the color in the requested format.
-   */
   asString(
     format: "rgba" | "hex" = "rgba"
   ): string {
@@ -100,9 +91,6 @@ export interface BrushOptions {
   };
 }
 
-/**
- * Stores brush colors, size, and highlight settings.
- */
 export class Brush {
   readonly primary: BrushColor;
   readonly secondary: BrushColor;
@@ -134,9 +122,6 @@ export class Brush {
     this.colorOutline = highlight.colorOutline ?? "#000";
   }
 
-  /**
-   * Exchanges primary and secondary colors.
-   */
   swapColors(): void {
     const primaryHex = this.primary.asString("hex");
     const primaryOpacity = this.primary.opacity;

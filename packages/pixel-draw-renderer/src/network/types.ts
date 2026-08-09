@@ -27,9 +27,6 @@ export type PixelServerMessage = network.NetworkServerMessage<
   PixelBufferSnapshot
 >;
 
-/**
- * A peer's in-progress UV region drag forwarded from UVMap "region-dragging".
- */
 export interface UVGhostPayload {
   id: string;
   face: UVFace | null;
@@ -37,9 +34,7 @@ export interface UVGhostPayload {
 }
 
 /**
- * A peer's in-progress selection drag - geometry only, no pixel colors.
- * Receivers sample moved-block colors from their own buffer at sourceRect,
- * which is valid because both sides share the same buffer state until commit.
+ * Carries geometry only; peers sample colors from shared pre-commit state.
  */
 export type SelectionGhostPayload =
   | {
@@ -52,9 +47,7 @@ export type SelectionGhostPayload =
     liveRect: SelectionRect;
     mask: boolean[];
     /**
-     * Whether source footprint renders blanked during move - mirrors
-     * FloatingSelectionOptions.blankSource locally. Not derivable from
-     * geometry alone (depends on prior gesture history).
+     * Mirrors local blanking state, which geometry alone cannot determine.
      */
     blankSource: boolean;
   };

@@ -11,7 +11,6 @@ export interface InteractionRouterOptions {
   modes: InteractionMode[];
   defaultMode: Mode;
   viewport: Viewport;
-  /** Applies a resolved CSS cursor to the canvas. */
   setCursor: (cursor: string) => void;
   onUndo: () => boolean;
   onRedo: () => boolean;
@@ -19,9 +18,6 @@ export interface InteractionRouterOptions {
 
 export type ExternalCursorMoveListener = (pos: Vec2 | null) => void;
 
-/**
- * Holds the active `InteractionMode` and forwards `InputActions` to it.
- */
 export class InteractionRouter implements InputActions {
   #modes: Map<Mode, InteractionMode>;
   #active: InteractionMode;
@@ -74,9 +70,6 @@ export class InteractionRouter implements InputActions {
     this.#syncCursor();
   }
 
-  /**
-   * Brush-highlight size for the active mode (see `InteractionMode.highlightSize`).
-   */
   highlightBrushSize(
     brushSize: number
   ): number {
@@ -143,8 +136,7 @@ export class InteractionRouter implements InputActions {
   }
 
   onPanEnd(): void {
-    // Fall back to grab while the Space modifier is still held, otherwise
-    // restore the active mode's own cursor.
+    // Space keeps the pan cursor active after the pointer is released.
     if (this.#panModifierHeld) {
       this.#setCursor("grab");
 

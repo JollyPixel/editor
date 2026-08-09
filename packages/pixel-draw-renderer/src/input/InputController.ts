@@ -75,9 +75,6 @@ export interface InputControllerOptions {
   onCtrlWheel?: (delta: number) => boolean;
 }
 
-/**
- * Translates DOM input into coordinate-resolved canvas actions.
- */
 export class InputController {
   #canvas: HTMLCanvasElement;
   #viewport: Viewport;

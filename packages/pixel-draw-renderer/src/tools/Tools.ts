@@ -39,11 +39,7 @@ export interface ToolsOptions {
   uvOverlay: UVRegionLayer;
   pipeline: EditPipeline;
   /**
-   * Called with a tool's live in-progress pixels (brush stroke, line drag)
-   * as they change, for streaming a ghost preview to peers. Selection
-   * progress streams separately, through `SelectController`'s own emitter
-   * (see `SelectionGhostSync`) — its payload is geometry, not pixels. Never
-   * fires for fill.
+   * Streams brush and line pixels; selection geometry uses its own emitter.
    */
   onProgress?: (pixels: PeerStrokePixel[]) => void;
 }
@@ -58,10 +54,6 @@ export interface Toolset {
   select: SelectTool;
 }
 
-/**
- * Groups the drawing tool controllers. The concrete container behind the
- * public `Toolset` view (`PixelArtCanvas.tools`).
- */
 export class Tools {
   readonly brush: BrushController;
   readonly fill: FillController;

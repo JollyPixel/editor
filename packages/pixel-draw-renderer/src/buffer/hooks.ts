@@ -10,9 +10,7 @@ import type {
 } from "../uv/UVRegion.ts";
 
 /**
- * @notes
- * originTimestamp is set only when replaying an undo/redo;
- * preserved as the network timestamp instead of "now".
+ * `originTimestamp` preserves the original network timestamp during replay.
  */
 export type PixelBufferHookEvent =
   | {

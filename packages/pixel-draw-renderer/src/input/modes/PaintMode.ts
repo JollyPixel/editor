@@ -14,15 +14,12 @@ export interface PaintModeOptions {
   brush: BrushController;
   line: LineController;
   highlight: BrushHighlightView;
-  /** Cancels the active primary drag without committing it. */
+  /**
+   * Cancels the active primary drag without committing it.
+   */
   stopDrawing: () => void;
 }
 
-/**
- * Freehand brush strokes plus the Shift-armed straight line, in the primary or
- * secondary color.
- * Owns both the brush and line tools and the coordination between them.
- */
 export class PaintMode extends InteractionMode {
   readonly id: Mode = "paint";
 
@@ -170,7 +167,7 @@ export class PaintMode extends InteractionMode {
     this.#line.shiftHeld = true;
 
     if (this.#brush.isActive === "primary") {
-      // A held pointer requires committing the line on mouseup.
+      // A held pointer commits the armed line on mouseup.
       this.#stopDrawing();
       this.#brush.endStroke();
       this.#line.arm("mouseup");

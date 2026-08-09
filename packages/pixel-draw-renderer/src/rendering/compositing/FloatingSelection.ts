@@ -21,9 +21,6 @@ const kOpaqueMask: RGBA = {
 };
 
 export interface FloatingSelectionOptions {
-  /**
-   * Original selection position.
-   */
   sourceRect: SelectionRect;
   /**
    * Row-major selection pixels.
@@ -42,16 +39,12 @@ export interface FloatingSelectionOptions {
 }
 
 /**
- * Fired after the floating selection appears, moves, or clears — a view
- * change the pixel buffer knows nothing about, so the view repaints on it.
+ * Fired for floating-selection view changes not represented by the buffer.
  */
 export type FloatingSelectionEvent = {
   changed: () => void;
 };
 
-/**
- * Renders a floating selection overlay.
- */
 export class FloatingSelection extends Emitter<
   FloatingSelectionEvent
 > {
@@ -118,9 +111,6 @@ export class FloatingSelection extends Emitter<
     return eraseCanvas;
   }
 
-  /**
-   * Updates the floating selection position.
-   */
   updatePosition(
     liveRect: SelectionRect
   ): void {
@@ -148,9 +138,6 @@ export class FloatingSelection extends Emitter<
     }
   }
 
-  /**
-   * Draws the floating selection.
-   */
   draw(
     ctx: CanvasRenderingContext2D
   ): void {

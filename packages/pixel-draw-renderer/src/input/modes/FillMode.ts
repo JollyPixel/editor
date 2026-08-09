@@ -14,9 +14,6 @@ export interface FillModeOptions {
   highlight: BrushHighlightView;
 }
 
-/**
- * Bucket fill (contiguous or global) on click, in the primary or secondary color.
- */
 export class FillMode extends InteractionMode {
   readonly id: Mode = "fill";
 

@@ -28,9 +28,6 @@ const kLabelCasingWidth = "3";
 const kLabelMinScreenSize = 40;
 const kLabelMaxLength = 20;
 
-/**
- * One rendered rect entry, with optional live-drag override applied.
- */
 interface RenderEntry {
   key: string;
   region: UVRegion;
@@ -78,8 +75,7 @@ function regionLabel(
 }
 
 /**
- * Draws UV region overlays and updates on UVMap events.
- * Selected faces paint last; non-selected uncollapsed faces are dimmed.
+ * Paints selected faces last and dims other uncollapsed faces.
  */
 export class UVRegionLayer {
   #viewport: DefaultViewport;
@@ -116,9 +112,6 @@ export class UVRegionLayer {
     this.#uvMap.on("label-visibility-changed", this.#onLabelVisibilityChanged);
   }
 
-  /**
-   * Sets a live drag override for one face (or null to clear).
-   */
   setLiveOverride(
     id: string,
     face: UVFace | null,
@@ -128,18 +121,12 @@ export class UVRegionLayer {
     this.#render();
   }
 
-  /**
-   * Re-renders the current viewport (pan/zoom).
-   */
   refresh(): void {
     this.#render();
   }
 
   /**
-   * Replaces the set of region/face entries currently shown as a peer's live
-   * drag ghost (`PeerUVPreview`). Their classical rendering is suppressed
-   * here so the ghost is the sole visual until it clears, instead of a
-   * stale border sitting underneath it for the whole drag.
+   * Suppresses stale region borders beneath peer drag ghosts.
    */
   setGhostSuppressed(
     entries: Iterable<{ id: string; face: UVFace | null; }>
@@ -200,8 +187,7 @@ export class UVRegionLayer {
   }
 
   /**
-    * One label per coincident-rect stack.
-    * Prefer selected face label; otherwise use top hit-order face.
+   * Uses one label per stack, preferring the selected or top hit-order face.
    */
   #renderLabels(
     entries: RenderEntry[],
@@ -249,7 +235,7 @@ export class UVRegionLayer {
       const el = this.#labels.get(entry.key) ?? this.#createLabel(entry.key);
 
       el.setAttribute("fill", entry.region.color);
-      // Border-like text casing, drawn under glyphs via paint-order.
+      // Paint-order draws the text casing beneath the glyphs.
       el.setAttribute("stroke", contrastingColor(entry.region.color));
       const { x, y } = this.#labelPosition(entry.geometry, zoom, camera);
       const rightAligned = "shape" in entry.geometry &&
@@ -265,7 +251,7 @@ export class UVRegionLayer {
         y
       );
 
-      // Append after rects so labels stay visible.
+      // Append labels after rects to keep them visible.
       this.#group.appendChild(el);
     }
   }
@@ -304,9 +290,6 @@ export class UVRegionLayer {
     return entries;
   }
 
-  /**
-    * Paint selected entries last so they stay on top.
-   */
   #paintOrder(
     entries: RenderEntry[]
   ): RenderEntry[] {

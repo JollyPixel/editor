@@ -1,9 +1,6 @@
 // Import Internal Dependencies
 import type { SelectionRect, Vec2 } from "../types.ts";
 
-/**
- * Restricts `value` to the inclusive range [min, max].
- */
 export function clamp(
   value: number,
   min: number,
@@ -105,8 +102,7 @@ export function vec2Equal(
 }
 
 /**
- * Position key set for cheap repeated membership checks.
- * Build once per reconciliation pass, reuse across all peer ghosts.
+ * Builds position keys once for reuse across a reconciliation pass.
  */
 export function positionKeySet(
   positions: Vec2[]
@@ -117,9 +113,7 @@ export function positionKeySet(
 }
 
 /**
- * Whether any cell in `rect` (masked cells only when `mask` given) falls
- * in `committed`. Content-based match because presence peer ids and command
- * ids are not guaranteed to match.
+ * Matches by content because presence and command peer ids may differ.
  */
 export function rectOverlapsPositionKeys(
   rect: SelectionRect,

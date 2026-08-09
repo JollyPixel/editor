@@ -21,7 +21,9 @@ export type UVRegionState =
   | "collapsed"
   | "uncollapsed";
 
-/** The corner containing the triangle's right angle. */
+/**
+ * The corner containing the triangle's right angle.
+ */
 export type UVTriangleCorner =
   | "top-left"
   | "top-right"
@@ -92,9 +94,6 @@ function normalizeActiveFaces(
   return UV_FACES.filter((face) => activeFaces.includes(face));
 }
 
-/**
- * Shares one rect across all faces (regions never mutate rects in place).
- */
 function sharedFaces(
   rect: SelectionRect
 ): Record<UVFace, UVGeometry> {
@@ -109,8 +108,7 @@ function sharedFaces(
 }
 
 /**
- * Immutable texture region: collapsed (one rect for all faces) or uncollapsed (per-face).
- * All mutations return a new instance or `this` on no-op.
+ * Immutable region whose mutations return a new instance or `this` on no-op.
  */
 export class UVRegion {
   readonly id: string;

@@ -40,9 +40,7 @@ function isPeerStrokePixels(
 }
 
 /**
- * Streams local in-progress pixels via presence and renders remote ghosts.
- * Ephemeral only - never touches history or the authoritative buffer.
- * Ghosts clear when authoritative edits overlap them or after inactivity.
+ * Streams non-authoritative stroke ghosts through presence only.
  */
 export class PixelStrokeGhostSync {
   #room: network.Room<PixelNetworkCommand, PixelServerMessage>;
@@ -171,8 +169,7 @@ export class PixelStrokeGhostSync {
   #reportLocal(
     pixels: PeerStrokePixel[]
   ): void {
-    // Empty = gesture committed; authoritative command already sent - drop
-    // to avoid resurrecting the ghost peers just saw cleared.
+    // Drop queued ticks after commit so cleared ghosts cannot reappear.
     if (pixels.length === 0) {
       this.#cancelPending();
 
@@ -202,7 +199,6 @@ export class PixelStrokeGhostSync {
     this.#pendingPixels = undefined;
   }
 
-  /** Clears ghosts touched by accepted command positions. */
   #reconcileCommand(
     command: PixelNetworkCommand
   ): void {

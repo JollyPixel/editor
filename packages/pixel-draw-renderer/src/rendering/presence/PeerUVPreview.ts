@@ -28,9 +28,7 @@ interface PeerBorder {
 }
 
 /**
- * Renders a dashed, per-peer-colored border for a remote peer's in-progress
- * (uncommitted) UV region drag. Purely visual: never touches `UVMap` state
- * or history.
+ * Renders non-authoritative peer UV drag borders.
  */
 export class PeerUVPreview {
   #svg: SVGElement;
@@ -67,10 +65,6 @@ export class PeerUVPreview {
     this.#syncSuppression();
   }
 
-  /**
-   * Clears every peer's ghost — used when the whole document is replaced by
-   * a snapshot, since none of the in-progress state it described survives.
-   */
   clearAll(): void {
     for (const clientId of [...this.#ghosts.keys()]) {
       this.remove(clientId);
@@ -78,11 +72,7 @@ export class PeerUVPreview {
   }
 
   /**
-   * Clears any ghost(s) for the given region id, regardless of which peer
-   * they belong to — used on reconciliation, where the committing peer's
-   * presence-observed id and their command's embedded id are not
-   * guaranteed to match (see UVGhostSync). Content-based instead: at most
-   * one peer sensibly drags a given region at a time.
+   * Matches regions because presence and command peer ids may differ.
    */
   removeByRegion(
     id: string
@@ -94,9 +84,6 @@ export class PeerUVPreview {
     }
   }
 
-  /**
-   * Re-places every active ghost — used after a pan/zoom.
-   */
   refresh(): void {
     for (const clientId of this.#ghosts.keys()) {
       this.#render(clientId);

@@ -12,10 +12,7 @@ export type PeerStrokesEvent = {
 };
 
 /**
- * Renders remote peers' in-progress (uncommitted) stroke pixels: a
- * non-authoritative, per-peer sparse pixel overlay composited on top of the
- * document buffer. Never touches `CanvasBuffer`, `History`, or conflict
- * resolution. Sync owns commit and inactivity cleanup.
+ * Renders non-authoritative peer strokes without mutating the document.
  */
 export class PeerStrokes extends Emitter<
   PeerStrokesEvent
@@ -64,11 +61,7 @@ export class PeerStrokes extends Emitter<
   }
 
   /**
-   * Clears any peer's ghost sharing a pixel with `positions` — used on
-   * reconciliation, where the committing peer's presence-observed id and
-   * their command's embedded id are not guaranteed to match (see
-   * PixelStrokeGhostSync). Content-based instead: a ghost sharing a pixel
-   * with a commit that just landed is stale, whoever sent it.
+   * Matches pixels because presence and command peer ids may differ.
    */
   removeOverlapping(
     positions: Vec2[]

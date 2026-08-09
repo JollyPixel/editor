@@ -12,9 +12,6 @@ import type {
   SelectionRect
 } from "../../types.ts";
 
-/**
- * Renders rectangular and masked selection outlines.
- */
 export class SelectionOutline {
   #viewport: DefaultViewport;
   #outline: SVGRectElement;
@@ -103,9 +100,6 @@ export class SelectionOutline {
     el.setAttribute("visibility", "hidden");
   }
 
-  /**
-   * Renders a rectangular selection outline.
-   */
   drawRect(
     rect: SelectionRect
   ): void {
@@ -128,9 +122,6 @@ export class SelectionOutline {
     }
   }
 
-  /**
-   * Renders a masked selection outline.
-   */
   drawMask(
     rect: SelectionRect,
     mask: boolean[]

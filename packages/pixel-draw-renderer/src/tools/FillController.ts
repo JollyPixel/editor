@@ -27,17 +27,13 @@ export interface FillControllerOptions {
   pipeline: EditPipeline;
 }
 
-/**
- * Public fill-tool surface (`PixelArtCanvas.tools.fill`).
- */
 export interface FillTool {
-  /** Whether fills recolor every matching pixel, not just the contiguous region. */
+  /**
+   * Recolors every matching pixel instead of only the contiguous region.
+   */
   global: boolean;
 }
 
-/**
- * Runs contiguous and global fills.
- */
 export class FillController implements FillTool {
   #brush: Brush;
   #canvasBuffer: CanvasBuffer;

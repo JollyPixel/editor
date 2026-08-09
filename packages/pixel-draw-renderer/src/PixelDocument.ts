@@ -13,17 +13,8 @@ import type {
 } from "./types.ts";
 
 export interface PixelDocumentOptions {
-  /**
-   * Initial texture size.
-   */
   size: Vec2;
-  /**
-   * Default fill color for the buffer.
-   */
   defaultColor?: ColorInput;
-  /**
-   * Maximum buffer dimension.
-   */
   maxSize?: number;
   /**
    * Initial texture source, loaded over the freshly-filled buffer.
@@ -37,10 +28,7 @@ export interface PixelDocumentOptions {
 }
 
 /**
- * The editable model: the pixel buffer, its UV regions, and the undo/redo
- * history. It owns the wiring the three need between them (the UV map reads
- * the buffer size; history observes both), so constructing a document is one
- * call rather than three ordered steps.
+ * Owns the buffer, UV map, history, and their shared wiring.
  */
 export class PixelDocument {
   readonly buffer: CanvasBuffer;
@@ -76,8 +64,7 @@ export class PixelDocument {
   }
 
   /**
-   * Subscribes to visible buffer mutations (stroke / region edits). The view
-   * repaints on these; size-changing edits are driven explicitly instead.
+   * Subscribes to visible mutations; size changes are driven separately.
    */
   onChange(
     listener: () => void

@@ -22,11 +22,11 @@ export type SelectionProgressEvent =
 export type SelectControllerEvent = {
   "selection-progress": (event: SelectionProgressEvent) => void;
   /**
-   * Move committed - select-edit command already sent; drop pending ghost tick.
+   * Signals that the command replaced any pending ghost tick.
    */
   "selection-committed": () => void;
   /**
-   * Gesture ended without a command - sender must clear presence explicitly.
+   * Signals that presence must clear because no command follows.
    */
   "selection-idle": () => void;
 };

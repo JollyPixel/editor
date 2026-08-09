@@ -3,9 +3,6 @@ export interface Canvas2D {
   readonly context: CanvasRenderingContext2D;
 }
 
-/**
- * Creates a canvas with an available 2D rendering context.
- */
 export function createCanvas2D(
   width: number,
   height: number

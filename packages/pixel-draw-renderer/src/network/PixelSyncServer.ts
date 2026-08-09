@@ -72,9 +72,6 @@ export interface PixelSyncServerOptions {
   conflictResolver?: network.ConflictResolver;
 }
 
-/**
- * Manages authoritative buffer state and client synchronization.
- */
 export class PixelSyncServer extends network.Extension {
   readonly id: string;
   readonly name = "pixel-draw.renderer";
@@ -101,7 +98,6 @@ export class PixelSyncServer extends network.Extension {
   onClientConnect(
     client: network.ClientHandle
   ): void {
-    // Send the current buffer snapshot to the new client.
     client.send({
       type: "snapshot",
       data: this.snapshot()
@@ -111,7 +107,7 @@ export class PixelSyncServer extends network.Extension {
   onClientDisconnect(
     _clientId: string
   ): void {
-    // Server owns client-list bookkeeping.
+    // The room owns client-list bookkeeping.
   }
 
   onMessage(
@@ -228,7 +224,7 @@ export class PixelSyncServer extends network.Extension {
   }
 
   /**
-   * Resolves per-pixel like `#receiveStroke`, sharing the same `#pixelTracker` history
+   * Resolves per pixel against the stroke conflict history.
    */
   #receiveSelectEdit(
     command: PixelSelectEditCommand,
@@ -272,7 +268,7 @@ export class PixelSyncServer extends network.Extension {
   }
 
   /**
-   * Resolves per-face like strokes (all-or-nothing: any key rejection blocks the whole command).
+   * Rejects the whole UV command when any face conflict is rejected.
    */
   #receiveUvRegionCommand(
     cmd: PixelUvRegionCommand,

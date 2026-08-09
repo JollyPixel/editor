@@ -16,9 +16,6 @@ export type NamedKey =
 
 export type KeyToken = NamedKey | (string & {});
 
-/**
- * Describes a keyboard shortcut.
- */
 export type Keybinding =
   | KeyToken
   | `${ModifierToken}+${KeyToken}`

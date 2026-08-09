@@ -28,9 +28,6 @@ export interface PasteResult {
 
 const kTransparent: RGBA = { r: 0, g: 0, b: 0, a: 0 };
 
-/**
- * Manages rectangular and masked selection state.
- */
 export class Select {
   #state: SelectState = "idle";
   #createStart: Vec2 | null = null;
@@ -401,9 +398,7 @@ export class Select {
   }
 
   /**
-   * Samples surrounding pixels and returns the most common color,
-   * so a vacated footprint blends in rather than leaving a flat hole.
-   * Falls back to `fallback` when rect has no in-bounds neighbors.
+   * Uses the dominant border color, or `fallback` without in-bounds neighbors.
    */
   static dominantBorderColor(
     buffer: DefaultPixelBuffer,
@@ -463,9 +458,7 @@ export class Select {
   }
 
   /**
-   * Resolve fill for a vacated footprint: explicit eraseColor or dominantBorderColor.
-   * Shared by SelectController and PeerFloatingSelections - both must
-   * resolve to the same color given the same buffer state.
+   * Keeps local and peer vacated-footprint colors consistent.
    */
   static resolveEraseColor(
     buffer: DefaultPixelBuffer,

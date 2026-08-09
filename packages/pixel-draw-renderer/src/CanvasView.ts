@@ -25,9 +25,6 @@ import type {
 } from "./types.ts";
 
 export interface CanvasViewOptions {
-  /**
-   * Element the canvas and SVG overlays are mounted into.
-   */
   parent: HTMLDivElement;
   zoom?: ZoomOptions;
   /**
@@ -39,9 +36,6 @@ export interface CanvasViewOptions {
     colors: { odd: string; even: string; };
     squareSize: number;
   };
-  /**
-   * Highlight spec (size + colors) driving the brush/line/selection overlays.
-   */
   brushHighlight: BrushHighlight;
   /**
    * Explicit fill for a peer's vacated selection footprint.
@@ -51,8 +45,7 @@ export interface CanvasViewOptions {
 }
 
 /**
- * The view: the pixel canvas, its SVG overlays, and the viewport camera. It
- * owns everything needed to paint the current document state
+ * Owns the canvas, overlays, and viewport camera.
  */
 export class CanvasView {
   #doc: PixelDocument;
@@ -123,7 +116,7 @@ export class CanvasView {
       floatingSelections: this.renderer.peerFloatingSelections
     });
 
-    // Repaint on pixel/floating-selection changes; no overlay refresh needed.
+    // Pixel and floating-selection changes do not affect overlay geometry.
     doc.onChange(this.#onRenderStateChanged);
     this.renderer.floatingSelection.on(
       "changed",
@@ -167,14 +160,14 @@ export class CanvasView {
     width: number,
     height: number
   ): void {
-    // Resize surfaces first; viewport "changed" then drives repaint + refresh.
+    // Resize surfaces first; the viewport event then repaints and refreshes.
     this.renderer.resize(width, height);
     this.overlays.resize(width, height);
     this.viewport.resizeCanvas(width, height);
   }
 
   centerTexture(): void {
-    // viewport.centerTexture() emits "changed" to trigger repaint.
+    // centerTexture emits the repaint-triggering viewport event.
     this.viewport.centerTexture();
   }
 
@@ -224,7 +217,7 @@ export class CanvasView {
       return clamp(4, zoomMin, zoomMax);
     }
 
-    // Leaves a small margin so the texture isn't flush against the edges.
+    // Keep the fitted texture clear of the container edges.
     const kFitPadding = 0.9;
     const fit = Math.min(
       containerSize.width / textureSize.x,

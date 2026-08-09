@@ -99,9 +99,6 @@ export interface PixelArtCanvasOptions {
     colors: { odd: string; even: string; };
     squareSize: number;
   };
-  /**
-    * Canvas color outside texture bounds.
-   */
   backgroundColor?: ColorInput;
   brush?: BrushOptions;
   select?: {
@@ -131,9 +128,6 @@ export interface PixelArtCanvasOptions {
     limit?: number;
   };
   onHistoryChange?: (state: HistoryState) => void;
-  /**
-   * Keybinding overrides.
-   */
   keybindings?: Partial<KeybindingsMap>;
 }
 
@@ -308,9 +302,6 @@ export class PixelArtCanvas {
     this.#router.mode = mode;
   }
 
-  /**
-   * Canvas color outside texture bounds.
-   */
   get backgroundColor(): string {
     return this.#view.backgroundColor;
   }
@@ -418,9 +409,6 @@ export class PixelArtCanvas {
     return this.#doc.buffer.pixels();
   }
 
-  /**
-   * Commits pixels as a stroke edit.
-   */
   commitPixels(
     pixels: Vec2[],
     slot: BrushColorSlot = "primary"
@@ -428,9 +416,6 @@ export class PixelArtCanvas {
     this.#edits.commitPixels(pixels, slot);
   }
 
-  /**
-    * Reverts the latest local edit.
-    */
   undo(): boolean {
     const entry = this.#edits.runHistoryReplay(() => this.#doc.history.undo());
     if (!entry) {
@@ -452,9 +437,6 @@ export class PixelArtCanvas {
     return true;
   }
 
-  /**
-    * Reapplies the latest reverted edit.
-    */
   redo(): boolean {
     const entry = this.#edits.runHistoryReplay(() => this.#doc.history.redo());
     if (!entry) {
@@ -487,32 +469,22 @@ export class PixelArtCanvas {
     return this.#doc.history.canRedo;
   }
 
-  /**
-   * Current buffer-mutation listener; readable so callers can chain on it.
-   */
   get onBufferUpdated(): PixelBufferHookListener | undefined {
     return this.#edits.onBufferUpdated;
   }
 
-  /**
-   * Replaces the local buffer-mutation listener.
-   */
   set onBufferUpdated(
     fn: PixelBufferHookListener | undefined
   ) {
     this.#edits.onBufferUpdated = fn;
   }
 
-  /**
-   * Current cursor-move listener; readable so callers can chain on it.
-   */
   get onCursorMove(): ExternalCursorMoveListener | undefined {
     return this.#router.onExternalCursorMove;
   }
 
   /**
-   * Replaces the cursor-move listener. Reports bounded texture position on
-   * every mousemove, null when pointer leaves canvas or texture bounds.
+   * Reports bounded texture positions, or `null` outside the texture.
    */
   set onCursorMove(
     fn: ExternalCursorMoveListener | undefined
@@ -520,16 +492,12 @@ export class PixelArtCanvas {
     this.#router.onExternalCursorMove = fn;
   }
 
-  /**
-   * Current stroke-progress listener; readable so callers can chain on it.
-   */
   get onStrokeProgress(): ((pixels: PeerStrokePixel[]) => void) | undefined {
     return this.#onStrokeProgress;
   }
 
   /**
-   * Replaces the stroke-progress listener. Reports live in-progress pixels
-   * for brush/line gestures
+   * Reports live brush and line pixels before commit.
    */
   set onStrokeProgress(
     fn: ((pixels: PeerStrokePixel[]) => void) | undefined
@@ -537,18 +505,12 @@ export class PixelArtCanvas {
     this.#onStrokeProgress = fn;
   }
 
-  /**
-   * Applies a remote mutation without emitting it.
-   */
   applyRemoteCommand(
     event: PixelBufferHookEvent
   ): void {
     this.#edits.applyRemoteCommand(event);
   }
 
-  /**
-   * Replaces the buffer from a remote snapshot.
-   */
   loadSnapshot(
     size: Vec2,
     pixels: Uint8ClampedArray,

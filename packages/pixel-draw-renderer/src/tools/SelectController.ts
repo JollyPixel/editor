@@ -37,7 +37,6 @@ export interface SelectEditEntry {
 
 export interface SelectControllerOptions {
   canvasBuffer: CanvasBuffer;
-  /** The floating overlay that renders a selection while it is dragged. */
   floatingSelection: FloatingSelection;
   selectionOverlay: SelectionOutline;
   /**
@@ -49,25 +48,20 @@ export interface SelectControllerOptions {
   pipeline: EditPipeline;
 }
 
-/**
- * Public select-tool surface (`PixelArtCanvas.tools.select`).
- */
 export interface SelectTool {
-  /** Whether empty-space clicks create shape (magic-wand) selections. */
+  /**
+   * Whether empty-space clicks create shape selections.
+   */
   shape: boolean;
-  /** Whether a committed selection exists to transform. */
   readonly hasSelection: boolean;
-  /** Rotates the active selection clockwise; `false` when none. */
+  /**
+   * Returns `false` when there is no active selection.
+   */
   rotate(): boolean;
-  /** Mirrors the active selection horizontally; `false` when none. */
   flipHorizontal(): boolean;
-  /** Mirrors the active selection vertically; `false` when none. */
   flipVertical(): boolean;
 }
 
-/**
- * Coordinates selection state, rendering, and commits.
- */
 export class SelectController extends Emitter<SelectControllerEvent> implements SelectTool {
   #select = new Select();
   #canvasBuffer: CanvasBuffer;
@@ -76,7 +70,6 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
   #eraseColor: RGBA | null;
   #pipeline: EditPipeline;
   #shapeMode = false;
-  /** The dragged selection's origin rect + erase policy for progress ticks. */
   #moveSourceRect: SelectionRect | null = null;
   #moveBlankSource = true;
 
@@ -92,8 +85,7 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
   }
 
   /**
-   * Resolve fill for a vacated footprint: explicit eraseColor or dominant
-   * surrounding color, falling back to transparent.
+   * Uses the explicit erase color or the dominant border color.
    */
   #resolveEraseColor(
     rect: SelectionRect
@@ -105,23 +97,14 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
     return this.#select.rect;
   }
 
-  /**
-   * Whether a committed selection is being dragged (not still being drawn).
-   */
   get isDragging(): boolean {
     return this.#select.state === "moving";
   }
 
-  /**
-   * Whether a committed selection exists - selected or moving, not creating.
-   */
   get hasSelection(): boolean {
     return this.#select.state === "selected" || this.#select.state === "moving";
   }
 
-  /**
-   * Whether empty-space clicks create shape selections.
-   */
   get shape(): boolean {
     return this.#shapeMode;
   }
@@ -137,9 +120,6 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
     this.clear();
   }
 
-  /**
-   * Starts creating or moving a selection.
-   */
   handleStart(
     pos: Vec2
   ): void {
@@ -204,7 +184,7 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
       shape.mask
     );
     this.#selectionOverlay.drawMask(shape.rect, shape.mask);
-    // Shape-select resolves instantly with no command - clear peer ghost explicitly.
+    // Shape selection has no command, so clear its peer ghost explicitly.
     this.emit("selection-idle");
   }
 
@@ -263,7 +243,7 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
       );
       this.#select.finishCreate(snapshot, finalRect);
       this.#selectionOverlay.drawRect(finalRect);
-      // Creation never commits a command - nothing to reconcile on peers.
+      // Creation has no command, so clear its peer ghost explicitly.
       this.emit("selection-idle");
 
       return;
@@ -285,11 +265,11 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
           newContent: snapshot,
           skipErase: result.skipErase
         });
-        // Command already sent; drop pending ghost tick.
+        // Drop the pending ghost tick after sending the command.
         this.emit("selection-committed");
       }
       else {
-        // No-op drag (dropped on source) - same as creation: nothing to reconcile.
+        // A no-op drag has no command, so clear its peer ghost explicitly.
         this.emit("selection-idle");
       }
 
@@ -304,9 +284,6 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
     }
   }
 
-  /**
-   * Copies the active selection.
-   */
   handleCopy(): boolean {
     if (this.#select.state !== "selected") {
       return false;
@@ -317,9 +294,6 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
     return true;
   }
 
-  /**
-   * Pastes the clipboard as the active selection.
-   */
   handlePaste(): boolean {
     const result = this.#select.paste();
     if (!result) {
@@ -342,9 +316,6 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
     return true;
   }
 
-  /**
-   * Erases the active selection.
-   */
   handleDelete(): boolean {
     if (this.#select.state !== "selected") {
       return false;
@@ -373,9 +344,6 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
     return true;
   }
 
-  /**
-   * Rotates the active selection clockwise.
-   */
   rotate(): boolean {
     if (this.#select.state !== "selected") {
       return false;
@@ -449,7 +417,7 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
     this.#floatingSelection.clear();
     this.#moveSourceRect = null;
 
-    // A mid-gesture interruption (e.g. mode switch) produces no command - nothing to reconcile.
+    // An interrupted gesture has no command, so clear its peer ghost explicitly.
     if (interruptedGesture) {
       this.emit("selection-idle");
     }
@@ -503,8 +471,7 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
     );
     this.#canvasBuffer.copyToMaster();
 
-    // drawPixels/drawMaskedRegion already repainted; afterColors sampled
-    // from buffer, unaffected by repaint timing.
+    // Sampling after repaint still reads the updated buffer state.
     const afterColors = this.#canvasBuffer.samplePixels(positions);
     this.#pipeline.commitSelectionEdit({
       positions,
@@ -517,9 +484,6 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
     });
   }
 
-  /**
-   * Restores selection state after a history replay.
-   */
   syncSelectionAfterHistory(
     rect: SelectionRect,
     mask: boolean[]

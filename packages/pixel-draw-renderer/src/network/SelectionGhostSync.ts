@@ -53,9 +53,7 @@ function isSelectionGhostPayload(
 }
 
 /**
- * Streams local in-progress selection via presence and renders remote ghosts.
- * Ephemeral only - never touches history or the authoritative buffer.
- * Ghosts clear on overlapping edits, idle gestures or inactivity.
+ * Streams non-authoritative selection ghosts through presence only.
  */
 export class SelectionGhostSync {
   #room: network.Room<PixelNetworkCommand, PixelServerMessage>;
@@ -73,13 +71,12 @@ export class SelectionGhostSync {
   };
 
   #onSelectionCommitted = (): void => {
-    // Command already sent to peers - drop to avoid resurrecting the ghost
-    // they just saw cleared via command reconciliation.
+    // Drop queued ticks after commit so cleared ghosts cannot reappear.
     this.#cancelPending();
   };
 
   #onSelectionIdle = (): void => {
-    // No command follows; clear presence explicitly instead of waiting on timeout.
+    // No command follows, so clear presence without waiting for timeout.
     this.#cancelPending();
     this.#room.updatePresence({
       [kPresenceSelectionKey]: null
@@ -244,7 +241,6 @@ export class SelectionGhostSync {
     this.#pendingPayload = undefined;
   }
 
-  /** Clears ghosts touched by accepted command positions. */
   #reconcileCommand(
     command: PixelNetworkCommand
   ): void {
@@ -301,7 +297,7 @@ export class SelectionGhostSync {
         mask: null,
         color
       });
-      // New marquee has no source footprint to blank.
+      // A new marquee has no source footprint to blank.
       this.#canvas.peerPresence.floatingSelections.remove(
         clientId
       );

@@ -21,9 +21,6 @@ export interface HistoryStackOptions {
   limit?: number;
 }
 
-/**
- * Replays a bounded undo/redo stack against a pixel buffer.
- */
 export class HistoryStack {
   #buffer: DefaultPixelBuffer;
   #uvMap: UVMap;

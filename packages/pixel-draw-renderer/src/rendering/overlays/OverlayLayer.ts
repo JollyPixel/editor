@@ -23,8 +23,7 @@ export interface OverlayLayerOptions {
 }
 
 /**
- * Owns the SVG element and the camera-aligned overlays drawn over the canvas.
- * UV is created first so tool overlays paint above its region borders.
+ * Creates UV first so tool overlays paint above region borders.
  */
 export class OverlayLayer {
   #parentHtmlElement: HTMLDivElement;

@@ -8,9 +8,6 @@ import type {
   Vec2
 } from "../../types.ts";
 
-/**
- * Renders a line preview overlay.
- */
 export class LinePreview {
   #viewport: DefaultViewport;
   #outline: SVGLineElement;

@@ -20,7 +20,9 @@ const kDashArray = "6 4";
 
 export interface PeerSelectionOutlineState {
   rect: SelectionRect;
-  /** `null` for a plain rectangle (always the case while `creating`). */
+  /**
+   * `null` for a plain rectangle, including every creating state.
+   */
   mask: boolean[] | null;
   color: string;
 }
@@ -113,8 +115,7 @@ class PeerSelectionBorder {
 }
 
 /**
- * Dashed per-peer-colored boundary for a remote peer's in-progress selection.
- * Purely visual - never touches selection state or history.
+ * Renders non-authoritative peer selection boundaries.
  */
 export class PeerSelectionOutlines {
   #svg: SVGElement;
@@ -150,9 +151,6 @@ export class PeerSelectionOutlines {
     return this.#ghosts.size > 0;
   }
 
-  /**
-   * Clear all ghosts when the document is replaced by a snapshot.
-   */
   clearAll(): void {
     for (const clientId of [...this.#ghosts.keys()]) {
       this.remove(clientId);
@@ -160,8 +158,7 @@ export class PeerSelectionOutlines {
   }
 
   /**
-   * Clear ghosts overlapping `positions` on reconciliation.
-   * Content-based match because presence id and command id may differ.
+   * Matches content because presence and command peer ids may differ.
    */
   removeOverlapping(
     positions: Vec2[]
@@ -179,9 +176,6 @@ export class PeerSelectionOutlines {
     }
   }
 
-  /**
-   * Re-place every active ghost after a pan/zoom.
-   */
   refresh(): void {
     for (const clientId of this.#ghosts.keys()) {
       this.#render(clientId);

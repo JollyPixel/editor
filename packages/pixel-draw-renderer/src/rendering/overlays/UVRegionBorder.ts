@@ -24,9 +24,6 @@ export interface UVRegionBorderStyle {
   casing?: boolean;
 }
 
-/**
- * Draws a colored UV border with an optional contrasting casing.
- */
 export class UVRegionBorder {
   #group: SVGGElement;
   #casing: SVGGeometryElement;

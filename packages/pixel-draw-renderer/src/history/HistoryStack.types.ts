@@ -35,9 +35,6 @@ export interface HistoryTextureReplacedEntry {
   afterPixels: Uint8ClampedArray;
 }
 
-/**
- * Stores pixels and selection state before and after a selection edit.
- */
 export interface HistorySelectEditEntry {
   action: "select-edit";
   timestamp: number;

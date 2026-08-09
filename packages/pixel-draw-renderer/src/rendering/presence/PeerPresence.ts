@@ -13,9 +13,6 @@ export interface PeerPresenceOptions {
   floatingSelections: PeerFloatingSelections;
 }
 
-/**
- * Groups the transient rendering state received from remote peers.
- */
 export class PeerPresence {
   readonly cursors: PeerCursors;
   readonly strokes: PeerStrokes;

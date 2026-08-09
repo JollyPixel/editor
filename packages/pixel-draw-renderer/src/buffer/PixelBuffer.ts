@@ -157,9 +157,6 @@ export class PixelBuffer implements DefaultPixelBuffer {
     return this.#working;
   }
 
-  /**
-   * Replaces pixels and resizes the buffer.
-   */
   replacePixels(
     pixels: Uint8ClampedArray,
     size: Vec2
@@ -175,9 +172,6 @@ export class PixelBuffer implements DefaultPixelBuffer {
     this.copyToMaster();
   }
 
-  /**
-   * Writes one color to each in-bounds position.
-   */
   drawPixels(
     positions: Iterable<Vec2>,
     color: RGBA
@@ -200,9 +194,6 @@ export class PixelBuffer implements DefaultPixelBuffer {
     }
   }
 
-  /**
-   * Writes row-major colors to in-bounds rectangle cells.
-   */
   drawRegion(
     rect: SelectionRect,
     pixels: RGBA[]
@@ -228,9 +219,6 @@ export class PixelBuffer implements DefaultPixelBuffer {
     }
   }
 
-  /**
-   * Writes only rectangle cells with a true mask value.
-   */
   drawMaskedRegion(
     rect: SelectionRect,
     pixels: RGBA[],

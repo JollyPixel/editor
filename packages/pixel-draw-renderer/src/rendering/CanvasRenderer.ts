@@ -41,16 +41,12 @@ export interface CanvasRendererOptions {
   backgroundColor?: ColorInput;
   /**
    * Explicit fill for a peer's vacated selection-move footprint, mirroring
-   * `PixelArtCanvasOptions.select.eraseColor` — so a peer's ghost blanks its
-   * source the same way the mover's own client does.
+   * `PixelArtCanvasOptions.select.eraseColor` so both clients blank it equally.
    * @default null (dominant neighbor color)
    */
   eraseColor?: RGBA | null;
 }
 
-/**
- * Renders the texture and its background.
- */
 export class CanvasRenderer {
   #canvas: HTMLCanvasElement;
   #ctx: CanvasRenderingContext2D;

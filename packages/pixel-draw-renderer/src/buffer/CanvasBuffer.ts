@@ -24,9 +24,6 @@ export type CanvasBufferEvent = {
   changed: () => void;
 };
 
-/**
- * Synchronizes a PixelBuffer with a canvas.
- */
 export class CanvasBuffer extends Emitter<
   CanvasBufferEvent
 > implements DefaultPixelBuffer {
@@ -121,9 +118,6 @@ export class CanvasBuffer extends Emitter<
     this.#buffer.replacePixels(imageData.data, size);
   }
 
-  /**
-   * Replaces pixels and resizes the existing canvas.
-   */
   replacePixels(
     pixels: Uint8ClampedArray,
     size: Vec2
@@ -135,18 +129,12 @@ export class CanvasBuffer extends Emitter<
     this.#syncCanvasFromBuffer();
   }
 
-  /**
-   * Returns a copy of the pixel data.
-   */
   pixels(): Uint8ClampedArray {
     return Uint8ClampedArray.from(
       this.#buffer.pixels()
     );
   }
 
-  /**
-   * Writes one color to each in-bounds position and syncs the canvas.
-   */
   drawPixels(
     pixels: Iterable<Vec2>,
     color: RGBA
@@ -200,9 +188,6 @@ export class CanvasBuffer extends Emitter<
     this.emit("changed");
   }
 
-  /**
-   * Writes row-major colors to in-bounds rectangle cells and syncs the canvas.
-   */
   drawRegion(
     rect: SelectionRect,
     pixels: RGBA[]
@@ -212,9 +197,6 @@ export class CanvasBuffer extends Emitter<
     this.emit("changed");
   }
 
-  /**
-   * Writes only rectangle cells with a true mask value and syncs the canvas.
-   */
   drawMaskedRegion(
     rect: SelectionRect,
     pixels: RGBA[],

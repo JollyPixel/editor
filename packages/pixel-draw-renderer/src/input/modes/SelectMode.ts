@@ -10,10 +10,6 @@ export interface SelectModeOptions {
   select: SelectController;
 }
 
-/**
- * Rectangular / magic-wand selection with move, copy, paste, delete, rotate and
- * flip.
- */
 export class SelectMode extends InteractionMode {
   readonly id: Mode = "select";
 
