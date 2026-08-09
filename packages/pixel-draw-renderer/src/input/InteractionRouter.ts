@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import type { InteractionMode } from "./modes/InteractionMode.ts";
-import type { InputActions } from "./InputController.ts";
+import type { InputActions } from "./InputActions.ts";
 import type { Viewport } from "../rendering/Viewport.ts";
 import type {
   Mode,
@@ -13,8 +13,8 @@ export interface InteractionRouterOptions {
   viewport: Viewport;
   /** Applies a resolved CSS cursor to the canvas. */
   setCursor: (cursor: string) => void;
-  onUndo: () => boolean | void;
-  onRedo: () => boolean | void;
+  onUndo: () => boolean;
+  onRedo: () => boolean;
 }
 
 export type ExternalCursorMoveListener = (pos: Vec2 | null) => void;
@@ -27,8 +27,8 @@ export class InteractionRouter implements InputActions {
   #active: InteractionMode;
   #viewport: Viewport;
   #setCursor: (cursor: string) => void;
-  #onUndo: () => boolean | void;
-  #onRedo: () => boolean | void;
+  #onUndo: () => boolean;
+  #onRedo: () => boolean;
   #panModifierHeld: boolean = false;
   onExternalCursorMove: ExternalCursorMoveListener | undefined;
 
@@ -88,26 +88,20 @@ export class InteractionRouter implements InputActions {
   }
 
   onPrimaryDown(
-    tx: number,
-    ty: number
-  ): boolean | void {
-    const handled = this.#active.onPrimaryDown({
-      x: tx,
-      y: ty
-    });
+    position: Vec2
+  ): boolean {
+    const shouldTrackDrag = this.#active.onPrimaryDown(
+      position
+    );
     this.#syncCursor();
 
-    return handled;
+    return shouldTrackDrag;
   }
 
   onPrimaryMove(
-    tx: number,
-    ty: number
+    position: Vec2
   ): void {
-    this.#active.onPrimaryMove({
-      x: tx,
-      y: ty
-    });
+    this.#active.onPrimaryMove(position);
   }
 
   onPrimaryUp(): void {
@@ -116,42 +110,36 @@ export class InteractionRouter implements InputActions {
   }
 
   onSecondaryDown(
-    tx: number,
-    ty: number,
+    position: Vec2,
     ctrlKey: boolean
-  ): boolean | void {
-    return this.#active.onSecondaryDown({
-      x: tx,
-      y: ty
-    }, ctrlKey);
+  ): boolean {
+    return this.#active.onSecondaryDown(
+      position,
+      ctrlKey
+    );
   }
 
   onSecondaryMove(
-    tx: number,
-    ty: number
+    position: Vec2
   ): void {
-    this.#active.onSecondaryMove({
-      x: tx,
-      y: ty
-    });
+    this.#active.onSecondaryMove(position);
   }
 
   onSecondaryUp(): void {
     this.#active.onSecondaryUp();
   }
 
-  onPanStart(
-    _mx: number,
-    _my: number
-  ): void {
+  onPanStart(): void {
     this.#setCursor("grabbing");
   }
 
   onPanMove(
-    dx: number,
-    dy: number
+    delta: Vec2
   ): void {
-    this.#viewport.applyPan(dx, dy);
+    this.#viewport.applyPan(
+      delta.x,
+      delta.y
+    );
   }
 
   onPanEnd(): void {
@@ -168,24 +156,26 @@ export class InteractionRouter implements InputActions {
 
   onZoom(
     delta: number,
-    cx: number,
-    cy: number
+    center: Vec2
   ): void {
-    this.#viewport.applyZoom(delta, cx, cy);
+    this.#viewport.applyZoom(
+      delta,
+      center.x,
+      center.y
+    );
   }
 
-  onMouseMove(
-    cx: number,
-    cy: number
+  onCanvasHover(
+    position: Vec2 | null
   ): void {
-    this.#active.onHover(cx, cy);
+    this.#active.onHover(position);
   }
 
-  onCursorMove(
-    pos: Vec2 | null
+  onTextureCursorMove(
+    position: Vec2 | null
   ): void {
-    this.#active.onCursorMove(pos);
-    this.onExternalCursorMove?.(pos);
+    this.#active.onCursorMove(position);
+    this.onExternalCursorMove?.(position);
   }
 
   onMouseUp(): void {
@@ -215,35 +205,35 @@ export class InteractionRouter implements InputActions {
     this.#syncCursor();
   }
 
-  onCopy(): boolean | void {
+  onCopy(): boolean {
     return this.#active.onCopy();
   }
 
-  onPaste(): boolean | void {
+  onPaste(): boolean {
     return this.#active.onPaste();
   }
 
-  onDelete(): boolean | void {
+  onDelete(): boolean {
     return this.#active.onDelete();
   }
 
-  onUndo(): boolean | void {
+  onUndo(): boolean {
     return this.#onUndo();
   }
 
-  onRedo(): boolean | void {
+  onRedo(): boolean {
     return this.#onRedo();
   }
 
-  onRotate(): boolean | void {
+  onRotate(): boolean {
     return this.#active.onRotate();
   }
 
-  onFlipHorizontal(): boolean | void {
+  onFlipHorizontal(): boolean {
     return this.#active.onFlipHorizontal();
   }
 
-  onFlipVertical(): boolean | void {
+  onFlipVertical(): boolean {
     return this.#active.onFlipVertical();
   }
 }

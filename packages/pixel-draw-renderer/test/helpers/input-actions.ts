@@ -1,14 +1,12 @@
 // Import Internal Dependencies
-import type { InputActions } from "#src/input/InputController.ts";
+import type { InputActions } from "#src/input/InputActions.ts";
 
 // Recorded arguments for every InputActions callback, keyed by callback name.
 // Typing to `keyof InputActions` makes a mistyped key a compile error instead
 // of a silently-undefined read.
 export type InputActionCalls = Record<keyof InputActions, unknown[][]>;
 
-// Return values for the callbacks typed `boolean | void` (the ones whose
-// return decides whether the browser default is suppressed / the gesture
-// tracked). Unset means the callback returns void.
+// Return values for callbacks that control drag tracking or browser defaults.
 export interface MakeActionsOptions {
   onPrimaryDownReturns?: boolean;
   onSecondaryDownReturns?: boolean;
@@ -44,8 +42,8 @@ export function makeActions(
     onPanMove: [],
     onPanEnd: [],
     onZoom: [],
-    onMouseMove: [],
-    onCursorMove: [],
+    onCanvasHover: [],
+    onTextureCursorMove: [],
     onMouseUp: [],
     onShiftDown: [],
     onShiftUp: [],
@@ -63,49 +61,49 @@ export function makeActions(
   };
 
   const actions: InputActions = {
-    onPrimaryDown: (tx, ty) => {
-      calls.onPrimaryDown.push([tx, ty]);
+    onPrimaryDown: (position) => {
+      calls.onPrimaryDown.push([position.x, position.y]);
 
-      return options.onPrimaryDownReturns;
+      return options.onPrimaryDownReturns ?? true;
     },
-    onPrimaryMove: (tx, ty) => {
-      calls.onPrimaryMove.push([tx, ty]);
+    onPrimaryMove: (position) => {
+      calls.onPrimaryMove.push([position.x, position.y]);
     },
     onPrimaryUp: () => {
       calls.onPrimaryUp.push([]);
     },
-    onSecondaryDown: (tx, ty, ctrlKey) => {
+    onSecondaryDown: (position, ctrlKey) => {
       calls.onSecondaryDown.push([
-        tx,
-        ty,
+        position.x,
+        position.y,
         ctrlKey
       ]);
 
-      return options.onSecondaryDownReturns;
+      return options.onSecondaryDownReturns ?? true;
     },
-    onSecondaryMove: (tx, ty) => {
-      calls.onSecondaryMove.push([tx, ty]);
+    onSecondaryMove: (position) => {
+      calls.onSecondaryMove.push([position.x, position.y]);
     },
     onSecondaryUp: () => {
       calls.onSecondaryUp.push([]);
     },
-    onPanStart: (mx, my) => {
-      calls.onPanStart.push([mx, my]);
+    onPanStart: () => {
+      calls.onPanStart.push([]);
     },
-    onPanMove: (dx, dy) => {
-      calls.onPanMove.push([dx, dy]);
+    onPanMove: (delta) => {
+      calls.onPanMove.push([delta.x, delta.y]);
     },
     onPanEnd: () => {
       calls.onPanEnd.push([]);
     },
-    onZoom: (delta, cx, cy) => {
-      calls.onZoom.push([delta, cx, cy]);
+    onZoom: (delta, center) => {
+      calls.onZoom.push([delta, center.x, center.y]);
     },
-    onMouseMove: (cx, cy) => {
-      calls.onMouseMove.push([cx, cy]);
+    onCanvasHover: (position) => {
+      calls.onCanvasHover.push([position]);
     },
-    onCursorMove: (pos) => {
-      calls.onCursorMove.push([pos]);
+    onTextureCursorMove: (position) => {
+      calls.onTextureCursorMove.push([position]);
     },
     onMouseUp: () => {
       calls.onMouseUp.push([]);
@@ -128,42 +126,42 @@ export function makeActions(
     onCopy: () => {
       calls.onCopy.push([]);
 
-      return options.onCopyReturns;
+      return options.onCopyReturns ?? false;
     },
     onPaste: () => {
       calls.onPaste.push([]);
 
-      return options.onPasteReturns;
+      return options.onPasteReturns ?? false;
     },
     onDelete: () => {
       calls.onDelete.push([]);
 
-      return options.onDeleteReturns;
+      return options.onDeleteReturns ?? false;
     },
     onUndo: () => {
       calls.onUndo.push([]);
 
-      return options.onUndoReturns;
+      return options.onUndoReturns ?? false;
     },
     onRedo: () => {
       calls.onRedo.push([]);
 
-      return options.onRedoReturns;
+      return options.onRedoReturns ?? false;
     },
     onRotate: () => {
       calls.onRotate.push([]);
 
-      return options.onRotateReturns;
+      return options.onRotateReturns ?? false;
     },
     onFlipHorizontal: () => {
       calls.onFlipHorizontal.push([]);
 
-      return options.onFlipHorizontalReturns;
+      return options.onFlipHorizontalReturns ?? false;
     },
     onFlipVertical: () => {
       calls.onFlipVertical.push([]);
 
-      return options.onFlipVerticalReturns;
+      return options.onFlipVerticalReturns ?? false;
     }
   };
 

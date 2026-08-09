@@ -65,6 +65,7 @@ export {
   type KeybindingAction,
   type KeybindingsMap
 } from "./input/Keybindings.ts";
+export type { WindowLike } from "./input/WindowLike.ts";
 export { InvalidKeybindingError } from "./input/errors/InvalidKeybindingError.ts";
 export { KeybindingConflictError } from "./input/errors/KeybindingConflictError.ts";
 export {

@@ -128,7 +128,10 @@ function mergeAndValidate(
   base: KeybindingsMap,
   patch: Partial<KeybindingsMap>
 ): KeybindingsMap {
-  const merged: KeybindingsMap = { ...base, ...patch };
+  const merged: KeybindingsMap = {
+    ...base,
+    ...patch
+  };
 
   const seenBy = new Map<string, KeybindingAction>();
   for (const action of kKeybindingActions) {

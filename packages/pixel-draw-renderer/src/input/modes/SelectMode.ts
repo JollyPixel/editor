@@ -40,7 +40,7 @@ export class SelectMode extends InteractionMode {
 
   onPrimaryDown(
     pos: Vec2
-  ): boolean | void {
+  ): boolean {
     this.#select.handleStart(pos);
 
     return true;
@@ -56,27 +56,27 @@ export class SelectMode extends InteractionMode {
     this.#select.handleEnd();
   }
 
-  onCopy(): boolean | void {
+  onCopy(): boolean {
     return this.#select.handleCopy();
   }
 
-  onPaste(): boolean | void {
+  onPaste(): boolean {
     return this.#select.handlePaste();
   }
 
-  onDelete(): boolean | void {
+  onDelete(): boolean {
     return this.#select.handleDelete();
   }
 
-  onRotate(): boolean | void {
+  onRotate(): boolean {
     return this.#select.rotate();
   }
 
-  onFlipHorizontal(): boolean | void {
+  onFlipHorizontal(): boolean {
     return this.#select.flipHorizontal();
   }
 
-  onFlipVertical(): boolean | void {
+  onFlipVertical(): boolean {
     return this.#select.flipVertical();
   }
 }

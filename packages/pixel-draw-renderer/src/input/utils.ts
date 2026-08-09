@@ -28,11 +28,20 @@ export function isEditableTarget(
     return false;
   }
 
-  if (target.isContentEditable || target.tagName === "TEXTAREA") {
+  if (
+    target.isContentEditable ||
+    target.tagName === "TEXTAREA"
+  ) {
     return true;
   }
 
-  return target.tagName === "INPUT" && kEditableInputTypes.has(
-    (target as HTMLInputElement).type
-  );
+  return isHTMLInputElement(target) ?
+    kEditableInputTypes.has(target.type) :
+    false;
+}
+
+function isHTMLInputElement(
+  element: HTMLElement | null
+): element is HTMLInputElement {
+  return element?.tagName === "INPUT";
 }

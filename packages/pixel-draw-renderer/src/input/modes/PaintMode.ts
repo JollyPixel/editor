@@ -55,7 +55,7 @@ export class PaintMode extends InteractionMode {
 
   onPrimaryDown(
     pos: Vec2
-  ): boolean | void {
+  ): boolean {
     if (this.#brush.pickArmed) {
       this.#brush.pick(pos.x, pos.y);
 
@@ -75,7 +75,11 @@ export class PaintMode extends InteractionMode {
       return false;
     }
 
-    this.#brush.startStroke(pos.x, pos.y, "primary");
+    this.#brush.startStroke(
+      pos.x,
+      pos.y,
+      "primary"
+    );
 
     return true;
   }
@@ -83,7 +87,10 @@ export class PaintMode extends InteractionMode {
   onPrimaryMove(
     pos: Vec2
   ): void {
-    this.#brush.continueStroke(pos.x, pos.y);
+    this.#brush.continueStroke(
+      pos.x,
+      pos.y
+    );
   }
 
   onPrimaryUp(): void {
@@ -93,7 +100,7 @@ export class PaintMode extends InteractionMode {
   onSecondaryDown(
     pos: Vec2,
     ctrlKey: boolean
-  ): boolean | void {
+  ): boolean {
     if (ctrlKey) {
       this.#brush.pick(pos.x, pos.y);
 
@@ -113,7 +120,11 @@ export class PaintMode extends InteractionMode {
       return false;
     }
 
-    this.#brush.startStroke(pos.x, pos.y, "secondary");
+    this.#brush.startStroke(
+      pos.x,
+      pos.y,
+      "secondary"
+    );
 
     return true;
   }
@@ -121,7 +132,10 @@ export class PaintMode extends InteractionMode {
   onSecondaryMove(
     pos: Vec2
   ): void {
-    this.#brush.continueStroke(pos.x, pos.y);
+    this.#brush.continueStroke(
+      pos.x,
+      pos.y
+    );
   }
 
   onSecondaryUp(): void {
@@ -129,13 +143,11 @@ export class PaintMode extends InteractionMode {
   }
 
   onHover(
-    cx: number,
-    cy: number
+    position: Vec2 | null
   ): void {
-    const outside = cx < 0 || cy < 0;
     this.#highlight.update(
-      outside ? null : cx,
-      outside ? null : cy
+      position?.x ?? null,
+      position?.y ?? null
     );
   }
 

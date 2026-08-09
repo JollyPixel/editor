@@ -41,28 +41,34 @@ export class FillMode extends InteractionMode {
 
   onPrimaryDown(
     pos: Vec2
-  ): boolean | void {
-    this.#fill.run(pos.x, pos.y, "primary");
+  ): boolean {
+    this.#fill.run(
+      pos.x,
+      pos.y,
+      "primary"
+    );
 
     return false;
   }
 
   onSecondaryDown(
     pos: Vec2
-  ): boolean | void {
-    this.#fill.run(pos.x, pos.y, "secondary");
+  ): boolean {
+    this.#fill.run(
+      pos.x,
+      pos.y,
+      "secondary"
+    );
 
     return false;
   }
 
   onHover(
-    cx: number,
-    cy: number
+    position: Vec2 | null
   ): void {
-    const outside = cx < 0 || cy < 0;
     this.#highlight.update(
-      outside ? null : cx,
-      outside ? null : cy
+      position?.x ?? null,
+      position?.y ?? null
     );
   }
 }

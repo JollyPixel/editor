@@ -35,35 +35,49 @@ export abstract class InteractionMode {
     return brushSize;
   }
 
-  /**
-   * Return `false` to keep the press from being tracked as a drag.
-   */
-  onPrimaryDown(_pos: Vec2): boolean | void {
+  onPrimaryDown(_pos: Vec2): boolean {
     return false;
   }
 
   onPrimaryMove(_pos: Vec2): void {}
   onPrimaryUp(): void {}
 
-  /**
-   * Return `false` to keep the press from being tracked as a drag.
-   */
-  onSecondaryDown(_pos: Vec2, _ctrlKey: boolean): boolean | void {
+  onSecondaryDown(
+    _pos: Vec2,
+    _ctrlKey: boolean
+  ): boolean {
     return false;
   }
 
   onSecondaryMove(_pos: Vec2): void {}
   onSecondaryUp(): void {}
-  onHover(_cx: number, _cy: number): void {}
+  onHover(_position: Vec2 | null): void {}
   onCursorMove(_pos: Vec2 | null): void {}
   onMouseUp(): void {}
   onShiftDown(): void {}
   onShiftUp(): void {}
   onBlur(): void {}
-  onCopy(): boolean | void {}
-  onPaste(): boolean | void {}
-  onDelete(): boolean | void {}
-  onRotate(): boolean | void {}
-  onFlipHorizontal(): boolean | void {}
-  onFlipVertical(): boolean | void {}
+  onCopy(): boolean {
+    return false;
+  }
+
+  onPaste(): boolean {
+    return false;
+  }
+
+  onDelete(): boolean {
+    return false;
+  }
+
+  onRotate(): boolean {
+    return false;
+  }
+
+  onFlipHorizontal(): boolean {
+    return false;
+  }
+
+  onFlipVertical(): boolean {
+    return false;
+  }
 }

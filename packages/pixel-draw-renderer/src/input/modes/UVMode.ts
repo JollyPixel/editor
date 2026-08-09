@@ -35,7 +35,7 @@ export class UVMode extends InteractionMode {
 
   onPrimaryDown(
     pos: Vec2
-  ): boolean | void {
+  ): boolean {
     this.#uv.handleStart(pos);
 
     return true;
@@ -51,7 +51,7 @@ export class UVMode extends InteractionMode {
     this.#uv.handleEnd();
   }
 
-  onDelete(): boolean | void {
+  onDelete(): boolean {
     return this.#uv.handleDelete();
   }
 

@@ -25,14 +25,12 @@ import { FillMode } from "./input/modes/FillMode.ts";
 import { SelectMode } from "./input/modes/SelectMode.ts";
 import { UVMode } from "./input/modes/UVMode.ts";
 import { MoveMode } from "./input/modes/MoveMode.ts";
-import {
-  InputController,
-  type WindowLike
-} from "./input/InputController.ts";
+import { InputController } from "./input/InputController.ts";
 import type {
   Keybindings,
   KeybindingsMap
 } from "./input/Keybindings.ts";
+import type { WindowLike } from "./input/WindowLike.ts";
 import type {
   DefaultViewport
 } from "./rendering/Viewport.ts";

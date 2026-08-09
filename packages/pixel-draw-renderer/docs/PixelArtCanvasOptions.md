@@ -3,6 +3,11 @@
 Configures a [`PixelArtCanvas`](./PixelArtCanvas.md) when it is constructed.
 
 ```ts
+import type {
+  PixelArtCanvasOptions,
+  WindowLike
+} from "@jolly-pixel/pixel-draw.renderer";
+
 const options: PixelArtCanvasOptions = {
   defaultMode: "paint",
   texture: { size: { x: 64, y: 32 } },
@@ -77,6 +82,8 @@ Overrides selected keyboard shortcuts. Unspecified actions keep their defaults. 
 ### `window`
 
 Event target used for drag continuation, keyboard input and blur handling. It defaults to the global `window` and accepts an object with compatible `addEventListener()` and `removeEventListener()` methods.
+
+`WindowLike` is exported for typed browser adapters and test doubles.
 
 ## Texture
 
