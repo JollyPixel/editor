@@ -8,6 +8,9 @@ import type { DefaultViewport } from "./Viewport.ts";
 import {
   FloatingSelectionOverlay
 } from "./overlays/FloatingSelectionOverlay.ts";
+import {
+  PeerStrokeGhosts
+} from "./overlays/PeerStrokeGhosts.ts";
 
 export interface CanvasRendererOptions {
   viewport: DefaultViewport;
@@ -49,6 +52,7 @@ export class CanvasRenderer {
   #canvasBuffer: CanvasBuffer;
 
   readonly floatingSelection: FloatingSelectionOverlay = new FloatingSelectionOverlay();
+  readonly peerStrokeGhosts: PeerStrokeGhosts = new PeerStrokeGhosts();
 
   constructor(
     options: CanvasRendererOptions
@@ -157,7 +161,10 @@ export class CanvasRenderer {
       camera.x,
       camera.y
     );
-    if (this.floatingSelection.isActive) {
+    if (
+      this.floatingSelection.isActive ||
+      this.peerStrokeGhosts.isActive
+    ) {
       this.#drawContent();
       this.#ctx.drawImage(this.#contentCanvas, 0, 0);
     }
@@ -184,6 +191,7 @@ export class CanvasRenderer {
 
     this.#contentCtx.drawImage(this.#canvasBuffer.canvas(), 0, 0);
     this.floatingSelection.draw(this.#contentCtx);
+    this.peerStrokeGhosts.draw(this.#contentCtx);
   }
 
   resize(

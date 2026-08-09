@@ -75,6 +75,10 @@ On connect, the server immediately sends a snapshot so late joiners catch up.
 
 Multiplayer cursors ride the same room, no server extension needed — presence is relayed by `network.Room` itself. See [PixelCursorSync](./PixelCursorSync.md).
 
+## Ghost Preview Streaming
+
+Peers can watch brush strokes, line drags, and selection moves land pixel-by-pixel before they commit — also riding presence, no server extension needed, purely visual. See [PixelStrokeGhostSync](./PixelStrokeGhostSync.md). UV region drags stream the same way, as a dashed vector border instead of pixels — see [UVGhostSync](./UVGhostSync.md).
+
 ## What To Read Next
 
 | File | Use it when |
@@ -82,3 +86,5 @@ Multiplayer cursors ride the same room, no server extension needed — presence 
 | [PixelSyncClient](./PixelSyncClient.md) | You are wiring client lifecycle (`attach`/`detach`/`destroy`) |
 | [PixelSyncServer](./PixelSyncServer.md) | You are wiring server rooms and authoritative buffers |
 | [PixelCursorSync](./PixelCursorSync.md) | You want to show peers' live cursors on the canvas |
+| [PixelStrokeGhostSync](./PixelStrokeGhostSync.md) | You want peers to see each other draw in real time |
+| [UVGhostSync](./UVGhostSync.md) | You want peers to see each other drag UV regions in real time |

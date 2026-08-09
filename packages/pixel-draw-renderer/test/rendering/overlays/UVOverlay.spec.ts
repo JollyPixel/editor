@@ -73,6 +73,7 @@ describe("UVOverlay — visibility follows UVMap state", () => {
     assert.strictEqual(rects[0].getAttribute("height"), "12");
     assert.strictEqual(rects[0].getAttribute("stroke"), "#123456");
     assert.ok(!rects[0].hasAttribute("stroke-dasharray"), "solid, not dashed");
+    assert.notStrictEqual(casings(svg)[0].style.display, "none", "the classical border keeps its contrasting casing");
   });
 
   test("insets the casing so it never paints outside the border", () => {

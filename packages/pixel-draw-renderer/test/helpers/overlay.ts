@@ -5,6 +5,7 @@
 import { SVG_NS } from "#src/rendering/constants.ts";
 import { Zoom } from "#src/rendering/Zoom.ts";
 import { UVMap } from "#src/uv/UVMap.ts";
+import { UVOverlay } from "#src/rendering/overlays/UVOverlay.ts";
 import type {
   DefaultViewport
 } from "#src/rendering/Viewport.ts";
@@ -44,4 +45,12 @@ export function makeUvMap(
   return new UVMap({
     getCanvasSize: () => size
   });
+}
+
+export function makeUvOverlay(
+  svg: SVGElement,
+  viewport: DefaultViewport,
+  uvMap: UVMap = makeUvMap()
+): UVOverlay {
+  return new UVOverlay(svg, viewport, uvMap);
 }

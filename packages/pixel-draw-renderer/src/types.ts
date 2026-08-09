@@ -28,6 +28,16 @@ export interface RGBA {
   a: number;
 }
 
+/**
+ * One pixel of a peer's in-progress (uncommitted) stroke — the ghost-preview
+ * wire/render payload shared by brush, line, and selection-move streaming.
+ */
+export interface PeerStrokePixel {
+  x: number;
+  y: number;
+  color: RGBA;
+}
+
 export interface BrushHighlight {
   readonly size: number;
   readonly colorInline: string;

@@ -2,7 +2,9 @@
 import * as network from "@jolly-pixel/network/client";
 import {
   PixelCursorSync,
+  PixelStrokeGhostSync,
   PixelSyncClient,
+  UVGhostSync,
   type PixelArtCanvas,
   type PixelNetworkCommand,
   type PixelServerMessage
@@ -52,6 +54,12 @@ export function initializeDemoSync(
 
   const cursorSync = new PixelCursorSync({ room });
   cursorSync.attach(canvasManager);
+
+  const strokeGhostSync = new PixelStrokeGhostSync({ room });
+  strokeGhostSync.attach(canvasManager);
+
+  const uvGhostSync = new UVGhostSync({ room });
+  uvGhostSync.attach(canvasManager);
 
   return syncReady;
 }

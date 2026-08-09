@@ -11,6 +11,7 @@ import type {
 } from "../rendering/overlays/SelectionOverlay.ts";
 import type { EditPipeline } from "../sync/EditPipeline.ts";
 import type {
+  PeerStrokePixel,
   RGBA,
   SelectionRect,
   Vec2
@@ -40,6 +41,8 @@ export interface SelectControllerOptions {
    */
   eraseColor: RGBA | null;
   pipeline: EditPipeline;
+  /** Called with the live moved block's pixels as they change, for peer streaming. */
+  onProgress?: (pixels: PeerStrokePixel[]) => void;
 }
 
 /**
@@ -68,6 +71,7 @@ export class SelectController implements SelectTool {
   #selectionOverlay: SelectionOverlay;
   #eraseColor: RGBA | null;
   #pipeline: EditPipeline;
+  #onProgress?: (pixels: PeerStrokePixel[]) => void;
   #shapeMode = false;
 
   constructor(
@@ -78,6 +82,7 @@ export class SelectController implements SelectTool {
     this.#selectionOverlay = options.selectionOverlay;
     this.#eraseColor = options.eraseColor;
     this.#pipeline = options.pipeline;
+    this.#onProgress = options.onProgress;
   }
 
   /**
@@ -216,9 +221,13 @@ export class SelectController implements SelectTool {
     if (this.#select.state === "moving") {
       const rect = this.#select.updateMove(pos);
       const mask = this.#select.mask;
+      const snapshot = this.#select.snapshot;
       if (rect && mask) {
         this.#selectionOverlay.drawMask(rect, mask);
         this.#floatingSelection.updatePosition(rect);
+      }
+      if (rect && mask && snapshot) {
+        this.#onProgress?.(maskedPixelsWithColor(rect, mask, snapshot));
       }
     }
   }
@@ -264,6 +273,8 @@ export class SelectController implements SelectTool {
           newContent: snapshot,
           skipErase: result.skipErase
         });
+        // Drops any rAF-queued pre-commit ghost tick — see PixelStrokeGhostSync.
+        this.#onProgress?.([]);
       }
 
       const rect = this.#select.rect;
@@ -516,6 +527,25 @@ function* maskedPositions(
       }
     }
   }
+}
+
+function maskedPixelsWithColor(
+  rect: SelectionRect,
+  mask: boolean[],
+  colors: RGBA[]
+): PeerStrokePixel[] {
+  const result: PeerStrokePixel[] = [];
+
+  for (let y = 0; y < rect.height; y++) {
+    for (let x = 0; x < rect.width; x++) {
+      const index = (y * rect.width) + x;
+      if (mask[index]) {
+        result.push({ x: rect.x + x, y: rect.y + y, color: colors[index] });
+      }
+    }
+  }
+
+  return result;
 }
 
 function unionMaskedPositions(

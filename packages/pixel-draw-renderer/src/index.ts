@@ -41,6 +41,7 @@ export {
   type ZoomOptions
 } from "./rendering/Zoom.ts";
 export type {
+  PeerStrokePixel,
   RGBA,
   SelectionRect,
   Vec2
@@ -80,7 +81,8 @@ export {
 export type {
   PixelBufferSnapshot,
   PixelNetworkCommand,
-  PixelServerMessage
+  PixelServerMessage,
+  UVGhostPayload
 } from "./network/types.ts";
 export { applyCommandToBuffer } from "./network/PixelCommandApplier.ts";
 export type {
@@ -91,3 +93,11 @@ export type {
   PixelCursorSyncOptions
 } from "./network/PixelCursorSync.ts";
 export { PixelCursorSync } from "./network/PixelCursorSync.ts";
+export type {
+  PixelStrokeGhostSyncOptions
+} from "./network/PixelStrokeGhostSync.ts";
+export { PixelStrokeGhostSync } from "./network/PixelStrokeGhostSync.ts";
+export type {
+  UVGhostSyncOptions
+} from "./network/UVGhostSync.ts";
+export { UVGhostSync } from "./network/UVGhostSync.ts";

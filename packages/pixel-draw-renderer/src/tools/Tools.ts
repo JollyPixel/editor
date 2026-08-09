@@ -23,7 +23,7 @@ import type { CanvasRenderer } from "../rendering/CanvasRenderer.ts";
 import type { EditPipeline } from "../sync/EditPipeline.ts";
 import type { LinePreviewOverlay } from "../rendering/overlays/LinePreviewOverlay.ts";
 import type { SelectionOverlay } from "../rendering/overlays/SelectionOverlay.ts";
-import type { RGBA } from "../types.ts";
+import type { PeerStrokePixel, RGBA } from "../types.ts";
 
 export interface ToolsOptions {
   brush: Brush;
@@ -35,6 +35,12 @@ export interface ToolsOptions {
   uvMap: UVMap;
   uvOverlay: UVOverlay;
   pipeline: EditPipeline;
+  /**
+   * Called with a tool's live in-progress pixels (brush stroke, line drag,
+   * selection move) as they change, for streaming a ghost preview to peers.
+   * Never fires for the initial selection marquee or fill.
+   */
+  onProgress?: (pixels: PeerStrokePixel[]) => void;
 }
 
 /**
@@ -65,7 +71,8 @@ export class Tools {
       brush: options.brush,
       canvasBuffer: options.canvasBuffer,
       canvas: options.renderer.canvas(),
-      pipeline: options.pipeline
+      pipeline: options.pipeline,
+      onProgress: options.onProgress
     });
 
     this.fill = new FillController({
@@ -77,7 +84,8 @@ export class Tools {
     this.line = new LineController({
       brush: options.brush,
       linePreview: options.linePreview,
-      pipeline: options.pipeline
+      pipeline: options.pipeline,
+      onProgress: options.onProgress
     });
 
     this.select = new SelectController({
@@ -85,7 +93,8 @@ export class Tools {
       floatingSelection: options.renderer.floatingSelection,
       selectionOverlay: options.selectionOverlay,
       eraseColor: options.eraseColor,
-      pipeline: options.pipeline
+      pipeline: options.pipeline,
+      onProgress: options.onProgress
     });
 
     this.uv = new UVController({

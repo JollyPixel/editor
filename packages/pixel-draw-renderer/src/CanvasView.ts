@@ -108,6 +108,10 @@ export class CanvasView {
       "changed",
       () => this.renderer.drawFrame()
     );
+    this.renderer.peerStrokeGhosts.on(
+      "changed",
+      () => this.renderer.drawFrame()
+    );
   }
 
   get backgroundColor(): string {
@@ -159,6 +163,7 @@ export class CanvasView {
       rendererCanvas.remove();
     }
     this.overlays.destroy();
+    this.renderer.peerStrokeGhosts.destroy();
   }
 
   /**

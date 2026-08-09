@@ -5,7 +5,11 @@ import type * as network from "@jolly-pixel/network";
 import type {
   PixelBufferHookEvent
 } from "../buffer/hooks.ts";
-import type { UVRegionData } from "../uv/UVRegion.ts";
+import type {
+  UVFace,
+  UVGeometry,
+  UVRegionData
+} from "../uv/UVRegion.ts";
 import type { Vec2 } from "../types.ts";
 
 export interface PixelBufferSnapshot {
@@ -22,3 +26,13 @@ export type PixelServerMessage = network.NetworkServerMessage<
   PixelNetworkCommand,
   PixelBufferSnapshot
 >;
+
+/**
+ * A peer's in-progress (uncommitted) UV region drag — forwarded verbatim
+ * from `UVMap`'s `"region-dragging"` event.
+ */
+export interface UVGhostPayload {
+  id: string;
+  face: UVFace | null;
+  geometry: UVGeometry;
+}

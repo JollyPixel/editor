@@ -51,11 +51,14 @@ import type {
   UVRegionData
 } from "./uv/UVRegion.ts";
 import type { PeerCursorOverlay } from "./rendering/overlays/PeerCursorOverlay.ts";
+import type { PeerStrokeGhosts } from "./rendering/overlays/PeerStrokeGhosts.ts";
+import type { PeerUVGhosts } from "./rendering/overlays/PeerUVGhosts.ts";
 import { toRGBA } from "./utils/colors.ts";
 import type {
   BrushHighlight,
   ColorInput,
   Mode,
+  PeerStrokePixel,
   SelectionRect,
   Vec2
 } from "./types.ts";
@@ -147,6 +150,7 @@ export class PixelArtCanvas {
 
   #edits: EditPipeline;
   #onDrawEnd?: () => void;
+  #onStrokeProgress?: (pixels: PeerStrokePixel[]) => void;
   #router: InteractionRouter;
   #tools: Tools;
 
@@ -155,6 +159,8 @@ export class PixelArtCanvas {
   readonly uv: UVMap;
   readonly tools: Toolset;
   readonly peerCursors: PeerCursorOverlay;
+  readonly peerStrokeGhosts: PeerStrokeGhosts;
+  readonly peerUvGhosts: PeerUVGhosts;
 
   constructor(
     parentHtmlElement: HTMLDivElement,
@@ -210,6 +216,8 @@ export class PixelArtCanvas {
     });
     this.viewport = this.#view.viewport;
     this.peerCursors = this.#view.overlays.peerCursors;
+    this.peerStrokeGhosts = this.#view.renderer.peerStrokeGhosts;
+    this.peerUvGhosts = this.#view.overlays.peerUvGhosts;
 
     this.#edits = new EditPipeline({
       brush: this.brush,
@@ -231,7 +239,8 @@ export class PixelArtCanvas {
       eraseColor,
       uvMap: this.#doc.uv,
       uvOverlay: this.#view.overlays.uvOverlay,
-      pipeline: this.#edits
+      pipeline: this.#edits,
+      onProgress: (pixels) => this.#onStrokeProgress?.(pixels)
     });
     this.tools = this.#tools;
 
@@ -244,6 +253,7 @@ export class PixelArtCanvas {
       this.#tools.select.refreshOverlay();
       this.#view.overlays.uvOverlay.refresh();
       this.#view.overlays.peerCursors.refresh();
+      this.#view.overlays.peerUvGhosts.refresh();
     });
 
     this.#router = new InteractionRouter({
@@ -517,6 +527,26 @@ export class PixelArtCanvas {
     fn: ExternalCursorMoveListener | undefined
   ) {
     this.#router.onExternalCursorMove = fn;
+  }
+
+  /**
+   * The current local stroke-progress listener, readable so callers can
+   * chain onto an existing handler.
+   */
+  get onStrokeProgress(): ((pixels: PeerStrokePixel[]) => void) | undefined {
+    return this.#onStrokeProgress;
+  }
+
+  /**
+   * Replaces the local stroke-progress listener. Reports a tool's live
+   * in-progress pixels (brush stroke, line drag, selection move) as they
+   * change — for streaming a ghost preview to peers. Never fires for the
+   * initial selection marquee or fill.
+   */
+  set onStrokeProgress(
+    fn: ((pixels: PeerStrokePixel[]) => void) | undefined
+  ) {
+    this.#onStrokeProgress = fn;
   }
 
   /**

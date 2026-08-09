@@ -138,6 +138,22 @@ readonly peerCursors: PeerCursorOverlay // { set, remove, refresh, destroy }
 
 Renders remote peers' cursors over the canvas — used by `PixelCursorSync`. `set(clientId, { pos, color, label? })` hides the marker when `pos` is `null`. See [network/PixelCursorSync.md](./network/PixelCursorSync.md).
 
+### `peerStrokeGhosts`
+
+```ts
+readonly peerStrokeGhosts: PeerStrokeGhosts // { set, remove, clearAll, destroy }
+```
+
+Renders remote peers' in-progress (uncommitted) stroke pixels over the canvas — used by `PixelStrokeGhostSync`. Purely visual: never touches history or the authoritative buffer. See [network/PixelStrokeGhostSync.md](./network/PixelStrokeGhostSync.md).
+
+### `peerUvGhosts`
+
+```ts
+readonly peerUvGhosts: PeerUVGhosts // { set, remove, clearAll, refresh, destroy }
+```
+
+Renders a dashed, per-peer-colored border for a remote peer's in-progress (uncommitted) UV region drag — used by `UVGhostSync`. Purely visual: never touches `UVMap` state or history. See [network/UVGhostSync.md](./network/UVGhostSync.md).
+
 ## Methods
 
 ### `mode`
@@ -357,3 +373,14 @@ set onCursorMove(fn: ((pos: Vec2 | null) => void) | undefined)
 ```
 
 Fires on every canvas mousemove with the bounded texture position, and `null` once the pointer leaves the canvas or texture bounds — used by `PixelCursorSync` to broadcast the local cursor. See [network/PixelCursorSync.md](./network/PixelCursorSync.md).
+
+---
+
+### `onStrokeProgress`
+
+```ts
+get onStrokeProgress(): ((pixels: PeerStrokePixel[]) => void) | undefined
+set onStrokeProgress(fn: ((pixels: PeerStrokePixel[]) => void) | undefined)
+```
+
+Fires with a tool's live in-progress pixels as they change — brush strokes, line drags, and the pixel-move phase of selection (not the initial marquee, not fill) — used by `PixelStrokeGhostSync` to broadcast a ghost preview to peers. See [network/PixelStrokeGhostSync.md](./network/PixelStrokeGhostSync.md).
