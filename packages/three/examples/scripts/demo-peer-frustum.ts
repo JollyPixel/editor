@@ -43,20 +43,20 @@ spawnPeer(scene, pane, {
   position: new THREE.Vector3(0, 1, 0),
   lookAt: new THREE.Vector3(3, 1, 3),
   color: "#f94144",
-  name: "Default"
+  displayName: "Default"
 });
 spawnPeer(scene, pane, {
   position: new THREE.Vector3(-3, 2, 1),
   lookAt: new THREE.Vector3(0, 0, 0),
   color: "#43aa8b",
-  name: "BoxName",
+  displayName: "BoxName",
   showNameBox: true
 });
 spawnPeer(scene, pane, {
   position: new THREE.Vector3(2, 0.5, -2),
   lookAt: new THREE.Vector3(0, 1, 0),
   color: "#577590",
-  name: "Apex",
+  displayName: "Apex",
   showApex: true
 });
 
@@ -71,16 +71,16 @@ interface PeerSpawnOptions {
   position: THREE.Vector3;
   lookAt: THREE.Vector3;
   color: THREE.ColorRepresentation;
-  name: string;
+  displayName: string;
   showApex?: boolean;
   showNameBox?: boolean;
 }
 
 /**
  * Spawns a peer frustum and wires a Tweakpane folder exposing every
- * `PeerFrustumOptions` field. `color`/`name`/`showNameBox` update the live
- * instance via its setters; `fov`/`aspect`/`near`/`depth`/`showApex` are
- * constructor-only, so changing them replaces the instance instead.
+ * `PeerFrustumOptions` field. `color`/`displayName`/`showNameBox` update the
+ * live instance via its accessors; `fov`/`aspect`/`near`/`depth`/`showApex`
+ * are constructor-only, so changing them replaces the instance instead.
  */
 function spawnPeer(
   scene: THREE.Scene,
@@ -89,7 +89,7 @@ function spawnPeer(
 ): void {
   const state = {
     color: spawn.color,
-    name: spawn.name,
+    displayName: spawn.displayName,
     showNameBox: spawn.showNameBox ?? false,
     showApex: spawn.showApex ?? false,
     fov: 50,
@@ -115,14 +115,20 @@ function spawnPeer(
     scene.add(frustum);
   }
 
-  const folder = pane.addFolder({ title: spawn.name });
+  const folder = pane.addFolder({ title: spawn.displayName });
 
   folder.addBinding(state, "color")
-    .on("change", ({ value }) => frustum.setColor(value));
-  folder.addBinding(state, "name")
-    .on("change", ({ value }) => frustum.setName(value));
+    .on("change", ({ value }) => {
+      frustum.color = value;
+    });
+  folder.addBinding(state, "displayName")
+    .on("change", ({ value }) => {
+      frustum.displayName = value;
+    });
   folder.addBinding(state, "showNameBox")
-    .on("change", ({ value }) => frustum.setShowNameBox(value));
+    .on("change", ({ value }) => {
+      frustum.showNameBox = value;
+    });
 
   folder.addBlade({ view: "separator" });
   folder.addBinding(state, "showApex").on("change", rebuild);
@@ -135,7 +141,7 @@ function spawnPeer(
 function buildFrustum(
   options: Required<Pick<
     PeerFrustumOptions,
-    "color" | "name" | "showNameBox" | "showApex" | "fov" | "aspect" | "near" | "depth"
+    "color" | "displayName" | "showNameBox" | "showApex" | "fov" | "aspect" | "near" | "depth"
   >>
 ): PeerFrustum {
   return new PeerFrustum(options);

@@ -33,8 +33,6 @@ scene.add(grid); // self-updating: no manual .update() call needed
 - [Grid](docs/Grid.md) - Ground-plane grid mesh. (TSL, `THREE.WebGPURenderer`).
 - [PeerFrustum](docs/PeerFrustum.md) - Renders connected peers as lightweight camera frustums.
 
-This package deliberately depends on `three` only. For a copy-paste recipe syncing `PeerFrustum` poses over `@jolly-pixel/network`, see `examples/scripts/network/PeerFrustumSync.ts` — run `npm run dev` and open `/peer-frustum-sync.html` for a live, playable version.
-
 ## ✨ Contributors guide
 
 If you are a developer **looking to contribute** to the project, you must first read the [CONTRIBUTING][contributing] guide.
@@ -43,7 +41,7 @@ Once you have finished your development, check that the tests (and linter) are s
 
 ```bash
 $ npm run test
-$ npm run lint
+$ npm run lint # run at the root of .git repository
 ```
 
 > [!CAUTION]

@@ -7,7 +7,7 @@ import { PeerFrustum } from "@jolly-pixel/three";
 
 const frustum = new PeerFrustum({
   color: "#43aa8b",
-  name: "Alice"
+  displayName: "Alice"
 });
 
 frustum.position.copy(peerCamera.position);
@@ -33,20 +33,22 @@ interface PeerFrustumOptions {
   depth?: number;
   color?: THREE.ColorRepresentation;
   showApex?: boolean;
-  name?: string;
+  displayName?: string;
   showNameBox?: boolean;
 }
 ```
+
+Every default below is `PeerFrustum.Defaults`' out-of-the-box value. Mutate `PeerFrustum.Defaults` to change it process-wide instead of passing the option to every constructor call.
 
 | Option | Default | Description |
 |---|---:|---|
 | `fov` | `50` | Vertical field of view in degrees. |
 | `aspect` | `16 / 9` | Width-to-height ratio. |
-| `near` | `depth * 0.2` | Distance from the local origin to the near rectangle. |
+| `near` | `Defaults.nearRatio * depth` | Distance from the local origin to the near rectangle. |
 | `depth` | `1.5` | Distance from the local origin to the far rectangle. |
 | `color` | `"#43aa8b"` | Wireframe and label accent color. |
 | `showApex` | `false` | Adds lines between the origin and near rectangle. |
-| `name` | none | Creates a floating label when provided. |
+| `displayName` | none | Creates a floating label when provided. |
 | `showNameBox` | `false` | Draws the label on a bordered background. |
 
 `near` must be greater than `0` and less than `depth`; invalid values throw. The geometry settings `fov`, `aspect`, `near`, `depth`, and `showApex` are constructor-only. Create a replacement frustum to change them.
@@ -59,35 +61,38 @@ interface PeerFrustumOptions {
 label: PeerFrustumLabel | null
 ```
 
-The label is `null` until a name is passed to the constructor or `setName()`. Once created, it is added as a child of the frustum. Use the methods on `PeerFrustum` to keep label color and box state synchronized with the wireframe.
+The label is `null` until a name is passed to the constructor or assigned via `displayName`. Once created, it is added as a child of the frustum. Use the accessors on `PeerFrustum` to keep label color and box state synchronized with the wireframe.
 
-Inherited `Object3D` properties such as `position`, `quaternion`, `scale`, and `visible` remain available.
+Inherited `Object3D` properties such as `position`, `quaternion`, `scale`, and `visible` remain available. `displayName` is a separate property from `Object3D.name`.
+
+### `color`
+
+```ts
+get color(): THREE.ColorRepresentation
+set color(color: THREE.ColorRepresentation)
+```
+
+Setting it updates the wireframe material and redraws an existing label. The value is also retained for a label created later.
+
+### `displayName`
+
+```ts
+get displayName(): string | undefined
+set displayName(displayName: string)
+```
+
+Reads `undefined` until a name is provided. Setting it creates the label when needed, or redraws the existing label with the new name. Assigning it requires a DOM with canvas support.
+
+### `showNameBox`
+
+```ts
+get showNameBox(): boolean
+set showNameBox(showNameBox: boolean)
+```
+
+Setting it changes the background style of an existing label. When no label exists, the value is retained and applied by the next `displayName` assignment.
 
 ## Methods
-
-### `setColor()`
-
-```ts
-setColor(color: THREE.ColorRepresentation): void
-```
-
-Changes the wireframe color and redraws an existing label. The value is also retained for a label created later by `setName()`.
-
-### `setName()`
-
-```ts
-setName(name: string): void
-```
-
-Creates the label when needed, or redraws the existing label with the new name. Calling this method requires a DOM with canvas support.
-
-### `setShowNameBox()`
-
-```ts
-setShowNameBox(showNameBox: boolean): void
-```
-
-Changes the background style of an existing label. When no label exists, the setting is retained and applied by the next `setName()` call.
 
 ### `dispose()`
 
@@ -108,7 +113,7 @@ frustum.dispose();
 
 ```ts
 interface PeerFrustumLabelOptions {
-  name: string;
+  displayName: string;
   color: THREE.ColorRepresentation;
   showNameBox?: boolean;
 }
@@ -120,13 +125,13 @@ Construction requires `document.createElement("canvas")` and a 2D canvas context
 
 The label uses a transparent `THREE.SpriteMaterial` with `depthTest: false` and `depthWrite: false`. It stays visible through scene geometry. Sprite size attenuation remains enabled, so its on-screen size decreases with distance.
 
-### Label methods
+### Label properties
 
 ```ts
-setName(name: string): void
-setColor(color: THREE.ColorRepresentation): void
-setShowNameBox(showNameBox: boolean): void
+get/set displayName: string
+get/set color: THREE.ColorRepresentation
+get/set showNameBox: boolean
 dispose(): void
 ```
 
-The three setters redraw the canvas texture immediately. `dispose()` releases the texture and sprite material.
+The three accessors redraw the canvas texture immediately on assignment. `dispose()` releases the texture and sprite material.
