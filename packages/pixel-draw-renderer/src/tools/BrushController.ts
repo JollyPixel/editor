@@ -2,7 +2,7 @@
 import type { Brush, BrushColorSlot } from "./Brush.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import type { EditPipeline } from "../sync/EditPipeline.ts";
-import { rgbToHex, toRGBA } from "../utils/colors.ts";
+import { rgbToHex } from "../utils/colors.ts";
 import type { PeerStrokePixel, RGBA, Vec2 } from "../types.ts";
 
 export interface BrushControllerOptions {
@@ -117,9 +117,9 @@ export class BrushController implements BrushTool {
     tx: number,
     ty: number
   ): void {
-    const rgba = toRGBA(
-      this.#brush[this.#activeSlot ?? "primary"].asString()
-    );
+    const rgba = this.#brush[
+      this.#activeSlot ?? "primary"
+    ].asRGBA();
 
     const affected = [...this.#brush.affectedPixels(tx, ty)];
     for (const pixel of affected) {

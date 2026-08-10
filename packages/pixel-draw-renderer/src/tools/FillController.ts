@@ -1,6 +1,5 @@
 // Import Internal Dependencies
 import { Fill } from "./Fill.ts";
-import { toRGBA } from "../utils/colors.ts";
 import type {
   Brush,
   BrushColorSlot
@@ -69,13 +68,15 @@ export class FillController implements FillTool {
       return;
     }
 
-    const fillColor = toRGBA(this.#brush[slot].asString());
+    const [r, g, b, a] = this.#canvasBuffer.samplePixel(tx, ty);
+    const beforeColor = { r, g, b, a };
+    const fillColor = this.#brush[slot].asRGBA();
     const positions = Fill.floodFill(
       this.#canvasBuffer,
       { x: tx, y: ty },
       fillColor
     );
-    this.#pipeline.commitPixels(positions, slot);
+    this.#pipeline.commitPixels(positions, slot, beforeColor);
   }
 
   #runGlobal(
@@ -90,7 +91,7 @@ export class FillController implements FillTool {
       b: sb,
       a: sa
     };
-    const toColor = toRGBA(this.#brush[slot].asString());
+    const toColor = this.#brush[slot].asRGBA();
 
     if (
       fromColor.r === toColor.r &&

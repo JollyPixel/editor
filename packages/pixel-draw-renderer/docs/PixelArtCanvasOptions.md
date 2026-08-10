@@ -97,7 +97,7 @@ Initial texture color. It defaults to opaque white.
 
 ### `texture.maxSize`
 
-Maximum texture dimension and master-buffer side length. It must be a positive integer and defaults to `2048`.
+Maximum texture dimension. Retained master storage grows toward this limit only as larger texture dimensions are reached. It must be a positive integer and defaults to `2048`.
 
 ### `texture.init`
 

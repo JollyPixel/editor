@@ -1,3 +1,6 @@
+// Import Node.js Dependencies
+import { cpus } from "node:os";
+
 // Import Third-party Dependencies
 import { Bench, type Task } from "tinybench";
 
@@ -8,12 +11,50 @@ import type {
 } from "../src/types.ts";
 
 // CONSTANTS
-const kDefaultTime = 500;
-const kDefaultWarmupTime = 100;
+const kDefaultTime = envNumber("BENCH_TIME_MS", 500);
+const kDefaultWarmupTime = envNumber("BENCH_WARMUP_TIME_MS", 100);
 // tinybench requires both time and iteration floors. Lower floors prevent long
 // tasks from running excessively while fast tasks still get enough samples.
-const kDefaultIterations = 12;
-const kDefaultWarmupIterations = 3;
+const kDefaultIterations = envNumber("BENCH_ITERATIONS", 12);
+const kDefaultWarmupIterations = envNumber("BENCH_WARMUP_ITERATIONS", 3);
+const kJsonOutput = process.env.BENCH_FORMAT === "json";
+const kTaskFilter = process.env.BENCH_TASK;
+
+let runtimeReported = false;
+
+interface BenchmarkRow {
+  task: string;
+  state?: string;
+  error?: string;
+  "ops/sec"?: number;
+  "mean (ms)"?: number;
+  "p50 (ms)"?: number;
+  "p99 (ms)"?: number;
+  "rme %"?: number;
+  samples?: number;
+}
+
+function envNumber(
+  name: string,
+  fallback: number
+): number {
+  const value = Number(process.env[name]);
+
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+function runtimeMetadata(): Record<string, number | string> {
+  return {
+    node: process.version,
+    v8: process.versions.v8,
+    platform: `${process.platform} ${process.arch}`,
+    cpu: cpus()[0]?.model ?? "unknown",
+    timeMs: kDefaultTime,
+    iterations: kDefaultIterations,
+    warmupTimeMs: kDefaultWarmupTime,
+    warmupIterations: kDefaultWarmupIterations
+  };
+}
 
 /**
  * Builds a `Bench` with shared warmup and time-budget defaults.
@@ -37,14 +78,43 @@ export function createBench(
 export async function reportBench(
   bench: Bench
 ): Promise<void> {
-  console.log(`\n# ${bench.name}`);
+  if (kTaskFilter) {
+    for (const task of bench.tasks) {
+      if (!task.name.includes(kTaskFilter)) {
+        bench.remove(task.name);
+      }
+    }
+    if (bench.tasks.length === 0) {
+      throw new Error(`No benchmark task matched BENCH_TASK=${kTaskFilter}`);
+    }
+  }
+
   await bench.run();
-  console.table(bench.table(toRow));
+  const rows = bench.tasks.map(toRow);
+
+  if (kJsonOutput) {
+    console.log(JSON.stringify({
+      suite: bench.name,
+      runtime: runtimeMetadata(),
+      results: rows
+    }));
+
+    return;
+  }
+
+  if (!runtimeReported) {
+    console.log("# Runtime");
+    console.table(runtimeMetadata());
+    runtimeReported = true;
+  }
+
+  console.log(`\n# ${bench.name}`);
+  console.table(rows);
 }
 
 function toRow(
   task: Task
-): Record<string, number | string> {
+): BenchmarkRow {
   const { result } = task;
 
   if (result.state === "errored") {
@@ -56,10 +126,12 @@ function toRow(
 
   return {
     task: task.name,
-    "ops/sec": Math.round(result.throughput.mean).toLocaleString("en-US"),
-    "avg (ms)": Number(result.latency.mean.toFixed(4)),
-    "± rme %": Number(result.throughput.rme.toFixed(2)),
-    samples: result.throughput.samplesCount
+    "ops/sec": Math.round(result.throughput.mean),
+    "mean (ms)": Number(result.latency.mean.toFixed(4)),
+    "p50 (ms)": Number(result.latency.p50.toFixed(4)),
+    "p99 (ms)": Number(result.latency.p99.toFixed(4)),
+    "rme %": Number(result.throughput.rme.toFixed(2)),
+    samples: result.latency.samplesCount
   };
 }
 

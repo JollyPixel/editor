@@ -8,6 +8,7 @@ import type {
   HistoryEntryInput
 } from "./HistoryStack.types.ts";
 import {
+  applyColorGroups,
   groupPositionsByColor
 } from "./utils.ts";
 
@@ -98,12 +99,7 @@ export class HistoryStack {
           entry.positions,
           entry.beforeColors
         );
-        for (const group of groupedColors) {
-          this.#buffer.drawPixels(
-            group.positions,
-            group.color
-          );
-        }
+        applyColorGroups(this.#buffer, groupedColors);
 
         this.#buffer.copyToMaster();
         break;
@@ -114,12 +110,7 @@ export class HistoryStack {
           entry.positions,
           entry.beforeColors
         );
-        for (const group of groupedColors) {
-          this.#buffer.drawPixels(
-            group.positions,
-            group.color
-          );
-        }
+        applyColorGroups(this.#buffer, groupedColors);
 
         this.#buffer.copyToMaster();
         break;
@@ -172,12 +163,7 @@ export class HistoryStack {
           entry.positions,
           entry.afterColors
         );
-        for (const group of groupedColors) {
-          this.#buffer.drawPixels(
-            group.positions,
-            group.color
-          );
-        }
+        applyColorGroups(this.#buffer, groupedColors);
 
         this.#buffer.copyToMaster();
         break;

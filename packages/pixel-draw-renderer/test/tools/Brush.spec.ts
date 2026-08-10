@@ -107,6 +107,20 @@ describe("Brush", () => {
         "#0000ff"
       );
     });
+
+    test("asRGBA returns byte components without exposing mutable state", () => {
+      const brush = new Brush({ color: "#123456" });
+      brush.primary.opacity = 0.5;
+
+      const rgba = brush.primary.asRGBA();
+      assert.deepStrictEqual(
+        rgba,
+        { r: 18, g: 52, b: 86, a: 128 }
+      );
+
+      rgba.r = 255;
+      assert.strictEqual(brush.primary.asRGBA().r, 18);
+    });
   });
 
   describe("opacity", () => {

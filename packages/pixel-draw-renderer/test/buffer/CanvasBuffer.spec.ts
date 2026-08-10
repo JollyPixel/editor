@@ -519,6 +519,26 @@ describe("CanvasBuffer", () => {
       assert.strictEqual(changes(), 1);
     });
 
+    test("emits once for multiple color groups", () => {
+      const buf = new CanvasBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
+      const changes = countChanges(buf);
+
+      buf.drawColorGroups([
+        {
+          color: { r: 255, g: 0, b: 0, a: 255 },
+          positions: [{ x: 0, y: 0 }]
+        },
+        {
+          color: { r: 0, g: 0, b: 255, a: 255 },
+          positions: [{ x: 1, y: 0 }]
+        }
+      ]);
+
+      assert.strictEqual(changes(), 1);
+      assert.deepStrictEqual(buf.samplePixel(0, 0), [255, 0, 0, 255]);
+      assert.deepStrictEqual(buf.samplePixel(1, 0), [0, 0, 255, 255]);
+    });
+
     test("does not emit on size-changing ops or copyToMaster", () => {
       const buf = new CanvasBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
       const changes = countChanges(buf);
