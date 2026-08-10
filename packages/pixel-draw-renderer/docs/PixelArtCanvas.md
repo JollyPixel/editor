@@ -76,7 +76,7 @@ set mode(value: Mode)
 
 | Mode | Left-click | Right-click |
 |---|---|---|
-| `"paint"` | Paint with `brush.primary`. Hold `Shift` for a straight line. | Paint with `brush.secondary`. `Ctrl`+right-click picks a color. |
+| `"paint"` | Paint with `brush.primary`. Hold `Shift` for a straight line. When the picker is armed, pick into `brush.primary`. | Paint with `brush.secondary`. When the picker is armed, pick into `brush.secondary`; otherwise `Ctrl`+right-click picks into `brush.primary`. |
 | `"move"` | Pan the view. | No action. |
 | `"fill"` | Fill with `brush.primary`. | Fill with `brush.secondary`. |
 | `"select"` | Create or move a selection. | No action. |
