@@ -5,9 +5,6 @@ import type {
 
 export type LineCommitTrigger = "mousedown" | "mouseup";
 
-/**
- * Manages line state and rasterization.
- */
 export class Line {
   #armed = false;
   #start: Vec2 | null = null;
@@ -49,7 +46,7 @@ export class Line {
   }
 
   /**
-    * Returns rasterized points without disarming.
+   * Returns rasterized points without disarming the line.
    */
   get previewPoints(): Vec2[] | null {
     if (
@@ -64,7 +61,7 @@ export class Line {
   }
 
   /**
-    * Returns rasterized points and disarms.
+   * Returns rasterized points and disarms the line.
    */
   commit(): Vec2[] | null {
     const points = this.previewPoints;
@@ -74,7 +71,7 @@ export class Line {
   }
 
   /**
-    * Rasterizes a line with Bresenham's algorithm.
+   * Uses Bresenham's line algorithm.
    */
   static rasterize(
     start: Vec2,

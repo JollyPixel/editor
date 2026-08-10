@@ -1,9 +1,11 @@
 // Import Internal Dependencies
 import {
-  Border,
-  type BorderStyle,
-  type UVOverlay
-} from "./UVOverlay.ts";
+  UVRegionBorder,
+  type UVRegionBorderStyle
+} from "../overlays/UVRegionBorder.ts";
+import type {
+  UVRegionLayer
+} from "../overlays/UVRegions.ts";
 import type { DefaultViewport } from "../Viewport.ts";
 import type {
   UVFace,
@@ -13,7 +15,7 @@ import type {
 // CONSTANTS
 const kStrokeWidth = 2;
 
-export interface PeerUVGhostState {
+export interface PeerUVPreviewState {
   id: string;
   face: UVFace | null;
   geometry: UVGeometry;
@@ -21,26 +23,24 @@ export interface PeerUVGhostState {
 }
 
 interface PeerBorder {
-  border: Border;
+  border: UVRegionBorder;
   isTriangle: boolean;
 }
 
 /**
- * Renders a dashed, per-peer-colored border for a remote peer's in-progress
- * (uncommitted) UV region drag. Purely visual: never touches `UVMap` state
- * or history.
+ * Renders non-authoritative peer UV drag borders.
  */
-export class PeerUVGhosts {
+export class PeerUVPreview {
   #svg: SVGElement;
   #viewport: DefaultViewport;
-  #uvOverlay: UVOverlay;
-  #ghosts = new Map<string, PeerUVGhostState>();
+  #uvOverlay: UVRegionLayer;
+  #ghosts = new Map<string, PeerUVPreviewState>();
   #borders = new Map<string, PeerBorder>();
 
   constructor(
     svg: SVGElement,
     viewport: DefaultViewport,
-    uvOverlay: UVOverlay
+    uvOverlay: UVRegionLayer
   ) {
     this.#svg = svg;
     this.#viewport = viewport;
@@ -49,7 +49,7 @@ export class PeerUVGhosts {
 
   set(
     clientId: string,
-    state: PeerUVGhostState
+    state: PeerUVPreviewState
   ): void {
     this.#ghosts.set(clientId, state);
     this.#render(clientId);
@@ -65,10 +65,6 @@ export class PeerUVGhosts {
     this.#syncSuppression();
   }
 
-  /**
-   * Clears every peer's ghost — used when the whole document is replaced by
-   * a snapshot, since none of the in-progress state it described survives.
-   */
   clearAll(): void {
     for (const clientId of [...this.#ghosts.keys()]) {
       this.remove(clientId);
@@ -76,11 +72,7 @@ export class PeerUVGhosts {
   }
 
   /**
-   * Clears any ghost(s) for the given region id, regardless of which peer
-   * they belong to — used on reconciliation, where the committing peer's
-   * presence-observed id and their command's embedded id are not
-   * guaranteed to match (see UVGhostSync). Content-based instead: at most
-   * one peer sensibly drags a given region at a time.
+   * Matches regions because presence and command peer ids may differ.
    */
   removeByRegion(
     id: string
@@ -92,9 +84,6 @@ export class PeerUVGhosts {
     }
   }
 
-  /**
-   * Re-places every active ghost — used after a pan/zoom.
-   */
   refresh(): void {
     for (const clientId of this.#ghosts.keys()) {
       this.#render(clientId);
@@ -136,7 +125,7 @@ export class PeerUVGhosts {
       state.geometry,
       isTriangle
     );
-    const style: BorderStyle = {
+    const style: UVRegionBorderStyle = {
       color: state.color,
       strokeWidth: kStrokeWidth,
       selected: false,
@@ -158,8 +147,8 @@ export class PeerUVGhosts {
     clientId: string,
     geometry: UVGeometry,
     isTriangle: boolean
-  ): Border {
-    const border = new Border(geometry);
+  ): UVRegionBorder {
+    const border = new UVRegionBorder(geometry);
     this.#borders.set(clientId, {
       border,
       isTriangle

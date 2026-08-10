@@ -9,14 +9,14 @@ import type {
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import type { DefaultViewport } from "./Viewport.ts";
 import {
-  FloatingSelectionOverlay
-} from "./overlays/FloatingSelectionOverlay.ts";
+  FloatingSelection
+} from "./compositing/FloatingSelection.ts";
 import {
-  PeerStrokeGhosts
-} from "./overlays/PeerStrokeGhosts.ts";
+  PeerStrokes
+} from "./presence/PeerStrokes.ts";
 import {
-  PeerFloatingSelectionGhosts
-} from "./overlays/PeerFloatingSelectionGhosts.ts";
+  PeerFloatingSelections
+} from "./presence/PeerFloatingSelections.ts";
 
 export interface CanvasRendererOptions {
   viewport: DefaultViewport;
@@ -41,16 +41,12 @@ export interface CanvasRendererOptions {
   backgroundColor?: ColorInput;
   /**
    * Explicit fill for a peer's vacated selection-move footprint, mirroring
-   * `PixelArtCanvasOptions.select.eraseColor` — so a peer's ghost blanks its
-   * source the same way the mover's own client does.
+   * `PixelArtCanvasOptions.select.eraseColor` so both clients blank it equally.
    * @default null (dominant neighbor color)
    */
   eraseColor?: RGBA | null;
 }
 
-/**
- * Renders the texture and its background.
- */
 export class CanvasRenderer {
   #canvas: HTMLCanvasElement;
   #ctx: CanvasRenderingContext2D;
@@ -64,9 +60,9 @@ export class CanvasRenderer {
   #viewport: DefaultViewport;
   #canvasBuffer: CanvasBuffer;
 
-  readonly floatingSelection: FloatingSelectionOverlay = new FloatingSelectionOverlay();
-  readonly peerStrokeGhosts: PeerStrokeGhosts = new PeerStrokeGhosts();
-  readonly peerFloatingSelectionGhosts: PeerFloatingSelectionGhosts;
+  readonly floatingSelection: FloatingSelection = new FloatingSelection();
+  readonly peerStrokes: PeerStrokes = new PeerStrokes();
+  readonly peerFloatingSelections: PeerFloatingSelections;
 
   constructor(
     options: CanvasRendererOptions
@@ -85,7 +81,7 @@ export class CanvasRenderer {
 
     this.#viewport = viewport;
     this.#canvasBuffer = canvasBuffer;
-    this.peerFloatingSelectionGhosts = new PeerFloatingSelectionGhosts(
+    this.peerFloatingSelections = new PeerFloatingSelections(
       canvasBuffer,
       eraseColor
     );
@@ -182,8 +178,8 @@ export class CanvasRenderer {
     );
     if (
       this.floatingSelection.isActive ||
-      this.peerStrokeGhosts.isActive ||
-      this.peerFloatingSelectionGhosts.isActive
+      this.peerStrokes.isActive ||
+      this.peerFloatingSelections.isActive
     ) {
       this.#drawContent();
       this.#ctx.drawImage(
@@ -227,9 +223,9 @@ export class CanvasRenderer {
       0,
       0
     );
-    this.peerFloatingSelectionGhosts.draw(this.#contentCtx);
+    this.peerFloatingSelections.draw(this.#contentCtx);
     this.floatingSelection.draw(this.#contentCtx);
-    this.peerStrokeGhosts.draw(this.#contentCtx);
+    this.peerStrokes.draw(this.#contentCtx);
   }
 
   resize(

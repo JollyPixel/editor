@@ -8,7 +8,10 @@ import {
 } from "./rendering/CanvasRenderer.ts";
 import {
   OverlayLayer
-} from "./rendering/OverlayLayer.ts";
+} from "./rendering/overlays/OverlayLayer.ts";
+import {
+  PeerPresence
+} from "./rendering/presence/PeerPresence.ts";
 import {
   Viewport
 } from "./rendering/Viewport.ts";
@@ -22,9 +25,6 @@ import type {
 } from "./types.ts";
 
 export interface CanvasViewOptions {
-  /**
-   * Element the canvas and SVG overlays are mounted into.
-   */
   parent: HTMLDivElement;
   zoom?: ZoomOptions;
   /**
@@ -36,9 +36,6 @@ export interface CanvasViewOptions {
     colors: { odd: string; even: string; };
     squareSize: number;
   };
-  /**
-   * Highlight spec (size + colors) driving the brush/line/selection overlays.
-   */
   brushHighlight: BrushHighlight;
   /**
    * Explicit fill for a peer's vacated selection footprint.
@@ -48,18 +45,22 @@ export interface CanvasViewOptions {
 }
 
 /**
- * The view: the pixel canvas, its SVG overlays, and the viewport camera. It
- * owns everything needed to paint the current document state
+ * Owns the canvas, overlays, and viewport camera.
  */
 export class CanvasView {
+  #doc: PixelDocument;
+  #onRenderStateChanged = () => this.renderer.drawFrame();
+
   readonly viewport: Viewport;
   readonly renderer: CanvasRenderer;
   readonly overlays: OverlayLayer;
+  readonly peerPresence: PeerPresence;
 
   constructor(
     doc: PixelDocument,
     options: CanvasViewOptions
   ) {
+    this.#doc = doc;
     const { parent } = options;
     const textureSize = doc.size();
 
@@ -107,19 +108,27 @@ export class CanvasView {
       uvMap: doc.uv
     });
 
-    // Repaint on pixel/floating-selection changes; no overlay refresh needed.
-    doc.onChange(() => this.renderer.drawFrame());
+    this.peerPresence = new PeerPresence({
+      cursors: this.overlays.peerCursors,
+      strokes: this.renderer.peerStrokes,
+      uv: this.overlays.peerUvPreview,
+      selectionOutlines: this.overlays.peerSelectionOutlines,
+      floatingSelections: this.renderer.peerFloatingSelections
+    });
+
+    // Pixel and floating-selection changes do not affect overlay geometry.
+    doc.onChange(this.#onRenderStateChanged);
     this.renderer.floatingSelection.on(
       "changed",
-      () => this.renderer.drawFrame()
+      this.#onRenderStateChanged
     );
-    this.renderer.peerStrokeGhosts.on(
+    this.renderer.peerStrokes.on(
       "changed",
-      () => this.renderer.drawFrame()
+      this.#onRenderStateChanged
     );
-    this.renderer.peerFloatingSelectionGhosts.on(
+    this.renderer.peerFloatingSelections.on(
       "changed",
-      () => this.renderer.drawFrame()
+      this.#onRenderStateChanged
     );
   }
 
@@ -141,18 +150,24 @@ export class CanvasView {
     this.renderer.drawFrame();
   }
 
+  refresh(): void {
+    this.renderer.drawFrame();
+    this.overlays.refresh();
+    this.peerPresence.refresh();
+  }
+
   resize(
     width: number,
     height: number
   ): void {
-    // Resize surfaces first; viewport "changed" then drives repaint + refresh.
+    // Resize surfaces first; the viewport event then repaints and refreshes.
     this.renderer.resize(width, height);
     this.overlays.resize(width, height);
     this.viewport.resizeCanvas(width, height);
   }
 
   centerTexture(): void {
-    // viewport.centerTexture() emits "changed" to trigger repaint.
+    // centerTexture emits the repaint-triggering viewport event.
     this.viewport.centerTexture();
   }
 
@@ -164,13 +179,26 @@ export class CanvasView {
   }
 
   destroy(): void {
+    this.#doc.offChange(this.#onRenderStateChanged);
+    this.renderer.floatingSelection.off(
+      "changed",
+      this.#onRenderStateChanged
+    );
+    this.renderer.peerStrokes.off(
+      "changed",
+      this.#onRenderStateChanged
+    );
+    this.renderer.peerFloatingSelections.off(
+      "changed",
+      this.#onRenderStateChanged
+    );
+
     const rendererCanvas = this.renderer.canvas();
     if (rendererCanvas.parentElement) {
       rendererCanvas.remove();
     }
+    this.peerPresence.destroy();
     this.overlays.destroy();
-    this.renderer.peerStrokeGhosts.destroy();
-    this.renderer.peerFloatingSelectionGhosts.destroy();
   }
 
   /**
@@ -189,7 +217,7 @@ export class CanvasView {
       return clamp(4, zoomMin, zoomMax);
     }
 
-    // Leaves a small margin so the texture isn't flush against the edges.
+    // Keep the fitted texture clear of the container edges.
     const kFitPadding = 0.9;
     const fit = Math.min(
       containerSize.width / textureSize.x,

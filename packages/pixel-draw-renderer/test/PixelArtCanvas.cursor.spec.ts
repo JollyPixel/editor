@@ -6,6 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import { PeerPresence } from "#src/index.ts";
 import type { Vec2 } from "#src/types.ts";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
 
@@ -77,18 +78,22 @@ describe("PixelArtCanvas — onCursorMove", () => {
     manager.destroy();
   });
 
-  test("peerCursors passthrough renders into the canvas's own overlay SVG", () => {
+  test("peerPresence.cursors renders into the canvas's own overlay SVG", () => {
     const { manager, children } = createPixelArtCanvas();
+    assert.ok(manager.peerPresence instanceof PeerPresence);
     // children[0] is the interactive canvas, children[1] the SVG overlay
-    // (see test/helpers/dom.ts). SelectionOverlay also owns <path>s (created
+    // (see test/helpers/dom.ts). SelectionOutline also owns <path>s (created
     // eagerly, just hidden), so assert on the delta rather than an absolute count.
     const svg = children[1] as unknown as SVGElement;
     const baseline = svg.querySelectorAll("path").length;
 
-    manager.peerCursors.set("peer-A", { pos: { x: 0, y: 0 }, color: "#ff0000" });
+    manager.peerPresence.cursors.set("peer-A", {
+      pos: { x: 0, y: 0 },
+      color: "#ff0000"
+    });
     assert.strictEqual(svg.querySelectorAll("path").length, baseline + 1);
 
-    manager.peerCursors.remove("peer-A");
+    manager.peerPresence.cursors.remove("peer-A");
     assert.strictEqual(svg.querySelectorAll("path").length, baseline);
     manager.destroy();
   });

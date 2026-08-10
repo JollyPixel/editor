@@ -3,8 +3,8 @@ import { InteractionMode } from "./InteractionMode.ts";
 import type { BrushController } from "../../tools/BrushController.ts";
 import type { LineController } from "../../tools/LineController.ts";
 import type {
-  BrushHighlightOverlay
-} from "../../rendering/overlays/BrushHighlightOverlay.ts";
+  BrushHighlightView
+} from "../../rendering/overlays/BrushHighlight.ts";
 import type {
   Mode,
   Vec2
@@ -13,22 +13,19 @@ import type {
 export interface PaintModeOptions {
   brush: BrushController;
   line: LineController;
-  highlight: BrushHighlightOverlay;
-  /** Cancels the active primary drag without committing it. */
+  highlight: BrushHighlightView;
+  /**
+   * Cancels the active primary drag without committing it.
+   */
   stopDrawing: () => void;
 }
 
-/**
- * Freehand brush strokes plus the Shift-armed straight line, in the primary or
- * secondary color.
- * Owns both the brush and line tools and the coordination between them.
- */
 export class PaintMode extends InteractionMode {
   readonly id: Mode = "paint";
 
   #brush: BrushController;
   #line: LineController;
-  #highlight: BrushHighlightOverlay;
+  #highlight: BrushHighlightView;
   #stopDrawing: () => void;
 
   constructor(
@@ -55,7 +52,7 @@ export class PaintMode extends InteractionMode {
 
   onPrimaryDown(
     pos: Vec2
-  ): boolean | void {
+  ): boolean {
     if (this.#brush.pickArmed) {
       this.#brush.pick(pos.x, pos.y);
 
@@ -75,7 +72,11 @@ export class PaintMode extends InteractionMode {
       return false;
     }
 
-    this.#brush.startStroke(pos.x, pos.y, "primary");
+    this.#brush.startStroke(
+      pos.x,
+      pos.y,
+      "primary"
+    );
 
     return true;
   }
@@ -83,7 +84,10 @@ export class PaintMode extends InteractionMode {
   onPrimaryMove(
     pos: Vec2
   ): void {
-    this.#brush.continueStroke(pos.x, pos.y);
+    this.#brush.continueStroke(
+      pos.x,
+      pos.y
+    );
   }
 
   onPrimaryUp(): void {
@@ -93,7 +97,7 @@ export class PaintMode extends InteractionMode {
   onSecondaryDown(
     pos: Vec2,
     ctrlKey: boolean
-  ): boolean | void {
+  ): boolean {
     if (ctrlKey) {
       this.#brush.pick(pos.x, pos.y);
 
@@ -113,7 +117,11 @@ export class PaintMode extends InteractionMode {
       return false;
     }
 
-    this.#brush.startStroke(pos.x, pos.y, "secondary");
+    this.#brush.startStroke(
+      pos.x,
+      pos.y,
+      "secondary"
+    );
 
     return true;
   }
@@ -121,7 +129,10 @@ export class PaintMode extends InteractionMode {
   onSecondaryMove(
     pos: Vec2
   ): void {
-    this.#brush.continueStroke(pos.x, pos.y);
+    this.#brush.continueStroke(
+      pos.x,
+      pos.y
+    );
   }
 
   onSecondaryUp(): void {
@@ -129,13 +140,11 @@ export class PaintMode extends InteractionMode {
   }
 
   onHover(
-    cx: number,
-    cy: number
+    position: Vec2 | null
   ): void {
-    const outside = cx < 0 || cy < 0;
     this.#highlight.update(
-      outside ? null : cx,
-      outside ? null : cy
+      position?.x ?? null,
+      position?.y ?? null
     );
   }
 
@@ -158,7 +167,7 @@ export class PaintMode extends InteractionMode {
     this.#line.shiftHeld = true;
 
     if (this.#brush.isActive === "primary") {
-      // A held pointer requires committing the line on mouseup.
+      // A held pointer commits the armed line on mouseup.
       this.#stopDrawing();
       this.#brush.endStroke();
       this.#line.arm("mouseup");

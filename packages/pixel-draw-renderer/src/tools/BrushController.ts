@@ -8,26 +8,25 @@ import type { PeerStrokePixel, RGBA, Vec2 } from "../types.ts";
 export interface BrushControllerOptions {
   brush: Brush;
   canvasBuffer: CanvasBuffer;
-  /** The display canvas the `colorpicked` event is dispatched on. */
+  /**
+   * Dispatch target for the `colorpicked` event.
+   */
   canvas: HTMLCanvasElement;
   pipeline: EditPipeline;
-  /** Called with the live stroke's pixels as they change, for peer streaming. */
+  /**
+   * Receives live stroke pixels for peer streaming.
+   */
   onProgress?: (pixels: PeerStrokePixel[]) => void;
 }
 
-/**
- * Public brush-tool surface (`PixelArtCanvas.tools.brush`).
- */
 export interface BrushTool {
-  /** Whether the next primary action picks a color instead of painting. */
+  /**
+   * Whether the next primary action picks a color instead of painting.
+   */
   pickArmed: boolean;
-  /** Samples a texture pixel into the primary brush color. */
   pick(x: number, y: number): RGBA | null;
 }
 
-/**
- * Applies brush strokes to the canvas.
- */
 export class BrushController implements BrushTool {
   #brush: Brush;
   #canvasBuffer: CanvasBuffer;
@@ -51,16 +50,10 @@ export class BrushController implements BrushTool {
     this.#onProgress = options.onProgress;
   }
 
-  /**
-   * Active brush color slot.
-   */
   get isActive(): BrushColorSlot | false {
     return this.#activeSlot ?? false;
   }
 
-  /**
-   * Whether the next primary action picks a color.
-   */
   get pickArmed(): boolean {
     return this.#pickArmed;
   }
@@ -71,9 +64,6 @@ export class BrushController implements BrushTool {
     this.#pickArmed = armed;
   }
 
-  /**
-   * Samples a pixel into the primary brush color.
-   */
   pick(
     tx: number,
     ty: number
@@ -99,9 +89,6 @@ export class BrushController implements BrushTool {
     return { r, g, b, a };
   }
 
-  /**
-   * Starts a brush stroke.
-   */
   startStroke(
     tx: number,
     ty: number,
@@ -118,14 +105,11 @@ export class BrushController implements BrushTool {
     this.#stamp(tx, ty);
   }
 
-  /**
-   * Commits the current brush stroke.
-   */
   endStroke(): void {
     this.#canvasBuffer.copyToMaster();
     this.#commit();
     this.#activeSlot = null;
-    // Drops any rAF-queued pre-commit ghost tick — see PixelStrokeGhostSync.
+    // Drop the queued pre-commit ghost tick to prevent stale peer state.
     this.#onProgress?.([]);
   }
 

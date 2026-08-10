@@ -43,18 +43,11 @@ export interface EditPipelineOptions {
   history: History;
   uvMap: UVMap;
   onBufferUpdated?: PixelBufferHookListener;
-  /**
-   * Called after a pixel mutation.
-   */
   onDrawEnd?: () => void;
 }
 
 /**
- * The single place where an edit becomes buffer mutation + history + hook +
- * `onDrawEnd`. Tools call one intent method per edit kind
- * (`commitStroke`, `commitPixels`, `commitGlobalFill`, `commitSelectionEdit`)
- * and `PixelArtCanvas` calls `resize` / `replaceTexture`; none of them have
- * to sequence the underlying primitives themselves.
+ * Centralizes buffer mutation, history, hooks, and draw-end ordering.
  */
 export class EditPipeline {
   #brush: Brush;
@@ -98,16 +91,10 @@ export class EditPipeline {
     );
   }
 
-  /**
-   * The current local buffer-mutation listener.
-   */
   get onBufferUpdated(): PixelBufferHookListener | undefined {
     return this.#onBufferUpdated;
   }
 
-  /**
-   * Replaces the local buffer-mutation listener.
-   */
   set onBufferUpdated(
     fn: PixelBufferHookListener | undefined
   ) {
@@ -115,8 +102,7 @@ export class EditPipeline {
   }
 
   /**
-   * Commits an already-applied stroke (the buffer is mutated live as the
-   * brush stamps, so this only records + emits + signals draw-end).
+   * Records and emits a stroke already applied live by the brush.
    */
   commitStroke(
     pixels: Vec2[],
@@ -137,9 +123,7 @@ export class EditPipeline {
   }
 
   /**
-   * Commits pixels as a stroke edit, resolving the color from the brush and
-   * applying them to the buffer first (used by line, fill, and the public
-   * `PixelArtCanvas.commitPixels`, where the buffer is not yet mutated).
+   * Applies pixels before recording and emitting the stroke.
    */
   commitPixels(
     pixels: Vec2[],
@@ -158,9 +142,6 @@ export class EditPipeline {
     this.commitStroke(pixels, color, beforeColors);
   }
 
-  /**
-   * Commits a global fill (recolors all matching pixels).
-   */
   commitGlobalFill(
     commit: FillGlobalCommit
   ): void {
@@ -181,12 +162,7 @@ export class EditPipeline {
   }
 
   /**
-   * Commits a selection edit (move / rotate / flip / paste / delete).
-   *
-   * The hook carries `positions` + final per-pixel `colors` (not a single
-   * uniform color like `stroke`) since a footprint change can vacate one
-   * rect and paint another with arbitrary content — the same shape
-   * `HistoryStack` already replays for local undo/redo.
+   * Selection hooks carry final per-pixel colors because content is nonuniform.
    */
   commitSelectionEdit(
     entry: SelectEditEntry
@@ -205,10 +181,6 @@ export class EditPipeline {
     this.#onDrawEnd?.();
   }
 
-  /**
-   * Resizes the texture, recording the before/after snapshots and emitting a
-   * `resized` hook.
-   */
   resize(
     size: Vec2
   ): void {
@@ -239,10 +211,6 @@ export class EditPipeline {
     });
   }
 
-  /**
-   * Replaces the whole texture from an image/canvas source, recording the
-   * before/after snapshots and emitting a `texture-replaced` hook.
-   */
   replaceTexture(
     source: HTMLCanvasElement | HTMLImageElement
   ): void {
@@ -280,8 +248,7 @@ export class EditPipeline {
   }
 
   /**
-   * Emits a local buffer mutation. Public because undo/redo replay their
-   * hook events through it.
+   * Public so undo and redo can replay hook events through the same path.
    */
   emitHook(
     event: PixelBufferHookEvent
@@ -307,8 +274,7 @@ export class EditPipeline {
     color: RGBA,
     positions: Vec2[]
   ): void {
-    // drawPixels emits "changed"; the view repaints. copyToMaster persists the
-    // stroke to the master buffer (no visible change, so no repaint).
+    // drawPixels repaints; copyToMaster only persists the visible result.
     this.#canvasBuffer.drawPixels(positions, color);
     this.#canvasBuffer.copyToMaster();
   }
@@ -340,9 +306,6 @@ export class EditPipeline {
     this.#renderer.drawFrame();
   }
 
-  /**
-   * Applies a remote mutation without emitting it.
-   */
   applyRemoteCommand(
     event: PixelBufferHookEvent
   ): void {
@@ -419,9 +382,6 @@ export class EditPipeline {
     }
   }
 
-  /**
-   * Replaces the buffer from a remote snapshot.
-   */
   loadSnapshot(
     size: Vec2,
     pixels: Uint8ClampedArray,
@@ -442,9 +402,7 @@ export class EditPipeline {
   }
 
   /**
-   * Runs `fn` while suppressing local history recording, but not network
-   * broadcast — used to replay undo/redo of UV region changes without
-   * re-recording the replay as a new entry.
+   * Suppresses history recording, but not network broadcast, during replay.
    */
   runHistoryReplay<T>(
     fn: () => T

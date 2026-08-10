@@ -2,8 +2,8 @@
 import { InteractionMode } from "./InteractionMode.ts";
 import type { FillController } from "../../tools/FillController.ts";
 import type {
-  BrushHighlightOverlay
-} from "../../rendering/overlays/BrushHighlightOverlay.ts";
+  BrushHighlightView
+} from "../../rendering/overlays/BrushHighlight.ts";
 import type {
   Mode,
   Vec2
@@ -11,17 +11,14 @@ import type {
 
 export interface FillModeOptions {
   fill: FillController;
-  highlight: BrushHighlightOverlay;
+  highlight: BrushHighlightView;
 }
 
-/**
- * Bucket fill (contiguous or global) on click, in the primary or secondary color.
- */
 export class FillMode extends InteractionMode {
   readonly id: Mode = "fill";
 
   #fill: FillController;
-  #highlight: BrushHighlightOverlay;
+  #highlight: BrushHighlightView;
 
   constructor(
     options: FillModeOptions
@@ -41,28 +38,34 @@ export class FillMode extends InteractionMode {
 
   onPrimaryDown(
     pos: Vec2
-  ): boolean | void {
-    this.#fill.run(pos.x, pos.y, "primary");
+  ): boolean {
+    this.#fill.run(
+      pos.x,
+      pos.y,
+      "primary"
+    );
 
     return false;
   }
 
   onSecondaryDown(
     pos: Vec2
-  ): boolean | void {
-    this.#fill.run(pos.x, pos.y, "secondary");
+  ): boolean {
+    this.#fill.run(
+      pos.x,
+      pos.y,
+      "secondary"
+    );
 
     return false;
   }
 
   onHover(
-    cx: number,
-    cy: number
+    position: Vec2 | null
   ): void {
-    const outside = cx < 0 || cy < 0;
     this.#highlight.update(
-      outside ? null : cx,
-      outside ? null : cy
+      position?.x ?? null,
+      position?.y ?? null
     );
   }
 }

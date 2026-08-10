@@ -15,11 +15,7 @@ const kEditableInputTypes = new Set([
 ]);
 
 /**
- * Prevents Shift from being reported while the user is typing in toolbar
- * UI (e.g. a brush-size field) elsewhere in the page. Only text-entry
- * inputs count as "typing" — a range/color input left focused after a drag
- * (canvas has no tabindex, so clicking it can't steal focus back) must not
- * keep swallowing Shift.
+ * Ignores text entry without treating focused range or color inputs as typing.
  */
 export function isEditableTarget(
   target: EventTarget | null
@@ -28,11 +24,20 @@ export function isEditableTarget(
     return false;
   }
 
-  if (target.isContentEditable || target.tagName === "TEXTAREA") {
+  if (
+    target.isContentEditable ||
+    target.tagName === "TEXTAREA"
+  ) {
     return true;
   }
 
-  return target.tagName === "INPUT" && kEditableInputTypes.has(
-    (target as HTMLInputElement).type
-  );
+  return isHTMLInputElement(target) ?
+    kEditableInputTypes.has(target.type) :
+    false;
+}
+
+function isHTMLInputElement(
+  element: HTMLElement | null
+): element is HTMLInputElement {
+  return element?.tagName === "INPUT";
 }

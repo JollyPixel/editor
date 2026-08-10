@@ -1,3 +1,7 @@
+// Import Internal Dependencies
+import { InvalidKeybindingError } from "./errors/InvalidKeybindingError.ts";
+import { KeybindingConflictError } from "./errors/KeybindingConflictError.ts";
+
 export type ModifierToken = "mod" | "shift" | "alt";
 
 export type NamedKey =
@@ -12,9 +16,6 @@ export type NamedKey =
 
 export type KeyToken = NamedKey | (string & {});
 
-/**
- * Describes a keyboard shortcut.
- */
 export type Keybinding =
   | KeyToken
   | `${ModifierToken}+${KeyToken}`
@@ -62,29 +63,6 @@ export const DEFAULT_KEYBINDINGS: KeybindingsMap = {
   flipHorizontal: "h",
   flipVertical: "v"
 };
-
-export class InvalidKeybindingError extends Error {
-  constructor(
-    binding: string,
-    options?: { cause?: unknown; }
-  ) {
-    super(`Invalid keybinding: "${binding}"`, options);
-
-    this.name = "InvalidKeybindingError";
-  }
-}
-
-export class KeybindingConflictError extends Error {
-  constructor(
-    binding: string,
-    actionA: KeybindingAction,
-    actionB: KeybindingAction
-  ) {
-    super(`Keybinding "${binding}" is already assigned to "${actionA}" (conflicts with "${actionB}")`);
-
-    this.name = "KeybindingConflictError";
-  }
-}
 
 export function parseKeybinding(
   binding: string
@@ -147,7 +125,10 @@ function mergeAndValidate(
   base: KeybindingsMap,
   patch: Partial<KeybindingsMap>
 ): KeybindingsMap {
-  const merged: KeybindingsMap = { ...base, ...patch };
+  const merged: KeybindingsMap = {
+    ...base,
+    ...patch
+  };
 
   const seenBy = new Map<string, KeybindingAction>();
   for (const action of kKeybindingActions) {

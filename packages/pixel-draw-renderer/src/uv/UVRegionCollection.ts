@@ -5,8 +5,7 @@ import {
 } from "./UVRegion.ts";
 
 /**
- * Id-keyed store mirroring the client's UVMap.
- * Stores instances for reuse in command application.
+ * Mirrors the client UV map while retaining region instances for commands.
  */
 export class UVRegionCollection implements Iterable<UVRegion> {
   #regions = new Map<string, UVRegion>();

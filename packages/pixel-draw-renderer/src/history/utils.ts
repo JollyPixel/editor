@@ -9,9 +9,6 @@ export interface ColorGroup {
   positions: Vec2[];
 }
 
-/**
- * Groups positions by RGBA color.
- */
 export function groupPositionsByColor(
   positions: Vec2[],
   colors: RGBA[]

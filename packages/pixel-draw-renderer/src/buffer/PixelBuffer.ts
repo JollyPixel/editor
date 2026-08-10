@@ -2,6 +2,7 @@
 import {
   toRGBA
 } from "../utils/colors.ts";
+import { RectArea } from "../utils/RectArea.ts";
 import { UVRegionCollection } from "../uv/UVRegionCollection.ts";
 import type {
   ColorInput,
@@ -157,9 +158,6 @@ export class PixelBuffer implements DefaultPixelBuffer {
     return this.#working;
   }
 
-  /**
-   * Replaces pixels and resizes the buffer.
-   */
   replacePixels(
     pixels: Uint8ClampedArray,
     size: Vec2
@@ -175,9 +173,6 @@ export class PixelBuffer implements DefaultPixelBuffer {
     this.copyToMaster();
   }
 
-  /**
-   * Writes one color to each in-bounds position.
-   */
   drawPixels(
     positions: Iterable<Vec2>,
     color: RGBA
@@ -200,64 +195,57 @@ export class PixelBuffer implements DefaultPixelBuffer {
     }
   }
 
-  /**
-   * Writes row-major colors to in-bounds rectangle cells.
-   */
   drawRegion(
     rect: SelectionRect,
     pixels: RGBA[]
   ): void {
-    for (let ry = 0; ry < rect.height; ry++) {
-      for (let rx = 0; rx < rect.width; rx++) {
-        const x = rect.x + rx;
-        const y = rect.y + ry;
-        if (
-          x < 0 || x >= this.#width ||
-          y < 0 || y >= this.#height
-        ) {
-          continue;
-        }
+    const size = this.size();
+    const area = RectArea.from(rect);
 
-        const { r, g, b, a } = pixels[ry * rect.width + rx];
-        const index = (y * this.#width + x) * 4;
+    for (const row of area.rowsWithin(size)) {
+      let sourceIndex = row.sourceIndex;
+      let index = row.indexInBounds * 4;
+      const sourceEnd = sourceIndex + row.length;
+
+      while (sourceIndex < sourceEnd) {
+        const { r, g, b, a } = pixels[sourceIndex];
         this.#working[index] = r;
         this.#working[index + 1] = g;
         this.#working[index + 2] = b;
         this.#working[index + 3] = a;
+        sourceIndex++;
+        index += 4;
       }
     }
   }
 
-  /**
-   * Writes only rectangle cells with a true mask value.
-   */
   drawMaskedRegion(
     rect: SelectionRect,
     pixels: RGBA[],
     mask: boolean[]
   ): void {
-    for (let ry = 0; ry < rect.height; ry++) {
-      for (let rx = 0; rx < rect.width; rx++) {
-        const localIndex = (ry * rect.width) + rx;
-        if (!mask[localIndex]) {
+    const size = this.size();
+    const area = RectArea.from(rect);
+
+    for (const row of area.rowsWithin(size)) {
+      let sourceIndex = row.sourceIndex;
+      let index = row.indexInBounds * 4;
+      const sourceEnd = sourceIndex + row.length;
+
+      while (sourceIndex < sourceEnd) {
+        if (!mask[sourceIndex]) {
+          sourceIndex++;
+          index += 4;
           continue;
         }
 
-        const x = rect.x + rx;
-        const y = rect.y + ry;
-        if (
-          x < 0 || x >= this.#width ||
-          y < 0 || y >= this.#height
-        ) {
-          continue;
-        }
-
-        const { r, g, b, a } = pixels[localIndex];
-        const index = (y * this.#width + x) * 4;
+        const { r, g, b, a } = pixels[sourceIndex];
         this.#working[index] = r;
         this.#working[index + 1] = g;
         this.#working[index + 2] = b;
         this.#working[index + 3] = a;
+        sourceIndex++;
+        index += 4;
       }
     }
   }
@@ -306,13 +294,6 @@ export class PixelBuffer implements DefaultPixelBuffer {
     positions: Vec2[]
   ): RGBA[] {
     return positions.map(({ x, y }) => {
-      if (
-        x < 0 || x >= this.#width ||
-        y < 0 || y >= this.#height
-      ) {
-        return { r: 0, g: 0, b: 0, a: 0 };
-      }
-
       const [r, g, b, a] = this.samplePixel(x, y);
 
       return { r, g, b, a };
@@ -326,21 +307,24 @@ export class PixelBuffer implements DefaultPixelBuffer {
   hasTransparency(
     rect: SelectionRect
   ): boolean {
-    for (let ry = 0; ry < rect.height; ry++) {
-      for (let rx = 0; rx < rect.width; rx++) {
-        const x = rect.x + rx;
-        const y = rect.y + ry;
-        if (
-          x < 0 || x >= this.#width ||
-          y < 0 || y >= this.#height
-        ) {
-          return true;
-        }
+    const size = this.size();
+    const area = RectArea.from(rect);
+    if (area.isEmpty) {
+      return false;
+    }
+    if (!area.fitsWithin(size)) {
+      return true;
+    }
 
-        const [, , , a] = this.samplePixel(x, y);
-        if (a < 255) {
+    for (const row of area.rowsWithin(size)) {
+      let alphaIndex = (row.indexInBounds * 4) + 3;
+      const alphaEnd = alphaIndex + (row.length * 4);
+
+      while (alphaIndex < alphaEnd) {
+        if (this.#working[alphaIndex] < 255) {
           return true;
         }
+        alphaIndex += 4;
       }
     }
 

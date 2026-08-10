@@ -41,11 +41,7 @@ function isUVGhostPayload(
 }
 
 /**
- * Broadcasts the local in-progress UV region drag over a `network.Room`'s
- * presence channel and mirrors remote peers' drags onto the attached
- * canvas's `peerUvGhosts` overlay. It never touches `UVMap` state or history.
- * A ghost clears when an authoritative command affects its region or after
- * a period of inactivity.
+ * Streams non-authoritative UV drag ghosts through presence only.
  */
 export class UVGhostSync {
   #room: network.Room<PixelNetworkCommand, PixelServerMessage>;
@@ -69,9 +65,7 @@ export class UVGhostSync {
   #onRegionMoved = (
     event: { region: UVRegion; }
   ): void => {
-    // The commit for this region is already on its way to peers,
-    // synchronously, ahead of any rAF-queued pre-commit tick below. Drop it
-    // instead of letting it resurrect the ghost peers just saw cleared.
+    // Drop queued ticks after commit so cleared ghosts cannot reappear.
     if (this.#pendingPayload?.id === event.region.id) {
       this.#cancelPending();
     }
@@ -101,7 +95,7 @@ export class UVGhostSync {
     }
     else if (message.type === "snapshot") {
       this.#ghostLeaser.clear();
-      this.#canvas?.peerUvGhosts.clearAll();
+      this.#canvas?.peerPresence.uv.clearAll();
     }
   };
 
@@ -161,7 +155,7 @@ export class UVGhostSync {
     this.#cancelPending();
     if (this.#enableGhostPreview) {
       this.#ghostLeaser.clear();
-      this.#canvas.peerUvGhosts.clearAll();
+      this.#canvas.peerPresence.uv.clearAll();
     }
     this.#canvas.uv.off(
       "region-dragging",
@@ -195,7 +189,7 @@ export class UVGhostSync {
   #removePeerGhost(
     clientId: string
   ): void {
-    this.#canvas?.peerUvGhosts.remove(clientId);
+    this.#canvas?.peerPresence.uv.remove(clientId);
   }
 
   #reportLocal(
@@ -224,7 +218,6 @@ export class UVGhostSync {
     this.#pendingPayload = undefined;
   }
 
-  /** Clears ghosts for the region changed by an accepted command. */
   #reconcileCommand(
     command: PixelNetworkCommand
   ): void {
@@ -235,12 +228,12 @@ export class UVGhostSync {
     switch (command.action) {
       case "uv-region-moved":
       case "uv-region-deleted":
-        this.#canvas.peerUvGhosts.removeByRegion(
+        this.#canvas.peerPresence.uv.removeByRegion(
           command.metadata.id
         );
         break;
       case "uv-region-state-changed":
-        this.#canvas.peerUvGhosts.removeByRegion(
+        this.#canvas.peerPresence.uv.removeByRegion(
           command.metadata.region.id
         );
         break;
@@ -259,7 +252,7 @@ export class UVGhostSync {
 
     const payload = patch[kPresenceUvKey];
     if (isUVGhostPayload(payload)) {
-      this.#canvas.peerUvGhosts.set(clientId, {
+      this.#canvas.peerPresence.uv.set(clientId, {
         ...payload,
         color: this.#palette.forKey(clientId)
       });

@@ -98,9 +98,11 @@ interface MockCanvas {
   onCursorMove: ((pos: Vec2 | null) => void) | undefined;
   setCalls: PeerCursorCall[];
   removedPeers: string[];
-  peerCursors: {
-    set(clientId: string, state: { pos: Vec2 | null; color: string; label?: string; }): void;
-    remove(clientId: string): void;
+  peerPresence: {
+    cursors: {
+      set(clientId: string, state: { pos: Vec2 | null; color: string; label?: string; }): void;
+      remove(clientId: string): void;
+    };
   };
   triggerCursorMove(pos: Vec2 | null): void;
 }
@@ -113,12 +115,14 @@ function createMockCanvas(): MockCanvas {
     onCursorMove: undefined,
     setCalls,
     removedPeers,
-    peerCursors: {
-      set(clientId, state) {
-        setCalls.push({ clientId, pos: state.pos, color: state.color, label: state.label });
-      },
-      remove(clientId) {
-        removedPeers.push(clientId);
+    peerPresence: {
+      cursors: {
+        set(clientId, state) {
+          setCalls.push({ clientId, pos: state.pos, color: state.color, label: state.label });
+        },
+        remove(clientId) {
+          removedPeers.push(clientId);
+        }
       }
     },
     triggerCursorMove(pos) {
@@ -130,7 +134,7 @@ function createMockCanvas(): MockCanvas {
 }
 
 // PixelCursorSync is typed against the concrete PixelArtCanvas, but only
-// uses the structural subset MockCanvas implements (onCursorMove, peerCursors).
+// uses the structural subset MockCanvas implements.
 function asHost(
   canvas: MockCanvas
 ): PixelArtCanvas {

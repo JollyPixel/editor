@@ -53,9 +53,7 @@ function isSelectionGhostPayload(
 }
 
 /**
- * Streams local in-progress selection via presence and renders remote ghosts.
- * Ephemeral only - never touches history or the authoritative buffer.
- * Ghosts clear on overlapping edits, idle gestures or inactivity.
+ * Streams non-authoritative selection ghosts through presence only.
  */
 export class SelectionGhostSync {
   #room: network.Room<PixelNetworkCommand, PixelServerMessage>;
@@ -73,13 +71,12 @@ export class SelectionGhostSync {
   };
 
   #onSelectionCommitted = (): void => {
-    // Command already sent to peers - drop to avoid resurrecting the ghost
-    // they just saw cleared via command reconciliation.
+    // Drop queued ticks after commit so cleared ghosts cannot reappear.
     this.#cancelPending();
   };
 
   #onSelectionIdle = (): void => {
-    // No command follows; clear presence explicitly instead of waiting on timeout.
+    // No command follows, so clear presence without waiting for timeout.
     this.#cancelPending();
     this.#room.updatePresence({
       [kPresenceSelectionKey]: null
@@ -110,8 +107,8 @@ export class SelectionGhostSync {
     }
     else if (message.type === "snapshot") {
       this.#ghostLeaser.clear();
-      this.#canvas?.peerSelectionGhosts.clearAll();
-      this.#canvas?.peerFloatingSelectionGhosts.clearAll();
+      this.#canvas?.peerPresence.selectionOutlines.clearAll();
+      this.#canvas?.peerPresence.floatingSelections.clearAll();
     }
   };
 
@@ -175,8 +172,8 @@ export class SelectionGhostSync {
     this.#cancelPending();
     if (this.#enableGhostPreview) {
       this.#ghostLeaser.clear();
-      this.#canvas.peerSelectionGhosts.clearAll();
-      this.#canvas.peerFloatingSelectionGhosts.clearAll();
+      this.#canvas.peerPresence.selectionOutlines.clearAll();
+      this.#canvas.peerPresence.floatingSelections.clearAll();
     }
     this.#canvas.selectionEvents.off(
       "selection-progress",
@@ -214,8 +211,8 @@ export class SelectionGhostSync {
   #removePeerGhosts(
     clientId: string
   ): void {
-    this.#canvas?.peerSelectionGhosts.remove(clientId);
-    this.#canvas?.peerFloatingSelectionGhosts.remove(clientId);
+    this.#canvas?.peerPresence.selectionOutlines.remove(clientId);
+    this.#canvas?.peerPresence.floatingSelections.remove(clientId);
   }
 
   #reportLocal(
@@ -244,7 +241,6 @@ export class SelectionGhostSync {
     this.#pendingPayload = undefined;
   }
 
-  /** Clears ghosts touched by accepted command positions. */
   #reconcileCommand(
     command: PixelNetworkCommand
   ): void {
@@ -254,10 +250,10 @@ export class SelectionGhostSync {
 
     switch (command.action) {
       case "select-edit":
-        this.#canvas.peerSelectionGhosts.removeOverlapping(
+        this.#canvas.peerPresence.selectionOutlines.removeOverlapping(
           command.metadata.positions
         );
-        this.#canvas.peerFloatingSelectionGhosts.removeOverlapping(
+        this.#canvas.peerPresence.floatingSelections.removeOverlapping(
           command.metadata.positions
         );
         break;
@@ -266,8 +262,8 @@ export class SelectionGhostSync {
       case "texture-replaced":
         // Whole-canvas ops have no positions; clear all ghosts.
         this.#ghostLeaser.clear();
-        this.#canvas.peerSelectionGhosts.clearAll();
-        this.#canvas.peerFloatingSelectionGhosts.clearAll();
+        this.#canvas.peerPresence.selectionOutlines.clearAll();
+        this.#canvas.peerPresence.floatingSelections.clearAll();
         break;
       default:
         break;
@@ -296,13 +292,13 @@ export class SelectionGhostSync {
 
     const color = this.#palette.forKey(clientId);
     if (value.phase === "creating") {
-      this.#canvas.peerSelectionGhosts.set(clientId, {
+      this.#canvas.peerPresence.selectionOutlines.set(clientId, {
         rect: value.rect,
         mask: null,
         color
       });
-      // New marquee has no source footprint to blank.
-      this.#canvas.peerFloatingSelectionGhosts.remove(
+      // A new marquee has no source footprint to blank.
+      this.#canvas.peerPresence.floatingSelections.remove(
         clientId
       );
       this.#ghostLeaser.renew(clientId);
@@ -310,12 +306,12 @@ export class SelectionGhostSync {
       return;
     }
 
-    this.#canvas.peerSelectionGhosts.set(clientId, {
+    this.#canvas.peerPresence.selectionOutlines.set(clientId, {
       rect: value.liveRect,
       mask: value.mask,
       color
     });
-    this.#canvas.peerFloatingSelectionGhosts.set(clientId, {
+    this.#canvas.peerPresence.floatingSelections.set(clientId, {
       sourceRect: value.sourceRect,
       liveRect: value.liveRect,
       mask: value.mask,

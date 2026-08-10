@@ -7,14 +7,24 @@ import {
   reportBench
 } from "./_harness.ts";
 import { PixelBuffer } from "../src/buffer/PixelBuffer.ts";
-import type { RGBA } from "../src/types.ts";
+import type {
+  RGBA,
+  SelectionRect
+} from "../src/types.ts";
 
 // CONSTANTS
 const kBlack: RGBA = { r: 0, g: 0, b: 0, a: 255 };
+const kClippedRegion: SelectionRect = {
+  x: -32,
+  y: -32,
+  width: 256,
+  height: 256
+};
 
 /**
  * Covers edit-path primitives: construction (`#fill` over `maxSize²`),
- * `copyToMaster`, `drawPixels`, `resize`, and snapshot clone cost.
+ * `copyToMaster`, pixel and region drawing, transparency scans, `resize`, and
+ * snapshot clone cost.
  */
 export async function run(): Promise<void> {
   const bench = createBench("PixelBuffer (buffer/PixelBuffer)");
@@ -28,6 +38,13 @@ export async function run(): Promise<void> {
   const stroke64 = randomPositions(64, { x: 256, y: 256 }, rng);
   const stroke1024 = randomPositions(1024, { x: 256, y: 256 }, rng);
   const color = randomColor(rng);
+  const regionPixels = new Array<RGBA>(
+    kClippedRegion.width * kClippedRegion.height
+  ).fill(color);
+  const regionMask = Array.from(
+    { length: regionPixels.length },
+    (_, index) => (index & 1) === 0
+  );
 
   bench
     .add(
@@ -49,6 +66,15 @@ export async function run(): Promise<void> {
     })
     .add("drawPixels / 1024-px stroke", () => {
       buffer256.drawPixels(stroke1024, color);
+    })
+    .add("drawRegion / clipped 256x256", () => {
+      buffer256.drawRegion(kClippedRegion, regionPixels);
+    })
+    .add("drawMaskedRegion / clipped 256x256, 50% mask", () => {
+      buffer256.drawMaskedRegion(kClippedRegion, regionPixels, regionMask);
+    })
+    .add("hasTransparency / opaque 256x256", () => {
+      buffer256.hasTransparency({ x: 0, y: 0, width: 256, height: 256 });
     })
     .add("drawPixels + copyToMaster / 64-px commit", () => {
       buffer256.drawPixels(stroke64, kBlack);

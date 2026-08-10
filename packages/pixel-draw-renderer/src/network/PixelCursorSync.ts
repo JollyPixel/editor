@@ -33,9 +33,7 @@ function defaultGetLabel(
 }
 
 /**
- * Broadcasts the local cursor position over a `network.Room`'s presence
- * channel and mirrors remote peers' cursors onto the attached canvas's
- * `peerCursors` overlay.
+ * Mirrors local and remote cursor state through room presence.
  */
 export class PixelCursorSync {
   #room: network.Room<PixelNetworkCommand, PixelServerMessage>;
@@ -195,7 +193,7 @@ export class PixelCursorSync {
     }
 
     const rawPos = presence[kPresenceCursorKey];
-    this.#canvas.peerCursors.set(clientId, {
+    this.#canvas.peerPresence.cursors.set(clientId, {
       pos: isVec2(rawPos) ? rawPos : null,
       color: this.#palette.forKey(clientId),
       label: this.#getLabel(identity)
@@ -206,13 +204,13 @@ export class PixelCursorSync {
   #removePeer(
     clientId: string
   ): void {
-    this.#canvas?.peerCursors.remove(clientId);
+    this.#canvas?.peerPresence.cursors.remove(clientId);
     this.#renderedPeers.delete(clientId);
   }
 
   #clearPeers(): void {
     for (const clientId of this.#renderedPeers) {
-      this.#canvas?.peerCursors.remove(clientId);
+      this.#canvas?.peerPresence.cursors.remove(clientId);
     }
     this.#renderedPeers.clear();
   }

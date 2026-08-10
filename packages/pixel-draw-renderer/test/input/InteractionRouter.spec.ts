@@ -41,7 +41,7 @@ class FakeMode extends InteractionMode {
     return brushSize * 2;
   }
 
-  onPrimaryDown(pos: Vec2): boolean | void {
+  onPrimaryDown(pos: Vec2): boolean {
     this.calls.push(`down:${pos.x},${pos.y}`);
 
     return true;
@@ -55,7 +55,7 @@ class FakeMode extends InteractionMode {
     this.calls.push("up");
   }
 
-  onDelete(): boolean | void {
+  onDelete(): boolean {
     this.calls.push("delete");
 
     return true;
@@ -72,8 +72,8 @@ function makeRouter(
   options: {
     modes?: FakeMode[];
     defaultMode?: Mode;
-    onUndo?: () => boolean | void;
-    onRedo?: () => boolean | void;
+    onUndo?: () => boolean;
+    onRedo?: () => boolean;
   } = {}
 ): { router: InteractionRouter; recorder: Recorder; modes: FakeMode[]; } {
   const modes = options.modes ?? [
@@ -96,8 +96,8 @@ function makeRouter(
     defaultMode: options.defaultMode ?? "paint",
     viewport,
     setCursor: (cursor) => recorder.cursor.push(cursor),
-    onUndo: options.onUndo ?? (() => undefined),
-    onRedo: options.onRedo ?? (() => undefined)
+    onUndo: options.onUndo ?? (() => false),
+    onRedo: options.onRedo ?? (() => false)
   });
 
   return {
@@ -126,8 +126,8 @@ describe("InteractionRouter", () => {
   test("forwards pointer actions to the active mode and returns its result", () => {
     const { router, modes } = makeRouter();
 
-    const handled = router.onPrimaryDown(4, 7);
-    router.onPrimaryMove(5, 8);
+    const handled = router.onPrimaryDown({ x: 4, y: 7 });
+    router.onPrimaryMove({ x: 5, y: 8 });
     router.onPrimaryUp();
 
     assert.strictEqual(handled, true);
@@ -176,7 +176,7 @@ describe("InteractionRouter", () => {
       defaultMode: "select"
     });
 
-    router.onPrimaryDown(1, 1);
+    router.onPrimaryDown({ x: 1, y: 1 });
     router.onPrimaryUp();
     router.onBlur();
 
@@ -201,8 +201,8 @@ describe("InteractionRouter", () => {
   test("handles pan and zoom itself, never touching the active mode", () => {
     const { router, recorder, modes } = makeRouter();
 
-    router.onPanMove(3, -4);
-    router.onZoom(120, 10, 20);
+    router.onPanMove({ x: 3, y: -4 });
+    router.onZoom(120, { x: 10, y: 20 });
 
     assert.deepStrictEqual(recorder.pan, [[3, -4]]);
     assert.deepStrictEqual(recorder.zoom, [[120, 10, 20]]);
@@ -215,7 +215,7 @@ describe("InteractionRouter", () => {
       defaultMode: "paint"
     });
 
-    router.onPanStart(0, 0);
+    router.onPanStart();
     router.onPanEnd();
 
     assert.deepStrictEqual(recorder.cursor, ["grabbing", "crosshair"]);
@@ -228,7 +228,7 @@ describe("InteractionRouter", () => {
     });
 
     router.onSpaceDown();
-    router.onPanStart(0, 0);
+    router.onPanStart();
     router.onPanEnd();
     router.onSpaceUp();
 

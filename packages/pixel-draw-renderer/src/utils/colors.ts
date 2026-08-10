@@ -68,8 +68,7 @@ export function contrastingColor(
   color: ColorInput
 ): string {
   const [r, g, b] = colorAsRGBA(color);
-  // ITU-R BT.601 weights, applied to sRGB values as-is: a black-or-white
-  // verdict does not warrant linearizing.
+  // BT.601 weights on sRGB are sufficient for a black-or-white choice.
   const brightness = ((r * 299) + (g * 587) + (b * 114)) / 1000;
 
   return brightness > kLightBrightness ?

@@ -62,9 +62,6 @@ export interface ViewportOptions {
   zoomSensitivity?: number;
 }
 
-/**
- * Manages viewport camera and zoom state.
- */
 export class Viewport extends Emitter<
   ViewportEvent
 > implements DefaultViewport {
@@ -146,7 +143,7 @@ export class Viewport extends Emitter<
   }
 
   /**
-   * Resizes the canvas while preserving its center point.
+   * Preserves the viewport center while resizing.
    */
   resizeCanvas(
     width: number,

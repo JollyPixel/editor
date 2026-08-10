@@ -6,17 +6,17 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { LinePreviewOverlay } from "#src/rendering/overlays/LinePreviewOverlay.ts";
+import { LinePreview } from "#src/rendering/overlays/LinePreview.ts";
 import {
   makeSvg,
   makeViewport,
   makeBrush
 } from "../../helpers/overlay.ts";
 
-describe("LinePreviewOverlay", () => {
+describe("LinePreview", () => {
   test("drawLine() shows two line elements through the pixel centers", () => {
     const svg = makeSvg();
-    const overlay = new LinePreviewOverlay(
+    const overlay = new LinePreview(
       svg,
       makeViewport(),
       makeBrush()
@@ -48,7 +48,7 @@ describe("LinePreviewOverlay", () => {
 
   test("clear() hides an active preview", () => {
     const svg = makeSvg();
-    const overlay = new LinePreviewOverlay(
+    const overlay = new LinePreview(
       svg,
       makeViewport(),
       makeBrush()

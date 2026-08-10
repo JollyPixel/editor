@@ -5,13 +5,7 @@ import type {
 } from "../types.ts";
 import type { DefaultPixelBuffer } from "../buffer/types.ts";
 
-/**
- * Computes pixel-fill regions.
- */
 export class Fill {
-  /**
-    * Returns the connected region requiring a color change.
-   */
   static floodFill(
     buffer: DefaultPixelBuffer,
     seed: Vec2,
@@ -42,7 +36,7 @@ export class Fill {
   }
 
   /**
-    * Returns the four-connected region at a seed.
+   * Uses four-connectivity from the seed pixel.
    */
   static connectedRegion(
     buffer: DefaultPixelBuffer,
@@ -103,9 +97,6 @@ export class Fill {
     return positions;
   }
 
-  /**
-    * Returns all pixels matching a color.
-   */
   static matchAll(
     buffer: DefaultPixelBuffer,
     color: RGBA

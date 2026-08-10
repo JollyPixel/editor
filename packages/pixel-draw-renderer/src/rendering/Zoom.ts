@@ -4,8 +4,7 @@ import {
 } from "../utils/math.ts";
 
 // CONSTANTS
-// Pixel delta of a "standard" mouse-wheel notch. One notch moves a full
-// sensitivity step; finer trackpad deltas scale down proportionally.
+// Finer wheel deltas scale below this full sensitivity step.
 const kReferenceNotch = 100;
 
 export interface ZoomOptions {
@@ -31,9 +30,6 @@ export interface ZoomOptions {
   sensitivity?: number;
 }
 
-/**
- * Stores zoom state and bounds.
- */
 export class Zoom {
   #value: number;
   #min: number;
@@ -90,10 +86,7 @@ export class Zoom {
   }
 
   /**
-   * Adjusts zoom from a wheel delta. `delta` is a pixel-space amount (a
-   * standard notch is ~100px); the step scales with its magnitude so
-   * fine-grained trackpad pinch/scroll deltas zoom smoothly instead of each
-   * event counting as a full notch.
+   * Scales zoom steps for fine-grained trackpad and wheel deltas.
    */
   applyDelta(
     delta: number

@@ -13,13 +13,13 @@ import {
 } from "#src/uv/UVMap.ts";
 import { UVController } from "#src/uv/UVController.ts";
 import { UV_FACES, type UVFace } from "#src/uv/UVRegion.ts";
-import type { UVOverlay } from "#src/rendering/overlays/UVOverlay.ts";
+import type { UVRegionLayer } from "#src/rendering/overlays/UVRegions.ts";
 import type { SelectionRect } from "#src/types.ts";
 
 type EventPayload<T extends UVMapEventType> = Parameters<UVMapEvent[T]>[0];
 
 // UVController only calls overlay.setLiveOverride; FakeOverlay implements that
-// structural subset and is cast to UVOverlay at the single injection site.
+// structural subset and is cast to UVRegionLayer at the single injection site.
 class FakeOverlay {
   overrides: { id: string; face: UVFace | null; rect: SelectionRect | null; }[] = [];
 
@@ -39,7 +39,7 @@ function makeSetup(
   const overlay = new FakeOverlay();
   const controller = new UVController({
     uvMap: map,
-    overlay: overlay as unknown as UVOverlay
+    overlay: overlay as unknown as UVRegionLayer
   });
 
   return { map, overlay, controller };

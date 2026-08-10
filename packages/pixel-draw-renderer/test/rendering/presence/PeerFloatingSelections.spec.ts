@@ -7,9 +7,9 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  PeerFloatingSelectionGhosts,
+  PeerFloatingSelections,
   type PeerFloatingSelectionState
-} from "#src/rendering/overlays/PeerFloatingSelectionGhosts.ts";
+} from "#src/rendering/presence/PeerFloatingSelections.ts";
 import { CanvasBuffer } from "#src/buffer/CanvasBuffer.ts";
 import {
   canvasPixels,
@@ -58,10 +58,10 @@ function makeDest(): HTMLCanvasElement {
   return dest;
 }
 
-describe("PeerFloatingSelectionGhosts — set + draw", () => {
+describe("PeerFloatingSelections — set + draw", () => {
   test("blits the sampled source content at the live rect", () => {
     const buf = makeBuffer();
-    const ghosts = new PeerFloatingSelectionGhosts(buf, kErase);
+    const ghosts = new PeerFloatingSelections(buf, kErase);
     const state: PeerFloatingSelectionState = {
       sourceRect: {
         x: 0,
@@ -96,7 +96,7 @@ describe("PeerFloatingSelectionGhosts — set + draw", () => {
 
   test("blankSource: true paints the erase color over the source rect", () => {
     const buf = makeBuffer();
-    const ghosts = new PeerFloatingSelectionGhosts(buf, kErase);
+    const ghosts = new PeerFloatingSelections(buf, kErase);
     const state: PeerFloatingSelectionState = {
       sourceRect: {
         x: 0,
@@ -127,7 +127,7 @@ describe("PeerFloatingSelectionGhosts — set + draw", () => {
 
   test("blankSource: false leaves the source rect untouched", () => {
     const buf = makeBuffer();
-    const ghosts = new PeerFloatingSelectionGhosts(buf, kErase);
+    const ghosts = new PeerFloatingSelections(buf, kErase);
     const state: PeerFloatingSelectionState = {
       sourceRect: {
         x: 0,
@@ -160,7 +160,7 @@ describe("PeerFloatingSelectionGhosts — set + draw", () => {
 
   test("masked-false cells are neither blanked at the source nor drawn at the destination", () => {
     const buf = makeBuffer();
-    const ghosts = new PeerFloatingSelectionGhosts(buf, kErase);
+    const ghosts = new PeerFloatingSelections(buf, kErase);
     const state: PeerFloatingSelectionState = {
       sourceRect: {
         x: 0,
@@ -204,7 +204,7 @@ describe("PeerFloatingSelectionGhosts — set + draw", () => {
 
   test("draw is a no-op when nothing has been set", () => {
     const buf = makeBuffer();
-    const ghosts = new PeerFloatingSelectionGhosts(buf, kErase);
+    const ghosts = new PeerFloatingSelections(buf, kErase);
     const dest = makeDest();
 
     assert.doesNotThrow(() => ghosts.draw(mockContextOf(dest).asRenderingContext()));
@@ -212,7 +212,7 @@ describe("PeerFloatingSelectionGhosts — set + draw", () => {
 
   test("a later tick with the same sourceRect repositions without resampling the buffer", () => {
     const buf = makeBuffer();
-    const ghosts = new PeerFloatingSelectionGhosts(buf, kErase);
+    const ghosts = new PeerFloatingSelections(buf, kErase);
     const sourceRect = {
       x: 0,
       y: 0,
@@ -269,7 +269,7 @@ describe("PeerFloatingSelectionGhosts — set + draw", () => {
 
   test("a different sourceRect (new gesture) resamples the buffer", () => {
     const buf = makeBuffer();
-    const ghosts = new PeerFloatingSelectionGhosts(buf, kErase);
+    const ghosts = new PeerFloatingSelections(buf, kErase);
 
     ghosts.set(
       "peer-A",
@@ -323,10 +323,10 @@ describe("PeerFloatingSelectionGhosts — set + draw", () => {
   });
 });
 
-describe("PeerFloatingSelectionGhosts — remove", () => {
+describe("PeerFloatingSelections — remove", () => {
   test("stops drawing the peer's ghost", () => {
     const buf = makeBuffer();
-    const ghosts = new PeerFloatingSelectionGhosts(buf, kErase);
+    const ghosts = new PeerFloatingSelections(buf, kErase);
     ghosts.set(
       "peer-A",
       {
@@ -361,7 +361,7 @@ describe("PeerFloatingSelectionGhosts — remove", () => {
 
   test("removing an unknown peer is a no-op", () => {
     const buf = makeBuffer();
-    const ghosts = new PeerFloatingSelectionGhosts(buf, kErase);
+    const ghosts = new PeerFloatingSelections(buf, kErase);
 
     assert.doesNotThrow(
       () => ghosts.remove("nobody")
@@ -369,10 +369,10 @@ describe("PeerFloatingSelectionGhosts — remove", () => {
   });
 });
 
-describe("PeerFloatingSelectionGhosts — isActive", () => {
+describe("PeerFloatingSelections — isActive", () => {
   test("reflects whether any peer is tracked", () => {
     const buf = makeBuffer();
-    const ghosts = new PeerFloatingSelectionGhosts(buf, kErase);
+    const ghosts = new PeerFloatingSelections(buf, kErase);
     assert.strictEqual(ghosts.isActive, false);
 
     ghosts.set("peer-A", {
@@ -398,7 +398,7 @@ describe("PeerFloatingSelectionGhosts — isActive", () => {
   });
 });
 
-describe("PeerFloatingSelectionGhosts — removeOverlapping", () => {
+describe("PeerFloatingSelections — removeOverlapping", () => {
   const kState: PeerFloatingSelectionState = {
     sourceRect: {
       x: 0,
@@ -418,7 +418,7 @@ describe("PeerFloatingSelectionGhosts — removeOverlapping", () => {
 
   test("clears a ghost whose live rect overlaps the given positions", () => {
     const buf = makeBuffer();
-    const ghosts = new PeerFloatingSelectionGhosts(buf, kErase);
+    const ghosts = new PeerFloatingSelections(buf, kErase);
     ghosts.set("peer-A", kState);
 
     ghosts.removeOverlapping([
@@ -430,7 +430,7 @@ describe("PeerFloatingSelectionGhosts — removeOverlapping", () => {
 
   test("clears a ghost whose source rect overlaps the given positions", () => {
     const buf = makeBuffer();
-    const ghosts = new PeerFloatingSelectionGhosts(buf, kErase);
+    const ghosts = new PeerFloatingSelections(buf, kErase);
     ghosts.set("peer-A", kState);
 
     ghosts.removeOverlapping([
@@ -442,7 +442,7 @@ describe("PeerFloatingSelectionGhosts — removeOverlapping", () => {
 
   test("leaves a ghost untouched when neither footprint overlaps", () => {
     const buf = makeBuffer();
-    const ghosts = new PeerFloatingSelectionGhosts(buf, kErase);
+    const ghosts = new PeerFloatingSelections(buf, kErase);
     ghosts.set("peer-A", kState);
 
     ghosts.removeOverlapping([
@@ -454,7 +454,7 @@ describe("PeerFloatingSelectionGhosts — removeOverlapping", () => {
 
   test("is a no-op for an empty positions array", () => {
     const buf = makeBuffer();
-    const ghosts = new PeerFloatingSelectionGhosts(buf, kErase);
+    const ghosts = new PeerFloatingSelections(buf, kErase);
     ghosts.set("peer-A", kState);
 
     ghosts.removeOverlapping([]);
@@ -463,10 +463,10 @@ describe("PeerFloatingSelectionGhosts — removeOverlapping", () => {
   });
 });
 
-describe("PeerFloatingSelectionGhosts — clearAll", () => {
+describe("PeerFloatingSelections — clearAll", () => {
   test("removes every peer's ghost", () => {
     const buf = makeBuffer();
-    const ghosts = new PeerFloatingSelectionGhosts(buf, kErase);
+    const ghosts = new PeerFloatingSelections(buf, kErase);
     ghosts.set("peer-A", {
       sourceRect: {
         x: 0,
@@ -506,10 +506,10 @@ describe("PeerFloatingSelectionGhosts — clearAll", () => {
   });
 });
 
-describe("PeerFloatingSelectionGhosts — changed signal", () => {
+describe("PeerFloatingSelections — changed signal", () => {
   test("emits on set and on a remove that actually clears something", () => {
     const buf = makeBuffer();
-    const ghosts = new PeerFloatingSelectionGhosts(buf, kErase);
+    const ghosts = new PeerFloatingSelections(buf, kErase);
     let changes = 0;
     ghosts.on("changed", () => {
       changes++;
@@ -541,10 +541,10 @@ describe("PeerFloatingSelectionGhosts — changed signal", () => {
   });
 });
 
-describe("PeerFloatingSelectionGhosts — destroy", () => {
+describe("PeerFloatingSelections — destroy", () => {
   test("clears every tracked peer", () => {
     const buf = makeBuffer();
-    const ghosts = new PeerFloatingSelectionGhosts(buf, kErase);
+    const ghosts = new PeerFloatingSelections(buf, kErase);
     ghosts.set("peer-A", {
       sourceRect: {
         x: 0,

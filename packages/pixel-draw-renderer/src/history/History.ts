@@ -34,19 +34,10 @@ export interface HistoryOptions {
    * @default 10
    */
   limit?: number;
-  /**
-   * Called when the history state changes.
-   */
   onChange?: (state: HistoryState) => void;
 }
 
-/**
- * Manages an optional history stack and change notifications.
- */
 export class History {
-  /**
-   * Builds hook events that restore an entry's prior state.
-   */
   static buildUndoReplayEvents(
     entry: HistoryEntry
   ): PixelBufferHookEvent[] {
@@ -110,9 +101,6 @@ export class History {
     }
   }
 
-  /**
-   * Builds hook events that restore an entry's later state.
-   */
   static buildRedoReplayEvents(
     entry: HistoryEntry
   ): PixelBufferHookEvent[] {

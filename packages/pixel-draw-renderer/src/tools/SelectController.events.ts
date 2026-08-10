@@ -4,7 +4,7 @@ import type { SelectionRect } from "../types.ts";
 /**
  * Live in-progress selection geometry for ghost-preview streaming.
  * `creating` is always a plain rect; `moving` carries the existing mask
- * and blankSource state mirroring FloatingOverlayOptions.blankSource.
+ * and blankSource state mirroring FloatingSelectionOptions.blankSource.
  */
 export type SelectionProgressEvent =
   | {
@@ -22,11 +22,11 @@ export type SelectionProgressEvent =
 export type SelectControllerEvent = {
   "selection-progress": (event: SelectionProgressEvent) => void;
   /**
-   * Move committed - select-edit command already sent; drop pending ghost tick.
+   * Signals that the command replaced any pending ghost tick.
    */
   "selection-committed": () => void;
   /**
-   * Gesture ended without a command - sender must clear presence explicitly.
+   * Signals that presence must clear because no command follows.
    */
   "selection-idle": () => void;
 };

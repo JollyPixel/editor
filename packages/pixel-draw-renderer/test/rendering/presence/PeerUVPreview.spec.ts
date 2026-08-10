@@ -7,9 +7,9 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  PeerUVGhosts,
-  type PeerUVGhostState
-} from "#src/rendering/overlays/PeerUVGhosts.ts";
+  PeerUVPreview,
+  type PeerUVPreviewState
+} from "#src/rendering/presence/PeerUVPreview.ts";
 import {
   makeSvg,
   makeUvMap,
@@ -18,7 +18,7 @@ import {
 } from "../../helpers/overlay.ts";
 
 // CONSTANTS
-const kRectGhost: PeerUVGhostState = {
+const kRectGhost: PeerUVPreviewState = {
   id: "region-A",
   face: null,
   geometry: {
@@ -29,7 +29,7 @@ const kRectGhost: PeerUVGhostState = {
   },
   color: "#ff0000"
 };
-const kTriangleGhost: PeerUVGhostState = {
+const kTriangleGhost: PeerUVPreviewState = {
   id: "region-B",
   face: "front",
   geometry: {
@@ -45,11 +45,11 @@ const kTriangleGhost: PeerUVGhostState = {
   color: "#00ff00"
 };
 
-describe("PeerUVGhosts — set", () => {
+describe("PeerUVPreview — set", () => {
   test("renders a dashed rect border at the projected screen position, with no contrasting casing", () => {
     const svg = makeSvg();
     const viewport = makeViewport();
-    const ghosts = new PeerUVGhosts(
+    const ghosts = new PeerUVPreview(
       svg,
       viewport,
       makeUvOverlay(svg, viewport)
@@ -87,7 +87,7 @@ describe("PeerUVGhosts — set", () => {
   test("renders a polygon for a triangle face", () => {
     const svg = makeSvg();
     const viewport = makeViewport();
-    const ghosts = new PeerUVGhosts(
+    const ghosts = new PeerUVPreview(
       svg,
       viewport,
       makeUvOverlay(svg, viewport)
@@ -110,7 +110,7 @@ describe("PeerUVGhosts — set", () => {
   test("tracks multiple peers independently", () => {
     const svg = makeSvg();
     const viewport = makeViewport();
-    const ghosts = new PeerUVGhosts(
+    const ghosts = new PeerUVPreview(
       svg,
       viewport,
       makeUvOverlay(svg, viewport)
@@ -132,7 +132,7 @@ describe("PeerUVGhosts — set", () => {
   test("a later set() for the same peer with the same shape family reuses the border (no duplicate elements)", () => {
     const svg = makeSvg();
     const viewport = makeViewport();
-    const ghosts = new PeerUVGhosts(
+    const ghosts = new PeerUVPreview(
       svg,
       viewport,
       makeUvOverlay(svg, viewport)
@@ -154,7 +154,7 @@ describe("PeerUVGhosts — set", () => {
   test("switching shape family (rect -> triangle) for the same peer recreates the border", () => {
     const svg = makeSvg();
     const viewport = makeViewport();
-    const ghosts = new PeerUVGhosts(
+    const ghosts = new PeerUVPreview(
       svg,
       viewport,
       makeUvOverlay(svg, viewport)
@@ -176,11 +176,11 @@ describe("PeerUVGhosts — set", () => {
   });
 });
 
-describe("PeerUVGhosts — remove", () => {
+describe("PeerUVPreview — remove", () => {
   test("removes the peer's border from the svg", () => {
     const svg = makeSvg();
     const viewport = makeViewport();
-    const ghosts = new PeerUVGhosts(
+    const ghosts = new PeerUVPreview(
       svg,
       viewport,
       makeUvOverlay(svg, viewport)
@@ -199,7 +199,7 @@ describe("PeerUVGhosts — remove", () => {
   test("removing an unknown peer is a no-op", () => {
     const svg = makeSvg();
     const viewport = makeViewport();
-    const ghosts = new PeerUVGhosts(
+    const ghosts = new PeerUVPreview(
       svg,
       viewport,
       makeUvOverlay(svg, viewport)
@@ -212,11 +212,11 @@ describe("PeerUVGhosts — remove", () => {
   });
 });
 
-describe("PeerUVGhosts — removeByRegion", () => {
+describe("PeerUVPreview — removeByRegion", () => {
   test("clears whichever peer's ghost matches the region id, regardless of clientId", () => {
     const svg = makeSvg();
     const viewport = makeViewport();
-    const ghosts = new PeerUVGhosts(
+    const ghosts = new PeerUVPreview(
       svg,
       viewport,
       makeUvOverlay(svg, viewport)
@@ -235,7 +235,7 @@ describe("PeerUVGhosts — removeByRegion", () => {
   test("leaves other peers' ghosts for unrelated regions untouched", () => {
     const svg = makeSvg();
     const viewport = makeViewport();
-    const ghosts = new PeerUVGhosts(
+    const ghosts = new PeerUVPreview(
       svg,
       viewport,
       makeUvOverlay(svg, viewport)
@@ -259,7 +259,7 @@ describe("PeerUVGhosts — removeByRegion", () => {
   test("is a no-op for an unknown region id", () => {
     const svg = makeSvg();
     const viewport = makeViewport();
-    const ghosts = new PeerUVGhosts(
+    const ghosts = new PeerUVPreview(
       svg,
       viewport,
       makeUvOverlay(svg, viewport)
@@ -277,11 +277,11 @@ describe("PeerUVGhosts — removeByRegion", () => {
   });
 });
 
-describe("PeerUVGhosts — clearAll", () => {
+describe("PeerUVPreview — clearAll", () => {
   test("removes every peer's border", () => {
     const svg = makeSvg();
     const viewport = makeViewport();
-    const ghosts = new PeerUVGhosts(
+    const ghosts = new PeerUVPreview(
       svg,
       viewport,
       makeUvOverlay(svg, viewport)
@@ -296,11 +296,11 @@ describe("PeerUVGhosts — clearAll", () => {
   });
 });
 
-describe("PeerUVGhosts — refresh", () => {
+describe("PeerUVPreview — refresh", () => {
   test("re-projects the stored geometry against a changed camera", () => {
     const svg = makeSvg();
     const viewport = makeViewport();
-    const ghosts = new PeerUVGhosts(
+    const ghosts = new PeerUVPreview(
       svg,
       viewport,
       makeUvOverlay(svg, viewport)
@@ -318,11 +318,11 @@ describe("PeerUVGhosts — refresh", () => {
   });
 });
 
-describe("PeerUVGhosts — destroy", () => {
+describe("PeerUVPreview — destroy", () => {
   test("removes every tracked peer's border", () => {
     const svg = makeSvg();
     const viewport = makeViewport();
-    const ghosts = new PeerUVGhosts(
+    const ghosts = new PeerUVPreview(
       svg,
       viewport,
       makeUvOverlay(svg, viewport)
@@ -337,13 +337,13 @@ describe("PeerUVGhosts — destroy", () => {
   });
 });
 
-describe("PeerUVGhosts — suppresses the classical UVOverlay border", () => {
+describe("PeerUVPreview — suppresses the classical UVRegionLayer border", () => {
   test("hides the region's classical border while a peer's ghost for it is active, restores it once cleared", () => {
     const svg = makeSvg();
     const viewport = makeViewport();
     const uvMap = makeUvMap();
     const uvOverlay = makeUvOverlay(svg, viewport, uvMap);
-    const ghosts = new PeerUVGhosts(svg, viewport, uvOverlay);
+    const ghosts = new PeerUVPreview(svg, viewport, uvOverlay);
 
     const region = uvMap.create({
       width: 2,
@@ -393,7 +393,7 @@ describe("PeerUVGhosts — suppresses the classical UVOverlay border", () => {
     const viewport = makeViewport();
     const uvMap = makeUvMap();
     const uvOverlay = makeUvOverlay(svg, viewport, uvMap);
-    const ghosts = new PeerUVGhosts(svg, viewport, uvOverlay);
+    const ghosts = new PeerUVPreview(svg, viewport, uvOverlay);
 
     const region = uvMap.create({
       width: 2,

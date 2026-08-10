@@ -17,30 +17,29 @@ import {
 } from "./SelectController.ts";
 import { UVController } from "../uv/UVController.ts";
 import type { UVMap } from "../uv/UVMap.ts";
-import type { UVOverlay } from "../rendering/overlays/UVOverlay.ts";
+import type { UVRegionLayer } from "../rendering/overlays/UVRegions.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import type { CanvasRenderer } from "../rendering/CanvasRenderer.ts";
 import type { EditPipeline } from "../sync/EditPipeline.ts";
-import type { LinePreviewOverlay } from "../rendering/overlays/LinePreviewOverlay.ts";
-import type { SelectionOverlay } from "../rendering/overlays/SelectionOverlay.ts";
-import type { PeerStrokePixel, RGBA } from "../types.ts";
+import type { LinePreview } from "../rendering/overlays/LinePreview.ts";
+import type { SelectionOutline } from "../rendering/overlays/SelectionOutline.ts";
+import type {
+  PeerStrokePixel,
+  RGBA
+} from "../types.ts";
 
 export interface ToolsOptions {
   brush: Brush;
   canvasBuffer: CanvasBuffer;
   renderer: CanvasRenderer;
-  linePreview: LinePreviewOverlay;
-  selectionOverlay: SelectionOverlay;
+  linePreview: LinePreview;
+  selectionOverlay: SelectionOutline;
   eraseColor: RGBA | null;
   uvMap: UVMap;
-  uvOverlay: UVOverlay;
+  uvOverlay: UVRegionLayer;
   pipeline: EditPipeline;
   /**
-   * Called with a tool's live in-progress pixels (brush stroke, line drag)
-   * as they change, for streaming a ghost preview to peers. Selection
-   * progress streams separately, through `SelectController`'s own emitter
-   * (see `SelectionGhostSync`) — its payload is geometry, not pixels. Never
-   * fires for fill.
+   * Streams brush and line pixels; selection geometry uses its own emitter.
    */
   onProgress?: (pixels: PeerStrokePixel[]) => void;
 }
@@ -55,10 +54,6 @@ export interface Toolset {
   select: SelectTool;
 }
 
-/**
- * Groups the drawing tool controllers. The concrete container behind the
- * public `Toolset` view (`PixelArtCanvas.tools`).
- */
 export class Tools {
   readonly brush: BrushController;
   readonly fill: FillController;

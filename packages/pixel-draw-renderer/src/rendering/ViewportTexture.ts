@@ -5,15 +5,9 @@ import type {
 
 export interface ViewportTextureOptions {
   size: Vec2;
-  /**
-    * Called after resizing.
-   */
   onResize?: () => void;
 }
 
-/**
- * Stores viewport texture dimensions.
- */
 export class ViewportTexture {
   #size: Vec2;
   #onResize?: () => void;

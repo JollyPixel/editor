@@ -355,6 +355,31 @@ describe("PixelBuffer", () => {
       });
       assert.deepStrictEqual(buf.samplePixel(3, 3), [9, 9, 9, 255]);
     });
+
+    test("preserves source alignment when clipping the top and left edges", () => {
+      const buf = new PixelBuffer({
+        size: { x: 2, y: 2 },
+        maxSize: kTestMaxSize
+      });
+      const pixels = Array.from({ length: 9 }, (_, index) => {
+        return {
+          r: index,
+          g: 0,
+          b: 0,
+          a: 255
+        };
+      });
+
+      buf.drawRegion(
+        { x: -1, y: -1, width: 3, height: 3 },
+        pixels
+      );
+
+      assert.deepStrictEqual(buf.samplePixel(0, 0), [4, 0, 0, 255]);
+      assert.deepStrictEqual(buf.samplePixel(1, 0), [5, 0, 0, 255]);
+      assert.deepStrictEqual(buf.samplePixel(0, 1), [7, 0, 0, 255]);
+      assert.deepStrictEqual(buf.samplePixel(1, 1), [8, 0, 0, 255]);
+    });
   });
 
   describe("drawMaskedRegion", () => {
@@ -402,6 +427,36 @@ describe("PixelBuffer", () => {
         buf.samplePixel(3, 3),
         [9, 9, 9, 255]
       );
+    });
+
+    test("preserves mask alignment when clipping the top and left edges", () => {
+      const buf = new PixelBuffer({
+        size: { x: 2, y: 2 },
+        defaultColor: { r: 20, g: 0, b: 0, a: 255 },
+        maxSize: kTestMaxSize
+      });
+      const pixels = Array.from({ length: 9 }, (_, index) => {
+        return {
+          r: index,
+          g: 0,
+          b: 0,
+          a: 255
+        };
+      });
+      const mask = new Array(9).fill(false);
+      mask[4] = true;
+      mask[8] = true;
+
+      buf.drawMaskedRegion(
+        { x: -1, y: -1, width: 3, height: 3 },
+        pixels,
+        mask
+      );
+
+      assert.deepStrictEqual(buf.samplePixel(0, 0), [4, 0, 0, 255]);
+      assert.deepStrictEqual(buf.samplePixel(1, 0), [20, 0, 0, 255]);
+      assert.deepStrictEqual(buf.samplePixel(0, 1), [20, 0, 0, 255]);
+      assert.deepStrictEqual(buf.samplePixel(1, 1), [8, 0, 0, 255]);
     });
   });
 

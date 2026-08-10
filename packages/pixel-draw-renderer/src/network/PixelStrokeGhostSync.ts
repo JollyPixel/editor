@@ -40,9 +40,7 @@ function isPeerStrokePixels(
 }
 
 /**
- * Streams local in-progress pixels via presence and renders remote ghosts.
- * Ephemeral only - never touches history or the authoritative buffer.
- * Ghosts clear when authoritative edits overlap them or after inactivity.
+ * Streams non-authoritative stroke ghosts through presence only.
  */
 export class PixelStrokeGhostSync {
   #room: network.Room<PixelNetworkCommand, PixelServerMessage>;
@@ -84,7 +82,7 @@ export class PixelStrokeGhostSync {
     }
     else if (message.type === "snapshot") {
       this.#ghostLeaser.clear();
-      this.#canvas?.peerStrokeGhosts.clearAll();
+      this.#canvas?.peerPresence.strokes.clearAll();
     }
   };
 
@@ -138,7 +136,7 @@ export class PixelStrokeGhostSync {
     this.#cancelPending();
     if (this.#enableGhostPreview) {
       this.#ghostLeaser.clear();
-      this.#canvas.peerStrokeGhosts.clearAll();
+      this.#canvas.peerPresence.strokes.clearAll();
       this.#canvas.onStrokeProgress = this.#previousHandler;
     }
     this.#canvas = undefined;
@@ -165,14 +163,13 @@ export class PixelStrokeGhostSync {
   #removePeerGhost(
     clientId: string
   ): void {
-    this.#canvas?.peerStrokeGhosts.remove(clientId);
+    this.#canvas?.peerPresence.strokes.remove(clientId);
   }
 
   #reportLocal(
     pixels: PeerStrokePixel[]
   ): void {
-    // Empty = gesture committed; authoritative command already sent - drop
-    // to avoid resurrecting the ghost peers just saw cleared.
+    // Drop queued ticks after commit so cleared ghosts cannot reappear.
     if (pixels.length === 0) {
       this.#cancelPending();
 
@@ -202,7 +199,6 @@ export class PixelStrokeGhostSync {
     this.#pendingPixels = undefined;
   }
 
-  /** Clears ghosts touched by accepted command positions. */
   #reconcileCommand(
     command: PixelNetworkCommand
   ): void {
@@ -212,7 +208,7 @@ export class PixelStrokeGhostSync {
 
     switch (command.action) {
       case "stroke":
-        this.#canvas.peerStrokeGhosts.removeOverlapping(
+        this.#canvas.peerPresence.strokes.removeOverlapping(
           command.metadata.positions
         );
         break;
@@ -221,7 +217,7 @@ export class PixelStrokeGhostSync {
       case "texture-replaced":
         // Whole-canvas ops have no positions; clear all ghosts.
         this.#ghostLeaser.clear();
-        this.#canvas.peerStrokeGhosts.clearAll();
+        this.#canvas.peerPresence.strokes.clearAll();
         break;
       default:
         break;
@@ -238,7 +234,7 @@ export class PixelStrokeGhostSync {
 
     const pixels = patch[kPresenceStrokeKey];
     if (isPeerStrokePixels(pixels)) {
-      this.#canvas.peerStrokeGhosts.set(
+      this.#canvas.peerPresence.strokes.set(
         clientId,
         pixels
       );

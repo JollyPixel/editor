@@ -1,169 +1,62 @@
 // Import Internal Dependencies
+import type { Viewport } from "../rendering/Viewport.ts";
+import type { Vec2 } from "../types.ts";
+import type { InputActions } from "./InputActions.ts";
 import {
   Keybindings,
   type KeybindingAction,
   type KeybindingsMap
 } from "./Keybindings.ts";
-import type {
-  Vec2
-} from "../types.ts";
-import type {
-  Viewport
-} from "../rendering/Viewport.ts";
-import {
-  isEditableTarget
-} from "./utils.ts";
+import { isEditableTarget } from "./utils.ts";
+import type { WindowLike } from "./WindowLike.ts";
 
 // CONSTANTS
-// Approximate pixels per WheelEvent.deltaMode unit (LINE = 1, PAGE = 2), so
-// line/page-based wheels (e.g. Firefox mouse) yield a pixel delta comparable
-// to pixel-based ones (trackpads, most mouse wheels).
-const kWheelLineHeight = 16;
-const kWheelPageHeight = 100;
+const kMouseButton = {
+  primary: 0,
+  auxiliary: 1,
+  secondary: 2
+} as const;
 
-export interface InputActions {
-  /**
-   * Starts a primary interaction at texture coordinates. Return `false` for
-   * single-shot actions that should not be tracked as drags.
-   */
-  onPrimaryDown(
-    tx: number,
-    ty: number
-  ): boolean | void;
-  /** Reports movement during a tracked primary drag. */
-  onPrimaryMove(
-    tx: number,
-    ty: number
-  ): void;
-  /** Ends a tracked primary drag. */
-  onPrimaryUp(): void;
-  /**
-   * Starts a secondary (right-click) interaction at texture coordinates.
-   * `ctrlKey` reports whether Ctrl was held at the time of the click. Return
-   * `false` for single-shot actions that should not be tracked as drags.
-   */
-  onSecondaryDown(
-    tx: number,
-    ty: number,
-    ctrlKey: boolean
-  ): boolean | void;
-  /** Reports movement during a tracked secondary drag. */
-  onSecondaryMove(
-    tx: number,
-    ty: number
-  ): void;
-  /** Ends a tracked secondary drag. */
-  onSecondaryUp(): void;
-  onPanStart(
-    mx: number,
-    my: number
-  ): void;
-  onPanMove(
-    dx: number,
-    dy: number
-  ): void;
-  onPanEnd(): void;
-  onZoom(
-    delta: number,
-    cx: number,
-    cy: number
-  ): void;
-  onMouseMove(
-    cx: number,
-    cy: number
-  ): void;
-  /** Reports the bounded texture position, or `null` outside the texture. */
-  onCursorMove(pos: Vec2 | null): void;
-  /** Reports every canvas or window mouseup. */
-  onMouseUp(): void;
-  /** Reports a non-repeat Shift press outside editable UI. */
-  onShiftDown(): void;
-  onShiftUp(): void;
-  /**
-   * Reports a non-repeat Space press (pan modifier) while hovering the canvas.
-   * While it's held, a left-drag pans instead of triggering the primary action.
-   */
-  onSpaceDown(): void;
-  onSpaceUp(): void;
-  onBlur(): void;
-  /**
-   * Return `true` to handle copy and suppress the browser default.
-   */
-  onCopy(): boolean | void;
-  /** Return `true` to handle paste and suppress the browser default. */
-  onPaste(): boolean | void;
-  /** Return `true` to handle Delete and suppress the browser default. */
-  onDelete(): boolean | void;
-  /** Return `true` to handle undo and suppress the browser default. */
-  onUndo(): boolean | void;
-  /** Return `true` to handle redo and suppress the browser default. */
-  onRedo(): boolean | void;
-  /** Return `true` to handle rotate and suppress the browser default. */
-  onRotate(): boolean | void;
-  /** Return `true` to handle a horizontal flip and suppress the browser default. */
-  onFlipHorizontal(): boolean | void;
-  /** Return `true` to handle a vertical flip and suppress the browser default. */
-  onFlipVertical(): boolean | void;
+const kMouseButtonMask = {
+  primary: 1,
+  secondary: 2
+} as const;
+
+const kWheelDeltaMode = {
+  pixel: 0,
+  line: 1,
+  page: 2
+} as const;
+
+// Approximate CSS-pixel equivalents for line and page wheel deltas.
+const kWheelLineDeltaPixels = 16;
+const kWheelPageDeltaPixels = 100;
+
+function neverPanOnPrimary(): boolean {
+  return false;
 }
 
-/**
- * Injectable subset of `Window` used for global pointer, keyboard, and blur events.
- */
-export interface WindowLike {
-  addEventListener(
-    type: "mousemove",
-    listener: (event: MouseEvent) => void
-  ): void;
-  addEventListener(
-    type: "mouseup",
-    listener: (event: MouseEvent) => void
-  ): void;
-  addEventListener(
-    type: "keydown",
-    listener: (event: KeyboardEvent) => void
-  ): void;
-  addEventListener(
-    type: "keyup",
-    listener: (event: KeyboardEvent) => void
-  ): void;
-  addEventListener(
-    type: "blur",
-    listener: () => void
-  ): void;
-  removeEventListener(
-    type: "mousemove",
-    listener: (event: MouseEvent) => void
-  ): void;
-  removeEventListener(
-    type: "mouseup",
-    listener: (event: MouseEvent) => void
-  ): void;
-  removeEventListener(
-    type: "keydown",
-    listener: (event: KeyboardEvent) => void
-  ): void;
-  removeEventListener(
-    type: "keyup",
-    listener: (event: KeyboardEvent) => void
-  ): void;
-  removeEventListener(
-    type: "blur",
-    listener: () => void
-  ): void;
+function ignoreCtrlWheel(
+  _delta: number
+): boolean {
+  return false;
 }
 
-export interface ResolveTexturePositionOptions {
-  /** Whether to clamp the returned texture position to the texture bounds. */
-  limit?: boolean;
+function isMouseButtonPressed(
+  buttons: number,
+  buttonMask: number
+): boolean {
+  return (buttons & buttonMask) !== 0;
 }
 
 export interface InputControllerOptions {
   canvas: HTMLCanvasElement;
   viewport: Viewport;
   actions: InputActions;
-  /** Global event target.
+  /**
+   * Global event target.
    * @default window
-   **/
+   */
   window?: WindowLike;
   /**
    * Keybinding overrides.
@@ -171,9 +64,7 @@ export interface InputControllerOptions {
    */
   keybindings?: Partial<KeybindingsMap>;
   /**
-   * When it returns `true`, a plain left-drag pans instead of triggering the
-   * primary action — used to make navigation modes (e.g. `"move"`) pan with a
-   * single-finger drag, no Space chord needed. Space+drag pans regardless.
+   * When it returns `true`, a plain primary drag pans.
    * @default () => false
    */
   shouldPanOnPrimary?: () => boolean;
@@ -184,16 +75,13 @@ export interface InputControllerOptions {
   onCtrlWheel?: (delta: number) => boolean;
 }
 
-/**
- * Translates DOM input into coordinate-resolved canvas actions.
- */
 export class InputController {
   #canvas: HTMLCanvasElement;
   #viewport: Viewport;
   #actions: InputActions;
-  #window: WindowLike;
+  #inputWindow: WindowLike;
   #isPanning: boolean = false;
-  #panStart: Vec2 = {
+  #panPosition: Vec2 = {
     x: 0,
     y: 0
   };
@@ -206,19 +94,6 @@ export class InputController {
 
   readonly keybindings: Keybindings;
 
-  #onMouseDown: (event: MouseEvent) => void;
-  #onMouseEnter: (event: MouseEvent) => void;
-  #onMouseMove: (event: MouseEvent) => void;
-  #onMouseLeave: (event: MouseEvent) => void;
-  #onMouseUp: (event: MouseEvent) => void;
-  #onWheel: (event: WheelEvent) => void;
-  #onContextMenu: (event: MouseEvent) => void;
-  #onWindowMouseMove: (event: MouseEvent) => void;
-  #onWindowMouseUp: (event: MouseEvent) => void;
-  #onKeyDown: (event: KeyboardEvent) => void;
-  #onKeyUp: (event: KeyboardEvent) => void;
-  #onWindowBlur: () => void;
-
   constructor(
     options: InputControllerOptions
   ) {
@@ -226,80 +101,101 @@ export class InputController {
       canvas,
       viewport,
       actions,
-      window: windowLike = window
+      window: inputWindow = window
     } = options;
 
     this.#canvas = canvas;
     this.#viewport = viewport;
     this.#actions = actions;
-    this.#window = windowLike;
-    this.#shouldPanOnPrimary = options.shouldPanOnPrimary ?? (() => false);
-    this.#onCtrlWheel = options.onCtrlWheel ?? (() => false);
+    this.#inputWindow = inputWindow;
+    this.#shouldPanOnPrimary = options.shouldPanOnPrimary ?? neverPanOnPrimary;
+    this.#onCtrlWheel = options.onCtrlWheel ?? ignoreCtrlWheel;
     this.keybindings = new Keybindings(options.keybindings);
 
-    this.#onMouseDown = (event) => this.#handleMouseDown(event);
-    this.#onMouseEnter = () => this.#handleMouseEnter();
-    this.#onMouseMove = (event) => this.#handleMouseMove(event);
-    this.#onMouseLeave = (event) => this.#handleMouseLeave(event);
-    this.#onMouseUp = (event) => this.#handleMouseUp(event);
-    this.#onWheel = (event) => this.#handleWheel(event);
-    this.#onContextMenu = (event) => this.#handleContextMenu(event);
-    this.#onWindowMouseMove = (event) => this.#handleWindowMouseMove(event);
-    this.#onWindowMouseUp = () => this.#handleWindowMouseUp();
-    this.#onKeyDown = (event) => this.#handleKeyDown(event);
-    this.#onKeyUp = (event) => this.#handleKeyUp(event);
-    this.#onWindowBlur = () => this.#handleWindowBlur();
-
-    this.#canvas.addEventListener("mousedown", this.#onMouseDown);
-    this.#canvas.addEventListener("mouseenter", this.#onMouseEnter);
-    this.#canvas.addEventListener("mousemove", this.#onMouseMove);
-    this.#canvas.addEventListener("mouseleave", this.#onMouseLeave);
-    this.#canvas.addEventListener("mouseup", this.#onMouseUp);
-    this.#canvas.addEventListener("wheel", this.#onWheel, { passive: false });
-    this.#canvas.addEventListener("contextmenu", this.#onContextMenu);
-    this.#window.addEventListener("mousemove", this.#onWindowMouseMove);
-    this.#window.addEventListener("mouseup", this.#onWindowMouseUp);
-    this.#window.addEventListener("keydown", this.#onKeyDown);
-    this.#window.addEventListener("keyup", this.#onKeyUp);
-    this.#window.addEventListener("blur", this.#onWindowBlur);
+    this.#addEventListeners();
   }
 
   /**
-    * Cancels the active primary drag without calling `onPrimaryUp`.
+   * Cancels the active primary drag without calling `onPrimaryUp`.
    */
   stopDrawing(): void {
     this.#isDraggingPrimary = false;
   }
 
   destroy(): void {
-    this.#canvas.removeEventListener("mousedown", this.#onMouseDown);
-    this.#canvas.removeEventListener("mouseenter", this.#onMouseEnter);
-    this.#canvas.removeEventListener("mousemove", this.#onMouseMove);
-    this.#canvas.removeEventListener("mouseleave", this.#onMouseLeave);
-    this.#canvas.removeEventListener("mouseup", this.#onMouseUp);
-    this.#canvas.removeEventListener("wheel", this.#onWheel);
-    this.#canvas.removeEventListener("contextmenu", this.#onContextMenu);
-    this.#window.removeEventListener("mousemove", this.#onWindowMouseMove);
-    this.#window.removeEventListener("mouseup", this.#onWindowMouseUp);
-    this.#window.removeEventListener("keydown", this.#onKeyDown);
-    this.#window.removeEventListener("keyup", this.#onKeyUp);
-    this.#window.removeEventListener("blur", this.#onWindowBlur);
+    this.#removeEventListeners();
   }
 
-  #resolveTexturePos(
-    event: MouseEvent,
-    parameters: ResolveTexturePositionOptions = {}
+  #addEventListeners(): void {
+    this.#canvas.addEventListener("mousedown", this.#handleMouseDown);
+    this.#canvas.addEventListener("mouseenter", this.#handleMouseEnter);
+    this.#canvas.addEventListener("mousemove", this.#handleMouseMove);
+    this.#canvas.addEventListener("mouseleave", this.#handleMouseLeave);
+    this.#canvas.addEventListener("mouseup", this.#handleMouseUp);
+    this.#canvas.addEventListener("wheel", this.#handleWheel, { passive: false });
+    this.#canvas.addEventListener("contextmenu", this.#handleContextMenu);
+    this.#inputWindow.addEventListener("mousemove", this.#handleWindowMouseMove);
+    this.#inputWindow.addEventListener("mouseup", this.#handleWindowMouseUp);
+    this.#inputWindow.addEventListener("keydown", this.#handleKeyDown);
+    this.#inputWindow.addEventListener("keyup", this.#handleKeyUp);
+    this.#inputWindow.addEventListener("blur", this.#handleWindowBlur);
+  }
+
+  #removeEventListeners(): void {
+    this.#canvas.removeEventListener("mousedown", this.#handleMouseDown);
+    this.#canvas.removeEventListener("mouseenter", this.#handleMouseEnter);
+    this.#canvas.removeEventListener("mousemove", this.#handleMouseMove);
+    this.#canvas.removeEventListener("mouseleave", this.#handleMouseLeave);
+    this.#canvas.removeEventListener("mouseup", this.#handleMouseUp);
+    this.#canvas.removeEventListener("wheel", this.#handleWheel);
+    this.#canvas.removeEventListener("contextmenu", this.#handleContextMenu);
+    this.#inputWindow.removeEventListener("mousemove", this.#handleWindowMouseMove);
+    this.#inputWindow.removeEventListener("mouseup", this.#handleWindowMouseUp);
+    this.#inputWindow.removeEventListener("keydown", this.#handleKeyDown);
+    this.#inputWindow.removeEventListener("keyup", this.#handleKeyUp);
+    this.#inputWindow.removeEventListener("blur", this.#handleWindowBlur);
+  }
+
+  #resolveTexturePosition(
+    event: MouseEvent
   ): Vec2 | null {
     const bounds = this.#canvas.getBoundingClientRect();
-    const { clientX, clientY } = event;
 
-    return this.#viewport.mouseTexturePosition(clientX, clientY, {
-      bounds,
-      limit: parameters.limit
-    });
+    return this.#viewport.mouseTexturePosition(
+      event.clientX,
+      event.clientY,
+      { bounds }
+    );
   }
 
-  #endDragAndReportMouseUp(): void {
+  #resolveBoundedTexturePosition(
+    event: MouseEvent
+  ): Vec2 | null {
+    const bounds = this.#canvas.getBoundingClientRect();
+
+    return this.#viewport.mouseTexturePosition(
+      event.clientX,
+      event.clientY,
+      {
+        bounds,
+        limit: true
+      }
+    );
+  }
+
+  #resolveCanvasPosition(
+    event: MouseEvent
+  ): Vec2 {
+    const bounds = this.#canvas.getBoundingClientRect();
+
+    return this.#viewport.mouseCanvasPosition(
+      event.clientX,
+      event.clientY,
+      bounds
+    );
+  }
+
+  #endTrackedDrags(): void {
     if (this.#isDraggingPrimary) {
       this.#isDraggingPrimary = false;
       this.#actions.onPrimaryUp();
@@ -309,7 +205,10 @@ export class InputController {
       this.#isDraggingSecondary = false;
       this.#actions.onSecondaryUp();
     }
+  }
 
+  #reportMouseUp(): void {
+    this.#endTrackedDrags();
     this.#actions.onMouseUp();
   }
 
@@ -317,175 +216,179 @@ export class InputController {
     event: MouseEvent
   ): void {
     this.#isPanning = true;
-    this.#panStart = {
+    this.#panPosition = {
       x: event.clientX,
       y: event.clientY
     };
-    this.#actions.onPanStart(
-      event.clientX,
-      event.clientY
-    );
+    this.#actions.onPanStart();
   }
 
-  #handleMouseDown(
-    event: MouseEvent
-  ): void {
-    this.#isHovering = true;
-
-    // A left-drag pans (over the primary action) when Space is held or the
-    // active mode navigates (e.g. "move") — both trackpad-friendly, no middle
-    // button needed.
-    if (event.button === 0 && (this.#spaceHeld || this.#shouldPanOnPrimary())) {
-      this.#beginPan(event);
-
-      return;
-    }
-
-    if (event.button === 0) {
-      const pos = this.#resolveTexturePos(event);
-      if (pos) {
-        const handled = this.#actions.onPrimaryDown(pos.x, pos.y);
-        this.#isDraggingPrimary = handled !== false;
-      }
-    }
-
-    if (event.button === 2) {
-      const pos = this.#resolveTexturePos(event);
-      if (pos) {
-        const handled = this.#actions.onSecondaryDown(pos.x, pos.y, event.ctrlKey);
-        this.#isDraggingSecondary = handled !== false;
-      }
-    }
-
-    if (event.button === 1) {
-      this.#beginPan(event);
-    }
-  }
-
-  #handleMouseMove(
-    event: MouseEvent
-  ): void {
-    event.preventDefault();
-    this.#isHovering = true;
-
-    const bounds = this.#canvas.getBoundingClientRect();
-    const canvasPos = this.#viewport.mouseCanvasPosition(
-      event.clientX,
-      event.clientY,
-      bounds
-    );
-    this.#actions.onMouseMove(canvasPos.x, canvasPos.y);
-    this.#actions.onCursorMove(this.#resolveTexturePos(event, {
-      limit: true
-    }));
-
-    if (event.buttons === 1 && this.#isDraggingPrimary) {
-      const pos = this.#resolveTexturePos(event);
-      if (pos) {
-        this.#actions.onPrimaryMove(pos.x, pos.y);
-      }
-    }
-
-    if ((event.buttons & 2) !== 0 && this.#isDraggingSecondary) {
-      const pos = this.#resolveTexturePos(event);
-      if (pos) {
-        this.#actions.onSecondaryMove(pos.x, pos.y);
-      }
-    }
-  }
-
-  #handleMouseEnter(): void {
-    this.#isHovering = true;
-  }
-
-  #handleMouseLeave(
-    _event: MouseEvent
-  ): void {
-    this.#isHovering = false;
-    this.#actions.onMouseMove(-1, -1);
-    this.#actions.onCursorMove(null);
-  }
-
-  #handleMouseUp(
-    _event: MouseEvent
-  ): void {
-    this.#endDragAndReportMouseUp();
-  }
-
-  // Converts a wheel delta to an approximate pixel amount regardless of
-  // deltaMode, so zoom steps are consistent across browsers and devices.
-  #normalizeWheelDelta(
-    event: WheelEvent
-  ): number {
-    if (event.deltaMode === 1) {
-      return event.deltaY * kWheelLineHeight;
-    }
-    if (event.deltaMode === 2) {
-      return event.deltaY * kWheelPageHeight;
-    }
-
-    return event.deltaY;
-  }
-
-  #handleWheel(
-    event: WheelEvent
-  ): void {
-    event.preventDefault();
-
-    const delta = this.#normalizeWheelDelta(event);
-    if (event.ctrlKey && this.#onCtrlWheel(delta)) {
-      return;
-    }
-
-    const bounds = this.#canvas.getBoundingClientRect();
-    const canvasPos = this.#viewport.mouseCanvasPosition(
-      event.clientX,
-      event.clientY,
-      bounds
-    );
-    this.#actions.onZoom(
-      delta,
-      canvasPos.x,
-      canvasPos.y
-    );
-    this.#actions.onMouseMove(
-      canvasPos.x,
-      canvasPos.y
-    );
-  }
-
-  #handleContextMenu(
-    event: MouseEvent
-  ): void {
-    // Right-click drives the secondary-color stroke (see #handleMouseDown);
-    // always suppress the browser's own context menu for it.
-    event.preventDefault();
-  }
-
-  #handleWindowMouseMove(
-    event: MouseEvent
-  ): void {
+  #endPan(): void {
     if (!this.#isPanning) {
       return;
     }
 
-    const dx = event.clientX - this.#panStart.x;
-    const dy = event.clientY - this.#panStart.y;
-    this.#panStart = {
+    this.#isPanning = false;
+    this.#actions.onPanEnd();
+  }
+
+  #handleMouseDown = (
+    event: MouseEvent
+  ): void => {
+    this.#isHovering = true;
+
+    switch (event.button) {
+      case kMouseButton.primary: {
+        if (
+          this.#spaceHeld ||
+          this.#shouldPanOnPrimary()
+        ) {
+          this.#beginPan(event);
+
+          return;
+        }
+
+        const position = this.#resolveTexturePosition(event);
+        if (position) {
+          this.#isDraggingPrimary = this.#actions.onPrimaryDown(position);
+        }
+
+        return;
+      }
+      case kMouseButton.secondary: {
+        const position = this.#resolveTexturePosition(event);
+        if (position) {
+          this.#isDraggingSecondary = this.#actions.onSecondaryDown(
+            position,
+            event.ctrlKey
+          );
+        }
+
+        return;
+      }
+      case kMouseButton.auxiliary:
+        this.#beginPan(event);
+    }
+  };
+
+  #handleMouseMove = (
+    event: MouseEvent
+  ): void => {
+    event.preventDefault();
+    this.#isHovering = true;
+
+    this.#actions.onCanvasHover(
+      this.#resolveCanvasPosition(event)
+    );
+    this.#actions.onTextureCursorMove(
+      this.#resolveBoundedTexturePosition(event)
+    );
+
+    if (
+      isMouseButtonPressed(event.buttons, kMouseButtonMask.primary) &&
+      this.#isDraggingPrimary
+    ) {
+      const position = this.#resolveTexturePosition(event);
+      if (position) {
+        this.#actions.onPrimaryMove(position);
+      }
+    }
+
+    if (
+      isMouseButtonPressed(event.buttons, kMouseButtonMask.secondary) &&
+      this.#isDraggingSecondary
+    ) {
+      const position = this.#resolveTexturePosition(event);
+      if (position) {
+        this.#actions.onSecondaryMove(position);
+      }
+    }
+  };
+
+  #handleMouseEnter = (): void => {
+    this.#isHovering = true;
+  };
+
+  #handleMouseLeave = (): void => {
+    this.#isHovering = false;
+    this.#actions.onCanvasHover(null);
+    this.#actions.onTextureCursorMove(null);
+  };
+
+  #handleMouseUp = (): void => {
+    this.#reportMouseUp();
+  };
+
+  #normalizeWheelDelta(
+    event: WheelEvent
+  ): number {
+    switch (event.deltaMode) {
+      case kWheelDeltaMode.line:
+        return event.deltaY * kWheelLineDeltaPixels;
+      case kWheelDeltaMode.page:
+        return event.deltaY * kWheelPageDeltaPixels;
+      case kWheelDeltaMode.pixel:
+      default:
+        return event.deltaY;
+    }
+  }
+
+  #handleWheel = (
+    event: WheelEvent
+  ): void => {
+    event.preventDefault();
+
+    const delta = this.#normalizeWheelDelta(
+      event
+    );
+    if (event.ctrlKey && this.#onCtrlWheel(delta)) {
+      return;
+    }
+
+    const center = this.#resolveCanvasPosition(event);
+    this.#actions.onZoom(
+      delta,
+      center
+    );
+    this.#actions.onCanvasHover(center);
+  };
+
+  #handleContextMenu = (
+    event: MouseEvent
+  ): void => {
+    event.preventDefault();
+  };
+
+  #handleWindowMouseMove = (
+    event: MouseEvent
+  ): void => {
+    if (!this.#isPanning) {
+      return;
+    }
+
+    const nextPosition = {
       x: event.clientX,
       y: event.clientY
     };
-    this.#actions.onPanMove(dx, dy);
-  }
+    const delta = {
+      x: nextPosition.x - this.#panPosition.x,
+      y: nextPosition.y - this.#panPosition.y
+    };
+    this.#panPosition = nextPosition;
+    this.#actions.onPanMove(delta);
+  };
 
-  #handleWindowMouseUp(): void {
-    if (this.#isPanning) {
-      this.#isPanning = false;
-      this.#actions.onPanEnd();
+  #handleWindowMouseUp = (
+    event: MouseEvent
+  ): void => {
+    this.#endPan();
+
+    if (event.target === this.#canvas) {
+      return;
     }
 
-    this.#endDragAndReportMouseUp();
-  }
+    this.#reportMouseUp();
+  };
 
   #endPanModifier(): void {
     if (!this.#spaceHeld) {
@@ -496,24 +399,20 @@ export class InputController {
     this.#actions.onSpaceUp();
   }
 
-  #handleWindowBlur(): void {
-    if (this.#isPanning) {
-      this.#isPanning = false;
-      this.#actions.onPanEnd();
-    }
-
+  #handleWindowBlur = (): void => {
+    this.#endPan();
+    this.#endTrackedDrags();
     this.#endPanModifier();
     this.#actions.onBlur();
-  }
+  };
 
-  #handleKeyDown(
+  #handleKeyDown = (
     event: KeyboardEvent
-  ): void {
-    if (!this.#isHovering) {
-      return;
-    }
-
-    if (isEditableTarget(event.target)) {
+  ): void => {
+    if (
+      !this.#isHovering ||
+      isEditableTarget(event.target)
+    ) {
       return;
     }
 
@@ -526,7 +425,6 @@ export class InputController {
     }
 
     if (event.code === "Space") {
-      // Suppress the page from scrolling while Space arms the pan modifier.
       event.preventDefault();
       if (!event.repeat && !this.#spaceHeld) {
         this.#spaceHeld = true;
@@ -545,15 +443,14 @@ export class InputController {
       return;
     }
 
-    const handled = this.#dispatchKeybindingAction(action);
-    if (handled) {
+    if (this.#dispatchKeybindingAction(action)) {
       event.preventDefault();
     }
-  }
+  };
 
   #dispatchKeybindingAction(
     action: KeybindingAction
-  ): boolean | void {
+  ): boolean {
     switch (action) {
       case "copy":
         return this.#actions.onCopy();
@@ -571,14 +468,17 @@ export class InputController {
         return this.#actions.onFlipHorizontal();
       case "flipVertical":
         return this.#actions.onFlipVertical();
-      default:
-        return undefined;
+      default: {
+        const unexpectedAction: never = action;
+
+        throw new Error(`Unknown keybinding action: ${unexpectedAction}`);
+      }
     }
   }
 
-  #handleKeyUp(
+  #handleKeyUp = (
     event: KeyboardEvent
-  ): void {
+  ): void => {
     if (event.key === "Shift") {
       this.#actions.onShiftUp();
 
@@ -588,5 +488,5 @@ export class InputController {
     if (event.code === "Space") {
       this.#endPanModifier();
     }
-  }
+  };
 }

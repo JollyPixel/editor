@@ -17,9 +17,6 @@ export interface ColorPaletteOptions {
   colors?: string[];
 }
 
-/**
- * Dispatches colors from a fixed, curated palette
- */
 export class ColorPalette {
   #colors: string[];
   #index = 0;

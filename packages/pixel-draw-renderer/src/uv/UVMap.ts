@@ -56,9 +56,6 @@ export type UVFaceGeometryTemplate =
 const kCascadeStep = 16;
 const kDefaultFace: UVFace = "front";
 
-/**
- * Manages UV regions: create/delete/move/collapse/uncollapse and selection/visibility state.
- */
 export class UVMap extends Emitter<
   UVMapEvent
 > implements Iterable<UVRegion> {
@@ -388,7 +385,7 @@ export class UVMap extends Emitter<
     const previous = region.toJSON();
     this.#regions.set(id, next);
 
-    // Selection is normalized before events fire so listeners see a consistent state.
+    // Normalize selection before events expose the new state.
     const selectionChanged = this.#applySelection(
       this.#selectedRegionId,
       this.#selectedFace

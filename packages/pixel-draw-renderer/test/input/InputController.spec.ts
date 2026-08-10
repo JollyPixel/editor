@@ -7,10 +7,8 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import {
-  InputController,
-  type WindowLike
-} from "#src/input/InputController.ts";
+import { InputController } from "#src/input/InputController.ts";
+import type { WindowLike } from "#src/input/WindowLike.ts";
 import { Viewport } from "#src/rendering/Viewport.ts";
 import { makeActions } from "../helpers/input-actions.ts";
 import { makeCanvas } from "../helpers/dom.ts";
@@ -174,7 +172,7 @@ describe("InputController", () => {
       ctrl.destroy();
     });
 
-    test("mouseleave triggers onMouseMove(-1, -1)", () => {
+    test("mouseleave reports a null canvas hover position", () => {
       const { actions, calls } = makeActions();
       const ctrl = new InputController({
         canvas,
@@ -185,10 +183,9 @@ describe("InputController", () => {
       canvas.dispatchEvent(
         new MouseEvent("mouseleave", { bubbles: true })
       );
-      const last = calls.onMouseMove.at(-1);
+      const last = calls.onCanvasHover.at(-1);
       assert.ok(last !== undefined);
-      assert.strictEqual(last[0], -1);
-      assert.strictEqual(last[1], -1);
+      assert.strictEqual(last[0], null);
       ctrl.destroy();
     });
   });
@@ -223,8 +220,8 @@ describe("InputController", () => {
         onPanMove: [],
         onPanEnd: [],
         onZoom: [],
-        onMouseMove: [],
-        onCursorMove: [],
+        onCanvasHover: [],
+        onTextureCursorMove: [],
         onMouseUp: [],
         onShiftDown: [],
         onShiftUp: [],
@@ -266,7 +263,7 @@ describe("InputController", () => {
     });
   });
 
-  describe("onCursorMove", () => {
+  describe("onTextureCursorMove", () => {
     // With this viewport (200x200 canvas, 16x16 texture, zoom 4), the
     // texture is centered with camera = (68, 68). client(100,100) -> texture
     // (8,8).
@@ -282,11 +279,11 @@ describe("InputController", () => {
       moveTo(canvas, 100, 100);
 
       assert.strictEqual(
-        calls.onCursorMove.length,
+        calls.onTextureCursorMove.length,
         1
       );
       assert.deepStrictEqual(
-        calls.onCursorMove[0][0],
+        calls.onTextureCursorMove[0][0],
         { x: 8, y: 8 }
       );
       ctrl.destroy();
@@ -303,11 +300,11 @@ describe("InputController", () => {
       moveTo(canvas, 1000, 1000);
 
       assert.strictEqual(
-        calls.onCursorMove.length,
+        calls.onTextureCursorMove.length,
         1
       );
       assert.strictEqual(
-        calls.onCursorMove[0][0],
+        calls.onTextureCursorMove[0][0],
         null
       );
       ctrl.destroy();
@@ -327,7 +324,7 @@ describe("InputController", () => {
       );
 
       assert.strictEqual(
-        calls.onCursorMove.at(-1)?.[0],
+        calls.onTextureCursorMove.at(-1)?.[0],
         null
       );
       ctrl.destroy();
@@ -404,7 +401,7 @@ describe("InputController", () => {
       ctrl.destroy();
     });
 
-    test("returning undefined (default) tracks the gesture normally", () => {
+    test("returning true tracks the gesture normally", () => {
       const { actions, calls } = makeActions();
       const ctrl = new InputController({
         canvas,

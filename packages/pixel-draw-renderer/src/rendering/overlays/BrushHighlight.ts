@@ -7,10 +7,7 @@ import type {
   BrushHighlight
 } from "../../types.ts";
 
-/**
- * Renders the brush cursor overlay.
- */
-export class BrushHighlightOverlay {
+export class BrushHighlightView {
   #viewport: DefaultViewport;
   #brush: BrushHighlight;
   #group: SVGGElement;
@@ -76,7 +73,6 @@ export class BrushHighlightOverlay {
     this.refresh();
   }
 
-  /** Repaints the current cursor position using the latest brush size. */
   refresh(): void {
     if (this.#cursorX === null || this.#cursorY === null) {
       this.hide();

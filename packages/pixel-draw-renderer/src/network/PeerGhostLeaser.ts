@@ -2,7 +2,9 @@
 const kDefaultTimeoutMs = 1500;
 
 export interface PeerGhostLeaserOptions {
-  /** Called when a peer stops renewing its ghost lease. */
+  /**
+   * Called when a peer stops renewing its ghost lease.
+   */
   onExpire: (clientId: string) => void;
   /**
    * Maximum time a ghost lease can remain idle.
@@ -11,9 +13,6 @@ export interface PeerGhostLeaserOptions {
   timeoutMs?: number;
 }
 
-/**
- * Tracks inactivity leases for ephemeral peer ghost state.
- */
 export class PeerGhostLeaser {
   #onExpire: (clientId: string) => void;
   #timeoutMs: number;

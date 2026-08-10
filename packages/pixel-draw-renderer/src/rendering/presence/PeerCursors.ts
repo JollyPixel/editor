@@ -20,25 +20,19 @@ interface PeerCursorElements {
 }
 
 // CONSTANTS
-// A fixed pointer-arrow shape, tip at the origin. The group it belongs to is
-// only ever translated (never scaled by zoom), so it reads as a real cursor
-// at any zoom level instead of growing/shrinking with the texture.
+// This pointer stays screen-sized because its group is translated, not scaled.
 const kArrowPath = "M0,0 L0,15.5 L3.6,12 L6.3,18.3 L8.6,17.3 L6,11.2 L11,11.2 Z";
 const kLabelFontSize = 11;
 const kLabelOffsetX = 13;
 const kLabelOffsetY = 9;
 
-/**
- * Renders one arrow-shaped cursor + colored name tag per remote peer
- */
-export class PeerCursorOverlay {
+export class PeerCursors {
   #svg: SVGElement;
   #viewport: DefaultViewport;
   #peers = new Map<string, PeerCursorState>();
   #elements = new Map<string, PeerCursorElements>();
   #defs: SVGDefsElement;
-  // Unique per instance so multiple PixelArtCanvas / PeerCursorOverlay pairs
-  // on the same page never collide on the filter's id.
+  // Per-instance ids prevent SVG filter collisions across canvases.
   #shadowFilterId = `peer-cursor-shadow-${crypto.randomUUID()}`;
 
   constructor(
@@ -51,13 +45,11 @@ export class PeerCursorOverlay {
     this.#svg.appendChild(this.#defs);
   }
 
-  // A soft drop shadow behind the arrow + label
   #createShadowFilter(): SVGDefsElement {
     const defs = document.createElementNS(SVG_NS, "defs");
     const filter = document.createElementNS(SVG_NS, "filter");
     filter.setAttribute("id", this.#shadowFilterId);
-    // Filter region defaults to the element's own bounding box, too tight for
-    // a blurred shadow — widen it so the shadow isn't clipped.
+    // Expand the default filter bounds so the blurred shadow is not clipped.
     filter.setAttribute("x", "-50%");
     filter.setAttribute("y", "-50%");
     filter.setAttribute("width", "200%");
@@ -165,8 +157,7 @@ export class PeerCursorOverlay {
     arrow.setAttribute("stroke-width", "1");
     group.appendChild(arrow);
 
-    // A white halo (paint-order stroke) keeps the colored label legible over
-    // similarly-colored artwork, without a solid background pill.
+    // A white paint-order stroke keeps labels legible over similar colors.
     const labelText = document.createElementNS(SVG_NS, "text");
     labelText.setAttribute("x", String(kLabelOffsetX));
     labelText.setAttribute("y", String(kLabelOffsetY));

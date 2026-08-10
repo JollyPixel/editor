@@ -6,7 +6,7 @@ import { createCanvas2D } from "../Canvas2D.ts";
 import {
   buildMaskedContentCanvas,
   buildMaskedFillCanvas
-} from "./maskedCanvas.ts";
+} from "./selectionCanvas.ts";
 import type {
   RGBA,
   SelectionRect
@@ -20,10 +20,7 @@ const kOpaqueMask: RGBA = {
   a: 255
 };
 
-export interface FloatingOverlayOptions {
-  /**
-   * Original selection position.
-   */
+export interface FloatingSelectionOptions {
   sourceRect: SelectionRect;
   /**
    * Row-major selection pixels.
@@ -42,17 +39,13 @@ export interface FloatingOverlayOptions {
 }
 
 /**
- * Fired after the floating selection appears, moves, or clears — a view
- * change the pixel buffer knows nothing about, so the view repaints on it.
+ * Fired for floating-selection view changes not represented by the buffer.
  */
 export type FloatingSelectionEvent = {
   changed: () => void;
 };
 
-/**
- * Renders a floating selection overlay.
- */
-export class FloatingSelectionOverlay extends Emitter<
+export class FloatingSelection extends Emitter<
   FloatingSelectionEvent
 > {
   #canvas: HTMLCanvasElement | null = null;
@@ -64,7 +57,7 @@ export class FloatingSelectionOverlay extends Emitter<
   #blankSource: boolean = true;
 
   create(
-    options: FloatingOverlayOptions
+    options: FloatingSelectionOptions
   ): void {
     const {
       sourceRect,
@@ -84,12 +77,12 @@ export class FloatingSelectionOverlay extends Emitter<
     );
     this.#eraseCanvas = mask
       ? buildMaskedFillCanvas(sourceRect, mask, eraseColor)
-      : FloatingSelectionOverlay.#buildUniformEraseCanvas(
+      : FloatingSelection.#buildUniformEraseCanvas(
         eraseColor
       );
     this.#maskCanvas = mask
       ? buildMaskedFillCanvas(sourceRect, mask, kOpaqueMask)
-      : FloatingSelectionOverlay.#buildUniformEraseCanvas(
+      : FloatingSelection.#buildUniformEraseCanvas(
         kOpaqueMask
       );
     this.#eraseIsUniform = !mask;
@@ -118,9 +111,6 @@ export class FloatingSelectionOverlay extends Emitter<
     return eraseCanvas;
   }
 
-  /**
-   * Updates the floating selection position.
-   */
   updatePosition(
     liveRect: SelectionRect
   ): void {
@@ -148,9 +138,6 @@ export class FloatingSelectionOverlay extends Emitter<
     }
   }
 
-  /**
-   * Draws the floating selection.
-   */
   draw(
     ctx: CanvasRenderingContext2D
   ): void {

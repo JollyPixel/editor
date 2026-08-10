@@ -17,8 +17,8 @@ import type {
 } from "#src/network/types.ts";
 import type { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
 import type { SelectionProgressEvent } from "#src/tools/SelectController.events.ts";
-import type { PeerSelectionGhostState } from "#src/rendering/overlays/PeerSelectionGhosts.ts";
-import type { PeerFloatingSelectionState } from "#src/rendering/overlays/PeerFloatingSelectionGhosts.ts";
+import type { PeerSelectionOutlineState } from "#src/rendering/presence/PeerSelectionOutlines.ts";
+import type { PeerFloatingSelectionState } from "#src/rendering/presence/PeerFloatingSelections.ts";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -149,7 +149,7 @@ function createMockSelectController(): MockSelectController {
 
 interface MockCanvas {
   selectionEvents: MockSelectController;
-  selectionSetCalls: { clientId: string; state: PeerSelectionGhostState; }[];
+  selectionSetCalls: { clientId: string; state: PeerSelectionOutlineState; }[];
   selectionRemovedPeers: string[];
   selectionClearAllCallCount: number;
   selectionRemoveOverlappingCalls: { x: number; y: number; }[][];
@@ -157,17 +157,19 @@ interface MockCanvas {
   floatingRemovedPeers: string[];
   floatingClearAllCallCount: number;
   floatingRemoveOverlappingCalls: { x: number; y: number; }[][];
-  peerSelectionGhosts: {
-    set(clientId: string, state: PeerSelectionGhostState): void;
-    remove(clientId: string): void;
-    clearAll(): void;
-    removeOverlapping(positions: { x: number; y: number; }[]): void;
-  };
-  peerFloatingSelectionGhosts: {
-    set(clientId: string, state: PeerFloatingSelectionState): void;
-    remove(clientId: string): void;
-    clearAll(): void;
-    removeOverlapping(positions: { x: number; y: number; }[]): void;
+  peerPresence: {
+    selectionOutlines: {
+      set(clientId: string, state: PeerSelectionOutlineState): void;
+      remove(clientId: string): void;
+      clearAll(): void;
+      removeOverlapping(positions: { x: number; y: number; }[]): void;
+    };
+    floatingSelections: {
+      set(clientId: string, state: PeerFloatingSelectionState): void;
+      remove(clientId: string): void;
+      clearAll(): void;
+      removeOverlapping(positions: { x: number; y: number; }[]): void;
+    };
   };
 }
 
@@ -189,32 +191,34 @@ function createMockCanvas(): MockCanvas {
     floatingRemovedPeers,
     floatingClearAllCallCount: 0,
     floatingRemoveOverlappingCalls,
-    peerSelectionGhosts: {
-      set(clientId, state) {
-        selectionSetCalls.push({ clientId, state });
+    peerPresence: {
+      selectionOutlines: {
+        set(clientId, state) {
+          selectionSetCalls.push({ clientId, state });
+        },
+        remove(clientId) {
+          selectionRemovedPeers.push(clientId);
+        },
+        clearAll() {
+          canvas.selectionClearAllCallCount++;
+        },
+        removeOverlapping(positions) {
+          selectionRemoveOverlappingCalls.push(positions);
+        }
       },
-      remove(clientId) {
-        selectionRemovedPeers.push(clientId);
-      },
-      clearAll() {
-        canvas.selectionClearAllCallCount++;
-      },
-      removeOverlapping(positions) {
-        selectionRemoveOverlappingCalls.push(positions);
-      }
-    },
-    peerFloatingSelectionGhosts: {
-      set(clientId, state) {
-        floatingSetCalls.push({ clientId, state });
-      },
-      remove(clientId) {
-        floatingRemovedPeers.push(clientId);
-      },
-      clearAll() {
-        canvas.floatingClearAllCallCount++;
-      },
-      removeOverlapping(positions) {
-        floatingRemoveOverlappingCalls.push(positions);
+      floatingSelections: {
+        set(clientId, state) {
+          floatingSetCalls.push({ clientId, state });
+        },
+        remove(clientId) {
+          floatingRemovedPeers.push(clientId);
+        },
+        clearAll() {
+          canvas.floatingClearAllCallCount++;
+        },
+        removeOverlapping(positions) {
+          floatingRemoveOverlappingCalls.push(positions);
+        }
       }
     }
   };

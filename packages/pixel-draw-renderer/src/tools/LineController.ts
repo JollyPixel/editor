@@ -8,25 +8,27 @@ import type {
   BrushColorSlot
 } from "./Brush.ts";
 import type { EditPipeline } from "../sync/EditPipeline.ts";
-import type { LinePreviewOverlay } from "../rendering/overlays/LinePreviewOverlay.ts";
+import type { LinePreview } from "../rendering/overlays/LinePreview.ts";
 import { toRGBA } from "../utils/colors.ts";
-import type { PeerStrokePixel, Vec2 } from "../types.ts";
+import type {
+  PeerStrokePixel,
+  Vec2
+} from "../types.ts";
 
 export interface LineControllerOptions {
   brush: Brush;
-  linePreview: LinePreviewOverlay;
+  linePreview: LinePreview;
   pipeline: EditPipeline;
-  /** Called with the live drag's pixels as they change, for peer streaming. */
+  /**
+   * Receives live line pixels for peer streaming.
+   */
   onProgress?: (pixels: PeerStrokePixel[]) => void;
 }
 
-/**
- * Coordinates line state, preview, and commits.
- */
 export class LineController {
   #line = new Line();
   #brush: Brush;
-  #linePreview: LinePreviewOverlay;
+  #linePreview: LinePreview;
   #pipeline: EditPipeline;
   #onProgress?: (pixels: PeerStrokePixel[]) => void;
 
@@ -57,9 +59,6 @@ export class LineController {
     this.#isShiftHeld = held;
   }
 
-  /**
-    * Updates the cursor position and line preview.
-   */
   updateCursor(
     pos: Vec2 | null
   ): void {
@@ -86,9 +85,6 @@ export class LineController {
     this.refreshPreview();
   }
 
-  /**
-    * Commits the armed line segment.
-   */
   commit(
     colorSlot: BrushColorSlot = this.#colorSlot
   ): void {
@@ -102,7 +98,7 @@ export class LineController {
       this.#stampLinePixels(points),
       colorSlot
     );
-    // Drops any rAF-queued pre-commit ghost tick — see PixelStrokeGhostSync.
+    // Drop the queued pre-commit ghost tick to prevent stale peer state.
     this.#onProgress?.([]);
 
     if (this.#isShiftHeld) {

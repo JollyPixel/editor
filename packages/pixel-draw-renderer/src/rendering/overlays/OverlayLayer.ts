@@ -1,19 +1,19 @@
 // Import Internal Dependencies
-import { SVG_NS } from "./constants.ts";
-import { BrushHighlightOverlay } from "./overlays/BrushHighlightOverlay.ts";
-import { LinePreviewOverlay } from "./overlays/LinePreviewOverlay.ts";
-import { SelectionOverlay } from "./overlays/SelectionOverlay.ts";
-import { UVOverlay } from "./overlays/UVOverlay.ts";
-import { PeerCursorOverlay } from "./overlays/PeerCursorOverlay.ts";
-import { PeerUVGhosts } from "./overlays/PeerUVGhosts.ts";
-import { PeerSelectionGhosts } from "./overlays/PeerSelectionGhosts.ts";
+import { SVG_NS } from "../constants.ts";
+import { PeerCursors } from "../presence/PeerCursors.ts";
+import { PeerSelectionOutlines } from "../presence/PeerSelectionOutlines.ts";
+import { PeerUVPreview } from "../presence/PeerUVPreview.ts";
+import { BrushHighlightView } from "./BrushHighlight.ts";
+import { LinePreview } from "./LinePreview.ts";
+import { SelectionOutline } from "./SelectionOutline.ts";
+import { UVRegionLayer } from "./UVRegions.ts";
 import type {
   DefaultViewport
-} from "./Viewport.ts";
-import type { UVMap } from "../uv/UVMap.ts";
+} from "../Viewport.ts";
+import type { UVMap } from "../../uv/UVMap.ts";
 import type {
   BrushHighlight
-} from "../types.ts";
+} from "../../types.ts";
 
 export interface OverlayLayerOptions {
   parent: HTMLDivElement;
@@ -23,20 +23,19 @@ export interface OverlayLayerOptions {
 }
 
 /**
- * Owns the SVG element and the camera-aligned overlays drawn over the canvas.
- * UV is created first so tool overlays paint above its region borders.
+ * Creates UV first so tool overlays paint above region borders.
  */
 export class OverlayLayer {
   #parentHtmlElement: HTMLDivElement;
   #svg: SVGElement;
 
-  readonly brushHighlight: BrushHighlightOverlay;
-  readonly linePreview: LinePreviewOverlay;
-  readonly selection: SelectionOverlay;
-  readonly uvOverlay: UVOverlay;
-  readonly peerCursors: PeerCursorOverlay;
-  readonly peerUvGhosts: PeerUVGhosts;
-  readonly peerSelectionGhosts: PeerSelectionGhosts;
+  readonly brushHighlight: BrushHighlightView;
+  readonly linePreview: LinePreview;
+  readonly selection: SelectionOutline;
+  readonly uvOverlay: UVRegionLayer;
+  readonly peerCursors: PeerCursors;
+  readonly peerUvPreview: PeerUVPreview;
+  readonly peerSelectionOutlines: PeerSelectionOutlines;
 
   constructor(
     options: OverlayLayerOptions
@@ -44,36 +43,36 @@ export class OverlayLayer {
     this.#parentHtmlElement = options.parent;
     this.#svg = this.#init();
 
-    this.uvOverlay = new UVOverlay(
+    this.uvOverlay = new UVRegionLayer(
       this.#svg,
       options.viewport,
       options.uvMap
     );
-    this.peerUvGhosts = new PeerUVGhosts(
+    this.peerUvPreview = new PeerUVPreview(
       this.#svg,
       options.viewport,
       this.uvOverlay
     );
-    this.brushHighlight = new BrushHighlightOverlay(
+    this.brushHighlight = new BrushHighlightView(
       this.#svg,
       options.viewport,
       options.brush
     );
-    this.linePreview = new LinePreviewOverlay(
+    this.linePreview = new LinePreview(
       this.#svg,
       options.viewport,
       options.brush
     );
-    this.selection = new SelectionOverlay(
+    this.selection = new SelectionOutline(
       this.#svg,
       options.viewport,
       options.brush
     );
-    this.peerCursors = new PeerCursorOverlay(
+    this.peerCursors = new PeerCursors(
       this.#svg,
       options.viewport
     );
-    this.peerSelectionGhosts = new PeerSelectionGhosts(
+    this.peerSelectionOutlines = new PeerSelectionOutlines(
       this.#svg,
       options.viewport
     );
@@ -121,11 +120,13 @@ export class OverlayLayer {
     );
   }
 
+  refresh(): void {
+    this.brushHighlight.refresh();
+    this.uvOverlay.refresh();
+  }
+
   destroy(): void {
     this.uvOverlay.destroy();
-    this.peerCursors.destroy();
-    this.peerUvGhosts.destroy();
-    this.peerSelectionGhosts.destroy();
     if (this.#svg.parentElement) {
       this.#svg.remove();
     }

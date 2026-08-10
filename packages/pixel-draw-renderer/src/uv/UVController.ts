@@ -10,8 +10,8 @@ import type {
   UVRegion
 } from "./UVRegion.ts";
 import type {
-  UVOverlay
-} from "../rendering/overlays/UVOverlay.ts";
+  UVRegionLayer
+} from "../rendering/overlays/UVRegions.ts";
 import type {
   SelectionRect,
   Vec2
@@ -19,7 +19,7 @@ import type {
 
 export interface UVControllerOptions {
   uvMap: UVMap;
-  overlay: UVOverlay;
+  overlay: UVRegionLayer;
 }
 
 interface DragState {
@@ -62,12 +62,11 @@ function stackKey(
 }
 
 /**
- * Routes canvas interaction (hit-test, drag, delete) to UVMap.
- * Repeat clicks advance through overlapping stacks.
+ * Advances repeat clicks through overlapping UV regions.
  */
 export class UVController {
   #uvMap: UVMap;
-  #overlay: UVOverlay;
+  #overlay: UVRegionLayer;
   #drag: DragState | null = null;
   #pick: PickState | null = null;
 
@@ -78,16 +77,10 @@ export class UVController {
     this.#overlay = options.overlay;
   }
 
-  /**
-   * Whether a region is currently being dragged.
-   */
   get isDragging(): boolean {
     return this.#drag !== null;
   }
 
-  /**
-   * Advances through an overlapping stack on repeat clicks.
-   */
   handleStart(
     pos: Vec2
   ): void {
@@ -175,7 +168,7 @@ export class UVController {
   }
 
   /**
-   * Cancels the drag; reverts live preview to the actual rect.
+   * Reverts the live preview to the stored geometry.
    */
   cancelDrag(): void {
     this.#pick = null;
@@ -196,9 +189,6 @@ export class UVController {
     this.#drag = null;
   }
 
-  /**
-   * Deletes the selected region.
-   */
   handleDelete(): boolean {
     const id = this.#uvMap.selectedRegionId;
     if (id === null) {
@@ -210,9 +200,6 @@ export class UVController {
     return this.#uvMap.delete(id);
   }
 
-  /**
-   * Advances only if this stack was just clicked and selection hasn't changed.
-   */
   #shouldAdvance(
     key: string
   ): boolean {
@@ -225,7 +212,7 @@ export class UVController {
   }
 
   /**
-   * All visible rects under pos, topmost first (independent of selection).
+   * Returns visible hits in topmost-first order, independent of selection.
    */
   #hitStack(
     pos: Vec2

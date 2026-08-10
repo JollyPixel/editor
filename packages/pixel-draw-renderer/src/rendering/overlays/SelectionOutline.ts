@@ -1,18 +1,18 @@
 // Import Internal Dependencies
 import { SVG_NS } from "../constants.ts";
+import {
+  selectionContourPath,
+  traceSelectionContour
+} from "./selectionContour.ts";
 import type {
   DefaultViewport
 } from "../Viewport.ts";
 import type {
   BrushHighlight,
-  SelectionRect,
-  Vec2
+  SelectionRect
 } from "../../types.ts";
 
-/**
- * Renders rectangular and masked selection outlines.
- */
-export class SelectionOverlay {
+export class SelectionOutline {
   #viewport: DefaultViewport;
   #outline: SVGRectElement;
   #inline: SVGRectElement;
@@ -40,7 +40,7 @@ export class SelectionOverlay {
     brush: BrushHighlight
   ): [outline: SVGRectElement, inline: SVGRectElement] {
     const outline = document.createElementNS(SVG_NS, "rect");
-    SelectionOverlay.#applyDashStyle(
+    SelectionOutline.#applyDashStyle(
       outline,
       brush.colorOutline,
       0
@@ -48,7 +48,7 @@ export class SelectionOverlay {
     svg.appendChild(outline);
 
     const inline = document.createElementNS(SVG_NS, "rect");
-    SelectionOverlay.#applyDashStyle(
+    SelectionOutline.#applyDashStyle(
       inline,
       brush.colorInline,
       6
@@ -63,7 +63,7 @@ export class SelectionOverlay {
     brush: BrushHighlight
   ): [outline: SVGPathElement, inline: SVGPathElement] {
     const outline = document.createElementNS(SVG_NS, "path");
-    SelectionOverlay.#applyDashStyle(
+    SelectionOutline.#applyDashStyle(
       outline,
       brush.colorOutline,
       0
@@ -71,7 +71,7 @@ export class SelectionOverlay {
     svg.appendChild(outline);
 
     const inline = document.createElementNS(SVG_NS, "path");
-    SelectionOverlay.#applyDashStyle(
+    SelectionOutline.#applyDashStyle(
       inline,
       brush.colorInline,
       6
@@ -100,9 +100,6 @@ export class SelectionOverlay {
     el.setAttribute("visibility", "hidden");
   }
 
-  /**
-   * Renders a rectangular selection outline.
-   */
   drawRect(
     rect: SelectionRect
   ): void {
@@ -125,9 +122,6 @@ export class SelectionOverlay {
     }
   }
 
-  /**
-   * Renders a masked selection outline.
-   */
   drawMask(
     rect: SelectionRect,
     mask: boolean[]
@@ -145,13 +139,13 @@ export class SelectionOverlay {
       zoom: this.#viewport.zoom.value,
       camera: this.#viewport.camera
     };
-    const loops = SelectionOverlay.traceContour(
+    const loops = traceSelectionContour(
       rect.width,
       rect.height,
       mask
     );
     const d = loops
-      .map((loop) => SelectionOverlay.loopToPath(loop, rect, screen))
+      .map((loop) => selectionContourPath(loop, rect, screen))
       .join(" ");
 
     for (const el of [this.#outlinePath, this.#inlinePath]) {
@@ -165,133 +159,5 @@ export class SelectionOverlay {
     this.#inline.setAttribute("visibility", "hidden");
     this.#outlinePath.setAttribute("visibility", "hidden");
     this.#inlinePath.setAttribute("visibility", "hidden");
-  }
-
-  /**
-   * Converts one traced contour loop into an SVG path `d` fragment, applying
-   * `rect`'s offset and the current zoom/camera. Public so peer overlays
-   * (e.g. `PeerSelectionGhosts`) can render a remote mask outline the same
-   * way this class renders the local one.
-   */
-  static loopToPath(
-    loop: Vec2[],
-    rect: SelectionRect,
-    screen: { zoom: number; camera: Vec2; }
-  ): string {
-    function toScreenPoint(p: Vec2): string {
-      const x = (rect.x + p.x) * screen.zoom + screen.camera.x;
-      const y = (rect.y + p.y) * screen.zoom + screen.camera.y;
-
-      return `${x} ${y}`;
-    }
-
-    return `M ${loop.map(toScreenPoint).join(" L ")} Z`;
-  }
-
-  /**
-   * Traces a selection mask into closed contour loops.
-   */
-  static traceContour(
-    width: number,
-    height: number,
-    mask: boolean[]
-  ): Vec2[][] {
-    function isSelected(
-      x: number,
-      y: number
-    ): boolean {
-      return x >= 0 && x < width &&
-        y >= 0 && y < height &&
-        mask[(y * width) + x];
-    }
-
-    const edges = new Map<string, Vec2>();
-    function setEdge(from: Vec2, to: Vec2): void {
-      edges.set(`${from.x},${from.y}`, to);
-    }
-
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        if (!mask[(y * width) + x]) {
-          continue;
-        }
-
-        if (!isSelected(x, y - 1)) {
-          setEdge(
-            { x, y },
-            { x: x + 1, y }
-          );
-        }
-        if (!isSelected(x + 1, y)) {
-          setEdge(
-            { x: x + 1, y },
-            { x: x + 1, y: y + 1 }
-          );
-        }
-        if (!isSelected(x, y + 1)) {
-          setEdge(
-            { x: x + 1, y: y + 1 },
-            { x, y: y + 1 }
-          );
-        }
-        if (!isSelected(x - 1, y)) {
-          setEdge(
-            { x, y: y + 1 },
-            { x, y }
-          );
-        }
-      }
-    }
-
-    const loops: Vec2[][] = [];
-    while (edges.size > 0) {
-      const [startKey] = edges.keys();
-      const [startX, startY] = startKey.split(",").map(Number);
-      let current: Vec2 = {
-        x: startX,
-        y: startY
-      };
-
-      const points: Vec2[] = [current];
-      for (;;) {
-        const next = edges.get(`${current.x},${current.y}`)!;
-        edges.delete(`${current.x},${current.y}`);
-        if (next.x === startX && next.y === startY) {
-          break;
-        }
-        points.push(next);
-        current = next;
-      }
-
-      loops.push(
-        SelectionOverlay.#simplifyLoop(points)
-      );
-    }
-
-    return loops;
-  }
-
-  /**
-   * Removes collinear contour points.
-   */
-  static #simplifyLoop(
-    points: Vec2[]
-  ): Vec2[] {
-    const result: Vec2[] = [];
-    const n = points.length;
-
-    for (let i = 0; i < n; i++) {
-      const prev = points[(i - 1 + n) % n];
-      const curr = points[i];
-      const next = points[(i + 1) % n];
-
-      const collinear = (prev.x === curr.x && curr.x === next.x) ||
-        (prev.y === curr.y && curr.y === next.y);
-      if (!collinear) {
-        result.push(curr);
-      }
-    }
-
-    return result.length > 0 ? result : points;
   }
 }

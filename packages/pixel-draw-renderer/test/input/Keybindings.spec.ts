@@ -8,11 +8,11 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   DEFAULT_KEYBINDINGS,
-  InvalidKeybindingError,
-  KeybindingConflictError,
   Keybindings,
   parseKeybinding
 } from "#src/input/Keybindings.ts";
+import { InvalidKeybindingError } from "#src/input/errors/InvalidKeybindingError.ts";
+import { KeybindingConflictError } from "#src/input/errors/KeybindingConflictError.ts";
 
 function keydown(
   parameters: {

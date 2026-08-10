@@ -46,6 +46,7 @@ export type {
 export type {
   DefaultViewport
 } from "./rendering/Viewport.ts";
+export { PeerPresence } from "./rendering/presence/PeerPresence.ts";
 export {
   Zoom,
   type ZoomOptions
@@ -59,13 +60,14 @@ export type {
 } from "./types.ts";
 export {
   DEFAULT_KEYBINDINGS,
-  InvalidKeybindingError,
-  KeybindingConflictError,
   Keybindings,
   type Keybinding,
   type KeybindingAction,
   type KeybindingsMap
 } from "./input/Keybindings.ts";
+export type { WindowLike } from "./input/WindowLike.ts";
+export { InvalidKeybindingError } from "./input/errors/InvalidKeybindingError.ts";
+export { KeybindingConflictError } from "./input/errors/KeybindingConflictError.ts";
 export {
   UVMap,
   type UVMapEvent,

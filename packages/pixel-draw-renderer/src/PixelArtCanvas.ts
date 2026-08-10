@@ -25,14 +25,12 @@ import { FillMode } from "./input/modes/FillMode.ts";
 import { SelectMode } from "./input/modes/SelectMode.ts";
 import { UVMode } from "./input/modes/UVMode.ts";
 import { MoveMode } from "./input/modes/MoveMode.ts";
-import {
-  InputController,
-  type WindowLike
-} from "./input/InputController.ts";
+import { InputController } from "./input/InputController.ts";
 import type {
   Keybindings,
   KeybindingsMap
 } from "./input/Keybindings.ts";
+import type { WindowLike } from "./input/WindowLike.ts";
 import type {
   DefaultViewport
 } from "./rendering/Viewport.ts";
@@ -54,11 +52,7 @@ import type {
   UVRegion,
   UVRegionData
 } from "./uv/UVRegion.ts";
-import type { PeerCursorOverlay } from "./rendering/overlays/PeerCursorOverlay.ts";
-import type { PeerStrokeGhosts } from "./rendering/overlays/PeerStrokeGhosts.ts";
-import type { PeerUVGhosts } from "./rendering/overlays/PeerUVGhosts.ts";
-import type { PeerSelectionGhosts } from "./rendering/overlays/PeerSelectionGhosts.ts";
-import type { PeerFloatingSelectionGhosts } from "./rendering/overlays/PeerFloatingSelectionGhosts.ts";
+import type { PeerPresence } from "./rendering/presence/PeerPresence.ts";
 import { toRGBA } from "./utils/colors.ts";
 import type {
   BrushHighlight,
@@ -105,9 +99,6 @@ export interface PixelArtCanvasOptions {
     colors: { odd: string; even: string; };
     squareSize: number;
   };
-  /**
-    * Canvas color outside texture bounds.
-   */
   backgroundColor?: ColorInput;
   brush?: BrushOptions;
   select?: {
@@ -137,9 +128,6 @@ export interface PixelArtCanvasOptions {
     limit?: number;
   };
   onHistoryChange?: (state: HistoryState) => void;
-  /**
-   * Keybinding overrides.
-   */
   keybindings?: Partial<KeybindingsMap>;
 }
 
@@ -154,16 +142,17 @@ export class PixelArtCanvas {
   #onStrokeProgress?: (pixels: PeerStrokePixel[]) => void;
   #router: InteractionRouter;
   #tools: Tools;
+  #onViewportChanged = () => {
+    this.#view.refresh();
+    this.#tools.line.refreshPreview();
+    this.#tools.select.refreshOverlay();
+  };
 
   readonly brush: Brush;
   readonly viewport: DefaultViewport;
   readonly uv: UVMap;
   readonly tools: Toolset;
-  readonly peerCursors: PeerCursorOverlay;
-  readonly peerStrokeGhosts: PeerStrokeGhosts;
-  readonly peerUvGhosts: PeerUVGhosts;
-  readonly peerSelectionGhosts: PeerSelectionGhosts;
-  readonly peerFloatingSelectionGhosts: PeerFloatingSelectionGhosts;
+  readonly peerPresence: PeerPresence;
   /**
    * Read-only subscription to the select tool's progress events.
    * Consumed by SelectionGhostSync; nothing outside sync should emit on it.
@@ -224,11 +213,7 @@ export class PixelArtCanvas {
       eraseColor
     });
     this.viewport = this.#view.viewport;
-    this.peerCursors = this.#view.overlays.peerCursors;
-    this.peerStrokeGhosts = this.#view.renderer.peerStrokeGhosts;
-    this.peerUvGhosts = this.#view.overlays.peerUvGhosts;
-    this.peerSelectionGhosts = this.#view.overlays.peerSelectionGhosts;
-    this.peerFloatingSelectionGhosts = this.#view.renderer.peerFloatingSelectionGhosts;
+    this.peerPresence = this.#view.peerPresence;
 
     this.#edits = new EditPipeline({
       brush: this.brush,
@@ -257,15 +242,7 @@ export class PixelArtCanvas {
     this.selectionEvents = this.#tools.select;
 
     // Camera changes repaint and re-place all camera-dependent overlays.
-    this.#view.viewport.on("changed", () => {
-      this.#view.drawFrame();
-      this.#tools.line.refreshPreview();
-      this.#tools.select.refreshOverlay();
-      this.#view.overlays.uvOverlay.refresh();
-      this.#view.overlays.peerCursors.refresh();
-      this.#view.overlays.peerUvGhosts.refresh();
-      this.#view.overlays.peerSelectionGhosts.refresh();
-    });
+    this.#view.viewport.on("changed", this.#onViewportChanged);
 
     this.#router = new InteractionRouter({
       defaultMode,
@@ -325,9 +302,6 @@ export class PixelArtCanvas {
     this.#router.mode = mode;
   }
 
-  /**
-   * Canvas color outside texture bounds.
-   */
   get backgroundColor(): string {
     return this.#view.backgroundColor;
   }
@@ -421,6 +395,7 @@ export class PixelArtCanvas {
 
   destroy(): void {
     this.#input.destroy();
+    this.#view.viewport.off("changed", this.#onViewportChanged);
     this.#view.destroy();
   }
 
@@ -434,9 +409,6 @@ export class PixelArtCanvas {
     return this.#doc.buffer.pixels();
   }
 
-  /**
-   * Commits pixels as a stroke edit.
-   */
   commitPixels(
     pixels: Vec2[],
     slot: BrushColorSlot = "primary"
@@ -444,9 +416,6 @@ export class PixelArtCanvas {
     this.#edits.commitPixels(pixels, slot);
   }
 
-  /**
-    * Reverts the latest local edit.
-    */
   undo(): boolean {
     const entry = this.#edits.runHistoryReplay(() => this.#doc.history.undo());
     if (!entry) {
@@ -468,9 +437,6 @@ export class PixelArtCanvas {
     return true;
   }
 
-  /**
-    * Reapplies the latest reverted edit.
-    */
   redo(): boolean {
     const entry = this.#edits.runHistoryReplay(() => this.#doc.history.redo());
     if (!entry) {
@@ -503,32 +469,22 @@ export class PixelArtCanvas {
     return this.#doc.history.canRedo;
   }
 
-  /**
-   * Current buffer-mutation listener; readable so callers can chain on it.
-   */
   get onBufferUpdated(): PixelBufferHookListener | undefined {
     return this.#edits.onBufferUpdated;
   }
 
-  /**
-   * Replaces the local buffer-mutation listener.
-   */
   set onBufferUpdated(
     fn: PixelBufferHookListener | undefined
   ) {
     this.#edits.onBufferUpdated = fn;
   }
 
-  /**
-   * Current cursor-move listener; readable so callers can chain on it.
-   */
   get onCursorMove(): ExternalCursorMoveListener | undefined {
     return this.#router.onExternalCursorMove;
   }
 
   /**
-   * Replaces the cursor-move listener. Reports bounded texture position on
-   * every mousemove, null when pointer leaves canvas or texture bounds.
+   * Reports bounded texture positions, or `null` outside the texture.
    */
   set onCursorMove(
     fn: ExternalCursorMoveListener | undefined
@@ -536,16 +492,12 @@ export class PixelArtCanvas {
     this.#router.onExternalCursorMove = fn;
   }
 
-  /**
-   * Current stroke-progress listener; readable so callers can chain on it.
-   */
   get onStrokeProgress(): ((pixels: PeerStrokePixel[]) => void) | undefined {
     return this.#onStrokeProgress;
   }
 
   /**
-   * Replaces the stroke-progress listener. Reports live in-progress pixels
-   * for brush/line gestures
+   * Reports live brush and line pixels before commit.
    */
   set onStrokeProgress(
     fn: ((pixels: PeerStrokePixel[]) => void) | undefined
@@ -553,18 +505,12 @@ export class PixelArtCanvas {
     this.#onStrokeProgress = fn;
   }
 
-  /**
-   * Applies a remote mutation without emitting it.
-   */
   applyRemoteCommand(
     event: PixelBufferHookEvent
   ): void {
     this.#edits.applyRemoteCommand(event);
   }
 
-  /**
-   * Replaces the buffer from a remote snapshot.
-   */
   loadSnapshot(
     size: Vec2,
     pixels: Uint8ClampedArray,
