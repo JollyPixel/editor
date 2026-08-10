@@ -22,8 +22,6 @@ const kControlKeys = new Set([
   "End",
   "Insert",
   "Delete",
-  "Tab",
-  "Escape",
   "F1",
   "F2",
   "F3",
@@ -49,6 +47,57 @@ const kControlKeys = new Set([
   "F23",
   "F24"
 ]);
+
+/**
+ * `Tab` and `Escape` are deliberately absent. Preventing `Tab` traps focus on the canvas, so a
+ * keyboard user can never reach surrounding UI, and preventing `Escape` suppresses the browser
+ * default action native `dialog` closes on. Both still emit, so a consumer wanting the old
+ * behaviour can call `keyboard.on("Tab", (event) => event.preventDefault())`.
+ */
+
+const kEditableTagNames = new Set([
+  "INPUT",
+  "TEXTAREA"
+]);
+
+function isEditableElement(
+  target: unknown
+): boolean {
+  if (target === null || typeof target !== "object") {
+    return false;
+  }
+
+  if ("isContentEditable" in target && target.isContentEditable === true) {
+    return true;
+  }
+
+  return "tagName" in target &&
+    typeof target.tagName === "string" &&
+    kEditableTagNames.has(target.tagName);
+}
+
+/**
+ * Whether a key event originated inside an editable control, in which case the engine must ignore
+ * it so typing does not also drive the game.
+ *
+ * Resolved through `composedPath()`: shadow DOM retargets `event.target` to the host, so a control
+ * inside a shadow root would otherwise report as its custom element. The whole path is scanned so
+ * a text node inside a `contenteditable` ancestor still matches.
+ */
+export interface KeyEventTargetLike {
+  target?: unknown;
+  composedPath?: () => readonly unknown[];
+}
+
+export function isEditableTarget(
+  event: KeyEventTargetLike
+): boolean {
+  if (typeof event.composedPath === "function") {
+    return event.composedPath().some(isEditableElement);
+  }
+
+  return isEditableElement(event.target);
+}
 
 export type KeyboardEvents = {
   down: [event: KeyboardEvent];
@@ -136,7 +185,7 @@ export class Keyboard extends EventEmitter<
   }
 
   #onKeyDown = (event: KeyboardEvent) => {
-    if (!this.#enabled) {
+    if (!this.#enabled || isEditableTarget(event)) {
       return;
     }
 
@@ -165,7 +214,7 @@ export class Keyboard extends EventEmitter<
   };
 
   #onKeyPress = (event: KeyboardEvent) => {
-    if (!this.#enabled) {
+    if (!this.#enabled || isEditableTarget(event)) {
       return;
     }
 
@@ -175,6 +224,11 @@ export class Keyboard extends EventEmitter<
     }
   };
 
+  /**
+   * Not guarded by `isEditableTarget`, unlike keydown and keypress. Holding a key on the canvas
+   * then focusing a field before releasing would otherwise leave it in `buttonsDown` forever.
+   * Deleting a key that was never added is a no-op, so releases are always safe to process.
+   */
   #onKeyUp = (event: KeyboardEvent) => {
     if (!this.#enabled) {
       return;

@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { Window } from "happy-dom";
 
 // Import Internal Dependencies
-import { Keyboard, type KeyCode } from "../../src/controls/devices/index.ts";
+import { Keyboard, isEditableTarget, type KeyCode } from "../../src/controls/devices/index.ts";
 import * as mocks from "./mocks/index.ts";
 
 // CONSTANTS
@@ -221,11 +221,128 @@ describe("Controls.Keyboard", () => {
       assert.equal(keyboard.buttonsDown.has("KeyA"), true);
     });
   });
+
+  describe("editable targets", () => {
+    test("keydown inside an editable control is ignored", () => {
+      documentAdapter.dispatchEvent("keydown", {
+        code: "KeyW",
+        target: createElement("input")
+      });
+      keyboard.update();
+
+      assert.equal(keyboard.buttonsDown.has("KeyW"), false);
+      assert.equal(keyboard.buttons.size, 0);
+    });
+
+    test("keypress inside an editable control does not accumulate char", () => {
+      documentAdapter.dispatchEvent("keypress", {
+        key: "a",
+        target: createElement("textarea")
+      });
+      keyboard.update();
+
+      assert.equal(keyboard.char, "");
+    });
+
+    test("keyup is never ignored, so a key held on the canvas releases inside a field", () => {
+      documentAdapter.dispatchEvent("keydown", { code: "KeyW" });
+      keyboard.update();
+      assert.equal(keyboard.buttonsDown.has("KeyW"), true);
+
+      documentAdapter.dispatchEvent("keyup", {
+        code: "KeyW",
+        target: createElement("input")
+      });
+      keyboard.update();
+
+      assert.equal(keyboard.buttonsDown.has("KeyW"), false);
+    });
+
+    test("keydown on a non editable target is still tracked", () => {
+      documentAdapter.dispatchEvent("keydown", {
+        code: "KeyW",
+        target: createElement("div")
+      });
+      keyboard.update();
+
+      assert.equal(keyboard.buttonsDown.has("KeyW"), true);
+    });
+  });
+
+  describe("control keys", () => {
+    test("Tab is not prevented, so focus can leave the canvas", () => {
+      const event = documentAdapter.dispatchEvent("keydown", { code: "Tab" });
+
+      assert.equal(event.defaultPrevented, false);
+      assert.equal(keyboard.buttonsDown.has("Tab"), true);
+    });
+
+    test("Escape is not prevented, so native dialog can close on it", () => {
+      const event = documentAdapter.dispatchEvent("keydown", { code: "Escape" });
+
+      assert.equal(event.defaultPrevented, false);
+      assert.equal(keyboard.buttonsDown.has("Escape"), true);
+    });
+
+    test("other control keys are still prevented", () => {
+      const event = documentAdapter.dispatchEvent("keydown", { code: "ArrowUp" });
+
+      assert.equal(event.defaultPrevented, true);
+    });
+  });
 });
+
+describe("Controls.isEditableTarget", () => {
+  test("matches an input anywhere in the composed path", () => {
+    assert.equal(
+      isEditableTarget({
+        target: createElement("jolly-pane"),
+        composedPath: () => [createElement("span"), createElement("input")]
+      }),
+      true
+    );
+  });
+
+  test("prefers the composed path over target, which shadow DOM retargets to the host", () => {
+    assert.equal(
+      isEditableTarget({
+        target: createElement("input"),
+        composedPath: () => [createElement("div")]
+      }),
+      false
+    );
+  });
+
+  test("matches a contenteditable element", () => {
+    assert.equal(
+      isEditableTarget({ composedPath: () => [{ isContentEditable: true }] }),
+      true
+    );
+  });
+
+  test("falls back to target when composedPath is absent, as on synthetic events", () => {
+    assert.equal(isEditableTarget({ target: createElement("textarea") }), true);
+    assert.equal(isEditableTarget({ target: createElement("div") }), false);
+  });
+
+  test("tolerates a missing or non object target", () => {
+    assert.equal(isEditableTarget({}), false);
+    assert.equal(isEditableTarget({ target: null }), false);
+    assert.equal(isEditableTarget({ target: "input" }), false);
+  });
+});
+
+function createElement(
+  tagName: string
+) {
+  return kEmulatedBrowserWindow.document.createElement(tagName);
+}
 
 interface EventData {
   code?: KeyCode;
   key?: string;
+  /** Stands in for the composed path, which an undispatched event cannot supply. */
+  target?: unknown;
 }
 
 class KeyboardDocumentAdapter extends mocks.DocumentAdapter {
@@ -240,7 +357,15 @@ class KeyboardDocumentAdapter extends mocks.DocumentAdapter {
       cancelable: true
     });
 
+    if ("target" in eventData) {
+      Object.defineProperty(event, "composedPath", {
+        value: () => [eventData.target]
+      });
+    }
+
     const listeners = this.listeners.get(type) ?? [];
     listeners.forEach((listener) => listener(event));
+
+    return event;
   }
 }
