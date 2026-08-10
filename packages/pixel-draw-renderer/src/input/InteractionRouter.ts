@@ -14,6 +14,9 @@ export interface InteractionRouterOptions {
   setCursor: (cursor: string) => void;
   onUndo: () => boolean;
   onRedo: () => boolean;
+  onCopy?: () => boolean;
+  onPaste?: () => boolean;
+  onModeChange?: (mode: Mode, previousMode: Mode) => void;
 }
 
 export type ExternalCursorMoveListener = (pos: Vec2 | null) => void;
@@ -25,6 +28,10 @@ export class InteractionRouter implements InputActions {
   #setCursor: (cursor: string) => void;
   #onUndo: () => boolean;
   #onRedo: () => boolean;
+  #onCopy: () => boolean;
+  #onPaste: () => boolean;
+  #onModeChange?: (mode: Mode, previousMode: Mode) => void;
+  #textureCursor: Vec2 | null = null;
   #panModifierHeld: boolean = false;
   onExternalCursorMove: ExternalCursorMoveListener | undefined;
 
@@ -45,6 +52,9 @@ export class InteractionRouter implements InputActions {
     this.#setCursor = options.setCursor;
     this.#onUndo = options.onUndo;
     this.#onRedo = options.onRedo;
+    this.#onCopy = options.onCopy ?? (() => this.#active.onCopy());
+    this.#onPaste = options.onPaste ?? (() => this.#active.onPaste());
+    this.#onModeChange = options.onModeChange;
   }
 
   get mode(): Mode {
@@ -68,6 +78,11 @@ export class InteractionRouter implements InputActions {
     this.#active = mode;
     this.#active.onEnter(previous);
     this.#syncCursor();
+    this.#onModeChange?.(next, previous);
+  }
+
+  get textureCursor(): Vec2 | null {
+    return this.#textureCursor ? { ...this.#textureCursor } : null;
   }
 
   highlightBrushSize(
@@ -166,6 +181,7 @@ export class InteractionRouter implements InputActions {
   onTextureCursorMove(
     position: Vec2 | null
   ): void {
+    this.#textureCursor = position ? { ...position } : null;
     this.#active.onCursorMove(position);
     this.onExternalCursorMove?.(position);
   }
@@ -198,11 +214,11 @@ export class InteractionRouter implements InputActions {
   }
 
   onCopy(): boolean {
-    return this.#active.onCopy();
+    return this.#onCopy();
   }
 
   onPaste(): boolean {
-    return this.#active.onPaste();
+    return this.#onPaste();
   }
 
   onDelete(): boolean {

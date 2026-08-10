@@ -5,18 +5,23 @@ export interface Canvas2D {
 
 export function createCanvas2D(
   width: number,
-  height: number
+  height: number,
+  contextAttributes?: CanvasRenderingContext2DSettings
 ): Canvas2D {
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
 
-  const context = canvas.getContext("2d");
+  const context = canvas.getContext(
+    "2d",
+    contextAttributes
+  );
   if (context === null) {
     throw new Error(
       "Unable to acquire a 2D canvas context"
     );
   }
+  context.imageSmoothingEnabled = false;
 
   return {
     canvas,

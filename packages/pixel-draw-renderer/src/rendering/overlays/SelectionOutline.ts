@@ -86,6 +86,7 @@ export class SelectionOutline {
     stroke: string,
     dashOffset: number
   ): void {
+    el.setAttribute("data-overlay", "selection");
     Object.assign(el.style, {
       pointerEvents: "none",
       fill: "none",

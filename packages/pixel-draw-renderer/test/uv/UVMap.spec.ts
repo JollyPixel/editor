@@ -202,6 +202,42 @@ describe("UVMap — restore", () => {
       { x: 0, y: 0, width: 2, height: 2 }
     );
   });
+
+  // A duplicated or echoed uv-region-created command used to emit a second
+  // region-created for a region the listener already tracked, which had the
+  // examples gallery build a second preview mesh and orphan the first.
+  test("restoring a known id reports a state change, not a second creation", () => {
+    const map = makeMap();
+    const created: EventPayload<"region-created">[] = [];
+    const changed: EventPayload<"region-state-changed">[] = [];
+    map.on("region-created", (e) => created.push(e));
+    map.on("region-state-changed", (e) => changed.push(e));
+
+    const region = map.create({ id: "r1", width: 4, height: 4 });
+    map.restore({
+      ...region.toJSON(),
+      color: "#123456"
+    });
+
+    assert.strictEqual(created.length, 1, "no duplicate creation");
+    assert.strictEqual(changed.length, 1);
+    assert.strictEqual(changed[0].previous.color, region.color);
+    assert.strictEqual(map.get("r1")!.color, "#123456");
+    assert.strictEqual([...map.regions].length, 1);
+  });
+
+  test("restoring identical data for a known id adds neither a region nor a creation", () => {
+    const map = makeMap();
+    const region = map.create({ id: "r1", width: 4, height: 4 });
+    const created: EventPayload<"region-created">[] = [];
+    map.on("region-created", (e) => created.push(e));
+
+    const stored = map.restore(region.toJSON());
+
+    assert.strictEqual(created.length, 0);
+    assert.strictEqual(stored.id, "r1");
+    assert.strictEqual([...map.regions].length, 1);
+  });
 });
 
 describe("UVMap — delete", () => {

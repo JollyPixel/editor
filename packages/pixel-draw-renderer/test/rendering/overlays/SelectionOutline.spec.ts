@@ -231,5 +231,73 @@ describe("SelectionOutline", () => {
         "outer boundary + inner hole boundary"
       );
     });
+
+    // Corner-touching cells share a boundary vertex, so that vertex starts
+    // two edges. Keying edges by origin alone dropped one and the walk then
+    // dereferenced a consumed edge (TypeError), which silently aborted
+    // SelectController.importSelection halfway through a paste.
+    test("two cells touching only at a corner trace as two separate loops", () => {
+      // X .
+      // . X
+      const loops = traceSelectionContour(
+        2,
+        2,
+        [true, false, false, true]
+      );
+
+      assert.strictEqual(loops.length, 2);
+      assert.deepStrictEqual(
+        loops.map((loop) => loop.length),
+        [4, 4],
+        "each cell keeps its own unit square"
+      );
+    });
+
+    test("the anti-diagonal traces as two separate loops", () => {
+      // . X
+      // X .
+      const loops = traceSelectionContour(
+        2,
+        2,
+        [false, true, true, false]
+      );
+
+      assert.strictEqual(loops.length, 2);
+    });
+
+    test("a checkerboard traces one loop per cell", () => {
+      const mask = [
+        true, false, true,
+        false, true, false,
+        true, false, true
+      ];
+      const loops = traceSelectionContour(3, 3, mask);
+
+      assert.strictEqual(loops.length, 5);
+      assert.deepStrictEqual(
+        loops.map((loop) => loop.length),
+        [4, 4, 4, 4, 4]
+      );
+    });
+
+    test("a corner-touching pair joined by a third cell stays one loop", () => {
+      // X X
+      // . X
+      const loops = traceSelectionContour(
+        2,
+        2,
+        [true, true, false, true]
+      );
+
+      assert.strictEqual(loops.length, 1);
+      assert.strictEqual(loops[0].length, 6);
+    });
+
+    test("an empty mask traces nothing", () => {
+      assert.deepStrictEqual(
+        traceSelectionContour(2, 2, [false, false, false, false]),
+        []
+      );
+    });
   });
 });

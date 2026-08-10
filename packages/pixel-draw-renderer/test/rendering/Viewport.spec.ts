@@ -111,6 +111,62 @@ describe("Viewport", () => {
     });
   });
 
+  describe("visibleCenter", () => {
+    test("returns the texture pixel under the middle of the canvas", () => {
+      const vp = new Viewport({
+        textureSize: {
+          x: 10,
+          y: 10
+        },
+        zoom: 2
+      });
+      vp.updateCanvasSize(100, 80);
+      vp.centerTexture();
+
+      assert.deepStrictEqual(
+        vp.visibleCenter(),
+        { x: 5, y: 5 }
+      );
+    });
+
+    test("follows the camera when the texture is panned off centre", () => {
+      const vp = new Viewport({
+        textureSize: {
+          x: 10,
+          y: 10
+        },
+        zoom: 2
+      });
+      vp.updateCanvasSize(100, 80);
+      vp.centerTexture();
+      // Pushing the texture right moves the visible centre left over it.
+      vp.applyPan(6, 0);
+
+      assert.deepStrictEqual(
+        vp.visibleCenter(),
+        { x: 2, y: 5 }
+      );
+    });
+
+    test("clamps to the texture when the centre falls outside it", () => {
+      const vp = new Viewport({
+        textureSize: {
+          x: 10,
+          y: 10
+        },
+        zoom: 2
+      });
+      vp.updateCanvasSize(100, 80);
+      vp.centerTexture();
+      vp.applyPan(1000, -1000);
+
+      assert.deepStrictEqual(
+        vp.visibleCenter(),
+        { x: 0, y: 9 }
+      );
+    });
+  });
+
   describe("clampCamera", () => {
     test("prevents camera from going past negative bound", () => {
       const vp = new Viewport({

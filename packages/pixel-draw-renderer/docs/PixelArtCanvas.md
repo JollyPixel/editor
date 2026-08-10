@@ -98,6 +98,7 @@ Use `keybindings.bindings` to read the current bindings and `keybindings.patch()
 
 ```ts
 get textureSize(): Vec2
+get maxTextureSize(): number
 set textureSize(value: Vec2)
 
 get texture(): Uint8ClampedArray
@@ -115,6 +116,8 @@ hasTransparency(rect: SelectionRect): boolean
 
 Gets or resizes the texture. Shrinking hides committed pixels outside the new bounds; growing can restore pixels retained by the master buffer. Dimensions must be positive integers no greater than [`texture.maxSize`](./PixelArtCanvasOptions.md#texturemaxsize).
 
+`maxTextureSize` exposes that validated limit for import UIs.
+
 ### `texture`
 
 The getter returns a copy of the current RGBA pixel data. The setter replaces the texture and resizes it to the source image or canvas.
@@ -126,6 +129,37 @@ Paints a precomputed set of texture coordinates as one edit. The color slot defa
 ### `hasTransparency()`
 
 Returns `true` when any pixel in `rect` has alpha below `255`. Areas outside the texture count as transparent.
+
+## Clipboard
+
+```ts
+copySelection(): Promise<ClipboardOperationResult>
+pasteClipboard(): Promise<ClipboardOperationResult>
+```
+
+Copy requires a completed selection. It stores an internal snapshot immediately, then writes a PNG to the OS clipboard when the Async Clipboard API is available. Supported JollyPixel instances also exchange versioned custom metadata carrying the shape mask and the raw RGBA samples, so a copy and paste between two JollyPixel instances is exact. The PNG remains interoperable with other image editors.
+
+Paste accepts PNG, JPEG, WebP and the first GIF frame. Alpha-zero pixels are excluded from the mask; partial alpha is preserved. An empty image is rejected.
+
+### Placement
+
+Pasted content is centered on the in-bounds texture cursor, or on the center of the visible view when the pointer is off the texture, then pulled inside the texture bounds. Content larger than the texture is pinned to the corresponding edge so its top-left stays visible; the overflow is kept in the selection and can be dragged back into range. Placement is independent of where the content was copied from, so a paste is always visible.
+
+`placeSelection()` is exported for callers that need the same rule.
+
+### Floating selections
+
+A paste lands as a floating selection: pixel-sharp, movable, and not yet written to the buffer. Deselecting it deposits it into the buffer as a single undoable edit. That covers clicking elsewhere, leaving Select mode, and pasting again. `tools.select.delete()` cancels it instead, leaving the texture untouched.
+
+`selectionEvents`'s `selection-state-changed` reports `isFloating` alongside `hasSelection` so a UI can distinguish a pending paste from a plain selection.
+
+### Pixel accuracy
+
+External images are decoded through WebCodecs `ImageDecoder` when available, which yields the file's own unpremultiplied samples with no color-profile transform applied. Without it, decoding falls back to `createImageBitmap` with `premultiplyAlpha` and `colorSpaceConversion` set to `"none"`, then to an `<img>`; both go through a canvas, whose premultiplied backing store cannot reproduce RGB under a low alpha exactly. `decodeRasterBlob()` and `decodeRasterCanvas()` are exported and share this path.
+
+### Errors
+
+OS clipboard access normally requires HTTPS, localhost or Electron. When reading is unavailable or denied, paste uses the internal snapshot. A readable clipboard with no raster image does not reuse stale internal data. If placing a decoded selection fails, the canvas reports `paste-failed`, restores the previous mode, and leaves no partial selection behind. Results are structured and also sent to `onClipboardResult`.
 
 ## History
 

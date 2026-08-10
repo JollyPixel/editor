@@ -52,16 +52,8 @@ export class SelectMode extends InteractionMode {
     this.#select.handleEnd();
   }
 
-  onCopy(): boolean {
-    return this.#select.handleCopy();
-  }
-
-  onPaste(): boolean {
-    return this.#select.handlePaste();
-  }
-
   onDelete(): boolean {
-    return this.#select.handleDelete();
+    return this.#select.delete();
   }
 
   onRotate(): boolean {

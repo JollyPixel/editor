@@ -231,6 +231,69 @@ export const panelStyles = css`
     background: var(--color-divider);
   }
 
+  .select-toolbar-row {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transform: translateX(-50%);
+  }
+
+  .select-toolbar-row .overlay-toolbar {
+    position: static;
+    transform: none;
+  }
+
+  .clipboard-status,
+  .drop-status {
+    min-height: 1em;
+    padding: 5px 8px;
+    border-radius: 5px;
+    background: var(--color-bg-overlay);
+    color: var(--color-text);
+    font: 11px sans-serif;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  .clipboard-status:empty,
+  .drop-status:empty {
+    display: none;
+  }
+
+  .texture-drop-overlay {
+    position: absolute;
+    z-index: 1;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 2px dashed var(--color-accent);
+    background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+    color: var(--color-text);
+    font: 12px sans-serif;
+    text-align: center;
+    pointer-events: none;
+  }
+
+  .texture-drop-overlay .icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .drop-status {
+    position: absolute;
+    left: 50%;
+    bottom: 44px;
+    z-index: 2;
+    transform: translateX(-50%);
+  }
+
   .file-input {
     display: none;
   }

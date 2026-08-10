@@ -20,7 +20,19 @@ export type SelectionProgressEvent =
   };
 
 export type SelectControllerEvent = {
-  "selection-progress": (event: SelectionProgressEvent) => void;
+  /**
+   * `isFloating` marks a paste that has not been deposited yet: deselecting
+   * it writes it to the buffer, deleting it cancels it.
+   */
+  "selection-state-changed": (
+    event: {
+      hasSelection: boolean;
+      isFloating: boolean;
+    }
+  ) => void;
+  "selection-progress": (
+    event: SelectionProgressEvent
+  ) => void;
   /**
    * Signals that the command replaced any pending ghost tick.
    */

@@ -100,6 +100,14 @@ export class ToolOptionsController implements ReactiveController {
     this.#host.requestUpdate();
   }
 
+  onCanvasModeChange(
+    mode: Mode
+  ): void {
+    this.#mode = mode;
+    this.#pickColorArmed = this.#canvas?.tools.brush.pickArmed ?? false;
+    this.#host.requestUpdate();
+  }
+
   /**
    * Force paint mode before toggling picker.
    */

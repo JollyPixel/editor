@@ -14,6 +14,12 @@ export type IconName =
   | "uv"
   | "undo"
   | "redo"
+  | "copy"
+  | "paste"
+  | "rotateClockwise"
+  | "flipHorizontal"
+  | "flipVertical"
+  | "clearTexture"
   | "swap"
   | "eyedropper"
   | "import"
@@ -222,6 +228,104 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
       stroke-width="2.4"
       stroke-linecap="round"
       stroke-linejoin="round"
+    />
+  `,
+  copy: svg`
+    <rect
+      x="8"
+      y="8"
+      width="12"
+      height="12"
+      rx="2"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+    />
+    <path
+      d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  `,
+  paste: svg`
+    <path
+      d="M9 5h6M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1Z"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M8 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linejoin="round"
+    />
+  `,
+  rotateClockwise: svg`
+    <path
+      d="M20 11a8 8 0 1 0-2.3 6"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linecap="round"
+    />
+    <path
+      d="M20 5v6h-6"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  `,
+  flipHorizontal: svg`
+    <path d="M12 3v18" stroke="currentColor" stroke-width="2" stroke-dasharray="2 2" />
+    <path
+      d="M4 6l6 6-6 6V6ZM20 6l-6 6 6 6V6Z"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linejoin="round"
+    />
+  `,
+  flipVertical: svg`
+    <path d="M3 12h18" stroke="currentColor" stroke-width="2" stroke-dasharray="2 2" />
+    <path
+      d="M6 4l6 6 6-6H6ZM6 20l6-6 6 6H6Z"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linejoin="round"
+    />
+  `,
+  clearTexture: svg`
+    <rect
+      x="4"
+      y="4"
+      width="16"
+      height="16"
+      rx="2"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+    />
+    <path
+      d="M7 17 17 7"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linecap="round"
+    />
+    <path
+      d="m7 13 4 4"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linecap="round"
     />
   `,
   swap: svg`

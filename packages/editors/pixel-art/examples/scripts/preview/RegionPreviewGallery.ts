@@ -39,6 +39,14 @@ export class RegionPreviewGallery {
   #disposed = false;
 
   readonly #onRegionCreated: UVMapListener<"region-created"> = ({ region }) => {
+    // Replacing a map entry would leave its actor in the scene forever, so
+    // never hold two previews for one id.
+    const stale = this.#previews.get(region.id);
+    if (stale) {
+      this.#previewFactory.destroy(stale);
+      this.#previews.delete(region.id);
+    }
+
     const preview = this.#previewFactory.create(
       region,
       this.#canvasManager.textureSize
