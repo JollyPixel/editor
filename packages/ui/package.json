@@ -3,13 +3,19 @@
   "description": "Common and System's UI for JollyPixel's editors",
   "version": "1.0.0",
   "type": "module",
-  "exports": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "scripts": {
-    "prepublish": "rimraf ./dist && tsc -b",
+    "prepublish": "rimraf ./dist ./tsconfig.tsbuildinfo && tsc -b",
     "build": "tsc",
-    "test-only": "node --test \"test/**/*.test.ts\"",
+    "dev": "vite",
+    "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
     "test": "c8 -r html npm run test-only",
-    "preview": "vite"
+    "test:e2e": "playwright test"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
@@ -30,5 +36,11 @@
     "test": "test"
   },
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "peerDependencies": {
+    "lit": "^3.3.0"
+  },
+  "devDependencies": {
+    "lit": "3.3.3"
+  }
 }

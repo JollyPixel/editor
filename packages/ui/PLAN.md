@@ -29,8 +29,9 @@ src/theme/peerColor.ts         golden angle hue rotation at fixed L and C
 src/theme/types.ts             ThemeMode, Density
 src/field/mixed.ts             Mixed (Symbol.for, unique symbol),
                                FieldValue<T>, isMixed
-src/storage/StorageAdapter.ts  interface + localStorage impl + memory
-                               fallback, construction and write failure
+src/storage/StorageAdapter.ts  the port
+src/storage/LocalStorageAdapter.ts  handles construction and write failure
+src/storage/MemoryStorageAdapter.ts  also the fallback the above degrades to
 src/storage/keys.ts            deriveKey(tagName, label, occurrence),
                                resolveOrder()
 src/geometry/valueFromDelta.ts object param: start, deltaPx, step,

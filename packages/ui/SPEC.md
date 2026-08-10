@@ -248,9 +248,13 @@ any number of peers stay mutually distinguishable and equally legible:
 
 ```ts
 export function peerColor(index: number): string {
-  return `oklch(70% 0.15 ${(index * 137.5) % 360})`;
+  return `oklch(60% 0.16 ${(index * 137.5) % 360})`;
 }
 ```
+
+Lightness is 60%, not the 70% an earlier draft carried. Measured over the first sixteen hues, 70%
+reaches only 2.36:1 against the light surface, under the 3:1 a lock ring needs to be visible at
+all; 60% reaches 3.45:1 light and 4.12:1 dark.
 
 ### Contrast
 
@@ -260,8 +264,13 @@ Committed targets, following WCAG 2.1:
 |---|---|
 | Body and label text on its surface | 4.5:1 |
 | Text 18px or larger | 3:1 |
-| Borders, focus rings, control boundaries (1.4.11) | 3:1 |
+| Focus rings and control boundaries (1.4.11) | 3:1 |
 | Peer colours against both surfaces | 3:1 |
+
+"Borders" splits in two, because one token cannot serve both jobs. `--jolly-border-strong` outlines
+interactive controls and clears 3:1 against both surfaces and both control backgrounds.
+`--jolly-border` divides surfaces, which 1.4.11 does not govern, and is deliberately below it: a
+divider at 3:1 reads as a hard rule between every row of a sixty control pane.
 
 These are design constraints, not assertions. Tokens are authored as CSS, so `light-dark()` and
 the ramp `var()` chain only resolve in a browser — happy-dom has no cascade, and a `CSSResult` is
