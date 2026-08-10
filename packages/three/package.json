@@ -10,7 +10,7 @@
   "scripts": {
     "prepublish": "rimraf ./dist && tsc -b",
     "build": "tsc",
-    "test-only": "node --test \"test/**/*.test.ts\"",
+    "test-only": "node --import ./test/setup.ts --test \"test/**/*.test.ts\"",
     "test": "c8 -r html npm run test-only",
     "dev": "vite"
   },
@@ -38,6 +38,7 @@
     "three": "0.185.1"
   },
   "devDependencies": {
+    "@jolly-pixel/network": "1.0.0",
     "@tweakpane/core": "2.0.5",
     "tweakpane": "4.0.5"
   }
