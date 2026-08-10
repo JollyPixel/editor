@@ -7,8 +7,10 @@ import {
   gotoDemo,
   setMode,
   clickTexturePixel,
-  readPixel
+  readPixel,
+  textureToScreenPoint
 } from "./utils.ts";
+import type { PixelDrawPanel } from "../../src/index.ts";
 
 test.beforeEach(async({ page }) => {
   await gotoDemo(page);
@@ -52,4 +54,69 @@ test("Import replaces the texture from a PNG file", async({ page }) => {
 
   await expect.poll(() => readPixel(page, TEXTURE_SIZE.x - 1, TEXTURE_SIZE.y - 1))
     .toEqual({ r: 0xff, g: 0x88, b: 0, a: 255 });
+});
+
+test("dragging one raster over the texture shows the bounded overlay and replaces it on drop", async({ page }) => {
+  await setMode(page, "fill");
+  const point = await textureToScreenPoint(page, 20, 20);
+  await page.evaluate(({ x, y }) => {
+    const panel = document.querySelector<PixelDrawPanel>("pixel-draw-panel")!;
+    const stage = panel.shadowRoot!.querySelector<HTMLElement>(".stage")!;
+    const canvas = document.createElement("canvas");
+    canvas.width = 4;
+    canvas.height = 3;
+    const context = canvas.getContext("2d")!;
+    context.clearRect(0, 0, 4, 3);
+    context.fillStyle = "#22aa66";
+    context.fillRect(3, 2, 1, 1);
+    const dataUrl = canvas.toDataURL("image/png");
+    const bytes = Uint8Array.from(
+      atob(dataUrl.split(",")[1]),
+      (character) => character.charCodeAt(0)
+    );
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([bytes], "drop.png", { type: "image/png" }));
+    Object.assign(window, { __textureDropTransfer: transfer });
+    stage.dispatchEvent(new DragEvent("dragover", {
+      bubbles: true,
+      cancelable: true,
+      clientX: x,
+      clientY: y,
+      dataTransfer: transfer
+    }));
+  }, point);
+
+  await expect(page.locator("pixel-draw-panel").locator(".texture-drop-overlay"))
+    .toContainText("Drop image to replace texture");
+
+  await page.evaluate(({ x, y }) => {
+    const panel = document.querySelector<PixelDrawPanel>("pixel-draw-panel")!;
+    const stage = panel.shadowRoot!.querySelector<HTMLElement>(".stage")!;
+    const transfer = (window as unknown as {
+      __textureDropTransfer: DataTransfer;
+    }).__textureDropTransfer;
+    stage.dispatchEvent(new DragEvent("drop", {
+      bubbles: true,
+      cancelable: true,
+      clientX: x,
+      clientY: y,
+      dataTransfer: transfer
+    }));
+  }, point);
+
+  await expect.poll(() => page.evaluate(() => {
+    const panel = document.querySelector<PixelDrawPanel>("pixel-draw-panel")!;
+
+    return {
+      mode: panel.canvasManager!.mode,
+      size: panel.canvasManager!.textureSize
+    };
+  })).toEqual({
+    mode: "fill",
+    size: { x: 4, y: 3 }
+  });
+  await expect.poll(() => readPixel(page, 3, 2))
+    .toEqual({ r: 0x22, g: 0xaa, b: 0x66, a: 255 });
+  await expect(page.locator("pixel-draw-panel").locator(".texture-drop-overlay"))
+    .toHaveCount(0);
 });

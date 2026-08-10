@@ -5,6 +5,7 @@ import { Emitter } from "@openally/emitt";
 import { Select } from "./Select.ts";
 import { ShapeSelect } from "./ShapeSelect.ts";
 import type { SelectControllerEvent } from "./SelectController.events.ts";
+import type { SelectionSnapshot } from "../clipboard/types.ts";
 import { clipRectToBounds } from "../utils/math.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import type {
@@ -55,11 +56,17 @@ export interface SelectTool {
   shape: boolean;
   readonly hasSelection: boolean;
   /**
+   * Whether the selection is a not-yet-deposited paste. Deselecting it
+   * deposits it; `delete()` cancels it.
+   */
+  readonly isFloating: boolean;
+  /**
    * Returns `false` when there is no active selection.
    */
   rotate(): boolean;
   flipHorizontal(): boolean;
   flipVertical(): boolean;
+  delete(): boolean;
 }
 
 export class SelectController extends Emitter<SelectControllerEvent> implements SelectTool {
@@ -72,6 +79,8 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
   #shapeMode = false;
   #moveSourceRect: SelectionRect | null = null;
   #moveBlankSource = true;
+  #publishedHasSelection = false;
+  #publishedIsFloating = false;
 
   constructor(
     options: SelectControllerOptions
@@ -103,6 +112,10 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
 
   get hasSelection(): boolean {
     return this.#select.state === "selected" || this.#select.state === "moving";
+  }
+
+  get isFloating(): boolean {
+    return this.#select.floating;
   }
 
   get shape(): boolean {
@@ -152,7 +165,7 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
     const snapshot = this.#select.snapshot;
     const mask = this.#select.mask;
     if (rect && snapshot && mask) {
-      const blankSource = !this.#select.willSkipErase;
+      const blankSource = !this.#select.floating;
       const eraseColor = this.#resolveEraseColor(rect);
       this.#floatingSelection.create({
         sourceRect: rect,
@@ -184,6 +197,7 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
       shape.mask
     );
     this.#selectionOverlay.drawMask(shape.rect, shape.mask);
+    this.#publishSelectionState();
     // Shape selection has no command, so clear its peer ghost explicitly.
     this.emit("selection-idle");
   }
@@ -195,7 +209,10 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
       const rect = this.#select.updateCreate(pos);
       if (rect) {
         this.#selectionOverlay.drawRect(rect);
-        this.emit("selection-progress", { phase: "creating", rect });
+        this.emit(
+          "selection-progress",
+          { phase: "creating", rect }
+        );
       }
 
       return;
@@ -209,13 +226,16 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
         this.#floatingSelection.updatePosition(rect);
       }
       if (rect && mask && this.#moveSourceRect) {
-        this.emit("selection-progress", {
-          phase: "moving",
-          sourceRect: this.#moveSourceRect,
-          liveRect: rect,
-          mask,
-          blankSource: this.#moveBlankSource
-        });
+        this.emit(
+          "selection-progress",
+          {
+            phase: "moving",
+            sourceRect: this.#moveSourceRect,
+            liveRect: rect,
+            mask,
+            blankSource: this.#moveBlankSource
+          }
+        );
       }
     }
   }
@@ -230,9 +250,7 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
         !finalRect ||
         (finalRect.width === 1 && finalRect.height === 1)
       ) {
-        this.#select.clear();
-        this.#selectionOverlay.clear();
-        this.emit("selection-idle");
+        this.clear();
 
         return;
       }
@@ -243,6 +261,7 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
       );
       this.#select.finishCreate(snapshot, finalRect);
       this.#selectionOverlay.drawRect(finalRect);
+      this.#publishSelectionState();
       // Creation has no command, so clear its peer ghost explicitly.
       this.emit("selection-idle");
 
@@ -281,44 +300,63 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
           currentMask
         );
       }
+      // A completed move writes the content, so a floating selection stops
+      // being floating here.
+      this.#publishSelectionState();
     }
   }
 
-  handleCopy(): boolean {
+  exportSelection(): SelectionSnapshot | null {
     if (this.#select.state !== "selected") {
-      return false;
+      return null;
     }
 
-    this.#select.copy();
-
-    return true;
+    return this.#select.exportSnapshot();
   }
 
-  handlePaste(): boolean {
-    const result = this.#select.paste();
-    if (!result) {
+  /**
+   * Installs `snapshot` as a floating selection. Any selection already active
+   * is deselected first, which deposits it if it was itself floating.
+   */
+  importSelection(
+    snapshot: SelectionSnapshot
+  ): boolean {
+    const expectedLength = snapshot.rect.width * snapshot.rect.height;
+    if (
+      snapshot.pixels.length !== expectedLength ||
+      snapshot.mask.length !== expectedLength ||
+      !snapshot.mask.some(Boolean)
+    ) {
       return false;
     }
 
-    this.#commitFootprintChange({
-      oldRect: result.rect,
-      oldMask: result.mask,
-      newRect: result.rect,
-      newMask: result.mask,
-      newContent: result.pixels,
-      skipErase: true
-    });
-    this.#selectionOverlay.drawMask(
-      result.rect,
-      result.mask
+    this.clear();
+    this.#select.importSnapshot(snapshot);
+    this.#showFloatingSelection(
+      snapshot.rect,
+      snapshot.pixels,
+      snapshot.mask
     );
+    this.#selectionOverlay.drawMask(
+      snapshot.rect,
+      snapshot.mask
+    );
+    this.#publishSelectionState();
 
     return true;
   }
 
-  handleDelete(): boolean {
+  delete(): boolean {
     if (this.#select.state !== "selected") {
       return false;
+    }
+
+    // A floating selection owns no buffer footprint: deleting it cancels the
+    // paste rather than depositing it.
+    if (this.#select.floating) {
+      this.discard();
+
+      return true;
     }
 
     const rect = this.#select.rect;
@@ -349,6 +387,7 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
       return false;
     }
 
+    const isFloating = this.#select.floating;
     const oldMask = this.#select.mask;
     const result = this.#select.rotate();
     const snapshot = this.#select.snapshot;
@@ -357,14 +396,23 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
       return false;
     }
 
-    this.#commitFootprintChange({
-      oldRect: result.oldRect,
-      oldMask,
-      newRect: result.newRect,
-      newMask,
-      newContent: snapshot,
-      skipErase: false
-    });
+    if (isFloating) {
+      this.#showFloatingSelection(
+        result.newRect,
+        snapshot,
+        newMask
+      );
+    }
+    else {
+      this.#commitFootprintChange({
+        oldRect: result.oldRect,
+        oldMask,
+        newRect: result.newRect,
+        newMask,
+        newContent: snapshot,
+        skipErase: false
+      });
+    }
     this.#selectionOverlay.drawMask(
       result.newRect,
       newMask
@@ -388,6 +436,7 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
       return false;
     }
 
+    const isFloating = this.#select.floating;
     const oldMask = this.#select.mask;
     const rect = flip(this.#select);
     const snapshot = this.#select.snapshot;
@@ -396,20 +445,44 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
       return false;
     }
 
-    this.#commitFootprintChange({
-      oldRect: rect,
-      oldMask,
-      newRect: rect,
-      newMask,
-      newContent: snapshot,
-      skipErase: false
-    });
+    if (isFloating) {
+      this.#showFloatingSelection(
+        rect,
+        snapshot,
+        newMask
+      );
+    }
+    else {
+      this.#commitFootprintChange({
+        oldRect: rect,
+        oldMask,
+        newRect: rect,
+        newMask,
+        newContent: snapshot,
+        skipErase: false
+      });
+    }
     this.#selectionOverlay.drawMask(rect, newMask);
 
     return true;
   }
 
+  /**
+   * Deselects, depositing a floating selection into the buffer first so that
+   * pixels the user can see are never destroyed by a stray click or a mode
+   * change.
+   */
   clear(): void {
+    this.#depositFloating();
+    this.discard();
+  }
+
+  /**
+   * Deselects without depositing. For callers that replace the buffer
+   * wholesale (resize, texture replacement, snapshot load), where the
+   * floating rect no longer maps to anything.
+   */
+  discard(): void {
     const interruptedGesture = this.#select.state === "creating" || this.#select.state === "moving";
 
     this.#select.clear();
@@ -421,6 +494,40 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
     if (interruptedGesture) {
       this.emit("selection-idle");
     }
+    this.#publishSelectionState();
+  }
+
+  /**
+   * Writes floating content at its current rect. No source is erased: a
+   * floating selection has no footprint to vacate.
+   */
+  #depositFloating(): void {
+    if (
+      this.#select.state !== "selected" ||
+      !this.#select.floating
+    ) {
+      return;
+    }
+
+    const rect = this.#select.rect;
+    const mask = this.#select.mask;
+    const snapshot = this.#select.snapshot;
+    if (!rect || !mask || !snapshot) {
+      return;
+    }
+
+    // Flip the flag first: the commit runs history and hook callbacks that
+    // may read back the tool's state.
+    this.#select.markDeposited();
+    this.#commitFootprintChange({
+      oldRect: rect,
+      oldMask: mask,
+      newRect: rect,
+      newMask: mask,
+      newContent: snapshot,
+      skipErase: true
+    });
+    this.emit("selection-committed");
   }
 
   refreshOverlay(): void {
@@ -430,6 +537,20 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
     if (rect && mask) {
       this.#selectionOverlay.drawMask(rect, mask);
     }
+  }
+
+  #showFloatingSelection(
+    rect: SelectionRect,
+    pixels: RGBA[],
+    mask: boolean[]
+  ): void {
+    this.#floatingSelection.create({
+      sourceRect: rect,
+      pixels,
+      mask,
+      eraseColor: this.#resolveEraseColor(rect),
+      blankSource: false
+    });
   }
 
   #commitFootprintChange(
@@ -494,6 +615,28 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
     );
     this.#select.restoreRect(rect, snapshot, mask);
     this.#selectionOverlay.drawMask(rect, mask);
+    this.#publishSelectionState();
+  }
+
+  #publishSelectionState(): void {
+    const hasSelection = this.hasSelection;
+    const isFloating = this.isFloating;
+    if (
+      hasSelection === this.#publishedHasSelection &&
+      isFloating === this.#publishedIsFloating
+    ) {
+      return;
+    }
+
+    this.#publishedHasSelection = hasSelection;
+    this.#publishedIsFloating = isFloating;
+    this.emit(
+      "selection-state-changed",
+      {
+        hasSelection,
+        isFloating
+      }
+    );
   }
 }
 

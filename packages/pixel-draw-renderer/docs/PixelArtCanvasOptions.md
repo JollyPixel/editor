@@ -35,6 +35,9 @@ interface PixelArtCanvasOptions {
   onBufferUpdated?: PixelBufferHookListener;
   history?: HistoryOptions;
   onHistoryChange?: (state: HistoryState) => void;
+  clipboard?: ClipboardAdapter | null;
+  onClipboardResult?: (result: ClipboardOperationResult) => void;
+  onModeChange?: (mode: Mode, previousMode: Mode) => void;
   keybindings?: Partial<KeybindingsMap>;
 }
 
@@ -84,6 +87,18 @@ Overrides selected keyboard shortcuts. Unspecified actions keep their defaults. 
 Event target used for drag continuation, keyboard input and blur handling. It defaults to the global `window` and accepts an object with compatible `addEventListener()` and `removeEventListener()` methods.
 
 `WindowLike` is exported for typed browser adapters and test doubles.
+
+### `clipboard`
+
+Overrides `navigator.clipboard` with an adapter exposing compatible `read()` and `write()` methods. Omit it to use the Async Clipboard API when available. Pass `null` to force internal-only copy and paste.
+
+### `onClipboardResult`
+
+Receives every copy or paste result, including toolbar, keyboard and direct API calls. Codes cover success, internal-only copy, busy operations, denied access, missing or invalid images, transparent images, maximum-size rejection, and a decoded selection that could not be placed (`paste-failed`).
+
+### `onModeChange`
+
+Called after an explicit mode change and after a successful paste switches the canvas to Select mode. It receives the new and previous modes.
 
 ## Texture
 

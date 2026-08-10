@@ -67,6 +67,18 @@ export class HistoryFileToolbarController implements ReactiveController {
     this.#canvas?.redo();
   }
 
+  clearTexture(): void {
+    if (!this.#canvas) {
+      return;
+    }
+
+    const size = this.#canvas.textureSize;
+    const blank = document.createElement("canvas");
+    blank.width = size.x;
+    blank.height = size.y;
+    this.#canvas.texture = blank;
+  }
+
   #onExportPng(): void {
     if (!this.#canvas) {
       return;
@@ -151,6 +163,15 @@ export class HistoryFileToolbarController implements ReactiveController {
         >
           ${renderIcon("export")}
           <span class="tooltip">Export</span>
+        </button>
+        <div class="overlay-toolbar-divider"></div>
+        <button
+          class="rail-btn" part="clear-texture-button"
+          aria-label="Clear texture"
+          @click=${() => this.clearTexture()}
+        >
+          ${renderIcon("clearTexture")}
+          <span class="tooltip">Clear texture</span>
         </button>
         <input
           class="file-input" part="file-input"

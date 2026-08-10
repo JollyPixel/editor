@@ -21,6 +21,8 @@ import { railButtonStyles } from "../mode-rail/rail-button.styles.ts";
 import { iconStyles } from "../common/icon.styles.ts";
 import { themeStyles, type ThemeMode } from "../theme.ts";
 import { UvToolbarController } from "../uv/UvToolbarController.ts";
+import { SelectToolbarController } from "../select/SelectToolbarController.ts";
+import { TextureDropController } from "../texture-drop/TextureDropController.ts";
 import { HistoryFileToolbarController } from "../history-file/HistoryFileToolbarController.ts";
 import { ToolOptionsController } from "../tool-options/ToolOptionsController.ts";
 import { ColorController } from "../color/ColorController.ts";
@@ -55,6 +57,8 @@ export class PixelDrawPanel extends LitElement {
   declare theme: ThemeMode;
 
   readonly #uvToolbar = new UvToolbarController(this);
+  readonly #selectToolbar = new SelectToolbarController(this);
+  readonly #textureDrop = new TextureDropController(this);
   readonly #historyFile = new HistoryFileToolbarController(this);
   readonly #toolOptions = new ToolOptionsController(this);
   readonly #colors = new ColorController(this);
@@ -115,6 +119,10 @@ export class PixelDrawPanel extends LitElement {
       this.renderRoot.querySelector<HTMLDivElement>(".canvas-host"),
       "PixelDrawPanel: .canvas-host element not found"
     );
+    const stageEl = assertElement(
+      this.renderRoot.querySelector<HTMLDivElement>(".stage"),
+      "PixelDrawPanel: .stage element not found"
+    );
     const backgroundColor = this.#canvasBackground();
     this.#canvasManager = new PixelArtCanvas(canvasHostEl, {
       ...options,
@@ -122,6 +130,15 @@ export class PixelDrawPanel extends LitElement {
       onHistoryChange: (state) => {
         this.#historyFile.onHistoryChange(state);
         options.onHistoryChange?.(state);
+      },
+      onModeChange: (mode, previousMode) => {
+        this.#toolOptions.onCanvasModeChange(mode);
+        this.#selectToolbar.onModeChange(mode === "select");
+        options.onModeChange?.(mode, previousMode);
+      },
+      onClipboardResult: (result) => {
+        this.#selectToolbar.onClipboardResult(result);
+        options.onClipboardResult?.(result);
       }
     });
 
@@ -129,6 +146,8 @@ export class PixelDrawPanel extends LitElement {
     this.#colors.attach(this.#canvasManager);
     this.#historyFile.attach(this.#canvasManager);
     this.#uvToolbar.attach(this.#canvasManager);
+    this.#selectToolbar.attach(this.#canvasManager);
+    this.#textureDrop.attach(this.#canvasManager, stageEl);
     this.#syncCanvasBackground();
     this.requestUpdate();
     await this.updateComplete;
@@ -223,7 +242,9 @@ export class PixelDrawPanel extends LitElement {
 
       <div class="stage" part="stage">
         <div class="canvas-host" part="canvas-host"></div>
+        ${this.#textureDrop.render()}
         ${this.#toolOptions.render()}
+        ${this.#selectToolbar.render(this.#toolOptions.mode === "select")}
         ${this.#uvToolbar.render(this.#toolOptions.mode === "uv", this.allowUvCreateDelete)}
         ${this.#historyFile.render()}
       </div>

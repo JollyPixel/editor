@@ -66,6 +66,23 @@ export {
   type KeybindingsMap
 } from "./input/Keybindings.ts";
 export type { WindowLike } from "./input/WindowLike.ts";
+export {
+  decodeRasterBlob,
+  decodeRasterCanvas
+} from "./clipboard/selectionImage.ts";
+export type {
+  ClipboardAdapter,
+  ClipboardOperationResult,
+  ClipboardOperation,
+  ClipboardResultCode,
+  ClipboardSource,
+  DecodedSelection,
+  SelectionSnapshot
+} from "./clipboard/types.ts";
+export {
+  placeSelection,
+  type SelectionPlacementOptions
+} from "./tools/selectionPlacement.ts";
 export { InvalidKeybindingError } from "./input/errors/InvalidKeybindingError.ts";
 export { KeybindingConflictError } from "./input/errors/KeybindingConflictError.ts";
 export {

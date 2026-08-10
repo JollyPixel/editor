@@ -170,7 +170,7 @@ describe("PixelArtCanvas — select mode", () => {
     manager.destroy();
   });
 
-  test("dragging a just-pasted duplicate does NOT preview the original as vacated (regression)", () => {
+  test("dragging a just-pasted duplicate does NOT preview the original as vacated (regression)", async() => {
     const manager = makeManager();
     const canvas = manager.canvas();
 
@@ -182,8 +182,8 @@ describe("PixelArtCanvas — select mode", () => {
       new MouseEvent("mouseup", { bubbles: true })
     );
 
-    window.dispatchEvent(ctrlKey("c"));
-    window.dispatchEvent(ctrlKey("v"));
+    await manager.copySelection();
+    await manager.pasteClipboard();
 
     // Baseline: the render canvas at (2,2) immediately after the paste.
     const baseline = readPixel(
@@ -637,7 +637,7 @@ describe("PixelArtCanvas — select mode", () => {
       manager.destroy();
     });
 
-    test("undo/redo covers a Paste", () => {
+    test("undo/redo covers a Paste", async() => {
       const manager = makeManager({
         history: { enabled: true }
       });
@@ -651,7 +651,7 @@ describe("PixelArtCanvas — select mode", () => {
         new MouseEvent("mouseup", { bubbles: true })
       );
 
-      window.dispatchEvent(ctrlKey("c"));
+      await manager.copySelection();
 
       // Move the original away so the paste's target square is empty,
       // making the paste's undo/redo effect on that pixel observable.
@@ -665,7 +665,19 @@ describe("PixelArtCanvas — select mode", () => {
         [255, 255, 255, 255]
       );
 
-      window.dispatchEvent(ctrlKey("v"));
+      // Paste centres the 2x1 copy on the cursor, so aiming at (3,2) puts
+      // its black left-hand pixel back on (2,2).
+      canvas.dispatchEvent(mouseEvent("mousemove", 96, 92));
+      await manager.pasteClipboard();
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 2, y: 2 }, 8),
+        [255, 255, 255, 255],
+        "paste stays out of the texture until placement"
+      );
+      canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
+      canvas.dispatchEvent(
+        new MouseEvent("mouseup", { bubbles: true })
+      );
       assert.deepStrictEqual(
         readPixel(manager.texture, { x: 2, y: 2 }, 8),
         [0, 0, 0, 255],

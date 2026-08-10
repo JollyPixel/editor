@@ -78,6 +78,10 @@ export class CanvasBuffer extends Emitter<
     return this.#buffer.size();
   }
 
+  get maxSize(): number {
+    return this.#buffer.maxSize;
+  }
+
   resize(
     size: Vec2
   ): void {
@@ -91,15 +95,33 @@ export class CanvasBuffer extends Emitter<
   loadTexture(
     source: HTMLCanvasElement | HTMLImageElement
   ): void {
+    const sourceSize: Vec2 = "getContext" in source ?
+      { x: source.width, y: source.height } :
+      {
+        x: source.naturalWidth || source.width,
+        y: source.naturalHeight || source.height
+      };
+    if (
+      !Number.isInteger(sourceSize.x) ||
+      !Number.isInteger(sourceSize.y) ||
+      sourceSize.x <= 0 ||
+      sourceSize.y <= 0 ||
+      sourceSize.x > this.maxSize ||
+      sourceSize.y > this.maxSize
+    ) {
+      throw new RangeError(
+        `PixelBuffer dimensions must be positive integers no greater than ${this.maxSize}`
+      );
+    }
+
     let canvas: HTMLCanvasElement;
     if ("getContext" in source) {
       canvas = source;
     }
     else {
-      const img = source;
       canvas = document.createElement("canvas");
-      canvas.width = img.naturalWidth || img.width;
-      canvas.height = img.naturalHeight || img.height;
+      canvas.width = sourceSize.x;
+      canvas.height = sourceSize.y;
       const ctx = canvas.getContext("2d", {
         willReadFrequently: true
       })!;

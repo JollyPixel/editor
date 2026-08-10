@@ -29,6 +29,16 @@ interface SceneAppearance {
   borderColor: THREE.ColorRepresentation;
 }
 
+declare global {
+  interface Window {
+    /**
+     * Preview meshes currently in the scene. Exposed for e2e: a region view
+     * leaking a second mesh is invisible from the DOM.
+     */
+    __uvPreviewMeshCount?: () => number;
+  }
+}
+
 const kSceneAppearances: Record<Exclude<ThemeMode, "auto">, SceneAppearance> = {
   light: {
     backgroundColor: "#eef3f7",
@@ -132,6 +142,7 @@ async function initRuntime(): Promise<void> {
     previewFactory,
     canvasManager
   });
+  window.__uvPreviewMeshCount = () => previewGallery.meshes.length;
   rotationToggle.addEventListener("change", () => {
     previewGallery.setRotating(rotationToggle.checked);
     localStorage.setItem(kRotationStorageKey, String(rotationToggle.checked));

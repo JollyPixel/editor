@@ -58,3 +58,16 @@ test("mod+z / mod+y keyboard shortcuts undo and redo", async({ page }) => {
     () => readPixel(page, 67, 2)
   ).toEqual({ r: 0, g: 0, b: 0, a: 255 });
 });
+
+test("Clear texture replaces the current texture with transparency", async({ page }) => {
+  await clickTexturePixel(page, 69, 2);
+  await expect.poll(
+    () => readPixel(page, 69, 2)
+  ).toEqual({ r: 0, g: 0, b: 0, a: 255 });
+  await expect(page.getByRole("button", { name: "Undo" })).toBeEnabled();
+
+  await page.getByRole("button", { name: "Clear texture" }).click();
+  await expect.poll(
+    () => readPixel(page, 69, 2)
+  ).toMatchObject({ a: 0 });
+});

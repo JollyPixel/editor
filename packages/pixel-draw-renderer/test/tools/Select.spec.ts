@@ -351,13 +351,12 @@ describe("Select", () => {
       assert.strictEqual(tool.finishMove(), null);
     });
 
-    test("a paste's first move has skipErase true — the original must survive", () => {
+    test("an imported snapshot's first move has skipErase true — the original must survive", () => {
       const tool = new Select();
       tool.startCreate({ x: 0, y: 0 });
       tool.finishCreate([kRed]);
-      tool.copy();
-
-      tool.paste();
+      const snapshot = tool.exportSnapshot()!;
+      tool.importSnapshot(snapshot);
       tool.startMove({ x: 0, y: 0 });
       tool.updateMove({ x: 5, y: 5 });
       const result = tool.finishMove();
@@ -369,8 +368,8 @@ describe("Select", () => {
       const tool = new Select();
       tool.startCreate({ x: 0, y: 0 });
       tool.finishCreate([kRed]);
-      tool.copy();
-      tool.paste();
+      const snapshot = tool.exportSnapshot()!;
+      tool.importSnapshot(snapshot);
 
       tool.startMove({ x: 0, y: 0 });
       tool.updateMove({ x: 5, y: 5 });
@@ -383,23 +382,27 @@ describe("Select", () => {
       assert.ok(!second!.skipErase);
     });
 
-    test("a click-only drag after a paste does not consume skipErase", () => {
+    test("a click-only drag places a floating paste and consumes skipErase", () => {
       const tool = new Select();
       tool.startCreate({ x: 0, y: 0 });
       tool.finishCreate([kRed]);
-      tool.copy();
-      tool.paste();
+      const snapshot = tool.exportSnapshot()!;
+      tool.importSnapshot(snapshot);
 
-      // No-op drag: finishMove returns null, skipErase must still be pending.
       tool.startMove({ x: 0, y: 0 });
       tool.updateMove({ x: 0, y: 0 });
-      assert.strictEqual(tool.finishMove(), null);
+      const placement = tool.finishMove();
+      assert.deepStrictEqual(placement, {
+        source: { x: 0, y: 0, width: 1, height: 1 },
+        dest: { x: 0, y: 0, width: 1, height: 1 },
+        skipErase: true
+      });
 
       tool.startMove({ x: 0, y: 0 });
       tool.updateMove({ x: 5, y: 5 });
       const result = tool.finishMove();
 
-      assert.ok(result!.skipErase);
+      assert.ok(!result!.skipErase);
     });
 
     test("a plain (non-pasted) selection's move never sets skipErase", () => {
@@ -414,18 +417,15 @@ describe("Select", () => {
   });
 
   describe("clear", () => {
-    test("resets to idle, dropping rect and snapshot but not the clipboard", () => {
+    test("resets to idle and drops the active snapshot", () => {
       const tool = new Select();
       tool.startCreate({ x: 0, y: 0 });
       tool.finishCreate([kRed]);
-      tool.copy();
-
       tool.clear();
 
       assert.strictEqual(tool.state, "idle");
       assert.strictEqual(tool.rect, null);
       assert.strictEqual(tool.snapshot, null);
-      assert.ok(tool.hasClipboard);
     });
   });
 
@@ -445,35 +445,20 @@ describe("Select", () => {
     });
   });
 
-  describe("copy / paste", () => {
-    test("copy is a no-op without a selection", () => {
+  describe("snapshot import / export", () => {
+    test("export returns null without a selection", () => {
       const tool = new Select();
-      tool.copy();
-      assert.ok(!tool.hasClipboard);
+      assert.strictEqual(tool.exportSnapshot(), null);
     });
 
-    test("paste returns null when the clipboard is empty", () => {
-      const tool = new Select();
-      assert.strictEqual(tool.paste(), null);
-    });
-
-    test("paste restores the clipboard's rect/pixels and becomes the active selection", () => {
+    test("import restores an exported rect and pixels as the active selection", () => {
       const tool = new Select();
       tool.startCreate({ x: 2, y: 2 });
       tool.finishCreate([kRed]);
-      tool.copy();
+      const snapshot = tool.exportSnapshot()!;
 
       tool.clear();
-      const result = tool.paste();
-
-      assert.deepStrictEqual(
-        result,
-        {
-          rect: { x: 2, y: 2, width: 1, height: 1 },
-          pixels: [kRed],
-          mask: [true]
-        }
-      );
+      tool.importSnapshot(snapshot);
       assert.strictEqual(tool.state, "selected");
       assert.deepStrictEqual(
         tool.rect,
@@ -481,23 +466,17 @@ describe("Select", () => {
       );
     });
 
-    test("paste is repeatable — clipboard survives being pasted", () => {
+    test("snapshot boundaries are defensively copied", () => {
       const tool = new Select();
       tool.startCreate({ x: 0, y: 0 });
       tool.finishCreate([kRed]);
-      tool.copy();
+      const snapshot = tool.exportSnapshot()!;
+      tool.importSnapshot(snapshot);
+      snapshot.pixels[0].r = 99;
+      snapshot.mask[0] = false;
 
-      tool.paste();
-      const second = tool.paste();
-
-      assert.deepStrictEqual(
-        second,
-        {
-          rect: { x: 0, y: 0, width: 1, height: 1 },
-          pixels: [kRed],
-          mask: [true]
-        }
-      );
+      assert.deepStrictEqual(tool.snapshot, [kRed]);
+      assert.deepStrictEqual(tool.mask, [true]);
     });
   });
 
@@ -537,7 +516,7 @@ describe("Select", () => {
       assert.deepStrictEqual(tool.mask, kMask);
     });
 
-    test("hitTest is true anywhere in the bounding rect, regardless of mask — grabbable like a rectangle", () => {
+    test("hitTest follows the mask, so holes are not grab handles", () => {
       const tool = new Select();
       tool.selectRegion(
         { x: 0, y: 0, width: 2, height: 2 },
@@ -546,8 +525,8 @@ describe("Select", () => {
       );
 
       assert.ok(tool.hitTest({ x: 0, y: 0 }), "masked-in top-left");
-      assert.ok(tool.hitTest({ x: 1, y: 0 }), "masked-out top-right — still a hit");
-      assert.ok(tool.hitTest({ x: 0, y: 1 }), "masked-out bottom-left — still a hit");
+      assert.ok(!tool.hitTest({ x: 1, y: 0 }), "masked-out top-right is a hole");
+      assert.ok(!tool.hitTest({ x: 0, y: 1 }), "masked-out bottom-left is a hole");
       assert.ok(tool.hitTest({ x: 1, y: 1 }), "masked-in bottom-right");
       assert.ok(!tool.hitTest({ x: 2, y: 0 }), "outside the bounding rect entirely");
     });
@@ -571,19 +550,17 @@ describe("Select", () => {
       );
     });
 
-    test("copy/paste round-trip the mask through the clipboard", () => {
+    test("snapshot export/import round-trips the mask", () => {
       const tool = new Select();
       tool.selectRegion(
         { x: 3, y: 3, width: 2, height: 2 },
         [kColorA, kColorB, kColorC, kColorD],
         kMask
       );
-      tool.copy();
+      const snapshot = tool.exportSnapshot()!;
       tool.clear();
+      tool.importSnapshot(snapshot);
 
-      const result = tool.paste();
-
-      assert.deepStrictEqual(result!.mask, kMask);
       assert.deepStrictEqual(tool.mask, kMask);
     });
 

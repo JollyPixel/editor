@@ -8,11 +8,16 @@ import {
   dragStroke,
   clickTexturePixel,
   readPixel,
-  setBrushColor
+  readRenderedPixel,
+  setBrushColor,
+  textureToScreenPoint
 } from "./utils.ts";
 import type { PixelDrawPanel } from "../../src/index.ts";
 
 // This file uses texture slice x:40-59, y:0-25 on the shared 80x80 canvas.
+
+// The OS clipboard is shared across browser contexts and must not be raced.
+test.describe.configure({ mode: "serial" });
 
 test.beforeEach(async({ page }) => {
   await gotoDemo(page);
@@ -103,6 +108,13 @@ test("Ctrl+C / Ctrl+V duplicates the selection in place", async({ page }) => {
   ]);
 
   await page.keyboard.press("Control+c");
+  await expect(page.locator("pixel-draw-panel").locator(".clipboard-status"))
+    .toContainText(/Copied/);
+
+  // Paste centres the 4x4 copy on the cursor, so aim at the selection's own
+  // centre to duplicate it in place.
+  const center = await textureToScreenPoint(page, 43, 17);
+  await page.mouse.move(center.x, center.y);
   await page.keyboard.press("Control+v");
 
   // A fresh paste doesn't erase its source when moved — dragging the
@@ -118,6 +130,108 @@ test("Ctrl+C / Ctrl+V duplicates the selection in place", async({ page }) => {
   await expect.poll(
     () => readPixel(page, 42, 16)
   ).toEqual({ r: 0, g: 0, b: 0, a: 255 });
+});
+
+test("external clipboard image pastes at the pointer and switches the mode rail to Select", async({
+  page,
+  context
+}) => {
+  await context.grantPermissions([
+    "clipboard-read",
+    "clipboard-write"
+  ]);
+  await setMode(page, "paint");
+  const point = await textureToScreenPoint(page, 48, 10);
+  await page.mouse.move(point.x, point.y);
+  await page.evaluate(async() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 3;
+    canvas.height = 1;
+    const context = canvas.getContext("2d")!;
+    context.fillStyle = "#ff0080";
+    context.fillRect(0, 0, 1, 1);
+    context.fillStyle = "#0060ff";
+    context.fillRect(1, 0, 1, 1);
+    context.fillStyle = "#00d060";
+    context.fillRect(2, 0, 1, 1);
+    const { promise, resolve, reject } = Promise.withResolvers<Blob>();
+    canvas.toBlob((blob) => {
+      if (blob) {
+        resolve(blob);
+      }
+      else {
+        reject(new Error("PNG encoding failed"));
+      }
+    }, "image/png");
+    await navigator.clipboard.write([
+      new ClipboardItem({ "image/png": await promise })
+    ]);
+  });
+
+  await page.keyboard.press("Control+v");
+
+  await expect.poll(() => page.evaluate(() => {
+    const panel = document.querySelector<PixelDrawPanel>("pixel-draw-panel");
+
+    return panel!.canvasManager!.mode;
+  })).toBe("select");
+  await expect(page.getByRole("button", { name: "Select", exact: true }))
+    .toHaveAttribute("aria-pressed", "true");
+  await expect.poll(
+    () => readPixel(page, 47, 10)
+  ).toMatchObject({ a: 0 });
+  await expect.poll(
+    () => readPixel(page, 48, 10)
+  ).toMatchObject({ a: 0 });
+  await expect.poll(
+    () => readPixel(page, 49, 10)
+  ).toMatchObject({ a: 0 });
+  await expect.poll(
+    () => readRenderedPixel(page, 47, 10)
+  ).toEqual({ r: 255, g: 0, b: 128, a: 255 });
+  await expect.poll(
+    () => readRenderedPixel(page, 48, 10)
+  ).toEqual({ r: 0, g: 96, b: 255, a: 255 });
+  await expect.poll(
+    () => readRenderedPixel(page, 49, 10)
+  ).toEqual({ r: 0, g: 208, b: 96, a: 255 });
+  const selectionOutline = page.locator("pixel-draw-panel").locator(
+    '.canvas-host svg [data-overlay="selection"][visibility="visible"]'
+  );
+  await expect(selectionOutline).toHaveCount(2);
+  await expect(selectionOutline.first()).toBeVisible();
+
+  await clickTexturePixel(page, 48, 10);
+  await expect.poll(
+    () => readPixel(page, 47, 10)
+  ).toEqual({ r: 255, g: 0, b: 128, a: 255 });
+  await expect.poll(
+    () => readPixel(page, 48, 10)
+  ).toEqual({ r: 0, g: 96, b: 255, a: 255 });
+  await expect.poll(
+    () => readPixel(page, 49, 10)
+  ).toEqual({ r: 0, g: 208, b: 96, a: 255 });
+});
+
+test("Select toolbar enables actions after a selection and dispatches Delete", async({ page }) => {
+  await setMode(page, "select");
+  await expect(page.getByRole("button", { name: "Paste image" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Copy selection" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Delete selection" })).toBeDisabled();
+
+  await setMode(page, "paint");
+  await clickTexturePixel(page, 53, 10);
+  await setMode(page, "select");
+  await dragStroke(page, [
+    { x: 53, y: 10 },
+    { x: 54, y: 11 }
+  ]);
+
+  await expect(page.getByRole("button", { name: "Copy selection" })).toBeEnabled();
+  await page.getByRole("button", { name: "Delete selection" }).click();
+  await expect.poll(
+    () => readPixel(page, 53, 10)
+  ).toMatchObject({ a: 0 });
 });
 
 test("R rotates a non-square selection 90deg clockwise around its center", async({ page }) => {

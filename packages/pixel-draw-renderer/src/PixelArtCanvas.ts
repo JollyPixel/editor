@@ -66,6 +66,13 @@ import type {
   PixelBufferHookEvent,
   PixelBufferHookListener
 } from "./buffer/hooks.ts";
+import { SelectionClipboard } from "./clipboard/SelectionClipboard.ts";
+import { placeSelection } from "./tools/selectionPlacement.ts";
+import type {
+  ClipboardAdapter,
+  ClipboardOperationResult,
+  DecodedSelection
+} from "./clipboard/types.ts";
 
 export type { Mode };
 export type { HistoryState };
@@ -128,6 +135,12 @@ export interface PixelArtCanvasOptions {
     limit?: number;
   };
   onHistoryChange?: (state: HistoryState) => void;
+  /**
+   * Overrides OS clipboard access. `null` forces internal-only behavior.
+   */
+  clipboard?: ClipboardAdapter | null;
+  onClipboardResult?: (result: ClipboardOperationResult) => void;
+  onModeChange?: (mode: Mode, previousMode: Mode) => void;
   keybindings?: Partial<KeybindingsMap>;
 }
 
@@ -142,6 +155,9 @@ export class PixelArtCanvas {
   #onStrokeProgress?: (pixels: PeerStrokePixel[]) => void;
   #router: InteractionRouter;
   #tools: Tools;
+  #clipboard: SelectionClipboard;
+  #clipboardPending = false;
+  #onClipboardResult?: (result: ClipboardOperationResult) => void;
   #onViewportChanged = () => {
     this.#view.refresh();
     this.#tools.line.refreshPreview();
@@ -165,6 +181,7 @@ export class PixelArtCanvas {
   ) {
     this.#parentHtmlElement = parentHtmlElement;
     this.#onDrawEnd = options.onDrawEnd;
+    this.#onClipboardResult = options.onClipboardResult;
     const defaultMode: Mode = options.defaultMode ?? "paint";
     const eraseColor = options.select?.eraseColor === undefined ?
       null :
@@ -240,6 +257,9 @@ export class PixelArtCanvas {
     });
     this.tools = this.#tools;
     this.selectionEvents = this.#tools.select;
+    this.#clipboard = new SelectionClipboard({
+      adapter: resolveClipboardAdapter(options.clipboard)
+    });
 
     // Camera changes repaint and re-place all camera-dependent overlays.
     this.#view.viewport.on("changed", this.#onViewportChanged);
@@ -252,6 +272,9 @@ export class PixelArtCanvas {
       },
       onUndo: () => this.undo(),
       onRedo: () => this.redo(),
+      onCopy: () => this.#handleCopyShortcut(),
+      onPaste: () => this.#handlePasteShortcut(),
+      onModeChange: options.onModeChange,
       modes: [
         new PaintMode({
           brush: this.#tools.brush,
@@ -347,6 +370,11 @@ export class PixelArtCanvas {
     }
 
     this.#edits.resize(size);
+    this.#tools.select.discard();
+  }
+
+  get maxTextureSize(): number {
+    return this.#doc.buffer.maxSize;
   }
 
   get camera(): Vec2 {
@@ -403,6 +431,7 @@ export class PixelArtCanvas {
     source: HTMLCanvasElement | HTMLImageElement
   ) {
     this.#edits.replaceTexture(source);
+    this.#tools.select.discard();
   }
 
   get texture(): Uint8ClampedArray {
@@ -417,13 +446,20 @@ export class PixelArtCanvas {
   }
 
   undo(): boolean {
+    const previousSize = this.textureSize;
     const entry = this.#edits.runHistoryReplay(() => this.#doc.history.undo());
     if (!entry) {
       return false;
     }
 
     this.#refreshAfterHistoryApply();
-    if (entry.action === "select-edit" && this.#router.mode === "select") {
+    if (
+      previousSize.x !== this.textureSize.x ||
+      previousSize.y !== this.textureSize.y
+    ) {
+      this.#tools.select.discard();
+    }
+    else if (entry.action === "select-edit" && this.#router.mode === "select") {
       this.#tools.select.syncSelectionAfterHistory(
         entry.oldRect,
         entry.oldMask
@@ -438,6 +474,7 @@ export class PixelArtCanvas {
   }
 
   redo(): boolean {
+    const previousSize = this.textureSize;
     const entry = this.#edits.runHistoryReplay(() => this.#doc.history.redo());
     if (!entry) {
       return false;
@@ -445,6 +482,12 @@ export class PixelArtCanvas {
 
     this.#refreshAfterHistoryApply();
     if (
+      previousSize.x !== this.textureSize.x ||
+      previousSize.y !== this.textureSize.y
+    ) {
+      this.#tools.select.discard();
+    }
+    else if (
       entry.action === "select-edit" &&
       this.#router.mode === "select"
     ) {
@@ -509,6 +552,12 @@ export class PixelArtCanvas {
     event: PixelBufferHookEvent
   ): void {
     this.#edits.applyRemoteCommand(event);
+    if (
+      event.action === "resized" ||
+      event.action === "texture-replaced"
+    ) {
+      this.#tools.select.discard();
+    }
   }
 
   loadSnapshot(
@@ -517,6 +566,133 @@ export class PixelArtCanvas {
     uvRegions: (UVRegion | UVRegionData)[] = []
   ): void {
     this.#edits.loadSnapshot(size, pixels, uvRegions);
+    this.#tools.select.discard();
+  }
+
+  async copySelection(): Promise<ClipboardOperationResult> {
+    if (this.#clipboardPending) {
+      return this.#reportClipboardResult({
+        operation: "copy",
+        code: "busy"
+      });
+    }
+
+    const snapshot = this.#tools.select.exportSelection();
+    if (!snapshot) {
+      return this.#reportClipboardResult({
+        operation: "copy",
+        code: "no-selection"
+      });
+    }
+
+    this.#clipboardPending = true;
+    try {
+      return this.#reportClipboardResult(
+        await this.#clipboard.copy(snapshot)
+      );
+    }
+    finally {
+      this.#clipboardPending = false;
+    }
+  }
+
+  /**
+   * Pastes as a floating selection centred on the cursor, or on the visible
+   * view when the pointer is off the texture. The selection stays movable
+   * until it is deselected, which deposits it.
+   */
+  async pasteClipboard(): Promise<ClipboardOperationResult> {
+    if (this.#clipboardPending) {
+      return this.#reportClipboardResult({
+        operation: "paste",
+        code: "busy"
+      });
+    }
+
+    this.#clipboardPending = true;
+    try {
+      const { result, selection } = await this.#clipboard.read(
+        this.maxTextureSize
+      );
+      if (result.code !== "pasted" || !selection) {
+        return this.#reportClipboardResult(result);
+      }
+
+      return this.#reportClipboardResult(
+        this.#floatPastedSelection(selection, result)
+      );
+    }
+    finally {
+      this.#clipboardPending = false;
+    }
+  }
+
+  /**
+   * Placement belongs here rather than in the clipboard: only the canvas knows
+   * the cursor, the camera, and the texture bounds.
+   */
+  #floatPastedSelection(
+    selection: DecodedSelection,
+    result: ClipboardOperationResult
+  ): ClipboardOperationResult {
+    const rect = placeSelection(selection, {
+      cursor: this.#router.textureCursor,
+      viewCenter: this.#view.viewport.visibleCenter(),
+      bounds: this.textureSize
+    });
+
+    const previousMode = this.mode;
+    this.mode = "select";
+
+    let imported: boolean;
+    try {
+      imported = this.#tools.select.importSelection({
+        rect,
+        pixels: selection.pixels,
+        mask: selection.mask
+      });
+    }
+    catch {
+      imported = false;
+    }
+    if (imported) {
+      return result;
+    }
+
+    // Never leave a half-applied selection behind: the overlay and the select
+    // state would disagree, and the toolbar would never learn one exists.
+    this.#tools.select.discard();
+    this.mode = previousMode;
+
+    return {
+      operation: "paste",
+      code: "paste-failed",
+      source: result.source
+    };
+  }
+
+  #handleCopyShortcut(): boolean {
+    if (!this.#tools.select.hasSelection) {
+      return false;
+    }
+
+    void this.copySelection();
+
+    return true;
+  }
+
+  #handlePasteShortcut(): boolean {
+    void this.pasteClipboard();
+
+    return true;
+  }
+
+  #reportClipboardResult(
+    result: ClipboardOperationResult
+  ): ClipboardOperationResult {
+    this.#onClipboardResult?.(result);
+
+    return result;
   }
 
   #refreshAfterHistoryApply(): void {
@@ -525,4 +701,22 @@ export class PixelArtCanvas {
     );
     this.#view.drawFrame();
   }
+}
+
+function resolveClipboardAdapter(
+  adapter: ClipboardAdapter | null | undefined
+): ClipboardAdapter | null {
+  if (adapter !== undefined) {
+    return adapter;
+  }
+  if (
+    typeof navigator !== "undefined" &&
+    navigator.clipboard &&
+    typeof navigator.clipboard.read === "function" &&
+    typeof navigator.clipboard.write === "function"
+  ) {
+    return navigator.clipboard;
+  }
+
+  return null;
 }

@@ -187,6 +187,10 @@ export class PixelBuffer implements DefaultPixelBuffer {
     };
   }
 
+  get maxSize(): number {
+    return this.#maxSize;
+  }
+
   resize(
     size: Vec2
   ): void {

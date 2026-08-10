@@ -1,29 +1,19 @@
 // Import Internal Dependencies
+import { pointInRect } from "../utils/math.ts";
 import type {
   RGBA,
   SelectionRect,
   Vec2
 } from "../types.ts";
 import type { DefaultPixelBuffer } from "../buffer/types.ts";
+import type { SelectionSnapshot } from "../clipboard/types.ts";
 
 export type SelectState = "idle" | "creating" | "selected" | "moving";
-
-export interface ClipboardSnapshot {
-  rect: SelectionRect;
-  pixels: RGBA[];
-  mask: boolean[];
-}
 
 export interface MoveResult {
   source: SelectionRect;
   dest: SelectionRect;
   skipErase: boolean;
-}
-
-export interface PasteResult {
-  rect: SelectionRect;
-  pixels: RGBA[];
-  mask: boolean[];
 }
 
 const kTransparent: RGBA = { r: 0, g: 0, b: 0, a: 0 };
@@ -37,8 +27,7 @@ export class Select {
   #moveOrigin: Vec2 | null = null;
   #moveBaseRect: SelectionRect | null = null;
   #liveRect: SelectionRect | null = null;
-  #clipboard: ClipboardSnapshot | null = null;
-  #skipNextErase = false;
+  #floating = false;
 
   get state(): SelectState {
     return this.#state;
@@ -56,12 +45,14 @@ export class Select {
     return this.#mask;
   }
 
-  get hasClipboard(): boolean {
-    return this.#clipboard !== null;
-  }
-
-  get willSkipErase(): boolean {
-    return this.#skipNextErase;
+  /**
+   * Whether the content lives only in the floating layer, with no footprint
+   * of its own in the buffer yet (a paste). Such a selection must not erase
+   * a source when it moves, and must be deposited rather than dropped when
+   * it is deselected.
+   */
+  get floating(): boolean {
+    return this.#floating;
   }
 
   startCreate(
@@ -70,7 +61,7 @@ export class Select {
     this.#state = "creating";
     this.#createStart = position;
     this.#rect = Select.normalizeRect(position, position);
-    this.#skipNextErase = false;
+    this.#floating = false;
 
     return this.#rect;
   }
@@ -122,25 +113,29 @@ export class Select {
       snapshot,
       mask
     );
-    this.#skipNextErase = false;
+    this.#floating = false;
   }
 
+  /**
+   * Masked-out cells are holes, not grab handles: a click through one starts
+   * a new selection instead of dragging the shape it belongs to.
+   */
   hitTest(
     pos: Vec2
   ): boolean {
     if (
       this.#state !== "selected" ||
-      !this.#rect
+      !this.#rect ||
+      !this.#mask ||
+      !pointInRect(pos, this.#rect)
     ) {
       return false;
     }
 
-    const r = this.#rect;
+    const rect = this.#rect;
+    const index = ((pos.y - rect.y) * rect.width) + (pos.x - rect.x);
 
-    return pos.x >= r.x &&
-      pos.x < r.x + r.width &&
-      pos.y >= r.y &&
-      pos.y < r.y + r.height;
+    return this.#mask[index] === true;
   }
 
   startMove(
@@ -198,15 +193,17 @@ export class Select {
     this.#moveBaseRect = null;
     this.#liveRect = null;
 
+    // The move writes the content into the buffer, so it stops floating.
+    const skipErase = this.#floating;
+    this.#floating = false;
+
     if (
       source.x === dest.x &&
-      source.y === dest.y
+      source.y === dest.y &&
+      !skipErase
     ) {
       return null;
     }
-
-    const skipErase = this.#skipNextErase;
-    this.#skipNextErase = false;
 
     return {
       source,
@@ -225,6 +222,8 @@ export class Select {
       snapshot,
       mask
     );
+    // History replay restores buffer-backed content.
+    this.#floating = false;
   }
 
   clear(): void {
@@ -236,7 +235,16 @@ export class Select {
     this.#moveOrigin = null;
     this.#moveBaseRect = null;
     this.#liveRect = null;
-    this.#skipNextErase = false;
+    this.#floating = false;
+  }
+
+  /**
+   * Clears the floating flag without clearing the selection. Keeps `floating`
+   * honest for anything that re-enters through the deposit's own commit
+   * callbacks, before the deselect that follows resets the whole state.
+   */
+  markDeposited(): void {
+    this.#floating = false;
   }
 
   markErased(
@@ -253,46 +261,35 @@ export class Select {
     );
   }
 
-  copy(): void {
+  exportSnapshot(): SelectionSnapshot | null {
     if (!this.#rect || !this.#snapshot || !this.#mask) {
-      return;
+      return null;
     }
 
-    this.#clipboard = {
+    return {
       rect: {
         ...this.#rect
       },
-      pixels: [
-        ...this.#snapshot
-      ],
+      pixels: this.#snapshot.map((pixel) => {
+        return { ...pixel };
+      }),
       mask: [
         ...this.#mask
       ]
     };
   }
 
-  paste(): PasteResult | null {
-    if (!this.#clipboard) {
-      return null;
-    }
-
-    this.#rect = {
-      ...this.#clipboard.rect
-    };
-    this.#snapshot = [
-      ...this.#clipboard.pixels
-    ];
-    this.#mask = [
-      ...this.#clipboard.mask
-    ];
-    this.#state = "selected";
-    this.#skipNextErase = true;
-
-    return {
-      rect: this.#rect,
-      pixels: this.#snapshot,
-      mask: this.#mask
-    };
+  importSnapshot(
+    snapshot: SelectionSnapshot
+  ): void {
+    this.#enterSelected(
+      { ...snapshot.rect },
+      snapshot.pixels.map((pixel) => {
+        return { ...pixel };
+      }),
+      [...snapshot.mask]
+    );
+    this.#floating = true;
   }
 
   rotate(): { oldRect: SelectionRect; newRect: SelectionRect; } | null {

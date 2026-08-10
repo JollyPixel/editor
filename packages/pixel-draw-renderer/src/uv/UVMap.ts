@@ -236,10 +236,22 @@ export class UVMap extends Emitter<
     return region;
   }
 
+  /**
+   * Recreates a region from serialized data. An id already present is an
+   * update, not a creation, and reports `region-state-changed`: re-emitting
+   * `region-created` would have listeners build a second view of a region
+   * they already track, leaving the first one orphaned.
+   */
   restore(
     region: UVRegion | UVRegionData
   ): UVRegion {
     const stored = UVRegion.from(region);
+    if (this.#regions.has(stored.id)) {
+      this.restoreState(stored);
+
+      return this.#regions.get(stored.id) ?? stored;
+    }
+
     this.#regions.set(stored.id, stored);
 
     this.emit("region-created", {

@@ -94,6 +94,35 @@ export async function readPixel(
   }, { x, y });
 }
 
+/**
+ * Read one visible pixel from the composited renderer canvas.
+ */
+export async function readRenderedPixel(
+  page: Page,
+  x: number,
+  y: number
+): Promise<PixelRGBA> {
+  return page.evaluate(({ x, y }) => {
+    const panel = document.querySelector<PixelDrawPanel>("pixel-draw-panel");
+    const canvasManager = panel!.canvasManager!;
+    const canvas = canvasManager.canvas();
+    const bounds = canvas.getBoundingClientRect();
+    const { camera, zoom } = canvasManager.viewport;
+    const scaleX = canvas.width / bounds.width;
+    const scaleY = canvas.height / bounds.height;
+    const canvasX = Math.floor(
+      (camera.x + ((x + 0.5) * zoom.value)) * scaleX
+    );
+    const canvasY = Math.floor(
+      (camera.y + ((y + 0.5) * zoom.value)) * scaleY
+    );
+    const context = canvas.getContext("2d")!;
+    const [r, g, b, a] = context.getImageData(canvasX, canvasY, 1, 1).data;
+
+    return { r, g, b, a };
+  }, { x, y });
+}
+
 type MouseButton = "left" | "right" | "middle";
 
 /**

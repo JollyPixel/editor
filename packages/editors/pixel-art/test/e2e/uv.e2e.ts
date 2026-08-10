@@ -244,3 +244,56 @@ test("collapsing keeps the edited face, and undo brings the discarded ones back"
     { x: 0, y: 0 }
   );
 });
+
+async function previewMeshCount(
+  page: Page
+): Promise<number> {
+  return page.evaluate(() => window.__uvPreviewMeshCount?.() ?? -1);
+}
+
+test("each region owns exactly one preview mesh", async({ page }) => {
+  // The beforeEach hook already created one cube.
+  expect(await previewMeshCount(page)).toBe(1);
+
+  await page.getByRole("button", { name: "Create cube", exact: true }).click();
+  expect(await previewMeshCount(page)).toBe(2);
+
+  await page.getByRole("button", { name: "Create ramp", exact: true }).click();
+  expect(await previewMeshCount(page)).toBe(3);
+});
+
+test("a re-sent create for a known region does not add a second preview mesh", async({ page }) => {
+  // Replays the command a peer echo or a resync delivers. UVMap.restore()
+  // used to emit region-created for an id it already held, so the gallery
+  // built a second mesh and orphaned the first in the scene.
+  const regionId = await page.evaluate(`(() => {
+    const region = Array.from((${uvPanel.toString()})().uv.regions)[0];
+
+    return region.id;
+  })()`) as string;
+
+  const created = await page.evaluate(`(() => {
+    const canvas = (${uvPanel.toString()})();
+    const region = canvas.uv.get(${JSON.stringify(regionId)});
+    let creations = 0;
+    const count = () => {
+      creations++;
+    };
+    canvas.uv.on("region-created", count);
+    canvas.applyRemoteCommand({
+      action: "uv-region-created",
+      metadata: { region: region.toJSON() }
+    });
+    canvas.uv.off("region-created", count);
+
+    return creations;
+  })()`) as number;
+
+  // The gallery also guards against a duplicate id, so assert the root cause
+  // too: without it the leak returns for any other region-created listener.
+  expect(created).toBe(0);
+  expect(await previewMeshCount(page)).toBe(1);
+  expect(await page.evaluate(
+    `Array.from((${uvPanel.toString()})().uv.regions).length`
+  )).toBe(1);
+});

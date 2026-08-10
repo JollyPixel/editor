@@ -193,6 +193,29 @@ export class Viewport extends Emitter<
     this.emit("changed");
   }
 
+  /**
+   * Centre of the visible canvas in texture space, clamped to the texture.
+   * The anchor for actions with no cursor of their own, such as a paste
+   * triggered from a toolbar.
+   */
+  visibleCenter(): Vec2 {
+    const size = this.#texture.size;
+    const zoom = this.zoom.value;
+
+    return {
+      x: clamp(
+        Math.floor((this.#canvasWidth / 2 - this.#camera.x) / zoom),
+        0,
+        Math.max(0, size.x - 1)
+      ),
+      y: clamp(
+        Math.floor((this.#canvasHeight / 2 - this.#camera.y) / zoom),
+        0,
+        Math.max(0, size.y - 1)
+      )
+    };
+  }
+
   mouseCanvasPosition(
     mx: number,
     my: number,

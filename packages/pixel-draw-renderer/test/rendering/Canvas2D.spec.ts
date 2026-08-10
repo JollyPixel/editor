@@ -19,6 +19,7 @@ describe("createCanvas2D", () => {
 
     assert.strictEqual(canvas.width, 2);
     assert.strictEqual(canvas.height, 3);
+    assert.strictEqual(context.imageSmoothingEnabled, false);
     assert.strictEqual(context, canvas.getContext("2d"));
   });
 

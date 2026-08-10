@@ -38,6 +38,15 @@ describe("CanvasBuffer", () => {
       assert.strictEqual(canvas.width, 16);
       assert.strictEqual(canvas.height, 16);
     });
+
+    test("exposes the validated maximum size", () => {
+      const buf = new CanvasBuffer({
+        size: { x: 4, y: 4 },
+        maxSize: kTestMaxSize
+      });
+
+      assert.strictEqual(buf.maxSize, kTestMaxSize);
+    });
   });
 
   describe("drawPixels / samplePixel", () => {
@@ -264,6 +273,24 @@ describe("CanvasBuffer", () => {
         { x: 10, y: 5 }
       );
       assert.strictEqual(buf.canvas(), externalCanvas);
+    });
+
+    test("rejects an oversized source before replacing working state", () => {
+      const buf = new CanvasBuffer({
+        size: { x: 4, y: 4 },
+        maxSize: kTestMaxSize
+      });
+      const originalCanvas = buf.canvas();
+      const oversized = document.createElement("canvas");
+      oversized.width = kTestMaxSize + 1;
+      oversized.height = 1;
+
+      assert.throws(
+        () => buf.loadTexture(oversized),
+        RangeError
+      );
+      assert.strictEqual(buf.canvas(), originalCanvas);
+      assert.deepStrictEqual(buf.size(), { x: 4, y: 4 });
     });
   });
 
