@@ -21,10 +21,15 @@ export interface BrushControllerOptions {
 
 export interface BrushTool {
   /**
-   * Whether the next primary action picks a color instead of painting.
+   * Whether the next primary or secondary action picks a color instead of
+   * painting.
    */
   pickArmed: boolean;
-  pick(x: number, y: number): RGBA | null;
+  pick(
+    x: number,
+    y: number,
+    slot?: BrushColorSlot
+  ): RGBA | null;
 }
 
 export class BrushController implements BrushTool {
@@ -66,7 +71,8 @@ export class BrushController implements BrushTool {
 
   pick(
     tx: number,
-    ty: number
+    ty: number,
+    slot: BrushColorSlot = "primary"
   ): RGBA | null {
     const size = this.#canvasBuffer.size();
     if (tx < 0 || ty < 0 || tx >= size.x || ty >= size.y) {
@@ -76,11 +82,11 @@ export class BrushController implements BrushTool {
     const [r, g, b, a] = this.#canvasBuffer.samplePixel(tx, ty);
     const hex = rgbToHex(r, g, b);
     const opacity = a / 255;
-    this.#brush.primary.set(hex, opacity);
+    this.#brush[slot].set(hex, opacity);
     this.#pickArmed = false;
 
     const event = new CustomEvent("colorpicked", {
-      detail: { hex, opacity },
+      detail: { hex, opacity, slot },
       bubbles: true,
       composed: true
     });

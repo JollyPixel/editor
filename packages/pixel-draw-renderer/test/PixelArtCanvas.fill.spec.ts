@@ -400,6 +400,49 @@ describe("PixelArtCanvas — fill mode", () => {
       manager.destroy();
     });
 
+    test("an armed right-click samples into the secondary color without drawing", () => {
+      const { manager, canvas } = makeManager();
+
+      let detail: any = null;
+      canvas.addEventListener("colorpicked", (event: Event) => {
+        detail = (event as CustomEvent<{
+          hex: string;
+          opacity: number;
+          slot: "primary" | "secondary";
+        }>).detail;
+      });
+
+      manager.tools.brush.pickArmed = true;
+      canvas.dispatchEvent(new MouseEvent("mousedown", {
+        button: 2,
+        buttons: 2,
+        clientX: 100,
+        clientY: 100,
+        bubbles: true
+      }));
+      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+
+      assert.deepStrictEqual(detail, {
+        hex: "#123456",
+        opacity: 1,
+        slot: "secondary"
+      });
+      assert.strictEqual(
+        manager.brush.primary.asString("hex"),
+        "#000000"
+      );
+      assert.strictEqual(
+        manager.brush.secondary.asString("hex"),
+        "#123456"
+      );
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 4, y: 4 }, 8),
+        [0x12, 0x34, 0x56, 255]
+      );
+      assert.ok(!manager.tools.brush.pickArmed);
+      manager.destroy();
+    });
+
     test("an armed click outside the texture bounds does not pick and stays armed", () => {
       const { manager, canvas } = makeManager();
 
@@ -426,7 +469,7 @@ describe("PixelArtCanvas — fill mode", () => {
       manager.destroy();
     });
 
-    test("right-click no longer picks a color", () => {
+    test("a contextmenu event alone does not pick a color", () => {
       const { manager, canvas } = makeManager();
 
       let fired = false;

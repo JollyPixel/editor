@@ -98,6 +98,12 @@ export class PaintMode extends InteractionMode {
     pos: Vec2,
     ctrlKey: boolean
   ): boolean {
+    if (this.#brush.pickArmed) {
+      this.#brush.pick(pos.x, pos.y, "secondary");
+
+      return false;
+    }
+
     if (ctrlKey) {
       this.#brush.pick(pos.x, pos.y);
 
