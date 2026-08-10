@@ -12,71 +12,115 @@ import { mockContextOf } from "../fixtures/canvas.ts";
 function canvasOf(
   label: PeerFrustumLabel
 ): HTMLCanvasElement {
-  return (label.material.map as THREE.CanvasTexture).image as HTMLCanvasElement;
+  const { map } = label.material;
+  assert.ok(map instanceof THREE.CanvasTexture);
+
+  return map.image;
 }
 
 describe("constructor", () => {
   test("is a THREE.Sprite", () => {
-    const label = new PeerFrustumLabel({ name: "Alice", color: "#43aa8b" });
+    const label = new PeerFrustumLabel({
+      displayName: "Alice",
+      color: "#43aa8b"
+    });
 
     assert.ok(label instanceof THREE.Sprite);
   });
 
   test("draws the name once on creation", () => {
-    const label = new PeerFrustumLabel({ name: "Alice", color: "#43aa8b" });
+    const label = new PeerFrustumLabel({
+      displayName: "Alice",
+      color: "#43aa8b"
+    });
 
-    assert.strictEqual(mockContextOf(canvasOf(label)).lastFillText, "Alice");
+    assert.strictEqual(
+      mockContextOf(canvasOf(label)).lastFillText,
+      "Alice"
+    );
   });
 
   test("showNameBox defaults to false: no background box is drawn", () => {
-    const label = new PeerFrustumLabel({ name: "Grace", color: "#43aa8b" });
+    const label = new PeerFrustumLabel({
+      displayName: "Grace",
+      color: "#43aa8b"
+    });
 
-    assert.strictEqual(mockContextOf(canvasOf(label)).roundRectCallCount, 0);
+    assert.strictEqual(
+      mockContextOf(canvasOf(label)).roundRectCallCount,
+      0
+    );
   });
 
   test("showNameBox: true draws a background box", () => {
-    const label = new PeerFrustumLabel({ name: "Heidi", color: "#43aa8b", showNameBox: true });
+    const label = new PeerFrustumLabel({
+      displayName: "Heidi",
+      color: "#43aa8b",
+      showNameBox: true
+    });
 
-    assert.strictEqual(mockContextOf(canvasOf(label)).roundRectCallCount, 1);
+    assert.strictEqual(
+      mockContextOf(canvasOf(label)).roundRectCallCount,
+      1
+    );
   });
 });
 
-describe("setName", () => {
+describe("displayName", () => {
   test("redraws with the new name", () => {
-    const label = new PeerFrustumLabel({ name: "Dave", color: "#43aa8b" });
+    const label = new PeerFrustumLabel({
+      displayName: "Dave",
+      color: "#43aa8b"
+    });
 
-    label.setName("Erin");
+    label.displayName = "Erin";
 
-    assert.strictEqual(mockContextOf(canvasOf(label)).lastFillText, "Erin");
+    assert.strictEqual(
+      mockContextOf(canvasOf(label)).lastFillText,
+      "Erin"
+    );
   });
 });
 
-describe("setColor", () => {
+describe("color", () => {
   test("redraws the label", () => {
-    const label = new PeerFrustumLabel({ name: "Bob", color: "#000000" });
+    const label = new PeerFrustumLabel({
+      displayName: "Bob",
+      color: "#000000"
+    });
     const context = mockContextOf(canvasOf(label));
     const callsBefore = context.fillTextCallCount;
 
-    label.setColor("#00ff00");
+    label.color = "#00ff00";
 
     assert.ok(context.fillTextCallCount > callsBefore);
   });
 });
 
-describe("setShowNameBox", () => {
+describe("showNameBox", () => {
   test("toggles the background box", () => {
-    const label = new PeerFrustumLabel({ name: "Ivan", color: "#43aa8b" });
+    const label = new PeerFrustumLabel({
+      displayName: "Ivan",
+      color: "#43aa8b"
+    });
 
-    label.setShowNameBox(true);
+    label.showNameBox = true;
 
-    assert.strictEqual(mockContextOf(canvasOf(label)).roundRectCallCount, 1);
+    assert.strictEqual(
+      mockContextOf(canvasOf(label)).roundRectCallCount,
+      1
+    );
   });
 });
 
 describe("dispose", () => {
   test("disposes the texture and material", () => {
-    const label = new PeerFrustumLabel({ name: "Frank", color: "#43aa8b" });
-    const texture = label.material.map as THREE.CanvasTexture;
+    const label = new PeerFrustumLabel({
+      displayName: "Frank",
+      color: "#43aa8b"
+    });
+    const { map: texture } = label.material;
+    assert.ok(texture instanceof THREE.CanvasTexture);
 
     let textureDisposed = false;
     let materialDisposed = false;

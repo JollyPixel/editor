@@ -83,3 +83,17 @@ server.register({
 One persistent worker per registration, not a pool: calls to it are effectively serialized, so a slow handler delays only the *next* call to that same extension, never the main thread or any other room. Per-client ordering (see [Server](./Server.md)) still applies on top of that.
 
 Call `server.close()` before the process exits if any worker-mode extension was registered.
+
+## Presence-only rooms
+
+`ServerRoom` requires an `Extension` even when a room only needs the base join/presence protocol and never sends a `"message"` envelope. `PresenceOnlyExtension` covers that case without a custom subclass:
+
+```ts
+server.register(new PresenceOnlyExtension("voxel-map:world-1"));
+```
+
+Its `name` defaults to the shared constant `"presence-only"` rather than `id`, so one rights rule (e.g. `"presence-only.$join"`) covers every presence-only room at once. Pass a second argument to opt a room into its own rights namespace instead:
+
+```ts
+new PresenceOnlyExtension("voxel-map:world-1", "voxel-map:world-1");
+```

@@ -12,7 +12,10 @@ import { mockContextOf } from "../fixtures/canvas.ts";
 function canvasOf(
   label: PeerFrustumLabel
 ): HTMLCanvasElement {
-  return (label.material.map as THREE.CanvasTexture).image as HTMLCanvasElement;
+  const { map } = label.material;
+  assert.ok(map instanceof THREE.CanvasTexture);
+
+  return map.image;
 }
 
 describe("constructor", () => {
@@ -96,7 +99,7 @@ describe("constructor", () => {
   });
 
   test("creates a nameplate label when a name is provided, added as a child", () => {
-    const frustum = new PeerFrustum({ name: "Alice" });
+    const frustum = new PeerFrustum({ displayName: "Alice" });
 
     assert.ok(frustum.label instanceof PeerFrustumLabel);
     assert.strictEqual(frustum.children.length, 1);
@@ -104,21 +107,25 @@ describe("constructor", () => {
   });
 });
 
-describe("setColor", () => {
+describe("color", () => {
   test("updates the wireframe material color", () => {
     const frustum = new PeerFrustum({ color: "#000000" });
-    frustum.setColor("#ff0000");
+    frustum.color = "#ff0000";
 
-    const material = frustum.material as THREE.LineBasicMaterial;
-    assert.strictEqual(`#${material.color.getHexString()}`, "#ff0000");
+    assert.strictEqual(
+      `#${frustum.material.color.getHexString()}`,
+      "#ff0000"
+    );
   });
 
   test("forwards the new color to the existing label", () => {
-    const frustum = new PeerFrustum({ name: "Bob" });
-    const context = mockContextOf(canvasOf(frustum.label as PeerFrustumLabel));
+    const frustum = new PeerFrustum({ displayName: "Bob" });
+    const { label } = frustum;
+    assert.ok(label instanceof PeerFrustumLabel);
+    const context = mockContextOf(canvasOf(label));
     const callsBefore = context.fillTextCallCount;
 
-    frustum.setColor("#00ff00");
+    frustum.color = "#00ff00";
 
     assert.ok(context.fillTextCallCount > callsBefore);
   });
@@ -126,45 +133,129 @@ describe("setColor", () => {
   test("does nothing to a label when none exists", () => {
     const frustum = new PeerFrustum();
 
-    assert.doesNotThrow(() => frustum.setColor("#ff0000"));
+    assert.doesNotThrow(() => {
+      frustum.color = "#ff0000";
+    });
   });
 });
 
-describe("setName", () => {
+describe("displayName", () => {
   test("creates a label lazily if none exists yet", () => {
     const frustum = new PeerFrustum();
     assert.strictEqual(frustum.label, null);
 
-    frustum.setName("Carol");
+    frustum.displayName = "Carol";
 
     assert.ok(frustum.label instanceof PeerFrustumLabel);
     assert.strictEqual(frustum.children.length, 1);
   });
 
   test("updates an existing label instead of replacing it", () => {
-    const frustum = new PeerFrustum({ name: "Dave" });
+    const frustum = new PeerFrustum({ displayName: "Dave" });
     const label = frustum.label;
 
-    frustum.setName("Erin");
+    frustum.displayName = "Erin";
 
     assert.strictEqual(frustum.label, label);
     assert.strictEqual(frustum.children.length, 1);
   });
 });
 
-describe("setShowNameBox", () => {
-  test("forwards to an existing label without throwing when none exists", () => {
+describe("showNameBox", () => {
+  test("does not throw when no label exists", () => {
     const frustum = new PeerFrustum();
 
-    assert.doesNotThrow(() => frustum.setShowNameBox(true));
+    assert.doesNotThrow(() => {
+      frustum.showNameBox = true;
+    });
+  });
+
+  test("applies the retained value when a label is created later", () => {
+    const frustum = new PeerFrustum();
+    frustum.showNameBox = true;
+
+    frustum.displayName = "Alice";
+
+    const { label } = frustum;
+    assert.ok(label instanceof PeerFrustumLabel);
+    const context = mockContextOf(canvasOf(label));
+    assert.strictEqual(context.roundRectCallCount, 1);
+  });
+});
+
+describe("PeerFrustum.Defaults", () => {
+  test("new PeerFrustum() falls back to a mutated PeerFrustum.Defaults value", () => {
+    const original = PeerFrustum.Defaults.color;
+    try {
+      PeerFrustum.Defaults.color = "#ff00ff";
+      const frustum = new PeerFrustum();
+
+      assert.strictEqual(
+        `#${frustum.material.color.getHexString()}`,
+        "#ff00ff"
+      );
+    }
+    finally {
+      PeerFrustum.Defaults.color = original;
+    }
+  });
+
+  test("mutating PeerFrustum.Defaults does not affect already-constructed instances", () => {
+    const original = PeerFrustum.Defaults.color;
+    try {
+      const frustum = new PeerFrustum();
+      PeerFrustum.Defaults.color = "#ff00ff";
+
+      assert.strictEqual(
+        `#${frustum.material.color.getHexString()}`,
+        "#43aa8b"
+      );
+    }
+    finally {
+      PeerFrustum.Defaults.color = original;
+    }
+  });
+
+  test("constructor options still override a mutated PeerFrustum.Defaults value", () => {
+    const original = PeerFrustum.Defaults.color;
+    try {
+      PeerFrustum.Defaults.color = "#ff00ff";
+      const frustum = new PeerFrustum({ color: "#00ff00" });
+
+      assert.strictEqual(
+        `#${frustum.material.color.getHexString()}`,
+        "#00ff00"
+      );
+    }
+    finally {
+      PeerFrustum.Defaults.color = original;
+    }
+  });
+
+  test("PeerFrustum.Defaults.nearRatio drives the derived near when near is omitted", () => {
+    const original = PeerFrustum.Defaults.nearRatio;
+    try {
+      PeerFrustum.Defaults.nearRatio = 0.5;
+      const depth = 3;
+      const frustum = new PeerFrustum({ depth });
+      const positions = frustum.geometry.getAttribute("position");
+      const nearTopLeftZ = positions.getZ(0);
+
+      assert.ok(Math.abs(nearTopLeftZ - -(depth * 0.5)) < 1e-6);
+    }
+    finally {
+      PeerFrustum.Defaults.nearRatio = original;
+    }
   });
 });
 
 describe("dispose", () => {
   test("disposes geometry, material and the label's texture/material", () => {
-    const frustum = new PeerFrustum({ name: "Frank" });
-    const label = frustum.label as PeerFrustumLabel;
-    const texture = label.material.map as THREE.CanvasTexture;
+    const frustum = new PeerFrustum({ displayName: "Frank" });
+    const { label } = frustum;
+    assert.ok(label instanceof PeerFrustumLabel);
+    const { map: texture } = label.material;
+    assert.ok(texture instanceof THREE.CanvasTexture);
 
     let geometryDisposed = false;
     let materialDisposed = false;
@@ -174,7 +265,7 @@ describe("dispose", () => {
     frustum.geometry.addEventListener("dispose", () => {
       geometryDisposed = true;
     });
-    (frustum.material as THREE.Material).addEventListener("dispose", () => {
+    frustum.material.addEventListener("dispose", () => {
       materialDisposed = true;
     });
     texture.addEventListener("dispose", () => {

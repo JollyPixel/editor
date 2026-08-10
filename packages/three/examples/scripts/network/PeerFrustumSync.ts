@@ -4,7 +4,10 @@ import type * as THREE from "three";
 
 // Import Internal Dependencies
 import { ColorPalette } from "./ColorPalette.ts";
-import { PeerFrustum, type PeerFrustumOptions } from "../../../src/index.ts";
+import {
+  PeerFrustum,
+  type PeerFrustumOptions
+} from "../../../src/index.ts";
 import {
   isPeerFrustumPresence,
   peerFrustumPresenceEqual,
@@ -27,9 +30,9 @@ export interface PeerFrustumSyncOptions<ClientMessage = unknown, ServerMessage =
   getLabel?: (identity: network.PeerMetadata) => string | undefined;
   /**
    * Shared visual options applied to every remote peer's frustum.
-   * `color` and `name` are driven by presence/identity instead and ignored here.
+   * `color` and `displayName` are driven by presence/identity instead and ignored here.
    */
-  frustum?: Omit<PeerFrustumOptions, "color" | "name">;
+  frustum?: Omit<PeerFrustumOptions, "color" | "displayName">;
 }
 
 function defaultGetLabel(
@@ -42,17 +45,12 @@ function defaultGetLabel(
  * Broadcasts the local entity/player's position and orientation over a
  * `network.Room`'s presence channel and mirrors remote peers' poses onto
  * `PeerFrustum` instances added to `parent`.
- *
- * Recipe, not a package export: kept in `examples/` so `@jolly-pixel/three`
- * itself stays dependency-free on `@jolly-pixel/network` — copy this file
- * into your own project and adapt it (e.g. a different transport, or reading
- * pose from an ECS component instead of an `Object3D`).
  */
 export class PeerFrustumSync<ClientMessage = unknown, ServerMessage = unknown> {
   #room: network.Room<ClientMessage, ServerMessage>;
   #parent: THREE.Object3D;
   #getLabel: (identity: network.PeerMetadata) => string | undefined;
-  #frustumOptions: Omit<PeerFrustumOptions, "color" | "name">;
+  #frustumOptions: Omit<PeerFrustumOptions, "color" | "displayName">;
   #palette = new ColorPalette();
   #peers = new Map<string, PeerFrustum>();
   #source: THREE.Object3D | undefined;
@@ -234,7 +232,7 @@ export class PeerFrustumSync<ClientMessage = unknown, ServerMessage = unknown> {
     const frustum = new PeerFrustum({
       ...this.#frustumOptions,
       color: this.#palette.forKey(clientId),
-      name: this.#getLabel(identity)
+      displayName: this.#getLabel(identity)
     });
     this.#parent.add(frustum);
     this.#peers.set(clientId, frustum);
