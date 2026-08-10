@@ -95,11 +95,20 @@ export function createOrbitCamera(
   return { camera, controls };
 }
 
+export interface UpdatableControls {
+  update(): void;
+}
+
 export interface StartLoopOptions {
   renderer: THREE.WebGPURenderer;
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
-  controls: OrbitControls;
+  /**
+   * Anything exposing a parameterless `update()`, called once per frame
+   * before rendering — `OrbitControls` and `createFreeFlyCamera`'s
+   * `controls` both satisfy this.
+   */
+  controls: UpdatableControls;
   onFrame?: () => void;
   onAfterRender?: () => void;
 }

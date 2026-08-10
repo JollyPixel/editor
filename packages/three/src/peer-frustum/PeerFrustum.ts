@@ -1,12 +1,8 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 
-// CONSTANTS
-const kLabelCanvasWidth = 384;
-const kLabelCanvasHeight = 96;
-const kLabelWorldWidth = 1.6;
-const kLabelWorldHeight = kLabelWorldWidth * (kLabelCanvasHeight / kLabelCanvasWidth);
-const kLabelOffsetY = 0.45;
+// Import Internal Dependencies
+import { PeerFrustumLabel } from "./PeerFrustumLabel.ts";
 
 export interface PeerFrustumOptions {
   /**
@@ -58,10 +54,10 @@ export interface PeerFrustumOptions {
 }
 
 interface FrustumCorners {
-  topLeft: THREE.Vector3;
-  topRight: THREE.Vector3;
-  bottomRight: THREE.Vector3;
-  bottomLeft: THREE.Vector3;
+  readonly topLeft: THREE.Vector3;
+  readonly topRight: THREE.Vector3;
+  readonly bottomRight: THREE.Vector3;
+  readonly bottomLeft: THREE.Vector3;
 }
 
 /**
@@ -75,12 +71,15 @@ interface FrustumCorners {
  * transform (`.position`, `.lookAt()`, ...), so N peers stay cheap — no
  * per-peer projection-matrix work.
  */
-export class PeerFrustum extends THREE.LineSegments {
+export class PeerFrustum extends THREE.LineSegments<THREE.BufferGeometry, THREE.LineBasicMaterial> {
+  /**
+   * The peer's floating nameplate, created lazily the first time a `name` is
+   * provided (via the constructor or `setName`). `null` until then.
+   */
+  label: PeerFrustumLabel | null = null;
+
   #color: THREE.ColorRepresentation;
-  #name: string | undefined;
   #showNameBox: boolean;
-  #label: THREE.Sprite | null = null;
-  #labelCanvas: HTMLCanvasElement | null = null;
 
   constructor(
     options: PeerFrustumOptions = {}
@@ -108,133 +107,44 @@ export class PeerFrustum extends THREE.LineSegments {
     );
 
     this.#color = color;
-    this.#name = name;
     this.#showNameBox = showNameBox;
     if (name !== undefined) {
-      this.#createLabel();
+      this.label = new PeerFrustumLabel({ name, color, showNameBox });
+      this.add(this.label);
     }
   }
 
   setColor(
     color: THREE.ColorRepresentation
   ): void {
-    (this.material as THREE.LineBasicMaterial).color.set(color);
+    this.material.color.set(color);
     this.#color = color;
-    this.#refreshLabel();
+    this.label?.setColor(color);
   }
 
   setName(
     name: string
   ): void {
-    this.#name = name;
-    if (this.#label === null) {
-      this.#createLabel();
+    if (this.label === null) {
+      this.label = new PeerFrustumLabel({ name, color: this.#color, showNameBox: this.#showNameBox });
+      this.add(this.label);
 
       return;
     }
-    this.#refreshLabel();
+    this.label.setName(name);
   }
 
   setShowNameBox(
     showNameBox: boolean
   ): void {
     this.#showNameBox = showNameBox;
-    this.#refreshLabel();
+    this.label?.setShowNameBox(showNameBox);
   }
 
   dispose(): void {
     this.geometry.dispose();
-    (this.material as THREE.Material).dispose();
-
-    if (this.#label !== null) {
-      (this.#label.material.map as THREE.CanvasTexture).dispose();
-      this.#label.material.dispose();
-    }
-  }
-
-  #createLabel(): void {
-    this.#labelCanvas = document.createElement("canvas");
-    this.#labelCanvas.width = kLabelCanvasWidth;
-    this.#labelCanvas.height = kLabelCanvasHeight;
-    PeerFrustum.#drawLabel(
-      this.#labelCanvas,
-      this.#name ?? "",
-      this.#color,
-      this.#showNameBox
-    );
-
-    const texture = new THREE.CanvasTexture(this.#labelCanvas);
-    texture.colorSpace = THREE.SRGBColorSpace;
-
-    this.#label = new THREE.Sprite(
-      new THREE.SpriteMaterial({
-        map: texture,
-        depthTest: false,
-        depthWrite: false,
-        transparent: true
-      })
-    );
-    this.#label.scale.set(kLabelWorldWidth, kLabelWorldHeight, 1);
-    this.#label.position.set(0, kLabelOffsetY, 0);
-    this.#label.renderOrder = 1;
-
-    this.add(this.#label);
-  }
-
-  #refreshLabel(): void {
-    if (this.#label === null || this.#labelCanvas === null) {
-      return;
-    }
-
-    PeerFrustum.#drawLabel(
-      this.#labelCanvas,
-      this.#name ?? "",
-      this.#color,
-      this.#showNameBox
-    );
-    (this.#label.material.map as THREE.CanvasTexture).needsUpdate = true;
-  }
-
-  static #drawLabel(
-    canvas: HTMLCanvasElement,
-    name: string,
-    color: THREE.ColorRepresentation,
-    showNameBox: boolean
-  ): void {
-    const context = canvas.getContext("2d")!;
-    const { width, height } = canvas;
-    const colorStyle = new THREE.Color(color).getStyle();
-
-    context.clearRect(0, 0, width, height);
-
-    if (showNameBox) {
-      context.fillStyle = "rgba(20, 20, 20, 0.75)";
-      context.strokeStyle = colorStyle;
-      context.lineWidth = 6;
-      context.beginPath();
-      context.roundRect(3, 3, width - 6, height - 6, height / 2);
-      context.fill();
-      context.stroke();
-
-      context.fillStyle = "#ffffff";
-    }
-    else {
-      // No background box — a dark drop shadow keeps the colored text legible
-      // against any scene background instead.
-      context.shadowColor = "rgba(0, 0, 0, 0.9)";
-      context.shadowBlur = 6;
-      context.shadowOffsetX = 0;
-      context.shadowOffsetY = 2;
-
-      context.fillStyle = colorStyle;
-    }
-
-    context.font = "700 60px sans-serif";
-    context.textAlign = "center";
-    context.textBaseline = "middle";
-    context.fillText(name, width / 2, height / 2);
-
-    context.shadowColor = "transparent";
+    this.material.dispose();
+    this.label?.dispose();
   }
 
   static #computeCorners(
@@ -298,3 +208,10 @@ export class PeerFrustum extends THREE.LineSegments {
     return new THREE.BufferGeometry().setFromPoints(points);
   }
 }
+
+export type {
+  PeerFrustumLabelOptions
+} from "./PeerFrustumLabel.ts";
+export {
+  PeerFrustumLabel
+};

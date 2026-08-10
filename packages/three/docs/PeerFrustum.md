@@ -71,14 +71,32 @@ export interface PeerFrustumOptions {
 }
 ```
 
+## Properties
+
+```ts
+class PeerFrustum extends THREE.LineSegments {
+  // null until a name is provided (constructor `name` option or `setName`)
+  label: PeerFrustumLabel | null;
+}
+
+class PeerFrustumLabel extends THREE.Sprite {
+  setName(name: string): void;
+  setColor(color: THREE.ColorRepresentation): void;
+  setShowNameBox(showNameBox: boolean): void;
+  dispose(): void;
+}
+```
+
+`PeerFrustumLabel` is the nameplate itself — a billboard `THREE.Sprite` with a canvas-generated texture, added as a child of `PeerFrustum` once a name exists. It's constructed and updated by `PeerFrustum` (see Methods below); reach into `frustum.label` directly only if you need the sprite itself (e.g. to read its current world transform).
+
 ## Methods
 
-- `setColor(color: THREE.ColorRepresentation): void` - Updates the wireframe's material color, and the nameplate's text/border color if a name is set.
-- `setName(name: string): void` - Sets or updates the nameplate text, creating it lazily if the frustum was built without one.
-- `setShowNameBox(showNameBox: boolean): void` - Toggles the nameplate's background box on an existing label.
-- `dispose(): void` - Disposes the underlying geometry, material, and the nameplate's texture/material (if any).
+- `setColor(color: THREE.ColorRepresentation): void` - Updates the wireframe's material color, and forwards to `label.setColor()` if a label exists.
+- `setName(name: string): void` - Forwards to `label.setName()`, creating `label` lazily (and adding it as a child) if the frustum was built without one.
+- `setShowNameBox(showNameBox: boolean): void` - Forwards to `label.setShowNameBox()` if a label exists.
+- `dispose(): void` - Disposes the underlying geometry, material, and `label` (if any).
 
 ## Notes
 
-- The nameplate is a billboard `THREE.Sprite` with a canvas-generated texture. By default (`showNameBox: false`) it's bold text colored to match the frustum with a dark drop shadow, no background — reads against any scene background without visual clutter. Set `showNameBox: true` for a rounded, semi-transparent box bordered in `color` instead, with white text. Rendered with `depthTest: false` so it stays legible through other geometry — no extra renderer setup (e.g. `CSS2DRenderer`) required. Like any `THREE.Sprite`, its on-screen size shrinks with camera distance (`sizeAttenuation` defaults to `true`) — let us know if you'd rather it stay a constant screen size regardless of distance.
+- By default (`showNameBox: false`) the nameplate is bold text colored to match the frustum with a dark drop shadow, no background — reads against any scene background without visual clutter. Set `showNameBox: true` for a rounded, semi-transparent box bordered in `color` instead, with white text. Rendered with `depthTest: false` so it stays legible through other geometry — no extra renderer setup (e.g. `CSS2DRenderer`) required. Like any `THREE.Sprite`, its on-screen size shrinks with camera distance (`sizeAttenuation` defaults to `true`) — let us know if you'd rather it stay a constant screen size regardless of distance.
 - Constructing with an invalid `near` (`<= 0` or `>= depth`) throws.

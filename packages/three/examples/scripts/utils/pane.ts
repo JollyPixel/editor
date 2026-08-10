@@ -10,7 +10,8 @@ const kExamplePinClass = "tp-example-pin";
 /** Label → path, as consumed by the switcher's `options`. */
 const kExamples: Record<string, string> = {
   Grid: "/",
-  "Peer Frustum": "/peer-frustum.html"
+  "Peer Frustum": "/peer-frustum.html",
+  "Peer Frustum Sync": "/peer-frustum-sync.html"
 };
 
 export interface ExamplePaneOptions {

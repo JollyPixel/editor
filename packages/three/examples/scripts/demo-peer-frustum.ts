@@ -37,7 +37,8 @@ const pane = createExamplePane();
 
 // A handful of peers at different poses/colors, purely to eyeball the
 // frustum shape from multiple angles at once — not wired to real presence
-// data yet (see docs/PeerFrustum.md once PeerFrustumSync lands).
+// data (see the "Peer Frustum Sync" example / examples/scripts/network/
+// PeerFrustumSync.ts to sync real peers over a network.Room).
 spawnPeer(scene, pane, {
   position: new THREE.Vector3(0, 1, 0),
   lookAt: new THREE.Vector3(3, 1, 3),

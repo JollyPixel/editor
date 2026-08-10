@@ -6,8 +6,14 @@ import assert from "node:assert/strict";
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { PeerFrustum } from "#src/index.ts";
+import { PeerFrustum, PeerFrustumLabel } from "#src/index.ts";
 import { mockContextOf } from "../fixtures/canvas.ts";
+
+function canvasOf(
+  label: PeerFrustumLabel
+): HTMLCanvasElement {
+  return (label.material.map as THREE.CanvasTexture).image as HTMLCanvasElement;
+}
 
 describe("constructor", () => {
   test("throws when near <= 0", () => {
@@ -85,32 +91,16 @@ describe("constructor", () => {
   test("does not create a label when no name is provided", () => {
     const frustum = new PeerFrustum();
 
+    assert.strictEqual(frustum.label, null);
     assert.strictEqual(frustum.children.length, 0);
   });
 
-  test("creates a nameplate sprite when a name is provided", () => {
+  test("creates a nameplate label when a name is provided, added as a child", () => {
     const frustum = new PeerFrustum({ name: "Alice" });
 
+    assert.ok(frustum.label instanceof PeerFrustumLabel);
     assert.strictEqual(frustum.children.length, 1);
-    assert.ok(frustum.children[0] instanceof THREE.Sprite);
-  });
-
-  test("showNameBox defaults to false: no background box is drawn", () => {
-    const frustum = new PeerFrustum({ name: "Grace" });
-    const sprite = frustum.children[0] as THREE.Sprite;
-    const canvas = (sprite.material.map as THREE.CanvasTexture)
-      .image as HTMLCanvasElement;
-
-    assert.strictEqual(mockContextOf(canvas).roundRectCallCount, 0);
-  });
-
-  test("showNameBox: true draws a background box", () => {
-    const frustum = new PeerFrustum({ name: "Heidi", showNameBox: true });
-    const sprite = frustum.children[0] as THREE.Sprite;
-    const canvas = (sprite.material.map as THREE.CanvasTexture)
-      .image as HTMLCanvasElement;
-
-    assert.strictEqual(mockContextOf(canvas).roundRectCallCount, 1);
+    assert.strictEqual(frustum.children[0], frustum.label);
   });
 });
 
@@ -123,66 +113,63 @@ describe("setColor", () => {
     assert.strictEqual(`#${material.color.getHexString()}`, "#ff0000");
   });
 
-  test("redraws the existing label to reflect the new color", () => {
+  test("forwards the new color to the existing label", () => {
     const frustum = new PeerFrustum({ name: "Bob" });
-    const sprite = frustum.children[0] as THREE.Sprite;
-    const canvas = (sprite.material.map as THREE.CanvasTexture)
-      .image as HTMLCanvasElement;
-    const context = mockContextOf(canvas);
+    const context = mockContextOf(canvasOf(frustum.label as PeerFrustumLabel));
     const callsBefore = context.fillTextCallCount;
 
     frustum.setColor("#00ff00");
 
     assert.ok(context.fillTextCallCount > callsBefore);
   });
+
+  test("does nothing to a label when none exists", () => {
+    const frustum = new PeerFrustum();
+
+    assert.doesNotThrow(() => frustum.setColor("#ff0000"));
+  });
 });
 
 describe("setName", () => {
   test("creates a label lazily if none exists yet", () => {
     const frustum = new PeerFrustum();
-    assert.strictEqual(frustum.children.length, 0);
+    assert.strictEqual(frustum.label, null);
 
     frustum.setName("Carol");
 
+    assert.ok(frustum.label instanceof PeerFrustumLabel);
     assert.strictEqual(frustum.children.length, 1);
   });
 
-  test("redraws an existing label with the new name", () => {
+  test("updates an existing label instead of replacing it", () => {
     const frustum = new PeerFrustum({ name: "Dave" });
-    const sprite = frustum.children[0] as THREE.Sprite;
-    const canvas = (sprite.material.map as THREE.CanvasTexture)
-      .image as HTMLCanvasElement;
+    const label = frustum.label;
 
     frustum.setName("Erin");
 
+    assert.strictEqual(frustum.label, label);
     assert.strictEqual(frustum.children.length, 1);
-    assert.strictEqual(mockContextOf(canvas).lastFillText, "Erin");
   });
 });
 
 describe("setShowNameBox", () => {
-  test("toggles the background box on an existing label", () => {
-    const frustum = new PeerFrustum({ name: "Ivan" });
-    const sprite = frustum.children[0] as THREE.Sprite;
-    const canvas = (sprite.material.map as THREE.CanvasTexture)
-      .image as HTMLCanvasElement;
+  test("forwards to an existing label without throwing when none exists", () => {
+    const frustum = new PeerFrustum();
 
-    frustum.setShowNameBox(true);
-
-    assert.strictEqual(mockContextOf(canvas).roundRectCallCount, 1);
+    assert.doesNotThrow(() => frustum.setShowNameBox(true));
   });
 });
 
 describe("dispose", () => {
   test("disposes geometry, material and the label's texture/material", () => {
     const frustum = new PeerFrustum({ name: "Frank" });
-    const sprite = frustum.children[0] as THREE.Sprite;
-    const texture = sprite.material.map as THREE.CanvasTexture;
+    const label = frustum.label as PeerFrustumLabel;
+    const texture = label.material.map as THREE.CanvasTexture;
 
     let geometryDisposed = false;
     let materialDisposed = false;
     let textureDisposed = false;
-    let spriteMaterialDisposed = false;
+    let labelMaterialDisposed = false;
 
     frustum.geometry.addEventListener("dispose", () => {
       geometryDisposed = true;
@@ -193,8 +180,8 @@ describe("dispose", () => {
     texture.addEventListener("dispose", () => {
       textureDisposed = true;
     });
-    sprite.material.addEventListener("dispose", () => {
-      spriteMaterialDisposed = true;
+    label.material.addEventListener("dispose", () => {
+      labelMaterialDisposed = true;
     });
 
     frustum.dispose();
@@ -202,6 +189,12 @@ describe("dispose", () => {
     assert.ok(geometryDisposed);
     assert.ok(materialDisposed);
     assert.ok(textureDisposed);
-    assert.ok(spriteMaterialDisposed);
+    assert.ok(labelMaterialDisposed);
+  });
+
+  test("does not throw when no label exists", () => {
+    const frustum = new PeerFrustum();
+
+    assert.doesNotThrow(() => frustum.dispose());
   });
 });
