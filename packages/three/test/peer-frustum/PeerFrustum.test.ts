@@ -153,10 +153,22 @@ describe("setName", () => {
 });
 
 describe("setShowNameBox", () => {
-  test("forwards to an existing label without throwing when none exists", () => {
+  test("does not throw when no label exists", () => {
     const frustum = new PeerFrustum();
 
     assert.doesNotThrow(() => frustum.setShowNameBox(true));
+  });
+
+  test("applies the retained value when a label is created later", () => {
+    const frustum = new PeerFrustum();
+    frustum.setShowNameBox(true);
+
+    frustum.setName("Alice");
+
+    const { label } = frustum;
+    assert.ok(label instanceof PeerFrustumLabel);
+    const context = mockContextOf(canvasOf(label));
+    assert.strictEqual(context.roundRectCallCount, 1);
   });
 });
 

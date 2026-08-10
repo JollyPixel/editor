@@ -109,6 +109,23 @@ describe("GridFadeValue", () => {
         { x: 9, y: 9, z: 9 }
       );
     });
+
+    test("writes the fallback position when target has been cleared", () => {
+      const object = new THREE.Object3D();
+      const fade = new GridFadeValue("target", object);
+      fade.target = null;
+
+      const uniform = new THREE.Vector3(9, 9, 9);
+      fade.trackTarget(
+        uniform,
+        { x: 4, y: 5, z: 6 }
+      );
+
+      assert.deepStrictEqual(
+        { x: uniform.x, y: uniform.y, z: uniform.z },
+        { x: 4, y: 5, z: 6 }
+      );
+    });
   });
 
   describe("anchorPosition", () => {

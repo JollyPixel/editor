@@ -22,8 +22,8 @@ $ yarn add @jolly-pixel/three
 import { Grid } from "@jolly-pixel/three";
 
 const grid = new Grid({
-  cellSize: 1,
-  sectionSize: 10
+  cell: { size: 1 },
+  section: { size: 10 }
 });
 scene.add(grid); // self-updating: no manual .update() call needed
 ```

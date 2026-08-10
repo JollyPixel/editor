@@ -51,7 +51,7 @@ export type GridStyle = "lines" | "cross";
 /**
  * `"camera"` fades around the camera's in-plane position.
  * `"origin"` fades around the plane origin.
- * `"target"` fades around `GridFadeOptions.target`'s world position, updated every frame.
+ * `"target"` fades around the target and falls back to the camera when cleared.
  */
 export type GridFadeFrom = "camera" | "origin" | "target";
 
@@ -99,7 +99,7 @@ export function createGridUniforms(
     yAxisColor: uniform(new THREE.Color(options.yAxisColor)),
     zAxisColor: uniform(new THREE.Color(options.zAxisColor)),
     offset: uniform(options.offset, "float"),
-    // Only written to when `fadeFrom` is "target"; updated each frame from `Grid.fade.target`.
+    // `Grid` updates this fade anchor every frame in target mode.
     targetPosition: uniform(new THREE.Vector3())
   };
 }

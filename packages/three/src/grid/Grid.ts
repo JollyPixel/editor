@@ -29,7 +29,7 @@ import type {
 // CONSTANTS
 const kInfiniteGridQuadSize = 2;
 
-// Plain number passthrough onto a `GridUniforms` entry's `.value`.
+// Numeric properties backed by a `GridUniforms` entry.
 const kNumberUniformKeys = [
   "cellSize",
   "sectionSize",
@@ -43,7 +43,7 @@ const kNumberUniformKeys = [
   "offset"
 ] as const;
 
-// boolean <-> tri-state float (`.value` is 0 or 1) onto a `GridUniforms` entry.
+// Boolean properties stored as 0 or 1 in a `GridUniforms` entry.
 const kBooleanUniformKeys = [
   "hideCellOnSection",
   "showAxes"
@@ -51,12 +51,12 @@ const kBooleanUniformKeys = [
 
 export interface GridCellOptions {
   /**
-   * Grid style.
+   * Cell style.
    * @default "lines"
    */
   style?: GridStyle;
   /**
-   * Cell size.
+   * Cell spacing in world units.
    * @default 1
    */
   size?: number;
@@ -74,7 +74,7 @@ export interface GridCellOptions {
 
 export interface GridSectionOptions {
   /**
-   * Grid style.
+   * Section style.
    * @default "lines"
    */
   style?: GridStyle;
@@ -97,22 +97,22 @@ export interface GridSectionOptions {
 
 export interface GridFadeOptions {
   /**
-   * Fade anchor.
+   * Distance-fade anchor.
    * @default "camera"
    */
   from?: GridFadeFrom;
   /**
-   * World-space object to fade (and, by default, recenter) around.
-   * Required when `from` is `"target"`; read via `getWorldPosition()` every frame.
+   * Object used by `"target"` fade mode.
+   * Required when `from` is `"target"`; its world position is read every frame.
    */
   target?: THREE.Object3D;
   /**
-   * Fade distance.
+   * Fade distance in world units.
    * @default 100
    */
   distance?: number;
   /**
-   * Fade strength.
+   * Fade curve exponent.
    * @default 1
    */
   strength?: number;
@@ -120,12 +120,12 @@ export interface GridFadeOptions {
 
 export interface GridAxesOptions {
   /**
-   * Show axes.
+   * Show the two axes contained by the grid plane.
    * @default true
    */
   show?: boolean;
   /**
-   * Line width, in pixels.
+   * Axis width, in pixels.
    * @default 2
    */
   thickness?: number;
@@ -158,7 +158,7 @@ export interface GridOptions {
    */
   plane?: GridPlane;
   /**
-   * Quad edge length.
+   * Finite quad edge length. Ignored by infinite grids.
    * @default Math.max(fadeDistance * 4, 200)
    */
   extent?: number;
@@ -176,12 +176,12 @@ export interface GridOptions {
    */
   crossSize?: number;
   /**
-   * Fade out cells across section lines.
+   * Suppress fine lines where section lines are drawn.
    * @default false
    */
   hideCellOnSection?: boolean;
   /**
-   * Fade width in cells.
+   * Fine-line suppression width in cells. Used by the `"lines"` style.
    * @default 0.5
    */
   hideCellOnSectionFadeWidth?: number;
@@ -204,7 +204,8 @@ export interface GridOptions {
    */
   enabled?: boolean;
   /**
-   * Recenter under the camera (or `fade.target`, when `fade.from` is `"target"`) each frame.
+   * Recenter each frame under the camera or `fade.target`.
+   * Ignored by infinite grids.
    * @default fade.from !== "origin"
    */
   followCamera?: boolean;
@@ -255,7 +256,7 @@ export interface GridExtentDefaults {
 }
 
 /**
- * Global fallbacks consumed by `new Grid()` whenever the matching `GridOptions` field is omitted.
+ * Global fallbacks used when a `GridOptions` field is omitted.
  */
 export interface GridDefaults {
   plane: GridPlaneValue;
@@ -273,7 +274,7 @@ export interface GridDefaults {
 }
 
 /**
- * Live-tunable properties defined in the constructor.
+ * Live properties backed by shader uniforms.
  */
 export interface Grid {
   cellSize: number;
@@ -291,10 +292,7 @@ export interface Grid {
 }
 
 /**
- * Ground-plane grid mesh.
- *
- * @note
- * Uses TSL and requires `THREE.WebGPURenderer`;
+ * TSL grid mesh for `THREE.WebGPURenderer`.
  */
 export class Grid extends THREE.Mesh<THREE.PlaneGeometry> {
   static readonly Defaults: GridDefaults = {
@@ -377,7 +375,7 @@ export class Grid extends THREE.Mesh<THREE.PlaneGeometry> {
       defaults.extent.minimum
     );
 
-    // Infinite mode uses a fixed 2x2 quad; the fragment shader handles orientation.
+    // Infinite mode uses a clip-space quad; the shader reconstructs the plane.
     const geometry = infiniteGrid ?
       new THREE.PlaneGeometry(kInfiniteGridQuadSize, kInfiniteGridQuadSize) :
       new THREE.PlaneGeometry(extent, extent);
@@ -462,13 +460,13 @@ export class Grid extends THREE.Mesh<THREE.PlaneGeometry> {
     _scene: unknown,
     camera: THREE.Camera
   ): void => {
-    // Runs even in infinite mode: repositioning is skipped below, but the fragment
-    // shader's fade calc reads `uniforms.targetPosition` directly every frame.
+    // Target mode keeps the shader fade anchor synchronized in both grid modes.
     this.fade.trackTarget(
-      this.#uniforms.targetPosition.value
+      this.#uniforms.targetPosition.value,
+      camera.position
     );
 
-    // Infinite mode skips per-frame repositioning; the fragment shader unprojects every pixel.
+    // Infinite mode reconstructs world positions without moving the mesh.
     if (this.infiniteGrid) {
       return;
     }

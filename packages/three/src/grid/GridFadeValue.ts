@@ -7,11 +7,7 @@ import type { Vector3Like } from "../types.ts";
 
 export class GridFadeValue {
   readonly from: GridFadeFrom;
-  /**
-   * Target object for `"target"` fade mode.
-   * @note
-   * Live-swappable.
-   */
+  /** Target for `"target"` mode. Set to `null` to use `trackTarget`'s fallback. */
   target: THREE.Object3D | null;
 
   constructor(
@@ -28,15 +24,22 @@ export class GridFadeValue {
   }
 
   /**
-   * Updates `targetPositionUniform` from `target`'s world position.
-   * Call every frame.
+   * Copies the target's world position, or the fallback when cleared.
    */
   trackTarget(
-    targetPositionUniform: THREE.Vector3
+    targetPositionUniform: THREE.Vector3,
+    fallbackPosition?: Vector3Like
   ): void {
     if (this.from === "target" && this.target) {
       this.target.getWorldPosition(
         targetPositionUniform
+      );
+    }
+    else if (this.from === "target" && fallbackPosition) {
+      targetPositionUniform.set(
+        fallbackPosition.x,
+        fallbackPosition.y,
+        fallbackPosition.z
       );
     }
   }

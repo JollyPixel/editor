@@ -14,7 +14,7 @@ import { createExamplePane } from "./utils/pane.ts";
 
 // CONSTANTS
 // Kept far enough apart that near < depth always holds, regardless of the
-// two sliders' independent values — no cross-field validation needed.
+// two sliders' independent values, so no cross-field validation is needed.
 const kNearRange = { min: 0.05, max: 1, step: 0.05 };
 const kDepthRange = { min: 1.2, max: 4, step: 0.1 };
 const kFovRange = { min: 20, max: 120, step: 1 };
@@ -36,7 +36,7 @@ const { camera, controls } = createOrbitCamera(
 const pane = createExamplePane();
 
 // A handful of peers at different poses/colors, purely to eyeball the
-// frustum shape from multiple angles at once — not wired to real presence
+// frustum shape from multiple angles at once. This is not wired to real presence
 // data (see the "Peer Frustum Sync" example / examples/scripts/network/
 // PeerFrustumSync.ts to sync real peers over a network.Room).
 spawnPeer(scene, pane, {
@@ -101,6 +101,7 @@ function spawnPeer(
   let frustum = buildFrustum(state);
   frustum.position.copy(spawn.position);
   frustum.lookAt(spawn.lookAt);
+  frustum.rotateY(Math.PI);
   scene.add(frustum);
 
   function rebuild(): void {
@@ -110,6 +111,7 @@ function spawnPeer(
     frustum = buildFrustum(state);
     frustum.position.copy(spawn.position);
     frustum.lookAt(spawn.lookAt);
+    frustum.rotateY(Math.PI);
     scene.add(frustum);
   }
 

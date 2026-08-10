@@ -14,21 +14,19 @@ export interface PeerFrustumLabelOptions {
    */
   name: string;
   /**
-   * Text/border color. Matches the owning `PeerFrustum`'s wireframe color.
+   * Text and border color.
    */
   color: THREE.ColorRepresentation;
   /**
-   * Draws the nameplate on a rounded, semi-transparent background box
-   * (bordered with `color`) instead of the default shadow-only text.
+   * Draw the name on a rounded background with a `color` border.
    * @default false
    */
   showNameBox?: boolean;
 }
 
 /**
- * Floating nameplate for a `PeerFrustum`, rendered as a billboard
- * `THREE.Sprite` with a canvas-generated texture. Positioned just above the
- * frustum's local origin so it reads as a label attached to the peer.
+ * Billboard nameplate rendered with a canvas texture.
+ * Positioned above the owning frustum's local origin.
  */
 export class PeerFrustumLabel extends THREE.Sprite {
   #name: string;
@@ -114,8 +112,7 @@ export class PeerFrustumLabel extends THREE.Sprite {
       context.fillStyle = "#ffffff";
     }
     else {
-      // No background box — a dark drop shadow keeps the colored text legible
-      // against any scene background instead.
+      // Use a dark shadow when no background is drawn.
       context.shadowColor = "rgba(0, 0, 0, 0.9)";
       context.shadowBlur = 6;
       context.shadowOffsetX = 0;

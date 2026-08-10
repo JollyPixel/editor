@@ -6,48 +6,42 @@ import { PeerFrustumLabel } from "./PeerFrustumLabel.ts";
 
 export interface PeerFrustumOptions {
   /**
-   * Vertical field of view in degrees, used only to shape the visualized frustum
-   * (not tied to the represented peer's actual camera near/far planes).
+   * Vertical field of view in degrees.
    * @default 50
    */
   fov?: number;
   /**
+   * Width-to-height ratio.
    * @default 16 / 9
    */
   aspect?: number;
   /**
-   * Near-plane visualization distance (apex-to-near-plane), in world units.
-   * Purely cosmetic — drawn as a wireframe rectangle, not a filled plane.
+   * Distance from the local origin to the near rectangle, in world units.
    * Must be strictly between 0 and `depth`.
    * @default depth * 0.2
    */
   near?: number;
   /**
-   * Visualization depth (apex-to-far-plane distance), in world units. Purely
-   * controls how large the frustum reads on screen.
+   * Distance from the local origin to the far rectangle, in world units.
    * @default 1.5
    */
   depth?: number;
   /**
+   * Wireframe and label accent color.
    * @default "#43aa8b"
    */
   color?: THREE.ColorRepresentation;
   /**
-   * Whether to draw the tip lines from the apex (the peer's position) down to
-   * the near plane. Enable for an at-a-glance sense of exactly where the peer
-   * is — the near/far rectangles and the edges connecting them are always
-   * drawn regardless.
+   * Draw lines from the local origin to the near rectangle.
    * @default false
    */
   showApex?: boolean;
   /**
-   * Display name for the connected peer, rendered as a floating nameplate
-   * above the frustum. Omit to render the frustum without one.
+   * Display name rendered above the frustum. Omit to skip the label.
    */
   name?: string;
   /**
-   * Draws the nameplate on a rounded, semi-transparent background box
-   * (bordered with `color`) instead of the default shadow-only text.
+   * Draw the name on a rounded background with a `color` border.
    * @default false
    */
   showNameBox?: boolean;
@@ -61,20 +55,14 @@ interface FrustumCorners {
 }
 
 /**
- * Lightweight camera-frustum representation for a connected peer.
- *
- * Deliberately not a `THREE.CameraHelper`: that requires a real `THREE.Camera`
- * per peer and draws extra guide lines (target cross) not wanted for a presence
- * indicator. This builds a static wireframe truncated pyramid (near/far
- * rectangles + connecting edges, optionally with an apex tip) once from a
- * fixed FOV/aspect/near/depth; position/orient it via the usual `Object3D`
- * transform (`.position`, `.lookAt()`, ...), so N peers stay cheap — no
- * per-peer projection-matrix work.
+ * Static wireframe camera shape for peer presence.
+ * Geometry points along local `-Z`; copy the represented camera's position
+ * and quaternion.
  */
 export class PeerFrustum extends THREE.LineSegments<THREE.BufferGeometry, THREE.LineBasicMaterial> {
   /**
-   * The peer's floating nameplate, created lazily the first time a `name` is
-   * provided (via the constructor or `setName`). `null` until then.
+   * Label created by the constructor or first `setName()` call.
+   * `null` until a name is provided.
    */
   label: PeerFrustumLabel | null = null;
 
@@ -188,7 +176,7 @@ export class PeerFrustum extends THREE.LineSegments<THREE.BufferGeometry, THREE.
       farCorners.bottomRight, farCorners.bottomLeft,
       farCorners.bottomLeft, farCorners.topLeft,
 
-      // Body — connects each near corner to its far counterpart
+      // Body connects each near corner to its far counterpart
       nearCorners.topLeft, farCorners.topLeft,
       nearCorners.topRight, farCorners.topRight,
       nearCorners.bottomRight, farCorners.bottomRight,
