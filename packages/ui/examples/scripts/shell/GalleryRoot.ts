@@ -23,9 +23,13 @@ export class GalleryRoot extends HTMLElement {
       return;
     }
 
-    const root = this.attachShadow({ mode: "open" });
+    const root = this.attachShadow({
+      mode: "open"
+    });
     const sheet = new CSSStyleSheet();
-    sheet.replaceSync(`${themeStyles.cssText}\n${shellStyles}`);
+    sheet.replaceSync(
+      `${themeStyles.cssText}\n${shellStyles}`
+    );
     root.adoptedStyleSheets = [sheet];
 
     const layout = document.createElement("div");
@@ -65,7 +69,9 @@ export class GalleryRoot extends HTMLElement {
         nav.append(title);
       }
 
-      nav.append(this.#buildLink(example.id, example.title));
+      nav.append(
+        this.#buildLink(example.id, example.title)
+      );
     }
 
     return nav;
@@ -81,7 +87,14 @@ export class GalleryRoot extends HTMLElement {
     link.dataset.exampleId = id;
     link.addEventListener("click", (event) => {
       event.preventDefault();
-      this.dispatchEvent(new CustomEvent("gallery-select", { detail: { id } }));
+
+      const customEvent = new CustomEvent(
+        "gallery-select",
+        {
+          detail: { id }
+        }
+      );
+      this.dispatchEvent(customEvent);
     });
     this.#links.set(id, link);
 

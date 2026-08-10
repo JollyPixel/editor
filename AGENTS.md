@@ -48,6 +48,8 @@ npm run ci:publish        # Publish to npm
 - Only one ESLint config exists, at the root (`eslint.config.mjs`), covering every workspace.
 - Run linting for all new functionality
 - Update API (markdown) documentation
+- Never use git or commit by yourself
+- When creating changeset file for release, make sure to keep them minimal (2 to 3 lines max)
 
 ## Coding Standards
 

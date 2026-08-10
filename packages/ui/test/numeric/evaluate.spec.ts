@@ -3,7 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { evaluate } from "../../src/expression/evaluate.ts";
+import { evaluate } from "../../src/numeric/evaluate.ts";
 
 function value(
   input: string
@@ -23,7 +23,7 @@ function error(
   return result.ok ? "" : result.error;
 }
 
-describe("Expression.evaluate", () => {
+describe("Numeric.evaluate", () => {
   describe("plain numbers", () => {
     test("parses integers, decimals and signs", () => {
       assert.equal(value("42"), 42);

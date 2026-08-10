@@ -2,8 +2,7 @@
 import { css } from "lit";
 
 /**
- * Inherited, so a nested pane can override its parent. Icon buttons stay 32px at every density:
- * an 18px pointer target is not usable.
+ * Inherited density tokens with fixed 32px icon targets.
  */
 export const densityTokens = css`
   :host {

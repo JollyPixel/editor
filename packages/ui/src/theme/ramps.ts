@@ -2,9 +2,7 @@
 import { css } from "lit";
 
 /**
- * Tier 1 ramps, in OKLCH for even lightness steps. Not an override point: components read the
- * semantic tokens in `tokens.ts`. Accent seeded from #4488ff. Every step sits inside sRGB, so
- * nothing is gamut mapped at render time.
+ * Internal OKLCH color ramps.
  */
 export const rampTokens = css`
   --jolly-neutral-0: oklch(100% 0 250);

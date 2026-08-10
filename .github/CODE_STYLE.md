@@ -30,3 +30,9 @@ Order: Node.js (`node:` prefix) → third-party → internal, each block headed 
 - Comments in the source code must bring value and when required they must be as compact and factual as possible
 - Avoid type cast as possible (use the skill `/typescript-magician` if facing a challenge).
 - Usage of — is prohibited inside comments and documentation
+- Avoid long lines of code (80 characters per line)
+- Avoid inlined objects definitions (jump lines)
+- Inside a `css`/`html` tagged template literal (Lit's `css` and `html` helpers), never put a
+  backtick inside a comment written in that CSS/HTML content — an unescaped backtick there closes
+  the outer JS template literal early and breaks the file. Reference identifiers in plain text or
+  quotes instead, e.g. `.gutter` becomes plain `.gutter` in the comment, not backtick-wrapped.

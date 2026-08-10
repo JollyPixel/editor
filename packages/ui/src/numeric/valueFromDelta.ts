@@ -1,20 +1,27 @@
 export interface ValueFromDeltaOptions {
-  /** Value when the drag began, not the current one. */
+  /**
+   * Value at drag start.
+   */
   start: number;
-  /** Pointer travel since the drag began, along the scrub axis. */
+  /**
+   * Pointer travel along the scrub axis.
+   */
   deltaPx: number;
   step: number;
-  /** Travel that advances one step. Without it a 0.01 step field is unusably twitchy. */
+  /**
+   * Pixels per step. @default 4
+   */
   pixelsPerStep?: number;
-  /** Modifier scaling. The component decides which modifier means fine or coarse. */
+  /**
+   * Fine or coarse modifier scale. @default 1
+   */
   multiplier?: number;
   min?: number;
   max?: number;
 }
 
 /**
- * Value for a drag scrub, quantised to whole steps from `start` rather than onto an absolute grid,
- * so an off-grid value moves instead of being silently rounded.
+ * Returns a scrub value stepped from the drag start.
  */
 export function valueFromDelta(
   options: ValueFromDeltaOptions
@@ -50,8 +57,7 @@ function clamp(
 }
 
 /**
- * `start + n * step` drifts, so 0.1 stepping reaches 0.30000000000000004. Rounding to the decimals
- * the inputs already carry clears it without truncating a start finer than the step.
+ * Limits floating-point drift to the input precision.
  */
 function round(
   value: number,

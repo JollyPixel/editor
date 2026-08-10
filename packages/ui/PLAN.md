@@ -1,14 +1,8 @@
 # @jolly-pixel/ui implementation plan
 
-Steps for the contracts in [SPEC.md](./SPEC.md). Each phase lists the files it creates, the
-tests it must carry, what it deletes, and the condition for calling it done.
-
-Phases are ordered so that every one after P2 retires code. Nothing is built without a consumer
-lined up to prove it.
-
-Conventions: `src/` mirrors the catalog sections in SPEC section 5. Every component ships
-`X.ts`, `X.styles.ts` and `docs/X.md` in the same commit, per the repository preference for
-documentation and tests written alongside implementation, never after.
+Steps for [SPEC.md](./SPEC.md). Each phase lists creates, tests, deletions, and its completion
+gate. From P2 onward every phase retires code; components ship with `X.ts`, `X.styles.ts`, and
+documentation in the same commit.
 
 ## P0: foundation
 
@@ -34,9 +28,9 @@ src/storage/LocalStorageAdapter.ts  handles construction and write failure
 src/storage/MemoryStorageAdapter.ts  also the fallback the above degrades to
 src/storage/keys.ts            deriveKey(tagName, label, occurrence),
                                resolveOrder()
-src/geometry/valueFromDelta.ts object param: start, deltaPx, step,
+src/numeric/valueFromDelta.ts  object param: start, deltaPx, step,
                                pixelsPerStep, multiplier, min, max
-src/expression/evaluate.ts     tokenizer + shunting yard, EvalResult, no eval
+src/numeric/evaluate.ts        tokenizer + shunting yard, EvalResult, no eval
 src/index.ts                   narrow barrel, see below
 docs/theming.md                tokens, tiers, theme attribute, density,
                                override recipe
@@ -53,15 +47,11 @@ examples/scripts/shell/        plain nav + main for now, swapped for
                                jolly-dock + jolly-list in P2
 ```
 
-The barrel exports only the consumer facing surface: the theme tokens, `Mixed`, `FieldValue`,
-`isMixed` and `StorageAdapter`. `evaluate`, `deriveKey`, `resolveOrder` and `valueFromDelta` stay
-internal, imported by relative path inside the package and from `test/`. This package publishes
-with `access: public`, so a barrel that re-exports everything makes four implementation details
-into API that has to be supported; promoting one later is additive, un-publishing one is
-breaking.
+The barrel exports theme tokens, `Mixed`, `FieldValue`, `isMixed`, and `StorageAdapter` only.
+`evaluate`, `deriveKey`, `resolveOrder`, and `valueFromDelta` remain internal; publishing them
+would make implementation details permanent API.
 
-**Deliberately not created here.** Every one of these appeared in an earlier draft of P0 and has
-no consumer in it, which is the rule this plan opens with:
+**Deferred from P0** because it has no P0 consumer:
 
 | Not in P0 | Where it went | Why |
 |---|---|---|
@@ -73,15 +63,9 @@ no consumer in it, which is the rule this plan opens with:
 | `geometry/clampToViewport.ts` | P2 | Its signature hides questions only `jolly-floating` answers |
 | `examples/scripts/stateMatrix.ts` | P1 | Its rows are `JollyField` states, which do not exist yet |
 
-The shell cannot dogfood yet: `jolly-dock` and `jolly-list` do not exist until P2. Routing,
-the manifest, `chrome=off` and `__galleryReady` are settled here and do not change when the
-shell's internals are replaced, so no test is rewritten by that swap — which only holds because
-those tests are written here. P0 therefore ships the shell's e2e suite, not unit tests alone; a
-routing contract with nothing asserting it is not settled, it is merely written down.
-
-Two placeholder examples, not one. A single entry cannot exercise the interesting half of
-`GalleryExample`: that `render()` returns a teardown and switching examples calls it. Left
-unproven until P1, the first leak gets attributed to a component rather than to the shell.
+P0 uses a plain gallery shell because `jolly-dock` and `jolly-list` arrive in P2. Its routing,
+manifest, `chrome=off`, and `__galleryReady` contracts and e2e suite stay unchanged after that
+swap. Two placeholders prove example teardown on navigation.
 
 **Package wiring**
 
@@ -100,40 +84,24 @@ unproven until P1, the first leak gets attributed to a component rather than to 
   buildinfo, concludes nothing changed, and silently emits nothing into the deleted `dist`
 - Pin `runtime`'s `lit@^3.3.1` range to `3.3.3`
 
-`@jolly-pixel/resize-handle` is **not** added here. Its consumer is `jolly-dock` in P2, which is
-also where that package gains the `handle` option.
-
-`@playwright/test`, `happy-dom`, `c8` and `vite` are already root devDependencies and hoisted, so
-this package adds none of them.
+`@jolly-pixel/resize-handle` arrives with its P2 consumer. The test and build tools are already
+hoisted root dev dependencies.
 
 **Changes in `packages/engine`**
 
-Independent of everything else here, and worth landing first because the current behaviour makes
-the UI unreachable by keyboard.
+Land this independently first: current keyboard handling makes the UI unreachable by keyboard.
 
 In `src/controls/devices/keyboard/Keyboard.class.ts`:
 
-- Export `isEditableTarget(event)`, resolving through `composedPath()` so retargeted shadow DOM
-  events find the real control, with a `typeof event.composedPath === "function"` fallback to
-  `event.target` for synthetic events. It lives here, not in `DocumentAdapter`: the adapter exists
-  for test injection, and policy there means every future adapter reimplements it
-- Guard `#onKeyDown` and `#onKeyPress` with it. **Not `#onKeyUp`** — guarding the release strands
-  keys. Hold `W` on the canvas, `Tab` into a field, release: the guard swallows the `keyup`,
-  `KeyW` stays in `buttonsDown`, and the camera drifts forever. Deleting a key that was never
-  added is a harmless no-op, so the asymmetry is correct
-- `#onKeyPress` matters as much as `#onKeyDown`: it accumulates `newChar`, so typing in a field
-  currently feeds the text to any consumer polling `keyboard.char`
-- Remove **both** `Tab` and `Escape` from `kControlKeys`. `Tab`, so focus can leave the canvas —
-  every UI side fix is defeated without it. `Escape`, because native `dialog`'s close is a
-  browser default action that `preventDefault()` suppresses; leaving it in means P2's
-  `dialog-escape` case passes in the gallery, where no engine runs, and silently fails in every
-  editor. No in-repo consumer depends on either being prevented: the four hand rolled `Escape`
-  handlers in pixel-art, voxel-map and voxel-model are listeners, which still fire
+- Export `isEditableTarget(event)`, based on `composedPath()` with an `event.target` fallback for
+  synthetic events; policy belongs in `Keyboard`, not `DocumentAdapter`
+- Guard `#onKeyDown` and `#onKeyPress`, never `#onKeyUp`, so a release after focus moves cannot
+  strand a held key; `keypress` also protects `newChar`
+- Remove `Tab` and `Escape` from `kControlKeys`, allowing focus to leave the canvas and native
+  dialogs to close. Existing in-repo Escape listeners still fire
 
-These are behaviour changes to a published package with its own suite, so they ship as **their own
-PR**, landed first — reviewable on their own merits and revertable without touching `ui`. A
-**minor** changeset records the change and the one line opt-out, since that is what a consumer
-reads in the changelog:
+This published-package behaviour change ships first in its own PR with a **minor** changeset and
+the opt-out:
 
 ```ts
 keyboard.on("Tab", (event) => event.preventDefault());
@@ -147,30 +115,23 @@ keyboard.on("Tab", (event) => event.preventDefault());
 - `StorageAdapter` — a stub throwing on the property read, and a stub throwing on `setItem`
   after a successful construction
 - `valueFromDelta` — sensitivity, clamping, step quantisation and float drift, multiplier
-- `evaluate` — precedence, parentheses, unary minus, scientific and comma decimals, `1/0` and
-  non-finite results as errors, the plain-number fast path, and grammar closure: unknown
-  identifiers, call syntax `f(1)`, property access `a.b` and string literals all fail to parse.
-  Grammar closure, not a denylist — a parser rejects `alert(1)` because `a` is not a token, and
-  framing it as "rejecting `eval` shaped input" invites someone to add a denylist later
+- `evaluate` — precedence, parentheses, unary signs, scientific and comma decimals, non-finite
+  failures, plain-number fast path, and grammar closure for identifiers, calls, properties, and
+  string literals
 
-**E2e**, the shell's own suite, per SPEC section 13: the nav renders every manifest entry,
-selecting one swaps the content, a deep link selects the right entry, `chrome=off` renders the
-example with no shell, switching runs the previous example's teardown, and the manifest sweep —
-every example mounts and disposes without throwing — which grows by itself from here on.
+**E2e**: manifest navigation, selection, deep link, `chrome=off`, teardown on switch, and a
+mount-and-dispose sweep for every example.
 
 Contrast is not asserted in code; see SPEC section 4 for why, and for the targets that still hold.
 
-**Done when**: `npm run build -w @jolly-pixel/ui`, `npm run test -w @jolly-pixel/ui` and
-`npm run test:e2e -w @jolly-pixel/ui` pass, lint is clean, `npm ls lit` shows a single deduped
-copy, both placeholder examples serve at `/?example=<id>&chrome=off`, and no component exists yet.
+**Done when**: UI build, unit, e2e, and lint pass; `npm ls lit` is deduped; both placeholders
+serve at `/?example=<id>&chrome=off`; and no component exists.
 
 ## P0 delivery
 
 Two pull requests, `engine` first.
 
-**PR 1 — `engine`.** The keyboard changes above, their tests, and a **minor** changeset. Separate
-rather than a separate commit, so a behaviour change to a published package is reviewed on its own
-merits, lands independently, and can be reverted without touching `ui`.
+**PR 1 — `engine`.** Keyboard changes, tests, and a **minor** changeset.
 
 **PR 2 — `ui`.** Five commits, in this order. Only the last has a hard dependency:
 
@@ -180,56 +141,142 @@ merits, lands independently, and can be reverted without touching `ui`.
    `test/e2e/constants.ts`, `test/setup.ts`, and `examples/src` renamed to `examples/scripts`.
    Nothing else can land first
 3. **Theme.** `ramps`, `tokens`, `density`, `scales`, `peerColor`, `types`, `docs/theming.md`
-4. **Pure kernel.** `mixed`, `storage/*`, `geometry/valueFromDelta`, `expression/evaluate`, and
+4. **Pure kernel.** `mixed`, `storage/*`, `numeric/valueFromDelta`, `numeric/evaluate`, and
    their specs
 5. **Gallery.** `manifest`, `types`, `main`, `shell/`, two placeholders, the shell e2e suite.
    Needs 2
 
-Commits 3 and 4 are independent of each other and of 5.
-
-**Changesets.** `engine` minor, as above. `runtime` **patch**, for the `lit` range pin. **None for
-`ui`**: it is unpublished at `1.0.0` and P0 ships no public API worth a release — its first
-changeset comes with P1.
-
-`README.md` stays `TBC`. A readme documenting an empty package ages badly, and its usage example
-would be rewritten the moment P1 lands.
+Commits 3 and 4 are independent of 5. Changesets: `engine` minor, `runtime` patch for the Lit pin,
+none for unpublished `ui`. `README.md` remains `TBC` until P1 provides usable API.
 
 ## P1: controls
 
-**Create first**, moved out of P0 so each lands with the code that proves it:
+**Create**
 
-- `src/field/JollyField.ts` — the base class (`label`, `description`, `value`, `default`,
-  `lockedBy`, `error`), in the same commit as the first control that extends it
-- `examples/scripts/stateMatrix.ts` — the shared default/mixed/locked/error/modified/disabled
-  rows tagged `[data-state]`, in the same commit as the first component example that renders
-  through it
+```
+src/field/JollyField.ts        abstract JollyField<T>, sealed render(),
+                               protected abstract renderValue()
+src/field/JollyField.styles.ts row, gutter, label, value, chips, error
+src/field/events.ts            JollyChangeDetail<T>, the emit helper
+src/field/predicates.ts        isModified()
+src/numeric/format.ts          formatNumber(), parseNumeric()
+src/collab/types.ts            CollaboratorPresence, moved out of P7
+src/theme/fallbacks.ts         the four narrow fallbacks, one source
+src/controls/types.ts          JollyOption<T>, Interval
+src/controls/flags.ts          mask to selection and back, pure
+src/interaction/ScrubController.ts   wraps valueFromDelta
+src/icon/registry.ts           registerIcon(), getIcon(), IconName
+src/icon/builtins.ts           registered through the public function
+src/icon/Icon.ts               jolly-icon
+src/dom.ts                     isInputElement(), isSelectElement(),
+                               detailOf(), mirroring pixel-art's guard
+
+examples/scripts/stateMatrix.ts      nine rows, factory based
+```
+
+**Also fixed here**, found while building the state matrix: `Mixed` was declared without a type
+annotation, so an exported `const` whose initializer is not a direct `Symbol()` call widened back
+to `symbol`. `FieldValue<string>` was therefore `string | symbol` and had lost the distinctness
+SPEC section 3 gives as the reason for the whole construction. Invisible at runtime, so P0's spec
+passed; `test/field/mixed.spec.ts` now carries a type level guard that stops compiling if it
+regresses.
+
+`CollaboratorPresence` moves here from P7 because SPEC section 3 now renders `peers` and
+`lockedBy` in P1. P7 supplies values and adds `PresenceSource` beside it, changing no control,
+which was the whole argument for a base class in the first place.
 
 **Create** under `src/controls/`: `Button`, `ButtonGroup`, `Checkbox`, `Number`, `Slider`,
 `Range`, `Text`, `Select`, `Flags`, `Color`, `Separator`, `PropertyRow`.
 
-Each extends `JollyField` and implements the full state channel table of SPEC section 4: focus as
-a native outset `outline`, lock as an inset `box-shadow` ring in the holder's peer colour, error
-on the border, revert in the gutter, `Mixed` as a dash placeholder, peers as stacked chips
-overflowing to `+N`, hover and active as background steps, disabled as opacity. A locked field
-also sets `aria-disabled` and goes read only, never `inert`.
+Nine of them extend `JollyField<T>`. `Button`, `Separator` and `PropertyRow` extend `LitElement`:
+the first has no value, so `default`, `Mixed` and revert are inert on it, and the other two are
+layout.
+
+| Extends `JollyField<T>` | `T` | Extends `LitElement` |
+|---|---|---|
+| `Checkbox` | `boolean` | `Button` |
+| `Number`, `Slider` | `number` | `Separator` |
+| `Range` | `Interval` | `PropertyRow` |
+| `Text`, `Color` | `string` | |
+| `Select`, `ButtonGroup` | `T` | |
+| `Flags` | `number` | |
+
+`JollyField` implements the full state channel table of SPEC section 4 once, so no control
+implements any of it: focus as a native outset `outline`, lock as a leading bar and tint in
+the holder's peer colour, error on the border, revert in the gutter, `Mixed` as a dash
+placeholder, peers as stacked chips overflowing to `+N`, hover and active as background steps,
+disabled as opacity. A locked field also sets `aria-disabled` and goes read only, never `inert`.
 
 The combinations are what matter: locked plus focused must show both rings, and mixed plus
 modified must show both affordances.
 
-`Number` wires drag scrub through `valueFromDelta` and expression input through `evaluate`.
+`Number` wires drag scrub through `ScrubController` and expression input through `evaluate`.
+`Select` and `Color` wrap native elements per SPEC section 5, so no floating layer is pulled
+forward from P2.
 
-**Create** `src/icon/Icon.ts` plus a registry, holding only the chrome glyphs: chevron, close,
-revert, drag, lock, eye, search.
+**Tests**. No spec can import a control, since a decorator is not erasable syntax and
+`node --test` strips rather than compiles. Unit tests therefore target the extracted modules:
+`predicates`, `numeric/format` and `controls/flags`, alongside P0's `evaluate` and
+`valueFromDelta`.
 
-**Tests**: unit for value formatting, mixed handling, revert predicate, expression commit and
-error paths. One component example per control, plus an e2e pass over drag scrub, revert click,
-and a locked plus focused field showing both rings at once, reached through
-`/?example=controls/<id>&chrome=off`.
+End to end covers the rest, asserting resolved tokens against the properties consuming them
+rather than pixels:
+
+```
+test/e2e/controls.e2e.ts      nine matrix rows per field, token wiring
+test/e2e/interaction.e2e.ts   scrub, revert, expression, Escape discards
+test/e2e/manifest.e2e.ts      every example mounts and disposes
+```
+
+Scrub cases use a small fixed `steps` count and assert the committed value rather than
+intermediate frames, since pixel-art's spurious timeouts traced to step counts.
 
 Density is verified through the `density` scenario example, once per preset, not per component.
 
+**Docs**: `docs/fields.md` for the contract shared by nine controls, `docs/controls.md` with one
+terse section each, `docs/icons.md` for the registry and the authoring grid. Not one page per
+component: they would each repeat the same contract, including the write back warning that has to
+appear first or nowhere.
+
+**Barrel**: the twelve elements, `JollyOption`, `Interval`, `JollyChangeDetail`,
+`CollaboratorPresence`, `registerIcon` and `IconName`. `JollyField`, `ScrubController` and the
+pure helpers stay internal.
+
 **Done when**: every control renders in the gallery in both themes and all three densities, and
 overriding `--jolly-accent-fill` on the gallery root visibly changes all of them.
+
+## P1 delivery
+
+One pull request, nine commits. Docs first, so the eight after it are reviewed against a document
+describing what was decided:
+
+1. **Docs.** The amended `SPEC.md` and `PLAN.md`
+2. **Field foundation.** `JollyField` and its styles, `events`, `predicates`, `numeric/format`,
+   `collab/types`, `theme/fallbacks`, `controls/types`, and their specs. `icon/registry` comes
+   with them rather than in 3, since `JollyOption.icon` is typed against `IconName`
+3. **Icons.** `builtins` and the `Icon` element
+4. **Scrub.** `ScrubController`
+5. **Text, Number, Checkbox**, plus `stateMatrix` and the first e2e specs. These three prove every
+   mechanism between them: draft state, scrub, expression and `#parseError`, native wrapping,
+   `Mixed` as a dash and as `indeterminate`, revert, all nine rows
+6. **Slider, Range, Flags**, plus `controls/flags` and its spec
+7. **Select, Color, ButtonGroup**
+8. **Button, Separator, PropertyRow**
+9. **Docs and changeset.** `fields.md`, `controls.md`, `icons.md`, the scope host section in
+   `theming.md`, `README.md` (which P0 deliberately left as `TBC`), the scenario examples, and a
+   **minor** changeset for `@jolly-pixel/ui`
+
+Commit 5 is the review checkpoint. If the base class is wrong it is wrong there, against three
+controls rather than twelve.
+
+### P1 source layout cleanup
+
+After P1, the numeric helpers are grouped under `src/numeric/`: expression parsing,
+formatting and quantisation, modifier scaling, and scrub-delta calculation. They describe one
+feature shared by `Number`, `Range`, and `ScrubController`; `expression/` and `geometry/` would
+misstate that relationship. `src/dom.ts` replaces the one-file `utils/` directory. The matching
+unit tests live in `test/numeric/`. This is a move-only refactor with unchanged package exports
+and control behaviour.
 
 ## P2: containers and chrome
 
@@ -512,6 +559,8 @@ covered by that package's own suite; these cases cover the pairing, and run once
 | Facade API shaped by one consumer | Examples migrate at P3, before either editor |
 | `jolly-tree` under specified against one consumer | Generic node shape, reparent resolution kept pure and unit tested |
 | E2e flakiness, as recorded in pixel-art | Tier kept small, geometry pushed into pure functions, workers isolated |
+| Components are unreachable from `node:test`, so a render bug is only ever caught by Playwright | Decorators are not erasable syntax and stripping fails at parse. Logic is extracted into `predicates`, `numeric/format` and `controls/flags`, which are unit tested; the elements stay thin enough that what remains is markup |
+| A consumer forgets the write back and the control looks broken | Inherent to a controlled element. Stated first in `docs/fields.md` rather than as a footnote, and the gallery examples all wire it |
 | `resize-handle` change breaking existing users | `handle` is optional and its tests run unmodified. The `sizeFromDelta` extraction is not purely additive — clamping changes drag behaviour — so it carries its own tests and its own changeset |
 | Migration diffs too large to review | One editor per phase, one component family per commit |
 | `runtime` is published, and P3b adds a dependency to it | `./stats` is DOM free and imported dynamically behind `includePerformanceStats`, so game bundles are unaffected when the flag is off |

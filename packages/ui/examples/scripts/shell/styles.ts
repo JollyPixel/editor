@@ -105,4 +105,66 @@ export const shellStyles = `
   .peer-chip.is-active {
     transform: scale(1.25);
   }
+
+  .state-matrix {
+    display: grid;
+    gap: var(--jolly-space-3);
+    max-width: 520px;
+  }
+
+  .state-row {
+    display: grid;
+    gap: var(--jolly-space-1);
+  }
+
+  .chrome-demo {
+    display: grid;
+    gap: var(--jolly-space-4);
+    max-width: 520px;
+  }
+
+  .chrome-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--jolly-space-2);
+    align-items: center;
+  }
+
+  .scenario-grid {
+    display: grid;
+    gap: var(--jolly-space-3);
+    max-width: 520px;
+  }
+
+  .scenario-hint {
+    margin: 0;
+    color: var(--jolly-text-muted);
+  }
+
+  .scenario-log {
+    display: grid;
+    gap: 2px;
+    margin: 0;
+    padding: var(--jolly-space-2);
+    border: 1px solid var(--jolly-border);
+    border-radius: var(--jolly-radius-sm);
+    background: var(--jolly-surface-sunken);
+    list-style: none;
+    font-variant-numeric: var(--jolly-font-numeric);
+  }
+
+  .scenario-log li[data-kind="change"] {
+    color: var(--jolly-accent-text);
+  }
+
+  .scenario-log li[data-kind="input"] {
+    color: var(--jolly-text-muted);
+  }
+
+  .state-name {
+    color: var(--jolly-text-muted);
+    font-size: 0.8em;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
 `;

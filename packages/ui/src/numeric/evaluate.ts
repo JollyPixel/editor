@@ -22,13 +22,7 @@ type Token =
 class ExpressionError extends Error {}
 
 /**
- * Evaluates a numeric field expression: `1920/2` commits `960`.
- *
- * Grammar is `+ - * /`, parentheses, unary sign, and decimal or scientific literals. A comma also
- * reads as a decimal separator, since no rule uses one and `1,5` is what a French locale types.
- *
- * Returns a result rather than throwing, since a malformed expression is expected user input.
- * Nothing eval shaped is denylisted; `alert(1)` fails because `a` is not a token here.
+ * Evaluates arithmetic expressions with decimal and scientific literals.
  */
 export function evaluate(
   input: string
@@ -41,7 +35,7 @@ export function evaluate(
     };
   }
 
-  // Most field entries are a bare number and never reach the parser.
+  // Fast path for plain numeric input.
   if (kPlainNumber.test(text)) {
     return finalize(
       Number(text.replace(",", "."))
