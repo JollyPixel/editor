@@ -16,6 +16,11 @@ import type {
   DefaultPixelBuffer
 } from "./types.ts";
 
+interface CanvasColorGroup {
+  color: RGBA;
+  positions: Vec2[];
+}
+
 export type CanvasBufferOptions = PixelBufferOptions;
 
 /**
@@ -131,9 +136,7 @@ export class CanvasBuffer extends Emitter<
   }
 
   pixels(): Uint8ClampedArray {
-    return Uint8ClampedArray.from(
-      this.#buffer.pixels()
-    );
+    return this.#buffer.pixels().slice();
   }
 
   drawPixels(
@@ -142,6 +145,28 @@ export class CanvasBuffer extends Emitter<
   ): void {
     const positions = Array.isArray(pixels) ? pixels : [...pixels];
     this.#buffer.drawPixels(positions, color);
+
+    const size = this.#buffer.size();
+    const dirtyArea = RectArea.bounding(positions, size);
+    if (dirtyArea === null) {
+      return;
+    }
+
+    this.#resyncCanvasRegion(dirtyArea.bounds);
+    this.emit("changed");
+  }
+
+  drawColorGroups(
+    groups: Iterable<CanvasColorGroup>
+  ): void {
+    const positions: Vec2[] = [];
+
+    for (const group of groups) {
+      this.#buffer.drawPixels(group.positions, group.color);
+      for (const position of group.positions) {
+        positions.push(position);
+      }
+    }
 
     const size = this.#buffer.size();
     const dirtyArea = RectArea.bounding(positions, size);

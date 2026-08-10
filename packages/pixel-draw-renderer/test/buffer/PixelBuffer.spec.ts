@@ -201,6 +201,46 @@ describe("PixelBuffer", () => {
       );
     });
 
+    test("initializes newly reached pixels with the constructor color", () => {
+      const color = { r: 12, g: 34, b: 56, a: 78 };
+      const buf = new PixelBuffer({
+        size: { x: 2, y: 2 },
+        defaultColor: color,
+        maxSize: kTestMaxSize
+      });
+
+      buf.resize({ x: 6, y: 5 });
+
+      assert.deepStrictEqual(
+        buf.samplePixel(5, 4),
+        [12, 34, 56, 78]
+      );
+    });
+
+    test("retains committed pixels through asymmetric shrink and growth", () => {
+      const buf = new PixelBuffer({
+        size: { x: 6, y: 4 },
+        maxSize: kTestMaxSize
+      });
+      buf.drawPixels(
+        [{ x: 5, y: 3 }],
+        { r: 12, g: 34, b: 56, a: 255 }
+      );
+      buf.copyToMaster();
+
+      buf.resize({ x: 2, y: 2 });
+      buf.resize({ x: 8, y: 5 });
+
+      assert.deepStrictEqual(
+        buf.samplePixel(5, 3),
+        [12, 34, 56, 255]
+      );
+      assert.deepStrictEqual(
+        buf.samplePixel(7, 4),
+        [255, 255, 255, 255]
+      );
+    });
+
     test("does not preserve uncommitted data", () => {
       const buf = new PixelBuffer({
         size: { x: 8, y: 8 },

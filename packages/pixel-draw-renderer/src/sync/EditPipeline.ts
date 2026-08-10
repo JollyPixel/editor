@@ -32,8 +32,10 @@ import type {
 } from "../tools/Brush.ts";
 import type { FillGlobalCommit } from "../tools/FillController.ts";
 import type { SelectEditEntry } from "../tools/SelectController.ts";
-import { toRGBA } from "../utils/colors.ts";
-import { groupPositionsByColor } from "../history/utils.ts";
+import {
+  applyColorGroups,
+  groupPositionsByColor
+} from "../history/utils.ts";
 
 export interface EditPipelineOptions {
   brush: Brush;
@@ -127,16 +129,20 @@ export class EditPipeline {
    */
   commitPixels(
     pixels: Vec2[],
-    slot: BrushColorSlot = "primary"
+    slot: BrushColorSlot = "primary",
+    uniformBeforeColor?: RGBA
   ): void {
     if (pixels.length === 0) {
       return;
     }
 
-    const color = toRGBA(this.#brush[slot].asString());
-    const beforeColors = this.#history.enabled ?
-      this.#canvasBuffer.samplePixels(pixels) :
-      [];
+    const color = this.#brush[slot].asRGBA();
+    let beforeColors: RGBA[] = [];
+    if (this.#history.enabled) {
+      beforeColors = uniformBeforeColor ?
+        pixels.map(() => uniformBeforeColor) :
+        this.#canvasBuffer.samplePixels(pixels);
+    }
 
     this.#applyStroke(color, pixels);
     this.commitStroke(pixels, color, beforeColors);
@@ -186,7 +192,7 @@ export class EditPipeline {
   ): void {
     const beforeSize = this.#canvasBuffer.size();
     const beforePixels = this.#history.enabled ?
-      Uint8ClampedArray.from(this.#canvasBuffer.pixels()) :
+      this.#canvasBuffer.pixels() :
       null;
 
     this.#resizeTexture(size);
@@ -197,9 +203,7 @@ export class EditPipeline {
         beforeSize,
         beforePixels,
         afterSize: structuredClone(size),
-        afterPixels: Uint8ClampedArray.from(
-          this.#canvasBuffer.pixels()
-        )
+        afterPixels: this.#canvasBuffer.pixels()
       });
     }
 
@@ -216,7 +220,7 @@ export class EditPipeline {
   ): void {
     const beforeSize = this.#canvasBuffer.size();
     const beforePixels = this.#history.enabled ?
-      Uint8ClampedArray.from(this.#canvasBuffer.pixels()) :
+      this.#canvasBuffer.pixels() :
       null;
 
     this.#canvasBuffer.loadTexture(source);
@@ -230,9 +234,7 @@ export class EditPipeline {
         beforeSize,
         beforePixels,
         afterSize: size,
-        afterPixels: Uint8ClampedArray.from(
-          this.#canvasBuffer.pixels()
-        )
+        afterPixels: this.#canvasBuffer.pixels()
       });
     }
 
@@ -283,9 +285,10 @@ export class EditPipeline {
     positions: Vec2[],
     colors: RGBA[]
   ): void {
-    for (const group of groupPositionsByColor(positions, colors)) {
-      this.#canvasBuffer.drawPixels(group.positions, group.color);
-    }
+    applyColorGroups(
+      this.#canvasBuffer,
+      groupPositionsByColor(positions, colors)
+    );
     this.#canvasBuffer.copyToMaster();
   }
 

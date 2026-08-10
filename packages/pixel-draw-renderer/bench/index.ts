@@ -4,6 +4,7 @@ import { run as floodFill } from "./flood-fill.bench.ts";
 import { run as history } from "./history.bench.ts";
 import { run as network } from "./network.bench.ts";
 import { run as pixelBuffer } from "./pixel-buffer.bench.ts";
+import { run as tools } from "./tools.bench.ts";
 
 // CONSTANTS
 const kSuites = [
@@ -11,7 +12,8 @@ const kSuites = [
   pixelBuffer,
   history,
   network,
-  colors
+  colors,
+  tools
 ];
 
 /**

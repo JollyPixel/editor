@@ -2,7 +2,10 @@
 import { toUint8Array } from "js-base64";
 
 // Import Internal Dependencies
-import { groupPositionsByColor } from "../history/utils.ts";
+import {
+  applyColorGroups,
+  groupPositionsByColor
+} from "../history/utils.ts";
 import { Fill } from "../tools/Fill.ts";
 import type { PixelBuffer } from "../buffer/PixelBuffer.ts";
 import type {
@@ -50,12 +53,7 @@ export function applyCommandToBuffer(
         cmd.metadata.positions,
         cmd.metadata.colors
       );
-      for (const group of groupedColors) {
-        buffer.drawPixels(
-          group.positions,
-          group.color
-        );
-      }
+      applyColorGroups(buffer, groupedColors);
       buffer.copyToMaster();
       break;
     }

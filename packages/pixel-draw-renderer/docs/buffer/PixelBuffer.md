@@ -2,7 +2,7 @@
 
 Headless RGBA pixel buffer with no DOM dependency. `PixelArtCanvas` uses an internal [`CanvasBuffer`](./CanvasBuffer.md) adapter to mirror it into an `HTMLCanvasElement`.
 
-Maintains two arrays: a `working` buffer at the current size, and a `master` buffer pre-allocated at `maxSize × maxSize`. `copyToMaster()` commits working into master; `resize()` reads back from master, so shrinking and growing again doesn't lose content.
+Maintains two arrays: a `working` buffer at the current size, and a retained `master` buffer that grows as larger dimensions are reached. `maxSize` is an upper bound rather than an up-front allocation. `copyToMaster()` commits working into master; `resize()` reads back from master, so shrinking and growing again doesn't lose content.
 
 ```ts
 new PixelBuffer(options: PixelBufferOptions)
@@ -29,7 +29,7 @@ size(): Vec2
 resize(size: Vec2): void
 ```
 
-Returns the current working size. `resize()` restores committed content from master. Dimensions above `maxSize` throw `RangeError`.
+Returns the current working size. `resize()` restores committed content from master and grows retained storage when necessary. Newly reached pixels use the constructor's `defaultColor`. Dimensions above `maxSize` throw `RangeError`.
 
 ### `pixels()`
 

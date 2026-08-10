@@ -30,6 +30,7 @@ interface BrushOptions {
 
 interface BrushColor {
   set(color: ColorInput, opacity?: number): void;
+  asRGBA(): RGBA;
   asString(format?: "rgba" | "hex"): string;
   get opacity(): number;
   set opacity(value: number);
@@ -51,7 +52,7 @@ readonly secondary: BrushColor
 
 Each slot stores a color and opacity. `set()` preserves the current opacity when its second argument is omitted. Opacity is clamped to `[0, 1]`.
 
-`asString()` returns `rgba(r, g, b, a)` by default. Pass `"hex"` for a six-digit hex color without opacity.
+`asRGBA()` returns a mutable snapshot with byte-valued RGBA components. `asString()` returns `rgba(r, g, b, a)` by default. Pass `"hex"` for a six-digit hex color without opacity.
 
 ### `size`
 

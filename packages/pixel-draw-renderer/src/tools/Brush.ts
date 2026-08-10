@@ -6,11 +6,13 @@ import { colorAsRGBA } from "../utils/colors.ts";
 import { clamp } from "../utils/math.ts";
 import type {
   ColorInput,
+  RGBA,
   Vec2
 } from "../types.ts";
 
 export class BrushColor {
   #color: Color;
+  #rgba: RGBA;
 
   constructor(
     color: ColorInput,
@@ -18,6 +20,7 @@ export class BrushColor {
   ) {
     this.#color = new Color(color);
     this.#color.alpha = clamp(opacity, 0, 1);
+    this.#rgba = this.#readRgba();
   }
 
   set(
@@ -29,6 +32,20 @@ export class BrushColor {
       clamp(opacity, 0, 1);
     this.#color = new Color(color);
     this.#color.alpha = alpha;
+    this.#rgba = this.#readRgba();
+  }
+
+  #readRgba(): RGBA {
+    const [r, g, b, a] = colorAsRGBA(this.#color);
+
+    return { r, g, b, a };
+  }
+
+  /**
+   * Returns a mutable RGBA snapshot of the current brush color.
+   */
+  asRGBA(): RGBA {
+    return { ...this.#rgba };
   }
 
   asString(
@@ -42,7 +59,7 @@ export class BrushColor {
       });
     }
 
-    const [r, g, b] = colorAsRGBA(this.#color);
+    const { r, g, b } = this.#rgba;
 
     return `rgba(${r}, ${g}, ${b}, ${this.#color.alpha})`;
   }
@@ -51,6 +68,7 @@ export class BrushColor {
     opacity: number
   ) {
     this.#color.alpha = clamp(opacity, 0, 1);
+    this.#rgba = this.#readRgba();
   }
 
   get opacity(): number {

@@ -9,7 +9,6 @@ import type {
 } from "./Brush.ts";
 import type { EditPipeline } from "../sync/EditPipeline.ts";
 import type { LinePreview } from "../rendering/overlays/LinePreview.ts";
-import { toRGBA } from "../utils/colors.ts";
 import type {
   PeerStrokePixel,
   Vec2
@@ -132,9 +131,7 @@ export class LineController {
         points.at(-1) ?? points[0]
       );
 
-      const color = toRGBA(
-        this.#brush[this.#colorSlot].asString()
-      );
+      const color = this.#brush[this.#colorSlot].asRGBA();
       this.#onProgress?.(
         this.#stampLinePixels(points).map((pos) => {
           return { ...pos, color };

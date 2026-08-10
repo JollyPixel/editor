@@ -66,4 +66,20 @@ describe("groupPositionsByColor", () => {
       2
     );
   });
+
+  test("does not collide non-byte colors in the numeric fast path", () => {
+    const positions = [
+      { x: 0, y: 0 },
+      { x: 1, y: 0 }
+    ];
+    const colors = [
+      { r: 0, g: 1, b: 0, a: 255 },
+      { r: 256, g: 0, b: 0, a: 255 }
+    ];
+
+    assert.strictEqual(
+      groupPositionsByColor(positions, colors).length,
+      2
+    );
+  });
 });
