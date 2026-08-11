@@ -1,10 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-import type {
-  GenericEventMap,
-  _Handler as Handler,
-  _RemoveEventListener as RemoveEventListener
-} from "@posva/event-emitter";
+import type { EventMap } from "@openally/emitt";
 
 // Import Internal Dependencies
 import type { RenderMode } from "./RenderStrategy.ts";
@@ -46,17 +42,13 @@ export interface RenderComponent {
 }
 
 export type RendererEvents = {
-  resize: [
-    { width: number; height: number; }
-  ];
-  draw: [
-    { source: THREE.WebGPURenderer; }
-  ];
+  resize: (size: { width: number; height: number; }) => void;
+  draw: (params: { source: THREE.WebGPURenderer; }) => void;
 };
 
 export interface Renderer<
   T = any,
-  Events extends GenericEventMap = RendererEvents
+  Events extends EventMap = RendererEvents
 > {
   readonly canvas: HTMLCanvasElement;
 
@@ -76,17 +68,15 @@ export interface Renderer<
 
   on<Key extends keyof Events>(
     type: Key,
-    handler: Handler<Events[Key]>
-  ): RemoveEventListener;
+    handler: Events[Key]
+  ): this;
   off<Key extends keyof Events>(
     type: Key,
-    handler?: Handler<Events[Key]>
+    handler: Events[Key]
   ): void;
   emit<Key extends keyof Events>(
     type: Key,
-    ...payload: Events[Key] extends [unknown, ...unknown[]] | []
-      ? Events[Key]
-      : [Events[Key]]
+    ...payload: Parameters<Events[Key]>
   ): void;
 
   observeResize(): void;

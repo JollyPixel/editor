@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-import { EventEmitter } from "@posva/event-emitter";
+import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import { type AudioListenerAdapter } from "./internals/AudioListener.ts";
@@ -10,10 +10,10 @@ export type VolumeObserver = {
 };
 
 export type GlobalAudioEvents = {
-  volumechange: [volume: number];
+  volumechange: (volume: number) => void;
 };
 
-export class GlobalAudio extends EventEmitter<GlobalAudioEvents> {
+export class GlobalAudio extends Emitter<GlobalAudioEvents> {
   #volumeObservers: VolumeObserver[] = [];
 
   listener: AudioListenerAdapter;

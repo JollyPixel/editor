@@ -135,7 +135,7 @@ describe("Controls.Mouse", () => {
   });
 
   test("should handle wheel scroll up", () => {
-    const wheelEvents: WheelEvent[] = [];
+    const wheelEvents: MouseEvent[] = [];
     mouse.on("wheel", (event) => {
       wheelEvents.push(event);
     });
@@ -491,7 +491,7 @@ class MouseCanvasAdapter extends mocks.CanvasAdapter {
 }
 
 class MouseDocumentAdapter extends mocks.DocumentAdapter {
-  exitPointerLock = mock.fn();
+  override exitPointerLock = mock.fn();
   pointerLockElement: any = null;
 
   dispatchEvent(

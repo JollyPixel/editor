@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-import { EventEmitter } from "@posva/event-emitter";
+import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import {
@@ -30,16 +30,16 @@ export type AppendedSceneEntry<TContext> = {
 };
 
 export type SceneEvents<TContext = WorldDefaultContext> = {
-  awake: [];
-  sceneChanged: [scene: Scene<TContext>];
-  sceneDestroyed: [scene: Scene<TContext>];
-  sceneAppended: [scene: Scene<TContext>];
-  sceneRemoved: [scene: Scene<TContext>];
+  awake: () => void;
+  sceneChanged: (scene: Scene<TContext>) => void;
+  sceneDestroyed: (scene: Scene<TContext>) => void;
+  sceneAppended: (scene: Scene<TContext>) => void;
+  sceneRemoved: (scene: Scene<TContext>) => void;
 };
 
 export class SceneManager<
   TContext = WorldDefaultContext
-> extends EventEmitter<SceneEvents<TContext>> {
+> extends Emitter<SceneEvents<TContext>> {
   default: THREE.Scene;
 
   componentsToBeStarted: Component[] = [];

@@ -1,6 +1,6 @@
 /* eslint-disable no-empty-function */
 // Import Third-party Dependencies
-import { EventEmitter } from "@posva/event-emitter";
+import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import type { World, WorldDefaultContext } from "./World.ts";
@@ -9,15 +9,15 @@ import type { Logger } from "./Logger.ts";
 import type { ComponentInitializeContext } from "../components/types.ts";
 
 export type SceneLifecycleEvents = {
-  initialize: [];
-  awake: [];
-  start: [];
-  destroy: [];
+  initialize: () => void;
+  awake: () => void;
+  start: () => void;
+  destroy: () => void;
 };
 
 export abstract class Scene<
   TContext = WorldDefaultContext
-> extends EventEmitter<SceneLifecycleEvents> {
+> extends Emitter<SceneLifecycleEvents> {
   static readonly Id = new IntegerIncrement();
 
   readonly id: number;
@@ -51,34 +51,34 @@ export abstract class Scene<
    * via context.assetManager.load(). All declared assets will be fully loaded before
    * awake() is called.
    */
-  async initialize(_context: ComponentInitializeContext): Promise<void> {}
+  async initialize(_context: ComponentInitializeContext): Promise<void> { }
 
   /**
    * Called once when the scene is first activated (before the first start/update).
    * Populate actors here.
    */
-  awake(): void {}
+  awake(): void { }
 
   /**
    * Called once at the beginning of the first frame after awake.
    * Useful for cross-actor initialization that requires all awake() calls to have run.
    */
-  start(): void {}
+  start(): void { }
 
   /**
    * Called every frame (variable rate).
    */
-  update(_deltaTime: number): void {}
+  update(_deltaTime: number): void { }
 
   /**
    * Called every fixed step (deterministic rate).
    */
-  fixedUpdate(_deltaTime: number): void {}
+  fixedUpdate(_deltaTime: number): void { }
 
   /**
    * Called when the scene is being replaced or explicitly unloaded.
    * Clean up timers, subscriptions, etc. Actor destruction is handled
    * automatically by SceneManager.
    */
-  destroy(): void {}
+  destroy(): void { }
 }
