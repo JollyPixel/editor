@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>resize-handle demo</title>
+  </head>
+  <body>
+    <div class="demo">
+      <header class="toolbar">
+        <div>
+          <strong>resize-handle</strong>
+          <span class="instructions">
+            Drag, use arrow keys, or double-click a handle.
+          </span>
+        </div>
+        <output id="status" aria-live="polite"></output>
+      </header>
+
+      <div class="editor">
+        <aside id="sidebar" class="sidebar">
+          <h1>Files</h1>
+          <ul>
+            <li class="selected">scene.ts</li>
+            <li>player.ts</li>
+            <li>world.json</li>
+          </ul>
+        </aside>
+
+        <section class="stage">
+          <main class="viewport">
+            <div class="object" aria-label="Demo object"></div>
+            <p>Viewport</p>
+          </main>
+
+          <section id="output" class="output">
+            <h2>Output</h2>
+            <code>&gt; Ready</code>
+          </section>
+        </section>
+      </div>
+    </div>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
