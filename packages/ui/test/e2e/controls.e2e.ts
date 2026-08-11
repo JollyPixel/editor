@@ -31,6 +31,12 @@ const kInputlessFields = [
   { id: "controls/button-group", tag: "jolly-button-group" }
 ];
 
+const kColoredFields = new Set([
+  "jolly-checkbox",
+  "jolly-slider",
+  "jolly-flags"
+]);
+
 const kLabelledExamples = [
   ...kFields,
   ...kInputlessFields,
@@ -115,7 +121,9 @@ test.describe("controls: state matrix", () => {
     test(`${tag} renders every matrix row`, async({ page }) => {
       await gotoGallery(page, { example: id, chrome: "off" });
 
-      await expect(page.locator(tag)).toHaveCount(9);
+      await expect(page.locator(tag)).toHaveCount(
+        kColoredFields.has(tag) ? 11 : 9
+      );
     });
 
     test(`${tag} reflects state as attributes`, async({ page }) => {
@@ -224,6 +232,8 @@ test.describe("controls: state matrix", () => {
 
         return {
           bar: style.boxShadow,
+          paddingBlockEnd: style.paddingBlockEnd,
+          paddingBlockStart: style.paddingBlockStart,
           tint: style.backgroundColor
         };
       });
@@ -232,6 +242,39 @@ test.describe("controls: state matrix", () => {
       expect(focused).not.toBe(rest);
       expect(held.bar).toContain("inset");
       expect(held.tint).not.toBe("rgba(0, 0, 0, 0)");
+      expect(held.paddingBlockStart).toBe("2px");
+      expect(held.paddingBlockEnd).toBe("2px");
+
+      const [fieldBounds, rowBounds, inputBounds] = await Promise.all([
+        locked.evaluate((node) => {
+          const bounds = node.getBoundingClientRect();
+
+          return {
+            top: bounds.top,
+            bottom: bounds.bottom
+          };
+        }),
+        locked.locator(".row").evaluate((node) => {
+          const bounds = node.getBoundingClientRect();
+
+          return {
+            top: bounds.top,
+            bottom: bounds.bottom
+          };
+        }),
+        input.evaluate((node) => {
+          const bounds = node.getBoundingClientRect();
+
+          return {
+            top: bounds.top,
+            bottom: bounds.bottom
+          };
+        })
+      ]);
+
+      expect(rowBounds.top - fieldBounds.top).toBe(2);
+      expect(inputBounds.top).toBeGreaterThanOrEqual(fieldBounds.top);
+      expect(inputBounds.bottom).toBeLessThanOrEqual(fieldBounds.bottom);
     });
 
     test(`${tag} paints the ring in the holder's colour`, async({ page }) => {
@@ -300,6 +343,28 @@ test.describe("controls: state matrix", () => {
   }
 });
 
+test.describe("controls: layout scenarios", () => {
+  test("Step Sizes reserves one stable label column", async({ page }) => {
+    await gotoGallery(page, {
+      example: "scenarios/step-sizes",
+      chrome: "off"
+    });
+
+    const fields = page.locator(
+      ".scenario-grid :is(jolly-number, jolly-slider, jolly-range)"
+    );
+    await expect(fields).toHaveCount(8);
+    await expect(fields.first()).toHaveCSS("--jolly-label-width", "10ch");
+
+    const widths = await fields.locator(".label").evaluateAll(
+      (labels) => labels.map((label) => label.getBoundingClientRect().width)
+    );
+
+    expect(new Set(widths).size).toBe(1);
+    expect(widths[0]).toBeGreaterThan(60);
+  });
+});
+
 test.describe("controls: select and button group", () => {
   for (const { id, tag } of kInputlessFields) {
     test(`${tag} renders every row and reflects state`, async({ page }) => {
@@ -309,6 +374,10 @@ test.describe("controls: select and button group", () => {
       await expect(row(page, tag, "mixed")).toHaveAttribute("mixed", "");
       await expect(row(page, tag, "modified")).toHaveAttribute("modified", "");
       await expect(row(page, tag, "locked")).toHaveAttribute("locked", "");
+      await expect(row(page, tag, "locked")).toHaveCSS(
+        "padding-block-start",
+        "2px"
+      );
     });
 
     test(`${tag} renders peer chips with overflow`, async({ page }) => {
@@ -429,22 +498,26 @@ test.describe("controls: select and button group", () => {
     expect(await page.evaluate(() => window.__changes)).toEqual([true]);
   });
 
-  test("checkbox has no background fill", async({ page }) => {
+  test("checkbox example opts into a background hit target", async({ page }) => {
     await gotoGallery(page, { example: "controls/checkbox", chrome: "off" });
 
-    const checkbox = row(page, "jolly-checkbox", "default")
-      .locator(".checkbox");
+    const field = row(page, "jolly-checkbox", "default");
+    const checkbox = field.locator(".checkbox");
 
-    await expect(checkbox).toHaveCSS(
-      "background-color",
-      "rgba(0, 0, 0, 0)"
-    );
+    await expect(field).toHaveAttribute("clickable-background", "");
+    await expect(checkbox).toHaveCSS("position", "relative");
+  });
 
-    await checkbox.hover();
-    await expect(checkbox).toHaveCSS(
-      "background-color",
-      "rgba(0, 0, 0, 0)"
-    );
+  test("clickable checkbox clears the gradient edge", async({ page }) => {
+    await gotoGallery(page, { example: "controls/checkbox", chrome: "off" });
+
+    const checkbox = row(page, "jolly-checkbox", "default");
+    const valueLeft = await checkbox.locator(".value")
+      .evaluate((node) => node.getBoundingClientRect().left);
+    const boxLeft = await control(checkbox)
+      .evaluate((node) => node.getBoundingClientRect().left);
+
+    expect(boxLeft - valueLeft).toBe(4);
   });
 
   test("checkbox alignment stays separate from its row label", async({ page }) => {
@@ -466,7 +539,7 @@ test.describe("controls: select and button group", () => {
       box.evaluate((node) => node.getBoundingClientRect().right)
     ]);
 
-    expect(edges[0] - edges[3]).toBe(4);
+    expect(edges[0] - edges[3]).toBe(8);
     expect(edges[1]).toBeLessThan(edges[2]);
     expect(edges[2]).toBeLessThan(edges[3]);
     await expect(label).toHaveCSS("text-align", "start");
@@ -538,7 +611,7 @@ test.describe("controls: select and button group", () => {
   test("slider hover changes handle color without resizing", async({ page }) => {
     await gotoGallery(page, { example: "controls/slider", chrome: "off" });
 
-    const lane = row(page, "jolly-slider", "default").locator(".lane");
+    const lane = row(page, "jolly-slider", "colored").locator(".lane");
 
     function trackHeight(): Promise<string> {
       return lane.evaluate((node) => getComputedStyle(
@@ -582,27 +655,6 @@ test.describe("controls: select and button group", () => {
     for (const right of valueRights) {
       expect(right).toBe(valueRights[0]);
     }
-  });
-
-  test("Editor sliders share a value edge with presence", async({ page }) => {
-    await gotoGallery(page, {
-      example: "scenarios/editor-states",
-      chrome: "off"
-    });
-
-    const sliders = page.locator("jolly-slider");
-    const metalness = sliders.filter({ hasText: "Metalness" });
-    const emission = sliders.filter({ hasText: "Emission" });
-    const [metalnessRight, emissionRight] = await Promise.all([
-      metalness.locator(".value").evaluate(
-        (node) => node.getBoundingClientRect().right
-      ),
-      emission.locator(".value").evaluate(
-        (node) => node.getBoundingClientRect().right
-      )
-    ]);
-
-    expect(metalnessRight).toBe(emissionRight);
   });
 
   test("revert hover matches its adjacent field background", async({ page }) => {
@@ -704,6 +756,82 @@ test.describe("controls: chrome", () => {
     ).toHaveAttribute("aria-label", "Grouping");
   });
 
+  test("a separator caption aligns with control labels", async({ page }) => {
+    await gotoGallery(page, { example: "scenarios/editor", chrome: "off" });
+
+    const palette = page.locator("jolly-floating");
+    const labelled = palette.locator("jolly-separator .labelled");
+    const caption = palette.locator("jolly-separator .caption");
+    const fieldLabel = palette.locator("jolly-slider .label").first();
+    const [captionLeft, labelLeft] = await Promise.all([
+      caption.evaluate((node) => node.getBoundingClientRect().left),
+      fieldLabel.evaluate((node) => node.getBoundingClientRect().left)
+    ]);
+
+    expect(captionLeft).toBe(labelLeft);
+    expect(
+      await caption.evaluate((node) => getComputedStyle(node).color)
+    ).not.toBe(
+      await fieldLabel.evaluate((node) => getComputedStyle(node).color)
+    );
+    await expect(labelled).toHaveCSS("margin-block-start", "2px");
+    await expect(caption).toHaveCSS(
+      "font-size",
+      await fieldLabel.evaluate((node) => getComputedStyle(node).fontSize)
+    );
+
+    const labelledRules = labelled.locator(".rule");
+    await expect(labelledRules).toHaveCount(2);
+    const leadingRule = labelledRules.first();
+    const trailingRule = labelledRules.last();
+    const [leadingRight, captionRight, trailingLeft] = await Promise.all([
+      leadingRule.evaluate((node) => node.getBoundingClientRect().right),
+      caption.evaluate((node) => node.getBoundingClientRect().right),
+      trailingRule.evaluate((node) => node.getBoundingClientRect().left)
+    ]);
+
+    expect(captionLeft - leadingRight).toBe(4);
+    expect(trailingLeft - captionRight).toBe(4);
+
+    const plainRule = page.locator(
+      "jolly-separator .unlabelled .rule"
+    ).first();
+    expect(
+      await trailingRule.evaluate(
+        (node) => getComputedStyle(node).backgroundColor
+      )
+    ).not.toBe(
+      await plainRule.evaluate(
+        (node) => getComputedStyle(node).backgroundColor
+      )
+    );
+  });
+
+  test("Editor examples show both separator variants", async({ page }) => {
+    for (const example of ["scenarios/editor", "scenarios/editor-states"]) {
+      await gotoGallery(page, { example, chrome: "off" });
+
+      const separators = page.locator("jolly-separator");
+      await expect(separators).toHaveCount(4);
+      await expect(
+        separators.locator('[role="separator"][aria-label]')
+      ).toHaveCount(2);
+      await expect(
+        separators.locator('[role="separator"]:not([aria-label])')
+      ).toHaveCount(2);
+
+      const labelled = separators.locator(".labelled").first();
+      const unlabelled = separators.locator(".unlabelled").first();
+      const [labelledHeight, unlabelledHeight] = await Promise.all([
+        labelled.evaluate((node) => node.getBoundingClientRect().height),
+        unlabelled.evaluate((node) => node.getBoundingClientRect().height)
+      ]);
+
+      expect(unlabelledHeight).toBe(labelledHeight);
+      await expect(unlabelled).toHaveCSS("margin-block-start", "2px");
+    }
+  });
+
   test("a property row slots arbitrary content", async({ page }) => {
     await gotoGallery(page, { example: "controls/chrome", chrome: "off" });
 
@@ -771,13 +899,15 @@ test.describe("controls: theming", () => {
   test("an overridden token reaches a painted style", async({ page }) => {
     await gotoGallery(page, { example: "controls/checkbox", chrome: "off" });
 
-    const box = control(page.locator("jolly-checkbox").first());
+    const neutralBox = control(row(page, "jolly-checkbox", "default"));
+    const coloredBox = control(row(page, "jolly-checkbox", "colored"));
 
-    function accent(): Promise<string> {
+    function accent(box: Locator): Promise<string> {
       return box.evaluate((node) => getComputedStyle(node).accentColor);
     }
 
-    const before = await accent();
+    const neutralBefore = await accent(neutralBox);
+    const coloredBefore = await accent(coloredBox);
 
     await page.evaluate(() => {
       const root = document.querySelector("gallery-root");
@@ -786,9 +916,11 @@ test.describe("controls: theming", () => {
       }
     });
 
-    const after = await accent();
+    const neutralAfter = await accent(neutralBox);
+    const coloredAfter = await accent(coloredBox);
 
-    expect(after).not.toBe(before);
-    expect(after).toBe("rgb(255, 102, 0)");
+    expect(neutralAfter).toBe(neutralBefore);
+    expect(coloredAfter).not.toBe(coloredBefore);
+    expect(coloredAfter).toBe("rgb(255, 102, 0)");
   });
 });

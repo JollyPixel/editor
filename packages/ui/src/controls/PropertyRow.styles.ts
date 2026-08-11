@@ -63,6 +63,13 @@ export const propertyRowStyles = css`
     margin-inline-end: calc(var(--jolly-space-1, 4px) * -1);
   }
 
+  /* Let an opted-in checkbox carry its gradient across the whole value column. */
+  :host([align="end"])
+    ::slotted(jolly-checkbox[align="end"][clickable-background]) {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
   /*
    * Align descriptions with field help text.
    */
@@ -70,7 +77,7 @@ export const propertyRowStyles = css`
     display: flex;
     align-items: flex-start;
     gap: var(--jolly-space-1, 4px);
-    margin-block: calc(var(--jolly-space-1, 4px) / 2) 0;
+    margin-block: calc(var(--jolly-space-1, 4px) / 2);
     margin-inline: calc(
         var(--jolly-gutter-width, 0px) + (var(--jolly-space-1, 4px) * 2)
       )
@@ -81,8 +88,9 @@ export const propertyRowStyles = css`
 
   .description jolly-icon {
     flex: 0 0 auto;
-    width: 12px;
-    height: 12px;
-    margin-block-start: 0.15em;
+    width: 14px;
+    height: 14px;
+    margin-block-start: 0;
+    color: var(--jolly-accent-text);
   }
 `;

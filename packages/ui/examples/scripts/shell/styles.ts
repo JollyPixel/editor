@@ -22,9 +22,34 @@ export const shellStyles = `
     flex: 0 0 auto;
   }
 
-  jolly-pane {
+  .gallery-pane {
     width: 100%;
     height: 100%;
+  }
+
+  .gallery-pane::part(header) {
+    flex-wrap: wrap;
+  }
+
+  .gallery-pane::part(title) {
+    flex-basis: 100%;
+  }
+
+  .gallery-pane::part(actions) {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+  }
+
+  .gallery-pane > [slot="actions"] {
+    --jolly-text-muted: color-mix(
+      in oklab,
+      var(--jolly-text-on-fill) 72%,
+      transparent
+    );
+
+    flex: 1 1 96px;
+    min-width: 96px;
+    color: var(--jolly-text-on-fill);
   }
 
   nav {
@@ -81,16 +106,16 @@ export const shellStyles = `
   }
 
   /*
-   * The gallery's own dock puts its resize grip 8px outside its right edge, which
+   * The gallery's own dock puts its resize grip 4px outside its right edge, which
    * would otherwise land on top of the example's rail. Clear it when the shell is
    * on; with chrome off there is no dock and no overhang to avoid.
    */
   .layout:not([data-chrome="off"]) .editor-shell {
-    padding-inline-start: 8px;
+    padding-inline-start: 4px;
   }
 
   /*
-   * A dock's resize grip straddles its edge, overhanging 8px into whatever sits
+   * A dock's resize grip sits outside its edge, overhanging 4px into whatever sits
    * beside it. The stage has a dock on each side, so it reserves that room
    * rather than letting the grips land on the toolbar and viewport.
    */

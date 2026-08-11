@@ -15,7 +15,7 @@ export const sliderStyles = css`
     --jolly-slider-track-height: 2px;
     --jolly-slider-inset: var(--jolly-space-1, 4px);
     --jolly-slider-groove: var(--jolly-groove);
-    --jolly-slider-fill: var(--jolly-accent-fill);
+    --jolly-slider-fill: var(--jolly-field-active-color);
     --jolly-slider-thumb-fill: var(--jolly-slider-fill);
     --jolly-slider-stop: calc(
       var(--jolly-slider-progress, 0) * (100% - var(--jolly-slider-knob)) +
@@ -52,7 +52,7 @@ export const sliderStyles = css`
 
   /* Hover changes only the handle color, so the track geometry stays still. */
   .lane:hover {
-    --jolly-slider-thumb-fill: var(--jolly-accent-fill-hover);
+    --jolly-slider-thumb-fill: var(--jolly-field-active-color-hover);
   }
 
   /* Focus geometry locates the active slider in a long pane. */

@@ -4,7 +4,10 @@ import {
   nothing,
   type TemplateResult
 } from "lit";
-import { customElement } from "lit/decorators.js";
+import {
+  customElement,
+  property
+} from "lit/decorators.js";
 
 // Import Internal Dependencies
 import { JollyField } from "../field/JollyField.ts";
@@ -21,16 +24,21 @@ export class Checkbox extends JollyField<boolean> {
     checkboxStyles
   ];
 
+  /** Expands the native label across the value background. */
+  @property({ type: Boolean, attribute: "clickable-background", reflect: true })
+  declare clickableBackground: boolean;
+
   constructor() {
     super();
 
     this.value = false;
+    this.clickableBackground = false;
   }
 
   /** Keeps the native checkbox on the standard control-sized hit target. */
   protected renderValue(): TemplateResult {
     return html`
-      <span class="checkbox">
+      <label class="checkbox">
         <input
           type="checkbox"
           .checked=${this.concreteValue ?? false}
@@ -42,7 +50,7 @@ export class Checkbox extends JollyField<boolean> {
           aria-invalid=${this.displayError === null ? nothing : "true"}
           @click=${this.#onClick}
         >
-      </span>
+      </label>
     `;
   }
 

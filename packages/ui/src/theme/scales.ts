@@ -26,6 +26,9 @@ export const scaleTokens = css`
      */
     --jolly-row-gap: var(--jolly-space-1);
 
+    /* Extra separation after folder groups, including reordered folders. */
+    --jolly-folder-gap: calc(var(--jolly-space-1) / 2);
+
     /*
      * Reserved leading space for the lock affordance. Zero by default; a
      * collaborative container opts its subtree in, which buys the fixed inset

@@ -52,18 +52,138 @@ test.describe("Dock", () => {
       await handle.evaluate((element) => getComputedStyle(element, "::after")
         .backgroundImage)
     ).toContain("radial-gradient");
+    await expect(handle).toHaveCSS("width", "4px");
 
-    const resting = await handle.evaluate(
-      (element) => getComputedStyle(element).backgroundColor
-    );
+    const colors = await handle.evaluate((element) => {
+      const probe = document.createElement("span");
+      probe.style.backgroundColor = "var(--jolly-dock-resize-bg)";
+      element.append(probe);
+      const values = {
+        handle: getComputedStyle(element).backgroundColor,
+        token: getComputedStyle(probe).backgroundColor
+      };
+      probe.remove();
+
+      return values;
+    });
+    expect(colors.handle).toBe(colors.token);
     await handle.hover();
     await expect.poll(
       () => handle.evaluate((element) => getComputedStyle(element).backgroundColor)
-    ).not.toBe(resting);
+    ).not.toBe(colors.handle);
+  });
+});
+
+test.describe("Pane", () => {
+  test("uses a larger left-origin pixel pattern", async({ page }) => {
+    await gotoGallery(page, {
+      example: "scenarios/editor",
+      chrome: "off"
+    });
+
+    const header = page.locator("jolly-pane > .header").first();
+    const title = header.locator(".title");
+    const colors = await header.evaluate((element) => {
+      const accentProbe = document.createElement("span");
+      const textProbe = document.createElement("span");
+      accentProbe.style.backgroundColor = "var(--jolly-accent-fill)";
+      textProbe.style.color = "var(--jolly-text-on-fill)";
+      element.append(accentProbe, textProbe);
+      const values = {
+        accent: getComputedStyle(accentProbe).backgroundColor,
+        background: getComputedStyle(element).backgroundColor,
+        foreground: getComputedStyle(element).color,
+        textOnFill: getComputedStyle(textProbe).color
+      };
+      accentProbe.remove();
+      textProbe.remove();
+
+      return values;
+    });
+    const pattern = await header.evaluate((element) => {
+      const style = getComputedStyle(element, "::before");
+
+      return {
+        backgroundImage: style.backgroundImage,
+        color: style.color,
+        insetInlineStart: style.insetInlineStart,
+        maskImage: style.maskImage,
+        opacity: style.opacity
+      };
+    });
+
+    expect(pattern.backgroundImage).toContain("conic-gradient");
+    expect(pattern.color).toBe(colors.textOnFill);
+    expect(pattern.insetInlineStart).toBe("0px");
+    expect(pattern.maskImage).toContain("linear-gradient");
+    expect(pattern.opacity).toBe("0.07");
+    expect(colors.background).toBe(colors.accent);
+    expect(colors.foreground).toBe(colors.textOnFill);
+    await expect(title).toHaveCSS("font-weight", "600");
+    await expect(title).toHaveCSS("letter-spacing", "0.88px");
   });
 });
 
 test.describe("Folder", () => {
+  test("uses a faded pixel pattern in every header", async({ page }) => {
+    await gotoGallery(page, {
+      example: "scenarios/reorder-persist",
+      chrome: "off"
+    });
+
+    const folders = page.locator("jolly-pane > jolly-folder");
+    const header = folders.first().locator(".header");
+
+    await expect(folders.locator(".folder-mark")).toHaveCount(0);
+    expect(
+      await header.evaluate((element) => getComputedStyle(element, "::after")
+        .backgroundImage)
+    ).toContain("conic-gradient");
+    await expect.poll(
+      () => header.evaluate((element) => getComputedStyle(element, "::after")
+        .opacity)
+    ).toBe("0.08");
+
+    await header.hover();
+    await expect.poll(
+      () => header.evaluate((element) => getComputedStyle(element, "::after")
+        .opacity)
+    ).toBe("0.14");
+  });
+
+  test("adds a light bottom gap between folder groups", async({ page }) => {
+    await gotoGallery(page, {
+      example: "scenarios/reorder-persist",
+      chrome: "off"
+    });
+
+    const margins = await page.locator("jolly-pane > jolly-folder")
+      .evaluateAll((folders) => folders.map(
+        (folder) => getComputedStyle(folder).marginBlockEnd
+      ));
+
+    expect(margins).toEqual(["2px", "2px", "2px"]);
+  });
+
+  test("distinguishes pane, folder, and control fills", async({ page }) => {
+    await gotoGallery(page, {
+      example: "scenarios/editor",
+      chrome: "off"
+    });
+
+    const inspector = page.locator("jolly-dock[side=right]");
+    const paneFill = await inspector.locator("jolly-pane > .header")
+      .evaluate((element) => getComputedStyle(element).backgroundColor);
+    const folderFill = await inspector.locator("jolly-folder > .header")
+      .first()
+      .evaluate((element) => getComputedStyle(element).backgroundColor);
+    const controlFill = await inspector.locator("jolly-number input")
+      .first()
+      .evaluate((element) => getComputedStyle(element).backgroundColor);
+
+    expect(new Set([paneFill, folderFill, controlFill]).size).toBe(3);
+  });
+
   test("keyboard reorder commits and survives reload", async({ page }) => {
     await gotoGallery(page, {
       example: "scenarios/reorder-persist",

@@ -68,10 +68,13 @@ jolly-pane { --jolly-accent-fill: #ff6600; }
 | `--jolly-surface`, `--jolly-surface-sunken`, `--jolly-surface-raised` | Opaque planes |
 | `--jolly-ink`, `--jolly-ink-danger` | The inks control fills are mixed from |
 | `--jolly-control-bg`, `-hover`, `-focus`, `-active`, `-muted` | Control states |
+| `--jolly-dock-resize-bg`, `-hover` | Dock resize separator states |
+| `--jolly-folder-header-bg`, `-hover`, `--jolly-pane-header-bg` | Container chrome hierarchy |
 | `--jolly-invalid-bg`, `-hover`, `-focus` | Invalid control states |
 | `--jolly-row-bg-focus` | Row tint locating the focused field |
 | `--jolly-groove` | Slider tracks and scrollbars |
 | `--jolly-divider` | Group-level rules |
+| `--jolly-separator-label`, `--jolly-separator-rule` | Captioned separator emphasis |
 | `--jolly-border`, `--jolly-border-strong` | Unused by the package; kept for consumers wanting outlines |
 | `--jolly-text`, `--jolly-text-muted`, `--jolly-text-on-fill` | Text |
 | `--jolly-accent-fill`, `-hover`, `-focus`, `--jolly-accent-text` | Accent surfaces and text |
@@ -93,12 +96,15 @@ depth:
 --jolly-control-bg: color-mix(in oklab, var(--jolly-ink) 8%, transparent);
 ```
 
-The stops are ordered because focus, hover, active and error share this one channel: rest 8%,
-hover 12%, focus 20%, active 26%, error from 15%.
+The neutral control stops are ordered because focus, hover, active and error share one channel:
+rest 8%, hover 12%, focus 20%, active 26%, and error from 15%. Container chrome uses dedicated
+semantic tokens instead: accent fill at 12% for folder headers and 18% on hover, then the solid
+accent fill for pane headers. This distinguishes hierarchy through hue as well as fill strength
+without coupling container chrome to interactive control states.
 
-This carries one invariant. **Containers paint opaque or paint nothing; only leaves tint.** Two
-translucent layers over each other drift lighter, so a container that tints will wash out
-everything inside it.
+This carries one invariant. **Container bodies paint opaque or paint nothing; only leaves and
+container chrome tint.** Two translucent body layers over each other drift lighter, so a container
+body that tints will wash out everything inside it.
 
 ## Layout tokens
 
@@ -130,9 +136,9 @@ jolly-pane { --jolly-field-trailing-width: 48px; }
 ## Scales
 
 The package defines spacing tokens `--jolly-space-1` through `--jolly-space-6`, radii
-`--jolly-radius-sm` (2px, controls) and `--jolly-radius-md` (6px, planes), `--jolly-row-gap`, and
-motion tokens `--jolly-duration-fast`, `--jolly-duration-base` and `--jolly-easing`. Durations
-become zero for reduced-motion users.
+`--jolly-radius-sm` (2px, controls) and `--jolly-radius-md` (6px, planes), `--jolly-row-gap`,
+`--jolly-folder-gap`, and motion tokens `--jolly-duration-fast`, `--jolly-duration-base` and
+`--jolly-easing`. Durations become zero for reduced-motion users.
 
 ## Contrast
 

@@ -26,6 +26,7 @@ field.addEventListener("jolly-change", (event) => {
 | `error` | `string \| null` | Consumer-provided validation message |
 | `disabled` | `boolean` | Disables and removes from tab order |
 | `readonly` | `boolean` | Prevents editing while remaining focusable |
+| `colored` | `boolean` | Uses the primary accent for supported controls and the modified indicator, default `false` |
 | `lockedBy` | `CollaboratorPresence \| null` | Collaborator holding the field |
 | `peers` | `CollaboratorPresence[]` | Collaborators shown on the field |
 | `align` | `"start" \| "end"` | Which edge the value sits against, default `"start"` |
@@ -38,6 +39,14 @@ down the pane:
 ```
 
 `value`, `default`, `lockedBy` and `peers` are properties, not attributes.
+
+Checkboxes, sliders and flags use muted gray paint in the light theme and near-white paint in the
+dark theme by default. Set `colored` to opt them into the primary accent. The modified indicator
+at the leading edge follows the same mode on every field:
+
+```html
+<jolly-slider label="Opacity" colored></jolly-slider>
+```
 
 ## Events
 
@@ -71,12 +80,14 @@ Fields can combine these states:
 | `readonly` | Focusable but not editable |
 | `locked` | Focusable, not editable, with collaborator indicator |
 | `mixed` | Dash placeholder or indeterminate state |
-| `modified` | Leading bar, with an always-visible muted revert affordance |
+| `modified` | Neutral leading bar, or accent-colored when `colored`, with an always-visible muted revert affordance |
 | `invalid` | Error tint and message |
 | `peers` | Collaborator chips |
 
-`disabled`, `readonly`, `locked`, `mixed`, `modified` and `invalid` are reflected attributes for
-styling. `disabled`, `readonly` and `lockedBy` can be combined.
+`disabled`, `readonly`, `colored`, `locked`, `mixed`, `modified` and `invalid` are reflected
+attributes for styling. `disabled`, `readonly` and `lockedBy` can be combined.
+Locked fields add 2px of tinted padding above and below the input. The input remains fully inside
+the background, and the leading ownership bar continues across the full padded row height.
 
 ## Mixed values
 
@@ -112,6 +123,9 @@ an ancestor to align labels:
 ```css
 .pane { --jolly-label-width: 8ch; }
 ```
+
+Choose a width that fits the longest label plus a little breathing room. For example, the Step
+Sizes gallery uses `10ch` so labels from `step 1` through `step 0.01` share one stable column.
 
 Set `--jolly-field-trailing-width` when stacked fields need the same value edge despite optional
 revert and presence chrome:

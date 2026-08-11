@@ -36,11 +36,16 @@ export class Separator extends LitElement {
 
   override render(): TemplateResult {
     if (this.label === "") {
-      return html`<div class="rule" role="separator"></div>`;
+      return html`
+        <div class="unlabelled" role="separator">
+          <span class="rule" aria-hidden="true"></span>
+        </div>
+      `;
     }
 
     return html`
       <div class="labelled" role="separator" aria-label=${this.label}>
+        <span class="rule" aria-hidden="true"></span>
         <span class="caption">${this.label}</span>
         <span class="rule" aria-hidden="true"></span>
       </div>

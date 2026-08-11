@@ -15,6 +15,7 @@ export interface FieldLike {
   error: string | null;
   disabled: boolean;
   readonly: boolean;
+  colored: boolean;
   lockedBy: CollaboratorPresence | null;
   peers: CollaboratorPresence[];
 }
@@ -28,6 +29,8 @@ export interface StateMatrixOptions<
   applyMixed?(field: TField): void;
   /** A value differing from `default`, so the revert gutter appears. */
   modified?(field: TField): void;
+  /** Adds accent and accent plus modified rows for controls with colored paint. */
+  colored?: boolean;
   /**
    * Also write back `jolly-input`, for a control whose continuous phase has no draft of its own
    * (`jolly-number`'s scrub, `jolly-slider`'s drag) and so needs `value` kept live to redraw.
@@ -56,7 +59,14 @@ const kRows = [
   "mixed+modified"
 ] as const;
 
-export type MatrixState = typeof kRows[number];
+const kColoredRows = [
+  "colored",
+  "colored+modified"
+] as const;
+
+export type MatrixState =
+  | typeof kRows[number]
+  | typeof kColoredRows[number];
 
 // CONSTANTS
 const kHolder: CollaboratorPresence = {
@@ -103,8 +113,12 @@ export function renderStateMatrix<
 ): () => void {
   const grid = document.createElement("div");
   grid.className = "state-matrix";
+  const states: MatrixState[] = [...kRows];
+  if (options.colored === true) {
+    states.push(...kColoredRows);
+  }
 
-  for (const state of kRows) {
+  for (const state of states) {
     grid.append(
       buildRow(state, options)
     );
@@ -192,6 +206,13 @@ function applyState<
       break;
     case "peers":
       field.peers = kCrowd;
+      break;
+    case "colored":
+      field.colored = true;
+      break;
+    case "colored+modified":
+      field.colored = true;
+      setModified?.(field);
       break;
     // Mixed is modified whenever a default exists, so this needs no second step.
     case "mixed+modified":

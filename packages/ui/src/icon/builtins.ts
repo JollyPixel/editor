@@ -122,20 +122,29 @@ registerIcon("check", svg`
 
 // Description indicator.
 registerIcon("info", svg`
-  <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.25" />
-  <path d="M12 11v5.5" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" />
-  <circle cx="12" cy="7.75" r="1.2" fill="currentColor" stroke="none" />
+  <circle cx="12" cy="12" r="9" fill="currentColor" />
+  <path
+    d="M12 10.5v6"
+    fill="none"
+    stroke="var(--jolly-surface, Canvas)"
+    stroke-width="2.5"
+    stroke-linecap="round"
+  />
+  <circle cx="12" cy="7.5" r="1.35" fill="var(--jolly-surface, Canvas)" />
 `);
 
 // Error indicator.
 registerIcon("warning", svg`
   <path
     d="M12 4.25 21.5 20.5h-19Z"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2.25"
-    stroke-linejoin="round"
+    fill="currentColor"
   />
-  <path d="M12 10v4.25" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" />
-  <circle cx="12" cy="17.25" r="1.2" fill="currentColor" stroke="none" />
+  <path
+    d="M12 9.75v4.75"
+    fill="none"
+    stroke="var(--jolly-surface, Canvas)"
+    stroke-width="2.5"
+    stroke-linecap="round"
+  />
+  <circle cx="12" cy="17.4" r="1.35" fill="var(--jolly-surface, Canvas)" />
 `);

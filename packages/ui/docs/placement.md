@@ -19,9 +19,9 @@ Dock emits `jolly-resize` while resizing and `jolly-resize-end` after pointer, k
 collapse changes. Both carry `{ width, height, collapsed }`.
 
 Dock chrome is intentionally flush: a slotted Pane loses its border radius and shadow while it
-is docked. The inward 8px separator uses the same dotted grip and accent hover treatment as the
-pixel-art editor. Floating Panes retain their raised, rounded treatment and quieter fine-line
-resize handles on their right and bottom edges.
+is docked. The inward 4px separator uses a soft accent-blue surface with a dotted grip and a
+slightly stronger accent treatment while interacting. Floating Panes retain their raised,
+rounded treatment and quieter fine-line resize handles on their right and bottom edges.
 
 ## Floating
 

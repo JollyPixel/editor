@@ -9,9 +9,11 @@ export const CHECKBOX_EXAMPLE: GalleryExample = {
   group: "Controls",
   render(host) {
     return renderStateMatrix<Checkbox>(host, {
+      colored: true,
       create() {
         const field = document.createElement("jolly-checkbox");
         field.label = "Cast shadows";
+        field.clickableBackground = true;
         field.value = false;
         field.default = false;
 

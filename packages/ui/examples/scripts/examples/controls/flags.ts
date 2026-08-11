@@ -29,6 +29,7 @@ export const FLAGS_EXAMPLE: GalleryExample = {
   group: "Controls",
   render(host) {
     return renderStateMatrix<Flags>(host, {
+      colored: true,
       create() {
         const field = document.createElement("jolly-flags");
         field.label = "Collides with";

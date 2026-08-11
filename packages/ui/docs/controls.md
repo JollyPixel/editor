@@ -95,6 +95,19 @@ It is hidden from assistive technology; each input retains its range-start or ra
 
 Boolean checkbox with native keyboard behavior and `indeterminate` support. `Mixed` renders as
 indeterminate; activating it commits `true`.
+The native box sits flush with the logical edge of its value container. Set `align="end"` to move
+it to the trailing edge.
+
+| Property | Attribute | Type | Default |
+|---|---|---|---|
+| `clickableBackground` | `clickable-background` | `boolean` | `false` |
+
+Enable `clickable-background` to expand a native label across the value area. A faint tint begins
+beside the checkbox and fades across the clickable background, strengthening on hover and focus.
+The checkbox keeps a 4px inset from the gradient's rounded strong edge. The gradient, radius, and
+inset reverse for end alignment while retaining the same dimensions. A 2px top and bottom inset
+keeps the gradient from reading as a full-height input fill. The Editors scenarios enable this
+option for their checkbox fields, including full-width gradients in end-aligned property rows.
 
 ### `jolly-select`
 
@@ -223,6 +236,17 @@ Use `label` when an icon-only button has no visible text.
 
 Visual separator between groups. The optional `label` captions it; an unlabeled separator is
 hidden from assistive technology.
+Captioned separators use the normal field-label font size and follow the shared field gutter so
+their text aligns with surrounding control labels. Accent-colored captions, softly tinted rules,
+and a small leading gap distinguish these group headings from ordinary field labels. The rule
+flanks a caption on both sides while preserving that label alignment.
+Labelled and unlabelled variants occupy the same row height and leading margin, so switching
+between them does not change the surrounding vertical rhythm.
+
+```html
+<jolly-separator></jolly-separator>
+<jolly-separator label="Rendering"></jolly-separator>
+```
 
 ### `jolly-property-row`
 
