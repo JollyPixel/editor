@@ -17,6 +17,10 @@ export {
 export {
   peerColor
 } from "./theme/peerColor.ts";
+export {
+  ensureFontFace,
+  fontFaceCss
+} from "./theme/font.ts";
 export type {
   ThemeMode,
   Density
@@ -85,11 +89,17 @@ export type {
   JollyChangeDetail
 } from "./field/events.ts";
 export type {
+  FieldAlign
+} from "./field/JollyField.ts";
+export type {
   CollaboratorPresence
 } from "./collab/types.ts";
 export {
   isInputElement,
   isSelectElement,
+  isButtonElement,
+  isSlotElement,
+  isDocumentOrShadowRoot,
   detailOf
 } from "./dom.ts";
 
@@ -104,3 +114,48 @@ export {
 export {
   MemoryStorageAdapter
 } from "./storage/MemoryStorageAdapter.ts";
+
+export {
+  PaneElement
+} from "./containers/Pane.ts";
+export {
+  Folder
+} from "./containers/Folder.ts";
+export {
+  Tabs,
+  type TabsOrientation
+} from "./containers/Tabs.ts";
+export {
+  Tab
+} from "./containers/Tab.ts";
+export {
+  Dock,
+  type DockSide
+} from "./containers/Dock.ts";
+export {
+  Floating
+} from "./containers/Floating.ts";
+export {
+  Dialog
+} from "./containers/Dialog.ts";
+export {
+  showPrompt,
+  showConfirm,
+  type PromptOptions,
+  type ConfirmOptions
+} from "./containers/dialogHelpers.ts";
+export {
+  Toolbar,
+  type ToolbarOrientation
+} from "./containers/Toolbar.ts";
+export {
+  Rail,
+  type RailOrientation
+} from "./containers/Rail.ts";
+export type {
+  JollyResizeDetail,
+  JollyMoveDetail,
+  JollyReorderDetail,
+  JollyToggleDetail,
+  JollyTabChangeDetail
+} from "./containers/events.ts";

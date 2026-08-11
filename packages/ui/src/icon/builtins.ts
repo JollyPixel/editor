@@ -28,10 +28,10 @@ registerIcon("close", svg`
   />
 `);
 
-// Revert arrow.
+// Circular reset arrow.
 registerIcon("revert", svg`
   <path
-    d="M4 10h6a6 6 0 1 1-5.7 8"
+    d="M3 12a9 9 0 1 0 3-6.7L3 8"
     fill="none"
     stroke="currentColor"
     stroke-width="2.25"
@@ -39,7 +39,7 @@ registerIcon("revert", svg`
     stroke-linejoin="round"
   />
   <path
-    d="M4 5v5h5"
+    d="M3 3v5h5"
     fill="none"
     stroke="currentColor"
     stroke-width="2.25"

@@ -16,6 +16,7 @@
     "docs:preview": "vitepress preview docs"
   },
   "workspaces": [
+    "packages/resize-handle",
     "packages/ui",
     "packages/three",
     "packages/engine",
@@ -24,7 +25,6 @@
     "packages/network",
     "packages/fs-tree",
     "packages/fs-tree-backend",
-    "packages/resize-handle",
     "packages/voxel-renderer",
     "packages/pixel-draw-renderer",
     "packages/editors/pixel-art",

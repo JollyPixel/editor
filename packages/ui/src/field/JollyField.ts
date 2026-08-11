@@ -29,6 +29,12 @@ const kMaxChips = 3;
 const kWarned = new Set<string>();
 
 /**
+ * Which edge a field's value sits against. Logical, so it follows writing
+ * direction rather than naming a physical side.
+ */
+export type FieldAlign = "start" | "end";
+
+/**
  * Shared field chrome. Subclasses render only the value area.
  */
 export abstract class JollyField<TValue> extends LitElement {
@@ -63,6 +69,13 @@ export abstract class JollyField<TValue> extends LitElement {
   @property({ type: Boolean, reflect: true })
   declare readonly: boolean;
 
+  /**
+   * Numeric and monitor-style rows often read better against the trailing edge,
+   * where the digits line up down the pane.
+   */
+  @property({ type: String, reflect: true })
+  declare align: FieldAlign;
+
   #draft: string | null = null;
   #parseError: string | null = null;
 
@@ -77,6 +90,7 @@ export abstract class JollyField<TValue> extends LitElement {
     this.error = null;
     this.disabled = false;
     this.readonly = false;
+    this.align = "start";
   }
 
   /**
@@ -251,7 +265,10 @@ export abstract class JollyField<TValue> extends LitElement {
         ${this.#renderGutter()}
         ${this.label === "" ? nothing : html`<span class="label">${this.label}</span>`}
         <div class="value">${this.renderValue()}</div>
-        ${this.#renderPeers()}
+        <div class="trailing">
+          ${this.#renderRevert()}
+          ${this.#renderPeers()}
+        </div>
       </div>
       ${this.#renderDescription()}
       ${this.#renderError()}
@@ -259,7 +276,8 @@ export abstract class JollyField<TValue> extends LitElement {
   }
 
   /**
-   * Renders the lock or revert affordance in a fixed-width gutter.
+   * Renders the lock affordance. The gutter collapses to nothing unless a
+   * container opted its subtree in, so a single user pane pays no leading inset.
    */
   #renderGutter(): TemplateResult {
     const holder = this.holder;
@@ -267,21 +285,26 @@ export abstract class JollyField<TValue> extends LitElement {
       return this.#renderLock(holder);
     }
 
-    const modified = this.modified;
-    if (!modified || !this.editable) {
-      return html`<span class="gutter"></span>`;
+    return html`<span class="gutter"></span>`;
+  }
+
+  /**
+   * Renders a muted revert action at the trailing edge while the value differs
+   * from its default.
+   */
+  #renderRevert(): TemplateResult | typeof nothing {
+    if (!this.modified || !this.editable) {
+      return nothing;
     }
 
     return html`
-      <span class="gutter">
-        <button
-          class="revert"
-          type="button"
-          title="Revert to default"
-          aria-label="Revert to default"
-          @click=${this.#onRevert}
-        ><jolly-icon name="revert"></jolly-icon></button>
-      </span>
+      <button
+        class="revert"
+        type="button"
+        title="Revert to default"
+        aria-label="Revert to default"
+        @click=${this.#onRevert}
+      ><jolly-icon name="revert"></jolly-icon></button>
     `;
   }
 

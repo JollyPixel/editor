@@ -20,19 +20,18 @@ export const selectStyles = css`
     cursor: pointer;
   }
 
+  /* Native dropdown rows need an opaque themed plane, especially in dark mode. */
+  .value option {
+    background: var(--jolly-surface-raised, Canvas);
+    color: var(--jolly-text, CanvasText);
+  }
+
   /*
    * Hide Firefox's inner focus ring without hiding the selected value.
    */
   .value select:-moz-focusring {
     color: transparent;
     text-shadow: 0 0 0 currentColor;
-  }
-
-  /*
-   * Suppress the ring for pointer-focused native selects.
-   */
-  .value select[data-pointer-focus]:focus-visible {
-    outline: none;
   }
 
   .value .chevron {

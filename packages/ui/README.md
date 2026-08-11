@@ -14,6 +14,7 @@ theming and collaboration-aware field state.
 ## 💡 Features
 
 - **Form controls**: text, number, slider, range, checkbox, select, flags, color and button groups
+- **Containers and chrome**: panes, folders, tabs, docks, floating panes, dialogs, toolbars and rails
 - **Actions and layout**: buttons, separators and property rows
 - **Controlled fields**: shared values, events, drafts, validation, mixed values and defaults
 - **Collaboration state**: peer presence, field locking and peer colors
@@ -100,10 +101,14 @@ Set `density` on the scope host when needed:
 - [Controls](./docs/controls.md): control-specific properties and behavior
 - [Theming](./docs/theming.md): themes, density and custom-property tokens
 - [Icons](./docs/icons.md): built-in icons and custom icon registration
+- [Containers](./docs/containers.md): panes, folders, tabs, toolbars, rails and persistence
+- [Placement](./docs/placement.md): docked and floating layout, resizing and movement
+- [Dialogs](./docs/dialogs.md): declarative modal content and prompt/confirm helpers
 
 The package currently ships twelve controls: `jolly-text`, `jolly-number`, `jolly-slider`, `jolly-range`,
 `jolly-checkbox`, `jolly-select`, `jolly-flags`, `jolly-color`, `jolly-button-group`,
-`jolly-button`, `jolly-separator` and `jolly-property-row`, plus `jolly-icon`.
+`jolly-button`, `jolly-separator` and `jolly-property-row`, plus the container elements and
+`jolly-icon`.
 
 ## 🖼️ Examples Gallery
 
@@ -146,8 +151,15 @@ Unit tests use `node:test`; end-to-end tests use Playwright against the gallery.
 
 MIT
 
+This package embeds Roboto Mono (weight 400, latin subset), licensed under the
+[Apache License 2.0][roboto-mono]. See [NOTICE](./NOTICE) for the full attribution. The face is
+registered against the document on first import of `themeStyles`; call `ensureFontFace()` yourself
+if you declare theme tokens by hand. Without it, `--jolly-font-family` falls back to the system
+mono stack.
+
 <!-- Reference-style links for DRYness -->
 
 [npm]: https://docs.npmjs.com/getting-started/what-is-npm
 [yarn]: https://yarnpkg.com
 [contributing]: ../../CONTRIBUTING.md
+[roboto-mono]: https://github.com/googlefonts/robotomono

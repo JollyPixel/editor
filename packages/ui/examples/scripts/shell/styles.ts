@@ -10,28 +10,26 @@ export const shellStyles = `
   }
 
   .layout {
-    display: grid;
-    grid-template-columns: 220px 1fr;
+    display: flex;
     height: 100%;
   }
 
   .layout[data-chrome="off"] {
-    grid-template-columns: 1fr;
+    display: block;
+  }
+
+  jolly-dock {
+    flex: 0 0 auto;
+  }
+
+  jolly-pane {
+    width: 100%;
+    height: 100%;
   }
 
   nav {
-    overflow-y: auto;
-    padding: var(--jolly-space-2);
-    background: var(--jolly-surface-sunken);
-    border-right: 1px solid var(--jolly-border);
-  }
-
-  .group-title {
-    padding: var(--jolly-space-2) var(--jolly-space-2) var(--jolly-space-1);
-    color: var(--jolly-text-muted);
-    font-size: 0.85em;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+    display: grid;
+    gap: 1px;
   }
 
   a {
@@ -60,7 +58,66 @@ export const shellStyles = `
 
   main {
     overflow: auto;
+    flex: 1 1 auto;
+    min-width: 0;
     padding: var(--jolly-space-4);
+  }
+
+  /* The composite scenarios are judged full bleed, so they drop the page inset. */
+  main:has(> .editor-shell) {
+    overflow: hidden;
+    padding: 0;
+  }
+
+  .layout[data-chrome="off"] main:has(> .editor-shell) {
+    height: 100%;
+  }
+
+  .editor-shell {
+    display: flex;
+    height: 100%;
+    min-height: 520px;
+    background: var(--jolly-surface-sunken);
+  }
+
+  /*
+   * The gallery's own dock puts its resize grip 8px outside its right edge, which
+   * would otherwise land on top of the example's rail. Clear it when the shell is
+   * on; with chrome off there is no dock and no overhang to avoid.
+   */
+  .layout:not([data-chrome="off"]) .editor-shell {
+    padding-inline-start: 8px;
+  }
+
+  /*
+   * A dock's resize grip straddles its edge, overhanging 8px into whatever sits
+   * beside it. The stage has a dock on each side, so it reserves that room
+   * rather than letting the grips land on the toolbar and viewport.
+   */
+  .editor-stage {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: var(--jolly-space-2);
+    min-width: 0;
+    padding-block: var(--jolly-space-2);
+    padding-inline: var(--jolly-space-3);
+  }
+
+  /* Without a basis the segments collapse to min-content and ellipsize. */
+  .editor-stage jolly-button-group {
+    flex: 0 0 auto;
+    width: 220px;
+  }
+
+  .editor-viewport {
+    display: grid;
+    flex: 1 1 auto;
+    min-height: 0;
+    border-radius: var(--jolly-radius-md);
+    background: var(--jolly-surface);
+    color: var(--jolly-text-muted);
+    place-items: center;
   }
 
   .token-grid {
@@ -106,7 +163,15 @@ export const shellStyles = `
     transform: scale(1.25);
   }
 
+  .state-matrix,
+  .chrome-demo {
+    --jolly-label-width: 14ch;
+  }
+
   .state-matrix {
+    --jolly-field-trailing-width: 48px;
+    --jolly-gutter-width: 14px;
+
     display: grid;
     gap: var(--jolly-space-3);
     max-width: 520px;
@@ -134,6 +199,19 @@ export const shellStyles = `
     display: grid;
     gap: var(--jolly-space-3);
     max-width: 520px;
+  }
+
+  .placement-stage {
+    position: relative;
+    display: flex;
+    min-height: 480px;
+    overflow: hidden;
+    border: 1px solid var(--jolly-border);
+  }
+
+  .placement-stage > p {
+    flex: 1 1 auto;
+    padding: var(--jolly-space-4);
   }
 
   .scenario-hint {

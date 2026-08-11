@@ -12,6 +12,7 @@ import {
 
 // Import Internal Dependencies
 import { propertyRowStyles } from "./PropertyRow.styles.ts";
+import type { FieldAlign } from "../field/JollyField.ts";
 
 // Registers the icon used by descriptions.
 import "../icon/Icon.ts";
@@ -31,11 +32,19 @@ export class PropertyRow extends LitElement {
   @property({ type: String })
   declare description: string;
 
+  /**
+   * Matches the field contract, so a custom row lines up with the controls
+   * around it instead of being the one row that does not.
+   */
+  @property({ type: String, reflect: true })
+  declare align: FieldAlign;
+
   constructor() {
     super();
 
     this.label = "";
     this.description = "";
+    this.align = "start";
   }
 
   override render(): TemplateResult {

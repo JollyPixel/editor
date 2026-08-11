@@ -29,7 +29,8 @@
   },
   "keywords": [],
   "files": [
-    "dist"
+    "dist",
+    "NOTICE"
   ],
   "directories": {
     "doc": "docs",
@@ -39,6 +40,9 @@
   "license": "MIT",
   "peerDependencies": {
     "lit": "^3.3.0"
+  },
+  "dependencies": {
+    "@jolly-pixel/resize-handle": "1.0.0"
   },
   "devDependencies": {
     "lit": "3.3.3"

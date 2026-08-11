@@ -308,6 +308,40 @@ test.describe("drag scrub", () => {
   });
 });
 
+test.describe("slider", () => {
+  test("the Editor updates slider progress before commit", async({ page }) => {
+    await gotoGallery(page, {
+      example: "scenarios/editor",
+      chrome: "off"
+    });
+    await recordChanges(page);
+
+    const slider = page.locator("jolly-slider").first();
+    const range = slider.locator('input[type="range"]');
+    const lane = slider.locator(".lane");
+
+    function progress(): Promise<string> {
+      return lane.evaluate((node) => getComputedStyle(node)
+        .getPropertyValue("--jolly-slider-progress"));
+    }
+
+    const before = await progress();
+
+    await range.evaluate((node) => {
+      if (node instanceof HTMLInputElement) {
+        node.value = "3";
+        node.dispatchEvent(new Event("input", {
+          bubbles: true,
+          composed: true
+        }));
+      }
+    });
+
+    await expect.poll(progress).not.toBe(before);
+    expect(await changes(page)).toEqual([]);
+  });
+});
+
 test.describe("arrow-key stepping", () => {
   test("ArrowUp/ArrowDown step jolly-number by step, Shift coarsens and Alt refines", async({ page }) => {
     await gotoGallery(page, {

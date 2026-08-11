@@ -37,6 +37,12 @@ const kInputlessFields = [
   { id: "controls/button-group", tag: "jolly-button-group" }
 ];
 
+const kLabelledExamples = [
+  ...kFields,
+  ...kInputlessFields,
+  { id: "controls/chrome", tag: "jolly-property-row" }
+];
+
 function row(
   page: Page,
   tag: string,
@@ -82,6 +88,34 @@ async function recordChanges(
 }
 
 test.describe("controls: state matrix", () => {
+  for (const { id, tag } of kLabelledExamples) {
+    test(`${id} reserves a shared label column`, async({ page }) => {
+      await gotoGallery(page, { example: id, chrome: "off" });
+
+      const field = page.locator(tag).first();
+
+      await expect(field).toHaveCSS("--jolly-label-width", "14ch");
+      const labelWidth = await field.locator(".label").first().evaluate(
+        (node) => node.getBoundingClientRect().width
+      );
+
+      expect(labelWidth).toBeGreaterThanOrEqual(80);
+
+      if (id !== "controls/chrome") {
+        const [defaultLabelLeft, lockedLabelLeft] = await Promise.all([
+          row(page, tag, "default").locator(".label").evaluate(
+            (node) => node.getBoundingClientRect().left
+          ),
+          row(page, tag, "locked").locator(".label").evaluate(
+            (node) => node.getBoundingClientRect().left
+          )
+        ]);
+
+        expect(lockedLabelLeft).toBe(defaultLabelLeft);
+      }
+    });
+  }
+
   for (const { id, tag } of kFields) {
     test(`${tag} renders every matrix row`, async({ page }) => {
       await gotoGallery(page, { example: id, chrome: "off" });
@@ -115,6 +149,13 @@ test.describe("controls: state matrix", () => {
       await expect(
         row(page, tag, "modified").locator(".revert")
       ).toBeVisible();
+
+      const modified = row(page, tag, "modified");
+      const mutedColor = await modified.locator(".label").evaluate(
+        (node) => getComputedStyle(node).color
+      );
+
+      await expect(modified.locator(".revert")).toHaveCSS("color", mutedColor);
 
       await expect(
         row(page, tag, "default").locator(".revert")
@@ -172,26 +213,30 @@ test.describe("controls: state matrix", () => {
     });
 
     /**
-     * The combination section 4 exists for: focus is outset and the lock
-     * inset, so a locked field that is also focused shows both, and focus is
-     * never suppressed.
+     * The combination section 4 exists for: the lock paints the field while
+     * focus tints the row, so a locked field that is also focused shows both,
+     * and focus is never suppressed.
+     *
+     * The row is what carries focus here rather than the control, because a
+     * third of the catalog has no fill of its own to tint.
      */
-    test(`${tag} shows both rings when locked and focused`, async({ page }) => {
+    test(`${tag} shows the lock and the focus tint together`, async({ page }) => {
       await gotoGallery(page, { example: id, chrome: "off" });
 
       const locked = row(page, tag, "locked");
       const input = control(locked);
 
+      function rowTint(): Promise<string> {
+        return locked
+          .locator(".row")
+          .evaluate((node) => getComputedStyle(node).backgroundColor);
+      }
+
+      const rest = await rowTint();
+
       await input.focus();
 
-      const outline = await input.evaluate((node) => {
-        const style = getComputedStyle(node);
-
-        return {
-          width: parseFloat(style.outlineWidth),
-          style: style.outlineStyle
-        };
-      });
+      const focused = await rowTint();
 
       /*
        * The lock is drawn on the field itself, not on the control inside it:
@@ -207,8 +252,8 @@ test.describe("controls: state matrix", () => {
         };
       });
 
-      expect(outline.style).toBe("solid");
-      expect(outline.width).toBeGreaterThan(0);
+      expect(rest).toBe("rgba(0, 0, 0, 0)");
+      expect(focused).not.toBe(rest);
       expect(held.bar).toContain("inset");
       expect(held.tint).not.toBe("rgba(0, 0, 0, 0)");
     });
@@ -417,6 +462,209 @@ test.describe("controls: select and button group", () => {
     expect(await page.evaluate(() => window.__changes)).toEqual([true]);
   });
 
+  test("checkbox has no background fill", async({ page }) => {
+    await gotoGallery(page, { example: "controls/checkbox", chrome: "off" });
+
+    const checkbox = row(page, "jolly-checkbox", "default")
+      .locator(".checkbox");
+
+    await expect(checkbox).toHaveCSS(
+      "background-color",
+      "rgba(0, 0, 0, 0)"
+    );
+
+    await checkbox.hover();
+    await expect(checkbox).toHaveCSS(
+      "background-color",
+      "rgba(0, 0, 0, 0)"
+    );
+  });
+
+  test("checkbox alignment stays separate from its row label", async({ page }) => {
+    await gotoGallery(page, {
+      example: "scenarios/editor",
+      chrome: "off"
+    });
+
+    const propertyRow = page.locator("jolly-property-row", {
+      has: page.locator("jolly-checkbox")
+    }).first();
+    const label = propertyRow.locator(".label").first();
+    const box = propertyRow.locator('input[type="checkbox"]');
+    const edges = await Promise.all([
+      propertyRow.locator(".row").first()
+        .evaluate((node) => node.getBoundingClientRect().right),
+      label.evaluate((node) => node.getBoundingClientRect().left),
+      label.evaluate((node) => node.getBoundingClientRect().right),
+      box.evaluate((node) => node.getBoundingClientRect().right)
+    ]);
+
+    expect(edges[0] - edges[3]).toBe(4);
+    expect(edges[1]).toBeLessThan(edges[2]);
+    expect(edges[2]).toBeLessThan(edges[3]);
+    await expect(label).toHaveCSS("text-align", "start");
+  });
+
+  test("range uses a decorative capped span between its ends", async({ page }) => {
+    await gotoGallery(page, { example: "controls/range", chrome: "off" });
+
+    const range = row(page, "jolly-range", "default");
+    const separator = range.locator(".separator");
+    const mutedColor = await range.locator(".label").evaluate(
+      (node) => getComputedStyle(node).color
+    );
+    const shape = await separator.evaluate((node) => {
+      const cap = getComputedStyle(node);
+      const span = getComputedStyle(node, "::after");
+
+      return {
+        capStart: cap.borderInlineStartStyle,
+        capEnd: cap.borderInlineEndStyle,
+        spanHeight: span.height,
+        spanColor: span.backgroundColor
+      };
+    });
+
+    await expect(separator).toHaveAttribute("aria-hidden", "true");
+    await expect(separator).toHaveText("");
+    await expect(separator).toHaveCSS("color", mutedColor);
+    expect(shape).toEqual({
+      capStart: "solid",
+      capEnd: "solid",
+      spanHeight: "1px",
+      spanColor: mutedColor
+    });
+  });
+
+  test("slider uses a square handle", async({ page }) => {
+    await gotoGallery(page, { example: "controls/slider", chrome: "off" });
+
+    const slider = row(page, "jolly-slider", "default");
+    const radii = await slider.evaluate((node) => {
+      const root = node.shadowRoot;
+      if (root === null) {
+        return [];
+      }
+
+      const sheets = [
+        ...root.adoptedStyleSheets,
+        ...root.styleSheets
+      ];
+      const rules = sheets
+        .flatMap((sheet) => [...sheet.cssRules]);
+
+      return rules
+        .filter((rule): rule is CSSStyleRule => (
+          rule instanceof CSSStyleRule &&
+          (
+            rule.selectorText.includes("slider-thumb") ||
+            rule.selectorText.includes("range-thumb")
+          )
+        ))
+        .map((rule) => rule.style.borderRadius);
+    });
+
+    expect(radii).toContain("var(--jolly-radius-sm, 2px)");
+    expect(radii).not.toContain("50%");
+  });
+
+  test("slider hover changes handle color without resizing", async({ page }) => {
+    await gotoGallery(page, { example: "controls/slider", chrome: "off" });
+
+    const lane = row(page, "jolly-slider", "default").locator(".lane");
+
+    function trackHeight(): Promise<string> {
+      return lane.evaluate((node) => getComputedStyle(
+        node,
+        "::before"
+      ).height);
+    }
+
+    const restingHeight = await trackHeight();
+    const restingFill = await tokenOf(lane, "--jolly-slider-thumb-fill");
+    const hoverFill = await tokenOf(lane, "--jolly-accent-fill-hover");
+
+    await lane.hover();
+    await expect.poll(() => tokenOf(
+      lane,
+      "--jolly-slider-thumb-fill"
+    )).not.toBe(restingFill);
+    expect(await tokenOf(lane, "--jolly-slider-thumb-fill"))
+      .toBe(hoverFill);
+
+    await page.waitForTimeout(150);
+    expect(await trackHeight()).toBe(restingHeight);
+  });
+
+  test("slider value edges stay aligned across field chrome", async({ page }) => {
+    await gotoGallery(page, { example: "controls/slider", chrome: "off" });
+
+    const states = [
+      "default",
+      "modified",
+      "locked",
+      "peers",
+      "mixed+modified"
+    ];
+    const valueRights = await Promise.all(states.map((state) => (
+      row(page, "jolly-slider", state).locator(".value").evaluate(
+        (node) => node.getBoundingClientRect().right
+      )
+    )));
+
+    for (const right of valueRights) {
+      expect(right).toBe(valueRights[0]);
+    }
+  });
+
+  test("Editor sliders share a value edge with presence", async({ page }) => {
+    await gotoGallery(page, {
+      example: "scenarios/editor-states",
+      chrome: "off"
+    });
+
+    const sliders = page.locator("jolly-slider");
+    const metalness = sliders.filter({ hasText: "Metalness" });
+    const emission = sliders.filter({ hasText: "Emission" });
+    const [metalnessRight, emissionRight] = await Promise.all([
+      metalness.locator(".value").evaluate(
+        (node) => node.getBoundingClientRect().right
+      ),
+      emission.locator(".value").evaluate(
+        (node) => node.getBoundingClientRect().right
+      )
+    ]);
+
+    expect(metalnessRight).toBe(emissionRight);
+  });
+
+  test("revert hover matches its adjacent field background", async({ page }) => {
+    await gotoGallery(page, { example: "controls/number", chrome: "off" });
+
+    const field = row(page, "jolly-number", "modified");
+    const input = control(field);
+    const revert = field.locator(".revert");
+
+    function backgroundOf(
+      target: Locator
+    ): Promise<string> {
+      return target.evaluate((node) => getComputedStyle(node)
+        .backgroundColor);
+    }
+
+    const fieldBackground = await backgroundOf(input);
+    const inputBox = await input.boundingBox();
+    const revertBox = await revert.boundingBox();
+
+    expect(inputBox).not.toBeNull();
+    expect(revertBox).not.toBeNull();
+    expect(revertBox?.height).toBe(inputBox?.height);
+    expect(revertBox?.x).toBe((inputBox?.x ?? 0) + (inputBox?.width ?? 0));
+
+    await revert.hover();
+    await expect.poll(() => backgroundOf(revert)).toBe(fieldBackground);
+  });
+
   /** Flags shares Checkbox's native input, and the same trusted-click race. */
   test("flags entry stays checked after a real click", async({ page }) => {
     await gotoGallery(page, { example: "controls/flags", chrome: "off" });
@@ -519,32 +767,34 @@ test.describe("controls: theming", () => {
       document.querySelector("gallery-root")?.setAttribute("theme", "dark");
     });
 
-    const dark = await background();
-
     expect(light).not.toBe("");
-    expect(dark).not.toBe(light);
+
+    /*
+     * Control fills transition, so a synchronous read lands mid-transition and
+     * reports the previous theme's colour. Poll until it settles.
+     */
+    await expect.poll(background).not.toBe(light);
   });
 
-  test("the focus outline paints from its token", async({ page }) => {
+  /**
+   * Focus is a fill step rather than an outline, so it has to beat the rest
+   * stop it shares a channel with.
+   */
+  test("focus paints the control from its token", async({ page }) => {
     await gotoGallery(page, { example: "controls/text", chrome: "off" });
 
     const input = control(page.locator("jolly-text").first());
 
+    function background(): Promise<string> {
+      return input.evaluate((node) => getComputedStyle(node).backgroundColor);
+    }
+
+    const rest = await background();
+
     await input.focus();
 
-    const outline = await input.evaluate((node) => {
-      const style = getComputedStyle(node);
-
-      return {
-        color: style.outlineColor,
-        width: parseFloat(style.outlineWidth),
-        style: style.outlineStyle
-      };
-    });
-
-    expect(outline.style).toBe("solid");
-    expect(outline.width).toBeGreaterThan(0);
-    expect(outline.color).not.toBe("rgba(0, 0, 0, 0)");
+    expect(rest).not.toBe("rgba(0, 0, 0, 0)");
+    await expect.poll(background).not.toBe(rest);
   });
 
   /**

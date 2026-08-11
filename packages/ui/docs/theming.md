@@ -11,6 +11,10 @@ class MyPane extends LitElement {
 }
 ```
 
+Apply it to scope hosts only. A leaf that declares the token block also re-declares
+`color-scheme`, which resets the scheme it should have inherited and drops that subtree back to
+the OS preference while everything around it stays on the chosen theme.
+
 ## Theme and density
 
 The `theme` attribute controls `color-scheme`:
@@ -23,14 +27,32 @@ The `theme` attribute controls `color-scheme`:
 Without an explicit value, the component follows the OS preference. `density` is inherited and
 supports `compact`, `default` and `comfortable`.
 
-| Preset | Row height | Font |
-|---|---:|---:|
-| `compact` | 18px | 11px |
-| `default` | 22px | 12px |
-| `comfortable` | 28px | 13px |
+| Preset | Row height | Font | Pitch |
+|---|---:|---:|---:|
+| `compact` | 16px | 10px | 20px |
+| `default` | 20px | 11px | 24px |
+| `comfortable` | 26px | 12px | 30px |
 
 ```html
 <jolly-pane density="compact"></jolly-pane>
+```
+
+Rows carry no outer spacing. The container stacking them applies `--jolly-row-gap`, which is what
+turns a row height into a pitch, and which lets a consumer stack fields flush.
+
+## Typography
+
+The package embeds Roboto Mono (weight 400, latin subset) and uses it at 11px throughout. It is
+inlined as a `data:` URI because the package ships no asset pipeline.
+
+`@font-face` is ignored inside a shadow root, so the face is registered against the document.
+Importing `themeStyles` does this for you; call `ensureFontFace()` yourself if you declare tokens
+by hand. Without registration `--jolly-font-family` falls back to the system mono stack.
+
+```ts
+import { ensureFontFace } from "@jolly-pixel/ui";
+
+ensureFontFace();
 ```
 
 ## Semantic tokens
@@ -43,14 +65,17 @@ jolly-pane { --jolly-accent-fill: #ff6600; }
 
 | Token | Use |
 |---|---|
-| `--jolly-surface`, `--jolly-surface-sunken`, `--jolly-surface-raised` | Surfaces |
-| `--jolly-control-bg`, `--jolly-control-bg-hover`, `--jolly-control-bg-active` | Control states |
-| `--jolly-border`, `--jolly-border-strong` | Dividers and control outlines |
+| `--jolly-surface`, `--jolly-surface-sunken`, `--jolly-surface-raised` | Opaque planes |
+| `--jolly-ink`, `--jolly-ink-danger` | The inks control fills are mixed from |
+| `--jolly-control-bg`, `-hover`, `-focus`, `-active`, `-muted` | Control states |
+| `--jolly-invalid-bg`, `-hover`, `-focus` | Invalid control states |
+| `--jolly-row-bg-focus` | Row tint locating the focused field |
+| `--jolly-groove` | Slider tracks and scrollbars |
+| `--jolly-divider` | Group-level rules |
+| `--jolly-border`, `--jolly-border-strong` | Unused by the package; kept for consumers wanting outlines |
 | `--jolly-text`, `--jolly-text-muted`, `--jolly-text-on-fill` | Text |
-| `--jolly-accent-fill`, `--jolly-accent-text` | Accent surfaces and text |
-| `--jolly-focus-ring` | Focus outline |
+| `--jolly-accent-fill`, `-hover`, `-focus`, `--jolly-accent-text` | Accent surfaces and text |
 | `--jolly-danger`, `--jolly-warning`, `--jolly-success` | Status text |
-| `--jolly-danger-border` | Invalid-control border |
 | `--jolly-modified`, `--jolly-locked` | Field indicators |
 | `--jolly-shadow-overlay`, `--jolly-shadow-floating`, `--jolly-shadow-modal` | Elevation |
 | `--jolly-axis-x`, `--jolly-axis-y`, `--jolly-axis-z` | Vector-field axis chips |
@@ -58,11 +83,66 @@ jolly-pane { --jolly-accent-fill: #ff6600; }
 The package also exposes neutral, accent, danger, warning and success ramp tokens. Prefer semantic
 tokens in application CSS; ramp names may change between versions.
 
+### How control fills work
+
+Controls have no border. A control is separated from its surface by an ink composited over it at
+an alpha stop, so one decision covers every state and a control stays coherent at any nesting
+depth:
+
+```css
+--jolly-control-bg: color-mix(in oklab, var(--jolly-ink) 8%, transparent);
+```
+
+The stops are ordered because focus, hover, active and error share this one channel: rest 8%,
+hover 12%, focus 20%, active 26%, error from 15%.
+
+This carries one invariant. **Containers paint opaque or paint nothing; only leaves tint.** Two
+translucent layers over each other drift lighter, so a container that tints will wash out
+everything inside it.
+
+## Layout tokens
+
+`--jolly-label-width` sets a shared label column so values line up down a pane. Set it on the
+container:
+
+```css
+jolly-pane { --jolly-label-width: 10ch; }
+```
+
+`--jolly-gutter-width` reserves leading space for the lock affordance. It is `0` by
+default, so a single-user pane pays no inset. A collaborative container opts its subtree in:
+
+```css
+jolly-dock[data-collaborative] { --jolly-gutter-width: 14px; }
+```
+
+That reservation is what stops a row from shifting when a peer takes or releases a lock. A lock
+without it still renders, widening the row instead.
+
+`--jolly-field-trailing-width` reserves a shared trailing column for reset and presence chrome.
+It is `auto` by default. Set a fixed width on a container when stacked value controls must keep
+the same trailing edge across those states:
+
+```css
+jolly-pane { --jolly-field-trailing-width: 48px; }
+```
+
 ## Scales
 
 The package defines spacing tokens `--jolly-space-1` through `--jolly-space-6`, radii
-`--jolly-radius-sm` and `--jolly-radius-md`, and motion tokens `--jolly-duration-fast`,
-`--jolly-duration-base` and `--jolly-easing`. Durations become zero for reduced-motion users.
+`--jolly-radius-sm` (2px, controls) and `--jolly-radius-md` (6px, planes), `--jolly-row-gap`, and
+motion tokens `--jolly-duration-fast`, `--jolly-duration-base` and `--jolly-easing`. Durations
+become zero for reduced-motion users.
+
+## Contrast
+
+Control boundaries do not meet WCAG 1.4.11, and there is no focus ring. This is deliberate: the
+design separates controls by fill rather than by outline. If you are building something with a
+contractual accessibility requirement, restore outlines through `--jolly-border-strong` and
+budget for an audit finding otherwise.
+
+Under `forced-colors: active` the ink system is dropped for system colours, so Windows High
+Contrast users get real boundaries back.
 
 ## Peer colors
 

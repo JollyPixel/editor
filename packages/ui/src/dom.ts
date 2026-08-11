@@ -13,6 +13,24 @@ export function isSelectElement(
   return target instanceof HTMLSelectElement;
 }
 
+export function isButtonElement(
+  target: EventTarget | null
+): target is HTMLButtonElement {
+  return target instanceof HTMLButtonElement;
+}
+
+export function isSlotElement(
+  target: EventTarget | null
+): target is HTMLSlotElement {
+  return target instanceof HTMLSlotElement;
+}
+
+export function isDocumentOrShadowRoot(
+  node: Node
+): node is Document | ShadowRoot {
+  return node instanceof Document || node instanceof ShadowRoot;
+}
+
 /**
  * Narrows a custom event to its detail.
  */

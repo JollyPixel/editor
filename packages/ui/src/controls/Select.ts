@@ -54,7 +54,6 @@ export class Select<TValue> extends JollyField<TValue> {
           aria-disabled=${this.lockedAria}
           aria-description=${this.lockDescription}
           aria-invalid=${this.displayError === null ? nothing : "true"}
-          .value=${this.#selectedKey}
           @focus=${this.#onFocus}
           @blur=${this.#onBlur}
           @keydown=${this.#onKeyDown}
@@ -70,6 +69,17 @@ export class Select<TValue> extends JollyField<TValue> {
         <jolly-icon class="chevron" name="chevron"></jolly-icon>
       </span>
     `;
+  }
+
+  /**
+   * Options render after the select's own bindings. Synchronizing here keeps
+   * the native selected option aligned when options and value arrive together.
+   */
+  protected override updated(): void {
+    const select = this.renderRoot.querySelector("select");
+    if (select !== null) {
+      select.value = this.#selectedKey;
+    }
   }
 
   get #selectedKey(): string {

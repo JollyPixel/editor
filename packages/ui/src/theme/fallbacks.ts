@@ -3,6 +3,10 @@ import { unsafeCSS } from "lit";
 
 /**
  * Usage-site fallbacks for essential theme tokens.
+ *
+ * These only apply when no scope host declared the tokens at all, which is
+ * already a degraded state, so `controlBg` is a mode-agnostic translucent grey
+ * rather than a value tuned for either scheme.
  */
 export const kFallback = {
   /**
@@ -10,9 +14,9 @@ export const kFallback = {
    */
   text: unsafeCSS("#1b2027"),
   /**
-   * --jolly-neutral-0
+   * --jolly-control-bg
    */
-  controlBg: unsafeCSS("#ffffff"),
+  controlBg: unsafeCSS("rgb(128 128 128 / 0.15)"),
   /**
    * --jolly-neutral-500
    */
