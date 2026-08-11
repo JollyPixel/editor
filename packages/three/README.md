@@ -32,6 +32,9 @@ scene.add(grid); // self-updating: no manual .update() call needed
 
 - [Grid](docs/Grid.md) - Ground-plane grid mesh. (TSL, `THREE.WebGPURenderer`).
 - [PeerFrustum](docs/PeerFrustum.md) - Renders connected peers as lightweight camera frustums.
+- [SelectionOutline](docs/SelectionOutline.md) - Non-destructive outline overlay for a selected mesh.
+- [SelectionBoundingBox](docs/SelectionBoundingBox.md) - Non-destructive bounding-box overlay for a selected group of meshes.
+- [SelectionManager](docs/SelectionManager.md) - Id-based selection/hover state, picking the right overlay (mesh vs. group) automatically.
 
 ## ✨ Contributors guide
 

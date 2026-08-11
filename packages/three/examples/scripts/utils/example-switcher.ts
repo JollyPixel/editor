@@ -11,7 +11,8 @@ const kToggleKey = "F3";
 const kExamples: Record<string, string> = {
   Grid: "/",
   "Peer Frustum": "/peer-frustum.html",
-  "Peer Frustum Sync": "/peer-frustum-sync.html"
+  "Peer Frustum Sync": "/peer-frustum-sync.html",
+  Selection: "/selection.html"
 };
 
 export interface ExamplePaneOptions {

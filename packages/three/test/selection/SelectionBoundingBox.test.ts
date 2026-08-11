@@ -1,0 +1,149 @@
+// Import Node.js Dependencies
+import { describe, test } from "node:test";
+import assert from "node:assert/strict";
+
+// Import Third-party Dependencies
+import * as THREE from "three";
+
+// Import Internal Dependencies
+import { SelectionBoundingBox } from "#src/index.ts";
+
+function createGroupOfTwoBoxes(): THREE.Group {
+  const group = new THREE.Group();
+
+  const first = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+  first.position.set(0, 0, 0);
+
+  const second = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+  second.position.set(2, 0, 0);
+
+  group.add(first, second);
+
+  return group;
+}
+
+function assertVectorCloseTo(
+  actual: THREE.Vector3,
+  expected: THREE.Vector3,
+  epsilon = 1e-9
+): void {
+  assert.ok(Math.abs(actual.x - expected.x) < epsilon, `x: ${actual.x} !~ ${expected.x}`);
+  assert.ok(Math.abs(actual.y - expected.y) < epsilon, `y: ${actual.y} !~ ${expected.y}`);
+  assert.ok(Math.abs(actual.z - expected.z) < epsilon, `z: ${actual.z} !~ ${expected.z}`);
+}
+
+describe("constructor", () => {
+  test("adds itself as a child of the target", () => {
+    const target = createGroupOfTwoBoxes();
+    const box = new SelectionBoundingBox({ target });
+
+    assert.strictEqual(target.children.length, 3);
+    assert.strictEqual(target.children.at(-1), box);
+  });
+
+  test("positions itself at the union bounding box center, in the target's local space", () => {
+    const target = createGroupOfTwoBoxes();
+    const box = new SelectionBoundingBox({ target });
+
+    assertVectorCloseTo(box.position, new THREE.Vector3(1, 0, 0));
+  });
+
+  test("scales itself to the union bounding box size (with a small size bias)", () => {
+    const target = createGroupOfTwoBoxes();
+    const box = new SelectionBoundingBox({ target });
+
+    assertVectorCloseTo(box.scale, new THREE.Vector3(3, 1, 1).multiplyScalar(1.01), 1e-6);
+  });
+
+  test("is unaffected by the target's own rotation - computed in local space", () => {
+    const target = createGroupOfTwoBoxes();
+    target.rotation.set(0, Math.PI / 3, 0);
+    target.updateMatrixWorld(true);
+
+    const box = new SelectionBoundingBox({ target });
+
+    assertVectorCloseTo(box.position, new THREE.Vector3(1, 0, 0));
+  });
+
+  test("hides itself when the target has no mesh descendants", () => {
+    const target = new THREE.Group();
+    const box = new SelectionBoundingBox({ target });
+
+    assert.strictEqual(box.visible, false);
+  });
+
+  test("defaults to white, full opacity, non-transparent", () => {
+    const box = new SelectionBoundingBox({ target: createGroupOfTwoBoxes() });
+
+    assert.strictEqual(`#${box.material.color.getHexString()}`, "#ffffff");
+    assert.strictEqual(box.material.opacity, 1);
+    assert.strictEqual(box.material.transparent, false);
+  });
+
+  test("applies the given color and opacity", () => {
+    const box = new SelectionBoundingBox({ target: createGroupOfTwoBoxes(), color: "#ff0000", opacity: 0.4 });
+
+    assert.strictEqual(`#${box.material.color.getHexString()}`, "#ff0000");
+    assert.strictEqual(box.material.opacity, 0.4);
+    assert.strictEqual(box.material.transparent, true);
+  });
+});
+
+describe("update", () => {
+  test("recomputes the box after a new child is added", () => {
+    const target = createGroupOfTwoBoxes();
+    const box = new SelectionBoundingBox({ target });
+
+    const third = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    third.position.set(4, 0, 0);
+    target.add(third);
+    box.update();
+
+    assertVectorCloseTo(box.position, new THREE.Vector3(2, 0, 0));
+  });
+});
+
+describe("setColor", () => {
+  test("updates the material color", () => {
+    const box = new SelectionBoundingBox({ target: createGroupOfTwoBoxes(), color: "#000000" });
+    box.setColor("#00ff00");
+
+    assert.strictEqual(`#${box.material.color.getHexString()}`, "#00ff00");
+  });
+});
+
+describe("setOpacity", () => {
+  test("updates opacity and toggles transparent accordingly", () => {
+    const box = new SelectionBoundingBox({ target: createGroupOfTwoBoxes() });
+
+    box.setOpacity(0.5);
+    assert.strictEqual(box.material.opacity, 0.5);
+    assert.strictEqual(box.material.transparent, true);
+
+    box.setOpacity(1);
+    assert.strictEqual(box.material.opacity, 1);
+    assert.strictEqual(box.material.transparent, false);
+  });
+});
+
+describe("dispose", () => {
+  test("removes itself from the target and disposes geometry/material", () => {
+    const target = createGroupOfTwoBoxes();
+    const box = new SelectionBoundingBox({ target });
+
+    let geometryDisposed = false;
+    let materialDisposed = false;
+    box.geometry.addEventListener("dispose", () => {
+      geometryDisposed = true;
+    });
+    box.material.addEventListener("dispose", () => {
+      materialDisposed = true;
+    });
+
+    box.dispose();
+
+    assert.strictEqual(target.children.length, 2);
+    assert.ok(geometryDisposed);
+    assert.ok(materialDisposed);
+  });
+});
