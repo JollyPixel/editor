@@ -35,6 +35,7 @@ export {
   registerIcon,
   getIcon,
   hasIcon,
+  type IconGlyph,
   type IconName,
   type BuiltinIconName
 } from "./icon/registry.ts";

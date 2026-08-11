@@ -381,7 +381,9 @@ ownership of a cube.
 ```ts
 export type IconName = BuiltinIconName | (string & {});
 
-export function registerIcon(name: string, glyph: SVGTemplateResult): void;
+export type IconGlyph = string | SVGTemplateResult;
+
+export function registerIcon(name: string, glyph: IconGlyph): void;
 ```
 
 The `(string & {})` union keeps autocomplete on the built in names while accepting any other.

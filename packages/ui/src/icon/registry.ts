@@ -1,5 +1,9 @@
 // Import Third-party Dependencies
-import type { SVGTemplateResult } from "lit";
+import {
+  svg,
+  type SVGTemplateResult
+} from "lit";
+import { unsafeSVG } from "lit/directives/unsafe-svg.js";
 
 /**
  * Names for built-in glyphs authored on the 24px icon grid.
@@ -21,6 +25,11 @@ export type BuiltinIconName =
  */
 export type IconName = BuiltinIconName | (string & {});
 
+/**
+ * SVG markup or a Lit SVG template that renders an icon glyph.
+ */
+export type IconGlyph = string | SVGTemplateResult;
+
 // CONSTANTS
 const kIcons = new Map<string, SVGTemplateResult>();
 
@@ -29,9 +38,14 @@ const kIcons = new Map<string, SVGTemplateResult>();
  */
 export function registerIcon(
   name: string,
-  glyph: SVGTemplateResult
+  glyph: IconGlyph
 ): void {
-  kIcons.set(name, glyph);
+  kIcons.set(
+    name,
+    typeof glyph === "string"
+      ? svg`${unsafeSVG(glyph)}`
+      : glyph
+  );
 }
 
 export function getIcon(
