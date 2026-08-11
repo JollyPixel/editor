@@ -10,13 +10,18 @@ import { SLIDER_EXAMPLE } from "./examples/controls/slider.ts";
 import { RANGE_EXAMPLE } from "./examples/controls/range.ts";
 import { FLAGS_EXAMPLE } from "./examples/controls/flags.ts";
 import { SELECT_EXAMPLE } from "./examples/controls/select.ts";
-import { COLOR_EXAMPLE } from "./examples/controls/color.ts";
+import {
+  COLOR_EXAMPLE,
+  COLOR_ALPHA_EXAMPLE
+} from "./examples/controls/color.ts";
+import { COLOR_PICKER_EXAMPLE } from "./examples/controls/colorPicker.ts";
 import { BUTTON_GROUP_EXAMPLE } from "./examples/controls/buttonGroup.ts";
 import { CHROME_EXAMPLE } from "./examples/controls/chrome.ts";
 import { DENSITY_EXAMPLE } from "./examples/scenarios/density.ts";
 import { THEME_EXAMPLE } from "./examples/scenarios/theme.ts";
 import { NUMERIC_ENTRY_EXAMPLE } from "./examples/scenarios/numericEntry.ts";
 import { STEP_SIZES_EXAMPLE } from "./examples/scenarios/stepSizes.ts";
+import { COLOR_POPOVER_EXAMPLE } from "./examples/scenarios/colorPopover.ts";
 import {
   EDITOR_EXAMPLE,
   EDITOR_STATES_EXAMPLE
@@ -36,7 +41,9 @@ import {
   DIALOG_ESCAPE_EXAMPLE
 } from "./examples/containers.ts";
 
-/** The nav and the e2e sweep both derive from this list, so adding a file adds an entry. */
+/**
+ * The navigation and E2E sweep derive from this list.
+ */
 export const manifest: readonly GalleryExample[] = [
   TOKENS_EXAMPLE,
   PEER_COLORS_EXAMPLE,
@@ -48,6 +55,8 @@ export const manifest: readonly GalleryExample[] = [
   FLAGS_EXAMPLE,
   SELECT_EXAMPLE,
   COLOR_EXAMPLE,
+  COLOR_ALPHA_EXAMPLE,
+  COLOR_PICKER_EXAMPLE,
   BUTTON_GROUP_EXAMPLE,
   CHROME_EXAMPLE,
   PANE_EXAMPLE,
@@ -63,6 +72,7 @@ export const manifest: readonly GalleryExample[] = [
   THEME_EXAMPLE,
   NUMERIC_ENTRY_EXAMPLE,
   STEP_SIZES_EXAMPLE,
+  COLOR_POPOVER_EXAMPLE,
   REORDER_PERSIST_EXAMPLE,
   DOCK_RESIZE_EXAMPLE,
   DIALOG_ESCAPE_EXAMPLE,

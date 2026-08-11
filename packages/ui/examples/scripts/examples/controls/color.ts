@@ -20,7 +20,33 @@ export const COLOR_EXAMPLE: GalleryExample = {
       },
       modified(field) {
         field.value = "#ff6600";
-      }
+      },
+      // Keep the swatch synced while the popup streams drag input.
+      liveInput: true
+    });
+  }
+};
+
+export const COLOR_ALPHA_EXAMPLE: GalleryExample = {
+  id: "controls/color-alpha",
+  title: "Color (alpha)",
+  group: "Controls",
+  render(host) {
+    return renderStateMatrix<Color>(host, {
+      create() {
+        const field = document.createElement("jolly-color");
+        field.label = "Tint";
+        field.description = "Eight digit values carry alpha";
+        field.alpha = true;
+        field.value = "#4488ffcc";
+        field.default = "#4488ffcc";
+
+        return field;
+      },
+      modified(field) {
+        field.value = "#ff660080";
+      },
+      liveInput: true
     });
   }
 };

@@ -1,12 +1,23 @@
 declare global {
   interface Window {
-    /** Set once the first example has mounted. E2e tests gate on it. */
+    /**
+     * Set once the first example has mounted.
+     * E2e tests gate on it.
+     */
     __galleryReady?: boolean;
-    /** Ids whose teardown ran, in order. */
+    /**
+     * Ids whose teardown ran, in order.
+     */
     __galleryDisposed?: string[];
-    /** Committed values collected by the end to end tier, which is the only tier that sees one. */
+    /**
+     * Committed values collected by the end to end tier,
+     * which is the only tier that sees one.
+     */
     __changes?: unknown[];
-    /** Count of continuous `jolly-input` events, for asserting each control's cadence. */
+    /**
+     * Count of continuous `jolly-input` events,
+     * for asserting each control's cadence.
+     */
     __inputs?: number;
   }
 }
@@ -19,7 +30,8 @@ export interface GalleryExample {
   title: string;
   group: string;
   /**
-   * Returns its teardown. The gallery only clears the host, so release timers and listeners here.
+   * Returns its teardown.
+   * The gallery only clears the host, so release timers and listeners here.
    */
   render(
     host: HTMLElement
