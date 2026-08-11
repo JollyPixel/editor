@@ -26,31 +26,61 @@ export const paneStyles = css`
   }
 
   .header {
+    position: relative;
     display: flex;
     align-items: center;
     flex: 0 0 auto;
     gap: var(--jolly-space-2, 8px);
     min-height: var(--jolly-row-height, 20px);
+    overflow: hidden;
     padding: var(--jolly-space-1, 4px) var(--jolly-space-2, 8px);
     border: 0;
-    background: var(--jolly-control-bg, ${kFallback.controlBg});
+    background: var(
+      --jolly-pane-header-bg,
+      ${kFallback.paneHeaderBg}
+    );
+    color: var(--jolly-text-on-fill, white);
     user-select: none;
   }
 
-  /*
-   * One bundled weight, so the title separates through tint and tracking rather
-   * than through a bolder face that would have to be synthesised.
-   */
+  /* A larger left-origin checker distinguishes pane chrome from folders. */
+  .header::before {
+    position: absolute;
+    z-index: 0;
+    inset-block: 0;
+    inset-inline-start: 0;
+    width: 52%;
+    background: conic-gradient(
+        from 90deg,
+        transparent 25%,
+        currentColor 0 50%,
+        transparent 0 75%,
+        currentColor 0
+      )
+      0 / 12px 12px;
+    color: var(--jolly-text-on-fill, white);
+    content: "";
+    opacity: 0.07;
+    pointer-events: none;
+    -webkit-mask-image: linear-gradient(to right, black, transparent);
+    mask-image: linear-gradient(to right, black, transparent);
+  }
+
+  /* Weight and tracking keep the title legible over the pixel pattern. */
   .title {
+    position: relative;
+    z-index: 1;
     overflow: hidden;
     flex: 1 1 auto;
-    font-weight: 400;
-    letter-spacing: 0.05em;
+    font-weight: 600;
+    letter-spacing: 0.08em;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   .actions {
+    position: relative;
+    z-index: 1;
     display: flex;
     align-items: center;
     gap: var(--jolly-space-1, 4px);
@@ -87,5 +117,11 @@ export const paneStyles = css`
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
+  }
+
+  @media (forced-colors: active) {
+    .header::before {
+      display: none;
+    }
   }
 `;

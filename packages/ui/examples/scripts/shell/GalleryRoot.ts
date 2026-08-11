@@ -75,6 +75,7 @@ export class GalleryRoot extends HTMLElement {
     dock.storageKey = "jolly-ui-gallery:dock";
 
     const pane = document.createElement("jolly-pane");
+    pane.className = "gallery-pane";
     pane.title = "@jolly-pixel/ui";
     pane.reorderable = true;
     pane.storageKey = "jolly-ui-gallery:navigation";

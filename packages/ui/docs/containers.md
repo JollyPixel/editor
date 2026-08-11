@@ -21,6 +21,22 @@ fills composite over it.
 
 `jolly-pane` owns a title, an `actions` slot, and scrollable content. The constructor is exported
 as `PaneElement`; the `Pane` name is reserved for the builder facade.
+Its header uses the solid `--jolly-accent-fill` surface with `--jolly-text-on-fill` foreground. A
+large, low-opacity on-fill square pattern begins at the left edge beneath the title and fades
+toward the center, complementing the tighter right-side folder pattern. Pane titles use a
+semibold weight and wider tracking to remain clear over the pattern.
+
+The header exposes `header`, `title`, and `actions` CSS parts. A narrow consumer can place the
+title on its own row without changing every Pane:
+
+```css
+.navigation-pane::part(header) { flex-wrap: wrap; }
+.navigation-pane::part(title) { flex-basis: 100%; }
+.navigation-pane::part(actions) {
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+}
+```
 
 A pane is not a theme scope. Apply `themeStyles` to a scope host above it; a pane that declared
 tokens itself would reset `color-scheme` and break theme inheritance for its subtree.
@@ -40,6 +56,11 @@ Pane's `StorageAdapter`.
 
 Folder `open` defaults to `true`. Header activation emits `jolly-toggle` with `{ open }` and
 persists expansion. Set `key` or `storage-key` when labels are not stable identifiers.
+Folder headers carry a low-contrast square pattern on their right side. It uses
+`--jolly-accent-text`, fades out before the label, and strengthens slightly during interaction.
+The folder content area remains unpainted.
+Folders add a 2px bottom gap through `--jolly-folder-gap`, which can be overridden on a containing
+Pane when a layout needs tighter or looser group separation.
 
 ## Tabs and Tab
 

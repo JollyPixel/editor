@@ -15,6 +15,10 @@ name for its control.
 
 `chevron`, `close`, `revert`, `drag`, `lock`, `eye`, `search`, `check`, `info`, `warning`.
 
+`info` and `warning` use solid semantic silhouettes so their small field-message instances remain
+visible. Their inner marks use `--jolly-surface` to retain contrast in both themes. Field messages
+render these badges at 14px, align them with the text top, and keep a 2px gap below the message.
+
 `jolly-button` and `JollyOption` accept icon names directly:
 
 ```ts

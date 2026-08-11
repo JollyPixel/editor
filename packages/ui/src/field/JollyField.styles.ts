@@ -13,10 +13,24 @@ export const fieldStyles = css`
    * so a consumer can stack fields flush when that is what they want.
    */
   :host {
+    --jolly-field-active-color: light-dark(
+      var(--jolly-neutral-600),
+      var(--jolly-neutral-50)
+    );
+    --jolly-field-active-color-hover: light-dark(
+      var(--jolly-neutral-500),
+      var(--jolly-neutral-200)
+    );
+
     display: block;
     font-family: var(--jolly-font-family, ui-monospace, monospace);
     font-size: var(--jolly-font-size, 11px);
     color: var(--jolly-text, ${kFallback.text});
+  }
+
+  :host([colored]) {
+    --jolly-field-active-color: var(--jolly-accent-fill);
+    --jolly-field-active-color-hover: var(--jolly-accent-fill-hover);
   }
 
   :host([disabled]) {
@@ -168,11 +182,12 @@ export const fieldStyles = css`
    * field is not editable, which makes reverting moot anyway.
    */
   :host([modified]:not([locked])) {
-    box-shadow: inset 2px 0 0 0 var(--jolly-modified);
+    box-shadow: inset 2px 0 0 0 var(--jolly-field-active-color);
     border-radius: var(--jolly-radius-sm, 2px);
   }
 
   :host([locked]) {
+    padding-block: calc(var(--jolly-space-1, 4px) / 2);
     box-shadow: inset 3px 0 0 0 var(--jolly-locked-ring, var(--jolly-locked));
     border-radius: var(--jolly-radius-sm, 2px);
     background: color-mix(
@@ -322,7 +337,7 @@ export const fieldStyles = css`
     display: flex;
     align-items: flex-start;
     gap: var(--jolly-space-1, 4px);
-    margin-block: calc(var(--jolly-space-1, 4px) / 2) 0;
+    margin-block: calc(var(--jolly-space-1, 4px) / 2);
     margin-inline: calc(
         var(--jolly-gutter-width, 0px) + (var(--jolly-space-1, 4px) * 2)
       )
@@ -333,13 +348,17 @@ export const fieldStyles = css`
   .description jolly-icon,
   .error jolly-icon {
     flex: 0 0 auto;
-    width: 12px;
-    height: 12px;
-    margin-block-start: 0.15em;
+    width: 14px;
+    height: 14px;
+    margin-block-start: 0;
   }
 
   .description {
     color: var(--jolly-text-muted);
+  }
+
+  .description jolly-icon {
+    color: var(--jolly-accent-text);
   }
 
   .error {

@@ -1,7 +1,8 @@
 // Import Third-party Dependencies
 import {
   test,
-  expect
+  expect,
+  type Locator
 } from "@playwright/test";
 
 // Import Internal Dependencies
@@ -17,6 +18,52 @@ import {
  * reddening every component report.
  */
 test.describe("gallery shell", () => {
+  test("scopes full-size pane CSS to its navigation pane", async({ page }) => {
+    await gotoGallery(page, { example: "containers/pane" });
+
+    await expect(page.locator("gallery-root .gallery-pane")).toHaveCount(1);
+    await expect(page.locator("gallery-root main jolly-pane.gallery-pane"))
+      .toHaveCount(0);
+  });
+
+  test("uses on-fill text in navigation pane actions", async({ page }) => {
+    await gotoGallery(page);
+
+    const pane = page.locator("gallery-root .gallery-pane");
+    const headerColor = await pane.locator(":scope > .header")
+      .evaluate((element) => getComputedStyle(element).color);
+    const actionText = [
+      pane.locator("jolly-button-group .segment").first(),
+      pane.locator("jolly-select select")
+    ];
+
+    for (const target of actionText) {
+      await expect(target).toHaveCSS("color", headerColor);
+    }
+  });
+
+  test("places the navigation title above responsive actions", async({ page }) => {
+    await gotoGallery(page);
+
+    const pane = page.locator("gallery-root .gallery-pane");
+    const initial = await galleryHeaderLayout(pane);
+
+    expect(initial.titleBottom).toBeLessThanOrEqual(initial.actionsTop);
+    expect(initial.themeTop).toBe(initial.densityTop);
+    expect(initial.themeWidth).toBeGreaterThanOrEqual(96);
+    expect(initial.densityWidth).toBeGreaterThanOrEqual(96);
+
+    await page.locator("gallery-root jolly-dock").evaluate((element) => {
+      element.style.width = "160px";
+    });
+    const narrow = await galleryHeaderLayout(pane);
+
+    expect(narrow.titleBottom).toBeLessThanOrEqual(narrow.actionsTop);
+    expect(narrow.densityTop).toBeGreaterThan(narrow.themeTop);
+    expect(narrow.themeWidth).toBeGreaterThanOrEqual(96);
+    expect(narrow.densityWidth).toBeGreaterThanOrEqual(96);
+  });
+
   test("renders one nav entry per manifest example", async({ page }) => {
     await gotoGallery(page);
 
@@ -189,6 +236,41 @@ test.describe("gallery shell", () => {
     );
   });
 });
+
+async function galleryHeaderLayout(
+  pane: Locator
+) {
+  return pane.evaluate((element) => {
+    const title = element.shadowRoot?.querySelector(".title");
+    const actions = element.shadowRoot?.querySelector(".actions");
+    const theme = element.querySelector("jolly-button-group");
+    const density = element.querySelector("jolly-select");
+    if (
+      title === null ||
+      title === undefined ||
+      actions === null ||
+      actions === undefined ||
+      theme === null ||
+      density === null
+    ) {
+      throw new Error("Gallery pane header is incomplete");
+    }
+
+    const titleRect = title.getBoundingClientRect();
+    const actionsRect = actions.getBoundingClientRect();
+    const themeRect = theme.getBoundingClientRect();
+    const densityRect = density.getBoundingClientRect();
+
+    return {
+      titleBottom: titleRect.bottom,
+      actionsTop: actionsRect.top,
+      themeTop: themeRect.top,
+      themeWidth: themeRect.width,
+      densityTop: densityRect.top,
+      densityWidth: densityRect.width
+    };
+  });
+}
 
 /**
  * Catches "throws on mount" across the library, and grows as later phases add

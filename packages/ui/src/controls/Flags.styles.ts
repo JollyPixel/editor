@@ -49,7 +49,7 @@ export const flagsStyles = css`
     width: 13px;
     height: 13px;
     margin: 0;
-    accent-color: var(--jolly-accent-fill);
+    accent-color: var(--jolly-field-active-color);
     cursor: inherit;
   }
 

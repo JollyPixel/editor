@@ -28,6 +28,29 @@ const inkTokens = css`
   --jolly-control-bg-focus: color-mix(in oklab, var(--jolly-ink) 20%, transparent);
   --jolly-control-bg-active: color-mix(in oklab, var(--jolly-ink) 26%, transparent);
 
+  /* Blue chrome separates container hierarchy from neutral leaf controls. */
+  --jolly-folder-header-bg: color-mix(
+    in oklab,
+    var(--jolly-accent-fill) 12%,
+    transparent
+  );
+  --jolly-folder-header-bg-hover: color-mix(
+    in oklab,
+    var(--jolly-accent-fill) 18%,
+    transparent
+  );
+  --jolly-pane-header-bg: var(--jolly-accent-fill);
+  --jolly-dock-resize-bg: color-mix(
+    in oklab,
+    var(--jolly-accent-fill) 12%,
+    transparent
+  );
+  --jolly-dock-resize-bg-hover: color-mix(
+    in oklab,
+    var(--jolly-accent-fill) 18%,
+    transparent
+  );
+
   /* Below the rest stop, so a readonly control reads as inert rather than idle. */
   --jolly-control-bg-muted: color-mix(in oklab, var(--jolly-ink) 4%, transparent);
 
@@ -67,6 +90,12 @@ const semanticTokens = css`
 
   --jolly-accent-fill: var(--jolly-accent-600);
   --jolly-accent-text: light-dark(var(--jolly-accent-700), var(--jolly-accent-300));
+  --jolly-separator-label: var(--jolly-accent-text);
+  --jolly-separator-rule: color-mix(
+    in oklab,
+    var(--jolly-accent-text) 28%,
+    transparent
+  );
 
   --jolly-focus-ring: light-dark(var(--jolly-accent-600), var(--jolly-accent-400));
   --jolly-danger: light-dark(var(--jolly-danger-700), var(--jolly-danger-300));
@@ -113,6 +142,13 @@ export const themeTokens = css`
       --jolly-control-bg-hover: ButtonFace;
       --jolly-control-bg-focus: ButtonFace;
       --jolly-control-bg-active: ButtonFace;
+      --jolly-folder-header-bg: ButtonFace;
+      --jolly-folder-header-bg-hover: ButtonFace;
+      --jolly-pane-header-bg: ButtonFace;
+      --jolly-dock-resize-bg: ButtonFace;
+      --jolly-dock-resize-bg-hover: Highlight;
+      --jolly-separator-label: CanvasText;
+      --jolly-separator-rule: ButtonBorder;
       --jolly-row-bg-focus: transparent;
       --jolly-groove: ButtonBorder;
     }

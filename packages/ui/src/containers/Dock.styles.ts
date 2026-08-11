@@ -49,7 +49,10 @@ export const dockStyles = css`
     position: absolute;
     z-index: 1;
     border: 0;
-    background: var(--jolly-control-bg, ${kFallback.controlBg});
+    background: var(
+      --jolly-dock-resize-bg,
+      color-mix(in oklab, ${kFallback.focusRing} 12%, transparent)
+    );
     touch-action: none;
     transition: background-color var(--jolly-duration-base, 160ms)
       var(--jolly-easing, ease);
@@ -71,7 +74,7 @@ export const dockStyles = css`
   .resize-handle:focus-visible::after {
     background-image: radial-gradient(
       circle,
-      var(--jolly-text-on-fill, #ffffff) 1.1px,
+      var(--jolly-accent-text, ${kFallback.focusRing}) 1.1px,
       transparent 1.3px
     );
   }
@@ -79,23 +82,26 @@ export const dockStyles = css`
   .resize-handle:hover,
   .resize-handle:active,
   .resize-handle:focus-visible {
-    background: var(--jolly-accent-fill, ${kFallback.focusRing});
+    background: var(
+      --jolly-dock-resize-bg-hover,
+      color-mix(in oklab, ${kFallback.focusRing} 18%, transparent)
+    );
   }
 
   :host([side="left"]) .resize-handle,
   :host([side="right"]) .resize-handle {
     top: 0;
     bottom: 0;
-    width: 8px;
+    width: 4px;
     cursor: ew-resize;
   }
 
   :host([side="left"]) .resize-handle {
-    right: -8px;
+    right: -4px;
   }
 
   :host([side="right"]) .resize-handle {
-    left: -8px;
+    left: -4px;
   }
 
   :host([side="left"]) .resize-handle::after,
@@ -113,16 +119,16 @@ export const dockStyles = css`
   :host([side="bottom"]) .resize-handle {
     right: 0;
     left: 0;
-    height: 8px;
+    height: 4px;
     cursor: ns-resize;
   }
 
   :host([side="top"]) .resize-handle {
-    bottom: -8px;
+    bottom: -4px;
   }
 
   :host([side="bottom"]) .resize-handle {
-    top: -8px;
+    top: -4px;
   }
 
   :host([side="top"]) .resize-handle::after,

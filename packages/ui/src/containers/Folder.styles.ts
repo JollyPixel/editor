@@ -11,6 +11,7 @@ export const folderStyles = css`
     flex-direction: column;
     gap: var(--jolly-row-gap, 4px);
     min-width: 0;
+    margin-block-end: var(--jolly-folder-gap, 2px);
     color: var(--jolly-text, ${kFallback.text});
     font: inherit;
   }
@@ -20,26 +21,66 @@ export const folderStyles = css`
    * carries a control fill instead, which is what separates it from its rows.
    */
   .header {
+    position: relative;
     display: flex;
     align-items: center;
     gap: var(--jolly-space-1, 4px);
     min-height: var(--jolly-row-height, 20px);
+    overflow: hidden;
     padding-inline: var(--jolly-space-1, 4px);
     border: 0;
     border-radius: var(--jolly-radius-sm, 2px);
-    background: var(--jolly-control-bg, ${kFallback.controlBg});
+    background: var(
+      --jolly-folder-header-bg,
+      ${kFallback.folderHeaderBg}
+    );
     color: inherit;
     font: inherit;
     transition: background-color var(--jolly-duration-fast, 100ms)
       var(--jolly-easing, ease);
   }
 
+  /* The checker fades in from the right without competing with the label. */
+  .header::after {
+    position: absolute;
+    z-index: 0;
+    inset-block: 0;
+    inset-inline-end: 0;
+    width: 46%;
+    background: conic-gradient(
+        from 90deg,
+        currentColor 25%,
+        transparent 0 50%,
+        currentColor 0 75%,
+        transparent 0
+      )
+      0 / 8px 8px;
+    color: var(--jolly-accent-text, ${kFallback.focusRing});
+    content: "";
+    opacity: 0.08;
+    pointer-events: none;
+    -webkit-mask-image: linear-gradient(to right, transparent, black 55%);
+    mask-image: linear-gradient(to right, transparent, black 55%);
+    transition: opacity var(--jolly-duration-fast, 100ms)
+      var(--jolly-easing, ease);
+  }
+
   .header:hover,
   .header:focus-within {
-    background: var(--jolly-control-bg-hover, ${kFallback.controlBg});
+    background: var(
+      --jolly-folder-header-bg-hover,
+      ${kFallback.folderHeaderBgHover}
+    );
+  }
+
+  .header:hover::after,
+  .header:focus-within::after {
+    opacity: 0.14;
   }
 
   .toggle {
+    position: relative;
+    z-index: 1;
     display: flex;
     align-items: center;
     flex: 1 1 auto;
@@ -68,6 +109,8 @@ export const folderStyles = css`
   }
 
   .grip {
+    position: relative;
+    z-index: 1;
     display: none;
     width: var(--jolly-control-height, 20px);
     height: var(--jolly-control-height, 20px);
@@ -102,5 +145,11 @@ export const folderStyles = css`
 
   :host([open]) .content {
     display: flex;
+  }
+
+  @media (forced-colors: active) {
+    .header::after {
+      display: none;
+    }
   }
 `;

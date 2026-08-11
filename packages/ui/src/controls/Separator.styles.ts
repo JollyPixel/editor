@@ -14,17 +14,34 @@ export const separatorStyles = css`
     background: var(--jolly-divider);
   }
 
-  .labelled {
-    display: flex;
+  .labelled,
+  .unlabelled {
     align-items: center;
-    gap: var(--jolly-space-2, 8px);
     min-height: var(--jolly-row-height, 20px);
+    margin-block-start: calc(var(--jolly-space-1, 4px) / 2);
+  }
+
+  .labelled {
+    display: grid;
+    grid-template-columns:
+      calc(var(--jolly-gutter-width, 0px) + var(--jolly-space-1, 4px))
+      auto
+      minmax(0, 1fr);
+    gap: var(--jolly-space-1, 4px);
+  }
+
+  .unlabelled {
+    display: flex;
+  }
+
+  .labelled .rule {
+    background: var(--jolly-separator-rule);
   }
 
   .caption {
     flex: 0 0 auto;
-    color: var(--jolly-text-muted);
-    font-size: 0.85em;
+    color: var(--jolly-separator-label);
+    font-size: 1em;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     user-select: none;

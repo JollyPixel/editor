@@ -202,6 +202,7 @@ function buildOutliner(
     row.align = "end";
     const visible = bind(document.createElement("jolly-checkbox"));
     visible.align = "end";
+    visible.clickableBackground = true;
     visible.value = name !== "Debug";
     row.append(visible);
     scene.append(row);
@@ -346,7 +347,7 @@ function buildTransform(
   scale.step = 0.05;
   scale.value = 1.35;
   scale.default = 1;
-  folder.append(scale);
+  folder.append(separator(), scale);
 
   if (options.salted) {
     const readonlyField = bind(document.createElement("jolly-number"));
@@ -397,7 +398,13 @@ function buildMaterial(
   name.label = "Name";
   name.value = "terrain_rock_01";
 
-  folder.append(albedo, roughness, shading, name);
+  folder.append(
+    albedo,
+    roughness,
+    separator("Shading"),
+    shading,
+    name
+  );
 
   if (options.salted) {
     const errored = bind(document.createElement("jolly-text"));
@@ -441,6 +448,7 @@ function buildPhysics(
 
   const collides = bind(document.createElement("jolly-checkbox"));
   collides.label = "Collides";
+  collides.clickableBackground = true;
   collides.value = true;
   collides.default = true;
 
@@ -459,11 +467,12 @@ function buildPhysics(
   layers.options = kLayers;
   layers.value = 5;
 
-  folder.append(collides, damping, layers);
+  folder.append(collides, damping, separator(), layers);
 
   if (options.salted) {
     const disabled = bind(document.createElement("jolly-checkbox"));
     disabled.label = "Kinematic";
+    disabled.clickableBackground = true;
     disabled.value = false;
     disabled.disabled = true;
 
@@ -483,6 +492,10 @@ function buildPalette(
   floating.storageKey = storageKey(options, "palette");
 
   const pane = labelledPane("Brush");
+  pane.style.setProperty(
+    "--jolly-field-trailing-width",
+    kFieldTrailingWidth
+  );
 
   const size = bind(document.createElement("jolly-slider"));
   size.label = "Size";
@@ -499,17 +512,24 @@ function buildPalette(
   opacity.step = 0.01;
   opacity.value = 1;
 
-  const separator = document.createElement("jolly-separator");
-  separator.label = "Colour";
-
   const primary = bind(document.createElement("jolly-color"));
   primary.label = "Primary";
-  primary.value = "#e2b33c";
+  primary.alpha = true;
+  primary.value = "#e2b33ccc";
 
-  pane.append(size, opacity, separator, primary);
+  pane.append(size, opacity, separator("Colour"), primary);
   floating.append(pane);
 
   return floating;
+}
+
+function separator(
+  label = ""
+): HTMLElementTagNameMap["jolly-separator"] {
+  const element = document.createElement("jolly-separator");
+  element.label = label;
+
+  return element;
 }
 
 function storageKey(

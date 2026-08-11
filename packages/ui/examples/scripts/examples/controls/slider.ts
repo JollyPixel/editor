@@ -10,6 +10,7 @@ export const SLIDER_EXAMPLE: GalleryExample = {
   render(host) {
     return renderStateMatrix<Slider>(host, {
       liveInput: true,
+      colored: true,
       create() {
         const field = document.createElement("jolly-slider");
         field.label = "Roughness";

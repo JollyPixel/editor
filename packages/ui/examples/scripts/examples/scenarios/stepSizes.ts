@@ -9,6 +9,7 @@ import {
 } from "../../../../src/index.ts";
 
 // CONSTANTS
+const kLabelWidth = "10ch";
 const kNumberSteps = [1, 0.1, 0.01];
 const kSliderSteps = [1, 0.1, 0.01];
 const kRangeSteps = [1, 0.5];
@@ -26,6 +27,7 @@ export const STEP_SIZES_EXAMPLE: GalleryExample = {
   render(host) {
     const root = document.createElement("div");
     root.className = "scenario-grid";
+    root.style.setProperty("--jolly-label-width", kLabelWidth);
 
     const hint = document.createElement("p");
     hint.className = "scenario-hint";

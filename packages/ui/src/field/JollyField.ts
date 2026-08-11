@@ -69,6 +69,10 @@ export abstract class JollyField<TValue> extends LitElement {
   @property({ type: Boolean, reflect: true })
   declare readonly: boolean;
 
+  /** Uses the theme accent for supported controls and the modified indicator. */
+  @property({ type: Boolean, reflect: true })
+  declare colored: boolean;
+
   /**
    * Numeric and monitor-style rows often read better against the trailing edge,
    * where the digits line up down the pane.
@@ -90,6 +94,7 @@ export abstract class JollyField<TValue> extends LitElement {
     this.error = null;
     this.disabled = false;
     this.readonly = false;
+    this.colored = false;
     this.align = "start";
   }
 
