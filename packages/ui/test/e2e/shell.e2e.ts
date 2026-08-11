@@ -12,8 +12,9 @@ import {
 } from "./utils.ts";
 
 /**
- * Every later test opts out of the shell with `chrome=off`, so it keeps a suite of its own: a nav
- * or router regression fails here by name instead of reddening every component report.
+ * Every later test opts out of the shell with `chrome=off`, so it keeps a
+ * suite of its own: a nav or router regression fails here by name instead of
+ * reddening every component report.
  */
 test.describe("gallery shell", () => {
   test("renders one nav entry per manifest example", async({ page }) => {
@@ -21,7 +22,9 @@ test.describe("gallery shell", () => {
 
     const links = page.locator("gallery-root nav a");
     await expect(links).toHaveCount(manifest.length);
-    await expect(links).toHaveText(manifest.map((example) => example.title));
+    await expect(links).toHaveText(
+      manifest.map((example) => example.title)
+    );
   });
 
   test("selects the first example by default", async({ page }) => {
@@ -51,14 +54,16 @@ test.describe("gallery shell", () => {
     await gotoGallery(page);
     await expect(page.locator("gallery-root .token-grid")).toBeVisible();
 
-    await page.locator(`gallery-root nav a[data-example-id="${manifest[1].id}"]`).click();
+    await page.locator(
+      `gallery-root nav a[data-example-id="${manifest[1].id}"]`
+    ).click();
 
     await expect(page.locator("gallery-root .peer-row")).toBeVisible();
     await expect(page.locator("gallery-root .token-grid")).toHaveCount(0);
     expect(new URL(page.url()).searchParams.get("example")).toBe(manifest[1].id);
   });
 
-  test("swapping runs the previous example's teardown before mounting the next", async({ page }) => {
+  test("swapping runs the previous teardown first", async({ page }) => {
     await gotoGallery(page);
     expect(await disposedIds(page)).toEqual([]);
 
@@ -105,7 +110,10 @@ test.describe("gallery shell", () => {
   });
 });
 
-/** Catches "throws on mount" across the library, and grows as later phases add entries. */
+/**
+ * Catches "throws on mount" across the library, and grows as later phases add
+ * entries.
+ */
 test.describe("manifest sweep", () => {
   for (const example of manifest) {
     test(`${example.id} mounts and disposes without throwing`, async({ page }) => {
@@ -123,7 +131,9 @@ test.describe("manifest sweep", () => {
       // Selecting in-page, not a second goto: a reload discards the tree without ever
       // calling the teardown this is meant to exercise.
       const next = manifest.find((entry) => entry.id !== example.id) ?? example;
-      await page.locator(`gallery-root nav a[data-example-id="${next.id}"]`).click();
+      await page.locator(
+        `gallery-root nav a[data-example-id="${next.id}"]`
+      ).click();
       await expect(page.locator("gallery-root main")).not.toBeEmpty();
 
       expect(await disposedIds(page)).toContain(example.id);

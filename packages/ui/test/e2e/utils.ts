@@ -7,7 +7,10 @@ export interface GotoOptions {
   theme?: "light" | "dark";
 }
 
-/** Waits for the first example to mount, so a selector cannot resolve against an empty document. */
+/**
+ * Waits for the first example to mount, so a selector cannot resolve against
+ * an empty document.
+ */
 export async function gotoGallery(
   page: Page,
   options: GotoOptions = {}
@@ -19,11 +22,15 @@ export async function gotoGallery(
 
   const query = params.toString();
   await page.goto(query === "" ? "/" : `/?${query}`);
-  await page.waitForFunction(() => window.__galleryReady === true);
+  await page.waitForFunction(
+    () => window.__galleryReady === true
+  );
 }
 
 export function disposedIds(
   page: Page
 ): Promise<string[]> {
-  return page.evaluate(() => window.__galleryDisposed ?? []);
+  return page.evaluate(
+    () => window.__galleryDisposed ?? []
+  );
 }

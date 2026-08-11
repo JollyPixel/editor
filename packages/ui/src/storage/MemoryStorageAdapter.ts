@@ -1,7 +1,9 @@
 // Import Internal Dependencies
 import type { StorageAdapter } from "./StorageAdapter.ts";
 
-/** Non persistent store, and the fallback [LocalStorageAdapter] degrades to. */
+/**
+ * In-memory storage and `LocalStorageAdapter` fallback.
+ */
 export class MemoryStorageAdapter implements StorageAdapter {
   #values = new Map<string, string>();
 

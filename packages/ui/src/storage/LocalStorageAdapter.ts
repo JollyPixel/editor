@@ -2,7 +2,9 @@
 import type { StorageAdapter } from "./StorageAdapter.ts";
 import { MemoryStorageAdapter } from "./MemoryStorageAdapter.ts";
 
-/** The slice of `Storage` this package uses. */
+/**
+ * The `Storage` API used by this package.
+ */
 export interface StorageLike {
   getItem(key: string): string | null;
   setItem(
@@ -12,7 +14,9 @@ export interface StorageLike {
 }
 
 export interface LocalStorageAdapterOptions {
-  /** Called once inside a `try`: reading `localStorage` itself throws in a sandboxed iframe. */
+  /**
+   * Resolves storage inside a `try` for sandboxed iframes.
+   */
   resolve?: () => StorageLike | undefined;
 }
 
@@ -30,10 +34,7 @@ function isStorageLike(
 }
 
 /**
- * Wraps `localStorage` with a memory fallback, covering both failure modes: the property read
- * throwing at construction, and `setItem` throwing on quota long after. A failed write degrades
- * the instance for good instead of throwing into a render. Writes also land in memory, so
- * degrading keeps what this session already stored.
+ * Wraps `localStorage` and permanently falls back to memory after a failure.
  */
 export class LocalStorageAdapter implements StorageAdapter {
   #fallback = new MemoryStorageAdapter();
@@ -53,7 +54,9 @@ export class LocalStorageAdapter implements StorageAdapter {
     }
   }
 
-  /** Whether writes still reach `localStorage`. */
+  /**
+   * Whether writes reach `localStorage`.
+   */
   get persistent() {
     return this.#storage !== null;
   }

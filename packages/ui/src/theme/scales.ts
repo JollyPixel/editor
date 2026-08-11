@@ -2,8 +2,7 @@
 import { css } from "lit";
 
 /**
- * 4px spacing grid. `fast` is for hover and press, `base` for expand and reveal; both go to zero
- * under `prefers-reduced-motion`. `--jolly-font-numeric` stops digits changing width mid scrub.
+ * Shared spacing, motion, and numeric-font tokens.
  */
 export const scaleTokens = css`
   :host {

@@ -2,31 +2,55 @@
 
 ## Imports
 
-Order: Node.js (`node:` prefix) → third-party → internal, each block headed by `// Import <Kind> Dependencies`. Internal imports keep `.ts` extensions. Use `import type { ... }` for type-only imports.
+Order import blocks as Node.js (`node:`), third-party, then internal. Prefix
+each block with `// Import <Kind> Dependencies`. Internal imports require `.ts`
+extensions; type-only imports require `import type`. Put each named import or
+export on its own line when the list has more than two members.
 
 ## Naming
 
-| Kind | Convention | Example |
+| Item | Convention | Example |
 |---|---|---|
-| Class / Interface / Type | `PascalCase` | `class HttpServer` |
-| Variable / Function / Method | `camelCase` | `fetchData` |
-| Private field or method | `#prefix` — never the TS `private` keyword | `#connectionPool` |
+| Class, interface, type | `PascalCase` | `HttpServer` |
+| Variable, function, method | `camelCase` | `fetchData` |
+| Private field or method | `#camelCase`; never TS `private` | `#connectionPool` |
 | Exported constant | `ALL_CAPS` | `API_URL` |
-| File-local constant | `k` + PascalCase | `kTimeoutMs` |
-| Type parameter | `T` + PascalCase | `TData` |
-| Unused param | `_` prefix | `_unused` |
+| File-local constant | `kPascalCase` | `kTimeoutMs` |
+| Type parameter | `TPascalCase` | `TData` |
+| Unused parameter | `_` prefix | `_unused` |
+
+## Value Objects and Intent
+
+- Model domain concepts with small value objects when they own invariants or
+  meaningful operations; keep validation and normalization inside them.
+- Prefer immutable value objects. Copy mutable inputs at boundaries and return
+  copies rather than exposing internal mutable state.
+- Name APIs after their intent and behavior (`applyDelta`, `fitsWithin`,
+  `rowsWithin`), not their implementation. Document units, defaults,
+  mutability, bounds, and out-of-bounds behavior when they are not obvious.
 
 ## Style
 
-- Double quotes, semicolons always, strict equality (`===`/`!==`)
-- `const` by default, `let` when reassigned, never `var`
-- Comments on their own preceding line, never inline end-of-line
-- Blank line before `return`
-- Arrow functions: no space before `()` — `async() => {}`. Named methods keep the space: `async foo() {}`
-- `type` for unions/mapped types, `interface` for extendable object shapes
-- No `enum` — use `as const` or union literal types
-- Custom errors extend `Error`, PascalCase name, optional `cause`
-- Constants directly beneath imports, under a `// CONSTANTS` comment
-- Comments in the source code must bring value and when required they must be as compact and factual as possible
-- Avoid type cast as possible (use the skill `/typescript-magician` if facing a challenge).
-- Usage of — is prohibited inside comments and documentation
+- Use double quotes, semicolons, strict equality (`===`/`!==`), `const` by
+  default, and `let` only when reassigned; never use `var`.
+- Put comments on their own preceding line, keep them compact and factual, and
+  never use an em dash in comments or documentation.
+- Leave a blank line before `return`; keep code under 80 characters where
+  practical.
+- Put each function, method, and constructor parameter on its own line when
+  there are more than two parameters.
+- Use no space before arrow-function `()` (`async() => {}`); named methods keep
+  the space (`async foo() {}`).
+- Use `type` for unions/mapped types and `interface` for extendable object
+  shapes. Never use `enum`, constructor parameter properties, or
+  `namespace`/`module`; use `as const`, union literals, or explicit fields.
+- Custom errors extend `Error`, use PascalCase names, and may accept `cause`.
+- Put constants directly below imports under `// CONSTANTS`.
+- Avoid unnecessary type casts (use `/typescript-magician` when needed) and
+  inline object definitions; expand objects across lines.
+- Expand non-trivial object literals across lines, with one property per line.
+- In Lit `css`/`html` template comments, never use an unescaped backtick;
+  mention identifiers as plain text or in quotes instead.
+- Use the narrowest useful collection type: prefer `Iterable<T>` when a caller
+  only needs traversal, and `Array<T>` when it needs length, indexing, or
+  mutation. Return `IterableIterator<T>` for lazy iteration.

@@ -7,8 +7,7 @@ import { densityTokens } from "./density.ts";
 import { scaleTokens } from "./scales.ts";
 
 /**
- * Tokens, density and scales for a scope host: `static styles = [themeStyles, ownStyles]`.
- * Leaf components consume tokens and declare none.
+ * Theme, density, and scale styles for scope hosts.
  */
 export const themeStyles = css`
   ${themeTokens}

@@ -2,14 +2,14 @@
 const kGoldenAngle = 137.5;
 
 /**
- * Fixed across hues so every peer stays equally legible. Over the first sixteen hues these values
- * measure 3.45:1 against the light surface and 4.12:1 against the dark one; at 70% lightness the
- * light surface drops to 2.36:1, under the 3:1 a lock ring needs.
+ * Fixed lightness keeps peer colors legible across hues.
  */
 const kPeerLightness = 60;
 const kPeerChroma = 0.16;
 
-/** Golden angle rotation, so consecutive indices land far apart. */
+/**
+ * Rotates hues by the golden angle.
+ */
 export function peerColor(
   index: number
 ): string {

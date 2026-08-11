@@ -1,7 +1,5 @@
 /**
- * Consumer facing surface only. `evaluate`, `deriveKey`, `resolveOrder` and `valueFromDelta` back
- * components, not consumers, and stay internal: promoting one later is additive, withdrawing one
- * is breaking.
+ * Public package exports.
  */
 
 export {
@@ -29,6 +27,71 @@ export {
   isMixed,
   type FieldValue
 } from "./field/mixed.ts";
+
+export {
+  Icon
+} from "./icon/Icon.ts";
+export {
+  registerIcon,
+  getIcon,
+  hasIcon,
+  type IconGlyph,
+  type IconName,
+  type BuiltinIconName
+} from "./icon/registry.ts";
+
+export {
+  Text
+} from "./controls/Text.ts";
+export {
+  NumberField
+} from "./controls/Number.ts";
+export {
+  Checkbox
+} from "./controls/Checkbox.ts";
+export {
+  Slider
+} from "./controls/Slider.ts";
+export {
+  Range
+} from "./controls/Range.ts";
+export {
+  Flags
+} from "./controls/Flags.ts";
+export {
+  Select
+} from "./controls/Select.ts";
+export {
+  Color
+} from "./controls/Color.ts";
+export {
+  ButtonGroup
+} from "./controls/ButtonGroup.ts";
+export {
+  Button,
+  type ButtonVariant
+} from "./controls/Button.ts";
+export {
+  Separator
+} from "./controls/Separator.ts";
+export {
+  PropertyRow
+} from "./controls/PropertyRow.ts";
+export type {
+  JollyOption,
+  Interval
+} from "./controls/types.ts";
+export type {
+  JollyChangeDetail
+} from "./field/events.ts";
+export type {
+  CollaboratorPresence
+} from "./collab/types.ts";
+export {
+  isInputElement,
+  isSelectElement,
+  detailOf
+} from "./dom.ts";
 
 export type {
   StorageAdapter

@@ -5,12 +5,7 @@ import { css } from "lit";
 import { rampTokens } from "./ramps.ts";
 
 /**
- * Tier 2, the only names components read and consumers override. One `light-dark()` pair per
- * token over two ramp steps, so the themes cannot disagree on which surface is darker.
- *
- * Ratios were verified when the steps were chosen (see docs/theming.md). `--jolly-border` is
- * deliberately under 3:1: it divides surfaces, which WCAG 1.4.11 does not cover. Control outlines
- * use `--jolly-border-strong`.
+ * Public semantic tokens built from the internal ramps.
  */
 const semanticTokens = css`
   --jolly-surface: light-dark(var(--jolly-neutral-50), var(--jolly-neutral-900));
@@ -46,8 +41,7 @@ const semanticTokens = css`
 `;
 
 /**
- * Goes on a scope host, never a leaf. The `theme` attribute only flips `color-scheme`, so two
- * panes on one page can carry different themes.
+ * Scope-host theme tokens with light and dark variants.
  */
 export const themeTokens = css`
   :host {

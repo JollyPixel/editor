@@ -2,15 +2,9 @@
 
 Foundation UI components for JollyPixel editors and demo examples.
 
-Editors today (`editors/pixel-art`, `editors/voxel-map`, `editors/voxel-model`) and the Vite
-examples (`voxel-renderer/examples`, `three/examples`) run on a mix of vanilla DOM, duplicated
-Lit components and Tweakpane. This package replaces that mix with one themeable, event driven,
-collaboration aware set of components.
-
-Interfaces must stay reactive and must be able to show which player is editing what, and to
-mark controls held by another player.
-
-This document records the contracts and the reasoning. `PLAN.md` holds the implementation steps.
+Editors and Vite examples currently mix vanilla DOM, duplicated Lit components and Tweakpane.
+This package replaces them with themeable, event-driven, collaboration-aware components.
+`PLAN.md` describes delivery.
 
 ## 1. Architecture: two layers
 
@@ -34,10 +28,8 @@ folder.addBinding(state, "position");
 folder.addMonitor(state, "fps");
 ```
 
-Editors write templates. Examples keep the Tweakpane shaped ergonomics they already use. One
-implementation sits underneath both, so a fix lands once.
-
-The facade is a thin constructor over elements. It owns no rendering.
+Editors use templates; examples keep Tweakpane-like ergonomics. The facade is a thin element
+constructor with no rendering of its own.
 
 ## 2. State ownership: controlled elements, stateful facade
 
@@ -56,13 +48,28 @@ folder.addBinding(state, "x");
 folder.refresh();
 ```
 
-A remote peer's edit and a local edit follow the same path: intent, pipeline, new `value`,
-re-render. There is no second code path and no "who wins" guard per control.
+Local and remote edits share one path: intent, pipeline, new `value`, re-render. Controls never
+mutate bound objects or poll; this mirrors `pixel-draw-renderer`'s `EditPipeline` model.
 
-This mirrors `pixel-draw-renderer`, where UI calls intent methods on `EditPipeline` and the
-view repaints from emitted change signals.
+### Value and draft
 
-Consequence: no control mutates a bound object directly, and no control polls.
+`value` is consumer owned. An element may keep transient `draft` state for partial text,
+expressions, drag origins and incomplete colours; it is discarded on commit, Escape, or a fresh
+value while unfocused.
+
+```ts
+// consumer owned, replaced from outside
+value: FieldValue<T>;
+
+// element owned, discarded on commit, Escape or a fresh value while unfocused
+#draft: string | null;
+#parseError: string | null;
+```
+
+While focused, a draft wins over incoming `value` so remote edits do not rewrite text under the
+caret. Other row state keeps updating. Enter and blur commit; Escape discards. `jolly-text`
+emits `jolly-input` per keystroke, while `jolly-number` does so only when scrubbing. Consumers
+must write a `jolly-change` value back, or the next render restores the old value.
 
 ## 3. Field contract
 
@@ -76,7 +83,33 @@ start because they change what a value means, and retrofitting them touches ever
 | `value` | `T \| typeof Mixed` | Current value, or `Mixed` across a multi selection |
 | `default` | `T \| undefined` | Enables the revert affordance when `value` differs |
 | `lockedBy` | `CollaboratorPresence \| null` | Peer currently holding the field |
-| `error` | `string \| null` | Validation message |
+| `peers` | `CollaboratorPresence[]` | Peers focused on the field, rendered as chips |
+| `disabled` | `boolean` | Not operable, not focusable |
+| `readonly` | `boolean` | Not editable, still focusable and copyable |
+| `error` | `string \| null` | Validation message, consumer owned |
+
+`peers` represents everyone focused on the field; `lockedBy` is the resolved holder. `error` is
+consumer owned. Parse failures use private `#parseError`, which takes display precedence without
+overwriting consumer validation.
+
+`disabled`, `readonly`, and `lockedBy` combine rather than override:
+
+```ts
+protected get editable(): boolean {
+  return !this.disabled && !this.readonly && this.lockedBy === null;
+}
+```
+
+They map to different accessibility semantics, because they mean different things:
+
+| Property | Inner input | ARIA | Focusable |
+|---|---|---|---|
+| `disabled` | `disabled` | native | no |
+| `readonly` | `readonly` | `aria-readonly="true"` | yes |
+| `lockedBy` | `readonly` | `aria-disabled="true"` plus the holder named | yes |
+
+Derived `locked`, `mixed`, `modified`, and `invalid` reflect to the host, as do `disabled` and
+`readonly`. No `path` ships until P7 provides a claimant.
 
 ```ts
 export const Mixed = Symbol.for("jolly-pixel.ui.mixed") as unique symbol;
@@ -86,34 +119,41 @@ export type FieldValue<TValue> = TValue | typeof Mixed;
 export function isMixed(value: unknown): value is typeof Mixed;
 ```
 
-`Symbol.for` rather than `Symbol()` so identity survives a duplicate module instance. `ui` is a
-workspace dependency resolved through `dist/` by three editors, which is the same hazard the
-`lit` peer dependency guards against; with a unique symbol, `value === Mixed` would silently
-return `false` across the boundary and a mixed field would render as an ordinary value.
-
-The `as unique symbol` assertion is required: `Symbol.for()` is typed `symbol`, so without it
-`FieldValue<string>` collapses to `string | symbol` and loses the distinctness.
-
-`isMixed` is the narrowing helper every render path branches on. Nothing else ships here until a
-control asks for it.
+`Symbol.for` preserves identity across duplicate module instances; `as unique symbol` preserves
+the distinct type. `isMixed` is the render-path narrowing helper.
 
 `Mixed` renders as a dash placeholder and leaves the value untouched until edited. Editing one
 axis of a mixed `jolly-vector3` applies that axis to the whole selection and leaves the others
 mixed.
 
-`Mixed` also carries the collaborative display: a value that differs from a peer's uses the
-same rendering path as a multi selection.
+Values differing from a peer use the same mixed rendering. Mixed values disable gestures that
+need a starting value, but typing remains available.
 
-Numeric fields additionally support:
+| Control | Mixed display | An edit commits |
+|---|---|---|
+| `jolly-number` | dash, no scrub cursor | the typed value |
+| `jolly-slider` | track, no thumb, no drag | the clicked position |
+| `jolly-range` | track, no thumbs | nothing until typed |
+| `jolly-text` | dash placeholder | the typed value |
+| `jolly-checkbox` | native `indeterminate` | `true` |
+| `jolly-select` | no option selected | the picked option |
+| `jolly-button-group` | nothing pressed | the pressed option |
+| `jolly-flags` | dash, no bits lit | the whole typed mask |
+| `jolly-color` | dash, no swatch | the picked colour |
 
-- Drag scrub on the label chip, continuous `jolly-input`, committing `jolly-change` on release
-- Expression input (`1920/2` commits `960`), tokenizer plus shunting yard, never `eval`. A
-  parse failure populates `error`
+Numeric fields support:
+
+- Drag scrub from a left handle: continuous `jolly-input`, `jolly-change` on release, a dashed
+  pointer guideline, `Shift` ×10 and `Alt` ×0.1. `Ctrl` is unused because macOS treats Ctrl-drag
+  as right click
+- `ArrowUp`/`ArrowDown` stepping through `valueFromDelta`, with the same modifiers and a discrete
+  `jolly-change`
+- Expression input such as `1920/2`, evaluated by tokenizer and shunting yard, never `eval`;
+  failures populate `#parseError`
 
 ### Expression grammar
 
-Deliberately small. Every additional feature is a token, a precedence row and a test, and each
-one can be added later against a real request:
+The grammar stays deliberately small:
 
 - Operators `+`, `-`, `*`, `/`, with unary `-` and `+`
 - Parentheses
@@ -121,12 +161,8 @@ one can be added later against a real request:
 - `,` accepted as a decimal separator alias, since no grammar rule uses a comma. Without it a
   French locale typing `1,5` gets a parse error in a numeric field
 
-No functions, no constants, no variables, no units, no `%`, no `**`. That covers `1920/2`,
-`100*1.5` and `(3+4)/2`, which is the shape of numeric field entry.
-
-Evaluation returns a discriminated result rather than throwing. A malformed expression is
-expected user input, not an exceptional condition; throwing would put a `try`/`catch` at every
-numeric commit and make typos control flow by exception.
+It has no functions, constants, variables, units, `%`, or `**`. Evaluation returns a
+discriminated result rather than throwing.
 
 ```ts
 export type EvalResult =
@@ -134,13 +170,8 @@ export type EvalResult =
   | { ok: false; error: string; };
 ```
 
-`1/0` and any non-finite outcome return `{ ok: false }`, because a field cannot hold `Infinity`.
-Input that already parses as a plain finite number short-circuits before the tokenizer, which is
-roughly 95% of entries.
-
-There is no denylist. A grammar-based parser rejects `alert(1)`, `constructor` and `a.b` for the
-same reason it rejects any other unknown token, so the property to test is grammar closure, not
-the blocking of particular strings.
+`1/0` and other non-finite results fail. Plain finite numbers bypass tokenisation. Grammar
+closure rejects unknown input such as `alert(1)`, `constructor`, and `a.b`; no denylist exists.
 
 ## 4. Theming and design language
 
@@ -161,10 +192,8 @@ never declare.
 :host([theme="dark"]) { color-scheme: dark; }
 ```
 
-The `theme` attribute only flips `color-scheme`. Adding a token is one line.
-
-`editors/pixel-art/src/ui/theme.ts` declares its 13 tokens three times, once on `:host`, once
-under `prefers-color-scheme`, once per `[theme]` value. That is the shape this replaces.
+The `theme` attribute only flips `color-scheme`; each token has one declaration. This replaces
+pixel-art's three declarations of each of its 13 tokens.
 
 Custom properties inherit through shadow roots, so consumers override with plain CSS and no
 piercing:
@@ -173,11 +202,11 @@ piercing:
 jolly-pane { --jolly-accent: #ff6600; }
 ```
 
-Leaf components read tokens with fallbacks (`var(--jolly-text, #16232f)`) so an element used
-outside a scope host still renders.
-
-Two panes on one page may carry different themes, which a document level stylesheet could not
-support.
+A leaf must not declare inherited tokens on `:host`, because it would block consumer overrides.
+Fallbacks stay at use sites and only cover `text`, `control-bg`, `border-strong`, and
+`focus-ring`, defined once in `src/theme/fallbacks.ts`; wider fallbacks would duplicate the
+palette and cannot preserve `light-dark()`. A component warns once per tag when
+`--jolly-surface` is absent. Scoped hosts allow multiple themes on one page.
 
 ### Token tiers
 
@@ -209,23 +238,16 @@ Semantics reference ramps through `var()` rather than inlining their values:
 }
 ```
 
-Light and dark differ by ramp index, not by hand picked pairs, so the two themes cannot drift
-into disagreeing about which of two surfaces is darker. The indirection is what keeps that
-invariant visible in the source — you read `50` against `900` on one line — and it surfaces in
-devtools, where hovering `--jolly-surface` shows which ramp step it resolved to. Inlining the
-values instead would make tier 1 decorative and put the pairs back in hand picked territory.
-
-"Private" is a convention, not a mechanism. CSS has no privacy, so tier 1 is reachable by a
-consumer who wants it; it is documented as unsupported rather than pretended to be inaccessible.
-
-Thirteen flat tokens, as `pixel-art` has, does not stretch to 45 components with eight states.
+Light and dark select ramp indices rather than hand-picked pairs. Ramp privacy is conventional:
+consumers can read them, but only semantic aliases are supported. A flat 13-token palette cannot
+cover 45 components and eight states.
 
 ### Palette
 
 Ramps are authored in OKLCH so lightness steps are perceptually even.
 
-The accent is seeded from `#4488ff`, the blue already used 24 times across voxel-map and
-voxel-model, rather than pixel-art's `#2f6fd8` and `#3a6fc2` which appear 8 times.
+The accent is seeded from `#4488ff`, used 24 times across voxel-map and voxel-model, rather than
+pixel-art's two blues, used eight times.
 
 `accent` is split, because it currently does two incompatible jobs with one value:
 
@@ -234,11 +256,9 @@ voxel-model, rather than pixel-art's `#2f6fd8` and `#3a6fc2` which appear 8 time
 | `--jolly-accent-fill` | Background behind text | White on it reaches 4.5:1 |
 | `--jolly-accent-text` | Accent coloured text and icons | Reaches 4.5:1 on the surface |
 
-Measured on the current values: `#3a6fc2` as text on `#131b24` is 3.5:1, below AA, while white
-on `#3a6fc2` is 5.0:1. One token cannot satisfy both, which is why there are two.
+`#3a6fc2` is 3.5:1 as text on `#131b24`, but 5.0:1 beneath white; one token cannot satisfy both.
 
-Neutrals replace the seven unordered dark surfaces in use today (`#0e1316`, `#111a20`,
-`#141a1d`, `#1a2228`, `#1e2a30`, `#2a3540`, `#2a3a4a`).
+Neutrals replace seven unordered dark surfaces currently in use.
 
 Axis colours are tokens, seeded from the existing `Vec3Input` values: X `#9b2020`, Y `#1e7a3a`,
 Z `#1a4f80`.
@@ -252,9 +272,8 @@ export function peerColor(index: number): string {
 }
 ```
 
-Lightness is 60%, not the 70% an earlier draft carried. Measured over the first sixteen hues, 70%
-reaches only 2.36:1 against the light surface, under the 3:1 a lock ring needs to be visible at
-all; 60% reaches 3.45:1 light and 4.12:1 dark.
+60% lightness reaches 3.45:1 on light and 4.12:1 on dark surfaces; 70% reaches only 2.36:1 on
+light.
 
 ### Contrast
 
@@ -272,13 +291,8 @@ interactive controls and clears 3:1 against both surfaces and both control backg
 `--jolly-border` divides surfaces, which 1.4.11 does not govern, and is deliberately below it: a
 divider at 3:1 reads as a hard rule between every row of a sixty control pane.
 
-These are design constraints, not assertions. Tokens are authored as CSS, so `light-dark()` and
-the ramp `var()` chain only resolve in a browser — happy-dom has no cascade, and a `CSSResult` is
-an opaque string a unit test can do nothing useful with. Checking every pair would mean either
-duplicating the palette as TypeScript data purely to serve the tests, or thirty `getComputedStyle`
-assertions in the end to end tier. Neither is worth it for a palette that changes rarely and
-visibly, so the ratios above are verified when the ramps are authored and revisited when they
-move.
+These are design constraints, checked when ramps are authored or changed. CSS cascade resolution
+makes unit assertions unhelpful, and duplicating the palette solely for tests is not warranted.
 
 ### Density
 
@@ -290,11 +304,8 @@ Three presets on the scope host. They inherit, so a nested pane may override its
 | `default` | 22px | 12px | 24 uses, matches `padding: 2px 4px` plus a border |
 | `comfortable` | 28px | 13px | 6 uses, dialogs and prose |
 
-The three presets are the three font sizes already in use. Icon buttons and rails are a separate
-role at 32px, following pixel-art's 36px rail button.
-
-Verification cost is capped by exercising one representative gallery page per preset, not all
-45 components.
+These are the three font sizes already used. Icon buttons and rails are a separate 32px role.
+One representative gallery page verifies each preset.
 
 ### Spacing, radius, typography
 
@@ -318,8 +329,8 @@ things carry a shadow, which is what makes them read as detached:
 `--jolly-shadow-overlay` (menu, tooltip), `--jolly-shadow-floating` (floating pane),
 `--jolly-shadow-modal` (dialog).
 
-Controls carry no drop shadow. This keeps the `box-shadow` channel free for the lock ring below,
-and avoids blurred shadows on 22px rows in a pane of sixty controls.
+Controls carry no shadow, keeping `box-shadow` free for lock treatment and avoiding blur on
+22px rows.
 
 ### State channels
 
@@ -329,7 +340,7 @@ stays readable.
 | State | Channel |
 |---|---|
 | Focus | Native `outline`, accent, `outline-offset: 2px`, outside the box |
-| Locked | Inset ring, `box-shadow: inset 0 0 0 2px`, in the holder's peer colour |
+| Locked | Leading bar and a faint background tint on the field, in the holder's peer colour |
 | Error | Border colour, plus a message beneath |
 | Modified | Revert affordance in the gutter |
 | Mixed | Dash placeholder in the value area |
@@ -337,13 +348,9 @@ stays readable.
 | Hover, active | Background step (`--jolly-control-bg-hover`, `-active`) |
 | Disabled | Reduced opacity, no pointer events |
 
-Focus is outside and the lock is inside, so a locked field that is also focused shows both, and
-focus is never suppressed. A single ring chosen by precedence would hide focus exactly when a
-field is locked or invalid, failing WCAG 2.4.7.
-
-Presence and locking are distinct. Several peers may hold focus on one field and all of them
-render as chips; one is the resolved holder and colours the inset ring, while the rest are
-`"contended"` per section 8 and are read only. Chips overflow to a `+N` counter.
+Focus is an outset control outline; the field-level lock bar and tint keep both states visible and
+leave the error border independent. Peers render as chips, one resolved holder colours the lock,
+and excess chips collapse to `+N`.
 
 ### Motion
 
@@ -358,8 +365,28 @@ more than intended.
 
 ### Icons
 
-16px grid, 1.5px stroke, `currentColor`, no fills, so an icon inherits the state colour of the
-control containing it.
+Icons render at 16px, at an effective 1.5px stroke, in `currentColor` with no fills, so an icon
+inherits the state colour of the control containing it.
+
+The authoring grid is a 24 viewBox at `stroke-width: 2.25`, which is the same icon: a 24 viewBox
+drawn into 16px scales by two thirds, and `2.25 * 2 / 3` is exactly 1.5. That matters because
+`editors/pixel-art` already carries 27 hand authored glyphs on a 24 viewBox at 2.2 to 2.4, so P8
+moves them verbatim instead of redrawing them for no visible difference.
+
+The registry is open, and built in glyphs carry no privilege: they are registered through the
+same `registerIcon` a consumer calls. This is the rule section 6 states for metrics, for the same
+reason, and it is what lets `voxel-map` put a domain glyph on a `JollyOption` without `ui` taking
+ownership of a cube.
+
+```ts
+export type IconName = BuiltinIconName | (string & {});
+
+export type IconGlyph = string | SVGTemplateResult;
+
+export function registerIcon(name: string, glyph: IconGlyph): void;
+```
+
+The `(string & {})` union keeps autocomplete on the built in names while accepting any other.
 
 ## 5. Component catalog
 
@@ -371,6 +398,42 @@ is. Domain coupled composites stay in editors and are built from these parts.
 `jolly-button`, `jolly-button-group` (segmented and grid), `jolly-checkbox`, `jolly-number`,
 `jolly-slider`, `jolly-range` (min and max interval), `jolly-text`, `jolly-select`,
 `jolly-flags` (bitmask), `jolly-color`, `jolly-separator`, `jolly-property-row`.
+
+Nine of them are fields and carry the section 3 contract. `jolly-button` has no value, so
+`default`, `Mixed` and revert are all meaningless on it, and `jolly-separator` and
+`jolly-property-row` are layout. Those three are plain elements.
+
+Three of the nine share shapes, so P3's `dispatch.ts` has one vocabulary to map rather than four:
+
+```ts
+export interface JollyOption<TValue> {
+  value: TValue;
+  label: string;
+  icon?: IconName;
+  disabled?: boolean;
+}
+
+export interface Interval {
+  from: number;
+  to: number;
+}
+```
+
+An array rather than Tweakpane's `Record<label, value>`, because a record keys the list by label,
+so two options cannot share one, and there is nowhere to hang the `icon` an icon only segmented
+rail needs. `Interval` uses `from` and `to` rather than `min` and `max` because `jolly-range`
+carries bounds and a selection at once, and `range.min` next to `range.value.min` is a permanent
+reading hazard.
+
+`jolly-select` and `jolly-color` wrap native elements. The floating layer a listbox or a picker
+panel would need is `jolly-floating` in P2, and `color-scheme` on the scope host already themes
+the browser's own dropdown and colour picker, so the native versions follow the theme for free.
+Accepted limit: option rows cannot carry icons or peer chips. A richer variant stays additive
+behind an attribute and is unscheduled until a consumer asks.
+
+`jolly-button-group` is one tab stop with arrow key navigation, since that is what a segmented
+control is and an eight option mode rail should not consume eight tab stops. `jolly-flags` keeps
+native checkboxes in natural tab order, because its entries genuinely are independent.
 
 ### Containers and chrome
 
@@ -917,8 +980,25 @@ and the whole function is testable with two arrays of strings.
 - Elements are prefixed `jolly-`, matching the existing `jolly-popup-manager`
 - Events are prefixed `jolly-`, `bubbles: true`, `composed: true`
 - `jolly-input` fires continuously during interaction, `jolly-change` on commit
-- `jolly-reorder` and `jolly-revert` carry the affected keys
+- `jolly-reorder` and `jolly-revert` carry the affected keys. Both are pane level, so they land
+  in P2 with the pane rather than on a field
 - Every element declares its tag in `HTMLElementTagNameMap`
+
+Field events carry the value and nothing else:
+
+```ts
+export interface JollyChangeDetail<TValue> {
+  value: TValue;
+}
+```
+
+They are not cancelable. Section 2 already forbids the element from mutating itself, so there is
+nothing for `preventDefault()` to prevent, and a cancelable event that ignores cancellation is a
+trap.
+
+A field's revert gutter is not a third kind of change: it commits `default` through
+`jolly-change`, which keeps one write back path and gives consumers nothing extra to branch on.
+That is why `jolly-revert` above is pane level, matching the plural keys it carries.
 
 ## 13. Testing
 
@@ -957,6 +1037,29 @@ Note for any test that does import Lit: Lit resolves to its Node export conditio
 must register `Document`, `ShadowRoot`, `CSSStyleSheet` and `HTMLTemplateElement`, which the
 existing `pixel-draw-renderer` setup does not.
 
+A harder constraint sits underneath that one. Components use decorators, matching `PixelDrawPanel`
+and `Vec3Input`, and a decorator is not erasable syntax: `node --test` strips types rather than
+compiling, so importing a decorated module fails with a `SyntaxError` at parse before a single
+test runs. **No spec can import a component.**
+
+That is not a limitation to work around, it is a constraint that decides where logic lives.
+Anything worth a unit test is a plain module the element calls:
+
+Numeric field support lives in `src/numeric/`. Expression parsing, display and quantisation,
+modifier scaling, and pointer-delta stepping are shared numeric-control mechanics; generic DOM
+event guards remain separate in `src/dom.ts`.
+
+```
+src/field/predicates.ts    isModified(value, default)
+src/numeric/format.ts      formatNumber(value, step), parseNumeric(text)
+src/controls/flags.ts      mask to selection, selection to mask, toggle
+src/numeric/valueFromDelta.ts    already P0
+src/numeric/evaluate.ts          already P0
+```
+
+Everything a component renders is therefore covered by the end to end tier alone, which is the
+tradeoff the two tier split already accepts.
+
 ### Examples gallery
 
 One page. A `jolly-dock` on the left lists the examples, the right side swaps content. The
@@ -978,9 +1081,13 @@ export interface GalleryExample {
 
 Two kinds, because "one goal" means different things for a control and for a behaviour:
 
-- **Component examples** render one component through a shared state matrix helper: default,
-  mixed, locked, error, modified, disabled, each tagged `[data-state]`. All of them stay
-  identical, and adding a seventh state updates every component example at once
+- **Component examples** render one component through a shared state matrix helper, each row
+  tagged `[data-state]`. All of them stay identical, and adding a state updates every component
+  example at once. Nine rows: `default`, `mixed`, `modified`, `error`, `disabled`, `readonly`,
+  `locked`, `peers`, `mixed+modified`. Focus is not among them, because only one element can hold
+  it: the locked plus focused case is produced by the test focusing the `locked` row. The helper
+  takes a factory rather than a tag name, since a `select` needs `options` and a `slider` needs
+  bounds, and each row builds a fresh element so one row's draft cannot leak into another
 - **Scenario examples** cover one behaviour with whatever setup it needs, which no component
   example can provide: input scope with a live viewport, locking with two peers, reorder
   persistence across a reload, the three densities, stats cycling under a frame loop
@@ -1038,6 +1145,16 @@ whose subpath throws `ERR_MODULE_NOT_FOUND` on import, with nothing in the build
 imports it dynamically, behind `includePerformanceStats`, so game bundles pay nothing when the
 flag is off.
 
+The root barrel exports the elements themselves, so importing it registers every custom element
+as a side effect. Three editors consume this package wholesale, and per component subpaths would
+be speculative under the rule above. The consequence is that `package.json` must never claim
+`"sideEffects": false`: a bundler taking that at its word drops the `customElements.define` calls
+and every tag renders as an unknown element.
+
+`JollyField`, `ScrubController` and the extracted pure helpers stay out of the barrel. This
+package publishes with `access: public`, so promoting one later is additive while withdrawing one
+is breaking, which is the rule P0 set for `evaluate` and `valueFromDelta`.
+
 The workspace currently resolves a single hoisted `lit@3.3.3`, while `runtime` requests `^3.3.1`.
 That range is pinned as part of P0. Because `.npmrc` sets `package-lock=false`, there is no
 lockfile to hold that tree in place, so a single copy is not something the repository can
@@ -1066,6 +1183,7 @@ edited.
 | A global em based scale factor | Fractional scales blur 1px borders and 22px rows, and canvas has to re-read the size |
 | A single ring chosen by precedence | Focus disappears exactly when a field is locked or invalid, failing WCAG 2.4.7 |
 | Trailing badges for every state | Three badges plus gaps consume about 48px of value width at `compact` |
+| An inset ring inside the control for the lock | Doubles with the border an input already has, floats detached on a borderless range, and boxes a whole group of checkboxes |
 | Elevation led surfaces | Blurred shadows on 22px rows read as blur, cost paint across sixty controls, and compete with the inset lock ring |
 | No shadows at all | A menu opening over a pane of the same colour is separated by a hairline alone |
 | Gating the engine keyboard on hover | Moving the pointer away mid sentence re-arms the engine under the user, as voxel-map does today |
@@ -1098,6 +1216,20 @@ edited.
 | Guarding `keyup` alongside `keydown` | Strands held keys when focus moves to a field mid press, and the camera drifts forever |
 | Building the shortcut registry in P0 | No phase registers a binding, and section 16 still questions whether rebindable shortcuts are wanted |
 | Building `InputScopeSource` in P0 | Its consumer is P6; it would sit unexercised until after forty five components exist |
+| `jolly-property-row` owning label, gutter and chips | Every field would need a wrapper, so P5 and P6 migrate one hand written row into two elements, and P7 could no longer light up locking from one file |
+| A field mixin or reactive controller instead of a base class | A controller cannot render the chrome around the value, so P7 wiring `lockedBy` would edit twelve files instead of one; a generic mixin loses `T` and needs it redeclared per control |
+| A precedence chain over `disabled`, `readonly` and `lockedBy` | The same failure as the rejected single ring: a locked field stops showing that it is also disabled |
+| The element writing its own `error` | It replaces a consumer's validation message on the first typo and clears it afterwards, so the consumer cannot trust a property it set |
+| A `jolly-error` event with no local rendering | Every numeric field needs the same write back boilerplate, and forgetting it makes a typo do nothing at all |
+| A `source` discriminator on the change detail | `jolly-input` against `jolly-change` already separates continuous from committed, which is the distinction consumers ask for |
+| Scrubbing a mixed field from a synthesised start | The first pointer move collapses the whole selection onto a value the user never saw, in one undo step |
+| Fallbacks on every token usage | Re-inlines the palette across every stylesheet, and a single value cannot carry `light-dark()` |
+| Authoring icons on a 16 viewBox | A 24 viewBox at 2.25 renders identically at 16px, and pixel-art's 27 glyphs are already drawn on it |
+| A closed icon record | `voxel-map`'s domain glyphs could not be used on a `JollyOption`, so `ui` would have to absorb a cube |
+| Exporting `JollyField` in P1 | Publishes a subclassable base, its protected surface and its DOM shape as versioned API before any consumer subclasses it |
+| Screenshot snapshots in the end to end tier | Baselines are per platform, development is Windows against Linux CI, and the tier is already the flaky one |
+| Authoring components without decorators | Would allow happy-dom component tests, but diverges from `PixelDrawPanel` and `Vec3Input` and re-litigates a settled test tier split |
+| One documentation page per component | Twelve pages each repeating one shared contract, against the preference to fold shared material into an owning doc |
 
 ## 16. Open points
 
@@ -1106,3 +1238,13 @@ edited.
   `importState`, decided in P3 when the facade lands
 - Whether user rebindable shortcuts are needed, and if so where the overrides persist. The
   registry makes it possible; nothing currently asks for it
+- Whether `jolly-flags` needs per bit mixedness. A bitmask across a multi selection genuinely is
+  mixed bit by bit, which `FieldValue<number>` cannot express. Whole value `Mixed` ships in P1;
+  the finer form waits for a multi selection consumer, which is P5 at the earliest
+- Relative multi edit is not expressible. `{ value: T }` carries one absolute value, so section 3's
+  "applies that axis to the whole selection" is the whole of it. Unity applies a delta to each
+  selected object instead, which would need a second detail shape and a second write back path
+- Whether `JollyField` becomes public. P5 and P6 will say whether an editor wants a domain field
+  with lock, mixed and revert; promoting it then is additive
+- How a field acquires a lock path. Section 8's `claim(path)` needs an identity that section 11's
+  `deriveKey` only gives to a pane. Decided in P7, with its first claimant

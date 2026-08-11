@@ -3,9 +3,9 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { valueFromDelta } from "../../src/geometry/valueFromDelta.ts";
+import { valueFromDelta } from "../../src/numeric/valueFromDelta.ts";
 
-describe("Geometry.valueFromDelta", () => {
+describe("Numeric.valueFromDelta", () => {
   test("returns the starting value for no travel", () => {
     assert.equal(valueFromDelta({
       start: 5,

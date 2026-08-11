@@ -1,6 +1,6 @@
 ---
 name: code-style
-description: Coding conventions for JollyPixel Editor — import ordering, naming, and style rules. Use before writing or editing TypeScript/JavaScript files in this repo (packages/**).
+description: Apply JollyPixel Editor conventions before editing TypeScript/JavaScript in packages/**.
 ---
 
-Read [.github/CODE_STYLE.md](../../../.github/CODE_STYLE.md) at the repository root and apply its import ordering, naming, and style rules to any code you write or edit in this repo.
+Before editing `packages/**`, read and follow the complete [CODE_STYLE.md](../../../.github/CODE_STYLE.md). It is the source of truth for imports, naming, TypeScript syntax, API intent, value objects, comments, formatting, and Lit template comments.
