@@ -12,7 +12,8 @@ const kExamples: Record<string, string> = {
   Grid: "/",
   "Area Box": "/area-box.html",
   "Peer Frustum": "/peer-frustum.html",
-  "Peer Frustum Sync": "/peer-frustum-sync.html"
+  "Peer Frustum Sync": "/peer-frustum-sync.html",
+  Selection: "/selection.html"
 };
 
 export interface ExamplePaneOptions {

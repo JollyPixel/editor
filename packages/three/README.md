@@ -32,15 +32,17 @@ scene.add(grid); // self-updating: no manual .update() call needed
 
 ### Components
 
+- [Network components](docs/network/index.md): Optional integrations with `@jolly-pixel/network`.
 - [AreaBox](docs/AreaBox.md): Translucent axis-aligned area, moved and resized on a grid by [AreaBoxControls](docs/AreaBoxControls.md).
 - [Grid](docs/Grid.md): Ground-plane grid mesh. (TSL, `THREE.WebGPURenderer`).
 - [PeerFrustum](docs/PeerFrustum.md): Renders connected peers as lightweight camera frustums.
+- [SelectionOutline](docs/SelectionOutline.md) - Non-destructive outline overlay for a selected mesh.
+- [SelectionBoundingBox](docs/SelectionBoundingBox.md) - Non-destructive bounding-box overlay for a selected group of meshes.
+- [SelectionManager](docs/SelectionManager.md) - Id-based selection/hover state, picking the right overlay (mesh vs. group) automatically.
 
 ### Network
 
 Optional, behind the `@jolly-pixel/three/network` entry point.
-
-- [Network components](docs/network/index.md): Optional integrations with `@jolly-pixel/network`.
 
 ## ✨ Contributors guide
 

@@ -62,3 +62,96 @@ jolly-floating {
   flex-shrink: 1;
   min-height: 0;
 }
+
+/*
+ * Scene outliner - a `TreeView` from @jolly-pixel/fs-tree mirroring the
+ * groups/meshes registered in a `SelectionManager`, kept in sync in both
+ * directions (see examples/scripts/demo-selection.ts).
+ */
+#outliner {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  width: 220px;
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  background: rgba(20, 20, 36, 0.85);
+  border: 1px solid #3a3a5c;
+  border-radius: 6px;
+  color: #e8e8f0;
+  z-index: 1000;
+}
+
+#outliner h2 {
+  margin: 0;
+  padding: 10px 12px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #9a9ac0;
+}
+
+#outliner .tree {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  outline: none;
+}
+
+#outliner .tree ol {
+  list-style: none;
+  margin: 0;
+  padding-left: 18px;
+}
+
+#outliner .tree li.item,
+#outliner .tree li.group {
+  display: flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 6px;
+  border-radius: 4px;
+  cursor: default;
+  user-select: none;
+}
+
+#outliner .tree li.item:hover,
+#outliner .tree li.group:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+#outliner .tree li.item.selected,
+#outliner .tree li.group.selected {
+  background: #3a5a8c;
+}
+
+#outliner .tree li .toggle {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  margin-right: 4px;
+  flex: none;
+  cursor: pointer;
+}
+
+#outliner .tree li .toggle::before {
+  content: "▾";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #9a9ac0;
+}
+
+#outliner .tree li.group.collapsed > .toggle::before {
+  content: "▸";
+}
+
+#outliner .tree li.item span,
+#outliner .tree li.group span {
+  padding-left: 2px;
+  white-space: nowrap;
+}

@@ -1,0 +1,207 @@
+// Import Node.js Dependencies
+import { describe, test } from "node:test";
+import assert from "node:assert/strict";
+
+// Import Third-party Dependencies
+import * as THREE from "three/webgpu";
+
+// Import Internal Dependencies
+import { ColoredOutlinePass } from "#src/index.ts";
+
+/**
+ * `ColoredOutlinePass`'s constructor only reads `toneMapping`/
+ * `outputColorSpace` off the renderer (see `RenderPipeline`'s own
+ * constructor) - a real `WebGPURenderer` needs an async `init()` (a GPU
+ * context) neither available nor needed for these tests, which never call
+ * `render()`. Same stub `ToonOutlinePass.test.ts` uses.
+ */
+function createRendererStub(): THREE.WebGPURenderer {
+  return {
+    toneMapping: THREE.NoToneMapping,
+    outputColorSpace: THREE.SRGBColorSpace
+  } as unknown as THREE.WebGPURenderer;
+}
+
+function createPass(
+  options?: ConstructorParameters<typeof ColoredOutlinePass>[3]
+): ColoredOutlinePass {
+  return new ColoredOutlinePass(
+    createRendererStub(),
+    new THREE.Scene(),
+    new THREE.PerspectiveCamera(),
+    options
+  );
+}
+
+describe("constructor", () => {
+  test("defaults edgeThickness to 1 and edgeGlow to 0", () => {
+    const coloredOutline = createPass();
+
+    assert.strictEqual(coloredOutline.edgeThickness, 1);
+    assert.strictEqual(coloredOutline.edgeGlow, 0);
+  });
+
+  test("applies the given options", () => {
+    const coloredOutline = createPass({ edgeThickness: 3, edgeGlow: 0.5, downSampleRatio: 4 });
+
+    assert.strictEqual(coloredOutline.edgeThickness, 3);
+    assert.strictEqual(coloredOutline.edgeGlow, 0.5);
+  });
+
+  test("exposes its own RenderPipeline", () => {
+    const coloredOutline = createPass();
+
+    assert.ok(coloredOutline.pipeline instanceof THREE.RenderPipeline);
+  });
+});
+
+describe("setEdgeThickness / setEdgeGlow", () => {
+  test("updates edgeThickness", () => {
+    const coloredOutline = createPass();
+    coloredOutline.setEdgeThickness(5);
+
+    assert.strictEqual(coloredOutline.edgeThickness, 5);
+  });
+
+  test("updates edgeGlow", () => {
+    const coloredOutline = createPass();
+    coloredOutline.setEdgeGlow(0.75);
+
+    assert.strictEqual(coloredOutline.edgeGlow, 0.75);
+  });
+});
+
+describe("setEntries", () => {
+  test("accepts an empty array", () => {
+    const coloredOutline = createPass();
+
+    assert.doesNotThrow(() => coloredOutline.setEntries([]));
+  });
+
+  test("accepts a single mesh entry", () => {
+    const coloredOutline = createPass();
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+
+    assert.doesNotThrow(() => coloredOutline.setEntries([{ target: mesh, color: "#ff0000" }]));
+  });
+
+  test("accepts a group entry, traversed to its meshes", () => {
+    const coloredOutline = createPass();
+    const group = new THREE.Group();
+    group.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
+    group.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
+
+    assert.doesNotThrow(() => coloredOutline.setEntries([{ target: group, color: "#00ff00" }]));
+  });
+
+  test("replaces the previous entries rather than accumulating them", () => {
+    const coloredOutline = createPass();
+    const meshA = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    const meshB = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+
+    coloredOutline.setEntries([{ target: meshA, color: "#ff0000" }]);
+
+    assert.doesNotThrow(() => coloredOutline.setEntries([{ target: meshB, color: "#0000ff" }]));
+  });
+
+  test("accepts multiple entries with distinct colors", () => {
+    const coloredOutline = createPass();
+    const entries = Array.from({ length: 5 }, (_, index) => {
+      return {
+        target: new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)),
+        color: `#${index}${index}${index}${index}${index}${index}`
+      };
+    });
+
+    assert.doesNotThrow(() => coloredOutline.setEntries(entries));
+  });
+
+  test("accepts a mix of priority and non-priority entries", () => {
+    const coloredOutline = createPass();
+    const priorityMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    const otherMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+
+    assert.doesNotThrow(() => coloredOutline.setEntries([
+      { target: priorityMesh, color: "#ff0000", priority: true },
+      { target: otherMesh, color: "#0000ff" }
+    ]));
+  });
+
+  test("accepts a priority group entry, traversed to its meshes", () => {
+    const coloredOutline = createPass();
+    const group = new THREE.Group();
+    group.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
+    group.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
+
+    assert.doesNotThrow(() => coloredOutline.setEntries([{ target: group, color: "#ffffff", priority: true }]));
+  });
+
+  test("accepts a single instanced entry (InstancedMesh + instanceId)", () => {
+    const coloredOutline = createPass();
+    const instancedMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial(), 10);
+
+    assert.doesNotThrow(() => coloredOutline.setEntries([{ target: instancedMesh, instanceId: 3, color: "#ff0000" }]));
+  });
+
+  test("accepts multiple instanced entries on the same InstancedMesh", () => {
+    const coloredOutline = createPass();
+    const instancedMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial(), 10);
+
+    assert.doesNotThrow(() => coloredOutline.setEntries([
+      { target: instancedMesh, instanceId: 0, color: "#ff0000" },
+      { target: instancedMesh, instanceId: 5, color: "#00ff00" },
+      { target: instancedMesh, instanceId: 9, color: "#0000ff" }
+    ]));
+  });
+
+  test("accepts a mix of instanced and whole-object entries", () => {
+    const coloredOutline = createPass();
+    const instancedMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial(), 10);
+    const wholeMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+
+    assert.doesNotThrow(() => coloredOutline.setEntries([
+      { target: instancedMesh, instanceId: 2, color: "#ff0000" },
+      { target: wholeMesh, color: "#00ff00" }
+    ]));
+  });
+
+  test("accepts a priority instanced entry", () => {
+    const coloredOutline = createPass();
+    const instancedMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial(), 10);
+
+    assert.doesNotThrow(() => coloredOutline.setEntries([
+      { target: instancedMesh, instanceId: 1, color: "#ff0000", priority: true }
+    ]));
+  });
+
+  test("rebuilding entries for the same InstancedMesh across calls does not throw", () => {
+    const coloredOutline = createPass();
+    const instancedMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial(), 10);
+
+    coloredOutline.setEntries([{ target: instancedMesh, instanceId: 0, color: "#ff0000" }]);
+    assert.doesNotThrow(() => coloredOutline.setEntries([{ target: instancedMesh, instanceId: 4, color: "#00ff00" }]));
+  });
+});
+
+describe("dispose", () => {
+  test("does not throw", () => {
+    const coloredOutline = createPass();
+
+    assert.doesNotThrow(() => coloredOutline.dispose());
+  });
+
+  test("does not throw after entries were set", () => {
+    const coloredOutline = createPass();
+    coloredOutline.setEntries([{ target: new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)), color: "#ff0000" }]);
+
+    assert.doesNotThrow(() => coloredOutline.dispose());
+  });
+
+  test("does not throw after instanced entries were set", () => {
+    const coloredOutline = createPass();
+    const instancedMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial(), 10);
+    coloredOutline.setEntries([{ target: instancedMesh, instanceId: 0, color: "#ff0000", priority: true }]);
+
+    assert.doesNotThrow(() => coloredOutline.dispose());
+  });
+});
