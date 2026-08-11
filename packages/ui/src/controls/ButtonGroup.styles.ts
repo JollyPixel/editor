@@ -2,9 +2,14 @@
 import { css } from "lit";
 
 export const buttonGroupStyles = css`
+  /*
+   * Segments used to be joined by shared borders. Without them a hairline gap
+   * does the same job: the fills read as one strip, still visibly divided.
+   */
   .group {
     display: flex;
     flex: 1 1 auto;
+    gap: 1px;
     min-width: 0;
   }
 
@@ -20,9 +25,9 @@ export const buttonGroupStyles = css`
     flex: 1 1 0;
     gap: 4px;
     min-width: 0;
-    height: var(--jolly-control-height, 22px);
+    height: var(--jolly-control-height, 20px);
     padding: 0 var(--jolly-space-1, 4px);
-    border: 1px solid var(--jolly-border-strong);
+    border: 0;
     background: var(--jolly-control-bg);
     color: inherit;
     font: inherit;
@@ -33,20 +38,20 @@ export const buttonGroupStyles = css`
   /*
    * Round only the outer edges of joined segments.
    */
-  :host(:not([layout="grid"])) .segment + .segment {
-    border-left: none;
-  }
-
   :host(:not([layout="grid"])) .segment:first-child {
-    border-radius: var(--jolly-radius-sm, 3px) 0 0 var(--jolly-radius-sm, 3px);
+    border-radius: var(--jolly-radius-sm, 2px) 0 0 var(--jolly-radius-sm, 2px);
   }
 
   :host(:not([layout="grid"])) .segment:last-child {
-    border-radius: 0 var(--jolly-radius-sm, 3px) var(--jolly-radius-sm, 3px) 0;
+    border-radius: 0 var(--jolly-radius-sm, 2px) var(--jolly-radius-sm, 2px) 0;
+  }
+
+  :host(:not([layout="grid"])) .segment:only-child {
+    border-radius: var(--jolly-radius-sm, 2px);
   }
 
   :host([layout="grid"]) .segment {
-    border-radius: var(--jolly-radius-sm, 3px);
+    border-radius: var(--jolly-radius-sm, 2px);
   }
 
   .segment:hover:not(:disabled) {
@@ -57,18 +62,26 @@ export const buttonGroupStyles = css`
     background: var(--jolly-control-bg-active);
   }
 
+  .segment:focus-visible {
+    background: var(--jolly-control-bg-focus);
+    outline: none;
+  }
+
   .segment[aria-checked="true"] {
     background: var(--jolly-accent-fill);
     color: var(--jolly-text-on-fill);
   }
 
-  .segment:focus-visible {
-    outline: 2px solid var(--jolly-focus-ring);
-    outline-offset: 2px;
-    /*
-     * Keep the focus outline above adjacent segments.
-     */
-    z-index: 1;
+  .segment[aria-checked="true"]:hover:not(:disabled) {
+    background: var(--jolly-accent-fill-hover);
+  }
+
+  /*
+   * A checked segment is already filled, so its focus step lightens the accent
+   * rather than tinting over it.
+   */
+  .segment[aria-checked="true"]:focus-visible {
+    background: var(--jolly-accent-fill-focus);
   }
 
   .segment:disabled {

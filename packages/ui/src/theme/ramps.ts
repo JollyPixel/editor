@@ -6,17 +6,17 @@ import { css } from "lit";
  */
 export const rampTokens = css`
   --jolly-neutral-0: oklch(100% 0 250);
-  --jolly-neutral-50: oklch(98% 0.003 250);
-  --jolly-neutral-100: oklch(96% 0.005 250);
-  --jolly-neutral-200: oklch(92% 0.008 250);
-  --jolly-neutral-300: oklch(86% 0.010 250);
-  --jolly-neutral-400: oklch(72% 0.014 250);
-  --jolly-neutral-500: oklch(60% 0.016 250);
-  --jolly-neutral-600: oklch(50% 0.018 250);
-  --jolly-neutral-700: oklch(40% 0.020 250);
-  --jolly-neutral-800: oklch(30% 0.022 250);
-  --jolly-neutral-900: oklch(21% 0.022 250);
-  --jolly-neutral-950: oklch(16% 0.020 250);
+  --jolly-neutral-50: oklch(98% 0.006 250);
+  --jolly-neutral-100: oklch(96% 0.014 250);
+  --jolly-neutral-200: oklch(91% 0.022 250);
+  --jolly-neutral-300: oklch(84% 0.032 250);
+  --jolly-neutral-400: oklch(72% 0.042 250);
+  --jolly-neutral-500: oklch(59% 0.045 250);
+  --jolly-neutral-600: oklch(49% 0.042 250);
+  --jolly-neutral-700: oklch(39% 0.038 250);
+  --jolly-neutral-800: oklch(29% 0.032 250);
+  --jolly-neutral-900: oklch(21% 0.028 250);
+  --jolly-neutral-950: oklch(16% 0.024 250);
 
   --jolly-accent-100: oklch(95% 0.020 260.7);
   --jolly-accent-200: oklch(89% 0.050 260.7);

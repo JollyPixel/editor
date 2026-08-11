@@ -10,9 +10,8 @@ import { kFallback } from "../theme/fallbacks.ts";
 export const propertyRowStyles = css`
   :host {
     display: block;
-    padding-block: var(--jolly-space-1, 4px);
-    font-family: var(--jolly-font-family, system-ui, sans-serif);
-    font-size: var(--jolly-font-size, 12px);
+    font-family: var(--jolly-font-family, ui-monospace, monospace);
+    font-size: var(--jolly-font-size, 11px);
     color: var(--jolly-text, ${kFallback.text});
   }
 
@@ -20,11 +19,12 @@ export const propertyRowStyles = css`
     display: flex;
     align-items: center;
     gap: var(--jolly-space-1, 4px);
-    min-height: var(--jolly-row-height, 22px);
-  /*
-   * Match the field's leading inset and gutter.
-   */
-    padding-inline: calc(14px + (var(--jolly-space-1, 4px) * 2)) var(--jolly-space-1, 4px);
+    min-height: var(--jolly-row-height, 20px);
+    /*
+     * Match the field's leading inset and collapsible gutter.
+     */
+    padding-inline: calc(var(--jolly-gutter-width, 0px) + var(--jolly-space-1, 4px))
+      var(--jolly-space-1, 4px);
   }
 
   /*
@@ -36,6 +36,7 @@ export const propertyRowStyles = css`
     max-width: 45%;
     overflow: hidden;
     color: var(--jolly-text-muted);
+    text-align: start;
     text-overflow: ellipsis;
     white-space: nowrap;
     user-select: none;
@@ -50,6 +51,19 @@ export const propertyRowStyles = css`
   }
 
   /*
+   * A row holds arbitrary content rather than an input, so the trailing edge is
+   * reached by moving the content, not by setting text-align.
+   */
+  :host([align="end"]) .value {
+    justify-content: flex-end;
+  }
+
+  /* A nested field already carries its own trailing row inset. */
+  :host([align="end"]) ::slotted(jolly-checkbox[align="end"]) {
+    margin-inline-end: calc(var(--jolly-space-1, 4px) * -1);
+  }
+
+  /*
    * Align descriptions with field help text.
    */
   .description {
@@ -57,7 +71,10 @@ export const propertyRowStyles = css`
     align-items: flex-start;
     gap: var(--jolly-space-1, 4px);
     margin-block: calc(var(--jolly-space-1, 4px) / 2) 0;
-    margin-inline: calc(14px + (var(--jolly-space-1, 4px) * 2)) var(--jolly-space-1, 4px);
+    margin-inline: calc(
+        var(--jolly-gutter-width, 0px) + (var(--jolly-space-1, 4px) * 2)
+      )
+      var(--jolly-space-1, 4px);
     color: var(--jolly-text-muted);
     font-size: 0.9em;
   }

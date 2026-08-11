@@ -83,7 +83,7 @@ export class Range extends JollyField<Interval> {
 
     return html`
       ${this.#renderEnd("from", interval?.from)}
-      <span class="separator">to</span>
+      <span class="separator" aria-hidden="true"></span>
       ${this.#renderEnd("to", interval?.to)}
     `;
   }

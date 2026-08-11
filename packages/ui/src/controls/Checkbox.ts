@@ -27,19 +27,22 @@ export class Checkbox extends JollyField<boolean> {
     this.value = false;
   }
 
+  /** Keeps the native checkbox on the standard control-sized hit target. */
   protected renderValue(): TemplateResult {
     return html`
-      <input
-        type="checkbox"
-        .checked=${this.concreteValue ?? false}
-        .indeterminate=${this.mixed}
-        ?disabled=${this.disabled}
-        aria-readonly=${this.readonlyAria}
-        aria-disabled=${this.lockedAria}
-        aria-description=${this.lockDescription}
-        aria-invalid=${this.displayError === null ? nothing : "true"}
-        @click=${this.#onClick}
-      >
+      <span class="checkbox">
+        <input
+          type="checkbox"
+          .checked=${this.concreteValue ?? false}
+          .indeterminate=${this.mixed}
+          ?disabled=${this.disabled}
+          aria-readonly=${this.readonlyAria}
+          aria-disabled=${this.lockedAria}
+          aria-description=${this.lockDescription}
+          aria-invalid=${this.displayError === null ? nothing : "true"}
+          @click=${this.#onClick}
+        >
+      </span>
     `;
   }
 

@@ -33,7 +33,8 @@ Expressions support decimal/scientific literals, unary signs, parentheses and `+
 
 ### `jolly-slider`
 
-Slider with a numeric readout. The readout is display-only.
+Slider paired with an editable numeric field. The field accepts typed entry and commits on Enter
+or blur, discarding on Escape, like `jolly-number`.
 
 | Property | Type | Default |
 |---|---|---|
@@ -41,7 +42,12 @@ Slider with a numeric readout. The readout is display-only.
 | `min` | `number` | `0` |
 | `max` | `number` | `100` |
 
-Dragging emits `jolly-input`.
+Dragging emits `jolly-input`; releasing the drag, and typing into the field, commit with
+`jolly-change`.
+
+The track is a fine groove filled to the current value. It is the one control with no fill of its
+own. Hover lightens the handle without changing geometry; focus thickens the track and grows the
+handle. An invalid slider recolours the fill and handle to `--jolly-danger-border`.
 
 ### `jolly-range`
 
@@ -55,6 +61,9 @@ Two-ended numeric interval. `value` is an `Interval` with `from` and `to` fields
 
 The ends cannot cross; a commit beyond the other end is clamped. Arrow keys and `Shift`/`Alt`
 stepping follow `jolly-number`.
+
+A decorative capped span between the inputs identifies them as the endpoints of one interval.
+It is hidden from assistive technology; each input retains its range-start or range-end name.
 
 ### `jolly-checkbox`
 
@@ -77,7 +86,8 @@ field.options = [
 ```
 
 Options are matched by position, so values may be objects or numbers. An option may also include
-an icon; see [icons.md](./icons.md).
+an icon; see [icons.md](./icons.md). Native dropdown rows use the raised theme surface so their
+background follows both light and dark modes.
 
 ### `jolly-button-group`
 

@@ -2,6 +2,9 @@
   "files": [],
   "references": [
     {
+      "path": "./packages/resize-handle"
+    },
+    {
       "path": "./packages/ui"
     },
     {
@@ -24,9 +27,6 @@
     },
     {
       "path": "./packages/network"
-    },
-    {
-      "path": "./packages/resize-handle"
     },
     {
       "path": "./packages/voxel-renderer"

@@ -87,6 +87,7 @@ start because they change what a value means, and retrofitting them touches ever
 | `disabled` | `boolean` | Not operable, not focusable |
 | `readonly` | `boolean` | Not editable, still focusable and copyable |
 | `error` | `string \| null` | Validation message, consumer owned |
+| `align` | `"start" \| "end"` | Which edge the value sits against |
 
 `peers` represents everyone focused on the field; `lockedBy` is the resolved holder. `error` is
 consumer owned. Parse failures use private `#parseError`, which takes display precedence without
@@ -202,7 +203,12 @@ piercing:
 jolly-pane { --jolly-accent: #ff6600; }
 ```
 
-A leaf must not declare inherited tokens on `:host`, because it would block consumer overrides.
+A leaf must not declare inherited tokens on `:host`. It would block consumer overrides, and it
+also breaks theming outright: declaring the token block re-declares `color-scheme: light dark`,
+which resets the scheme inherited from the scope host, so a nested element drops back to the
+system preference while everything around it stays on the chosen theme. Only scope hosts apply
+`themeStyles`; `jolly-dialog` is the one component that does, because it renders in the top layer.
+
 Fallbacks stay at use sites and only cover `text`, `control-bg`, `border-strong`, and
 `focus-ring`, defined once in `src/theme/fallbacks.ts`; wider fallbacks would duplicate the
 palette and cannot preserve `light-dark()`. A component warns once per tag when
@@ -221,12 +227,33 @@ names components use, and the only names consumers override.
 
 /* tier 2: semantics, public, about 30 names */
 --jolly-surface, --jolly-surface-sunken, --jolly-surface-raised;
---jolly-control-bg, --jolly-control-bg-hover, --jolly-control-bg-active;
+--jolly-ink, --jolly-ink-danger;
+--jolly-control-bg, --jolly-control-bg-hover, --jolly-control-bg-focus,
+--jolly-control-bg-active, --jolly-control-bg-muted;
+--jolly-invalid-bg, --jolly-invalid-bg-hover, --jolly-invalid-bg-focus;
+--jolly-row-bg-focus, --jolly-groove, --jolly-divider;
 --jolly-border, --jolly-border-strong;
 --jolly-text, --jolly-text-muted, --jolly-text-on-fill;
---jolly-accent-fill, --jolly-accent-text;
+--jolly-accent-fill, --jolly-accent-fill-hover, --jolly-accent-fill-focus, --jolly-accent-text;
 --jolly-focus-ring, --jolly-locked, --jolly-modified;
 ```
+
+Control backgrounds are not ramp steps. They are one ink at alpha stops, composited over
+whatever plane the control lands on:
+
+```css
+--jolly-ink: light-dark(var(--jolly-neutral-900), var(--jolly-neutral-50));
+--jolly-control-bg: color-mix(in oklab, var(--jolly-ink) 8%, transparent);
+--jolly-control-bg-hover: color-mix(in oklab, var(--jolly-ink) 12%, transparent);
+--jolly-control-bg-focus: color-mix(in oklab, var(--jolly-ink) 20%, transparent);
+--jolly-control-bg-active: color-mix(in oklab, var(--jolly-ink) 26%, transparent);
+```
+
+One decision instead of six, and a control stays coherent at any nesting depth without each
+level picking its own opaque pair. **Containers paint opaque or paint nothing; only leaves
+tint.** Two translucent layers over each other drift lighter, which is the invariant that
+prevents it. `--jolly-invalid-*` is the same mechanism with `--jolly-ink-danger` substituted,
+starting above the hover stop so an error never reads as "the pointer is here".
 
 Semantics reference ramps through `var()` rather than inlining their values:
 
@@ -283,13 +310,27 @@ Committed targets, following WCAG 2.1:
 |---|---|
 | Body and label text on its surface | 4.5:1 |
 | Text 18px or larger | 3:1 |
-| Focus rings and control boundaries (1.4.11) | 3:1 |
 | Peer colours against both surfaces | 3:1 |
 
-"Borders" splits in two, because one token cannot serve both jobs. `--jolly-border-strong` outlines
-interactive controls and clears 3:1 against both surfaces and both control backgrounds.
-`--jolly-border` divides surfaces, which 1.4.11 does not govern, and is deliberately below it: a
-divider at 3:1 reads as a hard rule between every row of a sixty control pane.
+**Non-text contrast (1.4.11) is deliberately not met for control boundaries.** Controls carry no
+border. A control is separated from its surface by an 8% ink fill, roughly 1.1:1, and hover,
+focus and active are further alpha stops on that same fill. This is a chosen trade: the borderless,
+fill-differentiated look is the design goal, and a boundary that clears 3:1 by fill alone forces
+surfaces heavy enough to lose it. The consequence is real and should be stated plainly to anyone
+auditing an editor built on this package: control boundaries and keyboard focus will be flagged.
+
+Two mitigations keep the result operable rather than merely quiet:
+
+- `@media (forced-colors: active)` drops the ink system for system colours, so Windows High
+  Contrast users get real boundaries back
+- focus is layered, not single channel: the control's own fill steps to 20% and the containing
+  row tints at 5%, so the active row is locatable in a long pane even where the control's step is
+  subtle
+
+`--jolly-border-strong` survives as a token for consumers who want outlines back, but nothing in
+the package paints with it. `--jolly-divider` replaces `--jolly-border` for the few remaining
+group-level rules (dialog header and footer), and is deliberately faint: a divider at 3:1 reads as
+a hard rule between every row of a sixty control pane.
 
 These are design constraints, checked when ramps are authored or changed. CSS cascade resolution
 makes unit assertions unhelpful, and duplicating the palette solely for tests is not warranted.
@@ -298,22 +339,37 @@ makes unit assertions unhelpful, and duplicating the palette solely for tests is
 
 Three presets on the scope host. They inherit, so a nested pane may override its parent.
 
-| Preset | Row height | Font | Notes |
+| Preset | Row height | Font | Pitch with the row gap |
 |---|---|---|---|
-| `compact` | 18px | 11px | 20 uses in the codebase today |
-| `default` | 22px | 12px | 24 uses, matches `padding: 2px 4px` plus a border |
-| `comfortable` | 28px | 13px | 6 uses, dialogs and prose |
+| `compact` | 16px | 10px | 20px |
+| `default` | 20px | 11px | 24px |
+| `comfortable` | 26px | 12px | 30px |
 
-These are the three font sizes already used. Icon buttons and rails are a separate 32px role.
-One representative gallery page verifies each preset.
+Each preset lost the 1px control border it used to include, so `default` is 20px rather than 22px:
+the old figure was derived as `padding: 2px 4px` plus a border that no longer exists.
+
+Rows own no outer spacing. The container stacking them applies `--jolly-row-gap`, so leaves
+compose flush when a consumer wants them to, and a container can set its own rhythm. Icon buttons
+and rails remain a separate 32px role. One representative gallery page verifies each preset.
 
 ### Spacing, radius, typography
 
 Spacing is a 4px grid (`--jolly-space-1` through `-6`), replacing the current mix of 3, 4, 5, 6,
 8, 10 and 15px gaps.
 
-Radius collapses six values to two: `--jolly-radius-sm: 3px` (16 uses today) and
-`--jolly-radius-md: 5px`.
+Radius collapses six values to two, chosen far enough apart that they read as different roles
+rather than as two similar numbers: `--jolly-radius-sm: 2px` for controls, `--jolly-radius-md: 6px`
+for planes.
+
+Typography is monospace throughout, at 11px. The package embeds Roboto Mono (weight 400, latin
+subset, Apache-2.0) as a base64 `data:` URI in `src/theme/font.ts`, because the package builds
+with bare `tsc` and has no asset pipeline that could rewrite a `.woff2` URL for a consumer's
+bundler. It costs roughly 16KB inlined. `@font-face` is ignored inside a shadow root, so
+`ensureFontFace()` registers it against the document; importing `themeStyles` calls it, and
+without it the family falls back to the system mono stack.
+
+One weight only. A second would roughly double those bytes, so hierarchy is expressed through
+tint and letter-spacing rather than through a bolder face that would otherwise be synthesised.
 
 Numeric values use `font-variant-numeric: tabular-nums`. Without it, digits change width while a
 value is being scrubbed and the field jitters.
@@ -323,14 +379,29 @@ panels already apply by hand.
 
 ### Surfaces and elevation
 
-In flow surfaces separate with a 1px border and a background step. Only genuinely floating
-things carry a shadow, which is what makes them read as detached:
+Containers split by role, because the package has two kinds and they want opposite treatment.
 
-`--jolly-shadow-overlay` (menu, tooltip), `--jolly-shadow-floating` (floating pane),
-`--jolly-shadow-modal` (dialog).
+**Planes** paint an opaque surface and own the elevation story. `jolly-dock` and `jolly-rail`
+are in flow; `jolly-dialog` and `jolly-floating` are detached and are the only two that carry a
+shadow, which is what makes them read as detached at all.
 
-Controls carry no shadow, keeping `box-shadow` free for lock treatment and avoiding blur on
-22px rows.
+**In-pane containers** paint nothing. `jolly-folder` and `jolly-tabs` are transparent and inherit
+whichever plane they land on, so nesting stays coherent without any level re-picking colours.
+`jolly-pane` is the one hybrid: it paints `--jolly-surface` so a standalone pane is still a plane,
+and `jolly-dock` and `jolly-floating` null that out through `::slotted` when they contain one.
+
+Separation between containers comes from the tint on leaves plus `--jolly-row-gap`, not from
+rules. Only dialog headers and footers keep a `--jolly-divider` line, because a dialog genuinely
+has group structure to express.
+
+| Token | Used by |
+|---|---|
+| `--jolly-shadow-overlay` | menu, tooltip |
+| `--jolly-shadow-floating` | `jolly-floating` |
+| `--jolly-shadow-modal` | `jolly-dialog` |
+
+A docked pane carries no shadow. Controls carry none either, which keeps `box-shadow` free for
+the lock and modified bars and avoids blur on a 20px row.
 
 ### State channels
 
@@ -339,18 +410,34 @@ stays readable.
 
 | State | Channel |
 |---|---|
-| Focus | Native `outline`, accent, `outline-offset: 2px`, outside the box |
-| Locked | Leading bar and a faint background tint on the field, in the holder's peer colour |
-| Error | Border colour, plus a message beneath |
-| Modified | Revert affordance in the gutter |
+| Focus | Fill step on the control (`--jolly-control-bg-focus`), plus a fainter tint on the row |
+| Locked | Leading 3px bar and a faint background tint on the field, in the holder's peer colour |
+| Error | The control's ink re-tinted to `--jolly-ink-danger`, plus a message beneath |
+| Modified | Leading 2px bar in `--jolly-modified`, with the revert action at the trailing edge |
 | Mixed | Dash placeholder in the value area |
 | Peers present | Stacked overlapping colour chips at the trailing edge |
-| Hover, active | Background step (`--jolly-control-bg-hover`, `-active`) |
+| Hover, active | Fill step (`--jolly-control-bg-hover`, `-active`) |
 | Disabled | Reduced opacity, no pointer events |
 
-Focus is an outset control outline; the field-level lock bar and tint keep both states visible and
-leave the error border independent. Peers render as chips, one resolved holder colours the lock,
-and excess chips collapse to `+N`.
+There is no focus ring. Focus, hover, active and error all express through the one fill channel,
+which is why their stops are ordered rather than merely different: rest 8%, hover 12%, focus 20%,
+active 26%, and error starting at 15% so it cannot be mistaken for hover.
+
+`jolly-color` and `jolly-flags` render a tinted box around the native input. `jolly-checkbox` and
+`jolly-slider` opt out of the surrounding fill so their compact native control and track remain
+visually distinct from text fields.
+
+Locked and modified both want the leading bar, so locked takes it: a locked field is not editable,
+which makes reverting moot. The revert action remains visible in the muted text colour whenever
+the value differs from its default. Its full-height gutter joins the value edge, and its hover fill
+matches the adjacent control background.
+
+Peers render as chips, one resolved holder colours the lock, and excess chips collapse to `+N`.
+
+`--jolly-gutter-width` is `0` by default, so a single user pane pays no leading inset. A
+collaborative container opts its subtree in at 14px, which buys the fixed inset that stops a lock
+from shifting the row. A lock present without that opt-in still renders, widening the row rather
+than clipping.
 
 ### Motion
 
@@ -426,8 +513,9 @@ carries bounds and a selection at once, and `range.min` next to `range.value.min
 reading hazard.
 
 `jolly-select` and `jolly-color` wrap native elements. The floating layer a listbox or a picker
-panel would need is `jolly-floating` in P2, and `color-scheme` on the scope host already themes
-the browser's own dropdown and colour picker, so the native versions follow the theme for free.
+panel would need is `jolly-floating` in P2. The scope host's `color-scheme` themes native chrome,
+while Select paints option rows with the raised surface so dropdown backgrounds remain explicit
+in both modes.
 Accepted limit: option rows cannot carry icons or peer chips. A richer variant stays additive
 behind an attribute and is unscheduled until a consumer asks.
 
@@ -718,7 +806,9 @@ during a drag cannot work from inside a shadow root. The package injects that on
 `jolly-dialog` wraps the native `dialog` element and `showModal()`, which supplies the top
 layer and focus trapping. `::backdrop` is styled inside the component's shadow styles.
 `dismissible` defaults to `true`, making Escape and backdrop clicks cancellation paths. Setting
-it to `false` leaves explicit actions in control.
+it to `false` leaves explicit actions in control. An explicit `theme` wins; otherwise opening
+adopts the nearest themed parent, or the active invoking control for a helper attached to the
+document body.
 
 An imperative helper mirrors the existing `showPrompt()` in voxel-map:
 
@@ -737,7 +827,8 @@ They accept strings. Declarative Dialog handles validation, rich content and cus
 `showPrompt()` resolves `string | null` and trims confirmed input; `showConfirm()` resolves a
 boolean. Escape, Cancel and backdrop dismissal resolve `null` or `false`. Cancellation is not an
 exception. Each helper uses `Promise.withResolvers` and removes its element exactly once after
-settlement.
+settlement. Helpers compose `jolly-text` and `jolly-button` so their fields and actions use the
+same theme and state styling as declarative content.
 
 ## 8. Collaboration
 

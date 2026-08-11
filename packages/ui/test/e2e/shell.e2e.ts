@@ -108,6 +108,86 @@ test.describe("gallery shell", () => {
 
     expect(dark).not.toBe(light);
   });
+
+  test("density preference stays selected across visuals and reloads", async({ page }) => {
+    await gotoGallery(page);
+    await page.evaluate(() => {
+      localStorage.setItem(
+        "jolly-ui-gallery:density",
+        "comfortable"
+      );
+    });
+    await page.reload();
+    await page.waitForFunction(
+      () => window.__galleryReady === true
+    );
+
+    const control = page.locator("gallery-root jolly-pane jolly-select");
+    const select = control.locator("select");
+
+    await expect(control).toHaveJSProperty("value", "comfortable");
+    await expect(select).toHaveValue("2");
+    await expect(select.locator("option:checked")).toHaveText("Comfortable");
+
+    await select.selectOption({ label: "Default" });
+    await page.locator(
+      `gallery-root nav a[data-example-id="${manifest[1].id}"]`
+    ).click();
+
+    await expect(control).toHaveJSProperty("value", "default");
+    await expect(select).toHaveValue("1");
+
+    await page.reload();
+    await page.waitForFunction(
+      () => window.__galleryReady === true
+    );
+    await expect(
+      page.locator("gallery-root jolly-pane jolly-select select")
+    ).toHaveValue("1");
+  });
+
+  test("dark density Select uses themed closed and dropdown surfaces", async({ page }) => {
+    await gotoGallery(page, { theme: "dark" });
+
+    const select = page.locator(
+      "gallery-root jolly-pane jolly-select select"
+    );
+    const segment = page.locator(
+      "gallery-root jolly-pane jolly-button-group .segment[aria-checked='false']"
+    ).first();
+    const selectStyle = await select.evaluate((node) => {
+      const style = getComputedStyle(node);
+
+      return {
+        backgroundColor: style.backgroundColor,
+        colorScheme: style.colorScheme
+      };
+    });
+    const segmentBackground = await segment.evaluate(
+      (node) => getComputedStyle(node).backgroundColor
+    );
+    const dropdownStyle = await select.evaluate((node) => {
+      const option = node.querySelector("option");
+      const probe = document.createElement("span");
+      probe.style.background = "var(--jolly-surface-raised)";
+      node.parentElement?.append(probe);
+      const surfaceBackground = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+
+      return {
+        optionBackground: option === null
+          ? ""
+          : getComputedStyle(option).backgroundColor,
+        surfaceBackground
+      };
+    });
+
+    expect(selectStyle.colorScheme).toBe("dark");
+    expect(selectStyle.backgroundColor).toBe(segmentBackground);
+    expect(dropdownStyle.optionBackground).toBe(
+      dropdownStyle.surfaceBackground
+    );
+  });
 });
 
 /**

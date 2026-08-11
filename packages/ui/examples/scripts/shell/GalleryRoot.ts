@@ -1,7 +1,17 @@
 // Import Internal Dependencies
-import { themeStyles } from "../../../src/index.ts";
+import {
+  LocalStorageAdapter,
+  detailOf,
+  themeStyles,
+  type Density,
+  type ThemeMode
+} from "../../../src/index.ts";
 import { manifest } from "../manifest.ts";
 import { shellStyles } from "./styles.ts";
+
+// CONSTANTS
+const kThemeKey = "jolly-ui-gallery:theme";
+const kDensityKey = "jolly-ui-gallery:density";
 
 /**
  * The gallery's scope host. Tokens declare against `:host`, which only resolves in a shadow root,
@@ -13,6 +23,8 @@ import { shellStyles } from "./styles.ts";
 export class GalleryRoot extends HTMLElement {
   #exampleHost = document.createElement("main");
   #links = new Map<string, HTMLAnchorElement>();
+  #storage = new LocalStorageAdapter();
+  #pane: HTMLElementTagNameMap["jolly-pane"] | null = null;
 
   get exampleHost(): HTMLElement {
     return this.#exampleHost;
@@ -37,7 +49,7 @@ export class GalleryRoot extends HTMLElement {
     layout.dataset.chrome = this.getAttribute("chrome") ?? "on";
 
     if (layout.dataset.chrome !== "off") {
-      layout.append(this.#buildNav());
+      layout.append(this.#buildDock());
     }
     layout.append(this.#exampleHost);
     root.append(layout);
@@ -56,25 +68,134 @@ export class GalleryRoot extends HTMLElement {
     }
   }
 
-  #buildNav(): HTMLElement {
-    const nav = document.createElement("nav");
-    let currentGroup = "";
+  #buildDock(): HTMLElement {
+    const dock = document.createElement("jolly-dock");
+    dock.side = "left";
+    dock.collapsible = true;
+    dock.storageKey = "jolly-ui-gallery:dock";
 
+    const pane = document.createElement("jolly-pane");
+    pane.title = "@jolly-pixel/ui";
+    pane.reorderable = true;
+    pane.storageKey = "jolly-ui-gallery:navigation";
+    pane.append(...this.#buildGroups());
+    pane.append(
+      this.#buildThemeControl(),
+      this.#buildDensityControl()
+    );
+    this.#pane = pane;
+    this.#applyPreferences();
+    dock.append(pane);
+
+    return dock;
+  }
+
+  #buildGroups(): HTMLElement[] {
+    const groups = new Map<string, HTMLElementTagNameMap["jolly-folder"]>();
     for (const example of manifest) {
-      if (example.group !== currentGroup) {
-        currentGroup = example.group;
-        const title = document.createElement("div");
-        title.className = "group-title";
-        title.textContent = currentGroup;
-        nav.append(title);
+      let folder = groups.get(example.group);
+      if (folder === undefined) {
+        folder = document.createElement("jolly-folder");
+        folder.label = example.group;
+        const nav = document.createElement("nav");
+        nav.setAttribute("aria-label", `${example.group} examples`);
+        folder.append(nav);
+        groups.set(example.group, folder);
       }
 
-      nav.append(
+      folder.querySelector("nav")?.append(
         this.#buildLink(example.id, example.title)
       );
     }
 
-    return nav;
+    return [...groups.values()];
+  }
+
+  #buildThemeControl(): HTMLElementTagNameMap["jolly-button-group"] {
+    const control = document.createElement("jolly-button-group");
+    control.slot = "actions";
+    control.label = "Theme";
+    control.options = [
+      {
+        value: "light",
+        label: "Light"
+      },
+      {
+        value: "dark",
+        label: "Dark"
+      }
+    ];
+    control.value = this.#theme();
+    control.addEventListener("jolly-change", (event) => {
+      const detail = detailOf<{ value: ThemeMode; }>(event);
+      if (detail === null) {
+        return;
+      }
+
+      const { value } = detail;
+      this.#storage.set(kThemeKey, value);
+      this.setAttribute("theme", value);
+      this.#pane?.setAttribute("theme", value);
+      control.value = value;
+    });
+
+    return control;
+  }
+
+  #buildDensityControl(): HTMLElementTagNameMap["jolly-select"] {
+    const control = document.createElement("jolly-select");
+    control.slot = "actions";
+    control.label = "Density";
+    control.options = [
+      {
+        value: "compact",
+        label: "Compact"
+      },
+      {
+        value: "default",
+        label: "Default"
+      },
+      {
+        value: "comfortable",
+        label: "Comfortable"
+      }
+    ];
+    control.value = this.#density();
+    control.addEventListener("jolly-change", (event) => {
+      const detail = detailOf<{ value: Density; }>(event);
+      if (detail === null) {
+        return;
+      }
+
+      const { value } = detail;
+      this.#storage.set(kDensityKey, value);
+      this.setAttribute("density", value);
+      this.#pane?.setAttribute("density", value);
+      control.value = value;
+    });
+
+    return control;
+  }
+
+  #applyPreferences(): void {
+    const theme = this.#theme();
+    const density = this.#density();
+    this.setAttribute("theme", theme);
+    this.setAttribute("density", density);
+    this.#pane?.setAttribute("theme", theme);
+    this.#pane?.setAttribute("density", density);
+  }
+
+  #theme(): ThemeMode {
+    const value = this.getAttribute("theme") ?? this.#storage.get(kThemeKey);
+
+    return value === "dark" ? "dark" : "light";
+  }
+
+  #density(): Density {
+    const value = this.#storage.get(kDensityKey);
+
+    return value === "compact" || value === "comfortable" ? value : "default";
   }
 
   #buildLink(

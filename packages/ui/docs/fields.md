@@ -28,6 +28,14 @@ field.addEventListener("jolly-change", (event) => {
 | `readonly` | `boolean` | Prevents editing while remaining focusable |
 | `lockedBy` | `CollaboratorPresence \| null` | Collaborator holding the field |
 | `peers` | `CollaboratorPresence[]` | Collaborators shown on the field |
+| `align` | `"start" \| "end"` | Which edge the value sits against, default `"start"` |
+
+Set `align="end"` on numeric and monitor-style rows, where trailing alignment lines the digits up
+down the pane:
+
+```html
+<jolly-number label="Position X" align="end"></jolly-number>
+```
 
 `value`, `default`, `lockedBy` and `peers` are properties, not attributes.
 
@@ -63,8 +71,8 @@ Fields can combine these states:
 | `readonly` | Focusable but not editable |
 | `locked` | Focusable, not editable, with collaborator indicator |
 | `mixed` | Dash placeholder or indeterminate state |
-| `modified` | Revert affordance |
-| `invalid` | Error styling and message |
+| `modified` | Leading bar, with an always-visible muted revert affordance |
+| `invalid` | Error tint and message |
 | `peers` | Collaborator chips |
 
 `disabled`, `readonly`, `locked`, `mixed`, `modified` and `invalid` are reflected attributes for
@@ -103,6 +111,13 @@ an ancestor to align labels:
 
 ```css
 .pane { --jolly-label-width: 8ch; }
+```
+
+Set `--jolly-field-trailing-width` when stacked fields need the same value edge despite optional
+revert and presence chrome:
+
+```css
+.pane { --jolly-field-trailing-width: 48px; }
 ```
 
 See [theming.md](./theming.md).
