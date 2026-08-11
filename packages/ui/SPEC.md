@@ -484,7 +484,8 @@ is. Domain coupled composites stay in editors and are built from these parts.
 
 `jolly-button`, `jolly-button-group` (segmented and grid), `jolly-checkbox`, `jolly-number`,
 `jolly-slider`, `jolly-range` (min and max interval), `jolly-text`, `jolly-select`,
-`jolly-flags` (bitmask), `jolly-color`, `jolly-separator`, `jolly-property-row`.
+`jolly-flags` (bitmask), `jolly-color`, `jolly-color-picker`, `jolly-separator`,
+`jolly-property-row`.
 
 Nine of them are fields and carry the section 3 contract. `jolly-button` has no value, so
 `default`, `Mixed` and revert are all meaningless on it, and `jolly-separator` and
@@ -512,10 +513,37 @@ rail needs. `Interval` uses `from` and `to` rather than `min` and `max` because 
 carries bounds and a selection at once, and `range.min` next to `range.value.min` is a permanent
 reading hazard.
 
-`jolly-select` and `jolly-color` wrap native elements. The floating layer a listbox or a picker
-panel would need is `jolly-floating` in P2. The scope host's `color-scheme` themes native chrome,
-while Select paints option rows with the raised surface so dropdown backgrounds remain explicit
-in both modes.
+`jolly-select` wraps a native element. The scope host's `color-scheme` themes native chrome, while
+Select paints option rows with the raised surface so dropdown backgrounds remain explicit in both
+modes.
+
+`jolly-color` no longer wraps `input[type="color"]`. It cannot express alpha, it ignores every
+token in section 4, and it forced a second code path for any editor wanting a themed picker. The
+row is now a swatch button opening `jolly-color-picker`, which is a fourteenth element and the
+one control that is a panel rather than a row: no label, `default`, `Mixed`, revert or `lockedBy`,
+because those belong to the row hosting it. The accepted loss is the OS picker's eyedropper and
+system palettes.
+
+Values are hex strings, `#rrggbb` normally and `#rrggbbaa` when `alpha` is set, which keeps
+`FieldValue<string>` and therefore `Mixed`, `default` and revert unchanged, and stays directly
+usable as a CSS value. `parseColor` and `formatHex` ship so a consumer wanting alpha separately
+does not write a fourth hex parser.
+
+The panel holds an HSVA tuple rather than deriving handle positions from `value`. Hex cannot carry
+hue at black, white or grey, so a derived picker collapses the hue handle to red the moment the
+cursor enters a corner. The tuple survives whenever it still formats to the incoming value, which
+is the consumer's own write-back returning, and re-derives otherwise, which is a peer edit, a
+revert or a preset.
+
+Placement is not the control's job. `PopoverController` owns anchored placement, repositioning
+while open, focus restoration and the Escape hook, over a native `popover` the host renders. This
+is what lets an editor build a brush swatch from the picker with no property row: `jolly-color` is
+one consumer of the controller, not the only route to a popup. `jolly-floating` is the wrong tool
+here, being a draggable, persisted, viewport-fixed panel rather than an anchored popup. CSS anchor
+positioning is not used, since Firefox does not implement it.
+
+The row therefore has no `inline` mode. An inline picker is the bare `jolly-color-picker` element,
+placed where it is wanted.
 Accepted limit: option rows cannot carry icons or peer chips. A richer variant stays additive
 behind an attribute and is unscheduled until a consumer asks.
 
@@ -1403,6 +1431,22 @@ edited.
 | Exporting `JollyField` in P1 | Publishes a subclassable base, its protected surface and its DOM shape as versioned API before any consumer subclasses it |
 | Screenshot snapshots in the end to end tier | Baselines are per platform, development is Windows against Linux CI, and the tier is already the flaky one |
 | Authoring components without decorators | Would allow happy-dom component tests, but diverges from `PixelDrawPanel` and `Vec3Input` and re-litigates a settled test tier split |
+| Keeping `input[type="color"]` in `jolly-color` | Cannot express alpha, ignores every section 4 token, and a `native` opt-out would ship two divergent paths through one control |
+| A structured `{ r, g, b, a }` colour value | Breaks `FieldValue<string>`, needs a `hasChanged` comparator, and makes consumers format before painting |
+| A hex string plus a separate `alpha` property | One drag of the alpha track then emits changes for two properties, so a consumer reconciles two events per gesture |
+| Deriving picker handles from `value` alone | Hue is unrepresentable at black, white and grey, so the hue handle snaps to red whenever the cursor enters a corner |
+| Holding HSVA as permanent canonical state | Two rows bound to one colour drift apart, since neither ever re-reads the value |
+| Four-digit `#rgba` input | Collides with partial input: `#ff66`, typed on the way to `#ff6600`, would commit instead of reporting incomplete |
+| `jolly-floating` as the picker's popup | It is a draggable, persisted, viewport-fixed panel, not an anchored popup, and it expects a nested Pane |
+| An absolutely positioned panel in the shadow root | Clipped by any scrolling ancestor, and `jolly-color` rows live inside scrolling docks |
+| Tweakpane-style inline row expansion | Shifts every row below it on open, and fights folder reorder and persisted layout |
+| CSS anchor positioning for the popup | Firefox does not implement it, so placement stays in JS |
+| An `inline` mode on `jolly-color` | The bare `jolly-color-picker` element already is the inline picker |
+| Popup placement inside `jolly-color` | An editor wanting a brush swatch with no property row would reimplement anchoring, Escape and focus restoration; `PopoverController` is the reusable half |
+| Canvas for the picker surfaces | CSS draws these gradients natively, and canvas cannot read the theme's custom properties |
+| An inset face on the swatch | The frame reads as a border drawn around the sample, and a colour has to fill its control to be judged |
+| Ok and Cancel buttons in the panel | Escape already cancels and the picker commits continuously, so the row costs vertical space in a panel meant to be compact |
+| An eyedropper and preset swatches | `EyeDropper` is Chromium-only and neither has a consumer, so both would ship speculatively |
 | One documentation page per component | Twelve pages each repeating one shared contract, against the preference to fold shared material into an owning doc |
 
 ## 16. Open points

@@ -1,7 +1,3 @@
-/**
- * Public package exports.
- */
-
 export {
   themeStyles
 } from "./theme/themeStyles.ts";
@@ -68,6 +64,22 @@ export {
 export {
   Color
 } from "./controls/Color.ts";
+export {
+  ColorPicker
+} from "./controls/ColorPicker.ts";
+export {
+  PopoverController,
+  type PopoverControllerOptions
+} from "./interaction/PopoverController.ts";
+export {
+  parseColor
+} from "./color/parse.ts";
+export {
+  formatHex
+} from "./color/format.ts";
+export type {
+  RGBA
+} from "./color/types.ts";
 export {
   ButtonGroup
 } from "./controls/ButtonGroup.ts";

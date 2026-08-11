@@ -10,13 +10,8 @@ import {
 import { gotoGallery } from "./utils.ts";
 
 /**
- * Components are unreachable from `node:test`, since a decorator is not
- * erasable syntax, so this is the only tier that sees one rendered.
- *
- * It asserts resolved tokens against the properties consuming them rather
- * than pixels: that catches a control reading the wrong token, a state
- * channel not painting, and `light-dark()` failing to resolve, with no per
- * platform baselines.
+ * Decorated components cannot run under `node:test`, so this suite renders them.
+ * It checks resolved tokens at their consuming properties without baselines.
  */
 const kFields = [
   { id: "controls/text", tag: "jolly-text" },
@@ -29,8 +24,7 @@ const kFields = [
 ];
 
 /**
- * These two render no `input`, so they sit out the shared table above and
- * carry their own cases below.
+ * Covers components without native inputs.
  */
 const kInputlessFields = [
   { id: "controls/select", tag: "jolly-select" },
@@ -52,8 +46,7 @@ function row(
 }
 
 /**
- * The control a field puts in the tab order. Skips the native colour swatch,
- * which jolly-color disables rather than making read only.
+ * Returns the field's focusable control. The color-input exclusion is legacy.
  */
 function control(
   field: Locator
@@ -73,7 +66,9 @@ function tokenOf(
   );
 }
 
-/** Collects committed values, which a controlled element never shows itself. */
+/**
+ * Records committed values emitted by controlled elements.
+ */
 async function recordChanges(
   page: Page
 ): Promise<void> {
@@ -163,9 +158,7 @@ test.describe("controls: state matrix", () => {
     });
 
     /**
-     * Mixed is modified whenever a default exists, since differing values
-     * cannot all equal one default. The matrix drops the default on the
-     * `mixed` row, so the two stay distinguishable.
+     * Mixed rows omit a default so mixed and modified remain distinct.
      */
     test(`${tag} treats mixed with a default as modified`, async({ page }) => {
       await gotoGallery(page, { example: id, chrome: "off" });
@@ -198,12 +191,7 @@ test.describe("controls: state matrix", () => {
       await expect(input).toHaveAttribute("aria-disabled", "true");
       await expect(input).toHaveAttribute("aria-description", /Held by/);
 
-      /*
-       * The native property, not toBeDisabled(): Playwright counts
-       * aria-disabled as disabled, which is the announcement section 8
-       * wants. What must stay true is that the control is still in the tab
-       * order, so its value can be read and copied.
-       */
+      /* Read native disabled because toBeDisabled includes aria-disabled. */
       expect(
         await input.evaluate((node: HTMLInputElement) => node.disabled)
       ).toBe(false);
@@ -212,14 +200,6 @@ test.describe("controls: state matrix", () => {
       await expect(input).toBeFocused();
     });
 
-    /**
-     * The combination section 4 exists for: the lock paints the field while
-     * focus tints the row, so a locked field that is also focused shows both,
-     * and focus is never suppressed.
-     *
-     * The row is what carries focus here rather than the control, because a
-     * third of the catalog has no fill of its own to tint.
-     */
     test(`${tag} shows the lock and the focus tint together`, async({ page }) => {
       await gotoGallery(page, { example: id, chrome: "off" });
 
@@ -238,11 +218,7 @@ test.describe("controls: state matrix", () => {
 
       const focused = await rowTint();
 
-      /*
-       * The lock is drawn on the field itself, not on the control inside it:
-       * a ring drawn within a control has to know that control's shape, and
-       * a third of the catalog has none to know.
-       */
+      /* The field owns the lock ring because inner control shapes vary. */
       const held = await locked.evaluate((node) => {
         const style = getComputedStyle(node);
 
@@ -274,10 +250,7 @@ test.describe("controls: state matrix", () => {
     });
 
     /**
-     * The lock glyph replaces the revert button in the gutter rather than
-     * adding a column beside it: `editable` is false whenever a field is
-     * held, so the two can never both want the slot, and the row's width
-     * stays constant across every state.
+     * Reuses the revert gutter for the lock glyph to keep row width stable.
      */
     test(`${tag} swaps the gutter for a lock glyph, tooltipped, when held`, async({ page }) => {
       await gotoGallery(page, { example: id, chrome: "off" });
@@ -289,9 +262,8 @@ test.describe("controls: state matrix", () => {
       await expect(gutter).toHaveAttribute("data-tooltip", /Held by/);
 
       /*
-       * A native title attribute plays no part in computed style at all, so this proves the reveal
-       * is the CSS one. The 500ms poll budget, well under a browser's own hover delay, is there for
-       * the reveal's own 100ms transition to settle, not to wait out anything slow.
+       * The 500 ms poll covers the CSS transition and stays below the native
+       * title delay.
        */
       function opacityOf(): Promise<string> {
         return gutter.evaluate(
@@ -364,12 +336,7 @@ test.describe("controls: select and button group", () => {
     await gotoGallery(page, { example: "controls/select", chrome: "off" });
     await recordChanges(page);
 
-    /*
-     * Driven in page rather than through selectOption. Playwright reads
-     * aria-disabled as not operable, which is exactly what a locked field
-     * declares, so it will not drive the control at all. What matters here
-     * is that the change handler puts the option back.
-     */
+    /* Drive in page because Playwright will not operate an aria-disabled select. */
     const after = await row(page, "jolly-select", "locked")
       .evaluate((field) => {
         const select = field.shadowRoot?.querySelector("select");
@@ -390,8 +357,7 @@ test.describe("controls: select and button group", () => {
   });
 
   /**
-   * A segmented control is one tab stop, unlike jolly-flags, whose entries
-   * really are independent.
+   * A segmented control is one tab stop. Flag entries are independent.
    */
   test("button group is one tab stop with arrow keys", async({ page }) => {
     await gotoGallery(page, {
@@ -430,9 +396,8 @@ test.describe("controls: select and button group", () => {
   });
 
   /**
-   * A trusted click, unlike a scripted `.click()` on the element from within the page, races the
-   * browser's own checkedness revert against Lit's re-render. `preventDefault()`-then-recompute
-   * used to lose that race, leaving the box visually stuck unchecked.
+   * Trusted clicks once exposed a race between native checkedness rollback and
+   * Lit rendering.
    */
   test("checkbox stays checked after a real click", async({ page }) => {
     await gotoGallery(page, { example: "controls/checkbox", chrome: "off" });
@@ -449,7 +414,9 @@ test.describe("controls: select and button group", () => {
     expect(await page.evaluate(() => window.__changes)).toEqual([true, false]);
   });
 
-  /** Clicking an indeterminate checkbox resolves it to checked, per the tri-state convention. */
+  /**
+   * Clicking an indeterminate checkbox resolves it to checked.
+   */
   test("checkbox click resolves mixed to checked", async({ page }) => {
     await gotoGallery(page, { example: "controls/checkbox", chrome: "off" });
     await recordChanges(page);
@@ -665,7 +632,9 @@ test.describe("controls: select and button group", () => {
     await expect.poll(() => backgroundOf(revert)).toBe(fieldBackground);
   });
 
-  /** Flags shares Checkbox's native input, and the same trusted-click race. */
+  /**
+   * Flags shares Checkbox's native input and trusted-click race.
+   */
   test("flags entry stays checked after a real click", async({ page }) => {
     await gotoGallery(page, { example: "controls/flags", chrome: "off" });
     await recordChanges(page);
@@ -683,7 +652,9 @@ test.describe("controls: select and button group", () => {
   });
 });
 
-/** The three elements that are not fields, so no matrix state applies. */
+/**
+ * Lists elements without field matrix states.
+ */
 test.describe("controls: chrome", () => {
   test("button renders slotted content beside its icon", async({ page }) => {
     await gotoGallery(page, { example: "controls/chrome", chrome: "off" });
@@ -744,10 +715,8 @@ test.describe("controls: chrome", () => {
 });
 
 /**
- * Assertions here read properties that consume a token, never the token
- * itself. A custom property computes to its unresolved token stream, so
- * `getPropertyValue("--jolly-surface")` returns the literal `light-dark(...)`
- * text and reads identically in both themes.
+ * Reads consumer properties because custom property values retain unresolved
+ * `light-dark(...)` text.
  */
 test.describe("controls: theming", () => {
   test("a token backed property differs per theme", async({ page }) => {
@@ -777,8 +746,7 @@ test.describe("controls: theming", () => {
   });
 
   /**
-   * Focus is a fill step rather than an outline, so it has to beat the rest
-   * stop it shares a channel with.
+   * Focus uses the shared fill channel and must override the resting fill.
    */
   test("focus paints the control from its token", async({ page }) => {
     await gotoGallery(page, { example: "controls/text", chrome: "off" });
@@ -798,8 +766,7 @@ test.describe("controls: theming", () => {
   });
 
   /**
-   * P1's done-when: overriding one token on the gallery root visibly changes
-   * every control.
+   * Verifies that one root token override updates every control.
    */
   test("an overridden token reaches a painted style", async({ page }) => {
     await gotoGallery(page, { example: "controls/checkbox", chrome: "off" });

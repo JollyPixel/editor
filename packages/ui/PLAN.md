@@ -377,6 +377,65 @@ Two ordered pull requests:
 2. **ui.** Nine elements, geometry, persistence wiring, gallery migration, docs, browser tests,
    and a minor release
 
+## P2b: colour picker
+
+Inserted after P2, because the popup needs a layer and P2 is what proved `jolly-floating` is not
+it. Independently shippable.
+
+**Create**
+
+```
+src/color/types.ts             RGBA, HSVA
+src/color/parse.ts             parseColor(), absorbing normalizeHex
+src/color/format.ts            formatHex(rgba, withAlpha)
+src/color/hsv.ts               rgbToHsv(), hsvToRgb()
+src/color/area.ts              ratioFromPointer(), saturationValueFromPointer()
+src/numeric/anchoredPosition.ts  below, flipped above, then clamped
+src/interaction/PopoverController.ts  placement, reposition, focus restore, onCancel
+src/controls/ColorPicker.ts    jolly-color-picker
+src/controls/ColorPicker.styles.ts
+```
+
+`src/color/` is deliberately dependency-free and shaped to lift into `@jolly-pixel/color` verbatim.
+That package is not created here: it would turn a UI feature into a cross-package extraction
+touching `pixel-draw-renderer`, `editor.pixel-art`, `voxel-map` and `three`'s duplicate
+`ColorPalette`.
+
+**Rewrite** `src/controls/Color.ts`. The native `input[type="color"]` goes, replaced by a swatch
+button opening the picker through `PopoverController`. Adds `alpha`, defaulting off so existing
+consumers keep emitting six digits.
+
+**Deletes**: `src/controls/hex.ts` and `test/controls/hex.spec.ts`, whose cases move to
+`test/color/parse.spec.ts`. This retires one of the three duplicate hex parsers in the repository.
+
+**Barrel**: `ColorPicker`, `PopoverController`, `parseColor`, `formatHex`, `RGBA`.
+`anchoredPosition` and the remaining `src/color/` modules stay internal.
+
+**Unit tests**, all pure, since no spec can import a decorated component: `parse` (shorthand,
+alpha, partial input, four-digit rejection), `format` (padding, clamping, alpha drop, round trip),
+`hsv` (sector placement, hue wrap, unit clamping, round trip, and the black collapse the tuple
+exists to survive), `area` (corners, centre, clamping, zero-sized rect), `anchoredPosition`
+(below, flip, clamp, oversized panel).
+
+**E2e**: open and focus, drag commit, Escape revert, click-away accept, disabled row, alpha on and
+off, the row's eight-digit hex field, the standalone panel's hex field and its invalid state, the
+hue and saturation surviving a trip through black, a readonly panel, and the `PopoverController`
+path with no `jolly-color` row at all.
+
+**Examples**: `controls/color-picker`, `controls/color-alpha`, and the `scenarios/color-popover`
+scenario, which is the standing proof that a picker in a popup does not require the field row.
+
+**Not built**: eyedropper, preset swatches, `rgb`/`hsl` format switching, an inline mode on the row.
+
+**Scheduled debt, not oversight**: `vanilla-picker` stays in `editors/pixel-art` until P8. Shipping
+the component without retiring its predecessor is exactly what "Verification per phase" warns
+against, so it is recorded here rather than left to be discovered. P8's colour work becomes
+`ColorSwatch.ts` composing `PopoverController` with `jolly-color-picker` inside its existing
+portal, which needs no `jolly-color` row.
+
+**Done when**: the gallery shows the picker standalone, inside a `jolly-color` row, and inside a
+popup built without one; and `npm run build`, unit, e2e and lint all pass.
+
 ## P3: facade, and the end of Tweakpane
 
 **Create** under `src/facade/`: `Pane`, `Folder`, `Binding`, `Monitor`, `Button`, `Blade`, plus
@@ -541,7 +600,10 @@ module imports anything from `@jolly-pixel/network`.
 ## P8: pixel-art consolidation
 
 **Migrate** `editors/pixel-art/src/ui`: `theme.ts` onto the shared tokens, `ModeRail` onto
-`jolly-rail`, the colour rail and swatch onto `jolly-color`.
+`jolly-rail`, and the colour rail and swatch onto `jolly-color-picker` plus `PopoverController`.
+Not onto `jolly-color`: the rail wants a brush colour, not a property row, so `ColorSwatch.ts`
+keeps its own trigger and drops `vanilla-picker` and its portal. `ColorSwatch` already emits
+`{ hex, opacity }`, which `parseColor` produces directly, so its event shape is unchanged.
 
 The six reactive controllers stay: they hold pixel-art domain logic, which is out of scope here.
 
