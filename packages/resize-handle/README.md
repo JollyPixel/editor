@@ -21,19 +21,32 @@ $ yarn add @jolly-pixel/resize-handle
 ```ts
 import { ResizeHandle } from "@jolly-pixel/resize-handle";
 
-const sidebar = document.getElementById("sidebar") as HTMLElement;
+const sidebar = document.querySelector<HTMLElement>("#sidebar");
+if (sidebar === null) {
+  throw new Error("Missing #sidebar element");
+}
 
 // Creates a drag handle and inserts it next to the sidebar.
 // Dragging the handle resizes the sidebar horizontally.
 const handle = new ResizeHandle(sidebar, {
   direction: "left",
-  collapsable: true
+  collapsible: true,
+  minSize: 200,
+  maxSize: 600
 });
 
 handle.addEventListener("dragStart", () => console.log("resize started"));
 handle.addEventListener("drag", () => console.log("resizing…"));
 handle.addEventListener("dragEnd", () => console.log("resize ended"));
+
+// Removes listeners and removes a handle created by this instance.
+handle.dispose();
 ```
+
+## 🧪 Demo
+
+Run `npm run dev -w @jolly-pixel/resize-handle` from the repository root. The demo includes
+horizontal and vertical handles with size bounds, keyboard control, and double-click collapse.
 
 Then style the handle and the global drag-cursor helpers in your CSS:
 
@@ -59,52 +72,8 @@ To temporarily disable a handle without destroying it, add the `disabled` CSS cl
 
 ## 📚 API
 
-### `ResizeHandleOptions`
-
-```ts
-interface ResizeHandleOptions {
-  /**
-   * The direction in which the handle resizes the target.
-   * Also controls where the handle element is inserted in the DOM:
-   * - "left" / "top"  → handle inserted after the target
-   * - "right" / "bottom" → handle inserted before the target
-   */
-  direction: "left" | "right" | "top" | "bottom";
-  /**
-   * When true, double-clicking the handle collapses the target to zero size.
-   * Double-clicking again restores the previous size.
-   * @default false
-   */
-  collapsable?: boolean;
-}
-```
-
-### `new ResizeHandle(targetElt, options)`
-
-Creates a resize handle for `targetElt`. A `<div class="resize-handle">` is inserted adjacent to the target in the DOM. If a matching `div.resize-handle` sibling already exists it is reused.
-
-Throws an `Error` if `direction` is not one of the four valid values.
-
-`ResizeHandle` extends `EventTarget`. The following events are dispatched on the instance:
-
-- **`"dragStart"`** — fired when the user presses the left mouse button on the handle.
-- **`"drag"`** — fired on each `pointermove` while dragging.
-- **`"dragEnd"`** — fired when the pointer is released or cancelled.
-
-### CSS classes
-
-The handle element (`handleElt`) receives these classes automatically:
-
-- `resize-handle` — always present, identifies the element.
-- `"left"` / `"right"` / `"top"` / `"bottom"` — matches the `direction` option.
-- `collapsable` — present when `collapsable: true`.
-- `disabled` — add this yourself to pause drag interaction without destroying the handle.
-
-While a drag is in progress, `<html>` receives:
-
-- `handle-dragging` — always set during a drag.
-- `vertical` — set for horizontal handles (`"left"` / `"right"`).
-- `horizontal` — set for vertical handles (`"top"` / `"bottom"`).
+See the [API reference](./docs/API.md) for constructor options, events, keyboard behavior,
+cleanup, resize math, and CSS classes.
 
 ## ✨ Contributors guide
 

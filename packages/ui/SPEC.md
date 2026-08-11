@@ -438,7 +438,11 @@ native checkboxes in natural tab order, because its entries genuinely are indepe
 ### Containers and chrome
 
 `jolly-pane`, `jolly-folder`, `jolly-tabs`, `jolly-tab`, `jolly-dock`, `jolly-floating`,
-`jolly-dialog`, `jolly-toolbar`, `jolly-rail`, `jolly-split`, `jolly-icon`.
+`jolly-dialog`, `jolly-toolbar`, `jolly-rail`, `jolly-icon`.
+
+`jolly-split` is deferred. No current editor has a split-pane consumer, and a public component
+would need decisions about slots, sizing, keyboard input and persistence that no use case can
+answer yet.
 
 ### Data views
 
@@ -613,7 +617,7 @@ Placement is separate from content. `jolly-pane` holds the content and fills its
 Wrappers position it.
 
 ```html
-<jolly-dock side="left" collapsable>
+<jolly-dock side="left" collapsible>
   <jolly-pane title="Layers">...</jolly-pane>
 </jolly-dock>
 
@@ -630,15 +634,47 @@ Docked and floating share all content code. The facade defaults to wrapping in
 The docked wrapper is named `jolly-dock`, not `jolly-panel`, so no two tags differ by one
 character.
 
+`jolly-pane` owns content chrome. Its header renders when `title` is non-empty or the named
+`actions` slot has content. Dock and Floating do not render another header. Pane and Dialog are
+the two scope hosts in this phase; the other containers consume inherited tokens or the four
+narrow fallbacks from section 4. The element constructor is exported as `PaneElement`, reserving
+`Pane` for the P3 facade.
+
+Folder expansion follows native details terminology. `open` defaults to `true`, header
+activation updates `aria-expanded`, and `jolly-toggle` carries `{ open }`. A Pane only permits
+folder reordering when it has the `reorderable` attribute. Reordering is limited to direct
+`jolly-folder` children of that Pane; controls, arbitrary slotted content and folders in another
+Pane do not enter the operation. Pane changes flattened slot order and never moves Lit-owned
+light DOM nodes.
+
+Each reorderable folder has a separate grip. Pointer input drags it. Keyboard input uses Space
+to enter and finish reorder mode, Up and Down to move, and Escape to restore the starting order.
+Moves are announced through a live region. Pane persists the committed order and emits
+`jolly-reorder` with the resulting folder keys.
+
+Tabs own their selected key as presentation state. An absent or invalid key selects the first
+enabled tab. Selection remains externally settable and `jolly-change` reports user changes.
+Tabs use roving focus with automatic activation: Left and Right navigate horizontal tabs, Up
+and Down navigate vertical tabs, Home and End select the first or last enabled tab, and disabled
+tabs are skipped.
+
+Toolbar and Rail are stateless layout components. Toolbar supplies `role="toolbar"` and a
+configurable orientation for inline actions. Rail is a persistent edge strip, vertical by
+default, sized for 32px icon controls. Selection, commands, flyouts and roving focus stay in the
+controls composed inside them.
+
 ### Resize
 
-`@jolly-pixel/resize-handle` gains an optional `handle` option. When supplied, the handle is
-used as is and no sibling element is injected.
+`@jolly-pixel/resize-handle` gains explicit bounds and an optional supplied handle. When a
+handle is supplied, no sibling is injected. The existing misspelt `collapsable` option is
+replaced by `collapsible`; this is a breaking change to that package.
 
 ```ts
 export interface ResizeHandleOptions {
   direction: ResizeDirection;
-  collapsable?: boolean;
+  collapsible?: boolean;
+  minSize?: number;
+  maxSize?: number;
   /**
    * Use this element as the handle instead of injecting a sibling.
    * Lets a shadow root own the handle while the host stays the resize target.
@@ -647,8 +683,32 @@ export interface ResizeHandleOptions {
 }
 ```
 
-`jolly-dock` renders the handle in its shadow root, targets itself, and ships the styling. This
-retires the `.resize-handle` block currently copied into three editors' `public/main.css`.
+Bounds default to zero and infinity. The package extracts its drag calculation into
+`sizeFromDelta({ initialSize, startDrag, current, fromStart, min, max })`; pointer and keyboard
+input call the same function. A handle is a focusable ARIA separator with its orientation and
+current bounds exposed. The relevant arrow keys resize by 8px, or 32px with Shift.
+
+`ResizeHandle.dispose()` is idempotent. It removes listeners, clears an active drag and its
+document classes, and removes only a handle injected by the class. Caller-supplied handles stay
+in their owning shadow root.
+
+`jolly-dock` supports all four sides. Left and right docks resize their width; top and bottom
+docks resize their height; the handle sits on the inward edge. Dock renders that handle in its
+shadow root, targets itself, and ships its styling. Dock owns its collapsed state because a
+ResizeHandle that applies `display: none` to the host would also hide a shadow-root handle.
+Double click and Enter toggle collapse, the previous size is restored on expand, and both states
+persist. This retires the `.resize-handle` block currently copied into three editors'
+`public/main.css` after those editors migrate.
+
+Floating uses fixed viewport coordinates, so document scroll never changes `x` or `y`. The
+non-interactive part of its nested Pane header is the move handle. It resizes from independent
+right and bottom handles. A pane that fits remains fully inside the viewport. If it is wider or
+taller than the viewport, the overflowing axis is anchored at zero so the leading title region
+stays reachable. The same clamp runs on connect, move, resize and viewport resize.
+
+Floating instances raise themselves within their document or shadow-root stacking context on
+pointer interaction or `focusin`. Stack order is transient and an explicit consumer z-index
+override wins. Position, width and height persist; z-index does not.
 
 `html.handle-dragging` stays on `document.documentElement`, because suppressing pointer events
 during a drag cannot work from inside a shadow root. The package injects that one rule once.
@@ -656,8 +716,9 @@ during a drag cannot work from inside a shadow root. The package injects that on
 ### Dialogs
 
 `jolly-dialog` wraps the native `dialog` element and `showModal()`, which supplies the top
-layer, focus trapping and Escape handling. `::backdrop` is styled inside the component's shadow
-styles.
+layer and focus trapping. `::backdrop` is styled inside the component's shadow styles.
+`dismissible` defaults to `true`, making Escape and backdrop clicks cancellation paths. Setting
+it to `false` leaves explicit actions in control.
 
 An imperative helper mirrors the existing `showPrompt()` in voxel-map:
 
@@ -665,7 +726,18 @@ An imperative helper mirrors the existing `showPrompt()` in voxel-map:
 const name = await showPrompt({ label: "Layer name" });
 ```
 
-Built on `Promise.withResolvers`, removing the element on settle.
+The helpers stay small:
+
+```ts
+showPrompt({ title?, label, defaultValue?, confirmLabel?, cancelLabel? });
+showConfirm({ title?, message, confirmLabel?, cancelLabel?, danger? });
+```
+
+They accept strings. Declarative Dialog handles validation, rich content and custom forms.
+`showPrompt()` resolves `string | null` and trims confirmed input; `showConfirm()` resolves a
+boolean. Escape, Cancel and backdrop dismissal resolve `null` or `false`. Cancellation is not an
+exception. Each helper uses `Promise.withResolvers` and removes its element exactly once after
+settlement.
 
 ## 8. Collaboration
 
@@ -906,7 +978,10 @@ object does not repaint.
 
 ## 11. Persistence
 
-Reorder order and pane state persist through a pluggable adapter.
+Layout state persists through a pluggable adapter. P2 stores folder order and expansion, dock
+size and collapse, and floating position and size. Tab selection is application state and does
+not persist automatically. Theme and density persistence belongs to the application or gallery
+shell.
 
 ```ts
 export interface StorageAdapter {
@@ -961,8 +1036,10 @@ Configuring a key per component was rejected as too heavy. The costs, all recove
   position while its own entry is dropped as orphaned. "I removed an unrelated folder and another
   one moved" is a confusing symptom, so it is recorded here rather than discovered later
 
-The pane namespace derives from `location.pathname` plus the pane title, so editors sharing
-`localhost` in development do not overwrite each other. `storage-key` overrides it.
+Pane, Dock and Floating namespaces derive from `location.pathname`, tag name, nested Pane title,
+side where applicable, and occurrence index. Editors sharing `localhost` in development do not
+overwrite each other. `storage-key` overrides the derived namespace. A development warning
+fires when occurrence is needed to distinguish otherwise identical stateful containers.
 
 Reconciliation on load, stated as an algorithm because "take their declared position" is
 ambiguous once a list has been reordered — declared position among all present keys, and position
@@ -980,8 +1057,13 @@ and the whole function is testable with two arrays of strings.
 - Elements are prefixed `jolly-`, matching the existing `jolly-popup-manager`
 - Events are prefixed `jolly-`, `bubbles: true`, `composed: true`
 - `jolly-input` fires continuously during interaction, `jolly-change` on commit
-- `jolly-reorder` and `jolly-revert` carry the affected keys. Both are pane level, so they land
-  in P2 with the pane rather than on a field
+- `jolly-reorder` carries the committed folder keys and `jolly-revert` carries affected field
+  keys. Both are pane level
+- Dock and Floating emit `jolly-resize` continuously and `jolly-resize-end` on commit. Resize
+  details carry `{ width, height }`; Dock also includes `collapsed`
+- Floating emits `jolly-move` continuously and `jolly-move-end` on commit, carrying `{ x, y }`
+- Pointer, keyboard and collapse operations use the same resize event path. No resize-start or
+  move-start event ships without a consumer
 - Every element declares its tag in `HTMLElementTagNameMap`
 
 Field events carry the value and nothing else:
@@ -1021,9 +1103,9 @@ without which a 0.01 step field is unusably twitchy; `min` and `max`, since a sc
 field's range is the same defect as an unclamped resize; and `multiplier`, so the component maps
 shift and control onto fine and coarse while the function stays pure.
 
-Size-from-delta is deliberately absent. `resize-handle` already computes it inline, and
-`jolly-dock` delegates resizing to that package, so a copy here would be duplication in the
-package that exists to remove duplication. It is extracted and clamped there instead.
+Size-from-delta is deliberately absent. `resize-handle` owns that calculation, and `jolly-dock`
+delegates resizing to the same package, so a copy here would not exercise the code that runs. P2
+extracts and clamps it there.
 
 End to end tests run with Playwright against the examples gallery, following the pattern in
 `editors/pixel-art`: `testMatch: "**/*.e2e.ts"` so the two runners never collect each other's
@@ -1094,9 +1176,10 @@ Two kinds, because "one goal" means different things for a control and for a beh
 
 ### Addressing examples from tests
 
-The gallery is chrome that tests must be able to opt out of. Built from `jolly-dock` and
-`jolly-list`, the shell otherwise shares fate with every test in the suite: a regression in
-either would turn the whole report red and say nothing about which component broke.
+The gallery is chrome that tests must be able to opt out of. It uses a `jolly-dock` containing a
+reorderable Pane. Manifest groups render as `jolly-folder` elements containing semantic `nav`
+links; `jolly-list` remains in P5. The Pane actions slot holds the theme button group and density
+select. The shell otherwise shares fate with several P2 components, so it keeps its own suite.
 
 Extending the query parameter approach already used by `editors/pixel-art`:
 
@@ -1104,7 +1187,7 @@ Extending the query parameter approach already used by `editors/pixel-art`:
 |---|---|
 | `/` | Full gallery, first example selected |
 | `/?example=controls/slider` | Full gallery, deep linked |
-| `/?example=controls/slider&chrome=off` | The example alone, no dock, no list |
+| `/?example=controls/slider&chrome=off` | The example alone, no dock or navigation |
 
 One mechanism, not two. An earlier draft also offered hash routing (`/#/controls/slider`) for the
 same job, which buys history handling, a precedence rule for when both forms are present, and two
@@ -1112,9 +1195,9 @@ code paths to test. The query parameter is what tests use, what `chrome=off` com
 what `editors/pixel-art` already does with `?empty`.
 
 Tests use the last form and gate on a `window.__galleryReady` flag, mirroring
-`__pixelSyncReady`. The shell keeps a small suite of its own so it stays covered: the list
-renders every manifest entry, selecting an entry swaps content, a deep link selects the right
-entry, and the dock's width survives a reload.
+`__pixelSyncReady`. The shell suite verifies every manifest link, selection and history,
+deep links, `chrome=off`, theme and density controls, folder order persistence, and dock width
+across reload.
 
 Enumerating the manifest gives one cheap test with disproportionate value: every example mounts
 and disposes without throwing. That catches the "component throws on connect" class across the

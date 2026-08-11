@@ -1,5 +1,8 @@
 // Import Node.js Dependencies
-import { before, afterEach } from "node:test";
+import {
+  before,
+  afterEach
+} from "node:test";
 
 // Import Third-party Dependencies
 import { Window } from "happy-dom";
@@ -12,6 +15,7 @@ before(() => {
 
   globalThis.document = kWindow.document as unknown as Document;
   globalThis.HTMLDivElement = win.HTMLDivElement as typeof HTMLDivElement;
+  globalThis.KeyboardEvent = win.KeyboardEvent as typeof KeyboardEvent;
   globalThis.MouseEvent = win.MouseEvent as typeof MouseEvent;
   globalThis.PointerEvent = win.PointerEvent as typeof PointerEvent;
 });
@@ -100,6 +104,22 @@ export function fireMouseEvent(
 ): MouseEvent {
   const event = new MouseEvent(type, {
     bubbles: true,
+    ...init
+  });
+  element.dispatchEvent(event);
+
+  return event;
+}
+
+export function fireKeyboardEvent(
+  element: HTMLElement,
+  key: string,
+  init?: KeyboardEventInit
+): KeyboardEvent {
+  const event = new KeyboardEvent("keydown", {
+    bubbles: true,
+    cancelable: true,
+    key,
     ...init
   });
   element.dispatchEvent(event);

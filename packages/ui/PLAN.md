@@ -44,7 +44,7 @@ examples/scripts/main.ts       route, mount, dispose, __galleryReady
 examples/scripts/manifest.ts   examples declare themselves
 examples/scripts/types.ts      GalleryExample
 examples/scripts/shell/        plain nav + main for now, swapped for
-                               jolly-dock + jolly-list in P2
+                               jolly-dock + grouped folders in P2
 ```
 
 The barrel exports theme tokens, `Mixed`, `FieldValue`, `isMixed`, and `StorageAdapter` only.
@@ -59,13 +59,13 @@ would make implementation details permanent API.
 | `input/ShortcutRegistry.ts`, `input/matchBinding.ts` | unscheduled | No phase registers a binding; SPEC section 16 still questions whether rebindable shortcuts are wanted |
 | `input/InputScope.ts`, `input/FocusScopeTracker.ts` | P6 | Consumer is voxel-map. Built here it sits unexercised for five phases |
 | `field/JollyField.ts` | P1 | A base class with six reactive properties designed against zero implementations |
-| `geometry/sizeFromDelta.ts` | `resize-handle`, P2 | That package already computes it inline and is what actually runs |
-| `geometry/clampToViewport.ts` | P2 | Its signature hides questions only `jolly-floating` answers |
+| `geometry/sizeFromDelta.ts` | `resize-handle`, P2 | That package owns the drag math and is what actually runs |
+| `geometry/clampToViewport.ts` | P2 | Floating defines fixed viewport coordinates and the oversized-axis fallback |
 | `examples/scripts/stateMatrix.ts` | P1 | Its rows are `JollyField` states, which do not exist yet |
 
-P0 uses a plain gallery shell because `jolly-dock` and `jolly-list` arrive in P2. Its routing,
-manifest, `chrome=off`, and `__galleryReady` contracts and e2e suite stay unchanged after that
-swap. Two placeholders prove example teardown on navigation.
+P0 uses a plain gallery shell because Dock, Pane and Folder arrive in P2. Its routing, manifest,
+`chrome=off`, and `__galleryReady` contracts and e2e suite stay unchanged after that swap. Two
+placeholders prove example teardown on navigation. `jolly-list` remains in P5.
 
 **Package wiring**
 
@@ -281,51 +281,101 @@ and control behaviour.
 ## P2: containers and chrome
 
 **Create** under `src/containers/`: `Pane`, `Folder`, `Tabs`, `Tab`, `Dock`, `Floating`,
-`Dialog`, `Toolbar`, `Rail`, `Split`.
+`Dialog`, `Toolbar`, `Rail`. Export the element constructor as `PaneElement`; `Pane` remains
+available for the P3 facade. `jolly-split` is deferred until a consumer defines its sizing and
+interaction contract.
 
-**Create** `src/geometry/clampToViewport.ts`, moved out of P0 — its signature depends on
-questions only `jolly-floating` answers (is `rect` the element's size or its current box, does the
-whole element stay in view or a grab handle's worth, does scroll count).
+**Create** `src/geometry/clampToViewport.ts`, moved out of P0. Floating uses fixed viewport
+coordinates. A pane that fits stays fully visible. An oversized axis anchors at zero, retaining
+the leading title region. Document scroll is not part of the calculation.
 
 **Add** the `@jolly-pixel/resize-handle` dependency, also moved out of P0.
 
-**Change** `packages/resize-handle/src/index.ts`, two things:
+**Change** `packages/resize-handle/src/index.ts`:
 
-- Add the optional `handle` to `ResizeHandleOptions`, skipping sibling injection when supplied.
-  Additive, so those tests stay green untouched
+- Add optional `handle`, `minSize` and `maxSize` options. Bounds default to zero and infinity;
+  supplying a handle skips sibling injection
+- Rename the unused `collapsable` option to `collapsible`. This is an accepted breaking change
 - Extract the inline drag math at `src/index.ts:145-149` into a pure exported
   `sizeFromDelta({ initialSize, startDrag, current, fromStart, min, max })`, tested in that
-  package. It currently applies **no clamp**, so a pane can be dragged to a negative width; the
-  clamp is a real fix, and it does change drag behaviour, so unlike the `handle` option this part
-  is not purely additive and its tests move with it
+  package. It currently applies no clamp, so a pane can be dragged to a negative width
+- Make handles focusable ARIA separators. Arrow keys resize by 8px, Shift plus an arrow by 32px,
+  through the same clamped function as pointer movement
+- Add idempotent `dispose()`. It removes listeners, ends an active drag, clears document classes,
+  and removes only handles injected by the class
 
 `ui` does not own size-from-delta. `jolly-dock` delegates resizing to `resize-handle`, which does
 the DOM writes, so a copy here would never be the code that runs.
 
-`Dock` renders the handle in its shadow root, targets itself, ships the styling, and injects the
-single `html.handle-dragging` rule once.
+`Pane` owns the optional title and `actions` slot and is a theme scope host. Folder reorder is
+opt-in through Pane's `reorderable` attribute. Only direct Folder children move. Pane changes
+slot order without moving Lit-owned light DOM, persists committed order through its
+`StorageAdapter`, and emits `jolly-reorder`. Folder uses `open`, defaults open, persists expansion
+and emits `jolly-toggle`. Its separate grip supports pointer drag and Space, Up, Down and Escape
+keyboard reordering with live announcements.
 
-`Dialog` wraps native `dialog` plus `showModal()`. Export `showPrompt()` and `showConfirm()`
-built on `Promise.withResolvers`.
+`Tabs` owns a settable selected key and emits `jolly-change`. It uses automatic activation,
+roving focus, orientation-specific arrows, Home and End, and skips disabled tabs.
 
-Folder reorder lands here, using `resolveOrder` and the `StorageAdapter`.
+`Dock` supports left, right, top and bottom. It renders the ResizeHandle handle in its shadow
+root, targets itself, ships the styling, and injects the single `html.handle-dragging` rule once.
+Dock owns collapse so its internal handle remains operable: double click and Enter toggle it,
+and size plus collapsed state persist.
+
+`Floating` moves from the non-interactive part of its nested Pane header and resizes from the
+right and bottom edges. It clamps on connect, move, resize and viewport resize. Position and size
+persist. Pointer interaction and `focusin` raise it within its current root; an explicit consumer
+z-index wins and stack order does not persist.
+
+Dock and Floating emit `jolly-resize` during interaction and `jolly-resize-end` on commit.
+Floating also emits `jolly-move` and `jolly-move-end`. Keyboard resize and Dock collapse use the
+same event path so later editor migrations can resize their canvases without special cases.
+
+`Dialog` is the other P2 theme scope host. It wraps native `dialog` plus `showModal()` and is
+dismissible by Escape or backdrop click unless `dismissible` is false. Export string-based
+`showPrompt()` and `showConfirm()` helpers built on `Promise.withResolvers`. Prompt resolves a
+trimmed string or `null`; Confirm resolves a boolean; every path settles and removes the helper
+element once.
+
+`Toolbar` and `Rail` are stateless layout. Toolbar provides toolbar semantics and orientation;
+Rail is a persistent edge strip, vertical by default, sized for 32px icon controls.
 
 **Gallery shell swap**: replace `examples/scripts/shell/` internals with `jolly-dock` holding a
-grouped `jolly-list`, plus a theme toggle and a density selector in the dock header, which
-dogfoods `jolly-button-group` and `jolly-select`. Routes, `chrome=off` and `__galleryReady` are
-unchanged, so only the shell's own five tests are touched.
+reorderable Pane. Manifest groups become Folder elements containing the existing semantic nav
+links. `jolly-list` stays in P5. The Pane actions slot holds a theme button group and density
+select; the gallery shell persists both preferences. Routes, `chrome=off` and `__galleryReady`
+remain unchanged.
 
-**Tests**: unit for reorder reconciliation and dialog promise settlement. E2e for handle drag
-resizing a dock, double click collapse, reorder persisting across reload, floating pane clamped
-inside the viewport, Escape closing a dialog.
+**Unit tests**: `sizeFromDelta`, ResizeHandle bounds and disposal, and `clampToViewport` for panes
+that fit and panes larger than either viewport axis. `resolveOrder` retains its P0 coverage.
+Decorated dialog modules do not enter `node:test`.
+
+**End to end**: pointer and keyboard Dock resizing, double click and Enter collapse, pointer and
+keyboard Folder reorder with reload persistence, Floating move, resize, clamping and stacking,
+Tabs keyboard activation, and Dialog confirmation, cancellation, Escape, backdrop, single
+settlement and element removal.
+
+**Docs and examples**: add one example for each of the nine P2 elements plus
+`reorder-persist`, `dock-resize` and `dialog-escape` scenarios. Add container, placement and
+dialog documentation in the same delivery as their components.
 
 **Deletes**: `.resize-handle` and `html.handle-dragging` blocks from
 `editors/pixel-art/examples/public/main.css`, `editors/voxel-map/public/main.css` and
 `editors/voxel-model/public/main.css`, once those editors adopt `jolly-dock` in P5 and P6. Until
 then the rules coexist.
 
-**Done when**: a gallery page shows a left dock, a right dock and a floating pane at once, all
-resizable and reorderable, with order surviving reload.
+**Done when**: one gallery scenario shows left and right Docks plus a Floating Pane. Docks and
+Floating resize through pointer and keyboard input, Floating stays recoverable after viewport
+changes, Folder order survives reload, and Dialog closes through native Escape handling.
+
+### P2 delivery
+
+Two ordered pull requests:
+
+1. **resize-handle.** Supplied handles, numeric bounds, clamped `sizeFromDelta`, keyboard
+   separators, the `collapsible` rename, lifecycle disposal, tests, and a major release
+2. **ui.** Nine elements, geometry, persistence wiring, gallery migration, docs, browser tests,
+   and a minor release
 
 ## P3: facade, and the end of Tweakpane
 
@@ -528,7 +578,7 @@ by itself as entries are added.
 | Phase | Component examples | Scenario examples |
 |---|---|---|
 | P1 | 12 controls | `density`, `theme`, `expression`, `drag-scrub` |
-| P2 | 10 containers | `reorder-persist`, `dock-resize`, `dialog-escape` |
+| P2 | 9 containers | `reorder-persist`, `dock-resize`, `dialog-escape` |
 | P3 | monitor, graph | `facade-parity` |
 | P3b | stats | `stats-cycle` |
 | P4 | 6 math | `mixed-per-axis` |
@@ -561,7 +611,7 @@ covered by that package's own suite; these cases cover the pairing, and run once
 | E2e flakiness, as recorded in pixel-art | Tier kept small, geometry pushed into pure functions, workers isolated |
 | Components are unreachable from `node:test`, so a render bug is only ever caught by Playwright | Decorators are not erasable syntax and stripping fails at parse. Logic is extracted into `predicates`, `numeric/format` and `controls/flags`, which are unit tested; the elements stay thin enough that what remains is markup |
 | A consumer forgets the write back and the control looks broken | Inherent to a controlled element. Stated first in `docs/fields.md` rather than as a footnote, and the gallery examples all wire it |
-| `resize-handle` change breaking existing users | `handle` is optional and its tests run unmodified. The `sizeFromDelta` extraction is not purely additive — clamping changes drag behaviour — so it carries its own tests and its own changeset |
+| `resize-handle` change breaking existing users | P2 deliberately renames `collapsable`, adds clamping and changes keyboard behavior. It lands first with updated tests and a major changeset |
 | Migration diffs too large to review | One editor per phase, one component family per commit |
 | `runtime` is published, and P3b adds a dependency to it | `./stats` is DOM free and imported dynamically behind `includePerformanceStats`, so game bundles are unaffected when the flag is off |
 | Canvas colours drift from the theme | Tokens resolved through `getComputedStyle` and re-resolved on `theme` and colour scheme changes, asserted in e2e |
