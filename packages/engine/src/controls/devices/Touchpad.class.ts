@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { EventEmitter } from "@posva/event-emitter";
+import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import type { CanvasAdapter } from "../../adapters/canvas.ts";
@@ -24,9 +24,9 @@ export type TouchPosition = {
 };
 
 export type TouchEvents = {
-  start: [Touch, TouchPosition];
-  move: [Touch, TouchPosition];
-  end: [Touch];
+  start: (touch: Touch, touchPosition: TouchPosition) => void;
+  move: (touch: Touch, touchPosition: TouchPosition) => void;
+  end: (touch: Touch) => void;
 };
 
 export interface TouchState {
@@ -50,7 +50,7 @@ export interface TouchpadOptions {
  * @see https://www.w3.org/TR/touch-events/
  * @see https://docs.google.com/document/d/12-HPlSIF7-ISY8TQHtuQ3IqDi-isZVI0Yzv5zwl90VU/edit?tab=t.0
  */
-export class Touchpad extends EventEmitter<
+export class Touchpad extends Emitter<
   TouchEvents
 > implements InputControl {
   static readonly MaxTouches = 10;

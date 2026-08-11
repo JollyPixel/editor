@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-import { EventEmitter } from "@posva/event-emitter";
+import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import {
@@ -32,10 +32,10 @@ import {
 } from "../components/renderers/index.ts";
 
 export type WorldEvents = {
-  beforeFixedUpdate: [number];
-  afterFixedUpdate: [number];
-  beforeUpdate: [number];
-  afterUpdate: [number];
+  beforeFixedUpdate: (dt: number) => void;
+  afterFixedUpdate: (dt: number) => void;
+  beforeUpdate: (dt: number) => void;
+  afterUpdate: (dt: number) => void;
 };
 
 export interface WorldOptions<
@@ -67,7 +67,7 @@ export interface WorldDefaultContext {
 export class World<
   T = THREE.WebGPURenderer,
   TContext = WorldDefaultContext
-> extends EventEmitter<WorldEvents> {
+> extends Emitter<WorldEvents> {
   renderer: Renderer<T>;
   input: Input;
   loadingManager: THREE.LoadingManager = new THREE.LoadingManager();

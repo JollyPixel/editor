@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { EventEmitter } from "@posva/event-emitter";
+import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import {
@@ -12,7 +12,7 @@ import type { InputConnectable } from "../types.ts";
 export type FullscreenState = "active" | "suspended";
 
 export type ScreenEvents = {
-  stateChange: [FullscreenState];
+  stateChange: (fullScreenState: FullscreenState) => void;
 };
 
 export interface ScreenOptions {
@@ -20,7 +20,7 @@ export interface ScreenOptions {
   documentAdapter?: DocumentAdapter;
 }
 
-export class Screen extends EventEmitter<
+export class Screen extends Emitter<
   ScreenEvents
 > implements InputConnectable {
   #canvas: CanvasAdapter;

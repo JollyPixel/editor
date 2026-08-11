@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-import { EventEmitter } from "@posva/event-emitter";
+import { Emitter } from "@openally/emitt";
 import "reflect-metadata";
 
 // Import Internal Dependencies
@@ -50,8 +50,8 @@ export interface InputListenerMetadata {
 }
 
 export type InputEvents = {
-  exit: [];
-  devicePreferenceChange: [preference: InputDevicePreference];
+  exit: () => void;
+  devicePreferenceChange: (preference: InputDevicePreference) => void;
 };
 
 export interface InputOptions {
@@ -62,7 +62,7 @@ export interface InputOptions {
   windowAdapter?: WindowAdapter;
 }
 
-export class Input extends EventEmitter<InputEvents> {
+export class Input extends Emitter<InputEvents> {
   static Metadata = Symbol("InputMetadata");
 
   static listen(

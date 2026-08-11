@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-import { EventEmitter } from "@posva/event-emitter";
+import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import type {
@@ -124,7 +124,7 @@ export function resolveRendererSettings(
 
 export class ThreeRenderer<
   TContext = WorldDefaultContext
-> extends EventEmitter<ThreeRendererEvents> implements Renderer {
+> extends Emitter<ThreeRendererEvents> implements Renderer {
   webGPURenderer: THREE.WebGPURenderer;
   renderComponents: RenderComponent[] = [];
   renderStrategy: RenderStrategy;

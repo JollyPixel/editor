@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { EventEmitter } from "@posva/event-emitter";
+import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import type {
@@ -100,10 +100,10 @@ export function isEditableTarget(
 }
 
 export type KeyboardEvents = {
-  down: [event: KeyboardEvent];
-  up: [event: KeyboardEvent];
-  press: [event: KeyboardEvent];
-  [key: string]: [event: KeyboardEvent];
+  down: (event: KeyboardEvent) => void;
+  up: (event: KeyboardEvent) => void;
+  press: (event: KeyboardEvent) => void;
+  [key: string]: (event: KeyboardEvent) => void;
 };
 
 export interface KeyState {
@@ -117,7 +117,7 @@ export interface KeyboardOptions {
   documentAdapter?: DocumentAdapter;
 }
 
-export class Keyboard extends EventEmitter<
+export class Keyboard extends Emitter<
   KeyboardEvents
 > implements InputControl {
   #documentAdapter: DocumentAdapter;

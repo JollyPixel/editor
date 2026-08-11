@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { EventEmitter } from "@posva/event-emitter";
+import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import {
@@ -39,11 +39,11 @@ export type MouseAction = keyof typeof MouseEventButton;
 export type MouseLockState = "locked" | "unlocked";
 
 export type MouseEvents = {
-  lockStateChange: [MouseLockState];
-  down: [event: MouseEvent];
-  up: [event: MouseEvent];
-  move: [event: MouseEvent];
-  wheel: [event: WheelEvent];
+  lockStateChange: (state: MouseLockState) => void;
+  down: (event: MouseEvent) => void;
+  up: (event: MouseEvent) => void;
+  move: (event: MouseEvent) => void;
+  wheel: (event: MouseEvent) => void;
 };
 
 export interface MouseOptions {
@@ -51,7 +51,7 @@ export interface MouseOptions {
   documentAdapter?: DocumentAdapter;
 }
 
-export class Mouse extends EventEmitter<
+export class Mouse extends Emitter<
   MouseEvents
 > implements InputControl {
   /**

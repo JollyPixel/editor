@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { EventEmitter } from "@posva/event-emitter";
+import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import {
@@ -108,8 +108,8 @@ interface AxisDownState {
 }
 
 export type GamepadEvents = {
-  connect: [gamepad: globalThis.Gamepad];
-  disconnect: [gamepad: globalThis.Gamepad];
+  connect: (gamepad: globalThis.Gamepad) => void;
+  disconnect: (gamepad: globalThis.Gamepad) => void;
 };
 
 export interface GamepadOptions {
@@ -120,7 +120,7 @@ export interface GamepadOptions {
 /**
  * @see https://developer.mozilla.org/en-US/docs/Web/API/Gamepad_API/Using_the_Gamepad_API
  */
-export class Gamepad extends EventEmitter<GamepadEvents> implements InputControl {
+export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
   static MaxGamepads = 4;
   static MaxButtons = 16;
   static MaxAxes = 4;

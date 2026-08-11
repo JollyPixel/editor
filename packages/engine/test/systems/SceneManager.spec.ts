@@ -126,14 +126,15 @@ describe("Systems.SceneManager", () => {
 
   test("should emit awake event", () => {
     let eventEmitted = false;
-    sceneManager.on("awake", () => {
+    function awake() {
       eventEmitted = true;
-    });
+    }
+    sceneManager.on("awake", awake);
 
     sceneManager.awake();
 
     assert.strictEqual(eventEmitted, true);
-    sceneManager.off("awake");
+    sceneManager.off("awake", awake);
   });
 
   describe("beginFrame", () => {
