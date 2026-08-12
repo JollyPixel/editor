@@ -6,7 +6,8 @@ JollyPixel Editor is a monorepo for a collaborative 3D HTML5 game maker. It prov
 
 ```
 packages/
-  engine/              @jolly-pixel/engine              – ECS framework on Three.js (public)
+  ui/                  @jolly-pixel/ui                   – Common and System's UI for JollyPixel's editors
+  engine/              @jolly-pixel/engine               – ECS framework on Three.js (public)
   runtime/             @jolly-pixel/runtime              – Browser/Electron runtime (public)
   event-store/         @jolly-pixel/event-store          – Event Sourcing pattern applied to JollyPixel's events (public)
   network/             @jolly-pixel/network              – Shared multiplayer sync wire (public)
@@ -15,10 +16,11 @@ packages/
   resize-handle/       @jolly-pixel/resize-handle        – Resizable pane UI element (public)
   voxel-renderer/      @jolly-pixel/voxel.renderer       – Voxel rendering library (public)
   pixel-draw-renderer/ @jolly-pixel/pixel-draw.renderer  – Pixel-art canvas library (public)
+  color/               @jolly-pixel/color                – The color utilities for JollyPixel's editors
   editors/
     voxel-map/         @jolly-pixel/editor.voxel-map     – Voxel map editor (private)
     voxel-model/       @jolly-pixel/editor.voxel-model   – Low-poly/voxel 3D model editor (private)
-    pixel-art/         @jolly-pixel/editor.pixel-art     – Pixel-art UI (Lit panel) on top of pixel-draw-renderer, reused by other editors (private)
+    pixel-art/         @jolly-pixel/editor.pixel-art     – Pixel-art UI (Lit panel) on top of pixel-draw-renderer, reused by other editors
 ```
 
 Library packages (engine, runtime, event-store, network, fs-tree, resize-handle, voxel-renderer, pixel-draw-renderer) compile with `tsc`. Editor/frontend packages (`editors/*`) use Vite to build their app, except `editors/pixel-art`, which is a `tsc`-built, reusable UI library (like the other libraries) rather than a standalone app — Vite there only serves its `examples/` demo.

@@ -16,6 +16,7 @@
     "docs:preview": "vitepress preview docs"
   },
   "workspaces": [
+    "packages/color",
     "packages/resize-handle",
     "packages/ui",
     "packages/three",
