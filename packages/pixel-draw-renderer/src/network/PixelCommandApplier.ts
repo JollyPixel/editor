@@ -5,7 +5,7 @@ import { toUint8Array } from "js-base64";
 import {
   applyColorGroups,
   groupPositionsByColor
-} from "../history/utils.ts";
+} from "../buffer/colorGroups.ts";
 import { Fill } from "../tools/Fill.ts";
 import type { PixelBuffer } from "../buffer/PixelBuffer.ts";
 import type {

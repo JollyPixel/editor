@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { PeerGhostLeaser } from "#src/network/PeerGhostLeaser.ts";
+import { PeerGhostLeaser } from "#src/network/ghosts/PeerGhostLeaser.ts";
 
 describe("PeerGhostLeaser", () => {
   test("expires a lease after the default 1500ms", (t) => {

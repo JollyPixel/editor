@@ -10,7 +10,7 @@ import type {
 import {
   applyColorGroups,
   groupPositionsByColor
-} from "./utils.ts";
+} from "../buffer/colorGroups.ts";
 
 // CONSTANTS
 const kDefaultLimit = 10;

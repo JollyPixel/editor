@@ -118,7 +118,7 @@ describe("PixelBuffer", () => {
       );
     });
 
-    test("ignores out-of-bounds positions", () => {
+    test("ignores invalid pixel positions", () => {
       const buf = new PixelBuffer({
         size: { x: 4, y: 4 },
         maxSize: kTestMaxSize
@@ -126,9 +126,14 @@ describe("PixelBuffer", () => {
       assert.doesNotThrow(() => {
         buf.drawPixels([
           { x: -1, y: 0 },
-          { x: 4, y: 4 }
+          { x: 4, y: 4 },
+          { x: 0.5, y: 0 }
         ], { r: 1, g: 2, b: 3, a: 4 });
       });
+      assert.deepStrictEqual(
+        buf.samplePixel(0, 0),
+        [255, 255, 255, 255]
+      );
     });
 
     test("samples out-of-bounds positions as transparent", () => {

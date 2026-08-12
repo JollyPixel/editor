@@ -9,6 +9,7 @@ import type {
   SelectionRect,
   Vec2
 } from "../types.ts";
+import { UVFaceMap } from "./UVFaceMap.ts";
 import {
   UV_FACES,
   UVRegion,
@@ -174,32 +175,9 @@ export class UVMap extends Emitter<
     };
     const hasTopology = options.activeFaces !== undefined || options.faceGeometries !== undefined;
     const state = options.state ?? (hasTopology ? "uncollapsed" : "collapsed");
-    const faces = {
-      front: this.#geometryFrom(
-        options.faceGeometries?.front,
-        rect
-      ),
-      back: this.#geometryFrom(
-        options.faceGeometries?.back,
-        rect
-      ),
-      left: this.#geometryFrom(
-        options.faceGeometries?.left,
-        rect
-      ),
-      right: this.#geometryFrom(
-        options.faceGeometries?.right,
-        rect
-      ),
-      top: this.#geometryFrom(
-        options.faceGeometries?.top,
-        rect
-      ),
-      bottom: this.#geometryFrom(
-        options.faceGeometries?.bottom,
-        rect
-      )
-    };
+    const faces = UVFaceMap.map(
+      (face) => this.#geometryFrom(options.faceGeometries?.[face], rect)
+    );
     let region: UVRegion;
     if (state === "uncollapsed") {
       region = new UVRegion({
@@ -275,7 +253,10 @@ export class UVMap extends Emitter<
       this.#selectedRegionId = null;
       this.#selectedFace = null;
     }
-    this.emit("region-deleted", { region });
+    this.emit(
+      "region-deleted",
+      { region }
+    );
     if (selectionChanged) {
       this.#emitSelectionChanged();
     }
@@ -298,12 +279,17 @@ export class UVMap extends Emitter<
       return false;
     }
 
-    const previousRect = region.rectFor(target ?? kDefaultFace);
+    const previousRect = region.rectFor(
+      target ?? kDefaultFace
+    );
     const clamped = clampRectSize(
       rect,
       this.#getCanvasSize()
     );
-    const moved = region.withRect(clamped, target ?? undefined);
+    const moved = region.withRect(
+      clamped,
+      target ?? undefined
+    );
     this.#regions.set(id, moved);
 
     this.emit("region-moved", {
@@ -325,7 +311,10 @@ export class UVMap extends Emitter<
       return;
     }
 
-    const target = this.#resolveFace(region, face);
+    const target = this.#resolveFace(
+      region,
+      face
+    );
     if (target === undefined) {
       return;
     }
@@ -369,7 +358,10 @@ export class UVMap extends Emitter<
   ): boolean {
     const next = UVRegion.from(value);
 
-    return this.#changeState(next.id, () => next);
+    return this.#changeState(
+      next.id,
+      () => next
+    );
   }
 
   clear(): void {
@@ -471,7 +463,10 @@ export class UVMap extends Emitter<
   ): Vec2 {
     const maxX = Math.max(0, size.x - width);
     const maxY = Math.max(0, size.y - height);
-    const colsPerRow = Math.max(1, Math.floor(maxX / kCascadeStep) + 1);
+    const colsPerRow = Math.max(
+      1,
+      Math.floor(maxX / kCascadeStep) + 1
+    );
 
     const col = this.#cascadeIndex % colsPerRow;
     const row = Math.floor(this.#cascadeIndex / colsPerRow);

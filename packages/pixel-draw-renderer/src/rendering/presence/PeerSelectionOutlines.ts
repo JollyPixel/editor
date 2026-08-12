@@ -4,6 +4,7 @@ import {
   selectionContourPath,
   traceSelectionContour
 } from "../overlays/selectionContour.ts";
+import { PeerRegistry } from "./PeerRegistry.ts";
 import {
   positionKeySet,
   rectOverlapsPositionKeys
@@ -64,10 +65,22 @@ class PeerSelectionBorder {
     if (!mask || mask.every(Boolean)) {
       this.#path.setAttribute("visibility", "hidden");
 
-      this.#rect.setAttribute("x", String(rect.x * zoom + camera.x));
-      this.#rect.setAttribute("y", String(rect.y * zoom + camera.y));
-      this.#rect.setAttribute("width", String(rect.width * zoom));
-      this.#rect.setAttribute("height", String(rect.height * zoom));
+      this.#rect.setAttribute(
+        "x",
+        String(rect.x * zoom + camera.x)
+      );
+      this.#rect.setAttribute(
+        "y",
+        String(rect.y * zoom + camera.y)
+      );
+      this.#rect.setAttribute(
+        "width",
+        String(rect.width * zoom)
+      );
+      this.#rect.setAttribute(
+        "height",
+        String(rect.height * zoom)
+      );
       this.#rect.setAttribute("visibility", "visible");
 
       return;
@@ -117,44 +130,24 @@ class PeerSelectionBorder {
 /**
  * Renders non-authoritative peer selection boundaries.
  */
-export class PeerSelectionOutlines {
+export class PeerSelectionOutlines extends PeerRegistry<
+  PeerSelectionOutlineState,
+  PeerSelectionBorder
+> {
   #svg: SVGElement;
   #viewport: DefaultViewport;
-  #ghosts = new Map<string, PeerSelectionOutlineState>();
-  #borders = new Map<string, PeerSelectionBorder>();
 
   constructor(
     svg: SVGElement,
     viewport: DefaultViewport
   ) {
+    super();
     this.#svg = svg;
     this.#viewport = viewport;
   }
 
-  set(
-    clientId: string,
-    state: PeerSelectionOutlineState
-  ): void {
-    this.#ghosts.set(clientId, state);
-    this.#render(clientId);
-  }
-
-  remove(
-    clientId: string
-  ): void {
-    this.#ghosts.delete(clientId);
-    this.#borders.get(clientId)?.remove();
-    this.#borders.delete(clientId);
-  }
-
   get isActive(): boolean {
-    return this.#ghosts.size > 0;
-  }
-
-  clearAll(): void {
-    for (const clientId of [...this.#ghosts.keys()]) {
-      this.remove(clientId);
-    }
+    return this.size > 0;
   }
 
   /**
@@ -168,39 +161,27 @@ export class PeerSelectionOutlines {
     }
 
     const committed = positionKeySet(positions);
-    for (const [clientId, state] of [...this.#ghosts.entries()]) {
+    for (const [clientId, state] of [...this.entries()]) {
       const { rect, mask } = state;
-      if (rectOverlapsPositionKeys(rect, mask, committed)) {
+
+      const isRectOverlapping = rectOverlapsPositionKeys(
+        rect,
+        mask,
+        committed
+      );
+      if (isRectOverlapping) {
         this.remove(clientId);
       }
     }
   }
 
-  refresh(): void {
-    for (const clientId of this.#ghosts.keys()) {
-      this.#render(clientId);
-    }
-  }
-
-  destroy(): void {
-    this.#ghosts.clear();
-    for (const border of this.#borders.values()) {
-      border.remove();
-    }
-    this.#borders.clear();
-  }
-
-  #render(
-    clientId: string
+  protected render(
+    clientId: string,
+    state: PeerSelectionOutlineState
   ): void {
-    const state = this.#ghosts.get(clientId);
-    if (!state) {
-      return;
-    }
-
-    const border = this.#borders.get(clientId) ?? this.#createBorder(
+    const border = this.view(
       clientId
-    );
+    ) ?? this.#createBorder(clientId);
     border.place(
       state.rect,
       state.mask,
@@ -210,11 +191,20 @@ export class PeerSelectionOutlines {
     border.appendTo(this.#svg);
   }
 
+  protected disposeView(
+    view: PeerSelectionBorder
+  ): void {
+    view.remove();
+  }
+
   #createBorder(
     clientId: string
   ): PeerSelectionBorder {
     const border = new PeerSelectionBorder();
-    this.#borders.set(clientId, border);
+    this.setView(
+      clientId,
+      border
+    );
 
     return border;
   }

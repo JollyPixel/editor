@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   groupPositionsByColor
-} from "#src/history/utils.ts";
+} from "#src/buffer/colorGroups.ts";
 import type { RGBA } from "#src/types.ts";
 
 // CONSTANTS

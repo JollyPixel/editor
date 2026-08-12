@@ -9,14 +9,14 @@ import assert from "node:assert/strict";
 import type * as network from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import { SelectionGhostSync } from "#src/network/SelectionGhostSync.ts";
+import { SelectionGhostSync } from "#src/network/ghosts/SelectionGhostSync.ts";
 import type {
   PixelNetworkCommand,
   PixelServerMessage,
   SelectionGhostPayload
 } from "#src/network/types.ts";
 import type { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
-import type { SelectionProgressEvent } from "#src/tools/SelectController.events.ts";
+import type { SelectionProgressEvent } from "#src/tools/SelectEngine.events.ts";
 import type { PeerSelectionOutlineState } from "#src/rendering/presence/PeerSelectionOutlines.ts";
 import type { PeerFloatingSelectionState } from "#src/rendering/presence/PeerFloatingSelections.ts";
 
@@ -106,7 +106,7 @@ function createMockRoom(): MockRoom {
   return room;
 }
 
-interface MockSelectController {
+interface MockSelectEngine {
   on(type: string, listener: (event: any) => void): void;
   off(type: string, listener: (event: any) => void): void;
   simulateProgress(event: SelectionProgressEvent): void;
@@ -114,7 +114,7 @@ interface MockSelectController {
   simulateIdle(): void;
 }
 
-function createMockSelectController(): MockSelectController {
+function createMockSelectEngine(): MockSelectEngine {
   const listeners = new Map<string, Set<(event: any) => void>>();
 
   function emit(type: string, event: unknown): void {
@@ -148,7 +148,7 @@ function createMockSelectController(): MockSelectController {
 }
 
 interface MockCanvas {
-  selectionEvents: MockSelectController;
+  selectionEvents: MockSelectEngine;
   selectionSetCalls: { clientId: string; state: PeerSelectionOutlineState; }[];
   selectionRemovedPeers: string[];
   selectionClearAllCallCount: number;
@@ -182,7 +182,7 @@ function createMockCanvas(): MockCanvas {
   const floatingRemoveOverlappingCalls: MockCanvas["floatingRemoveOverlappingCalls"] = [];
 
   const canvas: MockCanvas = {
-    selectionEvents: createMockSelectController(),
+    selectionEvents: createMockSelectEngine(),
     selectionSetCalls,
     selectionRemovedPeers,
     selectionClearAllCallCount: 0,

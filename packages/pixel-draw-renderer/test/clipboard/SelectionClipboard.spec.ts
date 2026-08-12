@@ -6,12 +6,9 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import {
-  SelectionClipboard,
-  decodeSelectionMetadata,
-  encodeSelectionMetadata
-} from "#src/clipboard/SelectionClipboard.ts";
+import { SelectionClipboard } from "#src/clipboard/SelectionClipboard.ts";
 import { encodeSelectionPng } from "#src/clipboard/selectionImage.ts";
+import { encodeSelectionMetadata } from "#src/clipboard/selectionMetadata.ts";
 import {
   JOLLYPIXEL_CLIPBOARD_TYPE,
   SUPPORTED_RASTER_TYPES,
@@ -59,97 +56,6 @@ function makeAdapter(
 }
 
 describe("SelectionClipboard", () => {
-  test("encodes full and bitset masks in version 1 metadata", () => {
-    const full = encodeSelectionMetadata({
-      ...kSnapshot,
-      mask: [true, true]
-    });
-    const bitset = encodeSelectionMetadata(kSnapshot);
-
-    assert.deepStrictEqual(full.mask, { encoding: "full" });
-    assert.strictEqual(bitset.mask.encoding, "bitset");
-    assert.deepStrictEqual(
-      decodeSelectionMetadata(JSON.stringify(full), kImage),
-      { mask: [true, true], pixels: kSnapshot.pixels }
-    );
-    assert.deepStrictEqual(
-      decodeSelectionMetadata(JSON.stringify(bitset), kImage),
-      { mask: kSnapshot.mask, pixels: kSnapshot.pixels }
-    );
-  });
-
-  test("the metadata pixel channel round-trips partial alpha exactly", () => {
-    // The PNG travels through a premultiplying canvas, so RGB under a low
-    // alpha cannot survive it. The custom format carries raw RGBA instead.
-    const snapshot: SelectionSnapshot = {
-      rect: { x: 0, y: 0, width: 2, height: 1 },
-      pixels: [
-        { r: 200, g: 100, b: 50, a: 3 },
-        { r: 255, g: 255, b: 255, a: 1 }
-      ],
-      mask: [true, true]
-    };
-    const decoded = decodeSelectionMetadata(
-      JSON.stringify(encodeSelectionMetadata(snapshot)),
-      { width: 2, height: 1, pixels: snapshot.pixels }
-    );
-
-    assert.deepStrictEqual(decoded!.pixels, snapshot.pixels);
-  });
-
-  test("metadata without a pixel channel still decodes, falling back to the raster", () => {
-    const legacy = JSON.stringify({
-      version: 1,
-      rect: kSnapshot.rect,
-      mask: { encoding: "full" }
-    });
-
-    assert.deepStrictEqual(
-      decodeSelectionMetadata(legacy, kImage),
-      { mask: [true, true], pixels: null }
-    );
-  });
-
-  test("rejects a pixel channel whose length does not match the image", () => {
-    const mismatched = JSON.stringify({
-      version: 1,
-      rect: kSnapshot.rect,
-      mask: { encoding: "full" },
-      pixels: "AAAA"
-    });
-
-    assert.deepStrictEqual(
-      decodeSelectionMetadata(mismatched, kImage),
-      { mask: [true, true], pixels: null }
-    );
-  });
-
-  test("rejects malformed, unsupported, mismatched, and invalid-mask metadata", () => {
-    const invalidPayloads = [
-      "not-json",
-      JSON.stringify({ version: 2, rect: kSnapshot.rect, mask: { encoding: "full" } }),
-      JSON.stringify({
-        version: 1,
-        rect: { ...kSnapshot.rect, width: 3 },
-        mask: { encoding: "full" }
-      }),
-      JSON.stringify({
-        version: 1,
-        rect: kSnapshot.rect,
-        mask: { encoding: "bitset", data: "" }
-      }),
-      JSON.stringify({
-        version: 1,
-        rect: kSnapshot.rect,
-        mask: { encoding: "bitset", data: "@@==" }
-      })
-    ];
-
-    for (const payload of invalidPayloads) {
-      assert.strictEqual(decodeSelectionMetadata(payload, kImage), null);
-    }
-  });
-
   test("writes PNG plus custom metadata when the custom type is supported", async() => {
     let written: ClipboardItem[] = [];
     const clipboard = new SelectionClipboard({

@@ -1,20 +1,20 @@
 // Import Internal Dependencies
 import type { Brush } from "./Brush.ts";
 import {
-  BrushController,
+  BrushEngine,
   type BrushTool
-} from "./BrushController.ts";
+} from "./BrushEngine.ts";
 import {
-  FillController,
+  FillEngine,
   type FillTool
-} from "./FillController.ts";
+} from "./FillEngine.ts";
 import {
-  LineController
-} from "./LineController.ts";
+  LineEngine
+} from "./LineEngine.ts";
 import {
-  SelectController,
+  SelectEngine,
   type SelectTool
-} from "./SelectController.ts";
+} from "./SelectEngine.ts";
 import { UVController } from "../uv/UVController.ts";
 import type { UVMap } from "../uv/UVMap.ts";
 import type { UVRegionLayer } from "../rendering/overlays/UVRegions.ts";
@@ -55,16 +55,16 @@ export interface Toolset {
 }
 
 export class Tools {
-  readonly brush: BrushController;
-  readonly fill: FillController;
-  readonly line: LineController;
-  readonly select: SelectController;
+  readonly brush: BrushEngine;
+  readonly fill: FillEngine;
+  readonly line: LineEngine;
+  readonly select: SelectEngine;
   readonly uv: UVController;
 
   constructor(
     options: ToolsOptions
   ) {
-    this.brush = new BrushController({
+    this.brush = new BrushEngine({
       brush: options.brush,
       canvasBuffer: options.canvasBuffer,
       canvas: options.renderer.canvas(),
@@ -72,20 +72,20 @@ export class Tools {
       onProgress: options.onProgress
     });
 
-    this.fill = new FillController({
+    this.fill = new FillEngine({
       brush: options.brush,
       canvasBuffer: options.canvasBuffer,
       pipeline: options.pipeline
     });
 
-    this.line = new LineController({
+    this.line = new LineEngine({
       brush: options.brush,
       linePreview: options.linePreview,
       pipeline: options.pipeline,
       onProgress: options.onProgress
     });
 
-    this.select = new SelectController({
+    this.select = new SelectEngine({
       canvasBuffer: options.canvasBuffer,
       floatingSelection: options.renderer.floatingSelection,
       selectionOverlay: options.selectionOverlay,

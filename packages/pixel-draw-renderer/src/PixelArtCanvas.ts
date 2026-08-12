@@ -11,7 +11,7 @@ import {
   Tools,
   type Toolset
 } from "./tools/Tools.ts";
-import type { SelectControllerEvent } from "./tools/SelectController.events.ts";
+import type { SelectEngineEvent } from "./tools/SelectEngine.events.ts";
 import {
   History,
   type HistoryState
@@ -173,7 +173,7 @@ export class PixelArtCanvas {
    * Read-only subscription to the select tool's progress events.
    * Consumed by SelectionGhostSync; nothing outside sync should emit on it.
    */
-  readonly selectionEvents: Pick<Emitter<SelectControllerEvent>, "on" | "off">;
+  readonly selectionEvents: Pick<Emitter<SelectEngineEvent>, "on" | "off">;
 
   constructor(
     parentHtmlElement: HTMLDivElement,

@@ -158,7 +158,11 @@ export class UVController {
       liveRect.x !== baseRect.x ||
       liveRect.y !== baseRect.y
     ) {
-      this.#uvMap.move(id, liveRect, face ?? undefined);
+      this.#uvMap.move(
+        id,
+        liveRect,
+        face ?? undefined
+      );
     }
     this.#overlay.setLiveOverride(
       id,
@@ -203,7 +207,10 @@ export class UVController {
   #shouldAdvance(
     key: string
   ): boolean {
-    if (this.#pick === null || this.#pick.key !== key) {
+    if (
+      this.#pick === null ||
+      this.#pick.key !== key
+    ) {
       return false;
     }
 
@@ -220,13 +227,20 @@ export class UVController {
     const candidates: HitCandidate[] = [];
 
     for (const region of this.#uvMap.regions) {
-      if (!this.#uvMap.isVisible(region.id)) {
+      const isRegionVisible = this.#uvMap.isVisible(
+        region.id
+      );
+      if (!isRegionVisible) {
         continue;
       }
 
       for (const { face, geometry } of region.facesOf()) {
         if (pointInGeometry(pos, geometry)) {
-          candidates.push({ region, face, geometry });
+          candidates.push({
+            region,
+            face,
+            geometry
+          });
         }
       }
     }

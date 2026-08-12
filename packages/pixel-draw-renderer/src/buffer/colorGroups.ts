@@ -5,7 +5,7 @@ import type {
 } from "../types.ts";
 import type {
   DefaultPixelBuffer
-} from "../buffer/types.ts";
+} from "./types.ts";
 
 export interface ColorGroup {
   color: RGBA;
@@ -13,7 +13,9 @@ export interface ColorGroup {
 }
 
 interface ColorGroupBuffer extends DefaultPixelBuffer {
-  drawColorGroups(groups: Iterable<ColorGroup>): void;
+  drawColorGroups(
+    groups: Iterable<ColorGroup>
+  ): void;
 }
 
 function supportsColorGroups(
@@ -33,7 +35,12 @@ function colorKey(
   color: RGBA
 ): number | string {
   const { r, g, b, a } = color;
-  if (isByte(r) && isByte(g) && isByte(b) && isByte(a)) {
+  if (
+    isByte(r) &&
+    isByte(g) &&
+    isByte(b) &&
+    isByte(a)
+  ) {
     return (((r * 256) + g) * 256 + b) * 256 + a;
   }
 
@@ -58,7 +65,9 @@ export function groupPositionsByColor(
     group.positions.push(positions[i]);
   }
 
-  return [...groups.values()];
+  return [
+    ...groups.values()
+  ];
 }
 
 export function applyColorGroups(
@@ -72,7 +81,9 @@ export function applyColorGroups(
   }
 
   for (const group of groups) {
-    buffer.drawPixels(group.positions, group.color);
+    buffer.drawPixels(
+      group.positions,
+      group.color
+    );
   }
 }
-

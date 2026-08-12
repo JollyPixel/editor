@@ -4,7 +4,7 @@ import { Emitter } from "@openally/emitt";
 // Import Internal Dependencies
 import { Select } from "./Select.ts";
 import { ShapeSelect } from "./ShapeSelect.ts";
-import type { SelectControllerEvent } from "./SelectController.events.ts";
+import type { SelectEngineEvent } from "./SelectEngine.events.ts";
 import type { SelectionSnapshot } from "../clipboard/types.ts";
 import { clipRectToBounds } from "../utils/math.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
@@ -22,9 +22,9 @@ import type {
 } from "../types.ts";
 
 export type {
-  SelectControllerEvent,
+  SelectEngineEvent,
   SelectionProgressEvent
-} from "./SelectController.events.ts";
+} from "./SelectEngine.events.ts";
 
 export interface SelectEditEntry {
   positions: Vec2[];
@@ -36,7 +36,7 @@ export interface SelectEditEntry {
   newMask: boolean[];
 }
 
-export interface SelectControllerOptions {
+export interface SelectEngineOptions {
   canvasBuffer: CanvasBuffer;
   floatingSelection: FloatingSelection;
   selectionOverlay: SelectionOutline;
@@ -69,7 +69,7 @@ export interface SelectTool {
   delete(): boolean;
 }
 
-export class SelectController extends Emitter<SelectControllerEvent> implements SelectTool {
+export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTool {
   #select = new Select();
   #canvasBuffer: CanvasBuffer;
   #floatingSelection: FloatingSelection;
@@ -83,7 +83,7 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
   #publishedIsFloating = false;
 
   constructor(
-    options: SelectControllerOptions
+    options: SelectEngineOptions
   ) {
     super();
     this.#canvasBuffer = options.canvasBuffer;
@@ -99,7 +99,11 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
   #resolveEraseColor(
     rect: SelectionRect
   ): RGBA {
-    return Select.resolveEraseColor(this.#canvasBuffer, rect, this.#eraseColor);
+    return Select.resolveEraseColor(
+      this.#canvasBuffer,
+      rect,
+      this.#eraseColor
+    );
   }
 
   get rect(): SelectionRect | null {
@@ -182,7 +186,10 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
   #startShapeSelection(
     pos: Vec2
   ): void {
-    const shape = ShapeSelect.compute(this.#canvasBuffer, pos);
+    const shape = ShapeSelect.compute(
+      this.#canvasBuffer,
+      pos
+    );
     if (!shape) {
       return;
     }
@@ -196,7 +203,10 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
       snapshot,
       shape.mask
     );
-    this.#selectionOverlay.drawMask(shape.rect, shape.mask);
+    this.#selectionOverlay.drawMask(
+      shape.rect,
+      shape.mask
+    );
     this.#publishSelectionState();
     // Shape selection has no command, so clear its peer ghost explicitly.
     this.emit("selection-idle");
@@ -259,7 +269,10 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
         this.#canvasBuffer,
         finalRect
       );
-      this.#select.finishCreate(snapshot, finalRect);
+      this.#select.finishCreate(
+        snapshot,
+        finalRect
+      );
       this.#selectionOverlay.drawRect(finalRect);
       this.#publishSelectionState();
       // Creation has no command, so clear its peer ghost explicitly.
@@ -576,7 +589,9 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
       { rect: oldRect, mask: oldMask },
       { rect: newRect, mask: newMask }
     );
-    const beforeColors = this.#canvasBuffer.samplePixels(positions);
+    const beforeColors = this.#canvasBuffer.samplePixels(
+      positions
+    );
 
     if (!skipErase) {
       const eraseColor = this.#resolveEraseColor(oldRect);
@@ -593,7 +608,9 @@ export class SelectController extends Emitter<SelectControllerEvent> implements 
     this.#canvasBuffer.copyToMaster();
 
     // Sampling after repaint still reads the updated buffer state.
-    const afterColors = this.#canvasBuffer.samplePixels(positions);
+    const afterColors = this.#canvasBuffer.samplePixels(
+      positions
+    );
     this.#pipeline.commitSelectionEdit({
       positions,
       beforeColors,
@@ -653,7 +670,10 @@ function* maskedPositions(
   for (let y = 0; y < rect.height; y++) {
     for (let x = 0; x < rect.width; x++) {
       if (mask[(y * rect.width) + x]) {
-        yield { x: rect.x + x, y: rect.y + y };
+        yield {
+          x: rect.x + x,
+          y: rect.y + y
+        };
       }
     }
   }
@@ -666,7 +686,11 @@ function unionMaskedPositions(
   const seen = new Set<string>();
   const result: Vec2[] = [];
 
-  for (const pos of [...maskedPositions(a), ...maskedPositions(b)]) {
+  const positions = [
+    ...maskedPositions(a),
+    ...maskedPositions(b)
+  ];
+  for (const pos of positions) {
     const key = `${pos.x},${pos.y}`;
     if (!seen.has(key)) {
       seen.add(key);

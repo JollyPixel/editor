@@ -3,13 +3,13 @@ export {
   Brush,
   type BrushOptions
 } from "./tools/Brush.ts";
-export type { BrushTool } from "./tools/BrushController.ts";
-export type { FillTool } from "./tools/FillController.ts";
+export type { BrushTool } from "./tools/BrushEngine.ts";
+export type { FillTool } from "./tools/FillEngine.ts";
 export type {
-  SelectControllerEvent,
+  SelectEngineEvent,
   SelectionProgressEvent,
   SelectTool
-} from "./tools/SelectController.ts";
+} from "./tools/SelectEngine.ts";
 export type { Toolset } from "./tools/Tools.ts";
 export {
   PixelArtCanvas,
@@ -128,13 +128,13 @@ export type {
 export { PixelCursorSync } from "./network/PixelCursorSync.ts";
 export type {
   PixelStrokeGhostSyncOptions
-} from "./network/PixelStrokeGhostSync.ts";
-export { PixelStrokeGhostSync } from "./network/PixelStrokeGhostSync.ts";
+} from "./network/ghosts/PixelStrokeGhostSync.ts";
+export { PixelStrokeGhostSync } from "./network/ghosts/PixelStrokeGhostSync.ts";
 export type {
   UVGhostSyncOptions
-} from "./network/UVGhostSync.ts";
-export { UVGhostSync } from "./network/UVGhostSync.ts";
+} from "./network/ghosts/UVGhostSync.ts";
+export { UVGhostSync } from "./network/ghosts/UVGhostSync.ts";
 export type {
   SelectionGhostSyncOptions
-} from "./network/SelectionGhostSync.ts";
-export { SelectionGhostSync } from "./network/SelectionGhostSync.ts";
+} from "./network/ghosts/SelectionGhostSync.ts";
+export { SelectionGhostSync } from "./network/ghosts/SelectionGhostSync.ts";

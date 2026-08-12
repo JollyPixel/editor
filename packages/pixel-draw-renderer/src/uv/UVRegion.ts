@@ -5,51 +5,24 @@ import type {
 import {
   copyGeometry,
   copyRect,
-  geometryAt,
   rectOf
 } from "./geometry.ts";
+import { UVFaceMap } from "./UVFaceMap.ts";
+import {
+  UV_FACES,
+  type UVFace,
+  type UVGeometry,
+  type UVRegionState
+} from "./types.ts";
 
-export type UVFace =
-  | "front"
-  | "back"
-  | "left"
-  | "right"
-  | "top"
-  | "bottom";
-
-export type UVRegionState =
-  | "collapsed"
-  | "uncollapsed";
-
-/**
- * The corner containing the triangle's right angle.
- */
-export type UVTriangleCorner =
-  | "top-left"
-  | "top-right"
-  | "bottom-left"
-  | "bottom-right";
-
-/**
- * A triangular UV occupies three corners of its bounding rect. Keeping the
- * bounds separate lets all existing move and clamp paths stay rect-based.
- */
-export interface UVTriangle {
-  shape: "triangle";
-  rect: SelectionRect;
-  corner: UVTriangleCorner;
-}
-
-export type UVGeometry = SelectionRect | UVTriangle;
-
-export const UV_FACES: readonly UVFace[] = [
-  "front",
-  "back",
-  "left",
-  "right",
-  "top",
-  "bottom"
-];
+export type {
+  UVFace,
+  UVRegionState,
+  UVTriangleCorner,
+  UVTriangle,
+  UVGeometry
+} from "./types.ts";
+export { UV_FACES } from "./types.ts";
 
 interface UVRegionIdentity {
   id: string;
@@ -75,36 +48,10 @@ export interface UVRegionFace {
   geometry: UVGeometry;
 }
 
-function copyFaces(
-  faces: Record<UVFace, UVGeometry>
-): Record<UVFace, UVGeometry> {
-  return {
-    front: copyGeometry(faces.front),
-    back: copyGeometry(faces.back),
-    left: copyGeometry(faces.left),
-    right: copyGeometry(faces.right),
-    top: copyGeometry(faces.top),
-    bottom: copyGeometry(faces.bottom)
-  };
-}
-
 function normalizeActiveFaces(
   activeFaces: readonly UVFace[]
 ): readonly UVFace[] {
   return UV_FACES.filter((face) => activeFaces.includes(face));
-}
-
-function sharedFaces(
-  rect: SelectionRect
-): Record<UVFace, UVGeometry> {
-  return {
-    front: copyRect(rect),
-    back: copyRect(rect),
-    left: copyRect(rect),
-    right: copyRect(rect),
-    top: copyRect(rect),
-    bottom: copyRect(rect)
-  };
 }
 
 /**
@@ -115,7 +62,7 @@ export class UVRegion {
   readonly name?: string;
   readonly color: string;
   readonly state: UVRegionState;
-  readonly #faces: Record<UVFace, UVGeometry>;
+  readonly #faces: UVFaceMap;
   readonly #activeFaces: readonly UVFace[];
   readonly #collapsedRect: SelectionRect | null;
 
@@ -134,7 +81,7 @@ export class UVRegion {
 
     if (data.state === "uncollapsed") {
       this.state = "uncollapsed";
-      this.#faces = copyFaces(data.faces);
+      this.#faces = new UVFaceMap(data.faces);
       this.#activeFaces = normalizeActiveFaces(
         data.activeFaces ?? UV_FACES
       );
@@ -143,8 +90,8 @@ export class UVRegion {
     else {
       this.state = "collapsed";
       this.#faces = data.faces ?
-        copyFaces(data.faces) :
-        sharedFaces(data.rect);
+        new UVFaceMap(data.faces) :
+        UVFaceMap.shared(data.rect);
       this.#activeFaces = normalizeActiveFaces(
         data.activeFaces ?? UV_FACES
       );
@@ -159,15 +106,15 @@ export class UVRegion {
       return copyRect(this.#collapsedRect);
     }
 
-    return rectOf(this.#faces[face]);
+    return rectOf(this.#faces.get(face));
   }
 
   geometryFor(
     face: UVFace
   ): UVGeometry {
-    return copyGeometry(
-      this.#collapsedRect ?? this.#faces[face]
-    );
+    return this.#collapsedRect ?
+      copyGeometry(this.#collapsedRect) :
+      this.#faces.get(face);
   }
 
   facesOf(): UVRegionFace[] {
@@ -175,7 +122,9 @@ export class UVRegion {
       return [
         {
           face: null,
-          geometry: copyRect(this.#collapsedRect!)
+          geometry: copyRect(
+            this.#collapsedRect!
+          )
         }
       ];
     }
@@ -183,7 +132,7 @@ export class UVRegion {
     return this.#activeFaces.map((face) => {
       return {
         face,
-        geometry: copyGeometry(this.#faces[face])
+        geometry: this.#faces.get(face)
       };
     });
   }
@@ -195,10 +144,10 @@ export class UVRegion {
       return this;
     }
 
-    const preferred = this.#faces[face];
+    const preferred = this.#faces.get(face);
     const geometry = "shape" in preferred ?
       this.#activeFaces
-        .map((activeFace) => this.#faces[activeFace])
+        .map((activeFace) => this.#faces.get(activeFace))
         .find((value) => !("shape" in value)) ?? preferred :
       preferred;
 
@@ -208,8 +157,10 @@ export class UVRegion {
       color: this.color,
       state: "collapsed",
       rect: rectOf(geometry),
-      faces: copyFaces(this.#faces),
-      activeFaces: [...this.#activeFaces]
+      faces: this.#faces.toJSON(),
+      activeFaces: [
+        ...this.#activeFaces
+      ]
     });
   }
 
@@ -223,8 +174,10 @@ export class UVRegion {
       name: this.name,
       color: this.color,
       state: "uncollapsed",
-      faces: this.#facesAt(this.#collapsedRect!),
-      activeFaces: [...this.#activeFaces]
+      faces: this.#faces.at(this.#collapsedRect!).toJSON(),
+      activeFaces: [
+        ...this.#activeFaces
+      ]
     });
   }
 
@@ -239,8 +192,10 @@ export class UVRegion {
         color: this.color,
         state: "collapsed",
         rect,
-        faces: copyFaces(this.#faces),
-        activeFaces: [...this.#activeFaces]
+        faces: this.#faces.toJSON(),
+        activeFaces: [
+          ...this.#activeFaces
+        ]
       });
     }
 
@@ -248,9 +203,8 @@ export class UVRegion {
       return this;
     }
 
-    const faces = copyFaces(this.#faces);
-    const previous = faces[face];
-    faces[face] = "shape" in previous ?
+    const previous = this.#faces.get(face);
+    const geometry = "shape" in previous ?
       { ...previous, rect: copyRect(rect) } :
       copyRect(rect);
 
@@ -259,8 +213,10 @@ export class UVRegion {
       name: this.name,
       color: this.color,
       state: "uncollapsed",
-      faces,
-      activeFaces: [...this.#activeFaces]
+      faces: this.#faces.withFace(face, geometry).toJSON(),
+      activeFaces: [
+        ...this.#activeFaces
+      ]
     });
   }
 
@@ -277,8 +233,10 @@ export class UVRegion {
       return {
         ...identity,
         state: "uncollapsed",
-        faces: copyFaces(this.#faces),
-        activeFaces: [...this.#activeFaces]
+        faces: this.#faces.toJSON(),
+        activeFaces: [
+          ...this.#activeFaces
+        ]
       };
     }
 
@@ -288,25 +246,14 @@ export class UVRegion {
       rect: copyRect(this.#collapsedRect!)
     };
     const hasTopology = this.#activeFaces.length !== UV_FACES.length ||
-      UV_FACES.some((face) => "shape" in this.#faces[face]);
+      UV_FACES.some((face) => "shape" in this.#faces.get(face));
     if (hasTopology) {
-      data.faces = copyFaces(this.#faces);
-      data.activeFaces = [...this.#activeFaces];
+      data.faces = this.#faces.toJSON();
+      data.activeFaces = [
+        ...this.#activeFaces
+      ];
     }
 
     return data;
-  }
-
-  #facesAt(
-    rect: SelectionRect
-  ): Record<UVFace, UVGeometry> {
-    return {
-      front: geometryAt(this.#faces.front, rect),
-      back: geometryAt(this.#faces.back, rect),
-      left: geometryAt(this.#faces.left, rect),
-      right: geometryAt(this.#faces.right, rect),
-      top: geometryAt(this.#faces.top, rect),
-      bottom: geometryAt(this.#faces.bottom, rect)
-    };
   }
 }

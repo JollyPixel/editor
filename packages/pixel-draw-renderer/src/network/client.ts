@@ -15,13 +15,13 @@ export type {
 export { PixelCursorSync } from "./PixelCursorSync.ts";
 export type {
   PixelStrokeGhostSyncOptions
-} from "./PixelStrokeGhostSync.ts";
-export { PixelStrokeGhostSync } from "./PixelStrokeGhostSync.ts";
+} from "./ghosts/PixelStrokeGhostSync.ts";
+export { PixelStrokeGhostSync } from "./ghosts/PixelStrokeGhostSync.ts";
 export type {
   UVGhostSyncOptions
-} from "./UVGhostSync.ts";
-export { UVGhostSync } from "./UVGhostSync.ts";
+} from "./ghosts/UVGhostSync.ts";
+export { UVGhostSync } from "./ghosts/UVGhostSync.ts";
 export type {
   SelectionGhostSyncOptions
-} from "./SelectionGhostSync.ts";
-export { SelectionGhostSync } from "./SelectionGhostSync.ts";
+} from "./ghosts/SelectionGhostSync.ts";
+export { SelectionGhostSync } from "./ghosts/SelectionGhostSync.ts";

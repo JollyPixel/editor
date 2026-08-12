@@ -7,7 +7,9 @@ import type {
 
 export interface DefaultPixelBuffer {
   size(): Vec2;
-  resize(size: Vec2): void;
+  resize(
+    size: Vec2
+  ): void;
   pixels(): Uint8ClampedArray;
   replacePixels(
     pixels: Uint8ClampedArray,

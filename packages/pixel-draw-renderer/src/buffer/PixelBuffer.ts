@@ -145,7 +145,9 @@ export class PixelBuffer implements DefaultPixelBuffer {
     this.#masterWidth = size.x;
     this.#masterHeight = size.y;
     this.#masterFill = { ...fillColor };
-    this.#master = new Uint8ClampedArray(size.x * size.y * 4);
+    this.#master = new Uint8ClampedArray(
+      size.x * size.y * 4
+    );
     this.#working = new Uint8ClampedArray(
       size.x * size.y * 4
     );
@@ -163,9 +165,18 @@ export class PixelBuffer implements DefaultPixelBuffer {
       return;
     }
 
-    const width = Math.max(size.x, this.#masterWidth);
-    const height = Math.max(size.y, this.#masterHeight);
-    const next = new Uint8ClampedArray(width * height * 4);
+    const width = Math.max(
+      size.x,
+      this.#masterWidth
+    );
+    const height = Math.max(
+      size.y,
+      this.#masterHeight
+    );
+    const next = new Uint8ClampedArray(
+      width * height * 4
+    );
+
     fillPixels(next, this.#masterFill);
     copyPixelRows(
       this.#master,
@@ -178,6 +189,16 @@ export class PixelBuffer implements DefaultPixelBuffer {
     this.#master = next;
     this.#masterWidth = width;
     this.#masterHeight = height;
+  }
+
+  #isPixelPositionInBounds(
+    x: number,
+    y: number
+  ): boolean {
+    return Number.isInteger(x) &&
+      Number.isInteger(y) &&
+      x >= 0 && x < this.#width &&
+      y >= 0 && y < this.#height;
   }
 
   size(): Vec2 {
@@ -194,7 +215,10 @@ export class PixelBuffer implements DefaultPixelBuffer {
   resize(
     size: Vec2
   ): void {
-    assertSize(size, this.#maxSize);
+    assertSize(
+      size,
+      this.#maxSize
+    );
     this.#ensureMasterSize(size);
 
     const next = new Uint8ClampedArray(
@@ -230,7 +254,9 @@ export class PixelBuffer implements DefaultPixelBuffer {
     this.#width = size.x;
     this.#height = size.y;
     this.#working = new Uint8ClampedArray(expectedLength);
-    this.#working.set(pixels.subarray(0, expectedLength));
+    this.#working.set(
+      pixels.subarray(0, expectedLength)
+    );
     this.#masterWidth = size.x;
     this.#masterHeight = size.y;
     this.#masterFill = { ...kTransparent };
@@ -244,10 +270,7 @@ export class PixelBuffer implements DefaultPixelBuffer {
     const { r, g, b, a } = color;
 
     for (const { x, y } of positions) {
-      if (
-        x < 0 || x >= this.#width ||
-        y < 0 || y >= this.#height
-      ) {
+      if (!this.#isPixelPositionInBounds(x, y)) {
         continue;
       }
 
@@ -328,12 +351,7 @@ export class PixelBuffer implements DefaultPixelBuffer {
     x: number,
     y: number
   ): [number, number, number, number] {
-    if (
-      !Number.isInteger(x) ||
-      !Number.isInteger(y) ||
-      x < 0 || x >= this.#width ||
-      y < 0 || y >= this.#height
-    ) {
+    if (!this.#isPixelPositionInBounds(x, y)) {
       return [0, 0, 0, 0];
     }
 
@@ -353,17 +371,16 @@ export class PixelBuffer implements DefaultPixelBuffer {
   samplePixels(
     positions: Vec2[]
   ): RGBA[] {
-    const colors: RGBA[] = new Array(positions.length);
+    const colors: RGBA[] = new Array(
+      positions.length
+    );
 
     for (let i = 0; i < positions.length; i++) {
       const { x, y } = positions[i];
-      if (
-        !Number.isInteger(x) ||
-        !Number.isInteger(y) ||
-        x < 0 || x >= this.#width ||
-        y < 0 || y >= this.#height
-      ) {
-        colors[i] = { ...kTransparent };
+      if (!this.#isPixelPositionInBounds(x, y)) {
+        colors[i] = {
+          ...kTransparent
+        };
         continue;
       }
 
