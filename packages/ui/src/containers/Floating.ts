@@ -14,16 +14,26 @@ import {
 // Import Internal Dependencies
 import { emitContainerEvent } from "./events.ts";
 import { floatingStyles } from "./Floating.styles.ts";
-import { type PaneElement } from "./Pane.ts";
+import {
+  isPane,
+  type PaneDragDetail,
+  type PaneElement
+} from "./Pane.ts";
 import {
   forwardResizeEvents,
   installResizeCursorStyles
 } from "./resize.ts";
-import { isDocumentOrShadowRoot } from "../dom.ts";
-import { clampToViewport } from "../numeric/clampToViewport.ts";
+import {
+  isDocumentOrShadowRoot
+} from "../dom.ts";
+import { startDragSession } from "../interaction/drag/DragSession.ts";
+import { clampToViewport } from "../geometry/clampToViewport.ts";
 import { LocalStorageAdapter } from "../storage/LocalStorageAdapter.ts";
+import { PersistedState } from "../storage/PersistedState.ts";
 import type { StorageAdapter } from "../storage/StorageAdapter.ts";
+import { deriveKey } from "../storage/keys.ts";
 
+// CONSTANTS
 const kRootStack = new WeakMap<Document | ShadowRoot, number>();
 const kOwnedZIndex = "var(--jolly-floating-stack)";
 
@@ -51,6 +61,13 @@ export class Floating extends LitElement {
   @property({ type: Number, attribute: "min-height" })
   declare minHeight: number;
 
+  /**
+   * Ghosts the window while a layout drags it, so what it passes over stays
+   * visible. Set by whoever runs the drag, not by the author.
+   */
+  @property({ type: Boolean, reflect: true })
+  declare dragging: boolean;
+
   @property({ type: String, attribute: "storage-key" })
   declare storageKey: string;
 
@@ -68,13 +85,31 @@ export class Floating extends LitElement {
 
   #resizeHandles: ResizeHandle[] = [];
   #removeResizeListeners: Array<() => void> = [];
-  #moveHandle: HTMLElement | null = null;
-  #pointerId: number | null = null;
-  #startX = 0;
-  #startY = 0;
-  #startClientX = 0;
-  #startClientY = 0;
   #ownsZIndex = false;
+  #managed = false;
+  #state = new PersistedState(this, {
+    isManaged: () => this.#managed,
+    namespace: () => this.#namespace(),
+    storage: () => this.storage,
+    onManagedWrite: () => {
+      emitContainerEvent(this, "jolly-layout-dirty", undefined);
+    }
+  });
+
+  /**
+   * True inside a `jolly-dock-layout`, which then owns movement and
+   * persistence so a drag can also end in a dock.
+   */
+  get managed(): boolean {
+    return this.#managed;
+  }
+
+  /**
+   * Identity used by the layout snapshot, taken from the pane it holds.
+   */
+  get layoutKey(): string {
+    return this.pane()?.layoutKey ?? deriveKey("jolly-floating", "");
+  }
 
   constructor() {
     super();
@@ -85,14 +120,20 @@ export class Floating extends LitElement {
     this.height = 360;
     this.minWidth = 160;
     this.minHeight = 80;
+    this.dragging = false;
     this.storageKey = "";
     this.storage = new LocalStorageAdapter();
   }
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.#managed = this.closest("jolly-dock-layout") !== null;
+  }
+
   override render(): TemplateResult {
     return html`
-      <div class="content">
-        <slot @slotchange=${this.#connectMoveHandle}></slot>
+      <div class="content" @jolly-pane-drag=${this.#onPaneDrag}>
+        <slot></slot>
       </div>
       <div
         class="resize-handle right"
@@ -108,18 +149,19 @@ export class Floating extends LitElement {
   }
 
   protected override firstUpdated(): void {
-    this.#restore();
+    if (!this.#managed) {
+      this.#restore();
+    }
     this.#applyGeometry();
     this.#connectResizeHandles();
-    this.#connectMoveHandle();
     this.addEventListener("pointerdown", this.#raise);
     this.addEventListener("focusin", this.#raise);
     this.ownerDocument.defaultView?.addEventListener(
       "resize",
-      this.#clamp
+      this.clampToView
     );
     installResizeCursorStyles(this.ownerDocument);
-    this.#clamp();
+    this.clampToView();
   }
 
   protected override updated(
@@ -144,15 +186,115 @@ export class Floating extends LitElement {
 
   override disconnectedCallback(): void {
     this.#disconnectResizeHandles();
-    this.#disconnectMoveHandle();
     this.removeEventListener("pointerdown", this.#raise);
     this.removeEventListener("focusin", this.#raise);
     this.ownerDocument.defaultView?.removeEventListener(
       "resize",
-      this.#clamp
+      this.clampToView
     );
     super.disconnectedCallback();
   }
+
+  /**
+   * The pane this window holds, if any.
+   */
+  pane(): PaneElement | null {
+    const children = this.hasUpdated ?
+      this._slot.assignedElements({ flatten: true }) :
+      [...this.children];
+
+    return children.find(isPane) ?? null;
+  }
+
+  /**
+   * Places the window at a viewport position, clamped to stay reachable.
+   */
+  moveTo(
+    x: number,
+    y: number
+  ): void {
+    this.x = x;
+    this.y = y;
+    this.clampToView();
+  }
+
+  /**
+   * Brings the window above its siblings in the same root.
+   */
+  raise(): void {
+    this.#raise();
+  }
+
+  clampToView = () => {
+    const rect = this.getBoundingClientRect();
+    const view = this.ownerDocument.defaultView;
+    if (view === null) {
+      return;
+    }
+
+    const position = clampToViewport({
+      x: this.x,
+      y: this.y,
+      rect,
+      viewport: {
+        width: view.innerWidth,
+        height: view.innerHeight
+      }
+    });
+    this.x = position.x;
+    this.y = position.y;
+  };
+
+  /**
+   * Moves the window from its pane header when no layout owns the gesture.
+   *
+   * A managed window ignores this: the layout runs the session instead, so
+   * the same drag can end in a dock rather than only somewhere else on screen.
+   */
+  #onPaneDrag = (
+    event: CustomEvent<PaneDragDetail>
+  ) => {
+    if (this.#managed) {
+      return;
+    }
+
+    event.stopPropagation();
+    const { detail } = event;
+    const startX = this.x;
+    const startY = this.y;
+    const originX = detail.event.clientX;
+    const originY = detail.event.clientY;
+    this.#raise();
+
+    startDragSession({
+      source: detail.pane,
+      event: detail.event,
+      handle: detail.handle,
+      ghostLabel: detail.pane.heading,
+      visuals: false,
+      zones: () => [],
+      onPreview: (result) => {
+        this.moveTo(
+          startX + result.x - originX,
+          startY + result.y - originY
+        );
+        emitContainerEvent(this, "jolly-move", {
+          x: this.x,
+          y: this.y
+        });
+      },
+      onCommit: () => {
+        this.#persist();
+        emitContainerEvent(this, "jolly-move-end", {
+          x: this.x,
+          y: this.y
+        });
+      },
+      onCancel: () => {
+        this.moveTo(startX, startY);
+      }
+    });
+  };
 
   #connectResizeHandles(): void {
     if (!this.hasUpdated) {
@@ -178,7 +320,7 @@ export class Floating extends LitElement {
         () => this.#resizeDetail(),
         () => {
           this.#readSize();
-          this.#clamp();
+          this.clampToView();
           this.#persist();
         }
       ));
@@ -206,123 +348,7 @@ export class Floating extends LitElement {
 
   #onResize = () => {
     this.#readSize();
-    this.#clamp();
-  };
-
-  #connectMoveHandle = () => {
-    this.#disconnectMoveHandle();
-    const pane = this._slot.assignedElements({ flatten: true })
-      .find((element): element is PaneElement => element.tagName === "JOLLY-PANE");
-    this.#moveHandle = pane?.renderRoot.querySelector<HTMLElement>(
-      ".header .title"
-    ) ?? null;
-    this.#moveHandle?.addEventListener("pointerdown", this.#onMoveStart);
-    if (this.#moveHandle !== null) {
-      this.#moveHandle.style.cursor = "move";
-      this.#moveHandle.style.touchAction = "none";
-    }
-  };
-
-  #disconnectMoveHandle(): void {
-    this.#moveHandle?.removeEventListener("pointerdown", this.#onMoveStart);
-    this.#moveHandle = null;
-  }
-
-  #onMoveStart = (
-    event: PointerEvent
-  ) => {
-    if (
-      event.button !== 0 ||
-      this.#pointerId !== null ||
-      this.#moveHandle === null
-    ) {
-      return;
-    }
-
-    event.preventDefault();
-    this.#raise();
-    this.#pointerId = event.pointerId;
-    this.#startX = this.x;
-    this.#startY = this.y;
-    this.#startClientX = event.clientX;
-    this.#startClientY = event.clientY;
-    this.#moveHandle.setPointerCapture(event.pointerId);
-    this.#moveHandle.addEventListener(
-      "pointermove",
-      this.#onMove
-    );
-    this.#moveHandle.addEventListener(
-      "pointerup",
-      this.#onMoveEnd
-    );
-    this.#moveHandle.addEventListener(
-      "pointercancel",
-      this.#onMoveEnd
-    );
-  };
-
-  #onMove = (
-    event: PointerEvent
-  ) => {
-    if (event.pointerId !== this.#pointerId) {
-      return;
-    }
-
-    this.x = this.#startX + event.clientX - this.#startClientX;
-    this.y = this.#startY + event.clientY - this.#startClientY;
-    this.#clamp();
-    emitContainerEvent(this, "jolly-move", {
-      x: this.x,
-      y: this.y
-    });
-  };
-
-  #onMoveEnd = (
-    event: PointerEvent
-  ) => {
-    if (event.pointerId !== this.#pointerId || this.#moveHandle === null) {
-      return;
-    }
-
-    this.#moveHandle.releasePointerCapture(event.pointerId);
-    this.#moveHandle.removeEventListener(
-      "pointermove",
-      this.#onMove
-    );
-    this.#moveHandle.removeEventListener(
-      "pointerup",
-      this.#onMoveEnd
-    );
-    this.#moveHandle.removeEventListener(
-      "pointercancel",
-      this.#onMoveEnd
-    );
-    this.#pointerId = null;
-    this.#persist();
-    emitContainerEvent(this, "jolly-move-end", {
-      x: this.x,
-      y: this.y
-    });
-  };
-
-  #clamp = () => {
-    const rect = this.getBoundingClientRect();
-    const view = this.ownerDocument.defaultView;
-    if (view === null) {
-      return;
-    }
-
-    const position = clampToViewport({
-      x: this.x,
-      y: this.y,
-      rect,
-      viewport: {
-        width: view.innerWidth,
-        height: view.innerHeight
-      }
-    });
-    this.x = position.x;
-    this.y = position.y;
+    this.clampToView();
   };
 
   #raise = () => {
@@ -341,7 +367,10 @@ export class Floating extends LitElement {
       : this.ownerDocument;
     const next = (kRootStack.get(root) ?? 0) + 1;
     kRootStack.set(root, next);
-    this.style.setProperty("--jolly-floating-stack", String(next));
+    this.style.setProperty(
+      "--jolly-floating-stack",
+      String(next)
+    );
     this.style.zIndex = kOwnedZIndex;
     this.#ownsZIndex = true;
   };
@@ -362,9 +391,7 @@ export class Floating extends LitElement {
   #restore(): void {
     const values = ["x", "y", "width", "height"] as const;
     for (const key of values) {
-      const stored = this.storage.get(
-        `${this.#namespace()}:${key}`
-      );
+      const stored = this.#state.read(key);
       if (stored === null) {
         continue;
       }
@@ -377,22 +404,10 @@ export class Floating extends LitElement {
   }
 
   #persist(): void {
-    this.storage.set(
-      `${this.#namespace()}:x`,
-      String(this.x)
-    );
-    this.storage.set(
-      `${this.#namespace()}:y`,
-      String(this.y)
-    );
-    this.storage.set(
-      `${this.#namespace()}:width`,
-      String(this.width)
-    );
-    this.storage.set(
-      `${this.#namespace()}:height`,
-      String(this.height)
-    );
+    const values = ["x", "y", "width", "height"] as const;
+    for (const key of values) {
+      this.#state.write(key, String(this[key]));
+    }
   }
 
   #resizeDetail() {
@@ -410,11 +425,9 @@ export class Floating extends LitElement {
       return this.storageKey;
     }
 
-    const pane = this.querySelector("jolly-pane");
-    const title = pane?.title ?? "untitled";
     const path = globalThis.location?.pathname ?? "";
 
-    return `${path}:jolly-floating:${title}`;
+    return `${path}:jolly-floating:${this.layoutKey}`;
   }
 }
 

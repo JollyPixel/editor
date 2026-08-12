@@ -9,6 +9,10 @@ import { property } from "lit/decorators.js";
 
 // Import Internal Dependencies
 import { fieldStyles } from "./JollyField.styles.ts";
+import {
+  DraftController,
+  type DraftResult
+} from "./DraftController.ts";
 import { emitFieldEvent } from "./events.ts";
 import {
   isModified,
@@ -20,6 +24,7 @@ import {
   type FieldValue
 } from "./mixed.ts";
 import type { CollaboratorPresence } from "../collab/types.ts";
+import { resolveThemeToken } from "../theme/resolveThemeToken.ts";
 
 // Registers the icon used by the revert gutter.
 import "../icon/Icon.ts";
@@ -33,6 +38,8 @@ const kWarned = new Set<string>();
  * direction rather than naming a physical side.
  */
 export type FieldAlign = "start" | "end";
+
+export type { DraftResult } from "./DraftController.ts";
 
 /**
  * Shared field chrome. Subclasses render only the value area.
@@ -80,8 +87,7 @@ export abstract class JollyField<TValue> extends LitElement {
   @property({ type: String, reflect: true })
   declare align: FieldAlign;
 
-  #draft: string | null = null;
-  #parseError: string | null = null;
+  #draft = new DraftController<TValue>(this);
 
   constructor() {
     super();
@@ -146,7 +152,7 @@ export abstract class JollyField<TValue> extends LitElement {
   }
 
   protected get draft(): string | null {
-    return this.#draft;
+    return this.#draft.draft;
   }
 
   /**
@@ -155,31 +161,46 @@ export abstract class JollyField<TValue> extends LitElement {
   protected setDraft(
     text: string | null
   ): void {
-    if (this.#draft === text) {
-      return;
-    }
-
-    this.#draft = text;
-    this.requestUpdate();
+    this.#draft.setDraft(text);
   }
 
   protected setParseError(
     message: string | null
   ): void {
-    if (this.#parseError === message) {
-      return;
-    }
-
-    this.#parseError = message;
-    this.requestUpdate();
+    this.#draft.setError(message);
   }
 
   /**
    * Clears the draft and parse error.
    */
   protected clearDraft(): void {
-    this.setDraft(null);
-    this.setParseError(null);
+    this.#draft.clear();
+  }
+
+  /** Updates a text input draft and clears an earlier local parse error. */
+  protected onDraftInput(
+    event: Event
+  ): void {
+    this.#draft.onInput(event);
+  }
+
+  /** Handles the standard Enter and Escape draft lifecycle. */
+  protected onDraftKeyDown(
+    event: KeyboardEvent,
+    commit: () => void
+  ): void {
+    this.#draft.onKeyDown(event, commit);
+  }
+
+  /** Commits a draft through a control-specific parser. */
+  protected commitDraft(
+    parse: (text: string) => DraftResult<TValue> | null
+  ): void {
+    this.#draft.commit(
+      parse,
+      this.editable,
+      (value) => this.emitChange(value)
+    );
   }
 
   protected emitInput(
@@ -242,26 +263,43 @@ export abstract class JollyField<TValue> extends LitElement {
   protected override willUpdate(): void {
     const holder = this.holder;
 
-    this.toggleAttribute("locked", holder !== null);
-    this.toggleAttribute("mixed", this.mixed);
+    this.toggleAttribute(
+      "locked",
+      holder !== null
+    );
+    this.toggleAttribute(
+      "mixed",
+      this.mixed
+    );
     this.toggleAttribute(
       "modified",
       this.modified
     );
-    this.toggleAttribute("invalid", this.displayError !== null);
-    this.toggleAttribute("scrubbable", this.scrubbable);
+    this.toggleAttribute(
+      "invalid",
+      this.displayError !== null
+    );
+    this.toggleAttribute(
+      "scrubbable",
+      this.scrubbable
+    );
 
     /* Exposes the lock color to host and subclass styles. */
     if (holder === null) {
-      this.style.removeProperty("--jolly-locked-ring");
+      this.style.removeProperty(
+        "--jolly-locked-ring"
+      );
     }
     else {
-      this.style.setProperty("--jolly-locked-ring", holder.color);
+      this.style.setProperty(
+        "--jolly-locked-ring",
+        holder.color
+      );
     }
   }
 
   protected get displayError(): string | null {
-    return this.#parseError ?? this.error;
+    return this.#draft.error ?? this.error;
   }
 
   override render(): TemplateResult {
@@ -398,9 +436,7 @@ export abstract class JollyField<TValue> extends LitElement {
       return;
     }
 
-    const resolved = getComputedStyle(this)
-      .getPropertyValue("--jolly-surface")
-      .trim();
+    const resolved = resolveThemeToken(this, "--jolly-surface");
 
     if (resolved === "") {
       kWarned.add(tag);

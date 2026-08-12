@@ -4,8 +4,8 @@ Shared API for the field controls listed in [controls.md](./controls.md).
 
 ## Controlled values
 
-Fields render `value` and emit changes; they do not update `value` themselves. Write the emitted
-value back to keep the control controlled.
+Fields render `value` and emit changes; they do not update `value` themselves. Write emitted
+values back to keep a field controlled:
 
 ```ts
 const field = document.createElement("jolly-number");
@@ -21,77 +21,42 @@ field.addEventListener("jolly-change", (event) => {
 |---|---|---|
 | `label` | `string` | Row label |
 | `description` | `string` | Help text |
-| `value` | `T \| typeof Mixed` | Current value or mixed value |
-| `default` | `T \| undefined` | Value used by the revert affordance |
-| `error` | `string \| null` | Consumer-provided validation message |
-| `disabled` | `boolean` | Disables and removes from tab order |
-| `readonly` | `boolean` | Prevents editing while remaining focusable |
-| `colored` | `boolean` | Uses the primary accent for supported controls and the modified indicator, default `false` |
-| `lockedBy` | `CollaboratorPresence \| null` | Collaborator holding the field |
-| `peers` | `CollaboratorPresence[]` | Collaborators shown on the field |
-| `align` | `"start" \| "end"` | Which edge the value sits against, default `"start"` |
+| `value` | `T \| typeof Mixed` | Current or mixed value |
+| `default` | `T \| undefined` | Revert value |
+| `error` | `string \| null` | Validation message |
+| `disabled` | `boolean` | Disabled and removed from tab order |
+| `readonly` | `boolean` | Focusable but not editable |
+| `colored` | `boolean` | Uses the primary accent |
+| `lockedBy` | `CollaboratorPresence \| null` | Current lock holder |
+| `peers` | `CollaboratorPresence[]` | Visible collaborators |
+| `align` | `"start" \| "end"` | Value alignment, default `"start"` |
 
-Set `align="end"` on numeric and monitor-style rows, where trailing alignment lines the digits up
-down the pane:
-
-```html
-<jolly-number label="Position X" align="end"></jolly-number>
-```
-
-`value`, `default`, `lockedBy` and `peers` are properties, not attributes.
-
-Checkboxes, sliders and flags use muted gray paint in the light theme and near-white paint in the
-dark theme by default. Set `colored` to opt them into the primary accent. The modified indicator
-at the leading edge follows the same mode on every field:
-
-```html
-<jolly-slider label="Opacity" colored></jolly-slider>
-```
+`value`, `default`, `lockedBy`, and `peers` are properties, not attributes. Use
+`align="end"` for numeric or monitor-style rows. Set `colored` when a supported control should
+use the primary accent.
 
 ## Events
 
 | Event | Detail | When |
 |---|---|---|
-| `jolly-input` | `{ value }` | During continuous interaction |
-| `jolly-change` | `{ value }` | On commit |
+| `jolly-input` | `{ value }` | Continuous interaction |
+| `jolly-change` | `{ value }` | Commit |
 
-Both events bubble and cross shadow boundaries. They are not cancelable. Controls without a
-continuous interaction emit only `jolly-change`; see [controls.md](./controls.md) for details.
+Both events bubble, cross shadow boundaries, and are not cancelable. Controls without continuous
+interaction emit only `jolly-change`. Reverting emits `jolly-change` with `default`.
 
-Reverting also emits `jolly-change` with `default`.
+## Editing and states
 
-## Editing
+Text controls keep an internal draft. Enter and blur commit it; Escape discards it. An external
+`value` update does not replace the visible draft while the field has focus.
 
-Text controls keep an internal draft while editing:
-
-- `Enter` commits.
-- `Escape` discards the draft.
-- `Blur` commits.
-
-While focused, the draft remains visible when an external `value` changes.
-
-## States
-
-Fields can combine these states:
-
-| State | Representation |
-|---|---|
-| `disabled` | Disabled, not focusable |
-| `readonly` | Focusable but not editable |
-| `locked` | Focusable, not editable, with collaborator indicator |
-| `mixed` | Dash placeholder or indeterminate state |
-| `modified` | Neutral leading bar, or accent-colored when `colored`, with an always-visible muted revert affordance |
-| `invalid` | Error tint and message |
-| `peers` | Collaborator chips |
-
-`disabled`, `readonly`, `colored`, `locked`, `mixed`, `modified` and `invalid` are reflected
-attributes for styling. `disabled`, `readonly` and `lockedBy` can be combined.
-Locked fields add 2px of tinted padding above and below the input. The input remains fully inside
-the background, and the leading ownership bar continues across the full padded row height.
+Fields can be disabled, readonly, locked, mixed, modified, invalid, or show peers. Their state
+attributes are reflected for styling. A locked field remains focusable but cannot be edited;
+`disabled`, `readonly`, and `lockedBy` can be combined.
 
 ## Mixed values
 
-`Mixed` represents different values across a multi-selection.
+`Mixed` represents different values across a multi-selection:
 
 ```ts
 import { Mixed, isMixed } from "@jolly-pixel/ui";
@@ -99,8 +64,8 @@ import { Mixed, isMixed } from "@jolly-pixel/ui";
 field.value = Mixed;
 ```
 
-Gestures that require a starting value are unavailable while mixed. Typing and committed keyboard
-input can still replace the mixed value. `isMixed()` tests for the sentinel.
+Controls that need a starting value disable those gestures while mixed. Typing and committed
+keyboard input can replace it. Use `isMixed()` to test the sentinel.
 
 ## Collaboration
 
@@ -109,29 +74,12 @@ input can still replace the mixed value. `isMixed()` tests for the sentinel.
 ```ts
 import { peerColor } from "@jolly-pixel/ui";
 
-field.peers = [
-  { clientId: "a1", displayName: "Ada", color: peerColor(0) }
-];
+field.peers = [{ clientId: "a1", displayName: "Ada", color: peerColor(0) }];
 field.lockedBy = field.peers[0];
 ```
 
 ## Theming
 
-Fields consume tokens from a scope host that includes `themeStyles`. Set `--jolly-label-width` on
-an ancestor to align labels:
-
-```css
-.pane { --jolly-label-width: 8ch; }
-```
-
-Choose a width that fits the longest label plus a little breathing room. For example, the Step
-Sizes gallery uses `10ch` so labels from `step 1` through `step 0.01` share one stable column.
-
-Set `--jolly-field-trailing-width` when stacked fields need the same value edge despite optional
-revert and presence chrome:
-
-```css
-.pane { --jolly-field-trailing-width: 48px; }
-```
-
-See [theming.md](./theming.md).
+Fields consume tokens from a scope host with `themeStyles`. Set `--jolly-label-width` to align
+labels and `--jolly-field-trailing-width` to reserve a stable trailing column. See
+[theming.md](./theming.md).

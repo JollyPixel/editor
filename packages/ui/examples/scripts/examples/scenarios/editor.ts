@@ -109,17 +109,30 @@ function mountEditor(
   shell.className = "editor-shell";
   shell.append(
     buildRail(),
-    buildOutliner(options),
+    buildOutliner(),
     buildStage(options),
     buildInspector(options)
   );
 
-  const palette = buildPalette(options);
-  host.append(shell, palette);
+  /*
+   * A layout owns both docks and the floating palette, which is what makes the
+   * Brush window dockable into the Outliner or the Inspector and draggable back
+   * out again. It renders "display: contents", so wrapping the shell in it
+   * changes nothing about how the editor is laid out. It also takes over
+   * persistence from the containers below it, hence the single storage key
+   * here and none on the dock or the window.
+   *
+   * Both docks pack their panes to the top rather than sharing themselves out
+   * evenly, which is what gave the small Brush window half a dock's height
+   * whatever was in it once it was docked.
+   */
+  const layout = document.createElement("jolly-dock-layout");
+  layout.storageKey = storageKey(options, "layout");
+  layout.append(shell, buildPalette());
+  host.append(layout);
 
   return () => {
-    shell.remove();
-    palette.remove();
+    layout.remove();
   };
 }
 
@@ -149,10 +162,13 @@ function bind<
  * A pane whose fields share one label column.
  */
 function labelledPane(
+  key: string,
   title: string
 ): HTMLElementTagNameMap["jolly-pane"] {
   const pane = document.createElement("jolly-pane");
-  pane.title = title;
+  pane.key = key;
+  pane.heading = title;
+  pane.collapsible = true;
   pane.style.setProperty("--jolly-label-width", kLabelWidth);
 
   return pane;
@@ -182,15 +198,15 @@ function buildRail(): HTMLElementTagNameMap["jolly-rail"] {
   return rail;
 }
 
-function buildOutliner(
-  options: EditorScenarioOptions
-): HTMLElementTagNameMap["jolly-dock"] {
+function buildOutliner(): HTMLElementTagNameMap["jolly-dock"] {
   const dock = document.createElement("jolly-dock");
   dock.side = "left";
+  dock.key = "outliner";
+  dock.align = "start";
   dock.collapsible = true;
-  dock.storageKey = storageKey(options, "outliner");
 
-  const pane = labelledPane("Outliner");
+  const pane = labelledPane("outliner", "Outliner");
+  pane.grow = false;
 
   const scene = document.createElement("jolly-folder");
   scene.label = "Scene";
@@ -288,8 +304,9 @@ function buildInspector(
 ): HTMLElementTagNameMap["jolly-dock"] {
   const dock = document.createElement("jolly-dock");
   dock.side = "right";
+  dock.key = "inspector";
+  dock.align = "start";
   dock.collapsible = true;
-  dock.storageKey = storageKey(options, "inspector");
   dock.style.setProperty(
     "--jolly-field-trailing-width",
     kFieldTrailingWidth
@@ -304,7 +321,8 @@ function buildInspector(
     dock.style.setProperty("--jolly-gutter-width", "14px");
   }
 
-  const pane = labelledPane("Inspector");
+  const pane = labelledPane("inspector", "Inspector");
+  pane.grow = false;
   pane.append(
     buildTransform(options),
     buildMaterial(options),
@@ -482,16 +500,17 @@ function buildPhysics(
   return folder;
 }
 
-function buildPalette(
-  options: EditorScenarioOptions
-): HTMLElementTagNameMap["jolly-floating"] {
+function buildPalette(): HTMLElementTagNameMap["jolly-floating"] {
   const floating = document.createElement("jolly-floating");
-  // Over the viewport, so it never starts on top of either dock.
-  floating.x = 820;
+  // Over the viewport, so it never starts on top of either dock. Sized, since
+  // a window that can be docked can also be dragged back out, and the size it
+  // comes back at is the one it was given here.
+  floating.x = 560;
   floating.y = 96;
-  floating.storageKey = storageKey(options, "palette");
+  floating.width = 260;
+  floating.height = 232;
 
-  const pane = labelledPane("Brush");
+  const pane = labelledPane("brush", "Brush");
   pane.style.setProperty(
     "--jolly-field-trailing-width",
     kFieldTrailingWidth

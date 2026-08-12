@@ -15,6 +15,7 @@ import {
 import { dialogStyles } from "./Dialog.styles.ts";
 import { emitContainerEvent } from "./events.ts";
 import { themeStyles } from "../theme/themeStyles.ts";
+import { resolveThemeToken } from "../theme/resolveThemeToken.ts";
 import type { ThemeMode } from "../theme/types.ts";
 
 type ResolvedThemeMode = Exclude<ThemeMode, "auto">;
@@ -27,7 +28,7 @@ export class Dialog extends LitElement {
   ];
 
   @property({ type: String })
-  declare title: string;
+  declare heading: string;
 
   @property({ type: Boolean })
   declare dismissible: boolean;
@@ -40,7 +41,7 @@ export class Dialog extends LitElement {
   constructor() {
     super();
 
-    this.title = "";
+    this.heading = "";
     this.dismissible = true;
   }
 
@@ -55,7 +56,7 @@ export class Dialog extends LitElement {
         @click=${this.#onBackdropClick}
         @close=${this.#onClose}
       >
-        ${this.title === "" ? nothing : html`<header>${this.title}</header>`}
+        ${this.heading === "" ? nothing : html`<header>${this.heading}</header>`}
         <div class="body"><slot></slot></div>
         <footer><slot name="actions"></slot></footer>
       </dialog>
@@ -154,9 +155,7 @@ function inheritedThemeMode(
   const parent = dialog.parentElement;
   if (parent !== null) {
     const parentStyle = getComputedStyle(parent);
-    const carriesTheme = parentStyle
-      .getPropertyValue("--jolly-surface")
-      .trim() !== "";
+    const carriesTheme = resolveThemeToken(parent, "--jolly-surface") !== "";
     if (carriesTheme) {
       const mode = themeModeOf(parentStyle);
       if (mode !== null) {

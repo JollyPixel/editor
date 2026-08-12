@@ -78,12 +78,85 @@ export const paneStyles = css`
     white-space: nowrap;
   }
 
+  :host([movable]) .header {
+    cursor: move;
+    touch-action: none;
+  }
+
+  /* The source keeps its slot while a drag previews where it would land. */
+  :host([dragging]) {
+    opacity: 0.4;
+  }
+
+  :host([collapsed]) .content {
+    display: none;
+  }
+
   .actions {
     position: relative;
     z-index: 1;
     display: flex;
     align-items: center;
     gap: var(--jolly-space-1, 4px);
+  }
+
+  .fold,
+  .grip {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--jolly-radius-sm, 3px);
+    background: none;
+    color: inherit;
+    opacity: 0.75;
+  }
+
+  .fold:hover,
+  .grip:hover {
+    background: rgb(255 255 255 / 0.15);
+    opacity: 1;
+  }
+
+  .fold:focus-visible,
+  .grip:focus-visible {
+    outline: 2px solid var(--jolly-focus-ring, ${kFallback.focusRing});
+    outline-offset: 1px;
+  }
+
+  .grip {
+    cursor: grab;
+    touch-action: none;
+  }
+
+  .grip[aria-pressed="true"] {
+    background: rgb(255 255 255 / 0.25);
+    opacity: 1;
+  }
+
+  .chevron {
+    transition: transform var(--jolly-duration-base, 160ms)
+      var(--jolly-easing, ease);
+  }
+
+  /*
+   * Down when open and right when shut, which is how a folder turns. The two
+   * fold the same way, so their chevrons have to point the same way too.
+   */
+  :host(:not([collapsed])) .chevron {
+    transform: rotate(90deg);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .chevron {
+      transition: none;
+    }
   }
 
   .content {

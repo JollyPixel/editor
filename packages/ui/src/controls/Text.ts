@@ -13,7 +13,7 @@ import {
 import { JollyField } from "../field/JollyField.ts";
 import { MIXED_PLACEHOLDER } from "../field/mixed.ts";
 import { isInputElement } from "../dom.ts";
-import { PointerFocusController } from "../interaction/PointerFocusController.ts";
+import { PointerFocusController } from "../field/PointerFocusController.ts";
 
 /**
  * Text field with streamed input and committed changes.

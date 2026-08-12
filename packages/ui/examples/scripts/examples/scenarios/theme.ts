@@ -2,9 +2,9 @@
 import type { GalleryExample } from "../../types.ts";
 import type { ThemeMode } from "../../../../src/index.ts";
 import {
-  createScopeHost,
+  createScopedHost,
   caption
-} from "./scopeHost.ts";
+} from "../shared/scopedHost.ts";
 
 // CONSTANTS
 const kThemes: ThemeMode[] = [
@@ -45,7 +45,7 @@ export const THEME_EXAMPLE: GalleryExample = {
 function buildPane(
   theme: ThemeMode
 ): HTMLElement {
-  const { host, content } = createScopeHost({
+  const { host, content } = createScopedHost({
     theme
   });
 

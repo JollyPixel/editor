@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
   LitElement,
+  css,
   html,
   type TemplateResult
 } from "lit";
@@ -9,16 +10,30 @@ import {
   property
 } from "lit/decorators.js";
 
-// Import Internal Dependencies
-import { toolbarStyles } from "./Toolbar.styles.ts";
-
 export type ToolbarOrientation = "horizontal" | "vertical";
 
 @customElement("jolly-toolbar")
 export class Toolbar extends LitElement {
-  static override styles = [
-    toolbarStyles
-  ];
+  static override styles = css`
+    :host,
+    div {
+      display: flex;
+      align-items: center;
+      gap: var(--jolly-space-1, 4px);
+    }
+
+    :host {
+      min-width: 0;
+      color: var(--jolly-text);
+      font: inherit;
+    }
+
+    :host([orientation="vertical"]),
+    :host([orientation="vertical"]) div {
+      align-items: stretch;
+      flex-direction: column;
+    }
+  `;
 
   @property({ type: String, reflect: true })
   declare orientation: ToolbarOrientation;

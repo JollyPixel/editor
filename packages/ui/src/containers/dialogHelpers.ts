@@ -32,7 +32,7 @@ export function showPrompt({
   cancelLabel = "Cancel"
 }: PromptOptions): Promise<string | null> {
   const dialog = new Dialog();
-  dialog.title = title;
+  dialog.heading = title;
 
   let value = defaultValue;
   const field = new Text();
@@ -83,7 +83,7 @@ export function showConfirm({
   danger = false
 }: ConfirmOptions): Promise<boolean> {
   const dialog = new Dialog();
-  dialog.title = title;
+  dialog.heading = title;
 
   const content = document.createElement("p");
   content.textContent = message;

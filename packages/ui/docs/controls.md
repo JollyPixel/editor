@@ -1,16 +1,12 @@
 # Controls
 
-The package provides thirteen custom elements. Nine are fields and share the contract in
-[fields.md](./fields.md); the remaining elements are layout, action or panel components.
-
-All tags are included in `HTMLElementTagNameMap`.
+Nine controls are fields and share the contract in [fields.md](./fields.md). The others are action
+or layout elements. All tags are included in `HTMLElementTagNameMap`.
 
 ## Anchored popups
 
-`PopoverController` places a native popover against a trigger. The host renders the popup and the
-trigger declaratively, so the platform supplies the top layer, light dismiss and Escape; the
-controller adds anchored placement, repositioning while open, focus restoration, and an `onCancel`
-hook for hosts that treat Escape as a cancel.
+`PopoverController` adds anchored placement, repositioning, focus restoration, and optional Escape
+cancellation to a native popover:
 
 ```ts
 #popup = new PopoverController(this, {
@@ -19,33 +15,18 @@ hook for hosts that treat Escape as a cancel.
 });
 ```
 
-```html
-<button popovertarget="panel"></button>
-<div id="panel" popover
-  @beforetoggle=${this.#popup.onBeforeToggle}
-  @toggle=${this.#popup.onToggle}
-></div>
-```
-
-It knows nothing about what the popup contains. `jolly-color` is one consumer; an editor wanting a
-brush swatch that opens `jolly-color-picker` with no property row is another, and composes the two
-directly rather than reaching for `jolly-color`.
+It does not constrain popup content. `jolly-color` uses it, and custom controls can compose it
+with `jolly-color-picker` directly.
 
 ## Fields
 
 ### `jolly-text`
 
-String input.
-
-| Property | Type | Default |
-|---|---|---|
-| `placeholder` | `string` | `""` |
-
-`jolly-input` fires for each keystroke.
+String input. `placeholder` defaults to `""`; `jolly-input` fires for each keystroke.
 
 ### `jolly-number`
 
-Numeric input with expression parsing, arrow-key stepping and drag scrubbing.
+Numeric input with expression parsing, arrow-key stepping, and drag scrubbing.
 
 | Property | Type | Default |
 |---|---|---|
@@ -53,14 +34,14 @@ Numeric input with expression parsing, arrow-key stepping and drag scrubbing.
 | `min` | `number` | `-Infinity` |
 | `max` | `number` | `Infinity` |
 
-Expressions support decimal/scientific literals, unary signs, parentheses and `+`, `-`, `*`,
-`/`. `Shift` multiplies the step by ten and `Alt` divides it by ten. Scrubbing emits
-`jolly-input`; typing and arrow keys commit with `jolly-change`.
+It accepts decimal and scientific literals, parentheses, unary signs, and `+`, `-`, `*`, `/`.
+Shift multiplies the step by ten; Alt divides it by ten. Scrubbing emits `jolly-input`; typing and
+arrow keys commit with `jolly-change`.
 
 ### `jolly-slider`
 
-Slider paired with an editable numeric field. The field accepts typed entry and commits on Enter
-or blur, discarding on Escape, like `jolly-number`.
+Slider with an editable numeric input. It accepts the same typed editing behavior as
+`jolly-number`.
 
 | Property | Type | Default |
 |---|---|---|
@@ -68,16 +49,11 @@ or blur, discarding on Escape, like `jolly-number`.
 | `min` | `number` | `0` |
 | `max` | `number` | `100` |
 
-Dragging emits `jolly-input`; releasing the drag, and typing into the field, commit with
-`jolly-change`.
-
-The track is a fine groove filled to the current value. It is the one control with no fill of its
-own. Hover lightens the handle without changing geometry; focus thickens the track and grows the
-handle. An invalid slider recolours the fill and handle to `--jolly-danger-border`.
+Dragging emits `jolly-input`; releasing or committing typed input emits `jolly-change`.
 
 ### `jolly-range`
 
-Two-ended numeric interval. `value` is an `Interval` with `from` and `to` fields.
+Two-ended numeric interval. `value` is an `Interval` with `from` and `to`.
 
 | Property | Type | Default |
 |---|---|---|
@@ -85,29 +61,19 @@ Two-ended numeric interval. `value` is an `Interval` with `from` and `to` fields
 | `min` | `number` | `0` |
 | `max` | `number` | `100` |
 
-The ends cannot cross; a commit beyond the other end is clamped. Arrow keys and `Shift`/`Alt`
-stepping follow `jolly-number`.
-
-A decorative capped span between the inputs identifies them as the endpoints of one interval.
-It is hidden from assistive technology; each input retains its range-start or range-end name.
+Ends cannot cross; a value beyond the other endpoint is clamped. Keyboard stepping follows
+`jolly-number`.
 
 ### `jolly-checkbox`
 
 Boolean checkbox with native keyboard behavior and `indeterminate` support. `Mixed` renders as
-indeterminate; activating it commits `true`.
-The native box sits flush with the logical edge of its value container. Set `align="end"` to move
-it to the trailing edge.
+indeterminate and activation commits `true`. Set `align="end"` for trailing placement.
 
 | Property | Attribute | Type | Default |
 |---|---|---|---|
 | `clickableBackground` | `clickable-background` | `boolean` | `false` |
 
-Enable `clickable-background` to expand a native label across the value area. A faint tint begins
-beside the checkbox and fades across the clickable background, strengthening on hover and focus.
-The checkbox keeps a 4px inset from the gradient's rounded strong edge. The gradient, radius, and
-inset reverse for end alignment while retaining the same dimensions. A 2px top and bottom inset
-keeps the gradient from reading as a full-height input fill. The Editors scenarios enable this
-option for their checkbox fields, including full-width gradients in end-aligned property rows.
+Set `clickable-background` to make the value area activate the checkbox.
 
 ### `jolly-select`
 
@@ -124,9 +90,8 @@ field.options = [
 ];
 ```
 
-Options are matched by position, so values may be objects or numbers. An option may also include
-an icon; see [icons.md](./icons.md). Native dropdown rows use the raised theme surface so their
-background follows both light and dark modes.
+Options are position-matched, so values may be objects or numbers. Options can also use an icon;
+see [icons.md](./icons.md).
 
 ### `jolly-button-group`
 
@@ -138,11 +103,11 @@ Single-choice segmented or grid selector.
 | `layout` | `"segmented" \| "grid"` | `"segmented"` |
 | `columns` | `number` | `0` (automatic) |
 
-Uses one tab stop and arrow-key navigation. Disabled options are skipped.
+It uses one tab stop and arrow-key navigation. Disabled options are skipped.
 
 ### `jolly-flags`
 
-Multi-select bitmask over `JollyOption<number>[]`. Each option's `value` must be one bit.
+Multi-select bitmask over `JollyOption<number>[]`. Each option value must be one bit.
 
 ```ts
 field.options = [
@@ -153,28 +118,19 @@ field.options = [
 field.value = 0b101;
 ```
 
-Values are treated as unsigned 32-bit masks. Each option has its own tab stop.
+Values are unsigned 32-bit masks. Each option has its own tab stop.
 
 ### `jolly-color`
 
-Hex color row: a swatch button that opens `jolly-color-picker` in a popup, plus a draftable hex
-field.
+Color field with a swatch popup and editable hex input.
 
 | Property | Type | Default |
 |---|---|---|
 | `alpha` | `boolean` | `false` |
 
-Accepts `#ff6600`, `ff6600`, `#f60` and `f60`, and normalizes to lowercase six-digit hex. With
-`alpha` set it also accepts and emits `#rrggbbaa`. Four-digit `#rgba` is rejected on purpose: it
-cannot be told apart from `#ff66`, which is what typing `#ff6600` looks like halfway through.
-
-With `alpha` off, an eight-digit value still parses but its alpha is dropped on commit, so a row
-showing no alpha affordance never emits one.
-
-The popup renders in the top layer, so a scrolling pane cannot clip it. **Escape cancels**,
-restoring the color held when the popup opened; clicking away, re-clicking the swatch and Enter
-all accept. That asymmetry is the only cancel a popup picker has, because the picker commits
-continuously while you drag.
+It accepts `#ff6600`, `ff6600`, `#f60`, and `f60`, then normalizes to lowercase six-digit hex.
+With `alpha`, it also accepts and emits `#rrggbbaa`. Escape restores the color from when the popup
+opened; clicking away, re-clicking the swatch, and Enter accept the current value.
 
 ```html
 <jolly-color label="Tint" alpha></jolly-color>
@@ -182,9 +138,8 @@ continuously while you drag.
 
 ### `jolly-color-picker`
 
-The picker panel on its own. It is **not a field**: no label, `default`, `Mixed`, revert or
-`lockedBy`, because those belong to the row hosting it. Use it directly wherever a picker is
-wanted without a property row.
+Standalone picker panel. It is not a field, so it has no label, `default`, `Mixed`, revert, or
+collaboration state.
 
 | Property | Type | Default |
 |---|---|---|
@@ -194,28 +149,14 @@ wanted without a property row.
 | `disabled` | `boolean` | `false` |
 | `readonly` | `boolean` | `false` |
 
-It emits `jolly-input` continuously while dragging and `jolly-change` on release, both carrying
-`JollyChangeDetail<string>`, so a consumer writes the value back exactly as it would for a field.
-`jolly-color` sets `hexInput` to `false`, since its row already carries a hex field.
-
-Saturation and value are two visually hidden range inputs inside a labelled group, so keyboard
-input, value announcement and forced-colors rendering all come from the platform; hue and alpha
-are range inputs too, sharing `jolly-slider`'s handle geometry.
-
-The alpha ramp carries an editable numeric readout, laid out as the slider's lane and value
-column. It quantises to `0.01`. Blank or unparsable input cancels the edit rather than reporting
-an error, since the ramp beside it still shows the value that survived.
-
-The panel keeps its own hue and saturation rather than deriving them from `value` on every render.
-Hex cannot express hue at black, white or grey, so a derived picker would snap the hue handle to
-red the moment you dragged into a corner. It re-reads `value` only when the incoming color differs
-from what it would emit, which is what lets a remote edit or a revert still move the handles.
+It emits `jolly-input` while dragging and `jolly-change` on release. `jolly-color` sets
+`hexInput` to `false` because its row includes a hex field.
 
 ## Action and layout elements
 
 ### `jolly-button`
 
-Slotted action button. It is not a field and has no `value`, `default` or field events.
+Slotted action button. It is not a field and has no `value`, `default`, or field events.
 
 | Property | Type | Default |
 |---|---|---|
@@ -234,14 +175,8 @@ Use `label` when an icon-only button has no visible text.
 
 ### `jolly-separator`
 
-Visual separator between groups. The optional `label` captions it; an unlabeled separator is
+Visual separator between groups. Its optional `label` adds a caption; an unlabeled separator is
 hidden from assistive technology.
-Captioned separators use the normal field-label font size and follow the shared field gutter so
-their text aligns with surrounding control labels. Accent-colored captions, softly tinted rules,
-and a small leading gap distinguish these group headings from ordinary field labels. The rule
-flanks a caption on both sides while preserving that label alignment.
-Labelled and unlabelled variants occupy the same row height and leading margin, so switching
-between them does not change the surrounding vertical rhythm.
 
 ```html
 <jolly-separator></jolly-separator>

@@ -2,7 +2,9 @@
 import { detailOf } from "../../src/index.ts";
 import { findExample } from "./manifest.ts";
 import { GalleryRoot } from "./shell/GalleryRoot.ts";
-import type { GalleryExample } from "./types.ts";
+import type {
+  GalleryExample
+} from "./types.ts";
 
 const disposed: string[] = [];
 window.__galleryDisposed = disposed;

@@ -3,24 +3,16 @@ import type { ResizeHandle } from "@jolly-pixel/resize-handle";
 
 // Import Internal Dependencies
 import { emitContainerEvent } from "./events.ts";
+import { ensureDocumentStyles } from "../interaction/ensureDocumentStyles.ts";
 
 // CONSTANTS
-const kStyleMarker = "data-jolly-resize-cursors";
-
 export function installResizeCursorStyles(
   document: Document
 ): void {
-  if (document.head.querySelector(`[${kStyleMarker}]`) !== null) {
-    return;
-  }
-
-  const style = document.createElement("style");
-  style.setAttribute(kStyleMarker, "");
-  style.textContent = `
+  ensureDocumentStyles("jolly-resize-cursors", `
     html.handle-dragging.vertical * { cursor: ew-resize !important; }
     html.handle-dragging.horizontal * { cursor: ns-resize !important; }
-  `;
-  document.head.append(style);
+  `, document);
 }
 
 export function forwardResizeEvents(

@@ -23,6 +23,7 @@ import { parseColor } from "../color/parse.ts";
 import type { HSVA } from "../color/types.ts";
 import { colorPickerStyles } from "./ColorPicker.styles.ts";
 import { emitFieldEvent } from "../field/events.ts";
+import { DraftController } from "../field/DraftController.ts";
 import {
   formatNumber,
   parseNumeric,
@@ -96,7 +97,7 @@ export class ColorPicker extends LitElement {
    */
   #hsva: HSVA = kBlack;
   #draft: string | null = null;
-  #alphaDraft: string | null = null;
+  #alphaDraft = new DraftController<number>(this);
   #invalid = false;
 
   constructor() {
@@ -275,7 +276,7 @@ export class ColorPicker extends LitElement {
           inputmode="decimal"
           spellcheck="false"
           aria-label="Alpha value"
-          .value=${this.#alphaDraft ?? formatNumber(this.#hsva.a, kAlphaStep)}
+          .value=${this.#alphaDraft.draft ?? formatNumber(this.#hsva.a, kAlphaStep)}
           ?disabled=${this.disabled}
           ?readonly=${this.readonly}
           @input=${this.#onAlphaType}
@@ -289,26 +290,16 @@ export class ColorPicker extends LitElement {
   #onAlphaType(
     event: Event
   ): void {
-    if (!isInputElement(event.target)) {
-      return;
-    }
-
-    this.#alphaDraft = event.target.value;
-    this.requestUpdate();
+    this.#alphaDraft.onInput(event);
   }
 
   #onAlphaKeyDown(
     event: KeyboardEvent
   ): void {
-    if (event.key === "Enter") {
-      this.#commitAlpha();
-    }
-    else if (event.key === "Escape") {
-      // Keep the parent popover open while discarding the draft.
-      event.stopPropagation();
-      this.#alphaDraft = null;
-      this.requestUpdate();
-    }
+    this.#alphaDraft.onKeyDown(
+      event,
+      () => this.#commitAlpha()
+    );
   }
 
   #onAlphaBlur(): void {
@@ -316,30 +307,29 @@ export class ColorPicker extends LitElement {
   }
 
   #commitAlpha(): void {
-    const draft = this.#alphaDraft;
-    if (draft === null || !this.editable) {
-      return;
-    }
+    this.#alphaDraft.commit(
+      (draft) => {
+        const result = parseNumeric(draft);
+        if (result === null || !result.ok) {
+          return null;
+        }
 
-    const result = parseNumeric(draft);
-    this.#alphaDraft = null;
-
-    // Invalid input restores the last committed alpha.
-    if (result === null || !result.ok) {
-      this.requestUpdate();
-
-      return;
-    }
-
-    this.#patch({
-      a: quantize(
-        result.value,
-        kAlphaStep,
-        0,
-        1
-      )
-    });
-    this.#commit();
+        return {
+          ok: true,
+          value: quantize(
+            result.value,
+            kAlphaStep,
+            0,
+            1
+          )
+        };
+      },
+      this.editable,
+      (alpha) => {
+        this.#patch({ a: alpha });
+        this.#commit();
+      }
+    );
   }
 
   #renderFooter(): TemplateResult {
@@ -509,7 +499,7 @@ export class ColorPicker extends LitElement {
       ...patch
     };
     this.#draft = null;
-    this.#alphaDraft = null;
+    this.#alphaDraft.clear();
     this.#invalid = false;
     this.requestUpdate();
   }

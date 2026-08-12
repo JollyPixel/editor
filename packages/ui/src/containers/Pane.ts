@@ -2,6 +2,7 @@
 import {
   LitElement,
   html,
+  nothing,
   type TemplateResult
 } from "lit";
 import {
@@ -13,23 +14,35 @@ import {
 
 // Import Internal Dependencies
 import { emitContainerEvent } from "./events.ts";
-import type { Folder } from "./Folder.ts";
+import { FolderListController } from "./FolderListController.ts";
 import { paneStyles } from "./Pane.styles.ts";
 import {
-  detailOf,
   isSlotElement
 } from "../dom.ts";
-import { LocalStorageAdapter } from "../storage/LocalStorageAdapter.ts";
-import type { StorageAdapter } from "../storage/StorageAdapter.ts";
-import {
-  deriveKey,
-  resolveOrder
-} from "../storage/keys.ts";
 
-interface FolderReorderDetail {
-  folder: Folder;
-  command: "cancel" | "down" | "finish" | "pointer" | "start" | "up";
-  clientY?: number;
+// Registers the chevron and grip glyphs.
+import "../icon/Icon.ts";
+import { LocalStorageAdapter } from "../storage/LocalStorageAdapter.ts";
+import { PersistedState } from "../storage/PersistedState.ts";
+import type { StorageAdapter } from "../storage/StorageAdapter.ts";
+import { deriveKey } from "../storage/keys.ts";
+
+// CONSTANTS
+const kInteractive = "button, input, select, textarea, a";
+
+export type PaneMoveCommand =
+  | "cancel"
+  | "down"
+  | "finish"
+  | "next"
+  | "previous"
+  | "start"
+  | "up";
+
+export interface PaneDragDetail {
+  pane: PaneElement;
+  event: PointerEvent;
+  handle: HTMLElement;
 }
 
 /*
@@ -45,10 +58,44 @@ export class PaneElement extends LitElement {
   ];
 
   @property({ type: String })
-  declare title: string;
+  declare heading: string;
+
+  @property({ type: String, reflect: true })
+  declare key: string;
 
   @property({ type: Boolean, reflect: true })
   declare reorderable: boolean;
+
+  /**
+   * Opts the pane into folding to its header, like a folder one level up.
+   */
+  @property({ type: Boolean, reflect: true })
+  declare collapsible: boolean;
+
+  @property({ type: Boolean, reflect: true })
+  declare collapsed: boolean;
+
+  /**
+   * Fills the leftover space of an aligned dock. Ignored elsewhere.
+   */
+  @property({ type: Boolean, reflect: true })
+  declare grow: boolean;
+
+  /**
+   * Dims the pane in place while a drag previews where it would land.
+   */
+  @property({ type: Boolean, reflect: true })
+  declare dragging: boolean;
+
+  /**
+   * Pins the pane where it is: no grip, no header drag, no keyboard move.
+   *
+   * A layout normally makes every pane it owns movable. Locking is how an
+   * author keeps the fixed furniture of an editor in place while still letting
+   * other panes be dragged in and out around it.
+   */
+  @property({ type: Boolean, reflect: true })
+  declare locked: boolean;
 
   @property({
     type: String,
@@ -65,34 +112,146 @@ export class PaneElement extends LitElement {
   @state()
   declare _announcement: string;
 
+  /**
+   * True inside a layout or a floating window, unless the pane is `locked`.
+   *
+   * Derived, not authored, and reflected so the header can show a move cursor.
+   * Only a pane with a container above it derives anything: one standing on its
+   * own keeps whatever it was given, which is what lets a detached clone carry
+   * the grip its source was dragged by.
+   */
+  @property({ type: Boolean, reflect: true })
+  declare movable: boolean;
+
+  @state()
+  declare _grabbed: boolean;
+
   @query("slot:not([name])")
   declare _contentSlot: HTMLSlotElement;
 
-  #folders: Folder[] = [];
-  #startOrder: string[] | null = null;
+  @query(".header")
+  declare _header: HTMLElement;
+
+  @query(".content")
+  declare _content: HTMLElement;
+
+  #managed = false;
+  #state = new PersistedState(this, {
+    isManaged: () => this.#managed,
+    namespace: () => this.#namespace(),
+    storage: () => this.storage,
+    onManagedWrite: () => {
+      emitContainerEvent(this, "jolly-layout-dirty", undefined);
+    }
+  });
+  /** True inside a container that can move the pane, lock or no lock. */
+  #hosted = false;
+  #folders = new FolderListController(this, {
+    content: () => this._content,
+    contentSlot: () => this._contentSlot,
+    namespace: () => this.#namespace(),
+    reorderable: () => this.reorderable,
+    storage: () => this.storage,
+    announce: (message) => this.announce(message)
+  });
+
+  /**
+   * Identity used by the layout snapshot, falling back to tag and title.
+   */
+  get layoutKey(): string {
+    return this.key === "" ?
+      deriveKey("jolly-pane", this.heading) :
+      this.key;
+  }
 
   constructor() {
     super();
 
-    this.title = "";
+    this.heading = "";
+    this.key = "";
     this.reorderable = false;
+    this.collapsible = false;
+    this.collapsed = false;
+    this.grow = false;
+    this.dragging = false;
+    this.locked = false;
     this.storageKey = "";
     this.storage = new LocalStorageAdapter();
     this._hasActions = false;
     this._announcement = "";
+    this.movable = false;
+    this._grabbed = false;
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.#managed = this.closest("jolly-dock-layout") !== null;
+    this.#hosted = this.#managed ||
+      this.closest("jolly-floating") !== null;
+    if (this.#hosted) {
+      this.movable = !this.locked;
+    }
+    if (!this.#managed) {
+      queueMicrotask(() => this.#restoreCollapsed());
+    }
+  }
+
+  protected override willUpdate(
+    changed: Map<PropertyKey, unknown>
+  ): void {
+    if (
+      this.#hosted &&
+      changed.has("locked")
+    ) {
+      this.movable = !this.locked;
+    }
   }
 
   override render(): TemplateResult {
-    const showHeader = this.title !== "" || this._hasActions;
+    const showHeader = this.heading !== "" ||
+      this._hasActions ||
+      this.collapsible ||
+      this.movable;
 
     return html`
       ${showHeader
         ? html`
-          <header class="header" part="header">
-            <span class="title" part="title">${this.title}</span>
+          <header
+            class="header"
+            part="header"
+            @pointerdown=${this.#onHeaderPointerDown}
+          >
+            ${this.collapsible
+              ? html`
+                <button
+                  class="fold"
+                  type="button"
+                  aria-expanded=${String(!this.collapsed)}
+                  aria-label=${`Fold ${this.heading || "pane"}`}
+                  @click=${this.#toggleCollapsed}
+                ><jolly-icon
+                  class="chevron"
+                  name="chevron"
+                  aria-hidden="true"
+                ></jolly-icon></button>
+              `
+              : nothing}
+            <span class="title" part="title">${this.heading}</span>
             <span class="actions" part="actions">
               <slot name="actions" @slotchange=${this.#onActionsChange}></slot>
             </span>
+            ${this.movable
+              ? html`
+                <button
+                  class="grip"
+                  type="button"
+                  aria-label=${`Move ${this.heading || "pane"}`}
+                  aria-pressed=${String(this._grabbed)}
+                  @pointerdown=${this.#onGripPointerDown}
+                  @keydown=${this.#onGripKeyDown}
+                ><jolly-icon name="drag" aria-hidden="true"></jolly-icon></button>
+              `
+              : nothing}
           </header>
         `
         : html`
@@ -104,12 +263,207 @@ export class PaneElement extends LitElement {
         `}
       <div class="content" part="content">
         <slot
-          @slotchange=${this.#onContentChange}
-          @jolly-folder-reorder=${this.#onReorderCommand}
+          @slotchange=${this.#folders.onContentChange}
+          @jolly-folder-reorder=${this.#folders.onReorderCommand}
+          @jolly-folder-drag=${this.#folders.onFolderDrag}
         ></slot>
       </div>
       <span class="live-region" aria-live="polite">${this._announcement}</span>
     `;
+  }
+
+  /**
+   * Speaks a message through the pane's live region.
+   */
+  announce(
+    message: string
+  ): void {
+    this._announcement = message;
+  }
+
+  folderStates(): Record<string, { open: boolean; }> {
+    return this.#folders.states();
+  }
+
+  applyFolderStates(
+    states: Readonly<Record<string, { open: boolean; }>>
+  ): void {
+    this.#folders.applyStates(states);
+  }
+
+  /**
+   * Header rect, used by a drag session for the ghost size.
+   */
+  headerRect(): DOMRect {
+    return (
+      this._header ?? this
+    ).getBoundingClientRect();
+  }
+
+  /**
+   * Extent the pane's own content asks for along an axis, capped by its box.
+   *
+   * A dock without `align` stretches its panes, so a pane holding two rows can
+   * own six hundred pixels of dock, all but forty of them empty. A drop
+   * resolved against that box has to clear a midpoint hundreds of pixels below
+   * anything the pane draws, and the line marking the end of the dock lands at
+   * the bottom of the container rather than under the last thing in it. Read
+   * this instead and the empty tail belongs to the dock, which is where it
+   * looks like it belongs.
+   *
+   * Only the block axis packs content, so it is the only one with an extent to
+   * measure: across it a pane is simply as wide as it is given.
+   *
+   * The slotted children are what gets measured, not `scrollHeight`, which
+   * never reports below the box it is asked about and so reads a stretched
+   * pane as full whatever is in it. A pane slotted nothing at all keeps its
+   * box, since there is then nothing to say it occupies any less.
+   */
+  occupiedSize(
+    axis: "x" | "y"
+  ): number {
+    const rect = this.getBoundingClientRect();
+    if (axis === "x") {
+      return rect.width;
+    }
+
+    const children = this._contentSlot?.assignedElements({ flatten: true }) ?? [];
+    if (children.length === 0) {
+      return rect.height;
+    }
+
+    // Folded content measures nothing, and reordered children are not in
+    // document order, so the header is the floor and every child is asked.
+    let bottom = this._header?.getBoundingClientRect().bottom ?? rect.top;
+    for (const child of children) {
+      bottom = Math.max(
+        bottom,
+        child.getBoundingClientRect().bottom
+      );
+    }
+
+    return Math.min(bottom - rect.top, rect.height);
+  }
+
+  #toggleCollapsed = () => {
+    this.collapsed = !this.collapsed;
+    this.#state.write(
+      "collapsed",
+      String(this.collapsed)
+    );
+
+    emitContainerEvent(
+      this,
+      "jolly-toggle",
+      { open: !this.collapsed }
+    );
+  };
+
+  #restoreCollapsed(): void {
+    const stored = this.#state.read("collapsed");
+
+    if (
+      stored === "true" ||
+      stored === "false"
+    ) {
+      this.collapsed = stored === "true";
+    }
+  }
+
+  #onHeaderPointerDown = (
+    event: PointerEvent
+  ) => {
+    if (
+      event.button !== 0 ||
+      !this.movable ||
+      isInteractiveTarget(event)
+    ) {
+      return;
+    }
+
+    this.#requestDrag(
+      event,
+      this._header
+    );
+  };
+
+  #onGripPointerDown = (
+    event: PointerEvent
+  ) => {
+    if (event.button !== 0 || !this.movable) {
+      return;
+    }
+
+    event.stopPropagation();
+    this.#requestDrag(
+      event,
+      event.currentTarget instanceof HTMLElement ?
+        event.currentTarget :
+        this._header
+    );
+  };
+
+  /**
+   * Asks whichever container owns movement to run the session.
+   *
+   * A layout answers with dock targets; a standalone floating window answers
+   * with a move-only session. Nothing answers for a plain docked pane, which
+   * is then simply not draggable.
+   */
+  #requestDrag(
+    event: PointerEvent,
+    handle: HTMLElement
+  ): void {
+    event.preventDefault();
+    emitContainerEvent(this, "jolly-pane-drag", {
+      pane: this,
+      event,
+      handle
+    });
+  }
+
+  #onGripKeyDown = (
+    event: KeyboardEvent
+  ) => {
+    if (event.key === " ") {
+      event.preventDefault();
+      this._grabbed = !this._grabbed;
+      this.#emitMove(
+        this._grabbed ? "start" : "finish"
+      );
+
+      return;
+    }
+    if (!this._grabbed) {
+      return;
+    }
+
+    const commands: Partial<Record<string, PaneMoveCommand>> = {
+      ArrowUp: "up",
+      ArrowDown: "down",
+      ArrowLeft: "previous",
+      ArrowRight: "next",
+      Escape: "cancel"
+    };
+    const command = commands[event.key];
+    if (command === undefined) {
+      return;
+    }
+
+    event.preventDefault();
+    this.#emitMove(command);
+    if (command === "cancel") {
+      this._grabbed = false;
+    }
+  };
+
+  #emitMove(
+    command: PaneMoveCommand
+  ): void {
+    emitContainerEvent(this, "jolly-pane-move", {
+      pane: this,
+      command
+    });
   }
 
   #onActionsChange = (
@@ -120,156 +474,6 @@ export class PaneElement extends LitElement {
     }
   };
 
-  #onContentChange = () => {
-    this.#folders = this._contentSlot.assignedElements({ flatten: true })
-      .filter((element): element is Folder => element.tagName === "JOLLY-FOLDER");
-
-    const keys = this.#folderKeys();
-    const namespace = this.#namespace();
-    for (let index = 0; index < this.#folders.length; index++) {
-      const folder = this.#folders[index];
-      folder.reorderable = this.reorderable;
-      if (folder.storageKey === "") {
-        folder.storage = this.storage;
-        folder.persistenceKey = `${namespace}:folder:${keys[index]}`;
-      }
-    }
-
-    const stored = parseOrder(this.storage.get(`${namespace}:order`));
-    this.#applyOrder(resolveOrder(stored, keys));
-  };
-
-  #onReorderCommand = (
-    event: Event
-  ) => {
-    if (!this.reorderable) {
-      return;
-    }
-
-    event.stopPropagation();
-    const detail = detailOf<FolderReorderDetail>(event);
-    if (detail === null) {
-      return;
-    }
-
-    const keys = this.#orderedKeys();
-    const key = detail.folder.persistenceKey.split(":folder:").at(-1);
-    if (key === undefined) {
-      return;
-    }
-
-    if (detail.command === "start") {
-      this.#startOrder = keys;
-      this._announcement = `${detail.folder.label} grabbed`;
-
-      return;
-    }
-    if (detail.command === "cancel") {
-      if (this.#startOrder !== null) {
-        this.#applyOrder(this.#startOrder);
-      }
-      this.#startOrder = null;
-      this._announcement = `${detail.folder.label} movement cancelled`;
-
-      return;
-    }
-    if (detail.command === "finish") {
-      this.#commitOrder();
-      this.#startOrder = null;
-      this._announcement = `${detail.folder.label} dropped`;
-
-      return;
-    }
-
-    if (detail.command === "pointer") {
-      const clientY = detail.clientY ?? 0;
-      const target = [...this.#folders]
-        .sort((left, right) => Number(left.style.order) - Number(right.style.order))
-        .find((folder) => clientY < folder.getBoundingClientRect().top +
-        (folder.getBoundingClientRect().height / 2));
-      const targetKey = target?.persistenceKey.split(":folder:").at(-1);
-      const next = targetKey === undefined ? keys.length - 1 : keys.indexOf(targetKey);
-      const index = keys.indexOf(key);
-      if (index !== -1 && next !== -1 && index !== next) {
-        keys.splice(index, 1);
-        keys.splice(next, 0, key);
-        this.#applyOrder(keys);
-        this._announcement = `${detail.folder.label}, position ${next + 1} of ${keys.length}`;
-      }
-
-      return;
-    }
-
-    const index = keys.indexOf(key);
-    const offset = detail.command === "up" ? -1 : 1;
-    const next = Math.min(Math.max(index + offset, 0), keys.length - 1);
-    if (index === -1 || index === next) {
-      return;
-    }
-
-    [keys[index], keys[next]] = [keys[next], keys[index]];
-    this.#applyOrder(keys);
-    this._announcement = `${detail.folder.label}, position ${next + 1} of ${keys.length}`;
-  };
-
-  #folderKeys(): string[] {
-    const occurrences = new Map<string, number>();
-
-    return this.#folders.map((folder) => {
-      if (folder.key !== "") {
-        return folder.key;
-      }
-
-      const base = deriveKey(
-        "jolly-folder",
-        folder.label
-      );
-      const occurrence = (occurrences.get(base) ?? 0) + 1;
-      occurrences.set(base, occurrence);
-
-      return deriveKey(
-        "jolly-folder",
-        folder.label,
-        occurrence
-      );
-    });
-  }
-
-  #orderedKeys(): string[] {
-    return [...this.#folders]
-      .sort((left, right) => Number(left.style.order) - Number(right.style.order))
-      .map((folder) => folder.persistenceKey.split(":folder:").at(-1) ?? "");
-  }
-
-  #applyOrder(
-    order: readonly string[]
-  ): void {
-    const positions = new Map(
-      order.map((key, index) => [key, index])
-    );
-    for (const folder of this.#folders) {
-      const key = folder.persistenceKey
-        .split(":folder:")
-        .at(-1) ?? "";
-      folder.style.order = String(
-        positions.get(key) ?? order.length
-      );
-    }
-  }
-
-  #commitOrder(): void {
-    const order = this.#orderedKeys();
-    this.storage.set(
-      `${this.#namespace()}:order`,
-      JSON.stringify(order)
-    );
-    emitContainerEvent(
-      this,
-      "jolly-reorder",
-      { keys: order }
-    );
-  }
-
   #namespace(): string {
     if (this.storageKey !== "") {
       return this.storageKey;
@@ -277,27 +481,26 @@ export class PaneElement extends LitElement {
 
     const path = globalThis.location?.pathname ?? "";
 
-    return `${path}:jolly-pane:${this.title || "untitled"}`;
+    return `${path}:jolly-pane:${this.heading || "untitled"}`;
   }
 }
 
-function parseOrder(
-  value: string | null
-): string[] {
-  if (value === null) {
-    return [];
-  }
+/**
+ * Keeps a header drag from starting on a control the header also carries.
+ */
+export function isPane(
+  element: Element
+): element is PaneElement {
+  return element.tagName === "JOLLY-PANE";
+}
 
-  try {
-    const parsed: unknown = JSON.parse(value);
+function isInteractiveTarget(
+  event: PointerEvent
+): boolean {
+  const { target } = event;
 
-    return Array.isArray(parsed) && parsed.every((key) => typeof key === "string")
-      ? parsed
-      : [];
-  }
-  catch {
-    return [];
-  }
+  return target instanceof Element &&
+    target.closest(kInteractive) !== null;
 }
 
 declare global {

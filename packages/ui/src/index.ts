@@ -1,3 +1,4 @@
+// Theme
 export {
   themeStyles
 } from "./theme/themeStyles.ts";
@@ -18,49 +19,68 @@ export {
   fontFaceCss
 } from "./theme/font.ts";
 export type {
-  ThemeMode,
-  Density
+  Density,
+  ThemeMode
 } from "./theme/types.ts";
 
+// Geometry
+export type {
+  Rect
+} from "./geometry/Rect.ts";
+
+// Storage
+export type {
+  StorageAdapter
+} from "./storage/StorageAdapter.ts";
+export {
+  LocalStorageAdapter,
+  type LocalStorageAdapterOptions,
+  type StorageLike
+} from "./storage/LocalStorageAdapter.ts";
+export {
+  MemoryStorageAdapter
+} from "./storage/MemoryStorageAdapter.ts";
+
+// Field infrastructure
 export {
   Mixed,
   isMixed,
   type FieldValue
 } from "./field/mixed.ts";
+export type {
+  FieldAlign
+} from "./field/JollyField.ts";
+export type {
+  JollyChangeDetail
+} from "./field/events.ts";
+export type {
+  CollaboratorPresence
+} from "./collab/types.ts";
 
+// Icons
 export {
   Icon
 } from "./icon/Icon.ts";
 export {
-  registerIcon,
   getIcon,
   hasIcon,
+  registerIcon,
+  type BuiltinIconName,
   type IconGlyph,
-  type IconName,
-  type BuiltinIconName
+  type IconName
 } from "./icon/registry.ts";
 
+// Controls
 export {
-  Text
-} from "./controls/Text.ts";
+  Button,
+  type ButtonVariant
+} from "./controls/Button.ts";
 export {
-  NumberField
-} from "./controls/Number.ts";
+  ButtonGroup
+} from "./controls/ButtonGroup.ts";
 export {
   Checkbox
 } from "./controls/Checkbox.ts";
-export {
-  Slider
-} from "./controls/Slider.ts";
-export {
-  Range
-} from "./controls/Range.ts";
-export {
-  Flags
-} from "./controls/Flags.ts";
-export {
-  Select
-} from "./controls/Select.ts";
 export {
   Color
 } from "./controls/Color.ts";
@@ -68,106 +88,140 @@ export {
   ColorPicker
 } from "./controls/ColorPicker.ts";
 export {
-  PopoverController,
-  type PopoverControllerOptions
-} from "./interaction/PopoverController.ts";
+  Flags
+} from "./controls/Flags.ts";
 export {
-  parseColor
-} from "./color/parse.ts";
+  NumberField
+} from "./controls/Number.ts";
 export {
-  formatHex
-} from "./color/format.ts";
-export type {
-  RGBA
-} from "./color/types.ts";
+  PropertyRow
+} from "./controls/PropertyRow.ts";
 export {
-  ButtonGroup
-} from "./controls/ButtonGroup.ts";
+  Range
+} from "./controls/Range.ts";
 export {
-  Button,
-  type ButtonVariant
-} from "./controls/Button.ts";
+  Select
+} from "./controls/Select.ts";
 export {
   Separator
 } from "./controls/Separator.ts";
 export {
-  PropertyRow
-} from "./controls/PropertyRow.ts";
+  Slider
+} from "./controls/Slider.ts";
+export {
+  Text
+} from "./controls/Text.ts";
 export type {
-  JollyOption,
-  Interval
+  Interval,
+  JollyOption
 } from "./controls/types.ts";
-export type {
-  JollyChangeDetail
-} from "./field/events.ts";
-export type {
-  FieldAlign
-} from "./field/JollyField.ts";
-export type {
-  CollaboratorPresence
-} from "./collab/types.ts";
-export {
-  isInputElement,
-  isSelectElement,
-  isButtonElement,
-  isSlotElement,
-  isDocumentOrShadowRoot,
-  detailOf
-} from "./dom.ts";
 
+// Colour values
+export {
+  formatHex
+} from "./color/format.ts";
+export {
+  parseColor
+} from "./color/parse.ts";
 export type {
-  StorageAdapter
-} from "./storage/StorageAdapter.ts";
-export {
-  LocalStorageAdapter,
-  type StorageLike,
-  type LocalStorageAdapterOptions
-} from "./storage/LocalStorageAdapter.ts";
-export {
-  MemoryStorageAdapter
-} from "./storage/MemoryStorageAdapter.ts";
+  RGBA
+} from "./color/types.ts";
 
+// Interaction
+export {
+  PopoverController,
+  type PopoverControllerOptions
+} from "./field/PopoverController.ts";
+export {
+  startDragSession,
+  horizontalInsertionLine,
+  verticalInsertionLine,
+  type DragResult,
+  type DragSessionHandle,
+  type DragSessionOptions,
+  type DragZone
+} from "./interaction/drag/DragSession.ts";
+export {
+  resolveDropIndex,
+  type DropCandidate,
+  type ResolveDropIndexOptions
+} from "./interaction/drag/dropIndex.ts";
+export {
+  copyTheme,
+  headerGhost,
+  themeTokenNames,
+  type GhostSource
+} from "./interaction/drag/dragGhost.ts";
+
+// Containers
+export {
+  Dialog
+} from "./containers/Dialog.ts";
+export {
+  showConfirm,
+  showPrompt,
+  type ConfirmOptions,
+  type PromptOptions
+} from "./containers/dialogHelpers.ts";
+export {
+  Dock,
+  type DockAlign,
+  type DockSide
+} from "./containers/Dock.ts";
+export {
+  DockLayout
+} from "./containers/DockLayout.ts";
+export {
+  Floating
+} from "./containers/Floating.ts";
+export {
+  Folder
+} from "./containers/Folder.ts";
 export {
   PaneElement
 } from "./containers/Pane.ts";
 export {
-  Folder
-} from "./containers/Folder.ts";
+  Rail,
+  type RailOrientation
+} from "./containers/Rail.ts";
+export {
+  Tab
+} from "./containers/Tab.ts";
 export {
   Tabs,
   type TabsOrientation
 } from "./containers/Tabs.ts";
 export {
-  Tab
-} from "./containers/Tab.ts";
-export {
-  Dock,
-  type DockSide
-} from "./containers/Dock.ts";
-export {
-  Floating
-} from "./containers/Floating.ts";
-export {
-  Dialog
-} from "./containers/Dialog.ts";
-export {
-  showPrompt,
-  showConfirm,
-  type PromptOptions,
-  type ConfirmOptions
-} from "./containers/dialogHelpers.ts";
-export {
   Toolbar,
   type ToolbarOrientation
 } from "./containers/Toolbar.ts";
 export {
-  Rail,
-  type RailOrientation
-} from "./containers/Rail.ts";
+  emptyLayout,
+  parseLayout,
+  reconcileLayout,
+  serializeLayout,
+  type DeclaredDock,
+  type DeclaredLayout,
+  type DockState,
+  type FloatingState,
+  type LayoutSnapshot,
+  type PaneState
+} from "./containers/layout.ts";
 export type {
-  JollyResizeDetail,
+  ContainerEventMap,
   JollyMoveDetail,
   JollyReorderDetail,
-  JollyToggleDetail,
-  JollyTabChangeDetail
+  JollyResizeDetail,
+  JollyTabChangeDetail,
+  JollyToggleDetail
 } from "./containers/events.ts";
+
+// DOM
+export {
+  detailOf,
+  isButtonElement,
+  isDocumentOrShadowRoot,
+  isInputElement,
+  isSelectElement,
+  isSlotElement
+} from "./dom.ts";

@@ -19,7 +19,7 @@ import {
 } from "../numeric/format.ts";
 import { sliderStyles } from "./Slider.styles.ts";
 import { isInputElement } from "../dom.ts";
-import { PointerFocusController } from "../interaction/PointerFocusController.ts";
+import { PointerFocusController } from "../field/PointerFocusController.ts";
 
 export interface SliderDefaults {
   step: number;
@@ -99,7 +99,7 @@ export class Slider extends JollyField<number> {
         aria-readonly=${this.readonlyAria}
         aria-disabled=${this.lockedAria}
         aria-invalid=${this.displayError === null ? nothing : "true"}
-        @input=${this.#onType}
+        @input=${this.onDraftInput}
         @focus=${this.#pointerFocus.onFocus}
         @keydown=${this.#onKeyDown}
         @blur=${this.#onBlur}
@@ -157,32 +157,15 @@ export class Slider extends JollyField<number> {
     this.emitChange(next);
   }
 
-  /**
-   * Typing in the readout edits a draft, which the range never sees.
-   */
-  #onType(
-    event: Event
-  ): void {
-    if (!isInputElement(event.target)) {
-      return;
-    }
-
-    this.setDraft(event.target.value);
-    this.setParseError(null);
-  }
-
   #onKeyDown(
     event: KeyboardEvent
   ): void {
     this.#pointerFocus.onKeyDown();
 
-    if (event.key === "Enter") {
-      this.#commit();
-    }
-    else if (event.key === "Escape") {
-      event.stopPropagation();
-      this.clearDraft();
-    }
+    this.onDraftKeyDown(
+      event,
+      () => this.#commit()
+    );
   }
 
   #onBlur(): void {
@@ -191,33 +174,22 @@ export class Slider extends JollyField<number> {
   }
 
   #commit(): void {
-    const draft = this.draft;
-    if (draft === null || !this.editable) {
-      return;
-    }
+    this.commitDraft((draft) => {
+      const result = parseNumeric(draft);
+      if (result === null || !result.ok) {
+        return result;
+      }
 
-    const result = parseNumeric(draft);
-    // Blank input cancels the edit.
-    if (result === null) {
-      this.clearDraft();
-
-      return;
-    }
-
-    if (!result.ok) {
-      this.setParseError(result.error);
-
-      return;
-    }
-
-    this.emitChange(
-      quantize(
-        result.value,
-        this.step,
-        this.min,
-        this.max
-      )
-    );
+      return {
+        ok: true,
+        value: quantize(
+          result.value,
+          this.step,
+          this.min,
+          this.max
+        )
+      };
+    });
   }
 
   /**
