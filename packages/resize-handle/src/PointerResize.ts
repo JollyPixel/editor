@@ -1,17 +1,20 @@
-// Import Internal Dependencies
-import type {
-  ResizeDirectionDefinition
-} from "./ResizeDirection.ts";
+export interface PointerCoordinate {
+  x: number;
+  y: number;
+}
 
 export interface PointerResizeOptions {
   handle: HTMLElement;
-  definition: ResizeDirectionDefinition;
+  /**
+   * classList token applied to <html> while dragging
+   */
+  dragToken: string;
   canStart: () => boolean;
   onStart: (
-    coordinate: number
+    coordinate: PointerCoordinate
   ) => void;
   onMove: (
-    coordinate: number
+    coordinate: PointerCoordinate
   ) => void;
   onEnd: () => void;
 }
@@ -21,10 +24,14 @@ export interface PointerResizeOptions {
  */
 export class PointerResize {
   #handle: HTMLElement;
-  #definition: ResizeDirectionDefinition;
+  #dragToken: string;
   #canStart: () => boolean;
-  #start: (coordinate: number) => void;
-  #move: (coordinate: number) => void;
+  #start: (
+    coordinate: PointerCoordinate
+  ) => void;
+  #move: (
+    coordinate: PointerCoordinate
+  ) => void;
   #end: () => void;
   #activePointerId: number | null = null;
   #disposed = false;
@@ -33,7 +40,7 @@ export class PointerResize {
     options: PointerResizeOptions
   ) {
     this.#handle = options.handle;
-    this.#definition = options.definition;
+    this.#dragToken = options.dragToken;
     this.#canStart = options.canStart;
     this.#start = options.onStart;
     this.#move = options.onMove;
@@ -72,7 +79,9 @@ export class PointerResize {
     event.preventDefault();
     this.#activePointerId = event.pointerId;
 
-    this.#handle.setPointerCapture(event.pointerId);
+    this.#handle.setPointerCapture(
+      event.pointerId
+    );
     this.#handle.addEventListener(
       "pointermove",
       this.#onPointerMove
@@ -87,17 +96,21 @@ export class PointerResize {
     );
     document.documentElement.classList.add(
       "handle-dragging",
-      this.#definition.orientation
+      this.#dragToken
     );
 
-    this.#start(this.#coordinate(event));
+    this.#start(
+      this.#coordinate(event)
+    );
   };
 
   #onPointerMove = (
     event: PointerEvent
   ) => {
     if (this.#activePointerId !== null) {
-      this.#move(this.#coordinate(event));
+      this.#move(
+        this.#coordinate(event)
+      );
     }
   };
 
@@ -133,14 +146,17 @@ export class PointerResize {
     );
     document.documentElement.classList.remove(
       "handle-dragging",
-      this.#definition.orientation
+      this.#dragToken
     );
     this.#end();
   }
 
   #coordinate(
     event: PointerEvent
-  ): number {
-    return event[this.#definition.coordinate];
+  ): PointerCoordinate {
+    return {
+      x: event.clientX,
+      y: event.clientY
+    };
   }
 }

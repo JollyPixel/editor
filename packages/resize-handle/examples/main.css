@@ -123,13 +123,13 @@ li.selected {
 }
 
 .object {
+  position: relative;
   width: 76px;
   height: 76px;
   border: 2px solid #89b4fa;
   border-radius: 8px;
   background: #4b70b8;
   box-shadow: 12px 14px 0 #293c64;
-  transform: rotate(7deg);
 }
 
 .output {
@@ -176,6 +176,19 @@ html.handle-dragging .resize-handle {
   background: #89b4fa;
 }
 
+.resize-handle.corner {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  cursor: nwse-resize;
+}
+
+.resize-handle.corner.bottom-right {
+  right: -7px;
+  bottom: -7px;
+}
+
 html.handle-dragging.vertical * {
   cursor: ew-resize !important;
   user-select: none;
@@ -183,6 +196,16 @@ html.handle-dragging.vertical * {
 
 html.handle-dragging.horizontal * {
   cursor: ns-resize !important;
+  user-select: none;
+}
+
+html.handle-dragging.nwse * {
+  cursor: nwse-resize !important;
+  user-select: none;
+}
+
+html.handle-dragging.nesw * {
+  cursor: nesw-resize !important;
   user-select: none;
 }
 

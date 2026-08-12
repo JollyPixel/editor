@@ -13,7 +13,10 @@ import {
 } from "../support/gallery.ts";
 import {
   boxOf,
-  dragTo
+  centerOf,
+  dragTo,
+  heightOf,
+  widthOf
 } from "../support/pointer.ts";
 
 test.describe("Dock", () => {
@@ -452,6 +455,27 @@ test.describe("Floating", () => {
     await expect.poll(
       () => floating.evaluate((element) => element.getBoundingClientRect().width)
     ).toBe(width + 8);
+  });
+
+  test("the corner handle resizes both axes together from one drag", async({ page }) => {
+    await gotoGallery(page, {
+      example: "containers/floating",
+      chrome: "off"
+    });
+
+    const floating = page.locator("jolly-floating");
+    const width = await widthOf(floating);
+    const height = await heightOf(floating);
+
+    const corner = floating.locator(".resize-handle.corner");
+    const from = await centerOf(corner);
+    await dragTo(page, corner, {
+      x: from.x + 40,
+      y: from.y + 30
+    });
+
+    await expect.poll(() => widthOf(floating)).toBe(width + 40);
+    await expect.poll(() => heightOf(floating)).toBe(height + 30);
   });
 });
 

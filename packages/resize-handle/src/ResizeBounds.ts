@@ -6,7 +6,9 @@ export class ResizeBounds {
   readonly max: number;
 
   get hasMaximum(): boolean {
-    return Number.isFinite(this.max);
+    return Number.isFinite(
+      this.max
+    );
   }
 
   constructor(

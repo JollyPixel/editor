@@ -87,8 +87,9 @@ Set `locked` on fixed panes. Locked panes cannot move and always use their autho
 even when a stored layout exists. `resetLayout()` restores the authored arrangement; `snapshot()`
 returns the current one; committed changes emit `jolly-layout-change`.
 
-`jolly-floating` also works outside a layout. Its pane header moves the window, while its edges
-resize it; it cannot dock without a layout.
+`jolly-floating` also works outside a layout. Its pane header moves the window, while its right
+and bottom edges resize it, plus a bottom-right corner that resizes both at once from a single
+drag; it cannot dock without a layout.
 
 ## Tabs and Tab
 

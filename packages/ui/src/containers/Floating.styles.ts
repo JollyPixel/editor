@@ -64,10 +64,16 @@ export const floatingStyles = css`
     opacity: 1;
   }
 
+  /*
+   * Inset by the host's own border-radius so the strip (and its hover line)
+   * stops before the rounded corner instead of running past the visible
+   * surface into the void the radius cuts away. The corner handle below
+   * fills the gap this leaves.
+   */
   .resize-handle.right {
-    top: 0;
+    top: var(--jolly-radius-md, 6px);
     right: -4px;
-    bottom: 0;
+    bottom: var(--jolly-radius-md, 6px);
     width: 8px;
     cursor: ew-resize;
   }
@@ -80,9 +86,9 @@ export const floatingStyles = css`
   }
 
   .resize-handle.bottom {
-    right: 0;
+    right: var(--jolly-radius-md, 6px);
     bottom: -4px;
-    left: 0;
+    left: var(--jolly-radius-md, 6px);
     height: 8px;
     cursor: ns-resize;
   }
@@ -92,6 +98,22 @@ export const floatingStyles = css`
     right: 0;
     left: 0;
     height: 2px;
+  }
+
+  .resize-handle.corner {
+    right: -4px;
+    bottom: -4px;
+    width: calc(var(--jolly-radius-md, 6px) + 8px);
+    height: calc(var(--jolly-radius-md, 6px) + 8px);
+    cursor: nwse-resize;
+  }
+
+  .resize-handle.corner::after {
+    right: 4px;
+    bottom: 4px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
   }
 
   .resize-handle:focus-visible {

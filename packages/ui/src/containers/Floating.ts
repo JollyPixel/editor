@@ -1,5 +1,9 @@
 // Import Third-party Dependencies
-import { ResizeHandle } from "@jolly-pixel/resize-handle";
+import {
+  CornerResizeHandle,
+  ResizeHandle,
+  type ResizeHandleLike
+} from "@jolly-pixel/resize-handle";
 import {
   LitElement,
   html,
@@ -83,7 +87,10 @@ export class Floating extends LitElement {
   @query(".bottom")
   declare _bottomHandle: HTMLDivElement;
 
-  #resizeHandles: ResizeHandle[] = [];
+  @query(".corner")
+  declare _cornerHandle: HTMLDivElement;
+
+  #resizeHandles: ResizeHandleLike[] = [];
   #removeResizeListeners: Array<() => void> = [];
   #ownsZIndex = false;
   #managed = false;
@@ -144,6 +151,11 @@ export class Floating extends LitElement {
         class="resize-handle bottom"
         part="resize-handle-bottom"
         aria-label="Resize floating pane height"
+      ></div>
+      <div
+        class="resize-handle corner bottom-right"
+        part="resize-handle-corner"
+        aria-hidden="true"
       ></div>
     `;
   }
@@ -312,7 +324,14 @@ export class Floating extends LitElement {
       handle: this._bottomHandle,
       minSize: this.minHeight
     });
-    this.#resizeHandles = [width, height];
+    const corner = new CornerResizeHandle(this, {
+      horizontal: "left",
+      vertical: "top",
+      handle: this._cornerHandle,
+      minWidth: this.minWidth,
+      minHeight: this.minHeight
+    });
+    this.#resizeHandles = [width, height, corner];
     for (const resizeHandle of this.#resizeHandles) {
       this.#removeResizeListeners.push(forwardResizeEvents(
         this,
