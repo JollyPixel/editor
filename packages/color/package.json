@@ -3,6 +3,7 @@
   "description": "The color utilities for JollyPixel's editors",
   "version": "1.0.0",
   "type": "module",
+  "private": true,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
