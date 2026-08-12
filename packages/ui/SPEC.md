@@ -734,14 +734,14 @@ Wrappers position it.
 
 ```html
 <jolly-dock side="left" collapsible>
-  <jolly-pane title="Layers">...</jolly-pane>
+  <jolly-pane heading="Layers">...</jolly-pane>
 </jolly-dock>
 
 <jolly-floating x="8" y="8">
-  <jolly-pane title="voxel.renderer">...</jolly-pane>
+  <jolly-pane heading="voxel.renderer">...</jolly-pane>
 </jolly-floating>
 
-<jolly-pane title="Transform">...</jolly-pane>
+<jolly-pane heading="Transform">...</jolly-pane>
 ```
 
 Docked and floating share all content code. The facade defaults to wrapping in

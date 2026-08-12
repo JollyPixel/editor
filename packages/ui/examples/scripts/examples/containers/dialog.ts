@@ -18,7 +18,7 @@ export const DIALOG_EXAMPLE: GalleryExample = {
     root.className = "chrome-row";
     const open = button("Open dialog", "accent");
     const dialog = document.createElement("jolly-dialog");
-    dialog.title = "Delete layer?";
+    dialog.heading = "Delete layer?";
     dialog.append(text("This declarative dialog can contain arbitrary content."));
     const close = button("Close", "accent");
     close.slot = "actions";

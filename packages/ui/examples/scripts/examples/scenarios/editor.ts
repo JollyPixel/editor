@@ -167,7 +167,7 @@ function labelledPane(
 ): HTMLElementTagNameMap["jolly-pane"] {
   const pane = document.createElement("jolly-pane");
   pane.key = key;
-  pane.title = title;
+  pane.heading = title;
   pane.collapsible = true;
   pane.style.setProperty("--jolly-label-width", kLabelWidth);
 

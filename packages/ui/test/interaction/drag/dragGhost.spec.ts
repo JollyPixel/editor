@@ -3,7 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { themeTokenNames } from "../../src/interaction/dragGhost.ts";
+import { themeTokenNames } from "../../../src/interaction/drag/dragGhost.ts";
 
 describe("Interaction.themeTokenNames", () => {
   test("reads the tokens a scope host declares", () => {
@@ -39,11 +39,11 @@ describe("Interaction.themeTokenNames", () => {
     );
   });
 
-  test("collects declarations only, never usages", () => {
-    // Every token is used at least once inside a "var()", so a pattern that
-    // matched usages too would report names no scope host actually declares.
+  test("includes ramp tokens declared by the scope", () => {
+    // The scope declares raw ramp tokens as well as semantic aliases, so a
+    // ghost receives every custom property needed by the resolved theme.
     assert.ok(
-      !themeTokenNames().includes("--jolly-neutral-100")
+      themeTokenNames().includes("--jolly-neutral-100")
     );
   });
 

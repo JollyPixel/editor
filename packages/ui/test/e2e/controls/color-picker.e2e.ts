@@ -206,6 +206,22 @@ test.describe("color: alpha", () => {
     expect(await lastChange(page)).toBe("#4488ff80");
   });
 
+  test("evaluates an alpha expression before committing it", async({ page }) => {
+    await gotoGallery(page, {
+      example: "controls/color-alpha",
+      chrome: "off"
+    });
+    await recordChanges(page);
+
+    const popover = await openPicker(row(page, "default"));
+    const readout = popover.locator("input.readout");
+
+    await readout.fill("1 / 2");
+    await readout.press("Enter");
+
+    expect(await lastChange(page)).toBe("#4488ff80");
+  });
+
   test("cancels an unparsable alpha instead of reporting an error", async({ page }) => {
     await gotoGallery(page, {
       example: "controls/color-alpha",

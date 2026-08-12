@@ -25,35 +25,35 @@ function peer(
 
 describe("Field.isModified", () => {
   test("is false without a default, since there is nothing to revert to", () => {
-    assert.equal(isModified(12, undefined), false);
+    assert.equal(isModified(12, undefined, Object.is), false);
   });
 
   test("is false when the value equals the default", () => {
-    assert.equal(isModified(12, 12), false);
-    assert.equal(isModified("a", "a"), false);
+    assert.equal(isModified(12, 12, Object.is), false);
+    assert.equal(isModified("a", "a", Object.is), false);
   });
 
   test("is true when the value differs", () => {
-    assert.equal(isModified(13, 12), true);
-    assert.equal(isModified("b", "a"), true);
+    assert.equal(isModified(13, 12, Object.is), true);
+    assert.equal(isModified("b", "a", Object.is), true);
   });
 
   test("is true for a Mixed value, since differing values cannot all equal one default", () => {
-    assert.equal(isModified<number>(Mixed, 12), true);
+    assert.equal(isModified<number>(Mixed, 12, Object.is), true);
   });
 
   test("is still false for a Mixed value with no default to revert to", () => {
     assert.equal(
-      isModified<number>(Mixed, undefined),
+      isModified<number>(Mixed, undefined, Object.is),
       false
     );
   });
 
-  test("compares objects by identity when given no comparator", () => {
+  test("compares objects by identity with Object.is", () => {
     const fallback = { x: 1 };
 
-    assert.equal(isModified({ x: 1 }, fallback), true);
-    assert.equal(isModified(fallback, fallback), false);
+    assert.equal(isModified({ x: 1 }, fallback, Object.is), true);
+    assert.equal(isModified(fallback, fallback, Object.is), false);
   });
 
   /** What stops an object valued field lighting its revert gutter on an untouched value. */
@@ -76,9 +76,9 @@ describe("Field.isModified", () => {
   });
 
   test("does not treat 0 or an empty string as absent", () => {
-    assert.equal(isModified(0, 0), false);
-    assert.equal(isModified(0, 1), true);
-    assert.equal(isModified("", "a"), true);
+    assert.equal(isModified(0, 0, Object.is), false);
+    assert.equal(isModified(0, 1, Object.is), true);
+    assert.equal(isModified("", "a", Object.is), true);
   });
 });
 

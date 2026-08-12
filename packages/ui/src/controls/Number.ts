@@ -17,12 +17,11 @@ import {
   parseNumeric,
   quantize
 } from "../numeric/format.ts";
-import { ScrubController } from "../interaction/ScrubController.ts";
+import { ScrubController } from "../interaction/scrub/ScrubController.ts";
 import { multiplierFor } from "../numeric/modifierMultiplier.ts";
 import { valueFromDelta } from "../numeric/valueFromDelta.ts";
 import { numberStyles } from "./Number.styles.ts";
-import { isInputElement } from "../dom.ts";
-import { PointerFocusController } from "../interaction/PointerFocusController.ts";
+import { PointerFocusController } from "../field/PointerFocusController.ts";
 
 export interface NumberFieldDefaults {
   step: number;
@@ -104,7 +103,7 @@ export class NumberField extends JollyField<number> {
           aria-disabled=${this.lockedAria}
           aria-description=${this.lockDescription}
           aria-invalid=${this.displayError === null ? nothing : "true"}
-          @input=${this.#onType}
+          @input=${this.onDraftInput}
           @focus=${this.#pointerFocus.onFocus}
           @keydown=${this.#onKeyDown}
           @blur=${this.#onBlur}
@@ -119,34 +118,22 @@ export class NumberField extends JollyField<number> {
     return value === undefined ? "" : formatNumber(value, this.step);
   }
 
-  /**
-   * Typing updates the draft; scrubbing is the continuous input path.
-   */
-  #onType(
-    event: Event
-  ): void {
-    if (!isInputElement(event.target)) {
-      return;
-    }
-
-    this.setDraft(event.target.value);
-    this.setParseError(null);
-  }
-
   #onKeyDown(
     event: KeyboardEvent
   ): void {
     this.#pointerFocus.onKeyDown();
 
-    if (event.key === "Enter") {
-      this.#commit();
-    }
-    else if (event.key === "Escape") {
-      event.stopPropagation();
-      this.clearDraft();
-    }
-    else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+    if (
+      event.key === "ArrowUp" ||
+      event.key === "ArrowDown"
+    ) {
       this.#step(event);
+    }
+    else {
+      this.onDraftKeyDown(
+        event,
+        () => this.#commit()
+      );
     }
   }
 
@@ -186,33 +173,26 @@ export class NumberField extends JollyField<number> {
   }
 
   #commit(): void {
-    const draft = this.draft;
-    if (draft === null || this.#scrub.dragging) {
+    if (this.#scrub.dragging) {
       return;
     }
 
-    const result = parseNumeric(draft);
-    // Blank input cancels the edit.
-    if (result === null) {
-      this.clearDraft();
+    this.commitDraft((draft) => {
+      const result = parseNumeric(draft);
+      if (result === null || !result.ok) {
+        return result;
+      }
 
-      return;
-    }
-
-    if (!result.ok) {
-      this.setParseError(result.error);
-
-      return;
-    }
-
-    this.emitChange(
-      quantize(
-        result.value,
-        this.step,
-        this.min,
-        this.max
-      )
-    );
+      return {
+        ok: true,
+        value: quantize(
+          result.value,
+          this.step,
+          this.min,
+          this.max
+        )
+      };
+    });
   }
 }
 

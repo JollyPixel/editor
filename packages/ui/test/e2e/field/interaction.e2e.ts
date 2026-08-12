@@ -81,6 +81,39 @@ test.describe("number: expression input", () => {
   });
 });
 
+test.describe("range: expression input", () => {
+  test("commits an evaluated expression for the focused endpoint", async({ page }) => {
+    await gotoGallery(page, {
+      example: "controls/range",
+      chrome: "off"
+    });
+    await recordChanges(page);
+
+    const input = row(page, "jolly-range", "default")
+      .locator('input[data-end="from"]');
+    await input.fill("2*3");
+    await input.press("Enter");
+
+    expect(await changes(page)).toEqual([{ from: 6, to: 20 }]);
+  });
+
+  test("reports an invalid expression without committing", async({ page }) => {
+    await gotoGallery(page, {
+      example: "controls/range",
+      chrome: "off"
+    });
+    await recordChanges(page);
+
+    const field = row(page, "jolly-range", "default");
+    const input = field.locator('input[data-end="from"]');
+    await input.fill("alert(1)");
+    await input.press("Enter");
+
+    await expect(field).toHaveAttribute("invalid", "");
+    expect(await changes(page)).toEqual([]);
+  });
+});
+
 test.describe("draft lifecycle", () => {
   test("Escape discards the draft and restores the value", async({ page }) => {
     await gotoGallery(page, {

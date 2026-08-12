@@ -25,6 +25,10 @@ export interface PaneState {
   collapsed?: boolean;
 }
 
+export interface FolderState {
+  open: boolean;
+}
+
 export interface LayoutSnapshot {
   v: number;
   docks: Record<string, DockState>;
@@ -40,6 +44,7 @@ export interface LayoutSnapshot {
    */
   geometry: Record<string, FloatingState>;
   panes: Record<string, PaneState>;
+  folders: Record<string, Record<string, FolderState>>;
 }
 
 export interface DeclaredDock {
@@ -75,7 +80,8 @@ export function emptyLayout(): LayoutSnapshot {
     docks: {},
     floating: {},
     geometry: {},
-    panes: {}
+    panes: {},
+    folders: {}
   };
 }
 
@@ -113,7 +119,8 @@ export function parseLayout(
     docks: readDocks(parsed.docks),
     floating: readFloating(parsed.floating),
     geometry: readFloating(parsed.geometry),
-    panes: readPanes(parsed.panes)
+    panes: readPanes(parsed.panes),
+    folders: readFolders(parsed.folders)
   };
 }
 
@@ -202,7 +209,10 @@ export function reconcileLayout(
     docks[dock.key] = {
       ...size === undefined ? {} : { size },
       collapsed: storedDock?.collapsed === true,
-      panes: resolveOrder(storedDock?.panes ?? [], present)
+      panes: resolveOrder(
+        storedDock?.panes ?? [],
+        present
+      )
     };
   }
 
@@ -240,7 +250,8 @@ export function reconcileLayout(
     docks,
     floating,
     geometry,
-    panes
+    panes,
+    folders: stored?.folders ?? {}
   };
 }
 
@@ -285,7 +296,10 @@ function readFloating(
     const geometry: FloatingState = {};
     for (const axis of ["x", "y", "width", "height"] as const) {
       const candidate = state[axis];
-      if (typeof candidate === "number" && Number.isFinite(candidate)) {
+      if (
+        typeof candidate === "number" &&
+        Number.isFinite(candidate)
+      ) {
         geometry[axis] = candidate;
       }
     }
@@ -304,12 +318,47 @@ function readPanes(
   }
 
   for (const [key, state] of Object.entries(value)) {
-    if (isRecord(state) && typeof state.collapsed === "boolean") {
-      panes[key] = { collapsed: state.collapsed };
+    if (
+      isRecord(state) &&
+      typeof state.collapsed === "boolean"
+    ) {
+      panes[key] = {
+        collapsed: state.collapsed
+      };
     }
   }
 
   return panes;
+}
+
+function readFolders(
+  value: unknown
+): Record<string, Record<string, FolderState>> {
+  const folders: Record<string, Record<string, FolderState>> = {};
+  if (!isRecord(value)) {
+    return folders;
+  }
+
+  for (const [paneKey, states] of Object.entries(value)) {
+    if (!isRecord(states)) {
+      continue;
+    }
+
+    const paneFolders: Record<string, FolderState> = {};
+    for (const [folderKey, state] of Object.entries(states)) {
+      if (
+        isRecord(state) &&
+        typeof state.open === "boolean"
+      ) {
+        paneFolders[folderKey] = {
+          open: state.open
+        };
+      }
+    }
+    folders[paneKey] = paneFolders;
+  }
+
+  return folders;
 }
 
 function readStringArray(

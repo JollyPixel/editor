@@ -30,16 +30,8 @@ export function clampToViewport({
   viewport
 }: ClampToViewportOptions): ViewportPosition {
   return {
-    x: clampAxis(
-      x,
-      rect.width,
-      viewport.width
-    ),
-    y: clampAxis(
-      y,
-      rect.height,
-      viewport.height
-    )
+    x: clampAxis(x, rect.width, viewport.width),
+    y: clampAxis(y, rect.height, viewport.height)
   };
 }
 
@@ -52,8 +44,5 @@ function clampAxis(
     return 0;
   }
 
-  return Math.min(
-    Math.max(position, 0),
-    viewportSize - size
-  );
+  return Math.min(Math.max(position, 0), viewportSize - size);
 }

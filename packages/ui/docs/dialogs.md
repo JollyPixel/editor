@@ -4,7 +4,7 @@
 Escape cancellation. It is a theme scope host.
 
 ```html
-<jolly-dialog title="Delete layer?">
+<jolly-dialog heading="Delete layer?">
   <p>This cannot be undone.</p>
   <jolly-button slot="actions">Cancel</jolly-button>
   <jolly-button slot="actions" variant="danger">Delete</jolly-button>

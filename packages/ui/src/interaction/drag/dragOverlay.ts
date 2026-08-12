@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import { copyTheme } from "./dragGhost.ts";
+import type { Rect } from "../../geometry/Rect.ts";
 
 // CONSTANTS
 const kOverlayClass = "jolly-drag-overlay";
@@ -44,16 +45,6 @@ const kInsertion = {
     "0 1px 4px rgb(0 0 0 / 0.28)"
   ].join(", ")
 };
-
-/**
- * Client-space rectangle, in CSS pixels.
- */
-export interface Rect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
 
 export interface DragOverlayOptions {
   accent: string;

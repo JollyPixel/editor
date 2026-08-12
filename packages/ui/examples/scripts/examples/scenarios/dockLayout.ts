@@ -73,7 +73,7 @@ function pane(
 ): HTMLElementTagNameMap["jolly-pane"] {
   const element = document.createElement("jolly-pane");
   element.key = key;
-  element.title = title;
+  element.heading = title;
   element.collapsible = true;
   const body = document.createElement("p");
   body.textContent = content;

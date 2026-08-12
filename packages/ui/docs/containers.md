@@ -15,7 +15,7 @@ Apply `themeStyles` to a scope host above containers. A pane is not a theme scop
 `jolly-pane` provides a title, an `actions` slot, and scrollable content:
 
 ```html
-<jolly-pane title="Inspector" reorderable storage-key="scene-inspector">
+<jolly-pane heading="Inspector" reorderable storage-key="scene-inspector">
   <jolly-button slot="actions">Reset</jolly-button>
   <jolly-folder label="Transform">...</jolly-folder>
   <jolly-folder label="Material">...</jolly-folder>
@@ -38,8 +38,8 @@ The Pane header exposes `header`, `title`, and `actions` CSS parts for local lay
 
 ```html
 <jolly-dock key="left" side="left" align="start" collapsible>
-  <jolly-pane key="hierarchy" title="Hierarchy" collapsible grow></jolly-pane>
-  <jolly-pane key="inspector" title="Inspector" collapsible></jolly-pane>
+  <jolly-pane key="hierarchy" heading="Hierarchy" collapsible grow></jolly-pane>
+  <jolly-pane key="inspector" heading="Inspector" collapsible></jolly-pane>
 </jolly-dock>
 ```
 
@@ -68,11 +68,11 @@ its own, so arrange its children with your CSS:
 <div class="editor-stage">
   <jolly-dock-layout storage-key="voxel-editor">
     <jolly-dock key="left" side="left" align="start">
-      <jolly-pane key="hierarchy" title="Hierarchy"></jolly-pane>
+      <jolly-pane key="hierarchy" heading="Hierarchy"></jolly-pane>
     </jolly-dock>
     <main>...viewport...</main>
     <jolly-dock key="hud" side="right" overlay align="end">
-      <jolly-pane key="tools" title="Tools"></jolly-pane>
+      <jolly-pane key="tools" heading="Tools"></jolly-pane>
     </jolly-dock>
   </jolly-dock-layout>
 </div>
@@ -123,4 +123,3 @@ Outside a layout, docks and floating windows persist independently.
 
 Stored state overrides matching authored state. New containers still appear where markup places
 them; removed containers are ignored. Future snapshot versions are discarded.
-

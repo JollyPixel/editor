@@ -13,10 +13,7 @@ import {
 import { JollyField } from "../field/JollyField.ts";
 import { selectStyles } from "./Select.styles.ts";
 import { isSelectElement } from "../dom.ts";
-import {
-  ensureModalityTracking,
-  wasPointerInput
-} from "../interaction/pointerModality.ts";
+import { PointerFocusController } from "../field/PointerFocusController.ts";
 import type { JollyOption } from "./types.ts";
 
 // CONSTANTS
@@ -35,13 +32,12 @@ export class Select<TValue> extends JollyField<TValue> {
   @property({ attribute: false })
   declare options: JollyOption<TValue>[];
 
-  #pointerFocused = false;
+  #pointerFocus = new PointerFocusController(this);
 
   constructor() {
     super();
 
     this.options = [];
-    ensureModalityTracking();
   }
 
   protected renderValue(): TemplateResult {
@@ -49,14 +45,14 @@ export class Select<TValue> extends JollyField<TValue> {
       <span class="select-wrap">
         <select
           ?disabled=${this.disabled}
-          ?data-pointer-focus=${this.#pointerFocused}
+          ?data-pointer-focus=${this.#pointerFocus.active}
           aria-readonly=${this.readonlyAria}
           aria-disabled=${this.lockedAria}
           aria-description=${this.lockDescription}
           aria-invalid=${this.displayError === null ? nothing : "true"}
-          @focus=${this.#onFocus}
-          @blur=${this.#onBlur}
-          @keydown=${this.#onKeyDown}
+          @focus=${this.#pointerFocus.onFocus}
+          @blur=${this.#pointerFocus.onBlur}
+          @keydown=${this.#pointerFocus.onKeyDown}
           @change=${this.#onChange}
         >
           ${this.mixed ? html`<option value=${kMixedValue}>—</option>` : nothing}
@@ -93,32 +89,6 @@ export class Select<TValue> extends JollyField<TValue> {
     );
 
     return index === -1 ? "" : String(index);
-  }
-
-  #onFocus(): void {
-    this.#setPointerFocused(wasPointerInput());
-  }
-
-  #onBlur(): void {
-    this.#setPointerFocused(false);
-  }
-
-  /**
-   * Keyboard input restores the focus-visible ring.
-   */
-  #onKeyDown(): void {
-    this.#setPointerFocused(false);
-  }
-
-  #setPointerFocused(
-    value: boolean
-  ): void {
-    if (this.#pointerFocused === value) {
-      return;
-    }
-
-    this.#pointerFocused = value;
-    this.requestUpdate();
   }
 
   #onChange(

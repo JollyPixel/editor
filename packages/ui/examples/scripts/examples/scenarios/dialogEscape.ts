@@ -13,7 +13,7 @@ export const DIALOG_ESCAPE_EXAMPLE = createSimpleExample(
     const root = document.createElement("div");
     root.className = "chrome-row";
     const dialog = document.createElement("jolly-dialog");
-    dialog.title = "Press Escape";
+    dialog.heading = "Press Escape";
     dialog.append(text("Escape follows the native dialog cancellation path."));
     const open = button("Open dismissible dialog");
     open.addEventListener("click", () => void dialog.showModal());

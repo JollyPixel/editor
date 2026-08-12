@@ -5,7 +5,7 @@ import type {
 } from "lit";
 
 // Import Internal Dependencies
-import { anchoredPosition } from "../numeric/anchoredPosition.ts";
+import { anchoredPosition } from "../geometry/anchoredPosition.ts";
 
 // CONSTANTS
 const kDefaultGap = 4;

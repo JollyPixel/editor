@@ -17,12 +17,11 @@ import { formatHex } from "../color/format.ts";
 import { parseColor } from "../color/parse.ts";
 import { colorStyles } from "./Color.styles.ts";
 import {
-  detailOf,
-  isInputElement
+  detailOf
 } from "../dom.ts";
 import type { JollyChangeDetail } from "../field/events.ts";
-import { PointerFocusController } from "../interaction/PointerFocusController.ts";
-import { PopoverController } from "../interaction/PopoverController.ts";
+import { PointerFocusController } from "../field/PointerFocusController.ts";
+import { PopoverController } from "../field/PopoverController.ts";
 
 // Registers the popover panel custom element.
 import {
@@ -146,7 +145,7 @@ export class Color extends JollyField<string> {
         aria-disabled=${this.lockedAria}
         aria-description=${this.lockDescription}
         aria-invalid=${this.displayError === null ? nothing : "true"}
-        @input=${this.#onType}
+        @input=${this.onDraftInput}
         @focus=${this.#pointerFocus.onFocus}
         @keydown=${this.#onKeyDown}
         @blur=${this.#onBlur}
@@ -188,7 +187,10 @@ export class Color extends JollyField<string> {
    */
   #revert(): void {
     const opening = this.#valueAtOpen;
-    if (opening === null || !this.editable) {
+    if (
+      opening === null ||
+      !this.editable
+    ) {
       return;
     }
 
@@ -231,29 +233,15 @@ export class Color extends JollyField<string> {
     return detail.value;
   }
 
-  #onType(
-    event: Event
-  ): void {
-    if (!isInputElement(event.target)) {
-      return;
-    }
-
-    this.setDraft(event.target.value);
-    this.setParseError(null);
-  }
-
   #onKeyDown(
     event: KeyboardEvent
   ): void {
     this.#pointerFocus.onKeyDown();
 
-    if (event.key === "Enter") {
-      this.#commit();
-    }
-    else if (event.key === "Escape") {
-      event.stopPropagation();
-      this.clearDraft();
-    }
+    this.onDraftKeyDown(
+      event,
+      () => this.#commit()
+    );
   }
 
   #onBlur(): void {
@@ -262,23 +250,23 @@ export class Color extends JollyField<string> {
   }
 
   #commit(): void {
-    const draft = this.draft;
-    if (draft === null || !this.editable) {
-      return;
-    }
+    this.commitDraft((draft) => {
+      const parsed = parseColor(draft);
+      if (parsed === null) {
+        return {
+          ok: false,
+          error: `"${draft.trim()}" is not a hex colour`
+        };
+      }
 
-    const parsed = parseColor(draft);
-    if (parsed === null) {
-      this.setParseError(
-        `"${draft.trim()}" is not a hex colour`
-      );
-
-      return;
-    }
-
-    this.emitChange(
-      formatHex(parsed, this.alpha)
-    );
+      return {
+        ok: true,
+        value: formatHex(
+          parsed,
+          this.alpha
+        )
+      };
+    });
   }
 }
 

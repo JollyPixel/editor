@@ -3,7 +3,7 @@ export function pane(
   content: string
 ): HTMLElementTagNameMap["jolly-pane"] {
   const element = document.createElement("jolly-pane");
-  element.title = title;
+  element.heading = title;
   if (content !== "") {
     element.append(text(content));
   }

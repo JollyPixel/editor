@@ -1,20 +1,21 @@
 // Import Internal Dependencies
 import {
   createDragOverlay,
-  type DragOverlay,
-  type Rect
+  type DragOverlay
 } from "./dragOverlay.ts";
+import type { Rect } from "../../geometry/Rect.ts";
 import {
   resolveDropIndex,
   type DropCandidate
 } from "./dropIndex.ts";
-import { kFallback } from "../theme/fallbacks.ts";
+import { ensureDocumentStyles } from "../ensureDocumentStyles.ts";
+import { kFallback } from "../../theme/fallbacks.ts";
+import { resolveThemeToken } from "../../theme/resolveThemeToken.ts";
 
 // CONSTANTS
 const kThreshold = 4;
 const kDeadBand = 6;
 const kDraggingClass = "jolly-pane-dragging";
-const kStyleId = "jolly-drag-session-styles";
 const kInsertionThickness = 2;
 const kEnterDepth = 48;
 const kChipOffset = 12;
@@ -186,7 +187,11 @@ export function startDragSession(
       }
 
       overlay = createDragOverlay({
-        accent: resolveAccent(source),
+        accent: resolveThemeToken(
+          source,
+          "--jolly-accent-fill",
+          String(kFallback.focusRing)
+        ),
         label: ghostLabel,
         ghost,
         element,
@@ -511,44 +516,15 @@ function movesNothing(
     (index === source || index === source + 1);
 }
 
-function resolveAccent(
-  host: HTMLElement
-): string {
-  return resolveToken(
-    host,
-    "--jolly-accent-fill",
-    kFallback.focusRing
-  );
-}
-
-function resolveToken(
-  host: HTMLElement,
-  name: string,
-  fallback: { toString(): string; }
-): string {
-  const resolved = getComputedStyle(host)
-    .getPropertyValue(name)
-    .trim();
-
-  return resolved === "" ? String(fallback) : resolved;
-}
-
 /**
  * Lazily installs the document-level cursor lock used during a drag.
  */
 function ensureSessionStyles(): void {
-  if (document.getElementById(kStyleId) !== null) {
-    return;
-  }
-
-  const style = document.createElement("style");
-  style.id = kStyleId;
-  style.textContent = `
+  ensureDocumentStyles("jolly-drag-session-styles", `
     html.${kDraggingClass},
     html.${kDraggingClass} * {
       cursor: grabbing !important;
       user-select: none !important;
     }
-  `;
-  document.head.append(style);
+  `);
 }

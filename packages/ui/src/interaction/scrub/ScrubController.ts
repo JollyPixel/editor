@@ -5,11 +5,12 @@ import type {
 } from "lit";
 
 // Import Internal Dependencies
-import { valueFromDelta } from "../numeric/valueFromDelta.ts";
-import { ensureDragStyles } from "./dragStyles.ts";
+import { valueFromDelta } from "../../numeric/valueFromDelta.ts";
+import { ensureDocumentStyles } from "../ensureDocumentStyles.ts";
 import { createDragGuide, type DragGuide } from "./dragGuide.ts";
-import { multiplierFor } from "../numeric/modifierMultiplier.ts";
-import { kFallback } from "../theme/fallbacks.ts";
+import { multiplierFor } from "../../numeric/modifierMultiplier.ts";
+import { kFallback } from "../../theme/fallbacks.ts";
+import { resolveThemeToken } from "../../theme/resolveThemeToken.ts";
 
 // CONSTANTS
 const kDraggingClass = "jolly-scrub-dragging";
@@ -111,7 +112,13 @@ export class ScrubController implements ReactiveController {
       "pointercancel",
       this.#onPointerUp
     );
-    ensureDragStyles();
+    ensureDocumentStyles("jolly-drag-styles", `
+      html.jolly-scrub-dragging,
+      html.jolly-scrub-dragging * {
+        cursor: ew-resize !important;
+        user-select: none !important;
+      }
+    `);
     document.documentElement.classList.add(
       kDraggingClass
     );
@@ -120,7 +127,11 @@ export class ScrubController implements ReactiveController {
     this.#guide = createDragGuide(
       top + (height / 2),
       event.clientX,
-      resolveGuideColor(this.#host)
+      resolveThemeToken(
+        this.#host as HTMLElement,
+        "--jolly-focus-ring",
+        String(kFallback.focusRing)
+      )
     );
 
     // Prevent native text selection while dragging.
@@ -196,17 +207,4 @@ export class ScrubController implements ReactiveController {
     this.#guide?.destroy();
     this.#guide = null;
   }
-}
-
-/**
- * Resolves a shadow-scoped token for the document-level drag guide.
- */
-function resolveGuideColor(
-  host: HTMLElement
-): string {
-  const resolved = getComputedStyle(host)
-    .getPropertyValue("--jolly-focus-ring")
-    .trim();
-
-  return resolved === "" ? String(kFallback.focusRing) : resolved;
 }

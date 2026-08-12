@@ -30,7 +30,6 @@ export function anchoredPosition({
 }: AnchoredPositionOptions): ViewportPosition {
   const below = anchor.bottom + gap;
   const above = anchor.top - gap - panel.height;
-
   const overflowsBelow = below + panel.height > viewport.height;
   const y = overflowsBelow && above >= 0 ? above : below;
 

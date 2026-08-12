@@ -13,13 +13,14 @@ import { JollyField } from "../field/JollyField.ts";
 import { MIXED_PLACEHOLDER } from "../field/mixed.ts";
 import {
   formatNumber,
+  parseNumeric,
   quantize
 } from "../numeric/format.ts";
 import { rangeStyles } from "./Range.styles.ts";
 import { multiplierFor } from "../numeric/modifierMultiplier.ts";
 import { valueFromDelta } from "../numeric/valueFromDelta.ts";
 import { isInputElement } from "../dom.ts";
-import { PointerFocusController } from "../interaction/PointerFocusController.ts";
+import { PointerFocusController } from "../field/PointerFocusController.ts";
 import type { Interval } from "./types.ts";
 
 export interface RangeDefaults {
@@ -58,6 +59,10 @@ export class Range extends JollyField<Interval> {
   declare max: number;
 
   #pointerFocus = new PointerFocusController(this);
+  #drafts: Record<keyof Interval, string | null> = {
+    from: null,
+    to: null
+  };
 
   constructor() {
     super();
@@ -98,7 +103,8 @@ export class Range extends JollyField<Interval> {
         inputmode="decimal"
         class="end"
         data-end=${end}
-        .value=${value === undefined ? "" : formatNumber(value, this.step)}
+        .value=${this.#drafts[end] ??
+        (value === undefined ? "" : formatNumber(value, this.step))}
         placeholder=${this.mixed ? MIXED_PLACEHOLDER : ""}
         aria-label=${end === "from" ? "Range start" : "Range end"}
         ?disabled=${this.disabled}
@@ -107,9 +113,9 @@ export class Range extends JollyField<Interval> {
         aria-readonly=${this.readonlyAria}
         aria-disabled=${this.lockedAria}
         aria-description=${this.lockDescription}
-        @change=${(event: Event) => this.#onCommit(end, event)}
+        @input=${(event: Event) => this.#onType(end, event)}
         @focus=${this.#pointerFocus.onFocus}
-        @blur=${this.#pointerFocus.onBlur}
+        @blur=${() => this.#onBlur(end)}
         @keydown=${(event: KeyboardEvent) => this.#onKeyDown(end, event)}
       >
     `;
@@ -124,6 +130,17 @@ export class Range extends JollyField<Interval> {
   ): void {
     this.#pointerFocus.onKeyDown();
 
+    if (event.key === "Enter") {
+      this.#commit(end);
+
+      return;
+    }
+    if (event.key === "Escape") {
+      event.stopPropagation();
+      this.#clearDraft(end);
+
+      return;
+    }
     if (event.key !== "ArrowUp" && event.key !== "ArrowDown") {
       return;
     }
@@ -154,30 +171,62 @@ export class Range extends JollyField<Interval> {
     );
   }
 
-  #onCommit(
+  #onType(
     end: keyof Interval,
     event: Event
   ): void {
+    if (!isInputElement(event.target)) {
+      return;
+    }
+
+    this.#drafts[end] = event.target.value;
+    this.setParseError(null);
+  }
+
+  #onBlur(
+    end: keyof Interval
+  ): void {
+    this.#pointerFocus.onBlur();
+    this.#commit(end);
+  }
+
+  #clearDraft(
+    end: keyof Interval
+  ): void {
+    this.#drafts[end] = null;
+    this.setParseError(null);
+    this.requestUpdate();
+  }
+
+  #commit(
+    end: keyof Interval
+  ): void {
+    const draft = this.#drafts[end];
     const interval = this.concreteValue;
     if (
-      !isInputElement(event.target) ||
+      draft === null ||
       interval === undefined ||
       !this.editable
     ) {
       return;
     }
 
-    const parsed = Number(
-      event.target.value.trim().replace(",", ".")
-    );
-    if (!Number.isFinite(parsed)) {
-      this.requestUpdate();
+    const result = parseNumeric(draft);
+    if (result === null) {
+      this.#clearDraft(end);
+
+      return;
+    }
+    if (!result.ok) {
+      this.setParseError(result.error);
 
       return;
     }
 
+    this.#drafts[end] = null;
+    this.requestUpdate();
     this.emitChange(
-      this.#withEnd(interval, end, parsed)
+      this.#withEnd(interval, end, result.value)
     );
   }
 
@@ -193,7 +242,11 @@ export class Range extends JollyField<Interval> {
       this.max
     );
 
-    return this.#clampToOther(interval, end, value);
+    return this.#clampToOther(
+      interval,
+      end,
+      value
+    );
   }
 
   #clampToOther(
@@ -203,14 +256,20 @@ export class Range extends JollyField<Interval> {
   ): Interval {
     if (end === "from") {
       return {
-        from: Math.min(value, interval.to),
+        from: Math.min(
+          value,
+          interval.to
+        ),
         to: interval.to
       };
     }
 
     return {
       from: interval.from,
-      to: Math.max(value, interval.from)
+      to: Math.max(
+        value,
+        interval.from
+      )
     };
   }
 }

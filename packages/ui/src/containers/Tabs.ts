@@ -99,7 +99,9 @@ export class Tabs extends LitElement {
     const requested = this._tabs.find(
       (tab) => tab.value === this.value && !tab.disabled
     );
-    const selected = requested ?? this._tabs.find((tab) => !tab.disabled);
+    const selected = requested ?? this._tabs.find(
+      (tab) => !tab.disabled
+    );
     const nextValue = selected?.value ?? "";
     if (this.value !== nextValue) {
       this.value = nextValue;
@@ -117,7 +119,7 @@ export class Tabs extends LitElement {
     if (userChange && selected !== undefined) {
       emitContainerEvent(
         this,
-        "jolly-change",
+        "jolly-tab-change",
         { value: selected.value }
       );
     }
@@ -130,7 +132,9 @@ export class Tabs extends LitElement {
       return;
     }
 
-    const index = Number(event.currentTarget.dataset.index);
+    const index = Number(
+      event.currentTarget.dataset.index
+    );
     this.#selectIndex(index, true);
   };
 

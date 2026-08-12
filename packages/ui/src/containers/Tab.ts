@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
   LitElement,
+  css,
   html,
   type TemplateResult
 } from "lit";
@@ -9,14 +10,19 @@ import {
   property
 } from "lit/decorators.js";
 
-// Import Internal Dependencies
-import { tabStyles } from "./Tab.styles.ts";
-
 @customElement("jolly-tab")
 export class Tab extends LitElement {
-  static override styles = [
-    tabStyles
-  ];
+  static override styles = css`
+    :host {
+      display: none;
+      box-sizing: border-box;
+      height: 100%;
+    }
+
+    :host([active]) {
+      display: block;
+    }
+  `;
 
   @property({ type: String })
   declare label: string;

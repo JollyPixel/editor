@@ -14,41 +14,21 @@ import {
 
 // Import Internal Dependencies
 import { emitContainerEvent } from "./events.ts";
-import type { Folder } from "./Folder.ts";
+import { FolderListController } from "./FolderListController.ts";
 import { paneStyles } from "./Pane.styles.ts";
 import {
-  detailOf,
   isSlotElement
 } from "../dom.ts";
 
 // Registers the chevron and grip glyphs.
 import "../icon/Icon.ts";
-import { headerGhost } from "../interaction/dragGhost.ts";
-import {
-  startDragSession,
-  verticalInsertionLine,
-  type DragSessionHandle
-} from "../interaction/DragSession.ts";
 import { LocalStorageAdapter } from "../storage/LocalStorageAdapter.ts";
+import { PersistedState } from "../storage/PersistedState.ts";
 import type { StorageAdapter } from "../storage/StorageAdapter.ts";
-import {
-  deriveKey,
-  resolveOrder
-} from "../storage/keys.ts";
+import { deriveKey } from "../storage/keys.ts";
 
 // CONSTANTS
 const kInteractive = "button, input, select, textarea, a";
-const kFolderZone = "folders";
-
-interface FolderReorderDetail {
-  folder: Folder;
-  command: "cancel" | "down" | "finish" | "start" | "up";
-}
-
-interface FolderDragDetail {
-  folder: Folder;
-  event: PointerEvent;
-}
 
 export type PaneMoveCommand =
   | "cancel"
@@ -58,6 +38,12 @@ export type PaneMoveCommand =
   | "previous"
   | "start"
   | "up";
+
+export interface PaneDragDetail {
+  pane: PaneElement;
+  event: PointerEvent;
+  handle: HTMLElement;
+}
 
 /*
  * A pane consumes tokens and never declares them. Declaring them would put
@@ -72,7 +58,7 @@ export class PaneElement extends LitElement {
   ];
 
   @property({ type: String })
-  declare title: string;
+  declare heading: string;
 
   @property({ type: String, reflect: true })
   declare key: string;
@@ -149,26 +135,39 @@ export class PaneElement extends LitElement {
   @query(".content")
   declare _content: HTMLElement;
 
-  #folders: Folder[] = [];
-  #startOrder: string[] | null = null;
   #managed = false;
+  #state = new PersistedState(this, {
+    isManaged: () => this.#managed,
+    namespace: () => this.#namespace(),
+    storage: () => this.storage,
+    onManagedWrite: () => {
+      emitContainerEvent(this, "jolly-layout-dirty", undefined);
+    }
+  });
   /** True inside a container that can move the pane, lock or no lock. */
   #hosted = false;
-  #session: DragSessionHandle | null = null;
+  #folders = new FolderListController(this, {
+    content: () => this._content,
+    contentSlot: () => this._contentSlot,
+    namespace: () => this.#namespace(),
+    reorderable: () => this.reorderable,
+    storage: () => this.storage,
+    announce: (message) => this.announce(message)
+  });
 
   /**
    * Identity used by the layout snapshot, falling back to tag and title.
    */
   get layoutKey(): string {
     return this.key === "" ?
-      deriveKey("jolly-pane", this.title) :
+      deriveKey("jolly-pane", this.heading) :
       this.key;
   }
 
   constructor() {
     super();
 
-    this.title = "";
+    this.heading = "";
     this.key = "";
     this.reorderable = false;
     this.collapsible = false;
@@ -200,19 +199,16 @@ export class PaneElement extends LitElement {
   protected override willUpdate(
     changed: Map<PropertyKey, unknown>
   ): void {
-    if (this.#hosted && changed.has("locked")) {
+    if (
+      this.#hosted &&
+      changed.has("locked")
+    ) {
       this.movable = !this.locked;
     }
   }
 
-  override disconnectedCallback(): void {
-    this.#session?.cancel();
-    this.#session = null;
-    super.disconnectedCallback();
-  }
-
   override render(): TemplateResult {
-    const showHeader = this.title !== "" ||
+    const showHeader = this.heading !== "" ||
       this._hasActions ||
       this.collapsible ||
       this.movable;
@@ -231,7 +227,7 @@ export class PaneElement extends LitElement {
                   class="fold"
                   type="button"
                   aria-expanded=${String(!this.collapsed)}
-                  aria-label=${`Fold ${this.title || "pane"}`}
+                  aria-label=${`Fold ${this.heading || "pane"}`}
                   @click=${this.#toggleCollapsed}
                 ><jolly-icon
                   class="chevron"
@@ -240,7 +236,7 @@ export class PaneElement extends LitElement {
                 ></jolly-icon></button>
               `
               : nothing}
-            <span class="title" part="title">${this.title}</span>
+            <span class="title" part="title">${this.heading}</span>
             <span class="actions" part="actions">
               <slot name="actions" @slotchange=${this.#onActionsChange}></slot>
             </span>
@@ -249,7 +245,7 @@ export class PaneElement extends LitElement {
                 <button
                   class="grip"
                   type="button"
-                  aria-label=${`Move ${this.title || "pane"}`}
+                  aria-label=${`Move ${this.heading || "pane"}`}
                   aria-pressed=${String(this._grabbed)}
                   @pointerdown=${this.#onGripPointerDown}
                   @keydown=${this.#onGripKeyDown}
@@ -267,9 +263,9 @@ export class PaneElement extends LitElement {
         `}
       <div class="content" part="content">
         <slot
-          @slotchange=${this.#onContentChange}
-          @jolly-folder-reorder=${this.#onReorderCommand}
-          @jolly-folder-drag=${this.#onFolderDrag}
+          @slotchange=${this.#folders.onContentChange}
+          @jolly-folder-reorder=${this.#folders.onReorderCommand}
+          @jolly-folder-drag=${this.#folders.onFolderDrag}
         ></slot>
       </div>
       <span class="live-region" aria-live="polite">${this._announcement}</span>
@@ -283,6 +279,16 @@ export class PaneElement extends LitElement {
     message: string
   ): void {
     this._announcement = message;
+  }
+
+  folderStates(): Record<string, { open: boolean; }> {
+    return this.#folders.states();
+  }
+
+  applyFolderStates(
+    states: Readonly<Record<string, { open: boolean; }>>
+  ): void {
+    this.#folders.applyStates(states);
   }
 
   /**
@@ -341,15 +347,10 @@ export class PaneElement extends LitElement {
 
   #toggleCollapsed = () => {
     this.collapsed = !this.collapsed;
-    if (this.#managed) {
-      emitContainerEvent(this, "jolly-layout-dirty", {});
-    }
-    else {
-      this.storage.set(
-        `${this.#namespace()}:collapsed`,
-        String(this.collapsed)
-      );
-    }
+    this.#state.write(
+      "collapsed",
+      String(this.collapsed)
+    );
 
     emitContainerEvent(
       this,
@@ -359,9 +360,7 @@ export class PaneElement extends LitElement {
   };
 
   #restoreCollapsed(): void {
-    const stored = this.storage.get(
-      `${this.#namespace()}:collapsed`
-    );
+    const stored = this.#state.read("collapsed");
 
     if (
       stored === "true" ||
@@ -475,251 +474,6 @@ export class PaneElement extends LitElement {
     }
   };
 
-  #onContentChange = () => {
-    this.#folders = this._contentSlot.assignedElements({ flatten: true })
-      .filter((element): element is Folder => element.tagName === "JOLLY-FOLDER");
-
-    const keys = this.#folderKeys();
-    const namespace = this.#namespace();
-    for (let index = 0; index < this.#folders.length; index++) {
-      const folder = this.#folders[index];
-      folder.reorderable = this.reorderable;
-      if (folder.storageKey === "") {
-        folder.storage = this.storage;
-        folder.persistenceKey = `${namespace}:folder:${keys[index]}`;
-      }
-    }
-
-    const stored = parseOrder(
-      this.storage.get(`${namespace}:order`)
-    );
-    this.#applyOrder(
-      resolveOrder(stored, keys)
-    );
-  };
-
-  /**
-   * Runs the pointer half of a folder reorder.
-   *
-   * Nothing moves until release: the session paints an insertion line and
-   * reports one index, which is what stops a folder oscillating under a hand
-   * resting on a boundary.
-   */
-  #onFolderDrag = (
-    event: Event
-  ) => {
-    if (!this.reorderable) {
-      return;
-    }
-
-    event.stopPropagation();
-    const detail = detailOf<FolderDragDetail>(event);
-    if (detail === null || this.#session !== null) {
-      return;
-    }
-
-    const ordered = this.#orderedFolders();
-    const from = ordered.indexOf(detail.folder);
-    if (from === -1) {
-      return;
-    }
-
-    const bounds = rectOf(this._content ?? this);
-    const candidates = ordered.map((folder) => {
-      const rect = folder.getBoundingClientRect();
-
-      return {
-        start: rect.y,
-        size: rect.height
-      };
-    });
-
-    this.#session = startDragSession({
-      source: detail.folder,
-      event: detail.event,
-      handle: detail.event.currentTarget instanceof HTMLElement ?
-        detail.event.currentTarget :
-        detail.folder,
-      ghostLabel: detail.folder.label,
-      ghostElement: () => {
-        const ghost = headerGhost(detail.folder);
-        // Only "label" needs putting back: it is the one thing the header
-        // shows that a clone of the attributes alone does not carry.
-        ghost.label = detail.folder.label;
-
-        return ghost;
-      },
-      zones: () => [
-        {
-          id: kFolderZone,
-          rect: bounds,
-          candidates,
-          axis: "y",
-          line: (index) => verticalInsertionLine(bounds, candidates, index)
-        }
-      ],
-      onStart: () => {
-        detail.folder.dragging = true;
-      },
-      onCommit: (result) => {
-        if (result.zone === null) {
-          return;
-        }
-
-        this.#moveFolder(
-          from,
-          result.index
-        );
-      },
-      onEnd: () => {
-        this.#session = null;
-        detail.folder.dragging = false;
-      }
-    });
-  };
-
-  #moveFolder(
-    from: number,
-    index: number
-  ): void {
-    const keys = this.#orderedKeys();
-    const to = index > from ? index - 1 : index;
-    if (to === from || to < 0 || to >= keys.length) {
-      return;
-    }
-
-    const [key] = keys.splice(from, 1);
-    keys.splice(to, 0, key);
-    this.#applyOrder(keys);
-    this.#commitOrder();
-    this._announcement =
-      `${this.#folders[from]?.label ?? "Folder"}, position ` +
-      `${to + 1} of ${keys.length}`;
-  }
-
-  #onReorderCommand = (
-    event: Event
-  ) => {
-    if (!this.reorderable) {
-      return;
-    }
-
-    event.stopPropagation();
-    const detail = detailOf<FolderReorderDetail>(event);
-    if (detail === null) {
-      return;
-    }
-
-    const keys = this.#orderedKeys();
-    const key = detail.folder.persistenceKey
-      .split(":folder:")
-      .at(-1);
-    if (key === undefined) {
-      return;
-    }
-
-    if (detail.command === "start") {
-      this.#startOrder = keys;
-      this._announcement = `${detail.folder.label} grabbed`;
-
-      return;
-    }
-    if (detail.command === "cancel") {
-      if (this.#startOrder !== null) {
-        this.#applyOrder(this.#startOrder);
-      }
-      this.#startOrder = null;
-      this._announcement = `${detail.folder.label} movement cancelled`;
-
-      return;
-    }
-    if (detail.command === "finish") {
-      this.#commitOrder();
-      this.#startOrder = null;
-      this._announcement = `${detail.folder.label} dropped`;
-
-      return;
-    }
-
-    const index = keys.indexOf(key);
-    const offset = detail.command === "up" ? -1 : 1;
-    const next = Math.min(
-      Math.max(index + offset, 0),
-      keys.length - 1
-    );
-    if (index === -1 || index === next) {
-      return;
-    }
-
-    [keys[index], keys[next]] = [keys[next], keys[index]];
-    this.#applyOrder(keys);
-    this._announcement = `${detail.folder.label}, position ${next + 1} of ${keys.length}`;
-  };
-
-  #folderKeys(): string[] {
-    const occurrences = new Map<string, number>();
-
-    return this.#folders.map((folder) => {
-      if (folder.key !== "") {
-        return folder.key;
-      }
-
-      const base = deriveKey(
-        "jolly-folder",
-        folder.label
-      );
-      const occurrence = (occurrences.get(base) ?? 0) + 1;
-      occurrences.set(base, occurrence);
-
-      return deriveKey(
-        "jolly-folder",
-        folder.label,
-        occurrence
-      );
-    });
-  }
-
-  #orderedFolders(): Folder[] {
-    return [...this.#folders].sort(
-      (left, right) => Number(left.style.order) - Number(right.style.order)
-    );
-  }
-
-  #orderedKeys(): string[] {
-    return this.#orderedFolders().map(
-      (folder) => folder.persistenceKey.split(":folder:").at(-1) ?? ""
-    );
-  }
-
-  #applyOrder(
-    order: readonly string[]
-  ): void {
-    const positions = new Map(
-      order.map((key, index) => [key, index])
-    );
-    for (const folder of this.#folders) {
-      const key = folder.persistenceKey
-        .split(":folder:")
-        .at(-1) ?? "";
-      folder.style.order = String(
-        positions.get(key) ?? order.length
-      );
-    }
-  }
-
-  #commitOrder(): void {
-    const order = this.#orderedKeys();
-    this.storage.set(
-      `${this.#namespace()}:order`,
-      JSON.stringify(order)
-    );
-    emitContainerEvent(
-      this,
-      "jolly-reorder",
-      { keys: order }
-    );
-  }
-
   #namespace(): string {
     if (this.storageKey !== "") {
       return this.storageKey;
@@ -727,26 +481,19 @@ export class PaneElement extends LitElement {
 
     const path = globalThis.location?.pathname ?? "";
 
-    return `${path}:jolly-pane:${this.title || "untitled"}`;
+    return `${path}:jolly-pane:${this.heading || "untitled"}`;
   }
-}
-
-function rectOf(
-  element: Element
-) {
-  const rect = element.getBoundingClientRect();
-
-  return {
-    x: rect.x,
-    y: rect.y,
-    width: rect.width,
-    height: rect.height
-  };
 }
 
 /**
  * Keeps a header drag from starting on a control the header also carries.
  */
+export function isPane(
+  element: Element
+): element is PaneElement {
+  return element.tagName === "JOLLY-PANE";
+}
+
 function isInteractiveTarget(
   event: PointerEvent
 ): boolean {
@@ -754,25 +501,6 @@ function isInteractiveTarget(
 
   return target instanceof Element &&
     target.closest(kInteractive) !== null;
-}
-
-function parseOrder(
-  value: string | null
-): string[] {
-  if (value === null) {
-    return [];
-  }
-
-  try {
-    const parsed: unknown = JSON.parse(value);
-
-    return Array.isArray(parsed) && parsed.every((key) => typeof key === "string")
-      ? parsed
-      : [];
-  }
-  catch {
-    return [];
-  }
 }
 
 declare global {

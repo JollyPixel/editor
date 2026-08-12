@@ -14,30 +14,28 @@ import {
 // Import Internal Dependencies
 import { emitContainerEvent } from "./events.ts";
 import { floatingStyles } from "./Floating.styles.ts";
-import { type PaneElement } from "./Pane.ts";
+import {
+  isPane,
+  type PaneDragDetail,
+  type PaneElement
+} from "./Pane.ts";
 import {
   forwardResizeEvents,
   installResizeCursorStyles
 } from "./resize.ts";
 import {
-  detailOf,
   isDocumentOrShadowRoot
 } from "../dom.ts";
-import { startDragSession } from "../interaction/DragSession.ts";
-import { clampToViewport } from "../numeric/clampToViewport.ts";
+import { startDragSession } from "../interaction/drag/DragSession.ts";
+import { clampToViewport } from "../geometry/clampToViewport.ts";
 import { LocalStorageAdapter } from "../storage/LocalStorageAdapter.ts";
+import { PersistedState } from "../storage/PersistedState.ts";
 import type { StorageAdapter } from "../storage/StorageAdapter.ts";
 import { deriveKey } from "../storage/keys.ts";
 
 // CONSTANTS
 const kRootStack = new WeakMap<Document | ShadowRoot, number>();
 const kOwnedZIndex = "var(--jolly-floating-stack)";
-
-interface PaneDragDetail {
-  pane: PaneElement;
-  event: PointerEvent;
-  handle: HTMLElement;
-}
 
 @customElement("jolly-floating")
 export class Floating extends LitElement {
@@ -89,6 +87,14 @@ export class Floating extends LitElement {
   #removeResizeListeners: Array<() => void> = [];
   #ownsZIndex = false;
   #managed = false;
+  #state = new PersistedState(this, {
+    isManaged: () => this.#managed,
+    namespace: () => this.#namespace(),
+    storage: () => this.storage,
+    onManagedWrite: () => {
+      emitContainerEvent(this, "jolly-layout-dirty", undefined);
+    }
+  });
 
   /**
    * True inside a `jolly-dock-layout`, which then owns movement and
@@ -246,18 +252,14 @@ export class Floating extends LitElement {
    * the same drag can end in a dock rather than only somewhere else on screen.
    */
   #onPaneDrag = (
-    event: Event
+    event: CustomEvent<PaneDragDetail>
   ) => {
     if (this.#managed) {
       return;
     }
 
-    const detail = detailOf<PaneDragDetail>(event);
-    if (detail === null) {
-      return;
-    }
-
     event.stopPropagation();
+    const { detail } = event;
     const startX = this.x;
     const startY = this.y;
     const originX = detail.event.clientX;
@@ -268,7 +270,7 @@ export class Floating extends LitElement {
       source: detail.pane,
       event: detail.event,
       handle: detail.handle,
-      ghostLabel: detail.pane.title,
+      ghostLabel: detail.pane.heading,
       visuals: false,
       zones: () => [],
       onPreview: (result) => {
@@ -365,7 +367,10 @@ export class Floating extends LitElement {
       : this.ownerDocument;
     const next = (kRootStack.get(root) ?? 0) + 1;
     kRootStack.set(root, next);
-    this.style.setProperty("--jolly-floating-stack", String(next));
+    this.style.setProperty(
+      "--jolly-floating-stack",
+      String(next)
+    );
     this.style.zIndex = kOwnedZIndex;
     this.#ownsZIndex = true;
   };
@@ -386,9 +391,7 @@ export class Floating extends LitElement {
   #restore(): void {
     const values = ["x", "y", "width", "height"] as const;
     for (const key of values) {
-      const stored = this.storage.get(
-        `${this.#namespace()}:${key}`
-      );
+      const stored = this.#state.read(key);
       if (stored === null) {
         continue;
       }
@@ -401,18 +404,9 @@ export class Floating extends LitElement {
   }
 
   #persist(): void {
-    if (this.#managed) {
-      emitContainerEvent(this, "jolly-layout-dirty", {});
-
-      return;
-    }
-
     const values = ["x", "y", "width", "height"] as const;
     for (const key of values) {
-      this.storage.set(
-        `${this.#namespace()}:${key}`,
-        String(this[key])
-      );
+      this.#state.write(key, String(this[key]));
     }
   }
 
@@ -435,12 +429,6 @@ export class Floating extends LitElement {
 
     return `${path}:jolly-floating:${this.layoutKey}`;
   }
-}
-
-function isPane(
-  element: Element
-): element is PaneElement {
-  return element.tagName === "JOLLY-PANE";
 }
 
 declare global {

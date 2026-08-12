@@ -12,7 +12,10 @@ import {
 
 // Import Internal Dependencies
 import type { Dock } from "./Dock.ts";
-import { emitContainerEvent } from "./events.ts";
+import {
+  emitContainerEvent,
+  type PaneMoveDetail
+} from "./events.ts";
 import { Floating } from "./Floating.ts";
 import {
   emptyLayout,
@@ -27,15 +30,14 @@ import {
   type PaneState
 } from "./layout.ts";
 import type {
-  PaneElement,
-  PaneMoveCommand
+  PaneDragDetail,
+  PaneElement
 } from "./Pane.ts";
-import { detailOf } from "../dom.ts";
-import { headerGhost } from "../interaction/dragGhost.ts";
+import { headerGhost } from "../interaction/drag/dragGhost.ts";
 import {
   startDragSession,
   type DragSessionHandle
-} from "../interaction/DragSession.ts";
+} from "../interaction/drag/DragSession.ts";
 import { LocalStorageAdapter } from "../storage/LocalStorageAdapter.ts";
 import type { StorageAdapter } from "../storage/StorageAdapter.ts";
 
@@ -55,17 +57,6 @@ interface ExtractGrab {
   /** Where inside the pane the pointer had hold of it. */
   offsetX: number;
   offsetY: number;
-}
-
-interface PaneDragDetail {
-  pane: PaneElement;
-  event: PointerEvent;
-  handle: HTMLElement;
-}
-
-interface PaneMoveDetail {
-  pane: PaneElement;
-  command: PaneMoveCommand;
 }
 
 /**
@@ -216,14 +207,14 @@ export class DockLayout extends LitElement {
    * simply somewhere else on screen.
    */
   #onPaneDrag = (
-    event: Event
+    event: CustomEvent<PaneDragDetail>
   ) => {
-    const detail = detailOf<PaneDragDetail>(event);
-    if (detail === null || this.#session !== null) {
+    if (this.#session !== null) {
       return;
     }
 
     event.stopPropagation();
+    const { detail } = event;
     const { pane } = detail;
     const home = pane.closest("jolly-dock");
     const frame = floatingOf(pane);
@@ -239,13 +230,13 @@ export class DockLayout extends LitElement {
       source: pane,
       event: detail.event,
       handle: detail.handle,
-      ghostLabel: pane.title || pane.layoutKey,
+      ghostLabel: pane.heading || pane.layoutKey,
       ghost: frame === null,
       ghostElement: () => {
         const ghost = headerGhost(pane);
-        // Only "title" needs putting back: it is the one thing the header
+        // Only "heading" needs putting back: it is the one thing the header
         // shows that a clone of the attributes alone does not carry.
-        ghost.title = pane.title;
+        ghost.heading = pane.heading;
 
         return ghost;
       },
@@ -306,6 +297,7 @@ export class DockLayout extends LitElement {
 
         if (dock !== null) {
           this.#dockPane(pane, dock, result.index);
+          this.#save();
         }
         else if (frame === null) {
           this.#extract(pane, {
@@ -315,8 +307,9 @@ export class DockLayout extends LitElement {
             offsetY: grabY
           });
         }
-
-        this.#save();
+        else {
+          this.#save();
+        }
       },
       onCancel: () => {
         if (frame !== null) {
@@ -334,16 +327,11 @@ export class DockLayout extends LitElement {
   };
 
   #onPaneMove = (
-    event: Event
+    event: CustomEvent<PaneMoveDetail>
   ) => {
-    const detail = detailOf<PaneMoveDetail>(event);
-    if (detail === null) {
-      return;
-    }
-
     event.stopPropagation();
-    const { pane, command } = detail;
-    const label = pane.title || pane.layoutKey;
+    const { pane, command } = event.detail;
+    const label = pane.heading || pane.layoutKey;
 
     if (command === "start") {
       this.#keyboardOrigin = this.#read();
@@ -501,6 +489,7 @@ export class DockLayout extends LitElement {
     void frame.updateComplete.then(() => {
       frame.clampToView();
       frame.raise();
+      this.#save();
     });
   }
 
@@ -515,7 +504,10 @@ export class DockLayout extends LitElement {
   ): Floating | null {
     const frame = floatingOf(pane);
     if (frame !== null) {
-      this.#geometry.set(pane.layoutKey, geometryOf(frame));
+      this.#geometry.set(
+        pane.layoutKey,
+        geometryOf(frame)
+      );
     }
 
     return frame;
@@ -524,7 +516,10 @@ export class DockLayout extends LitElement {
   #discardWindow(
     frame: Floating | null
   ): void {
-    if (frame !== null && frame.pane() === null) {
+    if (
+      frame !== null &&
+      frame.pane() === null
+    ) {
       frame.remove();
     }
   }
@@ -586,6 +581,11 @@ export class DockLayout extends LitElement {
         if (pane !== undefined && state.collapsed !== undefined) {
           pane.collapsed = state.collapsed;
         }
+      }
+      for (const pane of this.panes()) {
+        pane.applyFolderStates(
+          snapshot.folders[pane.layoutKey] ?? {}
+        );
       }
     }
     finally {
@@ -694,23 +694,35 @@ export class DockLayout extends LitElement {
     const floating: Record<string, FloatingState> = {};
     const geometry: Record<string, FloatingState> = {};
     const panes: Record<string, PaneState> = {};
+    const folders: Record<string, Record<string, { open: boolean; }>> = {};
     for (const pane of this.panes()) {
       const frame = floatingOf(pane);
       if (frame !== null) {
         floating[pane.layoutKey] = geometryOf(frame);
-        this.#geometry.set(pane.layoutKey, geometryOf(frame));
+        this.#geometry.set(
+          pane.layoutKey,
+          geometryOf(frame)
+        );
       }
 
       // Copied on the way out: the snapshot is handed to callers, and what
       // they get must not reach back into the cache behind it.
-      const remembered = this.#geometry.get(pane.layoutKey);
+      const remembered = this.#geometry.get(
+        pane.layoutKey
+      );
       if (remembered !== undefined) {
-        geometry[pane.layoutKey] = { ...remembered };
+        geometry[pane.layoutKey] = {
+          ...remembered
+        };
       }
       if (pane.collapsible) {
         panes[pane.layoutKey] = {
           collapsed: pane.collapsed
         };
+      }
+      const folderStates = pane.folderStates();
+      if (Object.keys(folderStates).length > 0) {
+        folders[pane.layoutKey] = folderStates;
       }
     }
 
@@ -719,7 +731,8 @@ export class DockLayout extends LitElement {
       docks,
       floating,
       geometry,
-      panes
+      panes,
+      folders
     };
   }
 

@@ -18,6 +18,7 @@ import { folderStyles } from "./Folder.styles.ts";
 import "../icon/Icon.ts";
 import { isButtonElement } from "../dom.ts";
 import { LocalStorageAdapter } from "../storage/LocalStorageAdapter.ts";
+import { PersistedState } from "../storage/PersistedState.ts";
 import type { StorageAdapter } from "../storage/StorageAdapter.ts";
 
 type ReorderCommand =
@@ -69,6 +70,14 @@ export class Folder extends LitElement {
   declare _reordering: boolean;
 
   #persistenceKey = "";
+  #state = new PersistedState(this, {
+    isManaged: () => this.closest("jolly-dock-layout") !== null,
+    namespace: () => this.#namespace(),
+    storage: () => this.storage,
+    onManagedWrite: () => {
+      emitContainerEvent(this, "jolly-layout-dirty", undefined);
+    }
+  });
 
   get persistenceKey(): string {
     return this.#persistenceKey;
@@ -144,10 +153,7 @@ export class Folder extends LitElement {
 
   #toggle = () => {
     this.open = !this.open;
-    this.storage.set(
-      `${this.#namespace()}:open`,
-      String(this.open)
-    );
+    this.#state.write("open", String(this.open));
     emitContainerEvent(
       this,
       "jolly-toggle",
@@ -156,9 +162,7 @@ export class Folder extends LitElement {
   };
 
   #restoreOpen(): void {
-    const stored = this.storage.get(
-      `${this.#namespace()}:open`
-    );
+    const stored = this.#state.read("open");
     if (stored === "true" || stored === "false") {
       this.open = stored === "true";
     }

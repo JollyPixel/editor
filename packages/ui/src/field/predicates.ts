@@ -13,7 +13,7 @@ import type {
 export function isModified<TValue>(
   value: FieldValue<TValue>,
   fallback: TValue | undefined,
-  equals: (a: TValue, b: TValue) => boolean = Object.is
+  equals: (a: TValue, b: TValue) => boolean
 ): boolean {
   if (fallback === undefined) {
     return false;

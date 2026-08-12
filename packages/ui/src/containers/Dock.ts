@@ -14,7 +14,10 @@ import {
 // Import Internal Dependencies
 import { dockStyles } from "./Dock.styles.ts";
 import { emitContainerEvent } from "./events.ts";
-import { type PaneElement } from "./Pane.ts";
+import {
+  isPane,
+  type PaneElement
+} from "./Pane.ts";
 import {
   forwardResizeEvents,
   installResizeCursorStyles
@@ -22,10 +25,11 @@ import {
 import {
   horizontalInsertionLine,
   verticalInsertionLine
-} from "../interaction/DragSession.ts";
-import type { Rect } from "../interaction/dragOverlay.ts";
-import type { DropCandidate } from "../interaction/dropIndex.ts";
+} from "../interaction/drag/DragSession.ts";
+import type { Rect } from "../geometry/Rect.ts";
+import type { DropCandidate } from "../interaction/drag/dropIndex.ts";
 import { LocalStorageAdapter } from "../storage/LocalStorageAdapter.ts";
+import { PersistedState } from "../storage/PersistedState.ts";
 import type { StorageAdapter } from "../storage/StorageAdapter.ts";
 import { deriveKey } from "../storage/keys.ts";
 
@@ -102,6 +106,14 @@ export class Dock extends LitElement {
   #resizeHandle: ResizeHandle | null = null;
   #removeResizeListeners: (() => void) | null = null;
   #managed = false;
+  #state = new PersistedState(this, {
+    isManaged: () => this.#managed,
+    namespace: () => this.#namespace(),
+    storage: () => this.storage,
+    onManagedWrite: () => {
+      emitContainerEvent(this, "jolly-layout-dirty", undefined);
+    }
+  });
 
   /**
    * True while the dock is inside a `jolly-dock-layout`, which then owns its
@@ -449,7 +461,10 @@ export class Dock extends LitElement {
 
   #applySize(): void {
     const dimension = this.#dimension();
-    if (this.collapsed || (this.empty && !this.overlay)) {
+    if (
+      this.collapsed ||
+      (this.empty && !this.overlay)
+    ) {
       this.style[dimension] = "0px";
 
       return;
@@ -462,31 +477,24 @@ export class Dock extends LitElement {
   }
 
   #restore(): void {
-    const size = Number(
-      this.storage.get(`${this.#namespace()}:size`)
-    );
-    if (Number.isFinite(size) && size > 0) {
+    const size = Number(this.#state.read("size"));
+    if (
+      Number.isFinite(size) &&
+      size > 0
+    ) {
       this.size = size;
     }
 
-    this.collapsed = this.storage.get(
-      `${this.#namespace()}:collapsed`
-    ) === "true";
+    this.collapsed = this.#state.read("collapsed") === "true";
   }
 
   #persist(): void {
-    if (this.#managed) {
-      emitContainerEvent(this, "jolly-layout-dirty", {});
-
-      return;
-    }
-
-    this.storage.set(
-      `${this.#namespace()}:size`,
+    this.#state.write(
+      "size",
       String(this.size)
     );
-    this.storage.set(
-      `${this.#namespace()}:collapsed`,
+    this.#state.write(
+      "collapsed",
       String(this.collapsed)
     );
   }
@@ -516,12 +524,6 @@ export class Dock extends LitElement {
 
     return `${path}:jolly-dock:${this.layoutKey}`;
   }
-}
-
-function isPane(
-  element: Element
-): element is PaneElement {
-  return element.tagName === "JOLLY-PANE";
 }
 
 declare global {

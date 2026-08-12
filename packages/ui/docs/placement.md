@@ -7,7 +7,7 @@ inside a Dock or Floating wrapper.
 
 ```html
 <jolly-dock side="left" collapsible min-size="160" max-size="480">
-  <jolly-pane title="Layers">...</jolly-pane>
+  <jolly-pane heading="Layers">...</jolly-pane>
 </jolly-dock>
 ```
 
@@ -25,7 +25,7 @@ collapse changes. Both carry `{ width, height, collapsed }`.
 
 ```html
 <jolly-floating x="8" y="8" width="320" height="360">
-  <jolly-pane title="Inspector">...</jolly-pane>
+  <jolly-pane heading="Inspector">...</jolly-pane>
 </jolly-floating>
 ```
 

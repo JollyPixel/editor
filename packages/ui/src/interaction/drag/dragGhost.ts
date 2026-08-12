@@ -1,7 +1,7 @@
 // Import Internal Dependencies
-import { MemoryStorageAdapter } from "../storage/MemoryStorageAdapter.ts";
-import type { StorageAdapter } from "../storage/StorageAdapter.ts";
-import { themeStyles } from "../theme/themeStyles.ts";
+import { MemoryStorageAdapter } from "../../storage/MemoryStorageAdapter.ts";
+import type { StorageAdapter } from "../../storage/StorageAdapter.ts";
+import { themeStyles } from "../../theme/themeStyles.ts";
 
 // CONSTANTS
 const kTokenPattern = /--jolly-[a-z0-9-]+(?=\s*:)/g;

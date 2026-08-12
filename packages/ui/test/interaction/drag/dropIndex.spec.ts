@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import {
   resolveDropIndex,
   type DropCandidate
-} from "../../src/interaction/dropIndex.ts";
+} from "../../../src/interaction/drag/dropIndex.ts";
 
 // CONSTANTS
 const kStack: DropCandidate[] = [

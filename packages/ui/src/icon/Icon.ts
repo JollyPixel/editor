@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
   LitElement,
+  css,
   html,
   svg,
   nothing,
@@ -12,7 +13,6 @@ import {
 } from "lit/decorators.js";
 
 // Import Internal Dependencies
-import { iconStyles } from "./Icon.styles.ts";
 import {
   getIcon,
   type IconName
@@ -30,9 +30,23 @@ const kWarned = new Set<string>();
  */
 @customElement("jolly-icon")
 export class Icon extends LitElement {
-  static override styles = [
-    iconStyles
-  ];
+  static override styles = css`
+    :host {
+      display: inline-flex;
+      flex: 0 0 auto;
+      align-items: center;
+      justify-content: center;
+      width: var(--jolly-icon-size, 16px);
+      height: var(--jolly-icon-size, 16px);
+      color: inherit;
+    }
+
+    svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+  `;
 
   @property({ type: String })
   declare name: IconName;
