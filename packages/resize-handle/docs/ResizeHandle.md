@@ -1,4 +1,4 @@
-# API reference
+# ResizeHandle
 
 ## `ResizeHandleOptions`
 
@@ -52,7 +52,8 @@ Use the arrow keys along the resize axis to change the target by 8px. Hold Shift
 Keyboard input respects `minSize` and `maxSize` and dispatches the same drag event sequence as
 pointer input.
 
-`ResizeHandle` extends `EventTarget` and dispatches these events:
+`ResizeHandle` extends `EventTarget`, implements [`ResizeHandleLike`](#resizehandlelike), and
+dispatches these events:
 
 - **`"dragStart"`**: fired when pointer or keyboard resizing starts.
 - **`"drag"`**: fired after each pointer or keyboard size update.
@@ -64,11 +65,6 @@ pointer input.
 Stops interaction and ends an active drag. It removes a handle created by the instance. Supplied
 handles and matching sibling handles remain in the DOM. Calling `dispose()` more than once has
 no effect.
-
-## `sizeFromDelta(options)`
-
-Pure resize math used by pointer and keyboard input. It applies the current coordinate to the
-initial size according to the handle edge, then clamps the result to `min` and `max`.
 
 ## CSS classes
 
@@ -84,3 +80,38 @@ While a drag is in progress, `<html>` receives:
 - `handle-dragging`: always set during a pointer drag.
 - `vertical`: set for horizontal sizing (`"left"` / `"right"`).
 - `horizontal`: set for vertical sizing (`"top"` / `"bottom"`).
+
+## `ResizeHandleLike`
+
+```ts
+interface ResizeHandleLike extends EventTarget {
+  dispose(): void;
+}
+```
+
+Shared contract implemented by both `ResizeHandle` and
+[`CornerResizeHandle`](./CornerResizeHandle.md). Use it to type code that only needs to listen
+for drag events and dispose, regardless of how many axes the handle drives.
+
+## `sizeFromDelta(options)`
+
+```ts
+interface SizeFromDeltaOptions {
+  /** Target size in pixels when the drag starts. */
+  initialSize: number;
+  /** Pointer coordinate in pixels when the drag starts. */
+  startDrag: number;
+  /** Current pointer coordinate in pixels. */
+  current: number;
+  /** Whether increasing the pointer coordinate increases the size. */
+  fromStart: boolean;
+  /** Smallest returned size in pixels. */
+  min: number;
+  /** Largest returned size in pixels. */
+  max: number;
+}
+```
+
+Pure resize math used by pointer and keyboard input, and reused per-axis by
+[`CornerResizeHandle`](./CornerResizeHandle.md). It applies the current coordinate to the
+initial size according to the handle edge, then clamps the result to `min` and `max`.

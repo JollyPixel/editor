@@ -1,5 +1,8 @@
 // Import Internal Dependencies
-import { PointerResize } from "./PointerResize.ts";
+import {
+  PointerResize,
+  type PointerCoordinate
+} from "./PointerResize.ts";
 import { ResizeBounds } from "./ResizeBounds.ts";
 import {
   coordinateFromKey,
@@ -7,6 +10,7 @@ import {
   type ResizeDirection,
   type ResizeDirectionDefinition
 } from "./ResizeDirection.ts";
+import type { ResizeHandleLike } from "./ResizeHandleLike.ts";
 import { sizeFromDelta } from "./utils.ts";
 
 // CONSTANTS
@@ -42,7 +46,7 @@ export interface ResizeHandleOptions {
 /**
  * Resizes a target element through pointer and keyboard input.
  */
-export class ResizeHandle extends EventTarget {
+export class ResizeHandle extends EventTarget implements ResizeHandleLike {
   #handleElt: HTMLElement;
   #targetElt: HTMLElement;
   #direction: ResizeDirection;
@@ -103,7 +107,7 @@ export class ResizeHandle extends EventTarget {
     );
     this.#pointerResize = new PointerResize({
       handle: this.#handleElt,
-      definition: this.#definition,
+      dragToken: this.#definition.orientation,
       canStart: this.#canInteract,
       onStart: this.#onPointerStart,
       onMove: this.#onPointerMove,
@@ -264,26 +268,32 @@ export class ResizeHandle extends EventTarget {
   };
 
   #onPointerStart = (
-    coordinate: number
+    coordinate: PointerCoordinate
   ) => {
     this.#initialSize = this.#readSize();
-    this.#startDrag = coordinate;
-    this.dispatchEvent(new Event("dragStart"));
+    this.#startDrag = this.#axisCoordinate(coordinate);
+    this.dispatchEvent(
+      new Event("dragStart")
+    );
   };
 
   #onPointerMove = (
-    coordinate: number
+    coordinate: PointerCoordinate
   ) => {
     this.#writeSize(this.#sizeFromCoordinate(
       this.#initialSize,
       this.#startDrag,
-      coordinate
+      this.#axisCoordinate(coordinate)
     ));
-    this.dispatchEvent(new Event("drag"));
+    this.dispatchEvent(
+      new Event("drag")
+    );
   };
 
   #onPointerEnd = () => {
-    this.dispatchEvent(new Event("dragEnd"));
+    this.dispatchEvent(
+      new Event("dragEnd")
+    );
   };
 
   #canInteract = (): boolean => !this.#disposed &&
@@ -303,6 +313,14 @@ export class ResizeHandle extends EventTarget {
       min: this.#bounds.min,
       max: this.#bounds.max
     });
+  }
+
+  #axisCoordinate(
+    coordinate: PointerCoordinate
+  ): number {
+    return this.#definition.coordinate === "clientX" ?
+      coordinate.x :
+      coordinate.y;
   }
 
   #readSize(): number {

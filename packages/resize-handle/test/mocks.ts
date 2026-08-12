@@ -25,7 +25,9 @@ afterEach(() => {
   document.documentElement.classList.remove(
     "handle-dragging",
     "vertical",
-    "horizontal"
+    "horizontal",
+    "nwse",
+    "nesw"
   );
 });
 

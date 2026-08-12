@@ -838,6 +838,36 @@ test.describe("DockLayout", () => {
       "hierarchy"
     ]);
   });
+
+  test("a jittery click on a collapsed dock's handle does not corrupt its remembered size", async({ page }) => {
+    await open(page);
+
+    const dock = page.locator("jolly-dock[key='left']");
+    const originalSize = await dock.evaluate((element) => element.size);
+    const handle = dock.locator(".resize-handle");
+
+    await handle.dblclick();
+    await expect.poll(() => widthOf(dock)).toBe(0);
+
+    // Collapsing moves the handle to where the dock's now-zero-width edge
+    // sits, so its position has to be read after collapsing, not before.
+    const point = await centerOf(handle);
+
+    // A double-click is two independent click cycles under the hood, each
+    // driving the resize handle's own pointerdown/pointerup. A couple of
+    // pixels of real-world jitter on either one reads as a resize drag on the
+    // collapsed (0px) dock, which is nearly impossible to force on purpose
+    // and exactly why this is hard to reproduce by hand.
+    await page.mouse.move(point.x, point.y);
+    await page.mouse.down();
+    await page.mouse.move(point.x + 3, point.y);
+    await page.mouse.up();
+
+    await expect.poll(() => dock.evaluate((element) => element.size)).toBe(originalSize);
+
+    await handle.dblclick();
+    await expect.poll(() => widthOf(dock)).toBe(originalSize);
+  });
 });
 
 function open(

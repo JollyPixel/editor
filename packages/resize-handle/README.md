@@ -6,6 +6,15 @@
   A modern and robust resize-handle / splitter library for your HTML5 apps and websites, inspired by <a href="https://github.com/sparklinlabs/resize-handle">sparklinlabs/resize-handle</a>
 </p>
 
+## 💡 Features
+
+- **Single-axis handles**: `ResizeHandle` resizes one edge (`left`/`right`/`top`/`bottom`) by pointer or keyboard, with `minSize`/`maxSize` bounds
+- **Corner handle**: `CornerResizeHandle` resizes width and height together from a single pointer drag, reusing the same per-axis math
+- **Collapsible edges**: double-click a `collapsible` handle to zero the target's size, double-click again to restore it
+- **Keyboard resizing**: arrow keys move a handle by 8px, Shift for a 32px step; keyboard input clamps to the same bounds and fires the same drag events as pointer input
+- **Accessible by default**: edge handles are focusable `role="separator"` elements with live `aria-valuemin`/`aria-valuemax`/`aria-valuenow`
+- **Locked drag cursor**: the whole document keeps the resize cursor while dragging, even if the pointer outruns the handle's own hit area
+
 ## 💃 Getting Started
 
 This package is available in the Node Package Repository and can be easily installed with [npm][npm] or [yarn][yarn].
@@ -43,11 +52,6 @@ handle.addEventListener("dragEnd", () => console.log("resize ended"));
 handle.dispose();
 ```
 
-## 🧪 Demo
-
-Run `npm run dev -w @jolly-pixel/resize-handle` from the repository root. The demo includes
-horizontal and vertical handles with size bounds, keyboard control, and double-click collapse.
-
 Then style the handle and the global drag-cursor helpers in your CSS:
 
 ```css
@@ -70,10 +74,14 @@ html.handle-dragging.horizontal * { cursor: ns-resize !important; }
 
 To temporarily disable a handle without destroying it, add the `disabled` CSS class to `handle.handleElt`. The handle will stop responding to pointer events until the class is removed.
 
+## 🧪 Demo
+
+Run `npm run dev -w @jolly-pixel/resize-handle` from the repository root. 
+
 ## 📚 API
 
-See the [API reference](./docs/API.md) for constructor options, events, keyboard behavior,
-cleanup, resize math, and CSS classes.
+- [ResizeHandle](./docs/ResizeHandle.md): single-axis resize handle and collapsing.
+- [CornerResizeHandle](./docs/CornerResizeHandle.md): two-axis corner resizing.
 
 ## ✨ Contributors guide
 

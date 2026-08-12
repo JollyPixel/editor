@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { ResizeHandle } from "@jolly-pixel/resize-handle";
+import type { ResizeHandleLike } from "@jolly-pixel/resize-handle";
 
 // Import Internal Dependencies
 import { emitContainerEvent } from "./events.ts";
@@ -12,12 +12,14 @@ export function installResizeCursorStyles(
   ensureDocumentStyles("jolly-resize-cursors", `
     html.handle-dragging.vertical * { cursor: ew-resize !important; }
     html.handle-dragging.horizontal * { cursor: ns-resize !important; }
+    html.handle-dragging.nwse * { cursor: nwse-resize !important; }
+    html.handle-dragging.nesw * { cursor: nesw-resize !important; }
   `, document);
 }
 
 export function forwardResizeEvents(
   owner: HTMLElement,
-  resizeHandle: ResizeHandle,
+  resizeHandle: ResizeHandleLike,
   detail: () => {
     width: number;
     height: number;
@@ -41,11 +43,23 @@ export function forwardResizeEvents(
       detail()
     );
   }
-  resizeHandle.addEventListener("drag", onResize);
-  resizeHandle.addEventListener("dragEnd", onResizeEnd);
+  resizeHandle.addEventListener(
+    "drag",
+    onResize
+  );
+  resizeHandle.addEventListener(
+    "dragEnd",
+    onResizeEnd
+  );
 
   return () => {
-    resizeHandle.removeEventListener("drag", onResize);
-    resizeHandle.removeEventListener("dragEnd", onResizeEnd);
+    resizeHandle.removeEventListener(
+      "drag",
+      onResize
+    );
+    resizeHandle.removeEventListener(
+      "dragEnd",
+      onResizeEnd
+    );
   };
 }

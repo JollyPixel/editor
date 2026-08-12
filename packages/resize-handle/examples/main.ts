@@ -1,5 +1,9 @@
 // Import Internal Dependencies
-import { ResizeHandle } from "../src/index.ts";
+import {
+  CornerResizeHandle,
+  ResizeHandle,
+  type ResizeHandleLike
+} from "../src/index.ts";
 import "./main.css";
 
 function requiredElement<TElement extends Element>(
@@ -16,6 +20,8 @@ function requiredElement<TElement extends Element>(
 
 const sidebar = requiredElement<HTMLElement>("#sidebar");
 const output = requiredElement<HTMLElement>("#output");
+const object = requiredElement<HTMLElement>("#object");
+const objectHandleElt = requiredElement<HTMLElement>("#object-handle");
 const status = requiredElement<HTMLOutputElement>("#status");
 
 const sidebarHandle = new ResizeHandle(sidebar, {
@@ -30,9 +36,22 @@ const outputHandle = new ResizeHandle(output, {
   minSize: 100,
   maxSize: 320
 });
-const handles = [
+// horizontal:"left"/vertical:"top" anchors the object's top-left corner, so
+// the supplied handle (placed bottom-right in the markup) grows both axes
+// together as it's dragged away from that anchor.
+const objectCorner = new CornerResizeHandle(object, {
+  horizontal: "left",
+  vertical: "top",
+  handle: objectHandleElt,
+  minWidth: 60,
+  maxWidth: 260,
+  minHeight: 60,
+  maxHeight: 220
+});
+const handles: ResizeHandleLike[] = [
   sidebarHandle,
-  outputHandle
+  outputHandle,
+  objectCorner
 ];
 
 function visibleSize(
@@ -51,8 +70,11 @@ function visibleSize(
 function updateStatus() {
   const sidebarWidth = visibleSize(sidebar, "width");
   const outputHeight = visibleSize(output, "height");
+  const objectWidth = visibleSize(object, "width");
+  const objectHeight = visibleSize(object, "height");
 
-  status.textContent = `Sidebar ${sidebarWidth}px · Output ${outputHeight}px`;
+  status.textContent = `Sidebar ${sidebarWidth}px · Output ${outputHeight}px · `
+    + `Object ${objectWidth}x${objectHeight}px`;
 }
 
 for (const handle of handles) {
@@ -64,11 +86,12 @@ for (const handle of handles) {
     "dragEnd",
     updateStatus
   );
-  handle.handleElt.addEventListener(
-    "dblclick",
-    updateStatus
-  );
 }
+
+// Only the edge handles are collapsible; the corner handle has no
+// double-click behavior.
+sidebarHandle.handleElt.addEventListener("dblclick", updateStatus);
+outputHandle.handleElt.addEventListener("dblclick", updateStatus);
 
 window.addEventListener("beforeunload", () => {
   for (const handle of handles) {
