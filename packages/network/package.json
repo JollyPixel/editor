@@ -45,12 +45,12 @@
     "@jolly-pixel/event-store": "1.0.0",
     "@loglayer/transport-pino": "3.3.0",
     "@openally/emitt": "1.0.1",
-    "@openally/result": "3.0.0",
+    "@openally/result": "3.1.0",
     "hyperid": "4.0.0",
     "loglayer": "9.4.0",
     "pino": "10.3.1",
     "ts-pattern": "5.9.0",
-    "ws": "8.21.1",
+    "ws": "8.21.3",
     "picomatch": "^4.0.3"
   }
 }
