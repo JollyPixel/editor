@@ -1,7 +1,7 @@
 {
   "name": "@jolly-pixel/voxel.renderer",
   "description": "Jolly Pixel 3D Voxel Engine and Renderer",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "type": "module",
   "exports": {
     ".": {
@@ -42,13 +42,13 @@
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "@jolly-pixel/engine": "3.0.0",
-    "@jolly-pixel/network": "1.0.0",
+    "@jolly-pixel/engine": "4.0.0",
+    "@jolly-pixel/network": "1.1.0",
     "three": "0.185.1"
   },
   "devDependencies": {
     "@dimforge/rapier3d": "0.19.3",
-    "@jolly-pixel/runtime": "3.4.0",
+    "@jolly-pixel/runtime": "4.0.0",
     "@tweakpane/core": "2.0.5",
     "simplex-noise": "4.0.3",
     "tweakpane": "4.0.5"

@@ -1,7 +1,7 @@
 {
   "name": "@jolly-pixel/ui",
   "description": "Common and System's UI for JollyPixel's editors",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "exports": {
     ".": {
@@ -42,7 +42,7 @@
     "lit": "^3.3.0"
   },
   "dependencies": {
-    "@jolly-pixel/resize-handle": "1.0.0"
+    "@jolly-pixel/resize-handle": "1.1.0"
   },
   "devDependencies": {
     "lit": "3.3.3"
