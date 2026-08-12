@@ -1,7 +1,7 @@
 {
   "name": "@jolly-pixel/pixel-draw.renderer",
   "description": "Jolly Pixel Pixel Art drawer and renderer",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "type": "module",
   "exports": {
     ".": {
@@ -45,7 +45,7 @@
     "tinybench": "6.1.2"
   },
   "dependencies": {
-    "@jolly-pixel/network": "1.0.0",
+    "@jolly-pixel/network": "1.1.0",
     "@openally/emitt": "1.0.1",
     "colorjs.io": "0.7.1",
     "js-base64": "3.9.2"

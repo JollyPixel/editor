@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/editor.voxel-model",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "type": "module",
   "private": true,
   "scripts": {
@@ -14,11 +14,11 @@
     "dist"
   ],
   "dependencies": {
-    "@jolly-pixel/engine": "3.0.0",
+    "@jolly-pixel/engine": "4.0.0",
     "@jolly-pixel/fs-tree": "1.0.1",
-    "@jolly-pixel/pixel-draw.renderer": "2.0.0",
-    "@jolly-pixel/resize-handle": "1.0.0",
-    "@jolly-pixel/runtime": "3.4.0",
+    "@jolly-pixel/pixel-draw.renderer": "3.0.0",
+    "@jolly-pixel/resize-handle": "1.1.0",
+    "@jolly-pixel/runtime": "4.0.0",
     "lit": "3.3.3",
     "three": "0.185.1"
   }
