@@ -1,5 +1,5 @@
-// Import Internal Dependencies
-import { compileGlobPattern } from "../utils/glob.ts";
+// Import Third-party Dependencies
+import picomatch from "picomatch";
 
 /**
  * "void": cannot receive or send.
@@ -15,7 +15,7 @@ export const JOIN_EVENT = "$join";
 export const PRESENCE_EVENT = "$presence";
 
 interface Permission {
-  pattern: RegExp;
+  isMatch: picomatch.Matcher;
   right: Right;
 }
 
@@ -40,7 +40,7 @@ export class RightsTable {
         role,
         Object.entries(patterns).map(([pattern, right]) => {
           return {
-            pattern: compileGlobPattern(pattern),
+            isMatch: picomatch(pattern),
             right
           };
         })
@@ -61,7 +61,7 @@ export class RightsTable {
       return "write";
     }
 
-    const rule = rules.find(({ pattern }) => pattern.test(key));
+    const rule = rules.find(({ isMatch }) => isMatch(key));
 
     return rule?.right ?? "write";
   }
