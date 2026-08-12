@@ -81,7 +81,9 @@ async function uvSnapshot(
 }
 
 test.beforeEach(async({ page }) => {
-  await gotoDemo(page);
+  // Preview meshes live in the 3D runtime; every test in this file either
+  // drags a region in front of it or asserts on __uvPreviewMeshCount.
+  await gotoDemo(page, undefined, { runtime: true });
   await resetRegions(page);
   await setMode(page, "uv");
   // Regions stay invisible and un-hittable until selected or shown.

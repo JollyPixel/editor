@@ -6,7 +6,7 @@ import {
 import type { Mode } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import { testRoomId } from "./constants.ts";
+import { testRoomId, TEXTURE_SIZE } from "./constants.ts";
 import type { PixelDrawPanel } from "../../src/index.ts";
 
 export interface PixelRGBA {
@@ -16,22 +16,55 @@ export interface PixelRGBA {
   a: number;
 }
 
+export interface GotoDemoOptions {
+  /**
+   * Boots the Three.js/WebGPU 3D preview runtime (camera, orbit controls,
+   * UV region meshes). Its render loop runs continuously and competes with
+   * every dispatched pointer event for the main thread, so it stays off
+   * unless a test actually asserts on the 3D preview (see uv.e2e.ts).
+   * @default false
+   */
+  runtime?: boolean;
+}
+
 /**
  * Open the demo and wait for interactivity.
  */
 export async function gotoDemo(
   page: Page,
-  room: string = testRoomId(test.info().parallelIndex)
+  room: string = testRoomId(test.info().parallelIndex),
+  options: GotoDemoOptions = {}
 ): Promise<void> {
-  await page.goto(`/?empty=true&room=${encodeURIComponent(room)}`);
+  const { runtime = false } = options;
+
+  const runtimeParam = runtime ? "" : "&runtime=off";
+  await page.goto(`/?empty=true&room=${encodeURIComponent(room)}${runtimeParam}`);
+
   await page.locator("jolly-loading")
     .waitFor({ state: "attached", timeout: 2_000 })
     .catch(() => undefined);
   await page.locator("jolly-loading")
     .waitFor({ state: "detached", timeout: 15_000 });
+
   await page.waitForFunction(
     () => (window as unknown as { __pixelSyncReady?: boolean; }).__pixelSyncReady === true
   );
+
+  // Each worker reuses one sync room across every test file (see
+  // testRoomId()), with no per-test reset: a previous test's fire-and-forget
+  // network op (e.g. a texture replace) can still be in flight when this
+  // page joins the same room and lands after this test starts painting,
+  // silently overwriting it. Blanking here mirrors global-setup.ts's
+  // once-per-run reset, giving every test its own settled starting state.
+  await page.evaluate((size) => {
+    const panel = document.querySelector<PixelDrawPanel>("pixel-draw-panel");
+    const canvasManager = panel!.canvasManager!;
+    const blank = document.createElement("canvas");
+    blank.width = size.x;
+    blank.height = size.y;
+    canvasManager.texture = blank;
+    canvasManager.uv.clear();
+  }, TEXTURE_SIZE);
 }
 
 const kModeLabel: Record<Mode, string> = {
@@ -67,6 +100,7 @@ export async function textureToScreenPoint(
     const panel = document.querySelector<PixelDrawPanel>("pixel-draw-panel");
     const canvasManager = panel!.canvasManager!;
     const bounds = canvasManager.canvas().getBoundingClientRect();
+
     const { camera, zoom } = canvasManager.viewport;
 
     return {
@@ -88,9 +122,16 @@ export async function readPixel(
     const panel = document.querySelector<PixelDrawPanel>("pixel-draw-panel");
     const canvas = panel!.canvasManager!.textureCanvas();
     const ctx = canvas.getContext("2d")!;
-    const [r, g, b, a] = ctx.getImageData(x, y, 1, 1).data;
+    const [r, g, b, a] = ctx.getImageData(
+      x,
+      y,
+      1,
+      1
+    ).data;
 
-    return { r, g, b, a };
+    return {
+      r, g, b, a
+    };
   }, { x, y });
 }
 
@@ -107,6 +148,7 @@ export async function readRenderedPixel(
     const canvasManager = panel!.canvasManager!;
     const canvas = canvasManager.canvas();
     const bounds = canvas.getBoundingClientRect();
+
     const { camera, zoom } = canvasManager.viewport;
     const scaleX = canvas.width / bounds.width;
     const scaleY = canvas.height / bounds.height;
@@ -117,13 +159,26 @@ export async function readRenderedPixel(
       (camera.y + ((y + 0.5) * zoom.value)) * scaleY
     );
     const context = canvas.getContext("2d")!;
-    const [r, g, b, a] = context.getImageData(canvasX, canvasY, 1, 1).data;
+    const [r, g, b, a] = context.getImageData(
+      canvasX,
+      canvasY,
+      1,
+      1
+    ).data;
 
-    return { r, g, b, a };
+    return {
+      r,
+      g,
+      b,
+      a
+    };
   }, { x, y });
 }
 
-type MouseButton = "left" | "right" | "middle";
+type MouseButton =
+  | "left"
+  | "right"
+  | "middle";
 
 /**
  * Draw a stroke across texture points.
@@ -137,18 +192,29 @@ export async function dragStroke(
     points.map((p) => textureToScreenPoint(page, p.x, p.y))
   );
 
-  await page.mouse.move(screenPoints[0].x, screenPoints[0].y);
-  await page.mouse.down({ button });
+  await page.mouse.move(
+    screenPoints[0].x,
+    screenPoints[0].y
+  );
+  await page.mouse.down({
+    button
+  });
   for (let i = 1; i < points.length; i++) {
     const distance = Math.max(
       Math.abs(points[i].x - points[i - 1].x),
       Math.abs(points[i].y - points[i - 1].y)
     );
-    await page.mouse.move(screenPoints[i].x, screenPoints[i].y, {
-      steps: Math.max(1, distance * 4)
-    });
+    await page.mouse.move(
+      screenPoints[i].x,
+      screenPoints[i].y,
+      {
+        steps: Math.max(1, distance * 4)
+      }
+    );
   }
-  await page.mouse.up({ button });
+  await page.mouse.up({
+    button
+  });
 }
 
 /**
@@ -160,10 +226,22 @@ export async function clickTexturePixel(
   y: number,
   button: MouseButton = "left"
 ): Promise<void> {
-  const point = await textureToScreenPoint(page, x, y);
-  await page.mouse.move(point.x, point.y);
-  await page.mouse.down({ button });
-  await page.mouse.up({ button });
+  const point = await textureToScreenPoint(
+    page,
+    x,
+    y
+  );
+
+  await page.mouse.move(
+    point.x,
+    point.y
+  );
+  await page.mouse.down({
+    button
+  });
+  await page.mouse.up({
+    button
+  });
 }
 
 /**
@@ -176,8 +254,19 @@ export async function setBrushColor(
   hex: string,
   opacity = 1
 ): Promise<void> {
-  await page.evaluate(({ slot: colorSlot, hex: color, opacity: alpha }) => {
-    const panel = document.querySelector<PixelDrawPanel>("pixel-draw-panel");
-    panel!.canvasManager!.brush[colorSlot].set(color, alpha);
+  await page.evaluate((options) => {
+    const {
+      slot: colorSlot,
+      hex: color,
+      opacity: alpha
+    } = options;
+
+    const panel = document.querySelector<PixelDrawPanel>(
+      "pixel-draw-panel"
+    );
+    panel!.canvasManager!.brush[colorSlot].set(
+      color,
+      alpha
+    );
   }, { slot, hex, opacity });
 }
