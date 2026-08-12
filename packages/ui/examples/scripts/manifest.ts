@@ -17,29 +17,28 @@ import {
 import { COLOR_PICKER_EXAMPLE } from "./examples/controls/colorPicker.ts";
 import { BUTTON_GROUP_EXAMPLE } from "./examples/controls/buttonGroup.ts";
 import { CHROME_EXAMPLE } from "./examples/controls/chrome.ts";
+import { PANE_EXAMPLE } from "./examples/containers/pane.ts";
+import { FOLDER_EXAMPLE } from "./examples/containers/folder.ts";
+import { TABS_EXAMPLE } from "./examples/containers/tabs.ts";
+import { TAB_EXAMPLE } from "./examples/containers/tab.ts";
+import { DOCK_EXAMPLE } from "./examples/containers/dock.ts";
+import { FLOATING_EXAMPLE } from "./examples/containers/floating.ts";
+import { DIALOG_EXAMPLE } from "./examples/containers/dialog.ts";
+import { TOOLBAR_EXAMPLE } from "./examples/containers/toolbar.ts";
+import { RAIL_EXAMPLE } from "./examples/containers/rail.ts";
 import { DENSITY_EXAMPLE } from "./examples/scenarios/density.ts";
 import { THEME_EXAMPLE } from "./examples/scenarios/theme.ts";
 import { NUMERIC_ENTRY_EXAMPLE } from "./examples/scenarios/numericEntry.ts";
 import { STEP_SIZES_EXAMPLE } from "./examples/scenarios/stepSizes.ts";
 import { COLOR_POPOVER_EXAMPLE } from "./examples/scenarios/colorPopover.ts";
+import { REORDER_PERSIST_EXAMPLE } from "./examples/scenarios/reorderPersistence.ts";
+import { DOCK_RESIZE_EXAMPLE } from "./examples/scenarios/dockResize.ts";
+import { DOCK_LAYOUT_EXAMPLE } from "./examples/scenarios/dockLayout.ts";
+import { DIALOG_ESCAPE_EXAMPLE } from "./examples/scenarios/dialogEscape.ts";
 import {
   EDITOR_EXAMPLE,
   EDITOR_STATES_EXAMPLE
 } from "./examples/scenarios/editor.ts";
-import {
-  PANE_EXAMPLE,
-  FOLDER_EXAMPLE,
-  TABS_EXAMPLE,
-  TAB_EXAMPLE,
-  DOCK_EXAMPLE,
-  FLOATING_EXAMPLE,
-  DIALOG_EXAMPLE,
-  TOOLBAR_EXAMPLE,
-  RAIL_EXAMPLE,
-  REORDER_PERSIST_EXAMPLE,
-  DOCK_RESIZE_EXAMPLE,
-  DIALOG_ESCAPE_EXAMPLE
-} from "./examples/containers.ts";
 
 /**
  * The navigation and E2E sweep derive from this list.
@@ -75,6 +74,7 @@ export const manifest: readonly GalleryExample[] = [
   COLOR_POPOVER_EXAMPLE,
   REORDER_PERSIST_EXAMPLE,
   DOCK_RESIZE_EXAMPLE,
+  DOCK_LAYOUT_EXAMPLE,
   DIALOG_ESCAPE_EXAMPLE,
   EDITOR_EXAMPLE,
   EDITOR_STATES_EXAMPLE

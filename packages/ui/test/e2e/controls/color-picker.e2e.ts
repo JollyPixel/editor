@@ -7,32 +7,17 @@ import {
 } from "@playwright/test";
 
 // Import Internal Dependencies
-import { gotoGallery } from "./utils.ts";
+import { gotoGallery } from "../support/gallery.ts";
+import {
+  fieldChanges as changes,
+  recordFieldChanges as recordChanges
+} from "../support/events.ts";
 
 function row(
   page: Page,
   state: string
 ): Locator {
   return page.locator(`[data-state="${state}"] jolly-color`);
-}
-
-async function recordChanges(
-  page: Page
-): Promise<void> {
-  await page.evaluate(() => {
-    window.__changes = [];
-    document.addEventListener("jolly-change", (event) => {
-      if (event instanceof CustomEvent) {
-        window.__changes?.push(event.detail.value);
-      }
-    });
-  });
-}
-
-function changes(
-  page: Page
-): Promise<unknown[]> {
-  return page.evaluate(() => window.__changes ?? []);
 }
 
 async function lastChange(

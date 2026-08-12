@@ -2,7 +2,7 @@
 import { test, expect } from "@playwright/test";
 
 // Import Internal Dependencies
-import { gotoGallery } from "./utils.ts";
+import { gotoGallery } from "../support/gallery.ts";
 
 test.describe("checkbox background activation", () => {
   test("clicking away from the native box activates it", async({ page }) => {

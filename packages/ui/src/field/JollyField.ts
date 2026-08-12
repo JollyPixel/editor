@@ -242,21 +242,38 @@ export abstract class JollyField<TValue> extends LitElement {
   protected override willUpdate(): void {
     const holder = this.holder;
 
-    this.toggleAttribute("locked", holder !== null);
-    this.toggleAttribute("mixed", this.mixed);
+    this.toggleAttribute(
+      "locked",
+      holder !== null
+    );
+    this.toggleAttribute(
+      "mixed",
+      this.mixed
+    );
     this.toggleAttribute(
       "modified",
       this.modified
     );
-    this.toggleAttribute("invalid", this.displayError !== null);
-    this.toggleAttribute("scrubbable", this.scrubbable);
+    this.toggleAttribute(
+      "invalid",
+      this.displayError !== null
+    );
+    this.toggleAttribute(
+      "scrubbable",
+      this.scrubbable
+    );
 
     /* Exposes the lock color to host and subclass styles. */
     if (holder === null) {
-      this.style.removeProperty("--jolly-locked-ring");
+      this.style.removeProperty(
+        "--jolly-locked-ring"
+      );
     }
     else {
-      this.style.setProperty("--jolly-locked-ring", holder.color);
+      this.style.setProperty(
+        "--jolly-locked-ring",
+        holder.color
+      );
     }
   }
 

@@ -133,7 +133,9 @@ export class ScrubController implements ReactiveController {
     }
 
     this.#guide?.update(event.clientX);
-    this.#options.onInput(this.#valueAt(event));
+    this.#options.onInput(
+      this.#valueAt(event)
+    );
   };
 
   #onPointerUp = (event: PointerEvent): void => {
@@ -179,7 +181,9 @@ export class ScrubController implements ReactiveController {
       );
 
       if (element.hasPointerCapture(this.#pointerId)) {
-        element.releasePointerCapture(this.#pointerId);
+        element.releasePointerCapture(
+          this.#pointerId
+        );
       }
     }
 

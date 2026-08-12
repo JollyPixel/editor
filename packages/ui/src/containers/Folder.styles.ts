@@ -131,6 +131,15 @@ export const folderStyles = css`
     place-items: center;
   }
 
+  .grip {
+    touch-action: none;
+  }
+
+  /* The source keeps its slot while a drag previews where it would land. */
+  :host([dragging]) {
+    opacity: 0.4;
+  }
+
   button:focus-visible {
     outline: none;
     background: var(--jolly-control-bg-focus);

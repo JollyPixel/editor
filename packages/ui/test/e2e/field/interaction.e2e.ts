@@ -1,44 +1,16 @@
 // Import Third-party Dependencies
 import {
   test,
-  expect,
-  type Locator,
-  type Page
+  expect
 } from "@playwright/test";
 
 // Import Internal Dependencies
-import { gotoGallery } from "./utils.ts";
-
-function row(
-  page: Page,
-  tag: string,
-  state: string
-): Locator {
-  return page.locator(`[data-state="${state}"] ${tag}`);
-}
-
-/**
- * Records committed values, since a controlled element shows nothing until a
- * consumer writes back.
- */
-async function recordChanges(
-  page: Page
-): Promise<void> {
-  await page.evaluate(() => {
-    window.__changes = [];
-    document.addEventListener("jolly-change", (event) => {
-      if (event instanceof CustomEvent) {
-        window.__changes?.push(event.detail.value);
-      }
-    });
-  });
-}
-
-function changes(
-  page: Page
-): Promise<unknown[]> {
-  return page.evaluate(() => window.__changes ?? []);
-}
+import { gotoGallery } from "../support/gallery.ts";
+import {
+  fieldChanges as changes,
+  recordFieldChanges as recordChanges
+} from "../support/events.ts";
+import { fieldRow as row } from "../support/locators.ts";
 
 test.describe("number: expression input", () => {
   test("commits an evaluated expression", async({ page }) => {
@@ -228,11 +200,13 @@ test.describe("drag scrub", () => {
         return null;
       }
 
+      const scrubHandle = handle;
+
       const events: string[] = [];
       element.addEventListener("jolly-input", () => events.push("input"));
       element.addEventListener("jolly-change", () => events.push("change"));
 
-      const box = handle.getBoundingClientRect();
+      const box = scrubHandle.getBoundingClientRect();
       const y = box.y + (box.height / 2);
       const from = box.x + (box.width / 2);
 
@@ -241,7 +215,7 @@ test.describe("drag scrub", () => {
         x: number,
         buttons: number
       ): void {
-        handle.dispatchEvent(new PointerEvent(type, {
+        scrubHandle.dispatchEvent(new PointerEvent(type, {
           bubbles: true,
           composed: true,
           cancelable: true,

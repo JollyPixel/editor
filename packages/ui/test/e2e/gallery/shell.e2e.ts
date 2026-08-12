@@ -6,11 +6,12 @@ import {
 } from "@playwright/test";
 
 // Import Internal Dependencies
-import { manifest } from "../../examples/scripts/manifest.ts";
+import { manifest } from "../../../examples/scripts/manifest.ts";
 import {
   disposedIds,
-  gotoGallery
-} from "./utils.ts";
+  gotoGallery,
+  reloadGallery
+} from "../support/gallery.ts";
 
 /**
  * Every later test opts out of the shell with `chrome=off`, so it keeps a
@@ -164,10 +165,7 @@ test.describe("gallery shell", () => {
         "comfortable"
       );
     });
-    await page.reload();
-    await page.waitForFunction(
-      () => window.__galleryReady === true
-    );
+    await reloadGallery(page);
 
     const control = page.locator("gallery-root jolly-pane jolly-select");
     const select = control.locator("select");
@@ -184,10 +182,7 @@ test.describe("gallery shell", () => {
     await expect(control).toHaveJSProperty("value", "default");
     await expect(select).toHaveValue("1");
 
-    await page.reload();
-    await page.waitForFunction(
-      () => window.__galleryReady === true
-    );
+    await reloadGallery(page);
     await expect(
       page.locator("gallery-root jolly-pane jolly-select select")
     ).toHaveValue("1");

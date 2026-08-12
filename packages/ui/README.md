@@ -140,6 +140,18 @@ npm run lint
 
 Unit tests use `node:test`; end-to-end tests use Playwright against the gallery.
 
+End-to-end tests follow the production ownership model under `test/e2e/`:
+
+- `controls/`, `containers/`, and `field/` hold component and field contracts.
+- `gallery/` verifies the gallery harness and manifest.
+- `scenarios/` holds multi-component workflows that do not belong to one source
+  module.
+- `support/` owns navigation, event capture, locator, pointer, and computed-style
+  helpers. Do not duplicate these helpers in a spec.
+
+Keep a test with the component that owns the observed contract. Put only
+deliberately cross-component user workflows in `scenarios/`.
+
 > [!IMPORTANT]
 > Keep unit-test assertions in plain modules. Component decorators are not erasable syntax and
 > cannot be imported directly by `node --test` with type stripping.

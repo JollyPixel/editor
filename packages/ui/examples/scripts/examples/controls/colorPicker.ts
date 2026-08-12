@@ -106,8 +106,14 @@ function buildPanel(
     readout.style.color = swatchInk(detail.value);
   }
 
-  picker.addEventListener("jolly-input", writeBack);
-  picker.addEventListener("jolly-change", writeBack);
+  picker.addEventListener(
+    "jolly-input",
+    writeBack
+  );
+  picker.addEventListener(
+    "jolly-change",
+    writeBack
+  );
 
   cell.append(
     caption,

@@ -2,9 +2,9 @@
 import type { GalleryExample } from "../../types.ts";
 import type { Density } from "../../../../src/index.ts";
 import {
-  createScopeHost,
+  createScopedHost,
   caption
-} from "./scopeHost.ts";
+} from "../shared/scopedHost.ts";
 
 // CONSTANTS
 const kDensities: Density[] = [
@@ -48,7 +48,7 @@ export const DENSITY_EXAMPLE: GalleryExample = {
 function buildPreset(
   density: Density
 ): HTMLElement {
-  const { host, content } = createScopeHost({
+  const { host, content } = createScopedHost({
     density
   });
 

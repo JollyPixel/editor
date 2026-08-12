@@ -1,30 +1,25 @@
 # Icons
 
 `jolly-icon` renders registered SVG glyphs. Icons use `currentColor` and default to 16px; set
-`--jolly-icon-size` to change the size.
+`--jolly-icon-size` to change their size.
 
 ```html
 <jolly-icon name="search"></jolly-icon>
 <jolly-icon name="close" label="Close panel"></jolly-icon>
 ```
 
-Icons are decorative unless `label` is provided. Use a label when the icon is the only accessible
-name for its control.
+Icons are decorative unless `label` is set. Provide one when the icon is the only accessible name
+for its control.
 
 ## Built-in names
 
-`chevron`, `close`, `revert`, `drag`, `lock`, `eye`, `search`, `check`, `info`, `warning`.
-
-`info` and `warning` use solid semantic silhouettes so their small field-message instances remain
-visible. Their inner marks use `--jolly-surface` to retain contrast in both themes. Field messages
-render these badges at 14px, align them with the text top, and keep a 2px gap below the message.
+`chevron`, `close`, `revert`, `drag`, `lock`, `eye`, `search`, `check`, `info`, and
+`warning`.
 
 `jolly-button` and `JollyOption` accept icon names directly:
 
 ```ts
-field.options = [
-  { value: "move", label: "Move", icon: "drag" }
-];
+field.options = [{ value: "move", label: "Move", icon: "drag" }];
 ```
 
 ## Registering icons
@@ -35,10 +30,10 @@ import { registerIcon } from "@jolly-pixel/ui";
 registerIcon("cube", "<path d=\"m12 3 7 4v8l-7 4-7-4V7l7-4Z\" />");
 ```
 
-`IconName` provides autocomplete for built-ins while allowing custom strings. Registering an
-existing name replaces it. Unknown names render nothing and warn once. You can also provide a Lit
-`SVGTemplateResult` when the glyph needs dynamic values. String glyphs are parsed as SVG markup,
-so only register strings from trusted sources.
+`IconName` autocompletes built-ins while allowing custom strings. Registering an existing name
+replaces it; unknown names render nothing and warn once. You can register a Lit
+`SVGTemplateResult` for dynamic glyphs. String glyphs are SVG markup, so register only trusted
+content.
 
-Register only the glyph contents; `jolly-icon` supplies the SVG wrapper, viewBox and ARIA.
-Author custom glyphs for a 24px viewBox with `fill="none"` and `stroke="currentColor"`.
+Register glyph contents only. `jolly-icon` supplies the SVG wrapper, viewBox, and ARIA. Use a
+24px viewBox with `fill="none"` and `stroke="currentColor"` for custom stroked icons.

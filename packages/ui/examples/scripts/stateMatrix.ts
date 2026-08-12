@@ -7,7 +7,6 @@ import {
   type JollyChangeDetail
 } from "../../src/index.ts";
 
-/** Structural, so the helper never imports a control and every field satisfies it. */
 export interface FieldLike {
   label: string;
   value: unknown;
@@ -23,22 +22,42 @@ export interface FieldLike {
 export interface StateMatrixOptions<
   TField extends HTMLElement & FieldLike
 > {
-  /** A fresh, fully configured element in its default state. Called once per row. */
+  /**
+   * A fresh, fully configured element in its default state.
+   * Called once per row.
+   */
   create(): TField;
-  /** Override when a control needs more than assigning the sentinel. */
+  /**
+   * Override when a control needs more than assigning the sentinel.
+   */
   applyMixed?(field: TField): void;
-  /** A value differing from `default`, so the revert gutter appears. */
+  /**
+   * A value differing from `default`,
+   * so the revert gutter appears.
+   */
   modified?(field: TField): void;
-  /** Adds accent and accent plus modified rows for controls with colored paint. */
+  /**
+   * Adds accent and accent plus modified rows for controls with colored paint.
+   */
   colored?: boolean;
   /**
    * Also write back `jolly-input`, for a control whose continuous phase has no draft of its own
    * (`jolly-number`'s scrub, `jolly-slider`'s drag) and so needs `value` kept live to redraw.
-   * `jolly-text` and `jolly-number`'s typed entry already render their own draft and must stay off
-   * this, or a keystroke would land in `value` before Enter, blur, or Escape says it should.
    */
   liveInput?: boolean;
 }
+
+export type MatrixState =
+  | typeof kRows[number]
+  | typeof kColoredRows[number];
+
+// CONSTANTS
+const kHolder: CollaboratorPresence = {
+  clientId: "peer-ada",
+  displayName: "Ada",
+  color: peerColor(0),
+  editing: "example.field"
+};
 
 /**
  * Nine rows, fixed, no opt out: the point of a shared matrix is that every control renders the
@@ -63,18 +82,6 @@ const kColoredRows = [
   "colored",
   "colored+modified"
 ] as const;
-
-export type MatrixState =
-  | typeof kRows[number]
-  | typeof kColoredRows[number];
-
-// CONSTANTS
-const kHolder: CollaboratorPresence = {
-  clientId: "peer-ada",
-  displayName: "Ada",
-  color: peerColor(0),
-  editing: "example.field"
-};
 
 /** None of them is editing, so this row shows presence alone and stays distinct from `locked`. */
 const kCrowd: CollaboratorPresence[] = [
@@ -114,7 +121,7 @@ export function renderStateMatrix<
   const grid = document.createElement("div");
   grid.className = "state-matrix";
   const states: MatrixState[] = [...kRows];
-  if (options.colored === true) {
+  if (options.colored) {
     states.push(...kColoredRows);
   }
 
@@ -145,7 +152,11 @@ function buildRow<
 
   // A fresh element per row, so one row's draft cannot leak into another.
   const field = options.create();
-  applyState(field, state, options);
+  applyState(
+    field,
+    state,
+    options
+  );
 
   // The write back every consumer owes a controlled element, per docs/fields.md.
   function writeBack(
@@ -161,9 +172,15 @@ function buildRow<
   // A scrub only ever fires jolly-input until release, so jolly-change alone would leave the
   // number or slider static on screen for the whole drag.
   if (options.liveInput) {
-    field.addEventListener("jolly-input", writeBack);
+    field.addEventListener(
+      "jolly-input",
+      writeBack
+    );
   }
-  field.addEventListener("jolly-change", writeBack);
+  field.addEventListener(
+    "jolly-change",
+    writeBack
+  );
 
   row.append(caption, field);
 

@@ -7,6 +7,7 @@ import {
   type ThemeMode
 } from "../../../src/index.ts";
 import { manifest } from "../manifest.ts";
+import { exampleStyles } from "../examples/shared/exampleStyles.ts";
 import { shellStyles } from "./styles.ts";
 
 // CONSTANTS
@@ -40,7 +41,7 @@ export class GalleryRoot extends HTMLElement {
     });
     const sheet = new CSSStyleSheet();
     sheet.replaceSync(
-      `${themeStyles.cssText}\n${shellStyles}`
+      `${themeStyles.cssText}\n${shellStyles}\n${exampleStyles}`
     );
     root.adoptedStyleSheets = [sheet];
 

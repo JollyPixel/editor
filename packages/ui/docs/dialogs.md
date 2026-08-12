@@ -1,6 +1,6 @@
 # Dialogs
 
-`jolly-dialog` wraps a native `dialog`, retaining the browser's top layer, focus behavior, and
+`jolly-dialog` wraps a native `dialog`, retaining top-layer behavior, focus management, and
 Escape cancellation. It is a theme scope host.
 
 ```html
@@ -12,24 +12,15 @@ Escape cancellation. It is a theme scope host.
 ```
 
 Call `showModal()` and `close(returnValue?)` on the element. Escape and backdrop clicks dismiss
-by default and emit `jolly-cancel`; set `dismissible` to `false` when explicit actions must decide
-the outcome. Closing emits `jolly-close` with `{ returnValue }`. Without an explicit `theme`, a
-dialog adopts its themed parent, or the active invoking control when a helper is attached to the
-document body.
+by default and emit `jolly-cancel`; set `dismissible` to `false` when explicit actions must
+decide the outcome. Closing emits `jolly-close` with `{ returnValue }`.
 
 ## String helpers
 
 ```ts
-import {
-  showConfirm,
-  showPrompt
-} from "@jolly-pixel/ui";
+import { showConfirm, showPrompt } from "@jolly-pixel/ui";
 
-const name = await showPrompt({
-  title: "New layer",
-  label: "Layer name"
-});
-
+const name = await showPrompt({ title: "New layer", label: "Layer name" });
 const remove = await showConfirm({
   title: "Delete layer?",
   message: "This cannot be undone.",
@@ -37,7 +28,6 @@ const remove = await showConfirm({
 });
 ```
 
-`showPrompt()` resolves a trimmed string or `null`. `showConfirm()` resolves a boolean.
-Cancellation is a normal result, not an exception. Helpers compose `jolly-text` and
-`jolly-button`, accept strings only, settle once, and remove their temporary element after every
-close path. Use declarative Dialog for rich content, validation, or custom forms.
+`showPrompt()` resolves a trimmed string or `null`; `showConfirm()` resolves a boolean.
+Cancellation is a normal result. Use a declarative dialog for rich content, validation, or custom
+forms.

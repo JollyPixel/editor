@@ -73,7 +73,8 @@ export class PopoverController implements ReactiveController {
     }
 
     const popover = this.#options.popover();
-    this.#restoreFocus = popover !== null && popover.matches(":focus-within");
+    this.#restoreFocus = popover !== null &&
+      popover.matches(":focus-within");
   };
 
   /**

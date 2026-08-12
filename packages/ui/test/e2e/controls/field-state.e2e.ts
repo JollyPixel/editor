@@ -2,12 +2,16 @@
 import {
   test,
   expect,
-  type Locator,
-  type Page
+  type Locator
 } from "@playwright/test";
 
 // Import Internal Dependencies
-import { gotoGallery } from "./utils.ts";
+import { gotoGallery } from "../support/gallery.ts";
+import {
+  fieldChanges,
+  recordFieldChanges as recordChanges
+} from "../support/events.ts";
+import { fieldRow as row } from "../support/locators.ts";
 
 /**
  * Decorated components cannot run under `node:test`, so this suite renders them.
@@ -43,14 +47,6 @@ const kLabelledExamples = [
   { id: "controls/chrome", tag: "jolly-property-row" }
 ];
 
-function row(
-  page: Page,
-  tag: string,
-  state: string
-): Locator {
-  return page.locator(`[data-state="${state}"] ${tag}`);
-}
-
 /**
  * Returns the field's focusable control. The color-input exclusion is legacy.
  */
@@ -70,22 +66,6 @@ function tokenOf(
       .trim(),
     name
   );
-}
-
-/**
- * Records committed values emitted by controlled elements.
- */
-async function recordChanges(
-  page: Page
-): Promise<void> {
-  await page.evaluate(() => {
-    window.__changes = [];
-    document.addEventListener("jolly-change", (event) => {
-      if (event instanceof CustomEvent) {
-        window.__changes?.push(event.detail.value);
-      }
-    });
-  });
 }
 
 test.describe("controls: state matrix", () => {
@@ -398,7 +378,7 @@ test.describe("controls: select and button group", () => {
       .locator("select")
       .selectOption({ label: "Linear" });
 
-    expect(await page.evaluate(() => window.__changes)).toEqual(["linear"]);
+    expect(await fieldChanges(page)).toEqual(["linear"]);
   });
 
   test("a locked select puts the picked option back", async({ page }) => {
@@ -421,7 +401,7 @@ test.describe("controls: select and button group", () => {
         return select.value;
       });
 
-    expect(await page.evaluate(() => window.__changes)).toEqual([]);
+    expect(await fieldChanges(page)).toEqual([]);
     expect(after).toBe("0");
   });
 
@@ -443,7 +423,7 @@ test.describe("controls: select and button group", () => {
     await focusable.focus();
     await page.keyboard.press("ArrowRight");
 
-    expect(await page.evaluate(() => window.__changes)).toEqual(["paint"]);
+    expect(await fieldChanges(page)).toEqual(["paint"]);
   });
 
   test("button group marks exactly one option checked", async({ page }) => {
@@ -480,7 +460,7 @@ test.describe("controls: select and button group", () => {
     await box.click();
     await expect(box).not.toBeChecked();
 
-    expect(await page.evaluate(() => window.__changes)).toEqual([true, false]);
+    expect(await fieldChanges(page)).toEqual([true, false]);
   });
 
   /**
@@ -495,7 +475,7 @@ test.describe("controls: select and button group", () => {
     await box.click();
     await expect(box).toBeChecked();
 
-    expect(await page.evaluate(() => window.__changes)).toEqual([true]);
+    expect(await fieldChanges(page)).toEqual([true]);
   });
 
   test("checkbox example opts into a background hit target", async({ page }) => {
@@ -700,7 +680,7 @@ test.describe("controls: select and button group", () => {
     await expect(box).not.toBeChecked();
 
     // Default row starts at 0b0101 (Default | Terrain); Player is 0b0010.
-    expect(await page.evaluate(() => window.__changes)).toEqual([0b0111, 0b0101]);
+    expect(await fieldChanges(page)).toEqual([0b0111, 0b0101]);
   });
 });
 

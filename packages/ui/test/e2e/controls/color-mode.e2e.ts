@@ -2,12 +2,12 @@
 import {
   test,
   expect,
-  type Locator,
-  type Page
+  type Locator
 } from "@playwright/test";
 
 // Import Internal Dependencies
-import { gotoGallery } from "./utils.ts";
+import { gotoGallery } from "../support/gallery.ts";
+import { fieldRow as row } from "../support/locators.ts";
 
 // CONSTANTS
 const kControls = [
@@ -15,14 +15,6 @@ const kControls = [
   { id: "controls/slider", tag: "jolly-slider" },
   { id: "controls/flags", tag: "jolly-flags" }
 ];
-
-function row(
-  page: Page,
-  tag: string,
-  state: string
-): Locator {
-  return page.locator(`[data-state="${state}"] ${tag}`);
-}
 
 function control(field: Locator): Locator {
   return field.locator('input:not([type="color"])').first();

@@ -27,6 +27,18 @@ export async function gotoGallery(
   );
 }
 
+/**
+ * Reloads the current gallery example and waits for its next mount.
+ */
+export async function reloadGallery(
+  page: Page
+): Promise<void> {
+  await page.reload();
+  await page.waitForFunction(
+    () => window.__galleryReady === true
+  );
+}
+
 export function disposedIds(
   page: Page
 ): Promise<string[]> {

@@ -51,6 +51,22 @@ const inkTokens = css`
     transparent
   );
 
+  /*
+   * A drop zone covers a whole dock rather than a handle, so it sits well below
+   * the resize wash: the same tint over that much area would read as a filled
+   * panel instead of as a place something can land.
+   */
+  --jolly-dock-zone-bg: color-mix(
+    in oklab,
+    var(--jolly-accent-fill) 6%,
+    transparent
+  );
+  --jolly-dock-zone-bg-armed: color-mix(
+    in oklab,
+    var(--jolly-accent-fill) 10%,
+    transparent
+  );
+
   /* Below the rest stop, so a readonly control reads as inert rather than idle. */
   --jolly-control-bg-muted: color-mix(in oklab, var(--jolly-ink) 4%, transparent);
 

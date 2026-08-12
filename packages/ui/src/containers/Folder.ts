@@ -20,7 +20,17 @@ import { isButtonElement } from "../dom.ts";
 import { LocalStorageAdapter } from "../storage/LocalStorageAdapter.ts";
 import type { StorageAdapter } from "../storage/StorageAdapter.ts";
 
-type ReorderCommand = "cancel" | "down" | "finish" | "start" | "up";
+type ReorderCommand =
+  | "cancel"
+  | "down"
+  | "finish"
+  | "start"
+  | "up";
+
+/*
+ * The pointer half of a reorder lives in "jolly-folder-drag"; the commands
+ * below are the keyboard half only.
+ */
 
 @customElement("jolly-folder")
 export class Folder extends LitElement {
@@ -40,7 +50,16 @@ export class Folder extends LitElement {
   @property({ type: Boolean, reflect: true })
   declare reorderable: boolean;
 
-  @property({ type: String, attribute: "storage-key" })
+  /**
+   * Dims the folder in place while a drag session previews its new position.
+   */
+  @property({ type: Boolean, reflect: true })
+  declare dragging: boolean;
+
+  @property({
+    type: String,
+    attribute: "storage-key"
+  })
   declare storageKey: string;
 
   @property({ attribute: false })
@@ -50,7 +69,6 @@ export class Folder extends LitElement {
   declare _reordering: boolean;
 
   #persistenceKey = "";
-  #pointerId: number | null = null;
 
   get persistenceKey(): string {
     return this.#persistenceKey;
@@ -74,6 +92,7 @@ export class Folder extends LitElement {
     this.key = "";
     this.open = true;
     this.reorderable = false;
+    this.dragging = false;
     this.storageKey = "";
     this.storage = new LocalStorageAdapter();
     this._reordering = false;
@@ -112,6 +131,15 @@ export class Folder extends LitElement {
         <slot></slot>
       </div>
     `;
+  }
+
+  /**
+   * Header rect, used by a drag session to size the ghost it carries.
+   */
+  headerRect(): DOMRect {
+    const header = this.renderRoot.querySelector(".header");
+
+    return (header ?? this).getBoundingClientRect();
   }
 
   #toggle = () => {
@@ -169,74 +197,29 @@ export class Folder extends LitElement {
     }
   };
 
+  /**
+   * Hands the pointer to the owning pane, which runs the drag session.
+   *
+   * The folder no longer captures the pointer itself: the pane owns the
+   * sibling geometry the session needs, and routing both drags through one
+   * engine is what gives folders the same insertion line panes get.
+   */
   #onGripPointerDown = (
     event: PointerEvent
   ) => {
     if (
       !isButtonElement(event.currentTarget) ||
       event.button !== 0 ||
-      this.#pointerId !== null
+      !this.reorderable
     ) {
       return;
     }
 
-    const grip = event.currentTarget;
     event.preventDefault();
-    this.#pointerId = event.pointerId;
-    grip.setPointerCapture(event.pointerId);
-    grip.addEventListener(
-      "pointermove",
-      this.#onGripPointerMove
-    );
-    grip.addEventListener(
-      "pointerup",
-      this.#onGripPointerEnd
-    );
-    grip.addEventListener(
-      "pointercancel",
-      this.#onGripPointerEnd
-    );
-    this.#emitReorder("start");
-  };
-
-  #onGripPointerMove = (
-    event: PointerEvent
-  ) => {
-    if (event.pointerId === this.#pointerId) {
-      emitContainerEvent(this, "jolly-folder-reorder", {
-        folder: this,
-        command: "pointer",
-        clientY: event.clientY
-      });
-    }
-  };
-
-  #onGripPointerEnd = (
-    event: PointerEvent
-  ) => {
-    if (
-      !isButtonElement(event.currentTarget) ||
-      event.pointerId !== this.#pointerId
-    ) {
-      return;
-    }
-
-    const grip = event.currentTarget;
-    grip.releasePointerCapture(event.pointerId);
-    grip.removeEventListener(
-      "pointermove",
-      this.#onGripPointerMove
-    );
-    grip.removeEventListener(
-      "pointerup",
-      this.#onGripPointerEnd
-    );
-    grip.removeEventListener(
-      "pointercancel",
-      this.#onGripPointerEnd
-    );
-    this.#pointerId = null;
-    this.#emitReorder("finish");
+    emitContainerEvent(this, "jolly-folder-drag", {
+      folder: this,
+      event
+    });
   };
 
   #emitReorder(

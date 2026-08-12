@@ -22,6 +22,15 @@ export const floatingStyles = css`
     box-shadow: var(--jolly-shadow-floating, 0 4px 16px rgb(0 0 0 / 0.3));
   }
 
+  /*
+   * A dragged window ghosts as a whole, surface and shadow included, so the
+   * dock it is aiming at stays readable underneath it. The pane inside does
+   * not dim on its own here: the window is the source being moved.
+   */
+  :host([dragging]) {
+    opacity: 0.4;
+  }
+
   .content {
     width: 100%;
     height: 100%;

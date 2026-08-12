@@ -72,6 +72,29 @@ export {
   type PopoverControllerOptions
 } from "./interaction/PopoverController.ts";
 export {
+  startDragSession,
+  horizontalInsertionLine,
+  verticalInsertionLine,
+  type DragResult,
+  type DragSessionHandle,
+  type DragSessionOptions,
+  type DragZone
+} from "./interaction/DragSession.ts";
+export {
+  resolveDropIndex,
+  type DropCandidate,
+  type ResolveDropIndexOptions
+} from "./interaction/dropIndex.ts";
+export type {
+  Rect
+} from "./interaction/dragOverlay.ts";
+export {
+  copyTheme,
+  headerGhost,
+  themeTokenNames,
+  type GhostSource
+} from "./interaction/dragGhost.ts";
+export {
   parseColor
 } from "./color/parse.ts";
 export {
@@ -142,8 +165,24 @@ export {
 } from "./containers/Tab.ts";
 export {
   Dock,
+  type DockAlign,
   type DockSide
 } from "./containers/Dock.ts";
+export {
+  DockLayout
+} from "./containers/DockLayout.ts";
+export {
+  emptyLayout,
+  parseLayout,
+  reconcileLayout,
+  serializeLayout,
+  type DeclaredDock,
+  type DeclaredLayout,
+  type DockState,
+  type FloatingState,
+  type LayoutSnapshot,
+  type PaneState
+} from "./containers/layout.ts";
 export {
   Floating
 } from "./containers/Floating.ts";

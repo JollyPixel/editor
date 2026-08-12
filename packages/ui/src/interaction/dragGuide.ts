@@ -39,7 +39,10 @@ export function createDragGuide(
   line.setAttribute("y2", String(originY));
   line.setAttribute("stroke", color);
   line.setAttribute("stroke-width", "1");
-  line.setAttribute("stroke-dasharray", "4 3");
+  line.setAttribute(
+    "stroke-dasharray",
+    "4 3"
+  );
   svg.append(line);
 
   const arrow = document.createElementNS(
@@ -54,11 +57,17 @@ export function createDragGuide(
   function update(
     currentX: number
   ): void {
-    line.setAttribute("x2", String(currentX));
+    line.setAttribute(
+      "x2",
+      String(currentX)
+    );
 
     // No arrow until the pointer moves.
     if (currentX === startX) {
-      arrow.setAttribute("points", "");
+      arrow.setAttribute(
+        "points",
+        ""
+      );
 
       return;
     }
@@ -70,7 +79,10 @@ export function createDragGuide(
       [tipX - (direction * 6), originY - 4],
       [tipX - (direction * 6), originY + 4]
     ].map((point) => point.join(",")).join(" ");
-    arrow.setAttribute("points", points);
+    arrow.setAttribute(
+      "points",
+      points
+    );
   }
 
   // Avoid the SVG default `x2` of zero before the first move.
