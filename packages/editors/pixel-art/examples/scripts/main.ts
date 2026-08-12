@@ -13,7 +13,6 @@ import { CameraBehavior } from "./components/Camera.ts";
 import { OrbitControlsBehavior } from "./components/OrbitControlsBehavior.ts";
 import { initializeDemoSync } from "./demo/DemoSync.ts";
 import { ThemeController } from "./demo/ThemeController.ts";
-import { CanvasTextureRefreshBehavior } from "./preview/CanvasTextureRefreshBehavior.ts";
 import { RegionPreviewFactory } from "./preview/RegionPreviewFactory.ts";
 import { RegionPreviewGallery } from "./preview/RegionPreviewGallery.ts";
 import { RegionPreviewPicker } from "./preview/RegionPreviewPicker.ts";
@@ -37,6 +36,10 @@ declare global {
      */
     __uvPreviewMeshCount?: () => number;
   }
+}
+
+function noop(): void {
+  // No 3D runtime is active yet; scene-appearance updates are a no-op.
 }
 
 const kSceneAppearances: Record<Exclude<ThemeMode, "auto">, SceneAppearance> = {
@@ -77,13 +80,47 @@ async function initRuntime(): Promise<void> {
     }
   });
 
-  const resizeHandle = new ResizeHandle(drawPanel, { direction: "left" });
+  const resizeHandle = new ResizeHandle(drawPanel, {
+    direction: "left"
+  });
   resizeHandle.addEventListener("drag", () => {
     drawPanel.onResize();
   });
   resizeHandle.addEventListener("dragEnd", () => {
     drawPanel.onResize();
   });
+
+  // Theming applies to the 2D panel regardless of whether the 3D preview
+  // runtime is running; only the scene-appearance side effect is 3D-only.
+  let applySceneAppearance: (theme: Exclude<ThemeMode, "auto">) => void = noop;
+  const themeController = new ThemeController({
+    drawPanel,
+    select: themeSelect,
+    onResolvedThemeChange: (theme) => applySceneAppearance(theme)
+  });
+  themeSelect.addEventListener("change", () => {
+    localStorage.setItem(
+      kThemeStorageKey,
+      themeSelect.value
+    );
+  });
+  window.addEventListener("beforeunload", () => {
+    themeController.dispose();
+  }, {
+    once: true
+  });
+
+  // The 3D preview runtime (camera, orbit controls, UV region meshes) is
+  // pure overhead for tests that only exercise the 2D pixel canvas: its
+  // WebGPU-fallback render loop runs continuously and competes with every
+  // CDP-dispatched pointer event for the main thread. Tests that don't
+  // assert on preview meshes skip it with `?runtime=off` (see gotoDemo()).
+  if (new URLSearchParams(window.location.search).get("runtime") === "off") {
+    const syncReady = initializeDemoSync(canvasManager);
+    await syncReady;
+
+    return;
+  }
 
   const canvas = document.querySelector<HTMLCanvasElement>(
     "#canvas-container > canvas"
@@ -110,8 +147,6 @@ async function initRuntime(): Promise<void> {
   const canvasTexture = new THREE.CanvasTexture(canvasManager.textureCanvas());
   canvasTexture.magFilter = THREE.NearestFilter;
   canvasTexture.minFilter = THREE.NearestFilter;
-  world.createActor("preview-texture-refresh")
-    .addComponentAndGet(CanvasTextureRefreshBehavior, { canvasTexture });
 
   const cameraBehavior = world.createActor("camera")
     .addComponentAndGet(CameraBehavior);
@@ -137,7 +172,10 @@ async function initRuntime(): Promise<void> {
     }
   };
 
-  const previewFactory = new RegionPreviewFactory({ world, canvasTexture });
+  const previewFactory = new RegionPreviewFactory({
+    world,
+    canvasTexture
+  });
   previewGallery = new RegionPreviewGallery({
     previewFactory,
     canvasManager
@@ -148,17 +186,16 @@ async function initRuntime(): Promise<void> {
     localStorage.setItem(kRotationStorageKey, String(rotationToggle.checked));
   });
   previewGallery.setRotating(rotationToggle.checked);
-  const themeController = new ThemeController({
-    drawPanel,
-    select: themeSelect,
-    onResolvedThemeChange: (theme) => {
-      const appearance = kSceneAppearances[theme];
-      scene.background = new THREE.Color(appearance.backgroundColor);
-      previewGallery.setAppearance({
-        borderColor: appearance.borderColor
-      });
-    }
-  });
+  applySceneAppearance = (theme) => {
+    const appearance = kSceneAppearances[theme];
+    scene.background = new THREE.Color(appearance.backgroundColor);
+    previewGallery.setAppearance({
+      borderColor: appearance.borderColor
+    });
+  };
+  applySceneAppearance(
+    resolveTheme(themeSelect.value as ThemeMode)
+  );
   const previewPicker = new RegionPreviewPicker({
     uv: canvasManager.uv,
     camera: cameraBehavior.camera,
@@ -166,14 +203,10 @@ async function initRuntime(): Promise<void> {
     getMeshes: () => previewGallery.meshes
   });
   window.addEventListener("beforeunload", () => {
-    themeController.dispose();
     previewPicker.dispose();
     previewGallery.dispose();
   }, {
     once: true
-  });
-  themeSelect.addEventListener("change", () => {
-    localStorage.setItem(kThemeStorageKey, themeSelect.value);
   });
 
   await runtimeReady.catch(console.error);
@@ -197,7 +230,9 @@ function restoreDemoPreferences(): {
     "#theme-select"
   )!;
   const rotation = localStorage.getItem(kRotationStorageKey);
-  const theme = themeFromStorage(localStorage.getItem(kThemeStorageKey));
+  const theme = themeFromStorage(
+    localStorage.getItem(kThemeStorageKey)
+  );
 
   if (rotation === "true" || rotation === "false") {
     rotationToggle.checked = rotation === "true";
@@ -232,7 +267,9 @@ function resolveTheme(
     return theme;
   }
 
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  return window.matchMedia(
+    "(prefers-color-scheme: dark)"
+  ).matches ? "dark" : "light";
 }
 
 function initializeStarterRegion(
