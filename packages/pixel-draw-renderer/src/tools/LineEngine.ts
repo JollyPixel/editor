@@ -14,7 +14,7 @@ import type {
   Vec2
 } from "../types.ts";
 
-export interface LineControllerOptions {
+export interface LineEngineOptions {
   brush: Brush;
   linePreview: LinePreview;
   pipeline: EditPipeline;
@@ -24,7 +24,7 @@ export interface LineControllerOptions {
   onProgress?: (pixels: PeerStrokePixel[]) => void;
 }
 
-export class LineController {
+export class LineEngine {
   #line = new Line();
   #brush: Brush;
   #linePreview: LinePreview;
@@ -36,7 +36,7 @@ export class LineController {
   #colorSlot: BrushColorSlot = "primary";
 
   constructor(
-    options: LineControllerOptions
+    options: LineEngineOptions
   ) {
     this.#brush = options.brush;
     this.#linePreview = options.linePreview;

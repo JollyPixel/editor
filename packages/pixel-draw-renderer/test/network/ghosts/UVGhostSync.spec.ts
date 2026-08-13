@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import type * as network from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import { UVGhostSync } from "#src/network/UVGhostSync.ts";
+import { UVGhostSync } from "#src/network/ghosts/UVGhostSync.ts";
 import type {
   PixelNetworkCommand,
   PixelServerMessage,

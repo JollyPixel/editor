@@ -22,7 +22,10 @@ export class ShapeSelect {
     buffer: DefaultPixelBuffer,
     seed: Vec2
   ): ShapeSelection | null {
-    const region = Fill.connectedRegion(buffer, seed);
+    const region = Fill.connectedRegion(
+      buffer,
+      seed
+    );
     if (region.length === 0) {
       return null;
     }
@@ -72,6 +75,7 @@ export class ShapeSelect {
     rect: SelectionRect
   ): boolean[] {
     const { width, height } = rect;
+
     const isRegion = new Array<boolean>(
       width * height
     ).fill(false);

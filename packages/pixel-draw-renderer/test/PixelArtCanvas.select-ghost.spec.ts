@@ -11,7 +11,7 @@ import {
   PixelArtCanvas,
   type PixelArtCanvasOptions
 } from "#src/PixelArtCanvas.ts";
-import type { SelectionProgressEvent } from "#src/tools/SelectController.events.ts";
+import type { SelectionProgressEvent } from "#src/tools/SelectEngine.events.ts";
 import { makeContainer } from "./helpers/dom.ts";
 import { mouseEvent } from "./helpers/events.ts";
 import {
@@ -21,7 +21,7 @@ import {
 
 /**
  * Coverage for the `selection-progress` / `selection-committed` /
- * `selection-idle` events `SelectController` emits (consumed by
+ * `selection-idle` events `SelectEngine` emits (consumed by
  * `SelectionGhostSync`) — see PixelArtCanvas.select.spec.ts for the default
  * rectangle-drag/move behavior these build on.
  */

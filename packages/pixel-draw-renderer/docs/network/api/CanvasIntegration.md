@@ -84,7 +84,7 @@ Cursor and stroke helpers chain callbacks already assigned to these slots and re
 
 ```ts
 readonly selectionEvents: Pick<
-  Emitter<SelectControllerEvent>,
+  Emitter<SelectEngineEvent>,
   "on" | "off"
 >
 ```

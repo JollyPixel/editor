@@ -13,7 +13,7 @@ import {
 } from "lit";
 import type {
   PixelArtCanvas,
-  SelectControllerEvent
+  SelectEngineEvent
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -46,7 +46,7 @@ interface FakeCanvasState {
 type ClipboardOperationResult = Awaited<ReturnType<PixelArtCanvas["copySelection"]>>;
 
 function makeCanvas(): FakeCanvasState {
-  let listener: SelectControllerEvent["selection-state-changed"] | null = null;
+  let listener: SelectEngineEvent["selection-state-changed"] | null = null;
   const calls: Record<string, number> = {
     copy: 0,
     paste: 0,
@@ -85,7 +85,7 @@ function makeCanvas(): FakeCanvasState {
     selectionEvents: {
       on: (
         _type: "selection-state-changed",
-        nextListener: SelectControllerEvent["selection-state-changed"]
+        nextListener: SelectEngineEvent["selection-state-changed"]
       ) => {
         listener = nextListener;
       },
@@ -109,9 +109,11 @@ function makeCanvas(): FakeCanvasState {
     canvas,
     calls,
     copyDeferred,
-    emitSelection(hasSelection: boolean) {
+    emitSelection(
+      hasSelection: boolean
+    ) {
       select.hasSelection = hasSelection;
-      listener?.({ hasSelection });
+      listener?.({ hasSelection, isFloating: false });
     }
   };
 }

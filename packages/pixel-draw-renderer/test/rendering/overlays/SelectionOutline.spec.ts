@@ -235,7 +235,7 @@ describe("SelectionOutline", () => {
     // Corner-touching cells share a boundary vertex, so that vertex starts
     // two edges. Keying edges by origin alone dropped one and the walk then
     // dereferenced a consumed edge (TypeError), which silently aborted
-    // SelectController.importSelection halfway through a paste.
+    // SelectEngine.importSelection halfway through a paste.
     test("two cells touching only at a corner trace as two separate loops", () => {
       // X .
       // . X

@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import { InteractionMode } from "./InteractionMode.ts";
-import type { FillController } from "../../tools/FillController.ts";
+import type { FillEngine } from "../../tools/FillEngine.ts";
 import type {
   BrushHighlightView
 } from "../../rendering/overlays/BrushHighlight.ts";
@@ -10,14 +10,14 @@ import type {
 } from "../../types.ts";
 
 export interface FillModeOptions {
-  fill: FillController;
+  fill: FillEngine;
   highlight: BrushHighlightView;
 }
 
 export class FillMode extends InteractionMode {
   readonly id: Mode = "fill";
 
-  #fill: FillController;
+  #fill: FillEngine;
   #highlight: BrushHighlightView;
 
   constructor(

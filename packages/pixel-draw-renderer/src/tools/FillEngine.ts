@@ -20,7 +20,7 @@ export interface FillGlobalCommit {
   toColor: RGBA;
 }
 
-export interface FillControllerOptions {
+export interface FillEngineOptions {
   brush: Brush;
   canvasBuffer: CanvasBuffer;
   pipeline: EditPipeline;
@@ -33,14 +33,14 @@ export interface FillTool {
   global: boolean;
 }
 
-export class FillController implements FillTool {
+export class FillEngine implements FillTool {
   #brush: Brush;
   #canvasBuffer: CanvasBuffer;
   #pipeline: EditPipeline;
   #global = false;
 
   constructor(
-    options: FillControllerOptions
+    options: FillEngineOptions
   ) {
     this.#brush = options.brush;
     this.#canvasBuffer = options.canvasBuffer;
@@ -63,12 +63,19 @@ export class FillController implements FillTool {
     slot: BrushColorSlot = "primary"
   ): void {
     if (this.#global) {
-      this.#runGlobal(tx, ty, slot);
+      this.#runGlobal(
+        tx,
+        ty,
+        slot
+      );
 
       return;
     }
 
-    const [r, g, b, a] = this.#canvasBuffer.samplePixel(tx, ty);
+    const [r, g, b, a] = this.#canvasBuffer.samplePixel(
+      tx,
+      ty
+    );
     const beforeColor = { r, g, b, a };
     const fillColor = this.#brush[slot].asRGBA();
     const positions = Fill.floodFill(
@@ -76,7 +83,11 @@ export class FillController implements FillTool {
       { x: tx, y: ty },
       fillColor
     );
-    this.#pipeline.commitPixels(positions, slot, beforeColor);
+    this.#pipeline.commitPixels(
+      positions,
+      slot,
+      beforeColor
+    );
   }
 
   #runGlobal(
@@ -84,7 +95,10 @@ export class FillController implements FillTool {
     ty: number,
     slot: BrushColorSlot
   ): void {
-    const [sr, sg, sb, sa] = this.#canvasBuffer.samplePixel(tx, ty);
+    const [sr, sg, sb, sa] = this.#canvasBuffer.samplePixel(
+      tx,
+      ty
+    );
     const fromColor: RGBA = {
       r: sr,
       g: sg,
@@ -102,12 +116,17 @@ export class FillController implements FillTool {
       return;
     }
 
-    const positions = Fill.matchAll(this.#canvasBuffer, fromColor);
+    const positions = Fill.matchAll(
+      this.#canvasBuffer,
+      fromColor
+    );
     if (positions.length === 0) {
       return;
     }
 
-    const beforeColors = positions.map(() => fromColor);
+    const beforeColors = positions.map(
+      () => fromColor
+    );
     this.#pipeline.commitGlobalFill({
       positions,
       beforeColors,

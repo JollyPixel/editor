@@ -4,7 +4,7 @@ import type {
   SelectionRect,
   Vec2
 } from "../types.ts";
-import type { UVGeometry } from "./UVRegion.ts";
+import type { UVGeometry } from "./types.ts";
 
 export class UVGeometryValue {
   readonly #value: UVGeometry;
@@ -61,7 +61,9 @@ export class UVGeometryValue {
     rect: SelectionRect
   ): UVGeometryValue {
     return new UVGeometryValue(
-      "shape" in this.#value ? { ...this.#value, rect } : rect
+      "shape" in this.#value ?
+        { ...this.#value, rect } :
+        rect
     );
   }
 

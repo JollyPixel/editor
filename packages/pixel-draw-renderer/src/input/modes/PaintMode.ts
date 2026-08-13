@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import { InteractionMode } from "./InteractionMode.ts";
-import type { BrushController } from "../../tools/BrushController.ts";
-import type { LineController } from "../../tools/LineController.ts";
+import type { BrushEngine } from "../../tools/BrushEngine.ts";
+import type { LineEngine } from "../../tools/LineEngine.ts";
 import type {
   BrushHighlightView
 } from "../../rendering/overlays/BrushHighlight.ts";
@@ -11,8 +11,8 @@ import type {
 } from "../../types.ts";
 
 export interface PaintModeOptions {
-  brush: BrushController;
-  line: LineController;
+  brush: BrushEngine;
+  line: LineEngine;
   highlight: BrushHighlightView;
   /**
    * Cancels the active primary drag without committing it.
@@ -23,8 +23,8 @@ export interface PaintModeOptions {
 export class PaintMode extends InteractionMode {
   readonly id: Mode = "paint";
 
-  #brush: BrushController;
-  #line: LineController;
+  #brush: BrushEngine;
+  #line: LineEngine;
   #highlight: BrushHighlightView;
   #stopDrawing: () => void;
 

@@ -5,7 +5,7 @@ import type { EditPipeline } from "../sync/EditPipeline.ts";
 import { rgbToHex } from "../utils/colors.ts";
 import type { PeerStrokePixel, RGBA, Vec2 } from "../types.ts";
 
-export interface BrushControllerOptions {
+export interface BrushEngineOptions {
   brush: Brush;
   canvasBuffer: CanvasBuffer;
   /**
@@ -32,7 +32,7 @@ export interface BrushTool {
   ): RGBA | null;
 }
 
-export class BrushController implements BrushTool {
+export class BrushEngine implements BrushTool {
   #brush: Brush;
   #canvasBuffer: CanvasBuffer;
   #canvas: HTMLCanvasElement;
@@ -46,7 +46,7 @@ export class BrushController implements BrushTool {
   #pickArmed = false;
 
   constructor(
-    options: BrushControllerOptions
+    options: BrushEngineOptions
   ) {
     this.#brush = options.brush;
     this.#canvasBuffer = options.canvasBuffer;
@@ -131,7 +131,10 @@ export class BrushController implements BrushTool {
     for (const pixel of affected) {
       const key = `${pixel.x},${pixel.y}`;
       if (!this.#strokeDirty.has(key)) {
-        const [r, g, b, a] = this.#canvasBuffer.samplePixel(pixel.x, pixel.y);
+        const [r, g, b, a] = this.#canvasBuffer.samplePixel(
+          pixel.x,
+          pixel.y
+        );
         this.#strokeBefore.set(key, { r, g, b, a });
       }
       this.#strokeDirty.set(key, pixel);

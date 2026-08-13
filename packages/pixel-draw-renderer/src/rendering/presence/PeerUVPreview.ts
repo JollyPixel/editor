@@ -3,6 +3,7 @@ import {
   UVRegionBorder,
   type UVRegionBorderStyle
 } from "../overlays/UVRegionBorder.ts";
+import { PeerRegistry } from "./PeerRegistry.ts";
 import type {
   UVRegionLayer
 } from "../overlays/UVRegions.ts";
@@ -30,18 +31,20 @@ interface PeerBorder {
 /**
  * Renders non-authoritative peer UV drag borders.
  */
-export class PeerUVPreview {
+export class PeerUVPreview extends PeerRegistry<
+  PeerUVPreviewState,
+  PeerBorder
+> {
   #svg: SVGElement;
   #viewport: DefaultViewport;
   #uvOverlay: UVRegionLayer;
-  #ghosts = new Map<string, PeerUVPreviewState>();
-  #borders = new Map<string, PeerBorder>();
 
   constructor(
     svg: SVGElement,
     viewport: DefaultViewport,
     uvOverlay: UVRegionLayer
   ) {
+    super();
     this.#svg = svg;
     this.#viewport = viewport;
     this.#uvOverlay = uvOverlay;
@@ -51,24 +54,15 @@ export class PeerUVPreview {
     clientId: string,
     state: PeerUVPreviewState
   ): void {
-    this.#ghosts.set(clientId, state);
-    this.#render(clientId);
+    super.set(clientId, state);
     this.#syncSuppression();
   }
 
   remove(
     clientId: string
   ): void {
-    this.#ghosts.delete(clientId);
-    this.#borders.get(clientId)?.border.remove();
-    this.#borders.delete(clientId);
+    super.remove(clientId);
     this.#syncSuppression();
-  }
-
-  clearAll(): void {
-    for (const clientId of [...this.#ghosts.keys()]) {
-      this.remove(clientId);
-    }
   }
 
   /**
@@ -77,50 +71,41 @@ export class PeerUVPreview {
   removeByRegion(
     id: string
   ): void {
-    for (const [clientId, state] of [...this.#ghosts.entries()]) {
+    for (const [clientId, state] of [...this.entries()]) {
       if (state.id === id) {
         this.remove(clientId);
       }
     }
   }
 
-  refresh(): void {
-    for (const clientId of this.#ghosts.keys()) {
-      this.#render(clientId);
-    }
-  }
-
   destroy(): void {
-    this.#ghosts.clear();
-    for (const { border } of this.#borders.values()) {
-      border.remove();
-    }
-    this.#borders.clear();
+    super.destroy();
     this.#syncSuppression();
   }
 
   #syncSuppression(): void {
     this.#uvOverlay.setGhostSuppressed(
-      this.#ghosts.values()
+      this.values()
     );
   }
 
-  #render(
-    clientId: string
+  protected render(
+    clientId: string,
+    state: PeerUVPreviewState
   ): void {
-    const state = this.#ghosts.get(clientId);
-    if (!state) {
-      return;
-    }
-
     const isTriangle = "shape" in state.geometry;
-    const existing = this.#borders.get(clientId);
-    if (existing && existing.isTriangle !== isTriangle) {
+    const existing = this.view(clientId);
+    if (
+      existing &&
+      existing.isTriangle !== isTriangle
+    ) {
       existing.border.remove();
-      this.#borders.delete(clientId);
+      this.clearView(clientId);
     }
 
-    const border = this.#borders.get(clientId)?.border ?? this.#createBorder(
+    const border = this.view(
+      clientId
+    )?.border ?? this.#createBorder(
       clientId,
       state.geometry,
       isTriangle
@@ -143,13 +128,21 @@ export class PeerUVPreview {
     border.appendTo(this.#svg);
   }
 
+  protected disposeView(
+    view: PeerBorder
+  ): void {
+    view.border.remove();
+  }
+
   #createBorder(
     clientId: string,
     geometry: UVGeometry,
     isTriangle: boolean
   ): UVRegionBorder {
-    const border = new UVRegionBorder(geometry);
-    this.#borders.set(clientId, {
+    const border = new UVRegionBorder(
+      geometry
+    );
+    this.setView(clientId, {
       border,
       isTriangle
     });

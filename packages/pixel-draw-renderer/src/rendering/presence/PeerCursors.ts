@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import { SVG_NS } from "../constants.ts";
+import { PeerRegistry } from "./PeerRegistry.ts";
 import type {
   DefaultViewport
 } from "../Viewport.ts";
@@ -26,11 +27,12 @@ const kLabelFontSize = 11;
 const kLabelOffsetX = 13;
 const kLabelOffsetY = 9;
 
-export class PeerCursors {
+export class PeerCursors extends PeerRegistry<
+  PeerCursorState,
+  PeerCursorElements
+> {
   #svg: SVGElement;
   #viewport: DefaultViewport;
-  #peers = new Map<string, PeerCursorState>();
-  #elements = new Map<string, PeerCursorElements>();
   #defs: SVGDefsElement;
   // Per-instance ids prevent SVG filter collisions across canvases.
   #shadowFilterId = `peer-cursor-shadow-${crypto.randomUUID()}`;
@@ -39,15 +41,27 @@ export class PeerCursors {
     svg: SVGElement,
     viewport: DefaultViewport
   ) {
+    super();
     this.#svg = svg;
     this.#viewport = viewport;
     this.#defs = this.#createShadowFilter();
     this.#svg.appendChild(this.#defs);
   }
 
+  destroy(): void {
+    super.destroy();
+    this.#defs.remove();
+  }
+
   #createShadowFilter(): SVGDefsElement {
-    const defs = document.createElementNS(SVG_NS, "defs");
-    const filter = document.createElementNS(SVG_NS, "filter");
+    const defs = document.createElementNS(
+      SVG_NS,
+      "defs"
+    );
+    const filter = document.createElementNS(
+      SVG_NS,
+      "filter"
+    );
     filter.setAttribute("id", this.#shadowFilterId);
     // Expand the default filter bounds so the blurred shadow is not clipped.
     filter.setAttribute("x", "-50%");
@@ -71,57 +85,19 @@ export class PeerCursors {
     return defs;
   }
 
-  set(
+  protected render(
     clientId: string,
     state: PeerCursorState
   ): void {
-    this.#peers.set(clientId, state);
-    this.#render(clientId);
-  }
-
-  remove(
-    clientId: string
-  ): void {
-    this.#peers.delete(clientId);
-    this.#elements.get(
-      clientId
-    )?.group.remove();
-    this.#elements.delete(clientId);
-  }
-
-  refresh(): void {
-    for (const clientId of this.#peers.keys()) {
-      this.#render(clientId);
-    }
-  }
-
-  destroy(): void {
-    for (const elements of this.#elements.values()) {
-      elements.group.remove();
-    }
-
-    this.#peers.clear();
-    this.#elements.clear();
-    this.#defs.remove();
-  }
-
-  #render(
-    clientId: string
-  ): void {
-    const state = this.#peers.get(clientId);
-    if (!state) {
-      return;
-    }
-
     if (!state.pos) {
-      this.#elements.get(
+      this.view(
         clientId
       )?.group.setAttribute("visibility", "hidden");
 
       return;
     }
 
-    const elements = this.#elements.get(
+    const elements = this.view(
       clientId
     ) ?? this.#createElements(clientId);
     const zoom = this.#viewport.zoom.value;
@@ -129,14 +105,29 @@ export class PeerCursors {
     const x = state.pos.x * zoom + camera.x;
     const y = state.pos.y * zoom + camera.y;
 
-    elements.group.setAttribute("visibility", "visible");
+    elements.group.setAttribute(
+      "visibility",
+      "visible"
+    );
     elements.group.setAttribute(
       "transform",
       `translate(${x}, ${y})`
     );
-    elements.arrow.setAttribute("fill", state.color);
-    elements.labelText.setAttribute("fill", state.color);
+    elements.arrow.setAttribute(
+      "fill",
+      state.color
+    );
+    elements.labelText.setAttribute(
+      "fill",
+      state.color
+    );
     elements.labelText.textContent = state.label ?? "";
+  }
+
+  protected disposeView(
+    view: PeerCursorElements
+  ): void {
+    view.group.remove();
   }
 
   #createElements(
@@ -174,7 +165,7 @@ export class PeerCursors {
       arrow,
       labelText
     };
-    this.#elements.set(clientId, elements);
+    this.setView(clientId, elements);
 
     return elements;
   }

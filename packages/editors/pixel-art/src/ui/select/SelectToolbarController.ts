@@ -8,7 +8,7 @@ import {
 import type {
   ClipboardOperationResult,
   PixelArtCanvas,
-  SelectControllerEvent
+  SelectEngineEvent
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -50,7 +50,7 @@ export class SelectToolbarController implements ReactiveController {
   #status = "";
   #statusTimer: number | null = null;
 
-  readonly #onSelectionStateChanged: SelectControllerEvent["selection-state-changed"] = (
+  readonly #onSelectionStateChanged: SelectEngineEvent["selection-state-changed"] = (
     { hasSelection }
   ) => {
     this.#hasSelection = hasSelection;

@@ -1,19 +1,19 @@
 // Import Internal Dependencies
 import { InteractionMode } from "./InteractionMode.ts";
-import type { SelectController } from "../../tools/SelectController.ts";
+import type { SelectEngine } from "../../tools/SelectEngine.ts";
 import type {
   Mode,
   Vec2
 } from "../../types.ts";
 
 export interface SelectModeOptions {
-  select: SelectController;
+  select: SelectEngine;
 }
 
 export class SelectMode extends InteractionMode {
   readonly id: Mode = "select";
 
-  #select: SelectController;
+  #select: SelectEngine;
 
   constructor(
     options: SelectModeOptions

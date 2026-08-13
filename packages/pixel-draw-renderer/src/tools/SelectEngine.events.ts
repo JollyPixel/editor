@@ -19,7 +19,7 @@ export type SelectionProgressEvent =
     blankSource: boolean;
   };
 
-export type SelectControllerEvent = {
+export type SelectEngineEvent = {
   /**
    * `isFloating` marks a paste that has not been deposited yet: deselecting
    * it writes it to the buffer, deleting it cancels it.
@@ -43,4 +43,4 @@ export type SelectControllerEvent = {
   "selection-idle": () => void;
 };
 
-export type SelectControllerEventType = keyof SelectControllerEvent;
+export type SelectEngineEventType = keyof SelectEngineEvent;

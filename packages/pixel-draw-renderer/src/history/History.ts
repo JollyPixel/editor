@@ -11,7 +11,7 @@ import type {
 } from "./HistoryStack.types.ts";
 import {
   groupPositionsByColor
-} from "./utils.ts";
+} from "../buffer/colorGroups.ts";
 import type {
   DefaultPixelBuffer
 } from "../buffer/types.ts";

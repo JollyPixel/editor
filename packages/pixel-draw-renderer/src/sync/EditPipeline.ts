@@ -30,12 +30,12 @@ import type {
   Brush,
   BrushColorSlot
 } from "../tools/Brush.ts";
-import type { FillGlobalCommit } from "../tools/FillController.ts";
-import type { SelectEditEntry } from "../tools/SelectController.ts";
+import type { FillGlobalCommit } from "../tools/FillEngine.ts";
+import type { SelectEditEntry } from "../tools/SelectEngine.ts";
 import {
   applyColorGroups,
   groupPositionsByColor
-} from "../history/utils.ts";
+} from "../buffer/colorGroups.ts";
 
 export interface EditPipelineOptions {
   brush: Brush;

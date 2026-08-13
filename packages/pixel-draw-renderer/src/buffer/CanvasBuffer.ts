@@ -143,14 +143,20 @@ export class CanvasBuffer extends Emitter<
       size.x,
       size.y
     );
-    this.#buffer.replacePixels(imageData.data, size);
+    this.#buffer.replacePixels(
+      imageData.data,
+      size
+    );
   }
 
   replacePixels(
     pixels: Uint8ClampedArray,
     size: Vec2
   ): void {
-    this.#buffer.replacePixels(pixels, size);
+    this.#buffer.replacePixels(
+      pixels,
+      size
+    );
     this.#workingCanvas.width = size.x;
     this.#workingCanvas.height = size.y;
 
@@ -166,10 +172,16 @@ export class CanvasBuffer extends Emitter<
     color: RGBA
   ): void {
     const positions = Array.isArray(pixels) ? pixels : [...pixels];
-    this.#buffer.drawPixels(positions, color);
+    this.#buffer.drawPixels(
+      positions,
+      color
+    );
 
     const size = this.#buffer.size();
-    const dirtyArea = RectArea.bounding(positions, size);
+    const dirtyArea = RectArea.bounding(
+      positions,
+      size
+    );
     if (dirtyArea === null) {
       return;
     }
@@ -184,14 +196,20 @@ export class CanvasBuffer extends Emitter<
     const positions: Vec2[] = [];
 
     for (const group of groups) {
-      this.#buffer.drawPixels(group.positions, group.color);
+      this.#buffer.drawPixels(
+        group.positions,
+        group.color
+      );
       for (const position of group.positions) {
         positions.push(position);
       }
     }
 
     const size = this.#buffer.size();
-    const dirtyArea = RectArea.bounding(positions, size);
+    const dirtyArea = RectArea.bounding(
+      positions,
+      size
+    );
     if (dirtyArea === null) {
       return;
     }
@@ -204,7 +222,10 @@ export class CanvasBuffer extends Emitter<
     rect: SelectionRect,
     pixels: RGBA[]
   ): void {
-    this.#buffer.drawRegion(rect, pixels);
+    this.#buffer.drawRegion(
+      rect,
+      pixels
+    );
     this.#resyncCanvasRegion(rect);
     this.emit("changed");
   }
@@ -214,7 +235,11 @@ export class CanvasBuffer extends Emitter<
     pixels: RGBA[],
     mask: boolean[]
   ): void {
-    this.#buffer.drawMaskedRegion(rect, pixels, mask);
+    this.#buffer.drawMaskedRegion(
+      rect,
+      pixels,
+      mask
+    );
     this.#resyncCanvasRegion(rect);
     this.emit("changed");
   }
@@ -240,13 +265,20 @@ export class CanvasBuffer extends Emitter<
       const sourceIndex = row.indexInBounds * 4;
       const byteLength = row.length * 4;
       imageData.data.set(
-        pixels.subarray(sourceIndex, sourceIndex + byteLength),
+        pixels.subarray(
+          sourceIndex,
+          sourceIndex + byteLength
+        ),
         destinationIndex
       );
       destinationIndex += byteLength;
     }
 
-    this.#workingCtx.putImageData(imageData, clipped.x, clipped.y);
+    this.#workingCtx.putImageData(
+      imageData,
+      clipped.x,
+      clipped.y
+    );
   }
 
   copyToMaster(): void {

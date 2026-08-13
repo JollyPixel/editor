@@ -80,7 +80,10 @@ export class PeerFloatingSelections extends Emitter<
     const sourceKey = rectKey(state.sourceRect);
     const existing = this.#entries.get(clientId);
 
-    if (existing && existing.sourceKey === sourceKey) {
+    if (
+      existing &&
+      existing.sourceKey === sourceKey
+    ) {
       // Reposition later ticks without resampling the shared buffer.
       existing.liveRect = state.liveRect;
       existing.blankSource = state.blankSource;
@@ -215,7 +218,11 @@ export class PeerFloatingSelections extends Emitter<
   ): void {
     ctx.save();
     ctx.globalCompositeOperation = "destination-out";
-    ctx.drawImage(maskCanvas, rect.x, rect.y);
+    ctx.drawImage(
+      maskCanvas,
+      rect.x,
+      rect.y
+    );
     ctx.restore();
   }
 }
