@@ -19,6 +19,19 @@ break inherited theme selection.
 Set `theme="light"` or `theme="dark"` on the scope host. Without it, the host follows the OS
 preference. `density` is inherited and accepts `compact`, `default`, or `comfortable`.
 
+`jolly-theme-preferences` composes the theme and density controls, applies them to its nearest
+`jolly-scope`, and persists them when given a `storage-key`:
+
+```html
+<jolly-scope>
+  <jolly-theme-preferences storage-key="editor:appearance"></jolly-theme-preferences>
+  <!-- themed UI -->
+</jolly-scope>
+```
+
+Set its `target` property when another element owns `themeStyles`. Its `storage` property accepts
+a `StorageAdapter`; `defaultTheme` and `defaultDensity` configure the fallback values.
+
 | Preset | Row height | Font | Pitch |
 |---|---:|---:|---:|
 | `compact` | 16px | 10px | 20px |
@@ -83,7 +96,9 @@ jolly-pane {
 
 `--jolly-label-width` aligns field labels. `--jolly-field-trailing-width` reserves space for
 optional revert and presence controls. `--jolly-gutter-width` reserves leading space for
-collaboration locks; it defaults to `0`.
+collaboration locks; it defaults to `0`. `--jolly-dock-size` sets a dock's width (`left`/`right`)
+or height (`top`/`bottom`), defaulting to `240px`; setting it on `jolly-dock` directly beats its
+own `:host` rule where a plain `width`/`height` override would lose on specificity.
 
 The package also defines `--jolly-space-1` through `--jolly-space-6`, `--jolly-radius-sm`,
 `--jolly-radius-md`, `--jolly-row-gap`, `--jolly-folder-gap`, and motion tokens

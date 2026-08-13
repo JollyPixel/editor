@@ -9,7 +9,7 @@ import { valueFromDelta } from "../../numeric/valueFromDelta.ts";
 import { ensureDocumentStyles } from "../ensureDocumentStyles.ts";
 import { createDragGuide, type DragGuide } from "./dragGuide.ts";
 import { multiplierFor } from "../../numeric/modifierMultiplier.ts";
-import { kFallback } from "../../theme/fallbacks.ts";
+import { kFallback } from "../../theme/styles/fallbacks.ts";
 import { resolveThemeToken } from "../../theme/resolveThemeToken.ts";
 
 // CONSTANTS

@@ -104,6 +104,7 @@ Set `density` on the scope host when needed:
 - [Containers](./docs/containers.md): panes, folders, tabs, toolbars, rails and persistence
 - [Placement](./docs/placement.md): docked and floating layout, resizing and movement
 - [Dialogs](./docs/dialogs.md): declarative modal content and prompt/confirm helpers
+- [Presence](./docs/presence.md): peer snapshots in panes and folders
 
 The package currently ships twelve controls: `jolly-text`, `jolly-number`, `jolly-slider`, `jolly-range`,
 `jolly-checkbox`, `jolly-select`, `jolly-flags`, `jolly-color`, `jolly-button-group`,

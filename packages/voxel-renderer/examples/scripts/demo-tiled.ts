@@ -12,7 +12,7 @@ import * as THREE from "three";
 import { VoxelBehavior } from "./components/VoxelMap.ts";
 import {
   createExamplePane
-} from "./utils/pane.ts";
+} from "./utils/example-switcher.ts";
 
 const canvas = document.querySelector("canvas") as HTMLCanvasElement | null;
 if (!canvas) {
@@ -50,5 +50,5 @@ world.createActor("map")
 await loadRuntime(runtime, { focusCanvas: false })
   .catch(console.error);
 
-createExamplePane();
-
+const pane = createExamplePane();
+pane.hidden = true;

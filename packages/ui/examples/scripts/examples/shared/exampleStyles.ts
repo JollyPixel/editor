@@ -158,6 +158,33 @@ export const exampleStyles = `
     position: absolute;
   }
 
+  .dock-transparent-stage {
+    position: relative;
+    display: flex;
+    height: 520px;
+    overflow: hidden;
+    border: 1px solid var(--jolly-border);
+  }
+
+  .dock-transparent-stage jolly-dock[overlay] {
+    position: absolute;
+  }
+
+  .dock-transparent-viewport {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--jolly-text-muted);
+    background-image:
+      linear-gradient(45deg, var(--jolly-border) 25%, transparent 25%),
+      linear-gradient(-45deg, var(--jolly-border) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, var(--jolly-border) 75%),
+      linear-gradient(-45deg, transparent 75%, var(--jolly-border) 75%);
+    background-size: 24px 24px;
+    background-position: 0 0, 0 12px, 12px -12px, -12px 0;
+  }
+
   .scenario-hint {
     margin: 0;
     color: var(--jolly-text-muted);

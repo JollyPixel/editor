@@ -48,8 +48,9 @@ main-axis space. With `align="start"` or `align="end"`, panes use their content 
 one pane take remaining space. Aligned docks scroll when their panes exceed the available space.
 
 `overlay` makes a dock float above content instead of reserving layout space. It defaults to
-`align="start"` and does not have a resize handle. When the layout is contained rather than
-viewport-sized, position an overlay dock relative to that container:
+`align="start"`. Its inward resize edge remains interactive but is transparent, so it does not
+create a visible dock surface. When the layout is contained rather than viewport-sized, position
+an overlay dock relative to that container:
 
 ```css
 .editor-stage { position: relative; }

@@ -9,7 +9,7 @@ import {
   splitPeerChips
 } from "../../src/field/predicates.ts";
 import { Mixed } from "../../src/field/mixed.ts";
-import type { CollaboratorPresence } from "../../src/collab/types.ts";
+import type { CollaboratorPresence } from "../../src/peer/types.ts";
 
 function peer(
   clientId: string,

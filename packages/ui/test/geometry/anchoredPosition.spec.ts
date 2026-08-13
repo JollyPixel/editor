@@ -12,7 +12,8 @@ test("Numeric.anchoredPosition", async(context) => {
         anchor: {
           top: 10,
           bottom: 30,
-          left: 20
+          left: 20,
+          right: 40
         },
         panel: {
           width: 40,
@@ -37,7 +38,8 @@ test("Numeric.anchoredPosition", async(context) => {
         anchor: {
           top: 70,
           bottom: 90,
-          left: 20
+          left: 20,
+          right: 40
         },
         panel: {
           width: 40,
@@ -62,7 +64,8 @@ test("Numeric.anchoredPosition", async(context) => {
         anchor: {
           top: 20,
           bottom: 40,
-          left: 20
+          left: 20,
+          right: 40
         },
         panel: {
           width: 40,
@@ -87,7 +90,8 @@ test("Numeric.anchoredPosition", async(context) => {
         anchor: {
           top: 10,
           bottom: 30,
-          left: 90
+          left: 90,
+          right: 100
         },
         panel: {
           width: 40,
@@ -112,7 +116,8 @@ test("Numeric.anchoredPosition", async(context) => {
         anchor: {
           top: 50,
           bottom: 70,
-          left: 20
+          left: 20,
+          right: 40
         },
         panel: {
           width: 120,
@@ -127,6 +132,34 @@ test("Numeric.anchoredPosition", async(context) => {
       {
         x: 0,
         y: 0
+      }
+    );
+  });
+
+  await context.test("centres an above-anchor panel and flips below", () => {
+    assert.deepEqual(
+      anchoredPosition({
+        anchor: {
+          top: 30,
+          bottom: 50,
+          left: 40,
+          right: 60
+        },
+        panel: {
+          width: 40,
+          height: 20
+        },
+        viewport: {
+          width: 100,
+          height: 100
+        },
+        gap: 4,
+        side: "above",
+        align: "center"
+      }),
+      {
+        x: 30,
+        y: 6
       }
     );
   });

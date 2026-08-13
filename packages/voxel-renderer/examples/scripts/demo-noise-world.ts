@@ -1,6 +1,17 @@
 // Import Third-party Dependencies
 import { Camera3DControls } from "@jolly-pixel/engine";
 import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
+import {
+  Control,
+  Controls,
+  formatCount,
+  formatMilliseconds,
+  formatPercent
+} from "@jolly-pixel/ui";
+
+// Registers the declarative controls declared by the example page.
+void Control;
+void Controls;
 import * as THREE from "three";
 
 // Import Internal Dependencies
@@ -18,12 +29,8 @@ import {
 } from "./utils/terrain.ts";
 import { createTerrainTileset } from "./utils/terrainAtlas.ts";
 import {
-  addMonitors,
-  createExamplePane,
-  formatCount,
-  formatMilliseconds,
-  formatPercent
-} from "./utils/pane.ts";
+  createExamplePane
+} from "./utils/example-switcher.ts";
 
 // CONSTANTS
 const kTerrainLayer = "Terrain";
@@ -144,7 +151,7 @@ const controls = {
 };
 
 const worldFolder = pane.addFolder({ title: "World" });
-addMonitors(worldFolder, worldStats, {
+worldFolder.addMonitors(worldStats, {
   size: { label: "size" },
   columns: { label: "columns", format: formatCount },
   chunkSize: { label: "chunk size", format: formatCount },
@@ -156,7 +163,7 @@ addMonitors(worldFolder, worldStats, {
 });
 
 const meshFolder = pane.addFolder({ title: "Mesh" });
-addMonitors(meshFolder, meshStats, {
+meshFolder.addMonitors(meshStats, {
   faces: { label: "faces", format: formatCount },
   culled: { label: "culled", format: formatPercent },
   merged: { label: "merged", format: formatPercent },

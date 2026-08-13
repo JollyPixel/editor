@@ -10,6 +10,37 @@
 
 <body>
   <canvas tabindex="-1"></canvas>
+  <jolly-scope>
+    <jolly-controls
+      position="bottom-left"
+      max-entries-per-row="3"
+      heading="Controls"
+    >
+      <jolly-control
+        description="Orbit"
+        details="Drag with the primary mouse button to orbit around the grid."
+      ><kbd>Drag</kbd></jolly-control>
+      <jolly-control
+        description="Pan"
+        details="Drag with the secondary mouse button to pan the camera target."
+      ><kbd>Right drag</kbd></jolly-control>
+      <jolly-control
+        description="Zoom"
+        details="Use the mouse wheel to change the camera distance."
+      ><kbd>Wheel</kbd></jolly-control>
+    </jolly-controls>
+    <jolly-dock-layout storage-key="three-examples:layout">
+      <jolly-dock
+        id="tools"
+        key="tools"
+        side="right"
+        align="start"
+        overlay
+        collapsible
+        size="340"
+      ></jolly-dock>
+    </jolly-dock-layout>
+  </jolly-scope>
   <script type="module" src="./scripts/demo-grid.ts"></script>
 </body>
 

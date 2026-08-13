@@ -29,6 +29,11 @@ export interface PeerFrustumSyncOptions<ClientMessage = unknown, ServerMessage =
    */
   getLabel?: (identity: network.PeerMetadata) => string | undefined;
   /**
+   * Chooses the color shared by a remote peer's frustum and other presence UI.
+   * @default a deterministic color from the built-in palette
+   */
+  getColor?: (clientId: string) => THREE.ColorRepresentation;
+  /**
    * Shared visual options applied to every remote peer's frustum.
    * `color` and `displayName` are driven by presence/identity instead and ignored here.
    */
@@ -50,6 +55,7 @@ export class PeerFrustumSync<ClientMessage = unknown, ServerMessage = unknown> {
   #room: network.Room<ClientMessage, ServerMessage>;
   #parent: THREE.Object3D;
   #getLabel: (identity: network.PeerMetadata) => string | undefined;
+  #getColor: (clientId: string) => THREE.ColorRepresentation;
   #frustumOptions: Omit<PeerFrustumOptions, "color" | "displayName">;
   #palette = new ColorPalette();
   #peers = new Map<string, PeerFrustum>();
@@ -78,6 +84,9 @@ export class PeerFrustumSync<ClientMessage = unknown, ServerMessage = unknown> {
     this.#room = options.room;
     this.#parent = options.parent;
     this.#getLabel = options.getLabel ?? defaultGetLabel;
+    this.#getColor = options.getColor ?? (
+      (clientId) => this.#palette.forKey(clientId)
+    );
     this.#frustumOptions = options.frustum ?? {};
 
     this.#room.on("peer-joined", this.#onPeerJoined);
@@ -127,6 +136,7 @@ export class PeerFrustumSync<ClientMessage = unknown, ServerMessage = unknown> {
    */
   update(): void {
     this.#reconcilePeers();
+    this.#refreshColors();
 
     if (!this.#source) {
       return;
@@ -231,7 +241,7 @@ export class PeerFrustumSync<ClientMessage = unknown, ServerMessage = unknown> {
   ): PeerFrustum {
     const frustum = new PeerFrustum({
       ...this.#frustumOptions,
-      color: this.#palette.forKey(clientId),
+      color: this.#getColor(clientId),
       displayName: this.#getLabel(identity)
     });
     this.#parent.add(frustum);
@@ -251,5 +261,11 @@ export class PeerFrustumSync<ClientMessage = unknown, ServerMessage = unknown> {
     this.#parent.remove(frustum);
     frustum.dispose();
     this.#peers.delete(clientId);
+  }
+
+  #refreshColors(): void {
+    for (const [clientId, frustum] of this.#peers) {
+      frustum.color = this.#getColor(clientId);
+    }
   }
 }

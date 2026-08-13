@@ -32,6 +32,7 @@ import { LocalStorageAdapter } from "../storage/LocalStorageAdapter.ts";
 import { PersistedState } from "../storage/PersistedState.ts";
 import type { StorageAdapter } from "../storage/StorageAdapter.ts";
 import { deriveKey } from "../storage/keys.ts";
+import { hiddenStyles } from "../theme/styles/hiddenStyles.ts";
 
 // CONSTANTS
 const kZoneBand = 48;
@@ -42,7 +43,8 @@ export type DockAlign = "end" | "start";
 @customElement("jolly-dock")
 export class Dock extends LitElement {
   static override styles = [
-    dockStyles
+    dockStyles,
+    hiddenStyles
   ];
 
   @property({ type: String, reflect: true })
@@ -166,17 +168,13 @@ export class Dock extends LitElement {
       <div class="content" part="content">
         <slot @slotchange=${this.#onSlotChange}></slot>
       </div>
-      ${this.overlay
-        ? null
-        : html`
-          <div
-            class="resize-handle"
-            part="resize-handle"
-            aria-label="Resize dock"
-            @dblclick=${this.#onDoubleClick}
-            @keydown=${this.#onHandleKeyDown}
-          ></div>
-        `}
+      <div
+        class="resize-handle"
+        part="resize-handle"
+        aria-label="Resize dock"
+        @dblclick=${this.#onDoubleClick}
+        @keydown=${this.#onHandleKeyDown}
+      ></div>
     `;
   }
 
@@ -380,11 +378,6 @@ export class Dock extends LitElement {
     }
 
     this.#disconnectResizeHandle();
-
-    // An overlay dock paints no edge, so there is nothing to grab.
-    if (this.overlay) {
-      return;
-    }
 
     this.#resizeHandle = new ResizeHandle(this, {
       direction: this.side,

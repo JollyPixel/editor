@@ -5,7 +5,7 @@ import {
 } from "./mixed.ts";
 import type {
   CollaboratorPresence
-} from "../collab/types.ts";
+} from "../peer/types.ts";
 
 /**
  * Whether a value differs from its default.

@@ -1,18 +1,14 @@
 // Import Third-party Dependencies
 import { ActorComponent, type Actor } from "@jolly-pixel/engine";
 import * as THREE from "three";
-import type { FolderApi, Pane } from "tweakpane";
-
-// Import Internal Dependencies
 import {
-  addMonitors,
   formatCount,
-  formatMilliseconds
-} from "../utils/pane.ts";
+  formatMilliseconds,
+  type Pane
+} from "@jolly-pixel/ui";
 
 // CONSTANTS
 const kBytesPerMebibyte = 1024 * 1024;
-const kGraphMaxFps = 165;
 const kGraphRows = 3;
 
 export interface PerformancePanelOptions {
@@ -44,7 +40,7 @@ export class PerformancePanel extends ActorComponent {
   #refreshInterval: number;
   #onRefresh?: () => void;
 
-  #folder: FolderApi | null = null;
+  #folder: ReturnType<Pane["addFolder"]> | null = null;
   #renderer: THREE.WebGLRenderer | null = null;
 
   // Bound as-is by the folder; every field is refreshed at once.
@@ -87,23 +83,21 @@ export class PerformancePanel extends ActorComponent {
   awake(): void {
     this.#renderer = this.actor.world.renderer.getSource();
 
-    // Right below the example switcher: the folder is only created on awake,
-    // after the demo has attached its own.
-    const folder = this.#pane.addFolder({ title: this.#title, index: 1 });
-    // Same key as the numeric readout below: the graph draws the history, the
-    // row underneath keeps the exact value readable.
-    folder.addBinding(this.#stats, "fps", {
-      readonly: true,
-      interval: 0,
+    // First: the pane holds only demo content (the switcher, theme and
+    // density controls live in their own chrome pane), and the folder is
+    // only created on awake, after the demo has attached its own.
+    const folder = this.#pane.addFolder({ title: this.#title });
+    this.#pane.element.prepend(folder.element);
+
+    folder.addMonitor(this.#stats, "fps", {
       view: "graph",
       min: 0,
-      max: kGraphMaxFps,
       rows: kGraphRows,
-      label: "fps"
+      label: "fps",
+      format: formatCount
     });
 
-    addMonitors(folder, this.#stats, {
-      fps: { label: "fps", format: formatCount },
+    folder.addMonitors(this.#stats, {
       worstMs: { label: "worst", format: formatMilliseconds },
       calls: { label: "draw calls", format: formatCount },
       triangles: { label: "triangles", format: formatCount },
@@ -112,7 +106,7 @@ export class PerformancePanel extends ActorComponent {
     });
 
     if (readHeapMebibytes() !== null) {
-      addMonitors(folder, this.#stats, {
+      folder.addMonitors(this.#stats, {
         heapMiB: { label: "js heap (MiB)", format: formatCount }
       });
     }

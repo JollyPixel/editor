@@ -1,19 +1,12 @@
 // Import Internal Dependencies
 import {
-  LocalStorageAdapter,
-  detailOf,
-  themeStyles,
-  type Density,
-  type ThemeMode
+  themeStyles
 } from "../../../src/index.ts";
 import { manifest } from "../manifest.ts";
 import { exampleStyles } from "../examples/shared/exampleStyles.ts";
 import { shellStyles } from "./styles.ts";
 
 // CONSTANTS
-const kThemeKey = "jolly-ui-gallery:theme";
-const kDensityKey = "jolly-ui-gallery:density";
-
 /**
  * The gallery's scope host. Tokens declare against `:host`, which only resolves in a shadow root,
  * so the gallery needs one even before any component exists.
@@ -24,8 +17,6 @@ const kDensityKey = "jolly-ui-gallery:density";
 export class GalleryRoot extends HTMLElement {
   #exampleHost = document.createElement("main");
   #links = new Map<string, HTMLAnchorElement>();
-  #storage = new LocalStorageAdapter();
-  #pane: HTMLElementTagNameMap["jolly-pane"] | null = null;
 
   get exampleHost(): HTMLElement {
     return this.#exampleHost;
@@ -81,12 +72,7 @@ export class GalleryRoot extends HTMLElement {
     pane.reorderable = true;
     pane.storageKey = "jolly-ui-gallery:navigation";
     pane.append(...this.#buildGroups());
-    pane.append(
-      this.#buildThemeControl(),
-      this.#buildDensityControl()
-    );
-    this.#pane = pane;
-    this.#applyPreferences();
+    pane.append(this.#buildPreferences());
     dock.append(pane);
 
     return dock;
@@ -113,91 +99,15 @@ export class GalleryRoot extends HTMLElement {
     return [...groups.values()];
   }
 
-  #buildThemeControl(): HTMLElementTagNameMap["jolly-button-group"] {
-    const control = document.createElement("jolly-button-group");
-    control.slot = "actions";
-    control.label = "Theme";
-    control.options = [
-      {
-        value: "light",
-        label: "Light"
-      },
-      {
-        value: "dark",
-        label: "Dark"
-      }
-    ];
-    control.value = this.#theme();
-    control.addEventListener("jolly-change", (event) => {
-      const detail = detailOf<{ value: ThemeMode; }>(event);
-      if (detail === null) {
-        return;
-      }
+  #buildPreferences(): HTMLElementTagNameMap["jolly-theme-preferences"] {
+    const preferences = document.createElement("jolly-theme-preferences");
+    const theme = this.getAttribute("theme");
+    preferences.slot = "actions";
+    preferences.storageKey = "jolly-ui-gallery";
+    preferences.defaultTheme = theme === "dark" ? "dark" : "light";
+    preferences.target = this;
 
-      const { value } = detail;
-      this.#storage.set(kThemeKey, value);
-      this.setAttribute("theme", value);
-      this.#pane?.setAttribute("theme", value);
-      control.value = value;
-    });
-
-    return control;
-  }
-
-  #buildDensityControl(): HTMLElementTagNameMap["jolly-select"] {
-    const control = document.createElement("jolly-select");
-    control.slot = "actions";
-    control.label = "Density";
-    control.options = [
-      {
-        value: "compact",
-        label: "Compact"
-      },
-      {
-        value: "default",
-        label: "Default"
-      },
-      {
-        value: "comfortable",
-        label: "Comfortable"
-      }
-    ];
-    control.value = this.#density();
-    control.addEventListener("jolly-change", (event) => {
-      const detail = detailOf<{ value: Density; }>(event);
-      if (detail === null) {
-        return;
-      }
-
-      const { value } = detail;
-      this.#storage.set(kDensityKey, value);
-      this.setAttribute("density", value);
-      this.#pane?.setAttribute("density", value);
-      control.value = value;
-    });
-
-    return control;
-  }
-
-  #applyPreferences(): void {
-    const theme = this.#theme();
-    const density = this.#density();
-    this.setAttribute("theme", theme);
-    this.setAttribute("density", density);
-    this.#pane?.setAttribute("theme", theme);
-    this.#pane?.setAttribute("density", density);
-  }
-
-  #theme(): ThemeMode {
-    const value = this.getAttribute("theme") ?? this.#storage.get(kThemeKey);
-
-    return value === "dark" ? "dark" : "light";
-  }
-
-  #density(): Density {
-    const value = this.#storage.get(kDensityKey);
-
-    return value === "compact" || value === "comfortable" ? value : "default";
+    return preferences;
   }
 
   #buildLink(

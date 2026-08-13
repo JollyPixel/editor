@@ -23,6 +23,10 @@ export interface PopoverControllerOptions {
    * Distance between the anchor edge and popover, in pixels.
    */
   gap?: number;
+  /** Preferred side of the anchor. */
+  side?: "above" | "below";
+  /** Horizontal alignment against the anchor. */
+  align?: "center" | "start";
   onOpen?: () => void;
   onClose?: () => void;
   /**
@@ -123,7 +127,8 @@ export class PopoverController implements ReactiveController {
       anchor: {
         top: anchorRect.top,
         bottom: anchorRect.bottom,
-        left: anchorRect.left
+        left: anchorRect.left,
+        right: anchorRect.right
       },
       panel: {
         width: panelRect.width,
@@ -133,7 +138,9 @@ export class PopoverController implements ReactiveController {
         width: window.innerWidth,
         height: window.innerHeight
       },
-      gap: this.#options.gap ?? kDefaultGap
+      gap: this.#options.gap ?? kDefaultGap,
+      side: this.#options.side,
+      align: this.#options.align
     });
 
     popover.style.left = `${placed.x}px`;

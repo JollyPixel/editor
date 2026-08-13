@@ -6,54 +6,46 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Flat World (Sync)</title>
   <link rel="stylesheet" href="/main.css">
-  <style>
-    /* Presence panel — specific to this example; kept clear of the pane. */
-    #session {
-      top: 48px;
-      left: 12px;
-      min-width: 170px;
-    }
-
-    #status {
-      color: rgba(249, 251, 231, 0.65);
-    }
-
-    #status.failed {
-      color: #f9c74f;
-    }
-
-    #peers {
-      margin-top: 8px;
-      padding-top: 8px;
-      border-top: 1px solid rgba(255, 255, 255, 0.15);
-    }
-
-    .peer {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      white-space: nowrap;
-    }
-
-    .swatch {
-      display: inline-block;
-      width: 9px;
-      height: 9px;
-      border-radius: 2px;
-    }
-  </style>
 </head>
 
 <body class="sky">
   <canvas tabindex="-1"></canvas>
   <div id="title">Flat World (Sync)</div>
-  <div id="session" class="panel">
-    <div id="status">connecting&hellip;</div>
-    <div id="peers"></div>
-  </div>
-  <div id="hint">
-    Left click: add &nbsp;·&nbsp; Right click: remove &nbsp;·&nbsp; WASD + Space/Shift: move &nbsp;·&nbsp; Middle drag: look
-  </div>
+  <jolly-scope>
+    <jolly-controls
+      position="bottom-left"
+      max-entries-per-row="3"
+      heading="Controls"
+    >
+      <jolly-control
+        description="Add block"
+        details="Click a voxel face to add a block beside it."
+      ><kbd>Left click</kbd></jolly-control>
+      <jolly-control
+        description="Remove block"
+        details="Right-click a voxel to remove it."
+      ><kbd>Right click</kbd></jolly-control>
+      <jolly-control
+        description="Move"
+        details="Move across the world relative to the camera direction."
+      ><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></jolly-control>
+      <jolly-control
+        description="Ascend"
+        details="Move upward while the key is held."
+      ><kbd>Space</kbd></jolly-control>
+      <jolly-control
+        description="Descend"
+        details="Move downward while the key is held."
+      ><kbd>Shift</kbd></jolly-control>
+      <jolly-control
+        description="Look around"
+        details="Hold the middle mouse button and drag to rotate the camera."
+      ><kbd>Middle drag</kbd></jolly-control>
+    </jolly-controls>
+    <jolly-dock-layout storage-key="voxel-renderer-examples:layout">
+      <jolly-dock id="tools" key="tools" side="right" align="start" overlay collapsible size="340"></jolly-dock>
+    </jolly-dock-layout>
+  </jolly-scope>
   <script type="module" src="./scripts/demo-flat-world.ts"></script>
 </body>
 

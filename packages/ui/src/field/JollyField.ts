@@ -13,6 +13,7 @@ import {
   DraftController,
   type DraftResult
 } from "./DraftController.ts";
+import { hiddenStyles } from "../theme/styles/hiddenStyles.ts";
 import { emitFieldEvent } from "./events.ts";
 import {
   isModified,
@@ -23,7 +24,7 @@ import {
   isMixed,
   type FieldValue
 } from "./mixed.ts";
-import type { CollaboratorPresence } from "../collab/types.ts";
+import type { CollaboratorPresence } from "../peer/types.ts";
 import { resolveThemeToken } from "../theme/resolveThemeToken.ts";
 
 // Registers the icon used by the revert gutter.
@@ -46,7 +47,8 @@ export type { DraftResult } from "./DraftController.ts";
  */
 export abstract class JollyField<TValue> extends LitElement {
   static override styles = [
-    fieldStyles
+    fieldStyles,
+    hiddenStyles
   ];
 
   @property({ type: String })

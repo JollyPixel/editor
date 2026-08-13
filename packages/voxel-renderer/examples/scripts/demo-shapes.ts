@@ -12,7 +12,7 @@ import {
   createOrbitCamera,
   startLoop
 } from "./utils/common.ts";
-import { createExamplePane } from "./utils/pane.ts";
+import { createExamplePane } from "./utils/example-switcher.ts";
 import { Cube } from "../../src/blocks/shapes/Cube.ts";
 import { Slab } from "../../src/blocks/shapes/Slab.ts";
 import { PoleY } from "../../src/blocks/shapes/PoleY.ts";
@@ -209,7 +209,9 @@ for (let i = 0; i < kShapes.length; i++) {
 
 // ── Animation loop ─────────────────────────────────────────────────────────────
 
-createExamplePane();
+const pane = createExamplePane();
+pane.hidden = true;
+
 await startLoop({
   renderer,
   scene,

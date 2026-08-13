@@ -12,6 +12,7 @@ import {
 
 // Import Internal Dependencies
 import { separatorStyles } from "./Separator.styles.ts";
+import { hiddenStyles } from "../theme/styles/hiddenStyles.ts";
 
 /**
  * Optional captioned divider between control groups.
@@ -19,7 +20,8 @@ import { separatorStyles } from "./Separator.styles.ts";
 @customElement("jolly-separator")
 export class Separator extends LitElement {
   static override styles = [
-    separatorStyles
+    separatorStyles,
+    hiddenStyles
   ];
 
   /**

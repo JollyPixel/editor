@@ -20,6 +20,7 @@ import { isButtonElement } from "../dom.ts";
 import { LocalStorageAdapter } from "../storage/LocalStorageAdapter.ts";
 import { PersistedState } from "../storage/PersistedState.ts";
 import type { StorageAdapter } from "../storage/StorageAdapter.ts";
+import { hiddenStyles } from "../theme/styles/hiddenStyles.ts";
 
 type ReorderCommand =
   | "cancel"
@@ -36,7 +37,8 @@ type ReorderCommand =
 @customElement("jolly-folder")
 export class Folder extends LitElement {
   static override styles = [
-    folderStyles
+    folderStyles,
+    hiddenStyles
   ];
 
   @property({ type: String })

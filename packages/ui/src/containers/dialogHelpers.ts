@@ -7,6 +7,8 @@ import {
 import { Text } from "../controls/Text.ts";
 import { detailOf } from "../dom.ts";
 import type { JollyChangeDetail } from "../field/events.ts";
+import { LocalStorageAdapter } from "../storage/LocalStorageAdapter.ts";
+import type { StorageAdapter } from "../storage/StorageAdapter.ts";
 
 export interface PromptOptions {
   title?: string;
@@ -22,6 +24,12 @@ export interface ConfirmOptions {
   confirmLabel?: string;
   cancelLabel?: string;
   danger?: boolean;
+}
+
+export interface StoredPromptOptions extends PromptOptions {
+  storage?: StorageAdapter;
+  storageKey: string;
+  fallbackValue: string;
 }
 
 export function showPrompt({
@@ -40,6 +48,7 @@ export function showPrompt({
   field.value = value;
   field.addEventListener("jolly-input", captureValue);
   field.addEventListener("jolly-change", captureValue);
+  field.addEventListener("keydown", confirmOnEnter);
   dialog.append(field);
 
   const confirm = actionButton(
@@ -72,6 +81,17 @@ export function showPrompt({
     returnValue: string
   ): string | null {
     return returnValue === "confirm" ? value.trim() : null;
+  }
+
+  function confirmOnEnter(
+    event: KeyboardEvent
+  ): void {
+    if (event.key !== "Enter") {
+      return;
+    }
+
+    event.preventDefault();
+    queueMicrotask(() => confirm.click());
   }
 }
 
@@ -110,6 +130,31 @@ export function showConfirm({
   );
 }
 
+/**
+ * Resolves a persisted value or prompts once, storing a fallback on cancel or
+ * blank confirmation. Uses local storage unless the caller provides another
+ * adapter, such as one backed by session storage.
+ */
+export async function resolveStoredPrompt({
+  storage = new LocalStorageAdapter(),
+  storageKey,
+  fallbackValue,
+  ...promptOptions
+}: StoredPromptOptions): Promise<string> {
+  const stored = storage.get(storageKey)?.trim();
+  if (stored) {
+    return stored;
+  }
+
+  const prompted = await showPrompt(promptOptions);
+  const value = prompted === null || prompted === "" ?
+    fallbackValue :
+    prompted;
+  storage.set(storageKey, value);
+
+  return value;
+}
+
 function actionButton(
   label: string,
   action: string,
@@ -142,8 +187,8 @@ function settleHelper<TResult>(
     }
 
     settled = true;
-    resolve(resolveValue(returnValue));
     dialog.remove();
+    resolve(resolveValue(returnValue));
   }
 
   dialog.addEventListener("jolly-cancel", () => settle(""));

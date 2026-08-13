@@ -862,6 +862,7 @@ same theme and state styling as declarative content.
 
 `ui` core depends on nothing network related. It declares a port and owns the presence schema,
 because `PeerMetadata` in `@jolly-pixel/network` is an untyped `Record<string, unknown>`.
+Collaboration types and display components live under `src/peer/`.
 
 ```ts
 export interface CollaboratorPresence {
@@ -882,6 +883,14 @@ export interface PresenceSource {
   off(event: "change", listener: () => void): void;
 }
 ```
+
+`jolly-presence` is the transport-free snapshot view for a Pane or Folder. Its
+`peers` property receives ordered `PresencePeer` entries (`id`, `username`,
+CSS `color`, optional `self`); its `max` property caps named rows, preserving
+the local peer when the cap permits. `Pane#addPresence()` and
+`Folder#addPresence()` return a facade with `update(peers)`. It renders the
+inclusive connection count, a polite live summary, color swatches, `(you)`,
+and `+N more` when capped. Username editing remains host-owned.
 
 A `@jolly-pixel/ui/network` subpath ships the adapter mapping a `Room` onto this port. Importing
 `@jolly-pixel/network` from its root entry pulls `Server.ts` and its `ws` dependency into a
@@ -1453,7 +1462,8 @@ edited.
 
 - Whether `jolly-tree` virtualizes. Deferred until a consumer exceeds a few hundred nodes
 - Whether pane state beyond order persists through Tweakpane style `exportState` and
-  `importState`, decided in P3 when the facade lands
+  `importState`. Decided in P3 not to build it: none of that phase's migrated examples need it,
+  and there is no consumer to validate a serialisation format against. Stays open until one asks
 - Whether user rebindable shortcuts are needed, and if so where the overrides persist. The
   registry makes it possible; nothing currently asks for it
 - Whether `jolly-flags` needs per bit mixedness. A bitmask across a multi selection genuinely is
