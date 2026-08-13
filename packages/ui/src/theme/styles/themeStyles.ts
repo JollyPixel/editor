@@ -2,10 +2,10 @@
 import { css } from "lit";
 
 // Import Internal Dependencies
-import { themeTokens } from "./tokens.ts";
-import { densityTokens } from "./density.ts";
-import { scaleTokens } from "./scales.ts";
-import { ensureFontFace } from "./font.ts";
+import { themeTokens } from "../tokens/semantic.ts";
+import { densityTokens } from "../tokens/density.ts";
+import { scaleTokens } from "../tokens/scales.ts";
+import { ensureFontFace } from "../font.ts";
 
 /*
  * A scope host is the thing that declares the theme, and the bundled face is

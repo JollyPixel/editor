@@ -4,6 +4,10 @@ import {
   ActorComponent
 } from "@jolly-pixel/engine";
 import type * as network from "@jolly-pixel/network/client";
+import type {
+  Presence,
+  PresencePeer
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type {
@@ -28,10 +32,10 @@ const kPresenceBrushKey = "brush";
 
 export interface PeerBrushesOptions {
   room: network.Room<VoxelNetworkCommand, VoxelServerMessage>;
-  /** Local username, shown in the legend as "(you)". */
+  /** Local username, shown in Presence as "(you)". */
   username: string;
-  /** Element the peer legend is rendered into. */
-  legend: HTMLElement;
+  /** Presence facade that renders the peer snapshot. */
+  presence: Presence;
 }
 
 /**
@@ -41,11 +45,11 @@ export interface PeerBrushesOptions {
 export class PeerBrushes extends ActorComponent {
   #room: network.Room<VoxelNetworkCommand, VoxelServerMessage>;
   #username: string;
-  #legend: HTMLElement;
+  #presence: Presence;
   #boxes = new Map<string, HighlightBox>();
   #lastSent: VoxelCoord | null | undefined;
-  /** Identity of the rendered legend, so the DOM is only rebuilt on change. */
-  #legendKey = "";
+  /** Identity of the rendered snapshot, so Presence only updates on change. */
+  #presenceKey = "";
 
   constructor(
     actor: Actor,
@@ -58,7 +62,7 @@ export class PeerBrushes extends ActorComponent {
 
     this.#room = options.room;
     this.#username = options.username;
-    this.#legend = options.legend;
+    this.#presence = options.presence;
   }
 
   /**
@@ -101,14 +105,14 @@ export class PeerBrushes extends ActorComponent {
       }
     }
 
-    this.#renderLegend(seen);
+    this.#renderPresence(seen);
   }
 
   override destroy(): void {
     for (const clientId of [...this.#boxes.keys()]) {
       this.#removeBox(clientId);
     }
-    this.#legend.replaceChildren();
+    this.#presence.update([]);
 
     super.destroy();
   }
@@ -141,41 +145,34 @@ export class PeerBrushes extends ActorComponent {
     this.#boxes.delete(clientId);
   }
 
-  #renderLegend(
+  #renderPresence(
     peerIds: ReadonlySet<string>
   ): void {
-    const entries = [
+    const peers: PresencePeer[] = [
       {
+        id: "local",
         color: peerColor(this.#username),
-        label: `${this.#username} (you)`
+        username: this.#username,
+        self: true
       },
       ...[...peerIds].sort().map((clientId) => {
         const username = readUsername(this.#room.peers.get(clientId)?.identity ?? {});
 
         return {
+          id: clientId,
           color: peerColor(username),
-          label: username
+          username
         };
       })
     ];
 
-    const key = entries.map(({ color, label }) => `${color}${label}`).join("|");
-    if (key === this.#legendKey) {
+    const key = peers.map(
+      (peer) => `${peer.id}:${peer.username}:${peer.color}`
+    ).join("|");
+    if (key === this.#presenceKey) {
       return;
     }
-    this.#legendKey = key;
-
-    this.#legend.replaceChildren(...entries.map(({ color, label }) => {
-      const row = document.createElement("div");
-      row.className = "peer";
-
-      const swatch = document.createElement("span");
-      swatch.className = "swatch";
-      swatch.style.background = color;
-
-      row.append(swatch, document.createTextNode(label));
-
-      return row;
-    }));
+    this.#presenceKey = key;
+    this.#presence.update(peers);
   }
 }

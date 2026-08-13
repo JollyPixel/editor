@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-import type { Pane } from "tweakpane";
+import type { Pane } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { PeerFrustum, type PeerFrustumOptions } from "../../src/index.ts";
@@ -10,7 +10,7 @@ import {
   createOrbitCamera,
   startLoop
 } from "./utils/common.ts";
-import { createExamplePane } from "./utils/pane.ts";
+import { createExamplePane } from "./utils/example-switcher.ts";
 
 // CONSTANTS
 // Kept far enough apart that near < depth always holds, regardless of the
@@ -33,7 +33,9 @@ const { camera, controls } = createOrbitCamera(
   { x: 0, y: 1, z: 0 }
 );
 
-const pane = createExamplePane();
+const pane = createExamplePane({
+  title: "Peer Frustum"
+});
 
 // A handful of peers at different poses/colors, purely to eyeball the
 // frustum shape from multiple angles at once. This is not wired to real presence
@@ -130,7 +132,7 @@ function spawnPeer(
       frustum.showNameBox = value;
     });
 
-  folder.addBlade({ view: "separator" });
+  folder.addSeparator();
   folder.addBinding(state, "showApex").on("change", rebuild);
   folder.addBinding(state, "fov", kFovRange).on("change", rebuild);
   folder.addBinding(state, "aspect", kAspectRange).on("change", rebuild);

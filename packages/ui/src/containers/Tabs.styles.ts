@@ -2,7 +2,7 @@
 import { css } from "lit";
 
 // Import Internal Dependencies
-import { kFallback } from "../theme/fallbacks.ts";
+import { kFallback } from "../theme/styles/fallbacks.ts";
 
 export const tabsStyles = css`
   :host {

@@ -12,8 +12,9 @@ inside a Dock or Floating wrapper.
 ```
 
 `side` accepts `left`, `right`, `top`, or `bottom`. The inward separator resizes by pointer
-or arrow keys (Shift changes the increment). Double-click or Enter toggles a collapsible dock.
-Size and collapse state persist.
+or arrow keys (Shift changes the increment). Overlay docks keep a transparent interactive edge so
+they can resize without adding a visible surface. Double-click or Enter toggles a collapsible
+dock. Size and collapse state persist.
 
 A dock can hold multiple panes. `align` and `overlay` change their layout; `jolly-dock-layout`
 moves panes between docks. See [containers](./containers.md).

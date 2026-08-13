@@ -11,7 +11,7 @@ import {
 } from "lit/decorators.js";
 
 // Import Internal Dependencies
-import { kFallback } from "../theme/fallbacks.ts";
+import { kFallback } from "../theme/styles/fallbacks.ts";
 
 export type RailOrientation = "horizontal" | "vertical";
 

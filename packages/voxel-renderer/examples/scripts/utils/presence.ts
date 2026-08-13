@@ -1,8 +1,17 @@
+// Import Third-party Dependencies
+import {
+  LocalStorageAdapter,
+  resolveStoredPrompt
+} from "@jolly-pixel/ui";
+
 // Import Internal Dependencies
 import type { VoxelCoord } from "../../../src/world/types.ts";
 
 // CONSTANTS
 const kUsernameStorageKey = "voxel-flat-world:username";
+const kUsernameStorage = new LocalStorageAdapter({
+  resolve: () => sessionStorage
+});
 /** One color per username, picked deterministically so every tab agrees. */
 const kPeerColors = [
   "#f94144",
@@ -16,24 +25,18 @@ const kPeerColors = [
 ];
 
 /**
- * Prompts once per browser session, then reuses the answer — opening a second
+ * Prompts once per browser session, then reuses the answer. Opening a second
  * tab asks again, which is what makes the demo testable alone.
  */
-export function resolveUsername(): string {
-  const cached = sessionStorage.getItem(kUsernameStorageKey);
-  if (cached) {
-    return cached;
-  }
-
-  // eslint-disable-next-line no-alert -- example-only UX, no dedicated UI needed here
-  const entered = window.prompt("Choose a username for this session")?.trim();
-  const username = entered && entered.length > 0 ?
-    entered :
-    "Guest";
-
-  sessionStorage.setItem(kUsernameStorageKey, username);
-
-  return username;
+export function resolveUsername(): Promise<string> {
+  return resolveStoredPrompt({
+    title: "Join flat world",
+    label: "Username",
+    confirmLabel: "Join",
+    storage: kUsernameStorage,
+    storageKey: kUsernameStorageKey,
+    fallbackValue: "Guest"
+  });
 }
 
 /**

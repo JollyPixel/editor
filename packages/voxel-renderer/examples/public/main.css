@@ -1,7 +1,5 @@
 * {
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
 }
 
 html,
@@ -70,16 +68,43 @@ canvas {
 }
 
 /*
- * Tweakpane's default wrapper, aligned with the 12px inset used above. The
- * `body` prefix outranks the stylesheet Tweakpane injects at runtime, which
- * would otherwise win on source order.
+ * The scope host covers the viewport so its dock can dock to an edge, but
+ * only the dock itself should catch pointer events — everywhere else has to
+ * reach the canvas underneath.
  */
-body .tp-dfwv {
-  top: 12px;
-  right: 12px;
-  /* Wider than the 256px default so the metric labels stay on one line. */
-  width: 350px;
+jolly-scope {
+  position: fixed;
+  inset: 0;
   z-index: 1001;
+  pointer-events: none;
+}
+
+jolly-dock {
+  --jolly-label-width: 17ch;
+  pointer-events: auto;
+}
+
+jolly-controls {
+  pointer-events: auto;
+}
+
+jolly-floating {
+  pointer-events: auto;
+}
+
+/*
+ * `grow` claims leftover flex space unconditionally, which is right for a
+ * lone pane but wastes space here. The content pane's default flex-shrink
+ * is 0 (`jolly-dock`'s non-grow panes are meant to stack and let the dock
+ * scroll them as one block), which blocks it from ever going below its
+ * content size — so it overflows the dock instead of capping itself and
+ * scrolling internally. Overriding shrink is enough: the flex algorithm
+ * then sizes it to content when that fits, or to whatever the chrome pane
+ * above it leaves, whichever is smaller.
+ */
+#tools > jolly-pane:last-of-type {
+  flex-shrink: 1;
+  min-height: 0;
 }
 
 /* Generic HUD panel — position it from the page that uses it. */

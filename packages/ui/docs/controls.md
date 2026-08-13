@@ -154,6 +154,43 @@ It emits `jolly-input` while dragging and `jolly-change` on release. `jolly-colo
 
 ## Action and layout elements
 
+### `jolly-controls` and `jolly-control`
+
+A declarative HUD card for scene controls. `jolly-controls` is positioned absolutely, so place it
+inside a positioned scene wrapper. Its `max-entries-per-row` is a maximum: constrained containers
+reduce the count to preserve readable descriptions.
+
+| Property | Type | Default |
+|---|---|---|
+| `position` | `ControlsPosition` | `"bottom-left"` |
+| `maxEntriesPerRow` (`max-entries-per-row`) | `number` | `3` |
+| `heading` | `string` | `""` |
+
+`position` accepts `top-left`, `top-middle`, `top-right`, `middle-left`, `middle`,
+`middle-right`, `bottom-left`, `bottom-middle`, and `bottom-right`. The inset follows density and
+can be overridden with `--jolly-controls-inset`.
+
+Each `jolly-control` accepts one or more `kbd` elements, a short `description`, and optional
+`details`. When details are present, an information button opens the full description on hover,
+keyboard focus, or click. It closes on pointer or focus exit, and Escape is handled by the native
+popover.
+
+```html
+<div class="scene">
+  <jolly-controls
+    position="bottom-left"
+    max-entries-per-row="3"
+    heading="Controls"
+  >
+    <jolly-control
+      description="Move forward"
+      details="Moves the player relative to the camera direction."
+    ><kbd>W</kbd></jolly-control>
+    <jolly-control description="Sprint"><kbd>Shift</kbd><kbd>W</kbd></jolly-control>
+  </jolly-controls>
+</div>
+```
+
 ### `jolly-button`
 
 Slotted action button. It is not a field and has no `value`, `default`, or field events.

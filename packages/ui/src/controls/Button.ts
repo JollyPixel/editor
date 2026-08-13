@@ -13,6 +13,7 @@ import {
 // Import Internal Dependencies
 import { buttonStyles } from "./Button.styles.ts";
 import type { IconName } from "../icon/registry.ts";
+import { hiddenStyles } from "../theme/styles/hiddenStyles.ts";
 
 // Side-effect import: an icon only button renders a `jolly-icon`.
 import "../icon/Icon.ts";
@@ -33,7 +34,8 @@ export class Button extends LitElement {
   };
 
   static override styles = [
-    buttonStyles
+    buttonStyles,
+    hiddenStyles
   ];
 
   @property({ type: String })

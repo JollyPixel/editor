@@ -1,16 +1,16 @@
 // Theme
 export {
   themeStyles
-} from "./theme/themeStyles.ts";
+} from "./theme/styles/themeStyles.ts";
 export {
   themeTokens
-} from "./theme/tokens.ts";
+} from "./theme/tokens/semantic.ts";
 export {
   densityTokens
-} from "./theme/density.ts";
+} from "./theme/tokens/density.ts";
 export {
   scaleTokens
-} from "./theme/scales.ts";
+} from "./theme/tokens/scales.ts";
 export {
   peerColor
 } from "./theme/peerColor.ts";
@@ -22,6 +22,18 @@ export type {
   Density,
   ThemeMode
 } from "./theme/types.ts";
+export {
+  ScopeHost
+} from "./theme/components/ScopeHost.ts";
+export {
+  ThemeControl
+} from "./theme/components/ThemeControl.ts";
+export {
+  DensityControl
+} from "./theme/components/DensityControl.ts";
+export {
+  ThemePreferences
+} from "./theme/components/ThemePreferences.ts";
 
 // Geometry
 export type {
@@ -55,7 +67,13 @@ export type {
 } from "./field/events.ts";
 export type {
   CollaboratorPresence
-} from "./collab/types.ts";
+} from "./peer/types.ts";
+
+// Peer presence
+export {
+  PresenceElement,
+  type PresencePeer
+} from "./peer/Presence.ts";
 
 // Icons
 export {
@@ -87,6 +105,13 @@ export {
 export {
   ColorPicker
 } from "./controls/ColorPicker.ts";
+export {
+  Control
+} from "./controls/Control.ts";
+export {
+  Controls,
+  type ControlsPosition
+} from "./controls/Controls.ts";
 export {
   Flags
 } from "./controls/Flags.ts";
@@ -160,8 +185,10 @@ export {
 export {
   showConfirm,
   showPrompt,
+  resolveStoredPrompt,
   type ConfirmOptions,
-  type PromptOptions
+  type PromptOptions,
+  type StoredPromptOptions
 } from "./containers/dialogHelpers.ts";
 export {
   Dock,
@@ -215,6 +242,52 @@ export type {
   JollyTabChangeDetail,
   JollyToggleDetail
 } from "./containers/events.ts";
+
+// Monitors
+export {
+  MonitorElement
+} from "./monitors/Monitor.ts";
+export {
+  GraphElement,
+  type GraphDefaults
+} from "./monitors/Graph.ts";
+export {
+  formatCount,
+  formatMilliseconds,
+  formatPercent
+} from "./monitors/format.ts";
+
+// Facade
+export {
+  Pane,
+  type PaneOptions
+} from "./facade/Pane.ts";
+export {
+  DockFacade
+} from "./facade/Dock.ts";
+export type {
+  Disposable,
+  MonitorFields
+} from "./facade/Container.ts";
+export type {
+  FolderOptions
+} from "./facade/Folder.ts";
+export type {
+  BindingChangeEvent,
+  BindingChangeHandler,
+  BindingOptions
+} from "./facade/Binding.ts";
+export type {
+  MonitorKey,
+  MonitorOptions
+} from "./facade/Monitor.ts";
+export type {
+  ButtonOptions
+} from "./facade/Button.ts";
+export {
+  Presence,
+  type PresenceOptions
+} from "./facade/Presence.ts";
 
 // DOM
 export {

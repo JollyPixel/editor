@@ -14,7 +14,7 @@ import {
 // Import Internal Dependencies
 import { dialogStyles } from "./Dialog.styles.ts";
 import { emitContainerEvent } from "./events.ts";
-import { themeStyles } from "../theme/themeStyles.ts";
+import { themeStyles } from "../theme/styles/themeStyles.ts";
 import { resolveThemeToken } from "../theme/resolveThemeToken.ts";
 import type { ThemeMode } from "../theme/types.ts";
 

@@ -36,6 +36,7 @@ import { LocalStorageAdapter } from "../storage/LocalStorageAdapter.ts";
 import { PersistedState } from "../storage/PersistedState.ts";
 import type { StorageAdapter } from "../storage/StorageAdapter.ts";
 import { deriveKey } from "../storage/keys.ts";
+import { hiddenStyles } from "../theme/styles/hiddenStyles.ts";
 
 // CONSTANTS
 const kRootStack = new WeakMap<Document | ShadowRoot, number>();
@@ -44,7 +45,8 @@ const kOwnedZIndex = "var(--jolly-floating-stack)";
 @customElement("jolly-floating")
 export class Floating extends LitElement {
   static override styles = [
-    floatingStyles
+    floatingStyles,
+    hiddenStyles
   ];
 
   @property({ type: Number, reflect: true })
@@ -94,6 +96,7 @@ export class Floating extends LitElement {
   #removeResizeListeners: Array<() => void> = [];
   #ownsZIndex = false;
   #managed = false;
+  #collapsed = false;
   #state = new PersistedState(this, {
     isManaged: () => this.#managed,
     namespace: () => this.#namespace(),
@@ -139,8 +142,12 @@ export class Floating extends LitElement {
 
   override render(): TemplateResult {
     return html`
-      <div class="content" @jolly-pane-drag=${this.#onPaneDrag}>
-        <slot></slot>
+      <div
+        class="content"
+        @jolly-pane-drag=${this.#onPaneDrag}
+        @jolly-toggle=${this.#onPaneToggle}
+      >
+        <slot @slotchange=${this.#onSlotChange}></slot>
       </div>
       <div
         class="resize-handle right"
@@ -174,6 +181,13 @@ export class Floating extends LitElement {
     );
     installResizeCursorStyles(this.ownerDocument);
     this.clampToView();
+    // A window nobody has touched yet still has to sit above static content:
+    // without a baseline stack value it keeps z-index "auto" and paints
+    // beneath any later, non-positioned sibling in the same stacking context.
+    this.#raise();
+    // Picks up a pane authored (or restored) already collapsed, since that
+    // never fires the `jolly-toggle` a click does.
+    this.#syncCollapsed();
   }
 
   protected override updated(
@@ -308,6 +322,29 @@ export class Floating extends LitElement {
     });
   };
 
+  #onSlotChange = () => {
+    this.#syncCollapsed();
+  };
+
+  /**
+   * A collapsed pane still fills whatever height `::slotted` gives it, so the
+   * window has to shrink to its header itself rather than trust the pane to
+   * do it, the way a pane folding inside a dock's own flex column can.
+   */
+  #onPaneToggle = () => {
+    this.#syncCollapsed();
+  };
+
+  #syncCollapsed(): void {
+    const collapsed = this.pane()?.collapsed ?? false;
+    this.#collapsed = collapsed;
+    this.#applyGeometry();
+    // Dragging the height handles while collapsed would fight the header-only
+    // height every frame and, worse, persist that as the remembered size.
+    this._bottomHandle?.classList.toggle("disabled", collapsed);
+    this._cornerHandle?.classList.toggle("disabled", collapsed);
+  }
+
   #connectResizeHandles(): void {
     if (!this.hasUpdated) {
       return;
@@ -397,6 +434,12 @@ export class Floating extends LitElement {
   #readSize(): void {
     const rect = this.getBoundingClientRect();
     this.width = rect.width;
+    // Collapsed, the box is its own header's height, not the height worth
+    // remembering: that stays whatever it was before folding, the same way a
+    // collapsed dock leaves `#readSize` without touching its own `size`.
+    if (this.#collapsed) {
+      return;
+    }
     this.height = rect.height;
   }
 
@@ -404,7 +447,9 @@ export class Floating extends LitElement {
     this.style.left = `${this.x}px`;
     this.style.top = `${this.y}px`;
     this.style.width = `${this.width}px`;
-    this.style.height = `${this.height}px`;
+    this.style.height = this.#collapsed ?
+      `${this.pane()?.headerRect().height ?? this.height}px` :
+      `${this.height}px`;
   }
 
   #restore(): void {

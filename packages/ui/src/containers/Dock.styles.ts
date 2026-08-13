@@ -2,14 +2,14 @@
 import { css } from "lit";
 
 // Import Internal Dependencies
-import { kFallback } from "../theme/fallbacks.ts";
+import { kFallback } from "../theme/styles/fallbacks.ts";
 
 export const dockStyles = css`
   :host {
     position: relative;
     display: block;
     box-sizing: border-box;
-    width: 240px;
+    width: var(--jolly-dock-size, 240px);
     height: 100%;
     min-width: 0;
     min-height: 0;
@@ -31,7 +31,7 @@ export const dockStyles = css`
   :host([side="top"]),
   :host([side="bottom"]) {
     width: 100%;
-    height: 240px;
+    height: var(--jolly-dock-size, 240px);
   }
 
   /*
@@ -48,7 +48,7 @@ export const dockStyles = css`
    */
   :host([overlay]) {
     position: fixed;
-    width: 240px;
+    width: var(--jolly-dock-size, 240px);
     height: auto;
     background: none;
     pointer-events: none;
@@ -153,6 +153,37 @@ export const dockStyles = css`
     padding: var(--jolly-dock-gap, 8px);
   }
 
+  /*
+   * An overlay has no painted dock surface, but its inward edge remains a
+   * resize target. Keeping the handle transparent avoids creating one.
+   */
+  :host([overlay]) .resize-handle {
+    background: transparent;
+    pointer-events: auto;
+  }
+
+  :host([overlay]) .resize-handle::after {
+    display: none;
+  }
+
+  :host([overlay]) .resize-handle:hover,
+  :host([overlay]) .resize-handle:active,
+  :host([overlay]) .resize-handle:focus-visible {
+    background: transparent;
+  }
+
+  /*
+   * An aligned overlay dock stacks content-sized panes rather than one pane
+   * filling it, so a tall stack can still exceed the viewport's inset-block
+   * bounds. Scrolling here trades the rule above's shadow-clipping avoidance
+   * for staying reachable, which a pane wider than it is tall never risked
+   * anyway.
+   */
+  :host([overlay][align][side="left"]) .content,
+  :host([overlay][align][side="right"]) .content {
+    overflow-y: auto;
+  }
+
   :host([align="start"]) .content {
     justify-content: flex-start;
   }
@@ -179,8 +210,14 @@ export const dockStyles = css`
    * content-sized, which is what makes a folded pane visibly shrink, and
    * "grow" opts a single pane back into filling the leftover space.
    */
+  /*
+   * "min-height: 0" undoes a flex item's default "auto", which sizes it to
+   * its content and blocks "flex-shrink" from ever taking it below that —
+   * exactly the shrinking these two rules mean to allow.
+   */
   :host(:not([align])) ::slotted(jolly-pane) {
     flex: 1 1 auto;
+    min-height: 0;
   }
 
   :host([align]) ::slotted(jolly-pane) {
@@ -196,6 +233,7 @@ export const dockStyles = css`
 
   :host([align]) ::slotted(jolly-pane[grow]) {
     flex: 1 1 auto;
+    min-height: 0;
   }
 
   /*

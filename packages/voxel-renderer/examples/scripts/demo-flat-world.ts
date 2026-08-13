@@ -4,6 +4,9 @@ import { Camera3DControls } from "@jolly-pixel/engine";
 import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
 import * as network from "@jolly-pixel/network/client";
 
+// Registers the declarative controls declared by the example page.
+import "@jolly-pixel/ui";
+
 // Import Internal Dependencies
 import { TilesetLoader } from "../../src/tileset/TilesetLoader.ts";
 import { VoxelRenderer } from "../../src/VoxelRenderer.ts";
@@ -23,7 +26,7 @@ import { peerColor, resolveUsername } from "./utils/presence.ts";
 import { createTerrainTileset } from "./utils/terrainAtlas.ts";
 import {
   createExamplePane
-} from "./utils/pane.ts";
+} from "./utils/example-switcher.ts";
 
 // CONSTANTS
 const kSkyColor = "#c2e7ff";
@@ -34,10 +37,7 @@ if (!(canvas instanceof HTMLCanvasElement)) {
   throw new Error("HTMLCanvasElement not found");
 }
 
-const status = document.querySelector<HTMLElement>("#status")!;
-const legend = document.querySelector<HTMLElement>("#peers")!;
-
-const username = resolveUsername();
+const username = await resolveUsername();
 const tileset = createTerrainTileset();
 const tilesetLoader = new TilesetLoader();
 await tilesetLoader.fromTileDefinition(tileset.definition);
@@ -79,8 +79,14 @@ const voxelMap = world.createActor("map")
 
 const room = initializeWebsocketTransport();
 
+const pane = createExamplePane({
+  title: "Peers"
+});
+pane.hidden = false;
+const presence = pane.addPresence();
+
 const peers = world.createActor("peers")
-  .addComponentAndGet(PeerBrushes, { room, username, legend });
+  .addComponentAndGet(PeerBrushes, { room, username, presence });
 
 const brush = world.createActor("brush")
   .addComponentAndGet(FlatWorldBrush, {
@@ -90,8 +96,8 @@ const brush = world.createActor("brush")
   });
 brush.onBrushMoved = (position) => peers.report(position);
 
-createExamplePane();
-await loadRuntime(runtime, { focusCanvas: false });
+await loadRuntime(
+  runtime, { focusCanvas: false });
 
 /**
  * Voxel edits ride the engine hook into `VoxelSyncClient`; brush positions ride
@@ -104,30 +110,22 @@ function initializeWebsocketTransport(): network.Room<
   const client = new network.Client({
     identity: { username }
   });
-  client.on("ready", () => setStatus("connected: waiting for world…"));
-
   const room = client.room<VoxelNetworkCommand, VoxelServerMessage>(
     FLAT_WORLD_ROOM
   );
   room.on("peer-joined", ({ clientId }) => console.log(`[flat-world] peer joined: ${clientId}`));
   room.on("peer-left", ({ clientId }) => console.log(`[flat-world] peer left: ${clientId}`));
-  room.on("denied", ({ event, reason }) => setStatus(`denied: ${event} (${reason})`, true));
-  room.on("error", ({ event, reason }) => setStatus(`error: ${event} (${reason})`, true));
+  room.on("denied", ({ event, reason }) => console.warn(
+    `[flat-world] denied: ${event} (${reason})`
+  ));
+  room.on("error", ({ event, reason }) => console.error(
+    `[flat-world] error: ${event} (${reason})`
+  ));
 
   const syncClient = new VoxelSyncClient({ room });
   // Must precede join(): a snapshot arriving with no attached engine is dropped.
   syncClient.attach(voxelMap.engine);
-  syncClient.on("ready", () => setStatus(`synced as ${username}`));
-
   room.join();
 
   return room;
-}
-
-function setStatus(
-  text: string,
-  failed = false
-): void {
-  status.textContent = text;
-  status.classList.toggle("failed", failed);
 }

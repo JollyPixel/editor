@@ -11,11 +11,49 @@
 <body class="sky">
   <canvas tabindex="-1"></canvas>
   <div id="title">Noise World</div>
-  <div id="hint">
-    WASD: move &nbsp;·&nbsp; Space/Shift: up-down &nbsp;·&nbsp; Middle drag: look &nbsp;·&nbsp;
-    R: rebuild &nbsp;·&nbsp; G: mesh debug &nbsp;·&nbsp; F3: hide panel &nbsp;·&nbsp;
-    <code>?size=512&amp;chunk=32&amp;seed=42</code>
-  </div>
+  <jolly-scope>
+    <jolly-controls
+      position="bottom-left"
+      max-entries-per-row="1"
+      heading="Controls"
+    >
+      <jolly-control
+        description="Move"
+        details="Move across the terrain relative to the camera direction."
+      ><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></jolly-control>
+      <jolly-control
+        description="Ascend"
+        details="Move upward while the key is held."
+      ><kbd>Space</kbd></jolly-control>
+      <jolly-control
+        description="Descend"
+        details="Move downward while the key is held."
+      ><kbd>Shift</kbd></jolly-control>
+      <jolly-control
+        description="Look around"
+        details="Hold the middle mouse button and drag to rotate the camera."
+      ><kbd>Middle drag</kbd></jolly-control>
+      <jolly-control
+        description="Rebuild world"
+        details="Generate the terrain again using the next seed."
+      ><kbd>R</kbd></jolly-control>
+      <jolly-control
+        description="Mesh debug"
+        details="Cycle the voxel mesh debug modes."
+      ><kbd>G</kbd></jolly-control>
+      <jolly-control
+        description="Greedy meshing"
+        details="Toggle greedy meshing for the terrain chunks."
+      ><kbd>M</kbd></jolly-control>
+      <jolly-control
+        description="Configuration"
+        details="Show or hide the configuration panel."
+      ><kbd>F3</kbd></jolly-control>
+    </jolly-controls>
+    <jolly-dock-layout storage-key="voxel-renderer-examples:layout">
+      <jolly-dock id="tools" key="tools" side="right" align="start" overlay collapsible size="340"></jolly-dock>
+    </jolly-dock-layout>
+  </jolly-scope>
   <script type="module" src="./scripts/demo-noise-world.ts"></script>
 </body>
 

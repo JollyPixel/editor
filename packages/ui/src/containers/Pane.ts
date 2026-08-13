@@ -26,6 +26,7 @@ import { LocalStorageAdapter } from "../storage/LocalStorageAdapter.ts";
 import { PersistedState } from "../storage/PersistedState.ts";
 import type { StorageAdapter } from "../storage/StorageAdapter.ts";
 import { deriveKey } from "../storage/keys.ts";
+import { hiddenStyles } from "../theme/styles/hiddenStyles.ts";
 
 // CONSTANTS
 const kInteractive = "button, input, select, textarea, a";
@@ -54,7 +55,8 @@ export interface PaneDragDetail {
 @customElement("jolly-pane")
 export class PaneElement extends LitElement {
   static override styles = [
-    paneStyles
+    paneStyles,
+    hiddenStyles
   ];
 
   @property({ type: String })
@@ -336,10 +338,7 @@ export class PaneElement extends LitElement {
     // document order, so the header is the floor and every child is asked.
     let bottom = this._header?.getBoundingClientRect().bottom ?? rect.top;
     for (const child of children) {
-      bottom = Math.max(
-        bottom,
-        child.getBoundingClientRect().bottom
-      );
+      bottom = Math.max(bottom, contentBottom(child));
     }
 
     return Math.min(bottom - rect.top, rect.height);
@@ -492,6 +491,31 @@ export function isPane(
   element: Element
 ): element is PaneElement {
   return element.tagName === "JOLLY-PANE";
+}
+
+/**
+ * Bottom edge of an element's rendered content, in client pixels.
+ *
+ * `display: contents` (`jolly-theme-preferences` among them) generates no
+ * box of its own, so `getBoundingClientRect()` on it is degenerate — always
+ * `{0, 0, 0, 0}`. Its rendered content still lives somewhere below that,
+ * either as light-DOM children or, for a custom element, inside its shadow
+ * root, so a contents host is walked instead of measured directly.
+ */
+function contentBottom(
+  element: Element
+): number {
+  const rect = element.getBoundingClientRect();
+  if (getComputedStyle(element).display !== "contents") {
+    return rect.bottom;
+  }
+
+  let bottom = Number.NEGATIVE_INFINITY;
+  for (const child of element.shadowRoot?.children ?? element.children) {
+    bottom = Math.max(bottom, contentBottom(child));
+  }
+
+  return bottom === Number.NEGATIVE_INFINITY ? rect.bottom : bottom;
 }
 
 function isInteractiveTarget(

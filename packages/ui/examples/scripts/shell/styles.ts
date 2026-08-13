@@ -41,6 +41,7 @@ export const shellStyles = `
   }
 
   .gallery-pane > [slot="actions"] {
+    --jolly-text: var(--jolly-text-on-fill);
     --jolly-text-muted: color-mix(
       in oklab,
       var(--jolly-text-on-fill) 72%,

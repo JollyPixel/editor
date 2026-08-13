@@ -1,6 +1,8 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-import type { BladeApi } from "tweakpane";
+
+// Registers the declarative controls declared by the example page.
+import "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
@@ -16,7 +18,7 @@ import {
   createOrbitCamera,
   startLoop
 } from "./utils/common.ts";
-import { createExamplePane } from "./utils/pane.ts";
+import { createExamplePane } from "./utils/example-switcher.ts";
 
 const canvas = document.querySelector("canvas") as HTMLCanvasElement;
 const renderer = await createRenderer(canvas);
@@ -64,7 +66,9 @@ function updateReferenceCube(): void {
   );
 }
 
-const pane = createExamplePane();
+const pane = createExamplePane({
+  title: "Grid"
+});
 
 const performancePanel = new PerformancePanel({ pane, renderer });
 
@@ -76,162 +80,146 @@ const axesFolder = pane.addFolder({
 });
 
 let grid: Grid;
-const gridFolderBindings: BladeApi[] = [];
-const axesValueBindings: BladeApi[] = [];
 
 // `extent` is constructor-only; track it locally so rebuilds can preserve it.
 let extentValue = 400;
 
-function disposeAll(
-  bindings: BladeApi[]
-): void {
-  for (const binding of bindings) {
-    binding.dispose();
-  }
-  bindings.length = 0;
-}
-
 function bindGridControls(
   target: Grid
 ): void {
-  disposeAll(gridFolderBindings);
+  gridFolder.disposeAll();
 
   // Ignored when `infiniteGrid` is true (see docs/Grid.md); hide it rather than
   // leave a control that visibly does nothing.
   const followCameraBinding = gridFolder.addBinding(target, "followCamera");
   followCameraBinding.hidden = target.infiniteGrid;
 
-  gridFolderBindings.push(
-    gridFolder.addBinding(target, "enabled"),
-    gridFolder
-      .addBinding({ plane: target.plane.value }, "plane", {
-        options: {
-          xz: "xz",
-          xy: "xy",
-          yz: "yz"
-        }
-      })
-      .on("change", ({ value }) => rebuildGrid({ plane: value })),
-    gridFolder.addBinding(target, "crossSize", {
-      min: 0.05,
-      max: 0.5,
-      step: 0.01
-    }),
-    gridFolder.addBinding(target, "offset", {
-      min: -5,
-      max: 5,
-      step: 0.1
-    }),
-    followCameraBinding,
-    gridFolder
-      .addBinding({ infiniteGrid: target.infiniteGrid }, "infiniteGrid")
-      .on("change", ({ value }) => rebuildGrid({ infiniteGrid: value })),
-    gridFolder
-      .addBinding({ extent: extentValue }, "extent", {
-        min: 5,
-        max: 500,
-        step: 5
-      })
-      // Rebuild only on release; rebuilding mid-drag disposes the slider and corrupts the value.
-      .on("change", ({ value, last }) => {
-        if (last) {
-          rebuildGrid({ extent: value });
-        }
-      }),
-
-    gridFolder.addBlade({ view: "separator" }),
-    gridFolder
-      .addBinding({ fadeFrom: target.fade.from }, "fadeFrom", {
-        label: "fadeFrom",
-        options: {
-          camera: "camera",
-          origin: "origin",
-          target: "target"
-        }
-      })
-      .on("change", ({ value }) => rebuildGrid({ fadeFrom: value })),
-    gridFolder.addBinding(target, "fadeDistance", {
-      min: 10,
+  gridFolder.addBinding(target, "enabled");
+  gridFolder
+    .addBinding({ plane: target.plane.value }, "plane", {
+      options: {
+        xz: "xz",
+        xy: "xy",
+        yz: "yz"
+      }
+    })
+    .on("change", ({ value }) => rebuildGrid({ plane: value }));
+  gridFolder.addBinding(target, "crossSize", {
+    min: 0.05,
+    max: 0.5,
+    step: 0.01
+  });
+  gridFolder.addBinding(target, "offset", {
+    min: -5,
+    max: 5,
+    step: 0.1
+  });
+  gridFolder
+    .addBinding({ infiniteGrid: target.infiniteGrid }, "infiniteGrid")
+    .on("change", ({ value }) => rebuildGrid({ infiniteGrid: value }));
+  gridFolder
+    .addBinding({ extent: extentValue }, "extent", {
+      min: 5,
       max: 500,
       step: 5
-    }),
-    gridFolder.addBinding(target, "fadeStrength", {
-      min: 0.1,
-      max: 5,
-      step: 0.1
-    }),
-
-    gridFolder.addBlade({ view: "separator" }),
-    gridFolder
-      .addBinding({ cellStyle: target.cellStyle.value }, "cellStyle", {
-        options: {
-          lines: "lines",
-          cross: "cross"
-        }
-      })
-      .on("change", ({ value }) => rebuildGrid({ cellStyle: value })),
-    gridFolder.addBinding(target, "cellSize", {
-      min: 0.1,
-      max: 10,
-      step: 0.1
-    }),
-    gridFolder.addBinding(target.cellColor, "value", {
-      label: "cellColor"
-    }),
-    gridFolder.addBinding(target, "cellThickness", {
-      min: 0.5,
-      max: 5,
-      step: 0.1
-    }),
-    gridFolder.addBinding(target, "hideCellOnSection"),
-    gridFolder.addBinding(target, "hideCellOnSectionFadeWidth", {
-      min: 0.05,
-      max: 3,
-      step: 0.05
-    }),
-
-    gridFolder.addBlade({ view: "separator" }),
-    gridFolder
-      .addBinding({ sectionStyle: target.sectionStyle.value }, "sectionStyle", {
-        options: {
-          lines: "lines",
-          cross: "cross"
-        }
-      })
-      .on("change", ({ value }) => rebuildGrid({ sectionStyle: value })),
-    gridFolder.addBinding(target, "sectionSize", {
-      min: 2,
-      max: 50,
-      step: 1
-    }),
-    gridFolder.addBinding(target.sectionColor, "value", {
-      label: "sectionColor"
-    }),
-    gridFolder.addBinding(target, "sectionThickness", {
-      min: 0.5,
-      max: 8,
-      step: 0.1
     })
-  );
+    // Rebuild only on release; rebuilding mid-drag disposes the slider and corrupts the value.
+    .on("change", ({ value, last }) => {
+      if (last) {
+        rebuildGrid({ extent: value });
+      }
+    });
 
-  disposeAll(axesValueBindings);
-  axesValueBindings.push(
-    axesFolder.addBinding(target, "showAxes"),
-    axesFolder.addBinding(target, "axisThickness", {
-      min: 0.5,
-      max: 6,
-      step: 0.1
-    }),
-    axesFolder.addBinding(target.xAxisColor, "value", {
-      label: "xAxisColor"
-    }),
-    axesFolder.addBinding(target.yAxisColor, "value", {
-      label: "yAxisColor"
-    }),
-    axesFolder.addBinding(target.zAxisColor, "value", {
-      label: "zAxisColor"
+  gridFolder.addSeparator();
+  gridFolder
+    .addBinding({ fadeFrom: target.fade.from }, "fadeFrom", {
+      label: "fadeFrom",
+      options: {
+        camera: "camera",
+        origin: "origin",
+        target: "target"
+      }
     })
-  );
+    .on("change", ({ value }) => rebuildGrid({ fadeFrom: value }));
+  gridFolder.addBinding(target, "fadeDistance", {
+    min: 10,
+    max: 500,
+    step: 5
+  });
+  gridFolder.addBinding(target, "fadeStrength", {
+    min: 0.1,
+    max: 5,
+    step: 0.1
+  });
+
+  gridFolder.addSeparator();
+  gridFolder
+    .addBinding({ cellStyle: target.cellStyle.value }, "cellStyle", {
+      options: {
+        lines: "lines",
+        cross: "cross"
+      }
+    })
+    .on("change", ({ value }) => rebuildGrid({ cellStyle: value }));
+  gridFolder.addBinding(target, "cellSize", {
+    min: 0.1,
+    max: 10,
+    step: 0.1
+  });
+  gridFolder.addBinding(target.cellColor, "value", {
+    label: "cellColor"
+  });
+  gridFolder.addBinding(target, "cellThickness", {
+    min: 0.5,
+    max: 5,
+    step: 0.1
+  });
+  gridFolder.addBinding(target, "hideCellOnSection");
+  gridFolder.addBinding(target, "hideCellOnSectionFadeWidth", {
+    min: 0.05,
+    max: 3,
+    step: 0.05
+  });
+
+  gridFolder.addSeparator();
+  gridFolder
+    .addBinding({ sectionStyle: target.sectionStyle.value }, "sectionStyle", {
+      options: {
+        lines: "lines",
+        cross: "cross"
+      }
+    })
+    .on("change", ({ value }) => rebuildGrid({ sectionStyle: value }));
+  gridFolder.addBinding(target, "sectionSize", {
+    min: 2,
+    max: 50,
+    step: 1
+  });
+  gridFolder.addBinding(target.sectionColor, "value", {
+    label: "sectionColor"
+  });
+  gridFolder.addBinding(target, "sectionThickness", {
+    min: 0.5,
+    max: 8,
+    step: 0.1
+  });
+
+  axesFolder.disposeAll();
+  axesFolder.addBinding(target, "showAxes");
+  axesFolder.addBinding(target, "axisThickness", {
+    min: 0.5,
+    max: 6,
+    step: 0.1
+  });
+  axesFolder.addBinding(target.xAxisColor, "value", {
+    label: "xAxisColor"
+  });
+  axesFolder.addBinding(target.yAxisColor, "value", {
+    label: "yAxisColor"
+  });
+  axesFolder.addBinding(target.zAxisColor, "value", {
+    label: "zAxisColor"
+  });
 }
 
 interface GridOverrides {
@@ -246,7 +234,7 @@ interface GridOverrides {
 function rebuildGrid(
   overrides: GridOverrides = {}
 ): void {
-  // Defer to let Tweakpane finish its current "change" emit before bindings are disposed.
+  // Defer to let the facade finish its current "change" emit before bindings are disposed.
   queueMicrotask(() => rebuildGridNow(overrides));
 }
 

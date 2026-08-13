@@ -20,7 +20,7 @@ import { RapierVoxelCollider } from "../../src/plugins/rapier/index.ts";
 import { SphereBehavior } from "./components/SphereController.ts";
 import {
   createExamplePane
-} from "./utils/pane.ts";
+} from "./utils/example-switcher.ts";
 
 // CONSTANTS
 const kTerrainSize = 32;
@@ -194,5 +194,9 @@ world.on("beforeFixedUpdate", (_dt) => {
 world.createActor("sphere")
   .addComponent(SphereBehavior, { body: sphereBody, mesh: sphereMesh });
 
-createExamplePane();
-loadRuntime(runtime, { focusCanvas: false }).catch(console.error);
+const pane = createExamplePane();
+pane.hidden = true;
+loadRuntime(
+  runtime,
+  { focusCanvas: false }
+).catch(console.error);

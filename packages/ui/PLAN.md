@@ -160,7 +160,7 @@ src/field/JollyField.styles.ts row, gutter, label, value, chips, error
 src/field/events.ts            JollyChangeDetail<T>, the emit helper
 src/field/predicates.ts        isModified()
 src/numeric/format.ts          formatNumber(), parseNumeric()
-src/collab/types.ts            CollaboratorPresence, moved out of P7
+src/peer/types.ts              CollaboratorPresence, moved out of P7
 src/theme/fallbacks.ts         the four narrow fallbacks, one source
 src/controls/types.ts          JollyOption<T>, Interval
 src/controls/flags.ts          mask to selection and back, pure
@@ -181,7 +181,7 @@ SPEC section 3 gives as the reason for the whole construction. Invisible at runt
 passed; `test/field/mixed.spec.ts` now carries a type level guard that stops compiling if it
 regresses.
 
-`CollaboratorPresence` moves here from P7 because SPEC section 3 now renders `peers` and
+`CollaboratorPresence` moves here from P7 into `src/peer/types.ts` because SPEC section 3 now renders `peers` and
 `lockedBy` in P1. P7 supplies values and adds `PresenceSource` beside it, changing no control,
 which was the whole argument for a base class in the first place.
 
@@ -252,7 +252,7 @@ describing what was decided:
 
 1. **Docs.** The amended `SPEC.md` and `PLAN.md`
 2. **Field foundation.** `JollyField` and its styles, `events`, `predicates`, `numeric/format`,
-   `collab/types`, `theme/fallbacks`, `controls/types`, and their specs. `icon/registry` comes
+   `peer/types`, `theme/fallbacks`, `controls/types`, and their specs. `icon/registry` comes
    with them rather than in 3, since `JollyOption.icon` is typed against `IconName`
 3. **Icons.** `builtins` and the `Icon` element
 4. **Scrub.** `ScrubController`
@@ -438,32 +438,121 @@ popup built without one; and `npm run build`, unit, e2e and lint all pass.
 
 ## P3: facade, and the end of Tweakpane
 
-**Create** under `src/facade/`: `Pane`, `Folder`, `Binding`, `Monitor`, `Button`, `Blade`, plus
-`dispatch.ts` choosing an element from the bound value's type.
+**Create** under `src/facade/`: `Pane`, `Folder`, `Binding`, `Monitor`, `Button`, `Separator`, plus
+`dispatch.ts` choosing an element from the bound value's type. Tweakpane calls its generic
+non-value row a "Blade", of which `{ view: "separator" }` is one kind; nothing else in `ui`
+speaks that vocabulary and no second blade kind is planned, so the facade names the class for
+what it actually wraps.
 
-Facade surface: `addFolder`, `addBinding`, `addMonitor`, `addButton`, `addBlade`, `refresh`,
-`dispose`, `hidden`, `disabled`, `element`.
+The six facade classes split into two tiers. Container tier, `Pane` and `Folder`: `addFolder`,
+`addBinding`, `addMonitor`, `addButton`, `addSeparator`, `refresh`, `dispose`, `hidden`,
+`disabled`, `element`. Leaf tier, `Binding`, `Monitor`, `Button`, `Separator`: `dispose`, `hidden`,
+`disabled`, `element`; `Binding` alone adds `on("change", ({ value, last }) => void)`, firing
+after the automatic write-back for every `jolly-input` (`last: false`) and `jolly-change`
+(`last: true`) from the dispatched element. A leaf never exposes `addFolder`; nothing here mirrors
+Tweakpane's single `BladeApi` inheritance chain.
+
+`dispatch.ts` picks an element from the bound value and, where given, `options`:
+
+| Value / options | Element | Note |
+|---|---|---|
+| `boolean` | `jolly-checkbox` | |
+| `number`, no `min`+`max` | `jolly-number` | `step` alone does not trigger a slider |
+| `number`, `min` and `max` both set | `jolly-slider` | matches today's Tweakpane rendering exactly |
+| `string`, matches `/^#[0-9a-f]{6}([0-9a-f]{2})?$/i` | `jolly-color` | shape sniffed, no `view` hint needed, mirrors Tweakpane's own auto-detection |
+| `string`, otherwise | `jolly-text` | |
+| any value, `options.options` set | `jolly-select` | always, regardless of option count; no button-group heuristic |
+| `Interval` (`{ from, to }`) | `jolly-range` | vocabulary carried for parity; no P3 migration target exercises it |
+
+`addMonitor(state, key, options)` dispatches on `options.view`: `"graph"` (with `min`, `max`,
+optional `rows`) renders `jolly-graph`; anything else renders `jolly-monitor`. This is an opt-in
+flag, not value-shape dispatch, mirroring Tweakpane's own `view: "graph"` on the one binding that
+uses it today.
+
+Bulk binding (Tweakpane's `addMonitors(folder, state, fields)` loop) is not part of the facade.
+It stays local per package, a few lines calling the public `addMonitor` in a loop; the pattern has
+no second real shape to validate against beyond the one demo that uses it, and promoting it now
+would be building for an audience of one.
 
 **Create** under `src/monitors/`: `Monitor` (label and value row), `Graph` (ring buffer
-sparkline). No internal timer, the application pushes values.
+sparkline), `format.ts` (`formatCount`, `formatMilliseconds`, `formatPercent`, moved in from the
+two duplicated `utils/pane.ts` copies). No internal timer, the application pushes values.
 
 **Migrate**
 
-- `packages/voxel-renderer/examples/scripts/utils/pane.ts`
-- `packages/three/examples/scripts/utils/pane.ts`
-- `packages/three/examples/scripts/demo-grid.ts`, `demo-peer-frustum.ts`
+- `packages/three/examples/scripts/utils/pane.ts` → deleted, replaced by
+  `packages/three/examples/scripts/utils/example-switcher.ts`: only the example-switcher binding
+  and `F3` visibility toggle survive, now calling the facade's `Pane` instead of tweakpane's.
+  `formatCount`/`formatMilliseconds` move to `@jolly-pixel/ui`; `addMonitors` becomes a local loop
+  over the public `addMonitor`
+- `packages/voxel-renderer/examples/scripts/utils/pane.ts` → same treatment, same new filename
+- `packages/three/examples/scripts/demo-grid.ts`, `demo-peer-frustum.ts` — every `addBinding`,
+  `addFolder`, `addBlade({ view: "separator" })` call moves onto the facade per the dispatch table
+  above; the separator calls become `addSeparator()`
+- `packages/voxel-renderer/examples/scripts/demo-transparency.ts`, `demo-noise-world.ts` — same
+  treatment. Not in the original scope note: both call `addFolder`/`addBinding` directly (layer
+  visibility and opacity, light colour and intensities, the debug-mode dropdown, an unbounded
+  `seed` field), the same way the two `three` demos do, and were missing from an earlier pass of
+  this plan. Without migrating them the `tweakpane` dependency cannot actually be deleted from
+  `voxel-renderer/package.json`
+- `packages/voxel-renderer/examples/scripts/demo-shapes.ts`, `demo-tileset.ts`, `demo-physics.ts`,
+  `demo-tiled.ts`, `demo-flat-world.ts` — no direct binding calls, only the `createExamplePane`
+  import path changes
 
-**Deletes**: both `utils/pane.ts` copies, and the `tweakpane` plus `@tweakpane/core`
-dependencies from `packages/three/package.json` and `packages/voxel-renderer/package.json`.
+**PerformancePanel.ts (both copies) and voxel-map's PerformanceHUD.ts**: a minimal facade-type
+swap only, not the full stats-consumer rearchitecture. Both `PerformancePanel.ts` copies hold the
+same `Pane` instance `createExamplePane()` returns (`new PerformancePanel({ pane, renderer })` in
+`demo-grid.ts`), so once that instance is the facade's `Pane` rather than tweakpane's, the type
+import and the `pane.addFolder`/`folder.addBinding`/`folder.dispose()` calls must follow in the
+same PR — otherwise the build breaks the moment `tweakpane` is removed, before P3b ever touches
+these files. The `fps` graph binding becomes `folder.addMonitor(stats, "fps", { view: "graph",
+min: 0, max: kGraphMaxFps, rows: kGraphRows })`; every other stat becomes a plain
+`folder.addMonitor(stats, key, { format })`. The hand-rolled `#frames`/`#elapsed`/`#worstFrame`
+accumulator, `voxel-map`'s duplicated `addMonitors`/`formatCount`, and the `PerformanceHUD.ts`
+rewrite into a `StatsRecorder` consumer all stay P3b's job, unchanged from PLAN's existing
+description of that phase.
 
-The two `PerformancePanel.ts` copies and voxel-map's `PerformanceHUD.ts` are handled in P3b, not
-here: they become stats consumers rather than pane consumers.
+**Deletes**: both `utils/pane.ts` copies (replaced by `example-switcher.ts`), and the `tweakpane`
+plus `@tweakpane/core` dependencies from `packages/three/package.json` and
+`packages/voxel-renderer/package.json`.
 
-**Tests**: unit for type dispatch and for `addMonitors` style formatting helpers carried over.
-E2e over one migrated example page confirming the example switcher and the F3 toggle still work.
+**Tests**: unit for `dispatch.ts`'s pure mapping and for `format.ts`'s three functions, both DOM
+free. No unit coverage for the facade classes themselves: they wrap Lit elements, the same
+"decorators are not erasable syntax" constraint that keeps every other component out of
+`node:test`. No new Playwright harness for `packages/three` or `packages/voxel-renderer`: neither
+package has one today, both are demo galleries rather than shipped product surfaces, and the
+migrated pages are verified manually rather than by standing up e2e infrastructure and a CI job
+entry for a demo switcher.
 
-**Done when**: no `tweakpane` import remains outside `node_modules`, and both example suites run
-against the facade.
+**Docs**: `docs/facade.md` for the builder API and its relationship to the element layer;
+`docs/monitors.md` for `jolly-monitor`, `jolly-graph`, and the `addMonitor` `view: "graph"` flag.
+
+**Not built**: `exportState`/`importState`. None of the four migrated demo files or the
+`PerformancePanel` swap need it, and building a serialisation format for every dispatched control
+type with no consumer to validate it against is exactly what SPEC section 15 rejects elsewhere.
+Stays an open point (SPEC section 16) until a real consumer asks.
+
+**Done when**: no `tweakpane` import remains outside `node_modules` in `packages/three` or
+`packages/voxel-renderer`, `npm run build`/`test`/`lint` pass for all three packages, and every
+migrated example page has been manually verified to render and behave as before.
+
+### P3 delivery
+
+One pull request across three packages, ui first:
+
+1. **`@jolly-pixel/ui`.** `src/facade/` (six classes, `dispatch.ts`), `src/monitors/` (`Monitor`,
+   `Graph`, `format.ts`), their unit specs, the `monitor`/`graph` gallery examples, the
+   `facade-parity` scenario, `docs/facade.md`, `docs/monitors.md`, and a **minor** changeset
+2. **`@jolly-pixel/three`.** `demo-grid.ts`, `demo-peer-frustum.ts`, `PerformancePanel.ts`,
+   `utils/pane.ts` → `utils/example-switcher.ts`, `tweakpane`/`@tweakpane/core` removed from
+   `package.json`, a **patch** changeset
+3. **`@jolly-pixel/voxel.renderer`.** Same shape as commit 2, plus `demo-transparency.ts`,
+   `demo-noise-world.ts`, and the five switcher-only demo pages' import updates, a **patch**
+   changeset
+
+Commit 1 is the review checkpoint: the facade's dispatch rules and event shape are established
+there, against the gallery's own examples, before either editor package's migration depends on
+them.
 
 ## P3b: stats
 
@@ -583,8 +672,8 @@ carries resize handle rules.
 
 ## P7: presence and locking
 
-**Create** `src/collab/PresenceSource.ts` (port and types), `src/collab/Presence.ts`
-(`jolly-presence`), `src/collab/LockController.ts` (Lit reactive controller claiming on focus and
+**Create** `src/peer/PresenceSource.ts` (port types beside the existing presence view),
+`src/collab/LockController.ts` (Lit reactive controller claiming on focus and
 releasing on blur), and `src/network/RoomPresenceSource.ts` behind the `./network` subpath,
 importing `@jolly-pixel/network/client`.
 

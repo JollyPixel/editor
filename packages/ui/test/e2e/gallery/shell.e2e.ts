@@ -235,36 +235,34 @@ test.describe("gallery shell", () => {
 async function galleryHeaderLayout(
   pane: Locator
 ) {
-  return pane.evaluate((element) => {
-    const title = element.shadowRoot?.querySelector(".title");
-    const actions = element.shadowRoot?.querySelector(".actions");
-    const theme = element.querySelector("jolly-button-group");
-    const density = element.querySelector("jolly-select");
-    if (
-      title === null ||
-      title === undefined ||
-      actions === null ||
-      actions === undefined ||
-      theme === null ||
-      density === null
-    ) {
-      throw new Error("Gallery pane header is incomplete");
-    }
+  const [
+    titleRect,
+    actionsRect,
+    themeRect,
+    densityRect
+  ] = await Promise.all([
+    pane.locator(".title").boundingBox(),
+    pane.locator(".actions").boundingBox(),
+    pane.locator("jolly-button-group").boundingBox(),
+    pane.locator("jolly-select").boundingBox()
+  ]);
+  if (
+    titleRect === null ||
+    actionsRect === null ||
+    themeRect === null ||
+    densityRect === null
+  ) {
+    throw new Error("Gallery pane header is incomplete");
+  }
 
-    const titleRect = title.getBoundingClientRect();
-    const actionsRect = actions.getBoundingClientRect();
-    const themeRect = theme.getBoundingClientRect();
-    const densityRect = density.getBoundingClientRect();
-
-    return {
-      titleBottom: titleRect.bottom,
-      actionsTop: actionsRect.top,
-      themeTop: themeRect.top,
-      themeWidth: themeRect.width,
-      densityTop: densityRect.top,
-      densityWidth: densityRect.width
-    };
-  });
+  return {
+    titleBottom: titleRect.y + titleRect.height,
+    actionsTop: actionsRect.y,
+    themeTop: themeRect.y,
+    themeWidth: themeRect.width,
+    densityTop: densityRect.y,
+    densityWidth: densityRect.width
+  };
 }
 
 /**
@@ -283,15 +281,17 @@ test.describe("manifest sweep", () => {
       });
 
       await gotoGallery(page, { example: example.id });
-      await expect(page.locator("gallery-root main")).not.toBeEmpty();
+      await expect(page.locator("gallery-root main > *").first())
+        .toBeAttached();
 
       // Selecting in-page, not a second goto: a reload discards the tree without ever
       // calling the teardown this is meant to exercise.
       const next = manifest.find((entry) => entry.id !== example.id) ?? example;
       await page.locator(
         `gallery-root nav a[data-example-id="${next.id}"]`
-      ).click();
-      await expect(page.locator("gallery-root main")).not.toBeEmpty();
+      ).evaluate((link: HTMLAnchorElement) => link.click());
+      await expect(page.locator("gallery-root main > *").first())
+        .toBeAttached();
 
       expect(await disposedIds(page)).toContain(example.id);
       expect(failures).toEqual([]);

@@ -9,7 +9,7 @@ import {
   type DropCandidate
 } from "./dropIndex.ts";
 import { ensureDocumentStyles } from "../ensureDocumentStyles.ts";
-import { kFallback } from "../../theme/fallbacks.ts";
+import { kFallback } from "../../theme/styles/fallbacks.ts";
 import { resolveThemeToken } from "../../theme/resolveThemeToken.ts";
 
 // CONSTANTS

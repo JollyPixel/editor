@@ -24,31 +24,41 @@ canvas {
 }
 
 /*
- * Tweakpane's default wrapper. Capped to the viewport height (minus the
- * top/bottom insets) with its own scrollbar, so it stays usable on short
- * screens once enough folders/bindings are added.
+ * The scope host covers the viewport so its dock can dock to an edge, but
+ * only the dock itself should catch pointer events — everywhere else has to
+ * reach the canvas underneath.
  */
-body .tp-dfwv {
-  top: 12px;
-  right: 12px;
-  width: 350px;
-  max-height: calc(100vh - 24px);
-  overflow-y: auto;
-  overflow-x: hidden;
-  z-index: 1001;
+jolly-scope {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+jolly-dock {
+  --jolly-label-width: 17ch;
+  pointer-events: auto;
+}
+
+jolly-controls {
+  pointer-events: auto;
+}
+
+jolly-floating {
+  pointer-events: auto;
 }
 
 /*
- * Pins the "example" page-switcher (see pane.ts) to the top of the
- * scrollable panel above, so it's reachable no matter how far the rest of
- * the content (peer folders, etc.) has been scrolled.
+ * `grow` claims leftover flex space unconditionally, which is right for a
+ * lone pane but wastes space here. The content pane's default flex-shrink
+ * is 0 (`jolly-dock`'s non-grow panes are meant to stack and let the dock
+ * scroll them as one block), which blocks it from ever going below its
+ * content size — so it overflows the dock instead of capping itself and
+ * scrolling internally. Overriding shrink is enough: the flex algorithm
+ * then sizes it to content when that fits, or to whatever the chrome pane
+ * above it leaves, whichever is smaller.
  */
-body .tp-dfwv .tp-example-pin {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background-color: var(--tp-base-background-color, hsl(230, 7%, 17%));
-  padding-top: 4px;
-  padding-bottom: 4px;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+#tools > jolly-pane:last-of-type {
+  flex-shrink: 1;
+  min-height: 0;
 }

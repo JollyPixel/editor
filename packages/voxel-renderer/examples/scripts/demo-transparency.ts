@@ -17,7 +17,7 @@ import {
 } from "./utils/common.ts";
 import {
   createExamplePane
-} from "./utils/pane.ts";
+} from "./utils/example-switcher.ts";
 import { createTransparencyTileset } from "./utils/transparencyAtlas.ts";
 import {
   LAYER_SPECS,
@@ -160,7 +160,7 @@ for (const layer of layerState) {
 
 const lightFolder = pane.addFolder({ title: "Light" });
 lightFolder
-  .addBinding(lightState, "background", { label: "background", view: "color" })
+  .addBinding(lightState, "background", { label: "background" })
   .on("change", ({ value }) => background.set(value));
 lightFolder
   .addBinding(lightState, "ambient", { label: "ambient", min: 0, max: 4, step: 0.05 })

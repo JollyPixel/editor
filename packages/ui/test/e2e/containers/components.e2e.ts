@@ -477,6 +477,33 @@ test.describe("Floating", () => {
     await expect.poll(() => widthOf(floating)).toBe(width + 40);
     await expect.poll(() => heightOf(floating)).toBe(height + 30);
   });
+
+  test("folding the held pane shrinks the window to its header, not just its content", async({ page }) => {
+    await gotoGallery(page, {
+      example: "containers/floating",
+      chrome: "off"
+    });
+
+    const floating = page.locator("jolly-floating");
+    const pane = floating.locator("jolly-pane");
+    const height = await heightOf(floating);
+
+    await pane.locator(".fold").click();
+    await expect(pane).toHaveAttribute("collapsed");
+    const headerHeight = await heightOf(pane.locator(".header"));
+    await expect.poll(() => heightOf(floating)).toBeCloseTo(headerHeight, 0);
+
+    // The bottom and corner handles would only fight that height and corrupt
+    // the size worth remembering, so they stand down while folded.
+    await expect(floating.locator(".resize-handle.bottom")).toHaveClass(/disabled/);
+    await expect(floating.locator(".resize-handle.corner")).toHaveClass(/disabled/);
+    await expect(floating.locator(".resize-handle.right")).not.toHaveClass(/disabled/);
+
+    await pane.locator(".fold").click();
+    await expect(pane).not.toHaveAttribute("collapsed");
+    await expect.poll(() => heightOf(floating)).toBeCloseTo(height, 0);
+    await expect(floating.locator(".resize-handle.bottom")).not.toHaveClass(/disabled/);
+  });
 });
 
 test.describe("Placement", () => {
@@ -620,7 +647,7 @@ test.describe("Dialog", () => {
     await expect(prompt.locator("jolly-text")).toHaveCount(1);
     await expect(prompt.locator("jolly-button")).toHaveCount(2);
     await prompt.locator("input").fill("  Layer  ");
-    await prompt.locator("jolly-button[data-action=confirm]").click();
+    await prompt.locator("input").press("Enter");
     await expect(example).toHaveAttribute("data-result", "Layer");
     await expect(prompt).toHaveCount(0);
 

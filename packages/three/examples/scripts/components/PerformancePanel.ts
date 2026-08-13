@@ -1,17 +1,13 @@
 // Import Third-party Dependencies
 import type * as THREE from "three/webgpu";
-import type { FolderApi, Pane } from "tweakpane";
-
-// Import Internal Dependencies
 import {
-  addMonitors,
   formatCount,
-  formatMilliseconds
-} from "../utils/pane.ts";
+  formatMilliseconds,
+  type Pane
+} from "@jolly-pixel/ui";
 
 // CONSTANTS
 const kBytesPerMebibyte = 1024 * 1024;
-const kGraphMaxFps = 165;
 const kGraphRows = 3;
 
 export interface PerformancePanelOptions {
@@ -33,7 +29,7 @@ export class PerformancePanel {
   #renderer: THREE.WebGPURenderer;
   #refreshInterval: number;
 
-  #folder: FolderApi;
+  #folder: ReturnType<Pane["addFolder"]>;
 
   #stats = {
     fps: 0,
@@ -64,19 +60,15 @@ export class PerformancePanel {
     this.#refreshInterval = refreshInterval;
 
     const folder = pane.addFolder({ title, expanded: false });
-    // Graph and numeric readout share the same value.
-    folder.addBinding(this.#stats, "fps", {
-      readonly: true,
-      interval: 0,
+    folder.addMonitor(this.#stats, "fps", {
       view: "graph",
       min: 0,
-      max: kGraphMaxFps,
       rows: kGraphRows,
-      label: "fps"
+      label: "fps",
+      format: formatCount
     });
 
-    addMonitors(folder, this.#stats, {
-      fps: { label: "fps", format: formatCount },
+    folder.addMonitors(this.#stats, {
       worstMs: { label: "worst", format: formatMilliseconds },
       calls: { label: "draw calls", format: formatCount },
       triangles: { label: "triangles", format: formatCount },
@@ -85,7 +77,7 @@ export class PerformancePanel {
     });
 
     if (readHeapMebibytes() !== null) {
-      addMonitors(folder, this.#stats, {
+      folder.addMonitors(this.#stats, {
         heapMiB: { label: "js heap (MiB)", format: formatCount }
       });
     }
