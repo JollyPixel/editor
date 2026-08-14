@@ -75,6 +75,7 @@ describe("Systems.World", () => {
       sceneManager,
       input,
       audio: createMockAudio(),
+      assetCoordinator: {},
       globalsAdapter: createMockGlobalsAdapter()
     });
   });

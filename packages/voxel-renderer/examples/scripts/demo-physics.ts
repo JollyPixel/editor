@@ -41,7 +41,8 @@ if (!canvas) {
 const rapierWorld = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
 
 const runtime = await Runtime.create(canvas, {
-  includePerformanceStats: true
+  includePerformanceStats: true,
+  focusCanvas: false
 });
 
 const tileDef = {
@@ -197,6 +198,5 @@ world.createActor("sphere")
 const pane = createExamplePane();
 pane.hidden = true;
 loadRuntime(
-  runtime,
-  { focusCanvas: false }
+  runtime
 ).catch(console.error);

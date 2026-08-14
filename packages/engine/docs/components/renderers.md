@@ -16,7 +16,7 @@ import { Actor, ModelRenderer } from "@jolly-pixel/engine";
 
 const actor = new Actor(world, { name: "Knight" });
 actor.addComponent(ModelRenderer, {
-  path: "models/knight.glb",
+  asset: KnightModel,
   animations: {
     default: "idle",
     clipNameRewriter: (name) => name.toLowerCase()
@@ -26,7 +26,7 @@ actor.addComponent(ModelRenderer, {
 
 | Option | Default | Description |
 | ------ | ------- | ----------- |
-| `path` | — | Path to the model file (`.obj`, `.fbx`, `.glb`, `.gltf`) |
+| `asset` | — | Typed model reference declared by the owning scene |
 | `debug` | `false` | Log loaded object and animations to the console |
 | `animations.default` | — | Name of the animation clip to play on start |
 | `animations.clipNameRewriter` | identity | Transforms clip names before storing them |
@@ -36,7 +36,7 @@ controls clip playback with crossfade transitions:
 
 ```ts
 const renderer = actor.addComponentAndGet(ModelRenderer, {
-  path: "models/knight.glb"
+  asset: KnightModel
 });
 
 renderer.animation.setFadeDuration(0.25);
@@ -100,7 +100,7 @@ import { Actor, TextRenderer } from "@jolly-pixel/engine";
 
 const actor = new Actor(world, { name: "Title" });
 actor.addComponent(TextRenderer, {
-  path: "fonts/roboto.typeface.json",
+  asset: RobotoFont,
   text: "Hello World",
   material: new THREE.MeshStandardMaterial({ color: 0xffffff }),
   textGeometryOptions: { size: 2, depth: 0.5 }
@@ -109,7 +109,7 @@ actor.addComponent(TextRenderer, {
 
 | Option | Default | Description |
 | ------ | ------- | ----------- |
-| `path` | — | Path to the `.typeface.json` font file |
+| `asset` | — | Typed font reference declared by the owning scene |
 | `text` | `""` | Initial text to display |
 | `material` | `MeshBasicMaterial` | Material applied to the text mesh |
 | `textGeometryOptions` | `{ size: 1, depth: 1 }` | Three.js `TextGeometry` parameters |
@@ -119,7 +119,7 @@ To update the text at runtime, use the `text` property and call
 
 ```ts
 const renderer = actor.addComponentAndGet(TextRenderer, {
-  path: "fonts/roboto.typeface.json"
+  asset: RobotoFont
 });
 
 renderer.text.setValue("Score: 100");

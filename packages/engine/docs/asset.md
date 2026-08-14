@@ -1,194 +1,89 @@
-# Asset Loading
+# Assets in the engine
 
-The asset system provides a unified pipeline for loading external resources
-(3D models, fonts, textures, audio, etc.). It is built around
-two main concepts:
+The engine consumes the platform-agnostic types from `@jolly-pixel/asset`.
+Scenes declare what they need, `SceneManager` owns replacement and additive
+load requests, and a platform loader performs the I/O. ECS lifecycle methods
+stay synchronous.
 
-- **Asset** — lightweight descriptor that identifies a file by its
-  path, name, extension, and type
-- **AssetManager** — orchestrates the full lifecycle:
-  enqueue → resolve loader → load → cache
+## Declaring scene assets
 
-A singleton `Assets` is exported from the engine and serves as the
-default entry point for all asset operations.
-
-```ts
-import { Systems } from "@jolly-pixel/engine";
-
-const { Assets } = Systems;
-```
-
-## Asset
-
-A lightweight value object describing a single resource.
-
-```ts
-type AssetTypeName =
-  | "unknown"
-  | "texture"
-  | "audio"
-  | "model"
-  | "font"
-  | (string & {});
-```
-
-```ts
-interface Asset {
-  readonly id: string;
-  name: string;
-  ext: string;
-  path: string;
-  type: AssetTypeName;
-
-  get basename(): string;
-  get longExt(): string;
-  toString(): string;
-}
-```
-
-If no `type` is given at construction time, the manager resolves it
-automatically from the file extension.
-
-## AssetManager
-
-Central façade that owns a loader registry, a waiting queue,
-and the loaded-asset cache.
-
-```ts
-interface LazyAsset<T = unknown> {
-  asset: Asset;
-  get: () => T;
-}
-```
-
-```ts
-interface AssetManager {
-  // Enqueue an asset and return a lazy handle.
-  // Optional options are forwarded to the loader callback.
-  load<T, TOptions>(assetOrPath: Asset | string, options?: TOptions): LazyAsset<T>;
-
-  // Return a typed load function bound to this manager.
-  lazyLoad<T, TOptions>(): (assetOrPath: Asset | string, options?: TOptions) => LazyAsset<T>;
-
-  // Retrieve a previously loaded asset by path (throws if missing)
-  get<T>(path: string): T;
-
-  // Flush the queue: load every waiting asset in parallel
-  loadAssets(context: AssetLoaderContext): Promise<void>;
-}
-```
-
-## Loading lifecycle
-
-1. **Register loaders** — each loader calls `Assets.registry.loader()`
-   at module evaluation time, binding file extensions to a type and
-   a loader callback.
-2. **Enqueue assets** — game or component code calls `Assets.load(path)`.
-   The asset is pushed into an internal queue and a `LazyAsset` handle
-   is returned immediately.
-3. **Flush the queue** — calling `Assets.loadAssets(context)` drains
-   the queue and runs every registered loader in parallel. Each result
-   is cached by asset path.
-4. **Access the result** — call `lazyAsset.get()` to retrieve the
-   loaded resource from the cache. Throws if the asset has not been
-   loaded yet.
-
-> [!NOTE]
-> When `autoload` is `true`, `loadAssets` is scheduled automatically
-> after each `load()` call, so you do not need to flush manually.
-
-## Built-in loaders
-
-The engine ships with three loaders. Each one registers itself
-when its module is imported.
-
-| Loader | Extensions | Result type |
-| ------ | ---------- | ----------- |
-| `Loaders.model` | `.obj`, `.fbx`, `.glb`, `.gltf` | `Model` (`THREE.Group` + `AnimationClip[]`) |
-| `Loaders.font` | `.typeface.json` | `Font` (Three.js typeface) |
-
-Usage:
-
-```ts
-import { Loaders } from "@jolly-pixel/engine";
-
-// Enqueue assets
-const knight = Loaders.model("models/knight.glb");
-const myFont = Loaders.font("fonts/roboto.typeface.json");
-
-// After loadAssets():
-const { object, animations } = knight.get();
-const font = myFont.get();
-```
-
-## Writing a custom loader
-
-To add support for a new file format, register a loader on the
-global `Assets.registry`:
+Create references from stable IDs and the engine asset types, then pass them to
+the scene constructor:
 
 ```ts
 import {
-  Systems,
-  type Asset,
-  type AssetLoaderContext
+  AssetReference,
+  type AssetReferenceGroup
+} from "@jolly-pixel/asset";
+import {
+  ActorComponent,
+  AssetTypes,
+  Systems
 } from "@jolly-pixel/engine";
 
-const { Assets } = Systems;
+class KnightBehavior extends ActorComponent {
+  static readonly assets = {
+    model: new AssetReference(
+      "model.knight",
+      AssetTypes.model
+    )
+  } satisfies AssetReferenceGroup;
 
-Assets.registry.loader(
-  {
-    extensions: [".csv"],
-    type: "spreadsheet"
-  },
-  async(asset: Asset, _context: AssetLoaderContext) => {
-    const response = await fetch(asset.toString());
-    const text = await response.text();
-
-    return text
-      .split("\n")
-      .map((row) => row.split(","));
+  override awake(): void {
+    const model = this.getAsset(KnightBehavior.assets.model);
+    // Use the prepared model synchronously.
   }
-);
-
-export const spreadsheet = Assets.lazyLoad<string[][]>();
-```
-
-The `context.manager` property is the shared `THREE.LoadingManager`
-instance, which can be passed to any Three.js loader to benefit from
-centralized progress tracking.
-
-## Per-load options
-
-Loaders can accept a typed `options` argument that callers supply at
-the `load()` call site. Options are forwarded as the third argument to
-the loader callback.
-
-**Register a loader with options:**
-
-```ts
-interface TilemapLoaderOptions {
-  flipY?: boolean;
-  baseDir?: string;
 }
 
-Assets.registry.loader<Tilemap, TilemapLoaderOptions>(
-  { extensions: [".tmj", ".json"], type: "tilemap" },
-  async(asset, context, options) => {
-    // options is typed TilemapLoaderOptions | undefined
-    const flipY = options?.flipY ?? false;
-    // ...
+class BattleScene extends Systems.Scene {
+  constructor() {
+    super("battle", {
+      assets: [KnightBehavior.assets]
+    });
   }
-);
-
-export const tilemap = Assets.lazyLoad<Tilemap, TilemapLoaderOptions>();
+}
 ```
 
-**Load with options:**
+`Scene.assets` is declarative data. `SceneManager.loadScene()` and
+`SceneManager.appendScene()` create a `SceneLoad` that tracks readiness and
+progress. The runtime prepares those references, then `SceneManager` activates
+the scene at a frame boundary.
+
+`SceneOptions.assets` accepts individual references and named reference groups.
+Groups are flattened once into the scene's immutable `assets` array.
+
+## Using a reference in a component
+
+Built-in model and text renderers accept typed references instead of paths:
 
 ```ts
-// Via lazyLoad helper — options are type-checked against TilemapLoaderOptions
-const map = tilemap("levels/level1.tmj", { flipY: true });
-
-// Or directly
-const map2 = Assets.load<Tilemap, TilemapLoaderOptions>("levels/level1.tmj", { baseDir: "assets/" });
+actor.addComponent(ModelRenderer, {
+  asset: KnightBehavior.assets.model
+});
 ```
+
+`ActorComponent.getAsset(reference)` reads the prepared value synchronously.
+The runtime completes the scene batch before `awake()`, so component lifecycle
+methods do not perform asynchronous work. A missing prepared value throws
+`AssetNotReadyError`, which exposes an orchestration error instead of starting
+an implicit load inside the ECS lifecycle.
+
+## Built-in types and loaders
+
+| Type | Kind | Loader | Supported source |
+| ---- | ---- | ------ | ---------------- |
+| `AssetTypes.model` | `model` | `AssetLoaders.model` | OBJ, FBX, glTF, GLB |
+| `AssetTypes.font` | `font` | `AssetLoaders.font` | Three.js typeface JSON |
+| `AUDIO_ASSET` | `audio` | `AudioAssetLoader` | Formats supported by `THREE.AudioLoader` |
+
+The runtime registers these browser loaders by default. A custom
+`AssetLoaderRegistry` can replace that set through `RuntimeOptions.assets`.
+
+## Responsibility boundary
+
+- `@jolly-pixel/asset` owns IDs, catalogs, references, handles, stores, and batches.
+- `@jolly-pixel/engine` owns scene requests and reads prepared handles synchronously.
+- `@jolly-pixel/runtime` performs browser asset I/O and reports progress to the engine.
+
+See the [`@jolly-pixel/asset` README](../../asset/README.md) for the catalog
+format and lower-level APIs.

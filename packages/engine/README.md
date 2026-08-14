@@ -148,7 +148,7 @@ class PlayerBehavior extends Behavior {
 }
 
 new Actor(world, { name: "player" })
-  .addComponent(ModelRenderer, { path: "models/Player.glb" })
+  .addComponent(ModelRenderer, { asset: PlayerModel })
   .addComponent(PlayerBehavior, { speed: 0.5 });
 ```
 

@@ -1,90 +1,153 @@
 # Runtime
 
-Main runtime class. Wraps a Three.js renderer, a game instance, and the
-update/render loop. Manages the full lifecycle: construction, starting,
-stopping, and frame-rate control.
+`Runtime` owns browser initialization, platform asset loaders, input bindings,
+and the engine loop. It installs an internal scene loader into `SceneManager`,
+so gameplay code requests scenes through the engine.
 
-- **start()**: Connects the game instance and begins the render loop via `setAnimationLoop`.
-- **stop()**: Disconnects the game instance and removes the animation loop.
-- **setFps(fps)**: Clamps the target FPS between `1` and `60`. No-op if `fps` is falsy.
+## Construction
 
 ```ts
-interface RuntimeOptions<
-  TContext = Systems.WorldDefaultContext
-> {
-  /**
-   * @default false
-   * Whether to include performance statistics (eg: FPS, memory usage).
-   */
-  includePerformanceStats?: boolean;
-  /**
-   * Optional context object passed to the World.
-   */
-  context?: TContext;
-  /**
-   * Optional global audio object passed to the World.
-   * If not provided, a default audio context will be created.
-   */
-  audio?: GlobalAudio;
+interface RuntimeAssetOptions {
+  readonly catalog?: AssetCatalog | string | URL;
+  readonly loaders?: Iterable<RuntimeAssetLoaderDefinition<unknown>>;
 }
 
-class Runtime<
-  TContext = WorldDefaultContext
-> {
-  world: Systems.World<THREE.WebGLRenderer, TContext>;
+interface RuntimeAssetLoaderDefinition<TValue = unknown> {
+  readonly type: AssetType<TValue>;
+
+  create(
+    manager: THREE.LoadingManager
+  ): AssetLoader<TValue>;
+}
+
+interface RuntimeOptions<TContext = Systems.WorldDefaultContext> {
+  includePerformanceStats?: boolean;
+  focusCanvas?: boolean;
+  context?: TContext;
+  audio?: GlobalAudio;
+  assets?: RuntimeAssetOptions;
+}
+
+const runtime = await Runtime.create(canvas, {
+  assets: {
+    catalog: "/assets.json"
+  }
+});
+```
+
+Place a persistent catalog in the Vite project's `public/` directory to serve
+it unchanged in development and copy it to the build output:
+
+```json
+{
+  "version": 1,
+  "assets": [
+    {
+      "id": "hero-model",
+      "kind": "model",
+      "source": "models/hero.glb"
+    }
+  ]
+}
+```
+
+`Runtime.create()` fetches string and `URL` inputs, parses the response through
+`AssetCatalog.parse()`, then constructs the world. An unsuccessful response,
+invalid JSON, or invalid manifest rejects the returned promise. Passing an
+`AssetCatalog` keeps the existing programmatic option.
+
+Runtime always registers the engine model, font, and audio loaders. Additional
+definitions receive the same Three.js loading manager and are added to the
+internal registry:
+
+```ts
+const runtime = await Runtime.create(canvas, {
+  assets: {
+    catalog: "/assets.json",
+    loaders: [
+      {
+        type: TILE_MAP_ASSET,
+        create: (manager) => new TileMapAssetLoader(manager)
+      }
+    ]
+  }
+});
+```
+
+Projects do not need to create or manage an `AssetLoaderRegistry`. A custom
+definition that duplicates a default asset kind throws during construction.
+
+`focusCanvas` defaults to `true`. While the runtime is running, page clicks
+restore focus to the canvas and canvas keypress defaults are prevented. The
+listeners are removed by `stop()` and installed again by `start()`.
+
+## Scene loading
+
+Gameplay code requests scenes from `SceneManager`:
+
+```ts
+const load = runtime.world.sceneManager.loadScene(
+  new BattleScene(),
+  {
+    activation: "manual"
+  }
+);
+```
+
+The runtime prepares `scene.assets` in the background and reports progress to
+the returned `SceneLoad`. Calling `load.allowActivation()` releases a ready
+scene for replacement at the next frame boundary. See the engine
+[SceneManager documentation](../../engine/docs/systems/scene-manager.md) for the
+state model and transition example.
+
+## Explicit asset batches
+
+Code outside the ECS lifecycle can start an independent batch through the
+world's coordinator:
+
+```ts
+const batch = runtime.world.assetCoordinator.loadBatch([iconReference], {
+  onProgress(progress) {
+    console.log(progress.completed, progress.total);
+  }
+});
+
+await batch.done;
+```
+
+Each batch owns its totals, failures, status, and completion promise.
+
+## API
+
+```ts
+class Runtime<TContext = Systems.WorldDefaultContext> {
+  world: Systems.World<THREE.WebGPURenderer, TContext>;
   canvas: HTMLCanvasElement;
   stats?: Stats;
-  clock: THREE.Clock;
-  manager: THREE.LoadingManager;
-  framesPerSecond: number;
 
-  get running(): boolean;
-
-  constructor(canvas: HTMLCanvasElement, options?: RuntimeOptions<TContext>);
+  static create<TContext>(
+    canvas: HTMLCanvasElement,
+    options?: RuntimeOptions<TContext>
+  ): Promise<Runtime<TContext>>;
 
   start(): void;
   stop(): void;
-  setFps(framesPerSecond: number | undefined): void;
+  dispose(): void;
 }
 ```
 
-> [!NOTE]
-> `Runtime.create()` throws an `Error` if `canvas` is falsy. Construction is
-> async because the underlying `ThreeRenderer` negotiates a WebGPU (or
-> WebGL2 fallback) adapter before it can be used.
+## Bootstrap loading screen
 
-## Usage
+`loadRuntime()` accepts an initial scene and additional references. It reports
+both operations through the loading screen before starting the loop:
 
 ```ts
-import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
-
-const canvas = document.querySelector("canvas")!;
-const runtime = await Runtime.create(canvas, {
-  includePerformanceStats: true
+await loadRuntime(runtime, {
+  scene: new BattleScene(),
+  assets: [sharedUiReference]
 });
-
-const { world } = runtime;
-// Work with the world
-
-loadRuntime(runtime)
-  .catch(console.error);
 ```
 
-## Type-safe context
-
-The `TContext` generic lets you pass a typed context object to the
-underlying `World`:
-
-```ts
-interface MyContext {
-  score: number;
-  level: string;
-}
-
-const runtime = new Runtime<MyContext>(canvas, {
-  context: { score: 0, level: "intro" }
-});
-
-// runtime.world.context is typed as MyContext
-runtime.world.context.score; // number
-```
+GPU detection and the minimum loading delay run concurrently. If device setup
+or asset loading fails, the loading screen displays the error and
+`loadRuntime()` rejects with that error.

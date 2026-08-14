@@ -1,8 +1,8 @@
 // Import Third-party Dependencies
+import type { AssetReference } from "@jolly-pixel/asset";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import * as Systems from "../../../systems/index.ts";
 import { Actor, ActorComponent } from "../../../actor/index.ts";
 import {
   Text3D,
@@ -11,12 +11,15 @@ import {
 import { type Font } from "./loader.ts";
 
 export interface TextRendererOptions extends Omit<Text3DOptions, "font"> {
-  path: string;
+  asset: AssetReference<Font>;
   text?: string;
 }
 
+/**
+ * Builds Three.js text from a prepared font asset during awake.
+ */
 export class TextRenderer extends ActorComponent<any> {
-  #asset: Systems.LazyAsset<Font>;
+  #asset: AssetReference<Font>;
 
   text: Text3D;
 
@@ -30,13 +33,13 @@ export class TextRenderer extends ActorComponent<any> {
     });
 
     const {
-      path,
+      asset,
       text,
       textGeometryOptions,
       material = new THREE.MeshBasicMaterial()
     } = options;
 
-    this.#asset = actor.world.assetManager.load<Font>(path);
+    this.#asset = asset;
     this.text = new Text3D({
       material,
       textGeometryOptions
@@ -47,7 +50,7 @@ export class TextRenderer extends ActorComponent<any> {
   }
 
   awake(): void {
-    const font = this.#asset.get();
+    const font = this.getAsset(this.#asset);
 
     this.text.setFont(font);
     this.updateMesh();

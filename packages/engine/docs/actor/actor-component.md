@@ -93,6 +93,11 @@ interface ActorComponent {
   /** Shortcut to `actor.world.context`. */
   get context(): TContext;
 
+  /** Returns a prepared asset value synchronously. */
+  protected getAsset<TValue>(
+    reference: AssetReference<TValue>
+  ): TValue;
+
   isDestroyed(): boolean;
 
   /** Returns `"$typeName:$id-$persistentId"`. */
@@ -102,6 +107,27 @@ interface ActorComponent {
   destroy(): void;
 }
 ```
+
+## Declaring component assets
+
+A component can expose one public static group and use the same references in
+its lifecycle:
+
+```ts
+class PlayerBehavior extends ActorComponent {
+  static readonly assets = {
+    model: new AssetReference("model.player", AssetTypes.model)
+  } satisfies AssetReferenceGroup;
+
+  override awake(): void {
+    const model = this.getAsset(PlayerBehavior.assets.model);
+  }
+}
+```
+
+Pass the group to the owning scene with `assets: [PlayerBehavior.assets]`.
+This keeps asset loading at the runtime boundary while `awake()`, `start()`,
+and `update()` remain synchronous.
 
 ## Accessing game context
 

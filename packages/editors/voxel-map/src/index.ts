@@ -13,11 +13,13 @@ import type {
   VoxelNetworkCommand,
   VoxelServerMessage
 } from "@jolly-pixel/voxel.renderer/network/client.ts";
+import { TilesetLoader } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import { editorState } from "./EditorState.ts";
 import { EditorSidebar } from "./ui/EditorSidebar.ts";
 import { EditorScene } from "./scene/editor.ts";
+import { LocalStoragePersistence } from "./lib/LocalStoragePersistence.ts";
 import type { EventCanvasHoverChange } from "./ui/types.ts";
 
 const canvas = document.querySelector<HTMLCanvasElement>(
@@ -28,7 +30,8 @@ if (!canvas) {
 }
 
 const runtime = await Runtime.create(canvas, {
-  includePerformanceStats: false
+  includePerformanceStats: false,
+  focusCanvas: false
 });
 const { world } = runtime;
 
@@ -47,15 +50,24 @@ const worldRoom = networkClient.room<VoxelNetworkCommand, VoxelServerMessage>(
 );
 worldRoom.join();
 
+const defaultTileset = {
+  id: "default",
+  src: "textures/tileset.png",
+  tileSize: 32
+};
+const pendingLoad = worldRoom ? null : LocalStoragePersistence.load();
+const tilesetLoader = new TilesetLoader({ manager: runtime.manager });
+if (pendingLoad !== null) {
+  await tilesetLoader.fromWorld(pendingLoad);
+}
+await tilesetLoader.fromTileDefinition(defaultTileset);
+
 const editorScene = new EditorScene(
   editorState,
   {
     defaultLayerName: "Ground",
-    defaultTileset: {
-      id: "default",
-      src: "textures/tileset.png",
-      tileSize: 32
-    },
+    tilesetLoader,
+    pendingLoad,
     voxelRoom: worldRoom
   }
 );
@@ -88,9 +100,7 @@ if (sidebar) {
   });
 }
 
-world.sceneManager.loadScene(editorScene);
-
 loadRuntime(runtime, {
-  focusCanvas: false
+  scene: editorScene
 })
   .catch(console.error);

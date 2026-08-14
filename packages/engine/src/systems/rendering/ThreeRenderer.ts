@@ -9,7 +9,7 @@ import type {
   RendererEvents
 } from "./Renderer.ts";
 import type { WorldDefaultContext } from "../World.ts";
-import type { SceneManager } from "../SceneManager.ts";
+import type { SceneManager } from "../scene/SceneManager.ts";
 import {
   type RenderMode,
   type RenderStrategy,
@@ -124,7 +124,7 @@ export function resolveRendererSettings(
 
 export class ThreeRenderer<
   TContext = WorldDefaultContext
-> extends Emitter<ThreeRendererEvents> implements Renderer {
+> extends Emitter<ThreeRendererEvents> implements Renderer<THREE.WebGPURenderer> {
   webGPURenderer: THREE.WebGPURenderer;
   renderComponents: RenderComponent[] = [];
   renderStrategy: RenderStrategy;

@@ -1,165 +1,97 @@
 # Architecture
 
-This document describes how the `@jolly-pixel/runtime` package is structured
-and how its components interact during the lifecycle of a game session.
+The runtime package connects a browser host to the synchronous engine world. It
+owns renderer construction, asynchronous startup, asset preparation, browser
+input bindings, and the game loop.
 
 ## Project structure
 
 ```
 src/
-├── index.ts               Entry point — exports Runtime and loadRuntime
-├── Runtime.ts             Core runtime class (game loop, renderer, clock)
-├── components/
-│   └── Loading.ts         <jolly-loading> Lit web component
-└── utils/
-    ├── getDevicePixelRatio.ts   Pixel-ratio helper (mobile vs desktop)
-    └── timers.ts                Promise-based setTimeout wrapper
+├── assets/                Asset composition and scene preparation
+├── bootstrap/             Startup workflow and device configuration
+├── ui/                    Lit components and bootstrap UI adapters
+├── Runtime.ts             Renderer, input bindings, and game-loop ownership
+└── index.ts               Public barrel exports
 ```
 
-## High-level overview
+`index.ts` contains exports only. Each public implementation lives in the file
+that owns its behavior.
 
-The runtime sits between the **host environment** (browser or Electron)
-and the **engine** (`@jolly-pixel/engine`). It is responsible for:
+## Responsibilities
 
-1. Creating a Three.js renderer bound to a `<canvas>`
-2. Detecting GPU capabilities and adapting quality
-3. Displaying a loading screen while assets are fetched
-4. Running the update/render loop at a target frame rate
+`Runtime` creates the renderer, world, asset coordinator, and runtime scene
+loader. It also owns browser listeners that remain active for the runtime
+session. `start()` installs those listeners and starts the animation loop;
+`stop()` removes them and disconnects the world.
 
-```
-┌─────────────────────────────────────────────────┐
-│                 Host environment                │
-│            (Browser / Electron shell)           │
-└────────────────────┬────────────────────────────┘
-                     │  provides <canvas>
-                     ▼
-┌─────────────────────────────────────────────────┐
-│                   loadRuntime()                 │
-│  ┌───────────┐  ┌────────────┐  ┌────────────┐  │
-│  │  detect-  │  │  <jolly-   │  │   Assets   │  │
-│  │    gpu    │  │  loading>  │  │   loader   │  │
-│  └─────┬─────┘  └─────┬──────┘  └──────┬─────┘  │
-│        │              │                │        │
-│        ▼              ▼                ▼        │
-│  ┌──────────────────────────────────────────┐   │
-│  │                Runtime                   │   │
-│  │  ┌────────────────────────────────────┐  │   │
-│  │  │          World              │  │   │
-│  │  │  (SceneEngine + ThreeRenderer)     │  │   │
-│  │  └────────────────────────────────────┘  │   │
-│  │  THREE.Clock ─── tick() ─── stats.js     │   │
-│  └──────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────┘
-```
+The `bootstrap` folder contains one-time startup work. `loadRuntime()` composes
+the workflow, while `configureRuntimeDevice()` applies the GPU-derived frame
+rate and pixel ratio. Startup UI details stay behind `RuntimeLoadingScreen`, so
+the bootstrap function does not manipulate Lit elements or canvas styles.
+
+`SceneManager` owns scene requests and their visible state. The internal
+`RuntimeSceneLoader` uses `AssetCoordinator` for I/O and reports progress back
+through the engine's scene-load driver.
 
 ## Bootstrap sequence
-
-`loadRuntime()` orchestrates the full startup. Below is the ordered
-sequence of operations:
 
 ```
 loadRuntime(runtime)
  │
- ├─ 1. Start GPU detection ─────────────── getGPUTier()  (async, runs in parallel)
+ ├─ mount RuntimeLoadingScreen
  │
- ├─ 2. Hide canvas ─────────────────────── opacity: 0
+ ├─ run concurrently
+ │   ├─ start loading-screen animation
+ │   ├─ configure runtime device
+ │   └─ wait for the minimum loading delay
  │
- ├─ 3. Mount <jolly-loading> ───────────── Lit web component
- │     └─ start()                          begins fade-in animation
+ ├─ load explicit assets
+ ├─ request the initial scene through SceneManager
+ │   └─ RuntimeSceneLoader reports scene asset progress
  │
- ├─ 4. Wait loadingDelay ───────────────── default 850 ms
- │
- ├─ 5. Await GPU tier result
- │     ├─ setFps(fps)                      clamp 1–60
- │     ├─ setPixelRatio(ratio)             mobile vs desktop cap
- │     └─ tier < 1 → throw                 GPU too weak
- │
- ├─ 6. Load assets ─────────────────────── Systems.Assets.loadAssets()
- │     └─ onProgress → loading bar         tracks loaded / total
- │
- ├─ 7. Complete loading screen
- │     ├─ progress bar fills ──────────── 400 ms animation
- │     ├─ fade-out ────────────────────── 500 ms
- │     └─ remove <jolly-loading>
- │
- └─ 8. Start runtime ──────────────────── runtime.start()
-       ├─ canvas opacity: 1               fade-in with CSS transition
-       ├─ world.connect()
-       └─ setAnimationLoop(tick)           game loop begins
+ ├─ queue the prepared scene
+ ├─ complete the loading screen
+ └─ runtime.start()
 ```
 
-> On any error during steps 5–8, the loading screen displays the error
-> message and stack trace instead.
+An initialization failure is shown by the loading screen and rethrown to the
+caller. The runtime does not start after a failed bootstrap.
 
-## Game loop
-
-The `Runtime.tick` callback is called by Three.js via `setAnimationLoop`.
-It implements a **fixed-timestep** pattern capped at the target FPS:
+## Runtime lifecycle
 
 ```
-setAnimationLoop(tick)
+Runtime.create(canvas)
  │
- └─ tick()
-     │
-     ├─ world.beginFrame()           ← snapshot tree + start components (once)
-     │
-     ├─ fixedTimeStep.tick({fixedUpdate, update})
-     │   │
-     │   ├─ fixedUpdate(fixedDelta)  ← runs 0..N times per frame
-     │   │   └─ world.fixedUpdate(dt)
-     │   │
-     │   └─ update(interpolation, delta) ← runs once per frame
-     │       ├─ stats.begin()
-     │       ├─ world.update(dt)
-     │       ├─ world.render()
-     │       └─ stats.end()
-     │
-     └─ world.endFrame()             ← destroy pending (once)
-         └─ returns true → runtime.stop()
+ ├─ create ThreeRenderer
+ ├─ create AssetCoordinator and World
+ └─ install RuntimeSceneLoader into SceneManager
+
+Runtime.start()
+ │
+ ├─ focus canvas and install input listeners
+ ├─ connect and start World
+ └─ setAnimationLoop(world.tick)
+
+Runtime.stop()
+ │
+ ├─ stop animation loop and World
+ ├─ remove input listeners
+ └─ disconnect World
 ```
 
-The loop stops when:
-- `world.endFrame()` signals an exit (input system exited)
-- `runtime.stop()` is called manually
-
-## Loading screen
-
-The `<jolly-loading>` element is a [Lit](https://lit.dev/) web component
-registered as a custom element. It manages three visual states:
-
-```
-  ┌────────────┐      setProgress()       ┌────────────┐
-  │  Loading   │ ─────────────────────▶  │  Progress  │
-  │  (started) │      setAsset()          │    bar     │
-  └────────────┘                          └─────┬──────┘
-                                                │
-                                          complete()
-                                                │
-                                                ▼
-                                          ┌────────────┐
-                                          │  Fade-out  │
-                                          │  + remove  │
-                                          └────────────┘
-
-                 error()
-  ┌────────────┐ ─────────────────────▶  ┌────────────┐
-  │  any state │                         │   Error    │
-  └────────────┘                         │  message   │
-                                         └────────────┘
-```
-
-The progress bar features a shimmer animation and a velocity-based
-"speed blur" effect when assets load quickly.
+The ECS lifecycle remains synchronous. `SceneManager.loadScene()` returns its
+state immediately, while `RuntimeSceneLoader` completes the platform I/O in the
+background. Scene activation still occurs at `beginFrame()`.
 
 ## Pixel-ratio strategy
 
-The runtime caps the device pixel ratio to avoid performance issues on
-high-DPI screens:
+The runtime limits high-DPI rendering cost with a device-specific cap:
 
-| Device  | Max pixel ratio |
-| ------- | --------------- |
-| Desktop | 1               |
-| Mobile  | 1.5             |
+| Device  | Maximum pixel ratio |
+| ------- | ------------------- |
+| Desktop | 1                   |
+| Mobile  | 1.5                 |
 
-The actual ratio used is `Math.min(cap, window.devicePixelRatio)`.
-Mobile detection comes from the `detect-gpu` library.
+The applied ratio is the lower of the cap and `window.devicePixelRatio`.
+Mobile detection comes from `detect-gpu`.

@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import type { AssetCoordinator } from "@jolly-pixel/asset";
 import * as THREE from "three/webgpu";
 import { Emitter } from "@openally/emitt";
 
@@ -12,10 +13,7 @@ import {
 } from "../actor/index.ts";
 import {
   type SceneManager
-} from "./SceneManager.ts";
-import {
-  AssetManager
-} from "./asset/Manager.ts";
+} from "./scene/SceneManager.ts";
 import { Input } from "../controls/Input.class.ts";
 import { GlobalAudio } from "../audio/GlobalAudio.ts";
 import {
@@ -27,9 +25,6 @@ import {
   Logger,
   type LoggerOptions
 } from "./Logger.ts";
-import {
-  Loaders
-} from "../components/renderers/index.ts";
 
 export type WorldEvents = {
   beforeFixedUpdate: (dt: number) => void;
@@ -56,6 +51,7 @@ export interface WorldOptions<
   input?: Input;
   audio?: GlobalAudio;
   context?: TContext;
+  assetCoordinator: AssetCoordinator;
 
   globalsAdapter?: GlobalsAdapter;
 }
@@ -64,17 +60,19 @@ export interface WorldDefaultContext {
   [key: string]: unknown;
 }
 
+/**
+ * Owns synchronous engine systems and their shared runtime context.
+ */
 export class World<
   T = THREE.WebGPURenderer,
   TContext = WorldDefaultContext
 > extends Emitter<WorldEvents> {
   renderer: Renderer<T>;
   input: Input;
-  loadingManager: THREE.LoadingManager = new THREE.LoadingManager();
   sceneManager: SceneManager<TContext>;
   audio: GlobalAudio;
   context: TContext;
-  assetManager: AssetManager;
+  assetCoordinator: AssetCoordinator;
 
   readonly loop: FixedTimeStep;
   readonly debug: boolean;
@@ -90,10 +88,14 @@ export class World<
 
     const {
       sceneManager,
-      input = new Input(renderer.canvas, { enableOnExit: options.enableOnExit ?? false }),
+      input = new Input(
+        renderer.canvas,
+        { enableOnExit: options.enableOnExit ?? false }
+      ),
       audio = new GlobalAudio(),
       context = Object.create(null),
-      globalsAdapter = new BrowserGlobalsAdapter()
+      globalsAdapter = new BrowserGlobalsAdapter(),
+      assetCoordinator
     } = options;
 
     this.debug = options.debug ?? false;
@@ -106,35 +108,20 @@ export class World<
         (options.logger?.namespaces ?? []),
       adapter: options.logger?.adapter
     });
-    this.assetManager = new AssetManager(this.logger);
-    this.assetManager.context = {
-      manager: this.loadingManager
-    };
-    this.assetManager.register(Loaders.model);
-    this.assetManager.register(Loaders.font);
-
-    this.#worldLogger = this.logger.child({ namespace: "Systems.World" });
+    this.#worldLogger = this.logger.child({
+      namespace: "Systems.World"
+    });
 
     this.renderer = renderer;
     this.sceneManager = sceneManager;
     this.input = input;
     this.audio = audio;
     this.context = context;
+    this.assetCoordinator = assetCoordinator;
     this.loop = new FixedTimeStep();
 
     sceneManager.bindWorld(this);
     globalsAdapter.setGame(this);
-  }
-
-  setLoadingManager(
-    manager: THREE.LoadingManager
-  ) {
-    this.loadingManager = manager;
-    this.assetManager.context = {
-      manager
-    };
-
-    return this;
   }
 
   createActor(
@@ -145,11 +132,6 @@ export class World<
       name,
       ...options
     });
-  }
-
-  async preloadSceneAssets() {
-    this.#worldLogger.debug("Preloading scene assets");
-    await this.sceneManager.preloadAssets();
   }
 
   connect() {
@@ -204,8 +186,13 @@ export class World<
     fps: number,
     fixedFps?: number
   ) {
-    this.#worldLogger.debug(`Setting FPS: ${fps} (fixed: ${fixedFps ?? fps})`);
-    this.loop.setFps(fps, fixedFps);
+    this.#worldLogger.debug(
+      `Setting FPS: ${fps} (fixed: ${fixedFps ?? fps})`
+    );
+    this.loop.setFps(
+      fps,
+      fixedFps
+    );
 
     return this;
   }

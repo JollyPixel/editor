@@ -12,14 +12,7 @@
 - Desktop runtime with [Electron.js][electron]
 - Include [stats.js](https://github.com/mrdoob/stats.js)
 - GPU and FPS detection with [detect-gpu](https://github.com/pmndrs/detect-gpu)
-
-Commin in future releases:
-
-- Customizable Splash screen
-- Plugins
-
-> [!WARNING]
-> This package is still in development and the API will change and evolve very quickly.
+- Catalog-backed asset loading with operation-scoped progress
 
 ## 💃 Getting Started
 
@@ -66,24 +59,36 @@ Then in your main script, create a `Runtime` instance and call `loadRuntime` to 
 - World (automatically handle the loop)
 
 ```ts
-import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
+import {
+  Runtime,
+  loadRuntime
+} from "@jolly-pixel/runtime";
 
 const canvas = document.querySelector("canvas")!;
 
 const runtime = await Runtime.create(canvas, {
-  // Displays a stats.js FPS panel — useful during development
-  includePerformanceStats: true
+  // Displays a stats.js FPS panel during development.
+  includePerformanceStats: true,
+  // Keeps keyboard focus on the canvas while the runtime is running.
+  focusCanvas: true,
+  assets: {
+    catalog: "/assets.json"
+  }
 });
 
 // The world gives you access to the engine systems
 // (scene, renderer, input, etc.)
 const { world } = runtime;
 
-// loadRuntime will detect the GPU, show a loading screen,
-// load all registered assets, then start the game loop.
-loadRuntime(runtime)
+// loadRuntime will detect the GPU, load the scene's declared assets,
+// queue the scene, then start the game loop.
+loadRuntime(runtime, { scene: new GameScene() })
   .catch(console.error);
 ```
+
+Vite serves `/assets.json` from `public/assets.json` during development and
+copies it to the build output. `Runtime.create()` fetches and parses the
+catalog before it constructs the world.
 
 For a more comprehensive illustration, we have created a mini game for [Brackeys 15][brackeys-2026-1]. The official JollyPixel documentation also come with an [Hello World](https://jollypixel.github.io/editor/engine/docs/guides/hello-world.html) guide.
 
@@ -97,35 +102,34 @@ Please refer to the dedicated guides below for additional information specific t
 
 ## 📚 API
 
-- [Runtime](./docs/Runtime.md)
+- [Runtime](./docs/Runtime.md): construction, dynamic asset batches, and scene transitions.
+- [SceneManager](../engine/docs/systems/scene-manager.md): scene-load state, progress, and activation gates.
 
 ### `loadRuntime(runtime: Runtime, options?: LoadRuntimeOptions)`
 
 Bootstraps the runtime by detecting GPU capabilities, displaying a loading screen, loading all registered assets, and starting the game loop.
 
-Returns a `Promise<void>` that resolves when loading completes, or shows an error on the loading screen if something fails.
+Returns a `Promise<void>` that resolves when loading completes. When startup
+fails, the loading screen displays the error and the promise rejects with the
+same error.
 
 ```ts
-interface LoadRuntimeOptions {
+interface LoadRuntimeOptions<TContext = Systems.WorldDefaultContext> {
   /**
+   * Minimum time in milliseconds for which the loading screen is shown.
    * @default 850
-   * Minimum delay (ms) before starting asset loading. Gives the loading UI time to render.
    */
   loadingDelay?: number;
-  /**
-   * Whether to automatically focus the game canvas when the user clicks anywhere on the page.
-   * This is important for games that require keyboard input,
-   * as it ensures that the canvas has focus and can receive keyboard events.
-   * @default true
-   */
-  focusCanvas?: boolean;
   /**
    * Element that contains the loading screen.
    * @default document.body
    */
   loadingContainer?: HTMLElement;
+  /** Additional references loaded before startup. */
+  assets?: Iterable<AssetReference<unknown>>;
+  /** Initial scene loaded and queued before startup. */
+  scene?: Systems.Scene<TContext>;
 }
-
 ```
 
 ### 🎨 Loader theme

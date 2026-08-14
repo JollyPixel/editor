@@ -43,7 +43,8 @@ const tilesetLoader = new TilesetLoader();
 await tilesetLoader.fromTileDefinition(tileset.definition);
 
 const runtime = await Runtime.create(canvas, {
-  includePerformanceStats: false
+  includePerformanceStats: false,
+  focusCanvas: false
 });
 const { world } = runtime;
 
@@ -96,8 +97,7 @@ const brush = world.createActor("brush")
   });
 brush.onBrushMoved = (position) => peers.report(position);
 
-await loadRuntime(
-  runtime, { focusCanvas: false });
+await loadRuntime(runtime);
 
 /**
  * Voxel edits ride the engine hook into `VoxelSyncClient`; brush positions ride

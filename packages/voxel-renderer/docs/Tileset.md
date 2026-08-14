@@ -287,10 +287,13 @@ const vr = actor.addComponentAndGet(VoxelRenderer, { tilesetLoader: loader });
 ```ts
 const snapshot = JSON.parse(localStorage.getItem("world")!);
 
-const loader = new TilesetLoader({ manager: assetManager.context.manager });
-await loader.fromWorld(snapshot);                           // pre-load every tileset
-await loader.fromTileDefinition(defaultTilesetDef);        // idempotent if already loaded
+const loader = new TilesetLoader({ manager: runtime.manager });
+await loader.fromWorld(snapshot);
+await loader.fromTileDefinition(defaultTilesetDef);
 
 const vr = actor.addComponentAndGet(VoxelRenderer, { tilesetLoader: loader });
-vr.engine.load(snapshot);                                  // fully synchronous
+vr.engine.load(snapshot);
 ```
+
+Prepare the loader in runtime bootstrap code, before requesting the scene. The
+scene can then construct `VoxelRenderer` and restore the snapshot synchronously.

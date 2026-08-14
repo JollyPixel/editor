@@ -83,7 +83,9 @@ export interface Renderer<
   unobserveResize(): void;
   resize(): void;
   draw(): void;
-  onDraw(callback: (source: T) => void): void;
+  onDraw(
+    callback: (event: { source: T; }) => void
+  ): void;
   clear(): void;
 
   /**

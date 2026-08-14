@@ -1,176 +1,128 @@
-# Scene
+# SceneManager
 
-The `Scene` is the top-level system that owns the
-[actor tree](../actor/actor-tree.md), drives the
-[component lifecycle](../actor/actor-component.md), and
-orchestrates per-frame updates and destruction. It acts as the
-bridge between the engine's Entity-Component model and the
-underlying Three.js `THREE.Scene`.
+`SceneManager` owns the active scene, appended scenes, scene-load state, and
+frame-boundary activation. Gameplay code can request a scene synchronously from
+an `ActorComponent` without accessing the runtime.
 
-Every [World](./world.md) holds exactly one `Scene`.
-When the game connects, the scene **awakens** all actors. Each
-animation frame follows a `beginFrame → fixedUpdate/update →
-endFrame` lifecycle that snapshots the tree once and reuses it
-for all updates within that frame.
-
-## Creating a scene
+## Loading a scene
 
 ```ts
-import { SceneEngine } from "@jolly-pixel/engine";
-
-// Default — creates its own THREE.Scene internally
-const scene = new SceneEngine();
-
-// Or wrap an existing Three.js scene
-const threeScene = new THREE.Scene();
-const scene = new SceneEngine(threeScene);
+const load = this.actor.world.sceneManager.loadScene(
+  new NextLevelScene()
+);
 ```
 
-The underlying Three.js scene is accessible at any time through
-`getSource()`:
+`loadScene()` requests a replacement and returns a `SceneLoad` immediately. The
+runtime loads the assets declared by `scene.assets` and reports progress through
+that object. Once the load is ready, `SceneManager` replaces the current scene
+at the next frame boundary.
 
 ```ts
-const threeScene = scene.getSource();
-threeScene.background = new THREE.Color(0x222222);
+load.status;
+load.completed;
+load.total;
+load.currentAsset;
+load.error;
 ```
 
-## Actor tree
+The status is one of `requested`, `loading`, `ready`, `failed`, `cancelled`, or
+`active`. Starting another replacement cancels an unfinished replacement.
 
-The scene exposes a root [ActorTree](../actor/actor-tree.md) via
-the `tree` property. When an [Actor](../actor/actor.md) is created
-without a parent, it is automatically added to this tree. All tree
-traversal and lookup features are available from the root:
+## Holding activation for a transition
+
+Use manual activation when a visual transition must finish before the scene is
+replaced:
 
 ```ts
-const player = scene.tree.getActor("Player");
+const load = sceneManager.loadScene(
+  new NextLevelScene(),
+  {
+    activation: "manual"
+  }
+);
+
+fade.start();
 ```
 
-## Lifecycle
-
-The scene drives the lifecycle of all actors and components in
-three phases — **awake**, **fixedUpdate**, and **update** —
-called by the `World`:
-
-```
-world.connect()
-  └─ scene.awake()                ← awakens all existing actors
-
-Per animation frame:
-  world.beginFrame()
-  │ └─ scene.beginFrame()
-  │      ├─ snapshot actors       ← walk tree once, cache all actors
-  │      └─ start components      ← newly registered components
-  │
-  ├─ world.fixedUpdate(dt)        ← 0..N times at fixed rate (e.g. 60 Hz)
-  │    └─ scene.fixedUpdate(dt)
-  │         └─ fixedUpdate actors ← calls actor.fixedUpdate(dt) on each
-  │
-  ├─ world.update(dt)             ← once per frame
-  │    └─ scene.update(dt)
-  │         └─ update actors      ← calls actor.update(dt) on each
-  │
-  └─ world.endFrame()
-       └─ scene.endFrame()
-            ├─ destroy components ← pending component destructions
-            └─ destroy actors     ← pending actor destructions
-```
-
-### Awake
-
-When `awake()` is called (typically once, at connection time), the
-scene walks the entire tree and calls `awake()` on every actor
-that has not yet been awoken.
-
-It then emits the `"awake"` event.
+The fade and asset loading can advance independently during normal synchronous
+updates:
 
 ```ts
-scene.on("awake", () => {
-  console.log("Scene is ready");
+if (fade.isOpaque) {
+  load.allowActivation();
+}
+```
+
+Calling `allowActivation()` before loading finishes records the permission and
+waits for readiness. Calling it after loading finishes releases the ready scene
+for activation. Both paths replace the scene at the next `beginFrame()`.
+
+## Appending a scene
+
+`appendScene()` uses the same loading and activation rules without replacing
+the current scene:
+
+```ts
+const load = sceneManager.appendScene(
+  new InventoryScene(),
+  {
+    activation: "manual"
+  }
+);
+```
+
+Different appended scenes load independently. Calling `removeScene()` before
+one activates cancels its load. A replacement takes priority at a frame
+boundary and cancels additive requests that have not activated yet.
+
+## Observing loads
+
+`SceneManager.sceneLoad` points to the latest replacement request. The manager
+emits `sceneLoadRequested` and `sceneLoadChanged` for replacement and additive
+loads, so loading UI can observe either operation:
+
+```ts
+sceneManager.on("sceneLoadChanged", (load) => {
+  loadingBar.set(load.completed, load.total);
 });
 ```
 
-### beginFrame
+Components may keep the returned `SceneLoad` and read it directly instead.
+Neither approach introduces promises into the ECS lifecycle.
 
-`beginFrame()` is called once per animation frame. It:
-
-1. **Snapshots** the tree — walks all actors and caches them for
-   the current frame. This snapshot is reused by all subsequent
-   `fixedUpdate` and `update` calls within the same frame.
-2. **Starts components** — any component queued in
-   `componentsToBeStarted` whose actor is in the snapshot receives
-   its `start()` call. Components whose actor is not yet in the
-   snapshot are deferred to the next frame.
-
-#### fixedUpdate
-
-`fixedUpdate(deltaTime)` runs 0 to N times per frame at a constant
-rate (driven by [FixedTimeStep](../internals/fixed-time-step.md)).
-It calls `actor.fixedUpdate(deltaTime)` on each cached actor. Use
-this for physics and deterministic logic.
-
-#### update
-
-`update(deltaTime)` runs once per frame. It calls
-`actor.update(deltaTime)` on each cached actor. Use this for
-rendering-related logic.
-
-#### endFrame
-
-`endFrame()` is called once at the end of the animation frame. It:
-
-1. **Destroys components** — components queued in
-   `componentsToBeDestroyed` have their `destroy()` hook called.
-2. **Destroys actors** — actors flagged with
-   `pendingForDestruction` are recursively destroyed (children
-   first) and removed from both the tree and the Three.js scene
-   graph.
-
-## Destroying actors
-
-Actors can be destroyed through the scene:
+## API
 
 ```ts
-scene.destroyActor(player);
+interface SceneLoadOptions {
+  activation?: "automatic" | "manual";
+}
+
+interface SceneLoad<TContext> {
+  readonly scene: Scene<TContext>;
+  readonly status: SceneLoadStatus;
+  readonly activationAllowed: boolean;
+  readonly completed: number;
+  readonly total: number;
+  readonly currentAsset: AssetRecord | null;
+  readonly error: Error | null;
+
+  allowActivation(): void;
+  cancel(): void;
+}
+
+class SceneManager<TContext> {
+  readonly currentScene: Scene<TContext> | null;
+  readonly sceneLoad: SceneLoad<TContext> | null;
+  readonly hasPendingScene: boolean;
+
+  loadScene(
+    scene: Scene<TContext>,
+    options?: SceneLoadOptions
+  ): SceneLoad<TContext>;
+
+  appendScene(
+    scene: Scene<TContext>,
+    options?: SceneLoadOptions
+  ): SceneLoad<TContext>;
+}
 ```
-
-This recursively destroys all children first, then removes the
-actor from the cached snapshot, the tree, and calls
-`actor.destroy()`. For deferred destruction (cleaned up at the end
-of the current frame), mark the actor as pending from the actor
-itself:
-
-```ts
-player.markDestructionPending();
-```
-
-See [Actor — Destruction](../actor/actor.md#destruction) for more
-details.
-
-## Destroying components
-
-Individual components can be removed without destroying their
-actor:
-
-```ts
-scene.destroyComponent(component);
-```
-
-The component is flagged as `pendingForDestruction` and queued. If
-it was still waiting for its `start()` call, it is removed from
-the start queue. The actual `destroy()` hook runs at the end of
-the current frame's update.
-
-## Events
-
-`SceneEngine` extends `EventEmitter` and emits:
-
-| Event | When it fires |
-| ----- | ------------- |
-| `awake` | After all actors have been awoken during `scene.awake()` |
-
-## See also
-
-- [Actor](../actor/actor.md) — the engine's core entity
-- [ActorComponent](../actor/actor-component.md) — component
-  lifecycle and API
-- [ActorTree](../actor/actor-tree.md) — tree traversal and lookups

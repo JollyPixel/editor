@@ -129,10 +129,10 @@ async function initRuntime(): Promise<void> {
     "#canvas-container"
   )!;
   const runtime = await Runtime.create(canvas, {
-    includePerformanceStats: false
+    includePerformanceStats: false,
+    focusCanvas: false
   });
   const runtimeReady = loadRuntime(runtime, {
-    focusCanvas: false,
     loadingContainer: canvasContainer
   });
 

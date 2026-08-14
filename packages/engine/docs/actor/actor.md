@@ -73,7 +73,7 @@ lifecycle.
 import { ModelRenderer } from "@jolly-pixel/engine";
 
 const player = new Actor(world, { name: "Player" })
-  .addComponent(ModelRenderer, { path: "models/knight.glb" })
+  .addComponent(ModelRenderer, { asset: KnightModel })
   .addComponent(PlayerBehavior);
 ```
 

@@ -1,37 +1,45 @@
-// Import Internal Dependencies
-import type { AssetManager } from "../systems/index.ts";
-import type { LazyAsset } from "../systems/asset/Base.ts";
+// Import Third-party Dependencies
+import type {
+  AssetCoordinator,
+  AssetHandle,
+  AssetReference
+} from "@jolly-pixel/asset";
 
+/**
+ * Maps gameplay names to synchronously readable audio asset handles.
+ */
 export class AudioLibrary<
   TKeys extends string = string
 > {
-  #assetManager: AssetManager;
-  #assets = new Map<TKeys, LazyAsset<AudioBuffer>>();
+  #assetCoordinator: AssetCoordinator;
+  #assets = new Map<TKeys, AssetHandle<AudioBuffer>>();
 
   constructor(
-    assetManager: AssetManager
+    assetCoordinator: AssetCoordinator
   ) {
-    this.#assetManager = assetManager;
+    this.#assetCoordinator = assetCoordinator;
   }
 
   register(
     name: TKeys,
-    path: string
-  ): LazyAsset<AudioBuffer> {
-    const lazy = this.#assetManager.load<AudioBuffer>(path);
-    this.#assets.set(name, lazy);
+    reference: AssetReference<AudioBuffer>
+  ): AssetHandle<AudioBuffer> {
+    const handle = this.#assetCoordinator.request(
+      reference
+    );
+    this.#assets.set(name, handle);
 
-    return lazy;
+    return handle;
   }
 
   get(
     name: TKeys
   ): AudioBuffer {
-    const lazy = this.#assets.get(name);
-    if (!lazy) {
+    const handle = this.#assets.get(name);
+    if (!handle) {
       throw new Error(`Audio "${name}" not registered.`);
     }
 
-    return lazy.get();
+    return handle.get();
   }
 }

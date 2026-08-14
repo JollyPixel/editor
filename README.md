@@ -22,6 +22,7 @@ Click on one of the links to access the documentation of the package:
 - [@jolly-pixel/three](./packages/three) - Common Three.js utilities and components for JollyPixel's workspaces and editors
 - [@jolly-pixel/engine](./packages/engine) - ECS framework on top of Three.js
 - [@jolly-pixel/runtime](./packages/runtime) - Runtime for the engine / ECS
+- [@jolly-pixel/asset](./packages/asset) - Platform-agnostic asset references and loading orchestration for browser and Node.js runtimes
 - [@jolly-pixel/event-store](./packages/event-store) - Append-only log for JollyPixel's events
 - [@jolly-pixel/network](./packages/network) - The shared wire for JollyPixel's multiplayer editors
 - [@jolly-pixel/voxel.renderer](./packages/voxel-renderer) - Voxel Engine and Renderer

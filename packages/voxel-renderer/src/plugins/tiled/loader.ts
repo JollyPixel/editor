@@ -1,8 +1,15 @@
 // Import Third-party Dependencies
 import {
-  Systems,
-  loadJSON
+  AssetType,
+  type AssetLoader,
+  type AssetRecord,
+  type AssetReference
+} from "@jolly-pixel/asset";
+import {
+  loadJSON,
+  pathUtils
 } from "@jolly-pixel/engine";
+import type * as THREE from "three";
 
 // Import Internal Dependencies
 import type {
@@ -15,48 +22,61 @@ import {
 import type {
   VoxelWorldJSON
 } from "../../serialization/VoxelSerializer.ts";
+import { TilesetLoader } from "../../tileset/TilesetLoader.ts";
 
-type TiledLoaderConverterOptions = Omit<TiledConverterOptions, "resolveTilesetSrc">;
+export type TiledMapAssetLoaderOptions = Omit<
+  TiledConverterOptions,
+  "resolveTilesetSrc"
+>;
 
-export type VoxelTiledMapAsset = Systems.Asset<VoxelWorldJSON, TiledLoaderConverterOptions>;
-
-export const TiledMapAssetLoader = new Systems.AssetLoader<
-  VoxelWorldJSON,
-  TiledLoaderConverterOptions
->({
-  type: "tilemap",
-  extensions: [".tmj"],
-  load: (asset, _context, options) => tmjLoader(asset, options)
-});
-
-export function loadVoxelTiledMap(
-  assetManager: Systems.AssetManager,
-  pathOrAsset: VoxelTiledMapAsset | string,
-  options?: TiledLoaderConverterOptions
-): Systems.LazyAsset<VoxelWorldJSON, TiledLoaderConverterOptions> {
-  assetManager.register(TiledMapAssetLoader);
-
-  return assetManager.load<VoxelWorldJSON, TiledLoaderConverterOptions>(
-    pathOrAsset,
-    options
-  );
+export interface VoxelTiledMap {
+  readonly world: VoxelWorldJSON;
+  readonly tilesetLoader: TilesetLoader;
 }
 
-async function tmjLoader(
-  asset: VoxelTiledMapAsset,
-  options: TiledLoaderConverterOptions = {}
-): Promise<VoxelWorldJSON> {
-  const tilemap = await loadJSON<TiledMap>(asset.path + asset.basename);
+export const TiledMapAssetType = new AssetType<VoxelTiledMap>("tilemap");
 
-  const worldJson = new TiledConverter()
-    .convert(
+export type VoxelTiledMapAsset = AssetReference<VoxelTiledMap>;
+
+/**
+ * Loads a Tiled map and prepares its textures as one runtime asset.
+ */
+export class TiledMapAssetLoader implements AssetLoader<VoxelTiledMap> {
+  #manager: THREE.LoadingManager | undefined;
+  #options: TiledMapAssetLoaderOptions;
+
+  constructor(
+    manager?: THREE.LoadingManager,
+    options: TiledMapAssetLoaderOptions = {}
+  ) {
+    this.#manager = manager;
+    this.#options = {
+      ...options
+    };
+  }
+
+  async load(
+    record: AssetRecord
+  ): Promise<VoxelTiledMap> {
+    const source = pathUtils.parse(record.source);
+    const tilemap = await loadJSON<TiledMap>(record.source);
+
+    const world = new TiledConverter().convert(
       tilemap,
       {
-        resolveTilesetSrc: (src) => asset.path + src.replace(/\.tsx$/, ".png"),
+        resolveTilesetSrc: (src) => source.dir + src.replace(/\.tsx$/, ".png"),
         layerMode: "stacked",
-        ...options
+        ...this.#options
       }
     );
+    const tilesetLoader = new TilesetLoader({
+      manager: this.#manager
+    });
+    await tilesetLoader.fromWorld(world);
 
-  return worldJson;
+    return {
+      world,
+      tilesetLoader
+    };
+  }
 }

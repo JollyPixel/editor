@@ -1,12 +1,23 @@
 // Import Third-party Dependencies
 import Stats from "stats.js";
 import * as THREE from "three/webgpu";
-
-// Import Internal Dependencies
 import {
   Systems,
   type GlobalAudio
 } from "@jolly-pixel/engine";
+
+// Import Internal Dependencies
+import {
+  createRuntimeAssetCoordinator
+} from "./assets/createRuntimeAssetCoordinator.ts";
+import type {
+  ResolvedRuntimeAssetOptions,
+  RuntimeAssetOptions
+} from "./assets/RuntimeAssetOptions.ts";
+import { RuntimeSceneLoader } from "./assets/RuntimeSceneLoader.ts";
+import {
+  resolveRuntimeAssetOptions
+} from "./assets/resolveRuntimeAssetOptions.ts";
 
 export interface RuntimeOptions<
   TContext = Systems.WorldDefaultContext
@@ -17,6 +28,11 @@ export interface RuntimeOptions<
    */
   includePerformanceStats?: boolean;
   /**
+   * Keeps keyboard focus on the canvas while the runtime is running.
+   * @default true
+   */
+  focusCanvas?: boolean;
+  /**
    * Optional context object passed to the World.
    */
   context?: TContext;
@@ -25,33 +41,60 @@ export interface RuntimeOptions<
    * If not provided, a default audio context will be created.
    */
   audio?: GlobalAudio;
+  /**
+   * Configures the catalog and platform loaders used by runtime asset operations.
+   */
+  assets?: RuntimeAssetOptions;
 }
 
+/**
+ * Owns browser initialization, runtime services, and the engine loop.
+ */
 export class Runtime<
   TContext = Systems.WorldDefaultContext
 > {
-  world: Systems.World<THREE.WebGPURenderer, TContext>;
+  readonly world: Systems.World<THREE.WebGPURenderer, TContext>;
 
-  canvas: HTMLCanvasElement;
+  readonly canvas: HTMLCanvasElement;
   stats?: Stats;
-  manager = new THREE.LoadingManager();
+  readonly manager = new THREE.LoadingManager();
 
   #isRunning = false;
+  #focusCanvas: boolean;
+
+  #focusCanvasHandler = () => {
+    if (document.activeElement !== this.canvas) {
+      this.canvas.focus();
+    }
+  };
+
+  #preventKeypressDefaultHandler = (event: KeyboardEvent) => {
+    event.preventDefault();
+  };
 
   private constructor(
     canvas: HTMLCanvasElement,
-    renderer: Systems.Renderer<any>,
+    renderer: Systems.Renderer<THREE.WebGPURenderer>,
     sceneManager: Systems.SceneManager<TContext>,
-    options: RuntimeOptions<TContext>
+    options: RuntimeOptions<TContext>,
+    assets: ResolvedRuntimeAssetOptions
   ) {
     this.canvas = canvas;
+    this.#focusCanvas = options.focusCanvas ?? true;
+    const assetCoordinator = createRuntimeAssetCoordinator(
+      this.manager,
+      assets
+    );
     this.world = new Systems.World<THREE.WebGPURenderer, TContext>(renderer, {
       enableOnExit: true,
       sceneManager,
       context: options.context,
-      audio: options.audio
+      audio: options.audio,
+      assetCoordinator
     });
-    this.world.setLoadingManager(this.manager);
+    sceneManager.setSceneLoader(
+      new RuntimeSceneLoader(assetCoordinator)
+    );
 
     if (options.includePerformanceStats) {
       this.stats = new Stats();
@@ -62,9 +105,8 @@ export class Runtime<
   }
 
   /**
-   * Builds a `Runtime`. `ThreeRenderer` requires an asynchronous `init()`
-   * before first use (see `ThreeRenderer.create`), so `Runtime` construction
-   * is async too.
+   * Resolves the asset catalog and initializes the renderer before creating
+   * the Runtime instance.
    */
   static async create<
     TContext = Systems.WorldDefaultContext
@@ -73,11 +115,14 @@ export class Runtime<
     options: RuntimeOptions<TContext> = Object.create(null)
   ): Promise<Runtime<TContext>> {
     if (!canvas) {
-      throw new Error("Canvas element is required to create a Runtime instance.");
+      throw new Error(
+        "Canvas element is required to create a Runtime instance."
+      );
     }
 
     const sceneManager = new Systems.SceneManager<TContext>();
-    const renderer: Systems.Renderer<any> = await Systems.ThreeRenderer.create(
+    const assets = await resolveRuntimeAssetOptions(options.assets);
+    const renderer = await Systems.ThreeRenderer.create(
       canvas,
       {
         sceneManager,
@@ -85,15 +130,17 @@ export class Runtime<
       }
     );
 
-    return new Runtime(canvas, renderer, sceneManager, options);
+    return new Runtime(
+      canvas,
+      renderer,
+      sceneManager,
+      options,
+      assets
+    );
   }
 
   get running() {
     return this.#isRunning;
-  }
-
-  preloadAssets() {
-    return this.world.preloadSceneAssets();
   }
 
   start() {
@@ -103,6 +150,16 @@ export class Runtime<
 
     this.#isRunning = true;
     this.canvas.focus();
+    this.canvas.addEventListener(
+      "keypress",
+      this.#preventKeypressDefaultHandler
+    );
+    if (this.#focusCanvas) {
+      document.addEventListener(
+        "click",
+        this.#focusCanvasHandler
+      );
+    }
 
     if (this.stats) {
       document.body.appendChild(this.stats.dom);
@@ -131,6 +188,17 @@ export class Runtime<
     this.world.input.exited = true;
     const renderer = this.world.renderer.getSource();
     renderer.setAnimationLoop(null);
+
+    this.canvas.removeEventListener(
+      "keypress",
+      this.#preventKeypressDefaultHandler
+    );
+    if (this.#focusCanvas) {
+      document.removeEventListener(
+        "click",
+        this.#focusCanvasHandler
+      );
+    }
 
     this.world.disconnect();
   }
