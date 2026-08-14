@@ -106,114 +106,44 @@ export const loadingStyles = css`
     }
   }
   #loading .progress-container {
-    width: 100%;
-    height: 6px;
-    background: linear-gradient(
+    --jolly-progress-height: 6px;
+    --jolly-progress-duration: 400ms;
+    --jolly-progress-easing: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    --jolly-progress-track: linear-gradient(
       180deg,
       var(--jolly-loading-progress-track-start, #b8bfb0) 0%,
       var(--jolly-loading-progress-track-middle, #d0d4c3) 50%,
       var(--jolly-loading-progress-track-end, #b8bfb0) 100%
     );
-    overflow: hidden;
-    position: relative;
-    border-radius: 3px;
-    box-shadow:
-      inset 0 1px 2px rgba(0, 0, 0, 0.1),
-      0 1px 0 rgba(255, 255, 255, 0.5);
-    opacity: 0;
-    animation: fade-slide-in 0.6s ease-out forwards;
-    animation-delay: 0.7s;
-    transform: translateZ(0);
-    backface-visibility: hidden;
-  }
-  #loading .progress-bar {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(
+    --jolly-progress-track-shadow:
+      inset 0 1px 2px rgb(0 0 0 / 0.1),
+      0 1px 0 rgb(255 255 255 / 0.5);
+    --jolly-progress-fill: linear-gradient(
       90deg,
       var(--jolly-loading-progress-start, #2a5d8f) 0%,
       var(--jolly-loading-progress-middle, #3e7cb8) 50%,
       var(--jolly-loading-progress-end, #4a8fd8) 100%
     );
-    transform: scaleX(var(--progress, 0));
-    transform-origin: left center;
-    transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    will-change: transform;
-    box-shadow:
-      0 0 10px var(--jolly-loading-progress-glow, rgba(62, 124, 184, 0.5)),
-      0 0 20px var(--jolly-loading-progress-glow-subtle, rgba(62, 124, 184, 0.3)),
-      inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    animation: progress-pulse 1.5s ease-in-out infinite;
+    --jolly-progress-shadow:
+      0 0 10px
+        var(--jolly-loading-progress-glow, rgba(62, 124, 184, 0.5)),
+      0 0 20px
+        var(--jolly-loading-progress-glow-subtle, rgba(62, 124, 184, 0.3)),
+      inset 0 1px 0 rgb(255 255 255 / 0.3);
+    --jolly-progress-shadow-active:
+      0 0 15px
+        var(--jolly-loading-progress-glow-strong, rgba(62, 124, 184, 0.7)),
+      0 0 30px
+        var(--jolly-loading-progress-glow, rgba(62, 124, 184, 0.5)),
+      inset 0 1px 0 rgb(255 255 255 / 0.4);
+
+    width: 100%;
+    position: relative;
+    opacity: 0;
+    animation: fade-slide-in 0.6s ease-out forwards;
+    animation-delay: 0.7s;
+    transform: translateZ(0);
     backface-visibility: hidden;
-  }
-  #loading .progress-bar.speed-blur {
-    animation: speed-blur 0.3s ease;
-  }
-  #loading .progress-bar::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(255, 255, 255, 0.15) 30%,
-      rgba(255, 255, 255, 0.4) 50%,
-      rgba(255, 255, 255, 0.15) 70%,
-      transparent 100%
-    );
-    animation: shimmer 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-  }
-  #loading .progress-bar::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.2) 0%,
-      transparent 50%,
-      rgba(0, 0, 0, 0.1) 100%
-    );
-  }
-  :host([completed]) .progress-bar {
-    animation: none;
-    box-shadow:
-      0 0 10px var(--jolly-loading-progress-glow, rgba(62, 124, 184, 0.5)),
-      0 0 20px var(--jolly-loading-progress-glow-subtle, rgba(62, 124, 184, 0.3)),
-      inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  }
-  :host([completed]) .progress-bar::before {
-    animation: none;
-  }
-  @keyframes shimmer {
-    0% {
-      transform: translateX(-100%);
-    }
-    100% {
-      transform: translateX(100%);
-    }
-  }
-  @keyframes progress-pulse {
-    0%, 100% {
-      box-shadow:
-        0 0 10px var(--jolly-loading-progress-glow, rgba(62, 124, 184, 0.5)),
-        0 0 20px var(--jolly-loading-progress-glow-subtle, rgba(62, 124, 184, 0.3)),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    }
-    50% {
-      box-shadow:
-        0 0 15px var(--jolly-loading-progress-glow-strong, rgba(62, 124, 184, 0.7)),
-        0 0 30px var(--jolly-loading-progress-glow, rgba(62, 124, 184, 0.5)),
-        inset 0 1px 0 rgba(255, 255, 255, 0.4);
-    }
   }
   #loading div.error {
     text-align: center;
@@ -264,7 +194,25 @@ export const loadingStyles = css`
       margin-top: 12px;
     }
     #loading .progress-container {
-      height: 5px;
+      --jolly-progress-height: 5px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :host,
+    #loading a,
+    #loading .logo,
+    #loading .asset,
+    #loading .progress-container {
+      animation: none;
+      transition-duration: 0ms;
+    }
+
+    #loading .logo,
+    #loading .asset,
+    #loading .progress-container {
+      opacity: 1;
+      transform: none;
     }
   }
 `;

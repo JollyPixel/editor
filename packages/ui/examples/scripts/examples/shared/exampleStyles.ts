@@ -216,4 +216,35 @@ export const exampleStyles = `
     text-transform: uppercase;
     letter-spacing: 0.06em;
   }
+
+  .progress-example {
+    display: grid;
+    gap: var(--jolly-space-5);
+    max-width: 720px;
+  }
+
+  .progress-states,
+  .progress-simulator {
+    display: grid;
+    gap: var(--jolly-space-3);
+  }
+
+  .progress-state {
+    display: grid;
+    grid-template-columns: 12ch minmax(180px, 1fr);
+    gap: var(--jolly-space-3);
+    align-items: center;
+  }
+
+  .loading-preview {
+    position: relative;
+    min-height: 360px;
+    overflow: hidden;
+    border: 1px solid var(--jolly-border);
+    border-radius: var(--jolly-radius-md);
+  }
+
+  .loading-preview jolly-loading {
+    font-size: 16px;
+  }
 `;

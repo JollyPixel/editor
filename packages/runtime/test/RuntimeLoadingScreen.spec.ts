@@ -4,17 +4,18 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { Window } from "happy-dom";
+import { AssetRecord } from "@jolly-pixel/asset";
 
 const kBrowserWindow = new Window();
 
-let LoadingClass: typeof import("../src/ui/Loading.ts").Loading;
+let LoadingClass: typeof import("@jolly-pixel/ui/feedback").Loading;
 let RuntimeLoadingScreenClass:
   typeof import("../src/ui/RuntimeLoadingScreen.ts").RuntimeLoadingScreen;
 
 before(async() => {
   installBrowserGlobals();
 
-  ({ Loading: LoadingClass } = await import("../src/ui/Loading.ts"));
+  ({ Loading: LoadingClass } = await import("@jolly-pixel/ui/feedback"));
   ({ RuntimeLoadingScreen: RuntimeLoadingScreenClass } = await import(
     "../src/ui/RuntimeLoadingScreen.ts"
   ));
@@ -53,6 +54,49 @@ describe("RuntimeLoadingScreen", () => {
     assert.strictEqual(loading.progress, 2);
     assert.strictEqual(loading.maxProgress, 5);
     assert.strictEqual(loading.errorMessage, "load failed");
+  });
+
+  test("forwards asset progress as display state", () => {
+    const canvas = document.createElement("canvas");
+    const container = document.createElement("div");
+    const screen = RuntimeLoadingScreenClass.mount(
+      canvas,
+      container
+    );
+    const loading = container.querySelector("jolly-loading");
+    assert.ok(loading instanceof LoadingClass);
+
+    screen.update({
+      status: "ready",
+      completed: 3,
+      total: 7,
+      record: AssetRecord.parse({
+        id: "texture:world",
+        kind: "texture",
+        source: "textures/world-atlas.png"
+      })
+    });
+
+    assert.strictEqual(loading.assetName, "textures/world-atlas.png");
+    assert.strictEqual(loading.progress, 3);
+    assert.strictEqual(loading.maxProgress, 7);
+  });
+
+  test("shows the cause stack for a fatal error", () => {
+    const canvas = document.createElement("canvas");
+    const container = document.createElement("div");
+    const screen = RuntimeLoadingScreenClass.mount(
+      canvas,
+      container
+    );
+    const loading = container.querySelector("jolly-loading");
+    assert.ok(loading instanceof LoadingClass);
+    const cause = new Error("decoder failed");
+
+    screen.error(new Error("load failed", { cause }));
+
+    assert.strictEqual(loading.errorMessage, "load failed");
+    assert.strictEqual(loading.errorStack, cause.stack);
   });
 
   test("fills progress before completing an empty load", async() => {

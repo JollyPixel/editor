@@ -18,6 +18,7 @@ theming and collaboration-aware field state.
 - **Actions and layout**: buttons, separators and property rows
 - **Controlled fields**: shared values, events, drafts, validation, mixed values and defaults
 - **Collaboration state**: peer presence, field locking and peer colors
+- **Feedback**: determinate and indeterminate progress plus the runtime loading screen
 - **Theming**: light/dark themes, density presets and semantic custom-property tokens
 - **Icons**: built-in glyphs and an open registry for custom icons
 
@@ -105,11 +106,12 @@ Set `density` on the scope host when needed:
 - [Placement](./docs/placement.md): docked and floating layout, resizing and movement
 - [Dialogs](./docs/dialogs.md): declarative modal content and prompt/confirm helpers
 - [Presence](./docs/presence.md): peer snapshots in panes and folders
+- [Progress](./docs/progress.md): progress semantics, loading lifecycle and CSS customization
 
 The package currently ships twelve controls: `jolly-text`, `jolly-number`, `jolly-slider`, `jolly-range`,
 `jolly-checkbox`, `jolly-select`, `jolly-flags`, `jolly-color`, `jolly-button-group`,
 `jolly-button`, `jolly-separator` and `jolly-property-row`, plus the container elements and
-`jolly-icon`.
+`jolly-icon`, `jolly-progress` and `jolly-loading`.
 
 ## 🖼️ Examples Gallery
 
