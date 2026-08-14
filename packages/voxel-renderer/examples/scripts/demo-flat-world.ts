@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import * as THREE from "three";
+import * as THREE from "three/webgpu";
 import { Camera3DControls } from "@jolly-pixel/engine";
 import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
 import * as network from "@jolly-pixel/network/client";

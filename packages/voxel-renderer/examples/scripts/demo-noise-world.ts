@@ -12,7 +12,7 @@ import {
 // Registers the declarative controls declared by the example page.
 void Control;
 void Controls;
-import * as THREE from "three";
+import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import {

@@ -102,13 +102,19 @@ export class PerformancePanel {
 
     this.#frames++;
     this.#elapsed += deltaTime;
-    this.#worstFrame = Math.max(this.#worstFrame, deltaTime);
+    this.#worstFrame = Math.max(
+      this.#worstFrame,
+      deltaTime
+    );
 
     if (this.#elapsed < this.#refreshInterval) {
       return;
     }
 
-    this.#refresh(this.#frames / this.#elapsed, this.#worstFrame);
+    this.#refresh(
+      this.#frames / this.#elapsed,
+      this.#worstFrame
+    );
     this.#elapsed = 0;
     this.#frames = 0;
     this.#worstFrame = 0;

@@ -4,7 +4,7 @@ import {
   ActorComponent,
   type ComponentInitializeContext
 } from "@jolly-pixel/engine";
-import * as THREE from "three";
+import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import {

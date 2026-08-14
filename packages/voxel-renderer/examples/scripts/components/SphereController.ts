@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import type { RigidBody } from "@dimforge/rapier3d";
-import * as THREE from "three";
+import * as THREE from "three/webgpu";
 import {
   Actor,
   ActorComponent
