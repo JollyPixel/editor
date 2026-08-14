@@ -3,7 +3,7 @@ import { describe, test, beforeEach, mock } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { SceneManager } from "../../src/systems/SceneManager.ts";
+import { SceneManager } from "../../src/systems/scene/SceneManager.ts";
 
 // CONSTANTS
 const kDeltaTime = 16.67;

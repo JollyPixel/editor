@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import type { AssetReference } from "@jolly-pixel/asset";
+
 // Import Internal Dependencies
 import { Actor } from "./Actor.ts";
 import { IntegerIncrement } from "../systems/generators/IntegerIncrement.ts";
@@ -17,6 +20,9 @@ export interface ActorComponentOptions<
   typeName: FreeComponentEnum;
 }
 
+/**
+ * Provides shared identity, lifecycle registration, and world access to components.
+ */
 export class ActorComponent<
   TContext = WorldDefaultContext
 > implements Component {
@@ -45,7 +51,9 @@ export class ActorComponent<
     return this.#needUpdate;
   }
 
-  set needUpdate(value: boolean) {
+  set needUpdate(
+    value: boolean
+  ) {
     this.#needUpdate = value;
 
     if (this.#needUpdate) {
@@ -63,6 +71,12 @@ export class ActorComponent<
 
   get context(): TContext {
     return this.actor.world.context;
+  }
+
+  protected getAsset<TValue>(
+    reference: AssetReference<TValue>
+  ): TValue {
+    return this.actor.world.assetCoordinator.get(reference);
   }
 
   toString(): string {

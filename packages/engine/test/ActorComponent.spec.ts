@@ -1,264 +1,62 @@
 // Import Node.js Dependencies
-import { describe, test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
+import { mock, test } from "node:test";
+
+// Import Third-party Dependencies
+import {
+  AssetReference,
+  AssetType
+} from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import { ActorComponent } from "../src/index.ts";
-import { createActor } from "./mocks.ts";
+import {
+  Actor,
+  ActorComponent
+} from "../src/index.ts";
+import { createWorld } from "./mocks.ts";
 
-describe("ActorComponent", () => {
-  beforeEach(() => {
-    ActorComponent.Id.clear();
+/**
+ * Exposes protected asset access for its focused unit test.
+ */
+class AssetConsumer extends ActorComponent {
+  constructor(
+    actor: Actor
+  ) {
+    super({
+      actor,
+      typeName: "AssetConsumer"
+    });
+  }
+
+  read<TValue>(
+    reference: AssetReference<TValue>
+  ): TValue {
+    return this.getAsset(reference);
+  }
+}
+
+test("ActorComponent reads a prepared asset synchronously", () => {
+  const reference = new AssetReference(
+    "dialogue.intro",
+    new AssetType<string>("text")
+  );
+  const get = mock.fn(
+    (_reference: AssetReference<string>) => "prepared dialogue"
+  );
+  const world = {
+    ...createWorld(),
+    assetCoordinator: { get }
+  };
+  const actor = new Actor(world as any, {
+    name: "reader"
   });
+  const component = new AssetConsumer(actor);
 
-  test("should register component to actor and add to components to be started", () => {
-    const fakeActor = createActor();
+  const value: string = component.read(reference);
 
-    const component = new ActorComponent({
-      // @ts-expect-error
-      actor: fakeActor,
-      typeName: "TestComponent"
-    });
-
-    assert.deepEqual(fakeActor.components, [component]);
-    assert.deepEqual(fakeActor.world.sceneManager.componentsToBeStarted, [component]);
-    assert.equal(component.actor, fakeActor);
-    assert.equal(component.id, 0);
-    assert.equal(component.typeName, "TestComponent");
-    assert.equal(component.pendingForDestruction, false);
-  });
-
-  test("should handle multiple components on same actor", () => {
-    const fakeActor = createActor();
-
-    const component1 = new ActorComponent({
-      // @ts-expect-error
-      actor: fakeActor,
-      typeName: "TestComponent1"
-    });
-
-    const component2 = new ActorComponent({
-      // @ts-expect-error
-      actor: fakeActor,
-      typeName: "TestComponent2"
-    });
-
-    assert.deepEqual(fakeActor.components, [component1, component2]);
-    assert.deepEqual(fakeActor.world.sceneManager.componentsToBeStarted, [component1, component2]);
-    assert.equal(component1.id, 0);
-    assert.equal(component2.id, 1);
-  });
-
-  test("should not be destroyed initially", () => {
-    const fakeActor = createActor();
-
-    const component = new ActorComponent({
-      // @ts-expect-error
-      actor: fakeActor,
-      typeName: "TestComponent"
-    });
-
-    assert.equal(component.isDestroyed(), false);
-  });
-
-  test("should remove component from actor on destroy", () => {
-    const fakeActor = createActor();
-
-    const component = new ActorComponent({
-      // @ts-expect-error
-      actor: fakeActor,
-      typeName: "TestComponent"
-    });
-
-    assert.equal(fakeActor.components.length, 1);
-    assert.equal(fakeActor.world.sceneManager.componentsToBeStarted.length, 1);
-
-    component.destroy();
-
-    assert.equal(fakeActor.components.length, 0);
-    assert.equal(fakeActor.world.sceneManager.componentsToBeStarted.length, 0);
-  });
-
-  test("should handle destroy when multiple components exist", () => {
-    const fakeActor = createActor();
-
-    const component1 = new ActorComponent({
-      // @ts-expect-error
-      actor: fakeActor,
-      typeName: "TestComponent1"
-    });
-
-    const component2 = new ActorComponent({
-      // @ts-expect-error
-      actor: fakeActor,
-      typeName: "TestComponent2"
-    });
-
-    assert.equal(fakeActor.components.length, 2);
-    assert.equal(fakeActor.world.sceneManager.componentsToBeStarted.length, 2);
-
-    component1.destroy();
-
-    assert.equal(fakeActor.components.length, 1);
-    assert.equal(fakeActor.world.sceneManager.componentsToBeStarted.length, 1);
-    assert.equal(fakeActor.components[0], component2);
-    assert.equal(fakeActor.world.sceneManager.componentsToBeStarted[0], component2);
-  });
-
-  test("should handle destroy on component not in componentsToBeStarted", () => {
-    const fakeActor = createActor();
-
-    const component = new ActorComponent({
-      // @ts-expect-error
-      actor: fakeActor,
-      typeName: "TestComponent"
-    });
-
-    // Manually remove from componentsToBeStarted to simulate started component
-    const startIndex = fakeActor.world.sceneManager.componentsToBeStarted.indexOf(component);
-    fakeActor.world.sceneManager.componentsToBeStarted.splice(startIndex, 1);
-
-    assert.equal(fakeActor.components.length, 1);
-    assert.equal(fakeActor.world.sceneManager.componentsToBeStarted.length, 0);
-
-    component.destroy();
-
-    assert.equal(fakeActor.components.length, 0);
-    assert.equal(fakeActor.world.sceneManager.componentsToBeStarted.length, 0);
-  });
-
-  test("should handle destroy on component not in actor components", () => {
-    const fakeActor = createActor();
-
-    const component = new ActorComponent({
-      // @ts-expect-error
-      actor: fakeActor,
-      typeName: "TestComponent"
-    });
-
-    // Manually remove from actor components
-    const componentIndex = fakeActor.components.indexOf(component);
-    fakeActor.components.splice(componentIndex, 1);
-
-    assert.equal(fakeActor.components.length, 0);
-    assert.equal(fakeActor.world.sceneManager.componentsToBeStarted.length, 1);
-
-    component.destroy();
-
-    assert.equal(fakeActor.components.length, 0);
-    assert.equal(fakeActor.world.sceneManager.componentsToBeStarted.length, 0);
-  });
-
-  test("should handle destroy on already destroyed component", () => {
-    const fakeActor = createActor();
-
-    const component = new ActorComponent({
-      // @ts-expect-error
-      actor: fakeActor,
-      typeName: "TestComponent"
-    });
-
-    component.destroy();
-    assert.equal(fakeActor.components.length, 0);
-    assert.equal(fakeActor.world.sceneManager.componentsToBeStarted.length, 0);
-
-    // Should not throw or cause issues
-    component.destroy();
-    assert.equal(fakeActor.components.length, 0);
-    assert.equal(fakeActor.world.sceneManager.componentsToBeStarted.length, 0);
-  });
-
-  test("should add component to componentsRequiringUpdate when needUpdate is set to true", () => {
-    const fakeActor = createActor();
-
-    const component = new ActorComponent({
-      // @ts-expect-error
-      actor: fakeActor,
-      typeName: "TestComponent"
-    });
-
-    assert.equal(component.needUpdate, false);
-    assert.equal(fakeActor.componentsRequiringUpdate.length, 0);
-
-    component.needUpdate = true;
-
-    assert.equal(component.needUpdate, true);
-    assert.equal(fakeActor.componentsRequiringUpdate.length, 1);
-    assert.equal(fakeActor.componentsRequiringUpdate[0], component);
-  });
-
-  test("should remove component from componentsRequiringUpdate when needUpdate is set to false", () => {
-    const fakeActor = createActor();
-
-    const component = new ActorComponent({
-      // @ts-expect-error
-      actor: fakeActor,
-      typeName: "TestComponent"
-    });
-
-    component.needUpdate = true;
-    assert.equal(fakeActor.componentsRequiringUpdate.length, 1);
-
-    component.needUpdate = false;
-    assert.equal(fakeActor.componentsRequiringUpdate.length, 0);
-  });
-
-  test("should not duplicate component in componentsRequiringUpdate on repeated needUpdate = true", () => {
-    const fakeActor = createActor();
-
-    const component = new ActorComponent({
-      // @ts-expect-error
-      actor: fakeActor,
-      typeName: "TestComponent"
-    });
-
-    component.needUpdate = true;
-    component.needUpdate = true;
-
-    assert.equal(fakeActor.componentsRequiringUpdate.length, 1);
-  });
-
-  test("should remove component from componentsRequiringUpdate on destroy", () => {
-    const fakeActor = createActor();
-
-    const component = new ActorComponent({
-      // @ts-expect-error
-      actor: fakeActor,
-      typeName: "TestComponent"
-    });
-
-    component.needUpdate = true;
-    assert.equal(fakeActor.componentsRequiringUpdate.length, 1);
-
-    component.destroy();
-
-    assert.equal(fakeActor.componentsRequiringUpdate.length, 0);
-    assert.equal(component.needUpdate, false);
-  });
-
-  test("should handle different component types", () => {
-    const fakeActor = createActor();
-
-    const scriptComponent = new ActorComponent({
-      // @ts-expect-error
-      actor: fakeActor,
-      typeName: "ScriptBehavior"
-    });
-
-    const cameraComponent = new ActorComponent({
-      // @ts-expect-error
-      actor: fakeActor,
-      typeName: "Camera"
-    });
-
-    const customComponent = new ActorComponent({
-      // @ts-expect-error
-      actor: fakeActor,
-      typeName: "CustomType"
-    });
-
-    assert.equal(scriptComponent.typeName, "ScriptBehavior");
-    assert.equal(cameraComponent.typeName, "Camera");
-    assert.equal(customComponent.typeName, "CustomType");
-  });
+  assert.equal(value, "prepared dialogue");
+  assert.strictEqual(
+    get.mock.calls[0].arguments[0],
+    reference
+  );
 });

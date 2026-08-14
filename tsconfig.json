@@ -20,6 +20,9 @@
       "path": "./packages/fs-tree-backend"
     },
     {
+      "path": "./packages/asset"
+    },
+    {
       "path": "./packages/engine"
     },
     {

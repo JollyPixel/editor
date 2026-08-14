@@ -1,12 +1,10 @@
 // Import Third-party Dependencies
 import {
-  Systems,
-  type ComponentInitializeContext
+  Systems
 } from "@jolly-pixel/engine";
 import {
   VoxelRenderer,
   TilesetLoader,
-  type TilesetDefinition,
   type VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
 import {
@@ -35,42 +33,26 @@ export interface EditorSceneOptions {
    * @default "Ground"
    */
   defaultLayerName?: string;
-  defaultTileset: TilesetDefinition;
+  tilesetLoader: TilesetLoader;
+  pendingLoad?: VoxelWorldJSON | null;
   /** Optional room to synchronize the voxel world over the network. */
   voxelRoom?: network.Room<VoxelNetworkCommand, VoxelServerMessage>;
 }
 
+/**
+ * Owns the synchronous ECS scene after its external resources are prepared.
+ */
 export class EditorScene extends Systems.Scene {
-  #tilesetLoader!: TilesetLoader;
+  #tilesetLoader: TilesetLoader;
   #defaultLayerName: string;
-  #defaultTileset: TilesetDefinition;
   #voxelRoom: network.Room<VoxelNetworkCommand, VoxelServerMessage> | undefined;
   #voxelSyncClient: VoxelSyncClient | undefined;
-  #pendingLoad: VoxelWorldJSON | null = null;
+  #pendingLoad: VoxelWorldJSON | null;
 
   editorState: EditorState;
 
   vr: VoxelRenderer;
   gridRenderer: GridRenderer;
-
-  override async initialize(
-    context: ComponentInitializeContext
-  ): Promise<void> {
-    const { assetManager } = context;
-
-    this.#tilesetLoader = new TilesetLoader({ manager: assetManager.context.manager });
-    // LocalStorage is an offline-only convenience: while a voxelRoom is
-    // attached, the server snapshot is the sole source of truth — restoring
-    // a stale local snapshot on top of a live session is what desyncs the
-    // client from the server (see loadWorld()/awake()).
-    this.#pendingLoad = this.#voxelRoom ? null : LocalStoragePersistence.load();
-
-    // Pre-load world tilesets first (if restoring), then default (idempotent if already loaded).
-    if (this.#pendingLoad !== null) {
-      await this.#tilesetLoader.fromWorld(this.#pendingLoad);
-    }
-    await this.#tilesetLoader.fromTileDefinition(this.#defaultTileset);
-  }
 
   constructor(
     editorState: EditorState,
@@ -80,12 +62,14 @@ export class EditorScene extends Systems.Scene {
 
     const {
       defaultLayerName = "Ground",
-      defaultTileset,
+      tilesetLoader,
+      pendingLoad = null,
       voxelRoom
     } = options;
 
     this.#defaultLayerName = defaultLayerName;
-    this.#defaultTileset = defaultTileset;
+    this.#tilesetLoader = tilesetLoader;
+    this.#pendingLoad = pendingLoad;
     this.#voxelRoom = voxelRoom;
     this.editorState = editorState;
   }

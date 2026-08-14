@@ -7,6 +7,7 @@ JollyPixel Editor is a monorepo for a collaborative 3D HTML5 game maker. It prov
 ```
 packages/
   ui/                  @jolly-pixel/ui                   – Common and System's UI for JollyPixel's editors
+  asset/               @jolly-pixel/asset                – Platform-agnostic asset references and loading orchestration for browser and Node.js runtimes
   engine/              @jolly-pixel/engine               – ECS framework on Three.js (public)
   runtime/             @jolly-pixel/runtime              – Browser/Electron runtime (public)
   event-store/         @jolly-pixel/event-store          – Event Sourcing pattern applied to JollyPixel's events (public)

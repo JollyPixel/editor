@@ -1,8 +1,8 @@
 // Import Third-party Dependencies
+import type { AssetReference } from "@jolly-pixel/asset";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import * as Systems from "../../../systems/index.ts";
 import { Actor, ActorComponent } from "../../../actor/index.ts";
 import { type Model } from "./loader.ts";
 
@@ -22,7 +22,7 @@ export interface ModelRendererAnimationOptions<
 export interface ModelRendererOptions<
   TClipName extends string = string
 > {
-  path: string;
+  asset: AssetReference<Model>;
   /**
    * @default false
    */
@@ -30,12 +30,15 @@ export interface ModelRendererOptions<
   animations?: ModelRendererAnimationOptions<TClipName>;
 }
 
+/**
+ * Attaches a prepared model asset to an actor during awake.
+ */
 export class ModelRenderer<
   TClipName extends string = string
 > extends ActorComponent<any> {
   group: THREE.Group<THREE.Object3DEventMap>;
 
-  #asset: Systems.LazyAsset<Model>;
+  #asset: AssetReference<Model>;
   #debug = false;
 
   animation = new ModelAnimation<TClipName>();
@@ -49,7 +52,7 @@ export class ModelRenderer<
       typeName: "ModelRenderer"
     });
 
-    this.#asset = actor.world.assetManager.load<Model>(options.path);
+    this.#asset = options.asset;
     this.#debug = options.debug ?? false;
 
     const { animations } = options;
@@ -70,7 +73,7 @@ export class ModelRenderer<
   }
 
   awake() {
-    const { object, animations } = this.#asset.get();
+    const { object, animations } = this.getAsset(this.#asset);
     if (this.#debug) {
       console.log({ object, animations });
     }

@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "id": "example.tiled-map",
+      "kind": "tilemap",
+      "source": "tilemap/brackeys-level.tmj"
+    }
+  ]
+}

@@ -82,7 +82,8 @@ const tilesetLoader = new TilesetLoader();
 await tilesetLoader.fromTileDefinition(tileset.definition);
 
 const runtime = await Runtime.create(canvas, {
-  includePerformanceStats: true
+  includePerformanceStats: true,
+  focusCanvas: false
 });
 const { world } = runtime;
 
@@ -202,7 +203,7 @@ controlsFolder
 world.createActor("hud")
   .addComponent(PerformancePanel, { pane, onRefresh: syncStats });
 
-await loadRuntime(runtime, { focusCanvas: false });
+await loadRuntime(runtime);
 
 report = buildWorld(engine, settings);
 syncStats();

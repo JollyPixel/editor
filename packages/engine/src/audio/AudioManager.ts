@@ -1,11 +1,13 @@
 // Import Third-party Dependencies
+import {
+  AssetType,
+  type AssetLoader,
+  type AssetRecord
+} from "@jolly-pixel/asset";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import {
-  AssetLoader,
-  type World
-} from "../systems/index.ts";
+import type { World } from "../systems/index.ts";
 import {
   type AudioListenerAdapter
 } from "./internals/AudioListener.ts";
@@ -18,22 +20,48 @@ import {
 const kDefaultVolume = 1;
 const kDefaultLoop = false;
 
-export const AudioAssetLoader = new AssetLoader<AudioBuffer>({
-  type: "audio",
-  extensions: [".mp3", ".ogg", ".wav", ".aac", ".flac"],
-  load: async(asset, context) => {
-    const loader = new THREE.AudioLoader(context.manager);
+export const AUDIO_ASSET = new AssetType<AudioBuffer>("audio");
 
-    return loader.loadAsync(asset.toString());
+/**
+ * Loads audio records with the Three.js loading manager owned by the runtime.
+ */
+export class AudioAssetLoader implements AssetLoader<AudioBuffer> {
+  #manager: THREE.LoadingManager;
+
+  constructor(
+    manager: THREE.LoadingManager
+  ) {
+    this.#manager = manager;
   }
-});
+
+  load(
+    record: AssetRecord
+  ): Promise<AudioBuffer> {
+    return new THREE.AudioLoader(this.#manager)
+      .loadAsync(record.source);
+  }
+}
 
 export type AudioManager = {
-  loadAudio: (url: string, options?: AudioLoadingOptions) => Promise<THREE.Audio>;
-  loadPositionalAudio: (url: string, options?: AudioLoadingOptions) => Promise<THREE.PositionalAudio>;
-  createAudio: (buffer: AudioBuffer, options?: AudioLoadingOptions) => THREE.Audio;
-  createPositionalAudio: (buffer: AudioBuffer, options?: AudioLoadingOptions) => THREE.PositionalAudio;
-  destroyAudio: (audio: THREE.Audio | THREE.PositionalAudio) => void;
+  loadAudio: (
+    url: string,
+    options?: AudioLoadingOptions
+  ) => Promise<THREE.Audio>;
+  loadPositionalAudio: (
+    url: string,
+    options?: AudioLoadingOptions
+  ) => Promise<THREE.PositionalAudio>;
+  createAudio: (
+    buffer: AudioBuffer,
+    options?: AudioLoadingOptions
+  ) => THREE.Audio;
+  createPositionalAudio: (
+    buffer: AudioBuffer,
+    options?: AudioLoadingOptions
+  ) => THREE.PositionalAudio;
+  destroyAudio: (
+    audio: THREE.Audio | THREE.PositionalAudio
+  ) => void;
 };
 
 export interface AudioLoadingOptions {
@@ -64,8 +92,6 @@ export class GlobalAudioManager implements AudioManager {
       listener: world.audio.listener
     });
 
-    world.assetManager.register(AudioAssetLoader);
-
     return audioManager;
   }
 
@@ -74,7 +100,9 @@ export class GlobalAudioManager implements AudioManager {
   ) {
     const {
       listener = new THREE.AudioListener(),
-      audioService = new AudioService({ listener })
+      audioService = new AudioService({
+        listener
+      })
     } = options;
 
     this.#listener = listener;
@@ -85,10 +113,16 @@ export class GlobalAudioManager implements AudioManager {
     audio: THREE.Audio | THREE.PositionalAudio,
     options: AudioLoadingOptions
   ): void {
-    const { name, loop = kDefaultLoop, volume = kDefaultVolume } = options;
+    const {
+      name,
+      loop = kDefaultLoop,
+      volume = kDefaultVolume
+    } = options;
 
     audio.setLoop(loop);
-    audio.setVolume(volume * this.#listener.getMasterVolume());
+    audio.setVolume(
+      volume * this.#listener.getMasterVolume()
+    );
 
     if (name) {
       audio.name = name;
@@ -99,8 +133,13 @@ export class GlobalAudioManager implements AudioManager {
     url: string,
     options: AudioLoadingOptions = {}
   ): Promise<THREE.Audio> {
-    const audio = await this.#audioService.createAudio(url);
-    this.#configureAudio(audio, options);
+    const audio = await this.#audioService.createAudio(
+      url
+    );
+    this.#configureAudio(
+      audio,
+      options
+    );
 
     return audio;
   }
@@ -109,8 +148,13 @@ export class GlobalAudioManager implements AudioManager {
     url: string,
     options: AudioLoadingOptions = {}
   ): Promise<THREE.PositionalAudio> {
-    const audio = await this.#audioService.createPositionalAudio(url);
-    this.#configureAudio(audio, options);
+    const audio = await this.#audioService.createPositionalAudio(
+      url
+    );
+    this.#configureAudio(
+      audio,
+      options
+    );
 
     return audio;
   }
@@ -119,9 +163,14 @@ export class GlobalAudioManager implements AudioManager {
     buffer: AudioBuffer,
     options: AudioLoadingOptions = {}
   ): THREE.Audio {
-    const audio = new THREE.Audio(this.#listener as THREE.AudioListener);
+    const audio = new THREE.Audio(
+      this.#listener as THREE.AudioListener
+    );
     audio.setBuffer(buffer);
-    this.#configureAudio(audio, options);
+    this.#configureAudio(
+      audio,
+      options
+    );
 
     return audio;
   }
@@ -130,9 +179,14 @@ export class GlobalAudioManager implements AudioManager {
     buffer: AudioBuffer,
     options: AudioLoadingOptions = {}
   ): THREE.PositionalAudio {
-    const audio = new THREE.PositionalAudio(this.#listener as THREE.AudioListener);
+    const audio = new THREE.PositionalAudio(
+      this.#listener as THREE.AudioListener
+    );
     audio.setBuffer(buffer);
-    this.#configureAudio(audio, options);
+    this.#configureAudio(
+      audio,
+      options
+    );
 
     return audio;
   }

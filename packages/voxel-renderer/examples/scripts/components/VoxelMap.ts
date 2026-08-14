@@ -1,42 +1,29 @@
 // Import Third-party Dependencies
 import {
+  AssetReference,
+  type AssetReferenceGroup
+} from "@jolly-pixel/asset";
+import {
   Actor,
-  ActorComponent,
-  type ComponentInitializeContext
+  ActorComponent
 } from "@jolly-pixel/engine";
-import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import {
-  TilesetLoader,
-  VoxelRenderer,
-  type VoxelWorldJSON
+  VoxelRenderer
 } from "../../../src/index.ts";
-import { loadVoxelTiledMap } from "../../../src/plugins/tiled/index.ts";
+import { TiledMapAssetType } from "../../../src/plugins/tiled/index.ts";
 
+/**
+ * Builds a voxel renderer from a prepared tiled-map asset.
+ */
 export class VoxelBehavior extends ActorComponent {
-  tilesetLoader = new TilesetLoader();
-
-  world: VoxelWorldJSON | undefined;
-
-  async initialize(
-    { assetManager }: ComponentInitializeContext
-  ) {
-    this.tilesetLoader = new TilesetLoader({
-      manager: assetManager.context.manager
-    });
-    const mapLoader = loadVoxelTiledMap(
-      this.actor.world.assetManager,
-      "tilemap/brackeys-level.tmj",
-      {
-        layerMode: "stacked"
-      }
-    );
-
-    this.world = await mapLoader.getAsync();
-    console.log(this.world);
-    await this.tilesetLoader.fromWorld(this.world);
-  }
+  static readonly assets = {
+    tiledMap: new AssetReference(
+      "example.tiled-map",
+      TiledMapAssetType
+    )
+  } satisfies AssetReferenceGroup;
 
   constructor(
     actor: Actor
@@ -48,22 +35,16 @@ export class VoxelBehavior extends ActorComponent {
   }
 
   awake() {
-    if (!this.world) {
-      throw new Error("world is not initialized");
-    }
+    const {
+      world,
+      tilesetLoader
+    } = this.getAsset(VoxelBehavior.assets.tiledMap);
 
     const vr = this.actor.addComponentAndGet(VoxelRenderer, {
-      material: "lambert",
-      materialCustomizer: (material) => {
-        if (material instanceof THREE.MeshStandardMaterial) {
-          material.metalness = 0;
-          material.roughness = 0.85;
-        }
-      },
-      tilesetLoader: this.tilesetLoader
+      tilesetLoader
     });
 
-    vr.engine.load(this.world, {
+    vr.engine.load(world, {
       mergeLayers: true
     });
   }
