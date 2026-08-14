@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
-import { ActorComponent, type Actor } from "@jolly-pixel/engine";
-import * as THREE from "three";
+import type * as THREE from "three/webgpu";
+import {
+  ActorComponent,
+  type Actor
+} from "@jolly-pixel/engine";
 import {
   formatCount,
   formatMilliseconds,
@@ -30,6 +33,11 @@ export interface PerformancePanelOptions {
   onRefresh?: () => void;
 }
 
+interface PendingRefresh {
+  fps: number;
+  worstFrame: number;
+}
+
 /**
  * Renderer statistics folder: framerate, draw calls, triangle count and heap
  * usage. Demos add their own folders to the same pane.
@@ -41,7 +49,7 @@ export class PerformancePanel extends ActorComponent {
   #onRefresh?: () => void;
 
   #folder: ReturnType<Pane["addFolder"]> | null = null;
-  #renderer: THREE.WebGLRenderer | null = null;
+  #renderer: THREE.WebGPURenderer | null = null;
 
   // Bound as-is by the folder; every field is refreshed at once.
   #stats = {
@@ -57,6 +65,8 @@ export class PerformancePanel extends ActorComponent {
   #elapsed = 0;
   #frames = 0;
   #worstFrame = 0;
+  #pendingRefresh: PendingRefresh | null = null;
+  #boundDraw = this.#onDraw.bind(this);
 
   constructor(
     actor: Actor,
@@ -82,11 +92,14 @@ export class PerformancePanel extends ActorComponent {
 
   awake(): void {
     this.#renderer = this.actor.world.renderer.getSource();
+    this.actor.world.renderer.on("draw", this.#boundDraw);
 
     // First: the pane holds only demo content (the switcher, theme and
     // density controls live in their own chrome pane), and the folder is
     // only created on awake, after the demo has attached its own.
-    const folder = this.#pane.addFolder({ title: this.#title });
+    const folder = this.#pane.addFolder({
+      title: this.#title
+    });
     this.#pane.element.prepend(folder.element);
 
     folder.addMonitor(this.#stats, "fps", {
@@ -120,16 +133,32 @@ export class PerformancePanel extends ActorComponent {
   ): void {
     this.#frames++;
     this.#elapsed += deltaTime;
-    this.#worstFrame = Math.max(this.#worstFrame, deltaTime);
+    this.#worstFrame = Math.max(
+      this.#worstFrame,
+      deltaTime
+    );
 
     if (this.#elapsed < this.#refreshInterval) {
       return;
     }
 
-    this.#refresh(this.#frames / this.#elapsed, this.#worstFrame);
+    this.#pendingRefresh = {
+      fps: this.#frames / this.#elapsed,
+      worstFrame: this.#worstFrame
+    };
     this.#elapsed = 0;
     this.#frames = 0;
     this.#worstFrame = 0;
+  }
+
+  #onDraw(): void {
+    if (this.#pendingRefresh === null) {
+      return;
+    }
+
+    const { fps, worstFrame } = this.#pendingRefresh;
+    this.#pendingRefresh = null;
+    this.#refresh(fps, worstFrame);
   }
 
   #refresh(
@@ -144,7 +173,7 @@ export class PerformancePanel extends ActorComponent {
 
     this.#stats.fps = fps;
     this.#stats.worstMs = worstFrame * 1000;
-    this.#stats.calls = render.calls;
+    this.#stats.calls = render.drawCalls;
     this.#stats.triangles = render.triangles;
     this.#stats.geometries = memory.geometries;
     this.#stats.textures = memory.textures;
@@ -155,8 +184,10 @@ export class PerformancePanel extends ActorComponent {
   }
 
   override destroy(): void {
+    this.actor.world.renderer.off("draw", this.#boundDraw);
     this.#folder?.dispose();
     this.#folder = null;
+    this.#renderer = null;
 
     super.destroy();
   }
