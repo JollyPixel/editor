@@ -621,7 +621,10 @@ in P6. The `.axis-input` markup in `editors/voxel-model/src/components/tabs/Buil
 
 ## P5: data views, and voxel-model
 
-**Create** under `src/data/`: `Tree`, `List`, `Search`, `Menu`, `Toast`, `Progress`.
+`Progress` shipped ahead of this phase under `src/feedback/`, together with the runtime loading
+screen that supplied its first consumer and gallery fixture.
+
+**Create** under `src/data/`: `Tree`, `List`, `Search`, `Menu`, `Toast`.
 
 `Tree` takes generic nodes (`{ id, label, children }`), supports drag and drop reparenting with
 above, below and inside drop zones, collapsible groups, and visibility plus lock toggles. It

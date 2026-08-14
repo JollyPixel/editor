@@ -3,9 +3,7 @@ import type {
   AssetLoadProgress,
   AssetRecord
 } from "@jolly-pixel/asset";
-
-// Import Internal Dependencies
-import { Loading } from "./Loading.ts";
+import { Loading } from "@jolly-pixel/ui/feedback";
 
 /**
  * Adapts the loading web component to the runtime bootstrap workflow.
@@ -59,7 +57,7 @@ export class RuntimeLoadingScreen {
   setAsset(
     asset: AssetRecord
   ): void {
-    this.#loading.setAsset(asset);
+    this.#loading.setAsset(asset.source);
   }
 
   setProgress(

@@ -134,30 +134,10 @@ interface LoadRuntimeOptions<TContext = Systems.WorldDefaultContext> {
 
 ### 🎨 Loader theme
 
-`<jolly-loading>` uses CSS custom properties with light-theme fallbacks. Set them
-on its container or an ancestor to match an application's palette; they cross
-the component's shadow boundary through normal CSS inheritance.
-
-```css
-#runtime-container {
-  --jolly-loading-background: #0d151d;
-  --jolly-loading-color: #e8eef5;
-  --jolly-loading-asset-color: #90a4b7;
-  --jolly-loading-progress-track-start: #22303c;
-  --jolly-loading-progress-track-middle: #2a3b52;
-  --jolly-loading-progress-track-end: #22303c;
-  --jolly-loading-progress-start: #2a5794;
-  --jolly-loading-progress-middle: #3a6fc2;
-  --jolly-loading-progress-end: #5e95eb;
-}
-```
-
-Optional `--jolly-loading-progress-glow`,
-`--jolly-loading-progress-glow-subtle`, and
-`--jolly-loading-progress-glow-strong` customize the progress-bar glow.
-Error states can use `--jolly-loading-error-color`,
-`--jolly-loading-error-background`, and
-`--jolly-loading-error-text-color`.
+The runtime uses `jolly-loading` from `@jolly-pixel/ui`. Set its CSS custom
+properties on `loadingContainer` or an ancestor. See the
+[UI progress and loading documentation](../ui/docs/progress.md#runtime-loading-screen)
+for the current property list, defaults, and examples.
 
 ## 📃 License
 

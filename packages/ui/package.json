@@ -3,11 +3,14 @@
   "description": "Common and System's UI for JollyPixel's editors",
   "version": "1.0.1",
   "type": "module",
-  "private": true,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./feedback": {
+      "types": "./dist/feedback/index.d.ts",
+      "default": "./dist/feedback/index.js"
     }
   },
   "scripts": {

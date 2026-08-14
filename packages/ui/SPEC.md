@@ -563,8 +563,14 @@ answer yet.
 ### Data views
 
 `jolly-tree` (drag and drop reparent, visibility and lock toggles), `jolly-list` (add, remove,
-reorder, inline rename), `jolly-search`, `jolly-menu` (context menu), `jolly-toast`,
-`jolly-progress`.
+reorder, inline rename), `jolly-search`, `jolly-menu` (context menu), `jolly-toast`.
+
+### Feedback
+
+`jolly-progress` follows native progress semantics: a numeric `value` is determinate and a missing
+value is indeterminate. It owns normalization, ARIA progressbar values, reduced motion, forced
+colors and theme hooks. `jolly-loading` composes it into the branded runtime startup screen while
+retaining the existing tag, completion timing, error view and `--jolly-loading-*` overrides.
 
 ### Math
 

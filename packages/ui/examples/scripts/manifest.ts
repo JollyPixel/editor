@@ -45,6 +45,7 @@ import {
 import { MONITOR_EXAMPLE } from "./examples/monitors/monitor.ts";
 import { GRAPH_EXAMPLE } from "./examples/monitors/graph.ts";
 import { FACADE_PARITY_EXAMPLE } from "./examples/scenarios/facadeParity.ts";
+import { PROGRESS_EXAMPLE } from "./examples/feedback/progress.ts";
 
 /**
  * The navigation and E2E sweep derive from this list.
@@ -89,7 +90,8 @@ export const manifest: readonly GalleryExample[] = [
   EDITOR_STATES_EXAMPLE,
   FACADE_PARITY_EXAMPLE,
   MONITOR_EXAMPLE,
-  GRAPH_EXAMPLE
+  GRAPH_EXAMPLE,
+  PROGRESS_EXAMPLE
 ];
 
 export function findExample(

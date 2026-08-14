@@ -257,6 +257,14 @@ export {
   formatPercent
 } from "./monitors/format.ts";
 
+// Feedback
+export {
+  Progress
+} from "./feedback/Progress.ts";
+export {
+  Loading
+} from "./feedback/Loading.ts";
+
 // Facade
 export {
   Pane,
