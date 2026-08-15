@@ -1,7 +1,7 @@
 // Import Internal Dependencies
-import type { ColoredOutlinePass, ColoredOutlineEntry } from "./ColoredOutlinePass.ts";
+import type { ColoredOutlinePass, ColoredOutlineEntry } from "../postprocess/ColoredOutlinePass.ts";
 import type { PeerSelectionRegistry } from "./PeerSelectionRegistry.ts";
-import type { SelectionManager } from "./SelectionManager.ts";
+import type { SelectionManager } from "../SelectionManager.ts";
 
 /**
  * The only surface of `ColoredOutlinePass` this class actually needs -

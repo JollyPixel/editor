@@ -6,6 +6,11 @@ import * as THREE from "three";
 // not sit exactly on that mesh's own surface (same z-fighting concern as
 // SelectionOutline's kScaleBias, applied to size instead of a scale bias).
 const kSizeBias = 1.01;
+// Draws after every default-renderOrder object, so an `xray` box reliably
+// wins the pixel even though it skips the depth test - depth alone would
+// only make it "win" against geometry rendered earlier in the same frame,
+// not geometry drawn afterward.
+const kXrayRenderOrder = 999;
 
 export interface SelectionBoundingBoxOptions {
   /**
@@ -24,6 +29,15 @@ export interface SelectionBoundingBoxOptions {
    * @default 1
    */
   opacity?: number;
+  /**
+   * Skips the depth test (and depth write) so the box stays visible through
+   * any geometry in front of it, like an X-ray, instead of being occluded
+   * like a normal object - handy for keeping a selection visible through
+   * walls or a crowded scene. Still a single draw call either way, so this
+   * doesn't cost anything extra to render.
+   * @default false
+   */
+  xray?: boolean;
 }
 
 /**
@@ -39,19 +53,21 @@ export class SelectionBoundingBox extends THREE.LineSegments<THREE.BufferGeometr
   constructor(
     options: SelectionBoundingBoxOptions
   ) {
-    const { target, color = "#ffffff", opacity = 1 } = options;
+    const { target, color = "#ffffff", opacity = 1, xray = false } = options;
 
     super(
       new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)),
       new THREE.LineBasicMaterial({
         color,
         transparent: opacity < 1,
-        opacity
+        opacity,
+        depthTest: !xray,
+        depthWrite: !xray
       })
     );
 
     this.target = target;
-    this.renderOrder = 1;
+    this.renderOrder = xray ? kXrayRenderOrder : 1;
     target.add(this);
     this.update();
   }
@@ -87,6 +103,18 @@ export class SelectionBoundingBox extends THREE.LineSegments<THREE.BufferGeometr
   ): void {
     this.material.opacity = opacity;
     this.material.transparent = opacity < 1;
+  }
+
+  /**
+   * Toggles depth-test/write and render order between the normal and X-ray
+   * behavior described on `SelectionBoundingBoxOptions.xray`.
+   */
+  setXray(
+    xray: boolean
+  ): void {
+    this.material.depthTest = !xray;
+    this.material.depthWrite = !xray;
+    this.renderOrder = xray ? kXrayRenderOrder : 1;
   }
 
   dispose(): void {

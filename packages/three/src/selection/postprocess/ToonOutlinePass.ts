@@ -8,7 +8,7 @@ import {
 } from "three/tsl";
 
 // Import Internal Dependencies
-import type { SelectionManager, SelectableObject } from "./SelectionManager.ts";
+import type { SelectionManager, SelectableObject } from "../SelectionManager.ts";
 import { instancedOutline, type InstancedOutlineSelection } from "./InstancedOutlineNode.ts";
 
 /**

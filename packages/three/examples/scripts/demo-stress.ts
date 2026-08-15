@@ -18,7 +18,7 @@ import {
   createOrbitCamera,
   startLoop
 } from "./utils/common.ts";
-import { createExamplePane } from "./utils/pane.ts";
+import { createExamplePane } from "./utils/example-switcher.ts";
 
 // CONSTANTS
 // Pointer must stay within this many CSS pixels between down/up to count as
@@ -468,7 +468,7 @@ function handleClick(): void {
   rebuildOverlays();
 }
 
-const pane = createExamplePane();
+const pane = createExamplePane({ title: "Stress" });
 const performancePanel = new PerformancePanel({ pane, renderer, title: "Performance" });
 
 const stressFolder = pane.addFolder({ title: "Stress Test" });
@@ -506,14 +506,18 @@ const selectionFolder = pane.addFolder({ title: "Selection" });
  * At high instance counts the actionable move is picking the pipeline:
  * prefer Peer Colors (enable it below) over "toon outline (postprocess)".
  */
-const perfHint = {
-  hint: "toon outline (postprocess) redraws the whole non-selected scene into a depth buffer every " +
-    "frame something is selected/hovered - twice, once per role - on top of the normal render. " +
-    "Peer Colors below (ColoredOutlinePass) doesn't: its cost scales with how many instances are " +
-    "outlined, not total instance count. At high instance counts, prefer Peer Colors (enable it " +
-    "below) over toon outline."
-};
-selectionFolder.addBinding(perfHint, "hint", { readonly: true, multiline: true, label: "perf note" });
+// No field/monitor fits a paragraph (`jolly-monitor`'s value column doesn't
+// wrap; `jolly-property-row`'s own `description` does) - built directly and
+// appended to `folder.element`, the facade's own documented escape hatch for
+// content it has no builder for.
+const perfHintRow = document.createElement("jolly-property-row");
+perfHintRow.label = "perf note";
+perfHintRow.description = "toon outline (postprocess) redraws the whole non-selected scene into a depth buffer every " +
+  "frame something is selected/hovered - twice, once per role - on top of the normal render. " +
+  "Peer Colors below (ColoredOutlinePass) doesn't: its cost scales with how many instances are " +
+  "outlined, not total instance count. At high instance counts, prefer Peer Colors (enable it " +
+  "below) over toon outline.";
+selectionFolder.element.append(perfHintRow);
 
 const styleSettings = { meshStyle: selectionManager.meshStyle };
 selectionFolder

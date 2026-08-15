@@ -52,6 +52,34 @@ describe("constructor", () => {
 
     assert.strictEqual(`#${outline.material.color.getHexString()}`, "#ff0000");
   });
+
+  test("defaults linewidth to 1", () => {
+    const outline = new SelectionOutline({ target: createTarget() });
+
+    assert.strictEqual(outline.material.linewidth, 1);
+  });
+
+  test("applies the given linewidth", () => {
+    const outline = new SelectionOutline({ target: createTarget(), linewidth: 3 });
+
+    assert.strictEqual(outline.material.linewidth, 3);
+  });
+
+  test("defaults to depth-tested with a low render order", () => {
+    const outline = new SelectionOutline({ target: createTarget() });
+
+    assert.strictEqual(outline.material.depthTest, true);
+    assert.strictEqual(outline.material.depthWrite, true);
+    assert.strictEqual(outline.renderOrder, 1);
+  });
+
+  test("xray disables depth test/write and raises the render order above default objects", () => {
+    const outline = new SelectionOutline({ target: createTarget(), xray: true });
+
+    assert.strictEqual(outline.material.depthTest, false);
+    assert.strictEqual(outline.material.depthWrite, false);
+    assert.ok(outline.renderOrder > 1);
+  });
 });
 
 describe("setColor", () => {
@@ -74,6 +102,35 @@ describe("setOpacity", () => {
     outline.setOpacity(1);
     assert.strictEqual(outline.material.opacity, 1);
     assert.strictEqual(outline.material.transparent, false);
+  });
+});
+
+describe("setLinewidth", () => {
+  test("updates the material linewidth", () => {
+    const outline = new SelectionOutline({ target: createTarget() });
+    outline.setLinewidth(4);
+
+    assert.strictEqual(outline.material.linewidth, 4);
+  });
+});
+
+describe("setXray", () => {
+  test("toggling xray on disables depth test/write and raises render order", () => {
+    const outline = new SelectionOutline({ target: createTarget() });
+    outline.setXray(true);
+
+    assert.strictEqual(outline.material.depthTest, false);
+    assert.strictEqual(outline.material.depthWrite, false);
+    assert.ok(outline.renderOrder > 1);
+  });
+
+  test("toggling xray off restores depth test/write and the default render order", () => {
+    const outline = new SelectionOutline({ target: createTarget(), xray: true });
+    outline.setXray(false);
+
+    assert.strictEqual(outline.material.depthTest, true);
+    assert.strictEqual(outline.material.depthWrite, true);
+    assert.strictEqual(outline.renderOrder, 1);
   });
 });
 

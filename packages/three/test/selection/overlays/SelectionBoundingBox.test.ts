@@ -87,6 +87,22 @@ describe("constructor", () => {
     assert.strictEqual(box.material.opacity, 0.4);
     assert.strictEqual(box.material.transparent, true);
   });
+
+  test("defaults to depth-tested with a low render order", () => {
+    const box = new SelectionBoundingBox({ target: createGroupOfTwoBoxes() });
+
+    assert.strictEqual(box.material.depthTest, true);
+    assert.strictEqual(box.material.depthWrite, true);
+    assert.strictEqual(box.renderOrder, 1);
+  });
+
+  test("xray disables depth test/write and raises the render order above default objects", () => {
+    const box = new SelectionBoundingBox({ target: createGroupOfTwoBoxes(), xray: true });
+
+    assert.strictEqual(box.material.depthTest, false);
+    assert.strictEqual(box.material.depthWrite, false);
+    assert.ok(box.renderOrder > 1);
+  });
 });
 
 describe("update", () => {
@@ -123,6 +139,26 @@ describe("setOpacity", () => {
     box.setOpacity(1);
     assert.strictEqual(box.material.opacity, 1);
     assert.strictEqual(box.material.transparent, false);
+  });
+});
+
+describe("setXray", () => {
+  test("toggling xray on disables depth test/write and raises render order", () => {
+    const box = new SelectionBoundingBox({ target: createGroupOfTwoBoxes() });
+    box.setXray(true);
+
+    assert.strictEqual(box.material.depthTest, false);
+    assert.strictEqual(box.material.depthWrite, false);
+    assert.ok(box.renderOrder > 1);
+  });
+
+  test("toggling xray off restores depth test/write and the default render order", () => {
+    const box = new SelectionBoundingBox({ target: createGroupOfTwoBoxes(), xray: true });
+    box.setXray(false);
+
+    assert.strictEqual(box.material.depthTest, true);
+    assert.strictEqual(box.material.depthWrite, true);
+    assert.strictEqual(box.renderOrder, 1);
   });
 });
 

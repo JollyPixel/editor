@@ -1,7 +1,7 @@
 // Import Internal Dependencies
-import { createSelectionOverlay, type SelectionOverlay } from "./createSelectionOverlay.ts";
+import { createSelectionOverlay, type SelectionOverlay } from "../overlays/createSelectionOverlay.ts";
 import type { PeerSelectionRegistry, PeerSelectionChangeEventDetail } from "./PeerSelectionRegistry.ts";
-import type { SelectionManager } from "./SelectionManager.ts";
+import type { SelectionManager } from "../SelectionManager.ts";
 
 export interface PeerSelectionOverlaysOptions {
   registry: PeerSelectionRegistry;

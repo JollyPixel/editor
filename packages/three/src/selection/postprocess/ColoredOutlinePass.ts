@@ -22,7 +22,7 @@ import {
 } from "three/tsl";
 
 // Import Internal Dependencies
-import type { SelectableObject } from "./SelectionManager.ts";
+import type { SelectableObject } from "../SelectionManager.ts";
 
 // CONSTANTS
 // Matches OutlineNode's own separable-blur kernel radius.

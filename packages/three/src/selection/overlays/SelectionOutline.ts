@@ -8,6 +8,11 @@ import * as THREE from "three";
 // slightly outward via scale instead - imperceptible as a size change, enough
 // to win the depth test outright.
 const kScaleBias = 1.005;
+// Draws after every default-renderOrder object, so an `xray` outline
+// reliably wins the pixel even though it skips the depth test - depth alone
+// would only make it "win" against geometry rendered earlier in the same
+// frame, not geometry drawn afterward.
+const kXrayRenderOrder = 999;
 
 export interface SelectionOutlineOptions {
   /**
@@ -26,6 +31,25 @@ export interface SelectionOutlineOptions {
    * @default 1
    */
   opacity?: number;
+  /**
+   * Line thickness in (CSS) pixels, forwarded straight to
+   * `THREE.LineBasicMaterial.linewidth`. Most WebGL backends silently clamp
+   * this to 1 regardless of the value given - a long-standing ANGLE/GL_LINES
+   * driver limitation `LineBasicMaterial` does nothing to work around - so a
+   * value above 1 is a "nice if the platform honors it" upgrade, not a
+   * guarantee; `WebGPURenderer` is not affected.
+   * @default 1
+   */
+  linewidth?: number;
+  /**
+   * Skips the depth test (and depth write) so the outline stays visible
+   * through any geometry in front of it, like an X-ray, instead of being
+   * occluded like a normal object - handy for keeping a selection visible
+   * through walls or a crowded scene. Still a single draw call either way,
+   * so this doesn't cost anything extra to render.
+   * @default false
+   */
+  xray?: boolean;
 }
 
 /**
@@ -39,18 +63,21 @@ export class SelectionOutline extends THREE.LineSegments<THREE.BufferGeometry, T
   constructor(
     options: SelectionOutlineOptions
   ) {
-    const { target, color = "#ffffff", opacity = 1 } = options;
+    const { target, color = "#ffffff", opacity = 1, linewidth = 1, xray = false } = options;
 
     super(
       new THREE.EdgesGeometry(target.geometry),
       new THREE.LineBasicMaterial({
         color,
         transparent: opacity < 1,
-        opacity
+        opacity,
+        linewidth,
+        depthTest: !xray,
+        depthWrite: !xray
       })
     );
 
-    this.renderOrder = 1;
+    this.renderOrder = xray ? kXrayRenderOrder : 1;
     this.scale.setScalar(kScaleBias);
     target.add(this);
   }
@@ -66,6 +93,29 @@ export class SelectionOutline extends THREE.LineSegments<THREE.BufferGeometry, T
   ): void {
     this.material.opacity = opacity;
     this.material.transparent = opacity < 1;
+  }
+
+  /**
+   * Updates the outline material's `linewidth` - see this option's own doc
+   * comment on `SelectionOutlineOptions` for why this is not guaranteed to
+   * have a visible effect on every platform.
+   */
+  setLinewidth(
+    linewidth: number
+  ): void {
+    this.material.linewidth = linewidth;
+  }
+
+  /**
+   * Toggles depth-test/write and render order between the normal and X-ray
+   * behavior described on `SelectionOutlineOptions.xray`.
+   */
+  setXray(
+    xray: boolean
+  ): void {
+    this.material.depthTest = !xray;
+    this.material.depthWrite = !xray;
+    this.renderOrder = xray ? kXrayRenderOrder : 1;
   }
 
   dispose(): void {
