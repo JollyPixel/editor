@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import "reflect-metadata";
+import type { InputListenerType } from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
 import type {
@@ -35,10 +36,18 @@ export type BehaviorPropertyMetadata = {
   description: string;
 };
 
+export type BehaviorInputListenerMetadata = {
+  type: InputListenerType;
+  methodName: BehaviorKey;
+};
+
 export type BehaviorMetadata = {
   properties: Map<BehaviorKey, BehaviorPropertyMetadata>;
   components: Map<BehaviorKey, SceneActorComponentType>;
+  inputListeners: BehaviorInputListenerMetadata[];
 };
+
+export const BehaviorMetadataKey = Symbol.for("BehaviorMetadata");
 
 export function SceneProperty(
   options: ScenePropertyOptions
@@ -49,31 +58,18 @@ export function SceneProperty(
     object: Object,
     propertyName: BehaviorKey
   ): void {
-    const { label = propertyName.toString(), description = "" } = options;
+    const {
+      label = propertyName.toString(),
+      description = ""
+    } = options;
 
-    const propertyValue: BehaviorPropertyMetadata = {
+    getOrCreateBehaviorMetadata(object).properties.set(propertyName, {
       type,
       label,
       description
-    };
-
-    const metadata = getBehaviorMetadata(object);
-    if (metadata) {
-      metadata.properties.set(propertyName, propertyValue);
-    }
-    else {
-      const metadata = createBehaviorMetadata();
-      metadata.properties.set(propertyName, propertyValue);
-
-      Reflect.defineMetadata(
-        SceneProperty.Metadata,
-        metadata,
-        object
-      );
-    }
+    });
   };
 }
-SceneProperty.Metadata = Symbol.for("BehaviorMetadata");
 
 export type SceneActorComponentType =
   | typeof ModelRenderer
@@ -89,33 +85,58 @@ export function SceneActorComponent(
     object: Object,
     propertyName: BehaviorKey
   ): void {
-    const metadata = getBehaviorMetadata(object);
+    getOrCreateBehaviorMetadata(object).components.set(
+      propertyName,
+      classObject
+    );
+  };
+}
 
-    if (metadata) {
-      metadata.components.set(propertyName, classObject);
-    }
-    else {
-      const metadata = createBehaviorMetadata();
-      metadata.components.set(propertyName, classObject);
-
-      Reflect.defineMetadata(
-        SceneProperty.Metadata,
-        metadata,
-        object
-      );
-    }
+/**
+ * Binds a Behavior method to an input event (by dot-path name, see
+ * `InputListenerType`). The listener is wired automatically during
+ * behavior initialization by `BehaviorInitializer`.
+ */
+export function InputListener(
+  type: InputListenerType
+) {
+  return function fn(
+    object: Object,
+    methodName: BehaviorKey
+  ): void {
+    getOrCreateBehaviorMetadata(object).inputListeners.push({
+      type,
+      methodName
+    });
   };
 }
 
 export function getBehaviorMetadata(
   object: Object
 ): BehaviorMetadata | undefined {
-  return Reflect.getMetadata(SceneProperty.Metadata, object);
+  return Reflect.getMetadata(
+    BehaviorMetadataKey,
+    object
+  );
 }
 
 export function createBehaviorMetadata(): BehaviorMetadata {
   return {
     properties: new Map(),
-    components: new Map()
+    components: new Map(),
+    inputListeners: []
   };
+}
+
+function getOrCreateBehaviorMetadata(
+  object: Object
+): BehaviorMetadata {
+  const metadata = getBehaviorMetadata(object) ?? createBehaviorMetadata();
+  Reflect.defineMetadata(
+    BehaviorMetadataKey,
+    metadata,
+    object
+  );
+
+  return metadata;
 }

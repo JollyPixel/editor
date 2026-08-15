@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import type { AssetCoordinator } from "@jolly-pixel/asset";
 import * as THREE from "three/webgpu";
+import { Input } from "@jolly-pixel/controls";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
@@ -14,7 +15,6 @@ import {
 import {
   type SceneManager
 } from "./scene/SceneManager.ts";
-import { Input } from "../controls/Input.class.ts";
 import { GlobalAudio } from "../audio/GlobalAudio.ts";
 import {
   type GlobalsAdapter,

@@ -3,10 +3,10 @@ import {
   Behavior,
   type BehaviorProperties,
   ModelRenderer,
-  Input,
   type InputDevicePreference,
   SceneProperty,
   SceneActorComponent,
+  InputListener,
   SignalEvent
 } from "@jolly-pixel/engine";
 
@@ -23,14 +23,14 @@ export class PlayerBehavior extends Behavior<PlayerProperties> {
   @SceneActorComponent(ModelRenderer)
   model: ModelRenderer;
 
-  @Input.listen("input.devicePreferenceChange")
+  @InputListener("input.devicePreferenceChange")
   onInputEvent(
     preference: InputDevicePreference
   ) {
     console.log("Input event detected in PlayerBehavior: ", preference);
   }
 
-  @Input.listen("gamepad.connect")
+  @InputListener("gamepad.connect")
   onGamepadConnect() {
     console.log("Gamepad connected!");
   }
@@ -38,7 +38,9 @@ export class PlayerBehavior extends Behavior<PlayerProperties> {
   awake() {
     this.actor.object3D.rotateX(-Math.PI / 2);
 
-    this.model.animation.setClipNameRewriter((name) => name.slice(name.indexOf("|") + 1).toLowerCase());
+    this.model.animation.setClipNameRewriter(
+      (name) => name.slice(name.indexOf("|") + 1).toLowerCase()
+    );
     this.model.animation.play("idle_loop");
     this.model.animation.setFadeDuration(0.25);
   }
@@ -46,27 +48,27 @@ export class PlayerBehavior extends Behavior<PlayerProperties> {
   update() {
     const { input } = this.actor.world;
 
-    if (input.isTouchDown("primary")) {
+    if (input.touchpad.isDown("primary")) {
       console.log("Primary touch is down!");
     }
 
-    if (input.wasGamepadButtonJustPressed(0, "DPadUp")) {
+    if (input.gamepad.wasButtonJustPressed(0, "DPadUp")) {
       console.log("Gamepad 0 button DPadUp is up!");
     }
 
-    if (input.wasGamepadAxisJustPressed(0, "LeftStickY", { positive: true })) {
+    if (input.gamepad.wasAxisJustPressed(0, "LeftStickY", { positive: true })) {
       console.log("Gamepad 0 axis LeftStickY was just pressed!");
     }
 
-    if (input.isKeyDown("ArrowUp")) {
+    if (input.keyboard.isDown("ArrowUp")) {
       this.actor.object3D.position.z += this.speed;
       this.model.animation.play("walk_loop");
     }
-    else if (input.isKeyDown("ArrowDown")) {
+    else if (input.keyboard.isDown("ArrowDown")) {
       this.actor.object3D.position.z -= this.speed;
       this.model.animation.play("walk_loop");
     }
-    else if (input.isMouseButtonDown("left")) {
+    else if (input.mouse.isDown("left")) {
       this.model.animation.play("punch_jab");
       this.onPlayerPunch.emit();
     }

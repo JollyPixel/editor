@@ -15,7 +15,10 @@ import * as THREE from "three";
 // Import Internal Dependencies
 // import { SpriteRenderer } from "./components/sprite/SpriteRenderer.class.ts";
 
-const canvasHTMLElement = document.querySelector("canvas") as HTMLCanvasElement;
+const canvasHTMLElement = document.querySelector<HTMLCanvasElement>("canvas");
+if (!canvasHTMLElement) {
+  throw new Error("No canvas element found");
+}
 const runtime = await Runtime.create(canvasHTMLElement, {
   includePerformanceStats: true
 });

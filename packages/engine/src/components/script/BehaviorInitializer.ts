@@ -1,12 +1,7 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-import "reflect-metadata";
 
 // Import Internal Dependencies
-import {
-  Input,
-  type InputListenerMetadata
-} from "../../controls/Input.class.ts";
 import { Behavior } from "./Behavior.ts";
 import {
   getBehaviorMetadata,
@@ -78,15 +73,10 @@ export class BehaviorInitializer<
   #resolveInputListeners(): void {
     const { input } = this.#behavior.actor.world;
 
-    const metadata = Reflect.getMetadata(
-      Input.Metadata,
-      this.#behavior
-    ) as InputListenerMetadata[] | undefined ?? [];
-
-    for (const { type, methodName } of metadata) {
+    for (const { type, methodName } of this.#metadata.inputListeners) {
       if (!(methodName in this.#behavior)) {
         this.#console.warn(
-          `[BehaviorInitializer] Class method '${methodName}' not found in ${this.behaviorName}`
+          `[BehaviorInitializer] Class method '${String(methodName)}' not found in ${this.behaviorName}`
         );
         continue;
       }
@@ -150,4 +140,3 @@ export class BehaviorInitializer<
     return value;
   }
 }
-

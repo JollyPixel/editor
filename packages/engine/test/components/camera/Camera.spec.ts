@@ -40,9 +40,13 @@ function createActorMock() {
         getMouseDelta: mock.fn(() => {
           return { x: 0, y: 0 };
         }),
-        isKeyDown: mock.fn(() => false),
-        isMouseButtonDown: mock.fn(() => false),
-        wasMouseButtonJustReleased: mock.fn(() => false)
+        keyboard: {
+          isDown: mock.fn(() => false)
+        },
+        mouse: {
+          isDown: mock.fn(() => false),
+          wasJustReleased: mock.fn(() => false)
+        }
       }
     }
   };
@@ -296,7 +300,7 @@ describe("Components.Camera.Camera3DControls", () => {
       const controls = new Camera3DControls(actor as unknown as Actor, {
         speed: 10
       });
-      actor.world.input.isKeyDown.mock.mockImplementation(
+      actor.world.input.keyboard.isDown.mock.mockImplementation(
         (key: string) => key === "KeyW"
       );
 
@@ -313,7 +317,7 @@ describe("Components.Camera.Camera3DControls", () => {
       const controls = new Camera3DControls(actor as unknown as Actor, {
         speed: 10
       });
-      actor.world.input.isKeyDown.mock.mockImplementation(
+      actor.world.input.keyboard.isDown.mock.mockImplementation(
         (key: string) => key === "Space"
       );
 

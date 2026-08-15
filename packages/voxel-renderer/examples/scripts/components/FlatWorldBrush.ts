@@ -87,7 +87,7 @@ export class FlatWorldBrush extends ActorComponent {
     this.#highlight.setFace(isGroundHit ? null : (hit.face?.normal ?? null));
 
     const { input } = this.actor.world;
-    if (input.wasMouseButtonJustPressed("left")) {
+    if (input.mouse.wasJustPressed("left")) {
       this.#engine.setVoxel(GROUND_LAYER, {
         position: placeTarget,
         blockId: PLACED_BLOCK_ID
@@ -95,7 +95,7 @@ export class FlatWorldBrush extends ActorComponent {
     }
     // Only a chunk hit has a voxel behind it; the ground plane has none.
     else if (
-      input.wasMouseButtonJustPressed("right") &&
+      input.mouse.wasJustPressed("right") &&
       !isGroundHit
     ) {
       this.#engine.removeVoxel(GROUND_LAYER, {
@@ -121,8 +121,9 @@ export class FlatWorldBrush extends ActorComponent {
     const { input } = this.actor.world;
     const scene = this.actor.world.sceneManager.getSource();
 
+    const viewportPosition = input.mouse.getViewportPosition();
     this.#raycaster.setFromCamera(
-      input.getMousePosition(),
+      new THREE.Vector2(viewportPosition.x, viewportPosition.y),
       this.#camera
     );
 

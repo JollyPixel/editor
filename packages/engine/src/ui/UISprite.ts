@@ -96,7 +96,7 @@ export class UISprite<
   }
 
   isPointerOver(): boolean {
-    const mouse = this.actor.world.input.getMouseWorldPosition();
+    const mouse = this.actor.world.input.mouse.getWorldPosition();
     const box = new THREE.Box3().setFromObject(this.mesh);
 
     return box.containsPoint(
@@ -125,18 +125,18 @@ export class UISprite<
     }
 
     // --- Pointer Down ---
-    if (isOver && input.wasMouseButtonJustPressed("left")) {
+    if (isOver && input.mouse.wasJustPressed("left")) {
       this.#isPressed = true;
       this.onPointerDown.emit();
     }
 
     // --- Right Click ---
-    if (isOver && input.wasMouseButtonJustReleased("right")) {
+    if (isOver && input.mouse.wasJustReleased("right")) {
       this.onRightClick.emit();
     }
 
     // --- Pointer Up / Click / Double Click ---
-    if (this.#isPressed && input.wasMouseButtonJustReleased("left")) {
+    if (this.#isPressed && input.mouse.wasJustReleased("left")) {
       this.#isPressed = false;
       this.onPointerUp.emit();
 

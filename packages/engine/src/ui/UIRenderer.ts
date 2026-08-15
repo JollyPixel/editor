@@ -44,7 +44,7 @@ export class UIRenderer<
     } = options;
     const { world } = actor;
 
-    const screenBounds = world.input.getScreenBounds();
+    const screenBounds = world.input.screen.getBounds();
 
     this.camera = new THREE.OrthographicCamera(
       screenBounds.left,

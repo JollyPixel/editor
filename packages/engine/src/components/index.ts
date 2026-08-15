@@ -6,6 +6,7 @@ export * from "./script/Behavior.ts";
 export {
   SceneProperty,
   SceneActorComponent,
+  InputListener,
   type ScenePropertyOptions
 } from "./script/BehaviorDecorators.ts";
 

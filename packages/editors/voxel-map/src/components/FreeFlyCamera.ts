@@ -112,8 +112,8 @@ export class FreeFlyCamera extends CameraComponent {
     const { transform } = this.actor;
 
     // --- Mouse look ---
-    if (input.isMouseButtonDown("middle") && input.isMouseMoving()) {
-      const delta = input.getMouseDelta(false);
+    if (input.mouse.isDown("middle") && input.mouse.isMoving()) {
+      const delta = input.mouse.getViewportDelta(false);
       this.#yaw -= delta.x * this.#mouseSensitivity;
       this.#pitch += delta.y * this.#mouseSensitivity;
       this.#pitch = Math.max(
@@ -133,22 +133,22 @@ export class FreeFlyCamera extends CameraComponent {
     // --- Accumulate movement intent ---
     this.#move.set(0, 0, 0);
 
-    if (input.isKeyDown("KeyW") || input.isKeyDown("ArrowUp")) {
+    if (input.keyboard.isDown("KeyW") || input.keyboard.isDown("ArrowUp")) {
       this.#move.addScaledVector(this.#forward, 1);
     }
-    if (input.isKeyDown("KeyS") || input.isKeyDown("ArrowDown")) {
+    if (input.keyboard.isDown("KeyS") || input.keyboard.isDown("ArrowDown")) {
       this.#move.addScaledVector(this.#forward, -1);
     }
-    if (input.isKeyDown("KeyA") || input.isKeyDown("ArrowLeft")) {
+    if (input.keyboard.isDown("KeyA") || input.keyboard.isDown("ArrowLeft")) {
       this.#move.addScaledVector(this.#right, -1);
     }
-    if (input.isKeyDown("KeyD") || input.isKeyDown("ArrowRight")) {
+    if (input.keyboard.isDown("KeyD") || input.keyboard.isDown("ArrowRight")) {
       this.#move.addScaledVector(this.#right, 1);
     }
-    if (input.isKeyDown("Space")) {
+    if (input.keyboard.isDown("Space")) {
       this.#move.y += 1;
     }
-    if (input.isKeyDown("ShiftLeft") || input.isKeyDown("ShiftRight")) {
+    if (input.keyboard.isDown("ShiftLeft") || input.keyboard.isDown("ShiftRight")) {
       this.#move.y -= 1;
     }
 
@@ -158,12 +158,12 @@ export class FreeFlyCamera extends CameraComponent {
     }
 
     // Scroll to zoom (dolly along look direction) — Ctrl is reserved for brush size.
-    const isCtrl = input.isKeyDown("ControlLeft") || input.isKeyDown("ControlRight");
+    const isCtrl = input.keyboard.isDown("ControlLeft") || input.keyboard.isDown("ControlRight");
     if (!isCtrl) {
-      if (input.isMouseButtonDown("scrollUp")) {
+      if (input.mouse.isDown("scrollUp")) {
         this.#dolly(transform, this.#scrollSpeed);
       }
-      if (input.isMouseButtonDown("scrollDown")) {
+      if (input.mouse.isDown("scrollDown")) {
         this.#dolly(transform, -this.#scrollSpeed);
       }
     }

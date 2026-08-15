@@ -1,9 +1,11 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
+import type {
+  InputKeyboardAction,
+  MouseEventButton
+} from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
-import type { InputKeyboardAction } from "../../controls/types.ts";
-import type { MouseEventButton } from "../../controls/Input.class.ts";
 import { Actor } from "../../actor/Actor.ts";
 import { CameraComponent, type CameraOptions } from "./Camera.ts";
 
@@ -101,7 +103,7 @@ export class Camera3DControls extends CameraComponent<any> {
 
   #rotate() {
     const { transform } = this.actor;
-    const mouseDelta = this.actor.world.input.getMouseDelta(
+    const mouseDelta = this.actor.world.input.mouse.getViewportDelta(
       true
     );
 
@@ -126,24 +128,24 @@ export class Camera3DControls extends CameraComponent<any> {
     const { input } = this.actor.world;
 
     const vector = this.#direction.set(0, 0, 0);
-    if (input.isKeyDown(this.#bindings.forward)) {
+    if (input.keyboard.isDown(this.#bindings.forward)) {
       vector.z -= 1;
     }
-    if (input.isKeyDown(this.#bindings.backward)) {
+    if (input.keyboard.isDown(this.#bindings.backward)) {
       vector.z += 1;
     }
 
-    if (input.isKeyDown(this.#bindings.up)) {
+    if (input.keyboard.isDown(this.#bindings.up)) {
       vector.y += 1;
     }
-    if (input.isKeyDown(this.#bindings.down)) {
+    if (input.keyboard.isDown(this.#bindings.down)) {
       vector.y -= 1;
     }
 
-    if (input.isKeyDown(this.#bindings.right)) {
+    if (input.keyboard.isDown(this.#bindings.right)) {
       vector.x += 1;
     }
-    if (input.isKeyDown(this.#bindings.left)) {
+    if (input.keyboard.isDown(this.#bindings.left)) {
       vector.x -= 1;
     }
 
@@ -162,11 +164,11 @@ export class Camera3DControls extends CameraComponent<any> {
       );
     }
 
-    if (input.isMouseButtonDown(this.#bindings.lookAround)) {
+    if (input.mouse.isDown(this.#bindings.lookAround)) {
       // input.mouse.lock();
       this.#rotate();
     }
-    else if (input.wasMouseButtonJustReleased(this.#bindings.lookAround)) {
+    else if (input.mouse.wasJustReleased(this.#bindings.lookAround)) {
       // input.mouse.unlock();
     }
   }
