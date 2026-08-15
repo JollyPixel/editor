@@ -110,6 +110,7 @@ export interface StartLoopOptions {
    */
   controls: UpdatableControls;
   onFrame?: () => void;
+  onBeforeRender?: () => void;
   onAfterRender?: () => void;
 }
 
@@ -125,6 +126,7 @@ export function startLoop(
     camera,
     controls,
     onFrame,
+    onBeforeRender,
     onAfterRender
   } = options;
 
@@ -133,6 +135,7 @@ export function startLoop(
   renderer.setAnimationLoop(() => {
     controls.update();
     onFrame?.();
+    onBeforeRender?.();
     renderer.render(scene, camera);
     onAfterRender?.();
   });

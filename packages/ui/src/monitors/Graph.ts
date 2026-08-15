@@ -14,7 +14,7 @@ import {
 
 // Import Internal Dependencies
 import { graphStyles } from "./Graph.styles.ts";
-import { resolveThemeToken } from "../theme/resolveThemeToken.ts";
+import { resolveThemeColor } from "../theme/resolveThemeToken.ts";
 import { hiddenStyles } from "../theme/styles/hiddenStyles.ts";
 
 export interface GraphDefaults {
@@ -192,7 +192,7 @@ export class GraphElement extends LitElement {
         ctx.lineTo(x, y);
       }
     });
-    ctx.strokeStyle = resolveThemeToken(
+    ctx.strokeStyle = resolveThemeColor(
       this,
       "--jolly-accent-fill",
       "#4488ff"

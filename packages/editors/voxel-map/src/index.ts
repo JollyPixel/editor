@@ -30,7 +30,9 @@ if (!canvas) {
 }
 
 const runtime = await Runtime.create(canvas, {
-  includePerformanceStats: false,
+  includePerformanceStats: {
+    position: "top-right"
+  },
   focusCanvas: false
 });
 const { world } = runtime;

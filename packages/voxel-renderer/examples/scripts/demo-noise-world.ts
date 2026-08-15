@@ -21,7 +21,7 @@ import {
   type VoxelDebugMode,
   type VoxelEngine
 } from "../../src/index.ts";
-import { PerformancePanel } from "./components/PerformancePanel.ts";
+import { RendererStats } from "./components/RendererStats.ts";
 import {
   TerrainBlock,
   generateTerrain,
@@ -199,9 +199,12 @@ controlsFolder
   .on("change", ({ value }) => setDebugMode(value));
 
 // Chunks are meshed over several frames (the engine tick is budgeted), so the
-// mesh counters are polled on the performance panel's own cadence.
+// mesh counters are polled with the renderer counters on the same cadence.
 world.createActor("hud")
-  .addComponent(PerformancePanel, { pane, onRefresh: syncStats });
+  .addComponent(RendererStats, {
+    folder: meshFolder,
+    onRefresh: syncStats
+  });
 
 await loadRuntime(runtime);
 

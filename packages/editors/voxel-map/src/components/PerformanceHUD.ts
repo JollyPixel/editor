@@ -1,24 +1,23 @@
 // Import Third-party Dependencies
-import { ActorComponent, type Actor } from "@jolly-pixel/engine";
 import {
-  type VoxelDebugMode,
-  type VoxelRenderer
+  ActorComponent,
+  type Actor
+} from "@jolly-pixel/engine";
+import {
+  Pane,
+  formatCount,
+  formatMilliseconds,
+  formatPercent
+} from "@jolly-pixel/ui";
+import { StatsRecorder } from "@jolly-pixel/ui/stats";
+import type {
+  VoxelDebugMode,
+  VoxelRenderer
 } from "@jolly-pixel/voxel.renderer";
-import { Pane, type FolderApi } from "tweakpane";
 import type * as THREE from "three/webgpu";
 
 // CONSTANTS
-const kRefreshInterval = 0.2;
-const kBytesPerMebibyte = 1024 * 1024;
-const kGraphMaxFps = 165;
-const kGraphRows = 3;
 const kToggleKey = "F3";
-const kHudStyle = [
-  "position:absolute",
-  "top:8px",
-  "right:8px",
-  "z-index:100"
-].join(";");
 const kDebugModeOptions: Record<VoxelDebugMode, VoxelDebugMode> = {
   off: "off",
   overlay: "overlay",
@@ -31,24 +30,22 @@ export interface PerformanceHUDOptions {
 
 export class PerformanceHUD extends ActorComponent {
   #vr: VoxelRenderer;
-  #renderer: THREE.WebGPURenderer | null = null;
-
-  #container: HTMLDivElement | null = null;
   #pane: Pane | null = null;
-  #rendererFolder: FolderApi | null = null;
-  #voxelFolder: FolderApi | null = null;
+  #worldFolder: ReturnType<Pane["addFolder"]> | null = null;
+  #meshFolder: ReturnType<Pane["addFolder"]> | null = null;
+  #recorder = new StatsRecorder();
+  #unsubscribe: (() => void) | null = null;
 
   #rendererStats = {
-    fps: 0,
-    worstMs: 0,
     calls: 0,
     triangles: 0,
     geometries: 0,
-    textures: 0,
-    heapMiB: 0
+    textures: 0
   };
-  // `mode` mirrors `VoxelDebugger.mode` so the dropdown stays correct if the
-  // mode is changed from elsewhere; every other field is a read-only monitor.
+  #frameStats = {
+    calls: 0,
+    triangles: 0
+  };
   #voxelStats = {
     mode: "off" as VoxelDebugMode,
     chunks: 0,
@@ -62,10 +59,6 @@ export class PerformanceHUD extends ActorComponent {
     buildMs: 0
   };
 
-  #elapsed = 0;
-  #frames = 0;
-  #worstFrame = 0;
-  // Stored so the listener can be removed in destroy()
   #onKeyDown: (event: KeyboardEvent) => void;
 
   constructor(
@@ -81,63 +74,38 @@ export class PerformanceHUD extends ActorComponent {
     this.#onKeyDown = (event: KeyboardEvent) => {
       if (event.key === kToggleKey) {
         event.preventDefault();
-        if (this.#pane) {
+        if (this.#pane !== null) {
           this.#pane.hidden = !this.#pane.hidden;
         }
       }
     };
   }
 
-  awake() {
-    this.#renderer = this.actor.world.renderer.getSource() as THREE.WebGPURenderer;
+  awake(): void {
+    const renderer = this.actor.world.renderer
+      .getSource() as THREE.WebGPURenderer;
+    this.actor.world.renderer.onDraw(this.#captureFrame);
+    this.#registerMetrics(renderer);
 
-    const gameContainer = document.querySelector<HTMLElement>("#game-container")!;
-    this.#container = document.createElement("div");
-    this.#container.style.cssText = kHudStyle;
-    gameContainer.appendChild(this.#container);
-
-    const pane = new Pane({ container: this.#container, title: "Performance [F3]" });
+    const pane = new Pane({ title: "Voxel Stats [F3]" });
     this.#pane = pane;
 
-    const rendererFolder = pane.addFolder({ title: "Renderer" });
-    // Graph and numeric readout share the same value.
-    rendererFolder.addBinding(this.#rendererStats, "fps", {
-      readonly: true,
-      interval: 0,
-      view: "graph",
-      min: 0,
-      max: kGraphMaxFps,
-      rows: kGraphRows,
-      label: "fps"
+    const worldFolder = pane.addFolder({ title: "World" });
+    worldFolder.addBinding(this.#voxelStats, "mode", {
+      options: kDebugModeOptions,
+      label: "debug"
+    }).on("change", ({ value }) => {
+      this.#vr.engine.debug.mode = value;
     });
-    addMonitors(rendererFolder, this.#rendererStats, {
-      fps: { label: "fps", format: formatCount },
-      worstMs: { label: "worst", format: formatMilliseconds },
-      calls: { label: "draw calls", format: formatCount },
-      triangles: { label: "triangles", format: formatCount },
-      geometries: { label: "geometries", format: formatCount },
-      textures: { label: "textures", format: formatCount }
-    });
-    if (readHeapMebibytes() !== null) {
-      addMonitors(rendererFolder, this.#rendererStats, {
-        heapMiB: { label: "js heap (MiB)", format: formatCount }
-      });
-    }
-    this.#rendererFolder = rendererFolder;
-
-    const voxelFolder = pane.addFolder({ title: "Voxels" });
-    voxelFolder
-      .addBinding(this.#voxelStats, "mode", {
-        options: kDebugModeOptions,
-        label: "debug"
-      })
-      .on("change", ({ value }) => {
-        this.#vr.engine.debug.mode = value;
-      });
-    addMonitors(voxelFolder, this.#voxelStats, {
+    worldFolder.addMonitors(this.#voxelStats, {
       chunks: { label: "chunks", format: formatCount },
+      voxels: { label: "voxels", format: formatCount }
+    });
+    this.#worldFolder = worldFolder;
+
+    const meshFolder = pane.addFolder({ title: "Mesh" });
+    meshFolder.addMonitors(this.#voxelStats, {
       meshes: { label: "meshes", format: formatCount },
-      voxels: { label: "voxels", format: formatCount },
       faces: { label: "faces", format: formatCount },
       culled: { label: "culled", format: formatPercent },
       merged: { label: "merged", format: formatPercent },
@@ -145,153 +113,163 @@ export class PerformanceHUD extends ActorComponent {
       facesPerVoxel: { label: "faces/voxel", format: formatDecimal },
       buildMs: { label: "build time", format: formatMilliseconds }
     });
-    this.#voxelFolder = voxelFolder;
+    meshFolder.addMonitors(this.#rendererStats, {
+      calls: { label: "draw calls", format: formatCount },
+      triangles: { label: "rendered tris", format: formatCount },
+      geometries: { label: "geometries", format: formatCount },
+      textures: { label: "textures", format: formatCount }
+    });
+    this.#meshFolder = meshFolder;
 
+    this.#unsubscribe = this.#recorder.subscribe(
+      (snapshot) => this.#refresh(snapshot)
+    );
     document.addEventListener("keydown", this.#onKeyDown);
-    this.#refresh(0, 0);
+    this.#refresh(this.#recorder.snapshot());
   }
 
-  update(dt: number) {
-    this.#frames++;
-    this.#elapsed += dt;
-    this.#worstFrame = Math.max(this.#worstFrame, dt);
-
-    if (this.#elapsed < kRefreshInterval) {
-      return;
-    }
-
-    this.#refresh(this.#frames / this.#elapsed, this.#worstFrame);
-    this.#elapsed = 0;
-    this.#frames = 0;
-    this.#worstFrame = 0;
-  }
-
-  #refresh(
-    fps: number,
-    worstFrame: number
+  update(
+    _deltaTime: number
   ): void {
-    if (!this.#renderer || !this.#rendererFolder || !this.#voxelFolder) {
-      return;
-    }
-
-    const { render, memory } = this.#renderer.info;
-    this.#rendererStats.fps = fps;
-    this.#rendererStats.worstMs = worstFrame * 1000;
-    this.#rendererStats.calls = render.drawCalls;
-    this.#rendererStats.triangles = render.triangles;
-    this.#rendererStats.geometries = memory.geometries;
-    this.#rendererStats.textures = memory.textures;
-    this.#rendererStats.heapMiB = readHeapMebibytes() ?? 0;
-    this.#rendererFolder.refresh();
-
-    const {
-      chunks, meshes, voxels, faces, culledFaces, mergedFaces,
-      triangles, facesPerSolidVoxel, buildTimeMs
-    } = this.#vr.engine.debug.stats;
-    const candidates = faces + culledFaces;
-    const emitted = faces + mergedFaces;
-
-    this.#voxelStats.mode = this.#vr.engine.debug.mode;
-    this.#voxelStats.chunks = chunks;
-    this.#voxelStats.meshes = meshes;
-    this.#voxelStats.voxels = voxels;
-    this.#voxelStats.faces = faces;
-    this.#voxelStats.culled = candidates === 0 ? 0 : (culledFaces / candidates) * 100;
-    this.#voxelStats.merged = emitted === 0 ? 0 : (mergedFaces / emitted) * 100;
-    this.#voxelStats.triangles = triangles;
-    this.#voxelStats.facesPerVoxel = facesPerSolidVoxel;
-    this.#voxelStats.buildMs = buildTimeMs;
-    this.#voxelFolder.refresh();
+    this.#recorder.begin();
+    this.#recorder.end();
   }
 
-  override destroy() {
+  override destroy(): void {
     document.removeEventListener("keydown", this.#onKeyDown);
+    this.actor.world.renderer.off("draw", this.#captureFrame);
+    this.#unsubscribe?.();
+    this.#unsubscribe = null;
     this.#pane?.dispose();
     this.#pane = null;
-    this.#rendererFolder = null;
-    this.#voxelFolder = null;
-    this.#container?.remove();
-    this.#container = null;
+    this.#worldFolder = null;
+    this.#meshFolder = null;
 
     super.destroy();
   }
-}
 
-type MonitorState = Record<string, number | string>;
+  #registerMetrics(
+    renderer: THREE.WebGPURenderer
+  ): void {
+    this.#recorder.addMetric({
+      id: "calls",
+      label: "draw calls",
+      better: "lower",
+      sample: () => this.#frameStats.calls
+    });
+    this.#recorder.addMetric({
+      id: "rendererTriangles",
+      label: "rendered tris",
+      better: "lower",
+      sample: () => this.#frameStats.triangles
+    });
+    this.#recorder.addMetric({
+      id: "geometries",
+      label: "geometries",
+      better: "lower",
+      sample: () => renderer.info.memory.geometries
+    });
+    this.#recorder.addMetric({
+      id: "textures",
+      label: "textures",
+      better: "lower",
+      sample: () => renderer.info.memory.textures
+    });
+    this.#registerVoxelMetrics();
+  }
 
-interface MonitorField {
-  label: string;
-  /** Number monitors only; ignored for string values. */
-  format?: (value: number) => string;
-}
+  #captureFrame = (
+    { source }: { source: THREE.WebGPURenderer; }
+  ) => {
+    this.#frameStats.calls = source.info.render.drawCalls;
+    this.#frameStats.triangles = source.info.render.triangles;
+  };
 
-type MonitorFields<TState extends MonitorState> = {
-  [K in keyof TState]?: MonitorField;
-};
+  #registerVoxelMetrics(): void {
+    const debug = () => this.#vr.engine.debug.stats;
+    this.#recorder.addMetric({
+      id: "chunks",
+      label: "chunks",
+      sample: () => debug().chunks
+    });
+    this.#recorder.addMetric({
+      id: "meshes",
+      label: "meshes",
+      sample: () => debug().meshes
+    });
+    this.#recorder.addMetric({
+      id: "voxels",
+      label: "voxels",
+      sample: () => debug().voxels
+    });
+    this.#recorder.addMetric({
+      id: "faces",
+      label: "faces",
+      sample: () => debug().faces
+    });
+    this.#recorder.addMetric({
+      id: "culled",
+      label: "culled",
+      sample: () => {
+        const { faces, culledFaces } = debug();
+        const candidates = faces + culledFaces;
 
-/**
- * Binds the named fields of `state` as read-only rows. Tweakpane's polling
- * ticker is left off (`interval: 0`): the caller decides when the values are
- * fresh and calls `folder.refresh()`.
- */
-function addMonitors<TState extends MonitorState>(
-  folder: FolderApi,
-  state: TState,
-  fields: MonitorFields<TState>
-): void {
-  for (const [key, field] of Object.entries(fields)) {
-    if (!field) {
-      continue;
-    }
+        return candidates === 0 ? 0 : (culledFaces / candidates) * 100;
+      }
+    });
+    this.#recorder.addMetric({
+      id: "merged",
+      label: "merged",
+      sample: () => {
+        const { faces, mergedFaces } = debug();
+        const emitted = faces + mergedFaces;
 
-    folder.addBinding(state, key, {
-      readonly: true,
-      interval: 0,
-      label: field.label,
-      format: field.format
+        return emitted === 0 ? 0 : (mergedFaces / emitted) * 100;
+      }
+    });
+    this.#recorder.addMetric({
+      id: "voxelTriangles",
+      label: "mesh tris",
+      sample: () => debug().triangles
+    });
+    this.#recorder.addMetric({
+      id: "facesPerVoxel",
+      label: "faces/voxel",
+      sample: () => debug().facesPerSolidVoxel
+    });
+    this.#recorder.addMetric({
+      id: "buildMs",
+      label: "build time",
+      better: "lower",
+      sample: () => debug().buildTimeMs
     });
   }
-}
 
-function formatCount(
-  value: number
-): string {
-  return Math.round(value).toLocaleString("en-US");
-}
+  #refresh(
+    snapshot: Record<string, number>
+  ): void {
+    this.#rendererStats.calls = snapshot.calls ?? 0;
+    this.#rendererStats.triangles = snapshot.rendererTriangles ?? 0;
+    this.#rendererStats.geometries = snapshot.geometries ?? 0;
+    this.#rendererStats.textures = snapshot.textures ?? 0;
 
-function formatMilliseconds(
-  value: number
-): string {
-  return `${value.toFixed(1)} ms`;
-}
-
-function formatPercent(
-  value: number
-): string {
-  return `${value.toFixed(1)} %`;
+    this.#voxelStats.mode = this.#vr.engine.debug.mode;
+    this.#voxelStats.chunks = snapshot.chunks ?? 0;
+    this.#voxelStats.meshes = snapshot.meshes ?? 0;
+    this.#voxelStats.voxels = snapshot.voxels ?? 0;
+    this.#voxelStats.faces = snapshot.faces ?? 0;
+    this.#voxelStats.culled = snapshot.culled ?? 0;
+    this.#voxelStats.merged = snapshot.merged ?? 0;
+    this.#voxelStats.triangles = snapshot.voxelTriangles ?? 0;
+    this.#voxelStats.facesPerVoxel = snapshot.facesPerVoxel ?? 0;
+    this.#voxelStats.buildMs = snapshot.buildMs ?? 0;
+    this.#worldFolder?.refresh();
+    this.#meshFolder?.refresh();
+  }
 }
 
 function formatDecimal(
   value: number
 ): string {
   return value.toFixed(1);
-}
-
-/**
- * `performance.memory` is a non-standard Chromium extension; probe it
- * structurally and report nothing on browsers that do not expose it.
- */
-function readHeapMebibytes(): number | null {
-  const memory: unknown = "memory" in performance ? performance.memory : null;
-
-  if (
-    typeof memory === "object" &&
-    memory !== null &&
-    "usedJSHeapSize" in memory &&
-    typeof memory.usedJSHeapSize === "number"
-  ) {
-    return memory.usedJSHeapSize / kBytesPerMebibyte;
-  }
-
-  return null;
 }

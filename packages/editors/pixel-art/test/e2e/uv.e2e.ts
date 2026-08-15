@@ -250,6 +250,7 @@ test("collapsing keeps the edited face, and undo brings the discarded ones back"
 async function previewMeshCount(
   page: Page
 ): Promise<number> {
+  // @ts-ignore
   return page.evaluate(() => window.__uvPreviewMeshCount?.() ?? -1);
 }
 

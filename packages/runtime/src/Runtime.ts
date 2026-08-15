@@ -1,10 +1,10 @@
 // Import Third-party Dependencies
-import Stats from "stats.js";
 import * as THREE from "three/webgpu";
 import {
   Systems,
   type GlobalAudio
 } from "@jolly-pixel/engine";
+import type { StatsRecorder } from "@jolly-pixel/ui/stats";
 
 // Import Internal Dependencies
 import {
@@ -18,6 +18,14 @@ import { RuntimeSceneLoader } from "./assets/RuntimeSceneLoader.ts";
 import {
   resolveRuntimeAssetOptions
 } from "./assets/resolveRuntimeAssetOptions.ts";
+import type {
+  MountedPerformanceStats
+} from "./stats/mountPerformanceStats.ts";
+import type {
+  PerformanceStatsPosition
+} from "./stats/resolveStatsOverlayX.ts";
+
+export type { PerformanceStatsPosition };
 
 export interface RuntimeOptions<
   TContext = Systems.WorldDefaultContext
@@ -26,7 +34,12 @@ export interface RuntimeOptions<
    * @default false
    * Whether to include performance statistics (eg: FPS, memory usage).
    */
-  includePerformanceStats?: boolean;
+  includePerformanceStats?: boolean | {
+    /** Mounts the default HUD. @default true */
+    mount?: boolean;
+    /** Viewport corner used by the mounted HUD. @default "top-left" */
+    position?: PerformanceStatsPosition;
+  };
   /**
    * Keeps keyboard focus on the canvas while the runtime is running.
    * @default true
@@ -56,11 +69,12 @@ export class Runtime<
   readonly world: Systems.World<THREE.WebGPURenderer, TContext>;
 
   readonly canvas: HTMLCanvasElement;
-  stats?: Stats;
+  stats?: StatsRecorder;
   readonly manager = new THREE.LoadingManager();
 
   #isRunning = false;
   #focusCanvas: boolean;
+  #statsOverlay: MountedPerformanceStats | null = null;
 
   #focusCanvasHandler = () => {
     if (document.activeElement !== this.canvas) {
@@ -95,13 +109,6 @@ export class Runtime<
     sceneManager.setSceneLoader(
       new RuntimeSceneLoader(assetCoordinator)
     );
-
-    if (options.includePerformanceStats) {
-      this.stats = new Stats();
-      this.stats.showPanel(0);
-      this.stats.dom.removeAttribute("style");
-      this.stats.dom.classList.add("stats");
-    }
   }
 
   /**
@@ -130,13 +137,18 @@ export class Runtime<
       }
     );
 
-    return new Runtime(
+    const runtime = new Runtime(
       canvas,
       renderer,
       sceneManager,
       options,
       assets
     );
+    await runtime.#initializePerformanceStats(
+      options.includePerformanceStats
+    );
+
+    return runtime;
   }
 
   get running() {
@@ -159,10 +171,6 @@ export class Runtime<
         "click",
         this.#focusCanvasHandler
       );
-    }
-
-    if (this.stats) {
-      document.body.appendChild(this.stats.dom);
     }
 
     this.world.connect();
@@ -209,7 +217,33 @@ export class Runtime<
    */
   dispose() {
     this.stop();
-    this.stats?.dom.remove();
+    this.#statsOverlay?.dispose();
+    this.#statsOverlay = null;
     this.world.dispose();
+  }
+
+  async #initializePerformanceStats(
+    option: RuntimeOptions<TContext>["includePerformanceStats"]
+  ): Promise<void> {
+    if (!option) {
+      return;
+    }
+
+    const { StatsRecorder } = await import("@jolly-pixel/ui/stats");
+    this.stats = new StatsRecorder();
+
+    const settings = typeof option === "object" ? option : {};
+    const mount = settings.mount ?? true;
+    if (!mount) {
+      return;
+    }
+
+    const { mountPerformanceStats } = await import(
+      "./stats/mountPerformanceStats.ts"
+    );
+    this.#statsOverlay = await mountPerformanceStats(
+      this.stats,
+      settings.position ?? "top-left"
+    );
   }
 }

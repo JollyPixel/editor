@@ -10,7 +10,7 @@
 
 - Web runtime with [Vite][vite]
 - Desktop runtime with [Electron.js][electron]
-- Include [stats.js](https://github.com/mrdoob/stats.js)
+- Optional themeable performance statistics
 - GPU and FPS detection with [detect-gpu](https://github.com/pmndrs/detect-gpu)
 - Catalog-backed asset loading with operation-scoped progress
 
@@ -67,7 +67,7 @@ import {
 const canvas = document.querySelector("canvas")!;
 
 const runtime = await Runtime.create(canvas, {
-  // Displays a stats.js FPS panel during development.
+  // Displays the JollyPixel performance HUD during development.
   includePerformanceStats: true,
   // Keeps keyboard focus on the canvas while the runtime is running.
   focusCanvas: true,

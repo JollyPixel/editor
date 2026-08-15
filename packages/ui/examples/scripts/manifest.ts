@@ -45,6 +45,7 @@ import {
 import { MONITOR_EXAMPLE } from "./examples/monitors/monitor.ts";
 import { GRAPH_EXAMPLE } from "./examples/monitors/graph.ts";
 import { FACADE_PARITY_EXAMPLE } from "./examples/scenarios/facadeParity.ts";
+import { STATS_CYCLE_EXAMPLE } from "./examples/scenarios/statsCycle.ts";
 import { PROGRESS_EXAMPLE } from "./examples/feedback/progress.ts";
 
 /**
@@ -89,6 +90,7 @@ export const manifest: readonly GalleryExample[] = [
   EDITOR_EXAMPLE,
   EDITOR_STATES_EXAMPLE,
   FACADE_PARITY_EXAMPLE,
+  STATS_CYCLE_EXAMPLE,
   MONITOR_EXAMPLE,
   GRAPH_EXAMPLE,
   PROGRESS_EXAMPLE

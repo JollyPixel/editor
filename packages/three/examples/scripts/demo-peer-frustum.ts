@@ -11,6 +11,7 @@ import {
   startLoop
 } from "./utils/common.ts";
 import { createExamplePane } from "./utils/example-switcher.ts";
+import { mountPerformanceStats } from "./utils/performance-stats.ts";
 
 // CONSTANTS
 // Kept far enough apart that near < depth always holds, regardless of the
@@ -36,6 +37,7 @@ const { camera, controls } = createOrbitCamera(
 const pane = createExamplePane({
   title: "Peer Frustum"
 });
+const performanceStats = mountPerformanceStats(renderer);
 
 // A handful of peers at different poses/colors, purely to eyeball the
 // frustum shape from multiple angles at once. This is not wired to real presence
@@ -66,7 +68,9 @@ startLoop({
   renderer,
   scene,
   camera,
-  controls
+  controls,
+  onBeforeRender: () => performanceStats.begin(),
+  onAfterRender: () => performanceStats.end()
 });
 
 interface PeerSpawnOptions {
@@ -79,7 +83,7 @@ interface PeerSpawnOptions {
 }
 
 /**
- * Spawns a peer frustum and wires a Tweakpane folder exposing every
+ * Spawns a peer frustum and wires a Pane folder exposing every
  * `PeerFrustumOptions` field. `color`/`displayName`/`showNameBox` update the
  * live instance via its accessors; `fov`/`aspect`/`near`/`depth`/`showApex`
  * are constructor-only, so changing them replaces the instance instead.
