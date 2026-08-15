@@ -144,7 +144,12 @@ export class ObjectLayerRenderer extends TransformGizmoBase {
 
   #trySelectObject(): void {
     const { input } = this.actor.world;
-    this.#raycaster.setFromCamera(input.getMousePosition(), this.camera);
+
+    const viewportPosition = input.mouse.getViewportPosition();
+    this.#raycaster.setFromCamera(
+      new THREE.Vector2(viewportPosition.x, viewportPosition.y),
+      this.camera
+    );
 
     const meshToKey = new Map<THREE.Mesh, string>();
     const fillMeshes: THREE.Mesh[] = [];
@@ -239,19 +244,19 @@ export class ObjectLayerRenderer extends TransformGizmoBase {
 
     // G = translate, Shift+S = scale — only when an object is selected.
     if (this.#selectedObjectKey && this.controls) {
-      if (input.wasKeyJustPressed("KeyG")) {
+      if (input.keyboard.wasJustPressed("KeyG")) {
         this.controls.setMode("translate");
       }
       else if (
-        input.wasKeyJustPressed("KeyS") &&
-        (input.isKeyDown("ShiftLeft") || input.isKeyDown("ShiftRight"))
+        input.keyboard.wasJustPressed("KeyS") &&
+        (input.keyboard.isDown("ShiftLeft") || input.keyboard.isDown("ShiftRight"))
       ) {
         this.controls.setMode("scale");
       }
     }
 
     // Handle object selection clicks (skip if a controls handle was just pressed).
-    if (!this.#isDragging && input.wasMouseButtonJustPressed("left")) {
+    if (!this.#isDragging && input.mouse.wasJustPressed("left")) {
       if (this.#skipNextSelect) {
         this.#skipNextSelect = false;
       }

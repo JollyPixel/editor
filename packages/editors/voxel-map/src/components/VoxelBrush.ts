@@ -73,7 +73,7 @@ export class VoxelBrush extends ActorComponent {
 
   update() {
     const { input } = this.actor.world;
-    const isCtrl = input.isKeyDown("ControlLeft") || input.isKeyDown("ControlRight");
+    const isCtrl = input.keyboard.isDown("ControlLeft") || input.keyboard.isDown("ControlRight");
 
     // No brush interaction when an object layer is selected.
     if (
@@ -85,10 +85,10 @@ export class VoxelBrush extends ActorComponent {
     }
 
     if (isCtrl) {
-      if (input.isMouseButtonDown("scrollUp")) {
+      if (input.mouse.isDown("scrollUp")) {
         editorState.setBrushSize(1);
       }
-      if (input.isMouseButtonDown("scrollDown")) {
+      if (input.mouse.isDown("scrollDown")) {
         editorState.setBrushSize(-1);
       }
 
@@ -98,12 +98,12 @@ export class VoxelBrush extends ActorComponent {
     }
 
     if (!editorState.isGizmoDragging) {
-      if (input.wasMouseButtonJustPressed("left")) {
+      if (input.mouse.wasJustPressed("left")) {
         if (editorState.selectedLayer) {
           this.#placeVoxels();
         }
       }
-      else if (input.wasMouseButtonJustPressed("right")) {
+      else if (input.mouse.wasJustPressed("right")) {
         if (editorState.selectedLayer) {
           this.#removeVoxels();
         }
@@ -117,8 +117,9 @@ export class VoxelBrush extends ActorComponent {
     const { input } = this.actor.world;
     const scene = this.actor.world.sceneManager.getSource();
 
+    const viewportPosition = input.mouse.getViewportPosition();
     this.#raycaster.setFromCamera(
-      input.getMousePosition(),
+      new THREE.Vector2(viewportPosition.x, viewportPosition.y),
       this.#camera
     );
 

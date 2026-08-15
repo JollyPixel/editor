@@ -18,6 +18,7 @@
 
 Click on one of the links to access the documentation of the package:
 
+- [@jolly-pixel/controls](./packages/controls) - HTML5 Input controls (Mouse, Touchpad, Keyboard, Gamepad)
 - [@jolly-pixel/ui](./packages/ui) - Common and System's UI for JollyPixel's editors
 - [@jolly-pixel/three](./packages/three) - Common Three.js utilities and components for JollyPixel's workspaces and editors
 - [@jolly-pixel/engine](./packages/engine) - ECS framework on top of Three.js

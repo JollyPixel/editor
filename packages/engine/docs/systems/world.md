@@ -178,7 +178,7 @@ accessible from any actor or component:
 // From inside a Behavior
 const { input, sceneManager, audio, renderer } = this.actor.world;
 
-if (input.isKeyDown("Space")) {
+if (input.keyboard.isDown("Space")) {
   audio.play("jump");
 }
 ```

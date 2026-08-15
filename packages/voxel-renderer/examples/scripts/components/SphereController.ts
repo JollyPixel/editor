@@ -56,16 +56,16 @@ export class SphereBehavior extends ActorComponent {
     let x = 0;
     let z = 0;
 
-    if (input.isKeyDown("ArrowLeft")) {
+    if (input.keyboard.isDown("ArrowLeft")) {
       x -= 1;
     }
-    if (input.isKeyDown("ArrowRight")) {
+    if (input.keyboard.isDown("ArrowRight")) {
       x += 1;
     }
-    if (input.isKeyDown("ArrowUp")) {
+    if (input.keyboard.isDown("ArrowUp")) {
       z -= 1;
     }
-    if (input.isKeyDown("ArrowDown")) {
+    if (input.keyboard.isDown("ArrowDown")) {
       z += 1;
     }
 

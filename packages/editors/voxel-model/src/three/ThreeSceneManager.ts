@@ -83,13 +83,14 @@ export default class ThreeSceneManager {
   }
 
   private cameraRayCast() {
-    if (this.input.wasMouseButtonJustPressed("left")) {
+    if (this.input.mouse.wasJustPressed("left")) {
       if (this.isTransformControlsDragging) {
         return;
       }
 
+      const viewportPosition = this.input.mouse.getViewportPosition();
       this.cameraRaycaster.setFromCamera(
-        this.input.getMousePosition(),
+        new THREE.Vector2(viewportPosition.x, viewportPosition.y),
         this.camera
       );
 
@@ -177,22 +178,22 @@ export default class ThreeSceneManager {
     const moveDistance = 0.1;
     const direction = new THREE.Vector3();
 
-    if (this.input.isKeyDown("W")) {
+    if (this.input.keyboard.isDown("W")) {
       direction.z -= moveDistance;
     }
-    if (this.input.isKeyDown("A")) {
+    if (this.input.keyboard.isDown("A")) {
       direction.x -= moveDistance;
     }
-    if (this.input.isKeyDown("S")) {
+    if (this.input.keyboard.isDown("S")) {
       direction.z += moveDistance;
     }
-    if (this.input.isKeyDown("D")) {
+    if (this.input.keyboard.isDown("D")) {
       direction.x += moveDistance;
     }
-    if (this.input.isKeyDown("Space")) {
+    if (this.input.keyboard.isDown("Space")) {
       direction.y += moveDistance;
     }
-    if (this.input.isKeyDown("ShiftLeft")) {
+    if (this.input.keyboard.isDown("ShiftLeft")) {
       direction.y -= moveDistance;
     }
 

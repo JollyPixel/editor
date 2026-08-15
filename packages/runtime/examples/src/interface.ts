@@ -5,7 +5,10 @@ import {
 } from "@jolly-pixel/engine";
 import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
 
-const canvasHTMLElement = document.querySelector("canvas") as HTMLCanvasElement;
+const canvasHTMLElement = document.querySelector<HTMLCanvasElement>("canvas");
+if (!canvasHTMLElement) {
+  throw new Error("No canvas element found");
+}
 const runtime = await Runtime.create(canvasHTMLElement, {
   includePerformanceStats: true
 });

@@ -140,7 +140,7 @@ class PlayerBehavior extends Behavior {
   }
 
   update() {
-    if (this.actor.world.input.isKeyDown("ArrowUp")) {
+    if (this.actor.world.input.keyboard.isDown("ArrowUp")) {
       this.onMovement.emit();
       this.actor.transform.moveForward(this.speed);
     }
@@ -156,42 +156,10 @@ new Actor(world, { name: "player" })
 
 ### 🎮 Device Controls
 
-Aggregates all physical devices (mouse, keyboard, gamepads, touchpad, screen) behind a unified
-query API so that behaviors can react to player actions without coupling to a specific device.
-
-- [Input](./docs/controls/input.md) — central input manager
-  - [Mouse](./docs/controls/mouse.md)
-  - [Keyboard](./docs/controls/keyboard.md)
-  - [Gamepad](./docs/controls/gamepad.md)
-  - [Touchpad](./docs/controls/touchpad.md)
-  - [Screen](./docs/controls/screen.md)
-- [CombinedInput](./docs/controls/combinedinput.md) — composable input conditions (AND, OR, NOT, sequence) for complex key bindings.
-
-<details>
-<summary>Code Example</summary>
-
-```ts
-import { InputCombination } from "@jolly-pixel/engine";
-
-const { input } = world;
-
-if (input.isKeyDown("Space")) {
-  console.log("jump!");
-}
-
-const dashCombo = InputCombination.all(
-  InputCombination.key("ShiftLeft"),
-  InputCombination.key("ArrowRight")
-);
-if (dashCombo.evaluate(input)) {
-  console.log("dash!");
-}
-```
+See [Controls](../controls/README.md) workspace for detailed documentation.
 
 > [!TIP]
 > In ActorComponent or Behavior input are accessible through this.actor.world.input
-
-</details>
 
 ### 🔊 Audio
 

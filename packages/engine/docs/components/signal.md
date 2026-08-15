@@ -16,7 +16,7 @@ export class PlayerBehavior extends Behavior {
   onPlayerPunch = new SignalEvent();
 
   update() {
-    if (this.actor.world.input.isMouseButtonDown("left")) {
+    if (this.actor.world.input.mouse.isDown("left")) {
       this.onPlayerPunch.emit();
     }
   }

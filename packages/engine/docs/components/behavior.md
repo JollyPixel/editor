@@ -15,7 +15,6 @@ import {
   Behavior,
   type BehaviorProperties,
   ModelRenderer,
-  Input,
   SceneProperty,
   SceneActorComponent,
   SignalEvent
@@ -47,7 +46,7 @@ export class PlayerBehavior extends Behavior<PlayerProperties> {
   fixedUpdate() {
     const { input } = this.actor.world;
 
-    if (input.isMouseButtonDown("left")) {
+    if (input.mouse.isDown("left")) {
       this.onPlayerPunch.emit();
     }
   }
@@ -55,7 +54,7 @@ export class PlayerBehavior extends Behavior<PlayerProperties> {
   update() {
     const { input } = this.actor.world;
 
-    if (input.isMouseButtonDown("left")) {
+    if (input.mouse.isDown("left")) {
       this.model.animation.play("punch_jab");
     }
     else {
@@ -88,13 +87,15 @@ component reference is resolved automatically during initialization.
 model: ModelRenderer;
 ```
 
-### `@Input.listen`
+### `@InputListener`
 
-Binds a method to an input event. The listener is wired
-automatically during behavior initialization.
+Binds a method to an input event, by dot-path name (see
+[`InputListenerType`](../../../controls/docs/input.md#listener-types)
+in `@jolly-pixel/controls`). The listener is wired automatically
+during behavior initialization.
 
 ```ts
-@Input.listen("keyboard.down")
+@InputListener("keyboard.down")
 onKeyDown(event: KeyboardEvent) {
   // …
 }

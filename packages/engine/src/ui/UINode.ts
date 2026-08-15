@@ -108,7 +108,7 @@ export class UINode<TContext = WorldDefaultContext> extends ActorComponent<TCont
       anchor = { x: "center", y: "center" }
     } = this.#options;
 
-    const screenBounds = this.actor.world.input.getScreenBounds();
+    const screenBounds = this.actor.world.input.screen.getBounds();
 
     const { width, height } = this.size;
     const pivot = this.pivot;
