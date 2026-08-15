@@ -4,6 +4,7 @@ export {
 } from "./bootstrap/loadRuntime.ts";
 export {
   Runtime,
+  type PerformanceStatsPosition,
   type RuntimeOptions
 } from "./Runtime.ts";
 export {

@@ -19,6 +19,7 @@ import { createFreeFlyCamera } from "./utils/free-fly-camera.ts";
 import {
   createExamplePane
 } from "./utils/example-switcher.ts";
+import { mountPerformanceStats } from "./utils/performance-stats.ts";
 
 // CONSTANTS
 const kRoomId = "three:peer-frustum-demo";
@@ -42,6 +43,7 @@ const { camera, controls } = createFreeFlyCamera(
 const pane = createExamplePane({
   title: "Peer Frustum (over network)"
 });
+const performanceStats = mountPerformanceStats(renderer);
 const username = await resolveStoredPrompt({
   title: "Join peer frustum session",
   label: "Username",
@@ -73,7 +75,9 @@ startLoop({
   onFrame: () => {
     peerFrustumSync.update();
     refreshSession();
-  }
+  },
+  onBeforeRender: () => performanceStats.begin(),
+  onAfterRender: () => performanceStats.end()
 });
 
 const sessionFolder = pane.addFolder({ title: "Session" });

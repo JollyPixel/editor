@@ -165,6 +165,24 @@ export const loadingStyles = css`
     font-size: 15px;
     border-radius: 4px;
   }
+  #loading button.dismiss {
+    margin-top: 1.5em;
+    padding: 0.5em 1.5em;
+    font-size: 14px;
+    font-family: sans-serif;
+    text-transform: none;
+    letter-spacing: normal;
+    color: var(--jolly-loading-error-color, #bf360c);
+    background: transparent;
+    border: 1px solid var(--jolly-loading-error-color, #bf360c);
+    border-radius: 4px;
+    cursor: pointer;
+    pointer-events: auto;
+  }
+  #loading button.dismiss:hover {
+    background: var(--jolly-loading-error-color, #bf360c);
+    color: var(--jolly-loading-error-background, #cfd8dc);
+  }
   /* Media queries pour mobile */
   @media (max-width: 600px) {
     #loading {

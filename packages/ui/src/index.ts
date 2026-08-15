@@ -256,6 +256,9 @@ export {
   formatMilliseconds,
   formatPercent
 } from "./monitors/format.ts";
+export {
+  StatsElement
+} from "./stats/Stats.ts";
 
 // Feedback
 export {

@@ -556,33 +556,145 @@ them.
 
 ## P3b: stats
 
-Separable from P3 and independently shippable. Retires four performance readouts.
+Separable from P3 and independently shippable. Retires four performance readouts, and is also
+the phase that finally removes `tweakpane` from the repository: `PerformanceHUD.ts` in
+`voxel-map` was missed by P3's migration and is, today, the only file in `voxel-map` still
+importing it.
 
 **Create**
 
 ```
 src/stats/StatsRecorder.ts     timing, refresh window, ring buffers,
                                begin() / end() / track() / addMetric() /
-                               snapshot() / subscribe()
+                               snapshot() / history() / subscribe()
 src/stats/MetricDefinition.ts  the public metric interface
-src/stats/builtins.ts          fps, ms, worstMs, mb (registered through
-                               the same public interface)
+src/stats/builtins.ts          fps, ms, worstMs, mb; self-registered by
+                               the StatsRecorder constructor, no opt-out
 src/stats/Stats.ts             jolly-stats, canvas, cycle on click
 src/stats/Stats.styles.ts
-src/stats/resolveTokens.ts     getComputedStyle bridge, canvas cannot
-                               read custom properties
+docs/stats.md
 ```
 
-Add the `./stats` subpath to `exports`, DOM free, no Lit.
+`jolly-stats` resolves its canvas colours through the existing `theme/resolveThemeToken.ts`
+(`getComputedStyle` bridge already used by `jolly-graph`), re-run on connect and on `theme` or
+colour-scheme change. There is no separate `src/stats/resolveTokens.ts`; a second copy of that
+bridge would duplicate P3a's.
+
+Add the `./stats` subpath to `exports`: `StatsRecorder` and `MetricDefinition`, DOM free, no Lit.
+`jolly-stats` itself, being a Lit element, ships from the root `.` barrel only, matching every
+other component; `./stats` stays exactly what section 14 promised, nothing that pulls Lit.
+
+**`StatsRecorder`'s public surface**
+
+- `begin()` / `end()` bracket the measured work, exactly as `stats.js`, so `Runtime.ts`'s call
+  sites are unchanged. `fps`, `ms` and `worstMs` are computed from that bracket directly, not
+  through `sample()`
+- `track(id, value)` pushes a value the caller already computed, once per call, for metrics like
+  `voxel-map`'s `buildMs` that arrive as a single number each frame
+- `addMetric(definition: MetricDefinition)` registers a metric that is either pushed through
+  `track()` or pulled through its own `sample()` once per refresh window
+- `snapshot(): Record<string, number>` returns every registered metric's current aggregated
+  value in one plain object. This is deliberately the same shape `folder.addMonitor(state, key)`
+  already expects, so a consumer assigns it onto its own mutable state object rather than
+  `folder.addMonitor` learning a second binding shape:
+  `Object.assign(this.#stats, recorder.snapshot()); this.#folder.refresh();`
+- `history(id: string): number[]` returns that metric's ring buffer, oldest to newest, for
+  `jolly-stats`'s range readout and `jolly-graph`'s sparkline. Neither is derivable from
+  `snapshot()` alone
+- `subscribe(listener: (snapshot) => void)` fires `listener` once per refresh window with the
+  same object `snapshot()` would return at that instant. Multiple independent consumers, such as
+  a facade `Pane` of monitor rows and a `jolly-stats` HUD, subscribe to one shared recorder
+  without coordinating
+
+**Builtins**: `fps`, `ms` and `worstMs` are self-registered in the `StatsRecorder` constructor
+from its own `begin()`/`end()` timing. `mb` is `sample()`-based against `performance.memory` and
+registers only when that property is structurally present, so it is simply absent from
+`snapshot()` on browsers without it — no metric ever reports `undefined`. All four ship with no
+opt-out; `builtins.ts` exists to prove the public `MetricDefinition` interface is sufficient
+(SPEC section 15), not to be called independently by a consumer.
 
 **Migrate**
 
-- `packages/runtime/src/Runtime.ts`: dynamic `import("@jolly-pixel/ui/stats")` behind
-  `includePerformanceStats`, `begin()` and `end()` call sites unchanged
-- `packages/voxel-renderer/examples/scripts/components/PerformancePanel.ts`
-- `packages/three/examples/scripts/components/PerformancePanel.ts`
-- `packages/editors/voxel-map/src/components/PerformanceHUD.ts` (297 lines), whose renderer and
-  voxel metrics become registered `sample()` definitions
+- `packages/runtime/src/Runtime.ts`. `RuntimeOptions.includePerformanceStats` widens from
+  `boolean` to `boolean | { mount?: boolean }`, `mount` defaulting to `true`:
+
+  ```ts
+  const statsOption = options.includePerformanceStats;
+  if (statsOption) {
+    const { StatsRecorder } = await import("@jolly-pixel/ui/stats");
+    this.stats = new StatsRecorder();
+
+    const mount = typeof statsOption === "object" ? (statsOption.mount ?? true) : true;
+    if (mount) {
+      await import("@jolly-pixel/ui");
+      const floating = document.createElement("jolly-floating");
+      floating.x = 8;
+      floating.y = 8;
+      const stats = document.createElement("jolly-stats");
+      stats.recorder = this.stats;
+      floating.append(stats);
+      document.body.append(floating);
+    }
+  }
+  ```
+
+  `this.stats` keeps its name and stays a public `StatsRecorder` getter either way, so
+  `begin()`/`end()` call sites around `world.tick()` are unchanged, and so an editor that wants
+  its own placement (embedding readouts in a Pane instead of the corner overlay) passes
+  `{ mount: false }` and builds against the same recorder instance. The second `import("@jolly-pixel/ui")`
+  only runs when an overlay is actually being mounted, so a game with the flag off pays nothing
+  and a game with `{ mount: false }` pays only for the DOM-free recorder — the whole element
+  barrel (all components, not just `jolly-floating` and `jolly-stats`) is pulled solely on the
+  path that renders it, which is the same per-component-subpath tradeoff section 14 already
+  accepts elsewhere. The corner moves from `stats.js`'s historical top-right to `jolly-floating`'s
+  native top-left coordinate model (`x: 8, y: 8`); reproducing the exact right edge would need
+  measuring the mounted element's width post-connect, which `jolly-floating` has no primitive
+  for today. This placement change is called out in the changeset
+- `packages/three/examples/scripts/components/PerformancePanel.ts` and
+  `packages/voxel-renderer/examples/scripts/components/PerformancePanel.ts`. Each panel now owns
+  its own `StatsRecorder` internally (`three` and `voxel-renderer`'s examples do not go through
+  `@jolly-pixel/runtime`, so there is no shared instance to reuse). `update()` keeps its existing
+  single call site — `onAfterRender: () => performancePanel.update()`, unchanged in every demo
+  file — and internally calls `recorder.begin()` immediately followed by `recorder.end()`, so
+  `fps`/`worstMs` stay frame-to-frame deltas exactly as they are today; no demo file gains a
+  second render-loop hook. `calls`, `triangles`, `geometries` and `textures` register through
+  `recorder.addMetric({ id, label, better: "lower", sample: () => renderer.info.render.calls })`
+  (and siblings), pulled once per refresh window from `this.#renderer.info`, reproducing the
+  existing values unchanged. The panel's own `heapMiB` monitor and its `readHeapMebibytes()`
+  helper are deleted outright in favour of the builtin `mb` metric — `snapshot().mb`, present or
+  absent exactly as the existing conditional `if (readHeapMebibytes() !== null)` already behaves.
+  The constructor subscribes once: `recorder.subscribe((snapshot) => { Object.assign(this.#stats, snapshot); this.#folder.refresh(); })`,
+  which replaces the manual `#elapsed`/`#frames`/`#worstFrame` accumulation and the
+  `refreshInterval` gate — the recorder owns the refresh window now, so the `refreshInterval`
+  constructor option is dropped
+- `packages/editors/voxel-map/src/components/PerformanceHUD.ts` (297 lines). Unlike the two
+  `PerformancePanel.ts` copies, this file was never migrated onto the facade in P3 — it still
+  constructs a raw `tweakpane` `Pane` and is the only remaining `tweakpane` import in `voxel-map`.
+  P3b gives it the same treatment those two files already got, plus the `StatsRecorder` swap, in
+  one pass:
+  - `new Pane({ title: "Performance [F3]" })` replaces the hand rolled `#container` div and
+    `kHudStyle` inline positioning entirely, rather than porting them: the facade's own `Pane`
+    already floats via `jolly-floating` inside a self-scoped `jolly-scope` appended to
+    `document.body` (`src/facade/Pane.ts`), which is exactly what the manual container existed
+    to approximate
+  - The "Renderer" folder's `fps`, `worstMs`, `calls`, `triangles`, `geometries`, `textures` and
+    `heapMiB`→`mb` follow the same `StatsRecorder`-fed `addMonitor`/`addMonitors` pattern as
+    `PerformancePanel.ts`, reading `this.#renderer.info` through `sample()`
+  - The "Voxels" folder keeps its one real control unchanged in shape:
+    `folder.addBinding(this.#voxelStats, "mode", { options: kDebugModeOptions, label: "debug" }).on("change", ({ value }) => { this.#vr.engine.debug.mode = value; })`,
+    since the facade's `Binding.on("change", ...)` mirrors Tweakpane's own call here directly.
+    `chunks`, `meshes`, `voxels`, `faces`, `culled`, `merged`, `triangles`, `facesPerVoxel` and
+    `buildMs` become one registered metric each on the same recorder, `sample()`-pulled from
+    `vr.engine.debug.stats` every refresh window; `culled` and `merged` keep their existing
+    inline percentage math (`culledFaces / candidates * 100`) inside the `sample()` callback
+  - `formatCount`, `formatMilliseconds` and `formatPercent` come from `@jolly-pixel/ui`'s
+    existing `monitors/format.ts`, replacing the three local copies and the local `addMonitors`
+    helper. `formatDecimal` (used once, for `facesPerVoxel`) has no other caller in the package
+    and is not promoted to `ui` for it; it stays a private helper in this file
+  - The F3 toggle becomes `pane.hidden = !pane.hidden` against the facade `Pane`, unchanged in
+    behaviour
+  - Remove `tweakpane` and `@tweakpane/core` from `packages/editors/voxel-map/package.json` —
+    this is the last `tweakpane` import anywhere in the repository
 
 **Deletes**
 
@@ -590,17 +702,57 @@ Add the `./stats` subpath to `exports`, DOM free, no Lit.
 - `this.stats.dom.removeAttribute("style")` in `Runtime.ts`
 - `.stats` CSS in `packages/runtime/examples/public/main.css` and
   `packages/editors/voxel-map/public/main.css`
-- the three hand rolled frame accumulators (`#frames`, `#elapsed`, `#worstFrame`)
-- voxel-map's inlined copy of `addMonitors` and `formatCount`
+- the three hand rolled frame accumulators (`#frames`, `#elapsed`, `#worstFrame`), the
+  `refreshInterval` option they served, and `readHeapMebibytes()`/`heapMiB` in both
+  `PerformancePanel.ts` copies
+- `PerformanceHUD.ts`'s local `addMonitors`, `formatCount`, `formatMilliseconds`,
+  `formatPercent`, `#container`, `kHudStyle` and its own `readHeapMebibytes()`/`heapMiB`
+- `tweakpane` and `@tweakpane/core` from `packages/editors/voxel-map/package.json`
 
 **Tests**: unit is the bulk here, since the recorder is DOM free. Fake clock over `begin()` and
-`end()`, aggregation modes (`last`, `average`, `max`), ring buffer wraparound, auto scaling
-bounds, `sample()` pulled once per window for every registered metric including hidden ones, and
-`mb` absent when `performance.memory` is not exposed. E2e for click and keyboard cycling, and for
-the selected metric surviving reload.
+`end()`, aggregation modes (`last`, `average`, `max`), ring buffer wraparound and `history()`
+contents, auto scaling bounds, `sample()` pulled once per window for every registered metric
+including hidden ones, `subscribe()` firing once per window with a matching `snapshot()`, and
+`mb` absent from both `snapshot()` and `history()` when `performance.memory` is not exposed. E2e
+for click and keyboard cycling, and for the selected metric surviving reload.
 
-**Done when**: no `stats.js` import remains outside `node_modules`, the HUD follows the `theme`
-attribute, and `voxel-renderer/bench` can construct a recorder with no DOM present.
+**Docs**: `docs/stats.md` covers `StatsRecorder`'s full surface
+(`begin`/`end`/`track`/`addMetric`/`snapshot`/`history`/`subscribe`), the `MetricDefinition`
+contract, the four builtins and why they cannot be opted out of, and `jolly-stats`'s cycling,
+keyboard and persistence behaviour — one page for the shared contract, matching why
+`docs/fields.md` is one page rather than twelve.
+
+**Examples**: the `stats-cycle` scenario drives a `StatsRecorder` from a synthetic
+`requestAnimationFrame` loop with `begin()`/`end()` plus one registered custom `sample()` metric,
+proving a consumer metric coexists with the builtins, and renders a standalone `jolly-stats`.
+Click and arrow-key cycling are exercised on this same page, so the example and the e2e cycling
+cases in the Tests bullet above target one page rather than two.
+
+**Done when**: no `stats.js` import remains outside `node_modules`, no `tweakpane` or
+`@tweakpane/core` import remains outside `node_modules` anywhere in the repository, the HUD
+follows the `theme` attribute, `voxel-renderer/bench` can construct a recorder with no DOM
+present, and `npm run build`/`test`/`lint` pass for `@jolly-pixel/ui`, `runtime`, `three`,
+`voxel-renderer` and `voxel-map`.
+
+### P3b delivery
+
+One pull request across five packages, `ui` first as the review checkpoint — its `StatsRecorder`
+API and `jolly-stats` are what every consumer commit after it depends on:
+
+1. **`@jolly-pixel/ui`.** `src/stats/` (recorder, metric types, builtins, `jolly-stats`, styles),
+   its unit specs, the `stats-cycle` example, `docs/stats.md`, the `./stats` subpath, and a
+   **minor** changeset
+2. **`@jolly-pixel/runtime`.** The `includePerformanceStats` option widening, the two-stage
+   dynamic import, the corner-placement change, and the `stats.js` removal — a **minor**
+   changeset, since the corner default change and the new `{ mount }` shape are consumer-visible
+   even though nothing breaks
+3. **`@jolly-pixel/three`.** `PerformancePanel.ts`'s `StatsRecorder` swap, a **patch** changeset
+4. **`@jolly-pixel/voxel.renderer`.** Same shape as commit 3, a **patch** changeset
+5. **`voxel-map`.** `PerformanceHUD.ts`'s full facade migration and the `tweakpane` removal from
+   `package.json`. No changeset: the package is private
+
+Commit 1 is where `snapshot()`/`history()`/`subscribe()`'s shapes get settled, against the
+gallery's own `stats-cycle` example, before any of the four consumer commits depend on them.
 
 ## P4: math components
 

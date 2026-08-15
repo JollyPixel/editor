@@ -36,8 +36,7 @@
     "@jolly-pixel/asset": "^1.0.0",
     "@jolly-pixel/engine": "^4.0.0",
     "@jolly-pixel/ui": "^1.0.1",
-    "detect-gpu": "^5.0.70",
-    "stats.js": "^0.17.0"
+    "@pmndrs/detect-gpu": "6.0.17"
   },
   "peerDependencies": {
     "three": "^0.185.1"

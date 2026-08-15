@@ -110,6 +110,17 @@ export class Loading extends LitElement {
     this.completed = false;
   }
 
+  /**
+   * Fades out and detaches the element. Callers use this to close the error
+   * view once the user has acknowledged it (`complete()` covers the success
+   * path and already detaches on its own).
+   */
+  async dismiss(): Promise<void> {
+    this.completed = true;
+    await waitForAnimation(kFadeOutDurationMs);
+    this.remove();
+  }
+
   setAsset(
     assetName: string
   ): void {
@@ -167,6 +178,11 @@ export class Loading extends LitElement {
     return html`
       <div class="error" role="alert">${this.errorMessage}</div>
       <pre class="error">${this.errorStack}</pre>
+      <button
+        class="dismiss"
+        type="button"
+        @click=${() => this.dismiss()}
+      >Dismiss</button>
     `;
   }
 }

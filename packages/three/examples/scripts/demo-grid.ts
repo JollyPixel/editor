@@ -11,7 +11,6 @@ import {
   type GridStyle,
   type GridFadeFrom
 } from "../../src/index.ts";
-import { PerformancePanel } from "./components/PerformancePanel.ts";
 import {
   createRenderer,
   createScene,
@@ -19,6 +18,7 @@ import {
   startLoop
 } from "./utils/common.ts";
 import { createExamplePane } from "./utils/example-switcher.ts";
+import { mountPerformanceStats } from "./utils/performance-stats.ts";
 
 const canvas = document.querySelector("canvas") as HTMLCanvasElement;
 const renderer = await createRenderer(canvas);
@@ -70,7 +70,7 @@ const pane = createExamplePane({
   title: "Grid"
 });
 
-const performancePanel = new PerformancePanel({ pane, renderer });
+const performanceStats = mountPerformanceStats(renderer);
 
 const gridFolder = pane.addFolder({
   title: "Grid"
@@ -296,5 +296,6 @@ startLoop({
   camera,
   controls,
   onFrame: updateReferenceCube,
-  onAfterRender: () => performancePanel.update()
+  onBeforeRender: () => performanceStats.begin(),
+  onAfterRender: () => performanceStats.end()
 });

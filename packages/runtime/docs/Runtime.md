@@ -21,7 +21,10 @@ interface RuntimeAssetLoaderDefinition<TValue = unknown> {
 }
 
 interface RuntimeOptions<TContext = Systems.WorldDefaultContext> {
-  includePerformanceStats?: boolean;
+  includePerformanceStats?: boolean | {
+    mount?: boolean;
+    position?: "top-left" | "top-right";
+  };
   focusCanvas?: boolean;
   context?: TContext;
   audio?: GlobalAudio;
@@ -50,6 +53,12 @@ it unchanged in development and copy it to the build output:
   ]
 }
 ```
+
+Set `includePerformanceStats` to `true` to mount a themeable performance HUD at
+the top-left corner. Pass `{ mount: false }` to create the same public
+`runtime.stats` recorder without mounting a display, for custom placement.
+Use `{ position: "top-right" }` to anchor the default display to the other top
+corner; it follows viewport resizes.
 
 `Runtime.create()` fetches string and `URL` inputs, parses the response through
 `AssetCatalog.parse()`, then constructs the world. An unsuccessful response,
