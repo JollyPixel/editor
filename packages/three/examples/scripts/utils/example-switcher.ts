@@ -13,7 +13,8 @@ const kExamples: Record<string, string> = {
   "Area Box": "/area-box.html",
   "Peer Frustum": "/peer-frustum.html",
   "Peer Frustum Sync": "/peer-frustum-sync.html",
-  Selection: "/selection.html"
+  Selection: "/selection.html",
+  Stress: "/stress.html"
 };
 
 export interface ExamplePaneOptions {

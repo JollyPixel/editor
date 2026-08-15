@@ -155,3 +155,27 @@ jolly-floating {
   padding-left: 2px;
   white-space: nowrap;
 }
+
+/*
+ * One round chip per remote peer currently selecting this node's object,
+ * oldest-first - the full detail `PeerSelectionOverlays` deliberately
+ * leaves out of the 3D view, which only ever shows a single overlay in the
+ * oldest peer's color (see demo-selection.ts's `refreshChips`).
+ */
+#outliner .tree li .presence {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding-left: 6px;
+  white-space: normal;
+}
+
+#outliner .tree li .peer-chip {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}

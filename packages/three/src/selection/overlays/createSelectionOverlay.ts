@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { SelectionOutline } from "./SelectionOutline.ts";
 import { SelectionHighlight } from "./SelectionHighlight.ts";
 import { SelectionBoundingBox } from "./SelectionBoundingBox.ts";
-import type { MeshSelectionStyle, SelectableObject } from "./SelectionManager.ts";
+import type { MeshSelectionStyle, SelectableObject } from "../SelectionManager.ts";
 
 export type SelectionOverlay = SelectionOutline | SelectionHighlight | SelectionBoundingBox;
 
