@@ -1,5 +1,5 @@
 {
-  "name": "@jolly-pixel/fs-tree",
+  "name": "@jolly-pixel/arbor",
   "description": "Robust, stylable tree view widget for HTML5 apps with drag'n'drop support",
   "version": "1.0.1",
   "type": "module",
@@ -20,7 +20,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/JollyPixel/editor.git",
-    "directory": "packages/fs-tree"
+    "directory": "packages/arbor"
   },
   "keywords": [],
   "files": [

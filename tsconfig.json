@@ -14,7 +14,7 @@
       "path": "./packages/three"
     },
     {
-      "path": "./packages/fs-tree"
+      "path": "./packages/arbor"
     },
     {
       "path": "./packages/fs-tree-backend"

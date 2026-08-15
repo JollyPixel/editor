@@ -588,7 +588,7 @@ a pane), `jolly-graph` (sparkline over a ring buffer).
 
 ### Out of scope
 
-Asset and object reference pickers (need `fs-tree`), block and tileset libraries, 3D preview
+Asset and object reference pickers (need `arbor`), block and tileset libraries, 3D preview
 tiles (need `three`), curve and gradient editors. Editors compose the first three from
 `jolly-dialog`, `jolly-tree` and `jolly-list`.
 

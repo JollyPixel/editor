@@ -1,4 +1,4 @@
-# @jolly-pixel/fs-tree
+# @jolly-pixel/arbor
 
 ## 1.0.1
 

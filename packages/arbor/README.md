@@ -1,5 +1,5 @@
 <h1 align="center">
-  fs-tree
+  Arbor
 </h1>
 
 <p align="center">
@@ -15,19 +15,19 @@
 This package is available in the Node Package Repository and can be easily installed with [npm][npm] or [yarn][yarn].
 
 ```bash
-$ npm i @jolly-pixel/fs-tree
+$ npm i @jolly-pixel/arbor
 # or
-$ yarn add @jolly-pixel/fs-tree
+$ yarn add @jolly-pixel/arbor
 ```
 
 ## 👀 Usage example
 
 ```ts
-import { TreeView } from "@jolly-pixel/tree-view";
+import { TreeView } from "@jolly-pixel/arbor";
 
-const container = document.getElementById(
-  "tree"
-) as HTMLDivElement;
+const container = document.querySelector<HTMLDivElement>(
+  "#tree"
+);
 
 const tree = new TreeView(container, {
   multipleSelection: true,
@@ -78,13 +78,6 @@ Then you can include a minimal stylesheets
 
 - [TreeView](./docs/TreeView.md)
 
-## 🎨 Custom theme
-
-🚧 Integrated stylesheets are coming in a future release
-
-- Dark
-- Light
-
 ## ✨ Contributors guide
 
 If you are a developer **looking to contribute** to the project, you must first read the [CONTRIBUTING][contributing] guide.
@@ -104,7 +97,7 @@ $ npm run lint
 One interactive example live in the `examples/` directory and are served by Vite. Start the dev server from the package root:
 
 ```bash
-npm run preview -w @jolly-pixel/fs-tree
+npm run preview -w @jolly-pixel/arbor
 ```
 
 ## 📃 License

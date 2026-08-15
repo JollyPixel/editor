@@ -73,7 +73,7 @@ $ npm run lint
 One interactive example live in the `examples/` directory and are served by Vite. Start the dev server from the package root:
 
 ```bash
-npm run preview -w @jolly-pixel/fs-tree
+npm run preview -w @jolly-pixel/arbor
 ```
 
 ## 📃 License

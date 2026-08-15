@@ -11,7 +11,7 @@ import assert from "node:assert";
 import { Window } from "happy-dom";
 
 // Import Internal Dependencies
-import { TreeView } from "../src/TreeView.class.ts";
+import { TreeView } from "../src/index.ts";
 
 const window = new Window();
 const document = window.document;
