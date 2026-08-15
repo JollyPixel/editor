@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import { LitElement, css, html } from "lit";
-import { TreeView } from "@jolly-pixel/fs-tree";
+import { TreeView } from "@jolly-pixel/arbor";
 
 // Import Internal Dependencies
 import type ModelManager from "../three/ModelManager.ts";

@@ -16,7 +16,7 @@ class FSTreeSynchronizer {
 ## Usage example
 
 ```typescript
-import { FSTree, FSTreeSynchronizer } from "@jolly-pixel/fs-tree";
+import { FSTree, FSTreeSynchronizer } from "@jolly-pixel/arbor";
 
 const tree = await FSTree.loadFromPath(process.cwd());
 {

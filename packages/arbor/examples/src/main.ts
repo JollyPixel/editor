@@ -2,7 +2,10 @@
 // Import Internal Dependencies
 import { TreeView } from "../../src/index.ts";
 
-const container = document.querySelector("main") as HTMLDivElement;
+const container = document.querySelector<HTMLDivElement>("main");
+if (!container) {
+  throw new Error("main element not found");
+}
 
 const treeView = new TreeView(
   container,

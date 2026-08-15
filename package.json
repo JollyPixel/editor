@@ -25,7 +25,7 @@
     "packages/runtime",
     "packages/event-store",
     "packages/network",
-    "packages/fs-tree",
+    "packages/arbor",
     "packages/fs-tree-backend",
     "packages/voxel-renderer",
     "packages/pixel-draw-renderer",

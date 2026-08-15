@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import { LitElement, html, css } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { TreeView } from "@jolly-pixel/fs-tree";
+import { TreeView } from "@jolly-pixel/arbor";
 import type {
   VoxelRenderer,
   VoxelLayer,

@@ -40,6 +40,7 @@
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
   "devDependencies": {
+    "@jolly-pixel/arbor": "1.0.1",
     "@types/lodash.set": "^4.3.9",
     "socket.io": "^4.8.1"
   }

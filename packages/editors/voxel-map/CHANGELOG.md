@@ -39,7 +39,7 @@
   - @jolly-pixel/voxel.renderer@2.0.0
   - @jolly-pixel/runtime@3.4.0
   - @jolly-pixel/engine@3.0.0
-  - @jolly-pixel/fs-tree@1.0.1
+  - @jolly-pixel/arbor@1.0.1
 
 ## 1.0.2
 
