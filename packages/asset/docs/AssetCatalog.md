@@ -4,7 +4,7 @@
 
 ```ts
 interface AssetRecordOptions {
-  readonly id: AssetId;
+  readonly id: AssetId | string;
   readonly kind: string;
   readonly source: string;
   readonly revision?: string;
