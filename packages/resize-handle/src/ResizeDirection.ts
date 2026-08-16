@@ -1,7 +1,17 @@
-export type ResizeDirection = "left" | "right" | "top" | "bottom";
-export type ResizeCoordinate = "clientX" | "clientY";
-export type ResizeDimension = "width" | "height";
-export type ResizeOrientation = "horizontal" | "vertical";
+export type ResizeDirection =
+  | "left"
+  | "right"
+  | "top"
+  | "bottom";
+export type ResizeCoordinate =
+  | "clientX"
+  | "clientY";
+export type ResizeDimension =
+  | "width"
+  | "height";
+export type ResizeOrientation =
+  | "horizontal"
+  | "vertical";
 export type ResizeKey =
   | "ArrowDown"
   | "ArrowLeft"
@@ -57,12 +67,12 @@ export function coordinateFromKey(
   key: string,
   step: number
 ): number | null {
-  if (key === definition.growKey) {
-    return definition.fromStart ? step : -step;
+  switch (key) {
+    case definition.growKey:
+      return definition.fromStart ? step : -step;
+    case definition.shrinkKey:
+      return definition.fromStart ? -step : step;
+    default:
+      return null;
   }
-  if (key === definition.shrinkKey) {
-    return definition.fromStart ? -step : step;
-  }
-
-  return null;
 }

@@ -3,33 +3,39 @@
 ## `ResizeHandleOptions`
 
 ```ts
+type ResizeDirection = "left" | "right" | "top" | "bottom";
+
 interface ResizeHandleOptions {
   /**
-   * The direction in which the handle resizes the target.
-   * Also controls where the handle element is inserted in the DOM:
-   * - "left" / "top"  → handle inserted after the target
-   * - "right" / "bottom" → handle inserted before the target
+   * The direction in which the handle resizes the target element.
    */
-  direction: "left" | "right" | "top" | "bottom";
+  direction: ResizeDirection;
   /**
-   * When true, double-clicking the handle collapses the target to zero size.
-   * Double-clicking again restores the previous size.
+   * Whether double-clicking collapses and restores the target.
    * @default false
    */
   collapsible?: boolean;
-  /** Existing handle. No sibling is injected when provided. */
+  /**
+   * An existing handle. When omitted, a sibling div is reused or created.
+   */
   handle?: HTMLElement;
-  /** Smallest target size in pixels. @default 0 */
+  /**
+   * Smallest target size in pixels.
+   * Must be a finite, non-negative number.
+   * @default 0
+   */
   minSize?: number;
-  /** Largest target size in pixels. @default Infinity */
+  /**
+   * Largest target size in pixels.
+   * Must be greater than or equal to `minSize`;
+   * @default Number.POSITIVE_INFINITY
+   */
   maxSize?: number;
 }
 ```
 
-`collapsable` was removed. Use `collapsible`.
-
-`minSize` must be a finite, non-negative number. `maxSize` must be greater than or equal to
-`minSize`; it may be `Infinity`. Invalid bounds throw a `RangeError` during construction.
+> [!NOTE]
+> Invalid `minSize` / `maxSize` bounds throw a `RangeError` during construction.
 
 ## `new ResizeHandle(targetElt, options)`
 
@@ -52,8 +58,7 @@ Use the arrow keys along the resize axis to change the target by 8px. Hold Shift
 Keyboard input respects `minSize` and `maxSize` and dispatches the same drag event sequence as
 pointer input.
 
-`ResizeHandle` extends `EventTarget`, implements [`ResizeHandleLike`](#resizehandlelike), and
-dispatches these events:
+`ResizeHandle` extends `EventTarget` and dispatches these events:
 
 - **`"dragStart"`**: fired when pointer or keyboard resizing starts.
 - **`"drag"`**: fired after each pointer or keyboard size update.
@@ -80,38 +85,3 @@ While a drag is in progress, `<html>` receives:
 - `handle-dragging`: always set during a pointer drag.
 - `vertical`: set for horizontal sizing (`"left"` / `"right"`).
 - `horizontal`: set for vertical sizing (`"top"` / `"bottom"`).
-
-## `ResizeHandleLike`
-
-```ts
-interface ResizeHandleLike extends EventTarget {
-  dispose(): void;
-}
-```
-
-Shared contract implemented by both `ResizeHandle` and
-[`CornerResizeHandle`](./CornerResizeHandle.md). Use it to type code that only needs to listen
-for drag events and dispose, regardless of how many axes the handle drives.
-
-## `sizeFromDelta(options)`
-
-```ts
-interface SizeFromDeltaOptions {
-  /** Target size in pixels when the drag starts. */
-  initialSize: number;
-  /** Pointer coordinate in pixels when the drag starts. */
-  startDrag: number;
-  /** Current pointer coordinate in pixels. */
-  current: number;
-  /** Whether increasing the pointer coordinate increases the size. */
-  fromStart: boolean;
-  /** Smallest returned size in pixels. */
-  min: number;
-  /** Largest returned size in pixels. */
-  max: number;
-}
-```
-
-Pure resize math used by pointer and keyboard input, and reused per-axis by
-[`CornerResizeHandle`](./CornerResizeHandle.md). It applies the current coordinate to the
-initial size according to the handle edge, then clamps the result to `min` and `max`.
