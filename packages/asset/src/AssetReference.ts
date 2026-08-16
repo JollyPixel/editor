@@ -27,9 +27,7 @@ export class AssetReference<
     id: AssetId | string,
     type: AssetType<TValue>
   ) {
-    this.id = typeof id === "string"
-      ? new AssetId(id)
-      : id;
+    this.id = AssetId.from(id);
     this.type = type;
   }
 

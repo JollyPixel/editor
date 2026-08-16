@@ -16,7 +16,7 @@ describe("AssetCatalog", () => {
   test("round-trips a versioned manifest", () => {
     const catalog = new AssetCatalog([
       new AssetRecord({
-        id: new AssetId("hero-model"),
+        id: "hero-model",
         kind: "model",
         source: "project:/models/hero.glb",
         revision: "sha256:abc"
@@ -39,7 +39,7 @@ describe("AssetCatalog", () => {
   test("rejects duplicate identifiers", () => {
     const catalog = new AssetCatalog();
     const record = new AssetRecord({
-      id: new AssetId("hero-model"),
+      id: "hero-model",
       kind: "model",
       source: "project:/models/hero.glb"
     });
@@ -53,7 +53,7 @@ describe("AssetCatalog", () => {
 
   test("iterates over records in insertion order", () => {
     const first = new AssetRecord({
-      id: new AssetId("hero-model"),
+      id: "hero-model",
       kind: "model",
       source: "project:/models/hero.glb"
     });

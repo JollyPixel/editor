@@ -31,8 +31,9 @@ runtime startup or a future scene transition.
 
 A runtime decides when an ECS world starts and when a scene becomes active.
 This package supplies the loading boundary it can await before entering
-synchronous lifecycle code. See the [glossary](./GLOSSARY.md) for the shared
-domain vocabulary.
+synchronous lifecycle code.
+
+See the [glossary](./GLOSSARY.md) for the shared domain vocabulary.
 
 ## 👀 Usage example
 
@@ -40,7 +41,6 @@ domain vocabulary.
 import {
   AssetCatalog,
   AssetCoordinator,
-  AssetId,
   AssetLoaderRegistry,
   AssetRecord,
   AssetReference,
@@ -51,11 +51,10 @@ interface Model {
   readonly source: string;
 }
 
-const heroId = new AssetId("hero-model");
 const MODEL_ASSET = new AssetType<Model>("model");
 const catalog = new AssetCatalog([
   new AssetRecord({
-    id: heroId,
+    id: "hero-model",
     kind: "model",
     source: "project:/models/hero.glb"
   })
@@ -76,7 +75,9 @@ const assets = new AssetCoordinator({
 });
 const heroReference = new AssetReference("hero-model", MODEL_ASSET);
 const hero = assets.request(heroReference);
-const batch = assets.loadBatch([heroReference]);
+const batch = assets.loadBatch([
+  heroReference
+]);
 
 await batch.done;
 
@@ -85,9 +86,7 @@ const model = hero.get();
 ```
 
 > [!NOTE]
-> `MODEL_ASSET` ties the persistent `"model"` kind to the `Model` value returned
-> by its loader. A browser loader could use `fetch`; a Node.js loader could
-> read from the filesystem.
+> `MODEL_ASSET` ties the persistent `"model"` kind to the `Model` value returned by its loader.
 
 ## 📚 API
 

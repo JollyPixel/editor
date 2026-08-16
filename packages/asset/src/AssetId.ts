@@ -2,6 +2,12 @@
  * Identifies one catalog asset independently from its physical source.
  */
 export class AssetId {
+  static from(
+    id: string | AssetId
+  ): AssetId {
+    return typeof id === "string" ? new AssetId(id) : id;
+  }
+
   readonly value: string;
 
   constructor(

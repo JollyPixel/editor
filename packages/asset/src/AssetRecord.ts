@@ -9,7 +9,7 @@ export interface AssetRecordData {
 }
 
 export interface AssetRecordOptions {
-  readonly id: AssetId;
+  readonly id: AssetId | string;
   readonly kind: string;
   readonly source: string;
   readonly revision?: string;
@@ -42,7 +42,7 @@ export class AssetRecord {
       );
     }
 
-    this.id = options.id;
+    this.id = AssetId.from(options.id);
     this.kind = options.kind;
     this.source = options.source;
     this.revision = options.revision;
@@ -108,7 +108,7 @@ export class AssetRecord {
     }
 
     return new AssetRecord({
-      id: new AssetId(input.id),
+      id: input.id,
       kind: input.kind,
       source: input.source,
       revision
