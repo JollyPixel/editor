@@ -33,11 +33,13 @@ export interface ResizeHandleOptions {
   handle?: HTMLElement;
   /**
    * Smallest target size in pixels.
+   * Must be a finite, non-negative number.
    * @default 0
    */
   minSize?: number;
   /**
    * Largest target size in pixels.
+   * Must be greater than or equal to `minSize`;
    * @default Number.POSITIVE_INFINITY
    */
   maxSize?: number;

@@ -5,21 +5,36 @@
 ```ts
 interface CornerResizeHandleOptions {
   /**
-   * Anchor edge for the width axis, same vocabulary as ResizeHandle's direction: "left" keeps
-   * the left edge fixed and grows width when the pointer moves right, "right" keeps the right
-   * edge fixed and grows width when the pointer moves left.
+   * Anchor edge for the width axis
    */
   horizontal: "left" | "right";
   /**
-   * Anchor edge for the height axis: "top" keeps the top edge fixed and grows height downward,
-   * "bottom" keeps the bottom edge fixed and grows height upward.
+   * Anchor edge for the height axis
    */
   vertical: "top" | "bottom";
-  /** An existing handle. When omitted, a div is appended to the target. */
+  /**
+   * An existing handle. When omitted, a div is appended to the target.
+   */
   handle?: HTMLElement;
+  /**
+   * Smallest target width in pixels.
+   * @default 0
+   */
   minWidth?: number;
+  /**
+   * Largest target width in pixels.
+   * @default Number.POSITIVE_INFINITY
+   */
   maxWidth?: number;
+  /**
+   * Smallest target height in pixels.
+   * @default 0
+   */
   minHeight?: number;
+  /**
+   * Largest target height in pixels.
+   * @default Number.POSITIVE_INFINITY
+   */
   maxHeight?: number;
 }
 ```

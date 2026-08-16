@@ -82,6 +82,15 @@ Run `npm run dev -w @jolly-pixel/resize-handle` from the repository root.
 
 - [ResizeHandle](./docs/ResizeHandle.md): single-axis resize handle and collapsing.
 - [CornerResizeHandle](./docs/CornerResizeHandle.md): two-axis corner resizing.
+- [Utilities](./docs/Utilities.md): shared resize math utilities.
+
+Both `ResizeHandle` and `CornerResizeHandle` implement a shared interface.
+
+```ts
+interface ResizeHandleLike extends EventTarget {
+  dispose(): void;
+}
+```
 
 ## ✨ Contributors guide
 
