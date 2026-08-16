@@ -17,7 +17,6 @@ package names. Add the same path to the root `tsconfig.json` `references` array.
 Also update:
 
 - `README.md`, in the `Available packages` section, with a short description.
-- `ARCHITECTURE.md`, in the monorepo structure tree.
 
 The root `tsconfig.json` reference includes the package in repository-wide
 TypeScript builds. Dependencies between packages belong in the new package's

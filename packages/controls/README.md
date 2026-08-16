@@ -3,12 +3,8 @@
 </h1>
 
 <p align="center">
-  HTML5 Input controls (Screen, Mouse, Touchpad, Keyboard, Gamepad)
+  Input controls (Screen, Mouse, Touchpad, Keyboard, Gamepad)
 </p>
-
-## 💡 Features
-
-TBC
 
 ## 💃 Getting Started
 

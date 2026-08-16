@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-JollyPixel Editor is a monorepo for a collaborative 3D HTML5 game maker (ECS framework on Three.js, browser/Electron runtime, editor tools). See [ARCHITECTURE.md](./ARCHITECTURE.md) for the repository layout.
+JollyPixel Editor is a monorepo for a collaborative 3D HTML5 game maker (ECS framework on Three.js, browser/Electron runtime, editor tools).
 
 ## Essential Commands
 

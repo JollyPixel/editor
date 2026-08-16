@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/controls",
-  "description": "HTML5 Input controls (Screen, Mouse, Touchpad, Keyboard, Gamepad)",
+  "description": "Input controls (Screen, Mouse, Touchpad, Keyboard, Gamepad)",
   "version": "1.0.0",
   "type": "module",
   "main": "dist/index.js",
