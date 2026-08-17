@@ -57,6 +57,7 @@ import {
 } from "./examples/math/transform.ts";
 import { POINT2D_EXAMPLE } from "./examples/math/point2d.ts";
 import { MIXED_PER_AXIS_EXAMPLE } from "./examples/scenarios/mixedPerAxis.ts";
+import { TREE_EXAMPLE } from "./examples/data/tree.ts";
 
 /**
  * The navigation and E2E sweep derive from this list.
@@ -87,6 +88,7 @@ export const manifest: readonly GalleryExample[] = [
   DIALOG_EXAMPLE,
   TOOLBAR_EXAMPLE,
   RAIL_EXAMPLE,
+  TREE_EXAMPLE,
   DENSITY_EXAMPLE,
   THEME_EXAMPLE,
   NUMERIC_ENTRY_EXAMPLE,

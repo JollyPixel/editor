@@ -14,11 +14,10 @@
     "dist"
   ],
   "dependencies": {
-    "@jolly-pixel/arbor": "1.0.1",
     "@jolly-pixel/engine": "4.0.0",
     "@jolly-pixel/pixel-draw.renderer": "3.0.0",
-    "@jolly-pixel/resize-handle": "1.1.0",
     "@jolly-pixel/runtime": "4.0.0",
+    "@jolly-pixel/ui": "1.0.1",
     "lit": "3.3.3",
     "three": "0.185.1"
   }

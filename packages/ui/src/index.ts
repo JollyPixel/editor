@@ -270,6 +270,41 @@ export type {
   JollyToggleDetail
 } from "./containers/events.ts";
 
+// Data views
+export {
+  Tree
+} from "./data/Tree.ts";
+export {
+  canDrop,
+  resolveReparent
+} from "./data/resolveReparent.ts";
+export {
+  resolveRowDropZone
+} from "./data/dropZone.ts";
+export {
+  resolveSelection
+} from "./data/selection.ts";
+export {
+  findNode,
+  findParentId,
+  flattenVisible,
+  isSelfOrDescendant,
+  type FlatTreeRow
+} from "./data/treeNodes.ts";
+export type {
+  JollyActivateDetail,
+  JollyReparentDetail,
+  JollySelectDetail,
+  JollyToggleExpandDetail,
+  JollyToggleLockDetail,
+  JollyToggleVisibleDetail,
+  TreeDropWhere,
+  TreeNode
+} from "./data/Tree.types.ts";
+export type {
+  DataEventMap
+} from "./data/events.ts";
+
 // Monitors
 export {
   MonitorElement

@@ -29,22 +29,6 @@ nav {
   padding: 10px;
 }
 
-.resize-handle {
-  flex-shrink: 0;
-}
-
-.resize-handle.left,
-.resize-handle.right {
-  width: 5px;
-  background: #aaa;
-  cursor: col-resize;
-}
-
-html.handle-dragging.vertical {
-  cursor: col-resize !important;
-  user-select: none;
-}
-
 #container {
   position: relative;
   background-color: #e0e0e0;

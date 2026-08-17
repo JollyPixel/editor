@@ -24,12 +24,24 @@
     min-width: 200px;
   }
 
+  jolly-scope {
+    display: contents;
+  }
 </style>
 
-<jolly-model-editor-left-panel></jolly-model-editor-left-panel>
-<section id="threeRenderer"></section>
-<jolly-model-editor-right-panel></jolly-model-editor-right-panel>
-<jolly-popup-manager></jolly-popup-manager>
+<jolly-scope>
+  <jolly-dock key="left" side="left" collapsible min-size="200" max-size="500" storage-key="voxel-model:left">
+    <jolly-pane heading="Build" locked>
+      <jolly-model-editor-left-panel></jolly-model-editor-left-panel>
+    </jolly-pane>
+  </jolly-dock>
+  <section id="threeRenderer"></section>
+  <jolly-dock key="right" side="right" collapsible min-size="200" max-size="500" storage-key="voxel-model:right">
+    <jolly-pane heading="Scene" locked>
+      <jolly-model-editor-right-panel></jolly-model-editor-right-panel>
+    </jolly-pane>
+  </jolly-dock>
+</jolly-scope>
 
 <script type="module" src="./src/index.ts"></script>
 

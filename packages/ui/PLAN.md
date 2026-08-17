@@ -68,32 +68,69 @@ the twelve P1 controls plus `JollyOption`/`Interval`/`JollyChangeDetail`/`Collab
 (unscheduled — SPEC section 16), `input/InputScope.ts`/`FocusScopeTracker.ts` (→ P6, lands with
 its consumer), `jolly-split` (no consumer defines its sizing contract yet).
 
-## P5: data views, and voxel-model
+## P5: `jolly-tree`, and voxel-model
 
 `Progress` shipped ahead of this phase under `src/feedback/`, together with the runtime loading
 screen that supplied its first consumer and gallery fixture.
 
-**Create** under `src/data/`: `Tree`, `List`, `Search`, `Menu`, `Toast`.
+**Create** under `src/data/`: `Tree`. Its reparent-zone resolution, keyboard navigation and
+multi-select algorithms port from `packages/arbor`'s `TreeView`/`TreeViewSelector`, which already
+implement this against hand-built DOM nodes for voxel-model's `RightPanel`. `List` and `Search`
+move to P6, where their only named consumers actually are. `Menu` and `Toast` are dropped from
+the plan entirely — see SPEC section 5.
 
-`Tree` takes generic nodes (`{ id, label, children }`), supports drag and drop reparenting with
-above, below and inside drop zones, collapsible groups, and visibility plus lock toggles. It
-knows nothing about scenes.
+`arbor` does **not** retire in this phase: `editors/voxel-map`'s `LayerManager.ts` also imports
+`TreeView` from it directly, a second consumer P5's own scope check missed until implementation.
+Retirement moves to P6, alongside `LayerManager`'s own migration onto `jolly-tree`. This phase only
+drops voxel-model's dependency on the package.
 
-**Migrate** `editors/voxel-model`: `LeftPanel` onto `jolly-rail` plus `jolly-tabs`, `RightPanel`
-onto `jolly-tree`, `PopupManager` and `AddMeshPopup` onto `jolly-dialog`, `tabs/Build` and
-`tabs/Paint` onto P1 and P4 controls.
+`Tree` takes generic nodes (`{ id, label, children }`, generic over a `data` payload the same way
+`TransformLike` is structural rather than closed), supports drag and drop reparenting with above,
+below and inside drop zones, collapsible groups, and visibility plus lock toggles. It knows
+nothing about scenes. It is fully controlled: `selected` and `expanded` are consumer owned, same
+as `value` elsewhere in this package, so remote or programmatic changes repaint it the same way a
+local edit does. A drop emits raw intent (`jolly-reparent` with `{ movedIds, targetId, where }`)
+rather than a computed result, so a consumer can veto a domain specific reparent — nesting a mesh
+inside a group it already contains, say — before applying one. A pure exported
+`resolveReparent(nodes, movedIds, targetId, where)` computes the common case for a consumer that
+has no veto to apply. The structural invariant that a node cannot be dropped into itself or its
+own descendant is enforced inside the component, ported from `arbor`'s dragover guard; that is
+not a domain rule, so it does not wait for the consumer to enforce it. Domain vetoes stay the
+consumer's job.
 
-**Deletes**: `PopupManager.ts`, the tree implementation inside `RightPanel.ts` (about 330 lines),
-and the hardcoded palettes across those six components.
+**Migrate** `editors/voxel-model`: `LeftPanel` onto `jolly-tabs` (its mode switcher is one
+horizontal row of three, which is what `jolly-tabs` already is — `jolly-rail` doesn't have a
+match anywhere in `LeftPanel`'s actual markup, correcting this bullet's original wording),
+`RightPanel` onto `jolly-tree` plus `jolly-toolbar` for its Add Cube / Duplicate row,
+`PopupManager` and `AddMeshPopup` onto `jolly-dialog`'s `showPrompt()`. The migration is as-is,
+not a cleanup:
+`LeftPanel`'s `animate` tab ships as a `disabled` `jolly-tab` despite there being no
+`tabs/Animate.ts` behind it, and `Duplicate` stays a button with no handler. `showPrompt()` has no
+hook for `PopupManager`'s `sceneManager.setControlsEnabled(false/true)` around the popup's
+lifecycle, so the migration wraps it locally to preserve that behavior — a thin, throwaway shim
+until P6's `InputScope` work makes it unnecessary.
 
-**Tests**: unit for reparent target resolution, which is pure given a node list and a drop
-target. E2e for dragging a node onto, above and below another, and for context menu open and
-dismiss.
+`tabs/Build.ts` and `tabs/Paint.ts` onto P1 and P4 controls is out of scope for this pass.
+`Build.ts`'s axis inputs, unwrap mode select and flip buttons are currently unwired decoration;
+`Paint.ts`'s color/opacity/size row is functional. Migrating both onto native-replacing controls
+is different enough work from a data-view migration that it gets its own pass.
 
-**Done when**: voxel-model renders entirely from `@jolly-pixel/ui`, responds to the `theme`
-attribute, and declares no component local colors.
+**Deletes**: `PopupManager.ts`, `components/popups/` (`AddMeshPopup.ts` folds into `showPrompt()`),
+and the hardcoded palettes across the migrated components. `packages/arbor` itself stays until P6
+— see above.
+
+**Tests**: unit for `resolveReparent`, which is pure given a node list, the moved ids and a drop
+target. E2e for dragging a node onto, above and below another.
+
+**Done when**: `RightPanel`, `LeftPanel` and the mesh creation dialog render from
+`@jolly-pixel/ui`, respond to the `theme` attribute, and declare no component local colors.
 
 ## P6: voxel-map
+
+**Create** under `src/data/`: `List` (add, remove, reorder, inline rename) and `Search`, moved
+from P5 to land beside their actual consumers — `List` replaces three hand-built copies
+(`ObjectLayerPanel`, `TilesetManager`, `LayerPanel`); `Search` is new functionality for
+`BlockLibrary`, which has no filter UI today to migrate from.
 
 **Migrate** the twelve components in `editors/voxel-map/src/ui/`, about 3,100 lines:
 `EditorSidebar`, `LayerPanel`, `LayerManager`, `ObjectLayerPanel`, `MapConfigPanel`,
@@ -185,8 +222,8 @@ by itself as entries are added.
 | P3 | monitor, graph | `facade-parity` |
 | P3b | stats | `stats-cycle` |
 | P4 | 6 math | `mixed-per-axis` |
-| P5 | 6 data views | `tree-reparent`, `menu-dismiss` |
-| P6 | — | `input-scope` |
+| P5 | 1 data view (tree) | `tree-reparent` |
+| P6 | 2 data views (list, search) | `input-scope` |
 | P7 | presence | `locking` (two contexts) |
 
 ## Input scope end to end coverage (P6)
