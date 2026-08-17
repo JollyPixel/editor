@@ -3,7 +3,7 @@
  */
 declare const _mixedSymbol: unique symbol;
 
-type MixedSymbol = typeof _mixedSymbol;
+export type MixedSymbol = typeof _mixedSymbol;
 
 /**
  * Preserves the `unique symbol` type of the global sentinel.
@@ -12,9 +12,7 @@ export const Mixed: MixedSymbol = Symbol.for("jolly-pixel.ui.mixed") as MixedSym
 
 export type FieldValue<TValue> = TValue | MixedSymbol;
 
-/**
- * Mixed-value placeholder; the em dash avoids a negative-sign ambiguity.
- */
+/** Mixed-value placeholder chosen to avoid minus-sign ambiguity. */
 export const MIXED_PLACEHOLDER = "—";
 
 export function isMixed<TValue>(

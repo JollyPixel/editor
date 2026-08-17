@@ -10,10 +10,6 @@ import {
 import type { GalleryExample } from "../../types.ts";
 
 // CONSTANTS
-/**
- * Both pages are built from these two functions, so the realistic one and the
- * salted one cannot drift into different layouts.
- */
 const kPeers: CollaboratorPresence[] = [
   {
     clientId: "ana",
@@ -66,20 +62,12 @@ const kLayers = [
   }
 ];
 
-/**
- * Widest label in the inspector is "Position X" at ten characters. Setting the
- * shared column on the pane aligns every value in it, including the property
- * rows, which size from the same token.
- */
+/** Fits the widest inspector label and aligns every field row. */
 const kLabelWidth = "10ch";
 const kFieldTrailingWidth = "48px";
 
 export interface EditorScenarioOptions {
-  /**
-   * Puts one row into each field state at once. No real inspector looks like
-   * this, which is the point: it is the only way to see every state channel
-   * against the others on a single screen.
-   */
+  /** Displays every field state together for visual testing. */
   salted: boolean;
 }
 
@@ -115,16 +103,8 @@ function mountEditor(
   );
 
   /*
-   * A layout owns both docks and the floating palette, which is what makes the
-   * Brush window dockable into the Outliner or the Inspector and draggable back
-   * out again. It renders "display: contents", so wrapping the shell in it
-   * changes nothing about how the editor is laid out. It also takes over
-   * persistence from the containers below it, hence the single storage key
-   * here and none on the dock or the window.
-   *
-   * Both docks pack their panes to the top rather than sharing themselves out
-   * evenly, which is what gave the small Brush window half a dock's height
-   * whatever was in it once it was docked.
+   * DockLayout owns docking and persistence for both docks and the palette.
+   * It uses display: contents, so it does not alter the editor grid.
    */
   const layout = document.createElement("jolly-dock-layout");
   layout.storageKey = storageKey(options, "layout");
@@ -158,9 +138,7 @@ function bind<
   return element;
 }
 
-/**
- * A pane whose fields share one label column.
- */
+/** Creates a pane whose fields share one label column. */
 function labelledPane(
   key: string,
   title: string
@@ -312,11 +290,7 @@ function buildInspector(
     kFieldTrailingWidth
   );
 
-  /*
-   * The inspector is the collaborative surface here, so it opts its subtree into
-   * the reserved gutter. That is what keeps a row from shifting when a peer
-   * takes or releases a lock.
-   */
+  // Reserve lock space so peer edits do not shift inspector rows.
   if (options.salted) {
     dock.style.setProperty("--jolly-gutter-width", "14px");
   }
@@ -341,22 +315,12 @@ function buildTransform(
   folder.label = "Transform";
   folder.open = true;
 
-  const axes: [string, number][] = [
-    ["Position X", 12],
-    ["Position Y", 0],
-    ["Position Z", -4.5]
-  ];
-
-  // Digits line up down the column when the value sits against the trailing edge.
-  for (const [label, value] of axes) {
-    const field = bind(document.createElement("jolly-number"));
-    field.label = label;
-    field.step = 0.1;
-    field.value = value;
-    field.default = 0;
-    field.align = "end";
-    folder.append(field);
-  }
+  const position = bind(document.createElement("jolly-vector3"));
+  position.label = "Position";
+  position.step = 0.1;
+  position.value = { x: 12, y: 0, z: -4.5 };
+  position.default = { x: 0, y: 0, z: 0 };
+  folder.append(position);
 
   const scale = bind(document.createElement("jolly-slider"));
   scale.label = "Scale";
@@ -375,13 +339,19 @@ function buildTransform(
     readonlyField.align = "end";
     readonlyField.description = "Derived from the mesh, not editable.";
 
-    const lockedField = bind(document.createElement("jolly-number"));
-    lockedField.label = "Rotation Y";
-    lockedField.value = 45;
-    lockedField.lockedBy = kPeers[0];
-    lockedField.peers = [kPeers[0], kPeers[1]];
+    // 45 degrees about Y.
+    const rotation = bind(document.createElement("jolly-quaternion"));
+    rotation.label = "Rotation";
+    rotation.value = {
+      x: 0,
+      y: 0.3826834323650898,
+      z: 0,
+      w: 0.9238795325112867
+    };
+    rotation.lockedBy = kPeers[0];
+    rotation.peers = [kPeers[0], kPeers[1]];
 
-    folder.append(readonlyField, lockedField);
+    folder.append(readonlyField, rotation);
   }
 
   return folder;
@@ -502,9 +472,7 @@ function buildPhysics(
 
 function buildPalette(): HTMLElementTagNameMap["jolly-floating"] {
   const floating = document.createElement("jolly-floating");
-  // Over the viewport, so it never starts on top of either dock. Sized, since
-  // a window that can be docked can also be dragged back out, and the size it
-  // comes back at is the one it was given here.
+  // Start over the viewport and preserve this size across docking.
   floating.x = 560;
   floating.y = 96;
   floating.width = 260;

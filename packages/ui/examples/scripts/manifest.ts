@@ -47,6 +47,16 @@ import { GRAPH_EXAMPLE } from "./examples/monitors/graph.ts";
 import { FACADE_PARITY_EXAMPLE } from "./examples/scenarios/facadeParity.ts";
 import { STATS_CYCLE_EXAMPLE } from "./examples/scenarios/statsCycle.ts";
 import { PROGRESS_EXAMPLE } from "./examples/feedback/progress.ts";
+import { VECTOR2_EXAMPLE } from "./examples/math/vector2.ts";
+import { VECTOR3_EXAMPLE } from "./examples/math/vector3.ts";
+import { VECTOR4_EXAMPLE } from "./examples/math/vector4.ts";
+import { QUATERNION_EXAMPLE } from "./examples/math/quaternion.ts";
+import {
+  TRANSFORM_EXAMPLE,
+  TRANSFORM_STACKED_EXAMPLE
+} from "./examples/math/transform.ts";
+import { POINT2D_EXAMPLE } from "./examples/math/point2d.ts";
+import { MIXED_PER_AXIS_EXAMPLE } from "./examples/scenarios/mixedPerAxis.ts";
 
 /**
  * The navigation and E2E sweep derive from this list.
@@ -91,9 +101,17 @@ export const manifest: readonly GalleryExample[] = [
   EDITOR_STATES_EXAMPLE,
   FACADE_PARITY_EXAMPLE,
   STATS_CYCLE_EXAMPLE,
+  MIXED_PER_AXIS_EXAMPLE,
   MONITOR_EXAMPLE,
   GRAPH_EXAMPLE,
-  PROGRESS_EXAMPLE
+  PROGRESS_EXAMPLE,
+  VECTOR2_EXAMPLE,
+  VECTOR3_EXAMPLE,
+  VECTOR4_EXAMPLE,
+  QUATERNION_EXAMPLE,
+  TRANSFORM_EXAMPLE,
+  TRANSFORM_STACKED_EXAMPLE,
+  POINT2D_EXAMPLE
 ];
 
 export function findExample(

@@ -188,7 +188,7 @@ test.describe("Folder", () => {
     const folderFill = await inspector.locator("jolly-folder > .header")
       .first()
       .evaluate((element) => getComputedStyle(element).backgroundColor);
-    const controlFill = await inspector.locator("jolly-number input")
+    const controlFill = await inspector.locator("jolly-vector3 input")
       .first()
       .evaluate((element) => getComputedStyle(element).backgroundColor);
 
@@ -220,12 +220,11 @@ test.describe("Folder", () => {
       { steps: 12 }
     );
 
-    // The order is previewed, not applied, so nothing slides under the hand.
+    // Dragging previews the order without moving panes.
     await expect(page.locator(".jolly-drag-overlay")).toHaveCount(1);
     await expect(folders.first()).toHaveAttribute("dragging");
 
-    // The line is neutral and haloed, the same treatment panes get. An accent
-    // line would land a blue bar directly under a blue pane header.
+    // Use the pane treatment; accent would merge with blue pane headers.
     const painted = await page.locator(".jolly-drag-insertion").evaluate(
       (element) => {
         const style = getComputedStyle(element);
@@ -244,9 +243,7 @@ test.describe("Folder", () => {
 
     expect(painted.fill).not.toBe(headerFill);
     expect(painted.halo).not.toBe("none");
-    // The neutral ramp is a cool grey, so an ink line separates its channels a
-    // little; the accent separates them several times as far. Half the header's
-    // separation sits well clear of both.
+    // Neutral channel spread stays below half the accent header's.
     expect(await channelSpread(page, painted.fill))
       .toBeLessThan(await channelSpread(page, headerFill) / 2);
     await expect.poll(() => visualOrder(folders)).toEqual([
@@ -272,8 +269,7 @@ test.describe("Folder", () => {
     });
 
     const pane = page.locator("jolly-pane[key='inspector']");
-    // Both fold to their header, so both point down open and right when shut.
-    // Read as a matrix, since either one alone proves nothing about the pair.
+    // Both containers point down when open and right when closed.
     await expect(pane).not.toHaveAttribute("collapsed");
     const paneOpen = await chevronAngleOf(pane.locator(".chevron"));
     await pane.locator(".fold").click();
@@ -320,14 +316,11 @@ test.describe("Folder", () => {
 
     const ghost = page.locator(".jolly-drag-overlay > jolly-folder");
     await expect(ghost).toHaveCount(1);
-    // The example sets "label" as a property, so only an explicit reassignment
-    // carries it across a clone that copies attributes alone.
+    // Property-only labels require explicit cloning.
     await expect(ghost.locator(".toggle")).toHaveText("Transform");
-    // The chevron and grip come along, which a label chip never carried.
     await expect(ghost.locator(".chevron")).toHaveCount(1);
     await expect(ghost.locator(".grip")).toHaveCount(1);
-    // Emptied and clipped, so it reduces to the header it stands for, while
-    // still reading as open exactly as the folder it was taken from does.
+    // The ghost keeps open state but clips to the empty header.
     await expect(ghost).toHaveAttribute("open");
     await expect.poll(
       () => ghost.evaluate((element) => element.children.length)
@@ -338,9 +331,7 @@ test.describe("Folder", () => {
     expect(carried.width).toBeCloseTo(source.width, 0);
     expect(carried.height).toBeCloseTo(sourceHeader.height, 0);
 
-    // Its own header fill, which resolves only from the copied theme. A folder
-    // wash is nothing like the flat accent the chip used to paint. Compared
-    // against an untouched sibling, out of reach of hover and drag state.
+    // Compare against an untouched sibling to exclude hover and drag state.
     const fill = await ghost.locator(".header").evaluate(
       (element) => getComputedStyle(element).backgroundColor
     );
@@ -493,8 +484,7 @@ test.describe("Floating", () => {
     const headerHeight = await heightOf(pane.locator(".header"));
     await expect.poll(() => heightOf(floating)).toBeCloseTo(headerHeight, 0);
 
-    // The bottom and corner handles would only fight that height and corrupt
-    // the size worth remembering, so they stand down while folded.
+    // Folded windows disable handles that would alter stored height.
     await expect(floating.locator(".resize-handle.bottom")).toHaveClass(/disabled/);
     await expect(floating.locator(".resize-handle.corner")).toHaveClass(/disabled/);
     await expect(floating.locator(".resize-handle.right")).not.toHaveClass(/disabled/);
@@ -529,8 +519,7 @@ test.describe("Placement", () => {
       ).toHaveCount(1);
       await expect(page.locator("jolly-floating")).toHaveCount(0);
 
-      // Back out to the viewport, so the next side is entered from a window
-      // again rather than across the dock the pane now sits in.
+      // Re-enter each dock from a floating window.
       await dragTo(page, header, {
         x: viewport.x + (viewport.width / 2),
         y: viewport.y + 160
@@ -557,7 +546,7 @@ test.describe("Placement", () => {
       "movable"
     );
 
-    // Its header is inert too, so the dock cannot be emptied by dragging.
+    // An inert header prevents dragging the only pane out.
     const viewport = await boxOf(page.locator(".placement-viewport"));
     await dragTo(page, page.locator("jolly-pane[key='left'] .header"), {
       x: viewport.x + (viewport.width / 2),
@@ -570,8 +559,7 @@ test.describe("Placement", () => {
   });
 
   test("a stored snapshot cannot strand a locked pane in a window", async({ page }) => {
-    // A snapshot written before the pane was locked, or by an older build:
-    // the pane it floats has no grip, so nothing could drag it home again.
+    // Simulate a stale snapshot that floated a now-locked pane.
     await page.goto("/");
     await page.evaluate(() => {
       localStorage.setItem("gallery-example:placement", JSON.stringify({
@@ -660,13 +648,8 @@ test.describe("Dialog", () => {
 });
 
 /**
- * How far a colour separates its channels, which is how far it is from a grey.
- *
- * Measured by painting into a canvas rather than by parsing the computed
- * string: these colours come out of `color-mix` and `light-dark`, which the
- * browser is free to serialize as `color(srgb ...)` or `oklab(...)`, and no
- * one parser survives that. A canvas gives sRGB bytes whatever the notation,
- * and composites the alpha away against black while it is at it.
+ * Measures distance from grey using canvas-normalized sRGB channel bytes.
+ * Canvas avoids browser-dependent serialization of computed color functions.
  */
 function channelSpread(
   page: Page,
@@ -690,12 +673,7 @@ function channelSpread(
   );
 }
 
-/**
- * The chevron's settled rotation in degrees, read off the computed matrix so
- * the two containers are compared by what they paint rather than by how they
- * say it. Both chevrons transition, and the computed transform interpolates
- * while they do, so the running animation has to be waited out first.
- */
+/** Reads a chevron's settled rotation from its computed transform matrix. */
 function chevronAngleOf(
   chevron: Locator
 ): Promise<number> {

@@ -60,7 +60,8 @@ export {
   type FieldValue
 } from "./field/mixed.ts";
 export type {
-  FieldAlign
+  FieldAlign,
+  FieldLabelPosition
 } from "./field/JollyField.ts";
 export type {
   JollyChangeDetail
@@ -140,6 +141,32 @@ export type {
   Interval,
   JollyOption
 } from "./controls/types.ts";
+
+// Math
+export {
+  Vector2
+} from "./math/Vector2.ts";
+export {
+  Vector3
+} from "./math/Vector3.ts";
+export {
+  Vector4
+} from "./math/Vector4.ts";
+export {
+  Quaternion
+} from "./math/Quaternion.ts";
+export {
+  Transform
+} from "./math/Transform.ts";
+export {
+  Point2d
+} from "./math/Point2d.ts";
+export type {
+  QuatLike,
+  TransformLike,
+  Vec3Like,
+  VectorValue
+} from "./math/types.ts";
 
 // Colour values
 export {

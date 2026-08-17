@@ -756,20 +756,60 @@ gallery's own `stats-cycle` example, before any of the four consumer commits dep
 
 ## P4: math components
 
-**Create** under `src/math/`: `Vector2`, `Vector3`, `Vector4`, `Quaternion`, `Transform`,
-`Point2d`, plus `src/math/euler.ts` for quaternion conversion and `src/math/equals.ts` for the
-`hasChanged` comparators.
+**Create** under `src/math/`:
 
-Axis chips reuse P1's drag scrub. Mixed applies per axis.
+```
+src/math/types.ts              Vec3Like, QuatLike, TransformLike,
+                               VectorValue<TAxis>
+src/math/VectorField.ts        abstract base, JollyField<VectorValue<TAxis>>,
+                               generic over an axis-key list
+src/math/VectorField.styles.ts axis-box row, shared by Vector2/3/4
+src/math/Vector2.ts            jolly-vector2, axes ["x","y"]
+src/math/Vector3.ts            jolly-vector3, axes ["x","y","z"]
+src/math/Vector4.ts            jolly-vector4, axes ["x","y","z","w"],
+                               speculative, no named consumer today
+src/math/Quaternion.ts         jolly-quaternion, edited as Euler angles
+src/math/Quaternion.styles.ts
+src/math/Transform.ts          jolly-transform, plain LitElement wrapper
+                               composing three field rows
+src/math/Transform.styles.ts
+src/math/Point2d.ts            jolly-point2d, draggable pad, speculative
+src/math/Point2d.styles.ts
+src/math/euler.ts              quaternion <-> Euler ("XYZ" order), about
+                               40 lines, internal
+src/math/equals.ts             hasChanged comparators, component wise,
+                               internal
+docs/math.md                   shared contract: VectorValue, per-axis
+                               Mixed, whole-row revert, the quaternion
+                               Euler-draft rule, Point2d's pad model
+
+examples/scripts/manifest.ts   six new examples, `mixed-per-axis` scenario
+```
+
+Axis chips reuse P1's drag scrub and P0's `evaluate`, the same expression grammar `jolly-number`
+uses. Mixed applies per axis; revert applies to the whole row. See SPEC section 10 for the full
+`VectorValue`, composition, and Euler-draft-survival rationale.
+
+**Barrel**: `Vector2`, `Vector3`, `Vector4`, `Quaternion`, `Transform`, `Point2d` element
+constructors, plus `Vec3Like`, `QuatLike`, `TransformLike`, `VectorValue`. `VectorField`,
+`euler.ts` and `equals.ts` stay internal, the same treatment P0 gave `evaluate` and
+`valueFromDelta`.
 
 **Tests**: unit for quaternion and Euler round trips across the order convention and near gimbal
-poles, and for component wise equality. E2e for dragging an axis chip and for the 2D pad.
+poles, for the Euler draft surviving a round-tripping value and re-deriving on a non-round-tripping
+one, and for component wise equality (`equals.ts`).
+
+**E2e**: dragging an axis chip and the 2D pad; editing one axis of a mixed vector and asserting
+that axis commits while its siblings stay `Mixed`; whole-row revert resetting every axis
+together; nudging one Euler axis near a gimbal pole and asserting the other two do not visibly
+jump; and `jolly-transform`'s position, rotation and scale sub-rows each emitting independently.
 
 **Deletes**: `editors/voxel-map/src/ui/Vec2Input.ts` and `Vec3Input.ts` once voxel-map migrates
 in P6. The `.axis-input` markup in `editors/voxel-model/src/components/tabs/Build.ts` goes in P5.
 
 **Done when**: `<jolly-vector3 .value=${mesh.position}>` renders a Three.js vector with no
-`three` dependency in this package.
+`three` dependency in this package, and editing one axis of a mixed `jolly-vector3` commits that
+axis while the others stay `Mixed`.
 
 ## P5: data views, and voxel-model
 
