@@ -88,10 +88,18 @@ start because they change what a value means, and retrofitting them touches ever
 | `readonly` | `boolean` | Not editable, still focusable and copyable |
 | `error` | `string \| null` | Validation message, consumer owned |
 | `align` | `"start" \| "end"` | Which edge the value sits against |
+| `labelPosition` | `"inline" \| "top"` | `"top"` puts the label on its own line above the value |
 
 `peers` represents everyone focused on the field; `lockedBy` is the resolved holder. `error` is
 consumer owned. Parse failures use private `#parseError`, which takes display precedence without
 overwriting consumer validation.
+
+`labelPosition` reflects as `label-position` because the property is two words; every other
+reflected member above is one. Rows with `"top"` still hold gutter, value and trailing to the
+contract's usual shapes, just split across two lines instead of one, so a container that sets
+`--jolly-gutter-width` for lock icons keeps both lines flush at the same left edge. `jolly-transform`
+forwards it to `position`, `rotation` and `scale`, which is the case dense numeric rows most want
+the extra vertical room.
 
 `disabled`, `readonly`, and `lockedBy` combine rather than override:
 
@@ -1090,11 +1098,26 @@ export interface Vec3Like {
   readonly y: number;
   readonly z: number;
 }
+
+export interface QuatLike {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+  readonly w: number;
+}
+
+export interface TransformLike {
+  readonly position: Vec3Like;
+  readonly rotation: QuatLike;
+  readonly scale: Vec3Like;
+}
 ```
 
-`THREE.Vector3` satisfies this already, so 3D editors pass their objects directly while 2D
-consumers of a button or a color swatch never pull a 3D library. Quaternion to Euler conversion
-ships here, about 40 lines.
+`THREE.Vector3` and `THREE.Quaternion` satisfy `Vec3Like` and `QuatLike` already, so 3D editors
+pass `mesh.position` and `mesh.quaternion` directly, while 2D consumers of a button or a color
+swatch never pull a 3D library. `THREE.Object3D` is not itself `TransformLike`; a one line
+adapter (`{ position: mesh.position, rotation: mesh.quaternion, scale: mesh.scale }`) is expected
+at the call site.
 
 Values are immutable snapshots. Lit re-renders on assignment, so mutating in place does not
 repaint:
@@ -1109,6 +1132,78 @@ mesh.position = mesh.position.clone().set(1, 2, 3);
 
 Properties declare `hasChanged` with a component wise comparison so re-assigning an equal valued
 object does not repaint.
+
+### Per-axis value and Mixed
+
+Section 3's `FieldValue<T> = T | typeof Mixed` is all or nothing, but a vector field applies
+Mixed per axis: editing one axis of a mixed selection commits that axis across the selection and
+leaves the others Mixed. `value` is therefore a union rather than `FieldValue<Vec3Like>`:
+
+```ts
+export type VectorValue<TAxis extends string> =
+  | Record<TAxis, number>
+  | Record<TAxis, FieldValue<number>>
+  | typeof Mixed;
+```
+
+A plain `Vec3Like`-shaped object (`Record<"x" | "y" | "z", number>`) is the common, direct
+binding case: `<jolly-vector3 .value=${mesh.position}>` needs no wrapping. The per-axis
+`FieldValue` record only appears under multi-selection, where one or more axes differ across the
+selected objects. Whole-value `Mixed` still covers "every axis differs, none has been touched
+yet."
+
+`jolly-input`/`jolly-change` emit `detail.value` typed as the same `VectorValue<TAxis>` union as
+`value`. An edited axis becomes a concrete number; untouched axes keep whatever they were,
+including `Mixed`. There is no principled concrete number to substitute for a still-Mixed axis
+that was never displayed as one — forcing one would silently pick a value for objects in the
+selection the user never touched.
+
+`default`, and therefore the Modified state and revert affordance, apply to the whole row, not
+per axis: `default` is `Vec3Like`-shaped, one leading bar and one revert action, resetting every
+axis together.
+
+### Composition
+
+`jolly-vector2`, `jolly-vector3`, and `jolly-vector4` share one abstract `VectorField extends
+JollyField<VectorValue<TAxis>>`, generic over an axis-key list (`["x","y"]`, `["x","y","z"]`,
+`["x","y","z","w"]`). `renderValue()` draws one bare axis box per key, wired directly to
+`ScrubController`, `valueFromDelta`, and `evaluate` — the same expression grammar `jolly-number`
+uses, not a reduced one. There is no nested `jolly-number`: a full field row (label, gutter, lock
+ring) per axis would duplicate the row chrome this base class already renders once.
+
+Each axis box carries a small corner-triangle color chip, seeded from the same axis colour
+tokens `Vec3Input` used (`--jolly-axis-x`, `-y`, `-z`), purely as a sighted-user visual accent.
+It is not the scrub handle — `jolly-number`'s existing left-handle drag grip is unchanged — and it
+is not the only means of conveying axis identity: each box carries `aria-label="X"` / `"Y"` /
+`"Z"` / `"W"` (overridable per instance for domain terms like `"pitch"`), matching how peer color
+chips in section 4 always resolve to a name, never color alone.
+
+`jolly-vector4` has no named consumer today. It ships anyway for API symmetry with the other two
+— the three share literally all their code, unlike a whole extra facade class built ahead of a
+consumer.
+
+`jolly-point2d` is not a third value shape. It reuses the two-axis `Vec2Like` (`Record<"x" |
+"y", number>`) but renders a draggable pad surface instead of two boxes, with optional `min`,
+`max`, and `step` attributes the same way `jolly-slider` bounds a scalar. It has no named
+consumer today either, and is recorded as speculative on the same footing as `jolly-vector4`.
+
+`jolly-quaternion` is edited as Euler angles but its `value` is `QuatLike`. Quaternion to Euler
+is not a unique conversion — many Euler triples produce the same quaternion, and near gimbal
+poles a small quaternion change can jump the derived angles onto a different triple. The element
+holds an internal Euler draft that survives across renders the same way `jolly-color-picker`'s
+HSVA tuple does (section 5): it persists as long as converting it back to a quaternion still
+equals the incoming `value` within an epsilon — i.e. the user's own edits keep echoing back — and
+re-derives fresh only on a genuine external change: a peer edit, a revert to default, or an
+incoming value that does not round trip to the cached triple. Conversion uses Euler order
+`"XYZ"`, matching `THREE.Euler`'s own default, so round tripping a mesh's rotation needs no
+explicit order argument. `euler.ts` implements the conversion, about 40 lines; it is not part of
+the public barrel, the same treatment P0 gave `evaluate` and `valueFromDelta`.
+
+`jolly-transform` composes `position` (`jolly-vector3`), `rotation` (`jolly-quaternion`), and
+`scale` (`jolly-vector3`) as three independently labeled, independently lockable field rows. It
+is a plain `LitElement`, not itself a `JollyField`: locking, Mixed, and revert are meaningful per
+sub-property — a consumer can lock just rotation — so there is nothing coherent for an outer
+field wrapper spanning all three to contribute.
 
 ## 11. Persistence
 

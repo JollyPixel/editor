@@ -12,7 +12,10 @@ import {
 
 // Import Internal Dependencies
 import { propertyRowStyles } from "./PropertyRow.styles.ts";
-import type { FieldAlign } from "../field/JollyField.ts";
+import type {
+  FieldAlign,
+  FieldLabelPosition
+} from "../field/JollyField.ts";
 
 // Registers the icon used by descriptions.
 import "../icon/Icon.ts";
@@ -39,18 +42,29 @@ export class PropertyRow extends LitElement {
   @property({ type: String, reflect: true })
   declare align: FieldAlign;
 
+  /** Matches `JollyField`'s label position. */
+  @property({
+    type: String,
+    attribute: "label-position",
+    reflect: true
+  })
+  declare labelPosition: FieldLabelPosition;
+
   constructor() {
     super();
 
     this.label = "";
     this.description = "";
     this.align = "start";
+    this.labelPosition = "inline";
   }
 
   override render(): TemplateResult {
     return html`
       <div class="row">
-        ${this.label === "" ? nothing : html`<span class="label">${this.label}</span>`}
+        <div class="leading">
+          ${this.label === "" ? nothing : html`<span class="label">${this.label}</span>`}
+        </div>
         <div class="value"><slot></slot></div>
       </div>
       ${this.description === ""

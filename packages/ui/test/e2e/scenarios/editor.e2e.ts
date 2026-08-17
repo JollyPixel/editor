@@ -55,7 +55,6 @@ test.describe("editor examples", () => {
     await expect(page.locator("jolly-floating")).toHaveCount(1);
     await expect(paneKeysOf(page, "inspector")).resolves.toEqual(["inspector"]);
 
-    // Into the Inspector, where it lands above the pane already there.
     await dragBrushInto(page, "inspector");
     await expect(page.locator("jolly-floating")).toHaveCount(0);
     await expect(paneKeysOf(page, "inspector")).resolves.toEqual([
@@ -63,7 +62,6 @@ test.describe("editor examples", () => {
       "inspector"
     ]);
 
-    // Across to the Outliner, without passing through a window on the way.
     await dragBrushInto(page, "outliner");
     await expect(paneKeysOf(page, "inspector")).resolves.toEqual(["inspector"]);
     await expect(paneKeysOf(page, "outliner")).resolves.toEqual([
@@ -71,7 +69,6 @@ test.describe("editor examples", () => {
       "outliner"
     ]);
 
-    // And back out onto the viewport, which is a window again.
     const viewport = (await page.locator(".editor-viewport").boundingBox())!;
     const header = (await page
       .locator("jolly-pane[key='brush'] .header")
@@ -98,8 +95,7 @@ test.describe("editor examples", () => {
       chrome: "off"
     });
 
-    // The Brush pane sets the column itself, so docking it next to the
-    // Inspector must not leave it inheriting the dock it landed in.
+    // Brush keeps its own label width after docking.
     await dragBrushInto(page, "inspector");
 
     const column = await page.locator("jolly-pane[key='brush']").evaluate(
@@ -137,8 +133,7 @@ test.describe("editor examples", () => {
       expect(surface.overflows).toBe(true);
       expect(surface.overflowY).toBe("auto");
 
-      // Off the bottom of the window, where it used to be stranded: nothing
-      // could scroll to it, so it could not be grabbed, folded or dragged out.
+      // Brush must remain reachable below the viewport.
       const brush = page.locator("jolly-pane[key='brush']");
       const stranded = (await brush.boundingBox())!;
       expect(stranded.y + stranded.height).toBeGreaterThan(520);
@@ -148,11 +143,11 @@ test.describe("editor examples", () => {
       expect(reached.y).toBeGreaterThanOrEqual(0);
       expect(reached.y + reached.height).toBeLessThanOrEqual(521);
 
-      // Scrolled to the very end, the last pane still clears the edge, which
-      // is what tells a stack that has run out from one cut off by the dock.
+      // Force the true end because scrollIntoViewIfNeeded omits dock padding.
       const end = await dock.evaluate((element) => {
         const content = element.shadowRoot!.querySelector(".content")!;
         const last = element.querySelector("jolly-pane[key='brush']")!;
+        content.scrollTop = content.scrollHeight;
 
         return {
           atEnd: content.scrollTop + content.clientHeight >=
@@ -182,13 +177,7 @@ test.describe("editor examples", () => {
   });
 });
 
-/**
- * Drags the Brush pane by its header into a dock, wherever it currently lives.
- *
- * Aimed by default near the top of the dock, which is the one drop position
- * that reads the same whatever is already stacked below it. Pass `y` to land
- * it somewhere else down the dock.
- */
+/** Drags Brush near a dock's top unless y selects another drop position. */
 async function dragBrushInto(
   page: Page,
   dock: string,

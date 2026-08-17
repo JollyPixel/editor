@@ -40,6 +40,12 @@ const kWarned = new Set<string>();
  */
 export type FieldAlign = "start" | "end";
 
+/**
+ * `"top"` puts the label on its own line above the value, trading label/value
+ * column alignment for more breathing room between rows.
+ */
+export type FieldLabelPosition = "inline" | "top";
+
 export type { DraftResult } from "./DraftController.ts";
 
 /**
@@ -89,6 +95,13 @@ export abstract class JollyField<TValue> extends LitElement {
   @property({ type: String, reflect: true })
   declare align: FieldAlign;
 
+  @property({
+    type: String,
+    attribute: "label-position",
+    reflect: true
+  })
+  declare labelPosition: FieldLabelPosition;
+
   #draft = new DraftController<TValue>(this);
 
   constructor() {
@@ -104,6 +117,7 @@ export abstract class JollyField<TValue> extends LitElement {
     this.readonly = false;
     this.colored = false;
     this.align = "start";
+    this.labelPosition = "inline";
   }
 
   /**
@@ -307,12 +321,16 @@ export abstract class JollyField<TValue> extends LitElement {
   override render(): TemplateResult {
     return html`
       <div class="row">
-        ${this.#renderGutter()}
-        ${this.label === "" ? nothing : html`<span class="label">${this.label}</span>`}
-        <div class="value">${this.renderValue()}</div>
-        <div class="trailing">
-          ${this.#renderRevert()}
-          ${this.#renderPeers()}
+        <div class="leading">
+          ${this.#renderGutter()}
+          ${this.label === "" ? nothing : html`<span class="label">${this.label}</span>`}
+        </div>
+        <div class="content">
+          <div class="value">${this.renderValue()}</div>
+          <div class="trailing">
+            ${this.#renderRevert()}
+            ${this.#renderPeers()}
+          </div>
         </div>
       </div>
       ${this.#renderDescription()}

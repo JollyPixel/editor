@@ -49,6 +49,39 @@ export const fieldStyles = css`
   }
 
   /*
+   * Flattened into the row's flex items by default, so inline layout is
+   * unaffected by the grouping these wrap for stacked layout.
+   */
+  .leading,
+  .content {
+    display: contents;
+  }
+
+  :host([label-position="top"]) .row {
+    flex-direction: column;
+    align-items: stretch;
+    min-height: auto;
+    gap: calc(var(--jolly-space-1, 4px) / 2);
+  }
+
+  :host([label-position="top"]) .leading,
+  :host([label-position="top"]) .content {
+    display: flex;
+    align-items: center;
+    gap: var(--jolly-space-1, 4px);
+  }
+
+  /*
+   * The gutter sits only on the label's line, so the value line needs a
+   * matching inset to keep both lines starting at the same edge.
+   */
+  :host([label-position="top"]) .content {
+    padding-inline-start: calc(
+      var(--jolly-gutter-width, 0px) + var(--jolly-space-1, 4px)
+    );
+  }
+
+  /*
    * Locating the active row in a long pane. Deliberately fainter than the
    * control's own focus tint, so the two read as a hierarchy and not a clash.
    */
@@ -103,6 +136,11 @@ export const fieldStyles = css`
     text-overflow: ellipsis;
     white-space: nowrap;
     user-select: none;
+  }
+
+  :host([label-position="top"]) .label {
+    width: auto;
+    max-width: none;
   }
 
   .value {

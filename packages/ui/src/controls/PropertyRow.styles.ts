@@ -27,6 +27,22 @@ export const propertyRowStyles = css`
       var(--jolly-space-1, 4px);
   }
 
+  .leading {
+    display: contents;
+  }
+
+  :host([label-position="top"]) .row {
+    flex-direction: column;
+    align-items: stretch;
+    min-height: auto;
+    gap: calc(var(--jolly-space-1, 4px) / 2);
+  }
+
+  :host([label-position="top"]) .leading {
+    display: flex;
+    align-items: center;
+  }
+
   /*
    * Use the shared label column when an ancestor sets it.
    */
@@ -40,6 +56,11 @@ export const propertyRowStyles = css`
     text-overflow: ellipsis;
     white-space: nowrap;
     user-select: none;
+  }
+
+  :host([label-position="top"]) .label {
+    width: auto;
+    max-width: none;
   }
 
   .value {

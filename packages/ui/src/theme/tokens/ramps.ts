@@ -43,4 +43,5 @@ export const rampTokens = css`
   --jolly-axis-x: oklch(45.2% 0.159 26.4);
   --jolly-axis-y: oklch(51.2% 0.129 149.1);
   --jolly-axis-z: oklch(41.9% 0.099 250.1);
+  --jolly-axis-w: oklch(45% 0.140 320);
 `;
