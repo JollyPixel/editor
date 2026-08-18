@@ -3,7 +3,23 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { PeerSelectionRegistry, type PeerSelectionChangeEventDetail } from "#src/index.ts";
+import {
+  PeerSelectionRegistry,
+  type PeerSelectionChangeEventDetail,
+  type PeerColorAllocator
+} from "#src/index.ts";
+
+function createStubColorAllocator(): PeerColorAllocator & { released: string[]; } {
+  const released: string[] = [];
+
+  return {
+    released,
+    colorOf: (peerId) => `stub:${peerId}`,
+    release: (peerId) => {
+      released.push(peerId);
+    }
+  };
+}
 
 describe("select", () => {
   test("records a peer's selection", () => {
@@ -112,6 +128,35 @@ describe("colorOf", () => {
     const registry = new PeerSelectionRegistry();
 
     assert.strictEqual(registry.colorOf("peer-a"), registry.colorOf("peer-a"));
+  });
+});
+
+describe("colorAllocator", () => {
+  test("delegates colorOf to the injected allocator", () => {
+    const allocator = createStubColorAllocator();
+    const registry = new PeerSelectionRegistry({ colorAllocator: allocator });
+
+    assert.strictEqual(registry.colorOf("peer-a"), "stub:peer-a");
+  });
+
+  test("calls release on removePeer", () => {
+    const allocator = createStubColorAllocator();
+    const registry = new PeerSelectionRegistry({ colorAllocator: allocator });
+    registry.select("peer-a", "box");
+
+    registry.removePeer("peer-a");
+
+    assert.deepStrictEqual(allocator.released, ["peer-a"]);
+  });
+
+  test("does not call release on dispose", () => {
+    const allocator = createStubColorAllocator();
+    const registry = new PeerSelectionRegistry({ colorAllocator: allocator });
+    registry.select("peer-a", "box");
+
+    registry.dispose();
+
+    assert.deepStrictEqual(allocator.released, []);
   });
 });
 
