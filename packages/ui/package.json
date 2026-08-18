@@ -15,6 +15,10 @@
     "./stats": {
       "types": "./dist/stats/index.d.ts",
       "default": "./dist/stats/index.js"
+    },
+    "./icon": {
+      "types": "./dist/icon/index.d.ts",
+      "default": "./dist/icon/index.js"
     }
   },
   "scripts": {

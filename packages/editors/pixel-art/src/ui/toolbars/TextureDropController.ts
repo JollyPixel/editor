@@ -12,119 +12,29 @@ import {
 
 // Import Internal Dependencies
 import { renderIcon } from "../common/icons.ts";
-
-// CONSTANTS
-const kSupportedTypes = new Set([
-  "image/png",
-  "image/jpeg",
-  "image/webp",
-  "image/gif"
-]);
-const kSupportedExtensions = new Set([
-  "png",
-  "jpg",
-  "jpeg",
-  "webp",
-  "gif"
-]);
-const kStatusTimeoutMs = 3_000;
-
-export interface TextureDropBounds {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-}
-
-interface FileSystemEntryLike {
-  isDirectory: boolean;
-}
-
-function isDirectoryItem(
-  item: DataTransferItem
-): boolean {
-  const itemWithEntry = item as DataTransferItem & {
-    webkitGetAsEntry?: () => FileSystemEntryLike | null;
-  };
-
-  return itemWithEntry.webkitGetAsEntry?.()?.isDirectory === true;
-}
-
-function isSupportedFile(
-  file: File
-): boolean {
-  if (kSupportedTypes.has(file.type.toLowerCase())) {
-    return true;
-  }
-
-  const extension = file.name.split(".").pop()?.toLowerCase();
-
-  return file.type === "" && extension !== undefined && kSupportedExtensions.has(extension);
-}
-
-export function hasSupportedImageDrag(
-  dataTransfer: DataTransfer | null
-): boolean {
-  if (!dataTransfer || [...dataTransfer.types].includes("text/uri-list")) {
-    return false;
-  }
-
-  const fileItems = [...dataTransfer.items].filter((item) => item.kind === "file");
-  if (fileItems.length > 0) {
-    return fileItems.length === 1 &&
-      !isDirectoryItem(fileItems[0]) &&
-      kSupportedTypes.has(fileItems[0].type.toLowerCase());
-  }
-
-  return dataTransfer.files.length === 1 &&
-    isSupportedFile(dataTransfer.files[0]);
-}
-
-export function textureDropBounds(
-  canvas: PixelArtCanvas,
-  stage: HTMLElement
-): TextureDropBounds {
-  const canvasBounds = canvas.canvas().getBoundingClientRect();
-  const stageBounds = stage.getBoundingClientRect();
-  const { camera, zoom, textureSize } = canvas;
-
-  return {
-    left: canvasBounds.left - stageBounds.left + camera.x,
-    top: canvasBounds.top - stageBounds.top + camera.y,
-    width: textureSize.x * zoom.value,
-    height: textureSize.y * zoom.value
-  };
-}
-
-export function pointInTextureBounds(
-  clientX: number,
-  clientY: number,
-  bounds: TextureDropBounds,
-  stage: HTMLElement
-): boolean {
-  const stageBounds = stage.getBoundingClientRect();
-  const x = clientX - stageBounds.left;
-  const y = clientY - stageBounds.top;
-
-  return x >= bounds.left &&
-    x < bounds.left + bounds.width &&
-    y >= bounds.top &&
-    y < bounds.top + bounds.height;
-}
+import { TransientStatus } from "./TransientStatus.ts";
+import {
+  hasSupportedImageDrag,
+  isDirectoryItem,
+  isSupportedFile,
+  pointInTextureBounds,
+  textureDropBounds,
+  type TextureDropBounds
+} from "./textureDropGeometry.ts";
 
 export class TextureDropController implements ReactiveController {
   #host: ReactiveControllerHost;
   #canvas: PixelArtCanvas | null = null;
   #stage: HTMLElement | null = null;
   #bounds: TextureDropBounds | null = null;
-  #status = "";
-  #statusTimer: number | null = null;
+  readonly #status: TransientStatus;
   #dropGeneration = 0;
 
   constructor(
     host: ReactiveControllerHost
   ) {
     this.#host = host;
+    this.#status = new TransientStatus(host);
     host.addController(this);
   }
 
@@ -158,7 +68,7 @@ export class TextureDropController implements ReactiveController {
     this.#canvas = null;
     this.#stage = null;
     this.#clearOverlay();
-    this.#clearStatus();
+    this.#status.clear();
   }
 
   readonly #onDragOver = (
@@ -224,7 +134,7 @@ export class TextureDropController implements ReactiveController {
 
     event.preventDefault();
     if (!file) {
-      this.#setStatus(this.#dropValidationMessage(event.dataTransfer));
+      this.#status.set(this.#dropValidationMessage(event.dataTransfer));
 
       return;
     }
@@ -296,7 +206,7 @@ export class TextureDropController implements ReactiveController {
       if (generation !== this.#dropGeneration) {
         return;
       }
-      this.#setStatus("Could not decode the image");
+      this.#status.set("Could not decode the image");
 
       return;
     }
@@ -307,7 +217,7 @@ export class TextureDropController implements ReactiveController {
       return;
     }
     if (source.width <= 0 || source.height <= 0) {
-      this.#setStatus("Could not decode the image");
+      this.#status.set("Could not decode the image");
 
       return;
     }
@@ -315,7 +225,7 @@ export class TextureDropController implements ReactiveController {
       source.width > canvas.maxTextureSize ||
       source.height > canvas.maxTextureSize
     ) {
-      this.#setStatus(
+      this.#status.set(
         `Image exceeds the maximum texture size of ${canvas.maxTextureSize}×${canvas.maxTextureSize}`
       );
 
@@ -324,7 +234,7 @@ export class TextureDropController implements ReactiveController {
 
     canvas.texture = source;
     canvas.centerTexture();
-    this.#setStatus("Texture replaced");
+    this.#status.set("Texture replaced");
   }
 
   #clearOverlay(): void {
@@ -334,37 +244,6 @@ export class TextureDropController implements ReactiveController {
 
     this.#bounds = null;
     this.#host.requestUpdate();
-  }
-
-  #setStatus(
-    status: string
-  ): void {
-    this.#clearStatusTimer();
-    this.#status = status;
-    this.#statusTimer = window.setTimeout(
-      () => this.#clearStatus(),
-      kStatusTimeoutMs
-    );
-    this.#host.requestUpdate();
-  }
-
-  #clearStatus(): void {
-    this.#clearStatusTimer();
-    if (!this.#status) {
-      return;
-    }
-
-    this.#status = "";
-    this.#host.requestUpdate();
-  }
-
-  #clearStatusTimer(): void {
-    if (this.#statusTimer === null) {
-      return;
-    }
-
-    window.clearTimeout(this.#statusTimer);
-    this.#statusTimer = null;
   }
 
   render() {
@@ -391,7 +270,7 @@ export class TextureDropController implements ReactiveController {
         part="drop-status"
         aria-live="polite"
         aria-atomic="true"
-      >${this.#status}</div>
+      >${this.#status.value}</div>
     `;
   }
 }

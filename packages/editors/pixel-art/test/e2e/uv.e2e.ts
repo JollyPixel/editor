@@ -44,6 +44,13 @@ interface UvSnapshot {
   faces: Record<string, { x: number; y: number; }>;
 }
 
+interface RampFaceSnapshot {
+  state: string;
+  activeFaces: string[];
+  left: { shape: string; corner: string; };
+  right: { shape: string; corner: string; };
+}
+
 function uvPanel(): PixelArtCanvas {
   const panel = document.querySelector<PixelDrawPanel>("pixel-draw-panel");
 
@@ -106,7 +113,7 @@ test("the ramp preset creates triangular side faces", async({ page }) => {
       left: data.faces.left,
       right: data.faces.right
     };
-  })()`) as any;
+  })()`) as RampFaceSnapshot;
   expect(ramp.state).toBe("collapsed");
   expect(ramp.activeFaces).toEqual(["back", "left", "right", "top", "bottom"]);
   expect(ramp.left).toMatchObject({ shape: "triangle", corner: "bottom-right" });

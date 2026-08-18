@@ -4,8 +4,9 @@ import {
   loadRuntime
 } from "@jolly-pixel/runtime";
 import {
-  ResizeHandle
-} from "@jolly-pixel/resize-handle";
+  Dock,
+  type ThemePreferences
+} from "@jolly-pixel/ui";
 import type {
   PixelArtCanvas
 } from "@jolly-pixel/pixel-draw.renderer";
@@ -16,14 +17,12 @@ import {
   type ThemeMode
 } from "../../src/index.ts";
 import { initializeDemoSync } from "./demo/DemoSync.ts";
-import { ThemeController } from "./demo/ThemeController.ts";
 import { PixelPreviewScene } from "./preview/PixelPreviewScene.ts";
 
 // CONSTANTS
 const kStarterRegionId = "pixel-draw-demo:starter-region";
 const kStarterRegionSize = 16;
 const kRotationStorageKey = "pixel-draw-demo:rotation";
-const kThemeStorageKey = "pixel-draw-demo:theme";
 
 function noop(): void {
   // No 3D runtime is active yet; scene-appearance updates are a no-op.
@@ -32,7 +31,7 @@ function noop(): void {
 await initRuntime();
 
 async function initRuntime(): Promise<void> {
-  const { rotationToggle, themeSelect } = restoreDemoPreferences();
+  const rotationToggle = restoreDemoPreferences();
   const drawPanel = document.querySelector<PixelDrawPanel>("pixel-draw-panel")!;
   const canvasManager = await drawPanel.initialize({
     texture: {
@@ -56,35 +55,41 @@ async function initRuntime(): Promise<void> {
     }
   });
 
-  const resizeHandle = new ResizeHandle(drawPanel, {
-    direction: "left"
-  });
-  resizeHandle.addEventListener("drag", () => {
+  const drawPanelDock = document.querySelector<Dock>("#draw-panel-dock")!;
+  drawPanelDock.addEventListener("jolly-resize", () => {
     drawPanel.onResize();
   });
-  resizeHandle.addEventListener("dragEnd", () => {
+  drawPanelDock.addEventListener("jolly-resize-end", () => {
     drawPanel.onResize();
   });
 
+  // jolly-theme-preferences owns the toggle and its persistence; setting
+  // `target` after both elements exist re-applies it (ThemePreferences'
+  // `updated()` hook), since `pixel-draw-panel` lives outside the preferences
+  // element's own tree and can't be found via `.closest("jolly-scope")`.
+  const themePreferences = document.querySelector<ThemePreferences>("#theme-preferences")!;
+  themePreferences.target = drawPanel;
+  await themePreferences.updateComplete;
+
   // Theming applies to the 2D panel regardless of whether the 3D preview
   // runtime is running; only the scene-appearance side effect is 3D-only.
+  // `--color-*` (the panel's CSS) and `--demo-*` (the page backdrop's CSS)
+  // both resolve "auto" on their own via `color-scheme`; only this resolved
+  // value, needed by the non-CSS 3D scene, is main.ts's to compute.
   let applySceneAppearance: (theme: Exclude<ThemeMode, "auto">) => void = noop;
-  const themeController = new ThemeController({
-    drawPanel,
-    select: themeSelect,
-    onResolvedThemeChange: (theme) => applySceneAppearance(theme)
+  function syncResolvedTheme(): void {
+    const resolvedTheme = resolveTheme(drawPanel.theme);
+    document.documentElement.dataset.theme = drawPanel.theme;
+    document.documentElement.dataset.resolvedTheme = resolvedTheme;
+    applySceneAppearance(resolvedTheme);
+  }
+  themePreferences.addEventListener("jolly-change", syncResolvedTheme);
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    if (drawPanel.theme === "auto") {
+      syncResolvedTheme();
+    }
   });
-  themeSelect.addEventListener("change", () => {
-    localStorage.setItem(
-      kThemeStorageKey,
-      themeSelect.value
-    );
-  });
-  window.addEventListener("beforeunload", () => {
-    themeController.dispose();
-  }, {
-    once: true
-  });
+  syncResolvedTheme();
 
   // The 3D preview runtime (camera, orbit controls, UV region meshes) is
   // pure overhead for tests that only exercise the 2D pixel canvas: its
@@ -132,9 +137,7 @@ async function initRuntime(): Promise<void> {
     localStorage.setItem(kRotationStorageKey, String(rotationToggle.checked));
   });
   applySceneAppearance = (theme) => previewScene.setAppearance(theme);
-  applySceneAppearance(
-    resolveTheme(themeSelect.value as ThemeMode)
-  );
+  syncResolvedTheme();
 
   const { world } = runtime;
 
@@ -146,45 +149,17 @@ async function initRuntime(): Promise<void> {
   world.renderer.on("resize", () => drawPanel.onResize());
 }
 
-function restoreDemoPreferences(): {
-  rotationToggle: HTMLInputElement;
-  themeSelect: HTMLSelectElement;
-} {
+function restoreDemoPreferences(): HTMLInputElement {
   const rotationToggle = document.querySelector<HTMLInputElement>(
     "#rotation-toggle"
   )!;
-  const themeSelect = document.querySelector<HTMLSelectElement>(
-    "#theme-select"
-  )!;
   const rotation = localStorage.getItem(kRotationStorageKey);
-  const theme = themeFromStorage(
-    localStorage.getItem(kThemeStorageKey)
-  );
 
   if (rotation === "true" || rotation === "false") {
     rotationToggle.checked = rotation === "true";
   }
 
-  if (theme !== null) {
-    themeSelect.value = theme;
-    document.documentElement.dataset.theme = theme;
-    document.documentElement.dataset.resolvedTheme = resolveTheme(theme);
-  }
-
-  return { rotationToggle, themeSelect };
-}
-
-function themeFromStorage(
-  value: string | null
-): ThemeMode | null {
-  switch (value) {
-    case "light":
-    case "dark":
-    case "auto":
-      return value;
-    default:
-      return null;
-  }
+  return rotationToggle;
 }
 
 function resolveTheme(

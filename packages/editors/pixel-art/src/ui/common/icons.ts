@@ -4,6 +4,9 @@ import {
   type SVGTemplateResult
 } from "lit";
 
+// Import Internal Dependencies
+import { getIcon, registerIcon } from "@jolly-pixel/ui/icon";
+
 export type IconName =
   | "move"
   | "paint"
@@ -33,10 +36,10 @@ export type IconName =
   | "label"
   | "eye";
 
-// CONSTANTS
-const kIcons: Record<IconName, SVGTemplateResult> = {
-  // Pan hand.
-  move: svg`
+// Registers pixel-art-specific glyphs into @jolly-pixel/ui's shared icon
+// registry ("eye" reuses the ui builtin as-is).
+// Pan hand.
+registerIcon("move", svg`
     <path
       d="M6 9v5"
       stroke="currentColor"
@@ -69,9 +72,10 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
       stroke-linecap="round"
       stroke-linejoin="round"
     />
-  `,
-  // Pencil.
-  paint: svg`
+  `);
+
+// Pencil.
+registerIcon("paint", svg`
     <path
       d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"
       fill="none"
@@ -80,9 +84,10 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
       stroke-linecap="round"
       stroke-linejoin="round"
     />
-  `,
-  // Paint bucket.
-  fill: svg`
+  `);
+
+// Paint bucket.
+registerIcon("fill", svg`
     <g transform="rotate(-20 12 11)">
       <path
         d="M6 4h10l-1.5 12a2 2 0 0 1-2 1.8h-3a2 2 0 0 1-2-1.8L6 4Z"
@@ -107,17 +112,19 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
       stroke-linecap="round"
     />
     <circle cx="18.5" cy="19.5" r="1.9" fill="currentColor" />
-  `,
-  // Bucket's neighbor fill, generalized: every matching cell, not just the
-  // connected region.
-  fillGlobal: svg`
+  `);
+
+// Bucket's neighbor fill, generalized: every matching cell, not just the
+// connected region.
+registerIcon("fillGlobal", svg`
     <rect x="4" y="4" width="7" height="7" rx="1.3" fill="currentColor" />
     <rect x="13" y="4" width="7" height="7" rx="1.3" fill="currentColor" />
     <rect x="4" y="13" width="7" height="7" rx="1.3" fill="currentColor" />
     <rect x="13" y="13" width="7" height="7" rx="1.3" fill="currentColor" />
-  `,
-  // Marquee selection.
-  select: svg`
+  `);
+
+// Marquee selection.
+registerIcon("select", svg`
     <rect
       x="4.5"
       y="4.5"
@@ -133,9 +140,10 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
     <circle cx="19.5" cy="4.5" r="1.7" fill="currentColor" />
     <circle cx="4.5" cy="19.5" r="1.7" fill="currentColor" />
     <circle cx="19.5" cy="19.5" r="1.7" fill="currentColor" />
-  `,
-  // Magic wand: shape select follows same-color pixels, not a rectangle.
-  wand: svg`
+  `);
+
+// Magic wand: shape select follows same-color pixels, not a rectangle.
+registerIcon("wand", svg`
     <path
       d="M5 19 15.5 8.5"
       stroke="currentColor"
@@ -148,9 +156,10 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
     />
     <circle cx="12.5" cy="5" r="1" fill="currentColor" />
     <circle cx="20" cy="12.5" r="1" fill="currentColor" />
-  `,
-  // UV grid.
-  uv: svg`
+  `);
+
+// UV grid.
+registerIcon("uv", svg`
     <rect
       x="4"
       y="4"
@@ -193,8 +202,9 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
       stroke="currentColor"
       stroke-width="2.2"
     />
-  `,
-  undo: svg`
+  `);
+
+registerIcon("undo", svg`
     <path
       d="M4 10h6a6 6 0 1 1-5.7 8"
       fill="none"
@@ -211,8 +221,9 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
       stroke-linecap="round"
       stroke-linejoin="round"
     />
-  `,
-  redo: svg`
+  `);
+
+registerIcon("redo", svg`
     <path
       d="M20 10h-6a6 6 0 1 0 5.7 8"
       fill="none"
@@ -229,8 +240,9 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
       stroke-linecap="round"
       stroke-linejoin="round"
     />
-  `,
-  copy: svg`
+  `);
+
+registerIcon("copy", svg`
     <rect
       x="8"
       y="8"
@@ -249,8 +261,9 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
       stroke-linecap="round"
       stroke-linejoin="round"
     />
-  `,
-  paste: svg`
+  `);
+
+registerIcon("paste", svg`
     <path
       d="M9 5h6M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1Z"
       fill="none"
@@ -266,8 +279,9 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
       stroke-width="2.2"
       stroke-linejoin="round"
     />
-  `,
-  rotateClockwise: svg`
+  `);
+
+registerIcon("rotateClockwise", svg`
     <path
       d="M20 11a8 8 0 1 0-2.3 6"
       fill="none"
@@ -283,8 +297,9 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
       stroke-linecap="round"
       stroke-linejoin="round"
     />
-  `,
-  flipHorizontal: svg`
+  `);
+
+registerIcon("flipHorizontal", svg`
     <path d="M12 3v18" stroke="currentColor" stroke-width="2" stroke-dasharray="2 2" />
     <path
       d="M4 6l6 6-6 6V6ZM20 6l-6 6 6 6V6Z"
@@ -293,8 +308,9 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
       stroke-width="2.2"
       stroke-linejoin="round"
     />
-  `,
-  flipVertical: svg`
+  `);
+
+registerIcon("flipVertical", svg`
     <path d="M3 12h18" stroke="currentColor" stroke-width="2" stroke-dasharray="2 2" />
     <path
       d="M6 4l6 6 6-6H6ZM6 20l6-6 6 6H6Z"
@@ -303,8 +319,9 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
       stroke-width="2.2"
       stroke-linejoin="round"
     />
-  `,
-  clearTexture: svg`
+  `);
+
+registerIcon("clearTexture", svg`
     <rect
       x="4"
       y="4"
@@ -327,8 +344,9 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
       stroke-width="2.2"
       stroke-linecap="round"
     />
-  `,
-  swap: svg`
+  `);
+
+registerIcon("swap", svg`
     <path
       d="M3 8h13"
       stroke="currentColor"
@@ -357,9 +375,10 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
       stroke-linecap="round"
       stroke-linejoin="round"
     />
-  `,
-  // Eyedropper.
-  eyedropper: svg`
+  `);
+
+// Eyedropper.
+registerIcon("eyedropper", svg`
     <path
       d="M11 7l6 6"
       stroke="currentColor"
@@ -374,9 +393,10 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
       stroke-linejoin="round"
       stroke-linecap="round"
     />
-  `,
-  // Import.
-  import: svg`
+  `);
+
+// Import.
+registerIcon("import", svg`
     <path
       d="M12 15V4"
       stroke="currentColor"
@@ -400,9 +420,10 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
       stroke-linecap="round"
       stroke-linejoin="round"
     />
-  `,
-  // Export.
-  export: svg`
+  `);
+
+// Export.
+registerIcon("export", svg`
     <path
       d="M12 4v11"
       stroke="currentColor"
@@ -426,8 +447,9 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
       stroke-linecap="round"
       stroke-linejoin="round"
     />
-  `,
-  add: svg`
+  `);
+
+registerIcon("add", svg`
     <path
       d="M12 5v14"
       stroke="currentColor"
@@ -440,9 +462,10 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
       stroke-width="2.4"
       stroke-linecap="round"
     />
-  `,
-  // Isometric cube.
-  cube: svg`
+  `);
+
+// Isometric cube.
+registerIcon("cube", svg`
     <path
       d="m12 3 7 4v8l-7 4-7-4V7l7-4Z"
       fill="none"
@@ -457,9 +480,10 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
       stroke-width="2"
       stroke-linejoin="round"
     />
-  `,
-  // Triangular ramp profile.
-  triangle: svg`
+  `);
+
+// Triangular ramp profile.
+registerIcon("triangle", svg`
     <path
       d="M5 19 12 5l7 14H5Z"
       fill="none"
@@ -467,9 +491,10 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
       stroke-width="2.2"
       stroke-linejoin="round"
     />
-  `,
-  // Trash can.
-  trash: svg`
+  `);
+
+// Trash can.
+registerIcon("trash", svg`
     <path
       d="M4 7h16"
       stroke="currentColor"
@@ -503,9 +528,10 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
       stroke-width="2"
       stroke-linecap="round"
     />
-  `,
-  // Corners pointing inward: merge into one.
-  collapse: svg`
+  `);
+
+// Corners pointing inward: merge into one.
+registerIcon("collapse", svg`
     <path
       d="M9 4v3.5A1.5 1.5 0 0 1 7.5 9H4"
       fill="none"
@@ -538,9 +564,10 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
       stroke-linecap="round"
       stroke-linejoin="round"
     />
-  `,
-  // Corners pointing outward: split into faces.
-  expand: svg`
+  `);
+
+// Corners pointing outward: split into faces.
+registerIcon("expand", svg`
     <path
       d="M4 9V5.5A1.5 1.5 0 0 1 5.5 4H9"
       fill="none"
@@ -573,9 +600,10 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
       stroke-linecap="round"
       stroke-linejoin="round"
     />
-  `,
-  // Text label inside a region frame.
-  label: svg`
+  `);
+
+// Text label inside a region frame.
+registerIcon("label", svg`
     <rect
       x="3.5"
       y="5"
@@ -593,26 +621,14 @@ const kIcons: Record<IconName, SVGTemplateResult> = {
       stroke-width="2.2"
       stroke-linecap="round"
     />
-  `,
-  eye: svg`
-    <path
-      d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2.2"
-      stroke-linejoin="round"
-      stroke-linecap="round"
-    />
-    <circle cx="12" cy="12" r="2.6" fill="none" stroke="currentColor" stroke-width="2.2" />
-  `
-};
+  `);
 
 export function renderIcon(
   name: IconName
 ): SVGTemplateResult {
   return svg`
     <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      ${kIcons[name]}
+      ${getIcon(name)}
     </svg>
   `;
 }

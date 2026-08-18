@@ -10,10 +10,17 @@ import {
   type PixelNetworkCommand,
   type PixelServerMessage
 } from "@jolly-pixel/pixel-draw.renderer";
+import {
+  LocalStorageAdapter,
+  resolveStoredPrompt
+} from "@jolly-pixel/ui";
 
 // CONSTANTS
 const kDemoRoom = "pixel-draw:demo-canvas";
 const kUsernameStorageKey = "pixel-draw-demo:username";
+const kUsernameStorage = new LocalStorageAdapter({
+  resolve: () => sessionStorage
+});
 
 declare global {
   interface Window {
@@ -22,12 +29,12 @@ declare global {
   }
 }
 
-export function initializeDemoSync(
+export async function initializeDemoSync(
   canvasManager: PixelArtCanvas
 ): Promise<void> {
   const networkClient = new network.Client({
     identity: {
-      username: resolveUsername()
+      username: await resolveUsername()
     }
   });
   // E2E tests override this via ?room=... so each Playwright worker gets
@@ -72,21 +79,13 @@ export function initializeDemoSync(
   return syncReady;
 }
 
-function resolveUsername(): string {
-  const cached = sessionStorage.getItem(kUsernameStorageKey);
-  if (cached) {
-    return cached;
-  }
-
-  // eslint-disable-next-line no-alert -- example-only UX
-  const entered = window.prompt(
-    "Choose a username for this session"
-  )?.trim();
-  const username = entered && entered.length > 0 ? entered : "Guest";
-  sessionStorage.setItem(
-    kUsernameStorageKey,
-    username
-  );
-
-  return username;
+function resolveUsername(): Promise<string> {
+  return resolveStoredPrompt({
+    title: "Join pixel-draw demo",
+    label: "Username",
+    confirmLabel: "Join",
+    storage: kUsernameStorage,
+    storageKey: kUsernameStorageKey,
+    fallbackValue: "Guest"
+  });
 }

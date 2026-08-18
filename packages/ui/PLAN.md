@@ -175,23 +175,59 @@ in one marks it held in the other, and that closing the first releases it.
 **Done when**: two browsers in one room show each other's avatars and field locks, and no core
 module imports anything from `@jolly-pixel/network`.
 
-## P8: pixel-art consolidation
+## P8: pixel-art consolidation — done
 
-**Migrate** `editors/pixel-art/src/ui`: `theme.ts` onto the shared tokens, `ModeRail` onto
+**Migrated** `editors/pixel-art/src/ui`: `theme.ts` onto the shared tokens, `ModeRail` onto
 `jolly-rail`, and the colour rail and swatch onto `jolly-color-picker` plus `PopoverController`.
 Not onto `jolly-color`: the rail wants a brush colour, not a property row, so `ColorSwatch.ts`
-keeps its own trigger and drops `vanilla-picker` and its portal. `ColorSwatch` already emits
-`{ hex, opacity }`, which `parseColor` produces directly, so its event shape is unchanged.
+kept its own trigger — it already emits `{ hex, opacity }`, which `parseColor` produces directly,
+so its event shape didn't change. `vanilla-picker` was retired a step ahead of this phase (see
+pixel-art's own history); this phase retired the `document.body` portal it left behind
+(`ColorSwatchPortal`) in favour of the native Popover API.
 
-The six reactive controllers stay: they hold pixel-art domain logic, which is out of scope here.
+The six reactive controllers stayed as-is: pixel-art domain logic, out of scope here.
 
-**Deletes**: `theme.ts` and its threefold token duplication, `mode-rail/`, and whichever colour
-components `jolly-color` subsumes.
+An extra first step not in the original plan: `examples/`'s hand-rolled resize handle moved onto
+`jolly-dock` before any `src/` migration started, since the example was the thing exercising the
+old handle. A mid-session "remove reimplemented UI responsibility" pass also replaced the demo's
+`<select>` theme toggle with `jolly-theme-preferences`, and moved `main.ts`'s theme-resolution glue
+onto it.
 
-**Watch**: `PixelDrawPanel` composes `themeStyles` into `static styles`. Under the new model it
-becomes a token consumer, so it must sit inside a scope host or set its own.
+**Deleted**: `theme.ts` and its threefold token duplication, `mode-rail/`'s `.rail-section` wrapper
+CSS (the component itself stayed, now composing `jolly-rail`), `ColorSwatchPortal.ts`/`.styles.ts`
+and the JS-driven `--jolly-*` ← `--color-*` theme copy they carried, `examples/scripts/demo/
+ThemeController.ts`, and the `@jolly-pixel/resize-handle` devDependency.
 
-**Done when**: pixel-art declares no tokens of its own and its e2e theme suite still passes.
+**Watch, resolved**: `PixelDrawPanel` composes `themeStyles` into `static styles` and sits as its
+own scope host (not nested in a `jolly-scope`) — `ThemePreferences.target` needed a reactivity fix
+(below) to apply preferences imperatively from `main.ts` across that separate DOM subtree.
+
+**Done when, met**: pixel-art's own `--color-*` names remain (a deliberate keep, not a gap — see
+below), but the handful of `--jolly-*` tokens `jolly-color-picker` reads are now real values set on
+`PixelDrawPanel`'s `:host`, not a portal-local bridge; the e2e theme suite passes (43/43 full suite).
+
+**Package-level changes this phase drove** (worth noting since they land in `packages/ui`, not
+just the consumer):
+- Fixed `resolveThemeColor()` (`src/theme/resolveThemeToken.ts`): its probe element was an
+  unslotted light-DOM child, silently unresolved for any component with no default `<slot>` —
+  affected `pixel-draw-panel` and (masked by an explicit fallback at every call site) `Stats.ts`.
+- Fixed `ThemePreferences` (`src/theme/components/ThemePreferences.ts`): preferences only
+  re-applied from `connectedCallback()`/`on*Change`, never when a consumer sets `.target`
+  imperatively after connection — pixel-art's exact case, since its panel lives outside any
+  `jolly-scope`.
+- Exported `resolveThemeColor`/`resolveThemeToken` from the package barrel (previously internal).
+- Added `side: "left" | "right"` to `anchoredPosition()` (`src/geometry/anchoredPosition.ts`) and
+  `PopoverController`, mirroring the existing above/below flip-and-clamp logic onto the X axis —
+  needed because pixel-art's color rail sits on the viewport's left edge and opens its picker
+  rightward, which the vertical-only placement didn't support.
+
+`--color-*` was **not** renamed to `--jolly-*` wholesale: pixel-art's own ~80-call-site palette
+stays under its own name, by design (kept deliberately in the theme-tokens step). Only the 7-token
+subset `jolly-color-picker` reads (`--jolly-ink`/`-text`/`-surface-raised`/`-control-bg`/
+`-control-bg-hover`/`-control-bg-focus`/`-focus-ring`) gained real `--jolly-*` values, set as
+static CSS on `PixelDrawPanel`'s `:host` rather than JS-copied at runtime — real DOM descendants
+inherit custom properties across shadow boundaries on their own, once the popover stopped being a
+`document.body` portal outside any scope host.
 
 ## Verification per phase
 

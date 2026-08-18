@@ -13,9 +13,7 @@ import type {
 
 // Import Internal Dependencies
 import { renderIcon } from "../common/icons.ts";
-
-// CONSTANTS
-const kStatusTimeoutMs = 3_000;
+import { TransientStatus } from "./TransientStatus.ts";
 
 function resultMessage(
   result: ClipboardOperationResult
@@ -47,8 +45,7 @@ export class SelectToolbarController implements ReactiveController {
   #canvas: PixelArtCanvas | null = null;
   #hasSelection = false;
   #clipboardPending = false;
-  #status = "";
-  #statusTimer: number | null = null;
+  readonly #status: TransientStatus;
 
   readonly #onSelectionStateChanged: SelectEngineEvent["selection-state-changed"] = (
     { hasSelection }
@@ -61,6 +58,7 @@ export class SelectToolbarController implements ReactiveController {
     host: ReactiveControllerHost
   ) {
     this.#host = host;
+    this.#status = new TransientStatus(host);
     host.addController(this);
   }
 
@@ -107,23 +105,11 @@ export class SelectToolbarController implements ReactiveController {
       return;
     }
 
-    this.#status = message;
-    this.#clearStatusTimer();
-    this.#statusTimer = window.setTimeout(
-      () => this.clearStatus(),
-      kStatusTimeoutMs
-    );
-    this.#host.requestUpdate();
+    this.#status.set(message);
   }
 
   clearStatus(): void {
-    this.#clearStatusTimer();
-    if (!this.#status) {
-      return;
-    }
-
-    this.#status = "";
-    this.#host.requestUpdate();
+    this.#status.clear();
   }
 
   async copy(): Promise<void> {
@@ -156,15 +142,6 @@ export class SelectToolbarController implements ReactiveController {
       this.#clipboardPending = false;
       this.#host.requestUpdate();
     }
-  }
-
-  #clearStatusTimer(): void {
-    if (this.#statusTimer === null) {
-      return;
-    }
-
-    window.clearTimeout(this.#statusTimer);
-    this.#statusTimer = null;
   }
 
   render(
@@ -241,7 +218,7 @@ export class SelectToolbarController implements ReactiveController {
           part="clipboard-status"
           aria-live="polite"
           aria-atomic="true"
-        >${this.#status}</div>
+        >${this.#status.value}</div>
       </div>
     `;
   }

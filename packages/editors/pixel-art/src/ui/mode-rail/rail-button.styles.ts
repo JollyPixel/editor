@@ -2,14 +2,6 @@
 import { css } from "lit";
 
 export const railButtonStyles = css`
-  .rail-section {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    flex-shrink: 0;
-    gap: 4px;
-  }
-
   .rail-btn {
     position: relative;
     display: flex;

@@ -24,8 +24,11 @@ export interface PopoverControllerOptions {
    */
   gap?: number;
   /** Preferred side of the anchor. */
-  side?: "above" | "below";
-  /** Horizontal alignment against the anchor. */
+  side?: "above" | "below" | "left" | "right";
+  /**
+   * Alignment on the axis perpendicular to `side`: horizontal for
+   * "above"/"below", vertical for "left"/"right".
+   */
   align?: "center" | "start";
   onOpen?: () => void;
   onClose?: () => void;

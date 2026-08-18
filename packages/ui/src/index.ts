@@ -34,6 +34,10 @@ export {
 export {
   ThemePreferences
 } from "./theme/components/ThemePreferences.ts";
+export {
+  resolveThemeColor,
+  resolveThemeToken
+} from "./theme/resolveThemeToken.ts";
 
 // Geometry
 export type {
@@ -78,16 +82,14 @@ export {
 
 // Icons
 export {
-  Icon
-} from "./icon/Icon.ts";
-export {
+  Icon,
   getIcon,
   hasIcon,
   registerIcon,
   type BuiltinIconName,
   type IconGlyph,
   type IconName
-} from "./icon/registry.ts";
+} from "./icon/index.ts";
 
 // Controls
 export {

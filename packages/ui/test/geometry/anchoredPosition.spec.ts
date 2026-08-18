@@ -136,6 +136,88 @@ test("Numeric.anchoredPosition", async(context) => {
     );
   });
 
+  await context.test("sits right of the anchor, offset by the gap", () => {
+    assert.deepEqual(
+      anchoredPosition({
+        anchor: {
+          top: 20,
+          bottom: 40,
+          left: 10,
+          right: 30
+        },
+        panel: {
+          width: 40,
+          height: 20
+        },
+        viewport: {
+          width: 100,
+          height: 100
+        },
+        gap: 4,
+        side: "right"
+      }),
+      {
+        x: 34,
+        y: 20
+      }
+    );
+  });
+
+  await context.test("flips left when the panel does not fit to the right", () => {
+    assert.deepEqual(
+      anchoredPosition({
+        anchor: {
+          top: 20,
+          bottom: 40,
+          left: 70,
+          right: 90
+        },
+        panel: {
+          width: 40,
+          height: 20
+        },
+        viewport: {
+          width: 100,
+          height: 100
+        },
+        gap: 4,
+        side: "right"
+      }),
+      {
+        x: 26,
+        y: 20
+      }
+    );
+  });
+
+  await context.test("centres a right-anchor panel vertically", () => {
+    assert.deepEqual(
+      anchoredPosition({
+        anchor: {
+          top: 30,
+          bottom: 50,
+          left: 10,
+          right: 30
+        },
+        panel: {
+          width: 40,
+          height: 40
+        },
+        viewport: {
+          width: 100,
+          height: 100
+        },
+        gap: 4,
+        side: "right",
+        align: "center"
+      }),
+      {
+        x: 34,
+        y: 20
+      }
+    );
+  });
+
   await context.test("centres an above-anchor panel and flips below", () => {
     assert.deepEqual(
       anchoredPosition({
