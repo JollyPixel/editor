@@ -1,7 +1,7 @@
 {
   "name": "@jolly-pixel/pixel-draw.renderer",
   "description": "Jolly Pixel Pixel Art drawer and renderer",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "type": "module",
   "exports": {
     ".": {

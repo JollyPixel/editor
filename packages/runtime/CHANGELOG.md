@@ -1,5 +1,24 @@
 # @jolly-pixel/runtime
 
+## 4.1.0
+
+### Minor Changes
+
+- [#489](https://github.com/JollyPixel/editor/pull/489) [`e83c39b`](https://github.com/JollyPixel/editor/commit/e83c39bdc271493400eecce3acd9b6568262f845) Thanks [@fraxken](https://github.com/fraxken)! - Move input controls inside the new @jolly-pixel/controls package (workspace)
+
+- [#487](https://github.com/JollyPixel/editor/pull/487) [`71953e5`](https://github.com/JollyPixel/editor/commit/71953e5e7d63eddb44702d8ab8897536e27b363f) Thanks [@fraxken](https://github.com/fraxken)! - Add the DOM-free `StatsRecorder` API and the themeable, cycling `jolly-stats` performance HUD. Replace stats.js with the JollyPixel recorder and HUD, with optional mounting and top-corner placement.
+
+- [#497](https://github.com/JollyPixel/editor/pull/497) [`09c6b49`](https://github.com/JollyPixel/editor/commit/09c6b49ef18895cfccc2d30b4c250e56fdeaeff7) Thanks [@fraxken](https://github.com/fraxken)! - Add a new option to skip entirely the loading screen
+
+- [#486](https://github.com/JollyPixel/editor/pull/486) [`d89455e`](https://github.com/JollyPixel/editor/commit/d89455e2093dd644ee67debadd0d7177857a6a59) Thanks [@fraxken](https://github.com/fraxken)! - Implement <jolly-progress> and <jolly-loading> inside UI and use them in runtime
+
+### Patch Changes
+
+- Updated dependencies [[`db58ed4`](https://github.com/JollyPixel/editor/commit/db58ed4f87cd137eb7e3a0470e75febcbad5034b), [`18842ab`](https://github.com/JollyPixel/editor/commit/18842abe5ad347f63eacf8254d0685cba235adee), [`b4a7046`](https://github.com/JollyPixel/editor/commit/b4a704691b17dfec6cafc637c757c937913632b4), [`e83c39b`](https://github.com/JollyPixel/editor/commit/e83c39bdc271493400eecce3acd9b6568262f845), [`71953e5`](https://github.com/JollyPixel/editor/commit/71953e5e7d63eddb44702d8ab8897536e27b363f), [`9b87bfe`](https://github.com/JollyPixel/editor/commit/9b87bfe6de642aaf3ea9d25a09dd3b022bb8f8dc), [`cd04886`](https://github.com/JollyPixel/editor/commit/cd048869b91af6a09ff56c73b8701b47fc13d78e), [`b4a7046`](https://github.com/JollyPixel/editor/commit/b4a704691b17dfec6cafc637c757c937913632b4), [`d89455e`](https://github.com/JollyPixel/editor/commit/d89455e2093dd644ee67debadd0d7177857a6a59)]:
+  - @jolly-pixel/ui@1.1.0
+  - @jolly-pixel/asset@1.1.0
+  - @jolly-pixel/engine@4.1.0
+
 ## 4.0.0
 
 ### Major Changes

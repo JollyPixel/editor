@@ -1,5 +1,18 @@
 # @jolly-pixel/editor.voxel-map
 
+## 1.2.1
+
+### Patch Changes
+
+- Updated dependencies [[`84c397e`](https://github.com/JollyPixel/editor/commit/84c397efa20a1749f8296f110bf019f7286a894c), [`db58ed4`](https://github.com/JollyPixel/editor/commit/db58ed4f87cd137eb7e3a0470e75febcbad5034b), [`e83c39b`](https://github.com/JollyPixel/editor/commit/e83c39bdc271493400eecce3acd9b6568262f845), [`71953e5`](https://github.com/JollyPixel/editor/commit/71953e5e7d63eddb44702d8ab8897536e27b363f), [`cd04886`](https://github.com/JollyPixel/editor/commit/cd048869b91af6a09ff56c73b8701b47fc13d78e), [`09c6b49`](https://github.com/JollyPixel/editor/commit/09c6b49ef18895cfccc2d30b4c250e56fdeaeff7), [`8444ce6`](https://github.com/JollyPixel/editor/commit/8444ce69ba3162983f8eac4349f536371c036029), [`d89455e`](https://github.com/JollyPixel/editor/commit/d89455e2093dd644ee67debadd0d7177857a6a59)]:
+  - @jolly-pixel/arbor@1.1.0
+  - @jolly-pixel/editor.pixel-art@1.2.0
+  - @jolly-pixel/runtime@4.1.0
+  - @jolly-pixel/engine@4.1.0
+  - @jolly-pixel/resize-handle@1.2.0
+  - @jolly-pixel/pixel-draw.renderer@3.1.0
+  - @jolly-pixel/voxel.renderer@3.0.1
+
 ## 1.2.0
 
 ### Minor Changes
