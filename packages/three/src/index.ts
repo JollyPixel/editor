@@ -10,7 +10,7 @@ export * from "./selection/overlays/MergedSelectionOverlay.ts";
 export * from "./selection/postprocess/InstancedOutlineNode.ts";
 export * from "./selection/postprocess/ToonOutlinePass.ts";
 export * from "./selection/postprocess/ColoredOutlinePass.ts";
-export * from "./selection/peer/ColorPalette.ts";
+export type * from "./selection/peer/PeerColorAllocator.ts";
 export * from "./selection/peer/PeerSelectionRegistry.ts";
 export * from "./selection/peer/PeerSelectionOverlays.ts";
 export * from "./selection/peer/PeerColoredOutline.ts";

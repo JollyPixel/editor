@@ -18,6 +18,7 @@ import {
   startLoop
 } from "./utils/common.ts";
 import { createExamplePane } from "./utils/example-switcher.ts";
+import { PeerColorPaletteAllocator } from "./network/PeerColorPaletteAllocator.ts";
 
 // CONSTANTS
 // Pointer must stay within this many CSS pixels between down/up to count as
@@ -89,8 +90,18 @@ spawnSelectableMeshes(scene, selectionManager, treeView);
  * overlay per object (the primary/oldest selector's color), regardless of
  * how many peers select it; the full per-peer list is rendered as outliner
  * chips below instead, via `refreshChips`.
+ *
+ * `colorAllocator` is constructed here rather than left on
+ * `PeerSelectionRegistry`'s own default so this demo, single-editor as it
+ * is, still shows the injection point: in a real multi-editor workspace,
+ * this same `PeerColorPaletteAllocator` instance could be constructed once
+ * and shared across every editor's `PeerSelectionRegistry` so a peer's color
+ * stays consistent across the whole session - a choice left entirely to the
+ * app, never forced by this package or this demo.
  */
-const peerRegistry = new PeerSelectionRegistry();
+const peerRegistry = new PeerSelectionRegistry({
+  colorAllocator: new PeerColorPaletteAllocator()
+});
 new PeerSelectionOverlays({ registry: peerRegistry, selection: selectionManager });
 
 peerRegistry.addEventListener("peerSelectionChange", (event) => {

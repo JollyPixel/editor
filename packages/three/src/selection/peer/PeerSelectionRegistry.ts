@@ -1,11 +1,50 @@
 // Import Internal Dependencies
-import { ColorPalette } from "./ColorPalette.ts";
+import type { PeerColorAllocator } from "./PeerColorAllocator.ts";
+
+// CONSTANTS
+const kDefaultColors = [
+  "#f94144",
+  "#f3722c",
+  "#f9c74f",
+  "#90be6d",
+  "#43aa8b",
+  "#4d908e",
+  "#577590",
+  "#277da1"
+];
 
 export interface PeerSelectionRegistryOptions {
   /**
-   * @default a built-in 8-color palette
+   * @default a stateless hash-based allocator over a built-in 8-color palette
    */
-  colors?: string[];
+  colorAllocator?: PeerColorAllocator;
+}
+
+function hash(
+  value: string
+): number {
+  let result = 0;
+  for (let i = 0; i < value.length; i++) {
+    result = (result * 31 + value.charCodeAt(i)) | 0;
+  }
+
+  return Math.abs(result);
+}
+
+/**
+ * Stateless, coordination-free fallback: any two `PeerSelectionRegistry`
+ * instances resolve the same peer id to the same color without sharing
+ * state, which is what lets each editor own an independent registry by
+ * default. A caller that wants collision-free/reclaimable colors across a
+ * larger or shared peer roster injects its own `colorAllocator` instead
+ * (see `examples/scripts/network/PeerColorPaletteAllocator.ts`).
+ */
+function createDefaultColorAllocator(): PeerColorAllocator {
+  return {
+    colorOf: (peerId) => kDefaultColors[hash(peerId) % kDefaultColors.length],
+    // Stateless, nothing to free.
+    release: () => void 0
+  };
 }
 
 export interface PeerSelectionChangeEventDetail {
@@ -32,14 +71,14 @@ export interface PeerSelectionChangeEventDetail {
 export class PeerSelectionRegistry extends EventTarget {
   #peerToObject = new Map<string, string>();
   #objectToPeers = new Map<string, string[]>();
-  #palette: ColorPalette;
+  #colorAllocator: PeerColorAllocator;
 
   constructor(
     options: PeerSelectionRegistryOptions = {}
   ) {
     super();
 
-    this.#palette = new ColorPalette({ colors: options.colors });
+    this.#colorAllocator = options.colorAllocator ?? createDefaultColorAllocator();
   }
 
   /**
@@ -83,12 +122,15 @@ export class PeerSelectionRegistry extends EventTarget {
 
   /**
    * Clears `peerId`'s selection entirely, as if it selected `null`. Use this
-   * when a peer disconnects.
+   * when a peer disconnects - the single point where `colorAllocator` learns
+   * a peer is actually gone (see `dispose`, which deliberately does not
+   * release colors).
    */
   removePeer(
     peerId: string
   ): void {
     this.select(peerId, null);
+    this.#colorAllocator.release(peerId);
   }
 
   selectionOf(
@@ -131,13 +173,17 @@ export class PeerSelectionRegistry extends EventTarget {
   colorOf(
     peerId: string
   ): string {
-    return this.#palette.forKey(peerId);
+    return this.#colorAllocator.colorOf(peerId);
   }
 
   /**
    * Forgets every peer and object. Does not dispatch `peerSelectionChange`
    * for the state it clears - consumers tearing this down should stop
-   * listening rather than react to a flood of removal events.
+   * listening rather than react to a flood of removal events. Does not call
+   * `colorAllocator.release` either: disposing this registry (e.g. an editor
+   * closing) is not the same as every peer disconnecting, especially when
+   * `colorAllocator` is shared across several editors' registries in the
+   * same collaborative session.
    */
   dispose(): void {
     this.#peerToObject.clear();

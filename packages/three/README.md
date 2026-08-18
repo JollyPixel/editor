@@ -45,8 +45,7 @@ scene.add(grid); // self-updating: no manual .update() call needed
 - [ToonOutlinePass](docs/ToonOutlinePass.md) - Scene-level postprocess selection outline, wireable into SelectionManager as the `"toonOutline"` style. Outlines individual instances of a `THREE.InstancedMesh` too. (TSL, `THREE.WebGPURenderer`).
 - [InstancedOutlineNode](docs/InstancedOutlineNode.md) - The TSL node backing ToonOutlinePass - a maintained fork of three's own OutlineNode, extended with per-instance selection support. (TSL, `THREE.WebGPURenderer`).
 - [ColoredOutlinePass](docs/ColoredOutlinePass.md) - Scene-level postprocess outline rendering many simultaneously outlined objects (including individual InstancedMesh instances), each in its own arbitrary color, in a single shared pass. (TSL, `THREE.WebGPURenderer`).
-- [ColorPalette](docs/ColorPalette.md) - Round-robin or deterministic-per-key color assignment, used to give remote peers stable colors.
-- [PeerSelectionRegistry](docs/PeerSelectionRegistry.md) - Tracks which remote peers have which object selected, independent of the local user's own selection.
+- [PeerSelectionRegistry](docs/PeerSelectionRegistry.md) - Tracks which remote peers have which object selected, independent of the local user's own selection. Color assignment is pluggable via `PeerColorAllocator`.
 - [PeerSelectionOverlays](docs/PeerSelectionOverlays.md) - Renders exactly one overlay per object a peer has selected, in the primary (oldest) selector's color.
 - [PeerColoredOutline](docs/PeerColoredOutline.md) - Same role as PeerSelectionOverlays, driving a ColoredOutlinePass instead - scales to many peers/many simultaneous colors.
 
