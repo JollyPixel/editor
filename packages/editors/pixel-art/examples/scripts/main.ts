@@ -125,15 +125,12 @@ async function initRuntime(): Promise<void> {
   const canvas = document.querySelector<HTMLCanvasElement>(
     "#canvas-container > canvas"
   )!;
-  const canvasContainer = document.querySelector<HTMLDivElement>(
-    "#canvas-container"
-  )!;
   const runtime = await Runtime.create(canvas, {
     includePerformanceStats: false,
     focusCanvas: false
   });
   const runtimeReady = loadRuntime(runtime, {
-    loadingContainer: canvasContainer
+    skipLoadingScreen: true
   });
 
   const { world } = runtime;

@@ -13,21 +13,6 @@
   --demo-text: #16232f;
   --demo-accent: #2f6fd8;
   --demo-dot: #6f8caa;
-  --jolly-loading-background: #d7e3ee;
-  --jolly-loading-color: #16232f;
-  --jolly-loading-asset-color: #465a6e;
-  --jolly-loading-progress-track-start: #c5d7e6;
-  --jolly-loading-progress-track-middle: #dbe7f2;
-  --jolly-loading-progress-track-end: #c5d7e6;
-  --jolly-loading-progress-start: #245aa9;
-  --jolly-loading-progress-middle: #2f6fd8;
-  --jolly-loading-progress-end: #5390ed;
-  --jolly-loading-progress-glow: rgba(47, 111, 216, 0.5);
-  --jolly-loading-progress-glow-subtle: rgba(47, 111, 216, 0.3);
-  --jolly-loading-progress-glow-strong: rgba(47, 111, 216, 0.7);
-  --jolly-loading-error-color: #a32914;
-  --jolly-loading-error-background: #f4ddd8;
-  --jolly-loading-error-text-color: #421007;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -38,21 +23,6 @@
     --demo-text: #eee;
     --demo-accent: #3a6fc2;
     --demo-dot: #6d8794;
-    --jolly-loading-background: #0d151d;
-    --jolly-loading-color: #e8eef5;
-    --jolly-loading-asset-color: #90a4b7;
-    --jolly-loading-progress-track-start: #22303c;
-    --jolly-loading-progress-track-middle: #2a3b52;
-    --jolly-loading-progress-track-end: #22303c;
-    --jolly-loading-progress-start: #2a5794;
-    --jolly-loading-progress-middle: #3a6fc2;
-    --jolly-loading-progress-end: #5e95eb;
-    --jolly-loading-progress-glow: rgba(58, 111, 194, 0.5);
-    --jolly-loading-progress-glow-subtle: rgba(58, 111, 194, 0.3);
-    --jolly-loading-progress-glow-strong: rgba(58, 111, 194, 0.7);
-    --jolly-loading-error-color: #ffb4a7;
-    --jolly-loading-error-background: #3b1d1a;
-    --jolly-loading-error-text-color: #ffe9e4;
   }
 }
 
@@ -63,21 +33,6 @@
   --demo-text: #16232f;
   --demo-accent: #2f6fd8;
   --demo-dot: #6f8caa;
-  --jolly-loading-background: #d7e3ee;
-  --jolly-loading-color: #16232f;
-  --jolly-loading-asset-color: #465a6e;
-  --jolly-loading-progress-track-start: #c5d7e6;
-  --jolly-loading-progress-track-middle: #dbe7f2;
-  --jolly-loading-progress-track-end: #c5d7e6;
-  --jolly-loading-progress-start: #245aa9;
-  --jolly-loading-progress-middle: #2f6fd8;
-  --jolly-loading-progress-end: #5390ed;
-  --jolly-loading-progress-glow: rgba(47, 111, 216, 0.5);
-  --jolly-loading-progress-glow-subtle: rgba(47, 111, 216, 0.3);
-  --jolly-loading-progress-glow-strong: rgba(47, 111, 216, 0.7);
-  --jolly-loading-error-color: #a32914;
-  --jolly-loading-error-background: #f4ddd8;
-  --jolly-loading-error-text-color: #421007;
 }
 
 :root[data-theme="dark"] {
@@ -87,21 +42,6 @@
   --demo-text: #eee;
   --demo-accent: #3a6fc2;
   --demo-dot: #6d8794;
-  --jolly-loading-background: #0d151d;
-  --jolly-loading-color: #e8eef5;
-  --jolly-loading-asset-color: #90a4b7;
-  --jolly-loading-progress-track-start: #22303c;
-  --jolly-loading-progress-track-middle: #2a3b52;
-  --jolly-loading-progress-track-end: #22303c;
-  --jolly-loading-progress-start: #2a5794;
-  --jolly-loading-progress-middle: #3a6fc2;
-  --jolly-loading-progress-end: #5e95eb;
-  --jolly-loading-progress-glow: rgba(58, 111, 194, 0.5);
-  --jolly-loading-progress-glow-subtle: rgba(58, 111, 194, 0.3);
-  --jolly-loading-progress-glow-strong: rgba(58, 111, 194, 0.7);
-  --jolly-loading-error-color: #ffb4a7;
-  --jolly-loading-error-background: #3b1d1a;
-  --jolly-loading-error-text-color: #ffe9e4;
 }
 
 html, body {

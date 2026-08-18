@@ -40,12 +40,6 @@ export async function gotoDemo(
   const runtimeParam = runtime ? "" : "&runtime=off";
   await page.goto(`/?empty=true&room=${encodeURIComponent(room)}${runtimeParam}`);
 
-  await page.locator("jolly-loading")
-    .waitFor({ state: "attached", timeout: 2_000 })
-    .catch(() => undefined);
-  await page.locator("jolly-loading")
-    .waitFor({ state: "detached", timeout: 15_000 });
-
   await page.waitForFunction(
     () => (window as unknown as { __pixelSyncReady?: boolean; }).__pixelSyncReady === true
   );
