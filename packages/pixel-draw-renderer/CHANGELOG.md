@@ -1,5 +1,11 @@
 # @jolly-pixel/pixel-draw.renderer
 
+## 3.1.0
+
+### Minor Changes
+
+- [#482](https://github.com/JollyPixel/editor/pull/482) [`8444ce6`](https://github.com/JollyPixel/editor/commit/8444ce69ba3162983f8eac4349f536371c036029) Thanks [@fraxken](https://github.com/fraxken)! - Refactor internal APIs and Types
+
 ## 3.0.0
 
 ### Major Changes

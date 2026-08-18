@@ -1,5 +1,16 @@
 # @jolly-pixel/engine
 
+## 4.1.0
+
+### Minor Changes
+
+- [#489](https://github.com/JollyPixel/editor/pull/489) [`e83c39b`](https://github.com/JollyPixel/editor/commit/e83c39bdc271493400eecce3acd9b6568262f845) Thanks [@fraxken](https://github.com/fraxken)! - Move input controls inside the new @jolly-pixel/controls package (workspace)
+
+### Patch Changes
+
+- Updated dependencies [[`18842ab`](https://github.com/JollyPixel/editor/commit/18842abe5ad347f63eacf8254d0685cba235adee)]:
+  - @jolly-pixel/asset@1.1.0
+
 ## 4.0.0
 
 ### Major Changes

@@ -1,7 +1,7 @@
 {
   "name": "@jolly-pixel/runtime",
   "description": "Jolly Pixel Runtime for web browsers and electron applications.",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -33,9 +33,9 @@
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "@jolly-pixel/asset": "^1.0.0",
-    "@jolly-pixel/engine": "^4.0.0",
-    "@jolly-pixel/ui": "^1.0.1",
+    "@jolly-pixel/asset": "^1.1.0",
+    "@jolly-pixel/engine": "^4.1.0",
+    "@jolly-pixel/ui": "^1.1.0",
     "@pmndrs/detect-gpu": "6.0.17"
   },
   "peerDependencies": {
