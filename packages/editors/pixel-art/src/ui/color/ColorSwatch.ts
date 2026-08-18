@@ -7,11 +7,16 @@ import {
   customElement,
   property
 } from "lit/decorators.js";
-import Picker, { type Color } from "vanilla-picker";
+import {
+  ColorPicker,
+  detailOf,
+  ensureFontFace,
+  type JollyChangeDetail
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
-  fromPickerColor,
+  splitRgbaHex,
   toRgbaHex,
   toRgbaString
 } from "../../utils/colors.ts";
@@ -24,8 +29,13 @@ export interface ColorChangeDetail {
   opacity: number;
 }
 
+// Registers the bundled Roboto Mono face on `document`, so the picker
+// portal (a light-DOM element with no @jolly-pixel/ui scope host) can
+// reference it by name instead of falling back to the page's font.
+ensureFontFace();
+
 /**
- * Swatch button that opens vanilla-picker and emits "color-change".
+ * Swatch button that opens a jolly-color-picker popover and emits "color-change".
  *
  * @fires {CustomEvent<ColorChangeDetail>} color-change
  * @fires {CustomEvent<void>} opened
@@ -42,7 +52,7 @@ export class ColorSwatch extends LitElement {
 
   #open = false;
   #buttonElement: HTMLButtonElement | null = null;
-  #picker: Picker | null = null;
+  #picker: ColorPicker | null = null;
   #portal: ColorSwatchPortal | null = null;
 
   constructor() {
@@ -69,19 +79,13 @@ export class ColorSwatch extends LitElement {
     });
     this.#portal = portal;
 
-    this.#picker = new Picker({
-      parent: portal.element,
-      popup: false,
-      alpha: true,
-      editor: true,
-      editorFormat: "hex",
-      color: toRgbaHex(
-        this.color,
-        this.opacity
-      ),
-      onChange: this.#onPickerChange,
-      onDone: this.#onPickerDone
-    });
+    const picker = document.createElement("jolly-color-picker");
+    picker.alpha = true;
+    picker.value = toRgbaHex(this.color, this.opacity);
+    picker.addEventListener("jolly-input", this.#onPickerChange);
+    picker.addEventListener("jolly-change", this.#onPickerChange);
+    portal.element.appendChild(picker);
+    this.#picker = picker;
 
     swatchElement.addEventListener(
       "click",
@@ -96,7 +100,8 @@ export class ColorSwatch extends LitElement {
       this.#onSwatchClick
     );
 
-    this.#picker?.destroy?.();
+    this.#picker?.removeEventListener("jolly-input", this.#onPickerChange);
+    this.#picker?.removeEventListener("jolly-change", this.#onPickerChange);
     this.#picker = null;
     this.#portal?.destroy();
     this.#portal = null;
@@ -110,10 +115,7 @@ export class ColorSwatch extends LitElement {
     this.opacity = opacity;
 
     if (this.#picker) {
-      this.#picker.setColor(
-        toRgbaHex(hex, opacity),
-        true
-      );
+      this.#picker.value = toRgbaHex(hex, opacity);
     }
     if (this.#buttonElement) {
       this.#buttonElement.style.background = toRgbaString(
@@ -158,14 +160,19 @@ export class ColorSwatch extends LitElement {
   };
 
   readonly #onPickerChange = (
-    color: Color
+    event: Event
   ): void => {
-    const { hex, opacity } = fromPickerColor(color);
+    const detail = detailOf<JollyChangeDetail<string>>(event);
+    if (detail === null) {
+      return;
+    }
+
+    const { hex, opacity } = splitRgbaHex(detail.value);
 
     this.color = hex;
     this.opacity = opacity;
     if (this.#buttonElement) {
-      this.#buttonElement.style.background = color.rgbaString;
+      this.#buttonElement.style.background = toRgbaString(hex, opacity);
     }
 
     const customEvent = new CustomEvent<ColorChangeDetail>("color-change", {
@@ -174,10 +181,6 @@ export class ColorSwatch extends LitElement {
       detail: { hex, opacity }
     });
     this.dispatchEvent(customEvent);
-  };
-
-  readonly #onPickerDone = (): void => {
-    this.#setOpen(false);
   };
 
   override render() {
