@@ -91,6 +91,40 @@ export default class ModelManager {
     return this.groups.find((group) => group.getGroupUUID() === uuid);
   }
 
+  /**
+   * Moves `childUuid` under `parentUuid`, or back to the scene root when
+   * `parentUuid` is `null`. Uses `THREE.Object3D#attach`, which recomputes
+   * the local transform from the current world transform, so the object
+   * does not visually jump at the moment it changes parent.
+   *
+   * The caller (the tree UI) is the sole trigger for this method and has
+   * already run the same move through `resolveReparent`'s structural guard,
+   * so a cycle can't reach here — this trusts that invariant rather than
+   * re-deriving it from the scene graph.
+   */
+  public reparent(
+    childUuid: string,
+    parentUuid: string | null
+  ): void {
+    const child = this.getGroupByUUID(childUuid);
+    if (!child) {
+      return;
+    }
+
+    if (parentUuid === null) {
+      this.scene.attach(child.getGroup());
+
+      return;
+    }
+
+    const parent = this.getGroupByUUID(parentUuid);
+    if (!parent) {
+      return;
+    }
+
+    parent.getGroup().attach(child.getGroup());
+  }
+
   public setTextureForAll(texture: THREE.Texture | null): void {
     this.groups.forEach((group) => {
       group.setTexture(texture);

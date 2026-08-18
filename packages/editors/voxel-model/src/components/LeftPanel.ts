@@ -1,7 +1,8 @@
 // Import Third-party Dependencies
-import { LitElement, css, html } from "lit";
+import { LitElement, css, html, type TemplateResult } from "lit";
 import { state, query } from "lit/decorators.js";
 import { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
+import "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import "./tabs/Paint.ts";
@@ -38,56 +39,20 @@ export class LeftPanel extends LitElement {
     :host {
       display: flex;
       flex-direction: column;
-      min-width: 300px;
-      width: 300px;
       height: 100%;
-      background: green;
-      flex-shrink: 0;
-    }
-
-    ul {
-      height: 40px;
-      width: 100%;
-      margin: 0;
-      margin-bottom: 5px;
-      padding: 0;
-      display: flex;
-
       box-sizing: border-box;
-      border: 2px solid #222;
-      border-radius: 5px;
-
-      list-style: none;
+      font: inherit;
     }
 
-    ul > li {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      background: #AAA;
-      border: 2px solid #CCC;
-      font-weight: normal;
-    }
-
-    ul > li:hover {
-      color: #fff;
-      cursor: pointer;
-      background: #444;
-    }
-
-    ul > li.mode-active {
-      background: #222;
-      color: #fff;
-      font-weight: bold;
+    jolly-tabs {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: auto;
     }
 
     #leftPanelContent {
-      flex: 1;
       display: flex;
       flex-direction: column;
-      overflow: auto;
     }
   `;
 
@@ -124,9 +89,11 @@ export class LeftPanel extends LitElement {
     this.canvasManager.mode = newMode;
   }
 
-  private handleTabClick(tabMode: "paint" | "build" | "animate"): void {
-    this.mode = tabMode;
-  }
+  private handleTabChange = (
+    event: CustomEvent<{ value: string; }>
+  ): void => {
+    this.mode = event.detail.value as "paint" | "build" | "animate";
+  };
 
   private syncTextureSizeInputs(): void {
     const textureSize = this.canvasManager.textureSize;
@@ -212,35 +179,18 @@ export class LeftPanel extends LitElement {
     }
   }
 
-  override render() {
+  override render(): TemplateResult {
     return html`
-      <ul>
-        <li
-          @click="${() => this.handleTabClick("build")}"
-          class="${this.mode === "build" ? "mode-active" : ""}"
-        >
-          Build
-        </li>
-        <li
-          @click="${() => this.handleTabClick("paint")}"
-          class="${this.mode === "paint" ? "mode-active" : ""}"
-        >
-          Paint
-        </li>
-        <li
-          @click="${() => this.handleTabClick("animate")}"
-          class="${this.mode === "animate" ? "mode-active" : ""}"
-        >
-          Animate
-        </li>
-      </ul>
       <div id="leftPanelContent">
-        <jolly-model-editor-build
-          style="display: ${this.mode === "build" ? "flex" : "none"};"
-        ></jolly-model-editor-build>
-        <jolly-model-editor-paint
-          style="display: ${this.mode === "paint" ? "flex" : "none"};"
-        ></jolly-model-editor-paint>
+        <jolly-tabs .value=${this.mode} @jolly-tab-change=${this.handleTabChange}>
+          <jolly-tab value="build" label="Build">
+            <jolly-model-editor-build></jolly-model-editor-build>
+          </jolly-tab>
+          <jolly-tab value="paint" label="Paint">
+            <jolly-model-editor-paint></jolly-model-editor-paint>
+          </jolly-tab>
+          <jolly-tab value="animate" label="Animate" disabled></jolly-tab>
+        </jolly-tabs>
       </div>
     `;
   }

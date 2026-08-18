@@ -571,7 +571,11 @@ answer yet.
 ### Data views
 
 `jolly-tree` (drag and drop reparent, visibility and lock toggles), `jolly-list` (add, remove,
-reorder, inline rename), `jolly-search`, `jolly-menu` (context menu), `jolly-toast`.
+reorder, inline rename), `jolly-search`.
+
+`jolly-menu` (context menu) and `jolly-toast` are deferred, unscheduled, the same treatment
+`jolly-split` gets above: no consumer in this repository names either one, so there is nothing to
+validate a design against. They stay recorded here for when one does.
 
 ### Feedback
 

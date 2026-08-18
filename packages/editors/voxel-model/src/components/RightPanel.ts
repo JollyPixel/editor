@@ -1,199 +1,63 @@
 // Import Third-party Dependencies
-import { LitElement, css, html } from "lit";
-import { TreeView } from "@jolly-pixel/arbor";
+import { LitElement, css, html, type TemplateResult } from "lit";
+import { state } from "lit/decorators.js";
+import {
+  findParentId,
+  resolveReparent,
+  showPrompt,
+  type JollyReparentDetail,
+  type JollySelectDetail,
+  type JollyToggleExpandDetail,
+  type TreeNode
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type ModelManager from "../three/ModelManager.ts";
 import type GroupManager from "../three/GroupManager.ts";
-import type { PopupManager } from "./PopupManager.ts";
-import { AddMeshPopup } from "./popups/index.ts";
+import type ThreeSceneManager from "../three/ThreeSceneManager.ts";
 
 export class RightPanel extends LitElement {
-  private treeView: TreeView;
   private modelManager: ModelManager | null = null;
-  private popupManager: PopupManager | null = null;
-  private uuidToListItemMap: Map<string, HTMLLIElement> = new Map();
+  private sceneManager: ThreeSceneManager | null = null;
+
+  @state()
+  private declare nodes: TreeNode[];
+
+  @state()
+  private declare selected: string[];
+
+  @state()
+  private declare expanded: string[];
 
   static override styles = css`
     :host {
       display: flex;
       flex-direction: column;
       height: 100%;
-      width: 300px;
-      min-width: 200px;
-      flex-shrink: 0;
-      border-left: 2px solid var(--jolly-border-color);
       box-sizing: border-box;
-      background: purple;
-    }
-    nav {
-      width: 100%;
-      padding: 5px;
-      box-sizing: border-box;
+      font: inherit;
     }
 
-    ul {
-      flex-grow: 1;
-      height: 40px;
-      margin: 0;
-      padding: 0;
-      display: flex;
-
-      box-sizing: border-box;
-      border: 2px solid var(--jolly-border-color);
-      border-radius: 5px;
-
-      list-style: none;
-      background: var(--jolly-surface-color);
-      gap: 5px;
-    }
-    ul > li {
-      flex: 1;
-      display: flex;
+    jolly-toolbar {
+      padding: var(--jolly-space-2, 8px);
     }
 
-    ul > li > button {
-      flex-grow: 1;
-      background: green;
-      border: none;
-      cursor: pointer;
-      font-size: 1em;
-      padding: 0;
-      margin: 0;
-      color: var(--jolly-text-color);
-    }
-    section {
-      flex-grow: 1;
-      width: 100%;
-      box-sizing: border-box;
-      border-bottom: 2px solid var(--jolly-border-color);
-    }
-
-    section {
-      background: orange;
-    }
-
-    ol.tree {
-      position: absolute;
-      list-style: none;
-      line-height: 1.5;
-      margin: 0;
-      padding: 0.25em 0.25em 2em 0.25em;
-      width: 100%;
-      min-height: 100%;
-    }
-
-    ol.tree * {
-      user-select: none;
-    }
-
-    ol.tree.drop-inside:before {
-      position: absolute;
-      content: "";
-      border-top: 1px solid #888;
-      left: 0.25em;
-      right: 0.25em;
-      top: 0.25em;
-    }
-
-    ol.tree ol {
-      list-style: none;
-      margin: 0;
-      padding-left: 24px;
-    }
-
-    ol.tree ol:last-of-type.drop-below {
-      border-bottom: 1px solid #888;
-      padding-bottom: 0;
-    }
-
-    ol.tree li.item,
-    ol.tree li.group {
-      background-clip: border-box;
-      height: 28px;
-      display: flex;
-      padding: 1px;
-      cursor: default;
-      display: flex;
-      align-items: center;
-    }
-
-    ol.tree li.item>.icon,
-    ol.tree li.group>.icon,
-    ol.tree li.item>.toggle,
-    ol.tree li.group>.toggle {
-      margin: -1px;
-      width: 24px;
-      height: 24px;
-    }
-
-    ol.tree li.item span,
-    ol.tree li.group span {
-      align-self: center;
-      padding: 0.25em;
-    }
-
-    ol.tree li.item:hover,
-    ol.tree li.group:hover {
-      background-color: #eee;
-    }
-
-    ol.tree li.item.drop-above,
-    ol.tree li.group.drop-above {
-      border-top: 1px solid #888;
-      padding-top: 0;
-    }
-
-    ol.tree li.item.drop-inside,
-    ol.tree li.group.drop-inside {
-      border: 1px solid #888;
-      padding: 0;
-    }
-
-    ol.tree li.item.selected,
-    ol.tree li.group.selected {
-      background: #beddf4;
-    }
-
-    ol.tree li.item>.icon {
-      background-image: url("./icons/item.svg");
-    }
-
-    ol.tree li.item.drop-below {
-      border-bottom: 1px solid #888;
-      padding-bottom: 0;
-    }
-
-    ol.tree li.group {
-      color: #444;
-    }
-
-    ol.tree li.group>.toggle {
-      background-image: url("./icons/group-open.svg");
-      cursor: pointer;
-    }
-
-    ol.tree li.group.drop-below+ol {
-      border-bottom: 1px solid #888;
-    }
-
-    ol.tree li.group.drop-below+ol:empty {
-      margin-top: -1px;
-      pointer-events: none;
-    }
-
-    ol.tree li.group.collapsed>.toggle {
-      background-image: url("./icons/group-closed.svg");
-    }
-
-    ol.tree li.group.collapsed+ol>ol,
-    ol.tree li.group.collapsed+ol>li {
-      display: none;
+    jolly-tree {
+      flex: 1 1 auto;
+      overflow: auto;
+      padding-inline: var(--jolly-space-1, 4px);
     }
   `;
 
-  override firstUpdated() {
-    this.initTreeView();
+  constructor() {
+    super();
+
+    this.nodes = [];
+    this.selected = [];
+    this.expanded = [];
+  }
+
+  override firstUpdated(): void {
     this.setupEventListeners();
   }
 
@@ -210,96 +74,98 @@ export class RightPanel extends LitElement {
       const uuid = group ? group.getGroupUUID() : null;
       this.setSelectedItemInUI(uuid);
     });
-
-    // Listen to TreeView selection changes
-    this.treeView.addEventListener("selectionChange", () => {
-      this.handleTreeViewSelectionChange();
-    });
   }
 
-  private handleTreeViewSelectionChange(): void {
-    const selectedNodes = this.treeView.selector.nodes;
+  private handleSelect = (
+    event: CustomEvent<JollySelectDetail>
+  ): void => {
+    this.selected = event.detail.selected;
 
-    if (selectedNodes.length === 0) {
-      if (this.modelManager) {
-        this.modelManager.selectGroup(null);
-      }
+    if (this.selected.length === 0) {
+      this.modelManager?.selectGroup(null);
 
       return;
     }
 
-    const selectedElement = selectedNodes[0] as HTMLLIElement;
-    const uuid = selectedElement.getAttribute("data-uuid");
-
-    if (!uuid || !this.modelManager) {
+    if (!this.modelManager) {
       return;
     }
 
-    const group = this.modelManager.getGroupByUUID(uuid);
+    const group = this.modelManager.getGroupByUUID(this.selected[0]);
     if (group) {
       this.modelManager.selectGroup(group);
     }
-  }
+  };
 
-  private initTreeView() {
-    const treeViewContainer = this.shadowRoot?.querySelector("section") as HTMLDivElement;
-    this.treeView = new TreeView(treeViewContainer);
-  }
+  private handleToggleExpand = (
+    event: CustomEvent<JollyToggleExpandDetail>
+  ): void => {
+    const { id, expanded } = event.detail;
+    this.expanded = expanded ?
+      [...this.expanded, id] :
+      this.expanded.filter((expandedId) => expandedId !== id);
+  };
+
+  /**
+   * The tree is the source of truth for hierarchy; the 3D scene follows it,
+   * not the other way round. `resolveReparent` already ran the structural
+   * guard, so a moved id landing under a new parent here can't be a cycle.
+   */
+  private handleReparent = (
+    event: CustomEvent<JollyReparentDetail>
+  ): void => {
+    const { movedIds, targetId, where } = event.detail;
+    const nextNodes = resolveReparent({ nodes: this.nodes, movedIds, targetId, where });
+    if (nextNodes === this.nodes) {
+      return;
+    }
+
+    this.nodes = nextNodes;
+
+    for (const movedId of movedIds) {
+      this.modelManager?.reparent(movedId, findParentId(nextNodes, movedId) ?? null);
+    }
+
+    if (where === "inside" && !this.expanded.includes(targetId)) {
+      this.expanded = [...this.expanded, targetId];
+    }
+  };
 
   public setModelManager(modelManager: ModelManager): void {
     this.modelManager = modelManager;
   }
 
-  public setPopupManager(popupManager: PopupManager): void {
-    this.popupManager = popupManager;
+  public setSceneManager(sceneManager: ThreeSceneManager): void {
+    this.sceneManager = sceneManager;
   }
 
   public addGroupItemToUI(group: GroupManager, label: string = "Cube"): void {
-    const uuid = group.getGroupUUID();
-    const itemElt = document.createElement("li");
-    itemElt.setAttribute("data-uuid", uuid);
-    itemElt.classList.add("item");
-
-    const iconElt = document.createElement("i");
-    iconElt.classList.add("icon");
-    itemElt.appendChild(iconElt);
-
-    const spanElt = document.createElement("span");
-    spanElt.textContent = label;
-    itemElt.appendChild(spanElt);
-
-    this.treeView.append(itemElt, "group");
-    this.uuidToListItemMap.set(uuid, itemElt);
+    this.nodes = [
+      ...this.nodes,
+      { id: group.getGroupUUID(), label }
+    ];
   }
 
   public setSelectedItemInUI(uuid: string | null): void {
-    const selectedItem = uuid ? this.uuidToListItemMap.get(uuid) : null;
-
-    // Update TreeView selector to keep it in sync
-    this.treeView.selector.clear();
-    if (selectedItem) {
-      this.treeView.selector.add(selectedItem);
-    }
+    this.selected = uuid ? [uuid] : [];
   }
 
   private handleAddCube(): void {
-    if (!this.popupManager) {
-      return;
-    }
+    void this.promptAddCube();
+  }
 
-    const addMeshPopup = new AddMeshPopup({
+  private async promptAddCube(): Promise<void> {
+    this.sceneManager?.setControlsEnabled(false);
+    const name = await showPrompt({
       title: "New Cube",
-      placeholder: "Cube",
-      onConfirm: (name) => {
-        this.createCubeWithName(name || "Cube");
-        this.popupManager?.hide();
-      },
-      onCancel: () => {
-        this.popupManager?.hide();
-      }
+      label: "Cube name",
+      defaultValue: "Cube"
     });
+    this.sceneManager?.setControlsEnabled(true);
 
-    this.popupManager.show(addMeshPopup);
+    if (name !== null) {
+      this.createCubeWithName(name || "Cube");
+    }
   }
 
   private createCubeWithName(name: string): void {
@@ -311,16 +177,23 @@ export class RightPanel extends LitElement {
     this.dispatchEvent(event);
   }
 
-  override render() {
+  override render(): TemplateResult {
     return html`
-      <nav>
-        <ul>
-          <li><button @click="${this.handleAddCube}">Add Cube</button></li>
-          <li><button>Duplicate</button></li>
-        </ul>
-      </nav>
-      <section>
-      </section>
+      <jolly-toolbar label="Actions">
+        <jolly-button @click=${this.handleAddCube}>Add Cube</jolly-button>
+        <jolly-button>Duplicate</jolly-button>
+      </jolly-toolbar>
+      <jolly-tree
+        .nodes=${this.nodes}
+        .selected=${this.selected}
+        .expanded=${this.expanded}
+        multiple
+        reorderable
+        row-drag
+        @jolly-select=${this.handleSelect}
+        @jolly-toggle-expand=${this.handleToggleExpand}
+        @jolly-reparent=${this.handleReparent}
+      ></jolly-tree>
     `;
   }
 }

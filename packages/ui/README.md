@@ -107,6 +107,7 @@ Set `density` on the scope host when needed:
 - [Dialogs](./docs/dialogs.md): declarative modal content and prompt/confirm helpers
 - [Presence](./docs/presence.md): peer snapshots in panes and folders
 - [Progress](./docs/progress.md): progress semantics, loading lifecycle and CSS customization
+- [Data views](./docs/data.md): `jolly-tree` — controlled nodes, selection, drag and drop reparenting
 
 The package currently ships twelve controls: `jolly-text`, `jolly-number`, `jolly-slider`, `jolly-range`,
 `jolly-checkbox`, `jolly-select`, `jolly-flags`, `jolly-color`, `jolly-button-group`,
