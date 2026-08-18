@@ -33,6 +33,11 @@ export interface LoadRuntimeOptions<
    * Initial scene to prepare and queue before starting the runtime.
    */
   scene?: Systems.Scene<TContext>;
+  /**
+   * Skip mounting the loading screen entirely
+   * @default false
+   */
+  skipLoadingScreen?: boolean;
 }
 
 export async function loadRuntime<
@@ -45,8 +50,25 @@ export async function loadRuntime<
     loadingDelay = 850,
     loadingContainer = document.body,
     assets = [],
-    scene
+    scene,
+    skipLoadingScreen = false
   } = options;
+
+  if (skipLoadingScreen) {
+    runtime.canvas.style.opacity = "1";
+
+    await configureRuntimeDevice(runtime);
+    await loadInitialAssets(runtime, null, assets);
+
+    if (scene !== undefined) {
+      await loadInitialScene(runtime.world.sceneManager, null, scene);
+    }
+
+    runtime.start();
+
+    return;
+  }
+
   const loadingScreen = RuntimeLoadingScreen.mount(
     runtime.canvas,
     loadingContainer
@@ -86,15 +108,15 @@ export async function loadRuntime<
 
 async function loadInitialAssets<TContext>(
   runtime: Runtime<TContext>,
-  loadingScreen: RuntimeLoadingScreen,
+  loadingScreen: RuntimeLoadingScreen | null,
   assets: Iterable<AssetReference<unknown>>
 ): Promise<void> {
   const batch = runtime.world.assetCoordinator.loadBatch(assets, {
     onProgress: (progress: AssetLoadProgress) => {
-      loadingScreen.update(progress);
+      loadingScreen?.update(progress);
     }
   });
-  loadingScreen.setProgress(
+  loadingScreen?.setProgress(
     batch.completed,
     batch.total
   );
@@ -104,7 +126,7 @@ async function loadInitialAssets<TContext>(
 
 function loadInitialScene<TContext>(
   sceneManager: Systems.SceneManager<TContext>,
-  loadingScreen: RuntimeLoadingScreen,
+  loadingScreen: RuntimeLoadingScreen | null,
   scene: Systems.Scene<TContext>
 ): Promise<void> {
   const sceneLoad = sceneManager.loadScene(scene);
@@ -121,12 +143,12 @@ function loadInitialScene<TContext>(
       return;
     }
 
-    loadingScreen.setProgress(
+    loadingScreen?.setProgress(
       sceneLoad.completed,
       sceneLoad.total
     );
     if (sceneLoad.currentAsset !== null) {
-      loadingScreen.setAsset(sceneLoad.currentAsset);
+      loadingScreen?.setAsset(sceneLoad.currentAsset);
     }
 
     if (

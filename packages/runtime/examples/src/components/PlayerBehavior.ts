@@ -37,7 +37,9 @@ export class PlayerBehavior extends Behavior<PlayerProperties> {
 
   awake() {
     this.actor.object3D.rotateX(-Math.PI / 2);
+  }
 
+  start() {
     this.model.animation.setClipNameRewriter(
       (name) => name.slice(name.indexOf("|") + 1).toLowerCase()
     );

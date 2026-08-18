@@ -4,107 +4,105 @@ import {
   AudioBackground,
   GlobalAudioManager,
   TextRenderer,
-  createViewHelper
+  createViewHelper,
+  AssetTypes,
+  Systems
 } from "@jolly-pixel/engine";
-import {
-  Runtime,
-  loadRuntime
-} from "@jolly-pixel/runtime";
+import { AssetReference } from "@jolly-pixel/asset";
 import * as THREE from "three";
 
 // Import Internal Dependencies
-// import { SpriteRenderer } from "./components/sprite/SpriteRenderer.class.ts";
+import { bootstrapRuntime } from "./utils/bootstrapRuntime.ts";
 
-const canvasHTMLElement = document.querySelector<HTMLCanvasElement>("canvas");
-if (!canvasHTMLElement) {
-  throw new Error("No canvas element found");
-}
-const runtime = await Runtime.create(canvasHTMLElement, {
-  includePerformanceStats: true
-});
-const { world } = runtime;
-// Composer/post-processing render mode is pending a rebuild on WebGPURenderer's
-// node-based PostProcessing API — "direct" (the default) is the only mode today.
+// CONSTANTS
+const kHelvetikerRegularFont = new AssetReference("helvetiker_regular", AssetTypes.font);
 
-world.createActor("camera")
-  .addComponent(Camera3DControls, {}, (component) => {
-    component.actor.transform
-      .setLocalPosition({ x: 10, y: 10, z: 5 })
-      .lookAt({ x: 0, y: 0, z: 0 });
+/**
+ * Declares and constructs the renderers example scene.
+ */
+class RenderersScene extends Systems.Scene {
+  audioBackground!: AudioBackground;
 
-    createViewHelper(component.camera, world);
-  });
+  constructor() {
+    super("renderers", {
+      assets: [kHelvetikerRegularFont]
+    });
+  }
 
-// new Actor(world, { name: "sprite" })
-//   .addComponent(SpriteRenderer, {
-//     texture: "./assets/sprites/teleport-door.png",
-//     tileHorizontal: 16,
-//     tileVertical: 1,
-//     animations: {
-//       open: { from: 0, to: 15 }
-//     }
-//   }, (sprite) => {
-//     sprite.setHorizontalFlip(true);
-//     sprite.animation.play("open", { loop: true, duration: 2.5 });
-//   });
+  override awake(): void {
+    const scene = this.world.sceneManager.getSource();
+    scene.background = new THREE.Color("#000000");
+    scene.add(
+      new THREE.GridHelper(
+        50,
+        50,
+        new THREE.Color("#888888")
+      ),
+      new THREE.AmbientLight(new THREE.Color("#ffffffff"), 3)
+    );
 
-const textActor = world.createActor("text")
-  .addComponent(TextRenderer, {
-    path: "./assets/fonts/helvetiker_regular.typeface.json",
-    text: "Hello, 3D World !",
-    textGeometryOptions: { size: 2, depth: 2, center: true }
-  });
-textActor.object3D.position.set(0, 5, 0);
+    this.world.createActor("camera")
+      .addComponent(Camera3DControls, {}, (component) => {
+        component.actor.transform
+          .setLocalPosition({ x: 10, y: 10, z: 5 })
+          .lookAt({ x: 0, y: 0, z: 0 });
 
-const scene = world.sceneManager.getSource();
-scene.background = new THREE.Color("#000000");
-scene.add(
-  new THREE.GridHelper(
-    50,
-    50,
-    new THREE.Color("#888888")
-  ),
-  new THREE.AmbientLight(new THREE.Color("#ffffffff"), 3)
-);
+        createViewHelper(component.camera, this.world);
+      });
 
-const audioManager = GlobalAudioManager.fromWorld(world);
+    const textActor = this.world.createActor("text")
+      .addComponent(TextRenderer, {
+        asset: kHelvetikerRegularFont,
+        text: "Hello, 3D World !",
+        textGeometryOptions: { size: 2, depth: 2, center: true }
+      });
+    textActor.object3D.position.set(0, 5, 0);
 
-const ab = new AudioBackground({
-  audioManager,
-  playlists: [
-    {
-      name: "normal",
-      onEnd: "loop",
-      tracks: [
+    const audioManager = GlobalAudioManager.fromWorld(this.world);
+    this.audioBackground = new AudioBackground({
+      audioManager,
+      playlists: [
         {
-          name: "behemoth",
-          path: "./assets/sounds/behemoth.ogg"
+          name: "normal",
+          onEnd: "loop",
+          tracks: [
+            {
+              name: "behemoth",
+              path: "./assets/sounds/behemoth.ogg"
+            },
+            {
+              name: "infernal-heat",
+              path: "./assets/sounds/infernal-heat.ogg"
+            }
+          ]
         },
         {
-          name: "infernal-heat",
-          path: "./assets/sounds/infernal-heat.ogg"
+          name: "boss",
+          onEnd: "play-next-playlist",
+          nextPlaylistName: "normal",
+          tracks: [
+            {
+              name: "tech-space",
+              path: "./assets/sounds/tech-space.ogg",
+              volume: 0.5
+            }
+          ]
         }
       ]
-    },
-    {
-      name: "boss",
-      onEnd: "play-next-playlist",
-      nextPlaylistName: "normal",
-      tracks: [
-        {
-          name: "tech-space",
-          path: "./assets/sounds/tech-space.ogg",
-          volume: 0.5
-        }
-      ]
-    }
-  ]
+    });
+    this.world.audio.observe(this.audioBackground);
+  }
+}
+
+const renderersScene = new RenderersScene();
+const runtime = await bootstrapRuntime({
+  includePerformanceStats: true,
+  assets: {
+    catalog: "./assets.json"
+  },
+  scene: renderersScene
 });
-world.audio.observe(ab);
 
-canvasHTMLElement.addEventListener("click", async() => {
-  await ab.play("boss.tech-space");
+runtime.canvas.addEventListener("click", async() => {
+  await renderersScene.audioBackground.play("boss.tech-space");
 }, { once: true });
-
-loadRuntime(runtime)
-  .catch(console.error);
