@@ -167,11 +167,18 @@ export class Floating extends LitElement {
     `;
   }
 
-  protected override firstUpdated(): void {
-    if (!this.#managed) {
-      this.#restore();
+  protected override willUpdate(): void {
+    // Restoring persisted geometry and clamping it to the viewport only touches reactive properties
+    if (!this.hasUpdated) {
+      if (!this.#managed) {
+        this.#restore();
+      }
+      this.#applyGeometry();
+      this.clampToView();
     }
-    this.#applyGeometry();
+  }
+
+  protected override firstUpdated(): void {
     this.#connectResizeHandles();
     this.addEventListener("pointerdown", this.#raise);
     this.addEventListener("focusin", this.#raise);
@@ -180,7 +187,6 @@ export class Floating extends LitElement {
       this.clampToView
     );
     installResizeCursorStyles(this.ownerDocument);
-    this.clampToView();
     // A window nobody has touched yet still has to sit above static content:
     // without a baseline stack value it keeps z-index "auto" and paints
     // beneath any later, non-positioned sibling in the same stacking context.

@@ -273,7 +273,11 @@ export abstract class JollyField<TValue> extends LitElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.#warnWhenUnscoped();
+    // Deferred: a field connected as part of a larger subtree insertion (the
+    // common case when a scenario builds a whole panel off-document and
+    // appends it in one shot) can run this before the browser has resolved
+    // inherited custom properties for the batch, reading a false empty.
+    queueMicrotask(() => this.#warnWhenUnscoped());
   }
 
   protected override willUpdate(): void {
@@ -451,6 +455,10 @@ export abstract class JollyField<TValue> extends LitElement {
    * Warns when a field is rendered outside a theme scope.
    */
   #warnWhenUnscoped(): void {
+    if (!this.isConnected) {
+      return;
+    }
+
     const tag = this.localName;
     if (kWarned.has(tag)) {
       return;

@@ -183,15 +183,26 @@ export class Dock extends LitElement {
   ): void {
     // An overlay dock is content-sized by definition; stretching would leave
     // one pane covering the whole viewport edge.
-    if (changed.has("overlay") && this.overlay && this.align === null) {
+    if (
+      changed.has("overlay") &&
+      this.overlay &&
+      this.align === null
+    ) {
       this.align = "start";
+    }
+
+    // Restoring persisted size/collapsed only touches reactive properties,
+    // so it belongs before the first render commits rather than in
+    // firstUpdated, where setting them would schedule a redundant update.
+    if (
+      !this.hasUpdated &&
+      !this.#managed
+    ) {
+      this.#restore();
     }
   }
 
   protected override firstUpdated(): void {
-    if (!this.#managed) {
-      this.#restore();
-    }
     this.#applySize();
     this.#connectResizeHandle();
     installResizeCursorStyles(this.ownerDocument);
