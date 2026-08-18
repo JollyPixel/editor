@@ -45,7 +45,7 @@
   "dependencies": {
     "@jolly-pixel/network": "1.1.0",
     "@jolly-pixel/pixel-draw.renderer": "3.0.0",
-    "lit": "3.3.3",
-    "vanilla-picker": "2.12.3"
+    "@jolly-pixel/ui": "1.0.1",
+    "lit": "3.3.3"
   }
 }

@@ -8,7 +8,11 @@
   <script>
     try {
       const theme = localStorage.getItem("pixel-draw-demo:theme");
-      if (theme === "light" || theme === "dark" || theme === "auto") {
+      if (
+        theme === "light" ||
+        theme === "dark" ||
+        theme === "auto"
+      ) {
         document.documentElement.dataset.theme = theme;
       }
     } catch {

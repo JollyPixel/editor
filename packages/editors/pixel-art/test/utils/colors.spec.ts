@@ -2,30 +2,12 @@
 import assert from "node:assert";
 import { describe, it } from "node:test";
 
-// Import Third-party Dependencies
-import type { Color } from "vanilla-picker";
-
 // Import Internal Dependencies
 import {
-  fromPickerColor,
+  splitRgbaHex,
   toRgbaHex,
   toRgbaString
 } from "../../src/utils/colors.ts";
-
-function createPickerColor(
-  hex: string,
-  alpha: number
-): Color {
-  return {
-    hex,
-    rgba: [0, 0, 0, alpha],
-    hsla: [0, 0, 0, alpha],
-    rgbString: "",
-    rgbaString: "",
-    hslString: "",
-    hslaString: ""
-  };
-}
 
 describe("toRgbaHex", () => {
   it("should append the opacity as a two-digit hex suffix", () => {
@@ -48,16 +30,24 @@ describe("toRgbaString", () => {
   });
 });
 
-describe("fromPickerColor", () => {
-  it("should strip the alpha suffix from an 8-digit picker hex", () => {
-    const result = fromPickerColor(createPickerColor("#1a2b3cff", 1));
+describe("splitRgbaHex", () => {
+  it("should strip the alpha suffix from an 8-digit hex string", () => {
+    const result = splitRgbaHex("#1a2b3cff");
 
     assert.strictEqual(result.hex, "#1a2b3c");
   });
 
-  it("should read opacity from the rgba alpha channel", () => {
-    const result = fromPickerColor(createPickerColor("#00000080", 0.5));
+  it("should read opacity from the alpha suffix", () => {
+    const result = splitRgbaHex("#00000080");
 
-    assert.strictEqual(result.opacity, 0.5);
+    assert.strictEqual(result.opacity, 0x80 / 255);
+  });
+
+  it("should round-trip through toRgbaHex", () => {
+    const hex8 = toRgbaHex("#4488ff", 0.5);
+    const result = splitRgbaHex(hex8);
+
+    assert.strictEqual(result.hex, "#4488ff");
+    assert.strictEqual(result.opacity, 0x80 / 255);
   });
 });

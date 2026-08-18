@@ -41,7 +41,8 @@ test("picking a foreground color via the swatch updates the brush and the paint"
   // Hit the real swatch UI.
   // Both pickers live in document.body, so target the visible input.
   await page.locator("color-swatch.fg").locator("button").click();
-  await page.locator(".picker_editor input:visible").fill("#ff00ff");
+  await page.locator("jolly-color-picker input.hex:visible").fill("#ff00ff");
+  await page.locator("jolly-color-picker input.hex:visible").press("Enter");
 
   await expect.poll(
     () => readBrush(page).then((b) => b.primary)

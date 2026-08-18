@@ -1,21 +1,18 @@
-// Import Third-party Dependencies
-import type { Color } from "vanilla-picker";
-
 export interface RgbaColor {
   hex: string;
   opacity: number;
 }
 
 /**
- * Extracts a "#rrggbb" hex color and a 0-1 opacity from a
- * vanilla-picker Color (its .hex is 8-digit "#rrggbbaa").
+ * Splits an 8-digit "#rrggbbaa" hex string into a "#rrggbb" hex
+ * color and a 0-1 opacity.
  */
-export function fromPickerColor(
-  color: Color
+export function splitRgbaHex(
+  hex8: string
 ): RgbaColor {
   return {
-    hex: color.hex.slice(0, 7),
-    opacity: color.rgba[3]
+    hex: hex8.slice(0, 7),
+    opacity: parseInt(hex8.slice(7, 9), 16) / 255
   };
 }
 
