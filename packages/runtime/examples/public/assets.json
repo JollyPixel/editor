@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "id": "tinywitch",
+      "kind": "model",
+      "source": "models/Tiny_Witch.obj"
+    },
+    {
+      "id": "standard",
+      "kind": "model",
+      "source": "models/Standard.fbx"
+    },
+    {
+      "id": "helvetiker_regular",
+      "kind": "font",
+      "source": "assets/fonts/helvetiker_regular.typeface.json"
+    }
+  ]
+}
