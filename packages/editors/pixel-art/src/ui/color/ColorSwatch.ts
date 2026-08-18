@@ -8,9 +8,9 @@ import {
   property
 } from "lit/decorators.js";
 import {
-  ColorPicker,
-  detailOf,
   ensureFontFace,
+  detailOf,
+  PopoverController,
   type JollyChangeDetail
 } from "@jolly-pixel/ui";
 
@@ -22,16 +22,15 @@ import {
 } from "../../utils/colors.ts";
 import { assertElement } from "../../utils/dom.ts";
 import { colorSwatchStyles } from "./ColorSwatch.styles.ts";
-import { ColorSwatchPortal } from "./ColorSwatchPortal.ts";
 
 export interface ColorChangeDetail {
   hex: string;
   opacity: number;
 }
 
-// Registers the bundled Roboto Mono face on `document`, so the picker
-// portal (a light-DOM element with no @jolly-pixel/ui scope host) can
-// reference it by name instead of falling back to the page's font.
+// Registers the bundled Roboto Mono face on `document`: the popover renders
+// in the top layer (native Popover API), still inside this shadow tree, but
+// "@font-face" declared inside a shadow root is ignored by the browser.
 ensureFontFace();
 
 /**
@@ -50,10 +49,21 @@ export class ColorSwatch extends LitElement {
   @property({ type: Number })
   declare opacity: number;
 
-  #open = false;
-  #buttonElement: HTMLButtonElement | null = null;
-  #picker: ColorPicker | null = null;
-  #portal: ColorSwatchPortal | null = null;
+  #swatchElement: HTMLButtonElement | null = null;
+  #popoverElement: HTMLElement | null = null;
+
+  #popup = new PopoverController(this, {
+    anchor: () => this.#swatchElement,
+    popover: () => this.#popoverElement,
+    side: "right",
+    onOpen: () => {
+      const event = new CustomEvent("opened", {
+        bubbles: true,
+        composed: true
+      });
+      this.dispatchEvent(event);
+    }
+  });
 
   constructor() {
     super();
@@ -62,49 +72,15 @@ export class ColorSwatch extends LitElement {
     this.opacity = 1;
   }
 
-  override firstUpdated() {
-    const swatchElement = assertElement(
+  override firstUpdated(): void {
+    this.#swatchElement = assertElement(
       this.renderRoot.querySelector<HTMLButtonElement>("button"),
       "ColorSwatch: button element not found"
     );
-    this.#buttonElement = swatchElement;
-    swatchElement.style.background = toRgbaString(
-      this.color,
-      this.opacity
+    this.#popoverElement = assertElement(
+      this.renderRoot.querySelector<HTMLElement>(".popover"),
+      "ColorSwatch: popover element not found"
     );
-
-    const portal = new ColorSwatchPortal({
-      anchor: swatchElement,
-      onDismiss: () => this.#setOpen(false)
-    });
-    this.#portal = portal;
-
-    const picker = document.createElement("jolly-color-picker");
-    picker.alpha = true;
-    picker.value = toRgbaHex(this.color, this.opacity);
-    picker.addEventListener("jolly-input", this.#onPickerChange);
-    picker.addEventListener("jolly-change", this.#onPickerChange);
-    portal.element.appendChild(picker);
-    this.#picker = picker;
-
-    swatchElement.addEventListener(
-      "click",
-      this.#onSwatchClick
-    );
-  }
-
-  override disconnectedCallback() {
-    super.disconnectedCallback();
-    this.#buttonElement?.removeEventListener(
-      "click",
-      this.#onSwatchClick
-    );
-
-    this.#picker?.removeEventListener("jolly-input", this.#onPickerChange);
-    this.#picker?.removeEventListener("jolly-change", this.#onPickerChange);
-    this.#picker = null;
-    this.#portal?.destroy();
-    this.#portal = null;
   }
 
   setColor(
@@ -113,51 +89,11 @@ export class ColorSwatch extends LitElement {
   ): void {
     this.color = hex;
     this.opacity = opacity;
-
-    if (this.#picker) {
-      this.#picker.value = toRgbaHex(hex, opacity);
-    }
-    if (this.#buttonElement) {
-      this.#buttonElement.style.background = toRgbaString(
-        this.color,
-        this.opacity
-      );
-    }
   }
 
   close(): void {
-    this.#setOpen(false);
+    this.#popup.hide();
   }
-
-  #setOpen(
-    open: boolean
-  ): void {
-    this.#open = open;
-    if (!this.#portal) {
-      throw new Error("ColorSwatch: portal not initialized");
-    }
-
-    if (open) {
-      this.#portal.open();
-
-      const event = new CustomEvent("opened", {
-        bubbles: true,
-        composed: true
-      });
-      this.dispatchEvent(event);
-    }
-    else {
-      this.#portal.close();
-    }
-    this.requestUpdate();
-  }
-
-  readonly #onSwatchClick = (
-    event: MouseEvent
-  ): void => {
-    event.stopPropagation();
-    this.#setOpen(!this.#open);
-  };
 
   readonly #onPickerChange = (
     event: Event
@@ -171,9 +107,6 @@ export class ColorSwatch extends LitElement {
 
     this.color = hex;
     this.opacity = opacity;
-    if (this.#buttonElement) {
-      this.#buttonElement.style.background = toRgbaString(hex, opacity);
-    }
 
     const customEvent = new CustomEvent<ColorChangeDetail>("color-change", {
       bubbles: true,
@@ -187,10 +120,26 @@ export class ColorSwatch extends LitElement {
     return html`
       <button
         part="swatch"
+        popovertarget="picker"
         title="Color"
         aria-haspopup="dialog"
-        aria-expanded=${this.#open}
+        aria-expanded=${this.#popup.open}
+        style="background:${toRgbaString(this.color, this.opacity)}"
       ></button>
+      <div
+        class="popover"
+        id="picker"
+        popover
+        @beforetoggle=${this.#popup.onBeforeToggle}
+        @toggle=${this.#popup.onToggle}
+      >
+        <jolly-color-picker
+          alpha
+          .value=${toRgbaHex(this.color, this.opacity)}
+          @jolly-input=${this.#onPickerChange}
+          @jolly-change=${this.#onPickerChange}
+        ></jolly-color-picker>
+      </div>
     `;
   }
 }

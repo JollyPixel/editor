@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
   LitElement,
+  css,
   html,
   nothing
 } from "lit";
@@ -10,6 +11,7 @@ import {
 } from "lit/decorators.js";
 import { classMap } from "lit/directives/class-map.js";
 import type { Mode } from "@jolly-pixel/pixel-draw.renderer";
+import "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
@@ -59,7 +61,12 @@ const kModeItems: ModeItem[] = [
 export class ModeRail extends LitElement {
   static override styles = [
     iconStyles,
-    railButtonStyles
+    railButtonStyles,
+    css`
+      jolly-rail {
+        background: transparent;
+      }
+    `
   ];
 
   @property({ type: String })
@@ -254,7 +261,7 @@ export class ModeRail extends LitElement {
 
   override render() {
     return html`
-      <div class="rail-section" role="group" aria-label="Drawing mode">
+      <jolly-rail role="group" aria-label="Drawing mode">
         ${kModeItems.map(({ mode, icon, label }) => {
           const flyoutButtons = this.#flyoutButtons(mode);
 
@@ -282,7 +289,7 @@ export class ModeRail extends LitElement {
             </div>
           `;
         })}
-      </div>
+      </jolly-rail>
     `;
   }
 }

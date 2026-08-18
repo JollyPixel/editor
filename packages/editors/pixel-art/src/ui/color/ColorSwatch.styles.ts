@@ -26,4 +26,18 @@ export const colorSwatchStyles = css`
     outline: 2px solid var(--color-swatch-focus-color, var(--color-accent, #4488ff));
     outline-offset: 2px;
   }
+
+  .popover {
+    position: fixed;
+    inset: auto;
+    margin: 0;
+    padding: var(--jolly-space-1, 4px);
+    overflow: visible;
+    border: none;
+    border-radius: var(--jolly-radius-md, 6px);
+    background: var(--jolly-surface-raised, Canvas);
+    box-shadow: var(--jolly-shadow-overlay);
+    color: var(--jolly-text, CanvasText);
+    font-family: var(--jolly-font-family, ui-monospace, monospace);
+  }
 `;

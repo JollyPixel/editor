@@ -13,24 +13,32 @@ import {
   type PixelArtCanvasOptions,
   type Mode
 } from "@jolly-pixel/pixel-draw.renderer";
+import { resolveThemeColor, themeStyles } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { ColorChangeDetail } from "../color/ColorSwatch.ts";
 import { panelStyles } from "./PixelDrawPanel.styles.ts";
 import { railButtonStyles } from "../mode-rail/rail-button.styles.ts";
 import { iconStyles } from "../common/icon.styles.ts";
-import { themeStyles, type ThemeMode } from "../theme.ts";
-import { UvToolbarController } from "../uv/UvToolbarController.ts";
-import { SelectToolbarController } from "../select/SelectToolbarController.ts";
-import { TextureDropController } from "../texture-drop/TextureDropController.ts";
-import { HistoryFileToolbarController } from "../history-file/HistoryFileToolbarController.ts";
-import { ToolOptionsController } from "../tool-options/ToolOptionsController.ts";
+import { UvToolbarController } from "../toolbars/UvToolbarController.ts";
+import { SelectToolbarController } from "../toolbars/SelectToolbarController.ts";
+import { TextureDropController } from "../toolbars/TextureDropController.ts";
+import { HistoryFileToolbarController } from "../toolbars/HistoryFileToolbarController.ts";
+import { ToolOptionsController } from "../toolbars/ToolOptionsController.ts";
 import { ColorController } from "../color/ColorController.ts";
 import { assertElement } from "../../utils/dom.ts";
 
 // Side-effect imports: register custom elements (also carries ModeVariantDetail's type).
 import { type ModeVariantDetail } from "../mode-rail/ModeRail.ts";
 import "../color/ColorPickerRail.ts";
+
+export type ThemeMode = "light" | "dark" | "auto";
+
+function isThemeMode(
+  value: string
+): value is ThemeMode {
+  return value === "light" || value === "dark" || value === "auto";
+}
 
 @customElement("pixel-draw-panel")
 export class PixelDrawPanel extends LitElement {
@@ -49,11 +57,22 @@ export class PixelDrawPanel extends LitElement {
   declare allowUvCreateDelete: boolean;
 
   /**
-   * "auto" follows prefers-color-scheme (see theme.ts); "light"/"dark"
-   * force a palette regardless of the OS setting. Reflects to the `theme`
-   * attribute, which is what the CSS override selectors key off.
+   * "auto" follows prefers-color-scheme; "light"/"dark" force a palette
+   * regardless of the OS setting. Reflects to the `theme` attribute, which is
+   * what the CSS override selectors key off. `jolly-theme-preferences`
+   * removes the attribute entirely for "auto" rather than writing it out, so
+   * the converter maps a missing/null attribute back to "auto" instead of
+   * leaving the property `null`.
    */
-  @property({ type: String, reflect: true })
+  @property({
+    type: String,
+    reflect: true,
+    converter: {
+      fromAttribute(value) {
+        return (value !== null && isThemeMode(value)) ? value : "auto";
+      }
+    }
+  })
   declare theme: ThemeMode;
 
   readonly #uvToolbar = new UvToolbarController(this);
@@ -181,7 +200,7 @@ export class PixelDrawPanel extends LitElement {
    * PixelArtCanvas paints its own void color on a <canvas> (not CSS), so it
    * can't pick up --color-canvas-bg from the cascade on its own — read the
    * resolved value and push it in, keeping the canvas one source of truth
-   * (theme.ts) instead of duplicating the palette in JS.
+   * (PixelDrawPanel.styles.ts) instead of duplicating the palette in JS.
    */
   #syncCanvasBackground(): void {
     if (!this.#canvasManager) {
@@ -195,7 +214,7 @@ export class PixelDrawPanel extends LitElement {
   }
 
   #canvasBackground(): string {
-    return getComputedStyle(this).getPropertyValue("--color-canvas-bg").trim();
+    return resolveThemeColor(this, "--color-canvas-bg");
   }
 
   /**

@@ -13,7 +13,7 @@ import {
   hasSupportedImageDrag,
   pointInTextureBounds,
   textureDropBounds
-} from "../../../src/ui/texture-drop/TextureDropController.ts";
+} from "../../../src/ui/toolbars/textureDropGeometry.ts";
 
 function rect(
   left: number,
@@ -36,7 +36,7 @@ function rect(
   };
 }
 
-describe("TextureDropController geometry", () => {
+describe("textureDropGeometry", () => {
   test("tracks camera, zoom, stage offset, and texture dimensions", () => {
     const stage = document.createElement("div");
     Object.assign(stage, {

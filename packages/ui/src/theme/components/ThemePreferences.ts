@@ -88,6 +88,19 @@ export class ThemePreferences extends LitElement {
     this.#applyPreferences();
   }
 
+  /**
+   * A consumer sets `target` imperatively when it lives outside this
+   * element's own tree (so `.closest("jolly-scope")` can't find it) — most
+   * often after both elements exist, which is later than `connectedCallback`.
+   */
+  protected override updated(
+    changed: Map<PropertyKey, unknown>
+  ): void {
+    if (changed.has("target")) {
+      this.#applyPreferences();
+    }
+  }
+
   override render(): TemplateResult {
     return html`
       <jolly-theme-control

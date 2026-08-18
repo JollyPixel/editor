@@ -37,6 +37,14 @@ export async function gotoDemo(
 ): Promise<void> {
   const { runtime = false } = options;
 
+  // The demo prompts for a username via a jolly-pixel/ui <jolly-dialog>,
+  // which (unlike window.prompt) never auto-dismisses in a headless
+  // browser, so it would hang __pixelSyncReady forever. Seed the session
+  // storage key it checks before any script on the page runs.
+  await page.addInitScript(() => {
+    sessionStorage.setItem("pixel-draw-demo:username", "E2E");
+  });
+
   const runtimeParam = runtime ? "" : "&runtime=off";
   await page.goto(`/?empty=true&room=${encodeURIComponent(room)}${runtimeParam}`);
 

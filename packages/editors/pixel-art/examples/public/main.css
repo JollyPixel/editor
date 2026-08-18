@@ -1,47 +1,29 @@
 /*
- * Demo-only chrome (resize handle, theme select, page backdrop) is outside
+ * Demo-only chrome (page backdrop, rotation toggle) is outside
  * pixel-draw-panel's shadow DOM, so it can't see its CSS custom properties.
- * Mirrors the same palette/resolution pattern as src/ui/theme.ts instead:
- * bare :root is light, prefers-color-scheme overrides to dark, and
- * :root[data-theme] forces one when the demo's #theme-select picks a value
- * other than "auto" (see scripts/main.ts's wireThemeSelect).
+ * Same "light-dark() + color-scheme" pattern as PixelDrawPanel.styles.ts: one
+ * line per token instead of a default block plus a "prefers-color-scheme"
+ * block plus a "[data-theme]" override block. "color-scheme" here starts as
+ * "light dark" (OS-driven, "auto") and main.ts sets "data-theme" only to pin
+ * an explicit light/dark choice, same contract as the "theme" attribute
+ * jolly-theme-preferences drives on the panel.
  */
 :root {
-  --demo-page-bg: #d7e3ee;
-  --demo-control-bg: #ffffff;
-  --demo-border: #6f8caa;
-  --demo-text: #16232f;
-  --demo-accent: #2f6fd8;
-  --demo-dot: #6f8caa;
-}
+  color-scheme: light dark;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --demo-page-bg: #0d151d;
-    --demo-control-bg: #1a2228;
-    --demo-border: #4a5c68;
-    --demo-text: #eee;
-    --demo-accent: #3a6fc2;
-    --demo-dot: #6d8794;
-  }
+  --demo-page-bg: light-dark(#d7e3ee, #0d151d);
+  --demo-control-bg: light-dark(#ffffff, #1a2228);
+  --demo-border: light-dark(#6f8caa, #4a5c68);
+  --demo-text: light-dark(#16232f, #eee);
+  --demo-accent: light-dark(#2f6fd8, #3a6fc2);
 }
 
 :root[data-theme="light"] {
-  --demo-page-bg: #d7e3ee;
-  --demo-control-bg: #ffffff;
-  --demo-border: #6f8caa;
-  --demo-text: #16232f;
-  --demo-accent: #2f6fd8;
-  --demo-dot: #6f8caa;
+  color-scheme: light;
 }
 
 :root[data-theme="dark"] {
-  --demo-page-bg: #0d151d;
-  --demo-control-bg: #1a2228;
-  --demo-border: #4a5c68;
-  --demo-text: #eee;
-  --demo-accent: #3a6fc2;
-  --demo-dot: #6d8794;
+  color-scheme: dark;
 }
 
 html, body {
@@ -69,12 +51,17 @@ body {
   outline: none;
 }
 
-#draw-panel {
-  min-width: 400px;
-  width: 500px;
-  max-width: 700px;
+#draw-panel-pane {
   height: 100%;
-  position: relative;
+}
+
+#draw-panel-pane::part(content) {
+  padding: 0;
+  overflow: hidden;
+}
+
+#draw-panel {
+  height: 100%;
   background-color: var(--demo-control-bg);
 }
 
@@ -92,8 +79,26 @@ body {
   gap: 8px;
 }
 
-#rotation-control,
-#theme-select {
+/*
+ * jolly-theme-preferences needs a jolly-scope ancestor for its own controls
+ * to render themed instead of falling back (see docs/theming.md). Overridden
+ * to the demo's own accent instead of jolly's stock ramp, so the toggle reads
+ * as part of this page's chrome rather than a different product's.
+ * "min-width" gives the three-segment Light/Dark/Auto toggle enough room:
+ * unset, "Light" (the longest label) truncates by a few px against "Dark"
+ * and "Auto" in the equal-width split.
+ */
+#demo-controls jolly-scope {
+  min-width: 190px;
+  --jolly-accent-fill: var(--demo-accent);
+  --jolly-accent-fill-hover: color-mix(in oklab, var(--demo-accent) 88%, white);
+  --jolly-accent-fill-focus: color-mix(in oklab, var(--demo-accent) 76%, white);
+}
+
+#rotation-control {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   padding: 8px;
   border: 0;
   border-radius: 4px;
@@ -102,26 +107,18 @@ body {
   color: var(--demo-text);
   font-size: 12px;
   cursor: pointer;
+  user-select: none;
   transition: background-color 0.15s;
   font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
 }
 
 #rotation-control:hover,
-#rotation-control:has(#rotation-toggle:focus-visible),
-#theme-select:hover,
-#theme-select:focus-visible {
+#rotation-control:has(#rotation-toggle:focus-visible) {
   background-color: color-mix(
     in srgb,
     var(--demo-control-bg),
     var(--demo-accent) 12%
   );
-}
-
-#rotation-control {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  user-select: none;
 }
 
 #rotation-toggle {
@@ -130,58 +127,4 @@ body {
   outline: 0;
   accent-color: var(--demo-accent);
   cursor: pointer;
-}
-
-#theme-select {
-  appearance: none;
-  padding-right: 22px;
-  background-image:
-    linear-gradient(45deg, transparent 50%, var(--demo-text) 50%),
-    linear-gradient(135deg, var(--demo-text) 50%, transparent 50%);
-  background-position:
-    calc(100% - 11px) 50%,
-    calc(100% - 7px) 50%;
-  background-size: 4px 4px, 4px 4px;
-  background-repeat: no-repeat;
-}
-
-.resize-handle.left {
-  position: relative;
-  width: 8px;
-  flex-shrink: 0;
-  background: var(--demo-control-bg);
-  cursor: col-resize;
-  transition: background 0.15s;
-}
-
-.resize-handle.left::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 3px;
-  height: 22px;
-  transform: translate(-50%, -50%);
-  background-image: radial-gradient(circle, var(--demo-dot) 1.1px, transparent 1.3px);
-  background-size: 100% 7px;
-  background-repeat: repeat-y;
-  pointer-events: none;
-}
-
-.resize-handle.left:hover,
-html.handle-dragging.vertical .resize-handle.left {
-  background: var(--demo-accent);
-}
-
-.resize-handle.left:hover::after,
-html.handle-dragging.vertical .resize-handle.left::after {
-  background-image: radial-gradient(circle, #ffffff 1.1px, transparent 1.3px);
-}
-
-html.handle-dragging.vertical {
-  cursor: col-resize;
-}
-
-html.handle-dragging.vertical * {
-  user-select: none;
 }

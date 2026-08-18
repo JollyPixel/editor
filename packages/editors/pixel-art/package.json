@@ -38,7 +38,6 @@
   "license": "MIT",
   "devDependencies": {
     "@jolly-pixel/engine": "4.0.0",
-    "@jolly-pixel/resize-handle": "1.1.0",
     "@jolly-pixel/runtime": "4.0.0",
     "three": "0.185.1"
   },

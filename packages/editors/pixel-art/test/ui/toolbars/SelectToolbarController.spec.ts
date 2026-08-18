@@ -17,7 +17,7 @@ import type {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import { SelectToolbarController } from "../../../src/ui/select/SelectToolbarController.ts";
+import { SelectToolbarController } from "../../../src/ui/toolbars/SelectToolbarController.ts";
 
 class TestHost implements ReactiveControllerHost {
   readonly updateComplete = Promise.resolve(true);

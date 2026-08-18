@@ -6,6 +6,28 @@ export const panelStyles = css`
     display: flex;
     flex-direction: row;
     height: 100%;
+
+    --color-bg-surface: light-dark(#eef3f8, #131b24);
+    --color-bg-overlay: light-dark(rgba(255, 255, 255, 0.92), rgba(24, 34, 48, 0.92));
+    --color-bg-tooltip: light-dark(#dbe7f2, #0d1520);
+    --color-bg-control: light-dark(#20344c, #2a3b52);
+    --color-border: light-dark(#6f8caa, #56708a);
+    --color-divider: light-dark(#c5d7e6, #22303c);
+    --color-text: light-dark(#16232f, #e8eef5);
+    --color-text-muted: light-dark(#465a6e, #90a4b7);
+    --color-text-emphasis: light-dark(#0b1420, #ffffff);
+    --color-text-on-accent: #ffffff;
+    --color-accent: light-dark(#2f6fd8, #3a6fc2);
+    --color-canvas-bg: light-dark(#d7e3ee, #0d151d);
+    --color-swatch-edge: light-dark(transparent, rgba(255, 255, 255, 0.22));
+
+    --jolly-ink: var(--color-text);
+    --jolly-text: var(--color-text);
+    --jolly-surface-raised: var(--color-bg-overlay);
+    --jolly-control-bg: var(--color-bg-surface);
+    --jolly-control-bg-hover: var(--color-divider);
+    --jolly-control-bg-focus: var(--color-border);
+    --jolly-focus-ring: var(--color-accent);
   }
 
   :host(:not([data-ready])) {

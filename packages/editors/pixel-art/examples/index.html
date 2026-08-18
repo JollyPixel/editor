@@ -23,10 +23,14 @@
 </head>
 
 <body>
-  <pixel-draw-panel id="draw-panel" allow-uv-create-delete></pixel-draw-panel>
+  <jolly-dock id="draw-panel-dock" side="left" size="500" min-size="400" max-size="700">
+    <jolly-pane id="draw-panel-pane">
+      <pixel-draw-panel id="draw-panel" allow-uv-create-delete></pixel-draw-panel>
+    </jolly-pane>
+  </jolly-dock>
   <script>
     const initialTheme = document.documentElement.dataset.theme;
-    if (initialTheme) {
+    if (initialTheme && initialTheme !== "auto") {
       document.querySelector("#draw-panel").setAttribute("theme", initialTheme);
     }
   </script>
@@ -37,11 +41,12 @@
         <input id="rotation-toggle" type="checkbox" checked>
         Rotate
       </label>
-      <select id="theme-select" title="Panel theme">
-        <option value="auto" selected>Auto</option>
-        <option value="light">Light</option>
-        <option value="dark">Dark</option>
-      </select>
+      <jolly-scope>
+        <jolly-theme-preferences
+          id="theme-preferences"
+          storage-key="pixel-draw-demo"
+        ></jolly-theme-preferences>
+      </jolly-scope>
     </div>
   </div>
   <script type="module" src="./scripts/main.ts"></script>
