@@ -48,7 +48,7 @@
     "three": "0.185.1"
   },
   "devDependencies": {
-    "@dimforge/rapier3d": "0.19.3",
+    "@dimforge/rapier3d": "0.20.0",
     "@jolly-pixel/runtime": "4.0.0",
     "@jolly-pixel/ui": "1.0.1",
     "simplex-noise": "4.0.3"
