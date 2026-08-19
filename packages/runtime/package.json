@@ -42,6 +42,6 @@
     "three": "^0.185.1"
   },
   "devDependencies": {
-    "electron": "43.3.0"
+    "electron": "43.4.0"
   }
 }
