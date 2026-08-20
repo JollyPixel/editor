@@ -26,6 +26,9 @@
       "path": "./packages/asset"
     },
     {
+      "path": "./packages/asset-server"
+    },
+    {
       "path": "./packages/engine"
     },
     {

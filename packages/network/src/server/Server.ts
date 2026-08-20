@@ -1,15 +1,9 @@
 // Import Third-party Dependencies
-import { match } from "ts-pattern";
-import {
-  Ok,
-  Err,
-  type Result
-} from "@openally/result";
 import * as EventStore from "@jolly-pixel/event-store";
 
 // Import Internal Dependencies
-import { ServerRoom } from "./ServerRoom.ts";
-import { Envelope } from "../Envelope.ts";
+import { Envelope } from "../protocol/Envelope.ts";
+import { errorMessage } from "./errors.ts";
 import {
   createLogger,
   type Logger
@@ -17,78 +11,62 @@ import {
 import {
   RightsTable,
   type RightsMap
-} from "./RightsTable.ts";
+} from "./rights/RightsTable.ts";
 import {
   Extension,
   type WorkerExtensionDescriptor
-} from "./Extension.ts";
-import { WorkerExtensionProxy } from "./worker/WorkerExtensionProxy.ts";
-import type {
-  ClientHandle
-} from "../types.ts";
+} from "./extension/Extension.ts";
+import { WorkerExtensionProxy } from "./extension/worker/WorkerExtensionProxy.ts";
+import { RoomRegistry } from "./room/RoomRegistry.ts";
+import type { RoomResolver } from "./room/RoomResolver.ts";
+import type { Timers } from "./room/timers.ts";
+import { ClientSessions } from "./ClientSessions.ts";
+import {
+  EnvelopeDispatcher,
+  type DispatchOutcome
+} from "./EnvelopeDispatcher.ts";
+import type { ClientHandle } from "../protocol/types.ts";
 
-interface ClientRecord {
-  handle: ClientHandle;
-  rooms: Set<string>;
-}
-
-interface DispatchOutcome {
-  outcome: "joined" | "left" | "handled" | "ignored" | "dropped";
-  reason?: string;
-}
-
-interface DispatchEvent {
+interface EnvelopeFields {
   clientId: string;
-  room: string;
-  kind: string;
-}
-
-interface DispatchContext {
-  clientId: string;
-  envelope: Envelope;
-  event: DispatchEvent;
-  record: ClientRecord;
-}
-
-interface RoomDispatchContext extends DispatchContext {
-  room: ServerRoom;
+  room?: string;
+  kind?: string;
 }
 
 export interface ServerOptions {
   logger?: Logger;
   rights?: RightsMap;
   eventStore?: EventStore.EventStore;
-}
-
-function errorMessage(
-  error: unknown
-): string {
-  return error instanceof Error ? error.message : String(error);
+  /**
+   * Empty resolved-room grace period in milliseconds.
+   * @default 30_000
+   */
+  roomGraceMs?: number;
+  /**
+   * Clock behind room eviction. Injected so a caller can drive the grace
+   * period instead of waiting on it.
+   */
+  timers?: Timers;
 }
 
 /**
- * Transport-agnostic multiplexer sitting between raw connections and
- * registered Extension instances.
+ * Dispatches transport envelopes to rooms in per-client order.
  */
 export class Server {
   readonly logger: Logger;
 
-  #rights: RightsTable;
-  #eventStore: EventStore.EventStore;
-  #rooms = new Map<string, ServerRoom>();
-  #clients = new Map<string, ClientRecord>();
-  #clientQueues = new Map<string, Promise<void>>();
+  #rooms: RoomRegistry;
+  #sessions = new ClientSessions();
+  #dispatcher: EnvelopeDispatcher;
   #workerProxies: WorkerExtensionProxy[] = [];
 
   constructor(
     options: ServerOptions = {}
   ) {
     this.logger = options.logger ?? createLogger();
-    this.#rights = new RightsTable(
-      options.rights
-    );
-    this.#eventStore = options.eventStore ?? EventStore.persistence.memory();
-    this.#eventStore.writer.on("append", (event) => this.logger
+
+    const eventStore = options.eventStore ?? EventStore.persistence.memory();
+    eventStore.writer.on("append", (event) => this.logger
       .withMetadata({
         assetType: event.assetType,
         assetId: event.assetId,
@@ -96,7 +74,7 @@ export class Server {
         eventVersion: event.eventVersion
       })
       .debug("append event"));
-    this.#eventStore.writer.on("error", (error, input) => this.logger
+    eventStore.writer.on("error", (error, input) => this.logger
       .withMetadata({
         assetType: input.assetType,
         assetId: input.assetId,
@@ -105,6 +83,18 @@ export class Server {
         outcome: "failed"
       })
       .error("append event"));
+
+    this.#rooms = new RoomRegistry({
+      logger: this.logger,
+      rights: new RightsTable(options.rights),
+      eventStore,
+      graceMs: options.roomGraceMs,
+      timers: options.timers
+    });
+    this.#dispatcher = new EnvelopeDispatcher({
+      rooms: this.#rooms,
+      sessions: this.#sessions
+    });
   }
 
   register(
@@ -118,22 +108,33 @@ export class Server {
       this.#workerProxies.push(resolvedExtension);
     }
 
-    const room = new ServerRoom(
-      resolvedExtension,
-      this.#rights,
-      {
-        logger: this.logger,
-        eventStore: this.#eventStore
-      }
-    );
+    this.#rooms.register(resolvedExtension);
+  }
 
-    this.#rooms.set(resolvedExtension.id, room);
-    this.logger
-      .withMetadata({ room: resolvedExtension.id })
-      .info("room registered");
+  /**
+   * Sets the resolver for rooms not registered in advance.
+   */
+  setRoomResolver(
+    resolver: RoomResolver | null
+  ): void {
+    this.#rooms.setResolver(resolver);
+  }
+
+  /**
+   * Resolves once in-flight room evictions have finished, for one room or
+   * all of them. Callers that need an evicted room's state flushed await
+   * this after the grace period elapses.
+   */
+  settled(
+    roomName?: string
+  ): Promise<void> {
+    return this.#rooms.settled(roomName);
   }
 
   async close(): Promise<void> {
+    this.#sessions.clear();
+    await this.#rooms.close();
+
     await Promise.allSettled(
       this.#workerProxies.map((proxy) => proxy.close())
     );
@@ -146,10 +147,7 @@ export class Server {
   handleConnect(
     client: ClientHandle
   ): void {
-    this.#clients.set(client.id, {
-      handle: client,
-      rooms: new Set()
-    });
+    this.#sessions.open(client);
     this.logger
       .withMetadata({ clientId: client.id })
       .debug("client connected");
@@ -158,7 +156,7 @@ export class Server {
   handleDisconnect(
     clientId: string
   ): Promise<void> {
-    return this.#enqueueForClient(
+    return this.#sessions.enqueue(
       clientId,
       () => this.#processDisconnect(clientId)
     );
@@ -168,54 +166,34 @@ export class Server {
     clientId: string,
     raw: unknown
   ): Promise<void> {
-    return this.#enqueueForClient(
+    return this.#sessions.enqueue(
       clientId,
       () => this.#processMessage(clientId, raw)
     );
   }
 
-  /**
-   * Chains dispatch for a given clientId onto its previous one, so message N+1
-   * never starts until message N (including any worker round-trip) has settled.
-   */
-  #enqueueForClient(
-    clientId: string,
-    task: () => Promise<void>
-  ): Promise<void> {
-    const previous = this.#clientQueues.get(
-      clientId
-    ) ?? Promise.resolve();
-    const next = previous.then(task, task);
-
-    this.#clientQueues.set(
-      clientId,
-      next.catch(() => void 0)
-    );
-
-    return next;
-  }
-
   async #processDisconnect(
     clientId: string
   ): Promise<void> {
-    const record = this.#clients.get(clientId);
-    const rooms = record ? [...record.rooms] : [];
-    for (const roomName of rooms) {
+    const session = this.#sessions.get(clientId);
+    const rooms = session ? [...session.rooms] : [];
+
+    for (const name of rooms) {
       try {
-        await this.#rooms.get(roomName)?.leave(clientId);
+        await this.#rooms.leave(name, clientId);
       }
       catch (error) {
         this.logger
           .withMetadata({
             clientId,
-            room: roomName,
+            room: name,
             reason: errorMessage(error)
           })
           .error("disconnect handling failed");
       }
     }
 
-    this.#clients.delete(clientId);
+    this.#sessions.close(clientId);
     this.logger
       .withMetadata({ clientId, rooms })
       .debug("client disconnected");
@@ -225,194 +203,47 @@ export class Server {
     clientId: string,
     raw: unknown
   ): Promise<void> {
-    const result = Envelope.parse(raw)
-      .orTee((error) => this.logger
-        .withMetadata({
-          clientId,
-          outcome: "dropped",
-          reason: "malformed envelope",
-          error
-        })
-        .warn("envelope handled"))
-      .andThen((envelope) => this.#resolveClient(clientId, envelope))
-      .andThen((context) => this.#resolveRoom(context));
+    const parsed = Envelope.parse(raw);
+    if (!parsed.ok) {
+      this.#logEnvelope({ clientId }, {
+        outcome: "dropped",
+        reason: `malformed envelope: ${parsed.val}`
+      });
 
-    if (!result.ok) {
       return;
     }
 
-    try {
-      await this.#dispatchEnvelope(result.val);
-    }
-    catch (error) {
-      this.logger
-        .withMetadata({
-          clientId,
+    const envelope = parsed.val;
+    const outcome = await this.#dispatcher.dispatch(clientId, envelope)
+      .catch((error): DispatchOutcome => {
+        return {
           outcome: "dropped",
           reason: errorMessage(error)
-        })
-        .error("envelope handled");
-    }
-  }
+        };
+      });
 
-  #resolveClient(
-    clientId: string,
-    envelope: Envelope
-  ): Result<DispatchContext, void> {
-    const event: DispatchEvent = {
+    this.#logEnvelope({
       clientId,
       room: envelope.room,
       kind: envelope.kind
-    };
-    const record = this.#clients.get(clientId);
-    const result: Result<DispatchContext, void> = record ?
-      Ok({ clientId, envelope, event, record }) :
-      Err(undefined);
-
-    return result.orTee(() => this.logger
-      .withMetadata({
-        ...event,
-        outcome: "dropped",
-        reason: "unknown client"
-      })
-      .warn("envelope handled"));
+    }, outcome);
   }
 
-  #resolveRoom(
-    context: DispatchContext
-  ): Result<RoomDispatchContext, void> {
-    const room = this.#rooms.get(context.event.room);
-    const result: Result<RoomDispatchContext, void> = room ?
-      Ok({ ...context, room }) :
-      Err(undefined);
-
-    return result.orTee(() => this.logger
-      .withMetadata({
-        ...context.event,
-        outcome: "dropped",
-        reason: "unregistered room"
-      })
-      .warn("envelope handled"));
-  }
-
-  async #dispatchEnvelope(
-    context: RoomDispatchContext
-  ): Promise<void> {
-    const { clientId, envelope, event, record, room } = context;
-
-    const outcome = await match(envelope)
-      .with({ kind: "join" }, (envelope) => this.#handleJoin(record, room, envelope))
-      .with({ kind: "leave" }, (envelope) => this.#handleLeave(record, room, envelope))
-      .with({ kind: "message" }, (envelope) => this.#handleMessage(clientId, room, envelope))
-      .with({ kind: "presence" }, (envelope) => this.#handlePresence(clientId, room, envelope))
-      .otherwise(() => {
-        return { outcome: "ignored" as const };
-      });
-
+  #logEnvelope(
+    fields: EnvelopeFields,
+    outcome: DispatchOutcome
+  ): void {
     const wideEvent = this.logger.withMetadata({
-      ...event,
+      ...fields,
       ...outcome
     });
+
     if (outcome.outcome === "dropped") {
       wideEvent.warn("envelope handled");
-    }
-    else {
-      wideEvent.debug("envelope handled");
-    }
-  }
 
-  async #handleJoin(
-    record: ClientRecord,
-    room: ServerRoom,
-    envelope: Extract<Envelope, { kind: "join"; }>
-  ): Promise<DispatchOutcome> {
-    if (record.rooms.has(envelope.room)) {
-      return {
-        outcome: "ignored",
-        reason: "already joined"
-      };
+      return;
     }
 
-    const admitted = await room.join(
-      record.handle.id,
-      record.handle,
-      envelope.identity ?? Object.create(null)
-    );
-    if (!admitted) {
-      return {
-        outcome: "dropped",
-        reason: "join denied"
-      };
-    }
-
-    record.rooms.add(envelope.room);
-
-    return { outcome: "joined" };
-  }
-
-  async #handleLeave(
-    record: ClientRecord,
-    room: ServerRoom,
-    envelope: Extract<Envelope, { kind: "leave"; }>
-  ): Promise<DispatchOutcome> {
-    if (!record.rooms.delete(envelope.room)) {
-      return {
-        outcome: "ignored",
-        reason: "not a member"
-      };
-    }
-
-    await room.leave(record.handle.id);
-
-    return { outcome: "left" };
-  }
-
-  async #handleMessage(
-    clientId: string,
-    room: ServerRoom,
-    envelope: Extract<Envelope, { kind: "message"; }>
-  ): Promise<DispatchOutcome> {
-    if (!this.#hasJoined(clientId, envelope.room)) {
-      return {
-        outcome: "dropped",
-        reason: "client has not joined room"
-      };
-    }
-
-    await room.message(
-      clientId,
-      envelope.payload
-    );
-
-    return { outcome: "handled" };
-  }
-
-  #handlePresence(
-    clientId: string,
-    room: ServerRoom,
-    envelope: Extract<Envelope, { kind: "presence"; }>
-  ): DispatchOutcome {
-    if (!this.#hasJoined(clientId, envelope.room)) {
-      return {
-        outcome: "dropped",
-        reason: "client has not joined room"
-      };
-    }
-
-    room.updatePresence(
-      clientId,
-      envelope.patch ?? Object.create(null)
-    );
-
-    return { outcome: "handled" };
-  }
-
-  #hasJoined(
-    clientId: string,
-    room: string
-  ): boolean {
-    return this.#clients.get(clientId)?.rooms.has(
-      room
-    ) ?? false;
+    wideEvent.debug("envelope handled");
   }
 }

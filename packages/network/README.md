@@ -3,7 +3,7 @@
 </h1>
 
 <p align="center">
-  The shared wire for JollyPixel's multiplayer editors
+  Networking primitives for JollyPixel's collaborative editors
 </p>
 
 ## 💃 Getting Started
@@ -12,13 +12,11 @@ This package is available in the Node Package Repository and can be easily insta
 
 ```bash
 $ npm i @jolly-pixel/network
-# or
-$ yarn add @jolly-pixel/network
 ```
 
 ## 👀 Usage example
 
-Using vite
+### Vite server
 
 ```ts
 import * as network from "@jolly-pixel/network";
@@ -26,33 +24,23 @@ import {
   createWebSocketNetworkPlugin
 } from "@jolly-pixel/network/plugins/vite.ts";
 
-class EchoExtension extends network.Extension {
-  readonly id = "echo";
-  readonly name = "echo";
-
-  onClientConnect(client: network.ClientHandle) {}
-  onClientDisconnect(clientId: string) {}
-  onMessage(clientId: string, payload: unknown, context: network.RoomContext) {
-    // payload is whatever the client's room.send() sent, envelope-free
-    context.room.broadcast(payload);
-  }
-}
-
 export default {
   plugins: [
     createWebSocketNetworkPlugin({
       extensions: [
-        new EchoExtension()
+        new network.PresenceOnlyExtension("echo", "echo", {
+          broadcast: true
+        })
       ]
     })
   ]
 };
 ```
 
-Browser:
+### Browser client
 
 ```ts
-import * as network from "@jolly-pixel/network";
+import * as network from "@jolly-pixel/network/client";
 
 const client = new network.Client();
 const room = client.room("echo");
@@ -70,7 +58,7 @@ room.send({ hello: "world" });
 - [Server](./docs/Server.md): room multiplexer
 - [Extension](./docs/Extension.md): room-side base class, including worker-mode extensions
 - [Rights](./docs/Rights.md): role-based access control
-- [Transports](./docs/Transports.md): vite plugin and websocket wiring
+- [Transports](./docs/Transports.md): Vite plugin and websocket wiring
 - [SyncAdapter](./docs/sync/SyncAdapter.md): client-side sync sessions
 - [Conflicts](./docs/sync/Conflicts.md): server-side conflict resolution
 
@@ -78,7 +66,7 @@ room.send({ hello: "world" });
 
 ## ✨ Contributors guide
 
-If you are a developer **looking to contribute** to the project, you must first read the [CONTRIBUTING][contributing] guide.
+Read the [contributing guide][contributing] before submitting a change.
 
 Once you have finished your development, check that the tests (and linter) are still good by running the following script:
 

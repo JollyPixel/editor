@@ -1,0 +1,65 @@
+{
+  "name": "@jolly-pixel/asset-server",
+  "description": "Back-end asset orchestration: event-sourced projection, reconciliation and catalog delivery",
+  "version": "1.0.0",
+  "type": "module",
+  "imports": {
+    "#src/*": "./src/*"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./sync": {
+      "types": "./dist/sync/index.d.ts",
+      "default": "./dist/sync/index.js"
+    },
+    "./catalog": {
+      "types": "./dist/catalog/index.d.ts",
+      "default": "./dist/catalog/index.js"
+    },
+    "./rooms": {
+      "types": "./dist/rooms/index.d.ts",
+      "default": "./dist/rooms/index.js"
+    },
+    "./plugins/*.ts": "./dist/plugins/*.js"
+  },
+  "scripts": {
+    "prepublish": "rimraf ./dist && tsc -b",
+    "build": "tsc",
+    "test-only": "node --test \"test/**/*.spec.ts\"",
+    "test": "c8 -r html npm run test-only"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JollyPixel/editor.git",
+    "directory": "packages/asset-server"
+  },
+  "keywords": [],
+  "files": [
+    "dist",
+    "docs"
+  ],
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  },
+  "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@jolly-pixel/asset": "1.0.0",
+    "@jolly-pixel/event-store": "2.0.0",
+    "@jolly-pixel/network": "1.1.0",
+    "@openally/emitt": "1.0.1",
+    "@openally/result": "3.1.0",
+    "chokidar": "^5.0.0",
+    "loglayer": "9.4.0",
+    "picomatch": "^4.0.3"
+  }
+}

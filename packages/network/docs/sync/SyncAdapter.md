@@ -1,6 +1,6 @@
 # SyncAdapter
 
-Base class for client-side sync of one local target over one room. It owns command stamping, echo-guarding, snapshot handling and ready state; implementations only say how to read/write the target's mutation hook and how to apply incoming data.
+Base class for synchronizing one local target over a room, including command stamping, echo guards, snapshots and ready state. Subclasses provide the target's mutation hook and apply incoming data.
 
 ```ts
 abstract class SyncAdapter<
@@ -31,12 +31,23 @@ Implement the four abstract hooks; everything else is inherited.
 
 ```ts
 class PixelSyncClient extends SyncAdapter<
-  PixelArtCanvas, PixelBufferHookEvent, PixelNetworkCommand, PixelBufferSnapshot
+  PixelArtCanvas,
+  PixelBufferHookEvent,
+  PixelNetworkCommand,
+  PixelBufferSnapshot
 > {
-  protected getHandler(canvas) { return canvas.onBufferUpdated; }
-  protected setHandler(canvas, fn) { canvas.onBufferUpdated = fn; }
-  protected applySnapshot(canvas, snapshot) { canvas.loadSnapshot(/* ... */); }
-  protected applyRemoteCommand(canvas, cmd) { canvas.applyRemoteCommand(cmd); }
+  protected getHandler(canvas) {
+    return canvas.onBufferUpdated;
+  }
+  protected setHandler(canvas, fn) {
+    canvas.onBufferUpdated = fn;
+  }
+  protected applySnapshot(canvas, snapshot) {
+    canvas.loadSnapshot(/* ... */);
+  }
+  protected applyRemoteCommand(canvas, cmd) {
+    canvas.applyRemoteCommand(cmd);
+  }
 }
 ```
 

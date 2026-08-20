@@ -12,8 +12,6 @@ This package is available in the Node Package Repository and can be easily insta
 
 ```bash
 $ npm i @jolly-pixel/event-store
-# or
-$ yarn add @jolly-pixel/event-store
 ```
 
 ## 👀 Usage example
@@ -27,7 +25,8 @@ const result = store.writer.append({
   assetType: "texture",
   assetId: "asset-1",
   eventType: "pixel-set",
-  eventData: { x: 1, y: 2, color: "#ffffff" }
+  eventData: { x: 1, y: 2, color: "#ffffff" },
+  actor: { type: "user", id: "alice" }
 }).unwrap();
 console.log(result);
 
@@ -37,21 +36,11 @@ console.log(events);
 
 ## 📚 API
 
-```ts
-export interface Event {
-  eventId: number;
-  assetType: string;
-  assetId: string;
-  eventType: string;
-  eventData: unknown;
-  eventVersion: number;
-  createdAt: string;
-}
-```
+All backends expose the same [`EventStore`](./docs/EventStore.md) API.
 
 ### 📦 Persistence
 
-CQRS split: each backend factory returns a `writer` and a `reader` sharing the same underlying storage, plus lifecycle `close()`.
+Each factory returns a `writer` and a `reader` sharing the same storage, plus lifecycle `close()`.
 
 ```ts
 import * as EventStore from "@jolly-pixel/event-store";
@@ -60,77 +49,32 @@ EventStore.persistence.memory();
 await EventStore.persistence.sqlite();
 ```
 
-- [`Memory`](./docs/Memory.md)
-- [`Sqlite`](./docs/Sqlite.md)
+- [`EventStore`](./docs/EventStore.md): shared writer, reader, events and lifecycle
+- [`Memory`](./docs/Memory.md): in-process storage
+- [`Sqlite`](./docs/Sqlite.md): durable Node.js storage
 
 > [!NOTE]
-> `sqlite` is async, `memory` is not. See [Browser compatibility](#-browser-compatibility).
-
-Every factory returns the same `EventStore` shape
-
-```ts
-export interface AppendInput {
-  assetType: string;
-  assetId: string;
-  eventType: string;
-  eventData: unknown;
-}
-
-export interface EventWriter {
-  append(
-    input: AppendInput
-  ): Result<Event, Error>;
-}
-
-export interface EventReader {
-  list(
-    assetId: string,
-    fromVersion?: number
-  ): Event[];
-}
-
-export interface EventStore {
-  readonly writer: EventWriter & TypedEventEmitter<EventStoreEventMap>;
-  readonly reader: EventReader;
-  close(): void;
-  [Symbol.dispose](): void;
-}
-```
+> `sqlite` is async, `memory` is synchronous. See [Browser compatibility](#-browser-compatibility).
 
 ### 🌐 Browser compatibility
 
-The package entrypoint is safe to import from browser code: its eagerly-evaluated module graph contains no `node:` builtin. The SQLite backend is reachable but never loaded up front —
-
-- `persistence.sqlite` is a lazy loader that `import()`s the backend on first call, which is why it is async while `persistence.memory` stays synchronous.
-- The backend itself resolves `node:sqlite` through a dynamic `import()`, and its schema is an inlined string rather than a `node:fs` read.
-- `SqliteEventWriter` / `SqliteEventReader` are exported from the root as **types only**. Import them as values from `@jolly-pixel/event-store/sqlite` (Node-only).
-
-`test/browser-compat.spec.ts` enforces this by walking the eager module graph, so a stray static import fails the suite.
+The package entrypoint is safe to import from browser code. `persistence.sqlite`
+loads its Node-only backend when called. Server code may also import it through
+`@jolly-pixel/event-store/sqlite`. See [`Sqlite`](./docs/Sqlite.md).
 
 ### 📡 Events
 
-`writer` implements an `EventEmitter` exposing the following events
-
-```ts
-export type EventStoreEventMap = {
-  append: (
-    event: Event
-  ) => void;
-  error: (
-    error: Error,
-    input: AppendInput
-  ) => void;
-};
-```
+`writer` emits `append` after a successful append and `error` after a failed one.
+See [`EventStore`](./docs/EventStore.md#events).
 
 ## ✨ Contributors guide
 
 If you are a developer **looking to contribute** to the project, you must first read the [CONTRIBUTING][contributing] guide.
 
-Once you have finished your development, check that the tests (and linter) are still good by running the following script:
+Run these commands from the monorepo root:
 
 ```bash
-$ npm run test
+$ npm run test -w @jolly-pixel/event-store
 $ npm run lint
 ```
 

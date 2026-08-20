@@ -4,166 +4,85 @@ import {
   test
 } from "node:test";
 import assert from "node:assert/strict";
+import { DatabaseSync } from "node:sqlite";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 // Import Internal Dependencies
 import * as EventStore from "#src/index.ts";
+import {
+  createSqliteEventStore,
+  SQL_SCHEMA
+} from "#src/persistence/sqlite/index.ts";
+import { append } from "../helpers/backends.ts";
 
-type SqliteEventStore = Awaited<
-  ReturnType<typeof EventStore.persistence.sqlite>
->;
-
-function append(
-  store: SqliteEventStore,
-  assetId: string,
-  eventData: unknown = {}
-): EventStore.Event {
-  return store.writer.append({
-    assetType: "texture",
-    assetId,
-    eventType: "pixel-set",
-    eventData
-  }).unwrap();
-}
-
-describe("SqliteEventStore — append", () => {
-  test("assigns a monotonically increasing version per asset", async() => {
-    const store = await EventStore.persistence.sqlite();
-
-    const first = append(store, "a1", { x: 1 });
-    const second = append(store, "a1", { x: 2 });
-
-    assert.strictEqual(first.eventVersion, 1);
-    assert.strictEqual(second.eventVersion, 2);
-    store.close();
-  });
-
-  test("tracks versions independently per asset", async() => {
-    const store = await EventStore.persistence.sqlite();
-
-    append(store, "a1");
-    const event = append(store, "a2");
-
-    assert.strictEqual(event.eventVersion, 1);
-    store.close();
-  });
-
-  test("round-trips event data through JSON", async() => {
-    const store = await EventStore.persistence.sqlite();
-
-    const event = append(store, "a1", { nested: { value: 1 } });
-
-    assert.deepEqual(event.eventData, { nested: { value: 1 } });
-    store.close();
-  });
-});
-
-describe("SqliteEventStore — list", () => {
-  test("returns events for the asset in version order", async() => {
-    const store = await EventStore.persistence.sqlite();
-    append(store, "a1", { x: 1 });
-    append(store, "a1", { x: 2 });
-    append(store, "a2", { x: 3 });
-
-    const events = store.reader.list("a1");
-
-    assert.deepEqual(events.map((event) => event.eventVersion), [1, 2]);
-    store.close();
-  });
-
-  test("fromVersion excludes events at or before it", async() => {
-    const store = await EventStore.persistence.sqlite();
-    append(store, "a1", { x: 1 });
-    append(store, "a1", { x: 2 });
-    append(store, "a1", { x: 3 });
-
-    const events = store.reader.list("a1", 1);
-
-    assert.deepEqual(events.map((event) => event.eventVersion), [2, 3]);
-    store.close();
-  });
-
-  test("returns an empty array for an unknown asset", async() => {
-    const store = await EventStore.persistence.sqlite();
-
-    assert.deepEqual(store.reader.list("missing"), []);
-    store.close();
-  });
-});
-
+/**
+ * Everything the shared conformance suite cannot express, because it only
+ * holds for the persistent backend.
+ */
 describe("SqliteEventStore — durability", () => {
   test("data survives across instances backed by the same file", async(t) => {
-    const path = await import("node:path");
-    const os = await import("node:os");
-    const fs = await import("node:fs");
-    const file = path.join(os.tmpdir(), `network-event-store-${process.pid}-${Date.now()}.sqlite`);
+    const file = path.join(
+      os.tmpdir(),
+      `event-store-${process.pid}-${Date.now()}.sqlite`
+    );
     t.after(() => fs.rmSync(file, { force: true }));
 
-    const first = await EventStore.persistence.sqlite(file);
+    using first = await EventStore.persistence.sqlite(file);
     append(first, "a1", { x: 1 });
     first.close();
 
-    const second = await EventStore.persistence.sqlite(file);
-    const events = second.reader.list("a1");
-    second.close();
+    using second = await EventStore.persistence.sqlite(file);
 
-    assert.deepEqual(events.map((event) => event.eventData), [{ x: 1 }]);
+    assert.deepEqual(
+      second.reader.list("a1").map((event) => event.eventData),
+      [{ x: 1 }]
+    );
   });
 });
 
-describe("SqliteEventStore — dispose", () => {
-  test("using calls close() on scope exit", async() => {
-    let closed = false;
+describe("SqliteEventStore — version invariant", () => {
+  test("the schema rejects a duplicate version for one asset", () => {
+    using db = new DatabaseSync(":memory:");
+    db.exec(SQL_SCHEMA);
+    const insert = db.prepare(
+      `INSERT INTO events (asset_type, asset_id, event_type, event_data,
+        event_version, actor, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    );
+    insert.run("texture", "a1", "pixel-set", "{}", 1, "{}", "now");
 
-    {
-      using store = await EventStore.persistence.sqlite();
-      store.close = () => {
-        closed = true;
-      };
-    }
-
-    assert.strictEqual(closed, true);
+    assert.throws(
+      () => insert.run("texture", "a1", "pixel-set", "{}", 1, "{}", "now"),
+      /UNIQUE constraint failed/
+    );
   });
 
-  test("closed instance rejects further operations", async() => {
-    const store = await EventStore.persistence.sqlite();
-    store[Symbol.dispose]();
+  test("two connections on one file keep versions unique", async(t) => {
+    const file = path.join(
+      os.tmpdir(),
+      `event-store-race-${process.pid}-${Date.now()}.sqlite`
+    );
+    t.after(() => fs.rmSync(file, { force: true }));
 
-    assert.throws(() => append(store, "a1"));
-  });
-});
+    using first = await EventStore.persistence.sqlite(file);
+    using second = await EventStore.persistence.sqlite(file);
 
-describe("SqliteEventStore — events", () => {
-  test("emits 'append' with the stored event on success", async() => {
-    const store = await EventStore.persistence.sqlite();
-    const received: EventStore.Event[] = [];
-    store.writer.on("append", (event) => received.push(event));
+    append(first, "a1", { writer: "first" });
+    append(second, "a1", { writer: "second" });
 
-    const event = append(store, "a1", { x: 1 });
-    store.close();
-
-    assert.deepEqual(received, [event]);
-  });
-
-  test("emits 'error' with the failure and the input when append throws", async() => {
-    const store = await EventStore.persistence.sqlite();
-    const received: { error: Error; input: unknown; }[] = [];
-    store.writer.on("error", (error, input) => received.push({ error, input }));
-
-    const input = { assetType: "texture", assetId: "a1", eventType: "pixel-set", eventData: 1n };
-    const result = store.writer.append(input);
-    store.close();
-
-    assert.strictEqual(result.ok, false);
-    assert.strictEqual(received.length, 1);
-    assert.deepEqual(received[0].input, input);
+    assert.deepEqual(
+      first.reader.list("a1").map((event) => event.eventVersion),
+      [1, 2]
+    );
   });
 });
 
 describe("SqliteEventStore — subpath entrypoint", () => {
   test("exposes the same factory as persistence.sqlite", async() => {
-    const { createSqliteEventStore } = await import("#src/persistence/sqlite/index.ts");
-
     using store = await createSqliteEventStore();
+
     const event = append(store, "a1", { x: 1 });
 
     assert.strictEqual(event.eventVersion, 1);

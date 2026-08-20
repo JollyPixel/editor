@@ -32,6 +32,7 @@ We provide agnostic renderers and engines (often used by our editors below):
 
 - [@jolly-pixel/event-store](./packages/event-store) - Append-only log (Event Sourcing pattern)
 - [@jolly-pixel/network](./packages/network) - Shared wire for multiplayer editors
+- [@jolly-pixel/asset-server](./packages/asset-server) - Back-end asset orchestration: event-sourced projection, reconciliation and catalog delivery
 
 ### UI
 

@@ -1,8 +1,8 @@
 // Import Internal Dependencies
 import type { EventStore } from "../../EventStore.ts";
+import { createEventStore } from "../createEventStore.ts";
 import { SQL_SCHEMA } from "./schema.ts";
-import { SqliteEventWriter } from "./writer.ts";
-import { SqliteEventReader } from "./reader.ts";
+import { SqliteEventLog } from "./log.ts";
 
 export async function createSqliteEventStore(
   location: string = ":memory:"
@@ -12,18 +12,10 @@ export async function createSqliteEventStore(
   const db = new DatabaseSync(location);
   db.exec(SQL_SCHEMA);
 
-  const store: EventStore = {
-    writer: new SqliteEventWriter(db),
-    reader: new SqliteEventReader(db),
-    close: () => db.close(),
-    [Symbol.dispose]() {
-      this.close();
-    }
-  };
-
-  return store;
+  return createEventStore(
+    new SqliteEventLog(db)
+  );
 }
 
 export { SQL_SCHEMA } from "./schema.ts";
-export { SqliteEventWriter } from "./writer.ts";
-export { SqliteEventReader } from "./reader.ts";
+export { SqliteEventLog } from "./log.ts";

@@ -30,28 +30,26 @@ interface RoomBroadcast {
 }
 ```
 
-`RoomEventStoreHandle.append`/`.list` return Promises. For an in-process extension this resolves on the same tick in practice (no real thread crossing); a worker-mode extension's calls genuinely round-trip to the main thread. The three lifecycle methods may return `void` or `Promise<void>` — return a Promise if the handler does anything async (including a worker-mode extension, where it always does).
+`RoomEventStoreHandle.append()` and `.list()` return Promises. Return a Promise from a lifecycle method when its work is asynchronous.
 
-`RoomBroadcast` is stable for the room's whole lifetime — safe to stash and call later, e.g. from a timer, not just from inside a dispatch. `sendTo` addresses one member by clientId; it's how a worker-hosted extension reaches a client it cached from an earlier `onClientConnect`, since it can't hold onto the literal `ClientHandle` across the thread boundary.
+`RoomBroadcast` is stable for the room's lifetime, so an extension can keep it for later use. `sendTo` addresses one member by `clientId`.
 
 - `id` — the room name this instance is registered under, typically unique per instance (`"voxel-map:world-1"`).
 - `name` — the extension *type*, shared by every instance of the class. Rights keys are built from it, so one rule covers every room the class backs.
-- `events` — declarative catalog of the domain event names this extension accepts. Defaults to `[]`, and is read by whoever writes the rights table.
-
-An extension declares *what* events exist for its room, never *who* may use them.
+- `events` — domain event names accepted by this extension. Defaults to `[]`; use these names when defining rights.
 
 ## Callbacks
 
 - `onClientConnect` — the client is already admitted. Its `client.send()` is pre-scoped to this room.
 - `onClientDisconnect` — explicit `leave()` or socket drop. Never gated; a member can always leave.
 - `onMessage` — a room-scoped message that already passed its write check. A rejected write never reaches here.
-- `getEventName(payload)` — extracts the event name used for rights lookups (e.g. `return payload.action`). Only called when the server was built with a rights table; the base implementation throws, so a misconfiguration fails loudly instead of granting the wrong thing. Always runs on the main thread, even for a worker-mode extension (see below) — rights-gating has to reject a message before paying a worker round-trip, not after.
+- `getEventName(payload)` — returns the event name used for rights lookups (e.g. `return payload.action`). It is called only when the server has a rights table. The base implementation throws.
 
-`context` is built per triggering client, but `context.room` is a stable shared broadcaster — safe to stash and call later. Its `broadcast()` fan-out is itself filtered by the rights table when one is configured.
+`context` is built for the triggering client. The rights table filters recipients of `context.room.broadcast()` when rights are configured.
 
-## Worker Extensions
+## Worker extensions
 
-Register a `WorkerExtensionDescriptor` instead of an `Extension` instance to move CPU-bound handlers off the main event loop, into a dedicated `worker_threads.Worker`. `Server`/`ServerRoom` only ever see an `Extension` — worker-ness is a registration-time decision, not something the class itself needs to know about, so write it exactly like an in-process extension.
+Register a `WorkerExtensionDescriptor` to run CPU-bound handlers in a dedicated `worker_threads.Worker`. Write the extension itself the same way as an in-process extension.
 
 ```ts
 interface WorkerExtensionDescriptor {
@@ -74,26 +72,49 @@ server.register({
 });
 ```
 
-- `id` / `name` / `getEventName` — same meaning as the matching `Extension` member. Supplied directly because `Server` needs them synchronously, before the worker has even loaded — `getEventName` in particular must run on the main thread for rights-gating. Omit it if the server has no rights table.
+- `id` / `name` / `getEventName` — same meaning as the matching `Extension` members. Provide `getEventName` when the server has a rights table.
 - `modulePath` / `exportName` — dynamically `import()`ed, then constructed as `module[exportName ?? "default"](workerData)`.
-- `workerData` — the constructor's argument; must be structured-cloneable (no functions, no live objects), since it crosses `postMessage`.
-- `rpcTimeoutMs` (default `10_000`) — bounds every cross-thread call: a dispatch into the worker, and the worker's own calls back into `RoomContext`.
-- `maxRestarts` / `restartWindowMs` (default `5` / `60_000`) — a crash or RPC timeout logs the failure and respawns the worker. Past this many restarts inside the window, the extension is marked dead: further messages are logged and dropped rather than retried indefinitely.
+- `workerData` — the constructor's argument; must be structured-cloneable (no functions or live objects).
+- `rpcTimeoutMs` (default `10_000`) — timeout for calls to the worker and calls from the worker into `RoomContext`.
+- `maxRestarts` / `restartWindowMs` (default `5` / `60_000`) — restart limit after crashes or RPC timeouts. Once reached, further messages are logged and dropped.
 
-One persistent worker per registration, not a pool: calls to it are effectively serialized, so a slow handler delays only the *next* call to that same extension, never the main thread or any other room. Per-client ordering (see [Server](./Server.md)) still applies on top of that.
+Each registration owns one worker and processes its calls sequentially. A slow handler delays later calls to that extension, but does not block the main thread or other rooms. Per-client ordering still applies; see [Server](./Server.md).
 
 Call `server.close()` before the process exits if any worker-mode extension was registered.
 
 ## Presence-only rooms
 
-`ServerRoom` requires an `Extension` even when a room only needs the base join/presence protocol and never sends a `"message"` envelope. `PresenceOnlyExtension` covers that case without a custom subclass:
+Use `PresenceOnlyExtension` when a room needs only join and presence events:
 
 ```ts
 server.register(new PresenceOnlyExtension("voxel-map:world-1"));
 ```
 
-Its `name` defaults to the shared constant `"presence-only"` rather than `id`, so one rights rule (e.g. `"presence-only.$join"`) covers every presence-only room at once. Pass a second argument to opt a room into its own rights namespace instead:
+Its `name` defaults to the shared constant `"presence-only"`, so one rights rule (e.g. `"presence-only.$join"`) covers every presence-only room. Pass a second argument to give the room its own rights namespace:
 
 ```ts
 new PresenceOnlyExtension("voxel-map:world-1", "voxel-map:world-1");
 ```
+
+## Disposal
+
+```ts
+dispose?(): void | Promise<void>;
+```
+
+Optional. Called when the room is disposed — on `Server.close()`, or when a
+dynamically resolved room's grace period expires (see
+[Dynamic rooms](./Server.md#dynamic-rooms)). Release timers, subscriptions
+and cached handles here.
+
+## Actors
+
+`RoomEventStoreHandle.append` takes an `AppendInput` **without** `actor`:
+
+```ts
+type RoomAppendInput = Omit<EventStore.AppendInput, "actor">;
+```
+
+The server fills in `actor` from the member's identity. It uses `userId` when
+present and otherwise falls back to the transport client ID. Extensions cannot
+set or omit the actor.

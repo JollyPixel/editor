@@ -18,7 +18,7 @@ import type { Server } from "../server/Server.ts";
 import type { Logger } from "../server/logger.ts";
 import type {
   ClientHandle
-} from "../types.ts";
+} from "../protocol/types.ts";
 
 export interface WebsocketTransportOptions {
   /**
@@ -29,9 +29,6 @@ export interface WebsocketTransportOptions {
   server: Server;
 }
 
-/**
- * Thin ws transport that forwards connect/disconnect/message events to Server.
- */
 export class WebsocketTransport {
   #server: Server;
   #logger: Logger;
@@ -50,7 +47,7 @@ export class WebsocketTransport {
     this.#logger = server.logger;
     this.#path = path;
 
-    // Use `noServer: true` so the shared dev server can filter upgrades manually.
+    // Manual upgrade filtering requires `noServer` mode.
     this.#wss = new WebSocketServer({
       noServer: true
     });
@@ -79,7 +76,7 @@ export class WebsocketTransport {
     });
   };
 
-  // Close clients on shutdown so the shared port is released before restart.
+  // Terminate clients before restart releases the shared port.
   #onHttpServerClose(
     httpServer: HttpServer | Http2SecureServer
   ): void {

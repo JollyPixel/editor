@@ -13,12 +13,65 @@ interface ServerOptions {
    */
   rights?: RightsMap;
   eventStore?: EventStore.EventStore;
+  /**
+   * Empty resolved-room grace period in milliseconds.
+   * @default 30_000
+   */
+  roomGraceMs?: number;
+  /**
+   * Clock behind room eviction. Injected so a caller can drive the grace
+   * period instead of waiting on it.
+   */
+  timers?: Timers;
 }
 ```
 
-- `register(extension)` — activates a room, keyed by `extension.id`. Accepts either an `Extension` instance (runs in-process) or a `WorkerExtensionDescriptor` (runs in a dedicated worker thread — see [Worker Extensions](./Extension.md#worker-extensions)).
-- `close()` — terminates every worker spawned by a worker-mode registration. A `Worker` keeps the process alive on its own, so any process (or test) that registers a worker-mode extension must call this before it can exit cleanly. A no-op if nothing worker-mode was registered. Also available as `[Symbol.asyncDispose]` for `await using`.
-- `logger` — a `loglayer` `ILogLayer`, defaulting to a pino-backed instance, passed down to every room.
+- `register(extension)` — registers a static room under `extension.id`. Pass an `Extension` or a [worker descriptor](./Extension.md#worker-extensions).
+- `close()` — stops workers and disposes rooms. Call it before process exit when using worker extensions. Also available as `[Symbol.asyncDispose]` for `await using`.
+- `logger` — a `loglayer` `ILogLayer` passed to every room.
 - `rights` — see [Rights](./Rights.md). One table for the whole server; there is no per-room override.
 
-`handleConnect` / `handleDisconnect` / `handleMessage` are called by transport code, not by application code. `handleMessage` and `handleDisconnect` return `Promise<void>`: dispatch to the extension is asynchronous — a worker-mode extension's dispatch genuinely round-trips to its thread, while an in-process one resolves on the same tick — and per-client ordering is preserved regardless: a given client's envelopes are always dispatched in the order they arrived, even though each one is now awaited.
+Transport implementations call `handleConnect`, `handleDisconnect` and `handleMessage`. The message and disconnect handlers return `Promise<void>`. Envelopes from one client are always handled in arrival order.
+
+## Dynamic rooms
+
+`register` covers rooms known up front. Use a resolver when room names are
+created at join time, such as one room per open document or match.
+
+```ts
+server.setRoomResolver((roomName) => RoomResolution | null);
+
+interface RoomResolution {
+  extension: Extension;
+  onEvict?: () => void | Promise<void>;
+  graceMs?: number;
+}
+```
+
+The resolver runs when a client joins an unknown room. Return `null` to reject
+the room name. Messages to unknown rooms are dropped without invoking the
+resolver.
+
+The requested room name identifies the resolved room and appears in outbound
+envelopes. It does not need to match `extension.id`.
+
+### Eviction
+
+A resolved room remains available for a grace period after its last member
+leaves. A join during that period cancels eviction.
+
+When the grace period expires, the server awaits `onEvict` and then calls the
+extension's optional `dispose()` method. A join for the same name waits for an
+in-progress eviction to finish.
+
+- `roomGraceMs` (`ServerOptions`) sets the default, `30_000` ms. A
+  resolution may override it per room.
+- `close()` evicts every resolved room, running each `onEvict`, then
+  disposes every room including statically registered ones.
+- `settled(roomName?)` resolves once an in-flight eviction has finished, for
+  one room or all of them. Eviction starts on a timer and tears down
+  asynchronously, so a caller that needs an evicted room's flushed state
+  awaits this rather than racing the teardown.
+- `timers` (`ServerOptions`) replaces the clock behind the grace period.
+  `systemTimers` is the default; a test supplies one it advances by hand, so
+  eviction is deterministic instead of wall-clock bound.

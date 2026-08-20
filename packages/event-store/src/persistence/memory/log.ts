@@ -1,46 +1,110 @@
 // Import Internal Dependencies
 import type {
   AppendInput,
-  Event
+  Event,
+  ListAllOptions
 } from "../../EventStore.ts";
+import type { EventLog } from "../EventLog.ts";
+import { toStoredValue } from "../serialize.ts";
 
-export class MemoryEventLog {
+type EventPredicate = (
+  event: Event
+) => boolean;
+
+export class MemoryEventLog implements EventLog {
   #events: Event[] = [];
   #nextEventId = 1;
   #versionByAsset = new Map<string, number>();
+  #closed = false;
 
   insert(
     input: AppendInput
   ): Event {
-    const { assetType, assetId, eventType, eventData } = input;
-    const eventVersion = (this.#versionByAsset.get(assetId) ?? 0) + 1;
-    this.#versionByAsset.set(assetId, eventVersion);
+    this.#assertOpen();
 
-    const event: Event = {
-      eventId: this.#nextEventId++,
+    const {
       assetType,
       assetId,
       eventType,
-      eventData: structuredClone(eventData),
-      eventVersion,
+      eventData,
+      actor
+    } = input;
+
+    const event: Event = {
+      eventId: this.#nextEventId,
+      assetType,
+      assetId,
+      eventType,
+      eventData: toStoredValue(eventData, "eventData"),
+      eventVersion: (this.#versionByAsset.get(assetId) ?? 0) + 1,
+      actor: toStoredValue(actor, "actor"),
       createdAt: new Date().toISOString()
     };
-    this.#events.push(event);
 
-    return structuredClone(event);
+    this.#nextEventId++;
+    this.#versionByAsset.set(
+      assetId,
+      event.eventVersion
+    );
+    this.#events.push(structuredClone(event));
+
+    return event;
   }
 
-  select(
+  list(
     assetId: string,
-    fromVersion: number
+    fromVersion = 0
   ): Event[] {
-    return this.#events
-      .filter((event) => event.assetId === assetId && event.eventVersion > fromVersion)
-      .sort((a, b) => a.eventVersion - b.eventVersion)
+    return this.#read(
+      (event) => event.assetId === assetId && event.eventVersion > fromVersion
+    );
+  }
+
+  listAll(
+    options: ListAllOptions = {}
+  ): Event[] {
+    const {
+      fromEventId = 0,
+      eventTypePrefix,
+      limit
+    } = options;
+
+    return this.#read(
+      (event) => event.eventId > fromEventId &&
+        matchesPrefix(event.eventType, eventTypePrefix),
+      limit
+    );
+  }
+
+  close(): void {
+    this.#events = [];
+    this.#versionByAsset.clear();
+    this.#nextEventId = 1;
+    this.#closed = true;
+  }
+
+  #read(
+    matches: EventPredicate,
+    limit?: number
+  ): Event[] {
+    this.#assertOpen();
+
+    const events = this.#events.filter(matches);
+
+    return (limit === undefined ? events : events.slice(0, limit))
       .map((event) => structuredClone(event));
   }
 
-  clear(): void {
-    this.#events = [];
+  #assertOpen(): void {
+    if (this.#closed) {
+      throw new Error("event log is closed");
+    }
   }
+}
+
+function matchesPrefix(
+  eventType: string,
+  prefix: string | undefined
+): boolean {
+  return prefix === undefined || eventType.startsWith(prefix);
 }

@@ -13,11 +13,5 @@ export const persistence = {
   }
 } as const;
 
-export {
-  MemoryEventWriter,
-  MemoryEventReader
-} from "./memory/index.ts";
-export type {
-  SqliteEventWriter,
-  SqliteEventReader
-} from "./sqlite/index.ts";
+export { createEventStore } from "./createEventStore.ts";
+export type { EventLog } from "./EventLog.ts";

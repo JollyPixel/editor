@@ -8,12 +8,12 @@ import {
 } from "@openally/result";
 
 // Import Internal Dependencies
-import { Envelope } from "../Envelope.ts";
+import { Envelope } from "../protocol/Envelope.ts";
 import { DEFAULT_WEBSOCKET_PATH } from "../transport/constants.ts";
 import type {
   Peer,
   PeerMetadata
-} from "../types.ts";
+} from "../protocol/types.ts";
 import type {
   Room,
   RoomEventMap
@@ -29,7 +29,7 @@ export interface ClientOptions {
    */
   url?: string;
   /**
-   * Static client metadata (e.g. username) attached to each "join" envelope.
+   * Static metadata sent with each join request.
    */
   identity?: PeerMetadata;
   /**
@@ -42,8 +42,7 @@ export type ClientEventMap = {
   ready: () => void;
 };
 
-// Client's own view of a room: same public surface as `Room`, plus the `emit` used to
-// deliver incoming envelopes. `Room` deliberately omits `emit` so consumers can't fake events.
+// Client mutates this emitter. Consumers receive only the `Room` surface.
 type InternalRoom<ClientMessage = any, ServerMessage = any> =
   Room<ClientMessage, ServerMessage> & Emitter<RoomEventMap<ServerMessage>>;
 
@@ -60,10 +59,9 @@ export class Client extends Emitter<ClientEventMap> {
   #logger: Logger;
   #socket: WebSocket;
   #ready = false;
-  // Set once the socket closes; lets #send() flag messages that will never flush.
+  // Makes `#send` warn when queued messages can no longer flush.
   #closed = false;
   #destroyed = false;
-  // Buffer outbound messages until the socket opens.
   #queue: string[] = [];
   #rooms = new Map<string, InternalRoom>();
 
@@ -220,7 +218,7 @@ export class Client extends Emitter<ClientEventMap> {
     room: InternalRoom,
     envelope: Envelope
   ): void {
-    // `room.peers` is readonly to consumers; Client mutates the backing map.
+    // Client owns the writable map behind the public readonly view.
     const peers = room.peers as Map<string, Peer>;
 
     match(envelope)

@@ -2,7 +2,7 @@
 
 ## Vite plugin
 
-The path for editor dev servers: it creates the `Server`, wires the websocket transport, and registers your extensions.
+Use the Vite plugin for editor development servers. It creates the `Server`, wires the websocket transport and registers your extensions.
 
 ```ts
 import { defineConfig } from "vite";
@@ -40,11 +40,9 @@ interface WebsocketVitePluginOptions {
 }
 ```
 
-The `voxel-renderer` and `pixel-draw-renderer` vite configs are real-world usage.
-
 ## WebsocketTransport
 
-The escape hatch when you own the http server. It only forwards connection events into the server's handlers.
+Use `WebsocketTransport` with an existing HTTP server. It forwards connection events to the server's handlers.
 
 ```ts
 import * as network from "@jolly-pixel/network";

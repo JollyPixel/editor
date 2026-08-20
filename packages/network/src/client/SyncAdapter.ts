@@ -6,7 +6,7 @@ import type { Room } from "./Room.ts";
 import type {
   NetworkCommandHeader,
   NetworkServerMessage
-} from "../types.ts";
+} from "../sync/types.ts";
 
 export type SyncAdapterEventMap = {
   ready: () => void;
@@ -14,9 +14,8 @@ export type SyncAdapterEventMap = {
 };
 
 /**
- * Syncs a local target over a `Room`,
- * stamping mutations with `clientId`/`seq`/`timestamp` and echo-guarding remote commands.
- **/
+ * Syncs local changes over a `Room` and ignores echoed commands.
+ */
 export abstract class SyncAdapter<
   Target,
   Event extends object,
@@ -94,9 +93,7 @@ export abstract class SyncAdapter<
     timestamp?: number
   ): Command;
   /**
-   * Stamps a payload shaped differently from `Event` (e.g. a one-off,
-   * non-hook admin command) with the same `clientId`/`seq`/`timestamp`
-   * envelope, without exposing the private `#seq` counter to subclasses.
+   * Stamps non-Event payloads without exposing `#seq`.
    */
   protected stampCommand<E extends object>(
     event: E,
@@ -165,12 +162,8 @@ export abstract class SyncAdapter<
       this.applySnapshot(this.#target, snapshot);
     }
 
-    // "ready" fires once, for "the initial connection is established".
-    // "snapshot" fires every time — applySnapshot() replaces the target's
-    // state wholesale (bypassing whatever per-mutation hooks the target
-    // normally emits), so anything mirroring that state (a layer list, a
-    // selection) needs its own signal to know a full refresh is due, not
-    // just the first one.
+    // `ready` fires after the first sync.
+    // `snapshot` fires after every full replacement.
     this.emit("snapshot");
 
     if (!this.#ready) {
