@@ -2,7 +2,7 @@
 import type {
   PeerMetadata,
   Peer
-} from "../types.ts";
+} from "../protocol/types.ts";
 
 export interface RoomPeerEvent {
   clientId: string;
@@ -17,7 +17,9 @@ export interface RoomDeniedEvent {
   reason: string;
 }
 
-/** Distinct from RoomDeniedEvent: an infrastructure failure, not an RBAC rejection. */
+/**
+ * An infrastructure failure, distinct from an RBAC denial.
+ */
 export interface RoomErrorEvent {
   event: string;
   reason: string;

@@ -14,6 +14,12 @@ import type {
   VoxelServerMessage
 } from "@jolly-pixel/voxel.renderer/network/client.ts";
 import { TilesetLoader } from "@jolly-pixel/voxel.renderer";
+import {
+  AssetCatalog,
+  assetRoomName,
+  CATALOG_URL_PATH,
+  type AssetRecord
+} from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
 import { editorState } from "./EditorState.ts";
@@ -21,6 +27,32 @@ import { EditorSidebar } from "./ui/EditorSidebar.ts";
 import { EditorScene } from "./scene/editor.ts";
 import { LocalStoragePersistence } from "./lib/LocalStoragePersistence.ts";
 import type { EventCanvasHoverChange } from "./ui/types.ts";
+
+async function fetchAssetCatalog(): Promise<AssetCatalog> {
+  const response = await fetch(CATALOG_URL_PATH);
+  if (!response.ok) {
+    throw new Error(
+      `Asset catalog responded with ${response.status}.`
+    );
+  }
+
+  return AssetCatalog.parse(await response.json());
+}
+
+function firstRecordOfKind(
+  catalog: AssetCatalog,
+  kind: string
+): AssetRecord {
+  for (const record of catalog) {
+    if (record.kind === kind) {
+      return record;
+    }
+  }
+
+  throw new Error(
+    `The asset workspace holds no "${kind}" document.`
+  );
+}
 
 const canvas = document.querySelector<HTMLCanvasElement>(
   "#game-container > canvas"
@@ -37,6 +69,12 @@ const runtime = await Runtime.create(canvas, {
 });
 const { world } = runtime;
 
+// Rooms are named after the assets the back-end catalogs, so the ids come
+// from the catalog rather than being hardcoded on both ends.
+const catalog = await fetchAssetCatalog();
+const textureRecord = firstRecordOfKind(catalog, "pixelart");
+const worldRecord = firstRecordOfKind(catalog, "voxelmap");
+
 // One shared WebSocket (matching vite.config.ts's createWebSocketNetworkPlugin),
 // multiplexing the texture (pixel-draw) and world (voxel) sync rooms.
 const wsProtocol = location.protocol === "https:" ? "wss:" : "ws:";
@@ -44,11 +82,11 @@ const networkClient = new network.Client({
   url: `${wsProtocol}//${location.host}/ws-sync`
 });
 const textureRoom = networkClient.room<PixelNetworkCommand, PixelServerMessage>(
-  "voxel-map:texture"
+  assetRoomName(textureRecord.kind, textureRecord.id.value)
 );
 textureRoom.join();
 const worldRoom = networkClient.room<VoxelNetworkCommand, VoxelServerMessage>(
-  "voxel-map:world"
+  assetRoomName(worldRecord.kind, worldRecord.id.value)
 );
 worldRoom.join();
 

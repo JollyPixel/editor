@@ -26,8 +26,11 @@
   ],
   "dependencies": {
     "@jolly-pixel/arbor": "1.0.1",
+    "@jolly-pixel/asset": "1.0.0",
+    "@jolly-pixel/asset-server": "1.0.0",
     "@jolly-pixel/editor.pixel-art": "1.1.0",
     "@jolly-pixel/engine": "^4.0.0",
+    "@jolly-pixel/event-store": "2.0.0",
     "@jolly-pixel/network": "1.1.0",
     "@jolly-pixel/pixel-draw.renderer": "3.0.0",
     "@jolly-pixel/resize-handle": "1.1.0",

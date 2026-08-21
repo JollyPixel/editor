@@ -7,7 +7,9 @@ import {
   AssetLoaders,
   AssetTypes,
   AUDIO_ASSET,
-  AudioAssetLoader
+  AudioAssetLoader,
+  TEXTURE_ASSET,
+  TextureAssetLoader
 } from "@jolly-pixel/engine";
 import * as THREE from "three/webgpu";
 
@@ -35,6 +37,10 @@ export function createRuntimeAssetCoordinator(
     .register(
       AUDIO_ASSET,
       new AudioAssetLoader(manager)
+    )
+    .register(
+      TEXTURE_ASSET,
+      new TextureAssetLoader(manager)
     );
 
   for (const definition of options.loaders ?? []) {

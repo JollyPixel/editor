@@ -38,6 +38,9 @@
       "path": "./packages/network"
     },
     {
+      "path": "./packages/asset-server"
+    },
+    {
       "path": "./packages/voxel-renderer"
     },
     {

@@ -2,7 +2,7 @@
 import type {
   WorkerTransport,
   WorkerTransportFactory
-} from "#src/server/worker/WorkerTransport.ts";
+} from "#src/server/extension/worker/WorkerTransport.ts";
 
 /**
  * In-memory WorkerTransport double: no real thread, no real postMessage. Tests

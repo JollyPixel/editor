@@ -204,6 +204,7 @@ The shapes, tileset and transparency examples use OrbitControls (left drag: rota
 - [Debug](docs/Debug.md) - `engine.debug`: live face/triangle statistics and wireframe visualization.
 - [Built-In Shapes](docs/BuiltInShapes.md) - All built-in block shapes and custom shape authoring.
 - [TiledConverter](docs/TiledConverter.md) - Converting Tiled `.tmj` exports to `VoxelWorldJSON`.
+- [Asset kind](docs/AssetKind.md) - Persisting a voxel map as an event-sourced `@jolly-pixel/asset-server` asset.
 
 ## 🧪 Benchmarks
 

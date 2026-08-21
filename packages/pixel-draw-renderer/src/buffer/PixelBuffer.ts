@@ -212,6 +212,21 @@ export class PixelBuffer implements DefaultPixelBuffer {
     return this.#maxSize;
   }
 
+  /**
+   * Whether `resize` and `replacePixels` would accept the size, that is
+   * positive integers no greater than `maxSize`. Both throw otherwise.
+   */
+  acceptsSize(
+    size: Vec2
+  ): boolean {
+    return Number.isInteger(size.x) &&
+      Number.isInteger(size.y) &&
+      size.x > 0 &&
+      size.y > 0 &&
+      size.x <= this.#maxSize &&
+      size.y <= this.#maxSize;
+  }
+
   resize(
     size: Vec2
   ): void {

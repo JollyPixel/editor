@@ -4,18 +4,13 @@ import * as network from "@jolly-pixel/network";
 // Import Internal Dependencies
 import { VoxelWorld } from "../world/VoxelWorld.ts";
 import { VoxelSerializer, type VoxelWorldJSON } from "../serialization/VoxelSerializer.ts";
-import { VOXEL_LAYER_HOOK_ACTIONS, type VoxelLayerHookEvent } from "../hooks.ts";
+import { VOXEL_LAYER_HOOK_ACTIONS } from "../hooks.ts";
 import { applyCommandToWorld } from "./VoxelCommandApplier.ts";
+import { isVoxelNetworkCommand } from "./VoxelCommandValidator.ts";
+import { VoxelCommandArbiter } from "./VoxelCommandArbiter.ts";
 import type { VoxelNetworkCommand } from "./types.ts";
 
 export type ClientHandle = network.ClientHandle;
-
-function isVoxelNetworkCommand(
-  value: unknown
-): value is VoxelNetworkCommand {
-  return typeof value === "object" && value !== null &&
-    "action" in value && "clientId" in value;
-}
 
 export interface VoxelSyncServerOptions {
   /**
@@ -53,7 +48,7 @@ export class VoxelSyncServer extends network.Extension {
   readonly world: VoxelWorld;
   readonly events: readonly string[] = VOXEL_LAYER_HOOK_ACTIONS;
 
-  #tracker: network.ConflictTracker<VoxelNetworkCommand>;
+  #arbiter: VoxelCommandArbiter;
   #serializer = new VoxelSerializer();
 
   constructor(
@@ -69,9 +64,7 @@ export class VoxelSyncServer extends network.Extension {
 
     this.id = id;
     this.world = world ?? new VoxelWorld(chunkSize);
-    this.#tracker = new network.ConflictTracker(
-      conflictResolver ?? new network.LastWriteWinsResolver()
-    );
+    this.#arbiter = new VoxelCommandArbiter({ conflictResolver });
   }
 
   onClientConnect(
@@ -126,8 +119,7 @@ export class VoxelSyncServer extends network.Extension {
       return;
     }
 
-    const key = VoxelSyncServer.#cmdKey(cmd);
-    if (this.#tracker.resolve(key, cmd) === "reject") {
+    if (!this.#arbiter.resolve(cmd)) {
       return;
     }
 
@@ -150,7 +142,7 @@ export class VoxelSyncServer extends network.Extension {
       return;
     }
 
-    this.#tracker.record(key, cmd);
+    this.#arbiter.record(cmd);
     this.#broadcast(cmd, context);
   }
 
@@ -172,24 +164,5 @@ export class VoxelSyncServer extends network.Extension {
       layers: this.world.getLayers().map((layer) => layer.toJSON()),
       objectLayers: [...this.world.getObjectLayers()]
     };
-  }
-
-  /**
-   * Returns a stable key for per-position conflict tracking.
-   * Returns `null` for structural operations that are always accepted.
-   */
-  static #cmdKey(
-    cmd: VoxelLayerHookEvent
-  ): string | null {
-    if (
-      cmd.action === "voxel-set" ||
-      cmd.action === "voxel-removed"
-    ) {
-      const { x, y, z } = cmd.metadata.position;
-
-      return `${cmd.layerName}:${x},${y},${z}`;
-    }
-
-    return null;
   }
 }

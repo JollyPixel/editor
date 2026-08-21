@@ -8,7 +8,8 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./network/*.ts": "./dist/network/*.js"
+    "./network/*.ts": "./dist/network/*.js",
+    "./asset/*.ts": "./dist/asset/*.js"
   },
   "imports": {
     "#src/*": "./src/*"
@@ -49,5 +50,17 @@
     "@openally/emitt": "1.0.1",
     "colorjs.io": "0.7.1",
     "js-base64": "3.9.2"
+  },
+  "peerDependencies": {
+    "@jolly-pixel/asset-server": "1.0.0",
+    "@jolly-pixel/event-store": "2.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@jolly-pixel/asset-server": {
+      "optional": true
+    },
+    "@jolly-pixel/event-store": {
+      "optional": true
+    }
   }
 }

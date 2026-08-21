@@ -166,6 +166,7 @@ manager.redo();
 - [`PixelBuffer`](./docs/buffer/PixelBuffer.md)
 - [`Keybindings`](./docs/input/Keybindings.md)
 - [`Network`](./docs/network/index.md)
+- [`Asset kind`](./docs/asset/index.md)
 
 ### Internal
 

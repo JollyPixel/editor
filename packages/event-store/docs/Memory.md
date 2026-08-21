@@ -8,17 +8,7 @@ No disk. No durability. Great for tests and local runs.
 EventStore.persistence.memory(): EventStore
 ```
 
-## `writer`
-
-```ts
-writer.append(input: AppendInput): Result<Event, Error>
-```
-
-## `reader`
-
-```ts
-reader.list(assetId: string, fromVersion?: number): Event[]
-```
+See [`EventStore`](./EventStore.md) for the shared writer and reader API.
 
 ## `close`
 
@@ -26,7 +16,8 @@ reader.list(assetId: string, fromVersion?: number): Event[]
 close(): void
 ```
 
-Clears all stored events. Also invoked automatically via `[Symbol.dispose]`, so a `using` declaration works:
+Drops all stored events. See [`EventStore lifecycle`](./EventStore.md#lifecycle) for
+closed-store behavior and `[Symbol.dispose]`.
 
 ```ts
 using store = EventStore.persistence.memory();

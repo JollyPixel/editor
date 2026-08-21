@@ -27,6 +27,7 @@
     "packages/event-store",
     "packages/network",
     "packages/arbor",
+    "packages/asset-server",
     "packages/fs-tree-backend",
     "packages/voxel-renderer",
     "packages/pixel-draw-renderer",

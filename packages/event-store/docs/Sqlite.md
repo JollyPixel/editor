@@ -9,10 +9,11 @@ EventStore.persistence.sqlite(location?: string): Promise<EventStore>
 ```
 
 > [!IMPORTANT]
-> This factory is **async**, unlike [`memory`](./Memory.md). `node:sqlite` is loaded through a dynamic `import()` so the package entrypoint stays browser-compatible, and an async import cannot be unwrapped synchronously.
+> This factory is **async**, unlike [`memory`](./Memory.md), because the SQLite backend is loaded only when called.
 
 > [!NOTE]
-> Automatically creates database schema on startup (`CREATE TABLE IF NOT EXISTS`)
+> The factory creates the database schema when needed. Files created before the
+> `(asset_id, event_version)` uniqueness constraint must be recreated to pick it up.
 
 ```ts
 import * as EventStore from "@jolly-pixel/event-store";
@@ -20,32 +21,21 @@ import * as EventStore from "@jolly-pixel/event-store";
 const store = await EventStore.persistence.sqlite("./events.sqlite");
 ```
 
-Node-only consumers can import the backend directly through the `./sqlite` subpath, which skips the lazy indirection and exposes the writer/reader classes as values:
+Node-only consumers can import the factory directly through the `./sqlite` subpath,
+which depends on `node:sqlite` and cannot be used in browser bundles:
 
 ```ts
-import {
-  createSqliteEventStore,
-  SqliteEventWriter,
-  SqliteEventReader
-} from "@jolly-pixel/event-store/sqlite";
+import { createSqliteEventStore } from "@jolly-pixel/event-store/sqlite";
 
 const store = await createSqliteEventStore("./events.sqlite");
 ```
 
-> [!WARNING]
-> The `./sqlite` subpath depends on `node:sqlite` and is not usable in a browser bundle. Reach for it from server code only — the root entrypoint never pulls it into the eager module graph.
+See [`EventStore`](./EventStore.md) for the shared writer and reader API.
 
-## `writer`
+## Concurrent appends
 
-```ts
-writer.append(input: AppendInput): Result<Event, Error>
-```
-
-## `reader`
-
-```ts
-reader.list(assetId: string, fromVersion?: number): Event[]
-```
+`append` assigns versions atomically, so concurrent writers cannot store duplicate
+versions for the same asset.
 
 ## `close`
 
@@ -53,7 +43,9 @@ reader.list(assetId: string, fromVersion?: number): Event[]
 close(): void
 ```
 
-Closes the underlying connection. Call this when done with a file-backed instance. Also invoked automatically via `[Symbol.dispose]`, so a `using` declaration works once the store is awaited:
+Closes the underlying connection. See
+[`EventStore lifecycle`](./EventStore.md#lifecycle) for closed-store behavior and
+`[Symbol.dispose]`.
 
 ```ts
 using store = await EventStore.persistence.sqlite(path);
