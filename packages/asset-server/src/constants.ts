@@ -22,3 +22,8 @@ events.db-wal
 `;
 
 export const ASSET_EVENT_PREFIX = "asset.";
+
+/**
+ * Machine-local event log opened by `openAssetEventStore`. Never committed.
+ */
+export const EVENTS_DB_PATH = `${STATE_DIRECTORY}/events.db`;

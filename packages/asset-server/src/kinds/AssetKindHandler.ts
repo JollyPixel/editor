@@ -41,6 +41,12 @@ export interface AssetKindHandler<TState = unknown> {
    */
   readonly match: readonly string[];
   readonly snapshot?: SnapshotPolicy;
+  /**
+   * Content types for the extensions this kind claims, keyed by lowercase
+   * extension including the dot. A host serving the workspace over HTTP
+   * labels its responses with them.
+   */
+  readonly contentTypes?: Readonly<Record<string, string>>;
 
   create(
     assetId: string

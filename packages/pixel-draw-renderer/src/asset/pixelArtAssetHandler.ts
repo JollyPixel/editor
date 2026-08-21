@@ -30,6 +30,9 @@ export const PIXEL_ART_COMMAND = "pixelart.command";
 
 // CONSTANTS
 const kDefaultMatch = ["**/*.pixelart"] as const;
+const kContentTypes: Readonly<Record<string, string>> = {
+  ".pixelart": "application/json; charset=utf-8"
+};
 const kDefaultSize: Vec2 = {
   x: 32,
   y: 32
@@ -67,6 +70,7 @@ export function pixelArtAssetHandler(
     kind: PIXEL_ART_KIND,
     match,
     snapshot,
+    contentTypes: kContentTypes,
 
     create(): PixelArtState {
       return { buffer: createPixelArtBuffer(defaultSize) };

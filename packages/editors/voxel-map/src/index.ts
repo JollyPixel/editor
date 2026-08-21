@@ -17,6 +17,7 @@ import { TilesetLoader } from "@jolly-pixel/voxel.renderer";
 import {
   AssetCatalog,
   assetRoomName,
+  CATALOG_URL_PATH,
   type AssetRecord
 } from "@jolly-pixel/asset";
 
@@ -27,11 +28,8 @@ import { EditorScene } from "./scene/editor.ts";
 import { LocalStoragePersistence } from "./lib/LocalStoragePersistence.ts";
 import type { EventCanvasHoverChange } from "./ui/types.ts";
 
-// CONSTANTS
-const kCatalogUrl = "/__jollypixel/catalog";
-
 async function fetchAssetCatalog(): Promise<AssetCatalog> {
-  const response = await fetch(kCatalogUrl);
+  const response = await fetch(CATALOG_URL_PATH);
   if (!response.ok) {
     throw new Error(
       `Asset catalog responded with ${response.status}.`

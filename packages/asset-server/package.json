@@ -23,7 +23,15 @@
       "types": "./dist/rooms/index.d.ts",
       "default": "./dist/rooms/index.js"
     },
-    "./plugins/*.ts": "./dist/plugins/*.js"
+    "./plugins/*.ts": "./dist/plugins/*.js",
+    "./static": {
+      "types": "./dist/static/index.d.ts",
+      "default": "./dist/static/index.js"
+    },
+    "./workspace": {
+      "types": "./dist/workspace/index.d.ts",
+      "default": "./dist/workspace/index.js"
+    }
   },
   "scripts": {
     "prepublish": "rimraf ./dist && tsc -b",
@@ -61,5 +69,13 @@
     "chokidar": "^5.0.0",
     "loglayer": "9.4.0",
     "picomatch": "^4.0.3"
+  },
+  "peerDependencies": {
+    "vite": "^8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
   }
 }

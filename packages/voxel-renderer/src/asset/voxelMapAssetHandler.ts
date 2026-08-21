@@ -32,6 +32,9 @@ export const VOXEL_MAP_COMMAND = "voxelmap.command";
 // CONSTANTS
 const kDefaultMatch = ["**/*.voxelmap.json"] as const;
 const kDefaultChunkSize = 16;
+const kContentTypes: Readonly<Record<string, string>> = {
+  ".json": "application/json; charset=utf-8"
+};
 /**
  * Terrain edits arrive in bursts and a large world is expensive to
  * serialize, so the default cadence is slower than the back-end's.
@@ -77,6 +80,7 @@ export function voxelMapAssetHandler(
     kind: VOXEL_MAP_KIND,
     match,
     snapshot,
+    contentTypes: kContentTypes,
 
     create(): VoxelMapState {
       return createVoxelMapState(chunkSize);

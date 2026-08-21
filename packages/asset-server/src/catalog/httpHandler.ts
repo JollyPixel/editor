@@ -5,10 +5,13 @@ import type {
   ServerResponse
 } from "node:http";
 
+// Import Third-party Dependencies
+import { CATALOG_URL_PATH } from "@jolly-pixel/asset";
+
 // Import Internal Dependencies
 import type { CatalogProjection } from "./CatalogProjection.ts";
 
-export const DEFAULT_CATALOG_PATH = "/__jollypixel/catalog";
+export const DEFAULT_CATALOG_PATH = CATALOG_URL_PATH;
 
 export type CatalogHandler = (
   request: IncomingMessage,
