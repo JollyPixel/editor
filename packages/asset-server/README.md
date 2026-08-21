@@ -24,7 +24,8 @@ import * as EventStore from "@jolly-pixel/event-store";
 import { Server } from "@jolly-pixel/network";
 import {
   createAssetBackend,
-  FilesystemAssetSource
+  FilesystemAssetSource,
+  textureAssetHandler
 } from "@jolly-pixel/asset-server";
 
 using eventStore = await EventStore.persistence.sqlite(
@@ -33,7 +34,8 @@ using eventStore = await EventStore.persistence.sqlite(
 
 await using backend = await createAssetBackend({
   source: new FilesystemAssetSource("./assets"),
-  eventStore
+  eventStore,
+  handlers: [textureAssetHandler()]
 });
 
 await using server = new Server({ eventStore });

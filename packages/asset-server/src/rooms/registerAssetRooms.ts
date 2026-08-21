@@ -3,7 +3,12 @@ import type {
   RoomResolution,
   Server
 } from "@jolly-pixel/network";
-import { AssetId } from "@jolly-pixel/asset";
+import {
+  AssetId,
+  assetRoomName,
+  parseAssetRoomName,
+  type AssetRoomName
+} from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
 import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
@@ -16,37 +21,14 @@ import {
   type Logger
 } from "../logger.ts";
 
-export interface AssetRoomName {
-  readonly kind: string;
-  readonly assetId: string;
-}
-
-export function assetRoomName(
-  kind: string,
-  assetId: string
-): string {
-  return `${kind}:${assetId}`;
-}
-
-/**
- * Splits `${kind}:${assetId}` at the first colon.
- */
-export function parseAssetRoomName(
-  roomName: string
-): AssetRoomName | null {
-  const separator = roomName.indexOf(":");
-  if (
-    separator <= 0 ||
-    separator === roomName.length - 1
-  ) {
-    return null;
-  }
-
-  return {
-    kind: roomName.slice(0, separator),
-    assetId: roomName.slice(separator + 1)
-  };
-}
+// Re-exported so a host wiring rooms needs one import, not two. The
+// definitions live in `@jolly-pixel/asset` because the browser needs them
+// to build the same room name.
+export {
+  assetRoomName,
+  parseAssetRoomName,
+  type AssetRoomName
+};
 
 export interface AssetRoomsOptions {
   server: Server;

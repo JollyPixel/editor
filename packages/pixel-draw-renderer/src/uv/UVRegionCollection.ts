@@ -32,6 +32,10 @@ export class UVRegionCollection implements Iterable<UVRegion> {
     this.#regions.delete(id);
   }
 
+  clear(): void {
+    this.#regions.clear();
+  }
+
   [Symbol.iterator](): IterableIterator<UVRegion> {
     return this.#regions.values();
   }

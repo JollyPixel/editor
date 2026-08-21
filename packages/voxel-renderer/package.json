@@ -9,6 +9,7 @@
       "default": "./dist/index.js"
     },
     "./network/*.ts": "./dist/network/*.js",
+    "./asset/*.ts": "./dist/asset/*.js",
     "./plugins/*": "./dist/plugins/*"
   },
   "scripts": {
@@ -52,5 +53,17 @@
     "@jolly-pixel/runtime": "4.0.0",
     "@jolly-pixel/ui": "1.0.1",
     "simplex-noise": "4.0.3"
+  },
+  "peerDependencies": {
+    "@jolly-pixel/asset-server": "1.0.0",
+    "@jolly-pixel/event-store": "2.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@jolly-pixel/asset-server": {
+      "optional": true
+    },
+    "@jolly-pixel/event-store": {
+      "optional": true
+    }
   }
 }

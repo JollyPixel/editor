@@ -6,6 +6,20 @@ export type {
 export {
   applyCommandToBuffer
 } from "./PixelCommandApplier.ts";
+export {
+  isPixelNetworkAction,
+  isPixelNetworkCommand,
+  PIXEL_NETWORK_ACTIONS
+} from "./PixelCommandValidator.ts";
+export {
+  PixelCommandArbiter
+} from "./PixelCommandArbiter.ts";
+export type {
+  PixelCommandArbiterOptions,
+  PixelSelectEditCommand,
+  PixelStrokeCommand,
+  PixelUvRegionCommand
+} from "./PixelCommandArbiter.ts";
 export type {
   PixelSyncServerOptions
 } from "./PixelSyncServer.ts";

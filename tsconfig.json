@@ -26,9 +26,6 @@
       "path": "./packages/asset"
     },
     {
-      "path": "./packages/asset-server"
-    },
-    {
       "path": "./packages/engine"
     },
     {
@@ -39,6 +36,9 @@
     },
     {
       "path": "./packages/network"
+    },
+    {
+      "path": "./packages/asset-server"
     },
     {
       "path": "./packages/voxel-renderer"

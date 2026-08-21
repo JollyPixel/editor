@@ -12,3 +12,8 @@ export type {
   VoxelSyncServerOptions
 } from "./VoxelSyncServer.ts";
 export { VoxelSyncServer } from "./VoxelSyncServer.ts";
+export { VoxelCommandArbiter } from "./VoxelCommandArbiter.ts";
+export type {
+  VoxelCommandArbiterOptions
+} from "./VoxelCommandArbiter.ts";
+export { isVoxelNetworkCommand } from "./VoxelCommandValidator.ts";

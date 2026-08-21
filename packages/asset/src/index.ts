@@ -42,3 +42,8 @@ export {
   UnsupportedAssetManifestError
 } from "./errors/index.ts";
 export type { AssetLoadFailure } from "./errors/index.ts";
+export {
+  assetRoomName,
+  parseAssetRoomName
+} from "./AssetRoom.ts";
+export type { AssetRoomName } from "./AssetRoom.ts";
