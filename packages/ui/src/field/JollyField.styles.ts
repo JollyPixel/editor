@@ -3,6 +3,7 @@ import { css } from "lit";
 
 // Import Internal Dependencies
 import { kFallback } from "../theme/styles/fallbacks.ts";
+import { fillTransition, truncate } from "../theme/styles/mixins.ts";
 
 /**
  * Shared field layout and state styles.
@@ -45,7 +46,7 @@ export const fieldStyles = css`
     min-height: var(--jolly-row-height, 20px);
     padding-inline: var(--jolly-space-1, 4px);
     border-radius: var(--jolly-radius-sm, 2px);
-    transition: background-color var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease);
+    ${fillTransition}
   }
 
   /*
@@ -130,11 +131,9 @@ export const fieldStyles = css`
     width: var(--jolly-label-width, auto);
     min-width: 0;
     max-width: 45%;
-    overflow: hidden;
     color: var(--jolly-text-muted);
     text-align: start;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    ${truncate}
     user-select: none;
   }
 
@@ -168,7 +167,7 @@ export const fieldStyles = css`
     color: inherit;
     font: inherit;
     font-variant-numeric: inherit;
-    transition: background-color var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease);
+    ${fillTransition}
   }
 
   .value input:hover:not(:disabled),
@@ -278,7 +277,7 @@ export const fieldStyles = css`
     background: none;
     color: var(--jolly-text-muted);
     cursor: pointer;
-    transition: background-color var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease);
+    ${fillTransition}
   }
 
   .revert > jolly-icon {

@@ -3,6 +3,7 @@ import { css } from "lit";
 
 // Import Internal Dependencies
 import { kFallback } from "../theme/styles/fallbacks.ts";
+import { truncate } from "../theme/styles/mixins.ts";
 
 /**
  * Matches `JollyField` geometry for custom rows.
@@ -50,11 +51,9 @@ export const propertyRowStyles = css`
     flex: 0 0 auto;
     width: var(--jolly-label-width, auto);
     max-width: 45%;
-    overflow: hidden;
     color: var(--jolly-text-muted);
     text-align: start;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    ${truncate}
     user-select: none;
   }
 

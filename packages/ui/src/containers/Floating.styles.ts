@@ -3,6 +3,7 @@ import { css } from "lit";
 
 // Import Internal Dependencies
 import { kFallback } from "../theme/styles/fallbacks.ts";
+import { focusRing } from "../theme/styles/mixins.ts";
 
 export const floatingStyles = css`
   /*
@@ -117,7 +118,7 @@ export const floatingStyles = css`
   }
 
   .resize-handle:focus-visible {
-    outline: 2px solid var(--jolly-focus-ring, ${kFallback.focusRing});
+    ${focusRing}
     outline-offset: -2px;
   }
 `;

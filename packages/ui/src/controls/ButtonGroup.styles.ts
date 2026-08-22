@@ -1,6 +1,13 @@
 // Import Third-party Dependencies
 import { css } from "lit";
 
+// Import Internal Dependencies
+import {
+  fillTransition,
+  truncate,
+  visuallyHidden
+} from "../theme/styles/mixins.ts";
+
 export const buttonGroupStyles = css`
   /*
    * Segments used to be joined by shared borders. Without them a hairline gap
@@ -32,7 +39,7 @@ export const buttonGroupStyles = css`
     color: inherit;
     font: inherit;
     cursor: pointer;
-    transition: background-color var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease);
+    ${fillTransition}
   }
 
   /*
@@ -90,20 +97,13 @@ export const buttonGroupStyles = css`
   }
 
   .segment-label {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    ${truncate}
   }
 
   /*
    * Hide visible labels while keeping their accessible names.
    */
   :host([icons-only]) .segment-label {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
+    ${visuallyHidden}
   }
 `;

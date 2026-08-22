@@ -3,6 +3,7 @@ import { css } from "lit";
 
 // Import Internal Dependencies
 import { kFallback } from "../theme/styles/fallbacks.ts";
+import { truncate } from "../theme/styles/mixins.ts";
 
 export const treeStyles = css`
   :host {
@@ -80,9 +81,7 @@ export const treeStyles = css`
 
   .label {
     flex: 1 1 auto;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    ${truncate}
   }
 
   /* Mirrors the eye toggle's own state: a row with visible=false reads as

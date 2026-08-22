@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import { css } from "lit";
 
+// Import Internal Dependencies
+import { focusRing } from "../theme/styles/mixins.ts";
+
 /**
  * Renders picker surfaces with gradients driven by custom properties.
  */
@@ -218,7 +221,7 @@ export const colorPickerStyles = css`
   /* Outline focus without altering the represented colour. */
   .area:has(input:focus-visible),
   .track:has(input:focus-visible) {
-    outline: 2px solid var(--jolly-focus-ring, Highlight);
+    ${focusRing}
     outline-offset: 1px;
   }
 
@@ -292,6 +295,12 @@ export const colorPickerStyles = css`
     .area,
     .track {
       forced-color-adjust: none;
+    }
+
+    /* The surfaces opt out of substitution, so the ring names the system colour. */
+    .area:has(input:focus-visible),
+    .track:has(input:focus-visible) {
+      outline-color: Highlight;
     }
   }
 `;

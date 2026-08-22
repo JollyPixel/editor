@@ -3,6 +3,7 @@ import { css } from "lit";
 
 // Import Internal Dependencies
 import { kFallback } from "../theme/styles/fallbacks.ts";
+import { focusRing } from "../theme/styles/mixins.ts";
 
 export const dockStyles = css`
   :host {
@@ -352,7 +353,7 @@ export const dockStyles = css`
   }
 
   .resize-handle:focus-visible {
-    outline: 2px solid var(--jolly-focus-ring, ${kFallback.focusRing});
+    ${focusRing}
     outline-offset: -3px;
   }
 `;

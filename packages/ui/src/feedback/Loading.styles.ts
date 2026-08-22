@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import { css } from "lit";
 
+// Import Internal Dependencies
+import { truncate } from "../theme/styles/mixins.ts";
+
 export const loadingStyles = css`
   :host {
     display: block;
@@ -88,9 +91,7 @@ export const loadingStyles = css`
     animation-delay: 0.5s;
     padding: 0 2em;
     max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    ${truncate}
     /* Transition douce lors du changement d'asset */
     transition: opacity 0.2s ease-out;
   }
