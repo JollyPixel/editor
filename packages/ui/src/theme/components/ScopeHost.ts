@@ -11,7 +11,8 @@ import { themeStyles } from "../styles/themeStyles.ts";
 
 /**
  * A declarative theme scope host for content with no scope host of its own
- * (`jolly-dialog` is the one container that self-scopes; see docs/theming.md).
+ * (`jolly-dialog` is the one container that self-scopes; see
+ * docs/guides/theming-and-density.md).
  * Set `theme` or `density` on it directly, the same as any scope host.
  *
  * Declares no `display`: a `:host` rule here would beat a consumer's own
