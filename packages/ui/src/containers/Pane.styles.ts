@@ -3,6 +3,11 @@ import { css } from "lit";
 
 // Import Internal Dependencies
 import { kFallback } from "../theme/styles/fallbacks.ts";
+import {
+  focusRing,
+  truncate,
+  visuallyHidden
+} from "../theme/styles/mixins.ts";
 
 export const paneStyles = css`
   /*
@@ -70,12 +75,10 @@ export const paneStyles = css`
   .title {
     position: relative;
     z-index: 1;
-    overflow: hidden;
     flex: 1 1 auto;
     font-weight: 600;
     letter-spacing: 0.08em;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    ${truncate}
   }
 
   :host([movable]) .header {
@@ -126,7 +129,7 @@ export const paneStyles = css`
 
   .fold:focus-visible,
   .grip:focus-visible {
-    outline: 2px solid var(--jolly-focus-ring, ${kFallback.focusRing});
+    ${focusRing}
     outline-offset: 1px;
   }
 
@@ -184,12 +187,7 @@ export const paneStyles = css`
   }
 
   .live-region {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
+    ${visuallyHidden}
   }
 
   @media (forced-colors: active) {

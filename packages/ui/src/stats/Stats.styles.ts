@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import { css } from "lit";
 
+// Import Internal Dependencies
+import { focusRing } from "../theme/styles/mixins.ts";
+
 export const statsStyles = css`
   :host {
     display: block;
@@ -38,7 +41,7 @@ export const statsStyles = css`
   }
 
   :host(:focus-visible) {
-    outline: 2px solid var(--jolly-focus-ring, Highlight);
+    ${focusRing}
     outline-offset: 1px;
   }
 

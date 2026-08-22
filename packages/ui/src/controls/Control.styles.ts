@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import { css } from "lit";
 
+// Import Internal Dependencies
+import { focusRing, truncate } from "../theme/styles/mixins.ts";
+
 export const controlStyles = css`
   :host {
     display: grid;
@@ -41,10 +44,8 @@ export const controlStyles = css`
 
   .description {
     min-inline-size: 0;
-    overflow: hidden;
     color: var(--jolly-text);
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    ${truncate}
   }
 
   .details-button {
@@ -67,7 +68,7 @@ export const controlStyles = css`
   }
 
   .details-button:focus-visible {
-    outline: 2px solid var(--jolly-focus-ring);
+    ${focusRing}
     outline-offset: 2px;
   }
 

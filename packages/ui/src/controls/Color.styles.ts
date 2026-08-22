@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import { css } from "lit";
 
+// Import Internal Dependencies
+import { focusRing } from "../theme/styles/mixins.ts";
+
 export const colorStyles = css`
   /* Fill the control so the colour sample has no surrounding frame. */
   .value .swatch {
@@ -23,7 +26,7 @@ export const colorStyles = css`
   }
 
   .value .swatch:focus-visible {
-    outline: 2px solid var(--jolly-focus-ring);
+    ${focusRing}
     outline-offset: 1px;
   }
 

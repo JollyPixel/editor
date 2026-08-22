@@ -3,6 +3,7 @@ import { css } from "lit";
 
 // Import Internal Dependencies
 import { kFallback } from "../theme/styles/fallbacks.ts";
+import { fillTransition } from "../theme/styles/mixins.ts";
 
 export const folderStyles = css`
   :host {
@@ -36,8 +37,7 @@ export const folderStyles = css`
     );
     color: inherit;
     font: inherit;
-    transition: background-color var(--jolly-duration-fast, 100ms)
-      var(--jolly-easing, ease);
+    ${fillTransition}
   }
 
   /* The checker fades in from the right without competing with the label. */

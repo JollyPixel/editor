@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import { css } from "lit";
 
+// Import Internal Dependencies
+import { fillTransition } from "../theme/styles/mixins.ts";
+
 export const point2dStyles = css`
   .pad {
     position: relative;
@@ -10,7 +13,7 @@ export const point2dStyles = css`
     background: var(--jolly-control-bg, transparent);
     cursor: crosshair;
     touch-action: none;
-    transition: background-color var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease);
+    ${fillTransition}
   }
 
   .pad:hover {

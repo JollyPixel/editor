@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import { css } from "lit";
 
+// Import Internal Dependencies
+import { fillTransition } from "../theme/styles/mixins.ts";
+
 /**
  * The wrapper hosts the scrub handle over the native input.
  */
@@ -42,7 +45,7 @@ export const numberStyles = css`
     border-radius: 1px;
     background: var(--jolly-groove);
     transform: translateY(-50%);
-    transition: background-color var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease);
+    ${fillTransition}
   }
 
   :host([scrubbable]) .scrub-handle:hover::before {

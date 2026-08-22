@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import { css } from "lit";
 
+// Import Internal Dependencies
+import { fillTransition } from "../theme/styles/mixins.ts";
+
 export const flagsStyles = css`
   .flags {
     display: flex;
@@ -25,7 +28,7 @@ export const flagsStyles = css`
     background: var(--jolly-control-bg);
     cursor: pointer;
     user-select: none;
-    transition: background-color var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease);
+    ${fillTransition}
   }
 
   .flag:hover {

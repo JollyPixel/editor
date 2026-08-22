@@ -3,6 +3,7 @@ import { css } from "lit";
 
 // Import Internal Dependencies
 import { kFallback } from "../theme/styles/fallbacks.ts";
+import { fillTransition } from "../theme/styles/mixins.ts";
 
 export const buttonStyles = css`
   :host {
@@ -26,7 +27,7 @@ export const buttonStyles = css`
     font: inherit;
     white-space: nowrap;
     cursor: pointer;
-    transition: background-color var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease);
+    ${fillTransition}
   }
 
   button:hover:not(:disabled) {

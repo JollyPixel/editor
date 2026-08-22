@@ -3,6 +3,7 @@ import { css } from "lit";
 
 // Import Internal Dependencies
 import { kFallback } from "../theme/styles/fallbacks.ts";
+import { truncate } from "../theme/styles/mixins.ts";
 
 export const monitorStyles = css`
   :host {
@@ -27,10 +28,8 @@ export const monitorStyles = css`
   .label {
     flex: 1 1 auto;
     min-width: 0;
-    overflow: hidden;
     color: var(--jolly-text-muted);
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    ${truncate}
   }
 
   .value {
