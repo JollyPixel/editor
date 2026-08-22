@@ -51,7 +51,7 @@ const kRowDragThreshold = 4;
  * Fully controlled: `nodes`, `selected` and `expanded` are consumer owned,
  * the same as `value` on a field. A drop, a toggle or a selection change
  * emits an intent event; the element repaints only once the consumer writes
- * the new value back. See `docs/data.md`.
+ * the new value back. See `docs/api/data/tree.md`.
  */
 @customElement("jolly-tree")
 export class Tree<TData = unknown> extends LitElement {

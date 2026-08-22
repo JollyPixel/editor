@@ -1561,7 +1561,7 @@ edited.
 | An inset face on the swatch | The frame reads as a border drawn around the sample, and a colour has to fill its control to be judged |
 | Ok and Cancel buttons in the panel | Escape already cancels and the picker commits continuously, so the row costs vertical space in a panel meant to be compact |
 | An eyedropper and preset swatches | `EyeDropper` is Chromium-only and neither has a consumer, so both would ship speculatively |
-| One documentation page per component | Twelve pages each repeating one shared contract, against the preference to fold shared material into an owning doc |
+| Repeating the full field contract on every component page | Component pages link to `docs/api/field/shared-field-api.md` and document their own additions |
 
 ## 16. Open points
 

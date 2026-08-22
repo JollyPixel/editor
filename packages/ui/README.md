@@ -98,21 +98,34 @@ Set `density` on the scope host when needed:
 
 ## 📚 API
 
-- [Fields](./docs/fields.md): shared properties, events, editing, states, `Mixed` and collaboration
-- [Controls](./docs/controls.md): control-specific properties and behavior
-- [Theming](./docs/theming.md): themes, density and custom-property tokens
-- [Icons](./docs/icons.md): built-in icons and custom icon registration
-- [Containers](./docs/containers.md): panes, folders, tabs, toolbars, rails and persistence
-- [Placement](./docs/placement.md): docked and floating layout, resizing and movement
-- [Dialogs](./docs/dialogs.md): declarative modal content and prompt/confirm helpers
-- [Presence](./docs/presence.md): peer snapshots in panes and folders
-- [Progress](./docs/progress.md): progress semantics, loading lifecycle and CSS customization
-- [Data views](./docs/data.md): `jolly-tree` — controlled nodes, selection, drag and drop reparenting
+The installation and first component example above are the starting point.
+These guides cover cross-component behavior:
 
-The package currently ships twelve controls: `jolly-text`, `jolly-number`, `jolly-slider`, `jolly-range`,
-`jolly-checkbox`, `jolly-select`, `jolly-flags`, `jolly-color`, `jolly-button-group`,
-`jolly-button`, `jolly-separator` and `jolly-property-row`, plus the container elements and
-`jolly-icon`, `jolly-progress` and `jolly-loading`.
+- [Choosing controls](./docs/guides/choosing-controls.md)
+- [Controlled fields](./docs/guides/controlled-fields.md)
+- [Composing containers](./docs/guides/composing-containers.md)
+- [Docking and persistence](./docs/guides/docking-and-persistence.md)
+- [Theming and density](./docs/guides/theming-and-density.md)
+- [Using the facade](./docs/guides/using-the-facade.md)
+
+The API reference follows the implementation folders. Each registered custom
+element has one page with its usage, properties, events, methods, slots, and
+styling surface where applicable.
+
+- [Controls](./docs/api/controls/README.md)
+- [Containers](./docs/api/containers/README.md)
+- [Data](./docs/api/data/README.md)
+- [Feedback](./docs/api/feedback/README.md)
+- [Icons](./docs/api/icon/README.md)
+- [Math](./docs/api/math/README.md)
+- [Monitors](./docs/api/monitors/README.md)
+- [Peer presence](./docs/api/peer/README.md)
+- [Stats](./docs/api/stats/README.md)
+- [Theme components](./docs/api/theme/README.md)
+- [Facade](./docs/api/facade/README.md)
+- [Storage](./docs/api/storage/README.md)
+- [Interaction helpers](./docs/api/interaction/README.md)
+- [Color utilities](./docs/api/color/README.md)
 
 ## 🖼️ Examples Gallery
 
