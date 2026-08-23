@@ -41,7 +41,7 @@ Once you have finished your development, check that the tests (and linter) are s
 
 ```bash
 $ npm run test
-$ npm run lint # run at the root of .git repository
+$ npm run lint
 ```
 
 > [!CAUTION]
