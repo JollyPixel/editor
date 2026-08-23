@@ -27,7 +27,8 @@
     "dev": "vite",
     "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
     "test": "c8 -r html npm run test-only",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "lint": "eslint src/**/*.ts"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",

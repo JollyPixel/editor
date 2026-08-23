@@ -10,7 +10,8 @@
     "test-only": "node --test test/**/*.test.ts",
     "test": "c8 -r html npm run test-only",
     "build": "tsc",
-    "preview": "vite"
+    "preview": "vite",
+    "lint": "eslint src/**/*.ts"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",

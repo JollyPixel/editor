@@ -12,7 +12,8 @@
     "build": "tsc",
     "test-only": "node --import ./test/setup.ts --test \"test/**/*.test.ts\"",
     "test": "c8 -r html npm run test-only",
-    "dev": "vite"
+    "dev": "vite",
+    "lint": "eslint src/**/*.ts"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
