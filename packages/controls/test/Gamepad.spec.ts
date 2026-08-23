@@ -393,4 +393,115 @@ describe("Controls.Gamepad", () => {
       assert.throws(() => gamepad.axisValue(0, 999), /Invalid gamepad info/);
     });
   });
+
+  describe("controllers reporting fewer buttons/axes than the standard mapping", () => {
+    test("does not throw when the gamepad exposes fewer buttons than MaxButtons", () => {
+      const mockGamepad = mocks.Gamepad();
+      mockGamepad.buttons = [{ pressed: true, value: 1 }, { pressed: false, value: 0 }];
+      navigatorAdapter.gamepads = [mockGamepad, null, null, null];
+
+      assert.doesNotThrow(() => gamepad.update());
+      assert.strictEqual(gamepad.buttons[0][0].isDown, true);
+      // Buttons the controller never reported stay at their reset state.
+      assert.strictEqual(gamepad.buttons[0][5].isDown, false);
+    });
+
+    test("leaves axis values numeric when the gamepad exposes fewer axes than MaxAxes", () => {
+      const mockGamepad = mocks.Gamepad();
+      mockGamepad.axes = [0.9, -0.9];
+      navigatorAdapter.gamepads = [mockGamepad, null, null, null];
+
+      gamepad.update();
+
+      assert.strictEqual(gamepad.axisValue(0, 0), 0.9);
+      assert.strictEqual(gamepad.axisValue(0, 1), -0.9);
+      // The absent second stick must not be poisoned with NaN/undefined.
+      assert.strictEqual(gamepad.axisValue(0, 2), 0);
+      assert.strictEqual(gamepad.axisValue(0, 3), 0);
+    });
+  });
+
+  describe("idle polling", () => {
+    test("stops calling getGamepads() every frame while nothing is connected", () => {
+      let polls = 0;
+      navigatorAdapter.getGamepads = () => {
+        polls++;
+
+        return navigatorAdapter.gamepads;
+      };
+
+      for (let frame = 0; frame < 120; frame++) {
+        gamepad.update();
+      }
+
+      // Roughly 120 / IdlePollFrames, versus 120 before the back-off.
+      assert.ok(polls <= 8, `expected at most 8 polls, got ${polls}`);
+    });
+
+    test("polls every frame again as soon as a gamepad appears", () => {
+      let polls = 0;
+      navigatorAdapter.getGamepads = () => {
+        polls++;
+
+        return navigatorAdapter.gamepads;
+      };
+
+      navigatorAdapter.gamepads = [mocks.Gamepad(), null, null, null];
+      for (let frame = 0; frame < 10; frame++) {
+        gamepad.update();
+      }
+
+      assert.strictEqual(polls, 10);
+    });
+
+    test("observes a button release on the very next frame", () => {
+      const mockGamepad = mocks.Gamepad();
+      mockGamepad.buttons[0] = { pressed: true, value: 1 };
+      navigatorAdapter.gamepads = [mockGamepad, null, null, null];
+      gamepad.update();
+
+      mockGamepad.buttons[0] = { pressed: false, value: 0 };
+      gamepad.update();
+
+      assert.strictEqual(gamepad.buttons[0][0].wasJustReleased, true);
+    });
+
+    test("clears wasActive when getGamepads() returns null", () => {
+      const mockGamepad = mocks.Gamepad();
+      mockGamepad.buttons[0] = { pressed: true, value: 1 };
+      navigatorAdapter.gamepads = [mockGamepad, null, null, null];
+      gamepad.update();
+      assert.strictEqual(gamepad.wasActive, true);
+
+      navigatorAdapter.getGamepads = () => null as any;
+      gamepad.update();
+
+      assert.strictEqual(gamepad.wasActive, false);
+    });
+  });
+
+  describe("connection counting", () => {
+    test("never drops below zero on an unmatched disconnect", () => {
+      const windowAdapter = new mocks.WindowAdapter();
+      const device = new Gamepad({ navigatorAdapter, windowAdapter });
+      device.connect();
+
+      windowAdapter.dispatch("gamepaddisconnected", { gamepad: mocks.Gamepad() });
+      windowAdapter.dispatch("gamepaddisconnected", { gamepad: mocks.Gamepad() });
+
+      assert.strictEqual(device.connectedGamepads, 0);
+    });
+
+    test("a disconnect after a connect returns the count to zero", () => {
+      const windowAdapter = new mocks.WindowAdapter();
+      const device = new Gamepad({ navigatorAdapter, windowAdapter });
+      device.connect();
+
+      windowAdapter.dispatch("gamepadconnected", { gamepad: mocks.Gamepad() });
+      assert.strictEqual(device.connectedGamepads, 1);
+
+      windowAdapter.dispatch("gamepaddisconnected", { gamepad: mocks.Gamepad() });
+      assert.strictEqual(device.connectedGamepads, 0);
+    });
+  });
 });

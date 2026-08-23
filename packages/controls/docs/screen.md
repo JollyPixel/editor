@@ -80,11 +80,21 @@ interface Screen {
   // from a user gesture
   requestFullscreenIfWanted(): void;
 
-  // Each read computes and returns a fresh object; cache it per frame
-  // rather than reading it repeatedly.
+  // Fresh objects. Prefer the `…To` variants in per-frame code.
   // Canvas client dimensions
   size: Vector2Like;
   // Canvas bounds centered at origin (useful for orthographic cameras)
-  bounds: { left: number; right: number; top: number; bottom: number; };
+  bounds: ScreenBounds;
+
+  // Write into a caller-owned object.
+  sizeTo<T extends Vector2Like>(out: T): T;
+  boundsTo<T extends ScreenBounds>(out: T): T;
+}
+
+interface ScreenBounds {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
 }
 ```

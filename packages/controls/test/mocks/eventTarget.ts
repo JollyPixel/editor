@@ -20,4 +20,13 @@ export class EventTargetAdapter {
   ) {
     this.listeners.get(type)?.delete(listener);
   }
+
+  dispatch(
+    type: string,
+    event: unknown
+  ) {
+    for (const listener of this.listeners.get(type) ?? []) {
+      listener(event as Event);
+    }
+  }
 }

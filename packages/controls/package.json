@@ -10,7 +10,8 @@
     "build": "tsc",
     "test-only": "node --test test/**/*.spec.ts",
     "test": "c8 -r html npm run test-only",
-    "lint": "eslint src/**/*.ts"
+    "lint": "eslint src/**/*.ts",
+    "bench": "node bench/index.ts"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
@@ -34,5 +35,8 @@
   "license": "MIT",
   "dependencies": {
     "@openally/emitt": "1.0.1"
+  },
+  "devDependencies": {
+    "tinybench": "6.1.3"
   }
 }

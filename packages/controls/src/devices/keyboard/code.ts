@@ -1,11 +1,9 @@
 // Import Internal Dependencies
 import {
-  isAlphabet,
   ALPHABET_TO_KEY,
   type Alphabet
 } from "./transformers/alphabet.ts";
 import {
-  isNumeric,
   NUMERIC_TO_KEY,
   type Numeric
 } from "./transformers/numeric.ts";
@@ -43,16 +41,27 @@ export type KeyCode =
 
 export type ExtendedKeyCode = KeyCode | Alphabet | Numeric;
 
+/**
+ * Every shorthand (`"A"`, `"a"`, `"7"`) pre-resolved to its `KeyCode`.
+ */
+const kExtendedKeyToCode: Record<string, KeyCode> = buildLookup();
+
+function buildLookup(): Record<string, KeyCode> {
+  const lookup: Record<string, KeyCode> = Object.create(null);
+
+  for (const [letter, code] of Object.entries(ALPHABET_TO_KEY)) {
+    lookup[letter] = code;
+    lookup[letter.toLowerCase()] = code;
+  }
+  for (const [digit, code] of Object.entries(NUMERIC_TO_KEY)) {
+    lookup[digit] = code;
+  }
+
+  return lookup;
+}
+
 export function mapKeyToExtendedKey(
   key: ExtendedKeyCode
 ): KeyCode {
-  if (isAlphabet(key)) {
-    return ALPHABET_TO_KEY[key.toUpperCase()];
-  }
-
-  if (isNumeric(key)) {
-    return NUMERIC_TO_KEY[key];
-  }
-
-  return key;
+  return kExtendedKeyToCode[key] ?? key as KeyCode;
 }

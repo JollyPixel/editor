@@ -12,11 +12,28 @@ import type {
   InputCustomAction,
   Vector2Like
 } from "../types.ts";
-import { InputActionQuery } from "../InputActionQuery.ts";
 import {
   TouchIdentifier,
   type TouchPosition
 } from "./Touchpad.class.ts";
+
+// CONSTANTS
+const kApplePlatform = /^Mac|iPhone|iPod|iPad/i;
+/** Every index in `MouseEventButton`, hence every bit the state masks use. */
+const kButtonCount = 7;
+const kScrollMask = (1 << 5) | (1 << 6);
+
+/** Cached lazily to avoid browser globals during module import. */
+let applePlatform: boolean | null = null;
+
+function isApplePlatform(): boolean {
+  if (applePlatform === null) {
+    applePlatform = typeof navigator !== "undefined" &&
+      kApplePlatform.test(navigator.platform);
+  }
+
+  return applePlatform;
+}
 
 export interface MouseButtonState {
   isDown: boolean;
@@ -64,9 +81,7 @@ export class Mouse extends Emitter<
   static wheelDelta(
     event: WheelEvent
   ): [number, number] {
-    const isApple = /^Mac|iPhone|iPod|iPad/i.test(navigator.platform);
-
-    if (isApple) {
+    if (isApplePlatform()) {
       // Note that deltaMode MUST be accessed BEFORE delta* in order to get
       // non-pixel values in Firefox.
       // See https://github.com/w3c/uievents/issues/181
@@ -98,14 +113,27 @@ export class Mouse extends Emitter<
   #canvas: CanvasAdapter;
   #documentAdapter: DocumentAdapter;
 
-  buttons: MouseButtonState[] = [];
-  buttonsDown: boolean[] = [];
+  /** Live DOM state and the last published state, stored as bitsets. */
+  #downMask = 0;
+  #prevMask = 0;
+  #pressedMask = 0;
+  #releasedMask = 0;
+  /** Published one-frame pulse, drained from `#pendingDoubleClicks`. */
+  #doubleClickedMask = 0;
+  /** Latched by the dblclick handler between frames. */
+  #pendingDoubleClicks = 0;
 
   #position = {
     x: 0,
     y: 0
   };
   newPosition: { x: number; y: number; } | null = null;
+
+  /** Reused by `#onMouseMove`; `newPosition` points at this or is null. */
+  #newPositionSlot = {
+    x: 0,
+    y: 0
+  };
 
   #delta = {
     x: 0,
@@ -121,6 +149,7 @@ export class Mouse extends Emitter<
   };
 
   #wasActive = false;
+  #settled = true;
   #wantsPointerLock = false;
   #wasPointerLocked = false;
 
@@ -211,15 +240,12 @@ export class Mouse extends Emitter<
   reset() {
     this.#scrollDelta.x = 0;
     this.#scrollDelta.y = 0;
-    for (let i = 0; i <= 6; i++) {
-      this.buttons[i] = {
-        isDown: false,
-        doubleClicked: false,
-        wasJustPressed: false,
-        wasJustReleased: false
-      };
-      this.buttonsDown[i] = false;
-    }
+    this.#downMask = 0;
+    this.#prevMask = 0;
+    this.#pressedMask = 0;
+    this.#releasedMask = 0;
+    this.#doubleClickedMask = 0;
+    this.#pendingDoubleClicks = 0;
 
     this.#position.x = 0;
     this.#position.y = 0;
@@ -232,25 +258,37 @@ export class Mouse extends Emitter<
   }
 
   get scrollUp() {
-    return this.buttonsDown[MouseEventButton.scrollUp];
+    return (this.#downMask & (1 << MouseEventButton.scrollUp)) !== 0;
   }
 
   get scrollDown() {
-    return this.buttonsDown[MouseEventButton.scrollDown];
+    return (this.#downMask & (1 << MouseEventButton.scrollDown)) !== 0;
   }
 
   get position() {
-    return {
-      x: this.#position.x,
-      y: this.#position.y
-    };
+    return this.positionTo({ x: 0, y: 0 });
+  }
+
+  positionTo<T extends Vector2Like>(
+    out: T
+  ): T {
+    out.x = this.#position.x;
+    out.y = this.#position.y;
+
+    return out;
   }
 
   get delta() {
-    return {
-      x: this.#delta.x,
-      y: this.#delta.y
-    };
+    return this.deltaTo({ x: 0, y: 0 });
+  }
+
+  deltaTo<T extends Vector2Like>(
+    out: T
+  ): T {
+    out.x = this.#delta.x;
+    out.y = this.#delta.y;
+
+    return out;
   }
 
   get locked() {
@@ -269,9 +307,6 @@ export class Mouse extends Emitter<
 
   unlock() {
     const isLocked = this.locked;
-    if (!isLocked) {
-      return;
-    }
 
     this.#wantsPointerLock = false;
     this.#wasPointerLocked = false;
@@ -290,49 +325,57 @@ export class Mouse extends Emitter<
     this.#canvas.style.cursor = visible ? "auto" : "none";
   }
 
-  /**
-   * Canvas-relative `position`, normalized to `[-1, 1]` on both axes with Y
-   * flipped (game/NDC convention: up is positive), rather than the raw
-   * top-left-origin pixel space `position` is in.
-   */
   get viewportPosition(): Vector2Like {
-    const position = this.position;
-    const x = (position.x / this.#canvas.clientWidth) * 2;
-    const y = (position.y / this.#canvas.clientHeight) * 2;
-
-    return {
-      x: x - 1,
-      y: (y - 1) * -1
-    };
+    return this.viewportPositionTo({ x: 0, y: 0 });
   }
 
-  /** `viewportPosition` scaled by half the canvas size, i.e. centered pixel coordinates. */
+  viewportPositionTo<T extends Vector2Like>(
+    out: T
+  ): T {
+    const x = (this.#position.x / this.#canvas.clientWidth) * 2;
+    const y = (this.#position.y / this.#canvas.clientHeight) * 2;
+
+    out.x = x - 1;
+    out.y = (y - 1) * -1;
+
+    return out;
+  }
+
   get worldPosition(): Vector2Like {
-    const normalized = this.viewportPosition;
-
-    return {
-      x: normalized.x * (this.#canvas.clientWidth / 2),
-      y: normalized.y * (this.#canvas.clientHeight / 2)
-    };
+    return this.worldPositionTo({ x: 0, y: 0 });
   }
 
-  /** Like `delta`, but Y-flipped and optionally normalized against half the canvas size. */
+  worldPositionTo<T extends Vector2Like>(
+    out: T
+  ): T {
+    this.viewportPositionTo(out);
+    out.x *= this.#canvas.clientWidth / 2;
+    out.y *= this.#canvas.clientHeight / 2;
+
+    return out;
+  }
+
   viewportDelta(
     normalizeWithSize = false
   ): Vector2Like {
-    const delta = this.delta;
+    return this.viewportDeltaTo({ x: 0, y: 0 }, normalizeWithSize);
+  }
 
+  viewportDeltaTo<T extends Vector2Like>(
+    out: T,
+    normalizeWithSize = false
+  ): T {
     if (normalizeWithSize) {
-      return {
-        x: delta.x / (this.#canvas.clientWidth / 2),
-        y: -delta.y / (this.#canvas.clientHeight / 2)
-      };
+      out.x = this.#delta.x / (this.#canvas.clientWidth / 2);
+      out.y = -this.#delta.y / (this.#canvas.clientHeight / 2);
+
+      return out;
     }
 
-    return {
-      x: delta.x,
-      y: -delta.y
-    };
+    out.x = this.#delta.x;
+    out.y = -this.#delta.y;
+
+    return out;
   }
 
   synchronizeWithTouch(
@@ -344,7 +387,7 @@ export class Mouse extends Emitter<
       return;
     }
     if (typeof buttonValue === "boolean") {
-      this.buttonsDown[MouseEventButton.left] = buttonValue;
+      this.#setButton(MouseEventButton.left, buttonValue);
     }
     if (position) {
       this.newPosition = position;
@@ -352,22 +395,17 @@ export class Mouse extends Emitter<
   }
 
   update() {
-    this.#wasActive = false;
-
-    const isScrollUp = this.#scrollDelta.y > 0;
-    const isScrollDown = this.#scrollDelta.y < 0;
-    this.buttonsDown[MouseEventButton.scrollUp] = isScrollUp;
-    this.buttonsDown[MouseEventButton.scrollDown] = isScrollDown;
-    if (isScrollDown || isScrollUp) {
-      this.#wasActive = true;
+    if (this.#settled && this.#isQuiet()) {
+      return;
     }
 
-    if (this.#scrollDelta.x !== 0) {
-      this.#scrollDelta.x = 0;
-    }
-    if (this.#scrollDelta.y !== 0) {
-      this.#scrollDelta.y = 0;
-    }
+    const scrollBits =
+      (Number(this.#scrollDelta.y > 0) << MouseEventButton.scrollUp) |
+      (Number(this.#scrollDelta.y < 0) << MouseEventButton.scrollDown);
+    this.#downMask = (this.#downMask & ~kScrollMask) | scrollBits;
+
+    this.#scrollDelta.x = 0;
+    this.#scrollDelta.y = 0;
 
     if (this.#wantsPointerLock && this.#wasPointerLocked) {
       this.#delta.x = this.newDelta.x;
@@ -389,19 +427,33 @@ export class Mouse extends Emitter<
       this.newPosition = null;
     }
 
-    for (let i = 0; i < this.buttons.length; i++) {
-      const mouseButton = this.buttons[i];
-      const wasDown = mouseButton.isDown;
-      const isDown = this.buttonsDown[i];
+    const isDown = this.#downMask;
+    const wasDown = this.#prevMask;
 
-      mouseButton.isDown = isDown;
-      mouseButton.wasJustPressed = !wasDown && mouseButton.isDown;
-      mouseButton.wasJustReleased = wasDown && !mouseButton.isDown;
+    this.#pressedMask = ~wasDown & isDown;
+    this.#releasedMask = wasDown & ~isDown;
+    this.#prevMask = isDown;
 
-      if (isDown) {
-        this.#wasActive = true;
-      }
-    }
+    // Publish pending double-clicks for one frame.
+    this.#doubleClickedMask = this.#pendingDoubleClicks;
+    this.#pendingDoubleClicks = 0;
+
+    this.#wasActive = isDown !== 0;
+    this.#settled = isDown === 0 &&
+      wasDown === 0 &&
+      this.#doubleClickedMask === 0 &&
+      this.#delta.x === 0 &&
+      this.#delta.y === 0;
+  }
+
+  #isQuiet(): boolean {
+    return this.newPosition === null &&
+      this.#scrollDelta.x === 0 &&
+      this.#scrollDelta.y === 0 &&
+      this.newDelta.x === 0 &&
+      this.newDelta.y === 0 &&
+      this.#pendingDoubleClicks === 0 &&
+      this.#downMask === 0;
   }
 
   isMoving(): boolean {
@@ -411,62 +463,102 @@ export class Mouse extends Emitter<
   isDown(
     action: InputMouseAction
   ): boolean {
-    return new InputActionQuery(action).match({
-      any: () => this.buttonsDown.some(Boolean),
-      none: () => this.buttonsDown.every((isDown) => !isDown),
-      value: (resolvedAction) => this.buttonsDown[this.#resolveButtonIndex(resolvedAction)] ?? false
-    });
+    if (action === "ANY") {
+      return this.#downMask !== 0;
+    }
+    if (action === "NONE") {
+      return this.#downMask === 0;
+    }
+
+    return (this.#downMask & this.#buttonBit(action)) !== 0;
   }
 
   wasJustPressed(
     action: InputMouseAction
   ): boolean {
-    return new InputActionQuery(action).match({
-      any: () => this.buttons.some((button) => button.wasJustPressed),
-      none: () => this.buttons.every((button) => !button.wasJustPressed),
-      value: (resolvedAction) => this.buttons[this.#resolveButtonIndex(resolvedAction)]?.wasJustPressed ?? false
-    });
+    if (action === "ANY") {
+      return this.#pressedMask !== 0;
+    }
+    if (action === "NONE") {
+      return this.#pressedMask === 0;
+    }
+
+    return (this.#pressedMask & this.#buttonBit(action)) !== 0;
   }
 
   wasJustReleased(
     action: InputMouseAction
   ): boolean {
-    return new InputActionQuery(action).match({
-      any: () => this.buttons.some((button) => button.wasJustReleased),
-      none: () => this.buttons.every((button) => !button.wasJustReleased),
-      value: (resolvedAction) => this.buttons[this.#resolveButtonIndex(resolvedAction)]?.wasJustReleased ?? false
-    });
+    if (action === "ANY") {
+      return this.#releasedMask !== 0;
+    }
+    if (action === "NONE") {
+      return this.#releasedMask === 0;
+    }
+
+    return (this.#releasedMask & this.#buttonBit(action)) !== 0;
   }
 
-  #resolveButtonIndex(
+  buttonState(
+    action: number | MouseAction
+  ): Readonly<MouseButtonState> {
+    const bit = this.#buttonBit(action);
+
+    return {
+      isDown: (this.#prevMask & bit) !== 0,
+      doubleClicked: (this.#doubleClickedMask & bit) !== 0,
+      wasJustPressed: (this.#pressedMask & bit) !== 0,
+      wasJustReleased: (this.#releasedMask & bit) !== 0
+    };
+  }
+
+  #buttonBit(
     action: number | MouseAction
   ): number {
-    return typeof action === "number" ?
+    const index = typeof action === "number" ?
       action :
       MouseEventButton[action];
+
+    return index >= 0 && index < kButtonCount ? 1 << index : 0;
+  }
+
+  #setButton(
+    index: number,
+    value: boolean
+  ): void {
+    const bit = this.#buttonBit(index);
+
+    this.#downMask = value ?
+      this.#downMask | bit :
+      this.#downMask & ~bit;
   }
 
   #onMouseMove = (event: MouseEvent) => {
     event.preventDefault();
 
     if (this.#wantsPointerLock) {
-      if (this.#wasPointerLocked) {
-        const delta = { x: 0, y: 0 };
-        if (event.movementX !== null) {
-          delta.x = event.movementX;
-          delta.y = event.movementY;
-        }
-
-        this.newDelta.x += delta.x;
-        this.newDelta.y += delta.y;
+      if (this.#wasPointerLocked && event.movementX !== null) {
+        this.newDelta.x += event.movementX;
+        this.newDelta.y += event.movementY;
       }
     }
     else {
-      const rect = (event.target as Element).getBoundingClientRect();
-      this.newPosition = {
-        x: event.clientX - rect.left,
-        y: event.clientY - rect.top
-      };
+      const position = this.#newPositionSlot;
+
+      if (
+        typeof event.offsetX === "number" &&
+        typeof event.offsetY === "number"
+      ) {
+        position.x = event.offsetX;
+        position.y = event.offsetY;
+      }
+      else {
+        const rect = (event.target as Element).getBoundingClientRect();
+        position.x = event.clientX - rect.left;
+        position.y = event.clientY - rect.top;
+      }
+
+      this.newPosition = position;
     }
 
     this.emit("move", event);
@@ -475,7 +567,7 @@ export class Mouse extends Emitter<
   #onMouseDown = (event: MouseEvent) => {
     event.preventDefault();
     this.#canvas.focus();
-    this.buttonsDown[event.button] = true;
+    this.#setButton(event.button, true);
 
     if (this.#wantsPointerLock && !this.#wasPointerLocked) {
       this.#canvas.requestPointerLock();
@@ -484,10 +576,10 @@ export class Mouse extends Emitter<
   };
 
   #onMouseUp = (event: MouseEvent) => {
-    if (this.buttonsDown[event.button]) {
+    if (this.isDown(event.button)) {
       event.preventDefault();
     }
-    this.buttonsDown[event.button] = false;
+    this.#setButton(event.button, false);
 
     if (this.#wantsPointerLock && !this.#wasPointerLocked) {
       this.#canvas.requestPointerLock();
@@ -497,14 +589,16 @@ export class Mouse extends Emitter<
 
   #onMouseDoubleClick = (event: MouseEvent) => {
     event.preventDefault();
-    this.buttons[event.button].doubleClicked = true;
+    this.#pendingDoubleClicks |= this.#buttonBit(event.button);
   };
 
   #onMouseWheel = (event: WheelEvent) => {
     event.preventDefault();
     const [deltaX, deltaY] = Mouse.wheelDelta(event);
 
-    this.#scrollDelta = { x: deltaX, y: deltaY };
+    // Accumulate every wheel event received between updates.
+    this.#scrollDelta.x += deltaX;
+    this.#scrollDelta.y += deltaY;
     this.emit("wheel", event);
 
     return false;

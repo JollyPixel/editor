@@ -39,11 +39,8 @@ gameLoop();
 ```
 
 > [!NOTE]
-> Most browsers (Chrome, Edge, Safari…) synthesize mouse events
-> from touch input on desktop trackpads and treat them as pointer/mouse
-> events rather than touch events. The `Touchpad` device will therefore
-> only receive events on actual **touch-screen** hardware. On a laptop
-> trackpad, input is handled by the `Mouse` device instead.
+> Desktop trackpads usually emit pointer or mouse events. `Touchpad` is for
+> **touch-screen** hardware; laptop trackpads use `Mouse`.
 
 ## Constructor
 
@@ -125,8 +122,10 @@ interface Touchpad {
   wasStarted(identifier: TouchAction): boolean;
   wasEnded(identifier: TouchAction): boolean;
 
-  // `position` normalized to [-1, 1] on both axes, Y flipped
+  // `position` normalized to [-1, 1] on both axes, Y flipped.
+  // Returns a fresh object; use `viewportPositionTo` on per-frame paths.
   viewportPosition(identifier: TouchAction): Vector2Like;
+  viewportPositionTo<T extends Vector2Like>(identifier: TouchAction, out: T): T;
 
   // true if the device supports touch events
   static isAvailable(): boolean;

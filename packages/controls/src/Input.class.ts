@@ -5,13 +5,12 @@ import { Emitter } from "@openally/emitt";
 import * as devices from "./devices/index.ts";
 import {
   BrowserWindowAdapter,
+  BrowserDocumentAdapter,
   type CanvasAdapter,
+  type DocumentAdapter,
   type WindowAdapter
 } from "./adapters/index.ts";
-import type {
-  InputControl,
-  KeyCode
-} from "./types.ts";
+import type { KeyCode } from "./types.ts";
 
 /**
  * @note default stand for mouse + keyboard
@@ -53,6 +52,7 @@ export interface InputOptions {
    */
   enableOnExit?: boolean;
   windowAdapter?: WindowAdapter;
+  documentAdapter?: DocumentAdapter;
 }
 
 export class Input extends Emitter<InputEvents> {
@@ -74,15 +74,18 @@ export class Input extends Emitter<InputEvents> {
     super();
     const {
       enableOnExit = false,
-      windowAdapter = new BrowserWindowAdapter()
+      windowAdapter = new BrowserWindowAdapter(),
+      documentAdapter = new BrowserDocumentAdapter()
     } = options;
 
     this.#windowAdapter = windowAdapter;
     const fullscreen = new devices.Screen({
-      canvas
+      canvas,
+      documentAdapter
     });
     this.mouse = new devices.Mouse({
-      canvas
+      canvas,
+      documentAdapter
     });
     this.mouse.on("down", fullscreen.requestFullscreenIfWanted);
     this.mouse.on("up", fullscreen.requestFullscreenIfWanted);
@@ -102,27 +105,24 @@ export class Input extends Emitter<InputEvents> {
     });
 
     this.gamepad = new devices.Gamepad({
-      navigatorAdapter: this.#windowAdapter.navigator
+      navigatorAdapter: this.#windowAdapter.navigator,
+      windowAdapter: this.#windowAdapter
     });
-    this.keyboard = new devices.Keyboard();
+    this.keyboard = new devices.Keyboard({
+      documentAdapter
+    });
 
     if (enableOnExit) {
       this.#windowAdapter.onbeforeunload = this.#doExitCallback;
     }
   }
 
-  #sourceInputs(): InputControl[] {
-    return [
-      this.mouse,
-      this.touchpad,
-      this.keyboard,
-      this.gamepad
-    ];
-  }
-
   connect() {
-    [...this.#sourceInputs(), this.screen]
-      .forEach((subscriber) => subscriber.connect?.());
+    this.mouse.connect();
+    this.touchpad.connect();
+    this.keyboard.connect();
+    this.gamepad.connect();
+    this.screen.connect();
     this.#windowAdapter.addEventListener(
       "blur",
       this.#onBlur
@@ -134,8 +134,11 @@ export class Input extends Emitter<InputEvents> {
   }
 
   disconnect() {
-    [...this.#sourceInputs(), this.screen]
-      .forEach((subscriber) => subscriber.disconnect?.());
+    this.mouse.disconnect();
+    this.touchpad.disconnect();
+    this.keyboard.disconnect();
+    this.gamepad.disconnect();
+    this.screen.disconnect();
     this.#windowAdapter.removeEventListener(
       "blur",
       this.#onBlur
@@ -151,8 +154,10 @@ export class Input extends Emitter<InputEvents> {
   }
 
   update() {
-    this.#sourceInputs()
-      .forEach((subscriber) => subscriber.update());
+    this.mouse.update();
+    this.touchpad.update();
+    this.keyboard.update();
+    this.gamepad.update();
 
     if (
       this.gamepad.wasActive &&
@@ -183,8 +188,10 @@ export class Input extends Emitter<InputEvents> {
   }
 
   #onBlur = () => {
-    this.#sourceInputs()
-      .forEach((subscriber) => subscriber.reset());
+    this.mouse.reset();
+    this.touchpad.reset();
+    this.keyboard.reset();
+    this.gamepad.reset();
   };
 
   #onContextMenu = (event: MouseEvent) => {

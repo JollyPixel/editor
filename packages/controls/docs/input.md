@@ -1,14 +1,11 @@
 # Input
 
-Composition root that owns one instance of each input device (mouse,
-keyboard, gamepad, touchpad, screen) and handles the concerns that cut
-across all of them: connecting/disconnecting every device at once, device
-preference switching (mouse+keyboard vs. gamepad), and exit lifecycle.
+`Input` owns one instance of each input device. It connects and updates them
+together and tracks device preference and exit lifecycle.
 
 Per-device state queries (`isDown`, `wasJustPressed`, coordinate-space
-helpers, ...) live on the devices themselves — `input.mouse`, `input.keyboard`,
-`input.gamepad`, `input.touchpad`, `input.screen` — not on `Input`. Adding a
-new control type is adding a new device, not growing this class.
+helpers, ...) live on `input.mouse`, `input.keyboard`, `input.gamepad`,
+`input.touchpad`, and `input.screen`.
 
 ```ts
 import { Input } from "@jolly-pixel/controls";
@@ -60,6 +57,7 @@ interface InputOptions {
   enableOnExit?: boolean;
   // Custom window adapter (defaults to BrowserWindowAdapter)
   windowAdapter?: WindowAdapter;
+  documentAdapter?: DocumentAdapter;
 }
 
 new Input(canvas: CanvasAdapter, options?: InputOptions);
@@ -103,11 +101,9 @@ was last active.
 
 ## Listener types
 
-`InputListenerType` is a union of dot-path names for every event emitted
-across `Input` and its devices, e.g. `"mouse.down"` or `"keyboard.KeyA"`.
-It exists so consumers can describe an input event by name rather than by
-direct subscription — for example `@jolly-pixel/engine`'s `@InputListener`
-behavior decorator, which binds a method to one of these event names.
+`InputListenerType` contains the dot-path name of every emitted event, such as
+`"mouse.down"` or `"keyboard.KeyA"`. Consumers such as
+`@jolly-pixel/engine`'s `@InputListener` decorator use these names for binding.
 
 Available listener types:
 
@@ -133,6 +129,4 @@ Available listener types:
 
 ### `vibrate(pattern)`
 
-Trigger device vibration via `navigator.vibrate()`. Not device-specific
-(the Web Vibration API vibrates the whole physical device), so it stays
-on `Input` rather than a particular device.
+Trigger vibration through `navigator.vibrate()`.

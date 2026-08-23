@@ -2,8 +2,7 @@
 import {
   describe,
   test,
-  beforeEach,
-  mock
+  beforeEach
 } from "node:test";
 import assert from "node:assert/strict";
 
@@ -14,26 +13,20 @@ import {
   GamepadButton
 } from "../src/index.ts";
 import { AtomicInput } from "../src/AtomicInput.ts";
-import type { CanvasAdapter } from "../src/adapters/index.ts";
-
-function createFakeCanvas(): CanvasAdapter {
-  return {
-    clientWidth: 800,
-    clientHeight: 600,
-    style: { cursor: "auto" },
-    addEventListener: mock.fn(),
-    removeEventListener: mock.fn(),
-    requestFullscreen: mock.fn(() => Promise.resolve()),
-    requestPointerLock: mock.fn(() => Promise.resolve()),
-    focus: mock.fn()
-  };
-}
+import * as mocks from "./mocks/index.ts";
 
 describe("Controls.AtomicInput", () => {
+  let canvas: mocks.CanvasAdapter;
   let input: Input;
 
   beforeEach(() => {
-    input = new Input(createFakeCanvas());
+    canvas = new mocks.CanvasAdapter();
+    input = new Input(canvas, {
+      documentAdapter: new mocks.DocumentAdapter()
+    });
+    // Mouse state now lives in private bitmasks, so it is driven through the
+    // DOM handlers rather than written directly.
+    input.mouse.connect();
   });
 
   describe("key", () => {
@@ -48,6 +41,7 @@ describe("Controls.AtomicInput", () => {
       assert.strictEqual(down.evaluate(input), true);
 
       input.keyboard.buttons.set("KeyA", {
+        code: "KeyA",
         isDown: true,
         wasJustPressed: true,
         wasJustAutoRepeated: false,
@@ -65,10 +59,10 @@ describe("Controls.AtomicInput", () => {
 
       assert.strictEqual(down.evaluate(input), false);
 
-      input.mouse.buttonsDown[MouseEventButton.left] = true;
-      assert.strictEqual(down.evaluate(input), true);
+      canvas.dispatch("mousedown", { button: MouseEventButton.left, preventDefault: () => void 0 });
+      input.mouse.update();
 
-      input.mouse.buttons[MouseEventButton.left].wasJustPressed = true;
+      assert.strictEqual(down.evaluate(input), true);
       assert.strictEqual(pressed.evaluate(input), true);
     });
   });
