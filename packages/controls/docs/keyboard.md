@@ -102,12 +102,11 @@ interface Keyboard {
   reset(): void;
   update(): void;
 
-  // Per-frame state queries — `key` accepts "ANY" / "NONE" alongside an
-  // ExtendedKeyCode, dispatched through InputActionQuery.
+  // Supports "ANY" / "NONE" through InputActionQuery.
   isDown(key: InputKeyboardAction): boolean;
   wasJustPressed(key: InputKeyboardAction): boolean;
   wasJustReleased(key: InputKeyboardAction): boolean;
-  // No ANY / NONE support — a specific key only.
+  // Requires a specific key.
   wasJustAutoRepeated(key: ExtendedKeyCode): boolean;
 }
 ```

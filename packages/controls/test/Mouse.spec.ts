@@ -40,30 +40,27 @@ describe("Controls.Mouse", () => {
     assert.strictEqual(mouse.locked, false);
     assert.deepStrictEqual(mouse.position, { x: 0, y: 0 });
     assert.deepStrictEqual(mouse.delta, { x: 0, y: 0 });
-    assert.strictEqual(mouse.buttons.length, 7);
-    assert.strictEqual(mouse.buttonsDown.length, 7);
-
     for (let i = 0; i < 7; i++) {
-      assert.deepStrictEqual(mouse.buttons[i], {
+      assert.deepStrictEqual(mouse.buttonState(i), {
         isDown: false,
         doubleClicked: false,
         wasJustPressed: false,
         wasJustReleased: false
       });
-      assert.strictEqual(mouse.buttonsDown[i], false);
+      assert.strictEqual(mouse.isDown(i), false);
     }
   });
 
   test("should reset mouse state correctly", () => {
-    mouse.buttonsDown[MouseEventButton.left] = true;
-    mouse.buttons[MouseEventButton.left].isDown = true;
+    canvas.dispatchMouseEvent("mousedown", { button: MouseEventButton.left });
+    mouse.update();
     mouse.newPosition = { x: 100, y: 200 };
     mouse.newDelta = { x: 5, y: 10 };
 
     mouse.reset();
 
-    assert.strictEqual(mouse.buttonsDown[MouseEventButton.left], false);
-    assert.strictEqual(mouse.buttons[MouseEventButton.left].isDown, false);
+    assert.strictEqual(mouse.isDown(MouseEventButton.left), false);
+    assert.strictEqual(mouse.buttonState(MouseEventButton.left).isDown, false);
     assert.strictEqual(mouse.newPosition, null);
     assert.deepStrictEqual(mouse.newDelta, { x: 0, y: 0 });
   });
@@ -112,7 +109,7 @@ describe("Controls.Mouse", () => {
     assert.strictEqual(mouse.isDown("NONE"), true);
     assert.strictEqual(mouse.isDown("ANY"), false);
 
-    mouse.buttonsDown[MouseEventButton.left] = true;
+    canvas.dispatchMouseEvent("mousedown", { button: MouseEventButton.left });
 
     assert.strictEqual(mouse.isDown("left"), true);
     assert.strictEqual(mouse.isDown(MouseEventButton.left), true);
@@ -123,12 +120,14 @@ describe("Controls.Mouse", () => {
   test("wasJustPressed / wasJustReleased resolve a named button, and handle ANY / NONE", () => {
     assert.strictEqual(mouse.wasJustPressed("NONE"), true);
 
-    mouse.buttons[MouseEventButton.left].wasJustPressed = true;
+    canvas.dispatchMouseEvent("mousedown", { button: MouseEventButton.left });
+    mouse.update();
     assert.strictEqual(mouse.wasJustPressed("left"), true);
     assert.strictEqual(mouse.wasJustPressed("ANY"), true);
     assert.strictEqual(mouse.wasJustPressed("NONE"), false);
 
-    mouse.buttons[MouseEventButton.left].wasJustReleased = true;
+    canvas.dispatchMouseEvent("mouseup", { button: MouseEventButton.left });
+    mouse.update();
     assert.strictEqual(mouse.wasJustReleased("left"), true);
   });
 
@@ -141,12 +140,12 @@ describe("Controls.Mouse", () => {
     canvas.dispatchMouseEvent("mousedown", { button: MouseEventButton.left });
 
     assert.strictEqual(downEvents.length, 1);
-    assert.strictEqual(mouse.buttonsDown[MouseEventButton.left], true);
+    assert.strictEqual(mouse.isDown(MouseEventButton.left), true);
     assert.strictEqual(canvas.focus.mock.calls.length, 1);
   });
 
   test("should handle mouse up event", () => {
-    mouse.buttonsDown[MouseEventButton.left] = true;
+    canvas.dispatchMouseEvent("mousedown", { button: MouseEventButton.left });
 
     const upEvents: MouseEvent[] = [];
     mouse.on("up", (event) => {
@@ -156,7 +155,7 @@ describe("Controls.Mouse", () => {
     canvas.dispatchMouseEvent("mouseup", { button: MouseEventButton.left });
 
     assert.strictEqual(upEvents.length, 1);
-    assert.strictEqual(mouse.buttonsDown[MouseEventButton.left], false);
+    assert.strictEqual(mouse.isDown(MouseEventButton.left), false);
   });
 
   test("should handle mouse move event without pointer lock", () => {
@@ -197,8 +196,19 @@ describe("Controls.Mouse", () => {
 
   test("should handle double click event", () => {
     canvas.dispatchMouseEvent("dblclick", { button: MouseEventButton.left });
+    mouse.update();
 
-    assert.strictEqual(mouse.buttons[MouseEventButton.left].doubleClicked, true);
+    assert.strictEqual(mouse.buttonState(MouseEventButton.left).doubleClicked, true);
+  });
+
+  test("doubleClicked is a one-frame pulse, not a permanent latch", () => {
+    canvas.dispatchMouseEvent("dblclick", { button: MouseEventButton.left });
+    mouse.update();
+    assert.strictEqual(mouse.buttonState(MouseEventButton.left).doubleClicked, true);
+
+    mouse.update();
+
+    assert.strictEqual(mouse.buttonState(MouseEventButton.left).doubleClicked, false);
   });
 
   test("should handle wheel scroll up", () => {
@@ -223,6 +233,26 @@ describe("Controls.Mouse", () => {
     assert.strictEqual(mouse.scrollDown, true);
   });
 
+  test("accumulates several wheel events arriving within one frame", () => {
+    // Two upward notches in the same frame must not cancel or be discarded:
+    // the deltas used to be replaced rather than summed, dropping the first.
+    canvas.dispatchWheelEvent({ wheelDelta: 120 });
+    canvas.dispatchWheelEvent({ wheelDelta: 120 });
+    mouse.update();
+
+    assert.strictEqual(mouse.scrollUp, true);
+    assert.strictEqual(mouse.scrollDown, false);
+  });
+
+  test("a down notch following an up notch in the same frame nets out", () => {
+    canvas.dispatchWheelEvent({ wheelDelta: 120 });
+    canvas.dispatchWheelEvent({ wheelDelta: -120 });
+    mouse.update();
+
+    assert.strictEqual(mouse.scrollUp, false);
+    assert.strictEqual(mouse.scrollDown, false);
+  });
+
   test("should clear scroll state after update", () => {
     canvas.dispatchWheelEvent({ wheelDelta: 120 });
     mouse.update();
@@ -238,20 +268,20 @@ describe("Controls.Mouse", () => {
     canvas.dispatchMouseEvent("mousedown", { button: MouseEventButton.left });
     mouse.update();
 
-    assert.strictEqual(mouse.buttons[MouseEventButton.left].isDown, true);
-    assert.strictEqual(mouse.buttons[MouseEventButton.left].wasJustPressed, true);
+    assert.strictEqual(mouse.buttonState(MouseEventButton.left).isDown, true);
+    assert.strictEqual(mouse.buttonState(MouseEventButton.left).wasJustPressed, true);
     assert.strictEqual(mouse.wasActive, true);
 
     mouse.update();
 
-    assert.strictEqual(mouse.buttons[MouseEventButton.left].wasJustPressed, false);
-    assert.strictEqual(mouse.buttons[MouseEventButton.left].isDown, true);
+    assert.strictEqual(mouse.buttonState(MouseEventButton.left).wasJustPressed, false);
+    assert.strictEqual(mouse.buttonState(MouseEventButton.left).isDown, true);
 
     canvas.dispatchMouseEvent("mouseup", { button: MouseEventButton.left });
     mouse.update();
 
-    assert.strictEqual(mouse.buttons[MouseEventButton.left].isDown, false);
-    assert.strictEqual(mouse.buttons[MouseEventButton.left].wasJustReleased, true);
+    assert.strictEqual(mouse.buttonState(MouseEventButton.left).isDown, false);
+    assert.strictEqual(mouse.buttonState(MouseEventButton.left).wasJustReleased, true);
   });
 
   test("should calculate position delta correctly", () => {
@@ -354,6 +384,19 @@ describe("Controls.Mouse", () => {
     assert.strictEqual(documentAdapter.exitPointerLock.mock.calls.length, 0);
   });
 
+  test("unlock() before the lock is granted still clears the pending intent", () => {
+    // The browser grants pointer lock asynchronously. Cancelling in between
+    // used to leave the intent flag set, so mousemove stayed on the
+    // pointer-lock branch and `position` never updated again.
+    mouse.lock();
+    mouse.unlock();
+
+    canvas.dispatchMouseEvent("mousemove", { clientX: 120, clientY: 80 });
+    mouse.update();
+
+    assert.deepStrictEqual(mouse.position, { x: 120, y: 80 });
+  });
+
   test("should use delta from newDelta when pointer locked", () => {
     mouse.lock();
     documentAdapter.pointerLockElement = canvas;
@@ -371,7 +414,7 @@ describe("Controls.Mouse", () => {
 
     mouse.synchronizeWithTouch(touch, true);
 
-    assert.strictEqual(mouse.buttonsDown[MouseEventButton.left], true);
+    assert.strictEqual(mouse.isDown(MouseEventButton.left), true);
   });
 
   test("should synchronize with primary touch for position", () => {
@@ -387,8 +430,16 @@ describe("Controls.Mouse", () => {
 
     mouse.synchronizeWithTouch(touch, true, { x: 100, y: 150 });
 
-    assert.strictEqual(mouse.buttonsDown[MouseEventButton.left], false);
+    assert.strictEqual(mouse.isDown(MouseEventButton.left), false);
     assert.strictEqual(mouse.newPosition, null);
+  });
+
+  test("tracks a button index outside the seven known ones as not pressed", () => {
+    canvas.dispatchMouseEvent("mousedown", { button: 9 });
+    mouse.update();
+
+    assert.strictEqual(mouse.isDown(9), false);
+    assert.strictEqual(mouse.isDown("ANY"), false);
   });
 
   test("should handle multiple buttons pressed simultaneously", () => {
@@ -396,8 +447,8 @@ describe("Controls.Mouse", () => {
     canvas.dispatchMouseEvent("mousedown", { button: MouseEventButton.right });
     mouse.update();
 
-    assert.strictEqual(mouse.buttons[MouseEventButton.left].isDown, true);
-    assert.strictEqual(mouse.buttons[MouseEventButton.right].isDown, true);
+    assert.strictEqual(mouse.buttonState(MouseEventButton.left).isDown, true);
+    assert.strictEqual(mouse.buttonState(MouseEventButton.right).isDown, true);
   });
 
   test("should properly connect and disconnect event listeners", () => {
@@ -456,7 +507,7 @@ describe("Controls.Mouse", () => {
     mouse.update();
 
     assert.deepStrictEqual(events, ["down", "move", "up"]);
-    assert.strictEqual(mouse.buttons[MouseEventButton.left].wasJustReleased, true);
+    assert.strictEqual(mouse.buttonState(MouseEventButton.left).wasJustReleased, true);
   });
 
   test("should calculate position relative to canvas offset", () => {
@@ -465,6 +516,103 @@ describe("Controls.Mouse", () => {
     canvas.dispatchMouseEvent("mousemove", { clientX: 250, clientY: 200 });
 
     assert.deepStrictEqual(mouse.newPosition, { x: 150, y: 150 });
+  });
+
+  test("does not force a layout read when the event exposes offsetX/offsetY", () => {
+    canvas.rect = { left: 100, top: 50 };
+    canvas.boundingClientRectCalls = 0;
+
+    for (let i = 0; i < 50; i++) {
+      canvas.dispatchMouseEvent("mousemove", { clientX: 250, clientY: 200 });
+    }
+
+    // getBoundingClientRect() forces style + layout in a real browser, at up
+    // to the mouse's polling rate. offsetX/offsetY carry the same value for
+    // free.
+    assert.strictEqual(canvas.boundingClientRectCalls, 0);
+    assert.deepStrictEqual(mouse.newPosition, { x: 150, y: 150 });
+  });
+
+  test("falls back to getBoundingClientRect() when offsets are unavailable", () => {
+    canvas.rect = { left: 100, top: 50 };
+    canvas.boundingClientRectCalls = 0;
+
+    canvas.dispatchMouseEvent("mousemove", {
+      clientX: 250,
+      clientY: 200,
+      omitOffsets: true
+    });
+
+    assert.strictEqual(canvas.boundingClientRectCalls, 1);
+    assert.deepStrictEqual(mouse.newPosition, { x: 150, y: 150 });
+  });
+
+  test("a full press/release cycle still publishes every transition", () => {
+    canvas.dispatchMouseEvent("mousedown", { button: MouseEventButton.left });
+    mouse.update();
+    assert.strictEqual(mouse.isDown("left"), true);
+    assert.strictEqual(mouse.wasJustPressed("left"), true);
+
+    mouse.update();
+    assert.strictEqual(mouse.wasJustPressed("left"), false);
+
+    canvas.dispatchMouseEvent("mouseup", { button: MouseEventButton.left });
+    mouse.update();
+    assert.strictEqual(mouse.wasJustReleased("left"), true);
+
+    // The settling tick must run even though nothing is held.
+    mouse.update();
+    assert.strictEqual(mouse.wasJustReleased("left"), false);
+    assert.strictEqual(mouse.wasActive, false);
+  });
+
+  test("stays quiet across many idle ticks and still wakes on the next event", () => {
+    for (let frame = 0; frame < 100; frame++) {
+      mouse.update();
+    }
+    assert.strictEqual(mouse.wasActive, false);
+
+    canvas.dispatchMouseEvent("mousedown", { button: MouseEventButton.right });
+    mouse.update();
+
+    assert.strictEqual(mouse.wasJustPressed("right"), true);
+    assert.strictEqual(mouse.wasActive, true);
+  });
+
+  test("movement arriving after idle ticks still updates position and delta", () => {
+    for (let frame = 0; frame < 20; frame++) {
+      mouse.update();
+    }
+
+    canvas.dispatchMouseEvent("mousemove", { clientX: 42, clientY: 24 });
+    mouse.update();
+
+    assert.deepStrictEqual(mouse.position, { x: 42, y: 24 });
+    assert.strictEqual(mouse.isMoving(), true);
+
+    mouse.update();
+    assert.strictEqual(mouse.isMoving(), false);
+  });
+
+  test("a wheel notch arriving after idle ticks is not swallowed", () => {
+    for (let frame = 0; frame < 20; frame++) {
+      mouse.update();
+    }
+
+    canvas.dispatchWheelEvent({ wheelDelta: 120 });
+    mouse.update();
+
+    assert.strictEqual(mouse.scrollUp, true);
+  });
+
+  test("reuses the newPosition object across events instead of reallocating", () => {
+    canvas.dispatchMouseEvent("mousemove", { clientX: 10, clientY: 10 });
+    const first = mouse.newPosition;
+
+    canvas.dispatchMouseEvent("mousemove", { clientX: 20, clientY: 20 });
+
+    assert.strictEqual(mouse.newPosition, first);
+    assert.deepStrictEqual(mouse.newPosition, { x: 20, y: 20 });
   });
 
   test("should not emit lockStateChange when lock state has not changed", () => {
@@ -487,6 +635,8 @@ interface MouseEventData {
   clientY?: number;
   movementX?: number;
   movementY?: number;
+  /** Simulates an environment that does not expose offsetX/offsetY. */
+  omitOffsets?: boolean;
 }
 
 interface WheelEventData {
@@ -499,8 +649,11 @@ interface WheelEventData {
 class MouseCanvasAdapter extends mocks.CanvasAdapter {
   rect = { left: 0, top: 0 };
   pointerLockElement: any = null;
+  boundingClientRectCalls = 0;
 
   getBoundingClientRect() {
+    this.boundingClientRectCalls++;
+
     return this.rect;
   }
 
@@ -521,6 +674,24 @@ class MouseCanvasAdapter extends mocks.CanvasAdapter {
 
     Object.defineProperty(event, "target", {
       value: this,
+      writable: false
+    });
+
+    // Browsers always expose offsetX/offsetY, relative to the target's box —
+    // the same quantity `clientX - rect.left` computes. Emulated here so the
+    // specs exercise the path a real browser takes. `omitOffsets` covers
+    // environments that do not provide them, where `Mouse` falls back to
+    // getBoundingClientRect().
+    Object.defineProperty(event, "offsetX", {
+      value: eventData.omitOffsets ?
+        undefined :
+        (eventData.clientX ?? 0) - this.rect.left,
+      writable: false
+    });
+    Object.defineProperty(event, "offsetY", {
+      value: eventData.omitOffsets ?
+        undefined :
+        (eventData.clientY ?? 0) - this.rect.top,
       writable: false
     });
 

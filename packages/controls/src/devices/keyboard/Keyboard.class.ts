@@ -6,7 +6,6 @@ import type {
   InputControl,
   InputCustomAction
 } from "../../types.ts";
-import { InputActionQuery } from "../../InputActionQuery.ts";
 import {
   BrowserDocumentAdapter,
   type DocumentAdapter
@@ -18,6 +17,7 @@ import {
 } from "./code.ts";
 
 // CONSTANTS
+/** `Tab` and `Escape` keep browser defaults but still emit key events. */
 const kControlKeys = new Set([
   "ArrowUp",
   "ArrowDown",
@@ -55,14 +55,6 @@ const kControlKeys = new Set([
   "F24"
 ]);
 
-/**
- * `Tab` and `Escape` are deliberately absent. Preventing `Tab` traps focus on the canvas, so a
- * keyboard user can never reach surrounding UI, and preventing `Escape` suppresses the browser
- * default action native `dialog` closes on.
- *
- * Both still emit, so a consumer wanting the old behaviour can call:
- * `keyboard.on("Tab", (event) => event.preventDefault())`.
- */
 const kEditableTagNames = new Set([
   "INPUT",
   "TEXTAREA"
@@ -90,14 +82,6 @@ function isEditableElement(
     kEditableTagNames.has(target.tagName);
 }
 
-/**
- * Whether a key event originated inside an editable control, in which case the engine must ignore
- * it so typing does not also drive the game.
- *
- * Resolved through `composedPath()`: shadow DOM retargets `event.target` to the host, so a control
- * inside a shadow root would otherwise report as its custom element. The whole path is scanned so
- * a text node inside a `contenteditable` ancestor still matches.
- */
 export interface KeyEventTargetLike {
   target?: unknown;
   composedPath?: () => readonly unknown[];
@@ -113,12 +97,6 @@ export function isEditableTarget(
   return isEditableElement(event.target);
 }
 
-/**
- * `down`/`up`/`press` are the fixed lifecycle events; every `KeyCode` is also
- * emitted individually (see `#onKeyDown`) so a consumer can subscribe to one
- * specific key. Keyed on `KeyCode` rather than an open `[key: string]` index
- * signature so a typo in a subscribed key name fails to compile.
- */
 export type KeyboardEvents =
   & Record<KeyCode, (event: KeyboardEvent) => void>
   & {
@@ -128,6 +106,7 @@ export type KeyboardEvents =
   };
 
 export interface KeyState {
+  code: string;
   isDown: boolean;
   wasJustPressed: boolean;
   wasJustAutoRepeated: boolean;
@@ -146,6 +125,7 @@ export class Keyboard extends Emitter<
   #documentAdapter: DocumentAdapter;
 
   #wasActive = false;
+  #settled = true;
   #enabled = true;
   buttons = new Map<string, KeyState>();
   buttonsDown = new Set<string>();
@@ -173,10 +153,6 @@ export class Keyboard extends Emitter<
     return this.#enabled;
   }
 
-  /**
-   * Disabling resets held keys so polling consumers see them release,
-   * instead of getting stuck "down".
-   */
   set enabled(
     enabled: boolean
   ) {
@@ -231,37 +207,66 @@ export class Keyboard extends Emitter<
   isDown(
     key: InputKeyboardAction
   ): boolean {
-    return new InputActionQuery(key).match({
-      any: () => this.buttonsDown.size > 0,
-      none: () => this.buttonsDown.size === 0,
-      value: (resolvedKey) => this.buttonsDown.has(mapKeyToExtendedKey(resolvedKey))
-    });
+    if (key === "ANY") {
+      return this.buttonsDown.size > 0;
+    }
+    if (key === "NONE") {
+      return this.buttonsDown.size === 0;
+    }
+
+    return this.buttonsDown.has(
+      mapKeyToExtendedKey(key)
+    );
   }
 
   wasJustPressed(
     key: InputKeyboardAction
   ): boolean {
-    return new InputActionQuery(key).match({
-      any: () => Array.from(this.buttons.values()).some((button) => button.wasJustPressed),
-      none: () => Array.from(this.buttons.values()).every((button) => !button.wasJustPressed),
-      value: (resolvedKey) => this.buttons.get(mapKeyToExtendedKey(resolvedKey))?.wasJustPressed ?? false
-    });
+    if (key === "ANY") {
+      return this.#anyButton("wasJustPressed");
+    }
+    if (key === "NONE") {
+      return !this.#anyButton("wasJustPressed");
+    }
+
+    return this.buttons.get(
+      mapKeyToExtendedKey(key)
+    )?.wasJustPressed ?? false;
   }
 
   wasJustReleased(
     key: InputKeyboardAction
   ): boolean {
-    return new InputActionQuery(key).match({
-      any: () => Array.from(this.buttons.values()).some((button) => button.wasJustReleased),
-      none: () => Array.from(this.buttons.values()).every((button) => !button.wasJustReleased),
-      value: (resolvedKey) => this.buttons.get(mapKeyToExtendedKey(resolvedKey))?.wasJustReleased ?? false
-    });
+    if (key === "ANY") {
+      return this.#anyButton("wasJustReleased");
+    }
+    if (key === "NONE") {
+      return !this.#anyButton("wasJustReleased");
+    }
+
+    return this.buttons.get(
+      mapKeyToExtendedKey(key)
+    )?.wasJustReleased ?? false;
+  }
+
+  #anyButton(
+    flag: "wasJustPressed" | "wasJustReleased"
+  ): boolean {
+    for (const button of this.buttons.values()) {
+      if (button[flag]) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   wasJustAutoRepeated(
     key: ExtendedKeyCode
   ): boolean {
-    return this.buttons.get(mapKeyToExtendedKey(key))?.wasJustAutoRepeated ?? false;
+    return this.buttons.get(
+      mapKeyToExtendedKey(key)
+    )?.wasJustAutoRepeated ?? false;
   }
 
   #onKeyDown = (event: KeyboardEvent) => {
@@ -279,6 +284,7 @@ export class Keyboard extends Emitter<
 
     if (!this.buttons.has(event.code)) {
       this.buttons.set(event.code, {
+        code: event.code,
         isDown: false,
         wasJustPressed: false,
         wasJustAutoRepeated: false,
@@ -313,11 +319,6 @@ export class Keyboard extends Emitter<
     }
   };
 
-  /**
-   * Not guarded by `isEditableTarget`, unlike keydown and keypress. Holding a key on the canvas
-   * then focusing a field before releasing would otherwise leave it in `buttonsDown` forever.
-   * Deleting a key that was never added is a no-op, so releases are always safe to process.
-   */
   #onKeyUp = (event: KeyboardEvent) => {
     if (!this.#enabled) {
       return;
@@ -328,33 +329,46 @@ export class Keyboard extends Emitter<
   };
 
   update() {
-    this.#wasActive = false;
+    if (
+      this.#settled &&
+      this.buttonsDown.size === 0 &&
+      this.autoRepeatedCode === null &&
+      this.newChar === ""
+    ) {
+      return;
+    }
 
-    for (const [code, keyState] of this.buttons) {
+    let active = 0;
+    let settling = 0;
+
+    for (const keyState of this.buttons.values()) {
       const wasDown = keyState.isDown;
-      const isDown = this.buttonsDown.has(code);
+      const isDown = this.buttonsDown.has(keyState.code);
 
       keyState.isDown = isDown;
-      keyState.wasJustPressed = !wasDown && keyState.isDown;
+      keyState.wasJustPressed = !wasDown && isDown;
       keyState.wasJustAutoRepeated = false;
-      keyState.wasJustReleased = wasDown && !keyState.isDown;
+      keyState.wasJustReleased = wasDown && !isDown;
 
-      if (isDown) {
-        this.#wasActive = true;
-      }
+      active |= Number(isDown);
+      settling |= Number(keyState.wasJustPressed) | Number(keyState.wasJustReleased);
     }
 
     if (this.autoRepeatedCode !== null) {
       const keyState = this.buttons.get(this.autoRepeatedCode);
       if (keyState) {
         keyState.wasJustAutoRepeated = true;
-        this.#wasActive = true;
+        active |= 1;
+        settling |= 1;
       }
       this.autoRepeatedCode = null;
     }
 
     this.char = this.newChar;
     this.newChar = "";
+
+    this.#wasActive = active !== 0;
+    this.#settled = active === 0 && settling === 0 && this.char === "";
   }
 }
 

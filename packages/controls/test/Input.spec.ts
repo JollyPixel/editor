@@ -18,10 +18,12 @@ import * as mocks from "./mocks/index.ts";
 /**
  * `Input`'s constructor wires real `devices.Mouse`/`Screen`/`Keyboard`/`Touchpad`/`Gamepad`
  * instances internally and only exposes a `windowAdapter` override (not a per-device
- * `documentAdapter`). These tests never call `connect()`/`disconnect()`, so the DOM/document
- * wiring those devices default to is never exercised here — only `Input`'s own orchestration
- * (device-preference switching, lifecycle) is under test. Per-device query and coordinate-space
- * behavior (isDown/wasJustPressed/viewportPosition/...) is covered in each device's own spec.
+ * `documentAdapter`). Only `Input`'s own orchestration (device-preference switching,
+ * lifecycle) is under test here; per-device query and coordinate-space behavior
+ * (isDown/wasJustPressed/viewportPosition/...) is covered in each device's own spec.
+ *
+ * The device-preference test connects the mouse alone, because mouse button state lives
+ * in private bitmasks and is only reachable through the DOM handlers.
  */
 function createFakeCanvas(): CanvasAdapter {
   return {
@@ -63,7 +65,12 @@ describe("Controls.Input", () => {
   describe("device preference", () => {
     test("switches to gamepad on gamepad activity, and back to default on mouse activity", () => {
       const windowAdapter = new FakeWindowAdapter();
-      const localInput = new Input(createFakeCanvas(), { windowAdapter });
+      const localCanvas = new mocks.CanvasAdapter();
+      const localInput = new Input(localCanvas, {
+        windowAdapter,
+        documentAdapter: new mocks.DocumentAdapter()
+      });
+      localInput.mouse.connect();
 
       const preferences: string[] = [];
       localInput.on("devicePreferenceChange", (preference) => preferences.push(preference));
@@ -78,7 +85,7 @@ describe("Controls.Input", () => {
       assert.strictEqual(localInput.devicePreference, "gamepad");
 
       windowAdapter.navigator.gamepads[0] = null;
-      localInput.mouse.buttonsDown[MouseEventButton.left] = true;
+      localCanvas.dispatch("mousedown", { button: MouseEventButton.left, preventDefault: () => void 0 });
       localInput.update();
 
       assert.strictEqual(localInput.devicePreference, "default");

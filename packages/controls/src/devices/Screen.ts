@@ -12,6 +12,13 @@ import type {
   Vector2Like
 } from "../types.ts";
 
+export interface ScreenBounds {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
 export type FullscreenState =
   | "active"
   | "suspended";
@@ -85,21 +92,42 @@ export class Screen extends Emitter<
   }
 
   get size(): Vector2Like {
-    return {
-      x: this.#canvas.clientWidth,
-      y: this.#canvas.clientHeight
-    };
+    return this.sizeTo({
+      x: 0,
+      y: 0
+    });
   }
 
-  get bounds() {
-    const size = this.size;
+  sizeTo<T extends Vector2Like>(
+    out: T
+  ): T {
+    out.x = this.#canvas.clientWidth;
+    out.y = this.#canvas.clientHeight;
 
-    return {
-      left: size.x / -2,
-      right: size.x / 2,
-      top: size.y / 2,
-      bottom: size.y / -2
-    };
+    return out;
+  }
+
+  get bounds(): ScreenBounds {
+    return this.boundsTo({
+      left: 0,
+      right: 0,
+      top: 0,
+      bottom: 0
+    });
+  }
+
+  boundsTo<T extends ScreenBounds>(
+    out: T
+  ): T {
+    const width = this.#canvas.clientWidth;
+    const height = this.#canvas.clientHeight;
+
+    out.left = width / -2;
+    out.right = width / 2;
+    out.top = height / 2;
+    out.bottom = height / -2;
+
+    return out;
   }
 
   exit() {

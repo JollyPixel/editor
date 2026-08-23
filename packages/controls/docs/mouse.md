@@ -27,7 +27,7 @@ mouse.on("wheel", (event) => {
 function gameLoop() {
   mouse.update();
 
-  if (mouse.buttons[MouseEventButton.left].wasJustPressed) {
+  if (mouse.wasJustPressed(MouseEventButton.left)) {
     console.log("Left click!");
   }
 
@@ -70,11 +70,21 @@ type MouseLockState = "locked" | "unlocked";
 
 interface MouseButtonState {
   isDown: boolean;
+  // One-frame pulse, like wasJustPressed/wasJustReleased: set by the tick that
+  // follows the dblclick event, cleared by the next one.
   doubleClicked: boolean;
   wasJustPressed: boolean;
   wasJustReleased: boolean;
 }
 ```
+
+## Per-frame cost
+
+`update()` returns immediately while the mouse is idle.
+
+`mousemove` uses `offsetX`/`offsetY` and falls back to
+`getBoundingClientRect()` when offsets are unavailable. `newPosition` reuses
+one object between events.
 
 ## Events
 
@@ -92,11 +102,6 @@ type MouseEvents = {
 
 ```ts
 interface Mouse {
-  // Per-button state indexed by MouseEventButton values
-  buttons: MouseButtonState[];
-  // Raw down state, written immediately on DOM events
-  buttonsDown: boolean[];
-
   // Canvas-local position in pixels (read-only)
   readonly position: { x: number; y: number };
   // Movement delta since last update() (read-only)
@@ -127,22 +132,32 @@ interface Mouse {
   isMoving(): boolean;
 
   // Per-frame state queries — `action` accepts "ANY" / "NONE" alongside a
-  // MouseAction / button index, dispatched through InputActionQuery.
+  // MouseAction / button index.
   isDown(action: InputMouseAction): boolean;
   wasJustPressed(action: InputMouseAction): boolean;
   wasJustReleased(action: InputMouseAction): boolean;
 
+  // Snapshot of the four flags from the last update().
+  // Prefer the direct queries above on per-frame paths.
+  buttonState(action: number | MouseAction): Readonly<MouseButtonState>;
+
   // Cursor visibility (sets canvas.style.cursor)
   visible: boolean;
 
-  // Each read computes and returns a fresh object; cache it per frame
-  // rather than reading it repeatedly.
+  // Fresh objects. Prefer the `…To` variants in per-frame code.
   // `position` normalized to [-1, 1] on both axes, Y flipped
   viewportPosition: Vector2Like;
   // `viewportPosition` scaled by half the canvas size (centered pixel coordinates)
   worldPosition: Vector2Like;
   // `delta`, Y flipped and optionally normalized against half the canvas size
   viewportDelta(normalizeWithSize?: boolean): Vector2Like;
+
+  // Write into a caller-owned vector. `THREE.Vector2` is compatible.
+  positionTo<T extends Vector2Like>(out: T): T;
+  deltaTo<T extends Vector2Like>(out: T): T;
+  viewportPositionTo<T extends Vector2Like>(out: T): T;
+  worldPositionTo<T extends Vector2Like>(out: T): T;
+  viewportDeltaTo<T extends Vector2Like>(out: T, normalizeWithSize?: boolean): T;
 
   // Mirror primary touch into mouse state (left button + position)
   synchronizeWithTouch(

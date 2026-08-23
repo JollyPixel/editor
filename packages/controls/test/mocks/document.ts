@@ -6,6 +6,7 @@ import { EventTargetAdapter } from "./eventTarget.ts";
 
 export class DocumentAdapter extends EventTargetAdapter {
   fullscreenElement: any = null;
+  pointerLockElement: any = null;
 
   exitPointerLock = mock.fn();
   exitFullscreen = mock.fn();

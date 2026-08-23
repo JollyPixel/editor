@@ -129,6 +129,9 @@ interface Gamepad {
   static readonly MaxGamepads: 4;
   static readonly MaxButtons: 16;
   static readonly MaxAxes: 4;
+  // Frames between navigator.getGamepads() polls while nothing is connected
+  // (default 30). See "Polling cost" below.
+  static IdlePollFrames: number;
 
   // Per-gamepad, per-button state
   buttons: GamepadButtonState[][];
@@ -150,6 +153,14 @@ interface Gamepad {
   readonly wasActive: boolean;
 }
 ```
+
+## Polling cost
+
+Until it finds a controller, `update()` polls every `Gamepad.IdlePollFrames`
+frames so it can detect controllers present at page load when
+`gamepadconnected` may not fire, after which polling returns to every frame.
+
+Set `Gamepad.IdlePollFrames = 1` to restore unconditional per-frame polling.
 
 ## API
 
@@ -184,6 +195,5 @@ interface Gamepad {
 }
 ```
 
-`isButtonDown`/`wasButtonJustPressed`/`wasButtonJustReleased`/`buttonValue`/`wasAxisJustPressed`/
-`wasAxisJustReleased`/`axisValue` all throw `Error("Invalid gamepad info")` for an out-of-range
-gamepad index, button, or axis — unlike `Mouse`/`Keyboard`, there's no `"ANY"`/`"NONE"` sentinel here.
+All button and axis query methods throw `Error("Invalid gamepad info")` for an
+out-of-range gamepad, button, or axis. `"ANY"` and `"NONE"` are not supported.

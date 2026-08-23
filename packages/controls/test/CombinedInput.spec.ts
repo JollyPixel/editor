@@ -17,20 +17,7 @@ import {
   InputCombination
 } from "../src/CombinedInput.ts";
 import type { InputCondition } from "../src/AtomicInput.ts";
-import type { CanvasAdapter } from "../src/adapters/index.ts";
-
-function createFakeCanvas(): CanvasAdapter {
-  return {
-    clientWidth: 800,
-    clientHeight: 600,
-    style: { cursor: "auto" },
-    addEventListener: mock.fn(),
-    removeEventListener: mock.fn(),
-    requestFullscreen: mock.fn(() => Promise.resolve()),
-    requestPointerLock: mock.fn(() => Promise.resolve()),
-    focus: mock.fn()
-  };
-}
+import * as mocks from "./mocks/index.ts";
 
 function stubCondition(
   result: boolean
@@ -45,10 +32,17 @@ function stubCondition(
 }
 
 describe("Controls.CombinedInput", () => {
+  let canvas: mocks.CanvasAdapter;
   let input: Input;
 
   beforeEach(() => {
-    input = new Input(createFakeCanvas());
+    canvas = new mocks.CanvasAdapter();
+    input = new Input(canvas, {
+      documentAdapter: new mocks.DocumentAdapter()
+    });
+    // Mouse state now lives in private bitmasks, so it is driven through the
+    // DOM handlers rather than written directly.
+    input.mouse.connect();
   });
 
   describe("AllInputs", () => {
@@ -144,7 +138,11 @@ describe("Controls.CombinedInput", () => {
     });
 
     test("mouse() accepts a bare button with a default/explicit state, or a dot-path action", () => {
-      input.mouse.buttonsDown[0] = true;
+      canvas.dispatch("mousedown", { button: 0, preventDefault: () => void 0 });
+      // Two ticks: the second clears `wasJustPressed`, leaving the button held
+      // but no longer freshly pressed, which is what the default state needs.
+      input.mouse.update();
+      input.mouse.update();
 
       assert.strictEqual(InputCombination.mouse("left").evaluate(input), false);
       assert.strictEqual(InputCombination.mouse("left", "down").evaluate(input), true);
