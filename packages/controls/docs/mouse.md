@@ -20,7 +20,7 @@ const mouse = new Mouse({ canvas });
 mouse.connect();
 mouse.on("down", (event) => console.log("button", event.button));
 mouse.on("wheel", (event) => {
-  const [dx, dy] = Mouse.getWheelDelta(event);
+  const [dx, dy] = Mouse.wheelDelta(event);
   console.log("scroll", dx, dy);
 });
 
@@ -133,15 +133,16 @@ interface Mouse {
   wasJustReleased(action: InputMouseAction): boolean;
 
   // Cursor visibility (sets canvas.style.cursor)
-  isVisible(): boolean;
-  setVisible(visible: boolean): void;
+  visible: boolean;
 
+  // Each read computes and returns a fresh object; cache it per frame
+  // rather than reading it repeatedly.
   // `position` normalized to [-1, 1] on both axes, Y flipped
-  getViewportPosition(): Vector2Like;
-  // `getViewportPosition()` scaled by half the canvas size (centered pixel coordinates)
-  getWorldPosition(): Vector2Like;
+  viewportPosition: Vector2Like;
+  // `viewportPosition` scaled by half the canvas size (centered pixel coordinates)
+  worldPosition: Vector2Like;
   // `delta`, Y flipped and optionally normalized against half the canvas size
-  getViewportDelta(normalizeWithSize?: boolean): Vector2Like;
+  viewportDelta(normalizeWithSize?: boolean): Vector2Like;
 
   // Mirror primary touch into mouse state (left button + position)
   synchronizeWithTouch(
@@ -152,7 +153,7 @@ interface Mouse {
 }
 
 // Normalize WheelEvent across browsers and platforms
-static getWheelDelta(event: WheelEvent): [number, number];
+static wheelDelta(event: WheelEvent): [number, number];
 ```
 
 ```ts

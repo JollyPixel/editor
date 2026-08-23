@@ -980,7 +980,7 @@ editor wires the two together once:
 
 ```ts
 uiScope.on("change", (scope) => {
-  world.input.keyboard.setEnabled(scope === "viewport");
+  world.input.keyboard.enabled = scope === "viewport";
 });
 ```
 

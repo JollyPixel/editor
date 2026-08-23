@@ -166,7 +166,7 @@ interface Gamepad {
   wasButtonJustPressed(gamepad: GamepadIndex, buttonIndex: number | keyof typeof GamepadButton): boolean;
   wasButtonJustReleased(gamepad: GamepadIndex, buttonIndex: number | keyof typeof GamepadButton): boolean;
   // Analog value of a button (0 to 1)
-  getButtonValue(gamepad: GamepadIndex, buttonIndex: number | keyof typeof GamepadButton): number;
+  buttonValue(gamepad: GamepadIndex, buttonIndex: number | keyof typeof GamepadButton): number;
 
   // `axis` accepts a GamepadAxis name or index; throws on an out-of-range gamepad/axis
   wasAxisJustPressed(
@@ -180,10 +180,10 @@ interface Gamepad {
     options?: { positive?: boolean; }
   ): boolean;
   // Current axis value (-1 to 1)
-  getAxisValue(gamepad: GamepadIndex, axis: number | keyof typeof GamepadAxis): number;
+  axisValue(gamepad: GamepadIndex, axis: number | keyof typeof GamepadAxis): number;
 }
 ```
 
-`isButtonDown`/`wasButtonJustPressed`/`wasButtonJustReleased`/`getButtonValue`/`wasAxisJustPressed`/
-`wasAxisJustReleased`/`getAxisValue` all throw `Error("Invalid gamepad info")` for an out-of-range
+`isButtonDown`/`wasButtonJustPressed`/`wasButtonJustReleased`/`buttonValue`/`wasAxisJustPressed`/
+`wasAxisJustReleased`/`axisValue` all throw `Error("Invalid gamepad info")` for an out-of-range
 gamepad index, button, or axis — unlike `Mouse`/`Keyboard`, there's no `"ANY"`/`"NONE"` sentinel here.

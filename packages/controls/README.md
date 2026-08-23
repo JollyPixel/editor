@@ -36,7 +36,7 @@ function gameLoop() {
     console.log("Jump!");
   }
   if (input.mouse.isDown("left")) {
-    const delta = input.mouse.getViewportDelta(true);
+    const delta = input.mouse.viewportDelta(true);
     console.log("Dragging", delta.x, delta.y);
   }
 

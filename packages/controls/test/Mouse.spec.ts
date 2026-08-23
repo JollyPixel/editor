@@ -77,34 +77,34 @@ describe("Controls.Mouse", () => {
     assert.strictEqual(mouse.isMoving(), true);
   });
 
-  test("isVisible / setVisible toggle the canvas cursor style", () => {
-    assert.strictEqual(mouse.isVisible(), true);
-    mouse.setVisible(false);
-    assert.strictEqual(mouse.isVisible(), false);
-    mouse.setVisible(true);
-    assert.strictEqual(mouse.isVisible(), true);
+  test("visible accessor toggles the canvas cursor style", () => {
+    assert.strictEqual(mouse.visible, true);
+    mouse.visible = false;
+    assert.strictEqual(mouse.visible, false);
+    mouse.visible = true;
+    assert.strictEqual(mouse.visible, true);
   });
 
-  test("getViewportPosition normalizes canvas-space coordinates into [-1, 1] with Y flipped", () => {
+  test("viewportPosition normalizes canvas-space coordinates into [-1, 1] with Y flipped", () => {
     mouse.newPosition = { x: 800, y: 0 };
     mouse.update();
 
-    assert.deepStrictEqual(mouse.getViewportPosition(), { x: 1, y: 1 });
+    assert.deepStrictEqual(mouse.viewportPosition, { x: 1, y: 1 });
   });
 
-  test("getWorldPosition scales the viewport position by half the canvas size", () => {
+  test("worldPosition scales the viewport position by half the canvas size", () => {
     mouse.newPosition = { x: 800, y: 0 };
     mouse.update();
 
-    assert.deepStrictEqual(mouse.getWorldPosition(), { x: 400, y: 300 });
+    assert.deepStrictEqual(mouse.worldPosition, { x: 400, y: 300 });
   });
 
-  test("getViewportDelta inverts Y, and normalizes against canvas size when requested", () => {
+  test("viewportDelta inverts Y, and normalizes against canvas size when requested", () => {
     mouse.newPosition = { x: 10, y: 20 };
     mouse.update();
 
-    assert.deepStrictEqual(mouse.getViewportDelta(), { x: 10, y: -20 });
-    assert.deepStrictEqual(mouse.getViewportDelta(true), { x: 0.025, y: -20 / 300 });
+    assert.deepStrictEqual(mouse.viewportDelta(), { x: 10, y: -20 });
+    assert.deepStrictEqual(mouse.viewportDelta(true), { x: 0.025, y: -20 / 300 });
   });
 
   test("isDown resolves a named button, and handles ANY / NONE", () => {

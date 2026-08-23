@@ -216,13 +216,13 @@ describe("Controls.Keyboard", () => {
     assert.equal(keyboard.buttonsDown.has("KeyA"), false);
   });
 
-  describe("setEnabled", () => {
+  describe("enabled setter", () => {
     test("defaults to enabled", () => {
       assert.equal(keyboard.enabled, true);
     });
 
     test("disabling ignores subsequent keydown/keyup events", () => {
-      keyboard.setEnabled(false);
+      keyboard.enabled = false;
       documentAdapter.dispatchEvent("keydown", { code: "KeyA" });
       keyboard.update();
 
@@ -235,14 +235,14 @@ describe("Controls.Keyboard", () => {
       keyboard.update();
       assert.equal(keyboard.buttonsDown.has("KeyW"), true);
 
-      keyboard.setEnabled(false);
+      keyboard.enabled = false;
 
       assert.equal(keyboard.buttonsDown.has("KeyW"), false);
     });
 
     test("re-enabling resumes tracking new keydown/keyup events", () => {
-      keyboard.setEnabled(false);
-      keyboard.setEnabled(true);
+      keyboard.enabled = false;
+      keyboard.enabled = true;
 
       documentAdapter.dispatchEvent("keydown", { code: "KeyA" });
       keyboard.update();
@@ -254,7 +254,7 @@ describe("Controls.Keyboard", () => {
       documentAdapter.dispatchEvent("keydown", { code: "KeyA" });
       keyboard.update();
 
-      keyboard.setEnabled(true);
+      keyboard.enabled = true;
 
       assert.equal(keyboard.buttonsDown.has("KeyA"), true);
     });

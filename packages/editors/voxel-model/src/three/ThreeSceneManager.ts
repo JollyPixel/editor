@@ -88,7 +88,7 @@ export default class ThreeSceneManager {
         return;
       }
 
-      const viewportPosition = this.input.mouse.getViewportPosition();
+      const viewportPosition = this.input.mouse.viewportPosition;
       this.cameraRaycaster.setFromCamera(
         new THREE.Vector2(viewportPosition.x, viewportPosition.y),
         this.camera

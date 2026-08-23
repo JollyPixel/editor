@@ -115,7 +115,7 @@ export class Touchpad extends Emitter<
     );
   }
 
-  getTouchState(
+  touchState(
     identifier: TouchAction
   ): TouchState {
     const finalizedIdentifier = typeof identifier === "string" ?
@@ -131,26 +131,26 @@ export class Touchpad extends Emitter<
   isDown(
     identifier: TouchAction
   ): boolean {
-    return this.getTouchState(identifier).isDown;
+    return this.touchState(identifier).isDown;
   }
 
   wasStarted(
     identifier: TouchAction
   ): boolean {
-    return this.getTouchState(identifier).wasStarted;
+    return this.touchState(identifier).wasStarted;
   }
 
   wasEnded(
     identifier: TouchAction
   ): boolean {
-    return this.getTouchState(identifier).wasEnded;
+    return this.touchState(identifier).wasEnded;
   }
 
   /** Canvas-relative touch position, normalized to `[-1, 1]` on both axes with Y flipped. */
-  getViewportPosition(
+  viewportPosition(
     identifier: TouchAction
   ): Vector2Like {
-    const { position } = this.getTouchState(identifier);
+    const { position } = this.touchState(identifier);
     const x = (position.x / this.#canvas.clientWidth) * 2;
     const y = (position.y / this.#canvas.clientHeight) * 2;
 

@@ -113,7 +113,7 @@ export class FreeFlyCamera extends CameraComponent {
 
     // --- Mouse look ---
     if (input.mouse.isDown("middle") && input.mouse.isMoving()) {
-      const delta = input.mouse.getViewportDelta(false);
+      const delta = input.mouse.viewportDelta(false);
       this.#yaw -= delta.x * this.#mouseSensitivity;
       this.#pitch += delta.y * this.#mouseSensitivity;
       this.#pitch = Math.max(

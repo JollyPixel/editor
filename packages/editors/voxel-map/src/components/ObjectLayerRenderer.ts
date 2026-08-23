@@ -145,7 +145,7 @@ export class ObjectLayerRenderer extends TransformGizmoBase {
   #trySelectObject(): void {
     const { input } = this.actor.world;
 
-    const viewportPosition = input.mouse.getViewportPosition();
+    const viewportPosition = input.mouse.viewportPosition;
     this.#raycaster.setFromCamera(
       new THREE.Vector2(viewportPosition.x, viewportPosition.y),
       this.camera

@@ -49,12 +49,12 @@ describe("Controls.Fullscreen", () => {
     assert.strictEqual(fullscreen.wantsFullscreen, true);
   });
 
-  test("getSize reads the canvas client size", () => {
-    assert.deepStrictEqual(fullscreen.getSize(), { x: 800, y: 600 });
+  test("size reads the canvas client size", () => {
+    assert.deepStrictEqual(fullscreen.size, { x: 800, y: 600 });
   });
 
-  test("getBounds centers the canvas size at the origin", () => {
-    assert.deepStrictEqual(fullscreen.getBounds(), {
+  test("bounds centers the canvas size at the origin", () => {
+    assert.deepStrictEqual(fullscreen.bounds, {
       left: -400,
       right: 400,
       top: 300,

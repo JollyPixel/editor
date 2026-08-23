@@ -354,7 +354,7 @@ describe("Controls.Gamepad", () => {
   });
 
   describe("button/axis queries", () => {
-    test("isButtonDown / wasButtonJustPressed / wasButtonJustReleased / getButtonValue resolve a named button", () => {
+    test("isButtonDown / wasButtonJustPressed / wasButtonJustReleased / buttonValue resolve a named button", () => {
       gamepad.buttons[0][0] = {
         isDown: true,
         wasJustPressed: true,
@@ -365,7 +365,7 @@ describe("Controls.Gamepad", () => {
       assert.strictEqual(gamepad.isButtonDown(0, "A"), true);
       assert.strictEqual(gamepad.wasButtonJustPressed(0, "A"), true);
       assert.strictEqual(gamepad.wasButtonJustReleased(0, "A"), false);
-      assert.strictEqual(gamepad.getButtonValue(0, "A"), 0.75);
+      assert.strictEqual(gamepad.buttonValue(0, "A"), 0.75);
       assert.strictEqual(gamepad.isButtonDown(0, 0), true);
     });
 
@@ -373,7 +373,7 @@ describe("Controls.Gamepad", () => {
       assert.throws(() => gamepad.isButtonDown(0, 999), /Invalid gamepad info/);
     });
 
-    test("wasAxisJustPressed / wasAxisJustReleased / getAxisValue resolve a named axis", () => {
+    test("wasAxisJustPressed / wasAxisJustReleased / axisValue resolve a named axis", () => {
       gamepad.axes[0][0] = {
         wasPositiveJustPressed: true,
         wasPositiveJustAutoRepeated: false,
@@ -386,11 +386,11 @@ describe("Controls.Gamepad", () => {
 
       assert.strictEqual(gamepad.wasAxisJustPressed(0, "LeftStickX", { positive: true }), true);
       assert.strictEqual(gamepad.wasAxisJustReleased(0, "LeftStickX", { positive: true }), false);
-      assert.strictEqual(gamepad.getAxisValue(0, "LeftStickX"), 0.5);
+      assert.strictEqual(gamepad.axisValue(0, "LeftStickX"), 0.5);
     });
 
     test("throws for an out-of-range axis", () => {
-      assert.throws(() => gamepad.getAxisValue(0, 999), /Invalid gamepad info/);
+      assert.throws(() => gamepad.axisValue(0, 999), /Invalid gamepad info/);
     });
   });
 });
