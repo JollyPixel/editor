@@ -20,9 +20,6 @@
       "path": "./packages/arbor"
     },
     {
-      "path": "./packages/fs-tree-backend"
-    },
-    {
       "path": "./packages/asset"
     },
     {

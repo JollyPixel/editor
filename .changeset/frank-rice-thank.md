@@ -1,5 +1,4 @@
 ---
-"@jolly-pixel/editor.pixel-art": minor
 "@jolly-pixel/ui": minor
 ---
 
