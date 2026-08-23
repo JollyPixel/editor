@@ -96,7 +96,7 @@ export class UISprite<
   }
 
   isPointerOver(): boolean {
-    const mouse = this.actor.world.input.mouse.getWorldPosition();
+    const mouse = this.actor.world.input.mouse.worldPosition;
     const box = new THREE.Box3().setFromObject(this.mesh);
 
     return box.containsPoint(

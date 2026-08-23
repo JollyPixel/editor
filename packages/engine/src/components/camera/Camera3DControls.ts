@@ -103,7 +103,7 @@ export class Camera3DControls extends CameraComponent<any> {
 
   #rotate() {
     const { transform } = this.actor;
-    const mouseDelta = this.actor.world.input.mouse.getViewportDelta(
+    const mouseDelta = this.actor.world.input.mouse.viewportDelta(
       true
     );
 

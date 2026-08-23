@@ -80,9 +80,11 @@ interface Screen {
   // from a user gesture
   requestFullscreenIfWanted(): void;
 
+  // Each read computes and returns a fresh object; cache it per frame
+  // rather than reading it repeatedly.
   // Canvas client dimensions
-  getSize(): Vector2Like;
+  size: Vector2Like;
   // Canvas bounds centered at origin (useful for orthographic cameras)
-  getBounds(): { left: number; right: number; top: number; bottom: number; };
+  bounds: { left: number; right: number; top: number; bottom: number; };
 }
 ```

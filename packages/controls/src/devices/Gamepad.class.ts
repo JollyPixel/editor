@@ -232,7 +232,7 @@ export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
     return this.#resolveButton(gamepad, buttonIndex).wasJustReleased;
   }
 
-  getButtonValue(
+  buttonValue(
     gamepad: GamepadIndex,
     buttonIndex: number | keyof typeof GamepadButton
   ): number {
@@ -273,7 +273,7 @@ export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
       axisInfo.wasNegativeJustReleased;
   }
 
-  getAxisValue(
+  axisValue(
     gamepad: GamepadIndex,
     axis: number | keyof typeof GamepadAxis
   ): number {
@@ -322,9 +322,8 @@ export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
       if (gamepad) {
         this.#updateButtons(gamepad, gamepadIndex);
         this.#updateAxes(gamepad, gamepadIndex);
-        this.vibration[gamepadIndex].setActuator(
-          gamepad.vibrationActuator ?? null
-        );
+        this.vibration[gamepadIndex].actuator =
+          gamepad.vibrationActuator ?? null;
       }
     }
   }
@@ -371,13 +370,13 @@ export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
         this.axes[gamepadIndex][stickIndex + 1]
       ];
 
-      const wasAxisDown = this.#getAxisDownStates(axes);
+      const wasAxisDown = this.#axisDownStates(axes);
       this.#updateAxisValues(
         gamepad,
         axes,
         stickIndex
       );
-      const isAxisDown = this.#getAxisDownStates(axes);
+      const isAxisDown = this.#axisDownStates(axes);
 
       this.#updateAxisStates(
         axes,
@@ -407,7 +406,7 @@ export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
     }
   }
 
-  #getAxisDownStates(
+  #axisDownStates(
     axes: [GamepadAxisState, GamepadAxisState]
   ): [AxisDownState, AxisDownState] {
     const pressedValue = 0.5;

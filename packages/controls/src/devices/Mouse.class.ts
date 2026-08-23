@@ -61,7 +61,7 @@ export class Mouse extends Emitter<
   /**
    * @see https://github.com/w3c/uievents/issues/181
    */
-  static getWheelDelta(
+  static wheelDelta(
     event: WheelEvent
   ): [number, number] {
     const isApple = /^Mac|iPhone|iPod|iPad/i.test(navigator.platform);
@@ -280,13 +280,13 @@ export class Mouse extends Emitter<
     }
   }
 
-  isVisible(): boolean {
+  get visible(): boolean {
     return this.#canvas.style.cursor !== "none";
   }
 
-  setVisible(
+  set visible(
     visible: boolean
-  ): void {
+  ) {
     this.#canvas.style.cursor = visible ? "auto" : "none";
   }
 
@@ -295,7 +295,7 @@ export class Mouse extends Emitter<
    * flipped (game/NDC convention: up is positive), rather than the raw
    * top-left-origin pixel space `position` is in.
    */
-  getViewportPosition(): Vector2Like {
+  get viewportPosition(): Vector2Like {
     const position = this.position;
     const x = (position.x / this.#canvas.clientWidth) * 2;
     const y = (position.y / this.#canvas.clientHeight) * 2;
@@ -306,9 +306,9 @@ export class Mouse extends Emitter<
     };
   }
 
-  /** `getViewportPosition()` scaled by half the canvas size, i.e. centered pixel coordinates. */
-  getWorldPosition(): Vector2Like {
-    const normalized = this.getViewportPosition();
+  /** `viewportPosition` scaled by half the canvas size, i.e. centered pixel coordinates. */
+  get worldPosition(): Vector2Like {
+    const normalized = this.viewportPosition;
 
     return {
       x: normalized.x * (this.#canvas.clientWidth / 2),
@@ -317,7 +317,7 @@ export class Mouse extends Emitter<
   }
 
   /** Like `delta`, but Y-flipped and optionally normalized against half the canvas size. */
-  getViewportDelta(
+  viewportDelta(
     normalizeWithSize = false
   ): Vector2Like {
     const delta = this.delta;
@@ -502,7 +502,7 @@ export class Mouse extends Emitter<
 
   #onMouseWheel = (event: WheelEvent) => {
     event.preventDefault();
-    const [deltaX, deltaY] = Mouse.getWheelDelta(event);
+    const [deltaX, deltaY] = Mouse.wheelDelta(event);
 
     this.#scrollDelta = { x: deltaX, y: deltaY };
     this.emit("wheel", event);

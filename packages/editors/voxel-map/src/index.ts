@@ -136,7 +136,7 @@ if (sidebar) {
   // drawing canvas to avoid the two colliding.
   sidebar.addEventListener("canvas-hover-change", (event: Event) => {
     const { hovering } = (event as EventCanvasHoverChange).detail;
-    world.input.keyboard.setEnabled(!hovering);
+    world.input.keyboard.enabled = !hovering;
   });
 }
 

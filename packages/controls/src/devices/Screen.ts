@@ -84,15 +84,15 @@ export class Screen extends Emitter<
     this.wantsFullscreen = true;
   }
 
-  getSize(): Vector2Like {
+  get size(): Vector2Like {
     return {
       x: this.#canvas.clientWidth,
       y: this.#canvas.clientHeight
     };
   }
 
-  getBounds() {
-    const size = this.getSize();
+  get bounds() {
+    const size = this.size;
 
     return {
       left: size.x / -2,

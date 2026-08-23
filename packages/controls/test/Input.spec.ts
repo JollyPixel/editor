@@ -21,7 +21,7 @@ import * as mocks from "./mocks/index.ts";
  * `documentAdapter`). These tests never call `connect()`/`disconnect()`, so the DOM/document
  * wiring those devices default to is never exercised here — only `Input`'s own orchestration
  * (device-preference switching, lifecycle) is under test. Per-device query and coordinate-space
- * behavior (isDown/wasJustPressed/getViewportPosition/...) is covered in each device's own spec.
+ * behavior (isDown/wasJustPressed/viewportPosition/...) is covered in each device's own spec.
  */
 function createFakeCanvas(): CanvasAdapter {
   return {
@@ -57,7 +57,7 @@ describe("Controls.Input", () => {
     assert.ok(input.gamepad);
     assert.ok(input.touchpad);
     assert.ok(input.screen);
-    assert.strictEqual(input.getDevicePreference(), "default");
+    assert.strictEqual(input.devicePreference, "default");
   });
 
   describe("device preference", () => {
@@ -68,20 +68,20 @@ describe("Controls.Input", () => {
       const preferences: string[] = [];
       localInput.on("devicePreferenceChange", (preference) => preferences.push(preference));
 
-      assert.strictEqual(localInput.getDevicePreference(), "default");
+      assert.strictEqual(localInput.devicePreference, "default");
 
       const fakeGamepad = mocks.Gamepad();
       fakeGamepad.buttons[0].pressed = true;
       windowAdapter.navigator.gamepads[0] = fakeGamepad;
 
       localInput.update();
-      assert.strictEqual(localInput.getDevicePreference(), "gamepad");
+      assert.strictEqual(localInput.devicePreference, "gamepad");
 
       windowAdapter.navigator.gamepads[0] = null;
       localInput.mouse.buttonsDown[MouseEventButton.left] = true;
       localInput.update();
 
-      assert.strictEqual(localInput.getDevicePreference(), "default");
+      assert.strictEqual(localInput.devicePreference, "default");
       assert.deepStrictEqual(preferences, ["gamepad", "default"]);
     });
   });

@@ -121,7 +121,7 @@ export class FlatWorldBrush extends ActorComponent {
     const { input } = this.actor.world;
     const scene = this.actor.world.sceneManager.getSource();
 
-    const viewportPosition = input.mouse.getViewportPosition();
+    const viewportPosition = input.mouse.viewportPosition;
     this.#raycaster.setFromCamera(
       new THREE.Vector2(viewportPosition.x, viewportPosition.y),
       this.#camera

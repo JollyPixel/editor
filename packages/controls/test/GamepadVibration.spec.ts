@@ -92,9 +92,9 @@ describe("Controls.GamepadVibration", () => {
     assert.strictEqual(actuator.reset.mock.callCount(), 1);
   });
 
-  test("should update the wrapped actuator via setActuator", async() => {
+  test("should update the wrapped actuator via the actuator setter", async() => {
     const noActuator = new GamepadVibration();
-    noActuator.setActuator(actuator);
+    noActuator.actuator = actuator;
 
     assert.strictEqual(noActuator.canVibrate, true);
     assert.strictEqual(await noActuator.pulse(1, 100), true);

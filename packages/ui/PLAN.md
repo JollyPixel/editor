@@ -146,7 +146,7 @@ from P5 to land beside their actual consumers — `List` replaces three hand-bui
 **Input scope**: **create** `src/input/InputScope.ts` (the `InputScope` type and
 `InputScopeSource` port) and `src/input/FocusScopeTracker.ts` (`focusin`/`focusout` over
 `composedPath()`), moved out of P0 to land with their consumer. Then replace the hover based
-`world.input.keyboard.setEnabled(!hovering)` in `src/index.ts` with the focus based wiring of SPEC
+`world.input.keyboard.enabled = !hovering` in `src/index.ts` with the focus based wiring of SPEC
 section 9. This is the editor that has the workaround, so it is the one that proves the
 replacement — and building the port five phases earlier would mean its first contact with a real
 focus tree came after forty five components existed.

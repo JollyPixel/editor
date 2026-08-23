@@ -146,7 +146,7 @@ export class Input extends Emitter<InputEvents> {
     );
   }
 
-  getDevicePreference(): InputDevicePreference {
+  get devicePreference(): InputDevicePreference {
     return this.#preference;
   }
 

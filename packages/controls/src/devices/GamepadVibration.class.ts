@@ -38,9 +38,9 @@ export class GamepadVibration {
   /**
    * @internal Refreshed by `Gamepad#update()` from the latest actuator snapshot.
    */
-  setActuator(
+  set actuator(
     actuator: GamepadHapticActuator | null
-  ): void {
+  ) {
     this.#actuator = actuator;
   }
 

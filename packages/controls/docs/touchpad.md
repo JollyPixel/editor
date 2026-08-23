@@ -25,7 +25,7 @@ touchpad.on("start", (touch, position) => {
 function gameLoop() {
   touchpad.update();
 
-  if (touchpad.getTouchState(TouchIdentifier.primary).wasStarted) {
+  if (touchpad.touchState(TouchIdentifier.primary).wasStarted) {
     console.log("Primary finger down!");
   }
   if (touchpad.isTwoFingerGesture) {
@@ -118,7 +118,7 @@ interface Touchpad {
   update(): void;
 
   // Returns the TouchState for a given finger identifier
-  getTouchState(identifier: TouchAction): TouchState;
+  touchState(identifier: TouchAction): TouchState;
 
   // Per-frame state queries, shorthand for the matching TouchState flag
   isDown(identifier: TouchAction): boolean;
@@ -126,7 +126,7 @@ interface Touchpad {
   wasEnded(identifier: TouchAction): boolean;
 
   // `position` normalized to [-1, 1] on both axes, Y flipped
-  getViewportPosition(identifier: TouchAction): Vector2Like;
+  viewportPosition(identifier: TouchAction): Vector2Like;
 
   // true if the device supports touch events
   static isAvailable(): boolean;

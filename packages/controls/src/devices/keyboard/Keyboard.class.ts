@@ -177,7 +177,7 @@ export class Keyboard extends Emitter<
    * Disabling resets held keys so polling consumers see them release,
    * instead of getting stuck "down".
    */
-  setEnabled(
+  set enabled(
     enabled: boolean
   ) {
     if (this.#enabled === enabled) {

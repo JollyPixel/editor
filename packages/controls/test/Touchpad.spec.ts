@@ -218,7 +218,7 @@ describe("Controls.Touchpad", () => {
     touchpad.touches[0].isDown = true;
     touchpad.touches[0].position = { x: 50, y: 75 };
 
-    const state = touchpad.getTouchState(0);
+    const state = touchpad.touchState(0);
 
     assert.strictEqual(state.isDown, true);
     assert.strictEqual(state.position.x, 50);
@@ -228,19 +228,19 @@ describe("Controls.Touchpad", () => {
   test("should get touch state by string identifier", () => {
     touchpad.touches[TouchIdentifier.primary].isDown = true;
 
-    const state = touchpad.getTouchState("primary");
+    const state = touchpad.touchState("primary");
 
     assert.strictEqual(state.isDown, true);
   });
 
   test("should throw error for out of bounds identifier", () => {
     assert.throws(
-      () => touchpad.getTouchState(-1),
+      () => touchpad.touchState(-1),
       /Touch index -1 is out of bounds/
     );
 
     assert.throws(
-      () => touchpad.getTouchState(Touchpad.MaxTouches),
+      () => touchpad.touchState(Touchpad.MaxTouches),
       new RegExp(`Touch index ${Touchpad.MaxTouches} is out of bounds`)
     );
   });
@@ -256,10 +256,10 @@ describe("Controls.Touchpad", () => {
     assert.strictEqual(touchpad.isDown("primary"), true);
   });
 
-  test("getViewportPosition normalizes canvas-space coordinates into [-1, 1] with Y flipped", () => {
+  test("viewportPosition normalizes canvas-space coordinates into [-1, 1] with Y flipped", () => {
     touchpad.touches[0].position = { x: 800, y: 0 };
 
-    assert.deepStrictEqual(touchpad.getViewportPosition(0), { x: 1, y: 1 });
+    assert.deepStrictEqual(touchpad.viewportPosition(0), { x: 1, y: 1 });
   });
 
   test("should properly connect and disconnect event listeners", () => {

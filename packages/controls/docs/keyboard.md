@@ -86,7 +86,9 @@ interface Keyboard {
   char: string;
 
   readonly wasActive: boolean;
-  readonly enabled: boolean;
+  // Assigning `false` resets held keys so polling consumers see them release
+  // instead of getting stuck "down".
+  enabled: boolean;
 }
 ```
 
@@ -99,10 +101,6 @@ interface Keyboard {
   disconnect(): void;
   reset(): void;
   update(): void;
-
-  // Disabling resets held keys so polling consumers see them release
-  // instead of getting stuck "down".
-  setEnabled(enabled: boolean): void;
 
   // Per-frame state queries — `key` accepts "ANY" / "NONE" alongside an
   // ExtendedKeyCode, dispatched through InputActionQuery.
