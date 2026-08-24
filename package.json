@@ -16,6 +16,7 @@
     "docs:preview": "vitepress preview docs"
   },
   "workspaces": [
+    "packages/bench",
     "packages/controls",
     "packages/loop",
     "packages/asset",

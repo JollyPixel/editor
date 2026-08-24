@@ -31,6 +31,7 @@ export on its own line when the list has more than two members.
 
 ## Style
 
+- Multi-line comments should not be inlined (prefer them on three lines)
 - Use double quotes, semicolons, strict equality (`===`/`!==`), `const` by
   default, and `let` only when reassigned; never use `var`.
 - Put comments on their own preceding line, keep them compact and factual, and

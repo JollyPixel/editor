@@ -1,10 +1,11 @@
-// Import Internal Dependencies
+// Import Third-party Dependencies
 import {
-  createBench,
   batched,
-  kBatch,
-  reportBench
-} from "./_harness.ts";
+  defineSuite,
+  runSuites
+} from "@jolly-pixel/bench";
+
+// Import Internal Dependencies
 import { createActiveInput } from "./tick-active.bench.ts";
 import { InputCombination } from "../src/index.ts";
 
@@ -12,9 +13,7 @@ import { InputCombination } from "../src/index.ts";
  * Every atomic condition funnels into the query path, so a 4-condition combo
  * multiplies whatever `isDown`/`wasJustPressed` cost by four.
  */
-export async function run(): Promise<void> {
-  const bench = createBench("controls / combinations");
-
+const suite = defineSuite("controls / combinations", (bench) => {
   const { input } = createActiveInput();
 
   const all = InputCombination.all(
@@ -65,10 +64,10 @@ export async function run(): Promise<void> {
     .add("AllInputs#evaluate — key + mouse + gamepad", batched(() => {
       mixed.evaluate(input);
     }));
+}, { opsPerIteration: "batch" });
 
-  await reportBench(bench, kBatch);
-}
+export default suite;
 
 if (import.meta.main) {
-  await run();
+  await runSuites([suite]);
 }

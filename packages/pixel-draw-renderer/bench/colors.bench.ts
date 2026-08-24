@@ -1,9 +1,11 @@
-// Import Internal Dependencies
+// Import Third-party Dependencies
 import {
-  createBench,
+  defineSuite,
   mulberry32,
-  reportBench
-} from "./_harness.ts";
+  runSuites
+} from "@jolly-pixel/bench";
+
+// Import Internal Dependencies
 import {
   colorAsRGBA,
   rgbToHex,
@@ -17,9 +19,7 @@ const kBatch = 256;
  * `toRGBA`/`colorAsRGBA` route through colorjs.io, so inputs are batched to
  * keep parser cost above harness overhead.
  */
-export async function run(): Promise<void> {
-  const bench = createBench("Colors (utils/colors)");
-
+const suite = defineSuite("Colors (utils/colors)", (bench) => {
   const rng = mulberry32();
   const hexInputs = Array.from({ length: kBatch }, () => randomHex(rng));
   const rgbInputs = Array.from({ length: kBatch }, () => randomRgbString(rng));
@@ -50,9 +50,9 @@ export async function run(): Promise<void> {
 
       return length;
     });
+});
 
-  await reportBench(bench);
-}
+export default suite;
 
 function randomChannel(
   rng: () => number
@@ -83,5 +83,5 @@ function randomRgbString(
 }
 
 if (import.meta.main) {
-  await run();
+  await runSuites([suite]);
 }

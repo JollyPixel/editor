@@ -1,10 +1,11 @@
-// Import Internal Dependencies
+// Import Third-party Dependencies
 import {
-  createBench,
   batched,
-  kBatch,
-  reportBench
-} from "./_harness.ts";
+  defineSuite,
+  runSuites
+} from "@jolly-pixel/bench";
+
+// Import Internal Dependencies
 import {
   FrameBudget,
   GameLoop,
@@ -21,9 +22,7 @@ const kSink = { value: 0 };
 /**
  * Measures dispatch, interpolation, and budget-check costs.
  */
-export async function run(): Promise<void> {
-  const bench = createBench("loop / primitives");
-
+const suite = defineSuite("loop / primitives", (bench) => {
   const source = new ManualFrameSource();
   const loop = new GameLoop({ source });
   loop.start({
@@ -49,10 +48,13 @@ export async function run(): Promise<void> {
       kSink.value += budget.expired ? 1 : 0;
     }));
 
-  await reportBench(bench, kBatch);
-  loop.stop();
-}
+  return () => {
+    loop.stop();
+  };
+}, { opsPerIteration: "batch" });
+
+export default suite;
 
 if (import.meta.main) {
-  await run();
+  await runSuites([suite]);
 }

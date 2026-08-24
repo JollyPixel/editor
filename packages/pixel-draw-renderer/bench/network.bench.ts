@@ -1,13 +1,15 @@
 // Import Third-party Dependencies
+import {
+  defineSuite,
+  mulberry32,
+  runSuites
+} from "@jolly-pixel/bench";
 import * as network from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import {
-  createBench,
-  mulberry32,
-  randomPositions,
-  reportBench
-} from "./_harness.ts";
+  randomPositions
+} from "./_fixtures.ts";
 import { applyCommandToBuffer } from "../src/network/PixelCommandApplier.ts";
 import { PixelBuffer } from "../src/buffer/PixelBuffer.ts";
 import type { PixelNetworkCommand } from "../src/network/types.ts";
@@ -23,9 +25,7 @@ const kResolveBatch = 1000;
  * Benchmarks command application (`stroke`, `global-fill`) and
  * `LastWriteWinsResolver.resolve` under mixed conflicts.
  */
-export async function run(): Promise<void> {
-  const bench = createBench("Network (network/*)");
-
+const suite = defineSuite("Network (network/*)", (bench) => {
   const rng = mulberry32();
   const size: Vec2 = { x: kSide, y: kSide };
 
@@ -70,9 +70,9 @@ export async function run(): Promise<void> {
 
       return accepted;
     });
+});
 
-  await reportBench(bench);
-}
+export default suite;
 
 function header(
   event: { action: string; metadata: unknown; }
@@ -112,5 +112,5 @@ function buildResolveContexts(
 }
 
 if (import.meta.main) {
-  await run();
+  await runSuites([suite]);
 }

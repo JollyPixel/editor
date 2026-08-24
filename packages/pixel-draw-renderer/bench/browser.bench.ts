@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import { report } from "@jolly-pixel/bench";
 import {
   chromium,
   type Browser
@@ -34,22 +35,15 @@ try {
   browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
   await page.goto(`http://127.0.0.1:${address.port}/browser/index.html`);
-  const report = await page.evaluate<BrowserBenchmarkReport>(
+  const browserReport = await page.evaluate<BrowserBenchmarkReport>(
     () => window.runPixelDrawBenchmarks()
   );
 
-  if (process.env.BENCH_FORMAT === "json") {
-    console.log(JSON.stringify({
-      suite: "Browser canvas and rendering",
-      ...report
-    }));
-  }
-  else {
-    console.log("# Browser runtime");
-    console.log(report.runtime.userAgent);
-    console.log("\n# Browser canvas and rendering");
-    console.table(report.results);
-  }
+  report({
+    suite: "pixel-draw / browser canvas and rendering",
+    runtime: { userAgent: browserReport.runtime.userAgent },
+    results: browserReport.results
+  });
 }
 finally {
   await browser?.close();

@@ -1,10 +1,11 @@
-// Import Internal Dependencies
+// Import Third-party Dependencies
 import {
-  createBench,
   batched,
-  kBatch,
-  reportBench
-} from "./_harness.ts";
+  defineSuite,
+  runSuites
+} from "@jolly-pixel/bench";
+
+// Import Internal Dependencies
 import { FrameScheduler } from "../src/index.ts";
 
 // CONSTANTS
@@ -15,9 +16,7 @@ const kFrame144 = 1000 / 144;
  * Measures steady, high-refresh, catch-up, panic, and capped paths.
  * The steady path tracks the cost of allocating `FrameSchedule` per frame.
  */
-export async function run(): Promise<void> {
-  const bench = createBench("loop / FrameScheduler#advance");
-
+const suite = defineSuite("loop / FrameScheduler#advance", (bench) => {
   const steady = advancer(new FrameScheduler(), kFrame60);
   const highRefresh = advancer(new FrameScheduler(), kFrame144);
   const panicking = advancer(new FrameScheduler(), 200);
@@ -33,9 +32,9 @@ export async function run(): Promise<void> {
     .add("overloaded — budget hit, remainder dropped", batched(panicking))
     .add("catch-up — 12 steps per frame", batched(catchUp))
     .add("render capped — 60fps cap on a 144Hz source", batched(capped));
+}, { opsPerIteration: "batch" });
 
-  await reportBench(bench, kBatch);
-}
+export default suite;
 
 function advancer(
   scheduler: FrameScheduler,
@@ -51,5 +50,5 @@ function advancer(
 }
 
 if (import.meta.main) {
-  await run();
+  await runSuites([suite]);
 }

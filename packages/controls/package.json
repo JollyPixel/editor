@@ -11,7 +11,7 @@
     "test-only": "node --test test/**/*.spec.ts",
     "test": "c8 -r html npm run test-only",
     "lint": "eslint src/**/*.ts",
-    "bench": "node bench/index.ts"
+    "bench": "jolly-bench"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
@@ -37,6 +37,6 @@
     "@openally/emitt": "1.0.1"
   },
   "devDependencies": {
-    "tinybench": "6.1.3"
+    "@jolly-pixel/bench": "*"
   }
 }

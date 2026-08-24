@@ -1,10 +1,11 @@
-// Import Internal Dependencies
+// Import Third-party Dependencies
 import {
-  createBench,
   batched,
-  kBatch,
-  reportBench
-} from "./_harness.ts";
+  defineSuite,
+  runSuites
+} from "@jolly-pixel/bench";
+
+// Import Internal Dependencies
 import { createActiveInput } from "./tick-active.bench.ts";
 
 /**
@@ -18,9 +19,7 @@ import { createActiveInput } from "./tick-active.bench.ts";
  */
 let sink: unknown;
 
-export async function run(): Promise<void> {
-  const bench = createBench("controls / query");
-
+const suite = defineSuite("controls / query", (bench) => {
   const { input } = createActiveInput();
   const { keyboard, mouse, gamepad, touchpad, screen } = input;
 
@@ -85,13 +84,15 @@ export async function run(): Promise<void> {
       sink = mouse.viewportDelta(true);
     }));
 
-  await reportBench(bench, kBatch);
+  return () => {
+    if (sink === Symbol.for("unreachable")) {
+      throw new Error("unreachable");
+    }
+  };
+}, { opsPerIteration: "batch" });
 
-  if (sink === Symbol.for("unreachable")) {
-    throw new Error("unreachable");
-  }
-}
+export default suite;
 
 if (import.meta.main) {
-  await run();
+  await runSuites([suite]);
 }

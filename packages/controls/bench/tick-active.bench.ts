@@ -1,10 +1,11 @@
-// Import Internal Dependencies
+// Import Third-party Dependencies
 import {
-  createBench,
   batched,
-  kBatch,
-  reportBench
-} from "./_harness.ts";
+  defineSuite,
+  runSuites
+} from "@jolly-pixel/bench";
+
+// Import Internal Dependencies
 import {
   createInput,
   createGamepadSnapshot,
@@ -19,9 +20,7 @@ import {
  * both sticks deflected. Measures the per-frame state-transition loops rather
  * than the idle short-circuit.
  */
-export async function run(): Promise<void> {
-  const bench = createBench("controls / tick — active");
-
+const suite = defineSuite("controls / tick — active", (bench) => {
   const active = createActiveInput();
   const keyboardOnly = createActiveInput();
   const gamepadOnly = createActiveInput();
@@ -52,9 +51,9 @@ export async function run(): Promise<void> {
     .add("Gamepad#update() — 1 gamepad, sticks deflected", batched(() => {
       gamepadOnly.input.gamepad.update();
     }));
+}, { opsPerIteration: "batch" });
 
-  await reportBench(bench, kBatch);
-}
+export default suite;
 
 export function createActiveInput(): BenchInput {
   const bench = createInput();
@@ -86,5 +85,5 @@ export function createActiveInput(): BenchInput {
 }
 
 if (import.meta.main) {
-  await run();
+  await runSuites([suite]);
 }

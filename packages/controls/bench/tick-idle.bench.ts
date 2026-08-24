@@ -1,10 +1,11 @@
-// Import Internal Dependencies
+// Import Third-party Dependencies
 import {
-  createBench,
   batched,
-  kBatch,
-  reportBench
-} from "./_harness.ts";
+  defineSuite,
+  runSuites
+} from "@jolly-pixel/bench";
+
+// Import Internal Dependencies
 import {
   createInput,
   createGamepadSnapshot
@@ -15,9 +16,7 @@ import {
  * holding nothing. Every millisecond here is paid whether or not the game reads
  * a single input, so this suite is the primary target of the idle-gating work.
  */
-export async function run(): Promise<void> {
-  const bench = createBench("controls / tick — idle");
-
+const suite = defineSuite("controls / tick — idle", (bench) => {
   const idle = createInput();
 
   const withGamepad = createInput();
@@ -42,10 +41,10 @@ export async function run(): Promise<void> {
     .add("Gamepad#update() — idle, no gamepad", batched(() => {
       idle.input.gamepad.update();
     }));
+}, { opsPerIteration: "batch" });
 
-  await reportBench(bench, kBatch);
-}
+export default suite;
 
 if (import.meta.main) {
-  await run();
+  await runSuites([suite]);
 }

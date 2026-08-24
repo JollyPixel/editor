@@ -103,6 +103,18 @@ A capped frame still accumulates time and still runs its fixed steps. Only
 `render` comes back `false`, because a source that swallowed frames would hide
 their elapsed time from the accumulator.
 
+## 🧪 Benchmarks
+
+The suites measure `FrameScheduler#advance()`, `GameLoop` callback dispatch,
+`Interpolated`, and `FrameBudget`.
+
+```bash
+npm run bench -w @jolly-pixel/loop
+```
+
+Use `-- --list` to inspect the suites. Filtering and measurement rules are
+documented by [`@jolly-pixel/bench`](../bench/README.md).
+
 ## ✨ Contributors guide
 
 If you are a developer **looking to contribute** to the project, you must first read the [CONTRIBUTING][contributing] guide.

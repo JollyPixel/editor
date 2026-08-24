@@ -203,6 +203,20 @@ export interface RGBA {
 }
 ```
 
+## 🧪 Benchmarks
+
+The default command measures `PixelBuffer`, editing tools, history, networking,
+and color conversion without a DOM. The browser command starts Vite and
+Chromium to measure canvas synchronization and frame rendering.
+
+```bash
+npm run bench -w @jolly-pixel/pixel-draw.renderer
+npm run bench:browser -w @jolly-pixel/pixel-draw.renderer
+```
+
+Use `-- --list` to inspect the headless suites. Filtering and measurement rules
+are documented by [`@jolly-pixel/bench`](../bench/README.md).
+
 ## Contributors Guide
 
 If you are a developer **looking to contribute** to the project, you must first read the [CONTRIBUTING][contributing] guide.
