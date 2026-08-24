@@ -70,6 +70,19 @@ if (dashCombo.evaluate(input)) {
   - [Screen](./docs/screen.md)
 - [CombinedInput](./docs/combinedinput.md): composable input conditions (AND, OR, NOT, sequence) for complex key bindings.
 
+## 🧪 Benchmarks
+
+The suites cover device updates, state queries, input combinations, and DOM
+event dispatch. They use headless adapters, so event benchmarks report
+`getBoundingClientRect()` call counts instead of browser layout timings.
+
+```bash
+npm run bench -w @jolly-pixel/controls
+```
+
+Use `-- --list` to inspect the suites. Filtering and measurement rules are
+documented by [`@jolly-pixel/bench`](../bench/README.md).
+
 ## ✨ Contributors guide
 
 If you are a developer **looking to contribute** to the project, you must first read the [CONTRIBUTING][contributing] guide.

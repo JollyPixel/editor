@@ -1,0 +1,32 @@
+{
+  "name": "@jolly-pixel/bench",
+  "description": "Shared benchmarking harness and CLI for JollyPixel workspaces",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "bin": {
+    "jolly-bench": "./bin/index.ts"
+  },
+  "scripts": {
+    "test-only": "node --test \"test/**/*.spec.ts\"",
+    "test": "c8 -r html npm run test-only",
+    "lint": "eslint \"{bin,src}/**/*.ts\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JollyPixel/editor.git",
+    "directory": "packages/bench"
+  },
+  "keywords": [],
+  "directories": {
+    "test": "test"
+  },
+  "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "tinybench": "6.1.3"
+  }
+}

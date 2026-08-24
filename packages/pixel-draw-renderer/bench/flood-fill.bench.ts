@@ -1,8 +1,10 @@
-// Import Internal Dependencies
+// Import Third-party Dependencies
 import {
-  createBench,
-  reportBench
-} from "./_harness.ts";
+  defineSuite,
+  runSuites
+} from "@jolly-pixel/bench";
+
+// Import Internal Dependencies
 import { PixelBuffer } from "../src/buffer/PixelBuffer.ts";
 import { Fill } from "../src/tools/Fill.ts";
 import type {
@@ -72,9 +74,7 @@ function checkerboardBuffer(
 /**
  * `Fill` is read-only, so per-scenario fixtures are reused across iterations.
  */
-export async function run(): Promise<void> {
-  const bench = createBench("Flood fill (tools/Fill)");
-
+const suite = defineSuite("Flood fill (tools/Fill)", (bench) => {
   const buffer128 = uniformBuffer(128);
   const buffer256 = uniformBuffer(256);
   const buffer512 = uniformBuffer(512);
@@ -112,10 +112,10 @@ export async function run(): Promise<void> {
     .add("matchAll / 256x256 (no match)", () => {
       Fill.matchAll(buffer256, kBlack);
     });
+});
 
-  await reportBench(bench);
-}
+export default suite;
 
 if (import.meta.main) {
-  await run();
+  await runSuites([suite]);
 }

@@ -1,11 +1,15 @@
+// Import Third-party Dependencies
+import {
+  defineSuite,
+  mulberry32,
+  runSuites
+} from "@jolly-pixel/bench";
+
 // Import Internal Dependencies
 import {
-  createBench,
-  mulberry32,
   randomColor,
-  randomPositions,
-  reportBench
-} from "./_harness.ts";
+  randomPositions
+} from "./_fixtures.ts";
 import { PixelBuffer } from "../src/buffer/PixelBuffer.ts";
 import { HistoryStack } from "../src/history/HistoryStack.ts";
 import { groupPositionsByColor } from "../src/buffer/colorGroups.ts";
@@ -21,9 +25,7 @@ const kGroupCount = 4096;
  * Benchmarks undo/redo replay and `groupPositionsByColor`.
  * Grouping cost scales with distinct color count.
  */
-export async function run(): Promise<void> {
-  const bench = createBench("History (history/HistoryStack)");
-
+const suite = defineSuite("History (history/HistoryStack)", (bench) => {
   const rng = mulberry32();
   const buffer = new PixelBuffer({
     size: { x: kSide, y: kSide },
@@ -59,9 +61,9 @@ export async function run(): Promise<void> {
     .add("groupPositionsByColor / 4096 px, all distinct", () => {
       groupPositionsByColor(manyColors.positions, manyColors.colors);
     });
+});
 
-  await reportBench(bench);
-}
+export default suite;
 
 function buildGroupInput(
   count: number,
@@ -84,5 +86,5 @@ function buildGroupInput(
 }
 
 if (import.meta.main) {
-  await run();
+  await runSuites([suite]);
 }

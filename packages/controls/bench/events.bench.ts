@@ -1,10 +1,11 @@
-// Import Internal Dependencies
+// Import Third-party Dependencies
 import {
-  createBench,
   batched,
-  kBatch,
-  reportBench
-} from "./_harness.ts";
+  defineSuite,
+  runSuites
+} from "@jolly-pixel/bench";
+
+// Import Internal Dependencies
 import {
   createInput,
   keyboardEvent,
@@ -21,9 +22,7 @@ import {
  * Layout cost cannot be reproduced outside a browser, so
  * `boundingClientRectCalls` is reported separately as "rect reads per event".
  */
-export async function run(): Promise<void> {
-  const bench = createBench("controls / events");
-
+const suite = defineSuite("controls / events", (bench) => {
   const { canvas, document } = createInput();
   const move = mouseEvent(canvas);
   const moveWithoutOffsets = mouseEvent(canvas, { omitOffsets: true });
@@ -60,9 +59,10 @@ export async function run(): Promise<void> {
       canvas.dispatch("touchmove", touchMoveTriple);
     }));
 
-  await reportBench(bench, kBatch);
-  reportLayoutReads();
-}
+  return reportLayoutReads;
+}, { opsPerIteration: "batch" });
+
+export default suite;
 
 /**
  * Counts forced-layout reads per event rather than timing them: in Node
@@ -115,5 +115,5 @@ function layoutScenarios() {
 }
 
 if (import.meta.main) {
-  await run();
+  await runSuites([suite]);
 }

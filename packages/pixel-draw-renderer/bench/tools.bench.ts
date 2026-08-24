@@ -1,8 +1,10 @@
-// Import Internal Dependencies
+// Import Third-party Dependencies
 import {
-  createBench,
-  reportBench
-} from "./_harness.ts";
+  defineSuite,
+  runSuites
+} from "@jolly-pixel/bench";
+
+// Import Internal Dependencies
 import { PixelBuffer } from "../src/buffer/PixelBuffer.ts";
 import { Line } from "../src/tools/Line.ts";
 import { Brush } from "../src/tools/Brush.ts";
@@ -18,8 +20,7 @@ const kWhite: RGBA = { r: 255, g: 255, b: 255, a: 255 };
 /**
  * Covers geometry and selection helpers used during interactive editing.
  */
-export async function run(): Promise<void> {
-  const bench = createBench("Tools (tools/*)");
+const suite = defineSuite("Tools (tools/*)", (bench) => {
   const brush1 = new Brush({ size: 1 });
   const brush8 = new Brush({ size: 8 });
   const brush32 = new Brush({ size: 32 });
@@ -92,10 +93,10 @@ export async function run(): Promise<void> {
       "traceSelectionContour / rectangle with hole 256x256",
       () => traceSelectionContour(kSide, kSide, mask)
     );
+});
 
-  await reportBench(bench);
-}
+export default suite;
 
 if (import.meta.main) {
-  await run();
+  await runSuites([suite]);
 }

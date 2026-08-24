@@ -1,11 +1,15 @@
+// Import Third-party Dependencies
+import {
+  defineSuite,
+  mulberry32,
+  runSuites
+} from "@jolly-pixel/bench";
+
 // Import Internal Dependencies
 import {
-  createBench,
-  mulberry32,
   randomColor,
-  randomPositions,
-  reportBench
-} from "./_harness.ts";
+  randomPositions
+} from "./_fixtures.ts";
 import { PixelBuffer } from "../src/buffer/PixelBuffer.ts";
 import type {
   RGBA,
@@ -26,9 +30,7 @@ const kClippedRegion: SelectionRect = {
  * `copyToMaster`, pixel and region drawing, transparency scans, `resize`, and
  * snapshot clone cost.
  */
-export async function run(): Promise<void> {
-  const bench = createBench("PixelBuffer (buffer/PixelBuffer)");
-
+const suite = defineSuite("PixelBuffer (buffer/PixelBuffer)", (bench) => {
   const rng = mulberry32();
 
   const buffer256 = new PixelBuffer({ size: { x: 256, y: 256 }, maxSize: 256 });
@@ -101,10 +103,10 @@ export async function run(): Promise<void> {
     .add("snapshot clone / Uint8ClampedArray.from 512x512", () => {
       Uint8ClampedArray.from(buffer512.pixels());
     });
+});
 
-  await reportBench(bench);
-}
+export default suite;
 
 if (import.meta.main) {
-  await run();
+  await runSuites([suite]);
 }
