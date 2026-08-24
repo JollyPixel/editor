@@ -4,7 +4,6 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import * as THREE from "three";
-import { MeshBasicNodeMaterial } from "three/webgpu";
 
 // Import Internal Dependencies
 import { MergedSelectionOverlay } from "#src/index.ts";
@@ -18,7 +17,7 @@ function createTarget(
   return mesh;
 }
 
-describe("constructor (outline style)", () => {
+describe("constructor", () => {
   test("adds a single LineSegments to the given parent, regardless of target count", () => {
     const parent = new THREE.Scene();
     const targets = [createTarget(0), createTarget(5), createTarget(10)];
@@ -26,7 +25,7 @@ describe("constructor (outline style)", () => {
       parent.add(target);
     }
 
-    const overlay = new MergedSelectionOverlay({ parent, style: "outline", targets, color: "#ffffff" });
+    const overlay = new MergedSelectionOverlay({ parent, targets, color: "#ffffff" });
 
     assert.strictEqual(overlay.object, parent.children.at(-1));
     assert.ok(overlay.object instanceof THREE.LineSegments);
@@ -40,7 +39,7 @@ describe("constructor (outline style)", () => {
     }
     const expectedPerTarget = new THREE.EdgesGeometry(targets[0].geometry).getAttribute("position").count;
 
-    const overlay = new MergedSelectionOverlay({ parent, style: "outline", targets, color: "#ffffff" });
+    const overlay = new MergedSelectionOverlay({ parent, targets, color: "#ffffff" });
 
     assert.strictEqual(overlay.object.geometry.getAttribute("position").count, expectedPerTarget * targets.length);
   });
@@ -53,7 +52,7 @@ describe("constructor (outline style)", () => {
     }
     parent.updateMatrixWorld(true);
 
-    const overlay = new MergedSelectionOverlay({ parent, style: "outline", targets, color: "#ffffff" });
+    const overlay = new MergedSelectionOverlay({ parent, targets, color: "#ffffff" });
     const position = overlay.object.geometry.getAttribute("position");
 
     const xs = new Set<number>();
@@ -69,64 +68,32 @@ describe("constructor (outline style)", () => {
   test("defaults to white, full opacity, non-transparent", () => {
     const parent = new THREE.Scene();
     const targets = [createTarget()];
-    const overlay = new MergedSelectionOverlay({ parent, style: "outline", targets, color: "#ffffff" });
+    const overlay = new MergedSelectionOverlay({ parent, targets, color: "#ffffff" });
 
-    assert.strictEqual(`#${(overlay.object as THREE.LineSegments).material.color.getHexString()}`, "#ffffff");
-    assert.strictEqual((overlay.object as THREE.LineSegments).material.opacity, 1);
-    assert.strictEqual((overlay.object as THREE.LineSegments).material.transparent, false);
+    assert.strictEqual(`#${overlay.object.material.color.getHexString()}`, "#ffffff");
+    assert.strictEqual(overlay.object.material.opacity, 1);
+    assert.strictEqual(overlay.object.material.transparent, false);
   });
 
   test("opacity < 1 marks the material transparent", () => {
     const parent = new THREE.Scene();
     const overlay = new MergedSelectionOverlay({
-      parent, style: "outline", targets: [createTarget()], color: "#ffffff", opacity: 0.4
+      parent, targets: [createTarget()], color: "#ffffff", opacity: 0.4
     });
 
-    assert.strictEqual((overlay.object as THREE.LineSegments).material.opacity, 0.4);
-    assert.strictEqual((overlay.object as THREE.LineSegments).material.transparent, true);
+    assert.strictEqual(overlay.object.material.opacity, 0.4);
+    assert.strictEqual(overlay.object.material.transparent, true);
   });
 
   test("xray disables depth test/write and raises render order above default objects", () => {
     const parent = new THREE.Scene();
     const overlay = new MergedSelectionOverlay({
-      parent, style: "outline", targets: [createTarget()], color: "#ffffff", xray: true
+      parent, targets: [createTarget()], color: "#ffffff", xray: true
     });
 
-    assert.strictEqual((overlay.object as THREE.LineSegments).material.depthTest, false);
-    assert.strictEqual((overlay.object as THREE.LineSegments).material.depthWrite, false);
+    assert.strictEqual(overlay.object.material.depthTest, false);
+    assert.strictEqual(overlay.object.material.depthWrite, false);
     assert.ok(overlay.object.renderOrder > 1);
-  });
-});
-
-describe("constructor (highlight style)", () => {
-  test("adds a single Mesh using a MeshBasicNodeMaterial, regardless of target count", () => {
-    const parent = new THREE.Scene();
-    const targets = [createTarget(0), createTarget(5), createTarget(10)];
-
-    const overlay = new MergedSelectionOverlay({ parent, style: "highlight", targets, color: "#ffffff" });
-
-    assert.strictEqual(overlay.object, parent.children.at(-1));
-    assert.ok(overlay.object instanceof THREE.Mesh);
-    assert.ok((overlay.object as THREE.Mesh).material instanceof MeshBasicNodeMaterial);
-  });
-
-  test("renders back faces only", () => {
-    const parent = new THREE.Scene();
-    const overlay = new MergedSelectionOverlay({
-      parent, style: "highlight", targets: [createTarget()], color: "#ffffff"
-    });
-
-    assert.strictEqual((overlay.object as THREE.Mesh<THREE.BufferGeometry, MeshBasicNodeMaterial>).material.side, THREE.BackSide);
-  });
-
-  test("merges every target's hull geometry into one buffer", () => {
-    const parent = new THREE.Scene();
-    const targets = [createTarget(0), createTarget(5)];
-    const expectedPerTarget = targets[0].geometry.getAttribute("position").count;
-
-    const overlay = new MergedSelectionOverlay({ parent, style: "highlight", targets, color: "#ffffff" });
-
-    assert.strictEqual(overlay.object.geometry.getAttribute("position").count, expectedPerTarget * targets.length);
   });
 });
 
@@ -136,7 +103,7 @@ describe("dispose", () => {
     const target = createTarget();
     parent.add(target);
 
-    const overlay = new MergedSelectionOverlay({ parent, style: "outline", targets: [target], color: "#ffffff" });
+    const overlay = new MergedSelectionOverlay({ parent, targets: [target], color: "#ffffff" });
 
     let targetGeometryDisposed = false;
     let mergedGeometryDisposed = false;
@@ -147,7 +114,7 @@ describe("dispose", () => {
     overlay.object.geometry.addEventListener("dispose", () => {
       mergedGeometryDisposed = true;
     });
-    (overlay.object as THREE.LineSegments).material.addEventListener("dispose", () => {
+    overlay.object.material.addEventListener("dispose", () => {
       materialDisposed = true;
     });
 

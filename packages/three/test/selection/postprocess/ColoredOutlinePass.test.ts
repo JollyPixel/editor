@@ -13,7 +13,7 @@ import { ColoredOutlinePass } from "#src/index.ts";
  * `outputColorSpace` off the renderer (see `RenderPipeline`'s own
  * constructor) - a real `WebGPURenderer` needs an async `init()` (a GPU
  * context) neither available nor needed for these tests, which never call
- * `render()`. Same stub `ToonOutlinePass.test.ts` uses.
+ * `render()`.
  */
 function createRendererStub(): THREE.WebGPURenderer {
   return {
@@ -181,6 +181,33 @@ describe("setEntries", () => {
     coloredOutline.setEntries([{ target: instancedMesh, instanceId: 0, color: "#ff0000" }]);
     assert.doesNotThrow(() => coloredOutline.setEntries([{ target: instancedMesh, instanceId: 4, color: "#00ff00" }]));
   });
+
+  test("accepts a single isolated entry", () => {
+    const coloredOutline = createPass();
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+
+    assert.doesNotThrow(() => coloredOutline.setEntries([{ target: mesh, color: "#ff0000", isolated: true }]));
+  });
+
+  test("accepts a mix of isolated and non-isolated entries", () => {
+    const coloredOutline = createPass();
+    const isolatedMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    const otherMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+
+    assert.doesNotThrow(() => coloredOutline.setEntries([
+      { target: isolatedMesh, color: "#ff0000", isolated: true },
+      { target: otherMesh, color: "#0000ff" }
+    ]));
+  });
+
+  test("accepts an isolated group entry, traversed to its meshes", () => {
+    const coloredOutline = createPass();
+    const group = new THREE.Group();
+    group.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
+    group.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
+
+    assert.doesNotThrow(() => coloredOutline.setEntries([{ target: group, color: "#ffffff", isolated: true }]));
+  });
 });
 
 describe("dispose", () => {
@@ -201,6 +228,26 @@ describe("dispose", () => {
     const coloredOutline = createPass();
     const instancedMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial(), 10);
     coloredOutline.setEntries([{ target: instancedMesh, instanceId: 0, color: "#ff0000", priority: true }]);
+
+    assert.doesNotThrow(() => coloredOutline.dispose());
+  });
+
+  test("does not throw after a whole-object priority entry was set - " +
+    "exercises the priority-only mask/edge-detect chain's own resources", () => {
+    const coloredOutline = createPass();
+    coloredOutline.setEntries([
+      { target: new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)), color: "#ff0000", priority: true }
+    ]);
+
+    assert.doesNotThrow(() => coloredOutline.dispose());
+  });
+
+  test("does not throw after a whole-object isolated entry was set - " +
+    "exercises the isolated-only mask/edge-detect chain's own resources", () => {
+    const coloredOutline = createPass();
+    coloredOutline.setEntries([
+      { target: new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)), color: "#ff0000", isolated: true }
+    ]);
 
     assert.doesNotThrow(() => coloredOutline.dispose());
   });

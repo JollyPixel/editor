@@ -14,6 +14,7 @@ const kExamples: Record<string, string> = {
   "Peer Frustum": "/peer-frustum.html",
   "Peer Frustum Sync": "/peer-frustum-sync.html",
   Selection: "/selection.html",
+  "Peer Selection": "/peer-selection.html",
   Stress: "/stress.html"
 };
 

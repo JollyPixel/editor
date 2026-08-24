@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { SelectionManager, SelectionOutline, SelectionHighlight, SelectionBoundingBox, ToonOutlinePass } from "#src/index.ts";
+import { SelectionManager, SelectionOutline, SelectionBoundingBox } from "#src/index.ts";
 
 function createManagerWithMeshAndGroup(): {
   manager: SelectionManager;
@@ -22,21 +22,6 @@ function createManagerWithMeshAndGroup(): {
   manager.register("group-1", group);
 
   return { manager, mesh, group };
-}
-
-/**
- * `ToonOutlinePass`'s constructor only reads `toneMapping`/`outputColorSpace`
- * off the renderer (see `RenderPipeline`'s own constructor) - a real
- * `WebGPURenderer` needs an async `init()` (a GPU context) neither available
- * nor needed for these tests, which never call `render()`.
- */
-function createToonOutline(): ToonOutlinePass {
-  const renderer = {
-    toneMapping: THREE.NoToneMapping,
-    outputColorSpace: THREE.SRGBColorSpace
-  } as unknown as THREE.WebGPURenderer;
-
-  return new ToonOutlinePass(renderer, new THREE.Scene(), new THREE.PerspectiveCamera());
 }
 
 describe("select", () => {
@@ -94,30 +79,31 @@ describe("select", () => {
     assert.throws(() => manager.select("unknown"));
   });
 
-  test("renders a SelectionHighlight for a mesh registered with style \"highlight\"", () => {
+  test("does not render a per-object overlay for a mesh registered with technique \"coloredOutline\"", () => {
     const manager = new SelectionManager();
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    manager.register("mesh-1", mesh, { style: "highlight" });
+    manager.register("mesh-1", mesh, { technique: "coloredOutline" });
 
     manager.select("mesh-1");
 
-    assert.ok(mesh.children[0] instanceof SelectionHighlight);
+    assert.strictEqual(manager.selected, "mesh-1");
+    assert.strictEqual(mesh.children.length, 0);
   });
 
-  test("meshStyle option sets the default overlay for meshes without a per-id override", () => {
-    const manager = new SelectionManager({ meshStyle: "highlight" });
+  test("technique option sets the default overlay for meshes without a per-id override", () => {
+    const manager = new SelectionManager({ technique: "coloredOutline" });
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     manager.register("mesh-1", mesh);
 
     manager.select("mesh-1");
 
-    assert.ok(mesh.children[0] instanceof SelectionHighlight);
+    assert.strictEqual(mesh.children.length, 0);
   });
 
-  test("a per-id style overrides the manager's default meshStyle", () => {
-    const manager = new SelectionManager({ meshStyle: "highlight" });
+  test("a per-id technique overrides the manager's default technique", () => {
+    const manager = new SelectionManager({ technique: "coloredOutline" });
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    manager.register("mesh-1", mesh, { style: "outline" });
+    manager.register("mesh-1", mesh, { technique: "outline" });
 
     manager.select("mesh-1");
 
@@ -174,7 +160,7 @@ describe("setColor/setHoverColor/setHoverOpacity", () => {
   });
 });
 
-describe("outline/highlight options", () => {
+describe("outline options", () => {
   test("outline option tunes the linewidth of an outline-styled overlay", () => {
     const { manager, mesh } = createManagerWithMeshAndGroup();
     const tunedManager = new SelectionManager({ outline: { linewidth: 3 } });
@@ -187,23 +173,6 @@ describe("outline/highlight options", () => {
     manager.dispose();
   });
 
-  test("highlight option tunes the thickness of a highlight-styled overlay", () => {
-    const manager = new SelectionManager({ meshStyle: "highlight", highlight: { thickness: 0.1 } });
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    manager.register("mesh-1", mesh);
-    manager.select("mesh-1");
-
-    const overlay = mesh.children[0] as SelectionHighlight;
-    const targetPosition = mesh.geometry.getAttribute("position");
-    const hullPosition = overlay.geometry.getAttribute("position");
-    const delta = new THREE.Vector3().fromBufferAttribute(hullPosition, 0)
-      .sub(new THREE.Vector3().fromBufferAttribute(targetPosition, 0)).length();
-
-    mesh.geometry.computeBoundingSphere();
-    const expectedBias = mesh.geometry.boundingSphere!.radius * 0.1;
-    assert.ok(Math.abs(delta - expectedBias) < 1e-6);
-  });
-
   test("setOutlineOptions rebuilds the active overlay with the new tuning", () => {
     const { manager, mesh } = createManagerWithMeshAndGroup();
     manager.select("mesh-1");
@@ -214,16 +183,40 @@ describe("outline/highlight options", () => {
     assert.strictEqual(overlay.material.linewidth, 5);
     assert.deepStrictEqual(manager.outlineOptions, { linewidth: 5 });
   });
+});
 
-  test("setHighlightOptions rebuilds the active overlay with the new tuning", () => {
-    const manager = new SelectionManager({ meshStyle: "highlight" });
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    manager.register("mesh-1", mesh);
-    manager.select("mesh-1");
+describe("bounding box options", () => {
+  test("boundingBox option tunes the fillOpacity of a group's SelectionBoundingBox", () => {
+    const { manager, group } = createManagerWithMeshAndGroup();
+    const tunedManager = new SelectionManager({ boundingBox: { fillOpacity: 0.3 } });
+    tunedManager.register("group-1", group);
+    tunedManager.select("group-1");
 
-    manager.setHighlightOptions({ thickness: 0.1 });
+    const overlay = group.children.at(-1) as SelectionBoundingBox;
+    assert.strictEqual((overlay.children[0] as THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>).material.opacity, 0.3);
 
-    assert.deepStrictEqual(manager.highlightOptions, { thickness: 0.1 });
+    manager.dispose();
+    tunedManager.dispose();
+  });
+
+  test("defaults to no fill mesh", () => {
+    const { manager, group } = createManagerWithMeshAndGroup();
+    manager.select("group-1");
+
+    const overlay = group.children.at(-1) as SelectionBoundingBox;
+    assert.strictEqual(overlay.children.length, 0);
+  });
+
+  test("setBoundingBoxOptions rebuilds the active overlay with the new tuning", () => {
+    const { manager, group } = createManagerWithMeshAndGroup();
+    manager.select("group-1");
+
+    manager.setBoundingBoxOptions({ fillOpacity: 0.5 });
+
+    const overlay = group.children.at(-1) as SelectionBoundingBox;
+    assert.strictEqual(overlay.children.length, 1);
+    assert.strictEqual((overlay.children[0] as THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>).material.opacity, 0.5);
+    assert.deepStrictEqual(manager.boundingBoxOptions, { fillOpacity: 0.5 });
   });
 });
 
@@ -283,66 +276,64 @@ describe("xray", () => {
   });
 });
 
-describe("setMeshStyle", () => {
+describe("setTechnique", () => {
   test("rebuilds the active selection overlay to reflect the new default", () => {
     const { manager, mesh } = createManagerWithMeshAndGroup();
     manager.select("mesh-1");
 
-    manager.setMeshStyle("highlight");
+    manager.setTechnique("coloredOutline");
 
-    assert.strictEqual(manager.meshStyle, "highlight");
-    assert.strictEqual(mesh.children.length, 1);
-    assert.ok(mesh.children[0] instanceof SelectionHighlight);
+    assert.strictEqual(manager.technique, "coloredOutline");
+    assert.strictEqual(mesh.children.length, 0, "coloredOutline skips the per-object overlay entirely");
   });
 
   test("rebuilds the active hover overlay to reflect the new default", () => {
     const { manager, mesh } = createManagerWithMeshAndGroup();
     manager.hover("mesh-1");
 
-    manager.setMeshStyle("highlight");
+    manager.setTechnique("coloredOutline");
 
-    assert.strictEqual(mesh.children.length, 1);
-    assert.ok(mesh.children[0] instanceof SelectionHighlight);
+    assert.strictEqual(mesh.children.length, 0);
   });
 
-  test("overrides an active mesh's per-id style", () => {
+  test("overrides an active mesh's per-id technique", () => {
     const manager = new SelectionManager();
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    manager.register("mesh-1", mesh, { style: "outline" });
+    manager.register("mesh-1", mesh, { technique: "outline" });
     manager.select("mesh-1");
 
-    manager.setMeshStyle("highlight");
+    manager.setTechnique("coloredOutline");
 
-    assert.ok(mesh.children[0] instanceof SelectionHighlight);
+    assert.strictEqual(mesh.children.length, 0);
   });
 
-  test("drops the per-id style so a later select also uses the new default", () => {
+  test("drops the per-id technique so a later select also uses the new default", () => {
     const manager = new SelectionManager();
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    manager.register("mesh-1", mesh, { style: "outline" });
+    manager.register("mesh-1", mesh, { technique: "outline" });
 
-    manager.setMeshStyle("highlight");
+    manager.setTechnique("coloredOutline");
 
-    assert.strictEqual(manager.styleFor("mesh-1"), "highlight");
+    assert.strictEqual(manager.techniqueFor("mesh-1"), "coloredOutline");
     manager.select("mesh-1");
-    assert.ok(mesh.children[0] instanceof SelectionHighlight);
+    assert.strictEqual(mesh.children.length, 0);
   });
 
   test("does not affect a group's SelectionBoundingBox", () => {
     const { manager, group } = createManagerWithMeshAndGroup();
     manager.select("group-1");
 
-    manager.setMeshStyle("highlight");
+    manager.setTechnique("coloredOutline");
 
     assert.ok(group.children.at(-1) instanceof SelectionBoundingBox);
   });
 
-  test("setting the same style is a no-op", () => {
+  test("setting the same technique is a no-op", () => {
     const { manager, mesh } = createManagerWithMeshAndGroup();
     manager.select("mesh-1");
     const overlayBefore = mesh.children[0];
 
-    manager.setMeshStyle("outline");
+    manager.setTechnique("outline");
 
     assert.strictEqual(mesh.children[0], overlayBefore);
   });
@@ -413,25 +404,25 @@ describe("dispose", () => {
   });
 });
 
-describe("styleFor", () => {
-  test("defaults to \"outline\" for a mesh registered without a style", () => {
+describe("techniqueFor", () => {
+  test("defaults to \"outline\" for a mesh registered without a technique", () => {
     const { manager } = createManagerWithMeshAndGroup();
 
-    assert.strictEqual(manager.styleFor("mesh-1"), "outline");
+    assert.strictEqual(manager.techniqueFor("mesh-1"), "outline");
   });
 
   test("returns the per-id override given to register", () => {
     const manager = new SelectionManager();
-    manager.register("mesh-1", new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)), { style: "highlight" });
+    manager.register("mesh-1", new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)), { technique: "coloredOutline" });
 
-    assert.strictEqual(manager.styleFor("mesh-1"), "highlight");
+    assert.strictEqual(manager.techniqueFor("mesh-1"), "coloredOutline");
   });
 
-  test("falls back to the manager's meshStyle default when no per-id override is set", () => {
-    const manager = new SelectionManager({ meshStyle: "highlight" });
+  test("falls back to the manager's technique default when no per-id override is set", () => {
+    const manager = new SelectionManager({ technique: "coloredOutline" });
     manager.register("mesh-1", new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
 
-    assert.strictEqual(manager.styleFor("mesh-1"), "highlight");
+    assert.strictEqual(manager.techniqueFor("mesh-1"), "coloredOutline");
   });
 });
 
@@ -449,191 +440,75 @@ describe("targetFor", () => {
   });
 });
 
-describe("toonOutline", () => {
-  test("select pushes the target into toonOutline instead of building a per-object overlay", () => {
-    const toonOutline = createToonOutline();
-    const manager = new SelectionManager({ meshStyle: "toonOutline", toonOutline });
+describe("coloredOutline technique", () => {
+  test("select skips building a per-object overlay entirely", () => {
+    const manager = new SelectionManager({ technique: "coloredOutline" });
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     manager.register("mesh-1", mesh);
 
     manager.select("mesh-1");
 
-    assert.strictEqual(toonOutline.selected, mesh);
-    assert.strictEqual(mesh.children.length, 0, "must not add a per-object overlay child");
-  });
-
-  test("select(null) clears toonOutline's selected target", () => {
-    const toonOutline = createToonOutline();
-    const manager = new SelectionManager({ meshStyle: "toonOutline", toonOutline });
-    manager.register("mesh-1", new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
-    manager.select("mesh-1");
-
-    manager.select(null);
-
-    assert.strictEqual(toonOutline.selected, null);
-  });
-
-  test("hover pushes the target into toonOutline", () => {
-    const toonOutline = createToonOutline();
-    const manager = new SelectionManager({ meshStyle: "toonOutline", toonOutline });
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    manager.register("mesh-1", mesh);
-
-    manager.hover("mesh-1");
-
-    assert.strictEqual(toonOutline.hovered, mesh);
-  });
-
-  test("suppresses toonOutline's hover target once that id becomes the selection", () => {
-    const toonOutline = createToonOutline();
-    const manager = new SelectionManager({ meshStyle: "toonOutline", toonOutline });
-    manager.register("mesh-1", new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
-    manager.hover("mesh-1");
-
-    manager.select("mesh-1");
-
-    assert.strictEqual(toonOutline.hovered, null);
-  });
-
-  test("a per-id toonOutline style is respected even when meshStyle is outline", () => {
-    const toonOutline = createToonOutline();
-    const manager = new SelectionManager({ toonOutline });
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    manager.register("mesh-1", mesh, { style: "toonOutline" });
-
-    manager.select("mesh-1");
-
-    assert.strictEqual(toonOutline.selected, mesh);
+    assert.strictEqual(manager.selected, "mesh-1");
     assert.strictEqual(mesh.children.length, 0);
   });
 
-  test("a group registered with toonOutline style still renders a SelectionBoundingBox, not pushed into toonOutline", () => {
-    const toonOutline = createToonOutline();
-    const manager = new SelectionManager({ meshStyle: "toonOutline", toonOutline });
+  test("hover skips building a per-object overlay entirely", () => {
+    const manager = new SelectionManager({ technique: "coloredOutline" });
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    manager.register("mesh-1", mesh);
+
+    manager.hover("mesh-1");
+
+    assert.strictEqual(manager.hovered, "mesh-1");
+    assert.strictEqual(mesh.children.length, 0);
+  });
+
+  test("does not throw when nothing external is actually driving a ColoredOutlinePass", () => {
+    const manager = new SelectionManager({ technique: "coloredOutline" });
+    manager.register("mesh-1", new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
+
+    assert.doesNotThrow(() => manager.select("mesh-1"));
+  });
+
+  test("a group still renders a SelectionBoundingBox, ignoring the technique", () => {
+    const manager = new SelectionManager({ technique: "coloredOutline" });
     const group = new THREE.Group();
     group.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
     manager.register("group-1", group);
 
     manager.select("group-1");
 
-    assert.strictEqual(toonOutline.selected, null);
     assert.ok(group.children.at(-1) instanceof SelectionBoundingBox);
   });
 
-  test("unregister clears an active toonOutline selection", () => {
-    const toonOutline = createToonOutline();
-    const manager = new SelectionManager({ meshStyle: "toonOutline", toonOutline });
+  test("unregister clears an active coloredOutline selection without throwing", () => {
+    const manager = new SelectionManager({ technique: "coloredOutline" });
     manager.register("mesh-1", new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
     manager.select("mesh-1");
 
-    manager.unregister("mesh-1");
-
-    assert.strictEqual(toonOutline.selected, null);
+    assert.doesNotThrow(() => manager.unregister("mesh-1"));
+    assert.strictEqual(manager.selected, null);
   });
 
-  test("dispose clears both toonOutline slots", () => {
-    const toonOutline = createToonOutline();
-    const manager = new SelectionManager({ toonOutline });
-    manager.register("mesh-1", new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)), { style: "toonOutline" });
-    manager.register("mesh-2", new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)), { style: "toonOutline" });
-    manager.select("mesh-1");
-    manager.hover("mesh-2");
-
-    manager.dispose();
-
-    assert.strictEqual(toonOutline.selected, null);
-    assert.strictEqual(toonOutline.hovered, null);
-  });
-
-  test("switching setMeshStyle to toonOutline disposes the previous per-object overlay", () => {
-    const toonOutline = createToonOutline();
-    const manager = new SelectionManager({ toonOutline });
+  test("switching setTechnique to coloredOutline disposes the previous per-object overlay", () => {
+    const manager = new SelectionManager();
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     manager.register("mesh-1", mesh);
     manager.select("mesh-1");
 
-    manager.setMeshStyle("toonOutline");
+    manager.setTechnique("coloredOutline");
 
     assert.strictEqual(mesh.children.length, 0);
-    assert.strictEqual(toonOutline.selected, mesh);
   });
 
-  test("switching setMeshStyle away from toonOutline clears it and rebuilds a per-object overlay", () => {
-    const toonOutline = createToonOutline();
-    const manager = new SelectionManager({ meshStyle: "toonOutline", toonOutline });
+  test("switching setTechnique away from coloredOutline rebuilds a per-object overlay", () => {
+    const manager = new SelectionManager({ technique: "coloredOutline" });
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     manager.register("mesh-1", mesh);
     manager.select("mesh-1");
 
-    manager.setMeshStyle("outline");
+    manager.setTechnique("outline");
 
-    assert.strictEqual(toonOutline.selected, null);
     assert.ok(mesh.children[0] instanceof SelectionOutline);
-  });
-
-  test("resolving to toonOutline without a configured pipeline throws", () => {
-    const manager = new SelectionManager({ meshStyle: "toonOutline" });
-    manager.register("mesh-1", new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
-
-    assert.throws(() => manager.select("mesh-1"));
-  });
-
-  test("constructor pushes color/hoverColor/hoverOpacity/xray into toonOutline immediately", () => {
-    const toonOutline = createToonOutline();
-    new SelectionManager({
-      toonOutline,
-      color: "#ff0000",
-      hoverColor: "#00ff00",
-      hoverOpacity: 0.6,
-      xray: true
-    });
-
-    assert.strictEqual(`#${toonOutline.color.getHexString()}`, "#ff0000");
-    assert.strictEqual(`#${toonOutline.hoverColor.getHexString()}`, "#00ff00");
-    assert.strictEqual(toonOutline.hoverOpacity, 0.6);
-    assert.strictEqual(toonOutline.xray, true);
-  });
-
-  test("constructor pushes toonOutlineOptions into toonOutline immediately", () => {
-    const toonOutline = createToonOutline();
-    new SelectionManager({
-      toonOutline,
-      toonOutlineOptions: { edgeThickness: 3, hiddenColor: "#123456" }
-    });
-
-    assert.strictEqual(toonOutline.edgeThickness, 3);
-    assert.strictEqual(`#${toonOutline.hiddenColor.getHexString()}`, "#123456");
-  });
-
-  test("setColor/setHoverColor/setHoverOpacity/setXray propagate to toonOutline regardless of the active style", () => {
-    const toonOutline = createToonOutline();
-    const manager = new SelectionManager({ toonOutline });
-
-    manager.setColor("#ff0000");
-    manager.setHoverColor("#00ff00");
-    manager.setHoverOpacity(0.7);
-    manager.setXray(true);
-
-    assert.strictEqual(`#${toonOutline.color.getHexString()}`, "#ff0000");
-    assert.strictEqual(`#${toonOutline.hoverColor.getHexString()}`, "#00ff00");
-    assert.strictEqual(toonOutline.hoverOpacity, 0.7);
-    assert.strictEqual(toonOutline.xray, true);
-  });
-
-  test("setToonOutlineOptions applies edgeThickness/hiddenColor to toonOutline", () => {
-    const toonOutline = createToonOutline();
-    const manager = new SelectionManager({ toonOutline });
-
-    manager.setToonOutlineOptions({ edgeThickness: 4, hiddenColor: "#abcdef" });
-
-    assert.strictEqual(toonOutline.edgeThickness, 4);
-    assert.strictEqual(`#${toonOutline.hiddenColor.getHexString()}`, "#abcdef");
-    assert.deepStrictEqual(manager.toonOutlineOptions, { edgeThickness: 4, hiddenColor: "#abcdef" });
-  });
-
-  test("setToonOutlineOptions is a no-op when no pipeline was configured", () => {
-    const manager = new SelectionManager();
-
-    assert.doesNotThrow(() => manager.setToonOutlineOptions({ edgeThickness: 4 }));
   });
 });

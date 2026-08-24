@@ -4,14 +4,11 @@ import * as THREE from "three/webgpu";
 // Import Internal Dependencies
 import {
   SelectionManager,
-  ToonOutlinePass,
   ColoredOutlinePass,
   PeerSelectionRegistry,
   MergedSelectionOverlay,
-  type MeshSelectionStyle,
   type ColoredOutlineEntry
 } from "../../src/index.ts";
-import { PerformancePanel } from "./components/PerformancePanel.ts";
 import {
   createRenderer,
   createScene,
@@ -19,6 +16,7 @@ import {
   startLoop
 } from "./utils/common.ts";
 import { createExamplePane } from "./utils/example-switcher.ts";
+import { mountPerformanceStats } from "./utils/performance-stats.ts";
 
 // CONSTANTS
 // Pointer must stay within this many CSS pixels between down/up to count as
@@ -50,58 +48,88 @@ camera.updateProjectionMatrix();
 
 /**
  * `SelectionManager` here is a pure settings holder (color/hoverColor/xray/
- * meshStyle/outlineOptions/highlightOptions, all already wired to the
- * "Selection" pane folder below) - never `register`/`select`/`hover`.
- * Unlike `demo-selection.ts`, the grid below is one `THREE.InstancedMesh`
- * (see its own comment), which has no per-instance `Object3D` to register:
- * `SelectionManager`'s id-based model fundamentally assumes one scene object
- * per selectable thing, so this demo drives `toonOutline`/the overlay
- * classes directly for every interaction (click-select, hover, Random
- * Selection alike) instead - the same "bypass" shape Random Selection
- * already used even before this file's InstancedMesh conversion, now used
- * for the single click-select and hover too.
+ * outlineOptions, all already wired to the "Selection" pane folder below) -
+ * never `register`/`select`/`hover`. Unlike `demo-selection.ts`, the grid
+ * below is one `THREE.InstancedMesh` (see its own comment), which has no
+ * per-instance `Object3D` to register: `SelectionManager`'s id-based model
+ * fundamentally assumes one scene object per selectable thing, so this demo
+ * drives the overlay classes / `coloredOutline` directly for every
+ * interaction (click-select, hover, Random Selection alike) instead - the
+ * same "bypass" shape Random Selection already used even before this file's
+ * InstancedMesh conversion, now used for the single click-select and hover
+ * too. Its own `technique` is deliberately unused here - see `RenderMode`
+ * below for why this demo needs a wider concept than `SelectionTechnique`
+ * covers.
  */
-const toonOutline = new ToonOutlinePass(renderer, scene, camera);
 const selectionManager = new SelectionManager();
 
 /**
- * A third, fully independent whole-frame technique alongside `toonOutline` -
- * owns its own `RenderPipeline`, so (per `ColoredOutlinePass`'s own doc
- * comment) it can't run in the same frame as `toonOutline`; `peerColorsEnabled`
- * below picks which of the two `render()` calls drives the loop.
+ * Owns its own `RenderPipeline` - `renderMode` below picks whether this or
+ * a plain `renderer.render(scene, camera)` drives the frame.
  */
 const coloredOutline = new ColoredOutlinePass(renderer, scene, camera);
 const peerRegistry = new PeerSelectionRegistry();
-let peerColorsEnabled = false;
+
+/**
+ * One unified mode for both the local selection *and* peers, instead of the
+ * two separate, only loosely related controls this file used to have
+ * (`SelectionManager`'s own `technique`, plus a standalone "Peer Colors
+ * enabled" toggle). Peers can only ever be represented by `ColoredOutlinePass`
+ * in this file - an `InstancedMesh` instance has no real `THREE.Object3D` of
+ * its own for `PeerSelectionOverlays`-style per-object techniques to attach
+ * to - so "which local technique is active" and "are peers visible" were
+ * never really independent axes to begin with; treating them as one
+ * dropdown makes that explicit instead of hiding it behind two controls that
+ * could disagree.
+ * - `"outline"`: local-only, no peers - `MergedSelectionOverlay`, the batched
+ *   equivalent of `SelectionManager`'s own `"outline"` per-object technique,
+ *   applied to `instanceProxyMesh`. The *only* mechanism rendering the local
+ *   selection/hover in this mode.
+ * - `"peerColors"`: `coloredOutline` drives the frame. The local selection
+ *   renders via its own `priority` entry, hover via its own plain entry (see
+ *   `refreshPeerColors`) - reliable on its own, no separate overlay needed.
+ *   Not `isolated` here unlike `PeerColoredOutlinePass`'s own hover entry
+ *   (see `ColoredOutlineEntry.isolated`'s own doc comment) - that option
+ *   isn't supported alongside `instanceId`, which every entry in this grid
+ *   uses. Every peer renders too, in its own color, all in the same
+ *   postprocess ring style as the local selection - the only mode where
+ *   peers are visible at all.
+ */
+type RenderMode = "outline" | "peerColors";
+let renderMode: RenderMode = "outline";
 let activePeerNames: string[] = [];
 
 /**
- * Replaces `PeerColoredOutline` for this demo rather than using it directly
- * (unlike an earlier version of this file) - `PeerColoredOutline` resolves
- * every id through `SelectionManager.targetFor`, which only ever returns a
- * whole `SelectableObject`, never "one instance of an `InstancedMesh`" (see
- * `ColoredOutlineEntry.instanceId`'s own doc comment for why that's a
- * distinct concept `ColoredOutlinePass` itself only recently grew - a
- * whole-object entry model has no seam for it). This grid has no
- * whole-object selectable things left to hand it, so this function takes
- * over `PeerColoredOutline`'s exact job (local selection wins and is
- * `priority`, peers read in their primary selector's color) directly against
- * instance ids instead - `peerRegistry` itself is unaffected (purely
- * id-based bookkeeping, agnostic to what an id refers to, same as always).
+ * Replaces `PeerColoredOutlinePass` for this demo rather than using it
+ * directly (unlike an earlier version of this file) - `PeerColoredOutlinePass`
+ * resolves every id through `SelectionManager.targetFor`, which only ever
+ * returns a whole `SelectableObject`, never "one instance of an
+ * `InstancedMesh`" (see `ColoredOutlineEntry.instanceId`'s own doc comment
+ * for why that's a distinct concept a whole-object entry model has no seam
+ * for). This grid has no whole-object selectable things left to hand it, so
+ * this function takes over `PeerColoredOutlinePass`'s exact job (local
+ * selection wins and is `priority`, local hover shows in its own color,
+ * peers read in their primary selector's color) directly against instance
+ * ids instead - `peerRegistry` itself is unaffected (purely id-based
+ * bookkeeping, agnostic to what an id refers to, same as always).
  */
 function refreshPeerColors(): void {
   const localIds = selectedInstanceId === null ? randomSelectedInstanceIds : [selectedInstanceId];
   const localIdSet = new Set(localIds);
+  const hoverId = hoveredInstanceId !== null && !localIdSet.has(hoveredInstanceId) ? hoveredInstanceId : null;
 
   const entries: ColoredOutlineEntry[] = localIds.map((instanceId) => {
     return { target: instancedMesh, instanceId, color: selectionManager.color, priority: true };
   });
+  if (hoverId !== null) {
+    entries.push({ target: instancedMesh, instanceId: hoverId, color: selectionManager.hoverColor });
+  }
 
   for (const objectId of peerRegistry.selectedObjectIds()) {
     const instanceId = Number(objectId);
-    if (localIdSet.has(instanceId)) {
-      // "My own selection wins visually for myself" - same rule
-      // `PeerColoredOutline` itself documents.
+    if (localIdSet.has(instanceId) || instanceId === hoverId) {
+      // "My own selection/hover wins visually for myself" - same rule
+      // `PeerColoredOutlinePass` itself documents.
       continue;
     }
 
@@ -158,10 +186,86 @@ function randomizePeerColors(
 }
 
 /**
+ * The `want` instance ids (within `[0, count)`, `excludeId` skipped) whose
+ * `gridPosition` is nearest `origin`, nearest-first. O(count log count) -
+ * cheap enough to call once per button click even at `kMaxInstanceCount`,
+ * not something to run per frame.
+ */
+function nearestInstanceIdsToPosition(
+  origin: THREE.Vector3,
+  count: number,
+  excludeId: number | null,
+  want: number
+): number[] {
+  const distances: { id: number; distanceSquared: number; }[] = [];
+  for (let i = 0; i < count; i++) {
+    if (i === excludeId) {
+      continue;
+    }
+    distances.push({ id: i, distanceSquared: gridPosition(i, count).distanceToSquared(origin) });
+  }
+  distances.sort((a, b) => a.distanceSquared - b.distanceSquared);
+
+  return distances.slice(0, Math.max(want, 0)).map(({ id }) => id);
+}
+
+/**
+ * "Peer rendering" counterpart to `randomizePeerColors` - instead of
+ * spreading `peerCount` peers uniformly at random across the whole grid,
+ * clusters them on the `peerCount` instances nearest the current local
+ * (priority) selection, densely overlapping it on screen. This is the
+ * stress-scale version of `demo-peer-selection.ts`'s "Priority stack": does
+ * the local selection's `ColoredOutlinePass` ring stay visible when
+ * surrounded by dozens/hundreds of simultaneous, tightly-overlapping peer
+ * selections, not just a handful spread across the whole scene? See the
+ * "Peer Colors" pane folder's own hint row for what to actually compare in
+ * the performance HUD while trying this.
+ *
+ * Auto-picks the grid's center-most instance as the local selection first
+ * if nothing is selected yet, so this works immediately on a fresh page
+ * load without requiring a manual click first.
+ */
+function clusterPeerColorsAroundSelection(
+  peerCount: number
+): void {
+  if (instanceCount === 0) {
+    return;
+  }
+
+  if (selectedInstanceId === null) {
+    const [centerId] = nearestInstanceIdsToPosition(new THREE.Vector3(), instanceCount, null, 1);
+    if (centerId === undefined) {
+      return;
+    }
+
+    randomSelectedInstanceIds = [];
+    selectedInstanceId = centerId;
+    rebuildOverlays();
+  }
+
+  const localId = selectedInstanceId;
+  if (localId === null) {
+    return;
+  }
+
+  clearPeerColors();
+  if (peerCount <= 0) {
+    return;
+  }
+
+  const centerPosition = gridPosition(localId, instanceCount);
+  const nearestIds = nearestInstanceIdsToPosition(centerPosition, instanceCount, localId, peerCount);
+  nearestIds.forEach((instanceId, index) => {
+    const peerName = `Peer ${index + 1}`;
+    activePeerNames.push(peerName);
+    peerRegistry.select(peerName, String(instanceId));
+  });
+}
+
+/**
  * One "heavy 3D model" stand-in geometry, shared by every instance -
- * `MergedSelectionOverlay`/`InstancedOutlineNode`/`ColoredOutlinePass` only
- * ever read geometry/transforms to build their own overlay data, never
- * mutate it.
+ * `MergedSelectionOverlay`/`ColoredOutlinePass` only ever read
+ * geometry/transforms to build their own overlay data, never mutate it.
  *
  * Every instance is one `THREE.InstancedMesh` rather than one
  * `THREE.Mesh` each (this file's own pre-instancing history) - collapses
@@ -233,97 +337,53 @@ function instanceProxyMesh(
  * `randomSelectedInstanceIds`, always at most one of those two non-empty;
  * hover: `hoveredInstanceId`, suppressed while it equals the current
  * selection - same suppression `SelectionManager`'s own hover overlay uses)
- * under whichever mesh style/xray is active now, then refreshes Peer Colors
- * so it picks up the same state. Called on every selection/hover/style/xray
+ * under whichever `renderMode` is active now, then refreshes Peer Colors so
+ * it picks up the same state. Called on every selection/hover/mode/xray
  * change - the single entry point every interaction below funnels through.
  *
- * "priority" (see `ColoredOutlineEntry.priority`'s own doc comment, mirrored
- * here for the local click-selection) means "this always wins,
- * unconditionally" - see the guaranteed overlay built near the end of this
- * function for why that needs a dedicated, always-built `xray` overlay
- * rather than trusting the mesh style's own selected look (`toonOutline`'s
- * glow, or a depth-tested `MergedSelectionOverlay`) or `ColoredOutlinePass`'s
- * own `priority` handling to provide that guarantee by themselves.
+ * Exactly one mechanism renders the local selection/hover per mode - see
+ * `RenderMode`'s own doc comment: `"outline"` owns `MergedSelectionOverlay`
+ * outright, `"peerColors"` relies on `ColoredOutlinePass`'s own `priority`
+ * entry for selection and a plain entry for hover (see `refreshPeerColors`)
+ * - reliable on its own, so nothing else is needed.
  */
 function rebuildOverlays(): void {
   clearSelectionOverlay();
   clearHoverOverlay();
 
-  const style = selectionManager.meshStyle;
   const selectedIds = selectedInstanceId === null ? randomSelectedInstanceIds : [selectedInstanceId];
   const hoverSuppressed = hoveredInstanceId !== null && hoveredInstanceId === selectedInstanceId;
   const hoverIds = !hoverSuppressed && hoveredInstanceId !== null ? [hoveredInstanceId] : [];
 
-  if (style === "toonOutline") {
-    toonOutline.setSelectedMany(selectedIds.map((instanceId) => {
-      return { mesh: instancedMesh, instanceId };
-    }));
-    toonOutline.setHovered(hoverIds.length > 0 ? { mesh: instancedMesh, instanceId: hoverIds[0] } : null);
-    // `ToonOutlinePass.setXray` is one shared flag for both the selected and
-    // hover role (no per-role xray in its API) - `true` here guarantees the
-    // selection stays visible as priority whenever this pipeline is the one
-    // actually driving the frame (see the guaranteed overlay below for when
-    // it isn't); the tradeoff is hover follows it too instead of the
-    // "x-ray" checkbox, unlike the outline/highlight styles' own hover
-    // overlay below, which stays independent.
-    toonOutline.setXray(true);
-  }
-  else {
-    toonOutline.setSelectedMany([]);
-    toonOutline.setHovered(null);
-
+  if (renderMode === "outline") {
     if (hoverIds.length > 0) {
       hoverOverlay = new MergedSelectionOverlay({
         parent: scene,
-        style,
         targets: hoverIds.map(instanceProxyMesh),
         color: selectionManager.hoverColor,
         opacity: selectionManager.hoverOpacity,
         linewidth: selectionManager.outlineOptions.linewidth,
-        thickness: selectionManager.highlightOptions.thickness,
         xray: selectionManager.xray
       });
     }
+    if (selectedIds.length > 0) {
+      selectionOverlay = new MergedSelectionOverlay({
+        parent: scene,
+        targets: selectedIds.map(instanceProxyMesh),
+        color: selectionManager.color,
+        opacity: 1,
+        linewidth: selectionManager.outlineOptions.linewidth,
+        // Always on, unlike hover above - a real `THREE.LineSegments` with
+        // `xray: true` (`depthTest: false` + `renderOrder: 999`, see
+        // `SelectionOutline`'s own doc comment) is what makes this mode's
+        // selection reliably visible through occluders at all, the local
+        // equivalent of `"peerColors"` mode's own `priority` guarantee.
+        xray: true
+      });
+    }
   }
-
-  // Guaranteed-visible representation of the local (priority) selection -
-  // built unconditionally, regardless of mesh style or whether Peer Colors
-  // is driving the frame. Neither of the other two mechanisms fully
-  // guarantees this on their own:
-  // - `ToonOutlinePass`'s own "selected" glow (above) only ever renders when
-  //   *its* pipeline is the one actually driving the frame - Peer Colors
-  //   drives `coloredOutline.render()` instead (see the render loop below),
-  //   which never touches `toonOutline` at all, so that glow simply doesn't
-  //   exist in the composited frame while Peer Colors is on.
-  // - `ColoredOutlinePass`'s own `priority` (see `refreshPeerColors`) wins
-  //   the underlying per-pixel mask unconditionally, but the *edge color* is
-  //   computed from a downsampled, Gaussian-blurred copy of that mask (see
-  //   `ColoredOutlinePass`'s own doc comment on the boundary-blend
-  //   approximation) - when the priority silhouette sits very close to a
-  //   non-priority one on screen, that blur can thin the priority-exclusive
-  //   sliver down to nothing, letting the peer's wider color visually win
-  //   despite correctly losing the mask itself.
-  // A real `THREE.LineSegments`/`Mesh` with `xray: true` sidesteps both:
-  // `depthTest: false` + `renderOrder: 999` (see `SelectionOutline`'s own
-  // doc comment) draws it after and through everything else in the normal
-  // `pass(scene, camera)` term both `toonOutline` and `coloredOutline`
-  // composite on top of, independent of either pipeline's own logic.
-  // `MergedSelectionOverlay` only supports `"outline"`/`"highlight"`, so
-  // `"toonOutline"` falls back to `"outline"` here specifically for this
-  // safety net - the toon glow above still gives the actual "toonOutline"
-  // look whenever its own pipeline is the one rendering.
-  if (selectedIds.length > 0) {
-    selectionOverlay = new MergedSelectionOverlay({
-      parent: scene,
-      style: style === "toonOutline" ? "outline" : style,
-      targets: selectedIds.map(instanceProxyMesh),
-      color: selectionManager.color,
-      opacity: 1,
-      linewidth: selectionManager.outlineOptions.linewidth,
-      thickness: selectionManager.highlightOptions.thickness,
-      xray: true
-    });
-  }
+  // "peerColors": the branch above doesn't apply - the local selection/hover
+  // render via `refreshPeerColors` below instead.
 
   refreshPeerColors();
 }
@@ -361,6 +421,31 @@ function pickRandomInstanceIds(
 }
 
 /**
+ * World-space position of instance `index` within a `count`-sized cubic
+ * grid - the exact layout `spawnInstances` bakes into `instancedMesh`'s own
+ * matrices, extracted so `nearestInstanceIdsToPosition` below can compute
+ * distances against it without a per-instance `getMatrixAt`/decompose
+ * round-trip (cheap either way at these instance counts, but this avoids
+ * two independent copies of the same grid formula drifting apart).
+ */
+function gridPosition(
+  index: number,
+  count: number
+): THREE.Vector3 {
+  const side = Math.ceil(Math.cbrt(count));
+  const centerOffset = ((side - 1) * kInstanceSpacing) / 2;
+  const x = index % side;
+  const y = Math.floor(index / side) % side;
+  const z = Math.floor(index / (side * side));
+
+  return new THREE.Vector3(
+    x * kInstanceSpacing - centerOffset,
+    y * kInstanceSpacing - centerOffset,
+    z * kInstanceSpacing - centerOffset
+  );
+}
+
+/**
  * Repositions instances `[0, count)` into a roughly cubic grid centered on
  * the origin and sets `instancedMesh.count` - never reallocates the
  * underlying GPU buffers, see `instancedMesh`'s own comment. Clears every
@@ -375,24 +460,11 @@ function spawnInstances(
   randomSelectedInstanceIds = [];
   clearSelectionOverlay();
   clearHoverOverlay();
-  toonOutline.setSelectedMany([]);
-  toonOutline.setHovered(null);
   clearPeerColors();
 
-  const side = Math.ceil(Math.cbrt(count));
-  const centerOffset = ((side - 1) * kInstanceSpacing) / 2;
   const matrix = new THREE.Matrix4();
-
   for (let i = 0; i < count; i++) {
-    const x = i % side;
-    const y = Math.floor(i / side) % side;
-    const z = Math.floor(i / (side * side));
-
-    matrix.setPosition(
-      x * kInstanceSpacing - centerOffset,
-      y * kInstanceSpacing - centerOffset,
-      z * kInstanceSpacing - centerOffset
-    );
+    matrix.setPosition(gridPosition(i, count));
     instancedMesh.setMatrixAt(i, matrix);
   }
 
@@ -469,7 +541,7 @@ function handleClick(): void {
 }
 
 const pane = createExamplePane({ title: "Stress" });
-const performancePanel = new PerformancePanel({ pane, renderer, title: "Performance" });
+const performanceStats = mountPerformanceStats(renderer);
 
 const stressFolder = pane.addFolder({ title: "Stress Test" });
 const stressSettings = { instanceCount: kDefaultInstanceCount };
@@ -491,20 +563,13 @@ stressFolder
 const selectionFolder = pane.addFolder({ title: "Selection" });
 
 /**
- * Draw-call cost warning: `toonOutline` runs on `ToonOutlinePass`, which owns
- * two `InstancedOutlineNode`s (selected + hovered) - see
- * `InstancedOutlineNode.updateBefore`. Whenever either has at least one
- * target, it redraws the *entire non-selected scene* into a depth buffer that
- * frame just to resolve occlusion - one extra full-scene draw-call pass per
- * active role, on top of the normal color pass. At thousands of instances
- * that's the dominant cost, not the instance count itself.
- *
- * `ColoredOutlinePass` (the "Peer Colors" pipeline below) was built
- * specifically to avoid this - see its own doc comment ("N colors would mean
- * paying that cost N times") - its mask pass only ever draws the currently
- * outlined instances, so cost scales with selection size, not scene size.
- * At high instance counts the actionable move is picking the pipeline:
- * prefer Peer Colors (enable it below) over "toon outline (postprocess)".
+ * Draw-call cost note: `"outline"` mode's `MergedSelectionOverlay` is a
+ * single cheap draw call regardless of how many instances are covered, but
+ * every rebuild (any selection/hover change) re-merges their geometry from
+ * scratch. `"peer colors"` (`ColoredOutlinePass`) doesn't rebuild geometry at
+ * all - its mask pass only ever draws the currently outlined instances, so
+ * cost scales with selection size, not scene size, and it's the only mode
+ * where peers are visible at all (see "mode"'s own description below).
  */
 // No field/monitor fits a paragraph (`jolly-monitor`'s value column doesn't
 // wrap; `jolly-property-row`'s own `description` does) - built directly and
@@ -512,38 +577,68 @@ const selectionFolder = pane.addFolder({ title: "Selection" });
 // content it has no builder for.
 const perfHintRow = document.createElement("jolly-property-row");
 perfHintRow.label = "perf note";
-perfHintRow.description = "toon outline (postprocess) redraws the whole non-selected scene into a depth buffer every " +
-  "frame something is selected/hovered - twice, once per role - on top of the normal render. " +
-  "Peer Colors below (ColoredOutlinePass) doesn't: its cost scales with how many instances are " +
-  "outlined, not total instance count. At high instance counts, prefer Peer Colors (enable it " +
-  "below) over toon outline.";
+perfHintRow.description = "\"outline\" re-merges geometry on every change; \"peer colors\" never rebuilds " +
+  "geometry and is the only mode where peers are visible.";
 selectionFolder.element.append(perfHintRow);
 
-const styleSettings = { meshStyle: selectionManager.meshStyle };
+/**
+ * One dropdown for both the local selection *and* peers - see `RenderMode`'s
+ * own doc comment for why these were never really independent choices.
+ * "outline" is local-only (no peers - not a limitation of this dropdown, but
+ * of what a per-object technique can represent on an `InstancedMesh`
+ * instance at all); "peer colors" is the one mode where peers - and the
+ * local selection, in the same style - both show.
+ */
+const modeHintRow = document.createElement("jolly-property-row");
+modeHintRow.description = "\"outline\" only shows your own local selection - switch to \"peer colors\" to " +
+  "see every peer too, in the same ring style.";
+selectionFolder.element.append(modeHintRow);
+
+// Explicit annotation: without it, TS narrows this object literal's `mode`
+// to the literal `"outline"` (control-flow narrowing a `let` read), which
+// the `satisfies Record<string, RenderMode>` binding below would then reject.
+const modeSettings: { mode: RenderMode; } = { mode: renderMode };
 selectionFolder
-  .addBinding(styleSettings, "meshStyle", {
-    label: "mesh style",
+  .addBinding(modeSettings, "mode", {
+    label: "mode",
     options: {
       outline: "outline",
-      highlight: "highlight",
-      "toon outline (postprocess)": "toonOutline"
-    } satisfies Record<string, MeshSelectionStyle>
+      "peer colors (postprocess, collaborative)": "peerColors"
+    } satisfies Record<string, RenderMode>
   })
   .on("change", ({ value }) => {
-    selectionManager.setMeshStyle(value);
+    renderMode = value;
     rebuildOverlays();
+    updateControlAvailability();
   });
 
-// Only affects the *hover* overlay - the selection overlay is always
-// x-ray (see rebuildOverlays's own doc comment for why "priority" implies
-// that), so this checkbox has nothing left to toggle for it.
+/**
+ * Only affects "outline" mode's hover overlay now (a dedicated
+ * `MergedSelectionOverlay` - see `rebuildOverlays`) - the local selection is
+ * always visible in both modes regardless of this setting (a permanent
+ * `xray: true` overlay in "outline", or `ColoredOutlinePass`'s own
+ * `priority` guarantee in "peer colors"), and "peer colors" mode has no
+ * occlusion concept at all to gate - every entry (selection, hover, and
+ * peers alike) always draws at full strength there, see
+ * `ColoredOutlinePass`'s own doc comment for why.
+ */
 const xraySettings = { xray: selectionManager.xray };
-selectionFolder
-  .addBinding(xraySettings, "xray", { label: "hover x-ray (selection is always visible)" })
+const xrayBinding = selectionFolder
+  .addBinding(xraySettings, "xray", { label: "x-ray (\"outline\" mode only - hover)" })
   .on("change", ({ value }) => {
     selectionManager.setXray(value);
     rebuildOverlays();
   });
+
+/**
+ * Reflects whether x-ray currently does anything, rather than leaving that
+ * to label text alone - called once here for the initial state, and again
+ * from "mode"'s own handler above whenever it changes.
+ */
+function updateControlAvailability(): void {
+  xrayBinding.disabled = renderMode !== "outline";
+}
+updateControlAvailability();
 
 const randomFolder = pane.addFolder({ title: "Random Selection" });
 const randomSettings = { count: 0 };
@@ -569,7 +664,7 @@ randomFolder.addButton({ title: "Clear" }).on("click", () => {
 });
 
 const peerColorsFolder = pane.addFolder({ title: "Peer Colors (ColoredOutlinePass)" });
-const peerColorsSettings = { peerCount: 4, enabled: false };
+const peerColorsSettings = { peerCount: 4 };
 peerColorsFolder
   .addBinding(peerColorsSettings, "peerCount", {
     label: "peer count",
@@ -586,23 +681,24 @@ peerColorsFolder
 peerColorsFolder.addButton({ title: "Randomize assignment" }).on("click", () => {
   randomizePeerColors(Math.round(peerColorsSettings.peerCount));
 });
-peerColorsFolder
-  .addBinding(peerColorsSettings, "enabled", { label: "enabled (drives the frame) - your own click-selection shows too" })
-  .on("change", ({ value }) => {
-    peerColorsEnabled = value;
-  });
+
+const clusterHintRow = document.createElement("jolly-property-row");
+clusterHintRow.description = "Packs peers densely around your selection instead of spreading them out - " +
+  "stresses ColoredOutlinePass's priority guarantee specifically, not just its per-color cost.";
+peerColorsFolder.element.append(clusterHintRow);
+peerColorsFolder.addButton({ title: "Cluster around selection" }).on("click", () => {
+  clusterPeerColorsAroundSelection(Math.round(peerColorsSettings.peerCount));
+});
 
 startLoop({
   renderer,
   scene,
   camera,
   controls,
-  // `coloredOutline` and `toonOutline` each own a full `RenderPipeline` (see
-  // `ColoredOutlinePass`'s own doc comment for why that means only one can
-  // drive a given frame) - `peerColorsEnabled` picks which. Safe to always
-  // route through `toonOutline` otherwise, see its own comment above for why
-  // that composites down to the normal scene render when nothing is
-  // currently using the "toonOutline" style.
-  render: () => (peerColorsEnabled ? coloredOutline.render() : toonOutline.render()),
-  onAfterRender: () => performancePanel.update()
+  // `coloredOutline` owns a full `RenderPipeline`, so it's only used as the
+  // frame's render call while "mode" above is "peerColors" - every other
+  // frame renders normally.
+  render: () => (renderMode === "peerColors" ? coloredOutline.render() : renderer.render(scene, camera)),
+  onBeforeRender: () => performanceStats.begin(),
+  onAfterRender: () => performanceStats.end()
 });

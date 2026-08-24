@@ -64,7 +64,7 @@ jolly-floating {
 }
 
 /*
- * Scene outliner - a `TreeView` from @jolly-pixel/fs-tree mirroring the
+ * Scene outliner - a `TreeView` from @jolly-pixel/arbor mirroring the
  * groups/meshes registered in a `SelectionManager`, kept in sync in both
  * directions (see examples/scripts/demo-selection.ts).
  */
@@ -176,6 +176,33 @@ jolly-floating {
   height: 10px;
   flex: none;
   padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+/*
+ * Static peer -> object legend in demo-peer-selection.ts's "Scenario" panel
+ * - one row per preset peer, a color dot matching its `PeerSelectionRegistry`
+ * color plus the object name it selected.
+ */
+.peer-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.peer-legend-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #cfcfe0;
+}
+
+.peer-legend-dot {
+  width: 10px;
+  height: 10px;
+  flex: none;
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.6);
 }

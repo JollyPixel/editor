@@ -1,58 +1,60 @@
-// Import Third-party Dependencies
-import * as THREE from "three";
-
 // Import Internal Dependencies
-import { SelectionOutline } from "./SelectionOutline.ts";
-import { SelectionHighlight } from "./SelectionHighlight.ts";
-import { SelectionBoundingBox } from "./SelectionBoundingBox.ts";
-import type { MeshSelectionStyle, SelectableObject } from "../SelectionManager.ts";
+import { SelectionOverlayRegistry, type SelectionOverlayCreateOptions } from "./SelectionOverlayFactory.ts";
+import {
+  outlineOverlayFactory,
+  boundingBoxOverlayFactory
+} from "./builtinSelectionOverlayFactories.ts";
+import type { SelectionOverlay } from "./SelectionOverlay.ts";
+import type { SelectionTechnique, SelectableObject } from "../SelectionManager.ts";
 
-export type SelectionOverlay = SelectionOutline | SelectionHighlight | SelectionBoundingBox;
+export type { SelectionOverlay } from "./SelectionOverlay.ts";
+export type {
+  SelectionOverlayFactory,
+  SelectionOverlayCreateOptions,
+  SelectionOverlayRegistryOptions
+} from "./SelectionOverlayFactory.ts";
+export { SelectionOverlayRegistry } from "./SelectionOverlayFactory.ts";
+export {
+  outlineOverlayFactory,
+  boundingBoxOverlayFactory
+};
 
-export interface CreateSelectionOverlayOptions {
-  style: MeshSelectionStyle;
-  color: THREE.ColorRepresentation;
-  opacity: number;
-  /**
-   * Forwarded to `SelectionOutline` when `style` is `"outline"` - ignored
-   * otherwise (and for a non-mesh `target`, which always gets a
-   * `SelectionBoundingBox`).
-   */
-  linewidth?: number;
-  /**
-   * Forwarded to `SelectionHighlight` when `style` is `"highlight"` -
-   * ignored otherwise.
-   */
-  thickness?: number;
-  /**
-   * Forwarded to whichever overlay gets built - `SelectionOutline`,
-   * `SelectionHighlight`, or `SelectionBoundingBox` - so a selection stays
-   * visible through occluding geometry regardless of `style` or of `target`
-   * being a mesh vs. a group.
-   */
-  xray?: boolean;
+export interface CreateSelectionOverlayOptions extends SelectionOverlayCreateOptions {
+  technique: SelectionTechnique;
 }
 
 /**
- * Picks and builds the right overlay for `target`: a non-mesh target (e.g. a
- * `THREE.Group`) always gets a `SelectionBoundingBox`; a `THREE.Mesh` gets a
- * `SelectionOutline` or `SelectionHighlight` per `options.style`.
+ * The registry `createSelectionOverlay` resolves against. Pre-populated with
+ * every built-in technique (`outline`/`boundingBox`) - a caller wanting a
+ * different or additional per-object technique (e.g. another editor in this
+ * monorepo) can `.register()` its own `SelectionOverlayFactory` into this
+ * same registry instead of forking `createSelectionOverlay`, or build a
+ * wholly separate `SelectionOverlayRegistry` and resolve against that
+ * directly. See `SelectionOverlayRegistry`'s own doc comment for the
+ * resolution order.
+ */
+export const defaultSelectionOverlayRegistry = new SelectionOverlayRegistry({
+  defaultId: "outline",
+  fallbackId: "boundingBox"
+});
+defaultSelectionOverlayRegistry.register(outlineOverlayFactory);
+defaultSelectionOverlayRegistry.register(boundingBoxOverlayFactory);
+
+/**
+ * Picks and builds the right overlay for `target` via
+ * `defaultSelectionOverlayRegistry`: a non-mesh target (e.g. a `THREE.Group`)
+ * always falls back to the `"boundingBox"` technique; a `THREE.Mesh` resolves
+ * per `options.technique`.
  *
  * Extracted out of `SelectionManager` so `PeerSelectionOverlays` can build
  * the exact same overlays for remote peer selections without duplicating
- * this branching.
+ * this resolution.
  */
 export function createSelectionOverlay(
   target: SelectableObject,
   options: CreateSelectionOverlayOptions
 ): SelectionOverlay {
-  const { style, color, opacity, linewidth, thickness, xray } = options;
+  const { technique, ...createOptions } = options;
 
-  if (!(target instanceof THREE.Mesh)) {
-    return new SelectionBoundingBox({ target, color, opacity, xray });
-  }
-
-  return style === "highlight" ?
-    new SelectionHighlight({ target, color, opacity, thickness, xray }) :
-    new SelectionOutline({ target, color, opacity, linewidth, xray });
+  return defaultSelectionOverlayRegistry.resolve(technique, target).create(target, createOptions);
 }

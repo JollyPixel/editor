@@ -40,16 +40,24 @@ export interface PeerSelectionOverlaysOptions {
    * @default 1
    */
   opacity?: number;
+  /**
+   * Suppresses a peer overlay (same as no selector at all) for any object
+   * `visibility.isVisible` reports `false` for - e.g. outside the camera
+   * frustum or beyond a configured max distance. Never consulted for the
+   * local user's own selection. Omitting this preserves today's
+   * always-visible behavior.
+   */
+  visibility?: PeerSelectionVisibility;
 }
 ```
 
 ## Methods
 
-- `dispose(): void` - Detaches its listeners and disposes every active peer overlay. Does not touch `registry` or `selection` state - only this class's own render output.
+- `dispose(): void` - Detaches its listeners and disposes every active peer overlay. Does not touch `registry`/`selection`/`visibility` state - only this class's own render output.
 
 ## Notes
 
-- Reuses the same `createSelectionOverlay` function `SelectionManager` uses internally, via `selection.styleFor(id)`/`selection.targetFor(id)`/`selection.outlineOptions`/`selection.highlightOptions`/`selection.xray`, so a peer-selected mesh gets the same `SelectionOutline`/`SelectionHighlight`/`SelectionBoundingBox` choice and tuning (linewidth, thickness, xray) as a locally-selected one would, just in the peer's color. A peer overlay already on screen is not retroactively retuned by a later `setOutlineOptions`/`setHighlightOptions`/`setXray` call on `selection` - only recoloring (a primary-selector change) is cheap enough to apply in place (see the note below); the new tuning applies the next time that overlay is disposed and rebuilt (e.g. every peer deselects the object, then one selects it again).
-- When `selection.styleFor(id)` resolves to `"toonOutline"` (see [ToonOutlinePass](./ToonOutlinePass.md)), a peer overlay falls back to `"outline"` instead - `ToonOutlinePass` is one shared pipeline, not a per-id instance, so it can't represent more than one simultaneously colored peer selection the way this class needs.
+- Reuses the same `createSelectionOverlay` function `SelectionManager` uses internally, via `selection.techniqueFor(id)`/`selection.targetFor(id)`/`selection.outlineOptions`/`selection.boundingBoxOptions`/`selection.xray`, so a peer-selected mesh (or group) gets the same `SelectionOutline`/`SelectionBoundingBox` choice and tuning (linewidth, fill opacity, xray) as a locally-selected one would, just in the peer's color. A peer overlay already on screen is not retroactively retuned by a later `setOutlineOptions`/`setBoundingBoxOptions`/`setXray` call on `selection` - only recoloring (a primary-selector change) is cheap enough to apply in place (see the note below); the new tuning applies the next time that overlay is disposed and rebuilt (e.g. every peer deselects the object, then one selects it again).
+- When `selection.techniqueFor(id)` resolves to `"coloredOutline"` (see [ColoredOutlinePass](./ColoredOutlinePass.md)), a peer overlay falls back to `"outline"` instead - `ColoredOutlinePass` is one shared pipeline, not a per-id instance, so it can't represent more than one simultaneously colored peer selection the way this class needs.
 - When the primary peer for an object changes (e.g. the oldest selector deselects and a newer one is promoted), the existing overlay instance is recolored via `setColor` rather than disposed and rebuilt - cheaper, and avoids visible geometry churn.
-- Listens to both `registry`'s `peerSelectionChange` and `selection`'s `selectionChange` to know when to suppress/restore a peer overlay against the local selection.
+- Listens to `registry`'s `peerSelectionChange`, `selection`'s `selectionChange`, and (if `visibility` was given) `visibility`'s `visibilityChange` to know when to suppress/restore a peer overlay against the local selection or camera visibility. See [PeerSelectionVisibility](./PeerSelectionVisibility.md) for what determines visibility.

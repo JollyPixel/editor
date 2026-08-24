@@ -89,15 +89,57 @@ function buildSeparableBlur(
   })();
 }
 
+/**
+ * 4-neighbor edge detection over a downsampled mask, extracted so both the
+ * shared mask (`#edgeDetectionMaterial`) and the priority-only mask
+ * (`#priorityEdgeDetectionMaterial`) can reuse the exact same shader instead
+ * of duplicating it - see `#renderTargetPriorityMask`'s own doc comment for
+ * why a second, independent mask/edge-detect chain exists at all. Boundary
+ * strength, weighted-average edge color, and the RGB-distance-not-length
+ * reasoning are all unchanged from the original single-chain version - see
+ * the inline comments where this is called for that rationale.
+ */
+function buildEdgeDetection(
+  maskDownSampleTexture: ReturnType<typeof texture>,
+  invSizeNode: ReturnType<typeof vec2>
+) {
+  return Fn(() => {
+    const uvNode = uv();
+
+    const c1 = maskDownSampleTexture.sample(uvNode.add(vec2(invSizeNode.x, 0))).toVar();
+    const c2 = maskDownSampleTexture.sample(uvNode.sub(vec2(invSizeNode.x, 0))).toVar();
+    const c3 = maskDownSampleTexture.sample(uvNode.add(vec2(0, invSizeNode.y))).toVar();
+    const c4 = maskDownSampleTexture.sample(uvNode.sub(vec2(0, invSizeNode.y))).toVar();
+
+    const diff1 = c1.rgb.sub(c2.rgb).length().mul(0.5);
+    const diff2 = c3.rgb.sub(c4.rgb).length().mul(0.5);
+    const edgeStrength = saturate(vec2(diff1, diff2).length());
+
+    const w1 = maskWeight(c1);
+    const w2 = maskWeight(c2);
+    const w3 = maskWeight(c3);
+    const w4 = maskWeight(c4);
+
+    const colorSum = c1.rgb.mul(w1)
+      .add(c2.rgb.mul(w2))
+      .add(c3.rgb.mul(w3))
+      .add(c4.rgb.mul(w4));
+    const weightSum = w1.add(w2).add(w3).add(w4);
+    const edgeColor = colorSum.div(max(weightSum, 0.0001));
+
+    return vec4(edgeColor, 1).mul(edgeStrength);
+  })();
+}
+
 export interface ColoredOutlineEntry {
   /**
-   * Mesh (or group, traversed to every mesh inside it - same convention as
-   * `ToonOutlinePass.setSelected`/three's own `OutlineNode`) to outline.
+   * Mesh (or group, traversed to every mesh inside it - same convention
+   * three's own `OutlineNode` uses) to outline.
    */
   target: SelectableObject;
   /**
-   * This entry's own outline color - unlike `ToonOutlinePass`, every entry
-   * carries its own color rather than sharing one or two fixed roles.
+   * This entry's own outline color - every entry carries its own color
+   * rather than sharing one or two fixed roles.
    */
   color: THREE.ColorRepresentation;
   /**
@@ -112,9 +154,42 @@ export interface ColoredOutlineEntry {
    * traversal order or actual depth. Typical use: the local user's own
    * selection, so it stays visibly outlined even where a peer's selection
    * is actually in front of it on screen.
+   *
+   * That "wins the shared mask" guarantee alone isn't quite enough for a
+   * priority entry whose silhouette ends up entirely enclosed within a
+   * larger, nearer non-priority entry's own silhouette (e.g. a small local
+   * selection viewed from far away, with a much closer peer selection
+   * projecting large enough on screen to fully swallow it) - the composite
+   * step only ever draws a ring into background-adjacent pixels, so a
+   * boundary that never touches actual background has nowhere to paint a
+   * ring into even after priority already won the color underneath. A
+   * priority entry also gets its own independent, self-only mask/edge-detect
+   * chain (see `#renderTargetPriorityMask`'s own doc comment) specifically
+   * to cover this case - its ring is guaranteed visible regardless of what
+   * (or how much of) a non-priority entry surrounds it.
    * @default false
    */
   priority?: boolean;
+  /**
+   * The opposite concern from `priority`: this entry's ring is always drawn
+   * complete, from its own dedicated mask, entirely independent of every
+   * other entry - it never competes for the shared mask, so it can neither
+   * be cut by another entry (the same "wins the overlap" problem `priority`
+   * solves) nor accidentally *cut one itself* by winning an ordinary depth
+   * test it happened to be nearer for (the problem `priority` does *not*
+   * solve, since a `priority` entry still redraws into the shared mask and
+   * can still out-depth a non-priority one there). Typical use: a transient
+   * hover preview, which should always read clearly but has no business
+   * clipping a peer's selection ring just because it's nearer the camera
+   * right now. Mutually exclusive with `priority` in practice - an isolated
+   * entry never touches the shared mask at all, so there is nothing there
+   * for it to win. Pays for its own mask/edge-detect chain (see
+   * `#renderTargetIsolatedMask`'s own doc comment), same cost shape as
+   * `priority` - skipped entirely on a frame with none. Not supported
+   * alongside `instanceId` (ignored there).
+   * @default false
+   */
+  isolated?: boolean;
   /**
    * Selects a single instance of an `THREE.InstancedMesh` `target`, instead
    * of outlining `target` as a whole - required when `target` is a
@@ -149,11 +224,12 @@ export interface ColoredOutlinePassOptions {
 /**
  * Scene-level postprocess outline that renders many simultaneously outlined
  * objects, each in its own arbitrary color, in a single shared mask +
- * edge-detection pass - unlike `ToonOutlinePass` (built on three's stock
- * `OutlineNode`), which is one shared pipeline per *color* (its own "selected"
- * and "hovered" roles), so representing N distinct colors there would mean N
- * separate `OutlineNode` instances, each repeating that technique's own
- * expensive non-selected-scene depth pre-pass.
+ * edge-detection pass - the same general shape as three's own stock
+ * `OutlineNode` (mask, edge-detect, blur, composite), generalized from
+ * `OutlineNode`'s fixed "selected"/"hovered" roles to an arbitrary
+ * per-entry color, and without repeating `OutlineNode`'s own expensive
+ * non-selected-scene depth pre-pass - this class has no notion of scene
+ * depth at all (see the note below).
  *
  * This class never re-renders the rest of the scene: its mask pass draws
  * only the objects currently in `setEntries`, via the same
@@ -167,24 +243,54 @@ export interface ColoredOutlinePassOptions {
  * `PeerSelectionRegistry` - it only ever paints colored outlines around
  * whatever `{ target, color }` entries it's given, the same
  * agnostic-core-vs-thin-glue split `PeerSelectionRegistry` already uses (see
- * its own doc comment). `PeerColoredOutline` is the thin adapter that feeds
- * it from the selection system.
+ * its own doc comment). `PeerColoredOutlinePass` is the thin adapter that
+ * feeds it from the selection system - including the local user's own
+ * selection, so it's a complete, self-sufficient driver with zero peers too,
+ * not something that only makes sense once peers exist.
  *
  * @note
- * Requires `THREE.WebGPURenderer`, like `ToonOutlinePass`. Owns its own
- * `RenderPipeline` (`render()` replaces `renderer.render(scene, camera)`) -
- * `RenderPipeline.outputNode` is a single composed graph per instance, so
- * this can't currently be composited into the same frame as a separate
- * `ToonOutlinePass`; pick one whole-frame technique per scene.
+ * Requires `THREE.WebGPURenderer`. Owns its own `RenderPipeline` (`render()`
+ * replaces `renderer.render(scene, camera)`) - `RenderPipeline.outputNode`
+ * is a single composed graph per instance, so this can't currently be
+ * composited into the same frame as another whole-frame postprocess
+ * pipeline; pick one per scene.
  *
  * @note
- * v1 scope: no occlusion-aware hidden edge / `xray` support - every entry
- * always reads as fully visible, regardless of what's in front of it. Adding
- * that later would reuse the main scene pass's own depth texture
- * (`pass(scene, camera).getTextureNode("depth")`) rather than repeating
- * `OutlineNode`'s redundant depth pre-pass, but it's deferred here to keep
- * this class scoped to what was actually asked for (many simultaneous
- * distinct colors, performant).
+ * Not occlusion-aware, deliberately: an entry's ring always draws at full,
+ * uniform strength around its own silhouette, regardless of what real scene
+ * geometry sits in front of it - effectively permanent x-ray, the same
+ * always-visible behavior for every entry, local selection and peers alike.
+ * Two earlier designs were built and reverted before landing here: one
+ * compared each masked pixel's own depth against the real scene's depth at
+ * that same pixel (accurate, angle-independent, but left a rare spurious
+ * edge exactly along the occlusion cut line wherever an entry was partially
+ * occluded); an even earlier one propagated that compare outward toward the
+ * ring's own pixel via a bounded search, which got measurably less accurate
+ * at grazing viewing angles. Both were replaced by dropping occlusion
+ * awareness entirely - the "hidden, dimmed" ring segment those designs
+ * produced when `xray` was on visually read as two different intensities
+ * stitched together at a seam, which was worse for legibility than simply
+ * never dimming at all. No scene depth is read anywhere in this class as a
+ * result - `pass(scene, camera)` is used only for its color output.
+ *
+ * @note
+ * A `priority: true` entry (`ColoredOutlineEntry.priority`) is guaranteed
+ * visible even when its own silhouette is entirely enclosed inside a larger,
+ * nearer non-priority entry's silhouette - not just "wins the shared mask
+ * pixels" (which the original single-mask design already gave it) but "its
+ * ring actually gets drawn somewhere," via a second, independent, self-only
+ * mask/edge-detect chain (see `#renderTargetPriorityMask`'s own doc
+ * comment). Only entries marked `priority` pay for this second chain -
+ * skipped entirely on a frame with none.
+ *
+ * @note
+ * An `isolated: true` entry (`ColoredOutlineEntry.isolated`) is the opposite
+ * of `priority`: it never touches the shared mask at all, drawing its ring
+ * from a third, independent, self-only mask/edge-detect chain (see
+ * `#renderTargetIsolatedMask`'s own doc comment) - so it can neither be cut
+ * by another entry nor cut one itself by winning an ordinary depth-test
+ * overlap it happened to be nearer for. Only entries marked `isolated` pay
+ * for this chain - skipped entirely on a frame with none.
  *
  * @note
  * Entries with `instanceId` set (see `ColoredOutlineEntry.instanceId`)
@@ -203,13 +309,12 @@ interface InstancedMaskResources {
    * not just zero their color. Instancing draws every instance of the mesh
    * in one call regardless of which ones are entries, so without this
    * discard a non-outlined instance would still write into the mask
-   * target's depth buffer at its own real depth, letting it occlude an
-   * actually-outlined instance (or an unrelated whole-object entry) behind
-   * it - silently breaking this pass's own "v1 scope" guarantee that every
-   * entry reads as fully visible regardless of what's in front of it (see
-   * this class's own doc comment), since a whole-object entry never has
-   * this problem: a non-entry mesh is simply never drawn into the mask
-   * target at all. `Discard()`-ing the fragment (not just writing `(0,0,0)`)
+   * target's depth buffer at its own real depth, letting it win the shared
+   * mask's own depth test against an actually-outlined instance (or an
+   * unrelated whole-object entry) behind it - a non-entry silently blocking
+   * an entry from the mask target entirely, which a whole-object entry never
+   * risks (a non-entry mesh is simply never drawn into the mask target at
+   * all). `Discard()`-ing the fragment (not just writing `(0,0,0)`)
    * is what keeps a non-outlined instance from touching the mask target in
    * any way, matching that same "never drawn there" behavior.
    */
@@ -247,6 +352,12 @@ export class ColoredOutlinePass {
   #entryByMesh = new Map<THREE.Mesh, THREE.Color>();
   #priorityMeshes = new Set<THREE.Mesh>();
   /**
+   * `isolated` entries land here instead of `#entryByMesh` entirely - never
+   * part of the shared mask's own pool, see `ColoredOutlineEntry.isolated`'s
+   * own doc comment for why.
+   */
+  #isolatedEntryByMesh = new Map<THREE.Mesh, THREE.Color>();
+  /**
    * Per `THREE.InstancedMesh`, per-instance color - entries with an
    * `instanceId` land here instead of `#entryByMesh`, since an InstancedMesh
    * is one object drawn in one call, not many objects to look up by identity.
@@ -277,8 +388,7 @@ export class ColoredOutlinePass {
    * than read back from) the matching uniform above - the exact object
    * `uniform()` stores as that uniform's `.value` (by reference, not a
    * copy), so mutating these in place also updates what the GPU reads,
-   * without needing to read back through the uniform's own untyped `.value`
-   * - same pattern `ToonOutlinePass` documents on its own color fields.
+   * without needing to read back through the uniform's own untyped `.value`.
    */
   #blurDirection = new THREE.Vector2();
   #invSize = new THREE.Vector2();
@@ -295,12 +405,72 @@ export class ColoredOutlinePass {
   #renderTargetBlur2: THREE.RenderTarget;
   #renderTargetComposite: THREE.RenderTarget;
 
+  /**
+   * Second, independent mask - only ever populated by `priority` entries,
+   * always `depthTest: false` (so, like the shared mask's own priority
+   * redraw, it ignores both real scene depth and every non-priority entry
+   * entirely) - and always cleared fresh, never layered onto the shared
+   * mask. Its own downsample/edge-detect/blur chain
+   * (`#renderTargetPriorityMaskDownSample`/`#renderTargetPriorityEdge1`/
+   * `#renderTargetPriorityEdge2`/`#renderTargetPriorityBlur1`/
+   * `#renderTargetPriorityBlur2`) mirrors the shared one exactly, reusing
+   * the same blur materials (`#blurMaterial1`/`#blurMaterial2`, parameterized
+   * by `#blurSourceTexture`'s mutable `.value` already, so no separate blur
+   * materials are needed) but its own dedicated copy/edge-detection
+   * materials, since those hardcode which texture they read from.
+   *
+   * Exists because the shared mask's composite step only ever draws a ring
+   * into pixels the shared mask itself doesn't already claim (`oneMinus(
+   * maskWeight(...))`, see `#compositeMaterial`) - a priority entry's ring
+   * has nowhere to paint once its whole silhouette sits inside a larger,
+   * nearer non-priority entry's own silhouette, even though the shared
+   * mask's own priority pass already gave it the right color underneath.
+   * This second mask is excluded *only by its own silhouette*, so its ring
+   * always has somewhere to go - see `ColoredOutlineEntry.priority`'s own
+   * doc comment.
+   */
+  #renderTargetPriorityMask: THREE.RenderTarget;
+  #renderTargetPriorityMaskDownSample: THREE.RenderTarget;
+  #renderTargetPriorityEdge1: THREE.RenderTarget;
+  #renderTargetPriorityEdge2: THREE.RenderTarget;
+  #renderTargetPriorityBlur1: THREE.RenderTarget;
+  #renderTargetPriorityBlur2: THREE.RenderTarget;
+
+  /**
+   * Third, independent mask - only ever populated by `isolated` entries,
+   * same shape as `#renderTargetPriorityMask` (always `depthTest: false`,
+   * always cleared fresh) but for the opposite reason: an `isolated` entry
+   * never redraws into the shared mask at all (see
+   * `ColoredOutlineEntry.isolated`'s own doc comment), so unlike `priority`
+   * there is no "wins the shared mask" pass feeding into this one - the
+   * shared mask's own first pass simply never sees isolated meshes (they're
+   * never in `#entryByMesh`, see `setEntries`). Its own downsample/
+   * edge-detect/blur chain mirrors the priority one exactly, reusing the
+   * same blur materials for the same reason.
+   */
+  #renderTargetIsolatedMask: THREE.RenderTarget;
+  #renderTargetIsolatedMaskDownSample: THREE.RenderTarget;
+  #renderTargetIsolatedEdge1: THREE.RenderTarget;
+  #renderTargetIsolatedEdge2: THREE.RenderTarget;
+  #renderTargetIsolatedBlur1: THREE.RenderTarget;
+  #renderTargetIsolatedBlur2: THREE.RenderTarget;
+
   #maskTexture: ReturnType<typeof texture>;
   #maskDownSampleTexture: ReturnType<typeof texture>;
   #blurSourceTexture: ReturnType<typeof texture>;
   #edge1Texture: ReturnType<typeof texture>;
   #edge2Texture: ReturnType<typeof texture>;
   #compositeTexture: ReturnType<typeof texture>;
+
+  #priorityMaskTexture: ReturnType<typeof texture>;
+  #priorityMaskDownSampleTexture: ReturnType<typeof texture>;
+  #priorityEdge1Texture: ReturnType<typeof texture>;
+  #priorityEdge2Texture: ReturnType<typeof texture>;
+
+  #isolatedMaskTexture: ReturnType<typeof texture>;
+  #isolatedMaskDownSampleTexture: ReturnType<typeof texture>;
+  #isolatedEdge1Texture: ReturnType<typeof texture>;
+  #isolatedEdge2Texture: ReturnType<typeof texture>;
 
   #maskMaterial: THREE.NodeMaterial;
   #priorityMaskMaterial: THREE.NodeMaterial;
@@ -309,6 +479,12 @@ export class ColoredOutlinePass {
   #blurMaterial1: THREE.NodeMaterial;
   #blurMaterial2: THREE.NodeMaterial;
   #compositeMaterial: THREE.NodeMaterial;
+
+  #priorityCopyMaterial: THREE.NodeMaterial;
+  #priorityEdgeDetectionMaterial: THREE.NodeMaterial;
+
+  #isolatedCopyMaterial: THREE.NodeMaterial;
+  #isolatedEdgeDetectionMaterial: THREE.NodeMaterial;
 
   #quad: THREE.QuadMesh;
 
@@ -336,8 +512,7 @@ export class ColoredOutlinePass {
     // `uniform()`'s return type-checks as an untagged `UniformNode<unknown>`
     // (its JSDoc return type isn't parameterized by the value/type argument
     // given), which TSL's fluent `.mul()`/`.div()` overloads can't resolve
-    // as an argument - same limitation `ToonOutlinePass` documents on its
-    // own uniforms. These casts tell TypeScript the concrete node type each
+    // as an argument. These casts tell TypeScript the concrete node type each
     // uniform actually builds at runtime, same live reference, just
     // narrowed for the type checker.
     const edgeThicknessNode = this.#edgeThicknessUniform as unknown as ReturnType<typeof float>;
@@ -354,12 +529,46 @@ export class ColoredOutlinePass {
     this.#renderTargetBlur2 = new THREE.RenderTarget(1, 1, { depthBuffer: false });
     this.#renderTargetComposite = new THREE.RenderTarget(1, 1, { depthBuffer: false });
 
+    // No depth buffer, unlike `#renderTargetMask` - the priority-only mask
+    // is only ever drawn with `depthTest: false` (see its own doc comment),
+    // so it never needs one.
+    this.#renderTargetPriorityMask = new THREE.RenderTarget(1, 1, { depthBuffer: false });
+    this.#renderTargetPriorityMaskDownSample = new THREE.RenderTarget(1, 1, { depthBuffer: false });
+    this.#renderTargetPriorityEdge1 = new THREE.RenderTarget(1, 1, { depthBuffer: false });
+    this.#renderTargetPriorityEdge2 = new THREE.RenderTarget(1, 1, { depthBuffer: false });
+    this.#renderTargetPriorityBlur1 = new THREE.RenderTarget(1, 1, { depthBuffer: false });
+    this.#renderTargetPriorityBlur2 = new THREE.RenderTarget(1, 1, { depthBuffer: false });
+
+    // Same shape, for `isolated` entries - see `#renderTargetIsolatedMask`'s
+    // own doc comment.
+    this.#renderTargetIsolatedMask = new THREE.RenderTarget(1, 1, { depthBuffer: false });
+    this.#renderTargetIsolatedMaskDownSample = new THREE.RenderTarget(1, 1, { depthBuffer: false });
+    this.#renderTargetIsolatedEdge1 = new THREE.RenderTarget(1, 1, { depthBuffer: false });
+    this.#renderTargetIsolatedEdge2 = new THREE.RenderTarget(1, 1, { depthBuffer: false });
+    this.#renderTargetIsolatedBlur1 = new THREE.RenderTarget(1, 1, { depthBuffer: false });
+    this.#renderTargetIsolatedBlur2 = new THREE.RenderTarget(1, 1, { depthBuffer: false });
+
     this.#maskTexture = texture(this.#renderTargetMask.texture);
     this.#maskDownSampleTexture = texture(this.#renderTargetMaskDownSample.texture);
     this.#blurSourceTexture = texture(this.#renderTargetEdge1.texture);
     this.#edge1Texture = texture(this.#renderTargetEdge1.texture);
     this.#edge2Texture = texture(this.#renderTargetEdge2.texture);
     this.#compositeTexture = texture(this.#renderTargetComposite.texture);
+
+    this.#priorityMaskTexture = texture(this.#renderTargetPriorityMask.texture);
+    this.#priorityMaskDownSampleTexture = texture(this.#renderTargetPriorityMaskDownSample.texture);
+    this.#priorityEdge1Texture = texture(this.#renderTargetPriorityEdge1.texture);
+    this.#priorityEdge2Texture = texture(this.#renderTargetPriorityEdge2.texture);
+
+    this.#isolatedMaskTexture = texture(this.#renderTargetIsolatedMask.texture);
+    this.#isolatedMaskDownSampleTexture = texture(this.#renderTargetIsolatedMaskDownSample.texture);
+    this.#isolatedEdge1Texture = texture(this.#renderTargetIsolatedEdge1.texture);
+    this.#isolatedEdge2Texture = texture(this.#renderTargetIsolatedEdge2.texture);
+
+    // Only ever used for its color output here (`pipeline.outputNode` below)
+    // - see this class's own doc comment for why no scene depth is read
+    // anywhere in this class.
+    const scenePassNode = pass(scene, camera);
 
     this.#maskMaterial = new THREE.NodeMaterial();
     this.#maskMaterial.name = "ColoredOutlinePass.mask";
@@ -375,7 +584,10 @@ export class ColoredOutlinePass {
     // depth buffer pass 1 already wrote would fail the priority mesh's own
     // fragments there, and the peer would still show through untouched.
     // "priority" means always-on-top, not "on top when it happens to be
-    // nearer" - this is what actually guarantees that.
+    // nearer" - this is what actually guarantees that. Reused as-is for
+    // `#renderTargetIsolatedMask`'s own single pass too (see `#renderMask`) -
+    // stateless beyond `maskColorNode`/`depthTest`, so one material covers
+    // both roles.
     this.#priorityMaskMaterial = new THREE.NodeMaterial();
     this.#priorityMaskMaterial.name = "ColoredOutlinePass.priorityMask";
     this.#priorityMaskMaterial.colorNode = vec4(maskColorNode, 1);
@@ -384,6 +596,14 @@ export class ColoredOutlinePass {
     this.#copyMaterial = new THREE.NodeMaterial();
     this.#copyMaterial.name = "ColoredOutlinePass.copy";
     this.#copyMaterial.fragmentNode = this.#maskTexture;
+
+    this.#priorityCopyMaterial = new THREE.NodeMaterial();
+    this.#priorityCopyMaterial.name = "ColoredOutlinePass.priorityCopy";
+    this.#priorityCopyMaterial.fragmentNode = this.#priorityMaskTexture;
+
+    this.#isolatedCopyMaterial = new THREE.NodeMaterial();
+    this.#isolatedCopyMaterial.name = "ColoredOutlinePass.isolatedCopy";
+    this.#isolatedCopyMaterial.fragmentNode = this.#isolatedMaskTexture;
 
     // Edge detection: 4-neighbor boundary strength plus the weighted average
     // color of whichever neighbors are actually masked, instead of choosing
@@ -401,43 +621,25 @@ export class ColoredOutlinePass {
     // unused by anything downstream, so its length doubles as a masked/not
     // signal - correct as long as no assigned entry color is at or near
     // pure black, since that would read as unmasked.
+    //
+    // `buildEdgeDetection` is shared with `#priorityEdgeDetectionMaterial`
+    // below, parameterized only by which downsampled mask to read - see that
+    // function's own doc comment.
     this.#edgeDetectionMaterial = new THREE.NodeMaterial();
     this.#edgeDetectionMaterial.name = "ColoredOutlinePass.edgeDetection";
-    this.#edgeDetectionMaterial.fragmentNode = Fn(() => {
-      const uvNode = uv();
+    this.#edgeDetectionMaterial.fragmentNode = buildEdgeDetection(this.#maskDownSampleTexture, invSizeNode);
 
-      const c1 = this.#maskDownSampleTexture.sample(uvNode.add(vec2(invSizeNode.x, 0))).toVar();
-      const c2 = this.#maskDownSampleTexture.sample(uvNode.sub(vec2(invSizeNode.x, 0))).toVar();
-      const c3 = this.#maskDownSampleTexture.sample(uvNode.add(vec2(0, invSizeNode.y))).toVar();
-      const c4 = this.#maskDownSampleTexture.sample(uvNode.sub(vec2(0, invSizeNode.y))).toVar();
+    this.#priorityEdgeDetectionMaterial = new THREE.NodeMaterial();
+    this.#priorityEdgeDetectionMaterial.name = "ColoredOutlinePass.priorityEdgeDetection";
+    this.#priorityEdgeDetectionMaterial.fragmentNode = buildEdgeDetection(
+      this.#priorityMaskDownSampleTexture, invSizeNode
+    );
 
-      // Boundary strength from actual RGB distance between neighbors, not
-      // `maskWeight` (RGB length) difference - two different peer colors can
-      // have near-identical length (e.g. orange (.98,.42,.42) and teal
-      // (.16,.80,.83) both length ~1.15) despite being visually completely
-      // different, which silently dropped the edge between two adjacent,
-      // differently-colored selections (only mask-vs-background boundaries
-      // were ever detected). RGB distance catches both cases: background to
-      // masked (large distance from (0,0,0)) and masked-color to
-      // differently-masked-color (large distance between distinct hues).
-      const diff1 = c1.rgb.sub(c2.rgb).length().mul(0.5);
-      const diff2 = c3.rgb.sub(c4.rgb).length().mul(0.5);
-      const edgeStrength = saturate(vec2(diff1, diff2).length());
-
-      const w1 = maskWeight(c1);
-      const w2 = maskWeight(c2);
-      const w3 = maskWeight(c3);
-      const w4 = maskWeight(c4);
-
-      const colorSum = c1.rgb.mul(w1)
-        .add(c2.rgb.mul(w2))
-        .add(c3.rgb.mul(w3))
-        .add(c4.rgb.mul(w4));
-      const weightSum = w1.add(w2).add(w3).add(w4);
-      const edgeColor = colorSum.div(max(weightSum, 0.0001));
-
-      return vec4(edgeColor, 1).mul(edgeStrength);
-    })();
+    this.#isolatedEdgeDetectionMaterial = new THREE.NodeMaterial();
+    this.#isolatedEdgeDetectionMaterial.name = "ColoredOutlinePass.isolatedEdgeDetection";
+    this.#isolatedEdgeDetectionMaterial.fragmentNode = buildEdgeDetection(
+      this.#isolatedMaskDownSampleTexture, invSizeNode
+    );
 
     this.#blurMaterial1 = new THREE.NodeMaterial();
     this.#blurMaterial1.name = "ColoredOutlinePass.blur1";
@@ -456,19 +658,39 @@ export class ColoredOutlinePass {
     // unblurred) reads ~1 via `maskWeight` exactly on an outlined object's
     // own rasterized pixels, so `oneMinus` of it keeps the outline in the
     // surrounding background only, the same role OutlineNode's own composite
-    // gives its mask multiply.
+    // gives its mask multiply. Always the entry's full silhouette, regardless
+    // of real scene occlusion - see this class's own doc comment for why.
+    //
+    // `priorityRing` is the same shape, computed from the independent
+    // priority-only chain instead (see `#renderTargetPriorityMask`'s own doc
+    // comment) - excluded only by *its own* silhouette, so it still has
+    // somewhere to paint even where `ring` has none (a priority entry's
+    // silhouette fully enclosed inside a larger non-priority one). `max()`,
+    // not `add()`: at a priority entry's own exposed boundary (the common
+    // case), both channels independently detect essentially the same edge,
+    // and simply summing them would double-brighten it there for no reason -
+    // `max()` guarantees at least as visible as either channel alone without
+    // that overshoot, and is a no-op wherever only one channel has anything
+    // to contribute.
     this.#compositeMaterial = new THREE.NodeMaterial();
     this.#compositeMaterial.name = "ColoredOutlinePass.composite";
     this.#compositeMaterial.fragmentNode = Fn(() => {
       const edgeValue = this.#edge1Texture.add(this.#edge2Texture.mul(edgeGlowNode));
+      const ring = edgeValue.mul(oneMinus(maskWeight(this.#maskTexture)));
 
-      return edgeValue.mul(oneMinus(maskWeight(this.#maskTexture)));
+      const priorityEdgeValue = this.#priorityEdge1Texture.add(this.#priorityEdge2Texture.mul(edgeGlowNode));
+      const priorityRing = priorityEdgeValue.mul(oneMinus(maskWeight(this.#priorityMaskTexture)));
+
+      const isolatedEdgeValue = this.#isolatedEdge1Texture.add(this.#isolatedEdge2Texture.mul(edgeGlowNode));
+      const isolatedRing = isolatedEdgeValue.mul(oneMinus(maskWeight(this.#isolatedMaskTexture)));
+
+      return max(max(ring, priorityRing), isolatedRing);
     })();
 
     this.#quad = new THREE.QuadMesh();
 
     this.pipeline = new THREE.RenderPipeline(renderer);
-    this.pipeline.outputNode = this.#compositeTexture.add(pass(scene, camera));
+    this.pipeline.outputNode = this.#compositeTexture.add(scenePassNode);
   }
 
   get edgeThickness(): number {
@@ -498,19 +720,24 @@ export class ColoredOutlinePass {
    * `target` (group support, same as three's own `OutlineNode`) into a flat
    * mesh-to-color map (plus a set of `priority` meshes, see that field's own
    * doc comment), cached until the next call rather than rebuilt every
-   * frame. An entry with `instanceId` set skips traversal entirely (an
-   * `InstancedMesh` has no children to find) and lands in
-   * `#instancedEntries` instead, which `#syncInstancedAttributes` then bakes
-   * into each referenced mesh's GPU-side attributes.
+   * frame. An `isolated` entry (see `ColoredOutlineEntry.isolated`) lands in
+   * `#isolatedEntryByMesh` instead, never `#entryByMesh` - it doesn't
+   * participate in the shared mask at all. An entry with `instanceId` set
+   * skips traversal entirely (an `InstancedMesh` has no children to find)
+   * and lands in `#instancedEntries` instead, which
+   * `#syncInstancedAttributes` then bakes into each referenced mesh's
+   * GPU-side attributes - `isolated` is silently ignored there (unsupported,
+   * see `ColoredOutlineEntry.isolated`'s own doc comment).
    */
   setEntries(
     entries: ColoredOutlineEntry[]
   ): void {
     this.#entryByMesh.clear();
     this.#priorityMeshes.clear();
+    this.#isolatedEntryByMesh.clear();
     this.#instancedEntries.clear();
 
-    for (const { target, color, priority = false, instanceId } of entries) {
+    for (const { target, color, priority = false, isolated = false, instanceId } of entries) {
       const threeColor = color instanceof THREE.Color ? color.clone() : new THREE.Color(color);
 
       if (instanceId !== undefined) {
@@ -521,6 +748,15 @@ export class ColoredOutlinePass {
           this.#instancedEntries.set(mesh, idColor);
         }
         idColor.set(instanceId, { color: threeColor, priority });
+        continue;
+      }
+
+      if (isolated) {
+        target.traverse((object) => {
+          if ((object as THREE.Mesh).isMesh) {
+            this.#isolatedEntryByMesh.set(object as THREE.Mesh, threeColor);
+          }
+        });
         continue;
       }
 
@@ -598,10 +834,10 @@ export class ColoredOutlinePass {
     // `Node<string>` (its declared return type isn't parameterized by the
     // "vec3"/"float" type-name argument given), which TSL's fluent
     // `.lessThan()`/typed-constructor overloads can't resolve as an argument
-    // - same limitation `ToonOutlinePass`/this file's own `uniform()` calls
-    // already document on their own casts. These tell TypeScript the
-    // concrete node type each call actually builds at runtime, same live
-    // node, just narrowed for the type checker.
+    // - same limitation this file's own `uniform()` calls already document
+    // on their own casts. These tell TypeScript the concrete node type each
+    // call actually builds at runtime, same live node, just narrowed for the
+    // type checker.
     function instancedColorNode(): ReturnType<typeof vec3> {
       return instancedBufferAttribute(colorAttribute, "vec3") as unknown as ReturnType<typeof vec3>;
     }
@@ -655,6 +891,7 @@ export class ColoredOutlinePass {
   dispose(): void {
     this.#entryByMesh.clear();
     this.#priorityMeshes.clear();
+    this.#isolatedEntryByMesh.clear();
     this.#instancedEntries.clear();
     for (const resources of this.#instancedResources.values()) {
       resources.material.dispose();
@@ -669,6 +906,18 @@ export class ColoredOutlinePass {
     this.#renderTargetBlur1.dispose();
     this.#renderTargetBlur2.dispose();
     this.#renderTargetComposite.dispose();
+    this.#renderTargetPriorityMask.dispose();
+    this.#renderTargetPriorityMaskDownSample.dispose();
+    this.#renderTargetPriorityEdge1.dispose();
+    this.#renderTargetPriorityEdge2.dispose();
+    this.#renderTargetPriorityBlur1.dispose();
+    this.#renderTargetPriorityBlur2.dispose();
+    this.#renderTargetIsolatedMask.dispose();
+    this.#renderTargetIsolatedMaskDownSample.dispose();
+    this.#renderTargetIsolatedEdge1.dispose();
+    this.#renderTargetIsolatedEdge2.dispose();
+    this.#renderTargetIsolatedBlur1.dispose();
+    this.#renderTargetIsolatedBlur2.dispose();
 
     this.#maskMaterial.dispose();
     this.#priorityMaskMaterial.dispose();
@@ -677,6 +926,10 @@ export class ColoredOutlinePass {
     this.#blurMaterial1.dispose();
     this.#blurMaterial2.dispose();
     this.#compositeMaterial.dispose();
+    this.#priorityCopyMaterial.dispose();
+    this.#priorityEdgeDetectionMaterial.dispose();
+    this.#isolatedCopyMaterial.dispose();
+    this.#isolatedEdgeDetectionMaterial.dispose();
 
     this.pipeline.dispose();
   }
@@ -695,7 +948,7 @@ export class ColoredOutlinePass {
     const scene = this.#scene;
     const camera = this.#camera;
 
-    if (this.#entryByMesh.size === 0 && this.#instancedEntries.size === 0) {
+    if (this.#entryByMesh.size === 0 && this.#instancedEntries.size === 0 && this.#isolatedEntryByMesh.size === 0) {
       if (this.#lastEntryCount > 0) {
         this.#clearComposite();
         this.#lastEntryCount = 0;
@@ -703,7 +956,7 @@ export class ColoredOutlinePass {
 
       return;
     }
-    this.#lastEntryCount = this.#entryByMesh.size + this.#instancedEntries.size;
+    this.#lastEntryCount = this.#entryByMesh.size + this.#instancedEntries.size + this.#isolatedEntryByMesh.size;
 
     const previousTarget = renderer.getRenderTarget();
     const previousAutoClear = renderer.autoClear;
@@ -775,7 +1028,9 @@ export class ColoredOutlinePass {
     // `InstancedMaskResources.priorityFlagAttribute`'s own doc comment), so
     // a mesh with no priority instances simply draws nothing and costs one
     // harmless all-discarded draw call.
-    if (this.#priorityMeshes.size > 0 || this.#instancedEntries.size > 0) {
+    const hasPriority = this.#priorityMeshes.size > 0 || this.#instancedEntries.size > 0;
+
+    if (hasPriority) {
       renderer.autoClear = false;
       renderer.setRenderObjectFunction((
         object, objectScene, objectCamera, geometry, _material, group, lightsNode, clippingContext
@@ -806,11 +1061,77 @@ export class ColoredOutlinePass {
           object, objectScene, objectCamera, geometry, this.#priorityMaskMaterial, group, lightsNode, clippingContext
         );
       });
-
       renderer.render(scene, camera);
+
+      // Third pass: the same override function (still active from just
+      // above - `setRenderObjectFunction` isn't called again here) redraws
+      // the same priority entries into their own fresh (cleared) target
+      // instead of layering onto the shared mask - see
+      // `#renderTargetPriorityMask`'s own doc comment for why this second,
+      // independent chain exists.
+      renderer.autoClear = true;
+      renderer.setRenderTarget(this.#renderTargetPriorityMask);
+      renderer.render(scene, camera);
+    }
+    else {
+      // No priority entries this frame - clear only the two textures the
+      // composite step actually samples (`#priorityEdge1Texture`/
+      // `#priorityEdge2Texture`), skipping the mask render and the
+      // downsample/edge-detect/blur chain below entirely, so a frame with no
+      // priority entries pays nothing extra for it.
+      renderer.setRenderTarget(this.#renderTargetPriorityEdge1);
+      renderer.clear();
+      renderer.setRenderTarget(this.#renderTargetPriorityEdge2);
+      renderer.clear();
+    }
+
+    // Isolated entries: a single fresh `depthTest: false` pass, entirely
+    // independent of the shared/priority mask above - reuses
+    // `#priorityMaskMaterial` (see its own doc comment) since the shape is
+    // identical, only the target and which entries feed it differ. No
+    // "layer onto the shared mask" step at all, unlike priority - an
+    // isolated entry was never in `#entryByMesh` to begin with (see
+    // `setEntries`), so there is nothing there for it to win.
+    const hasIsolated = this.#isolatedEntryByMesh.size > 0;
+
+    if (hasIsolated) {
+      renderer.autoClear = true;
+      renderer.setRenderObjectFunction((
+        object, objectScene, objectCamera, geometry, _material, group, lightsNode, clippingContext
+        // eslint-disable-next-line max-params -- external callback contract, see comment above
+      ) => {
+        const color = this.#isolatedEntryByMesh.get(object as THREE.Mesh);
+        if (color === undefined) {
+          return;
+        }
+
+        this.#maskColor.copy(color);
+        renderer.renderObject(
+          object, objectScene, objectCamera, geometry, this.#priorityMaskMaterial, group, lightsNode, clippingContext
+        );
+      });
+      renderer.setRenderTarget(this.#renderTargetIsolatedMask);
+      renderer.render(scene, camera);
+    }
+    else {
+      renderer.setRenderTarget(this.#renderTargetIsolatedEdge1);
+      renderer.clear();
+      renderer.setRenderTarget(this.#renderTargetIsolatedEdge2);
+      renderer.clear();
     }
 
     renderer.setRenderObjectFunction(previousRenderObjectFunction);
+
+    // Restored here, not at the very end - leaving `scene.background`/the
+    // transparent clear color set for the mask passes above in place any
+    // longer than necessary risked the real scene render (`pipeline.render()`,
+    // called right after this method returns) picking them up too - the
+    // actual bug behind a real report of the whole 3D view going white
+    // specifically whenever any entry existed (i.e. whenever this method did
+    // any work at all).
+    renderer.autoClear = previousAutoClear;
+    renderer.setClearColor(previousClearColor, previousClearAlpha);
+    scene.background = previousBackground;
 
     this.#quad.material = this.#copyMaterial;
     renderer.setRenderTarget(this.#renderTargetMaskDownSample);
@@ -842,14 +1163,75 @@ export class ColoredOutlinePass {
     renderer.setRenderTarget(this.#renderTargetEdge2);
     this.#quad.render(renderer);
 
+    if (hasPriority) {
+      this.#quad.material = this.#priorityCopyMaterial;
+      renderer.setRenderTarget(this.#renderTargetPriorityMaskDownSample);
+      this.#quad.render(renderer);
+
+      this.#quad.material = this.#priorityEdgeDetectionMaterial;
+      renderer.setRenderTarget(this.#renderTargetPriorityEdge1);
+      this.#quad.render(renderer);
+
+      this.#blurSourceTexture.value = this.#renderTargetPriorityEdge1.texture;
+      this.#blurDirection.set(1, 0);
+      this.#quad.material = this.#blurMaterial1;
+      renderer.setRenderTarget(this.#renderTargetPriorityBlur1);
+      this.#quad.render(renderer);
+
+      this.#blurSourceTexture.value = this.#renderTargetPriorityBlur1.texture;
+      this.#blurDirection.set(0, 1);
+      renderer.setRenderTarget(this.#renderTargetPriorityEdge1);
+      this.#quad.render(renderer);
+
+      this.#blurSourceTexture.value = this.#renderTargetPriorityEdge1.texture;
+      this.#blurDirection.set(1, 0);
+      this.#quad.material = this.#blurMaterial2;
+      renderer.setRenderTarget(this.#renderTargetPriorityBlur2);
+      this.#quad.render(renderer);
+
+      this.#blurSourceTexture.value = this.#renderTargetPriorityBlur2.texture;
+      this.#blurDirection.set(0, 1);
+      renderer.setRenderTarget(this.#renderTargetPriorityEdge2);
+      this.#quad.render(renderer);
+    }
+
+    if (hasIsolated) {
+      this.#quad.material = this.#isolatedCopyMaterial;
+      renderer.setRenderTarget(this.#renderTargetIsolatedMaskDownSample);
+      this.#quad.render(renderer);
+
+      this.#quad.material = this.#isolatedEdgeDetectionMaterial;
+      renderer.setRenderTarget(this.#renderTargetIsolatedEdge1);
+      this.#quad.render(renderer);
+
+      this.#blurSourceTexture.value = this.#renderTargetIsolatedEdge1.texture;
+      this.#blurDirection.set(1, 0);
+      this.#quad.material = this.#blurMaterial1;
+      renderer.setRenderTarget(this.#renderTargetIsolatedBlur1);
+      this.#quad.render(renderer);
+
+      this.#blurSourceTexture.value = this.#renderTargetIsolatedBlur1.texture;
+      this.#blurDirection.set(0, 1);
+      renderer.setRenderTarget(this.#renderTargetIsolatedEdge1);
+      this.#quad.render(renderer);
+
+      this.#blurSourceTexture.value = this.#renderTargetIsolatedEdge1.texture;
+      this.#blurDirection.set(1, 0);
+      this.#quad.material = this.#blurMaterial2;
+      renderer.setRenderTarget(this.#renderTargetIsolatedBlur2);
+      this.#quad.render(renderer);
+
+      this.#blurSourceTexture.value = this.#renderTargetIsolatedBlur2.texture;
+      this.#blurDirection.set(0, 1);
+      renderer.setRenderTarget(this.#renderTargetIsolatedEdge2);
+      this.#quad.render(renderer);
+    }
+
     this.#quad.material = this.#compositeMaterial;
     renderer.setRenderTarget(this.#renderTargetComposite);
     this.#quad.render(renderer);
 
     renderer.setRenderTarget(previousTarget);
-    renderer.autoClear = previousAutoClear;
-    renderer.setClearColor(previousClearColor, previousClearAlpha);
-    scene.background = previousBackground;
   }
 
   /**
@@ -879,17 +1261,29 @@ export class ColoredOutlinePass {
   ): void {
     this.#renderTargetMask.setSize(width, height);
     this.#renderTargetComposite.setSize(width, height);
+    this.#renderTargetPriorityMask.setSize(width, height);
+    this.#renderTargetIsolatedMask.setSize(width, height);
 
     let resx = Math.round(width / this.#downSampleRatio);
     let resy = Math.round(height / this.#downSampleRatio);
     this.#renderTargetMaskDownSample.setSize(resx, resy);
     this.#renderTargetEdge1.setSize(resx, resy);
     this.#renderTargetBlur1.setSize(resx, resy);
+    this.#renderTargetPriorityMaskDownSample.setSize(resx, resy);
+    this.#renderTargetPriorityEdge1.setSize(resx, resy);
+    this.#renderTargetPriorityBlur1.setSize(resx, resy);
+    this.#renderTargetIsolatedMaskDownSample.setSize(resx, resy);
+    this.#renderTargetIsolatedEdge1.setSize(resx, resy);
+    this.#renderTargetIsolatedBlur1.setSize(resx, resy);
     this.#invSize.set(1 / resx, 1 / resy);
 
     resx = Math.round(resx / 2);
     resy = Math.round(resy / 2);
     this.#renderTargetEdge2.setSize(resx, resy);
     this.#renderTargetBlur2.setSize(resx, resy);
+    this.#renderTargetPriorityEdge2.setSize(resx, resy);
+    this.#renderTargetPriorityBlur2.setSize(resx, resy);
+    this.#renderTargetIsolatedEdge2.setSize(resx, resy);
+    this.#renderTargetIsolatedBlur2.setSize(resx, resy);
   }
 }

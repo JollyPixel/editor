@@ -105,6 +105,50 @@ describe("constructor", () => {
   });
 });
 
+describe("fillOpacity", () => {
+  test("builds no fill mesh by default", () => {
+    const box = new SelectionBoundingBox({ target: createGroupOfTwoBoxes() });
+
+    assert.strictEqual(box.children.length, 0);
+  });
+
+  test("builds a fill mesh matching the wireframe's own color when fillOpacity > 0", () => {
+    const box = new SelectionBoundingBox({ target: createGroupOfTwoBoxes(), color: "#ff00ff", fillOpacity: 0.3 });
+
+    assert.strictEqual(box.children.length, 1);
+    const fill = box.children[0] as THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>;
+    assert.strictEqual(`#${fill.material.color.getHexString()}`, "#ff00ff");
+    assert.strictEqual(fill.material.opacity, 0.3);
+    assert.strictEqual(fill.material.transparent, true);
+  });
+
+  test("the fill mesh never writes depth, regardless of xray", () => {
+    const box = new SelectionBoundingBox({ target: createGroupOfTwoBoxes(), fillOpacity: 0.3 });
+    const fill = box.children[0] as THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>;
+
+    assert.strictEqual(fill.material.depthWrite, false);
+    box.setXray(true);
+    assert.strictEqual(fill.material.depthWrite, false);
+  });
+});
+
+describe("setFillOpacity", () => {
+  test("updates the fill mesh's own opacity", () => {
+    const box = new SelectionBoundingBox({ target: createGroupOfTwoBoxes(), fillOpacity: 0.3 });
+    box.setFillOpacity(0.6);
+
+    const fill = box.children[0] as THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>;
+    assert.strictEqual(fill.material.opacity, 0.6);
+  });
+
+  test("is a no-op when the box was built without a fill mesh", () => {
+    const box = new SelectionBoundingBox({ target: createGroupOfTwoBoxes() });
+
+    assert.doesNotThrow(() => box.setFillOpacity(0.5));
+    assert.strictEqual(box.children.length, 0);
+  });
+});
+
 describe("update", () => {
   test("recomputes the box after a new child is added", () => {
     const target = createGroupOfTwoBoxes();
@@ -125,6 +169,14 @@ describe("setColor", () => {
     box.setColor("#00ff00");
 
     assert.strictEqual(`#${box.material.color.getHexString()}`, "#00ff00");
+  });
+
+  test("also updates the fill mesh's own color, when one exists", () => {
+    const box = new SelectionBoundingBox({ target: createGroupOfTwoBoxes(), color: "#000000", fillOpacity: 0.3 });
+    box.setColor("#00ff00");
+
+    const fill = box.children[0] as THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>;
+    assert.strictEqual(`#${fill.material.color.getHexString()}`, "#00ff00");
   });
 });
 
@@ -160,6 +212,15 @@ describe("setXray", () => {
     assert.strictEqual(box.material.depthWrite, true);
     assert.strictEqual(box.renderOrder, 1);
   });
+
+  test("also toggles the fill mesh's own depth test/render order, when one exists", () => {
+    const box = new SelectionBoundingBox({ target: createGroupOfTwoBoxes(), fillOpacity: 0.3 });
+    box.setXray(true);
+
+    const fill = box.children[0] as THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>;
+    assert.strictEqual(fill.material.depthTest, false);
+    assert.ok(fill.renderOrder > 1);
+  });
 });
 
 describe("dispose", () => {
@@ -181,5 +242,25 @@ describe("dispose", () => {
     assert.strictEqual(target.children.length, 2);
     assert.ok(geometryDisposed);
     assert.ok(materialDisposed);
+  });
+
+  test("also disposes the fill mesh's own geometry/material, when one exists", () => {
+    const target = createGroupOfTwoBoxes();
+    const box = new SelectionBoundingBox({ target, fillOpacity: 0.3 });
+    const fill = box.children[0] as THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>;
+
+    let fillGeometryDisposed = false;
+    let fillMaterialDisposed = false;
+    fill.geometry.addEventListener("dispose", () => {
+      fillGeometryDisposed = true;
+    });
+    fill.material.addEventListener("dispose", () => {
+      fillMaterialDisposed = true;
+    });
+
+    box.dispose();
+
+    assert.ok(fillGeometryDisposed);
+    assert.ok(fillMaterialDisposed);
   });
 });

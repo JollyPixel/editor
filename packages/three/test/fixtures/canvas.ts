@@ -16,6 +16,9 @@ export class MockCanvasRenderingContext2D {
   lastStrokeText = "";
   roundRectCallCount = 0;
   lineJoin: CanvasLineJoin = "miter";
+  arcCallCount = 0;
+  fillCallCount = 0;
+  strokeCallCount = 0;
 
   clearRect(..._args: unknown[]): void {
     // No-op for testing
@@ -35,11 +38,14 @@ export class MockCanvasRenderingContext2D {
   roundRect(..._args: unknown[]): void {
     this.roundRectCallCount++;
   }
+  arc(..._args: unknown[]): void {
+    this.arcCallCount++;
+  }
   fill(): void {
-    // No-op for testing
+    this.fillCallCount++;
   }
   stroke(): void {
-    // No-op for testing
+    this.strokeCallCount++;
   }
 
   fillText(

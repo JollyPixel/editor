@@ -3,7 +3,6 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { createSelectionOverlay, type SelectionOverlay } from "./overlays/createSelectionOverlay.ts";
-import type { ToonOutlinePass } from "./postprocess/ToonOutlinePass.ts";
 
 export type SelectableObject = THREE.Mesh | THREE.Object3D;
 
@@ -11,17 +10,37 @@ export type SelectableObject = THREE.Mesh | THREE.Object3D;
  * Which technique a registered object renders when selected/hovered. A
  * non-mesh target (e.g. a `THREE.Group`) always renders `SelectionBoundingBox`
  * regardless of this setting - a group's selection indicator stays the same
- * line-segment box no matter which style is active.
- * - `"outline"` - `SelectionOutline`, a clean silhouette on low-poly/hard-surface
- *   meshes, but busy on smooth/high-poly ones.
- * - `"highlight"` - `SelectionHighlight`, an inverted-hull rim that reads
- *   cleanly on any mesh regardless of complexity.
- * - `"toonOutline"` - `ToonOutlinePass`, a scene-level postprocess outline
- *   (see its own doc comment) instead of a per-object overlay child.
- *   Requires a `ToonOutlinePass` passed via `SelectionManagerOptions.toonOutline`
- *   - resolving to this style for a mesh without one set throws.
+ * line-segment box no matter which technique is active. Under
+ * `"coloredOutline"` this box renders *alongside*, not instead of, the
+ * scene-level per-mesh colored outline a `PeerColoredOutlinePass`/equivalent
+ * still draws for that same group (see its own doc comment) - deliberately
+ * both at once, one technique per group is not a design goal here.
+ * - `"outline"` - `SelectionOutline`, a clean silhouette via `THREE.EdgesGeometry`,
+ *   cheap and pipeline-free (composes with any host render pipeline, unlike
+ *   `"coloredOutline"` below).
+ * - `"coloredOutline"` - `ColoredOutlinePass`, a scene-level postprocess
+ *   outline (see its own doc comment) instead of a per-object overlay child.
+ *   `SelectionManager` itself never owns or drives a `ColoredOutlinePass` -
+ *   resolving an id to this technique just skips building a local overlay for
+ *   it (see `#applySelectedOverlay`); actually rendering anything requires a
+ *   separate `PeerColoredOutlinePass` (even with zero peers registered) or
+ *   equivalent reading this manager's `selected`/`hovered`/`color`/
+ *   `hoverColor` and driving a `ColoredOutlinePass` itself. Misconfiguring
+ *   this - choosing `"coloredOutline"` with nothing actually wired up -
+ *   fails silently (no visible feedback, no thrown error), unlike every
+ *   other technique here; this manager holds no reference to any pipeline
+ *   object to loudly check against.
+ *
+ * These two are only the built-in ids, kept as literals here for
+ * autocomplete/documentation - not exhaustive. `"outline"` resolves through
+ * `defaultSelectionOverlayRegistry` (`overlays/createSelectionOverlay.ts`),
+ * which a caller can register additional per-object techniques into (see
+ * `SelectionOverlayRegistry`'s own doc comment); any registered id is a legal
+ * `SelectionTechnique` value here too, hence the trailing `(string & {})`
+ * branch, which keeps editor autocomplete for the known literals without
+ * rejecting an id this type doesn't know about.
  */
-export type MeshSelectionStyle = "outline" | "highlight" | "toonOutline";
+export type SelectionTechnique = "outline" | "coloredOutline" | (string & {});
 
 export interface SelectionManagerOptions {
   /**
@@ -37,50 +56,34 @@ export interface SelectionManagerOptions {
    */
   hoverOpacity?: number;
   /**
-   * Default overlay style for registered meshes, used unless overridden
-   * per-id via `register`'s own `style` option.
+   * Default overlay technique for registered meshes, used unless overridden
+   * per-id via `register`'s own `technique` option.
    * @default "outline"
    */
-  meshStyle?: MeshSelectionStyle;
+  technique?: SelectionTechnique;
   /**
    * Default `SelectionOutline` tuning applied to every mesh rendered with
-   * the `"outline"` style. Fields left unset here fall back to
+   * the `"outline"` technique. Fields left unset here fall back to
    * `SelectionOutlineOptions`'s own defaults. Adjustable at runtime via
    * `setOutlineOptions`.
    */
   outline?: { linewidth?: number; };
   /**
-   * Default `SelectionHighlight` tuning applied to every mesh rendered with
-   * the `"highlight"` style. Fields left unset here fall back to
-   * `SelectionHighlightOptions`'s own defaults. Adjustable at runtime via
-   * `setHighlightOptions`.
+   * Default `SelectionBoundingBox` tuning applied to every group (any
+   * registered non-mesh target - `SelectionBoundingBox` is what such a
+   * target always renders, regardless of `technique`). Fields left unset
+   * here fall back to `SelectionBoundingBoxOptions`'s own defaults.
+   * Adjustable at runtime via `setBoundingBoxOptions`.
    */
-  highlight?: { thickness?: number; };
-  /**
-   * The pipeline driving the `"toonOutline"` style, if any - not owned by
-   * `SelectionManager` (never disposed by it), only pushed to. Required for
-   * any registered mesh id to actually resolve to `"toonOutline"` (via
-   * `meshStyle` or a per-id `register` override); resolving without one set
-   * throws. A non-mesh id (e.g. a `THREE.Group`) never needs this - it
-   * always renders `SelectionBoundingBox` regardless of style.
-   * `color`/`hoverColor`/`hoverOpacity`/`xray` below apply to it the same as
-   * to the per-object overlay styles, kept in sync automatically.
-   */
-  toonOutline?: ToonOutlinePass;
-  /**
-   * Default `ToonOutlinePass` tuning applied whenever `toonOutline` above is
-   * set. Fields left unset here fall back to `ToonOutlinePassOptions`'s own
-   * defaults. Adjustable at runtime via `setToonOutlineOptions`.
-   */
-  toonOutlineOptions?: { edgeThickness?: number; hiddenColor?: THREE.ColorRepresentation; };
+  boundingBox?: { fillOpacity?: number; };
   /**
    * Skips the depth test (and depth write) on the selection/hover overlay so
    * it stays visible through any geometry in front of it, like an X-ray,
    * instead of being occluded like a normal object - handy for keeping a
    * selection visible through walls or a crowded scene. Applies uniformly
-   * regardless of `meshStyle`/per-id `style` (`SelectionOutline`,
-   * `SelectionHighlight`, a group's `SelectionBoundingBox`, and
-   * `ToonOutlinePass` all support it). Adjustable at runtime via `setXray`.
+   * regardless of `technique`/per-id `technique` (`SelectionOutline` and a
+   * group's `SelectionBoundingBox` both support it). Adjustable at runtime
+   * via `setXray`.
    * @default false
    */
   xray?: boolean;
@@ -88,23 +91,20 @@ export interface SelectionManagerOptions {
 
 /**
  * Tracks a single selected id and a single hovered id across a pool of
- * registered objects, rendering a `SelectionOutline`/`SelectionHighlight`/
- * driven `ToonOutlinePass` (per `MeshSelectionStyle`) for a `THREE.Mesh`, or
- * always a `SelectionBoundingBox` for anything else (typically a
- * `THREE.Group`) - callers never need to know which technique a given id
- * resolves to.
+ * registered objects, rendering a `SelectionOutline` (per `SelectionTechnique`)
+ * for a `THREE.Mesh`, or always a `SelectionBoundingBox` for anything else
+ * (typically a `THREE.Group`) - callers never need to know which technique a
+ * given id resolves to.
  *
- * `"outline"`/`"highlight"` (and every non-mesh id, regardless of style) are
- * per-object overlay children this class builds and disposes itself as
- * selection/hover changes; `"toonOutline"` is a scene-level pipeline
- * instead, supplied (not owned) via `SelectionManagerOptions.toonOutline` -
- * this class only ever pushes selected/hovered targets and shared tuning
- * (`color`/`hoverColor`/`hoverOpacity`/`xray`/`toonOutlineOptions`) into it,
- * never constructs or disposes it.
+ * `"outline"` (and every non-mesh id, regardless of technique) is a
+ * per-object overlay child this class builds and disposes itself as
+ * selection/hover changes; `"coloredOutline"` is a scene-level pipeline
+ * instead, entirely outside this class - see `SelectionTechnique`'s own doc
+ * comment on that id for what driving it actually requires.
  *
  * Objects are addressed by a caller-assigned string id rather than by
  * object reference so that a UI outside the 3D view (e.g. a `TreeView` from
- * `@jolly-pixel/fs-tree`) can drive selection without holding onto
+ * `@jolly-pixel/arbor`) can drive selection without holding onto
  * `THREE.Object3D` instances itself - it only needs to agree on ids.
  * Dispatches plain `Event`s (`selectionChange`, `hoverChange`) rather than
  * `CustomEvent`s, matching `TreeView`'s own `selectionChange` event: state is
@@ -112,15 +112,13 @@ export interface SelectionManagerOptions {
  */
 export class SelectionManager extends EventTarget {
   #targets = new Map<string, SelectableObject>();
-  #meshStyles = new Map<string, MeshSelectionStyle>();
+  #techniques = new Map<string, SelectionTechnique>();
   #color: THREE.ColorRepresentation;
   #hoverColor: THREE.ColorRepresentation;
   #hoverOpacity: number;
-  #meshStyle: MeshSelectionStyle;
+  #technique: SelectionTechnique;
   #outlineOptions: { linewidth?: number; };
-  #highlightOptions: { thickness?: number; };
-  #toonOutline: ToonOutlinePass | null;
-  #toonOutlineOptions: { edgeThickness?: number; hiddenColor?: THREE.ColorRepresentation; };
+  #boundingBoxOptions: { fillOpacity?: number; };
   #xray: boolean;
 
   #selectedId: string | null = null;
@@ -136,24 +134,10 @@ export class SelectionManager extends EventTarget {
     this.#color = options.color ?? "#ffffff";
     this.#hoverColor = options.hoverColor ?? "#8ab4f8";
     this.#hoverOpacity = options.hoverOpacity ?? 0.35;
-    this.#meshStyle = options.meshStyle ?? "outline";
+    this.#technique = options.technique ?? "outline";
     this.#outlineOptions = { ...options.outline };
-    this.#highlightOptions = { ...options.highlight };
-    this.#toonOutline = options.toonOutline ?? null;
-    this.#toonOutlineOptions = { ...options.toonOutlineOptions };
+    this.#boundingBoxOptions = { ...options.boundingBox };
     this.#xray = options.xray ?? false;
-
-    // The manager's own color/hover/xray/toonOutline settings are the
-    // source of truth `ToonOutlinePass` mirrors (see this class's own doc
-    // comment) - push them in immediately so it starts in sync rather than
-    // sitting on whatever defaults it was constructed with.
-    if (this.#toonOutline) {
-      this.#toonOutline.setColor(this.#color);
-      this.#toonOutline.setHoverColor(this.#hoverColor);
-      this.#toonOutline.setHoverOpacity(this.#hoverOpacity);
-      this.#toonOutline.setXray(this.#xray);
-      this.#applyToonOutlineOptions();
-    }
   }
 
   get selected(): string | null {
@@ -192,57 +176,51 @@ export class SelectionManager extends EventTarget {
    * Updates the color of the full-opacity "selected" overlay (e.g. from a
    * settings panel) and immediately rebuilds the active selection overlay so
    * the change is visible without reselecting. The hover overlay is
-   * unaffected. Also pushed to `toonOutline` (if set), regardless of whether
-   * it's the currently active style - see this class's own doc comment.
+   * unaffected.
    */
   setColor(
     color: THREE.ColorRepresentation
   ): void {
     this.#color = color;
     this.#selectedOverlay?.setColor(color);
-    this.#toonOutline?.setColor(color);
   }
 
   /**
    * Updates the color of the dimmer "hover" overlay and immediately
    * refreshes the active hover overlay (if any and not currently suppressed
    * by a matching selection) so the change is visible without re-hovering.
-   * Also pushed to `toonOutline` (if set) - see `setColor`.
    */
   setHoverColor(
     color: THREE.ColorRepresentation
   ): void {
     this.#hoverColor = color;
     this.#hoverOverlay?.setColor(color);
-    this.#toonOutline?.setHoverColor(color);
   }
 
   /**
    * Updates the opacity of the dimmer "hover" overlay and immediately
    * refreshes the active hover overlay (if any and not currently suppressed
    * by a matching selection) so the change is visible without re-hovering.
-   * Also pushed to `toonOutline` (if set) - see `setColor`.
    */
   setHoverOpacity(
     opacity: number
   ): void {
     this.#hoverOpacity = opacity;
     this.#hoverOverlay?.setOpacity(opacity);
-    this.#toonOutline?.setHoverOpacity(opacity);
   }
 
   register(
     id: string,
     target: SelectableObject,
-    options: { style?: MeshSelectionStyle; } = {}
+    options: { technique?: SelectionTechnique; } = {}
   ): void {
     this.#targets.set(id, target);
 
-    if (options.style) {
-      this.#meshStyles.set(id, options.style);
+    if (options.technique) {
+      this.#techniques.set(id, options.technique);
     }
     else {
-      this.#meshStyles.delete(id);
+      this.#techniques.delete(id);
     }
   }
 
@@ -260,7 +238,7 @@ export class SelectionManager extends EventTarget {
       this.hover(null);
     }
     this.#targets.delete(id);
-    this.#meshStyles.delete(id);
+    this.#techniques.delete(id);
   }
 
   select(
@@ -282,28 +260,28 @@ export class SelectionManager extends EventTarget {
   }
 
   /**
-   * Default overlay style for registered meshes - see `meshStyle` on
+   * Default overlay technique for registered meshes - see `technique` on
    * `SelectionManagerOptions`. A group's `SelectionBoundingBox` never
    * depends on this.
    */
-  get meshStyle(): MeshSelectionStyle {
-    return this.#meshStyle;
+  get technique(): SelectionTechnique {
+    return this.#technique;
   }
 
   /**
-   * Switches the manager's mesh overlay style for every mesh - including
-   * ids registered with their own per-id `style` override via `register`,
+   * Switches the manager's mesh overlay technique for every mesh - including
+   * ids registered with their own per-id `technique` override via `register`,
    * which this drops - and immediately rebuilds the active selection/hover
    * overlays so the change is visible without needing to reselect anything.
    * A per-id override can be reinstated afterward with a fresh `register`
-   * call, until the next `setMeshStyle`.
+   * call, until the next `setTechnique`.
    */
-  setMeshStyle(
-    style: MeshSelectionStyle
+  setTechnique(
+    technique: SelectionTechnique
   ): void {
-    const changed = style !== this.#meshStyle || this.#meshStyles.size > 0;
-    this.#meshStyle = style;
-    this.#meshStyles.clear();
+    const changed = technique !== this.#technique || this.#techniques.size > 0;
+    this.#technique = technique;
+    this.#techniques.clear();
 
     if (!changed) {
       return;
@@ -321,19 +299,11 @@ export class SelectionManager extends EventTarget {
   }
 
   /**
-   * Current default `SelectionHighlight` tuning - see `highlight` on
-   * `SelectionManagerOptions`.
-   */
-  get highlightOptions(): { thickness?: number; } {
-    return { ...this.#highlightOptions };
-  }
-
-  /**
    * Merges `options` into the manager's default `SelectionOutline` tuning
    * (e.g. from a settings panel) and immediately rebuilds the active
    * selection/hover overlays so the change is visible without reselecting -
-   * same rebuild behavior as `setMeshStyle`. Only affects an overlay
-   * currently rendered with the `"outline"` style.
+   * same rebuild behavior as `setTechnique`. Only affects an overlay
+   * currently rendered with the `"outline"` technique.
    */
   setOutlineOptions(
     options: { linewidth?: number; }
@@ -343,37 +313,26 @@ export class SelectionManager extends EventTarget {
   }
 
   /**
-   * Same as `setOutlineOptions`, for the manager's default `SelectionHighlight`
-   * tuning. Only affects an overlay currently rendered with the `"highlight"`
-   * style.
-   */
-  setHighlightOptions(
-    options: { thickness?: number; }
-  ): void {
-    this.#highlightOptions = { ...this.#highlightOptions, ...options };
-    this.#rebuildActiveOverlays();
-  }
-
-  /**
-   * Current default `ToonOutlinePass` tuning - see `toonOutlineOptions` on
+   * Current default `SelectionBoundingBox` tuning - see `boundingBox` on
    * `SelectionManagerOptions`.
    */
-  get toonOutlineOptions(): { edgeThickness?: number; hiddenColor?: THREE.ColorRepresentation; } {
-    return { ...this.#toonOutlineOptions };
+  get boundingBoxOptions(): { fillOpacity?: number; } {
+    return { ...this.#boundingBoxOptions };
   }
 
   /**
-   * Merges `options` into the manager's default `ToonOutlinePass` tuning and
-   * immediately applies it to `toonOutline` (a no-op if none was set) -
-   * unlike `setOutlineOptions`/`setHighlightOptions`, this never needs to
-   * rebuild an overlay, since `ToonOutlinePass`'s own tuning is all live
-   * uniforms rather than baked-in geometry.
+   * Merges `options` into the manager's default `SelectionBoundingBox`
+   * tuning (e.g. from a settings panel) and immediately rebuilds the active
+   * selection/hover overlays so the change is visible without reselecting -
+   * same rebuild behavior as `setOutlineOptions`. Only affects a currently
+   * rendered group overlay (a non-mesh target always renders
+   * `SelectionBoundingBox`, regardless of `technique`).
    */
-  setToonOutlineOptions(
-    options: { edgeThickness?: number; hiddenColor?: THREE.ColorRepresentation; }
+  setBoundingBoxOptions(
+    options: { fillOpacity?: number; }
   ): void {
-    this.#toonOutlineOptions = { ...this.#toonOutlineOptions, ...options };
-    this.#applyToonOutlineOptions();
+    this.#boundingBoxOptions = { ...this.#boundingBoxOptions, ...options };
+    this.#rebuildActiveOverlays();
   }
 
   /**
@@ -387,8 +346,7 @@ export class SelectionManager extends EventTarget {
    * Toggles X-ray (see `xray` on `SelectionManagerOptions`) and immediately
    * updates the active selection/hover overlays in place - cheap, like
    * `setColor`, since every overlay class's own `setXray` just flips
-   * material flags/render order rather than rebuilding geometry. Also
-   * pushed to `toonOutline` (if set) - see `setColor`.
+   * material flags/render order rather than rebuilding geometry.
    */
   setXray(
     xray: boolean
@@ -398,7 +356,6 @@ export class SelectionManager extends EventTarget {
     if (this.#hoveredId !== null && this.#hoveredId !== this.#selectedId) {
       this.#hoverOverlay?.setXray(xray);
     }
-    this.#toonOutline?.setXray(xray);
   }
 
   hover(
@@ -422,20 +379,20 @@ export class SelectionManager extends EventTarget {
     this.select(null);
     this.hover(null);
     this.#targets.clear();
-    this.#meshStyles.clear();
+    this.#techniques.clear();
   }
 
   /**
-   * Resolves the overlay style `id` would render with: its own per-id
+   * Resolves the overlay technique `id` would render with: its own per-id
    * override if `register` was given one, otherwise the manager's
-   * `meshStyle` default. Exposed so `PeerSelectionOverlays` can build
+   * `technique` default. Exposed so `PeerSelectionOverlays` can build
    * matching overlays for remote peer selections via
    * `createSelectionOverlay` without duplicating this resolution.
    */
-  styleFor(
+  techniqueFor(
     id: string
-  ): MeshSelectionStyle {
-    return this.#meshStyles.get(id) ?? this.#meshStyle;
+  ): SelectionTechnique {
+    return this.#techniques.get(id) ?? this.#technique;
   }
 
   /**
@@ -449,11 +406,9 @@ export class SelectionManager extends EventTarget {
 
   /**
    * Rebuilds the active selection/hover overlays in place, so a runtime
-   * tuning change (`setMeshStyle`, `setOutlineOptions`,
-   * `setHighlightOptions`) is visible immediately without needing to
-   * reselect anything. `setToonOutlineOptions`/`setColor`/etc. don't need
-   * this - `ToonOutlinePass` only ever gets pushed live tuning, never
-   * rebuilt.
+   * tuning change (`setTechnique`, `setOutlineOptions`) is visible
+   * immediately without needing to reselect anything. `setColor`/etc. don't
+   * need this - they update the existing overlay in place instead.
    */
   #rebuildActiveOverlays(): void {
     if (this.#selectedId !== null) {
@@ -466,31 +421,28 @@ export class SelectionManager extends EventTarget {
 
   /**
    * Clears whatever the "selected" slot currently holds (a disposable
-   * overlay, a `toonOutline` target, or nothing) and, if `id` isn't `null`,
-   * re-applies it per `id`'s resolved style - a `"toonOutline"` style pushes
-   * `id`'s target straight into `toonOutline` instead of building a
-   * disposable overlay, since `ToonOutlinePass` isn't a per-id instance (see
-   * this class's own doc comment). Only for a `THREE.Mesh` target though - a
-   * non-mesh one (typically a `THREE.Group`) always gets a
-   * `SelectionBoundingBox` instead, the same fallback `"outline"`/
-   * `"highlight"` already get, so a group's selection indicator stays the
-   * same line-segment box regardless of style.
+   * overlay, or nothing) and, if `id` isn't `null`, re-applies it per `id`'s
+   * resolved technique - a `"coloredOutline"` technique skips building a
+   * local overlay entirely, since that technique is a scene-level pipeline
+   * outside this class's own model (see `SelectionTechnique`'s own doc
+   * comment). Only for a `THREE.Mesh` target though - a non-mesh one
+   * (typically a `THREE.Group`) always gets a `SelectionBoundingBox`
+   * instead, the same fallback `"outline"` already gets, so a group's
+   * selection indicator stays the same line-segment box regardless of
+   * technique.
    */
   #applySelectedOverlay(
     id: string | null
   ): void {
     this.#selectedOverlay?.dispose();
     this.#selectedOverlay = null;
-    this.#toonOutline?.setSelected(null);
 
     if (id === null) {
       return;
     }
 
     const target = this.#requireTarget(id);
-    if (this.styleFor(id) === "toonOutline" && target instanceof THREE.Mesh) {
-      this.#requireToonOutline().setSelected(target);
-
+    if (this.techniqueFor(id) === "coloredOutline" && target instanceof THREE.Mesh) {
       return;
     }
 
@@ -505,16 +457,13 @@ export class SelectionManager extends EventTarget {
   ): void {
     this.#hoverOverlay?.dispose();
     this.#hoverOverlay = null;
-    this.#toonOutline?.setHovered(null);
 
     if (id === null) {
       return;
     }
 
     const target = this.#requireTarget(id);
-    if (this.styleFor(id) === "toonOutline" && target instanceof THREE.Mesh) {
-      this.#requireToonOutline().setHovered(target);
-
+    if (this.techniqueFor(id) === "coloredOutline" && target instanceof THREE.Mesh) {
       return;
     }
 
@@ -527,18 +476,18 @@ export class SelectionManager extends EventTarget {
     opacity: number
   ): SelectionOverlay {
     const target = this.#requireTarget(id);
-    const style = this.styleFor(id);
+    const technique = this.techniqueFor(id);
 
-    // A `"toonOutline"` style only reaches here for a non-mesh target (see
-    // `#applySelectedOverlay`/`#applyHoverOverlay`) - `createSelectionOverlay`
-    // falls back to `SelectionBoundingBox` for those regardless of `style`,
-    // same as `"outline"`/`"highlight"`.
+    // A `"coloredOutline"` technique only reaches here for a non-mesh target
+    // (see `#applySelectedOverlay`/`#applyHoverOverlay`) - `createSelectionOverlay`
+    // falls back to `SelectionBoundingBox` for those regardless of
+    // `technique`, same as `"outline"`.
     return createSelectionOverlay(target, {
-      style,
+      technique,
       color,
       opacity,
       linewidth: this.#outlineOptions.linewidth,
-      thickness: this.#highlightOptions.thickness,
+      fillOpacity: this.#boundingBoxOptions.fillOpacity,
       xray: this.#xray
     });
   }
@@ -552,36 +501,5 @@ export class SelectionManager extends EventTarget {
     }
 
     return target;
-  }
-
-  /**
-   * `toonOutline`, or throws a clear error if `styleFor` resolved to
-   * `"toonOutline"` without one having been passed to the constructor - a
-   * silent no-op there would leave a selection with no visible feedback at
-   * all, which is worse than failing loudly at the point of misconfiguration.
-   */
-  #requireToonOutline(): ToonOutlinePass {
-    if (!this.#toonOutline) {
-      throw new Error(
-        "SelectionManager: resolved to the \"toonOutline\" style but no ToonOutlinePass was " +
-        "given - pass one via the \"toonOutline\" constructor option."
-      );
-    }
-
-    return this.#toonOutline;
-  }
-
-  #applyToonOutlineOptions(): void {
-    if (!this.#toonOutline) {
-      return;
-    }
-
-    const { edgeThickness, hiddenColor } = this.#toonOutlineOptions;
-    if (edgeThickness !== undefined) {
-      this.#toonOutline.setEdgeThickness(edgeThickness);
-    }
-    if (hiddenColor !== undefined) {
-      this.#toonOutline.setHiddenColor(hiddenColor);
-    }
   }
 }

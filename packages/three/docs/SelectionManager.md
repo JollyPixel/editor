@@ -2,23 +2,21 @@
 
 Tracks a single selected id and a single hovered id across a pool of
 registered objects, extending `EventTarget`. Renders a
-[SelectionOutline](./SelectionOutline.md) or a
-[SelectionHighlight](./SelectionHighlight.md) for a `THREE.Mesh` (`"outline"`
-by default, see `meshStyle` below), a
+[SelectionOutline](./SelectionOutline.md) for a `THREE.Mesh` (the only
+built-in per-object technique, see `technique` below), or a
 [SelectionBoundingBox](./SelectionBoundingBox.md) for anything else
-(typically a `THREE.Group`), or drives a shared
-[ToonOutlinePass](./ToonOutlinePass.md) - callers never need to know which
-technique a given id resolves to.
+(typically a `THREE.Group`) - callers never need to know which technique a
+given id resolves to.
 
-The first two styles are per-object overlay children this class builds and
-disposes itself as selection/hover changes; `"toonOutline"` is a
-scene-level pipeline instead, supplied (not owned) via the `toonOutline`
-constructor option - this class only ever pushes selected/hovered targets and
-shared tuning into it, never constructs or disposes it.
+`"outline"` (and every non-mesh id, regardless of technique) is a per-object
+overlay child this class builds and disposes itself as selection/hover
+changes; `"coloredOutline"` is a scene-level pipeline instead, entirely
+outside this class - see `SelectionTechnique` below for what driving it
+actually requires.
 
 Objects are addressed by a caller-assigned string id rather than by object
 reference, so that a UI outside the 3D view (e.g. a `TreeView` from
-`@jolly-pixel/fs-tree`) can drive selection without holding onto
+`@jolly-pixel/arbor`) can drive selection without holding onto
 `THREE.Object3D` instances itself - it only needs to agree on ids with
 whatever registered them.
 
@@ -36,27 +34,21 @@ selection.addEventListener("selectionChange", () => {
 selection.select("group-1"); // draws a SelectionBoundingBox on `group`
 selection.select("mesh-1");  // disposes it, draws a SelectionOutline on `mesh`
 selection.select(null);      // clears the selection
-
-// A smooth/high-poly mesh reads poorly as a SelectionOutline (see that
-// class's own Notes) - opt it into the SelectionHighlight overlay instead.
-selection.register("torus-knot", torusKnotMesh, { style: "highlight" });
 ```
 
 ```ts
-// Wiring up ToonOutlinePass as a technique - see that class's own doc for
-// building the pipeline itself.
-import { SelectionManager, ToonOutlinePass } from "@jolly-pixel/three";
+// "coloredOutline" skips the per-object overlay entirely - a separate
+// PeerColoredOutlinePass (even with zero peers registered) or equivalent
+// reads `selected`/`hovered`/`color`/`hoverColor` and renders through a
+// ColoredOutlinePass instead. See ColoredOutlinePass/PeerColoredOutlinePass's
+// own docs for building that pipeline.
+import { SelectionManager } from "@jolly-pixel/three";
 
-const toonOutline = new ToonOutlinePass(renderer, scene, camera);
-const selection = new SelectionManager({ toonOutline, meshStyle: "toonOutline" });
+const selection = new SelectionManager({ technique: "coloredOutline" });
 selection.register("mesh-1", mesh);
-selection.register("group-1", group); // still a SelectionBoundingBox - groups always are, regardless of style
+selection.register("group-1", group); // still a SelectionBoundingBox - groups always are, regardless of technique
 
-selection.select("mesh-1"); // pushes `mesh` into toonOutline.setSelected, no overlay child added
-
-renderer.setAnimationLoop(() => {
-  toonOutline.render(); // replaces renderer.render(scene, camera) - safe even if nothing uses this style yet
-});
+selection.select("mesh-1"); // no overlay child added - selection.selected/.color are what a driving pass reads
 ```
 
 ## SelectionManagerOptions
@@ -76,68 +68,82 @@ export interface SelectionManagerOptions {
    */
   hoverOpacity?: number;
   /**
-   * Default overlay style for registered meshes, used unless overridden
-   * per-id via `register`'s own `style` option.
+   * Default overlay technique for registered meshes, used unless overridden
+   * per-id via `register`'s own `technique` option.
    * @default "outline"
    */
-  meshStyle?: MeshSelectionStyle;
+  technique?: SelectionTechnique;
   /**
    * Default `SelectionOutline` tuning applied to every mesh rendered with
-   * the `"outline"` style. Fields left unset here fall back to
+   * the `"outline"` technique. Fields left unset here fall back to
    * `SelectionOutlineOptions`'s own defaults. Adjustable at runtime via
    * `setOutlineOptions`.
    */
   outline?: { linewidth?: number };
   /**
-   * Default `SelectionHighlight` tuning applied to every mesh rendered with
-   * the `"highlight"` style. Fields left unset here fall back to
-   * `SelectionHighlightOptions`'s own defaults. Adjustable at runtime via
-   * `setHighlightOptions`.
+   * Default `SelectionBoundingBox` tuning applied to every group (any
+   * registered non-mesh target - `SelectionBoundingBox` is what such a
+   * target always renders, regardless of `technique`). Fields left unset
+   * here fall back to `SelectionBoundingBoxOptions`'s own defaults.
+   * Adjustable at runtime via `setBoundingBoxOptions`.
    */
-  highlight?: { thickness?: number };
-  /**
-   * The pipeline driving the `"toonOutline"` style, if any - not owned by
-   * `SelectionManager` (never disposed by it), only pushed to. Required for
-   * any registered id to actually resolve to `"toonOutline"` (via
-   * `meshStyle` or a per-id `register` override); resolving without one set
-   * throws. `color`/`hoverColor`/`hoverOpacity`/`xray` below apply to it the
-   * same as to the per-object overlay styles, kept in sync automatically.
-   */
-  toonOutline?: ToonOutlinePass;
-  /**
-   * Default `ToonOutlinePass` tuning applied whenever `toonOutline` above is
-   * set. Fields left unset here fall back to `ToonOutlinePassOptions`'s own
-   * defaults. Adjustable at runtime via `setToonOutlineOptions`.
-   */
-  toonOutlineOptions?: { edgeThickness?: number; hiddenColor?: THREE.ColorRepresentation };
+  boundingBox?: { fillOpacity?: number };
   /**
    * Skips the depth test (and depth write) on the selection/hover overlay so
    * it stays visible through any geometry in front of it, like an X-ray,
    * instead of being occluded like a normal object - handy for keeping a
    * selection visible through walls or a crowded scene. Applies uniformly
-   * regardless of `meshStyle`/per-id `style` (`SelectionOutline`,
-   * `SelectionHighlight`, a group's `SelectionBoundingBox`, and
-   * `ToonOutlinePass` all support it). Adjustable at runtime via `setXray`.
+   * regardless of `technique`/per-id `technique` (`SelectionOutline` and a
+   * group's `SelectionBoundingBox` both support it). Adjustable at runtime
+   * via `setXray`.
    * @default false
    */
   xray?: boolean;
 }
 ```
 
-## MeshSelectionStyle
+## SelectionTechnique
 
 ```ts
-export type MeshSelectionStyle = "outline" | "highlight" | "toonOutline";
+export type SelectionTechnique = "outline" | "coloredOutline" | (string & {});
 ```
 
 Which technique a registered object renders when selected/hovered. A
 non-mesh target (e.g. a `THREE.Group`) always renders `SelectionBoundingBox`
 regardless of this setting - a group's selection indicator stays the same
-line-segment box no matter which style is active.
+line-segment box no matter which technique is active. Under `"coloredOutline"`
+this box renders *alongside*, not instead of, the scene-level per-mesh
+colored outline a [PeerColoredOutlinePass](./PeerColoredOutlinePass.md) (or
+equivalent) still draws for that same group - deliberately both at once, see
+that class's own doc comment for why.
 
-- `"outline"` - [SelectionOutline](./SelectionOutline.md), a clean silhouette on low-poly/hard-surface meshes, but busy on smooth/high-poly ones.
-- `"highlight"` - [SelectionHighlight](./SelectionHighlight.md), an inverted-hull rim that reads cleanly on any mesh regardless of complexity. Requires `THREE.WebGPURenderer` (see that class's own Notes).
-- `"toonOutline"` - [ToonOutlinePass](./ToonOutlinePass.md), a scene-level postprocess outline instead of a per-object overlay child. Requires a `ToonOutlinePass` passed via the `toonOutline` constructor option - resolving to this style for a mesh without one set throws.
+- `"outline"` - [SelectionOutline](./SelectionOutline.md), a clean silhouette via `THREE.EdgesGeometry`, cheap and pipeline-free (composes with any host render pipeline, unlike `"coloredOutline"` below).
+- `"coloredOutline"` - [ColoredOutlinePass](./ColoredOutlinePass.md), a scene-level postprocess outline instead of a per-object overlay child. `SelectionManager` itself never owns or drives a `ColoredOutlinePass` - resolving an id to this technique just skips building a local overlay for it. Actually rendering anything requires a separate [PeerColoredOutlinePass](./PeerColoredOutlinePass.md) (even with zero peers registered) or equivalent reading this manager's `selected`/`hovered`/`color`/`hoverColor` and driving a `ColoredOutlinePass` itself. **Misconfiguring this - choosing `"coloredOutline"` with nothing actually wired up - fails silently** (no visible feedback, no thrown error), unlike every other technique here: this manager holds no reference to any pipeline object to loudly check against.
+
+These two are only the built-in ids, kept as literals for editor
+autocomplete - not exhaustive. `"outline"` resolves through
+`defaultSelectionOverlayRegistry`, a `SelectionOverlayRegistry` exported from
+`@jolly-pixel/three` alongside `createSelectionOverlay`. A caller that wants
+a different or additional per-object technique - e.g. another editor in this
+monorepo with its own visual style - implements a `SelectionOverlayFactory`
+and either `.register()`s it into `defaultSelectionOverlayRegistry` or builds
+a separate `SelectionOverlayRegistry` and resolves against that directly;
+any registered id is then a legal `SelectionTechnique` value, which is why
+the type keeps a trailing `(string & {})` branch instead of being a closed
+union.
+
+```ts
+import { defaultSelectionOverlayRegistry, type SelectionOverlayFactory } from "@jolly-pixel/three";
+
+const myTechnique: SelectionOverlayFactory = {
+  id: "my-technique",
+  supports: (target) => target instanceof THREE.Mesh,
+  create: (target, options) => new MyOverlay({ target, ...options })
+};
+defaultSelectionOverlayRegistry.register(myTechnique);
+
+selection.register("mesh-1", mesh, { technique: "my-technique" });
+```
 
 ## Properties
 
@@ -146,29 +152,27 @@ line-segment box no matter which style is active.
 - `color: THREE.ColorRepresentation` - Current color of the full-opacity "selected" overlay (see `setColor`).
 - `hoverColor: THREE.ColorRepresentation` - Current color of the dimmer "hover" overlay (see `setHoverColor`).
 - `hoverOpacity: number` - Current opacity of the dimmer "hover" overlay (see `setHoverOpacity`).
-- `meshStyle: MeshSelectionStyle` - Current default mesh overlay style (see `setMeshStyle`).
+- `technique: SelectionTechnique` - Current default mesh overlay technique (see `setTechnique`).
 - `outlineOptions: { linewidth?: number }` - Current default `SelectionOutline` tuning (see `setOutlineOptions`).
-- `highlightOptions: { thickness?: number }` - Current default `SelectionHighlight` tuning (see `setHighlightOptions`).
-- `toonOutlineOptions: { edgeThickness?: number; hiddenColor?: THREE.ColorRepresentation }` - Current default `ToonOutlinePass` tuning (see `setToonOutlineOptions`).
-- `xray: boolean` - Current X-ray state, applied regardless of style (see `setXray`).
+- `boundingBoxOptions: { fillOpacity?: number }` - Current default `SelectionBoundingBox` tuning (see `setBoundingBoxOptions`).
+- `xray: boolean` - Current X-ray state, applied regardless of technique (see `setXray`).
 
 ## Methods
 
-- `register(id: string, target: THREE.Mesh | THREE.Object3D, options?: { style?: MeshSelectionStyle }): void` - Associates an id with an object. Re-registering an existing id replaces its target. `options.style` overrides `meshStyle` for this id only; omitting it falls back to `meshStyle`.
-- `unregister(id: string): void` - Drops `id` from the registry, clearing its selection/hover overlay (or `toonOutline` target) first if it holds either.
-- `select(id: string | null): void` - Selects `id`. Throws if `id` was not registered, or if it resolves to `"toonOutline"` without one configured. No-ops (and does not dispatch) if `id` already is the selection.
+- `register(id: string, target: THREE.Mesh | THREE.Object3D, options?: { technique?: SelectionTechnique }): void` - Associates an id with an object. Re-registering an existing id replaces its target. `options.technique` overrides the manager's default `technique` for this id only; omitting it falls back to `technique`.
+- `unregister(id: string): void` - Drops `id` from the registry, clearing its selection/hover overlay first if it holds either.
+- `select(id: string | null): void` - Selects `id`. Throws if `id` was not registered. No-ops (and does not dispatch) if `id` already is the selection.
 - `hover(id: string | null): void` - Same as `select`, but for the dimmer hover overlay. Suppressed when `id` is already the current selection, and dropped automatically once that id becomes the selection.
-- `setColor(color: THREE.ColorRepresentation): void` - Updates the "selected" overlay color and recolors the active selection overlay in place (no rebuild - cheap, like the overlay classes' own `setColor`). The hover overlay is unaffected. Also pushed to `toonOutline` (if set), regardless of whether it's the currently active style.
+- `setColor(color: THREE.ColorRepresentation): void` - Updates the "selected" overlay color and recolors the active selection overlay in place (no rebuild - cheap, like the overlay classes' own `setColor`). The hover overlay is unaffected.
 - `setHoverColor(color: THREE.ColorRepresentation): void` - Same as `setColor`, for the dimmer "hover" overlay.
-- `setHoverOpacity(opacity: number): void` - Updates the active hover overlay's opacity in place. Also pushed to `toonOutline`.
-- `setMeshStyle(style: MeshSelectionStyle): void` - Switches the technique at runtime for every id (e.g. from a settings panel), including ids registered with their own per-id `style` override - `register`'s `style` is dropped for all ids, so a per-id override only sticks until the next `setMeshStyle` call, reinstated afterward with a fresh `register`. Immediately rebuilds the active selection/hover overlays (or pushes into `toonOutline`) so the change is visible without reselecting. No-ops if `style` already is the default and no per-id override was set.
-- `setOutlineOptions(options: { linewidth?: number }): void` - Merges `options` into the manager's default `SelectionOutline` tuning and immediately rebuilds the active selection/hover overlays. Only affects an overlay currently rendered with the `"outline"` style.
-- `setHighlightOptions(options: { thickness?: number }): void` - Same as `setOutlineOptions`, for `SelectionHighlight` tuning. Only affects an overlay currently rendered with the `"highlight"` style.
-- `setToonOutlineOptions(options: { edgeThickness?: number; hiddenColor?: THREE.ColorRepresentation }): void` - Merges `options` into the manager's default `ToonOutlinePass` tuning and immediately applies it to `toonOutline` (a no-op if none was set). Unlike `setOutlineOptions`/`setHighlightOptions`, never rebuilds an overlay - `ToonOutlinePass`'s tuning is all live uniforms.
-- `setXray(xray: boolean): void` - Toggles X-ray on the active selection/hover overlays in place (no rebuild - cheap, like `setColor`). Applies regardless of style, including `toonOutline`.
-- `styleFor(id: string): MeshSelectionStyle` - Resolves the style `id` would render with: its per-id override if `register` was given one, otherwise `meshStyle`. Exposed for [PeerSelectionOverlays](./PeerSelectionOverlays.md) to build matching overlays for remote peer selections.
+- `setHoverOpacity(opacity: number): void` - Updates the active hover overlay's opacity in place.
+- `setTechnique(technique: SelectionTechnique): void` - Switches the technique at runtime for every id (e.g. from a settings panel), including ids registered with their own per-id `technique` override - `register`'s `technique` is dropped for all ids, so a per-id override only sticks until the next `setTechnique` call, reinstated afterward with a fresh `register`. Immediately rebuilds the active selection/hover overlays so the change is visible without reselecting. No-ops if `technique` already is the default and no per-id override was set.
+- `setOutlineOptions(options: { linewidth?: number }): void` - Merges `options` into the manager's default `SelectionOutline` tuning and immediately rebuilds the active selection/hover overlays. Only affects an overlay currently rendered with the `"outline"` technique.
+- `setBoundingBoxOptions(options: { fillOpacity?: number }): void` - Merges `options` into the manager's default `SelectionBoundingBox` tuning and immediately rebuilds the active selection/hover overlays. Only affects a currently rendered group overlay.
+- `setXray(xray: boolean): void` - Toggles X-ray on the active selection/hover overlays in place (no rebuild - cheap, like `setColor`). Applies regardless of technique.
+- `techniqueFor(id: string): SelectionTechnique` - Resolves the technique `id` would render with: its per-id override if `register` was given one, otherwise the manager's default `technique`. Exposed for [PeerSelectionOverlays](./PeerSelectionOverlays.md) to build matching overlays for remote peer selections.
 - `targetFor(id: string): THREE.Mesh | THREE.Object3D | undefined` - The object registered for `id`, or `undefined` if none is.
-- `dispose(): void` - Clears selection, hover (including any `toonOutline` target), and forgets every registered id. The instance can be reused afterward via `register`. Does not dispose `toonOutline` itself - it isn't owned by this class.
+- `dispose(): void` - Clears selection and hover, and forgets every registered id. The instance can be reused afterward via `register`.
 
 ## Events
 
@@ -177,7 +181,8 @@ line-segment box no matter which style is active.
 
 ## Notes
 
-- `select`/`hover` check `target instanceof THREE.Mesh` first: anything else (a `THREE.Group`, or any other non-mesh `Object3D`) always gets `SelectionBoundingBox`, regardless of `styleFor(id)`. For a mesh, `styleFor(id)` decides between `SelectionOutline`/`SelectionHighlight` and pushing the target straight into `toonOutline` (throwing if `"toonOutline"` resolved without one configured).
-- A peer selection (see [PeerSelectionOverlays](./PeerSelectionOverlays.md) below) always falls back to `"outline"` when `styleFor` resolves to `"toonOutline"` - `ToonOutlinePass` is one shared pipeline, not a per-id instance, so it can't represent more than one simultaneously colored peer selection.
+- `select`/`hover` check `target instanceof THREE.Mesh` first: anything else (a `THREE.Group`, or any other non-mesh `Object3D`) always gets `SelectionBoundingBox`, regardless of `techniqueFor(id)`. For a mesh, `techniqueFor(id)` decides between `SelectionOutline`/a registered custom technique and skipping the overlay entirely for `"coloredOutline"`.
+- A peer selection (see [PeerSelectionOverlays](./PeerSelectionOverlays.md) below) always falls back to `"outline"` when `techniqueFor` resolves to `"coloredOutline"` - `ColoredOutlinePass` is one shared pipeline, not a per-id instance, so it can't represent more than one simultaneously colored peer selection.
 - Does not do any picking/raycasting itself - it only reacts to ids handed to it. See `examples/scripts/demo-selection.ts` for a `resolvePickId` helper that maps a raycast hit straight to the specific mesh's id, so 3D-view picks never need extra clicks to drill past a parent group - selecting a group as a whole is only done from the outliner (e.g. `TreeView`).
-- Only models a single local user. For remote peers, see [PeerSelectionRegistry](./PeerSelectionRegistry.md) (tracks which peers have what selected) and [PeerSelectionOverlays](./PeerSelectionOverlays.md) (renders one overlay per object in the primary peer's color, reusing `styleFor`/`targetFor` above).
+- Only models a single local user. For remote peers, see [PeerSelectionRegistry](./PeerSelectionRegistry.md) (tracks which peers have what selected) and [PeerSelectionOverlays](./PeerSelectionOverlays.md) (renders one overlay per object in the primary peer's color, reusing `techniqueFor`/`targetFor` above).
+- See [SelectionOverlayRegistry](./SelectionOverlayRegistry.md) for how `"outline"` (and any custom per-object technique) actually resolves to a concrete overlay class, and how to register a new one.

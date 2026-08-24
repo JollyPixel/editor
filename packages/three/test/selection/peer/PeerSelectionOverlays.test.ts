@@ -6,23 +6,43 @@ import assert from "node:assert/strict";
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { SelectionManager, PeerSelectionRegistry, PeerSelectionOverlays, SelectionOutline } from "#src/index.ts";
+import {
+  SelectionManager,
+  PeerSelectionRegistry,
+  PeerSelectionOverlays,
+  PeerSelectionVisibility,
+  SelectionOutline
+} from "#src/index.ts";
 
-function createHarness(): {
+function createHarness(
+  options?: { visibility?: boolean; }
+): {
   selection: SelectionManager;
   registry: PeerSelectionRegistry;
   overlays: PeerSelectionOverlays;
+  visibility: PeerSelectionVisibility | undefined;
+  camera: THREE.PerspectiveCamera | undefined;
   mesh: THREE.Mesh;
 } {
   const selection = new SelectionManager();
   const registry = new PeerSelectionRegistry();
-  const overlays = new PeerSelectionOverlays({ registry, selection });
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-
   selection.register("mesh-1", mesh);
 
+  let camera: THREE.PerspectiveCamera | undefined;
+  let visibility: PeerSelectionVisibility | undefined;
+  if (options?.visibility) {
+    camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
+    camera.position.set(0, 0, 0);
+    camera.lookAt(0, 0, -1);
+    camera.updateMatrixWorld();
+    visibility = new PeerSelectionVisibility({ registry, selection, camera });
+  }
+
+  const overlays = new PeerSelectionOverlays({ registry, selection, visibility });
+
   return {
-    selection, registry, overlays, mesh
+    selection, registry, overlays, visibility, camera, mesh
   };
 }
 
@@ -88,15 +108,65 @@ describe("peer selection", () => {
     assert.strictEqual(`#${material.color.getHexString()}`, registry.colorOf("peer-a"));
   });
 
-  test("falls back to \"outline\" for an id resolved to the \"toonOutline\" style " +
+  test("falls back to \"outline\" for an id resolved to the \"coloredOutline\" technique " +
     "- a peer overlay can't share a single pipeline across peers", () => {
     const { registry, selection, mesh } = createHarness();
-    selection.setMeshStyle("toonOutline");
+    selection.setTechnique("coloredOutline");
 
     registry.select("peer-a", "mesh-1");
 
     assert.strictEqual(mesh.children.length, 1);
     assert.ok(mesh.children[0] instanceof SelectionOutline);
+  });
+});
+
+describe("visibility", () => {
+  test("suppresses the peer overlay for an object visibility reports not visible", () => {
+    const { registry, visibility, mesh } = createHarness({ visibility: true });
+    // Behind the camera.
+    mesh.position.set(0, 0, 10);
+    // `update()` only evaluates currently peer-selected ids (see its own doc
+    // comment), so the selection must exist first - registers with the
+    // default "unseen" visible=true, then this `update()` evaluates it for
+    // real (a flip, since nothing was tracked yet) and dispatches
+    // `visibilityChange`, which re-runs `#refresh` and picks up the result.
+    registry.select("peer-a", "mesh-1");
+    visibility!.update();
+
+    assert.strictEqual(mesh.children.length, 0);
+  });
+
+  test("shows the peer overlay once visibility reports it visible again", () => {
+    const { registry, visibility, mesh } = createHarness({ visibility: true });
+    mesh.position.set(0, 0, 10);
+    registry.select("peer-a", "mesh-1");
+    visibility!.update();
+    assert.strictEqual(mesh.children.length, 0);
+
+    // Back in front of the camera.
+    mesh.position.set(0, 0, -10);
+    // Dispatches visibilityChange, which re-checks every selected id.
+    visibility!.update();
+
+    assert.strictEqual(mesh.children.length, 1);
+  });
+
+  test("never suppresses the local selection's own overlay", () => {
+    const { selection, visibility, mesh } = createHarness({ visibility: true });
+    // Behind the camera.
+    mesh.position.set(0, 0, 10);
+    visibility!.update();
+
+    selection.select("mesh-1");
+
+    assert.strictEqual(mesh.children.length, 1, "local selection must render regardless of camera visibility");
+  });
+
+  test("omitting visibility preserves always-visible behavior", () => {
+    const { registry, mesh } = createHarness();
+    registry.select("peer-a", "mesh-1");
+
+    assert.strictEqual(mesh.children.length, 1);
   });
 });
 

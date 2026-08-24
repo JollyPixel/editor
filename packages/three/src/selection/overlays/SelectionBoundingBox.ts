@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 
+// Import Internal Dependencies
+import { computeLocalBoundingBox } from "./computeLocalBoundingBox.ts";
+
 // CONSTANTS
 // Grows the box slightly so a group containing a single box-shaped mesh does
 // not sit exactly on that mesh's own surface (same z-fighting concern as
@@ -38,6 +41,14 @@ export interface SelectionBoundingBoxOptions {
    * @default false
    */
   xray?: boolean;
+  /**
+   * Opacity of a translucent fill mesh added alongside the line-segment box,
+   * tinting the group's own volume in `color` instead of only outlining it.
+   * `0` (the default) skips building the fill mesh entirely - the box stays
+   * a pure wireframe, an extra draw call only a caller who wants it pays for.
+   * @default 0
+   */
+  fillOpacity?: number;
 }
 
 /**
@@ -50,10 +61,14 @@ export interface SelectionBoundingBoxOptions {
 export class SelectionBoundingBox extends THREE.LineSegments<THREE.BufferGeometry, THREE.LineBasicMaterial> {
   readonly target: THREE.Object3D;
 
+  #fillMesh: THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial> | null = null;
+
   constructor(
     options: SelectionBoundingBoxOptions
   ) {
-    const { target, color = "#ffffff", opacity = 1, xray = false } = options;
+    const {
+      target, color = "#ffffff", opacity = 1, xray = false, fillOpacity = 0
+    } = options;
 
     super(
       new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)),
@@ -68,6 +83,12 @@ export class SelectionBoundingBox extends THREE.LineSegments<THREE.BufferGeometr
 
     this.target = target;
     this.renderOrder = xray ? kXrayRenderOrder : 1;
+
+    if (fillOpacity > 0) {
+      this.#fillMesh = this.#createFillMesh(color, fillOpacity, xray);
+      this.add(this.#fillMesh);
+    }
+
     target.add(this);
     this.update();
   }
@@ -96,6 +117,7 @@ export class SelectionBoundingBox extends THREE.LineSegments<THREE.BufferGeometr
     color: THREE.ColorRepresentation
   ): void {
     this.material.color.set(color);
+    this.#fillMesh?.material.color.set(color);
   }
 
   setOpacity(
@@ -106,8 +128,28 @@ export class SelectionBoundingBox extends THREE.LineSegments<THREE.BufferGeometr
   }
 
   /**
+   * Updates the fill mesh's own opacity - see `SelectionBoundingBoxOptions.fillOpacity`.
+   * A no-op if this box was built with `fillOpacity: 0` (or omitted): there is
+   * no fill mesh to update, and this method doesn't build one on demand -
+   * whether a fill mesh exists at all is decided once, at construction.
+   */
+  setFillOpacity(
+    opacity: number
+  ): void {
+    if (!this.#fillMesh) {
+      return;
+    }
+    this.#fillMesh.material.opacity = opacity;
+    this.#fillMesh.visible = opacity > 0;
+  }
+
+  /**
    * Toggles depth-test/write and render order between the normal and X-ray
-   * behavior described on `SelectionBoundingBoxOptions.xray`.
+   * behavior described on `SelectionBoundingBoxOptions.xray`. The fill mesh
+   * (if any) follows the same depth-test toggle so it stays visible through
+   * occluders alongside the wireframe - its own depth write stays permanently
+   * off regardless (see `#createFillMesh`), so this only ever flips its
+   * `depthTest`/render order.
    */
   setXray(
     xray: boolean
@@ -115,44 +157,55 @@ export class SelectionBoundingBox extends THREE.LineSegments<THREE.BufferGeometr
     this.material.depthTest = !xray;
     this.material.depthWrite = !xray;
     this.renderOrder = xray ? kXrayRenderOrder : 1;
+
+    if (this.#fillMesh) {
+      this.#fillMesh.material.depthTest = !xray;
+      this.#fillMesh.renderOrder = xray ? kXrayRenderOrder : 1;
+    }
   }
 
   dispose(): void {
     this.removeFromParent();
     this.geometry.dispose();
     this.material.dispose();
+
+    if (this.#fillMesh) {
+      this.#fillMesh.geometry.dispose();
+      this.#fillMesh.material.dispose();
+      this.#fillMesh = null;
+    }
   }
-}
 
-/**
- * Union of every mesh descendant's bounding box, expressed in `target`'s own
- * local space (i.e. as if `target` had an identity transform) so the result
- * can be applied as this overlay's position/scale once it is parented to
- * `target`.
- */
-function computeLocalBoundingBox(
-  target: THREE.Object3D
-): THREE.Box3 {
-  target.updateWorldMatrix(true, true);
-  const inverseTargetWorld = target.matrixWorld.clone().invert();
-  const relativeMatrix = new THREE.Matrix4();
-  const meshLocalBox = new THREE.Box3();
-  const box = new THREE.Box3();
+  /**
+   * Same unit `BoxGeometry(1, 1, 1)` the wireframe's own `EdgesGeometry` was
+   * built from, so a fill mesh parented to `this` (inheriting its scale and
+   * position for free, same as the wireframe inherits `target`'s own
+   * transform) exactly fills the wireframe's silhouette without needing its
+   * own separate sizing logic. `depthWrite` stays off unconditionally
+   * (unlike the wireframe's own material, which flips it with `xray`) - a
+   * translucent fill corrupting the depth buffer for whatever draws after it
+   * is exactly the bug already fixed once this session in `ColoredOutlinePass`'s
+   * own priority-mask material; nothing here needs the fill's own depth
+   * written for any later pass to read, so there's no upside to risking it
+   * again.
+   */
+  #createFillMesh(
+    color: THREE.ColorRepresentation,
+    opacity: number,
+    xray: boolean
+  ): THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial> {
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity,
+        depthTest: !xray,
+        depthWrite: false
+      })
+    );
+    mesh.renderOrder = xray ? kXrayRenderOrder : 1;
 
-  target.traverse((descendant) => {
-    if (!(descendant instanceof THREE.Mesh)) {
-      return;
-    }
-
-    descendant.geometry.computeBoundingBox();
-    if (!descendant.geometry.boundingBox) {
-      return;
-    }
-
-    relativeMatrix.multiplyMatrices(inverseTargetWorld, descendant.matrixWorld);
-    meshLocalBox.copy(descendant.geometry.boundingBox).applyMatrix4(relativeMatrix);
-    box.union(meshLocalBox);
-  });
-
-  return box;
+    return mesh;
+  }
 }

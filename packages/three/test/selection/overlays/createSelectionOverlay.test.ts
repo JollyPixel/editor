@@ -6,59 +6,54 @@ import assert from "node:assert/strict";
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { createSelectionOverlay, SelectionOutline, SelectionHighlight, SelectionBoundingBox } from "#src/index.ts";
+import { createSelectionOverlay, SelectionOutline, SelectionBoundingBox } from "#src/index.ts";
 
 describe("createSelectionOverlay", () => {
-  test("builds a SelectionOutline for a mesh with style \"outline\"", () => {
+  test("builds a SelectionOutline for a mesh with technique \"outline\"", () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    const overlay = createSelectionOverlay(mesh, { style: "outline", color: "#ffffff", opacity: 1 });
+    const overlay = createSelectionOverlay(mesh, { technique: "outline", color: "#ffffff", opacity: 1 });
 
     assert.ok(overlay instanceof SelectionOutline);
   });
 
-  test("builds a SelectionHighlight for a mesh with style \"highlight\"", () => {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    const overlay = createSelectionOverlay(mesh, { style: "highlight", color: "#ffffff", opacity: 1 });
-
-    assert.ok(overlay instanceof SelectionHighlight);
-  });
-
-  test("builds a SelectionBoundingBox for a non-mesh target regardless of style", () => {
+  test("builds a SelectionBoundingBox for a non-mesh target regardless of technique", () => {
     const group = new THREE.Group();
     group.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
 
-    const outlineStyled = createSelectionOverlay(group, { style: "outline", color: "#ffffff", opacity: 1 });
-    const highlightStyled = createSelectionOverlay(group, { style: "highlight", color: "#ffffff", opacity: 1 });
+    const overlay = createSelectionOverlay(group, { technique: "outline", color: "#ffffff", opacity: 1 });
 
-    assert.ok(outlineStyled instanceof SelectionBoundingBox);
-    assert.ok(highlightStyled instanceof SelectionBoundingBox);
+    assert.ok(overlay instanceof SelectionBoundingBox);
+  });
+
+  test("falls back to \"outline\" for a mesh given an unregistered technique id", () => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    const overlay = createSelectionOverlay(mesh, { technique: "coloredOutline", color: "#ffffff", opacity: 1 });
+
+    assert.ok(overlay instanceof SelectionOutline);
+  });
+
+  test("builds a SelectionBoundingBox for a mesh explicitly given technique \"boundingBox\"", () => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    const overlay = createSelectionOverlay(mesh, { technique: "boundingBox", color: "#ffffff", opacity: 1 });
+
+    assert.ok(overlay instanceof SelectionBoundingBox);
   });
 
   test("forwards linewidth to a SelectionOutline", () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     const overlay = createSelectionOverlay(
       mesh,
-      { style: "outline", color: "#ffffff", opacity: 1, linewidth: 3 }
+      { technique: "outline", color: "#ffffff", opacity: 1, linewidth: 3 }
     ) as SelectionOutline;
 
     assert.strictEqual(overlay.material.linewidth, 3);
-  });
-
-  test("forwards thickness and xray to a SelectionHighlight", () => {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    const overlay = createSelectionOverlay(
-      mesh,
-      { style: "highlight", color: "#ffffff", opacity: 1, thickness: 0.1, xray: true }
-    ) as SelectionHighlight;
-
-    assert.strictEqual(overlay.material.depthTest, false);
   });
 
   test("forwards xray to a SelectionOutline", () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     const overlay = createSelectionOverlay(
       mesh,
-      { style: "outline", color: "#ffffff", opacity: 1, xray: true }
+      { technique: "outline", color: "#ffffff", opacity: 1, xray: true }
     ) as SelectionOutline;
 
     assert.strictEqual(overlay.material.depthTest, false);
@@ -70,7 +65,7 @@ describe("createSelectionOverlay", () => {
 
     const overlay = createSelectionOverlay(
       group,
-      { style: "outline", color: "#ffffff", opacity: 1, xray: true }
+      { technique: "outline", color: "#ffffff", opacity: 1, xray: true }
     ) as SelectionBoundingBox;
 
     assert.strictEqual(overlay.material.depthTest, false);
