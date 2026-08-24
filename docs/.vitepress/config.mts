@@ -174,10 +174,6 @@ export default defineConfig({
                 {
                   text: "Audio",
                   link: "/engine/docs/internals/audio"
-                },
-                {
-                  text: "FixedTimeStep",
-                  link: "/engine/docs/internals/fixed-time-step"
                 }
               ]
             },

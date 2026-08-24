@@ -3,9 +3,9 @@
 The engine follows an **Entity-Component** pattern inspired by
 game engines like Unity and Godot:
 
-- **Entity** → [Actor](actor.md) — a node in the scene tree with
+- **Entity** → [Actor](actor.md): a node in the scene tree with
   a transform, but no logic or rendering on its own.
-- **Component** → `ActorComponent` — a modular piece of data or
+- **Component** → `ActorComponent`: a modular piece of data or
   behavior attached to an actor. Each component adds one
   responsibility (rendering, physics, scripting, etc.).
 
@@ -13,8 +13,8 @@ An actor gains its capabilities entirely through the components
 attached to it. For example, the same actor can display a 3D model
 by attaching a `ModelRenderer` and react to player input by
 attaching a custom [Behavior](../components/behavior.md). This
-composition-over-inheritance approach keeps each piece small,
-reusable, and testable in isolation.
+composition-over-inheritance approach keeps each component focused
+on one piece of behavior or rendering.
 
 The engine ships with several built-in components:
 
@@ -53,8 +53,8 @@ Components follow a lifecycle managed by the scene engine:
 | ---- | ------------ |
 | `awake()` | Once, when the scene starts or when the actor is added |
 | `start()` | Once, on the first frame after the component is created |
-| `fixedUpdate(deltaTime)` | Every fixed step, at a constant rate (default 60 Hz). Use for physics and deterministic logic |
-| `update(deltaTime)` | Every frame, receives the elapsed time in seconds. Use for rendering-related logic |
+| `fixedUpdate(deltaTime, stepIndex)` | Every fixed step, at a constant rate (default 60 Hz). Use for physics and deterministic logic. `stepIndex` counts the steps within the current frame |
+| `update(deltaTime, alpha)` | Every drawn frame, with the elapsed time in seconds. `alpha` is how far the frame sits between the last fixed step and the next one, in `[0, 1)` |
 | `destroy()` | When the actor or component is removed from the scene |
 
 Components that define `update()` or `fixedUpdate()` are

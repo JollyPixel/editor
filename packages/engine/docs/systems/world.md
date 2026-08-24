@@ -95,34 +95,27 @@ game.disconnect();
 game.dispose();
 ```
 
-Call it whenever a world is dropped — closing a scene in an editor,
-swapping a canvas. Browsers cap the number of live WebGL contexts
+Call it whenever a world is dropped, such as when closing a scene in
+an editor or swapping a canvas. Browsers cap the number of live WebGL contexts
 (~16 in Chrome), so a world that is garbage-collected without being
 disposed leaks one, and a long session eventually stops rendering
 altogether. The world must not be used after disposal.
 
 ## Game loop
 
-The game loop is driven by a
-[FixedTimeStep](../internals/fixed-time-step.md) which separates
-deterministic logic from rendering:
+The caller owns a `FrameScheduler` from
+[@jolly-pixel/loop](../../../loop/README.md) and passes each `FrameSchedule` to
+the world. Use one scheduler per app. `World` reads no clock.
 
 ```ts
-const fixedTimeStep = new FixedTimeStep();
-fixedTimeStep.start();
+import { FrameScheduler } from "@jolly-pixel/loop";
 
-function loop() {
-  game.beginFrame();
-  fixedTimeStep.tick({
-    fixedUpdate: (fixedDelta) => {
-      game.fixedUpdate(fixedDelta / 1000);
-    },
-    update: (_interpolation, delta) => {
-      game.update(delta / 1000);
-      game.render();
-    }
-  });
-  const exited = game.endFrame();
+const scheduler = new FrameScheduler({ fixedFps: 60, maxFps: 144 });
+
+world.start();
+
+function loop(now: number) {
+  const exited = world.tick(scheduler.advance(now));
   if (exited) { /* stop loop */ }
 
   requestAnimationFrame(loop);
@@ -131,34 +124,58 @@ function loop() {
 requestAnimationFrame(loop);
 ```
 
-#### `beginFrame()`
+`@jolly-pixel/runtime` provides a `GameLoop` that owns the frame source and
+scheduler. It calls `tick()` from the renderer's animation loop. Configure
+timing on the loop:
 
-Called once at the start of each animation frame:
+```ts
+runtime.loop.scheduler.fixedFps = 60;  // simulation rate
+runtime.loop.scheduler.maxFps = 144;   // render cap, independent of fixedFps
+runtime.loop.timeScale = 0.5;          // slow motion; 0 pauses the simulation
+```
 
-1. Updates the [Input](../controls/input.md) system.
-2. Calls `sceneManager.beginFrame()` — snapshots the actor tree
-   and starts pending components. The snapshot is reused by all
-   `fixedUpdate` and `update` calls within the same frame.
+#### `tick(schedule)`
 
-#### `fixedUpdate(deltaTime)`
+`schedule` is the `FrameSchedule` produced for the current frame, and `World`
+uses it unchanged because it has no accumulator. Tests and editors can replay
+or construct any frame. Returns `true` when the input system asked to exit.
 
-Runs deterministic logic at a fixed rate (0 to N times per frame):
+One frame, in order:
 
-1. Calls `sceneManager.fixedUpdate(deltaTime)` — runs
-   `actor.fixedUpdate(deltaTime)` on each cached actor.
+1. Calls `sceneManager.beginFrame()`, which snapshots the actor tree and
+   starts pending components. The snapshot is reused by every `fixedUpdate`
+   and `update` call in the frame.
+2. Runs `schedule.steps` fixed steps, each preceded by an
+   [Input](../controls/input.md) update.
+3. Updates input once more if the frame ran no step at all.
+4. On a drawn frame, calls `sceneManager.update(deltaTime, alpha)` then
+   `renderer.draw()`.
+5. Calls `endFrame()`.
 
-### `update(deltaTime)`
+#### `fixedUpdate(deltaTime, stepIndex)`
 
-Runs variable-rate logic once per rendered frame:
+Runs deterministic logic at a fixed rate, 0 to `maxStepsPerFrame` times per
+frame, always with the same delta. `stepIndex` counts the steps within the
+current frame, from zero.
 
-1. Calls `sceneManager.update(deltaTime)` — runs
-   `actor.update(deltaTime)` on each cached actor.
+Input is sampled before each step, so a catch-up frame running three steps
+reports a press edge to the first step only, and a frame that runs no step
+does not diff the edge away before any step has seen it.
+
+#### `update(deltaTime, alpha)`
+
+Runs variable-rate logic once per drawn frame. `alpha` is how far the frame
+sits between the last fixed step and the next one, in `[0, 1)`. Pass it to
+`Interpolated` from `@jolly-pixel/loop` to draw smoothly between steps.
+
+A frame suppressed by `maxFps` skips `update` and the draw, but still
+accumulates time and still runs its fixed steps.
 
 #### `endFrame(): boolean`
 
 Called once at the end of each animation frame:
 
-1. Calls `sceneManager.endFrame()` — destroys pending components
+1. Calls `sceneManager.endFrame()`, which destroys pending components
    and actors.
 2. If the input system signals an exit, clears the renderer and
    returns `true`. Otherwise returns `false`.
@@ -171,8 +188,8 @@ cameras.
 
 ## Accessing subsystems
 
-All subsystems are available as public properties, making them
-accessible from any actor or component:
+Actors and components can access every subsystem through public
+`World` properties:
 
 ```ts
 // From inside a Behavior
@@ -185,7 +202,7 @@ if (input.keyboard.isDown("Space")) {
 
 ## See also
 
-- [SceneManager](scene-manager.md) — actor tree, lifecycle, and destruction
-- [Renderer](renderer.md) — rendering pipeline
-- [Input](../controls/input.md) — input handling
-- [Actor](../actor/actor.md) — the engine's core entity
+- [SceneManager](scene-manager.md): actor tree, lifecycle, and destruction
+- [Renderer](renderer.md): rendering pipeline
+- [Input](../controls/input.md): input handling
+- [Actor](../actor/actor.md): the engine's core entity

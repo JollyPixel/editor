@@ -5,8 +5,15 @@ import {
   type GlobalAudio
 } from "@jolly-pixel/engine";
 import type { StatsRecorder } from "@jolly-pixel/ui/stats";
+import {
+  GameLoop,
+  type FrameSchedulerOptions
+} from "@jolly-pixel/loop";
 
 // Import Internal Dependencies
+import {
+  AnimationLoopFrameSource
+} from "./AnimationLoopFrameSource.ts";
 import {
   createRuntimeAssetCoordinator
 } from "./assets/createRuntimeAssetCoordinator.ts";
@@ -58,6 +65,10 @@ export interface RuntimeOptions<
    * Configures the catalog and platform loaders used by runtime asset operations.
    */
   assets?: RuntimeAssetOptions;
+  /**
+   * Scheduling options
+   */
+  loop?: FrameSchedulerOptions;
 }
 
 /**
@@ -67,6 +78,7 @@ export class Runtime<
   TContext = Systems.WorldDefaultContext
 > {
   readonly world: Systems.World<THREE.WebGPURenderer, TContext>;
+  readonly loop: GameLoop;
 
   readonly canvas: HTMLCanvasElement;
   stats?: StatsRecorder;
@@ -105,6 +117,12 @@ export class Runtime<
       context: options.context,
       audio: options.audio,
       assetCoordinator
+    });
+    this.loop = new GameLoop({
+      source: new AnimationLoopFrameSource(
+        renderer.getSource()
+      ),
+      ...options.loop
     });
     sceneManager.setSceneLoader(
       new RuntimeSceneLoader(assetCoordinator)
@@ -175,13 +193,14 @@ export class Runtime<
 
     this.world.connect();
     this.world.start();
-    const renderer = this.world.renderer.getSource();
-    renderer.setAnimationLoop(() => {
-      this.stats?.begin();
-      const exit = this.world.tick();
-      this.stats?.end();
-      if (exit) {
-        this.stop();
+    this.loop.start({
+      frame: (schedule) => {
+        this.stats?.begin();
+        const exit = this.world.tick(schedule);
+        this.stats?.end();
+        if (exit) {
+          this.stop();
+        }
       }
     });
   }
@@ -194,8 +213,7 @@ export class Runtime<
     this.#isRunning = false;
     this.world.stop();
     this.world.input.exited = true;
-    const renderer = this.world.renderer.getSource();
-    renderer.setAnimationLoop(null);
+    this.loop.stop();
 
     this.canvas.removeEventListener(
       "keypress",

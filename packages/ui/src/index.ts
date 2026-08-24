@@ -34,6 +34,9 @@ export {
 export {
   ThemePreferences
 } from "./theme/components/ThemePreferences.ts";
+export type {
+  ThemePreferencesLayout
+} from "./theme/components/ThemePreferences.ts";
 export {
   resolveThemeColor,
   resolveThemeToken

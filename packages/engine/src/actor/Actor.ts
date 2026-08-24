@@ -200,18 +200,24 @@ export class Actor<
   }
 
   update(
-    deltaTime: number
+    deltaTime: number,
+    alpha = 0
   ) {
     if (!this.pendingForDestruction) {
-      this.componentsRequiringUpdate.forEach((component) => component.update?.(deltaTime));
+      this.componentsRequiringUpdate.forEach(
+        (component) => component.update?.(deltaTime, alpha)
+      );
     }
   }
 
   fixedUpdate(
-    deltaTime: number
+    deltaTime: number,
+    stepIndex = 0
   ) {
     if (!this.pendingForDestruction) {
-      this.componentsRequiringUpdate.forEach((component) => component.fixedUpdate?.(deltaTime));
+      this.componentsRequiringUpdate.forEach(
+        (component) => component.fixedUpdate?.(deltaTime, stepIndex)
+      );
     }
   }
 

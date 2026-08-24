@@ -227,7 +227,6 @@ $ npm run lint
 
 - [Adapters](./docs/internals/adapters.md)
 - [Audio](./docs/internals/audio.md)
-- [FixedTimeStep](./docs/internals/fixed-time-step.md)
 
 ## License
 

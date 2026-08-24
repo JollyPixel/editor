@@ -22,7 +22,7 @@ export async function configureRuntimeDevice<TContext>(
     );
   }
 
-  runtime.world.setFps(fps ?? 60);
+  runtime.loop.scheduler.maxFps = fps ?? Infinity;
   runtime.world.renderer.getSource().setPixelRatio(
     getDevicePixelRatio(isMobile)
   );

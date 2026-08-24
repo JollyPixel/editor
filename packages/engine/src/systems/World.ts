@@ -2,6 +2,7 @@
 import type { AssetCoordinator } from "@jolly-pixel/asset";
 import * as THREE from "three/webgpu";
 import { Input } from "@jolly-pixel/controls";
+import type { FrameSchedule } from "@jolly-pixel/loop";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
@@ -20,7 +21,6 @@ import {
   type GlobalsAdapter,
   BrowserGlobalsAdapter
 } from "../adapters/global.ts";
-import { FixedTimeStep } from "./FixedTimeStep.ts";
 import {
   Logger,
   type LoggerOptions
@@ -74,11 +74,11 @@ export class World<
   context: TContext;
   assetCoordinator: AssetCoordinator;
 
-  readonly loop: FixedTimeStep;
   readonly debug: boolean;
   readonly logger: Logger;
 
   #worldLogger: Logger;
+  #running = false;
 
   constructor(
     renderer: Renderer<T>,
@@ -118,7 +118,6 @@ export class World<
     this.audio = audio;
     this.context = context;
     this.assetCoordinator = assetCoordinator;
-    this.loop = new FixedTimeStep();
 
     sceneManager.bindWorld(this);
     globalsAdapter.setGame(this);
@@ -153,16 +152,20 @@ export class World<
     return this;
   }
 
+  get running(): boolean {
+    return this.#running;
+  }
+
   start() {
     this.#worldLogger.debug("Starting world");
-    this.loop.start();
+    this.#running = true;
 
     return this;
   }
 
   stop() {
     this.#worldLogger.debug("Stopping world");
-    this.loop.stop();
+    this.#running = false;
 
     return this;
   }
@@ -182,45 +185,55 @@ export class World<
     return this;
   }
 
-  setFps(
-    fps: number,
-    fixedFps?: number
-  ) {
-    this.#worldLogger.debug(
-      `Setting FPS: ${fps} (fixed: ${fixedFps ?? fps})`
-    );
-    this.loop.setFps(
-      fps,
-      fixedFps
-    );
+  tick(
+    schedule: FrameSchedule
+  ): boolean {
+    if (!this.#running) {
+      return false;
+    }
 
-    return this;
-  }
+    this.sceneManager.beginFrame();
 
-  tick() {
-    this.#beginFrame();
-    this.loop.tick({
-      fixedUpdate: (fixedDelta) => {
-        const dt = fixedDelta / 1000;
-        this.emit("beforeFixedUpdate", dt);
-        this.sceneManager.fixedUpdate(dt);
-        this.emit("afterFixedUpdate", dt);
-      },
-      update: (_interpolation, delta) => {
-        const dt = delta / 1000;
-        this.emit("beforeUpdate", dt);
-        this.sceneManager.update(dt);
-        this.renderer.draw();
-        this.emit("afterUpdate", dt);
-      }
-    });
+    const fixedDt = schedule.fixedDelta / 1000;
+    for (let stepIndex = 0; stepIndex < schedule.steps; stepIndex++) {
+      this.input.update();
+
+      this.emit(
+        "beforeFixedUpdate",
+        fixedDt
+      );
+      this.sceneManager.fixedUpdate(
+        fixedDt,
+        stepIndex
+      );
+      this.emit(
+        "afterFixedUpdate",
+        fixedDt
+      );
+    }
+    if (schedule.steps === 0) {
+      this.input.update();
+    }
+
+    if (schedule.render) {
+      const dt = schedule.frameDelta / 1000;
+
+      this.emit(
+        "beforeUpdate",
+        dt
+      );
+      this.sceneManager.update(
+        dt,
+        schedule.alpha
+      );
+      this.renderer.draw();
+      this.emit(
+        "afterUpdate",
+        dt
+      );
+    }
 
     return this.#endFrame();
-  }
-
-  #beginFrame() {
-    this.input.update();
-    this.sceneManager.beginFrame();
   }
 
   #endFrame(): boolean {

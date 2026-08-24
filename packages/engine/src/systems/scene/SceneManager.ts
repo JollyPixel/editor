@@ -526,28 +526,30 @@ export class SceneManager<
   }
 
   fixedUpdate(
-    deltaTime: number
+    deltaTime: number,
+    stepIndex = 0
   ) {
     this.#cachedActors.forEach((actor) => {
-      actor.fixedUpdate(deltaTime);
+      actor.fixedUpdate(deltaTime, stepIndex);
     });
-    this.#currentScene?.fixedUpdate(deltaTime);
+    this.#currentScene?.fixedUpdate(deltaTime, stepIndex);
 
     for (const { scene } of this.#appendedScenes.values()) {
-      scene.fixedUpdate(deltaTime);
+      scene.fixedUpdate(deltaTime, stepIndex);
     }
   }
 
   update(
-    deltaTime: number
+    deltaTime: number,
+    alpha = 0
   ) {
     this.#cachedActors.forEach((actor) => {
-      actor.update(deltaTime);
+      actor.update(deltaTime, alpha);
     });
-    this.#currentScene?.update(deltaTime);
+    this.#currentScene?.update(deltaTime, alpha);
 
     for (const { scene } of this.#appendedScenes.values()) {
-      scene.update(deltaTime);
+      scene.update(deltaTime, alpha);
     }
   }
 

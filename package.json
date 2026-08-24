@@ -17,6 +17,7 @@
   },
   "workspaces": [
     "packages/controls",
+    "packages/loop",
     "packages/asset",
     "packages/color",
     "packages/resize-handle",

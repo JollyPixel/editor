@@ -29,6 +29,7 @@ interface RuntimeOptions<TContext = Systems.WorldDefaultContext> {
   context?: TContext;
   audio?: GlobalAudio;
   assets?: RuntimeAssetOptions;
+  loop?: FrameSchedulerOptions;
 }
 
 const runtime = await Runtime.create(canvas, {
@@ -104,10 +105,10 @@ const load = runtime.world.sceneManager.loadScene(
 ```
 
 The runtime prepares `scene.assets` in the background and reports progress to
-the returned `SceneLoad`. Calling `load.allowActivation()` releases a ready
-scene for replacement at the next frame boundary. See the engine
-[SceneManager documentation](../../engine/docs/systems/scene-manager.md) for the
-state model and transition example.
+the returned `SceneLoad`. Calling `load.allowActivation()` tells the load to
+release a ready scene and schedule its replacement at the next frame boundary.
+The engine [SceneManager documentation](../../engine/docs/systems/scene-manager.md)
+includes the state model and a transition example.
 
 ## Explicit asset batches
 
@@ -131,6 +132,7 @@ Each batch owns its totals, failures, status, and completion promise.
 ```ts
 class Runtime<TContext = Systems.WorldDefaultContext> {
   world: Systems.World<THREE.WebGPURenderer, TContext>;
+  readonly loop: GameLoop;
   canvas: HTMLCanvasElement;
   stats?: Stats;
 
@@ -144,6 +146,23 @@ class Runtime<TContext = Systems.WorldDefaultContext> {
   dispose(): void;
 }
 ```
+
+### `loop`
+
+The [`GameLoop`](../../loop/docs/gameloop.md) owns the runtime's frame source and
+its single `FrameScheduler`. It controls the start/stop lifecycle and calls
+`world.tick(schedule)` once per frame. The loop exists from construction.
+Configure its scheduler before the first frame:
+
+```ts
+runtime.loop.scheduler.fixedFps = 60;  // simulation rate
+runtime.loop.scheduler.maxFps = 144;   // render cap, independent of fixedFps
+runtime.loop.timeScale = 0.5;          // slow motion; 0 pauses the simulation
+```
+
+Set `timeScale` on the loop. When paused, the loop writes zero to the scheduler
+while retaining the requested scale. Use `runtime.start()` and `runtime.stop()`
+to drive the loop.
 
 ## Bootstrap loading screen
 
