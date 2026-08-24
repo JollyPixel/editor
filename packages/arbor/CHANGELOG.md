@@ -1,5 +1,11 @@
 # @jolly-pixel/arbor
 
+## 1.1.0
+
+### Minor Changes
+
+- [#488](https://github.com/JollyPixel/editor/pull/488) [`84c397e`](https://github.com/JollyPixel/editor/commit/84c397efa20a1749f8296f110bf019f7286a894c) Thanks [@fraxken](https://github.com/fraxken)! - Rename fs-tree to arbor
+
 ## 1.0.1
 
 ### Patch Changes

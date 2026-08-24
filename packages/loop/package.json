@@ -38,7 +38,7 @@
     "@openally/emitt": "1.0.1"
   },
   "devDependencies": {
-    "@jolly-pixel/ui": "1.0.1",
+    "@jolly-pixel/ui": "1.1.0",
     "tinybench": "6.1.3"
   }
 }

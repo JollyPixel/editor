@@ -1,7 +1,7 @@
 {
   "name": "@jolly-pixel/pixel-draw.renderer",
   "description": "Jolly Pixel Pixel Art drawer and renderer",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "type": "module",
   "exports": {
     ".": {
@@ -53,7 +53,7 @@
     "js-base64": "3.9.2"
   },
   "peerDependencies": {
-    "@jolly-pixel/asset-server": "1.0.0",
+    "@jolly-pixel/asset-server": "1.0.1",
     "@jolly-pixel/event-store": "2.0.0"
   },
   "peerDependenciesMeta": {

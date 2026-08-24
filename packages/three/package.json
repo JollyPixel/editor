@@ -41,6 +41,6 @@
   },
   "devDependencies": {
     "@jolly-pixel/network": "1.1.0",
-    "@jolly-pixel/ui": "1.0.1"
+    "@jolly-pixel/ui": "1.1.0"
   }
 }
