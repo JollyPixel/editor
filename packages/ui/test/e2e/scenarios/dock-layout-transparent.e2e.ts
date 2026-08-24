@@ -68,4 +68,63 @@ test.describe("Dock layout transparent scenario", () => {
       measurements.controlBottom - 1
     );
   });
+
+  test("layout=stack keeps the controls at the top of the pane", async({ page }) => {
+    await gotoGallery(page, { example: kExample });
+
+    const chrome = page.locator("jolly-pane[key='chrome']");
+    const preferences = chrome.locator("jolly-theme-preferences");
+    await expect(chrome.locator("jolly-select select")).toBeVisible();
+
+    // The stretch only shows once the pane body has room to spare, which is
+    // what a locked chrome pane above a shorter sibling ends up with.
+    await chrome.evaluate((pane) => {
+      pane.style.flex = "0 0 auto";
+      pane.style.height = "400px";
+    });
+
+    // Every host down this chain is `display: contents`, so the button group
+    // and the select are the first elements with a real box.
+    async function measure(): Promise<{
+      display: string;
+      themeHeight: number;
+      extent: number;
+    }> {
+      return preferences.evaluate((element) => {
+        function box(
+          control: string,
+          inner: string
+        ): DOMRect {
+          return element
+            .shadowRoot!.querySelector(control)!
+            .shadowRoot!.querySelector(inner)!
+            .getBoundingClientRect();
+        }
+        const theme = box("jolly-theme-control", "jolly-button-group");
+        const density = box("jolly-density-control", "jolly-select");
+
+        return {
+          display: getComputedStyle(element).display,
+          themeHeight: theme.height,
+          extent: density.bottom - theme.top
+        };
+      });
+    }
+
+    // Flattened into the pane's column, the controls are flex items whose
+    // "1 1 96px" basis is read as height, so they stretch into the spare room
+    // and push density away from theme. A grid host keeps both at their own
+    // height, at the top of the pane.
+    const flattened = await measure();
+    expect(flattened.display).toBe("contents");
+
+    await preferences.evaluate(
+      (element) => element.setAttribute("layout", "stack")
+    );
+    const stacked = await measure();
+
+    expect(stacked.display).toBe("grid");
+    expect(stacked.themeHeight).toBeLessThan(flattened.themeHeight);
+    expect(stacked.extent).toBeLessThan(flattened.extent);
+  });
 });

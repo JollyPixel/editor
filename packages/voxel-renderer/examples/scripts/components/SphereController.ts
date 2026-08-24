@@ -5,6 +5,25 @@ import {
   Actor,
   ActorComponent
 } from "@jolly-pixel/engine";
+import { Interpolated, lerpNumber } from "@jolly-pixel/loop";
+
+interface Translation {
+  x: number;
+  y: number;
+  z: number;
+}
+
+function lerpTranslation(
+  previous: Translation,
+  current: Translation,
+  alpha: number
+): Translation {
+  return {
+    x: lerpNumber(previous.x, current.x, alpha),
+    y: lerpNumber(previous.y, current.y, alpha),
+    z: lerpNumber(previous.z, current.z, alpha)
+  };
+}
 
 export interface SphereBehaviorOptions {
   /** Rapier dynamic body representing the sphere. */
@@ -30,11 +49,20 @@ export interface SphereBehaviorOptions {
  * Diagonal input is normalised so all directions have equal force magnitude.
  * The component registers for per-frame updates automatically because it
  * defines an update() method (the engine detects this in Actor.#initializeComponent).
+ *
+ * Motion lives in fixedUpdate(), which is what fixed steps are for: the
+ * simulation advances at a constant rate whatever the display does. update()
+ * only draws, interpolating between the last two steps with the frame's alpha
+ * so a 60Hz simulation stays smooth on a 144Hz screen.
  */
 export class SphereBehavior extends ActorComponent {
   #body: RigidBody;
   #mesh: THREE.Mesh;
   #force: number;
+  #position = new Interpolated<Translation>(
+    { x: 0, y: 0, z: 0 },
+    lerpTranslation
+  );
 
   constructor(
     actor: Actor<any>,
@@ -50,7 +78,7 @@ export class SphereBehavior extends ActorComponent {
     this.#force = options.force ?? 0.15;
   }
 
-  update(_dt: number): void {
+  fixedUpdate(): void {
     const { input } = this.actor.world;
 
     let x = 0;
@@ -78,10 +106,16 @@ export class SphereBehavior extends ActorComponent {
       );
     }
 
-    // Sync the Three.js mesh to the physics body position.
-    // update() runs after the last fixed-update batch each frame, so the
-    // position read here always reflects the most recent Rapier step.
-    const pos = this.#body.translation();
-    this.#mesh.position.set(pos.x, pos.y, pos.z);
+    // The Rapier step for this tick already ran (world "beforeFixedUpdate"),
+    // so this is the body's position as of the step just taken.
+    this.#position.push(this.#body.translation());
+  }
+
+  update(
+    _dt: number,
+    alpha = 0
+  ): void {
+    const { x, y, z } = this.#position.at(alpha);
+    this.#mesh.position.set(x, y, z);
   }
 }

@@ -2,8 +2,14 @@
 import { describe, test, beforeEach, mock } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { FrameScheduler } from "@jolly-pixel/loop";
+
 // Import Internal Dependencies
 import { World } from "../../src/systems/World.ts";
+
+// CONSTANTS
+const kFixedDelta60 = 1000 / 60;
 
 function createMockSceneManager() {
   return {
@@ -64,11 +70,25 @@ describe("Systems.World", () => {
   let sceneManager: ReturnType<typeof createMockSceneManager>;
   let renderer: ReturnType<typeof createMockRenderer>;
   let input: ReturnType<typeof createMockInput>;
+  // The world neither reads a clock nor owns a scheduler, so the test owns
+  // both: it decides the frame, the world executes it.
+  let now: number;
+  let scheduler: FrameScheduler;
+
+  function tick(
+    deltaMs = 0
+  ): boolean {
+    now += deltaMs;
+
+    return world.tick(scheduler.advance(now));
+  }
 
   beforeEach(() => {
     sceneManager = createMockSceneManager();
     renderer = createMockRenderer();
     input = createMockInput();
+    now = 0;
+    scheduler = new FrameScheduler();
 
     // @ts-expect-error - using mocks
     world = new World(renderer, {
@@ -82,71 +102,98 @@ describe("Systems.World", () => {
 
   describe("tick()", () => {
     test("should call beginFrame and endFrame", () => {
-      world.loop.start();
+      world.start();
 
-      world.tick();
+      tick();
 
-      assert.strictEqual(input.update.mock.callCount(), 1);
       assert.strictEqual(sceneManager.beginFrame.mock.callCount(), 1);
       assert.strictEqual(sceneManager.endFrame.mock.callCount(), 1);
     });
 
     test("should return true when input.exited is true", () => {
-      world.loop.start();
+      world.start();
       input.exited = true;
 
-      const result = world.tick();
+      const result = tick();
 
       assert.strictEqual(result, true);
       assert.strictEqual(renderer.clear.mock.callCount(), 1);
     });
 
     test("should return false when input.exited is false", () => {
-      world.loop.start();
+      world.start();
 
-      const result = world.tick();
+      assert.strictEqual(tick(), false);
+    });
 
-      assert.strictEqual(result, false);
+    test("should do nothing before start()", () => {
+      assert.strictEqual(tick(16), false);
+
+      assert.strictEqual(sceneManager.beginFrame.mock.callCount(), 0);
+      assert.strictEqual(sceneManager.update.mock.callCount(), 0);
+    });
+
+    test("should run one fixed step per accumulated fixed delta", () => {
+      world.start();
+      tick();
+
+      // 80ms is four steps of 16.66ms, plus change.
+      tick(80);
+
+      const indexes = sceneManager.fixedUpdate.mock.calls
+        .map(({ arguments: args }) => args[1]);
+      assert.deepStrictEqual(indexes, [0, 1, 2, 3]);
+
+      const [deltaTime] = sceneManager.fixedUpdate.mock.calls[0].arguments;
+      assert.strictEqual(deltaTime, kFixedDelta60 / 1000);
+    });
+
+    test("should forward the frame delta and alpha to update()", () => {
+      world.start();
+      tick();
+
+      tick(80);
+
+      const [deltaTime, alpha] = sceneManager.update.mock.calls.at(-1)!.arguments;
+      assert.strictEqual(deltaTime, 0.08);
+      // 80ms leaves 13.33ms in the accumulator, four fifths of a step.
+      assert.ok(Math.abs(alpha - 0.8) < 1e-9, `alpha was ${alpha}`);
+    });
+
+    test("should keep stepping but stop drawing on a capped frame", () => {
+      scheduler.maxFps = 30;
+      world.start();
+      // The first frame always draws: it primes the scheduler.
+      tick();
+      sceneManager.update.mock.resetCalls();
+      renderer.draw.mock.resetCalls();
+
+      tick(20);
+
+      assert.strictEqual(sceneManager.fixedUpdate.mock.callCount(), 1);
+      assert.strictEqual(sceneManager.update.mock.callCount(), 0);
+      assert.strictEqual(renderer.draw.mock.callCount(), 0);
     });
 
     test("should emit events in correct order", () => {
       const events: string[] = [];
+
+      world.start();
+      tick();
 
       world.on("beforeFixedUpdate", () => events.push("beforeFixedUpdate"));
       world.on("afterFixedUpdate", () => events.push("afterFixedUpdate"));
       world.on("beforeUpdate", () => events.push("beforeUpdate"));
       world.on("afterUpdate", () => events.push("afterUpdate"));
 
-      world.start();
+      tick(20);
 
-      // Wait enough simulated time for a fixed step to fire
-      // FixedTimeStep uses performance.now() internally.
-      // We need to call tick() twice: first to initialize the timer,
-      // then after a delay to accumulate enough delta.
-      world.tick();
-
-      // Simulate passage of time by calling tick again
-      // The InternalTimer will compute delta from performance.now()
-      // On the first tick the delta may be ~0, so events may not fire.
-      // Let's force enough time by doing multiple ticks.
-      const startTime = performance.now();
-      while (performance.now() - startTime < 20) {
-        // busy-wait to let at least one fixed step accumulate
-      }
-      world.tick();
-
-      assert.ok(events.includes("beforeFixedUpdate"), "should emit beforeFixedUpdate");
-      assert.ok(events.includes("afterFixedUpdate"), "should emit afterFixedUpdate");
-      assert.ok(events.includes("beforeUpdate"), "should emit beforeUpdate");
-      assert.ok(events.includes("afterUpdate"), "should emit afterUpdate");
-
-      // Verify order: beforeFixedUpdate comes before afterFixedUpdate
-      const bfi = events.indexOf("beforeFixedUpdate");
-      const afi = events.indexOf("afterFixedUpdate");
-      const bu = events.indexOf("beforeUpdate");
-      const au = events.indexOf("afterUpdate");
-      assert.ok(bfi < afi, "beforeFixedUpdate should come before afterFixedUpdate");
-      assert.ok(bu < au, "beforeUpdate should come before afterUpdate");
+      assert.deepStrictEqual(events, [
+        "beforeFixedUpdate",
+        "afterFixedUpdate",
+        "beforeUpdate",
+        "afterUpdate"
+      ]);
     });
 
     test("should emit deltaTime in seconds for fixedUpdate hooks", () => {
@@ -156,19 +203,10 @@ describe("Systems.World", () => {
       });
 
       world.start();
-      world.tick();
+      tick();
+      tick(20);
 
-      const startTime = performance.now();
-      while (performance.now() - startTime < 20) {
-        // busy-wait
-      }
-      world.tick();
-
-      if (receivedDt > 0) {
-        // fixedDelta should be ~1/60 in seconds (~0.01667)
-        assert.ok(receivedDt > 0.01, `deltaTime should be > 0.01, got ${receivedDt}`);
-        assert.ok(receivedDt < 0.05, `deltaTime should be < 0.05, got ${receivedDt}`);
-      }
+      assert.strictEqual(receivedDt, kFixedDelta60 / 1000);
     });
 
     test("should emit deltaTime in seconds for update hooks", () => {
@@ -178,27 +216,69 @@ describe("Systems.World", () => {
       });
 
       world.start();
-      world.tick();
+      tick();
+      tick(20);
 
-      const startTime = performance.now();
-      while (performance.now() - startTime < 20) {
-        // busy-wait
-      }
-      world.tick();
+      assert.strictEqual(receivedDt, 0.02);
+    });
+  });
 
-      assert.ok(receivedDt > 0, `deltaTime should be > 0, got ${receivedDt}`);
+  describe("input sampling", () => {
+    test("should sample input once per fixed step", () => {
+      world.start();
+      tick();
+      input.update.mock.resetCalls();
+
+      // Three steps: the first sees the press edge, the next two diff against
+      // it and correctly do not, so a jump fires once rather than three times.
+      tick(3 * kFixedDelta60);
+
+      assert.strictEqual(sceneManager.fixedUpdate.mock.callCount(), 3);
+      assert.strictEqual(input.update.mock.callCount(), 3);
+    });
+
+    test("should sample input once on a frame that runs no step", () => {
+      world.start();
+      tick();
+      input.update.mock.resetCalls();
+
+      // A 144Hz frame against a 60Hz simulation: no step is due.
+      tick(1000 / 144);
+
+      assert.strictEqual(sceneManager.fixedUpdate.mock.callCount(), 0);
+      assert.strictEqual(input.update.mock.callCount(), 1);
+    });
+
+    test("should sample before the step that reads the sample", () => {
+      const stepsWhenSampled: number[] = [];
+      input.update.mock.mockImplementation(() => {
+        stepsWhenSampled.push(sceneManager.fixedUpdate.mock.callCount());
+      });
+
+      world.start();
+      tick();
+      tick(1000 / 144);
+      tick(1000 / 144);
+      tick(1000 / 144);
+
+      // Every sample lands before the step it feeds, never after it, so no
+      // edge is diffed away before a step has seen it.
+      assert.deepStrictEqual(stepsWhenSampled, [0, 0, 0, 0]);
+      assert.strictEqual(sceneManager.fixedUpdate.mock.callCount(), 1);
     });
   });
 
   describe("start() / stop()", () => {
-    test("should delegate to loop.start() and loop.stop()", () => {
-      // After start, tick should process frames
+    test("should gate ticking", () => {
       world.start();
-      world.tick();
+      assert.strictEqual(world.running, true);
+      tick(20);
       assert.strictEqual(sceneManager.beginFrame.mock.callCount(), 1);
 
-      // After stop, loop.tick becomes a no-op (but beginFrame/endFrame still called by world.tick)
       world.stop();
+      assert.strictEqual(world.running, false);
+      tick(20);
+      assert.strictEqual(sceneManager.beginFrame.mock.callCount(), 1);
     });
   });
 
@@ -222,7 +302,7 @@ describe("Systems.World", () => {
       world.start();
 
       world.dispose();
-      world.tick();
+      tick(20);
 
       assert.strictEqual(
         sceneManager.update.mock.callCount(),
@@ -232,18 +312,30 @@ describe("Systems.World", () => {
     });
   });
 
-  describe("setFps()", () => {
-    test("should update loop FPS settings", () => {
-      world.setFps(30, 30);
+  describe("scheduling", () => {
+    test("should run whatever the caller's scheduler decided", () => {
+      scheduler.fixedFps = 30;
+      scheduler.timeScale = 0.5;
 
-      assert.strictEqual(world.loop.framesPerSecond, 30);
-      assert.strictEqual(world.loop.fixedFramesPerSecond, 30);
+      world.start();
+      tick();
+      // Half speed: 100ms of wall clock is 50ms of simulation, one step of
+      // 33.3ms with the remainder left in the accumulator.
+      tick(100);
+
+      assert.strictEqual(sceneManager.fixedUpdate.mock.callCount(), 1);
     });
 
-    test("should return this for chaining", () => {
-      const result = world.setFps(30);
+    test("should not advance a scheduler of its own", () => {
+      world.start();
+      // Two ticks off the same schedule run twice: the world holds no
+      // accumulator, so replaying one is not de-duplicated.
+      const schedule = scheduler.advance(0);
+      world.tick(schedule);
+      world.tick(schedule);
 
-      assert.strictEqual(result, world);
+      assert.strictEqual(sceneManager.beginFrame.mock.callCount(), 2);
+      assert.strictEqual(scheduler.frameCount, 1);
     });
   });
 
@@ -255,13 +347,8 @@ describe("Systems.World", () => {
       world.off("beforeUpdate", handler);
 
       world.start();
-      world.tick();
-
-      const startTime = performance.now();
-      while (performance.now() - startTime < 20) {
-        // busy-wait
-      }
-      world.tick();
+      tick();
+      tick(20);
 
       assert.strictEqual(handler.mock.callCount(), 0);
     });

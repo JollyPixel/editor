@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Frame inspector — @jolly-pixel/loop</title>
+  <link rel="stylesheet" href="/main.css">
+</head>
+
+<body>
+  <main>
+    <h1>
+      Frame inspector
+      <small>Live plot of every decision the scheduler makes. F3 toggles the panel.</small>
+    </h1>
+    <canvas id="plot"></canvas>
+    <div class="legend">
+      <span><i class="swatch" style="background:#4a90d9"></i>normal frame</span>
+      <span><i class="swatch" style="background:#33556f"></i>no fixed step</span>
+      <span><i class="swatch" style="background:#e0a531"></i>clamped</span>
+      <span><i class="swatch" style="background:#e05252"></i>panicked (wins over clamped)</span>
+      <span><i class="swatch" style="background:#5fd08a"></i>accumulator</span>
+    </div>
+    <p class="hint">Three lanes, oldest frame on the left: <b>frame delta</b>
+      (time the frame took), <b>steps per frame</b> (fixed updates it ran, with
+      the step budget dashed), <b>accumulator</b> (simulation time owed, always
+      under one fixed delta). Each lane prints the value its top edge stands
+      for &mdash; it auto-scales, so read it before comparing two plots. A
+      vertical dashed line marks the frame where a setting changed.</p>
+    <p class="hint">Healthy: steady blue bars, steps alternating between the
+      same one or two values, a sawtooth accumulator. Raise <b>fixedFps</b>
+      above your display rate to see steps double up; cap <b>maxFps</b> below it
+      to see frames stop being drawn while the simulation keeps stepping.</p>
+  </main>
+  <jolly-scope>
+    <jolly-dock-layout storage-key="loop-examples:layout">
+      <jolly-dock id="tools" key="tools" side="right" align="start" overlay collapsible size="340"></jolly-dock>
+    </jolly-dock-layout>
+  </jolly-scope>
+  <script type="module" src="./scripts/demo-inspector.ts"></script>
+</body>
+
+</html>

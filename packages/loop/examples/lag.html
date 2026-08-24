@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lag injector — @jolly-pixel/loop</title>
+  <link rel="stylesheet" href="/main.css">
+</head>
+
+<body>
+  <main>
+    <h1>
+      Lag injector
+      <small>Stall the frame on purpose, then watch what the lag policy does about it.</small>
+    </h1>
+    <canvas id="plot"></canvas>
+    <div class="legend">
+      <span><i class="swatch" style="background:#4a90d9"></i>normal frame</span>
+      <span><i class="swatch" style="background:#33556f"></i>no fixed step</span>
+      <span><i class="swatch" style="background:#e0a531"></i>clamped</span>
+      <span><i class="swatch" style="background:#e05252"></i>panicked (wins over clamped)</span>
+      <span><i class="swatch" style="background:#5fd08a"></i>accumulator</span>
+    </div>
+    <p class="hint">Sustained overload is the one to watch. Burning more than
+      the <b>step budget</b> per frame makes every frame panic: <b>dropped</b>
+      climbs, and <b>steps per frame</b> pins to the dashed budget line instead
+      of climbing with the backlog. The frame rate settles low &mdash; the work
+      really is slow &mdash; but it settles. Raise <b>maxStepsPerFrame</b>
+      without the budget and each late frame would schedule more steps than the
+      last, which is the spiral this policy exists to prevent.</p>
+    <p class="hint">Replay buttons freeze a deterministic tape on the plot and
+      the totals below it; <b>Back to live</b> returns to the running loop.</p>
+  </main>
+  <jolly-scope>
+    <jolly-dock-layout storage-key="loop-examples:layout">
+      <jolly-dock id="tools" key="tools" side="right" align="start" overlay collapsible size="340"></jolly-dock>
+    </jolly-dock-layout>
+  </jolly-scope>
+  <script type="module" src="./scripts/demo-lag.ts"></script>
+</body>
+
+</html>

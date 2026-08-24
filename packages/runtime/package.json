@@ -36,6 +36,7 @@
   "dependencies": {
     "@jolly-pixel/asset": "^1.0.0",
     "@jolly-pixel/engine": "^4.0.0",
+    "@jolly-pixel/loop": "^1.0.0",
     "@jolly-pixel/ui": "^1.0.1",
     "@pmndrs/detect-gpu": "6.0.17"
   },

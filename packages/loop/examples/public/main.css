@@ -1,0 +1,81 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: #12121a;
+  color: #e7e7ef;
+  font: 13px/1.5 system-ui, sans-serif;
+}
+
+main {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 20px;
+  overflow: hidden;
+}
+
+h1 {
+  margin: 0;
+  font: 600 15px/1.2 monospace;
+  letter-spacing: 0.02em;
+}
+
+h1 small {
+  display: block;
+  margin-top: 4px;
+  font: 11px/1.4 system-ui, sans-serif;
+  color: #9a9ab0;
+  letter-spacing: 0;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  background: #191922;
+  border: 1px solid #2b2b3a;
+  border-radius: 6px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  font: 11px/1.4 monospace;
+  color: #9a9ab0;
+}
+
+.legend b {
+  color: #e7e7ef;
+  font-weight: 600;
+}
+
+.swatch {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 5px;
+  border-radius: 2px;
+  vertical-align: baseline;
+}
+
+.hint {
+  font: 11px/1.4 monospace;
+  color: #6f6f88;
+}
+
+/* The dock lives outside `main`, so it never sits on top of the plots. */
+jolly-scope {
+  position: relative;
+  z-index: 2;
+}

@@ -49,16 +49,6 @@ jolly-floating {
 }
 
 /*
- * ThemePreferences flattens its controls for horizontal action rows. Inside
- * this vertical pane that would turn their 96px flex basis into height and
- * stretch the Configuration pane, so keep them in a local grid instead.
- */
-#tools > jolly-pane:first-of-type jolly-theme-preferences {
-  display: grid;
-  gap: var(--jolly-row-gap, 4px);
-}
-
-/*
  * `grow` claims leftover flex space unconditionally, which is right for a
  * lone pane but wastes space here. The content pane's default flex-shrink
  * is 0 (`jolly-dock`'s non-grow panes are meant to stack and let the dock

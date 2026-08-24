@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interpolation — @jolly-pixel/loop</title>
+  <link rel="stylesheet" href="/main.css">
+</head>
+
+<body>
+  <main>
+    <h1>
+      Interpolation
+      <small>Two squares, ten fixed steps per second. One reads alpha, one does not.</small>
+    </h1>
+    <canvas id="stage"></canvas>
+    <div class="legend">
+      <span><i class="swatch" style="background:#5fd08a"></i>interpolated, reads
+        <b>schedule.alpha</b></span>
+      <span><i class="swatch" style="background:#e05252"></i>raw, reads the last
+        fixed step</span>
+    </div>
+    <p class="hint">At <b>fixedFps: 10</b> the raw square visibly stutters at ten
+      jumps per second while the interpolated one glides. Drag fixedFps up to 60
+      and the difference disappears.</p>
+  </main>
+  <jolly-scope>
+    <jolly-dock-layout storage-key="loop-examples:layout">
+      <jolly-dock id="tools" key="tools" side="right" align="start" overlay collapsible size="340"></jolly-dock>
+    </jolly-dock-layout>
+  </jolly-scope>
+  <script type="module" src="./scripts/demo-interpolation.ts"></script>
+</body>
+
+</html>

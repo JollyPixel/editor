@@ -77,17 +77,19 @@ export abstract class Scene<
   start(): void { }
 
   /**
-   * Called every frame (variable rate).
+   * Runs per rendered frame with interpolation `alpha` in [0, 1).
    */
   update(
-    _deltaTime: number
+    _deltaTime: number,
+    _alpha?: number
   ): void { }
 
   /**
-   * Called every fixed step (deterministic rate).
+   * Runs per fixed step. `stepIndex` starts at zero for each frame.
    */
   fixedUpdate(
-    _deltaTime: number
+    _deltaTime: number,
+    _stepIndex?: number
   ): void { }
 
   /**

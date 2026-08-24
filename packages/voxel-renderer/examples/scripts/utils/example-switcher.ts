@@ -63,6 +63,9 @@ export function createExamplePane(
     });
 
   const preferences = document.createElement("jolly-theme-preferences");
+  // Two rows at the top of the pane rather than flattened into it, see
+  // @jolly-pixel/ui docs/api/theme/theme-preferences.md.
+  preferences.layout = "stack";
   preferences.storageKey = "voxel-renderer-examples";
   chrome.element.append(preferences);
 

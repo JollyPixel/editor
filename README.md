@@ -20,6 +20,7 @@ Click on one of the links to access the documentation of the package;
 
 - [@jolly-pixel/engine](./packages/engine) - Entity Component System (ECS)
 - [@jolly-pixel/controls](./packages/controls) - Input controls (Screen, Mouse, Touchpad, Keyboard, Gamepad)
+- [@jolly-pixel/loop](./packages/loop) - Frame scheduling and time primitives (FrameScheduler, GameLoop)
 - [@jolly-pixel/runtime](./packages/runtime) - Browser/Electron runtime
 - [@jolly-pixel/asset](./packages/asset) - Platform-agnostic asset references and loading orchestration
 

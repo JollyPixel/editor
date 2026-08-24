@@ -48,8 +48,9 @@ function createFakeRuntime(
   const startCalls: string[] = [];
   const runtime = {
     canvas,
+    // configureRuntimeDevice writes the detected refresh rate here.
+    loop: { scheduler: { maxFps: Infinity } },
     world: {
-      setFps: () => void 0,
       renderer: {
         getSource: () => {
           return { setPixelRatio: () => void 0 };

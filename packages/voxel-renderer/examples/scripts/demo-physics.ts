@@ -186,7 +186,9 @@ scene.add(sphereMesh);
 
 // ── Physics integration ───────────────────────────────────────────────────────
 // Step Rapier once per fixed tick (60 Hz), before sceneManager.fixedUpdate().
-// SphereController.update() handles input, impulse application, and mesh sync.
+// SphereController then reads input, applies its impulse and records the
+// stepped position in its fixedUpdate(); its update() only interpolates the
+// mesh between the last two steps.
 world.on("beforeFixedUpdate", (_dt) => {
   rapierWorld.step();
 });

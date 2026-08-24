@@ -35,25 +35,29 @@ import "./ThemeControl.ts";
 const kThemeSuffix = ":theme";
 const kDensitySuffix = ":density";
 
+export type ThemePreferencesLayout = "inline" | "stack";
+
 /**
  * Persists and applies a theme and density pair to a scope host.
  */
 @customElement("jolly-theme-preferences")
 export class ThemePreferences extends LitElement {
-  /*
-   * `display: contents`, deliberately: it lets `jolly-theme-control` and
-   * `jolly-density-control` wrap independently as direct items of whatever
-   * flex row hosts this (the gallery header's `.actions` slot included, see
-   * `shell.e2e.ts`'s narrow-header test). `getBoundingClientRect()` on a
-   * `contents` host is degenerate, empty rect, no descendants, so anything
-   * that measures this element directly (`Pane.occupiedSize()`) has to walk
-   * into it instead of trusting its own rect — see `Pane.ts`.
-   */
   static override styles = css`
     :host {
       display: contents;
     }
+
+    :host([layout="stack"]) {
+      display: grid;
+      gap: var(--jolly-row-gap, 4px);
+    }
   `;
+
+  @property({
+    type: String,
+    reflect: true
+  })
+  declare layout: ThemePreferencesLayout;
 
   @property({ attribute: false })
   declare target: HTMLElement | null;
@@ -76,6 +80,7 @@ export class ThemePreferences extends LitElement {
   constructor() {
     super();
 
+    this.layout = "inline";
     this.target = null;
     this.storageKey = "";
     this.storage = new LocalStorageAdapter();
