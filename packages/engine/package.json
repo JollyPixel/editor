@@ -1,7 +1,7 @@
 {
   "name": "@jolly-pixel/engine",
   "description": "Minimal and opiniated ECS framework on top of three.js.",
-  "version": "4.0.0",
+  "version": "5.0.0",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -33,8 +33,8 @@
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "@jolly-pixel/asset": "^1.0.0",
-    "@jolly-pixel/controls": "1.0.0",
+    "@jolly-pixel/asset": "^1.1.0",
+    "@jolly-pixel/controls": "2.0.0",
     "@jolly-pixel/loop": "1.0.0",
     "@openally/emitt": "1.0.1",
     "picomatch": "^4.0.3",

@@ -1,5 +1,14 @@
 # @jolly-pixel/voxel.renderer
 
+## 3.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`66ee3e0`](https://github.com/JollyPixel/editor/commit/66ee3e0740bcf6ec96a507ad47c9d565a9750a48), [`18842ab`](https://github.com/JollyPixel/editor/commit/18842abe5ad347f63eacf8254d0685cba235adee), [`e83c39b`](https://github.com/JollyPixel/editor/commit/e83c39bdc271493400eecce3acd9b6568262f845), [`cd200eb`](https://github.com/JollyPixel/editor/commit/cd200ebf5440b27cecc74221104deae7e7bf9be6)]:
+  - @jolly-pixel/engine@5.0.0
+  - @jolly-pixel/asset@1.1.0
+  - @jolly-pixel/asset-server@1.0.1
+
 ## 3.0.0
 
 ### Major Changes

@@ -1,7 +1,7 @@
 {
   "name": "@jolly-pixel/asset-server",
   "description": "Back-end asset orchestration: event-sourced projection, reconciliation and catalog delivery",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "imports": {
     "#src/*": "./src/*"
@@ -62,7 +62,7 @@
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "@jolly-pixel/asset": "1.0.0",
+    "@jolly-pixel/asset": "1.1.0",
     "@jolly-pixel/event-store": "2.0.0",
     "@jolly-pixel/network": "1.1.0",
     "@openally/emitt": "1.0.1",
