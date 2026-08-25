@@ -12,6 +12,10 @@
       "types": "./dist/feedback/index.d.ts",
       "default": "./dist/feedback/index.js"
     },
+    "./network": {
+      "types": "./dist/network/index.d.ts",
+      "default": "./dist/network/index.js"
+    },
     "./stats": {
       "types": "./dist/stats/index.d.ts",
       "default": "./dist/stats/index.js"
@@ -52,13 +56,20 @@
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
   "peerDependencies": {
+    "@jolly-pixel/network": "^1.1.0",
     "lit": "^3.3.0"
+  },
+  "peerDependenciesMeta": {
+    "@jolly-pixel/network": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@jolly-pixel/color": "1.0.0",
     "@jolly-pixel/resize-handle": "1.1.0"
   },
   "devDependencies": {
+    "@jolly-pixel/network": "1.1.0",
     "lit": "3.3.3"
   }
 }

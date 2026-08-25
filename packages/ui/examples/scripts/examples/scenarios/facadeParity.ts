@@ -4,7 +4,7 @@ import { Pane } from "../../../../src/index.ts";
 
 /**
  * Built entirely through the builder facade rather than markup, proving the
- * Tweakpane-shaped ergonomics `PLAN.md` promises for P3. It floats near the
+ * Tweakpane-shaped ergonomics the facade exists to provide. It floats near the
  * top left rather than mounting inside this card, since that is what `Pane`
  * does on its own.
  */

@@ -223,7 +223,7 @@ export class Client extends Emitter<ClientEventMap> {
 
     match(envelope)
       .with({ kind: "message" }, (envelope) => this.#handleRoomMessage(room, envelope))
-      .with({ kind: "sync" }, (envelope) => this.#handleSync(peers, envelope))
+      .with({ kind: "sync" }, (envelope) => this.#handleSync(room, peers, envelope))
       .with({ kind: "peer-joined" }, (envelope) => this.#handlePeerJoined(room, peers, envelope))
       .with({ kind: "peer-left" }, (envelope) => this.#handlePeerLeft(room, peers, envelope))
       .with({ kind: "peer-presence" }, (envelope) => this.#handlePeerPresence(room, peers, envelope))
@@ -240,6 +240,7 @@ export class Client extends Emitter<ClientEventMap> {
   }
 
   #handleSync(
+    room: InternalRoom,
     peers: Map<string, Peer>,
     envelope: Extract<Envelope, { kind: "sync"; }>
   ): void {
@@ -250,6 +251,10 @@ export class Client extends Emitter<ClientEventMap> {
         presence: member.presence
       });
     }
+
+    room.emit("sync", {
+      clientIds: envelope.members.map((member) => member.clientId)
+    });
   }
 
   #handlePeerJoined(

@@ -82,6 +82,12 @@ export {
   PresenceElement,
   type PresencePeer
 } from "./peer/Presence.ts";
+export {
+  NullPresenceSource,
+  type LockState,
+  type PresenceSource
+} from "./peer/PresenceSource.ts";
+export { toPresencePeers } from "./peer/toPresencePeers.ts";
 
 // Icons
 export {

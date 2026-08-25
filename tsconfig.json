@@ -11,6 +11,12 @@
       "path": "./packages/resize-handle"
     },
     {
+      "path": "./packages/event-store"
+    },
+    {
+      "path": "./packages/network"
+    },
+    {
       "path": "./packages/ui"
     },
     {
@@ -27,12 +33,6 @@
     },
     {
       "path": "./packages/runtime"
-    },
-    {
-      "path": "./packages/event-store"
-    },
-    {
-      "path": "./packages/network"
     },
     {
       "path": "./packages/asset-server"

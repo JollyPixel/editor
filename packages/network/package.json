@@ -13,7 +13,10 @@
     },
     "./plugins/*.ts": "./dist/plugins/*.js",
     "./transport/*.ts": "./dist/transport/*.js",
-    "./client": "./dist/client/index.js"
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "default": "./dist/client/index.js"
+    }
   },
   "scripts": {
     "prepublish": "rimraf ./dist && tsc -b",

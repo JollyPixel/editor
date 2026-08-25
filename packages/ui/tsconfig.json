@@ -14,6 +14,9 @@
   "references": [
     {
       "path": "../resize-handle"
+    },
+    {
+      "path": "../network"
     }
   ]
 }

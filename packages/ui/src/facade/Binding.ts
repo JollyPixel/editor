@@ -19,11 +19,13 @@ interface BindableElement extends HTMLElement {
   label: string;
   disabled: boolean;
   align: FieldAlign;
+  path: string | null;
 }
 
 export interface BindingOptions<TValue> extends DispatchOptions<TValue> {
   label?: string;
   align?: FieldAlign;
+  path?: string;
 }
 
 export interface BindingChangeEvent<TValue> {
@@ -63,6 +65,7 @@ export class Binding<TObject extends object, TKey extends keyof TObject> {
     // of a row's controls naturally fill it; every other control keeps the
     // leading default.
     this.#bindable.align = options.align ?? (tag === "jolly-checkbox" ? "end" : "start");
+    this.#bindable.path = options.path ?? null;
     this.#bindable.value = value;
     this.element = this.#bindable;
 

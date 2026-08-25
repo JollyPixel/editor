@@ -12,6 +12,10 @@ export interface RoomPeerPresenceEvent extends RoomPeerEvent {
   patch: PeerMetadata;
 }
 
+export interface RoomSyncEvent {
+  clientIds: string[];
+}
+
 export interface RoomDeniedEvent {
   event: string;
   reason: string;
@@ -27,6 +31,7 @@ export interface RoomErrorEvent {
 
 export type RoomEventMap<ServerMessage = unknown> = {
   message: (payload: ServerMessage) => void;
+  sync: (event: RoomSyncEvent) => void;
   "peer-joined": (event: RoomPeerEvent) => void;
   "peer-left": (event: RoomPeerEvent) => void;
   "peer-presence": (event: RoomPeerPresenceEvent) => void;

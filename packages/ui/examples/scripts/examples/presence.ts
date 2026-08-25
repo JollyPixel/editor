@@ -14,18 +14,18 @@ export const PRESENCE_EXAMPLE: GalleryExample = {
     const presence = pane.addPresence({ max: 2 });
     presence.update([
       {
-        id: "ada",
-        username: "Ada",
+        clientId: "ada",
+        displayName: "Ada",
         color: "#f94144"
       },
       {
-        id: "lin",
-        username: "Lin",
+        clientId: "lin",
+        displayName: "Lin",
         color: "#43aa8b"
       },
       {
-        id: "sam",
-        username: "Sam",
+        clientId: "sam",
+        displayName: "Sam",
         color: "#577590",
         self: true
       }
