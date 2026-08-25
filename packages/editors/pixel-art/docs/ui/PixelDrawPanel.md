@@ -43,7 +43,7 @@ Drag one local PNG, JPEG, WebP or GIF over the rendered texture rectangle to sho
 | `canvasManager` | The live `PixelArtCanvas`, or `null` before `initialize()`. |
 | `onResize()` | Call on container resize (ResizeObserver, split-pane drag, etc). |
 | `allow-uv-create-delete` attribute / `allowUvCreateDelete` property | Shows the Create/Delete buttons in the UV toolbar. Off by default: creating/deleting regions only makes sense when the panel owns the UV layout (the package's own example); embeddings over a fixed mesh (e.g. voxel-map) leave it off. |
-| `theme` attribute / property (`"light" \| "dark" \| "auto"`, default `"auto"`) | Selects the palette. `"auto"` follows `prefers-color-scheme`; `"light"`/`"dark"` force one regardless of the OS setting. Reflects to the attribute. |
+| `theme` attribute / property (`"light" \| "dark" \| "auto"`, default `"auto"`) | Selects the palette. `"auto"` follows the theme scope the panel is embedded in (`jolly-scope`, or any themed ancestor), falling back to `prefers-color-scheme` when there is none; `"light"`/`"dark"` force one regardless. Reflects to the attribute. |
 
 Destruction is automatic: `disconnectedCallback()` calls `canvasManager.destroy()` when the element leaves the DOM.
 

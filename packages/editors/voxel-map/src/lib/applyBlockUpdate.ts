@@ -1,22 +1,32 @@
 // Import Third-party Dependencies
 import type {
-  VoxelRenderer,
-  BlockDefinition
+  BlockDefinition,
+  VoxelRenderer
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import { editorState } from "../EditorState.ts";
 
-/**
- * Registers an updated block definition and rebuilds placed voxels/preview
- * state that depend on it. All block mutations (BlockLibrary's own inputs,
- * BlockUvBridge's UV-region drags) route through here.
- */
+export function applyBlockUpdates(
+  vr: VoxelRenderer,
+  updates: Iterable<BlockDefinition>
+): void {
+  let changed = false;
+  for (const update of updates) {
+    vr.engine.blockRegistry.register(update);
+    changed = true;
+  }
+  if (!changed) {
+    return;
+  }
+
+  vr.engine.markAllChunksDirty("block definitions updated");
+  editorState.dispatchBlockRegistryChanged();
+}
+
 export function applyBlockUpdate(
   vr: VoxelRenderer,
-  updated: BlockDefinition
+  update: BlockDefinition
 ): void {
-  vr.engine.blockRegistry.register(updated);
-  vr.engine.markAllChunksDirty("BlockLibrary update");
-  editorState.dispatchBlockRegistryChanged();
+  applyBlockUpdates(vr, [update]);
 }

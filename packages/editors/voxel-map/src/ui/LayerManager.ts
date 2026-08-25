@@ -1,18 +1,34 @@
 // Import Third-party Dependencies
 import { LitElement, html, css } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { TreeView } from "@jolly-pixel/arbor";
-import type {
-  VoxelRenderer,
-  VoxelLayer,
-  VoxelObjectLayerJSON,
-  VoxelLayerHookEvent
-} from "@jolly-pixel/voxel.renderer";
+import type { VoxelRenderer } from "@jolly-pixel/voxel.renderer";
+import {
+  showPrompt,
+  type JollySelectDetail,
+  type JollyToggleVisibleDetail,
+  type TreeNode
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { editorState } from "../EditorState.ts";
-import type { Icon } from "./Icon.ts";
-import { showPrompt } from "./PromptDialog.ts";
+
+// CONSTANTS
+const kVoxelPrefix = "voxel:";
+const kObjectPrefix = "object:";
+
+/** A layer kind and name packed into a unique tree row ID. */
+interface LayerRef {
+  type: "voxel" | "object";
+  name: string;
+}
+
+function refOf(
+  id: string
+): LayerRef {
+  return id.startsWith(kObjectPrefix)
+    ? { type: "object", name: id.slice(kObjectPrefix.length) }
+    : { type: "voxel", name: id.slice(kVoxelPrefix.length) };
+}
 
 @customElement("layer-manager")
 export class LayerManager extends LitElement {
@@ -20,354 +36,193 @@ export class LayerManager extends LitElement {
     :host {
       display: flex;
       flex-direction: column;
+      gap: var(--jolly-row-gap, 4px);
       overflow: hidden;
-    }
-
-    .toolbar {
-      display: flex;
-      gap: 4px;
-      padding: 4px 8px;
-      background: #141a1d;
-      border-bottom: 1px solid #2a3540;
-    }
-    .toolbar button {
-      background: #2a3a4a;
-      border: 1px solid #3a5060;
-      color: #ccc;
-      padding: 2px 8px;
-      border-radius: 3px;
-      cursor: pointer;
-      font-size: 12px;
-    }
-    .toolbar button:hover {
-      background: #3a5a7a;
-      color: #fff;
     }
 
     .tree-host {
       flex: 1;
       overflow-y: auto;
-      padding: 4px;
-    }
-    .tree-host ol {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-    .tree-host li {
-      display: flex;
-      align-items: center;
-      padding: 3px 6px;
-      border-radius: 3px;
-      cursor: pointer;
-      user-select: none;
-      font-size: 12px;
-      color: #aaa;
-    }
-    .tree-host li:hover {
-      background: #1e2a30;
-      color: #ccc;
-    }
-    .tree-host li.selected {
-      background: #1a3050;
-      color: #4488ff;
-    }
-
-    .layer-name {
-      flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .gizmo-btn {
-      flex-shrink: 0;
-      background: transparent;
-      border: none;
-      color: #728292;
-      cursor: pointer;
-      font-size: 16px;
-      opacity: 1;
-      transition: opacity 0.1s, color 0.1s;
-      display: flex;
-      justify-content: center;
-    }
-    .gizmo-btn.active {
-      opacity: 1;
-      color: #29a129;
     }
   `;
 
-  @property({ attribute: false }) declare vr: VoxelRenderer;
+  @property({ attribute: false })
+  declare vr: VoxelRenderer;
 
-  @state() private declare _selectedLayer: string | null;
+  @state()
+  private declare _nodes: TreeNode<LayerRef>[];
+  @state()
+  private declare _selected: string[];
+  #subscriptions: Array<() => void> = [];
 
   constructor() {
     super();
-    this._selectedLayer = editorState.selectedLayer;
+    this._nodes = [];
+    this._selected = [];
   }
 
-  #treeView: TreeView | null = null;
-  #treeContainer: HTMLDivElement | null = null;
+  readonly #onLayerUpdated = () => {
+    this.#refreshNodes();
+  };
 
-  // voxel layer name → tree LI element
-  #itemMap = new Map<string, HTMLLIElement>();
-  // object layer name → tree LI element
-  #objectItemMap = new Map<string, HTMLLIElement>();
-
-  #onDocumentPointerDown = (e: PointerEvent) => {
-    if (!this._selectedLayer || !this.#treeContainer) {
-      return;
-    }
-    const path = e.composedPath();
-
-    // Only deselect when the click is inside the tree-host but not on a layer row.
-    if (!path.includes(this.#treeContainer)) {
-      return;
-    }
-
-    if (path.some((node) => node instanceof HTMLLIElement)) {
-      return;
-    }
-    this.#clearSelection();
+  readonly #onSelectedLayerChange = () => {
+    this._selected = this.#selectionFromState();
   };
 
   override updated(
     changedProperties: Map<string | symbol, unknown>
   ): void {
-    if (changedProperties.has("vr") && this.vr && this.#treeView) {
-      this.#populateFromVR();
+    if (changedProperties.has("vr") && this.vr) {
+      this.#refreshNodes();
     }
   }
 
-  override firstUpdated() {
-    this.#treeContainer = this.shadowRoot!.querySelector<HTMLDivElement>(".tree-host")!;
+  override connectedCallback() {
+    super.connectedCallback();
 
-    this.#treeView = new TreeView(this.#treeContainer, {
-      multipleSelection: false,
-      dropCallback: (_evt, location, nodes) => {
-        if (nodes.length === 0 || !this.vr) {
-          return false;
-        }
+    this.#subscriptions.push(
+      editorState.on("layerUpdated", this.#onLayerUpdated),
+      editorState.on("worldReset", this.#onLayerUpdated),
+      editorState.on("selectionChange", this.#onSelectedLayerChange)
+    );
 
-        const name = nodes[0].dataset.layerName;
-        if (!name) {
-          return false;
-        }
-
-        // Object layers cannot be reordered via drag-drop in v1.
-        if (nodes[0].dataset.layerType === "object") {
-          return false;
-        }
-
-        // Determine new array index from location and call moveLayer accordingly.
-        const allItems = [...this.#itemMap.values()];
-        const currentIdx = allItems.indexOf(nodes[0]);
-        const targetElt = location.target;
-        const targetIdx = targetElt ? allItems.indexOf(targetElt as HTMLLIElement) : allItems.length - 1;
-
-        const delta = targetIdx - currentIdx;
-        if (delta === 0) {
-          return false;
-        }
-
-        const times = Math.abs(delta);
-        const direction = delta > 0 ? "down" : "up";
-        for (let i = 0; i < times; i++) {
-          this.vr.engine.moveLayer(name, direction);
-        }
-
-        return true;
-      }
-    });
-
-    this.#treeView.addEventListener("selectionChange", () => {
-      const items = this.#treeContainer!.querySelectorAll<HTMLLIElement>("li.selected");
-      const li = items[0] ?? null;
-      const name = li?.dataset.layerName ?? null;
-      const isObject = li?.dataset.layerType === "object";
-      this._selectedLayer = name;
-      editorState.setSelectedLayer(name, isObject ? "object" : "voxel");
-    });
-
-    this.#populateFromVR();
-    this.#listenToVR();
-
-    editorState.addEventListener("gizmoLayerChange", () => {
-      this.#updateGizmoButtonStates();
-    });
-    editorState.addEventListener("worldReset", () => {
-      this.#populateFromVR();
-    });
-    // Keeps the tree's highlight (and button enabled-state) in sync when the
-    // selection changes from outside a row click — e.g. EditorScene selecting
-    // the first layer once a network snapshot lands.
-    editorState.addEventListener("selectedLayerChange", () => {
-      this._selectedLayer = editorState.selectedLayer;
-      this.#syncSelectionHighlight();
-    });
-
-    document.addEventListener("pointerdown", this.#onDocumentPointerDown);
+    this._selected = this.#selectionFromState();
+    this.#refreshNodes();
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
-    document.removeEventListener("pointerdown", this.#onDocumentPointerDown);
+    for (const unsubscribe of this.#subscriptions.splice(0)) {
+      unsubscribe();
+    }
   }
 
   override render() {
+    const hasSelection = this._selected.length > 0;
+
     return html`
-      <div class="toolbar">
-        <button @click=${this.#addLayer}>+ Voxel</button>
-        <button @click=${this.#addObjectLayer}>+ Object</button>
-        <button @click=${this.#removeLayer} ?disabled=${!this._selectedLayer}>- Remove</button>
-        <button @click=${this.#moveUp} ?disabled=${!this._selectedLayer}>↑</button>
-        <button @click=${this.#moveDown} ?disabled=${!this._selectedLayer}>↓</button>
+      <jolly-toolbar label="Layers">
+        <jolly-button @click=${this.#addLayer}>+ Voxel</jolly-button>
+        <jolly-button @click=${this.#addObjectLayer}>+ Object</jolly-button>
+        <jolly-button
+          @click=${this.#removeLayer}
+          ?disabled=${!hasSelection}
+        >- Remove</jolly-button>
+        <jolly-button
+          @click=${this.#moveUp}
+          ?disabled=${!hasSelection}
+        >↑</jolly-button>
+        <jolly-button
+          @click=${this.#moveDown}
+          ?disabled=${!hasSelection}
+        >↓</jolly-button>
+      </jolly-toolbar>
+
+      <div class="tree-host" @click=${this.#onHostClick}>
+        <jolly-tree
+          .nodes=${this._nodes}
+          .selected=${this._selected}
+          @jolly-select=${this.#onSelect}
+          @jolly-toggle-visible=${this.#onToggleVisible}
+        ></jolly-tree>
       </div>
-      <div class="tree-host"></div>
     `;
   }
 
-  #populateFromVR(): void {
-    if (!this.vr || !this.#treeView) {
-      return;
+  get #selectedRef(): LayerRef | null {
+    const [id] = this._selected;
+
+    return id === undefined ? null : refOf(id);
+  }
+
+  #selectionFromState(): string[] {
+    const {
+      selectedLayer,
+      selectedLayerType
+    } = editorState;
+    if (selectedLayer === null) {
+      return [];
     }
 
-    this.#treeView.clear();
-    this.#itemMap.clear();
-    this.#objectItemMap.clear();
+    const prefix = selectedLayerType === "object" ? kObjectPrefix : kVoxelPrefix;
+
+    return [`${prefix}${selectedLayer}`];
+  }
+
+  #refreshNodes(): void {
+    if (!this.vr) {
+      return;
+    }
 
     const layers = [
       ...this.vr.engine.world.getLayers()
     ].reverse();
-    for (const layer of layers) {
-      this.#appendLayerItem(layer);
-    }
 
-    for (const objectLayer of this.vr.engine.getObjectLayers()) {
-      this.#appendObjectLayerItem(objectLayer);
-    }
-
-    // Restore the visual selection highlight after the list is rebuilt.
-    this.#syncSelectionHighlight();
+    this._nodes = [
+      ...layers.map((layer): TreeNode<LayerRef> => {
+        return {
+          id: `${kVoxelPrefix}${layer.name}`,
+          label: layer.name,
+          visible: layer.visible,
+          data: { type: "voxel", name: layer.name }
+        };
+      }),
+      ...this.vr.engine.getObjectLayers().map((layer): TreeNode<LayerRef> => {
+        return {
+          id: `${kObjectPrefix}${layer.name}`,
+          label: `[Obj] ${layer.name}`,
+          visible: layer.visible,
+          data: { type: "object", name: layer.name }
+        };
+      })
+    ];
   }
 
-  /** Moves the tree's visual highlight to match `this._selectedLayer`. */
-  #syncSelectionHighlight(): void {
-    if (!this.#treeView) {
+  #onHostClick(
+    event: MouseEvent
+  ): void {
+    const onRow = event.composedPath().some(
+      (node) => node instanceof HTMLElement && node.classList.contains("row")
+    );
+    if (onRow) {
       return;
     }
 
-    this.#treeView.selector.clear();
-    if (this._selectedLayer) {
-      const li = this.#itemMap.get(this._selectedLayer) ??
-        this.#objectItemMap.get(this._selectedLayer);
-      if (li) {
-        this.#treeView.selector.add(li);
-      }
-    }
-  }
-
-  #appendLayerItem(
-    layer: VoxelLayer
-  ): HTMLLIElement {
-    const li = document.createElement("li");
-    li.dataset.layerName = layer.name;
-
-    const nameSpan = document.createElement("span");
-    nameSpan.className = "layer-name";
-    nameSpan.textContent = layer.name;
-
-    const gizmoBtn = document.createElement("custom-icon");
-    gizmoBtn.className = "gizmo-btn";
-    gizmoBtn.title = "Toggle layer gizmo";
-    gizmoBtn.setAttribute("name", "transform");
-    if (editorState.gizmoLayer === layer.name) {
-      gizmoBtn.classList.add("active");
-    }
-    // Stop propagation so clicking the button doesn't trigger row selection.
-    gizmoBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
-    gizmoBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const isActive = editorState.gizmoLayer === layer.name;
-      editorState.setGizmoLayer(isActive ? null : layer.name);
-    });
-
-    li.append(nameSpan, gizmoBtn);
-    this.#treeView!.append(li, "item");
-    this.#itemMap.set(layer.name, li);
-
-    return li;
-  }
-
-  #appendObjectLayerItem(
-    layer: VoxelObjectLayerJSON
-  ): HTMLLIElement {
-    const li = document.createElement("li");
-    li.dataset.layerName = layer.name;
-    li.dataset.layerType = "object";
-
-    const nameSpan = document.createElement("span");
-    nameSpan.className = "layer-name";
-    nameSpan.textContent = `[Obj] ${layer.name}`;
-
-    li.append(nameSpan);
-    this.#treeView!.append(li, "item");
-    this.#objectItemMap.set(layer.name, li);
-
-    return li;
-  }
-
-  #clearSelection(): void {
-    this.#treeView?.selector.clear();
-    this._selectedLayer = null;
+    this._selected = [];
     editorState.setSelectedLayer(null);
   }
 
-  #updateGizmoButtonStates(): void {
-    const active = editorState.gizmoLayer;
-    for (const [name, li] of this.#itemMap) {
-      const btn = li.querySelector<Icon>(".gizmo-btn");
-      if (btn) {
-        btn.classList.toggle("active", name === active);
-      }
+  #onSelect(
+    event: CustomEvent<JollySelectDetail>
+  ): void {
+    this._selected = event.detail.selected;
+
+    const ref = this.#selectedRef;
+    if (ref === null) {
+      editorState.setSelectedLayer(null);
+
+      return;
     }
-    // Object layers have no gizmo button; no action needed for #objectItemMap.
+    editorState.setSelectedLayer(ref.name, ref.type);
   }
 
-  #listenToVR(): void {
-    // Layer events are broadcast via editorState by index.ts wiring.
-    editorState.addEventListener("layerUpdated", (event) => {
-      const evt = (event as CustomEvent<VoxelLayerHookEvent>).detail;
-      if (evt.action === "added") {
-        const layer = this.vr?.engine.getLayer(evt.layerName);
-        if (layer) {
-          this.#appendLayerItem(layer);
-        }
-      }
-      else if (evt.action === "removed") {
-        const li = this.#itemMap.get(evt.layerName);
-        if (li) {
-          this.#treeView!.remove(li);
-          this.#itemMap.delete(evt.layerName);
-        }
-      }
-      else if (evt.action === "reordered") {
-        this.#populateFromVR();
-      }
-      else if (evt.action === "object-layer-added") {
-        const objectLayer = this.vr?.engine.getObjectLayer(evt.layerName);
-        if (objectLayer) {
-          this.#appendObjectLayerItem(objectLayer);
-        }
-      }
-      else if (evt.action === "object-layer-removed") {
-        const li = this.#objectItemMap.get(evt.layerName);
-        if (li) {
-          this.#treeView!.remove(li);
-          this.#objectItemMap.delete(evt.layerName);
-        }
-      }
-    });
+  #onToggleVisible(
+    event: CustomEvent<JollyToggleVisibleDetail>
+  ): void {
+    if (!this.vr) {
+      return;
+    }
+
+    const { visible } = event.detail;
+    const { type, name } = refOf(event.detail.id);
+    if (type === "object") {
+      this.vr.engine.updateObjectLayer(name, { visible });
+    }
+    else {
+      this.vr.engine.updateLayer(name, { visible });
+      this.vr.engine.markAllChunksDirty();
+    }
+    this.#refreshNodes();
   }
 
   async #addLayer() {
@@ -376,6 +231,7 @@ export class LayerManager extends LitElement {
     }
 
     const name = await showPrompt({
+      title: "New layer",
       label: "Layer name:",
       defaultValue: `Layer ${this.vr.engine.world.getLayers().length + 1}`
     });
@@ -391,6 +247,7 @@ export class LayerManager extends LitElement {
     }
 
     const name = await showPrompt({
+      title: "New object layer",
       label: "Object layer name:",
       defaultValue: `Objects ${this.vr.engine.getObjectLayers().length + 1}`
     });
@@ -401,35 +258,43 @@ export class LayerManager extends LitElement {
   }
 
   #removeLayer(): void {
-    if (!this._selectedLayer || !this.vr) {
+    const ref = this.#selectedRef;
+    if (ref === null || !this.vr) {
       return;
     }
 
-    if (this.#objectItemMap.has(this._selectedLayer)) {
-      this.vr.engine.removeObjectLayer(this._selectedLayer);
+    if (ref.type === "object") {
+      this.vr.engine.removeObjectLayer(ref.name);
     }
     else {
-      this.vr.engine.removeLayer(this._selectedLayer);
+      this.vr.engine.removeLayer(ref.name);
       this.vr.engine.markAllChunksDirty();
     }
-    this._selectedLayer = null;
+    this._selected = [];
     editorState.setSelectedLayer(null);
   }
 
   #moveUp(): void {
-    if (!this._selectedLayer || !this.vr || this.#objectItemMap.has(this._selectedLayer)) {
-      return;
-    }
-
-    this.vr.engine.moveLayer(this._selectedLayer, "up");
+    this.#move("up");
   }
 
   #moveDown(): void {
-    if (!this._selectedLayer || !this.vr || this.#objectItemMap.has(this._selectedLayer)) {
+    this.#move("down");
+  }
+
+  #move(
+    direction: "up" | "down"
+  ): void {
+    const ref = this.#selectedRef;
+    if (
+      ref === null ||
+      ref.type === "object" ||
+      !this.vr
+    ) {
       return;
     }
 
-    this.vr.engine.moveLayer(this._selectedLayer, "down");
+    this.vr.engine.moveLayer(ref.name, direction);
   }
 }
 

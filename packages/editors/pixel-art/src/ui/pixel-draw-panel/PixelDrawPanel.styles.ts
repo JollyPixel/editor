@@ -30,6 +30,20 @@ export const panelStyles = css`
     --jolly-focus-ring: var(--color-accent);
   }
 
+  /*
+   * "auto" defers to the theme scope the panel is embedded in, which
+   * PixelDrawPanel resolves into "data-ambient-theme". "themeStyles" leaves the
+   * host on both schemes, so without this an embedded panel lights up against a
+   * dark editor whenever the OS says light.
+   */
+  :host([theme="auto"][data-ambient-theme="light"]) {
+    color-scheme: light;
+  }
+
+  :host([theme="auto"][data-ambient-theme="dark"]) {
+    color-scheme: dark;
+  }
+
   :host(:not([data-ready])) {
     visibility: hidden;
   }

@@ -32,7 +32,7 @@ export class FreeFlyCamera extends CameraComponent {
   #scrollSpeed: number;
   #friction: number;
 
-  // Reused each frame — avoid allocations.
+  // Reused each frame to avoid allocations.
   #forward = new THREE.Vector3();
   #right = new THREE.Vector3();
   #up = new THREE.Vector3(0, 1, 0);
@@ -75,10 +75,7 @@ export class FreeFlyCamera extends CameraComponent {
     );
   }
 
-  /**
-   * The actor transform drives the camera, so pose changes must go through it —
-   * writes to `camera.position` / `camera.rotation` are overwritten every frame.
-   */
+  /** Camera pose is derived from the actor transform each frame. */
   #applyOrientation() {
     this.actor.transform.setLocalOrientation(
       this.#orientation.setFromEuler(
@@ -111,7 +108,7 @@ export class FreeFlyCamera extends CameraComponent {
     const { input } = this.actor.world;
     const { transform } = this.actor;
 
-    // --- Mouse look ---
+    // Mouse look
     if (input.mouse.isDown("middle") && input.mouse.isMoving()) {
       const delta = input.mouse.viewportDelta(false);
       this.#yaw -= delta.x * this.#mouseSensitivity;
@@ -124,13 +121,13 @@ export class FreeFlyCamera extends CameraComponent {
       this.#applyOrientation();
     }
 
-    // --- Compute camera orientation vectors ---
+    // Camera orientation
     transform.getForward(this.#forward);
     this.#forward.y = 0;
     this.#forward.normalize();
     this.#right.crossVectors(this.#forward, this.#up).normalize();
 
-    // --- Accumulate movement intent ---
+    // Movement intent
     this.#move.set(0, 0, 0);
 
     if (input.keyboard.isDown("KeyW") || input.keyboard.isDown("ArrowUp")) {
@@ -157,7 +154,7 @@ export class FreeFlyCamera extends CameraComponent {
       this.#vel.copy(this.#move);
     }
 
-    // Scroll to zoom (dolly along look direction) — Ctrl is reserved for brush size.
+    // Ctrl reserves scrolling for brush size.
     const isCtrl = input.keyboard.isDown("ControlLeft") || input.keyboard.isDown("ControlRight");
     if (!isCtrl) {
       if (input.mouse.isDown("scrollUp")) {
@@ -168,18 +165,16 @@ export class FreeFlyCamera extends CameraComponent {
       }
     }
 
-    // --- Apply velocity + friction ---
+    // Velocity and friction
     transform.moveGlobal(
       this.#offset.copy(this.#vel).multiplyScalar(deltaTime)
     );
     this.#vel.multiplyScalar(1 - this.#friction);
 
-    // Damp to exact zero when nearly stopped.
     if (this.#vel.lengthSq() < 0.0001) {
       this.#vel.set(0, 0, 0);
     }
 
-    // Handle resize
     const canvas = this.actor.world.renderer.canvas;
     const aspect = canvas.clientWidth / canvas.clientHeight;
     if (Math.abs(this.camera.aspect - aspect) > 0.001) {

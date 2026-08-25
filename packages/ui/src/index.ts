@@ -41,6 +41,11 @@ export {
   resolveThemeColor,
   resolveThemeToken
 } from "./theme/resolveThemeToken.ts";
+export {
+  ambientThemeMode,
+  documentThemeMode,
+  type ResolvedThemeMode
+} from "./theme/ambientTheme.ts";
 
 // Geometry
 export type {

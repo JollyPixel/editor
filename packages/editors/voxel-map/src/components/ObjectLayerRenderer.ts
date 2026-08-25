@@ -10,6 +10,7 @@ import type {
 
 // Import Internal Dependencies
 import { editorState } from "../EditorState.ts";
+import { normalizeVoxelExtent } from "../lib/voxelExtent.ts";
 import { TransformGizmoBase } from "./TransformGizmoBase.ts";
 import { ObjectLayerVisuals } from "./ObjectLayerVisuals.ts";
 
@@ -26,9 +27,8 @@ export class ObjectLayerRenderer extends TransformGizmoBase {
   #initialObjDimensions: { w: number; h: number; } | null = null;
   #raycaster = new THREE.Raycaster();
   #isDragging = false;
-  // Set to true when TransformControls "mouseDown" fires so the same click
-  // that activates a handle does not immediately deselect the object.
   #skipNextSelect = false;
+  #subscriptions: Array<() => void> = [];
 
   constructor(
     actor: Actor,
@@ -48,74 +48,79 @@ export class ObjectLayerRenderer extends TransformGizmoBase {
   override awake(): void {
     super.awake();
 
-    // When the user presses down on a handle, mark that the next click
-    // originating from the engine input system should be skipped for selection.
-    this.controls!.addEventListener("mouseDown", () => {
-      this.#skipNextSelect = true;
-    });
-
-    // Flush position / scale to VoxelObjectJSON once the drag ends.
-    this.controls!.addEventListener("mouseUp", () => {
-      this.#flushObjectTransform();
-    });
-
-    this.controls!.addEventListener("dragging-changed", (event) => {
-      this.#isDragging = (event as THREE.Event & { value: boolean; }).value;
-    });
-
-    // In scale mode snap X/Z to 1-unit steps and lock Y to 1 (objects are
-    // always 1 unit tall). The scale is clamped per-frame so the visual
-    // feedback during drag already shows the snapped result.
-    this.controls!.addEventListener("objectChange", () => {
-      if (this.controls?.mode !== "scale") {
-        return;
-      }
-
-      const group = this.#selectedObjectKey
-        ? this.#visuals.getGroup(this.#selectedObjectKey)
-        : null;
-      const dims = this.#initialObjDimensions;
-
-      if (!group || !dims) {
-        return;
-      }
-
-      const targetW = Math.max(1, Math.round(dims.w * group.scale.x));
-      group.scale.x = targetW / dims.w;
-
-      const targetH = Math.max(1, Math.round(dims.h * group.scale.z));
-      group.scale.z = targetH / dims.h;
-
-      group.scale.y = 1;
-    });
-
-    // Deselect when the user switches away from an object layer.
-    editorState.addEventListener("selectedLayerTypeChange", () => {
-      if (editorState.selectedLayerType !== "object") {
-        this.#detachControls();
-      }
-    });
-
-    editorState.addEventListener("layerUpdated", (event) => {
-      const evt = (event as CustomEvent<VoxelLayerHookEvent>).detail;
-      if (
-        evt.action === "object-layer-added" ||
-        evt.action === "object-layer-removed" ||
-        evt.action === "object-layer-updated"
-      ) {
-        this.#visuals.rebuildAll();
-        this.#detachControls();
-      }
-      else if (
-        evt.action === "object-added" ||
-        evt.action === "object-removed" ||
-        evt.action === "object-updated"
-      ) {
-        this.#visuals.rebuildLayer(evt.layerName);
-        this.#reattachAfterRebuild(evt.layerName);
-      }
-    });
+    this.controls!.addEventListener("mouseDown", this.#onMouseDown);
+    this.controls!.addEventListener("mouseUp", this.#onMouseUp);
+    this.controls!.addEventListener("dragging-changed", this.#onDraggingChanged);
+    this.controls!.addEventListener("objectChange", this.#onObjectChange);
+    this.#subscriptions.push(
+      editorState.on("selectionChange", this.#onSelectionChange),
+      editorState.on("layerUpdated", this.#onLayerUpdated)
+    );
   }
+
+  override destroy(): void {
+    this.controls?.removeEventListener("mouseDown", this.#onMouseDown);
+    this.controls?.removeEventListener("mouseUp", this.#onMouseUp);
+    this.controls?.removeEventListener("dragging-changed", this.#onDraggingChanged);
+    this.controls?.removeEventListener("objectChange", this.#onObjectChange);
+    for (const unsubscribe of this.#subscriptions.splice(0)) {
+      unsubscribe();
+    }
+    super.destroy();
+  }
+
+  readonly #onMouseDown = (): void => {
+    this.#skipNextSelect = true;
+  };
+
+  readonly #onMouseUp = (): void => this.#flushObjectTransform();
+
+  readonly #onDraggingChanged = (event: { value: unknown; }): void => {
+    this.#isDragging = event.value === true;
+  };
+
+  readonly #onObjectChange = (): void => {
+    if (this.controls?.mode !== "scale") {
+      return;
+    }
+
+    const group = this.#selectedObjectKey
+      ? this.#visuals.getGroup(this.#selectedObjectKey)
+      : null;
+    const dimensions = this.#initialObjDimensions;
+    if (!group || !dimensions) {
+      return;
+    }
+
+    const width = normalizeVoxelExtent(dimensions.w * group.scale.x);
+    const height = normalizeVoxelExtent(dimensions.h * group.scale.z);
+    group.scale.set(width / dimensions.w, 1, height / dimensions.h);
+  };
+
+  readonly #onSelectionChange = (): void => {
+    if (editorState.selectedLayerType !== "object") {
+      this.#detachControls();
+    }
+  };
+
+  readonly #onLayerUpdated = (event: VoxelLayerHookEvent): void => {
+    if (
+      event.action === "object-layer-added" ||
+      event.action === "object-layer-removed" ||
+      event.action === "object-layer-updated"
+    ) {
+      this.#visuals.rebuildAll();
+      this.#detachControls();
+    }
+    else if (
+      event.action === "object-added" ||
+      event.action === "object-removed" ||
+      event.action === "object-updated"
+    ) {
+      this.#visuals.rebuildLayer(event.layerName);
+      this.#reattachAfterRebuild(event.layerName);
+    }
+  };
 
   #reattachAfterRebuild(
     layerName: string
@@ -133,7 +138,10 @@ export class ObjectLayerRenderer extends TransformGizmoBase {
       const layer = this.#vr.engine.getObjectLayer(layerName);
       const obj = layer?.objects.find((o) => o.id === objId);
       if (obj) {
-        this.#initialObjDimensions = { w: obj.width ?? 1, h: obj.height ?? 1 };
+        this.#initialObjDimensions = {
+          w: normalizeVoxelExtent(obj.width ?? 1),
+          h: normalizeVoxelExtent(obj.height ?? 1)
+        };
       }
       this.controls.attach(newGroup);
     }
@@ -185,7 +193,10 @@ export class ObjectLayerRenderer extends TransformGizmoBase {
     }
 
     this.#selectedObjectKey = key;
-    this.#initialObjDimensions = { w: obj.width ?? 1, h: obj.height ?? 1 };
+    this.#initialObjDimensions = {
+      w: normalizeVoxelExtent(obj.width ?? 1),
+      h: normalizeVoxelExtent(obj.height ?? 1)
+    };
 
     const group = this.#visuals.getGroup(key)!;
     this.controls?.attach(group);
@@ -215,8 +226,8 @@ export class ObjectLayerRenderer extends TransformGizmoBase {
     }
 
     if (this.controls.mode === "translate") {
-      const w = obj.width ?? 1;
-      const h = obj.height ?? 1;
+      const w = normalizeVoxelExtent(obj.width ?? 1);
+      const h = normalizeVoxelExtent(obj.height ?? 1);
       this.#vr.engine.updateObject(layerName, objId, {
         x: Math.round(group.position.x - w / 2),
         y: Math.round(group.position.y - 0.5),
@@ -224,11 +235,9 @@ export class ObjectLayerRenderer extends TransformGizmoBase {
       });
     }
     else if (this.controls.mode === "scale") {
-      // Scale is already snapped to integer steps by the objectChange handler,
-      // so Math.round here is just a safety net.
       const dims = this.#initialObjDimensions!;
-      const newW = Math.max(1, Math.round(dims.w * group.scale.x));
-      const newH = Math.max(1, Math.round(dims.h * group.scale.z));
+      const newW = normalizeVoxelExtent(dims.w * group.scale.x);
+      const newH = normalizeVoxelExtent(dims.h * group.scale.z);
       const newX = Math.round(obj.x + dims.w / 2 - newW / 2);
       const newZ = Math.round(obj.z + dims.h / 2 - newH / 2);
       this.#vr.engine.updateObject(layerName, objId, { x: newX, z: newZ, width: newW, height: newH });
@@ -242,7 +251,6 @@ export class ObjectLayerRenderer extends TransformGizmoBase {
 
     const { input } = this.actor.world;
 
-    // G = translate, Shift+S = scale — only when an object is selected.
     if (this.#selectedObjectKey && this.controls) {
       if (input.keyboard.wasJustPressed("KeyG")) {
         this.controls.setMode("translate");
@@ -255,7 +263,6 @@ export class ObjectLayerRenderer extends TransformGizmoBase {
       }
     }
 
-    // Handle object selection clicks (skip if a controls handle was just pressed).
     if (!this.#isDragging && input.mouse.wasJustPressed("left")) {
       if (this.#skipNextSelect) {
         this.#skipNextSelect = false;

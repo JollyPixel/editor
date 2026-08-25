@@ -3,8 +3,8 @@ import {
   Runtime,
   loadRuntime
 } from "@jolly-pixel/runtime";
-import { ResizeHandle } from "@jolly-pixel/resize-handle";
 import * as network from "@jolly-pixel/network/client";
+import type * as networkTypes from "@jolly-pixel/network";
 import type {
   PixelNetworkCommand,
   PixelServerMessage
@@ -13,20 +13,36 @@ import type {
   VoxelNetworkCommand,
   VoxelServerMessage
 } from "@jolly-pixel/voxel.renderer/network/client.ts";
-import { TilesetLoader } from "@jolly-pixel/voxel.renderer";
+import {
+  TilesetLoader,
+  type TilesetDefinition
+} from "@jolly-pixel/voxel.renderer";
 import {
   AssetCatalog,
   assetRoomName,
+  assetSourceUrl,
   CATALOG_URL_PATH,
   type AssetRecord
 } from "@jolly-pixel/asset";
+// Registers every "jolly-*" element.
+import "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { editorState } from "./EditorState.ts";
 import { EditorSidebar } from "./ui/EditorSidebar.ts";
 import { EditorScene } from "./scene/editor.ts";
-import { LocalStoragePersistence } from "./lib/LocalStoragePersistence.ts";
+import { parseVoxelWorld } from "./lib/parseVoxelWorld.ts";
 import type { EventCanvasHoverChange } from "./ui/types.ts";
+// Registers the editor's icon glyphs.
+import "./ui/icons.ts";
+
+// CONSTANTS
+/** Used offline, and when the shared document declares no tileset of its own. */
+const kFallbackTileset: TilesetDefinition = {
+  id: "default",
+  src: "textures/tileset.png",
+  tileSize: 32
+};
 
 async function fetchAssetCatalog(): Promise<AssetCatalog> {
   const response = await fetch(CATALOG_URL_PATH);
@@ -54,6 +70,32 @@ function firstRecordOfKind(
   );
 }
 
+/**
+ * Tileset textures must be resident before the first world snapshot reaches
+ * `VoxelEngine.load()`, which refuses to register one it cannot find.
+ */
+async function preloadTilesets(
+  loader: TilesetLoader,
+  record: AssetRecord | null
+): Promise<void> {
+  if (record !== null) {
+    const response = await fetch(assetSourceUrl(record.source));
+    if (!response.ok) {
+      throw new Error(
+        `Voxel-map document responded with ${response.status}.`
+      );
+    }
+
+    await loader.fromWorld(
+      parseVoxelWorld(await response.text())
+    );
+  }
+
+  if (loader.tilesets.size === 0) {
+    await loader.fromTileDefinition(kFallbackTileset);
+  }
+}
+
 const canvas = document.querySelector<HTMLCanvasElement>(
   "#game-container > canvas"
 );
@@ -68,46 +110,35 @@ const runtime = await Runtime.create(canvas, {
   focusCanvas: false
 });
 const { world } = runtime;
+const offline = new URLSearchParams(location.search).has("offline");
+let worldRecord: AssetRecord | null = null;
+let textureRoom: networkTypes.Room<PixelNetworkCommand, PixelServerMessage> | undefined;
+let worldRoom: networkTypes.Room<VoxelNetworkCommand, VoxelServerMessage> | undefined;
 
-// Rooms are named after the assets the back-end catalogs, so the ids come
-// from the catalog rather than being hardcoded on both ends.
-const catalog = await fetchAssetCatalog();
-const textureRecord = firstRecordOfKind(catalog, "pixelart");
-const worldRecord = firstRecordOfKind(catalog, "voxelmap");
-
-// One shared WebSocket (matching vite.config.ts's createWebSocketNetworkPlugin),
-// multiplexing the texture (pixel-draw) and world (voxel) sync rooms.
-const wsProtocol = location.protocol === "https:" ? "wss:" : "ws:";
-const networkClient = new network.Client({
-  url: `${wsProtocol}//${location.host}/ws-sync`
-});
-const textureRoom = networkClient.room<PixelNetworkCommand, PixelServerMessage>(
-  assetRoomName(textureRecord.kind, textureRecord.id.value)
-);
-textureRoom.join();
-const worldRoom = networkClient.room<VoxelNetworkCommand, VoxelServerMessage>(
-  assetRoomName(worldRecord.kind, worldRecord.id.value)
-);
-worldRoom.join();
-
-const defaultTileset = {
-  id: "default",
-  src: "textures/tileset.png",
-  tileSize: 32
-};
-const pendingLoad = worldRoom ? null : LocalStoragePersistence.load();
-const tilesetLoader = new TilesetLoader({ manager: runtime.manager });
-if (pendingLoad !== null) {
-  await tilesetLoader.fromWorld(pendingLoad);
+if (!offline) {
+  const catalog = await fetchAssetCatalog();
+  const textureRecord = firstRecordOfKind(catalog, "pixelart");
+  worldRecord = firstRecordOfKind(catalog, "voxelmap");
+  const wsProtocol = location.protocol === "https:" ? "wss:" : "ws:";
+  const networkClient = new network.Client({
+    url: `${wsProtocol}//${location.host}/ws-sync`
+  });
+  textureRoom = networkClient.room<PixelNetworkCommand, PixelServerMessage>(
+    assetRoomName(textureRecord.kind, textureRecord.id.value)
+  );
+  worldRoom = networkClient.room<VoxelNetworkCommand, VoxelServerMessage>(
+    assetRoomName(worldRecord.kind, worldRecord.id.value)
+  );
 }
-await tilesetLoader.fromTileDefinition(defaultTileset);
+
+const tilesetLoader = new TilesetLoader({ manager: runtime.manager });
+await preloadTilesets(tilesetLoader, worldRecord);
 
 const editorScene = new EditorScene(
   editorState,
   {
     defaultLayerName: "Ground",
     tilesetLoader,
-    pendingLoad,
     voxelRoom: worldRoom
   }
 );
@@ -116,31 +147,20 @@ const sidebar = document.querySelector<EditorSidebar>("#sidebar")!;
 if (sidebar) {
   sidebar.textureRoom = textureRoom;
   sidebar.onLoadWorld = (data) => editorScene.loadWorld(data);
-
-  // editorScene.vr / gridRenderer are assigned inside awake(), which runs
-  // after loadScene(). Defer propagating them to the sidebar until the block
-  // registry is fully populated (dispatched at the end of awake()).
-  editorState.addEventListener("blockRegistryChanged", () => {
-    sidebar.vr = editorScene.vr;
-    sidebar.gridRenderer = editorScene.gridRenderer;
-  }, { once: true });
-
-  new ResizeHandle(
-    sidebar,
-    { direction: "left" }
-  );
-
-  // The pixel-art texture editor's own keybinds (Shift, Ctrl+C/V, Delete)
-  // and the 3D viewport's WASD camera controls both listen document/window
-  // -wide, so yield the engine's keyboard while the pointer is over the
-  // drawing canvas to avoid the two colliding.
   sidebar.addEventListener("canvas-hover-change", (event: Event) => {
     const { hovering } = (event as EventCanvasHoverChange).detail;
     world.input.keyboard.enabled = !hovering;
   });
 }
 
-loadRuntime(runtime, {
-  scene: editorScene
-})
-  .catch(console.error);
+await loadRuntime(runtime, {
+  scene: editorScene,
+  skipLoadingScreen: true
+});
+
+// The scene awakes on the first frame, after loadRuntime() has resolved.
+const { vr, gridRenderer } = await editorScene.ready;
+if (sidebar) {
+  sidebar.vr = vr;
+  sidebar.gridRenderer = gridRenderer;
+}

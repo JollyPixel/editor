@@ -12,6 +12,11 @@ Apply the stylesheet to a shadow-root scope host or wrap HTML in `jolly-scope`.
 `theme` accepts `light` or `dark`. An absent theme follows the system color
 scheme. `density` accepts `compact`, `default`, or `comfortable`.
 
+An element that declares tokens of its own stops inheriting the scope around
+it, and one appended to `document.body` never inherited any. Both resolve the
+page theme with `ambientThemeMode()` / `documentThemeMode()` and stamp it back
+on themselves — `jolly-dialog` and the facade's floating `Pane` already do.
+
 `jolly-theme-preferences` renders the theme and density controls, applies their
 values to a target scope, and persists them when `storage-key` is set.
 

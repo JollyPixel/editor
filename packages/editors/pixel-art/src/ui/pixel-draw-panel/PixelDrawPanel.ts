@@ -13,7 +13,11 @@ import {
   type PixelArtCanvasOptions,
   type Mode
 } from "@jolly-pixel/pixel-draw.renderer";
-import { resolveThemeColor, themeStyles } from "@jolly-pixel/ui";
+import {
+  ambientThemeMode,
+  resolveThemeColor,
+  themeStyles
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { ColorChangeDetail } from "../color/ColorSwatch.ts";
@@ -57,8 +61,9 @@ export class PixelDrawPanel extends LitElement {
   declare allowUvCreateDelete: boolean;
 
   /**
-   * "auto" follows prefers-color-scheme; "light"/"dark" force a palette
-   * regardless of the OS setting. Reflects to the `theme` attribute, which is
+   * "auto" follows the theme scope the panel is embedded in, and
+   * prefers-color-scheme when it is embedded in none; "light"/"dark" force a
+   * palette regardless. Reflects to the `theme` attribute, which is
    * what the CSS override selectors key off. `jolly-theme-preferences`
    * removes the attribute entirely for "auto" rather than writing it out, so
    * the converter maps a missing/null attribute back to "auto" instead of
@@ -106,6 +111,7 @@ export class PixelDrawPanel extends LitElement {
     // an OS scheme change mid-session instead of the CSS cascade doing it.
     this.#prefersDarkQuery = window.matchMedia("(prefers-color-scheme: dark)");
     this.#prefersDarkQuery.addEventListener("change", this.#onPrefersColorSchemeChange);
+    this.#syncAmbientTheme();
   }
 
   override disconnectedCallback() {
@@ -195,6 +201,22 @@ export class PixelDrawPanel extends LitElement {
       this.#syncCanvasBackground();
     }
   };
+
+  /**
+   * Embedded in an editor, the panel is one surface among many and has to
+   * match them; the OS preference only decides when the surrounding page has
+   * stated none. `theme` stays the author's setting either way — this records
+   * what "auto" resolved to, which the styles read to pick a palette.
+   */
+  #syncAmbientTheme(): void {
+    const ambient = ambientThemeMode(this);
+    if (ambient === null) {
+      delete this.dataset.ambientTheme;
+    }
+    else {
+      this.dataset.ambientTheme = ambient;
+    }
+  }
 
   /**
    * PixelArtCanvas paints its own void color on a <canvas> (not CSS), so it

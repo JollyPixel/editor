@@ -22,14 +22,7 @@ function tileRectOf(
   };
 }
 
-/**
- * Finds every block referencing `tilesetId`, through `defaultTexture` or any
- * `faceTextures` entry, paired with the tile rect(s) (in buffer pixel
- * coordinates) it draws from on that tileset. Unlike BlockUvBridge's
- * defaultTexture-only lookup (which mirrors draggable UV regions), this
- * covers every face so a texture edit can be checked against everything a
- * block actually renders with.
- */
+/** Includes default and per-face texture references. */
 export function findBlocksReferencingTileset(
   blocks: Iterable<BlockDefinition>,
   tilesetId: string,

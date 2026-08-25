@@ -15,6 +15,7 @@ import type {
 
 // Import Internal Dependencies
 import { editorState } from "../EditorState.ts";
+import { normalizeVoxelExtent } from "../lib/voxelExtent.ts";
 
 // CONSTANTS
 const kLabelCanvasWidth = 256;
@@ -50,11 +51,7 @@ function makeTextSprite(
   return sprite;
 }
 
-/**
- * One color per object layer. The golden angle keeps ids that hash close
- * together far apart in hue, so layers stay distinguishable however many
- * of them a map carries.
- */
+/** Produces stable, well-spaced colors from object IDs. */
 function layerColor(
   id: string
 ): string {
@@ -71,6 +68,7 @@ export interface ObjectLayerVisualsOptions {
 export class ObjectLayerVisuals extends ActorComponent {
   #vr: VoxelRenderer;
   #objectGroups: Map<string, THREE.Group> = new Map();
+  #unsubscribeSelection: (() => void) | null = null;
 
   constructor(
     actor: Actor,
@@ -86,8 +84,10 @@ export class ObjectLayerVisuals extends ActorComponent {
   awake(): void {
     this.rebuildAll();
 
-    editorState.addEventListener("selectedLayerChange", () => this.#updateObjectVisibility());
-    editorState.addEventListener("selectedLayerTypeChange", () => this.#updateObjectVisibility());
+    this.#unsubscribeSelection = editorState.on(
+      "selectionChange",
+      () => this.#updateObjectVisibility()
+    );
   }
 
   rebuildAll(): void {
@@ -150,8 +150,8 @@ export class ObjectLayerVisuals extends ActorComponent {
     layerName: string,
     obj: VoxelObjectJSON
   ): void {
-    const w = obj.width ?? 1;
-    const h = obj.height ?? 1;
+    const w = normalizeVoxelExtent(obj.width ?? 1);
+    const h = normalizeVoxelExtent(obj.height ?? 1);
 
     const group = new THREE.Group();
     group.position.set(obj.x + w / 2, obj.y + 0.5, obj.z + h / 2);
@@ -170,7 +170,6 @@ export class ObjectLayerVisuals extends ActorComponent {
     group.add(fillMesh);
 
     const label = makeTextSprite(obj.name);
-    // Sit the label just above the top face of the bounding box.
     label.position.set(0, 0.8, 0);
     group.add(label);
 
@@ -210,6 +209,8 @@ export class ObjectLayerVisuals extends ActorComponent {
   }
 
   override destroy(): void {
+    this.#unsubscribeSelection?.();
+    this.#unsubscribeSelection = null;
     for (const group of this.#objectGroups.values()) {
       this.#disposeGroup(group);
     }

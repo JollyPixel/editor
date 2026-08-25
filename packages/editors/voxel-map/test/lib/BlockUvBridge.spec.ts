@@ -171,7 +171,7 @@ describe("BlockUvBridge / region-moved", () => {
       const updated = vr.engine.blockRegistry.get(1)!;
       assert.equal(updated.defaultTexture!.col, 1.875);
       assert.equal(updated.defaultTexture!.row, 3.125);
-      assert.deepEqual(dirtyReasons, ["BlockLibrary update"]);
+      assert.deepEqual(dirtyReasons, ["block definitions updated"]);
     }
     finally {
       bridge.dispose();
@@ -368,9 +368,7 @@ describe("BlockUvBridge / selection cross-highlight", () => {
     try {
       bridge.setActiveTileset("atlas", 16);
 
-      // setSelectedBlock() no-ops on an unchanged id, and editorState is a
-      // shared singleton — force a real transition regardless of whatever
-      // other tests left it at.
+      // Force a transition because EditorState is shared across tests.
       editorState.setSelectedBlock(999);
       editorState.setSelectedBlock(2);
 
@@ -395,6 +393,78 @@ describe("BlockUvBridge / selection cross-highlight", () => {
       uv.select("block-2");
 
       assert.equal(editorState.selectedBlockId, 2);
+    }
+    finally {
+      bridge.dispose();
+      editorState.setSelectedBlock(1);
+    }
+  });
+});
+
+describe("BlockUvBridge / selection at boot", () => {
+  it("highlights the block already selected before the tileset loaded", () => {
+    const { vr } = makeFakeVoxelRenderer();
+    vr.engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));
+    vr.engine.blockRegistry.register(makeBlock(2, { col: 1, row: 0, tilesetId: "atlas" }));
+
+    // Boot state: block 1 is selected and emits no selectedBlockChange of
+    // its own, so nothing but the rebuild can apply the highlight.
+    editorState.setSelectedBlock(1);
+
+    const uv = makeUv();
+    const bridge = new BlockUvBridge(uv, vr);
+    try {
+      bridge.setActiveTileset("atlas", 16);
+
+      assert.equal(uv.selectedRegionId, "block-1");
+    }
+    finally {
+      bridge.dispose();
+      editorState.setSelectedBlock(1);
+    }
+  });
+
+  it("keeps the highlight across a rebuild that deletes every region", () => {
+    const { vr } = makeFakeVoxelRenderer();
+    vr.engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));
+    vr.engine.blockRegistry.register(makeBlock(2, { col: 1, row: 0, tilesetId: "atlas" }));
+
+    const uv = makeUv();
+    const bridge = new BlockUvBridge(uv, vr);
+    try {
+      bridge.setActiveTileset("atlas", 16);
+      editorState.setSelectedBlock(2);
+
+      vr.engine.blockRegistry.register(makeBlock(3, { col: 2, row: 0, tilesetId: "atlas" }));
+      editorState.dispatchBlockRegistryChanged();
+
+      assert.equal(uv.selectedRegionId, "block-2");
+    }
+    finally {
+      bridge.dispose();
+      editorState.setSelectedBlock(1);
+    }
+  });
+});
+
+describe("BlockUvBridge / deleted region", () => {
+  it("brings the highlight back with the region it restores", () => {
+    const { vr } = makeFakeVoxelRenderer();
+    vr.engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));
+    vr.engine.blockRegistry.register(makeBlock(2, { col: 1, row: 0, tilesetId: "atlas" }));
+
+    const uv = makeUv();
+    const bridge = new BlockUvBridge(uv, vr);
+    try {
+      bridge.setActiveTileset("atlas", 16);
+      editorState.setSelectedBlock(2);
+      assert.equal(uv.selectedRegionId, "block-2");
+
+      // A remote peer deleting the region drops the selection with it.
+      uv.delete("block-2");
+
+      assert.ok(uv.get("block-2"));
+      assert.equal(uv.selectedRegionId, "block-2");
     }
     finally {
       bridge.dispose();

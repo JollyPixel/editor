@@ -26,9 +26,7 @@ export interface VoxelBrushOptions {
   groundPlaneSize?: number;
 }
 
-/**
- * Handles voxel painting / erasing
- */
+/** Handles voxel painting and erasing. */
 export class VoxelBrush extends ActorComponent {
   readonly vr: VoxelRenderer;
 
@@ -54,7 +52,6 @@ export class VoxelBrush extends ActorComponent {
     this.vr = vr;
     this.#camera = camera;
 
-    // Invisible ground plane for hit-testing when no voxels exist yet.
     this.#plane = new THREE.Mesh(
       new THREE.PlaneGeometry(
         groundPlaneSize,
@@ -75,7 +72,6 @@ export class VoxelBrush extends ActorComponent {
     const { input } = this.actor.world;
     const isCtrl = input.keyboard.isDown("ControlLeft") || input.keyboard.isDown("ControlRight");
 
-    // No brush interaction when an object layer is selected.
     if (
       editorState.selectedLayerType === "object"
     ) {
@@ -179,18 +175,11 @@ export class VoxelBrush extends ActorComponent {
     return positions;
   }
 
-  /**
-   * Returns true when the camera is looking upward (camera Y world-dir > 0).
-   * In "auto" mode this is computed from the camera; otherwise the explicit
-   * editorState.flipY toggle is used.
-   */
   #resolveFlipY(): boolean {
-    // Explicit toggle always wins.
     if (editorState.flipY) {
       return true;
     }
 
-    // In auto mode, derive flip from camera looking upward.
     if (editorState.rotationMode === "auto") {
       const dir = new THREE.Vector3();
       this.#camera.getWorldDirection(dir);
@@ -201,10 +190,6 @@ export class VoxelBrush extends ActorComponent {
     return false;
   }
 
-  /**
-   * Aligns the block's front face toward the dominant camera viewing direction.
-   * Maps the XZ look direction to one of 4 VoxelRotation values.
-   */
   #resolveRotation(): VoxelRotationType {
     const mode = editorState.rotationMode;
     if (mode !== "auto") {
@@ -220,13 +205,11 @@ export class VoxelBrush extends ActorComponent {
     const absZ = Math.abs(dir.z);
 
     if (absZ >= absX) {
-      // Dominant Z axis
       return dir.z > 0 ?
         VoxelRotation.None :
         VoxelRotation.Deg180;
     }
 
-    // Dominant X axis
     return dir.x > 0 ?
       VoxelRotation.CCW90 :
       VoxelRotation.CW90;
@@ -276,8 +259,6 @@ export class VoxelBrush extends ActorComponent {
 
     const hit = this.#castRay();
     if (hit) {
-      // The ground plane has no voxel to superpose over: fall back to the
-      // placement cell, same as a real hit's face highlight has nothing to sit on.
       const isGroundHit = hit.object === this.#plane;
       const center = isGroundHit ?
         this.#hitToVoxelPos(hit, true) :

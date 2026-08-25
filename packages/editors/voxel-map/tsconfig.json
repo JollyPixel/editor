@@ -28,6 +28,9 @@
       "path": "../../three"
     },
     {
+      "path": "../../ui"
+    },
+    {
       "path": "../pixel-art"
     },
     {

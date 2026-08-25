@@ -21,7 +21,7 @@ export async function mountPerformanceStats(
   recorder: StatsRecorder,
   position: PerformanceStatsPosition
 ): Promise<MountedPerformanceStats> {
-  await import("@jolly-pixel/ui");
+  const { documentThemeMode } = await import("@jolly-pixel/ui");
 
   const floating = document.createElement("jolly-floating");
   const view = document.defaultView;
@@ -47,14 +47,22 @@ export async function mountPerformanceStats(
   stats.style.width = "100%";
   stats.style.height = "100%";
   floating.append(stats);
-  document.body.append(floating);
+
+  const scope = document.createElement("jolly-scope");
+  scope.style.display = "contents";
+  const theme = documentThemeMode();
+  if (theme !== null) {
+    scope.setAttribute("theme", theme);
+  }
+  scope.append(floating);
+  document.body.append(scope);
 
   return {
     dispose() {
       if (position === "top-right" && view !== null) {
         view.removeEventListener("resize", positionOverlay);
       }
-      floating.remove();
+      scope.remove();
     }
   };
 }

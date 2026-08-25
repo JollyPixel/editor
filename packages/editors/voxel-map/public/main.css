@@ -18,31 +18,15 @@ body {
   font-size: 13px;
 }
 
-editor-sidebar {
-  flex-shrink: 0;
-  min-width: 200px;
-  max-width: 600px;
+jolly-scope {
+  display: contents;
+
+  --jolly-accent-fill: #4488ff;
+  --jolly-label-width: 15ch;
 }
 
-.resize-handle.left {
-  width: 4px;
-  flex-shrink: 0;
-  background: #1a2228;
-  cursor: col-resize;
-  transition: background 0.15s;
-}
-
-.resize-handle.left:hover,
-html.handle-dragging.vertical .resize-handle.left {
-  background: #4488ff;
-}
-
-html.handle-dragging.vertical {
-  cursor: col-resize;
-}
-
-html.handle-dragging.vertical * {
-  user-select: none;
+jolly-pane::part(content) {
+  padding: 0;
 }
 
 #game-container {
@@ -82,4 +66,3 @@ html.handle-dragging.vertical * {
   scrollbar-width: thin;
   scrollbar-color: #2a3a4a #0a0f12;
 }
-

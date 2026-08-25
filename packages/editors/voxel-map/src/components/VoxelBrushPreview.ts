@@ -9,8 +9,7 @@ import {
 } from "@jolly-pixel/engine";
 
 // CONSTANTS
-// Half-extent of a preview cube, slightly larger than a voxel (0.5) to avoid
-// z-fighting against the actual chunk mesh at the edge of the hit.
+// The extra 0.01 prevents z-fighting with the chunk mesh.
 const kHalfSize = 0.51;
 const kFaceMargin = 0.05;
 const kFaceOffset = 0.001;
@@ -50,14 +49,8 @@ export interface VoxelBrushPreviewOptions {
 }
 
 /**
- * Renders a ghost-preview of the brush footprint using an InstancedMesh,
- * a `LineSegments2` outline, and a highlighted quad on the hit face.
- *
- * Uses WebGPU line helpers (`LineSegments2`/`Line2NodeMaterial`) rather than
- * core `THREE.LineSegments`/`LineDashedMaterial` — `Line2NodeMaterial` is
- * node-based (no `onBeforeCompile` GLSL patching), so it works with
- * WebGPURenderer's NodeBuilder while keeping a stable pixel line width.
- * Mirrors voxel-renderer's `examples/scripts/utils/brushHighlight.ts`.
+ * Brush footprint preview. WebGPU line helpers provide stable pixel widths
+ * without GLSL patching. See voxel-renderer's `brushHighlight.ts` example.
  */
 export class VoxelBrushPreview extends ActorComponent {
   static Max = 512;
@@ -174,10 +167,6 @@ export class VoxelBrushPreview extends ActorComponent {
     this.#faceMesh.visible = true;
   }
 
-  /**
-   * @param normal Hit face normal, in world space. Highlights the
-   * corresponding face of every preview cube; pass `null` to hide it.
-   */
   updateFromPositions(
     positions: THREE.Vector3[],
     normal: THREE.Vector3 | null = null
@@ -212,10 +201,6 @@ export class VoxelBrushPreview extends ActorComponent {
     this.#updateFace(positions, count, normal);
   }
 
-  /**
-   * Places a highlighted quad on the given face (`normal`) of every
-   * preview cube, offset outward by `kHalfSize` to sit flush on the surface.
-   */
   #updateFace(
     positions: THREE.Vector3[],
     count: number,
@@ -246,10 +231,6 @@ export class VoxelBrushPreview extends ActorComponent {
     this.#faceMesh.visible = true;
   }
 
-  /**
-   * Returns a flat positions array (start/end pairs) for the 12 edges
-   * of each preview cube, suitable for `LineSegmentsGeometry.setPositions()`.
-   */
   #buildBorderPositions(
     positions: THREE.Vector3[],
     count: number
@@ -262,7 +243,6 @@ export class VoxelBrushPreview extends ActorComponent {
       const z = positions[i].z + 0.5 - kHalfSize;
       const size = kHalfSize * 2;
 
-      // Bottom-face corners (y)
       const b0x = x;
       const b0y = y;
       const b0z = z;
@@ -276,7 +256,6 @@ export class VoxelBrushPreview extends ActorComponent {
       const b3y = y;
       const b3z = z + size;
 
-      // Top-face corners (y+size)
       const t0x = x;
       const t0y = y + size;
       const t0z = z;
@@ -290,17 +269,14 @@ export class VoxelBrushPreview extends ActorComponent {
       const t3y = y + size;
       const t3z = z + size;
 
-      // Bottom 4 edges
       result.push(b0x, b0y, b0z, b1x, b1y, b1z);
       result.push(b1x, b1y, b1z, b2x, b2y, b2z);
       result.push(b2x, b2y, b2z, b3x, b3y, b3z);
       result.push(b3x, b3y, b3z, b0x, b0y, b0z);
-      // Top 4 edges
       result.push(t0x, t0y, t0z, t1x, t1y, t1z);
       result.push(t1x, t1y, t1z, t2x, t2y, t2z);
       result.push(t2x, t2y, t2z, t3x, t3y, t3z);
       result.push(t3x, t3y, t3z, t0x, t0y, t0z);
-      // 4 vertical edges
       result.push(b0x, b0y, b0z, t0x, t0y, t0z);
       result.push(b1x, b1y, b1z, t1x, t1y, t1z);
       result.push(b2x, b2y, b2z, t2x, t2y, t2z);

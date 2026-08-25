@@ -15,16 +15,12 @@ export interface LayerGizmoOptions {
   camera: THREE.PerspectiveCamera;
 }
 
-/**
- * Visual manipulator for repositioning a voxel layer in world space.
- * Uses THREE.js TransformControls
- * Activate by calling setActiveLayer(name) from the Layer panel.
- */
 export class LayerGizmo extends TransformGizmoBase {
   #pivot = new THREE.Object3D();
   #pivotOffset = new THREE.Vector3();
   #activeLayer: string | null = null;
   #vr: VoxelRenderer;
+  #subscriptions: Array<() => void> = [];
 
   constructor(
     actor: Actor,
@@ -40,44 +36,20 @@ export class LayerGizmo extends TransformGizmoBase {
     this.controls!.setSpace("world");
     this.controls!.setTranslationSnap(1);
 
-    // Pivot is the object TransformControls manipulates.
     this.actor.addChildren(this.#pivot);
+    this.controls!.addEventListener("objectChange", this.#onObjectChange);
+    this.#subscriptions.push(
+      editorState.on("gizmoLayerChange", this.setActiveLayer.bind(this)),
+      editorState.on("layerUpdated", this.#onLayerUpdated)
+    );
+  }
 
-    // Apply offset when pivot is dragged.
-    // The pivot sits at the voxel-content center, so subtract #pivotOffset
-    // (center − original offset) to recover the true layer offset.
-    this.controls!.addEventListener("objectChange", () => {
-      if (!this.#activeLayer) {
-        return;
-      }
-      const p = this.#pivot.position;
-      this.#vr.engine.setLayerOffset(this.#activeLayer, {
-        x: Math.round(p.x - this.#pivotOffset.x),
-        y: Math.round(p.y - this.#pivotOffset.y),
-        z: Math.round(p.z - this.#pivotOffset.z)
-      });
-    });
-
-    // Show/hide the gizmo when the user toggles it from the layer list.
-    editorState.addEventListener("gizmoLayerChange", () => {
-      this.setActiveLayer(editorState.gizmoLayer);
-    });
-
-    // Reposition pivot when voxels are placed/removed or the offset is changed
-    // externally (e.g. via the LayerPanel inputs) on the active layer.
-    editorState.addEventListener("layerUpdated", (e) => {
-      const evt = (e as CustomEvent<VoxelLayerHookEvent>).detail;
-      if (evt.layerName !== this.#activeLayer) {
-        return;
-      }
-      if (
-        evt.action === "voxel-set" ||
-        evt.action === "voxel-removed" ||
-        evt.action === "offset-updated"
-      ) {
-        this.#repositionPivot();
-      }
-    });
+  override destroy(): void {
+    this.controls?.removeEventListener("objectChange", this.#onObjectChange);
+    for (const unsubscribe of this.#subscriptions.splice(0)) {
+      unsubscribe();
+    }
+    super.destroy();
   }
 
   setActiveLayer(
@@ -123,4 +95,29 @@ export class LayerGizmo extends TransformGizmoBase {
     );
     this.#pivot.position.copy(center);
   }
+
+  readonly #onObjectChange = (): void => {
+    if (!this.#activeLayer) {
+      return;
+    }
+    const position = this.#pivot.position;
+    this.#vr.engine.setLayerOffset(this.#activeLayer, {
+      x: Math.round(position.x - this.#pivotOffset.x),
+      y: Math.round(position.y - this.#pivotOffset.y),
+      z: Math.round(position.z - this.#pivotOffset.z)
+    });
+  };
+
+  readonly #onLayerUpdated = (event: VoxelLayerHookEvent): void => {
+    if (event.layerName !== this.#activeLayer) {
+      return;
+    }
+    if (
+      event.action === "voxel-set" ||
+      event.action === "voxel-removed" ||
+      event.action === "offset-updated"
+    ) {
+      this.#repositionPivot();
+    }
+  };
 }
