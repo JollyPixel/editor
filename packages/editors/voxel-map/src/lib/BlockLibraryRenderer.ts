@@ -7,8 +7,10 @@ import type {
   FaceDefinition
 } from "@jolly-pixel/voxel.renderer";
 
+// Import Internal Dependencies
+import { disposeObject3D } from "./disposeObject3D.ts";
+
 // CONSTANTS
-// px per block preview cell
 const kCellSize = 64;
 const kCameraFov = 45;
 const kCameraZ = 2.2;
@@ -17,10 +19,9 @@ const kDirIntensity = 1.2;
 
 export interface CellEntry {
   blockId: number;
+  block: BlockDefinition;
   mesh: THREE.Mesh | THREE.Group;
-  // cell column
   x: number;
-  // cell row
   y: number;
 }
 
@@ -30,15 +31,6 @@ export interface BlockLibraryRendererOptions {
   blocks?: BlockDefinition[];
 }
 
-/**
- * Standalone Three.js renderer that draws a scrollable grid of block previews
- * inside a dedicated canvas. Uses scissor / viewport per cell.
- *
- * Usage:
- *   const r = new BlockLibraryRenderer(container, { shapeRegistry, tilesetManager, blocks });
- *   r.setBlocks(newBlocks);
- *   r.getBlockAtPointer(px, py); // → blockId | null
- */
 export class BlockLibraryRenderer {
   readonly canvas: HTMLCanvasElement;
 
@@ -52,7 +44,6 @@ export class BlockLibraryRenderer {
   #raf = -1;
   #rot = 0;
   #cols = 1;
-  // Adaptive cell size in device pixels — computed from available width
   #cellSize = kCellSize;
   #container: HTMLElement;
   #resizeObserver: ResizeObserver;
@@ -99,23 +90,36 @@ export class BlockLibraryRenderer {
   setBlocks(
     blocks: BlockDefinition[]
   ): void {
-    for (const cell of this.#cells) {
-      this.#scene.remove(cell.mesh);
-      if (cell.mesh instanceof THREE.Mesh) {
-        cell.mesh.geometry.dispose();
-      }
-    }
-    this.#cells = [];
+    const previous = new Map(
+      this.#cells.map((cell) => [cell.blockId, cell])
+    );
+    const next: CellEntry[] = [];
 
-    for (let i = 0; i < blocks.length; i++) {
-      const mesh = this.#buildBlockMesh(blocks[i]);
-      // Start hidden — each cell is made visible only during its own render pass
-      // to prevent all meshes from overlapping at the origin simultaneously.
+    for (const block of blocks) {
+      const existing = previous.get(block.id);
+      if (existing?.block === block) {
+        previous.delete(block.id);
+        next.push(existing);
+
+        continue;
+      }
+
+      if (existing) {
+        this.#removeCell(existing);
+        previous.delete(block.id);
+      }
+
+      const mesh = this.#buildBlockMesh(block);
       mesh.visible = false;
       this.#scene.add(mesh);
-      this.#cells.push({ blockId: blocks[i].id, mesh, x: 0, y: 0 });
+      next.push({ blockId: block.id, block, mesh, x: 0, y: 0 });
     }
 
+    for (const cell of previous.values()) {
+      this.#removeCell(cell);
+    }
+
+    this.#cells = next;
     this.#relayout();
   }
 
@@ -145,7 +149,7 @@ export class BlockLibraryRenderer {
     cancelAnimationFrame(this.#raf);
     this.#resizeObserver.disconnect();
     for (const cell of this.#cells) {
-      this.#scene.remove(cell.mesh);
+      this.#removeCell(cell);
     }
     this.#cells = [];
     this.#renderer.dispose();
@@ -186,7 +190,6 @@ export class BlockLibraryRenderer {
       const faceUvs = face.uvs;
       const n = face.normal;
 
-      // Determine UV region for this face (use defaultTexture or first faceTexture)
       const tileRef =
         block.faceTextures[face.face as keyof typeof block.faceTextures] ??
         block.defaultTexture;
@@ -204,7 +207,7 @@ export class BlockLibraryRenderer {
           vScale = region.scaleV;
         }
         catch {
-          // No-op — region unavailable
+          // A missing tile region falls back to the full texture.
         }
       }
 
@@ -242,7 +245,6 @@ export class BlockLibraryRenderer {
     const paddingH = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
     const availCssPx = this.#container.clientWidth - paddingH;
 
-    // Compute columns from the nominal cell size, then stretch cells to fill exactly
     this.#cols = Math.max(1, Math.floor(availCssPx / (kCellSize / pr)));
     this.#cellSize = Math.max(1, Math.round(availCssPx * pr / this.#cols));
 
@@ -281,7 +283,6 @@ export class BlockLibraryRenderer {
     const totalRows = Math.ceil(this.#cells.length / this.#cols) || 1;
     const cellCssPx = this.#cellSize / pr;
 
-    // Only render cells within the container's visible scroll window.
     const scrollTop = this.#container.scrollTop;
     const containerH = this.#container.clientHeight;
 
@@ -292,14 +293,11 @@ export class BlockLibraryRenderer {
         continue;
       }
 
-      // Make only this cell's mesh visible so no other mesh renders into
-      // its scissor region. Reset to hidden immediately after the draw call.
       cell.mesh.visible = true;
       cell.mesh.position.set(0, 0, 0);
       cell.mesh.rotation.set(0.4, this.#rot, 0);
 
       const x = cell.x * cellCssPx;
-      // flip Y for WebGL
       const y = (totalRows - 1 - cell.y) * cellCssPx;
 
       this.#renderer.setViewport(x, y, cellCssPx, cellCssPx);
@@ -317,5 +315,10 @@ export class BlockLibraryRenderer {
     }
 
     this.#renderer.setScissorTest(false);
+  }
+
+  #removeCell(cell: CellEntry): void {
+    this.#scene.remove(cell.mesh);
+    disposeObject3D(cell.mesh);
   }
 }

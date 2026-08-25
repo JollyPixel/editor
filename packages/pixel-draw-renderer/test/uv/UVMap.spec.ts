@@ -785,6 +785,27 @@ describe("UVMap — clear", () => {
       "rect must be { x: 0, y: 0, width: 4, height: 4 }"
     );
   });
+
+  test("terminates when a listener restores a region while clearing", () => {
+    const map = makeMap();
+    const first = map.create({ width: 4, height: 4 });
+    map.create({ width: 4, height: 4 });
+
+    // The voxel-map bridge puts a block region back as soon as it is
+    // deleted; clearing must not feed that re-insertion back into itself.
+    let restored = 0;
+    map.on("region-deleted", ({ region }) => {
+      if (region.id === first.id && restored < 8) {
+        restored++;
+        map.restore(region);
+      }
+    });
+
+    map.clear();
+
+    assert.strictEqual(restored, 1);
+    assert.deepStrictEqual([...map.regions].map((region) => region.id), [first.id]);
+  });
 });
 
 describe("UVMap — on/off", () => {

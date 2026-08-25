@@ -1,173 +1,71 @@
 // Import Third-party Dependencies
 import { LitElement, html, css, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { repeat } from "lit/directives/repeat.js";
 import type {
   VoxelRenderer,
   VoxelObjectLayerJSON,
   VoxelObjectJSON,
   VoxelLayerHookEvent
 } from "@jolly-pixel/voxel.renderer";
+import {
+  showPrompt,
+  type JollyChangeDetail,
+  type Vec3Like
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { editorState } from "../EditorState.ts";
-import type { EventInput } from "./types.ts";
-import type { Vec3 } from "./Vec3Input.ts";
-import type { Vec2 } from "./Vec2Input.ts";
-import { showPrompt } from "./PromptDialog.ts";
+import { normalizeVoxelExtent } from "../lib/voxelExtent.ts";
+import type { Vec2Like } from "./types.ts";
 
 @customElement("object-layer-panel")
 export class ObjectLayerPanel extends LitElement {
   static override styles = css`
     :host {
-      display: block;
-      background: #1a2228;
-      padding: 8px;
-      font-size: 13px;
-      color: #ccc;
+      display: flex;
+      flex-direction: column;
+      gap: var(--jolly-row-gap, 4px);
+      padding: var(--jolly-space-1, 4px);
+      border-top: 1px solid var(--jolly-groove);
     }
+
     .panel-title {
-      font-size: 11px;
-      font-weight: 600;
-      color: #888;
+      color: var(--jolly-text-muted);
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      margin-bottom: 8px;
     }
-    .row {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 6px;
-    }
-    label {
-      min-width: 70px;
-      color: #aaa;
-      font-size: 12px;
-    }
-    input[type="checkbox"] {
-      accent-color: #4488ff;
-    }
-    input[type="number"],
-    input[type="text"] {
-      background: #111a20;
-      border: 1px solid #333;
-      color: #eee;
-      padding: 2px 4px;
-      border-radius: 3px;
-      font-size: 12px;
-      width: 56px;
-    }
-    input[type="text"] {
-      width: auto;
-      flex: 1;
-    }
-    .section-title {
-      font-size: 11px;
-      font-weight: 600;
-      color: #888;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin: 10px 0 5px;
-    }
-    .object-card {
-      background: #111a20;
-      border-radius: 4px;
-      padding: 6px;
-      margin-bottom: 6px;
-    }
-    .object-header {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 4px;
-    }
-    .object-name {
-      flex: 1;
-      font-weight: 600;
-      font-size: 12px;
-    }
-    .object-name-input {
-      flex: 1;
-      font-weight: 600;
-      font-size: 12px;
-      background: #111a20;
-      border: 1px solid #4488ff;
-      color: #eee;
-      padding: 0 2px;
-      border-radius: 2px;
-    }
-    .object-type {
-      font-size: 11px;
-      color: #778899;
-    }
-    .remove-btn {
-      background: transparent;
-      border: none;
-      color: #ff5555;
-      cursor: pointer;
-      font-size: 14px;
-      line-height: 1;
-      padding: 0 2px;
-    }
-    vec3-input,
-    vec2-input {
-      margin-bottom: 4px;
-    }
+
     .prop-row {
       display: flex;
-      gap: 4px;
-      margin-bottom: 4px;
+      align-items: center;
+      gap: var(--jolly-space-1, 4px);
     }
-    .prop-row input[type="text"] {
+    .prop-row jolly-text {
       flex: 1;
-    }
-    .prop-remove {
-      background: transparent;
-      border: none;
-      color: #ff5555;
-      cursor: pointer;
-      font-size: 14px;
-      line-height: 1;
-      padding: 0 2px;
-    }
-    .add-btn {
-      background: transparent;
-      border: 1px dashed #444;
-      color: #888;
-      font-size: 12px;
-      cursor: pointer;
-      width: 100%;
-      padding: 3px;
-      border-radius: 3px;
-      margin-top: 2px;
-    }
-    .add-btn:hover {
-      border-color: #4488ff;
-      color: #4488ff;
+      min-width: 0;
     }
   `;
 
-  @property({ attribute: false }) declare vr: VoxelRenderer;
-  @property({ type: String }) declare layerName: string | null;
+  @property({ attribute: false })
+  declare vr: VoxelRenderer;
+  @property({ type: String })
+  declare layerName: string | null;
 
-  @state() private declare _layer: VoxelObjectLayerJSON | null;
-  @state() private declare _visible: boolean;
-  @state() private declare _objects: VoxelObjectJSON[];
-  @state() private declare _editingObjectId: string | null;
-  @state() private declare _editingValue: string;
+  @state()
+  private declare _layer: VoxelObjectLayerJSON | null;
+  @state()
+  private declare _objects: VoxelObjectJSON[];
+  #subscriptions: Array<() => void> = [];
 
   constructor() {
     super();
     this.layerName = null;
     this._layer = null;
-    this._visible = true;
     this._objects = [];
-    this._editingObjectId = null;
-    this._editingValue = "";
   }
 
-  #onLayerUpdated = (event: Event) => {
-    const evt = (event as CustomEvent<VoxelLayerHookEvent>).detail;
+  #onLayerUpdated = (evt: VoxelLayerHookEvent) => {
     if (
       evt.layerName !== this.layerName ||
       (
@@ -184,18 +82,25 @@ export class ObjectLayerPanel extends LitElement {
 
   override connectedCallback() {
     super.connectedCallback();
-    editorState.addEventListener("layerUpdated", this.#onLayerUpdated);
+    this.#subscriptions.push(
+      editorState.on("layerUpdated", this.#onLayerUpdated)
+    );
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
-    editorState.removeEventListener("layerUpdated", this.#onLayerUpdated);
+    for (const unsubscribe of this.#subscriptions.splice(0)) {
+      unsubscribe();
+    }
   }
 
   override willUpdate(
     changed: Map<string, unknown>
   ) {
-    if (changed.has("layerName") || changed.has("vr")) {
+    if (
+      changed.has("layerName") ||
+      changed.has("vr")
+    ) {
       this.#syncFromLayer();
     }
   }
@@ -211,7 +116,6 @@ export class ObjectLayerPanel extends LitElement {
     this._layer = layer;
 
     if (layer) {
-      this._visible = layer.visible;
       this._objects = [...layer.objects];
     }
   }
@@ -224,19 +128,13 @@ export class ObjectLayerPanel extends LitElement {
     return html`
       <div class="panel-title">Object Layer: ${this.layerName}</div>
 
-      <div class="row">
-        <label>Visible</label>
-        <input
-          type="checkbox"
-          ?checked=${this._visible}
-          @change=${this.#onVisibleChange}
-        />
-      </div>
+      ${repeat(
+        this._objects,
+        (object) => object.id,
+        (object) => this.#renderObject(object)
+      )}
 
-      <div class="section-title">Objects</div>
-      ${this._objects.map((obj) => this.#renderObject(obj))}
-
-      <button class="add-btn" @click=${this.#addObject}>+ Add Object</button>
+      <jolly-button @click=${this.#addObject}>+ Add Object</jolly-button>
     `;
   }
 
@@ -244,143 +142,166 @@ export class ObjectLayerPanel extends LitElement {
     obj: VoxelObjectJSON
   ) {
     return html`
-      <div class="object-card">
-        <div class="object-header">
-          ${this._editingObjectId === obj.id
-            ? html`<input type="text" class="object-name-input"
-                .value=${this._editingValue}
-                @input=${(event: EventInput) => {
-                  this._editingValue = event.target.value;
-                }}
-                @keydown=${(event: KeyboardEvent) => this.#onRenameKeydown(obj.id, event)}
-                @blur=${() => this.#commitRename(obj.id)}
-              />`
-            : html`<span class="object-name"
-                @dblclick=${() => this.#startRename(obj)}
-              >${obj.name}</span>`}
-          ${obj.type ? html`<span class="object-type">${obj.type}</span>` : null}
-          <input
-            type="checkbox"
-            title="Visible"
-            ?checked=${obj.visible}
-            @change=${(e: EventInput) => this.#onObjectVisibleChange(obj.id, e)}
-          />
-          <button class="remove-btn" @click=${() => this.#removeObject(obj.id)}>×</button>
-        </div>
+      <jolly-folder
+        key=${obj.id}
+        label=${obj.name}
+      >
+        <jolly-text
+          label="Name"
+          .value=${obj.name}
+          @jolly-change=${(event: CustomEvent<JollyChangeDetail<string>>) => this.#onObjectNameChange(obj.id, event)}
+        ></jolly-text>
 
-        <vec3-input
-          .x=${obj.x}
-          .y=${obj.y}
-          .z=${obj.z}
-          @change=${(e: CustomEvent<Vec3>) => this.#onObjectPosChange(obj.id, e)}
-        ></vec3-input>
+        ${obj.type
+          ? html`<jolly-property-row label="Type">${obj.type}</jolly-property-row>`
+          : nothing}
 
-        <vec2-input
-          .x=${obj.width ?? 1}
-          .y=${obj.height ?? 1}
-          labelX="W"
-          labelY="H"
-          @change=${(e: CustomEvent<Vec2>) => this.#onObjectSizeChange(obj.id, e)}
-        ></vec2-input>
+        <jolly-checkbox
+          align="end"
+          label="Visible"
+          .value=${obj.visible}
+          @jolly-change=${(event: CustomEvent<JollyChangeDetail<boolean>>) => this.#onObjectVisibleChange(obj.id, event)}
+        ></jolly-checkbox>
+
+        <jolly-vector3
+          label="Position"
+          step="1"
+          .value=${{ x: obj.x, y: obj.y, z: obj.z }}
+          @jolly-change=${(event: CustomEvent<JollyChangeDetail<Vec3Like>>) => this.#onObjectPosChange(obj.id, event)}
+        ></jolly-vector3>
+
+        <jolly-vector2
+          label="Size"
+          step="1"
+          min="1"
+          .axisLabels=${{ x: "W", y: "H" }}
+          .value=${{
+            x: normalizeVoxelExtent(obj.width ?? 1),
+            y: normalizeVoxelExtent(obj.height ?? 1)
+          }}
+          @jolly-change=${(event: CustomEvent<JollyChangeDetail<Vec2Like>>) => this.#onObjectSizeChange(obj.id, event)}
+        ></jolly-vector2>
 
         ${this.#renderObjectProperties(obj)}
-      </div>
+
+        <jolly-button
+          variant="danger"
+          @click=${() => this.#removeObject(obj.id)}
+        >Remove object</jolly-button>
+      </jolly-folder>
     `;
   }
 
   #renderObjectProperties(
     obj: VoxelObjectJSON
   ) {
-    const props = obj.properties ?? {};
-    const entries = Object.entries(props);
+    const entries = Object.entries(obj.properties ?? {});
 
     return html`
-      <div class="section-title" style="margin-top:6px;">Properties</div>
-      ${entries.map(([key, value]) => html`
-        <div class="prop-row">
-          <input
-            type="text"
-            placeholder="key"
-            .value=${key}
-            @change=${(e: EventInput) => this.#onPropKeyChange(obj.id, key, e)}
-          />
-          <input
-            type="text"
-            placeholder="value"
-            .value=${String(value)}
-            @change=${(e: EventInput) => this.#onPropValueChange(obj.id, key, e)}
-          />
-          <button class="prop-remove" @click=${() => this.#removeProp(obj.id, key)}>×</button>
-        </div>
-      `)}
-      <button
-        class="add-btn"
-        @click=${() => this.#addProp(obj.id)}
-      >+ Add property</button>
+      <jolly-folder key="properties" label="Properties">
+        ${entries.map(([key, value]) => html`
+          <div class="prop-row">
+            <jolly-text
+              placeholder="key"
+              .value=${key}
+              @jolly-change=${(event: CustomEvent<JollyChangeDetail<string>>) => this.#onPropKeyChange(obj.id, key, event)}
+            ></jolly-text>
+            <jolly-text
+              placeholder="value"
+              .value=${String(value)}
+              @jolly-change=${(event: CustomEvent<JollyChangeDetail<string>>) => this.#onPropValueChange(obj.id, key, event)}
+            ></jolly-text>
+            <jolly-button
+              icon="close"
+              icon-only
+              variant="danger"
+              label="Remove property"
+              @click=${() => this.#removeProp(obj.id, key)}
+            ></jolly-button>
+          </div>
+        `)}
+        <jolly-button @click=${() => this.#addProp(obj.id)}>+ Add property</jolly-button>
+      </jolly-folder>
     `;
   }
 
-  #onVisibleChange(
-    event: EventInput
+  #onObjectNameChange(
+    objId: string,
+    event: CustomEvent<JollyChangeDetail<string>>
   ): void {
-    if (!this.layerName) {
+    const name = event.detail.value.trim();
+    if (!this.layerName || !name) {
       return;
     }
 
-    this._visible = event.target.checked;
-    this.vr.engine.updateObjectLayer(this.layerName, { visible: this._visible });
+    this.vr.engine.updateObject(this.layerName, objId, { name });
   }
 
   #onObjectVisibleChange(
     objId: string,
-    event: EventInput
+    event: CustomEvent<JollyChangeDetail<boolean>>
   ): void {
     if (!this.layerName) {
       return;
     }
 
-    this.vr.engine.updateObject(this.layerName, objId, { visible: event.target.checked });
+    this.vr.engine.updateObject(
+      this.layerName,
+      objId,
+      { visible: event.detail.value }
+    );
   }
 
   #onObjectPosChange(
     objId: string,
-    event: CustomEvent<Vec3>
+    event: CustomEvent<JollyChangeDetail<Vec3Like>>
   ): void {
     if (!this.layerName) {
       return;
     }
 
-    const { x, y, z } = event.detail;
-    this.vr.engine.updateObject(this.layerName, objId, { x, y, z });
+    const { x, y, z } = event.detail.value;
+    this.vr.engine.updateObject(
+      this.layerName,
+      objId,
+      {
+        x: Math.round(x),
+        y: Math.round(y),
+        z: Math.round(z)
+      }
+    );
   }
 
   #onObjectSizeChange(
     objId: string,
-    event: CustomEvent<Vec2>
+    event: CustomEvent<JollyChangeDetail<Vec2Like>>
   ): void {
     if (!this.layerName) {
       return;
     }
 
-    const { x: width, y: height } = event.detail;
-    this.vr.engine.updateObject(this.layerName, objId, { width, height });
+    const { x: width, y: height } = event.detail.value;
+    this.vr.engine.updateObject(
+      this.layerName,
+      objId,
+      {
+        width: normalizeVoxelExtent(width),
+        height: normalizeVoxelExtent(height)
+      }
+    );
   }
 
   #onPropKeyChange(
     objId: string,
     oldKey: string,
-    event: EventInput
+    event: CustomEvent<JollyChangeDetail<string>>
   ): void {
-    if (!this.layerName) {
+    const obj = this.#objectById(objId);
+    if (obj === undefined) {
       return;
     }
 
-    const obj = this._objects.find((o) => o.id === objId);
-    if (!obj) {
-      return;
-    }
-
-    const newKey = event.target.value.trim();
+    const newKey = event.detail.value.trim();
     if (!newKey || newKey === oldKey) {
       return;
     }
@@ -388,91 +309,73 @@ export class ObjectLayerPanel extends LitElement {
     const props = { ...(obj.properties ?? {}) };
     props[newKey] = props[oldKey];
     delete props[oldKey];
-    this.vr.engine.updateObject(this.layerName, objId, { properties: props });
+    this.vr.engine.updateObject(
+      this.layerName!,
+      objId,
+      { properties: props }
+    );
   }
 
   #onPropValueChange(
     objId: string,
     key: string,
-    event: EventInput
+    event: CustomEvent<JollyChangeDetail<string>>
   ): void {
-    if (!this.layerName) {
+    const obj = this.#objectById(objId);
+    if (obj === undefined) {
       return;
     }
 
-    const obj = this._objects.find((o) => o.id === objId);
-    if (!obj) {
-      return;
-    }
-
-    const props = { ...(obj.properties ?? {}), [key]: event.target.value };
-    this.vr.engine.updateObject(this.layerName, objId, { properties: props });
+    const props = { ...(obj.properties ?? {}), [key]: event.detail.value };
+    this.vr.engine.updateObject(
+      this.layerName!,
+      objId,
+      { properties: props }
+    );
   }
 
   #addProp(
     objId: string
   ): void {
-    if (!this.layerName) {
-      return;
-    }
-
-    const obj = this._objects.find((o) => o.id === objId);
-    if (!obj) {
+    const obj = this.#objectById(objId);
+    if (obj === undefined) {
       return;
     }
 
     const props = { ...(obj.properties ?? {}), "": "" };
-    this.vr.engine.updateObject(this.layerName, objId, { properties: props });
+    this.vr.engine.updateObject(
+      this.layerName!,
+      objId,
+      { properties: props }
+    );
   }
 
   #removeProp(
     objId: string,
     key: string
   ): void {
-    if (!this.layerName) {
-      return;
-    }
-
-    const obj = this._objects.find((o) => o.id === objId);
-    if (!obj) {
+    const obj = this.#objectById(objId);
+    if (obj === undefined) {
       return;
     }
 
     const props = { ...(obj.properties ?? {}) };
     delete props[key];
-    this.vr.engine.updateObject(this.layerName, objId, { properties: props });
+    this.vr.engine.updateObject(
+      this.layerName!,
+      objId,
+      { properties: props }
+    );
   }
 
-  #startRename(
-    obj: VoxelObjectJSON
-  ): void {
-    this._editingObjectId = obj.id;
-    this._editingValue = obj.name;
-    this.updateComplete.then(() => {
-      this.shadowRoot?.querySelector<HTMLInputElement>(".object-name-input")?.focus();
-    });
-  }
-
-  #commitRename(
+  #objectById(
     objId: string
-  ): void {
-    const trimmed = this._editingValue.trim();
-    if (trimmed && this.layerName) {
-      this.vr.engine.updateObject(this.layerName, objId, { name: trimmed });
+  ): VoxelObjectJSON | undefined {
+    if (!this.layerName) {
+      return undefined;
     }
-    this._editingObjectId = null;
-  }
 
-  #onRenameKeydown(
-    _objId: string,
-    event: KeyboardEvent
-  ): void {
-    if (event.key === "Enter") {
-      (event.target as HTMLInputElement).blur();
-    }
-    else if (event.key === "Escape") {
-      this._editingObjectId = null;
-    }
+    return this._objects.find((candidate) => candidate.id === objId);
   }
 
   #removeObject(
@@ -490,7 +393,11 @@ export class ObjectLayerPanel extends LitElement {
       return;
     }
 
-    const name = await showPrompt({ label: "Object name:", defaultValue: "Object" });
+    const name = await showPrompt({
+      title: "New object",
+      label: "Object name:",
+      defaultValue: "Object"
+    });
     if (!name?.trim()) {
       return;
     }

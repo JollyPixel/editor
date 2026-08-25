@@ -1,5 +1,9 @@
 // Import Third-party Dependencies
-import type { TilesetManager, VoxelRenderer } from "@jolly-pixel/voxel.renderer";
+import type {
+  BlockDefinition,
+  TilesetManager,
+  VoxelRenderer
+} from "@jolly-pixel/voxel.renderer";
 import type * as network from "@jolly-pixel/network";
 import {
   PixelSyncClient,
@@ -9,18 +13,10 @@ import {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import { applyBlockUpdate } from "./applyBlockUpdate.ts";
+import { applyBlockUpdates } from "./applyBlockUpdate.ts";
 import { findBlocksReferencingTileset } from "./blockTextureTiles.ts";
+import { editorState } from "../EditorState.ts";
 
-// CONSTANTS
-const kTextureKeyPrefix = "jolly-pixel-voxel-map-texture-";
-
-/**
- * Bridges a `PixelArtCanvas` owned by `<pixel-draw-panel>` with the Three.js
- * tileset texture. Call attach() once the panel has finished initializing,
- * then loadTileset() each time the active tileset changes. destroy() cleans
- * up the sync client.
- */
 export class TextureEditorBridge {
   #manager: PixelArtCanvas | null = null;
   #syncClient: PixelSyncClient | null = null;
@@ -28,6 +24,8 @@ export class TextureEditorBridge {
   #tilesetId: string | null = null;
   #vr: VoxelRenderer | null = null;
   #tileSize = 1;
+  #unsubscribe: (() => void) | null = null;
+  #syncing = false;
 
   get isActive(): boolean {
     return this.#manager !== null;
@@ -37,11 +35,21 @@ export class TextureEditorBridge {
     canvas: PixelArtCanvas,
     room?: network.Room<PixelNetworkCommand, PixelServerMessage>
   ): void {
+    this.#syncClient?.destroy();
+    this.#syncClient = null;
     this.#manager = canvas;
+    this.#unsubscribe ??= editorState.on(
+      "blockRegistryChanged",
+      this.#onBlockRegistryChanged
+    );
 
     if (room) {
       this.#syncClient = new PixelSyncClient({ room });
       this.#syncClient.attach(this.#manager);
+      // The room owns the atlas pixels, so every replacement has to reach the
+      // Three.js tileset — not only the strokes drawn here.
+      this.#syncClient.on("snapshot", () => this.syncToThree());
+      room.join();
     }
   }
 
@@ -59,7 +67,6 @@ export class TextureEditorBridge {
       return;
     }
 
-    // The unpadded atlas: its pixel grid is the one the editor draws on.
     const texture = tilesetManager.getSourceTexture(id);
     if (!texture) {
       return;
@@ -70,50 +77,59 @@ export class TextureEditorBridge {
     this.#vr = vr;
     this.#tileSize = tilesetManager.getDefinitions().find((def) => def.id === id)?.tileSize ?? 1;
 
-    const saved = localStorage.getItem(kTextureKeyPrefix + id);
-    if (saved) {
-      const img = new Image();
-      img.onload = () => {
-        this.#manager!.texture = img;
-        this.syncToThree();
-      };
-      img.src = saved;
-    }
-    else {
-      this.#manager.texture = texture.image as HTMLImageElement;
+    // A room snapshot overwrites this with the shared atlas as soon as it
+    // lands; until then the shipped image keeps the canvas usable.
+    if (this.#applyTexture(texture.image as HTMLImageElement, "tileset source image")) {
+      this.syncTransparency();
     }
   }
 
-  /**
-   * Pushes the current texture canvas back into the tileset — which repacks it
-   * with its gutter — and caches it to localStorage. Called from the
-   * `onDrawEnd` hook passed to `PixelDrawPanel.initialize()`.
-   */
+  #applyTexture(
+    source: HTMLImageElement,
+    origin: string
+  ): boolean {
+    const manager = this.#manager;
+    if (!manager) {
+      return false;
+    }
+
+    const width = source.naturalWidth || source.width;
+    const height = source.naturalHeight || source.height;
+    const { maxTextureSize } = manager;
+
+    if (width > maxTextureSize || height > maxTextureSize) {
+      console.error(
+        `TextureEditorBridge: ${origin} for tileset "${this.#tilesetId}" is ` +
+        `${width}x${height}, above the editor limit of ${maxTextureSize}px per side. ` +
+        "Raise `texture.maxSize` on the pixel-draw panel or use a smaller atlas."
+      );
+
+      return false;
+    }
+
+    manager.texture = source;
+
+    return true;
+  }
+
   syncToThree(): void {
     if (!this.#manager || !this.#tilesetManager) {
       return;
     }
 
-    const canvas = this.#manager.textureCanvas();
-    this.#tilesetManager.updateSourceImage(canvas, this.#tilesetId ?? undefined);
+    this.#tilesetManager.updateSourceImage(
+      this.#manager.textureCanvas(),
+      this.#tilesetId ?? undefined
+    );
 
-    if (this.#tilesetId) {
-      localStorage.setItem(
-        kTextureKeyPrefix + this.#tilesetId,
-        canvas.toDataURL("image/png")
-      );
-    }
-
-    this.#syncTransparency();
+    this.syncTransparency();
   }
 
   /**
-   * Keeps `BlockDefinition.transparent` in sync with what the tile actually
-   * looks like: a block referencing a tile that just gained (or lost) alpha
-   * has its flag flipped, which re-registers it and rebuilds every chunk so
-   * culling/greedy meshing pick up the change immediately.
+   * Derives `transparent` for every block drawing from the active tileset,
+   * out of the alpha of the pixels under its tiles.
    */
-  #syncTransparency(): void {
+  syncTransparency(): void {
     if (!this.#manager || !this.#vr || !this.#tilesetId) {
       return;
     }
@@ -124,30 +140,41 @@ export class TextureEditorBridge {
       this.#tileSize
     );
 
+    const updates: BlockDefinition[] = [];
     for (const { block, rects } of affected) {
       const transparent = rects.some((rect) => this.#manager!.hasTransparency(rect));
       if (transparent === (block.transparent === true)) {
         continue;
       }
 
-      applyBlockUpdate(this.#vr, { ...block, transparent });
+      updates.push({ ...block, transparent });
+    }
+
+    this.#syncing = true;
+    try {
+      applyBlockUpdates(this.#vr, updates);
+    }
+    finally {
+      this.#syncing = false;
     }
   }
 
-  exportPng(filename: string): void {
-    if (!this.#manager) {
+  /**
+   * Moving a UV region, switching a block to another tileset or registering a
+   * new block all change which pixels a block reads, so the flag is derived
+   * again. The write-back re-enters this listener, hence the guard.
+   */
+  readonly #onBlockRegistryChanged = (): void => {
+    if (this.#syncing) {
       return;
     }
 
-    const canvas = this.#manager.textureCanvas();
-    const url = canvas.toDataURL("image/png");
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = filename;
-    anchor.click();
-  }
+    this.syncTransparency();
+  };
 
   destroy(): void {
+    this.#unsubscribe?.();
+    this.#unsubscribe = null;
     this.#syncClient?.destroy();
     this.#syncClient = null;
     this.#manager = null;

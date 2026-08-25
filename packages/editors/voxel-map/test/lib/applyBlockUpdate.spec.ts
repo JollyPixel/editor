@@ -10,7 +10,10 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { applyBlockUpdate } from "../../src/lib/applyBlockUpdate.ts";
+import {
+  applyBlockUpdate,
+  applyBlockUpdates
+} from "../../src/lib/applyBlockUpdate.ts";
 import { editorState } from "../../src/EditorState.ts";
 
 function makeBlock(): BlockDefinition {
@@ -48,18 +51,42 @@ describe("applyBlockUpdate", () => {
     function listener() {
       dispatched = true;
     }
-    editorState.addEventListener("blockRegistryChanged", listener);
+    const unsubscribe = editorState.on("blockRegistryChanged", listener);
 
     try {
       const updated = { ...block, name: "Granite" };
       applyBlockUpdate(vr, updated);
 
       assert.equal(vr.engine.blockRegistry.get(1)?.name, "Granite");
-      assert.deepEqual(dirtyReasons, ["BlockLibrary update"]);
+      assert.deepEqual(dirtyReasons, ["block definitions updated"]);
       assert.equal(dispatched, true);
     }
     finally {
-      editorState.removeEventListener("blockRegistryChanged", listener);
+      unsubscribe();
+    }
+  });
+
+  it("registers a batch with one invalidation and one notification", () => {
+    const { vr, dirtyReasons } = makeFakeVoxelRenderer();
+    let notifications = 0;
+    const unsubscribe = editorState.on(
+      "blockRegistryChanged",
+      () => notifications++
+    );
+
+    try {
+      applyBlockUpdates(vr, [
+        makeBlock(),
+        { ...makeBlock(), id: 2, name: "Dirt" }
+      ]);
+
+      assert.equal(vr.engine.blockRegistry.get(1)?.name, "Stone");
+      assert.equal(vr.engine.blockRegistry.get(2)?.name, "Dirt");
+      assert.deepEqual(dirtyReasons, ["block definitions updated"]);
+      assert.equal(notifications, 1);
+    }
+    finally {
+      unsubscribe();
     }
   });
 });

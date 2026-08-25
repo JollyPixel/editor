@@ -23,7 +23,6 @@ import { editorState } from "../EditorState.ts";
 const kRegionIdPrefix = "block-";
 const kRegionColor = "#4488ff";
 
-// Maps pixel-draw face names to voxel-renderer axis-based Face slots.
 const kFaceToVoxel: Record<UVFace, Face> = {
   front: Face.PosZ,
   back: Face.NegZ,
@@ -57,7 +56,6 @@ function regionId(
   return `${kRegionIdPrefix}${blockId}`;
 }
 
-// Parses a `block-<id>` region id to its block id, or null for non-block regions.
 function blockIdFromRegion(
   id: string
 ): number | null {
@@ -69,10 +67,6 @@ function blockIdFromRegion(
   return Number.isNaN(value) ? null : value;
 }
 
-/**
- * Syncs block texture assignments with UVMap regions (one `block-<id>` region per block).
- * Collapsed = defaultTexture; uncollapsed = per-face faceTextures.
- */
 export class BlockUvBridge {
   readonly #uv: UVMap;
   readonly #vr: VoxelRenderer;
@@ -80,6 +74,7 @@ export class BlockUvBridge {
   #tileSize = 1;
   #rebuilding = false;
   #applying = false;
+  #stateSubscriptions: Array<() => void> = [];
 
   constructor(
     uv: UVMap,
@@ -92,8 +87,10 @@ export class BlockUvBridge {
     this.#uv.on("region-state-changed", this.#onRegionStateChanged);
     this.#uv.on("region-deleted", this.#onRegionDeleted);
     this.#uv.on("selection-changed", this.#onSelectionChanged);
-    editorState.addEventListener("blockRegistryChanged", this.#onBlockRegistryChanged);
-    editorState.addEventListener("selectedBlockChange", this.#onSelectedBlockChange);
+    this.#stateSubscriptions.push(
+      editorState.on("blockRegistryChanged", this.#onBlockRegistryChanged),
+      editorState.on("selectedBlockChange", this.#onSelectedBlockChange)
+    );
   }
 
   setActiveTileset(
@@ -113,8 +110,9 @@ export class BlockUvBridge {
     this.#uv.off("region-state-changed", this.#onRegionStateChanged);
     this.#uv.off("region-deleted", this.#onRegionDeleted);
     this.#uv.off("selection-changed", this.#onSelectionChanged);
-    editorState.removeEventListener("blockRegistryChanged", this.#onBlockRegistryChanged);
-    editorState.removeEventListener("selectedBlockChange", this.#onSelectedBlockChange);
+    for (const unsubscribe of this.#stateSubscriptions.splice(0)) {
+      unsubscribe();
+    }
   }
 
   #blocksOnActiveTileset(): BlockDefinition[] {
@@ -142,11 +140,12 @@ export class BlockUvBridge {
     finally {
       this.#rebuilding = false;
     }
+
+    // Deleting a region drops the selection, and the block selected at boot
+    // never emits an event of its own, so the highlight is applied from state.
+    this.#onSelectedBlockChange(editorState.selectedBlockId);
   }
 
-  /**
-   * Builds a region from a block definition (collapsed or uncollapsed).
-   */
   #regionFor(
     block: BlockDefinition
   ): UVRegion {
@@ -238,9 +237,6 @@ export class BlockUvBridge {
     this.#uv.restore(region);
   }
 
-  /**
-   * Writes a region back to its block definition.
-   */
   #applyRegionToBlock(
     region: UVRegion
   ): void {
@@ -292,7 +288,6 @@ export class BlockUvBridge {
       return;
     }
 
-    // Skip if the registry already matches (prevents rebuild loops).
     if (regionsEqual(this.#regionFor(block), event.region)) {
       return;
     }
@@ -324,9 +319,6 @@ export class BlockUvBridge {
     return block?.defaultTexture ? block : undefined;
   }
 
-  /**
-   * Restores a block region if deleted via the generic UV toolbar.
-   */
   readonly #onRegionDeleted: UVMapListener<"region-deleted"> = (event) => {
     if (this.#rebuilding) {
       return;
@@ -338,9 +330,16 @@ export class BlockUvBridge {
     }
 
     const block = this.#vr.engine.blockRegistry.get(blockId);
-    if (block) {
-      this.#restoreRegionFor(block);
+    if (!block) {
+      return;
     }
+
+    this.#restoreRegionFor(block);
+
+    // Deleting the selected region drops the selection, and putting the region
+    // back does not bring it along. Remote deletions arrive during startup, so
+    // without this the block selected at boot never gets highlighted.
+    this.#onSelectedBlockChange(editorState.selectedBlockId);
   };
 
   readonly #onSelectionChanged: UVMapListener<"selection-changed"> = (event) => {
@@ -356,10 +355,7 @@ export class BlockUvBridge {
     editorState.setSelectedBlock(blockId);
   };
 
-  readonly #onSelectedBlockChange = (
-    event: Event
-  ): void => {
-    const id = (event as CustomEvent<number>).detail;
+  readonly #onSelectedBlockChange = (id: number): void => {
     const uvId = regionId(id);
 
     this.#uv.select(this.#uv.get(uvId) ? uvId : null);

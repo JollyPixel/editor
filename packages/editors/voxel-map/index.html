@@ -9,10 +9,24 @@
 </head>
 
 <body>
-  <editor-sidebar id="sidebar"></editor-sidebar>
-  <div id="game-container">
-    <canvas tabindex="-1"></canvas>
-  </div>
+  <jolly-scope theme="dark" density="comfortable">
+    <jolly-dock
+      key="left"
+      side="left"
+      collapsible
+      size="380"
+      min-size="200"
+      max-size="600"
+      storage-key="voxel-map:left"
+    >
+      <jolly-pane storage-key="voxel-map:pane" locked>
+        <editor-sidebar id="sidebar"></editor-sidebar>
+      </jolly-pane>
+    </jolly-dock>
+    <div id="game-container">
+      <canvas tabindex="-1"></canvas>
+    </div>
+  </jolly-scope>
   <script type="module" src="./src/index.ts"></script>
 </body>
 

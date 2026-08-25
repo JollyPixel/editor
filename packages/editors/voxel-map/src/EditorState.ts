@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import type {
-  VoxelRotation,
-  VoxelLayerHookEvent
+  VoxelLayerHookEvent,
+  VoxelRotation
 } from "@jolly-pixel/voxel.renderer";
 
 // CONSTANTS
@@ -10,24 +10,45 @@ const kMaxBrushSize = 8;
 
 export type SidebarTab = "general" | "paint" | "layers";
 export type RotationMode = typeof VoxelRotation[keyof typeof VoxelRotation] | "auto";
+export type LayerSelection = {
+  name: string;
+  type: "voxel" | "object";
+} | null;
 
-export class EditorState extends EventTarget {
-  #selectedLayer: string | null = null;
-  #selectedLayerType: "voxel" | "object" | null = null;
-  #selectedBlockId: number = 1;
-  #brushSize: number = 1;
+export interface EditorStateEventMap {
+  selectionChange: LayerSelection;
+  selectedBlockChange: number;
+  brushSizeChange: number;
+  rotationModeChange: RotationMode;
+  flipYChange: boolean;
+  activeSidebarTabChange: SidebarTab;
+  gizmoLayerChange: string | null;
+  layerUpdated: VoxelLayerHookEvent;
+  blockRegistryChanged: undefined;
+  worldReset: undefined;
+}
+
+export class EditorState {
+  #events = new EventTarget();
+  #selection: LayerSelection = null;
+  #selectedBlockId = 1;
+  #brushSize = 1;
   #rotationMode: RotationMode = "auto";
-  #flipY: boolean = false;
+  #flipY = false;
   #activeSidebarTab: SidebarTab = "general";
   #isGizmoDragging = false;
   #gizmoLayer: string | null = null;
 
+  get selection(): LayerSelection {
+    return this.#selection;
+  }
+
   get selectedLayer(): string | null {
-    return this.#selectedLayer;
+    return this.#selection?.name ?? null;
   }
 
   get selectedLayerType(): "voxel" | "object" | null {
-    return this.#selectedLayerType;
+    return this.#selection?.type ?? null;
   }
 
   get selectedBlockId(): number {
@@ -54,73 +75,64 @@ export class EditorState extends EventTarget {
     return this.#isGizmoDragging;
   }
 
-  setGizmoDragging(dragging: boolean): void {
-    this.#isGizmoDragging = dragging;
-  }
-
   get gizmoLayer(): string | null {
     return this.#gizmoLayer;
   }
 
-  setGizmoLayer(
-    name: string | null
-  ): void {
+  on<K extends keyof EditorStateEventMap>(
+    type: K,
+    listener: (value: EditorStateEventMap[K]) => void
+  ): () => void {
+    function eventListener(event: Event): void {
+      listener((event as CustomEvent<EditorStateEventMap[K]>).detail);
+    }
+    this.#events.addEventListener(type, eventListener);
+
+    return () => this.#events.removeEventListener(type, eventListener);
+  }
+
+  setGizmoDragging(dragging: boolean): void {
+    this.#isGizmoDragging = dragging;
+  }
+
+  setGizmoLayer(name: string | null): void {
     if (this.#gizmoLayer === name) {
       return;
     }
     this.#gizmoLayer = name;
-    this.dispatchEvent(
-      new CustomEvent("gizmoLayerChange", { detail: name })
-    );
-    this.dispatchEvent(new CustomEvent("change"));
+    this.#dispatch("gizmoLayerChange", name);
   }
 
   setSelectedLayer(
     name: string | null,
     type: "voxel" | "object" = "voxel"
   ): void {
-    if (this.#selectedLayer === name) {
+    const next = name === null ? null : { name, type };
+    if (
+      this.#selection?.name === next?.name &&
+      this.#selection?.type === next?.type
+    ) {
       return;
     }
-    this.#selectedLayer = name;
-    const newType = name === null ? null : type;
-    const typeChanged = this.#selectedLayerType !== newType;
-    this.#selectedLayerType = newType;
 
-    this.dispatchEvent(
-      new CustomEvent("selectedLayerChange", { detail: name })
-    );
-    if (typeChanged) {
-      this.dispatchEvent(
-        new CustomEvent("selectedLayerTypeChange", { detail: newType })
-      );
-    }
-    // Deactivate the gizmo whenever the active layer changes.
+    this.#selection = next;
+    this.#dispatch("selectionChange", next);
+
     if (this.#gizmoLayer !== null) {
       this.#gizmoLayer = null;
-      this.dispatchEvent(
-        new CustomEvent("gizmoLayerChange", { detail: null })
-      );
+      this.#dispatch("gizmoLayerChange", null);
     }
-    this.dispatchEvent(new CustomEvent("change"));
   }
 
-  setSelectedBlock(
-    id: number
-  ): void {
+  setSelectedBlock(id: number): void {
     if (this.#selectedBlockId === id) {
       return;
     }
     this.#selectedBlockId = id;
-    this.dispatchEvent(
-      new CustomEvent("selectedBlockChange", { detail: id })
-    );
-    this.dispatchEvent(new CustomEvent("change"));
+    this.#dispatch("selectedBlockChange", id);
   }
 
-  setBrushSize(
-    delta: number
-  ): void {
+  setBrushSize(delta: number): void {
     const next = Math.max(
       kMinBrushSize,
       Math.min(kMaxBrushSize, this.#brushSize + delta)
@@ -129,80 +141,54 @@ export class EditorState extends EventTarget {
       return;
     }
     this.#brushSize = next;
-    this.dispatchEvent(
-      new CustomEvent("brushSizeChange", { detail: next })
-    );
-    this.dispatchEvent(new CustomEvent("change"));
+    this.#dispatch("brushSizeChange", next);
   }
 
-  setBrushSizeAbsolute(
-    size: number
-  ): void {
-    this.setBrushSize(
-      size - this.#brushSize
-    );
+  setBrushSizeAbsolute(size: number): void {
+    this.setBrushSize(size - this.#brushSize);
   }
 
-  setRotationMode(
-    mode: RotationMode
-  ): void {
+  setRotationMode(mode: RotationMode): void {
     if (this.#rotationMode === mode) {
       return;
     }
     this.#rotationMode = mode;
-    this.dispatchEvent(
-      new CustomEvent("rotationModeChange", { detail: mode })
-    );
-    this.dispatchEvent(new CustomEvent("change"));
+    this.#dispatch("rotationModeChange", mode);
   }
 
-  setFlipY(
-    val: boolean
-  ): void {
-    if (this.#flipY === val) {
+  setFlipY(value: boolean): void {
+    if (this.#flipY === value) {
       return;
     }
-    this.#flipY = val;
-    this.dispatchEvent(
-      new CustomEvent("flipYChange", { detail: val })
-    );
-    this.dispatchEvent(new CustomEvent("change"));
+    this.#flipY = value;
+    this.#dispatch("flipYChange", value);
   }
 
-  setActiveSidebarTab(
-    tab: SidebarTab
-  ): void {
+  setActiveSidebarTab(tab: SidebarTab): void {
     if (this.#activeSidebarTab === tab) {
       return;
     }
     this.#activeSidebarTab = tab;
-    this.dispatchEvent(
-      new CustomEvent("activeSidebarTabChange", { detail: tab })
-    );
-    this.dispatchEvent(new CustomEvent("change"));
+    this.#dispatch("activeSidebarTabChange", tab);
   }
 
-  dispatchLayerUpdated(
-    evt: VoxelLayerHookEvent
-  ): void {
-    this.dispatchEvent(
-      new CustomEvent("layerUpdated", { detail: evt })
-    );
+  dispatchLayerUpdated(event: VoxelLayerHookEvent): void {
+    this.#dispatch("layerUpdated", event);
   }
 
   dispatchBlockRegistryChanged(): void {
-    this.dispatchEvent(new CustomEvent("blockRegistryChanged"));
+    this.#dispatch("blockRegistryChanged", undefined);
   }
 
-  /**
-   * Signals that the world's layers were replaced wholesale (a network
-   * snapshot or a JSON load) rather than through the usual per-mutation
-   * hooks — listeners that mirror the layer list (e.g. LayerManager's tree)
-   * need to fully re-read it from `vr.engine.world`, since no individual
-   * "added"/"removed" events were emitted for the change.
-   */
   dispatchWorldReset(): void {
-    this.dispatchEvent(new CustomEvent("worldReset"));
+    this.#dispatch("worldReset", undefined);
+  }
+
+  #dispatch<K extends keyof EditorStateEventMap>(
+    type: K,
+    value: EditorStateEventMap[K]
+  ): void {
+    this.#events.dispatchEvent(new CustomEvent(type, { detail: value }));
   }
 }
 

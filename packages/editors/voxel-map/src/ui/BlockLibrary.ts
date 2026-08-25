@@ -1,47 +1,34 @@
 // Import Third-party Dependencies
 import { LitElement, html, css } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { customElement, property, query, state } from "lit/decorators.js";
 import {
   type VoxelRenderer,
   type BlockDefinition,
-  type BlockShapeID,
   VoxelRotation
 } from "@jolly-pixel/voxel.renderer";
+import type {
+  JollyChangeDetail,
+  JollyOption
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { BlockLibraryRenderer } from "../lib/BlockLibraryRenderer.ts";
-import { applyBlockUpdate } from "../lib/applyBlockUpdate.ts";
+// Also registers the configuration modal element.
+import { BlockEditorDialog } from "./BlockEditorDialog.ts";
 import {
   editorState,
   type RotationMode
 } from "../EditorState.ts";
-import type {
-  EventInput,
-  EventSelect
-} from "./types.ts";
-import { showPrompt } from "./PromptDialog.ts";
+
+// Registers the Three.js block grid.
+import "./BlockLibraryViewport.ts";
 
 // CONSTANTS
-const kRotationOptions: { label: string; value: RotationMode; }[] = [
+const kRotationOptions: JollyOption<RotationMode>[] = [
   { label: "Auto", value: "auto" },
   { label: "0°", value: VoxelRotation.None },
   { label: "CCW 90°", value: VoxelRotation.CCW90 },
   { label: "180°", value: VoxelRotation.Deg180 },
   { label: "CW 90°", value: VoxelRotation.CW90 }
-];
-
-const kAllShapeIds: BlockShapeID[] = [
-  "cube",
-  "slabBottom",
-  "slabTop",
-  "poleY",
-  "pole",
-  "ramp",
-  "rampCornerInner",
-  "rampCornerOuter",
-  "stair",
-  "stairCornerInner",
-  "stairCornerOuter"
 ];
 
 @customElement("block-library")
@@ -50,159 +37,42 @@ export class BlockLibrary extends LitElement {
     :host {
       display: flex;
       flex-direction: column;
+      gap: var(--jolly-row-gap, 4px);
       overflow: hidden;
-    }
-
-    .viewport-host {
-      overflow-y: auto;
-      background: #0e1316;
-      cursor: pointer;
-      min-height: 100px;
-      max-height: 240px;
-      overflow-x: hidden;
-      padding: 5px;
-    }
-    .editor-section {
-      padding: 8px;
-      border-top: 1px solid #2a3540;
-      font-size: 12px;
-      color: #ccc;
-    }
-    .section-title {
-      font-size: 11px;
-      font-weight: 600;
-      color: #888;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 6px;
-    }
-    .row {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 5px;
-    }
-    label {
-      min-width: 70px;
-      color: #aaa;
-    }
-    select, input[type="text"], input[type="number"] {
-      flex: 1;
-      background: #111a20;
-      border: 1px solid #333;
-      color: #eee;
-      padding: 3px 5px;
-      border-radius: 3px;
-      font-size: 12px;
-    }
-    input[type="number"] {
-      width: 0;
-    }
-    .selected-info {
-      font-size: 11px;
-      color: #4488ff;
-      margin-bottom: 5px;
-    }
-    .toolbar {
-      display: flex;
-      gap: 4px;
-      padding: 4px 8px;
-      background: #141a1d;
-      border-bottom: 1px solid #2a3540;
-    }
-    .toolbar button {
-      background: #2a3a4a;
-      border: 1px solid #3a5060;
-      color: #ccc;
-      padding: 2px 8px;
-      border-radius: 3px;
-      cursor: pointer;
-      font-size: 12px;
-    }
-    .toolbar button:hover {
-      background: #3a5a7a;
-    }
-    .subsection-title {
-      font-size: 10px;
-      font-weight: 600;
-      color: #667;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin: 8px 0 4px;
-    }
-
-    .rotation-bar {
-      display: flex;
-      align-items: center;
-      gap: 3px;
-      padding: 4px 8px;
-      background: #0e1316;
-      border-top: 1px solid #1e2a30;
-      border-bottom: 1px solid #1e2a30;
-    }
-    .rotation-bar span {
-      font-size: 10px;
-      font-weight: 600;
-      color: #556;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-right: 4px;
-      white-space: nowrap;
-    }
-    .rotation-bar button {
-      background: #1a2228;
-      border: 1px solid #2a3540;
-      color: #888;
-      padding: 2px 7px;
-      border-radius: 3px;
-      cursor: pointer;
-      font-size: 11px;
-      white-space: nowrap;
-    }
-    .rotation-bar button:hover {
-      background: #243040;
-      color: #ccc;
-    }
-    .rotation-bar button.active {
-      background: #1a3a5a;
-      border-color: #4488ff;
-      color: #4488ff;
-    }
-    .rotation-bar .separator {
-      width: 1px;
-      background: #2a3540;
-      align-self: stretch;
-      margin: 0 3px;
-    }
-    .rotation-bar button.active-flip {
-      background: #3a1a5a;
-      border-color: #aa44ff;
-      color: #aa44ff;
     }
   `;
 
-  @property({ attribute: false }) declare vr: VoxelRenderer;
+  @property({ attribute: false })
+  declare vr: VoxelRenderer;
 
-  @state() private declare _selectedId: number | null;
-  @state() private declare _selectedBlock: BlockDefinition | null;
-  @state() private declare _rotationMode: RotationMode;
-  @state() private declare _flipY: boolean;
+  @state()
+  private declare _selectedId: number | null;
+  @state()
+  private declare _selectedBlock: BlockDefinition | null;
+  @state()
+  private declare _blocks: BlockDefinition[];
+  @state()
+  private declare _rotationMode: RotationMode;
+  @state()
+  private declare _flipY: boolean;
+
+  @query("block-editor-dialog")
+  declare private _dialog: BlockEditorDialog;
+
+  #subscriptions: Array<() => void> = [];
 
   constructor() {
     super();
 
     this._selectedId = null;
     this._selectedBlock = null;
+    this._blocks = [];
     this._rotationMode = editorState.rotationMode;
     this._flipY = editorState.flipY;
   }
 
-  #renderer: BlockLibraryRenderer | null = null;
-  #viewportHost: HTMLDivElement | null = null;
-
   readonly #onSelectedBlockChange = () => {
     this._selectedId = editorState.selectedBlockId;
-    this.#renderer?.setSelectedBlock(this._selectedId);
     this._selectedBlock = this.vr?.engine.blockRegistry.get(this._selectedId ?? 0) ?? null;
   };
 
@@ -211,7 +81,7 @@ export class BlockLibrary extends LitElement {
       this._selectedId = editorState.selectedBlockId;
       this._selectedBlock = this.vr.engine.blockRegistry.get(this._selectedId ?? 0) ?? null;
     }
-    this.#buildRenderer();
+    this.#refreshBlocks();
   };
 
   readonly #onRotationModeChange = () => {
@@ -222,23 +92,21 @@ export class BlockLibrary extends LitElement {
     this._flipY = editorState.flipY;
   };
 
-  override firstUpdated() {
-    this.#viewportHost = this.shadowRoot!.querySelector<HTMLDivElement>(".viewport-host")!;
-
-    editorState.addEventListener("selectedBlockChange", this.#onSelectedBlockChange);
-    editorState.addEventListener("blockRegistryChanged", this.#onBlockRegistryChanged);
-    editorState.addEventListener("rotationModeChange", this.#onRotationModeChange);
-    editorState.addEventListener("flipYChange", this.#onFlipYChange);
+  override connectedCallback() {
+    super.connectedCallback();
+    this.#subscriptions.push(
+      editorState.on("selectedBlockChange", this.#onSelectedBlockChange),
+      editorState.on("blockRegistryChanged", this.#onBlockRegistryChanged),
+      editorState.on("rotationModeChange", this.#onRotationModeChange),
+      editorState.on("flipYChange", this.#onFlipYChange)
+    );
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
-    editorState.removeEventListener("selectedBlockChange", this.#onSelectedBlockChange);
-    editorState.removeEventListener("blockRegistryChanged", this.#onBlockRegistryChanged);
-    editorState.removeEventListener("rotationModeChange", this.#onRotationModeChange);
-    editorState.removeEventListener("flipYChange", this.#onFlipYChange);
-    this.#renderer?.dispose();
-    this.#renderer = null;
+    for (const unsubscribe of this.#subscriptions.splice(0)) {
+      unsubscribe();
+    }
   }
 
   override willUpdate(
@@ -247,304 +115,106 @@ export class BlockLibrary extends LitElement {
     if (changed.has("vr") && this.vr) {
       this._selectedId = editorState.selectedBlockId;
       this._selectedBlock = this.vr.engine.blockRegistry.get(this._selectedId) ?? null;
+      this.#refreshBlocks();
     }
-  }
-
-  override updated(
-    changed: Map<string, unknown>
-  ) {
-    if (changed.has("vr") && this.vr && this.#viewportHost) {
-      this.#buildRenderer();
-    }
-  }
-
-  #buildRenderer(): void {
-    if (!this.vr || !this.#viewportHost) {
-      return;
-    }
-
-    this.#renderer?.dispose();
-    const blocks = [...this.vr.engine.blockRegistry.getAll()];
-    this.#renderer = new BlockLibraryRenderer(this.#viewportHost, {
-      shapeRegistry: this.vr.engine.shapeRegistry,
-      tilesetManager: this.vr.engine.tilesetManager,
-      blocks
-    });
-    this.#renderer.setSelectedBlock(this._selectedId);
   }
 
   override render() {
-    const tilesetDefs = this.vr?.engine.tilesetManager.getDefinitions() ?? [];
-    const currentTilesetId =
-      this._selectedBlock?.defaultTexture?.tilesetId ??
-      this.vr?.engine.tilesetManager.defaultTilesetId ??
-      null;
-    const currentCol = this._selectedBlock?.defaultTexture?.col ?? 0;
-    const currentRow = this._selectedBlock?.defaultTexture?.row ?? 0;
-
     return html`
-      <div class="toolbar">
-        <button @click=${this.#addBlock}>+ Block</button>
-        <button
-          @click=${this.#removeBlock}
-          ?disabled=${this._selectedId === null}
-        >- Remove</button>
-      </div>
+      <jolly-toolbar label="Block library">
+        <jolly-button @click=${this.#addBlock}>+ Block</jolly-button>
+        <jolly-button
+          icon="pencil"
+          icon-only
+          label="Edit block"
+          ?disabled=${this._selectedBlock === null}
+          @click=${this.#editBlock}
+        ></jolly-button>
+      </jolly-toolbar>
 
-      <div
-        class="viewport-host"
-        @click=${this.#onViewportClick}
-      ></div>
+      <block-library-viewport
+        .vr=${this.vr}
+        .blocks=${this._blocks}
+        .selectedId=${this._selectedId}
+        @block-select=${this.#onBlockSelect}
+        @block-edit=${this.#onBlockEdit}
+      ></block-library-viewport>
 
-      <div class="rotation-bar">
-        <span>Rotation</span>
-        ${kRotationOptions.map(({ label, value }) => html`
-          <button
-            class=${this._rotationMode === value ? "active" : ""}
-            @click=${() => editorState.setRotationMode(value)}
-          >${label}</button>
-        `)}
-        <div class="separator"></div>
-        <button
-          class=${this._flipY ? "active-flip" : ""}
-          @click=${() => editorState.setFlipY(!this._flipY)}
-        >Flip Y</button>
-      </div>
+      <jolly-button-group
+        label="Rotation"
+        .options=${kRotationOptions}
+        .value=${this._rotationMode}
+        @jolly-change=${this.#onRotationChange}
+      ></jolly-button-group>
+      <jolly-checkbox
+        align="end"
+        label="Flip Y"
+        .value=${this._flipY}
+        @jolly-change=${this.#onFlipYToggle}
+      ></jolly-checkbox>
 
-      ${this._selectedBlock
-          ? html`
-          <div class="editor-section">
-            <div class="selected-info">Block #${this._selectedBlock.id}: ${this._selectedBlock.name}</div>
-
-            <div class="row">
-              <label>Name</label>
-              <input
-                type="text"
-                .value=${this._selectedBlock.name}
-                @change=${(event: EventInput) => this.#renameBlock(event.target.value)}
-              />
-            </div>
-
-            <div class="row">
-              <label>Shape</label>
-              <select @change=${this.#onShapeChange}>
-                ${kAllShapeIds.map((id) => html`
-                  <option
-                    value=${id}
-                    ?selected=${this._selectedBlock!.shapeId === id}
-                  >${id}</option>
-                `)}
-              </select>
-            </div>
-
-            <div class="row">
-              <label>Transparent</label>
-              <input
-                type="checkbox"
-                .checked=${this._selectedBlock.transparent === true}
-                @change=${(event: EventInput) => this.#onTransparentChange(event.target.checked)}
-              />
-            </div>
-
-            <div class="subsection-title">Texture</div>
-
-            <div class="row">
-              <label>Tileset</label>
-              <select @change=${this.#onTilesetChange}>
-                ${tilesetDefs.map((def) => html`
-                  <option
-                    value=${def.id}
-                    ?selected=${currentTilesetId === def.id}
-                  >${def.id}</option>
-                `)}
-              </select>
-            </div>
-
-            <div class="row">
-              <label>Col</label>
-              <input
-                type="number"
-                min="0"
-                .value=${String(currentCol)}
-                @change=${this.#onColChange}
-              />
-            </div>
-
-            <div class="row">
-              <label>Row</label>
-              <input
-                type="number"
-                min="0"
-                .value=${String(currentRow)}
-                @change=${this.#onRowChange}
-              />
-            </div>
-          </div>
-        `
-          : null
-      }
+      <block-editor-dialog
+        .vr=${this.vr}
+        .block=${this._selectedBlock}
+      ></block-editor-dialog>
     `;
   }
 
-  #onViewportClick(
-    event: MouseEvent
+  #onBlockSelect(
+    event: CustomEvent<{ id: number; }>
   ): void {
-    if (!this.#renderer || !this.#viewportHost) {
-      return;
-    }
-    const rect = this.#renderer.canvas.getBoundingClientRect();
-    const px = event.clientX - rect.left;
-    const py = event.clientY - rect.top;
-    const blockId = this.#renderer.getBlockAtPointer(px, py);
-    if (blockId !== null) {
-      editorState.setSelectedBlock(blockId);
-    }
+    editorState.setSelectedBlock(event.detail.id);
   }
 
-  async #addBlock() {
+  #onBlockEdit(
+    event: CustomEvent<{ id: number; }>
+  ): void {
+    editorState.setSelectedBlock(event.detail.id);
+    void this.#editBlock();
+  }
+
+  #onRotationChange(
+    event: CustomEvent<JollyChangeDetail<RotationMode>>
+  ): void {
+    editorState.setRotationMode(event.detail.value);
+  }
+
+  #onFlipYToggle(
+    event: CustomEvent<JollyChangeDetail<boolean>>
+  ): void {
+    editorState.setFlipY(event.detail.value);
+  }
+
+  async #addBlock(): Promise<void> {
     if (!this.vr) {
       return;
     }
 
-    const name = await showPrompt({ label: "Block name:", defaultValue: "New Block" });
-    if (!name?.trim()) {
-      return;
-    }
-    const existingIds = [...this.vr.engine.blockRegistry.getAll()].map((b) => b.id);
-    const newId = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
-    const defaultTilesetId = this.vr.engine.tilesetManager.defaultTilesetId ?? undefined;
-    this.vr.engine.blockRegistry.register({
-      id: newId,
-      name: name.trim(),
-      shapeId: "cube",
-      collidable: true,
-      faceTextures: {},
-      defaultTexture: { tilesetId: defaultTilesetId, col: 0, row: 0 }
-    });
-    editorState.dispatchBlockRegistryChanged();
-    this.#refreshRenderer();
-  }
-
-  #removeBlock(): void {
-    if (this._selectedId === null || !this.vr) {
-      return;
-    }
-
-    // BlockRegistry has no remove API — just rebuild the display without it.
-    // The block remains in registry (safe for existing voxels) but won't show.
-    this._selectedId = null;
-    this._selectedBlock = null;
-  }
-
-  #renameBlock(
-    newName: string
-  ): void {
-    if (!this._selectedBlock || !this.vr || !newName.trim()) {
-      return;
-    }
-
-    this.#applyBlockUpdate({
-      ...this._selectedBlock,
-      name: newName.trim()
-    });
-  }
-
-  #onShapeChange(
-    event: EventSelect
-  ): void {
-    if (!this._selectedBlock || !this.vr) {
-      return;
-    }
-
-    const shapeId = event.target.value as BlockShapeID;
-    this.#applyBlockUpdate({
-      ...this._selectedBlock,
-      shapeId
-    });
-  }
-
-  #onTransparentChange(
-    transparent: boolean
-  ): void {
-    if (!this._selectedBlock || !this.vr) {
-      return;
-    }
-
-    this.#applyBlockUpdate({
-      ...this._selectedBlock,
-      transparent
-    });
-  }
-
-  #onTilesetChange(
-    event: EventSelect
-  ): void {
-    if (!this._selectedBlock || !this.vr) {
-      return;
-    }
-
-    const tilesetId = event.target.value;
-    this.#applyBlockUpdate({
-      ...this._selectedBlock,
-      defaultTexture: {
-        ...this._selectedBlock.defaultTexture,
-        tilesetId,
-        col: 0,
-        row: 0
-      }
-    });
-  }
-
-  #onColChange(
-    event: EventInput
-  ): void {
-    if (!this._selectedBlock || !this.vr) {
-      return;
-    }
-
-    const col = Math.max(0, parseInt(event.target.value, 10) || 0);
-    this.#applyBlockUpdate({
-      ...this._selectedBlock,
-      defaultTexture: { ...this._selectedBlock.defaultTexture!, col }
-    });
-  }
-
-  #onRowChange(
-    event: EventInput
-  ): void {
-    if (!this._selectedBlock || !this.vr) {
-      return;
-    }
-
-    const row = Math.max(0, parseInt(event.target.value, 10) || 0);
-    this.#applyBlockUpdate({
-      ...this._selectedBlock,
-      defaultTexture: {
-        ...this._selectedBlock.defaultTexture!,
-        row
-      }
-    });
+    await this.updateComplete;
+    await this._dialog?.openForCreate();
   }
 
   /**
-   * Registers the updated definition via the shared applyBlockUpdate
-   * helper, then refreshes this component's own local state/preview grid.
+   * A selection made in the same tick has not reached the modal yet, so the
+   * host settles before the dialog reads its block.
    */
-  #applyBlockUpdate(
-    updated: BlockDefinition
-  ): void {
-    applyBlockUpdate(this.vr, updated);
-    this._selectedBlock = updated;
-    this.#refreshRenderer();
-  }
-
-  #refreshRenderer(): void {
-    if (!this.vr || !this.#renderer) {
+  async #editBlock(): Promise<void> {
+    if (!this.vr || this._selectedBlock === null) {
       return;
     }
 
-    const blocks = [...this.vr.engine.blockRegistry.getAll()];
-    this.#renderer.setBlocks(blocks);
+    await this.updateComplete;
+    await this._dialog?.openForEdit();
+  }
+
+  #refreshBlocks(): void {
+    if (!this.vr) {
+      return;
+    }
+
+    this._blocks = [
+      ...this.vr.engine.blockRegistry.getAll()
+    ];
   }
 }
 

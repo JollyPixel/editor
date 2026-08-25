@@ -3,6 +3,7 @@ import "../containers/Pane.ts";
 import "../containers/Floating.ts";
 import "../theme/components/ScopeHost.ts";
 import { FacadeContainer } from "./Container.ts";
+import { documentThemeMode } from "../theme/ambientTheme.ts";
 import type { PresenceSource } from "../peer/PresenceSource.ts";
 import {
   Folder,
@@ -101,6 +102,11 @@ export class Pane extends FacadeContainer {
    * `jolly-dialog` self-scopes), and a body-appended element sits outside
    * every shadow root the page owns. `jolly-scope` is `Pane`'s own scope,
    * so a floating window is themed with no setup from the caller.
+   *
+   * Having no ancestor to inherit from, that scope would otherwise follow the
+   * OS while the page around it follows the theme its own scope host declares:
+   * it adopts that theme instead, and only falls back to the OS on a page that
+   * declares none.
    */
   #mountFloating(): HTMLElement {
     const floating = document.createElement("jolly-floating");
@@ -109,6 +115,10 @@ export class Pane extends FacadeContainer {
     const scope = document.createElement("jolly-scope");
     scope.style.display = "contents";
     scope.style.setProperty("--jolly-label-width", kDefaultLabelWidth);
+    const theme = documentThemeMode();
+    if (theme !== null) {
+      scope.setAttribute("theme", theme);
+    }
     scope.append(floating);
     document.body.append(scope);
 

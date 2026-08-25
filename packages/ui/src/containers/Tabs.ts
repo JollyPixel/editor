@@ -55,6 +55,7 @@ export class Tabs extends LitElement {
     return html`
       <div
         class="list"
+        part="list"
         role="tablist"
         aria-orientation=${this.orientation}
         @keydown=${this.#onKeyDown}
@@ -62,6 +63,7 @@ export class Tabs extends LitElement {
         ${this._tabs.map((tab, index) => html`
           <button
             id=${this.#buttonId(index)}
+            part=${tab.value === this.value ? "tab tab-selected" : "tab"}
             type="button"
             role="tab"
             aria-controls=${this.#panelId(index)}

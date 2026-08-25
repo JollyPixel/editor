@@ -15,10 +15,10 @@ import {
 import { dialogStyles } from "./Dialog.styles.ts";
 import { emitContainerEvent } from "./events.ts";
 import { themeStyles } from "../theme/styles/themeStyles.ts";
-import { resolveThemeToken } from "../theme/resolveThemeToken.ts";
-import type { ThemeMode } from "../theme/types.ts";
-
-type ResolvedThemeMode = Exclude<ThemeMode, "auto">;
+import {
+  ambientThemeMode,
+  type ResolvedThemeMode
+} from "../theme/ambientTheme.ts";
 
 @customElement("jolly-dialog")
 export class Dialog extends LitElement {
@@ -92,7 +92,7 @@ export class Dialog extends LitElement {
       return;
     }
 
-    const inherited = inheritedThemeMode(this);
+    const inherited = ambientThemeMode(this);
     if (inherited === null) {
       return;
     }
@@ -147,53 +147,6 @@ export class Dialog extends LitElement {
       returnValue: this._dialog.returnValue
     });
   };
-}
-
-function inheritedThemeMode(
-  dialog: Dialog
-): ResolvedThemeMode | null {
-  const parent = dialog.parentElement;
-  if (parent !== null) {
-    const parentStyle = getComputedStyle(parent);
-    const carriesTheme = resolveThemeToken(parent, "--jolly-surface") !== "";
-    if (carriesTheme) {
-      const mode = themeModeOf(parentStyle);
-      if (mode !== null) {
-        return mode;
-      }
-    }
-  }
-
-  const active = dialog.ownerDocument.activeElement;
-  if (active !== null) {
-    const mode = themeModeOf(getComputedStyle(active));
-    if (mode !== null) {
-      return mode;
-    }
-  }
-
-  return parent === null
-    ? null
-    : themeModeOf(getComputedStyle(parent));
-}
-
-function themeModeOf(
-  style: CSSStyleDeclaration
-): ResolvedThemeMode | null {
-  const schemes = new Set(
-    style.colorScheme.split(/\s+/)
-  );
-  const hasLight = schemes.has("light");
-  const hasDark = schemes.has("dark");
-
-  if (hasDark && !hasLight) {
-    return "dark";
-  }
-  if (hasLight && !hasDark) {
-    return "light";
-  }
-
-  return null;
 }
 
 declare global {

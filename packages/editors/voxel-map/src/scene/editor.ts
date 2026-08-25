@@ -25,7 +25,10 @@ import {
   PerformanceHUD
 } from "../components/index.ts";
 import type { EditorState } from "../EditorState.ts";
-import { LocalStoragePersistence } from "../lib/LocalStoragePersistence.ts";
+
+// CONSTANTS
+/** Upper bound on the blocks derived from the default tileset. */
+const kDefaultBlockLimit = 32;
 
 export interface EditorSceneOptions {
   /**
@@ -34,9 +37,16 @@ export interface EditorSceneOptions {
    */
   defaultLayerName?: string;
   tilesetLoader: TilesetLoader;
-  pendingLoad?: VoxelWorldJSON | null;
   /** Optional room to synchronize the voxel world over the network. */
   voxelRoom?: network.Room<VoxelNetworkCommand, VoxelServerMessage>;
+}
+
+/**
+ * Components the UI binds to, published once the scene has awoken.
+ */
+export interface EditorSceneHandles {
+  vr: VoxelRenderer;
+  gridRenderer: GridRenderer;
 }
 
 /**
@@ -47,12 +57,20 @@ export class EditorScene extends Systems.Scene {
   #defaultLayerName: string;
   #voxelRoom: network.Room<VoxelNetworkCommand, VoxelServerMessage> | undefined;
   #voxelSyncClient: VoxelSyncClient | undefined;
-  #pendingLoad: VoxelWorldJSON | null;
+  #handles = Promise.withResolvers<EditorSceneHandles>();
 
   editorState: EditorState;
 
   vr: VoxelRenderer;
   gridRenderer: GridRenderer;
+
+  /**
+   * `awake()` runs on the first frame, which is after `loadRuntime()`
+   * resolves. Anything needing `vr` or `gridRenderer` awaits this instead.
+   */
+  get ready(): Promise<EditorSceneHandles> {
+    return this.#handles.promise;
+  }
 
   constructor(
     editorState: EditorState,
@@ -63,13 +81,11 @@ export class EditorScene extends Systems.Scene {
     const {
       defaultLayerName = "Ground",
       tilesetLoader,
-      pendingLoad = null,
       voxelRoom
     } = options;
 
     this.#defaultLayerName = defaultLayerName;
     this.#tilesetLoader = tilesetLoader;
-    this.#pendingLoad = pendingLoad;
     this.#voxelRoom = voxelRoom;
     this.editorState = editorState;
   }
@@ -97,10 +113,7 @@ export class EditorScene extends Systems.Scene {
       .createActor("map")
       .addComponentAndGet(VoxelRenderer, {
         chunkSize: 16,
-        // Networked mode starts empty — nothing may be created locally
-        // before the sync client below is attached, or it becomes a layer
-        // the server never learns about (see VoxelSyncServer's "dropped
-        // invalid command" logging for what happens next).
+        // Networked layers must be created after the sync client attaches.
         layers: this.#voxelRoom ? [] : [this.#defaultLayerName],
         blocks: [],
         material: "lambert",
@@ -116,19 +129,11 @@ export class EditorScene extends Systems.Scene {
     if (this.#voxelRoom) {
       this.#voxelSyncClient = new VoxelSyncClient({ room: this.#voxelRoom });
       this.#voxelSyncClient.attach(vr.engine);
-      // "snapshot" fires for every full-world replace (the initial connect
-      // snapshot, and any subsequent one from replaceWorld()/loadWorld()) —
-      // unlike "ready", which only fires once. applySnapshot() bypasses the
-      // usual per-mutation hooks, so the UI needs this explicit signal to
-      // know it must re-read layers/selection from scratch.
+      // Snapshots bypass per-mutation hooks, so mirrored UI state must reset.
       this.#voxelSyncClient.on("snapshot", () => {
         let layers = vr.engine.world.getLayers();
         if (layers.length === 0) {
-          // A genuinely empty room (nobody has created anything yet) gets a
-          // default layer so there's always something to paint on. Created
-          // now — after the sync client is attached and the snapshot
-          // confirmed empty — so it's properly broadcast, unlike the
-          // constructor-time default layer this replaced.
+          // Creating the default now broadcasts it through the attached client.
           vr.engine.addLayer(this.#defaultLayerName);
           layers = vr.engine.world.getLayers();
         }
@@ -139,6 +144,7 @@ export class EditorScene extends Systems.Scene {
           this.editorState.setSelectedLayer(layers[0].name);
         }
 
+        this.#registerDefaultBlocks();
         this.editorState.dispatchBlockRegistryChanged();
         this.editorState.dispatchWorldReset();
       });
@@ -147,9 +153,6 @@ export class EditorScene extends Systems.Scene {
       this.editorState.setSelectedLayer(this.#defaultLayerName);
     }
 
-    // Built before the first dispatchBlockRegistryChanged() below — index.ts's
-    // once-listener grabs `this.gridRenderer` on that first dispatch, so it
-    // must already be assigned by then.
     this.gridRenderer = world
       .createActor("grid")
       .addComponentAndGet(GridRenderer, {
@@ -173,32 +176,10 @@ export class EditorScene extends Systems.Scene {
         }
       });
 
-    // Skip default blocks when restoring a saved world — vr.load() will
-    // register the persisted definitions (which carry user edits).
-    // Registering defaults first would cause load() to skip saved blocks
-    // because of its "skip already-registered IDs" guard.
-    if (!this.#pendingLoad?.blocks?.length) {
-      for (const block of vr.engine.tilesetManager.getDefaultBlocks(void 0, { limit: 32 })) {
-        vr.engine.blockRegistry.register(block);
-      }
-    }
+    this.#registerDefaultBlocks();
     this.editorState.dispatchBlockRegistryChanged();
 
-    if (!this.#voxelRoom) {
-      const persistence = new LocalStoragePersistence(vr, this.editorState);
-      persistence.start();
-
-      if (this.#pendingLoad !== null) {
-        vr.engine.load(this.#pendingLoad);
-        this.editorState.dispatchBlockRegistryChanged();
-        const layers = vr.engine.world.getLayers();
-        if (layers.length > 0) {
-          this.editorState.setSelectedLayer(layers[0].name);
-        }
-        this.editorState.dispatchWorldReset();
-        this.#pendingLoad = null;
-      }
-    }
+    this.#voxelRoom?.join();
 
     world.createActor("brush")
       .addComponent(VoxelBrush, {
@@ -220,12 +201,14 @@ export class EditorScene extends Systems.Scene {
 
     world.createActor("perf-hud")
       .addComponent(PerformanceHUD, { vr });
+
+    this.#handles.resolve({
+      vr: this.vr,
+      gridRenderer: this.gridRenderer
+    });
   }
 
-  /**
-   * Replaces the world state, either as an authoritative broadcast to every
-   * connected client (networked mode) or as a local-only load (offline mode).
-   */
+  /** Replaces the shared world, or only the local world when offline. */
   loadWorld(data: VoxelWorldJSON): void {
     if (this.#voxelSyncClient) {
       this.#voxelSyncClient.replaceWorld(data);
@@ -240,7 +223,25 @@ export class EditorScene extends Systems.Scene {
   }
 
   override destroy(): void {
+    this.#handles.reject(
+      new Error("The editor scene was destroyed before it awoke.")
+    );
     this.#voxelSyncClient?.destroy();
     this.#voxelSyncClient = undefined;
+  }
+
+  /**
+   * The document format carries no block definitions, so the registry is
+   * rebuilt from the tileset. Existing ids are left alone because placed
+   * voxels reference them.
+   */
+  #registerDefaultBlocks(): void {
+    const { blockRegistry, tilesetManager } = this.vr.engine;
+
+    for (const block of tilesetManager.getDefaultBlocks(void 0, { limit: kDefaultBlockLimit })) {
+      if (!blockRegistry.has(block.id)) {
+        blockRegistry.register(block);
+      }
+    }
   }
 }

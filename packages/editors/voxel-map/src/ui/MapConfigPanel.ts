@@ -2,81 +2,41 @@
 import { LitElement, html, css, type PropertyValues } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import type { VoxelRenderer, VoxelWorldJSON } from "@jolly-pixel/voxel.renderer";
+import type { JollyChangeDetail } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { GridRenderer } from "../components/GridRenderer.ts";
+import { parseVoxelWorld } from "../lib/parseVoxelWorld.ts";
 import type { EventInput } from "./types.ts";
 
 @customElement("map-config-panel")
 export class MapConfigPanel extends LitElement {
   static override styles = css`
     :host {
-      display: block;
-      padding: 8px;
-      color: #ccc;
-      font-size: 13px;
-    }
-    .section {
-      margin-bottom: 12px;
-    }
-    .section-title {
-      font-size: 11px;
-      font-weight: 600;
-      color: #888;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 6px;
-    }
-    .row {
       display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 4px;
+      flex-direction: column;
+      gap: var(--jolly-row-gap, 4px);
     }
-    label {
-      min-width: 80px;
-      color: #aaa;
-    }
-    input[type="number"] {
-      width: 60px;
-      background: #1a2228;
-      border: 1px solid #333;
-      color: #eee;
-      padding: 2px 4px;
-      border-radius: 3px;
-      font-size: 12px;
-    }
-    input[type="checkbox"] {
-      accent-color: #4488ff;
-    }
-    button {
-      background: #2a3a4a;
-      border: 1px solid #4488ff;
-      color: #4488ff;
-      padding: 4px 10px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
-      transition: background 0.15s;
-    }
-    button:hover {
-      background: #3a5a7a;
-    }
-    .btn-row {
-      display: flex;
-      gap: 6px;
-      margin-top: 4px;
-    }
+
     input[type="file"] {
       display: none;
     }
+
+    .actions {
+      display: flex;
+      gap: var(--jolly-row-gap, 4px);
+    }
   `;
 
-  @property({ attribute: false }) declare vr: VoxelRenderer;
-  @property({ attribute: false }) declare gridRenderer: GridRenderer | undefined;
-  @property({ attribute: false }) declare onLoadWorld: ((data: VoxelWorldJSON) => void) | undefined;
+  @property({ attribute: false })
+  declare vr: VoxelRenderer;
+  @property({ attribute: false })
+  declare gridRenderer: GridRenderer | undefined;
+  @property({ attribute: false })
+  declare onLoadWorld: ((data: VoxelWorldJSON) => void) | undefined;
 
-  @state() private declare _gridVisible: boolean;
+  @state()
+  private declare _gridVisible: boolean;
 
   constructor() {
     super();
@@ -93,33 +53,25 @@ export class MapConfigPanel extends LitElement {
 
   override render() {
     return html`
-      <div class="section">
-        <div class="section-title">Grid Settings</div>
-        <div class="row">
-          <label>Visible</label>
-          <input
-            type="checkbox"
-            ?checked=${this._gridVisible}
-            @change=${(event: EventInput) => this.#onGridVisibleChange(event)}
-          />
-        </div>
-      </div>
+      <jolly-checkbox
+        align="end"
+        label="Grid visibility"
+        .value=${this._gridVisible}
+        @jolly-change=${this.#onGridVisibleChange}
+      ></jolly-checkbox>
 
-      <div class="section">
-        <div class="section-title">Save / Load</div>
-        <div class="btn-row">
-          <button @click=${this.#onSave}>Save JSON</button>
-          <button @click=${this.#onLoad}>Load JSON</button>
-        </div>
-        <input type="file" id="file-input" accept=".json" @change=${this.#onFileSelected} />
+      <div class="actions">
+        <jolly-button @click=${this.#onSave}>Save JSON</jolly-button>
+        <jolly-button variant="danger" @click=${this.#onLoad}>Load JSON</jolly-button>
       </div>
+      <input type="file" id="file-input" accept=".json" @change=${this.#onFileSelected} />
     `;
   }
 
   #onGridVisibleChange(
-    event: EventInput
+    event: CustomEvent<JollyChangeDetail<boolean>>
   ): void {
-    this._gridVisible = event.target.checked;
+    this._gridVisible = event.detail.value;
     this.gridRenderer?.setVisible(this._gridVisible);
   }
 
@@ -157,11 +109,14 @@ export class MapConfigPanel extends LitElement {
 
     try {
       const text = await file.text();
-      const data = JSON.parse(text) as VoxelWorldJSON;
+      const data = parseVoxelWorld(text);
       this.onLoadWorld?.(data);
 
       this.dispatchEvent(
-        new CustomEvent("world-loaded", { bubbles: true, composed: true })
+        new CustomEvent("world-loaded", {
+          bubbles: true,
+          composed: true
+        })
       );
     }
     catch (err) {
