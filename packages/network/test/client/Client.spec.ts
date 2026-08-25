@@ -172,6 +172,24 @@ describe("Client — peers mirror", () => {
     ]);
   });
 
+  test("sync fires \"sync\" with the peers already present", () => {
+    const { client, socket } = createOpenClient();
+    const room = client.room("pixel-draw");
+    const synced: string[][] = [];
+    room.on("sync", (event) => synced.push(event.clientIds));
+
+    socket.receive({
+      room: "pixel-draw",
+      kind: "sync",
+      members: [
+        { clientId: "B", identity: {}, presence: {} },
+        { clientId: "C", identity: {}, presence: {} }
+      ]
+    });
+
+    assert.deepEqual(synced, [["B", "C"]]);
+  });
+
   test("peer-joined adds to peers and fires \"peer-joined\"", () => {
     const { client, socket } = createOpenClient();
     const room = client.room("pixel-draw");

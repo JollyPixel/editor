@@ -26,6 +26,11 @@ import { LocalStorageAdapter } from "../storage/LocalStorageAdapter.ts";
 import { PersistedState } from "../storage/PersistedState.ts";
 import type { StorageAdapter } from "../storage/StorageAdapter.ts";
 import { deriveKey } from "../storage/keys.ts";
+import {
+  providePresenceSource,
+  type PresenceProvider
+} from "../peer/presenceContext.ts";
+import type { PresenceSource } from "../peer/PresenceSource.ts";
 import { hiddenStyles } from "../theme/styles/hiddenStyles.ts";
 
 // CONSTANTS
@@ -108,6 +113,9 @@ export class PaneElement extends LitElement {
   @property({ attribute: false })
   declare storage: StorageAdapter;
 
+  @property({ attribute: false })
+  declare presence: PresenceSource | null;
+
   @state()
   declare _hasActions: boolean;
 
@@ -148,6 +156,7 @@ export class PaneElement extends LitElement {
   });
   /** True inside a container that can move the pane, lock or no lock. */
   #hosted = false;
+  #presenceProvider: PresenceProvider | null = null;
   #folders = new FolderListController(this, {
     content: () => this._content,
     contentSlot: () => this._contentSlot,
@@ -179,14 +188,22 @@ export class PaneElement extends LitElement {
     this.locked = false;
     this.storageKey = "";
     this.storage = new LocalStorageAdapter();
+    this.presence = null;
     this._hasActions = false;
     this._announcement = "";
     this.movable = false;
     this._grabbed = false;
   }
 
+  override disconnectedCallback(): void {
+    this.#presenceProvider?.dispose();
+    this.#presenceProvider = null;
+    super.disconnectedCallback();
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
+    this.#presenceProvider = providePresenceSource(this, () => this.presence);
     this.#managed = this.closest("jolly-dock-layout") !== null;
     this.#hosted = this.#managed ||
       this.closest("jolly-floating") !== null;
@@ -201,6 +218,9 @@ export class PaneElement extends LitElement {
   protected override willUpdate(
     changed: Map<PropertyKey, unknown>
   ): void {
+    if (changed.has("presence")) {
+      this.#presenceProvider?.notify();
+    }
     if (
       this.#hosted &&
       changed.has("locked")

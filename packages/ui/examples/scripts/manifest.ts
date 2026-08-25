@@ -38,6 +38,7 @@ import { DOCK_RESIZE_EXAMPLE } from "./examples/scenarios/dockResize.ts";
 import { DOCK_LAYOUT_EXAMPLE } from "./examples/scenarios/dockLayout.ts";
 import { DOCK_LAYOUT_TRANSPARENT_EXAMPLE } from "./examples/scenarios/dockLayoutTransparent.ts";
 import { DIALOG_ESCAPE_EXAMPLE } from "./examples/scenarios/dialogEscape.ts";
+import { LOCKING_EXAMPLE } from "./examples/scenarios/locking.ts";
 import {
   EDITOR_EXAMPLE,
   EDITOR_STATES_EXAMPLE
@@ -99,6 +100,7 @@ export const manifest: readonly GalleryExample[] = [
   DOCK_LAYOUT_EXAMPLE,
   DOCK_LAYOUT_TRANSPARENT_EXAMPLE,
   DIALOG_ESCAPE_EXAMPLE,
+  LOCKING_EXAMPLE,
   EDITOR_EXAMPLE,
   EDITOR_STATES_EXAMPLE,
   FACADE_PARITY_EXAMPLE,

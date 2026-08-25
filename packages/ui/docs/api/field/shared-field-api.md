@@ -20,6 +20,7 @@ and `JollyChangeDetail<T>`.
 | `colored` | `colored` | `boolean` | `false` |
 | `lockedBy` | none | `CollaboratorPresence \| null` | `null` |
 | `peers` | none | `CollaboratorPresence[]` | `[]` |
+| `path` | `path` | `string \| null` | `null` |
 | `align` | `align` | `"start" \| "end"` | `"start"` |
 | `labelPosition` | `label-position` | `"inline" \| "top"` | `"inline"` |
 
@@ -48,3 +49,12 @@ unchanged until an allowed edit commits a concrete value.
 `editing` fields. `lockedBy` makes the field read-only while keeping it
 focusable. `peers` renders collaborator indicators. The package owns no
 collaboration transport.
+
+`path` is the identity the field claims while focused, agreed between clients
+and supplied by the consumer. It defaults to `null`, which opts the field out of
+locking entirely.
+
+A field with a `path` under a pane carrying a [`PresenceSource`](../peer/presence-source.md)
+has `lockedBy` and `peers` written for it: it claims on focus, releases on blur
+and on disconnection, and never locks against itself. Without a source both stay
+consumer owned, like every other property here.

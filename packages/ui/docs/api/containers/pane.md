@@ -22,6 +22,7 @@
 | `movable` | `movable` | `boolean` | Derived from its container |
 | `storageKey` | `storage-key` | `string` | `""` |
 | `storage` | none | `StorageAdapter` | `LocalStorageAdapter` |
+| `presence` | none | `PresenceSource \| null` | `null` |
 
 `actions` is the named header slot. The default slot contains pane content.
 Collapsing emits `jolly-toggle` with `{ open }`. Committed folder ordering

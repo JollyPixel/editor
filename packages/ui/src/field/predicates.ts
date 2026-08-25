@@ -27,14 +27,20 @@ export function isModified<TValue>(
 }
 
 /**
- * Resolves the peer that owns a field lock.
+ * Resolves a remote holder while excluding the local peer.
  */
 export function resolveHolder(
   peers: readonly CollaboratorPresence[],
-  lockedBy: CollaboratorPresence | null
+  lockedBy: CollaboratorPresence | null,
+  selfId = ""
 ): CollaboratorPresence | null {
   if (lockedBy !== null) {
     return lockedBy;
+  }
+  if (
+    peers.some((peer) => peer.clientId === selfId && peer.editing !== undefined)
+  ) {
+    return null;
   }
 
   return peers.find(

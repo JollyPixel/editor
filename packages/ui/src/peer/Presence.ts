@@ -10,15 +10,10 @@ import {
 
 // Import Internal Dependencies
 import { presenceStyles } from "./Presence.styles.ts";
+import type { CollaboratorPresence } from "./types.ts";
 import { hiddenStyles } from "../theme/styles/hiddenStyles.ts";
 
-export interface PresencePeer {
-  /** Stable caller-owned identity. It is not displayed. */
-  id: string;
-  /** Display name supplied by the collaboration host. */
-  username: string;
-  /** CSS color shared with the host's other peer visuals. */
-  color: string;
+export interface PresencePeer extends CollaboratorPresence {
   /** Marks the local peer. At most one entry should set this. */
   self?: boolean;
 }
@@ -96,11 +91,11 @@ export class PresenceElement extends LitElement {
               class="swatch"
               part="swatch"
               role="img"
-              aria-label=${`${peer.username}'s color`}
+              aria-label=${`${peer.displayName}'s color`}
               style=${`background-color: ${peer.color}`}
             ></span>
             <span class=${peer.self ? "self" : ""}>
-              ${peer.username}${peer.self ? " (you)" : ""}
+              ${peer.displayName}${peer.self ? " (you)" : ""}
             </span>
           </li>
         `)}

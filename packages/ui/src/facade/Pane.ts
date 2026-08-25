@@ -3,6 +3,7 @@ import "../containers/Pane.ts";
 import "../containers/Floating.ts";
 import "../theme/components/ScopeHost.ts";
 import { FacadeContainer } from "./Container.ts";
+import type { PresenceSource } from "../peer/PresenceSource.ts";
 import {
   Folder,
   type FolderOptions
@@ -60,6 +61,19 @@ export class Pane extends FacadeContainer {
     this.element = options.container === undefined
       ? this.#mountFloating()
       : this.#mountInto(options.container, options.grow ?? true);
+  }
+
+  /**
+   * Collaboration source served to every field in this pane.
+   */
+  get presence(): PresenceSource | null {
+    return this.#pane.presence;
+  }
+
+  set presence(
+    value: PresenceSource | null
+  ) {
+    this.#pane.presence = value;
   }
 
   protected get contentHost(): HTMLElement {

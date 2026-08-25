@@ -5,6 +5,10 @@ export interface GotoOptions {
   example?: string;
   chrome?: "off";
   theme?: "light" | "dark";
+  /** Collaboration room, unique per test so parallel workers stay isolated. */
+  room?: string;
+  /** Display name of the local peer in that room. */
+  as?: string;
 }
 
 /**

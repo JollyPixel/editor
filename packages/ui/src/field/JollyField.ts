@@ -3,6 +3,7 @@ import {
   LitElement,
   html,
   nothing,
+  type PropertyValues,
   type TemplateResult
 } from "lit";
 import { property } from "lit/decorators.js";
@@ -25,6 +26,7 @@ import {
   type FieldValue
 } from "./mixed.ts";
 import type { CollaboratorPresence } from "../peer/types.ts";
+import { LockController } from "../peer/LockController.ts";
 import { resolveThemeToken } from "../theme/resolveThemeToken.ts";
 
 // Registers the icon used by the revert gutter.
@@ -75,6 +77,12 @@ export abstract class JollyField<TValue> extends LitElement {
   @property({ attribute: false })
   declare peers: CollaboratorPresence[];
 
+  /**
+   * Stable lock identity shared by clients; null disables field locking.
+   */
+  @property({ type: String, reflect: true })
+  declare path: string | null;
+
   @property({ type: String })
   declare error: string | null;
 
@@ -103,6 +111,7 @@ export abstract class JollyField<TValue> extends LitElement {
   declare labelPosition: FieldLabelPosition;
 
   #draft = new DraftController<TValue>(this);
+  #lock = new LockController(this);
 
   constructor() {
     super();
@@ -112,6 +121,7 @@ export abstract class JollyField<TValue> extends LitElement {
     this.default = undefined;
     this.lockedBy = null;
     this.peers = [];
+    this.path = null;
     this.error = null;
     this.disabled = false;
     this.readonly = false;
@@ -268,7 +278,11 @@ export abstract class JollyField<TValue> extends LitElement {
    * Current lock holder.
    */
   protected get holder(): CollaboratorPresence | null {
-    return resolveHolder(this.peers, this.lockedBy);
+    return resolveHolder(
+      this.peers,
+      this.lockedBy,
+      this.#lock.selfId
+    );
   }
 
   override connectedCallback(): void {
@@ -280,7 +294,13 @@ export abstract class JollyField<TValue> extends LitElement {
     queueMicrotask(() => this.#warnWhenUnscoped());
   }
 
-  protected override willUpdate(): void {
+  protected override willUpdate(
+    changed: PropertyValues<this>
+  ): void {
+    if (changed.has("path")) {
+      this.#lock.pathChanged();
+    }
+
     const holder = this.holder;
 
     this.toggleAttribute(
