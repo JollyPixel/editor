@@ -169,19 +169,6 @@ export class TextureEditorBridge {
     }
   }
 
-  exportPng(filename: string): void {
-    if (!this.#manager) {
-      return;
-    }
-
-    const canvas = this.#manager.textureCanvas();
-    const url = canvas.toDataURL("image/png");
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = filename;
-    anchor.click();
-  }
-
   destroy(): void {
     this.#syncClient?.destroy();
     this.#syncClient = null;

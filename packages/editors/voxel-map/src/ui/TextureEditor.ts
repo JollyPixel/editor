@@ -47,20 +47,6 @@ export class TextureEditor extends LitElement {
       max-width: 100px;
     }
 
-    .toolbar button {
-      background: #1a2228;
-      border: 1px solid #2a3540;
-      color: #aaa;
-      padding: 2px 8px;
-      border-radius: 3px;
-      cursor: pointer;
-      font-size: 11px;
-    }
-    .toolbar button:hover {
-      background: #243040;
-      color: #ccc;
-    }
-
     /*
      * Deliberately no "display" override here: an outer-tree rule targeting
      * a custom element wins over that element's own ":host { display }"
@@ -213,18 +199,13 @@ export class TextureEditor extends LitElement {
     this.#applyTileset(this.tilesetId);
   }
 
-  #onExport(): void {
-    const id = this.tilesetId || this.vr?.engine.tilesetManager.defaultTilesetId || "texture";
-    this.#bridge.exportPng(`${id}.png`);
-  }
-
   override render() {
     const tilesetDefs = this.vr?.engine.tilesetManager.getDefinitions() ?? [];
     const currentTilesetId = this.tilesetId || this.vr?.engine.tilesetManager.defaultTilesetId || "";
 
     return html`
-      <div class="toolbar">
-        ${tilesetDefs.length > 1 ? html`
+      ${tilesetDefs.length > 1 ? html`
+        <div class="toolbar">
           <select @change=${this.#onTilesetChange}>
             ${tilesetDefs.map((def) => html`
               <option
@@ -233,10 +214,8 @@ export class TextureEditor extends LitElement {
               >${def.id}</option>
             `)}
           </select>
-        ` : null}
-
-        <button @click=${this.#onExport}>Export</button>
-      </div>
+        </div>
+      ` : null}
 
       <pixel-draw-panel></pixel-draw-panel>
     `;

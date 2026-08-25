@@ -19,7 +19,6 @@ import "./LayerManager.ts";
 import "./LayerPanel.ts";
 import "./ObjectLayerPanel.ts";
 import "./BlockLibrary.ts";
-import "./TilesetManager.ts";
 import "./TextureEditor.ts";
 import "./Vec3Input.ts";
 import "./Vec2Input.ts";
@@ -102,6 +101,12 @@ export class EditorSidebar extends LitElement {
     }
     .box-content.collapsed {
       display: none;
+    }
+
+    /* Panel owning the whole tab height instead of a scrolling section stack */
+    .fill {
+      flex: 1;
+      min-height: 0;
     }
   `;
 
@@ -217,20 +222,12 @@ export class EditorSidebar extends LitElement {
 
   #renderPaint() {
     return html`
-      ${this.#section("TileSet Manager", html`
-        <tileset-manager
-          .vr=${this.vr}
-          @tileset-added=${() => this.requestUpdate()}
-        ></tileset-manager>
-      `)}
-
-      ${this.#section("Texture Editor", html`
-        <texture-editor
-          .vr=${this.vr}
-          .active=${this._tab === "paint"}
-          .room=${this.textureRoom}
-        ></texture-editor>
-      `)}
+      <texture-editor
+        class="fill"
+        .vr=${this.vr}
+        .active=${this._tab === "paint"}
+        .room=${this.textureRoom}
+      ></texture-editor>
     `;
   }
 
