@@ -11,11 +11,11 @@ import { Brush } from "../src/tools/Brush.ts";
 import { Select } from "../src/tools/Select.ts";
 import { ShapeSelect } from "../src/tools/ShapeSelect.ts";
 import { traceSelectionContour } from "../src/rendering/overlays/selectionContour.ts";
-import type { RGBA } from "../src/types.ts";
+import type { RGBA8 } from "../src/types.ts";
 
 // CONSTANTS
 const kSide = 256;
-const kWhite: RGBA = { r: 255, g: 255, b: 255, a: 255 };
+const kWhite: RGBA8 = { r: 255, g: 255, b: 255, a: 255 };
 
 /**
  * Covers geometry and selection helpers used during interactive editing.
@@ -29,7 +29,7 @@ const suite = defineSuite("Tools (tools/*)", (bench) => {
     defaultColor: kWhite,
     maxSize: kSide
   });
-  const snapshot = new Array<RGBA>(kSide * kSide).fill(kWhite);
+  const snapshot = new Array<RGBA8>(kSide * kSide).fill(kWhite);
   const mask = new Array<boolean>(kSide * kSide).fill(false);
   for (let y = 16; y < 240; y++) {
     for (let x = 16; x < 240; x++) {

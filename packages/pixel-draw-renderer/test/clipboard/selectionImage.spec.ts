@@ -33,7 +33,7 @@ interface DecoderStubOptions {
   width?: number;
   height?: number;
   /**
-   * Simulates a padded plane layout, which the RGBA fast path cannot use.
+   * Simulates a padded plane layout, which the RGBA8 fast path cannot use.
    */
   allocationSize?: number;
   throwOnConstruct?: boolean;

@@ -52,7 +52,7 @@ describe("selectionMetadata", () => {
 
   test("the metadata pixel channel round-trips partial alpha exactly", () => {
     // The PNG travels through a premultiplying canvas, so RGB under a low
-    // alpha cannot survive it. The custom format carries raw RGBA instead.
+    // alpha cannot survive it. The custom format carries raw RGBA8 instead.
     const snapshot: SelectionSnapshot = {
       rect: { x: 0, y: 0, width: 2, height: 1 },
       pixels: [

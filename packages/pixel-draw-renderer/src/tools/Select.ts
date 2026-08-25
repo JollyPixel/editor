@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import { pointInRect } from "../utils/math.ts";
 import type {
-  RGBA,
+  RGBA8,
   SelectionRect,
   Vec2
 } from "../types.ts";
@@ -16,13 +16,13 @@ export interface MoveResult {
   skipErase: boolean;
 }
 
-const kTransparent: RGBA = { r: 0, g: 0, b: 0, a: 0 };
+const kTransparent: RGBA8 = { r: 0, g: 0, b: 0, a: 0 };
 
 export class Select {
   #state: SelectState = "idle";
   #createStart: Vec2 | null = null;
   #rect: SelectionRect | null = null;
-  #snapshot: RGBA[] | null = null;
+  #snapshot: RGBA8[] | null = null;
   #mask: boolean[] | null = null;
   #moveOrigin: Vec2 | null = null;
   #moveBaseRect: SelectionRect | null = null;
@@ -37,7 +37,7 @@ export class Select {
     return this.#state === "moving" ? this.#liveRect : this.#rect;
   }
 
-  get snapshot(): RGBA[] | null {
+  get snapshot(): RGBA8[] | null {
     return this.#snapshot;
   }
 
@@ -85,7 +85,7 @@ export class Select {
   }
 
   finishCreate(
-    snapshot: RGBA[],
+    snapshot: RGBA8[],
     finalRect?: SelectionRect
   ): void {
     if (this.#state !== "creating") {
@@ -105,7 +105,7 @@ export class Select {
 
   selectRegion(
     rect: SelectionRect,
-    snapshot: RGBA[],
+    snapshot: RGBA8[],
     mask: boolean[]
   ): void {
     this.#enterSelected(
@@ -214,7 +214,7 @@ export class Select {
 
   restoreRect(
     rect: SelectionRect,
-    snapshot: RGBA[],
+    snapshot: RGBA8[],
     mask: boolean[]
   ): void {
     this.#enterSelected(
@@ -248,7 +248,7 @@ export class Select {
   }
 
   markErased(
-    eraseColor: RGBA
+    eraseColor: RGBA8
   ): void {
     if (!this.#rect || !this.#mask || !this.#snapshot) {
       return;
@@ -369,7 +369,7 @@ export class Select {
 
   #enterSelected(
     rect: SelectionRect,
-    snapshot: RGBA[],
+    snapshot: RGBA8[],
     mask: boolean[]
   ): void {
     this.#state = "selected";
@@ -400,10 +400,10 @@ export class Select {
   static dominantBorderColor(
     buffer: DefaultPixelBuffer,
     rect: SelectionRect,
-    fallback: RGBA
-  ): RGBA {
+    fallback: RGBA8
+  ): RGBA8 {
     const size = buffer.size();
-    const counts = new Map<string, { color: RGBA; count: number; }>();
+    const counts = new Map<string, { color: RGBA8; count: number; }>();
 
     function sample(
       x: number,
@@ -442,7 +442,7 @@ export class Select {
       sample(rect.x + rect.width, y);
     }
 
-    let best: RGBA | null = null;
+    let best: RGBA8 | null = null;
     let bestCount = 0;
     for (const entry of counts.values()) {
       if (entry.count > bestCount) {
@@ -460,8 +460,8 @@ export class Select {
   static resolveEraseColor(
     buffer: DefaultPixelBuffer,
     rect: SelectionRect,
-    explicitEraseColor: RGBA | null
-  ): RGBA {
+    explicitEraseColor: RGBA8 | null
+  ): RGBA8 {
     if (explicitEraseColor !== null) {
       return explicitEraseColor;
     }
@@ -472,9 +472,9 @@ export class Select {
   static captureSnapshot(
     buffer: DefaultPixelBuffer,
     rect: SelectionRect
-  ): RGBA[] {
+  ): RGBA8[] {
     const size = buffer.size();
-    const pixels: RGBA[] = [];
+    const pixels: RGBA8[] = [];
 
     for (let ry = 0; ry < rect.height; ry++) {
       for (let rx = 0; rx < rect.width; rx++) {
@@ -514,10 +514,10 @@ export class Select {
   }
 
   static rotateSnapshotCW(
-    snapshot: RGBA[],
+    snapshot: RGBA8[],
     width: number,
     height: number
-  ): RGBA[] {
+  ): RGBA8[] {
     return Select.#rotateGridCW(
       snapshot,
       width,
@@ -538,10 +538,10 @@ export class Select {
   }
 
   static flipSnapshotHorizontal(
-    snapshot: RGBA[],
+    snapshot: RGBA8[],
     width: number,
     height: number
-  ): RGBA[] {
+  ): RGBA8[] {
     return Select.#flipGridHorizontal(
       snapshot,
       width,
@@ -562,10 +562,10 @@ export class Select {
   }
 
   static flipSnapshotVertical(
-    snapshot: RGBA[],
+    snapshot: RGBA8[],
     width: number,
     height: number
-  ): RGBA[] {
+  ): RGBA8[] {
     return Select.#flipGridVertical(
       snapshot,
       width,

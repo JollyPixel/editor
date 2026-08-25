@@ -1,3 +1,9 @@
+// Import Third-party Dependencies
+import {
+  parseColor,
+  toRGBA8
+} from "@jolly-pixel/color";
+
 // Canvas 2D fixture. happy-dom provides real <canvas> elements (events,
 // sizing, DOM tree, style) but no 2D rendering context, so installCanvasMock
 // patches getContext("2d") to return a pixel-backed MockCanvas2DContext. Only
@@ -7,32 +13,19 @@
 function parseCSSColor(
   color: string
 ): [number, number, number, number] {
-  if (color.startsWith("#")) {
-    const hex = color.slice(1).padEnd(6, "0");
-
-    return [
-      parseInt(hex.slice(0, 2), 16),
-      parseInt(hex.slice(2, 4), 16),
-      parseInt(hex.slice(4, 6), 16),
-      255
-    ];
+  const parsed = parseColor(color);
+  if (parsed === null) {
+    return [0, 0, 0, 255];
   }
 
-  const match = color.match(
-    /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/
-  );
-  if (match) {
-    return [
-      parseInt(match[1], 10),
-      parseInt(match[2], 10),
-      parseInt(match[3], 10),
-      match[4] === undefined ?
-        255 :
-        Math.round(parseFloat(match[4]) * 255)
-    ];
-  }
+  const {
+    r,
+    g,
+    b,
+    a
+  } = toRGBA8(parsed);
 
-  return [0, 0, 0, 255];
+  return [r, g, b, a];
 }
 
 function isCanvasSource(
@@ -61,7 +54,7 @@ class MockImageData {
   }
 }
 
-// Mock 2D Context, backed by an RGBA buffer sized to the live canvas.
+// Mock 2D Context, backed by an RGBA8 buffer sized to the live canvas.
 export class MockCanvas2DContext {
   fillStyle = "#000000";
   globalCompositeOperation: GlobalCompositeOperation = "source-over";
@@ -86,7 +79,7 @@ export class MockCanvas2DContext {
     );
   }
 
-  // The RGBA buffer backing this context, resynced to the canvas size.
+  // The RGBA8 buffer backing this context, resynced to the canvas size.
   get pixels(): Uint8ClampedArray {
     this.#syncSize();
 
@@ -411,14 +404,14 @@ export function mockContextOf(
   return context;
 }
 
-/** The RGBA pixel buffer backing a mocked canvas. */
+/** The RGBA8 pixel buffer backing a mocked canvas. */
 export function canvasPixels(
   canvas: HTMLCanvasElement
 ): Uint8ClampedArray {
   return mockContextOf(canvas).pixels;
 }
 
-/** Reads the RGBA tuple at (pos.x, pos.y) from a row-major pixel buffer. */
+/** Reads the RGBA8 tuple at (pos.x, pos.y) from a row-major pixel buffer. */
 export function readPixel(
   pixels: Uint8ClampedArray,
   pos: { x: number; y: number; },

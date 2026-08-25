@@ -7,21 +7,21 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { Select } from "#src/tools/Select.ts";
-import type { RGBA } from "#src/types.ts";
+import type { RGBA8 } from "#src/types.ts";
 
 // CONSTANTS
-const kRed: RGBA = { r: 255, g: 0, b: 0, a: 255 };
-const kColorA: RGBA = { r: 10, g: 0, b: 0, a: 255 };
-const kColorB: RGBA = { r: 20, g: 0, b: 0, a: 255 };
-const kColorC: RGBA = { r: 30, g: 0, b: 0, a: 255 };
-const kColorD: RGBA = { r: 40, g: 0, b: 0, a: 255 };
-const kColorE: RGBA = { r: 50, g: 0, b: 0, a: 255 };
-const kColorF: RGBA = { r: 60, g: 0, b: 0, a: 255 };
+const kRed: RGBA8 = { r: 255, g: 0, b: 0, a: 255 };
+const kColorA: RGBA8 = { r: 10, g: 0, b: 0, a: 255 };
+const kColorB: RGBA8 = { r: 20, g: 0, b: 0, a: 255 };
+const kColorC: RGBA8 = { r: 30, g: 0, b: 0, a: 255 };
+const kColorD: RGBA8 = { r: 40, g: 0, b: 0, a: 255 };
+const kColorE: RGBA8 = { r: 50, g: 0, b: 0, a: 255 };
+const kColorF: RGBA8 = { r: 60, g: 0, b: 0, a: 255 };
 // 2 wide x 3 tall, row-major:
 // A B
 // C D
 // E F
-const k2x3Snapshot: RGBA[] = [
+const k2x3Snapshot: RGBA8[] = [
   kColorA,
   kColorB,
   kColorC,
@@ -29,10 +29,10 @@ const k2x3Snapshot: RGBA[] = [
   kColorE,
   kColorF
 ];
-const kColorG: RGBA = { r: 70, g: 0, b: 0, a: 255 };
-const kColorH: RGBA = { r: 80, g: 0, b: 0, a: 255 };
+const kColorG: RGBA8 = { r: 70, g: 0, b: 0, a: 255 };
+const kColorH: RGBA8 = { r: 80, g: 0, b: 0, a: 255 };
 // 2 wide x 4 tall (even x even — no center-pivot rounding drift), row-major.
-const k2x4Snapshot: RGBA[] = [
+const k2x4Snapshot: RGBA8[] = [
   kColorA,
   kColorB,
   kColorC,
@@ -47,7 +47,7 @@ describe("Select", () => {
   describe("rotate / flip (instance)", () => {
     function makeSelectedWith(
       rect: { x: number; y: number; width: number; height: number; },
-      snapshot: RGBA[]
+      snapshot: RGBA8[]
     ): Select {
       const tool = new Select();
       tool.startCreate({
@@ -436,7 +436,7 @@ describe("Select", () => {
       tool.updateCreate({ x: 1, y: 0 });
       tool.finishCreate([kRed, kRed]);
 
-      const eraseColor: RGBA = {
+      const eraseColor: RGBA8 = {
         r: 255, g: 255, b: 255, a: 255
       };
       tool.markErased(eraseColor);
@@ -539,7 +539,7 @@ describe("Select", () => {
         kMask
       );
 
-      const eraseColor: RGBA = {
+      const eraseColor: RGBA8 = {
         r: 255, g: 255, b: 255, a: 255
       };
       tool.markErased(eraseColor);

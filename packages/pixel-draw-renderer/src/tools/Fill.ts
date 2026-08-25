@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import type {
-  RGBA,
+  RGBA8,
   Vec2
 } from "../types.ts";
 import type { DefaultPixelBuffer } from "../buffer/types.ts";
@@ -88,7 +88,7 @@ export class Fill {
   static floodFill(
     buffer: DefaultPixelBuffer,
     seed: Vec2,
-    fillColor: RGBA
+    fillColor: RGBA8
   ): Vec2[] {
     const size = buffer.size();
     if (!isInBounds(seed, size)) {
@@ -126,7 +126,7 @@ export class Fill {
 
   static matchAll(
     buffer: DefaultPixelBuffer,
-    color: RGBA
+    color: RGBA8
   ): Vec2[] {
     const size = buffer.size();
     const pixels = buffer.pixels();

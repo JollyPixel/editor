@@ -13,28 +13,28 @@ import {
   canvasPixels,
   mockContextOf
 } from "../../fixtures/canvas.ts";
-import type { RGBA } from "#src/types.ts";
+import type { RGBA8 } from "#src/types.ts";
 
 // CONSTANTS
-const kRed: RGBA = {
+const kRed: RGBA8 = {
   r: 255,
   g: 0,
   b: 0,
   a: 255
 };
-const kBlue: RGBA = {
+const kBlue: RGBA8 = {
   r: 0,
   g: 0,
   b: 255,
   a: 255
 };
-const kErase: RGBA = {
+const kErase: RGBA8 = {
   r: 9,
   g: 9,
   b: 9,
   a: 255
 };
-const kTransparent: RGBA = {
+const kTransparent: RGBA8 = {
   r: 0,
   g: 0,
   b: 0,

@@ -3,14 +3,14 @@ import { CanvasBuffer } from "../../src/buffer/CanvasBuffer.ts";
 import { CanvasRenderer } from "../../src/rendering/CanvasRenderer.ts";
 import { Viewport } from "../../src/rendering/Viewport.ts";
 import type {
-  RGBA,
+  RGBA8,
   Vec2
 } from "../../src/types.ts";
 
 // CONSTANTS
-const kBlack: RGBA = { r: 0, g: 0, b: 0, a: 255 };
-const kBlue: RGBA = { r: 0, g: 0, b: 255, a: 255 };
-const kRed: RGBA = { r: 255, g: 0, b: 0, a: 255 };
+const kBlack: RGBA8 = { r: 0, g: 0, b: 0, a: 255 };
+const kBlue: RGBA8 = { r: 0, g: 0, b: 255, a: 255 };
+const kRed: RGBA8 = { r: 255, g: 0, b: 0, a: 255 };
 
 export interface BrowserBenchmarkResult {
   task: string;

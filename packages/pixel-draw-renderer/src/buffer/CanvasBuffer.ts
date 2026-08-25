@@ -8,7 +8,7 @@ import {
 } from "./PixelBuffer.ts";
 import { RectArea } from "../utils/RectArea.ts";
 import type {
-  RGBA,
+  RGBA8,
   SelectionRect,
   Vec2
 } from "../types.ts";
@@ -17,7 +17,7 @@ import type {
 } from "./types.ts";
 
 interface CanvasColorGroup {
-  color: RGBA;
+  color: RGBA8;
   positions: Vec2[];
 }
 
@@ -169,7 +169,7 @@ export class CanvasBuffer extends Emitter<
 
   drawPixels(
     pixels: Iterable<Vec2>,
-    color: RGBA
+    color: RGBA8
   ): void {
     const positions = Array.isArray(pixels) ? pixels : [...pixels];
     this.#buffer.drawPixels(
@@ -220,7 +220,7 @@ export class CanvasBuffer extends Emitter<
 
   drawRegion(
     rect: SelectionRect,
-    pixels: RGBA[]
+    pixels: RGBA8[]
   ): void {
     this.#buffer.drawRegion(
       rect,
@@ -232,7 +232,7 @@ export class CanvasBuffer extends Emitter<
 
   drawMaskedRegion(
     rect: SelectionRect,
-    pixels: RGBA[],
+    pixels: RGBA8[],
     mask: boolean[]
   ): void {
     this.#buffer.drawMaskedRegion(
@@ -297,7 +297,7 @@ export class CanvasBuffer extends Emitter<
    */
   samplePixels(
     positions: Vec2[]
-  ): RGBA[] {
+  ): RGBA8[] {
     return this.#buffer.samplePixels(positions);
   }
 

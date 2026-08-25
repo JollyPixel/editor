@@ -8,13 +8,13 @@ import {
 import { PixelBuffer } from "../src/buffer/PixelBuffer.ts";
 import { Fill } from "../src/tools/Fill.ts";
 import type {
-  RGBA,
+  RGBA8,
   Vec2
 } from "../src/types.ts";
 
 // CONSTANTS
-const kWhite: RGBA = { r: 255, g: 255, b: 255, a: 255 };
-const kBlack: RGBA = { r: 0, g: 0, b: 0, a: 255 };
+const kWhite: RGBA8 = { r: 255, g: 255, b: 255, a: 255 };
+const kBlack: RGBA8 = { r: 0, g: 0, b: 0, a: 255 };
 
 /**
  * Uniform buffer fixture with `maxSize` pinned to the canvas size.

@@ -279,7 +279,7 @@ test.describe("color picker: standalone panel", () => {
     const panel = page.locator('[data-readout="default"]');
     const input = page.locator("jolly-color-picker").first().locator("input.hex");
 
-    await input.fill("rebeccapurple");
+    await input.fill("not-a-color");
     await input.press("Enter");
 
     await expect(input).toHaveAttribute("aria-invalid", "true");

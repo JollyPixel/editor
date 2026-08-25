@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import { createCanvas2D } from "../Canvas2D.ts";
-import type { RGBA, SelectionRect } from "../../types.ts";
+import type { RGBA8, SelectionRect } from "../../types.ts";
 
 /**
  * Rect-sized canvas filled with `color` only where `mask` is true.
@@ -10,7 +10,7 @@ import type { RGBA, SelectionRect } from "../../types.ts";
 export function buildMaskedFillCanvas(
   rect: SelectionRect,
   mask: boolean[],
-  color: RGBA
+  color: RGBA8
 ): HTMLCanvasElement {
   const {
     canvas,
@@ -42,7 +42,7 @@ export function buildMaskedFillCanvas(
  */
 export function buildMaskedContentCanvas(
   rect: SelectionRect,
-  pixels: RGBA[],
+  pixels: RGBA8[],
   mask: boolean[]
 ): HTMLCanvasElement {
   const {

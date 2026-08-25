@@ -12,11 +12,11 @@ import {
 } from "#src/history/History.ts";
 import { PixelBuffer } from "#src/buffer/PixelBuffer.ts";
 import { UVMap } from "#src/uv/UVMap.ts";
-import type { RGBA } from "#src/types.ts";
+import type { RGBA8 } from "#src/types.ts";
 
 // CONSTANTS
-const kRed: RGBA = { r: 255, g: 0, b: 0, a: 255 };
-const kWhite: RGBA = { r: 255, g: 255, b: 255, a: 255 };
+const kRed: RGBA8 = { r: 255, g: 0, b: 0, a: 255 };
+const kWhite: RGBA8 = { r: 255, g: 255, b: 255, a: 255 };
 
 function makeBuffer(): PixelBuffer {
   return new PixelBuffer({

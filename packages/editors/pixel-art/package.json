@@ -43,6 +43,7 @@
     "three": "0.185.1"
   },
   "dependencies": {
+    "@jolly-pixel/color": "1.0.0",
     "@jolly-pixel/network": "1.1.0",
     "@jolly-pixel/pixel-draw.renderer": "3.0.0",
     "@jolly-pixel/ui": "1.0.1",

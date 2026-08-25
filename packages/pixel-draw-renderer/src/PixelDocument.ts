@@ -8,13 +8,13 @@ import {
 } from "./history/History.ts";
 import { UVMap } from "./uv/UVMap.ts";
 import type {
-  ColorInput,
+  ByteColorInput,
   Vec2
 } from "./types.ts";
 
 export interface PixelDocumentOptions {
   size: Vec2;
-  defaultColor?: ColorInput;
+  defaultColor?: ByteColorInput;
   maxSize?: number;
   /**
    * Initial texture source, loaded over the freshly-filled buffer.

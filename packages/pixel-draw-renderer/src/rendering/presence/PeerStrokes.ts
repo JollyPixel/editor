@@ -1,4 +1,8 @@
 // Import Third-party Dependencies
+import {
+  formatRgba,
+  fromRGBA8
+} from "@jolly-pixel/color";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
@@ -46,9 +50,7 @@ export class PeerStrokes extends Emitter<
   ): void {
     for (const pixels of this.#pixels.values()) {
       for (const { x, y, color } of pixels) {
-        const alpha = color.a / 255;
-
-        ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`;
+        ctx.fillStyle = formatRgba(fromRGBA8(color));
         ctx.fillRect(x, y, 1, 1);
       }
     }

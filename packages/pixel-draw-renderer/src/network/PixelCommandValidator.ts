@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import type {
-  RGBA,
+  RGBA8,
   SelectionRect,
   Vec2
 } from "../types.ts";
@@ -74,7 +74,7 @@ function isRect(
 
 function isRGBA(
   value: unknown
-): value is RGBA {
+): value is RGBA8 {
   return isRecord(value) &&
     isFiniteNumber(value.r) &&
     isFiniteNumber(value.g) &&

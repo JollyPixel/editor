@@ -1,91 +1,38 @@
 // Import Third-party Dependencies
-import Color from "colorjs.io";
+import {
+  assertColor,
+  formatRgba,
+  fromRGBA8,
+  toRGBA8,
+  type RGBA
+} from "@jolly-pixel/color";
 
 // Import Internal Dependencies
-import {
-  clamp
-} from "./math.ts";
 import type {
-  ColorInput,
-  RGBA
+  ByteColorInput,
+  RGBA8
 } from "../types.ts";
 
-// CONSTANTS
-// Perceived brightness above which a color reads as light (0-255).
-const kLightBrightness = 140;
-
-function clamp255(
-  value: number
-): number {
-  return clamp(Math.round(value * 255), 0, 255);
-}
-
-/**
- * Parses any valid CSS color string (hex, rgb(), hsl(), named color, ...) or
- * an existing colorjs.io `Color` instance into 0-255 RGBA components.
- * Out-of-gamut sRGB values are clamped rather than gamut-mapped.
- */
-export function colorAsRGBA(
-  color: ColorInput
-): [number, number, number, number] {
-  const srgb = new Color(
-    color
-  ).to("srgb");
-  const [r, g, b] = srgb.coords;
-
-  return [
-    clamp255(r ?? 0),
-    clamp255(g ?? 0),
-    clamp255(b ?? 0),
-    clamp255(srgb.alpha ?? 1)
-  ];
-}
-
-export function toRGBA(
-  color: RGBA | ColorInput
-): RGBA {
-  if (
-    typeof color === "string" ||
-    color instanceof Color
-  ) {
-    const [r, g, b, a] = colorAsRGBA(color);
-
-    return {
-      r,
-      g,
-      b,
-      a
-    };
+export function resolveColor(
+  color: ByteColorInput
+): RGBA8 {
+  if (typeof color !== "string") {
+    return color;
   }
 
-  return color;
+  return toRGBA8(assertColor(color));
 }
 
-/**
- * Black or white, whichever stands out against `color`. Alpha is ignored.
- */
-export function contrastingColor(
-  color: ColorInput
-): string {
-  const [r, g, b] = colorAsRGBA(color);
-  // BT.601 weights on sRGB are sufficient for a black-or-white choice.
-  const brightness = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-
-  return brightness > kLightBrightness ?
-    "#000" :
-    "#FFF";
+export function toUnitColor(
+  color: ByteColorInput
+): RGBA {
+  return typeof color === "string" ?
+    assertColor(color) :
+    fromRGBA8(color);
 }
 
-/**
- * Formats 0-255 RGB components as a lowercase 6-digit hex string
- * (e.g. "#1a2b3c"). Alpha is not represented.
- */
-export function rgbToHex(
-  r: number,
-  g: number,
-  b: number
+export function toCssColor(
+  color: ByteColorInput
 ): string {
-  return `#${((r << 16) | (g << 8) | b)
-    .toString(16)
-    .padStart(6, "0")}`;
+  return formatRgba(toUnitColor(color));
 }

@@ -1,5 +1,11 @@
 // Import Third-party Dependencies
 import {
+  formatHex,
+  hsvToRgb,
+  rgbToHsv,
+  type HSVA
+} from "@jolly-pixel/color";
+import {
   LitElement,
   html,
   nothing,
@@ -14,13 +20,7 @@ import {
 
 // Import Internal Dependencies
 import { saturationValueFromPointer } from "../color/area.ts";
-import { formatHex } from "../color/format.ts";
-import {
-  hsvToRgb,
-  rgbToHsv
-} from "../color/hsv.ts";
-import { parseColor } from "../color/parse.ts";
-import type { HSVA } from "../color/types.ts";
+import { parseFieldColor } from "../color/draft.ts";
 import { colorPickerStyles } from "./ColorPicker.styles.ts";
 import { emitFieldEvent } from "../field/events.ts";
 import { DraftController } from "../field/DraftController.ts";
@@ -134,7 +134,7 @@ export class ColorPicker extends LitElement {
    * Preserves held HSVA during write-back. External values replace it.
    */
   #adoptValue(): void {
-    const incoming = parseColor(this.value ?? "");
+    const incoming = parseFieldColor(this.value ?? "");
     if (incoming === null) {
       return;
     }
@@ -557,7 +557,7 @@ export class ColorPicker extends LitElement {
       return;
     }
 
-    const parsed = parseColor(draft);
+    const parsed = parseFieldColor(draft);
     if (parsed === null) {
       this.#invalid = true;
       this.requestUpdate();

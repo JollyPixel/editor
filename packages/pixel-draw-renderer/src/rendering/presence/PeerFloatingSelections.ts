@@ -13,13 +13,13 @@ import {
 } from "../../utils/math.ts";
 import type { CanvasBuffer } from "../../buffer/CanvasBuffer.ts";
 import type {
-  RGBA,
+  RGBA8,
   SelectionRect,
   Vec2
 } from "../../types.ts";
 
 // CONSTANTS
-const kOpaqueMask: RGBA = {
+const kOpaqueMask: RGBA8 = {
   r: 0,
   g: 0,
   b: 0,
@@ -61,12 +61,12 @@ export class PeerFloatingSelections extends Emitter<
   PeerFloatingSelectionsEvent
 > {
   #canvasBuffer: CanvasBuffer;
-  #eraseColor: RGBA | null;
+  #eraseColor: RGBA8 | null;
   #entries = new Map<string, PeerFloatingEntry>();
 
   constructor(
     canvasBuffer: CanvasBuffer,
-    eraseColor: RGBA | null
+    eraseColor: RGBA8 | null
   ) {
     super();
     this.#canvasBuffer = canvasBuffer;

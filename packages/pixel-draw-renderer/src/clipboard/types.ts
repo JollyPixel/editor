@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import type {
-  RGBA,
+  RGBA8,
   SelectionRect
 } from "../types.ts";
 
@@ -21,7 +21,7 @@ export type SupportedRasterType = typeof SUPPORTED_RASTER_TYPES[number];
  */
 export interface SelectionSnapshot {
   rect: SelectionRect;
-  pixels: RGBA[];
+  pixels: RGBA8[];
   mask: boolean[];
 }
 
@@ -33,7 +33,7 @@ export interface SelectionSnapshot {
 export interface DecodedSelection {
   width: number;
   height: number;
-  pixels: RGBA[];
+  pixels: RGBA8[];
   mask: boolean[];
 }
 
@@ -51,7 +51,7 @@ export interface SelectionClipboardMetadataV1 {
   rect: SelectionRect;
   mask: SelectionMaskMetadata;
   /**
-   * Base64 row-major RGBA. Optional because the field postdates v1 readers.
+   * Base64 row-major RGBA8. Optional because the field postdates v1 readers.
    * When present it supersedes the PNG, which round-trips through a
    * premultiplying canvas and so cannot preserve partial alpha exactly.
    */
@@ -93,7 +93,7 @@ export interface ClipboardOperationResult {
 export interface DecodedRasterImage {
   width: number;
   height: number;
-  pixels: RGBA[];
+  pixels: RGBA8[];
 }
 
 export type RasterBlobDecoder = (

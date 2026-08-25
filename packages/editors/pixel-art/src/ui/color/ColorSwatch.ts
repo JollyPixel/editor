@@ -1,5 +1,11 @@
 // Import Third-party Dependencies
 import {
+  formatHex,
+  formatRgba,
+  parseColor,
+  type RGBA
+} from "@jolly-pixel/color";
+import {
   LitElement,
   html
 } from "lit";
@@ -15,13 +21,16 @@ import {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import {
-  splitRgbaHex,
-  toRgbaHex,
-  toRgbaString
-} from "../../utils/colors.ts";
 import { assertElement } from "../../utils/dom.ts";
 import { colorSwatchStyles } from "./ColorSwatch.styles.ts";
+
+// CONSTANTS
+const kBlack: RGBA = {
+  r: 0,
+  g: 0,
+  b: 0,
+  a: 1
+};
 
 export interface ColorChangeDetail {
   hex: string;
@@ -103,7 +112,13 @@ export class ColorSwatch extends LitElement {
       return;
     }
 
-    const { hex, opacity } = splitRgbaHex(detail.value);
+    const parsed = parseColor(detail.value);
+    if (parsed === null) {
+      return;
+    }
+
+    const hex = formatHex(parsed);
+    const opacity = parsed.a;
 
     this.color = hex;
     this.opacity = opacity;
@@ -116,6 +131,19 @@ export class ColorSwatch extends LitElement {
     this.dispatchEvent(customEvent);
   };
 
+  /**
+   * The swatch colour with `opacity` applied, which owns alpha instead of
+   * the `color` property.
+   */
+  get #currentColor(): RGBA {
+    const parsed = parseColor(this.color) ?? kBlack;
+
+    return {
+      ...parsed,
+      a: this.opacity
+    };
+  }
+
   override render() {
     return html`
       <button
@@ -124,7 +152,7 @@ export class ColorSwatch extends LitElement {
         title="Color"
         aria-haspopup="dialog"
         aria-expanded=${this.#popup.open}
-        style="background:${toRgbaString(this.color, this.opacity)}"
+        style="background:${formatRgba(this.#currentColor)}"
       ></button>
       <div
         class="popover"
@@ -135,7 +163,7 @@ export class ColorSwatch extends LitElement {
       >
         <jolly-color-picker
           alpha
-          .value=${toRgbaHex(this.color, this.opacity)}
+          .value=${formatHex(this.#currentColor, true)}
           @jolly-input=${this.#onPickerChange}
           @jolly-change=${this.#onPickerChange}
         ></jolly-color-picker>

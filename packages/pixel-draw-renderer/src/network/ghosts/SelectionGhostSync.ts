@@ -1,7 +1,7 @@
+// Import Third-party Dependencies
+import { ColorPalette } from "@jolly-pixel/color";
+
 // Import Internal Dependencies
-import {
-  ColorPalette
-} from "../../utils/ColorPalette.ts";
 import {
   PeerPresenceGhostSync,
   type PeerPresenceGhostSyncOptions

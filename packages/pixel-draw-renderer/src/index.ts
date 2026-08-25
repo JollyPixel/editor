@@ -52,9 +52,9 @@ export {
   type ZoomOptions
 } from "./rendering/Zoom.ts";
 export type {
-  ColorInput,
+  ByteColorInput,
   PeerStrokePixel,
-  RGBA,
+  RGBA8,
   SelectionRect,
   Vec2
 } from "./types.ts";

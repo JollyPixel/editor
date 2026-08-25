@@ -1,9 +1,11 @@
+// Import Third-party Dependencies
+import { formatHex8 } from "@jolly-pixel/color";
+
 // Import Internal Dependencies
 import type { Brush, BrushColorSlot } from "./Brush.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import type { EditPipeline } from "../sync/EditPipeline.ts";
-import { rgbToHex } from "../utils/colors.ts";
-import type { PeerStrokePixel, RGBA, Vec2 } from "../types.ts";
+import type { PeerStrokePixel, RGBA8, Vec2 } from "../types.ts";
 
 export interface BrushEngineOptions {
   brush: Brush;
@@ -29,7 +31,7 @@ export interface BrushTool {
     x: number,
     y: number,
     slot?: BrushColorSlot
-  ): RGBA | null;
+  ): RGBA8 | null;
 }
 
 export class BrushEngine implements BrushTool {
@@ -40,8 +42,8 @@ export class BrushEngine implements BrushTool {
   #onProgress?: (pixels: PeerStrokePixel[]) => void;
 
   #strokeDirty = new Map<string, Vec2>();
-  #strokeBefore = new Map<string, RGBA>();
-  #strokeColor: RGBA | null = null;
+  #strokeBefore = new Map<string, RGBA8>();
+  #strokeColor: RGBA8 | null = null;
   #activeSlot: BrushColorSlot | null = null;
   #pickArmed = false;
 
@@ -73,14 +75,14 @@ export class BrushEngine implements BrushTool {
     tx: number,
     ty: number,
     slot: BrushColorSlot = "primary"
-  ): RGBA | null {
+  ): RGBA8 | null {
     const size = this.#canvasBuffer.size();
     if (tx < 0 || ty < 0 || tx >= size.x || ty >= size.y) {
       return null;
     }
 
     const [r, g, b, a] = this.#canvasBuffer.samplePixel(tx, ty);
-    const hex = rgbToHex(r, g, b);
+    const hex = formatHex8({ r, g, b, a: 255 });
     const opacity = a / 255;
     this.#brush[slot].set(hex, opacity);
     this.#pickArmed = false;

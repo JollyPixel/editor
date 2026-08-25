@@ -1,9 +1,9 @@
 // Import Third-party Dependencies
+import { ColorPalette } from "@jolly-pixel/color";
 import type * as network from "@jolly-pixel/network/client";
 import type * as THREE from "three";
 
 // Import Internal Dependencies
-import { ColorPalette } from "./ColorPalette.ts";
 import {
   PeerFrustum,
   type PeerFrustumOptions

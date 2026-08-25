@@ -1,12 +1,10 @@
 // Import Internal Dependencies
-import {
-  toRGBA
-} from "../utils/colors.ts";
+import { resolveColor } from "../utils/colors.ts";
 import { RectArea } from "../utils/RectArea.ts";
 import { UVRegionCollection } from "../uv/UVRegionCollection.ts";
 import type {
-  ColorInput,
-  RGBA,
+  ByteColorInput,
+  RGBA8,
   SelectionRect,
   Vec2
 } from "../types.ts";
@@ -20,7 +18,7 @@ export interface PixelBufferOptions {
    * Default fill color.
    * @default { r: 255, g: 255, b: 255, a: 255 }
    */
-  defaultColor?: RGBA | ColorInput;
+  defaultColor?: RGBA8 | ByteColorInput;
   /**
    * Maximum buffer dimension.
    * @default 2048
@@ -29,13 +27,13 @@ export interface PixelBufferOptions {
 }
 
 // CONSTANTS
-const kDefaultColor: RGBA = {
+const kDefaultColor: RGBA8 = {
   r: 255,
   g: 255,
   b: 255,
   a: 255
 };
-const kTransparent: RGBA = {
+const kTransparent: RGBA8 = {
   r: 0,
   g: 0,
   b: 0,
@@ -68,7 +66,7 @@ function copyPixelRows(
 
 function fillPixels(
   pixels: Uint8ClampedArray,
-  color: RGBA
+  color: RGBA8
 ): void {
   const { r, g, b, a } = color;
   if (r === g && g === b && b === a) {
@@ -112,7 +110,7 @@ function assertSize(
 }
 
 /**
- * Stores raw RGBA pixel data and UV regions without DOM APIs.
+ * Stores raw RGBA8 pixel data and UV regions without DOM APIs.
  */
 export class PixelBuffer implements DefaultPixelBuffer {
   #width: number;
@@ -121,7 +119,7 @@ export class PixelBuffer implements DefaultPixelBuffer {
   #master: Uint8ClampedArray;
   #masterWidth: number;
   #masterHeight: number;
-  #masterFill: RGBA;
+  #masterFill: RGBA8;
   #working: Uint8ClampedArray;
 
   readonly uvRegions = new UVRegionCollection();
@@ -141,7 +139,7 @@ export class PixelBuffer implements DefaultPixelBuffer {
     this.#maxSize = maxSize;
     this.#width = size.x;
     this.#height = size.y;
-    const fillColor = toRGBA(defaultColor);
+    const fillColor = resolveColor(defaultColor);
     this.#masterWidth = size.x;
     this.#masterHeight = size.y;
     this.#masterFill = { ...fillColor };
@@ -280,7 +278,7 @@ export class PixelBuffer implements DefaultPixelBuffer {
 
   drawPixels(
     positions: Iterable<Vec2>,
-    color: RGBA
+    color: RGBA8
   ): void {
     const { r, g, b, a } = color;
 
@@ -299,7 +297,7 @@ export class PixelBuffer implements DefaultPixelBuffer {
 
   drawRegion(
     rect: SelectionRect,
-    pixels: RGBA[]
+    pixels: RGBA8[]
   ): void {
     const size = this.size();
     const area = RectArea.from(rect);
@@ -323,7 +321,7 @@ export class PixelBuffer implements DefaultPixelBuffer {
 
   drawMaskedRegion(
     rect: SelectionRect,
-    pixels: RGBA[],
+    pixels: RGBA8[],
     mask: boolean[]
   ): void {
     const size = this.size();
@@ -385,8 +383,8 @@ export class PixelBuffer implements DefaultPixelBuffer {
    */
   samplePixels(
     positions: Vec2[]
-  ): RGBA[] {
-    const colors: RGBA[] = new Array(
+  ): RGBA8[] {
+    const colors: RGBA8[] = new Array(
       positions.length
     );
 

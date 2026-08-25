@@ -5,9 +5,6 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import Color from "colorjs.io";
-
 // Import Internal Dependencies
 import { PixelBuffer } from "#src/buffer/PixelBuffer.ts";
 
@@ -65,10 +62,10 @@ describe("PixelBuffer", () => {
       );
     });
 
-    test("accepts defaultColor as a colorjs.io Color instance", () => {
+    test("accepts defaultColor as byte channels", () => {
       const buf = new PixelBuffer({
         size: { x: 2, y: 2 },
-        defaultColor: new Color("blue"),
+        defaultColor: { r: 0, g: 0, b: 255, a: 255 },
         maxSize: kTestMaxSize
       });
 
@@ -104,7 +101,7 @@ describe("PixelBuffer", () => {
   });
 
   describe("drawPixels / samplePixel", () => {
-    test("writes RGBA values to specified pixels", () => {
+    test("writes RGBA8 values to specified pixels", () => {
       const buf = new PixelBuffer({
         size: { x: 4, y: 4 },
         maxSize: kTestMaxSize

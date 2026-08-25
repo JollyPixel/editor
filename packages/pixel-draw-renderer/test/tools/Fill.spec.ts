@@ -9,25 +9,25 @@ import assert from "node:assert/strict";
 import { Fill } from "#src/tools/Fill.ts";
 import { PixelBuffer } from "#src/buffer/PixelBuffer.ts";
 import type {
-  RGBA,
+  RGBA8,
   Vec2
 } from "#src/types.ts";
 
 // CONSTANTS
 const kTestMaxSize = 32;
-const kColorA: RGBA = {
+const kColorA: RGBA8 = {
   r: 255,
   g: 0,
   b: 0,
   a: 255
 };
-const kColorB: RGBA = {
+const kColorB: RGBA8 = {
   r: 0,
   g: 0,
   b: 255,
   a: 255
 };
-const kFillColor: RGBA = {
+const kFillColor: RGBA8 = {
   r: 0,
   g: 255,
   b: 0,

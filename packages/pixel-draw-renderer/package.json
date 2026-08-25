@@ -47,9 +47,9 @@
     "@jolly-pixel/bench": "*"
   },
   "dependencies": {
+    "@jolly-pixel/color": "1.0.0",
     "@jolly-pixel/network": "1.1.0",
     "@openally/emitt": "1.0.1",
-    "colorjs.io": "0.7.1",
     "js-base64": "3.9.2"
   },
   "peerDependencies": {

@@ -50,7 +50,7 @@ describe("CanvasBuffer", () => {
   });
 
   describe("drawPixels / samplePixel", () => {
-    test("writes RGBA values to specified pixels", () => {
+    test("writes RGBA8 values to specified pixels", () => {
       const buf = new CanvasBuffer({
         size: { x: 4, y: 4 },
         maxSize: kTestMaxSize

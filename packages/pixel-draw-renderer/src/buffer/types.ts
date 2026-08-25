@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import type {
-  RGBA,
+  RGBA8,
   SelectionRect,
   Vec2
 } from "../types.ts";
@@ -17,7 +17,7 @@ export interface DefaultPixelBuffer {
   ): void;
   drawPixels(
     positions: Iterable<Vec2>,
-    color: RGBA
+    color: RGBA8
   ): void;
   copyToMaster(): void;
   samplePixel(
@@ -26,7 +26,7 @@ export interface DefaultPixelBuffer {
   ): [number, number, number, number];
   samplePixels(
     positions: Vec2[]
-  ): RGBA[];
+  ): RGBA8[];
   hasTransparency(
     rect: SelectionRect
   ): boolean;

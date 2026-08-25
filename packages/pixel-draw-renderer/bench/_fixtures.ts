@@ -1,12 +1,12 @@
 // Import Internal Dependencies
 import type {
-  RGBA,
+  RGBA8,
   Vec2
 } from "../src/types.ts";
 
 export function randomColor(
   rng: () => number
-): RGBA {
+): RGBA8 {
   return {
     r: Math.floor(rng() * 256),
     g: Math.floor(rng() * 256),
