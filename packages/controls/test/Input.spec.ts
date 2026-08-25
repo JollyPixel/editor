@@ -62,6 +62,14 @@ describe("Controls.Input", () => {
     assert.strictEqual(input.devicePreference, "default");
   });
 
+  test("publishes accumulated mouse state", () => {
+    const publish = mock.method(input.mouse, "publishFrameState");
+
+    input.publishFrameState();
+
+    assert.strictEqual(publish.mock.callCount(), 1);
+  });
+
   describe("device preference", () => {
     test("switches to gamepad on gamepad activity, and back to default on mouse activity", () => {
       const windowAdapter = new FakeWindowAdapter();

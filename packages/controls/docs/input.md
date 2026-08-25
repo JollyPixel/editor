@@ -79,6 +79,14 @@ Remove all DOM event listeners. Call when tearing down the game loop.
 Poll every device and flush per-frame state (just pressed / just released).
 Call once per frame **before** querying input state.
 
+### `publishFrameState()`
+
+Publish mouse transitions, wheel state, and movement accumulated across every
+`update()` call since the previous publication. Engines that sample input once
+per fixed step call this immediately before their rendered update, so the
+rendered update sees every transient without repeating an edge in catch-up
+fixed steps.
+
 ## Events
 
 `Input` extends `EventEmitter` and emits the following events:

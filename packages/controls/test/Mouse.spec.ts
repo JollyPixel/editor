@@ -131,6 +131,58 @@ describe("Controls.Mouse", () => {
     assert.strictEqual(mouse.wasJustReleased("left"), true);
   });
 
+  test("preserves a complete click that occurs between input samples", () => {
+    canvas.dispatchMouseEvent("mousedown", { button: MouseEventButton.left });
+    canvas.dispatchMouseEvent("mouseup", { button: MouseEventButton.left });
+
+    mouse.update();
+
+    assert.strictEqual(mouse.wasJustPressed("left"), true);
+    assert.strictEqual(mouse.wasJustReleased("left"), true);
+
+    mouse.update();
+
+    assert.strictEqual(mouse.wasJustPressed("left"), false);
+    assert.strictEqual(mouse.wasJustReleased("left"), false);
+
+    mouse.publishFrameState();
+
+    assert.strictEqual(mouse.wasJustPressed("left"), true);
+    assert.strictEqual(mouse.wasJustReleased("left"), true);
+
+    mouse.publishFrameState();
+
+    assert.strictEqual(mouse.wasJustPressed("left"), false);
+    assert.strictEqual(mouse.wasJustReleased("left"), false);
+  });
+
+  test("publishes transitions accumulated across several input samples", () => {
+    canvas.dispatchMouseEvent("mousedown", { button: MouseEventButton.left });
+    mouse.update();
+    mouse.update();
+
+    assert.strictEqual(mouse.wasJustPressed("left"), false);
+
+    mouse.publishFrameState();
+
+    assert.strictEqual(mouse.wasJustPressed("left"), true);
+  });
+
+  test("publishes wheel and movement accumulated across samples", () => {
+    canvas.dispatchMouseEvent("mousemove", { clientX: 20, clientY: 10 });
+    canvas.dispatchWheelEvent({ wheelDelta: 120 });
+    mouse.update();
+    mouse.update();
+
+    assert.deepStrictEqual(mouse.delta, { x: 0, y: 0 });
+    assert.strictEqual(mouse.scrollUp, false);
+
+    mouse.publishFrameState();
+
+    assert.deepStrictEqual(mouse.delta, { x: 20, y: 10 });
+    assert.strictEqual(mouse.scrollUp, true);
+  });
+
   test("should handle mouse down event", () => {
     const downEvents: MouseEvent[] = [];
     mouse.on("down", (event) => {
@@ -730,7 +782,7 @@ class MouseCanvasAdapter extends mocks.CanvasAdapter {
 
 class MouseDocumentAdapter extends mocks.DocumentAdapter {
   override exitPointerLock = mock.fn();
-  pointerLockElement: any = null;
+  override pointerLockElement: any = null;
 
   dispatchEvent(
     type: "pointerlockchange" | "pointerlockerror"

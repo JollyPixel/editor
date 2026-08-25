@@ -218,6 +218,7 @@ export class World<
     if (schedule.render) {
       const dt = schedule.frameDelta / 1000;
 
+      this.input.publishFrameState();
       this.emit(
         "beforeUpdate",
         dt

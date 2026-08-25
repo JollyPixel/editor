@@ -16,6 +16,7 @@ import {
   TouchIdentifier,
   type TouchPosition
 } from "./Touchpad.class.ts";
+import { MouseMask } from "./MouseMask.ts";
 
 // CONSTANTS
 const kApplePlatform = /^Mac|iPhone|iPod|iPad/i;
@@ -116,12 +117,10 @@ export class Mouse extends Emitter<
   /** Live DOM state and the last published state, stored as bitsets. */
   #downMask = 0;
   #prevMask = 0;
-  #pressedMask = 0;
-  #releasedMask = 0;
-  /** Published one-frame pulse, drained from `#pendingDoubleClicks`. */
-  #doubleClickedMask = 0;
-  /** Latched by the dblclick handler between frames. */
-  #pendingDoubleClicks = 0;
+  #pressed = new MouseMask();
+  #released = new MouseMask();
+  #doubleClicked = new MouseMask();
+  #scroll = new MouseMask();
 
   #position = {
     x: 0,
@@ -136,6 +135,10 @@ export class Mouse extends Emitter<
   };
 
   #delta = {
+    x: 0,
+    y: 0
+  };
+  #frameDelta = {
     x: 0,
     y: 0
   };
@@ -242,10 +245,10 @@ export class Mouse extends Emitter<
     this.#scrollDelta.y = 0;
     this.#downMask = 0;
     this.#prevMask = 0;
-    this.#pressedMask = 0;
-    this.#releasedMask = 0;
-    this.#doubleClickedMask = 0;
-    this.#pendingDoubleClicks = 0;
+    this.#pressed.reset();
+    this.#released.reset();
+    this.#doubleClicked.reset();
+    this.#scroll.reset();
 
     this.#position.x = 0;
     this.#position.y = 0;
@@ -253,6 +256,8 @@ export class Mouse extends Emitter<
 
     this.#delta.x = 0;
     this.#delta.y = 0;
+    this.#frameDelta.x = 0;
+    this.#frameDelta.y = 0;
     this.newDelta.x = 0;
     this.newDelta.y = 0;
   }
@@ -402,7 +407,9 @@ export class Mouse extends Emitter<
     const scrollBits =
       (Number(this.#scrollDelta.y > 0) << MouseEventButton.scrollUp) |
       (Number(this.#scrollDelta.y < 0) << MouseEventButton.scrollDown);
-    this.#downMask = (this.#downMask & ~kScrollMask) | scrollBits;
+    this.#scroll.sample(scrollBits);
+    this.#downMask = (this.#downMask & ~kScrollMask) |
+      this.#scroll.value;
 
     this.#scrollDelta.x = 0;
     this.#scrollDelta.y = 0;
@@ -426,24 +433,53 @@ export class Mouse extends Emitter<
 
       this.newPosition = null;
     }
+    this.#frameDelta.x += this.#delta.x;
+    this.#frameDelta.y += this.#delta.y;
 
     const isDown = this.#downMask;
     const wasDown = this.#prevMask;
 
-    this.#pressedMask = ~wasDown & isDown;
-    this.#releasedMask = wasDown & ~isDown;
+    this.#pressed.sample(~wasDown & isDown);
+    this.#released.sample(wasDown & ~isDown);
     this.#prevMask = isDown;
-
-    // Publish pending double-clicks for one frame.
-    this.#doubleClickedMask = this.#pendingDoubleClicks;
-    this.#pendingDoubleClicks = 0;
+    this.#doubleClicked.sample();
 
     this.#wasActive = isDown !== 0;
     this.#settled = isDown === 0 &&
       wasDown === 0 &&
-      this.#doubleClickedMask === 0 &&
+      !this.#pressed.any &&
+      !this.#released.any &&
+      !this.#doubleClicked.any &&
       this.#delta.x === 0 &&
       this.#delta.y === 0;
+  }
+
+  /**
+   * Re-publishes transient state accumulated across input samples so a
+   * rendered update cannot miss an edge consumed by an earlier fixed step.
+   */
+  publishFrameState(): void {
+    this.#pressed.publishFrame();
+    this.#released.publishFrame();
+    this.#doubleClicked.publishFrame();
+    this.#scroll.publishFrame();
+    this.#downMask = (this.#downMask & ~kScrollMask) |
+      this.#scroll.value;
+    this.#delta.x = this.#frameDelta.x;
+    this.#delta.y = this.#frameDelta.y;
+
+    this.#frameDelta.x = 0;
+    this.#frameDelta.y = 0;
+
+    if (
+      this.#pressed.any ||
+      this.#released.any ||
+      this.#doubleClicked.any ||
+      this.#delta.x !== 0 ||
+      this.#delta.y !== 0
+    ) {
+      this.#settled = false;
+    }
   }
 
   #isQuiet(): boolean {
@@ -452,7 +488,9 @@ export class Mouse extends Emitter<
       this.#scrollDelta.y === 0 &&
       this.newDelta.x === 0 &&
       this.newDelta.y === 0 &&
-      this.#pendingDoubleClicks === 0 &&
+      !this.#pressed.queued &&
+      !this.#released.queued &&
+      !this.#doubleClicked.queued &&
       this.#downMask === 0;
   }
 
@@ -470,33 +508,39 @@ export class Mouse extends Emitter<
       return this.#downMask === 0;
     }
 
-    return (this.#downMask & this.#buttonBit(action)) !== 0;
+    return (
+      this.#downMask & this.#buttonBit(action)
+    ) !== 0;
   }
 
   wasJustPressed(
     action: InputMouseAction
   ): boolean {
     if (action === "ANY") {
-      return this.#pressedMask !== 0;
+      return this.#pressed.any;
     }
     if (action === "NONE") {
-      return this.#pressedMask === 0;
+      return !this.#pressed.any;
     }
 
-    return (this.#pressedMask & this.#buttonBit(action)) !== 0;
+    return this.#pressed.has(
+      this.#buttonBit(action)
+    );
   }
 
   wasJustReleased(
     action: InputMouseAction
   ): boolean {
     if (action === "ANY") {
-      return this.#releasedMask !== 0;
+      return this.#released.any;
     }
     if (action === "NONE") {
-      return this.#releasedMask === 0;
+      return !this.#released.any;
     }
 
-    return (this.#releasedMask & this.#buttonBit(action)) !== 0;
+    return this.#released.has(
+      this.#buttonBit(action)
+    );
   }
 
   buttonState(
@@ -506,9 +550,9 @@ export class Mouse extends Emitter<
 
     return {
       isDown: (this.#prevMask & bit) !== 0,
-      doubleClicked: (this.#doubleClickedMask & bit) !== 0,
-      wasJustPressed: (this.#pressedMask & bit) !== 0,
-      wasJustReleased: (this.#releasedMask & bit) !== 0
+      doubleClicked: this.#doubleClicked.has(bit),
+      wasJustPressed: this.#pressed.has(bit),
+      wasJustReleased: this.#released.has(bit)
     };
   }
 
@@ -527,6 +571,14 @@ export class Mouse extends Emitter<
     value: boolean
   ): void {
     const bit = this.#buttonBit(index);
+    const wasDown = (this.#downMask & bit) !== 0;
+
+    if (value && !wasDown) {
+      this.#pressed.queue(bit);
+    }
+    else if (!value && wasDown) {
+      this.#released.queue(bit);
+    }
 
     this.#downMask = value ?
       this.#downMask | bit :
@@ -589,7 +641,9 @@ export class Mouse extends Emitter<
 
   #onMouseDoubleClick = (event: MouseEvent) => {
     event.preventDefault();
-    this.#pendingDoubleClicks |= this.#buttonBit(event.button);
+    this.#doubleClicked.queue(
+      this.#buttonBit(event.button)
+    );
   };
 
   #onMouseWheel = (event: WheelEvent) => {

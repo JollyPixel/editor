@@ -82,6 +82,12 @@ interface MouseButtonState {
 
 `update()` returns immediately while the mouse is idle.
 
+Button transitions are latched when DOM or synchronized touch events arrive,
+so a complete press and release between two calls to `update()` still
+publishes both edges. Each input sample also accumulates transient button,
+wheel, double-click, and movement state until `publishFrameState()` makes that
+combined state visible to a rendered update.
+
 `mousemove` uses `offsetX`/`offsetY` and falls back to
 `getBoundingClientRect()` when offsets are unavailable. `newPosition` reuses
 one object between events.
@@ -123,6 +129,7 @@ interface Mouse {
   disconnect(): void;
   reset(): void;
   update(): void;
+  publishFrameState(): void;
 
   // Pointer lock
   lock(): void;

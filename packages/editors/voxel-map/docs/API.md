@@ -9,6 +9,12 @@ This package is a private browser application, not a published library. Its inte
 
 World data entering from a file or from the asset workspace goes through `parseVoxelWorld()` before it reaches `VoxelRenderer`. Block-definition batches go through `applyBlockUpdates()` so one user operation causes one chunk invalidation and one state notification.
 
+## Brush input boundary
+
+`VoxelBrush` consumes the frame-stable mouse transitions published by the
+engine input cycle. After one brush footprint is mutated, the voxel engine is
+flushed so the preview and the next brush raycast use rebuilt chunk geometry.
+
 ## Runtime modes
 
 Normal startup fetches the asset catalog, preloads the tilesets the voxel-map document declares, then joins the voxel-map and pixel-art rooms. The rooms are the only durable store: nothing is written to browser local storage. Adding `?offline` to the URL skips all network setup and leaves the session unsaved.

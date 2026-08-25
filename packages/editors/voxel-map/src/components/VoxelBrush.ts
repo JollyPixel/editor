@@ -234,6 +234,7 @@ export class VoxelBrush extends ActorComponent {
         flipY
       });
     }
+    this.vr.engine.flush();
   }
 
   #removeVoxels(): void {
@@ -248,6 +249,7 @@ export class VoxelBrush extends ActorComponent {
     for (const pos of this.#getBrushPositions(center)) {
       this.vr.engine.removeVoxel(layerName, { position: pos });
     }
+    this.vr.engine.flush();
   }
 
   #updatePreview(): void {

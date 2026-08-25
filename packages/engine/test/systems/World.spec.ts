@@ -47,6 +47,7 @@ function createMockInput() {
     connect: mock.fn(),
     disconnect: mock.fn(),
     update: mock.fn(),
+    publishFrameState: mock.fn(),
     exited: false
   };
 }
@@ -247,6 +248,21 @@ describe("Systems.World", () => {
 
       assert.strictEqual(sceneManager.fixedUpdate.mock.callCount(), 0);
       assert.strictEqual(input.update.mock.callCount(), 1);
+    });
+
+    test("should publish accumulated input before the rendered update", () => {
+      const order: string[] = [];
+      input.publishFrameState.mock.mockImplementation(() => {
+        order.push("input");
+      });
+      sceneManager.update.mock.mockImplementation(() => {
+        order.push("scene");
+      });
+      world.start();
+
+      tick();
+
+      assert.deepStrictEqual(order, ["input", "scene"]);
     });
 
     test("should sample before the step that reads the sample", () => {
