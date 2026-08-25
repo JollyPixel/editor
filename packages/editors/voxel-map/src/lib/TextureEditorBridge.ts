@@ -74,14 +74,49 @@ export class TextureEditorBridge {
     if (saved) {
       const img = new Image();
       img.onload = () => {
-        this.#manager!.texture = img;
-        this.syncToThree();
+        if (this.#applyTexture(img, "locally cached edit")) {
+          this.syncToThree();
+        }
       };
       img.src = saved;
     }
     else {
-      this.#manager.texture = texture.image as HTMLImageElement;
+      this.#applyTexture(texture.image as HTMLImageElement, "tileset source image");
     }
+  }
+
+  /**
+   * Hands a texture to the canvas, refusing oversized ones instead of letting
+   * them throw. `PixelArtCanvas` rejects any dimension above `maxTextureSize`,
+   * and from an `Image.onload` handler that RangeError escapes as an unhandled
+   * rejection, leaving the editor wedged with no visible cause.
+   */
+  #applyTexture(
+    source: HTMLImageElement,
+    origin: string
+  ): boolean {
+    const manager = this.#manager;
+    if (!manager) {
+      return false;
+    }
+
+    const width = source.naturalWidth || source.width;
+    const height = source.naturalHeight || source.height;
+    const { maxTextureSize } = manager;
+
+    if (width > maxTextureSize || height > maxTextureSize) {
+      console.error(
+        `TextureEditorBridge: ${origin} for tileset "${this.#tilesetId}" is ` +
+        `${width}x${height}, above the editor limit of ${maxTextureSize}px per side. ` +
+        "Raise `texture.maxSize` on the pixel-draw panel or use a smaller atlas."
+      );
+
+      return false;
+    }
+
+    manager.texture = source;
+
+    return true;
   }
 
   /**

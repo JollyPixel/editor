@@ -108,7 +108,7 @@ export class TextureEditor extends LitElement {
         color: "#000000"
       },
       texture: {
-        maxSize: 512
+        maxSize: 2048
       },
       onDrawEnd: () => this.#bridge.syncToThree()
     });

@@ -33,11 +33,13 @@ function makeBlock(
   };
 }
 
-function makeFakeVoxelRenderer(): { vr: VoxelRenderer; dirtyReasons: string[]; } {
+function makeFakeVoxelRenderer(
+  image: object = {}
+): { vr: VoxelRenderer; dirtyReasons: string[]; } {
   const dirtyReasons: string[] = [];
   const tilesetManager = {
     getSourceTexture: () => {
-      return { image: {} };
+      return { image };
     },
     updateSourceImage: () => void 0,
     getDefinitions: () => [{ id: "atlas", src: "", tileSize: 16, cols: 4, rows: 4 }]
@@ -148,5 +150,119 @@ describe("TextureEditorBridge / transparency auto-sync", () => {
 
     assert.equal(vr.engine.blockRegistry.get(1)!.transparent, true);
     assert.deepEqual(dirtyReasons, ["BlockLibrary update"]);
+  });
+});
+
+function makeSizingManager(
+  maxTextureSize: number
+): PixelArtCanvas & { assigned: HTMLImageElement | null; } {
+  const fakeCanvas = { toDataURL: () => "data:image/png;base64," } as unknown as HTMLCanvasElement;
+
+  return {
+    maxTextureSize,
+    assigned: null,
+    textureCanvas: () => fakeCanvas,
+    hasTransparency: () => false,
+    set texture(source: HTMLImageElement) {
+      this.assigned = source;
+    }
+  } as unknown as PixelArtCanvas & { assigned: HTMLImageElement | null; };
+}
+
+function makeImage(
+  width: number,
+  height: number
+): HTMLImageElement {
+  return { naturalWidth: width, naturalHeight: height } as unknown as HTMLImageElement;
+}
+
+/**
+ * Runs `fn` with console.error captured, returning everything it logged.
+ */
+function captureErrors(
+  fn: () => void
+): string[] {
+  const logged: string[] = [];
+  const original = console.error;
+  console.error = (message: string) => {
+    logged.push(message);
+  };
+  try {
+    fn();
+  }
+  finally {
+    console.error = original;
+  }
+
+  return logged;
+}
+
+describe("TextureEditorBridge / oversized textures", () => {
+  beforeEach(() => {
+    (globalThis as { localStorage?: Storage; }).localStorage = {
+      getItem: () => null,
+      setItem: () => void 0
+    } as unknown as Storage;
+  });
+
+  it("loads a source image that fits within the canvas limit", () => {
+    const { vr } = makeFakeVoxelRenderer(makeImage(1024, 512));
+    const manager = makeSizingManager(2048);
+
+    const bridge = new TextureEditorBridge();
+    bridge.attach(manager);
+
+    const logged = captureErrors(() => bridge.loadTileset(vr, "atlas"));
+
+    assert.deepEqual(logged, []);
+    assert.equal(manager.assigned!.naturalWidth, 1024);
+  });
+
+  it("refuses a source image wider than the limit instead of throwing", () => {
+    const { vr } = makeFakeVoxelRenderer(makeImage(1024, 512));
+    const manager = makeSizingManager(512);
+
+    const bridge = new TextureEditorBridge();
+    bridge.attach(manager);
+
+    const logged = captureErrors(() => bridge.loadTileset(vr, "atlas"));
+
+    assert.equal(manager.assigned, null);
+    assert.equal(logged.length, 1);
+    assert.match(logged[0], /tileset source image.*1024x512.*512px per side/);
+  });
+
+  it("refuses an oversized cached edit without pushing it back to the tileset", () => {
+    const { vr } = makeFakeVoxelRenderer(makeImage(64, 64));
+    const manager = makeSizingManager(512);
+    (globalThis as { localStorage?: Storage; }).localStorage = {
+      getItem: () => "data:image/png;base64,cached",
+      setItem: () => void 0
+    } as unknown as Storage;
+
+    let synced = 0;
+    class FakeImage {
+      naturalWidth = 4096;
+      naturalHeight = 4096;
+      onload: (() => void) | null = null;
+      set src(_value: string) {
+        this.onload?.();
+      }
+    }
+    (globalThis as { Image?: unknown; }).Image = FakeImage;
+
+    const bridge = new TextureEditorBridge();
+    bridge.attach(manager);
+    const original = bridge.syncToThree.bind(bridge);
+    bridge.syncToThree = () => {
+      synced++;
+      original();
+    };
+
+    const logged = captureErrors(() => bridge.loadTileset(vr, "atlas"));
+
+    assert.equal(manager.assigned, null);
+    assert.equal(synced, 0);
+    assert.match(logged[0], /locally cached edit.*4096x4096/);
   });
 });
