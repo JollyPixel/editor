@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import Color from "colorjs.io";
+import { parseColor } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import type { PixelDocument } from "./PixelDocument.ts";
@@ -19,8 +19,8 @@ import type { ZoomOptions } from "./rendering/Zoom.ts";
 import { clamp } from "./utils/math.ts";
 import type {
   BrushHighlight,
-  ColorInput,
-  RGBA,
+  ByteColorInput,
+  RGBA8,
   Vec2
 } from "./types.ts";
 
@@ -31,7 +31,7 @@ export interface CanvasViewOptions {
    * Canvas color outside texture bounds. When omitted it is resolved from
    * the parent's computed background color, falling back to `#424242`.
    */
-  background?: ColorInput;
+  background?: ByteColorInput;
   backgroundTransparency?: {
     colors: { odd: string; even: string; };
     squareSize: number;
@@ -41,7 +41,7 @@ export interface CanvasViewOptions {
    * Explicit fill for a peer's vacated selection footprint.
    * @default null (dominant neighbor color)
    */
-  eraseColor?: RGBA | null;
+  eraseColor?: RGBA8 | null;
 }
 
 /**
@@ -81,7 +81,7 @@ export class CanvasView {
 
     const computedBackgroundColor = getComputedStyle(parent).backgroundColor;
     const backgroundColor = options.background ?? (
-      computedBackgroundColor && new Color(computedBackgroundColor).alpha > 0
+      isOpaqueEnough(computedBackgroundColor)
         ? computedBackgroundColor
         : "#424242"
     );
@@ -137,7 +137,7 @@ export class CanvasView {
   }
 
   set backgroundColor(
-    color: ColorInput
+    color: ByteColorInput
   ) {
     this.renderer.backgroundColor = color;
   }
@@ -226,4 +226,16 @@ export class CanvasView {
 
     return clamp(Math.floor(fit), zoomMin, zoomMax);
   }
+}
+
+/**
+ * Whether a computed background color is worth inheriting. Unset and fully
+ * transparent backgrounds fall through to the renderer's own default.
+ */
+function isOpaqueEnough(
+  color: string
+): boolean {
+  const parsed = parseColor(color);
+
+  return parsed !== null && parsed.a > 0;
 }

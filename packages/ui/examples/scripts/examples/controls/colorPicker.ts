@@ -1,8 +1,10 @@
+// Import Third-party Dependencies
+import { parseColor } from "@jolly-pixel/color";
+
 // Import Internal Dependencies
 import type { GalleryExample } from "../../types.ts";
 import {
   detailOf,
-  parseColor,
   type JollyChangeDetail
 } from "../../../../src/index.ts";
 

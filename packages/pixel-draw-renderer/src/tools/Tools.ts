@@ -25,7 +25,7 @@ import type { LinePreview } from "../rendering/overlays/LinePreview.ts";
 import type { SelectionOutline } from "../rendering/overlays/SelectionOutline.ts";
 import type {
   PeerStrokePixel,
-  RGBA
+  RGBA8
 } from "../types.ts";
 
 export interface ToolsOptions {
@@ -34,7 +34,7 @@ export interface ToolsOptions {
   renderer: CanvasRenderer;
   linePreview: LinePreview;
   selectionOverlay: SelectionOutline;
-  eraseColor: RGBA | null;
+  eraseColor: RGBA8 | null;
   uvMap: UVMap;
   uvOverlay: UVRegionLayer;
   pipeline: EditPipeline;

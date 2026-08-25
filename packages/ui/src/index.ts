@@ -173,17 +173,6 @@ export type {
   VectorValue
 } from "./math/types.ts";
 
-// Colour values
-export {
-  formatHex
-} from "./color/format.ts";
-export {
-  parseColor
-} from "./color/parse.ts";
-export type {
-  RGBA
-} from "./color/types.ts";
-
 // Interaction
 export {
   PopoverController,

@@ -20,7 +20,7 @@ import {
   type SelectionSnapshot
 } from "./types.ts";
 import type {
-  RGBA
+  RGBA8
 } from "../types.ts";
 
 export interface SelectionClipboardOptions {
@@ -49,8 +49,8 @@ function cloneSnapshot(
 }
 
 function clonePixels(
-  pixels: RGBA[]
-): RGBA[] {
+  pixels: RGBA8[]
+): RGBA8[] {
   return pixels.map((pixel) => {
     return { ...pixel };
   });
@@ -258,7 +258,7 @@ export class SelectionClipboard {
       selection: {
         width: image.width,
         height: image.height,
-        // Our own metadata carries exact RGBA; the PNG does not.
+        // Our own metadata carries exact RGBA8; the PNG does not.
         pixels: clonePixels(
           metadata?.pixels ?? image.pixels
         ),

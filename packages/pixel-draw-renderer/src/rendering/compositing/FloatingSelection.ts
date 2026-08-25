@@ -8,12 +8,12 @@ import {
   buildMaskedFillCanvas
 } from "./selectionCanvas.ts";
 import type {
-  RGBA,
+  RGBA8,
   SelectionRect
 } from "../../types.ts";
 
 // CONSTANTS
-const kOpaqueMask: RGBA = {
+const kOpaqueMask: RGBA8 = {
   r: 0,
   g: 0,
   b: 0,
@@ -25,12 +25,12 @@ export interface FloatingSelectionOptions {
   /**
    * Row-major selection pixels.
    */
-  pixels: RGBA[];
+  pixels: RGBA8[];
   /**
    * Row-major selection mask.
    */
   mask?: boolean[];
-  eraseColor: RGBA;
+  eraseColor: RGBA8;
   /**
    * Whether to erase the source while dragging.
    * @default true
@@ -93,7 +93,7 @@ export class FloatingSelection extends Emitter<
   }
 
   static #buildUniformEraseCanvas(
-    eraseColor: RGBA
+    eraseColor: RGBA8
   ): HTMLCanvasElement {
     const {
       canvas: eraseCanvas,

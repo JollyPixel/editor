@@ -3,15 +3,16 @@
   "description": "The color utilities for JollyPixel's editors",
   "version": "1.0.0",
   "type": "module",
-  "private": true,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "prepublish": "rimraf ./dist && tsc -b",
     "build": "tsc",
-    "test-only": "node --test test/**/*.spec.ts",
-    "test": "c8 -r html npm run test-only",
-    "lint": "eslint src/**/*.ts"
+    "typecheck": "tsc --noEmit -p test/tsconfig.json",
+    "test-only": "node --test \"test/**/*.spec.ts\"",
+    "test": "npm run typecheck && c8 -r html npm run test-only",
+    "lint": "eslint \"src/**/*.ts\"",
+    "bench": "jolly-bench"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
@@ -22,6 +23,9 @@
     "type": "git",
     "url": "git+https://github.com/JollyPixel/editor.git",
     "directory": "packages/color"
+  },
+  "devDependencies": {
+    "@jolly-pixel/bench": "*"
   },
   "keywords": [],
   "files": [

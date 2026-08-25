@@ -1,5 +1,7 @@
 // Import Third-party Dependencies
-import type Color from "colorjs.io";
+import type { RGBA8 } from "@jolly-pixel/color";
+
+export type { RGBA8 };
 
 export type Vec2 = {
   x: number;
@@ -17,16 +19,9 @@ export interface SelectionRect {
 
 /**
  * Anything accepted as a color input across the package: a CSS color string
- * (hex, rgb(), hsl(), named color, ...) or a colorjs.io `Color` instance.
+ * (hex, rgb(), hsl(), named color, ...) or byte channels.
  */
-export type ColorInput = string | Color;
-
-export interface RGBA {
-  r: number;
-  g: number;
-  b: number;
-  a: number;
-}
+export type ByteColorInput = string | RGBA8;
 
 /**
  * Wire and render payload for one uncommitted peer-stroke pixel.
@@ -34,7 +29,7 @@ export interface RGBA {
 export interface PeerStrokePixel {
   x: number;
   y: number;
-  color: RGBA;
+  color: RGBA8;
 }
 
 export interface BrushHighlight {

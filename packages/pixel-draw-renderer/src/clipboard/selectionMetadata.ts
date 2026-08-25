@@ -13,7 +13,7 @@ import type {
   SelectionSnapshot
 } from "./types.ts";
 import type {
-  RGBA,
+  RGBA8,
   SelectionRect
 } from "../types.ts";
 
@@ -22,7 +22,7 @@ export interface SelectionMetadata {
   /**
    * `null` when the payload predates the lossless pixel channel.
    */
-  pixels: RGBA[] | null;
+  pixels: RGBA8[] | null;
 }
 
 function encodeMask(
@@ -50,7 +50,7 @@ function encodeMask(
 }
 
 function encodePixels(
-  pixels: RGBA[]
+  pixels: RGBA8[]
 ): string {
   const bytes = new Uint8Array(
     pixels.length * 4
@@ -147,7 +147,7 @@ function decodeMask(
 function decodePixels(
   value: unknown,
   length: number
-): RGBA[] | null {
+): RGBA8[] | null {
   if (value === undefined) {
     return null;
   }
@@ -160,7 +160,7 @@ function decodePixels(
     return null;
   }
 
-  const pixels = new Array<RGBA>(length);
+  const pixels = new Array<RGBA8>(length);
   for (let i = 0; i < length; i++) {
     const offset = i * 4;
     pixels[i] = {

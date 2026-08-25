@@ -53,10 +53,10 @@ import type {
   UVRegionData
 } from "./uv/UVRegion.ts";
 import type { PeerPresence } from "./rendering/presence/PeerPresence.ts";
-import { toRGBA } from "./utils/colors.ts";
+import { resolveColor } from "./utils/colors.ts";
 import type {
   BrushHighlight,
-  ColorInput,
+  ByteColorInput,
   Mode,
   PeerStrokePixel,
   SelectionRect,
@@ -89,7 +89,7 @@ export interface PixelArtCanvasOptions {
    */
   window?: WindowLike;
   texture?: {
-    defaultColor?: ColorInput;
+    defaultColor?: ByteColorInput;
     size?: {
       x: number;
       y?: number;
@@ -106,7 +106,7 @@ export interface PixelArtCanvasOptions {
     colors: { odd: string; even: string; };
     squareSize: number;
   };
-  backgroundColor?: ColorInput;
+  backgroundColor?: ByteColorInput;
   brush?: BrushOptions;
   select?: {
     /**
@@ -114,7 +114,7 @@ export interface PixelArtCanvasOptions {
      * Omit to use the dominant neighbor color (transparent as fallback).
      * @default dominant neighbor color, transparent as the ultimate fallback
      */
-    eraseColor?: ColorInput;
+    eraseColor?: ByteColorInput;
   };
   /**
    * Called after a local edit is committed to the master buffer.
@@ -185,7 +185,7 @@ export class PixelArtCanvas {
     const defaultMode: Mode = options.defaultMode ?? "paint";
     const eraseColor = options.select?.eraseColor === undefined ?
       null :
-      toRGBA(options.select.eraseColor);
+      resolveColor(options.select.eraseColor);
 
     const textureSize: Vec2 = options.texture?.size
       ? { x: options.texture.size.x, y: options.texture.size.y ?? options.texture.size.x }
@@ -330,7 +330,7 @@ export class PixelArtCanvas {
   }
 
   set backgroundColor(
-    color: ColorInput
+    color: ByteColorInput
   ) {
     this.#view.backgroundColor = color;
   }

@@ -9,15 +9,15 @@ import type {
 } from "../buffer/CanvasBuffer.ts";
 import type { EditPipeline } from "../sync/EditPipeline.ts";
 import type {
-  RGBA,
+  RGBA8,
   Vec2
 } from "../types.ts";
 
 export interface FillGlobalCommit {
   positions: Vec2[];
-  beforeColors: RGBA[];
-  fromColor: RGBA;
-  toColor: RGBA;
+  beforeColors: RGBA8[];
+  fromColor: RGBA8;
+  toColor: RGBA8;
 }
 
 export interface FillEngineOptions {
@@ -99,7 +99,7 @@ export class FillEngine implements FillTool {
       tx,
       ty
     );
-    const fromColor: RGBA = {
+    const fromColor: RGBA8 = {
       r: sr,
       g: sg,
       b: sb,

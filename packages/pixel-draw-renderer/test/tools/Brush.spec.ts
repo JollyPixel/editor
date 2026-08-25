@@ -5,9 +5,6 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import Color from "colorjs.io";
-
 // Import Internal Dependencies
 import { Brush } from "#src/tools/Brush.ts";
 
@@ -87,9 +84,9 @@ describe("Brush", () => {
       );
     });
 
-    test("set accepts a colorjs.io Color instance", () => {
+    test("set accepts byte channels", () => {
       const brush = new Brush();
-      brush.primary.set(new Color("lime"));
+      brush.primary.set({ r: 0, g: 255, b: 0, a: 255 });
       assert.strictEqual(
         brush.primary.asString("hex"),
         "#00ff00"
@@ -100,8 +97,8 @@ describe("Brush", () => {
       );
     });
 
-    test("constructor accepts a colorjs.io Color instance", () => {
-      const brush = new Brush({ color: new Color("blue") });
+    test("constructor accepts byte channels", () => {
+      const brush = new Brush({ color: { r: 0, g: 0, b: 255, a: 255 } });
       assert.strictEqual(
         brush.primary.asString("hex"),
         "#0000ff"

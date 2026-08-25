@@ -1,3 +1,9 @@
+// Import Third-party Dependencies
+import {
+  imageDataToPixels,
+  pixelsToImageData
+} from "@jolly-pixel/color";
+
 // Import Internal Dependencies
 import type {
   DecodedRasterImage,
@@ -6,7 +12,6 @@ import type {
 import {
   createCanvas2D
 } from "../rendering/Canvas2D.ts";
-import type { RGBA } from "../types.ts";
 
 // CONSTANTS
 // Canvas backing stores hold premultiplied 8-bit RGBA, so drawImage cannot
@@ -14,26 +19,6 @@ import type { RGBA } from "../types.ts";
 // and comes back as (170,85,85,3). WebCodecs hands us the file's own samples
 // instead, which is what a pixel-art editor needs.
 const kBytesPerPixel = 4;
-
-function imageDataToPixels(
-  data: Uint8ClampedArray
-): RGBA[] {
-  const pixels: RGBA[] = new Array(
-    data.length / kBytesPerPixel
-  );
-
-  for (let i = 0; i < pixels.length; i++) {
-    const offset = i * kBytesPerPixel;
-    pixels[i] = {
-      r: data[offset],
-      g: data[offset + 1],
-      b: data[offset + 2],
-      a: data[offset + 3]
-    };
-  }
-
-  return pixels;
-}
 
 function renderSnapshot(
   snapshot: SelectionSnapshot
@@ -48,14 +33,7 @@ function renderSnapshot(
     canvas.width,
     canvas.height
   );
-  for (let i = 0; i < snapshot.pixels.length; i++) {
-    const pixel = snapshot.pixels[i];
-    const offset = i * kBytesPerPixel;
-    imageData.data[offset] = pixel.r;
-    imageData.data[offset + 1] = pixel.g;
-    imageData.data[offset + 2] = pixel.b;
-    imageData.data[offset + 3] = snapshot.mask[i] ? pixel.a : 0;
-  }
+  pixelsToImageData(snapshot.pixels, imageData.data, snapshot.mask);
   context.putImageData(imageData, 0, 0);
 
   return canvas;
@@ -63,7 +41,7 @@ function renderSnapshot(
 
 /**
  * Interop format for other applications. Partial alpha survives only
- * approximately, which is why JollyPixel copies also carry raw RGBA in their
+ * approximately, which is why JollyPixel copies also carry raw RGBA8 in their
  * own clipboard type.
  */
 export async function encodeSelectionPng(
@@ -166,7 +144,7 @@ async function copyFrameToRaster(
     colorSpace: "srgb"
   };
 
-  // A padded stride would mean the buffer is not a plain RGBA raster; the
+  // A padded stride would mean the buffer is not a plain RGBA8 raster; the
   // canvas fallback is simpler than unpacking one.
   if (frame.allocationSize(options) !== width * height * kBytesPerPixel) {
     return null;
@@ -260,7 +238,7 @@ function decodeWithImage(
 }
 
 /**
- * Decodes to exact RGBA, preferring WebCodecs so partial alpha and embedded
+ * Decodes to exact RGBA8, preferring WebCodecs so partial alpha and embedded
  * color profiles cannot alter the pixels.
  */
 export async function decodeRasterBlob(
@@ -309,13 +287,7 @@ export async function decodeRasterCanvas(
     decoded.width,
     decoded.height
   );
-  for (let i = 0; i < decoded.pixels.length; i++) {
-    const offset = i * kBytesPerPixel;
-    imageData.data[offset] = decoded.pixels[i].r;
-    imageData.data[offset + 1] = decoded.pixels[i].g;
-    imageData.data[offset + 2] = decoded.pixels[i].b;
-    imageData.data[offset + 3] = decoded.pixels[i].a;
-  }
+  pixelsToImageData(decoded.pixels, imageData.data);
   context.putImageData(imageData, 0, 0);
 
   return canvas;

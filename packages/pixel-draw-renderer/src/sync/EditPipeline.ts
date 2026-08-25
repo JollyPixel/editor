@@ -21,7 +21,7 @@ import type {
   UVRegionData
 } from "../uv/UVRegion.ts";
 import type {
-  RGBA,
+  RGBA8,
   SelectionRect,
   Vec2
 } from "../types.ts";
@@ -108,8 +108,8 @@ export class EditPipeline {
    */
   commitStroke(
     pixels: Vec2[],
-    color: RGBA,
-    beforeColors: RGBA[]
+    color: RGBA8,
+    beforeColors: RGBA8[]
   ): void {
     this.#recordHistory({
       action: "stroke",
@@ -130,14 +130,14 @@ export class EditPipeline {
   commitPixels(
     pixels: Vec2[],
     slot: BrushColorSlot = "primary",
-    uniformBeforeColor?: RGBA
+    uniformBeforeColor?: RGBA8
   ): void {
     if (pixels.length === 0) {
       return;
     }
 
     const color = this.#brush[slot].asRGBA();
-    let beforeColors: RGBA[] = [];
+    let beforeColors: RGBA8[] = [];
     if (this.#history.enabled) {
       beforeColors = uniformBeforeColor ?
         pixels.map(() => uniformBeforeColor) :
@@ -273,7 +273,7 @@ export class EditPipeline {
   }
 
   #applyStroke(
-    color: RGBA,
+    color: RGBA8,
     positions: Vec2[]
   ): void {
     // drawPixels repaints; copyToMaster only persists the visible result.
@@ -283,7 +283,7 @@ export class EditPipeline {
 
   #applySelectEdit(
     positions: Vec2[],
-    colors: RGBA[]
+    colors: RGBA8[]
   ): void {
     applyColorGroups(
       this.#canvasBuffer,

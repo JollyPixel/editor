@@ -13,12 +13,12 @@ import {
 import { applyCommandToBuffer } from "../src/network/PixelCommandApplier.ts";
 import { PixelBuffer } from "../src/buffer/PixelBuffer.ts";
 import type { PixelNetworkCommand } from "../src/network/types.ts";
-import type { RGBA, Vec2 } from "../src/types.ts";
+import type { RGBA8, Vec2 } from "../src/types.ts";
 
 // CONSTANTS
 const kSide = 256;
-const kWhite: RGBA = { r: 255, g: 255, b: 255, a: 255 };
-const kBlack: RGBA = { r: 0, g: 0, b: 0, a: 255 };
+const kWhite: RGBA8 = { r: 255, g: 255, b: 255, a: 255 };
+const kBlack: RGBA8 = { r: 0, g: 0, b: 0, a: 255 };
 const kResolveBatch = 1000;
 
 /**

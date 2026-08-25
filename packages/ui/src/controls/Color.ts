@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import { formatHex } from "@jolly-pixel/color";
 import {
   html,
   nothing,
@@ -13,8 +14,7 @@ import {
 // Import Internal Dependencies
 import { JollyField } from "../field/JollyField.ts";
 import { MIXED_PLACEHOLDER } from "../field/mixed.ts";
-import { formatHex } from "../color/format.ts";
-import { parseColor } from "../color/parse.ts";
+import { parseFieldColor } from "../color/draft.ts";
 import { colorStyles } from "./Color.styles.ts";
 import {
   detailOf
@@ -106,7 +106,7 @@ export class Color extends JollyField<string> {
   #normalize(
     input: string
   ): string {
-    const parsed = parseColor(input ?? "");
+    const parsed = parseFieldColor(input ?? "");
 
     return parsed === null
       ? input
@@ -251,7 +251,7 @@ export class Color extends JollyField<string> {
 
   #commit(): void {
     this.commitDraft((draft) => {
-      const parsed = parseColor(draft);
+      const parsed = parseFieldColor(draft);
       if (parsed === null) {
         return {
           ok: false,

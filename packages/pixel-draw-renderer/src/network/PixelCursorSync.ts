@@ -1,8 +1,8 @@
 // Import Third-party Dependencies
+import { ColorPalette } from "@jolly-pixel/color";
 import type * as network from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
-import { ColorPalette } from "../utils/ColorPalette.ts";
 import {
   isVec2,
   vec2Equal

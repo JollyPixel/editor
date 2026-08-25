@@ -1,50 +1,60 @@
 // Import Third-party Dependencies
-import Color from "colorjs.io";
+import {
+  formatHex,
+  formatRgb,
+  formatRgba,
+  toRGBA8,
+  type RGBA
+} from "@jolly-pixel/color";
 
 // Import Internal Dependencies
-import { colorAsRGBA } from "../utils/colors.ts";
+import { toUnitColor } from "../utils/colors.ts";
 import { clamp } from "../utils/math.ts";
 import type {
-  ColorInput,
-  RGBA,
+  ByteColorInput,
+  RGBA8,
   Vec2
 } from "../types.ts";
 
 export class BrushColor {
-  #color: Color;
-  #rgba: RGBA;
+  /**
+   * The color without its alpha, which `opacity` owns instead.
+   */
+  #color: RGBA;
+  #opacity: number;
+  #rgba: RGBA8;
 
   constructor(
-    color: ColorInput,
+    color: ByteColorInput,
     opacity: number = 1
   ) {
-    this.#color = new Color(color);
-    this.#color.alpha = clamp(opacity, 0, 1);
+    this.#color = opaqueColor(color);
+    this.#opacity = clamp(opacity, 0, 1);
     this.#rgba = this.#readRgba();
   }
 
   set(
-    color: ColorInput,
+    color: ByteColorInput,
     opacity?: number
   ): void {
-    const alpha = opacity === undefined ?
-      this.#color.alpha :
-      clamp(opacity, 0, 1);
-    this.#color = new Color(color);
-    this.#color.alpha = alpha;
+    this.#color = opaqueColor(color);
+    if (opacity !== undefined) {
+      this.#opacity = clamp(opacity, 0, 1);
+    }
     this.#rgba = this.#readRgba();
   }
 
-  #readRgba(): RGBA {
-    const [r, g, b, a] = colorAsRGBA(this.#color);
-
-    return { r, g, b, a };
+  #readRgba(): RGBA8 {
+    return toRGBA8({
+      ...this.#color,
+      a: this.#opacity
+    });
   }
 
   /**
-   * Returns a mutable RGBA snapshot of the current brush color.
+   * Returns a mutable RGBA8 snapshot of the current brush color.
    */
-  asRGBA(): RGBA {
+  asRGBA(): RGBA8 {
     return { ...this.#rgba };
   }
 
@@ -52,28 +62,37 @@ export class BrushColor {
     format: "rgba" | "hex" = "rgba"
   ): string {
     if (format === "hex") {
-      return this.#color.toString({
-        format: "hex",
-        collapse: false,
-        alpha: false
-      });
+      return formatHex(this.#color);
     }
 
-    const { r, g, b } = this.#rgba;
-
-    return `rgba(${r}, ${g}, ${b}, ${this.#color.alpha})`;
+    return formatRgba({
+      ...this.#color,
+      a: this.#opacity
+    });
   }
 
   set opacity(
     opacity: number
   ) {
-    this.#color.alpha = clamp(opacity, 0, 1);
+    this.#opacity = clamp(opacity, 0, 1);
     this.#rgba = this.#readRgba();
   }
 
   get opacity(): number {
-    return this.#color.alpha;
+    return this.#opacity;
   }
+}
+
+/**
+ * Alpha is dropped: opacity is tracked separately so a color swap keeps it.
+ */
+function opaqueColor(
+  color: ByteColorInput
+): RGBA {
+  return {
+    ...toUnitColor(color),
+    a: 1
+  };
 }
 
 export type BrushColorSlot = "primary" | "secondary";
@@ -83,12 +102,12 @@ export interface BrushOptions {
    * Primary brush color.
    * @default "#000000"
    */
-  color?: ColorInput;
+  color?: ByteColorInput;
   /**
    * Secondary brush color.
    * @default "#FFFFFF"
    */
-  secondaryColor?: ColorInput;
+  secondaryColor?: ByteColorInput;
   /**
    * Brush size in pixels.
    * @default 32
@@ -104,8 +123,8 @@ export interface BrushOptions {
    * @default { colorInline: "#FFF", colorOutline: "#000" }
    */
   highlight?: {
-    colorInline?: ColorInput;
-    colorOutline?: ColorInput;
+    colorInline?: ByteColorInput;
+    colorOutline?: ByteColorInput;
   };
 }
 
@@ -152,10 +171,9 @@ export class Brush {
   }
 
   set colorInline(
-    color: ColorInput
+    color: ByteColorInput
   ) {
-    const [r, g, b] = colorAsRGBA(color);
-    this.#colorInline = `rgb(${r}, ${g}, ${b})`;
+    this.#colorInline = formatRgb(toUnitColor(color));
   }
 
   get colorInline(): string {
@@ -163,10 +181,9 @@ export class Brush {
   }
 
   set colorOutline(
-    color: ColorInput
+    color: ByteColorInput
   ) {
-    const [r, g, b] = colorAsRGBA(color);
-    this.#colorOutline = `rgb(${r}, ${g}, ${b})`;
+    this.#colorOutline = formatRgb(toUnitColor(color));
   }
 
   get colorOutline(): string {

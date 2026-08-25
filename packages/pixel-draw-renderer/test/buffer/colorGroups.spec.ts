@@ -9,14 +9,14 @@ import assert from "node:assert/strict";
 import {
   groupPositionsByColor
 } from "#src/buffer/colorGroups.ts";
-import type { RGBA } from "#src/types.ts";
+import type { RGBA8 } from "#src/types.ts";
 
 // CONSTANTS
-const kRed: RGBA = { r: 255, g: 0, b: 0, a: 255 };
-const kBlue: RGBA = { r: 0, g: 0, b: 255, a: 255 };
+const kRed: RGBA8 = { r: 255, g: 0, b: 0, a: 255 };
+const kBlue: RGBA8 = { r: 0, g: 0, b: 255, a: 255 };
 
 describe("groupPositionsByColor", () => {
-  test("groups positions sharing an identical RGBA into one bucket", () => {
+  test("groups positions sharing an identical RGBA8 into one bucket", () => {
     const positions = [
       { x: 0, y: 0 },
       { x: 1, y: 0 },

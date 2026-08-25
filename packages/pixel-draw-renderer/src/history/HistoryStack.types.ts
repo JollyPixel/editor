@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import type {
-  RGBA,
+  RGBA8,
   SelectionRect,
   Vec2
 } from "../types.ts";
@@ -13,8 +13,8 @@ export interface HistoryStrokeEntry {
   action: "stroke";
   timestamp: number;
   positions: Vec2[];
-  beforeColors: RGBA[];
-  afterColor: RGBA;
+  beforeColors: RGBA8[];
+  afterColor: RGBA8;
 }
 
 export interface HistoryResizedEntry {
@@ -39,8 +39,8 @@ export interface HistorySelectEditEntry {
   action: "select-edit";
   timestamp: number;
   positions: Vec2[];
-  beforeColors: RGBA[];
-  afterColors: RGBA[];
+  beforeColors: RGBA8[];
+  afterColors: RGBA8[];
   oldRect: SelectionRect;
   newRect: SelectionRect;
   oldMask: boolean[];

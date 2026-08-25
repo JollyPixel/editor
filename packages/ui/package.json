@@ -55,6 +55,7 @@
     "lit": "^3.3.0"
   },
   "dependencies": {
+    "@jolly-pixel/color": "1.0.0",
     "@jolly-pixel/resize-handle": "1.1.0"
   },
   "devDependencies": {

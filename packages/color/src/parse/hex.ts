@@ -1,16 +1,15 @@
 // Import Internal Dependencies
-import type { RGBA } from "./types.ts";
+import { BYTE_MAX } from "../utils.ts";
+import type { RGBA } from "../types.ts";
 
 // CONSTANTS
 const kHexPattern = /^#?([0-9a-f]+)$/i;
 const kFullLengths = new Set([6, 8]);
 
 /**
- * Parses `#rgb`, `#rrggbb`, or `#rrggbbaa` with an optional hash.
- * Returns `null` for other formats and partial input. Four-digit `#rgba` is
- * excluded because it is ambiguous with partially typed six-digit values.
+ * Accepts short or full hex, with an optional hash and alpha.
  */
-export function parseColor(
+export function parseHex(
   input: string
 ): RGBA | null {
   const match = kHexPattern.exec(input.trim());
@@ -19,9 +18,9 @@ export function parseColor(
   }
 
   const digits = match[1].toLowerCase();
-  const hex = digits.length === 3
-    ? expandShorthand(digits)
-    : digits;
+  const hex = digits.length <= 4 ?
+    expandShorthand(digits) :
+    digits;
 
   if (!kFullLengths.has(hex.length)) {
     return null;
@@ -31,7 +30,7 @@ export function parseColor(
     r: channel(hex, 0),
     g: channel(hex, 2),
     b: channel(hex, 4),
-    a: hex.length === 8 ? channel(hex, 6) / 255 : 1
+    a: hex.length === 8 ? channel(hex, 6) : 1
   };
 }
 
@@ -51,5 +50,5 @@ function channel(
   return Number.parseInt(
     hex.slice(index, index + 2),
     16
-  );
+  ) / BYTE_MAX;
 }

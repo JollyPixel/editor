@@ -9,20 +9,20 @@ import assert from "node:assert/strict";
 import { ShapeSelect } from "#src/tools/ShapeSelect.ts";
 import { PixelBuffer } from "#src/buffer/PixelBuffer.ts";
 import type {
-  RGBA,
+  RGBA8,
   Vec2
 } from "#src/types.ts";
 
 // CONSTANTS
 const kTestMaxSize = 32;
-const kBorder: RGBA = { r: 0, g: 0, b: 0, a: 255 };
-const kInside: RGBA = { r: 255, g: 255, b: 255, a: 255 };
-const kOutside: RGBA = { r: 200, g: 200, b: 200, a: 255 };
+const kBorder: RGBA8 = { r: 0, g: 0, b: 0, a: 255 };
+const kInside: RGBA8 = { r: 255, g: 255, b: 255, a: 255 };
+const kOutside: RGBA8 = { r: 200, g: 200, b: 200, a: 255 };
 
 function fillAll(
   buf: PixelBuffer,
   size: { x: number; y: number; },
-  color: RGBA
+  color: RGBA8
 ): void {
   const all: Vec2[] = [];
   for (let y = 0; y < size.y; y++) {

@@ -6,10 +6,8 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import Color from "colorjs.io";
-
 // Import Internal Dependencies
+import { toCssColor } from "#src/utils/colors.ts";
 import { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
 import { makeContainer } from "./helpers/dom.ts";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
@@ -213,7 +211,7 @@ describe("PixelArtCanvas", () => {
 
       assert.strictEqual(
         manager.backgroundColor,
-        new Color("#555555").toString()
+        toCssColor("#555555")
       );
       manager.destroy();
     });
@@ -229,7 +227,7 @@ describe("PixelArtCanvas", () => {
 
       assert.strictEqual(
         manager.backgroundColor,
-        new Color("#ff0000").toString()
+        toCssColor("#ff0000")
       );
       manager.destroy();
     });
@@ -245,7 +243,7 @@ describe("PixelArtCanvas", () => {
       manager.backgroundColor = "#00ff00";
       assert.strictEqual(
         manager.backgroundColor,
-        new Color("#00ff00").toString()
+        toCssColor("#00ff00")
       );
       manager.destroy();
     });

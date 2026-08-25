@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import type {
-  RGBA,
+  RGBA8,
   Vec2
 } from "../types.ts";
 import type {
@@ -8,7 +8,7 @@ import type {
 } from "./types.ts";
 
 export interface ColorGroup {
-  color: RGBA;
+  color: RGBA8;
   positions: Vec2[];
 }
 
@@ -32,7 +32,7 @@ function isByte(
 }
 
 function colorKey(
-  color: RGBA
+  color: RGBA8
 ): number | string {
   const { r, g, b, a } = color;
   if (
@@ -49,7 +49,7 @@ function colorKey(
 
 export function groupPositionsByColor(
   positions: Vec2[],
-  colors: RGBA[]
+  colors: RGBA8[]
 ): ColorGroup[] {
   const groups = new Map<number | string, ColorGroup>();
 

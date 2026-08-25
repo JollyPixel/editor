@@ -12,12 +12,12 @@ import {
 } from "./_fixtures.ts";
 import { PixelBuffer } from "../src/buffer/PixelBuffer.ts";
 import type {
-  RGBA,
+  RGBA8,
   SelectionRect
 } from "../src/types.ts";
 
 // CONSTANTS
-const kBlack: RGBA = { r: 0, g: 0, b: 0, a: 255 };
+const kBlack: RGBA8 = { r: 0, g: 0, b: 0, a: 255 };
 const kClippedRegion: SelectionRect = {
   x: -32,
   y: -32,
@@ -41,7 +41,7 @@ const suite = defineSuite("PixelBuffer (buffer/PixelBuffer)", (bench) => {
   const stroke64 = randomPositions(64, { x: 256, y: 256 }, rng);
   const stroke1024 = randomPositions(1024, { x: 256, y: 256 }, rng);
   const color = randomColor(rng);
-  const regionPixels = new Array<RGBA>(
+  const regionPixels = new Array<RGBA8>(
     kClippedRegion.width * kClippedRegion.height
   ).fill(color);
   const regionMask = Array.from(

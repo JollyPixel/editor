@@ -15,7 +15,7 @@ import { HistoryStack } from "../src/history/HistoryStack.ts";
 import { groupPositionsByColor } from "../src/buffer/colorGroups.ts";
 import { UVMap } from "../src/uv/UVMap.ts";
 import type { HistoryStrokeEntry } from "../src/history/HistoryStack.types.ts";
-import type { RGBA, Vec2 } from "../src/types.ts";
+import type { RGBA8, Vec2 } from "../src/types.ts";
 
 // CONSTANTS
 const kSide = 256;
@@ -69,14 +69,14 @@ function buildGroupInput(
   count: number,
   distinctColors: number,
   rng: () => number
-): { positions: Vec2[]; colors: RGBA[]; } {
+): { positions: Vec2[]; colors: RGBA8[]; } {
   const palette = Array.from(
     { length: distinctColors },
     () => randomColor(rng)
   );
 
   const positions: Vec2[] = new Array(count);
-  const colors: RGBA[] = new Array(count);
+  const colors: RGBA8[] = new Array(count);
   for (let i = 0; i < count; i++) {
     positions[i] = { x: i, y: 0 };
     colors[i] = palette[i % palette.length];

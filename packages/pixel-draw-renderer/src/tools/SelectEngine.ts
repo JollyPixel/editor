@@ -16,7 +16,7 @@ import type {
 } from "../rendering/overlays/SelectionOutline.ts";
 import type { EditPipeline } from "../sync/EditPipeline.ts";
 import type {
-  RGBA,
+  RGBA8,
   SelectionRect,
   Vec2
 } from "../types.ts";
@@ -28,8 +28,8 @@ export type {
 
 export interface SelectEditEntry {
   positions: Vec2[];
-  beforeColors: RGBA[];
-  afterColors: RGBA[];
+  beforeColors: RGBA8[];
+  afterColors: RGBA8[];
   oldRect: SelectionRect;
   newRect: SelectionRect;
   oldMask: boolean[];
@@ -45,7 +45,7 @@ export interface SelectEngineOptions {
    * Delete), overriding the smart default below. `null` when not
    * configured by the consumer.
    */
-  eraseColor: RGBA | null;
+  eraseColor: RGBA8 | null;
   pipeline: EditPipeline;
 }
 
@@ -74,7 +74,7 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
   #canvasBuffer: CanvasBuffer;
   #floatingSelection: FloatingSelection;
   #selectionOverlay: SelectionOutline;
-  #eraseColor: RGBA | null;
+  #eraseColor: RGBA8 | null;
   #pipeline: EditPipeline;
   #shapeMode = false;
   #moveSourceRect: SelectionRect | null = null;
@@ -98,7 +98,7 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
    */
   #resolveEraseColor(
     rect: SelectionRect
-  ): RGBA {
+  ): RGBA8 {
     return Select.resolveEraseColor(
       this.#canvasBuffer,
       rect,
@@ -379,7 +379,7 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
     }
 
     const eraseColor = this.#resolveEraseColor(rect);
-    const eraseColors: RGBA[] = new Array(
+    const eraseColors: RGBA8[] = new Array(
       rect.width * rect.height
     ).fill(eraseColor);
     this.#commitFootprintChange({
@@ -554,7 +554,7 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
 
   #showFloatingSelection(
     rect: SelectionRect,
-    pixels: RGBA[],
+    pixels: RGBA8[],
     mask: boolean[]
   ): void {
     this.#floatingSelection.create({
@@ -572,7 +572,7 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
       oldMask: boolean[];
       newRect: SelectionRect;
       newMask: boolean[];
-      newContent: RGBA[];
+      newContent: RGBA8[];
       skipErase: boolean;
     }
   ): void {

@@ -1,9 +1,9 @@
 // Import Third-party Dependencies
+import { ColorPalette } from "@jolly-pixel/color";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import { clamp, clampRectSize } from "../utils/math.ts";
-import { ColorPalette } from "../utils/ColorPalette.ts";
 import { geometryAt } from "./geometry.ts";
 import type {
   SelectionRect,

@@ -1,10 +1,8 @@
-// Import Third-party Dependencies
-import Color from "colorjs.io";
-
 // Import Internal Dependencies
+import { toCssColor } from "../utils/colors.ts";
 import type {
-  ColorInput,
-  RGBA
+  ByteColorInput,
+  RGBA8
 } from "../types.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import type { DefaultViewport } from "./Viewport.ts";
@@ -31,20 +29,20 @@ export interface CanvasRendererOptions {
    * @default { odd: "#999", even: "#666" }
    */
   bgColors?: {
-    odd: ColorInput;
-    even: ColorInput;
+    odd: ByteColorInput;
+    even: ByteColorInput;
   };
   /**
    * Transparent-pixel background color.
    * @default "#555555"
    */
-  backgroundColor?: ColorInput;
+  backgroundColor?: ByteColorInput;
   /**
    * Explicit fill for a peer's vacated selection-move footprint, mirroring
    * `PixelArtCanvasOptions.select.eraseColor` so both clients blank it equally.
    * @default null (dominant neighbor color)
    */
-  eraseColor?: RGBA | null;
+  eraseColor?: RGBA8 | null;
 }
 
 export class CanvasRenderer {
@@ -87,12 +85,10 @@ export class CanvasRenderer {
     );
     this.#bgSquareSize = bgSquareSize;
     this.#bgColors = {
-      odd: new Color(bgColors.odd).toString(),
-      even: new Color(bgColors.even).toString()
+      odd: toCssColor(bgColors.odd),
+      even: toCssColor(bgColors.even)
     };
-    this.#backgroundColor = new Color(
-      backgroundColor
-    ).toString();
+    this.#backgroundColor = toCssColor(backgroundColor);
 
     this.#canvas = document.createElement("canvas");
     this.#ctx = this.#canvas.getContext("2d")!;
@@ -115,11 +111,9 @@ export class CanvasRenderer {
   }
 
   set backgroundColor(
-    color: ColorInput
+    color: ByteColorInput
   ) {
-    this.#backgroundColor = new Color(
-      color
-    ).toString();
+    this.#backgroundColor = toCssColor(color);
     this.drawFrame();
   }
 

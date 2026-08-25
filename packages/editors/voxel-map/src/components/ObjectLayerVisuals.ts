@@ -1,4 +1,8 @@
 // Import Third-party Dependencies
+import {
+  goldenAngleColor,
+  hashKey
+} from "@jolly-pixel/color";
 import * as THREE from "three";
 import {
   type Actor,
@@ -46,15 +50,18 @@ function makeTextSprite(
   return sprite;
 }
 
-function colorFromId(
+/**
+ * One color per object layer. The golden angle keeps ids that hash close
+ * together far apart in hue, so layers stay distinguishable however many
+ * of them a map carries.
+ */
+function layerColor(
   id: string
-): number {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) {
-    hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
-  }
-
-  return new THREE.Color().setHSL((hash % 360) / 360, 0.65, 0.55).getHex();
+): string {
+  return goldenAngleColor(hashKey(id), {
+    saturation: 0.65,
+    lightness: 0.55
+  });
 }
 
 export interface ObjectLayerVisualsOptions {
@@ -153,7 +160,7 @@ export class ObjectLayerVisuals extends ActorComponent {
     const fillMesh = new THREE.Mesh(
       boxGeo,
       new THREE.MeshBasicMaterial({
-        color: colorFromId(obj.id),
+        color: layerColor(obj.id),
         transparent: true,
         opacity: 0.35,
         depthWrite: false,

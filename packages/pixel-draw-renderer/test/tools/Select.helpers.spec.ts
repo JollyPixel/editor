@@ -8,22 +8,22 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { Select } from "#src/tools/Select.ts";
 import { PixelBuffer } from "#src/buffer/PixelBuffer.ts";
-import type { RGBA } from "#src/types.ts";
+import type { RGBA8 } from "#src/types.ts";
 
 // CONSTANTS
 const kTestMaxSize = 32;
-const kRed: RGBA = { r: 255, g: 0, b: 0, a: 255 };
-const kColorA: RGBA = { r: 10, g: 0, b: 0, a: 255 };
-const kColorB: RGBA = { r: 20, g: 0, b: 0, a: 255 };
-const kColorC: RGBA = { r: 30, g: 0, b: 0, a: 255 };
-const kColorD: RGBA = { r: 40, g: 0, b: 0, a: 255 };
-const kColorE: RGBA = { r: 50, g: 0, b: 0, a: 255 };
-const kColorF: RGBA = { r: 60, g: 0, b: 0, a: 255 };
+const kRed: RGBA8 = { r: 255, g: 0, b: 0, a: 255 };
+const kColorA: RGBA8 = { r: 10, g: 0, b: 0, a: 255 };
+const kColorB: RGBA8 = { r: 20, g: 0, b: 0, a: 255 };
+const kColorC: RGBA8 = { r: 30, g: 0, b: 0, a: 255 };
+const kColorD: RGBA8 = { r: 40, g: 0, b: 0, a: 255 };
+const kColorE: RGBA8 = { r: 50, g: 0, b: 0, a: 255 };
+const kColorF: RGBA8 = { r: 60, g: 0, b: 0, a: 255 };
 // 2 wide x 3 tall, row-major:
 // A B
 // C D
 // E F
-const k2x3Snapshot: RGBA[] = [
+const k2x3Snapshot: RGBA8[] = [
   kColorA,
   kColorB,
   kColorC,
@@ -98,8 +98,8 @@ describe("Select — static helpers", () => {
   });
 
   describe("dominantBorderColor (static)", () => {
-    const kFallback: RGBA = { r: 1, g: 2, b: 3, a: 4 };
-    const kWhite: RGBA = { r: 255, g: 255, b: 255, a: 255 };
+    const kFallback: RGBA8 = { r: 1, g: 2, b: 3, a: 4 };
+    const kWhite: RGBA8 = { r: 255, g: 255, b: 255, a: 255 };
 
     test("returns the canvas's own default fill when the rect's border is untouched", () => {
       const buf = new PixelBuffer({
@@ -131,7 +131,7 @@ describe("Select — static helpers", () => {
       ], kRed);
       // The ring around a (2,2,2,2) rect has 12 cells; paint 7 of them blue,
       // outnumbering the 5 still at the canvas's default white.
-      const blue: RGBA = {
+      const blue: RGBA8 = {
         r: 0, g: 0, b: 255, a: 255
       };
       buf.drawPixels([
@@ -267,7 +267,7 @@ describe("Select — static helpers", () => {
   });
 
   describe("grid transform helpers (static, generic)", () => {
-    test("rotateMaskCW rotates a boolean grid the same way rotateSnapshotCW rotates an RGBA grid", () => {
+    test("rotateMaskCW rotates a boolean grid the same way rotateSnapshotCW rotates an RGBA8 grid", () => {
       // Same layout as k2x3Snapshot (A..F), true where the letter is one of A/D/E.
       const mask = [true, false, false, true, true, false];
       // rotateSnapshotCW(k2x3Snapshot) === [E, C, A, F, D, B] — same permutation, as booleans.

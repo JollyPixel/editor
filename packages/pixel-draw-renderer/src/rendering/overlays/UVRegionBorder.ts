@@ -1,6 +1,8 @@
+// Import Third-party Dependencies
+import { contrastingColor } from "@jolly-pixel/color";
+
 // Import Internal Dependencies
 import { SVG_NS } from "../constants.ts";
-import { contrastingColor } from "../../utils/colors.ts";
 import { rectOf } from "../../uv/geometry.ts";
 import type { UVGeometry } from "../../uv/UVRegion.ts";
 import type {

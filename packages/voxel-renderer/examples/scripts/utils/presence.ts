@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import { colorFromKey } from "@jolly-pixel/color";
 import {
   LocalStorageAdapter,
   resolveStoredPrompt
@@ -12,17 +13,6 @@ const kUsernameStorageKey = "voxel-flat-world:username";
 const kUsernameStorage = new LocalStorageAdapter({
   resolve: () => sessionStorage
 });
-/** One color per username, picked deterministically so every tab agrees. */
-const kPeerColors = [
-  "#f94144",
-  "#f3722c",
-  "#f9c74f",
-  "#90be6d",
-  "#43aa8b",
-  "#4d908e",
-  "#577590",
-  "#277da1"
-];
 
 /**
  * Prompts once per browser session, then reuses the answer. Opening a second
@@ -47,12 +37,7 @@ export function resolveUsername(): Promise<string> {
 export function peerColor(
   username: string
 ): string {
-  let hash = 0;
-  for (let i = 0; i < username.length; i++) {
-    hash = ((hash * 31) + username.charCodeAt(i)) | 0;
-  }
-
-  return kPeerColors[Math.abs(hash) % kPeerColors.length];
+  return colorFromKey(username);
 }
 
 /**

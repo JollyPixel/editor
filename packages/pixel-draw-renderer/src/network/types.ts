@@ -15,7 +15,7 @@ import type { SelectionRect, Vec2 } from "../types.ts";
 export interface PixelBufferSnapshot {
   size: Vec2;
   /**
-   * Base64-encoded RGBA data.
+   * Base64-encoded RGBA8 data.
    */
   pixels: string;
   uvRegions: UVRegionData[];

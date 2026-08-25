@@ -372,7 +372,7 @@ describe("UVRegionLayer — staying visible over the artwork", () => {
 
     assert.deepStrictEqual(
       casings(svg).map((casing) => casing.getAttribute("stroke")),
-      ["#000", "#FFF"],
+      ["#000", "#fff"],
       "a casing matching the region color would hide with it"
     );
   });
@@ -472,7 +472,7 @@ describe("UVRegionLayer — staying visible over the artwork", () => {
 
     const label = svg.querySelector("text")!;
     assert.strictEqual(label.getAttribute("fill"), "#123456");
-    assert.strictEqual(label.getAttribute("stroke"), "#FFF");
+    assert.strictEqual(label.getAttribute("stroke"), "#fff");
     assert.strictEqual(
       label.getAttribute("paint-order"),
       "stroke",

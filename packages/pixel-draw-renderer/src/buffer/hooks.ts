@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import type {
-  RGBA,
+  RGBA8,
   SelectionRect,
   Vec2
 } from "../types.ts";
@@ -16,7 +16,7 @@ export type PixelBufferHookEvent =
   | {
     action: "stroke";
     metadata: {
-      color: RGBA;
+      color: RGBA8;
       positions: Vec2[];
     };
     originTimestamp?: number;
@@ -39,8 +39,8 @@ export type PixelBufferHookEvent =
   | {
     action: "global-fill";
     metadata: {
-      fromColor: RGBA;
-      toColor: RGBA;
+      fromColor: RGBA8;
+      toColor: RGBA8;
     };
     originTimestamp?: number;
   }
@@ -48,7 +48,7 @@ export type PixelBufferHookEvent =
     action: "select-edit";
     metadata: {
       positions: Vec2[];
-      colors: RGBA[];
+      colors: RGBA8[];
     };
     originTimestamp?: number;
   }
