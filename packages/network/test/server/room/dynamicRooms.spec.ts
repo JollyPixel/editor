@@ -470,3 +470,91 @@ describe("Server — room lifetime regressions", () => {
     await server.close();
   });
 });
+
+describe("dynamic rooms — concurrent joins", () => {
+  test("a slow resolution does not hold up a join on another room", async() => {
+    const order: string[] = [];
+    const server = new Server();
+    server.setRoomResolver(async(name): Promise<RoomResolution> => {
+      if (name === "pixelart:slow") {
+        await new Promise((resolve) => {
+          setTimeout(resolve, 30);
+        });
+      }
+      order.push(name);
+
+      return { extension: new AssetExtension(name, "pixelart") };
+    });
+
+    server.handleConnect(client("A"));
+    const slow = server.handleMessage("A", {
+      room: "pixelart:slow",
+      kind: "join"
+    });
+    const fast = server.handleMessage("A", {
+      room: "pixelart:fast",
+      kind: "join"
+    });
+
+    await Promise.all([slow, fast]);
+
+    assert.deepEqual(order, ["pixelart:fast", "pixelart:slow"]);
+    await server.close();
+  });
+
+  test("a message still lands after the join it followed on the same room", async() => {
+    const { server, extensions } = harness();
+    const room = "pixelart:a1";
+
+    server.handleConnect(client("A"));
+    const join = server.handleMessage("A", { room, kind: "join" });
+    const message = server.handleMessage("A", {
+      room,
+      kind: "message",
+      payload: { action: "stroke" }
+    });
+
+    await Promise.all([join, message]);
+
+    assert.deepEqual(
+      extensions.get(room)!.messages,
+      [{ action: "stroke" }]
+    );
+    await server.close();
+  });
+
+  test("a disconnect waits for the joins still in flight", async() => {
+    const order: string[] = [];
+    const server = new Server();
+    server.setRoomResolver(async(name): Promise<RoomResolution> => {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 20);
+      });
+      const extension = new AssetExtension(name, "pixelart");
+      function connect() {
+        order.push("join");
+      }
+      function disconnect() {
+        order.push("leave");
+      }
+
+      return {
+        extension: Object.assign(extension, {
+          onClientConnect: connect,
+          onClientDisconnect: disconnect
+        })
+      };
+    });
+
+    server.handleConnect(client("A"));
+    const join = server.handleMessage("A", {
+      room: "pixelart:a1",
+      kind: "join"
+    });
+    await server.handleDisconnect("A");
+    await join;
+
+    assert.deepEqual(order, ["join", "leave"]);
+    await server.close();
+  });
+});

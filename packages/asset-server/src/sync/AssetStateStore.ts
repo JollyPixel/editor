@@ -1,9 +1,27 @@
+// Import Node.js Dependencies
+import timers from "node:timers/promises";
+
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
 
 // Import Internal Dependencies
 import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
 import type { AssetKindHandler } from "../kinds/AssetKindHandler.ts";
+import {
+  ASSET_CREATED,
+  ASSET_DELETED,
+  ASSET_UPDATED
+} from "../events/AssetEvents.ts";
+
+// CONSTANTS
+/** Lifecycle events a handler folds by replacing the whole state. */
+const kCheckpointEventTypes: readonly string[] = [
+  ASSET_CREATED,
+  ASSET_UPDATED,
+  ASSET_DELETED
+];
+/** Events folded between yields, so one long replay cannot hold the loop. */
+const kReplayYieldEvery = 250;
 
 export interface AssetStateEntry {
   readonly assetId: string;
@@ -24,6 +42,7 @@ export class AssetStateStore {
   #eventStore: EventStore.EventStore;
   #kinds: AssetKindRegistry;
   #entries = new Map<string, AssetStateEntry>();
+  #replays = new Map<string, Promise<AssetStateEntry>>();
   #onAppend: ((event: EventStore.Event) => void) | null = null;
 
   constructor(
@@ -68,20 +87,32 @@ export class AssetStateStore {
 
   /**
    * Returns the live entry, replaying the asset's stream on first access.
+   * Concurrent callers share one replay.
    */
   acquire(
     assetId: string,
     kind: string
-  ): AssetStateEntry {
+  ): Promise<AssetStateEntry> {
     const existing = this.#entries.get(assetId);
     if (existing !== undefined) {
-      return existing;
+      return Promise.resolve(existing);
     }
 
-    const entry = this.#replay(assetId, kind);
-    this.#entries.set(assetId, entry);
+    const inFlight = this.#replays.get(assetId);
+    if (inFlight !== undefined) {
+      return inFlight;
+    }
 
-    return entry;
+    const replay = this.#replay(assetId, kind)
+      .then((entry) => {
+        this.#entries.set(assetId, entry);
+
+        return entry;
+      })
+      .finally(() => this.#replays.delete(assetId));
+    this.#replays.set(assetId, replay);
+
+    return replay;
   }
 
   release(
@@ -94,27 +125,48 @@ export class AssetStateStore {
    * Serializes an asset's state to the bytes its projection stores.
    * Replays the stream when the asset is not live.
    */
-  serialize(
+  async serialize(
     assetId: string,
     kind: string
   ): Promise<Uint8Array> {
-    const entry = this.#entries.get(assetId) ?? this.#replay(assetId, kind);
+    const entry = this.#entries.get(assetId) ??
+      await this.#replay(assetId, kind);
 
     return entry.handler.serialize(entry.state);
   }
 
   /**
-   * Folds an asset's whole stream into a fresh state. Not registered as
-   * live: `acquire` keeps the result, `serialize` throws it away.
+   * Folds an asset's stream into a fresh state from its last checkpoint. Not
+   * registered as live: `acquire` keeps the result, `serialize` drops it.
    */
-  #replay(
+  async #replay(
     assetId: string,
     kind: string
-  ): AssetStateEntry {
+  ): Promise<AssetStateEntry> {
     const handler = this.#kinds.get(kind);
     const state = handler.create(assetId);
-    for (const event of this.#eventStore.reader.list(assetId)) {
-      handler.apply(state, event);
+    const checkpoint = this.#eventStore.reader.lastVersionOf(
+      assetId,
+      kCheckpointEventTypes
+    );
+    // `list` is exclusive, so step back one to fold the checkpoint itself.
+    let from = Math.max(checkpoint - 1, 0);
+    let sinceYield = 0;
+
+    for (;;) {
+      const events = this.#eventStore.reader.list(assetId, from);
+      if (events.length === 0) {
+        break;
+      }
+
+      for (const event of events) {
+        handler.apply(state, event);
+        from = event.eventVersion;
+        if (++sinceYield >= kReplayYieldEvery) {
+          sinceYield = 0;
+          await timers.setImmediate();
+        }
+      }
     }
 
     return {

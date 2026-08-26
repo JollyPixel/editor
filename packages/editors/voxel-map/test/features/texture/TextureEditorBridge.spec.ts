@@ -18,6 +18,7 @@ import type {
 } from "@jolly-pixel/pixel-draw.renderer";
 import type * as network from "@jolly-pixel/network";
 import { Emitter } from "@openally/emitt";
+import { fromUint8Array } from "js-base64";
 
 // Import Internal Dependencies
 import { TextureEditorBridge } from "../../../src/features/texture/TextureEditorBridge.ts";
@@ -111,18 +112,36 @@ function makeScheduler() {
 
 type FakeManager = PixelArtCanvas & {
   document: Emitter<CanvasBufferEvent>;
+  /** Scope depth at each texture assignment; 0 means it broadcast. */
+  textureSetDepths: number[];
 };
 
 function makeFakeManager(
   hasTransparency: (rect: SelectionRect) => boolean
 ): FakeManager {
   const fakeCanvas = { toDataURL: () => "data:image/png;base64," } as unknown as HTMLCanvasElement;
+  const textureSetDepths: number[] = [];
+  let depth = 0;
 
   return {
     document: new Emitter<CanvasBufferEvent>(),
     textureSize: { x: 64, y: 64 },
     textureCanvas: () => fakeCanvas,
-    hasTransparency
+    hasTransparency,
+    textureSetDepths,
+    loadSnapshot: () => void 0,
+    set texture(_source: HTMLImageElement) {
+      textureSetDepths.push(depth);
+    },
+    runLocalRestore: <T>(fn: () => T): T => {
+      depth++;
+      try {
+        return fn();
+      }
+      finally {
+        depth--;
+      }
+    }
   } as unknown as FakeManager;
 }
 
@@ -224,7 +243,8 @@ function makeSizingManager(
     hasTransparency: () => false,
     set texture(source: HTMLImageElement) {
       assigned = source;
-    }
+    },
+    runLocalRestore: <T>(fn: () => T): T => fn()
   };
 
   return manager as unknown as PixelArtCanvas & {
@@ -523,5 +543,83 @@ describe("TextureEditorBridge / derived transparency", () => {
     }));
 
     assert.equal(vr.engine.blockRegistry.get(2)!.transparent, undefined);
+  });
+});
+
+describe("TextureEditorBridge / placeholder atlas", () => {
+  /** A room whose snapshot the test delivers on demand. */
+  function makeSnapshotRoom(): {
+    room: network.Room<PixelNetworkCommand, PixelServerMessage>;
+    deliverSnapshot: (size: { x: number; y: number; }) => void;
+  } {
+    const listeners: ((message: PixelServerMessage) => void)[] = [];
+    const room = {
+      clientId: "local",
+      on: (
+        _event: string,
+        listener: (message: PixelServerMessage) => void
+      ) => listeners.push(listener),
+      off: () => void 0,
+      join: () => void 0,
+      leave: () => void 0,
+      send: () => void 0
+    } as unknown as network.Room<PixelNetworkCommand, PixelServerMessage>;
+
+    return {
+      room,
+      deliverSnapshot: (size) => {
+        for (const listener of listeners) {
+          listener({
+            type: "snapshot",
+            data: {
+              size,
+              pixels: fromUint8Array(
+                new Uint8Array(size.x * size.y * 4)
+              ),
+              uvRegions: []
+            }
+          });
+        }
+      }
+    };
+  }
+
+  it("applies the shipped atlas inside a local-restore scope, never as an edit", () => {
+    const { vr } = makeFakeVoxelRenderer();
+    const manager = makeFakeManager(() => false);
+
+    const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
+    bridge.attach(manager);
+    bridge.loadTileset(vr, "atlas");
+
+    assert.deepEqual(manager.textureSetDepths, [1]);
+    bridge.destroy();
+  });
+
+  it("leaves the room document alone once its snapshot has landed", () => {
+    const { vr } = makeFakeVoxelRenderer();
+    const manager = makeFakeManager(() => false);
+    const { room, deliverSnapshot } = makeSnapshotRoom();
+
+    const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
+    bridge.attach(manager, room);
+    deliverSnapshot({ x: 64, y: 64 });
+    bridge.loadTileset(vr, "atlas");
+
+    assert.deepEqual(manager.textureSetDepths, []);
+    bridge.destroy();
+  });
+
+  it("still fills the gap while the room snapshot is outstanding", () => {
+    const { vr } = makeFakeVoxelRenderer();
+    const manager = makeFakeManager(() => false);
+    const { room } = makeSnapshotRoom();
+
+    const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
+    bridge.attach(manager, room);
+    bridge.loadTileset(vr, "atlas");
+
+    assert.deepEqual(manager.textureSetDepths, [1]);
+    bridge.destroy();
   });
 });

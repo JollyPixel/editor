@@ -89,7 +89,9 @@ export class TextureEditor extends LitElement {
     this.#bridge.attach(canvas, this.room);
 
     if (this.vr) {
-      this.#uvBridge = new BlockUvBridge(canvas.uv, this.vr);
+      this.#uvBridge = new BlockUvBridge(canvas.uv, this.vr, {
+        runLocalRestore: (fn) => canvas.runLocalRestore(fn)
+      });
       this.#applyTileset(this.tilesetId || null);
     }
 
@@ -130,8 +132,15 @@ export class TextureEditor extends LitElement {
         this.#uvBridge?.dispose();
         this.#uvBridge = null;
       }
-      if (!this.#uvBridge && this.#canvas) {
-        this.#uvBridge = new BlockUvBridge(this.#canvas.uv, this.vr);
+      const canvas = this.#canvas;
+      if (!this.#uvBridge && canvas) {
+        this.#uvBridge = new BlockUvBridge(
+          canvas.uv,
+          this.vr,
+          {
+            runLocalRestore: (fn) => canvas.runLocalRestore(fn)
+          }
+        );
       }
       this.#applyTileset(this.tilesetId || null);
     }

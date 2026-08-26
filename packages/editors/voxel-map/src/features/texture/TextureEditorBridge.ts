@@ -159,8 +159,21 @@ export class TextureEditorBridge {
     this.#vr = vr;
     this.#tileSize = tilesetManager.getDefinitions().find((def) => def.id === id)?.tileSize ?? 1;
 
-    // Use the shipped atlas until the room snapshot arrives.
-    if (this.#applyTexture(texture.image as HTMLImageElement, "tileset source image")) {
+    // The room document is authoritative once its snapshot lands.
+    if (this.#syncClient?.ready) {
+      this.syncTransparency();
+
+      return;
+    }
+
+    // A placeholder every peer loads for itself, so it is not an edit.
+    const applied = this.#manager.runLocalRestore(
+      () => this.#applyTexture(
+        texture.image as HTMLImageElement,
+        "tileset source image"
+      )
+    );
+    if (applied) {
       this.syncTransparency();
     }
   }

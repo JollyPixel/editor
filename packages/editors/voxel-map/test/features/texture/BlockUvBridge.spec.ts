@@ -9,7 +9,10 @@ import {
   type VoxelRenderer,
   type BlockDefinition
 } from "@jolly-pixel/voxel.renderer";
-import { UVMap } from "@jolly-pixel/pixel-draw.renderer";
+import {
+  UVMap,
+  type UVRegion
+} from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import { BlockUvBridge } from "../../../src/features/texture/BlockUvBridge.ts";
@@ -554,6 +557,75 @@ describe("BlockUvBridge / deleted region", () => {
     finally {
       bridge.dispose();
       editorState.setSelectedBlock(1);
+    }
+  });
+});
+
+describe("BlockUvBridge / derived-region rebuilds", () => {
+  it("runs the whole rebuild inside the local-restore scope", () => {
+    const { vr } = makeFakeVoxelRenderer();
+    vr.engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));
+    vr.engine.blockRegistry.register(makeBlock(2, { col: 1, row: 0, tilesetId: "atlas" }));
+
+    const uv = makeUv();
+    const outsideScope: string[] = [];
+    let depth = 0;
+    function recordIfUnscoped(
+      { region }: { region: UVRegion; }
+    ): void {
+      if (depth === 0) {
+        outsideScope.push(region.id);
+      }
+    }
+    uv.on("region-created", recordIfUnscoped);
+    uv.on("region-deleted", recordIfUnscoped);
+
+    const bridge = new BlockUvBridge(uv, vr, {
+      runLocalRestore: (fn) => {
+        depth++;
+        try {
+          return fn();
+        }
+        finally {
+          depth--;
+        }
+      }
+    });
+    try {
+      bridge.setActiveTileset("atlas", 16);
+      bridge.setActiveTileset("atlas", 32);
+
+      assert.deepEqual(outsideScope, []);
+      assert.deepEqual(uv.get("block-2")?.rectFor("front"), {
+        x: 32,
+        y: 0,
+        width: 32,
+        height: 32
+      });
+    }
+    finally {
+      bridge.dispose();
+    }
+  });
+
+  it("rebuilds unscoped when no scope is supplied", () => {
+    const { vr } = makeFakeVoxelRenderer();
+    vr.engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));
+
+    const uv = makeUv();
+    const bridge = new BlockUvBridge(uv, vr);
+    try {
+      bridge.setActiveTileset("atlas", 16);
+
+      assert.deepEqual(uv.get("block-1")?.rectFor("front"), {
+        x: 0,
+        y: 0,
+        width: 16,
+        height: 16
+      });
+    }
+    finally {
+      bridge.dispose();
     }
   });
 });

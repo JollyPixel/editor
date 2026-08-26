@@ -67,9 +67,18 @@ function blockIdFromRegion(
   return Number.isNaN(value) ? null : value;
 }
 
+export interface BlockUvBridgeOptions {
+  /**
+   * Scope keeping region rebuilds out of history and the room; pass
+   * `PixelArtCanvas.runLocalRestore`. Defaults to running `fn` unscoped.
+   */
+  runLocalRestore?: <T>(fn: () => T) => T;
+}
+
 export class BlockUvBridge {
   readonly #uv: UVMap;
   readonly #vr: VoxelRenderer;
+  readonly #runLocalRestore: <T>(fn: () => T) => T;
   #tilesetId: string | null = null;
   #tileSize = 1;
   #rebuilding = false;
@@ -78,10 +87,12 @@ export class BlockUvBridge {
 
   constructor(
     uv: UVMap,
-    vr: VoxelRenderer
+    vr: VoxelRenderer,
+    options: BlockUvBridgeOptions = {}
   ) {
     this.#uv = uv;
     this.#vr = vr;
+    this.#runLocalRestore = options.runLocalRestore ?? ((fn) => fn());
 
     this.#uv.on("region-moved", this.#onRegionMoved);
     this.#uv.on("region-dragging", this.#onRegionDragging);
@@ -130,14 +141,16 @@ export class BlockUvBridge {
   #rebuild(): void {
     this.#rebuilding = true;
     try {
-      for (const region of [...this.#uv.regions]) {
-        if (blockIdFromRegion(region.id) !== null) {
-          this.#uv.delete(region.id);
+      this.#runLocalRestore(() => {
+        for (const region of [...this.#uv.regions]) {
+          if (blockIdFromRegion(region.id) !== null) {
+            this.#uv.delete(region.id);
+          }
         }
-      }
-      for (const block of this.#blocksOnActiveTileset()) {
-        this.#restoreRegionFor(block);
-      }
+        for (const block of this.#blocksOnActiveTileset()) {
+          this.#restoreRegionFor(block);
+        }
+      });
     }
     finally {
       this.#rebuilding = false;

@@ -50,6 +50,15 @@ export interface EventReader {
     fromVersion?: number
   ): Event[];
 
+  /**
+   * Returns the newest matching version for one asset, or `0`.
+   * Event types are matched exactly.
+   */
+  lastVersionOf(
+    assetId: string,
+    eventTypes: readonly string[]
+  ): number;
+
   /** Lists every stream in eventId order. */
   listAll(
     options?: ListAllOptions

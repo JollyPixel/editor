@@ -60,6 +60,27 @@ export class MemoryEventLog implements EventLog {
     );
   }
 
+  lastVersionOf(
+    assetId: string,
+    eventTypes: readonly string[]
+  ): number {
+    this.#assertOpen();
+
+    const wanted = new Set(eventTypes);
+    let version = 0;
+    for (const event of this.#events) {
+      if (
+        event.assetId === assetId &&
+        wanted.has(event.eventType) &&
+        event.eventVersion > version
+      ) {
+        version = event.eventVersion;
+      }
+    }
+
+    return version;
+  }
+
   listAll(
     options: ListAllOptions = {}
   ): Event[] {

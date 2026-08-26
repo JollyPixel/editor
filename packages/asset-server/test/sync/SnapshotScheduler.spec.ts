@@ -34,7 +34,7 @@ async function counterAsset(
     actor: kActor
   })).unwrap();
   await harness.projector.flush();
-  harness.states.acquire(created.assetId, "counter");
+  await harness.states.acquire(created.assetId, "counter");
 
   return created.assetId;
 }

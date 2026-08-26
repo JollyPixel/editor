@@ -25,6 +25,12 @@ path that no registered handler claims.
 supports live editing provides `createExtension`; other kinds have no dynamic
 editing room.
 
+`apply` must reset the existing `TState` in place for `asset.created`,
+`asset.updated` and `asset.deleted`. Each event is a complete checkpoint.
+Replay creates a fresh state, resumes at the newest checkpoint and folds later
+events. Reassigning the `state` parameter has no effect because `apply` returns
+`void` and the store retains the value returned by `create`.
+
 `TState` defaults to `unknown`, so a handler declared without it must narrow
 its own state before use. Pass the state type to keep `create`, `apply` and
 `serialize` checked against each other.

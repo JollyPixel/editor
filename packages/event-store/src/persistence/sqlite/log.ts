@@ -93,6 +93,24 @@ export class SqliteEventLog implements EventLog {
     ).map((row) => toEvent(row));
   }
 
+  lastVersionOf(
+    assetId: string,
+    eventTypes: readonly string[]
+  ): number {
+    if (eventTypes.length === 0) {
+      return 0;
+    }
+
+    const placeholders = eventTypes.map(() => "?").join(", ");
+    const row = this.#db.prepare(
+      `SELECT MAX(event_version) AS event_version
+       FROM events
+       WHERE asset_id = ? AND event_type IN (${placeholders})`
+    ).get(assetId, ...eventTypes) as { event_version: number | null; } | undefined;
+
+    return row?.event_version ?? 0;
+  }
+
   listAll(
     options: ListAllOptions = {}
   ): Event[] {
