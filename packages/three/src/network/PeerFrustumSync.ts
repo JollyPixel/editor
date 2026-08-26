@@ -7,32 +7,60 @@ import type * as THREE from "three";
 import {
   PeerFrustum,
   type PeerFrustumOptions
-} from "../../../src/index.ts";
+} from "../peer-frustum/PeerFrustum.ts";
 import {
-  isPeerFrustumPresence,
-  peerFrustumPresenceEqual,
-  type PeerFrustumPresence
-} from "./types.ts";
+  decodePeerFrustumPose,
+  peerFrustumPoseEqual,
+  type PeerFrustumPose
+} from "./PeerFrustumPose.ts";
 
 // CONSTANTS
-const kPresenceFrustumKey = "frustum";
+const kDefaultPresenceKey = "frustum";
+const kDefaultThrottleMs = 50;
 
-export interface PeerFrustumSyncOptions<ClientMessage = unknown, ServerMessage = unknown> {
+export interface PeerFrustumSyncOptions<
+  ClientMessage = unknown,
+  ServerMessage = unknown
+> {
   room: network.Room<ClientMessage, ServerMessage>;
   /**
    * Object3D remote peers' frustums are added to/removed from (typically the scene).
    */
   parent: THREE.Object3D;
   /**
+   * Presence field poses are published under. Change it when a room carries
+   * more than one frustum stream.
+   * @default "frustum"
+   */
+  presenceKey?: string;
+  /**
+   * Minimum delay between two presence updates, in milliseconds. `0` reports
+   * on every `update()` where the pose moved.
+   * @default 50
+   */
+  throttleMs?: number;
+  /**
    * Extracts a display label from a peer's identity.
    * @default reads `identity.username` when it's a string
    */
-  getLabel?: (identity: network.PeerMetadata) => string | undefined;
+  getLabel?: (
+    clientId: string,
+    identity: network.PeerMetadata
+  ) => string | undefined;
   /**
    * Chooses the color shared by a remote peer's frustum and other presence UI.
+   *
+   * `clientId` is the id the server assigned to that peer, which no client can
+   * compute for itself: `room.clientId` is local and never leaves the tab. Map
+   * the color from a field the host stamps into `identity` when the local tab
+   * must agree with its peers on its own color.
+   *
    * @default a deterministic color from the built-in palette
    */
-  getColor?: (clientId: string) => THREE.ColorRepresentation;
+  getColor?: (
+    clientId: string,
+    identity: network.PeerMetadata
+  ) => THREE.ColorRepresentation;
   /**
    * Shared visual options applied to every remote peer's frustum.
    * `color` and `displayName` are driven by presence/identity instead and ignored here.
@@ -41,31 +69,44 @@ export interface PeerFrustumSyncOptions<ClientMessage = unknown, ServerMessage =
 }
 
 function defaultGetLabel(
+  _clientId: string,
   identity: network.PeerMetadata
 ): string | undefined {
   return typeof identity.username === "string" ? identity.username : undefined;
 }
 
-/**
- * Broadcasts the local entity/player's position and orientation over a
- * `network.Room`'s presence channel and mirrors remote peers' poses onto
- * `PeerFrustum` instances added to `parent`.
- */
-export class PeerFrustumSync<ClientMessage = unknown, ServerMessage = unknown> {
+export class PeerFrustumSync<
+  ClientMessage = unknown,
+  ServerMessage = unknown
+> {
   #room: network.Room<ClientMessage, ServerMessage>;
   #parent: THREE.Object3D;
-  #getLabel: (identity: network.PeerMetadata) => string | undefined;
-  #getColor: (clientId: string) => THREE.ColorRepresentation;
+  #presenceKey: string;
+  #throttleMs: number;
+  #getLabel: (
+    clientId: string,
+    identity: network.PeerMetadata
+  ) => string | undefined;
+  #getColor: (
+    clientId: string,
+    identity: network.PeerMetadata
+  ) => THREE.ColorRepresentation;
   #frustumOptions: Omit<PeerFrustumOptions, "color" | "displayName">;
   #palette = new ColorPalette();
   #peers = new Map<string, PeerFrustum>();
   #source: THREE.Object3D | undefined;
-  #lastSent: PeerFrustumPresence | null | undefined;
+  #lastSent: PeerFrustumPose | undefined;
+  #lastSentAt = 0;
 
+  #onSync = (): void => {
+    this.#reconcilePeers();
+    this.#invalidateLastSent();
+  };
   #onPeerJoined = (
     event: network.RoomPeerEvent
   ): void => {
     this.#syncPeer(event.clientId);
+    this.#invalidateLastSent();
   };
   #onPeerLeft = (
     event: network.RoomPeerEvent
@@ -83,12 +124,15 @@ export class PeerFrustumSync<ClientMessage = unknown, ServerMessage = unknown> {
   ) {
     this.#room = options.room;
     this.#parent = options.parent;
+    this.#presenceKey = options.presenceKey ?? kDefaultPresenceKey;
+    this.#throttleMs = options.throttleMs ?? kDefaultThrottleMs;
     this.#getLabel = options.getLabel ?? defaultGetLabel;
     this.#getColor = options.getColor ?? (
       (clientId) => this.#palette.forKey(clientId)
     );
     this.#frustumOptions = options.frustum ?? {};
 
+    this.#room.on("sync", this.#onSync);
     this.#room.on("peer-joined", this.#onPeerJoined);
     this.#room.on("peer-left", this.#onPeerLeft);
     this.#room.on("peer-presence", this.#onPeerPresence);
@@ -107,11 +151,12 @@ export class PeerFrustumSync<ClientMessage = unknown, ServerMessage = unknown> {
 
   detach(): void {
     this.#source = undefined;
-    this.#lastSent = undefined;
+    this.#invalidateLastSent();
   }
 
   destroy(): void {
     this.detach();
+    this.#room.off("sync", this.#onSync);
     this.#room.off("peer-joined", this.#onPeerJoined);
     this.#room.off("peer-left", this.#onPeerLeft);
     this.#room.off("peer-presence", this.#onPeerPresence);
@@ -121,23 +166,7 @@ export class PeerFrustumSync<ClientMessage = unknown, ServerMessage = unknown> {
     }
   }
 
-  /**
-   * Reads the attached source's current position/orientation and reports it
-   * as a presence update if it changed since the last call, then picks up
-   * any peer this session doesn't know about yet. Call once per render tick
-   * (e.g. from the host's animation loop).
-   *
-   * The reconcile step matters on join: the room's initial "sync" snapshot
-   * populates `room.peers` directly without emitting "peer-joined" for each
-   * already-connected peer (see `network.Room`'s docs), and it can arrive
-   * after `attach()` has already run its one-shot seed. Repeating the check
-   * every tick means an already-connected peer always shows up on the next
-   * frame, regardless of that race.
-   */
   update(): void {
-    this.#reconcilePeers();
-    this.#refreshColors();
-
     if (!this.#source) {
       return;
     }
@@ -150,27 +179,37 @@ export class PeerFrustumSync<ClientMessage = unknown, ServerMessage = unknown> {
     });
   }
 
+  refreshColors(): void {
+    for (const [clientId, frustum] of this.#peers) {
+      const identity = this.#room.peers.get(clientId)?.identity ?? {};
+      frustum.color = this.#getColor(clientId, identity);
+    }
+  }
+
   #reportLocal(
-    pose: PeerFrustumPresence
+    pose: PeerFrustumPose
   ): void {
-    if (
-      this.#lastSent !== undefined &&
-      peerFrustumPresenceEqual(pose, this.#lastSent)
-    ) {
-      return;
+    if (this.#lastSent !== undefined) {
+      if (peerFrustumPoseEqual(pose, this.#lastSent)) {
+        return;
+      }
+
+      if (Date.now() - this.#lastSentAt < this.#throttleMs) {
+        return;
+      }
     }
 
     this.#lastSent = pose;
+    this.#lastSentAt = Date.now();
     this.#room.updatePresence({
-      [kPresenceFrustumKey]: pose
+      [this.#presenceKey]: pose
     });
   }
 
-  /**
-   * Creates a frustum for any peer already in `room.peers` that this session
-   * hasn't seen yet. A no-op for peers already tracked — their pose updates
-   * keep flowing through the "peer-presence" listener.
-   */
+  #invalidateLastSent(): void {
+    this.#lastSent = undefined;
+  }
+
   #reconcilePeers(): void {
     for (const [clientId, peer] of this.#room.peers) {
       if (!this.#peers.has(clientId)) {
@@ -198,7 +237,7 @@ export class PeerFrustumSync<ClientMessage = unknown, ServerMessage = unknown> {
     clientId: string,
     patch: network.PeerMetadata
   ): void {
-    if (!(kPresenceFrustumKey in patch)) {
+    if (!(this.#presenceKey in patch)) {
       return;
     }
 
@@ -215,9 +254,9 @@ export class PeerFrustumSync<ClientMessage = unknown, ServerMessage = unknown> {
     identity: network.PeerMetadata,
     presence: network.PeerMetadata
   ): void {
-    const rawPose = presence[kPresenceFrustumKey];
+    const pose = decodePeerFrustumPose(presence[this.#presenceKey]);
 
-    if (!isPeerFrustumPresence(rawPose)) {
+    if (pose === undefined) {
       const frustum = this.#peers.get(clientId);
       if (frustum) {
         frustum.visible = false;
@@ -226,13 +265,10 @@ export class PeerFrustumSync<ClientMessage = unknown, ServerMessage = unknown> {
       return;
     }
 
-    // Color/name are set once at creation, not re-applied on every pose
-    // update — PeerFrustum's nameplate is a canvas texture, expensive to
-    // redraw at the rate poses stream in.
     const frustum = this.#peers.get(clientId) ?? this.#createPeer(clientId, identity);
     frustum.visible = true;
-    frustum.position.copy(rawPose.position);
-    frustum.quaternion.copy(rawPose.quaternion);
+    frustum.position.copy(pose.position);
+    frustum.quaternion.copy(pose.quaternion);
   }
 
   #createPeer(
@@ -241,8 +277,8 @@ export class PeerFrustumSync<ClientMessage = unknown, ServerMessage = unknown> {
   ): PeerFrustum {
     const frustum = new PeerFrustum({
       ...this.#frustumOptions,
-      color: this.#getColor(clientId),
-      displayName: this.#getLabel(identity)
+      color: this.#getColor(clientId, identity),
+      displayName: this.#getLabel(clientId, identity)
     });
     this.#parent.add(frustum);
     this.#peers.set(clientId, frustum);
@@ -261,11 +297,5 @@ export class PeerFrustumSync<ClientMessage = unknown, ServerMessage = unknown> {
     this.#parent.remove(frustum);
     frustum.dispose();
     this.#peers.delete(clientId);
-  }
-
-  #refreshColors(): void {
-    for (const [clientId, frustum] of this.#peers) {
-      frustum.color = this.#getColor(clientId);
-    }
   }
 }

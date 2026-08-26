@@ -30,8 +30,16 @@ scene.add(grid); // self-updating: no manual .update() call needed
 
 ## 📚 API
 
-- [Grid](docs/Grid.md) - Ground-plane grid mesh. (TSL, `THREE.WebGPURenderer`).
-- [PeerFrustum](docs/PeerFrustum.md) - Renders connected peers as lightweight camera frustums.
+### Components
+
+- [Grid](docs/Grid.md): Ground-plane grid mesh. (TSL, `THREE.WebGPURenderer`).
+- [PeerFrustum](docs/PeerFrustum.md): Renders connected peers as lightweight camera frustums.
+
+### Network
+
+Optional, behind the `@jolly-pixel/three/network` entry point.
+
+- [Network components](docs/network/index.md): Optional integrations with `@jolly-pixel/network`.
 
 ## ✨ Contributors guide
 
