@@ -316,6 +316,41 @@ describe("Controls.Mouse", () => {
     assert.strictEqual(mouse.scrollUp, false);
   });
 
+  test("publishes the wheel magnitude, not only its direction", () => {
+    canvas.dispatchWheelEvent({ wheelDelta: 120 });
+    canvas.dispatchWheelEvent({ wheelDelta: 120 });
+    canvas.dispatchWheelEvent({ wheelDelta: 120 });
+    mouse.update();
+
+    assert.strictEqual(mouse.scroll.y, 3);
+    assert.strictEqual(mouse.isScrolling(), true);
+
+    mouse.update();
+
+    assert.deepStrictEqual(mouse.scroll, { x: 0, y: 0 });
+    assert.strictEqual(mouse.isScrolling(), false);
+  });
+
+  test("sums the notches every fixed step consumed into the frame", () => {
+    canvas.dispatchWheelEvent({ wheelDelta: 120 });
+    mouse.update();
+    canvas.dispatchWheelEvent({ wheelDelta: 120 });
+    mouse.update();
+    mouse.publishFrameState();
+
+    assert.strictEqual(mouse.scroll.y, 2);
+  });
+
+  test("writes the scroll into a caller-owned vector", () => {
+    canvas.dispatchWheelEvent({ wheelDelta: -120 });
+    mouse.update();
+
+    const out = { x: 0, y: 0 };
+
+    assert.strictEqual(mouse.scrollTo(out), out);
+    assert.deepStrictEqual(out, { x: 0, y: -1 });
+  });
+
   test("should update button states correctly", () => {
     canvas.dispatchMouseEvent("mousedown", { button: MouseEventButton.left });
     mouse.update();
@@ -503,6 +538,59 @@ describe("Controls.Mouse", () => {
     assert.strictEqual(mouse.buttonState(MouseEventButton.right).isDown, true);
   });
 
+  test("keeps tracking a drag once the cursor leaves the canvas", () => {
+    canvas.dispatchMouseEvent("mousedown", { button: MouseEventButton.middle });
+    mouse.update();
+
+    documentAdapter.dispatchMouseEvent("mousemove", {
+      clientX: 40,
+      clientY: 20
+    });
+    mouse.update();
+
+    assert.deepStrictEqual(mouse.position, { x: 40, y: 20 });
+    assert.deepStrictEqual(mouse.delta, { x: 40, y: 20 });
+  });
+
+  test("ignores movement away from the canvas while no button is held", () => {
+    documentAdapter.dispatchMouseEvent("mousemove", {
+      clientX: 40,
+      clientY: 20
+    });
+    mouse.update();
+
+    assert.deepStrictEqual(mouse.position, { x: 0, y: 0 });
+    assert.strictEqual(mouse.isMoving(), false);
+  });
+
+  test("releases a button let go of outside the canvas", () => {
+    canvas.dispatchMouseEvent("mousedown", { button: MouseEventButton.middle });
+    mouse.update();
+
+    assert.strictEqual(mouse.isDown("middle"), true);
+
+    documentAdapter.dispatchMouseEvent("mouseup", {
+      button: MouseEventButton.middle
+    });
+    mouse.update();
+
+    assert.strictEqual(mouse.isDown("middle"), false);
+    assert.strictEqual(mouse.wasJustReleased("middle"), true);
+  });
+
+  test("handles a canvas event once, however far it bubbles", () => {
+    const events: string[] = [];
+    mouse.on("up", () => events.push("up"));
+
+    canvas.dispatchMouseEvent("mousedown", { button: MouseEventButton.left });
+    const event = canvas.dispatchMouseEvent("mouseup", {
+      button: MouseEventButton.left
+    });
+    documentAdapter.replay("mouseup", event);
+
+    assert.deepStrictEqual(events, ["up"]);
+  });
+
   test("should properly connect and disconnect event listeners", () => {
     const canvasAddEventListener = mock.fn();
     const canvasRemoveEventListener = mock.fn();
@@ -533,14 +621,16 @@ describe("Controls.Mouse", () => {
     assert.strictEqual(canvasAddEventListener.mock.calls[3].arguments[0], "dblclick");
     assert.strictEqual(canvasAddEventListener.mock.calls[4].arguments[0], "wheel");
 
-    assert.strictEqual(docAddEventListener.mock.calls.length, 2);
-    assert.strictEqual(docAddEventListener.mock.calls[0].arguments[0], "pointerlockchange");
-    assert.strictEqual(docAddEventListener.mock.calls[1].arguments[0], "pointerlockerror");
+    assert.strictEqual(docAddEventListener.mock.calls.length, 4);
+    assert.strictEqual(docAddEventListener.mock.calls[0].arguments[0], "mousemove");
+    assert.strictEqual(docAddEventListener.mock.calls[1].arguments[0], "mouseup");
+    assert.strictEqual(docAddEventListener.mock.calls[2].arguments[0], "pointerlockchange");
+    assert.strictEqual(docAddEventListener.mock.calls[3].arguments[0], "pointerlockerror");
 
     newMouse.disconnect();
 
     assert.strictEqual(canvasRemoveEventListener.mock.calls.length, 5);
-    assert.strictEqual(docRemoveEventListener.mock.calls.length, 2);
+    assert.strictEqual(docRemoveEventListener.mock.calls.length, 4);
   });
 
   test("should handle complete mouse interaction lifecycle", () => {
@@ -748,6 +838,8 @@ class MouseCanvasAdapter extends mocks.CanvasAdapter {
     });
 
     listeners.forEach((listener) => listener(event));
+
+    return event;
   }
 
   dispatchWheelEvent(
@@ -783,6 +875,32 @@ class MouseCanvasAdapter extends mocks.CanvasAdapter {
 class MouseDocumentAdapter extends mocks.DocumentAdapter {
   override exitPointerLock = mock.fn();
   override pointerLockElement: any = null;
+
+  /** A move or release that happened away from the canvas. */
+  dispatchMouseEvent(
+    type: "mousemove" | "mouseup",
+    eventData: MouseEventData = {}
+  ) {
+    const event = new kEmulatedBrowserWindow.MouseEvent(type, {
+      button: eventData.button ?? 0,
+      clientX: eventData.clientX ?? 0,
+      clientY: eventData.clientY ?? 0,
+      bubbles: true,
+      cancelable: true
+    });
+
+    this.replay(type, event);
+  }
+
+  /** Replays a canvas event the way bubbling delivers it to the document. */
+  replay(
+    type: string,
+    event: unknown
+  ) {
+    const listeners = this.listeners.get(type) ?? new Set();
+
+    listeners.forEach((listener) => listener(event as any));
+  }
 
   dispatchEvent(
     type: "pointerlockchange" | "pointerlockerror"

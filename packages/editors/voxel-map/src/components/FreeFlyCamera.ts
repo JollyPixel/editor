@@ -6,31 +6,57 @@ import {
   createViewHelper
 } from "@jolly-pixel/engine";
 
+// CONSTANTS
+const kRestingVelocitySq = 1e-6;
+
 export interface FreeFlyCameraOptions {
   position?: THREE.Vector3Like;
   yaw?: number;
   pitch?: number;
+  /**
+   * Cruise speed in units per second.
+   */
   moveSpeed?: number;
+  /**
+   * Bounds for the scroll-adjusted `moveSpeed`, in units per second.
+   */
+  minMoveSpeed?: number;
+  maxMoveSpeed?: number;
+  /**
+   * Velocity response in 1/s: the rate at which the camera eases towards the
+   * speed the keys ask for, and back to rest when they are released. Applied
+   * against the frame delta, so the feel does not change with frame rate.
+   */
+  responsiveness?: number;
   mouseSensitivity?: number;
   maxPitch?: number;
+  /**
+   * Units travelled per wheel notch.
+   */
   scrollSpeed?: number;
-  friction?: number;
+  /**
+   * Fraction `moveSpeed` grows per wheel notch while looking around.
+   */
+  speedAdjustStep?: number;
 }
 
 /**
  * Minecraft-style free-fly camera.
- * WASD = horizontal, Space/Shift = vertical, RMB+drag = look.
- * Velocity accumulates each frame and lerps to zero (inertia).
+ * WASD = horizontal, Space/Shift = vertical, MMB+drag = look.
+ * Wheel dollies along the view; wheel while looking sets the fly speed.
  */
 export class FreeFlyCamera extends CameraComponent {
   #vel = new THREE.Vector3();
   #yaw: number;
   #pitch: number;
   #moveSpeed: number;
+  #minMoveSpeed: number;
+  #maxMoveSpeed: number;
+  #responsiveness: number;
   #mouseSensitivity: number;
   #maxPitch: number;
   #scrollSpeed: number;
-  #friction: number;
+  #speedAdjustStep: number;
 
   // Reused each frame to avoid allocations.
   #forward = new THREE.Vector3();
@@ -38,6 +64,8 @@ export class FreeFlyCamera extends CameraComponent {
   #up = new THREE.Vector3(0, 1, 0);
   #move = new THREE.Vector3();
   #offset = new THREE.Vector3();
+  #dollyOffset = new THREE.Vector3();
+  #scroll = { x: 0, y: 0 };
   #euler = new THREE.Euler(0, 0, 0, "YXZ");
   #orientation = new THREE.Quaternion();
 
@@ -52,22 +80,28 @@ export class FreeFlyCamera extends CameraComponent {
     });
 
     const {
-      moveSpeed = 12,
+      moveSpeed = 18,
+      minMoveSpeed = 2,
+      maxMoveSpeed = 240,
+      responsiveness = 18,
       mouseSensitivity = 0.003,
       maxPitch = Math.PI / 2 - 0.01,
       scrollSpeed = 2.5,
+      speedAdjustStep = 0.15,
       yaw = 0,
-      pitch = -0.2,
-      friction = 0.24
+      pitch = -0.2
     } = options;
 
     this.#yaw = yaw;
     this.#pitch = pitch;
-    this.#moveSpeed = moveSpeed;
+    this.#minMoveSpeed = minMoveSpeed;
+    this.#maxMoveSpeed = maxMoveSpeed;
+    this.#moveSpeed = this.#clampMoveSpeed(moveSpeed);
+    this.#responsiveness = responsiveness;
     this.#mouseSensitivity = mouseSensitivity;
     this.#maxPitch = maxPitch;
     this.#scrollSpeed = scrollSpeed;
-    this.#friction = friction;
+    this.#speedAdjustStep = speedAdjustStep;
 
     this.#applyOrientation();
     this.actor.transform.setLocalPosition(
@@ -75,22 +109,34 @@ export class FreeFlyCamera extends CameraComponent {
     );
   }
 
-  /** Camera pose is derived from the actor transform each frame. */
   #applyOrientation() {
     this.actor.transform.setLocalOrientation(
       this.#orientation.setFromEuler(
-        this.#euler.set(this.#pitch, this.#yaw, 0)
+        this.#euler.set(
+          this.#pitch,
+          this.#yaw,
+          0
+        )
       )
     );
   }
 
-  /** Moves along the full look direction, pitch included. */
   #dolly(
     transform: Actor["transform"],
     distance: number
   ) {
     transform.moveGlobal(
-      transform.getForward(this.#offset).multiplyScalar(distance)
+      transform.getForward(this.#dollyOffset)
+        .multiplyScalar(distance)
+    );
+  }
+
+  #clampMoveSpeed(
+    speed: number
+  ): number {
+    return Math.min(
+      this.#maxMoveSpeed,
+      Math.max(this.#minMoveSpeed, speed)
     );
   }
 
@@ -98,8 +144,21 @@ export class FreeFlyCamera extends CameraComponent {
     return this.threeCamera as THREE.PerspectiveCamera;
   }
 
+  get moveSpeed(): number {
+    return this.#moveSpeed;
+  }
+
+  set moveSpeed(
+    speed: number
+  ) {
+    this.#moveSpeed = this.#clampMoveSpeed(speed);
+  }
+
   start() {
-    createViewHelper(this.threeCamera, this.actor.world);
+    createViewHelper(
+      this.threeCamera,
+      this.actor.world
+    );
   }
 
   update(
@@ -107,9 +166,10 @@ export class FreeFlyCamera extends CameraComponent {
   ) {
     const { input } = this.actor.world;
     const { transform } = this.actor;
+    const isLooking = input.mouse.isDown("middle");
 
     // Mouse look
-    if (input.mouse.isDown("middle") && input.mouse.isMoving()) {
+    if (isLooking && input.mouse.isMoving()) {
       const delta = input.mouse.viewportDelta(false);
       this.#yaw -= delta.x * this.#mouseSensitivity;
       this.#pitch += delta.y * this.#mouseSensitivity;
@@ -130,56 +190,74 @@ export class FreeFlyCamera extends CameraComponent {
     // Movement intent
     this.#move.set(0, 0, 0);
 
-    if (input.keyboard.isDown("KeyW") || input.keyboard.isDown("ArrowUp")) {
+    if (
+      input.keyboard.isDown("KeyW") ||
+      input.keyboard.isDown("ArrowUp")
+    ) {
       this.#move.addScaledVector(this.#forward, 1);
     }
-    if (input.keyboard.isDown("KeyS") || input.keyboard.isDown("ArrowDown")) {
+    if (
+      input.keyboard.isDown("KeyS") ||
+      input.keyboard.isDown("ArrowDown")
+    ) {
       this.#move.addScaledVector(this.#forward, -1);
     }
-    if (input.keyboard.isDown("KeyA") || input.keyboard.isDown("ArrowLeft")) {
+    if (
+      input.keyboard.isDown("KeyA") ||
+      input.keyboard.isDown("ArrowLeft")
+    ) {
       this.#move.addScaledVector(this.#right, -1);
     }
-    if (input.keyboard.isDown("KeyD") || input.keyboard.isDown("ArrowRight")) {
+    if (
+      input.keyboard.isDown("KeyD") ||
+      input.keyboard.isDown("ArrowRight")
+    ) {
       this.#move.addScaledVector(this.#right, 1);
     }
     if (input.keyboard.isDown("Space")) {
       this.#move.y += 1;
     }
-    if (input.keyboard.isDown("ShiftLeft") || input.keyboard.isDown("ShiftRight")) {
+    if (
+      input.keyboard.isDown("ShiftLeft") ||
+      input.keyboard.isDown("ShiftRight")
+    ) {
       this.#move.y -= 1;
     }
 
     if (this.#move.lengthSq() > 0) {
       this.#move.normalize().multiplyScalar(this.#moveSpeed);
-      this.#vel.copy(this.#move);
     }
 
     // Ctrl reserves scrolling for brush size.
     const isCtrl = input.keyboard.isDown("ControlLeft") || input.keyboard.isDown("ControlRight");
-    if (!isCtrl) {
-      if (input.mouse.isDown("scrollUp")) {
-        this.#dolly(transform, this.#scrollSpeed);
+    const scroll = input.mouse.scrollTo(this.#scroll);
+    if (!isCtrl && scroll.y !== 0) {
+      if (isLooking) {
+        this.moveSpeed = this.#moveSpeed *
+          Math.pow(1 + this.#speedAdjustStep, scroll.y);
       }
-      if (input.mouse.isDown("scrollDown")) {
-        this.#dolly(transform, -this.#scrollSpeed);
+      else {
+        this.#dolly(
+          transform,
+          scroll.y * this.#scrollSpeed
+        );
       }
     }
 
-    // Velocity and friction
-    transform.moveGlobal(
-      this.#offset.copy(this.#vel).multiplyScalar(deltaTime)
+    this.#vel.lerp(
+      this.#move,
+      1 - Math.exp(-this.#responsiveness * deltaTime)
     );
-    this.#vel.multiplyScalar(1 - this.#friction);
 
-    if (this.#vel.lengthSq() < 0.0001) {
+    if (this.#vel.lengthSq() < kRestingVelocitySq) {
       this.#vel.set(0, 0, 0);
     }
-
-    const canvas = this.actor.world.renderer.canvas;
-    const aspect = canvas.clientWidth / canvas.clientHeight;
-    if (Math.abs(this.camera.aspect - aspect) > 0.001) {
-      this.camera.aspect = aspect;
-      this.camera.updateProjectionMatrix();
+    else {
+      transform.moveGlobal(
+        this.#offset
+          .copy(this.#vel)
+          .multiplyScalar(deltaTime)
+      );
     }
   }
 }

@@ -27,8 +27,10 @@ session. `start()` installs those listeners and starts the animation loop;
 
 The `bootstrap` folder contains one-time startup work. `loadRuntime()` composes
 the workflow, while `configureRuntimeDevice()` applies the GPU-derived frame
-rate and pixel ratio. Startup UI details stay behind `RuntimeLoadingScreen`, so
-the bootstrap function does not manipulate Lit elements or canvas styles.
+rate and pixel ratio. Its `maxFps` option overrides that frame rate, which
+hosts targeting a desktop display are expected to set. Startup UI details stay
+behind `RuntimeLoadingScreen`, so the bootstrap function does not manipulate
+Lit elements or canvas styles.
 
 `SceneManager` owns scene requests and their visible state. The internal
 `RuntimeSceneLoader` uses `AssetCoordinator` for I/O and reports progress back

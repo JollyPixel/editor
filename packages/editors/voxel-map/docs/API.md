@@ -9,11 +9,29 @@ This package is a private browser application, not a published library. Its inte
 
 World data entering from a file or from the asset workspace goes through `parseVoxelWorld()` before it reaches `VoxelRenderer`. Block-definition batches go through `applyBlockUpdates()` so one user operation causes one chunk invalidation and one state notification.
 
+## Camera and brush input
+
+`FreeFlyCamera` owns WASD/arrows, Space and Shift, and the middle button for
+looking around. The wheel dollies along the view; held together with the
+middle button it sets the fly speed instead, between `minMoveSpeed` and
+`maxMoveSpeed`. Ctrl reserves the wheel for the brush size, so the camera
+ignores it. Velocity eases towards the requested speed at `responsiveness`
+per second, applied against the frame delta, so the feel is the same at any
+frame rate. The editor renders uncapped (`maxFps: Infinity`): the runtime's
+GPU-benchmarked default is a throughput score and would throttle the camera
+below the display refresh.
+
 ## Brush input boundary
 
 `VoxelBrush` consumes the frame-stable mouse transitions published by the
 engine input cycle. After one brush footprint is mutated, the voxel engine is
 flushed so the preview and the next brush raycast use rebuilt chunk geometry.
+
+The preview raycast is the most expensive per-frame work in the editor, so it
+runs only when the pointer moved, the camera moved, or an edit invalidated the
+hit; while the middle button steers the camera the preview is hidden and no
+ray is cast at all. It intersects `VoxelRenderer.engine.root`, which holds the
+chunk meshes and nothing else, rather than sweeping the whole scene graph.
 
 ## Runtime modes
 

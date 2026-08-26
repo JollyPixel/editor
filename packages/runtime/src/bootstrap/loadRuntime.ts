@@ -38,6 +38,11 @@ export interface LoadRuntimeOptions<
    * @default false
    */
   skipLoadingScreen?: boolean;
+  /**
+   * Render cap in frames per second, overriding the GPU-benchmarked estimate.
+   * @see ConfigureRuntimeDeviceOptions
+   */
+  maxFps?: number;
 }
 
 export async function loadRuntime<
@@ -51,13 +56,14 @@ export async function loadRuntime<
     loadingContainer = document.body,
     assets = [],
     scene,
-    skipLoadingScreen = false
+    skipLoadingScreen = false,
+    maxFps
   } = options;
 
   if (skipLoadingScreen) {
     runtime.canvas.style.opacity = "1";
 
-    await configureRuntimeDevice(runtime);
+    await configureRuntimeDevice(runtime, { maxFps });
     await loadInitialAssets(runtime, null, assets);
 
     if (scene !== undefined) {
@@ -77,7 +83,7 @@ export async function loadRuntime<
   try {
     await Promise.all([
       loadingScreen.start(),
-      configureRuntimeDevice(runtime),
+      configureRuntimeDevice(runtime, { maxFps }),
       waitForLoadingDelay(loadingDelay)
     ]);
 

@@ -10,6 +10,11 @@ export interface CanvasAdapter extends EventTargetAdapter {
     options?: FocusOptions | undefined,
   ): void;
 
+  getBoundingClientRect?(): {
+    left: number;
+    top: number;
+  };
+
   readonly clientWidth: number;
   readonly clientHeight: number;
   style: {

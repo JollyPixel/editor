@@ -155,7 +155,8 @@ if (sidebar) {
 
 await loadRuntime(runtime, {
   scene: editorScene,
-  skipLoadingScreen: true
+  skipLoadingScreen: true,
+  maxFps: Infinity
 });
 
 // The scene awakes on the first frame, after loadRuntime() has resolved.

@@ -112,6 +112,9 @@ interface Mouse {
   readonly position: { x: number; y: number };
   // Movement delta since last update() (read-only)
   readonly delta: { x: number; y: number };
+  // Signed wheel notches for the current frame, positive Y scrolling away
+  // from the user. Keeps the magnitude `scrollUp`/`scrollDown` discard.
+  readonly scroll: { x: number; y: number };
 
   readonly locked: boolean;
   readonly scrollUp: boolean;
@@ -138,6 +141,9 @@ interface Mouse {
   // true if the mouse moved during the current frame
   isMoving(): boolean;
 
+  // true if the wheel turned during the current frame
+  isScrolling(): boolean;
+
   // Per-frame state queries — `action` accepts "ANY" / "NONE" alongside a
   // MouseAction / button index.
   isDown(action: InputMouseAction): boolean;
@@ -162,6 +168,7 @@ interface Mouse {
   // Write into a caller-owned vector. `THREE.Vector2` is compatible.
   positionTo<T extends Vector2Like>(out: T): T;
   deltaTo<T extends Vector2Like>(out: T): T;
+  scrollTo<T extends Vector2Like>(out: T): T;
   viewportPositionTo<T extends Vector2Like>(out: T): T;
   worldPositionTo<T extends Vector2Like>(out: T): T;
   viewportDeltaTo<T extends Vector2Like>(out: T, normalizeWithSize?: boolean): T;
