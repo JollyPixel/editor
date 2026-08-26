@@ -20,3 +20,10 @@ export {
   loadVoxelMapDocument,
   voxelMapSnapshot
 } from "./VoxelMapDocument.ts";
+
+export {
+  resolveTilesetDefinition,
+  type AtlasSize,
+  type ResolvedTilesetDefinition,
+  type TilesetDefinition
+} from "../tileset/types.ts";

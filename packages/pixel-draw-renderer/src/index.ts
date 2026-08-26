@@ -76,6 +76,11 @@ export {
   decodeRasterBlob,
   decodeRasterCanvas
 } from "./clipboard/selectionImage.ts";
+export {
+  decodePng,
+  InvalidPngError,
+  type DecodedPng
+} from "./image/index.ts";
 export type {
   ClipboardAdapter,
   ClipboardOperationResult,

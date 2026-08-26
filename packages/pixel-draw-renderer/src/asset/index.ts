@@ -13,10 +13,14 @@ export type {
 export type { PixelArtState } from "./PixelArtState.ts";
 export {
   createPixelArtBuffer,
+  createPixelArtBufferFromPng,
   decodePixelArtDocument,
   encodePixelArtDocument,
   InvalidPixelArtDocumentError,
   loadPixelArtDocument,
   pixelArtSnapshot
 } from "./PixelArtDocument.ts";
-export type { PixelArtDocumentData } from "./PixelArtDocument.ts";
+export type {
+  PixelArtBufferFromPngOptions,
+  PixelArtDocumentData
+} from "./PixelArtDocument.ts";

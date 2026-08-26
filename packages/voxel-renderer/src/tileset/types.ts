@@ -4,7 +4,6 @@ export interface TileRef {
   tilesetId?: string;
 }
 
-/** Precomputed UV region for a specific tile in the atlas. */
 export interface TilesetUVRegion {
   offsetU: number;
   offsetV: number;
@@ -31,4 +30,25 @@ export interface TilesetDefinition {
    * When omitted, derived automatically from the image height: Math.floor(image.height / tileSize).
    */
   rows?: number;
+}
+
+export type ResolvedTilesetDefinition = TilesetDefinition & {
+  cols: number;
+  rows: number;
+};
+
+export interface AtlasSize {
+  width: number;
+  height: number;
+}
+
+export function resolveTilesetDefinition(
+  def: TilesetDefinition,
+  size: AtlasSize
+): ResolvedTilesetDefinition {
+  return {
+    ...def,
+    cols: def.cols ?? Math.floor(size.width / def.tileSize),
+    rows: def.rows ?? Math.floor(size.height / def.tileSize)
+  };
 }

@@ -55,6 +55,21 @@ interface TilesetDefinition {
 }
 ```
 
+## resolveTilesetDefinition
+
+```ts
+function resolveTilesetDefinition(
+  def: TilesetDefinition,
+  size: { width: number; height: number; }
+): ResolvedTilesetDefinition;
+```
+
+Fills in `cols` and `rows` from the atlas dimensions, flooring partial tiles out
+of the grid; explicit values are kept. `TilesetManager.registerTexture` applies
+it to a loaded texture, and it is re-exported from
+`@jolly-pixel/voxel.renderer/asset/index.ts` so a document seeded outside a
+browser resolves the same grid.
+
 ## TileRef
 
 References a specific tile in an atlas by grid position.

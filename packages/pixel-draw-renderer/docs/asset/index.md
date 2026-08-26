@@ -62,6 +62,26 @@ pixels shorter than the declared size all throw
 A loaded document is complete state, not a patch. UV regions are cleared
 before the document's are applied.
 
+## Seeding a document from an image
+
+```ts
+import {
+  createPixelArtBufferFromPng,
+  encodePixelArtDocument
+} from "@jolly-pixel/pixel-draw.renderer/asset/index.ts";
+
+const buffer = await createPixelArtBufferFromPng(
+  await fs.readFile("textures/tileset.png")
+);
+const document = encodePixelArtDocument(buffer);
+```
+
+The buffer is sized to the image and holds its exact samples, decoded by
+[`decodePng`](../image/index.md). UV regions stay empty, since PNG cannot carry
+them. `maxSize` defaults to the image's own dimensions when they exceed
+`PixelBuffer`'s 2048 ceiling, so an oversized atlas still fits; pass it
+explicitly to pin a different bound.
+
 ## Why the room never writes
 
 `apply` is the only writer. A room that mutated the buffer *and* appended
