@@ -23,11 +23,16 @@ interface CanvasColorGroup {
 
 export type CanvasBufferOptions = PixelBufferOptions;
 
-/**
- * Fired after a pixel mutation that changes the visible working canvas
- */
 export type CanvasBufferEvent = {
-  changed: () => void;
+  changed: (
+    event: { bounds: SelectionRect; }
+  ) => void;
+  resized: (
+    event: { size: Vec2; }
+  ) => void;
+  replaced: (
+    event: { size: Vec2; }
+  ) => void;
 };
 
 export class CanvasBuffer extends Emitter<
@@ -90,6 +95,10 @@ export class CanvasBuffer extends Emitter<
     this.#workingCanvas.height = size.y;
 
     this.#syncCanvasFromBuffer();
+    this.emit(
+      "resized",
+      { size: this.#buffer.size() }
+    );
   }
 
   loadTexture(
@@ -147,6 +156,11 @@ export class CanvasBuffer extends Emitter<
       imageData.data,
       size
     );
+
+    this.emit(
+      "replaced",
+      { size }
+    );
   }
 
   replacePixels(
@@ -187,7 +201,10 @@ export class CanvasBuffer extends Emitter<
     }
 
     this.#resyncCanvasRegion(dirtyArea.bounds);
-    this.emit("changed");
+    this.emit(
+      "changed",
+      { bounds: dirtyArea.bounds }
+    );
   }
 
   drawColorGroups(
@@ -215,7 +232,10 @@ export class CanvasBuffer extends Emitter<
     }
 
     this.#resyncCanvasRegion(dirtyArea.bounds);
-    this.emit("changed");
+    this.emit(
+      "changed",
+      { bounds: dirtyArea.bounds }
+    );
   }
 
   drawRegion(
@@ -227,7 +247,10 @@ export class CanvasBuffer extends Emitter<
       pixels
     );
     this.#resyncCanvasRegion(rect);
-    this.emit("changed");
+    this.emit(
+      "changed",
+      { bounds: rect }
+    );
   }
 
   drawMaskedRegion(
@@ -241,7 +264,10 @@ export class CanvasBuffer extends Emitter<
       mask
     );
     this.#resyncCanvasRegion(rect);
-    this.emit("changed");
+    this.emit(
+      "changed",
+      { bounds: rect }
+    );
   }
 
   #resyncCanvasRegion(

@@ -200,6 +200,91 @@ describe("BlockUvBridge / region-moved", () => {
   });
 });
 
+describe("BlockUvBridge / region-dragging", () => {
+  it("moves the block on every pointer move, not only on release", () => {
+    const { vr, dirtyReasons } = makeFakeVoxelRenderer();
+    vr.engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));
+
+    const uv = makeUv();
+    const bridge = new BlockUvBridge(uv, vr);
+    try {
+      bridge.setActiveTileset("atlas", 16);
+
+      uv.previewMove("block-1", { x: 32, y: 16, width: 16, height: 16 });
+
+      const updated = vr.engine.blockRegistry.get(1)!;
+      assert.equal(updated.defaultTexture!.col, 2);
+      assert.equal(updated.defaultTexture!.row, 1);
+      assert.deepEqual(dirtyReasons, ["block definitions updated"]);
+    }
+    finally {
+      bridge.dispose();
+    }
+  });
+
+  it("ignores a drag of a region that is not a block's", () => {
+    const { vr, dirtyReasons } = makeFakeVoxelRenderer();
+    vr.engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));
+
+    const uv = makeUv();
+    const bridge = new BlockUvBridge(uv, vr);
+    try {
+      bridge.setActiveTileset("atlas", 16);
+      uv.create({ id: "custom-region", width: 8, height: 8 });
+
+      uv.previewMove("custom-region", { x: 5, y: 5, width: 8, height: 8 });
+
+      assert.deepEqual(dirtyReasons, []);
+    }
+    finally {
+      bridge.dispose();
+    }
+  });
+
+  it("does not re-apply a drag that lands where the block already is", () => {
+    const { vr, dirtyReasons } = makeFakeVoxelRenderer();
+    vr.engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));
+
+    const uv = makeUv();
+    const bridge = new BlockUvBridge(uv, vr);
+    try {
+      bridge.setActiveTileset("atlas", 16);
+      const rect = uv.get("block-1")!.rectFor("front");
+
+      uv.previewMove("block-1", rect);
+
+      assert.deepEqual(dirtyReasons, []);
+    }
+    finally {
+      bridge.dispose();
+    }
+  });
+
+  it("leaves the release event nothing left to do", () => {
+    const { vr, dirtyReasons } = makeFakeVoxelRenderer();
+    vr.engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));
+
+    const uv = makeUv();
+    const bridge = new BlockUvBridge(uv, vr);
+    try {
+      bridge.setActiveTileset("atlas", 16);
+      const target = { x: 32, y: 16, width: 16, height: 16 };
+
+      uv.previewMove("block-1", target);
+      uv.move("block-1", target);
+
+      assert.deepEqual(
+        dirtyReasons,
+        ["block definitions updated"],
+        "the drag already wrote it; the release must not remesh a second time"
+      );
+    }
+    finally {
+      bridge.dispose();
+    }
+  });
+});
+
 describe("BlockUvBridge / faceTextures round-trip", () => {
   it("uncollapsing a block region writes all six faceTextures", () => {
     const { vr } = makeFakeVoxelRenderer();

@@ -9,13 +9,34 @@ import {
   PixelSyncClient,
   type PixelArtCanvas,
   type PixelNetworkCommand,
-  type PixelServerMessage
+  type PixelServerMessage,
+  type SelectionRect
 } from "@jolly-pixel/pixel-draw.renderer";
+import {
+  PixelCanvasTexture
+} from "@jolly-pixel/editor.pixel-art/three/PixelCanvasTexture.ts";
 
 // Import Internal Dependencies
 import { applyBlockUpdates } from "./applyBlockUpdate.ts";
 import { findBlocksReferencingTileset } from "./blockTextureTiles.ts";
 import { editorState } from "../EditorState.ts";
+
+function rectsIntersect(
+  a: SelectionRect,
+  b: SelectionRect
+): boolean {
+  return a.x < b.x + b.width &&
+    b.x < a.x + a.width &&
+    a.y < b.y + b.height &&
+    b.y < a.y + a.height;
+}
+
+export interface TextureEditorBridgeOptions {
+  /**
+   * Test scheduler override.
+   */
+  scheduler?: (callback: () => void) => void;
+}
 
 export class TextureEditorBridge {
   #manager: PixelArtCanvas | null = null;
@@ -26,6 +47,20 @@ export class TextureEditorBridge {
   #tileSize = 1;
   #unsubscribe: (() => void) | null = null;
   #syncing = false;
+  #texture: PixelCanvasTexture | null = null;
+  readonly #scheduler: (callback: () => void) => void;
+  #running = false;
+  /**
+   * Requires one full repad before regional updates resume.
+   */
+  #needsFullSync = false;
+
+  constructor(
+    options: TextureEditorBridgeOptions = {}
+  ) {
+    this.#scheduler = options.scheduler ??
+      ((callback) => requestAnimationFrame(callback));
+  }
 
   get isActive(): boolean {
     return this.#manager !== null;
@@ -43,14 +78,61 @@ export class TextureEditorBridge {
       this.#onBlockRegistryChanged
     );
 
+    // Manual flush batches local and remote writes once per frame.
+    this.#texture?.dispose();
+    this.#texture = new PixelCanvasTexture(canvas, { flush: "manual" });
+    this.#texture.on("resized", () => {
+      // Resizes and snapshots require a full repad.
+      this.#needsFullSync = true;
+    });
+    this.#startFrameLoop();
+
     if (room) {
       this.#syncClient = new PixelSyncClient({ room });
       this.#syncClient.attach(this.#manager);
-      // The room owns the atlas pixels, so every replacement has to reach the
-      // Three.js tileset — not only the strokes drawn here.
-      this.#syncClient.on("snapshot", () => this.syncToThree());
       room.join();
     }
+  }
+
+  #startFrameLoop(): void {
+    if (this.#running) {
+      return;
+    }
+    this.#running = true;
+
+    const tick = () => {
+      if (!this.#running) {
+        return;
+      }
+      this.#flush();
+      this.#scheduler(tick);
+    };
+    this.#scheduler(tick);
+  }
+
+  #flush(): void {
+    const dirty = this.#texture?.consume();
+    if (!dirty) {
+      return;
+    }
+
+    if (this.#needsFullSync) {
+      this.#needsFullSync = false;
+      this.syncToThree();
+
+      return;
+    }
+
+    if (!this.#manager || !this.#tilesetManager) {
+      return;
+    }
+
+    this.#tilesetManager.updateSourceRegion(
+      this.#manager.textureCanvas(),
+      dirty,
+      this.#tilesetId ?? undefined
+    );
+    this.syncTransparency(dirty);
   }
 
   loadTileset(
@@ -77,8 +159,7 @@ export class TextureEditorBridge {
     this.#vr = vr;
     this.#tileSize = tilesetManager.getDefinitions().find((def) => def.id === id)?.tileSize ?? 1;
 
-    // A room snapshot overwrites this with the shared atlas as soon as it
-    // lands; until then the shipped image keeps the canvas usable.
+    // Use the shipped atlas until the room snapshot arrives.
     if (this.#applyTexture(texture.image as HTMLImageElement, "tileset source image")) {
       this.syncTransparency();
     }
@@ -126,10 +207,11 @@ export class TextureEditorBridge {
   }
 
   /**
-   * Derives `transparent` for every block drawing from the active tileset,
-   * out of the alpha of the pixels under its tiles.
+   * Recomputes transparency; `bounds` limits work to touched tiles.
    */
-  syncTransparency(): void {
+  syncTransparency(
+    bounds?: SelectionRect
+  ): void {
     if (!this.#manager || !this.#vr || !this.#tilesetId) {
       return;
     }
@@ -142,6 +224,10 @@ export class TextureEditorBridge {
 
     const updates: BlockDefinition[] = [];
     for (const { block, rects } of affected) {
+      if (bounds && !rects.some((rect) => rectsIntersect(rect, bounds))) {
+        continue;
+      }
+
       const transparent = rects.some((rect) => this.#manager!.hasTransparency(rect));
       if (transparent === (block.transparent === true)) {
         continue;
@@ -160,9 +246,7 @@ export class TextureEditorBridge {
   }
 
   /**
-   * Moving a UV region, switching a block to another tileset or registering a
-   * new block all change which pixels a block reads, so the flag is derived
-   * again. The write-back re-enters this listener, hence the guard.
+   * Recomputes after registry changes; the guard prevents recursion.
    */
   readonly #onBlockRegistryChanged = (): void => {
     if (this.#syncing) {
@@ -173,6 +257,9 @@ export class TextureEditorBridge {
   };
 
   destroy(): void {
+    this.#running = false;
+    this.#texture?.dispose();
+    this.#texture = null;
     this.#unsubscribe?.();
     this.#unsubscribe = null;
     this.#syncClient?.destroy();

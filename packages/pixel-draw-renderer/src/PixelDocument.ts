@@ -1,6 +1,10 @@
+// Import Third-party Dependencies
+import { Emitter } from "@openally/emitt";
+
 // Import Internal Dependencies
 import {
-  CanvasBuffer
+  CanvasBuffer,
+  type CanvasBufferEvent
 } from "./buffer/CanvasBuffer.ts";
 import {
   History,
@@ -17,7 +21,7 @@ export interface PixelDocumentOptions {
   defaultColor?: ByteColorInput;
   maxSize?: number;
   /**
-   * Initial texture source, loaded over the freshly-filled buffer.
+   * Initial texture loaded over the filled buffer.
    */
   init?: HTMLCanvasElement;
   history?: {
@@ -28,9 +32,16 @@ export interface PixelDocumentOptions {
 }
 
 /**
+ * Buffer events forwarded verbatim.
+ */
+export type PixelDocumentEvent = CanvasBufferEvent;
+
+/**
  * Owns the buffer, UV map, history, and their shared wiring.
  */
-export class PixelDocument {
+export class PixelDocument extends Emitter<
+  PixelDocumentEvent
+> {
   readonly buffer: CanvasBuffer;
   readonly uv: UVMap;
   readonly history: History;
@@ -38,6 +49,8 @@ export class PixelDocument {
   constructor(
     options: PixelDocumentOptions
   ) {
+    super();
+
     this.buffer = new CanvasBuffer({
       size: options.size,
       defaultColor: options.defaultColor,
@@ -57,24 +70,13 @@ export class PixelDocument {
       limit: options.history?.limit,
       onChange: options.history?.onChange
     });
+
+    this.buffer.on("changed", (event) => this.emit("changed", event));
+    this.buffer.on("resized", (event) => this.emit("resized", event));
+    this.buffer.on("replaced", (event) => this.emit("replaced", event));
   }
 
   size(): Vec2 {
     return this.buffer.size();
-  }
-
-  /**
-   * Subscribes to visible mutations; size changes are driven separately.
-   */
-  onChange(
-    listener: () => void
-  ): void {
-    this.buffer.on("changed", listener);
-  }
-
-  offChange(
-    listener: () => void
-  ): void {
-    this.buffer.off("changed", listener);
   }
 }

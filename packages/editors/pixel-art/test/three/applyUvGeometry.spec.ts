@@ -10,7 +10,7 @@ import type { UVTriangleCorner } from "@jolly-pixel/pixel-draw.renderer";
 import {
   applyUvGeometry,
   orientUv
-} from "../../examples/scripts/preview/applyUvGeometry.ts";
+} from "#src/three/applyUvGeometry.ts";
 
 // CONSTANTS
 const kCanonicalTriangle: [number, number][] = [
@@ -66,6 +66,34 @@ describe("applyUvGeometry", () => {
       0.25, 0.25,
       0.5, 0.25,
       0.5, 0.5
+    ]);
+  });
+
+  test("leaves vertices outside the range untouched", () => {
+    const baseUv = Float32Array.from([
+      0, 0,
+      1, 0,
+      1, 1,
+      0, 1
+    ]);
+    const attribute = new THREE.Float32BufferAttribute(
+      Float32Array.from(baseUv),
+      2
+    );
+
+    applyUvGeometry(
+      attribute,
+      baseUv,
+      { x: 0, y: 0, width: 32, height: 32 },
+      { x: 64, y: 64 },
+      { start: 2, count: 2 }
+    );
+
+    assert.deepStrictEqual(Array.from(attribute.array), [
+      0, 0,
+      1, 0,
+      0.5, 1,
+      0, 1
     ]);
   });
 });

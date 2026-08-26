@@ -36,11 +36,25 @@ type Mode = "paint" | "move" | "fill" | "select" | "uv";
 ## Core objects
 
 ```ts
+readonly document: PixelDocument
 readonly brush: Brush
 readonly tools: Toolset
 readonly uv: UVMap
 readonly viewport: DefaultViewport
 ```
+
+### `document`
+
+The buffer, UV map and history behind the canvas, plus the `changed` / `resized` / `replaced` events forwarded from [`CanvasBuffer`](./buffer/CanvasBuffer.md). Subscribe here — not to `onDrawEnd` — to mirror the texture elsewhere, such as onto a Three.js material:
+
+```ts
+canvas.document.on("changed", ({ bounds }) => texture.markDirty(bounds));
+canvas.document.on("replaced", () => {
+  texture.image = canvas.textureCanvas();
+});
+```
+
+`changed` fires for remote peer strokes as well as local ones; `onDrawEnd` and the buffer hooks do not.
 
 ### `brush`
 

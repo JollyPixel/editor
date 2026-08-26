@@ -10,7 +10,9 @@ import type {
 import {
   defaultPadding,
   padAtlas,
-  tileUVRegion
+  padAtlasRegion,
+  tileUVRegion,
+  type AtlasRegion
 } from "./atlasLayout.ts";
 import type { BlockDefinition } from "../blocks/BlockDefinition.ts";
 
@@ -22,8 +24,7 @@ export type {
 
 export interface TilesetManagerOptions {
   /**
-   * Edge-replicated gutter, in texels, added around each tile when repacking.
-   * Set to 0 to render atlases unchanged.
+   * Edge-replicated gutter in texels; 0 disables repacking.
    * @default half the tile size, clamped to 2..8
    */
   padding?: number;
@@ -33,7 +34,7 @@ export interface TilesetDefaultBlockOptions {
   /**
    * Maximum block ID to generate (inclusive).
    * @default 255.
-   **/
+   */
   limit?: number;
   /**
    * Function to map block IDs to custom block definitions.
@@ -41,49 +42,48 @@ export interface TilesetDefaultBlockOptions {
   map?: (blockId: number, col: number, row: number) => Omit<BlockDefinition, "id">;
 }
 
-/** TilesetDefinition with cols and rows guaranteed (resolved from image dimensions when omitted). */
+/**
+ * Tileset definition with dimensions resolved from the image.
+ */
 export type ResolvedTilesetDefinition = TilesetDefinition & {
   cols: number;
   rows: number;
 };
 
-/** What an atlas can be backed by: the loaded image, or a repacked canvas. */
+/**
+ * Image or repacked canvas backing an atlas.
+ */
 export type TilesetImage = HTMLImageElement | HTMLCanvasElement;
 export type TilesetTexture = THREE.Texture<TilesetImage>;
 
 export interface TilesetEntry {
   def: ResolvedTilesetDefinition;
-  /** Atlas bound to materials, gutter-padded when `padding > 0`. */
+  /**
+   * Material atlas, padded when `padding > 0`.
+   */
   texture: TilesetTexture;
-  /** Atlas as registered by the caller, before padding. */
+  /**
+   * Original unpadded atlas.
+   */
   sourceTexture: TilesetTexture;
-  /** Effective gutter, in texels. 0 when the atlas is rendered as-is. */
+  /**
+   * Effective gutter in texels.
+   */
   padding: number;
   material: THREE.MeshLambertMaterial | null;
 }
 
 /**
- * Manages tileset textures and computes UV regions for each tile.
- *
- * Atlases can be repacked with a `padding`-texel gutter copied from tile
- * borders (see `padAtlas`). This makes MSAA UV overshoot sample the same tile,
- * not its neighbour. With `padding = 0`, UVs match the raw atlas.
- *
- * UV formula (Y-flipped for WebGL origin, half-texel inset after gutter,
- * `cell = tileSize + 2 * padding`):
- *   offsetU = (col * cell + padding) / imgW + 0.5 / imgW
- *   offsetV = 1 - ((row + 1) * cell - padding) / imgH + 0.5 / imgH
- *   scaleU  = (tileSize - 1) / imgW
- *   scaleV  = (tileSize - 1) / imgH
- *
- * A single shared THREE.Texture is kept per tileset, no per-tile cloning.
- * NearestFilter is used to preserve pixel-art crispness.
+ * Manages source and padded textures plus per-tile UV regions.
+ * Materials share one nearest-filtered texture per tileset.
  */
 export class TilesetManager {
   #tilesets = new Map<string, TilesetEntry>();
   #defaultTilesetId: string | null = null;
   #version = 0;
-  /** null selects `defaultPadding(tileSize)` per tileset. */
+  /**
+   * Null selects `defaultPadding(tileSize)`.
+   */
   #padding: number | null;
 
   constructor(
@@ -94,10 +94,6 @@ export class TilesetManager {
       Math.max(0, Math.trunc(options.padding));
   }
 
-  /**
-   * Loads a tileset image and registers it under the given definition ID.
-    * `loader` is optional; a new TextureLoader is created when omitted.
-   */
   async loadTileset(
     def: TilesetDefinition,
     loader?: THREE.TextureLoader
@@ -108,10 +104,6 @@ export class TilesetManager {
     this.registerTexture(def, texture);
   }
 
-  /**
-   * Registers a tileset from an already-loaded THREE.Texture.
-    * Useful for tests or externally loaded textures.
-   */
   registerTexture(
     def: TilesetDefinition,
     texture: THREE.Texture<HTMLImageElement>
@@ -147,11 +139,8 @@ export class TilesetManager {
   }
 
   /**
-    * Replaces a tileset source image (for example, after editor write-back) and
-    * re-pads it. The image must keep the registered atlas dimensions.
-   *
-    * Both textures are updated in place because materials keep a reference to
-    * the render texture.
+   * Replaces and repads a source without changing texture references.
+   * The new image must preserve the registered dimensions.
    */
   updateSourceImage(
     image: TilesetImage,
@@ -172,9 +161,43 @@ export class TilesetManager {
   }
 
   /**
-    * Repacked atlas with per-tile gutter, or null when padding is disabled or
-    * rasterization is unavailable.
+   * Repads touched tiles, falling back to a full repad when required.
+   * `bounds` uses source-atlas texels.
    */
+  updateSourceRegion(
+    image: TilesetImage,
+    bounds: AtlasRegion,
+    tilesetId = this.#defaultTilesetId
+  ): void {
+    const entry = tilesetId === null ? undefined : this.#tilesets.get(tilesetId);
+    if (!entry) {
+      return;
+    }
+
+    entry.sourceTexture.image = image;
+    entry.sourceTexture.needsUpdate = true;
+
+    if (entry.texture === entry.sourceTexture) {
+      return;
+    }
+
+    const padded = entry.texture.image;
+    if (typeof HTMLCanvasElement === "undefined" || !(padded instanceof HTMLCanvasElement)) {
+      entry.texture.image = this.#padTiles(entry.def, image) ?? image;
+      entry.texture.needsUpdate = true;
+
+      return;
+    }
+
+    padAtlasRegion(padded, image, {
+      cols: entry.def.cols,
+      rows: entry.def.rows,
+      tileSize: entry.def.tileSize,
+      padding: entry.padding
+    }, bounds);
+    entry.texture.needsUpdate = true;
+  }
+
   #padTiles(
     def: ResolvedTilesetDefinition,
     image: TilesetImage
@@ -194,17 +217,12 @@ export class TilesetManager {
   }
 
   /**
-    * Incremented when tilesets change, invalidating precomputed UV regions.
-    * See `BlockRegistry.version`.
+   * Changes with tilesets, invalidating cached UV regions.
    */
   get version(): number {
     return this.#version;
   }
 
-  /**
-   * Computes the atlas UV region for the tile at (col, row) in a given tileset.
-    * If `tilesetId` is omitted, the first registered tileset is used.
-   */
   getTileUV(
     ref: TileRef
   ): TilesetUVRegion {
@@ -228,11 +246,6 @@ export class TilesetManager {
     });
   }
 
-  /**
-    * Returns the shared THREE.Texture bound to materials.
-    * When padding is enabled, this is the gutter-padded atlas.
-    * Always matches `getTileUV()`.
-   **/
   getTexture(
     tilesetId?: string
   ): THREE.Texture | undefined {
@@ -244,11 +257,9 @@ export class TilesetManager {
   }
 
   /**
-    * Returns the atlas as registered, before padding.
-    * Editing tools should read/write this texture, then call
-    * `updateSourceImage()`. Its pixel grid is the one
-    * `TilesetDefinition.tileSize` describes.
-   **/
+   * Returns the unpadded texture for editing.
+   * After edits, call `updateSourceImage`; `tileSize` describes this grid.
+   */
   getSourceTexture(
     tilesetId?: string
   ): THREE.Texture | undefined {
@@ -320,7 +331,6 @@ export class TilesetManager {
   dispose(): void {
     for (const entry of this.#tilesets.values()) {
       entry.texture.dispose();
-      // Same object when padding is off; dispose() is idempotent otherwise.
       entry.sourceTexture.dispose();
       entry.material?.dispose();
     }

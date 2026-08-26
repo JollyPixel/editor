@@ -17,7 +17,7 @@ import {
 
 export interface RegionPreviewFactoryOptions {
   world: Systems.World;
-  canvasTexture: THREE.CanvasTexture;
+  canvasTexture: THREE.Texture;
 }
 
 export interface RegionPreviewFactoryContract {
@@ -28,7 +28,7 @@ export interface RegionPreviewFactoryContract {
 export class RegionPreviewFactory implements RegionPreviewFactoryContract {
   readonly #actors = new WeakMap<RegionPreview, Actor>();
   #world: Systems.World;
-  #canvasTexture: THREE.CanvasTexture;
+  #canvasTexture: THREE.Texture;
 
   constructor(
     options: RegionPreviewFactoryOptions

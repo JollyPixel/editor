@@ -18,6 +18,12 @@ export {
   type Mode
 } from "./PixelArtCanvas.ts";
 export {
+  PixelDocument,
+  type PixelDocumentEvent,
+  type PixelDocumentOptions
+} from "./PixelDocument.ts";
+export type { CanvasBufferEvent } from "./buffer/CanvasBuffer.ts";
+export {
   PixelBuffer,
   type PixelBufferOptions
 } from "./buffer/PixelBuffer.ts";
@@ -106,10 +112,8 @@ export {
   type UVTriangleCorner
 } from "./uv/UVRegion.ts";
 export { UVRegionCollection } from "./uv/UVRegionCollection.ts";
-// PixelSyncServer is deliberately not re-exported here: it value-imports
-// @jolly-pixel/network's server root (worker_threads and friends), and this
-// barrel is consumed by browser bundles. Import it from
-// "@jolly-pixel/pixel-draw.renderer/network/index.ts" instead.
+// PixelSyncServer pulls worker_threads through the network server barrel.
+// Use the network subpath to keep browser bundles clean.
 export type {
   PixelBufferSnapshot,
   PixelNetworkCommand,

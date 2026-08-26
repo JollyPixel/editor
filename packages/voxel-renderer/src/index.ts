@@ -1,4 +1,4 @@
-// VoxelEngine — engine-agnostic core (no @jolly-pixel/engine dependency)
+// VoxelEngine
 export {
   VoxelEngine,
   VoxelRotation,
@@ -9,14 +9,14 @@ export {
   type VoxelLogger
 } from "./VoxelEngine.ts";
 
-// VoxelRenderer — ActorComponent wrapper around VoxelEngine
+// VoxelRenderer
 export {
   VoxelRenderer,
   type VoxelRendererOptions
 } from "./VoxelRenderer.ts";
 export * from "./hooks.ts";
 
-// Debug — mesh statistics and wireframe visualization
+// Debug
 export {
   VoxelDebugger,
   type VoxelDebugMode,
@@ -52,7 +52,7 @@ export type {
   FaceDefinition
 } from "./blocks/BlockShape.ts";
 
-// Collision — physics-agnostic contract.
+// Collision
 export {
   mergeChunkGeometries,
   type VoxelCollider,
@@ -86,6 +86,7 @@ export {
   type TilesetEntry
 } from "./tileset/TilesetLoader.ts";
 export { enableTileWrapping } from "./tileset/tileWrapping.ts";
+export type { AtlasRegion } from "./tileset/atlasLayout.ts";
 
 // World
 export {

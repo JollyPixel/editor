@@ -79,12 +79,12 @@ export type { HistoryState };
 
 export interface PixelArtCanvasOptions {
   /**
-  * Initial interaction mode: `paint`, `move`, `fill`, or `select`.
-  * @default "paint"
+   * Initial interaction mode.
+   * @default "paint"
    */
   defaultMode?: Mode;
   /**
-  * Global event target for drag continuation, keyboard, and blur events.
+   * Target for drag continuation, keyboard, and blur events.
    * @default window
    */
   window?: WindowLike;
@@ -98,8 +98,7 @@ export interface PixelArtCanvasOptions {
     init?: HTMLCanvasElement;
   };
   /**
-   * Zoom default: if omitted, computed to fit the texture in the container.
-   * Pass an explicit `default` to opt out.
+   * Fits the texture when `zoom.default` is omitted.
    */
   zoom?: ZoomOptions;
   backgroundTransparency?: {
@@ -110,14 +109,13 @@ export interface PixelArtCanvasOptions {
   brush?: BrushOptions;
   select?: {
     /**
-     * Explicit fill for deleted pixels and vacated selection footprints.
-     * Omit to use the dominant neighbor color (transparent as fallback).
-     * @default dominant neighbor color, transparent as the ultimate fallback
+     * Fill for deleted pixels and vacated selections.
+     * @default dominant neighbor color, then transparent
      */
     eraseColor?: ByteColorInput;
   };
   /**
-   * Called after a local edit is committed to the master buffer.
+   * Called after a local edit commits to the master buffer.
    */
   onDrawEnd?: () => void;
   /**
@@ -125,7 +123,7 @@ export interface PixelArtCanvasOptions {
    */
   onBufferUpdated?: PixelBufferHookListener;
   /**
-   * History settings. If omitted, history is disabled.
+   * Omit to disable history.
    */
   history?: {
     enabled?: boolean;
@@ -136,7 +134,7 @@ export interface PixelArtCanvasOptions {
   };
   onHistoryChange?: (state: HistoryState) => void;
   /**
-   * Overrides OS clipboard access. `null` forces internal-only behavior.
+   * Clipboard override; null forces internal-only behavior.
    */
   clipboard?: ClipboardAdapter | null;
   onClipboardResult?: (result: ClipboardOperationResult) => void;
@@ -146,7 +144,6 @@ export interface PixelArtCanvasOptions {
 
 export class PixelArtCanvas {
   #parentHtmlElement: HTMLDivElement;
-  #doc: PixelDocument;
   #view: CanvasView;
   #input: InputController;
 
@@ -164,14 +161,14 @@ export class PixelArtCanvas {
     this.#tools.select.refreshOverlay();
   };
 
+  readonly document: PixelDocument;
   readonly brush: Brush;
   readonly viewport: DefaultViewport;
   readonly uv: UVMap;
   readonly tools: Toolset;
   readonly peerPresence: PeerPresence;
   /**
-   * Read-only subscription to the select tool's progress events.
-   * Consumed by SelectionGhostSync; nothing outside sync should emit on it.
+   * Read-only select progress events for SelectionGhostSync.
    */
   readonly selectionEvents: Pick<Emitter<SelectEngineEvent>, "on" | "off">;
 
@@ -191,7 +188,7 @@ export class PixelArtCanvas {
       ? { x: options.texture.size.x, y: options.texture.size.y ?? options.texture.size.x }
       : { x: 64, y: 32 };
 
-    this.#doc = new PixelDocument({
+    this.document = new PixelDocument({
       size: textureSize,
       defaultColor: options.texture?.defaultColor,
       maxSize: options.texture?.maxSize,
@@ -202,7 +199,7 @@ export class PixelArtCanvas {
         onChange: options.onHistoryChange
       }
     });
-    this.uv = this.#doc.uv;
+    this.uv = this.document.uv;
 
     this.brush = new Brush(options.brush);
 
@@ -221,7 +218,7 @@ export class PixelArtCanvas {
       }
     };
 
-    this.#view = new CanvasView(this.#doc, {
+    this.#view = new CanvasView(this.document, {
       parent: parentHtmlElement,
       zoom: options.zoom,
       background: options.backgroundColor,
@@ -234,23 +231,23 @@ export class PixelArtCanvas {
 
     this.#edits = new EditPipeline({
       brush: this.brush,
-      canvasBuffer: this.#doc.buffer,
+      canvasBuffer: this.document.buffer,
       viewport: this.#view.viewport,
       renderer: this.#view.renderer,
-      history: this.#doc.history,
-      uvMap: this.#doc.uv,
+      history: this.document.history,
+      uvMap: this.document.uv,
       onBufferUpdated: options.onBufferUpdated,
       onDrawEnd: options.onDrawEnd
     });
 
     this.#tools = new Tools({
       brush: this.brush,
-      canvasBuffer: this.#doc.buffer,
+      canvasBuffer: this.document.buffer,
       renderer: this.#view.renderer,
       linePreview: this.#view.overlays.linePreview,
       selectionOverlay: this.#view.overlays.selection,
       eraseColor,
-      uvMap: this.#doc.uv,
+      uvMap: this.document.uv,
       uvOverlay: this.#view.overlays.uvOverlay,
       pipeline: this.#edits,
       onProgress: (pixels) => this.#onStrokeProgress?.(pixels)
@@ -298,7 +295,6 @@ export class PixelArtCanvas {
       window: options.window,
       actions: this.#router,
       keybindings: options.keybindings,
-      // In "move" mode a plain left-drag pans.
       shouldPanOnPrimary: () => this.#router.mode === "move",
       onCtrlWheel: (delta) => {
         if (this.#router.mode !== "paint" || delta === 0) {
@@ -354,7 +350,7 @@ export class PixelArtCanvas {
   }
 
   get textureSize(): Vec2 {
-    return this.#doc.buffer.size();
+    return this.document.buffer.size();
   }
 
   set textureSize(
@@ -374,7 +370,7 @@ export class PixelArtCanvas {
   }
 
   get maxTextureSize(): number {
-    return this.#doc.buffer.maxSize;
+    return this.document.buffer.maxSize;
   }
 
   get camera(): Vec2 {
@@ -403,18 +399,18 @@ export class PixelArtCanvas {
       return;
     }
 
-    // view.resize() resizes the viewport last; its "changed" signal repaints.
+    // Viewport resize runs last and emits the repaint.
     this.#view.resize(bounds.width, bounds.height);
   }
 
   textureCanvas(): HTMLCanvasElement {
-    return this.#doc.buffer.canvas();
+    return this.document.buffer.canvas();
   }
 
   hasTransparency(
     rect: SelectionRect
   ): boolean {
-    return this.#doc.buffer.hasTransparency(rect);
+    return this.document.buffer.hasTransparency(rect);
   }
 
   canvas(): HTMLCanvasElement {
@@ -435,7 +431,7 @@ export class PixelArtCanvas {
   }
 
   get texture(): Uint8ClampedArray {
-    return this.#doc.buffer.pixels();
+    return this.document.buffer.pixels();
   }
 
   commitPixels(
@@ -447,7 +443,7 @@ export class PixelArtCanvas {
 
   undo(): boolean {
     const previousSize = this.textureSize;
-    const entry = this.#edits.runHistoryReplay(() => this.#doc.history.undo());
+    const entry = this.#edits.runHistoryReplay(() => this.document.history.undo());
     if (!entry) {
       return false;
     }
@@ -475,7 +471,7 @@ export class PixelArtCanvas {
 
   redo(): boolean {
     const previousSize = this.textureSize;
-    const entry = this.#edits.runHistoryReplay(() => this.#doc.history.redo());
+    const entry = this.#edits.runHistoryReplay(() => this.document.history.redo());
     if (!entry) {
       return false;
     }
@@ -505,11 +501,11 @@ export class PixelArtCanvas {
   }
 
   canUndo(): boolean {
-    return this.#doc.history.canUndo;
+    return this.document.history.canUndo;
   }
 
   canRedo(): boolean {
-    return this.#doc.history.canRedo;
+    return this.document.history.canRedo;
   }
 
   get onBufferUpdated(): PixelBufferHookListener | undefined {
@@ -526,9 +522,6 @@ export class PixelArtCanvas {
     return this.#router.onExternalCursorMove;
   }
 
-  /**
-   * Reports bounded texture positions, or `null` outside the texture.
-   */
   set onCursorMove(
     fn: ExternalCursorMoveListener | undefined
   ) {
@@ -539,9 +532,6 @@ export class PixelArtCanvas {
     return this.#onStrokeProgress;
   }
 
-  /**
-   * Reports live brush and line pixels before commit.
-   */
   set onStrokeProgress(
     fn: ((pixels: PeerStrokePixel[]) => void) | undefined
   ) {
@@ -596,11 +586,6 @@ export class PixelArtCanvas {
     }
   }
 
-  /**
-   * Pastes as a floating selection centred on the cursor, or on the visible
-   * view when the pointer is off the texture. The selection stays movable
-   * until it is deselected, which deposits it.
-   */
   async pasteClipboard(): Promise<ClipboardOperationResult> {
     if (this.#clipboardPending) {
       return this.#reportClipboardResult({
@@ -628,8 +613,7 @@ export class PixelArtCanvas {
   }
 
   /**
-   * Placement belongs here rather than in the clipboard: only the canvas knows
-   * the cursor, the camera, and the texture bounds.
+   * Placement needs the canvas cursor, camera, and texture bounds.
    */
   #floatPastedSelection(
     selection: DecodedSelection,
@@ -659,8 +643,7 @@ export class PixelArtCanvas {
       return result;
     }
 
-    // Never leave a half-applied selection behind: the overlay and the select
-    // state would disagree, and the toolbar would never learn one exists.
+    // Restore state after a partial selection import.
     this.#tools.select.discard();
     this.mode = previousMode;
 
@@ -697,7 +680,7 @@ export class PixelArtCanvas {
 
   #refreshAfterHistoryApply(): void {
     this.#view.viewport.texture.resize(
-      this.#doc.buffer.size()
+      this.document.buffer.size()
     );
     this.#view.drawFrame();
   }

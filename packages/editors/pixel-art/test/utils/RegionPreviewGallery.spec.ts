@@ -6,8 +6,6 @@ import assert from "node:assert/strict";
 import * as THREE from "three";
 import {
   UVMap,
-  type UVFace,
-  type UVGeometry,
   type UVRegion,
   type Vec2
 } from "@jolly-pixel/pixel-draw.renderer";
@@ -21,23 +19,20 @@ class FakePreview implements RegionPreview {
   readonly mesh = new THREE.Mesh();
   readonly rotation = new THREE.Euler();
   readonly targetPositions: THREE.Vector3[] = [];
+  readonly followed: UVMap[] = [];
+  readonly textureSizes: Vec2[] = [];
   selected = false;
-  regionApplyCount = 0;
-  faceApplyCount = 0;
 
-  applyRegion(
-    _region: UVRegion,
-    _textureSize: Vec2
+  follow(
+    uv: UVMap
   ): void {
-    this.regionApplyCount++;
+    this.followed.push(uv);
   }
 
-  applyFace(
-    _face: UVFace | null,
-    _geometry: UVGeometry,
-    _textureSize: Vec2
+  setTextureSize(
+    size: Vec2
   ): void {
-    this.faceApplyCount++;
+    this.textureSizes.push(size);
   }
 
   setTargetPosition(
@@ -121,12 +116,45 @@ describe("RegionPreviewGallery", () => {
     assert.strictEqual(factory.previews[0].selected, false);
     assert.strictEqual(factory.previews[1].selected, true);
 
-    uv.move("second", { x: 8, y: 8, width: 16, height: 16 });
-    assert.strictEqual(factory.previews[1].faceApplyCount, 1);
-
     uv.delete("first");
     assert.deepStrictEqual(factory.destroyed, [factory.previews[0]]);
     assert.strictEqual(gallery.meshes.length, 1);
+  });
+
+  test("hands region tracking to each preview", () => {
+    const uv = createUv();
+    const factory = new FakePreviewFactory();
+    new RegionPreviewGallery({
+      previewFactory: factory,
+      canvasManager: {
+        uv,
+        textureSize: { x: 64, y: 64 }
+      }
+    });
+
+    uv.create({ id: "first", width: 16, height: 16 });
+
+    assert.deepStrictEqual(factory.previews[0].followed, [uv]);
+  });
+
+  test("refreshTextureSize pushes the current size to every preview", () => {
+    const uv = createUv();
+    const factory = new FakePreviewFactory();
+    const gallery = new RegionPreviewGallery({
+      previewFactory: factory,
+      canvasManager: {
+        uv,
+        textureSize: { x: 32, y: 16 }
+      }
+    });
+
+    uv.create({ id: "first", width: 16, height: 16 });
+    gallery.refreshTextureSize();
+
+    assert.deepStrictEqual(
+      factory.previews[0].textureSizes,
+      [{ x: 32, y: 16 }]
+    );
   });
 
   test("disposes previews and detaches listeners once", () => {

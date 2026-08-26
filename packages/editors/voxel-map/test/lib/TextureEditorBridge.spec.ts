@@ -10,12 +10,14 @@ import {
   type BlockDefinition
 } from "@jolly-pixel/voxel.renderer";
 import type {
+  CanvasBufferEvent,
   PixelArtCanvas,
   PixelNetworkCommand,
   PixelServerMessage,
   SelectionRect
 } from "@jolly-pixel/pixel-draw.renderer";
 import type * as network from "@jolly-pixel/network";
+import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import { TextureEditorBridge } from "../../src/lib/TextureEditorBridge.ts";
@@ -49,15 +51,24 @@ function makeFakeVoxelRenderer(
   vr: VoxelRenderer;
   dirtyReasons: string[];
   updatedTilesets: string[];
+  updatedRegions: SelectionRect[];
 } {
   const dirtyReasons: string[] = [];
   const updatedTilesets: string[] = [];
+  const updatedRegions: SelectionRect[] = [];
   const tilesetManager = {
     getSourceTexture: () => {
       return { image };
     },
     updateSourceImage: (_image: object, id: string) => {
       updatedTilesets.push(id);
+    },
+    updateSourceRegion: (
+      _image: object,
+      bounds: SelectionRect,
+      _id: string
+    ) => {
+      updatedRegions.push(bounds);
     },
     getDefinitions: () => definitions
   };
@@ -74,19 +85,45 @@ function makeFakeVoxelRenderer(
   return {
     vr: fake as unknown as VoxelRenderer,
     dirtyReasons,
-    updatedTilesets
+    updatedTilesets,
+    updatedRegions
   };
 }
 
+/**
+ * Drains the bridge's frame loop on demand: it schedules through the injected
+ * scheduler, so a test decides when a frame happens.
+ */
+function makeScheduler() {
+  const queue: (() => void)[] = [];
+
+  return {
+    schedule: (callback: () => void) => {
+      queue.push(callback);
+    },
+    /** Runs one frame; the callback reschedules itself for the next. */
+    frame() {
+      const next = queue.shift();
+      next?.();
+    }
+  };
+}
+
+type FakeManager = PixelArtCanvas & {
+  document: Emitter<CanvasBufferEvent>;
+};
+
 function makeFakeManager(
   hasTransparency: (rect: SelectionRect) => boolean
-): PixelArtCanvas {
+): FakeManager {
   const fakeCanvas = { toDataURL: () => "data:image/png;base64," } as unknown as HTMLCanvasElement;
 
   return {
+    document: new Emitter<CanvasBufferEvent>(),
+    textureSize: { x: 64, y: 64 },
     textureCanvas: () => fakeCanvas,
     hasTransparency
-  } as unknown as PixelArtCanvas;
+  } as unknown as FakeManager;
 }
 
 describe("TextureEditorBridge / transparency auto-sync", () => {
@@ -101,7 +138,7 @@ describe("TextureEditorBridge / transparency auto-sync", () => {
       defaultTexture: { tilesetId: "atlas", col: 1, row: 0 }
     }));
 
-    const bridge = new TextureEditorBridge();
+    const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
     bridge.attach(makeFakeManager((rect) => rect.x === 0));
     bridge.loadTileset(vr, "atlas");
 
@@ -120,7 +157,7 @@ describe("TextureEditorBridge / transparency auto-sync", () => {
       defaultTexture: { tilesetId: "atlas", col: 0, row: 0 }
     }));
 
-    const bridge = new TextureEditorBridge();
+    const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
     bridge.attach(makeFakeManager(() => true));
     bridge.loadTileset(vr, "atlas");
 
@@ -139,7 +176,7 @@ describe("TextureEditorBridge / transparency auto-sync", () => {
       defaultTexture: { tilesetId: "atlas", col: 0, row: 0 }
     }));
 
-    const bridge = new TextureEditorBridge();
+    const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
     bridge.attach(makeFakeManager(() => false));
     bridge.loadTileset(vr, "atlas");
 
@@ -158,7 +195,7 @@ describe("TextureEditorBridge / transparency auto-sync", () => {
       faceTextures: { [Face.PosY]: { tilesetId: "atlas", col: 2, row: 0 } }
     }));
 
-    const bridge = new TextureEditorBridge();
+    const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
     bridge.attach(makeFakeManager((rect) => rect.x === 32));
     bridge.loadTileset(vr, "atlas");
 
@@ -178,6 +215,8 @@ function makeSizingManager(
 
   const manager = {
     maxTextureSize,
+    document: new Emitter<CanvasBufferEvent>(),
+    textureSize: { x: 64, y: 64 },
     get assigned() {
       return assigned;
     },
@@ -226,7 +265,7 @@ describe("TextureEditorBridge / oversized textures", () => {
     const { vr } = makeFakeVoxelRenderer(makeImage(1024, 512));
     const manager = makeSizingManager(2048);
 
-    const bridge = new TextureEditorBridge();
+    const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
     bridge.attach(manager);
 
     const logged = captureErrors(() => bridge.loadTileset(vr, "atlas"));
@@ -240,7 +279,7 @@ describe("TextureEditorBridge / oversized textures", () => {
     const { vr } = makeFakeVoxelRenderer(makeImage(1024, 512));
     const manager = makeSizingManager(512);
 
-    const bridge = new TextureEditorBridge();
+    const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
     bridge.attach(manager);
 
     const logged = captureErrors(() => bridge.loadTileset(vr, "atlas"));
@@ -262,46 +301,141 @@ describe("TextureEditorBridge / room startup", () => {
       leave: () => void 0,
       send: () => void 0
     } as unknown as network.Room<PixelNetworkCommand, PixelServerMessage>;
-    const bridge = new TextureEditorBridge();
+    const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
 
     bridge.attach(makeFakeManager(() => false), room);
 
     assert.deepEqual(calls, ["subscribe", "join"]);
     bridge.destroy();
   });
+});
 
-  it("pushes a room snapshot back to the Three.js tileset", () => {
-    let onMessage: ((message: unknown) => void) | undefined;
-    const room = {
-      clientId: "local",
-      on: (_event: string, listener: (message: unknown) => void) => {
-        onMessage = listener;
-      },
-      off: () => void 0,
-      join: () => void 0,
-      leave: () => void 0,
-      send: () => void 0
-    } as unknown as network.Room<PixelNetworkCommand, PixelServerMessage>;
-    const { vr, updatedTilesets } = makeFakeVoxelRenderer();
-    const manager = makeFakeManager(() => false) as PixelArtCanvas & {
-      loadSnapshot: () => void;
-    };
-    manager.loadSnapshot = () => void 0;
+describe("TextureEditorBridge / streaming to the tileset", () => {
+  it("repads only the tiles a stroke touched, once per frame", () => {
+    const scheduler = makeScheduler();
+    const { vr, updatedRegions, updatedTilesets } = makeFakeVoxelRenderer();
+    const manager = makeFakeManager(() => false);
 
-    const bridge = new TextureEditorBridge();
-    bridge.attach(manager, room);
+    const bridge = new TextureEditorBridge({ scheduler: scheduler.schedule });
+    bridge.attach(manager);
+    bridge.loadTileset(vr, "atlas");
+    updatedTilesets.length = 0;
+
+    manager.document.emit("changed", {
+      bounds: { x: 2, y: 2, width: 2, height: 2 }
+    });
+    manager.document.emit("changed", {
+      bounds: { x: 8, y: 8, width: 2, height: 2 }
+    });
+    scheduler.frame();
+
+    assert.deepEqual(
+      updatedRegions,
+      [{ x: 2, y: 2, width: 8, height: 8 }],
+      "one union of the frame's dirty bounds, not one call per pixel"
+    );
+    assert.deepEqual(
+      updatedTilesets,
+      [],
+      "the whole atlas must not be repadded for a stroke"
+    );
+    bridge.destroy();
+  });
+
+  it("does nothing on a frame with no edits", () => {
+    const scheduler = makeScheduler();
+    const { vr, updatedRegions } = makeFakeVoxelRenderer();
+
+    const bridge = new TextureEditorBridge({ scheduler: scheduler.schedule });
+    bridge.attach(makeFakeManager(() => false));
     bridge.loadTileset(vr, "atlas");
 
-    onMessage!({
-      type: "snapshot",
-      data: {
-        size: { x: 4, y: 4 },
-        pixels: "",
-        uvRegions: []
-      }
-    });
+    scheduler.frame();
+    scheduler.frame();
+
+    assert.deepEqual(updatedRegions, []);
+    bridge.destroy();
+  });
+
+  it("falls back to a full repad after the texture is replaced", () => {
+    const scheduler = makeScheduler();
+    const { vr, updatedRegions, updatedTilesets } = makeFakeVoxelRenderer();
+    const manager = makeFakeManager(() => false);
+
+    const bridge = new TextureEditorBridge({ scheduler: scheduler.schedule });
+    bridge.attach(manager);
+    bridge.loadTileset(vr, "atlas");
+    updatedTilesets.length = 0;
+
+    // What a room snapshot lands as: CanvasBuffer.loadTexture swaps the
+    // element, so the padded atlas has to be rebuilt whole.
+    manager.document.emit("replaced", { size: { x: 64, y: 64 } });
+    scheduler.frame();
 
     assert.deepEqual(updatedTilesets, ["atlas"]);
+    assert.deepEqual(updatedRegions, []);
+
+    // The incremental path resumes on the next stroke.
+    manager.document.emit("changed", {
+      bounds: { x: 0, y: 0, width: 2, height: 2 }
+    });
+    scheduler.frame();
+
+    assert.deepEqual(updatedRegions, [{ x: 0, y: 0, width: 2, height: 2 }]);
+    bridge.destroy();
+  });
+
+  it("stops flushing once destroyed", () => {
+    const scheduler = makeScheduler();
+    const { vr, updatedRegions } = makeFakeVoxelRenderer();
+    const manager = makeFakeManager(() => false);
+
+    const bridge = new TextureEditorBridge({ scheduler: scheduler.schedule });
+    bridge.attach(manager);
+    bridge.loadTileset(vr, "atlas");
+    bridge.destroy();
+
+    manager.document.emit("changed", {
+      bounds: { x: 0, y: 0, width: 2, height: 2 }
+    });
+    scheduler.frame();
+
+    assert.deepEqual(updatedRegions, []);
+  });
+
+  it("rescans only the blocks whose tiles the edit touched", () => {
+    const scheduler = makeScheduler();
+    const { vr } = makeFakeVoxelRenderer();
+    // tileSize is 16: tile (0, 0) covers texels 0..15, tile (2, 2) 32..47.
+    vr.engine.blockRegistry.register(makeBlock(1, {
+      transparent: false,
+      defaultTexture: { tilesetId: "atlas", col: 0, row: 0 }
+    }));
+    vr.engine.blockRegistry.register(makeBlock(2, {
+      transparent: false,
+      defaultTexture: { tilesetId: "atlas", col: 2, row: 2 }
+    }));
+
+    let transparent = false;
+    const manager = makeFakeManager(() => transparent);
+    const bridge = new TextureEditorBridge({ scheduler: scheduler.schedule });
+    bridge.attach(manager);
+    bridge.loadTileset(vr, "atlas");
+
+    // Both blocks now read as opaque. Make every tile read transparent, but
+    // report an edit inside tile (0, 0) only.
+    transparent = true;
+    manager.document.emit("changed", {
+      bounds: { x: 4, y: 4, width: 2, height: 2 }
+    });
+    scheduler.frame();
+
+    assert.equal(vr.engine.blockRegistry.get(1)!.transparent, true);
+    assert.equal(
+      vr.engine.blockRegistry.get(2)!.transparent,
+      false,
+      "a block whose tile the stroke never reached must not be rescanned"
+    );
     bridge.destroy();
   });
 });
@@ -313,7 +447,7 @@ describe("TextureEditorBridge / derived transparency", () => {
       defaultTexture: { tilesetId: "atlas", col: 0, row: 0 }
     }));
 
-    const bridge = new TextureEditorBridge();
+    const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
     bridge.attach(makeFakeManager(() => true));
     bridge.loadTileset(vr, "atlas");
 
@@ -329,7 +463,7 @@ describe("TextureEditorBridge / derived transparency", () => {
       defaultTexture: { tilesetId: "atlas", col: 0, row: 0 }
     }));
 
-    const bridge = new TextureEditorBridge();
+    const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
     // Only the second column of the atlas holds alpha.
     bridge.attach(makeFakeManager((rect) => rect.x === 16));
     bridge.loadTileset(vr, "atlas");
@@ -347,7 +481,7 @@ describe("TextureEditorBridge / derived transparency", () => {
   it("derives it for a block registered after the tileset loaded", () => {
     const { vr } = makeFakeVoxelRenderer();
 
-    const bridge = new TextureEditorBridge();
+    const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
     bridge.attach(makeFakeManager(() => true));
     bridge.loadTileset(vr, "atlas");
 
@@ -365,7 +499,7 @@ describe("TextureEditorBridge / derived transparency", () => {
       defaultTexture: { tilesetId: "atlas", col: 0, row: 0 }
     }));
 
-    const bridge = new TextureEditorBridge();
+    const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
     bridge.attach(makeFakeManager(() => true));
     bridge.loadTileset(vr, "atlas");
 
@@ -379,7 +513,7 @@ describe("TextureEditorBridge / derived transparency", () => {
       defaultTexture: { tilesetId: "atlas", col: 0, row: 0 }
     }));
 
-    const bridge = new TextureEditorBridge();
+    const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
     bridge.attach(makeFakeManager(() => true));
     bridge.loadTileset(vr, "atlas");
     bridge.destroy();
