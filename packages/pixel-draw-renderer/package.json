@@ -50,7 +50,7 @@
     "@jolly-pixel/color": "1.0.0",
     "@jolly-pixel/network": "1.1.0",
     "@openally/emitt": "1.0.1",
-    "js-base64": "3.9.2"
+    "js-base64": "3.9.3"
   },
   "peerDependencies": {
     "@jolly-pixel/asset-server": "1.0.0",
