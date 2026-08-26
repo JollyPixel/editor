@@ -5,9 +5,10 @@ import {
   type ReactiveControllerHost
 } from "lit";
 import { ref, createRef, type Ref } from "lit/directives/ref.js";
-import type {
-  PixelArtCanvas,
-  HistoryState
+import {
+  decodeRasterCanvas,
+  type PixelArtCanvas,
+  type HistoryState
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -103,9 +104,9 @@ export class HistoryFileToolbarController implements ReactiveController {
     fileInput.click();
   }
 
-  #onImportFileSelected(
+  async #onImportFileSelected(
     event: Event
-  ): void {
+  ): Promise<void> {
     if (!isInputElement(event.target) || !this.#canvas) {
       return;
     }
@@ -116,14 +117,19 @@ export class HistoryFileToolbarController implements ReactiveController {
     }
 
     const canvas = this.#canvas;
-    const url = URL.createObjectURL(file);
-    const image = new Image();
-    image.onload = () => {
-      canvas.texture = image;
-      canvas.centerTexture();
-      URL.revokeObjectURL(url);
-    };
-    image.src = url;
+    let source: HTMLCanvasElement;
+    try {
+      source = await decodeRasterCanvas(file);
+    }
+    catch {
+      return;
+    }
+    if (this.#canvas !== canvas) {
+      return;
+    }
+
+    canvas.texture = source;
+    canvas.centerTexture();
   }
 
   render() {
@@ -177,7 +183,7 @@ export class HistoryFileToolbarController implements ReactiveController {
           class="file-input" part="file-input"
           type="file" accept="image/png,image/*"
           ${ref(this.#fileInputRef)}
-          @change=${(event: Event) => this.#onImportFileSelected(event)}
+          @change=${(event: Event) => void this.#onImportFileSelected(event)}
         >
       </div>
     `;

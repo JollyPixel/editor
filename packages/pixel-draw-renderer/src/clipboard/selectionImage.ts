@@ -12,8 +12,10 @@ import type {
 import {
   createCanvas2D
 } from "../rendering/Canvas2D.ts";
+import { decodePng } from "../image/decodePng.ts";
 
 // CONSTANTS
+const kPngType = "image/png";
 // Canvas backing stores hold premultiplied 8-bit RGBA, so drawImage cannot
 // round-trip low-alpha colors: rgba(200,100,50,3) premultiplies to (2,1,1,3)
 // and comes back as (170,85,85,3). WebCodecs hands us the file's own samples
@@ -238,13 +240,56 @@ function decodeWithImage(
 }
 
 /**
+ * Pure-JS PNG path for platforms without WebCodecs, where the canvas decoders
+ * are the only other option and premultiply. Returns null for other formats
+ * and for PNG features the decoder does not implement.
+ */
+async function decodeWithPng(
+  blob: Blob
+): Promise<DecodedRasterImage | null> {
+  if (blob.type !== kPngType) {
+    return null;
+  }
+
+  try {
+    const {
+      width,
+      height,
+      pixels
+    } = await decodePng(
+      new Uint8Array(await blob.arrayBuffer())
+    );
+
+    return {
+      width,
+      height,
+      pixels: imageDataToPixels(pixels)
+    };
+  }
+  catch {
+    return null;
+  }
+}
+
+/**
+ * The two lossless decoders, in order of preference. Null means every exact
+ * path declined and the caller must fall back to a canvas.
+ */
+async function decodeExact(
+  blob: Blob
+): Promise<DecodedRasterImage | null> {
+  return await decodeWithImageDecoder(blob) ??
+    await decodeWithPng(blob);
+}
+
+/**
  * Decodes to exact RGBA8, preferring WebCodecs so partial alpha and embedded
  * color profiles cannot alter the pixels.
  */
 export async function decodeRasterBlob(
   blob: Blob
 ): Promise<DecodedRasterImage> {
-  const decoded = await decodeWithImageDecoder(blob);
+  const decoded = await decodeExact(blob);
   if (decoded) {
     return decoded;
   }
@@ -273,7 +318,7 @@ async function decodeRasterToCanvas(
 export async function decodeRasterCanvas(
   blob: Blob
 ): Promise<HTMLCanvasElement> {
-  const decoded = await decodeWithImageDecoder(blob);
+  const decoded = await decodeExact(blob);
   if (!decoded) {
     return decodeRasterToCanvas(blob);
   }

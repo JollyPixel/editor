@@ -5,6 +5,8 @@ import {
   test
 } from "node:test";
 import assert from "node:assert/strict";
+import { Buffer } from "node:buffer";
+import { deflateSync } from "node:zlib";
 
 // Import Internal Dependencies
 import {
@@ -109,6 +111,42 @@ function installBitmapDecoder(
   });
 }
 
+function pngChunk(
+  type: string,
+  data: Buffer
+): Buffer {
+  const length = Buffer.alloc(4);
+  length.writeUInt32BE(data.length);
+
+  return Buffer.concat([
+    length,
+    Buffer.from(type, "ascii"),
+    data,
+    Buffer.alloc(4)
+  ]);
+}
+
+/**
+ * A real 2x1 truecolor-with-alpha PNG carrying `kFragilePixels`, so the
+ * pure-JS decoder has something valid to read.
+ */
+function fragilePngBlob(): Blob {
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(2, 0);
+  ihdr.writeUInt32BE(1, 4);
+  ihdr[8] = 8;
+  ihdr[9] = 6;
+
+  const payload = Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]),
+    pngChunk("IHDR", ihdr),
+    pngChunk("IDAT", deflateSync(Buffer.from([0, ...kFragilePixels]))),
+    pngChunk("IEND", Buffer.alloc(0))
+  ]);
+
+  return new Blob([payload], { type: "image/png" });
+}
+
 function clearDecoders(): void {
   Reflect.deleteProperty(globalThis, "ImageDecoder");
   Reflect.deleteProperty(globalThis, "createImageBitmap");
@@ -190,6 +228,38 @@ describe("selectionImage decoding", () => {
     await decodeRasterBlob(new Blob(["png"], { type: "image/png" }));
 
     assert.ok(received.options, "the canvas decoder ran");
+  });
+
+  test("decodes PNG losslessly without WebCodecs, skipping the canvas", async() => {
+    const received: { options?: ImageBitmapOptions; } = {};
+    installBitmapDecoder(received);
+
+    const image = await decodeRasterBlob(fragilePngBlob());
+
+    assert.deepStrictEqual(image, {
+      width: 2,
+      height: 1,
+      pixels: [
+        { r: 200, g: 100, b: 50, a: 3 },
+        { r: 0, g: 0, b: 0, a: 0 }
+      ]
+    });
+    assert.strictEqual(
+      received.options,
+      undefined,
+      "the canvas decoder never ran"
+    );
+  });
+
+  test("decodeRasterCanvas takes the same PNG path without WebCodecs", async() => {
+    installBitmapDecoder({});
+
+    const canvas = await decodeRasterCanvas(fragilePngBlob());
+
+    assert.deepStrictEqual(
+      [...canvasPixels(canvas)],
+      kFragilePixels
+    );
   });
 
   test("decodeRasterCanvas writes exact samples rather than compositing them", async() => {

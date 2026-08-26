@@ -2,10 +2,12 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import type {
-  TileRef,
-  TilesetDefinition,
-  TilesetUVRegion
+import {
+  resolveTilesetDefinition,
+  type ResolvedTilesetDefinition,
+  type TileRef,
+  type TilesetDefinition,
+  type TilesetUVRegion
 } from "./types.ts";
 import {
   defaultPadding,
@@ -17,6 +19,7 @@ import {
 import type { BlockDefinition } from "../blocks/BlockDefinition.ts";
 
 export type {
+  ResolvedTilesetDefinition,
   TileRef,
   TilesetDefinition,
   TilesetUVRegion
@@ -41,14 +44,6 @@ export interface TilesetDefaultBlockOptions {
    */
   map?: (blockId: number, col: number, row: number) => Omit<BlockDefinition, "id">;
 }
-
-/**
- * Tileset definition with dimensions resolved from the image.
- */
-export type ResolvedTilesetDefinition = TilesetDefinition & {
-  cols: number;
-  rows: number;
-};
 
 /**
  * Image or repacked canvas backing an atlas.
@@ -108,11 +103,7 @@ export class TilesetManager {
     def: TilesetDefinition,
     texture: THREE.Texture<HTMLImageElement>
   ): void {
-    const resolvedDef: ResolvedTilesetDefinition = {
-      ...def,
-      cols: def.cols ?? Math.floor(texture.image.width / def.tileSize),
-      rows: def.rows ?? Math.floor(texture.image.height / def.tileSize)
-    };
+    const resolvedDef = resolveTilesetDefinition(def, texture.image);
 
     const padded = this.#padTiles(resolvedDef, texture.image);
     const renderTexture: TilesetTexture = padded === null ?

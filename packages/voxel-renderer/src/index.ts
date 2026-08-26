@@ -78,8 +78,13 @@ export {
   type TilesetUVRegion,
   type TilesetImage,
   type TileRef,
-  type TilesetDefinition
+  type TilesetDefinition,
+  type ResolvedTilesetDefinition
 } from "./tileset/TilesetManager.ts";
+export {
+  resolveTilesetDefinition,
+  type AtlasSize
+} from "./tileset/types.ts";
 export {
   TilesetLoader,
   type TilesetLoaderOptions,

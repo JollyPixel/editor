@@ -6,12 +6,15 @@ import {
 
 // Import Internal Dependencies
 import { PixelBuffer } from "../buffer/PixelBuffer.ts";
+import { decodePng } from "../image/decodePng.ts";
 import type { UVRegionData } from "../uv/UVRegion.ts";
 import type { PixelBufferSnapshot } from "../network/types.ts";
 import type { Vec2 } from "../types.ts";
 
 // CONSTANTS
 const kDocumentVersion = 1;
+// Mirrors PixelBuffer's own ceiling, which the decoded image may exceed.
+const kDefaultMaxSize = 2048;
 
 /**
  * Serialized pixel-art state, including UV regions that PNG cannot store.
@@ -139,6 +142,37 @@ export function createPixelArtBuffer(
   size: Vec2
 ): PixelBuffer {
   return new PixelBuffer({ size });
+}
+
+export interface PixelArtBufferFromPngOptions {
+  /**
+   * Maximum buffer dimension.
+   * @default the image's own dimensions, or 2048 when it is smaller
+   */
+  maxSize?: number;
+}
+
+/**
+ * Fills a buffer with an image file's exact samples, sized to the image. UV
+ * regions stay empty, since PNG cannot carry them.
+ */
+export async function createPixelArtBufferFromPng(
+  data: Uint8Array,
+  options: PixelArtBufferFromPngOptions = {}
+): Promise<PixelBuffer> {
+  const { width, height, pixels } = await decodePng(data);
+  const size: Vec2 = {
+    x: width,
+    y: height
+  };
+
+  const buffer = new PixelBuffer({
+    size,
+    maxSize: options.maxSize ?? Math.max(width, height, kDefaultMaxSize)
+  });
+  buffer.replacePixels(pixels, size);
+
+  return buffer;
 }
 
 function isSize(
