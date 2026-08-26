@@ -64,7 +64,7 @@ export function registerAssetRooms(
     logger = silentLogger()
   } = options;
 
-  server.setRoomResolver((roomName): RoomResolution | null => {
+  server.setRoomResolver(async(roomName): Promise<RoomResolution | null> => {
     function refuse(
       reason: string,
       metadata: Record<string, unknown> = {}
@@ -102,7 +102,7 @@ export function registerAssetRooms(
       return refuse("unknown asset");
     }
 
-    const entry = states.acquire(assetId, kind);
+    const entry = await states.acquire(assetId, kind);
     const extension = handler.createExtension({
       assetId,
       kind,

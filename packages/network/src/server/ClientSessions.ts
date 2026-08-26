@@ -7,18 +7,23 @@ export interface ClientSession {
 }
 
 /**
- * Tracks joined rooms and serializes dispatch per client.
+ * Tracks joined rooms and serializes dispatch per client and lane.
  */
 export class ClientSessions {
   #sessions = new Map<string, ClientSession>();
-  #queues = new Map<string, Promise<void>>();
+  #queues = new Map<string, Map<string, Promise<void>>>();
 
   get size(): number {
     return this.#sessions.size;
   }
 
   get pending(): number {
-    return this.#queues.size;
+    let total = 0;
+    for (const lanes of this.#queues.values()) {
+      total += lanes.size;
+    }
+
+    return total;
   }
 
   open(
@@ -47,28 +52,50 @@ export class ClientSessions {
     this.#queues.clear();
   }
 
-  /**
-   * Runs a client's tasks in order, even after a prior task fails.
-   */
   enqueue(
     clientId: string,
-    task: () => Promise<void>
+    task: () => Promise<void>,
+    lane = ""
   ): Promise<void> {
-    const previous = this.#queues.get(
-      clientId
-    ) ?? Promise.resolve();
+    let lanes = this.#queues.get(clientId);
+    if (lanes === undefined) {
+      lanes = new Map();
+      this.#queues.set(clientId, lanes);
+    }
+
+    const previous = lanes.get(lane) ?? Promise.resolve();
     const next = previous.then(task, task);
 
     // Remove the tail only when no newer task has replaced it.
     const tail: Promise<void> = next
       .catch(() => void 0)
       .then(() => {
-        if (this.#queues.get(clientId) === tail) {
+        if (lanes.get(lane) !== tail) {
+          return;
+        }
+        lanes.delete(lane);
+        if (
+          lanes.size === 0 &&
+          this.#queues.get(clientId) === lanes
+        ) {
           this.#queues.delete(clientId);
         }
       });
-    this.#queues.set(clientId, tail);
+    lanes.set(lane, tail);
 
     return next;
+  }
+
+  async drain(
+    clientId: string
+  ): Promise<void> {
+    const lanes = this.#queues.get(clientId);
+    if (lanes === undefined) {
+      return;
+    }
+
+    await Promise.allSettled([
+      ...lanes.values()
+    ]);
   }
 }

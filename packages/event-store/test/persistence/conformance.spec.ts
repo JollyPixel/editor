@@ -166,6 +166,64 @@ for (const backend of backends) {
     });
   });
 
+  describe(`${backend.name} — lastVersionOf`, () => {
+    test("returns the version of the newest matching event", async() => {
+      using store = await backend.create();
+      append(store, "a1", {}, "asset.created");
+      append(store, "a1", {}, "pixelart.command");
+      append(store, "a1", {}, "asset.updated");
+      append(store, "a1", {}, "pixelart.command");
+
+      assert.strictEqual(
+        store.reader.lastVersionOf("a1", ["asset.created", "asset.updated"]),
+        3
+      );
+    });
+
+    test("matches any of the given types, not only the first", async() => {
+      using store = await backend.create();
+      append(store, "a1", {}, "asset.updated");
+      append(store, "a1", {}, "asset.deleted");
+
+      assert.strictEqual(
+        store.reader.lastVersionOf("a1", ["asset.updated", "asset.deleted"]),
+        2
+      );
+    });
+
+    test("returns 0 when the stream holds no matching event", async() => {
+      using store = await backend.create();
+      append(store, "a1", {}, "pixelart.command");
+
+      assert.strictEqual(
+        store.reader.lastVersionOf("a1", ["asset.updated"]),
+        0
+      );
+    });
+
+    test("returns 0 for an unknown asset and for an empty type list", async() => {
+      using store = await backend.create();
+      append(store, "a1", {}, "asset.updated");
+
+      assert.strictEqual(
+        store.reader.lastVersionOf("missing", ["asset.updated"]),
+        0
+      );
+      assert.strictEqual(store.reader.lastVersionOf("a1", []), 0);
+    });
+
+    test("ignores matching events on another asset stream", async() => {
+      using store = await backend.create();
+      append(store, "a2", {}, "asset.updated");
+      append(store, "a1", {}, "pixelart.command");
+
+      assert.strictEqual(
+        store.reader.lastVersionOf("a1", ["asset.updated"]),
+        0
+      );
+    });
+  });
+
   describe(`${backend.name} — listAll`, () => {
     test("returns append order across interleaved streams", async() => {
       using store = await backend.create();

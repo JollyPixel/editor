@@ -559,6 +559,16 @@ export class PixelArtCanvas {
     this.#tools.select.discard();
   }
 
+  /**
+   * Runs a synchronous state rebuild without history or network broadcast.
+   * The suppression scope ends when `fn` returns.
+   */
+  runLocalRestore<T>(
+    fn: () => T
+  ): T {
+    return this.#edits.runLocalRestore(fn);
+  }
+
   async copySelection(): Promise<ClipboardOperationResult> {
     if (this.#clipboardPending) {
       return this.#reportClipboardResult({

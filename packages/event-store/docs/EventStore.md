@@ -66,11 +66,18 @@ emitted with the error and original input after a failed write.
 
 ```ts
 reader.list(assetId: string, fromVersion?: number): Event[]
+reader.lastVersionOf(assetId: string, eventTypes: readonly string[]): number
 reader.listAll(options?: ListAllOptions): Event[]
 ```
 
 `list` returns one asset stream in `eventVersion` order and treats `fromVersion`
 as an exclusive lower bound.
+
+`lastVersionOf` returns the version of the newest event on `assetId` whose type
+is one of `eventTypes`, or `0` when the stream holds none. A reader that knows
+which types rebuild the whole state uses it to resume a fold from the last one
+instead of the head. The method returns only the version and does not clone the
+matching event. Lookup cost depends on the backend and its stored event count.
 
 `listAll` reads every stream in `eventId` order and accepts these filters:
 

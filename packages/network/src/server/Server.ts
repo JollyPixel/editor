@@ -153,22 +153,33 @@ export class Server {
       .debug("client connected");
   }
 
-  handleDisconnect(
+  async handleDisconnect(
     clientId: string
   ): Promise<void> {
-    return this.#sessions.enqueue(
-      clientId,
-      () => this.#processDisconnect(clientId)
-    );
+    await this.#sessions.drain(clientId);
+    await this.#processDisconnect(clientId);
   }
 
   handleMessage(
     clientId: string,
     raw: unknown
   ): Promise<void> {
+    const parsed = Envelope.parse(raw);
+    if (!parsed.ok) {
+      this.#logEnvelope({ clientId }, {
+        outcome: "dropped",
+        reason: `malformed envelope: ${parsed.val}`
+      });
+
+      return Promise.resolve();
+    }
+
+    const envelope = parsed.val;
+
     return this.#sessions.enqueue(
       clientId,
-      () => this.#processMessage(clientId, raw)
+      () => this.#processMessage(clientId, envelope),
+      envelope.room
     );
   }
 
@@ -201,19 +212,8 @@ export class Server {
 
   async #processMessage(
     clientId: string,
-    raw: unknown
+    envelope: Envelope
   ): Promise<void> {
-    const parsed = Envelope.parse(raw);
-    if (!parsed.ok) {
-      this.#logEnvelope({ clientId }, {
-        outcome: "dropped",
-        reason: `malformed envelope: ${parsed.val}`
-      });
-
-      return;
-    }
-
-    const envelope = parsed.val;
     const outcome = await this.#dispatcher.dispatch(clientId, envelope)
       .catch((error): DispatchOutcome => {
         return {

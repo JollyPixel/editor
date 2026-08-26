@@ -61,6 +61,18 @@ when the serialized bytes have the current content hash.
 `backend.flush(assetId?)`, room eviction and backend shutdown flush pending
 snapshots. See [Asset kinds](./AssetKinds.md#snapshot-policy) for cadence.
 
+## Replay
+
+```ts
+states.acquire(assetId: string, kind: string): Promise<AssetStateEntry>
+```
+
+Snapshots double as replay checkpoints. `acquire` folds only from the newest
+`asset.created`, `asset.updated` or `asset.deleted`, so replay cost tracks
+edits since the last snapshot rather than the whole history. The fold yields
+periodically, so a long stream cannot hold the event loop while other rooms
+resolve, and concurrent callers share one replay.
+
 ## Reconciliation
 
 ```ts

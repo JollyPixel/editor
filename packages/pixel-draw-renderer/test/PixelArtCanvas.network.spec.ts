@@ -485,3 +485,109 @@ describe("PixelArtCanvas — loadSnapshot", () => {
     manager.destroy();
   });
 });
+
+describe("PixelArtCanvas — runLocalRestore", () => {
+  let container: HTMLDivElement;
+
+  beforeEach(() => {
+    ({ container } = makeContainer());
+  });
+
+  test("suppresses the 'texture-replaced' broadcast while still replacing the texture", () => {
+    const events: PixelBufferHookEvent[] = [];
+    const manager = new PixelArtCanvas(container, {
+      texture: {
+        maxSize: 32,
+        size: { x: 4, y: 4 }
+      },
+      history: { enabled: true },
+      onBufferUpdated: (event) => events.push(event)
+    });
+
+    const externalCanvas = document.createElement("canvas");
+    externalCanvas.width = 8;
+    externalCanvas.height = 8;
+    manager.runLocalRestore(() => {
+      manager.texture = externalCanvas;
+    });
+
+    assert.strictEqual(events.length, 0);
+    assert.deepStrictEqual(
+      manager.textureSize,
+      { x: 8, y: 8 }
+    );
+    manager.destroy();
+  });
+
+  test("suppresses uv region broadcasts and records no history", () => {
+    const events: PixelBufferHookEvent[] = [];
+    const manager = new PixelArtCanvas(container, {
+      texture: {
+        maxSize: 32,
+        size: { x: 8, y: 8 }
+      },
+      history: { enabled: true },
+      onBufferUpdated: (event) => events.push(event)
+    });
+
+    manager.runLocalRestore(() => {
+      manager.uv.create({
+        width: 4,
+        height: 4
+      });
+    });
+
+    assert.strictEqual(events.length, 0);
+    assert.strictEqual([...manager.uv.regions].length, 1);
+    assert.ok(!manager.canUndo());
+    manager.destroy();
+  });
+
+  test("restores broadcasting after the scope, and on a throw", () => {
+    const events: PixelBufferHookEvent[] = [];
+    const manager = new PixelArtCanvas(container, {
+      texture: {
+        maxSize: 32,
+        size: { x: 8, y: 8 }
+      },
+      onBufferUpdated: (event) => events.push(event)
+    });
+
+    assert.throws(() => manager.runLocalRestore(() => {
+      throw new Error("boom");
+    }), /boom/);
+
+    manager.uv.create({
+      width: 4,
+      height: 4
+    });
+
+    assert.deepStrictEqual(
+      events.map((event) => event.action),
+      ["uv-region-created"]
+    );
+    manager.destroy();
+  });
+
+  test("a nested scope leaves the outer one intact", () => {
+    const events: PixelBufferHookEvent[] = [];
+    const manager = new PixelArtCanvas(container, {
+      texture: {
+        maxSize: 32,
+        size: { x: 8, y: 8 }
+      },
+      onBufferUpdated: (event) => events.push(event)
+    });
+
+    manager.runLocalRestore(() => {
+      manager.runLocalRestore(() => void 0);
+      manager.uv.create({
+        width: 4,
+        height: 4
+      });
+    });
+
+    assert.strictEqual(events.length, 0);
+    manager.destroy();
+  });
+});

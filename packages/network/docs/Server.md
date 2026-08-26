@@ -31,7 +31,7 @@ interface ServerOptions {
 - `logger` — a `loglayer` `ILogLayer` passed to every room.
 - `rights` — see [Rights](./Rights.md). One table for the whole server; there is no per-room override.
 
-Transport implementations call `handleConnect`, `handleDisconnect` and `handleMessage`. The message and disconnect handlers return `Promise<void>`. Envelopes from one client are always handled in arrival order.
+Transport implementations call `handleConnect`, `handleDisconnect` and `handleMessage`. The message and disconnect handlers return `Promise<void>`. Envelopes from one client are handled in arrival order per room, so a slow join on one room does not hold up a join on another; `handleDisconnect` waits for every room still in flight.
 
 ## Dynamic rooms
 
@@ -39,7 +39,11 @@ Transport implementations call `handleConnect`, `handleDisconnect` and `handleMe
 created at join time, such as one room per open document or match.
 
 ```ts
-server.setRoomResolver((roomName) => RoomResolution | null);
+type RoomResolver = (
+  roomName: string
+) => Promise<RoomResolution | null> | RoomResolution | null;
+
+server.setRoomResolver(resolver: RoomResolver | null);
 
 interface RoomResolution {
   extension: Extension;
@@ -49,8 +53,9 @@ interface RoomResolution {
 ```
 
 The resolver runs when a client joins an unknown room. Return `null` to reject
-the room name. Messages to unknown rooms are dropped without invoking the
-resolver.
+the room name, or return a promise when resolution needs asynchronous work. A
+thrown error or rejected promise is logged and rejects the join. Messages to
+unknown rooms are dropped without invoking the resolver.
 
 The requested room name identifies the resolved room and appears in outbound
 envelopes. It does not need to match `extension.id`.

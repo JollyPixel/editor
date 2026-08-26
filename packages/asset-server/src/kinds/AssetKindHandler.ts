@@ -53,8 +53,8 @@ export interface AssetKindHandler<TState = unknown> {
   ): TState;
 
   /**
-   * Applies one event to the state. Receives every event on the asset's
-   * stream, lifecycle and domain alike.
+   * Mutates state for one lifecycle or domain event. Lifecycle events reset
+   * the complete state in place.
    */
   apply(
     state: TState,

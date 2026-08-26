@@ -55,6 +55,18 @@ loadSnapshot(
 
 Replaces the texture and UV regions without broadcasting a command. It clears local history.
 
+### `runLocalRestore(fn)`
+
+```ts
+runLocalRestore<T>(fn: () => T): T
+```
+
+Runs `fn` with history and broadcast suppressed, then restores both. Use it when rebuilding state every peer derives on its own: a placeholder texture shown before the first snapshot, or UV regions recomputed from an application registry. A real edit must go through the ordinary tool and texture APIs so it reaches the room.
+
+The callback must finish synchronously. Suppression ends when `fn` returns, so
+work after an `await` is recorded and broadcast. Nesting is safe, and the scope
+is restored when `fn` throws.
+
 ## Presence callbacks
 
 ### `onCursorMove`

@@ -405,6 +405,23 @@ export class EditPipeline {
   }
 
   /**
+   * Suppresses history and network broadcast during a synchronous rebuild
+   * that every peer derives locally.
+   */
+  runLocalRestore<T>(
+    fn: () => T
+  ): T {
+    const wasApplyingRemote = this.#isApplyingRemote;
+    this.#isApplyingRemote = true;
+    try {
+      return fn();
+    }
+    finally {
+      this.#isApplyingRemote = wasApplyingRemote;
+    }
+  }
+
+  /**
    * Suppresses history recording, but not network broadcast, during replay.
    */
   runHistoryReplay<T>(
