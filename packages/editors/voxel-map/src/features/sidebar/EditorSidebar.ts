@@ -14,16 +14,16 @@ import {
   editorState,
   type LayerSelection,
   type SidebarTab
-} from "../EditorState.ts";
-import type { GridRenderer } from "../components/GridRenderer.ts";
+} from "../../EditorState.ts";
+import type { GridRenderer } from "../../components/GridRenderer.ts";
 
 // Registers child custom elements.
-import "./MapConfigPanel.ts";
-import "./LayerManager.ts";
-import "./LayerPanel.ts";
-import "./ObjectLayerPanel.ts";
-import "./BlockLibrary.ts";
-import "./TextureEditor.ts";
+import "../map-config/MapConfigPanel.ts";
+import "../layers/LayerManager.ts";
+import "../layers/LayerPanel.ts";
+import "../object-layers/ObjectLayerPanel.ts";
+import "../blocks/BlockLibrary.ts";
+import "../texture/TextureEditor.ts";
 
 @customElement("editor-sidebar")
 export class EditorSidebar extends LitElement {

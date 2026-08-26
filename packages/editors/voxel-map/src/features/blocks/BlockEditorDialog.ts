@@ -13,13 +13,13 @@ import type {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { applyBlockUpdate } from "../lib/applyBlockUpdate.ts";
-import { BLOCK_SHAPE_OPTIONS } from "../lib/blockShapes.ts";
+import { applyBlockUpdate } from "./applyBlockUpdate.ts";
+import { BLOCK_SHAPE_OPTIONS } from "./blockShapes.ts";
 import {
   createBlockDefinition,
   nextBlockId
-} from "../lib/blockDefaults.ts";
-import { editorState } from "../EditorState.ts";
+} from "./blockDefaults.ts";
+import { editorState } from "../../EditorState.ts";
 
 // CONSTANTS
 const kDefaultBlockName = "New Block";

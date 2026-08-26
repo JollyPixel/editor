@@ -16,8 +16,8 @@ import {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import { applyBlockUpdate } from "./applyBlockUpdate.ts";
-import { editorState } from "../EditorState.ts";
+import { applyBlockUpdate } from "../blocks/applyBlockUpdate.ts";
+import { editorState } from "../../EditorState.ts";
 
 // CONSTANTS
 const kRegionIdPrefix = "block-";

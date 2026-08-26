@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { Face, type BlockDefinition } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { findBlocksReferencingTileset } from "../../src/lib/blockTextureTiles.ts";
+import { findBlocksReferencingTileset } from "../../../src/features/texture/blockTextureTiles.ts";
 
 function makeBlock(
   id: number,

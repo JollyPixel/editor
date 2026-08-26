@@ -12,8 +12,8 @@ import {
 import { UVMap } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import { BlockUvBridge } from "../../src/lib/BlockUvBridge.ts";
-import { editorState } from "../../src/EditorState.ts";
+import { BlockUvBridge } from "../../../src/features/texture/BlockUvBridge.ts";
+import { editorState } from "../../../src/EditorState.ts";
 
 interface BlockTexturePlacement {
   col: number;

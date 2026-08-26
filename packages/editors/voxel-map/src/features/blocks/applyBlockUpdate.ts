@@ -5,7 +5,7 @@ import type {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { editorState } from "../EditorState.ts";
+import { editorState } from "../../EditorState.ts";
 
 export function applyBlockUpdates(
   vr: VoxelRenderer,

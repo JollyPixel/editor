@@ -3,10 +3,6 @@
 import { svg } from "lit";
 import { registerIcon } from "@jolly-pixel/ui";
 
-/**
- * Editor-owned glyphs, authored on the same 24px grid as the package
- * built-ins so `jolly-icon` can render them by name.
- */
 registerIcon("transform", svg`
   <path
     d="M14.8284 6.34313L16.2426 4.92892L12 0.686279L7.75735 4.92892L9.17156 6.34313L12 3.51471L14.8284 6.34313Z"

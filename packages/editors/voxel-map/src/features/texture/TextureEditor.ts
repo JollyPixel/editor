@@ -12,8 +12,8 @@ import { PixelDrawPanel } from "@jolly-pixel/editor.pixel-art";
 import type { JollyChangeDetail, JollyOption } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { TextureEditorBridge } from "../lib/TextureEditorBridge.ts";
-import { BlockUvBridge } from "../lib/BlockUvBridge.ts";
+import { TextureEditorBridge } from "./TextureEditorBridge.ts";
+import { BlockUvBridge } from "./BlockUvBridge.ts";
 
 // CONSTANTS
 const kCanvasHoverChangeEvent = "canvas-hover-change";

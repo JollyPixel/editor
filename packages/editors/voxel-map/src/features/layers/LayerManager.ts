@@ -10,7 +10,7 @@ import {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { editorState } from "../EditorState.ts";
+import { editorState } from "../../EditorState.ts";
 
 // CONSTANTS
 const kVoxelPrefix = "voxel:";

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 // Import Internal Dependencies
-import { parseVoxelWorld } from "../../src/lib/parseVoxelWorld.ts";
+import { parseVoxelWorld } from "../../../src/features/map-config/parseVoxelWorld.ts";
 
 describe("parseVoxelWorld", () => {
   it("returns a validated version-one world", () => {

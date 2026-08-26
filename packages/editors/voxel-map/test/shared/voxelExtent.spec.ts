@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 // Import Internal Dependencies
-import { normalizeVoxelExtent } from "../../src/lib/voxelExtent.ts";
+import { normalizeVoxelExtent } from "../../src/shared/voxelExtent.ts";
 
 describe("normalizeVoxelExtent", () => {
   it("rounds positive dimensions to whole voxels", () => {

@@ -17,9 +17,9 @@ import {
 } from "@jolly-pixel/editor.pixel-art/three/PixelCanvasTexture.ts";
 
 // Import Internal Dependencies
-import { applyBlockUpdates } from "./applyBlockUpdate.ts";
+import { applyBlockUpdates } from "../blocks/applyBlockUpdate.ts";
 import { findBlocksReferencingTileset } from "./blockTextureTiles.ts";
-import { editorState } from "../EditorState.ts";
+import { editorState } from "../../EditorState.ts";
 
 function rectsIntersect(
   a: SelectionRect,

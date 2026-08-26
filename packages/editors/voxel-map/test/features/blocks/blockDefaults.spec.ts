@@ -9,7 +9,7 @@ import type { BlockDefinition } from "@jolly-pixel/voxel.renderer";
 import {
   createBlockDefinition,
   nextBlockId
-} from "../../src/lib/blockDefaults.ts";
+} from "../../../src/features/blocks/blockDefaults.ts";
 
 function makeBlock(
   id: number

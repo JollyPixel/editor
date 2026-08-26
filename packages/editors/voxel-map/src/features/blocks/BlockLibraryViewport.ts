@@ -7,7 +7,7 @@ import type {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { BlockLibraryRenderer } from "../lib/BlockLibraryRenderer.ts";
+import { BlockLibraryRenderer } from "./BlockLibraryRenderer.ts";
 
 // CONSTANTS
 const kBlockSelectEvent = "block-select";

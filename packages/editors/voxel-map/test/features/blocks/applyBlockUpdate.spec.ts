@@ -13,8 +13,8 @@ import {
 import {
   applyBlockUpdate,
   applyBlockUpdates
-} from "../../src/lib/applyBlockUpdate.ts";
-import { editorState } from "../../src/EditorState.ts";
+} from "../../../src/features/blocks/applyBlockUpdate.ts";
+import { editorState } from "../../../src/EditorState.ts";
 
 function makeBlock(): BlockDefinition {
   return {

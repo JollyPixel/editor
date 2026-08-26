@@ -10,7 +10,7 @@ import type {
 
 // Import Internal Dependencies
 import { editorState } from "../EditorState.ts";
-import { normalizeVoxelExtent } from "../lib/voxelExtent.ts";
+import { normalizeVoxelExtent } from "../shared/voxelExtent.ts";
 import { TransformGizmoBase } from "./TransformGizmoBase.ts";
 import { ObjectLayerVisuals } from "./ObjectLayerVisuals.ts";
 

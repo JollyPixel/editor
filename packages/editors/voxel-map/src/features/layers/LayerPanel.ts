@@ -5,7 +5,7 @@ import type { VoxelRenderer, VoxelLayer, VoxelLayerHookEvent } from "@jolly-pixe
 import type { JollyChangeDetail, Vec3Like } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { editorState } from "../EditorState.ts";
+import { editorState } from "../../EditorState.ts";
 
 @customElement("layer-panel")
 export class LayerPanel extends LitElement {

@@ -20,8 +20,8 @@ import type * as network from "@jolly-pixel/network";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import { TextureEditorBridge } from "../../src/lib/TextureEditorBridge.ts";
-import { applyBlockUpdate } from "../../src/lib/applyBlockUpdate.ts";
+import { TextureEditorBridge } from "../../../src/features/texture/TextureEditorBridge.ts";
+import { applyBlockUpdate } from "../../../src/features/blocks/applyBlockUpdate.ts";
 
 function makeBlock(
   id: number,

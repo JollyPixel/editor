@@ -29,12 +29,12 @@ import "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { editorState } from "./EditorState.ts";
-import { EditorSidebar } from "./ui/EditorSidebar.ts";
-import { EditorScene } from "./scene/editor.ts";
-import { parseVoxelWorld } from "./lib/parseVoxelWorld.ts";
-import type { EventCanvasHoverChange } from "./ui/types.ts";
+import { EditorSidebar } from "./features/sidebar/EditorSidebar.ts";
+import { EditorScene } from "./scene/EditorScene.ts";
+import { parseVoxelWorld } from "./features/map-config/parseVoxelWorld.ts";
+import type { EventCanvasHoverChange } from "./shared/dom.types.ts";
 // Registers the editor's icon glyphs.
-import "./ui/icons.ts";
+import "./features/sidebar/icons.ts";
 
 // CONSTANTS
 /** Used offline, and when the shared document declares no tileset of its own. */

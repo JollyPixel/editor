@@ -17,7 +17,7 @@ import { BlockEditorDialog } from "./BlockEditorDialog.ts";
 import {
   editorState,
   type RotationMode
-} from "../EditorState.ts";
+} from "../../EditorState.ts";
 
 // Registers the Three.js block grid.
 import "./BlockLibraryViewport.ts";

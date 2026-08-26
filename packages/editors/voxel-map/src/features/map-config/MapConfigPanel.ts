@@ -1,13 +1,25 @@
 // Import Third-party Dependencies
-import { LitElement, html, css, type PropertyValues } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
-import type { VoxelRenderer, VoxelWorldJSON } from "@jolly-pixel/voxel.renderer";
+import {
+  LitElement,
+  html,
+  css,
+  type PropertyValues
+} from "lit";
+import {
+  customElement,
+  property,
+  state
+} from "lit/decorators.js";
+import type {
+  VoxelRenderer,
+  VoxelWorldJSON
+} from "@jolly-pixel/voxel.renderer";
 import type { JollyChangeDetail } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { GridRenderer } from "../components/GridRenderer.ts";
-import { parseVoxelWorld } from "../lib/parseVoxelWorld.ts";
-import type { EventInput } from "./types.ts";
+import type { GridRenderer } from "../../components/GridRenderer.ts";
+import { parseVoxelWorld } from "./parseVoxelWorld.ts";
+import type { EventInput } from "../../shared/dom.types.ts";
 
 @customElement("map-config-panel")
 export class MapConfigPanel extends LitElement {

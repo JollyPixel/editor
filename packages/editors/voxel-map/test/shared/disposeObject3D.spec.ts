@@ -6,7 +6,7 @@ import { describe, it } from "node:test";
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { disposeObject3D } from "../../src/lib/disposeObject3D.ts";
+import { disposeObject3D } from "../../src/shared/disposeObject3D.ts";
 
 describe("disposeObject3D", () => {
   it("disposes shared geometry and material once across a group", () => {

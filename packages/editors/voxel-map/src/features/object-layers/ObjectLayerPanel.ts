@@ -15,9 +15,9 @@ import {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { editorState } from "../EditorState.ts";
-import { normalizeVoxelExtent } from "../lib/voxelExtent.ts";
-import type { Vec2Like } from "./types.ts";
+import { editorState } from "../../EditorState.ts";
+import { normalizeVoxelExtent } from "../../shared/voxelExtent.ts";
+import type { Vec2Like } from "../../shared/dom.types.ts";
 
 @customElement("object-layer-panel")
 export class ObjectLayerPanel extends LitElement {

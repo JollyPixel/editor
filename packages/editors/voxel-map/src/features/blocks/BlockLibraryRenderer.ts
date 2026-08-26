@@ -8,7 +8,7 @@ import type {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { disposeObject3D } from "./disposeObject3D.ts";
+import { disposeObject3D } from "../../shared/disposeObject3D.ts";
 
 // CONSTANTS
 const kCellSize = 64;
