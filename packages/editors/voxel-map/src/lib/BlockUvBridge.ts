@@ -84,6 +84,7 @@ export class BlockUvBridge {
     this.#vr = vr;
 
     this.#uv.on("region-moved", this.#onRegionMoved);
+    this.#uv.on("region-dragging", this.#onRegionDragging);
     this.#uv.on("region-state-changed", this.#onRegionStateChanged);
     this.#uv.on("region-deleted", this.#onRegionDeleted);
     this.#uv.on("selection-changed", this.#onSelectionChanged);
@@ -107,6 +108,7 @@ export class BlockUvBridge {
 
   dispose(): void {
     this.#uv.off("region-moved", this.#onRegionMoved);
+    this.#uv.off("region-dragging", this.#onRegionDragging);
     this.#uv.off("region-state-changed", this.#onRegionStateChanged);
     this.#uv.off("region-deleted", this.#onRegionDeleted);
     this.#uv.off("selection-changed", this.#onSelectionChanged);
@@ -293,6 +295,34 @@ export class BlockUvBridge {
     }
 
     this.#applyRegionToBlock(event.region);
+  };
+
+  /**
+   * `region-moved` only lands on pointer release, which leaves the map showing
+   * the old texture for the whole drag. This applies each pointer move, so the
+   * blocks follow live.
+   */
+  readonly #onRegionDragging: UVMapListener<"region-dragging"> = (event) => {
+    if (this.#rebuilding) {
+      return;
+    }
+
+    const block = this.#blockOf(event.id);
+    if (!block) {
+      return;
+    }
+
+    const region = this.#uv.get(event.id);
+    if (!region) {
+      return;
+    }
+
+    const dragged = region.withRect(event.rect, event.face ?? undefined);
+    if (regionsEqual(this.#regionFor(block), dragged)) {
+      return;
+    }
+
+    this.#applyRegionToBlock(dragged);
   };
 
   readonly #onRegionStateChanged: UVMapListener<"region-state-changed"> = (event) => {

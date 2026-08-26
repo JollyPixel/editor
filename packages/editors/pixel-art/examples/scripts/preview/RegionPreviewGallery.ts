@@ -39,8 +39,7 @@ export class RegionPreviewGallery {
   #disposed = false;
 
   readonly #onRegionCreated: UVMapListener<"region-created"> = ({ region }) => {
-    // Replacing a map entry would leave its actor in the scene forever, so
-    // never hold two previews for one id.
+    // Destroy a stale actor before replacing its preview.
     const stale = this.#previews.get(region.id);
     if (stale) {
       this.#previewFactory.destroy(stale);
@@ -56,6 +55,9 @@ export class RegionPreviewGallery {
       preview.setRotation(referencePreview.rotation);
     }
 
+    // Each preview subscribes to UV changes directly.
+    preview.follow(this.#canvasManager.uv);
+
     this.#previews.set(region.id, preview);
     this.#relayout();
     preview.setBorderColor(this.#appearance.borderColor);
@@ -69,35 +71,6 @@ export class RegionPreviewGallery {
       this.#previews.delete(region.id);
     }
     this.#relayout();
-  };
-
-  readonly #onRegionMoved: UVMapListener<"region-moved"> = ({ region, face }) => {
-    this.#previews.get(region.id)?.applyFace(
-      face,
-      region.geometryFor(face ?? "front"),
-      this.#canvasManager.textureSize
-    );
-  };
-
-  readonly #onRegionDragging: UVMapListener<"region-dragging"> = ({
-    id,
-    face,
-    geometry
-  }) => {
-    this.#previews.get(id)?.applyFace(
-      face,
-      geometry,
-      this.#canvasManager.textureSize
-    );
-  };
-
-  readonly #onRegionStateChanged: UVMapListener<"region-state-changed"> = ({
-    region
-  }) => {
-    this.#previews.get(region.id)?.applyRegion(
-      region,
-      this.#canvasManager.textureSize
-    );
   };
 
   readonly #onSelectionChanged: UVMapListener<"selection-changed"> = ({
@@ -117,9 +90,6 @@ export class RegionPreviewGallery {
     const { uv } = this.#canvasManager;
     uv.on("region-created", this.#onRegionCreated);
     uv.on("region-deleted", this.#onRegionDeleted);
-    uv.on("region-moved", this.#onRegionMoved);
-    uv.on("region-dragging", this.#onRegionDragging);
-    uv.on("region-state-changed", this.#onRegionStateChanged);
     uv.on("selection-changed", this.#onSelectionChanged);
   }
 
@@ -131,10 +101,8 @@ export class RegionPreviewGallery {
 
   refreshTextureSize(): void {
     const { textureSize } = this.#canvasManager;
-    for (const region of this.#canvasManager.uv.regions) {
-      this.#previews
-        .get(region.id)
-        ?.applyRegion(region, textureSize);
+    for (const preview of this.#previews.values()) {
+      preview.setTextureSize(textureSize);
     }
   }
 
@@ -165,9 +133,6 @@ export class RegionPreviewGallery {
     const { uv } = this.#canvasManager;
     uv.off("region-created", this.#onRegionCreated);
     uv.off("region-deleted", this.#onRegionDeleted);
-    uv.off("region-moved", this.#onRegionMoved);
-    uv.off("region-dragging", this.#onRegionDragging);
-    uv.off("region-state-changed", this.#onRegionStateChanged);
     uv.off("selection-changed", this.#onSelectionChanged);
 
     for (const preview of this.#previews.values()) {

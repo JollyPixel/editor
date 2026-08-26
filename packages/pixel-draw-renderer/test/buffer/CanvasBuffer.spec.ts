@@ -7,6 +7,10 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { CanvasBuffer } from "#src/buffer/CanvasBuffer.ts";
+import type {
+  SelectionRect,
+  Vec2
+} from "#src/types.ts";
 import {
   mockContextOf,
   readPixel
@@ -579,6 +583,150 @@ describe("CanvasBuffer", () => {
         0,
         "callers repaint these explicitly after resizing the viewport texture"
       );
+    });
+  });
+
+  describe("changed bounds", () => {
+    function boundsOf(
+      buf: CanvasBuffer
+    ): () => SelectionRect[] {
+      const seen: SelectionRect[] = [];
+      buf.on("changed", ({ bounds }) => {
+        seen.push(bounds);
+      });
+
+      return () => seen;
+    }
+
+    test("drawPixels reports the bounding box of the written pixels", () => {
+      const buf = new CanvasBuffer({ size: { x: 8, y: 8 }, maxSize: kTestMaxSize });
+      const bounds = boundsOf(buf);
+
+      buf.drawPixels(
+        [{ x: 1, y: 2 }, { x: 4, y: 3 }],
+        { r: 1, g: 2, b: 3, a: 255 }
+      );
+
+      assert.deepStrictEqual(
+        bounds(),
+        [{ x: 1, y: 2, width: 4, height: 2 }]
+      );
+    });
+
+    test("drawColorGroups reports the union across every group", () => {
+      const buf = new CanvasBuffer({ size: { x: 8, y: 8 }, maxSize: kTestMaxSize });
+      const bounds = boundsOf(buf);
+
+      buf.drawColorGroups([
+        {
+          color: { r: 255, g: 0, b: 0, a: 255 },
+          positions: [{ x: 0, y: 0 }]
+        },
+        {
+          color: { r: 0, g: 0, b: 255, a: 255 },
+          positions: [{ x: 5, y: 6 }]
+        }
+      ]);
+
+      assert.deepStrictEqual(
+        bounds(),
+        [{ x: 0, y: 0, width: 6, height: 7 }]
+      );
+    });
+
+    test("drawRegion reports the written rect", () => {
+      const buf = new CanvasBuffer({ size: { x: 8, y: 8 }, maxSize: kTestMaxSize });
+      const bounds = boundsOf(buf);
+      const rect = { x: 2, y: 1, width: 3, height: 2 };
+
+      buf.drawRegion(
+        rect,
+        new Array(6).fill({ r: 1, g: 1, b: 1, a: 255 })
+      );
+
+      assert.deepStrictEqual(bounds(), [rect]);
+    });
+
+    test("drawMaskedRegion reports the written rect", () => {
+      const buf = new CanvasBuffer({ size: { x: 8, y: 8 }, maxSize: kTestMaxSize });
+      const bounds = boundsOf(buf);
+      const rect = { x: 0, y: 0, width: 2, height: 2 };
+
+      buf.drawMaskedRegion(
+        rect,
+        new Array(4).fill({ r: 1, g: 1, b: 1, a: 255 }),
+        [true, false, false, true]
+      );
+
+      assert.deepStrictEqual(bounds(), [rect]);
+    });
+  });
+
+  describe("resized / replaced signals", () => {
+    function recordSurfaceEvents(
+      buf: CanvasBuffer
+    ): { resized: Vec2[]; replaced: Vec2[]; changed: number; } {
+      const record = {
+        resized: [] as Vec2[],
+        replaced: [] as Vec2[],
+        changed: 0
+      };
+      buf.on("resized", ({ size }) => {
+        record.resized.push(size);
+      });
+      buf.on("replaced", ({ size }) => {
+        record.replaced.push(size);
+      });
+      buf.on("changed", () => {
+        record.changed++;
+      });
+
+      return record;
+    }
+
+    test("resize emits resized and keeps the same canvas element", () => {
+      const buf = new CanvasBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
+      const before = buf.canvas();
+      const record = recordSurfaceEvents(buf);
+
+      buf.resize({ x: 8, y: 6 });
+
+      assert.deepStrictEqual(record.resized, [{ x: 8, y: 6 }]);
+      assert.deepStrictEqual(record.replaced, []);
+      assert.strictEqual(record.changed, 0);
+      assert.strictEqual(buf.canvas(), before);
+    });
+
+    test("loadTexture emits replaced and swaps the working canvas element", () => {
+      const buf = new CanvasBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
+      const before = buf.canvas();
+      const record = recordSurfaceEvents(buf);
+
+      const source = document.createElement("canvas");
+      source.width = 6;
+      source.height = 5;
+      buf.loadTexture(source);
+
+      assert.deepStrictEqual(record.replaced, [{ x: 6, y: 5 }]);
+      assert.deepStrictEqual(record.resized, []);
+      assert.strictEqual(record.changed, 0);
+      assert.notStrictEqual(buf.canvas(), before);
+      assert.strictEqual(buf.canvas(), source);
+    });
+
+    test("loadTexture does not emit when the source is rejected", () => {
+      const buf = new CanvasBuffer({ size: { x: 4, y: 4 }, maxSize: kTestMaxSize });
+      const record = recordSurfaceEvents(buf);
+
+      const source = document.createElement("canvas");
+      source.width = kTestMaxSize + 1;
+      source.height = 4;
+
+      assert.throws(
+        () => buf.loadTexture(source),
+        RangeError
+      );
+      assert.deepStrictEqual(record.replaced, []);
     });
   });
 });

@@ -8,17 +8,45 @@ const kMaxPadding = 8;
 export interface AtlasLayout {
   cols: number;
   rows: number;
-  /** Tile width/height in the source atlas, in texels. */
+  /**
+   * Square tile size in source-atlas texels.
+   */
   tileSize: number;
-  /** Texels of gutter added on each side of every tile. */
+  /**
+   * Gutter texels on each tile edge.
+   */
   padding: number;
 }
 
+/**
+ * A rectangle of source-atlas texels. Structurally the editor's `SelectionRect`.
+ */
+export interface AtlasRegion {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Inclusive tile-index bounds.
+ */
+export interface AtlasTileRange {
+  colStart: number;
+  colEnd: number;
+  rowStart: number;
+  rowEnd: number;
+}
+
 interface TileDrawOptions {
-  /** Top-left of the tile in the source atlas. */
+  /**
+   * Source tile's top-left texel.
+   */
   sx: number;
   sy: number;
-  /** Top-left of the tile body in the padded atlas. */
+  /**
+   * Padded tile body's top-left texel.
+   */
   dx: number;
   dy: number;
   tileSize: number;
@@ -26,10 +54,7 @@ interface TileDrawOptions {
 }
 
 /**
- * Repacks an atlas by adding a `padding`-texel gutter copied from each tile edge.
- * This keeps MSAA UV overshoot sampling the same tile instead of neighbours.
- * Returns null when rasterization is unavailable (no DOM/2D context) or layout
- * values are invalid, so callers can keep the original atlas.
+ * Repacks tiles with edge gutters and returns null when unavailable.
  */
 export function padAtlas(
   image: CanvasImageSource,
@@ -52,7 +77,7 @@ export function padAtlas(
   if (context === null) {
     return null;
   }
-  // Gutters must be exact texel copies, never interpolations.
+  // Disable interpolation so gutters copy exact texels.
   context.imageSmoothingEnabled = false;
 
   for (let row = 0; row < rows; row++) {
@@ -72,6 +97,76 @@ export function padAtlas(
 }
 
 /**
+ * Repads touched tiles in place: 9-36 draws versus about 147,000 for 2048px.
+ * Invalid layouts and bounds leave the target unchanged.
+ */
+export function padAtlasRegion(
+  target: HTMLCanvasElement,
+  image: CanvasImageSource,
+  layout: AtlasLayout,
+  bounds: AtlasRegion
+): void {
+  const { tileSize, padding } = layout;
+  const range = atlasTileRange(layout, bounds);
+  if (range === null) {
+    return;
+  }
+
+  const context = target.getContext("2d");
+  if (context === null) {
+    return;
+  }
+  context.imageSmoothingEnabled = false;
+
+  const cell = paddedCellSize(tileSize, padding);
+  for (let row = range.rowStart; row <= range.rowEnd; row++) {
+    for (let col = range.colStart; col <= range.colEnd; col++) {
+      drawPaddedTile(context, image, {
+        sx: col * tileSize,
+        sy: row * tileSize,
+        dx: (col * cell) + padding,
+        dy: (row * cell) + padding,
+        tileSize,
+        padding
+      });
+    }
+  }
+}
+
+/**
+ * Returns clamped tile bounds, or null when no valid tile is hit.
+ * An exact upper boundary belongs to the preceding tile.
+ */
+export function atlasTileRange(
+  layout: AtlasLayout,
+  bounds: AtlasRegion
+): AtlasTileRange | null {
+  const { cols, rows, tileSize, padding } = layout;
+  if (padding <= 0 || cols <= 0 || rows <= 0 || tileSize <= 0) {
+    return null;
+  }
+  if (bounds.width <= 0 || bounds.height <= 0) {
+    return null;
+  }
+
+  const colStart = Math.floor(bounds.x / tileSize);
+  const colEnd = Math.floor((bounds.x + bounds.width - 1) / tileSize);
+  const rowStart = Math.floor(bounds.y / tileSize);
+  const rowEnd = Math.floor((bounds.y + bounds.height - 1) / tileSize);
+
+  if (colEnd < 0 || rowEnd < 0 || colStart > cols - 1 || rowStart > rows - 1) {
+    return null;
+  }
+
+  return {
+    colStart: Math.max(colStart, 0),
+    colEnd: Math.min(colEnd, cols - 1),
+    rowStart: Math.max(rowStart, 0),
+    rowEnd: Math.min(rowEnd, rows - 1)
+  };
+}
+
+/**
  * Size of one tile plus its gutters in the padded atlas.
  */
 export function paddedCellSize(
@@ -82,9 +177,7 @@ export function paddedCellSize(
 }
 
 /**
- * Default gutter for a tile size.
- * MSAA overshoot scales with tile size, so padding scales too.
- * Clamped to avoid excessive atlas memory growth.
+ * Scales gutter with tile size, clamped to limit atlas growth.
  */
 export function defaultPadding(
   tileSize: number
@@ -93,10 +186,8 @@ export function defaultPadding(
 }
 
 /**
- * UV region for tile body (col, row) in a padded atlas.
- * Y is flipped for WebGL and UVs are inset by half a texel so edge vertices
- * sample texel centers, not borders. With `padding = 0`, this matches raw atlas
- * layout.
+ * Returns padded tile UVs with WebGL Y-flip and half-texel inset.
+ * Zero padding matches the source atlas.
  */
 export function tileUVRegion(
   col: number,

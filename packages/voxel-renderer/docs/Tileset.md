@@ -125,8 +125,9 @@ Consequences to be aware of:
   at the default padding is **4× the texture memory**. Atlases are small; this is
   usually negligible.
 - `getTexture()` returns the **padded** atlas and always matches `getTileUV()`.
-  Editing tools must use `getSourceTexture()` / `updateSourceImage()` instead — those
-  address the original pixel grid that `tileSize` describes.
+  Editing tools must use `getSourceTexture()` / `updateSourceImage()` /
+  `updateSourceRegion()` instead — those address the original pixel grid that
+  `tileSize` describes.
 - Repacking needs a 2D canvas. Where none exists (Node, SSR), the atlas is rendered
   unpadded and UVs collapse to the raw layout — no error, just no protection.
 
@@ -199,6 +200,32 @@ editor.texture = tilesetManager.getSourceTexture()!.image as HTMLImageElement;
 
 // push edits back; the gutter is rebuilt for you
 tilesetManager.updateSourceImage(editor.textureCanvas());
+```
+
+#### `updateSourceRegion(image: TilesetImage, bounds: AtlasRegion, tilesetId?: string): void`
+
+Same, but rebuilds the gutter for only the tiles `bounds` covers. `bounds` is
+`{ x, y, width, height }` in source-atlas texels — structurally the pixel editor's
+`SelectionRect`.
+
+Use this for a live editor stream. `updateSourceImage` redraws the nine-slice for every
+tile in the atlas: at 2048px and `tileSize` 16 that is 128×128 tiles, roughly 147 000
+`drawImage` calls, which no per-frame budget survives. A brush stroke touches one to
+four tiles, so this issues 9 to 36 instead.
+
+`updateSourceImage` remains the path for anything that changes the atlas wholesale —
+snapshots, resizes, tileset switches — and this method falls back to it when the padded
+atlas is not a canvas it can draw into.
+
+A rectangle ending exactly on a tile boundary stops at the tile before it, so bounds
+covering texels 0..15 of a 16px grid repad tile 0 alone.
+
+```ts
+// once per frame, from the editor's accumulated dirty rectangle
+const dirty = bridge.consume();
+if (dirty !== null) {
+  tilesetManager.updateSourceRegion(editor.textureCanvas(), dirty);
+}
 ```
 
 #### `getDefinitions(): Array<TilesetDefinition & { cols: number; rows: number }>`

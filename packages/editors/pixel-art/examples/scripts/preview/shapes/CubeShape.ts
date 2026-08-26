@@ -6,6 +6,7 @@ import {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
+import { boxFaceRanges } from "../../../../src/three/faceRanges.ts";
 import {
   PREVIEW_SHAPE_SIZE,
   type PreviewShape
@@ -19,16 +20,6 @@ import {
   createFaceLabel
 } from "./faceLabels.ts";
 
-// CONSTANTS
-const kFaceRanges = {
-  right: { start: 0, count: 4 },
-  left: { start: 4, count: 4 },
-  top: { start: 8, count: 4 },
-  bottom: { start: 12, count: 4 },
-  front: { start: 16, count: 4 },
-  back: { start: 20, count: 4 }
-} satisfies PreviewShape["faceRanges"];
-
 export function createCubeShape(
   borderMaterial: THREE.MeshBasicMaterial
 ): PreviewShape {
@@ -38,7 +29,7 @@ export function createCubeShape(
       PREVIEW_SHAPE_SIZE,
       PREVIEW_SHAPE_SIZE
     ),
-    faceRanges: kFaceRanges,
+    faceRanges: boxFaceRanges(),
     decorations: [
       createRoundedBoxBorder(PREVIEW_SHAPE_SIZE, borderMaterial),
       ...createFaceLabels()

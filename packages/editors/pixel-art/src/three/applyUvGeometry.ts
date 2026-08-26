@@ -8,7 +8,7 @@ import type {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import type { FaceVertexRange } from "./PreviewShape.ts";
+import type { FaceVertexRange } from "./faceRanges.ts";
 
 export interface ApplyUvRectOptions {
   uvAttribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute;
@@ -19,6 +19,9 @@ export interface ApplyUvRectOptions {
   corner?: UVTriangleCorner | null;
 }
 
+/**
+ * Projects a face from immutable `baseUv` so repeated calls are idempotent.
+ */
 export function applyUvGeometry(
   uvAttribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
   baseUv: Float32Array,
@@ -64,6 +67,9 @@ export function applyUvRect(
   }
 }
 
+/**
+ * Flips the canonical bottom-right triangle onto another corner.
+ */
 export function orientUv(
   u: number,
   v: number,

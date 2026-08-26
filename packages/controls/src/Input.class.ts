@@ -181,6 +181,13 @@ export class Input extends Emitter<InputEvents> {
     }
   }
 
+  /**
+   * Publishes mouse transients accumulated since the previous render.
+   */
+  publishFrameState(): void {
+    this.mouse.publishFrameState();
+  }
+
   vibrate(
     pattern: VibratePattern
   ): void {

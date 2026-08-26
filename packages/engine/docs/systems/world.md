@@ -148,7 +148,8 @@ One frame, in order:
 2. Runs `schedule.steps` fixed steps, each preceded by an
    [Input](../controls/input.md) update.
 3. Updates input once more if the frame ran no step at all.
-4. On a drawn frame, calls `sceneManager.update(deltaTime, alpha)` then
+4. On a drawn frame, publishes transient input accumulated across the fixed
+   samples, calls `sceneManager.update(deltaTime, alpha)`, then
    `renderer.draw()`.
 5. Calls `endFrame()`.
 
@@ -167,6 +168,11 @@ does not diff the edge away before any step has seen it.
 Runs variable-rate logic once per drawn frame. `alpha` is how far the frame
 sits between the last fixed step and the next one, in `[0, 1)`. Pass it to
 `Interpolated` from `@jolly-pixel/loop` to draw smoothly between steps.
+
+Before this phase, `World` republishes mouse transitions and movement
+accumulated across every fixed-step input sample since the previous drawn
+frame. Variable-rate components therefore see each mouse edge once even when
+the current frame ran several fixed steps.
 
 A frame suppressed by `maxFps` skips `update` and the draw, but still
 accumulates time and still runs its fixed steps.

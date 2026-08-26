@@ -28,8 +28,8 @@ export interface CanvasViewOptions {
   parent: HTMLDivElement;
   zoom?: ZoomOptions;
   /**
-   * Canvas color outside texture bounds. When omitted it is resolved from
-   * the parent's computed background color, falling back to `#424242`.
+   * Outside color;
+   * defaults to the parent's background or `#424242`.
    */
   background?: ByteColorInput;
   backgroundTransparency?: {
@@ -116,8 +116,8 @@ export class CanvasView {
       floatingSelections: this.renderer.peerFloatingSelections
     });
 
-    // Pixel and floating-selection changes do not affect overlay geometry.
-    doc.onChange(this.#onRenderStateChanged);
+    // These changes repaint without updating overlay geometry.
+    doc.on("changed", this.#onRenderStateChanged);
     this.renderer.floatingSelection.on(
       "changed",
       this.#onRenderStateChanged
@@ -160,14 +160,12 @@ export class CanvasView {
     width: number,
     height: number
   ): void {
-    // Resize surfaces first; the viewport event then repaints and refreshes.
     this.renderer.resize(width, height);
     this.overlays.resize(width, height);
     this.viewport.resizeCanvas(width, height);
   }
 
   centerTexture(): void {
-    // centerTexture emits the repaint-triggering viewport event.
     this.viewport.centerTexture();
   }
 
@@ -179,7 +177,10 @@ export class CanvasView {
   }
 
   destroy(): void {
-    this.#doc.offChange(this.#onRenderStateChanged);
+    this.#doc.off(
+      "changed",
+      this.#onRenderStateChanged
+    );
     this.renderer.floatingSelection.off(
       "changed",
       this.#onRenderStateChanged
@@ -201,10 +202,6 @@ export class CanvasView {
     this.overlays.destroy();
   }
 
-  /**
-   * Fit-zoom for initial display when `zoom.default` is omitted.
-   * Falls back to 4 when the container has no measurable size yet.
-   */
   static #computeFitZoom(
     containerSize: { width: number; height: number; },
     textureSize: Vec2,
@@ -229,8 +226,7 @@ export class CanvasView {
 }
 
 /**
- * Whether a computed background color is worth inheriting. Unset and fully
- * transparent backgrounds fall through to the renderer's own default.
+ * Accepts inherited backgrounds unless unset or fully transparent.
  */
 function isOpaqueEnough(
   color: string

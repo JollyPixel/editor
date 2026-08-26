@@ -8,7 +8,8 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    }
+    },
+    "./three/*.ts": "./dist/three/*.js"
   },
   "imports": {
     "#src/*": "./src/*"
@@ -39,14 +40,15 @@
   "license": "MIT",
   "devDependencies": {
     "@jolly-pixel/engine": "4.0.0",
-    "@jolly-pixel/runtime": "4.0.0",
-    "three": "0.185.1"
+    "@jolly-pixel/runtime": "4.0.0"
   },
   "dependencies": {
     "@jolly-pixel/color": "1.0.0",
     "@jolly-pixel/network": "1.1.0",
     "@jolly-pixel/pixel-draw.renderer": "3.0.0",
     "@jolly-pixel/ui": "1.0.1",
-    "lit": "3.3.3"
+    "@openally/emitt": "1.0.1",
+    "lit": "3.3.3",
+    "three": "0.185.1"
   }
 }

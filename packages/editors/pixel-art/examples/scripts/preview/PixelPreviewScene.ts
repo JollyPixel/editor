@@ -4,6 +4,7 @@ import * as THREE from "three";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
+import { PixelCanvasTexture } from "../../../src/three/PixelCanvasTexture.ts";
 import { CameraBehavior } from "../components/Camera.ts";
 import { OrbitControlsBehavior } from "../components/OrbitControlsBehavior.ts";
 import { RegionPreviewFactory } from "./RegionPreviewFactory.ts";
@@ -13,8 +14,7 @@ import { RegionPreviewPicker } from "./RegionPreviewPicker.ts";
 declare global {
   interface Window {
     /**
-     * Preview meshes currently in the scene. Exposed for e2e: a region view
-     * leaking a second mesh is invisible from the DOM.
+     * Current preview mesh count for e2e leak checks.
      */
     __uvPreviewMeshCount?: () => number;
   }
@@ -38,19 +38,20 @@ const kSceneAppearances: Record<string, PixelPreviewSceneAppearance> = {
 
 export interface PixelPreviewSceneOptions {
   canvasManager: PixelArtCanvas;
-  /** @default true */
+  /**
+   * @default true
+   */
   initialRotating?: boolean;
 }
 
 /**
- * Owns every Three.js concern for the pixel-draw preview: camera, orbit
- * controls, lighting, the UV region gallery and its click-to-select picker.
+ * Owns the preview camera, controls, lights, gallery, and picker.
  */
 export class PixelPreviewScene extends Systems.Scene {
   readonly #canvasManager: PixelArtCanvas;
   readonly #initialRotating: boolean;
 
-  #canvasTexture!: THREE.CanvasTexture;
+  #canvasTexture!: PixelCanvasTexture;
   #previewGallery!: RegionPreviewGallery;
   #previewPicker!: RegionPreviewPicker;
 
@@ -69,23 +70,15 @@ export class PixelPreviewScene extends Systems.Scene {
       new THREE.HemisphereLight(0xffffff, 0x76848c, 2.8)
     );
 
-    this.#canvasTexture = new THREE.CanvasTexture(
-      this.#canvasManager.textureCanvas()
-    );
-    this.#canvasTexture.magFilter = THREE.NearestFilter;
-    this.#canvasTexture.minFilter = THREE.NearestFilter;
-    this.#canvasManager.onBufferUpdated = (event) => {
-      this.#canvasTexture.needsUpdate = true;
-      if (event.action === "texture-replaced") {
-        this.#canvasTexture.image = this.#canvasManager.textureCanvas();
-        this.#previewGallery.refreshTextureSize();
-      }
-    };
+    // One upload per animation frame, however many pixels the stroke touched.
+    this.#canvasTexture = new PixelCanvasTexture(this.#canvasManager);
+    this.#canvasTexture.on("resized", () => {
+      this.#previewGallery.refreshTextureSize();
+    });
 
     const cameraBehavior = this.world.createActor("camera")
       .addComponentAndGet(CameraBehavior);
 
-    // Drag orbit + scroll zoom camera controls.
     this.world.createActor("orbit-controls").addComponentAndGet(OrbitControlsBehavior, {
       camera: cameraBehavior.camera,
       cameraActor: cameraBehavior.actor,
@@ -96,7 +89,7 @@ export class PixelPreviewScene extends Systems.Scene {
 
     const previewFactory = new RegionPreviewFactory({
       world: this.world,
-      canvasTexture: this.#canvasTexture
+      canvasTexture: this.#canvasTexture.texture
     });
     this.#previewGallery = new RegionPreviewGallery({
       previewFactory,
@@ -112,9 +105,8 @@ export class PixelPreviewScene extends Systems.Scene {
       getMeshes: () => this.#previewGallery.meshes
     });
 
-    // SceneManager activates the scene (and calls awake()) on the next
-    // render frame, well after loadRuntime()'s promise has already
-    // resolved — callers needing world-dependent APIs must wait for this.
+    // SceneManager calls awake next frame, after loadRuntime resolves.
+    // World-dependent callers must wait for this event.
     this.emit("awake");
   }
 
@@ -139,6 +131,7 @@ export class PixelPreviewScene extends Systems.Scene {
   override destroy(): void {
     this.#previewPicker.dispose();
     this.#previewGallery.dispose();
+    this.#canvasTexture.dispose();
     delete window.__uvPreviewMeshCount;
   }
 }

@@ -3,6 +3,7 @@ import * as THREE from "three";
 import type { UVFace } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
+import { rampFaceRanges } from "../../../../src/three/faceRanges.ts";
 import {
   PREVIEW_SHAPE_SIZE,
   type PreviewShape
@@ -17,14 +18,6 @@ import {
 } from "./faceLabels.ts";
 
 // CONSTANTS
-const kFaceRanges = {
-  bottom: { start: 0, count: 4 },
-  back: { start: 4, count: 4 },
-  left: { start: 8, count: 3 },
-  right: { start: 11, count: 3 },
-  top: { start: 14, count: 4 }
-} satisfies PreviewShape["faceRanges"];
-
 const kBorderEdges = [
   [0, 1], [1, 5], [5, 3], [3, 0], [5, 4],
   [4, 2], [2, 1], [2, 0], [3, 4]
@@ -35,7 +28,7 @@ export function createRampShape(
 ): PreviewShape {
   return {
     geometry: createGeometry(),
-    faceRanges: kFaceRanges,
+    faceRanges: rampFaceRanges(),
     decorations: [
       createBorder(borderMaterial),
       ...createFaceLabels()

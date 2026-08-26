@@ -5,18 +5,14 @@ import {
 } from "@jolly-pixel/engine";
 import * as THREE from "three";
 import type {
-  UVFace,
-  UVGeometry,
+  UVMap,
   UVRegion,
   Vec2
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
+import { UVGeometryBinding } from "../../../src/three/UVGeometryBinding.ts";
 import type { PreviewShape } from "./PreviewShape.ts";
-import {
-  applyUvGeometry,
-  applyUvRect
-} from "./applyUvGeometry.ts";
 import { resolvePreviewShape } from "./resolvePreviewShape.ts";
 
 // CONSTANTS
@@ -25,20 +21,19 @@ const kRotationSpeedY = 0.6;
 const kPositionLerpRate = 6;
 
 export interface RegionPreviewBehaviorOptions {
-  canvasTexture: THREE.CanvasTexture;
+  canvasTexture: THREE.Texture;
   region: UVRegion;
   textureSize: Vec2;
 }
 
+/**
+ * Preview controls; UV projection stays in UVGeometryBinding.
+ */
 export interface RegionPreview {
   readonly mesh: THREE.Mesh;
   readonly rotation: THREE.Euler;
-  applyRegion(region: UVRegion, textureSize: Vec2): void;
-  applyFace(
-    face: UVFace | null,
-    geometry: UVGeometry,
-    textureSize: Vec2
-  ): void;
+  follow(uv: UVMap): void;
+  setTextureSize(size: Vec2): void;
   setTargetPosition(position: THREE.Vector3): void;
   setSelected(selected: boolean): void;
   setBorderColor(color: THREE.ColorRepresentation): void;
@@ -50,7 +45,7 @@ export class RegionPreviewBehavior extends ActorComponent implements RegionPrevi
   readonly mesh: THREE.Mesh;
 
   readonly #shape: PreviewShape;
-  readonly #baseUv: Float32Array;
+  readonly #binding: UVGeometryBinding;
   readonly #borderMaterial: THREE.MeshBasicMaterial;
   readonly #selectionColor: THREE.Color;
   readonly #borderColor = new THREE.Color(0x101820);
@@ -73,9 +68,6 @@ export class RegionPreviewBehavior extends ActorComponent implements RegionPrevi
       toneMapped: false
     });
     this.#shape = resolvePreviewShape(region, this.#borderMaterial);
-    this.#baseUv = Float32Array.from(
-      this.#shape.geometry.getAttribute("uv").array
-    );
     this.#selectionColor = new THREE.Color(region.color);
 
     this.mesh = new THREE.Mesh(
@@ -86,7 +78,14 @@ export class RegionPreviewBehavior extends ActorComponent implements RegionPrevi
       })
     );
     this.mesh.userData.regionId = region.id;
-    this.applyRegion(region, textureSize);
+
+    // The binding snapshots the new geometry's untouched UVs.
+    this.#binding = new UVGeometryBinding({
+      geometry: this.#shape.geometry,
+      region,
+      textureSize,
+      faceRanges: this.#shape.faceRanges
+    });
 
     this.actor.addChildren(
       this.mesh,
@@ -99,55 +98,22 @@ export class RegionPreviewBehavior extends ActorComponent implements RegionPrevi
     return this.actor.object3D.rotation;
   }
 
+  follow(
+    uv: UVMap
+  ): void {
+    this.#binding.follow(uv);
+  }
+
+  setTextureSize(
+    size: Vec2
+  ): void {
+    this.#binding.setTextureSize(size);
+  }
+
   setTargetPosition(
     position: THREE.Vector3
   ): void {
     this.#targetPosition.copy(position);
-  }
-
-  applyRegion(
-    region: UVRegion,
-    textureSize: Vec2
-  ): void {
-    for (const { face, geometry } of region.facesOf()) {
-      this.applyFace(face, geometry, textureSize);
-    }
-  }
-
-  applyFace(
-    face: UVFace | null,
-    geometry: UVGeometry,
-    textureSize: Vec2
-  ): void {
-    const uvAttribute = this.mesh.geometry.getAttribute("uv");
-
-    if (face === null) {
-      applyUvRect({
-        uvAttribute,
-        baseUv: this.#baseUv,
-        rect: "shape" in geometry ? geometry.rect : geometry,
-        textureSize,
-        range: {
-          start: 0,
-          count: this.#baseUv.length / 2
-        }
-      });
-    }
-    else {
-      const range = this.#shape.faceRanges[face];
-      if (!range) {
-        return;
-      }
-      applyUvGeometry(
-        uvAttribute,
-        this.#baseUv,
-        geometry,
-        textureSize,
-        range
-      );
-    }
-
-    uvAttribute.needsUpdate = true;
   }
 
   setSelected(
@@ -189,6 +155,11 @@ export class RegionPreviewBehavior extends ActorComponent implements RegionPrevi
       this.#targetPosition,
       alpha
     );
+  }
+
+  override destroy(): void {
+    this.#binding.unfollow();
+    super.destroy();
   }
 
   #syncBorderColor(): void {

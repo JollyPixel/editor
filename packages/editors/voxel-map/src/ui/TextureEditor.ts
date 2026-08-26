@@ -79,8 +79,8 @@ export class TextureEditor extends LitElement {
       },
       texture: {
         maxSize: 2048
-      },
-      onDrawEnd: () => this.#bridge.syncToThree()
+      }
+      // Buffer events drive once-per-frame tileset sync.
     });
     if (!this.isConnected) {
       return;
@@ -174,7 +174,6 @@ export class TextureEditor extends LitElement {
     }
   }
 
-  /** Lets the host suspend shortcuts while the drawing canvas is active. */
   #dispatchHoverChange(
     hovering: boolean
   ): void {
