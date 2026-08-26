@@ -133,15 +133,15 @@ Node flags cannot pass through the bin shim. Use `NODE_OPTIONS`, or run the CLI
 as a file:
 
 ```bash
-node --max-old-space-size=8192 node_modules/@jolly-pixel/bench/bin/index.ts
+node --max-old-space-size=8192 node_modules/@jolly-pixel/bench/src/cli.ts
 node --cpu-prof bench/mesh-build.bench.ts
 ```
 
 ## 📚 API
 
-`bin/` contains the `jolly-bench` entrypoint. `src/` contains the public suite,
-configuration, reporting, error, and PRNG modules, plus internal helpers such
-as the shared numeric parser. CLI-only behavior stays in `bin/`.
+`src/cli.ts` is the `jolly-bench` entrypoint. `src/` also contains the public
+suite, configuration, reporting, error, and PRNG modules, plus internal helpers
+such as the shared numeric parser.
 
 | Export | Purpose |
 | --- | --- |

@@ -8,12 +8,12 @@
     ".": "./src/index.ts"
   },
   "bin": {
-    "jolly-bench": "./bin/index.ts"
+    "jolly-bench": "./src/cli.ts"
   },
   "scripts": {
     "test-only": "node --test \"test/**/*.spec.ts\"",
     "test": "c8 -r html npm run test-only",
-    "lint": "eslint \"{bin,src}/**/*.ts\""
+    "lint": "eslint \"src/**/*.ts\""
   },
   "repository": {
     "type": "git",

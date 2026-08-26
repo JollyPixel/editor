@@ -11,8 +11,8 @@ import {
   loadSuite,
   runSuites,
   type BenchmarkSuite
-} from "../src/index.ts";
-import { positiveNumber } from "../src/utils/parse.ts";
+} from "./index.ts";
+import { positiveNumber } from "./utils/parse.ts";
 
 // CONSTANTS
 const kUsage = `Usage: jolly-bench [filter...] [options]
@@ -36,7 +36,7 @@ Options:
   --help                   print this message
 
 Node flags cannot pass through this bin. Use NODE_OPTIONS, or run
-node node_modules/@jolly-pixel/bench/bin/index.ts instead.`;
+node node_modules/@jolly-pixel/bench/src/cli.ts instead.`;
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
