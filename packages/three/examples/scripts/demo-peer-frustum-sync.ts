@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import * as THREE from "three/webgpu";
 import * as network from "@jolly-pixel/network/client";
 import {
   LocalStorageAdapter,
@@ -9,13 +8,18 @@ import {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { PeerFrustumSync } from "./network/PeerFrustumSync.ts";
+import {
+  Grid,
+  PeerFrustum
+} from "../../src/index.ts";
+import { PeerFrustumSync } from "../../src/network/index.ts";
 import {
   createRenderer,
   createScene,
   startLoop
 } from "./utils/common.ts";
 import { createFreeFlyCamera } from "./utils/free-fly-camera.ts";
+import { createMirrorRoom } from "./utils/mirror-room.ts";
 import {
   createExamplePane
 } from "./utils/example-switcher.ts";
@@ -27,18 +31,50 @@ const kUsernameStorageKey = "peer-frustum-demo:username";
 const kUsernameStorage = new LocalStorageAdapter({
   resolve: () => sessionStorage
 });
+// The server assigns each connection a clientId this tab never learns
+// (`networkClient.id` is local and never leaves it), so a color keyed on it
+// would not be the one the other tabs pick for us. This id is stamped into
+// `identity` instead: it reaches every peer in the join snapshot, so all tabs
+// order the room the same way and agree on who gets which color.
+const kLocalPeerId = crypto.randomUUID();
+const kBackground = "#1e2a30";
+const kRoomSize = 20;
 
 const canvas = document.querySelector("canvas") as HTMLCanvasElement;
 const renderer = await createRenderer(canvas);
 
-const scene = createScene("#1e2a30");
-scene.add(new THREE.AxesHelper(1));
-scene.add(new THREE.GridHelper(20, 20, "#3a4750", "#2a3439"));
+const scene = createScene(kBackground);
+// Sized and faded to the mirror room: an infinite or camera-following grid
+// would run past the walls and show up in their reflections.
+scene.add(new Grid({
+  extent: kRoomSize,
+  followCamera: false,
+  cell: { color: "#2a3439" },
+  section: {
+    size: 5,
+    color: "#3a4750"
+  },
+  fade: {
+    from: "origin",
+    distance: kRoomSize * 0.6
+  },
+  axes: {
+    show: false
+  }
+}));
 
 const { camera, controls } = createFreeFlyCamera(
   canvas,
   { x: 0, y: 2, z: 8 }
 );
+
+// Glass walls closing the grid, so a lone tab still sees a frustum move:
+// its own, reflected back at it.
+const mirrorRoom = createMirrorRoom(camera, {
+  size: kRoomSize,
+  backdrop: kBackground
+});
+scene.add(mirrorRoom.group);
 
 const pane = createExamplePane({
   title: "Peer Frustum (over network)"
@@ -54,7 +90,10 @@ const username = await resolveStoredPrompt({
 });
 
 const networkClient = new network.Client({
-  identity: { username }
+  identity: {
+    username,
+    peerId: kLocalPeerId
+  }
 });
 const room = networkClient.room(kRoomId);
 room.join();
@@ -63,9 +102,20 @@ room.join();
 const peerFrustumSync = new PeerFrustumSync({
   room,
   parent: scene,
-  getColor: colorForPeer
+  getColor: (clientId, identity) => colorForPeer(
+    readPeerId(identity) ?? clientId
+  )
 });
 peerFrustumSync.attach(camera);
+
+// The local avatar the mirrors reflect. Hidden from the scene camera, which
+// sits exactly inside it, and driven from the same pose peers receive.
+const selfFrustum = new PeerFrustum({
+  color: colorForPeer(kLocalPeerId),
+  displayName: username
+});
+mirrorRoom.showOnlyInMirrors(selfFrustum);
+scene.add(selfFrustum);
 
 startLoop({
   renderer,
@@ -74,6 +124,8 @@ startLoop({
   controls,
   onFrame: () => {
     peerFrustumSync.update();
+    selfFrustum.position.copy(camera.position);
+    selfFrustum.quaternion.copy(camera.quaternion);
     refreshSession();
   },
   onBeforeRender: () => performanceStats.begin(),
@@ -88,11 +140,18 @@ const sessionState = {
   peers: 0,
   controls: "click canvas, WASD + mouse to fly"
 };
+const mirrorState = { enabled: true };
 
 sessionFolder.addButton({ title: "Change name" }).on("click", () => {
   sessionStorage.removeItem(kUsernameStorageKey);
   window.location.reload();
 });
+
+sessionFolder
+  .addBinding(mirrorState, "enabled", { label: "mirrors" })
+  .on("change", ({ value }) => {
+    mirrorRoom.group.visible = value;
+  });
 
 sessionFolder.addSeparator();
 
@@ -106,7 +165,7 @@ sessionFolder.addMonitors(sessionState, {
 function refreshSession(): void {
   const peers = presencePeers();
   const key = peers.map(
-    (peer) => `${peer.id}:${peer.username}:${peer.color}:${peer.self}`
+    (peer) => `${peer.clientId}:${peer.displayName}:${peer.color}:${peer.self}`
   ).join("|");
   if (key === presenceKey) {
     return;
@@ -114,42 +173,62 @@ function refreshSession(): void {
 
   presenceKey = key;
   sessionState.peers = room.peers.size;
+  // Colors here are derived from the peer list, so they shift on join/leave.
+  peerFrustumSync.refreshColors();
+  selfFrustum.color = colorForPeer(kLocalPeerId);
   sessionFolder.refresh();
   presence.update(peers);
 }
 
 function colorForPeer(
-  clientId: string
+  peerId: string
 ): string {
   return peerColor(
-    peerIds().indexOf(clientId)
+    orderedPeerIds().indexOf(peerId)
   );
 }
 
-function peerIds(): string[] {
+// Built from the stamped ids, so a given peer lands on the same index — and
+// therefore the same color — in every tab.
+function orderedPeerIds(): string[] {
   return [
-    networkClient.id,
-    ...room.peers.keys()
+    kLocalPeerId,
+    ...[...room.peers.values()].map(
+      (peer) => readPeerId(peer.identity) ?? peer.clientId
+    )
   ].sort();
 }
 
 function presencePeers(): PresencePeer[] {
-  return peerIds().map((clientId) => {
-    const peer = room.peers.get(clientId);
+  const remote = [...room.peers.values()]
+    .map((peer) => {
+      return {
+        clientId: peer.clientId,
+        displayName: readUsername(peer.identity),
+        color: colorForPeer(readPeerId(peer.identity) ?? peer.clientId)
+      };
+    })
+    .sort((a, b) => a.clientId.localeCompare(b.clientId));
 
-    return {
-      id: clientId,
-      username: clientId === networkClient.id ?
-        username :
-        readUsername(peer?.identity),
-      color: colorForPeer(clientId),
-      self: clientId === networkClient.id
-    };
-  });
+  return [
+    {
+      clientId: kLocalPeerId,
+      displayName: username,
+      color: colorForPeer(kLocalPeerId),
+      self: true
+    },
+    ...remote
+  ];
 }
 
 function readUsername(
   identity: network.PeerMetadata | undefined
 ): string {
   return typeof identity?.username === "string" ? identity.username : "Guest";
+}
+
+function readPeerId(
+  identity: network.PeerMetadata | undefined
+): string | undefined {
+  return typeof identity?.peerId === "string" ? identity.peerId : undefined;
 }

@@ -3,7 +3,16 @@
   "description": "Common Three.js utilities and components for JollyPixel's workspaces and editors",
   "version": "1.1.0",
   "type": "module",
-  "exports": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./network": {
+      "types": "./dist/network/index.d.ts",
+      "default": "./dist/network/index.js"
+    }
+  },
   "imports": {
     "#src/*": "./src/*"
   },
@@ -36,11 +45,19 @@
   },
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
+  "peerDependencies": {
+    "@jolly-pixel/network": "^1.1.0"
+  },
+  "peerDependenciesMeta": {
+    "@jolly-pixel/network": {
+      "optional": true
+    }
+  },
   "dependencies": {
+    "@jolly-pixel/color": "1.0.0",
     "three": "0.185.1"
   },
   "devDependencies": {
-    "@jolly-pixel/color": "1.0.0",
     "@jolly-pixel/network": "1.1.0",
     "@jolly-pixel/ui": "1.0.1"
   }
