@@ -150,6 +150,20 @@ export class Mouse extends Emitter<
     x: 0,
     y: 0
   };
+  #scrollSample = {
+    x: 0,
+    y: 0
+  };
+  #frameScroll = {
+    x: 0,
+    y: 0
+  };
+
+  /**
+   * Canvas event already handled by the canvas listener. Document listeners
+   * see the same object once it bubbles and must not process it twice.
+   */
+  #canvasEvent: MouseEvent | null = null;
 
   #wasActive = false;
   #settled = true;
@@ -196,6 +210,14 @@ export class Mouse extends Emitter<
       this.#onMouseWheel
     );
     this.#documentAdapter.addEventListener(
+      "mousemove",
+      this.#onDocumentMouseMove
+    );
+    this.#documentAdapter.addEventListener(
+      "mouseup",
+      this.#onDocumentMouseUp
+    );
+    this.#documentAdapter.addEventListener(
       "pointerlockchange",
       this.#onPointerLockChange,
       false
@@ -229,6 +251,14 @@ export class Mouse extends Emitter<
       this.#onMouseWheel
     );
     this.#documentAdapter.removeEventListener(
+      "mousemove",
+      this.#onDocumentMouseMove
+    );
+    this.#documentAdapter.removeEventListener(
+      "mouseup",
+      this.#onDocumentMouseUp
+    );
+    this.#documentAdapter.removeEventListener(
       "pointerlockchange",
       this.#onPointerLockChange,
       false
@@ -243,6 +273,11 @@ export class Mouse extends Emitter<
   reset() {
     this.#scrollDelta.x = 0;
     this.#scrollDelta.y = 0;
+    this.#scrollSample.x = 0;
+    this.#scrollSample.y = 0;
+    this.#frameScroll.x = 0;
+    this.#frameScroll.y = 0;
+    this.#canvasEvent = null;
     this.#downMask = 0;
     this.#prevMask = 0;
     this.#pressed.reset();
@@ -268,6 +303,23 @@ export class Mouse extends Emitter<
 
   get scrollDown() {
     return (this.#downMask & (1 << MouseEventButton.scrollDown)) !== 0;
+  }
+
+  get scroll() {
+    return this.scrollTo({ x: 0, y: 0 });
+  }
+
+  scrollTo<T extends Vector2Like>(
+    out: T
+  ): T {
+    out.x = this.#scrollSample.x;
+    out.y = this.#scrollSample.y;
+
+    return out;
+  }
+
+  isScrolling(): boolean {
+    return this.#scrollSample.x !== 0 || this.#scrollSample.y !== 0;
   }
 
   get position() {
@@ -411,6 +463,10 @@ export class Mouse extends Emitter<
     this.#downMask = (this.#downMask & ~kScrollMask) |
       this.#scroll.value;
 
+    this.#scrollSample.x = this.#scrollDelta.x;
+    this.#scrollSample.y = this.#scrollDelta.y;
+    this.#frameScroll.x += this.#scrollDelta.x;
+    this.#frameScroll.y += this.#scrollDelta.y;
     this.#scrollDelta.x = 0;
     this.#scrollDelta.y = 0;
 
@@ -467,9 +523,13 @@ export class Mouse extends Emitter<
       this.#scroll.value;
     this.#delta.x = this.#frameDelta.x;
     this.#delta.y = this.#frameDelta.y;
+    this.#scrollSample.x = this.#frameScroll.x;
+    this.#scrollSample.y = this.#frameScroll.y;
 
     this.#frameDelta.x = 0;
     this.#frameDelta.y = 0;
+    this.#frameScroll.x = 0;
+    this.#frameScroll.y = 0;
 
     if (
       this.#pressed.any ||
@@ -585,7 +645,27 @@ export class Mouse extends Emitter<
       this.#downMask & ~bit;
   }
 
+  #isDragging(): boolean {
+    return (this.#downMask & ~kScrollMask) !== 0;
+  }
+
+  #canvasRelativePosition(
+    event: MouseEvent,
+    out: { x: number; y: number; }
+  ): boolean {
+    const rect = this.#canvas.getBoundingClientRect?.();
+    if (!rect) {
+      return false;
+    }
+
+    out.x = event.clientX - rect.left;
+    out.y = event.clientY - rect.top;
+
+    return true;
+  }
+
   #onMouseMove = (event: MouseEvent) => {
+    this.#canvasEvent = event;
     event.preventDefault();
 
     if (this.#wantsPointerLock) {
@@ -628,6 +708,7 @@ export class Mouse extends Emitter<
   };
 
   #onMouseUp = (event: MouseEvent) => {
+    this.#canvasEvent = event;
     if (this.isDown(event.button)) {
       event.preventDefault();
     }
@@ -656,6 +737,37 @@ export class Mouse extends Emitter<
     this.emit("wheel", event);
 
     return false;
+  };
+
+  #onDocumentMouseMove = (event: MouseEvent) => {
+    if (
+      event === this.#canvasEvent ||
+      this.#wantsPointerLock ||
+      !this.#isDragging()
+    ) {
+      return;
+    }
+
+    const position = this.#newPositionSlot;
+    if (!this.#canvasRelativePosition(event, position)) {
+      return;
+    }
+    this.newPosition = position;
+
+    this.emit("move", event);
+  };
+
+  #onDocumentMouseUp = (event: MouseEvent) => {
+    if (
+      event === this.#canvasEvent ||
+      !this.isDown(event.button)
+    ) {
+      return;
+    }
+
+    this.#setButton(event.button, false);
+
+    this.emit("up", event);
   };
 
   #onPointerLockChange = () => {

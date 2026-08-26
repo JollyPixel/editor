@@ -26,7 +26,6 @@ export interface VoxelBrushOptions {
   groundPlaneSize?: number;
 }
 
-/** Handles voxel painting and erasing. */
 export class VoxelBrush extends ActorComponent {
   readonly vr: VoxelRenderer;
 
@@ -34,6 +33,9 @@ export class VoxelBrush extends ActorComponent {
   #raycaster = new THREE.Raycaster();
   #plane: THREE.Mesh;
   #preview: VoxelBrushPreview;
+  #pointer = new THREE.Vector2();
+  #previewDirty = true;
+  #lastCameraMatrix = new THREE.Matrix4();
 
   constructor(
     actor: Actor,
@@ -75,7 +77,13 @@ export class VoxelBrush extends ActorComponent {
     if (
       editorState.selectedLayerType === "object"
     ) {
-      this.#preview.hide();
+      this.#hidePreview();
+
+      return;
+    }
+
+    if (input.mouse.isDown("middle")) {
+      this.#hidePreview();
 
       return;
     }
@@ -83,9 +91,11 @@ export class VoxelBrush extends ActorComponent {
     if (isCtrl) {
       if (input.mouse.isDown("scrollUp")) {
         editorState.setBrushSize(1);
+        this.#previewDirty = true;
       }
       if (input.mouse.isDown("scrollDown")) {
         editorState.setBrushSize(-1);
+        this.#previewDirty = true;
       }
 
       this.#updatePreview();
@@ -111,18 +121,16 @@ export class VoxelBrush extends ActorComponent {
 
   #castRay(): THREE.Intersection | null {
     const { input } = this.actor.world;
-    const scene = this.actor.world.sceneManager.getSource();
 
-    const viewportPosition = input.mouse.viewportPosition;
     this.#raycaster.setFromCamera(
-      new THREE.Vector2(viewportPosition.x, viewportPosition.y),
+      input.mouse.viewportPositionTo(this.#pointer),
       this.#camera
     );
 
-    const voxelHits = this.#raycaster.intersectObjects(
-      scene.children,
+    const voxelHits = this.#raycaster.intersectObject(
+      this.vr.engine.root,
       true
-    ).filter((intersection) => intersection.object.name.startsWith("voxel_chunk_"));
+    );
 
     if (voxelHits.length > 0) {
       return voxelHits[0];
@@ -235,6 +243,7 @@ export class VoxelBrush extends ActorComponent {
       });
     }
     this.vr.engine.flush();
+    this.#previewDirty = true;
   }
 
   #removeVoxels(): void {
@@ -250,12 +259,37 @@ export class VoxelBrush extends ActorComponent {
       this.vr.engine.removeVoxel(layerName, { position: pos });
     }
     this.vr.engine.flush();
+    this.#previewDirty = true;
+  }
+
+  #hidePreview(): void {
+    this.#preview.hide();
+    this.#previewDirty = true;
+  }
+
+  #consumePreviewRefresh(): boolean {
+    const { input } = this.actor.world;
+    const cameraMoved = !this.#lastCameraMatrix.equals(
+      this.#camera.matrixWorld
+    );
+
+    if (!this.#previewDirty && !cameraMoved && !input.mouse.isMoving()) {
+      return false;
+    }
+
+    this.#lastCameraMatrix.copy(this.#camera.matrixWorld);
+    this.#previewDirty = false;
+
+    return true;
   }
 
   #updatePreview(): void {
     if (editorState.isGizmoDragging) {
-      this.#preview.hide();
+      this.#hidePreview();
 
+      return;
+    }
+    if (!this.#consumePreviewRefresh()) {
       return;
     }
 

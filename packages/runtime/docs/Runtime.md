@@ -180,6 +180,17 @@ GPU detection and the minimum loading delay run concurrently. If device setup
 or asset loading fails, the loading screen displays the error and
 `loadRuntime()` rejects with that error.
 
+Device setup derives the render cap from a GPU benchmark. That number is a
+throughput score rather than a target frame rate, so it can throttle a capable
+machine below its display refresh. Pass `maxFps` to override it:
+
+```ts
+await loadRuntime(runtime, {
+  scene: new BattleScene(),
+  maxFps: Infinity
+});
+```
+
 Pass `skipLoadingScreen: true` to bypass the loading screen entirely: no
 overlay is mounted, the canvas is shown immediately, and `loadingDelay` /
 `loadingContainer` are ignored.

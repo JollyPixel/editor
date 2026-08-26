@@ -4,8 +4,17 @@ import { getGPUTier } from "@pmndrs/detect-gpu";
 // Import Internal Dependencies
 import type { Runtime } from "../Runtime.ts";
 
+export interface ConfigureRuntimeDeviceOptions {
+  /**
+   * Render cap in frames per second.
+   * Overrides the GPU-benchmarked estimate.
+   */
+  maxFps?: number;
+}
+
 export async function configureRuntimeDevice<TContext>(
-  runtime: Runtime<TContext>
+  runtime: Runtime<TContext>,
+  options: ConfigureRuntimeDeviceOptions = {}
 ): Promise<void> {
   const {
     fps,
@@ -22,7 +31,7 @@ export async function configureRuntimeDevice<TContext>(
     );
   }
 
-  runtime.loop.scheduler.maxFps = fps ?? Infinity;
+  runtime.loop.scheduler.maxFps = options.maxFps ?? fps ?? Infinity;
   runtime.world.renderer.getSource().setPixelRatio(
     getDevicePixelRatio(isMobile)
   );
