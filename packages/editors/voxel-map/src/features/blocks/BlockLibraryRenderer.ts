@@ -9,13 +9,18 @@ import type {
 
 // Import Internal Dependencies
 import { disposeObject3D } from "../../shared/disposeObject3D.ts";
+import { computeBlockGridLayout } from "./blockGridLayout.ts";
 
 // CONSTANTS
-const kCellSize = 64;
+// Extra render resolution on top of the display density, so cube
+// silhouettes stay smooth once MSAA has resolved.
+const kSuperSampling = 2;
+const kMaxPixelRatio = 3;
 const kCameraFov = 45;
 const kCameraZ = 2.2;
 const kAmbientIntensity = 1.5;
 const kDirIntensity = 1.2;
+const kSelectedBackground = new THREE.Color(0x2a3a5a);
 
 export interface CellEntry {
   blockId: number;
@@ -44,7 +49,7 @@ export class BlockLibraryRenderer {
   #raf = -1;
   #rot = 0;
   #cols = 1;
-  #cellSize = kCellSize;
+  #cellSize = 1;
   #container: HTMLElement;
   #resizeObserver: ResizeObserver;
 
@@ -57,10 +62,12 @@ export class BlockLibraryRenderer {
     this.#container = container;
 
     this.#renderer = new THREE.WebGLRenderer({
-      antialias: false,
+      antialias: true,
       alpha: true
     });
-    this.#renderer.setPixelRatio(window.devicePixelRatio);
+    this.#renderer.setPixelRatio(
+      Math.min(window.devicePixelRatio * kSuperSampling, kMaxPixelRatio)
+    );
     this.#renderer.autoClear = false;
     this.#renderer.setClearColor(0x000000, 0);
 
@@ -127,10 +134,8 @@ export class BlockLibraryRenderer {
     px: number,
     py: number
   ): number | null {
-    const pr = this.#renderer.getPixelRatio();
-    const cellCssPx = this.#cellSize / pr;
-    const col = Math.floor(px / cellCssPx);
-    const row = Math.floor(py / cellCssPx);
+    const col = Math.floor(px / this.#cellSize);
+    const row = Math.floor(py / this.#cellSize);
 
     const cell = this.#cells.find(
       (cell) => cell.x === col && cell.y === row
@@ -240,13 +245,14 @@ export class BlockLibraryRenderer {
   }
 
   #relayout(): void {
-    const pr = this.#renderer.getPixelRatio();
     const style = getComputedStyle(this.#container);
     const paddingH = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
-    const availCssPx = this.#container.clientWidth - paddingH;
+    const layout = computeBlockGridLayout(
+      this.#container.clientWidth - paddingH
+    );
 
-    this.#cols = Math.max(1, Math.floor(availCssPx / (kCellSize / pr)));
-    this.#cellSize = Math.max(1, Math.round(availCssPx * pr / this.#cols));
+    this.#cols = layout.cols;
+    this.#cellSize = layout.cellSize;
 
     for (let i = 0; i < this.#cells.length; i++) {
       this.#cells[i].x = i % this.#cols;
@@ -258,12 +264,11 @@ export class BlockLibraryRenderer {
 
   #resizeCanvas(): void {
     const rows = Math.ceil(this.#cells.length / this.#cols) || 1;
-    const pr = this.#renderer.getPixelRatio();
     const w = this.#cols * this.#cellSize;
     const h = rows * this.#cellSize;
-    this.#renderer.setSize(w / pr, h / pr, false);
-    this.canvas.style.width = `${w / pr}px`;
-    this.canvas.style.height = `${h / pr}px`;
+    this.#renderer.setSize(w, h, false);
+    this.canvas.style.width = `${w}px`;
+    this.canvas.style.height = `${h}px`;
   }
 
   #startLoop(): void {
@@ -279,16 +284,15 @@ export class BlockLibraryRenderer {
 
     this.#renderer.clear();
 
-    const pr = this.#renderer.getPixelRatio();
     const totalRows = Math.ceil(this.#cells.length / this.#cols) || 1;
-    const cellCssPx = this.#cellSize / pr;
+    const cellSize = this.#cellSize;
 
     const scrollTop = this.#container.scrollTop;
     const containerH = this.#container.clientHeight;
 
     for (const cell of this.#cells) {
-      const cellTop = cell.y * cellCssPx;
-      const cellBottom = cellTop + cellCssPx;
+      const cellTop = cell.y * cellSize;
+      const cellBottom = cellTop + cellSize;
       if (cellBottom <= scrollTop || cellTop >= scrollTop + containerH) {
         continue;
       }
@@ -297,16 +301,16 @@ export class BlockLibraryRenderer {
       cell.mesh.position.set(0, 0, 0);
       cell.mesh.rotation.set(0.4, this.#rot, 0);
 
-      const x = cell.x * cellCssPx;
-      const y = (totalRows - 1 - cell.y) * cellCssPx;
+      const x = cell.x * cellSize;
+      const y = (totalRows - 1 - cell.y) * cellSize;
 
-      this.#renderer.setViewport(x, y, cellCssPx, cellCssPx);
-      this.#renderer.setScissor(x, y, cellCssPx, cellCssPx);
+      this.#renderer.setViewport(x, y, cellSize, cellSize);
+      this.#renderer.setScissor(x, y, cellSize, cellSize);
       this.#renderer.setScissorTest(true);
       this.#renderer.clearDepth();
 
       this.#scene.background = cell.blockId === this.#selectedId
-        ? new THREE.Color(0x2a3a5a)
+        ? kSelectedBackground
         : null;
 
       this.#renderer.render(this.#scene, this.#camera);
