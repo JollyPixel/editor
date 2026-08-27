@@ -28,6 +28,10 @@ export on its own line when the list has more than two members.
 - Name APIs after their intent and behavior (`applyDelta`, `fitsWithin`,
   `rowsWithin`), not their implementation. Document units, defaults,
   mutability, bounds, and out-of-bounds behavior when they are not obvious.
+- Do not prefix methods with `get`/`set`. Use a real getter/setter pair when
+  the member reads as a property (`set state(value)`), otherwise name the
+  method after what it does (`copySizeTo`, `toBox3`, `resize`, `emphasize`,
+  `hover`). Reserve the prefixes for accessors mandated by an external API.
 
 ## Style
 

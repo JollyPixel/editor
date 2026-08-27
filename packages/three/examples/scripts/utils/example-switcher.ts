@@ -10,6 +10,7 @@ const kToggleKey = "F3";
 /** Label → path, as consumed by the switcher's `options`. */
 const kExamples: Record<string, string> = {
   Grid: "/",
+  "Area Box": "/area-box.html",
   "Peer Frustum": "/peer-frustum.html",
   "Peer Frustum Sync": "/peer-frustum-sync.html"
 };

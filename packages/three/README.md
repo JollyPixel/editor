@@ -32,6 +32,7 @@ scene.add(grid); // self-updating: no manual .update() call needed
 
 ### Components
 
+- [AreaBox](docs/AreaBox.md): Translucent axis-aligned area, moved and resized on a grid by [AreaBoxControls](docs/AreaBoxControls.md).
 - [Grid](docs/Grid.md): Ground-plane grid mesh. (TSL, `THREE.WebGPURenderer`).
 - [PeerFrustum](docs/PeerFrustum.md): Renders connected peers as lightweight camera frustums.
 
