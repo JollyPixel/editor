@@ -6,6 +6,7 @@ import { ActorTree } from "./ActorTree.ts";
 import { Transform } from "./Transform.ts";
 import { IntegerIncrement } from "../systems/generators/IntegerIncrement.ts";
 import { PersistentIdIncrement } from "../systems/generators/PersistentIdIncrement.ts";
+import { disposeObject3D } from "../utils/disposeObject3D.ts";
 import type { World, WorldDefaultContext } from "../systems/World.ts";
 import type { Behavior } from "../components/script/Behavior.ts";
 import type {
@@ -187,7 +188,7 @@ export class Actor<
   ): this {
     for (const object of objects) {
       this.object3D.remove(object);
-      Actor.disposeObject3D(object);
+      disposeObject3D(object);
     }
 
     return this;
@@ -244,28 +245,10 @@ export class Actor<
       this.parent.remove(this);
     }
 
-    this.object3D.traverse((child) => Actor.disposeObject3D(child));
-    this.object3D.clear();
-  }
-
-  static disposeObject3D(
-    object: THREE.Object3D
-  ): void {
-    if ("geometry" in object && object.geometry instanceof THREE.BufferGeometry) {
-      object.geometry.dispose();
-    }
-
-    if ("material" in object) {
-      const materials = Array.isArray(object.material)
-        ? object.material
-        : [object.material];
-
-      for (const material of materials) {
-        if (material instanceof THREE.Material) {
-          material.dispose();
-        }
-      }
-    }
+    disposeObject3D(
+      this.object3D,
+      { stopAtActors: true }
+    );
   }
 
   markDestructionPending() {
