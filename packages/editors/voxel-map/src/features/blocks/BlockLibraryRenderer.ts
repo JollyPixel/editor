@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
+import { disposeObject3D } from "@jolly-pixel/engine";
 import type {
   BlockDefinition,
   BlockShapeRegistry,
@@ -8,7 +9,6 @@ import type {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { disposeObject3D } from "../../shared/disposeObject3D.ts";
 import { computeBlockGridLayout } from "./blockGridLayout.ts";
 
 // CONSTANTS

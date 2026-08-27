@@ -223,6 +223,11 @@ $ npm run lint
 > [!CAUTION]
 > In case you introduce a new feature or fix a bug, make sure to include tests for it as well.
 
+### 🧰 Utils
+
+- [disposeObject3D](./docs/utils/dispose-object-3d.md) — releases the GPU
+  resources owned by an Object3D subtree.
+
 ### 📦 Internals
 
 - [Adapters](./docs/internals/adapters.md)

@@ -111,16 +111,17 @@ const mesh = new THREE.Mesh(geometry, material);
 actor.addChildren(mesh);
 ```
 
-When removing children, their geometry and materials are
-automatically disposed:
+When removing children, their GPU resources are automatically
+disposed
 
 ```ts
 actor.removeChildren(mesh);
 ```
 
-On destruction, the actor traverses all remaining Three.js children
-and disposes their GPU resources (geometry and materials) before
-clearing the group.
+On destruction, the actor disposes the resources of all its remaining
+Three.js children before clearing the group. The traversal stops on
+nested actors, which own their own destruction, and leaves textures
+untouched since they are commonly shared.
 
 ## Transform
 
