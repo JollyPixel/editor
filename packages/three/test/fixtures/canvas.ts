@@ -12,7 +12,10 @@ export class MockCanvasRenderingContext2D {
 
   fillTextCallCount = 0;
   lastFillText = "";
+  strokeTextCallCount = 0;
+  lastStrokeText = "";
   roundRectCallCount = 0;
+  lineJoin: CanvasLineJoin = "miter";
 
   clearRect(..._args: unknown[]): void {
     // No-op for testing
@@ -44,6 +47,13 @@ export class MockCanvasRenderingContext2D {
   ): void {
     this.fillTextCallCount++;
     this.lastFillText = text;
+  }
+
+  strokeText(
+    text: string
+  ): void {
+    this.strokeTextCallCount++;
+    this.lastStrokeText = text;
   }
 
   measureText(

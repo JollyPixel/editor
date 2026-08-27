@@ -15,6 +15,9 @@ const kPeerFrustumDemoRoom = "three:peer-frustum-demo";
 // https://vitejs.dev/config/
 export default defineConfig({
   root: "examples",
+  server: {
+    allowedHosts: true
+  },
   plugins: [
     checker({ typescript: true }),
     createWebSocketNetworkPlugin({

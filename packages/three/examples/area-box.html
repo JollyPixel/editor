@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Area Box - @jolly-pixel/three</title>
+  <link rel="stylesheet" href="/main.css">
+</head>
+
+<body>
+  <canvas tabindex="-1"></canvas>
+  <jolly-scope>
+    <jolly-controls
+      position="bottom-left"
+      max-entries-per-row="3"
+      heading="Controls"
+    >
+      <jolly-control
+        description="Select"
+        details="Click an area to select it, click the ground to deselect."
+      ><kbd>Click</kbd></jolly-control>
+      <jolly-control
+        description="Move"
+        details="Drag the selected volume to move it on the ground plane."
+      ><kbd>Drag</kbd></jolly-control>
+      <jolly-control
+        description="Resize"
+        details="Drag a face arrow to move that face alone."
+      ><kbd>Drag arrow</kbd></jolly-control>
+      <jolly-control
+        description="Move vertically"
+        details="Hold Shift while dragging the volume, with move axes set to XYZ."
+      ><kbd>Shift</kbd> + <kbd>Drag</kbd></jolly-control>
+      <jolly-control
+        description="Ignore the grid"
+        details="Hold Alt during a gesture to suspend snapping."
+      ><kbd>Alt</kbd></jolly-control>
+    </jolly-controls>
+    <jolly-dock-layout storage-key="three-examples:layout">
+      <jolly-dock
+        id="tools"
+        key="tools"
+        side="right"
+        align="start"
+        overlay
+        collapsible
+        size="340"
+      ></jolly-dock>
+    </jolly-dock-layout>
+  </jolly-scope>
+  <script type="module" src="./scripts/demo-area-box.ts"></script>
+</body>
+
+</html>
