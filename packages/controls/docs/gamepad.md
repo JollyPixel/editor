@@ -1,30 +1,30 @@
 # Gamepad
 
-Gamepad input handler supporting up to 4 controllers. Tracks button state,
-analog stick axes with dead zone, and axis auto-repeat for menu navigation.
+`Gamepad` polls up to four controllers through the browser Gamepad API. It
+tracks button transitions, analog values, directional stick transitions, and
+axis auto-repeat for menu-style navigation.
 
-Automatically connected and polled by `Input`, but can also be used standalone.
+`Input` connects and updates one automatically, or the device can be used on
+its own.
 
 ```ts
 import {
   Gamepad,
-  GamepadButton,
-  GamepadAxis
+  GamepadAxis,
+  GamepadButton
 } from "@jolly-pixel/controls";
 
 const gamepad = new Gamepad();
-
 gamepad.connect();
-gamepad.on("connect", (pad) => console.log("connected", pad.id));
 
 function gameLoop() {
   gamepad.update();
 
-  if (gamepad.buttons[0][GamepadButton.A].wasJustPressed) {
-    console.log("Player 1 pressed A!");
+  if (gamepad.wasButtonJustPressed(0, GamepadButton.A)) {
+    console.log("Player 1 pressed A");
   }
 
-  const stickX = gamepad.axes[0][GamepadAxis.LeftStickX].value;
+  const stickX = gamepad.axisValue(0, GamepadAxis.LeftStickX);
   if (stickX !== 0) {
     console.log("Left stick X:", stickX);
   }
@@ -37,58 +37,66 @@ gameLoop();
 
 ## Constructor
 
-### `new Gamepad(options?)`
-
 ```ts
 interface GamepadOptions {
   navigatorAdapter?: NavigatorAdapter;
   windowAdapter?: WindowAdapter;
 }
 
-new Gamepad(options?: GamepadOptions);
+new Gamepad(options?: GamepadOptions)
 ```
 
-## Types
+The adapters default to browser-backed implementations. They are useful for
+custom hosts and tests, but their interfaces are not exported from the package
+root.
+
+## Standard mapping
 
 ```ts
 type GamepadIndex = 0 | 1 | 2 | 3;
 
-// W3C Standard Gamepad button mapping
-// @see https://w3c.github.io/gamepad/#remapping
 const GamepadButton = {
-  // Face buttons
-  A: 0,        // Xbox: A, PlayStation: Cross
-  B: 1,        // Xbox: B, PlayStation: Circle
-  X: 2,        // Xbox: X, PlayStation: Square
-  Y: 3,        // Xbox: Y, PlayStation: Triangle
-  // Shoulder buttons
-  LeftBumper: 4,   // L1
-  RightBumper: 5,  // R1
-  LeftTrigger: 6,  // L2
-  RightTrigger: 7, // R2
-  // Center buttons
-  Select: 8,       // Back/Share
-  Start: 9,        // Start/Options
-  // Stick buttons
-  LeftStick: 10,   // L3
-  RightStick: 11,  // R3
-  // D-Pad
+  A: 0,
+  B: 1,
+  X: 2,
+  Y: 3,
+  LeftBumper: 4,
+  RightBumper: 5,
+  LeftTrigger: 6,
+  RightTrigger: 7,
+  Select: 8,
+  Start: 9,
+  LeftStick: 10,
+  RightStick: 11,
   DPadUp: 12,
   DPadDown: 13,
   DPadLeft: 14,
   DPadRight: 15,
-  // Special
   Home: 16
 } as const;
 
-// Axis values range from -1.0 (left/up) to 1.0 (right/down)
 const GamepadAxis = {
   LeftStickX: 0,
   LeftStickY: 1,
   RightStickX: 2,
   RightStickY: 3
 } as const;
+```
 
+The names follow the W3C standard mapping. Button availability still depends
+on the connected controller.
+
+The current implementation allocates `Gamepad.MaxButtons` as `16`, covering
+indices `0` through `15`. `GamepadButton.Home` is exported as index `16`,
+but no state is allocated for it, so querying `"Home"` throws
+`Error("Invalid gamepad info")`.
+
+Axis values range from `-1` to `1`. X is negative to the left and positive
+to the right. Y is negative upward and positive downward.
+
+## State
+
+```ts
 interface GamepadButtonState {
   isDown: boolean;
   wasJustPressed: boolean;
@@ -111,89 +119,209 @@ interface GamepadAutoRepeat {
   positive: boolean;
   time: number;
 }
+
+declare class Gamepad {
+  static MaxGamepads: number;
+  static MaxButtons: number;
+  static MaxAxes: number;
+  static IdlePollFrames: number;
+
+  connectedGamepads: number;
+  buttons: GamepadButtonState[][];
+  axes: GamepadAxisState[][];
+  autoRepeats: (GamepadAutoRepeat | null)[];
+  vibration: GamepadVibration[];
+
+  axisDeadZone: number;
+  axisAutoRepeatDelayMs: number;
+  axisAutoRepeatRateMs: number;
+
+  get wasActive(): boolean;
+}
+```
+
+The arrays are indexed by gamepad first, then button or axis. They are mutable
+public state. The query methods provide name resolution and consistent error
+handling.
+
+`connectedGamepads` is updated by connection events. It never drops below
+zero. `wasActive` is true when the latest poll found a pressed button or an
+axis beyond the directional press threshold.
+
+The default tuning values are:
+
+```ts
+Gamepad.IdlePollFrames = 30;
+gamepad.axisDeadZone = 0.25;
+gamepad.axisAutoRepeatDelayMs = 500;
+gamepad.axisAutoRepeatRateMs = 33;
+```
+
+All four static fields are mutable in the current declaration.
+
+## Button queries
+
+```ts
+interface Gamepad {
+  isButtonDown(
+    gamepad: GamepadIndex,
+    button: number | keyof typeof GamepadButton
+  ): boolean;
+
+  wasButtonJustPressed(
+    gamepad: GamepadIndex,
+    button: number | keyof typeof GamepadButton
+  ): boolean;
+
+  wasButtonJustReleased(
+    gamepad: GamepadIndex,
+    button: number | keyof typeof GamepadButton
+  ): boolean;
+
+  buttonValue(
+    gamepad: GamepadIndex,
+    button: number | keyof typeof GamepadButton
+  ): number;
+}
+```
+
+The transition methods compare the latest poll with the previous one.
+`buttonValue()` returns the controller's analog button value, normally in the
+range `0` through `1`.
+
+A button index without allocated state throws
+`Error("Invalid gamepad info")`. `"ANY"` and `"NONE"` are not accepted.
+
+## Axis queries
+
+```ts
+interface Gamepad {
+  wasAxisJustPressed(
+    gamepad: GamepadIndex,
+    axis: number | keyof typeof GamepadAxis,
+    options?: {
+      autoRepeat?: boolean;
+      positive?: boolean;
+    }
+  ): boolean;
+
+  wasAxisJustReleased(
+    gamepad: GamepadIndex,
+    axis: number | keyof typeof GamepadAxis,
+    options?: {
+      positive?: boolean;
+    }
+  ): boolean;
+
+  axisValue(
+    gamepad: GamepadIndex,
+    axis: number | keyof typeof GamepadAxis
+  ): number;
+}
+```
+
+`axisValue()` applies `axisDeadZone` to each two-axis stick using its radial
+magnitude. A stick inside the dead zone reports `0` on both axes.
+
+Directional press and release flags use a fixed magnitude of `0.5` after the
+dead zone has been applied. `positive` defaults to `false`, so an omitted
+option queries the negative direction. Set `positive: true` for right or down.
+
+`autoRepeat` defaults to `false`. When enabled for a press query, it also
+returns true on a held direction after `axisAutoRepeatDelayMs`, then every
+`axisAutoRepeatRateMs`. Auto-repeat tracks one axis direction per gamepad.
+
+An axis index without allocated state throws
+`Error("Invalid gamepad info")`.
+
+## Polling
+
+```ts
+update(): void
+reset(): void
+```
+
+Until a controller is found, `update()` calls `navigator.getGamepads()` once
+every `Gamepad.IdlePollFrames` updates. This back-off still detects a
+controller present at page load when `gamepadconnected` did not fire. After a
+controller appears, polling returns to every update.
+
+Set `Gamepad.IdlePollFrames = 1` for unconditional polling while disconnected.
+`reset()` clears every allocated button and axis state. It leaves tuning,
+connection count, and vibration wrappers in place.
+
+## Vibration
+
+`vibration` contains one `GamepadVibration` wrapper for each supported
+gamepad index. `update()` refreshes a wrapper from the corresponding
+controller's `vibrationActuator`.
+
+```ts
+interface GamepadVibrationOptions {
+  startDelay?: number;
+  strongMagnitude?: number;
+  weakMagnitude?: number;
+  effectType?: GamepadHapticEffectType;
+}
+
+declare class GamepadVibration {
+  constructor(
+    actuator?: GamepadHapticActuator | null
+  );
+
+  readonly canVibrate: boolean;
+
+  pulse(
+    intensity: number,
+    duration: number,
+    options?: GamepadVibrationOptions
+  ): Promise<boolean>;
+
+  stop(): Promise<boolean>;
+
+  set actuator(
+    actuator: GamepadHapticActuator | null
+  );
+}
+```
+
+`GamepadVibration` can be constructed separately with an actuator or `null`.
+The `actuator` setter is marked internal and is refreshed by
+`Gamepad.update()` for wrappers in the `vibration` array.
+
+`pulse()` defaults `startDelay` to `0`, both magnitudes to `intensity`, and
+`effectType` to `"dual-rumble"`. It resolves to `true` only when
+`playEffect()` reports `"complete"`. It resolves to `false` when no actuator
+is available or the effect is preempted.
+
+`stop()` calls the actuator's `reset()` and follows the same boolean result
+rule. It resolves to `false` when `canVibrate` is false.
+
+```ts
+if (gamepad.vibration[0].canVibrate) {
+  await gamepad.vibration[0].pulse(0.75, 150);
+}
 ```
 
 ## Events
 
 ```ts
 type GamepadEvents = {
-  connect: [gamepad: globalThis.Gamepad];
-  disconnect: [gamepad: globalThis.Gamepad];
+  connect: (gamepad: globalThis.Gamepad) => void;
+  disconnect: (gamepad: globalThis.Gamepad) => void;
 };
 ```
 
-## Properties
+Both events receive the browser `Gamepad` from the corresponding window
+event.
+
+## Lifecycle
 
 ```ts
-interface Gamepad {
-  static readonly MaxGamepads: 4;
-  static readonly MaxButtons: 16;
-  static readonly MaxAxes: 4;
-  // Frames between navigator.getGamepads() polls while nothing is connected
-  // (default 30). See "Polling cost" below.
-  static IdlePollFrames: number;
-
-  // Per-gamepad, per-button state
-  buttons: GamepadButtonState[][];
-  // Per-gamepad, per-axis state
-  axes: GamepadAxisState[][];
-  // Per-gamepad auto-repeat tracking (for held axes)
-  autoRepeats: (GamepadAutoRepeat | null)[];
-
-  // Number of currently connected controllers
-  connectedGamepads: number;
-
-  // Dead zone threshold for analog sticks (default 0.25)
-  axisDeadZone: number;
-  // Delay before first auto-repeat in ms (default 500)
-  axisAutoRepeatDelayMs: number;
-  // Interval between auto-repeats in ms (default 33)
-  axisAutoRepeatRateMs: number;
-
-  readonly wasActive: boolean;
-}
+connect(): void
+disconnect(): void
 ```
 
-## Polling cost
-
-Until it finds a controller, `update()` polls every `Gamepad.IdlePollFrames`
-frames so it can detect controllers present at page load when
-`gamepadconnected` may not fire, after which polling returns to every frame.
-
-Set `Gamepad.IdlePollFrames = 1` to restore unconditional per-frame polling.
-
-## API
-
-```ts
-interface Gamepad {
-  // Lifecycle
-  connect(): void;
-  disconnect(): void;
-  reset(): void;
-  update(): void;
-
-  // Per-frame state queries, `buttonIndex` accepts a GamepadButton name or index
-  isButtonDown(gamepad: GamepadIndex, buttonIndex: number | keyof typeof GamepadButton): boolean;
-  wasButtonJustPressed(gamepad: GamepadIndex, buttonIndex: number | keyof typeof GamepadButton): boolean;
-  wasButtonJustReleased(gamepad: GamepadIndex, buttonIndex: number | keyof typeof GamepadButton): boolean;
-  // Analog value of a button (0 to 1)
-  buttonValue(gamepad: GamepadIndex, buttonIndex: number | keyof typeof GamepadButton): number;
-
-  // `axis` accepts a GamepadAxis name or index; throws on an out-of-range gamepad/axis
-  wasAxisJustPressed(
-    gamepad: GamepadIndex,
-    axis: number | keyof typeof GamepadAxis,
-    options?: { positive?: boolean; autoRepeat?: boolean; }
-  ): boolean;
-  wasAxisJustReleased(
-    gamepad: GamepadIndex,
-    axis: number | keyof typeof GamepadAxis,
-    options?: { positive?: boolean; }
-  ): boolean;
-  // Current axis value (-1 to 1)
-  axisValue(gamepad: GamepadIndex, axis: number | keyof typeof GamepadAxis): number;
-}
-```
-
-All button and axis query methods throw `Error("Invalid gamepad info")` for an
-out-of-range gamepad, button, or axis. `"ANY"` and `"NONE"` are not supported.
+`connect()` registers `gamepadconnected` and `gamepaddisconnected` listeners
+on the window adapter. `disconnect()` removes them. Polling happens only when
+the caller invokes `update()`.

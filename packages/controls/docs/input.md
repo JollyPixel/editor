@@ -1,11 +1,8 @@
 # Input
 
-`Input` owns one instance of each input device. It connects and updates them
-together and tracks device preference and exit lifecycle.
-
-Per-device state queries (`isDown`, `wasJustPressed`, coordinate-space
-helpers, ...) live on `input.mouse`, `input.keyboard`, `input.gamepad`,
-`input.touchpad`, and `input.screen`.
+`Input` owns the mouse, keyboard, gamepad, touch, and fullscreen controls for
+one canvas. It connects their browser listeners, advances their frame state,
+and tracks which input family was active most recently.
 
 ```ts
 import { Input } from "@jolly-pixel/controls";
@@ -14,8 +11,8 @@ const canvas = document.querySelector("canvas");
 if (!canvas) {
   throw new Error("No canvas element found");
 }
-const input = new Input(canvas);
 
+const input = new Input(canvas);
 input.connect();
 
 function gameLoop() {
@@ -35,11 +32,43 @@ function gameLoop() {
 gameLoop();
 ```
 
-## Device APIs
+## Constructor
 
-Each device is available as a property on the `Input` instance
-(`input.mouse`, `input.keyboard`, `input.gamepad`, `input.touchpad`,
-`input.screen`) and can also be used standalone.
+```ts
+interface InputOptions {
+  enableOnExit?: boolean;
+  windowAdapter?: WindowAdapter;
+  documentAdapter?: DocumentAdapter;
+}
+
+new Input(
+  canvas: CanvasAdapter,
+  options?: InputOptions
+)
+```
+
+An `HTMLCanvasElement` satisfies `CanvasAdapter`. The window and document
+adapters default to browser-backed implementations and are mainly useful for
+custom hosts and tests. Their interfaces are referenced by the public options
+but are not exported from the package root.
+
+`enableOnExit` defaults to `false`. When enabled, `Input` assigns an
+`onbeforeunload` handler to the window adapter and emits `exit` once. The
+assignment remains installed after `disconnect()`.
+
+## Devices
+
+```ts
+interface Input {
+  mouse: Mouse;
+  keyboard: Keyboard;
+  gamepad: Gamepad;
+  touchpad: Touchpad;
+  screen: Screen;
+}
+```
+
+The device instances can also be constructed and used on their own:
 
 - [Mouse](mouse.md)
 - [Keyboard](keyboard.md)
@@ -47,94 +76,124 @@ Each device is available as a property on the `Input` instance
 - [Touchpad](touchpad.md)
 - [Screen](screen.md)
 
-## Constructor
-
-### `new Input(canvas, options?)`
-
-```ts
-interface InputOptions {
-  // Emit an "exit" event on window.onbeforeunload
-  enableOnExit?: boolean;
-  // Custom window adapter (defaults to BrowserWindowAdapter)
-  windowAdapter?: WindowAdapter;
-  documentAdapter?: DocumentAdapter;
-}
-
-new Input(canvas: CanvasAdapter, options?: InputOptions);
-```
+`Input` mirrors primary touch events into the left mouse button and mouse
+position. It also connects mouse down and up events to the pending fullscreen
+request owned by `screen`.
 
 ## Lifecycle
 
-### `connect()`
+```ts
+interface Input {
+  connect(): void;
+  disconnect(): void;
+  update(): void;
+  publishFrameState(): void;
+}
+```
 
-Register all DOM event listeners for every device (mouse, keyboard,
-gamepad, touchpad, screen). Must be called before `update()`.
+### `connect()` / `disconnect()`
 
-### `disconnect()`
+`connect()` registers the device listeners plus window `blur` and
+`contextmenu` listeners. Call it before expecting browser events to reach the
+input state.
 
-Remove all DOM event listeners. Call when tearing down the game loop.
+`disconnect()` removes the listeners registered by `connect()`. It does not
+clear the `onbeforeunload` assignment created by `enableOnExit`.
+
+The context-menu listener prevents the browser menu from opening. A window
+blur resets mouse, keyboard, gamepad, and touch state so held controls cannot
+remain stuck.
 
 ### `update()`
 
-Poll every device and flush per-frame state (just pressed / just released).
-Call once per frame **before** querying input state.
+Advances mouse, touchpad, keyboard, and gamepad state. Call it once before the
+frame reads `isDown`, `wasJustPressed`, `wasJustReleased`, movement, or typed
+characters.
+
+`update()` also changes `devicePreference` when it sees gamepad activity or
+activity from mouse, keyboard, or touch input.
 
 ### `publishFrameState()`
 
-Publish mouse transitions, wheel state, and movement accumulated across every
-`update()` call since the previous publication. Engines that sample input once
-per fixed step call this immediately before their rendered update, so the
-rendered update sees every transient without repeating an edge in catch-up
-fixed steps.
+Publishes mouse transitions, wheel state, and movement accumulated across
+every `update()` call since the previous publication. A fixed-step engine can
+call it before the rendered update so the render sees all transients consumed
+by catch-up steps without repeating an edge.
 
-## Events
-
-`Input` extends `EventEmitter` and emits the following events:
+## Device preference
 
 ```ts
 type InputDevicePreference = "default" | "gamepad";
 
+interface Input {
+  get devicePreference(): InputDevicePreference;
+}
+```
+
+`"default"` covers mouse, keyboard, and touch input. The initial preference is
+`"default"`. `Input` changes it to `"gamepad"` after gamepad activity and back
+to `"default"` after activity from one of the other devices.
+
+## Exit state
+
+```ts
+interface Input {
+  exited: boolean;
+}
+```
+
+`exited` starts as `false`. The first `onbeforeunload` callback emits `exit`
+and sets it to `true`; later callbacks do not emit the event again.
+
+## Events
+
+`Input` extends `Emitter` from `@openally/emitt`.
+
+```ts
 type InputEvents = {
-  // Fired on window.onbeforeunload (requires enableOnExit)
-  exit: [];
-  // Fired when active device switches between "default" (mouse + keyboard) and "gamepad"
-  devicePreferenceChange: [preference: InputDevicePreference];
+  exit: () => void;
+  devicePreferenceChange: (
+    preference: InputDevicePreference
+  ) => void;
 };
 ```
 
-### `devicePreference: InputDevicePreference`
-
-Returns `"default"` (mouse + keyboard) or `"gamepad"` based on which device
-was last active.
+`exit` requires `enableOnExit: true`. `devicePreferenceChange` receives the
+new preference after the state changes.
 
 ## Listener types
 
-`InputListenerType` contains the dot-path name of every emitted event, such as
-`"mouse.down"` or `"keyboard.KeyA"`. Consumers such as
-`@jolly-pixel/engine`'s `@InputListener` decorator use these names for binding.
+`InputListenerType` is the dot-path union used by consumers that bind Input
+and device events through one name, such as `@jolly-pixel/engine`'s
+`@InputListener` decorator.
 
-Available listener types:
+```ts
+type InputListenerType =
+  | "input.devicePreferenceChange"
+  | "input.exit"
+  | "mouse.down"
+  | "mouse.up"
+  | "mouse.move"
+  | "mouse.wheel"
+  | "mouse.lockStateChange"
+  | "gamepad.connect"
+  | "gamepad.disconnect"
+  | "touchpad.start"
+  | "touchpad.move"
+  | "touchpad.end"
+  | "screen.stateChange"
+  | "keyboard.down"
+  | "keyboard.up"
+  | "keyboard.press"
+  | `keyboard.${KeyCode}`;
+```
 
-- `mouse.down`
-- `mouse.up`
-- `mouse.move`
-- `mouse.wheel`
-- `mouse.lockStateChange`
-- `keyboard.down`
-- `keyboard.up`
-- `keyboard.press`
-- `keyboard.<KeyCode>`
-- `gamepad.connect`
-- `gamepad.disconnect`
-- `touchpad.start`
-- `touchpad.move`
-- `touchpad.end`
-- `screen.stateChange`
-- `input.devicePreferenceChange`
-- `input.exit`
+## Vibration
 
-## Misc
+```ts
+vibrate(pattern: VibratePattern): void
+```
 
-### `vibrate(pattern)`
-
-Trigger vibration through `navigator.vibrate()`.
+Delegates to `navigator.vibrate()`. This is device vibration, commonly used on
+phones. Controller haptics are available through
+[`input.gamepad.vibration`](gamepad.md#vibration).
