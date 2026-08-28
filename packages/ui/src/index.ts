@@ -180,6 +180,7 @@ export {
 export type {
   QuatLike,
   TransformLike,
+  Vec2Like,
   Vec3Like,
   VectorValue
 } from "./math/types.ts";

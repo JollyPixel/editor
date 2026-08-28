@@ -4,6 +4,11 @@ import type {
   MixedSymbol
 } from "../field/mixed.ts";
 
+export interface Vec2Like {
+  readonly x: number;
+  readonly y: number;
+}
+
 export interface Vec3Like {
   readonly x: number;
   readonly y: number;

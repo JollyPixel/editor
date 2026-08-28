@@ -11,13 +11,13 @@ import type {
 import {
   showPrompt,
   type JollyChangeDetail,
+  type Vec2Like,
   type Vec3Like
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { editorState } from "../../EditorState.ts";
 import { normalizeVoxelExtent } from "../../shared/voxelExtent.ts";
-import type { Vec2Like } from "../../shared/dom.types.ts";
 
 @customElement("object-layer-panel")
 export class ObjectLayerPanel extends LitElement {
