@@ -1,35 +1,34 @@
 # Touchpad
 
-Multi-touch input handler. Tracks up to 10 simultaneous touch points
-with per-finger state (down, started, ended, position).
+`Touchpad` tracks up to ten browser touch identifiers with per-touch position
+and frame transitions. It is intended for touch-screen events. Laptop
+trackpads normally appear through [Mouse](mouse.md).
 
-Automatically connected and polled by `Input`, but can also be used standalone.
+`Input` connects and updates one automatically, or the device can be used on
+its own.
 
 ```ts
 import {
-  Touchpad,
-  TouchIdentifier
+  TouchIdentifier,
+  Touchpad
 } from "@jolly-pixel/controls";
 
 const canvas = document.querySelector("canvas");
 if (!canvas) {
   throw new Error("No canvas element found");
 }
-const touchpad = new Touchpad({ canvas });
 
+const touchpad = new Touchpad({ canvas });
 touchpad.connect();
-touchpad.on("start", (touch, position) => {
-  console.log("touch", touch.identifier, position);
-});
 
 function gameLoop() {
   touchpad.update();
 
-  if (touchpad.touchState(TouchIdentifier.primary).wasStarted) {
-    console.log("Primary finger down!");
+  if (touchpad.wasStarted(TouchIdentifier.primary)) {
+    console.log("Primary touch started");
   }
   if (touchpad.isTwoFingerGesture) {
-    console.log("Pinch / two-finger gesture");
+    console.log("Two touches are down");
   }
 
   requestAnimationFrame(gameLoop);
@@ -38,21 +37,18 @@ function gameLoop() {
 gameLoop();
 ```
 
-> [!NOTE]
-> Desktop trackpads usually emit pointer or mouse events. `Touchpad` is for
-> **touch-screen** hardware; laptop trackpads use `Mouse`.
-
 ## Constructor
-
-### `new Touchpad(options)`
 
 ```ts
 interface TouchpadOptions {
   canvas: CanvasAdapter;
 }
 
-new Touchpad(options: TouchpadOptions);
+new Touchpad(options: TouchpadOptions)
 ```
+
+An `HTMLCanvasElement` satisfies the structural `CanvasAdapter` type. The
+adapter type is not exported from the package root.
 
 ## Types
 
@@ -64,7 +60,6 @@ const TouchIdentifier = {
 } as const;
 
 type TouchAction = number | keyof typeof TouchIdentifier;
-
 type TouchPosition = { x: number; y: number };
 
 interface TouchState {
@@ -75,59 +70,125 @@ interface TouchState {
 }
 ```
 
+The names map directly to browser touch identifiers `0`, `1`, and `2`.
+Numeric actions can address any identifier from `0` through `9`.
+
+## State and gestures
+
+```ts
+declare class Touchpad {
+  static readonly MaxTouches: 10;
+
+  touches: TouchState[];
+  touchesDown: boolean[];
+
+  readonly wasActive: boolean;
+  readonly isOneFingerGesture: boolean;
+  readonly isTwoFingerGesture: boolean;
+  readonly isThreeFingerGesture: boolean;
+
+  update(): void;
+  reset(): void;
+}
+```
+
+`touchesDown` changes immediately when touch events arrive. `update()`
+compares it with the previous state and publishes `wasStarted` and `wasEnded`
+for one input step. A start and end must be separated by an update if the
+caller needs to observe both transitions.
+
+The gesture getters read `touchesDown` directly. They report whether
+identifiers `0`, `0 + 1`, or `0 + 1 + 2` are currently down. They do not
+count arbitrary active identifiers.
+
+`wasActive` is true while any touch is down. `reset()` replaces all ten
+states with their initial values and clears every raw down flag.
+
+`touches` and `touchesDown` are mutable public arrays. Query methods are the
+safer surface for ordinary polling.
+
+## Queries
+
+```ts
+interface Touchpad {
+  touchState(identifier: TouchAction): TouchState;
+  isDown(identifier: TouchAction): boolean;
+  wasStarted(identifier: TouchAction): boolean;
+  wasEnded(identifier: TouchAction): boolean;
+}
+```
+
+`touchState()` returns the live `TouchState` stored by the device. The three
+flag methods read that same object.
+
+An identifier below `0` or at least `Touchpad.MaxTouches` throws an error
+whose message contains the invalid index. A named action resolves through
+`TouchIdentifier`.
+
+## Position
+
+```ts
+interface Touchpad {
+  viewportPosition(
+    identifier: TouchAction
+  ): Vector2Like;
+
+  viewportPositionTo<T extends Vector2Like>(
+    identifier: TouchAction,
+    out: T
+  ): T;
+}
+```
+
+Touch positions use canvas-local CSS pixels. Start and move handlers subtract
+the target's bounding rectangle from `clientX` and `clientY`.
+
+`viewportPosition()` normalizes the stored position into `[-1, 1]` on both
+axes and flips Y. It returns a new object. `viewportPositionTo()` writes into
+a caller-owned object and returns it.
+
+`Vector2Like` is the structural `{ x: number; y: number }` shape used by the
+output method. It is not exported from the package root.
+
 ## Events
 
 ```ts
 type TouchEvents = {
-  start: [Touch, TouchPosition];
-  move: [Touch, TouchPosition];
-  end: [Touch];
+  start: (
+    touch: Touch,
+    position: TouchPosition
+  ) => void;
+  move: (
+    touch: Touch,
+    position: TouchPosition
+  ) => void;
+  end: (touch: Touch) => void;
 };
 ```
 
-## Properties
+`start` and `move` receive the live position object stored in the matching
+`TouchState`. Later movement mutates that object, so copy it if the listener
+needs a snapshot. `end` receives only the browser `Touch`.
+
+Touch start, move, end, and cancel handlers call `preventDefault()`. A cancel
+updates down state and emits `end`.
+
+## Availability
 
 ```ts
-interface Touchpad {
-  static readonly MaxTouches: 10;
-
-  // Per-finger state indexed by touch identifier
-  touches: TouchState[];
-  // Raw down state, written immediately on DOM events
-  touchesDown: boolean[];
-
-  readonly wasActive: boolean;
-  // Gesture helpers (read-only)
-  readonly isOneFingerGesture: boolean;
-  readonly isTwoFingerGesture: boolean;
-  readonly isThreeFingerGesture: boolean;
-}
+static isAvailable(): boolean
 ```
 
-## API
+Returns whether `document.documentElement` has an `ontouchstart` property.
+The method reads the global `document` and therefore requires a DOM-like
+environment.
+
+## Lifecycle
 
 ```ts
-interface Touchpad {
-  // Lifecycle
-  connect(): void;
-  disconnect(): void;
-  reset(): void;
-  update(): void;
-
-  // Returns the TouchState for a given finger identifier
-  touchState(identifier: TouchAction): TouchState;
-
-  // Per-frame state queries, shorthand for the matching TouchState flag
-  isDown(identifier: TouchAction): boolean;
-  wasStarted(identifier: TouchAction): boolean;
-  wasEnded(identifier: TouchAction): boolean;
-
-  // `position` normalized to [-1, 1] on both axes, Y flipped.
-  // Returns a fresh object; use `viewportPositionTo` on per-frame paths.
-  viewportPosition(identifier: TouchAction): Vector2Like;
-  viewportPositionTo<T extends Vector2Like>(identifier: TouchAction, out: T): T;
-
-  // true if the device supports touch events
-  static isAvailable(): boolean;
-}
+connect(): void
+disconnect(): void
 ```
+
+`connect()` registers touchstart, touchend, touchmove, and touchcancel
+listeners on the canvas. `disconnect()` removes them without resetting state.

@@ -1,57 +1,49 @@
-# CombinedInput
+# InputCombination
 
-Declarative input combination system that lets you compose complex input
-conditions from simple building blocks. Build key chords, alternative
-bindings, exclusion lists, and input sequences using a fluent API
-powered by the `InputCombination` factory.
+`InputCombination` builds conditions from keyboard, mouse, and gamepad state.
+Conditions can represent a single control, a chord, alternatives, exclusions,
+or an ordered sequence.
 
 ```ts
-import { InputCombination, Input } from "@jolly-pixel/controls";
+import {
+  Input,
+  InputCombination
+} from "@jolly-pixel/controls";
 
-const canvas = document.querySelector("canvas")!;
+const canvas = document.querySelector("canvas");
+if (!canvas) {
+  throw new Error("No canvas element found");
+}
+
 const input = new Input(canvas);
 input.connect();
 
-// Single key press
-const jump = InputCombination.key("Space");
-
-// Ctrl + S chord (both must be active)
-const save = InputCombination.all("ControlLeft.down", "KeyS.pressed");
-
-// WASD or Arrow keys (any one triggers it)
-const moveUp = InputCombination.atLeastOne("KeyW.down", "ArrowUp.down");
-
-// Left-click only when Shift is NOT held
-const selectSingle = InputCombination.all(
-  InputCombination.mouse("left", "pressed"),
-  InputCombination.none("ShiftLeft.down")
+const save = InputCombination.all(
+  "ControlLeft.down",
+  "KeyS.pressed"
 );
 
-// Konami-style sequence
-const combo = InputCombination.sequence(
-  "ArrowUp.pressed",
-  "ArrowUp.pressed",
-  "ArrowDown.pressed",
-  "ArrowDown.pressed"
+const moveUp = InputCombination.atLeastOne(
+  "KeyW.down",
+  "ArrowUp.down"
+);
+
+const selectWithoutShift = InputCombination.all(
+  InputCombination.mouse("left", "pressed"),
+  InputCombination.none("ShiftLeft.down")
 );
 
 function gameLoop() {
   input.update();
 
-  if (jump.evaluate(input)) {
-    console.log("Jump!");
-  }
   if (save.evaluate(input)) {
-    console.log("Save!");
+    console.log("Save");
   }
   if (moveUp.evaluate(input)) {
-    console.log("Moving up");
+    console.log("Move up");
   }
-  if (selectSingle.evaluate(input)) {
-    console.log("Single select");
-  }
-  if (combo.evaluate(input)) {
-    console.log("Combo activated!");
+  if (selectWithoutShift.evaluate(input)) {
+    console.log("Select");
   }
 
   requestAnimationFrame(gameLoop);
@@ -60,9 +52,9 @@ function gameLoop() {
 gameLoop();
 ```
 
-## InputCondition Interface
+## Condition shape
 
-Every condition returned by `InputCombination` implements this interface:
+Every factory result has the following structural interface:
 
 ```ts
 interface InputCondition {
@@ -71,164 +63,234 @@ interface InputCondition {
 }
 ```
 
-### `evaluate(input): boolean`
+`evaluate()` reads the current frame state from `Input`. `reset()` clears
+condition-owned progress. Atomic conditions have no progress to clear;
+composite conditions forward the reset to their children.
 
-Returns `true` when the condition is satisfied for the current frame.
+`InputCondition` and the atomic condition types are used by the public
+signatures but are not exported from the package root.
 
-### `reset()`
-
-Reset internal state (relevant for stateful conditions like sequences).
-
-## InputCombination
-
-Static factory class used to create all input conditions.
-
-## Atomic Conditions
-
-### `InputCombination.key(action)`
-
-Create a keyboard condition from a combined action string.
+## Action types
 
 ```ts
-InputCombination.key("Space.pressed");
-InputCombination.key("KeyW.down");
-InputCombination.key("ShiftLeft.released");
+type CombinedInputState =
+  | "down"
+  | "pressed"
+  | "released";
+
+type CombinedInputAction =
+  `${ExtendedKeyCode | MouseAction}.${CombinedInputState}`;
 ```
 
-### `InputCombination.key(key, state?)`
+`"down"` remains true while the control is held. `"pressed"` and
+`"released"` read the corresponding transition from the latest device
+update.
 
-Create a keyboard condition with an explicit key code and state.
-Defaults to `"pressed"` when `state` is omitted.
+The combined action and state aliases are not exported from the package root.
+Factory overloads still validate them at compile time.
+
+## Atomic conditions
+
+### `InputCombination.key()`
+
+```ts
+InputCombination.key(
+  action: CombinedInputAction
+): AtomicInput
+
+InputCombination.key(
+  key: ExtendedKeyCode,
+  state?: CombinedInputState
+): AtomicInput
+```
+
+Creates a keyboard condition. The state defaults to `"pressed"`.
 
 ```ts
 InputCombination.key("Space");
 InputCombination.key("KeyW", "down");
+InputCombination.key("ShiftLeft.released");
 ```
 
-### `InputCombination.mouse(action)`
-
-Create a mouse button condition from a combined action string.
+### `InputCombination.mouse()`
 
 ```ts
-InputCombination.mouse("left.pressed");
-InputCombination.mouse("right.down");
+InputCombination.mouse(
+  action: CombinedInputAction
+): AtomicInput
+
+InputCombination.mouse(
+  button: MouseAction,
+  state?: CombinedInputState
+): AtomicInput
 ```
 
-### `InputCombination.mouse(button, state?)`
-
-Create a mouse button condition with an explicit button and state.
-Defaults to `"pressed"` when `state` is omitted.
+Creates a mouse button or virtual wheel-button condition. The state defaults
+to `"pressed"`.
 
 ```ts
 InputCombination.mouse("left");
 InputCombination.mouse("right", "down");
+InputCombination.mouse("scrollUp.pressed");
 ```
 
-### `InputCombination.gamepad(gamepad, button, state?)`
+### `InputCombination.gamepad()`
 
-Create a gamepad button condition. Defaults to `"pressed"` when `state`
-is omitted.
+```ts
+InputCombination.gamepad(
+  gamepad: GamepadIndex,
+  button: number | keyof typeof GamepadButton,
+  state?: CombinedInputState
+): AtomicInput
+```
+
+Creates a gamepad button condition. The state defaults to `"pressed"`.
 
 ```ts
 InputCombination.gamepad(0, "A");
 InputCombination.gamepad(0, "LeftBumper", "down");
 ```
 
-## Composite Conditions
+The `AtomicInput` class returned by these methods is not exported from the
+package root.
 
-### `InputCombination.all(...conditions)`
-
-Returns a condition that is satisfied when **all** child conditions are
-satisfied simultaneously. Useful for key chords and modifier combinations.
-
-Accepts `InputCondition` objects or `CombinedInputAction` shorthand strings.
+## Combined-action detection
 
 ```ts
-// Ctrl + Shift + S
-InputCombination.all("ControlLeft.down", "ShiftLeft.down", "KeyS.pressed");
+InputCombination.isCombinedAction(
+  action: unknown
+): action is CombinedInputAction
+```
 
-// Mixed condition objects and strings
+Returns true when `action` is a string containing a period. It does not
+validate the key, mouse action, or state segments.
+
+## Composite conditions
+
+Composite methods accept existing condition objects and combined-action
+strings:
+
+```ts
+type ConditionArgument =
+  | InputCondition
+  | CombinedInputAction;
+```
+
+The composite signatures below use `ConditionArgument` as a local
+documentation alias. It is not exported.
+
+A string passed directly to a composite is always converted with
+`InputCombination.key()`. Create mouse and gamepad conditions with their
+factories before passing them to a composite.
+
+### `InputCombination.all()`
+
+```ts
 InputCombination.all(
-  InputCombination.mouse("left", "pressed"),
-  "ShiftLeft.down"
+  ...conditions: ConditionArgument[]
+): AllInputs
+```
+
+Returns true when every child returns true during the same evaluation. This is
+used for chords and modifier guards. An empty `all()` condition returns true.
+
+```ts
+InputCombination.all(
+  "ControlLeft.down",
+  "ShiftLeft.down",
+  "KeyS.pressed"
 );
 ```
 
-### `InputCombination.atLeastOne(...conditions)`
-
-Returns a condition that is satisfied when **at least one** child condition
-is satisfied. Useful for alternative bindings.
+### `InputCombination.atLeastOne()`
 
 ```ts
-// Accept either WASD or Arrow key
-InputCombination.atLeastOne("KeyW.down", "ArrowUp.down");
+InputCombination.atLeastOne(
+  ...conditions: ConditionArgument[]
+): AtLeastOneInput
 ```
 
-### `InputCombination.none(...conditions)`
-
-Returns a condition that is satisfied when **none** of the child conditions
-are satisfied. Useful for exclusion guards.
+Returns true when at least one child returns true. An empty condition returns
+false.
 
 ```ts
-// True only when neither Shift key is held
-InputCombination.none("ShiftLeft.down", "ShiftRight.down");
+InputCombination.atLeastOne(
+  "KeyW.down",
+  "ArrowUp.down"
+);
 ```
 
-### `InputCombination.sequence(...conditions)`
+### `InputCombination.none()`
 
-Returns a condition that is satisfied when all child conditions are triggered
-**in order** within a default timeout (100 ms between each step).
+```ts
+InputCombination.none(
+  ...conditions: ConditionArgument[]
+): NoneInputs
+```
+
+Returns true when every child returns false. An empty condition returns true.
+
+```ts
+InputCombination.none(
+  "ShiftLeft.down",
+  "ShiftRight.down"
+);
+```
+
+## Sequences
 
 ```ts
 InputCombination.sequence(
+  ...conditions: ConditionArgument[]
+): SequenceInputs
+
+InputCombination.sequenceWithTimeout(
+  timeoutMs: number,
+  ...conditions: ConditionArgument[]
+): SequenceInputs
+```
+
+A sequence advances when its current child evaluates to true. Other active
+controls do not cancel progress. If the elapsed time since the previous
+matched child exceeds the timeout, progress returns to the first child before
+the current evaluation.
+
+`sequence()` uses `SequenceInputs.DefaultTimeout`, which defaults to `100`
+milliseconds. `sequenceWithTimeout()` uses the supplied interval between
+matched steps.
+
+After the final child matches, the sequence returns true once and resets its
+progress. Calling `reset()` also resets every child.
+
+```ts
+const konami = InputCombination.sequenceWithTimeout(
+  500,
+  "ArrowUp.pressed",
   "ArrowUp.pressed",
   "ArrowDown.pressed",
-  "ArrowUp.pressed"
+  "ArrowDown.pressed"
 );
 ```
 
-### `InputCombination.sequenceWithTimeout(timeoutMs, ...conditions)`
+## Concrete condition classes
 
-Same as `sequence` but with a custom timeout between each step.
-
-```ts
-InputCombination.sequenceWithTimeout(
-  500,
-  "KeyA.pressed",
-  "KeyB.pressed",
-  "KeyC.pressed"
-);
-```
-
-## Types
+The package root exports the composite implementations:
 
 ```ts
-type CombinedInputState = "down" | "pressed" | "released";
+new AllInputs(conditions: InputCondition[])
+new AtLeastOneInput(conditions: InputCondition[])
+new NoneInputs(conditions: InputCondition[])
 
-type CombinedInputAction =
-  `${ExtendedKeyCode | MouseAction}.${CombinedInputState}`;
-
-type MouseAction =
-  | "left" | "middle" | "right"
-  | "back" | "forward"
-  | "scrollUp" | "scrollDown";
-
-type GamepadIndex = 0 | 1 | 2 | 3;
-
-type GamepadButton =
-  | "A" | "B" | "X" | "Y"
-  | "LeftBumper" | "RightBumper"
-  | "LeftTrigger" | "RightTrigger"
-  | "Select" | "Start"
-  | "LeftStick" | "RightStick"
-  | "DPadUp" | "DPadDown" | "DPadLeft" | "DPadRight"
-  | "Home";
+new SequenceInputs(
+  conditions: InputCondition[],
+  timeoutMs?: number,
+  now?: () => number
+)
 ```
 
-## State Meanings
+`SequenceInputs.DefaultTimeout` is mutable and defaults to `100`. The
+optional clock defaults to `Date.now` and allows deterministic sequence
+evaluation.
 
-| State | Meaning |
-| ------------ | ---------------------------------------- |
-| `"down"` | `true` while the button/key is held |
-| `"pressed"` | `true` only on the frame it was pressed |
-| `"released"` | `true` only on the frame it was released |
+The factory methods are the practical entry point because `InputCondition`
+cannot currently be imported from the package root.

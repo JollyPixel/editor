@@ -68,7 +68,10 @@ if (dashCombo.evaluate(input)) {
   - [Gamepad](./docs/gamepad.md)
   - [Touchpad](./docs/touchpad.md)
   - [Screen](./docs/screen.md)
-- [CombinedInput](./docs/combinedinput.md): composable input conditions (AND, OR, NOT, sequence) for complex key bindings.
+- [InputCombination](./docs/combinedinput.md): composable input conditions for
+  chords, alternatives, exclusions, and sequences.
+- [InputActionQuery](./docs/inputactionquery.md): dispatch helper for
+  `"ANY"`, `"NONE"`, and concrete actions.
 
 ## 🧪 Benchmarks
 
