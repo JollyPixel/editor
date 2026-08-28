@@ -316,6 +316,10 @@ export abstract class JollyField<TValue> extends LitElement {
       this.modified
     );
     this.toggleAttribute(
+      "unlabeled",
+      this.label === ""
+    );
+    this.toggleAttribute(
       "invalid",
       this.displayError !== null
     );

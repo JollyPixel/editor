@@ -58,6 +58,7 @@ import {
 } from "./examples/math/transform.ts";
 import { POINT2D_EXAMPLE } from "./examples/math/point2d.ts";
 import { MIXED_PER_AXIS_EXAMPLE } from "./examples/scenarios/mixedPerAxis.ts";
+import { UNLABELED_FIELDS_EXAMPLE } from "./examples/scenarios/unlabeledFields.ts";
 import { TREE_EXAMPLE } from "./examples/data/tree.ts";
 
 /**
@@ -106,6 +107,7 @@ export const manifest: readonly GalleryExample[] = [
   FACADE_PARITY_EXAMPLE,
   STATS_CYCLE_EXAMPLE,
   MIXED_PER_AXIS_EXAMPLE,
+  UNLABELED_FIELDS_EXAMPLE,
   MONITOR_EXAMPLE,
   GRAPH_EXAMPLE,
   PROGRESS_EXAMPLE,

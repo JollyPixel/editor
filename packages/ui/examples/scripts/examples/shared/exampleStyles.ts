@@ -126,6 +126,12 @@ export const exampleStyles = `
     max-width: 520px;
   }
 
+  .prop-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--jolly-space-1);
+  }
+
   .placement-stage,
   .dock-layout-stage {
     position: relative;

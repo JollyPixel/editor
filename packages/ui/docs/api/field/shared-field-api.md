@@ -27,6 +27,10 @@ and `JollyChangeDetail<T>`.
 `value`, `default`, `lockedBy`, and `peers` must be assigned as JavaScript
 properties. `labelPosition="top"` places the label above the value area.
 
+An empty `label` drops the label column: the field reflects `unlabeled`, and the
+value spans the row with the same inset on both edges. A locked field keeps its
+gutter, so the value stays clear of the lock icon.
+
 ## Events
 
 | Event | Detail | Timing |

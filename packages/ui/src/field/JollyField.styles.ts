@@ -82,6 +82,15 @@ export const fieldStyles = css`
     );
   }
 
+  /* With no label the leading line is an empty band, unless it holds a lock. */
+  :host([unlabeled]:not([locked])[label-position="top"]) .leading {
+    display: none;
+  }
+
+  :host([unlabeled]:not([locked])[label-position="top"]) .content {
+    padding-inline-start: 0;
+  }
+
   /*
    * Locating the active row in a long pane. Deliberately fainter than the
    * control's own focus tint, so the two read as a hierarchy and not a clash.
@@ -103,6 +112,14 @@ export const fieldStyles = css`
     width: var(--jolly-gutter-width, 0px);
     height: 14px;
     overflow: hidden;
+  }
+
+  /*
+   * Without a label the gap after a collapsed gutter is an inset paid for
+   * nothing. Locked keeps it: there the gutter paints an icon.
+   */
+  :host([unlabeled]:not([locked])) .gutter {
+    margin-inline-end: calc(var(--jolly-space-1, 4px) * -1);
   }
 
   /*
@@ -380,6 +397,14 @@ export const fieldStyles = css`
       )
       var(--jolly-space-1, 4px);
     font-size: 0.9em;
+  }
+
+  /* No label column to clear, so they follow the value back to the row inset. */
+  :host([unlabeled]:not([locked])) .description,
+  :host([unlabeled]:not([locked])) .error {
+    margin-inline-start: calc(
+      var(--jolly-gutter-width, 0px) + var(--jolly-space-1, 4px)
+    );
   }
 
   .description jolly-icon,
