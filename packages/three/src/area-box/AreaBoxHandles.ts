@@ -90,6 +90,7 @@ export class AreaBoxHandles extends THREE.Object3D {
   #activeCount = kGroundSlotCount;
   #arrows: THREE.InstancedMesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
   #pickers: THREE.InstancedMesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
+  #disposed = false;
 
   constructor(
     options: AreaBoxHandlesOptions
@@ -239,6 +240,11 @@ export class AreaBoxHandles extends THREE.Object3D {
   }
 
   dispose(): void {
+    if (this.#disposed) {
+      return;
+    }
+
+    this.#disposed = true;
     this.#arrows.geometry.dispose();
     this.#arrows.material.dispose();
     this.#arrows.dispose();

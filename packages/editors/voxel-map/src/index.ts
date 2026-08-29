@@ -24,7 +24,7 @@ import {
   CATALOG_URL_PATH,
   type AssetRecord
 } from "@jolly-pixel/asset";
-// Registers every "jolly-*" element.
+// Register all jolly-* elements.
 import "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -33,11 +33,11 @@ import { EditorSidebar } from "./features/sidebar/EditorSidebar.ts";
 import { EditorScene } from "./scene/EditorScene.ts";
 import { parseVoxelWorld } from "./features/map-config/parseVoxelWorld.ts";
 import type { EventCanvasHoverChange } from "./shared/dom.types.ts";
-// Registers the editor's icon glyphs.
+// Register editor icon glyphs.
 import "./features/sidebar/icons.ts";
 
 // CONSTANTS
-/** Used offline, and when the shared document declares no tileset of its own. */
+// Used offline or when the shared document has no tileset.
 const kFallbackTileset: TilesetDefinition = {
   id: "default",
   src: "textures/tileset.png",
@@ -70,10 +70,7 @@ function firstRecordOfKind(
   );
 }
 
-/**
- * Tileset textures must be resident before the first world snapshot reaches
- * `VoxelEngine.load()`, which refuses to register one it cannot find.
- */
+// VoxelEngine.load() requires tileset textures to be resident.
 async function preloadTilesets(
   loader: TilesetLoader,
   record: AssetRecord | null
@@ -159,7 +156,7 @@ await loadRuntime(runtime, {
   maxFps: Infinity
 });
 
-// The scene awakes on the first frame, after loadRuntime() has resolved.
+// Wait for first-frame scene initialization.
 const { vr, gridRenderer } = await editorScene.ready;
 if (sidebar) {
   sidebar.vr = vr;

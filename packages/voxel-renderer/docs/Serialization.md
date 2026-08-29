@@ -69,6 +69,8 @@ interface VoxelObjectJSON {
   height?: number;
   rotation?: number;
   visible: boolean;
+  color?: string;
+  locked?: boolean;
   properties?: VoxelObjectProperties;
 }
 

@@ -1,7 +1,10 @@
 // Import Internal Dependencies
 import type { IconName } from "../icon/registry.ts";
 
-export type TreeDropWhere = "above" | "inside" | "below";
+export type TreeDropWhere =
+  | "above"
+  | "inside"
+  | "below";
 
 /**
  * A tree row.
@@ -20,6 +23,11 @@ export interface TreeNode<TData = unknown> {
   visible?: boolean;
   /** Rendered as a lock toggle when set. Omit for nodes with no lock concept. */
   locked?: boolean;
+  /**
+   * Whether the label accepts an inline edit, on a `renamable` tree. Omit or
+   * set false for rows whose label is not the consumer's to change.
+   */
+  renamable?: boolean;
   data?: TData;
 }
 
@@ -44,6 +52,16 @@ export interface JollyToggleVisibleDetail {
 export interface JollyToggleLockDetail {
   id: string;
   locked: boolean;
+}
+
+/**
+ * A committed inline edit of a row label. Raw intent, like every other tree
+ * event: the name is trimmed and non-empty, but the tree does not apply it.
+ * The row keeps its old label until the consumer writes the new one back.
+ */
+export interface JollyRenameDetail {
+  id: string;
+  name: string;
 }
 
 /**

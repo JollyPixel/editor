@@ -32,14 +32,6 @@ interface BlockDraft {
   tilesetId: string;
 }
 
-/**
- * Modal configuration for a block: name, shape and tileset. Tile coordinates
- * and transparency are owned by the paint tab, so they are absent here.
- *
- * In "edit" mode every field commits straight to the registry, keeping the
- * block preview live. In "create" mode the fields fill a draft that is
- * registered on confirmation.
- */
 @customElement("block-editor-dialog")
 export class BlockEditorDialog extends LitElement {
   static override styles = css`
@@ -54,7 +46,6 @@ export class BlockEditorDialog extends LitElement {
   @property({ attribute: false })
   declare vr: VoxelRenderer | undefined;
 
-  /** Live registry entry edited in "edit" mode. */
   @property({ attribute: false })
   declare block: BlockDefinition | null;
 
@@ -78,7 +69,6 @@ export class BlockEditorDialog extends LitElement {
     };
   }
 
-  /** Configures the selected block. */
   async openForEdit(): Promise<void> {
     if (!this.block) {
       return;
@@ -89,7 +79,6 @@ export class BlockEditorDialog extends LitElement {
     await this._dialog.showModal();
   }
 
-  /** Collects a new block definition, registered on confirmation. */
   async openForCreate(): Promise<void> {
     this._mode = "create";
     this._draft = {
@@ -226,8 +215,6 @@ export class BlockEditorDialog extends LitElement {
       return;
     }
 
-    // A tileset switch restarts at the first tile; the paint tab moves the
-    // UV region from there.
     this.#applyEdit({
       defaultTexture: {
         ...this.block.defaultTexture,

@@ -80,7 +80,6 @@ export class TextureEditor extends LitElement {
       texture: {
         maxSize: 2048
       }
-      // Buffer events drive once-per-frame tileset sync.
     });
     if (!this.isConnected) {
       return;

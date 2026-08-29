@@ -84,6 +84,19 @@ export const treeStyles = css`
     ${truncate}
   }
 
+  /* Sits in the label's own box so committing an edit does not reflow. */
+  .rename {
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    border-radius: var(--jolly-radius-sm, 2px);
+    outline: 1px solid var(--jolly-focus-ring, ${kFallback.focusRing});
+    outline-offset: 1px;
+    background: var(--jolly-control-bg, ${kFallback.controlBg});
+    color: var(--jolly-text, ${kFallback.text});
+    font: inherit;
+  }
+
   /* Mirrors the eye toggle's own state: a row with visible=false reads as
      hidden at a glance, not only through its icon. */
   .row[data-hidden="true"] .label,
@@ -91,12 +104,18 @@ export const treeStyles = css`
     opacity: 0.5;
   }
 
+  /*
+   * Narrower than they are tall: the glyph keeps the full row height to click
+   * on, while the trimmed sides bring neighbouring glyphs to the same 4px
+   * rhythm the rest of the row uses. The chevron column is left alone, since
+   * its width sets the indent of every nested row.
+   */
   .visible-toggle,
   .lock-toggle,
   .grip {
     flex: 0 0 auto;
     display: none;
-    width: var(--jolly-control-height, 20px);
+    width: 16px;
     height: var(--jolly-control-height, 20px);
     padding: 0;
     border: 0;
@@ -109,6 +128,17 @@ export const treeStyles = css`
   .lock-toggle {
     display: grid;
     place-items: center;
+  }
+
+  /*
+   * The trailing toggles read as one cluster, so they drop the row gap too.
+   * Stacked on the buttons' own insets it spaced the eye and the lock three
+   * times wider than anything else on the row.
+   */
+  .visible-toggle + .lock-toggle,
+  .visible-toggle + .grip,
+  .lock-toggle + .grip {
+    margin-inline-start: calc(-1 * var(--jolly-space-1, 4px));
   }
 
   .visible-toggle[data-active="false"],

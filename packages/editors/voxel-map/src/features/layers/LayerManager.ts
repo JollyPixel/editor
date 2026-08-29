@@ -1,33 +1,83 @@
 // Import Third-party Dependencies
 import { LitElement, html, css } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import {
+  customElement,
+  property,
+  query,
+  state
+} from "lit/decorators.js";
 import type { VoxelRenderer } from "@jolly-pixel/voxel.renderer";
 import {
-  showPrompt,
+  showConfirm,
+  type JollyRenameDetail,
   type JollySelectDetail,
+  type JollyToggleLockDetail,
   type JollyToggleVisibleDetail,
   type TreeNode
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { editorState } from "../../EditorState.ts";
+import {
+  editorState,
+  type LayerSelection
+} from "../../EditorState.ts";
+import { createObjectAt } from "../object-layers/objectArea.ts";
+// Imported for its side effect too: it registers the child dialog element.
+import { AddLayerDialog } from "./AddLayerDialog.ts";
 
 // CONSTANTS
 const kVoxelPrefix = "voxel:";
-const kObjectPrefix = "object:";
+const kObjectLayerPrefix = "object:";
+const kObjectPrefix = "obj:";
 
-/** A layer kind and name packed into a unique tree row ID. */
-interface LayerRef {
-  type: "voxel" | "object";
-  name: string;
+/** Tree-row identity encoded in the row id. */
+type LayerRef =
+  | { kind: "voxel-layer"; name: string; }
+  | { kind: "object-layer"; name: string; }
+  | { kind: "object"; layerName: string; objectId: string; };
+
+function rowId(
+  ref: LayerRef
+): string {
+  switch (ref.kind) {
+    case "voxel-layer":
+      return `${kVoxelPrefix}${ref.name}`;
+    case "object-layer":
+      return `${kObjectLayerPrefix}${ref.name}`;
+    default:
+      return `${kObjectPrefix}${ref.layerName}/${ref.objectId}`;
+  }
 }
 
 function refOf(
   id: string
 ): LayerRef {
-  return id.startsWith(kObjectPrefix)
-    ? { type: "object", name: id.slice(kObjectPrefix.length) }
-    : { type: "voxel", name: id.slice(kVoxelPrefix.length) };
+  if (id.startsWith(kObjectPrefix)) {
+    const rest = id.slice(kObjectPrefix.length);
+    const separator = rest.lastIndexOf("/");
+
+    return {
+      kind: "object",
+      layerName: rest.slice(0, separator),
+      objectId: rest.slice(separator + 1)
+    };
+  }
+
+  return id.startsWith(kObjectLayerPrefix)
+    ? { kind: "object-layer", name: id.slice(kObjectLayerPrefix.length) }
+    : { kind: "voxel-layer", name: id.slice(kVoxelPrefix.length) };
+}
+
+function selectionOf(
+  ref: LayerRef
+): LayerSelection {
+  return ref.kind === "object"
+    ? {
+      kind: "object",
+      layerName: ref.layerName,
+      objectId: ref.objectId
+    }
+    : { kind: ref.kind, name: ref.name };
 }
 
 @customElement("layer-manager")
@@ -53,20 +103,28 @@ export class LayerManager extends LitElement {
   private declare _nodes: TreeNode<LayerRef>[];
   @state()
   private declare _selected: string[];
+  @state()
+  private declare _expanded: string[];
+
+  @query("add-layer-dialog")
+  private declare _addDialog: AddLayerDialog;
+
   #subscriptions: Array<() => void> = [];
 
   constructor() {
     super();
     this._nodes = [];
     this._selected = [];
+    this._expanded = [];
   }
 
   readonly #onLayerUpdated = () => {
     this.#refreshNodes();
   };
 
-  readonly #onSelectedLayerChange = () => {
+  readonly #onSelectionChange = () => {
     this._selected = this.#selectionFromState();
+    this.#expandSelectedLayer();
   };
 
   override updated(
@@ -83,7 +141,7 @@ export class LayerManager extends LitElement {
     this.#subscriptions.push(
       editorState.on("layerUpdated", this.#onLayerUpdated),
       editorState.on("worldReset", this.#onLayerUpdated),
-      editorState.on("selectionChange", this.#onSelectedLayerChange)
+      editorState.on("selectionChange", this.#onSelectionChange)
     );
 
     this._selected = this.#selectionFromState();
@@ -102,30 +160,36 @@ export class LayerManager extends LitElement {
 
     return html`
       <jolly-toolbar label="Layers">
-        <jolly-button @click=${this.#addLayer}>+ Voxel</jolly-button>
-        <jolly-button @click=${this.#addObjectLayer}>+ Object</jolly-button>
+        <jolly-button @click=${this.#add}>+ Add</jolly-button>
         <jolly-button
-          @click=${this.#removeLayer}
+          @click=${this.#remove}
           ?disabled=${!hasSelection}
         >- Remove</jolly-button>
         <jolly-button
           @click=${this.#moveUp}
-          ?disabled=${!hasSelection}
+          ?disabled=${!this.#canMove}
         >↑</jolly-button>
         <jolly-button
           @click=${this.#moveDown}
-          ?disabled=${!hasSelection}
+          ?disabled=${!this.#canMove}
         >↓</jolly-button>
       </jolly-toolbar>
 
       <div class="tree-host" @click=${this.#onHostClick}>
         <jolly-tree
+          renamable
           .nodes=${this._nodes}
           .selected=${this._selected}
+          .expanded=${this._expanded}
           @jolly-select=${this.#onSelect}
+          @jolly-toggle-expand=${this.#onToggleExpand}
           @jolly-toggle-visible=${this.#onToggleVisible}
+          @jolly-toggle-lock=${this.#onToggleLock}
+          @jolly-rename=${this.#onRename}
         ></jolly-tree>
       </div>
+
+      <add-layer-dialog></add-layer-dialog>
     `;
   }
 
@@ -135,18 +199,26 @@ export class LayerManager extends LitElement {
     return id === undefined ? null : refOf(id);
   }
 
+  get #canMove(): boolean {
+    return this.#selectedRef?.kind === "voxel-layer";
+  }
+
   #selectionFromState(): string[] {
-    const {
-      selectedLayer,
-      selectedLayerType
-    } = editorState;
-    if (selectedLayer === null) {
-      return [];
+    const { selection } = editorState;
+
+    return selection === null ? [] : [rowId(selection)];
+  }
+
+  #expandSelectedLayer(): void {
+    const layerName = editorState.selectedObject?.layerName;
+    if (layerName === undefined) {
+      return;
     }
 
-    const prefix = selectedLayerType === "object" ? kObjectPrefix : kVoxelPrefix;
-
-    return [`${prefix}${selectedLayer}`];
+    const id = rowId({ kind: "object-layer", name: layerName });
+    if (!this._expanded.includes(id)) {
+      this._expanded = [...this._expanded, id];
+    }
   }
 
   #refreshNodes(): void {
@@ -160,19 +232,43 @@ export class LayerManager extends LitElement {
 
     this._nodes = [
       ...layers.map((layer): TreeNode<LayerRef> => {
+        const ref: LayerRef = { kind: "voxel-layer", name: layer.name };
+
         return {
-          id: `${kVoxelPrefix}${layer.name}`,
+          id: rowId(ref),
           label: layer.name,
+          icon: "voxel-layer",
           visible: layer.visible,
-          data: { type: "voxel", name: layer.name }
+          data: ref
         };
       }),
       ...this.vr.engine.getObjectLayers().map((layer): TreeNode<LayerRef> => {
+        const ref: LayerRef = { kind: "object-layer", name: layer.name };
+
         return {
-          id: `${kObjectPrefix}${layer.name}`,
-          label: `[Obj] ${layer.name}`,
+          id: rowId(ref),
+          label: layer.name,
+          icon: "object-layer",
           visible: layer.visible,
-          data: { type: "object", name: layer.name }
+          data: ref,
+          children: layer.objects.map((object): TreeNode<LayerRef> => {
+            const objectRef: LayerRef = {
+              kind: "object",
+              layerName: layer.name,
+              objectId: object.id
+            };
+
+            return {
+              id: rowId(objectRef),
+              label: object.name,
+              icon: "object-area",
+              visible: object.visible,
+              locked: object.locked ?? false,
+              // Layer names are persistent keys and cannot be renamed here.
+              renamable: true,
+              data: objectRef
+            };
+          })
         };
       })
     ];
@@ -188,8 +284,7 @@ export class LayerManager extends LitElement {
       return;
     }
 
-    this._selected = [];
-    editorState.setSelectedLayer(null);
+    editorState.setSelection(null);
   }
 
   #onSelect(
@@ -198,12 +293,16 @@ export class LayerManager extends LitElement {
     this._selected = event.detail.selected;
 
     const ref = this.#selectedRef;
-    if (ref === null) {
-      editorState.setSelectedLayer(null);
+    editorState.setSelection(ref === null ? null : selectionOf(ref));
+  }
 
-      return;
-    }
-    editorState.setSelectedLayer(ref.name, ref.type);
+  #onToggleExpand(
+    event: CustomEvent<{ id: string; expanded: boolean; }>
+  ): void {
+    const { id, expanded } = event.detail;
+    this._expanded = expanded
+      ? [...this._expanded, id]
+      : this._expanded.filter((candidate) => candidate !== id);
   }
 
   #onToggleVisible(
@@ -214,64 +313,145 @@ export class LayerManager extends LitElement {
     }
 
     const { visible } = event.detail;
-    const { type, name } = refOf(event.detail.id);
-    if (type === "object") {
-      this.vr.engine.updateObjectLayer(name, { visible });
-    }
-    else {
-      this.vr.engine.updateLayer(name, { visible });
-      this.vr.engine.markAllChunksDirty();
+    const ref = refOf(event.detail.id);
+    switch (ref.kind) {
+      case "object":
+        this.vr.engine.updateObject(ref.layerName, ref.objectId, { visible });
+        break;
+      case "object-layer":
+        this.vr.engine.updateObjectLayer(ref.name, { visible });
+        break;
+      default:
+        this.vr.engine.updateLayer(ref.name, { visible });
+        this.vr.engine.markAllChunksDirty();
+        break;
     }
     this.#refreshNodes();
   }
 
-  async #addLayer() {
+  #onRename(
+    event: CustomEvent<JollyRenameDetail>
+  ): void {
+    const ref = refOf(event.detail.id);
+    if (!this.vr || ref.kind !== "object") {
+      return;
+    }
+
+    this.vr.engine.updateObject(
+      ref.layerName,
+      ref.objectId,
+      { name: event.detail.name }
+    );
+    this.#refreshNodes();
+  }
+
+  #onToggleLock(
+    event: CustomEvent<JollyToggleLockDetail>
+  ): void {
+    const ref = refOf(event.detail.id);
+    if (!this.vr || ref.kind !== "object") {
+      return;
+    }
+
+    this.vr.engine.updateObject(
+      ref.layerName,
+      ref.objectId,
+      { locked: event.detail.locked }
+    );
+    this.#refreshNodes();
+  }
+
+  async #add() {
     if (!this.vr) {
       return;
     }
 
-    const name = await showPrompt({
-      title: "New layer",
-      label: "Layer name:",
-      defaultValue: `Layer ${this.vr.engine.world.getLayers().length + 1}`
+    const { activeObjectLayer } = editorState;
+    const objectLayers = this.vr.engine.getObjectLayers();
+    const result = await this._addDialog.open({
+      canAddObject: activeObjectLayer !== null,
+      defaultKind: activeObjectLayer === null ? "voxel-layer" : "object",
+      defaultName: {
+        "voxel-layer": `Layer ${this.vr.engine.world.getLayers().length + 1}`,
+        "object-layer": `Objects ${objectLayers.length + 1}`,
+        object: "Object"
+      }
     });
-    if (!name?.trim()) {
+    if (result === null) {
       return;
     }
-    this.vr.engine.addLayer(name.trim());
+
+    switch (result.kind) {
+      case "voxel-layer":
+        this.vr.engine.addLayer(result.name);
+        editorState.selectVoxelLayer(result.name);
+        break;
+      case "object-layer":
+        this.vr.engine.addObjectLayer(result.name);
+        editorState.selectObjectLayer(result.name);
+        break;
+      default:
+        this.#addObject(activeObjectLayer!, result.name);
+        break;
+    }
   }
 
-  async #addObjectLayer() {
-    if (!this.vr) {
-      return;
-    }
-
-    const name = await showPrompt({
-      title: "New object layer",
-      label: "Object layer name:",
-      defaultValue: `Objects ${this.vr.engine.getObjectLayers().length + 1}`
-    });
-    if (!name?.trim()) {
-      return;
-    }
-    this.vr.engine.addObjectLayer(name.trim());
+  #addObject(
+    layerName: string,
+    name: string
+  ): void {
+    // Spawn new objects in the camera's focus cell.
+    const object = createObjectAt(name, editorState.viewFocus);
+    this.vr.engine.addObject(layerName, object);
+    editorState.selectObject({ layerName, objectId: object.id });
   }
 
-  #removeLayer(): void {
+  async #remove() {
     const ref = this.#selectedRef;
     if (ref === null || !this.vr) {
       return;
     }
 
-    if (ref.type === "object") {
+    if (ref.kind === "object") {
+      this.vr.engine.removeObject(ref.layerName, ref.objectId);
+      editorState.selectObjectLayer(ref.layerName);
+
+      return;
+    }
+
+    // Layer deletion is irreversible without an undo stack.
+    const confirmed = await showConfirm({
+      title: "Delete layer",
+      message: this.#removalMessage(ref),
+      confirmLabel: "Delete",
+      danger: true
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    if (ref.kind === "object-layer") {
       this.vr.engine.removeObjectLayer(ref.name);
     }
     else {
       this.vr.engine.removeLayer(ref.name);
       this.vr.engine.markAllChunksDirty();
     }
-    this._selected = [];
-    editorState.setSelectedLayer(null);
+    editorState.setSelection(null);
+  }
+
+  #removalMessage(
+    ref: LayerRef & { name: string; }
+  ): string {
+    if (ref.kind !== "object-layer") {
+      return `Delete the voxel layer "${ref.name}" and everything painted on it?`;
+    }
+
+    const count = this.vr.engine.getObjectLayer(ref.name)?.objects.length ?? 0;
+
+    return count === 0
+      ? `Delete the object layer "${ref.name}"?`
+      : `Delete the object layer "${ref.name}" and its ${count} object(s)?`;
   }
 
   #moveUp(): void {
@@ -288,7 +468,7 @@ export class LayerManager extends LitElement {
     const ref = this.#selectedRef;
     if (
       ref === null ||
-      ref.type === "object" ||
+      ref.kind !== "voxel-layer" ||
       !this.vr
     ) {
       return;

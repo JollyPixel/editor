@@ -12,8 +12,7 @@ import type {
 import { computeBlockGridLayout } from "./blockGridLayout.ts";
 
 // CONSTANTS
-// Extra render resolution on top of the display density, so cube
-// silhouettes stay smooth once MSAA has resolved.
+// Extra resolution keeps cube silhouettes smooth after MSAA resolves.
 const kSuperSampling = 2;
 const kMaxPixelRatio = 3;
 const kCameraFov = 45;

@@ -207,4 +207,37 @@ describe("disposeObject3D", () => {
     assert.equal(ownDisposals(), 1);
     assert.equal(nestedDisposals(), 0);
   });
+
+  test("leaves a self-disposing node's resources to its own dispose", () => {
+    class SelfDisposingMesh extends THREE.Mesh {
+      dispose(): void {
+        this.geometry.dispose();
+        (this.material as THREE.Material).dispose();
+      }
+    }
+
+    const geometry = new THREE.BoxGeometry();
+    const material = new THREE.MeshBasicMaterial();
+    const geometryDisposals = countDisposals(geometry);
+    const materialDisposals = countDisposals(material);
+
+    const root = new THREE.Group();
+    root.add(new SelfDisposingMesh(geometry, material));
+    disposeObject3D(root);
+
+    assert.equal(geometryDisposals(), 1);
+    assert.equal(materialDisposals(), 1);
+  });
+
+  test("still frees the geometry and material of an InstancedMesh", () => {
+    const geometry = new THREE.BoxGeometry();
+    const material = new THREE.MeshBasicMaterial();
+    const geometryDisposals = countDisposals(geometry);
+    const materialDisposals = countDisposals(material);
+
+    disposeObject3D(new THREE.InstancedMesh(geometry, material, 4));
+
+    assert.equal(geometryDisposals(), 1);
+    assert.equal(materialDisposals(), 1);
+  });
 });

@@ -110,6 +110,15 @@ label: AreaBoxLabel | null
 
 Nameplate created from `displayName`, centered above the top face. `null` until a name is provided.
 
+### `color`
+
+```ts
+get color(): THREE.Color
+set color(color: THREE.ColorRepresentation)
+```
+
+Area color. The getter returns a **copy** of the fill color. Assigning repaints the fill and the edges in place, keeping the emphasis of the current `state`. No geometry or material is reallocated and nothing is disposed, so an attached area can be recolored while it is on screen. The label is left white for legibility.
+
 ### `state`
 
 ```ts
@@ -146,6 +155,8 @@ dispose(): void
 
 Delegates to `fill.dispose()`, `edges?.dispose()` and `label?.dispose()`. It leaves the scene graph and foreign children, including controls-owned resize arrows, untouched.
 
+Idempotent: later calls are ignored, on `AreaBox` and on each of its parts. Freeing an already freed GPU resource faults the renderer backend, and a subtree walker such as `disposeObject3D` may reach a part after its owner disposed it.
+
 ## AreaBoxFill
 
 ```ts
@@ -169,7 +180,8 @@ The transparent `FrontSide` material **writes depth**, so its near face hides th
 |---|---|
 | `resize(size: Vector3Like)` | Scales the unit box and re-centers it on the min-corner anchor. |
 | `emphasize(opacity: number, tint: number)` | Scales the constructor `opacity` by `opacity`, clamped to `1`, and clears the smoke toward the area color by `tint` (0 to 1). |
-| `dispose()` | Releases the geometry and the material. |
+| `get/set color` | Reads a copy of the area color, or repaints the material in place and re-applies the last `emphasize()` arguments. |
+| `dispose()` | Releases the geometry and the material, once. |
 
 ## AreaBoxEdges
 
@@ -190,9 +202,10 @@ It keeps the area color as-is, and opts out of frustum culling because fat lines
 
 | Method | Description |
 |---|---|
-| `resize(size: Vector3Like)` | Rebuilds the segments so they trace the box instead of stretching with it, then recomputes the geometry bounds. |
+| `resize(size: Vector3Like)` | Rebuilds the segments so they trace the box instead of stretching with it, then recomputes the geometry bounds. A resize to the size already traced is dropped: a rebuild swaps in fresh instanced buffers, and destroying the previous ones mid-frame faults the WebGPU queue with a buffer the pass being encoded still references. |
 | `emphasize(opacity: number, tint: number)` | Scales the constructor `opacity` by `opacity`, clamped to `1`, and tints the color toward white by `tint * 0.4`. |
-| `dispose()` | Releases the geometry and the material. |
+| `get/set color` | Reads a copy of the edge color, or repaints the material in place and re-applies the last `emphasize()` arguments. |
+| `dispose()` | Releases the geometry and the material, once. |
 
 ## AreaBoxLabel
 

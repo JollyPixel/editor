@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { LitElement, html, css } from "lit";
+import { LitElement, html, css, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import type { JollyTabChangeDetail } from "@jolly-pixel/ui";
 import type { VoxelRenderer, VoxelWorldJSON } from "@jolly-pixel/voxel.renderer";
@@ -21,7 +21,7 @@ import type { GridRenderer } from "../../components/GridRenderer.ts";
 import "../map-config/MapConfigPanel.ts";
 import "../layers/LayerManager.ts";
 import "../layers/LayerPanel.ts";
-import "../object-layers/ObjectLayerPanel.ts";
+import "../object-layers/ObjectPanel.ts";
 import "../blocks/BlockLibrary.ts";
 import "../texture/TextureEditor.ts";
 
@@ -45,10 +45,7 @@ export class EditorSidebar extends LitElement {
       flex: 1 1 0;
     }
 
-    /*
-     * The pane's own inset is off (see main.css) so the paint tab can run edge
-     * to edge; the tabs that hold controls carry the gutter themselves.
-     */
+    /* Tab panes own their gutter because paint content runs edge to edge. */
     jolly-tab {
       overflow-y: auto;
       padding: var(--jolly-space-1, 4px);
@@ -61,6 +58,12 @@ export class EditorSidebar extends LitElement {
 
     texture-editor {
       height: 100%;
+    }
+
+    .hint {
+      margin: 0;
+      padding: var(--jolly-space-1, 4px);
+      color: var(--jolly-text-muted);
     }
   `;
 
@@ -76,16 +79,13 @@ export class EditorSidebar extends LitElement {
   @state()
   private declare _tab: SidebarTab;
   @state()
-  private declare _selectedLayer: string | null;
-  @state()
-  private declare _selectedLayerType: "voxel" | "object" | null;
+  private declare _selection: LayerSelection;
   #subscriptions: Array<() => void> = [];
 
   constructor() {
     super();
     this._tab = "general";
-    this._selectedLayer = null;
-    this._selectedLayerType = null;
+    this._selection = null;
   }
 
   override connectedCallback() {
@@ -106,8 +106,7 @@ export class EditorSidebar extends LitElement {
   }
 
   readonly #onSelectionChange = (selection: LayerSelection): void => {
-    this._selectedLayer = selection?.name ?? null;
-    this._selectedLayerType = selection?.type ?? null;
+    this._selection = selection;
   };
 
   readonly #onTabStateChange = (tab: SidebarTab): void => {
@@ -168,22 +167,6 @@ export class EditorSidebar extends LitElement {
   }
 
   #renderLayers() {
-    let layerPanel: unknown = null;
-    if (this._selectedLayer) {
-      if (this._selectedLayerType === "object") {
-        layerPanel = html`<object-layer-panel
-                .vr=${this.vr}
-                .layerName=${this._selectedLayer}
-              ></object-layer-panel>`;
-      }
-      else {
-        layerPanel = html`<layer-panel
-                .vr=${this.vr}
-                .layerName=${this._selectedLayer}
-              ></layer-panel>`;
-      }
-    }
-
     return html`
       <jolly-folder
         key="layers"
@@ -194,9 +177,34 @@ export class EditorSidebar extends LitElement {
           .vr=${this.vr}
           style="height:200px;"
         ></layer-manager>
-        ${layerPanel}
+        ${this.#renderSelectionPanel()}
       </jolly-folder>
     `;
+  }
+
+  #renderSelectionPanel() {
+    const selection = this._selection;
+    if (selection === null) {
+      return nothing;
+    }
+
+    switch (selection.kind) {
+      case "voxel-layer":
+        return html`<layer-panel
+          .vr=${this.vr}
+          .layerName=${selection.name}
+        ></layer-panel>`;
+      case "object":
+        return html`<object-panel
+          .vr=${this.vr}
+          .layerName=${selection.layerName}
+          .objectId=${selection.objectId}
+        ></object-panel>`;
+      default:
+        return html`<p class="hint">
+          Select an object to edit its properties.
+        </p>`;
+    }
   }
 
   #renderPaint() {

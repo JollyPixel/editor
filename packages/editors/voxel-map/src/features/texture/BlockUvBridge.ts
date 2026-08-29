@@ -156,8 +156,7 @@ export class BlockUvBridge {
       this.#rebuilding = false;
     }
 
-    // Deleting a region drops the selection, and the block selected at boot
-    // never emits an event of its own, so the highlight is applied from state.
+    // Restore the boot selection after rebuilding regions.
     this.#onSelectedBlockChange(editorState.selectedBlockId);
   }
 
@@ -310,11 +309,7 @@ export class BlockUvBridge {
     this.#applyRegionToBlock(event.region);
   };
 
-  /**
-   * `region-moved` only lands on pointer release, which leaves the map showing
-   * the old texture for the whole drag. This applies each pointer move, so the
-   * blocks follow live.
-   */
+  // Update during dragging because region-moved fires only on release.
   readonly #onRegionDragging: UVMapListener<"region-dragging"> = (event) => {
     if (this.#rebuilding) {
       return;
@@ -379,9 +374,7 @@ export class BlockUvBridge {
 
     this.#restoreRegionFor(block);
 
-    // Deleting the selected region drops the selection, and putting the region
-    // back does not bring it along. Remote deletions arrive during startup, so
-    // without this the block selected at boot never gets highlighted.
+    // Restoring a deleted region does not restore its selection.
     this.#onSelectedBlockChange(editorState.selectedBlockId);
   };
 

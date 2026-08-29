@@ -299,6 +299,7 @@ export {
 } from "./data/treeNodes.ts";
 export type {
   JollyActivateDetail,
+  JollyRenameDetail,
   JollyReparentDetail,
   JollySelectDetail,
   JollyToggleExpandDetail,

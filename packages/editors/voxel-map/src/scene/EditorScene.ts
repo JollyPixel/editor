@@ -25,9 +25,9 @@ import {
   PerformanceHUD
 } from "../components/index.ts";
 import type { EditorState } from "../EditorState.ts";
+import { viewFocusPoint } from "../shared/viewFocus.ts";
 
 // CONSTANTS
-/** Upper bound on the blocks derived from the default tileset. */
 const kDefaultBlockLimit = 32;
 
 export interface EditorSceneOptions {
@@ -58,6 +58,7 @@ export class EditorScene extends Systems.Scene {
   #voxelRoom: network.Room<VoxelNetworkCommand, VoxelServerMessage> | undefined;
   #voxelSyncClient: VoxelSyncClient | undefined;
   #handles = Promise.withResolvers<EditorSceneHandles>();
+  #subscriptions: Array<() => void> = [];
 
   editorState: EditorState;
 
@@ -108,12 +109,17 @@ export class EditorScene extends Systems.Scene {
       .addComponentAndGet(FreeFlyCamera, {
         position: { x: 8, y: 12, z: 32 }
       });
+    this.#subscriptions.push(
+      this.editorState.on("gizmoDraggingChange", (dragging) => {
+        freeFlyCamera.enabled = !dragging;
+      })
+    );
 
     const vr = world
       .createActor("map")
       .addComponentAndGet(VoxelRenderer, {
         chunkSize: 16,
-        // Networked layers must be created after the sync client attaches.
+        // Create networked layers only after the sync client attaches.
         layers: this.#voxelRoom ? [] : [this.#defaultLayerName],
         blocks: [],
         material: "lambert",
@@ -126,22 +132,29 @@ export class EditorScene extends Systems.Scene {
       });
     this.vr = vr;
 
+    // Provide an in-view spawn point for new objects.
+    this.editorState.viewFocusProvider = () => viewFocusPoint(
+      freeFlyCamera.camera,
+      vr.engine.root
+    );
+
     if (this.#voxelRoom) {
       this.#voxelSyncClient = new VoxelSyncClient({ room: this.#voxelRoom });
       this.#voxelSyncClient.attach(vr.engine);
-      // Snapshots bypass per-mutation hooks, so mirrored UI state must reset.
+      // Snapshots bypass hooks that normally update mirrored UI state.
       this.#voxelSyncClient.on("snapshot", () => {
         let layers = vr.engine.world.getLayers();
         if (layers.length === 0) {
-          // Creating the default now broadcasts it through the attached client.
+          // The attached client broadcasts this default layer.
           vr.engine.addLayer(this.#defaultLayerName);
           layers = vr.engine.world.getLayers();
         }
 
-        const currentSelectionStillExists = this.editorState.selectedLayer !== null &&
-          layers.some((layer) => layer.name === this.editorState.selectedLayer);
+        const selected = this.editorState.selectedVoxelLayer;
+        const currentSelectionStillExists = selected !== null &&
+          layers.some((layer) => layer.name === selected);
         if (!currentSelectionStillExists) {
-          this.editorState.setSelectedLayer(layers[0].name);
+          this.editorState.selectVoxelLayer(layers[0].name);
         }
 
         this.#registerDefaultBlocks();
@@ -150,7 +163,7 @@ export class EditorScene extends Systems.Scene {
       });
     }
     else {
-      this.editorState.setSelectedLayer(this.#defaultLayerName);
+      this.editorState.selectVoxelLayer(this.#defaultLayerName);
     }
 
     this.gridRenderer = world
@@ -216,7 +229,7 @@ export class EditorScene extends Systems.Scene {
     else {
       this.vr.engine.load(data);
       const layers = this.vr.engine.world.getLayers();
-      this.editorState.setSelectedLayer(layers.length > 0 ? layers[0].name : null);
+      this.editorState.selectVoxelLayer(layers.length > 0 ? layers[0].name : null);
       this.editorState.dispatchBlockRegistryChanged();
       this.editorState.dispatchWorldReset();
     }
@@ -226,15 +239,15 @@ export class EditorScene extends Systems.Scene {
     this.#handles.reject(
       new Error("The editor scene was destroyed before it awoke.")
     );
+    for (const unsubscribe of this.#subscriptions.splice(0)) {
+      unsubscribe();
+    }
+    this.editorState.viewFocusProvider = null;
     this.#voxelSyncClient?.destroy();
     this.#voxelSyncClient = undefined;
   }
 
-  /**
-   * The document format carries no block definitions, so the registry is
-   * rebuilt from the tileset. Existing ids are left alone because placed
-   * voxels reference them.
-   */
+  // Preserve existing ids because placed voxels reference them.
   #registerDefaultBlocks(): void {
     const { blockRegistry, tilesetManager } = this.vr.engine;
 

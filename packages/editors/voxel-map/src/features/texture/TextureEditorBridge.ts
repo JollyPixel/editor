@@ -50,9 +50,6 @@ export class TextureEditorBridge {
   #texture: PixelCanvasTexture | null = null;
   readonly #scheduler: (callback: () => void) => void;
   #running = false;
-  /**
-   * Requires one full repad before regional updates resume.
-   */
   #needsFullSync = false;
 
   constructor(
@@ -78,11 +75,11 @@ export class TextureEditorBridge {
       this.#onBlockRegistryChanged
     );
 
-    // Manual flush batches local and remote writes once per frame.
+    // Batch local and remote writes once per frame.
     this.#texture?.dispose();
     this.#texture = new PixelCanvasTexture(canvas, { flush: "manual" });
     this.#texture.on("resized", () => {
-      // Resizes and snapshots require a full repad.
+      // Resizes and snapshots invalidate regional padding.
       this.#needsFullSync = true;
     });
     this.#startFrameLoop();
@@ -159,14 +156,14 @@ export class TextureEditorBridge {
     this.#vr = vr;
     this.#tileSize = tilesetManager.getDefinitions().find((def) => def.id === id)?.tileSize ?? 1;
 
-    // The room document is authoritative once its snapshot lands.
+    // Do not overwrite an attached room's snapshot.
     if (this.#syncClient?.ready) {
       this.syncTransparency();
 
       return;
     }
 
-    // A placeholder every peer loads for itself, so it is not an edit.
+    // Local restore keeps the placeholder out of shared history.
     const applied = this.#manager.runLocalRestore(
       () => this.#applyTexture(
         texture.image as HTMLImageElement,
@@ -219,9 +216,7 @@ export class TextureEditorBridge {
     this.syncTransparency();
   }
 
-  /**
-   * Recomputes transparency; `bounds` limits work to touched tiles.
-   */
+  /** Recomputes transparency within optional tile bounds. */
   syncTransparency(
     bounds?: SelectionRect
   ): void {
@@ -258,9 +253,6 @@ export class TextureEditorBridge {
     }
   }
 
-  /**
-   * Recomputes after registry changes; the guard prevents recursion.
-   */
   readonly #onBlockRegistryChanged = (): void => {
     if (this.#syncing) {
       return;

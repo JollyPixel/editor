@@ -1,275 +1,426 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 import {
-  type Actor
+  type Actor,
+  ActorComponent
 } from "@jolly-pixel/engine";
+import {
+  AreaBox,
+  AreaBoxControls,
+  type AreaBoxDragEvent
+} from "@jolly-pixel/three";
 import type {
   VoxelRenderer,
+  VoxelObjectJSON,
   VoxelLayerHookEvent
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import { editorState } from "../EditorState.ts";
-import { normalizeVoxelExtent } from "../shared/voxelExtent.ts";
-import { TransformGizmoBase } from "./TransformGizmoBase.ts";
-import { ObjectLayerVisuals } from "./ObjectLayerVisuals.ts";
+import {
+  areaTransformOf,
+  colorOf,
+  isLocked,
+  objectKey,
+  objectPatchFromArea,
+  parseObjectKey,
+  sameObjectArea
+} from "../features/object-layers/objectArea.ts";
+
+// CONSTANTS
+const kMinObjectSize = {
+  x: 1,
+  y: 1,
+  z: 1
+};
 
 export interface ObjectLayerRendererOptions {
   vr: VoxelRenderer;
   camera: THREE.PerspectiveCamera;
 }
 
-export class ObjectLayerRenderer extends TransformGizmoBase {
+export class ObjectLayerRenderer extends ActorComponent {
   #vr: VoxelRenderer;
-  #visuals: ObjectLayerVisuals;
-
-  #selectedObjectKey: string | null = null;
-  #initialObjDimensions: { w: number; h: number; } | null = null;
+  #camera: THREE.PerspectiveCamera;
+  #canvas: HTMLCanvasElement | null = null;
+  #controls: AreaBoxControls | null = null;
+  #areas = new Map<string, AreaBox>();
+  #selectedKey: string | null = null;
   #raycaster = new THREE.Raycaster();
-  #isDragging = false;
-  #skipNextSelect = false;
+  #pointer = new THREE.Vector2();
   #subscriptions: Array<() => void> = [];
 
   constructor(
     actor: Actor,
     options: ObjectLayerRendererOptions
   ) {
-    super(
+    super({
       actor,
-      options,
-      "ObjectLayerRenderer"
-    );
-    this.#vr = options.vr;
-    this.#visuals = this.actor.addComponentAndGet(ObjectLayerVisuals, {
-      vr: options.vr
+      typeName: "ObjectLayerRenderer"
     });
+    this.#vr = options.vr;
+    this.#camera = options.camera;
   }
 
-  override awake(): void {
-    super.awake();
+  awake(): void {
+    const canvas = this.actor.world.renderer.canvas;
+    this.#canvas = canvas;
 
-    this.controls!.addEventListener("mouseDown", this.#onMouseDown);
-    this.controls!.addEventListener("mouseUp", this.#onMouseUp);
-    this.controls!.addEventListener("dragging-changed", this.#onDraggingChanged);
-    this.controls!.addEventListener("objectChange", this.#onObjectChange);
+    const controls = new AreaBoxControls(this.#camera, canvas, {
+      snap: 1,
+      minSize: kMinObjectSize,
+      moveAxes: "xyz",
+      resizeAxes: "xz"
+    });
+    controls.addEventListener("start", this.#onDragStart);
+    controls.addEventListener("change", this.#onDragChange);
+    controls.addEventListener("end", this.#onDragEnd);
+    this.#controls = controls;
+
+    canvas.addEventListener("pointerdown", this.#onPointerDown, true);
     this.#subscriptions.push(
       editorState.on("selectionChange", this.#onSelectionChange),
-      editorState.on("layerUpdated", this.#onLayerUpdated)
+      editorState.on("layerUpdated", this.#onLayerUpdated),
+      editorState.on("worldReset", this.#onWorldReset)
     );
+
+    this.#syncAll();
   }
 
   override destroy(): void {
-    this.controls?.removeEventListener("mouseDown", this.#onMouseDown);
-    this.controls?.removeEventListener("mouseUp", this.#onMouseUp);
-    this.controls?.removeEventListener("dragging-changed", this.#onDraggingChanged);
-    this.controls?.removeEventListener("objectChange", this.#onObjectChange);
+    this.#canvas?.removeEventListener("pointerdown", this.#onPointerDown, true);
+    this.#canvas = null;
+
     for (const unsubscribe of this.#subscriptions.splice(0)) {
       unsubscribe();
     }
+
+    this.#controls?.dispose();
+    this.#controls = null;
+    this.#selectedKey = null;
+
+    for (const key of [...this.#areas.keys()]) {
+      this.#removeArea(key);
+    }
+
     super.destroy();
   }
 
-  readonly #onMouseDown = (): void => {
-    this.#skipNextSelect = true;
-  };
+  #syncAll(): void {
+    const layers = this.#vr.engine.getObjectLayers();
+    const names = new Set(layers.map((layer) => layer.name));
 
-  readonly #onMouseUp = (): void => this.#flushObjectTransform();
-
-  readonly #onDraggingChanged = (event: { value: unknown; }): void => {
-    this.#isDragging = event.value === true;
-  };
-
-  readonly #onObjectChange = (): void => {
-    if (this.controls?.mode !== "scale") {
-      return;
+    for (const key of [...this.#areas.keys()]) {
+      if (!names.has(parseObjectKey(key).layerName)) {
+        this.#removeArea(key);
+      }
     }
-
-    const group = this.#selectedObjectKey
-      ? this.#visuals.getGroup(this.#selectedObjectKey)
-      : null;
-    const dimensions = this.#initialObjDimensions;
-    if (!group || !dimensions) {
-      return;
+    for (const layer of layers) {
+      this.#syncLayer(layer.name);
     }
+  }
 
-    const width = normalizeVoxelExtent(dimensions.w * group.scale.x);
-    const height = normalizeVoxelExtent(dimensions.h * group.scale.z);
-    group.scale.set(width / dimensions.w, 1, height / dimensions.h);
-  };
-
-  readonly #onSelectionChange = (): void => {
-    if (editorState.selectedLayerType !== "object") {
-      this.#detachControls();
-    }
-  };
-
-  readonly #onLayerUpdated = (event: VoxelLayerHookEvent): void => {
-    if (
-      event.action === "object-layer-added" ||
-      event.action === "object-layer-removed" ||
-      event.action === "object-layer-updated"
-    ) {
-      this.#visuals.rebuildAll();
-      this.#detachControls();
-    }
-    else if (
-      event.action === "object-added" ||
-      event.action === "object-removed" ||
-      event.action === "object-updated"
-    ) {
-      this.#visuals.rebuildLayer(event.layerName);
-      this.#reattachAfterRebuild(event.layerName);
-    }
-  };
-
-  #reattachAfterRebuild(
+  #syncLayer(
     layerName: string
   ): void {
+    // Keep hidden areas allocated to avoid GPU churn on visibility changes.
+    const objects = this.#vr.engine.getObjectLayer(layerName)?.objects ?? [];
+    const alive = new Set(
+      objects.map((object) => objectKey(layerName, object.id))
+    );
+
+    for (const key of [...this.#areas.keys()]) {
+      if (
+        parseObjectKey(key).layerName === layerName &&
+        !alive.has(key)
+      ) {
+        this.#removeArea(key);
+      }
+    }
+    for (const object of objects) {
+      this.#syncObject(layerName, object);
+    }
+
+    this.#updateVisibility();
+  }
+
+  #syncObject(
+    layerName: string,
+    object: VoxelObjectJSON
+  ): void {
+    const key = objectKey(layerName, object.id);
+    const { position, size } = areaTransformOf(object);
+    const area = this.#areas.get(key);
+
+    if (area === undefined) {
+      const created = new AreaBox({
+        position,
+        size,
+        color: colorOf(object),
+        displayName: object.name
+      });
+      this.actor.addChildren(created);
+      this.#areas.set(key, created);
+
+      return;
+    }
+
+    if (this.#selectedKey === key && this.#controls?.dragging === true) {
+      return;
+    }
+
+    area.position.set(position.x, position.y, position.z);
+    area.size = size;
+
+    const color = colorOf(object);
+    if (area.color.getHexString() !== new THREE.Color(color).getHexString()) {
+      area.color = color;
+    }
+
+    // Redrawing an unchanged label would re-upload its texture.
+    if (area.label !== null && area.label.displayName !== object.name) {
+      area.label.displayName = object.name;
+    }
+  }
+
+  #removeArea(
+    key: string
+  ): void {
+    const area = this.#areas.get(key);
+    if (area === undefined) {
+      return;
+    }
+
+    // Detach first because removeChildren() disposes the entire subtree.
+    if (this.#selectedKey === key) {
+      this.#detach();
+    }
+    this.actor.removeChildren(area);
+    this.#areas.delete(key);
+
+    // Preserve the layer selection after a remote object deletion.
+    if (this.#selectedObjectKey() === key) {
+      editorState.selectObjectLayer(parseObjectKey(key).layerName);
+    }
+  }
+
+  // Area visibility follows eye toggles, not selection.
+  #updateVisibility(): void {
+    const selectedKey = this.#selectedObjectKey();
+
+    for (const [key, area] of this.#areas) {
+      area.visible = this.#isShown(key);
+      if (area.label !== null) {
+        // Show only the selected nameplate to avoid overlapping labels.
+        area.label.visible = key === selectedKey;
+      }
+    }
+
+    this.#syncGizmo(selectedKey);
+  }
+
+  #syncGizmo(
+    selectedKey: string | null
+  ): void {
+    const controls = this.#controls;
+    if (controls === null) {
+      return;
+    }
+
+    const area = selectedKey === null
+      ? undefined
+      : this.#areas.get(selectedKey);
     if (
-      !this.#selectedObjectKey?.startsWith(`${layerName}:`) ||
-      !this.controls
+      selectedKey === null ||
+      area === undefined ||
+      !area.visible ||
+      this.#isLockedKey(selectedKey)
+    ) {
+      this.#detach();
+
+      return;
+    }
+
+    if (this.#selectedKey !== selectedKey) {
+      this.#selectedKey = selectedKey;
+      controls.attach(area);
+    }
+  }
+
+  #selectedObjectKey(): string | null {
+    const selected = editorState.selectedObject;
+
+    return selected === null
+      ? null
+      : objectKey(selected.layerName, selected.objectId);
+  }
+
+  #isShown(
+    key: string
+  ): boolean {
+    const object = this.#objectOf(key);
+    if (object === undefined) {
+      return false;
+    }
+
+    const { layerName } = parseObjectKey(key);
+
+    return this.#vr.engine.getObjectLayer(layerName)?.visible === true &&
+      object.visible;
+  }
+
+  #isLockedKey(
+    key: string
+  ): boolean {
+    const object = this.#objectOf(key);
+
+    return object !== undefined && isLocked(object);
+  }
+
+  #objectOf(
+    key: string
+  ): VoxelObjectJSON | undefined {
+    const { layerName, objectId } = parseObjectKey(key);
+
+    return this.#vr.engine
+      .getObjectLayer(layerName)
+      ?.objects.find((candidate) => candidate.id === objectId);
+  }
+
+  #detach(): void {
+    this.#controls?.detach();
+    this.#selectedKey = null;
+  }
+
+  #pick(
+    event: PointerEvent
+  ): string | null {
+    const canvas = this.#canvas;
+    if (canvas === null) {
+      return null;
+    }
+
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) {
+      return null;
+    }
+
+    this.#pointer.set(
+      (((event.clientX - rect.left) / rect.width) * 2) - 1,
+      (-((event.clientY - rect.top) / rect.height) * 2) + 1
+    );
+    this.#raycaster.setFromCamera(this.#pointer, this.#camera);
+
+    // Locked areas must not intercept picks for objects behind them.
+    const pickable = [...this.#areas].filter(
+      ([key, area]) => area.visible && !this.#isLockedKey(key)
+    );
+    const hits = this.#raycaster.intersectObjects(
+      pickable.map(([, area]) => area.fill),
+      false
+    );
+    if (hits.length === 0) {
+      return null;
+    }
+
+    const hit = pickable.find(([, area]) => area.fill === hits[0].object);
+
+    return hit?.[0] ?? null;
+  }
+
+  readonly #onPointerDown = (
+    event: PointerEvent
+  ): void => {
+    const controls = this.#controls;
+    // Let the brush handle pointer input outside object context.
+    if (
+      controls === null ||
+      event.button !== 0 ||
+      !editorState.isObjectContext ||
+      controls.isOverHandle(event)
     ) {
       return;
     }
 
-    const newGroup = this.#visuals.getGroup(this.#selectedObjectKey);
-    if (newGroup) {
-      const objId = this.#selectedObjectKey.slice(layerName.length + 1);
-      const layer = this.#vr.engine.getObjectLayer(layerName);
-      const obj = layer?.objects.find((o) => o.id === objId);
-      if (obj) {
-        this.#initialObjDimensions = {
-          w: normalizeVoxelExtent(obj.width ?? 1),
-          h: normalizeVoxelExtent(obj.height ?? 1)
-        };
-      }
-      this.controls.attach(newGroup);
-    }
-    else {
-      this.#detachControls();
-    }
-  }
+    const key = this.#pick(event);
+    if (key === null) {
+      editorState.setSelection(
+        editorState.activeObjectLayer === null
+          ? null
+          : {
+            kind: "object-layer",
+            name: editorState.activeObjectLayer
+          }
+      );
 
-  #trySelectObject(): void {
-    const { input } = this.actor.world;
-
-    const viewportPosition = input.mouse.viewportPosition;
-    this.#raycaster.setFromCamera(
-      new THREE.Vector2(viewportPosition.x, viewportPosition.y),
-      this.camera
-    );
-
-    const meshToKey = new Map<THREE.Mesh, string>();
-    const fillMeshes: THREE.Mesh[] = [];
-    for (const { key, mesh } of this.#visuals.getFillMeshes()) {
-      fillMeshes.push(mesh);
-      meshToKey.set(mesh, key);
+      return;
     }
 
-    const hits = this.#raycaster.intersectObjects(fillMeshes, false);
-    if (hits.length > 0) {
-      const key = meshToKey.get(hits[0].object as THREE.Mesh);
-      if (key) {
-        this.#selectObject(key);
+    // Attach with the pointer event to preserve the grab offset.
+    const { layerName, objectId } = parseObjectKey(key);
+    this.#selectedKey = key;
+    controls.attach(this.#areas.get(key)!, { from: event });
+    editorState.selectObject({ layerName, objectId });
+  };
 
-        return;
-      }
-    }
+  readonly #onDragStart = (): void => {
+    editorState.setGizmoDragging(true);
+  };
 
-    this.#detachControls();
-  }
+  readonly #onDragChange = (
+    event: AreaBoxDragEvent
+  ): void => this.#persist(event);
 
-  #selectObject(
-    key: string
+  readonly #onDragEnd = (
+    event: AreaBoxDragEvent
+  ): void => {
+    this.#persist(event);
+    editorState.setGizmoDragging(false);
+  };
+
+  #persist(
+    event: AreaBoxDragEvent
   ): void {
-    const colonIdx = key.lastIndexOf(":");
-    const layerName = key.slice(0, colonIdx);
-    const objId = key.slice(colonIdx + 1);
-
-    const layer = this.#vr.engine.getObjectLayer(layerName);
-    const obj = layer?.objects.find((o) => o.id === objId);
-    if (!obj) {
+    if (this.#selectedKey === null) {
       return;
     }
 
-    this.#selectedObjectKey = key;
-    this.#initialObjDimensions = {
-      w: normalizeVoxelExtent(obj.width ?? 1),
-      h: normalizeVoxelExtent(obj.height ?? 1)
-    };
-
-    const group = this.#visuals.getGroup(key)!;
-    this.controls?.attach(group);
-  }
-
-  #detachControls(): void {
-    this.controls?.detach();
-    this.#selectedObjectKey = null;
-    this.#initialObjDimensions = null;
-  }
-
-  #flushObjectTransform(): void {
-    if (!this.#selectedObjectKey || !this.controls) {
+    const { layerName, objectId } = parseObjectKey(this.#selectedKey);
+    const object = this.#vr.engine
+      .getObjectLayer(layerName)
+      ?.objects.find((candidate) => candidate.id === objectId);
+    if (object === undefined) {
       return;
     }
 
-    const colonIdx = this.#selectedObjectKey.lastIndexOf(":");
-    const layerName = this.#selectedObjectKey.slice(0, colonIdx);
-    const objId = this.#selectedObjectKey.slice(colonIdx + 1);
-
-    const layer = this.#vr.engine.getObjectLayer(layerName);
-    const obj = layer?.objects.find((o) => o.id === objId);
-    const group = this.#visuals.getGroup(this.#selectedObjectKey);
-
-    if (!obj || !group) {
+    const patch = objectPatchFromArea(event.min, event.size);
+    if (sameObjectArea(object, patch)) {
       return;
     }
 
-    if (this.controls.mode === "translate") {
-      const w = normalizeVoxelExtent(obj.width ?? 1);
-      const h = normalizeVoxelExtent(obj.height ?? 1);
-      this.#vr.engine.updateObject(layerName, objId, {
-        x: Math.round(group.position.x - w / 2),
-        y: Math.round(group.position.y - 0.5),
-        z: Math.round(group.position.z - h / 2)
-      });
-    }
-    else if (this.controls.mode === "scale") {
-      const dims = this.#initialObjDimensions!;
-      const newW = normalizeVoxelExtent(dims.w * group.scale.x);
-      const newH = normalizeVoxelExtent(dims.h * group.scale.z);
-      const newX = Math.round(obj.x + dims.w / 2 - newW / 2);
-      const newZ = Math.round(obj.z + dims.h / 2 - newH / 2);
-      this.#vr.engine.updateObject(layerName, objId, { x: newX, z: newZ, width: newW, height: newH });
-    }
+    this.#vr.engine.updateObject(layerName, objectId, patch);
   }
 
-  update(): void {
-    if (editorState.selectedLayerType !== "object") {
-      return;
-    }
+  readonly #onSelectionChange = (): void => this.#updateVisibility();
 
-    const { input } = this.actor.world;
+  readonly #onWorldReset = (): void => this.#syncAll();
 
-    if (this.#selectedObjectKey && this.controls) {
-      if (input.keyboard.wasJustPressed("KeyG")) {
-        this.controls.setMode("translate");
-      }
-      else if (
-        input.keyboard.wasJustPressed("KeyS") &&
-        (input.keyboard.isDown("ShiftLeft") || input.keyboard.isDown("ShiftRight"))
-      ) {
-        this.controls.setMode("scale");
-      }
+  readonly #onLayerUpdated = (
+    event: VoxelLayerHookEvent
+  ): void => {
+    switch (event.action) {
+      case "object-layer-added":
+      case "object-layer-removed":
+      case "object-layer-updated":
+        this.#syncAll();
+        break;
+      case "object-added":
+      case "object-removed":
+      case "object-updated":
+        this.#syncLayer(event.layerName);
+        break;
+      default:
+        break;
     }
-
-    if (!this.#isDragging && input.mouse.wasJustPressed("left")) {
-      if (this.#skipNextSelect) {
-        this.#skipNextSelect = false;
-      }
-      else {
-        this.#trySelectObject();
-      }
-    }
-  }
+  };
 }

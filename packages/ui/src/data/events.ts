@@ -1,6 +1,7 @@
 // Import Internal Dependencies
 import type {
   JollyActivateDetail,
+  JollyRenameDetail,
   JollyReparentDetail,
   JollySelectDetail,
   JollyToggleExpandDetail,
@@ -14,6 +15,7 @@ export interface DataEventMap {
   "jolly-toggle-expand": JollyToggleExpandDetail;
   "jolly-toggle-visible": JollyToggleVisibleDetail;
   "jolly-toggle-lock": JollyToggleLockDetail;
+  "jolly-rename": JollyRenameDetail;
   "jolly-reparent": JollyReparentDetail;
 }
 
@@ -37,6 +39,7 @@ declare global {
     "jolly-toggle-expand": CustomEvent<JollyToggleExpandDetail>;
     "jolly-toggle-visible": CustomEvent<JollyToggleVisibleDetail>;
     "jolly-toggle-lock": CustomEvent<JollyToggleLockDetail>;
+    "jolly-rename": CustomEvent<JollyRenameDetail>;
     "jolly-reparent": CustomEvent<JollyReparentDetail>;
   }
 }
