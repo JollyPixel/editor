@@ -18,6 +18,9 @@ import type {
   VoxelObjectJSON,
   VoxelObjectProperties
 } from "../../serialization/VoxelSerializer.ts";
+import {
+  normalizeVoxelExtent
+} from "../../serialization/voxelObject.ts";
 import type {
   VoxelLayerJSON,
   VoxelEntryKey
@@ -351,8 +354,12 @@ function convertObjectLayer(
       x: obj.x / ctx.map.tilewidth,
       y: 0,
       z: obj.y / ctx.map.tileheight,
-      width: obj.width / ctx.map.tilewidth,
-      height: obj.height / ctx.map.tileheight,
+      width: normalizeVoxelExtent(
+        obj.width / ctx.map.tilewidth
+      ),
+      height: normalizeVoxelExtent(
+        obj.height / ctx.map.tileheight
+      ),
       rotation: obj.rotation,
       visible: obj.visible
     };

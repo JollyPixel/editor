@@ -69,6 +69,11 @@ export {
   type VoxelObjectLayerJSON,
   type VoxelObjectProperties
 } from "./serialization/VoxelSerializer.ts";
+export {
+  normalizeVoxelExtent,
+  voxelObjectFootprint,
+  type VoxelObjectFootprint
+} from "./serialization/voxelObject.ts";
 
 // Tileset
 export {

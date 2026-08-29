@@ -268,6 +268,35 @@ describe("TiledConverter.convert — error paths", () => {
 describe("TiledConverter.convert — object layers", () => {
   const converter = new TiledConverter();
 
+  function makeObjectMap(
+    size: { width: number; height: number; }
+  ) {
+    return makeMinimalMap(undefined, {
+      width: 10,
+      height: 10,
+      tilesets: [],
+      layers: [{
+        type: "objectgroup",
+        id: 2,
+        name: "Spawns",
+        visible: true,
+        opacity: 1,
+        x: 0,
+        y: 0,
+        objects: [{
+          id: 1,
+          name: "PlayerStart",
+          x: 32,
+          y: 48,
+          width: size.width,
+          height: size.height,
+          rotation: 0,
+          visible: true
+        }]
+      }]
+    });
+  }
+
   it("object layers are included in objectLayers", () => {
     const map = makeMinimalMap(undefined, {
       width: 10,
@@ -306,6 +335,40 @@ describe("TiledConverter.convert — object layers", () => {
     assert.equal(obj.x, 2);
     assert.equal(obj.z, 3);
     assert.equal(obj.properties?.team, "blue");
+  });
+
+  it("gives a zero-sized point object a one voxel footprint", () => {
+    const result = converter.convert(
+      makeObjectMap({ width: 0, height: 0 }),
+      { resolveTilesetSrc: simpleSrc }
+    );
+
+    const obj = result.objectLayers![0].objects[0];
+    assert.equal(obj.width, 1);
+    assert.equal(obj.height, 1);
+  });
+
+  it("rounds an object that spans a fraction of a tile", () => {
+    // 40/16 = 2.5 → 3, 8/16 = 0.5 → 1
+    const result = converter.convert(
+      makeObjectMap({ width: 40, height: 8 }),
+      { resolveTilesetSrc: simpleSrc }
+    );
+
+    const obj = result.objectLayers![0].objects[0];
+    assert.equal(obj.width, 3);
+    assert.equal(obj.height, 1);
+  });
+
+  it("keeps a whole-tile footprint as it is", () => {
+    const result = converter.convert(
+      makeObjectMap({ width: 32, height: 64 }),
+      { resolveTilesetSrc: simpleSrc }
+    );
+
+    const obj = result.objectLayers![0].objects[0];
+    assert.equal(obj.width, 2);
+    assert.equal(obj.height, 4);
   });
 
   it("objectLayers is absent when no object layers exist", () => {
