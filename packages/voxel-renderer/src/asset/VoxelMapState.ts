@@ -3,9 +3,7 @@ import type { VoxelWorld } from "../world/VoxelWorld.ts";
 import type { TilesetDefinition } from "../tileset/TilesetManager.ts";
 
 /**
- * `apply` is the sole world writer. Rooms only read and append.
- *
- * `tilesets` preserves document metadata absent from `VoxelWorld`.
+ * Stores the authoritative world and its separate tileset metadata.
  */
 export interface VoxelMapState {
   readonly world: VoxelWorld;

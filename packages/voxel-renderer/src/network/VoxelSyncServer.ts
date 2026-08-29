@@ -14,15 +14,12 @@ export type ClientHandle = network.ClientHandle;
 
 export interface VoxelSyncServerOptions {
   /**
-   * Extension id this server is registered under. A
-   * VoxelSyncServer owns exactly one world, so a Server hosting
-   * several worlds needs one instance per world, each under its own id.
+   * Extension ID; use one server and ID per world.
    * @default "voxel-map"
    */
   id?: string;
   /**
-   * Existing `VoxelWorld` to use as the authoritative state.
-   * A new world is created when omitted.
+   * Authoritative world; omission creates a new one.
    */
   world?: VoxelWorld;
   /**
@@ -32,15 +29,13 @@ export interface VoxelSyncServerOptions {
   chunkSize?: number;
   /**
    * Custom conflict resolver.
-   * Defaults to `LastWriteWinsResolver`.
+   * @default network.LastWriteWinsResolver
    */
   conflictResolver?: network.ConflictResolver<VoxelNetworkCommand>;
 }
 
 /**
  * Headless, server-authoritative voxel world manager.
- *
- * Has no Three.js dependency and runs in Node.js / Deno / Bun.
  */
 export class VoxelSyncServer extends network.Extension {
   readonly id: string;
@@ -70,7 +65,6 @@ export class VoxelSyncServer extends network.Extension {
   onClientConnect(
     client: network.ClientHandle
   ): void {
-    // Sends the world's current snapshot to the newly connected peer.
     client.send({
       type: "snapshot",
       data: this.snapshot()
@@ -80,7 +74,7 @@ export class VoxelSyncServer extends network.Extension {
   onClientDisconnect(
     _clientId: string
   ): void {
-    // No client-list bookkeeping to clean up — Server owns that.
+    // The room owns client bookkeeping.
   }
 
   getEventName(
@@ -105,10 +99,7 @@ export class VoxelSyncServer extends network.Extension {
     cmd: VoxelNetworkCommand,
     context: network.RoomContext
   ): void {
-    // Out-of-band admin action: replaces the whole world and re-snapshots
-    // every connected client (including the sender) rather than diffing
-    // against the current one via applyCommandToWorld(). Bypasses the LWW
-    // tracker entirely — a full-world replace always wins.
+    // Full-world replacement bypasses conflict arbitration.
     if (cmd.action === "world-replace") {
       this.#serializer.deserialize(cmd.data, this.world);
       context.room.broadcast({
@@ -123,13 +114,7 @@ export class VoxelSyncServer extends network.Extension {
       return;
     }
 
-    // A client can reference a layer the server doesn't (yet) know about —
-    // e.g. a stale command from before a reconnect resynced state. VoxelWorld
-    // methods like setVoxelAt() throw in that case, which is correct for
-    // local/programmatic use but must not crash the shared session for every
-    // connected client over one bad command from one client. Recording is
-    // deferred until here so a command that fails to apply never poisons the
-    // tracker for that key.
+    // One stale client command must not terminate the shared session.
     try {
       applyCommandToWorld(this.world, cmd);
     }

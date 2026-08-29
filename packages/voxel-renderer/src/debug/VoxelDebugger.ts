@@ -14,9 +14,7 @@ const kModeCycle: Record<VoxelDebugMode, VoxelDebugMode> = {
 };
 
 /**
- * - `off`: chunks render normally, only counters are collected.
- * - `overlay`: a wireframe copy is drawn on top of the textured chunks.
- * - `wireframe`: the textured chunks are hidden, leaving only the wireframe.
+ * Selects counters only, a wireframe overlay, or wireframe-only rendering.
  */
 export type VoxelDebugMode =
   | "off"
@@ -40,33 +38,24 @@ export interface VoxelDebuggerOptions {
   opacity?: number;
 }
 
-/**
- * Aggregated counters for every chunk currently meshed by the engine.
- */
 export interface VoxelDebugStats {
-  /** Chunks the mesh builder processed, including those emitting no face. */
   chunks: number;
-  /** Chunk meshes attached to the scene graph, i.e. one draw call each. */
   meshes: number;
   voxels: number;
   hiddenVoxels: number;
   faces: number;
   culledFaces: number;
-  /** Voxel faces greedy meshing folded into a neighbour's quad; 0 when off. */
   mergedFaces: number;
   vertices: number;
   triangles: number;
   /**
-   * Faces emitted per voxel that contributed geometry. Falls 3–20× when greedy
-   * meshing is on; if it does not, a merge predicate has become too strict.
+   * Faces emitted per voxel that contributed geometry.
    */
   facesPerSolidVoxel: number;
   /**
-   * Vertex attributes emitted, in bytes per vertex — indices excluded.
-   * Averaged over live chunks, weighted by vertex count.
+   * Vertex-weighted attribute bytes per vertex, excluding indices.
    */
   bytesPerVertex: number;
-  /** Sum of the last build time of every live chunk, not a frame cost. */
   buildTimeMs: number;
 }
 
@@ -77,8 +66,7 @@ interface DebugChunk {
 }
 
 /**
- * Runtime inspector for `VoxelEngine`: keeps the per-chunk mesh counters the
- * builder produces and, on demand, draws the chunk geometry as a wireframe.
+ * Tracks live chunk statistics and optional wireframe overlays.
  */
 export class VoxelDebugger {
   #parent: THREE.Object3D;
@@ -117,9 +105,6 @@ export class VoxelDebugger {
     return this.#mode;
   }
 
-  /**
-   * Applies the new mode to every chunk already built.
-   */
   set mode(value: VoxelDebugMode) {
     if (value === this.#mode) {
       return;
@@ -146,9 +131,6 @@ export class VoxelDebugger {
     this.mode = value ? "overlay" : "off";
   }
 
-  /**
-   * Cycles `off` → `overlay` → `wireframe` → `off`, for a debug keybinding.
-   */
   nextMode(): VoxelDebugMode {
     this.mode = kModeCycle[this.#mode];
 
@@ -198,8 +180,7 @@ export class VoxelDebugger {
   }
 
   /**
-   * Records the result of one chunk build. `stats` is copied because the
-   * builder reuses its instance for the next chunk.
+   * Records a chunk build and copies its reused statistics object.
    */
   registerChunk(
     key: string,

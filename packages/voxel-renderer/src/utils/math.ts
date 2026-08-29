@@ -1,7 +1,7 @@
 export type Vec3 = [number, number, number];
 export type Vec2 = [number, number];
 
-// Face enum — index into FACE_NORMALS / FACE_OFFSETS / FACE_OPPOSITE
+// Face enum indexed by FACE_NORMALS / FACE_OFFSETS / FACE_OPPOSITE.
 export const FACE = {
   PosX: 0,
   NegX: 1,
@@ -73,8 +73,7 @@ export function isPowerOfTwo(
 }
 
 /**
- * Chunk sizes must be powers of two so every chunk-space coordinate conversion
- * is a shift and a mask rather than a division.
+ * Enforces power-of-two chunk sizes required by shift-and-mask indexing.
  */
 export function assertPowerOfTwoChunkSize(
   value: number,

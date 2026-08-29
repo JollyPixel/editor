@@ -12,42 +12,36 @@ import {
 // CONSTANTS
 const kStairFaces: readonly FaceDefinition[] = [
   {
-    // NegY: full flat bottom quad
     face: FACE.NegY,
     normal: [0, -1, 0],
     vertices: [[0, 0, 1], [0, 0, 0], [1, 0, 0], [1, 0, 1]],
     uvs: [[0, 0], [0, 1], [1, 1], [1, 0]]
   },
   {
-    // PosZ: full back wall y=0..1 (high step at back)
     face: FACE.PosZ,
     normal: [0, 0, 1],
     vertices: [[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]],
     uvs: [[0, 0], [1, 0], [1, 1], [0, 1]]
   },
   {
-    // NegZ: lower front wall y=0..0.5
     face: FACE.NegZ,
     normal: [0, 0, -1],
     vertices: [[1, 0, 0], [0, 0, 0], [0, 0.5, 0], [1, 0.5, 0]],
     uvs: [[1, 0], [0, 0], [0, 0.5], [1, 0.5]]
   },
   {
-    // PosY: front step top y=0.5, z=0..0.5
     face: FACE.PosY,
     normal: [0, 1, 0],
     vertices: [[0, 0.5, 0], [0, 0.5, 0.5], [1, 0.5, 0.5], [1, 0.5, 0]],
     uvs: [[0, 0], [0, 0.5], [1, 0.5], [1, 0]]
   },
   {
-    // PosY: back top y=1, z=0.5..1
     face: FACE.PosY,
     normal: [0, 1, 0],
     vertices: [[0, 1, 0.5], [0, 1, 1], [1, 1, 1], [1, 1, 0.5]],
     uvs: [[0, 0.5], [0, 1], [1, 1], [1, 0.5]]
   },
   {
-    // Inner riser at z=0.5, y=0.5..1, facing NegZ (always visible — interior face)
     face: FACE.NegZ,
     cull: null,
     normal: [0, 0, -1],
@@ -55,28 +49,24 @@ const kStairFaces: readonly FaceDefinition[] = [
     uvs: [[1, 0], [0, 0], [0, 0.5], [1, 0.5]]
   },
   {
-    // PosX: right lower quad y=0..0.5, z=0..1
     face: FACE.PosX,
     normal: [1, 0, 0],
     vertices: [[1, 0, 0], [1, 0.5, 0], [1, 0.5, 1], [1, 0, 1]],
     uvs: [[0, 0], [0, 0.5], [1, 0.5], [1, 0]]
   },
   {
-    // PosX: right upper back quad y=0.5..1, z=0.5..1
     face: FACE.PosX,
     normal: [1, 0, 0],
     vertices: [[1, 0.5, 0.5], [1, 1, 0.5], [1, 1, 1], [1, 0.5, 1]],
     uvs: [[0.5, 0.5], [0.5, 1], [1, 1], [1, 0.5]]
   },
   {
-    // NegX: left lower quad y=0..0.5, z=0..1
     face: FACE.NegX,
     normal: [-1, 0, 0],
     vertices: [[0, 0, 1], [0, 0.5, 1], [0, 0.5, 0], [0, 0, 0]],
     uvs: [[1, 0], [1, 0.5], [0, 0.5], [0, 0]]
   },
   {
-    // NegX: left upper back quad y=0.5..1, z=0.5..1
     face: FACE.NegX,
     normal: [-1, 0, 0],
     vertices: [[0, 0.5, 1], [0, 1, 1], [0, 1, 0.5], [0, 0.5, 0.5]],
@@ -86,84 +76,72 @@ const kStairFaces: readonly FaceDefinition[] = [
 
 const kStairCornerInnerFaces: readonly FaceDefinition[] = [
   {
-    // NegY: full flat bottom quad
     face: FACE.NegY,
     normal: [0, -1, 0],
     vertices: [[0, 0, 1], [0, 0, 0], [1, 0, 0], [1, 0, 1]],
     uvs: [[0, 0], [0, 1], [1, 1], [1, 0]]
   },
   {
-    // PosZ: full back wall y=0..1
     face: FACE.PosZ,
     normal: [0, 0, 1],
     vertices: [[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]],
     uvs: [[0, 0], [1, 0], [1, 1], [0, 1]]
   },
   {
-    // PosX: full right wall y=0..1
     face: FACE.PosX,
     normal: [1, 0, 0],
     vertices: [[1, 0, 0], [1, 1, 0], [1, 1, 1], [1, 0, 1]],
     uvs: [[0, 0], [0, 1], [1, 1], [1, 0]]
   },
   {
-    // NegZ: lower front wall y=0..0.5, x=0..1
     face: FACE.NegZ,
     normal: [0, 0, -1],
     vertices: [[1, 0, 0], [0, 0, 0], [0, 0.5, 0], [1, 0.5, 0]],
     uvs: [[1, 0], [0, 0], [0, 0.5], [1, 0.5]]
   },
   {
-    // NegX: lower left wall y=0..0.5, z=0..1
     face: FACE.NegX,
     normal: [-1, 0, 0],
     vertices: [[0, 0, 1], [0, 0.5, 1], [0, 0.5, 0], [0, 0, 0]],
     uvs: [[1, 0], [1, 0.5], [0, 0.5], [0, 0]]
   },
   {
-    // PosY: step platform y=0.5, x=0..0.5, z=0..0.5 (missing upper quadrant)
     face: FACE.PosY,
     normal: [0, 1, 0],
     vertices: [[0, 0.5, 0], [0, 0.5, 0.5], [0.5, 0.5, 0.5], [0.5, 0.5, 0]],
     uvs: [[0, 0], [0, 0.5], [0.5, 0.5], [0.5, 0]]
   },
   {
-    // PosY: back top y=1, z=0.5..1, x=0..1
     face: FACE.PosY,
     normal: [0, 1, 0],
     vertices: [[0, 1, 0.5], [0, 1, 1], [1, 1, 1], [1, 1, 0.5]],
     uvs: [[0, 0.5], [0, 1], [1, 1], [1, 0.5]]
   },
   {
-    // PosY: front-right top y=1, z=0..0.5, x=0.5..1
     face: FACE.PosY,
     normal: [0, 1, 0],
     vertices: [[0.5, 1, 0], [0.5, 1, 0.5], [1, 1, 0.5], [1, 1, 0]],
     uvs: [[0.5, 0], [0.5, 0.5], [1, 0.5], [1, 0]]
   },
   {
-    // Inner riser at z=0.5, y=0.5..1, x=0..0.5 (facing NegZ, always visible)
     face: FACE.NegZ,
     normal: [0, 0, -1],
     vertices: [[0.5, 0.5, 0.5], [0, 0.5, 0.5], [0, 1, 0.5], [0.5, 1, 0.5]],
     uvs: [[0.5, 0], [0, 0], [0, 0.5], [0.5, 0.5]]
   },
   {
-    // NegZ: upper front wall y=0.5..1, x=0.5..1 (right only — upper block)
     face: FACE.NegZ,
     normal: [0, 0, -1],
     vertices: [[1, 0.5, 0], [0.5, 0.5, 0], [0.5, 1, 0], [1, 1, 0]],
     uvs: [[0.5, 0], [0, 0], [0, 0.5], [0.5, 0.5]]
   },
   {
-    // Inner riser at x=0.5, y=0.5..1, z=0..0.5 (facing NegX, always visible)
     face: FACE.NegX,
     normal: [-1, 0, 0],
     vertices: [[0.5, 0.5, 0], [0.5, 0.5, 0.5], [0.5, 1, 0.5], [0.5, 1, 0]],
     uvs: [[0, 0], [0.5, 0], [0.5, 0.5], [0, 0.5]]
   },
   {
-    // NegX: upper left wall y=0.5..1, z=0.5..1 (back only — upper block)
     face: FACE.NegX,
     normal: [-1, 0, 0],
     vertices: [[0, 0.5, 1], [0, 1, 1], [0, 1, 0.5], [0, 0.5, 0.5]],
@@ -173,84 +151,72 @@ const kStairCornerInnerFaces: readonly FaceDefinition[] = [
 
 const kStairCornerOuterFaces: readonly FaceDefinition[] = [
   {
-    // NegY: full flat bottom quad
     face: FACE.NegY,
     normal: [0, -1, 0],
     vertices: [[0, 0, 1], [0, 0, 0], [1, 0, 0], [1, 0, 1]],
     uvs: [[0, 0], [0, 1], [1, 1], [1, 0]]
   },
   {
-    // NegZ: lower front wall y=0..0.5, x=0..1
     face: FACE.NegZ,
     normal: [0, 0, -1],
     vertices: [[1, 0, 0], [0, 0, 0], [0, 0.5, 0], [1, 0.5, 0]],
     uvs: [[1, 0], [0, 0], [0, 0.5], [1, 0.5]]
   },
   {
-    // NegZ: upper front wall y=0.5..1, x=0..0.5 (left only — upper block)
     face: FACE.NegZ,
     normal: [0, 0, -1],
     vertices: [[0.5, 0.5, 0], [0, 0.5, 0], [0, 1, 0], [0.5, 1, 0]],
     uvs: [[0.5, 0.5], [0, 0.5], [0, 1], [0.5, 1]]
   },
   {
-    // NegX: lower left wall y=0..0.5, z=0..1
     face: FACE.NegX,
     normal: [-1, 0, 0],
     vertices: [[0, 0, 1], [0, 0.5, 1], [0, 0.5, 0], [0, 0, 0]],
     uvs: [[1, 0], [1, 0.5], [0, 0.5], [0, 0]]
   },
   {
-    // NegX: upper left wall y=0.5..1, z=0..0.5 (front only — upper block)
     face: FACE.NegX,
     normal: [-1, 0, 0],
     vertices: [[0, 0.5, 0], [0, 0.5, 0.5], [0, 1, 0.5], [0, 1, 0]],
     uvs: [[0, 0.5], [0.5, 0.5], [0.5, 1], [0, 1]]
   },
   {
-    // PosZ: lower back wall y=0..0.5 (no upper block at back)
     face: FACE.PosZ,
     normal: [0, 0, 1],
     vertices: [[0, 0, 1], [1, 0, 1], [1, 0.5, 1], [0, 0.5, 1]],
     uvs: [[0, 0], [1, 0], [1, 0.5], [0, 0.5]]
   },
   {
-    // PosX: lower right wall y=0..0.5
     face: FACE.PosX,
     normal: [1, 0, 0],
     vertices: [[1, 0, 0], [1, 0.5, 0], [1, 0.5, 1], [1, 0, 1]],
     uvs: [[0, 0], [0, 0.5], [1, 0.5], [1, 0]]
   },
   {
-    // PosY: upper block top y=1, x=0..0.5, z=0..0.5
     face: FACE.PosY,
     normal: [0, 1, 0],
     vertices: [[0, 1, 0], [0, 1, 0.5], [0.5, 1, 0.5], [0.5, 1, 0]],
     uvs: [[0, 0], [0, 0.5], [0.5, 0.5], [0.5, 0]]
   },
   {
-    // PosY: slab top, front-right quadrant, x=0.5..1, z=0..0.5, y=0.5
     face: FACE.PosY,
     normal: [0, 1, 0],
     vertices: [[0.5, 0.5, 0], [0.5, 0.5, 0.5], [1, 0.5, 0.5], [1, 0.5, 0]],
     uvs: [[0.5, 0], [0.5, 0.5], [1, 0.5], [1, 0]]
   },
   {
-    // PosY: slab top, back-left quadrant, x=0..0.5, z=0.5..1, y=0.5
     face: FACE.PosY,
     normal: [0, 1, 0],
     vertices: [[0, 0.5, 0.5], [0, 0.5, 1], [0.5, 0.5, 1], [0.5, 0.5, 0.5]],
     uvs: [[0, 0.5], [0, 1], [0.5, 1], [0.5, 0.5]]
   },
   {
-    // PosY: slab top, back-right quadrant, x=0.5..1, z=0.5..1, y=0.5
     face: FACE.PosY,
     normal: [0, 1, 0],
     vertices: [[0.5, 0.5, 0.5], [0.5, 0.5, 1], [1, 0.5, 1], [1, 0.5, 0.5]],
     uvs: [[0.5, 0.5], [0.5, 1], [1, 1], [1, 0.5]]
   },
   {
-    // Inner riser at x=0.5, y=0.5..1, z=0..0.5 (right side of upper block, facing PosX, always visible — interior face)
     face: FACE.PosX,
     cull: null,
     normal: [1, 0, 0],
@@ -258,7 +224,6 @@ const kStairCornerOuterFaces: readonly FaceDefinition[] = [
     uvs: [[0.5, 0.5], [0, 0.5], [0, 1], [0.5, 1]]
   },
   {
-    // Inner riser at z=0.5, y=0.5..1, x=0..0.5 (back side of upper block, facing PosZ, always visible — interior face)
     face: FACE.PosZ,
     cull: null,
     normal: [0, 0, 1],
@@ -268,11 +233,7 @@ const kStairCornerOuterFaces: readonly FaceDefinition[] = [
 ];
 
 /**
- * Stair — L-cross-section stair block.
- * Full bottom slab + upper half-block at back (z=0.5..1). High step at PosZ.
- *
- * Occludes: NegY, PosZ.
- * collisionHint: trimesh.
+ * Straight stair that occludes NegY and PosZ.
  */
 export class Stair implements BlockShape {
   readonly id: BlockShapeID;
@@ -294,12 +255,7 @@ export class Stair implements BlockShape {
 }
 
 /**
- * StairCornerInner — concave inner corner stair.
- * Full bottom slab; upper L-shaped block (3/4 top), missing front-left quadrant.
- * Two inner risers at the step edge.
- *
- * Occludes: NegY, PosZ, PosX.
- * collisionHint: trimesh.
+ * Concave stair corner that occludes NegY, PosZ, and PosX.
  */
 export class StairCornerInner implements BlockShape {
   readonly id: BlockShapeID;
@@ -321,12 +277,7 @@ export class StairCornerInner implements BlockShape {
 }
 
 /**
- * StairCornerOuter — convex outer corner stair.
- * Full bottom slab; upper quarter-block only at front-left (x=0..0.5, z=0..0.5).
- * Two inner risers on the right/back sides of the upper block.
- *
- * Occludes: NegY only.
- * collisionHint: trimesh.
+ * Convex stair corner whose bottom is its only fully occluding face.
  */
 export class StairCornerOuter implements BlockShape {
   readonly id: BlockShapeID;

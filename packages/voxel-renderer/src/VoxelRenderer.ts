@@ -21,9 +21,7 @@ export {
 export type VoxelRendererOptions = VoxelEngineOptions;
 
 /**
- * ActorComponent wrapper around `VoxelEngine`. Attaches `engine.root` to the
- * actor's `object3D` and initialises the engine on awake, ticks it every
- * update, then detaches and disposes it on destroy.
+ * Runs a `VoxelEngine` through the actor component lifecycle.
  */
 export class VoxelRenderer extends ActorComponent {
   readonly engine: VoxelEngine;

@@ -1,4 +1,3 @@
-// VoxelEngine
 export {
   VoxelEngine,
   VoxelRotation,
@@ -9,14 +8,12 @@ export {
   type VoxelLogger
 } from "./VoxelEngine.ts";
 
-// VoxelRenderer
 export {
   VoxelRenderer,
   type VoxelRendererOptions
 } from "./VoxelRenderer.ts";
 export * from "./hooks.ts";
 
-// Debug
 export {
   VoxelDebugger,
   type VoxelDebugMode,
@@ -25,7 +22,6 @@ export {
 } from "./debug/VoxelDebugger.ts";
 export { MeshBuildStats } from "./mesh/MeshBuildStats.ts";
 
-// Built-in shapes
 export { Cube } from "./blocks/shapes/Cube.ts";
 export { Slab, type SlabType } from "./blocks/shapes/Slab.ts";
 export { PoleY } from "./blocks/shapes/PoleY.ts";
@@ -41,7 +37,6 @@ export {
   StairCornerOuter
 } from "./blocks/shapes/Stair.ts";
 
-// Blocks
 export { BlockRegistry } from "./blocks/BlockRegistry.ts";
 export type {
   BlockDefinition,
@@ -55,7 +50,6 @@ export type {
   FaceDefinition
 } from "./blocks/BlockShape.ts";
 
-// Collision
 export {
   mergeChunkGeometries,
   type VoxelCollider,
@@ -64,7 +58,6 @@ export {
   type VoxelColliderFactory
 } from "./collision/index.ts";
 
-// Serialization
 export {
   VoxelSerializer,
   type VoxelWorldJSON,
@@ -78,7 +71,6 @@ export {
   type VoxelObjectFootprint
 } from "./serialization/voxelObject.ts";
 
-// Tileset
 export {
   TilesetManager,
   type TilesetManagerOptions,
@@ -101,7 +93,6 @@ export {
 export { enableTileWrapping } from "./tileset/tileWrapping.ts";
 export type { AtlasRegion } from "./tileset/atlasLayout.ts";
 
-// World
 export {
   VoxelWorld
 } from "./world/VoxelWorld.ts";
@@ -133,7 +124,6 @@ export {
   voxelPositionOf
 } from "./world/voxelCoord.ts";
 
-// Math
 export {
   FACE as Face
 } from "./utils/math.ts";

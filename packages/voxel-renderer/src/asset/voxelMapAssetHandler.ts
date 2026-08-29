@@ -36,8 +36,7 @@ const kContentTypes: Readonly<Record<string, string>> = {
   ".json": "application/json; charset=utf-8"
 };
 /**
- * Terrain edits arrive in bursts and a large world is expensive to
- * serialize, so the default cadence is slower than the back-end's.
+ * Uses a slower snapshot cadence for bursty, expensive terrain serialization.
  */
 const kDefaultSnapshot: SnapshotPolicy = {
   delay: 5_000,
@@ -51,8 +50,7 @@ export interface VoxelMapAssetHandlerOptions {
    */
   match?: readonly string[];
   /**
-   * Chunk size for a world without a document.
-   * Documents must use the same chunk size.
+   * Chunk size used when no document exists.
    * @default 16
    */
   chunkSize?: number;

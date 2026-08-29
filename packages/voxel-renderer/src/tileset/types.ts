@@ -22,12 +22,12 @@ export interface TilesetDefinition {
   tileSize: number;
   /**
    * Number of tile columns in the atlas.
-   * When omitted, derived automatically from the image width: Math.floor(image.width / tileSize).
+   * @default Math.floor(image.width / tileSize)
    */
   cols?: number;
   /**
    * Number of tile rows in the atlas.
-   * When omitted, derived automatically from the image height: Math.floor(image.height / tileSize).
+   * @default Math.floor(image.height / tileSize)
    */
   rows?: number;
 }

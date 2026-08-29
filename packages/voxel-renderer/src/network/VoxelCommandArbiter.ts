@@ -14,8 +14,7 @@ export interface VoxelCommandArbiterOptions {
 }
 
 /**
- * Resolves command conflicts without mutating the world.
- * `world-replace` bypasses arbitration.
+ * Resolves command conflicts; `world-replace` bypasses arbitration.
  */
 export class VoxelCommandArbiter {
   #tracker: network.ConflictTracker<VoxelNetworkCommand>;
@@ -28,9 +27,6 @@ export class VoxelCommandArbiter {
     );
   }
 
-  /**
-   * Defers conflict recording until the caller applies the command.
-   */
   resolve(
     command: VoxelNetworkCommand
   ): boolean {
@@ -49,9 +45,6 @@ export class VoxelCommandArbiter {
     );
   }
 
-  /**
-   * Returns `null` for structural operations.
-   */
   static key(
     command: VoxelLayerHookEvent | VoxelNetworkCommand
   ): string | null {

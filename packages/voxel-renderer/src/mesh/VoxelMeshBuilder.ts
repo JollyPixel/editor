@@ -32,36 +32,18 @@ export interface VoxelMeshBuilderOptions {
   shapeRegistry: BlockShapeRegistry;
   tilesetManager: TilesetManager;
   /**
-   * Merge coplanar identical faces into the largest quads possible instead of
-   * emitting one quad per voxel face. See `GreedyMesher`.
-   *
-   * Geometry built this way carries the extra `tileRegion` / `tileRepeat`
-   * attributes and needs a material prepared by `enableTileWrapping()`.
+   * Enables greedy face merging and tiled geometry attributes.
    * @default false
    */
   greedy?: boolean;
 }
 
 /**
- * Builds per-tileset THREE.BufferGeometries for one chunk.
- *
- * Default algorithm (naive face culling): for each filled voxel, emit only the
- * faces where the adjacent voxel in the face's direction either does not exist
- * or does not occlude. Non-axis-aligned faces (slopes, corners) correctly
- * rotate their culling direction before the neighbour lookup.
- *
- * With `greedy` enabled, `GreedyMesher` takes over and stretches each cube-like
- * face over the largest run of identical voxels it can, cutting the triangle
- * count by roughly 3× on terrain. Faces it cannot stretch still go through the
- * naive path, so mixed chunks keep working.
- *
- * Voxels hidden by a higher-priority layer are skipped. Geometry is split by
- * tileset so each mesh can use the correct texture.
+ * Builds visible chunk geometry, split by tileset and cutout mode.
  */
 export class VoxelMeshBuilder {
   /**
-   * Counters for the most recent `buildChunkGeometries()` call. The instance is
-   * reused, so callers keeping the numbers around must `clone()` them.
+   * Reused counters for the latest build; clone them for retention.
    */
   readonly stats = new MeshBuildStats();
 
@@ -71,12 +53,8 @@ export class VoxelMeshBuilder {
   #greedyMesher: GreedyMesher;
   #greedy: boolean;
 
-  /** One reusable accumulator per tileset slot, kept across chunk builds. */
   #buffers: (GeometryBuffer | undefined)[] = [];
 
-  /**
-   * Bound once so the greedy pass allocates no closure per chunk.
-   */
   #bufferFor = (slot: number): GeometryBuffer => {
     let buffer = this.#buffers[slot];
     if (buffer === undefined) {
@@ -106,8 +84,7 @@ export class VoxelMeshBuilder {
   }
 
   /**
-   * Switching modes changes the attribute layout, so the accumulators are
-   * dropped rather than reused. Callers must rebuild every chunk afterwards.
+   * Drops buffers because switching modes changes their attribute layout.
    */
   set greedy(value: boolean) {
     if (value === this.#greedy) {
@@ -119,14 +96,7 @@ export class VoxelMeshBuilder {
   }
 
   /**
-   * Builds merged BufferGeometries for one chunk, grouped by tileset ID.
-   * Returns null if the chunk is empty or produces no visible faces.
-   *
-   * Each entry in the returned Map is a separate geometry containing only the
-   * faces whose tile references belong to that tileset, allowing the caller to
-   * bind the correct texture per draw call. The faces of `transparent` blocks
-   * form their own entry, keyed by `chunkGeometryKey()`, so they can be drawn
-   * double-sided without the rest of the chunk paying for it.
+   * Builds visible chunk geometry grouped by tileset and cutout mode.
    */
   buildChunkGeometries(
     chunk: VoxelChunk,
@@ -135,9 +105,6 @@ export class VoxelMeshBuilder {
     const { stats } = this;
     stats.reset();
 
-    // No tileset registered yet — cannot compute UVs. Return null so the
-    // caller skips mesh creation; loadTileset() will mark chunks dirty and
-    // trigger a rebuild once the texture is available.
     if (this.#tilesetManager.defaultTilesetId === null || chunk.voxelCount === 0) {
       return null;
     }
@@ -149,7 +116,6 @@ export class VoxelMeshBuilder {
     const worldOriginY = (chunk.cy * chunkSize) + layer.offset.y;
     const worldOriginZ = (chunk.cz * chunkSize) + layer.offset.z;
 
-    // Culling reads one voxel outside the chunk on every axis.
     const neighbourhood = new ChunkNeighbourhood({
       world: this.#world,
       variants: this.#variants,
@@ -180,10 +146,6 @@ export class VoxelMeshBuilder {
     return geometries;
   }
 
-  /**
-   * One quad per visible voxel face. Takes the same options as the greedy pass
-   * so `buildChunkGeometries()` can hand either one the same object.
-   */
   #buildNaive(
     options: MeshPassOptions
   ): boolean {
@@ -289,8 +251,7 @@ export class VoxelMeshBuilder {
 }
 
 /**
- * Bytes of vertex attributes one vertex of `geometry` occupies. Every geometry
- * of one build shares a layout, so the caller can simply take the last.
+ * Returns vertex-attribute bytes per vertex, excluding indices.
  */
 function bytesPerVertex(
   geometry: THREE.BufferGeometry

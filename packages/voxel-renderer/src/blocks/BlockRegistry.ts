@@ -1,11 +1,14 @@
 // Import Internal Dependencies
-import type { Coords, TileRef, TileRefIn } from "../tileset/types.ts";
-import type { BlockDefinition, BlockDefinitionIn } from "./BlockDefinition.ts";
+import type {
+  Coords,
+  TileRef,
+  TileRefIn
+} from "../tileset/types.ts";
+import type {
+  BlockDefinition,
+  BlockDefinitionIn
+} from "./BlockDefinition.ts";
 
-/**
- * Registry mapping numeric block IDs to their definitions.
- * @note Block ID 0 is reserved for air and cannot be registered.
- */
 export class BlockRegistry {
   #blocks = new Map<number, BlockDefinition>();
   #version = 0;
@@ -27,7 +30,9 @@ export class BlockRegistry {
     def: BlockDefinitionIn
   ): this {
     if (def.id === 0) {
-      throw new Error("Block ID 0 is reserved for air and cannot be registered.");
+      throw new Error(
+        "Block ID 0 is reserved for air and cannot be registered."
+      );
     }
 
     def.collidable ??= true;

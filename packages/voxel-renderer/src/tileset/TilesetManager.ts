@@ -42,7 +42,11 @@ export interface TilesetDefaultBlockOptions {
   /**
    * Function to map block IDs to custom block definitions.
    */
-  map?: (blockId: number, col: number, row: number) => Omit<BlockDefinition, "id">;
+  map?: (
+    blockId: number,
+    col: number,
+    row: number
+  ) => Omit<BlockDefinition, "id">;
 }
 
 /**
@@ -69,8 +73,7 @@ export interface TilesetEntry {
 }
 
 /**
- * Manages source and padded textures plus per-tile UV regions.
- * Materials share one nearest-filtered texture per tileset.
+ * Manages source and padded textures with per-tile UV regions.
  */
 export class TilesetManager {
   #tilesets = new Map<string, TilesetEntry>();
@@ -96,7 +99,10 @@ export class TilesetManager {
     const textureLoader = loader ?? new THREE.TextureLoader();
     const texture = await textureLoader.loadAsync(def.src);
 
-    this.registerTexture(def, texture);
+    this.registerTexture(
+      def,
+      texture
+    );
   }
 
   registerTexture(
@@ -130,8 +136,7 @@ export class TilesetManager {
   }
 
   /**
-   * Replaces and repads a source without changing texture references.
-   * The new image must preserve the registered dimensions.
+   * Repads a same-size source without replacing texture references.
    */
   updateSourceImage(
     image: TilesetImage,
@@ -152,8 +157,7 @@ export class TilesetManager {
   }
 
   /**
-   * Repads touched tiles, falling back to a full repad when required.
-   * `bounds` uses source-atlas texels.
+   * Repads touched source-atlas texels, or falls back to a full repad.
    */
   updateSourceRegion(
     image: TilesetImage,
@@ -248,8 +252,7 @@ export class TilesetManager {
   }
 
   /**
-   * Returns the unpadded texture for editing.
-   * After edits, call `updateSourceImage`; `tileSize` describes this grid.
+   * Returns the unpadded editable texture and its tile size.
    */
   getSourceTexture(
     tilesetId?: string

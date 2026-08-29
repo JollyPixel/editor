@@ -6,10 +6,7 @@ import type { VoxelLayerHookEvent } from "../hooks.ts";
 import type { VoxelWorldJSON } from "../serialization/VoxelSerializer.ts";
 
 /**
- * A one-off admin action that replaces the entire world for every connected
- * client (e.g. importing a JSON file). Deliberately not part of
- * `VoxelLayerHookEvent` — it isn't a per-mutation engine hook, so it's kept
- * out of `VOXEL_LAYER_HOOK_ACTIONS` and `VoxelCommandApplier`.
+ * Admin command kept outside the per-mutation engine hooks.
  */
 export interface VoxelWorldReplaceCommand {
   action: "world-replace";

@@ -12,12 +12,7 @@ const kFreeKey = -1;
 const kGoldenRatio = 0x9E3779B1;
 
 /**
- * Sparse voxel store backed by two typed arrays instead of a `Map`.
- *
- * A `Map` allocates a hash-table entry per voxel, which is costly in JS heap.
- * This version uses open addressing over `Int32Array` and `Uint32Array`, so it
- * stays compact and GC-friendly. Deletion reshuffles nearby entries to keep
- * clusters contiguous.
+ * Sparse open-addressed voxel store backed by typed arrays.
  */
 export class VoxelStore {
   #keys: Int32Array;
@@ -47,8 +42,7 @@ export class VoxelStore {
   }
 
   /**
-   * Number of slots to walk when iterating. Only non-negative `keys` entries
-   * hold a voxel.
+   * Number of slots scanned during iteration.
    */
   get capacity(): number {
     return this.#keys.length;
@@ -93,9 +87,6 @@ export class VoxelStore {
     return this.get(key) !== VOXEL_ABSENT;
   }
 
-  /**
-   * Returns true when `key` was not already present.
-   */
   set(
     key: number,
     value: PackedVoxel

@@ -10,27 +10,21 @@ import type { VoxelCoord } from "../world/types.ts";
 export interface VoxelChunkCollision {
   chunk: VoxelChunk;
   /**
-   * Keyed by tileset id (one draw call per texture). Collision is
-   * texture-agnostic: merge via `mergeChunkGeometries()` or ignore.
+   * Per-tileset geometry that collision adapters may merge or ignore.
    */
   geometries: ReadonlyMap<string, THREE.BufferGeometry>;
   layerOffset: VoxelCoord;
 }
 
 /**
- * Physics-agnostic collision sink driven by `VoxelEngine`.
- *
- * No physics handle crosses this boundary: implementations key their own
- * bookkeeping on the opaque `key` the engine passes back.
+ * Physics adapter keyed by opaque chunk IDs from `VoxelEngine`.
  */
 export interface VoxelCollider {
-  /** Replaces anything previously registered under `key`. */
   rebuildChunk(
     key: string,
     collision: VoxelChunkCollision
   ): void;
 
-  /** No-op for unknown keys. */
   removeChunk(
     key: string
   ): void;

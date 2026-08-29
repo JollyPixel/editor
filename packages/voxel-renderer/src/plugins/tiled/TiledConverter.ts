@@ -31,10 +31,7 @@ import type { BlockShapeID } from "../../blocks/BlockShape.ts";
 
 export interface TiledConverterOptions {
   /**
-   * Maps a Tiled tileset `source` string (e.g. `"TX Tileset Grass.tsx"`) and
-   * its derived ID to the actual asset path/URL used for TilesetDefinition.src.
-   * Called once per tileset. For embedded tilesets without a source file,
-   * `tiledSource` is an empty string and `tilesetId` is the tileset name.
+   * Resolves a Tiled tileset source and derived ID to an asset URL.
    */
   resolveTilesetSrc: (tiledSource: string, tilesetId: string) => string;
 
@@ -45,13 +42,7 @@ export interface TiledConverterOptions {
   chunkSize?: number;
 
   /**
-   * Controls how Tiled tile layers map to the 3-D Y axis.
-   *
-   * - `"flat"`    — all tile layers are placed at Y=0; when two layers occupy
-   *                 the same (x, z) cell the later layer wins.
-   * - `"stacked"` — tile layer at index N is placed at Y=N (useful for
-   *                 multi-floor or multi-depth maps).
-   *
+   * Maps layers to Y=0 (`"flat"`) or their layer index (`"stacked"`).
    * @default "flat"
    */
   layerMode?: "flat" | "stacked";
@@ -68,10 +59,6 @@ export interface TiledConverterOptions {
    */
   collidable?: boolean;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Internal context types (avoid exceeding max-params limit)
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface TilesetBuildContext {
   options: TiledConverterOptions;
@@ -97,14 +84,7 @@ interface ObjectLayerContext {
 }
 
 /**
- * Converts a parsed Tiled JSON map to a VoxelWorldJSON snapshot.
- *
- * - Each Tiled tile layer becomes a VoxelLayerJSON.
- * - Each Tiled object layer becomes a VoxelObjectLayerJSON.
- * - One BlockDefinition is generated per unique tile GID found in the map;
- *   these are embedded in the output as `blocks` so the file is self-contained.
- *
- * No browser or Three.js dependency — safe to run in Node.js build pipelines.
+ * Converts Tiled layers and unique tile GIDs into a self-contained snapshot.
  */
 export class TiledConverter {
   convert(
@@ -167,9 +147,7 @@ export class TiledConverter {
 }
 
 /**
- * Derives a stable string ID for a tileset.
- * Prefers the tileset name; falls back to the source filename without extension;
- * last resort is a positional placeholder.
+ * Derives an ID from the tileset name, source filename, or position.
  */
 function deriveTilesetId(
   tileset: TiledMapTileset,

@@ -19,9 +19,7 @@ import type {
 } from "./RapierVoxelCollider.types.ts";
 
 export interface RapierVoxelColliderOptions {
-  /** Rapier3D module (static API). */
   api: RapierAPI;
-  /** Rapier3D world instance. */
   world: RapierWorld;
   blockRegistry: BlockRegistry;
   shapeRegistry: BlockShapeRegistry;
@@ -34,13 +32,7 @@ interface SolidVoxel {
 }
 
 /**
- * Rapier3D implementation of `VoxelCollider`. Strategy per chunk:
- *   - any block hints "trimesh" → one trimesh from the chunk's built geometry.
- *   - otherwise → one cuboid per voxel, both parented to a static body.
- *   - all blocks "none" → no collider.
- *
- * Trimeshes are accurate for sloped shapes but can ghost-collide on internal
- * edges; cuboids are more robust and performant for full-cube worlds.
+ * Uses a trimesh when requested by any block; otherwise uses cuboids.
  */
 export class RapierVoxelCollider implements VoxelCollider {
   #rapier: RapierAPI;
@@ -48,7 +40,6 @@ export class RapierVoxelCollider implements VoxelCollider {
   #blockRegistry: BlockRegistry;
   #shapeRegistry: BlockShapeRegistry;
 
-  /** Chunk key → static body; removing it drops its attached colliders too. */
   #bodies = new Map<string, RapierRigidBody>();
 
   constructor(
@@ -91,7 +82,6 @@ export class RapierVoxelCollider implements VoxelCollider {
     this.#bodies.clear();
   }
 
-  /** Returns null when the chunk holds no collidable voxel. */
   #buildChunkBody(
     collision: VoxelChunkCollision
   ): RapierRigidBody | null {
@@ -120,7 +110,6 @@ export class RapierVoxelCollider implements VoxelCollider {
     return body;
   }
 
-  /** A single trimesh hint upgrades the whole chunk to the trimesh strategy. */
   #collectSolids(
     chunk: VoxelChunk
   ): { solids: SolidVoxel[]; hasTrimesh: boolean; } {
@@ -147,7 +136,6 @@ export class RapierVoxelCollider implements VoxelCollider {
     return { solids, hasTrimesh };
   }
 
-  /** False when no usable triangle exists, so the caller falls back to cuboids. */
   #buildTrimesh(
     body: RapierRigidBody,
     geometries: ReadonlyMap<string, THREE.BufferGeometry>
@@ -182,7 +170,6 @@ export class RapierVoxelCollider implements VoxelCollider {
     }
   }
 
-  /** One 1×1×1 cuboid per voxel, positioned relative to the body's chunk origin. */
   #buildCuboids(
     body: RapierRigidBody,
     solids: readonly SolidVoxel[]

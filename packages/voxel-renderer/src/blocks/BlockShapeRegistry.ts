@@ -18,9 +18,6 @@ import {
   StairCornerOuter
 } from "./shapes/Stair.ts";
 
-/**
- * Registry that maps shape IDs to BlockShape implementations.
- */
 export class BlockShapeRegistry {
   #shapes = new Map<BlockShapeID, BlockShape>();
   #version = 0;
@@ -28,7 +25,10 @@ export class BlockShapeRegistry {
   register(
     shape: BlockShape
   ): this {
-    this.#shapes.set(shape.id, shape);
+    this.#shapes.set(
+      shape.id,
+      shape
+    );
     this.#version++;
 
     return this;

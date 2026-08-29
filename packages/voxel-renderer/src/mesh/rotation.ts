@@ -2,23 +2,14 @@
 import { type Vec3, FACE } from "../utils/math.ts";
 
 // CONSTANTS
-// Precomputed rotation table: kRotateFaceTable[rotation][face] = rotatedFace
-// Positive rotation = CCW around +Y axis when viewed from above.
-// rot=1 (90° CCW): PosX→NegZ, NegX→PosZ, PosZ→PosX, NegZ→NegX
+// Indexed by quarter-turn then face; positive rotation is CCW from above.
 const kRotateFaceTable: readonly (readonly FACE[])[] = [
-  // rot=0: identity
   [0, 1, 2, 3, 4, 5],
-  // rot=1: 90° CCW from above
   [5, 4, 2, 3, 0, 1],
-  // rot=2: 180°
   [1, 0, 2, 3, 5, 4],
-  // rot=3: 270° CCW (= 90° CW)
   [4, 5, 2, 3, 1, 0]
 ];
 
-/**
- * Rotates a vertex position in 0-1 block space around the block center.
- */
 export function rotateVertex(
   vec3: Vec3,
   rotation: number,
@@ -28,7 +19,6 @@ export function rotateVertex(
   let y = vec3[1];
   let z = vec3[2];
 
-  // Rotate around Y axis (center = 0.5)
   switch (rotation) {
     case 1: {
       const nx = z;
@@ -62,9 +52,6 @@ export function rotateVertex(
   return [x, y, z];
 }
 
-/**
- * Maps a block-local face direction to world-space after a Y-axis rotation.
- */
 export function rotateFace(
   face: FACE,
   rotation: number
@@ -83,7 +70,6 @@ export function rotateNormal(
   let ny = normal[1];
   let nz = normal[2];
 
-  // Y-axis rotation (same formula as rotateVertex but without translation).
   switch (rotation) {
     case 1: {
       const t = nx;
@@ -115,7 +101,6 @@ export function rotateNormal(
   return [nx, ny, nz];
 }
 
-/** Swaps PosY ↔ NegY; all other faces pass through unchanged. */
 export function flipYFace(
   face: FACE
 ): FACE {

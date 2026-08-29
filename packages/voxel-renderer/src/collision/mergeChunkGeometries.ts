@@ -2,10 +2,7 @@
 import * as THREE from "three";
 
 /**
- * Merges per-tileset chunk geometries into one position/index geometry.
- * Only collision-relevant attributes are kept (no UVs, normals or colors).
- *
- * Returns null when there is nothing to collide with.
+ * Merges chunk geometries, retaining only positions and indices.
  */
 export function mergeChunkGeometries(
   geometries: ReadonlyMap<string, THREE.BufferGeometry>
