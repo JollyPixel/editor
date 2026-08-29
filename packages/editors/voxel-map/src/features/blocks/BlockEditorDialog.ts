@@ -14,10 +14,7 @@ import type {
 
 // Import Internal Dependencies
 import { applyBlockUpdate } from "./applyBlockUpdate.ts";
-import {
-  createBlockDefinition,
-  nextBlockId
-} from "./blockDefaults.ts";
+import { createBlockDefinition } from "./blockDefaults.ts";
 import { editorState } from "../../EditorState.ts";
 
 // CONSTANTS
@@ -256,7 +253,7 @@ export class BlockEditorDialog extends LitElement {
 
     const { blockRegistry } = this.vr.engine;
     const block = createBlockDefinition({
-      id: nextBlockId(blockRegistry.getAll()),
+      id: blockRegistry.nextId,
       name: this._draft.name.trim() || kDefaultBlockName,
       shapeId: this._draft.shapeId,
       tilesetId: this._draft.tilesetId || undefined

@@ -4,11 +4,12 @@ import type { BlockDefinition, BlockDefinitionIn } from "./BlockDefinition.ts";
 
 /**
  * Registry mapping numeric block IDs to their definitions.
- * Block ID 0 is reserved for air and cannot be registered.
+ * @note Block ID 0 is reserved for air and cannot be registered.
  */
 export class BlockRegistry {
   #blocks = new Map<number, BlockDefinition>();
   #version = 0;
+  #highestId = 0;
 
   constructor(
     defs: BlockDefinitionIn[] = []
@@ -58,23 +59,32 @@ export class BlockRegistry {
 
     this.#blocks.set(def.id, def as BlockDefinition);
     this.#version++;
+    if (def.id > this.#highestId) {
+      this.#highestId = def.id;
+    }
 
     return this;
   }
 
-  /**
-   * Incremented on every `register()`. Consumers that precompute data derived
-   * from block definitions (VoxelMeshBuilder) compare it to detect staleness.
-   */
+  get nextId(): number {
+    return this.#highestId + 1;
+  }
+
   get version(): number {
     return this.#version;
   }
 
-  #canAddDefaultTileSetId(ref: TileRef, defaultTilesetId: string | undefined) {
+  #canAddDefaultTileSetId(
+    ref: TileRef,
+    defaultTilesetId: string | undefined
+  ) {
     return !ref.tilesetId && defaultTilesetId;
   }
 
-  #makeTileRef(coords: Coords, defaultTilesetId: string | undefined): TileRef {
+  #makeTileRef(
+    coords: Coords,
+    defaultTilesetId: string | undefined
+  ): TileRef {
     return {
       col: coords[0],
       row: coords[1],

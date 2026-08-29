@@ -177,6 +177,62 @@ describe("BlockRegistry.getAll", () => {
   });
 });
 
+describe("BlockRegistry.nextId", () => {
+  it("is one for an empty registry, never zero (air)", () => {
+    assert.equal(new BlockRegistry().nextId, 1);
+  });
+
+  it("sits above the highest identifier, whatever the order", () => {
+    const registry = new BlockRegistry();
+    registry
+      .register(makeDef(4))
+      .register(makeDef(9))
+      .register(makeDef(2));
+
+    assert.equal(registry.nextId, 10);
+  });
+
+  it("counts definitions registered through the constructor", () => {
+    const registry = new BlockRegistry([makeDef(1), makeDef(3)]);
+
+    assert.equal(registry.nextId, 4);
+  });
+
+  it("ignores the air definition the constructor skips", () => {
+    const registry = new BlockRegistry([makeDef(0)]);
+
+    assert.equal(registry.nextId, 1);
+  });
+
+  it("does not reuse a gap left between two blocks", () => {
+    const registry = new BlockRegistry();
+    registry.register(makeDef(1)).register(makeDef(3));
+
+    assert.equal(registry.nextId, 4);
+  });
+
+  it("stays put when a block is overwritten with a lower id", () => {
+    const registry = new BlockRegistry();
+    registry.register(makeDef(7)).register(makeDef(2));
+
+    assert.equal(registry.nextId, 8);
+  });
+
+  it("hands out an unused id every time it is registered", () => {
+    const registry = new BlockRegistry();
+    for (let count = 0; count < 3; count++) {
+      const id = registry.nextId;
+      assert.equal(registry.has(id), false);
+      registry.register(makeDef(id));
+    }
+
+    assert.deepEqual(
+      [...registry.getAll()].map((def) => def.id),
+      [1, 2, 3]
+    );
+  });
+});
+
 describe("BlockRegistry version", () => {
   it("starts at 0 and increments on every register", () => {
     const registry = new BlockRegistry();

@@ -2,43 +2,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import type { BlockDefinition } from "@jolly-pixel/voxel.renderer";
-
 // Import Internal Dependencies
-import {
-  createBlockDefinition,
-  nextBlockId
-} from "../../../src/features/blocks/blockDefaults.ts";
-
-function makeBlock(
-  id: number
-): BlockDefinition {
-  return {
-    id,
-    name: `Block${id}`,
-    shapeId: "cube",
-    collidable: true,
-    faceTextures: {}
-  };
-}
-
-describe("nextBlockId", () => {
-  it("returns one for an empty registry, never zero (air)", () => {
-    assert.equal(nextBlockId([]), 1);
-  });
-
-  it("sits above the highest identifier, whatever the order", () => {
-    assert.equal(
-      nextBlockId([makeBlock(4), makeBlock(9), makeBlock(2)]),
-      10
-    );
-  });
-
-  it("does not reuse a gap left by a removed block", () => {
-    assert.equal(nextBlockId([makeBlock(1), makeBlock(3)]), 4);
-  });
-});
+import { createBlockDefinition } from "../../../src/features/blocks/blockDefaults.ts";
 
 describe("createBlockDefinition", () => {
   it("lands on the first tile of the given tileset, collidable and opaque", () => {

@@ -14,19 +14,6 @@ export interface CreateBlockOptions {
   tilesetId?: string;
 }
 
-export function nextBlockId(
-  blocks: Iterable<BlockDefinition>
-): number {
-  let highest = 0;
-  for (const block of blocks) {
-    if (block.id > highest) {
-      highest = block.id;
-    }
-  }
-
-  return highest + 1;
-}
-
 export function createBlockDefinition(
   options: CreateBlockOptions
 ): BlockDefinition {

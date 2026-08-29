@@ -132,6 +132,15 @@ Registers a block definition. Throws if `def.id === 0`.
 
 #### `getAll(): IterableIterator<BlockDefinition>`
 
+#### `readonly nextId: number`
+
+Identifier to give the next block, one above the highest ever registered. Never
+0 (air), and never reuses the gap a removed block left behind, so an id stays
+tied to the block it was minted for.
+
+Not clamped to `MAX_BLOCK_ID`; a world
+holding that many blocks fails later, when the voxel is packed.
+
 #### `readonly version: number`
 
 Incremented on every `register()`. The mesh builder precompiles geometry per
