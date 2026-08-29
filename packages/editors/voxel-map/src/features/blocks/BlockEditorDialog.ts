@@ -3,6 +3,7 @@ import { LitElement, html, css, nothing } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import type {
   BlockDefinition,
+  BlockDefinitionIn,
   BlockShapeID,
   VoxelRenderer
 } from "@jolly-pixel/voxel.renderer";
@@ -14,11 +15,6 @@ import type {
 
 // Import Internal Dependencies
 import { applyBlockUpdate } from "./applyBlockUpdate.ts";
-import { BLOCK_SHAPE_OPTIONS } from "./blockShapes.ts";
-import {
-  createBlockDefinition,
-  nextBlockId
-} from "./blockDefaults.ts";
 import { editorState } from "../../EditorState.ts";
 
 // CONSTANTS
@@ -118,7 +114,7 @@ export class BlockEditorDialog extends LitElement {
           ></jolly-text>
           <jolly-select
             label="Shape"
-            .options=${BLOCK_SHAPE_OPTIONS}
+            .options=${this.#shapeOptions()}
             .value=${values.shapeId}
             @jolly-change=${this.#onShapeChange}
           ></jolly-select>
@@ -161,6 +157,16 @@ export class BlockEditorDialog extends LitElement {
 
   #defaultTilesetId(): string {
     return this.vr?.engine.tilesetManager.defaultTilesetId ?? "";
+  }
+
+  #shapeOptions(): JollyOption<BlockShapeID>[] {
+    if (!this.vr) {
+      return [];
+    }
+
+    return [...this.vr.engine.shapeRegistry.ids()].map((id) => {
+      return { label: id, value: id };
+    });
   }
 
   #tilesetOptions(): JollyOption<string>[] {
@@ -246,12 +252,16 @@ export class BlockEditorDialog extends LitElement {
     }
 
     const { blockRegistry } = this.vr.engine;
-    const block = createBlockDefinition({
-      id: nextBlockId(blockRegistry.getAll()),
+    const block: BlockDefinitionIn = {
+      id: blockRegistry.nextId,
       name: this._draft.name.trim() || kDefaultBlockName,
       shapeId: this._draft.shapeId,
-      tilesetId: this._draft.tilesetId || undefined
-    });
+      defaultTexture: {
+        tilesetId: this._draft.tilesetId || undefined,
+        col: 0,
+        row: 0
+      }
+    };
 
     blockRegistry.register(block);
     editorState.dispatchBlockRegistryChanged();

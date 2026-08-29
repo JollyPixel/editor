@@ -114,3 +114,34 @@ Converts the world and tileset metadata to a plain JSON-serialisable object.
 
 Clears `world` and restores it from a snapshot. Voxel layers and object layers are
 both restored. Throws if `data.version !== 1`.
+
+## normalizeVoxelExtent
+
+```ts
+function normalizeVoxelExtent(value: number): number
+```
+
+Snaps a `VoxelObjectJSON` `width` or `height` to the whole voxels the engine
+stores, clamping to one.
+
+| Input | Result |
+|---|---|
+| `3` | `3` |
+| `2.6` | `3` |
+| `0.5` | `1` |
+| `0`, negative, `NaN`, `Infinity` | `1` |
+
+## voxelObjectFootprint
+
+```ts
+interface VoxelObjectFootprint {
+  width: number;
+  height: number;
+}
+
+function voxelObjectFootprint(object: VoxelObjectJSON): VoxelObjectFootprint
+```
+
+Whole-cell footprint an object occupies. An absent `width` or `height` means a
+single cell; a stored extent is snapped through `normalizeVoxelExtent`. `width`
+spans x, `height` spans z.

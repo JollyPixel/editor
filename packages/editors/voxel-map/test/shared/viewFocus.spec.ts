@@ -8,7 +8,6 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import {
   castViewRay,
-  voxelPositionOf,
   viewFocusPoint
 } from "../../src/shared/viewFocus.ts";
 
@@ -95,29 +94,6 @@ describe("castViewRay", () => {
   });
 });
 
-describe("voxelPositionOf", () => {
-  const hit = {
-    point: new THREE.Vector3(3.2, 1, 4.7),
-    distance: 9,
-    normal: new THREE.Vector3(0, 1, 0),
-    ground: false
-  };
-
-  test("takes the free cell in front of the surface", () => {
-    assert.deepEqual(
-      voxelPositionOf(hit, "front").toArray(),
-      [3, 1, 4]
-    );
-  });
-
-  test("takes the cell the surface belongs to on the back side", () => {
-    assert.deepEqual(
-      voxelPositionOf(hit, "back").toArray(),
-      [3, 0, 4]
-    );
-  });
-});
-
 describe("viewFocusPoint", () => {
   test("lands on top of the solid the camera is aimed at", () => {
     const camera = createCamera(
@@ -130,7 +106,7 @@ describe("viewFocusPoint", () => {
       createBlock({ x: 3, y: 0, z: 4 })
     );
 
-    assert.deepEqual(focus.toArray(), [3, 1, 4]);
+    assert.deepEqual(focus, { x: 3, y: 1, z: 4 });
   });
 
   test("lands on the ground cell the camera is aimed at", () => {
@@ -141,7 +117,7 @@ describe("viewFocusPoint", () => {
 
     const focus = viewFocusPoint(camera, new THREE.Group());
 
-    assert.deepEqual(focus.toArray(), [6, 0, 2]);
+    assert.deepEqual(focus, { x: 6, y: 0, z: 2 });
   });
 
   test("pulls a hit beyond maxDistance back along the ray", () => {
@@ -152,7 +128,7 @@ describe("viewFocusPoint", () => {
 
     const focus = viewFocusPoint(camera, null, { maxDistance: 64 });
 
-    assert.deepEqual(focus.toArray(), [0, 136, 0]);
+    assert.deepEqual(focus, { x: 0, y: 136, z: 0 });
   });
 
   test("stays ahead of the camera when the ray hits nothing", () => {
@@ -163,7 +139,7 @@ describe("viewFocusPoint", () => {
 
     const focus = viewFocusPoint(camera, null, { fallbackDistance: 12 });
 
-    assert.deepEqual(focus.toArray(), [0, 4, -12]);
+    assert.deepEqual(focus, { x: 0, y: 4, z: -12 });
   });
 
   test("never resolves to the origin while the camera is elsewhere", () => {
@@ -174,6 +150,6 @@ describe("viewFocusPoint", () => {
 
     const focus = viewFocusPoint(camera, new THREE.Group());
 
-    assert.deepEqual(focus.toArray(), [64, 0, -33]);
+    assert.deepEqual(focus, { x: 64, y: 0, z: -33 });
   });
 });

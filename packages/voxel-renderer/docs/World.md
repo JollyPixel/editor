@@ -34,6 +34,27 @@ interface VoxelEntry {
 > with a deep equality check, never `===`. Use the `Packed` accessors on hot paths to
 > skip the allocation entirely.
 
+## Coordinate helpers
+
+Conversions from continuous world space to the whole cells the world stores. A
+cell owns the half-open span from its own corner up to the next, so both floor
+rather than round.
+
+#### `voxelCellOf(point: VoxelCoord): VoxelCoord`
+
+Cell containing `point`. `{ x: 3.5, y: 0.5, z: 4.5 }` is in cell
+`{ x: 3, y: 0, z: 4 }`, and `{ x: -0.2 }` is in cell `{ x: -1 }`.
+
+#### `voxelPositionOf(point: VoxelCoord, normal: VoxelCoord, side?: "front" | "back"): VoxelCoord`
+
+Cell on either side of a surface, for picking against a raycast hit. Offsets
+`point` half a cell along `normal`, then takes the containing cell.
+
+- `"front"` (default) is the empty cell the surface faces, where a voxel is placed.
+- `"back"` is the cell the surface belongs to, the voxel that gets removed.
+
+Neither argument is modified.
+
 ## VoxelWorld
 
 Top-level container for a layered voxel scene. Layers are composited from highest `order`

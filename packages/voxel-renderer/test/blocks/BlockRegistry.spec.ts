@@ -73,6 +73,64 @@ describe("BlockRegistry.register", () => {
   });
 });
 
+describe("BlockRegistry.register — defaults", () => {
+  it("treats an omitted collidable as true", () => {
+    const registry = new BlockRegistry();
+    registry.register({ id: 1, name: "A", shapeId: "cube" });
+
+    assert.equal(registry.get(1)!.collidable, true);
+  });
+
+  it("keeps an explicit collidable of false", () => {
+    const registry = new BlockRegistry();
+    registry.register({
+      id: 1,
+      name: "A",
+      shapeId: "cube",
+      collidable: false
+    });
+
+    assert.equal(registry.get(1)!.collidable, false);
+  });
+
+  it("treats omitted faceTextures as none", () => {
+    const registry = new BlockRegistry();
+    registry.register({ id: 1, name: "A", shapeId: "cube" });
+
+    assert.deepEqual(registry.get(1)!.faceTextures, {});
+  });
+
+  it("stores a block authored with nothing but its identity", () => {
+    const registry = new BlockRegistry();
+    registry.register({ id: 1, name: "A", shapeId: "cube" });
+
+    assert.deepEqual(registry.get(1), {
+      id: 1,
+      name: "A",
+      shapeId: "cube",
+      collidable: true,
+      faceTextures: {}
+    });
+  });
+
+  it("still resolves a bare tile ref tuple against defaultTilesetId", () => {
+    const registry = new BlockRegistry();
+    registry.register({
+      id: 1,
+      name: "A",
+      shapeId: "cube",
+      defaultTexture: [2, 3],
+      defaultTilesetId: "atlas"
+    });
+
+    assert.deepEqual(registry.get(1)!.defaultTexture, {
+      col: 2,
+      row: 3,
+      tilesetId: "atlas"
+    });
+  });
+});
+
 describe("BlockRegistry.get", () => {
   it("returns the registered def", () => {
     const registry = new BlockRegistry();
@@ -174,6 +232,62 @@ describe("BlockRegistry.getAll", () => {
     const registry = new BlockRegistry();
     const all = [...registry.getAll()];
     assert.equal(all.length, 0);
+  });
+});
+
+describe("BlockRegistry.nextId", () => {
+  it("is one for an empty registry, never zero (air)", () => {
+    assert.equal(new BlockRegistry().nextId, 1);
+  });
+
+  it("sits above the highest identifier, whatever the order", () => {
+    const registry = new BlockRegistry();
+    registry
+      .register(makeDef(4))
+      .register(makeDef(9))
+      .register(makeDef(2));
+
+    assert.equal(registry.nextId, 10);
+  });
+
+  it("counts definitions registered through the constructor", () => {
+    const registry = new BlockRegistry([makeDef(1), makeDef(3)]);
+
+    assert.equal(registry.nextId, 4);
+  });
+
+  it("ignores the air definition the constructor skips", () => {
+    const registry = new BlockRegistry([makeDef(0)]);
+
+    assert.equal(registry.nextId, 1);
+  });
+
+  it("does not reuse a gap left between two blocks", () => {
+    const registry = new BlockRegistry();
+    registry.register(makeDef(1)).register(makeDef(3));
+
+    assert.equal(registry.nextId, 4);
+  });
+
+  it("stays put when a block is overwritten with a lower id", () => {
+    const registry = new BlockRegistry();
+    registry.register(makeDef(7)).register(makeDef(2));
+
+    assert.equal(registry.nextId, 8);
+  });
+
+  it("hands out an unused id every time it is registered", () => {
+    const registry = new BlockRegistry();
+    for (let count = 0; count < 3; count++) {
+      const id = registry.nextId;
+      assert.equal(registry.has(id), false);
+      registry.register(makeDef(id));
+    }
+
+    assert.deepEqual(
+      [...registry.getAll()].map((def) => def.id),
+      [1, 2, 3]
+    );
   });
 });
 

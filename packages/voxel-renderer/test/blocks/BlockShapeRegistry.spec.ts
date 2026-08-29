@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { BlockShapeRegistry } from "../../src/blocks/BlockShapeRegistry.ts";
+import type { BlockShape } from "../../src/blocks/BlockShape.ts";
 
 // CONSTANTS
 const kDefaultShapeIds = [
@@ -19,6 +20,17 @@ const kDefaultShapeIds = [
   "stairCornerInner",
   "stairCornerOuter"
 ] as const;
+
+function makeShape(
+  id: string
+): BlockShape {
+  return {
+    id,
+    collisionHint: "box",
+    faces: [],
+    occludes: () => false
+  };
+}
 
 describe("BlockShapeRegistry (empty)", () => {
   it("has returns false for any id", () => {
@@ -83,7 +95,7 @@ describe("BlockShapeRegistry.createDefault", () => {
     assert.ok(registry instanceof BlockShapeRegistry);
   });
 
-  it("contains all 13 built-in shape IDs", () => {
+  it("contains all 11 built-in shape IDs", () => {
     const registry = BlockShapeRegistry.createDefault();
     for (const id of kDefaultShapeIds) {
       assert.equal(
@@ -114,6 +126,59 @@ describe("BlockShapeRegistry.createDefault", () => {
       occludes: () => false
     });
     assert.equal(r2.has("only_in_r1"), false);
+  });
+});
+
+describe("BlockShapeRegistry.getAll", () => {
+  it("is empty for a fresh registry", () => {
+    const registry = new BlockShapeRegistry();
+    assert.deepEqual([...registry.getAll()], []);
+  });
+
+  it("yields the registered shapes in registration order", () => {
+    const registry = new BlockShapeRegistry();
+    const first = makeShape("first");
+    const second = makeShape("second");
+    registry.register(first).register(second);
+
+    assert.deepEqual([...registry.getAll()], [first, second]);
+  });
+
+  it("keeps the original position when a shape is overwritten", () => {
+    const registry = new BlockShapeRegistry();
+    const replacement = makeShape("first");
+    registry
+      .register(makeShape("first"))
+      .register(makeShape("second"))
+      .register(replacement);
+
+    assert.deepEqual(
+      [...registry.getAll()].map((shape) => shape.id),
+      ["first", "second"]
+    );
+    assert.equal([...registry.getAll()][0], replacement);
+  });
+});
+
+describe("BlockShapeRegistry.ids", () => {
+  it("is empty for a fresh registry", () => {
+    const registry = new BlockShapeRegistry();
+    assert.deepEqual([...registry.ids()], []);
+  });
+
+  it("yields every built-in shape id for the default registry", () => {
+    const registry = BlockShapeRegistry.createDefault();
+    assert.deepEqual([...registry.ids()], [...kDefaultShapeIds]);
+  });
+
+  it("includes a custom shape registered after createDefault", () => {
+    const registry = BlockShapeRegistry.createDefault();
+    registry.register(makeShape("myShape"));
+
+    assert.deepEqual(
+      [...registry.ids()],
+      [...kDefaultShapeIds, "myShape"]
+    );
   });
 });
 

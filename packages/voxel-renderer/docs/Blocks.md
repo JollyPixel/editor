@@ -44,6 +44,38 @@ export interface BlockDefinition {
 }
 ```
 
+## BlockDefinitionIn
+
+Authoring form of `BlockDefinition`, accepted by `BlockRegistry.register()` and
+the engine's `blocks` option. `register()` fills the defaults and stores a plain
+`BlockDefinition`.
+
+```ts
+export interface BlockDefinitionIn {
+  id: number;
+  name: string;
+  shapeId: BlockShapeID;
+  /** @default {} */
+  faceTextures?: Partial<Record<FACE, TileRefIn>>;
+  defaultTexture?: TileRefIn;
+  /** @default true */
+  collidable?: boolean;
+  /** @default false */
+  transparent?: boolean;
+  /** Fills in any tile ref that omits a tileset. Dropped once resolved. */
+  defaultTilesetId?: string;
+}
+```
+
+Only `id`, `name`, and `shapeId` are required, so a solid untextured block is:
+
+```ts
+registry.register({ id: 1, name: "Stone", shapeId: "cube" });
+```
+
+A `TileRefIn` may be a bare `[col, row]` tuple; `register()` expands it and
+applies `defaultTilesetId` to any ref that omits a tileset.
+
 ## BlockShapeID
 
 ```ts
@@ -122,15 +154,25 @@ must return `false` to avoid incorrect face culling.
 
 Maps numeric block IDs to `BlockDefinition` objects. Accessible via `VoxelEngine.blockRegistry`.
 
-#### `register(def: BlockDefinition): this`
+#### `register(def: BlockDefinitionIn): this`
 
-Registers a block definition. Throws if `def.id === 0`.
+Registers a block definition, filling the defaults documented on
+[`BlockDefinitionIn`](#blockdefinitionin). Throws if `def.id === 0`.
 
 #### `get(id: number): BlockDefinition | undefined`
 
 #### `has(id: number): boolean`
 
 #### `getAll(): IterableIterator<BlockDefinition>`
+
+#### `readonly nextId: number`
+
+Identifier to give the next block, one above the highest ever registered. Never
+0 (air), and never reuses the gap a removed block left behind, so an id stays
+tied to the block it was minted for.
+
+Not clamped to `MAX_BLOCK_ID`; a world
+holding that many blocks fails later, when the voxel is packed.
 
 #### `readonly version: number`
 
@@ -147,6 +189,14 @@ by `VoxelEngine`. Accessible via `VoxelEngine.shapeRegistry`.
 #### `get(id: BlockShapeID): BlockShape | undefined`
 
 #### `has(id: BlockShapeID): boolean`
+
+#### `getAll(): IterableIterator<BlockShape>`
+
+Every registered shape, in registration order.
+
+#### `ids(): IterableIterator<BlockShapeID>`
+
+IDs of every registered shape, in registration order.
 
 #### `readonly version: number`
 

@@ -43,7 +43,10 @@ export {
 
 // Blocks
 export { BlockRegistry } from "./blocks/BlockRegistry.ts";
-export type { BlockDefinition } from "./blocks/BlockDefinition.ts";
+export type {
+  BlockDefinition,
+  BlockDefinitionIn
+} from "./blocks/BlockDefinition.ts";
 export { BlockShapeRegistry } from "./blocks/BlockShapeRegistry.ts";
 export type {
   BlockShape,
@@ -69,6 +72,11 @@ export {
   type VoxelObjectLayerJSON,
   type VoxelObjectProperties
 } from "./serialization/VoxelSerializer.ts";
+export {
+  normalizeVoxelExtent,
+  voxelObjectFootprint,
+  type VoxelObjectFootprint
+} from "./serialization/voxelObject.ts";
 
 // Tileset
 export {
@@ -120,6 +128,10 @@ export type {
   VoxelCoord,
   VoxelEntry
 } from "./world/types.ts";
+export {
+  voxelCellOf,
+  voxelPositionOf
+} from "./world/voxelCoord.ts";
 
 // Math
 export {

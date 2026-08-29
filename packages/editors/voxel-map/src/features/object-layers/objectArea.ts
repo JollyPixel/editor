@@ -4,10 +4,11 @@ import {
   hashKey
 } from "@jolly-pixel/color";
 import type { Vector3Like } from "@jolly-pixel/three";
-import type { VoxelObjectJSON } from "@jolly-pixel/voxel.renderer";
-
-// Import Internal Dependencies
-import { normalizeVoxelExtent } from "../../shared/voxelExtent.ts";
+import {
+  normalizeVoxelExtent,
+  voxelObjectFootprint,
+  type VoxelObjectJSON
+} from "@jolly-pixel/voxel.renderer";
 
 // CONSTANTS
 const kDerivedColor = {
@@ -99,6 +100,8 @@ export function isLocked(
 export function areaTransformOf(
   object: VoxelObjectJSON
 ): AreaTransform {
+  const footprint = voxelObjectFootprint(object);
+
   return {
     position: {
       x: object.x,
@@ -106,9 +109,9 @@ export function areaTransformOf(
       z: object.z
     },
     size: {
-      x: normalizeVoxelExtent(object.width ?? 1),
+      x: footprint.width,
       y: 1,
-      z: normalizeVoxelExtent(object.height ?? 1)
+      z: footprint.height
     }
   };
 }
@@ -130,9 +133,11 @@ export function sameObjectArea(
   object: VoxelObjectJSON,
   patch: ObjectAreaPatch
 ): boolean {
+  const footprint = voxelObjectFootprint(object);
+
   return object.x === patch.x &&
     object.y === patch.y &&
     object.z === patch.z &&
-    normalizeVoxelExtent(object.width ?? 1) === patch.width &&
-    normalizeVoxelExtent(object.height ?? 1) === patch.height;
+    footprint.width === patch.width &&
+    footprint.height === patch.height;
 }

@@ -6,14 +6,15 @@ import {
 } from "@jolly-pixel/engine";
 import {
   VoxelRenderer,
-  VoxelRotation
+  VoxelRotation,
+  voxelPositionOf,
+  type VoxelCoord
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import { editorState } from "../EditorState.ts";
 import {
   castViewRay,
-  voxelPositionOf,
   type ViewRayHit
 } from "../shared/viewFocus.ts";
 import { VoxelBrushPreview } from "./VoxelBrushPreview.ts";
@@ -123,7 +124,7 @@ export class VoxelBrush extends ActorComponent {
   }
 
   #getBrushPositions(
-    center: THREE.Vector3
+    center: VoxelCoord
   ): THREE.Vector3[] {
     const size = editorState.brushSize;
     const half = Math.floor(size / 2);
@@ -188,7 +189,7 @@ export class VoxelBrush extends ActorComponent {
       return;
     }
 
-    const center = voxelPositionOf(hit, "front");
+    const center = voxelPositionOf(hit.point, hit.normal, "front");
     const rotation = this.#resolveRotation();
     const flipY = this.#resolveFlipY();
     const layerName = editorState.selectedVoxelLayer!;
@@ -211,7 +212,7 @@ export class VoxelBrush extends ActorComponent {
       return;
     }
 
-    const center = voxelPositionOf(hit, "back");
+    const center = voxelPositionOf(hit.point, hit.normal, "back");
     const layerName = editorState.selectedVoxelLayer!;
 
     for (const pos of this.#getBrushPositions(center)) {
@@ -254,7 +255,11 @@ export class VoxelBrush extends ActorComponent {
 
     const hit = this.#castRay();
     if (hit) {
-      const center = voxelPositionOf(hit, hit.ground ? "front" : "back");
+      const center = voxelPositionOf(
+        hit.point,
+        hit.normal,
+        hit.ground ? "front" : "back"
+      );
 
       this.#preview.updateFromPositions(
         this.#getBrushPositions(center),

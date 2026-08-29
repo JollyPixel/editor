@@ -1,10 +1,12 @@
 // Import Third-party Dependencies
 import { LitElement, html, css, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import type {
-  VoxelRenderer,
-  VoxelObjectJSON,
-  VoxelLayerHookEvent
+import {
+  normalizeVoxelExtent,
+  voxelObjectFootprint,
+  type VoxelRenderer,
+  type VoxelObjectJSON,
+  type VoxelLayerHookEvent
 } from "@jolly-pixel/voxel.renderer";
 import type {
   JollyChangeDetail,
@@ -14,7 +16,6 @@ import type {
 
 // Import Internal Dependencies
 import { editorState } from "../../EditorState.ts";
-import { normalizeVoxelExtent } from "../../shared/voxelExtent.ts";
 import {
   colorOf,
   derivedColorOf
@@ -147,6 +148,7 @@ export class ObjectPanel extends LitElement {
     }
 
     const locked = object.locked ?? false;
+    const footprint = voxelObjectFootprint(object);
 
     return html`
       <jolly-separator label=${object.name}></jolly-separator>
@@ -173,8 +175,8 @@ export class ObjectPanel extends LitElement {
         ?disabled=${locked}
         .axisLabels=${{ x: "W", y: "H" }}
         .value=${{
-          x: normalizeVoxelExtent(object.width ?? 1),
-          y: normalizeVoxelExtent(object.height ?? 1)
+          x: footprint.width,
+          y: footprint.height
         }}
         @jolly-change=${this.#onSizeChange}
       ></jolly-vector2>

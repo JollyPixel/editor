@@ -4,17 +4,17 @@ import type { BlockDefinition, BlockDefinitionIn } from "./BlockDefinition.ts";
 
 /**
  * Registry mapping numeric block IDs to their definitions.
- * Block ID 0 is reserved for air and cannot be registered.
+ * @note Block ID 0 is reserved for air and cannot be registered.
  */
 export class BlockRegistry {
   #blocks = new Map<number, BlockDefinition>();
   #version = 0;
+  #highestId = 0;
 
   constructor(
     defs: BlockDefinitionIn[] = []
   ) {
     for (const def of defs) {
-      // Skip air block
       if (def.id === 0) {
         continue;
       }
@@ -30,13 +30,19 @@ export class BlockRegistry {
       throw new Error("Block ID 0 is reserved for air and cannot be registered.");
     }
 
+    def.collidable ??= true;
+    def.faceTextures ??= {};
+
     for (const face in def.faceTextures) {
       if (!Object.hasOwn(def.faceTextures, face)) {
         continue;
       }
       const ref: TileRefIn = def.faceTextures[face];
       if (Array.isArray(ref)) {
-        def.faceTextures[face] = this.#makeTileRef(ref, def.defaultTilesetId);
+        def.faceTextures[face] = this.#makeTileRef(
+          ref,
+          def.defaultTilesetId
+        );
 
         continue;
       }
@@ -47,7 +53,10 @@ export class BlockRegistry {
 
     if (def.defaultTexture) {
       if (Array.isArray(def.defaultTexture)) {
-        def.defaultTexture = this.#makeTileRef(def.defaultTexture, def.defaultTilesetId);
+        def.defaultTexture = this.#makeTileRef(
+          def.defaultTexture,
+          def.defaultTilesetId
+        );
       }
       else if (this.#canAddDefaultTileSetId(def.defaultTexture, def.defaultTilesetId)) {
         def.defaultTexture.tilesetId = def.defaultTilesetId;
@@ -56,25 +65,37 @@ export class BlockRegistry {
 
     delete def.defaultTilesetId;
 
-    this.#blocks.set(def.id, def as BlockDefinition);
+    this.#blocks.set(
+      def.id,
+      def as BlockDefinition
+    );
     this.#version++;
+    if (def.id > this.#highestId) {
+      this.#highestId = def.id;
+    }
 
     return this;
   }
 
-  /**
-   * Incremented on every `register()`. Consumers that precompute data derived
-   * from block definitions (VoxelMeshBuilder) compare it to detect staleness.
-   */
+  get nextId(): number {
+    return this.#highestId + 1;
+  }
+
   get version(): number {
     return this.#version;
   }
 
-  #canAddDefaultTileSetId(ref: TileRef, defaultTilesetId: string | undefined) {
+  #canAddDefaultTileSetId(
+    ref: TileRef,
+    defaultTilesetId: string | undefined
+  ) {
     return !ref.tilesetId && defaultTilesetId;
   }
 
-  #makeTileRef(coords: Coords, defaultTilesetId: string | undefined): TileRef {
+  #makeTileRef(
+    coords: Coords,
+    defaultTilesetId: string | undefined
+  ): TileRef {
     return {
       col: coords[0],
       row: coords[1],
