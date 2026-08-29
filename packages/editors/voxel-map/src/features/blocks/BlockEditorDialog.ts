@@ -14,7 +14,6 @@ import type {
 
 // Import Internal Dependencies
 import { applyBlockUpdate } from "./applyBlockUpdate.ts";
-import { BLOCK_SHAPE_OPTIONS } from "./blockShapes.ts";
 import {
   createBlockDefinition,
   nextBlockId
@@ -118,7 +117,7 @@ export class BlockEditorDialog extends LitElement {
           ></jolly-text>
           <jolly-select
             label="Shape"
-            .options=${BLOCK_SHAPE_OPTIONS}
+            .options=${this.#shapeOptions()}
             .value=${values.shapeId}
             @jolly-change=${this.#onShapeChange}
           ></jolly-select>
@@ -161,6 +160,16 @@ export class BlockEditorDialog extends LitElement {
 
   #defaultTilesetId(): string {
     return this.vr?.engine.tilesetManager.defaultTilesetId ?? "";
+  }
+
+  #shapeOptions(): JollyOption<BlockShapeID>[] {
+    if (!this.vr) {
+      return [];
+    }
+
+    return [...this.vr.engine.shapeRegistry.ids()].map((id) => {
+      return { label: id, value: id };
+    });
   }
 
   #tilesetOptions(): JollyOption<string>[] {

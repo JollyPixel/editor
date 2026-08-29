@@ -148,6 +148,14 @@ by `VoxelEngine`. Accessible via `VoxelEngine.shapeRegistry`.
 
 #### `has(id: BlockShapeID): boolean`
 
+#### `getAll(): IterableIterator<BlockShape>`
+
+Every registered shape, in registration order.
+
+#### `ids(): IterableIterator<BlockShapeID>`
+
+IDs of every registered shape, in registration order.
+
 #### `readonly version: number`
 
 Incremented on every `register()`; see `BlockRegistry.version`.

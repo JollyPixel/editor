@@ -1,9 +1,15 @@
 // Import Internal Dependencies
-import type { BlockShape } from "./BlockShape.ts";
+import type {
+  BlockShape,
+  BlockShapeID
+} from "./BlockShape.ts";
 import { Cube } from "./shapes/Cube.ts";
 import { Slab } from "./shapes/Slab.ts";
 import { Ramp } from "./shapes/Ramp.ts";
-import { RampCornerInner, RampCornerOuter } from "./shapes/RampCorner.ts";
+import {
+  RampCornerInner,
+  RampCornerOuter
+} from "./shapes/RampCorner.ts";
 import { PoleY } from "./shapes/PoleY.ts";
 import { Pole } from "./shapes/Pole.ts";
 import {
@@ -14,10 +20,9 @@ import {
 
 /**
  * Registry that maps shape IDs to BlockShape implementations.
- * Register custom shapes at runtime via register() without touching core logic.
  */
 export class BlockShapeRegistry {
-  #shapes = new Map<string, BlockShape>();
+  #shapes = new Map<BlockShapeID, BlockShape>();
   #version = 0;
 
   register(
@@ -29,21 +34,28 @@ export class BlockShapeRegistry {
     return this;
   }
 
-  /** Incremented on every `register()`; see `BlockRegistry.version`. */
   get version(): number {
     return this.#version;
   }
 
   get(
-    id: string
+    id: BlockShapeID
   ): BlockShape | undefined {
     return this.#shapes.get(id);
   }
 
   has(
-    id: string
+    id: BlockShapeID
   ): boolean {
     return this.#shapes.has(id);
+  }
+
+  getAll(): IterableIterator<BlockShape> {
+    return this.#shapes.values();
+  }
+
+  ids(): IterableIterator<BlockShapeID> {
+    return this.#shapes.keys();
   }
 
   static createDefault(): BlockShapeRegistry {
