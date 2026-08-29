@@ -3,6 +3,7 @@ import { LitElement, html, css, nothing } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import type {
   BlockDefinition,
+  BlockDefinitionIn,
   BlockShapeID,
   VoxelRenderer
 } from "@jolly-pixel/voxel.renderer";
@@ -14,7 +15,6 @@ import type {
 
 // Import Internal Dependencies
 import { applyBlockUpdate } from "./applyBlockUpdate.ts";
-import { createBlockDefinition } from "./blockDefaults.ts";
 import { editorState } from "../../EditorState.ts";
 
 // CONSTANTS
@@ -252,12 +252,16 @@ export class BlockEditorDialog extends LitElement {
     }
 
     const { blockRegistry } = this.vr.engine;
-    const block = createBlockDefinition({
+    const block: BlockDefinitionIn = {
       id: blockRegistry.nextId,
       name: this._draft.name.trim() || kDefaultBlockName,
       shapeId: this._draft.shapeId,
-      tilesetId: this._draft.tilesetId || undefined
-    });
+      defaultTexture: {
+        tilesetId: this._draft.tilesetId || undefined,
+        col: 0,
+        row: 0
+      }
+    };
 
     blockRegistry.register(block);
     editorState.dispatchBlockRegistryChanged();

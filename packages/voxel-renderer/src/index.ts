@@ -43,7 +43,10 @@ export {
 
 // Blocks
 export { BlockRegistry } from "./blocks/BlockRegistry.ts";
-export type { BlockDefinition } from "./blocks/BlockDefinition.ts";
+export type {
+  BlockDefinition,
+  BlockDefinitionIn
+} from "./blocks/BlockDefinition.ts";
 export { BlockShapeRegistry } from "./blocks/BlockShapeRegistry.ts";
 export type {
   BlockShape,

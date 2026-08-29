@@ -73,6 +73,64 @@ describe("BlockRegistry.register", () => {
   });
 });
 
+describe("BlockRegistry.register — defaults", () => {
+  it("treats an omitted collidable as true", () => {
+    const registry = new BlockRegistry();
+    registry.register({ id: 1, name: "A", shapeId: "cube" });
+
+    assert.equal(registry.get(1)!.collidable, true);
+  });
+
+  it("keeps an explicit collidable of false", () => {
+    const registry = new BlockRegistry();
+    registry.register({
+      id: 1,
+      name: "A",
+      shapeId: "cube",
+      collidable: false
+    });
+
+    assert.equal(registry.get(1)!.collidable, false);
+  });
+
+  it("treats omitted faceTextures as none", () => {
+    const registry = new BlockRegistry();
+    registry.register({ id: 1, name: "A", shapeId: "cube" });
+
+    assert.deepEqual(registry.get(1)!.faceTextures, {});
+  });
+
+  it("stores a block authored with nothing but its identity", () => {
+    const registry = new BlockRegistry();
+    registry.register({ id: 1, name: "A", shapeId: "cube" });
+
+    assert.deepEqual(registry.get(1), {
+      id: 1,
+      name: "A",
+      shapeId: "cube",
+      collidable: true,
+      faceTextures: {}
+    });
+  });
+
+  it("still resolves a bare tile ref tuple against defaultTilesetId", () => {
+    const registry = new BlockRegistry();
+    registry.register({
+      id: 1,
+      name: "A",
+      shapeId: "cube",
+      defaultTexture: [2, 3],
+      defaultTilesetId: "atlas"
+    });
+
+    assert.deepEqual(registry.get(1)!.defaultTexture, {
+      col: 2,
+      row: 3,
+      tilesetId: "atlas"
+    });
+  });
+});
+
 describe("BlockRegistry.get", () => {
   it("returns the registered def", () => {
     const registry = new BlockRegistry();
