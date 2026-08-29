@@ -1,5 +1,10 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
+import {
+  voxelCellOf,
+  voxelPositionOf
+} from "@jolly-pixel/voxel.renderer";
+import type { Vector3Like } from "@jolly-pixel/three";
 
 // CONSTANTS
 const kScreenCenter = new THREE.Vector2(0, 0);
@@ -8,16 +13,6 @@ const kDefaultGroundPlaneSize = 4096;
 const kDefaultFallbackDistance = 12;
 const kDefaultMinDistance = 2;
 const kDefaultMaxDistance = 64;
-
-function toGridCell(
-  point: THREE.Vector3
-): THREE.Vector3 {
-  return new THREE.Vector3(
-    Math.floor(point.x),
-    Math.floor(point.y),
-    Math.floor(point.z)
-  );
-}
 
 export interface ViewRayHit {
   /**
@@ -121,22 +116,11 @@ export function castViewRay(
   };
 }
 
-export function voxelPositionOf(
-  hit: ViewRayHit,
-  side: "front" | "back" = "front"
-): THREE.Vector3 {
-  const point = hit.point
-    .clone()
-    .addScaledVector(hit.normal, side === "front" ? 0.5 : -0.5);
-
-  return toGridCell(point);
-}
-
 export function viewFocusPoint(
   camera: THREE.Camera,
   solid: THREE.Object3D | null,
   options: ViewFocusOptions = {}
-): THREE.Vector3 {
+): Vector3Like {
   const {
     fallbackDistance = kDefaultFallbackDistance,
     minDistance = kDefaultMinDistance,
@@ -155,14 +139,14 @@ export function viewFocusPoint(
     hit.distance >= minDistance &&
     hit.distance <= maxDistance
   ) {
-    return voxelPositionOf(hit, "front");
+    return voxelPositionOf(hit.point, hit.normal, "front");
   }
 
   const distance = hit === null ?
     fallbackDistance :
     Math.min(maxDistance, Math.max(minDistance, hit.distance));
 
-  return toGridCell(
+  return voxelCellOf(
     raycaster.ray.at(distance, new THREE.Vector3())
   );
 }

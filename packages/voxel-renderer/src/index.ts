@@ -128,6 +128,10 @@ export type {
   VoxelCoord,
   VoxelEntry
 } from "./world/types.ts";
+export {
+  voxelCellOf,
+  voxelPositionOf
+} from "./world/voxelCoord.ts";
 
 // Math
 export {
