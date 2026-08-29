@@ -94,21 +94,21 @@ function collectNode(
     Partial<THREE.CubeCamera> &
     Partial<Disposable>;
 
-  if (isBufferGeometry(candidate.geometry)) {
-    geometries.add(candidate.geometry);
-  }
+  if (!ownsItsResources(candidate)) {
+    if (isBufferGeometry(candidate.geometry)) {
+      geometries.add(candidate.geometry);
+    }
 
-  const nodeMaterials = Array.isArray(candidate.material) ?
-    candidate.material :
-    [candidate.material];
-  for (const material of nodeMaterials) {
-    if (isMaterial(material)) {
-      materials.add(material);
+    const nodeMaterials = Array.isArray(candidate.material) ?
+      candidate.material :
+      [candidate.material];
+    for (const material of nodeMaterials) {
+      if (isMaterial(material)) {
+        materials.add(material);
+      }
     }
   }
 
-  // Skeletons can be shared by several skinned meshes, the Set
-  // guarantees a single disposal.
   if (isDisposable(candidate.skeleton)) {
     disposables.add(candidate.skeleton);
   }
@@ -118,6 +118,14 @@ function collectNode(
   if (isDisposable(candidate)) {
     disposables.add(candidate);
   }
+}
+
+function ownsItsResources(
+  candidate: Partial<Disposable>
+): boolean {
+  return isDisposable(candidate) &&
+    !hasFlag(candidate, "isInstancedMesh") &&
+    !hasFlag(candidate, "isBatchedMesh");
 }
 
 function collectTextures(

@@ -11,6 +11,11 @@ import {
 
 // Import Internal Dependencies
 import { editorState } from "../EditorState.ts";
+import {
+  castViewRay,
+  voxelPositionOf,
+  type ViewRayHit
+} from "../shared/viewFocus.ts";
 import { VoxelBrushPreview } from "./VoxelBrushPreview.ts";
 
 type VoxelRotationType = typeof VoxelRotation[
@@ -21,6 +26,8 @@ export interface VoxelBrushOptions {
   vr: VoxelRenderer;
   camera: THREE.PerspectiveCamera;
   /**
+   * Side of the square ground plane the brush falls back to when the pointer
+   * misses every voxel.
    * @default 4096
    */
   groundPlaneSize?: number;
@@ -31,7 +38,7 @@ export class VoxelBrush extends ActorComponent {
 
   #camera: THREE.PerspectiveCamera;
   #raycaster = new THREE.Raycaster();
-  #plane: THREE.Mesh;
+  #groundPlaneSize: number;
   #preview: VoxelBrushPreview;
   #pointer = new THREE.Vector2();
   #previewDirty = true;
@@ -53,20 +60,8 @@ export class VoxelBrush extends ActorComponent {
 
     this.vr = vr;
     this.#camera = camera;
+    this.#groundPlaneSize = groundPlaneSize;
 
-    this.#plane = new THREE.Mesh(
-      new THREE.PlaneGeometry(
-        groundPlaneSize,
-        groundPlaneSize
-      ).rotateX(-Math.PI / 2),
-      new THREE.MeshBasicMaterial({
-        visible: false,
-        side: THREE.DoubleSide
-      })
-    );
-    this.#plane.name = "voxel_brush_plane";
-
-    this.actor.addChildren(this.#plane);
     this.#preview = this.actor.addComponentAndGet(VoxelBrushPreview);
   }
 
@@ -74,9 +69,7 @@ export class VoxelBrush extends ActorComponent {
     const { input } = this.actor.world;
     const isCtrl = input.keyboard.isDown("ControlLeft") || input.keyboard.isDown("ControlRight");
 
-    if (
-      editorState.selectedLayerType === "object"
-    ) {
+    if (editorState.isObjectContext) {
       this.#hidePreview();
 
       return;
@@ -105,12 +98,12 @@ export class VoxelBrush extends ActorComponent {
 
     if (!editorState.isGizmoDragging) {
       if (input.mouse.wasJustPressed("left")) {
-        if (editorState.selectedLayer) {
+        if (editorState.selectedVoxelLayer) {
           this.#placeVoxels();
         }
       }
       else if (input.mouse.wasJustPressed("right")) {
-        if (editorState.selectedLayer) {
+        if (editorState.selectedVoxelLayer) {
           this.#removeVoxels();
         }
       }
@@ -119,48 +112,14 @@ export class VoxelBrush extends ActorComponent {
     this.#updatePreview();
   }
 
-  #castRay(): THREE.Intersection | null {
+  #castRay(): ViewRayHit | null {
     const { input } = this.actor.world;
 
-    this.#raycaster.setFromCamera(
-      input.mouse.viewportPositionTo(this.#pointer),
-      this.#camera
-    );
-
-    const voxelHits = this.#raycaster.intersectObject(
-      this.vr.engine.root,
-      true
-    );
-
-    if (voxelHits.length > 0) {
-      return voxelHits[0];
-    }
-
-    const planeHits = this.#raycaster.intersectObject(
-      this.#plane,
-      false
-    );
-
-    return planeHits.length > 0 ? planeHits[0] : null;
-  }
-
-  #hitToVoxelPos(
-    hit: THREE.Intersection,
-    place: boolean
-  ): THREE.Vector3 {
-    const point = hit.point.clone();
-    if (hit.face && place) {
-      point.addScaledVector(hit.face.normal, 0.5);
-    }
-    else if (hit.face && !place) {
-      point.addScaledVector(hit.face.normal, -0.5);
-    }
-
-    return new THREE.Vector3(
-      Math.floor(point.x),
-      Math.floor(point.y),
-      Math.floor(point.z)
-    );
+    return castViewRay(this.#camera, this.vr.engine.root, {
+      pointer: input.mouse.viewportPositionTo(this.#pointer),
+      groundPlaneSize: this.#groundPlaneSize,
+      raycaster: this.#raycaster
+    });
   }
 
   #getBrushPositions(
@@ -229,10 +188,10 @@ export class VoxelBrush extends ActorComponent {
       return;
     }
 
-    const center = this.#hitToVoxelPos(hit, true);
+    const center = voxelPositionOf(hit, "front");
     const rotation = this.#resolveRotation();
     const flipY = this.#resolveFlipY();
-    const layerName = editorState.selectedLayer!;
+    const layerName = editorState.selectedVoxelLayer!;
 
     for (const pos of this.#getBrushPositions(center)) {
       this.vr.engine.setVoxel(layerName, {
@@ -252,8 +211,8 @@ export class VoxelBrush extends ActorComponent {
       return;
     }
 
-    const center = this.#hitToVoxelPos(hit, false);
-    const layerName = editorState.selectedLayer!;
+    const center = voxelPositionOf(hit, "back");
+    const layerName = editorState.selectedVoxelLayer!;
 
     for (const pos of this.#getBrushPositions(center)) {
       this.vr.engine.removeVoxel(layerName, { position: pos });
@@ -295,14 +254,11 @@ export class VoxelBrush extends ActorComponent {
 
     const hit = this.#castRay();
     if (hit) {
-      const isGroundHit = hit.object === this.#plane;
-      const center = isGroundHit ?
-        this.#hitToVoxelPos(hit, true) :
-        this.#hitToVoxelPos(hit, false);
+      const center = voxelPositionOf(hit, hit.ground ? "front" : "back");
 
       this.#preview.updateFromPositions(
         this.#getBrushPositions(center),
-        isGroundHit ? null : (hit.face?.normal ?? null)
+        hit.ground ? null : hit.normal
       );
     }
     else {

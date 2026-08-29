@@ -32,6 +32,9 @@ export class AreaBoxFill extends THREE.Mesh<
   #opacity: number;
   #color: THREE.Color;
   #smokedColor: THREE.Color;
+  #emphasisOpacity = 1;
+  #tint = 0;
+  #disposed = false;
 
   constructor(
     options: AreaBoxFillOptions
@@ -80,23 +83,49 @@ export class AreaBoxFill extends THREE.Mesh<
     );
   }
 
+  get color(): THREE.Color {
+    return this.#color.clone();
+  }
+
+  set color(
+    color: THREE.ColorRepresentation
+  ) {
+    this.#color.set(color);
+    this.#smokedColor.copy(this.#color).lerp(
+      kSmokeColor,
+      kFillSmoke
+    );
+    this.#applyEmphasis();
+  }
+
   emphasize(
     opacity: number,
     tint: number
   ): void {
+    this.#emphasisOpacity = opacity;
+    this.#tint = tint;
+    this.#applyEmphasis();
+  }
+
+  dispose(): void {
+    if (this.#disposed) {
+      return;
+    }
+
+    this.#disposed = true;
+    this.geometry.dispose();
+    this.material.dispose();
+  }
+
+  #applyEmphasis(): void {
     this.material.opacity = Math.min(
-      this.#opacity * opacity,
+      this.#opacity * this.#emphasisOpacity,
       1
     );
     this.material.color.copy(this.#smokedColor).lerp(
       this.#color,
-      tint
+      this.#tint
     );
-  }
-
-  dispose(): void {
-    this.geometry.dispose();
-    this.material.dispose();
   }
 }
 

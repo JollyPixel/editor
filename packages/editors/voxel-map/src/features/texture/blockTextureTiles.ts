@@ -22,7 +22,6 @@ function tileRectOf(
   };
 }
 
-/** Includes default and per-face texture references. */
 export function findBlocksReferencingTileset(
   blocks: Iterable<BlockDefinition>,
   tilesetId: string,

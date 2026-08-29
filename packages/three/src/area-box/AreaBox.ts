@@ -74,6 +74,7 @@ export class AreaBox extends THREE.Object3D {
 
   #size = new THREE.Vector3(1, 1, 1);
   #state: AreaBoxState = "idle";
+  #disposed = false;
 
   constructor(
     options: AreaBoxOptions = {}
@@ -154,6 +155,19 @@ export class AreaBox extends THREE.Object3D {
     return this.position;
   }
 
+  get color(): THREE.Color {
+    return this.fill.color;
+  }
+
+  set color(
+    color: THREE.ColorRepresentation
+  ) {
+    this.fill.color = color;
+    if (this.edges) {
+      this.edges.color = color;
+    }
+  }
+
   get state(): AreaBoxState {
     return this.#state;
   }
@@ -193,6 +207,11 @@ export class AreaBox extends THREE.Object3D {
   }
 
   dispose(): void {
+    if (this.#disposed) {
+      return;
+    }
+
+    this.#disposed = true;
     this.fill.dispose();
     this.edges?.dispose();
     this.label?.dispose();

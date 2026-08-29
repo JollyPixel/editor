@@ -194,10 +194,6 @@ export class BlockLibrary extends LitElement {
     await this._dialog?.openForCreate();
   }
 
-  /**
-   * A selection made in the same tick has not reached the modal yet, so the
-   * host settles before the dialog reads its block.
-   */
   async #editBlock(): Promise<void> {
     if (!this.vr || this._selectedBlock === null) {
       return;

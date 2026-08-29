@@ -1,8 +1,12 @@
 // Import Third-party Dependencies
+import type { Vector3Like } from "@jolly-pixel/three";
 import type {
   VoxelLayerHookEvent,
   VoxelRotation
 } from "@jolly-pixel/voxel.renderer";
+
+// Import Internal Dependencies
+import type { ObjectKey } from "./features/object-layers/objectArea.ts";
 
 // CONSTANTS
 const kMinBrushSize = 1;
@@ -10,10 +14,22 @@ const kMaxBrushSize = 8;
 
 export type SidebarTab = "general" | "paint" | "layers";
 export type RotationMode = typeof VoxelRotation[keyof typeof VoxelRotation] | "auto";
-export type LayerSelection = {
-  name: string;
-  type: "voxel" | "object";
-} | null;
+
+/**
+ * What the layers tree has selected. An object row carries its own layer,
+ * so an object selection stays anchored to the layer that holds it.
+ */
+export type LayerSelection =
+  | { kind: "voxel-layer"; name: string; }
+  | { kind: "object-layer"; name: string; }
+  | { kind: "object"; layerName: string; objectId: string; }
+  | null;
+
+/**
+ * Resolves the grid cell the camera is aimed at. Registered by the scene,
+ * which owns the camera, and read by the UI when it needs a spawn point.
+ */
+export type ViewFocusProvider = () => Vector3Like;
 
 export interface EditorStateEventMap {
   selectionChange: LayerSelection;
@@ -23,6 +39,7 @@ export interface EditorStateEventMap {
   flipYChange: boolean;
   activeSidebarTabChange: SidebarTab;
   gizmoLayerChange: string | null;
+  gizmoDraggingChange: boolean;
   layerUpdated: VoxelLayerHookEvent;
   blockRegistryChanged: undefined;
   worldReset: undefined;
@@ -38,17 +55,54 @@ export class EditorState {
   #activeSidebarTab: SidebarTab = "general";
   #isGizmoDragging = false;
   #gizmoLayer: string | null = null;
+  #viewFocusProvider: ViewFocusProvider | null = null;
 
   get selection(): LayerSelection {
     return this.#selection;
   }
 
-  get selectedLayer(): string | null {
-    return this.#selection?.name ?? null;
+  /**
+   * Name of the selected voxel layer, null under any other selection. The
+   * brush paints here, so an object selection must never resolve to a name.
+   */
+  get selectedVoxelLayer(): string | null {
+    return this.#selection?.kind === "voxel-layer"
+      ? this.#selection.name
+      : null;
   }
 
-  get selectedLayerType(): "voxel" | "object" | null {
-    return this.#selection?.type ?? null;
+  /**
+   * Object layer the selection sits in, whether the layer row itself or one
+   * of its object rows is selected.
+   */
+  get activeObjectLayer(): string | null {
+    const selection = this.#selection;
+    if (selection === null) {
+      return null;
+    }
+
+    switch (selection.kind) {
+      case "object-layer":
+        return selection.name;
+      case "object":
+        return selection.layerName;
+      default:
+        return null;
+    }
+  }
+
+  /** Whether the layers tree has an object layer or one of its objects. */
+  get isObjectContext(): boolean {
+    return this.activeObjectLayer !== null;
+  }
+
+  get selectedObject(): ObjectKey | null {
+    return this.#selection?.kind === "object"
+      ? {
+        layerName: this.#selection.layerName,
+        objectId: this.#selection.objectId
+      }
+      : null;
   }
 
   get selectedBlockId(): number {
@@ -79,6 +133,28 @@ export class EditorState {
     return this.#gizmoLayer;
   }
 
+  get viewFocusProvider(): ViewFocusProvider | null {
+    return this.#viewFocusProvider;
+  }
+
+  set viewFocusProvider(
+    provider: ViewFocusProvider | null
+  ) {
+    this.#viewFocusProvider = provider;
+  }
+
+  /**
+   * Grid cell the camera is aimed at, the world origin while no provider is
+   * registered. Read on demand: the value changes on every camera move.
+   */
+  get viewFocus(): Vector3Like {
+    return this.#viewFocusProvider?.() ?? {
+      x: 0,
+      y: 0,
+      z: 0
+    };
+  }
+
   on<K extends keyof EditorStateEventMap>(
     type: K,
     listener: (value: EditorStateEventMap[K]) => void
@@ -92,7 +168,11 @@ export class EditorState {
   }
 
   setGizmoDragging(dragging: boolean): void {
+    if (this.#isGizmoDragging === dragging) {
+      return;
+    }
     this.#isGizmoDragging = dragging;
+    this.#dispatch("gizmoDraggingChange", dragging);
   }
 
   setGizmoLayer(name: string | null): void {
@@ -103,25 +183,49 @@ export class EditorState {
     this.#dispatch("gizmoLayerChange", name);
   }
 
-  setSelectedLayer(
-    name: string | null,
-    type: "voxel" | "object" = "voxel"
+  /**
+   * Single entry point for what the layers tree has selected. The viewport
+   * writes object selections here too, so the tree, the panels and the area
+   * gizmo all read one value.
+   */
+  setSelection(
+    selection: LayerSelection
   ): void {
-    const next = name === null ? null : { name, type };
-    if (
-      this.#selection?.name === next?.name &&
-      this.#selection?.type === next?.type
-    ) {
+    if (selectionKey(this.#selection) === selectionKey(selection)) {
       return;
     }
 
-    this.#selection = next;
-    this.#dispatch("selectionChange", next);
+    this.#selection = selection;
+    this.#dispatch("selectionChange", selection);
 
     if (this.#gizmoLayer !== null) {
       this.#gizmoLayer = null;
       this.#dispatch("gizmoLayerChange", null);
     }
+  }
+
+  selectVoxelLayer(
+    name: string | null
+  ): void {
+    this.setSelection(
+      name === null ? null : { kind: "voxel-layer", name }
+    );
+  }
+
+  selectObjectLayer(
+    name: string
+  ): void {
+    this.setSelection({ kind: "object-layer", name });
+  }
+
+  selectObject(
+    key: ObjectKey
+  ): void {
+    this.setSelection({
+      kind: "object",
+      layerName: key.layerName,
+      objectId: key.objectId
+    });
   }
 
   setSelectedBlock(id: number): void {
@@ -190,6 +294,18 @@ export class EditorState {
   ): void {
     this.#events.dispatchEvent(new CustomEvent(type, { detail: value }));
   }
+}
+
+function selectionKey(
+  selection: LayerSelection
+): string | null {
+  if (selection === null) {
+    return null;
+  }
+
+  return selection.kind === "object"
+    ? `${selection.kind}:${selection.layerName}/${selection.objectId}`
+    : `${selection.kind}:${selection.name}`;
 }
 
 export const editorState = new EditorState();

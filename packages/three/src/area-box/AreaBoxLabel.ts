@@ -27,6 +27,7 @@ export class AreaBoxLabel extends THREE.Sprite {
   #color: THREE.ColorRepresentation;
   #canvas: Canvas2D;
   #texture: THREE.CanvasTexture;
+  #disposed = false;
 
   constructor(
     options: AreaBoxLabelOptions
@@ -88,6 +89,11 @@ export class AreaBoxLabel extends THREE.Sprite {
   }
 
   dispose(): void {
+    if (this.#disposed) {
+      return;
+    }
+
+    this.#disposed = true;
     this.#texture.dispose();
     this.material.dispose();
   }

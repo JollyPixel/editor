@@ -13,6 +13,7 @@ import {
 
 // Import Internal Dependencies
 import { canDrop } from "./resolveReparent.ts";
+import { resolveRename } from "./resolveRename.ts";
 import { resolveRowDropZone } from "./dropZone.ts";
 import { resolveSelection } from "./selection.ts";
 import {
@@ -72,14 +73,18 @@ export class Tree<TData = unknown> extends LitElement {
   @property({ type: Boolean, reflect: true })
   declare reorderable: boolean;
 
-  /**
-   * Lets a drag start from anywhere on the row, not only its grip — the
-   * whole-row drag `arbor` had. Off by default: a bare `reorderable` keeps
-   * the grip as the sole, unambiguous drag origin, which costs nothing to
-   * discover since it is always visible once `reorderable` is set.
-   */
-  @property({ type: Boolean, reflect: true, attribute: "row-drag" })
+  @property({
+    type: Boolean,
+    reflect: true,
+    attribute: "row-drag"
+  })
   declare rowDrag: boolean;
+
+  @property({ type: Boolean, reflect: true })
+  declare renamable: boolean;
+
+  @state()
+  private declare _renamingId: string | null;
 
   @state()
   private declare _anchorId: string | null;
@@ -93,11 +98,6 @@ export class Tree<TData = unknown> extends LitElement {
   @state()
   private declare _moveState: MoveState | null;
 
-  /**
-   * Set while a row-drag has crossed its movement threshold, so the `click`
-   * that follows `pointerup` does not also fire a selection change. Plain
-   * instance state, not `@state`: it never affects a render.
-   */
   #suppressClick = false;
 
   constructor() {
@@ -109,6 +109,8 @@ export class Tree<TData = unknown> extends LitElement {
     this.multiple = false;
     this.reorderable = false;
     this.rowDrag = false;
+    this.renamable = false;
+    this._renamingId = null;
     this._anchorId = null;
     this._dragPreview = null;
     this._dragMovedIds = null;
@@ -172,7 +174,7 @@ export class Tree<TData = unknown> extends LitElement {
         ${node.icon === undefined ? nothing : html`
           <jolly-icon class="node-icon" name=${node.icon} aria-hidden="true"></jolly-icon>
         `}
-        <span class="label">${node.label}</span>
+        ${this.#renderLabel(node)}
         ${node.visible === undefined ? nothing : html`
           <button
             class="visible-toggle"
@@ -258,11 +260,132 @@ export class Tree<TData = unknown> extends LitElement {
     emitDataEvent(this, "jolly-select", { selected: result.selected });
   }
 
+  protected override updated(
+    changed: Map<string, unknown>
+  ): void {
+    if (
+      changed.has("_renamingId") &&
+      this._renamingId !== null
+    ) {
+      this.renderRoot.querySelector<HTMLInputElement>(".rename")?.focus();
+    }
+  }
+
+  #renderLabel(
+    node: TreeNode<TData>
+  ): TemplateResult {
+    if (this._renamingId !== node.id) {
+      return html`<span class="label">${node.label}</span>`;
+    }
+
+    return html`
+      <input
+        class="label rename"
+        type="text"
+        .value=${node.label}
+        aria-label="Rename"
+        @keydown=${this.#onRenameKeyDown}
+        @blur=${(event: FocusEvent) => this.#commitRename(event.target, node)}
+        @focus=${this.#onRenameFocus}
+      >
+    `;
+  }
+
+  #isRenamable(
+    id: string
+  ): boolean {
+    return this.renamable &&
+      findNode(this.nodes, id)?.renamable === true;
+  }
+
+  #startRename(
+    id: string
+  ): void {
+    if (this.#isRenamable(id)) {
+      this._renamingId = id;
+    }
+  }
+
+  readonly #onRenameFocus = (
+    event: FocusEvent
+  ): void => {
+    const input = event.target;
+    if (input instanceof HTMLInputElement) {
+      input.select();
+    }
+  };
+
+  readonly #onRenameKeyDown = (
+    event: KeyboardEvent
+  ): void => {
+    // The tree's own navigation must not read the keys typed into the field.
+    event.stopPropagation();
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      this.#cancelRename();
+    }
+    else if (event.key === "Enter") {
+      event.preventDefault();
+      // Blur commits, so the two paths cannot double-emit.
+      (event.target as HTMLInputElement).blur();
+    }
+  };
+
+  #cancelRename(): void {
+    const id = this._renamingId;
+    this._renamingId = null;
+    if (id !== null) {
+      this.#focusRow(id);
+    }
+  }
+
+  /**
+   * Emits the edit unless it was cancelled, left blank, or left unchanged.
+   * The label is not written here: `nodes` stays consumer owned.
+   */
+  #commitRename(
+    target: EventTarget | null,
+    node: TreeNode<TData>
+  ): void {
+    if (this._renamingId !== node.id) {
+      return;
+    }
+
+    this._renamingId = null;
+    const name = resolveRename(
+      node.label,
+      target instanceof HTMLInputElement ? target.value : ""
+    );
+    if (name !== null) {
+      emitDataEvent(this, "jolly-rename", { id: node.id, name });
+    }
+    this.#focusRow(node.id);
+  }
+
+  #focusRow(
+    id: string
+  ): void {
+    this.updateComplete.then(() => {
+      const row = this.renderRoot.querySelector<HTMLElement>(
+        `.row[data-id="${CSS.escape(id)}"]`
+      );
+      row?.focus();
+    });
+  }
+
   #onRowDoubleClick(
     event: MouseEvent,
     id: string
   ): void {
     if (isButtonElement(event.target)) {
+      return;
+    }
+
+    if (this.#isRenamable(id)) {
+      event.preventDefault();
+      this.#startRename(id);
+
       return;
     }
 
@@ -380,6 +503,13 @@ export class Tree<TData = unknown> extends LitElement {
         }
         break;
       }
+      case "F2":
+        if (!this.#isRenamable(activeRow.node.id)) {
+          break;
+        }
+        event.preventDefault();
+        this.#startRename(activeRow.node.id);
+        break;
       case "Enter":
         event.preventDefault();
         emitDataEvent(this, "jolly-activate", { id: activeRow.node.id });

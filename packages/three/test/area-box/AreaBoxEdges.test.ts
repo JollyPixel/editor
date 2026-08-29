@@ -67,6 +67,28 @@ describe("AreaBoxEdges", () => {
       assert.deepEqual(edges.scale.toArray(), [1, 1, 1]);
     });
 
+    test("keeps the instanced buffers on a resize to the same size", () => {
+      // setPositions() swaps in fresh buffers, and destroying the previous
+      // ones mid-frame faults the WebGPU queue.
+      const edges = createEdges();
+
+      edges.resize({ x: 6, y: 3, z: 4 });
+      const positions = edges.geometry.getAttribute("instanceStart");
+      edges.resize({ x: 6, y: 3, z: 4 });
+
+      assert.equal(edges.geometry.getAttribute("instanceStart"), positions);
+    });
+
+    test("rebuilds the instanced buffers on a real size change", () => {
+      const edges = createEdges();
+
+      edges.resize({ x: 6, y: 3, z: 4 });
+      const positions = edges.geometry.getAttribute("instanceStart");
+      edges.resize({ x: 6, y: 3, z: 5 });
+
+      assert.notEqual(edges.geometry.getAttribute("instanceStart"), positions);
+    });
+
     test("shrinks the bounds back down on a smaller size", () => {
       const edges = createEdges();
 

@@ -27,11 +27,15 @@ export interface AreaBoxEdgesOptions {
 }
 
 /**
- * Twelve fat-line segments tracing the area, rebuilt on every resize.
+ * Twelve fat-line segments tracing the area
  */
 export class AreaBoxEdges extends LineSegments2 {
   #opacity: number;
   #color: THREE.Color;
+  #size: THREE.Vector3 | null = null;
+  #emphasisOpacity = 1;
+  #tint = 0;
+  #disposed = false;
 
   constructor(
     options: AreaBoxEdgesOptions
@@ -58,6 +62,20 @@ export class AreaBoxEdges extends LineSegments2 {
   resize(
     size: Vector3Like
   ): void {
+    if (
+      this.#size !== null &&
+      this.#size.x === size.x &&
+      this.#size.y === size.y &&
+      this.#size.z === size.z
+    ) {
+      return;
+    }
+
+    this.#size = new THREE.Vector3(
+      size.x,
+      size.y,
+      size.z
+    );
     this.geometry.setPositions(
       outlinePositions(size)
     );
@@ -65,23 +83,45 @@ export class AreaBoxEdges extends LineSegments2 {
     this.geometry.computeBoundingSphere();
   }
 
+  get color(): THREE.Color {
+    return this.#color.clone();
+  }
+
+  set color(
+    color: THREE.ColorRepresentation
+  ) {
+    this.#color.set(color);
+    this.#applyEmphasis();
+  }
+
   emphasize(
     opacity: number,
     tint: number
   ): void {
+    this.#emphasisOpacity = opacity;
+    this.#tint = tint;
+    this.#applyEmphasis();
+  }
+
+  dispose(): void {
+    if (this.#disposed) {
+      return;
+    }
+
+    this.#disposed = true;
+    this.geometry.dispose();
+    this.material.dispose();
+  }
+
+  #applyEmphasis(): void {
     this.material.opacity = Math.min(
-      this.#opacity * opacity,
+      this.#opacity * this.#emphasisOpacity,
       1
     );
     this.material.color.copy(this.#color).lerp(
       kTintTarget,
-      tint * kTintRatio
+      this.#tint * kTintRatio
     );
-  }
-
-  dispose(): void {
-    this.geometry.dispose();
-    this.material.dispose();
   }
 }
 

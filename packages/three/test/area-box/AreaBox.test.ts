@@ -200,3 +200,55 @@ describe("render order", () => {
     assert.ok(area.edges!.renderOrder > area.fill.renderOrder);
   });
 });
+
+describe("color", () => {
+  test("repaints the fill and the edges without reallocating them", () => {
+    const area = new AreaBox({ color: "#8ecf72" });
+    const { geometry, material } = area.fill;
+    const edgeMaterial = area.edges!.material;
+
+    area.color = "#ff0000";
+
+    assert.equal(area.color.getHexString(), "ff0000");
+    assert.equal(area.edges!.color.getHexString(), "ff0000");
+    // Same instances: recolouring must never churn GPU resources.
+    assert.equal(area.fill.geometry, geometry);
+    assert.equal(area.fill.material, material);
+    assert.equal(area.edges!.material, edgeMaterial);
+  });
+
+  test("keeps the emphasis of the current state", () => {
+    const area = new AreaBox({ color: "#8ecf72" });
+    area.state = "active";
+
+    area.color = "#ff0000";
+
+    // Identical to an area built red and emphasised the same way: the
+    // recolour must neither drop the emphasis nor apply it twice.
+    const reference = new AreaBox({ color: "#ff0000" });
+    reference.state = "active";
+
+    assert.equal(
+      area.fill.material.opacity,
+      reference.fill.material.opacity
+    );
+    assert.equal(
+      area.fill.material.color.getHexString(),
+      reference.fill.material.color.getHexString()
+    );
+  });
+});
+
+describe("dispose idempotence", () => {
+  test("frees its resources once, however many times it is called", () => {
+    const area = new AreaBox({ displayName: "Spawn" });
+    let disposals = 0;
+    area.fill.geometry.addEventListener("dispose", () => disposals++);
+
+    area.dispose();
+    area.dispose();
+    area.fill.dispose();
+
+    assert.equal(disposals, 1);
+  });
+});

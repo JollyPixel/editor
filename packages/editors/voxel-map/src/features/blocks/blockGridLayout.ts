@@ -1,5 +1,5 @@
 // CONSTANTS
-// Target width of a preview cell, in CSS pixels.
+// Target preview-cell width in CSS pixels.
 const kCellSize = 64;
 
 export interface BlockGridLayout {

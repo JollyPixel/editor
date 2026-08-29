@@ -1,6 +1,10 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-import { type Actor } from "@jolly-pixel/engine";
+import {
+  type Actor,
+  ActorComponent
+} from "@jolly-pixel/engine";
+import { TransformControls } from "three/addons/controls/TransformControls.js";
 import type {
   VoxelRenderer,
   VoxelLayerHookEvent
@@ -8,14 +12,15 @@ import type {
 
 // Import Internal Dependencies
 import { editorState } from "../EditorState.ts";
-import { TransformGizmoBase } from "./TransformGizmoBase.ts";
 
 export interface LayerGizmoOptions {
   vr: VoxelRenderer;
   camera: THREE.PerspectiveCamera;
 }
 
-export class LayerGizmo extends TransformGizmoBase {
+export class LayerGizmo extends ActorComponent {
+  #camera: THREE.PerspectiveCamera;
+  #controls: TransformControls | null = null;
   #pivot = new THREE.Object3D();
   #pivotOffset = new THREE.Vector3();
   #activeLayer: string | null = null;
@@ -26,18 +31,27 @@ export class LayerGizmo extends TransformGizmoBase {
     actor: Actor,
     options: LayerGizmoOptions
   ) {
-    super(actor, options, "LayerGizmo");
+    super({
+      actor,
+      typeName: "LayerGizmo"
+    });
     this.#vr = options.vr;
+    this.#camera = options.camera;
   }
 
-  override awake(): void {
-    super.awake();
+  awake(): void {
+    const controls = new TransformControls(
+      this.#camera,
+      this.actor.world.renderer.canvas
+    );
+    controls.setMode("translate");
+    controls.setSpace("world");
+    controls.setTranslationSnap(1);
+    controls.addEventListener("dragging-changed", this.#onDraggingChanged);
+    controls.addEventListener("objectChange", this.#onObjectChange);
+    this.#controls = controls;
 
-    this.controls!.setSpace("world");
-    this.controls!.setTranslationSnap(1);
-
-    this.actor.addChildren(this.#pivot);
-    this.controls!.addEventListener("objectChange", this.#onObjectChange);
+    this.actor.addChildren(controls.getHelper(), this.#pivot);
     this.#subscriptions.push(
       editorState.on("gizmoLayerChange", this.setActiveLayer.bind(this)),
       editorState.on("layerUpdated", this.#onLayerUpdated)
@@ -45,10 +59,19 @@ export class LayerGizmo extends TransformGizmoBase {
   }
 
   override destroy(): void {
-    this.controls?.removeEventListener("objectChange", this.#onObjectChange);
     for (const unsubscribe of this.#subscriptions.splice(0)) {
       unsubscribe();
     }
+
+    this.#controls?.removeEventListener(
+      "dragging-changed",
+      this.#onDraggingChanged
+    );
+    this.#controls?.removeEventListener("objectChange", this.#onObjectChange);
+    this.#controls?.detach();
+    this.#controls?.dispose();
+    this.#controls = null;
+
     super.destroy();
   }
 
@@ -57,24 +80,19 @@ export class LayerGizmo extends TransformGizmoBase {
   ): void {
     this.#activeLayer = name;
 
-    if (!this.controls) {
+    const controls = this.#controls;
+    if (controls === null) {
       return;
     }
 
-    if (!name) {
-      this.controls.detach();
-
-      return;
-    }
-
-    if (!this.#vr.engine.getLayer(name)) {
-      this.controls.detach();
+    if (name === null || !this.#vr.engine.getLayer(name)) {
+      controls.detach();
 
       return;
     }
 
     this.#repositionPivot();
-    this.controls.attach(this.#pivot);
+    controls.attach(this.#pivot);
   }
 
   #repositionPivot(): void {
@@ -95,6 +113,12 @@ export class LayerGizmo extends TransformGizmoBase {
     );
     this.#pivot.position.copy(center);
   }
+
+  readonly #onDraggingChanged = (
+    event: { value: unknown; }
+  ): void => {
+    editorState.setGizmoDragging(event.value === true);
+  };
 
   readonly #onObjectChange = (): void => {
     if (!this.#activeLayer) {

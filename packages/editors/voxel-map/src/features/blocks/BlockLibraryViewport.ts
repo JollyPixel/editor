@@ -13,7 +13,6 @@ import { BlockLibraryRenderer } from "./BlockLibraryRenderer.ts";
 const kBlockSelectEvent = "block-select";
 const kBlockEditEvent = "block-edit";
 
-/** Three.js block preview grid with pointer picking. */
 @customElement("block-library-viewport")
 export class BlockLibraryViewport extends LitElement {
   static override styles = css`
@@ -35,8 +34,10 @@ export class BlockLibraryViewport extends LitElement {
 
   @property({ attribute: false })
   declare vr: VoxelRenderer | undefined;
+
   @property({ attribute: false })
   declare blocks: BlockDefinition[];
+
   @property({ attribute: false })
   declare selectedId: number | null;
 
@@ -99,13 +100,19 @@ export class BlockLibraryViewport extends LitElement {
   #onClick(
     event: MouseEvent
   ): void {
-    this.#emitForPointer(kBlockSelectEvent, event);
+    this.#emitForPointer(
+      kBlockSelectEvent,
+      event
+    );
   }
 
   #onDoubleClick(
     event: MouseEvent
   ): void {
-    this.#emitForPointer(kBlockEditEvent, event);
+    this.#emitForPointer(
+      kBlockEditEvent,
+      event
+    );
   }
 
   #emitForPointer(

@@ -116,12 +116,12 @@ function createHarness(): BrushHarness {
 describe("VoxelBrush mesh synchronization", () => {
   afterEach(() => {
     mock.restoreAll();
-    editorState.setSelectedLayer(null);
+    editorState.setSelection(null);
     editorState.setBrushSizeAbsolute(1);
   });
 
   test("flushes once after placing a complete brush footprint", () => {
-    editorState.setSelectedLayer("Ground");
+    editorState.selectVoxelLayer("Ground");
     editorState.setBrushSizeAbsolute(2);
     const harness = createHarness();
 
@@ -135,7 +135,7 @@ describe("VoxelBrush mesh synchronization", () => {
   });
 
   test("flushes after removing a voxel", () => {
-    editorState.setSelectedLayer("Ground");
+    editorState.selectVoxelLayer("Ground");
     const harness = createHarness();
 
     harness.publishPress("right");
@@ -148,7 +148,7 @@ describe("VoxelBrush mesh synchronization", () => {
 describe("VoxelBrush preview refresh gating", () => {
   afterEach(() => {
     mock.restoreAll();
-    editorState.setSelectedLayer(null);
+    editorState.setSelection(null);
     editorState.setBrushSizeAbsolute(1);
   });
 

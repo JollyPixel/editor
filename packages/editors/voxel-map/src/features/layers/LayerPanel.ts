@@ -15,13 +15,6 @@ export class LayerPanel extends LitElement {
       flex-direction: column;
       gap: var(--jolly-row-gap, 4px);
       padding: var(--jolly-space-1, 4px);
-      border-top: 1px solid var(--jolly-groove);
-    }
-
-    .panel-title {
-      color: var(--jolly-text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
     }
 
     .prop-row {
@@ -126,7 +119,7 @@ export class LayerPanel extends LitElement {
     }
 
     return html`
-      <div class="panel-title">Layer: ${this.layerName}</div>
+      <jolly-separator label=${this.layerName ?? ""}></jolly-separator>
 
       <jolly-checkbox
         align="end"

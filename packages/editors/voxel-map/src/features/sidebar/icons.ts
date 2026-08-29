@@ -34,3 +34,32 @@ registerIcon("pencil", svg`
     fill="currentColor"
   />
 `);
+
+registerIcon("voxel-layer", svg`
+  <path
+    fill-rule="evenodd"
+    clip-rule="evenodd"
+    d="M12 2L21 7V17L12 22L3 17V7L12 2ZM12 4.31L5.06 8.17L12 12.03L18.94 8.17L12 4.31ZM5 9.87V15.82L11 19.15V13.2L5 9.87ZM13 19.15L19 15.82V9.87L13 13.2V19.15Z"
+    fill="currentColor"
+  />
+`);
+
+registerIcon("object-layer", svg`
+  <path
+    d="M10.5 3H9C7.34315 3 6 4.34315 6 6V9C6 10.1046 5.10457 11 4 11H3V13H4C5.10457 13 6 13.8954 6 15V18C6 19.6569 7.34315 21 9 21H10.5V19H9C8.44772 19 8 18.5523 8 18V15C8 13.8135 7.31672 12.7865 6.32297 12C7.31672 11.2135 8 10.1865 8 9V6C8 5.44772 8.44772 5 9 5H10.5V3Z"
+    fill="currentColor"
+  />
+  <path
+    d="M13.5 3H15C16.6569 3 18 4.34315 18 6V9C18 10.1046 18.8954 11 20 11H21V13H20C18.8954 13 18 13.8954 18 15V18C18 19.6569 16.6569 21 15 21H13.5V19H15C15.5523 19 16 18.5523 16 18V15C16 13.8135 16.6833 12.7865 17.677 12C16.6833 11.2135 16 10.1865 16 9V6C16 5.44772 15.5523 5 15 5H13.5V3Z"
+    fill="currentColor"
+  />
+`);
+
+registerIcon("object-area", svg`
+  <path
+    fill-rule="evenodd"
+    clip-rule="evenodd"
+    d="M4 4H10V6H6V10H4V4ZM14 4H20V10H18V6H14V4ZM6 14V18H10V20H4V14H6ZM18 14H20V20H14V18H18V14Z"
+    fill="currentColor"
+  />
+`);

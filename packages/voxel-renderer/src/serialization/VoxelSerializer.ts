@@ -10,18 +10,8 @@ import type {
 import type { VoxelEntry } from "../world/types.ts";
 import type { BlockDefinition } from "../blocks/BlockDefinition.ts";
 
-/**
- * Flat key/value bag for custom object properties.
- * Complex types (color, object-ref, class) are intentionally omitted — only
- * primitive-scalar properties survive the round-trip.
- */
 export type VoxelObjectProperties = Record<string, string | number | boolean>;
 
-/**
- * A single named object placed in the world (spawn point, trigger zone, …).
- * Coordinates are in voxel/tile space (floats allowed for sub-tile precision).
- * Y is 0 for maps imported from a flat 2-D source.
- */
 export interface VoxelObjectJSON {
   id: string;
   name: string;
@@ -33,10 +23,11 @@ export interface VoxelObjectJSON {
   height?: number;
   rotation?: number;
   visible: boolean;
+  color?: string;
+  locked?: boolean;
   properties?: VoxelObjectProperties;
 }
 
-/** A named layer that holds placed objects rather than voxel data. */
 export interface VoxelObjectLayerJSON {
   id: string;
   name: string;
@@ -49,23 +40,11 @@ export interface VoxelWorldJSON {
   version: 1;
   chunkSize: number;
   tilesets: TilesetDefinition[];
-  /**
-   * Block definitions embedded by a converter so the file is self-contained.
-   * Absent in files produced by VoxelSerializer.serialize() (the registry
-   * lives in user code there); present in converter output.
-   */
   blocks?: BlockDefinition[];
   layers: VoxelLayerJSON[];
-  /** Named object layers (spawn points, triggers, etc.). */
   objectLayers?: VoxelObjectLayerJSON[];
 }
 
-/**
- * Serialises and deserialises a VoxelWorld to/from a plain JSON object.
- *
- * Format: sparse voxel map keyed by "x,y,z" strings for human readability and
- * easy diffing.  The version field allows future format migrations.
- */
 export class VoxelSerializer {
   serialize(
     world: VoxelWorld,
@@ -82,10 +61,6 @@ export class VoxelSerializer {
     };
   }
 
-  /**
-   * Clears `world` and restores it from a serialised JSON snapshot.
-   * Throws if the data version is not 1.
-   */
   deserialize(
     data: VoxelWorldJSON,
     world: VoxelWorld

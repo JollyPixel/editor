@@ -46,6 +46,9 @@ export interface FreeFlyCameraOptions {
  * Wheel dollies along the view; wheel while looking sets the fly speed.
  */
 export class FreeFlyCamera extends CameraComponent {
+  enabled = true;
+
+  #descendBlocked = false;
   #vel = new THREE.Vector3();
   #yaw: number;
   #pitch: number;
@@ -165,10 +168,22 @@ export class FreeFlyCamera extends CameraComponent {
     deltaTime: number
   ) {
     const { input } = this.actor.world;
+    const isDescending = input.keyboard.isDown("ShiftLeft") ||
+      input.keyboard.isDown("ShiftRight");
+
+    if (!this.enabled) {
+      this.#descendBlocked = isDescending;
+      this.#vel.set(0, 0, 0);
+
+      return;
+    }
+    if (!isDescending) {
+      this.#descendBlocked = false;
+    }
+
     const { transform } = this.actor;
     const isLooking = input.mouse.isDown("middle");
 
-    // Mouse look
     if (isLooking && input.mouse.isMoving()) {
       const delta = input.mouse.viewportDelta(false);
       this.#yaw -= delta.x * this.#mouseSensitivity;
@@ -181,13 +196,11 @@ export class FreeFlyCamera extends CameraComponent {
       this.#applyOrientation();
     }
 
-    // Camera orientation
     transform.getForward(this.#forward);
     this.#forward.y = 0;
     this.#forward.normalize();
     this.#right.crossVectors(this.#forward, this.#up).normalize();
 
-    // Movement intent
     this.#move.set(0, 0, 0);
 
     if (
@@ -217,10 +230,7 @@ export class FreeFlyCamera extends CameraComponent {
     if (input.keyboard.isDown("Space")) {
       this.#move.y += 1;
     }
-    if (
-      input.keyboard.isDown("ShiftLeft") ||
-      input.keyboard.isDown("ShiftRight")
-    ) {
+    if (isDescending && !this.#descendBlocked) {
       this.#move.y -= 1;
     }
 
