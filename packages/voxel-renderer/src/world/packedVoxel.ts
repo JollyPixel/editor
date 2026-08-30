@@ -1,4 +1,8 @@
 // Import Internal Dependencies
+import {
+  AIR_BLOCK_ID,
+  isAir
+} from "../blocks/BlockId.ts";
 import type { VoxelEntry } from "./types.ts";
 
 // CONSTANTS
@@ -24,9 +28,14 @@ export function packVoxel(
   blockId: number,
   transform: number
 ): PackedVoxel {
+  if (isAir(blockId)) {
+    throw new RangeError(
+      `Block id ${AIR_BLOCK_ID} is reserved for air; remove the voxel instead.`
+    );
+  }
   if (blockId < 0 || blockId > MAX_BLOCK_ID) {
     throw new RangeError(
-      `Block id ${blockId} is out of range (0..${MAX_BLOCK_ID}).`
+      `Block id ${blockId} is out of range (1..${MAX_BLOCK_ID}).`
     );
   }
 

@@ -40,13 +40,11 @@ describe("BlockRegistry constructor", () => {
     assert.equal(registry.has(2), true);
   });
 
-  it("silently skips id=0 in constructor defs", () => {
-    const registry = new BlockRegistry([
-      makeDef(0),
-      makeDef(1)
-    ]);
-    assert.equal(registry.has(0), false);
-    assert.equal(registry.has(1), true);
+  it("throws on an air definition, like register does", () => {
+    assert.throws(
+      () => new BlockRegistry([makeDef(1), makeDef(0)]),
+      /Block id 0 is reserved/
+    );
   });
 });
 
@@ -61,7 +59,7 @@ describe("BlockRegistry.register", () => {
     const registry = new BlockRegistry();
     assert.throws(
       () => registry.register(makeDef(0)),
-      /Block ID 0 is reserved/
+      /Block id 0 is reserved/
     );
   });
 
@@ -304,10 +302,9 @@ describe("BlockRegistry.nextId", () => {
     assert.equal(registry.nextId, 4);
   });
 
-  it("ignores the air definition the constructor skips", () => {
-    const registry = new BlockRegistry([makeDef(0)]);
-
-    assert.equal(registry.nextId, 1);
+  it("stays at one when a rejected air definition aborts the constructor", () => {
+    assert.throws(() => new BlockRegistry([makeDef(0)]));
+    assert.equal(new BlockRegistry().nextId, 1);
   });
 
   it("does not reuse a gap left between two blocks", () => {

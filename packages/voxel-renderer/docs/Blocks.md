@@ -9,11 +9,7 @@ engine's `blocks` option. Only `id`, `name`, and `shapeId` are required.
 
 ```ts
 export interface BlockDefinition {
-  /**
-   * Unique numeric identifier.
-   * @note
-   * 0 is reserved for air.
-   **/
+  /** Unique numeric identifier, 1 or above. See [Air](#air). */
   id: number;
   /** Human-readable name for editor display. */
   name: string;
@@ -52,6 +48,26 @@ registry.register({ id: 1, name: "Stone", shapeId: "cube" });
 
 A `TileRef` may be a bare `[col, row]` tuple; resolution expands it and applies
 `defaultTilesetId` to any ref that omits a tileset.
+
+## Air
+
+```ts
+const AIR_BLOCK_ID = 0;
+function isAir(blockId: number): boolean;
+```
+
+Id `0` is reserved: a cell holding air holds no voxel at all. Nothing stores it,
+so both ends of the invariant throw rather than accept it.
+
+- `BlockRegistry.register()` (and the constructor, which routes through it)
+  throws an `Error` on a definition with id `0`.
+- `packVoxel()` throws a `RangeError`, which takes every write path with it:
+  `VoxelChunk.set()`, `VoxelLayer.setVoxelAt()`, `VoxelWorld.setVoxelAt()` and
+  `VoxelEngine.setVoxel()`.
+
+Erase a voxel with `removeVoxel()`; setting it to air is not a supported
+alternative. On the read side, air is a missing entry: `undefined` from
+`getVoxelAt()`, [`VOXEL_ABSENT`](./Chunk.md) from the packed accessors.
 
 ## ResolvedBlockDefinition
 
@@ -157,7 +173,8 @@ Maps numeric block IDs to `ResolvedBlockDefinition` objects. Accessible via `Vox
 #### `register(def: BlockDefinition): this`
 
 Registers a block definition, filling the defaults documented on
-[`BlockDefinition`](#blockdefinition). Throws if `def.id === 0`.
+[`BlockDefinition`](#blockdefinition). Throws on `AIR_BLOCK_ID`, see
+[Air](#air).
 
 #### `get(id: number): ResolvedBlockDefinition | undefined`
 

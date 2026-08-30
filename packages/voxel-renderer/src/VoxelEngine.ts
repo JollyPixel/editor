@@ -121,9 +121,6 @@ export interface VoxelEngineOptions {
   materialCustomizer?: MaterialCustomizerFn;
 
   layers?: string[];
-  /**
-   * Initial block definitions; block ID 0 is reserved for air.
-   */
   blocks?: BlockDefinition[];
   /**
    * Shapes registered after the defaults from `BlockShapeRegistry`.

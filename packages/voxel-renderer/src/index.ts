@@ -26,6 +26,10 @@ export * from "./blocks/shapes/index.ts";
 
 export { BlockRegistry } from "./blocks/BlockRegistry.ts";
 export {
+  AIR_BLOCK_ID,
+  isAir
+} from "./blocks/BlockId.ts";
+export {
   resolveBlockDefinition,
   type BlockDefinition,
   type ResolvedBlockDefinition

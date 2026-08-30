@@ -8,9 +8,6 @@ import type { FACE } from "../utils/math.ts";
 import type { BlockShapeID } from "./BlockShape.ts";
 
 export interface BlockDefinition {
-  /**
-   * Numeric ID; 0 is reserved for air.
-   */
   id: number;
   name: string;
   shapeId: BlockShapeID;

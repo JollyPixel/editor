@@ -113,10 +113,7 @@ interface VoxelEngineOptions {
    * Optional list of layer names to create on initialization.
    */
   layers?: string[];
-  /**
-   * Optional initial block definitions to register.
-   * Block ID 0 is reserved for air
-   */
+  /** Optional initial block definitions to register. */
   blocks?: BlockDefinition[];
   /**
    * Optional block shapes to register in addition to the default

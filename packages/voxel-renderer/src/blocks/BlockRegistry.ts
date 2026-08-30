@@ -1,5 +1,9 @@
 // Import Internal Dependencies
 import {
+  AIR_BLOCK_ID,
+  isAir
+} from "./BlockId.ts";
+import {
   resolveBlockDefinition,
   type BlockDefinition,
   type ResolvedBlockDefinition
@@ -14,10 +18,6 @@ export class BlockRegistry implements Iterable<ResolvedBlockDefinition> {
     defs: BlockDefinition[] = []
   ) {
     for (const def of defs) {
-      if (def.id === 0) {
-        continue;
-      }
-
       this.register(def);
     }
   }
@@ -25,9 +25,9 @@ export class BlockRegistry implements Iterable<ResolvedBlockDefinition> {
   register(
     def: BlockDefinition
   ): this {
-    if (def.id === 0) {
+    if (isAir(def.id)) {
       throw new Error(
-        "Block ID 0 is reserved for air and cannot be registered."
+        `Block id ${AIR_BLOCK_ID} is reserved for air and cannot be registered.`
       );
     }
 
