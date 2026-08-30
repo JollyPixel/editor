@@ -13,10 +13,9 @@ import {
   vec4
 } from "three/tsl";
 
-export interface TileWrappedMaterial extends THREE.Material {
-  map?: THREE.Texture | null;
-  colorNode?: unknown;
-}
+export type TileWrappedMaterial =
+  | THREE.MeshLambertMaterial
+  | THREE.MeshStandardMaterial;
 
 /**
  * Repeats atlas tiles across greedy quads using WebGPU-compatible TSL nodes.
@@ -51,5 +50,8 @@ export function enableTileWrapping(
   // Opacity is omitted: setupDiffuseColor() applies it after this node.
   const tint = reference("color", "color", material);
 
-  material.colorNode = vec4(tint, float(1)).mul(sampledDiffuseColor);
+  // The WebGPU build aliases the classic material names onto their node
+  // variants, so `colorNode` exists at runtime but not on the classic type.
+  (material as { colorNode?: unknown; }).colorNode = vec4(tint, float(1))
+    .mul(sampledDiffuseColor);
 }

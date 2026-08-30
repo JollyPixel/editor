@@ -37,11 +37,11 @@ export class VoxelBehavior extends ActorComponent {
   awake() {
     const {
       world,
-      tilesetLoader
+      tilesets
     } = this.getAsset(VoxelBehavior.assets.tiledMap);
 
     const vr = this.actor.addComponentAndGet(VoxelRenderer, {
-      tilesetLoader
+      tilesets
     });
 
     vr.engine.load(world, {

@@ -22,7 +22,10 @@ import {
 import type {
   VoxelWorldJSON
 } from "../../serialization/VoxelSerializer.ts";
-import { TilesetLoader } from "../../tileset/TilesetLoader.ts";
+import {
+  loadTilesets,
+  type TilesetSource
+} from "../../tileset/loadTilesets.ts";
 
 export type TiledMapAssetLoaderOptions = Omit<
   TiledConverterOptions,
@@ -31,7 +34,7 @@ export type TiledMapAssetLoaderOptions = Omit<
 
 export interface VoxelTiledMap {
   readonly world: VoxelWorldJSON;
-  readonly tilesetLoader: TilesetLoader;
+  readonly tilesets: TilesetSource[];
 }
 
 export const TiledMapAssetType = new AssetType<VoxelTiledMap>("tilemap");
@@ -69,14 +72,13 @@ export class TiledMapAssetLoader implements AssetLoader<VoxelTiledMap> {
         ...this.#options
       }
     );
-    const tilesetLoader = new TilesetLoader({
+    const tilesets = await loadTilesets(world.tilesets, {
       manager: this.#manager
     });
-    await tilesetLoader.fromWorld(world);
 
     return {
       world,
-      tilesetLoader
+      tilesets
     };
   }
 }

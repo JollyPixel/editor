@@ -57,21 +57,26 @@ function makeFakeVoxelRenderer(
   const dirtyReasons: string[] = [];
   const updatedTilesets: string[] = [];
   const updatedRegions: SelectionRect[] = [];
+  const atlases = new Map(definitions.map((def) => [
+    def.id,
+    {
+      def,
+      sourceTexture: { image },
+      updateSource(_image: object, bounds?: SelectionRect) {
+        if (bounds) {
+          updatedRegions.push(bounds);
+        }
+        else {
+          updatedTilesets.push(def.id);
+        }
+      }
+    }
+  ] as const));
   const tilesetManager = {
-    getSourceTexture: () => {
-      return { image };
-    },
-    updateSourceImage: (_image: object, id: string) => {
-      updatedTilesets.push(id);
-    },
-    updateSourceRegion: (
-      _image: object,
-      bounds: SelectionRect,
-      _id: string
-    ) => {
-      updatedRegions.push(bounds);
-    },
-    getDefinitions: () => definitions
+    defaultTilesetId: definitions[0]?.id ?? null,
+    has: (id: string) => atlases.has(id),
+    atlas: (id: string) => atlases.get(id),
+    definitions: () => definitions
   };
   const fake = {
     engine: {

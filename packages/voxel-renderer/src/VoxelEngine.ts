@@ -23,8 +23,11 @@ import {
   VoxelDebugger,
   type VoxelDebuggerOptions
 } from "./debug/VoxelDebugger.ts";
-import { VoxelMeshBuilder } from "./mesh/VoxelMeshBuilder.ts";
-import { parseChunkGeometryKey } from "./mesh/chunkGeometryKey.ts";
+import {
+  VoxelMeshBuilder,
+  parseChunkGeometryKey,
+  enableTileWrapping
+} from "./mesh/index.ts";
 import {
   VoxelSerializer,
   type VoxelWorldJSON,
@@ -33,8 +36,7 @@ import {
 } from "./serialization/VoxelSerializer.ts";
 import { TilesetManager } from "./tileset/TilesetManager.ts";
 import type { TilesetDefinition } from "./tileset/types.ts";
-import type { TilesetLoader } from "./tileset/TilesetLoader.ts";
-import { enableTileWrapping } from "./tileset/tileWrapping.ts";
+import type { TilesetSource } from "./tileset/loadTilesets.ts";
 import { VoxelWorld } from "./world/VoxelWorld.ts";
 import {
   VoxelLayer,
@@ -67,6 +69,12 @@ export interface VoxelLoadOptions {
    * Collapses layers before rendering; higher-priority voxels win overlaps.
    */
   mergeLayers?: boolean;
+
+  /**
+   * Atlases to register before the world is read, for tilesets the engine was
+   * not constructed with.
+   */
+  tilesets?: Iterable<TilesetSource>;
 }
 
 type MaterialCustomizerFn = (
@@ -158,9 +166,10 @@ export interface VoxelEngineOptions {
   greedy?: boolean;
 
   /**
-   * Preloaded tilesets registered synchronously during construction.
+   * Preloaded atlases (see `loadTilesets`) registered synchronously during
+   * construction.
    */
-  tilesetLoader?: TilesetLoader;
+  tilesets?: Iterable<TilesetSource>;
 
   /**
    * Per-tick rebuild budget in milliseconds; 0 drains the queue.
@@ -222,7 +231,6 @@ export class VoxelEngine {
   #materialType: "lambert" | "standard";
   #alphaTest: number;
 
-  #tilesetLoader: TilesetLoader | null;
   #logger: VoxelLogger;
   #onLayerUpdated?: VoxelLayerHookListener;
 
@@ -244,7 +252,7 @@ export class VoxelEngine {
       onLayerUpdated,
       debug,
       tilesetPadding,
-      tilesetLoader,
+      tilesets,
       greedy = false,
       rebuildBudgetMs = 8
     } = options;
@@ -274,12 +282,7 @@ export class VoxelEngine {
     );
 
     this.tilesetManager = new TilesetManager({ padding: tilesetPadding });
-    this.#tilesetLoader = tilesetLoader ?? null;
-    if (tilesetLoader) {
-      for (const entry of tilesetLoader.tilesets.values()) {
-        this.tilesetManager.registerTexture(entry.def, entry.texture);
-      }
-    }
+    this.#registerTilesets(tilesets);
     this.serializer = new VoxelSerializer();
 
     this.#meshBuilder = new VoxelMeshBuilder({
@@ -891,6 +894,16 @@ export class VoxelEngine {
     return result;
   }
 
+  #registerTilesets(
+    sources: Iterable<TilesetSource> = []
+  ): void {
+    for (const { def, texture } of sources) {
+      if (!this.tilesetManager.has(def.id)) {
+        this.tilesetManager.registerTexture(def, texture);
+      }
+    }
+  }
+
   loadTileset(
     def: TilesetDefinition,
     texture: THREE.Texture<HTMLImageElement>
@@ -940,18 +953,14 @@ export class VoxelEngine {
 
     this.serializer.deserialize(data, this.world);
 
+    this.#registerTilesets(options.tilesets);
     for (const tilesetDef of data.tilesets) {
-      if (this.tilesetManager.getTexture(tilesetDef.id)) {
-        continue;
-      }
-      const entry = this.#tilesetLoader?.tilesets.get(tilesetDef.id);
-      if (!entry) {
+      if (!this.tilesetManager.has(tilesetDef.id)) {
         throw new Error(
-          `VoxelEngine.load(): tileset '${tilesetDef.id}' is not pre-loaded. ` +
-          "Call TilesetLoader.fromWorld() before constructing VoxelEngine."
+          `VoxelEngine.load(): tileset '${tilesetDef.id}' is not registered. ` +
+          "Pass it through loadTilesets() first."
         );
       }
-      this.tilesetManager.registerTexture(entry.def, entry.texture);
     }
 
     for (const mat of this.#materials.values()) {
@@ -999,9 +1008,7 @@ export class VoxelEngine {
       return material;
     }
 
-    const texture = this.tilesetManager.getTexture(
-      tilesetId
-    ) ?? null;
+    const { texture } = this.tilesetManager.atlas(tilesetId);
     const transparent = bucket < kOpacitySteps;
 
     const materialOptions = {

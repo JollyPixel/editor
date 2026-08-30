@@ -44,7 +44,10 @@ export function packTransform(
   flipZ: boolean,
   flipY = false
 ): number {
-  return (rotation & 0b11) | (flipX ? 0b100 : 0) | (flipZ ? 0b1000 : 0) | (flipY ? 0b10000 : 0);
+  return (rotation & 0b11) |
+    (flipX ? 0b100 : 0) |
+    (flipZ ? 0b1000 : 0) |
+    (flipY ? 0b10000 : 0);
 }
 
 export function unpackTransform(

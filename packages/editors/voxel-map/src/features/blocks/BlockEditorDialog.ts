@@ -170,7 +170,7 @@ export class BlockEditorDialog extends LitElement {
   }
 
   #tilesetOptions(): JollyOption<string>[] {
-    const definitions = this.vr?.engine.tilesetManager.getDefinitions() ?? [];
+    const definitions = this.vr?.engine.tilesetManager.definitions() ?? [];
 
     return definitions.map((def) => {
       return { label: def.id, value: def.id };

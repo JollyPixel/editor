@@ -2,7 +2,7 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import type { BlockVariantFace } from "./BlockVariantCache.ts";
+import type { BlockVariantFace } from "./variants/types.ts";
 
 // CONSTANTS
 const kInitialVertices = 4096;

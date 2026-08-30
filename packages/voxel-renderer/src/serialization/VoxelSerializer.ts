@@ -51,7 +51,7 @@ export class VoxelSerializer {
     return {
       version: 1,
       chunkSize: world.chunkSize,
-      tilesets: tilesetManager.getDefinitions(),
+      tilesets: tilesetManager.definitions(),
       layers: world
         .getLayers()
         .map((layer) => layer.toJSON()),

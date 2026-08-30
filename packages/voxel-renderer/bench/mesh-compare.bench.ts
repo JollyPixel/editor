@@ -2,8 +2,11 @@
 import { parseArgs } from "node:util";
 
 // Import Internal Dependencies
-import { VoxelMeshBuilder } from "../src/mesh/VoxelMeshBuilder.ts";
-import { createBenchEngine, populateTerrain } from "./common.ts";
+import { VoxelMeshBuilder } from "../src/mesh/index.ts";
+import {
+  createBenchEngine,
+  populateTerrain
+} from "./common.ts";
 
 /**
  * Naive vs greedy on one world, interleaved inside a single process.

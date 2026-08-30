@@ -175,7 +175,9 @@ export class BlockLibraryRenderer {
       block.defaultTexture?.tilesetId ??
       this.#tilesetManager.defaultTilesetId ??
       undefined;
-    const texture = this.#tilesetManager.getTexture(tilesetId) ?? null;
+    const texture = this.#tilesetManager.has(tilesetId) ?
+      this.#tilesetManager.atlas(tilesetId).texture :
+      null;
     const mat = new THREE.MeshLambertMaterial({
       map: texture,
       side: THREE.FrontSide,
@@ -204,7 +206,9 @@ export class BlockLibraryRenderer {
 
       if (tileRef && texture) {
         try {
-          const region = this.#tilesetManager.getTileUV(tileRef);
+          const region = this.#tilesetManager
+            .atlas(tileRef.tilesetId)
+            .uvFor(tileRef.col, tileRef.row);
           uOffset = region.offsetU;
           vOffset = region.offsetV;
           uScale = region.scaleU;

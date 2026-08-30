@@ -48,11 +48,11 @@ interface VoxelLayerOptions extends VoxelLayerConfigurableOptions {
 
 ```ts
 class VoxelLayer {
-  readonly id: string;
-  readonly name: string;
-  readonly order: number;
-  readonly visible: boolean;
-  readonly opacity: number;
+  id: string;
+  name: string;
+  order: number;
+  visible: boolean;
+  opacity: number;
   wasVisible: boolean;
 
   // number of currently allocated chunks
@@ -64,6 +64,10 @@ class VoxelLayer {
 }
 ```
 
+These properties are mutable in the TypeScript API because deserialization and
+world management update them. Application code should use the corresponding
+`VoxelWorld` or `VoxelEngine` methods so mesh invalidation and hooks still run.
+
 > **`offset`** - shifts where voxels render in world space; does not move chunk storage. Always use `VoxelWorld.setLayerOffset` or `translateLayer` so chunks are marked dirty.
 
 > **`opacity`** - `1` = fully opaque (default), `0` = hidden (same as `visible = false`). Values below `0` or above `1` are clamped. Semi-transparent layers (`0 < opacity < 1`) skip face occlusion but are still solid for collision. Always use `VoxelWorld.setLayerOpacity` or `updateLayer` to apply changes.
@@ -74,7 +78,7 @@ class VoxelLayer {
 
 ### toJSON(): VoxelLayerJSON
 
-Layer as a serializable JSON
+Returns the serializable layer state.
 
 ```ts
 interface VoxelLayerJSON {
@@ -112,7 +116,7 @@ if (!chunk) {}
 ### getVoxelAt(position: Vector3Like): VoxelEntry | undefined
 
 Read a voxel at world-space `position` (offset is applied).
-Returns a freshly built `VoxelEntry`, or `undefined` if empty — see the
+Returns a freshly built `VoxelEntry`, or `undefined` if empty. See the
 [storage note](./Chunk.md#storage) on why the result is never `===` what was written.
 
 ```ts
@@ -143,10 +147,12 @@ Remove the voxel at the given world-space `position`. If the containing chunk be
 layer.removeVoxelAt({ x: 0, y: 0, z: 0 });
 ```
 
-### centerToWorld(): Vector3
+### centerToWorld(): Vector3 | null
 
 Returns the world-space center of all voxels in the given layer, accounting for the layer offset.
-When the layer has no voxels the layer offset itself is returned as a Vector3.
+When the layer has no voxels the layer offset itself is returned as a `Vector3`.
+Every current implementation path returns a `Vector3`; the public declaration
+remains nullable.
 
 ### markChunkDirty(cx: number, cy: number, cz: number): void
 
@@ -156,7 +162,7 @@ Mark the chunk at the given chunk coordinates as dirty so it will be rebuilt.
 layer.markChunkDirty(0, 0, 0);
 ```
 
-### getChunks(): IterableIterator< VoxelChunk >
+### getChunks(): IterableIterator<VoxelChunk>
 
 Iterate allocated chunks in this layer.
 
@@ -165,3 +171,20 @@ for (const chunk of layer.getChunks()) {
   // process chunk
 }
 ```
+
+### clone(options?: Partial<VoxelLayerOptions>): VoxelLayer
+
+Creates a detached copy of the layer, including its voxels and properties. Use
+`VoxelWorld.cloneLayer()` or `VoxelEngine.cloneLayer()` when the clone should be
+added to a world.
+
+### mergeFrom(source: VoxelLayer): void
+
+Copies every voxel from `source` into this layer. Source voxels overwrite target
+voxels at the same world position. Prefer the world or engine merge method when
+the operation must update world state or emit hooks.
+
+### drainPendingRemovals(): IterableIterator<VoxelChunk>
+
+Consumes chunks that became empty and were removed from storage. Renderers use
+this iterator to dispose stale meshes; ordinary callers rarely need it.

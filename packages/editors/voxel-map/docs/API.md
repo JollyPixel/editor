@@ -141,7 +141,7 @@ Normal startup fetches the asset catalog, preloads the tilesets the voxel-map do
 
 ## Ownership of the tileset
 
-The voxel-map document names the tileset (`id`, `src`, `tileSize`); the pixel-art document holds its pixels. `TextureEditorBridge` seeds the drawing canvas from the loaded atlas, then every room snapshot and every stroke is pushed back into `TilesetManager.updateSourceImage()`. Block definitions are not part of either document — `EditorScene` derives them from the tileset grid on awake.
+The voxel-map document names the tileset (`id`, `src`, `tileSize`); the pixel-art document holds its pixels. `TextureEditorBridge` seeds the drawing canvas from the loaded atlas, then every room snapshot and every stroke is pushed back into `TilesetAtlas.updateSource()`. Block definitions are not part of either document — `EditorScene` derives them from the tileset grid on awake.
 
 ## Derived block texture state
 

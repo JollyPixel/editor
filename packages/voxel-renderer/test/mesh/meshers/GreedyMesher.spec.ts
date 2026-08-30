@@ -6,15 +6,15 @@ import assert from "node:assert/strict";
 import type * as THREE from "three";
 
 // Import Internal Dependencies
-import { VoxelWorld } from "../../src/world/VoxelWorld.ts";
-import { BlockRegistry } from "../../src/blocks/BlockRegistry.ts";
-import { BlockShapeRegistry } from "../../src/blocks/BlockShapeRegistry.ts";
-import { TilesetManager } from "../../src/tileset/TilesetManager.ts";
-import { VoxelMeshBuilder } from "../../src/mesh/VoxelMeshBuilder.ts";
-import { packTransform } from "../../src/utils/math.ts";
-import { mockTexture } from "../helpers/mockTexture.ts";
-import { DEFAULT_TEXTURE, makeBlockDef } from "../helpers/blocks.ts";
-import { makeAtlasDef } from "../helpers/atlas.ts";
+import { VoxelWorld } from "../../../src/world/VoxelWorld.ts";
+import { BlockRegistry } from "../../../src/blocks/BlockRegistry.ts";
+import { BlockShapeRegistry } from "../../../src/blocks/BlockShapeRegistry.ts";
+import { TilesetManager } from "../../../src/tileset/TilesetManager.ts";
+import { VoxelMeshBuilder } from "../../../src/mesh/index.ts";
+import { packTransform } from "../../../src/utils/math.ts";
+import { mockTexture } from "../../helpers/mockTexture.ts";
+import { DEFAULT_TEXTURE, makeBlockDef } from "../../helpers/blocks.ts";
+import { makeAtlasDef } from "../../helpers/atlas.ts";
 
 // CONSTANTS
 const kCubeId = 1;
@@ -340,7 +340,7 @@ describe("GreedyMesher — tile attributes", () => {
     const f = makeFixture();
     fill(f, { from: [0, 0, 0], to: [1, 0, 1] });
 
-    const expected = f.tilesetManager.getTileUV({ col: 0, row: 0 });
+    const expected = f.tilesetManager.atlas().uvFor(0, 0);
     const [geometry] = [...build(f)!.values()];
     const region = geometry.getAttribute("tileRegion");
     // The rect is stored as normalized uint16, so it decodes to within a step.
@@ -393,25 +393,6 @@ describe("GreedyMesher — layers", () => {
   });
 });
 
-describe("VoxelMeshBuilder — greedy toggle", () => {
-  it("defaults to off", () => {
-    const f = makeFixture({ greedy: false });
-    assert.equal(f.builder.greedy, false);
-  });
-
-  it("switches meshing mode at runtime", () => {
-    const f = makeFixture({ greedy: false });
-    fill(f, { from: [0, 0, 0], to: [3, 0, 3] });
-    assert.equal(countVertices(build(f)), 48 * 4);
-
-    f.builder.greedy = true;
-    assert.equal(countVertices(build(f)), 6 * 4);
-
-    f.builder.greedy = false;
-    assert.equal(countVertices(build(f)), 48 * 4);
-  });
-});
-
 describe("GreedyMesher — tiled attribute layout", () => {
   it("narrows tileRegion and tileRepeat but keeps tiled uv in float32", () => {
     const f = makeFixture();
@@ -460,7 +441,7 @@ describe("GreedyMesher — tiled attribute layout", () => {
 
     const [geometry] = [...build(f)!.values()];
     const attribute = geometry.getAttribute("tileRegion");
-    const expected = f.tilesetManager.getTileUV(DEFAULT_TEXTURE);
+    const expected = f.tilesetManager.atlas().uvFor(DEFAULT_TEXTURE.col, DEFAULT_TEXTURE.row);
     const step = 1 / 65535;
 
     for (let i = 0; i < attribute.count; i++) {

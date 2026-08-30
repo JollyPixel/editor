@@ -136,8 +136,10 @@ Geometry descriptor for one polygonal face of a block shape.
 
 ```ts
 interface FaceDefinition {
-  /** Axis-aligned culling direction used to find the neighbor to check. */
+  /** Texture slot and default culling direction. */
   face: FACE;
+  /** Neighbor to test; omitted uses `face`, while `null` disables culling. */
+  cull?: FACE | null;
   /** Outward-pointing surface normal (need not be axis-aligned). */
   normal: Vec3;
   /** 3 (triangle) or 4 (quad) positions in 0-1 block space. */
@@ -232,6 +234,53 @@ Incremented on every `register()`; see `BlockRegistry.version`.
 #### `static createDefault(): BlockShapeRegistry`
 
 Creates a standalone registry pre-loaded with all built-in shapes.
+
+## blocksFromTileset
+
+```ts
+function* blocksFromTileset(
+  def: ResolvedTilesetDefinition,
+  options?: BlocksFromTilesetOptions
+): IterableIterator<ResolvedBlockDefinition>;
+```
+
+Generates one cube block per tile of an atlas, numbered from 1 in row-major order,
+so a grid can seed a `BlockRegistry` without hand-writing a definition per tile.
+Take the definition from [`TilesetManager.atlas()`](./Tileset.md#tilesetmanager).
+Generated blocks default to `collidable: false`; override that value in `map` when
+the atlas represents solid terrain.
+
+```ts
+import { blocksFromTileset } from "@jolly-pixel/voxel.renderer";
+
+const { blockRegistry, tilesetManager } = vr.engine;
+
+const blocks = blocksFromTileset(
+  tilesetManager.atlas().def,
+  {
+    limit: 32,
+    map: () => ({ collidable: true })
+  }
+);
+for (const block of blocks) {
+  blockRegistry.register(block);
+}
+```
+
+```ts
+interface BlocksFromTilesetOptions {
+  /**
+   * Maximum block ID to generate (inclusive).
+   * @default 255
+   */
+  limit?: number;
+  map?: (blockId: number, col: number, row: number) => BlockOverrides;
+}
+
+type BlockOverrides = Partial<
+  Pick<ResolvedBlockDefinition, "name" | "shapeId" | "collidable" | "transparent">
+>;
+```
 
 ## Face
 

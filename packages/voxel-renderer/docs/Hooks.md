@@ -1,14 +1,13 @@
 # Hooks
 
-Hooks allow you to listen for changes in `VoxelEngine`, for example when a layer
-is added, removed or updated. They are particularly useful for synchronizing voxel-world
-changes between multiple clients or systems.
+Hooks report voxel, layer, and object-layer changes from `VoxelEngine`. They are
+useful for synchronizing a voxel world with another client or system.
 
 ```ts
 import {
   VoxelEngine,
   type VoxelLayerHookEvent
-} from "@jolly-pixel/voxel-renderer";
+} from "@jolly-pixel/voxel.renderer";
 
 function onLayerUpdated(
   event: VoxelLayerHookEvent
@@ -20,7 +19,7 @@ function onLayerUpdated(
 }
 
 const engine = new VoxelEngine({
-  onLayerUpdated,
+  onLayerUpdated
 });
 ```
 
@@ -44,6 +43,8 @@ gives you a precise `metadata` type with no casting required.
 | `"added"` | `{ options: VoxelLayerConfigurableOptions }` | |
 | `"removed"` | `{}` | |
 | `"updated"` | `{ options: Partial<VoxelLayerConfigurableOptions> }` | |
+| `"cloned"` | `{ options: PartialExcept<VoxelLayerOptions, "name"> }` | `layerName` is the source layer. |
+| `"merged"` | `{ targetLayerName: string }` | `layerName` is the source layer. |
 | `"offset-updated"` | `{ offset: VoxelCoord }` or `{ delta: VoxelCoord }` | |
 | `"voxel-set"` | `{ position, blockId, rotation, flipX, flipZ, flipY }` | |
 | `"voxel-removed"` | `{ position: Vector3Like }` | |
@@ -58,21 +59,6 @@ gives you a precise `metadata` type with no casting required.
 | `"object-updated"` | `{ objectId: string; patch: Partial<VoxelObjectJSON> }` | |
 
 `VoxelLayerHookAction` is a convenience alias for `VoxelLayerHookEvent["action"]`.
-
-## Breaking change: `"object-added"` metadata
-
-Prior to the network sync layer, the `"object-added"` event carried `{ objectId: string }`.
-It now carries `{ object: VoxelObjectJSON }` so remote commands can fully reconstruct the
-object without an extra lookup. Update existing consumers:
-
-```ts
-// Before
-if (event.action === "object-added") {
-  console.log(event.metadata.objectId);
-}
-
-// After
-if (event.action === "object-added") {
-  console.log(event.metadata.object.id); // same value, richer payload
-}
-```
+`VOXEL_LAYER_HOOK_ACTIONS` contains the same action vocabulary for integrations
+that need a runtime list. The `"object-added"` event carries the full object in
+`metadata.object`, so a remote consumer can reconstruct it without another lookup.

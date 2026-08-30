@@ -175,7 +175,7 @@ export class TextureEditor extends LitElement {
 
     const resolvedId = tilesetId ?? this.vr.engine.tilesetManager.defaultTilesetId;
     const def = resolvedId
-      ? this.vr.engine.tilesetManager.getDefinitions().find((candidate) => candidate.id === resolvedId)
+      ? this.vr.engine.tilesetManager.definitions().find((candidate) => candidate.id === resolvedId)
       : undefined;
     if (def) {
       this.#uvBridge?.setActiveTileset(def.id, def.tileSize);
@@ -208,7 +208,7 @@ export class TextureEditor extends LitElement {
   }
 
   override render() {
-    const tilesetDefs = this.vr?.engine.tilesetManager.getDefinitions() ?? [];
+    const tilesetDefs = this.vr?.engine.tilesetManager.definitions() ?? [];
     const currentTilesetId = this.tilesetId || this.vr?.engine.tilesetManager.defaultTilesetId || "";
     const tilesetOptions: JollyOption<string>[] = tilesetDefs.map((def) => {
       return { label: def.id, value: def.id };

@@ -8,23 +8,14 @@ import type { VoxelLayer } from "../world/VoxelLayer.ts";
 import type { BlockRegistry } from "../blocks/BlockRegistry.ts";
 import type { BlockShapeRegistry } from "../blocks/BlockShapeRegistry.ts";
 import type { TilesetManager } from "../tileset/TilesetManager.ts";
-import {
-  voxelBlockId,
-  voxelTransform
-} from "../world/packedVoxel.ts";
-import {
-  FACE_OFFSETS,
-  FACE_OPPOSITE
-} from "../utils/math.ts";
-import { BlockVariantCache } from "./BlockVariantCache.ts";
+import type { MeshPassOptions } from "./types.ts";
+import { BlockVariantCache } from "./variants/BlockVariantCache.ts";
 import { chunkGeometryKey } from "./chunkGeometryKey.ts";
 import { GeometryBuffer } from "./GeometryBuffer.ts";
 import { MeshBuildStats } from "./MeshBuildStats.ts";
-import {
-  GreedyMesher,
-  type MeshPassOptions
-} from "./GreedyMesher.ts";
-import { ChunkNeighbourhood } from "./ChunkNeighbourhood.ts";
+import { GreedyMesher } from "./meshers/GreedyMesher.ts";
+import { NaiveMesher } from "./meshers/NaiveMesher.ts";
+import { ChunkNeighbourhood } from "./neighbourhood/ChunkNeighbourhood.ts";
 
 export interface VoxelMeshBuilderOptions {
   world: VoxelWorld;
@@ -51,6 +42,7 @@ export class VoxelMeshBuilder {
   #tilesetManager: TilesetManager;
   #variants: BlockVariantCache;
   #greedyMesher: GreedyMesher;
+  #naiveMesher: NaiveMesher;
   #greedy: boolean;
 
   #buffers: (GeometryBuffer | undefined)[] = [];
@@ -77,6 +69,7 @@ export class VoxelMeshBuilder {
       tilesetManager: options.tilesetManager
     });
     this.#greedyMesher = new GreedyMesher(this.#variants);
+    this.#naiveMesher = new NaiveMesher(this.#variants);
   }
 
   get greedy(): boolean {
@@ -136,84 +129,13 @@ export class VoxelMeshBuilder {
       stats,
       bufferFor: this.#bufferFor
     };
-    const emitted = this.#greedy ?
-      this.#greedyMesher.mesh(pass) :
-      this.#buildNaive(pass);
+    const mesher = this.#greedy ? this.#greedyMesher : this.#naiveMesher;
+    const emitted = mesher.mesh(pass);
 
     const geometries = emitted ? this.#collectGeometries() : null;
     stats.buildTimeMs = performance.now() - startedAt;
 
     return geometries;
-  }
-
-  #buildNaive(
-    options: MeshPassOptions
-  ): boolean {
-    const {
-      chunk,
-      neighbourhood,
-      worldOriginX,
-      worldOriginY,
-      worldOriginZ,
-      stats
-    } = options;
-    const { shift, mask } = chunk;
-    const shiftZ = shift * 2;
-    const { keys, values, capacity } = chunk.store;
-    let emitted = false;
-
-    for (let slot = 0; slot < capacity; slot++) {
-      const linearIdx = keys[slot];
-      if (linearIdx < 0) {
-        continue;
-      }
-
-      const lx = linearIdx & mask;
-      const ly = (linearIdx >> shift) & mask;
-      const lz = linearIdx >> shiftZ;
-
-      const wx = worldOriginX + lx;
-      const wy = worldOriginY + ly;
-      const wz = worldOriginZ + lz;
-
-      stats.voxels++;
-      if (!neighbourhood.winsCompositing(wx, wy, wz)) {
-        stats.hiddenVoxels++;
-        continue;
-      }
-
-      const packed = values[slot];
-      const variant = this.#variants.get(
-        voxelBlockId(packed),
-        voxelTransform(packed)
-      );
-      if (variant === null) {
-        continue;
-      }
-
-      for (const face of variant.faces) {
-        const { cull } = face;
-        if (cull >= 0) {
-          const offset = FACE_OFFSETS[cull];
-          const hidden = neighbourhood.isNeighbourFaceHidden(
-            wx + offset[0],
-            wy + offset[1],
-            wz + offset[2],
-            FACE_OPPOSITE[cull]
-          );
-          if (hidden) {
-            stats.culledFaces++;
-            continue;
-          }
-        }
-
-        this.#bufferFor(face.slot).addFace(face, wx, wy, wz);
-        stats.faces++;
-        emitted = true;
-      }
-    }
-
-    return emitted;
   }
 
   #resetBuffers(): void {

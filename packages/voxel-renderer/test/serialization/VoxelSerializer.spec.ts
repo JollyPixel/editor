@@ -8,15 +8,15 @@ import { VoxelWorld } from "../../src/world/VoxelWorld.ts";
 import type { TilesetManager } from "../../src/tileset/TilesetManager.ts";
 import { makeVoxelEntry } from "../helpers/voxelEntry.ts";
 
-// Minimal TilesetManager stub — serialize() only calls getDefinitions()
+// Minimal TilesetManager stub - serialize() only calls definitions()
 const emptyTilesetManager = {
-  getDefinitions() {
+  definitions() {
     return [];
   }
 } as unknown as TilesetManager;
 
 const tilesetManagerWithOne = {
-  getDefinitions() {
+  definitions() {
     return [{ id: "atlas", src: "/atlas.png", tileSize: 16, cols: 4, rows: 4 }];
   }
 } as unknown as TilesetManager;

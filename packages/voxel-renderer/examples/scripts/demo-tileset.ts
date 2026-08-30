@@ -4,6 +4,7 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import {
   TilesetManager,
+  loadTilesets,
   type TilesetUVRegion
 } from "../../src/tileset/index.ts";
 import {
@@ -26,19 +27,23 @@ const kGap = 1.15;
 
 const tilesetManager = new TilesetManager();
 
-await tilesetManager.loadTileset({
-  id: "main",
-  src: kTileSrc,
-  tileSize: 32
-});
+for (const { def, texture } of await loadTilesets([
+  {
+    id: "main",
+    src: kTileSrc,
+    tileSize: 32
+  }
+])) {
+  tilesetManager.registerTexture(def, texture);
+}
 
 console.log("[tileset-demo] Tileset loaded. defaultTilesetId:", tilesetManager.defaultTilesetId);
-// console.log("[tileset-demo] Definitions:", tilesetManager.getDefinitions());
+// console.log("[tileset-demo] Definitions:", tilesetManager.definitions());
 
 // // Log all UV regions for verification
 // for (let row = 0; row < kRows; row++) {
 //   for (let col = 0; col < kCols; col++) {
-//     const uv = tilesetManager.getTileUV({ col, row });
+//     const uv = tilesetManager.atlas().uvFor(col, row);
 //     console.log(`  tile(col=${col}, row=${row}):`, uv);
 //   }
 // }
@@ -74,7 +79,7 @@ scene.add(dirLight);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const texture = tilesetManager.getTexture()!;
+const texture = tilesetManager.atlas().texture;
 
 /**
  * Creates a MeshLambertMaterial for a single tile.
@@ -106,7 +111,7 @@ const labelEntries: LabelEntry[] = [];
 
 for (let row = 0; row < kRows; row++) {
   for (let col = 0; col < kCols; col++) {
-    const uv = tilesetManager.getTileUV({ col, row });
+    const uv = tilesetManager.atlas().uvFor(col, row);
     const mesh = new THREE.Mesh(kQuadGeo, createTileMaterial(uv));
     mesh.position.set(col * kGap, 0, -row * kGap);
     scene.add(mesh);

@@ -10,7 +10,7 @@ import { VoxelWorld } from "../../src/world/VoxelWorld.ts";
 import { BlockRegistry } from "../../src/blocks/BlockRegistry.ts";
 import { BlockShapeRegistry } from "../../src/blocks/BlockShapeRegistry.ts";
 import { TilesetManager } from "../../src/tileset/TilesetManager.ts";
-import { VoxelMeshBuilder } from "../../src/mesh/VoxelMeshBuilder.ts";
+import { VoxelMeshBuilder } from "../../src/mesh/index.ts";
 import { packTransform } from "../../src/utils/math.ts";
 import type { VoxelChunk } from "../../src/world/VoxelChunk.ts";
 import { mockTexture } from "../helpers/mockTexture.ts";
@@ -400,7 +400,7 @@ describe("VoxelMeshBuilder — geometry attribute layout", () => {
     const uvs = geometry.getAttribute("uv");
 
     // Every vertex of a cube sits on a corner of its tile's atlas rect.
-    const region = f.tilesetManager.getTileUV(DEFAULT_TEXTURE);
+    const region = f.tilesetManager.atlas().uvFor(DEFAULT_TEXTURE.col, DEFAULT_TEXTURE.row);
     const step = 1 / 65535;
 
     for (let i = 0; i < uvs.count; i++) {
@@ -428,6 +428,28 @@ describe("VoxelMeshBuilder — geometry attribute layout", () => {
     // 6 quads → 12 triangles.
     assert.ok(index.array instanceof Uint16Array);
     assert.equal(index.count, 36);
+  });
+});
+
+describe("VoxelMeshBuilder — greedy toggle", () => {
+  it("defaults to off", () => {
+    assert.equal(makeFixture().builder.greedy, false);
+  });
+
+  it("switches meshing mode at runtime", () => {
+    const f = makeFixture();
+    for (let x = 0; x <= 3; x++) {
+      for (let z = 0; z <= 3; z++) {
+        f.world.setVoxelAt("test", { x, y: 0, z }, { blockId: kCubeId, transform: 0 });
+      }
+    }
+    assert.equal(countVertices(f), 48 * 4);
+
+    f.builder.greedy = true;
+    assert.equal(countVertices(f), 6 * 4);
+
+    f.builder.greedy = false;
+    assert.equal(countVertices(f), 48 * 4);
   });
 });
 

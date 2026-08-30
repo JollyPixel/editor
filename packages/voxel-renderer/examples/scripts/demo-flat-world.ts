@@ -8,7 +8,7 @@ import * as network from "@jolly-pixel/network/client";
 import "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { TilesetLoader } from "../../src/tileset/TilesetLoader.ts";
+import { loadTilesets } from "../../src/tileset/loadTilesets.ts";
 import { VoxelRenderer } from "../../src/VoxelRenderer.ts";
 import { VoxelSyncClient } from "../../src/network/VoxelSyncClient.ts";
 import type {
@@ -39,8 +39,8 @@ if (!(canvas instanceof HTMLCanvasElement)) {
 
 const username = await resolveUsername();
 const tileset = createTerrainTileset();
-const tilesetLoader = new TilesetLoader();
-await tilesetLoader.fromTileDefinition(tileset.definition);
+
+const tilesets = await loadTilesets([tileset.definition]);
 
 const runtime = await Runtime.create(canvas, {
   includePerformanceStats: false,
@@ -74,7 +74,7 @@ const voxelMap = world.createActor("map")
   .addComponentAndGet(VoxelRenderer, {
     chunkSize: CHUNK_SIZE,
     blocks: tileset.blocks,
-    tilesetLoader,
+    tilesets,
     material: "lambert"
   });
 

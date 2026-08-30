@@ -8,8 +8,8 @@ import {
   rotateFace,
   rotateNormal,
   flipYFace
-} from "../../src/mesh/rotation.ts";
-import { FACE } from "../../src/utils/math.ts";
+} from "../../../src/mesh/variants/rotation.ts";
+import { FACE } from "../../../src/utils/math.ts";
 
 // CONSTANTS
 const kEpsilon = 1e-10;

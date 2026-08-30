@@ -16,14 +16,14 @@ export {
   createVoxelMapState,
   decodeVoxelMapDocument,
   encodeVoxelMapDocument,
-  InvalidVoxelMapDocumentError,
   loadVoxelMapDocument,
   voxelMapSnapshot
 } from "./VoxelMapDocument.ts";
+export { InvalidVoxelMapDocumentError } from "./errors/InvalidVoxelMapDocumentError.ts";
 
-export type {
-  AtlasSize,
-  ResolvedTilesetDefinition,
-  TilesetDefinition
+export {
+  resolveTilesetDefinition,
+  type AtlasSize,
+  type ResolvedTilesetDefinition,
+  type TilesetDefinition
 } from "../tileset/types.ts";
-export { resolveTilesetDefinition } from "../tileset/resolve.ts";

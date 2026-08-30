@@ -47,5 +47,5 @@ test("TiledMapAssetLoader prepares a catalog record", async(context) => {
     record.source
   );
   assert.strictEqual(asset.world.version, 1);
-  assert.strictEqual(asset.tilesetLoader.tilesets.size, 0);
+  assert.deepStrictEqual(asset.tilesets, []);
 });

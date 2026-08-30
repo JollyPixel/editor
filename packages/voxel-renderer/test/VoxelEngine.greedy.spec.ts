@@ -6,10 +6,10 @@ import assert from "node:assert/strict";
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { VoxelEngine } from "../../src/VoxelEngine.ts";
-import { mockTexture } from "../helpers/mockTexture.ts";
-import { makeBlockDef } from "../helpers/blocks.ts";
-import { makeAtlasDef } from "../helpers/atlas.ts";
+import { VoxelEngine } from "../src/VoxelEngine.ts";
+import { mockTexture } from "./helpers/mockTexture.ts";
+import { makeBlockDef } from "./helpers/blocks.ts";
+import { makeAtlasDef } from "./helpers/atlas.ts";
 
 // CONSTANTS
 const kCubeId = 1;

@@ -7,16 +7,22 @@ Wraps a [`VoxelEngine`](./VoxelEngine.md) instance, exposed as `vr.engine`, and 
 lifecycle from `awake`/`update`/`destroy`.
 
 ```ts
+import {
+  VoxelRenderer,
+  loadTilesets
+} from "@jolly-pixel/voxel.renderer";
+
 // Pre-load tilesets before constructing VoxelRenderer (no async in lifecycle).
-const loader = new TilesetLoader();
-await loader.fromTileDefinition({
-  id: "default",
-  src: "tileset.png",
-  tileSize: 16
-});
+const tilesets = await loadTilesets([
+  {
+    id: "default",
+    src: "tileset.png",
+    tileSize: 16
+  }
+]);
 
 const vr = actor.addComponentAndGet(VoxelRenderer, {
-  tilesetLoader: loader,
+  tilesets,
   layers: ["Ground"],
   blocks: [
     {
@@ -44,4 +50,4 @@ the full `setVoxel` / layer / object-layer / serialization API.
 
 ### Hooks
 
-See [Hooks](./Hooks.md) for more information
+See [Hooks](./Hooks.md) for more information.

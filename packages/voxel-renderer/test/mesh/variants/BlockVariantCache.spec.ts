@@ -3,14 +3,14 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { BlockRegistry } from "../../src/blocks/BlockRegistry.ts";
-import { BlockShapeRegistry } from "../../src/blocks/BlockShapeRegistry.ts";
-import { TilesetManager } from "../../src/tileset/TilesetManager.ts";
-import { BlockVariantCache } from "../../src/mesh/BlockVariantCache.ts";
-import { packTransform } from "../../src/utils/math.ts";
-import { mockTexture } from "../helpers/mockTexture.ts";
-import { DEFAULT_TEXTURE, makeBlockDef } from "../helpers/blocks.ts";
-import { makeAtlasDef } from "../helpers/atlas.ts";
+import { BlockRegistry } from "../../../src/blocks/BlockRegistry.ts";
+import { BlockShapeRegistry } from "../../../src/blocks/BlockShapeRegistry.ts";
+import { TilesetManager } from "../../../src/tileset/TilesetManager.ts";
+import { BlockVariantCache } from "../../../src/mesh/variants/BlockVariantCache.ts";
+import { packTransform } from "../../../src/utils/math.ts";
+import { mockTexture } from "../../helpers/mockTexture.ts";
+import { DEFAULT_TEXTURE, makeBlockDef } from "../../helpers/blocks.ts";
+import { makeAtlasDef } from "../../helpers/atlas.ts";
 
 // CONSTANTS
 const kCubeId = 1;

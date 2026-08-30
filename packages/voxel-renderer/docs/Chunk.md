@@ -1,14 +1,13 @@
 # VoxelChunk
 
 Fixed-size, sparse 3D grid of voxel data. Chunk coordinates `(cx, cy, cz)` are in
-**chunk space** — multiply by `chunkSize` to get the world-space origin.
+**chunk space**. Multiply by `chunkSize` to get the world-space origin.
 
 ## Storage
 
 Voxels are stored as packed 32-bit integers in a [`VoxelStore`](#voxelstore), not as
-`{ blockId, transform }` objects. A `Map<number, VoxelEntry>` costs ~87 bytes of JS
-heap per voxel; the packed form costs ~11 bytes, lives in typed arrays outside the
-heap, and is invisible to the garbage collector.
+`{ blockId, transform }` objects. Keys and values live in typed arrays, avoiding one
+heap object per stored voxel.
 
 Two consequences for callers:
 
@@ -32,9 +31,9 @@ new VoxelChunk(
 ```
 
 > [!NOTE]
-> Chunk has a default size of 16, and `size` must be a power of two —
-> `linearIndex()` composes the three local coordinates into disjoint bit fields
-> rather than multiplying. Anything else throws a `RangeError`.
+> Chunk has a default size of 16. `size` must be a power of two because
+> `linearIndex()` composes the three local coordinates into disjoint bit fields.
+> Anything else throws a `RangeError`.
 
 ## Properties
 
@@ -56,7 +55,7 @@ class VoxelChunk {
 
   readonly voxelCount: number;
 
-  // backing storage; not part of the stable API
+  // low-level backing storage; prefer the chunk accessors
   readonly store: VoxelStore;
 }
 ```
@@ -86,10 +85,13 @@ position is empty. This is what the mesh builder calls once per voxel face.
 
 `false` when the position is provably empty, using a conservative bounding box
 of every written voxel. A `true` result still needs a `getAt()` to confirm.
-The box only ever grows — `delete()` never shrinks it — so it stays valid at
-the cost of being loose after erasures.
+The box only grows. `delete()` never shrinks it, so the result stays valid at
+the cost of becoming loose after erasures.
 
-### `delete(coords: VoxelLinearCoords): void`
+### `delete(coords: VoxelLinearCoords): boolean`
+
+Removes the voxel and returns `true`; returns `false` when the position was already
+empty.
 
 ### `isEmpty(): boolean`
 
@@ -106,9 +108,13 @@ Same walk, yielding the packed integer instead of an entry object.
 
 Converts local chunk coordinates to the flat key used for sparse storage.
 
-### `fromLinearIndex(idx: number): [number, number, number]`
+### `fromLinearIndex(idx: number): { lx: number; ly: number; lz: number }`
 
 Inverse of `linearIndex`.
+
+### `toString(): string`
+
+Returns the chunk key as `"cx,cy,cz"`.
 
 ## Packed voxels
 

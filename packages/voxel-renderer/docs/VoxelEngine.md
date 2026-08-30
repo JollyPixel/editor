@@ -5,15 +5,22 @@ Three.js meshes. Use it directly, or through [`VoxelRenderer`](./VoxelRenderer.m
 which exposes it as `vr.engine`.
 
 ```ts
-const loader = new TilesetLoader();
-await loader.fromTileDefinition({
-  id: "default",
-  src: "tileset.png",
-  tileSize: 16
-});
+import {
+  VoxelEngine,
+  VoxelRotation,
+  loadTilesets
+} from "@jolly-pixel/voxel.renderer";
+
+const tilesets = await loadTilesets([
+  {
+    id: "default",
+    src: "tileset.png",
+    tileSize: 16
+  }
+]);
 
 const engine = new VoxelEngine({
-  tilesetLoader: loader,
+  tilesets,
   layers: ["Ground"],
   blocks: [
     {
@@ -78,7 +85,7 @@ type MaterialCustomizerFn = (
 
 interface VoxelEngineOptions {
   /**
-   * Must be a power of two — every world-to-chunk conversion is a shift and a
+   * Must be a power of two because every world-to-chunk conversion is a shift and a
    * mask. Anything else throws a RangeError.
    * @default 16
    */
@@ -136,11 +143,8 @@ interface VoxelEngineOptions {
   logger?: VoxelLogger;
 
   /**
-   * Optional callback that is called whenever a layer is
-   * - added
-   * - removed
-   * - updated.
-   * Useful for synchronizing external systems with changes to the voxel world.
+   * Called for each supported voxel, layer, and object-layer mutation.
+   * See Hooks.md for the event union.
    */
   onLayerUpdated?: VoxelLayerHookListener;
 
@@ -162,18 +166,28 @@ interface VoxelEngineOptions {
 
   /**
    * Merge coplanar identical block faces into the largest quads possible
-   * instead of one quad per voxel face. Roughly 3x fewer triangles on terrain.
+   * instead of one quad per voxel face.
    * See [Greedy meshing](#greedy-meshing).
    * @default false
    */
   greedy?: boolean;
 
   /**
-   * Optional pre-loaded tileset collection. All tilesets in the loader are
-   * registered synchronously during construction. Use `TilesetLoader.fromTileDefinition()`
-   * or `TilesetLoader.fromWorld()` to populate it before constructing `VoxelEngine`.
+   * Pre-loaded atlases, registered synchronously during construction. Use
+   * `loadTilesets()` to fetch them before constructing `VoxelEngine`.
    */
-  tilesetLoader?: TilesetLoader;
+  tilesets?: Iterable<TilesetSource>;
+}
+```
+
+`load()` accepts a separate options object:
+
+```ts
+interface VoxelLoadOptions {
+  /** Collapse voxel layers after deserialization. */
+  mergeLayers?: boolean;
+  /** Atlases to register before validating the snapshot's tileset list. */
+  tilesets?: Iterable<TilesetSource>;
 }
 ```
 
@@ -190,6 +204,9 @@ class VoxelEngine {
   readonly debug: VoxelDebugger; // mesh statistics + wireframe, see ./Debug.md
 
   greedy: boolean; // read/write; assigning rebuilds every chunk
+  rebuildFocus: THREE.Vector3Like | null;
+  readonly pendingRebuilds: number;
+  onLayerUpdated: VoxelLayerHookListener | undefined;
 }
 ```
 
@@ -218,7 +235,8 @@ engine.pendingRebuilds;                // 0 once the world is up to date
 
 ## Chunk geometry layout
 
-One `THREE.Mesh` per tileset per chunk, parented to `root`. 19 bytes per vertex:
+One `THREE.Mesh` per tileset and cutout mode per chunk, parented to `root`.
+The standard layout uses 19 bytes per vertex:
 
 | Attribute  | Type                | Items | Bytes | Notes |
 |------------|---------------------|-------|-------|-------|
@@ -230,11 +248,15 @@ Vertices are not shared between faces (a cube = 24 vertices). `position` stays `
 
 ## Greedy meshing
 
-With `greedy: true` adjacent identical faces are merged into the largest rectangle possible — roughly 3x fewer triangles on flat terrain. Merging only happens within the same chunk and only for full flat faces (cubes, slabs); slopes, poles, and rotated voxels are left as-is.
+With `greedy: true`, adjacent identical faces are merged into the largest rectangle
+possible. This can reduce triangle counts on flat terrain. Merging stays within one
+chunk and applies only to full flat faces such as cubes and slabs. Slopes, poles, and
+rotated voxels remain separate.
 
 ### What it changes
 
-Greedy mode adds two extra vertex attributes (+20 bytes/vertex) and enables tile-repeating in the shader:
+Greedy mode uses 35 bytes per vertex. It adds two attributes, widens `uv` from
+4 to 8 bytes, and enables tile-repeating in the shader:
 
 | Attribute    | Type                | Items | Bytes | Notes |
 |--------------|---------------------|-------|-------|-------|
@@ -246,7 +268,9 @@ Greedy mode adds two extra vertex attributes (+20 bytes/vertex) and enables tile
 
 ### When not to use it
 
-Avoid combining greedy meshing with large chunk sizes. The scratch grid scales with `chunkSize³`: fine at 16–64, but at `chunkSize: 256` it uses 64 MB and meshes ~35% slower. It is also incompatible with per-vertex lighting or ambient occlusion.
+Avoid combining greedy meshing with large chunk sizes because its scratch grid scales
+with `chunkSize³`. It is also incompatible with per-vertex lighting or ambient
+occlusion.
 
 ```ts
 const engine = new VoxelEngine({ chunkSize: 32, greedy: true });
@@ -257,9 +281,21 @@ engine.greedy = false;
 
 ## Methods
 
-#### `getLayer(name: string): VoxelLayer`
+#### `getLayer(name: string): VoxelLayer | undefined`
 
-Find a layer or `null` if none is found with **name**.
+Returns the named layer, or `undefined` when it does not exist.
+
+#### `cloneLayer(name: string, options: PartialExcept<VoxelLayerOptions, "name">): VoxelLayer | undefined`
+
+Clones the named layer and adds the copy to the world. `options.name` is required.
+Returns `undefined` when the source layer does not exist and fires `"cloned"` on
+success.
+
+#### `mergeLayer(sourceLayerName: string, targetLayerName: string): boolean`
+
+Copies source voxels into the target layer. Source voxels win at overlapping world
+positions. Returns `false` when either layer does not exist and fires `"merged"` on
+success.
 
 #### `addLayer(name: string, options?: VoxelLayerConfigurableOptions): VoxelLayer`
 
@@ -281,15 +317,15 @@ interface VoxelLayerConfigurableOptions {
 > A layer with `opacity < 1` renders with real alpha blending and stops occluding
 > neighbouring faces (like glass); `opacity === 0` behaves exactly like `visible: false`.
 > See [Layer](./Layer.md) for the full semantics. Partial opacity does not affect
-> collision — see [Collision](./Collision.md).
+> collision; see [Collision](./Collision.md).
 
-#### `updateLayer(name: string, options?: Partial< VoxelLayerConfigurableOptions >): boolean`
+#### `updateLayer(name: string, options: Partial<VoxelLayerConfigurableOptions>): boolean`
 
-Update a layer that already exists. Return `false` if no layer is found with the given name and `true` when updated.
+Updates an existing layer. Returns `false` when the name is unknown.
 
-#### `removeLayer(name: string): VoxelLayer`
+#### `removeLayer(name: string): boolean`
 
-Remove and returns a boolean confirming layer deletion.
+Removes the named layer. Returns `false` when it does not exist.
 
 #### `setLayerOffset(name: string, offset: VoxelCoord): void`
 
@@ -308,7 +344,7 @@ Swaps `order` with the neighbouring layer in the given direction.
 
 #### `getLayerCenter(name: string): Vector3 | null`
 
-Returns the world-space center of all voxels in the given layer
+Returns the world-space center of all voxels in the given layer.
 
 #### `setVoxel(layerName: string, options: VoxelSetOptions): void`
 
@@ -379,8 +415,8 @@ engine.removeVoxelBulk("Ground", [
 #### `getVoxel` overloads
 
 ```ts
-getVoxel(position: VoxelCoord): VoxelEntry | undefined
-getVoxel(layerName: string, position: VoxelCoord): VoxelEntry | undefined
+getVoxel(position: THREE.Vector3Like): VoxelEntry | undefined
+getVoxel(layerName: string, position: THREE.Vector3Like): VoxelEntry | undefined
 ```
 
 Composited read (first overload) or layer-specific read (second overload). Returns `undefined` for air.
@@ -388,8 +424,8 @@ Composited read (first overload) or layer-specific read (second overload). Retur
 #### `getVoxelNeighbour` overloads
 
 ```ts
-getVoxelNeighbour(position: VoxelCoord, face: Face): VoxelEntry | undefined
-getVoxelNeighbour(layerName: string, position: VoxelCoord, face: Face): VoxelEntry | undefined
+getVoxelNeighbour(position: THREE.Vector3Like, face: Face): VoxelEntry | undefined
+getVoxelNeighbour(layerName: string, position: THREE.Vector3Like, face: Face): VoxelEntry | undefined
 ```
 
 Returns the voxel immediately adjacent to `position` in the given face direction.
@@ -399,24 +435,31 @@ Composited (first overload) or restricted to a specific layer (second overload).
 
 Registers an already-loaded texture for a tileset definition. The first registered tileset
 becomes the default for tile references with no explicit `tilesetId`.
-Prefer passing a `TilesetLoader` via `VoxelEngineOptions.tilesetLoader` for pre-loading;
-use this method only when adding a tileset after construction.
+Prefer passing `VoxelEngineOptions.tilesets` for pre-loading; use this method only when
+adding a tileset after construction.
 
 #### `save(): VoxelWorldJSON`
 
-Serialises the full world state (layers, voxels, tileset metadata) to a plain JSON object.
+Serialises voxel layers, object layers, voxels, tileset metadata, and registered block
+definitions to a plain JSON object.
 
-#### `load(data: VoxelWorldJSON): void`
+#### `load(data: VoxelWorldJSON, options?: VoxelLoadOptions): void`
 
-Clears the current world and restores state from a JSON snapshot. All tilesets referenced
-by the snapshot must have been pre-loaded via `TilesetLoader` before this call — if a
-tileset is missing, an error is thrown. Already-registered tilesets are skipped.
+Clears the current world and restores state from a JSON snapshot. Every tileset the
+snapshot references must be registered by the time the world is read, either at
+construction or through `VoxelLoadOptions.tilesets`. A missing tileset throws.
+Already-registered tilesets are skipped.
+
+Embedded block definitions are registered only when their IDs are not already present.
+Set `mergeLayers: true` to collapse voxel layers after deserialization.
+`data.chunkSize` is metadata; `load()` keeps the engine's configured chunk size.
+Construct the engine with the snapshot's chunk size when the values must match.
 
 #### `markAllChunksDirty(source?: string): void`
 
-Mark all the chunks as dirty and rebuild them in the next frame
+Marks every chunk dirty for a later rebuild.
 
-### Object Layer API
+### Object layer API
 
 Object layers hold placed objects (spawn points, trigger zones, etc.) rather than voxel
 data. Each mutating method fires a `VoxelLayerHookEvent` so external systems stay in sync.
@@ -461,4 +504,9 @@ Returns `false` if the layer or object is not found.
 
 ### Hooks
 
-See [Hooks](./Hooks.md) for more information
+#### `applyRemoteCommand(command: VoxelLayerHookEvent): void`
+
+Applies a hook event without emitting it again through `onLayerUpdated`. Network
+adapters use this method to avoid echo loops.
+
+See [Hooks](./Hooks.md) for the event reference.

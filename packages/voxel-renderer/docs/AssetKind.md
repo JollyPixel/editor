@@ -56,13 +56,13 @@ serialize. Override with `snapshot`.
 
 `apply` is the only writer. A room that mutated the world *and* appended
 would apply every command twice. Most commands are absolute writes and would
-survive that, but `offset-updated` carries a `delta` — applying it twice
+survive that, but `offset-updated` carries a `delta`. Applying it twice
 moves the layer twice as far. Live state and a cold replay would then
-disagree, which is the one thing an event-sourced asset cannot tolerate.
+disagree and break event-source consistency.
 
-`world-replace` skips arbitration, since a full-state overwrite always wins.
-It is appended like any other command so a replay reproduces it, then every
-peer is re-snapshotted rather than asked to diff.
+`world-replace` skips arbitration because a full-state overwrite always wins.
+It is appended like any other command so a replay reproduces it. Every peer
+then receives a fresh snapshot.
 
 ## Errors
 

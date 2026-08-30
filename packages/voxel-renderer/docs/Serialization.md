@@ -2,17 +2,26 @@
 
 Save and restore world state as plain JSON. Version 1 stores voxels as a sparse map
 keyed by `"x,y,z"` strings for human readability and easy diffing.
-Tileset metadata is embedded so the loader can restore textures automatically.
+Tileset metadata records which atlases the snapshot expects. Load those textures
+before calling `VoxelEngine.load()`, or pass them through `VoxelLoadOptions.tilesets`.
 
 ```ts
-const engine = new VoxelEngine({});
+import {
+  VoxelEngine,
+  loadTilesets,
+  type VoxelWorldJSON
+} from "@jolly-pixel/voxel.renderer";
 
 // Save
-const json = engine.save();
+const json = sourceEngine.save();
 localStorage.setItem("map", JSON.stringify(json));
 
-// Load
+// Restore into a new engine
 const data = JSON.parse(localStorage.getItem("map")!) as VoxelWorldJSON;
+const engine = new VoxelEngine({
+  chunkSize: data.chunkSize,
+  tilesets: await loadTilesets(data.tilesets)
+});
 engine.load(data);
 ```
 
@@ -31,19 +40,22 @@ interface VoxelLayerJSON {
   id: string;
   name: string;
   visible: boolean;
+  /** Absent in older files; treated as 1 on load. */
+  opacity?: number;
   order: number;
   /** World-space translation of the layer.
    * Absent in files produced before layer offsets were introduced;
    * treated as {x:0,y:0,z:0} on load.
    **/
   offset?: { x: number; y: number; z: number };
+  properties?: Record<string, any>;
   voxels: Record<VoxelEntryKey, VoxelEntryJSON>;
 }
 
 /**
  * Voxel keys are always world-space coordinates (layer offset included).
  * Files produced before layer offsets were introduced carry no `offset` field
- * and are loaded as if offset is {0,0,0} — identical to the previous behaviour.
+ * and are loaded as if offset is {0,0,0}, identical to the previous behaviour.
  */
 
 /**
@@ -88,7 +100,7 @@ interface VoxelWorldJSON {
   chunkSize: number;
   tilesets: TilesetDefinition[];
   layers: VoxelLayerJSON[];
-  /** Block definitions embedded by converters (e.g. TiledConverter).
+  /** Embedded block definitions populated by VoxelEngine.save() and converters.
    * Auto-registered on load.
    **/
   blocks?: ResolvedBlockDefinition[];
@@ -105,6 +117,8 @@ interface VoxelWorldJSON {
 
 Low-level serialiser. Most users should prefer the higher-level `VoxelEngine.save()` /
 `VoxelEngine.load()`, which also handle material invalidation and chunk rebuilds.
+`VoxelEngine.save()` also adds the engine's block definitions. The low-level
+`serialize()` method does not.
 
 #### `serialize(world: VoxelWorld, tilesetManager: TilesetManager): VoxelWorldJSON`
 
@@ -113,7 +127,8 @@ Converts the world and tileset metadata to a plain JSON-serialisable object.
 #### `deserialize(data: VoxelWorldJSON, world: VoxelWorld): void`
 
 Clears `world` and restores it from a snapshot. Voxel layers and object layers are
-both restored. Throws if `data.version !== 1`.
+both restored. Throws if `data.version !== 1`. The target world's existing
+`chunkSize` is retained; this method does not compare it with `data.chunkSize`.
 
 ## normalizeVoxelExtent
 

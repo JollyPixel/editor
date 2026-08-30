@@ -3,7 +3,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import {
-  TilesetLoader,
+  loadTilesets,
   VoxelEngine,
   type VoxelDebugMode
 } from "../../src/index.ts";
@@ -45,8 +45,8 @@ if (!canvas) {
 // ── Engine ────────────────────────────────────────────────────────────────────
 
 const tileset = createTransparencyTileset();
-const tilesetLoader = new TilesetLoader();
-await tilesetLoader.fromTileDefinition(tileset.definition);
+
+const tilesets = await loadTilesets([tileset.definition]);
 
 /**
  * Every material the engine mints, kept so the panel can drive `alphaTest` and
@@ -68,7 +68,7 @@ const materialState = {
 const engine = new VoxelEngine({
   chunkSize: 16,
   blocks: tileset.blocks,
-  tilesetLoader,
+  tilesets,
   material: materialType,
   alphaTest: materialState.alphaTest,
   materialCustomizer: (material) => {

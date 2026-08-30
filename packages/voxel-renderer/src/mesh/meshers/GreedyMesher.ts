@@ -1,24 +1,27 @@
 // Import Internal Dependencies
-import type { VoxelChunk } from "../world/VoxelChunk.ts";
-import type { BlockVariant, BlockVariantCache } from "./BlockVariantCache.ts";
-import type { GeometryBuffer } from "./GeometryBuffer.ts";
-import type { MeshBuildStats } from "./MeshBuildStats.ts";
-import type { ChunkNeighbourhood } from "./ChunkNeighbourhood.ts";
+import type { VoxelChunk } from "../../world/VoxelChunk.ts";
+import type { BlockVariant } from "../variants/types.ts";
+import type { BlockVariantCache } from "../variants/BlockVariantCache.ts";
+import type { MeshBuildStats } from "../MeshBuildStats.ts";
+import type { ChunkNeighbourhood } from "../neighbourhood/ChunkNeighbourhood.ts";
+import type {
+  GeometryBufferFactory,
+  Mesher,
+  MeshPassOptions
+} from "../types.ts";
 import {
   voxelBlockId,
   voxelTransform
-} from "../world/packedVoxel.ts";
+} from "../../world/packedVoxel.ts";
 import {
   FACE_OFFSETS,
   FACE_OPPOSITE
-} from "../utils/math.ts";
+} from "../../utils/math.ts";
 
 // CONSTANTS
 const kDirections = 6;
 const kNotMergeable = -1;
 const kInitialLocalVariants = 16;
-
-export type GeometryBufferFactory = (slot: number) => GeometryBuffer;
 
 function strideOf(
   axis: number,
@@ -52,20 +55,10 @@ function widenSlice(
   }
 }
 
-export interface MeshPassOptions {
-  chunk: VoxelChunk;
-  neighbourhood: ChunkNeighbourhood;
-  worldOriginX: number;
-  worldOriginY: number;
-  worldOriginZ: number;
-  stats: MeshBuildStats;
-  bufferFor: GeometryBufferFactory;
-}
-
 /**
  * Merges identical full boundary quads using six dense-grid sweeps.
  */
-export class GreedyMesher {
+export class GreedyMesher implements Mesher {
   #variants: BlockVariantCache;
 
   #grid = new Int32Array(0);

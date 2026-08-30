@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { type Vec3, FACE } from "../utils/math.ts";
+import { type Vec3, FACE } from "../../utils/math.ts";
 
 // CONSTANTS
 // Indexed by quarter-turn then face; positive rotation is CCW from above.
