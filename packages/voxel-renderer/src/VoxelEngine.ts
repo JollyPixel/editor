@@ -29,11 +29,14 @@ import {
   enableTileWrapping
 } from "./mesh/index.ts";
 import {
-  VoxelSerializer,
-  type VoxelWorldJSON,
-  type VoxelObjectLayerJSON,
-  type VoxelObjectJSON
-} from "./serialization/VoxelSerializer.ts";
+  deserializeVoxelWorld,
+  serializeVoxelWorld
+} from "./serialization/world.ts";
+import type {
+  VoxelWorldJSON,
+  VoxelObjectLayerJSON,
+  VoxelObjectJSON
+} from "./serialization/types.ts";
 import { TilesetManager } from "./tileset/TilesetManager.ts";
 import type { TilesetDefinition } from "./tileset/types.ts";
 import type { TilesetSource } from "./tileset/loadTilesets.ts";
@@ -196,7 +199,6 @@ export class VoxelEngine {
   readonly blockRegistry: BlockRegistry;
   readonly shapeRegistry: BlockShapeRegistry;
   readonly tilesetManager: TilesetManager;
-  readonly serializer: VoxelSerializer;
 
   readonly debug: VoxelDebugger;
 
@@ -283,7 +285,6 @@ export class VoxelEngine {
 
     this.tilesetManager = new TilesetManager({ padding: tilesetPadding });
     this.#registerTilesets(tilesets);
-    this.serializer = new VoxelSerializer();
 
     this.#meshBuilder = new VoxelMeshBuilder({
       world: this.world,
@@ -926,13 +927,10 @@ export class VoxelEngine {
   save(): VoxelWorldJSON {
     this.#logger.debug("Serializing world to JSON...");
 
-    return {
-      ...this.serializer.serialize(
-        this.world,
-        this.tilesetManager
-      ),
-      blocks: [...this.blockRegistry]
-    };
+    return serializeVoxelWorld(this.world, {
+      tilesets: this.tilesetManager.definitions(),
+      blocks: this.blockRegistry
+    });
   }
 
   load(
@@ -942,16 +940,9 @@ export class VoxelEngine {
     this.#disposeChunkMeshes();
     this.#logger.debug("Cleared existing chunk meshes while loading new world.");
 
-    // Existing registrations override definitions embedded by converters.
-    if (data.blocks) {
-      for (const blockDef of data.blocks) {
-        if (!this.blockRegistry.has(blockDef.id)) {
-          this.blockRegistry.register(blockDef);
-        }
-      }
-    }
-
-    this.serializer.deserialize(data, this.world);
+    deserializeVoxelWorld(data, this.world, {
+      blocks: this.blockRegistry
+    });
 
     this.#registerTilesets(options.tilesets);
     for (const tilesetDef of data.tilesets) {

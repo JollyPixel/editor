@@ -9,6 +9,14 @@ import {
   type ResolvedBlockDefinition
 } from "./BlockDefinition.ts";
 
+export interface BlockRegisterManyOptions {
+  /**
+   * Keeps the registration an id already has instead of replacing it.
+   * @default false
+   */
+  skipExisting?: boolean;
+}
+
 export class BlockRegistry implements Iterable<ResolvedBlockDefinition> {
   #blocks = new Map<number, ResolvedBlockDefinition>();
   #version = 0;
@@ -17,9 +25,7 @@ export class BlockRegistry implements Iterable<ResolvedBlockDefinition> {
   constructor(
     defs: BlockDefinition[] = []
   ) {
-    for (const def of defs) {
-      this.register(def);
-    }
+    this.registerMany(defs);
   }
 
   register(
@@ -40,6 +46,23 @@ export class BlockRegistry implements Iterable<ResolvedBlockDefinition> {
     this.#version++;
     if (resolved.id > this.#highestId) {
       this.#highestId = resolved.id;
+    }
+
+    return this;
+  }
+
+  registerMany(
+    defs: Iterable<BlockDefinition>,
+    options: BlockRegisterManyOptions = {}
+  ): this {
+    const { skipExisting = false } = options;
+
+    for (const def of defs) {
+      if (skipExisting && this.has(def.id)) {
+        continue;
+      }
+
+      this.register(def);
     }
 
     return this;

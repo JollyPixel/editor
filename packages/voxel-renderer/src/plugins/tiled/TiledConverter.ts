@@ -17,7 +17,7 @@ import type {
   VoxelObjectLayerJSON,
   VoxelObjectJSON,
   VoxelObjectProperties
-} from "../../serialization/VoxelSerializer.ts";
+} from "../../serialization/types.ts";
 import {
   normalizeVoxelExtent
 } from "../../serialization/voxelObject.ts";

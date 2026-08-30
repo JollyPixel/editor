@@ -1,15 +1,16 @@
 // Import Third-party Dependencies
 import {
-  decodeVoxelMapDocument
-} from "@jolly-pixel/voxel.renderer/asset/VoxelMapDocument.ts";
-import type { VoxelWorldJSON } from "@jolly-pixel/voxel.renderer";
+  decodeVoxelDocument,
+  type VoxelWorldJSON
+} from "@jolly-pixel/voxel.renderer";
 
+// CONSTANTS
 const kEncoder = new TextEncoder();
 
 export function parseVoxelWorld(
   text: string
 ): VoxelWorldJSON {
-  return decodeVoxelMapDocument(
+  return decodeVoxelDocument(
     kEncoder.encode(text)
   );
 }

@@ -7,7 +7,7 @@ import type {
   VoxelLayerHookEvent,
   VoxelLayerHookListener
 } from "../hooks.ts";
-import type { VoxelWorldJSON } from "../serialization/VoxelSerializer.ts";
+import type { VoxelWorldJSON } from "../serialization/types.ts";
 import type {
   VoxelNetworkCommand,
   VoxelServerMessage,
@@ -18,9 +18,6 @@ export interface VoxelSyncClientOptions {
   room: network.Room<VoxelNetworkCommand, VoxelServerMessage>;
 }
 
-/**
- * Synchronizes one `VoxelEngine` over a world-scoped room.
- */
 export class VoxelSyncClient extends network.SyncAdapter<
   VoxelEngine,
   VoxelLayerHookEvent,
@@ -57,7 +54,6 @@ export class VoxelSyncClient extends network.SyncAdapter<
     engine: VoxelEngine,
     cmd: VoxelNetworkCommand
   ): void {
-    // World replacements arrive as snapshots, never commands.
     if (cmd.action === "world-replace") {
       return;
     }
@@ -65,14 +61,14 @@ export class VoxelSyncClient extends network.SyncAdapter<
     engine.applyRemoteCommand(cmd);
   }
 
-  /**
-   * Replaces the world for every client through the snapshot path.
-   */
   replaceWorld(
     data: VoxelWorldJSON
   ): void {
     this.room.send(
-      this.stampCommand<VoxelWorldReplaceCommand>({ action: "world-replace", data })
+      this.stampCommand<VoxelWorldReplaceCommand>({
+        action: "world-replace",
+        data
+      })
     );
   }
 

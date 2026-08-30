@@ -5,7 +5,7 @@ standalone via `BlockShapeRegistry.createDefault()`.
 
 ## Shape Reference
 
-![Available block shapes](./shapes.png)
+![Available block shapes](./images/shapes.png)
 
 ### Solid / Slab
 

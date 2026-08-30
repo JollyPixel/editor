@@ -12,7 +12,7 @@ import type {
   VoxelServerMessage
 } from "../../src/network/types.ts";
 import type { VoxelLayerHookEvent, VoxelLayerHookListener } from "../../src/hooks.ts";
-import type { VoxelWorldJSON } from "../../src/serialization/VoxelSerializer.ts";
+import type { VoxelWorldJSON } from "../../src/serialization/types.ts";
 import type { VoxelEngine } from "../../src/VoxelEngine.ts";
 import { makeAddedCommand, voxelSetCmd } from "../helpers/networkCommands.ts";
 

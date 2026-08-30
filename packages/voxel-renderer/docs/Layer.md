@@ -94,7 +94,7 @@ interface VoxelLayerJSON {
 ```
 
 > [!NOTE]
-> Used under the hood by the `VoxelSerializer` implementation, see: [Serialization](./Serialization.md)
+> Used under the hood by `serializeVoxelWorld()`, see: [Serialization](./Serialization.md)
 
 ### getOrCreateChunk(cx: number, cy: number, cz: number): VoxelChunk
 

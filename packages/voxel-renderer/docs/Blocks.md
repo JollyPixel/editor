@@ -9,33 +9,28 @@ engine's `blocks` option. Only `id`, `name`, and `shapeId` are required.
 
 ```ts
 export interface BlockDefinition {
-  /** Unique numeric identifier, 1 or above. See [Air](#air). */
   id: number;
-  /** Human-readable name for editor display. */
   name: string;
-  /** ID of the BlockShape to use for geometry generation. */
   shapeId: BlockShapeID;
   /**
-   * Per-face tile references.
-   * If a face is absent, defaultTexture is used.
+   * Per-face tiles; missing faces use `defaultTexture`.
    * @default {}
    */
   faceTextures?: Partial<Record<FACE, TileRef>>;
-  /** Fallback tile used for any face not listed in faceTextures. */
   defaultTexture?: TileRef;
   /**
-   * If false, the mesh builder will not emit
-   * collision geometry for this block.
+   * If false, the mesh builder will not emit collision geometry for this block.
    * @default true
-   **/
+   */
   collidable?: boolean;
   /**
-   * Set it on any block you can see through.
    * A transparent block never hides a neighbouring face.
    * @default false
    */
   transparent?: boolean;
-  /** Fills in any tile ref that omits a tileset. Dropped once resolved. */
+  /**
+   * Tileset used by tile references that omit one; dropped once resolved.
+   */
   defaultTilesetId?: string;
 }
 ```
@@ -59,7 +54,8 @@ function isAir(blockId: number): boolean;
 Id `0` is reserved: a cell holding air holds no voxel at all. Nothing stores it,
 so both ends of the invariant throw rather than accept it.
 
-- `BlockRegistry.register()` (and the constructor, which routes through it)
+- `BlockRegistry.register()` (and `registerMany()`/the constructor, which route
+  through it)
   throws an `Error` on a definition with id `0`.
 - `packVoxel()` throws a `RangeError`, which takes every write path with it:
   `VoxelChunk.set()`, `VoxelLayer.setVoxelAt()`, `VoxelWorld.setVoxelAt()` and
@@ -107,15 +103,13 @@ type BlockShapeID =
   | "stair"
   | "stairCornerInner"
   | "stairCornerOuter"
-  | (string & {}); // custom shapes registered at runtime
+  | (string & {});
 ```
 
-> The `(string & {})` tail means any string compiles, but unknown IDs fail silently at
-> runtime — the voxel is skipped. Always use a built-in ID or one registered via
-> `BlockShapeRegistry.register()`.
+> The `(string & {})` tail means any string compiles, but unknown IDs fail silently at runtime.
+> Always use a built-in ID or one registered via `BlockShapeRegistry.register()`.
 
-![Available block shapes](./shapes.png)
-
+![Available block shapes](./images/shapes.png)
 
 ## BlockCollisionHint
 
@@ -135,16 +129,26 @@ See [Collision](./Collision.md) for more information.
 Geometry descriptor for one polygonal face of a block shape.
 
 ```ts
-interface FaceDefinition {
-  /** Texture slot and default culling direction. */
+export interface FaceDefinition {
+  /**
+   * Texture slot and default culling direction.
+   */
   face: FACE;
-  /** Neighbor to test; omitted uses `face`, while `null` disables culling. */
+  /**
+   * Occlusion neighbor; omitted uses `face`, while `null` disables culling.
+   */
   cull?: FACE | null;
-  /** Outward-pointing surface normal (need not be axis-aligned). */
+  /**
+   * Outward normal, which need not be axis-aligned.
+   */
   normal: Vec3;
-  /** 3 (triangle) or 4 (quad) positions in 0-1 block space. */
+  /**
+   * Three or four positions in normalized block space.
+   */
   vertices: readonly Vec3[];
-  /** Same count as vertices; UV coordinates in 0-1 tile space. */
+  /**
+   * One normalized tile-space UV per vertex.
+   */
   uvs: readonly Vec2[];
 }
 ```
@@ -156,11 +160,13 @@ A quad is triangulated as `[0,1,2]` + `[0,2,3]`.
 Interface implemented by all shape classes.
 
 ```ts
-interface BlockShape {
+export interface BlockShape {
   readonly id: BlockShapeID;
   readonly faces: readonly FaceDefinition[];
+
+  occludes(face: FACE): boolean;
+
   readonly collisionHint: BlockCollisionHint;
-  occludes(face: Face): boolean;
 }
 ```
 
@@ -177,6 +183,14 @@ Maps numeric block IDs to `ResolvedBlockDefinition` objects. Accessible via `Vox
 Registers a block definition, filling the defaults documented on
 [`BlockDefinition`](#blockdefinition). Throws on `AIR_BLOCK_ID`, see
 [Air](#air).
+
+#### `registerMany(defs: Iterable<BlockDefinition>, options?): this`
+
+Registers each definition in turn. `{ skipExisting: true }` keeps the
+registration an id already has rather than replacing it, which is what a load
+path wants: local registrations then win over the definitions a document or a
+converter embedded. Defaults to `false`, so a plain `registerMany()` overwrites
+like `register()` does.
 
 #### `get(id: number): ResolvedBlockDefinition | undefined`
 
@@ -200,8 +214,9 @@ holding that many blocks fails later, when the voxel is packed.
 
 #### `readonly version: number`
 
-Incremented on every `register()`. The mesh builder precompiles geometry per
-block and uses this to notice that its cache went stale.
+Incremented on every `register()`, so a `registerMany()` that skipped everything
+leaves it untouched. The mesh builder precompiles geometry per block and uses
+this to notice that its cache went stale.
 
 ## BlockShapeRegistry
 

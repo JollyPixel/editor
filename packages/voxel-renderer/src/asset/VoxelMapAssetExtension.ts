@@ -6,7 +6,6 @@ import type { AssetRoomBinding } from "@jolly-pixel/asset-server";
 import { VoxelCommandArbiter } from "../network/VoxelCommandArbiter.ts";
 import { isVoxelNetworkCommand } from "../network/VoxelCommandValidator.ts";
 import { VOXEL_LAYER_HOOK_ACTIONS } from "../hooks.ts";
-import { voxelMapSnapshot } from "./VoxelMapDocument.ts";
 import type { VoxelMapState } from "./VoxelMapState.ts";
 import type { VoxelNetworkCommand } from "../network/types.ts";
 
@@ -49,7 +48,7 @@ export class VoxelMapAssetExtension extends network.Extension {
   ): void {
     client.send({
       type: "snapshot",
-      data: voxelMapSnapshot(this.#state)
+      data: this.#state.toJSON()
     });
   }
 
@@ -79,7 +78,7 @@ export class VoxelMapAssetExtension extends network.Extension {
       if (await this.#append(payload, context)) {
         context.room.broadcast({
           type: "snapshot",
-          data: voxelMapSnapshot(this.#state)
+          data: this.#state.toJSON()
         });
       }
 

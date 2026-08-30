@@ -7,7 +7,7 @@ import {
   normalizeVoxelExtent,
   voxelObjectFootprint
 } from "../../src/serialization/voxelObject.ts";
-import type { VoxelObjectJSON } from "../../src/serialization/VoxelSerializer.ts";
+import type { VoxelObjectJSON } from "../../src/serialization/types.ts";
 
 function makeObject(
   patch: Partial<VoxelObjectJSON> = {}

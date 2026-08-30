@@ -28,12 +28,10 @@ import {
   VOXEL_MAP_KIND
 } from "../../src/asset/voxelMapAssetHandler.ts";
 import {
-  createVoxelMapState,
-  decodeVoxelMapDocument,
-  encodeVoxelMapDocument,
-  loadVoxelMapDocument
-} from "../../src/asset/VoxelMapDocument.ts";
-import type { VoxelMapState } from "../../src/asset/VoxelMapState.ts";
+  decodeVoxelDocument,
+  encodeVoxelDocument
+} from "../../src/serialization/document.ts";
+import { VoxelMapState } from "../../src/asset/VoxelMapState.ts";
 import { voxelSetCmd } from "../helpers/networkCommands.ts";
 
 // CONSTANTS
@@ -91,17 +89,17 @@ function client(
 }
 
 function seededDocument(): Uint8Array {
-  const state = createVoxelMapState(kChunkSize);
+  const state = new VoxelMapState(kChunkSize);
   state.world.addLayer("Ground");
 
-  return encodeVoxelMapDocument(state);
+  return encodeVoxelDocument(state.toJSON());
 }
 
 function stateFromFile(
   data: Uint8Array
 ): VoxelMapState {
-  const state = createVoxelMapState(kChunkSize);
-  loadVoxelMapDocument(state, decodeVoxelMapDocument(data));
+  const state = new VoxelMapState(kChunkSize);
+  state.load(decodeVoxelDocument(data));
 
   return state;
 }

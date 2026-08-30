@@ -16,14 +16,12 @@ import {
 import { applyCommandToWorld } from "../network/VoxelCommandApplier.ts";
 import { isVoxelNetworkCommand } from "../network/VoxelCommandValidator.ts";
 import {
-  asVoxelWorldJSON,
-  createVoxelMapState,
-  decodeVoxelMapDocument,
-  encodeVoxelMapDocument,
-  loadVoxelMapDocument
-} from "./VoxelMapDocument.ts";
+  decodeVoxelDocument,
+  encodeVoxelDocument,
+  parseVoxelDocument
+} from "../serialization/document.ts";
 import { VoxelMapAssetExtension } from "./VoxelMapAssetExtension.ts";
-import type { VoxelMapState } from "./VoxelMapState.ts";
+import { VoxelMapState } from "./VoxelMapState.ts";
 import type { VoxelNetworkCommand } from "../network/types.ts";
 
 export const VOXEL_MAP_KIND = "voxelmap";
@@ -61,9 +59,6 @@ export interface VoxelMapAssetHandlerOptions {
   conflictResolver?: network.ConflictResolver<VoxelNetworkCommand>;
 }
 
-/**
- * Uses `apply` as the sole writer to avoid applying offset deltas twice.
- */
 export function voxelMapAssetHandler(
   options: VoxelMapAssetHandlerOptions = {}
 ): AssetKindHandler<VoxelMapState> {
@@ -81,7 +76,7 @@ export function voxelMapAssetHandler(
     contentTypes: kContentTypes,
 
     create(): VoxelMapState {
-      return createVoxelMapState(chunkSize);
+      return new VoxelMapState(chunkSize);
     },
 
     apply(
@@ -104,7 +99,7 @@ export function voxelMapAssetHandler(
       state: VoxelMapState
     ): Promise<Uint8Array> {
       return Promise.resolve(
-        encodeVoxelMapDocument(state)
+        encodeVoxelDocument(state.toJSON())
       );
     },
 
@@ -128,16 +123,14 @@ function applyEvent(
       event.eventType === ASSET_CREATED ||
       event.eventType === ASSET_UPDATED
     ) {
-      loadVoxelMapDocument(
-        state,
-        decodeVoxelMapDocument(
+      state.load(
+        decodeVoxelDocument(
           decodeContent(event.eventData.content)
         )
       );
     }
     else if (event.eventType === ASSET_DELETED) {
-      state.world.clear();
-      state.tilesets = [];
+      state.clear();
     }
 
     return;
@@ -152,9 +145,8 @@ function applyEvent(
 
   const command = event.eventData;
   if (command.action === "world-replace") {
-    loadVoxelMapDocument(
-      state,
-      asVoxelWorldJSON(command.data)
+    state.load(
+      parseVoxelDocument(command.data)
     );
 
     return;

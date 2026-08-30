@@ -21,7 +21,7 @@ import {
 } from "./TiledConverter.ts";
 import type {
   VoxelWorldJSON
-} from "../../serialization/VoxelSerializer.ts";
+} from "../../serialization/types.ts";
 import {
   loadTilesets,
   type TilesetSource
