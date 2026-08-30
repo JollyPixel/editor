@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import type {
-  BlockDefinition,
+  ResolvedBlockDefinition,
   TilesetManager,
   VoxelRenderer
 } from "@jolly-pixel/voxel.renderer";
@@ -230,7 +230,7 @@ export class TextureEditorBridge {
       this.#tileSize
     );
 
-    const updates: BlockDefinition[] = [];
+    const updates: ResolvedBlockDefinition[] = [];
     for (const { block, rects } of affected) {
       if (bounds && !rects.some((rect) => rectsIntersect(rect, bounds))) {
         continue;

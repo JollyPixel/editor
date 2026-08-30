@@ -26,7 +26,7 @@ import type {
   VoxelEntryKey
 } from "../../world/VoxelLayer.ts";
 import type { TilesetDefinition } from "../../tileset/types.ts";
-import type { BlockDefinition } from "../../blocks/BlockDefinition.ts";
+import type { ResolvedBlockDefinition } from "../../blocks/BlockDefinition.ts";
 import type { BlockShapeID } from "../../blocks/BlockShape.ts";
 
 export interface TiledConverterOptions {
@@ -206,8 +206,8 @@ function collectGIDs(
 function buildBlocks(
   rawGids: Set<number>,
   ctx: BlockBuildContext
-): { blocks: BlockDefinition[]; gidToBlockId: Map<number, number>; } {
-  const blocks: BlockDefinition[] = [];
+): { blocks: ResolvedBlockDefinition[]; gidToBlockId: Map<number, number>; } {
+  const blocks: ResolvedBlockDefinition[] = [];
   const gidToBlockId = new Map<number, number>();
   let nextId = 1;
 

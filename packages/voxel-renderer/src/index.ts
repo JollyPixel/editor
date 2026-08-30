@@ -22,25 +22,13 @@ export {
 } from "./debug/VoxelDebugger.ts";
 export { MeshBuildStats } from "./mesh/MeshBuildStats.ts";
 
-export { Cube } from "./blocks/shapes/Cube.ts";
-export { Slab, type SlabType } from "./blocks/shapes/Slab.ts";
-export { PoleY } from "./blocks/shapes/PoleY.ts";
-export { Pole } from "./blocks/shapes/Pole.ts";
-export { Ramp } from "./blocks/shapes/Ramp.ts";
-export {
-  RampCornerInner,
-  RampCornerOuter
-} from "./blocks/shapes/RampCorner.ts";
-export {
-  Stair,
-  StairCornerInner,
-  StairCornerOuter
-} from "./blocks/shapes/Stair.ts";
+export * from "./blocks/shapes/index.ts";
 
 export { BlockRegistry } from "./blocks/BlockRegistry.ts";
-export type {
-  BlockDefinition,
-  BlockDefinitionIn
+export {
+  resolveBlockDefinition,
+  type BlockDefinition,
+  type ResolvedBlockDefinition
 } from "./blocks/BlockDefinition.ts";
 export { BlockShapeRegistry } from "./blocks/BlockShapeRegistry.ts";
 export type {
@@ -77,14 +65,19 @@ export {
   type TilesetDefaultBlockOptions,
   type TilesetUVRegion,
   type TilesetImage,
-  type TileRef,
+  type ResolvedTileRef,
   type TilesetDefinition,
   type ResolvedTilesetDefinition
 } from "./tileset/TilesetManager.ts";
-export {
-  resolveTilesetDefinition,
-  type AtlasSize
+export type {
+  AtlasSize,
+  Coords,
+  TileRef
 } from "./tileset/types.ts";
+export {
+  resolveTileRef,
+  resolveTilesetDefinition
+} from "./tileset/resolve.ts";
 export {
   TilesetLoader,
   type TilesetLoaderOptions,

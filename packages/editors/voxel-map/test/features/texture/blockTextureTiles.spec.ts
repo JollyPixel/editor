@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { Face, type BlockDefinition } from "@jolly-pixel/voxel.renderer";
+import { Face, type ResolvedBlockDefinition } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import { findBlocksReferencingTileset } from "../../../src/features/texture/blockTextureTiles.ts";
@@ -11,10 +11,10 @@ import { findBlocksReferencingTileset } from "../../../src/features/texture/bloc
 function makeBlock(
   id: number,
   options: {
-    defaultTexture?: BlockDefinition["defaultTexture"];
-    faceTextures?: BlockDefinition["faceTextures"];
+    defaultTexture?: ResolvedBlockDefinition["defaultTexture"];
+    faceTextures?: ResolvedBlockDefinition["faceTextures"];
   }
-): BlockDefinition {
+): ResolvedBlockDefinition {
   return {
     id,
     name: `Block${id}`,

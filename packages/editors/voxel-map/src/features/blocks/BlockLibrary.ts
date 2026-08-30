@@ -3,7 +3,7 @@ import { LitElement, html, css } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import {
   type VoxelRenderer,
-  type BlockDefinition,
+  type ResolvedBlockDefinition,
   VoxelRotation
 } from "@jolly-pixel/voxel.renderer";
 import type {
@@ -48,9 +48,9 @@ export class BlockLibrary extends LitElement {
   @state()
   private declare _selectedId: number | null;
   @state()
-  private declare _selectedBlock: BlockDefinition | null;
+  private declare _selectedBlock: ResolvedBlockDefinition | null;
   @state()
-  private declare _blocks: BlockDefinition[];
+  private declare _blocks: ResolvedBlockDefinition[];
   @state()
   private declare _rotationMode: RotationMode;
   @state()

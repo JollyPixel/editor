@@ -2,13 +2,13 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import {
-  resolveTilesetDefinition,
-  type ResolvedTilesetDefinition,
-  type TileRef,
-  type TilesetDefinition,
-  type TilesetUVRegion
+import type {
+  ResolvedTilesetDefinition,
+  ResolvedTileRef,
+  TilesetDefinition,
+  TilesetUVRegion
 } from "./types.ts";
+import { resolveTilesetDefinition } from "./resolve.ts";
 import {
   defaultPadding,
   padAtlas,
@@ -16,11 +16,11 @@ import {
   tileUVRegion,
   type AtlasRegion
 } from "./atlasLayout.ts";
-import type { BlockDefinition } from "../blocks/BlockDefinition.ts";
+import type { ResolvedBlockDefinition } from "../blocks/BlockDefinition.ts";
 
 export type {
   ResolvedTilesetDefinition,
-  TileRef,
+  ResolvedTileRef,
   TilesetDefinition,
   TilesetUVRegion
 };
@@ -46,7 +46,7 @@ export interface TilesetDefaultBlockOptions {
     blockId: number,
     col: number,
     row: number
-  ) => Omit<BlockDefinition, "id">;
+  ) => Omit<ResolvedBlockDefinition, "id">;
 }
 
 /**
@@ -219,7 +219,7 @@ export class TilesetManager {
   }
 
   getTileUV(
-    ref: TileRef
+    ref: ResolvedTileRef
   ): TilesetUVRegion {
     const id = ref.tilesetId ?? this.#defaultTilesetId;
     if (id === null) {
@@ -273,12 +273,12 @@ export class TilesetManager {
   getDefaultBlocks(
     tilesetId = this.#defaultTilesetId,
     options: TilesetDefaultBlockOptions = {}
-  ): BlockDefinition[] {
+  ): ResolvedBlockDefinition[] {
     const {
       limit = 255,
       map
     } = options;
-    const blocks: BlockDefinition[] = [];
+    const blocks: ResolvedBlockDefinition[] = [];
 
     if (!tilesetId) {
       return blocks;

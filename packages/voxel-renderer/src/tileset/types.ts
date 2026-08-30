@@ -1,4 +1,4 @@
-export interface TileRef {
+export interface ResolvedTileRef {
   col: number;
   row: number;
   tilesetId?: string;
@@ -13,7 +13,7 @@ export interface TilesetUVRegion {
 
 export type Coords = [col: number, row: number];
 
-export type TileRefIn = Coords | TileRef;
+export type TileRef = Coords | ResolvedTileRef;
 
 export interface TilesetDefinition {
   id: string;
@@ -40,15 +40,4 @@ export type ResolvedTilesetDefinition = TilesetDefinition & {
 export interface AtlasSize {
   width: number;
   height: number;
-}
-
-export function resolveTilesetDefinition(
-  def: TilesetDefinition,
-  size: AtlasSize
-): ResolvedTilesetDefinition {
-  return {
-    ...def,
-    cols: def.cols ?? Math.floor(size.width / def.tileSize),
-    rows: def.rows ?? Math.floor(size.height / def.tileSize)
-  };
 }

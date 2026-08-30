@@ -19,13 +19,13 @@ await loader.fromTileDefinition({
 const vr = actor.addComponentAndGet(VoxelRenderer, { tilesetLoader: loader });
 
 // Tile at column 2, row 0 — uses the default tileset
-const tileRef: TileRef = {
+const tileRef: ResolvedTileRef = {
   col: 2,
   row: 0
 };
 
 // Tile from a secondary tileset
-const decorTile: TileRef = {
+const decorTile: ResolvedTileRef = {
   col: 0,
   row: 3,
   tilesetId: "decor"
@@ -72,16 +72,25 @@ browser resolves the same grid.
 
 ## TileRef
 
-References a specific tile in an atlas by grid position.
+References a specific tile in an atlas by grid position, either as an object or
+as a bare `[col, row]` tuple.
 
 ```ts
-interface TileRef {
+interface ResolvedTileRef {
   col: number;
   row: number;
   // omit to use the default (first loaded) tileset
   tilesetId?: string;
 }
+
+type Coords = [col: number, row: number];
+
+type TileRef = Coords | ResolvedTileRef;
 ```
+
+`resolveTileRef(ref, defaultTilesetId?)` expands a tuple and fills in a missing
+`tilesetId`, returning a new `ResolvedTileRef`. `BlockRegistry` stores the
+resolved form, so any tile reference read back from it is a `ResolvedTileRef`.
 
 ## TilesetUVRegion
 
@@ -184,7 +193,7 @@ Registers an already-loaded `THREE.Texture`. Useful in tests or server-side cont
 Auto-derives `cols` and `rows` from the image dimensions if they are not set on `def`,
 then repacks the atlas with its gutter (see [Atlas padding](#atlas-padding)).
 
-#### `getTileUV(ref: TileRef): TilesetUVRegion`
+#### `getTileUV(ref: ResolvedTileRef): TilesetUVRegion`
 
 Computes atlas UV coordinates for the tile at `(col, row)`, in the padded layout.
 Throws if no tileset is loaded or the referenced ID is unknown.
@@ -247,9 +256,9 @@ if (dirty !== null) {
 
 Returns all registered tileset definitions with `cols` and `rows` resolved from the image.
 
-#### `getDefaultBlocks(tilesetId: string | null, options?: TilesetDefaultBlockOptions): BlockDefinition[]`
+#### `getDefaultBlocks(tilesetId: string | null, options?: TilesetDefaultBlockOptions): ResolvedBlockDefinition[]`
 
-Returns a default Array of `BlockDefinition` mapped to the given **tilesetId** (or default one if not provided).
+Returns a default Array of `ResolvedBlockDefinition` mapped to the given **tilesetId** (or default one if not provided).
 
 ```ts
 interface TilesetDefaultBlockOptions {
@@ -261,7 +270,7 @@ interface TilesetDefaultBlockOptions {
   /**
    * Function to map block IDs to custom block definitions.
    */
-  map?: (blockId: number, col: number, row: number) => Omit<BlockDefinition, "id">;
+  map?: (blockId: number, col: number, row: number) => Omit<ResolvedBlockDefinition, "id">;
 }
 ```
 

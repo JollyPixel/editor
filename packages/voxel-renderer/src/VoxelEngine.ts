@@ -7,7 +7,7 @@ import {
   BlockRegistry
 } from "./blocks/BlockRegistry.ts";
 import type {
-  BlockDefinitionIn
+  BlockDefinition
 } from "./blocks/BlockDefinition.ts";
 import {
   BlockShapeRegistry
@@ -124,7 +124,7 @@ export interface VoxelEngineOptions {
   /**
    * Initial block definitions; block ID 0 is reserved for air.
    */
-  blocks?: BlockDefinitionIn[];
+  blocks?: BlockDefinition[];
   /**
    * Shapes registered after the defaults from `BlockShapeRegistry`.
    */

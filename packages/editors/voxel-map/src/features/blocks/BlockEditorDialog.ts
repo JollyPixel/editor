@@ -3,7 +3,7 @@ import { LitElement, html, css, nothing } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import type {
   BlockDefinition,
-  BlockDefinitionIn,
+  ResolvedBlockDefinition,
   BlockShapeID,
   VoxelRenderer
 } from "@jolly-pixel/voxel.renderer";
@@ -43,7 +43,7 @@ export class BlockEditorDialog extends LitElement {
   declare vr: VoxelRenderer | undefined;
 
   @property({ attribute: false })
-  declare block: BlockDefinition | null;
+  declare block: ResolvedBlockDefinition | null;
 
   @state()
   private declare _mode: BlockEditorMode;
@@ -232,13 +232,13 @@ export class BlockEditorDialog extends LitElement {
   }
 
   #applyEdit(
-    patch: Partial<BlockDefinition>
+    patch: Partial<ResolvedBlockDefinition>
   ): void {
     if (!this.block || !this.vr) {
       return;
     }
 
-    const updated: BlockDefinition = {
+    const updated: ResolvedBlockDefinition = {
       ...this.block,
       ...patch
     };
@@ -252,7 +252,7 @@ export class BlockEditorDialog extends LitElement {
     }
 
     const { blockRegistry } = this.vr.engine;
-    const block: BlockDefinitionIn = {
+    const block: BlockDefinition = {
       id: blockRegistry.nextId,
       name: this._draft.name.trim() || kDefaultBlockName,
       shapeId: this._draft.shapeId,

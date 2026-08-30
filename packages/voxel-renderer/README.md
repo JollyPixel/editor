@@ -197,7 +197,7 @@ The shapes, tileset and transparency examples use OrbitControls (left drag: rota
 - [VoxelEngine](docs/VoxelEngine.md) - Engine-agnostic core - options, voxel placement, tileset loading, save/load. Usable standalone or via `VoxelRenderer`.
 - [VoxelRenderer](docs/VoxelRenderer.md) - `ActorComponent` wrapper around `VoxelEngine` for JollyPixel scenes.
 - [World](docs/World.md) - `VoxelWorld`, `VoxelLayer`, `VoxelChunk`, and related types.
-- [Blocks](docs/Blocks.md) - `BlockDefinition`, `BlockShape`, `BlockRegistry`, `BlockShapeRegistry`, and `Face`.
+- [Blocks](docs/Blocks.md) - `BlockDefinition`, `ResolvedBlockDefinition`, `BlockShape`, `BlockRegistry`, `BlockShapeRegistry`, and `Face`.
 - [Tileset](docs/Tileset.md) - `TilesetManager`, `TilesetDefinition`, `TileRef`, UV regions.
 - [Serialization](docs/Serialization.md) - `VoxelSerializer` and JSON snapshot types.
 - [Collision](docs/Collision.md) - The `VoxelCollider` contract and the bundled `RapierVoxelCollider` plugin.

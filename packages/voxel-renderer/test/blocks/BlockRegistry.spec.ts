@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import type { BlockDefinitionIn } from "../../src/blocks/BlockDefinition.ts";
+import type { BlockDefinition } from "../../src/blocks/BlockDefinition.ts";
 import { BlockRegistry } from "../../src/blocks/BlockRegistry.ts";
 import { FACE } from "../../src/utils/math.ts";
 import { DEFAULT_TEXTURE } from "../helpers/blocks.ts";
@@ -11,7 +11,7 @@ import { DEFAULT_TEXTURE } from "../helpers/blocks.ts";
 function makeDef(
   id: number,
   name = `Block${id}`
-): BlockDefinitionIn {
+): BlockDefinition {
   return {
     id,
     name,
@@ -113,6 +113,33 @@ describe("BlockRegistry.register — defaults", () => {
     });
   });
 
+  it("leaves the authored definition untouched", () => {
+    const registry = new BlockRegistry();
+    const def: BlockDefinition = {
+      id: 1,
+      name: "A",
+      shapeId: "cube",
+      faceTextures: {
+        [FACE.PosY]: [1, 2]
+      },
+      defaultTexture: { col: 0, row: 0 },
+      defaultTilesetId: "atlas"
+    };
+
+    registry.register(def);
+
+    assert.deepEqual(def, {
+      id: 1,
+      name: "A",
+      shapeId: "cube",
+      faceTextures: {
+        [FACE.PosY]: [1, 2]
+      },
+      defaultTexture: { col: 0, row: 0 },
+      defaultTilesetId: "atlas"
+    });
+  });
+
   it("still resolves a bare tile ref tuple against defaultTilesetId", () => {
     const registry = new BlockRegistry();
     registry.register({
@@ -134,9 +161,8 @@ describe("BlockRegistry.register — defaults", () => {
 describe("BlockRegistry.get", () => {
   it("returns the registered def", () => {
     const registry = new BlockRegistry();
-    const def = makeDef(5);
-    registry.register(def);
-    assert.equal(registry.get(5), def);
+    registry.register(makeDef(5));
+    assert.deepEqual(registry.get(5), makeDef(5));
   });
 
   it("returns undefined for unknown id", () => {

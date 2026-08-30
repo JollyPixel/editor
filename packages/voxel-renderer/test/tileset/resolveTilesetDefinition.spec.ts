@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { resolveTilesetDefinition } from "../../src/tileset/types.ts";
+import { resolveTilesetDefinition } from "../../src/tileset/resolve.ts";
 
 // CONSTANTS
 const kDefinition = {
