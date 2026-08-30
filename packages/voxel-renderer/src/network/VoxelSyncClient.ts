@@ -19,8 +19,7 @@ export interface VoxelSyncClientOptions {
 }
 
 /**
- * Synchronizes a single `VoxelEngine` over one `network.Room`.
- * The room is scoped to one world.
+ * Synchronizes one `VoxelEngine` over a world-scoped room.
  */
 export class VoxelSyncClient extends network.SyncAdapter<
   VoxelEngine,
@@ -58,10 +57,7 @@ export class VoxelSyncClient extends network.SyncAdapter<
     engine: VoxelEngine,
     cmd: VoxelNetworkCommand
   ): void {
-    // "world-replace" is never sent as a "command" message (see
-    // replaceWorld()/VoxelSyncServer.receive(), which re-broadcasts it as a
-    // "snapshot" instead) — this narrows the type back to VoxelLayerHookEvent
-    // for engine.applyRemoteCommand() and guards defensively at runtime.
+    // World replacements arrive as snapshots, never commands.
     if (cmd.action === "world-replace") {
       return;
     }
@@ -70,8 +66,7 @@ export class VoxelSyncClient extends network.SyncAdapter<
   }
 
   /**
-   * Replaces the world for every connected client (including this one),
-   * which arrives back as an ordinary snapshot via `applySnapshot()`.
+   * Replaces the world for every client through the snapshot path.
    */
   replaceWorld(
     data: VoxelWorldJSON

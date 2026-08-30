@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import type {
-  BlockDefinition,
+  ResolvedBlockDefinition,
   VoxelRenderer
 } from "@jolly-pixel/voxel.renderer";
 
@@ -9,7 +9,7 @@ import { editorState } from "../../EditorState.ts";
 
 export function applyBlockUpdates(
   vr: VoxelRenderer,
-  updates: Iterable<BlockDefinition>
+  updates: Iterable<ResolvedBlockDefinition>
 ): void {
   let changed = false;
   for (const update of updates) {
@@ -26,7 +26,7 @@ export function applyBlockUpdates(
 
 export function applyBlockUpdate(
   vr: VoxelRenderer,
-  update: BlockDefinition
+  update: ResolvedBlockDefinition
 ): void {
   applyBlockUpdates(vr, [update]);
 }

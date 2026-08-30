@@ -1,37 +1,20 @@
-/**
- * Counters gathered while meshing one chunk.
- */
 export class MeshBuildStats {
-  /** Voxels visited in the chunk, including those skipped afterwards. */
   voxels = 0;
-  /** Voxels skipped because a higher-priority layer covers the position. */
   hiddenVoxels = 0;
-  /** Faces written to a geometry buffer. */
   faces = 0;
-  /** Faces skipped because an opaque neighbour occludes them. */
   culledFaces = 0;
   /**
-   * Voxel faces greedy meshing folded into a neighbour's quad. Always 0 when
-   * greedy meshing is off.
+   * Faces folded into neighbouring greedy quads; 0 when disabled.
    */
   mergedFaces = 0;
   vertices = 0;
   triangles = 0;
-  /** Geometries produced, one per tileset the chunk references. */
   geometries = 0;
-  /**
-   * Vertex attributes emitted, in bytes per vertex — indices excluded. Read
-   * off the geometries themselves, so shrinking or widening an attribute shows
-   * up here whether or not anyone remembered to update the docs.
-   */
   bytesPerVertex = 0;
-  /** Wall-clock time spent in `buildChunkGeometries`. */
   buildTimeMs = 0;
 
   /**
-   * Faces emitted per voxel that actually contributed geometry. Greedy meshing
-   * drives this 3–20× below the naive path on terrain; if it does not, a merge
-   * predicate has become too strict.
+   * Faces emitted per voxel that contributed geometry.
    */
   get facesPerSolidVoxel(): number {
     const solidVoxels = this.voxels - this.hiddenVoxels;

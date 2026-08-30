@@ -2,7 +2,7 @@
 import * as THREE from "three";
 import { disposeObject3D } from "@jolly-pixel/engine";
 import type {
-  BlockDefinition,
+  ResolvedBlockDefinition,
   BlockShapeRegistry,
   TilesetManager,
   FaceDefinition
@@ -23,7 +23,7 @@ const kSelectedBackground = new THREE.Color(0x2a3a5a);
 
 export interface CellEntry {
   blockId: number;
-  block: BlockDefinition;
+  block: ResolvedBlockDefinition;
   mesh: THREE.Mesh | THREE.Group;
   x: number;
   y: number;
@@ -32,7 +32,7 @@ export interface CellEntry {
 export interface BlockLibraryRendererOptions {
   shapeRegistry: BlockShapeRegistry;
   tilesetManager: TilesetManager;
-  blocks?: BlockDefinition[];
+  blocks?: ResolvedBlockDefinition[];
 }
 
 export class BlockLibraryRenderer {
@@ -94,7 +94,7 @@ export class BlockLibraryRenderer {
   }
 
   setBlocks(
-    blocks: BlockDefinition[]
+    blocks: ResolvedBlockDefinition[]
   ): void {
     const previous = new Map(
       this.#cells.map((cell) => [cell.blockId, cell])
@@ -161,7 +161,7 @@ export class BlockLibraryRenderer {
   }
 
   #buildBlockMesh(
-    block: BlockDefinition
+    block: ResolvedBlockDefinition
   ): THREE.Mesh | THREE.Group {
     const shape = this.#shapeRegistry.get(block.shapeId);
     if (!shape) {

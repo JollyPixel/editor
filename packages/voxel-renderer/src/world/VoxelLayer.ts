@@ -22,7 +22,7 @@ import type {
 
 // CONSTANTS
 // Chunk coordinates are packed into a single int32 so the chunk map keeps
-// Smi keys — 11 bits for X and Z, 10 for Y, since voxel worlds are far wider
+// Smi keys: 11 bits for X and Z, 10 for Y, since voxel worlds are far wider
 // than they are tall. Creating a chunk outside that range throws rather than
 // aliasing onto another one.
 const kChunkBitsY = 10;
@@ -33,11 +33,7 @@ const kChunkSpanY = 1 << kChunkBitsY;
 const kChunkSpanXZ = 1 << kChunkBitsXZ;
 
 /**
- * Biased bit-pack of the chunk coordinates into one int32. The three fields
- * are disjoint, so the mapping is one-to-one and the result stays a Smi —
- * unlike the template string this replaces, it allocates nothing.
- *
- * Callers must have cleared `inChunkRange()` first.
+ * Packs validated chunk coordinates into disjoint biased int32 fields.
  */
 function packChunkKey(
   cx: number,
@@ -61,8 +57,7 @@ function inChunkRange(
 }
 
 /**
- * Key of one voxel entry in a serialised layer: its world position as "x,y,z".
- * The map is sparse, so unwritten positions are simply absent.
+ * Sparse serialized voxel key containing its world position.
  */
 export type VoxelEntryKey = `${number},${number},${number}`;
 

@@ -7,7 +7,7 @@ import {
   BlockRegistry,
   Face,
   type VoxelRenderer,
-  type BlockDefinition
+  type ResolvedBlockDefinition
 } from "@jolly-pixel/voxel.renderer";
 import type {
   CanvasBufferEvent,
@@ -28,10 +28,10 @@ function makeBlock(
   id: number,
   options: {
     transparent?: boolean;
-    defaultTexture?: BlockDefinition["defaultTexture"];
-    faceTextures?: BlockDefinition["faceTextures"];
+    defaultTexture?: ResolvedBlockDefinition["defaultTexture"];
+    faceTextures?: ResolvedBlockDefinition["faceTextures"];
   } = {}
-): BlockDefinition {
+): ResolvedBlockDefinition {
   return {
     id,
     name: `Block${id}`,

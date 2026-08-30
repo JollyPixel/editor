@@ -113,10 +113,7 @@ interface VoxelEngineOptions {
    * Optional list of layer names to create on initialization.
    */
   layers?: string[];
-  /**
-   * Optional initial block definitions to register.
-   * Block ID 0 is reserved for air
-   */
+  /** Optional initial block definitions to register. */
   blocks?: BlockDefinition[];
   /**
    * Optional block shapes to register in addition to the default
@@ -401,7 +398,7 @@ Composited (first overload) or restricted to a specific layer (second overload).
 #### `loadTileset(def: TilesetDefinition, texture: THREE.Texture<HTMLImageElement>): void`
 
 Registers an already-loaded texture for a tileset definition. The first registered tileset
-becomes the default for `TileRef` values with no explicit `tilesetId`.
+becomes the default for tile references with no explicit `tilesetId`.
 Prefer passing a `TilesetLoader` via `VoxelEngineOptions.tilesetLoader` for pre-loading;
 use this method only when adding a tileset after construction.
 

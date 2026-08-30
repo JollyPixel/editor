@@ -15,13 +15,11 @@ import {
 
 // CONSTANTS
 const kDirections = 6;
-/** Marks a variant that owns no mergeable face, so the sweep can skip it. */
 const kNotMergeable = -1;
 const kInitialLocalVariants = 16;
 
 export type GeometryBufferFactory = (slot: number) => GeometryBuffer;
 
-/** Step between two cells of the dense grid along one world axis. */
 function strideOf(
   axis: number,
   size: number
@@ -33,7 +31,6 @@ function strideOf(
   return axis === 1 ? size : size * size;
 }
 
-/** Grows one slice's `(u, v)` extents to contain a newly written cell. */
 function widenSlice(
   min: Int32Array,
   max: Int32Array,
@@ -55,10 +52,8 @@ function widenSlice(
   }
 }
 
-/** Options shared by both mesh passes, naive and greedy. */
 export interface MeshPassOptions {
   chunk: VoxelChunk;
-  /** Prefetched layers around the chunk, and the occlusion queries over them. */
   neighbourhood: ChunkNeighbourhood;
   worldOriginX: number;
   worldOriginY: number;
@@ -68,49 +63,23 @@ export interface MeshPassOptions {
 }
 
 /**
- * Meshes one chunk by merging coplanar identical faces into the largest quads
- * it can, instead of emitting one quad per voxel face.
- *
- * A face takes part only when `BlockVariantCache` marked it mergeable — a full
- * unit quad flat on the block boundary. Slopes, stair risers and other partial
- * faces are emitted per voxel exactly as the naive path does, so a chunk mixing
- * cubes and ramps still meshes correctly; only the cube-like faces merge.
- *
- * Two voxels merge when they resolve to the same (block, transform) variant and
- * both show the same world-space direction, which by construction gives them
- * the same texture, normal, winding and tileset. Nothing else is compared: this
- * renderer carries no per-vertex lighting or ambient occlusion that a stretched
- * quad could smear.
- *
- * Merging never crosses a chunk boundary, which is what keeps a chunk rebuild
- * local.
- *
- * The sweep needs random access, unlike the naive path which walks the chunk's
- * sparse map. Voxels are therefore scattered into a dense grid once — O(voxels)
- * — and the six directional passes read that grid, restricted to the bounding
- * box of the filled cells so a mostly-empty chunk costs little.
+ * Merges identical full boundary quads using six dense-grid sweeps.
  */
 export class GreedyMesher {
   #variants: BlockVariantCache;
 
-  /** Dense `size³` grid of local variant indices, offset by 1 (0 = empty). */
   #grid = new Int32Array(0);
-  /** One `size²` slice of the grid being merged. */
   #mask = new Int32Array(0);
   #size = -1;
 
   /**
-   * Variants present in the chunk, compacted to small indices so the sweep can
-   * resolve a cell with an array read instead of a hash lookup.
+   * Chunk variants compacted to indices for direct grid lookup.
    */
   #localVariants: BlockVariant[] = [];
   /**
-   * Bit `d` set when the local variant at that index owns a mergeable face in
-   * direction `d`. Lifts the per-cell `mergeFaces[direction]` probe out of the
-   * mask-building loop.
+   * Mergeable-direction mask for each local variant.
    */
   #mergeableDirections = new Uint8Array(kInitialLocalVariants);
-  /** Bumped per chunk; stamps `BlockVariant.sweepEpoch` in place of a Map. */
   #epoch = 0;
 
   // Per-chunk state, set by `mesh()` so the passes stay parameter-free.
@@ -127,11 +96,7 @@ export class GreedyMesher {
   #emitted = false;
 
   /**
-   * Per-slice in-plane extents, one pair of arrays per world axis, each holding
-   * `(u, v)` per slice. The chunk's whole bounding box is a poor proxy for one
-   * slice of it — a terrain chunk is nearly empty in most of its box — so the
-   * sweep reads these instead. Filled by `#fillGrid()`, which already visits
-   * every voxel.
+   * Per-slice extents that avoid sweeping empty parts of terrain bounds.
    */
   #sliceMin: Int32Array[] = [];
   #sliceMax: Int32Array[] = [];
@@ -157,10 +122,6 @@ export class GreedyMesher {
     this.#variants = variants;
   }
 
-  /**
-   * Writes the chunk's geometry into the buffers `bufferFor` hands out.
-   * Returns true when at least one face was emitted.
-   */
   mesh(
     options: MeshPassOptions
   ): boolean {
@@ -212,9 +173,7 @@ export class GreedyMesher {
   }
 
   /**
-   * Scatters the chunk's voxels into the dense grid, emitting the faces the
-   * sweep cannot handle on the way. Returns false when nothing is mergeable,
-   * which lets `mesh()` skip all six passes.
+   * Fills the grid and emits faces that no directional sweep can merge.
    */
   #fillGrid(): boolean {
     const { size, shift, mask } = this.#chunk;
@@ -302,10 +261,6 @@ export class GreedyMesher {
     return filled;
   }
 
-  /**
-   * Emits the faces of one voxel that no directional pass will pick up:
-   * triangles, slopes and any face not flat on the block boundary.
-   */
   #emitUnmergeableFaces(
     variant: BlockVariant,
     wx: number,
@@ -341,12 +296,7 @@ export class GreedyMesher {
   }
 
   /**
-   * Compact index for a variant, or `kNotMergeable` when it owns no face the
-   * sweep can stretch (a stair, for instance).
-   *
-   * `BlockVariantCache` memoizes one object per (block, transform), so the
-   * answer is stamped onto the variant under the current epoch rather than kept
-   * in a side map keyed by it.
+   * Returns an epoch-stamped local index, or `kNotMergeable`.
    */
   #localIndexOf(
     variant: BlockVariant
@@ -382,9 +332,6 @@ export class GreedyMesher {
     return local;
   }
 
-  /**
-   * Builds and merges every slice perpendicular to one of the six directions.
-   */
   #sweep(
     direction: number
   ): void {
@@ -417,9 +364,7 @@ export class GreedyMesher {
   }
 
   /**
-   * Fills the mask with the local variant index of every voxel in the slice
-   * showing a visible mergeable face in `direction`, and 0 everywhere else.
-   * Returns false when the slice has no such face.
+   * Builds one directional slice mask and reports whether it contains a face.
    */
   #buildMask(
     direction: number,
@@ -458,7 +403,6 @@ export class GreedyMesher {
         if (cell !== 0 && (mergeable[cell - 1] & directionBit) !== 0) {
           const lx = axis === 0 ? slice : u;
           const lz = axis === 2 ? slice : v;
-          // X and Z are a single comparison each; only Y depends on all three axes.
           let ly = v;
           if (axis === 0) {
             ly = u;
@@ -491,9 +435,7 @@ export class GreedyMesher {
   }
 
   /**
-   * Consumes the mask, emitting one quad per maximal rectangle of equal cells.
-   * Rectangles grow along `vAxis` first (contiguous in the mask) and then along
-   * `uAxis`, the usual greedy order.
+   * Emits one quad per maximal equal-cell rectangle in the mask.
    */
   #mergeMask(
     direction: number,
@@ -539,7 +481,6 @@ export class GreedyMesher {
 
         const lx = axis === 0 ? slice : u;
         const lz = axis === 2 ? slice : v;
-        // X and Z are a single comparison each; only Y depends on all three axes.
         let ly = v;
         if (axis === 0) {
           ly = u;
@@ -566,10 +507,6 @@ export class GreedyMesher {
     }
   }
 
-  /**
-   * True when the `spanV` mask cells from `start` onward all hold `cell` — the
-   * test that lets a rectangle grow one row.
-   */
   #rowMatches(
     start: number,
     spanV: number,
@@ -587,8 +524,7 @@ export class GreedyMesher {
   }
 
   /**
-   * Zeroes only the cells `#fillGrid()` wrote, so the next chunk starts clean
-   * without paying for a full `size³` clear.
+   * Clears only populated grid cells.
    */
   #clearGrid(): void {
     const grid = this.#grid;

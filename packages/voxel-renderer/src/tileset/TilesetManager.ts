@@ -2,13 +2,13 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import {
-  resolveTilesetDefinition,
-  type ResolvedTilesetDefinition,
-  type TileRef,
-  type TilesetDefinition,
-  type TilesetUVRegion
+import type {
+  ResolvedTilesetDefinition,
+  ResolvedTileRef,
+  TilesetDefinition,
+  TilesetUVRegion
 } from "./types.ts";
+import { resolveTilesetDefinition } from "./resolve.ts";
 import {
   defaultPadding,
   padAtlas,
@@ -16,14 +16,7 @@ import {
   tileUVRegion,
   type AtlasRegion
 } from "./atlasLayout.ts";
-import type { BlockDefinition } from "../blocks/BlockDefinition.ts";
-
-export type {
-  ResolvedTilesetDefinition,
-  TileRef,
-  TilesetDefinition,
-  TilesetUVRegion
-};
+import type { ResolvedBlockDefinition } from "../blocks/BlockDefinition.ts";
 
 export interface TilesetManagerOptions {
   /**
@@ -42,7 +35,11 @@ export interface TilesetDefaultBlockOptions {
   /**
    * Function to map block IDs to custom block definitions.
    */
-  map?: (blockId: number, col: number, row: number) => Omit<BlockDefinition, "id">;
+  map?: (
+    blockId: number,
+    col: number,
+    row: number
+  ) => Omit<ResolvedBlockDefinition, "id">;
 }
 
 /**
@@ -51,7 +48,7 @@ export interface TilesetDefaultBlockOptions {
 export type TilesetImage = HTMLImageElement | HTMLCanvasElement;
 export type TilesetTexture = THREE.Texture<TilesetImage>;
 
-export interface TilesetEntry {
+export interface TilesetAtlasEntry {
   def: ResolvedTilesetDefinition;
   /**
    * Material atlas, padded when `padding > 0`.
@@ -69,11 +66,10 @@ export interface TilesetEntry {
 }
 
 /**
- * Manages source and padded textures plus per-tile UV regions.
- * Materials share one nearest-filtered texture per tileset.
+ * Manages source and padded textures with per-tile UV regions.
  */
 export class TilesetManager {
-  #tilesets = new Map<string, TilesetEntry>();
+  #tilesets = new Map<string, TilesetAtlasEntry>();
   #defaultTilesetId: string | null = null;
   #version = 0;
   /**
@@ -96,7 +92,10 @@ export class TilesetManager {
     const textureLoader = loader ?? new THREE.TextureLoader();
     const texture = await textureLoader.loadAsync(def.src);
 
-    this.registerTexture(def, texture);
+    this.registerTexture(
+      def,
+      texture
+    );
   }
 
   registerTexture(
@@ -130,8 +129,7 @@ export class TilesetManager {
   }
 
   /**
-   * Replaces and repads a source without changing texture references.
-   * The new image must preserve the registered dimensions.
+   * Repads a same-size source without replacing texture references.
    */
   updateSourceImage(
     image: TilesetImage,
@@ -152,8 +150,7 @@ export class TilesetManager {
   }
 
   /**
-   * Repads touched tiles, falling back to a full repad when required.
-   * `bounds` uses source-atlas texels.
+   * Repads touched source-atlas texels, or falls back to a full repad.
    */
   updateSourceRegion(
     image: TilesetImage,
@@ -215,7 +212,7 @@ export class TilesetManager {
   }
 
   getTileUV(
-    ref: TileRef
+    ref: ResolvedTileRef
   ): TilesetUVRegion {
     const id = ref.tilesetId ?? this.#defaultTilesetId;
     if (id === null) {
@@ -248,8 +245,7 @@ export class TilesetManager {
   }
 
   /**
-   * Returns the unpadded texture for editing.
-   * After edits, call `updateSourceImage`; `tileSize` describes this grid.
+   * Returns the unpadded editable texture and its tile size.
    */
   getSourceTexture(
     tilesetId?: string
@@ -270,12 +266,12 @@ export class TilesetManager {
   getDefaultBlocks(
     tilesetId = this.#defaultTilesetId,
     options: TilesetDefaultBlockOptions = {}
-  ): BlockDefinition[] {
+  ): ResolvedBlockDefinition[] {
     const {
       limit = 255,
       map
     } = options;
-    const blocks: BlockDefinition[] = [];
+    const blocks: ResolvedBlockDefinition[] = [];
 
     if (!tilesetId) {
       return blocks;

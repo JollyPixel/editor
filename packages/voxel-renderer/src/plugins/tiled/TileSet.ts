@@ -31,11 +31,7 @@ export interface TileProps {
 }
 
 /**
- * Pure-data wrapper around a Tiled tileset entry.
- *
- * Converts GIDs (Global tile IDs) to local coordinates and UV regions.
- * No Three.js or browser dependency — safe to use in Node.js build tools.
- * UV values are normalised (0–1 per tile), independent of actual image size.
+ * Converts Tiled GIDs to local coordinates and normalized UV regions.
  */
 export class TileSet {
   static find(

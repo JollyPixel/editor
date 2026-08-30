@@ -15,7 +15,7 @@ import type {
   RapierRigidBody,
   RapierRigidBodyDesc
 } from "../../../src/plugins/rapier/RapierVoxelCollider.types.ts";
-import type { BlockDefinitionIn } from "../../../src/blocks/BlockDefinition.ts";
+import type { BlockDefinition } from "../../../src/blocks/BlockDefinition.ts";
 
 // CONSTANTS
 const kNoGeometries = new Map();
@@ -116,7 +116,7 @@ function makeMockRapier() {
   };
 }
 
-function makeBlockDef(id: number, shapeId: string, collidable = true): BlockDefinitionIn {
+function makeBlockDef(id: number, shapeId: string, collidable = true): BlockDefinition {
   return {
     id,
     name: `Block${id}`,

@@ -1,77 +1,45 @@
 // Import Internal Dependencies
-import type { Coords, TileRef, TileRefIn } from "../tileset/types.ts";
-import type { BlockDefinition, BlockDefinitionIn } from "./BlockDefinition.ts";
+import {
+  AIR_BLOCK_ID,
+  isAir
+} from "./BlockId.ts";
+import {
+  resolveBlockDefinition,
+  type BlockDefinition,
+  type ResolvedBlockDefinition
+} from "./BlockDefinition.ts";
 
-/**
- * Registry mapping numeric block IDs to their definitions.
- * @note Block ID 0 is reserved for air and cannot be registered.
- */
-export class BlockRegistry {
-  #blocks = new Map<number, BlockDefinition>();
+export class BlockRegistry implements Iterable<ResolvedBlockDefinition> {
+  #blocks = new Map<number, ResolvedBlockDefinition>();
   #version = 0;
   #highestId = 0;
 
   constructor(
-    defs: BlockDefinitionIn[] = []
+    defs: BlockDefinition[] = []
   ) {
     for (const def of defs) {
-      if (def.id === 0) {
-        continue;
-      }
-
       this.register(def);
     }
   }
 
   register(
-    def: BlockDefinitionIn
+    def: BlockDefinition
   ): this {
-    if (def.id === 0) {
-      throw new Error("Block ID 0 is reserved for air and cannot be registered.");
+    if (isAir(def.id)) {
+      throw new Error(
+        `Block id ${AIR_BLOCK_ID} is reserved for air and cannot be registered.`
+      );
     }
 
-    def.collidable ??= true;
-    def.faceTextures ??= {};
-
-    for (const face in def.faceTextures) {
-      if (!Object.hasOwn(def.faceTextures, face)) {
-        continue;
-      }
-      const ref: TileRefIn = def.faceTextures[face];
-      if (Array.isArray(ref)) {
-        def.faceTextures[face] = this.#makeTileRef(
-          ref,
-          def.defaultTilesetId
-        );
-
-        continue;
-      }
-      if (this.#canAddDefaultTileSetId(ref, def.defaultTilesetId)) {
-        ref.tilesetId = def.defaultTilesetId;
-      }
-    }
-
-    if (def.defaultTexture) {
-      if (Array.isArray(def.defaultTexture)) {
-        def.defaultTexture = this.#makeTileRef(
-          def.defaultTexture,
-          def.defaultTilesetId
-        );
-      }
-      else if (this.#canAddDefaultTileSetId(def.defaultTexture, def.defaultTilesetId)) {
-        def.defaultTexture.tilesetId = def.defaultTilesetId;
-      }
-    }
-
-    delete def.defaultTilesetId;
+    const resolved = resolveBlockDefinition(def);
 
     this.#blocks.set(
-      def.id,
-      def as BlockDefinition
+      resolved.id,
+      resolved
     );
     this.#version++;
-    if (def.id > this.#highestId) {
-      this.#highestId = def.id;
+    if (resolved.id > this.#highestId) {
+      this.#highestId = resolved.id;
     }
 
     return this;
@@ -85,27 +53,9 @@ export class BlockRegistry {
     return this.#version;
   }
 
-  #canAddDefaultTileSetId(
-    ref: TileRef,
-    defaultTilesetId: string | undefined
-  ) {
-    return !ref.tilesetId && defaultTilesetId;
-  }
-
-  #makeTileRef(
-    coords: Coords,
-    defaultTilesetId: string | undefined
-  ): TileRef {
-    return {
-      col: coords[0],
-      row: coords[1],
-      tilesetId: defaultTilesetId
-    };
-  }
-
   get(
     id: number
-  ): BlockDefinition | undefined {
+  ): ResolvedBlockDefinition | undefined {
     return this.#blocks.get(id);
   }
 
@@ -115,7 +65,11 @@ export class BlockRegistry {
     return this.#blocks.has(id);
   }
 
-  getAll(): IterableIterator<BlockDefinition> {
+  getAll(): IterableIterator<ResolvedBlockDefinition> {
     return this.#blocks.values();
+  }
+
+  [Symbol.iterator](): IterableIterator<ResolvedBlockDefinition> {
+    return this.getAll();
   }
 }

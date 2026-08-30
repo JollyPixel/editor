@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import {
   TilesetLoader
 } from "../../src/tileset/TilesetLoader.ts";
-import type { TilesetDefinition } from "../../src/tileset/TilesetManager.ts";
+import type { TilesetDefinition } from "../../src/tileset/types.ts";
 import type { VoxelWorldJSON } from "../../src/serialization/VoxelSerializer.ts";
 import { mockTexture } from "../helpers/mockTexture.ts";
 

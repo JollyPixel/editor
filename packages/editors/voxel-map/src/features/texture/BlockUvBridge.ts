@@ -2,8 +2,8 @@
 import {
   Face,
   type VoxelRenderer,
-  type BlockDefinition,
-  type TileRef
+  type ResolvedBlockDefinition,
+  type ResolvedTileRef
 } from "@jolly-pixel/voxel.renderer";
 import {
   UVRegion,
@@ -128,7 +128,7 @@ export class BlockUvBridge {
     }
   }
 
-  #blocksOnActiveTileset(): BlockDefinition[] {
+  #blocksOnActiveTileset(): ResolvedBlockDefinition[] {
     if (!this.#tilesetId) {
       return [];
     }
@@ -161,7 +161,7 @@ export class BlockUvBridge {
   }
 
   #regionFor(
-    block: BlockDefinition
+    block: ResolvedBlockDefinition
   ): UVRegion {
     const id = regionId(block.id);
     const fallback = this.#rectOf(block.defaultTexture!);
@@ -216,7 +216,7 @@ export class BlockUvBridge {
   }
 
   #rectOf(
-    tileRef: TileRef
+    tileRef: ResolvedTileRef
   ): SelectionRect {
     const tileSize = this.#tileSize;
 
@@ -230,8 +230,8 @@ export class BlockUvBridge {
 
   #tileRefOf(
     rect: SelectionRect,
-    template: TileRef
-  ): TileRef {
+    template: ResolvedTileRef
+  ): ResolvedTileRef {
     return {
       ...template,
       col: rect.x / this.#tileSize,
@@ -240,7 +240,7 @@ export class BlockUvBridge {
   }
 
   #restoreRegionFor(
-    block: BlockDefinition
+    block: ResolvedBlockDefinition
   ): void {
     const region = this.#regionFor(block);
     const existing = this.#uv.get(region.id);
@@ -264,7 +264,7 @@ export class BlockUvBridge {
       return;
     }
 
-    const updated: BlockDefinition = region.state === "uncollapsed" ?
+    const updated: ResolvedBlockDefinition = region.state === "uncollapsed" ?
       {
         ...block,
         faceTextures: Object.fromEntries(
@@ -346,7 +346,7 @@ export class BlockUvBridge {
 
   #blockOf(
     id: string
-  ): BlockDefinition | undefined {
+  ): ResolvedBlockDefinition | undefined {
     const blockId = blockIdFromRegion(id);
     if (blockId === null) {
       return undefined;

@@ -7,7 +7,7 @@ import {
   BlockRegistry,
   Face,
   type VoxelRenderer,
-  type BlockDefinition
+  type ResolvedBlockDefinition
 } from "@jolly-pixel/voxel.renderer";
 import {
   UVMap,
@@ -27,7 +27,7 @@ interface BlockTexturePlacement {
 function makeBlock(
   id: number,
   placement: BlockTexturePlacement
-): BlockDefinition {
+): ResolvedBlockDefinition {
   return {
     id,
     name: `Block${id}`,
@@ -86,7 +86,7 @@ describe("BlockUvBridge.setActiveTileset", () => {
     const ramp = {
       ...makeBlock(1, { col: 2, row: 1, tilesetId: "atlas" }),
       shapeId: "ramp"
-    } satisfies BlockDefinition;
+    } satisfies ResolvedBlockDefinition;
     vr.engine.blockRegistry.register(ramp);
 
     const uv = makeUv();

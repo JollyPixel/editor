@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import { VoxelEngine } from "../src/VoxelEngine.ts";
-import type { BlockDefinitionIn } from "../src/blocks/BlockDefinition.ts";
+import type { BlockDefinition } from "../src/blocks/BlockDefinition.ts";
 import {
   TerrainBlock,
   generateTerrain,
@@ -64,7 +64,7 @@ export function populateTerrain(
   );
 }
 
-function terrainBlocks(): BlockDefinitionIn[] {
+function terrainBlocks(): BlockDefinition[] {
   return Object.values(TerrainBlock).map((id, index) => {
     return {
       id,

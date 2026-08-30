@@ -1,17 +1,17 @@
 // Import Third-party Dependencies
 import type {
-  BlockDefinition,
-  TileRef
+  ResolvedBlockDefinition,
+  ResolvedTileRef
 } from "@jolly-pixel/voxel.renderer";
 import type { SelectionRect } from "@jolly-pixel/pixel-draw.renderer";
 
 export interface BlockTextureRects {
-  block: BlockDefinition;
+  block: ResolvedBlockDefinition;
   rects: SelectionRect[];
 }
 
 function tileRectOf(
-  ref: TileRef,
+  ref: ResolvedTileRef,
   tileSize: number
 ): SelectionRect {
   return {
@@ -23,14 +23,14 @@ function tileRectOf(
 }
 
 export function findBlocksReferencingTileset(
-  blocks: Iterable<BlockDefinition>,
+  blocks: Iterable<ResolvedBlockDefinition>,
   tilesetId: string,
   tileSize: number
 ): BlockTextureRects[] {
   const results: BlockTextureRects[] = [];
 
   for (const block of blocks) {
-    const refs: TileRef[] = [];
+    const refs: ResolvedTileRef[] = [];
     if (block.defaultTexture?.tilesetId === tilesetId) {
       refs.push(block.defaultTexture);
     }

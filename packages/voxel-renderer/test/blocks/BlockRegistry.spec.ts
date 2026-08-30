@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import type { BlockDefinitionIn } from "../../src/blocks/BlockDefinition.ts";
+import type { BlockDefinition } from "../../src/blocks/BlockDefinition.ts";
 import { BlockRegistry } from "../../src/blocks/BlockRegistry.ts";
 import { FACE } from "../../src/utils/math.ts";
 import { DEFAULT_TEXTURE } from "../helpers/blocks.ts";
@@ -11,7 +11,7 @@ import { DEFAULT_TEXTURE } from "../helpers/blocks.ts";
 function makeDef(
   id: number,
   name = `Block${id}`
-): BlockDefinitionIn {
+): BlockDefinition {
   return {
     id,
     name,
@@ -40,13 +40,11 @@ describe("BlockRegistry constructor", () => {
     assert.equal(registry.has(2), true);
   });
 
-  it("silently skips id=0 in constructor defs", () => {
-    const registry = new BlockRegistry([
-      makeDef(0),
-      makeDef(1)
-    ]);
-    assert.equal(registry.has(0), false);
-    assert.equal(registry.has(1), true);
+  it("throws on an air definition, like register does", () => {
+    assert.throws(
+      () => new BlockRegistry([makeDef(1), makeDef(0)]),
+      /Block id 0 is reserved/
+    );
   });
 });
 
@@ -61,7 +59,7 @@ describe("BlockRegistry.register", () => {
     const registry = new BlockRegistry();
     assert.throws(
       () => registry.register(makeDef(0)),
-      /Block ID 0 is reserved/
+      /Block id 0 is reserved/
     );
   });
 
@@ -113,6 +111,33 @@ describe("BlockRegistry.register — defaults", () => {
     });
   });
 
+  it("leaves the authored definition untouched", () => {
+    const registry = new BlockRegistry();
+    const def: BlockDefinition = {
+      id: 1,
+      name: "A",
+      shapeId: "cube",
+      faceTextures: {
+        [FACE.PosY]: [1, 2]
+      },
+      defaultTexture: { col: 0, row: 0 },
+      defaultTilesetId: "atlas"
+    };
+
+    registry.register(def);
+
+    assert.deepEqual(def, {
+      id: 1,
+      name: "A",
+      shapeId: "cube",
+      faceTextures: {
+        [FACE.PosY]: [1, 2]
+      },
+      defaultTexture: { col: 0, row: 0 },
+      defaultTilesetId: "atlas"
+    });
+  });
+
   it("still resolves a bare tile ref tuple against defaultTilesetId", () => {
     const registry = new BlockRegistry();
     registry.register({
@@ -134,9 +159,8 @@ describe("BlockRegistry.register — defaults", () => {
 describe("BlockRegistry.get", () => {
   it("returns the registered def", () => {
     const registry = new BlockRegistry();
-    const def = makeDef(5);
-    registry.register(def);
-    assert.equal(registry.get(5), def);
+    registry.register(makeDef(5));
+    assert.deepEqual(registry.get(5), makeDef(5));
   });
 
   it("returns undefined for unknown id", () => {
@@ -235,6 +259,28 @@ describe("BlockRegistry.getAll", () => {
   });
 });
 
+describe("BlockRegistry[Symbol.iterator]", () => {
+  it("yields the same defs as getAll", () => {
+    const registry = new BlockRegistry([
+      makeDef(1),
+      makeDef(2)
+    ]);
+
+    assert.deepEqual([...registry], [...registry.getAll()]);
+  });
+
+  it("is iterable with for...of", () => {
+    const registry = new BlockRegistry([makeDef(4)]);
+
+    const ids: number[] = [];
+    for (const definition of registry) {
+      ids.push(definition.id);
+    }
+
+    assert.deepEqual(ids, [4]);
+  });
+});
+
 describe("BlockRegistry.nextId", () => {
   it("is one for an empty registry, never zero (air)", () => {
     assert.equal(new BlockRegistry().nextId, 1);
@@ -256,10 +302,9 @@ describe("BlockRegistry.nextId", () => {
     assert.equal(registry.nextId, 4);
   });
 
-  it("ignores the air definition the constructor skips", () => {
-    const registry = new BlockRegistry([makeDef(0)]);
-
-    assert.equal(registry.nextId, 1);
+  it("stays at one when a rejected air definition aborts the constructor", () => {
+    assert.throws(() => new BlockRegistry([makeDef(0)]));
+    assert.equal(new BlockRegistry().nextId, 1);
   });
 
   it("does not reuse a gap left between two blocks", () => {

@@ -5,7 +5,7 @@ import * as THREE from "three";
 import {
   TilesetManager,
   type TilesetUVRegion
-} from "../../src/tileset/TilesetManager.ts";
+} from "../../src/tileset/index.ts";
 import {
   type LabelEntry,
   createLabel,

@@ -21,9 +21,9 @@ export {
   voxelMapSnapshot
 } from "./VoxelMapDocument.ts";
 
-export {
-  resolveTilesetDefinition,
-  type AtlasSize,
-  type ResolvedTilesetDefinition,
-  type TilesetDefinition
+export type {
+  AtlasSize,
+  ResolvedTilesetDefinition,
+  TilesetDefinition
 } from "../tileset/types.ts";
+export { resolveTilesetDefinition } from "../tileset/resolve.ts";

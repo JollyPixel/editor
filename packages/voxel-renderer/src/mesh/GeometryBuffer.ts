@@ -6,7 +6,6 @@ import type { BlockVariantFace } from "./BlockVariantCache.ts";
 
 // CONSTANTS
 const kInitialVertices = 4096;
-// Above this vertex count a chunk can no longer be indexed with 16-bit values.
 const kUint16Limit = 65536;
 
 export interface GeometryBufferOptions {
@@ -15,24 +14,14 @@ export interface GeometryBufferOptions {
    */
   vertexCapacity?: number;
   /**
-   * Emit the `tileRegion` / `tileRepeat` attributes and write `uv` in tile
-   * space instead of atlas space so merged quads can repeat a tile. Required by
-   * greedy meshing, useless otherwise.
+   * Emits attributes required by tiled greedy geometry.
    * @default false
    */
   tiled?: boolean;
 }
 
 /**
- * Growable typed-array accumulator for one tileset's geometry.
- *
- * Values are written straight into typed arrays instead of `number[]`, avoiding
- * boxing and the extra float conversion pass. Buffers are reused between chunks,
- * so a chunk only pays for growth once.
- *
- * Every attribute except tiled `uv` is staged in the precision it is emitted
- * as — `BlockVariantCache` quantises normals, atlas UVs and tile rects once per
- * variant — so `toGeometry()` is a copy with no conversion pass.
+ * Reusable typed-array accumulator for one tileset's geometry.
  */
 export class GeometryBuffer {
   vertexCount = 0;
@@ -42,14 +31,10 @@ export class GeometryBuffer {
 
   #positions: Float32Array;
   #normals: Int8Array;
-  /** `vertexCount × 2` tile-space UVs; empty unless `tiled`. */
   #tileUvs: Float32Array;
-  /** `vertexCount × 2` unorm16 atlas UVs; empty when `tiled`. */
   #atlasUvs: Uint16Array;
   #indices: Uint32Array;
-  /** `vertexCount × 4` unorm16 atlas rects; empty unless `tiled`. */
   #regions: Uint16Array;
-  /** `vertexCount × 2` tile repeat counts; empty unless `tiled`. */
   #repeats: Uint16Array;
 
   #vertexCapacity: number;
@@ -65,7 +50,6 @@ export class GeometryBuffer {
 
     this.tiled = tiled;
     this.#vertexCapacity = vertexCapacity;
-    // A quad emits 6 indices for 4 vertices.
     this.#indexCapacity = (vertexCapacity * 3) >> 1;
 
     this.#positions = new Float32Array(vertexCapacity * 3);
@@ -83,10 +67,7 @@ export class GeometryBuffer {
   }
 
   /**
-   * Appends one face, translated to the voxel's world position.
-   *
-   * Positional parameters are used instead of an options object to avoid
-   * allocations on the hot path.
+   * Appends a face translated to the voxel's world position.
    */
   addFace(
     face: BlockVariantFace,
@@ -98,10 +79,7 @@ export class GeometryBuffer {
   }
 
   /**
-   * Appends one face stretched over `spanU × spanV` voxels along its in-plane
-   * world axes. Only valid on a `tiled` buffer:
-   * the UVs run past 1 and rely on the material folding them back into the
-   * tile's atlas rect.
+   * Appends a tiled face stretched over `spanU × spanV` voxels.
    */
   // eslint-disable-next-line max-params
   addMergedFace(
@@ -114,8 +92,7 @@ export class GeometryBuffer {
   ): void {
     const merge = face.merge!;
 
-    // The face lies flat on `axis`, so only the two in-plane axes stretch:
-    // axis 0 → (1, spanU, spanV), axis 1 → (spanU, 1, spanV), axis 2 → (spanU, spanV, 1).
+    // Only the two axes in the face plane stretch.
     const sx = merge.axis === 0 ? 1 : spanU;
     const sz = merge.axis === 2 ? 1 : spanV;
     let sy = 1;
@@ -126,8 +103,7 @@ export class GeometryBuffer {
       sy = spanV;
     }
 
-    // A rotated block turns the tile sideways, so the repeat counts follow the
-    // tile's own axes rather than the world's.
+    // Repeat counts follow the tile axes after rotation.
     const repeatU = merge.swapped ? spanV : spanU;
     const repeatV = merge.swapped ? spanU : spanV;
 
@@ -135,9 +111,7 @@ export class GeometryBuffer {
   }
 
   /**
-   * Shared vertex writer. `sx/sy/sz` scale the block-local positions and
-   * `repeatU/repeatV` scale the tile UVs. On a non-tiled buffer both are 1,
-   * so the atlas UVs are copied verbatim.
+   * Writes scaled positions and repeated or atlas-space UVs.
    */
   // eslint-disable-next-line max-params
   #write(
@@ -204,7 +178,6 @@ export class GeometryBuffer {
       u += 2;
     }
 
-    // Triangulate via fan from vertex 0: [0,1,2] and (if quad) [0,2,3].
     const indices = this.#indices;
     let n = this.indexCount;
     indices[n++] = base;
@@ -221,8 +194,7 @@ export class GeometryBuffer {
   }
 
   /**
-   * Copies the written range into exact-size attributes. This narrows each one
-   * to the smallest type that can represent it without visible loss.
+   * Copies written ranges into exact-size geometry attributes.
    */
   toGeometry(): THREE.BufferGeometry {
     const { vertexCount, tiled } = this;

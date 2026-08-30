@@ -23,7 +23,7 @@ engine.load(data);
 type VoxelEntryKey = `${number},${number},${number}`;
 
 interface VoxelEntryJSON {
-  block: number;     // BlockDefinition.id
+  block: number;     // ResolvedBlockDefinition.id
   transform: number; // packed rotation + flip byte
 }
 
@@ -91,7 +91,7 @@ interface VoxelWorldJSON {
   /** Block definitions embedded by converters (e.g. TiledConverter).
    * Auto-registered on load.
    **/
-  blocks?: BlockDefinition[];
+  blocks?: ResolvedBlockDefinition[];
   /**
    * Named object layers (spawn points, triggers, etc.).
    * Present in converter output and in files saved after object layers

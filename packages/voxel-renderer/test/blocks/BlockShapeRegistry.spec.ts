@@ -160,6 +160,27 @@ describe("BlockShapeRegistry.getAll", () => {
   });
 });
 
+describe("BlockShapeRegistry[Symbol.iterator]", () => {
+  it("yields the same shapes as getAll", () => {
+    const registry = new BlockShapeRegistry();
+    registry.register(makeShape("first")).register(makeShape("second"));
+
+    assert.deepEqual([...registry], [...registry.getAll()]);
+  });
+
+  it("is iterable with for...of", () => {
+    const registry = new BlockShapeRegistry();
+    registry.register(makeShape("only"));
+
+    const ids: string[] = [];
+    for (const shape of registry) {
+      ids.push(shape.id);
+    }
+
+    assert.deepEqual(ids, ["only"]);
+  });
+});
+
 describe("BlockShapeRegistry.ids", () => {
   it("is empty for a fresh registry", () => {
     const registry = new BlockShapeRegistry();

@@ -15,8 +15,9 @@ Two consequences for callers:
 - `get()`, `getAt()` and `entries()` **rebuild** a `VoxelEntry` on each call. They no
   longer return the object that was written, so compare with a deep equality check,
   never `===`.
-- Block ids must fit in 23 bits (`0..MAX_BLOCK_ID`, 8 388 607). `packVoxel()` throws a
-  `RangeError` above that rather than truncating silently.
+- Block ids must fit in 23 bits (`1..MAX_BLOCK_ID`, 8 388 607). `packVoxel()` throws a
+  `RangeError` above that rather than truncating silently, and on id `0`, which is
+  air and has no packed form (see [Air](./Blocks.md#air)).
 
 The `Packed` variants below skip the object entirely and are what the mesh builders
 use.

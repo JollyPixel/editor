@@ -1,58 +1,83 @@
 // Import Internal Dependencies
-import type { TileRef, TileRefIn } from "../tileset/types.ts";
+import type {
+  ResolvedTileRef,
+  TileRef
+} from "../tileset/types.ts";
+import { resolveTileRef } from "../tileset/resolve.ts";
 import type { FACE } from "../utils/math.ts";
 import type { BlockShapeID } from "./BlockShape.ts";
 
-export interface BlockDef {
-  /**
-   * Unique numeric identifier.
-   * @note
-   * 0 is reserved for air.
-   **/
+export interface BlockDefinition {
   id: number;
-  /**
-   * Human-readable name for editor display.
-   */
   name: string;
-  /**
-   * ID of the BlockShape to use for geometry generation.
-   */
   shapeId: BlockShapeID;
   /**
-   * A transparent block never hides a neighbouring face.
-   * @default false
+   * Per-face tiles; missing faces use `defaultTexture`.
+   * @default {}
    */
-  transparent?: boolean;
-}
-
-export interface BlockDefinition extends BlockDef {
-  /**
-   * Per-face tile references. If a face is absent, defaultTexture is used.
-   */
-  faceTextures: Partial<Record<FACE, TileRef>>;
-  /**
-   * Fallback tile used for any face not listed in faceTextures.
-   */
+  faceTextures?: Partial<Record<FACE, TileRef>>;
   defaultTexture?: TileRef;
   /**
    * If false, the mesh builder will not emit collision geometry for this block.
    * @default true
    */
-  collidable: boolean;
-}
-
-export interface BlockDefinitionIn extends BlockDef {
-  /**
-   * @default {}
-   */
-  faceTextures?: Partial<Record<FACE, TileRefIn>>;
-  defaultTexture?: TileRefIn;
-  /**
-   * @default true
-   */
   collidable?: boolean;
   /**
-   * Fallback tile set id used for any tile ref that does not have a tileset id.
+   * A transparent block never hides a neighbouring face.
+   * @default false
+   */
+  transparent?: boolean;
+  /**
+   * Tileset used by tile references that omit one; dropped once resolved.
    */
   defaultTilesetId?: string;
+}
+
+export type ResolvedBlockDefinition =
+  & Omit<
+    BlockDefinition,
+    "faceTextures" | "defaultTexture" | "collidable" | "defaultTilesetId"
+  >
+  & {
+    faceTextures: Partial<Record<FACE, ResolvedTileRef>>;
+    defaultTexture?: ResolvedTileRef;
+    collidable: boolean;
+  };
+
+export function resolveBlockDefinition(
+  def: BlockDefinition
+): ResolvedBlockDefinition {
+  const {
+    faceTextures = {},
+    defaultTexture,
+    collidable = true,
+    defaultTilesetId,
+    ...rest
+  } = def;
+
+  const resolved: ResolvedBlockDefinition = {
+    ...rest,
+    collidable,
+    faceTextures: {}
+  };
+
+  for (const key of Object.keys(faceTextures)) {
+    const face = Number(key) as FACE;
+    const ref = faceTextures[face];
+    if (ref) {
+      resolved.faceTextures[face] = resolveTileRef(
+        ref,
+        defaultTilesetId
+      );
+    }
+  }
+
+  if (defaultTexture) {
+    resolved.defaultTexture = resolveTileRef(
+      defaultTexture,
+      defaultTilesetId
+    );
+  }
+
+  return resolved;
 }

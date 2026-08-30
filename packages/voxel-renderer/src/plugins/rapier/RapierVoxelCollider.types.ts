@@ -1,7 +1,5 @@
 /**
- * Structural subset of the Rapier3D API used by this plugin. Declaring it
- * structurally keeps the WASM module out of the package: the consumer passes an
- * already-initialised Rapier namespace, which satisfies these shapes uncast.
+ * Structural Rapier3D subset that keeps the WASM module consumer-owned.
  */
 
 export interface RapierColliderDesc {
@@ -45,7 +43,6 @@ export interface RapierWorld {
   ): void;
 }
 
-/** The subset of the Rapier module's static API required by this plugin. */
 export interface RapierAPI {
   RigidBodyDesc: {
     fixed(): RapierRigidBodyDesc;

@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import {
   BlockRegistry,
   type VoxelRenderer,
-  type BlockDefinition
+  type ResolvedBlockDefinition
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -16,7 +16,7 @@ import {
 } from "../../../src/features/blocks/applyBlockUpdate.ts";
 import { editorState } from "../../../src/EditorState.ts";
 
-function makeBlock(): BlockDefinition {
+function makeBlock(): ResolvedBlockDefinition {
   return {
     id: 1,
     name: "Stone",

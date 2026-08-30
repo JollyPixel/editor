@@ -3,32 +3,31 @@ import type {
   BlockShape,
   BlockShapeID
 } from "./BlockShape.ts";
-import { Cube } from "./shapes/Cube.ts";
-import { Slab } from "./shapes/Slab.ts";
-import { Ramp } from "./shapes/Ramp.ts";
+
 import {
+  Cube,
+  Pole,
+  PoleY,
+  Ramp,
   RampCornerInner,
-  RampCornerOuter
-} from "./shapes/RampCorner.ts";
-import { PoleY } from "./shapes/PoleY.ts";
-import { Pole } from "./shapes/Pole.ts";
-import {
+  RampCornerOuter,
+  Slab,
   Stair,
   StairCornerInner,
   StairCornerOuter
-} from "./shapes/Stair.ts";
+} from "./shapes/index.ts";
 
-/**
- * Registry that maps shape IDs to BlockShape implementations.
- */
-export class BlockShapeRegistry {
+export class BlockShapeRegistry implements Iterable<BlockShape> {
   #shapes = new Map<BlockShapeID, BlockShape>();
   #version = 0;
 
   register(
     shape: BlockShape
   ): this {
-    this.#shapes.set(shape.id, shape);
+    this.#shapes.set(
+      shape.id,
+      shape
+    );
     this.#version++;
 
     return this;
@@ -58,10 +57,12 @@ export class BlockShapeRegistry {
     return this.#shapes.keys();
   }
 
-  static createDefault(): BlockShapeRegistry {
-    const registry = new BlockShapeRegistry();
+  [Symbol.iterator](): IterableIterator<BlockShape> {
+    return this.getAll();
+  }
 
-    registry
+  static createDefault(): BlockShapeRegistry {
+    return new BlockShapeRegistry()
       .register(new Cube())
       .register(new Slab("bottom"))
       .register(new Slab("top"))
@@ -73,7 +74,5 @@ export class BlockShapeRegistry {
       .register(new Stair())
       .register(new StairCornerInner())
       .register(new StairCornerOuter());
-
-    return registry;
   }
 }

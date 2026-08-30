@@ -3,7 +3,7 @@ import { LitElement, html, css } from "lit";
 import { customElement, property, query } from "lit/decorators.js";
 import type {
   VoxelRenderer,
-  BlockDefinition
+  ResolvedBlockDefinition
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -36,7 +36,7 @@ export class BlockLibraryViewport extends LitElement {
   declare vr: VoxelRenderer | undefined;
 
   @property({ attribute: false })
-  declare blocks: BlockDefinition[];
+  declare blocks: ResolvedBlockDefinition[];
 
   @property({ attribute: false })
   declare selectedId: number | null;

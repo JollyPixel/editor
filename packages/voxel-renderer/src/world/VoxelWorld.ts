@@ -36,11 +36,7 @@ export type IterableLayerChunk = {
 };
 
 /**
- * Top-level container for layered voxel data.
- *
- * Layers are composited top-to-bottom: when multiple layers contain a voxel at
- * the same world position, the one with the highest `order` value wins.
- * This allows decorative layers to override base terrain non-destructively.
+ * Layered voxel data composited by ascending `order`.
  */
 export class VoxelWorld {
   readonly chunkSize: number;
@@ -60,8 +56,6 @@ export class VoxelWorld {
     this.#chunkShift = Math.log2(chunkSize);
     this.#chunkMask = chunkSize - 1;
   }
-
-  // --- Layer management --- //
 
   addLayer(
     name: string,

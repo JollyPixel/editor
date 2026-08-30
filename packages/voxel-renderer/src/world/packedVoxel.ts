@@ -1,4 +1,8 @@
 // Import Internal Dependencies
+import {
+  AIR_BLOCK_ID,
+  isAir
+} from "../blocks/BlockId.ts";
 import type { VoxelEntry } from "./types.ts";
 
 // CONSTANTS
@@ -11,14 +15,12 @@ const kTransformMask = 0xFF;
 export const MAX_BLOCK_ID = 0x7FFFFF;
 
 /**
- * Returned when a position holds no voxel. Every real `PackedVoxel` is
- * non-negative, so `packed < 0` means absent.
+ * Negative sentinel returned when no voxel is present.
  */
 export const VOXEL_ABSENT = -1;
 
 /**
- * One voxel encoded as a non-negative integer.
- * Bits 8-30 hold `blockId`; bits 0-7 hold `transform`.
+ * Packed voxel with block ID in bits 8-30 and transform in bits 0-7.
  */
 export type PackedVoxel = number;
 
@@ -26,9 +28,14 @@ export function packVoxel(
   blockId: number,
   transform: number
 ): PackedVoxel {
+  if (isAir(blockId)) {
+    throw new RangeError(
+      `Block id ${AIR_BLOCK_ID} is reserved for air; remove the voxel instead.`
+    );
+  }
   if (blockId < 0 || blockId > MAX_BLOCK_ID) {
     throw new RangeError(
-      `Block id ${blockId} is out of range (0..${MAX_BLOCK_ID}).`
+      `Block id ${blockId} is out of range (1..${MAX_BLOCK_ID}).`
     );
   }
 

@@ -8,19 +8,10 @@ const kMaxPadding = 8;
 export interface AtlasLayout {
   cols: number;
   rows: number;
-  /**
-   * Square tile size in source-atlas texels.
-   */
   tileSize: number;
-  /**
-   * Gutter texels on each tile edge.
-   */
   padding: number;
 }
 
-/**
- * A rectangle of source-atlas texels. Structurally the editor's `SelectionRect`.
- */
 export interface AtlasRegion {
   x: number;
   y: number;
@@ -28,9 +19,6 @@ export interface AtlasRegion {
   height: number;
 }
 
-/**
- * Inclusive tile-index bounds.
- */
 export interface AtlasTileRange {
   colStart: number;
   colEnd: number;
@@ -39,14 +27,8 @@ export interface AtlasTileRange {
 }
 
 interface TileDrawOptions {
-  /**
-   * Source tile's top-left texel.
-   */
   sx: number;
   sy: number;
-  /**
-   * Padded tile body's top-left texel.
-   */
   dx: number;
   dy: number;
   tileSize: number;
@@ -97,8 +79,7 @@ export function padAtlas(
 }
 
 /**
- * Repads touched tiles in place: 9-36 draws versus about 147,000 for 2048px.
- * Invalid layouts and bounds leave the target unchanged.
+ * Repads touched tiles in place; invalid bounds leave the target unchanged.
  */
 export function padAtlasRegion(
   target: HTMLCanvasElement,
@@ -134,8 +115,7 @@ export function padAtlasRegion(
 }
 
 /**
- * Returns clamped tile bounds, or null when no valid tile is hit.
- * An exact upper boundary belongs to the preceding tile.
+ * Returns clamped tile bounds, assigning exact upper edges to the prior tile.
  */
 export function atlasTileRange(
   layout: AtlasLayout,
@@ -166,9 +146,6 @@ export function atlasTileRange(
   };
 }
 
-/**
- * Size of one tile plus its gutters in the padded atlas.
- */
 export function paddedCellSize(
   tileSize: number,
   padding: number
@@ -186,8 +163,7 @@ export function defaultPadding(
 }
 
 /**
- * Returns padded tile UVs with WebGL Y-flip and half-texel inset.
- * Zero padding matches the source atlas.
+ * Returns padded UVs with WebGL Y-flip and half-texel inset.
  */
 export function tileUVRegion(
   col: number,

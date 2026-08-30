@@ -28,67 +28,49 @@ const kAllFaces: readonly FACE[] = [
   FACE.PosZ,
   FACE.NegZ
 ];
-/** Occlusion table slot holding no compiled mask yet. */
 const kOcclusionUnknown = -1;
 /**
- * Ceiling on the flat occlusion table, in slots. 64k slots (256 KB) covers
- * block ids 0-2047; ids above that fall back to the variant map, which is
- * simply the behaviour before the table existed.
+ * Caps the flat occlusion table at 64k slots; higher IDs use the map.
  */
 const kOcclusionMaxSlots = 1 << 16;
 
 /**
- * How a mergeable face maps onto the world axes so the greedy mesher can
- * stretch it over a run of identical voxels.
- *
- * Only full unit quads on a block boundary can be stretched; `BlockVariantCache`
- * computes this once per (block, transform).
+ * World-axis mapping for a full quad that greedy meshing can stretch.
  */
 export interface BlockFaceMerge {
   /** World axis the face is perpendicular to (0 = x, 1 = y, 2 = z). */
   axis: number;
-  /** The two in-plane world axes, ascending. */
   uAxis: number;
   vAxis: number;
   /**
-   * True when the tile's U runs along `vAxis` instead of `uAxis` — a rotated
-   * or mirrored block turns the tile sideways relative to the world axes.
+   * True when tile U follows `vAxis` after rotation or mirroring.
    */
   swapped: boolean;
 }
 
 /**
- * One emitted polygon of a block variant, resolved at compile time.
- * Rotation, mirroring, atlas UVs and flip-Y winding are baked in, so emitting
- * it is a copy plus a translation by the voxel position.
+ * Polygon with transforms, winding, and atlas UVs compiled into its data.
  */
 export interface BlockVariantFace {
   /** World-space neighbour direction to test for occlusion, or -1 to always emit. */
   cull: number;
-  /** Index of the per-tileset geometry buffer this face belongs to. */
   slot: number;
   vertexCount: number;
-  /** 3 indices per triangle: 6 for a quad, 3 otherwise. */
   indexCount: number;
   /** `vertexCount × 3` block-local positions in 0-1 space. */
   positions: Float32Array;
   /**
-   * `vertexCount × 2` atlas UVs, already unsigned-normalized. Emitted verbatim
-   * on the non-tiled path, so the mesher never re-quantises them.
+   * Unsigned-normalized atlas UVs emitted by the non-tiled path.
    */
   uvs: Uint16Array;
   /**
-   * `vertexCount × 2` UVs in tile space (0-1 inside the tile), before the atlas
-   * rect is applied. Greedy meshing scales these past 1 to repeat the tile and
-   * lets the shader fold them back into `region`, so they stay float.
+   * Float tile-space UVs that greedy quads scale beyond 1 for repetition.
    */
   tileUvs: Float32Array;
   /**
-   * The tile's atlas rect `[offsetU, offsetV, scaleU, scaleV]`, unsigned
-   * normalized like `uvs`.
+   * Unsigned-normalized `[offsetU, offsetV, scaleU, scaleV]` atlas rect.
    */
   region: Uint16Array;
-  /** Non-null when the face can be stretched over a run of identical voxels. */
   merge: BlockFaceMerge | null;
   /** Face normal, signed-normalized to the byte the attribute is emitted as. */
   normalX: number;
@@ -101,14 +83,11 @@ export interface BlockVariant {
   /** Bit `f` is set when this variant fully covers world-space face `f`. */
   occlusionMask: number;
   /**
-   * The mergeable face covering each world-space direction, indexed by `FACE`.
-   * Undefined where the variant has no full-quad face pointing that way.
+   * Mergeable full-quad face for each world-space direction.
    */
   mergeFaces: readonly (BlockVariantFace | undefined)[];
   /**
-   * Scratch slot owned by the single `GreedyMesher` sweeping this cache: the
-   * variant's compact index in the chunk being meshed. Only meaningful while
-   * `sweepEpoch` matches that mesher's current epoch.
+   * Per-mesher scratch index valid only while `sweepEpoch` matches.
    */
   sweepIndex: number;
   sweepEpoch: number;
@@ -121,11 +100,7 @@ export interface BlockVariantCacheOptions {
 }
 
 /**
- * Compiles and memoizes the geometry of a (blockId, transform) pair.
- *
- * This avoids recomputing per-vertex rotation, mirroring and atlas UV math for
- * every voxel in the world. Entries are dropped when block, shape or tileset
- * registries report a new version.
+ * Memoizes transformed geometry and atlas UVs by block and transform.
  */
 export class BlockVariantCache {
   #blockRegistry: BlockRegistry;
@@ -133,15 +108,12 @@ export class BlockVariantCache {
   #tilesetManager: TilesetManager;
 
   #variants = new Map<number, BlockVariant | null>();
-  /** Slot per `(tilesetId, cutout)`, and the two properties of each slot. */
   #slots = new Map<string, number>();
   #tilesetIds: string[] = [];
   #cutouts: boolean[] = [];
 
   /**
-   * `occlusionMask` per (blockId, transform), `kOcclusionUnknown` where not yet
-   * compiled. The mesh builder asks for this bitmask once per face test, so it
-   * gets a flat array read instead of a hash lookup.
+   * Flat occlusion cache indexed by block and transform.
    */
   #occlusion = new Int32Array(0);
 
@@ -157,10 +129,6 @@ export class BlockVariantCache {
     this.#tilesetManager = options.tilesetManager;
   }
 
-  /**
-   * Drops every compiled variant when a registry has changed since the last
-   * call. Cheap enough to run before each chunk.
-   */
   refresh(): void {
     const blockVersion = this.#blockRegistry.version;
     const shapeVersion = this.#shapeRegistry.version;
@@ -182,8 +150,7 @@ export class BlockVariantCache {
   }
 
   /**
-   * Returns null when the block or its shape is unknown. Such a voxel emits no
-   * geometry and occludes nothing.
+   * Returns null when the block or shape is unknown.
    */
   get(
     blockId: number,
@@ -201,10 +168,7 @@ export class BlockVariantCache {
   }
 
   /**
-   * Bit `f` of the returned mask is set when the variant fully covers
-   * world-space face `f`. Returns 0 for an unknown block, which occludes
-   * nothing — same answer `get()` would produce, without the Map lookup or the
-   * `BlockVariant` the caller does not need.
+   * Returns a world-face occlusion mask, or 0 for an unknown block.
    */
   occlusionMaskOf(
     blockId: number,
@@ -251,7 +215,6 @@ export class BlockVariantCache {
     return this.#tilesetIds[slot];
   }
 
-  /** True when the slot holds the faces of `transparent` blocks. */
   isCutoutAt(
     slot: number
   ): boolean {
@@ -299,12 +262,9 @@ export class BlockVariantCache {
     for (const faceDef of shape.faces) {
       const tileRef = blockDef.faceTextures[faceDef.face] ?? blockDef.defaultTexture;
       if (!tileRef) {
-        // No texture configured — the face is never emitted.
         continue;
       }
 
-      // An explicit `cull` field overrides the default (which is to use
-      // `face`); `null` means always emit.
       const cullFace = faceDef.cull === undefined ? faceDef.face : faceDef.cull;
       let cull = -1;
       if (cullFace !== null) {
@@ -376,7 +336,6 @@ export class BlockVariantCache {
 
     return {
       faces,
-      // A see-through block covers nothing, whatever its shape says.
       occlusionMask: cutout ? 0 : this.#occlusionMask(shape, rotation, flipY),
       mergeFaces: indexMergeFaces(faces),
       sweepIndex: 0,
@@ -387,9 +346,7 @@ export class BlockVariantCache {
   }
 
   /**
-   * Bakes `shape.occludes()` for all six directions into a bitmask indexed by
-   * *world* face. Each world face is converted to the variant's local space
-   * with the INVERSE rotation (rotateFace maps local→world).
+   * Bakes local occlusion into a world-face bitmask.
    */
   #occlusionMask(
     shape: BlockShape,
@@ -413,12 +370,7 @@ export class BlockVariantCache {
 }
 
 /**
- * Picks, per world-space direction, the face the greedy mesher may stretch.
- *
- * A shape could in principle declare two full quads pointing the same way (two
- * coplanar halves, say); only the first is kept mergeable and the others fall
- * back to the per-voxel path, which keeps `merge !== null` a reliable "the
- * sweep owns this face" test.
+ * Selects at most one stretchable face per world-space direction.
  */
 function indexMergeFaces(
   faces: BlockVariantFace[]
@@ -442,20 +394,13 @@ function indexMergeFaces(
 }
 
 /**
- * Describes how a face maps onto the world axes, or null when it cannot be
- * stretched over a run of voxels.
- *
- * A face qualifies only when it is a quad whose four corners match the block
- * boundary and the tile corners. Slopes, triangles and inset faces fail and
- * keep the per-voxel path.
+ * Maps a full boundary quad onto world axes, or rejects it as unmergeable.
  */
 function describeMerge(
   cull: number,
   positions: Float32Array,
   tileUvs: Float32Array
 ): BlockFaceMerge | null {
-  // `positions` is allocated as `vertexCount * 3`, so its length carries the
-  // vertex count already.
   if (positions.length !== 12 || cull < 0) {
     return null;
   }

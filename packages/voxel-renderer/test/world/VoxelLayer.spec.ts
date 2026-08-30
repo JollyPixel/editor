@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { VoxelLayer } from "../../src/world/VoxelLayer.ts";
+import { AIR_BLOCK_ID } from "../../src/blocks/BlockId.ts";
 import { makeVoxelEntry } from "../helpers/voxelEntry.ts";
 
 // CONSTANTS
@@ -130,6 +131,20 @@ describe("VoxelLayer setVoxelAt / getVoxelAt round-trip", () => {
     const layer = makeLayer();
     layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
     assert.equal(layer.getVoxelAt({ x: 1, y: 0, z: 0 }), undefined);
+  });
+
+  it("rejects air instead of storing it as a voxel", () => {
+    const layer = makeLayer();
+
+    assert.throws(
+      () => layer.setVoxelAt(
+        { x: 0, y: 0, z: 0 },
+        makeVoxelEntry(AIR_BLOCK_ID)
+      ),
+      /reserved for air/
+    );
+    assert.equal(layer.getVoxelAt({ x: 0, y: 0, z: 0 }), undefined);
+    assert.equal(layer.chunkCount, 0);
   });
 
   it("creates one chunk when first voxel is set in it", () => {

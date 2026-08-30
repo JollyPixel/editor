@@ -4,13 +4,64 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { Cube } from "../../../src/blocks/shapes/Cube.ts";
+import { Pole } from "../../../src/blocks/shapes/Pole.ts";
 import { Slab } from "../../../src/blocks/shapes/Slab.ts";
 import { Ramp } from "../../../src/blocks/shapes/Ramp.ts";
 import { RampCornerInner, RampCornerOuter } from "../../../src/blocks/shapes/RampCorner.ts";
 import { PoleY } from "../../../src/blocks/shapes/PoleY.ts";
+import {
+  Stair,
+  StairCornerInner,
+  StairCornerOuter
+} from "../../../src/blocks/shapes/Stair.ts";
 import { FACE } from "../../../src/utils/math.ts";
+import type { BlockShape } from "../../../src/blocks/BlockShape.ts";
 
 const ALL_FACES = [FACE.PosX, FACE.NegX, FACE.PosY, FACE.NegY, FACE.PosZ, FACE.NegZ];
+
+function assertOutwardWinding(
+  shape: BlockShape
+): void {
+  for (const face of shape.faces) {
+    const [v0, v1, v2] = face.vertices;
+    const ax = v1[0] - v0[0];
+    const ay = v1[1] - v0[1];
+    const az = v1[2] - v0[2];
+    const bx = v2[0] - v0[0];
+    const by = v2[1] - v0[1];
+    const bz = v2[2] - v0[2];
+    const crossX = (ay * bz) - (az * by);
+    const crossY = (az * bx) - (ax * bz);
+    const crossZ = (ax * by) - (ay * bx);
+    const dot = (crossX * face.normal[0]) +
+      (crossY * face.normal[1]) +
+      (crossZ * face.normal[2]);
+
+    assert.ok(dot > 0, `${shape.id} has an inward-facing polygon`);
+  }
+}
+
+describe("Built-in shape winding", () => {
+  it("points every polygon normal outward", () => {
+    const shapes: BlockShape[] = [
+      new Cube(),
+      new Pole(),
+      new PoleY(),
+      new Ramp(),
+      new RampCornerInner(),
+      new RampCornerOuter(),
+      new Slab("bottom"),
+      new Slab("top"),
+      new Stair(),
+      new StairCornerInner(),
+      new StairCornerOuter()
+    ];
+
+    for (const shape of shapes) {
+      assertOutwardWinding(shape);
+    }
+  });
+});
 
 describe("Cube", () => {
   const cube = new Cube();

@@ -4,19 +4,12 @@ Block definitions, shapes, registries, and the `Face` constant.
 
 ## BlockDefinition
 
-Describes a block type: its shape, textures, and physics behaviour.
+Authoring form of a block, accepted by `BlockRegistry.register()` and the
+engine's `blocks` option. Only `id`, `name`, and `shapeId` are required.
 
 ```ts
-/**
- * Describes a block type: its shape, per-face texture tiles, and collidability.
- * Block ID 0 is always air and is never stored in the registry.
- */
 export interface BlockDefinition {
-  /**
-   * Unique numeric identifier.
-   * @note
-   * 0 is reserved for air.
-   **/
+  /** Unique numeric identifier, 1 or above. See [Air](#air). */
   id: number;
   /** Human-readable name for editor display. */
   name: string;
@@ -25,56 +18,79 @@ export interface BlockDefinition {
   /**
    * Per-face tile references.
    * If a face is absent, defaultTexture is used.
-   * Allows blocks to have a different top texture from their sides.
+   * @default {}
    */
-  faceTextures: Partial<Record<FACE, TileRef>>;
+  faceTextures?: Partial<Record<FACE, TileRef>>;
   /** Fallback tile used for any face not listed in faceTextures. */
   defaultTexture?: TileRef;
   /**
    * If false, the mesh builder will not emit
    * collision geometry for this block.
+   * @default true
    **/
-  collidable: boolean;
+  collidable?: boolean;
   /**
    * Set it on any block you can see through.
    * A transparent block never hides a neighbouring face.
    * @default false
    */
   transparent?: boolean;
-}
-```
-
-## BlockDefinitionIn
-
-Authoring form of `BlockDefinition`, accepted by `BlockRegistry.register()` and
-the engine's `blocks` option. `register()` fills the defaults and stores a plain
-`BlockDefinition`.
-
-```ts
-export interface BlockDefinitionIn {
-  id: number;
-  name: string;
-  shapeId: BlockShapeID;
-  /** @default {} */
-  faceTextures?: Partial<Record<FACE, TileRefIn>>;
-  defaultTexture?: TileRefIn;
-  /** @default true */
-  collidable?: boolean;
-  /** @default false */
-  transparent?: boolean;
   /** Fills in any tile ref that omits a tileset. Dropped once resolved. */
   defaultTilesetId?: string;
 }
 ```
 
-Only `id`, `name`, and `shapeId` are required, so a solid untextured block is:
+So a solid untextured block is:
 
 ```ts
 registry.register({ id: 1, name: "Stone", shapeId: "cube" });
 ```
 
-A `TileRefIn` may be a bare `[col, row]` tuple; `register()` expands it and
-applies `defaultTilesetId` to any ref that omits a tileset.
+A `TileRef` may be a bare `[col, row]` tuple; resolution expands it and applies
+`defaultTilesetId` to any ref that omits a tileset.
+
+## Air
+
+```ts
+const AIR_BLOCK_ID = 0;
+function isAir(blockId: number): boolean;
+```
+
+Id `0` is reserved: a cell holding air holds no voxel at all. Nothing stores it,
+so both ends of the invariant throw rather than accept it.
+
+- `BlockRegistry.register()` (and the constructor, which routes through it)
+  throws an `Error` on a definition with id `0`.
+- `packVoxel()` throws a `RangeError`, which takes every write path with it:
+  `VoxelChunk.set()`, `VoxelLayer.setVoxelAt()`, `VoxelWorld.setVoxelAt()` and
+  `VoxelEngine.setVoxel()`.
+
+Erase a voxel with `removeVoxel()`; setting it to air is not a supported
+alternative. On the read side, air is a missing entry: `undefined` from
+`getVoxelAt()`, [`VOXEL_ABSENT`](./Chunk.md) from the packed accessors.
+
+## ResolvedBlockDefinition
+
+What `BlockRegistry` stores and every consumer reads: defaults applied, every
+tile reference an object, and no `defaultTilesetId`.
+
+```ts
+export type ResolvedBlockDefinition =
+  & Omit<
+    BlockDefinition,
+    "faceTextures" | "defaultTexture" | "collidable" | "defaultTilesetId"
+  >
+  & {
+    faceTextures: Partial<Record<FACE, ResolvedTileRef>>;
+    defaultTexture?: ResolvedTileRef;
+    collidable: boolean;
+  };
+```
+
+### `resolveBlockDefinition(def: BlockDefinition): ResolvedBlockDefinition`
+
+Returns a new definition; `def` and its tile references are never mutated.
+`BlockRegistry.register()` calls it for you.
 
 ## BlockShapeID
 
@@ -152,18 +168,24 @@ must return `false` to avoid incorrect face culling.
 
 ## BlockRegistry
 
-Maps numeric block IDs to `BlockDefinition` objects. Accessible via `VoxelEngine.blockRegistry`.
+Maps numeric block IDs to `ResolvedBlockDefinition` objects. Accessible via `VoxelEngine.blockRegistry`.
 
-#### `register(def: BlockDefinitionIn): this`
+#### `register(def: BlockDefinition): this`
 
 Registers a block definition, filling the defaults documented on
-[`BlockDefinitionIn`](#blockdefinitionin). Throws if `def.id === 0`.
+[`BlockDefinition`](#blockdefinition). Throws on `AIR_BLOCK_ID`, see
+[Air](#air).
 
-#### `get(id: number): BlockDefinition | undefined`
+#### `get(id: number): ResolvedBlockDefinition | undefined`
 
 #### `has(id: number): boolean`
 
-#### `getAll(): IterableIterator<BlockDefinition>`
+#### `getAll(): IterableIterator<ResolvedBlockDefinition>`
+
+#### `[Symbol.iterator](): IterableIterator<ResolvedBlockDefinition>`
+
+Same iterator as `getAll()`, so the registry can be spread or used directly in
+a `for...of` loop.
 
 #### `readonly nextId: number`
 
@@ -197,6 +219,11 @@ Every registered shape, in registration order.
 #### `ids(): IterableIterator<BlockShapeID>`
 
 IDs of every registered shape, in registration order.
+
+#### `[Symbol.iterator](): IterableIterator<BlockShape>`
+
+Same iterator as `getAll()`, so the registry can be spread or used directly in
+a `for...of` loop.
 
 #### `readonly version: number`
 

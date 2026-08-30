@@ -15,38 +15,25 @@ export const DEFAULT_CHUNK_SIZE = 16;
 export type VoxelLinearCoords = [number, number, number];
 
 /**
- * Fixed-size 3-D voxel grid.
- * Local coordinates run from [0, size) on each axis.
- * Empty chunks stay cheap because storage is a sparse `VoxelStore`.
- *
- * Voxels are stored as packed integers, not objects. `get()` and `entries()`
- * rebuild a `VoxelEntry` each time, so they do not preserve object identity.
- * Hot paths should use the packed variants.
+ * Fixed-size sparse grid storing voxels as packed integers.
  */
 export class VoxelChunk {
-  /** Chunk coordinates (not world coordinates). */
   readonly cx: number;
   readonly cy: number;
   readonly cz: number;
-  /** Always a power of two, which is what makes the index math shift/mask. */
   readonly size: number;
-  /** `log2(size)`, the stride shift between two consecutive Y planes. */
   readonly shift: number;
-  /** `size - 1`, the local-coordinate mask. */
   readonly mask: number;
 
   /**
-   * Backing storage. Exposed so mesh builders can walk `store.keys` and
-   * `store.values` directly; not part of the stable API.
+   * Exposes packed storage for mesh-builder hot paths.
    */
   readonly store = new VoxelStore();
 
   dirty = true;
 
   /**
-   * Conservative local-space bounds of written voxels. Only widened, never
-   * shrunk on delete, so it always contains every entry. See `mayContain()`.
-   * Empty chunks keep an inverted range, which contains nothing.
+   * Conservative bounds that widen on writes but do not shrink on deletion.
    */
   #minX: number;
   #minY: number;
@@ -74,8 +61,7 @@ export class VoxelChunk {
   }
 
   /**
-   * The three local coordinates occupy disjoint bit fields, so composing them
-   * is an OR rather than the two multiplies a mixed-radix index would need.
+   * Packs local coordinates into disjoint bit fields.
    */
   linearIndex(
     lx: number,
@@ -107,9 +93,6 @@ export class VoxelChunk {
     return this.getAt(lx, ly, lz);
   }
 
-  /**
-   * Same as `get()` without the tuple.
-   */
   getAt(
     lx: number,
     ly: number,
@@ -174,8 +157,7 @@ export class VoxelChunk {
   }
 
   /**
-   * False when the position is provably empty. A `true` result still needs a
-   * `getPackedAt()` to confirm, so this is a cheap pre-check.
+   * Rejects positions outside conservative bounds without a store lookup.
    */
   mayContain(
     lx: number,

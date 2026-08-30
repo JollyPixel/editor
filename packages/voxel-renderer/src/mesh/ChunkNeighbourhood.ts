@@ -11,7 +11,6 @@ import {
 } from "../world/packedVoxel.ts";
 
 // CONSTANTS
-// A region one chunk wide plus a one-voxel border spans at most 3 chunks per axis.
 const kSpan = 3;
 
 export interface LayerChunkCacheOptions {
@@ -23,18 +22,11 @@ export interface LayerChunkCacheOptions {
 }
 
 /**
- * Per-layer voxel lookup over a prefetched 3×3×3 block of chunks.
- *
- * The mesh builder calls this for each face, so resolving the chunks once up
- * front keeps the hot path simple. Most queries land in the window's centre
- * chunk — every voxel of the chunk being meshed does, and only its one-voxel
- * border does not — so that case is answered without any chunk-grid arithmetic.
+ * Prefetches a 3×3×3 chunk window for hot-path voxel lookup.
  */
 export class LayerChunkCache {
   readonly layer: VoxelLayer;
-  /** Translucent layers never occlude a neighbouring face. */
   readonly opaque: boolean;
-  /** True when the layer holds no chunk anywhere in the prefetched window. */
   readonly empty: boolean = true;
 
   #size: number;
@@ -49,7 +41,6 @@ export class LayerChunkCache {
   /** Pre-filled with `null` rather than left holey, so reads stay monomorphic. */
   #chunks: (VoxelChunk | null)[] = new Array(kSpan ** 3).fill(null);
 
-  /** World-space origin of the window's centre chunk, and the chunk itself. */
   #centreWx: number;
   #centreWy: number;
   #centreWz: number;
@@ -123,8 +114,7 @@ export class LayerChunkCache {
   }
 
   /**
-   * The window's 26 outer chunks, plus the fallback for a caller reaching past
-   * the one-voxel border the cache was built for.
+   * Reads outer chunks or falls back beyond the cached border.
    */
   #packedOutsideCentre(
     wx: number,
@@ -166,7 +156,6 @@ export class LayerChunkCache {
 export interface ChunkNeighbourhoodOptions {
   world: VoxelWorld;
   variants: BlockVariantCache;
-  /** The layer being meshed, which fixes `selfIndex`. */
   layer: VoxelLayer;
   minWx: number;
   minWy: number;
@@ -174,13 +163,10 @@ export interface ChunkNeighbourhoodOptions {
 }
 
 /**
- * Every effectively visible layer of the world, in compositing order.
- *
- * It also answers the two occlusion checks the mesh builder uses.
+ * Provides compositing and occlusion queries over visible layers.
  */
 export class ChunkNeighbourhood {
   readonly layers: readonly LayerChunkCache[];
-  /** Rank of the layer being meshed among `layers`, or -1 when it is hidden. */
   readonly selfIndex: number;
 
   #variants: BlockVariantCache;
@@ -201,8 +187,6 @@ export class ChunkNeighbourhood {
       const cache = new LayerChunkCache({
         layer: candidate, chunkSize, minWx, minWy, minWz
       });
-      // A layer with no chunk in the window can neither win compositing nor
-      // occlude anywhere the builder looks, so it is dropped from the walk.
       if (!cache.empty) {
         layers.push(cache);
       }
@@ -218,8 +202,7 @@ export class ChunkNeighbourhood {
   }
 
   /**
-   * True when the layer being meshed owns what the world composites at
-   * `(wx, wy, wz)`, meaning no higher-priority layer covers the position.
+   * True when no higher-priority layer covers the position.
    */
   winsCompositing(
     wx: number,
@@ -243,8 +226,7 @@ export class ChunkNeighbourhood {
   }
 
   /**
-   * True when the neighbour voxel exists, belongs to an opaque layer and its
-   * shape occludes `oppFace`.
+   * True when an opaque neighbour occludes `oppFace`.
    */
   isNeighbourFaceHidden(
     nx: number,

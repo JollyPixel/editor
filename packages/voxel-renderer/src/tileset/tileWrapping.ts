@@ -13,20 +13,13 @@ import {
   vec4
 } from "three/tsl";
 
-// TYPES
 export interface TileWrappedMaterial extends THREE.Material {
   map?: THREE.Texture | null;
   colorNode?: unknown;
 }
 
 /**
- * Repeats one atlas tile across a larger quad for greedy-meshed geometry.
- *
- * Requires `tileRegion` and `tileRepeat` attributes, with `uv` in tile space.
- * Uses TSL `colorNode` so it works with `WebGPURenderer`.
- * Assumes nearest-filtered atlases without mipmaps.
- *
- * Limitation: shadow depth materials inherit the wrapped UVs.
+ * Repeats atlas tiles across greedy quads using WebGPU-compatible TSL nodes.
  */
 export function enableTileWrapping(
   material: TileWrappedMaterial
