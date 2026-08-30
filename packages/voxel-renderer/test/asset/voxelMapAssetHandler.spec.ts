@@ -21,11 +21,9 @@ import {
   VOXEL_MAP_KIND
 } from "../../src/asset/voxelMapAssetHandler.ts";
 import {
-  createVoxelMapState,
-  encodeVoxelMapDocument,
-  voxelMapSnapshot
-} from "../../src/asset/VoxelMapDocument.ts";
-import type { VoxelMapState } from "../../src/asset/VoxelMapState.ts";
+  encodeVoxelDocument
+} from "../../src/serialization/document.ts";
+import { VoxelMapState } from "../../src/asset/VoxelMapState.ts";
 import type { VoxelNetworkCommand } from "../../src/network/types.ts";
 import { voxelSetCmd } from "../helpers/networkCommands.ts";
 
@@ -51,7 +49,7 @@ function event(
 function documentEvent(
   state: VoxelMapState
 ): EventStore.Event {
-  const data = encodeVoxelMapDocument(state);
+  const data = encodeVoxelDocument(state.toJSON());
 
   return event(ASSET_CREATED, {
     path: "world.voxelmap.json",
@@ -103,7 +101,7 @@ describe("voxelMapAssetHandler", () => {
 
   test("a lifecycle event loads the whole document", () => {
     const handler = voxelMapAssetHandler({ chunkSize: 16 });
-    const source = createVoxelMapState(16);
+    const source = new VoxelMapState(16);
     source.world.addLayer("Ground");
     source.world.setVoxelAt(
       "Ground",
@@ -140,7 +138,7 @@ describe("voxelMapAssetHandler", () => {
 
   test("keeps the tileset list a document arrived with", () => {
     const handler = voxelMapAssetHandler({ chunkSize: 16 });
-    const source = createVoxelMapState(16);
+    const source = new VoxelMapState(16);
     source.tilesets = [
       {
         id: "default",
@@ -152,7 +150,7 @@ describe("voxelMapAssetHandler", () => {
     const state = handler.create("asset-1");
     handler.apply(state, documentEvent(source));
 
-    assert.deepEqual(voxelMapSnapshot(state).tilesets, source.tilesets);
+    assert.deepEqual(state.toJSON().tilesets, source.tilesets);
   });
 
   test("a domain command mutates the folded world", () => {
@@ -201,12 +199,12 @@ describe("voxelMapAssetHandler", () => {
     const state = handler.create("asset-1");
     state.world.addLayer("Stale");
 
-    const replacement = createVoxelMapState(16);
+    const replacement = new VoxelMapState(16);
     replacement.world.addLayer("Fresh");
 
     handler.apply(state, event(VOXEL_MAP_COMMAND, {
       action: "world-replace",
-      data: voxelMapSnapshot(replacement),
+      data: replacement.toJSON(),
       clientId: "client-A",
       seq: 1,
       timestamp: 1000
@@ -268,7 +266,7 @@ describe("voxelMapAssetHandler", () => {
     const state = handler.create("asset-1");
     state.world.addLayer("Ground");
 
-    handler.apply(state, documentEvent(createVoxelMapState(8)));
+    handler.apply(state, documentEvent(new VoxelMapState(8)));
 
     assert.deepEqual(
       state.world.getLayers().map((layer) => layer.name),

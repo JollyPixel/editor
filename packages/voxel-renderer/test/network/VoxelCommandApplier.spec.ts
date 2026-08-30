@@ -7,7 +7,7 @@ import { VoxelWorld } from "../../src/world/VoxelWorld.ts";
 import { applyCommandToWorld } from "../../src/network/VoxelCommandApplier.ts";
 import { packTransform } from "../../src/utils/math.ts";
 import { VOXEL_LAYER_HOOK_ACTIONS, type VoxelLayerHookEvent } from "../../src/hooks.ts";
-import type { VoxelObjectJSON } from "../../src/serialization/VoxelSerializer.ts";
+import type { VoxelObjectJSON } from "../../src/serialization/types.ts";
 import { makeVoxelEntry } from "../helpers/voxelEntry.ts";
 import { makeAddedCommand } from "../helpers/networkCommands.ts";
 

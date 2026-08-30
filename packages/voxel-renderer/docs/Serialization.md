@@ -113,22 +113,73 @@ interface VoxelWorldJSON {
 }
 ```
 
-## VoxelSerializer
+## Worlds
 
-Low-level serialiser. Most users should prefer the higher-level `VoxelEngine.save()` /
-`VoxelEngine.load()`, which also handle material invalidation and chunk rebuilds.
-`VoxelEngine.save()` also adds the engine's block definitions. The low-level
-`serialize()` method does not.
+These two functions own the document format: they are the only place a
+`VoxelWorldJSON` is built or applied to a world. Most users should prefer the
+higher-level `VoxelEngine.save()` / `VoxelEngine.load()`, which also handle
+material invalidation and chunk rebuilds.
 
-#### `serialize(world: VoxelWorld, tilesetManager: TilesetManager): VoxelWorldJSON`
+#### `serializeVoxelWorld(world: VoxelWorld, options?: VoxelSerializeOptions): VoxelWorldJSON`
 
-Converts the world and tileset metadata to a plain JSON-serialisable object.
+Converts a world to a plain JSON-serialisable object.
 
-#### `deserialize(data: VoxelWorldJSON, world: VoxelWorld): void`
+```ts
+interface VoxelSerializeOptions {
+  tilesets?: Iterable<TilesetDefinition>;
+  blocks?: Iterable<ResolvedBlockDefinition>;
+}
+```
 
-Clears `world` and restores it from a snapshot. Voxel layers and object layers are
-both restored. Throws if `data.version !== 1`. The target world's existing
-`chunkSize` is retained; this method does not compare it with `data.chunkSize`.
+Both are metadata the world does not hold. `tilesets` records which atlases the
+document expects; loading their textures stays the caller's job, since a texture
+cannot be rebuilt from JSON. `blocks` is omitted from the output when not passed.
+
+#### `deserializeVoxelWorld(data: VoxelWorldJSON, world: VoxelWorld, options?: VoxelDeserializeOptions): void`
+
+Validates `data` through `parseVoxelDocument`, then clears `world` and restores it.
+Voxel layers and object layers are both restored, and malformed voxel keys are
+skipped. Throws `InvalidVoxelDocumentError` when the document is malformed or when
+its `chunkSize` differs from the target world's; the world is left untouched in
+both cases.
+
+```ts
+interface VoxelDeserializeOptions {
+  blocks?: BlockRegistry;
+}
+```
+
+Embedded `blocks` are registered into `options.blocks` when given. Ids already in
+the registry are left alone, so local registrations win over the definitions a
+converter embedded.
+
+## Documents
+
+Validation and byte encoding for stored or transmitted documents.
+
+#### `parseVoxelDocument(value: unknown): VoxelWorldJSON`
+
+Builds a document from untrusted input. Throws when `version` is not 1, when
+`chunkSize` is not a positive integer, or when `layers` is not an array.
+`tilesets`, `blocks` and `objectLayers` are taken only when they are arrays: a
+missing or malformed `tilesets` becomes `[]`, and the other two are left out.
+
+The result holds only those fields, so unknown top-level keys never reach a world
+or a later save. List *elements* are not inspected; `deserializeVoxelWorld`
+skips the invalid ones.
+
+#### `encodeVoxelDocument(document: VoxelWorldJSON): Uint8Array`
+
+UTF-8 JSON bytes.
+
+#### `decodeVoxelDocument(data: Uint8Array): VoxelWorldJSON`
+
+The inverse, then `parseVoxelDocument`.
+
+#### `InvalidVoxelDocumentError`
+
+Thrown by all three, and by `deserializeVoxelWorld`. Carries the parse failure
+as `cause` when JSON decoding is what failed.
 
 ## normalizeVoxelExtent
 

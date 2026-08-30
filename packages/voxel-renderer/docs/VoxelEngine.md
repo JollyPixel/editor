@@ -200,7 +200,6 @@ class VoxelEngine {
   readonly blockRegistry: BlockRegistry;
   readonly shapeRegistry: BlockShapeRegistry;
   readonly tilesetManager: TilesetManager;
-  readonly serializer: VoxelSerializer;
   readonly debug: VoxelDebugger; // mesh statistics + wireframe, see ./Debug.md
 
   greedy: boolean; // read/write; assigning rebuilds every chunk

@@ -48,6 +48,55 @@ describe("BlockRegistry constructor", () => {
   });
 });
 
+describe("BlockRegistry registerMany", () => {
+  it("registers every definition and returns the registry", () => {
+    const registry = new BlockRegistry();
+
+    const returned = registry.registerMany([makeDef(1), makeDef(2)]);
+
+    assert.equal(returned, registry);
+    assert.equal(registry.has(1), true);
+    assert.equal(registry.has(2), true);
+  });
+
+  it("replaces an existing id by default", () => {
+    const registry = new BlockRegistry([makeDef(1, "first")]);
+
+    registry.registerMany([makeDef(1, "second")]);
+
+    assert.equal(registry.get(1)?.name, "second");
+  });
+
+  it("keeps the existing registration when skipExisting is set", () => {
+    const registry = new BlockRegistry([makeDef(1, "first")]);
+
+    registry.registerMany(
+      [makeDef(1, "second"), makeDef(2, "new")],
+      { skipExisting: true }
+    );
+
+    assert.equal(registry.get(1)?.name, "first");
+    assert.equal(registry.get(2)?.name, "new");
+  });
+
+  it("does not bump the version for a skipped definition", () => {
+    const registry = new BlockRegistry([makeDef(1)]);
+    const { version } = registry;
+
+    registry.registerMany([makeDef(1)], { skipExisting: true });
+
+    assert.equal(registry.version, version);
+  });
+
+  it("accepts any iterable, not just an array", () => {
+    const registry = new BlockRegistry();
+
+    registry.registerMany(new Set([makeDef(1), makeDef(2)]));
+
+    assert.equal(registry.has(2), true);
+  });
+});
+
 describe("BlockRegistry.register", () => {
   it("returns this for fluent chaining", () => {
     const registry = new BlockRegistry();
@@ -171,6 +220,7 @@ describe("BlockRegistry.get", () => {
   it("returns the registered def with transformed face textures", () => {
     const registry = new BlockRegistry();
     const def = makeDef(5);
+    def.faceTextures = {};
     def.faceTextures[FACE.NegY] = [1, 2];
     def.faceTextures[FACE.NegZ] = [3, 4];
     def.faceTextures[FACE.PosY] = { col: 5, row: 6 };

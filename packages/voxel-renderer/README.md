@@ -6,9 +6,13 @@
   JollyPixel Voxel Engine and Renderer
 </p>
 
+<p align="center">
+  <img src="./docs/images/noise-world.png">
+</p>
+
 ## 📌 About
 
-Chunked voxel engine and Three.js renderer. Use `VoxelEngine` directly, or `VoxelRenderer` to plug it into a JollyPixel [engine][engine] (ECS) scene. Either way you get multi-layer voxel worlds with tileset textures, face culling, block transforms, JSON save/load, and optional physics via a pluggable collider interface (Rapier3D included).
+Chunked voxel engine and Three.js renderer. Use `VoxelEngine` directly, or `VoxelRenderer` to plug it into a JollyPixel [engine][engine] (ECS) scene.
 
 ## 💡 Features
 
@@ -28,9 +32,6 @@ Chunked voxel engine and Three.js renderer. Use `VoxelEngine` directly, or `Voxe
 - Optional physics through the backend-agnostic `VoxelCollider` interface, with `"box"` or `"trimesh"` colliders rebuilt per dirty chunk and a Rapier3D plugin included; zero extra dependency if omitted
 - Compatible with JollyPixel engine logger
 - Debug mode (`engine.debug`) exposing live face/triangle counts and a wireframe view of the meshed chunks
-
-> [!NOTE]
-> The implementation and optimization are probably far from perfect. Feel free to open a PR to help us.
 
 ## 💃 Getting Started
 
@@ -112,33 +113,6 @@ for (let x = 0; x < 8; x++) {
 }
 ```
 
-### Tiled import - convert a `.tmj` map
-
-```ts
-import { loadJSON } from "@jolly-pixel/engine";
-import {
-  VoxelRenderer,
-  TiledConverter,
-  type TiledMap
-} from "@jolly-pixel/voxel.renderer";
-
-// No blocks or layers needed here - load() restores them from the JSON snapshot
-const voxelMap = world.createActor("map")
-  .addComponentAndGet(VoxelRenderer, { alphaTest: 0.1, material: "lambert" });
-
-const tiledMap = await loadJSON<TiledMap>("tilemap/map.tmj");
-
-const worldJson = new TiledConverter().convert(tiledMap, {
-  // Map Tiled .tsx source references to the PNG files served by your dev server
-  resolveTilesetSrc: (src) => "tilemap/" + src.replace(/\.tsx$/, ".png"),
-  layerMode: "stacked"
-});
-
-voxelMap.engine.load(worldJson);
-
-await loadRuntime(runtime);
-```
-
 ### Rapier3D physics
 
 Physics is plugged in through the backend-agnostic `VoxelCollider` interface
@@ -170,6 +144,20 @@ const voxelMap = world.createActor("map")
   });
 ```
 
+## 📚 API
+
+- [VoxelEngine](docs/VoxelEngine.md) - Engine-agnostic core - options, voxel placement, tileset loading, save/load. Usable standalone or via `VoxelRenderer`.
+- [VoxelRenderer](docs/VoxelRenderer.md) - `ActorComponent` wrapper around `VoxelEngine` for JollyPixel scenes.
+- [World](docs/World.md) - `VoxelWorld`, `VoxelLayer`, `VoxelChunk`, and related types.
+- [Blocks](docs/Blocks.md) - `BlockDefinition`, `ResolvedBlockDefinition`, `BlockShape`, `BlockRegistry`, `BlockShapeRegistry`, and `Face`.
+- [Tileset](docs/Tileset.md) - `TilesetManager`, `TilesetDefinition`, `TileRef`, UV regions.
+- [Serialization](docs/Serialization.md) - world serialization and JSON snapshot types.
+- [Collision](docs/Collision.md) - The `VoxelCollider` contract and the bundled `RapierVoxelCollider` plugin.
+- [Debug](docs/Debug.md) - `engine.debug`: live face/triangle statistics and wireframe visualization.
+- [Built-In Shapes](docs/BuiltInShapes.md) - All built-in block shapes and custom shape authoring.
+- [TiledConverter](docs/TiledConverter.md) - Converting Tiled `.tmj` exports to `VoxelWorldJSON`.
+- [Asset kind](docs/AssetKind.md) - Persisting a voxel map as an event-sourced `@jolly-pixel/asset-server` asset.
+
 ## 🚀 Running the examples
 
 Seven interactive examples live in the `examples/` directory and are served by Vite. Start the dev server from the package root:
@@ -190,22 +178,6 @@ Then open one of these URLs in your browser:
 | `http://localhost:5173/flat-world.html` | `demo-flat-world.ts` | A server-authoritative flat world edited by several browsers at once, with peer brushes over the room's presence channel |
 | `http://localhost:5173/transparency.html` | `demo-transparency.ts` | A diorama for checking transparency and lighting: blended water and glass, cutout leaves/grates/windows with and without `transparent: true`, an alpha-gradient probe for `alphaTest`, and live light, material and layer controls |
 
-The shapes, tileset and transparency examples use OrbitControls (left drag: rotate, right drag: pan, scroll: zoom); the others use `Camera3DControls` (WASD + mouse).
-
-## 📚 API
-
-- [VoxelEngine](docs/VoxelEngine.md) - Engine-agnostic core - options, voxel placement, tileset loading, save/load. Usable standalone or via `VoxelRenderer`.
-- [VoxelRenderer](docs/VoxelRenderer.md) - `ActorComponent` wrapper around `VoxelEngine` for JollyPixel scenes.
-- [World](docs/World.md) - `VoxelWorld`, `VoxelLayer`, `VoxelChunk`, and related types.
-- [Blocks](docs/Blocks.md) - `BlockDefinition`, `ResolvedBlockDefinition`, `BlockShape`, `BlockRegistry`, `BlockShapeRegistry`, and `Face`.
-- [Tileset](docs/Tileset.md) - `TilesetManager`, `TilesetDefinition`, `TileRef`, UV regions.
-- [Serialization](docs/Serialization.md) - `VoxelSerializer` and JSON snapshot types.
-- [Collision](docs/Collision.md) - The `VoxelCollider` contract and the bundled `RapierVoxelCollider` plugin.
-- [Debug](docs/Debug.md) - `engine.debug`: live face/triangle statistics and wireframe visualization.
-- [Built-In Shapes](docs/BuiltInShapes.md) - All built-in block shapes and custom shape authoring.
-- [TiledConverter](docs/TiledConverter.md) - Converting Tiled `.tmj` exports to `VoxelWorldJSON`.
-- [Asset kind](docs/AssetKind.md) - Persisting a voxel map as an event-sourced `@jolly-pixel/asset-server` asset.
-
 ## 🧪 Benchmarks
 
 ### Noise-world benchmark
@@ -223,8 +195,6 @@ It is configurable from the query string:
 | `size` | `256` | World width/depth in voxels (`size²` columns) |
 | `chunk` | `16` | `chunkSize`; trades draw calls against rebuild cost |
 | `seed` | `1337` | Terrain seed; the same seed always yields the same world |
-
-Controls: `WASD` / `Space` / `Shift` to fly, `R` to rebuild with the next seed, `F3` to hide the HUD.
 
 ### Headless benchmark
 
@@ -262,17 +232,6 @@ const vr = new VoxelRenderer({
   })
 });
 ```
-
-Quick tips
-
-- **Tileset missing:** verify the `src` path and ensure the image is being served (check browser Network tab and CORS).
-- **Cutout/transparent textures look wrong:** increase or decrease `alphaTest` (for example `alphaTest: 0.1`) to tune cutout thresholds.
-- **Physics not working:** make sure Rapier is initialized (`await Rapier.init()`) and that your `collider` factory returns a `RapierVoxelCollider` built with that `World`.
-- **Chunks not updating or faces missing:** face culling hides faces between adjacent solid voxels; confirm neighboring voxels are placed correctly.
-
-Reporting issues
-
-- When opening an issue, include package and runtime versions, reproduction steps, and enable debug logs (see above). A minimal repro or screenshot speeds up investigation.
 
 ## Contributors guide
 

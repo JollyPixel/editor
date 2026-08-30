@@ -2,13 +2,20 @@
 import type { Vector3Like } from "three";
 
 // Import Internal Dependencies
-import type { VoxelLayerConfigurableOptions, VoxelLayerOptions } from "./world/VoxelLayer.ts";
+import type {
+  VoxelLayerConfigurableOptions,
+  VoxelLayerOptions
+} from "./world/VoxelLayer.ts";
 import type { VoxelCoord } from "./world/types.ts";
 import type {
   VoxelObjectLayerJSON,
   VoxelObjectJSON
-} from "./serialization/VoxelSerializer.ts";
-import type { VoxelSetOptions, VoxelRemoveOptions, PartialExcept } from "./types.ts";
+} from "./serialization/types.ts";
+import type {
+  VoxelSetOptions,
+  VoxelRemoveOptions,
+  PartialExcept
+} from "./types.ts";
 
 export type VoxelLayerHookEvent =
   | {

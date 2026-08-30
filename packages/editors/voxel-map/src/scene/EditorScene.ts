@@ -256,10 +256,6 @@ export class EditorScene extends Systems.Scene {
       limit: kDefaultBlockLimit
     });
 
-    for (const block of blocks) {
-      if (!blockRegistry.has(block.id)) {
-        blockRegistry.register(block);
-      }
-    }
+    blockRegistry.registerMany(blocks, { skipExisting: true });
   }
 }

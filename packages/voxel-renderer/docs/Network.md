@@ -113,9 +113,10 @@ because both use the `network.Extension` base.
 >
 > Mutation commands that fail inside `applyCommandToWorld()` are caught, logged, and
 > dropped. `isVoxelNetworkCommand()` is only a shallow marker check: it verifies that
-> the payload is an object with `action` and `clientId` fields. Validate untrusted wire
-> data before it reaches this extension. In particular, malformed `world-replace` data
-> is deserialized outside the mutation-command error boundary.
+> the payload is an object with `action` and `clientId` fields, so validate untrusted
+> wire data before it reaches this extension. A `world-replace` payload is the one
+> exception: `deserializeVoxelWorld()` validates it, and a rejected document is
+> logged and dropped like a failed mutation command.
 
 ### API
 

@@ -10,16 +10,15 @@ export { VoxelMapAssetExtension } from "./VoxelMapAssetExtension.ts";
 export type {
   VoxelMapAssetExtensionOptions
 } from "./VoxelMapAssetExtension.ts";
-export type { VoxelMapState } from "./VoxelMapState.ts";
+export { VoxelMapState } from "./VoxelMapState.ts";
 export {
-  asVoxelWorldJSON,
-  createVoxelMapState,
-  decodeVoxelMapDocument,
-  encodeVoxelMapDocument,
-  loadVoxelMapDocument,
-  voxelMapSnapshot
-} from "./VoxelMapDocument.ts";
-export { InvalidVoxelMapDocumentError } from "./errors/InvalidVoxelMapDocumentError.ts";
+  decodeVoxelDocument,
+  encodeVoxelDocument,
+  parseVoxelDocument
+} from "../serialization/document.ts";
+export {
+  InvalidVoxelDocumentError
+} from "../serialization/errors/InvalidVoxelDocumentError.ts";
 
 export {
   resolveTilesetDefinition,

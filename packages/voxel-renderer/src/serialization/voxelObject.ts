@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { VoxelObjectJSON } from "./VoxelSerializer.ts";
+import type { VoxelObjectJSON } from "./types.ts";
 
 export interface VoxelObjectFootprint {
   width: number;

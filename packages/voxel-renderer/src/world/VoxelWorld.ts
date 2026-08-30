@@ -23,7 +23,7 @@ import {
 import type {
   VoxelObjectJSON,
   VoxelObjectLayerJSON
-} from "../serialization/VoxelSerializer.ts";
+} from "../serialization/types.ts";
 import type { PartialExcept } from "../types.ts";
 
 // CONSTANTS

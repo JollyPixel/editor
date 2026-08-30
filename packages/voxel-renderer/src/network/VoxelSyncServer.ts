@@ -3,7 +3,11 @@ import * as network from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import { VoxelWorld } from "../world/VoxelWorld.ts";
-import { VoxelSerializer, type VoxelWorldJSON } from "../serialization/VoxelSerializer.ts";
+import {
+  deserializeVoxelWorld,
+  serializeVoxelWorld
+} from "../serialization/world.ts";
+import type { VoxelWorldJSON } from "../serialization/types.ts";
 import { VOXEL_LAYER_HOOK_ACTIONS } from "../hooks.ts";
 import { applyCommandToWorld } from "./VoxelCommandApplier.ts";
 import { isVoxelNetworkCommand } from "./VoxelCommandValidator.ts";
@@ -44,7 +48,6 @@ export class VoxelSyncServer extends network.Extension {
   readonly events: readonly string[] = VOXEL_LAYER_HOOK_ACTIONS;
 
   #arbiter: VoxelCommandArbiter;
-  #serializer = new VoxelSerializer();
 
   constructor(
     options: VoxelSyncServerOptions = {}
@@ -59,7 +62,9 @@ export class VoxelSyncServer extends network.Extension {
 
     this.id = id;
     this.world = world ?? new VoxelWorld(chunkSize);
-    this.#arbiter = new VoxelCommandArbiter({ conflictResolver });
+    this.#arbiter = new VoxelCommandArbiter({
+      conflictResolver
+    });
   }
 
   onClientConnect(
@@ -80,7 +85,9 @@ export class VoxelSyncServer extends network.Extension {
   getEventName(
     payload: unknown
   ): string {
-    return isVoxelNetworkCommand(payload) ? payload.action : "unknown";
+    return isVoxelNetworkCommand(payload)
+      ? payload.action
+      : "unknown";
   }
 
   onMessage(
@@ -92,16 +99,32 @@ export class VoxelSyncServer extends network.Extension {
       return;
     }
 
-    this.receive(payload, context);
+    this.receive(
+      payload,
+      context
+    );
   }
 
   receive(
     cmd: VoxelNetworkCommand,
     context: network.RoomContext
   ): void {
-    // Full-world replacement bypasses conflict arbitration.
     if (cmd.action === "world-replace") {
-      this.#serializer.deserialize(cmd.data, this.world);
+      try {
+        deserializeVoxelWorld(
+          cmd.data,
+          this.world
+        );
+      }
+      catch (error) {
+        console.error(
+          "VoxelSyncServer: dropped invalid world-replace:",
+          error
+        );
+
+        return;
+      }
+
       context.room.broadcast({
         type: "snapshot",
         data: this.snapshot()
@@ -142,12 +165,6 @@ export class VoxelSyncServer extends network.Extension {
   }
 
   snapshot(): VoxelWorldJSON {
-    return {
-      version: 1,
-      chunkSize: this.world.chunkSize,
-      tilesets: [],
-      layers: this.world.getLayers().map((layer) => layer.toJSON()),
-      objectLayers: [...this.world.getObjectLayers()]
-    };
+    return serializeVoxelWorld(this.world);
   }
 }

@@ -36,15 +36,32 @@ world. That separation is what lets the asset room append rather than mutate.
 ## Documents
 
 The kind matches `**/*.voxelmap.json` by default and stores `VoxelWorldJSON`,
-the same shape `VoxelSerializer` produces.
+the same shape `serializeVoxelWorld()` produces.
 
-`VoxelMapState` carries `tilesets` next to the world because a `VoxelWorld`
-does not hold one. A document's tileset list is restored on load and written
-back on snapshot; without it, every save would drop the list the file
-arrived with.
+`VoxelMapState` is the handler's state: a `VoxelWorld` plus the `tilesets` a
+document carries but a world does not. A document's tileset list is restored on
+load and written back on snapshot; without it, every save would drop the list
+the file arrived with.
+
+```ts
+class VoxelMapState {
+  readonly world: VoxelWorld;
+  tilesets: TilesetDefinition[];
+
+  constructor(chunkSize: number);
+  // Snapshots the world and its tilesets as a document.
+  toJSON(): VoxelWorldJSON;
+  // Restores both from one, replacing whatever the state held.
+  load(document: VoxelWorldJSON): void;
+  // Empties the world and drops the tileset list.
+  clear(): void;
+}
+```
 
 A document whose `chunkSize` differs from the handler's is refused rather
-than loaded into a mismatched world.
+than loaded into a mismatched world. Validation and byte encoding both come
+from `serialization/`: `parseVoxelDocument`, `encodeVoxelDocument` and
+`decodeVoxelDocument` are re-exported from `asset/index.ts` for convenience.
 
 ## Snapshot cadence
 

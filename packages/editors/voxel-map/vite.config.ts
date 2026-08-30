@@ -12,9 +12,9 @@ import {
   pixelArtAssetHandler
 } from "@jolly-pixel/pixel-draw.renderer/asset/index.ts";
 import {
-  createVoxelMapState,
-  encodeVoxelMapDocument,
-  voxelMapAssetHandler
+  encodeVoxelDocument,
+  voxelMapAssetHandler,
+  VoxelMapState
 } from "@jolly-pixel/voxel.renderer/asset/index.ts";
 
 // Import Internal Dependencies
@@ -24,10 +24,13 @@ import { readTilesetSeed } from "./vite/tilesetSeed.ts";
 const kChunkSize = 16;
 const kDefaultLayerName = "Ground";
 
-// The seeded documents and the browser share one atlas: the voxel-map
-// document points at the public URL, the pixel-art document holds its pixels.
 const tileset = await readTilesetSeed({
-  file: path.join(import.meta.dirname, "public", "textures", "tileset.png"),
+  file: path.join(
+    import.meta.dirname,
+    "public",
+    "textures",
+    "tileset.png"
+  ),
   definition: {
     id: "default",
     src: "textures/tileset.png",
@@ -53,11 +56,11 @@ export default defineConfig({
           tileset.buffer
         ),
         "maps/overworld.voxelmap.json": () => {
-          const state = createVoxelMapState(kChunkSize);
+          const state = new VoxelMapState(kChunkSize);
           state.tilesets = [tileset.definition];
           state.world.addLayer(kDefaultLayerName);
 
-          return encodeVoxelMapDocument(state);
+          return encodeVoxelDocument(state.toJSON());
         }
       }
     })

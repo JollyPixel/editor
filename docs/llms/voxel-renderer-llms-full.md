@@ -327,7 +327,7 @@ type BlockShapeID =
 > runtime — the voxel is skipped. Always use a built-in ID or one registered via
 > `BlockShapeRegistry.register()`.
 
-![Available block shapes](./shapes.png)
+![Available block shapes](./images/shapes.png)
 
 
 ## BlockCollisionHint
@@ -435,7 +435,7 @@ standalone via `BlockShapeRegistry.createDefault()`.
 
 ## Shape Reference
 
-![Available block shapes](./shapes.png)
+![Available block shapes](./images/shapes.png)
 
 ### Solid / Slab
 
@@ -2348,6 +2348,3 @@ object is not found.
 
 Merges `patch` into the matching object. Returns `false` if the layer or object is not
 found.
-
-
-
