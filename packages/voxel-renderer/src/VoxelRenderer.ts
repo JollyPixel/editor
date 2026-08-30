@@ -10,14 +10,6 @@ import {
   type VoxelEngineOptions
 } from "./VoxelEngine.ts";
 
-export {
-  VoxelRotation,
-  type VoxelLoadOptions,
-  type VoxelSetOptions,
-  type VoxelRemoveOptions,
-  type VoxelLogger
-} from "./VoxelEngine.ts";
-
 export type VoxelRendererOptions = VoxelEngineOptions;
 
 /**

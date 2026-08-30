@@ -2,7 +2,7 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import type { TilesetDefinition } from "./TilesetManager.ts";
+import type { TilesetDefinition } from "./types.ts";
 import type { VoxelWorldJSON } from "../serialization/VoxelSerializer.ts";
 
 export interface TilesetLoaderOptions {

@@ -31,10 +31,8 @@ import {
   type VoxelObjectLayerJSON,
   type VoxelObjectJSON
 } from "./serialization/VoxelSerializer.ts";
-import {
-  TilesetManager,
-  type TilesetDefinition
-} from "./tileset/TilesetManager.ts";
+import { TilesetManager } from "./tileset/TilesetManager.ts";
+import type { TilesetDefinition } from "./tileset/types.ts";
 import type { TilesetLoader } from "./tileset/TilesetLoader.ts";
 import { enableTileWrapping } from "./tileset/tileWrapping.ts";
 import { VoxelWorld } from "./world/VoxelWorld.ts";

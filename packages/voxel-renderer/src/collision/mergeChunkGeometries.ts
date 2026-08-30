@@ -1,16 +1,20 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 
+export interface MergedChunkGeometry {
+  geometry: THREE.BufferGeometry;
+  /**
+   * True when newly allocated, meaning the caller must dispose it.
+   */
+  owned: boolean;
+}
+
 /**
  * Merges chunk geometries, retaining only positions and indices.
  */
 export function mergeChunkGeometries(
   geometries: ReadonlyMap<string, THREE.BufferGeometry>
-): {
-  geometry: THREE.BufferGeometry;
-  /** True when newly allocated, meaning the caller must dispose it. */
-  owned: boolean;
-} | null {
+): MergedChunkGeometry | null {
   if (geometries.size === 0) {
     return null;
   }
@@ -74,7 +78,9 @@ export function mergeChunkGeometries(
     "position",
     new THREE.BufferAttribute(positions, 3)
   );
-  merged.setIndex(new THREE.BufferAttribute(indices, 1));
+  merged.setIndex(
+    new THREE.BufferAttribute(indices, 1)
+  );
 
   return {
     geometry: merged,

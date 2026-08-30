@@ -3,10 +3,8 @@ import type { VoxelWorld } from "../world/VoxelWorld.ts";
 import type {
   VoxelLayerJSON
 } from "../world/VoxelLayer.ts";
-import type {
-  TilesetManager,
-  TilesetDefinition
-} from "../tileset/TilesetManager.ts";
+import type { TilesetManager } from "../tileset/TilesetManager.ts";
+import type { TilesetDefinition } from "../tileset/types.ts";
 import type { VoxelEntry } from "../world/types.ts";
 import type { ResolvedBlockDefinition } from "../blocks/BlockDefinition.ts";
 

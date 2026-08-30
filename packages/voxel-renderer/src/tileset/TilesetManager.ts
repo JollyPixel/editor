@@ -18,13 +18,6 @@ import {
 } from "./atlasLayout.ts";
 import type { ResolvedBlockDefinition } from "../blocks/BlockDefinition.ts";
 
-export type {
-  ResolvedTilesetDefinition,
-  ResolvedTileRef,
-  TilesetDefinition,
-  TilesetUVRegion
-};
-
 export interface TilesetManagerOptions {
   /**
    * Edge-replicated gutter in texels; 0 disables repacking.
@@ -55,7 +48,7 @@ export interface TilesetDefaultBlockOptions {
 export type TilesetImage = HTMLImageElement | HTMLCanvasElement;
 export type TilesetTexture = THREE.Texture<TilesetImage>;
 
-export interface TilesetEntry {
+export interface TilesetAtlasEntry {
   def: ResolvedTilesetDefinition;
   /**
    * Material atlas, padded when `padding > 0`.
@@ -76,7 +69,7 @@ export interface TilesetEntry {
  * Manages source and padded textures with per-tile UV regions.
  */
 export class TilesetManager {
-  #tilesets = new Map<string, TilesetEntry>();
+  #tilesets = new Map<string, TilesetAtlasEntry>();
   #defaultTilesetId: string | null = null;
   #version = 0;
   /**
