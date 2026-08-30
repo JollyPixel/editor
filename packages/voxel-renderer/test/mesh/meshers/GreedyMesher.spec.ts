@@ -340,7 +340,7 @@ describe("GreedyMesher — tile attributes", () => {
     const f = makeFixture();
     fill(f, { from: [0, 0, 0], to: [1, 0, 1] });
 
-    const expected = f.tilesetManager.getTileUV({ col: 0, row: 0 });
+    const expected = f.tilesetManager.atlas().uvFor(0, 0);
     const [geometry] = [...build(f)!.values()];
     const region = geometry.getAttribute("tileRegion");
     // The rect is stored as normalized uint16, so it decodes to within a step.
@@ -441,7 +441,7 @@ describe("GreedyMesher — tiled attribute layout", () => {
 
     const [geometry] = [...build(f)!.values()];
     const attribute = geometry.getAttribute("tileRegion");
-    const expected = f.tilesetManager.getTileUV(DEFAULT_TEXTURE);
+    const expected = f.tilesetManager.atlas().uvFor(DEFAULT_TEXTURE.col, DEFAULT_TEXTURE.row);
     const step = 1 / 65535;
 
     for (let i = 0; i < attribute.count; i++) {

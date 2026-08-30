@@ -2,7 +2,8 @@
 
 Data model for the voxel world: layers, chunks, and per-voxel entries.
 
-Under the hood world use:
+The world uses:
+
 - [Chunk](./Chunk.md)
 - [Layer](./Layer.md)
 
@@ -58,7 +59,7 @@ Neither argument is modified.
 ## VoxelWorld
 
 Top-level container for a layered voxel scene. Layers are composited from highest `order`
-to lowest — the first visible layer with `opacity > 0` that has a voxel at a given position
+to lowest. The first visible layer with `opacity > 0` that has a voxel at a given position
 wins. This allows decorative layers to override base terrain non-destructively.
 A layer with `opacity === 0` is skipped during compositing exactly like an invisible one.
 
@@ -68,10 +69,9 @@ A layer with `opacity === 0` is skipped during compositing exactly like an invis
 new VoxelWorld(chunkSize?: number) // default: 16
 ```
 
-`chunkSize` must be a power of two. Every world-to-chunk conversion — on the
-write path, in the mesher, and in the neighbour lookups — is a shift and a mask,
-so a size that is not a power of two throws a `RangeError` rather than falling
-back to division.
+`chunkSize` must be a power of two. Every world-to-chunk conversion (on the
+write path, in the mesher, and in neighbour lookups) is a shift and a mask.
+Other sizes throw a `RangeError`.
 
 ### Properties
 
@@ -81,9 +81,14 @@ readonly chunkSize: number;
 
 ### Methods
 
-#### `addLayer(name: string): VoxelLayer`
+#### `addLayer(name: string, options?: VoxelLayerConfigurableOptions): VoxelLayer`
 
 Creates and appends a new layer with the next available `order`.
+
+#### `updateLayer(name: string, options: Partial<VoxelLayerConfigurableOptions>): boolean`
+
+Updates visibility, opacity, or properties. Returns `false` when the layer does
+not exist.
 
 #### `removeLayer(name: string): boolean`
 
@@ -108,7 +113,7 @@ same-bucket change (e.g. `0.4 → 0.6`), or every layer's chunks when the change
 #### `setLayerOffset(name: string, offset: VoxelCoord): void`
 
 Sets the world-space translation of a layer. All voxels in that layer are shifted by
-`offset` — a voxel stored at local `{0,0,0}` will appear at `{offset.x, offset.y, offset.z}`
+`offset`: a voxel stored at local `{0,0,0}` will appear at `{offset.x, offset.y, offset.z}`
 in world space. Marks all chunks in every layer dirty so cross-layer face culling is
 re-evaluated on the next frame. No-op if the layer is not found.
 
@@ -123,48 +128,78 @@ Adds `delta` to the layer's current offset. Equivalent to calling `setLayerOffse
 
 All layers, sorted highest `order` first.
 
-#### `getVoxelAt(position: VoxelCoord): VoxelEntry | undefined`
+#### `cloneLayer(name: string, options: PartialExcept<VoxelLayerOptions, "name">): VoxelLayer | undefined`
 
-Composited read — returns the voxel from the highest-priority visible layer (`opacity > 0`)
+Clones a layer and adds the copy to the world. `options.name` is required. Other
+layer options can override the source values. Returns `undefined` when the source
+layer does not exist.
+
+#### `mergeLayer(sourceName: string, targetName: string): boolean`
+
+Copies the source voxels into the target. Source voxels overwrite target voxels at
+the same world position. Returns `false` when either layer does not exist. The source
+layer remains in the world.
+
+#### `mergeAllLayers(): VoxelLayer | null`
+
+Collapses all voxel layers into the lowest-order layer. Higher-order voxels win at
+overlapping world positions, and every other voxel layer is removed. Returns `null`
+for an empty world.
+
+#### `getVoxelAt(position: THREE.Vector3Like): VoxelEntry | undefined`
+
+Composited read. Returns the voxel from the highest-priority visible layer (`opacity > 0`)
 at that position. Returns `undefined` for air.
 
-#### `getPackedVoxelAt(position: VoxelCoord): PackedVoxel`
+#### `getPackedVoxelAt(position: THREE.Vector3Like): PackedVoxel`
 
 Allocation-free `getVoxelAt`, returning `VOXEL_ABSENT` (`-1`) for air.
 
-#### `getVoxelWithLayerAt(position: VoxelCoord): { entry: VoxelEntry; layer: VoxelLayer } | undefined`
+#### `getVoxelWithLayerAt(position: THREE.Vector3Like): { entry: VoxelEntry; layer: VoxelLayer } | undefined`
 
 Same compositing rules as `getVoxelAt`, but also returns the owning `VoxelLayer` so callers
 can inspect layer-level properties (e.g. `opacity`) of the resolved voxel.
 
-#### `getVoxelNeighbour(position: VoxelCoord, face: Face): VoxelEntry | undefined`
+#### `getVoxelNeighbour(position: THREE.Vector3Like, face: Face): VoxelEntry | undefined`
 
 Composited read of the voxel immediately adjacent to `position` in the given face direction.
 
-#### `setVoxelAt(layerName: string, position: VoxelCoord, entry: VoxelEntry): void`
+#### `setVoxelAt(layerName: string, position: THREE.Vector3Like, entry: VoxelEntry): void`
 
-#### `setPackedVoxelAt(layerName: string, position: VoxelCoord, packed: PackedVoxel): void`
+#### `setPackedVoxelAt(layerName: string, position: THREE.Vector3Like, packed: PackedVoxel): void`
 
 Writes a voxel directly and marks neighbouring chunks dirty for boundary face re-evaluation.
 Throws if the layer is not found. Prefer `VoxelEngine.setVoxel` to handle rotation packing.
 
-#### `removeVoxelAt(layerName: string, position: VoxelCoord): void`
+#### `removeVoxelAt(layerName: string, position: THREE.Vector3Like): void`
 
 Removes a voxel. No-op if the layer is not found.
 
-#### `getAllChunks(): Generator<[VoxelLayer, VoxelChunk]>`
+#### `getAllChunks(): IterableIterator<IterableLayerChunk>`
 
 Iterates over every chunk across all layers.
 
-#### `getAllDirtyChunks(): Generator<[VoxelLayer, VoxelChunk]>`
+#### `getAllDirtyChunks(): IterableIterator<IterableLayerChunk>`
 
 Iterates over chunks whose `dirty` flag is set.
+
+```ts
+interface IterableLayerChunk {
+  layer: VoxelLayer;
+  chunk: VoxelChunk;
+}
+```
+
+#### `getAllChunksToBeRemoved(): IterableIterator<IterableLayerChunk>`
+
+Consumes chunks whose meshes must be removed because their layer disappeared or
+the chunk became empty. This is renderer-facing lifecycle plumbing.
 
 #### `clear(): void`
 
 Removes all voxel layers and object layers.
 
-### Object Layer Management
+### Object layer management
 
 Object layers hold placed objects (spawn points, trigger zones, etc.) rather than
 voxel data. They are stored by name and serialised as part of `VoxelWorldJSON`.
@@ -204,4 +239,3 @@ object is not found.
 
 Merges `patch` into the matching object. Returns `false` if the layer or object is not
 found.
-

@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import type {
   ResolvedBlockDefinition,
-  TilesetManager,
+  TilesetAtlas,
   VoxelRenderer
 } from "@jolly-pixel/voxel.renderer";
 import type * as network from "@jolly-pixel/network";
@@ -41,10 +41,9 @@ export interface TextureEditorBridgeOptions {
 export class TextureEditorBridge {
   #manager: PixelArtCanvas | null = null;
   #syncClient: PixelSyncClient | null = null;
-  #tilesetManager: TilesetManager | null = null;
+  #atlas: TilesetAtlas | null = null;
   #tilesetId: string | null = null;
   #vr: VoxelRenderer | null = null;
-  #tileSize = 1;
   #unsubscribe: (() => void) | null = null;
   #syncing = false;
   #texture: PixelCanvasTexture | null = null;
@@ -120,15 +119,11 @@ export class TextureEditorBridge {
       return;
     }
 
-    if (!this.#manager || !this.#tilesetManager) {
+    if (!this.#manager || !this.#atlas) {
       return;
     }
 
-    this.#tilesetManager.updateSourceRegion(
-      this.#manager.textureCanvas(),
-      dirty,
-      this.#tilesetId ?? undefined
-    );
+    this.#atlas.updateSource(this.#manager.textureCanvas(), dirty);
     this.syncTransparency(dirty);
   }
 
@@ -142,19 +137,15 @@ export class TextureEditorBridge {
 
     const { tilesetManager } = vr.engine;
     const id = tilesetId ?? tilesetManager.defaultTilesetId;
-    if (!id) {
+    if (id === null || !tilesetManager.has(id)) {
       return;
     }
 
-    const texture = tilesetManager.getSourceTexture(id);
-    if (!texture) {
-      return;
-    }
+    const atlas = tilesetManager.atlas(id);
 
     this.#tilesetId = id;
-    this.#tilesetManager = tilesetManager;
+    this.#atlas = atlas;
     this.#vr = vr;
-    this.#tileSize = tilesetManager.getDefinitions().find((def) => def.id === id)?.tileSize ?? 1;
 
     // Do not overwrite an attached room's snapshot.
     if (this.#syncClient?.ready) {
@@ -166,7 +157,7 @@ export class TextureEditorBridge {
     // Local restore keeps the placeholder out of shared history.
     const applied = this.#manager.runLocalRestore(
       () => this.#applyTexture(
-        texture.image as HTMLImageElement,
+        atlas.sourceTexture.image as HTMLImageElement,
         "tileset source image"
       )
     );
@@ -204,14 +195,11 @@ export class TextureEditorBridge {
   }
 
   syncToThree(): void {
-    if (!this.#manager || !this.#tilesetManager) {
+    if (!this.#manager || !this.#atlas) {
       return;
     }
 
-    this.#tilesetManager.updateSourceImage(
-      this.#manager.textureCanvas(),
-      this.#tilesetId ?? undefined
-    );
+    this.#atlas.updateSource(this.#manager.textureCanvas());
 
     this.syncTransparency();
   }
@@ -220,14 +208,14 @@ export class TextureEditorBridge {
   syncTransparency(
     bounds?: SelectionRect
   ): void {
-    if (!this.#manager || !this.#vr || !this.#tilesetId) {
+    if (!this.#manager || !this.#vr || !this.#atlas || !this.#tilesetId) {
       return;
     }
 
     const affected = findBlocksReferencingTileset(
       this.#vr.engine.blockRegistry.getAll(),
       this.#tilesetId,
-      this.#tileSize
+      this.#atlas.def.tileSize
     );
 
     const updates: ResolvedBlockDefinition[] = [];
@@ -270,7 +258,7 @@ export class TextureEditorBridge {
     this.#syncClient?.destroy();
     this.#syncClient = null;
     this.#manager = null;
-    this.#tilesetManager = null;
+    this.#atlas = null;
     this.#tilesetId = null;
     this.#vr = null;
   }

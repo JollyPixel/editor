@@ -4,6 +4,8 @@
 optional wireframe view of the geometry the mesh builder produced.
 
 ```ts
+import { VoxelEngine } from "@jolly-pixel/voxel.renderer";
+
 const engine = new VoxelEngine({ layers: ["Ground"] });
 
 // Draw the wireframe over the textured chunks.
@@ -14,8 +16,7 @@ console.log(`${faces} faces, ${culledFaces} culled, ${triangles} triangles`);
 ```
 
 Counters are collected on every chunk build, whatever the mode; only the
-wireframe has a rendering cost. Meshing a 512×512 noise world with the counters
-enabled measures within ~1% of the same run without them.
+wireframe has an additional rendering cost.
 
 ## Modes
 
@@ -25,7 +26,7 @@ enabled measures within ~1% of the same run without them.
 | `"overlay"` | a wireframe copy is drawn over the textured chunks |
 | `"wireframe"` | the textured chunks are hidden, leaving only the wireframe |
 
-Wireframes reuse the chunk geometries — switching modes never re-meshes
+Wireframes reuse the chunk geometries. Switching modes never re-meshes
 anything and costs no extra vertex memory, only one draw call per chunk mesh.
 While a mode other than `"off"` is active, a `THREE.Group` named
 `"VoxelDebugger"` holds them under `engine.root`.
@@ -78,7 +79,7 @@ interface VoxelDebugStats {
   mergedFaces: number;
   vertices: number;
   triangles: number;
-  /** faces / (voxels - hiddenVoxels). Falls 3-20x under greedy meshing. */
+  /** faces / (voxels - hiddenVoxels). */
   facesPerSolidVoxel: number;
   /** Vertex attributes emitted, in bytes per vertex; indices excluded. */
   bytesPerVertex: number;
@@ -107,13 +108,13 @@ const ratio = (mergedFaces / (faces + mergedFaces)) * 100;
 
 The two derived figures are the ones worth watching for regressions:
 
-- `facesPerSolidVoxel` should drop 3-20x the moment greedy meshing is on. If it
-  does not, a merge predicate has become too strict and the sweep is silently
-  falling back to the per-voxel path.
+- `facesPerSolidVoxel` should decrease when greedy meshing combines faces. If it
+  does not, inspect the merge predicates and the blocks in the measured chunks.
 - `bytesPerVertex` is read off the emitted geometries, not off a constant, so an
   attribute that quietly widens (or a dropped one that comes back) shows up here
-  with no code change needed. Expect 19 naive, 35 with greedy meshing, whose
-  `tileRegion`/`tileRepeat` attributes and float tile UVs cost the difference.
+  with no code change needed. The current layouts report 19 without greedy
+  meshing and 35 with it. `tileRegion`, `tileRepeat`, and float tile UVs account
+  for the difference.
 
 Counters for a single chunk are available on the mesh builder itself as
 `MeshBuildStats`; `VoxelDebugger` keeps a copy per chunk key and aggregates them

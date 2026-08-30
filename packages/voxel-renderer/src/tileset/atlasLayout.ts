@@ -43,14 +43,23 @@ export function padAtlas(
   options: AtlasLayout
 ): HTMLCanvasElement | null {
   const { cols, rows, tileSize, padding } = options;
-  if (padding <= 0 || cols <= 0 || rows <= 0 || tileSize <= 0) {
+
+  if (
+    padding <= 0 ||
+    cols <= 0 ||
+    rows <= 0 ||
+    tileSize <= 0
+  ) {
     return null;
   }
   if (typeof document === "undefined") {
     return null;
   }
 
-  const cell = paddedCellSize(tileSize, padding);
+  const cell = paddedCellSize(
+    tileSize,
+    padding
+  );
   const canvas = document.createElement("canvas");
   canvas.width = cols * cell;
   canvas.height = rows * cell;
@@ -88,7 +97,11 @@ export function padAtlasRegion(
   bounds: AtlasRegion
 ): void {
   const { tileSize, padding } = layout;
-  const range = atlasTileRange(layout, bounds);
+
+  const range = atlasTileRange(
+    layout,
+    bounds
+  );
   if (range === null) {
     return;
   }
@@ -99,7 +112,10 @@ export function padAtlasRegion(
   }
   context.imageSmoothingEnabled = false;
 
-  const cell = paddedCellSize(tileSize, padding);
+  const cell = paddedCellSize(
+    tileSize,
+    padding
+  );
   for (let row = range.rowStart; row <= range.rowEnd; row++) {
     for (let col = range.colStart; col <= range.colEnd; col++) {
       drawPaddedTile(context, image, {
@@ -122,19 +138,38 @@ export function atlasTileRange(
   bounds: AtlasRegion
 ): AtlasTileRange | null {
   const { cols, rows, tileSize, padding } = layout;
-  if (padding <= 0 || cols <= 0 || rows <= 0 || tileSize <= 0) {
+
+  if (
+    padding <= 0 ||
+    cols <= 0 ||
+    rows <= 0 ||
+    tileSize <= 0
+  ) {
     return null;
   }
   if (bounds.width <= 0 || bounds.height <= 0) {
     return null;
   }
 
-  const colStart = Math.floor(bounds.x / tileSize);
-  const colEnd = Math.floor((bounds.x + bounds.width - 1) / tileSize);
-  const rowStart = Math.floor(bounds.y / tileSize);
-  const rowEnd = Math.floor((bounds.y + bounds.height - 1) / tileSize);
+  const colStart = Math.floor(
+    bounds.x / tileSize
+  );
+  const colEnd = Math.floor(
+    (bounds.x + bounds.width - 1) / tileSize
+  );
+  const rowStart = Math.floor(
+    bounds.y / tileSize
+  );
+  const rowEnd = Math.floor(
+    (bounds.y + bounds.height - 1) / tileSize
+  );
 
-  if (colEnd < 0 || rowEnd < 0 || colStart > cols - 1 || rowStart > rows - 1) {
+  if (
+    colEnd < 0 ||
+    rowEnd < 0 ||
+    colStart > cols - 1 ||
+    rowStart > rows - 1
+  ) {
     return null;
   }
 
@@ -159,7 +194,10 @@ export function paddedCellSize(
 export function defaultPadding(
   tileSize: number
 ): number {
-  return Math.min(Math.max(Math.round(tileSize / 2), kMinPadding), kMaxPadding);
+  return Math.min(
+    Math.max(Math.round(tileSize / 2), kMinPadding),
+    kMaxPadding
+  );
 }
 
 /**
@@ -171,7 +209,11 @@ export function tileUVRegion(
   layout: AtlasLayout
 ): TilesetUVRegion {
   const { cols, rows, tileSize, padding } = layout;
-  const cell = paddedCellSize(tileSize, padding);
+
+  const cell = paddedCellSize(
+    tileSize,
+    padding
+  );
   const imgW = cols * cell;
   const imgH = rows * cell;
 
@@ -192,17 +234,34 @@ function drawPaddedTile(
   options: TileDrawOptions
 ): void {
   const { sx, sy, dx, dy, tileSize: size, padding } = options;
+
   const last = size - 1;
 
-  context.drawImage(image, sx, sy, size, size, dx, dy, size, size);
-
-  context.drawImage(image, sx, sy, 1, size, dx - padding, dy, padding, size);
-  context.drawImage(image, sx + last, sy, 1, size, dx + size, dy, padding, size);
-  context.drawImage(image, sx, sy, size, 1, dx, dy - padding, size, padding);
-  context.drawImage(image, sx, sy + last, size, 1, dx, dy + size, size, padding);
-
-  context.drawImage(image, sx, sy, 1, 1, dx - padding, dy - padding, padding, padding);
-  context.drawImage(image, sx + last, sy, 1, 1, dx + size, dy - padding, padding, padding);
-  context.drawImage(image, sx, sy + last, 1, 1, dx - padding, dy + size, padding, padding);
-  context.drawImage(image, sx + last, sy + last, 1, 1, dx + size, dy + size, padding, padding);
+  context.drawImage(
+    image, sx, sy, size, size, dx, dy, size, size
+  );
+  context.drawImage(
+    image, sx, sy, 1, size, dx - padding, dy, padding, size
+  );
+  context.drawImage(
+    image, sx + last, sy, 1, size, dx + size, dy, padding, size
+  );
+  context.drawImage(
+    image, sx, sy, size, 1, dx, dy - padding, size, padding
+  );
+  context.drawImage(
+    image, sx, sy + last, size, 1, dx, dy + size, size, padding
+  );
+  context.drawImage(
+    image, sx, sy, 1, 1, dx - padding, dy - padding, padding, padding
+  );
+  context.drawImage(
+    image, sx + last, sy, 1, 1, dx + size, dy - padding, padding, padding
+  );
+  context.drawImage(
+    image, sx, sy + last, 1, 1, dx - padding, dy + size, padding, padding
+  );
+  context.drawImage(
+    image, sx + last, sy + last, 1, 1, dx + size, dy + size, padding, padding
+  );
 }

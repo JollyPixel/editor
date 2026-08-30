@@ -4,20 +4,13 @@ import {
   VoxelSerializer,
   type VoxelWorldJSON
 } from "../serialization/VoxelSerializer.ts";
+import {
+  InvalidVoxelMapDocumentError
+} from "./errors/InvalidVoxelMapDocumentError.ts";
 import type { VoxelMapState } from "./VoxelMapState.ts";
 
 // CONSTANTS
 const kSerializer = new VoxelSerializer();
-
-export class InvalidVoxelMapDocumentError extends Error {
-  constructor(
-    reason: string,
-    options?: { cause?: unknown; }
-  ) {
-    super(`Invalid voxel-map document: ${reason}`, options);
-    this.name = "InvalidVoxelMapDocumentError";
-  }
-}
 
 export function voxelMapSnapshot(
   state: VoxelMapState
@@ -26,8 +19,12 @@ export function voxelMapSnapshot(
     version: 1,
     chunkSize: state.world.chunkSize,
     tilesets: state.tilesets,
-    layers: state.world.getLayers().map((layer) => layer.toJSON()),
-    objectLayers: [...state.world.getObjectLayers()]
+    layers: state.world.getLayers().map(
+      (layer) => layer.toJSON()
+    ),
+    objectLayers: [
+      ...state.world.getObjectLayers()
+    ]
   };
 }
 

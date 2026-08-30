@@ -1,7 +1,7 @@
 # Collision
 
-Optional physics integration. Disabled by default — no physics dependency is required when
-collision is not needed.
+Optional physics integration. It is disabled by default, so no physics dependency
+is required when collision is not needed.
 
 `VoxelEngine` knows nothing about any physics backend: it drives the `VoxelCollider`
 interface. A [Rapier3D](https://rapier.rs/) implementation ships in
@@ -14,6 +14,7 @@ Pass a `collider` factory to `VoxelEngineOptions` (a.k.a. `VoxelRendererOptions`
 
 ```ts
 import Rapier from "@dimforge/rapier3d-compat";
+import { VoxelRenderer } from "@jolly-pixel/voxel.renderer";
 import {
   RapierVoxelCollider
 } from "@jolly-pixel/voxel.renderer/plugins/rapier/index.js";
@@ -30,13 +31,13 @@ const vr = actor.addComponentAndGet(VoxelRenderer, {
 });
 ```
 
-The factory runs once during construction, after the block and shape registries exist —
-`context` carries both, spread into the options above.
+The factory runs once during construction, after the block and shape registries
+exist. `context` carries both and is spread into the options above.
 
 Colliders are built and updated automatically alongside chunk meshes, and released when a
 chunk is emptied, its layer hidden, or the engine disposed.
 
-> **Opacity note** — a layer's `opacity` (see [Layer](./Layer.md)) has no effect on
+> **Opacity note:** a layer's `opacity` (see [Layer](./Layer.md)) has no effect on
 > collision except at `opacity === 0`, which is treated like `visible: false` and removes
 > the layer's colliders entirely. A translucent layer (e.g. `opacity: 0.5` glass) is still
 > fully solid.
@@ -57,7 +58,7 @@ interface VoxelCollider {
 
 interface VoxelChunkCollision {
   chunk: VoxelChunk;
-  /** Keyed by tileset id — collision is texture-agnostic. */
+  /** Grouped by tileset and cutout mode. Treat string keys as opaque. */
   geometries: ReadonlyMap<string, THREE.BufferGeometry>;
   layerOffset: VoxelCoord;
 }
@@ -68,10 +69,10 @@ type VoxelColliderFactory = (context: {
 }) => VoxelCollider;
 ```
 
-`geometries` is split per tileset because rendering needs one draw call per texture.
-Implementations needing a single mesh can merge them with `mergeChunkGeometries()`, which
-returns `null` when there is nothing to collide with and flags whether the caller owns
-(and must dispose) the result:
+`geometries` follows the renderer's draw groups, split by tileset and cutout mode.
+Collider implementations should iterate the values or merge them with
+`mergeChunkGeometries()`. The merge returns `null` when there is nothing to collide
+with and reports whether the caller owns the result and must dispose it:
 
 ```ts
 const merged = mergeChunkGeometries(collision.geometries);
@@ -84,7 +85,7 @@ if (merged) {
 }
 ```
 
-## Collision Strategy
+## Collision strategy
 
 The strategy is chosen per-chunk based on the `collisionHint` of each voxel's shape:
 
@@ -116,7 +117,7 @@ interface RapierVoxelColliderOptions {
 
 `RapierAPI`, `RapierWorld`, `RapierCollider` and friends are structural interfaces declaring
 only the subset used here, so the package never imports the Rapier WASM module. Pass the
-already-initialised Rapier namespace — the real types satisfy the shapes without a cast.
+already-initialised Rapier namespace; the real types satisfy the shapes without a cast.
 
 ```ts
 interface RapierAPI {

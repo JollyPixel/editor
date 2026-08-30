@@ -15,7 +15,6 @@ export interface RendererStatsOptions {
   onRefresh?: () => void;
 }
 
-/** Adds post-draw renderer counters to an existing example folder. */
 export class RendererStats extends ActorComponent {
   #folder: ReturnType<Pane["addFolder"]>;
   #onRefresh?: () => void;

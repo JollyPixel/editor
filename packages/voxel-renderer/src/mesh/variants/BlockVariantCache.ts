@@ -221,7 +221,9 @@ export class BlockVariantCache {
         cull = flipY ? flipYFace(worldFace) : worldFace;
       }
 
-      const uvRegion = this.#tilesetManager.getTileUV(tileRef);
+      const uvRegion = this.#tilesetManager
+        .atlas(tileRef.tilesetId)
+        .uvFor(tileRef.col, tileRef.row);
       const vertexCount = faceDef.vertices.length;
       const positions = new Float32Array(vertexCount * 3);
       const uvs = new Uint16Array(vertexCount * 2);

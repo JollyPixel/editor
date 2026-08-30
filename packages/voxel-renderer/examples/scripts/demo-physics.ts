@@ -12,7 +12,7 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import {
   VoxelRenderer,
-  TilesetLoader,
+  loadTilesets,
   Face,
   type BlockDefinition
 } from "../../src/index.ts";
@@ -51,8 +51,7 @@ const tileDef = {
   id: "default"
 };
 
-const tilesetLoader = new TilesetLoader();
-await tilesetLoader.fromTileDefinition(tileDef);
+const tilesets = await loadTilesets([tileDef]);
 
 const { world } = runtime;
 world.logger.setLevel("debug");
@@ -135,7 +134,7 @@ const voxelMap = world.createActor("map")
         world: rapierWorld,
         ...context
       }),
-      tilesetLoader
+      tilesets
     }
   );
 

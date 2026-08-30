@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { resolveTileRef } from "../../src/tileset/resolve.ts";
+import { resolveTileRef } from "../../src/tileset/types.ts";
 
 describe("resolveTileRef", () => {
   it("expands a tuple, taking the default tileset", () => {

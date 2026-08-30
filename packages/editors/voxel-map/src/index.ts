@@ -3,6 +3,7 @@ import {
   Runtime,
   loadRuntime
 } from "@jolly-pixel/runtime";
+import type * as THREE from "three";
 import * as network from "@jolly-pixel/network/client";
 import type * as networkTypes from "@jolly-pixel/network";
 import type {
@@ -14,7 +15,8 @@ import type {
   VoxelServerMessage
 } from "@jolly-pixel/voxel.renderer/network/client.ts";
 import {
-  TilesetLoader,
+  loadTilesets,
+  type TilesetSource,
   type TilesetDefinition
 } from "@jolly-pixel/voxel.renderer";
 import {
@@ -72,25 +74,26 @@ function firstRecordOfKind(
 
 // VoxelEngine.load() requires tileset textures to be resident.
 async function preloadTilesets(
-  loader: TilesetLoader,
-  record: AssetRecord | null
-): Promise<void> {
-  if (record !== null) {
-    const response = await fetch(assetSourceUrl(record.source));
-    if (!response.ok) {
-      throw new Error(
-        `Voxel-map document responded with ${response.status}.`
-      );
-    }
+  record: AssetRecord | null,
+  manager: THREE.LoadingManager
+): Promise<TilesetSource[]> {
+  if (record === null) {
+    return loadTilesets([kFallbackTileset], { manager });
+  }
 
-    await loader.fromWorld(
-      parseVoxelWorld(await response.text())
+  const response = await fetch(assetSourceUrl(record.source));
+  if (!response.ok) {
+    throw new Error(
+      `Voxel-map document responded with ${response.status}.`
     );
   }
 
-  if (loader.tilesets.size === 0) {
-    await loader.fromTileDefinition(kFallbackTileset);
-  }
+  const { tilesets } = parseVoxelWorld(await response.text());
+
+  return loadTilesets(
+    tilesets.length > 0 ? tilesets : [kFallbackTileset],
+    { manager }
+  );
 }
 
 const canvas = document.querySelector<HTMLCanvasElement>(
@@ -128,14 +131,13 @@ if (!offline) {
   );
 }
 
-const tilesetLoader = new TilesetLoader({ manager: runtime.manager });
-await preloadTilesets(tilesetLoader, worldRecord);
+const tilesets = await preloadTilesets(worldRecord, runtime.manager);
 
 const editorScene = new EditorScene(
   editorState,
   {
     defaultLayerName: "Ground",
-    tilesetLoader,
+    tilesets,
     voxelRoom: worldRoom
   }
 );

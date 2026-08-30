@@ -400,7 +400,7 @@ describe("VoxelMeshBuilder — geometry attribute layout", () => {
     const uvs = geometry.getAttribute("uv");
 
     // Every vertex of a cube sits on a corner of its tile's atlas rect.
-    const region = f.tilesetManager.getTileUV(DEFAULT_TEXTURE);
+    const region = f.tilesetManager.atlas().uvFor(DEFAULT_TEXTURE.col, DEFAULT_TEXTURE.row);
     const step = 1 / 65535;
 
     for (let i = 0; i < uvs.count; i++) {

@@ -1,9 +1,9 @@
 // Import Internal Dependencies
-import type {
-  ResolvedTileRef,
-  TileRef
+import {
+  resolveTileRef,
+  type ResolvedTileRef,
+  type TileRef
 } from "../tileset/types.ts";
-import { resolveTileRef } from "../tileset/resolve.ts";
 import type { FACE } from "../utils/math.ts";
 import type { BlockShapeID } from "./BlockShape.ts";
 

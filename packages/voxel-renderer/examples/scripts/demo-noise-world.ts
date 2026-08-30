@@ -16,7 +16,7 @@ import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import {
-  TilesetLoader,
+  loadTilesets,
   VoxelRenderer,
   type VoxelDebugMode,
   type VoxelEngine
@@ -78,8 +78,7 @@ if (!canvas) {
 const settings = readSettings();
 const tileset = createTerrainTileset();
 
-const tilesetLoader = new TilesetLoader();
-await tilesetLoader.fromTileDefinition(tileset.definition);
+const tilesets = await loadTilesets([tileset.definition]);
 
 const runtime = await Runtime.create(canvas, {
   includePerformanceStats: true,
@@ -118,7 +117,7 @@ const voxelMap = world.createActor("map")
     blocks: tileset.blocks,
     material: "lambert",
     alphaTest: 0.5,
-    tilesetLoader
+    tilesets
   });
 
 const { engine } = voxelMap;

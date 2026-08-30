@@ -4,7 +4,8 @@ import {
 } from "@jolly-pixel/engine";
 import {
   VoxelRenderer,
-  TilesetLoader,
+  blocksFromTileset,
+  type TilesetSource,
   type VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
 import {
@@ -36,7 +37,7 @@ export interface EditorSceneOptions {
    * @default "Ground"
    */
   defaultLayerName?: string;
-  tilesetLoader: TilesetLoader;
+  tilesets: TilesetSource[];
   /** Optional room to synchronize the voxel world over the network. */
   voxelRoom?: network.Room<VoxelNetworkCommand, VoxelServerMessage>;
 }
@@ -53,7 +54,7 @@ export interface EditorSceneHandles {
  * Owns the synchronous ECS scene after its external resources are prepared.
  */
 export class EditorScene extends Systems.Scene {
-  #tilesetLoader: TilesetLoader;
+  #tilesets: TilesetSource[];
   #defaultLayerName: string;
   #voxelRoom: network.Room<VoxelNetworkCommand, VoxelServerMessage> | undefined;
   #voxelSyncClient: VoxelSyncClient | undefined;
@@ -81,12 +82,12 @@ export class EditorScene extends Systems.Scene {
 
     const {
       defaultLayerName = "Ground",
-      tilesetLoader,
+      tilesets,
       voxelRoom
     } = options;
 
     this.#defaultLayerName = defaultLayerName;
-    this.#tilesetLoader = tilesetLoader;
+    this.#tilesets = tilesets;
     this.#voxelRoom = voxelRoom;
     this.editorState = editorState;
   }
@@ -128,7 +129,7 @@ export class EditorScene extends Systems.Scene {
         },
         alphaTest: 0,
         onLayerUpdated: (evt) => this.editorState.dispatchLayerUpdated(evt),
-        tilesetLoader: this.#tilesetLoader
+        tilesets: this.#tilesets
       });
     this.vr = vr;
 
@@ -251,7 +252,11 @@ export class EditorScene extends Systems.Scene {
   #registerDefaultBlocks(): void {
     const { blockRegistry, tilesetManager } = this.vr.engine;
 
-    for (const block of tilesetManager.getDefaultBlocks(void 0, { limit: kDefaultBlockLimit })) {
+    const blocks = blocksFromTileset(tilesetManager.atlas().def, {
+      limit: kDefaultBlockLimit
+    });
+
+    for (const block of blocks) {
       if (!blockRegistry.has(block.id)) {
         blockRegistry.register(block);
       }

@@ -12,20 +12,24 @@ auto-registered when passed to `VoxelEngine.load()`.
 ```ts
 import { loadJSON } from "@jolly-pixel/engine";
 import {
-  TiledConverter,
   VoxelEngine,
-  type TiledMap
+  loadTilesets
 } from "@jolly-pixel/voxel.renderer";
+import {
+  TiledConverter,
+  type TiledMap
+} from "@jolly-pixel/voxel.renderer/plugins/tiled/index.js";
 
 const tiledMap = await loadJSON<TiledMap>("map.tmj");
 
-const engine = new VoxelEngine({});
-engine.load(
-  new TiledConverter().convert(tiledMap, {
-    resolveTilesetSrc: (_src, tilesetId) => `assets/${tilesetId}.png`,
-    layerMode: "stacked"
-  })
-);
+const snapshot = new TiledConverter().convert(tiledMap, {
+  resolveTilesetSrc: (_src, tilesetId) => `assets/${tilesetId}.png`,
+  layerMode: "stacked"
+});
+const tilesets = await loadTilesets(snapshot.tilesets);
+const engine = new VoxelEngine({ tilesets });
+
+engine.load(snapshot);
 ```
 
 > [!IMPORTANT]
@@ -63,7 +67,7 @@ interface TiledConverterOptions {
 
   /**
    * BlockShape ID assigned to every generated block.
-   * @default "fullCube"
+   * @default "cube"
    */
   defaultShapeId?: BlockShapeID;
 
@@ -89,14 +93,14 @@ TypeScript types for the Tiled JSON Map Format 1.11.x. Import `TiledMap` when yo
 type the raw JSON before converting:
 
 ```ts
-import type { TiledMap } from "@jolly-pixel/voxel.renderer";
+import type { TiledMap } from "@jolly-pixel/voxel.renderer/plugins/tiled/index.js";
 ```
 
 ## Loading a Tiled map as an asset
 
 `TiledMapAssetLoader` converts the map and loads its tileset textures. It
 returns a `VoxelTiledMap`, which contains the `VoxelWorldJSON` and its prepared
-`TilesetLoader`.
+`TilesetSource` list.
 
 Register the record in the project catalog and give the runtime the tiled
 loader:
@@ -105,20 +109,15 @@ loader:
 import {
   AssetCatalog,
   AssetId,
-  AssetRecord,
-  AssetReference
+  AssetRecord
 } from "@jolly-pixel/asset";
 import { Runtime } from "@jolly-pixel/runtime";
 import {
   TiledMapAssetLoader,
   TiledMapAssetType
-} from "@jolly-pixel/voxel.renderer";
+} from "@jolly-pixel/voxel.renderer/plugins/tiled/index.js";
 
 const mapId = new AssetId("map.intro");
-const mapAsset = new AssetReference(
-  mapId,
-  TiledMapAssetType
-);
 const catalog = new AssetCatalog([
   new AssetRecord({
     id: mapId,
@@ -126,6 +125,11 @@ const catalog = new AssetCatalog([
     source: "maps/intro.tmj"
   })
 ]);
+
+const canvas = document.querySelector("canvas");
+if (!canvas) {
+  throw new Error("HTMLCanvasElement not found");
+}
 
 const runtime = await Runtime.create(canvas, {
   assets: {
@@ -142,31 +146,49 @@ const runtime = await Runtime.create(canvas, {
 });
 ```
 
-Declare `mapAsset` in `Scene.assets`. Components can then read the prepared
-value synchronously during `awake()`:
+Declare the reference on the component that consumes it. Include that component's
+asset group in the scene, then read the prepared value synchronously during
+`awake()`:
 
 ```ts
-const asset = actor.world.assetCoordinator.request(mapAsset);
+import { AssetReference, type AssetReferenceGroup } from "@jolly-pixel/asset";
+import { Actor, ActorComponent, Systems } from "@jolly-pixel/engine";
+import { VoxelRenderer } from "@jolly-pixel/voxel.renderer";
+import {
+  TiledMapAssetType
+} from "@jolly-pixel/voxel.renderer/plugins/tiled/index.js";
 
-class MapScene extends Scene {
-  constructor() {
-    super("map", {
-      assets: [mapAsset]
-    });
+class VoxelMap extends ActorComponent {
+  static readonly assets = {
+    map: new AssetReference("map.intro", TiledMapAssetType)
+  } satisfies AssetReferenceGroup;
+
+  constructor(actor: Actor) {
+    super({ actor, typeName: "VoxelMap" });
+  }
+
+  awake(): void {
+    const { world, tilesets } = this.getAsset(VoxelMap.assets.map);
+    const renderer = this.actor.addComponentAndGet(VoxelRenderer, { tilesets });
+
+    renderer.engine.load(world);
   }
 }
 
-const {
-  world,
-  tilesetLoader
-} = asset.get();
+class MapScene extends Systems.Scene {
+  constructor() {
+    super("map", {
+      assets: [VoxelMap.assets]
+    });
+  }
 
-const renderer = actor.addComponentAndGet(VoxelRenderer, {
-  tilesetLoader
-});
-renderer.engine.load(world);
+  override awake(): void {
+    this.world.createActor("map").addComponent(VoxelMap);
+  }
+}
 ```
 
 The loader resolves `.tsx` tileset sources to `.png` files beside the `.tmj`
 record source. Pass `TiledMapAssetLoaderOptions` to its constructor to change
-converter settings such as `layerMode` or `chunkSize`.
+converter settings such as `layerMode` or `chunkSize`. Its `layerMode` default is
+`"stacked"`. Direct `TiledConverter` calls default to `"flat"`.
