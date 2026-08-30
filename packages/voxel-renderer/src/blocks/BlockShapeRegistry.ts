@@ -17,7 +17,7 @@ import {
   StairCornerOuter
 } from "./shapes/index.ts";
 
-export class BlockShapeRegistry {
+export class BlockShapeRegistry implements Iterable<BlockShape> {
   #shapes = new Map<BlockShapeID, BlockShape>();
   #version = 0;
 
@@ -55,6 +55,10 @@ export class BlockShapeRegistry {
 
   ids(): IterableIterator<BlockShapeID> {
     return this.#shapes.keys();
+  }
+
+  [Symbol.iterator](): IterableIterator<BlockShape> {
+    return this.getAll();
   }
 
   static createDefault(): BlockShapeRegistry {

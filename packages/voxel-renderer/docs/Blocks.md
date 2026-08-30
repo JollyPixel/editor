@@ -165,6 +165,11 @@ Registers a block definition, filling the defaults documented on
 
 #### `getAll(): IterableIterator<ResolvedBlockDefinition>`
 
+#### `[Symbol.iterator](): IterableIterator<ResolvedBlockDefinition>`
+
+Same iterator as `getAll()`, so the registry can be spread or used directly in
+a `for...of` loop.
+
 #### `readonly nextId: number`
 
 Identifier to give the next block, one above the highest ever registered. Never
@@ -197,6 +202,11 @@ Every registered shape, in registration order.
 #### `ids(): IterableIterator<BlockShapeID>`
 
 IDs of every registered shape, in registration order.
+
+#### `[Symbol.iterator](): IterableIterator<BlockShape>`
+
+Same iterator as `getAll()`, so the registry can be spread or used directly in
+a `for...of` loop.
 
 #### `readonly version: number`
 

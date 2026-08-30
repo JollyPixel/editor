@@ -261,6 +261,28 @@ describe("BlockRegistry.getAll", () => {
   });
 });
 
+describe("BlockRegistry[Symbol.iterator]", () => {
+  it("yields the same defs as getAll", () => {
+    const registry = new BlockRegistry([
+      makeDef(1),
+      makeDef(2)
+    ]);
+
+    assert.deepEqual([...registry], [...registry.getAll()]);
+  });
+
+  it("is iterable with for...of", () => {
+    const registry = new BlockRegistry([makeDef(4)]);
+
+    const ids: number[] = [];
+    for (const definition of registry) {
+      ids.push(definition.id);
+    }
+
+    assert.deepEqual(ids, [4]);
+  });
+});
+
 describe("BlockRegistry.nextId", () => {
   it("is one for an empty registry, never zero (air)", () => {
     assert.equal(new BlockRegistry().nextId, 1);

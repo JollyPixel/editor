@@ -923,7 +923,7 @@ export class VoxelEngine {
         this.world,
         this.tilesetManager
       ),
-      blocks: [...this.blockRegistry.getAll()]
+      blocks: [...this.blockRegistry]
     };
   }
 

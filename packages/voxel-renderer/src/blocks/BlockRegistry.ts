@@ -5,7 +5,7 @@ import {
   type ResolvedBlockDefinition
 } from "./BlockDefinition.ts";
 
-export class BlockRegistry {
+export class BlockRegistry implements Iterable<ResolvedBlockDefinition> {
   #blocks = new Map<number, ResolvedBlockDefinition>();
   #version = 0;
   #highestId = 0;
@@ -67,5 +67,9 @@ export class BlockRegistry {
 
   getAll(): IterableIterator<ResolvedBlockDefinition> {
     return this.#blocks.values();
+  }
+
+  [Symbol.iterator](): IterableIterator<ResolvedBlockDefinition> {
+    return this.getAll();
   }
 }
