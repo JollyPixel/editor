@@ -23,8 +23,10 @@ import {
   VoxelDebugger,
   type VoxelDebuggerOptions
 } from "./debug/VoxelDebugger.ts";
-import { VoxelMeshBuilder } from "./mesh/VoxelMeshBuilder.ts";
-import { parseChunkGeometryKey } from "./mesh/chunkGeometryKey.ts";
+import {
+  VoxelMeshBuilder,
+  parseChunkGeometryKey
+} from "./mesh/index.ts";
 import {
   VoxelSerializer,
   type VoxelWorldJSON,

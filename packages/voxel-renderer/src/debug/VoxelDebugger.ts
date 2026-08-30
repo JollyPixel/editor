@@ -2,7 +2,7 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import type { MeshBuildStats } from "../mesh/MeshBuildStats.ts";
+import type { MeshBuildStats } from "../mesh/index.ts";
 
 // CONSTANTS
 const kDefaultColor = 0x66FF99;

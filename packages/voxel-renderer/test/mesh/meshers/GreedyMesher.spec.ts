@@ -6,15 +6,15 @@ import assert from "node:assert/strict";
 import type * as THREE from "three";
 
 // Import Internal Dependencies
-import { VoxelWorld } from "../../src/world/VoxelWorld.ts";
-import { BlockRegistry } from "../../src/blocks/BlockRegistry.ts";
-import { BlockShapeRegistry } from "../../src/blocks/BlockShapeRegistry.ts";
-import { TilesetManager } from "../../src/tileset/TilesetManager.ts";
-import { VoxelMeshBuilder } from "../../src/mesh/VoxelMeshBuilder.ts";
-import { packTransform } from "../../src/utils/math.ts";
-import { mockTexture } from "../helpers/mockTexture.ts";
-import { DEFAULT_TEXTURE, makeBlockDef } from "../helpers/blocks.ts";
-import { makeAtlasDef } from "../helpers/atlas.ts";
+import { VoxelWorld } from "../../../src/world/VoxelWorld.ts";
+import { BlockRegistry } from "../../../src/blocks/BlockRegistry.ts";
+import { BlockShapeRegistry } from "../../../src/blocks/BlockShapeRegistry.ts";
+import { TilesetManager } from "../../../src/tileset/TilesetManager.ts";
+import { VoxelMeshBuilder } from "../../../src/mesh/index.ts";
+import { packTransform } from "../../../src/utils/math.ts";
+import { mockTexture } from "../../helpers/mockTexture.ts";
+import { DEFAULT_TEXTURE, makeBlockDef } from "../../helpers/blocks.ts";
+import { makeAtlasDef } from "../../helpers/atlas.ts";
 
 // CONSTANTS
 const kCubeId = 1;
@@ -390,25 +390,6 @@ describe("GreedyMesher — layers", () => {
     const [geometry] = [...build(f)!.values()];
 
     assert.equal(geometry.getAttribute("color"), undefined);
-  });
-});
-
-describe("VoxelMeshBuilder — greedy toggle", () => {
-  it("defaults to off", () => {
-    const f = makeFixture({ greedy: false });
-    assert.equal(f.builder.greedy, false);
-  });
-
-  it("switches meshing mode at runtime", () => {
-    const f = makeFixture({ greedy: false });
-    fill(f, { from: [0, 0, 0], to: [3, 0, 3] });
-    assert.equal(countVertices(build(f)), 48 * 4);
-
-    f.builder.greedy = true;
-    assert.equal(countVertices(build(f)), 6 * 4);
-
-    f.builder.greedy = false;
-    assert.equal(countVertices(build(f)), 48 * 4);
   });
 });
 
