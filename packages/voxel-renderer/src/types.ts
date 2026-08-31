@@ -4,10 +4,6 @@ import type { Vector3Like } from "three";
 // Import Internal Dependencies
 import type { VoxelTransformOptions } from "./world/VoxelTransform.ts";
 
-/**
- * Rotation and flip flags use the `VoxelRotation` constants and default to
- * an identity transform.
- */
 export interface VoxelSetOptions extends VoxelTransformOptions {
   position: Vector3Like;
   blockId: number;

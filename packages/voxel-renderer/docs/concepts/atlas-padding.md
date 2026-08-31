@@ -10,7 +10,8 @@ sample land on a copy of the tile's own border.
 
 ## Default padding
 
-Padding defaults to half the tile size, clamped from 2 through 8 texels. Set
+Padding defaults to half the tile size, clamped from 2 through 8 texels, as
+[`AtlasLayout.defaultPadding()`](../api/tilesets/AtlasLayout.md#padding). Set
 `VoxelEngineOptions.tilesetPadding` to `0` to disable repacking.
 
 ```ts
@@ -27,7 +28,8 @@ memory.
 
 ## Source and render textures
 
-`TilesetAtlas.sourceTexture` keeps the original grid. `texture` contains the
+[`TilesetAtlas.sourceTexture`](../api/tilesets/TilesetAtlas.md) keeps the
+original grid. `texture` contains the
 padded atlas and is the texture used by chunk materials. `uvFor()` always
 returns coordinates for `texture`.
 

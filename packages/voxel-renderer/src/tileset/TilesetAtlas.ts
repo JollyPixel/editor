@@ -11,13 +11,13 @@ import {
   type TilesetUVRegion
 } from "./types.ts";
 import {
-  defaultPadding,
-  padAtlas,
-  padAtlasRegion,
-  tileUVRegion,
-  type AtlasLayout,
+  AtlasLayout,
   type AtlasRegion
-} from "./atlasLayout.ts";
+} from "./AtlasLayout.ts";
+import {
+  padAtlas,
+  padAtlasRegion
+} from "./padAtlas.ts";
 
 export class TilesetAtlas {
   readonly def: ResolvedTilesetDefinition;
@@ -36,27 +36,19 @@ export class TilesetAtlas {
       def,
       texture.image
     );
-    const {
-      cols,
-      rows,
-      tileSize
-    } = resolved;
-    const requested = padding ?? defaultPadding(tileSize);
-
-    this.#padded = padAtlas(texture.image, {
-      cols,
-      rows,
-      tileSize,
-      padding: requested
+    const requested = new AtlasLayout({
+      cols: resolved.cols,
+      rows: resolved.rows,
+      tileSize: resolved.tileSize,
+      padding: padding ?? undefined
     });
 
+    this.#padded = padAtlas(texture.image, requested);
+
     this.def = resolved;
-    this.layout = {
-      cols,
-      rows,
-      tileSize,
-      padding: this.#padded === null ? 0 : requested
-    };
+    this.layout = this.#padded === null ?
+      requested.withoutPadding() :
+      requested;
 
     this.sourceTexture = texture;
     this.texture = this.#padded === null ?
@@ -73,11 +65,7 @@ export class TilesetAtlas {
     col: number,
     row: number
   ): TilesetUVRegion {
-    return tileUVRegion(
-      col,
-      row,
-      this.layout
-    );
+    return this.layout.uvFor(col, row);
   }
 
   updateSource(
@@ -91,17 +79,7 @@ export class TilesetAtlas {
       return;
     }
 
-    const {
-      cols,
-      rows,
-      tileSize
-    } = this.layout;
-    const region: AtlasRegion = bounds ?? {
-      x: 0,
-      y: 0,
-      width: cols * tileSize,
-      height: rows * tileSize
-    };
+    const region: AtlasRegion = bounds ?? this.layout.sourceBounds();
 
     padAtlasRegion(
       this.#padded,
