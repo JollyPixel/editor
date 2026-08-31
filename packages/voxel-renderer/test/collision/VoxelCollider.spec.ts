@@ -78,7 +78,7 @@ function makeEngine(
 describe("VoxelEngine — collider wiring", () => {
   it("never calls the factory when no collider option is given", () => {
     const engine = makeEngine();
-    engine.setVoxel("Ground", {
+    engine.world.setVoxel("Ground", {
       position: { x: 0, y: 0, z: 0 },
       blockId: kCubeId
     });
@@ -109,13 +109,13 @@ describe("VoxelEngine — collider wiring", () => {
     const fake = makeFakeCollider();
     const engine = makeEngine(() => fake.collider);
 
-    engine.setLayerOffset("Ground", {
+    engine.world.setLayerOffset("Ground", {
       x: 8,
       y: 0,
       z: 4
     });
     // Placed at the offset origin, so it lands in the layer-local chunk 0,0,0.
-    engine.setVoxel("Ground", {
+    engine.world.setVoxel("Ground", {
       position: { x: 8, y: 0, z: 4 },
       blockId: kCubeId
     });
@@ -136,7 +136,7 @@ describe("VoxelEngine — collider wiring", () => {
     const fake = makeFakeCollider();
     const engine = makeEngine(() => fake.collider);
 
-    engine.setVoxel("Ground", {
+    engine.world.setVoxel("Ground", {
       position: { x: 0, y: 0, z: 0 },
       blockId: kCubeId
     });
@@ -144,7 +144,7 @@ describe("VoxelEngine — collider wiring", () => {
 
     const rebuiltWhileVisible = fake.rebuilt.length;
 
-    engine.updateLayer("Ground", { visible: false });
+    engine.world.updateLayer("Ground", { visible: false });
     engine.markAllChunksDirty();
     engine.tick(0);
 
@@ -160,7 +160,7 @@ describe("VoxelEngine — collider wiring", () => {
     const fake = makeFakeCollider();
     const engine = makeEngine(() => fake.collider);
 
-    engine.setVoxel("Ground", {
+    engine.world.setVoxel("Ground", {
       position: { x: 0, y: 0, z: 0 },
       blockId: kCubeId
     });
@@ -168,7 +168,7 @@ describe("VoxelEngine — collider wiring", () => {
 
     const [{ key }] = fake.rebuilt;
 
-    engine.removeVoxel("Ground", {
+    engine.world.removeVoxel("Ground", {
       position: { x: 0, y: 0, z: 0 }
     });
     engine.tick(0);
@@ -183,7 +183,7 @@ describe("VoxelEngine — collider wiring", () => {
     const fake = makeFakeCollider();
     const engine = makeEngine(() => fake.collider);
 
-    engine.setVoxel("Ground", {
+    engine.world.setVoxel("Ground", {
       position: { x: 0, y: 0, z: 0 },
       blockId: kCubeId
     });

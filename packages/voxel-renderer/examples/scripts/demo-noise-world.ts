@@ -398,7 +398,7 @@ function buildWorld(
 ): BuildReport {
   const generateStart = performance.now();
   const terrain = generateTerrain(
-    (position, blockId) => engine.setVoxel(
+    (position, blockId) => engine.world.setVoxel(
       blockId === TerrainBlock.Water ? kWaterLayer : kTerrainLayer,
       { position, blockId }
     ),
@@ -430,12 +430,12 @@ function buildWorld(
 function resetLayers(
   engine: VoxelEngine
 ): void {
-  engine.removeLayer(kTerrainLayer);
-  engine.removeLayer(kWaterLayer);
+  engine.world.removeLayer(kTerrainLayer);
+  engine.world.removeLayer(kWaterLayer);
   engine.tick(0);
 
-  engine.addLayer(kTerrainLayer);
-  engine.addLayer(kWaterLayer);
+  engine.world.addLayer(kTerrainLayer);
+  engine.world.addLayer(kWaterLayer);
 }
 
 function countChunks(

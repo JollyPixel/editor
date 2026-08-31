@@ -75,7 +75,14 @@ Other sizes throw a `RangeError`.
 
 ```ts
 readonly chunkSize: number;
+onLayerUpdated?: VoxelLayerHookListener;
 ```
+
+Every mutating method below emits a [hook event](../core/hooks.md) on
+`onLayerUpdated`, so an editor or a network adapter can mirror local edits
+without wrapping the world. The exceptions are the `*At` write primitives
+(`setVoxelAt`, `setPackedVoxelAt`, `removeVoxelAt`), `setLayerVisible`,
+`setLayerOpacity`, `mergeAllLayers` and `clear`, which stay silent.
 
 ### Methods
 
@@ -162,16 +169,67 @@ can inspect layer-level properties (e.g. `opacity`) of the resolved voxel.
 
 Composited read of the voxel immediately adjacent to `position` in the given face direction.
 
+#### `setVoxel(layerName: string, options: VoxelSetOptions): void`
+
+Places a voxel at a world-space position, packing rotation and flips for you,
+and emits `"voxel-set"`.
+
+```ts
+interface VoxelSetOptions extends VoxelTransformOptions {
+  position: THREE.Vector3Like;
+  blockId: number;
+  /** Y-axis rotation in 90° steps. Default: `VoxelRotation.None`. */
+  rotation?: VoxelRotation;
+  /** Mirror the block on the X axis. Default: `false`. */
+  flipX?: boolean;
+  /** Mirror the block on the Z axis. Default: `false`. */
+  flipZ?: boolean;
+  /** Mirror the block geometry around y = 0.5 (upside-down). */
+  flipY?: boolean;
+}
+```
+
+The rotation and flip fields come from
+[`VoxelTransformOptions`](./VoxelTransform.md), which packs them into the
+transform byte a chunk stores. A rotation outside `0..3` wraps rather than
+spilling into the flip bits.
+
+#### `removeVoxel(layerName: string, options: VoxelRemoveOptions): void`
+
+Removes the voxel at a world-space position and emits `"voxel-removed"`.
+
+```ts
+interface VoxelRemoveOptions {
+  position: THREE.Vector3Like;
+}
+```
+
+#### `setVoxelBulk(layerName: string, entries: VoxelSetOptions[]): void`
+
+Places several voxels and emits a single `"voxels-set"` for the batch.
+
+```ts
+world.setVoxelBulk("Ground", [
+  { position: { x: 0, y: 0, z: 0 }, blockId: 1 },
+  { position: { x: 1, y: 0, z: 0 }, blockId: 2, rotation: VoxelRotation.CW90 }
+]);
+```
+
+#### `removeVoxelBulk(layerName: string, entries: VoxelRemoveOptions[]): void`
+
+Removes several voxels and emits a single `"voxels-removed"` for the batch.
+
 #### `setVoxelAt(layerName: string, position: THREE.Vector3Like, entry: VoxelEntry): void`
 
 #### `setPackedVoxelAt(layerName: string, position: THREE.Vector3Like, packed: PackedVoxel): void`
 
 Writes a voxel directly and marks neighbouring chunks dirty for boundary face re-evaluation.
-Throws if the layer is not found. Prefer `VoxelEngine.setVoxel` to handle rotation packing.
+Throws if the layer is not found. Emits nothing: prefer `setVoxel` unless you are
+loading data peers already have.
 
 #### `removeVoxelAt(layerName: string, position: THREE.Vector3Like): void`
 
-Removes a voxel. No-op if the layer is not found.
+Removes a voxel without emitting. No-op if the layer is not found.
 
 #### `getAllChunks(): IterableIterator<IterableLayerChunk>`
 
@@ -196,6 +254,24 @@ the chunk became empty. This is renderer-facing lifecycle plumbing.
 #### `clear(): void`
 
 Removes all voxel layers and object layers.
+
+### Hooks
+
+#### `applyRemoteCommand(cmd: VoxelLayerHookEvent): void`
+
+Replays a peer's hook event onto this world without emitting it again through
+`onLayerUpdated`, so a network adapter cannot echo it back. Every action of the
+event union is handled; an unknown one throws.
+
+#### `silently<T>(fn: () => T): T`
+
+Runs `fn` with `onLayerUpdated` muted and returns its result. Use it for
+mutations peers already know about, such as deserializing a document.
+`applyRemoteCommand` is built on it, and nesting is safe.
+
+```ts
+world.silently(() => deserializeVoxelWorld(snapshot, world));
+```
 
 ### Object layer management
 

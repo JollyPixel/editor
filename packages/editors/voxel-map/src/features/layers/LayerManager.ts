@@ -242,7 +242,7 @@ export class LayerManager extends LitElement {
           data: ref
         };
       }),
-      ...this.vr.engine.getObjectLayers().map((layer): TreeNode<LayerRef> => {
+      ...this.vr.engine.world.getObjectLayers().map((layer): TreeNode<LayerRef> => {
         const ref: LayerRef = { kind: "object-layer", name: layer.name };
 
         return {
@@ -316,13 +316,13 @@ export class LayerManager extends LitElement {
     const ref = refOf(event.detail.id);
     switch (ref.kind) {
       case "object":
-        this.vr.engine.updateObject(ref.layerName, ref.objectId, { visible });
+        this.vr.engine.world.updateObjectInLayer(ref.layerName, ref.objectId, { visible });
         break;
       case "object-layer":
-        this.vr.engine.updateObjectLayer(ref.name, { visible });
+        this.vr.engine.world.updateObjectLayer(ref.name, { visible });
         break;
       default:
-        this.vr.engine.updateLayer(ref.name, { visible });
+        this.vr.engine.world.updateLayer(ref.name, { visible });
         this.vr.engine.markAllChunksDirty();
         break;
     }
@@ -337,7 +337,7 @@ export class LayerManager extends LitElement {
       return;
     }
 
-    this.vr.engine.updateObject(
+    this.vr.engine.world.updateObjectInLayer(
       ref.layerName,
       ref.objectId,
       { name: event.detail.name }
@@ -353,7 +353,7 @@ export class LayerManager extends LitElement {
       return;
     }
 
-    this.vr.engine.updateObject(
+    this.vr.engine.world.updateObjectInLayer(
       ref.layerName,
       ref.objectId,
       { locked: event.detail.locked }
@@ -367,7 +367,7 @@ export class LayerManager extends LitElement {
     }
 
     const { activeObjectLayer } = editorState;
-    const objectLayers = this.vr.engine.getObjectLayers();
+    const objectLayers = this.vr.engine.world.getObjectLayers();
     const result = await this._addDialog.open({
       canAddObject: activeObjectLayer !== null,
       defaultKind: activeObjectLayer === null ? "voxel-layer" : "object",
@@ -383,11 +383,11 @@ export class LayerManager extends LitElement {
 
     switch (result.kind) {
       case "voxel-layer":
-        this.vr.engine.addLayer(result.name);
+        this.vr.engine.world.addLayer(result.name);
         editorState.selectVoxelLayer(result.name);
         break;
       case "object-layer":
-        this.vr.engine.addObjectLayer(result.name);
+        this.vr.engine.world.addObjectLayer(result.name);
         editorState.selectObjectLayer(result.name);
         break;
       default:
@@ -402,7 +402,7 @@ export class LayerManager extends LitElement {
   ): void {
     // Spawn new objects in the camera's focus cell.
     const object = createObjectAt(name, editorState.viewFocus);
-    this.vr.engine.addObject(layerName, object);
+    this.vr.engine.world.addObjectToLayer(layerName, object);
     editorState.selectObject({ layerName, objectId: object.id });
   }
 
@@ -413,7 +413,7 @@ export class LayerManager extends LitElement {
     }
 
     if (ref.kind === "object") {
-      this.vr.engine.removeObject(ref.layerName, ref.objectId);
+      this.vr.engine.world.removeObjectFromLayer(ref.layerName, ref.objectId);
       editorState.selectObjectLayer(ref.layerName);
 
       return;
@@ -431,10 +431,10 @@ export class LayerManager extends LitElement {
     }
 
     if (ref.kind === "object-layer") {
-      this.vr.engine.removeObjectLayer(ref.name);
+      this.vr.engine.world.removeObjectLayer(ref.name);
     }
     else {
-      this.vr.engine.removeLayer(ref.name);
+      this.vr.engine.world.removeLayer(ref.name);
       this.vr.engine.markAllChunksDirty();
     }
     editorState.setSelection(null);
@@ -447,7 +447,7 @@ export class LayerManager extends LitElement {
       return `Delete the voxel layer "${ref.name}" and everything painted on it?`;
     }
 
-    const count = this.vr.engine.getObjectLayer(ref.name)?.objects.length ?? 0;
+    const count = this.vr.engine.world.getObjectLayer(ref.name)?.objects.length ?? 0;
 
     return count === 0
       ? `Delete the object layer "${ref.name}"?`
@@ -474,7 +474,7 @@ export class LayerManager extends LitElement {
       return;
     }
 
-    this.vr.engine.moveLayer(ref.name, direction);
+    this.vr.engine.world.moveLayer(ref.name, direction);
   }
 }
 

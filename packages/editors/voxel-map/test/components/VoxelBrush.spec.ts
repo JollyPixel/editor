@@ -42,11 +42,13 @@ function createHarness(): BrushHarness {
   const operations: string[] = [];
   const engine = {
     root: new THREE.Group(),
-    setVoxel(): void {
-      operations.push("set");
-    },
-    removeVoxel(): void {
-      operations.push("remove");
+    world: {
+      setVoxel(): void {
+        operations.push("set");
+      },
+      removeVoxel(): void {
+        operations.push("remove");
+      }
     },
     flush(): void {
       operations.push("flush");

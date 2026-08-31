@@ -6,15 +6,13 @@ import {
 } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
-import {
-  VoxelEngine,
-  type VoxelEngineOptions
-} from "./VoxelEngine.ts";
+import { VoxelEngine } from "./VoxelEngine.ts";
+import type { VoxelEngineOptions } from "./VoxelEngine.types.ts";
 
 export interface VoxelRendererOptions extends VoxelEngineOptions {
   /**
-   * Object whose world position prioritizes chunk rebuilds, usually the
-   * camera. Sampled once per update; `null` leaves `engine.focus` alone.
+   * Object whose world position prioritizes chunk rebuilds.
+   * Sampled each update; `null` preserves `engine.focus`.
    * @default null
    */
   focus?: THREE.Object3D | null;

@@ -6,15 +6,10 @@ import assert from "node:assert/strict";
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import {
-  VoxelEngine,
-  type VoxelEngineOptions
-} from "../src/VoxelEngine.ts";
+import { VoxelEngine } from "../src/VoxelEngine.ts";
+import type { VoxelEngineOptions } from "../src/VoxelEngine.types.ts";
 import { ViewDistance } from "../src/world/ViewDistance.ts";
-import type {
-  VoxelCollider,
-  VoxelColliderFactory
-} from "../src/collision/VoxelCollider.ts";
+import type { VoxelCollider } from "../src/collision/VoxelCollider.ts";
 import { mockTexture } from "./helpers/mockTexture.ts";
 import { makeBlockDef } from "./helpers/blocks.ts";
 import { makeAtlasDef } from "./helpers/atlas.ts";
@@ -44,7 +39,7 @@ function makeEngine(
   engine.loadTileset(makeAtlasDef(), mockTexture());
 
   for (let i = 0; i < count; i++) {
-    engine.setVoxel(kLayer, {
+    engine.world.setVoxel(kLayer, {
       position: { x: i * kChunkSize, y: 0, z: 0 },
       blockId: kCubeId
     });
@@ -74,7 +69,7 @@ function chunkOf(
   engine: VoxelEngine,
   cx: number
 ) {
-  return engine.getLayer(kLayer)!.getChunk(cx, 0, 0)!;
+  return engine.world.getLayer(kLayer)!.getChunk(cx, 0, 0)!;
 }
 
 describe("VoxelEngine — view distance", () => {
@@ -111,7 +106,7 @@ describe("VoxelEngine — view distance", () => {
     engine.focus = { x: 2, y: 2, z: 2 };
     engine.tick(0);
 
-    engine.setVoxel(kLayer, {
+    engine.world.setVoxel(kLayer, {
       position: { x: 13, y: 1, z: 0 },
       blockId: kCubeId
     });
@@ -241,15 +236,13 @@ describe("VoxelEngine — view distance", () => {
 
   it("keeps colliders for chunks the view distance unloads", () => {
     const live = new Set<string>();
-    const collider: VoxelColliderFactory = () => {
-      const stub: VoxelCollider = {
+    function collider(): VoxelCollider {
+      return {
         rebuildChunk: (key) => void live.add(key),
         removeChunk: (key) => void live.delete(key),
         dispose: () => void 0
       };
-
-      return stub;
-    };
+    }
 
     const engine = makeEngine(4, {
       viewDistance: {
@@ -318,7 +311,7 @@ describe("VoxelEngine — view distance", () => {
         hysteresis: 0
       }
     });
-    engine.setLayerOffset(kLayer, { x: 100, y: 0, z: 0 });
+    engine.world.setLayerOffset(kLayer, { x: 100, y: 0, z: 0 });
     engine.focus = { x: 102, y: 2, z: 2 };
 
     engine.tick(0);
@@ -336,9 +329,11 @@ describe("VoxelEngine — view distance", () => {
     });
     engine.focus = { x: 2, y: 2, z: 2 };
     engine.tick(0);
-    const overlays = () => engine.root
-      .getObjectByName("VoxelDebugger")!
-      .children.length;
+    function overlays(): number {
+      return engine.root
+        .getObjectByName("VoxelDebugger")!
+        .children.length;
+    }
     assert.equal(overlays(), 2);
 
     engine.focus = { x: 14, y: 2, z: 2 };

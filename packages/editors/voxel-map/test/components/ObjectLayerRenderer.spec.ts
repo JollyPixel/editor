@@ -94,16 +94,18 @@ function createHarness(
 
   const updates: RendererHarness["updates"] = [];
   const engine = {
-    getObjectLayers: () => layers,
-    getObjectLayer: (name: string) => layers.find(
-      (layer) => layer.name === name
-    ),
-    updateObject: (
-      _layerName: string,
-      objectId: string,
-      patch: Partial<VoxelObjectJSON>
-    ) => {
-      updates.push({ objectId, patch });
+    world: {
+      getObjectLayers: () => layers,
+      getObjectLayer: (name: string) => layers.find(
+        (layer) => layer.name === name
+      ),
+      updateObjectInLayer: (
+        _layerName: string,
+        objectId: string,
+        patch: Partial<VoxelObjectJSON>
+      ) => {
+        updates.push({ objectId, patch });
+      }
     }
   };
 

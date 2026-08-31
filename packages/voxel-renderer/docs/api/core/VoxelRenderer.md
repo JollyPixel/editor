@@ -82,7 +82,7 @@ const vr = actor.addComponentAndGet(VoxelRenderer, {
   ]
 });
 
-vr.engine.setVoxel("Ground", {
+vr.engine.world.setVoxel("Ground", {
   position: { x: 0, y: 0, z: 0 },
   blockId: 1
 });

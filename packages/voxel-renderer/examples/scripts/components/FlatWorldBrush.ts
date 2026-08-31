@@ -88,7 +88,7 @@ export class FlatWorldBrush extends ActorComponent {
 
     const { input } = this.actor.world;
     if (input.mouse.wasJustPressed("left")) {
-      this.#engine.setVoxel(GROUND_LAYER, {
+      this.#engine.world.setVoxel(GROUND_LAYER, {
         position: placeTarget,
         blockId: PLACED_BLOCK_ID
       });
@@ -98,7 +98,7 @@ export class FlatWorldBrush extends ActorComponent {
       input.mouse.wasJustPressed("right") &&
       !isGroundHit
     ) {
-      this.#engine.removeVoxel(GROUND_LAYER, {
+      this.#engine.world.removeVoxel(GROUND_LAYER, {
         position: hitTarget
       });
     }

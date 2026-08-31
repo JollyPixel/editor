@@ -53,7 +53,7 @@ export function populateTerrain(
   options: TerrainOptions
 ): TerrainStats {
   return generateTerrain(
-    (position, blockId) => engine.setVoxel(
+    (position, blockId) => engine.world.setVoxel(
       blockId === TerrainBlock.Water ? WATER_LAYER : TERRAIN_LAYER,
       {
         position,

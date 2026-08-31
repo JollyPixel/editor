@@ -251,7 +251,7 @@ function updateLayer(
   name: string,
   options: { visible?: boolean; opacity?: number; }
 ): void {
-  engine.updateLayer(name, options);
+  engine.world.updateLayer(name, options);
   // An opacity change dirties every layer; flush so the panel and the frame
   // never disagree about what the scene looks like.
   engine.flush();

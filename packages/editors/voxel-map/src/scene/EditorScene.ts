@@ -147,7 +147,7 @@ export class EditorScene extends Systems.Scene {
         let layers = vr.engine.world.getLayers();
         if (layers.length === 0) {
           // The attached client broadcasts this default layer.
-          vr.engine.addLayer(this.#defaultLayerName);
+          vr.engine.world.addLayer(this.#defaultLayerName);
           layers = vr.engine.world.getLayers();
         }
 

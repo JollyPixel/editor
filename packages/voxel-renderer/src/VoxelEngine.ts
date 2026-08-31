@@ -1,240 +1,41 @@
-/* eslint-disable max-lines */
 // Import Third-party Dependencies
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import {
-  BlockRegistry
-} from "./blocks/BlockRegistry.ts";
-import type {
-  BlockDefinition
-} from "./blocks/BlockDefinition.ts";
-import {
-  BlockShapeRegistry
-} from "./blocks/BlockShapeRegistry.ts";
-import type {
-  BlockShape
-} from "./blocks/BlockShape.ts";
-import type {
-  VoxelCollider,
-  VoxelColliderFactory
-} from "./collision/VoxelCollider.ts";
-import {
-  VoxelDebugger,
-  type VoxelDebuggerOptions
-} from "./debug/VoxelDebugger.ts";
-import {
-  VoxelMeshBuilder,
-  ChunkGeometryKey,
-  enableTileWrapping
-} from "./mesh/index.ts";
+import { BlockRegistry } from "./blocks/BlockRegistry.ts";
+import { BlockShapeRegistry } from "./blocks/BlockShapeRegistry.ts";
+import type { VoxelCollider } from "./collision/VoxelCollider.ts";
+import { VoxelDebugger } from "./debug/VoxelDebugger.ts";
+import { VoxelMeshBuilder } from "./mesh/index.ts";
+import { ChunkMaterialCache } from "./render/ChunkMaterialCache.ts";
+import { ChunkMeshStore } from "./render/ChunkMeshStore.ts";
+import { ChunkRebuildQueue } from "./render/ChunkRebuildQueue.ts";
+import { ChunkViewport } from "./render/ChunkViewport.ts";
+import { ChunkVisibility } from "./render/ChunkVisibility.ts";
 import {
   deserializeVoxelWorld,
   serializeVoxelWorld
 } from "./serialization/world.ts";
-import type {
-  VoxelWorldJSON,
-  VoxelObjectLayerJSON,
-  VoxelObjectJSON
-} from "./serialization/types.ts";
+import type { VoxelWorldJSON } from "./serialization/types.ts";
 import { TilesetManager } from "./tileset/TilesetManager.ts";
 import type { TilesetDefinition } from "./tileset/types.ts";
 import type { TilesetSource } from "./tileset/loadTilesets.ts";
 import { VoxelWorld } from "./world/VoxelWorld.ts";
-import {
-  VoxelLayer,
-  type VoxelLayerConfigurableOptions,
-  type VoxelLayerOptions
-} from "./world/VoxelLayer.ts";
-import { VoxelChunk } from "./world/VoxelChunk.ts";
-import {
-  ViewDistance,
-  type ViewDistanceOptions
-} from "./world/ViewDistance.ts";
-import type { VoxelEntry, VoxelCoord } from "./world/types.ts";
-import {
-  FACE_OFFSETS,
-  type FACE
-} from "./utils/math.ts";
-import { VoxelTransform } from "./world/VoxelTransform.ts";
+import type { VoxelLayer } from "./world/VoxelLayer.ts";
+import type { VoxelChunk } from "./world/VoxelChunk.ts";
+import { ViewDistance } from "./world/ViewDistance.ts";
+import type { VoxelLayerHookEvent, VoxelLayerHookListener } from "./hooks.ts";
+import { NOOP_LOGGER, type VoxelLogger } from "./utils/logger.ts";
 import type {
-  VoxelLayerHookListener,
-  VoxelLayerHookEvent
-} from "./hooks.ts";
-import type { VoxelSetOptions, VoxelRemoveOptions, PartialExcept } from "./types.ts";
-
-export type { VoxelSetOptions, VoxelRemoveOptions };
-
-// CONSTANTS
-/**
- * Thirty-two translucent buckets plus one fully opaque material per tileset.
- */
-const kOpacitySteps = 32;
-
-const kChunkOffset = {
-  x: 0,
-  y: 0,
-  z: 0
-};
-
-export interface VoxelLoadOptions {
-  /**
-   * Collapses layers before rendering; higher-priority voxels win overlaps.
-   */
-  mergeLayers?: boolean;
-
-  /**
-   * Atlases to register before the world is read, for tilesets the engine was
-   * not constructed with.
-   */
-  tilesets?: Iterable<TilesetSource>;
-}
-
-type MaterialCustomizerFn = (
-  material: THREE.MeshLambertMaterial | THREE.MeshStandardMaterial,
-  tilesetId: string
-) => void;
-
-export const VoxelRotation = {
-  None: 0,
-  CCW90: 1,
-  Deg180: 2,
-  CW90: 3
-} as const;
-
-/**
- * Logger shape kept independent from the engine package's concrete logger.
- */
-export interface VoxelLogger {
-  child(options: { namespace: string; }): VoxelLogger;
-  debug(msg: string, meta?: Record<string, unknown>): void;
-}
-
-const kNoopLogger: VoxelLogger = {
-  child() {
-    return kNoopLogger;
-  },
-  debug() {
-    // Intentionally empty.
-  }
-};
-
-export interface VoxelEngineOptions {
-  /**
-   * @default 16
-   */
-  chunkSize?: number;
-  /**
-   * Collision factory called once with the registries; disabled when omitted.
-   */
-  collider?: VoxelColliderFactory;
-  /**
-   * Chunk material type.
-   * @default "lambert"
-   */
-  material?: "lambert" | "standard";
-
-  /**
-   * Called once for each new material with its tileset ID.
-   */
-  materialCustomizer?: MaterialCustomizerFn;
-
-  layers?: string[];
-  blocks?: BlockDefinition[];
-  /**
-   * Shapes registered after the defaults from `BlockShapeRegistry`.
-   */
-  shapes?: BlockShape[];
-  /**
-   * Alpha-test cutoff; 0 disables fragment discards.
-   * @default 0.1
-   */
-  alphaTest?: number;
-
-  /**
-   * Debug logger; defaults to a no-op implementation.
-   */
-  logger?: VoxelLogger;
-
-  /**
-   * Receives local layer mutations for external synchronization.
-   */
-  onLayerUpdated?: VoxelLayerHookListener;
-
-  /**
-   * Initial debug view; counters are collected in every mode.
-   */
-  debug?: VoxelDebuggerOptions;
-
-  /**
-   * Atlas gutter in texels; 0 disables padding.
-   * @default half the tile size, clamped to 2..8
-   */
-  tilesetPadding?: number;
-
-  /**
-   * Enables greedy merging; incompatible with custom UV shader compilation.
-   * @default false
-   */
-  greedy?: boolean;
-
-  /**
-   * Preloaded atlases (see `loadTilesets`) registered synchronously during
-   * construction.
-   */
-  tilesets?: Iterable<TilesetSource>;
-
-  /**
-   * Per-tick rebuild budget in milliseconds; 0 drains the queue.
-   * @default 8
-   */
-  rebuildBudgetMs?: number;
-
-  /**
-   * Chunk radius around `focus` kept meshed and drawn, as a radius in chunks
-   * or a full `ViewDistance` description. Ignored while `focus` is null.
-   * @default Infinity
-   */
-  viewDistance?: number | ViewDistanceOptions;
-
-  /**
-   * What happens to a chunk that leaves the view distance: `"hide"` keeps its
-   * geometry ready to show again, `"unload"` frees it and remeshes on return.
-   * @default "hide"
-   */
-  viewDistancePolicy?: ViewDistancePolicy;
-}
-
-export type ViewDistancePolicy =
-  | "hide"
-  | "unload";
-
-interface PendingRebuild {
-  layer: VoxelLayer;
-  chunk: VoxelChunk;
-  distance: number;
-}
-
-interface ChunkMeshes {
-  layer: VoxelLayer;
-  chunk: VoxelChunk;
-  meshes: THREE.Mesh[];
-  visible: boolean;
-}
-
-interface VisibilityStamp {
-  focus: THREE.Vector3Like;
-  viewDistance: ViewDistance;
-  policy: ViewDistancePolicy;
-}
+  VoxelEngineOptions,
+  VoxelLoadOptions,
+  ViewDistancePolicy
+} from "./VoxelEngine.types.ts";
 
 /**
  * Owns a voxel world and its chunked Three.js meshes.
  */
 export class VoxelEngine {
-  /**
-   * Scene group that owns every generated chunk mesh.
-   */
   readonly root = new THREE.Group();
 
   readonly world: VoxelWorld;
@@ -249,29 +50,13 @@ export class VoxelEngine {
   viewDistancePolicy: ViewDistancePolicy;
 
   #meshBuilder: VoxelMeshBuilder;
-  #collider: VoxelCollider | null = null;
-  #rebuildQueue: PendingRebuild[] = [];
-  #queuedChunks = new Set<VoxelChunk>();
+  #materials: ChunkMaterialCache;
+  #meshes: ChunkMeshStore;
+  #queue = new ChunkRebuildQueue();
+  #visibility: ChunkVisibility;
+  #collider: VoxelCollider | null;
   #rebuildBudgetMs: number;
-  #lastSortFocus: THREE.Vector3Like | null = null;
-  #chunkMeshes = new Map<string, ChunkMeshes>();
-  #lastVisibility: VisibilityStamp | null = null;
-
-  /**
-   * Lazily created materials keyed by tileset, opacity bucket, and cutout mode.
-   */
-  #materials = new Map<
-    string,
-    THREE.MeshLambertMaterial | THREE.MeshStandardMaterial
-  >();
-  #materialCustomizer?: MaterialCustomizerFn;
-  #materialType: "lambert" | "standard";
-  #alphaTest: number;
-
   #logger: VoxelLogger;
-  #onLayerUpdated?: VoxelLayerHookListener;
-
-  #isApplyingRemote = false;
 
   constructor(
     options: VoxelEngineOptions = {}
@@ -285,7 +70,7 @@ export class VoxelEngine {
       blocks = [],
       shapes = [],
       alphaTest = 0.1,
-      logger = kNoopLogger,
+      logger = NOOP_LOGGER,
       onLayerUpdated,
       debug,
       tilesetPadding,
@@ -299,23 +84,18 @@ export class VoxelEngine {
     this.root.name = "VoxelEngine";
     this.debug = new VoxelDebugger(this.root, debug);
 
-    this.#materialType = material;
-    this.#materialCustomizer = materialCustomizer;
-    this.#alphaTest = alphaTest;
     this.#rebuildBudgetMs = rebuildBudgetMs;
     this.viewDistance = viewDistance === undefined ?
       ViewDistance.Unlimited :
       ViewDistance.from(viewDistance);
     this.viewDistancePolicy = viewDistancePolicy;
-    this.#onLayerUpdated = onLayerUpdated;
     this.#logger = logger.child({
       namespace: "VoxelEngine"
     });
 
     this.world = new VoxelWorld(chunkSize);
-    if (layers.length > 0) {
-      layers.forEach((name) => this.addLayer(name));
-    }
+    this.world.onLayerUpdated = onLayerUpdated;
+    layers.forEach((name) => this.world.addLayer(name));
 
     this.blockRegistry = new BlockRegistry(blocks);
     this.shapeRegistry = BlockShapeRegistry
@@ -339,6 +119,33 @@ export class VoxelEngine {
       blockRegistry: this.blockRegistry,
       shapeRegistry: this.shapeRegistry
     }) ?? null;
+
+    this.#materials = new ChunkMaterialCache({
+      tilesetManager: this.tilesetManager,
+      type: material,
+      alphaTest,
+      customizer: materialCustomizer,
+      tileWrapping: greedy
+    });
+    this.#meshes = new ChunkMeshStore({
+      root: this.root,
+      meshBuilder: this.#meshBuilder,
+      materials: this.#materials,
+      debug: this.debug,
+      collider: this.#collider,
+      logger: this.#logger
+    });
+    this.#visibility = new ChunkVisibility({
+      meshes: this.#meshes,
+      unload: (layer, chunk) => {
+        this.#removeChunk(
+          layer,
+          chunk,
+          { collider: false }
+        );
+        chunk.dirty = true;
+      }
+    });
   }
 
   init(): void {
@@ -352,741 +159,59 @@ export class VoxelEngine {
       this.#removeChunk(layer, chunk);
     }
 
-    // Runs first so a chunk coming back into view is remeshed by the drain
-    // below rather than one tick later.
-    this.#updateChunkVisibility();
-    this.#enqueueDirtyChunks();
-    this.#drainRebuildQueue(this.#rebuildBudgetMs);
+    const viewport = this.#viewport();
+
+    this.#visibility.update(viewport);
+    this.#enqueueDirtyChunks(viewport);
+    this.#queue.drain(
+      this.#rebuildBudgetMs,
+      (layer, chunk) => this.#meshes.rebuild(layer, chunk)
+    );
   }
 
   /**
    * Rebuilds all queued and dirty chunks without applying the tick budget.
    */
   flush(): void {
-    this.#enqueueDirtyChunks();
-    this.#drainRebuildQueue(0);
+    this.#enqueueDirtyChunks(this.#viewport());
+    this.#queue.drain(
+      0,
+      (layer, chunk) => this.#meshes.rebuild(layer, chunk)
+    );
   }
 
   get pendingRebuilds(): number {
-    return this.#queuedChunks.size;
-  }
-
-  /**
-   * @deprecated Renamed to `focus`, which now also drives view distance.
-   */
-  get rebuildFocus(): THREE.Vector3Like | null {
-    return this.focus;
-  }
-
-  set rebuildFocus(value: THREE.Vector3Like | null) {
-    this.focus = value;
-  }
-
-  /**
-   * Clears dirty flags before queuing so later edits can dirty a chunk again.
-   */
-  #enqueueDirtyChunks(): void {
-    const before = this.#rebuildQueue.length;
-
-    for (const { layer, chunk } of this.world.getAllDirtyChunks()) {
-      // Left dirty on purpose: the chunk is meshed when it enters the view
-      // distance, with every edit it missed already in it.
-      if (!this.#chunkInView(layer, chunk, false)) {
-        continue;
-      }
-
-      chunk.dirty = false;
-
-      // Zero opacity removes the layer from rendering and compositing.
-      if (!layer.visible || layer.opacity === 0) {
-        if (layer.wasVisible) {
-          this.#removeChunk(layer, chunk);
-        }
-
-        continue;
-      }
-
-      if (!this.#queuedChunks.has(chunk)) {
-        this.#queuedChunks.add(chunk);
-        this.#rebuildQueue.push({ layer, chunk, distance: 0 });
-      }
-    }
-
-    if (this.focus === null) {
-      return;
-    }
-
-    const grew = this.#rebuildQueue.length !== before;
-    if (grew || this.#focusMovedSinceSort()) {
-      this.#sortRebuildQueue();
-    }
-  }
-
-  /**
-   * Half a chunk of drift is the smallest move able to reorder neighbours,
-   * and keeps a walking camera from resorting the queue every tick.
-   */
-  #focusMovedSinceSort(): boolean {
-    return this.#focusMovedFrom(this.#lastSortFocus);
-  }
-
-  #focusMovedFrom(
-    last: THREE.Vector3Like | null
-  ): boolean {
-    if (last === null) {
-      return true;
-    }
-
-    const focus = this.focus!;
-    const threshold = this.world.chunkSize / 2;
-
-    return Math.abs(focus.x - last.x) >= threshold ||
-      Math.abs(focus.y - last.y) >= threshold ||
-      Math.abs(focus.z - last.z) >= threshold;
-  }
-
-  /**
-   * `retain` applies the hysteresis slack a chunk already in view keeps.
-   * Always true without a focus or with an unlimited view distance.
-   */
-  #chunkInView(
-    layer: VoxelLayer,
-    chunk: VoxelChunk,
-    retain: boolean
-  ): boolean {
-    const { focus, viewDistance } = this;
-    if (focus === null || viewDistance.unlimited) {
-      return true;
-    }
-
-    const { chunkSize } = this.world;
-    const { x, y, z } = chunkCenterOffset(layer, chunk, focus, chunkSize);
-
-    return retain ?
-      viewDistance.retains(x, y, z, chunkSize) :
-      viewDistance.admits(x, y, z, chunkSize);
-  }
-
-  /**
-   * Skipped entirely while neither the focus nor the view distance moved.
-   */
-  #updateChunkVisibility(): void {
-    const { focus, viewDistance, viewDistancePolicy: policy } = this;
-    if (focus === null || viewDistance.unlimited) {
-      if (this.#lastVisibility !== null) {
-        this.#lastVisibility = null;
-        this.#restoreCulledChunks();
-      }
-
-      return;
-    }
-
-    const last = this.#lastVisibility;
-    const changed = last === null ||
-      last.viewDistance !== viewDistance ||
-      last.policy !== policy ||
-      this.#focusMovedFrom(last.focus);
-    if (!changed) {
-      return;
-    }
-
-    this.#lastVisibility = {
-      focus: {
-        x: focus.x,
-        y: focus.y,
-        z: focus.z
-      },
-      viewDistance,
-      policy
-    };
-
-    for (const [key, entry] of this.#chunkMeshes) {
-      const { layer, chunk, visible } = entry;
-      const inView = this.#chunkInView(layer, chunk, visible);
-      if (inView === visible) {
-        continue;
-      }
-
-      if (!inView && policy === "unload") {
-        // Colliders outlive the view distance: physics must not depend on
-        // where the camera happens to look.
-        this.#removeChunk(layer, chunk, { collider: false });
-        chunk.dirty = true;
-
-        continue;
-      }
-
-      entry.visible = inView;
-      this.debug.cullChunk(key, !inView);
-    }
-  }
-
-  /**
-   * Chunks the view distance unloaded are already dirty and come back
-   * through the rebuild queue instead.
-   */
-  #restoreCulledChunks(): void {
-    for (const [key, entry] of this.#chunkMeshes) {
-      if (entry.visible) {
-        continue;
-      }
-
-      entry.visible = true;
-      this.debug.cullChunk(key, false);
-    }
-  }
-
-  /**
-   * Rebuilds at least one chunk, then stops when the positive budget is spent.
-   */
-  #drainRebuildQueue(
-    budgetMs: number
-  ): void {
-    const queue = this.#rebuildQueue;
-    if (queue.length === 0) {
-      return;
-    }
-
-    const deadline = budgetMs > 0 ? performance.now() + budgetMs : Infinity;
-    let index = 0;
-
-    while (index < queue.length) {
-      const { layer, chunk } = queue[index++];
-      if (!this.#queuedChunks.delete(chunk)) {
-        continue;
-      }
-
-      this.#rebuildChunk(layer, chunk);
-
-      if (performance.now() >= deadline) {
-        break;
-      }
-    }
-
-    this.#rebuildQueue = index < queue.length ? queue.slice(index) : [];
-  }
-
-  #sortRebuildQueue(): void {
-    const focus = this.focus!;
-    const { chunkSize } = this.world;
-
-    for (const pending of this.#rebuildQueue) {
-      pending.distance = squaredDistance(pending, focus, chunkSize);
-    }
-    this.#rebuildQueue.sort((a, b) => a.distance - b.distance);
-
-    this.#lastSortFocus = {
-      x: focus.x,
-      y: focus.y,
-      z: focus.z
-    };
-  }
-
-  dispose(): void {
-    this.#logger.debug("Disposing VoxelEngine.");
-    this.#rebuildQueue = [];
-    this.#queuedChunks.clear();
-    this.#lastSortFocus = null;
-    // Mesh geometries are owned here; materials are shared per tileset.
-    this.#disposeChunkMeshes();
-    this.debug.dispose();
-    this.#collider?.dispose();
-
-    for (const mat of this.#materials.values()) {
-      mat.dispose();
-    }
-    this.#materials.clear();
-
-    this.tilesetManager.dispose();
+    return this.#queue.size;
   }
 
   get greedy(): boolean {
     return this.#meshBuilder.greedy;
   }
 
-  /**
-   * Changes meshing mode and invalidates all geometry and materials.
-   */
   set greedy(value: boolean) {
     if (value === this.#meshBuilder.greedy) {
       return;
     }
 
     this.#meshBuilder.greedy = value;
-    for (const material of this.#materials.values()) {
-      material.dispose();
-    }
-    this.#materials.clear();
-    this.#disposeChunkMeshes();
+    this.#materials.tileWrapping = value;
+    this.#materials.invalidate();
+    this.#clearChunkMeshes();
     this.markAllChunksDirty("greedy");
   }
 
   get onLayerUpdated(): VoxelLayerHookListener | undefined {
-    return this.#onLayerUpdated;
+    return this.world.onLayerUpdated;
   }
 
   set onLayerUpdated(fn: VoxelLayerHookListener | undefined) {
-    this.#onLayerUpdated = fn;
+    this.world.onLayerUpdated = fn;
   }
 
-  #emitHook(event: VoxelLayerHookEvent): void {
-    if (this.#isApplyingRemote) {
-      return;
-    }
-    this.#onLayerUpdated?.(event);
-  }
-
-  #dispatchCommand(event: VoxelLayerHookEvent): void {
-    switch (event.action) {
-      case "added":
-        this.addLayer(event.layerName, event.metadata.options);
-        break;
-
-      case "removed":
-        this.removeLayer(event.layerName);
-        break;
-
-      case "updated":
-        this.updateLayer(event.layerName, event.metadata.options);
-        break;
-
-      case "offset-updated":
-        if ("offset" in event.metadata) {
-          this.setLayerOffset(event.layerName, event.metadata.offset);
-        }
-        else {
-          this.translateLayer(event.layerName, event.metadata.delta);
-        }
-        break;
-
-      case "voxel-set": {
-        const { position, blockId, rotation, flipX, flipZ, flipY } = event.metadata;
-        this.setVoxel(event.layerName, {
-          position,
-          blockId,
-          rotation,
-          flipX,
-          flipZ,
-          flipY
-        });
-        break;
-      }
-
-      case "voxel-removed":
-        this.removeVoxel(event.layerName, { position: event.metadata.position });
-        break;
-
-      case "voxels-set":
-        this.setVoxelBulk(event.layerName, event.metadata.entries);
-        break;
-
-      case "voxels-removed":
-        this.removeVoxelBulk(event.layerName, event.metadata.entries);
-        break;
-
-      case "reordered":
-        this.moveLayer(event.layerName, event.metadata.direction);
-        break;
-
-      case "object-layer-added":
-        this.addObjectLayer(event.layerName);
-        break;
-
-      case "object-layer-removed":
-        this.removeObjectLayer(event.layerName);
-        break;
-
-      case "object-layer-updated":
-        this.updateObjectLayer(event.layerName, event.metadata.patch);
-        break;
-
-      case "object-added":
-        this.addObject(event.layerName, event.metadata.object);
-        break;
-
-      case "object-removed":
-        this.removeObject(event.layerName, event.metadata.objectId);
-        break;
-
-      case "object-updated":
-        this.updateObject(
-          event.layerName,
-          event.metadata.objectId,
-          event.metadata.patch
-        );
-        break;
-    }
-  }
-
-  /**
-   * Applies a remote command without re-emitting it through the local hook.
-   */
-  applyRemoteCommand(cmd: VoxelLayerHookEvent): void {
-    this.#isApplyingRemote = true;
-    try {
-      this.#dispatchCommand(cmd);
-    }
-    finally {
-      this.#isApplyingRemote = false;
-    }
-  }
-
-  /**
-   * Places a voxel; rotation uses 0..3 quarter-turns around Y.
-   */
-  setVoxel(
-    layerName: string,
-    options: VoxelSetOptions
+  applyRemoteCommand(
+    cmd: VoxelLayerHookEvent
   ): void {
-    const { position, blockId } = options;
-    const transform = new VoxelTransform(options);
-
-    this.world.setVoxelAt(
-      layerName,
-      position,
-      { blockId, transform: transform.packed }
-    );
-    this.#emitHook({
-      action: "voxel-set",
-      layerName,
-      metadata: {
-        position,
-        blockId,
-        rotation: transform.rotation,
-        flipX: transform.flipX,
-        flipZ: transform.flipZ,
-        flipY: transform.flipY
-      }
-    });
-  }
-
-  removeVoxel(
-    layerName: string,
-    options: VoxelRemoveOptions
-  ): void {
-    this.world.removeVoxelAt(layerName, options.position);
-    this.#emitHook({
-      action: "voxel-removed",
-      layerName,
-      metadata: { position: options.position }
-    });
-  }
-
-  setVoxelBulk(
-    layerName: string,
-    entries: VoxelSetOptions[]
-  ): void {
-    for (const entry of entries) {
-      this.world.setVoxelAt(
-        layerName,
-        entry.position,
-        {
-          blockId: entry.blockId,
-          transform: new VoxelTransform(entry).packed
-        }
-      );
-    }
-    this.#emitHook({
-      action: "voxels-set",
-      layerName,
-      metadata: { entries }
-    });
-  }
-
-  removeVoxelBulk(
-    layerName: string,
-    entries: VoxelRemoveOptions[]
-  ): void {
-    for (const { position } of entries) {
-      this.world.removeVoxelAt(layerName, position);
-    }
-    this.#emitHook({
-      action: "voxels-removed",
-      layerName,
-      metadata: { entries }
-    });
-  }
-
-  getVoxel(position: THREE.Vector3Like): VoxelEntry | undefined;
-  getVoxel(layerName: string, position: THREE.Vector3Like): VoxelEntry | undefined;
-  getVoxel(
-    posOrLayer: THREE.Vector3Like | string,
-    posArg?: THREE.Vector3Like
-  ): VoxelEntry | undefined {
-    if (typeof posOrLayer === "string") {
-      return this.world.getLayer(posOrLayer)?.getVoxelAt(posArg!);
-    }
-
-    return this.world.getVoxelAt(posOrLayer);
-  }
-
-  getVoxelNeighbour(position: THREE.Vector3Like, face: FACE): VoxelEntry | undefined;
-  getVoxelNeighbour(layerName: string, position: THREE.Vector3Like, face: FACE): VoxelEntry | undefined;
-  getVoxelNeighbour(
-    posOrLayer: THREE.Vector3Like | string,
-    faceOrPos: FACE | THREE.Vector3Like,
-    faceArg?: FACE
-  ): VoxelEntry | undefined {
-    if (typeof faceOrPos === "number") {
-      return this.world.getVoxelNeighbour(
-        posOrLayer as THREE.Vector3Like,
-        faceOrPos
-      );
-    }
-
-    const offset = FACE_OFFSETS[faceArg!];
-
-    return this.world.getLayer(posOrLayer as string)?.getVoxelAt({
-      x: faceOrPos.x + offset[0],
-      y: faceOrPos.y + offset[1],
-      z: faceOrPos.z + offset[2]
-    });
-  }
-
-  getLayer(
-    name: string
-  ): VoxelLayer | undefined {
-    return this.world.getLayer(name);
-  }
-
-  cloneLayer(name: string, options: PartialExcept<VoxelLayerOptions, "name">): VoxelLayer | undefined {
-    const clone = this.world.cloneLayer(name, options);
-    if (!clone) {
-      return undefined;
-    }
-
-    this.#emitHook({
-      action: "cloned",
-      layerName: name,
-      metadata: { options }
-    });
-
-    return clone;
-  }
-
-  mergeLayer(
-    sourceLayerName: string,
-    targetLayerName: string
-  ): boolean {
-    const merged = this.world.mergeLayer(sourceLayerName, targetLayerName);
-    if (!merged) {
-      return false;
-    }
-
-    this.#emitHook({
-      action: "merged",
-      layerName: sourceLayerName,
-      metadata: { targetLayerName }
-    });
-
-    return true;
-  }
-
-  addLayer(
-    name: string,
-    options: VoxelLayerConfigurableOptions = {}
-  ): VoxelLayer {
-    const layer = this.world.addLayer(name, options);
-    this.#emitHook({
-      action: "added",
-      layerName: name,
-      metadata: { options }
-    });
-
-    return layer;
-  }
-
-  updateLayer(
-    name: string,
-    options: Partial<VoxelLayerConfigurableOptions>
-  ): boolean {
-    const result = this.world.updateLayer(name, options);
-    if (result) {
-      this.#emitHook({
-        action: "updated",
-        layerName: name,
-        metadata: { options }
-      });
-    }
-
-    return result;
-  }
-
-  removeLayer(
-    name: string
-  ): boolean {
-    const result = this.world.removeLayer(name);
-    if (result) {
-      this.#emitHook({
-        action: "removed",
-        layerName: name,
-        metadata: {}
-      });
-    }
-
-    return result;
-  }
-
-  setLayerOffset(
-    name: string,
-    offset: VoxelCoord
-  ): void {
-    this.world.setLayerOffset(name, offset);
-    this.#emitHook({
-      action: "offset-updated",
-      layerName: name,
-      metadata: { offset }
-    });
-  }
-
-  translateLayer(
-    name: string,
-    delta: VoxelCoord
-  ): void {
-    this.world.translateLayer(name, delta);
-    this.#emitHook({
-      action: "offset-updated",
-      layerName: name,
-      metadata: { delta }
-    });
-  }
-
-  moveLayer(
-    name: string,
-    direction: "up" | "down"
-  ): void {
-    this.world.moveLayer(name, direction);
-    this.markAllChunksDirty("moveLayer");
-    this.#emitHook({
-      action: "reordered",
-      layerName: name,
-      metadata: { direction }
-    });
-  }
-
-  getLayerCenter(
-    name: string
-  ): THREE.Vector3 | null {
-    const layer = this.world.getLayer(name);
-    if (!layer) {
-      return null;
-    }
-
-    return layer.centerToWorld();
-  }
-
-  addObjectLayer(
-    name: string,
-    options?: Partial<Pick<VoxelObjectLayerJSON, "visible" | "order">>
-  ): VoxelObjectLayerJSON {
-    const layer = this.world.addObjectLayer(name, options);
-    this.#emitHook({
-      action: "object-layer-added",
-      layerName: name,
-      metadata: {}
-    });
-
-    return layer;
-  }
-
-  removeObjectLayer(
-    name: string
-  ): boolean {
-    const result = this.world.removeObjectLayer(name);
-    if (result) {
-      this.#emitHook({
-        action: "object-layer-removed",
-        layerName: name,
-        metadata: {}
-      });
-    }
-
-    return result;
-  }
-
-  getObjectLayer(
-    name: string
-  ): VoxelObjectLayerJSON | undefined {
-    return this.world.getObjectLayer(name);
-  }
-
-  getObjectLayers(): readonly VoxelObjectLayerJSON[] {
-    return this.world.getObjectLayers();
-  }
-
-  updateObjectLayer(
-    name: string,
-    patch: Partial<Pick<VoxelObjectLayerJSON, "visible">>
-  ): boolean {
-    const result = this.world.updateObjectLayer(name, patch);
-    if (result) {
-      this.#emitHook({
-        action: "object-layer-updated",
-        layerName: name,
-        metadata: { patch }
-      });
-    }
-
-    return result;
-  }
-
-  addObject(
-    layerName: string,
-    object: VoxelObjectJSON
-  ): boolean {
-    const result = this.world.addObjectToLayer(layerName, object);
-    if (result) {
-      this.#emitHook({
-        action: "object-added",
-        layerName,
-        metadata: { object }
-      });
-    }
-
-    return result;
-  }
-
-  removeObject(
-    layerName: string,
-    objectId: string
-  ): boolean {
-    const result = this.world.removeObjectFromLayer(layerName, objectId);
-    if (result) {
-      this.#emitHook({
-        action: "object-removed",
-        layerName,
-        metadata: { objectId }
-      });
-    }
-
-    return result;
-  }
-
-  updateObject(
-    layerName: string,
-    objectId: string,
-    patch: Partial<VoxelObjectJSON>
-  ): boolean {
-    const result = this.world.updateObjectInLayer(layerName, objectId, patch);
-    if (result) {
-      this.#emitHook({
-        action: "object-updated",
-        layerName,
-        metadata: { objectId, patch }
-      });
-    }
-
-    return result;
-  }
-
-  #registerTilesets(
-    sources: Iterable<TilesetSource> = []
-  ): void {
-    for (const { def, texture } of sources) {
-      if (!this.tilesetManager.has(def.id)) {
-        this.tilesetManager.registerTexture(def, texture);
-      }
-    }
+    this.world.applyRemoteCommand(cmd);
   }
 
   loadTileset(
@@ -1096,15 +221,7 @@ export class VoxelEngine {
     this.tilesetManager.registerTexture(def, texture);
     this.#logger.debug(`Loaded tileset '${def.id}' from '${def.src}'`);
 
-    // Material keys share the tileset ID prefix across opacity variants.
-    const prefix = `${def.id}:`;
-    for (const [key, material] of this.#materials) {
-      if (key.startsWith(prefix)) {
-        material.dispose();
-        this.#materials.delete(key);
-      }
-    }
-
+    this.#materials.invalidate(def.id);
     this.markAllChunksDirty("loadTileset");
   }
 
@@ -1121,12 +238,14 @@ export class VoxelEngine {
     data: VoxelWorldJSON,
     options: VoxelLoadOptions = {}
   ): void {
-    this.#disposeChunkMeshes();
+    this.#clearChunkMeshes();
     this.#logger.debug("Cleared existing chunk meshes while loading new world.");
 
-    deserializeVoxelWorld(data, this.world, {
-      blocks: this.blockRegistry
-    });
+    this.world.silently(
+      () => deserializeVoxelWorld(data, this.world, {
+        blocks: this.blockRegistry
+      })
+    );
 
     this.#registerTilesets(options.tilesets);
     for (const tilesetDef of data.tilesets) {
@@ -1138,198 +257,13 @@ export class VoxelEngine {
       }
     }
 
-    for (const mat of this.#materials.values()) {
-      mat.dispose();
-    }
-    this.#materials.clear();
+    this.#materials.invalidate();
 
     if (options.mergeLayers) {
       this.world.mergeAllLayers();
     }
 
     this.#rebuildAllChunks("load");
-  }
-
-  /**
-   * Quantizes opacity while reserving the top bucket for exactly opaque layers.
-   */
-  #opacityBucket(
-    opacity: number
-  ): number {
-    if (opacity >= 1) {
-      return kOpacitySteps;
-    }
-
-    return Math.min(
-      kOpacitySteps - 1,
-      Math.max(0, Math.round(opacity * kOpacitySteps))
-    );
-  }
-
-  /**
-   * Applies layer opacity through shared materials without a vertex color.
-   */
-  #getMaterial(
-    tilesetId: string,
-    opacity: number,
-    cutout = false
-  ): THREE.MeshLambertMaterial | THREE.MeshStandardMaterial {
-    const bucket = this.#opacityBucket(opacity);
-    const key = `${tilesetId}:${bucket}${cutout ? ":cutout" : ""}`;
-    this.#logger.debug(`Getting material for tileset '${tilesetId}' (opacity=${opacity})`);
-
-    let material = this.#materials.get(key);
-    if (material) {
-      return material;
-    }
-
-    const { texture } = this.tilesetManager.atlas(tilesetId);
-    const transparent = bucket < kOpacitySteps;
-
-    const materialOptions = {
-      map: texture,
-      // Transparent and cutout geometry exposes both sides of a surface.
-      side: transparent || cutout ? THREE.DoubleSide : THREE.FrontSide,
-      alphaTest: this.#alphaTest,
-      opacity: bucket / kOpacitySteps,
-      transparent,
-      // Depth writes would hide translucent faces that should blend.
-      depthWrite: !transparent
-    };
-
-    if (this.#materialType === "standard") {
-      material = new THREE.MeshStandardMaterial(materialOptions);
-    }
-    else {
-      material = new THREE.MeshLambertMaterial(materialOptions);
-    }
-
-    // Greedy quads need tile-local UV repetition.
-    if (this.#meshBuilder.greedy) {
-      enableTileWrapping(material);
-    }
-    this.#materialCustomizer?.(material, tilesetId);
-
-    this.#materials.set(key, material);
-
-    return material;
-  }
-
-  /**
-   * Disposes chunk meshes while retaining materials owned by `#materials`.
-   */
-  #disposeChunkMeshes(): void {
-    this.debug.clear();
-
-    for (const { meshes } of this.#chunkMeshes.values()) {
-      for (const mesh of meshes) {
-        this.root.remove(mesh);
-        mesh.geometry.dispose();
-      }
-    }
-    this.#chunkMeshes.clear();
-    this.#lastVisibility = null;
-  }
-
-  #removeChunk(
-    layer: VoxelLayer,
-    chunk: VoxelChunk,
-    options: { collider?: boolean; } = {}
-  ) {
-    const { collider = true } = options;
-    this.#queuedChunks.delete(chunk);
-
-    const chunkKeyBase = `${layer.id}:${chunk.toString()}`;
-    this.#logger.debug(
-      `Removing chunk '${chunkKeyBase}' with layer name '${layer.name}'`
-    );
-
-    this.debug.unregisterChunk(chunkKeyBase);
-
-    const entry = this.#chunkMeshes.get(chunkKeyBase);
-    if (entry) {
-      for (const mesh of entry.meshes) {
-        this.root.remove(mesh);
-        mesh.geometry.dispose();
-      }
-      this.#chunkMeshes.delete(chunkKeyBase);
-    }
-
-    if (collider) {
-      this.#collider?.removeChunk(chunkKeyBase);
-    }
-  }
-
-  #rebuildChunk(
-    layer: VoxelLayer,
-    chunk: VoxelChunk
-  ): void {
-    const chunkKeyBase = `${layer.id}:${chunk.toString()}`;
-    this.#logger.debug(
-      `Rebuilding chunk '${chunkKeyBase}' with layer name '${layer.name}'`
-    );
-
-    this.#removeChunk(layer, chunk);
-
-    const geometries = this.#meshBuilder.buildChunkGeometries(chunk, layer);
-    if (!geometries) {
-      // Culled chunks still contribute voxel statistics.
-      this.debug.registerChunk(chunkKeyBase, [], this.#meshBuilder.stats);
-
-      return;
-    }
-
-    const { opacity } = layer;
-
-    const meshes: THREE.Mesh[] = [];
-    for (const [key, geometry] of geometries) {
-      const { tilesetId, cutout } = ChunkGeometryKey.parse(key);
-      const mesh = new THREE.Mesh(
-        geometry,
-        this.#getMaterial(tilesetId, opacity, cutout)
-      );
-      mesh.name = `voxel_chunk_${chunkKeyBase}:${key}`;
-
-      this.root.add(mesh);
-      meshes.push(mesh);
-    }
-    this.#chunkMeshes.set(chunkKeyBase, {
-      layer,
-      chunk,
-      meshes,
-      visible: true
-    });
-    this.debug.registerChunk(chunkKeyBase, meshes, this.#meshBuilder.stats);
-
-    if (this.#collider) {
-      const layerOffset = layer.offset;
-      this.#logger.debug(
-        `Rebuilding collision for chunk '${chunkKeyBase}' with layer name '${layer.name}'`,
-        { offset: layerOffset }
-      );
-
-      this.#collider.rebuildChunk(chunkKeyBase, {
-        chunk,
-        geometries,
-        layerOffset
-      });
-    }
-  }
-
-  #rebuildAllChunks(
-    source?: string
-  ): void {
-    this.#logger.debug("Rebuilding all chunks...", { source });
-
-    this.#rebuildQueue = [];
-    this.#queuedChunks.clear();
-    this.#lastSortFocus = null;
-
-    // Routed through the queue so the focus ordering applies here too; the
-    // zero budget keeps the whole world ready when this call returns.
-    this.markAllChunksDirty(source);
-    this.#enqueueDirtyChunks();
-    this.#drainRebuildQueue(0);
   }
 
   markAllChunksDirty(
@@ -1341,35 +275,88 @@ export class VoxelEngine {
       chunk.dirty = true;
     }
   }
-}
 
-/**
- * Vector from the focus to a chunk center, written into a shared scratch so
- * the per-chunk range tests allocate nothing.
- */
-function chunkCenterOffset(
-  layer: VoxelLayer,
-  chunk: VoxelChunk,
-  focus: THREE.Vector3Like,
-  chunkSize: number
-): THREE.Vector3Like {
-  const half = chunkSize / 2;
+  dispose(): void {
+    this.#logger.debug("Disposing VoxelEngine.");
+    this.#queue.clear();
+    this.#clearChunkMeshes();
+    this.debug.dispose();
+    this.#collider?.dispose();
+    this.#materials.dispose();
+    this.tilesetManager.dispose();
+  }
 
-  kChunkOffset.x = (chunk.cx * chunkSize) + half + layer.offset.x - focus.x;
-  kChunkOffset.y = (chunk.cy * chunkSize) + half + layer.offset.y - focus.y;
-  kChunkOffset.z = (chunk.cz * chunkSize) + half + layer.offset.z - focus.z;
+  #viewport(): ChunkViewport {
+    return new ChunkViewport({
+      focus: this.focus,
+      viewDistance: this.viewDistance,
+      policy: this.viewDistancePolicy,
+      chunkSize: this.world.chunkSize
+    });
+  }
 
-  return kChunkOffset;
-}
+  #enqueueDirtyChunks(
+    viewport: ChunkViewport
+  ): void {
+    let grew = false;
 
-function squaredDistance(
-  pending: PendingRebuild,
-  focus: THREE.Vector3Like,
-  chunkSize: number
-): number {
-  const { x, y, z } = chunkCenterOffset(
-    pending.layer, pending.chunk, focus, chunkSize
-  );
+    for (const { layer, chunk } of this.world.getAllDirtyChunks()) {
+      if (!viewport.contains(layer, chunk, false)) {
+        continue;
+      }
 
-  return (x * x) + (y * y) + (z * z);
+      chunk.dirty = false;
+      if (!layer.visible || layer.opacity === 0) {
+        if (layer.wasVisible) {
+          this.#removeChunk(layer, chunk);
+        }
+
+        continue;
+      }
+
+      grew = this.#queue.push(layer, chunk) || grew;
+    }
+
+    if (viewport.focus === null) {
+      return;
+    }
+
+    if (grew || this.#queue.focusMovedSinceSort(viewport)) {
+      this.#queue.sortBy(viewport);
+    }
+  }
+
+  #removeChunk(
+    layer: VoxelLayer,
+    chunk: VoxelChunk,
+    options: { collider?: boolean; } = {}
+  ): void {
+    this.#queue.cancel(chunk);
+    this.#meshes.remove(layer, chunk, options);
+  }
+
+  #clearChunkMeshes(): void {
+    this.#meshes.clear();
+    this.#visibility.reset();
+  }
+
+  #rebuildAllChunks(
+    source?: string
+  ): void {
+    this.#logger.debug("Rebuilding all chunks...", { source });
+
+    this.#queue.clear();
+    this.markAllChunksDirty(source);
+    this.flush();
+  }
+
+  #registerTilesets(
+    sources: Iterable<TilesetSource> = []
+  ): void {
+    for (const { def, texture } of sources) {
+      if (!this.tilesetManager.has(def.id)) {
+        this.tilesetManager.registerTexture(def, texture);
+      }
+    }
+  }
 }

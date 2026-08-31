@@ -97,7 +97,7 @@ Place voxels through the engine exposed by the component:
 ```ts
 for (let x = 0; x < 8; x++) {
   for (let z = 0; z < 8; z++) {
-    renderer.engine.setVoxel("Ground", {
+    renderer.engine.world.setVoxel("Ground", {
       position: {
         x,
         y: 0,
