@@ -15,11 +15,15 @@ VoxelWorld
 ## Layer compositing
 
 Voxel layers are composited from the highest `order` to the lowest. At one world
-position, the first visible layer with `opacity > 0` and a stored voxel wins.
+position, the first visible layer with `opacity >= 1` and a stored voxel wins.
 This lets a decorative layer replace base terrain without modifying it.
 
-An opacity below `1` stops the layer from occluding neighbouring faces during
-mesh generation. An opacity of `0` behaves like `visible = false`. Collision is
+An opacity below `1` scopes occlusion to the layer itself during mesh
+generation: only its own voxels cull its faces, it does not occlude neighbouring
+faces, and it does not win compositing over the voxels it covers — they stay
+visible through it. Its own interior faces are still culled: emitting them
+stacks coincident blended quads, which reads as a checkerboard through the
+volume. An opacity of `0` behaves like `visible = false`. Collision is
 unchanged for partially transparent layers and removed only when the layer is
 hidden.
 

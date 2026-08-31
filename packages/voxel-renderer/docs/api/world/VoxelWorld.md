@@ -110,7 +110,8 @@ Hidden layers are skipped during compositing and mesh rebuild.
 #### `setLayerOpacity(name: string, opacity: number): void`
 
 Sets a layer's rendered translucency (clamped to `[0, 1]`). A layer with `opacity < 1`
-stops occluding neighbouring faces during mesh building (like glass); `opacity === 0`
+is occluded only by its own voxels (like glass): nothing in another layer culls its
+faces, and it hides neither neighbouring faces nor the voxels it covers; `opacity === 0`
 is treated exactly like `visible = false`. Marks only the layer's own chunks dirty for a
 same-bucket change (e.g. `0.4 → 0.6`), or every layer's chunks when the change crosses the
 `opacity === 1` occlusion boundary. No-op if the layer is not found.

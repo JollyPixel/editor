@@ -59,8 +59,8 @@ const materials = new Set<ChunkMaterial>();
 const materialState = {
   alphaTest: 0.1,
   flatShading: false,
-  /** Engine default for a blended material; turn it on to see what it costs. */
-  depthWrite: false,
+  /** Engine default for a blended material; turn it off to see what it buys. */
+  depthWrite: true,
   roughness: 0.85,
   metalness: 0
 };

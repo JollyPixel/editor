@@ -522,10 +522,10 @@ describe("VoxelEngine — layer opacity on the material", () => {
     assert.equal(mesh.geometry.getAttribute("color"), undefined);
     assert.equal(mesh.material.transparent, true);
     assert.equal(mesh.material.opacity, 0.5);
-    assert.equal(mesh.material.depthWrite, false);
-    // Both surfaces of a translucent block are visible through each other, and
-    // the camera may end up inside the volume.
-    assert.equal(mesh.material.side, THREE.DoubleSide);
+    assert.equal(mesh.material.depthWrite, true);
+    // The mesher emits both faces of a voxel, so a second pass over the same
+    // quads would only blend them twice.
+    assert.equal(mesh.material.side, THREE.FrontSide);
   });
 
   it("gives transparent blocks their own double-sided mesh on an opaque layer", () => {
