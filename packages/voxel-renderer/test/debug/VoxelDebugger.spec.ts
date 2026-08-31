@@ -111,6 +111,7 @@ describe("VoxelDebugger — statistics", () => {
 
     assert.deepEqual(engine.debug.stats, {
       chunks: 0,
+      culledChunks: 0,
       meshes: 0,
       voxels: 0,
       hiddenVoxels: 0,

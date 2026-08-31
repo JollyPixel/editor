@@ -97,6 +97,18 @@ interface VoxelEngineOptions {
    */
   rebuildBudgetMs?: number;
   /**
+   * Chunk radius around `focus` kept meshed and drawn, as a radius in chunks or
+   * a full ViewDistance description. Ignored while `focus` is null.
+   * @default Infinity
+   */
+  viewDistance?: number | ViewDistanceOptions;
+  /**
+   * What happens to a chunk that leaves the view distance: "hide" keeps its
+   * geometry ready to show again, "unload" frees it and remeshes on return.
+   * @default "hide"
+   */
+  viewDistancePolicy?: "hide" | "unload";
+  /**
    * Enables collision when provided, disabled by default so no physics backend
    * is required. Called once during construction with the registries.
    * See plugins/rapier for the bundled Rapier3D implementation.
@@ -203,7 +215,9 @@ class VoxelEngine {
   readonly debug: VoxelDebugger;
 
   greedy: boolean; // read/write; assigning rebuilds every chunk
-  rebuildFocus: THREE.Vector3Like | null;
+  focus: THREE.Vector3Like | null;
+  viewDistance: ViewDistance;
+  viewDistancePolicy: "hide" | "unload";
   readonly pendingRebuilds: number;
   onLayerUpdated: VoxelLayerHookListener | undefined;
 }
@@ -228,9 +242,62 @@ When wrapped by `VoxelRenderer`, these are called automatically from its
 ```ts
 const engine = new VoxelEngine({ rebuildBudgetMs: 8 });
 
-engine.rebuildFocus = camera.position; // prioritize chunks near the camera
-engine.pendingRebuilds;                // 0 once the world is up to date
+engine.focus = focusPoint;  // prioritize chunks near this point
+engine.pendingRebuilds;     // 0 once the world is up to date
 ```
+
+### Focus
+
+`focus` is a point in `root` local space, reread on every tick, so a live
+vector can be assigned once. Without it the queue is drained in the order
+chunks were created, which for a world generated from its origin means the
+chunks nearest the camera are built last. [`VoxelRenderer`](./VoxelRenderer.md)
+samples it from an `Object3D` for you.
+
+The queue is reordered when it grows and when the focus has drifted by half a
+chunk, so a moving camera keeps pulling the nearest chunks forward.
+
+`rebuildFocus` is the deprecated name of the same property.
+
+### View distance
+
+With a finite `viewDistance`, chunks further than that radius from `focus` are
+not meshed at all and stay dirty until they come into range, carrying every
+edit they missed. Chunks already built when they leave the radius follow
+`viewDistancePolicy`.
+
+```ts
+import { ViewDistance } from "@jolly-pixel/voxel.renderer";
+
+const engine = new VoxelEngine({
+  viewDistance: 8,             // radius in chunks
+  viewDistancePolicy: "hide"   // or "unload"
+});
+
+engine.viewDistance = new ViewDistance({
+  chunks: 12,
+  shape: "sphere",
+  hysteresis: 2
+});
+```
+
+| Option | Meaning |
+|---|---|
+| `chunks` | Radius in chunks. `Infinity` (the default) disables the whole mechanism. |
+| `shape` | `"xz"` (default) ignores the vertical axis, like Minecraft's cylinder; `"sphere"` measures all three axes. |
+| `hysteresis` | Extra radius in chunks a visible chunk keeps before being dropped, so a chunk on the border does not flip every tick. Defaults to `1`. |
+
+`"hide"` keeps the geometry uploaded and only toggles mesh visibility, which
+costs memory but makes coming back free. `"unload"` disposes the geometry and
+remeshes the chunk on return.
+
+The view distance is visual only: colliders built for a chunk survive an
+unload, so physics never depends on where the camera points. It also does
+nothing while `focus` is `null`, and `flush()` does not force out-of-range
+chunks to be meshed.
+
+`ViewDistance` is immutable, so assign a new instance to change it; the engine
+detects the swap and reapplies it on the next tick.
 
 The [rendering and meshing](../../concepts/rendering-and-meshing.md) concept
 explains the chunk geometry layout, rebuild queue, and greedy meshing tradeoffs.

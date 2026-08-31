@@ -47,6 +47,10 @@ import {
   type VoxelLayerOptions
 } from "./world/VoxelLayer.ts";
 import { VoxelChunk } from "./world/VoxelChunk.ts";
+import {
+  ViewDistance,
+  type ViewDistanceOptions
+} from "./world/ViewDistance.ts";
 import type { VoxelEntry, VoxelCoord } from "./world/types.ts";
 import {
   FACE_OFFSETS,
@@ -66,6 +70,12 @@ export type { VoxelSetOptions, VoxelRemoveOptions };
  * Thirty-two translucent buckets plus one fully opaque material per tileset.
  */
 const kOpacitySteps = 32;
+
+const kChunkOffset = {
+  x: 0,
+  y: 0,
+  z: 0
+};
 
 export interface VoxelLoadOptions {
   /**
@@ -179,11 +189,43 @@ export interface VoxelEngineOptions {
    * @default 8
    */
   rebuildBudgetMs?: number;
+
+  /**
+   * Chunk radius around `focus` kept meshed and drawn, as a radius in chunks
+   * or a full `ViewDistance` description. Ignored while `focus` is null.
+   * @default Infinity
+   */
+  viewDistance?: number | ViewDistanceOptions;
+
+  /**
+   * What happens to a chunk that leaves the view distance: `"hide"` keeps its
+   * geometry ready to show again, `"unload"` frees it and remeshes on return.
+   * @default "hide"
+   */
+  viewDistancePolicy?: ViewDistancePolicy;
 }
+
+export type ViewDistancePolicy =
+  | "hide"
+  | "unload";
 
 interface PendingRebuild {
   layer: VoxelLayer;
   chunk: VoxelChunk;
+  distance: number;
+}
+
+interface ChunkMeshes {
+  layer: VoxelLayer;
+  chunk: VoxelChunk;
+  meshes: THREE.Mesh[];
+  visible: boolean;
+}
+
+interface VisibilityStamp {
+  focus: THREE.Vector3Like;
+  viewDistance: ViewDistance;
+  policy: ViewDistancePolicy;
 }
 
 /**
@@ -202,25 +244,18 @@ export class VoxelEngine {
 
   readonly debug: VoxelDebugger;
 
-  /**
-   * Optional world-space point used to prioritize nearby chunk rebuilds.
-   */
-  rebuildFocus: THREE.Vector3Like | null = null;
+  focus: THREE.Vector3Like | null = null;
+  viewDistance: ViewDistance;
+  viewDistancePolicy: ViewDistancePolicy;
 
   #meshBuilder: VoxelMeshBuilder;
   #collider: VoxelCollider | null = null;
-
-  /**
-   * Deferred chunks; membership in `#queuedChunks` is authoritative.
-   */
   #rebuildQueue: PendingRebuild[] = [];
   #queuedChunks = new Set<VoxelChunk>();
   #rebuildBudgetMs: number;
-
-  /**
-   * Chunk key to one mesh per tileset used by that chunk.
-   */
-  #chunkMeshes = new Map<string, THREE.Mesh[]>();
+  #lastSortFocus: THREE.Vector3Like | null = null;
+  #chunkMeshes = new Map<string, ChunkMeshes>();
+  #lastVisibility: VisibilityStamp | null = null;
 
   /**
    * Lazily created materials keyed by tileset, opacity bucket, and cutout mode.
@@ -256,7 +291,9 @@ export class VoxelEngine {
       tilesetPadding,
       tilesets,
       greedy = false,
-      rebuildBudgetMs = 8
+      rebuildBudgetMs = 8,
+      viewDistance,
+      viewDistancePolicy = "hide"
     } = options;
 
     this.root.name = "VoxelEngine";
@@ -266,6 +303,10 @@ export class VoxelEngine {
     this.#materialCustomizer = materialCustomizer;
     this.#alphaTest = alphaTest;
     this.#rebuildBudgetMs = rebuildBudgetMs;
+    this.viewDistance = viewDistance === undefined ?
+      ViewDistance.Unlimited :
+      ViewDistance.from(viewDistance);
+    this.viewDistancePolicy = viewDistancePolicy;
     this.#onLayerUpdated = onLayerUpdated;
     this.#logger = logger.child({
       namespace: "VoxelEngine"
@@ -311,6 +352,9 @@ export class VoxelEngine {
       this.#removeChunk(layer, chunk);
     }
 
+    // Runs first so a chunk coming back into view is remeshed by the drain
+    // below rather than one tick later.
+    this.#updateChunkVisibility();
     this.#enqueueDirtyChunks();
     this.#drainRebuildQueue(this.#rebuildBudgetMs);
   }
@@ -328,12 +372,29 @@ export class VoxelEngine {
   }
 
   /**
+   * @deprecated Renamed to `focus`, which now also drives view distance.
+   */
+  get rebuildFocus(): THREE.Vector3Like | null {
+    return this.focus;
+  }
+
+  set rebuildFocus(value: THREE.Vector3Like | null) {
+    this.focus = value;
+  }
+
+  /**
    * Clears dirty flags before queuing so later edits can dirty a chunk again.
    */
   #enqueueDirtyChunks(): void {
     const before = this.#rebuildQueue.length;
 
     for (const { layer, chunk } of this.world.getAllDirtyChunks()) {
+      // Left dirty on purpose: the chunk is meshed when it enters the view
+      // distance, with every edit it missed already in it.
+      if (!this.#chunkInView(layer, chunk, false)) {
+        continue;
+      }
+
       chunk.dirty = false;
 
       // Zero opacity removes the layer from rendering and compositing.
@@ -347,12 +408,131 @@ export class VoxelEngine {
 
       if (!this.#queuedChunks.has(chunk)) {
         this.#queuedChunks.add(chunk);
-        this.#rebuildQueue.push({ layer, chunk });
+        this.#rebuildQueue.push({ layer, chunk, distance: 0 });
       }
     }
 
-    if (this.rebuildFocus !== null && this.#rebuildQueue.length !== before) {
+    if (this.focus === null) {
+      return;
+    }
+
+    const grew = this.#rebuildQueue.length !== before;
+    if (grew || this.#focusMovedSinceSort()) {
       this.#sortRebuildQueue();
+    }
+  }
+
+  /**
+   * Half a chunk of drift is the smallest move able to reorder neighbours,
+   * and keeps a walking camera from resorting the queue every tick.
+   */
+  #focusMovedSinceSort(): boolean {
+    return this.#focusMovedFrom(this.#lastSortFocus);
+  }
+
+  #focusMovedFrom(
+    last: THREE.Vector3Like | null
+  ): boolean {
+    if (last === null) {
+      return true;
+    }
+
+    const focus = this.focus!;
+    const threshold = this.world.chunkSize / 2;
+
+    return Math.abs(focus.x - last.x) >= threshold ||
+      Math.abs(focus.y - last.y) >= threshold ||
+      Math.abs(focus.z - last.z) >= threshold;
+  }
+
+  /**
+   * `retain` applies the hysteresis slack a chunk already in view keeps.
+   * Always true without a focus or with an unlimited view distance.
+   */
+  #chunkInView(
+    layer: VoxelLayer,
+    chunk: VoxelChunk,
+    retain: boolean
+  ): boolean {
+    const { focus, viewDistance } = this;
+    if (focus === null || viewDistance.unlimited) {
+      return true;
+    }
+
+    const { chunkSize } = this.world;
+    const { x, y, z } = chunkCenterOffset(layer, chunk, focus, chunkSize);
+
+    return retain ?
+      viewDistance.retains(x, y, z, chunkSize) :
+      viewDistance.admits(x, y, z, chunkSize);
+  }
+
+  /**
+   * Skipped entirely while neither the focus nor the view distance moved.
+   */
+  #updateChunkVisibility(): void {
+    const { focus, viewDistance, viewDistancePolicy: policy } = this;
+    if (focus === null || viewDistance.unlimited) {
+      if (this.#lastVisibility !== null) {
+        this.#lastVisibility = null;
+        this.#restoreCulledChunks();
+      }
+
+      return;
+    }
+
+    const last = this.#lastVisibility;
+    const changed = last === null ||
+      last.viewDistance !== viewDistance ||
+      last.policy !== policy ||
+      this.#focusMovedFrom(last.focus);
+    if (!changed) {
+      return;
+    }
+
+    this.#lastVisibility = {
+      focus: {
+        x: focus.x,
+        y: focus.y,
+        z: focus.z
+      },
+      viewDistance,
+      policy
+    };
+
+    for (const [key, entry] of this.#chunkMeshes) {
+      const { layer, chunk, visible } = entry;
+      const inView = this.#chunkInView(layer, chunk, visible);
+      if (inView === visible) {
+        continue;
+      }
+
+      if (!inView && policy === "unload") {
+        // Colliders outlive the view distance: physics must not depend on
+        // where the camera happens to look.
+        this.#removeChunk(layer, chunk, { collider: false });
+        chunk.dirty = true;
+
+        continue;
+      }
+
+      entry.visible = inView;
+      this.debug.cullChunk(key, !inView);
+    }
+  }
+
+  /**
+   * Chunks the view distance unloaded are already dirty and come back
+   * through the rebuild queue instead.
+   */
+  #restoreCulledChunks(): void {
+    for (const [key, entry] of this.#chunkMeshes) {
+      if (entry.visible) {
+        continue;
+      }
+
+      entry.visible = true;
+      this.debug.cullChunk(key, false);
     }
   }
 
@@ -387,18 +567,26 @@ export class VoxelEngine {
   }
 
   #sortRebuildQueue(): void {
-    const focus = this.rebuildFocus!;
+    const focus = this.focus!;
     const { chunkSize } = this.world;
-    const half = chunkSize / 2;
 
-    this.#rebuildQueue.sort((a, b) => squaredDistance(a, focus, chunkSize, half) -
-      squaredDistance(b, focus, chunkSize, half));
+    for (const pending of this.#rebuildQueue) {
+      pending.distance = squaredDistance(pending, focus, chunkSize);
+    }
+    this.#rebuildQueue.sort((a, b) => a.distance - b.distance);
+
+    this.#lastSortFocus = {
+      x: focus.x,
+      y: focus.y,
+      z: focus.z
+    };
   }
 
   dispose(): void {
     this.#logger.debug("Disposing VoxelEngine.");
     this.#rebuildQueue = [];
     this.#queuedChunks.clear();
+    this.#lastSortFocus = null;
     // Mesh geometries are owned here; materials are shared per tileset.
     this.#disposeChunkMeshes();
     this.debug.dispose();
@@ -1033,19 +1221,22 @@ export class VoxelEngine {
   #disposeChunkMeshes(): void {
     this.debug.clear();
 
-    for (const meshes of this.#chunkMeshes.values()) {
+    for (const { meshes } of this.#chunkMeshes.values()) {
       for (const mesh of meshes) {
         this.root.remove(mesh);
         mesh.geometry.dispose();
       }
     }
     this.#chunkMeshes.clear();
+    this.#lastVisibility = null;
   }
 
   #removeChunk(
     layer: VoxelLayer,
-    chunk: VoxelChunk
+    chunk: VoxelChunk,
+    options: { collider?: boolean; } = {}
   ) {
+    const { collider = true } = options;
     this.#queuedChunks.delete(chunk);
 
     const chunkKeyBase = `${layer.id}:${chunk.toString()}`;
@@ -1055,16 +1246,18 @@ export class VoxelEngine {
 
     this.debug.unregisterChunk(chunkKeyBase);
 
-    const meshes = this.#chunkMeshes.get(chunkKeyBase);
-    if (meshes) {
-      for (const mesh of meshes) {
+    const entry = this.#chunkMeshes.get(chunkKeyBase);
+    if (entry) {
+      for (const mesh of entry.meshes) {
         this.root.remove(mesh);
         mesh.geometry.dispose();
       }
       this.#chunkMeshes.delete(chunkKeyBase);
     }
 
-    this.#collider?.removeChunk(chunkKeyBase);
+    if (collider) {
+      this.#collider?.removeChunk(chunkKeyBase);
+    }
   }
 
   #rebuildChunk(
@@ -1100,7 +1293,12 @@ export class VoxelEngine {
       this.root.add(mesh);
       meshes.push(mesh);
     }
-    this.#chunkMeshes.set(chunkKeyBase, meshes);
+    this.#chunkMeshes.set(chunkKeyBase, {
+      layer,
+      chunk,
+      meshes,
+      visible: true
+    });
     this.debug.registerChunk(chunkKeyBase, meshes, this.#meshBuilder.stats);
 
     if (this.#collider) {
@@ -1125,11 +1323,13 @@ export class VoxelEngine {
 
     this.#rebuildQueue = [];
     this.#queuedChunks.clear();
+    this.#lastSortFocus = null;
 
-    for (const { layer, chunk } of this.world.getAllChunks()) {
-      chunk.dirty = false;
-      this.#rebuildChunk(layer, chunk);
-    }
+    // Routed through the queue so the focus ordering applies here too; the
+    // zero budget keeps the whole world ready when this call returns.
+    this.markAllChunksDirty(source);
+    this.#enqueueDirtyChunks();
+    this.#drainRebuildQueue(0);
   }
 
   markAllChunksDirty(
@@ -1143,16 +1343,33 @@ export class VoxelEngine {
   }
 }
 
+/**
+ * Vector from the focus to a chunk center, written into a shared scratch so
+ * the per-chunk range tests allocate nothing.
+ */
+function chunkCenterOffset(
+  layer: VoxelLayer,
+  chunk: VoxelChunk,
+  focus: THREE.Vector3Like,
+  chunkSize: number
+): THREE.Vector3Like {
+  const half = chunkSize / 2;
+
+  kChunkOffset.x = (chunk.cx * chunkSize) + half + layer.offset.x - focus.x;
+  kChunkOffset.y = (chunk.cy * chunkSize) + half + layer.offset.y - focus.y;
+  kChunkOffset.z = (chunk.cz * chunkSize) + half + layer.offset.z - focus.z;
+
+  return kChunkOffset;
+}
+
 function squaredDistance(
   pending: PendingRebuild,
   focus: THREE.Vector3Like,
-  chunkSize: number,
-  half: number
+  chunkSize: number
 ): number {
-  const { chunk, layer } = pending;
-  const dx = (chunk.cx * chunkSize) + half + layer.offset.x - focus.x;
-  const dy = (chunk.cy * chunkSize) + half + layer.offset.y - focus.y;
-  const dz = (chunk.cz * chunkSize) + half + layer.offset.z - focus.z;
+  const { x, y, z } = chunkCenterOffset(
+    pending.layer, pending.chunk, focus, chunkSize
+  );
 
-  return (dx * dx) + (dy * dy) + (dz * dz);
+  return (x * x) + (y * y) + (z * z);
 }

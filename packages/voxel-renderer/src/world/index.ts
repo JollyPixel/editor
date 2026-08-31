@@ -6,3 +6,4 @@ export * from "./VoxelChunk.ts";
 export * from "./VoxelStore.ts";
 export * from "./VoxelLayer.ts";
 export * from "./VoxelWorld.ts";
+export * from "./ViewDistance.ts";

@@ -9,10 +9,18 @@ lifecycle from `awake`/`update`/`destroy`.
 ## API
 
 ```ts
-type VoxelRendererOptions = VoxelEngineOptions;
+interface VoxelRendererOptions extends VoxelEngineOptions {
+  /**
+   * Object whose world position prioritizes chunk rebuilds, usually the
+   * camera. Sampled once per update; null leaves engine.focus alone.
+   * @default null
+   */
+  focus?: THREE.Object3D | null;
+}
 
 class VoxelRenderer extends ActorComponent {
   readonly engine: VoxelEngine;
+  focus: THREE.Object3D | null;
 
   constructor(
     actor: Actor<any>,
@@ -28,6 +36,18 @@ The constructor uses `actor.world.logger` unless the options supply another
 logger. `awake()` attaches `engine.root` to the actor and initializes the
 engine. `update()` advances its rebuild queue. `destroy()` removes the root and
 disposes the engine before destroying the component.
+
+Pass `focus` to build chunks near a camera first, and to drive
+[`viewDistance`](./VoxelEngine.md#view-distance). Its world position is
+converted into the engine root's local space on every update, so a moved actor
+needs no extra work.
+
+```ts
+const vr = actor.addComponentAndGet(VoxelRenderer, {
+  focus: cameraActor.object3D,
+  viewDistance: 8
+});
+```
 
 ```ts
 import {

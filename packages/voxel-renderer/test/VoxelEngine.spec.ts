@@ -370,19 +370,98 @@ describe("VoxelEngine — budgeted rebuild queue", () => {
     assert.equal(engine.getLayer("Ground")!.getChunk(0, 0, 0)!.dirty, true);
   });
 
-  it("rebuilds chunks nearest rebuildFocus first", () => {
+  it("rebuilds chunks nearest the focus first", () => {
     const engine = new VoxelEngine({ chunkSize: 4, rebuildBudgetMs: Number.MIN_VALUE, blocks: [
       makeBlockDef(kCubeId, "cube", { name: "Cube" })
     ] });
     registerTileset(engine);
     engine.addLayer("Ground");
     fillChunks(engine, "Ground", 4);
-    engine.rebuildFocus = { x: 14, y: 2, z: 2 };
+    engine.focus = { x: 14, y: 2, z: 2 };
 
     engine.tick(0);
 
     assert.equal(engine.root.children.length, 1);
     assert.match(engine.root.children[0].name, /:3,0,0:/);
+  });
+
+  it("keeps rebuilding away from the focus over several ticks", () => {
+    const engine = new VoxelEngine({ chunkSize: 4, rebuildBudgetMs: Number.MIN_VALUE, blocks: [
+      makeBlockDef(kCubeId, "cube", { name: "Cube" })
+    ] });
+    registerTileset(engine);
+    engine.addLayer("Ground");
+    // Chunks are created from the origin outwards, so the focus at the far
+    // end must reverse the order they were enqueued in.
+    fillChunks(engine, "Ground", 4);
+    engine.focus = { x: 14, y: 2, z: 2 };
+
+    for (let tick = 0; tick < 4; tick++) {
+      engine.tick(0);
+    }
+
+    assert.deepEqual(
+      engine.root.children.map((mesh) => mesh.name.split(":")[1]),
+      ["3,0,0", "2,0,0", "1,0,0", "0,0,0"]
+    );
+  });
+
+  it("reorders the queue when the focus moves without new dirty chunks", () => {
+    const engine = new VoxelEngine({ chunkSize: 4, rebuildBudgetMs: Number.MIN_VALUE, blocks: [
+      makeBlockDef(kCubeId, "cube", { name: "Cube" })
+    ] });
+    registerTileset(engine);
+    engine.addLayer("Ground");
+    fillChunks(engine, "Ground", 4);
+    engine.focus = { x: 14, y: 2, z: 2 };
+    engine.tick(0);
+
+    // Nothing dirties a chunk between the two ticks: only the move may
+    // promote the chunk at the other end of the queue.
+    engine.focus = { x: 2, y: 2, z: 2 };
+    engine.tick(0);
+
+    assert.deepEqual(
+      engine.root.children.map((mesh) => mesh.name.split(":")[1]),
+      ["3,0,0", "0,0,0"]
+    );
+  });
+
+  it("ignores a focus move smaller than half a chunk", () => {
+    const engine = new VoxelEngine({ chunkSize: 4, rebuildBudgetMs: Number.MIN_VALUE, blocks: [
+      makeBlockDef(kCubeId, "cube", { name: "Cube" })
+    ] });
+    registerTileset(engine);
+    engine.addLayer("Ground");
+    fillChunks(engine, "Ground", 4);
+    engine.focus = { x: 14, y: 2, z: 2 };
+    engine.tick(0);
+
+    engine.focus = { x: 13, y: 2, z: 2 };
+    engine.tick(0);
+
+    assert.deepEqual(
+      engine.root.children.map((mesh) => mesh.name.split(":")[1]),
+      ["3,0,0", "2,0,0"]
+    );
+  });
+
+  it("builds the whole world from init(), nearest the focus first", () => {
+    const engine = new VoxelEngine({ chunkSize: 4, blocks: [
+      makeBlockDef(kCubeId, "cube", { name: "Cube" })
+    ] });
+    registerTileset(engine);
+    engine.addLayer("Ground");
+    fillChunks(engine, "Ground", 4);
+    engine.focus = { x: 14, y: 2, z: 2 };
+
+    engine.init();
+
+    assert.deepEqual(
+      engine.root.children.map((mesh) => mesh.name.split(":")[1]),
+      ["3,0,0", "2,0,0", "1,0,0", "0,0,0"]
+    );
+    assert.equal(engine.pendingRebuilds, 0);
   });
 
   it("does not rebuild a chunk unloaded while it was queued", () => {

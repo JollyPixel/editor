@@ -140,8 +140,9 @@ integration; then the application owns `init()`, `tick()`, `flush()`, and
 - [`VoxelWorld`](docs/api/world/VoxelWorld.md),
   [`VoxelLayer`](docs/api/world/VoxelLayer.md),
   [`VoxelChunk`](docs/api/world/VoxelChunk.md),
-  [`VoxelStore`](docs/api/world/VoxelStore.md), and
-  [`VoxelTransform`](docs/api/world/VoxelTransform.md).
+  [`VoxelStore`](docs/api/world/VoxelStore.md),
+  [`VoxelTransform`](docs/api/world/VoxelTransform.md), and
+  [`ViewDistance`](docs/api/world/ViewDistance.md).
 
 ### Blocks, tilesets, and rendering API
 

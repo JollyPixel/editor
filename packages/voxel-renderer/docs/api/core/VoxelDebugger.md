@@ -94,6 +94,8 @@ chunk rebuilds, layer removals and `load()` without ever being stale.
 interface VoxelDebugStats {
   /** Chunks the mesh builder processed, including those emitting no face. */
   chunks: number;
+  /** Chunks hidden by the view distance; counted in every total above. */
+  culledChunks: number;
   /** Chunk meshes attached to the scene graph, i.e. one draw call each. */
   meshes: number;
   /** Voxels visited. */

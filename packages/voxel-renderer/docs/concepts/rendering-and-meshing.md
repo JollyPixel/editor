@@ -29,11 +29,30 @@ opacity buckets.
 ## Rebuild scheduling
 
 `tick()` spends at most `rebuildBudgetMs` on dirty chunks during one frame.
-The default is 8 ms. A value of `0` rebuilds the entire queue. `rebuildFocus`
-prioritizes chunks near a camera or other point of interest.
+The default is 8 ms. A value of `0` rebuilds the entire queue. `focus`
+prioritizes chunks near a camera or other point of interest; without it the
+queue follows the order chunks were created in, which usually means the far
+side of the world is meshed first.
 
 `init()` and `load()` rebuild the complete world synchronously. Use `flush()`
 when callers need current meshes before continuing.
+
+## View distance
+
+`viewDistance` bounds the work to a chunk radius around `focus`. It is
+unlimited by default, and the whole mechanism is inert while `focus` is
+`null`.
+
+Chunks outside the radius are never meshed, and stay dirty so they are built
+with all their pending edits the moment they come into range. Built chunks
+that leave the radius are hidden (`viewDistancePolicy: "hide"`, the default)
+or disposed and remeshed on return (`"unload"`). A one-chunk hysteresis keeps
+a chunk on the border from flipping every tick.
+
+Colliders are not affected: a chunk unloaded by the view distance keeps its
+collision, so physics is independent of the camera. Frustum culling still
+applies on top, and it is what removes the chunks behind the camera; view
+distance is about how much is meshed and drawn at all.
 
 ## Greedy meshing
 

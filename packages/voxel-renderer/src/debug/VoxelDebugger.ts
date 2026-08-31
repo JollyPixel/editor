@@ -40,6 +40,7 @@ export interface VoxelDebuggerOptions {
 
 export interface VoxelDebugStats {
   chunks: number;
+  culledChunks: number;
   meshes: number;
   voxels: number;
   hiddenVoxels: number;
@@ -48,13 +49,7 @@ export interface VoxelDebugStats {
   mergedFaces: number;
   vertices: number;
   triangles: number;
-  /**
-   * Faces emitted per voxel that contributed geometry.
-   */
   facesPerSolidVoxel: number;
-  /**
-   * Vertex-weighted attribute bytes per vertex, excluding indices.
-   */
   bytesPerVertex: number;
   buildTimeMs: number;
 }
@@ -63,6 +58,7 @@ interface DebugChunk {
   meshes: readonly THREE.Mesh[];
   stats: MeshBuildStats;
   overlays: THREE.Mesh[];
+  culled: boolean;
 }
 
 /**
@@ -140,6 +136,7 @@ export class VoxelDebugger {
   get stats(): VoxelDebugStats {
     const total: VoxelDebugStats = {
       chunks: 0,
+      culledChunks: 0,
       meshes: 0,
       voxels: 0,
       hiddenVoxels: 0,
@@ -154,8 +151,11 @@ export class VoxelDebugger {
     };
 
     let vertexBytes = 0;
-    for (const { meshes, stats } of this.#chunks.values()) {
+    for (const { meshes, stats, culled } of this.#chunks.values()) {
       total.chunks++;
+      if (culled) {
+        total.culledChunks++;
+      }
       total.meshes += meshes.length;
       total.voxels += stats.voxels;
       total.hiddenVoxels += stats.hiddenVoxels;
@@ -192,9 +192,23 @@ export class VoxelDebugger {
     const chunk: DebugChunk = {
       meshes,
       stats: stats.clone(),
-      overlays: []
+      overlays: [],
+      culled: false
     };
     this.#chunks.set(key, chunk);
+    this.#applyMode(chunk);
+  }
+
+  cullChunk(
+    key: string,
+    culled: boolean
+  ): void {
+    const chunk = this.#chunks.get(key);
+    if (!chunk || chunk.culled === culled) {
+      return;
+    }
+
+    chunk.culled = culled;
     this.#applyMode(chunk);
   }
 
@@ -227,12 +241,12 @@ export class VoxelDebugger {
   #applyMode(
     chunk: DebugChunk
   ): void {
-    const visible = this.#mode !== "wireframe";
+    const visible = !chunk.culled && this.#mode !== "wireframe";
     for (const mesh of chunk.meshes) {
       mesh.visible = visible;
     }
 
-    if (this.#mode === "off") {
+    if (this.#mode === "off" || chunk.culled) {
       this.#clearOverlays(chunk);
 
       return;

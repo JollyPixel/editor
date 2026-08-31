@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import { Camera3DControls } from "@jolly-pixel/engine";
 import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
 import {
   Control,
@@ -17,11 +16,13 @@ import * as THREE from "three/webgpu";
 // Import Internal Dependencies
 import {
   loadTilesets,
+  ViewDistance,
   VoxelRenderer,
   type VoxelDebugMode,
   type VoxelEngine
 } from "../../src/index.ts";
 import { RendererStats } from "./components/RendererStats.ts";
+import { FreeFlyCamera } from "./components/FreeFlyCamera.ts";
 import {
   TerrainBlock,
   generateTerrain,
@@ -36,7 +37,7 @@ import {
 const kTerrainLayer = "Terrain";
 const kWaterLayer = "Water";
 const kSkyColor = "#8ec5e8";
-const kCameraSpeed = 60;
+const kCameraSpeed = 120;
 
 const kSizeBounds = {
   default: 256,
@@ -53,6 +54,8 @@ const kSeedBounds = {
   min: 0,
   max: 0x7FFFFFFF
 };
+// Chunk radius the "view" folder can dial in; 0 means unlimited.
+const kMaxViewDistance = 24;
 
 interface WorldSettings {
   /** World width and depth in voxels. */
@@ -89,7 +92,8 @@ const { world } = runtime;
 const scene = world.sceneManager.getSource();
 scene.background = new THREE.Color(kSkyColor);
 // Fog hides the world border and keeps distant chunks cheap to look at.
-scene.fog = new THREE.Fog(kSkyColor, settings.size * 0.5, settings.size * 1.7);
+const fog = new THREE.Fog(kSkyColor, settings.size * 0.5, settings.size * 1.7);
+scene.fog = fog;
 
 const sun = new THREE.DirectionalLight(new THREE.Color("#fff6e0"), 2.2);
 sun.position.set(settings.size, settings.size * 1.5, settings.size * 0.5);
@@ -98,19 +102,24 @@ scene.add(
   sun
 );
 
-world.createActor("camera")
-  .addComponent(Camera3DControls, {
-    speed: kCameraSpeed,
-    far: settings.size * 4
-  }, (component) => {
-    const center = settings.size / 2;
-    component.actor.transform
-      .setLocalPosition({ x: center, y: 70, z: center + (settings.size * 0.7) })
-      .lookAt({ x: center, y: 10, z: center });
+const center = settings.size / 2;
+const cameraDistance = settings.size * 0.7;
+const cameraActor = world.createActor("camera")
+  .addComponent(FreeFlyCamera, {
+    position: { x: center, y: 70, z: center + cameraDistance },
+    // Faces -Z, tilted down onto the middle of the terrain.
+    yaw: 0,
+    pitch: Math.atan2(10 - 70, cameraDistance),
+    far: settings.size * 4,
+    moveSpeed: kCameraSpeed,
+    maxMoveSpeed: kCameraSpeed * 12
   });
 
 const voxelMap = world.createActor("map")
   .addComponentAndGet(VoxelRenderer, {
+    // Terrain is generated from the origin outwards, so without a focus the
+    // chunks under the camera would be the last ones meshed.
+    focus: cameraActor.object3D,
     greedy: true,
     chunkSize: settings.chunkSize,
     layers: [kTerrainLayer, kWaterLayer],
@@ -141,7 +150,13 @@ const meshStats = {
   merged: 0,
   triangles: 0,
   vertices: 0,
-  meshes: ""
+  meshes: "",
+  drawn: ""
+};
+const view = {
+  /** Radius in chunks; 0 stands for the unlimited default. */
+  distance: 0,
+  policy: engine.viewDistancePolicy
 };
 // Mirrors the engine so the keyboard shortcuts and the pane never disagree.
 const controls = {
@@ -171,8 +186,28 @@ meshFolder.addMonitors(meshStats, {
   // chunk, not just what survived frustum culling this frame.
   triangles: { label: "mesh tris", format: formatCount },
   vertices: { label: "mesh verts", format: formatCount },
-  meshes: { label: "meshes" }
+  meshes: { label: "meshes" },
+  drawn: { label: "drawn chunks" }
 });
+
+const viewFolder = pane.addFolder({ title: "View" });
+viewFolder
+  .addBinding(view, "distance", {
+    label: "distance",
+    min: 0,
+    max: kMaxViewDistance,
+    step: 1
+  })
+  .on("change", () => applyViewDistance());
+viewFolder
+  .addBinding(view, "policy", {
+    label: "policy",
+    options: {
+      hide: "hide",
+      unload: "unload"
+    }
+  })
+  .on("change", () => applyViewDistance());
 
 const controlsFolder = pane.addFolder({ title: "Controls" });
 // A plain number field: the seed range is far too wide for a slider.
@@ -205,7 +240,9 @@ world.createActor("hud")
     onRefresh: syncStats
   });
 
-await loadRuntime(runtime);
+await loadRuntime(runtime, {
+  skipLoadingScreen: true
+});
 
 report = buildWorld(engine, settings);
 syncStats();
@@ -287,6 +324,33 @@ function setDebugMode(
 }
 
 /**
+ * A radius of 0 restores the unlimited default. The fog follows the radius so
+ * chunks fade out instead of popping at the border.
+ */
+function applyViewDistance(): void {
+  const { distance, policy } = view;
+
+  engine.viewDistance = distance === 0 ?
+    ViewDistance.Unlimited :
+    new ViewDistance({ chunks: distance });
+  engine.viewDistancePolicy = policy;
+
+  if (distance === 0) {
+    fog.near = settings.size * 0.5;
+    fog.far = settings.size * 1.7;
+  }
+  else {
+    // Ends on the hysteresis border, so a chunk is fully fogged out by the
+    // time it is dropped.
+    fog.far = (distance + 1) * settings.chunkSize;
+    fog.near = fog.far * 0.55;
+  }
+
+  console.log(`[noise-world] view distance: ${distance || "unlimited"} (${policy})`);
+  syncStats();
+}
+
+/**
  * Copies the latest build report and mesh counters into the bound state, then
  * repaints both folders.
  */
@@ -305,7 +369,8 @@ function syncStats(): void {
   }
 
   const {
-    faces, culledFaces, mergedFaces, triangles, vertices, meshes, chunks
+    faces, culledFaces, mergedFaces, triangles, vertices, meshes, chunks,
+    culledChunks
   } = engine.debug.stats;
   const candidates = faces + culledFaces;
   const emitted = faces + mergedFaces;
@@ -316,9 +381,11 @@ function syncStats(): void {
   meshStats.triangles = triangles;
   meshStats.vertices = vertices;
   meshStats.meshes = `${formatCount(meshes)} / ${formatCount(chunks)}`;
+  meshStats.drawn = `${formatCount(chunks - culledChunks)} / ${formatCount(chunks)}`;
 
   worldFolder.refresh();
   meshFolder.refresh();
+  viewFolder.refresh();
 }
 
 /**
