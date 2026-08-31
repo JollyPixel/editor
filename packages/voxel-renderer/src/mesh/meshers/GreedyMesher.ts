@@ -274,7 +274,8 @@ export class GreedyMesher implements Mesher {
           wx + offset[0],
           wy + offset[1],
           wz + offset[2],
-          FACE_OPPOSITE[cull]
+          FACE_OPPOSITE[cull],
+          variant.blockId
         );
         if (hidden) {
           stats.culledFaces++;
@@ -409,7 +410,8 @@ export class GreedyMesher implements Mesher {
               this.#originX + lx + offset[0],
               this.#originY + ly + offset[1],
               this.#originZ + lz + offset[2],
-              opposite
+              opposite,
+              this.#localVariants[cell - 1].blockId
             )
           ) {
             stats.culledFaces++;

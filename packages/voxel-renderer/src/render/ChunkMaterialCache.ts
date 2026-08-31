@@ -100,13 +100,11 @@ export class ChunkMaterialCache {
 
     const options = {
       map: texture,
-      side: transparent || cutout
-        ? THREE.DoubleSide
-        : THREE.FrontSide,
+      side: cutout ? THREE.DoubleSide : THREE.FrontSide,
       alphaTest: this.#alphaTest,
       opacity: bucket / kOpacitySteps,
       transparent,
-      depthWrite: !transparent
+      depthWrite: true
     };
 
     const material = this.#type === "standard" ?

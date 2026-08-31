@@ -43,9 +43,21 @@ export interface BlockVariantFace {
 }
 
 export interface BlockVariant {
+  /** Block this variant was compiled from, for same-block face culling. */
+  blockId: number;
   faces: readonly BlockVariantFace[];
-  /** Bit `f` is set when this variant fully covers world-space face `f`. */
+  /**
+   * Bit `f` is set when this variant fully covers world-space face `f`,
+   * and always 0 for a cutout block: alpha holes mean it may never hide the
+   * face of a different block.
+   */
   occlusionMask: number;
+  /**
+   * What `occlusionMask` would be without the cutout rule, consulted only
+   * against a neighbour holding the same block. Two adjacent leaves drop
+   * their shared face; leaves still hide nothing of the stone beside them.
+   */
+  selfOcclusionMask: number;
   /**
    * Mergeable full-quad face for each world-space direction.
    */

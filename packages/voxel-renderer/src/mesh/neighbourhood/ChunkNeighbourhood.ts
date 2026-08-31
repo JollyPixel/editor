@@ -6,7 +6,8 @@ import { LayerChunkCache } from "./LayerChunkCache.ts";
 import {
   voxelBlockId,
   voxelTransform,
-  VOXEL_ABSENT
+  VOXEL_ABSENT,
+  type PackedVoxel
 } from "../../world/packedVoxel.ts";
 
 export interface ChunkNeighbourhoodOptions {
@@ -27,6 +28,8 @@ export class ChunkNeighbourhood {
 
   #variants: BlockVariantCache;
   #layerCount: number;
+  #selfOpaque: boolean;
+  #self: LayerChunkCache | null;
 
   constructor(
     options: ChunkNeighbourhoodOptions
@@ -55,11 +58,10 @@ export class ChunkNeighbourhood {
 
     this.#variants = variants;
     this.#layerCount = layers.length;
+    this.#selfOpaque = layer.opacity >= 1;
+    this.#self = layers[this.selfIndex] ?? null;
   }
 
-  /**
-   * True when no higher-priority layer covers the position.
-   */
   winsCompositing(
     wx: number,
     wy: number,
@@ -73,6 +75,10 @@ export class ChunkNeighbourhood {
         return true;
       }
 
+      if (!layers[i].opaque) {
+        continue;
+      }
+
       if (layers[i].packedAt(wx, wy, wz) !== VOXEL_ABSENT) {
         return false;
       }
@@ -81,35 +87,52 @@ export class ChunkNeighbourhood {
     return false;
   }
 
-  /**
-   * True when an opaque neighbour occludes `oppFace`.
-   */
   isNeighbourFaceHidden(
     nx: number,
     ny: number,
     nz: number,
-    oppFace: number
+    oppFace: number,
+    blockId: number
   ): boolean {
+    if (!this.#selfOpaque) {
+      const cache = this.#self;
+
+      return cache !== null &&
+        this.#occludes(cache.packedAt(nx, ny, nz), oppFace, blockId);
+    }
+
     const layers = this.layers;
 
     for (let i = 0; i < this.#layerCount; i++) {
       const cache = layers[i];
-      const neighbour = cache.packedAt(nx, ny, nz);
-      if (neighbour === VOXEL_ABSENT) {
+      if (!cache.opaque) {
         continue;
       }
-      if (!cache.opaque) {
-        return false;
+
+      const neighbour = cache.packedAt(nx, ny, nz);
+      if (neighbour !== VOXEL_ABSENT) {
+        return this.#occludes(neighbour, oppFace, blockId);
       }
-
-      const occlusionMask = this.#variants.occlusionMaskOf(
-        voxelBlockId(neighbour),
-        voxelTransform(neighbour)
-      );
-
-      return (occlusionMask & (1 << oppFace)) !== 0;
     }
 
     return false;
+  }
+
+  #occludes(
+    neighbour: PackedVoxel,
+    oppFace: number,
+    blockId: number
+  ): boolean {
+    if (neighbour === VOXEL_ABSENT) {
+      return false;
+    }
+
+    const neighbourBlockId = voxelBlockId(neighbour);
+    const transform = voxelTransform(neighbour);
+    const occlusionMask = neighbourBlockId === blockId ?
+      this.#variants.selfOcclusionMaskOf(neighbourBlockId, transform) :
+      this.#variants.occlusionMaskOf(neighbourBlockId, transform);
+
+    return (occlusionMask & (1 << oppFace)) !== 0;
   }
 }

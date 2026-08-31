@@ -41,6 +41,54 @@ function makeCache() {
   return { cache, blockRegistry };
 }
 
+describe("BlockVariantCache — selfOcclusionMaskOf", () => {
+  it("matches occlusionMaskOf for an opaque block", () => {
+    const { cache } = makeCache();
+
+    for (const blockId of [kCubeId, kRampId, kSlabId]) {
+      for (let transform = 0; transform < 32; transform++) {
+        assert.equal(
+          cache.selfOcclusionMaskOf(blockId, transform),
+          cache.occlusionMaskOf(blockId, transform),
+          `block ${blockId}, transform ${transform}`
+        );
+      }
+    }
+  });
+
+  it("keeps what a transparent block covers, which occlusionMaskOf drops", () => {
+    const { cache, blockRegistry } = makeCache();
+
+    blockRegistry.register(
+      makeBlockDef(kLeavesId, "cube", { name: "Leaves", transparent: true })
+    );
+    cache.refresh();
+
+    assert.equal(cache.occlusionMaskOf(kLeavesId, 0), 0);
+    assert.equal(cache.selfOcclusionMaskOf(kLeavesId, 0), 0b111111);
+  });
+
+  it("reports only the faces a transparent non-cube shape covers", () => {
+    const { cache, blockRegistry } = makeCache();
+
+    blockRegistry.register(
+      makeBlockDef(kLeavesId, "slab", { name: "Hedge", transparent: true })
+    );
+    cache.refresh();
+
+    assert.equal(
+      cache.selfOcclusionMaskOf(kLeavesId, 0),
+      cache.occlusionMaskOf(kSlabId, 0)
+    );
+  });
+
+  it("returns 0 for an unknown block", () => {
+    const { cache } = makeCache();
+
+    assert.equal(cache.selfOcclusionMaskOf(999, 0), 0);
+  });
+});
+
 describe("BlockVariantCache — occlusionMaskOf", () => {
   it("agrees with the compiled variant for every block and transform", () => {
     const { cache } = makeCache();

@@ -18,8 +18,11 @@ interface BlockDefinition {
 
 Missing `faceTextures` entries use `defaultTexture`. `collidable` defaults to
 `true`, and `transparent` defaults to `false`. A transparent block does not hide
-a neighbouring face. `defaultTilesetId` fills tile references that omit a
-tileset and is removed from the resolved definition.
+the face of a neighbouring block, because its alpha holes may reveal it. It
+does hide the face it shares with a neighbour holding that same block: both
+copies of that face sit on one plane, so drawing them z-fights. Two different
+transparent blocks keep their shared faces. `defaultTilesetId` fills tile
+references that omit a tileset and is removed from the resolved definition.
 
 ```ts
 registry.register({

@@ -93,8 +93,9 @@ export interface VoxelLayerConfigurableOptions {
   visible?: boolean;
   /**
    * Rendered translucency, from `0` (fully transparent) to `1` (fully opaque).
-   * Values are clamped to `[0, 1]`. A layer with `opacity < 1` no longer
-   * occludes neighbouring faces during mesh building (like glass).
+   * Values are clamped to `[0, 1]`. A layer with `opacity < 1` is occluded
+   * only by its own voxels (like glass): nothing in another layer culls its
+   * faces, and it hides neither neighbouring faces nor the voxels it covers.
    * @default 1
    */
   opacity?: number;

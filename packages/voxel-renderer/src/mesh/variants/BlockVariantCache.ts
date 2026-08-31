@@ -44,6 +44,8 @@ const kOcclusionUnknown = -1;
  * Caps the flat occlusion table at 64k slots; higher IDs use the map.
  */
 const kOcclusionMaxSlots = 1 << 16;
+const kOcclusionFaceMask = 0b111111;
+const kSelfOcclusionShift = 6;
 
 export interface BlockVariantCacheOptions {
   blockRegistry: BlockRegistry;
@@ -126,6 +128,21 @@ export class BlockVariantCache {
     blockId: number,
     transform: number
   ): number {
+    return this.#occlusionEntry(blockId, transform) & kOcclusionFaceMask;
+  }
+
+  selfOcclusionMaskOf(
+    blockId: number,
+    transform: number
+  ): number {
+    return (this.#occlusionEntry(blockId, transform) >> kSelfOcclusionShift) &
+      kOcclusionFaceMask;
+  }
+
+  #occlusionEntry(
+    blockId: number,
+    transform: number
+  ): number {
     const key = (blockId * kTransformCount) + (transform & VOXEL_TRANSFORM_MASK);
     // Unsigned so a negative key (never produced by a packed voxel, but cheap
     // to rule out) misses the table instead of reading `undefined`.
@@ -145,7 +162,10 @@ export class BlockVariantCache {
     transform: number
   ): number {
     const variant = this.get(blockId, transform);
-    const mask = variant === null ? 0 : variant.occlusionMask;
+    const mask = variant === null ?
+      0 :
+      variant.occlusionMask |
+      (variant.selfOcclusionMask << kSelfOcclusionShift);
 
     if (key >= 0 && key < kOcclusionMaxSlots) {
       if (key >= this.#occlusion.length) {
@@ -284,9 +304,13 @@ export class BlockVariantCache {
       });
     }
 
+    const selfOcclusionMask = this.#occlusionMask(shape, rotation, flipY);
+
     return {
+      blockId,
       faces,
-      occlusionMask: cutout ? 0 : this.#occlusionMask(shape, rotation, flipY),
+      occlusionMask: cutout ? 0 : selfOcclusionMask,
+      selfOcclusionMask,
       mergeFaces: indexMergeFaces(faces),
       sweepIndex: 0,
       // No mesher epoch is ever negative, so a freshly compiled variant always

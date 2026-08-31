@@ -53,12 +53,14 @@ describe("ChunkMaterialCache — resolve", () => {
     assert.equal(material.opacity, 1);
   });
 
-  it("blends a translucent layer from both sides", () => {
+  it("blends a translucent layer front-side only, still writing depth", () => {
     const material = makeCache().resolve("atlas", 0.5);
 
     assert.equal(material.transparent, true);
-    assert.equal(material.depthWrite, false);
-    assert.equal(material.side, THREE.DoubleSide);
+    // Chunk quads are drawn in buffer order, so without depth a far face
+    // paints over a near one.
+    assert.equal(material.depthWrite, true);
+    assert.equal(material.side, THREE.FrontSide);
     assert.equal(material.opacity, 0.5);
   });
 

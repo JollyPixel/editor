@@ -79,7 +79,8 @@ export class NaiveMesher implements Mesher {
             wx + offset[0],
             wy + offset[1],
             wz + offset[2],
-            FACE_OPPOSITE[cull]
+            FACE_OPPOSITE[cull],
+            variant.blockId
           );
           if (hidden) {
             stats.culledFaces++;

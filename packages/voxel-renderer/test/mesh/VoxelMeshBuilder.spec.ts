@@ -13,6 +13,7 @@ import { TilesetManager } from "../../src/tileset/TilesetManager.ts";
 import { VoxelMeshBuilder } from "../../src/mesh/index.ts";
 import { VoxelTransform } from "../../src/world/VoxelTransform.ts";
 import type { VoxelChunk } from "../../src/world/VoxelChunk.ts";
+import type { VoxelLayer } from "../../src/world/VoxelLayer.ts";
 import { mockTexture } from "../helpers/mockTexture.ts";
 import { DEFAULT_TEXTURE, makeBlockDef } from "../helpers/blocks.ts";
 import { makeAtlasDef } from "../helpers/atlas.ts";
@@ -22,6 +23,7 @@ const kCubeId = 1;
 const kRampId = 2;
 const kStairId = 3;
 const kLeavesId = 4;
+const kGrateId = 5;
 
 /**
  * Builds a fully functional (non-rendering) fixture: world (chunkSize=4),
@@ -53,7 +55,15 @@ function makeFixture() {
  * all tileset geometries.  Each quad contributes 4 vertices; each triangle 3.
  */
 function countVertices(fixture: ReturnType<typeof makeFixture>): number {
-  const { layer, builder } = fixture;
+  return countLayerVertices(fixture, fixture.layer);
+}
+
+/** Same as `countVertices`, for a layer other than the fixture's default one. */
+function countLayerVertices(
+  fixture: ReturnType<typeof makeFixture>,
+  layer: VoxelLayer
+): number {
+  const { builder } = fixture;
   const chunk = layer.getChunk(0, 0, 0);
   if (!chunk) {
     return 0;
@@ -152,9 +162,57 @@ describe("VoxelMeshBuilder — opacity affects occlusion", () => {
     // PosX face of the "test" cube is hidden by the opaque neighbour: 5 faces = 20 verts.
     assert.equal(countVertices(f), 20);
   });
+
+  it("a translucent layer keeps every face, even against an opaque neighbour", () => {
+    const f = makeFixture();
+    const glass = f.world.addLayer("glass", { opacity: 0.5 });
+    glass.setVoxelAt({ x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    f.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+
+    // Culling a face you can see through leaves a hole into geometry that was never emitted.
+    assert.equal(countLayerVertices(f, glass), 24);
+  });
+
+  it("a translucent layer still occludes itself", () => {
+    const f = makeFixture();
+    f.layer.opacity = 0.5;
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    f.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+
+    // 12 faces minus the 2 the cubes share: keeping them stacks coincident
+    // blended quads, which reads as a checkerboard through the volume.
+    assert.equal(countVertices(f), 40);
+  });
+
+  it("an opaque neighbour occludes through a translucent voxel sharing its cell", () => {
+    const f = makeFixture();
+    f.world.addLayer("glass", { opacity: 0.5 }).setVoxelAt(
+      { x: 1, y: 0, z: 0 },
+      { blockId: kCubeId, transform: 0 }
+    );
+    f.world.addLayer("stone").setVoxelAt(
+      { x: 1, y: 0, z: 0 },
+      { blockId: kCubeId, transform: 0 }
+    );
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+
+    // The translucent layer is skipped rather than ending the search, so the
+    // opaque layer under it still hides the PosX face: 5 faces = 20 verts.
+    assert.equal(countVertices(f), 20);
+  });
+
+  it("a translucent layer does not suppress a lower-priority voxel it covers", () => {
+    const f = makeFixture();
+    const glass = f.world.addLayer("glass", { opacity: 0.5 });
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    glass.setVoxelAt({ x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+
+    assert.equal(countLayerVertices(f, glass), 24);
+    assert.equal(countVertices(f), 24);
+  });
 });
 
-describe("VoxelMeshBuilder — transparent blocks never occlude", () => {
+describe("VoxelMeshBuilder — transparent blocks occlude only themselves", () => {
   /**
    * A cutout tile (leaves, a grate, a window) is opaque as far as the mesher
    * can tell, so without the flag its neighbours are culled and the holes look
@@ -188,12 +246,25 @@ describe("VoxelMeshBuilder — transparent blocks never occlude", () => {
     assert.equal(countVertices(f), 40);
   });
 
-  it("keeps every face between two transparent neighbours", () => {
+  it("culls the face two neighbours of the same transparent block share", () => {
     const f = withLeaves(true);
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
     f.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
 
-    // The canopy case: 6 faces each, nothing culled.
+    // The canopy case: emitting both would put two coplanar quads on the
+    // shared plane, which z-fight. 5 faces each.
+    assert.equal(countVertices(f), 40);
+  });
+
+  it("keeps the shared face between two different transparent blocks", () => {
+    const f = withLeaves(true);
+    f.blockRegistry.register(
+      makeBlockDef(kGrateId, "cube", { name: "Grate", transparent: true })
+    );
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
+    f.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kGrateId, transform: 0 });
+
+    // Their holes do not line up, so each still shows through the other.
     assert.equal(countVertices(f), 48);
   });
 
