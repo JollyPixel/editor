@@ -40,7 +40,7 @@ describe("VoxelEngine — construction", () => {
   it("creates layers passed via options", () => {
     const engine = new VoxelEngine({ layers: ["Ground"] });
 
-    assert.ok(engine.getLayer("Ground"));
+    assert.ok(engine.world.getLayer("Ground"));
   });
 
   it("has an empty root Object3D group with no meshes until tick/init", () => {
@@ -55,7 +55,7 @@ describe("VoxelEngine — hook emission", () => {
     const events: VoxelLayerHookEvent[] = [];
     const engine = makeEngine((e) => events.push(e));
 
-    engine.addLayer("Ground");
+    engine.world.addLayer("Ground");
 
     assert.equal(events.length, 1);
     assert.equal(events[0].action, "added");
@@ -65,9 +65,9 @@ describe("VoxelEngine — hook emission", () => {
   it("emits a 'voxel-set' event when a voxel is placed", () => {
     const events: VoxelLayerHookEvent[] = [];
     const engine = makeEngine((e) => events.push(e));
-    engine.addLayer("Ground");
+    engine.world.addLayer("Ground");
 
-    engine.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
+    engine.world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
 
     const last = events.at(-1)!;
     assert.equal(last.action, "voxel-set");
@@ -77,10 +77,10 @@ describe("VoxelEngine — hook emission", () => {
   it("emits a 'voxel-removed' event when a voxel is removed", () => {
     const events: VoxelLayerHookEvent[] = [];
     const engine = makeEngine((e) => events.push(e));
-    engine.addLayer("Ground");
-    engine.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
+    engine.world.addLayer("Ground");
+    engine.world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
 
-    engine.removeVoxel("Ground", { position: { x: 0, y: 0, z: 0 } });
+    engine.world.removeVoxel("Ground", { position: { x: 0, y: 0, z: 0 } });
 
     const last = events.at(-1)!;
     assert.equal(last.action, "voxel-removed");
@@ -89,22 +89,33 @@ describe("VoxelEngine — hook emission", () => {
   it("emits a 'reordered' event when a layer is moved", () => {
     const events: VoxelLayerHookEvent[] = [];
     const engine = makeEngine((e) => events.push(e));
-    engine.addLayer("A");
-    engine.addLayer("B");
+    engine.world.addLayer("A");
+    engine.world.addLayer("B");
 
-    engine.moveLayer("A", "up");
+    engine.world.moveLayer("B", "up");
 
     const last = events.at(-1)!;
     assert.equal(last.action, "reordered");
-    assert.equal(last.layerName, "A");
+    assert.equal(last.layerName, "B");
+  });
+
+  it("emits nothing when a layer is already at the end of the order", () => {
+    const events: VoxelLayerHookEvent[] = [];
+    const engine = makeEngine((e) => events.push(e));
+    engine.world.addLayer("A");
+    engine.world.addLayer("B");
+
+    engine.world.moveLayer("A", "up");
+
+    assert.equal(events.at(-1)!.action, "added");
   });
 
   it("emits an 'object-added' event when an object is added to an object layer", () => {
     const events: VoxelLayerHookEvent[] = [];
     const engine = makeEngine((e) => events.push(e));
-    engine.addObjectLayer("Objects");
+    engine.world.addObjectLayer("Objects");
 
-    engine.addObject("Objects", { id: "o1", name: "Thing", x: 0, y: 0, z: 0, visible: true });
+    engine.world.addObjectToLayer("Objects", { id: "o1", name: "Thing", x: 0, y: 0, z: 0, visible: true });
 
     const last = events.at(-1)!;
     assert.equal(last.action, "object-added");
@@ -115,38 +126,38 @@ describe("VoxelEngine — hook emission", () => {
 describe("VoxelEngine — layer/voxel mutation delegation", () => {
   it("setVoxel/getVoxel round-trip through world", () => {
     const engine = makeEngine();
-    engine.addLayer("Ground");
+    engine.world.addLayer("Ground");
 
-    engine.setVoxel("Ground", { position: { x: 1, y: 2, z: 3 }, blockId: kCubeId });
+    engine.world.setVoxel("Ground", { position: { x: 1, y: 2, z: 3 }, blockId: kCubeId });
 
-    const entry = engine.getVoxel("Ground", { x: 1, y: 2, z: 3 });
+    const entry = engine.world.getLayer("Ground")!.getVoxelAt({ x: 1, y: 2, z: 3 });
     assert.equal(entry?.blockId, kCubeId);
   });
 
   it("setVoxelBulk places every entry and fires a single 'voxels-set' event", () => {
     const events: VoxelLayerHookEvent[] = [];
     const engine = makeEngine((e) => events.push(e));
-    engine.addLayer("Ground");
+    engine.world.addLayer("Ground");
 
-    engine.setVoxelBulk("Ground", [
+    engine.world.setVoxelBulk("Ground", [
       { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId },
       { position: { x: 1, y: 0, z: 0 }, blockId: kCubeId }
     ]);
 
-    assert.equal(engine.getVoxel("Ground", { x: 0, y: 0, z: 0 })?.blockId, kCubeId);
-    assert.equal(engine.getVoxel("Ground", { x: 1, y: 0, z: 0 })?.blockId, kCubeId);
+    assert.equal(engine.world.getLayer("Ground")!.getVoxelAt({ x: 0, y: 0, z: 0 })?.blockId, kCubeId);
+    assert.equal(engine.world.getLayer("Ground")!.getVoxelAt({ x: 1, y: 0, z: 0 })?.blockId, kCubeId);
     const last = events.at(-1)!;
     assert.equal(last.action, "voxels-set");
   });
 
   it("removeLayer removes it from the world", () => {
     const engine = makeEngine();
-    engine.addLayer("Ground");
+    engine.world.addLayer("Ground");
 
-    const result = engine.removeLayer("Ground");
+    const result = engine.world.removeLayer("Ground");
 
     assert.equal(result, true);
-    assert.equal(engine.getLayer("Ground"), undefined);
+    assert.equal(engine.world.getLayer("Ground"), undefined);
   });
 });
 
@@ -154,7 +165,7 @@ describe("VoxelEngine — applyRemoteCommand echo-suppression", () => {
   it("applies a voxel-set command to the world without re-emitting the hook", () => {
     const events: VoxelLayerHookEvent[] = [];
     const engine = makeEngine((e) => events.push(e));
-    engine.addLayer("Ground");
+    engine.world.addLayer("Ground");
     events.length = 0;
 
     engine.applyRemoteCommand({
@@ -170,7 +181,7 @@ describe("VoxelEngine — applyRemoteCommand echo-suppression", () => {
       }
     });
 
-    assert.equal(engine.getVoxel("Ground", { x: 5, y: 0, z: 5 })?.blockId, kCubeId);
+    assert.equal(engine.world.getLayer("Ground")!.getVoxelAt({ x: 5, y: 0, z: 5 })?.blockId, kCubeId);
     assert.equal(events.length, 0);
   });
 
@@ -184,15 +195,15 @@ describe("VoxelEngine — applyRemoteCommand echo-suppression", () => {
       metadata: { options: {} }
     });
 
-    assert.ok(engine.getLayer("Remote"));
+    assert.ok(engine.world.getLayer("Remote"));
     assert.equal(events.length, 0);
   });
 
   it("applies a 'reordered' command without re-emitting the hook", () => {
     const events: VoxelLayerHookEvent[] = [];
     const engine = makeEngine((e) => events.push(e));
-    engine.addLayer("A");
-    engine.addLayer("B");
+    engine.world.addLayer("A");
+    engine.world.addLayer("B");
     events.length = 0;
 
     engine.applyRemoteCommand({
@@ -207,7 +218,7 @@ describe("VoxelEngine — applyRemoteCommand echo-suppression", () => {
   it("still applies local mutations normally after a remote command", () => {
     const events: VoxelLayerHookEvent[] = [];
     const engine = makeEngine((e) => events.push(e));
-    engine.addLayer("Ground");
+    engine.world.addLayer("Ground");
     events.length = 0;
 
     engine.applyRemoteCommand({
@@ -224,7 +235,7 @@ describe("VoxelEngine — applyRemoteCommand echo-suppression", () => {
     });
     assert.equal(events.length, 0);
 
-    engine.setVoxel("Ground", { position: { x: 1, y: 0, z: 0 }, blockId: kCubeId });
+    engine.world.setVoxel("Ground", { position: { x: 1, y: 0, z: 0 }, blockId: kCubeId });
     assert.equal(events.length, 1);
     assert.equal(events[0].action, "voxel-set");
   });
@@ -234,8 +245,8 @@ describe("VoxelEngine — chunk rebuild orchestration", () => {
   it("tick() builds a mesh for a dirty chunk and adds it to root", () => {
     const engine = makeEngine();
     registerTileset(engine);
-    engine.addLayer("Ground");
-    engine.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
+    engine.world.addLayer("Ground");
+    engine.world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
 
     engine.tick(0);
 
@@ -245,8 +256,8 @@ describe("VoxelEngine — chunk rebuild orchestration", () => {
   it("tick() does not rebuild a chunk that isn't dirty", () => {
     const engine = makeEngine();
     registerTileset(engine);
-    engine.addLayer("Ground");
-    engine.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
+    engine.world.addLayer("Ground");
+    engine.world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
     engine.tick(0);
     const meshCountAfterFirstTick = engine.root.children.length;
 
@@ -258,8 +269,8 @@ describe("VoxelEngine — chunk rebuild orchestration", () => {
   it("init() rebuilds meshes for voxels already present before initialization (e.g. after deserialize)", () => {
     const engine = makeEngine();
     registerTileset(engine);
-    engine.addLayer("Ground");
-    engine.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
+    engine.world.addLayer("Ground");
+    engine.world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
 
     engine.init();
 
@@ -269,8 +280,8 @@ describe("VoxelEngine — chunk rebuild orchestration", () => {
   it("dispose() removes all chunk meshes from root", () => {
     const engine = makeEngine();
     registerTileset(engine);
-    engine.addLayer("Ground");
-    engine.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
+    engine.world.addLayer("Ground");
+    engine.world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
     engine.tick(0);
     assert.equal(engine.root.children.length, 1);
 
@@ -290,7 +301,7 @@ function fillChunks(
   count: number
 ): void {
   for (let i = 0; i < count; i++) {
-    engine.setVoxel(layerName, { position: { x: i * 4, y: 0, z: 0 }, blockId: kCubeId });
+    engine.world.setVoxel(layerName, { position: { x: i * 4, y: 0, z: 0 }, blockId: kCubeId });
   }
 }
 
@@ -300,7 +311,7 @@ describe("VoxelEngine — budgeted rebuild queue", () => {
       makeBlockDef(kCubeId, "cube", { name: "Cube" })
     ] });
     registerTileset(engine);
-    engine.addLayer("Ground");
+    engine.world.addLayer("Ground");
     fillChunks(engine, "Ground", 6);
 
     engine.tick(0);
@@ -317,7 +328,7 @@ describe("VoxelEngine — budgeted rebuild queue", () => {
       makeBlockDef(kCubeId, "cube", { name: "Cube" })
     ] });
     registerTileset(engine);
-    engine.addLayer("Ground");
+    engine.world.addLayer("Ground");
     fillChunks(engine, "Ground", 6);
 
     engine.tick(0);
@@ -331,7 +342,7 @@ describe("VoxelEngine — budgeted rebuild queue", () => {
       makeBlockDef(kCubeId, "cube", { name: "Cube" })
     ] });
     registerTileset(engine);
-    engine.addLayer("Ground");
+    engine.world.addLayer("Ground");
     fillChunks(engine, "Ground", 4);
 
     for (let i = 0; i < 4; i++) {
@@ -347,7 +358,7 @@ describe("VoxelEngine — budgeted rebuild queue", () => {
       makeBlockDef(kCubeId, "cube", { name: "Cube" })
     ] });
     registerTileset(engine);
-    engine.addLayer("Ground");
+    engine.world.addLayer("Ground");
     fillChunks(engine, "Ground", 6);
 
     engine.flush();
@@ -359,25 +370,25 @@ describe("VoxelEngine — budgeted rebuild queue", () => {
   it("keeps an edit that lands after the flag is cleared", () => {
     const engine = makeEngine();
     registerTileset(engine);
-    engine.addLayer("Ground");
-    engine.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
+    engine.world.addLayer("Ground");
+    engine.world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
     engine.tick(0);
 
     // The chunk was meshed, so a further edit must dirty it again rather than
     // being swallowed by the clear that ran before the mesh.
-    engine.setVoxel("Ground", { position: { x: 1, y: 0, z: 0 }, blockId: kCubeId });
+    engine.world.setVoxel("Ground", { position: { x: 1, y: 0, z: 0 }, blockId: kCubeId });
 
-    assert.equal(engine.getLayer("Ground")!.getChunk(0, 0, 0)!.dirty, true);
+    assert.equal(engine.world.getLayer("Ground")!.getChunk(0, 0, 0)!.dirty, true);
   });
 
-  it("rebuilds chunks nearest rebuildFocus first", () => {
+  it("rebuilds chunks nearest the focus first", () => {
     const engine = new VoxelEngine({ chunkSize: 4, rebuildBudgetMs: Number.MIN_VALUE, blocks: [
       makeBlockDef(kCubeId, "cube", { name: "Cube" })
     ] });
     registerTileset(engine);
-    engine.addLayer("Ground");
+    engine.world.addLayer("Ground");
     fillChunks(engine, "Ground", 4);
-    engine.rebuildFocus = { x: 14, y: 2, z: 2 };
+    engine.focus = { x: 14, y: 2, z: 2 };
 
     engine.tick(0);
 
@@ -385,19 +396,98 @@ describe("VoxelEngine — budgeted rebuild queue", () => {
     assert.match(engine.root.children[0].name, /:3,0,0:/);
   });
 
+  it("keeps rebuilding away from the focus over several ticks", () => {
+    const engine = new VoxelEngine({ chunkSize: 4, rebuildBudgetMs: Number.MIN_VALUE, blocks: [
+      makeBlockDef(kCubeId, "cube", { name: "Cube" })
+    ] });
+    registerTileset(engine);
+    engine.world.addLayer("Ground");
+    // Chunks are created from the origin outwards, so the focus at the far
+    // end must reverse the order they were enqueued in.
+    fillChunks(engine, "Ground", 4);
+    engine.focus = { x: 14, y: 2, z: 2 };
+
+    for (let tick = 0; tick < 4; tick++) {
+      engine.tick(0);
+    }
+
+    assert.deepEqual(
+      engine.root.children.map((mesh) => mesh.name.split(":")[1]),
+      ["3,0,0", "2,0,0", "1,0,0", "0,0,0"]
+    );
+  });
+
+  it("reorders the queue when the focus moves without new dirty chunks", () => {
+    const engine = new VoxelEngine({ chunkSize: 4, rebuildBudgetMs: Number.MIN_VALUE, blocks: [
+      makeBlockDef(kCubeId, "cube", { name: "Cube" })
+    ] });
+    registerTileset(engine);
+    engine.world.addLayer("Ground");
+    fillChunks(engine, "Ground", 4);
+    engine.focus = { x: 14, y: 2, z: 2 };
+    engine.tick(0);
+
+    // Nothing dirties a chunk between the two ticks: only the move may
+    // promote the chunk at the other end of the queue.
+    engine.focus = { x: 2, y: 2, z: 2 };
+    engine.tick(0);
+
+    assert.deepEqual(
+      engine.root.children.map((mesh) => mesh.name.split(":")[1]),
+      ["3,0,0", "0,0,0"]
+    );
+  });
+
+  it("ignores a focus move smaller than half a chunk", () => {
+    const engine = new VoxelEngine({ chunkSize: 4, rebuildBudgetMs: Number.MIN_VALUE, blocks: [
+      makeBlockDef(kCubeId, "cube", { name: "Cube" })
+    ] });
+    registerTileset(engine);
+    engine.world.addLayer("Ground");
+    fillChunks(engine, "Ground", 4);
+    engine.focus = { x: 14, y: 2, z: 2 };
+    engine.tick(0);
+
+    engine.focus = { x: 13, y: 2, z: 2 };
+    engine.tick(0);
+
+    assert.deepEqual(
+      engine.root.children.map((mesh) => mesh.name.split(":")[1]),
+      ["3,0,0", "2,0,0"]
+    );
+  });
+
+  it("builds the whole world from init(), nearest the focus first", () => {
+    const engine = new VoxelEngine({ chunkSize: 4, blocks: [
+      makeBlockDef(kCubeId, "cube", { name: "Cube" })
+    ] });
+    registerTileset(engine);
+    engine.world.addLayer("Ground");
+    fillChunks(engine, "Ground", 4);
+    engine.focus = { x: 14, y: 2, z: 2 };
+
+    engine.init();
+
+    assert.deepEqual(
+      engine.root.children.map((mesh) => mesh.name.split(":")[1]),
+      ["3,0,0", "2,0,0", "1,0,0", "0,0,0"]
+    );
+    assert.equal(engine.pendingRebuilds, 0);
+  });
+
   it("does not rebuild a chunk unloaded while it was queued", () => {
     const engine = new VoxelEngine({ chunkSize: 4, rebuildBudgetMs: Number.MIN_VALUE, blocks: [
       makeBlockDef(kCubeId, "cube", { name: "Cube" })
     ] });
     registerTileset(engine);
-    engine.addLayer("Ground");
+    engine.world.addLayer("Ground");
     fillChunks(engine, "Ground", 3);
     engine.tick(0);
     assert.equal(engine.pendingRebuilds, 2);
 
     // Emptying a chunk drops it from the layer; the queue must let it go too.
-    engine.removeVoxel("Ground", { position: { x: 4, y: 0, z: 0 } });
-    engine.removeVoxel("Ground", { position: { x: 8, y: 0, z: 0 } });
+    engine.world.removeVoxel("Ground", { position: { x: 4, y: 0, z: 0 } });
+    engine.world.removeVoxel("Ground", { position: { x: 8, y: 0, z: 0 } });
     engine.flush();
 
     assert.equal(engine.pendingRebuilds, 0);
@@ -409,8 +499,8 @@ describe("VoxelEngine — layer opacity on the material", () => {
   it("renders a fully opaque layer with an opaque material", () => {
     const engine = makeEngine();
     registerTileset(engine);
-    engine.addLayer("Ground");
-    engine.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
+    engine.world.addLayer("Ground");
+    engine.world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
     engine.flush();
 
     const material = (engine.root.children[0] as ChunkMesh).material;
@@ -424,8 +514,8 @@ describe("VoxelEngine — layer opacity on the material", () => {
   it("carries the layer opacity on the material instead of the geometry", () => {
     const engine = makeEngine();
     registerTileset(engine);
-    engine.addLayer("Ground", { opacity: 0.5 });
-    engine.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
+    engine.world.addLayer("Ground", { opacity: 0.5 });
+    engine.world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
     engine.flush();
 
     const mesh = engine.root.children[0] as ChunkMesh;
@@ -450,9 +540,9 @@ describe("VoxelEngine — layer opacity on the material", () => {
       ]
     });
     registerTileset(engine);
-    engine.addLayer("Ground");
-    engine.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
-    engine.setVoxel("Ground", { position: { x: 2, y: 0, z: 0 }, blockId: kLeavesId });
+    engine.world.addLayer("Ground");
+    engine.world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
+    engine.world.setVoxel("Ground", { position: { x: 2, y: 0, z: 0 }, blockId: kLeavesId });
     engine.flush();
 
     const meshes = engine.root.children as ChunkMesh[];
@@ -472,8 +562,8 @@ describe("VoxelEngine — layer opacity on the material", () => {
   it("keeps an almost-opaque layer out of the opaque material bucket", () => {
     const engine = makeEngine();
     registerTileset(engine);
-    engine.addLayer("Ground", { opacity: 0.999 });
-    engine.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
+    engine.world.addLayer("Ground", { opacity: 0.999 });
+    engine.world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
     engine.flush();
 
     const material = (engine.root.children[0] as ChunkMesh).material;
@@ -484,12 +574,12 @@ describe("VoxelEngine — layer opacity on the material", () => {
   it("shares one material between layers whose opacities land in one bucket", () => {
     const engine = makeEngine();
     registerTileset(engine);
-    engine.addLayer("A", { opacity: 0.5 });
-    engine.addLayer("B", { opacity: 0.5001 });
+    engine.world.addLayer("A", { opacity: 0.5 });
+    engine.world.addLayer("B", { opacity: 0.5001 });
     // Distinct positions, otherwise the higher-priority layer wins compositing
     // and the other emits no mesh at all.
-    engine.setVoxel("A", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
-    engine.setVoxel("B", { position: { x: 8, y: 0, z: 0 }, blockId: kCubeId });
+    engine.world.setVoxel("A", { position: { x: 0, y: 0, z: 0 }, blockId: kCubeId });
+    engine.world.setVoxel("B", { position: { x: 8, y: 0, z: 0 }, blockId: kCubeId });
     engine.flush();
 
     const [first, second] = engine.root.children as ChunkMesh[];

@@ -143,7 +143,7 @@ const voxelMap = world.createActor("map")
 // 16 × 16 = 256 individual voxels (box colliders, most performant strategy).
 for (let x = 0; x < kTerrainSize; x++) {
   for (let z = 0; z < kTerrainSize; z++) {
-    voxelMap.engine.setVoxel("Ground", { position: { x, y: 0, z }, blockId: 1 });
+    voxelMap.engine.world.setVoxel("Ground", { position: { x, y: 0, z }, blockId: 1 });
   }
 }
 
@@ -153,7 +153,7 @@ for (let x = 0; x < kTerrainSize; x++) {
 for (let y = 1; y <= kPlatformHeight; y++) {
   for (let x = kPlatformMin; x <= kPlatformMax; x++) {
     for (let z = kPlatformMin; z <= kPlatformMax; z++) {
-      voxelMap.engine.setVoxel("Ground", { position: { x, y, z }, blockId: 1 });
+      voxelMap.engine.world.setVoxel("Ground", { position: { x, y, z }, blockId: 1 });
     }
   }
 }

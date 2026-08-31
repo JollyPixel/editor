@@ -34,7 +34,7 @@ function makeEngine(
   // A 4×4 plate, which merges into 6 quads.
   for (let x = 0; x < 4; x++) {
     for (let z = 0; z < 4; z++) {
-      engine.setVoxel(kLayer, {
+      engine.world.setVoxel(kLayer, {
         position: { x, y: 0, z },
         blockId: kCubeId
       });

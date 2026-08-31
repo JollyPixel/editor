@@ -99,7 +99,7 @@ export class LayerPanel extends LitElement {
       return;
     }
 
-    const layer = this.vr.engine.getLayer(this.layerName) ?? null;
+    const layer = this.vr.engine.world.getLayer(this.layerName) ?? null;
     this._layer = layer;
 
     if (layer) {
@@ -190,7 +190,7 @@ export class LayerPanel extends LitElement {
       y: Math.round(y),
       z: Math.round(z)
     };
-    this.vr.engine.setLayerOffset(this.layerName, this._offset);
+    this.vr.engine.world.setLayerOffset(this.layerName, this._offset);
     this.vr.engine.markAllChunksDirty();
   }
 
@@ -237,7 +237,7 @@ export class LayerPanel extends LitElement {
         props[key.trim()] = value;
       }
     }
-    this.vr.engine.updateLayer(this.layerName, {
+    this.vr.engine.world.updateLayer(this.layerName, {
       properties: props
     });
   }

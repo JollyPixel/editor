@@ -91,7 +91,8 @@ world.logger.setLevel("debug");
 world.logger.enableNamespace("*");
 
 await loadRuntime(runtime, {
-  scene: new TiledScene()
+  scene: new TiledScene(),
+  skipLoadingScreen: true
 })
   .catch(console.error);
 

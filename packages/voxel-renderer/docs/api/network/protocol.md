@@ -37,12 +37,10 @@ boundary.
 ## Headless application
 
 ```ts
-function applyCommandToWorld(
-  world: VoxelWorld,
-  command: VoxelLayerHookEvent
-): void;
+world.applyRemoteCommand(command: VoxelLayerHookEvent): void;
 ```
 
-`applyCommandToWorld()` replays one mutation against a bare `VoxelWorld`. It is
-used by the server and is also available to tests, offline tools, and other
-headless integrations.
+[`VoxelWorld.applyRemoteCommand()`](../world/VoxelWorld.md#hooks) replays one
+mutation against a bare `VoxelWorld` without echoing it back through
+`onLayerUpdated`. It is used by the server and is also available to tests,
+offline tools, and other headless integrations.

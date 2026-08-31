@@ -13,7 +13,6 @@ import {
 } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
-import { applyCommandToWorld } from "../network/VoxelCommandApplier.ts";
 import { isVoxelNetworkCommand } from "../network/VoxelCommandValidator.ts";
 import {
   decodeVoxelDocument,
@@ -152,6 +151,5 @@ function applyEvent(
     return;
   }
 
-  // Ignore commands for layers removed by a later world replacement.
-  applyCommandToWorld(state.world, command);
+  state.world.applyRemoteCommand(command);
 }

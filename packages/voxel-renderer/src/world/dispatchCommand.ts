@@ -1,12 +1,11 @@
 // Import Internal Dependencies
 import type { VoxelLayerHookEvent } from "../hooks.ts";
-import type { VoxelWorld } from "../world/VoxelWorld.ts";
-import { VoxelTransform } from "../world/VoxelTransform.ts";
+import type { VoxelWorld } from "./VoxelWorld.ts";
 
 /**
- * Applies one hook event to a headless `VoxelWorld`.
+ * Replays one hook event onto a world.
  */
-export function applyCommandToWorld(
+export function dispatchCommand(
   world: VoxelWorld,
   cmd: VoxelLayerHookEvent
 ): void {
@@ -31,6 +30,20 @@ export function applyCommandToWorld(
       );
       break;
 
+    case "cloned":
+      world.cloneLayer(
+        cmd.layerName,
+        cmd.metadata.options
+      );
+      break;
+
+    case "merged":
+      world.mergeLayer(
+        cmd.layerName,
+        cmd.metadata.targetLayerName
+      );
+      break;
+
     case "offset-updated":
       if ("offset" in cmd.metadata) {
         world.setLayerOffset(
@@ -47,48 +60,37 @@ export function applyCommandToWorld(
       break;
 
     case "voxel-set":
-      world.setVoxelAt(cmd.layerName, cmd.metadata.position, {
-        blockId: cmd.metadata.blockId,
-        transform: new VoxelTransform(cmd.metadata).packed
-      });
+      world.setVoxel(
+        cmd.layerName,
+        cmd.metadata
+      );
       break;
 
     case "voxel-removed":
-      world.removeVoxelAt(
+      world.removeVoxel(
         cmd.layerName,
-        cmd.metadata.position
+        cmd.metadata
       );
       break;
 
     case "voxels-set":
-      for (const entry of cmd.metadata.entries) {
-        world.setVoxelAt(cmd.layerName, entry.position, {
-          blockId: entry.blockId,
-          transform: new VoxelTransform(entry).packed
-        });
-      }
+      world.setVoxelBulk(
+        cmd.layerName,
+        cmd.metadata.entries
+      );
       break;
 
     case "voxels-removed":
-      for (const entry of cmd.metadata.entries) {
-        world.removeVoxelAt(
-          cmd.layerName,
-          entry.position
-        );
-      }
+      world.removeVoxelBulk(
+        cmd.layerName,
+        cmd.metadata.entries
+      );
       break;
 
     case "reordered":
       world.moveLayer(
         cmd.layerName,
         cmd.metadata.direction
-      );
-      break;
-
-    case "merged":
-      world.mergeLayer(
-        cmd.layerName,
-        cmd.metadata.targetLayerName
       );
       break;
 
@@ -132,5 +134,12 @@ export function applyCommandToWorld(
         cmd.metadata.patch
       );
       break;
+
+    default: {
+      const unhandled: never = cmd;
+      throw new Error(
+        `dispatchCommand: unhandled action '${(unhandled as VoxelLayerHookEvent).action}'.`
+      );
+    }
   }
 }

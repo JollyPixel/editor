@@ -50,7 +50,7 @@ function makeEngine(
   );
 
   for (let x = 0; x < voxels; x++) {
-    engine.setVoxel("Ground", {
+    engine.world.setVoxel("Ground", {
       position: { x, y: 0, z: 0 },
       blockId: kCubeId
     });
@@ -111,6 +111,7 @@ describe("VoxelDebugger — statistics", () => {
 
     assert.deepEqual(engine.debug.stats, {
       chunks: 0,
+      culledChunks: 0,
       meshes: 0,
       voxels: 0,
       hiddenVoxels: 0,
@@ -149,7 +150,7 @@ describe("VoxelDebugger — statistics", () => {
 
   it("drops the statistics of a chunk once its layer is removed", () => {
     const engine = makeEngine();
-    engine.removeLayer("Ground");
+    engine.world.removeLayer("Ground");
     engine.tick(0);
 
     assert.equal(engine.debug.stats.chunks, 0);
@@ -206,7 +207,7 @@ describe("VoxelDebugger — modes", () => {
     const engine = makeEngine();
     engine.debug.mode = "wireframe";
 
-    engine.setVoxel("Ground", {
+    engine.world.setVoxel("Ground", {
       position: { x: 0, y: 8, z: 0 },
       blockId: kCubeId
     });

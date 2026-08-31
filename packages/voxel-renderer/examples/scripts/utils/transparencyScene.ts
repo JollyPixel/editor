@@ -74,7 +74,7 @@ function fill(
   for (let x = box.x0; x <= box.x1; x++) {
     for (let y = box.y0; y <= box.y1; y++) {
       for (let z = box.z0; z <= box.z1; z++) {
-        engine.setVoxel(layerName, { position: { x, y, z }, blockId });
+        engine.world.setVoxel(layerName, { position: { x, y, z }, blockId });
       }
     }
   }
@@ -88,7 +88,7 @@ function clear(
   for (let x = box.x0; x <= box.x1; x++) {
     for (let y = box.y0; y <= box.y1; y++) {
       for (let z = box.z0; z <= box.z1; z++) {
-        engine.removeVoxel(layerName, { position: { x, y, z } });
+        engine.world.removeVoxel(layerName, { position: { x, y, z } });
       }
     }
   }
@@ -148,23 +148,23 @@ function buildShapeCluster(
   const z = 10;
 
   for (const rotation of [0, 1, 2, 3] as const) {
-    engine.setVoxel(Ground, {
+    engine.world.setVoxel(Ground, {
       position: { x: 2 + rotation, y: 2, z },
       blockId: TransparencyBlock.StoneRamp,
       rotation
     });
-    engine.setVoxel(Ground, {
+    engine.world.setVoxel(Ground, {
       position: { x: 2 + rotation, y: 2, z: z + 2 },
       blockId: TransparencyBlock.StoneStair,
       rotation
     });
   }
 
-  engine.setVoxel(Ground, {
+  engine.world.setVoxel(Ground, {
     position: { x: 6, y: 2, z },
     blockId: TransparencyBlock.PlankSlab
   });
-  engine.setVoxel(Ground, {
+  engine.world.setVoxel(Ground, {
     position: { x: 6, y: 2, z: z + 2 },
     blockId: TransparencyBlock.StonePole
   });
@@ -217,7 +217,7 @@ function buildGreenhouse(
   clear(engine, Glass, { x0: 15, x1: 15, y0: 2, y1: 3, z0: 20, z1: 20 });
 
   fill(engine, Ground, TransparencyBlock.Plank, { ...box, y0: 2, y1: 2, x0: 14, x1: 16, z0: 17, z1: 19 });
-  engine.setVoxel(Ground, {
+  engine.world.setVoxel(Ground, {
     position: { x: 15, y: 3, z: 18 },
     blockId: TransparencyBlock.Ruby
   });
@@ -281,7 +281,7 @@ export function buildScene(
   engine: VoxelEngine
 ): void {
   for (const { name, opacity } of LAYER_SPECS) {
-    engine.addLayer(name, { opacity });
+    engine.world.addLayer(name, { opacity });
   }
 
   buildGround(engine);

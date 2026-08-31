@@ -85,7 +85,7 @@ export class LayerGizmo extends ActorComponent {
       return;
     }
 
-    if (name === null || !this.#vr.engine.getLayer(name)) {
+    if (name === null || !this.#vr.engine.world.getLayer(name)) {
       controls.detach();
 
       return;
@@ -100,12 +100,12 @@ export class LayerGizmo extends ActorComponent {
       return;
     }
 
-    const layer = this.#vr.engine.getLayer(this.#activeLayer);
+    const layer = this.#vr.engine.world.getLayer(this.#activeLayer);
     if (!layer) {
       return;
     }
 
-    const center = this.#vr.engine.getLayerCenter(this.#activeLayer)!;
+    const center = this.#vr.engine.world.getLayer(this.#activeLayer)?.centerToWorld() ?? null!;
     this.#pivotOffset.set(
       center.x - layer.offset.x,
       center.y - layer.offset.y,
@@ -125,7 +125,7 @@ export class LayerGizmo extends ActorComponent {
       return;
     }
     const position = this.#pivot.position;
-    this.#vr.engine.setLayerOffset(this.#activeLayer, {
+    this.#vr.engine.world.setLayerOffset(this.#activeLayer, {
       x: Math.round(position.x - this.#pivotOffset.x),
       y: Math.round(position.y - this.#pivotOffset.y),
       z: Math.round(position.z - this.#pivotOffset.z)

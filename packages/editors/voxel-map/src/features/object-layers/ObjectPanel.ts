@@ -128,7 +128,7 @@ export class ObjectPanel extends LitElement {
       return;
     }
 
-    const object = this.vr.engine
+    const object = this.vr.engine.world
       .getObjectLayer(this.layerName)
       ?.objects.find((candidate) => candidate.id === this.objectId) ?? null;
     this._object = object;
@@ -297,7 +297,7 @@ export class ObjectPanel extends LitElement {
       return;
     }
 
-    this.vr.engine.updateObject(this.layerName, this.objectId, patch);
+    this.vr.engine.world.updateObjectInLayer(this.layerName, this.objectId, patch);
     this.requestUpdate();
   }
 }

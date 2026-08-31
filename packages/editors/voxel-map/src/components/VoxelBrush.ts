@@ -195,7 +195,7 @@ export class VoxelBrush extends ActorComponent {
     const layerName = editorState.selectedVoxelLayer!;
 
     for (const pos of this.#getBrushPositions(center)) {
-      this.vr.engine.setVoxel(layerName, {
+      this.vr.engine.world.setVoxel(layerName, {
         position: pos,
         blockId: editorState.selectedBlockId,
         rotation,
@@ -216,7 +216,7 @@ export class VoxelBrush extends ActorComponent {
     const layerName = editorState.selectedVoxelLayer!;
 
     for (const pos of this.#getBrushPositions(center)) {
-      this.vr.engine.removeVoxel(layerName, { position: pos });
+      this.vr.engine.world.removeVoxel(layerName, { position: pos });
     }
     this.vr.engine.flush();
     this.#previewDirty = true;

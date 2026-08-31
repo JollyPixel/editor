@@ -9,7 +9,6 @@ import {
 } from "../serialization/world.ts";
 import type { VoxelWorldJSON } from "../serialization/types.ts";
 import { VOXEL_LAYER_HOOK_ACTIONS } from "../hooks.ts";
-import { applyCommandToWorld } from "./VoxelCommandApplier.ts";
 import { isVoxelNetworkCommand } from "./VoxelCommandValidator.ts";
 import { VoxelCommandArbiter } from "./VoxelCommandArbiter.ts";
 import type { VoxelNetworkCommand } from "./types.ts";
@@ -137,9 +136,8 @@ export class VoxelSyncServer extends network.Extension {
       return;
     }
 
-    // One stale client command must not terminate the shared session.
     try {
-      applyCommandToWorld(this.world, cmd);
+      this.world.applyRemoteCommand(cmd);
     }
     catch (error) {
       console.error(

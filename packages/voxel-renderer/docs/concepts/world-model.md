@@ -38,6 +38,8 @@ chunks dirty and recalculates cross-layer face culling.
 and direct reads or writes for one layer. `VoxelChunk` owns the fixed-size grid,
 and `VoxelStore` owns its sparse packed values.
 
-Use [`VoxelEngine`](../api/core/VoxelEngine.md) for application edits that must
-also update rendering, collision, and hooks. The lower-level world classes are
-useful for headless processing and integrations.
+Application edits go through `VoxelWorld`, which emits the
+[hook events](../api/core/hooks.md) and marks the chunks it touched dirty;
+[`VoxelEngine`](../api/core/VoxelEngine.md) picks those up to update rendering
+and collision. A world used on its own, with no engine around it, is what a
+headless server or an offline tool runs.

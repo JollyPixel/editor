@@ -24,7 +24,17 @@ import type {
   VoxelObjectJSON,
   VoxelObjectLayerJSON
 } from "../serialization/types.ts";
-import type { PartialExcept } from "../types.ts";
+import type {
+  PartialExcept,
+  VoxelSetOptions,
+  VoxelRemoveOptions
+} from "../types.ts";
+import { VoxelTransform } from "./VoxelTransform.ts";
+import type {
+  VoxelLayerHookEvent,
+  VoxelLayerHookListener
+} from "../hooks.ts";
+import { dispatchCommand } from "./dispatchCommand.ts";
 
 // CONSTANTS
 let kLayerIdCounter = 0;
@@ -41,11 +51,14 @@ export type IterableLayerChunk = {
 export class VoxelWorld {
   readonly chunkSize: number;
 
+  onLayerUpdated?: VoxelLayerHookListener;
+
   #layers: VoxelLayer[] = [];
   #layersToRemove: VoxelLayer[] = [];
   #objectLayers: Map<string, VoxelObjectLayerJSON> = new Map();
   #chunkShift: number;
   #chunkMask: number;
+  #muted = false;
 
   constructor(
     chunkSize: number = DEFAULT_CHUNK_SIZE
@@ -70,6 +83,11 @@ export class VoxelWorld {
     });
     this.#layers.push(layer);
     this.#sortLayers();
+    this.#emit({
+      action: "added",
+      layerName: name,
+      metadata: { options }
+    });
 
     return layer;
   }
@@ -92,6 +110,11 @@ export class VoxelWorld {
     if (options.opacity !== undefined) {
       this.#updateLayerOpacity(layer, options.opacity);
     }
+    this.#emit({
+      action: "updated",
+      layerName: name,
+      metadata: { options }
+    });
 
     return true;
   }
@@ -109,6 +132,11 @@ export class VoxelWorld {
     const layer = this.#layers[idx];
     this.#layersToRemove.push(layer);
     this.#layers.splice(idx, 1);
+    this.#emit({
+      action: "removed",
+      layerName: name,
+      metadata: {}
+    });
 
     return true;
   }
@@ -132,11 +160,18 @@ export class VoxelWorld {
       return;
     }
 
-    // Swap order values, then re-sort.
     const temp = layer.order;
     layer.order = this.#layers[swapIdx].order;
     this.#layers[swapIdx].order = temp;
     this.#sortLayers();
+
+    // Compositing order changed, so every layer remeshes.
+    this.#markAllLayersDirty();
+    this.#emit({
+      action: "reordered",
+      layerName: name,
+      metadata: { direction }
+    });
   }
 
   setLayerVisible(
@@ -167,11 +202,6 @@ export class VoxelWorld {
     }
   }
 
-  /**
-   * A layer only occludes neighbouring faces while fully opaque (opacity 1);
-   * crossing that boundary invalidates every layer's occlusion, not just this
-   * one's own geometry (which always needs rebuilding to re-bake its alpha).
-   */
   #updateLayerOpacity(
     layer: VoxelLayer,
     opacity: number
@@ -199,6 +229,11 @@ export class VoxelWorld {
 
     layer.offset = offset;
     this.#markAllLayersDirty();
+    this.#emit({
+      action: "offset-updated",
+      layerName: name,
+      metadata: { offset }
+    });
   }
 
   translateLayer(
@@ -216,6 +251,11 @@ export class VoxelWorld {
       z: layer.offset.z + delta.z
     };
     this.#markAllLayersDirty();
+    this.#emit({
+      action: "offset-updated",
+      layerName: name,
+      metadata: { delta }
+    });
   }
 
   getLayers(): readonly VoxelLayer[] {
@@ -230,7 +270,10 @@ export class VoxelWorld {
     );
   }
 
-  cloneLayer(name: string, options: PartialExcept<VoxelLayerOptions, "name">): VoxelLayer | undefined {
+  cloneLayer(
+    name: string,
+    options: PartialExcept<VoxelLayerOptions, "name">
+  ): VoxelLayer | undefined {
     const layer = this.getLayer(name);
     if (!layer) {
       return undefined;
@@ -238,15 +281,15 @@ export class VoxelWorld {
 
     const clone = layer.clone({ ...options, id: `${layer.id}_${kLayerIdCounter++}` });
     this.#layers.push(clone);
+    this.#emit({
+      action: "cloned",
+      layerName: name,
+      metadata: { options }
+    });
 
     return clone;
   }
 
-  /**
-   * Merges all voxels from `sourceName` into `targetName`.
-   * Source voxels overwrite target voxels at the same world position.
-   * Returns false if either layer does not exist.
-   */
   mergeLayer(
     sourceName: string,
     targetName: string
@@ -259,17 +302,15 @@ export class VoxelWorld {
 
     target.mergeFrom(source);
     this.#markLayerDirty(target);
+    this.#emit({
+      action: "merged",
+      layerName: sourceName,
+      metadata: { targetLayerName: targetName }
+    });
 
     return true;
   }
 
-  /**
-   * Collapses all voxel layers into a single layer using compositor order
-   * (lowest-priority voxels are overwritten by higher-priority ones).
-   * All layers except the base (lowest order) are removed from the world.
-   * Returns null when there are no layers; returns the existing layer when
-   * there is only one.
-   */
   mergeAllLayers(): VoxelLayer | null {
     if (this.#layers.length === 0) {
       return null;
@@ -278,7 +319,6 @@ export class VoxelWorld {
       return this.#layers[0];
     }
 
-    // Sort ascending so we merge from lowest to highest priority.
     const sorted = [...this.#layers].sort((a, b) => a.order - b.order);
     const target = sorted[0];
 
@@ -286,7 +326,6 @@ export class VoxelWorld {
       target.mergeFrom(sorted[i]);
     }
 
-    // Remove all but the target layer.
     for (let i = 1; i < sorted.length; i++) {
       const idx = this.#layers.findIndex((l) => l === sorted[i]);
       if (idx !== -1) {
@@ -300,8 +339,6 @@ export class VoxelWorld {
     return target;
   }
 
-  // --- Object layer management --- //
-
   addObjectLayer(
     name: string,
     options: Partial<Pick<VoxelObjectLayerJSON, "visible" | "order">> = {}
@@ -314,6 +351,11 @@ export class VoxelWorld {
       objects: []
     };
     this.#objectLayers.set(name, layer);
+    this.#emit({
+      action: "object-layer-added",
+      layerName: name,
+      metadata: {}
+    });
 
     return layer;
   }
@@ -321,7 +363,17 @@ export class VoxelWorld {
   removeObjectLayer(
     name: string
   ): boolean {
-    return this.#objectLayers.delete(name);
+    if (!this.#objectLayers.delete(name)) {
+      return false;
+    }
+
+    this.#emit({
+      action: "object-layer-removed",
+      layerName: name,
+      metadata: {}
+    });
+
+    return true;
   }
 
   getObjectLayer(
@@ -346,6 +398,11 @@ export class VoxelWorld {
     if (patch.visible !== undefined) {
       layer.visible = patch.visible;
     }
+    this.#emit({
+      action: "object-layer-updated",
+      layerName: name,
+      metadata: { patch }
+    });
 
     return true;
   }
@@ -360,6 +417,11 @@ export class VoxelWorld {
     }
 
     layer.objects.push(object);
+    this.#emit({
+      action: "object-added",
+      layerName,
+      metadata: { object }
+    });
 
     return true;
   }
@@ -381,6 +443,11 @@ export class VoxelWorld {
     }
 
     layer.objects.splice(idx, 1);
+    this.#emit({
+      action: "object-removed",
+      layerName,
+      metadata: { objectId }
+    });
 
     return true;
   }
@@ -403,19 +470,15 @@ export class VoxelWorld {
     }
 
     Object.assign(obj, patch);
+    this.#emit({
+      action: "object-updated",
+      layerName,
+      metadata: { objectId, patch }
+    });
 
     return true;
   }
 
-  // --- Composited voxel access --- //
-
-  /**
-   * Returns the voxel entry at (x, y, z) from the highest-priority visible
-   * layer that has data there. Returns undefined for air.
-   *
-   * This is the function the mesh builder always calls for neighbour lookups,
-   * giving it transparent cross-chunk and cross-layer visibility.
-   */
   getVoxelAt(
     position: Vector3Like
   ): VoxelEntry | undefined {
@@ -438,18 +501,9 @@ export class VoxelWorld {
     return VOXEL_ABSENT;
   }
 
-  /**
-   * Same compositing rules as `getVoxelAt`, but also returns the owning
-   * layer so callers can inspect layer-level properties (e.g. `opacity`) of
-   * the resolved voxel — used by VoxelMeshBuilder to decide occlusion.
-   *
-   * A layer with `opacity === 0` is treated the same as `visible = false`:
-   * it neither wins compositing nor occludes lower layers.
-   */
   getVoxelWithLayerAt(
     position: Vector3Like
   ): { entry: VoxelEntry; layer: VoxelLayer; } | undefined {
-    // Iterate from highest to lowest order (already sorted descending).
     for (const layer of this.#layers) {
       if (!layer.visible || layer.opacity === 0) {
         continue;
@@ -476,6 +530,74 @@ export class VoxelWorld {
     });
   }
 
+  setVoxel(
+    layerName: string,
+    options: VoxelSetOptions
+  ): void {
+    const { position, blockId } = options;
+    const transform = new VoxelTransform(options);
+
+    this.setVoxelAt(layerName, position, {
+      blockId,
+      transform: transform.packed
+    });
+    this.#emit({
+      action: "voxel-set",
+      layerName,
+      metadata: {
+        position,
+        blockId,
+        rotation: transform.rotation,
+        flipX: transform.flipX,
+        flipZ: transform.flipZ,
+        flipY: transform.flipY
+      }
+    });
+  }
+
+  removeVoxel(
+    layerName: string,
+    options: VoxelRemoveOptions
+  ): void {
+    this.removeVoxelAt(layerName, options.position);
+    this.#emit({
+      action: "voxel-removed",
+      layerName,
+      metadata: { position: options.position }
+    });
+  }
+
+  setVoxelBulk(
+    layerName: string,
+    entries: VoxelSetOptions[]
+  ): void {
+    for (const entry of entries) {
+      this.setVoxelAt(layerName, entry.position, {
+        blockId: entry.blockId,
+        transform: new VoxelTransform(entry).packed
+      });
+    }
+    this.#emit({
+      action: "voxels-set",
+      layerName,
+      metadata: { entries }
+    });
+  }
+
+  removeVoxelBulk(
+    layerName: string,
+    entries: VoxelRemoveOptions[]
+  ): void {
+    for (const { position } of entries) {
+      this.removeVoxelAt(layerName, position);
+    }
+    this.#emit({
+      action: "voxels-removed",
+      layerName,
+      metadata: { entries }
+    });
+  }
+
   setVoxelAt(
     layerName: string,
     position: Vector3Like,
@@ -499,9 +621,6 @@ export class VoxelWorld {
     }
 
     layer.setPackedVoxelAt(position, packed);
-
-    // Mark neighbouring chunks dirty when a boundary voxel changes so their
-    // faces are re-evaluated at the next update.
     this.#markNeighbourChunksDirty(layer, position);
   }
 
@@ -517,8 +636,6 @@ export class VoxelWorld {
     layer.removeVoxelAt(position);
     this.#markNeighbourChunksDirty(layer, position);
   }
-
-  // --- Chunk helpers --- //
 
   * getAllDirtyChunks(): IterableIterator<IterableLayerChunk> {
     for (const layer of this.#layers) {
@@ -557,13 +674,40 @@ export class VoxelWorld {
       }
     } while (this.#layersToRemove.length > 0);
 
-    // Drain individual chunks that became empty this frame.
-    // Their Three.js meshes must be removed even though the layer is still active.
     for (const layer of this.#layers) {
       for (const chunk of layer.drainPendingRemovals()) {
         yield { layer, chunk };
       }
     }
+  }
+
+  applyRemoteCommand(
+    cmd: VoxelLayerHookEvent
+  ): void {
+    this.silently(() => dispatchCommand(this, cmd));
+  }
+
+  silently<T>(
+    fn: () => T
+  ): T {
+    const previous = this.#muted;
+    this.#muted = true;
+    try {
+      return fn();
+    }
+    finally {
+      this.#muted = previous;
+    }
+  }
+
+  #emit(
+    event: VoxelLayerHookEvent
+  ): void {
+    if (this.#muted) {
+      return;
+    }
+
+    this.onLayerUpdated?.(event);
   }
 
   clear(): void {
@@ -573,8 +717,9 @@ export class VoxelWorld {
   }
 
   #sortLayers(): void {
-    // Highest order = highest priority (drawn/composited last, wins in getVoxelAt).
-    this.#layers.sort((a, b) => b.order - a.order);
+    this.#layers.sort(
+      (a, b) => b.order - a.order
+    );
   }
 
   #markLayerDirty(
@@ -591,10 +736,6 @@ export class VoxelWorld {
     }
   }
 
-  /**
-   * When a voxel on a chunk boundary changes, the adjacent chunk also needs its
-   * mesh rebuilt so boundary faces are culled correctly.
-   */
   #markNeighbourChunksDirty(
     layer: VoxelLayer,
     position: Vector3Like
@@ -602,7 +743,7 @@ export class VoxelWorld {
     const s = this.chunkSize;
     const shift = this.#chunkShift;
     const mask = this.#chunkMask;
-    // Subtract layer offset to get local-space position for chunk index math.
+
     const x = position.x - layer.offset.x;
     const y = position.y - layer.offset.y;
     const z = position.z - layer.offset.z;

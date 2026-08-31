@@ -107,7 +107,7 @@ export class ObjectLayerRenderer extends ActorComponent {
   }
 
   #syncAll(): void {
-    const layers = this.#vr.engine.getObjectLayers();
+    const layers = this.#vr.engine.world.getObjectLayers();
     const names = new Set(layers.map((layer) => layer.name));
 
     for (const key of [...this.#areas.keys()]) {
@@ -124,7 +124,7 @@ export class ObjectLayerRenderer extends ActorComponent {
     layerName: string
   ): void {
     // Keep hidden areas allocated to avoid GPU churn on visibility changes.
-    const objects = this.#vr.engine.getObjectLayer(layerName)?.objects ?? [];
+    const objects = this.#vr.engine.world.getObjectLayer(layerName)?.objects ?? [];
     const alive = new Set(
       objects.map((object) => objectKey(layerName, object.id))
     );
@@ -265,7 +265,7 @@ export class ObjectLayerRenderer extends ActorComponent {
 
     const { layerName } = parseObjectKey(key);
 
-    return this.#vr.engine.getObjectLayer(layerName)?.visible === true &&
+    return this.#vr.engine.world.getObjectLayer(layerName)?.visible === true &&
       object.visible;
   }
 
@@ -282,7 +282,7 @@ export class ObjectLayerRenderer extends ActorComponent {
   ): VoxelObjectJSON | undefined {
     const { layerName, objectId } = parseObjectKey(key);
 
-    return this.#vr.engine
+    return this.#vr.engine.world
       .getObjectLayer(layerName)
       ?.objects.find((candidate) => candidate.id === objectId);
   }
@@ -386,7 +386,7 @@ export class ObjectLayerRenderer extends ActorComponent {
     }
 
     const { layerName, objectId } = parseObjectKey(this.#selectedKey);
-    const object = this.#vr.engine
+    const object = this.#vr.engine.world
       .getObjectLayer(layerName)
       ?.objects.find((candidate) => candidate.id === objectId);
     if (object === undefined) {
@@ -398,7 +398,7 @@ export class ObjectLayerRenderer extends ActorComponent {
       return;
     }
 
-    this.#vr.engine.updateObject(layerName, objectId, patch);
+    this.#vr.engine.world.updateObjectInLayer(layerName, objectId, patch);
   }
 
   readonly #onSelectionChange = (): void => this.#updateVisibility();
