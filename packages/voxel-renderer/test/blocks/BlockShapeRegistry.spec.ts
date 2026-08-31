@@ -89,6 +89,55 @@ describe("BlockShapeRegistry.register", () => {
   });
 });
 
+describe("BlockShapeRegistry.registerMany", () => {
+  it("registers every shape and returns the registry", () => {
+    const registry = new BlockShapeRegistry();
+    const first = makeShape("first");
+    const second = makeShape("second");
+
+    const returned = registry.registerMany([first, second]);
+
+    assert.equal(returned, registry);
+    assert.equal(registry.get("first"), first);
+    assert.equal(registry.get("second"), second);
+  });
+
+  it("replaces a shape already using the same id", () => {
+    const registry = new BlockShapeRegistry();
+    const replacement = makeShape("first");
+    registry.register(makeShape("first"));
+
+    registry.registerMany([replacement]);
+
+    assert.equal(registry.get("first"), replacement);
+  });
+
+  it("bumps the version once per shape", () => {
+    const registry = new BlockShapeRegistry();
+
+    registry.registerMany([makeShape("first"), makeShape("second")]);
+
+    assert.equal(registry.version, 2);
+  });
+
+  it("accepts any iterable, not just an array", () => {
+    const registry = new BlockShapeRegistry();
+
+    registry.registerMany(new Set([makeShape("first"), makeShape("second")]));
+
+    assert.deepEqual([...registry.ids()], ["first", "second"]);
+  });
+
+  it("leaves the registry untouched for an empty iterable", () => {
+    const registry = new BlockShapeRegistry();
+
+    registry.registerMany([]);
+
+    assert.deepEqual([...registry.getAll()], []);
+    assert.equal(registry.version, 0);
+  });
+});
+
 describe("BlockShapeRegistry.createDefault", () => {
   it("returns a BlockShapeRegistry instance", () => {
     const registry = BlockShapeRegistry.createDefault();

@@ -10,6 +10,7 @@ class BlockShapeRegistry implements Iterable<BlockShape> {
   readonly version: number;
 
   register(shape: BlockShape): this;
+  registerMany(shapes: Iterable<BlockShape>): this;
   get(id: BlockShapeID): BlockShape | undefined;
   has(id: BlockShapeID): boolean;
   getAll(): IterableIterator<BlockShape>;
@@ -19,6 +20,9 @@ class BlockShapeRegistry implements Iterable<BlockShape> {
   static createDefault(): BlockShapeRegistry;
 }
 ```
+
+`register()` replaces any shape already using the ID. `registerMany()` applies
+it to each shape of the iterable, in iteration order.
 
 Iteration preserves registration order. `version` increments on each
 registration so mesh caches can detect a changed shape. `createDefault()`

@@ -19,22 +19,25 @@ export class Slab implements BlockShape {
   readonly collisionHint: BlockCollisionHint = "box";
   readonly faces: readonly FaceDefinition[];
 
+  #type: SlabType;
+
   constructor(
     type: SlabType = "bottom",
     id?: BlockShapeID
   ) {
     this.id = id ?? (type === "bottom" ? "slabBottom" : "slabTop");
+    this.#type = type;
     this.faces = Slab.#buildFaces(type);
   }
 
   occludes(
     face: FACE
   ): boolean {
-    if (this.id.includes("Bottom") || this.id === "slabBottom") {
-      return face === FACE.NegY;
-    }
+    const expectedFace = this.#type === "bottom"
+      ? FACE.NegY
+      : FACE.PosY;
 
-    return face === FACE.PosY;
+    return face === expectedFace;
   }
 
   static #buildFaces(
