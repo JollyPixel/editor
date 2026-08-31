@@ -38,125 +38,133 @@ Chunked voxel engine and Three.js renderer. Use `VoxelEngine` directly, or `Voxe
 This package is available in the Node Package Repository and can be easily installed with [npm][npm] or [yarn][yarn].
 
 ```bash
-$ npm i @jolly-pixel/voxel.renderer
+$ npm install @jolly-pixel/voxel.renderer
 # or
 $ yarn add @jolly-pixel/voxel.renderer
 ```
 
 ## 👀 Usage example
 
-### Basic - place voxels manually
+Load atlas textures before creating the renderer. The following example runs
+inside a JollyPixel actor lifecycle where `actor` is available:
 
 ```ts
+import {
+  Face,
+  VoxelRenderer,
+  loadTilesets,
+  type BlockDefinition
+} from "@jolly-pixel/voxel.renderer";
+
+const tilesets = await loadTilesets([
+  {
+    id: "default",
+    src: "tileset/UV_cube.png",
+    tileSize: 32
+  }
+]);
+
 const blocks: BlockDefinition[] = [
   {
     id: 1,
     name: "Dirt",
     shapeId: "cube",
     collidable: true,
+    defaultTexture: {
+      tilesetId: "default",
+      col: 2,
+      row: 0
+    },
     faceTextures: {
       [Face.PosY]: {
         tilesetId: "default",
         col: 0,
         row: 2
-      },
-      [Face.NegX]: {
-        tilesetId: "default",
-        col: 0,
-        row: 1
-      },
-      [Face.NegZ]: {
-        tilesetId: "default",
-        col: 0,
-        row: 1
-      },
-      [Face.PosX]: {
-        tilesetId: "default",
-        col: 0,
-        row: 1
-      },
-      [Face.PosZ]: {
-        tilesetId: "default",
-        col: 0,
-        row: 1
       }
-    },
-    defaultTexture: {
-      tilesetId: "default",
-      col: 2,
-      row: 0
     }
   }
 ];
 
-const voxelMap = world.createActor("map")
-  .addComponentAndGet(VoxelRenderer, {
-    chunkSize: 16,
-    layers: ["Ground"],
-    blocks
-  });
-
-voxelMap.engine.loadTileset({
-  id: "default",
-  src: "tileset/UV_cube.png",
-  tileSize: 32
+const renderer = actor.addComponentAndGet(VoxelRenderer, {
+  tilesets,
+  layers: ["Ground"],
+  blocks
 });
+```
 
-// Place a flat 8×8 ground plane
+Place voxels through the engine exposed by the component:
+
+```ts
 for (let x = 0; x < 8; x++) {
   for (let z = 0; z < 8; z++) {
-    voxelMap.engine.setVoxel("Ground", {
-      position: { x, y: 0, z },
+    renderer.engine.setVoxel("Ground", {
+      position: {
+        x,
+        y: 0,
+        z
+      },
       blockId: 1
     });
   }
 }
 ```
 
-### Rapier3D physics
+`VoxelRenderer` attaches `engine.root` to the actor and drives the engine
+lifecycle. Use `VoxelEngine` directly for a standalone Three.js or headless
+integration; then the application owns `init()`, `tick()`, `flush()`, and
+`dispose()`.
 
-Physics is plugged in through the backend-agnostic `VoxelCollider` interface
+## 📚 Documentation
 
-```ts
-import Rapier from "@dimforge/rapier3d-compat";
-import { RapierVoxelCollider } from "@jolly-pixel/voxel.renderer/plugins/rapier/index.js";
+### Concepts and guides
 
-await Rapier.init();
-const rapierWorld = new Rapier.World({
-  x: 0,
-  y: -9.81,
-  z: 0
-});
+- [World model](docs/concepts/world-model.md): layers, chunks, compositing, and
+  ownership.
+- [Rendering and meshing](docs/concepts/rendering-and-meshing.md): dirty chunk
+  rebuilds, geometry layout, and greedy meshing.
+- [Atlas padding](docs/concepts/atlas-padding.md): source and render textures.
+- [Loading tilesets](docs/guides/loading-and-restoring-tilesets.md),
+  [creating custom shapes](docs/guides/creating-custom-shapes.md), and
+  [saving worlds](docs/guides/saving-and-loading-worlds.md).
+- [Adding physics](docs/guides/adding-physics.md),
+  [network synchronization](docs/guides/synchronizing-a-world.md),
+  [Tiled import](docs/guides/importing-a-tiled-map.md), and
+  [persistent voxel maps](docs/guides/persisting-a-voxel-map.md).
 
-// Step physics once per fixed tick, before the scene update
-world.on("beforeFixedUpdate", () => rapierWorld.step());
+### Core and world API
 
-const voxelMap = world.createActor("map")
-  .addComponentAndGet(VoxelRenderer, {
-    chunkSize: 16,
-    layers: ["Ground"],
-    blocks,
-    collider: (context) => new RapierVoxelCollider({
-      api: Rapier,
-      world: rapierWorld,
-      ...context
-    })
-  });
-```
+- [`VoxelEngine`](docs/api/core/VoxelEngine.md) and
+  [`VoxelRenderer`](docs/api/core/VoxelRenderer.md).
+- [`VoxelDebugger` and mesh statistics](docs/api/core/VoxelDebugger.md), and
+  [hook events](docs/api/core/hooks.md).
+- [`VoxelWorld`](docs/api/world/VoxelWorld.md),
+  [`VoxelLayer`](docs/api/world/VoxelLayer.md),
+  [`VoxelChunk`](docs/api/world/VoxelChunk.md), and
+  [`VoxelStore`](docs/api/world/VoxelStore.md).
 
-## 📚 API
+### Blocks, tilesets, and rendering API
 
-- [VoxelEngine](docs/VoxelEngine.md) - Engine-agnostic core - options, voxel placement, tileset loading, save/load. Usable standalone or via `VoxelRenderer`.
-- [VoxelRenderer](docs/VoxelRenderer.md) - `ActorComponent` wrapper around `VoxelEngine` for JollyPixel scenes.
-- [World](docs/World.md) - `VoxelWorld`, `VoxelLayer`, `VoxelChunk`, and related types.
-- [Blocks](docs/Blocks.md) - `BlockDefinition`, `ResolvedBlockDefinition`, `BlockShape`, `BlockRegistry`, `BlockShapeRegistry`, and `Face`.
-- [Tileset](docs/Tileset.md) - `TilesetManager`, `TilesetDefinition`, `TileRef`, UV regions.
-- [Serialization](docs/Serialization.md) - world serialization and JSON snapshot types.
-- [Collision](docs/Collision.md) - The `VoxelCollider` contract and the bundled `RapierVoxelCollider` plugin.
-- [Debug](docs/Debug.md) - `engine.debug`: live face/triangle statistics and wireframe visualization.
-- [Built-In Shapes](docs/BuiltInShapes.md) - All built-in block shapes and custom shape authoring.
-- [TiledConverter](docs/TiledConverter.md) - Converting Tiled `.tmj` exports to `VoxelWorldJSON`.
-- [Asset kind](docs/AssetKind.md) - Persisting a voxel map as an event-sourced `@jolly-pixel/asset-server` asset.
+- [`BlockDefinition`](docs/api/blocks/BlockDefinition.md),
+  [`BlockRegistry` and tileset block generation](docs/api/blocks/BlockRegistry.md),
+  [`BlockShape`](docs/api/blocks/BlockShape.md), and
+  [`BlockShapeRegistry`](docs/api/blocks/BlockShapeRegistry.md).
+- [Built-in shapes](docs/api/blocks/built-in-shapes.md) and
+  [tilesets](docs/api/tilesets/tilesets.md).
+- [Rendering, meshing, and tile wrapping](docs/concepts/rendering-and-meshing.md),
+  [`VoxelCollider`](docs/api/collision/VoxelCollider.md), and
+  [`RapierVoxelCollider`](docs/api/collision/RapierVoxelCollider.md).
+
+### Serialization and integration API
+
+- [Serialization, document codec, and voxel objects](docs/api/serialization/serialization.md).
+- [`VoxelSyncClient`](docs/api/network/VoxelSyncClient.md),
+  [`VoxelSyncServer`](docs/api/network/VoxelSyncServer.md),
+  [`VoxelCommandArbiter`](docs/api/network/VoxelCommandArbiter.md), and the
+  [network protocol](docs/api/network/protocol.md).
+- [`TiledConverter`](docs/api/tiled/TiledConverter.md),
+  including its JSON types, and
+  [`TiledMapAssetLoader`](docs/api/tiled/TiledMapAssetLoader.md).
+- [Voxel-map asset-server APIs](docs/api/asset-server/voxel-map-assets.md).
 
 ## 🚀 Running the examples
 
@@ -225,7 +233,7 @@ Alternatively, pass a custom `Logger` instance to `VoxelRenderer`:
 import { Systems } from "@jolly-pixel/engine";
 import { VoxelRenderer } from "@jolly-pixel/voxel.renderer";
 
-const vr = new VoxelRenderer({
+const renderer = actor.addComponentAndGet(VoxelRenderer, {
   logger: new Systems.Logger({
     level: "trace",
     namespaces: ["*"]

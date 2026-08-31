@@ -3,9 +3,13 @@
 Fixed-size, sparse 3D grid of voxel data. Chunk coordinates `(cx, cy, cz)` are in
 **chunk space**. Multiply by `chunkSize` to get the world-space origin.
 
+```ts
+const DEFAULT_CHUNK_SIZE = 16;
+```
+
 ## Storage
 
-Voxels are stored as packed 32-bit integers in a [`VoxelStore`](#voxelstore), not as
+Voxels are stored as packed 32-bit integers in a [`VoxelStore`](./VoxelStore.md), not as
 `{ blockId, transform }` objects. Keys and values live in typed arrays, avoiding one
 heap object per stored voxel.
 
@@ -16,10 +20,37 @@ Two consequences for callers:
   never `===`.
 - Block ids must fit in 23 bits (`1..MAX_BLOCK_ID`, 8 388 607). `packVoxel()` throws a
   `RangeError` above that rather than truncating silently, and on id `0`, which is
-  air and has no packed form (see [Air](./Blocks.md#air)).
+  air and has no packed form (see [air](../blocks/BlockDefinition.md#air)).
 
 The `Packed` variants below skip the object entirely and are what the mesh builders
 use.
+
+### Packed voxel values
+
+Chunks encode a block ID and transform byte in one non-negative 32-bit integer.
+
+```ts
+type PackedVoxel = number;
+
+const MAX_BLOCK_ID: number; // 8_388_607
+const VOXEL_ABSENT: number; // -1
+
+function packVoxel(
+  blockId: number,
+  transform: number
+): PackedVoxel;
+
+function unpackVoxel(packed: PackedVoxel): VoxelEntry;
+function voxelBlockId(packed: PackedVoxel): number;
+function voxelTransform(packed: PackedVoxel): number;
+```
+
+`packVoxel()` stores the transform in bits 0 through 7 and the block ID in bits
+8 through 30. It throws `RangeError` for air (`0`), a negative ID, or an ID
+greater than `MAX_BLOCK_ID`.
+
+`VOXEL_ABSENT` is returned by packed read methods when no voxel exists. Every
+stored `PackedVoxel` is non-negative, so `packed < 0` is a valid absence check.
 
 ## Constructor
 
@@ -116,57 +147,5 @@ Inverse of `linearIndex`.
 
 Returns the chunk key as `"cx,cy,cz"`.
 
-## Packed voxels
-
-```ts
-type PackedVoxel = number;
-
-// blockId in bits 8-30, transform in bits 0-7
-function packVoxel(blockId: number, transform: number): PackedVoxel;
-function unpackVoxel(packed: PackedVoxel): VoxelEntry;
-function voxelBlockId(packed: PackedVoxel): number;
-function voxelTransform(packed: PackedVoxel): number;
-
-const MAX_BLOCK_ID: number;  // 8_388_607
-const VOXEL_ABSENT: number;  // -1
-```
-
-Every real `PackedVoxel` is non-negative, so `packed < 0` is the absence test.
-
-## VoxelStore
-
-Sparse `linearIndex → PackedVoxel` map backed by an `Int32Array` of keys and a
-`Uint32Array` of values, open-addressed with linear probing and grown at a 3/4 load
-factor. Deletion shifts the following cluster back (Knuth 6.4 algorithm R) instead of
-leaving tombstones, so a chunk that is repeatedly painted and erased never degrades.
-
-```ts
-class VoxelStore {
-  readonly size: number;
-  // slot count to walk when iterating; keys/values are replaced on growth
-  readonly capacity: number;
-  readonly keys: Int32Array;
-  readonly values: Uint32Array;
-
-  get(key: number): PackedVoxel;   // VOXEL_ABSENT when missing
-  has(key: number): boolean;
-  set(key: number, value: PackedVoxel): boolean;  // true when the key was new
-  delete(key: number): boolean;
-  clear(): void;
-}
-```
-
-`keys` and `values` are exposed so a hot loop can sweep a chunk without the per-voxel
-allocation an iterator forces. Slots holding a voxel are those where `keys[slot] >= 0`:
-
-```ts
-const { keys, values, capacity } = chunk.store;
-
-for (let slot = 0; slot < capacity; slot++) {
-  const linearIndex = keys[slot];
-  if (linearIndex < 0) {
-    continue;
-  }
-  const blockId = voxelBlockId(values[slot]);
-}
-```
+The low-level sparse backing store has a separate
+[`VoxelStore`](./VoxelStore.md) reference.

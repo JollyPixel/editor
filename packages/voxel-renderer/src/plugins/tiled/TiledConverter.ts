@@ -49,7 +49,7 @@ export interface TiledConverterOptions {
 
   /**
    * BlockShape ID assigned to every generated block.
-   * @default "fullCube"
+   * @default "cube"
    */
   defaultShapeId?: BlockShapeID;
 

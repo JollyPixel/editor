@@ -1,15 +1,35 @@
-# Built-In Shapes
+# Built-in shapes
 
 All shapes below are registered automatically by `VoxelEngine`. They are also available
 standalone via `BlockShapeRegistry.createDefault()`.
 
+## Class exports
+
+The root package exports each implementation class:
+
+| Class | Constructor | Default ID |
+|---|---|---|
+| `Cube` | `new Cube(id?)` | `"cube"` |
+| `Slab` | `new Slab(type?, id?)` | `"slabBottom"` or `"slabTop"` |
+| `Pole` | `new Pole()` | `"pole"` |
+| `PoleY` | `new PoleY()` | `"poleY"` |
+| `Ramp` | `new Ramp(id?)` | `"ramp"` |
+| `RampCornerInner` | `new RampCornerInner(id?)` | `"rampCornerInner"` |
+| `RampCornerOuter` | `new RampCornerOuter(id?)` | `"rampCornerOuter"` |
+| `Stair` | `new Stair(id?)` | `"stair"` |
+| `StairCornerInner` | `new StairCornerInner(id?)` | `"stairCornerInner"` |
+| `StairCornerOuter` | `new StairCornerOuter(id?)` | `"stairCornerOuter"` |
+
+`SlabType` is `"top" | "bottom"`; its default is `"bottom"`.
+
 ## Shape Reference
 
-![Available block shapes](./images/shapes.png)
+![Available block shapes](../../images/shapes.png)
 
 ### Solid / Slab
 
-All shapes in this category use **collisionHint**: [box](./Collision.md).
+All shapes in this category use `collisionHint: "box"`. See
+[`VoxelCollider`](../collision/VoxelCollider.md).
 
 | Shape ID | Occludes |
 |---:|---|
@@ -26,7 +46,8 @@ The default is `"bottom"`.
 
 ### Poles / Beams
 
-All pole shapes use **collisionHint**: [trimesh](./Collision.md) and occlude no faces (sub-voxel cross-section).
+All pole shapes use `collisionHint: "trimesh"` and occlude no faces because
+their cross-section does not fill a voxel.
 
 | Shape ID | Occludes |
 |---:|---|
@@ -35,7 +56,7 @@ All pole shapes use **collisionHint**: [trimesh](./Collision.md) and occlude no 
 
 ### Ramps
 
-All ramp shapes use **collisionHint**: [trimesh](./Collision.md).
+All ramp shapes use `collisionHint: "trimesh"`.
 
 | Shape ID | Occludes |
 |---:|---|
@@ -45,7 +66,7 @@ All ramp shapes use **collisionHint**: [trimesh](./Collision.md).
 
 ### Stairs
 
-All stair shapes use **collisionHint**: [trimesh](./Collision.md).
+All stair shapes use `collisionHint: "trimesh"`.
 
 | Shape ID | Occludes |
 |---:|---|
@@ -79,61 +100,5 @@ engine.setVoxel("Ceiling", {
 
 `flipY` can be combined freely with `rotation`, `flipX`, and `flipZ`.
 
----
-
-> You can also learn more about Collision [here](./Collision.md).
-
-## Custom Shapes
-
-Implement `BlockShape` and register the instance via the `shapes` option or `shapeRegistry.register()`:
-
-```ts
-import {
-  VoxelEngine,
-  type BlockShape,
-  type FaceDefinition,
-  type Face
-} from "@jolly-pixel/voxel.renderer";
-
-class MyShape implements BlockShape {
-  readonly id = "myShape";
-  readonly collisionHint = "box" as const;
-  readonly faces: readonly FaceDefinition[] = [
-    // define triangles/quads in 0–1 block space
-  ];
-
-  occludes(_face: Face): boolean {
-    return false; // return true only for fully covered faces
-  }
-}
-
-// Option A — at construction time
-const engine = new VoxelEngine({
-  shapes: [
-    new MyShape()
-  ]
-});
-
-// Option B — at any time before voxels are placed
-engine.shapeRegistry.register(
-  new MyShape()
-);
-```
-
-Then reference the shape in a `BlockDefinition`:
-
-```ts
-engine.blockRegistry.register({
-  id: 10,
-  name: "Custom",
-  shapeId: "myShape",
-  collidable: true,
-  faceTextures: {},
-  defaultTexture: {
-    col: 0,
-    row: 0
-  }
-});
-```
-
-See [Blocks](./Blocks.md) documentation for more information.
+Custom implementations use the same `BlockShape` contract. See
+[creating custom shapes](../../guides/creating-custom-shapes.md).

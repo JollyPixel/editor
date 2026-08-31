@@ -20,7 +20,7 @@ export const PLACED_BLOCK_ID = TerrainBlock.Stone;
  *
  * Only the server calls this. Clients join with zero layers and take
  * everything from the first snapshot, so there is no local state that a
- * snapshot could disagree with (see docs/Network.md).
+ * snapshot could disagree with (see docs/guides/synchronizing-a-world.md).
  */
 export function seedFlatWorld(
   world: VoxelWorld
