@@ -9,11 +9,9 @@ import { Slab } from "../../../src/blocks/shapes/Slab.ts";
 import { Ramp } from "../../../src/blocks/shapes/Ramp.ts";
 import { RampCornerInner, RampCornerOuter } from "../../../src/blocks/shapes/RampCorner.ts";
 import { PoleY } from "../../../src/blocks/shapes/PoleY.ts";
-import {
-  Stair,
-  StairCornerInner,
-  StairCornerOuter
-} from "../../../src/blocks/shapes/Stair.ts";
+import { Stair } from "../../../src/blocks/shapes/Stair.ts";
+import { StairCornerInner } from "../../../src/blocks/shapes/StairCornerInner.ts";
+import { StairCornerOuter } from "../../../src/blocks/shapes/StairCornerOuter.ts";
 import { FACE } from "../../../src/utils/math.ts";
 import type { BlockShape } from "../../../src/blocks/BlockShape.ts";
 
@@ -149,33 +147,23 @@ describe("Slab (top)", () => {
   });
 });
 
-describe("Slab — occludes() id-string contract (bug documentation)", () => {
-  it("custom id containing 'Bottom' is treated as bottom slab", () => {
-    // The check is: this.id.includes("Bottom") || this.id === "slabBottom"
+describe("Slab — occludes() follows the constructor type, not the id", () => {
+  it("keeps bottom occlusion under a custom id", () => {
     const slab = new Slab("bottom", "myBottomSlab");
-    assert.ok(
-      slab.occludes(FACE.NegY),
-      "NegY should occlude when id contains 'Bottom'"
-    );
-    assert.ok(
-      !slab.occludes(FACE.PosY),
-      "PosY should not occlude when id contains 'Bottom'"
-    );
+    assert.ok(slab.occludes(FACE.NegY), "NegY should occlude a bottom slab");
+    assert.ok(!slab.occludes(FACE.PosY), "PosY should not occlude a bottom slab");
   });
 
-  it("custom id NOT containing 'Bottom' and not 'slabBottom' uses top logic (known quirk)", () => {
-    // A bottom slab with a custom id like "slab" will incorrectly behave as a top slab.
-    // This test documents the current (imperfect) behaviour.
+  it("keeps bottom occlusion under a custom id that says nothing about the type", () => {
     const slab = new Slab("bottom", "slab");
-    // Neither "slab".includes("Bottom") nor "slab" === "slabBottom" → uses top path
-    assert.ok(
-      slab.occludes(FACE.PosY),
-      "quirk: custom id falls through to top-slab logic"
-    );
-    assert.ok(
-      !slab.occludes(FACE.NegY),
-      "quirk: custom id falls through to top-slab logic"
-    );
+    assert.ok(slab.occludes(FACE.NegY), "NegY should occlude a bottom slab");
+    assert.ok(!slab.occludes(FACE.PosY), "PosY should not occlude a bottom slab");
+  });
+
+  it("keeps top occlusion under a custom id that reads as a bottom slab", () => {
+    const slab = new Slab("top", "myBottomSlab");
+    assert.ok(slab.occludes(FACE.PosY), "PosY should occlude a top slab");
+    assert.ok(!slab.occludes(FACE.NegY), "NegY should not occlude a top slab");
   });
 });
 

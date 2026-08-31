@@ -22,11 +22,9 @@ import {
   RampCornerInner,
   RampCornerOuter
 } from "../../src/blocks/shapes/RampCorner.ts";
-import {
-  Stair,
-  StairCornerInner,
-  StairCornerOuter
-} from "../../src/blocks/shapes/Stair.ts";
+import { Stair } from "../../src/blocks/shapes/Stair.ts";
+import { StairCornerInner } from "../../src/blocks/shapes/StairCornerInner.ts";
+import { StairCornerOuter } from "../../src/blocks/shapes/StairCornerOuter.ts";
 
 // CONSTANTS
 const kGap = 2.5;
