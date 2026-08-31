@@ -2,8 +2,7 @@
 import { LitElement, html, css, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import {
-  normalizeVoxelExtent,
-  voxelObjectFootprint,
+  VoxelFootprint,
   type VoxelRenderer,
   type VoxelObjectJSON,
   type VoxelLayerHookEvent
@@ -148,7 +147,7 @@ export class ObjectPanel extends LitElement {
     }
 
     const locked = object.locked ?? false;
-    const footprint = voxelObjectFootprint(object);
+    const footprint = VoxelFootprint.of(object);
 
     return html`
       <jolly-separator label=${object.name}></jolly-separator>
@@ -250,10 +249,9 @@ export class ObjectPanel extends LitElement {
     event: CustomEvent<JollyChangeDetail<Vec2Like>>
   ): void {
     const { x: width, y: height } = event.detail.value;
-    this.#patch({
-      width: normalizeVoxelExtent(width),
-      height: normalizeVoxelExtent(height)
-    });
+    this.#patch(
+      new VoxelFootprint(width, height).toJSON()
+    );
   }
 
   #onPropKeyChange(
