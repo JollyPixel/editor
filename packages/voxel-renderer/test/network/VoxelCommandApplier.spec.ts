@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { VoxelWorld } from "../../src/world/VoxelWorld.ts";
 import { applyCommandToWorld } from "../../src/network/VoxelCommandApplier.ts";
-import { packTransform } from "../../src/utils/math.ts";
+import { VoxelTransform } from "../../src/world/VoxelTransform.ts";
 import { VOXEL_LAYER_HOOK_ACTIONS, type VoxelLayerHookEvent } from "../../src/hooks.ts";
 import type { VoxelObjectJSON } from "../../src/serialization/types.ts";
 import { makeVoxelEntry } from "../helpers/voxelEntry.ts";
@@ -184,7 +184,7 @@ describe("applyCommandToWorld — voxel-set", () => {
     assert.ok(layer !== undefined);
     const entry = layer.getVoxelAt({ x: 1, y: 0, z: 0 });
     assert.ok(entry);
-    assert.equal(entry.transform, packTransform(1, true, false, false));
+    assert.equal(entry.transform, new VoxelTransform({ rotation: 1, flipX: true }).packed);
   });
 });
 
@@ -240,7 +240,7 @@ describe("applyCommandToWorld — voxels-set (bulk)", () => {
     assert.ok(layer !== undefined);
     const entry = layer.getVoxelAt({ x: 0, y: 0, z: 0 });
     assert.ok(entry);
-    assert.equal(entry.transform, packTransform(0, false, false, false));
+    assert.equal(entry.transform, new VoxelTransform({ rotation: 0 }).packed);
   });
 });
 

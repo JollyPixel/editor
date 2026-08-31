@@ -12,7 +12,7 @@ import {
   VOXEL_ABSENT
 } from "../../src/world/packedVoxel.ts";
 import { AIR_BLOCK_ID } from "../../src/blocks/BlockId.ts";
-import { packTransform } from "../../src/utils/math.ts";
+import { VoxelTransform } from "../../src/world/VoxelTransform.ts";
 
 describe("VOXEL_ABSENT", () => {
   it("is negative so every packed voxel is distinguishable", () => {
@@ -39,12 +39,17 @@ describe("packVoxel / unpackVoxel", () => {
     }
   });
 
-  it("round-trips every value packTransform can produce", () => {
+  it("round-trips every value a VoxelTransform can produce", () => {
     for (const rotation of [0, 1, 2, 3] as const) {
       for (const flipX of [false, true]) {
         for (const flipZ of [false, true]) {
           for (const flipY of [false, true]) {
-            const transform = packTransform(rotation, flipX, flipZ, flipY);
+            const transform = new VoxelTransform({
+              rotation,
+              flipX,
+              flipZ,
+              flipY
+            }).packed;
             const packed = packVoxel(42, transform);
 
             assert.equal(voxelBlockId(packed), 42);

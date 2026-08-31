@@ -11,7 +11,7 @@ import { BlockRegistry } from "../../../src/blocks/BlockRegistry.ts";
 import { BlockShapeRegistry } from "../../../src/blocks/BlockShapeRegistry.ts";
 import { TilesetManager } from "../../../src/tileset/TilesetManager.ts";
 import { VoxelMeshBuilder } from "../../../src/mesh/index.ts";
-import { packTransform } from "../../../src/utils/math.ts";
+import { VoxelTransform } from "../../../src/world/VoxelTransform.ts";
 import { mockTexture } from "../../helpers/mockTexture.ts";
 import { DEFAULT_TEXTURE, makeBlockDef } from "../../helpers/blocks.ts";
 import { makeAtlasDef } from "../../helpers/atlas.ts";
@@ -222,7 +222,7 @@ describe("GreedyMesher — merge boundaries", () => {
       from: [2, 0, 0],
       to: [3, 0, 0],
       blockId: kCubeId,
-      transform: packTransform(1, false, false)
+      transform: new VoxelTransform({ rotation: 1 }).packed
     });
 
     // A rotated cube turns its tile sideways, so it cannot share a quad with

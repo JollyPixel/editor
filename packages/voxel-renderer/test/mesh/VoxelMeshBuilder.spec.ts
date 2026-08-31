@@ -11,7 +11,7 @@ import { BlockRegistry } from "../../src/blocks/BlockRegistry.ts";
 import { BlockShapeRegistry } from "../../src/blocks/BlockShapeRegistry.ts";
 import { TilesetManager } from "../../src/tileset/TilesetManager.ts";
 import { VoxelMeshBuilder } from "../../src/mesh/index.ts";
-import { packTransform } from "../../src/utils/math.ts";
+import { VoxelTransform } from "../../src/world/VoxelTransform.ts";
 import type { VoxelChunk } from "../../src/world/VoxelChunk.ts";
 import { mockTexture } from "../helpers/mockTexture.ts";
 import { DEFAULT_TEXTURE, makeBlockDef } from "../helpers/blocks.ts";
@@ -258,7 +258,7 @@ describe("VoxelMeshBuilder — ramp rotation base cases (rot=0, rot=2)", () => {
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 1 }, {
       blockId: kRampId,
-      transform: packTransform(2, false, false)
+      transform: new VoxelTransform({ rotation: 2 }).packed
     });
 
     // Cube: 5 faces (PosZ hidden by the ramp's back wall) = 20 verts.
@@ -273,7 +273,7 @@ describe("VoxelMeshBuilder — ramp rotation base cases (rot=0, rot=2)", () => {
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 1 }, {
       blockId: kRampId,
-      transform: packTransform(0, false, false)
+      transform: new VoxelTransform({ rotation: 0 }).packed
     });
 
     // The ramp's open front (rot=0) has no NegZ geometry, so it never
@@ -292,7 +292,7 @@ describe("VoxelMeshBuilder — neighbour rotation inversion fix (rot=1 / rot=3)"
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
     f.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, {
       blockId: kRampId,
-      transform: packTransform(1, false, false)
+      transform: new VoxelTransform({ rotation: 1 }).packed
     });
 
     // Cube keeps all 6 faces (24 verts); the ramp's open front (rot=1) faces
@@ -309,7 +309,7 @@ describe("VoxelMeshBuilder — neighbour rotation inversion fix (rot=1 / rot=3)"
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
     f.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, {
       blockId: kRampId,
-      transform: packTransform(3, false, false)
+      transform: new VoxelTransform({ rotation: 3 }).packed
     });
 
     // Cube's PosX face is hidden by the ramp's back wall (rot=3 turns it to
@@ -326,7 +326,7 @@ describe("VoxelMeshBuilder — neighbour rotation inversion fix (rot=1 / rot=3)"
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
     f.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, {
       blockId: kStairId,
-      transform: packTransform(1, false, false)
+      transform: new VoxelTransform({ rotation: 1 }).packed
     });
 
     // Cube keeps all 6 faces (24 verts). Of the stair's 10 constituent faces,
@@ -344,7 +344,7 @@ describe("VoxelMeshBuilder — neighbour rotation inversion fix (rot=1 / rot=3)"
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
     f.world.setVoxelAt("test", { x: -1, y: 0, z: 0 }, {
       blockId: kRampId,
-      transform: packTransform(1, false, false)
+      transform: new VoxelTransform({ rotation: 1 }).packed
     });
 
     // Ramp is in chunk (-1,0,0), only the cube chunk (0,0,0) is built here.

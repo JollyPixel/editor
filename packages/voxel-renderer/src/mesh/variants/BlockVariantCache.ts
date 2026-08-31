@@ -23,11 +23,14 @@ import {
   toSnorm8,
   toUnorm16
 } from "./quantize.ts";
+import {
+  VoxelTransform,
+  VOXEL_TRANSFORM_MASK
+} from "../../world/VoxelTransform.ts";
 
 // CONSTANTS
 // A packed transform uses bits 0-4, so a block has at most 32 variants.
-const kTransformCount = 32;
-const kTransformMask = kTransformCount - 1;
+const kTransformCount = VOXEL_TRANSFORM_MASK + 1;
 const kAllFaces: readonly FACE[] = [
   FACE.PosX,
   FACE.NegX,
@@ -105,11 +108,11 @@ export class BlockVariantCache {
     blockId: number,
     transform: number
   ): BlockVariant | null {
-    const key = (blockId * kTransformCount) + (transform & kTransformMask);
+    const key = (blockId * kTransformCount) + (transform & VOXEL_TRANSFORM_MASK);
 
     let variant = this.#variants.get(key);
     if (variant === undefined) {
-      variant = this.#compile(blockId, transform & kTransformMask);
+      variant = this.#compile(blockId, transform & VOXEL_TRANSFORM_MASK);
       this.#variants.set(key, variant);
     }
 
@@ -123,7 +126,7 @@ export class BlockVariantCache {
     blockId: number,
     transform: number
   ): number {
-    const key = (blockId * kTransformCount) + (transform & kTransformMask);
+    const key = (blockId * kTransformCount) + (transform & VOXEL_TRANSFORM_MASK);
     // Unsigned so a negative key (never produced by a packed voxel, but cheap
     // to rule out) misses the table instead of reading `undefined`.
     if (key >>> 0 < this.#occlusion.length) {
@@ -202,10 +205,8 @@ export class BlockVariantCache {
     }
 
     const cutout = blockDef.transparent === true;
-    const rotation = transform & 0b11;
-    const flipX = (transform & 0b100) !== 0;
-    const flipZ = (transform & 0b1000) !== 0;
-    const flipY = (transform & 0b10000) !== 0;
+    const voxelTransform = VoxelTransform.fromPacked(transform);
+    const { rotation, flipY } = voxelTransform;
 
     const faces: BlockVariantFace[] = [];
     for (const faceDef of shape.faces) {
@@ -235,8 +236,7 @@ export class BlockVariantCache {
         const vi = flipY ? vertexCount - 1 - i : i;
         const vertex = rotateVertex(
           faceDef.vertices[vi],
-          rotation,
-          { x: flipX, z: flipZ, y: flipY }
+          voxelTransform
         );
         positions[i * 3] = vertex[0];
         positions[(i * 3) + 1] = vertex[1];
@@ -257,8 +257,7 @@ export class BlockVariantCache {
 
       const normal = rotateNormal(
         faceDef.normal,
-        rotation,
-        { flipX, flipZ, flipY }
+        voxelTransform
       );
 
       faces.push({

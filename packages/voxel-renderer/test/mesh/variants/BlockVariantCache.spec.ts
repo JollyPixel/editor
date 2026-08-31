@@ -7,7 +7,7 @@ import { BlockRegistry } from "../../../src/blocks/BlockRegistry.ts";
 import { BlockShapeRegistry } from "../../../src/blocks/BlockShapeRegistry.ts";
 import { TilesetManager } from "../../../src/tileset/TilesetManager.ts";
 import { BlockVariantCache } from "../../../src/mesh/variants/BlockVariantCache.ts";
-import { packTransform } from "../../../src/utils/math.ts";
+import { VoxelTransform } from "../../../src/world/VoxelTransform.ts";
 import { mockTexture } from "../../helpers/mockTexture.ts";
 import { DEFAULT_TEXTURE, makeBlockDef } from "../../helpers/blocks.ts";
 import { makeAtlasDef } from "../../helpers/atlas.ts";
@@ -95,7 +95,7 @@ describe("BlockVariantCache — occlusionMaskOf", () => {
 
   it("masks the transform to the five bits a packed voxel carries", () => {
     const { cache } = makeCache();
-    const transform = packTransform(1, true, false, false);
+    const transform = new VoxelTransform({ rotation: 1, flipX: true }).packed;
 
     assert.equal(
       cache.occlusionMaskOf(kRampId, transform),

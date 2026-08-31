@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import type { VoxelLayerHookEvent } from "../hooks.ts";
 import type { VoxelWorld } from "../world/VoxelWorld.ts";
-import { packTransform } from "../utils/math.ts";
+import { VoxelTransform } from "../world/VoxelTransform.ts";
 
 /**
  * Applies one hook event to a headless `VoxelWorld`.
@@ -46,27 +46,12 @@ export function applyCommandToWorld(
       }
       break;
 
-    case "voxel-set": {
-      const {
-        position,
-        blockId,
-        rotation,
-        flipX,
-        flipZ,
-        flipY
-      } = cmd.metadata;
-
-      world.setVoxelAt(cmd.layerName, position, {
-        blockId,
-        transform: packTransform(
-          rotation as 0 | 1 | 2 | 3,
-          flipX,
-          flipZ,
-          flipY
-        )
+    case "voxel-set":
+      world.setVoxelAt(cmd.layerName, cmd.metadata.position, {
+        blockId: cmd.metadata.blockId,
+        transform: new VoxelTransform(cmd.metadata).packed
       });
       break;
-    }
 
     case "voxel-removed":
       world.removeVoxelAt(
@@ -77,23 +62,9 @@ export function applyCommandToWorld(
 
     case "voxels-set":
       for (const entry of cmd.metadata.entries) {
-        const {
-          position,
-          blockId,
-          rotation = 0,
-          flipX = false,
-          flipZ = false,
-          flipY = false
-        } = entry;
-
-        world.setVoxelAt(cmd.layerName, position, {
-          blockId,
-          transform: packTransform(
-            rotation as 0 | 1 | 2 | 3,
-            flipX,
-            flipZ,
-            flipY
-          )
+        world.setVoxelAt(cmd.layerName, entry.position, {
+          blockId: entry.blockId,
+          transform: new VoxelTransform(entry).packed
         });
       }
       break;

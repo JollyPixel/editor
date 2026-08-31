@@ -139,8 +139,9 @@ integration; then the application owns `init()`, `tick()`, `flush()`, and
   [hook events](docs/api/core/hooks.md).
 - [`VoxelWorld`](docs/api/world/VoxelWorld.md),
   [`VoxelLayer`](docs/api/world/VoxelLayer.md),
-  [`VoxelChunk`](docs/api/world/VoxelChunk.md), and
-  [`VoxelStore`](docs/api/world/VoxelStore.md).
+  [`VoxelChunk`](docs/api/world/VoxelChunk.md),
+  [`VoxelStore`](docs/api/world/VoxelStore.md), and
+  [`VoxelTransform`](docs/api/world/VoxelTransform.md).
 
 ### Blocks, tilesets, and rendering API
 

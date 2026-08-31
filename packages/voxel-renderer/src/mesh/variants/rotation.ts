@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import { type Vec3, FACE } from "../../utils/math.ts";
+import type { VoxelTransform } from "../../world/VoxelTransform.ts";
 
 // CONSTANTS
 // Indexed by quarter-turn then face; positive rotation is CCW from above.
@@ -12,14 +13,13 @@ const kRotateFaceTable: readonly (readonly FACE[])[] = [
 
 export function rotateVertex(
   vec3: Vec3,
-  rotation: number,
-  flip: { x: boolean; z: boolean; y?: boolean; }
+  transform: VoxelTransform
 ): Vec3 {
   let x = vec3[0];
   let y = vec3[1];
   let z = vec3[2];
 
-  switch (rotation) {
+  switch (transform.rotation) {
     case 1: {
       const nx = z;
       const nz = 1 - x;
@@ -39,13 +39,13 @@ export function rotateVertex(
     }
   }
 
-  if (flip.x) {
+  if (transform.flipX) {
     x = 1 - x;
   }
-  if (flip.z) {
+  if (transform.flipZ) {
     z = 1 - z;
   }
-  if (flip.y) {
+  if (transform.flipY) {
     y = 1 - y;
   }
 
@@ -61,16 +61,13 @@ export function rotateFace(
 
 export function rotateNormal(
   normal: Vec3,
-  rotation: number,
-  flip: { flipX: boolean; flipZ: boolean; flipY?: boolean; }
+  transform: VoxelTransform
 ): Vec3 {
-  const { flipX, flipZ, flipY } = flip;
-
   let nx = normal[0];
   let ny = normal[1];
   let nz = normal[2];
 
-  switch (rotation) {
+  switch (transform.rotation) {
     case 1: {
       const t = nx;
       nx = nz; nz = -t;
@@ -88,13 +85,13 @@ export function rotateNormal(
     }
   }
 
-  if (flipX) {
+  if (transform.flipX) {
     nx = -nx;
   }
-  if (flipZ) {
+  if (transform.flipZ) {
     nz = -nz;
   }
-  if (flipY) {
+  if (transform.flipY) {
     ny = -ny;
   }
 
