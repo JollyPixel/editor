@@ -5,8 +5,7 @@ import {
 } from "@jolly-pixel/color";
 import type { Vector3Like } from "@jolly-pixel/three";
 import {
-  normalizeVoxelExtent,
-  voxelObjectFootprint,
+  VoxelFootprint,
   type VoxelObjectJSON
 } from "@jolly-pixel/voxel.renderer";
 
@@ -100,7 +99,7 @@ export function isLocked(
 export function areaTransformOf(
   object: VoxelObjectJSON
 ): AreaTransform {
-  const footprint = voxelObjectFootprint(object);
+  const footprint = VoxelFootprint.of(object);
 
   return {
     position: {
@@ -124,8 +123,7 @@ export function objectPatchFromArea(
     x: roundCoordinate(min.x),
     y: roundCoordinate(min.y),
     z: roundCoordinate(min.z),
-    width: normalizeVoxelExtent(size.x),
-    height: normalizeVoxelExtent(size.z)
+    ...new VoxelFootprint(size.x, size.z).toJSON()
   };
 }
 
@@ -133,11 +131,10 @@ export function sameObjectArea(
   object: VoxelObjectJSON,
   patch: ObjectAreaPatch
 ): boolean {
-  const footprint = voxelObjectFootprint(object);
-
   return object.x === patch.x &&
     object.y === patch.y &&
     object.z === patch.z &&
-    footprint.width === patch.width &&
-    footprint.height === patch.height;
+    VoxelFootprint.of(object).equals(
+      new VoxelFootprint(patch.width, patch.height)
+    );
 }

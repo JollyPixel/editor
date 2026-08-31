@@ -10,9 +10,19 @@ import {
   flipYFace
 } from "../../../src/mesh/variants/rotation.ts";
 import { FACE } from "../../../src/utils/math.ts";
+import { VoxelTransform } from "../../../src/world/VoxelTransform.ts";
 
 // CONSTANTS
 const kEpsilon = 1e-10;
+
+function tf(
+  rotation: number,
+  flipX = false,
+  flipZ = false,
+  flipY = false
+): VoxelTransform {
+  return new VoxelTransform({ rotation, flipX, flipZ, flipY });
+}
 
 function approxEqual(
   a: number,
@@ -71,123 +81,123 @@ describe("rotateFace", () => {
 describe("rotateVertex", () => {
   it("rotation 0 with no flips is identity", () => {
     const v = [0.3, 0.7, 0.2] as const;
-    const result = rotateVertex([...v], 0, { x: false, z: false });
+    const result = rotateVertex([...v], tf(0));
     assert.deepEqual(result, [...v]);
   });
 
   it("block center [0.5,0.5,0.5] is invariant under any rotation", () => {
     for (let r = 0; r < 4; r++) {
-      const result = rotateVertex([0.5, 0.5, 0.5], r, { x: false, z: false });
+      const result = rotateVertex([0.5, 0.5, 0.5], tf(r));
       assert.ok(vecApproxEqual(result, [0.5, 0.5, 0.5]), `center not invariant at rotation ${r}`);
     }
   });
 
   it("rot=1: [1,0,0] → [0,0,0]", () => {
-    assert.deepEqual(rotateVertex([1, 0, 0], 1, { x: false, z: false }), [0, 0, 0]);
+    assert.deepEqual(rotateVertex([1, 0, 0], tf(1)), [0, 0, 0]);
   });
 
   it("rot=1: [0,0,0] → [0,0,1]", () => {
-    assert.deepEqual(rotateVertex([0, 0, 0], 1, { x: false, z: false }), [0, 0, 1]);
+    assert.deepEqual(rotateVertex([0, 0, 0], tf(1)), [0, 0, 1]);
   });
 
   it("rot=1: [0,0,1] → [1,0,1]", () => {
-    assert.deepEqual(rotateVertex([0, 0, 1], 1, { x: false, z: false }), [1, 0, 1]);
+    assert.deepEqual(rotateVertex([0, 0, 1], tf(1)), [1, 0, 1]);
   });
 
   it("rot=1: [1,0,1] → [1,0,0]", () => {
-    assert.deepEqual(rotateVertex([1, 0, 1], 1, { x: false, z: false }), [1, 0, 0]);
+    assert.deepEqual(rotateVertex([1, 0, 1], tf(1)), [1, 0, 0]);
   });
 
   it("rot=2: [1,0,0] → [0,0,1] (180° maps each corner to its diagonally opposite)", () => {
-    assert.deepEqual(rotateVertex([1, 0, 0], 2, { x: false, z: false }), [0, 0, 1]);
+    assert.deepEqual(rotateVertex([1, 0, 0], tf(2)), [0, 0, 1]);
   });
 
   it("rot=2: [0,0,0] → [1,0,1]", () => {
-    assert.deepEqual(rotateVertex([0, 0, 0], 2, { x: false, z: false }), [1, 0, 1]);
+    assert.deepEqual(rotateVertex([0, 0, 0], tf(2)), [1, 0, 1]);
   });
 
   it("flipX mirrors x around 0.5", () => {
-    const result = rotateVertex([1, 0, 0], 0, { x: true, z: false });
+    const result = rotateVertex([1, 0, 0], tf(0, true, false));
     assert.deepEqual(result, [0, 0, 0]);
   });
 
   it("flipZ mirrors z around 0.5", () => {
-    const result = rotateVertex([0, 0, 0.2], 0, { x: false, z: true });
+    const result = rotateVertex([0, 0, 0.2], tf(0, false, true));
     assert.ok(approxEqual(result[2], 0.8));
   });
 
   it("Y coordinate is unchanged when flipY is not set", () => {
-    const result = rotateVertex([0.3, 0.7, 0.2], 3, { x: true, z: true });
+    const result = rotateVertex([0.3, 0.7, 0.2], tf(3, true, true));
     assert.ok(approxEqual(result[1], 0.7));
   });
 });
 
 describe("rotateVertex with flipY", () => {
   it("flipY mirrors y around 0.5", () => {
-    const result = rotateVertex([0.3, 0.7, 0.2], 0, { x: false, z: false, y: true });
+    const result = rotateVertex([0.3, 0.7, 0.2], tf(0, false, false, true));
     assert.ok(approxEqual(result[0], 0.3));
     assert.ok(approxEqual(result[1], 0.3));
     assert.ok(approxEqual(result[2], 0.2));
   });
 
   it("block center [0.5,0.5,0.5] is invariant under flipY", () => {
-    const result = rotateVertex([0.5, 0.5, 0.5], 0, { x: false, z: false, y: true });
+    const result = rotateVertex([0.5, 0.5, 0.5], tf(0, false, false, true));
     assert.ok(vecApproxEqual(result, [0.5, 0.5, 0.5]));
   });
 
   it("flipY composes with rotation: rot=1 then flipY", () => {
     // rot=1: [0,0,0] → [0,0,1]; then flipY: y stays 0 → 1-0=1
-    const result = rotateVertex([0, 0, 0], 1, { x: false, z: false, y: true });
+    const result = rotateVertex([0, 0, 0], tf(1, false, false, true));
     assert.ok(vecApproxEqual(result, [0, 1, 1]));
   });
 });
 
 describe("rotateNormal", () => {
   it("rotation 0 with no flips is identity", () => {
-    assert.deepEqual(rotateNormal([1, 0, 0], 0, { flipX: false, flipZ: false }), [1, 0, 0]);
+    assert.deepEqual(rotateNormal([1, 0, 0], tf(0)), [1, 0, 0]);
   });
 
   it("rot=1: [1,0,0] → [0,0,-1]", () => {
-    const result = rotateNormal([1, 0, 0], 1, { flipX: false, flipZ: false });
+    const result = rotateNormal([1, 0, 0], tf(1));
     assert.ok(vecApproxEqual(result, [0, 0, -1]));
   });
 
   it("rot=1: [0,0,1] → [1,0,0]", () => {
-    const result = rotateNormal([0, 0, 1], 1, { flipX: false, flipZ: false });
+    const result = rotateNormal([0, 0, 1], tf(1));
     assert.ok(vecApproxEqual(result, [1, 0, 0]));
   });
 
   it("rot=2: [1,0,0] → [-1,0,0]", () => {
-    const result = rotateNormal([1, 0, 0], 2, { flipX: false, flipZ: false });
+    const result = rotateNormal([1, 0, 0], tf(2));
     assert.ok(vecApproxEqual(result, [-1, 0, 0]));
   });
 
   it("flipX negates nx component", () => {
-    const result = rotateNormal([0.5, 0, 0.5], 0, { flipX: true, flipZ: false });
+    const result = rotateNormal([0.5, 0, 0.5], tf(0, true, false));
     assert.ok(vecApproxEqual(result, [-0.5, 0, 0.5]));
   });
 
   it("flipZ negates nz component", () => {
-    const result = rotateNormal([0, 0, 1], 0, { flipX: false, flipZ: true });
+    const result = rotateNormal([0, 0, 1], tf(0, false, true));
     assert.ok(vecApproxEqual(result, [0, 0, -1]));
   });
 
   it("Y component is unchanged when flipY is not set", () => {
-    const result = rotateNormal([0, 0.7, 0], 2, { flipX: true, flipZ: true });
+    const result = rotateNormal([0, 0.7, 0], tf(2, true, true));
     assert.ok(approxEqual(result[1], 0.7));
   });
 });
 
 describe("rotateNormal with flipY", () => {
   it("flipY negates ny component", () => {
-    const result = rotateNormal([0, 0.7, 0], 0, { flipX: false, flipZ: false, flipY: true });
+    const result = rotateNormal([0, 0.7, 0], tf(0, false, false, true));
     assert.ok(approxEqual(result[0], 0));
     assert.ok(approxEqual(result[1], -0.7));
     assert.ok(approxEqual(result[2], 0));
   });
 
   it("X and Z components are unchanged by flipY alone", () => {
-    const result = rotateNormal([0.5, 0.3, 0.4], 0, { flipX: false, flipZ: false, flipY: true });
+    const result = rotateNormal([0.5, 0.3, 0.4], tf(0, false, false, true));
     assert.ok(approxEqual(result[0], 0.5));
     assert.ok(approxEqual(result[2], 0.4));
   });

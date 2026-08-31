@@ -10,7 +10,7 @@ const kTransformBits = 8;
 const kTransformMask = 0xFF;
 
 /**
- * Highest storable block id. `packTransform()` uses 5 bits, leaving 23 bits for block IDs.
+ * Highest storable block id. The transform takes a byte, leaving 23 bits.
  */
 export const MAX_BLOCK_ID = 0x7FFFFF;
 

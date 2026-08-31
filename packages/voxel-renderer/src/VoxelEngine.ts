@@ -25,7 +25,7 @@ import {
 } from "./debug/VoxelDebugger.ts";
 import {
   VoxelMeshBuilder,
-  parseChunkGeometryKey,
+  ChunkGeometryKey,
   enableTileWrapping
 } from "./mesh/index.ts";
 import {
@@ -49,10 +49,10 @@ import {
 import { VoxelChunk } from "./world/VoxelChunk.ts";
 import type { VoxelEntry, VoxelCoord } from "./world/types.ts";
 import {
-  packTransform,
   FACE_OFFSETS,
   type FACE
 } from "./utils/math.ts";
+import { VoxelTransform } from "./world/VoxelTransform.ts";
 import type {
   VoxelLayerHookListener,
   VoxelLayerHookEvent
@@ -476,7 +476,7 @@ export class VoxelEngine {
         this.setVoxel(event.layerName, {
           position,
           blockId,
-          rotation: rotation as 0 | 1 | 2 | 3,
+          rotation,
           flipX,
           flipZ,
           flipY
@@ -550,25 +550,25 @@ export class VoxelEngine {
     layerName: string,
     options: VoxelSetOptions
   ): void {
-    const {
-      position,
-      blockId,
-      rotation = 0,
-      flipX = false,
-      flipZ = false,
-      flipY = false
-    } = options;
-    const transform = packTransform(rotation, flipX, flipZ, flipY);
+    const { position, blockId } = options;
+    const transform = new VoxelTransform(options);
 
     this.world.setVoxelAt(
       layerName,
       position,
-      { blockId, transform }
+      { blockId, transform: transform.packed }
     );
     this.#emitHook({
       action: "voxel-set",
       layerName,
-      metadata: { position, blockId, rotation, flipX, flipZ, flipY }
+      metadata: {
+        position,
+        blockId,
+        rotation: transform.rotation,
+        flipX: transform.flipX,
+        flipZ: transform.flipZ,
+        flipY: transform.flipY
+      }
     });
   }
 
@@ -588,18 +588,14 @@ export class VoxelEngine {
     layerName: string,
     entries: VoxelSetOptions[]
   ): void {
-    for (const {
-      position,
-      blockId,
-      rotation = 0,
-      flipX = false,
-      flipZ = false,
-      flipY = false
-    } of entries) {
+    for (const entry of entries) {
       this.world.setVoxelAt(
         layerName,
-        position,
-        { blockId, transform: packTransform(rotation, flipX, flipZ, flipY) }
+        entry.position,
+        {
+          blockId: entry.blockId,
+          transform: new VoxelTransform(entry).packed
+        }
       );
     }
     this.#emitHook({
@@ -1094,7 +1090,7 @@ export class VoxelEngine {
 
     const meshes: THREE.Mesh[] = [];
     for (const [key, geometry] of geometries) {
-      const { tilesetId, cutout } = parseChunkGeometryKey(key);
+      const { tilesetId, cutout } = ChunkGeometryKey.parse(key);
       const mesh = new THREE.Mesh(
         geometry,
         this.#getMaterial(tilesetId, opacity, cutout)

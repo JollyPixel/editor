@@ -3,8 +3,10 @@ export * from "./loadTilesets.ts";
 export * from "./TilesetAtlas.ts";
 export * from "./TilesetManager.ts";
 
-// `atlasLayout.ts` is an internal helper module; only the region shape is public.
-export type {
+// `padAtlas.ts` is an internal helper module; only the layout is public.
+export {
   AtlasLayout,
-  AtlasRegion
-} from "./atlasLayout.ts";
+  type AtlasLayoutOptions,
+  type AtlasRegion,
+  type AtlasTileRange
+} from "./AtlasLayout.ts";

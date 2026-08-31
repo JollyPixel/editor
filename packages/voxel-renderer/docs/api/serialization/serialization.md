@@ -159,23 +159,46 @@ interface VoxelObjectLayerJSON {
 
 Only string, number, and boolean property values survive serialization.
 
-### Footprint helpers
+### `VoxelFootprint`
+
+Immutable whole-cell area an object covers on the ground plane. Width spans x
+and height spans z.
 
 ```ts
-interface VoxelObjectFootprint {
+class VoxelFootprint {
+  static readonly Unit: VoxelFootprint;
+  static normalizeExtent(value: number): number;
+  static of(
+    object: Pick<VoxelObjectJSON, "width" | "height">
+  ): VoxelFootprint;
+
+  readonly width: number;
+  readonly height: number;
+
+  constructor(width: number, height: number);
+
+  equals(other: VoxelFootprint): boolean;
+  toJSON(): VoxelFootprintJSON;
+}
+
+interface VoxelFootprintJSON {
   width: number;
   height: number;
 }
-
-function normalizeVoxelExtent(value: number): number;
-
-function voxelObjectFootprint(
-  object: VoxelObjectJSON
-): VoxelObjectFootprint;
 ```
 
-`normalizeVoxelExtent()` rounds a finite extent to the nearest whole voxel and
-clamps it to at least `1`. Invalid, zero, and negative values become `1`.
+The constructor normalizes both extents, so a footprint is always whole cells.
+`normalizeExtent()` rounds to the nearest whole voxel and clamps to at least
+`1`; invalid, zero, and negative values become `1`.
 
-`voxelObjectFootprint()` applies that rule to the object's width and height.
-Missing dimensions occupy one cell. Width spans x and height spans z.
+`of()` reads an object's stored dimensions, where a missing one occupies a
+single cell. It does not mutate the object.
+
+`toJSON()` returns the `width` and `height` an object stores, so it can be
+spread into a `VoxelObjectJSON` or an update patch.
+
+```ts
+const footprint = VoxelFootprint.of(object);
+
+footprint.equals(new VoxelFootprint(size.x, size.z));
+```

@@ -307,7 +307,7 @@ Returns the world-space center of all voxels in the given layer.
 Places a voxel at a world-space position.
 
 ```ts
-interface VoxelSetOptions {
+interface VoxelSetOptions extends VoxelTransformOptions {
   position: THREE.Vector3Like;
   blockId: number;
   /** Y-axis rotation in 90° steps. Default: `VoxelRotation.None`. */
@@ -333,6 +333,11 @@ const VoxelRotation = {
 
 type VoxelRotation = typeof VoxelRotation[keyof typeof VoxelRotation];
 ```
+
+The rotation and flip fields come from
+[`VoxelTransformOptions`](../world/VoxelTransform.md), which packs them into the
+transform byte a chunk stores. A rotation outside `0..3` wraps rather than
+spilling into the flip bits.
 
 #### `removeVoxel(layerName: string, options: VoxelRemoveOptions): void`
 

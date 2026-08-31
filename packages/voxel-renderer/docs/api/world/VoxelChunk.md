@@ -46,7 +46,8 @@ function voxelTransform(packed: PackedVoxel): number;
 ```
 
 `packVoxel()` stores the transform in bits 0 through 7 and the block ID in bits
-8 through 30. It throws `RangeError` for air (`0`), a negative ID, or an ID
+8 through 30. Only the low five transform bits carry meaning; decode them with
+[`VoxelTransform`](./VoxelTransform.md). It throws `RangeError` for air (`0`), a negative ID, or an ID
 greater than `MAX_BLOCK_ID`.
 
 `VOXEL_ABSENT` is returned by packed read methods when no voxel exists. Every

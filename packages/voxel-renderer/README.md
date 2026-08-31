@@ -139,8 +139,9 @@ integration; then the application owns `init()`, `tick()`, `flush()`, and
   [hook events](docs/api/core/hooks.md).
 - [`VoxelWorld`](docs/api/world/VoxelWorld.md),
   [`VoxelLayer`](docs/api/world/VoxelLayer.md),
-  [`VoxelChunk`](docs/api/world/VoxelChunk.md), and
-  [`VoxelStore`](docs/api/world/VoxelStore.md).
+  [`VoxelChunk`](docs/api/world/VoxelChunk.md),
+  [`VoxelStore`](docs/api/world/VoxelStore.md), and
+  [`VoxelTransform`](docs/api/world/VoxelTransform.md).
 
 ### Blocks, tilesets, and rendering API
 
@@ -148,8 +149,11 @@ integration; then the application owns `init()`, `tick()`, `flush()`, and
   [`BlockRegistry` and tileset block generation](docs/api/blocks/BlockRegistry.md),
   [`BlockShape`](docs/api/blocks/BlockShape.md), and
   [`BlockShapeRegistry`](docs/api/blocks/BlockShapeRegistry.md).
-- [Built-in shapes](docs/api/blocks/built-in-shapes.md) and
-  [tilesets](docs/api/tilesets/tilesets.md).
+- [Built-in shapes](docs/api/blocks/built-in-shapes.md),
+  [tilesets](docs/api/tilesets/tilesets.md),
+  [`TilesetManager`](docs/api/tilesets/TilesetManager.md),
+  [`TilesetAtlas`](docs/api/tilesets/TilesetAtlas.md), and
+  [`AtlasLayout`](docs/api/tilesets/AtlasLayout.md).
 - [Rendering, meshing, and tile wrapping](docs/concepts/rendering-and-meshing.md),
   [`VoxelCollider`](docs/api/collision/VoxelCollider.md), and
   [`RapierVoxelCollider`](docs/api/collision/RapierVoxelCollider.md).

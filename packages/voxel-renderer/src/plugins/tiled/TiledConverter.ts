@@ -19,8 +19,8 @@ import type {
   VoxelObjectProperties
 } from "../../serialization/types.ts";
 import {
-  normalizeVoxelExtent
-} from "../../serialization/voxelObject.ts";
+  VoxelFootprint
+} from "../../serialization/VoxelFootprint.ts";
 import type {
   VoxelLayerJSON,
   VoxelEntryKey
@@ -325,6 +325,10 @@ function convertObjectLayer(
   ctx: ObjectLayerContext
 ): VoxelObjectLayerJSON {
   const objects: VoxelObjectJSON[] = layer.objects.map((obj) => {
+    const footprint = new VoxelFootprint(
+      obj.width / ctx.map.tilewidth,
+      obj.height / ctx.map.tileheight
+    );
     const result: VoxelObjectJSON = {
       id: String(obj.id),
       name: obj.name,
@@ -332,12 +336,8 @@ function convertObjectLayer(
       x: obj.x / ctx.map.tilewidth,
       y: 0,
       z: obj.y / ctx.map.tileheight,
-      width: normalizeVoxelExtent(
-        obj.width / ctx.map.tilewidth
-      ),
-      height: normalizeVoxelExtent(
-        obj.height / ctx.map.tileheight
-      ),
+      width: footprint.width,
+      height: footprint.height,
       rotation: obj.rotation,
       visible: obj.visible
     };

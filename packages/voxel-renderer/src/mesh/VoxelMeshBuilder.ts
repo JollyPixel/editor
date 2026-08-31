@@ -10,7 +10,7 @@ import type { BlockShapeRegistry } from "../blocks/BlockShapeRegistry.ts";
 import type { TilesetManager } from "../tileset/TilesetManager.ts";
 import type { MeshPassOptions } from "./types.ts";
 import { BlockVariantCache } from "./variants/BlockVariantCache.ts";
-import { chunkGeometryKey } from "./chunkGeometryKey.ts";
+import { ChunkGeometryKey } from "./ChunkGeometryKey.ts";
 import { GeometryBuffer } from "./GeometryBuffer.ts";
 import { MeshBuildStats } from "./MeshBuildStats.ts";
 import { GreedyMesher } from "./meshers/GreedyMesher.ts";
@@ -160,10 +160,10 @@ export class VoxelMeshBuilder {
       stats.geometries++;
       stats.bytesPerVertex = bytesPerVertex(geometry);
       result.set(
-        chunkGeometryKey(
+        new ChunkGeometryKey(
           this.#variants.tilesetIdAt(slot),
           this.#variants.isCutoutAt(slot)
-        ),
+        ).toString(),
         geometry
       );
     }
