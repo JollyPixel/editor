@@ -91,13 +91,14 @@ export class ChunkNeighbourhood {
     nx: number,
     ny: number,
     nz: number,
-    oppFace: number
+    oppFace: number,
+    blockId: number
   ): boolean {
     if (!this.#selfOpaque) {
       const cache = this.#self;
 
       return cache !== null &&
-        this.#occludes(cache.packedAt(nx, ny, nz), oppFace);
+        this.#occludes(cache.packedAt(nx, ny, nz), oppFace, blockId);
     }
 
     const layers = this.layers;
@@ -110,7 +111,7 @@ export class ChunkNeighbourhood {
 
       const neighbour = cache.packedAt(nx, ny, nz);
       if (neighbour !== VOXEL_ABSENT) {
-        return this.#occludes(neighbour, oppFace);
+        return this.#occludes(neighbour, oppFace, blockId);
       }
     }
 
@@ -119,16 +120,18 @@ export class ChunkNeighbourhood {
 
   #occludes(
     neighbour: PackedVoxel,
-    oppFace: number
+    oppFace: number,
+    blockId: number
   ): boolean {
     if (neighbour === VOXEL_ABSENT) {
       return false;
     }
 
-    const occlusionMask = this.#variants.occlusionMaskOf(
-      voxelBlockId(neighbour),
-      voxelTransform(neighbour)
-    );
+    const neighbourBlockId = voxelBlockId(neighbour);
+    const transform = voxelTransform(neighbour);
+    const occlusionMask = neighbourBlockId === blockId ?
+      this.#variants.selfOcclusionMaskOf(neighbourBlockId, transform) :
+      this.#variants.occlusionMaskOf(neighbourBlockId, transform);
 
     return (occlusionMask & (1 << oppFace)) !== 0;
   }

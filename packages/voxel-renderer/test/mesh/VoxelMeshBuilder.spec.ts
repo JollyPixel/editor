@@ -23,6 +23,7 @@ const kCubeId = 1;
 const kRampId = 2;
 const kStairId = 3;
 const kLeavesId = 4;
+const kGrateId = 5;
 
 /**
  * Builds a fully functional (non-rendering) fixture: world (chunkSize=4),
@@ -211,7 +212,7 @@ describe("VoxelMeshBuilder — opacity affects occlusion", () => {
   });
 });
 
-describe("VoxelMeshBuilder — transparent blocks never occlude", () => {
+describe("VoxelMeshBuilder — transparent blocks occlude only themselves", () => {
   /**
    * A cutout tile (leaves, a grate, a window) is opaque as far as the mesher
    * can tell, so without the flag its neighbours are culled and the holes look
@@ -245,12 +246,25 @@ describe("VoxelMeshBuilder — transparent blocks never occlude", () => {
     assert.equal(countVertices(f), 40);
   });
 
-  it("keeps every face between two transparent neighbours", () => {
+  it("culls the face two neighbours of the same transparent block share", () => {
     const f = withLeaves(true);
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
     f.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
 
-    // The canopy case: 6 faces each, nothing culled.
+    // The canopy case: emitting both would put two coplanar quads on the
+    // shared plane, which z-fight. 5 faces each.
+    assert.equal(countVertices(f), 40);
+  });
+
+  it("keeps the shared face between two different transparent blocks", () => {
+    const f = withLeaves(true);
+    f.blockRegistry.register(
+      makeBlockDef(kGrateId, "cube", { name: "Grate", transparent: true })
+    );
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kLeavesId, transform: 0 });
+    f.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kGrateId, transform: 0 });
+
+    // Their holes do not line up, so each still shows through the other.
     assert.equal(countVertices(f), 48);
   });
 
