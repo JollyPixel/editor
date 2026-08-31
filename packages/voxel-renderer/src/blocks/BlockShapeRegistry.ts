@@ -33,6 +33,16 @@ export class BlockShapeRegistry implements Iterable<BlockShape> {
     return this;
   }
 
+  registerMany(
+    shapes: Iterable<BlockShape>
+  ): this {
+    for (const shape of shapes) {
+      this.register(shape);
+    }
+
+    return this;
+  }
+
   get version(): number {
     return this.#version;
   }
@@ -63,16 +73,18 @@ export class BlockShapeRegistry implements Iterable<BlockShape> {
 
   static createDefault(): BlockShapeRegistry {
     return new BlockShapeRegistry()
-      .register(new Cube())
-      .register(new Slab("bottom"))
-      .register(new Slab("top"))
-      .register(new PoleY())
-      .register(new Pole())
-      .register(new Ramp())
-      .register(new RampCornerInner())
-      .register(new RampCornerOuter())
-      .register(new Stair())
-      .register(new StairCornerInner())
-      .register(new StairCornerOuter());
+      .registerMany([
+        new Cube(),
+        new Slab("bottom"),
+        new Slab("top"),
+        new PoleY(),
+        new Pole(),
+        new Ramp(),
+        new RampCornerInner(),
+        new RampCornerOuter(),
+        new Stair(),
+        new StairCornerInner(),
+        new StairCornerOuter()
+      ]);
   }
 }
