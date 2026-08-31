@@ -94,7 +94,8 @@ interface VoxelLayerJSON {
 ```
 
 > [!NOTE]
-> Used under the hood by `serializeVoxelWorld()`, see: [Serialization](./Serialization.md)
+> Used by `serializeVoxelWorld()`. See
+> [serialization](../serialization/serialization.md).
 
 ### getOrCreateChunk(cx: number, cy: number, cz: number): VoxelChunk
 
@@ -117,7 +118,7 @@ if (!chunk) {}
 
 Read a voxel at world-space `position` (offset is applied).
 Returns a freshly built `VoxelEntry`, or `undefined` if empty. See the
-[storage note](./Chunk.md#storage) on why the result is never `===` what was written.
+[storage note](./VoxelChunk.md#storage) on why the result is never `===` what was written.
 
 ```ts
 const entry = layer.getVoxelAt({ x: 10, y: 5, z: 0 });

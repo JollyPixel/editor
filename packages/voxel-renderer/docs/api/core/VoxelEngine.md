@@ -151,14 +151,14 @@ interface VoxelEngineOptions {
   /**
    * Initial state of the debug inspector (`engine.debug`). Mesh counters are
    * always collected; this only decides whether the wireframe is drawn from
-   * the start. See [Debug](./Debug.md).
+   * the start. See [`VoxelDebugger`](./VoxelDebugger.md).
    */
   debug?: VoxelDebuggerOptions;
 
   /**
    * Texels of edge-replicated gutter added around every tile of an atlas before
    * it is bound to a material. Prevents distant geometry from sampling
-   * neighbouring tiles. See [Tileset](./Tileset.md#atlas-padding).
+   * neighbouring tiles. See [atlas padding](../../concepts/atlas-padding.md).
    * Set to 0 to render atlases untouched.
    * @default half the tile size, clamped to 2..8
    */
@@ -167,7 +167,7 @@ interface VoxelEngineOptions {
   /**
    * Merge coplanar identical block faces into the largest quads possible
    * instead of one quad per voxel face.
-   * See [Greedy meshing](#greedy-meshing).
+   * See [rendering and meshing](../../concepts/rendering-and-meshing.md#greedy-meshing).
    * @default false
    */
   greedy?: boolean;
@@ -200,7 +200,7 @@ class VoxelEngine {
   readonly blockRegistry: BlockRegistry;
   readonly shapeRegistry: BlockShapeRegistry;
   readonly tilesetManager: TilesetManager;
-  readonly debug: VoxelDebugger; // mesh statistics + wireframe, see ./Debug.md
+  readonly debug: VoxelDebugger;
 
   greedy: boolean; // read/write; assigning rebuilds every chunk
   rebuildFocus: THREE.Vector3Like | null;
@@ -232,51 +232,8 @@ engine.rebuildFocus = camera.position; // prioritize chunks near the camera
 engine.pendingRebuilds;                // 0 once the world is up to date
 ```
 
-## Chunk geometry layout
-
-One `THREE.Mesh` per tileset and cutout mode per chunk, parented to `root`.
-The standard layout uses 19 bytes per vertex:
-
-| Attribute  | Type                | Items | Bytes | Notes |
-|------------|---------------------|-------|-------|-------|
-| `position` | `float32`           | 3     | 12    | absolute world space |
-| `normal`   | `int8` normalized   | 3     | 3     | non-axis-aligned for ramps/corners |
-| `uv`       | `uint16` normalized | 2     | 4     | atlas coordinates |
-
-Vertices are not shared between faces (a cube = 24 vertices). `position` stays `float32`; it is read verbatim by raycasting and `mergeChunkGeometries()`. Layer opacity lives on the material, not on vertices; materials are cached in 32 opacity buckets so an opacity slider never mints unbounded instances.
-
-## Greedy meshing
-
-With `greedy: true`, adjacent identical faces are merged into the largest rectangle
-possible. This can reduce triangle counts on flat terrain. Merging stays within one
-chunk and applies only to full flat faces such as cubes and slabs. Slopes, poles, and
-rotated voxels remain separate.
-
-### What it changes
-
-Greedy mode uses 35 bytes per vertex. It adds two attributes, widens `uv` from
-4 to 8 bytes, and enables tile-repeating in the shader:
-
-| Attribute    | Type                | Items | Bytes | Notes |
-|--------------|---------------------|-------|-------|-------|
-| `uv`         | `float32`           | 2     | 8     | tile space (`0..span`), not atlas space |
-| `tileRegion` | `uint16` normalized | 4     | 8     | atlas rect: `offsetU, offsetV, scaleU, scaleV` |
-| `tileRepeat` | `uint16`            | 2     | 4     | tile repeat count per axis |
-
-> A `materialCustomizer` that overrides `onBeforeCompile` or remaps `map` UVs will conflict with the tile-wrapping shader.
-
-### When not to use it
-
-Avoid combining greedy meshing with large chunk sizes because its scratch grid scales
-with `chunkSize³`. It is also incompatible with per-vertex lighting or ambient
-occlusion.
-
-```ts
-const engine = new VoxelEngine({ chunkSize: 32, greedy: true });
-
-// Toggling at runtime rebuilds every chunk and swaps the materials.
-engine.greedy = false;
-```
+The [rendering and meshing](../../concepts/rendering-and-meshing.md) concept
+explains the chunk geometry layout, rebuild queue, and greedy meshing tradeoffs.
 
 ## Methods
 
@@ -315,8 +272,8 @@ interface VoxelLayerConfigurableOptions {
 
 > A layer with `opacity < 1` renders with real alpha blending and stops occluding
 > neighbouring faces (like glass); `opacity === 0` behaves exactly like `visible: false`.
-> See [Layer](./Layer.md) for the full semantics. Partial opacity does not affect
-> collision; see [Collision](./Collision.md).
+> See [`VoxelLayer`](../world/VoxelLayer.md) for the full semantics. Partial
+> opacity does not affect collision; see [`VoxelCollider`](../collision/VoxelCollider.md).
 
 #### `updateLayer(name: string, options: Partial<VoxelLayerConfigurableOptions>): boolean`
 
@@ -508,4 +465,4 @@ Returns `false` if the layer or object is not found.
 Applies a hook event without emitting it again through `onLayerUpdated`. Network
 adapters use this method to avoid echo loops.
 
-See [Hooks](./Hooks.md) for the event reference.
+See [hooks](./hooks.md) for the event reference.

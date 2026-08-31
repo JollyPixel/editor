@@ -1,19 +1,14 @@
-# World
+# VoxelWorld
 
-Data model for the voxel world: layers, chunks, and per-voxel entries.
+`VoxelWorld` owns voxel layers, object layers, and chunk lifecycle. Read
+[the world model](../../concepts/world-model.md) for the ownership and compositing
+rules.
 
-The world uses:
+## Values and coordinates
 
-- [Chunk](./Chunk.md)
-- [Layer](./Layer.md)
-
-## Types
+The world API uses these value types for positions and voxel contents:
 
 ```ts
-/**
- * World-space integer position.
- * Any `THREE.Vector3Like` is accepted wherever `VoxelCoord` is expected.
- **/
 interface VoxelCoord {
   x: number;
   y: number;
@@ -21,42 +16,45 @@ interface VoxelCoord {
 }
 
 interface VoxelEntry {
-  // references BlockDefinition.id;
-  // 0 = air (never stored), capped at MAX_BLOCK_ID (2^23 - 1)
   blockId: number;
-  // packed rotation + flip flags
   transform: number;
 }
 ```
 
-> [!IMPORTANT]
-> `VoxelEntry` is a value type, not a handle. Chunks store voxels as packed integers
-> (see [Chunk](./Chunk.md#storage)), so every read rebuilds the object: compare results
-> with a deep equality check, never `===`. Use the `Packed` accessors on hot paths to
-> skip the allocation entirely.
+Any `THREE.Vector3Like` is accepted where a method expects `VoxelCoord`.
+`VoxelEntry.blockId` refers to `BlockDefinition.id`; `0` means air and is never
+stored. The maximum block ID is 8,388,607.
 
-## Coordinate helpers
+`VoxelEntry` is a value type. Chunks store packed integers and build a new object
+for each unpacked read, so compare entries by value instead of identity. The
+packed API on [`VoxelChunk`](./VoxelChunk.md#packed-voxel-values) avoids that
+allocation on hot paths.
 
-Conversions from continuous world space to the whole cells the world stores. A
-cell owns the half-open span from its own corner up to the next, so both floor
-rather than round.
+### `voxelCellOf(point)`
 
-#### `voxelCellOf(point: VoxelCoord): VoxelCoord`
+```ts
+function voxelCellOf(point: VoxelCoord): VoxelCoord;
+```
 
-Cell containing `point`. `{ x: 3.5, y: 0.5, z: 4.5 }` is in cell
-`{ x: 3, y: 0, z: 4 }`, and `{ x: -0.2 }` is in cell `{ x: -1 }`.
+Returns the whole cell containing `point`. Cells use half-open spans and the
+function floors each component. `{ x: 3.5, y: 0.5, z: 4.5 }` resolves to
+`{ x: 3, y: 0, z: 4 }`; `{ x: -0.2, y: 0, z: 0 }` resolves to x = -1.
 
-#### `voxelPositionOf(point: VoxelCoord, normal: VoxelCoord, side?: "front" | "back"): VoxelCoord`
+### `voxelPositionOf(point, normal, side?)`
 
-Cell on either side of a surface, for picking against a raycast hit. Offsets
-`point` half a cell along `normal`, then takes the containing cell.
+```ts
+function voxelPositionOf(
+  point: VoxelCoord,
+  normal: VoxelCoord,
+  side?: "front" | "back"
+): VoxelCoord;
+```
 
-- `"front"` (default) is the empty cell the surface faces, where a voxel is placed.
-- `"back"` is the cell the surface belongs to, the voxel that gets removed.
+Returns the cell on one side of a surface, for example after a raycast hit.
+`"front"` is the empty cell the surface faces and is the default. `"back"` is
+the cell that owns the surface. Neither argument is modified.
 
-Neither argument is modified.
-
-## VoxelWorld
+## `VoxelWorld`
 
 Top-level container for a layered voxel scene. Layers are composited from highest `order`
 to lowest. The first visible layer with `opacity > 0` that has a voxel at a given position

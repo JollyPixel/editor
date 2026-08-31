@@ -6,6 +6,29 @@ Each chunk is rebuilt only when its content changes, keeping GPU work proportion
 Wraps a [`VoxelEngine`](./VoxelEngine.md) instance, exposed as `vr.engine`, and drives its
 lifecycle from `awake`/`update`/`destroy`.
 
+## API
+
+```ts
+type VoxelRendererOptions = VoxelEngineOptions;
+
+class VoxelRenderer extends ActorComponent {
+  readonly engine: VoxelEngine;
+
+  constructor(
+    actor: Actor<any>,
+    options?: VoxelRendererOptions
+  );
+  awake(): void;
+  update(deltaTime: number): void;
+  destroy(): void;
+}
+```
+
+The constructor uses `actor.world.logger` unless the options supply another
+logger. `awake()` attaches `engine.root` to the actor and initializes the
+engine. `update()` advances its rebuild queue. `destroy()` removes the root and
+disposes the engine before destroying the component.
+
 ```ts
 import {
   VoxelRenderer,
@@ -48,6 +71,6 @@ vr.engine.setVoxel("Ground", {
 See [VoxelEngine](./VoxelEngine.md) for `VoxelEngineOptions` (constructor options) and
 the full `setVoxel` / layer / object-layer / serialization API.
 
-### Hooks
+## Hooks
 
-See [Hooks](./Hooks.md) for more information.
+See [hooks](./hooks.md) for more information.

@@ -1,4 +1,4 @@
-# Debug
+# VoxelDebugger
 
 `VoxelEngine.debug` exposes a `VoxelDebugger`: live mesh statistics and an
 optional wireframe view of the geometry the mesh builder produced.
@@ -17,6 +17,35 @@ console.log(`${faces} faces, ${culledFaces} culled, ${triangles} triangles`);
 
 Counters are collected on every chunk build, whatever the mode; only the
 wireframe has an additional rendering cost.
+
+## API
+
+```ts
+class VoxelDebugger {
+  mode: VoxelDebugMode;
+  enabled: boolean;
+  readonly stats: VoxelDebugStats;
+
+  constructor(
+    parent: THREE.Object3D,
+    options?: VoxelDebuggerOptions
+  );
+  nextMode(): VoxelDebugMode;
+  registerChunk(
+    key: string,
+    meshes: readonly THREE.Mesh[],
+    stats: MeshBuildStats
+  ): void;
+  unregisterChunk(key: string): void;
+  clear(): void;
+  dispose(): void;
+}
+```
+
+`registerChunk()` copies the supplied statistics. Re-registering a key replaces
+its meshes and counters. `unregisterChunk()` ignores unknown keys. `clear()`
+removes all tracked chunks and overlays; `dispose()` also releases the debug
+material.
 
 ## Modes
 
@@ -96,7 +125,8 @@ const { faces, culledFaces } = engine.debug.stats;
 const ratio = (culledFaces / (faces + culledFaces)) * 100;
 ```
 
-With [greedy meshing](./VoxelEngine.md#greedy-meshing) on, `faces` counts quads
+With [greedy meshing](../../concepts/rendering-and-meshing.md#greedy-meshing) on,
+`faces` counts quads
 rather than voxel faces, and `mergedFaces` is how many extra voxel faces those
 quads absorbed. `faces + mergedFaces` is therefore what the naive builder would
 have emitted, which makes the merge ratio readable the same way:
@@ -116,9 +146,34 @@ The two derived figures are the ones worth watching for regressions:
   meshing and 35 with it. `tileRegion`, `tileRepeat`, and float tile UVs account
   for the difference.
 
-Counters for a single chunk are available on the mesh builder itself as
-`MeshBuildStats`; `VoxelDebugger` keeps a copy per chunk key and aggregates them
-on demand.
+`MeshBuildStats` holds the counters for a single chunk build. `VoxelDebugger`
+keeps a copy per chunk key and aggregates them on demand.
+
+```ts
+class MeshBuildStats {
+  voxels: number;
+  hiddenVoxels: number;
+  faces: number;
+  culledFaces: number;
+  mergedFaces: number;
+  vertices: number;
+  triangles: number;
+  geometries: number;
+  bytesPerVertex: number;
+  buildTimeMs: number;
+
+  readonly facesPerSolidVoxel: number;
+
+  reset(): void;
+  copyFrom(source: MeshBuildStats): void;
+  clone(): MeshBuildStats;
+}
+```
+
+All counters start at `0`. `facesPerSolidVoxel` is `faces` divided by
+`voxels - hiddenVoxels`; it returns `0` when no voxel contributed geometry.
+`reset()` clears the instance. `copyFrom()` replaces every field with another
+instance's counters, and `clone()` returns an independent copy.
 
 ## Example
 
