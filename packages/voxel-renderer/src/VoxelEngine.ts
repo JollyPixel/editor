@@ -25,7 +25,7 @@ import {
 } from "./debug/VoxelDebugger.ts";
 import {
   VoxelMeshBuilder,
-  parseChunkGeometryKey,
+  ChunkGeometryKey,
   enableTileWrapping
 } from "./mesh/index.ts";
 import {
@@ -1090,7 +1090,7 @@ export class VoxelEngine {
 
     const meshes: THREE.Mesh[] = [];
     for (const [key, geometry] of geometries) {
-      const { tilesetId, cutout } = parseChunkGeometryKey(key);
+      const { tilesetId, cutout } = ChunkGeometryKey.parse(key);
       const mesh = new THREE.Mesh(
         geometry,
         this.#getMaterial(tilesetId, opacity, cutout)

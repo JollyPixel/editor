@@ -10,7 +10,10 @@ and configuration.
 ## Chunk geometry layout
 
 Each chunk has one `THREE.Mesh` per tileset and cutout mode, parented to
-`VoxelEngine.root`. The standard layout uses 19 bytes per vertex:
+`VoxelEngine.root`. A draw group is identified by its tileset id, with a
+`:cutout` suffix for the transparent half, so a mesh is named
+`voxel_chunk_<chunk>:<tileset>[:cutout]`. A tileset id may therefore not end in
+`:cutout`. The standard layout uses 19 bytes per vertex:
 
 | Attribute | Type | Items | Bytes | Notes |
 |---|---|---:|---:|---|

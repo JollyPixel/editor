@@ -7,7 +7,7 @@ import type {
   BlockVariant,
   BlockVariantFace
 } from "./types.ts";
-import { chunkGeometryKey } from "../chunkGeometryKey.ts";
+import { ChunkGeometryKey } from "../ChunkGeometryKey.ts";
 import { FACE } from "../../utils/math.ts";
 import {
   describeMerge,
@@ -177,7 +177,7 @@ export class BlockVariantCache {
     tilesetId: string,
     cutout: boolean
   ): number {
-    const key = chunkGeometryKey(tilesetId, cutout);
+    const key = new ChunkGeometryKey(tilesetId, cutout).toString();
 
     let slot = this.#slots.get(key);
     if (slot === undefined) {
