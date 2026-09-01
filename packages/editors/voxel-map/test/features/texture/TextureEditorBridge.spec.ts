@@ -320,17 +320,26 @@ describe("TextureEditorBridge / room startup", () => {
   it("subscribes before joining the room", () => {
     const calls: string[] = [];
     const room = {
+      peers: new Map(),
       on: () => calls.push("subscribe"),
       off: () => void 0,
       join: () => calls.push("join"),
       leave: () => void 0,
-      send: () => void 0
+      send: () => void 0,
+      updatePresence: () => void 0
     } as unknown as network.Room<PixelNetworkCommand, PixelServerMessage>;
     const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
 
     bridge.attach(makeFakeManager(() => false), room);
 
-    assert.deepEqual(calls, ["subscribe", "join"]);
+    // Both the document and the cursor sync must be listening first: a
+    // snapshot or a presence patch arriving before them would be dropped.
+    assert.equal(calls.at(-1), "join");
+    assert.deepEqual(
+      new Set(calls.slice(0, -1)),
+      new Set(["subscribe"])
+    );
+    assert.ok(calls.length > 2);
     bridge.destroy();
   });
 });
@@ -560,14 +569,22 @@ describe("TextureEditorBridge / placeholder atlas", () => {
     const listeners: ((message: PixelServerMessage) => void)[] = [];
     const room = {
       clientId: "local",
+      peers: new Map(),
+      // Keyed by event: the bridge also subscribes to the presence events, and
+      // a snapshot delivered to those would be read as a peer update.
       on: (
-        _event: string,
+        event: string,
         listener: (message: PixelServerMessage) => void
-      ) => listeners.push(listener),
+      ) => {
+        if (event === "message") {
+          listeners.push(listener);
+        }
+      },
       off: () => void 0,
       join: () => void 0,
       leave: () => void 0,
-      send: () => void 0
+      send: () => void 0,
+      updatePresence: () => void 0
     } as unknown as network.Room<PixelNetworkCommand, PixelServerMessage>;
 
     return {

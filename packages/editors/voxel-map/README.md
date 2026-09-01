@@ -30,8 +30,6 @@ Add `?offline` to skip network setup entirely. Nothing is persisted in that mode
 - `EditorSidebar` contains the Lit editing panels.
 - `TextureEditorBridge`, `BlockUvBridge`, and `BlockLibraryRenderer` connect pixel editing and block previews to the voxel engine. Tile coordinates and `transparent` are derived from the paint tab, never typed in: `block-editor-dialog` configures name, shape, and tileset alone.
 
-See [Voxel Map Editor Boundaries](./docs/API.md) for lifecycle and data-boundary details.
-
 ## 🧪 Tests and checks
 
 ```bash

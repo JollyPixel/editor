@@ -13,11 +13,12 @@ new PixelCursorSync(options: PixelCursorSyncOptions)
 
 interface PixelCursorSyncOptions {
   room: Room<PixelNetworkCommand, PixelServerMessage>;
-  getLabel?: (identity: PeerMetadata) => string | undefined;
+  label?: (identity: PeerMetadata) => string | undefined;
+  color?: (clientId: string, identity: PeerMetadata) => string;
 }
 ```
 
-`getLabel` reads `identity.username` when omitted.
+`label` reads `identity.username` when omitted. `color` falls back to a deterministic color keyed on the peer's `clientId`; pass it when the color must be derived from a stable identity field instead.
 
 `attach()` chains the existing `canvas.onCursorMove` callback, publishes changed coordinates and seeds cursors already stored in `room.peers`. A `null` coordinate hides the local cursor on remote clients.
 

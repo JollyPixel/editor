@@ -34,6 +34,11 @@ import { editorState } from "./EditorState.ts";
 import { EditorSidebar } from "./features/sidebar/EditorSidebar.ts";
 import { EditorScene } from "./scene/EditorScene.ts";
 import { parseVoxelWorld } from "./features/map-config/parseVoxelWorld.ts";
+import {
+  toPeerMetadata,
+  type EditorIdentity
+} from "./network/identity.ts";
+import { resolveEditorIdentity } from "./network/resolveEditorIdentity.ts";
 import type { EventCanvasHoverChange } from "./shared/dom.types.ts";
 // Register editor icon glyphs.
 import "./features/sidebar/icons.ts";
@@ -114,14 +119,18 @@ const offline = new URLSearchParams(location.search).has("offline");
 let worldRecord: AssetRecord | null = null;
 let textureRoom: networkTypes.Room<PixelNetworkCommand, PixelServerMessage> | undefined;
 let worldRoom: networkTypes.Room<VoxelNetworkCommand, VoxelServerMessage> | undefined;
+let identity: EditorIdentity | undefined;
 
 if (!offline) {
+  // Prompted before the socket opens: the username travels in the join request.
+  identity = await resolveEditorIdentity();
   const catalog = await fetchAssetCatalog();
   const textureRecord = firstRecordOfKind(catalog, "pixelart");
   worldRecord = firstRecordOfKind(catalog, "voxelmap");
   const wsProtocol = location.protocol === "https:" ? "wss:" : "ws:";
   const networkClient = new network.Client({
-    url: `${wsProtocol}//${location.host}/ws-sync`
+    url: `${wsProtocol}//${location.host}/ws-sync`,
+    identity: toPeerMetadata(identity)
   });
   textureRoom = networkClient.room<PixelNetworkCommand, PixelServerMessage>(
     assetRoomName(textureRecord.kind, textureRecord.id.value)
@@ -138,7 +147,8 @@ const editorScene = new EditorScene(
   {
     defaultLayerName: "Ground",
     tilesets,
-    voxelRoom: worldRoom
+    voxelRoom: worldRoom,
+    identity
   }
 );
 

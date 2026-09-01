@@ -3,10 +3,7 @@ import * as THREE from "three";
 import { LineSegments2 } from "three/addons/lines/webgpu/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js";
 import { Line2NodeMaterial } from "three/webgpu";
-import {
-  Actor,
-  ActorComponent
-} from "@jolly-pixel/engine";
+import type { VoxelCoord } from "@jolly-pixel/voxel.renderer";
 
 // CONSTANTS
 // The extra 0.01 prevents z-fighting with the chunk mesh.
@@ -14,10 +11,12 @@ const kHalfSize = 0.51;
 const kFaceMargin = 0.05;
 const kFaceOffset = 0.001;
 const kFaceDefaultNormal = new THREE.Vector3(0, 0, 1);
+const kDefaultHighlight = 0x9df6ff;
 
-export interface VoxelBrushPreviewOptions {
+export interface BrushMeshOptions {
   /**
-   * Color of the brush preview cubes.
+   * Color of the brush preview cubes. It also tints the outline and the hit
+   * face unless those are set on their own.
    * @default 0x33e0ff
    */
   color?: THREE.ColorRepresentation;
@@ -28,7 +27,7 @@ export interface VoxelBrushPreviewOptions {
   opacity?: number;
   /**
    * Color of the outline drawn around each preview cube.
-   * @default 0x9df6ff
+   * @default `color` when it is given, 0x9df6ff otherwise
    */
   borderColor?: THREE.ColorRepresentation;
   /**
@@ -38,7 +37,7 @@ export interface VoxelBrushPreviewOptions {
   borderLineWidth?: number;
   /**
    * Color of the highlighted quad drawn on the hit face.
-   * @default 0x9df6ff
+   * @default `color` when it is given, 0x9df6ff otherwise
    */
   faceColor?: THREE.ColorRepresentation;
   /**
@@ -49,11 +48,14 @@ export interface VoxelBrushPreviewOptions {
 }
 
 /**
- * Brush footprint preview. WebGPU line helpers provide stable pixel widths
- * without GLSL patching. See voxel-renderer's `brushHighlight.ts` example.
+ * Draws the cells a brush covers, as translucent cubes wrapped in one outline,
+ * plus a quad on the face the pointer hit.
+ *
+ * Visibility has a single owner: `hide()` and `show()` set the intent, and
+ * nothing is drawn while the cell count is zero.
  */
-export class VoxelBrushPreview extends ActorComponent {
-  static Max = 512;
+export class BrushMesh extends THREE.Group {
+  static maxCells = 512;
 
   #previewMesh: THREE.InstancedMesh;
   #dummy = new THREE.Object3D();
@@ -63,26 +65,33 @@ export class VoxelBrushPreview extends ActorComponent {
   #faceMesh: THREE.InstancedMesh;
   #faceQuaternion = new THREE.Quaternion();
 
+  #hidden = false;
+  #cellCount = 0;
+  #hasFace = false;
+
   constructor(
-    actor: Actor,
-    options: VoxelBrushPreviewOptions = {}
+    options: BrushMeshOptions = {}
   ) {
-    super({
-      actor,
-      typeName: "VoxelBrushPreview"
-    });
+    super();
 
     const {
       color = 0x33e0ff,
       opacity = 0.15,
-      borderColor = 0x9df6ff,
       borderLineWidth = 2,
-      faceColor = 0x9df6ff,
       faceOpacity = 0.45
     } = options;
+    const highlight = options.color ?? kDefaultHighlight;
+    const borderColor = options.borderColor ?? highlight;
+    const faceColor = options.faceColor ?? highlight;
+
+    this.name = "brush";
 
     const inflatedSize = kHalfSize * 2;
-    const geometry = new THREE.BoxGeometry(inflatedSize, inflatedSize, inflatedSize);
+    const geometry = new THREE.BoxGeometry(
+      inflatedSize,
+      inflatedSize,
+      inflatedSize
+    );
     const material = new THREE.MeshBasicMaterial({
       color,
       transparent: true,
@@ -93,11 +102,12 @@ export class VoxelBrushPreview extends ActorComponent {
     this.#previewMesh = new THREE.InstancedMesh(
       geometry,
       material,
-      VoxelBrushPreview.Max
+      BrushMesh.maxCells
     );
     this.#previewMesh.count = 0;
     this.#previewMesh.renderOrder = 1;
     this.#previewMesh.frustumCulled = false;
+    this.#previewMesh.visible = false;
 
     const borderGeometry = new LineSegmentsGeometry();
     borderGeometry.setPositions([]);
@@ -111,7 +121,10 @@ export class VoxelBrushPreview extends ActorComponent {
     this.#border.frustumCulled = false;
     this.#border.visible = false;
 
-    const faceGeometry = new THREE.PlaneGeometry(1 - kFaceMargin * 2, 1 - kFaceMargin * 2);
+    const faceGeometry = new THREE.PlaneGeometry(
+      1 - kFaceMargin * 2,
+      1 - kFaceMargin * 2
+    );
     const faceMaterial = new THREE.MeshBasicMaterial({
       color: faceColor,
       opacity: faceOpacity,
@@ -123,62 +136,54 @@ export class VoxelBrushPreview extends ActorComponent {
     this.#faceMesh = new THREE.InstancedMesh(
       faceGeometry,
       faceMaterial,
-      VoxelBrushPreview.Max
+      BrushMesh.maxCells
     );
     this.#faceMesh.count = 0;
     this.#faceMesh.renderOrder = 3;
     this.#faceMesh.frustumCulled = false;
     this.#faceMesh.visible = false;
-  }
 
-  awake() {
-    this.actor.addChildren(this.#previewMesh);
-    this.actor.addChildren(this.#border);
-    this.actor.addChildren(this.#faceMesh);
-  }
-
-  override destroy(): void {
-    this.#previewMesh.geometry.dispose();
-    (this.#previewMesh.material as THREE.Material).dispose();
-    this.#border.geometry.dispose();
-    (this.#border.material as THREE.Material).dispose();
-    this.#faceMesh.geometry.dispose();
-    (this.#faceMesh.material as THREE.Material).dispose();
-    super.destroy();
-  }
-
-  set count(value: number) {
-    this.#previewMesh.count = value;
-    this.#border.visible = value > 0;
-    if (value === 0) {
-      this.#faceMesh.visible = false;
-    }
+    this.add(
+      this.#previewMesh,
+      this.#border,
+      this.#faceMesh
+    );
   }
 
   hide(): void {
-    this.#previewMesh.visible = false;
-    this.#border.visible = false;
-    this.#faceMesh.visible = false;
+    this.#hidden = true;
+    this.#applyVisibility();
   }
 
   show(): void {
-    this.#previewMesh.visible = true;
-    this.#border.visible = true;
-    this.#faceMesh.visible = true;
+    this.#hidden = false;
+    this.#applyVisibility();
   }
 
-  updateFromPositions(
-    positions: THREE.Vector3[],
+  /** Drops every cell, leaving the hidden or shown intent alone. */
+  clearCells(): void {
+    this.#cellCount = 0;
+    this.#hasFace = false;
+    this.#previewMesh.count = 0;
+    this.#faceMesh.count = 0;
+    this.#applyVisibility();
+  }
+
+  /**
+   * Draws one cube per grid cell. Cells past `BrushMesh.maxCells` are dropped.
+   * The hit face is drawn only when a surface normal is given.
+   */
+  drawCells(
+    cells: VoxelCoord[],
     normal: THREE.Vector3 | null = null
-  ) {
-    this.#previewMesh.visible = true;
-    const count = Math.min(positions.length, VoxelBrushPreview.Max);
+  ): void {
+    const count = Math.min(cells.length, BrushMesh.maxCells);
 
     for (let i = 0; i < count; i++) {
       this.#dummy.position.set(
-        positions[i].x + 0.5,
-        positions[i].y + 0.5,
-        positions[i].z + 0.5
+        cells[i].x + 0.5,
+        cells[i].y + 0.5,
+        cells[i].z + 0.5
       );
       this.#dummy.quaternion.identity();
       this.#dummy.updateMatrix();
@@ -187,39 +192,52 @@ export class VoxelBrushPreview extends ActorComponent {
 
     this.#previewMesh.count = count;
     this.#previewMesh.instanceMatrix.needsUpdate = true;
+    this.#cellCount = count;
 
     if (count === 0) {
-      this.#border.visible = false;
-      this.#faceMesh.visible = false;
+      this.clearCells();
 
       return;
     }
 
-    this.#border.geometry.setPositions(this.#buildBorderPositions(positions, count));
-    this.#border.visible = true;
-
-    this.#updateFace(positions, count, normal);
+    this.#border.geometry.setPositions(
+      this.#buildBorderPositions(cells, count)
+    );
+    this.#drawFace(cells, count, normal);
+    this.#applyVisibility();
   }
 
-  #updateFace(
-    positions: THREE.Vector3[],
+  #applyVisibility(): void {
+    const visible = !this.#hidden && this.#cellCount > 0;
+
+    this.#previewMesh.visible = visible;
+    this.#border.visible = visible;
+    this.#faceMesh.visible = visible && this.#hasFace;
+  }
+
+  #drawFace(
+    cells: VoxelCoord[],
     count: number,
     normal: THREE.Vector3 | null
   ): void {
     if (normal === null) {
-      this.#faceMesh.visible = false;
+      this.#hasFace = false;
+      this.#faceMesh.count = 0;
 
       return;
     }
 
-    this.#faceQuaternion.setFromUnitVectors(kFaceDefaultNormal, normal);
+    this.#faceQuaternion.setFromUnitVectors(
+      kFaceDefaultNormal,
+      normal
+    );
     const offset = kHalfSize + kFaceOffset;
 
     for (let i = 0; i < count; i++) {
       this.#dummy.position.set(
-        positions[i].x + 0.5 + normal.x * offset,
-        positions[i].y + 0.5 + normal.y * offset,
-        positions[i].z + 0.5 + normal.z * offset
+        cells[i].x + 0.5 + normal.x * offset,
+        cells[i].y + 0.5 + normal.y * offset,
+        cells[i].z + 0.5 + normal.z * offset
       );
       this.#dummy.quaternion.copy(this.#faceQuaternion);
       this.#dummy.updateMatrix();
@@ -228,19 +246,19 @@ export class VoxelBrushPreview extends ActorComponent {
 
     this.#faceMesh.count = count;
     this.#faceMesh.instanceMatrix.needsUpdate = true;
-    this.#faceMesh.visible = true;
+    this.#hasFace = true;
   }
 
   #buildBorderPositions(
-    positions: THREE.Vector3[],
+    cells: VoxelCoord[],
     count: number
   ): number[] {
     const result: number[] = [];
 
     for (let i = 0; i < count; i++) {
-      const x = positions[i].x + 0.5 - kHalfSize;
-      const y = positions[i].y + 0.5 - kHalfSize;
-      const z = positions[i].z + 0.5 - kHalfSize;
+      const x = cells[i].x + 0.5 - kHalfSize;
+      const y = cells[i].y + 0.5 - kHalfSize;
+      const z = cells[i].z + 0.5 - kHalfSize;
       const size = kHalfSize * 2;
 
       const b0x = x;

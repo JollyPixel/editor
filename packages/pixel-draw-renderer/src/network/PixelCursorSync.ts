@@ -23,10 +23,19 @@ export interface PixelCursorSyncOptions {
    * Extracts a display label from a peer's identity.
    * @default reads `identity.username` when it's a string
    */
-  getLabel?: (identity: network.PeerMetadata) => string | undefined;
+  label?: (identity: network.PeerMetadata) => string | undefined;
+  /**
+   * Chooses the color of a remote peer's cursor.
+   *
+   * @default a deterministic color from the built-in palette
+   */
+  color?: (
+    clientId: string,
+    identity: network.PeerMetadata
+  ) => string;
 }
 
-function defaultGetLabel(
+function defaultLabel(
   identity: network.PeerMetadata
 ): string | undefined {
   return typeof identity.username === "string" ? identity.username : undefined;
@@ -37,7 +46,11 @@ function defaultGetLabel(
  */
 export class PixelCursorSync {
   #room: network.Room<PixelNetworkCommand, PixelServerMessage>;
-  #getLabel: (identity: network.PeerMetadata) => string | undefined;
+  #label: (identity: network.PeerMetadata) => string | undefined;
+  #color: (
+    clientId: string,
+    identity: network.PeerMetadata
+  ) => string;
   #palette = new ColorPalette();
   #canvas: PixelArtCanvas | undefined;
   #previousHandler: ((pos: Vec2 | null) => void) | undefined;
@@ -76,7 +89,10 @@ export class PixelCursorSync {
     options: PixelCursorSyncOptions
   ) {
     this.#room = options.room;
-    this.#getLabel = options.getLabel ?? defaultGetLabel;
+    this.#label = options.label ?? defaultLabel;
+    this.#color = options.color ?? (
+      (clientId) => this.#palette.forKey(clientId)
+    );
 
     this.#room.on(
       "peer-joined",
@@ -195,8 +211,8 @@ export class PixelCursorSync {
     const rawPos = presence[kPresenceCursorKey];
     this.#canvas.peerPresence.cursors.set(clientId, {
       pos: isVec2(rawPos) ? rawPos : null,
-      color: this.#palette.forKey(clientId),
-      label: this.#getLabel(identity)
+      color: this.#color(clientId, identity),
+      label: this.#label(identity)
     });
     this.#renderedPeers.add(clientId);
   }

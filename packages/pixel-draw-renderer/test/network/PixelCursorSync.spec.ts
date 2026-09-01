@@ -323,20 +323,42 @@ describe("PixelCursorSync — remote peers", () => {
     assert.deepStrictEqual(canvas.removedPeers, ["peer-B"]);
   });
 
-  test("a custom getLabel option overrides the default identity.username lookup", () => {
+  test("a custom label option overrides the default identity.username lookup", () => {
     const room = createMockRoom();
     room.addPeer("peer-B", { displayName: "Bobby" });
 
     const canvas = createMockCanvas();
     const sync = new PixelCursorSync({
       room,
-      getLabel: (identity) => identity.displayName as string
+      label: (identity) => identity.displayName as string
     });
     sync.attach(asHost(canvas));
 
     room.simulatePresence("peer-B", { cursor: { x: 0, y: 0 } });
 
     assert.strictEqual(canvas.setCalls[0].label, "Bobby");
+  });
+
+  test("a custom color option receives the clientId and the peer identity", () => {
+    const room = createMockRoom();
+    room.addPeer("peer-B", { tint: "#123456" });
+
+    const seen: string[] = [];
+    const canvas = createMockCanvas();
+    const sync = new PixelCursorSync({
+      room,
+      color: (clientId, identity) => {
+        seen.push(clientId);
+
+        return identity.tint as string;
+      }
+    });
+    sync.attach(asHost(canvas));
+
+    room.simulatePresence("peer-B", { cursor: { x: 0, y: 0 } });
+
+    assert.deepStrictEqual(seen, ["peer-B", "peer-B"]);
+    assert.strictEqual(canvas.setCalls.at(-1)!.color, "#123456");
   });
 });
 

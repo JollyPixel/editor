@@ -1,7 +1,10 @@
 // Import Third-party Dependencies
 import { LitElement, html, css, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import type { JollyTabChangeDetail } from "@jolly-pixel/ui";
+import type {
+  JollyTabChangeDetail,
+  PresencePeer
+} from "@jolly-pixel/ui";
 import type { VoxelRenderer, VoxelWorldJSON } from "@jolly-pixel/voxel.renderer";
 import type * as network from "@jolly-pixel/network";
 import type {
@@ -80,22 +83,27 @@ export class EditorSidebar extends LitElement {
   private declare _tab: SidebarTab;
   @state()
   private declare _selection: LayerSelection;
+  @state()
+  private declare _peers: readonly PresencePeer[];
   #subscriptions: Array<() => void> = [];
 
   constructor() {
     super();
     this._tab = "general";
     this._selection = null;
+    this._peers = editorState.peers;
   }
 
   override connectedCallback() {
     super.connectedCallback();
     this.#subscriptions.push(
       editorState.on("selectionChange", this.#onSelectionChange),
-      editorState.on("activeSidebarTabChange", this.#onTabStateChange)
+      editorState.on("activeSidebarTabChange", this.#onTabStateChange),
+      editorState.on("peersChange", this.#onPeersChange)
     );
     this.#onSelectionChange(editorState.selection);
     this.#onTabStateChange(editorState.activeSidebarTab);
+    this.#onPeersChange(editorState.peers);
   }
 
   override disconnectedCallback() {
@@ -111,6 +119,10 @@ export class EditorSidebar extends LitElement {
 
   readonly #onTabStateChange = (tab: SidebarTab): void => {
     this._tab = tab;
+  };
+
+  readonly #onPeersChange = (peers: readonly PresencePeer[]): void => {
+    this._peers = peers;
   };
 
   override render() {
@@ -140,6 +152,8 @@ export class EditorSidebar extends LitElement {
 
   #renderGeneral() {
     return html`
+      ${this.#renderCollaborators()}
+
       <jolly-folder
         key="map-config"
         label="Map Config"
@@ -162,6 +176,22 @@ export class EditorSidebar extends LitElement {
           .vr=${this.vr}
           style="flex:1;min-height:200px;"
         ></block-library>
+      </jolly-folder>
+    `;
+  }
+
+  #renderCollaborators() {
+    if (this._peers.length === 0) {
+      return nothing;
+    }
+
+    return html`
+      <jolly-folder
+        key="collaborators"
+        label="Collaborators"
+        storage-key="voxel-map:folder:collaborators"
+      >
+        <jolly-presence .peers=${this._peers}></jolly-presence>
       </jolly-folder>
     `;
   }

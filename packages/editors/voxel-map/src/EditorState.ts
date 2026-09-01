@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import type { Vector3Like } from "@jolly-pixel/three";
+import type { PresencePeer } from "@jolly-pixel/ui";
 import type {
   VoxelLayerHookEvent,
   VoxelRotation
@@ -43,6 +44,7 @@ export interface EditorStateEventMap {
   layerUpdated: VoxelLayerHookEvent;
   blockRegistryChanged: undefined;
   worldReset: undefined;
+  peersChange: readonly PresencePeer[];
 }
 
 export class EditorState {
@@ -56,6 +58,7 @@ export class EditorState {
   #isGizmoDragging = false;
   #gizmoLayer: string | null = null;
   #viewFocusProvider: ViewFocusProvider | null = null;
+  #peers: readonly PresencePeer[] = [];
 
   get selection(): LayerSelection {
     return this.#selection;
@@ -133,6 +136,10 @@ export class EditorState {
     return this.#gizmoLayer;
   }
 
+  get peers(): readonly PresencePeer[] {
+    return this.#peers;
+  }
+
   get viewFocusProvider(): ViewFocusProvider | null {
     return this.#viewFocusProvider;
   }
@@ -143,10 +150,6 @@ export class EditorState {
     this.#viewFocusProvider = provider;
   }
 
-  /**
-   * Grid cell the camera is aimed at, the world origin while no provider is
-   * registered. Read on demand: the value changes on every camera move.
-   */
   get viewFocus(): Vector3Like {
     return this.#viewFocusProvider?.() ?? {
       x: 0,
@@ -183,11 +186,6 @@ export class EditorState {
     this.#dispatch("gizmoLayerChange", name);
   }
 
-  /**
-   * Single entry point for what the layers tree has selected. The viewport
-   * writes object selections here too, so the tree, the panels and the area
-   * gizmo all read one value.
-   */
   setSelection(
     selection: LayerSelection
   ): void {
@@ -274,6 +272,11 @@ export class EditorState {
     }
     this.#activeSidebarTab = tab;
     this.#dispatch("activeSidebarTabChange", tab);
+  }
+
+  setPeers(peers: Iterable<PresencePeer>): void {
+    this.#peers = [...peers];
+    this.#dispatch("peersChange", this.#peers);
   }
 
   dispatchLayerUpdated(event: VoxelLayerHookEvent): void {

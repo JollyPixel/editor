@@ -51,7 +51,7 @@ Use only the helpers your editor needs. `enableGhostPreview: false` disables str
 
 Stroke, UV and selection updates are coalesced to one full presence payload per animation frame. They send the current preview, not a delta. A later update replaces an earlier one.
 
-Cursor positions are deduplicated. The default label comes from `identity.username`; pass `getLabel` to `PixelCursorSync` for another identity shape.
+Cursor positions are deduplicated. The default label comes from `identity.username` and the default color is keyed on `clientId`; pass `label` and `color` to `PixelCursorSync` for another identity shape.
 
 ## Reconciliation and expiry
 

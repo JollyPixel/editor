@@ -1,13 +1,15 @@
 // Import Third-party Dependencies
-import { Grid, type GridOptions } from "@jolly-pixel/three";
-import { ActorComponent, Actor } from "@jolly-pixel/engine";
+import {
+  Grid,
+  type GridOptions
+} from "@jolly-pixel/three";
+import {
+  ActorComponent,
+  Actor
+} from "@jolly-pixel/engine";
 
 export type GridRendererOptions = GridOptions;
 
-/**
- * Renders the voxel editor's floor grid using @jolly-pixel/three's `Grid`
- * (TSL, requires THREE.WebGPURenderer).
- */
 export class GridRenderer extends ActorComponent {
   #options: GridRendererOptions;
   #grid: Grid | null = null;
@@ -28,7 +30,10 @@ export class GridRenderer extends ActorComponent {
   setExtent(
     value: number
   ): void {
-    this.#options = { ...this.#options, extent: value };
+    this.#options = {
+      ...this.#options,
+      extent: value
+    };
     this.#clear();
     this.#build();
   }
@@ -40,7 +45,10 @@ export class GridRenderer extends ActorComponent {
   setVisible(
     value: boolean
   ): void {
-    this.#options = { ...this.#options, enabled: value };
+    this.#options = {
+      ...this.#options,
+      enabled: value
+    };
     if (this.#grid) {
       this.#grid.enabled = value;
     }
