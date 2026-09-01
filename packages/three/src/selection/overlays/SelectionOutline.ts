@@ -1,13 +1,20 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 
+// Import Internal Dependencies
+import { inflateEdgesGeometry } from "./inflateEdgesGeometry.ts";
+
 // CONSTANTS
 // Edges sit exactly on the target's own surface, so identical depth values
 // z-fight with the mesh's triangles at that seam (visible as a dashed/flickering
-// line). `glPolygonOffset` doesn't apply to GL_LINES, so nudge the outline
-// slightly outward via scale instead - imperceptible as a size change, enough
-// to win the depth test outright.
-const kScaleBias = 1.005;
+// line). `glPolygonOffset` doesn't apply to GL_LINES, so nudge every edge
+// vertex slightly outward instead, along its own local surface normal
+// (`inflateEdgesGeometry`) rather than a uniform `object.scale` bump - see
+// that function's own doc comment for why the distinction matters on a
+// torus/torus knot's concave-relative-to-origin regions. Expressed as a
+// fraction of the target's own bounding-sphere radius, not an absolute
+// distance, so it reads the same regardless of the mesh's actual size.
+const kOffsetFactor = 0.006;
 // Draws after every default-renderOrder object, so an `xray` outline
 // reliably wins the pixel even though it skips the depth test - depth alone
 // would only make it "win" against geometry rendered earlier in the same
@@ -65,8 +72,11 @@ export class SelectionOutline extends THREE.LineSegments<THREE.BufferGeometry, T
   ) {
     const { target, color = "#ffffff", opacity = 1, linewidth = 1, xray = false } = options;
 
+    target.geometry.computeBoundingSphere();
+    const offset = (target.geometry.boundingSphere?.radius ?? 1) * kOffsetFactor;
+
     super(
-      new THREE.EdgesGeometry(target.geometry),
+      inflateEdgesGeometry(target.geometry, offset),
       new THREE.LineBasicMaterial({
         color,
         transparent: opacity < 1,
@@ -78,7 +88,6 @@ export class SelectionOutline extends THREE.LineSegments<THREE.BufferGeometry, T
     );
 
     this.renderOrder = xray ? kXrayRenderOrder : 1;
-    this.scale.setScalar(kScaleBias);
     target.add(this);
   }
 

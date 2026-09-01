@@ -108,15 +108,42 @@ describe("peer selection", () => {
     assert.strictEqual(`#${material.color.getHexString()}`, registry.colorOf("peer-a"));
   });
 
-  test("falls back to \"outline\" for an id resolved to the \"coloredOutline\" technique " +
+  test("falls back to \"outline\" for an id resolved to the \"highlight\" technique " +
     "- a peer overlay can't share a single pipeline across peers", () => {
     const { registry, selection, mesh } = createHarness();
-    selection.setTechnique("coloredOutline");
+    selection.setTechnique("highlight");
 
     registry.select("peer-a", "mesh-1");
 
     assert.strictEqual(mesh.children.length, 1);
     assert.ok(mesh.children[0] instanceof SelectionOutline);
+  });
+
+  test("falls back to \"outline\" for an id resolved to the \"highlightJfa\" technique " +
+    "- same single-shared-pipeline limitation as \"highlight\"", () => {
+    const { registry, selection, mesh } = createHarness();
+    selection.setTechnique("highlightJfa");
+
+    registry.select("peer-a", "mesh-1");
+
+    assert.strictEqual(mesh.children.length, 1);
+    assert.ok(mesh.children[0] instanceof SelectionOutline);
+  });
+
+  test("setXray on an already-built overlay is picked up once refreshAll() runs", () => {
+    const { registry, selection, overlays, mesh } = createHarness();
+    registry.select("peer-a", "mesh-1");
+    const overlayBefore = mesh.children[0];
+    const materialBefore = (overlayBefore as THREE.LineSegments).material as THREE.LineBasicMaterial;
+    assert.strictEqual(materialBefore.depthTest, true, "starts non-x-ray");
+
+    // `setXray` dispatches no event of its own - see `refreshAll`'s own doc
+    // comment - so nothing re-runs `#refresh` without this explicit call.
+    selection.setXray(true);
+    overlays.refreshAll();
+
+    assert.strictEqual(mesh.children[0], overlayBefore, "must reuse the same overlay instance, not rebuild it");
+    assert.strictEqual(materialBefore.depthTest, false, "x-ray disables depth test");
   });
 });
 

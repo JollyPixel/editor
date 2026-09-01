@@ -79,10 +79,10 @@ describe("select", () => {
     assert.throws(() => manager.select("unknown"));
   });
 
-  test("does not render a per-object overlay for a mesh registered with technique \"coloredOutline\"", () => {
+  test("does not render a per-object overlay for a mesh registered with technique \"highlight\"", () => {
     const manager = new SelectionManager();
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    manager.register("mesh-1", mesh, { technique: "coloredOutline" });
+    manager.register("mesh-1", mesh, { technique: "highlight" });
 
     manager.select("mesh-1");
 
@@ -91,7 +91,7 @@ describe("select", () => {
   });
 
   test("technique option sets the default overlay for meshes without a per-id override", () => {
-    const manager = new SelectionManager({ technique: "coloredOutline" });
+    const manager = new SelectionManager({ technique: "highlight" });
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     manager.register("mesh-1", mesh);
 
@@ -101,7 +101,7 @@ describe("select", () => {
   });
 
   test("a per-id technique overrides the manager's default technique", () => {
-    const manager = new SelectionManager({ technique: "coloredOutline" });
+    const manager = new SelectionManager({ technique: "highlight" });
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     manager.register("mesh-1", mesh, { technique: "outline" });
 
@@ -281,17 +281,17 @@ describe("setTechnique", () => {
     const { manager, mesh } = createManagerWithMeshAndGroup();
     manager.select("mesh-1");
 
-    manager.setTechnique("coloredOutline");
+    manager.setTechnique("highlight");
 
-    assert.strictEqual(manager.technique, "coloredOutline");
-    assert.strictEqual(mesh.children.length, 0, "coloredOutline skips the per-object overlay entirely");
+    assert.strictEqual(manager.technique, "highlight");
+    assert.strictEqual(mesh.children.length, 0, "highlight skips the per-object overlay entirely");
   });
 
   test("rebuilds the active hover overlay to reflect the new default", () => {
     const { manager, mesh } = createManagerWithMeshAndGroup();
     manager.hover("mesh-1");
 
-    manager.setTechnique("coloredOutline");
+    manager.setTechnique("highlight");
 
     assert.strictEqual(mesh.children.length, 0);
   });
@@ -302,7 +302,7 @@ describe("setTechnique", () => {
     manager.register("mesh-1", mesh, { technique: "outline" });
     manager.select("mesh-1");
 
-    manager.setTechnique("coloredOutline");
+    manager.setTechnique("highlight");
 
     assert.strictEqual(mesh.children.length, 0);
   });
@@ -312,9 +312,9 @@ describe("setTechnique", () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     manager.register("mesh-1", mesh, { technique: "outline" });
 
-    manager.setTechnique("coloredOutline");
+    manager.setTechnique("highlight");
 
-    assert.strictEqual(manager.techniqueFor("mesh-1"), "coloredOutline");
+    assert.strictEqual(manager.techniqueFor("mesh-1"), "highlight");
     manager.select("mesh-1");
     assert.strictEqual(mesh.children.length, 0);
   });
@@ -323,7 +323,7 @@ describe("setTechnique", () => {
     const { manager, group } = createManagerWithMeshAndGroup();
     manager.select("group-1");
 
-    manager.setTechnique("coloredOutline");
+    manager.setTechnique("highlight");
 
     assert.ok(group.children.at(-1) instanceof SelectionBoundingBox);
   });
@@ -413,16 +413,16 @@ describe("techniqueFor", () => {
 
   test("returns the per-id override given to register", () => {
     const manager = new SelectionManager();
-    manager.register("mesh-1", new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)), { technique: "coloredOutline" });
+    manager.register("mesh-1", new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)), { technique: "highlight" });
 
-    assert.strictEqual(manager.techniqueFor("mesh-1"), "coloredOutline");
+    assert.strictEqual(manager.techniqueFor("mesh-1"), "highlight");
   });
 
   test("falls back to the manager's technique default when no per-id override is set", () => {
-    const manager = new SelectionManager({ technique: "coloredOutline" });
+    const manager = new SelectionManager({ technique: "highlight" });
     manager.register("mesh-1", new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
 
-    assert.strictEqual(manager.techniqueFor("mesh-1"), "coloredOutline");
+    assert.strictEqual(manager.techniqueFor("mesh-1"), "highlight");
   });
 });
 
@@ -440,9 +440,9 @@ describe("targetFor", () => {
   });
 });
 
-describe("coloredOutline technique", () => {
+describe("highlight technique", () => {
   test("select skips building a per-object overlay entirely", () => {
-    const manager = new SelectionManager({ technique: "coloredOutline" });
+    const manager = new SelectionManager({ technique: "highlight" });
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     manager.register("mesh-1", mesh);
 
@@ -453,7 +453,7 @@ describe("coloredOutline technique", () => {
   });
 
   test("hover skips building a per-object overlay entirely", () => {
-    const manager = new SelectionManager({ technique: "coloredOutline" });
+    const manager = new SelectionManager({ technique: "highlight" });
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     manager.register("mesh-1", mesh);
 
@@ -463,15 +463,15 @@ describe("coloredOutline technique", () => {
     assert.strictEqual(mesh.children.length, 0);
   });
 
-  test("does not throw when nothing external is actually driving a ColoredOutlinePass", () => {
-    const manager = new SelectionManager({ technique: "coloredOutline" });
+  test("does not throw when nothing external is actually driving a HighlightPass", () => {
+    const manager = new SelectionManager({ technique: "highlight" });
     manager.register("mesh-1", new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
 
     assert.doesNotThrow(() => manager.select("mesh-1"));
   });
 
   test("a group still renders a SelectionBoundingBox, ignoring the technique", () => {
-    const manager = new SelectionManager({ technique: "coloredOutline" });
+    const manager = new SelectionManager({ technique: "highlight" });
     const group = new THREE.Group();
     group.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
     manager.register("group-1", group);
@@ -481,8 +481,8 @@ describe("coloredOutline technique", () => {
     assert.ok(group.children.at(-1) instanceof SelectionBoundingBox);
   });
 
-  test("unregister clears an active coloredOutline selection without throwing", () => {
-    const manager = new SelectionManager({ technique: "coloredOutline" });
+  test("unregister clears an active highlight selection without throwing", () => {
+    const manager = new SelectionManager({ technique: "highlight" });
     manager.register("mesh-1", new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
     manager.select("mesh-1");
 
@@ -490,19 +490,92 @@ describe("coloredOutline technique", () => {
     assert.strictEqual(manager.selected, null);
   });
 
-  test("switching setTechnique to coloredOutline disposes the previous per-object overlay", () => {
+  test("switching setTechnique to highlight disposes the previous per-object overlay", () => {
     const manager = new SelectionManager();
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     manager.register("mesh-1", mesh);
     manager.select("mesh-1");
 
-    manager.setTechnique("coloredOutline");
+    manager.setTechnique("highlight");
 
     assert.strictEqual(mesh.children.length, 0);
   });
 
-  test("switching setTechnique away from coloredOutline rebuilds a per-object overlay", () => {
-    const manager = new SelectionManager({ technique: "coloredOutline" });
+  test("switching setTechnique away from highlight rebuilds a per-object overlay", () => {
+    const manager = new SelectionManager({ technique: "highlight" });
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    manager.register("mesh-1", mesh);
+    manager.select("mesh-1");
+
+    manager.setTechnique("outline");
+
+    assert.ok(mesh.children[0] instanceof SelectionOutline);
+  });
+});
+
+describe("highlightJfa technique", () => {
+  test("select skips building a per-object overlay entirely", () => {
+    const manager = new SelectionManager({ technique: "highlightJfa" });
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    manager.register("mesh-1", mesh);
+
+    manager.select("mesh-1");
+
+    assert.strictEqual(manager.selected, "mesh-1");
+    assert.strictEqual(mesh.children.length, 0);
+  });
+
+  test("hover skips building a per-object overlay entirely", () => {
+    const manager = new SelectionManager({ technique: "highlightJfa" });
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    manager.register("mesh-1", mesh);
+
+    manager.hover("mesh-1");
+
+    assert.strictEqual(manager.hovered, "mesh-1");
+    assert.strictEqual(mesh.children.length, 0);
+  });
+
+  test("does not throw when nothing external is actually driving a HighlightPassJfa", () => {
+    const manager = new SelectionManager({ technique: "highlightJfa" });
+    manager.register("mesh-1", new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
+
+    assert.doesNotThrow(() => manager.select("mesh-1"));
+  });
+
+  test("a group still renders a SelectionBoundingBox, ignoring the technique", () => {
+    const manager = new SelectionManager({ technique: "highlightJfa" });
+    const group = new THREE.Group();
+    group.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
+    manager.register("group-1", group);
+
+    manager.select("group-1");
+
+    assert.ok(group.children.at(-1) instanceof SelectionBoundingBox);
+  });
+
+  test("unregister clears an active highlightJfa selection without throwing", () => {
+    const manager = new SelectionManager({ technique: "highlightJfa" });
+    manager.register("mesh-1", new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
+    manager.select("mesh-1");
+
+    assert.doesNotThrow(() => manager.unregister("mesh-1"));
+    assert.strictEqual(manager.selected, null);
+  });
+
+  test("switching setTechnique to highlightJfa disposes the previous per-object overlay", () => {
+    const manager = new SelectionManager();
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    manager.register("mesh-1", mesh);
+    manager.select("mesh-1");
+
+    manager.setTechnique("highlightJfa");
+
+    assert.strictEqual(mesh.children.length, 0);
+  });
+
+  test("switching setTechnique away from highlightJfa rebuilds a per-object overlay", () => {
+    const manager = new SelectionManager({ technique: "highlightJfa" });
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     manager.register("mesh-1", mesh);
     manager.select("mesh-1");

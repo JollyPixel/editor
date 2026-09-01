@@ -150,7 +150,7 @@ export class PeerSelectionRegistry extends EventTarget {
 
   /**
    * Every object id with at least one current selector, in no particular
-   * order. Lets a caller (e.g. `PeerColoredOutlinePass`) enumerate every
+   * order. Lets a caller (e.g. `PeerHighlightPass`) enumerate every
    * currently-selected object without tracking that set itself.
    */
   selectedObjectIds(): readonly string[] {

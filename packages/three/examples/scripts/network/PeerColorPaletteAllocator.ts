@@ -1,5 +1,7 @@
+// Import Third-party Dependencies
+import { ColorPalette, type ColorPaletteOptions } from "@jolly-pixel/color";
+
 // Import Internal Dependencies
-import { ColorPalette, type ColorPaletteOptions } from "./ColorPalette.ts";
 import type { PeerColorAllocator } from "../../../src/index.ts";
 
 /**

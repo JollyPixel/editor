@@ -141,10 +141,23 @@ describe("setFillOpacity", () => {
     assert.strictEqual(fill.material.opacity, 0.6);
   });
 
-  test("is a no-op when the box was built without a fill mesh", () => {
+  test("builds a fill mesh on demand, matching the wireframe's current color and x-ray state", () => {
+    const box = new SelectionBoundingBox({ target: createGroupOfTwoBoxes(), color: "#ff00ff", xray: true });
+    assert.strictEqual(box.children.length, 0, "starts with no fill mesh - built with fillOpacity: 0");
+
+    box.setFillOpacity(0.5);
+
+    assert.strictEqual(box.children.length, 1);
+    const fill = box.children[0] as THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>;
+    assert.strictEqual(fill.material.opacity, 0.5);
+    assert.strictEqual(`#${fill.material.color.getHexString()}`, "#ff00ff");
+    assert.strictEqual(fill.material.depthTest, false, "matches the wireframe's own x-ray state");
+  });
+
+  test("remains a no-op for a non-positive opacity on a box with no fill mesh yet", () => {
     const box = new SelectionBoundingBox({ target: createGroupOfTwoBoxes() });
 
-    assert.doesNotThrow(() => box.setFillOpacity(0.5));
+    assert.doesNotThrow(() => box.setFillOpacity(0));
     assert.strictEqual(box.children.length, 0);
   });
 });

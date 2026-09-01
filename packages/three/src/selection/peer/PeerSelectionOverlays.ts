@@ -2,7 +2,7 @@
 import { createSelectionOverlay, type SelectionOverlay } from "../overlays/createSelectionOverlay.ts";
 import type { PeerSelectionRegistry, PeerSelectionChangeEventDetail } from "./PeerSelectionRegistry.ts";
 import type { PeerSelectionVisibility } from "./PeerSelectionVisibility.ts";
-import type { SelectionManager } from "../SelectionManager.ts";
+import { isScenePipelineTechnique, type SelectionManager } from "../SelectionManager.ts";
 
 export interface PeerSelectionOverlaysOptions {
   registry: PeerSelectionRegistry;
@@ -94,6 +94,24 @@ export class PeerSelectionOverlays {
   }
 
   /**
+   * Re-applies color and x-ray to every currently active peer overlay
+   * against `selection`'s current state. `SelectionManager.setXray` (unlike
+   * `select`/`hover`) dispatches no event of its own, so an already-built
+   * peer overlay has nothing to react to - `#refresh`'s own "existing"
+   * branch keeps it current the moment something else triggers a refresh
+   * (a peer (de)selecting, the local selection changing, a visibility flip),
+   * but a caller driving `setXray` from a settings panel with none of those
+   * happening needs to call this explicitly afterward. A newly built overlay
+   * never needs this - `#refresh`'s construction path already reads
+   * `selection.xray` fresh.
+   */
+  refreshAll(): void {
+    for (const objectId of [...this.#overlays.keys()]) {
+      this.#refresh(objectId);
+    }
+  }
+
+  /**
    * Detaches its listeners and disposes every active peer overlay. Does not
    * touch `registry`/`selection`/`visibility` state - only this class's own
    * render output.
@@ -132,6 +150,8 @@ export class PeerSelectionOverlays {
     const color = this.#registry.colorOf(primaryPeerId);
     if (existing) {
       existing.setColor(color);
+      existing.setXray(this.#selection.xray);
+      existing.setFillOpacity?.(this.#selection.boundingBoxOptions.fillOpacity ?? 0);
 
       return;
     }
@@ -145,13 +165,13 @@ export class PeerSelectionOverlays {
     const { fillOpacity } = this.#selection.boundingBoxOptions;
 
     // A peer overlay always builds a disposable per-object overlay, one per
-    // selecting peer's color - `"coloredOutline"` has no such thing (a
-    // single shared pipeline, not a per-id instance, see
-    // `ColoredOutlinePass`'s own doc comment), so it can't represent more
-    // than one simultaneously colored peer selection. Falls back to
-    // `"outline"` in that case rather than mishandling the technique.
+    // selecting peer's color - a scene-level pipeline technique has no such
+    // thing (a single shared pipeline, not a per-id instance, see
+    // `HighlightPass`/`HighlightPassJfa`'s own doc comments), so it can't
+    // represent more than one simultaneously colored peer selection. Falls
+    // back to `"outline"` in that case rather than mishandling the technique.
     const rawTechnique = this.#selection.techniqueFor(objectId);
-    const technique = rawTechnique === "coloredOutline" ? "outline" : rawTechnique;
+    const technique = isScenePipelineTechnique(rawTechnique) ? "outline" : rawTechnique;
 
     this.#overlays.set(objectId, createSelectionOverlay(target, {
       technique,

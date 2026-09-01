@@ -27,7 +27,7 @@ describe("createSelectionOverlay", () => {
 
   test("falls back to \"outline\" for a mesh given an unregistered technique id", () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    const overlay = createSelectionOverlay(mesh, { technique: "coloredOutline", color: "#ffffff", opacity: 1 });
+    const overlay = createSelectionOverlay(mesh, { technique: "highlight", color: "#ffffff", opacity: 1 });
 
     assert.ok(overlay instanceof SelectionOutline);
   });

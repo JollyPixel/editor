@@ -84,7 +84,7 @@ export interface PeerSelectionChangeEventDetail {
 - `removePeer(peerId: string): void` - Clears `peerId`'s selection entirely, as if it selected `null`. Use this when a peer disconnects - also the single point where `colorAllocator.release(peerId)` is called.
 - `selectionOf(peerId: string): string | null` - The object `peerId` currently has selected, or `null`.
 - `selectorsOf(objectId: string): readonly string[]` - Every peer currently selecting `objectId`, oldest-first.
-- `selectedObjectIds(): readonly string[]` - Every object id with at least one current selector, in no particular order. Lets a caller (e.g. `PeerColoredOutlinePass`) enumerate every currently-selected object without tracking that set itself.
+- `selectedObjectIds(): readonly string[]` - Every object id with at least one current selector, in no particular order. Lets a caller (e.g. `PeerHighlightPass`) enumerate every currently-selected object without tracking that set itself.
 - `primarySelectorOf(objectId: string): string | null` - The peer that has selected `objectId` the longest, or `null` if none has. This is the peer whose color a single 3D overlay should use.
 - `colorOf(peerId: string): string` - Deterministic color for `peerId`, stable across calls.
 - `dispose(): void` - Forgets every peer and object. Does not dispatch `peerSelectionChange` for the state it clears, and does not call `colorAllocator.release` - disposing this registry is not the same as every peer disconnecting, especially when `colorAllocator` is shared across several editors' registries in the same session.
@@ -97,4 +97,4 @@ export interface PeerSelectionChangeEventDetail {
 
 - Tie-break rule for "primary" selector: insertion-order, oldest-selector-wins. If the primary peer deselects or moves to another object, the next-oldest remaining peer is promoted automatically - no extra bookkeeping needed on the caller's side.
 - Colors come from the injected (or default) `PeerColorAllocator`, keyed by `peerId` - see above.
-- See `examples/scripts/demo-selection.ts` (run `npm run dev`, open `/selection.html`) for a demo built on this class - the "Presence" pane folder drives 2-3 fake peers, and `refreshChips` renders `selectorsOf` as small colored chips in the outliner.
+- See `examples/scripts/selection.ts` (run `npm run dev`, open `/selection.html`) for a demo built on this class - the "Presence" pane folder drives 2-3 fake peers, and `refreshChips` renders `selectorsOf` as small colored chips in the outliner.

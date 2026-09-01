@@ -114,7 +114,7 @@ export interface StartLoopOptions {
   onAfterRender?: () => void;
   /**
    * Overrides the frame's draw call, in place of the default
-   * `renderer.render(scene, camera)` - e.g. a `ColoredOutlinePass`'s own
+   * `renderer.render(scene, camera)` - e.g. a `HighlightPass`'s own
    * `render()`, which must run in `renderer.render`'s place once it owns the
    * frame's `RenderPipeline`.
    */

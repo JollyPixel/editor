@@ -75,7 +75,7 @@ export interface SelectionOverlayRegistryOptions {
  * 1. The requested id, if registered and it supports `target`.
  * 2. `defaultId`, if it supports `target` - a `THREE.Mesh` target given an id
  *    this registry doesn't know about (e.g. a scene-level pipeline style id
- *    like `"coloredOutline"` reaching here by mistake) silently falls back to
+ *    like `"highlight"` reaching here by mistake) silently falls back to
  *    this instead of throwing, same as before.
  * 3. `fallbackId` - what every target none of the above support (typically a
  *    `THREE.Group`, via `"boundingBox"`) always got before, regardless of

@@ -1,4 +1,4 @@
-# ColoredOutlinePass
+# HighlightPass
 
 Scene-level postprocess outline that renders many simultaneously outlined
 objects, each in its own arbitrary color, in a single shared mask +
@@ -30,20 +30,20 @@ Deliberately has no notion of peers, [SelectionManager](./SelectionManager.md),
 or [PeerSelectionRegistry](./PeerSelectionRegistry.md) - it only ever paints
 colored outlines around whatever `{ target, color }` entries it's given, the
 same agnostic-core-vs-thin-glue split `PeerSelectionRegistry` already uses.
-[PeerColoredOutlinePass](./PeerColoredOutlinePass.md) is the thin adapter
+[PeerHighlightPass](./PeerHighlightPass.md) is the thin adapter
 that feeds it from the selection system - including the local user's own
 selection, so it's a complete, self-sufficient driver with zero peers too.
 
 ```ts
 import * as THREE from "three/webgpu";
-import { ColoredOutlinePass } from "@jolly-pixel/three";
+import { HighlightPass } from "@jolly-pixel/three";
 
 const renderer = new THREE.WebGPURenderer({ canvas });
 await renderer.init();
 
-const coloredOutline = new ColoredOutlinePass(renderer, scene, camera);
+const highlight = new HighlightPass(renderer, scene, camera);
 
-coloredOutline.setEntries([
+highlight.setEntries([
   { target: meshA, color: "#ff0000" },
   { target: meshB, color: "#00aaff" },
   { target: groupC, color: "#22cc55" }, // groups are traversed to every mesh inside them
@@ -51,17 +51,17 @@ coloredOutline.setEntries([
 ]);
 
 renderer.setAnimationLoop(() => {
-  coloredOutline.render(); // replaces renderer.render(scene, camera)
+  highlight.render(); // replaces renderer.render(scene, camera)
 });
 
 // ... later
-coloredOutline.dispose();
+highlight.dispose();
 ```
 
-## ColoredOutlineEntry
+## HighlightEntry
 
 ```ts
-export interface ColoredOutlineEntry {
+export interface HighlightEntry {
   /**
    * Mesh (or group, traversed to every mesh inside it) to outline.
    */
@@ -114,10 +114,10 @@ export interface ColoredOutlineEntry {
 }
 ```
 
-## ColoredOutlinePassOptions
+## HighlightPassOptions
 
 ```ts
-export interface ColoredOutlinePassOptions {
+export interface HighlightPassOptions {
   /**
    * @default 1
    */
@@ -138,7 +138,7 @@ export interface ColoredOutlinePassOptions {
 - `render(): void` - Renders the mask/edge-detection passes for the current entries, then the scene through the outline pipeline. Call this instead of `renderer.render(scene, camera)` in the render loop.
 - `get edgeThickness(): number` / `setEdgeThickness(edgeThickness: number): void` - Reads/updates the detected-edge thickness.
 - `get edgeGlow(): number` / `setEdgeGlow(edgeGlow: number): void` - Reads/updates the animated glow/pulse multiplier.
-- `setEntries(entries: ColoredOutlineEntry[]): void` - Replaces every currently outlined entry. Traverses each `target` (group support) into a flat mesh-to-color map (plus the set of `priority` meshes), cached until the next call rather than rebuilt every frame. An `isolated` entry lands in its own separate map instead, never the shared one.
+- `setEntries(entries: HighlightEntry[]): void` - Replaces every currently outlined entry. Traverses each `target` (group support) into a flat mesh-to-color map (plus the set of `priority` meshes), cached until the next call rather than rebuilt every frame. An `isolated` entry lands in its own separate map instead, never the shared one.
 - `dispose(): void` - Frees the GPU resources owned by this pass (render targets, materials, the `RenderPipeline`). Does not touch entries' own geometries/materials.
 
 ## Notes
@@ -152,9 +152,10 @@ export interface ColoredOutlinePassOptions {
 - Edge-detection boundary strength comes from the RGB *distance* between neighboring mask texels, not from `maskWeight`'s (background-vs-masked) signal - two different entry colors can have near-identical RGB length (e.g. orange `(.98,.42,.42)` and teal `(.16,.80,.83)`, both length ~1.15) despite being visually distinct, which would otherwise silently drop the edge between two adjacent, differently-colored selections and only ever detect mask-vs-background boundaries. RGB distance catches both cases. At a boundary where two different colors meet (two peers' outlines touching), the shader still blends the neighboring colors' weighted average for the edge's own color rather than picking one - a known, accepted approximation, not a bug; only the *detection* of that boundary needed fixing, not the color chosen once it's found.
 - The "is this pixel masked" signal used for that weighted-average color and for the composite's own-surface gate is each mask-buffer texel's RGB length (`maskWeight`), not the mask render target's own alpha channel - `setClearColor(color, 0)` did not reliably clear this particular render target's alpha to 0 on the renderer this was built against (sampling alpha in a downstream shader read back 1 everywhere, drawn pixels and background alike, verified empirically). RGB itself clears to true black correctly, so its length works as a stand-in. Practical implication: don't assign pure/near-black (`#000000`) as an entry's color - it would read as unmasked.
 - `setEntries()` does a full replace, not an incremental diff - fine for click-driven selection changes (inherently low frequency), but not a technique to reuse as-is for something higher-frequency like live hover broadcast without reconsidering the cost of rebuilding/re-traversing the whole entries list on every change.
-- **Instanced entries** (`instanceId` set): rather than one draw call per outlined instance, each `InstancedMesh` referenced by any instanced entry gets one dedicated set of `THREE.InstancedBufferAttribute`s (per-instance mask color, plus a per-instance "is this an entry" flag) read via TSL's `instancedBufferAttribute()` - the same low-level technique three's own `instance()` helper uses internally for `InstancedMesh.instanceColor`, just aimed at buffers this class owns instead. Deliberately *not* `mesh.instanceColor` itself - three auto-multiplies every material's diffuse color by `instanceColor` when it's set (`NodeMaterial.setupDiffuseColor`), which would leak into the mesh's own normal scene rendering and tint every non-outlined instance pure black. Every non-outlined instance is `Discard()`-ed in the mask pass's own shader, not just zeroed - instancing draws every instance of the mesh in one call regardless of which ones are entries, so a color-only approach would still write those instances' real depth into the mask target, letting them win the shared mask's own depth test against an actually-outlined instance (or an unrelated whole-object entry) behind them, silently blocking it from the mask target entirely. The whole mesh still redraws in the priority second pass whenever *any* instanced entry references it, regardless of whether any of its instances are actually `priority` - a dedicated per-instance flag attribute discards every non-priority instance's fragments in that pass's own shader too, so a mesh with no priority instances just costs one harmless all-discarded draw call rather than needing a separate "does this mesh need the second pass" check. Net cost per outlined `InstancedMesh`: two draw calls (one per pass) regardless of how many of its instances are simultaneously outlined - same shape as the whole-object case, just per mesh instead of per outlined object.
-- See `examples/scripts/demo-stress.ts` (run `npm run dev`, open `/stress.html`) - the "Peer Colors" pane folder wires this class against the same heavy-instance stress rig used to compare it against `outline`, so instances, peer count, and the local user's own click-selection can all be pushed at once. That demo resolves peer/local selections into instanced entries itself rather than through `PeerColoredOutlinePass` - see the demo's own `refreshPeerColors` for why: `PeerColoredOutlinePass` resolves every id through `SelectionManager.targetFor`, which only ever returns a whole object, never a single `InstancedMesh` instance.
+- **Instanced entries** (`instanceId` set): rather than one draw call per outlined instance, each `InstancedMesh` referenced by any instanced entry gets one dedicated set of `THREE.InstancedBufferAttribute`s (per-instance mask color, plus a per-instance "is this an entry" flag) read via TSL's `instancedBufferAttribute()` - the same low-level technique three's own `instance()` helper uses internally for `InstancedMesh.instanceColor`, just aimed at buffers this class owns instead. Deliberately *not* `mesh.instanceColor` itself - three auto-multiplies every material's diffuse color by `instanceColor` when it's set (`NodeMaterial.setupDiffuseColor`), which would leak into the mesh's own normal scene rendering and tint every non-outlined instance pure black. Every non-outlined instance is `Discard()`-ed in the mask pass's own shader, not just zeroed - instancing draws every instance of the mesh in one call regardless of which ones are entries, so a color-only approach would still write those instances' real depth into the mask target, letting them win the shared mask's own depth test against an actually-outlined instance (or an unrelated whole-object entry) behind them, silently blocking it from the mask target entirely. The whole mesh still redraws in the priority second pass whenever *any* instanced entry references it, regardless of whether any of its instances are actually `priority` - a dedicated per-instance flag attribute discards every non-priority instance's fragments in that pass's own shader too, so a mesh with no priority instances just costs one harmless all-discarded draw call rather than needing a separate "does this mesh need the second pass" check. Net cost per outlined `InstancedMesh`: two draw calls (one per pass) regardless of how many of its instances are simultaneously outlined - same shape as the whole-object case, just per mesh instead of per outlined object. This subsystem lives in its own `InstancedHighlightMask` class, shared by every highlight technique that needs it.
+- Internally, the TSL shader-graph builders (Gaussian blur, edge detection, composite, mask-weight signal) live under `src/selection/postprocess/tsl/`, separate from this class's own render-target/pass-sequencing orchestration - not part of the public API, but useful to know when reading the source.
+- See `examples/scripts/selection-stress.ts` (run `npm run dev`, open `/selection-stress.html`) - the "Peer Colors" pane folder wires this class against the same heavy-instance stress rig used to compare it against `outline`, so instances, peer count, and the local user's own click-selection can all be pushed at once. That demo resolves peer/local selections into instanced entries itself rather than through `PeerHighlightPass` - see the demo's own `refreshPeerColors` for why: `PeerHighlightPass` resolves every id through `SelectionManager.targetFor`, which only ever returns a whole object, never a single `InstancedMesh` instance.
 
-## Alternative considered: Jump Flood Algorithm
+## Alternative: Jump Flood Algorithm
 
-`examples/scripts/utils/JumpFloodOutlinePass.ts` is a research-spike prototype comparing this class's Sobel-diff-edge-detect + separable-blur ring against a Jump Flood Algorithm distance-field one - a real per-pixel distance to the silhouette instead of a blurred edge map, so the ring reads the same width regardless of viewing angle or downsample level. It deliberately lives in `examples/`, not `src/` - not a published package API, no test coverage, and it skips the one thing this class earns its size from beyond the ring shape itself (`InstancedMesh` support); `priority`/`isolated` entries both work the same way there as they do here. See `examples/scripts/demo-selection.ts`'s "Peer rendering" -> "colors (JFA prototype)" option to compare the two side-by-side on the same scene/entries.
+[HighlightPassJfa](./HighlightPassJfa.md) is a second, production, selectable technique - same `HighlightEntry`/`setEntries` shape, same `priority`/`isolated`/`instanceId` support, but a Jump Flood Algorithm distance field instead of this class's Sobel-diff-edge-detect + separable-blur ring: a real per-pixel distance to the silhouette, so the ring reads the same width regardless of viewing angle or downsample level. See `examples/scripts/selection.ts`'s "Peer rendering" -> "colors (postprocess, JFA)" option to compare the two side-by-side on the same scene/entries.

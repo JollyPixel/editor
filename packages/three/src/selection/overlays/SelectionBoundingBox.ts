@@ -129,14 +129,23 @@ export class SelectionBoundingBox extends THREE.LineSegments<THREE.BufferGeometr
 
   /**
    * Updates the fill mesh's own opacity - see `SelectionBoundingBoxOptions.fillOpacity`.
-   * A no-op if this box was built with `fillOpacity: 0` (or omitted): there is
-   * no fill mesh to update, and this method doesn't build one on demand -
-   * whether a fill mesh exists at all is decided once, at construction.
+   * A box built with `fillOpacity: 0` (or omitted) has no fill mesh yet - a
+   * positive `opacity` here builds one on demand, matching the wireframe's
+   * current color and X-ray state (read back off `this.material` rather than
+   * kept as separate fields, since `setColor`/`setXray` already keep it
+   * current); a non-positive `opacity` on a box that still has none is a
+   * no-op, same as it always was.
    */
   setFillOpacity(
     opacity: number
   ): void {
     if (!this.#fillMesh) {
+      if (opacity <= 0) {
+        return;
+      }
+      this.#fillMesh = this.#createFillMesh(this.material.color, opacity, !this.material.depthTest);
+      this.add(this.#fillMesh);
+
       return;
     }
     this.#fillMesh.material.opacity = opacity;
@@ -184,7 +193,7 @@ export class SelectionBoundingBox extends THREE.LineSegments<THREE.BufferGeometr
    * own separate sizing logic. `depthWrite` stays off unconditionally
    * (unlike the wireframe's own material, which flips it with `xray`) - a
    * translucent fill corrupting the depth buffer for whatever draws after it
-   * is exactly the bug already fixed once this session in `ColoredOutlinePass`'s
+   * is exactly the bug already fixed once this session in `HighlightPass`'s
    * own priority-mask material; nothing here needs the fill's own depth
    * written for any later pass to read, so there's no upside to risking it
    * again.

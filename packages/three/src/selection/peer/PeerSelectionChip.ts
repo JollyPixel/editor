@@ -14,7 +14,7 @@ const kChipLabelFont = `700 ${kChipCanvasSize * 0.36}px sans-serif`;
 export interface PeerSelectionChipOptions {
   /**
    * The selecting peer's own color, same source `PeerSelectionOverlays`/
-   * `PeerColoredOutlinePass` already read via `PeerSelectionRegistry.colorOf`.
+   * `PeerHighlightPass` already read via `PeerSelectionRegistry.colorOf`.
    * Also the background fill for an overflow badge (see `label` below) -
    * a caller building one picks its own neutral color, since an overflow
    * badge doesn't belong to any single peer.

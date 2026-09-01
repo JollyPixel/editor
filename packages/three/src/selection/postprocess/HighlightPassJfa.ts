@@ -1,156 +1,25 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
 import {
-  Fn,
   float,
   vec2,
   vec3,
   vec4,
-  uv,
   uniform,
   texture,
-  max,
-  greaterThan,
-  lessThan,
-  and,
-  If,
-  oneMinus,
-  saturate,
-  smoothstep,
   pass
 } from "three/tsl";
 
 // Import Internal Dependencies
-import type { ColoredOutlineEntry } from "../../../src/index.ts";
+import type { HighlightEntry } from "./HighlightPass.ts";
+import { InstancedHighlightMask } from "./InstancedHighlightMask.ts";
+import { buildJfaSeedInit } from "./tsl/jfa/seed.ts";
+import { buildJfaPositionStep, buildJfaColorStep } from "./tsl/jfa/propagate.ts";
+import { buildJfaRingComposite, type JfaRingChannel } from "./tsl/jfa/resolve.ts";
 
-// CONSTANTS
-/**
- * 9-neighbor Jump Flood sampling pattern (the 8 compass directions plus the
- * center/self offset) - a fixed, small set, so it's unrolled as plain JS
- * `for` loops building the shader graph rather than a TSL `Loop()` (same
- * "manually unroll a small fixed neighborhood" style `ColoredOutlinePass`'s
- * own `buildEdgeDetection` already uses for its 4-neighbor scan).
- */
-const kJfaOffsets: ReadonlyArray<readonly [number, number]> = [
-  [-1, -1], [0, -1], [1, -1],
-  [-1, 0], [0, 0], [1, 0],
-  [-1, 1], [0, 1], [1, 1]
-];
-
-/**
- * Same "is this texel masked" signal `ColoredOutlinePass` uses (RGB length,
- * not the alpha channel - see that class's own `maskWeight` doc comment for
- * why alpha isn't reliable on this renderer). Duplicated here rather than
- * imported since this file is deliberately standalone (see this class's own
- * doc comment).
- */
-function maskWeight(c) {
-  return saturate(c.rgb.length());
-}
-
-/**
- * Seeds every masked texel with its own pixel coordinate (`valid = 1`);
- * every other texel starts invalid (`valid = 0`, own coordinate kept anyway,
- * though unused while invalid) - parameterized by which mask to read so the
- * shared and priority-only chains (see `#renderTargetPriorityMask`'s own doc
- * comment) can reuse this instead of duplicating it, the same "extract a
- * builder function, call it twice" shape `buildJfaPositionStep`/
- * `buildJfaColorStep` already use below.
- */
-function buildSeedPositionInit(
-  maskTextureNode: ReturnType<typeof texture>,
-  resolutionNode: ReturnType<typeof vec2>
-) {
-  return Fn(() => {
-    const uvNode = uv();
-    const masked = greaterThan(maskWeight(maskTextureNode.sample(uvNode)), float(0.5));
-    const pixelCoord = uvNode.mul(resolutionNode);
-    const result = vec4(pixelCoord, 0, 0).toVar();
-
-    If(masked, () => {
-      result.assign(vec4(pixelCoord, 1, 0));
-    });
-
-    return result;
-  })();
-}
-
-/**
- * One Jump Flood propagation step for the *position* buffer: for the current
- * texel, checks the 9 neighbors (at `stepNode` texels away) of the previous
- * iteration's position buffer and keeps whichever one is nearest in pixel
- * space, carrying that neighbor's own stored seed position forward. `vec4`
- * layout: `xy` = seed's own pixel coordinate, `z` = valid flag (`1`/`0`),
- * `w` unused.
- */
-function buildJfaPositionStep(
-  positionSourceTexture: ReturnType<typeof texture>,
-  stepNode: ReturnType<typeof float>,
-  invSizeNode: ReturnType<typeof vec2>,
-  resolutionNode: ReturnType<typeof vec2>
-) {
-  return Fn(() => {
-    const uvNode = uv();
-    const pixelCoord = uvNode.mul(resolutionNode).toVar();
-    const best = vec4(0, 0, 0, 0).toVar();
-    const bestDist = float(1e10).toVar();
-
-    for (const [dx, dy] of kJfaOffsets) {
-      const sampleUv = uvNode.add(vec2(dx, dy).mul(stepNode).mul(invSizeNode));
-      const candidate = positionSourceTexture.sample(sampleUv).toVar();
-      const dist = pixelCoord.sub(candidate.xy).length();
-
-      If(and(greaterThan(candidate.z, float(0.5)), lessThan(dist, bestDist)), () => {
-        best.assign(candidate);
-        bestDist.assign(dist);
-      });
-    }
-
-    return best;
-  })();
-}
-
-/**
- * The color-buffer twin of `buildJfaPositionStep` - re-derives the exact
- * same "which of the 9 neighbors is nearest" decision (same source texture,
- * same math, so it agrees with the position step's own choice - see this
- * class's own doc comment for why this simpler "recompute the same decision
- * twice" approach was chosen over packing color into the position buffer or
- * a multi-render-target step), then outputs *that* neighbor's color instead
- * of its position.
- */
-function buildJfaColorStep(
-  positionSourceTexture: ReturnType<typeof texture>,
-  colorSourceTexture: ReturnType<typeof texture>,
-  stepNode: ReturnType<typeof float>,
-  invSizeNode: ReturnType<typeof vec2>,
-  resolutionNode: ReturnType<typeof vec2>
-) {
-  return Fn(() => {
-    const uvNode = uv();
-    const pixelCoord = uvNode.mul(resolutionNode).toVar();
-    const bestColor = vec4(0, 0, 0, 0).toVar();
-    const bestDist = float(1e10).toVar();
-
-    for (const [dx, dy] of kJfaOffsets) {
-      const offset = vec2(dx, dy).mul(stepNode).mul(invSizeNode);
-      const sampleUv = uvNode.add(offset);
-      const candidatePos = positionSourceTexture.sample(sampleUv).toVar();
-      const dist = pixelCoord.sub(candidatePos.xy).length();
-
-      If(and(greaterThan(candidatePos.z, float(0.5)), lessThan(dist, bestDist)), () => {
-        bestDist.assign(dist);
-        bestColor.assign(colorSourceTexture.sample(sampleUv));
-      });
-    }
-
-    return bestColor;
-  })();
-}
-
-export interface JumpFloodOutlinePassOptions {
+export interface HighlightPassJfaOptions {
   /**
-   * Ring thickness, in screen pixels - unlike `ColoredOutlinePass.edgeThickness`
+   * Ring thickness, in screen pixels - unlike `HighlightPass.edgeThickness`
    * (downsampled pixels, blur-kernel-radius-shaped), this is an exact,
    * resolution-independent pixel count: the Jump Flood distance field is a
    * real per-pixel distance to the silhouette, not a blur radius, so the
@@ -161,68 +30,69 @@ export interface JumpFloodOutlinePassOptions {
 }
 
 /**
- * Research-spike prototype (Phase 6 of the original architecture roadmap for
- * `src/selection` - see `docs/ColoredOutlinePass.md`'s own "Alternative
- * considered: Jump Flood Algorithm" note) comparing a Jump Flood Algorithm
- * outline against
- * `ColoredOutlinePass`'s existing Sobel-diff-edge-detect + separable-blur
- * approach. Deliberately lives here in `examples/`, not `src/` - it is not a
- * published package API, has no test coverage, and intentionally skips the
- * one thing `ColoredOutlinePass` earns its size from beyond the ring shape
- * itself: `InstancedMesh` support. Its main job is to answer one question
- * visually: does JFA's uniform, resolution-independent ring actually look
- * better than the blurred one, and is it worth productionizing. See
- * `examples/scripts/demo-selection.ts`'s "Peer rendering" -> "colors (JFA
- * prototype)" option to compare them side-by-side against the same
- * scene/entries.
+ * Jump Flood Algorithm alternative to `HighlightPass` - same `HighlightEntry`/
+ * `setEntries` shape, so a caller (e.g. `PeerHighlightPass`) can drive either
+ * technique interchangeably, but replaces `HighlightPass`'s
+ * downsample/edge-detect/blur chain with a real distance field: every
+ * background texel knows the exact pixel-space distance to its nearest
+ * outlined silhouette, so the ring reads the same width regardless of
+ * viewing angle or downsample level, unlike a blurred edge map.
  *
- * Same overall shape as `ColoredOutlinePass` (mask pass, `RenderPipeline`
- * compositing the ring onto a `pass(scene, camera)`), but the
- * downsample/edge-detect/blur chain is replaced with a real distance field:
+ * Same overall shape as `HighlightPass` (mask pass, `RenderPipeline`
+ * compositing the ring onto a `pass(scene, camera)`):
  * 1. Mask pass - flat per-entry color, depth-tested, exactly like
- *    `ColoredOutlinePass`'s own non-priority mask pass.
+ *    `HighlightPass`'s own non-priority mask pass.
  * 2. Seed init - every masked texel seeds itself (its own pixel coordinate,
  *    `valid = 1`); every other texel starts invalid.
  * 3. `O(log2(max(width, height)))` Jump Flood passes, each halving the
  *    sample step, propagating the nearest seed's position (and, via a
  *    second, parallel pass re-deriving the same nearest-neighbor decision -
  *    see `buildJfaColorStep`'s own doc comment - its color) to every texel.
- * 4. Composite - every texel now knows the pixel-space distance to its
- *    nearest masked seed; a background texel within `ringThickness` of one
- *    draws that seed's color, with a ~1px smoothstep falloff at the edge.
+ * 4. Composite (`tsl/jfa/resolve.ts`) - every texel now knows the
+ *    pixel-space distance to its nearest masked seed; a background texel
+ *    within `ringThickness` of one draws that seed's color, with a ~1px
+ *    smoothstep falloff at the edge.
  *
  * Ping-pongs two independent render-target pairs (`#renderTargetSeedPosA`/`B`,
  * `#renderTargetSeedColorA`/`B`) across the Jump Flood passes, alternating
  * which one is "source" vs "destination" each iteration (same `.value`
- * reassignment technique `ColoredOutlinePass`'s own blur passes use) - a
+ * reassignment technique `HighlightPass`'s own blur passes use) - a
  * texture can't be read and written in the same GPU pass.
  *
  * @note
  * Requires `THREE.WebGPURenderer`. Owns its own `RenderPipeline` - pick one
  * whole-frame postprocess pipeline per scene, same caveat as
- * `ColoredOutlinePass`.
+ * `HighlightPass`.
  *
  * @note
- * `priority` entries (`ColoredOutlineEntry.priority`) work the same as
- * `ColoredOutlinePass`'s own - see `#renderTargetPriorityMask`'s own doc
+ * `priority` entries (`HighlightEntry.priority`) work the same as
+ * `HighlightPass`'s own - see `#renderTargetPriorityMask`'s own doc
  * comment for the mechanism, which mirrors that class's exactly (a
  * `depthTest: false` redraw so priority wins the shared mask's overlap
  * contest, plus a second, independent mask/seed/propagate chain so a
  * priority entry's ring still has somewhere to draw even when its silhouette
  * is entirely enclosed inside a larger, nearer non-priority entry's own).
  * Always on for whichever entries are marked `priority` - no separate option
- * to enable it, same as `ColoredOutlinePass` - and free (skipped entirely,
+ * to enable it, same as `HighlightPass` - and free (skipped entirely,
  * same as that class) on a frame with no priority entries.
  *
  * @note
- * `isolated` entries (`ColoredOutlineEntry.isolated`) also work the same as
- * `ColoredOutlinePass`'s own - see `#renderTargetIsolatedMask`'s own doc
+ * `isolated` entries (`HighlightEntry.isolated`) also work the same as
+ * `HighlightPass`'s own - see `#renderTargetIsolatedMask`'s own doc
  * comment. The opposite of `priority`: a third, independent mask/seed/
  * propagate chain, but no shared-mask redraw at all - an isolated entry
  * never competes for the shared mask's own pixels, so it can neither be cut
  * by another entry nor cut one itself.
+ *
+ * @note
+ * `instanceId` entries (`HighlightEntry.instanceId`) work the same as
+ * `HighlightPass`'s own too, via the same shared `InstancedHighlightMask` -
+ * see that class's own doc comment. A mask pass's "which instances are
+ * entries, what color/priority do they have" concern is identical between
+ * both techniques; only what happens to the resulting mask afterward
+ * (blur-based vs distance-field-based) differs.
  */
-export class JumpFloodOutlinePass {
+export class HighlightPassJfa {
   readonly pipeline: THREE.RenderPipeline;
 
   #renderer: THREE.WebGPURenderer;
@@ -230,11 +100,13 @@ export class JumpFloodOutlinePass {
   #camera: THREE.Camera;
 
   #entryByMesh = new Map<THREE.Mesh, THREE.Color>();
-  #entryCount = 0;
+  #lastEntryCount = 0;
   /** Priority meshes, a subset of `#entryByMesh`'s own keys - see `#renderTargetPriorityMask`'s own doc comment. */
   #priorityMeshes = new Set<THREE.Mesh>();
   /** `isolated` entries land here instead - never part of `#entryByMesh` at all, see `#renderTargetIsolatedMask`'s own doc comment. */
   #isolatedEntryByMesh = new Map<THREE.Mesh, THREE.Color>();
+  /** Entries with an `instanceId` set - see `InstancedHighlightMask`'s own doc comment. */
+  #instancedMask = new InstancedHighlightMask();
 
   #ringThickness: number;
   #ringThicknessUniform: ReturnType<typeof uniform>;
@@ -266,7 +138,7 @@ export class JumpFloodOutlinePass {
    * Second, independent mask - only ever populated by `priority` entries,
    * always `depthTest: false` (see `#priorityMaskMaterial`'s own doc
    * comment), and always cleared fresh, never layered onto the shared mask -
-   * same shape as `ColoredOutlinePass.#renderTargetPriorityMask`, and it
+   * same shape as `HighlightPass.#renderTargetPriorityMask`, and it
    * exists for the exact same reason: the shared chain's own composite
    * contribution only ever draws a ring into pixels the shared mask doesn't
    * already claim, so a priority entry whose silhouette ends up entirely
@@ -289,7 +161,7 @@ export class JumpFloodOutlinePass {
    * same shape as `#renderTargetPriorityMask` (always `depthTest: false`,
    * always cleared fresh) but for the opposite reason: an `isolated` entry
    * never redraws into the shared mask at all (see
-   * `ColoredOutlineEntry.isolated`'s own doc comment) - the shared mask's own
+   * `HighlightEntry.isolated`'s own doc comment) - the shared mask's own
    * first pass simply never sees isolated meshes (they're never in
    * `#entryByMesh`, see `setEntries`). Its own seed/propagate chain
    * (`#renderTargetIsolatedSeedPosA`/`B`/`#renderTargetIsolatedSeedColorA`/`B`)
@@ -336,7 +208,7 @@ export class JumpFloodOutlinePass {
   /**
    * `depthTest: false` so a priority entry always wins the shared mask
    * buffer regardless of its actual distance from the camera - same
-   * reasoning as `ColoredOutlinePass.#priorityMaskMaterial`'s own doc
+   * reasoning as `HighlightPass.#priorityMaskMaterial`'s own doc
    * comment. Reused for the shared mask's own second (layered) pass,
    * `#renderTargetPriorityMask`'s single (fresh) pass, and
    * `#renderTargetIsolatedMask`'s own single (fresh) pass - stateless, only
@@ -359,7 +231,7 @@ export class JumpFloodOutlinePass {
     renderer: THREE.WebGPURenderer,
     scene: THREE.Scene,
     camera: THREE.Camera,
-    options: JumpFloodOutlinePassOptions = {}
+    options: HighlightPassJfaOptions = {}
   ) {
     const { ringThickness = 2 } = options;
 
@@ -376,7 +248,7 @@ export class JumpFloodOutlinePass {
     this.#hasPriorityUniform = uniform(0);
     this.#hasIsolatedUniform = uniform(0);
 
-    // See `ColoredOutlinePass`'s own matching comment - `uniform()`'s return
+    // See `HighlightPass`'s own matching comment - `uniform()`'s return
     // type-checks as an untagged `UniformNode<unknown>`, which TSL's fluent
     // node methods can't resolve as an argument. Same live reference, just
     // narrowed for the type checker.
@@ -439,128 +311,100 @@ export class JumpFloodOutlinePass {
     const scenePassNode = pass(scene, camera);
 
     this.#maskMaterial = new THREE.NodeMaterial();
-    this.#maskMaterial.name = "JumpFloodOutlinePass.mask";
+    this.#maskMaterial.name = "HighlightPassJfa.mask";
     this.#maskMaterial.colorNode = vec4(maskColorNode, 1);
 
     this.#priorityMaskMaterial = new THREE.NodeMaterial();
-    this.#priorityMaskMaterial.name = "JumpFloodOutlinePass.priorityMask";
+    this.#priorityMaskMaterial.name = "HighlightPassJfa.priorityMask";
     this.#priorityMaskMaterial.colorNode = vec4(maskColorNode, 1);
     this.#priorityMaskMaterial.depthTest = false;
 
     this.#seedPositionInitMaterial = new THREE.NodeMaterial();
-    this.#seedPositionInitMaterial.name = "JumpFloodOutlinePass.seedPositionInit";
-    this.#seedPositionInitMaterial.fragmentNode = buildSeedPositionInit(this.#maskTexture, resolutionNode);
+    this.#seedPositionInitMaterial.name = "HighlightPassJfa.seedPositionInit";
+    this.#seedPositionInitMaterial.fragmentNode = buildJfaSeedInit(this.#maskTexture, resolutionNode);
 
     this.#seedColorInitMaterial = new THREE.NodeMaterial();
-    this.#seedColorInitMaterial.name = "JumpFloodOutlinePass.seedColorInit";
+    this.#seedColorInitMaterial.name = "HighlightPassJfa.seedColorInit";
     this.#seedColorInitMaterial.fragmentNode = this.#maskTexture;
 
     this.#prioritySeedPositionInitMaterial = new THREE.NodeMaterial();
-    this.#prioritySeedPositionInitMaterial.name = "JumpFloodOutlinePass.prioritySeedPositionInit";
-    this.#prioritySeedPositionInitMaterial.fragmentNode = buildSeedPositionInit(
+    this.#prioritySeedPositionInitMaterial.name = "HighlightPassJfa.prioritySeedPositionInit";
+    this.#prioritySeedPositionInitMaterial.fragmentNode = buildJfaSeedInit(
       this.#priorityMaskTexture, resolutionNode
     );
 
     this.#prioritySeedColorInitMaterial = new THREE.NodeMaterial();
-    this.#prioritySeedColorInitMaterial.name = "JumpFloodOutlinePass.prioritySeedColorInit";
+    this.#prioritySeedColorInitMaterial.name = "HighlightPassJfa.prioritySeedColorInit";
     this.#prioritySeedColorInitMaterial.fragmentNode = this.#priorityMaskTexture;
 
     this.#isolatedSeedPositionInitMaterial = new THREE.NodeMaterial();
-    this.#isolatedSeedPositionInitMaterial.name = "JumpFloodOutlinePass.isolatedSeedPositionInit";
-    this.#isolatedSeedPositionInitMaterial.fragmentNode = buildSeedPositionInit(
+    this.#isolatedSeedPositionInitMaterial.name = "HighlightPassJfa.isolatedSeedPositionInit";
+    this.#isolatedSeedPositionInitMaterial.fragmentNode = buildJfaSeedInit(
       this.#isolatedMaskTexture, resolutionNode
     );
 
     this.#isolatedSeedColorInitMaterial = new THREE.NodeMaterial();
-    this.#isolatedSeedColorInitMaterial.name = "JumpFloodOutlinePass.isolatedSeedColorInit";
+    this.#isolatedSeedColorInitMaterial.name = "HighlightPassJfa.isolatedSeedColorInit";
     this.#isolatedSeedColorInitMaterial.fragmentNode = this.#isolatedMaskTexture;
 
     this.#jfaPositionStepMaterial = new THREE.NodeMaterial();
-    this.#jfaPositionStepMaterial.name = "JumpFloodOutlinePass.jfaPositionStep";
+    this.#jfaPositionStepMaterial.name = "HighlightPassJfa.jfaPositionStep";
     this.#jfaPositionStepMaterial.fragmentNode = buildJfaPositionStep(
       this.#jfaPositionSourceTexture, jfaStepNode, invSizeNode, resolutionNode
     );
 
     this.#jfaColorStepMaterial = new THREE.NodeMaterial();
-    this.#jfaColorStepMaterial.name = "JumpFloodOutlinePass.jfaColorStep";
+    this.#jfaColorStepMaterial.name = "HighlightPassJfa.jfaColorStep";
     this.#jfaColorStepMaterial.fragmentNode = buildJfaColorStep(
       this.#jfaPositionSourceTexture, this.#jfaColorSourceTexture, jfaStepNode, invSizeNode, resolutionNode
     );
 
     this.#jfaPriorityPositionStepMaterial = new THREE.NodeMaterial();
-    this.#jfaPriorityPositionStepMaterial.name = "JumpFloodOutlinePass.jfaPriorityPositionStep";
+    this.#jfaPriorityPositionStepMaterial.name = "HighlightPassJfa.jfaPriorityPositionStep";
     this.#jfaPriorityPositionStepMaterial.fragmentNode = buildJfaPositionStep(
       this.#jfaPriorityPositionSourceTexture, jfaStepNode, invSizeNode, resolutionNode
     );
 
     this.#jfaPriorityColorStepMaterial = new THREE.NodeMaterial();
-    this.#jfaPriorityColorStepMaterial.name = "JumpFloodOutlinePass.jfaPriorityColorStep";
+    this.#jfaPriorityColorStepMaterial.name = "HighlightPassJfa.jfaPriorityColorStep";
     this.#jfaPriorityColorStepMaterial.fragmentNode = buildJfaColorStep(
       this.#jfaPriorityPositionSourceTexture, this.#jfaPriorityColorSourceTexture, jfaStepNode, invSizeNode, resolutionNode
     );
 
     this.#jfaIsolatedPositionStepMaterial = new THREE.NodeMaterial();
-    this.#jfaIsolatedPositionStepMaterial.name = "JumpFloodOutlinePass.jfaIsolatedPositionStep";
+    this.#jfaIsolatedPositionStepMaterial.name = "HighlightPassJfa.jfaIsolatedPositionStep";
     this.#jfaIsolatedPositionStepMaterial.fragmentNode = buildJfaPositionStep(
       this.#jfaIsolatedPositionSourceTexture, jfaStepNode, invSizeNode, resolutionNode
     );
 
     this.#jfaIsolatedColorStepMaterial = new THREE.NodeMaterial();
-    this.#jfaIsolatedColorStepMaterial.name = "JumpFloodOutlinePass.jfaIsolatedColorStep";
+    this.#jfaIsolatedColorStepMaterial.name = "HighlightPassJfa.jfaIsolatedColorStep";
     this.#jfaIsolatedColorStepMaterial.fragmentNode = buildJfaColorStep(
       this.#jfaIsolatedPositionSourceTexture, this.#jfaIsolatedColorSourceTexture, jfaStepNode, invSizeNode, resolutionNode
     );
 
-    // Ring shape: solid out to `ringThickness` pixels from the nearest
-    // masked seed, ~1px smoothstep falloff past that, zeroed back out over
-    // the entry's own rasterized pixels (`oneMinus(maskWeight(...))`) so the
-    // ring only ever paints into the surrounding background - same role
-    // `ColoredOutlinePass.#compositeMaterial`'s own `oneMinus(maskWeight(...))`
-    // plays, just against a distance field instead of a blurred edge map.
-    // `priorityRing`/`isolatedRing` are the same shape, each computed from
-    // their own independent chain instead - `max()`, not `add()`, for the
-    // same reason `ColoredOutlinePass.#compositeMaterial` uses it: at an
-    // entry's own exposed boundary (the common case), multiple channels
-    // independently detect essentially the same ring, and summing them would
-    // double-brighten it for no reason. `hasPriorityNode`/`hasIsolatedNode`
-    // zero their own channel out entirely on a frame with none of that kind
-    // of entry - `#renderJumpFlood` skips re-running that chain's
-    // propagation then, so without the gate a stale ring from whenever such
-    // entries were last present could otherwise leak through forever.
+    const sharedChannel: JfaRingChannel = {
+      positionTexture: this.#finalPositionTexture, colorTexture: this.#finalColorTexture, maskTexture: this.#maskTexture
+    };
+    const priorityChannel: JfaRingChannel = {
+      positionTexture: this.#finalPriorityPositionTexture,
+      colorTexture: this.#finalPriorityColorTexture,
+      maskTexture: this.#priorityMaskTexture
+    };
+    const isolatedChannel: JfaRingChannel = {
+      positionTexture: this.#finalIsolatedPositionTexture,
+      colorTexture: this.#finalIsolatedColorTexture,
+      maskTexture: this.#isolatedMaskTexture
+    };
+
     this.#compositeMaterial = new THREE.NodeMaterial();
-    this.#compositeMaterial.name = "JumpFloodOutlinePass.composite";
-    this.#compositeMaterial.fragmentNode = Fn(() => {
-      const uvNode = uv();
-      const pixelCoord = uvNode.mul(resolutionNode);
-      const seedPos = this.#finalPositionTexture.sample(uvNode);
-      const seedColor = this.#finalColorTexture.sample(uvNode);
-      const dist = pixelCoord.sub(seedPos.xy).length();
-
-      const ringShape = oneMinus(smoothstep(ringThicknessNode, ringThicknessNode.add(1), dist));
-      const ring = ringShape.mul(oneMinus(maskWeight(this.#maskTexture.sample(uvNode))));
-
-      const prioritySeedPos = this.#finalPriorityPositionTexture.sample(uvNode);
-      const prioritySeedColor = this.#finalPriorityColorTexture.sample(uvNode);
-      const priorityDist = pixelCoord.sub(prioritySeedPos.xy).length();
-
-      const priorityRingShape = oneMinus(smoothstep(ringThicknessNode, ringThicknessNode.add(1), priorityDist));
-      const priorityRing = priorityRingShape
-        .mul(oneMinus(maskWeight(this.#priorityMaskTexture.sample(uvNode))))
-        .mul(hasPriorityNode);
-
-      const isolatedSeedPos = this.#finalIsolatedPositionTexture.sample(uvNode);
-      const isolatedSeedColor = this.#finalIsolatedColorTexture.sample(uvNode);
-      const isolatedDist = pixelCoord.sub(isolatedSeedPos.xy).length();
-
-      const isolatedRingShape = oneMinus(smoothstep(ringThicknessNode, ringThicknessNode.add(1), isolatedDist));
-      const isolatedRing = isolatedRingShape
-        .mul(oneMinus(maskWeight(this.#isolatedMaskTexture.sample(uvNode))))
-        .mul(hasIsolatedNode);
-
-      const primary = max(vec4(seedColor.rgb, 1).mul(ring), vec4(prioritySeedColor.rgb, 1).mul(priorityRing));
-
-      return max(primary, vec4(isolatedSeedColor.rgb, 1).mul(isolatedRing));
-    })();
+    this.#compositeMaterial.name = "HighlightPassJfa.composite";
+    this.#compositeMaterial.fragmentNode = buildJfaRingComposite(
+      { resolutionNode, ringThicknessNode, hasPriorityNode, hasIsolatedNode },
+      sharedChannel,
+      priorityChannel,
+      isolatedChannel
+    );
 
     this.#quad = new THREE.QuadMesh();
 
@@ -581,21 +425,26 @@ export class JumpFloodOutlinePass {
 
   /**
    * Replaces every currently outlined entry - same whole-object group
-   * traversal `ColoredOutlinePass.setEntries` uses, and `priority`/`isolated`
-   * are respected the same way that class does (see
+   * traversal `HighlightPass.setEntries` uses, and `priority`/`isolated`/
+   * `instanceId` are all respected the same way that class does (see
    * `#renderTargetPriorityMask`'s/`#renderTargetIsolatedMask`'s own doc
-   * comments) - only `instanceId` is silently ignored (unsupported in this
-   * prototype - see this class's own doc comment).
+   * comments, and `InstancedHighlightMask`'s own doc comment).
    */
   setEntries(
-    entries: ColoredOutlineEntry[]
+    entries: HighlightEntry[]
   ): void {
     this.#entryByMesh.clear();
     this.#priorityMeshes.clear();
     this.#isolatedEntryByMesh.clear();
+    this.#instancedMask.clear();
 
-    for (const { target, color, priority = false, isolated = false } of entries) {
+    for (const { target, color, priority = false, isolated = false, instanceId } of entries) {
       const threeColor = color instanceof THREE.Color ? color.clone() : new THREE.Color(color);
+
+      if (instanceId !== undefined) {
+        this.#instancedMask.add(target as THREE.InstancedMesh, instanceId, threeColor, priority);
+        continue;
+      }
 
       if (isolated) {
         target.traverse((object) => {
@@ -616,6 +465,8 @@ export class JumpFloodOutlinePass {
         }
       });
     }
+
+    this.#instancedMask.sync();
   }
 
   /**
@@ -632,6 +483,7 @@ export class JumpFloodOutlinePass {
     this.#entryByMesh.clear();
     this.#priorityMeshes.clear();
     this.#isolatedEntryByMesh.clear();
+    this.#instancedMask.dispose();
 
     this.#renderTargetMask.dispose();
     this.#renderTargetSeedPosA.dispose();
@@ -674,16 +526,16 @@ export class JumpFloodOutlinePass {
     const scene = this.#scene;
     const camera = this.#camera;
 
-    if (this.#entryByMesh.size === 0 && this.#isolatedEntryByMesh.size === 0) {
-      if (this.#entryCount > 0) {
+    if (this.#entryByMesh.size === 0 && this.#isolatedEntryByMesh.size === 0 && this.#instancedMask.size === 0) {
+      if (this.#lastEntryCount > 0) {
         this.#clearComposite();
-        this.#entryCount = 0;
+        this.#lastEntryCount = 0;
       }
 
       return;
     }
-    this.#entryCount = this.#entryByMesh.size + this.#isolatedEntryByMesh.size;
-    const hasPriority = this.#priorityMeshes.size > 0;
+    this.#lastEntryCount = this.#entryByMesh.size + this.#isolatedEntryByMesh.size + this.#instancedMask.size;
+    const hasPriority = this.#priorityMeshes.size > 0 || this.#instancedMask.size > 0;
     this.#hasPriorityUniform.value = hasPriority ? 1 : 0;
     const hasIsolated = this.#isolatedEntryByMesh.size > 0;
     this.#hasIsolatedUniform.value = hasIsolated ? 1 : 0;
@@ -696,7 +548,7 @@ export class JumpFloodOutlinePass {
     const previousClearAlpha = renderer.getClearAlpha();
     const previousBackground = scene.background;
 
-    // Same reasoning as `ColoredOutlinePass.#renderMask` - an opaque scene
+    // Same reasoning as `HighlightPass.#renderMask` - an opaque scene
     // background forces a full clear on every `renderer.render()` call
     // regardless of `autoClear`, which would fight this mask pass's own
     // transparent clear.
@@ -710,8 +562,17 @@ export class JumpFloodOutlinePass {
 
     renderer.setRenderObjectFunction((
       object, objectScene, objectCamera, geometry, _material, group, lightsNode, clippingContext
-      // eslint-disable-next-line max-params -- external callback contract, matches ColoredOutlinePass's own override
+      // eslint-disable-next-line max-params -- external callback contract, matches HighlightPass's own override
     ) => {
+      const instanced = this.#instancedMask.materialsFor(object as THREE.InstancedMesh);
+      if (instanced) {
+        renderer.renderObject(
+          object, objectScene, objectCamera, geometry, instanced.material, group, lightsNode, clippingContext
+        );
+
+        return;
+      }
+
       const color = this.#entryByMesh.get(object as THREE.Mesh);
       if (color === undefined) {
         return;
@@ -724,7 +585,10 @@ export class JumpFloodOutlinePass {
     renderer.setRenderTarget(this.#renderTargetMask);
     renderer.render(scene, camera);
 
-    // Second pass: redraws every `priority` entry, without clearing the
+    // Second pass: redraws every `priority` entry (and every `InstancedMesh`
+    // referenced by any instanced entry - `priorityMaterial` discards every
+    // non-priority instance's fragments itself, see
+    // `InstancedHighlightMask`'s own doc comment), without clearing the
     // target first, so priority always wins the shared mask buffer over
     // everything the first pass already drew wherever silhouettes overlap on
     // screen - see `#priorityMaskMaterial`'s own doc comment. Third pass:
@@ -736,8 +600,17 @@ export class JumpFloodOutlinePass {
       renderer.autoClear = false;
       renderer.setRenderObjectFunction((
         object, objectScene, objectCamera, geometry, _material, group, lightsNode, clippingContext
-        // eslint-disable-next-line max-params -- external callback contract, matches ColoredOutlinePass's own override
+        // eslint-disable-next-line max-params -- external callback contract, matches HighlightPass's own override
       ) => {
+        const instanced = this.#instancedMask.materialsFor(object as THREE.InstancedMesh);
+        if (instanced) {
+          renderer.renderObject(
+            object, objectScene, objectCamera, geometry, instanced.priorityMaterial, group, lightsNode, clippingContext
+          );
+
+          return;
+        }
+
         const mesh = object as THREE.Mesh;
         if (!this.#priorityMeshes.has(mesh)) {
           return;
@@ -767,7 +640,7 @@ export class JumpFloodOutlinePass {
       renderer.autoClear = true;
       renderer.setRenderObjectFunction((
         object, objectScene, objectCamera, geometry, _material, group, lightsNode, clippingContext
-        // eslint-disable-next-line max-params -- external callback contract, matches ColoredOutlinePass's own override
+        // eslint-disable-next-line max-params -- external callback contract, matches HighlightPass's own override
       ) => {
         const color = this.#isolatedEntryByMesh.get(object as THREE.Mesh);
         if (color === undefined) {
@@ -785,7 +658,7 @@ export class JumpFloodOutlinePass {
 
     renderer.setRenderObjectFunction(previousRenderObjectFunction);
 
-    // Restored here, not at the very end - see `ColoredOutlinePass.#renderMask`'s
+    // Restored here, not at the very end - see `HighlightPass.#renderMask`'s
     // own comment on why this specific ordering is what actually fixed a
     // real "whole 3D view turns white" bug: every quad step from here on
     // must see the caller's own scene background/clear state, not this mask

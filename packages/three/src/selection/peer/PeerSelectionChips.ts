@@ -14,7 +14,7 @@ const kChipMarginY = 0.35;
 /**
  * Caps how many individual per-selector chips a row ever shows - beyond
  * this, the rest collapse into one "+N" overflow badge (see `#buildSlots`)
- * instead of the row growing without bound. Unlike `ColoredOutlinePass`
+ * instead of the row growing without bound. Unlike `HighlightPass`
  * (cost scales with distinct outlined *objects*, not peers), each chip is
  * its own draw call and its own GPU-resident canvas texture with no
  * batching between them - fine for the handful of concurrent selectors a
@@ -34,7 +34,7 @@ export interface PeerSelectionChipsOptions {
   /**
    * Skips the chip row entirely for any object `visibility.isVisible`
    * reports `false` for - same option, same semantics, as
-   * `PeerSelectionOverlays`/`PeerColoredOutlinePass`'s own `visibility`.
+   * `PeerSelectionOverlays`/`PeerHighlightPass`'s own `visibility`.
    * Omitting this preserves always-visible behavior.
    */
   visibility?: PeerSelectionVisibility;
@@ -56,7 +56,7 @@ export interface PeerSelectionChipsOptions {
  * at `kMaxChips` individual chips with the rest collapsed into a trailing
  * "+N" overflow badge (see `#buildSlots`) rather than the row growing
  * without bound. An object with zero or one selector gets no chip row at
- * all: the primary ring `PeerSelectionOverlays`/`PeerColoredOutlinePass`
+ * all: the primary ring `PeerSelectionOverlays`/`PeerHighlightPass`
  * already draws communicates a single selector's color on its own, so a
  * one-chip row would be pure redundancy.
  *
@@ -66,12 +66,12 @@ export interface PeerSelectionChipsOptions {
  *
  * A third, independent rendering concern from the primary ring - this class
  * has no notion of which technique is currently drawing that ring, or
- * whether it's `PeerSelectionOverlays` or `PeerColoredOutlinePass` driving
+ * whether it's `PeerSelectionOverlays` or `PeerHighlightPass` driving
  * it. Never gated by the local selection: the same object can show a local
  * selection ring *and* a peer chip row at once, since the chip row is only
  * ever about `registry.selectorsOf`, a purely peer-side concern the local
  * selection doesn't affect (the same reasoning
- * `examples/scripts/demo-selection.ts`'s own pre-existing DOM-based
+ * `examples/scripts/selection.ts`'s own pre-existing DOM-based
  * `refreshChips` outliner chips already follow - they too only react to
  * `peerSelectionChange`, never a local `selectionChange`).
  */

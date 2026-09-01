@@ -21,7 +21,7 @@ export interface PeerSelectionVisibilityOptions {
 /**
  * Tracks, per currently peer-selected object, whether it's actually worth
  * rendering a peer indicator for - inside the camera frustum and within
- * `maxDistance`. `PeerSelectionOverlays`/`PeerColoredOutlinePass` each accept
+ * `maxDistance`. `PeerSelectionOverlays`/`PeerHighlightPass` each accept
  * this as an optional `visibility` option and treat a "not visible" id the
  * same as "not selected" - so a collaborative scene with many simultaneous
  * peer selections only pays overlay-construction/entries-rebuild cost for
@@ -42,7 +42,7 @@ export interface PeerSelectionVisibilityOptions {
  * its own `visibilityChange` `Event` (extends `EventTarget`, same convention
  * `SelectionManager`/`PeerSelectionRegistry` already use) only when that
  * call actually flips at least one id, so `PeerSelectionOverlays`/
- * `PeerColoredOutlinePass` can subscribe once in their own constructors -
+ * `PeerHighlightPass` can subscribe once in their own constructors -
  * same shape as their existing `peerSelectionChange`/`selectionChange`
  * subscriptions - and stay in sync without the caller driving them by hand.
  */

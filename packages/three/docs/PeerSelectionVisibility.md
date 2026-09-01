@@ -2,7 +2,7 @@
 
 Tracks, per currently peer-selected object, whether it's actually worth rendering a peer indicator for -
 inside the camera frustum and within an optional max distance. [PeerSelectionOverlays](./PeerSelectionOverlays.md)
-and [PeerColoredOutlinePass](./PeerColoredOutlinePass.md) each accept this as an optional `visibility` option
+and [PeerHighlightPass](./PeerHighlightPass.md) each accept this as an optional `visibility` option
 and treat a "not visible" id the same as "not selected" - so a collaborative scene with many simultaneous
 peer selections only pays overlay-construction/entries-rebuild cost for the ones actually worth showing, not
 every peer selection that exists anywhere in the scene. Omitting `visibility` entirely on either class
@@ -13,19 +13,19 @@ peer selections. Camera-relative culling only makes sense for someone else's sel
 user just clicked because they panned the camera away from it would read as a bug, not an optimization.
 
 ```ts
-import { SelectionManager, PeerSelectionRegistry, PeerSelectionVisibility, PeerColoredOutlinePass, ColoredOutlinePass } from "@jolly-pixel/three";
+import { SelectionManager, PeerSelectionRegistry, PeerSelectionVisibility, PeerHighlightPass, HighlightPass } from "@jolly-pixel/three";
 
 const selection = new SelectionManager();
 const registry = new PeerSelectionRegistry();
-const coloredOutline = new ColoredOutlinePass(renderer, scene, camera);
+const highlight = new HighlightPass(renderer, scene, camera);
 
 const visibility = new PeerSelectionVisibility({ registry, selection, camera, maxDistance: 40 });
-const peerColoredOutline = new PeerColoredOutlinePass({ registry, selection, coloredOutline, visibility });
+const peerHighlight = new PeerHighlightPass({ registry, selection, highlight, visibility });
 
 renderer.setAnimationLoop(() => {
   controls.update();
   visibility.update(); // once per render tick - camera motion isn't event-driven
-  coloredOutline.render();
+  highlight.render();
 });
 ```
 
@@ -56,10 +56,10 @@ export interface PeerSelectionVisibilityOptions {
 
 ## Events
 
-- `visibilityChange` - Dispatched (as a plain `Event`, no `detail`) from `update()` when at least one tracked id's visibility actually flipped. `PeerSelectionOverlays`/`PeerColoredOutlinePass` each subscribe to this once, in their own constructor, the same way they already subscribe to `registry`'s `peerSelectionChange` and `selection`'s `selectionChange` - a caller just needs to call `update()` every frame; everything downstream re-syncs itself via this event.
+- `visibilityChange` - Dispatched (as a plain `Event`, no `detail`) from `update()` when at least one tracked id's visibility actually flipped. `PeerSelectionOverlays`/`PeerHighlightPass` each subscribe to this once, in their own constructor, the same way they already subscribe to `registry`'s `peerSelectionChange` and `selection`'s `selectionChange` - a caller just needs to call `update()` every frame; everything downstream re-syncs itself via this event.
 
 ## Notes
 
 - World bounds per object come from `new THREE.Box3().setFromObject(target)` (three's own built-in world-AABB traversal), then `.getBoundingSphere()` - recomputed fresh on every `update()` call for every currently peer-selected id, deliberately not cached across ticks, since a selected object (an orbiting peer selection, say) can move. Only scratch `Box3`/`Sphere`/`Frustum`/`Matrix4` instances are cached, to avoid per-tick GC churn.
 - An id no longer peer-selected is silently dropped from the tracked set on the next `update()` - this does not count as a "flip" for `visibilityChange` purposes, since nothing was rendering it anyway.
-- See `examples/scripts/demo-peer-selection.ts` (run `npm run dev`, open `/peer-selection.html`) - the "Peer rendering" pane folder's "max distance" field drives this directly; orbiting the camera away from a peer selection demonstrates the (always-on, no control needed) frustum half on its own.
+- See `examples/scripts/selection-peer.ts` (run `npm run dev`, open `/selection-peer.html`) - the "Peer rendering" pane folder's "max distance" field drives this directly; orbiting the camera away from a peer selection demonstrates the (always-on, no control needed) frustum half on its own.

@@ -39,7 +39,7 @@ export interface MergedSelectionOverlayOptions {
  * *each*). Built for bulk multi-select scenarios outside `SelectionManager`'s
  * own single-selection model (its own overlay never covers more than two
  * targets - selected and hover - so it has nothing to gain here); see
- * `packages/three/examples/scripts/demo-stress.ts`'s "Random Selection" for
+ * `packages/three/examples/scripts/selection-stress.ts`'s "Random Selection" for
  * the motivating case.
  *
  * Each target's own `EdgesGeometry` is baked into world space
@@ -56,8 +56,8 @@ export interface MergedSelectionOverlayOptions {
  * rebuild-on-change pattern `createSelectionOverlay`'s own callers already
  * use for their per-target overlays.
  *
- * Not applicable to the `"coloredOutline"` technique - that one already costs
- * nothing extra per target (`ColoredOutlinePass.setEntries` takes the whole
+ * Not applicable to the `"highlight"` technique - that one already costs
+ * nothing extra per target (`HighlightPass.setEntries` takes the whole
  * batch directly), so there is no per-target draw call here to merge away.
  */
 export class MergedSelectionOverlay {

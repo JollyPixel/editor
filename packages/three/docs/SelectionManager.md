@@ -10,9 +10,9 @@ given id resolves to.
 
 `"outline"` (and every non-mesh id, regardless of technique) is a per-object
 overlay child this class builds and disposes itself as selection/hover
-changes; `"coloredOutline"` is a scene-level pipeline instead, entirely
-outside this class - see `SelectionTechnique` below for what driving it
-actually requires.
+changes; `"highlight"`/`"highlightJfa"` are scene-level pipelines instead,
+entirely outside this class - see `SelectionTechnique` below for what
+driving one actually requires.
 
 Objects are addressed by a caller-assigned string id rather than by object
 reference, so that a UI outside the 3D view (e.g. a `TreeView` from
@@ -37,14 +37,15 @@ selection.select(null);      // clears the selection
 ```
 
 ```ts
-// "coloredOutline" skips the per-object overlay entirely - a separate
-// PeerColoredOutlinePass (even with zero peers registered) or equivalent
-// reads `selected`/`hovered`/`color`/`hoverColor` and renders through a
-// ColoredOutlinePass instead. See ColoredOutlinePass/PeerColoredOutlinePass's
-// own docs for building that pipeline.
+// "highlight"/"highlightJfa" both skip the per-object overlay entirely - a
+// separate PeerHighlightPass (even with zero peers registered) or
+// equivalent reads `selected`/`hovered`/`color`/`hoverColor` and renders
+// through a HighlightPass or HighlightPassJfa instead. See
+// HighlightPass/HighlightPassJfa/PeerHighlightPass's own docs for building
+// that pipeline.
 import { SelectionManager } from "@jolly-pixel/three";
 
-const selection = new SelectionManager({ technique: "coloredOutline" });
+const selection = new SelectionManager({ technique: "highlight" }); // or "highlightJfa"
 selection.register("mesh-1", mesh);
 selection.register("group-1", group); // still a SelectionBoundingBox - groups always are, regardless of technique
 
@@ -105,22 +106,25 @@ export interface SelectionManagerOptions {
 ## SelectionTechnique
 
 ```ts
-export type SelectionTechnique = "outline" | "coloredOutline" | (string & {});
+export type SelectionTechnique = "outline" | "highlight" | "highlightJfa" | (string & {});
 ```
 
 Which technique a registered object renders when selected/hovered. A
 non-mesh target (e.g. a `THREE.Group`) always renders `SelectionBoundingBox`
 regardless of this setting - a group's selection indicator stays the same
-line-segment box no matter which technique is active. Under `"coloredOutline"`
-this box renders *alongside*, not instead of, the scene-level per-mesh
-colored outline a [PeerColoredOutlinePass](./PeerColoredOutlinePass.md) (or
-equivalent) still draws for that same group - deliberately both at once, see
-that class's own doc comment for why.
+line-segment box no matter which technique is active. Under `"highlight"`/
+`"highlightJfa"` this box renders *alongside*, not instead of, the
+scene-level per-mesh colored highlight a [PeerHighlightPass](./PeerHighlightPass.md)
+(or equivalent) still draws for that same group - deliberately both at once,
+see that class's own doc comment for why.
 
-- `"outline"` - [SelectionOutline](./SelectionOutline.md), a clean silhouette via `THREE.EdgesGeometry`, cheap and pipeline-free (composes with any host render pipeline, unlike `"coloredOutline"` below).
-- `"coloredOutline"` - [ColoredOutlinePass](./ColoredOutlinePass.md), a scene-level postprocess outline instead of a per-object overlay child. `SelectionManager` itself never owns or drives a `ColoredOutlinePass` - resolving an id to this technique just skips building a local overlay for it. Actually rendering anything requires a separate [PeerColoredOutlinePass](./PeerColoredOutlinePass.md) (even with zero peers registered) or equivalent reading this manager's `selected`/`hovered`/`color`/`hoverColor` and driving a `ColoredOutlinePass` itself. **Misconfiguring this - choosing `"coloredOutline"` with nothing actually wired up - fails silently** (no visible feedback, no thrown error), unlike every other technique here: this manager holds no reference to any pipeline object to loudly check against.
+- `"outline"` - [SelectionOutline](./SelectionOutline.md), a clean silhouette via `THREE.EdgesGeometry`, cheap and pipeline-free (composes with any host render pipeline, unlike `"highlight"`/`"highlightJfa"` below).
+- `"highlight"` - [HighlightPass](./HighlightPass.md), a scene-level postprocess outline (a blurred edge map) instead of a per-object overlay child.
+- `"highlightJfa"` - [HighlightPassJfa](./HighlightPassJfa.md), the same scene-level postprocess concept as `"highlight"`, but a Jump Flood Algorithm distance field instead of a blurred edge map - a real per-pixel distance to the silhouette, so the ring reads the same width regardless of viewing angle or downsample level.
 
-These two are only the built-in ids, kept as literals for editor
+For either scene-level technique, `SelectionManager` itself never owns or drives the actual pass - resolving an id to one just skips building a local overlay for it. Actually rendering anything requires a separate [PeerHighlightPass](./PeerHighlightPass.md) (even with zero peers registered) or equivalent reading this manager's `selected`/`hovered`/`color`/`hoverColor` and driving a `HighlightPass`/`HighlightPassJfa` itself. **Misconfiguring this - choosing one of these with nothing actually wired up - fails silently** (no visible feedback, no thrown error), unlike every other technique here: this manager holds no reference to any pipeline object to loudly check against.
+
+These three are only the built-in ids, kept as literals for editor
 autocomplete - not exhaustive. `"outline"` resolves through
 `defaultSelectionOverlayRegistry`, a `SelectionOverlayRegistry` exported from
 `@jolly-pixel/three` alongside `createSelectionOverlay`. A caller that wants
@@ -174,6 +178,14 @@ selection.register("mesh-1", mesh, { technique: "my-technique" });
 - `targetFor(id: string): THREE.Mesh | THREE.Object3D | undefined` - The object registered for `id`, or `undefined` if none is.
 - `dispose(): void` - Clears selection and hover, and forgets every registered id. The instance can be reused afterward via `register`.
 
+## isScenePipelineTechnique
+
+```ts
+export function isScenePipelineTechnique(technique: SelectionTechnique): boolean;
+```
+
+Module-level export (not a method) - `true` for `"highlight"`/`"highlightJfa"`, `false` otherwise. This class and [PeerSelectionOverlays](./PeerSelectionOverlays.md) both use it to recognize either scene-level pipeline technique without duplicating a two-way string comparison at every call site.
+
 ## Events
 
 - `selectionChange` - Dispatched (as a plain `Event`, no `detail`) whenever `select()` actually changes the selection. Read the new value via the `selected` getter, mirroring `TreeView`'s own `selectionChange` event.
@@ -181,8 +193,8 @@ selection.register("mesh-1", mesh, { technique: "my-technique" });
 
 ## Notes
 
-- `select`/`hover` check `target instanceof THREE.Mesh` first: anything else (a `THREE.Group`, or any other non-mesh `Object3D`) always gets `SelectionBoundingBox`, regardless of `techniqueFor(id)`. For a mesh, `techniqueFor(id)` decides between `SelectionOutline`/a registered custom technique and skipping the overlay entirely for `"coloredOutline"`.
-- A peer selection (see [PeerSelectionOverlays](./PeerSelectionOverlays.md) below) always falls back to `"outline"` when `techniqueFor` resolves to `"coloredOutline"` - `ColoredOutlinePass` is one shared pipeline, not a per-id instance, so it can't represent more than one simultaneously colored peer selection.
-- Does not do any picking/raycasting itself - it only reacts to ids handed to it. See `examples/scripts/demo-selection.ts` for a `resolvePickId` helper that maps a raycast hit straight to the specific mesh's id, so 3D-view picks never need extra clicks to drill past a parent group - selecting a group as a whole is only done from the outliner (e.g. `TreeView`).
+- `select`/`hover` check `target instanceof THREE.Mesh` first: anything else (a `THREE.Group`, or any other non-mesh `Object3D`) always gets `SelectionBoundingBox`, regardless of `techniqueFor(id)`. For a mesh, `techniqueFor(id)` decides between `SelectionOutline`/a registered custom technique and skipping the overlay entirely for `"highlight"`/`"highlightJfa"` (see the exported `isScenePipelineTechnique(technique)` helper, which both this class and `PeerSelectionOverlays` use to recognize either one).
+- A peer selection (see [PeerSelectionOverlays](./PeerSelectionOverlays.md) below) always falls back to `"outline"` when `techniqueFor` resolves to a scene-level pipeline technique - `HighlightPass`/`HighlightPassJfa` are each one shared pipeline, not a per-id instance, so neither can represent more than one simultaneously colored peer selection.
+- Does not do any picking/raycasting itself - it only reacts to ids handed to it. See `examples/scripts/selection.ts` for a `resolvePickId` helper that maps a raycast hit straight to the specific mesh's id, so 3D-view picks never need extra clicks to drill past a parent group - selecting a group as a whole is only done from the outliner (e.g. `TreeView`).
 - Only models a single local user. For remote peers, see [PeerSelectionRegistry](./PeerSelectionRegistry.md) (tracks which peers have what selected) and [PeerSelectionOverlays](./PeerSelectionOverlays.md) (renders one overlay per object in the primary peer's color, reusing `techniqueFor`/`targetFor` above).
 - See [SelectionOverlayRegistry](./SelectionOverlayRegistry.md) for how `"outline"` (and any custom per-object technique) actually resolves to a concrete overlay class, and how to register a new one.

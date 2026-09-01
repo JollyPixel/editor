@@ -7,10 +7,13 @@ import {
   SelectionManager,
   PeerSelectionRegistry,
   PeerSelectionOverlays,
-  PeerColoredOutlinePass,
+  PeerHighlightPass,
   PeerSelectionVisibility,
   PeerSelectionChips,
-  ColoredOutlinePass,
+  HighlightPass,
+  HighlightPassJfa,
+  createSelectionOverlay,
+  type SelectionOverlay,
   type SelectionTechnique,
   type PeerSelectionChangeEventDetail
 } from "../../src/index.ts";
@@ -21,8 +24,8 @@ import {
   startLoop
 } from "./utils/common.ts";
 import { createExamplePane } from "./utils/example-switcher.ts";
+import { bindSelectionAndPeerPanel, type PeerRenderingMode } from "./utils/selection-panel.ts";
 import { PeerColorPaletteAllocator } from "./network/PeerColorPaletteAllocator.ts";
-import { JumpFloodOutlinePass } from "./utils/JumpFloodOutlinePass.ts";
 
 // CONSTANTS
 // Pointer must stay within this many CSS pixels between down/up to count as
@@ -69,29 +72,26 @@ const nodeToId = new Map<HTMLLIElement, string>();
 /**
  * Scene-level postprocess technique - an architecturally distinct option
  * alongside `SelectionManager`'s own "outline" per-object overlay (see
- * `ColoredOutlinePass`'s own doc comment for why: one shared pipeline for
+ * `HighlightPass`'s own doc comment for why: one shared pipeline for
  * the whole scene, not a per-id instance). `SelectionManager` never owns or
- * drives this directly - resolving an id to `technique: "coloredOutline"`
+ * drives this directly - resolving an id to `technique: "highlight"`
  * just skips building a local overlay for it (see `SelectionTechnique`'s own
- * doc comment); `PeerColoredOutlinePass` below (driven by "Peer rendering",
+ * doc comment); `PeerHighlightPass` below (driven by "Peer rendering",
  * not `SelectionManager`'s own `technique`) is what actually reads
  * `selectionManager`'s state and renders through this. Driven via `render:`
  * in `startLoop` below only while "Peer rendering" is on "colors" - see
  * `setPeerRenderingMode`'s own doc comment for why.
  */
-const coloredOutline = new ColoredOutlinePass(renderer, scene, camera);
+const highlight = new HighlightPass(renderer, scene, camera);
 
 /**
- * Phase 6 research-spike prototype (see its own doc comment) - a Jump Flood
- * Algorithm outline, offered as a third "Peer rendering" mode
- * (`"colorsJfa"`) alongside `coloredOutline` above, so its uniform,
- * resolution-independent ring can be compared side-by-side against
- * `ColoredOutlinePass`'s blur-based one on the exact same scene/entries.
- * Deliberately lives in `examples/`, not `src/` - not a published package
- * API, no occlusion/priority/instancing support, purely for this visual
- * comparison.
+ * Jump Flood Algorithm alternative to `highlight` above (see
+ * `HighlightPassJfa`'s own doc comment) - offered as a third "Peer
+ * rendering" mode (`"colorsJfa"`), so its uniform, resolution-independent
+ * ring can be compared side-by-side against `HighlightPass`'s blur-based one
+ * on the exact same scene/entries.
  */
-const jfaOutline = new JumpFloodOutlinePass(renderer, scene, camera);
+const highlightJfa = new HighlightPassJfa(renderer, scene, camera);
 
 const selectionManager = new SelectionManager();
 const treeView = new TreeView(
@@ -103,7 +103,7 @@ spawnSelectableMeshes(scene, selectionManager, treeView);
  * Fake remote peers, driven by the "Presence" pane folder below - no real
  * `@jolly-pixel/network` wiring here, same local-only prototyping approach
  * as the rest of this demo. Both peer-rendering mechanisms below
- * (`PeerSelectionOverlays`/`PeerColoredOutlinePass`, see
+ * (`PeerSelectionOverlays`/`PeerHighlightPass`, see
  * `setPeerRenderingMode`'s own doc comment) render exactly one 3D ring per
  * object (the primary/oldest selector's color), regardless of how many
  * peers select it; the full per-peer list shows two ways - as outliner
@@ -143,7 +143,7 @@ const peerVisibility = new PeerSelectionVisibility({
  * A third, independent peer-rendering concern from "Peer rendering" below -
  * a small row of colored billboard chips above any object with *more than
  * one* simultaneous peer selector (see its own doc comment), regardless of
- * which of `PeerSelectionOverlays`/`PeerColoredOutlinePass` is drawing that
+ * which of `PeerSelectionOverlays`/`PeerHighlightPass` is drawing that
  * object's own primary ring. Complements, rather than replaces, this file's
  * own pre-existing DOM-based `refreshChips` outliner chips below - that one
  * lists every selector in the sidebar regardless of camera view, this one
@@ -154,7 +154,7 @@ const peerVisibility = new PeerSelectionVisibility({
  * this demo exists specifically to show the feature, so it's turned on from
  * the start here.
  */
-new PeerSelectionChips({
+const peerChips = new PeerSelectionChips({
   registry: peerRegistry,
   selection: selectionManager,
   visibility: peerVisibility,
@@ -162,49 +162,68 @@ new PeerSelectionChips({
 });
 
 /**
- * "Peer rendering" mode - the two peer-layer mechanisms this package ships,
- * mutually exclusive here so the scene stays legible (both would otherwise
- * draw their own ring around the same peer-selected object):
- * - `"overlays"` (`PeerSelectionOverlays`): one disposable
- *   `SelectionOutline`/`SelectionBoundingBox` per peer-selected object,
- *   reusing `selectionManager`'s own `technique`/`xray` - matches the local
- *   look 1:1 for `"outline"`, but falls back to `"outline"` for a peer when
- *   `technique` resolves to `"coloredOutline"` (see `PeerSelectionOverlays`'s
- *   own doc comment: a single shared `ColoredOutlinePass` isn't a per-object
- *   instance a peer overlay can build one of per selecting peer).
- * - `"colors"` (`PeerColoredOutlinePass` + `ColoredOutlinePass`): one shared
- *   postprocess pass, arbitrary simultaneous peer colors, always fully
- *   visible regardless of real scene occlusion (see `ColoredOutlinePass`'s
- *   own doc comment for why), and a `priority` entry for the local selection
- *   that wins any on-screen overlap with a peer's regardless of depth -
- *   including full on-screen enclosure by a much larger/nearer peer
- *   selection (see `ColoredOutlinePass`'s own doc comment on its
- *   priority-only mask/edge-detect chain).
- * - `"colorsJfa"` (`PeerColoredOutlinePass` + `JumpFloodOutlinePass`): the
- *   same `PeerColoredOutlinePass` adapter, pointed at the Phase 6 research
- *   prototype instead - same entries, arbitrary colors, the same `priority`
- *   guarantee as `"colors"` (see `JumpFloodOutlinePass`'s own doc comment),
- *   but a uniform, resolution-independent ring instead of a blurred one.
- *   Exists purely to compare edge quality side-by-side against `"colors"` on
- *   the same scene.
- *
- * "selection technique" and this mode are kept in sync *both* ways, not just
- * "selection technique" -> mode as a one-time default - `"overlays"` always
- * forces technique back to `"outline"`, and `"colors"`/`"colorsJfa"` always
- * force it to `"coloredOutline"`. This isn't just tidiness: `SelectionManager`
- * skips building its own local overlay whenever technique is
- * `"coloredOutline"` (assuming `ColoredOutlinePass` is handling it), while
- * `PeerSelectionOverlays` (`"overlays"` mode) never renders the local
- * selection at all (peer-only, by design) - decoupling the two used to mean
- * the *local* selection could render nothing at all, not just a peer falling
- * back to a plain line-segment look. `"colors"` <-> `"colorsJfa"` stays a free
- * choice either way (both already imply `"coloredOutline"`), which is how to
- * compare the JFA prototype against the primary technique on the same scene.
+ * The three peer-layer mechanisms this package ships, mutually exclusive
+ * here so the scene stays legible - see `bindSelectionAndPeerPanel`'s own
+ * doc comment (utils/selection-panel.ts) for how the panel's single "mode"
+ * control drives which one is active, and each mechanism's own doc comment
+ * for what it actually builds.
  */
-type PeerRenderingMode = "overlays" | "colors" | "colorsJfa";
 let peerSelectionOverlays: PeerSelectionOverlays | null = null;
-let peerColoredOutline: PeerColoredOutlinePass | null = null;
+let peerHighlight: PeerHighlightPass | null = null;
 let peerRenderingMode: PeerRenderingMode = "overlays";
+
+/**
+ * Peer group selections have no box under "colors"/"colorsJfa" mode -
+ * `PeerHighlightPass` only ever knows about per-mesh `HighlightEntry`
+ * objects, so a peer selecting "Cluster" there rings each of its parts but
+ * never the group as a whole - unlike "overlays" mode, where
+ * `PeerSelectionOverlays`' own `SelectionOverlayRegistry` fallback already
+ * builds a `SelectionBoundingBox` for any non-mesh peer target (see that
+ * registry's own doc comment: a `THREE.Group` never supports the requested
+ * or default technique, so it always falls through to `"boundingBox"`).
+ * This keeps a peer's group selection visually consistent across every
+ * peer-rendering mode - same fallback resolution `PeerSelectionOverlays`
+ * uses internally, just also run - for non-mesh targets only - while
+ * "colors"/"colorsJfa" is active, since "overlays" mode already covers it
+ * via the real `PeerSelectionOverlays` instance. Local selection needs no
+ * equivalent - `SelectionManager` itself already always renders a box for a
+ * group regardless of technique (see its own doc comment).
+ */
+const peerGroupBoxes = new Map<string, SelectionOverlay>();
+
+function refreshPeerGroupBoxes(): void {
+  const relevantIds = new Set([...peerGroupBoxes.keys(), ...peerRegistry.selectedObjectIds()]);
+
+  for (const objectId of relevantIds) {
+    const existing = peerGroupBoxes.get(objectId);
+    const target = selectionManager.targetFor(objectId);
+    const isNonMeshTarget = target !== undefined && !(target instanceof THREE.Mesh);
+    const isLocalSelected = objectId === selectionManager.selected;
+    const culled = !peerVisibility.isVisible(objectId);
+    const eligible = peerRenderingMode !== "overlays" && isNonMeshTarget && !isLocalSelected && !culled;
+    const peerId = eligible ? peerRegistry.primarySelectorOf(objectId) : null;
+
+    if (peerId === null) {
+      existing?.dispose();
+      peerGroupBoxes.delete(objectId);
+      continue;
+    }
+
+    const color = peerRegistry.colorOf(peerId);
+    if (existing) {
+      existing.setColor(color);
+      continue;
+    }
+
+    peerGroupBoxes.set(objectId, createSelectionOverlay(target!, {
+      technique: selectionManager.techniqueFor(objectId),
+      color,
+      opacity: 1,
+      fillOpacity: selectionManager.boundingBoxOptions.fillOpacity,
+      xray: selectionManager.xray
+    }));
+  }
+}
 
 function setPeerRenderingMode(
   mode: PeerRenderingMode
@@ -213,10 +232,10 @@ function setPeerRenderingMode(
 
   peerSelectionOverlays?.dispose();
   peerSelectionOverlays = null;
-  peerColoredOutline?.dispose();
-  peerColoredOutline = null;
-  coloredOutline.setEntries([]);
-  jfaOutline.setEntries([]);
+  peerHighlight?.dispose();
+  peerHighlight = null;
+  highlight.setEntries([]);
+  highlightJfa.setEntries([]);
 
   if (mode === "overlays") {
     peerSelectionOverlays = new PeerSelectionOverlays({
@@ -224,15 +243,18 @@ function setPeerRenderingMode(
     });
   }
   else {
-    peerColoredOutline = new PeerColoredOutlinePass({
+    peerHighlight = new PeerHighlightPass({
       registry: peerRegistry,
       selection: selectionManager,
-      coloredOutline: mode === "colorsJfa" ? jfaOutline : coloredOutline,
+      highlight: mode === "colorsJfa" ? highlightJfa : highlight,
       visibility: peerVisibility
     });
   }
+
+  refreshPeerGroupBoxes();
 }
-setPeerRenderingMode("overlays");
+
+peerVisibility.addEventListener("visibilityChange", () => refreshPeerGroupBoxes());
 
 peerRegistry.addEventListener("peerSelectionChange", (event) => {
   const { objectId, previousObjectId } = (event as CustomEvent<PeerSelectionChangeEventDetail>).detail;
@@ -243,6 +265,7 @@ peerRegistry.addEventListener("peerSelectionChange", (event) => {
   if (objectId) {
     refreshChips(objectId);
   }
+  refreshPeerGroupBoxes();
 });
 
 /**
@@ -272,6 +295,9 @@ selectionManager.addEventListener("selectionChange", () => {
   }
 
   refreshStatus();
+  // The local selection suppresses any peer group box for the same object -
+  // see `refreshPeerGroupBoxes`'s own doc comment.
+  refreshPeerGroupBoxes();
 });
 
 const raycaster = new THREE.Raycaster();
@@ -430,8 +456,8 @@ function spawnSelectableMeshes(
   // Smooth/high-poly stand-in for a "real" imported model: every adjacent
   // face pair differs by more than SelectionOutline's edge threshold, so an
   // EdgesGeometry outline here reads as a busy wireframe rather than a clean
-  // line - switch "selection technique" below to "colored outline" to see
-  // this one (and everything else) rendered via ColoredOutlinePass's
+  // line - switch "mode" below to "highlight" to see
+  // this one (and everything else) rendered via HighlightPass's
   // screen-space silhouette instead, which doesn't depend on edge angles at
   // all and stays clean here regardless of poly count.
   registerStandalone(
@@ -491,229 +517,61 @@ function material(
 }
 
 const pane = createExamplePane({ title: "Selection" });
-const infoFolder = pane.addFolder({ title: "Selection" });
+const statusFolder = pane.addFolder({ title: "Status" });
 const status = {
   hovered: "-",
   selected: "-"
 };
 
-infoFolder.addMonitor(status, "hovered");
-infoFolder.addMonitor(status, "selected");
-
-// No field/monitor fits a paragraph (`jolly-monitor`'s value column doesn't
-// wrap; see `jolly-property-row`'s own doc comment for why that one does) -
-// built directly and appended to `folder.element`, the facade's own
-// documented escape hatch for content it has no builder for
-// (`disposeAll()` only removes what a builder created, so this survives a
-// `bindGridControls`-style rebuild the same way as everything else here,
-// which never rebuilds this folder).
-const hintRow = document.createElement("jolly-property-row");
-hintRow.description = "Selection Technique below switches between \"outline\" (per-object, x-ray-capable) " +
-  "and \"colored outline\" (postprocess, always fully visible) - see each control's own description for " +
-  "specifics, and this file's comments for the deeper why.";
-infoFolder.element.append(hintRow);
-
-/**
- * Global selection technique, switchable at runtime - forces every id to
- * match (register's per-id `technique` only lasts until the next
- * setTechnique call). A group (e.g. "Cluster" here) always stays a
- * `SelectionBoundingBox` regardless of this setting, "coloredOutline"
- * included - see `SelectionManager`'s own doc comment for why. Its
- * individual parts are ordinary meshes though, so they follow this setting
- * like anything else - pick one directly in the 3D view (not the "Cluster"
- * outliner node) to try colored outline on it.
- */
-const techniqueSettings = { technique: selectionManager.technique };
-infoFolder
-  .addBinding(techniqueSettings, "technique", {
-    label: "selection technique",
-    options: {
-      outline: "outline",
-      "colored outline (postprocess)": "coloredOutline"
-    } satisfies Record<string, SelectionTechnique>
-  })
-  .on("change", ({ value }) => {
-    selectionManager.setTechnique(value);
-
-    // Keeps "Peer rendering" mode in sync both ways - see `setPeerRenderingMode`'s
-    // own doc comment for why this is an enforced invariant, not just a
-    // default. Preserves "colorsJfa" over "colors" if that's already chosen -
-    // both already imply `"coloredOutline"`, so there's nothing to fix there.
-    let pairedPeerMode: PeerRenderingMode = "overlays";
-    if (value === "coloredOutline") {
-      pairedPeerMode = peerRenderingMode === "colorsJfa" ? "colorsJfa" : "colors";
-    }
-    if (pairedPeerMode !== peerRenderingMode) {
-      setPeerRenderingMode(pairedPeerMode);
-      peerModeSettings.mode = pairedPeerMode;
-      peerFolder.refresh();
-    }
-    updateControlAvailability();
-  });
-
-/**
- * Colors for the "selected" and "hover" overlays, independent of selection
- * technique - every setter here rebuilds/recolors the active overlay(s) in
- * place, so dragging a color swatch previews live on whatever is currently
- * selected/hovered. Only affects the "outline"/`SelectionBoundingBox`
- * per-object overlays - a `"coloredOutline"`-technique selection instead
- * reads `selectionManager.color`/`hoverColor` live through
- * `PeerColoredOutlinePass` (see its own doc comment), so these still apply
- * once "selection technique" is switched to "coloredOutline", just via a
- * different path.
- */
-const colorSettings = {
-  color: `#${new THREE.Color(selectionManager.color).getHexString()}`,
-  hoverColor: `#${new THREE.Color(selectionManager.hoverColor).getHexString()}`,
-  hoverOpacity: selectionManager.hoverOpacity
-};
-infoFolder
-  .addBinding(colorSettings, "color", { label: "selected color" })
-  .on("change", ({ value }) => selectionManager.setColor(value));
-infoFolder
-  .addBinding(colorSettings, "hoverColor", { label: "hover color" })
-  .on("change", ({ value }) => selectionManager.setHoverColor(value));
-infoFolder
-  .addBinding(colorSettings, "hoverOpacity", { label: "hover opacity", min: 0, max: 1, step: 0.05 })
-  .on("change", ({ value }) => selectionManager.setHoverOpacity(value));
-
-/**
- * SelectionOutline tuning, applied to every mesh currently rendered with
- * the "outline" technique - see `setOutlineOptions` on `SelectionManager`.
- * Rebuilds the active selection/hover overlays immediately, same as the
- * "selection technique" dropdown above.
- */
-const outlineSettings = { linewidth: 1 };
-infoFolder
-  .addBinding(outlineSettings, "linewidth", { label: "outline width", min: 1, max: 10, step: 1 })
-  .on("change", ({ value }) => selectionManager.setOutlineOptions({ linewidth: value }));
-
-/**
- * `SelectionBoundingBox` tuning, applied to a group (e.g. "Cluster") whenever
- * it's selected/hovered as a whole - see `setBoundingBoxOptions` on
- * `SelectionManager`. `0` (the default) draws no fill mesh at all, matching
- * this class's prior wireframe-only behavior; try selecting "Cluster" from
- * the outliner and raising this to see the tinted volume appear.
- */
-const boundingBoxSettings = { fillOpacity: 0 };
-infoFolder
-  .addBinding(boundingBoxSettings, "fillOpacity", { label: "group fill opacity", min: 0, max: 1, step: 0.05 })
-  .on("change", ({ value }) => selectionManager.setBoundingBoxOptions({ fillOpacity: value }));
-
-/**
- * X-ray only applies to the "outline" selection technique's own overlays
- * (`SelectionManager.xray`, see its own doc comment) - never "colored
- * outline", which has no occlusion concept to gate at all: every entry's
- * ring always draws fully regardless of what's in front of it (see
- * `ColoredOutlinePass`'s own doc comment for why). See "Peer rendering"
- * below for the equivalent local/peer split on the colored-outline side.
- */
-const xraySettings = { xray: selectionManager.xray };
-const xrayBinding = infoFolder
-  .addBinding(xraySettings, "xray", { label: "x-ray (\"outline\" technique only)" })
-  .on("change", ({ value }) => selectionManager.setXray(value));
+statusFolder.addMonitor(status, "hovered");
+statusFolder.addMonitor(status, "selected");
 
 function refreshStatus(): void {
   status.hovered = hovered?.name ?? "-";
   status.selected = selectionManager.selected ? (displayNames.get(selectionManager.selected) ?? selectionManager.selected) : "-";
-  infoFolder.refresh();
+  statusFolder.refresh();
 }
 
-const peerFolder = pane.addFolder({ title: "Peer rendering" });
+// A non-mesh target ("Cluster") always renders a `SelectionBoundingBox`
+// regardless of mode, so `boundingBox: true` here shows "group opacity" -
+// `selection-peer.ts` has no group and omits it.
+bindSelectionAndPeerPanel({
+  pane,
+  selectionManager,
+  peerVisibility,
+  highlight,
+  highlightJfa,
+  peerChips,
+  boundingBox: true,
+  maxDistance: { default: 30, max: 30 },
+  onPeerModeChange: setPeerRenderingMode,
+  // Two separate peer-side group-box mechanisms, depending on "Peer
+  // rendering" mode (see `peerGroupBoxes`'s own doc comment) - both need an
+  // explicit nudge here, since `setBoundingBoxOptions` dispatches no event:
+  // - "overlays" mode: the real `PeerSelectionOverlays` instance already
+  //   builds a peer's group box itself; `refreshAll` re-applies the current
+  //   fillOpacity to its already-built overlay (see its own doc comment).
+  // - "colors"/"colorsJfa" mode: `refreshPeerGroupBoxes` on its own only
+  //   recolors an existing entry, never rebuilds it, so a "group opacity"
+  //   change alone would never reach one - clearing the map first forces
+  //   every still-relevant entry back through the fresh-
+  //   `createSelectionOverlay` branch, picking up the new fillOpacity the
+  //   same way a brand new peer selection already would.
+  onBoundingBoxOptionsChange: () => {
+    peerSelectionOverlays?.refreshAll();
 
-// Explicit annotation: without it, TS narrows this object literal's `mode`
-// to the literal `"overlays"` (control-flow narrowing a `let` read, unlike
-// `selectionManager.technique` above which is a getter call), which the
-// `satisfies Record<string, PeerRenderingMode>` binding below would then
-// reject.
-const peerModeSettings: { mode: PeerRenderingMode; } = { mode: peerRenderingMode };
-peerFolder
-  .addBinding(peerModeSettings, "mode", {
-    label: "mode",
-    options: {
-      "overlays (per-object)": "overlays",
-      "colors (postprocess, priority)": "colors",
-      "colors (JFA prototype)": "colorsJfa"
-    } satisfies Record<string, PeerRenderingMode>
-  })
-  .on("change", ({ value }) => {
-    setPeerRenderingMode(value);
-
-    // Keeps "selection technique" in sync both ways - see this mode's own
-    // doc comment for why. "overlays" forces "outline"; "colors"/"colorsJfa"
-    // both force "coloredOutline".
-    const pairedTechnique: SelectionTechnique = value === "overlays" ? "outline" : "coloredOutline";
-    if (pairedTechnique !== selectionManager.technique) {
-      selectionManager.setTechnique(pairedTechnique);
-      techniqueSettings.technique = pairedTechnique;
-      infoFolder.refresh();
+    for (const overlay of peerGroupBoxes.values()) {
+      overlay.dispose();
     }
-    updateControlAvailability();
-  });
-
-// The local selection is always a `priority` entry, and both "colors" and
-// "colors (JFA prototype)" honor it the same way - see `ColoredOutlinePass`'s
-// and `JumpFloodOutlinePass`'s own doc comments on their (matching)
-// priority-only mask/seed chains.
-const priorityHintRow = document.createElement("jolly-property-row");
-priorityHintRow.description = "Both \"colors\" modes make your own selection win any on-screen overlap " +
-  "with a peer's, regardless of depth.";
-peerFolder.element.append(priorityHintRow);
-
-/**
- * `ColoredOutlinePass` tuning, applied whenever "Peer rendering" is on
- * "colors" (regardless of "selection technique", since `PeerColoredOutlinePass`
- * always includes the local selection too - see its own doc comment).
- * `edgeThickness` is this technique's equivalent of the "outline" technique's
- * own "outline width" setting (in the "Selection" folder). No hidden-opacity/
- * x-ray equivalent here - every ring always draws at full strength
- * regardless of real scene occlusion, see `ColoredOutlinePass`'s own doc
- * comment for why.
- */
-const coloredOutlineSettings = { edgeThickness: coloredOutline.edgeThickness };
-const edgeThicknessBinding = peerFolder
-  .addBinding(coloredOutlineSettings, "edgeThickness", { label: "colored outline edge thickness", min: 1, max: 10, step: 1 })
-  .on("change", ({ value }) => coloredOutline.setEdgeThickness(value));
-
-/**
- * `JumpFloodOutlinePass` tuning, applied whenever "Peer rendering" is on
- * "colors (JFA prototype)". `ringThickness` is an exact pixel count (not a
- * blur-kernel radius like `edgeThickness` above) - the whole point of this
- * research prototype is that its ring reads the same width everywhere,
- * regardless of downsample level or viewing angle. See `JumpFloodOutlinePass`'s
- * own doc comment for what this prototype deliberately doesn't support yet
- * (priority, instancing).
- */
-const jfaOutlineSettings = { ringThickness: jfaOutline.ringThickness };
-const ringThicknessBinding = peerFolder
-  .addBinding(jfaOutlineSettings, "ringThickness", { label: "JFA ring thickness (px)", min: 1, max: 10, step: 1 })
-  .on("change", ({ value }) => jfaOutline.setRingThickness(value));
-
-/**
- * Reflects which controls actually do anything under the current
- * technique/mode combo, rather than leaving that to label text alone -
- * called once here for the initial state, and again from both the
- * "selection technique" and "Peer rendering" mode handlers above whenever
- * either changes (including indirectly, via the sync between them).
- */
-function updateControlAvailability(): void {
-  xrayBinding.disabled = selectionManager.technique !== "outline";
-  edgeThicknessBinding.disabled = peerRenderingMode !== "colors";
-  ringThicknessBinding.disabled = peerRenderingMode !== "colorsJfa";
-}
-updateControlAvailability();
-
-const visibilityHintRow = document.createElement("jolly-property-row");
-visibilityHintRow.description = "\"max distance\" caps how far a peer selection's ring/chips render before " +
-  "disappearing - never affects your own selection.";
-peerFolder.element.append(visibilityHintRow);
-
-const visibilitySettings = { maxDistance: 30 };
-peerFolder
-  .addBinding(visibilitySettings, "maxDistance", { label: "max distance", min: 0, max: 30, step: 1 })
-  .on("change", ({ value }) => {
-    peerVisibility.setMaxDistance(value);
-  });
+    peerGroupBoxes.clear();
+    refreshPeerGroupBoxes();
+  },
+  // `PeerSelectionOverlays#refresh` only re-applies x-ray to an existing
+  // overlay when something else triggers a refresh - `setXray` itself
+  // dispatches no event, so an already peer-selected object needs this
+  // explicit nudge. See `refreshAll`'s own doc comment.
+  onXrayChange: () => peerSelectionOverlays?.refreshAll()
+});
 
 /**
  * Fake peers, each a dropdown over every registered id plus "(none)". Purely
@@ -752,16 +610,16 @@ startLoop({
   // see `PeerSelectionVisibility`'s own doc comment for why this has to run
   // every frame rather than only reacting to events.
   onFrame: () => peerVisibility.update(),
-  // `coloredOutline`/`jfaOutline` each own a full `RenderPipeline`, so one is
+  // `highlight`/`highlightJfa` each own a full `RenderPipeline`, so one is
   // only used as the frame's render call while it's actually driving
   // anything (its own matching "Peer rendering" mode) - every other frame
   // renders normally.
   render: () => {
     if (peerRenderingMode === "colors") {
-      coloredOutline.render();
+      highlight.render();
     }
     else if (peerRenderingMode === "colorsJfa") {
-      jfaOutline.render();
+      highlightJfa.render();
     }
     else {
       renderer.render(scene, camera);
