@@ -39,6 +39,16 @@ describe("AreaBoxEdges", () => {
       assert.equal(createEdges({ width: 3 }).material.linewidth, 3);
     });
 
+    test("stays opaque at a full opacity", () => {
+      // A transparent Line2NodeMaterial samples a full-screen copy of the
+      // opaque pass, which three recreates mid-encode on a canvas resize.
+      assert.equal(createEdges({ opacity: 1 }).material.transparent, false);
+    });
+
+    test("turns transparent below a full opacity", () => {
+      assert.equal(createEdges({ opacity: 0.4 }).material.transparent, true);
+    });
+
     test("opts out of frustum culling", () => {
       // Fat lines expand beyond the source segments used for frustum tests.
       assert.equal(createEdges().frustumCulled, false);
@@ -114,6 +124,23 @@ describe("AreaBoxEdges", () => {
       edges.emphasize(1.05, 0);
 
       assert.equal(edges.material.opacity, 1);
+    });
+
+    test("drops transparency once the emphasis reaches full opacity", () => {
+      const edges = createEdges({ opacity: 0.98 });
+
+      edges.emphasize(1.05, 0);
+
+      assert.equal(edges.material.transparent, false);
+    });
+
+    test("turns transparent again below a full opacity", () => {
+      const edges = createEdges({ opacity: 0.98 });
+
+      edges.emphasize(1.05, 0);
+      edges.emphasize(1, 0);
+
+      assert.equal(edges.material.transparent, true);
     });
 
     test("tints towards white without reaching it", () => {

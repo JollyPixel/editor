@@ -200,10 +200,12 @@ The twelve-segment outline, drawn with `Line2NodeMaterial` fat lines: line width
 
 It keeps the area color as-is, and opts out of frustum culling because fat lines expand beyond the source segments the frustum test reads.
 
+`material.transparent` follows the effective opacity rather than staying on: `Line2NodeMaterial` sets `NoBlending` and, while transparent, composites in the shader against a full-screen copy of the opaque pass. Three resizes that copy from inside the render pass, so a canvas resize faults the WebGPU queue with a texture the pass being encoded still references. At an effective opacity of `1` the copy buys nothing, so the material stays opaque and the pass never runs.
+
 | Method | Description |
 |---|---|
 | `resize(size: Vector3Like)` | Rebuilds the segments so they trace the box instead of stretching with it, then recomputes the geometry bounds. A resize to the size already traced is dropped: a rebuild swaps in fresh instanced buffers, and destroying the previous ones mid-frame faults the WebGPU queue with a buffer the pass being encoded still references. |
-| `emphasize(opacity: number, tint: number)` | Scales the constructor `opacity` by `opacity`, clamped to `1`, and tints the color toward white by `tint * 0.4`. |
+| `emphasize(opacity: number, tint: number)` | Scales the constructor `opacity` by `opacity`, clamped to `1`, and tints the color toward white by `tint * 0.4`. Toggles `material.transparent` when the result crosses full opacity. |
 | `get/set color` | Reads a copy of the edge color, or repaints the material in place and re-applies the last `emphasize()` arguments. |
 | `dispose()` | Releases the geometry and the material, once. |
 
