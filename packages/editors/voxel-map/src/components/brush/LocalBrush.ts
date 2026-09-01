@@ -6,24 +6,25 @@ import {
 } from "@jolly-pixel/engine";
 import {
   VoxelRenderer,
-  VoxelRotation,
   voxelPositionOf,
   type VoxelCoord
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { editorState } from "../EditorState.ts";
+import { editorState } from "../../EditorState.ts";
 import {
   castViewRay,
   type ViewRayHit
-} from "../shared/viewFocus.ts";
-import { VoxelBrushPreview } from "./VoxelBrushPreview.ts";
+} from "../../shared/viewFocus.ts";
+import * as cursor from "./cursor.ts";
+import type { BrushCursor } from "./cursor.ts";
+import {
+  resolveFlipY,
+  resolveRotation
+} from "./orientation.ts";
+import { BrushMesh } from "./BrushMesh.ts";
 
-type VoxelRotationType = typeof VoxelRotation[
-  keyof typeof VoxelRotation
-];
-
-export interface VoxelBrushOptions {
+export interface LocalBrushOptions {
   vr: VoxelRenderer;
   camera: THREE.PerspectiveCamera;
   /**
@@ -32,38 +33,63 @@ export interface VoxelBrushOptions {
    * @default 4096
    */
   groundPlaneSize?: number;
+  /**
+   * Tint of the cursor preview. Set it to the local peer's collaboration
+   * color so this user's brush looks the same here as it does to peers.
+   */
+  color?: THREE.ColorRepresentation;
 }
 
-export class VoxelBrush extends ActorComponent {
+/**
+ * The brush this user paints with: it owns the pointer input, the aim ray and
+ * the voxel edits, and publishes the aimed cursor for `PeerBrushes` to share.
+ */
+export class LocalBrush extends ActorComponent {
+  /**
+   * Fired when the aimed cursor moves or resizes, `null` when nothing is
+   * aimed at.
+   */
+  onCursorChange?: (cursor: BrushCursor | null) => void;
+
   readonly vr: VoxelRenderer;
 
   #camera: THREE.PerspectiveCamera;
+  #cursor: BrushCursor | null = null;
   #raycaster = new THREE.Raycaster();
   #groundPlaneSize: number;
-  #preview: VoxelBrushPreview;
+  #mesh: BrushMesh;
   #pointer = new THREE.Vector2();
   #previewDirty = true;
   #lastCameraMatrix = new THREE.Matrix4();
 
   constructor(
     actor: Actor,
-    options: VoxelBrushOptions
+    options: LocalBrushOptions
   ) {
     super({
       actor,
-      typeName: "VoxelBrush"
+      typeName: "LocalBrush"
     });
     const {
       vr,
       camera,
-      groundPlaneSize = 4096
+      groundPlaneSize = 4096,
+      color
     } = options;
 
     this.vr = vr;
     this.#camera = camera;
     this.#groundPlaneSize = groundPlaneSize;
 
-    this.#preview = this.actor.addComponentAndGet(VoxelBrushPreview);
+    this.#mesh = new BrushMesh(
+      color === undefined ? {} : { color }
+    );
+    this.actor.addChildren(this.#mesh);
+  }
+
+  override destroy(): void {
+    this.actor.removeChildren(this.#mesh);
+    super.destroy();
   }
 
   update() {
@@ -123,64 +149,24 @@ export class VoxelBrush extends ActorComponent {
     });
   }
 
-  #getBrushPositions(
+  #cellsAround(
     center: VoxelCoord
-  ): THREE.Vector3[] {
-    const size = editorState.brushSize;
-    const half = Math.floor(size / 2);
-    const positions: THREE.Vector3[] = [];
-
-    for (let dx = 0; dx < size; dx++) {
-      for (let dz = 0; dz < size; dz++) {
-        positions.push(new THREE.Vector3(
-          center.x - half + dx,
-          center.y,
-          center.z - half + dz
-        ));
-      }
-    }
-
-    return positions;
+  ): VoxelCoord[] {
+    return cursor.cellsOf({
+      position: center,
+      size: editorState.brushSize
+    });
   }
 
-  #resolveFlipY(): boolean {
-    if (editorState.flipY) {
-      return true;
+  #setCursor(
+    next: BrushCursor | null
+  ): void {
+    if (cursor.equals(next, this.#cursor)) {
+      return;
     }
 
-    if (editorState.rotationMode === "auto") {
-      const dir = new THREE.Vector3();
-      this.#camera.getWorldDirection(dir);
-
-      return dir.y > 0;
-    }
-
-    return false;
-  }
-
-  #resolveRotation(): VoxelRotationType {
-    const mode = editorState.rotationMode;
-    if (mode !== "auto") {
-      return mode;
-    }
-
-    const dir = new THREE.Vector3();
-    this.#camera.getWorldDirection(dir);
-    dir.y = 0;
-    dir.normalize();
-
-    const absX = Math.abs(dir.x);
-    const absZ = Math.abs(dir.z);
-
-    if (absZ >= absX) {
-      return dir.z > 0 ?
-        VoxelRotation.None :
-        VoxelRotation.Deg180;
-    }
-
-    return dir.x > 0 ?
-      VoxelRotation.CCW90 :
-      VoxelRotation.CW90;
+    this.#cursor = next;
+    this.onCursorChange?.(next);
   }
 
   #placeVoxels(): void {
@@ -190,13 +176,20 @@ export class VoxelBrush extends ActorComponent {
     }
 
     const center = voxelPositionOf(hit.point, hit.normal, "front");
-    const rotation = this.#resolveRotation();
-    const flipY = this.#resolveFlipY();
+    const rotation = resolveRotation(
+      this.#camera,
+      editorState.rotationMode
+    );
+    const flipY = resolveFlipY(
+      this.#camera,
+      editorState.rotationMode,
+      editorState.flipY
+    );
     const layerName = editorState.selectedVoxelLayer!;
 
-    for (const pos of this.#getBrushPositions(center)) {
+    for (const position of this.#cellsAround(center)) {
       this.vr.engine.world.setVoxel(layerName, {
-        position: pos,
+        position,
         blockId: editorState.selectedBlockId,
         rotation,
         flipY
@@ -215,16 +208,17 @@ export class VoxelBrush extends ActorComponent {
     const center = voxelPositionOf(hit.point, hit.normal, "back");
     const layerName = editorState.selectedVoxelLayer!;
 
-    for (const pos of this.#getBrushPositions(center)) {
-      this.vr.engine.world.removeVoxel(layerName, { position: pos });
+    for (const position of this.#cellsAround(center)) {
+      this.vr.engine.world.removeVoxel(layerName, { position });
     }
     this.vr.engine.flush();
     this.#previewDirty = true;
   }
 
   #hidePreview(): void {
-    this.#preview.hide();
+    this.#mesh.hide();
     this.#previewDirty = true;
+    this.#setCursor(null);
   }
 
   #consumePreviewRefresh(): boolean {
@@ -254,20 +248,27 @@ export class VoxelBrush extends ActorComponent {
     }
 
     const hit = this.#castRay();
-    if (hit) {
-      const center = voxelPositionOf(
-        hit.point,
-        hit.normal,
-        hit.ground ? "front" : "back"
-      );
+    if (!hit) {
+      this.#mesh.clearCells();
+      this.#setCursor(null);
 
-      this.#preview.updateFromPositions(
-        this.#getBrushPositions(center),
-        hit.ground ? null : hit.normal
-      );
+      return;
     }
-    else {
-      this.#preview.count = 0;
-    }
+
+    const center = voxelPositionOf(
+      hit.point,
+      hit.normal,
+      hit.ground ? "front" : "back"
+    );
+
+    this.#mesh.show();
+    this.#mesh.drawCells(
+      this.#cellsAround(center),
+      hit.ground ? null : hit.normal
+    );
+    this.#setCursor({
+      position: center,
+      size: editorState.brushSize
+    });
   }
 }

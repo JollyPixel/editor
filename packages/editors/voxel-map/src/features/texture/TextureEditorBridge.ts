@@ -6,6 +6,7 @@ import type {
 } from "@jolly-pixel/voxel.renderer";
 import type * as network from "@jolly-pixel/network";
 import {
+  PixelCursorSync,
   PixelSyncClient,
   type PixelArtCanvas,
   type PixelNetworkCommand,
@@ -20,6 +21,10 @@ import {
 import { applyBlockUpdates } from "../blocks/applyBlockUpdate.ts";
 import { findBlocksReferencingTileset } from "./blockTextureTiles.ts";
 import { editorState } from "../../EditorState.ts";
+import {
+  peerColor,
+  readUsername
+} from "../../network/identity.ts";
 
 function rectsIntersect(
   a: SelectionRect,
@@ -41,6 +46,7 @@ export interface TextureEditorBridgeOptions {
 export class TextureEditorBridge {
   #manager: PixelArtCanvas | null = null;
   #syncClient: PixelSyncClient | null = null;
+  #cursorSync: PixelCursorSync | null = null;
   #atlas: TilesetAtlas | null = null;
   #tilesetId: string | null = null;
   #vr: VoxelRenderer | null = null;
@@ -66,6 +72,8 @@ export class TextureEditorBridge {
     canvas: PixelArtCanvas,
     room?: network.Room<PixelNetworkCommand, PixelServerMessage>
   ): void {
+    this.#cursorSync?.destroy();
+    this.#cursorSync = null;
     this.#syncClient?.destroy();
     this.#syncClient = null;
     this.#manager = canvas;
@@ -86,6 +94,12 @@ export class TextureEditorBridge {
     if (room) {
       this.#syncClient = new PixelSyncClient({ room });
       this.#syncClient.attach(this.#manager);
+      this.#cursorSync = new PixelCursorSync({
+        room,
+        label: (identity) => readUsername(identity),
+        color: (clientId, identity) => peerColor(clientId, identity)
+      });
+      this.#cursorSync.attach(this.#manager);
       room.join();
     }
   }
@@ -255,6 +269,8 @@ export class TextureEditorBridge {
     this.#texture = null;
     this.#unsubscribe?.();
     this.#unsubscribe = null;
+    this.#cursorSync?.destroy();
+    this.#cursorSync = null;
     this.#syncClient?.destroy();
     this.#syncClient = null;
     this.#manager = null;

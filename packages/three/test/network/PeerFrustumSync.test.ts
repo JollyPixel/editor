@@ -246,7 +246,7 @@ describe("colors", () => {
       room,
       parent,
       throttleMs: 0,
-      getColor: () => colors[Math.min(calls++, colors.length - 1)]
+      color: () => colors[Math.min(calls++, colors.length - 1)]
     });
     room.addPeer("alice", { presence: { frustum: pose(1) } });
     sync.attach(new THREE.Object3D());
@@ -261,14 +261,14 @@ describe("colors", () => {
     assert.equal(frustum.color, "#222222");
   });
 
-  test("passes the peer identity to getColor", () => {
+  test("passes the peer identity to color", () => {
     const room = new FakeRoom();
     const parent = new THREE.Object3D();
     const seen: PeerMetadata[] = [];
     const sync = new PeerFrustumSync({
       room,
       parent,
-      getColor: (_clientId, identity) => {
+      color: (_clientId, identity) => {
         seen.push(identity);
 
         return "#333333";

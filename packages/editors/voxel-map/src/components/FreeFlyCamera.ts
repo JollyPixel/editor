@@ -42,8 +42,6 @@ export interface FreeFlyCameraOptions {
 
 /**
  * Minecraft-style free-fly camera.
- * WASD = horizontal, Space/Shift = vertical, MMB+drag = look.
- * Wheel dollies along the view; wheel while looking sets the fly speed.
  */
 export class FreeFlyCamera extends CameraComponent {
   enabled = true;

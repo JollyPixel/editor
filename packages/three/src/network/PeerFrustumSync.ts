@@ -43,7 +43,7 @@ export interface PeerFrustumSyncOptions<
    * Extracts a display label from a peer's identity.
    * @default reads `identity.username` when it's a string
    */
-  getLabel?: (
+  label?: (
     clientId: string,
     identity: network.PeerMetadata
   ) => string | undefined;
@@ -57,7 +57,7 @@ export interface PeerFrustumSyncOptions<
    *
    * @default a deterministic color from the built-in palette
    */
-  getColor?: (
+  color?: (
     clientId: string,
     identity: network.PeerMetadata
   ) => THREE.ColorRepresentation;
@@ -68,7 +68,7 @@ export interface PeerFrustumSyncOptions<
   frustum?: Omit<PeerFrustumOptions, "color" | "displayName">;
 }
 
-function defaultGetLabel(
+function defaultLabel(
   _clientId: string,
   identity: network.PeerMetadata
 ): string | undefined {
@@ -83,11 +83,11 @@ export class PeerFrustumSync<
   #parent: THREE.Object3D;
   #presenceKey: string;
   #throttleMs: number;
-  #getLabel: (
+  #label: (
     clientId: string,
     identity: network.PeerMetadata
   ) => string | undefined;
-  #getColor: (
+  #color: (
     clientId: string,
     identity: network.PeerMetadata
   ) => THREE.ColorRepresentation;
@@ -126,8 +126,8 @@ export class PeerFrustumSync<
     this.#parent = options.parent;
     this.#presenceKey = options.presenceKey ?? kDefaultPresenceKey;
     this.#throttleMs = options.throttleMs ?? kDefaultThrottleMs;
-    this.#getLabel = options.getLabel ?? defaultGetLabel;
-    this.#getColor = options.getColor ?? (
+    this.#label = options.label ?? defaultLabel;
+    this.#color = options.color ?? (
       (clientId) => this.#palette.forKey(clientId)
     );
     this.#frustumOptions = options.frustum ?? {};
@@ -182,7 +182,7 @@ export class PeerFrustumSync<
   refreshColors(): void {
     for (const [clientId, frustum] of this.#peers) {
       const identity = this.#room.peers.get(clientId)?.identity ?? {};
-      frustum.color = this.#getColor(clientId, identity);
+      frustum.color = this.#color(clientId, identity);
     }
   }
 
@@ -277,8 +277,8 @@ export class PeerFrustumSync<
   ): PeerFrustum {
     const frustum = new PeerFrustum({
       ...this.#frustumOptions,
-      color: this.#getColor(clientId, identity),
-      displayName: this.#getLabel(clientId, identity)
+      color: this.#color(clientId, identity),
+      displayName: this.#label(clientId, identity)
     });
     this.#parent.add(frustum);
     this.#peers.set(clientId, frustum);

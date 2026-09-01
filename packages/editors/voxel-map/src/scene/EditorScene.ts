@@ -20,12 +20,16 @@ import * as THREE from "three";
 import {
   FreeFlyCamera,
   GridRenderer,
-  VoxelBrush,
+  LocalBrush,
   LayerGizmo,
   ObjectLayerRenderer,
+  PeerBrushes,
+  PeerFrustums,
   PerformanceHUD
 } from "../components/index.ts";
 import type { EditorState } from "../EditorState.ts";
+import type { EditorIdentity } from "../network/identity.ts";
+import { PeerRoster } from "../network/PeerRoster.ts";
 import { viewFocusPoint } from "../shared/viewFocus.ts";
 
 // CONSTANTS
@@ -38,8 +42,15 @@ export interface EditorSceneOptions {
    */
   defaultLayerName?: string;
   tilesets: TilesetSource[];
-  /** Optional room to synchronize the voxel world over the network. */
+  /**
+   * Optional room to synchronize the voxel world over the network.
+   */
   voxelRoom?: network.Room<VoxelNetworkCommand, VoxelServerMessage>;
+  /**
+   * Local collaborator, resolved before the socket opens. Absent offline, in
+   * which case the brush keeps its default tint.
+   */
+  identity?: EditorIdentity;
 }
 
 /**
@@ -57,7 +68,9 @@ export class EditorScene extends Systems.Scene {
   #tilesets: TilesetSource[];
   #defaultLayerName: string;
   #voxelRoom: network.Room<VoxelNetworkCommand, VoxelServerMessage> | undefined;
+  #identity: EditorIdentity | undefined;
   #voxelSyncClient: VoxelSyncClient | undefined;
+  #peerRoster: PeerRoster | undefined;
   #handles = Promise.withResolvers<EditorSceneHandles>();
   #subscriptions: Array<() => void> = [];
 
@@ -66,10 +79,6 @@ export class EditorScene extends Systems.Scene {
   vr: VoxelRenderer;
   gridRenderer: GridRenderer;
 
-  /**
-   * `awake()` runs on the first frame, which is after `loadRuntime()`
-   * resolves. Anything needing `vr` or `gridRenderer` awaits this instead.
-   */
   get ready(): Promise<EditorSceneHandles> {
     return this.#handles.promise;
   }
@@ -83,12 +92,14 @@ export class EditorScene extends Systems.Scene {
     const {
       defaultLayerName = "Ground",
       tilesets,
-      voxelRoom
+      voxelRoom,
+      identity
     } = options;
 
     this.#defaultLayerName = defaultLayerName;
     this.#tilesets = tilesets;
     this.#voxelRoom = voxelRoom;
+    this.#identity = identity;
     this.editorState = editorState;
   }
 
@@ -193,13 +204,35 @@ export class EditorScene extends Systems.Scene {
     this.#registerDefaultBlocks();
     this.editorState.dispatchBlockRegistryChanged();
 
+    if (this.#voxelRoom && this.#identity) {
+      this.#peerRoster = new PeerRoster({
+        room: this.#voxelRoom,
+        identity: this.#identity
+      });
+    }
+
     this.#voxelRoom?.join();
 
-    world.createActor("brush")
-      .addComponent(VoxelBrush, {
+    const brush = world.createActor("brush")
+      .addComponentAndGet(LocalBrush, {
         vr,
-        camera: freeFlyCamera.camera
+        camera: freeFlyCamera.camera,
+        color: this.#identity?.color
       });
+
+    if (this.#voxelRoom) {
+      const peerBrushes = world.createActor("peer-brushes")
+        .addComponentAndGet(PeerBrushes, { room: this.#voxelRoom });
+      brush.onCursorChange = (cursor) => {
+        peerBrushes.publishLocalCursor(cursor);
+      };
+
+      world.createActor("peer-frustums")
+        .addComponent(PeerFrustums, {
+          room: this.#voxelRoom,
+          camera: freeFlyCamera.camera
+        });
+    }
 
     world.createActor("gizmo")
       .addComponent(LayerGizmo, {
@@ -222,11 +255,11 @@ export class EditorScene extends Systems.Scene {
     });
   }
 
-  /** Replaces the shared world, or only the local world when offline. */
   loadWorld(data: VoxelWorldJSON): void {
     if (this.#voxelSyncClient) {
       this.#voxelSyncClient.replaceWorld(data);
     }
+
     else {
       this.vr.engine.load(data);
       const layers = this.vr.engine.world.getLayers();
@@ -246,9 +279,10 @@ export class EditorScene extends Systems.Scene {
     this.editorState.viewFocusProvider = null;
     this.#voxelSyncClient?.destroy();
     this.#voxelSyncClient = undefined;
+    this.#peerRoster?.dispose();
+    this.#peerRoster = undefined;
   }
 
-  // Preserve existing ids because placed voxels reference them.
   #registerDefaultBlocks(): void {
     const { blockRegistry, tilesetManager } = this.vr.engine;
 

@@ -88,7 +88,11 @@ export class ObjectLayerRenderer extends ActorComponent {
   }
 
   override destroy(): void {
-    this.#canvas?.removeEventListener("pointerdown", this.#onPointerDown, true);
+    this.#canvas?.removeEventListener(
+      "pointerdown",
+      this.#onPointerDown,
+      true
+    );
     this.#canvas = null;
 
     for (const unsubscribe of this.#subscriptions.splice(0)) {
@@ -124,7 +128,9 @@ export class ObjectLayerRenderer extends ActorComponent {
     layerName: string
   ): void {
     // Keep hidden areas allocated to avoid GPU churn on visibility changes.
-    const objects = this.#vr.engine.world.getObjectLayer(layerName)?.objects ?? [];
+    const objects = this.#vr.engine.world.getObjectLayer(
+      layerName
+    )?.objects ?? [];
     const alive = new Set(
       objects.map((object) => objectKey(layerName, object.id))
     );
@@ -165,7 +171,10 @@ export class ObjectLayerRenderer extends ActorComponent {
       return;
     }
 
-    if (this.#selectedKey === key && this.#controls?.dragging === true) {
+    if (
+      this.#selectedKey === key &&
+      this.#controls?.dragging === true
+    ) {
       return;
     }
 
@@ -200,7 +209,9 @@ export class ObjectLayerRenderer extends ActorComponent {
 
     // Preserve the layer selection after a remote object deletion.
     if (this.#selectedObjectKey() === key) {
-      editorState.selectObjectLayer(parseObjectKey(key).layerName);
+      editorState.selectObjectLayer(
+        parseObjectKey(key).layerName
+      );
     }
   }
 
@@ -309,7 +320,10 @@ export class ObjectLayerRenderer extends ActorComponent {
       (((event.clientX - rect.left) / rect.width) * 2) - 1,
       (-((event.clientY - rect.top) / rect.height) * 2) + 1
     );
-    this.#raycaster.setFromCamera(this.#pointer, this.#camera);
+    this.#raycaster.setFromCamera(
+      this.#pointer,
+      this.#camera
+    );
 
     // Locked areas must not intercept picks for objects behind them.
     const pickable = [...this.#areas].filter(
@@ -323,7 +337,9 @@ export class ObjectLayerRenderer extends ActorComponent {
       return null;
     }
 
-    const hit = pickable.find(([, area]) => area.fill === hits[0].object);
+    const hit = pickable.find(
+      ([, area]) => area.fill === hits[0].object
+    );
 
     return hit?.[0] ?? null;
   }
@@ -360,7 +376,10 @@ export class ObjectLayerRenderer extends ActorComponent {
     const { layerName, objectId } = parseObjectKey(key);
     this.#selectedKey = key;
     controls.attach(this.#areas.get(key)!, { from: event });
-    editorState.selectObject({ layerName, objectId });
+    editorState.selectObject({
+      layerName,
+      objectId
+    });
   };
 
   readonly #onDragStart = (): void => {
@@ -398,7 +417,11 @@ export class ObjectLayerRenderer extends ActorComponent {
       return;
     }
 
-    this.#vr.engine.world.updateObjectInLayer(layerName, objectId, patch);
+    this.#vr.engine.world.updateObjectInLayer(
+      layerName,
+      objectId,
+      patch
+    );
   }
 
   readonly #onSelectionChange = (): void => this.#updateVisibility();

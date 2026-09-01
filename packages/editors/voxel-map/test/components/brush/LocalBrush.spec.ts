@@ -13,14 +13,16 @@ import type { VoxelRenderer } from "@jolly-pixel/voxel.renderer";
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { editorState } from "../../src/EditorState.ts";
-import { VoxelBrush } from "../../src/components/VoxelBrush.ts";
-import { VoxelBrushPreview } from "../../src/components/VoxelBrushPreview.ts";
+import { editorState } from "../../../src/EditorState.ts";
+import { LocalBrush } from "../../../src/components/brush/LocalBrush.ts";
+import { BrushMesh } from "../../../src/components/brush/BrushMesh.ts";
+import type { BrushCursor } from "../../../src/components/brush/cursor.ts";
 
 type MouseAction = "left" | "right";
 
 interface BrushHarness {
-  brush: VoxelBrush;
+  cursors: (BrushCursor | null)[];
+  brush: LocalBrush;
   camera: THREE.PerspectiveCamera;
   operations: string[];
   previewUpdates: number;
@@ -86,22 +88,26 @@ function createHarness(): BrushHarness {
     }
   };
   const actor = actorValue as unknown as Actor;
-  const updateFromPositions = mock.method(
-    VoxelBrushPreview.prototype,
-    "updateFromPositions"
+  const drawCells = mock.method(
+    BrushMesh.prototype,
+    "drawCells"
   );
-  const brush = new VoxelBrush(actor, {
+  const brush = new LocalBrush(actor, {
     vr: { engine } as unknown as VoxelRenderer,
     camera,
     groundPlaneSize: 10
   });
 
+  const cursors: (BrushCursor | null)[] = [];
+  brush.onCursorChange = (cursor) => cursors.push(cursor);
+
   return {
     brush,
     camera,
     operations,
+    cursors,
     get previewUpdates(): number {
-      return updateFromPositions.mock.callCount();
+      return drawCells.mock.callCount();
     },
     publishPress(action: MouseAction): void {
       pressed = action;
@@ -115,14 +121,14 @@ function createHarness(): BrushHarness {
   };
 }
 
-describe("VoxelBrush mesh synchronization", () => {
+describe("LocalBrush mesh synchronization", () => {
   afterEach(() => {
     mock.restoreAll();
     editorState.setSelection(null);
     editorState.setBrushSizeAbsolute(1);
   });
 
-  test("flushes once after placing a complete brush footprint", () => {
+  test("flushes once after placing every cell of the brush", () => {
     editorState.selectVoxelLayer("Ground");
     editorState.setBrushSizeAbsolute(2);
     const harness = createHarness();
@@ -147,7 +153,7 @@ describe("VoxelBrush mesh synchronization", () => {
   });
 });
 
-describe("VoxelBrush preview refresh gating", () => {
+describe("LocalBrush preview refresh gating", () => {
   afterEach(() => {
     mock.restoreAll();
     editorState.setSelection(null);
@@ -208,5 +214,58 @@ describe("VoxelBrush preview refresh gating", () => {
     harness.brush.update();
 
     assert.strictEqual(harness.previewUpdates, 1);
+  });
+});
+
+describe("LocalBrush cursor reporting", () => {
+  afterEach(() => {
+    mock.restoreAll();
+    editorState.setSelection(null);
+    editorState.setBrushSizeAbsolute(1);
+  });
+
+  test("reports the aimed cell and the current brush size", () => {
+    const harness = createHarness();
+
+    harness.brush.update();
+
+    assert.deepStrictEqual(harness.cursors, [
+      {
+        position: { x: 0, y: 0, z: 0 },
+        size: 1
+      }
+    ]);
+  });
+
+  test("stays silent while the aim and the size are unchanged", () => {
+    const harness = createHarness();
+
+    harness.brush.update();
+    harness.brush.update();
+
+    assert.strictEqual(harness.cursors.length, 1);
+  });
+
+  test("reports again after the brush size changed", () => {
+    const harness = createHarness();
+
+    harness.brush.update();
+    editorState.setBrushSizeAbsolute(3);
+    harness.brush.update();
+
+    assert.deepStrictEqual(harness.cursors.at(-1), {
+      position: { x: 0, y: 0, z: 0 },
+      size: 3
+    });
+  });
+
+  test("reports nothing aimed at while the camera is steered", () => {
+    const harness = createHarness();
+
+    harness.brush.update();
+    harness.setButtonDown("middle");
+    harness.brush.update();
+
+    assert.strictEqual(harness.cursors.at(-1), null);
   });
 });

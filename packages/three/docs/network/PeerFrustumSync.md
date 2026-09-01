@@ -60,11 +60,11 @@ interface PeerFrustumSyncOptions<
   parent: THREE.Object3D;
   presenceKey?: string;
   throttleMs?: number;
-  getLabel?: (
+  label?: (
     clientId: string,
     identity: network.PeerMetadata
   ) => string | undefined;
-  getColor?: (
+  color?: (
     clientId: string,
     identity: network.PeerMetadata
   ) => THREE.ColorRepresentation;
@@ -78,9 +78,9 @@ interface PeerFrustumSyncOptions<
 | `parent` | required | Object that owns the remote frustums. |
 | `presenceKey` | `"frustum"` | Presence field used for poses. Set a different key for each frustum stream in the same room. |
 | `throttleMs` | `50` | Minimum delay between changed pose reports, in milliseconds. Set it to `0` to report every change observed by `update()`. |
-| `getLabel` | `identity.username` | Returns the name shown on a remote frustum. |
-| `getColor` | color derived from `clientId` | Returns the color of a remote frustum. |
-| `frustum` | `{}` | Options shared by remote frustums. `color` and `displayName` are controlled by `getColor` and `getLabel`. |
+| `label` | `identity.username` | Returns the name shown on a remote frustum. |
+| `color` | color derived from `clientId` | Returns the color of a remote frustum. |
+| `frustum` | `{}` | Options shared by remote frustums. Its own `color` and `displayName` are ignored: the top-level `color` and `label` options drive them. |
 
 ## Methods
 
@@ -120,7 +120,7 @@ Call it once per render tick.
 refreshColors(): void
 ```
 
-Calls `getColor` again for every tracked peer. Colors are otherwise resolved
+Resolves the `color` option again for every tracked peer. Colors are otherwise resolved
 when each remote frustum is created.
 
 ### `destroy()`
@@ -134,7 +134,7 @@ remote frustum.
 
 ## Peer identity and colors
 
-The `clientId` passed to `getColor` and `getLabel` is assigned to the remote
+The `clientId` passed to the `color` and `label` options is assigned to the remote
 connection. It differs from `room.clientId`, which is local to the tab. When a
 client must reproduce its own peer-visible color, use a stable identity field
 that all peers receive.

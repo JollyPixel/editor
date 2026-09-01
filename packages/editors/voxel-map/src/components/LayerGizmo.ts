@@ -47,8 +47,14 @@ export class LayerGizmo extends ActorComponent {
     controls.setMode("translate");
     controls.setSpace("world");
     controls.setTranslationSnap(1);
-    controls.addEventListener("dragging-changed", this.#onDraggingChanged);
-    controls.addEventListener("objectChange", this.#onObjectChange);
+    controls.addEventListener(
+      "dragging-changed",
+      this.#onDraggingChanged
+    );
+    controls.addEventListener(
+      "objectChange",
+      this.#onObjectChange
+    );
     this.#controls = controls;
 
     this.actor.addChildren(controls.getHelper(), this.#pivot);
@@ -67,7 +73,10 @@ export class LayerGizmo extends ActorComponent {
       "dragging-changed",
       this.#onDraggingChanged
     );
-    this.#controls?.removeEventListener("objectChange", this.#onObjectChange);
+    this.#controls?.removeEventListener(
+      "objectChange",
+      this.#onObjectChange
+    );
     this.#controls?.detach();
     this.#controls?.dispose();
     this.#controls = null;
@@ -85,7 +94,10 @@ export class LayerGizmo extends ActorComponent {
       return;
     }
 
-    if (name === null || !this.#vr.engine.world.getLayer(name)) {
+    if (
+      name === null ||
+      !this.#vr.engine.world.getLayer(name)
+    ) {
       controls.detach();
 
       return;
@@ -100,12 +112,16 @@ export class LayerGizmo extends ActorComponent {
       return;
     }
 
-    const layer = this.#vr.engine.world.getLayer(this.#activeLayer);
+    const layer = this.#vr.engine.world.getLayer(
+      this.#activeLayer
+    );
     if (!layer) {
       return;
     }
 
-    const center = this.#vr.engine.world.getLayer(this.#activeLayer)?.centerToWorld() ?? null!;
+    const center = this.#vr.engine.world.getLayer(
+      this.#activeLayer
+    )?.centerToWorld() ?? null!;
     this.#pivotOffset.set(
       center.x - layer.offset.x,
       center.y - layer.offset.y,

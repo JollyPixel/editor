@@ -102,7 +102,7 @@ room.join();
 const peerFrustumSync = new PeerFrustumSync({
   room,
   parent: scene,
-  getColor: (clientId, identity) => colorForPeer(
+  color: (clientId, identity) => colorForPeer(
     readPeerId(identity) ?? clientId
   )
 });
