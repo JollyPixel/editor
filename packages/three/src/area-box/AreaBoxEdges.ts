@@ -47,7 +47,7 @@ export class AreaBoxEdges extends LineSegments2 {
       new Line2NodeMaterial({
         color,
         linewidth: width,
-        transparent: true,
+        transparent: opacity < 1,
         opacity,
         depthWrite: false
       })
@@ -114,14 +114,28 @@ export class AreaBoxEdges extends LineSegments2 {
   }
 
   #applyEmphasis(): void {
-    this.material.opacity = Math.min(
+    const opacity = Math.min(
       this.#opacity * this.#emphasisOpacity,
       1
     );
+
+    this.material.opacity = opacity;
+    this.#setTransparent(opacity < 1);
     this.material.color.copy(this.#color).lerp(
       kTintTarget,
       this.#tint * kTintRatio
     );
+  }
+
+  #setTransparent(
+    transparent: boolean
+  ): void {
+    if (this.material.transparent === transparent) {
+      return;
+    }
+
+    this.material.transparent = transparent;
+    this.material.needsUpdate = true;
   }
 }
 
