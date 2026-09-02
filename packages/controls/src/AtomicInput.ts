@@ -4,7 +4,8 @@ import {
   type MouseAction,
   type GamepadIndex,
   type GamepadButton,
-  type ExtendedKeyCode
+  type ExtendedKeyCode,
+  type InputKeyboardAction
 } from "./devices/index.ts";
 
 export interface InputCondition {
@@ -22,16 +23,22 @@ export type CombinedInputState =
   | "down"
   | "pressed"
   | "released";
-export type CombinedInputAction = `${ExtendedKeyCode | MouseAction}.${CombinedInputState}`;
+export type CombinedKeyboardInputAction =
+  `${ExtendedKeyCode}.${CombinedInputState}`;
+export type CombinedMouseInputAction =
+  `${MouseAction}.${CombinedInputState}`;
+export type CombinedInputAction =
+  | CombinedKeyboardInputAction
+  | CombinedMouseInputAction;
 
 export type AtomicInputAction =
-  | ExtendedKeyCode
+  | InputKeyboardAction
   | MouseAction
   | [GamepadIndex, number | keyof typeof GamepadButton];
 
 type AtomicKeyboardInput = {
   type: "key";
-  action: ExtendedKeyCode;
+  action: InputKeyboardAction;
 };
 
 type AtomicMouseInput = {
@@ -55,7 +62,7 @@ export class AtomicInput implements InputCondition {
 
   constructor(
     type: "key",
-    action: ExtendedKeyCode,
+    action: InputKeyboardAction,
     state?: CombinedInputState
   );
   constructor(
@@ -107,7 +114,7 @@ export class AtomicInput implements InputCondition {
 
   #evaluateKey(
     input: Input,
-    key: ExtendedKeyCode
+    key: InputKeyboardAction
   ): boolean {
     switch (this.#state) {
       case "down":

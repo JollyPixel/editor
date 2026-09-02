@@ -427,7 +427,7 @@ describe("Controls.Gamepad", () => {
       navigatorAdapter.getGamepads = () => {
         polls++;
 
-        return navigatorAdapter.gamepads;
+        return navigatorAdapter.toNativeGamepads();
       };
 
       for (let frame = 0; frame < 120; frame++) {
@@ -443,7 +443,7 @@ describe("Controls.Gamepad", () => {
       navigatorAdapter.getGamepads = () => {
         polls++;
 
-        return navigatorAdapter.gamepads;
+        return navigatorAdapter.toNativeGamepads();
       };
 
       navigatorAdapter.gamepads = [mocks.Gamepad(), null, null, null];

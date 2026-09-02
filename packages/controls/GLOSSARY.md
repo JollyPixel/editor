@@ -69,6 +69,25 @@ The composite condition layer built on `AtomicInput`: `AllInputs`,
 The shared interface every atomic and composite condition implements:
 `evaluate(input)` and `reset()`.
 
+### AxisSource
+
+A single contributor to an axis value: `ButtonAxisSource` (two conditions
+driving `1` and `-1`) or `GamepadAxisSource` (one analog stick axis). Sources
+produce values in `[-1, 1]` and have no axis-level scaling.
+
+### Axis
+
+One degree of freedom, resolving its sources to a single number in
+`[-1, 1]` before `invert` and `scale`. With several sources bound, the one
+with the largest magnitude wins. Equal sources pointing in opposite
+directions cancel. Resolved axes do not nest as sources.
+
+### AxisMap
+
+A set of named axes sampled once per frame by `update(input)`, so every
+consumer of a frame reads the same intent. Reports intent only: speed,
+smoothing, and normalization belong to the consumer.
+
 ### InputActionQuery
 
 The value object wrapping a query action (a real action, or the `ANY`/`NONE`

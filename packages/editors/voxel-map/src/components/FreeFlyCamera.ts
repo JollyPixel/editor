@@ -3,7 +3,11 @@ import * as THREE from "three";
 import {
   Actor,
   CameraComponent,
-  createViewHelper
+  createViewHelper,
+  Axis,
+  AxisMap,
+  InputCombination,
+  type InputCondition
 } from "@jolly-pixel/engine";
 
 // CONSTANTS
@@ -69,6 +73,26 @@ export class FreeFlyCamera extends CameraComponent {
   #scroll = { x: 0, y: 0 };
   #euler = new THREE.Euler(0, 0, 0, "YXZ");
   #orientation = new THREE.Quaternion();
+
+  #descend: InputCondition = {
+    evaluate: (input) => !this.#descendBlocked && (
+      input.keyboard.isDown("ShiftLeft") ||
+      input.keyboard.isDown("ShiftRight")
+    ),
+    reset: () => void 0
+  };
+
+  #axes = new AxisMap({
+    moveRight: Axis.buttons(
+      InputCombination.atLeastOne("KeyD.down", "ArrowRight.down"),
+      InputCombination.atLeastOne("KeyA.down", "ArrowLeft.down")
+    ),
+    moveUp: Axis.buttons("Space", this.#descend),
+    moveForward: Axis.buttons(
+      InputCombination.atLeastOne("KeyW.down", "ArrowUp.down"),
+      InputCombination.atLeastOne("KeyS.down", "ArrowDown.down")
+    )
+  });
 
   constructor(
     actor: Actor,
@@ -199,38 +223,17 @@ export class FreeFlyCamera extends CameraComponent {
     this.#forward.normalize();
     this.#right.crossVectors(this.#forward, this.#up).normalize();
 
+    this.#axes.update(input);
     this.#move.set(0, 0, 0);
-
-    if (
-      input.keyboard.isDown("KeyW") ||
-      input.keyboard.isDown("ArrowUp")
-    ) {
-      this.#move.addScaledVector(this.#forward, 1);
-    }
-    if (
-      input.keyboard.isDown("KeyS") ||
-      input.keyboard.isDown("ArrowDown")
-    ) {
-      this.#move.addScaledVector(this.#forward, -1);
-    }
-    if (
-      input.keyboard.isDown("KeyA") ||
-      input.keyboard.isDown("ArrowLeft")
-    ) {
-      this.#move.addScaledVector(this.#right, -1);
-    }
-    if (
-      input.keyboard.isDown("KeyD") ||
-      input.keyboard.isDown("ArrowRight")
-    ) {
-      this.#move.addScaledVector(this.#right, 1);
-    }
-    if (input.keyboard.isDown("Space")) {
-      this.#move.y += 1;
-    }
-    if (isDescending && !this.#descendBlocked) {
-      this.#move.y -= 1;
-    }
+    this.#move.addScaledVector(
+      this.#forward,
+      this.#axes.value("moveForward")
+    );
+    this.#move.addScaledVector(
+      this.#right,
+      this.#axes.value("moveRight")
+    );
+    this.#move.y += this.#axes.value("moveUp");
 
     if (this.#move.lengthSq() > 0) {
       this.#move.normalize().multiplyScalar(this.#moveSpeed);

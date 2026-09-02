@@ -1,8 +1,10 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-import type {
-  InputKeyboardAction,
-  MouseEventButton
+import {
+  Axis,
+  AxisMap,
+  type InputKeyboardAction,
+  type MouseEventButton
 } from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
@@ -28,8 +30,14 @@ export interface Camera3DControlsOptions extends CameraOptions {
   speed?: number;
 }
 
+type Camera3DControlsAxis =
+  | "moveX"
+  | "moveY"
+  | "moveZ";
+
 export class Camera3DControls extends CameraComponent<any> {
   #bindings: Required<NonNullable<Camera3DControlsOptions["bindings"]>>;
+  #axes: AxisMap<Camera3DControlsAxis>;
 
   maxRollUp: number;
   maxRollDown: number;
@@ -68,6 +76,12 @@ export class Camera3DControls extends CameraComponent<any> {
       down: bindings?.down ?? "ShiftLeft",
       lookAround: bindings?.lookAround ?? "middle"
     };
+
+    this.#axes = new AxisMap({
+      moveX: Axis.buttons(this.#bindings.right, this.#bindings.left),
+      moveY: Axis.buttons(this.#bindings.up, this.#bindings.down),
+      moveZ: Axis.buttons(this.#bindings.backward, this.#bindings.forward)
+    });
 
     this.maxRollUp = maxRollUp;
     this.maxRollDown = maxRollDown;
@@ -127,27 +141,13 @@ export class Camera3DControls extends CameraComponent<any> {
   ) {
     const { input } = this.actor.world;
 
-    const vector = this.#direction.set(0, 0, 0);
-    if (input.keyboard.isDown(this.#bindings.forward)) {
-      vector.z -= 1;
-    }
-    if (input.keyboard.isDown(this.#bindings.backward)) {
-      vector.z += 1;
-    }
-
-    if (input.keyboard.isDown(this.#bindings.up)) {
-      vector.y += 1;
-    }
-    if (input.keyboard.isDown(this.#bindings.down)) {
-      vector.y -= 1;
-    }
-
-    if (input.keyboard.isDown(this.#bindings.right)) {
-      vector.x += 1;
-    }
-    if (input.keyboard.isDown(this.#bindings.left)) {
-      vector.x -= 1;
-    }
+    this.#axes.update(input);
+    const vector = this.#axes.vector3(
+      "moveX",
+      "moveY",
+      "moveZ",
+      this.#direction
+    );
 
     const { transform } = this.actor;
     const distance = this.#movementSpeed * deltaTime;

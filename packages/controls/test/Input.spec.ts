@@ -86,7 +86,9 @@ describe("Controls.Input", () => {
       assert.strictEqual(localInput.devicePreference, "default");
 
       const fakeGamepad = mocks.Gamepad();
-      fakeGamepad.buttons[0].pressed = true;
+      const button = fakeGamepad.buttons[0];
+      assert.ok(button !== null);
+      button.pressed = true;
       windowAdapter.navigator.gamepads[0] = fakeGamepad;
 
       localInput.update();

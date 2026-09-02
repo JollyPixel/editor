@@ -9,7 +9,8 @@
     "prepublish": "rimraf ./dist && tsc -b",
     "build": "tsc",
     "test-only": "node --test test/**/*.spec.ts",
-    "test": "c8 -r html npm run test-only",
+    "test-types": "tstyche --tsconfig ./test/tsconfig.json",
+    "test": "c8 -r html npm run test-only && npm run test-types",
     "lint": "eslint src/**/*.ts",
     "bench": "jolly-bench"
   },
@@ -37,6 +38,7 @@
     "@openally/emitt": "1.0.1"
   },
   "devDependencies": {
-    "@jolly-pixel/bench": "*"
+    "@jolly-pixel/bench": "*",
+    "tstyche": "7.2.3"
   }
 }

@@ -2,7 +2,11 @@
 import {
   Input,
   InputCombination,
-  type InputDevicePreference
+  Axis,
+  AxisMap,
+  type InputDevicePreference,
+  type InputCondition,
+  type AxisSource
 } from "@jolly-pixel/controls";
 
 export * as Systems from "./systems/index.ts";
@@ -19,9 +23,13 @@ export * as Types from "./types.ts";
 
 export {
   Input,
-  InputCombination
+  InputCombination,
+  Axis,
+  AxisMap
 };
 
 export type {
-  InputDevicePreference
+  InputDevicePreference,
+  InputCondition,
+  AxisSource
 };
