@@ -67,8 +67,8 @@ interface InputCondition {
 condition-owned progress. Atomic conditions have no progress to clear;
 composite conditions forward the reset to their children.
 
-`InputCondition` and the atomic condition types are used by the public
-signatures but are not exported from the package root.
+`InputCondition`, `AtomicInput`, and the action aliases described below are
+exported from the package root.
 
 ## Action types
 
@@ -78,16 +78,24 @@ type CombinedInputState =
   | "pressed"
   | "released";
 
+type CombinedKeyboardInputAction =
+  `${ExtendedKeyCode}.${CombinedInputState}`;
+
+type CombinedMouseInputAction =
+  `${MouseAction}.${CombinedInputState}`;
+
 type CombinedInputAction =
-  `${ExtendedKeyCode | MouseAction}.${CombinedInputState}`;
+  | CombinedKeyboardInputAction
+  | CombinedMouseInputAction;
 ```
 
 `"down"` remains true while the control is held. `"pressed"` and
 `"released"` read the corresponding transition from the latest device
 update.
 
-The combined action and state aliases are not exported from the package root.
-Factory overloads still validate them at compile time.
+These action and state aliases are exported from the package root. Keyboard
+and mouse actions use separate types so a mouse action cannot reach a keyboard
+condition by mistake.
 
 ## Atomic conditions
 
@@ -95,11 +103,11 @@ Factory overloads still validate them at compile time.
 
 ```ts
 InputCombination.key(
-  action: CombinedInputAction
+  action: CombinedKeyboardInputAction
 ): AtomicInput
 
 InputCombination.key(
-  key: ExtendedKeyCode,
+  key: InputKeyboardAction,
   state?: CombinedInputState
 ): AtomicInput
 ```
@@ -110,13 +118,21 @@ Creates a keyboard condition. The state defaults to `"pressed"`.
 InputCombination.key("Space");
 InputCombination.key("KeyW", "down");
 InputCombination.key("ShiftLeft.released");
+InputCombination.key("ANY", "pressed");
+InputCombination.key("NONE", "down");
 ```
+
+`InputKeyboardAction` includes the `"ANY"` and `"NONE"` sentinels. They query
+the selected state across the whole keyboard, as described by
+[InputActionQuery](inputactionquery.md). Sentinels use the separate `state`
+argument; combined forms such as `"ANY.down"` are not part of
+`CombinedKeyboardInputAction`.
 
 ### `InputCombination.mouse()`
 
 ```ts
 InputCombination.mouse(
-  action: CombinedInputAction
+  action: CombinedMouseInputAction
 ): AtomicInput
 
 InputCombination.mouse(
@@ -151,8 +167,8 @@ InputCombination.gamepad(0, "A");
 InputCombination.gamepad(0, "LeftBumper", "down");
 ```
 
-The `AtomicInput` class returned by these methods is not exported from the
-package root.
+The `AtomicInput` class returned by these methods is exported from the package
+root.
 
 ## Combined-action detection
 
@@ -173,15 +189,14 @@ strings:
 ```ts
 type ConditionArgument =
   | InputCondition
-  | CombinedInputAction;
+  | CombinedKeyboardInputAction;
 ```
 
 The composite signatures below use `ConditionArgument` as a local
 documentation alias. It is not exported.
 
-A string passed directly to a composite is always converted with
-`InputCombination.key()`. Create mouse and gamepad conditions with their
-factories before passing them to a composite.
+A string passed directly to a composite is a keyboard action. Create mouse and
+gamepad conditions with their factories before passing them to a composite.
 
 ### `InputCombination.all()`
 
@@ -259,6 +274,10 @@ the current evaluation.
 milliseconds. `sequenceWithTimeout()` uses the supplied interval between
 matched steps.
 
+`timeoutMs` is used without validation. With the default clock, a negative
+value resets progress before each evaluation. `NaN` and `Infinity` prevent
+the sequence from expiring. An empty sequence always returns false.
+
 After the final child matches, the sequence returns true once and resets its
 progress. Calling `reset()` also resets every child.
 
@@ -274,7 +293,31 @@ const konami = InputCombination.sequenceWithTimeout(
 
 ## Concrete condition classes
 
-The package root exports the composite implementations:
+The package root exports the atomic and composite implementations. The
+factory methods above are the shorter way to build them.
+
+```ts
+new AtomicInput(
+  type: "key",
+  action: InputKeyboardAction,
+  state?: CombinedInputState
+)
+
+new AtomicInput(
+  type: "mouse",
+  action: MouseAction,
+  state?: CombinedInputState
+)
+
+new AtomicInput(
+  type: "gamepad",
+  action: [GamepadIndex, number | keyof typeof GamepadButton],
+  state?: CombinedInputState
+)
+```
+
+The low-level `CombinedInputType` and `AtomicInputAction` unions used by
+`AtomicInput` are also exported.
 
 ```ts
 new AllInputs(conditions: InputCondition[])
@@ -288,9 +331,5 @@ new SequenceInputs(
 )
 ```
 
-`SequenceInputs.DefaultTimeout` is mutable and defaults to `100`. The
-optional clock defaults to `Date.now` and allows deterministic sequence
-evaluation.
-
-The factory methods are the practical entry point because `InputCondition`
-cannot currently be imported from the package root.
+`SequenceInputs.DefaultTimeout` is mutable and defaults to `100`. The optional
+clock defaults to `Date.now` and allows deterministic sequence evaluation.

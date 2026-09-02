@@ -5,13 +5,16 @@ import {
   type MouseAction,
   type GamepadIndex,
   type GamepadButton,
-  type ExtendedKeyCode
+  type ExtendedKeyCode,
+  type InputKeyboardAction
 } from "./devices/index.ts";
 
 import {
   AtomicInput,
   type InputCondition,
   type CombinedInputAction,
+  type CombinedKeyboardInputAction,
+  type CombinedMouseInputAction,
   type CombinedInputState
 } from "./AtomicInput.ts";
 
@@ -30,15 +33,19 @@ export class AllInputs implements InputCondition {
   evaluate(
     input: Input
   ): boolean {
-    return this.#conditions.every(
-      (condition) => condition.evaluate(input)
-    );
+    for (const condition of this.#conditions) {
+      if (!condition.evaluate(input)) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   reset(): void {
-    this.#conditions.forEach(
-      (condition) => condition.reset()
-    );
+    for (const condition of this.#conditions) {
+      condition.reset();
+    }
   }
 }
 
@@ -57,15 +64,19 @@ export class AtLeastOneInput implements InputCondition {
   evaluate(
     input: Input
   ): boolean {
-    return this.#conditions.some(
-      (condition) => condition.evaluate(input)
-    );
+    for (const condition of this.#conditions) {
+      if (condition.evaluate(input)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   reset(): void {
-    this.#conditions.forEach(
-      (condition) => condition.reset()
-    );
+    for (const condition of this.#conditions) {
+      condition.reset();
+    }
   }
 }
 
@@ -84,15 +95,19 @@ export class NoneInputs implements InputCondition {
   evaluate(
     input: Input
   ): boolean {
-    return this.#conditions.every(
-      (condition) => !condition.evaluate(input)
-    );
+    for (const condition of this.#conditions) {
+      if (condition.evaluate(input)) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   reset(): void {
-    this.#conditions.forEach(
-      (condition) => condition.reset()
-    );
+    for (const condition of this.#conditions) {
+      condition.reset();
+    }
   }
 }
 
@@ -144,9 +159,9 @@ export class SequenceInputs implements InputCondition {
   reset(): void {
     this.#currentIndex = 0;
     this.#lastActivationTime = 0;
-    this.#conditions.forEach(
-      (condition) => condition.reset()
-    );
+    for (const condition of this.#conditions) {
+      condition.reset();
+    }
   }
 }
 
@@ -157,13 +172,13 @@ export class InputCombination {
     return typeof action === "string" && action.includes(".");
   }
 
-  static key(key: CombinedInputAction): AtomicInput;
+  static key(key: CombinedKeyboardInputAction): AtomicInput;
   static key(
-    key: ExtendedKeyCode,
+    key: InputKeyboardAction,
     state?: CombinedInputState
   ): AtomicInput;
   static key(
-    key: ExtendedKeyCode | CombinedInputAction,
+    key: InputKeyboardAction | CombinedKeyboardInputAction,
     state: CombinedInputState = "pressed"
   ): AtomicInput {
     if (InputCombination.isCombinedAction(key)) {
@@ -180,18 +195,18 @@ export class InputCombination {
 
     return new AtomicInput(
       "key",
-      key as ExtendedKeyCode,
+      key as InputKeyboardAction,
       state
     );
   }
 
-  static mouse(button: CombinedInputAction): AtomicInput;
+  static mouse(button: CombinedMouseInputAction): AtomicInput;
   static mouse(
     button: MouseAction,
     state?: CombinedInputState
   ): AtomicInput;
   static mouse(
-    button: MouseAction | CombinedInputAction,
+    button: MouseAction | CombinedMouseInputAction,
     state: CombinedInputState = "pressed"
   ): AtomicInput {
     if (InputCombination.isCombinedAction(button)) {
@@ -226,7 +241,7 @@ export class InputCombination {
   }
 
   static all(
-    ...conditions: (InputCondition | CombinedInputAction)[]
+    ...conditions: (InputCondition | CombinedKeyboardInputAction)[]
   ): AllInputs {
     return new AllInputs(
       conditions.map(
@@ -239,7 +254,7 @@ export class InputCombination {
   }
 
   static atLeastOne(
-    ...conditions: (InputCondition | CombinedInputAction)[]
+    ...conditions: (InputCondition | CombinedKeyboardInputAction)[]
   ): AtLeastOneInput {
     return new AtLeastOneInput(
       conditions.map(
@@ -252,7 +267,7 @@ export class InputCombination {
   }
 
   static none(
-    ...conditions: (InputCondition | CombinedInputAction)[]
+    ...conditions: (InputCondition | CombinedKeyboardInputAction)[]
   ): NoneInputs {
     return new NoneInputs(
       conditions.map(
@@ -265,7 +280,7 @@ export class InputCombination {
   }
 
   static sequence(
-    ...conditions: (InputCondition | CombinedInputAction)[]
+    ...conditions: (InputCondition | CombinedKeyboardInputAction)[]
   ): SequenceInputs {
     return new SequenceInputs(
       conditions.map(
@@ -279,7 +294,7 @@ export class InputCombination {
 
   static sequenceWithTimeout(
     timeoutMs: number,
-    ...conditions: (InputCondition | CombinedInputAction)[]
+    ...conditions: (InputCondition | CombinedKeyboardInputAction)[]
   ): SequenceInputs {
     return new SequenceInputs(
       conditions.map(

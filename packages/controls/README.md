@@ -68,6 +68,8 @@ if (dashCombo.evaluate(input)) {
   - [Gamepad](./docs/gamepad.md)
   - [Touchpad](./docs/touchpad.md)
   - [Screen](./docs/screen.md)
+- [AxisMap](./docs/axismap.md): named scalar axes built from keys, mouse
+  buttons, and gamepad sticks.
 - [InputCombination](./docs/combinedinput.md): composable input conditions for
   chords, alternatives, exclusions, and sequences.
 - [InputActionQuery](./docs/inputactionquery.md): dispatch helper for
@@ -75,8 +77,8 @@ if (dashCombo.evaluate(input)) {
 
 ## 🧪 Benchmarks
 
-The suites cover device updates, state queries, input combinations, and DOM
-event dispatch. They use headless adapters, so event benchmarks report
+The suites cover device updates, state queries, input combinations, axis
+resolution, and DOM event dispatch. They use headless adapters, so event benchmarks report
 `getBoundingClientRect()` call counts instead of browser layout timings.
 
 ```bash

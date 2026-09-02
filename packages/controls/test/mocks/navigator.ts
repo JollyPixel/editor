@@ -1,14 +1,40 @@
 // Import Node.js Dependencies
 import { mock } from "node:test";
 
-export function GamepadHapticActuator(): globalThis.GamepadHapticActuator {
-  return {
-    playEffect: mock.fn(() => Promise.resolve("complete")),
-    reset: mock.fn(() => Promise.resolve("complete"))
-  };
+// Import Internal Dependencies
+import type {
+  NavigatorAdapter as NavigatorAdapterContract
+} from "../../src/adapters/navigator.ts";
+
+export interface GamepadButtonMock {
+  pressed: boolean;
+  touched?: boolean;
+  value: number;
 }
 
-export function Gamepad(): any {
+export interface GamepadMock {
+  id: string;
+  index: number;
+  connected: boolean;
+  timestamp: number;
+  mapping: GamepadMappingType;
+  buttons: Array<GamepadButtonMock | null>;
+  axes: Array<number | null>;
+  vibrationActuator: ReturnType<typeof GamepadHapticActuator> | null;
+}
+
+export function GamepadHapticActuator() {
+  return {
+    playEffect: mock.fn<globalThis.GamepadHapticActuator["playEffect"]>(
+      () => Promise.resolve("complete")
+    ),
+    reset: mock.fn<globalThis.GamepadHapticActuator["reset"]>(
+      () => Promise.resolve("complete")
+    )
+  } satisfies globalThis.GamepadHapticActuator;
+}
+
+export function Gamepad(): GamepadMock {
   return {
     id: "mock-gamepad",
     index: 0,
@@ -23,11 +49,15 @@ export function Gamepad(): any {
   };
 }
 
-export class NavigatorAdapter {
-  gamepads = [null, null, null, null];
+export class NavigatorAdapter implements NavigatorAdapterContract {
+  gamepads: Array<GamepadMock | null> = [null, null, null, null];
 
   getGamepads(): (globalThis.Gamepad | null)[] {
-    return this.gamepads;
+    return this.toNativeGamepads();
+  }
+
+  toNativeGamepads(): (globalThis.Gamepad | null)[] {
+    return this.gamepads as unknown as (globalThis.Gamepad | null)[];
   }
 
   vibrate(_pattern: VibratePattern) {

@@ -11,7 +11,7 @@ import { GamepadVibration } from "../src/index.ts";
 import * as mocks from "./mocks/index.ts";
 
 describe("Controls.GamepadVibration", () => {
-  let actuator: globalThis.GamepadHapticActuator;
+  let actuator: ReturnType<typeof mocks.GamepadHapticActuator>;
   let vibration: GamepadVibration;
 
   beforeEach(() => {
