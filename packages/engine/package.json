@@ -37,7 +37,7 @@
     "@jolly-pixel/controls": "1.0.0",
     "@jolly-pixel/loop": "1.0.0",
     "@openally/emitt": "1.0.1",
-    "picomatch": "^4.0.3",
+    "picomatch": "4.0.7",
     "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
