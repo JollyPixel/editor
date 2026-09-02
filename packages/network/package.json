@@ -52,10 +52,10 @@
     "@openally/result": "3.1.0",
     "hyperid": "4.0.0",
     "loglayer": "9.4.0",
+    "picomatch": "4.0.7",
     "pino": "10.3.1",
     "ts-pattern": "5.9.0",
-    "ws": "8.21.3",
-    "picomatch": "^4.0.3"
+    "ws": "8.21.3"
   },
   "peerDependencies": {
     "vite": "^8.0.0"
