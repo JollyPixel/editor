@@ -21,6 +21,7 @@ export {
 } from "./AssetRecord.ts";
 export type {
   AssetRecordData,
+  AssetRecordFetchOptions,
   AssetRecordOptions
 } from "./AssetRecord.ts";
 export { AssetReference } from "./AssetReference.ts";
@@ -33,7 +34,9 @@ export type { AssetStatus } from "./runtime/AssetStore.ts";
 export {
   AssetAlreadyExistsError,
   AssetBatchLoadError,
+  AssetFetchError,
   AssetKindMismatchError,
+  AssetKindNotFoundError,
   AssetLoaderAlreadyExistsError,
   AssetLoaderNotFoundError,
   AssetNotReadyError,

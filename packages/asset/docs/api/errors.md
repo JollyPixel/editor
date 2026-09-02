@@ -10,7 +10,14 @@ All of them extend `Error` and set `name` to the class name.
 | `AssetAlreadyExistsError` | `AssetCatalog.add()` receives an existing ID |
 | `AssetNotFoundError` | A catalog operation cannot find the requested ID |
 | `AssetKindMismatchError` | A reference's expected kind differs from persisted or stored data |
+| `AssetKindNotFoundError` | `AssetCatalog.firstOfKind()` matches no record |
 | `UnsupportedAssetManifestError` | `AssetCatalog.parse()` receives a version other than `1` |
+| `AssetFetchError` | `AssetCatalog.fetch()` or `AssetRecord.fetch()` gets a non-2xx status |
+
+`AssetKindNotFoundError.kind` contains the requested kind. `AssetFetchError`
+carries the requested `url`, HTTP `status`, and `record`. Its `record` is
+`null` for catalog requests. Transport errors from the global `fetch`
+propagate unchanged.
 
 Invalid persistence shapes and empty string values throw `TypeError` rather
 than a package-specific error.
