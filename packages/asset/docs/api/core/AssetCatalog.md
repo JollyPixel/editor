@@ -8,6 +8,8 @@ component data.
 
 ```ts
 class AssetCatalog implements Iterable<AssetRecord> {
+  static async fetch(url?: string): Promise<AssetCatalog>;
+
   readonly size: number;
 
   constructor(records?: Iterable<AssetRecord>);
@@ -17,12 +19,18 @@ class AssetCatalog implements Iterable<AssetRecord> {
   replace(record: AssetRecord): this;
   remove(id: AssetId): AssetRecord;
   get(id: AssetId): AssetRecord;
+  byKind(kind: string): IterableIterator<AssetRecord>;
+  firstOfKind(kind: string): AssetRecord;
   resolve(reference: AssetReference<unknown>): AssetRecord;
   toJSON(): AssetManifestData;
 
   static parse(input: unknown): AssetCatalog;
 }
 ```
+
+`fetch()` requests `CATALOG_URL_PATH` by default and passes the JSON response
+to `parse()`. It throws `AssetFetchError` for non-2xx responses. Transport and
+JSON-decoding errors propagate unchanged, as do errors from `parse()`.
 
 Initial records pass through the same duplicate-ID check as `add()`.
 
@@ -33,6 +41,8 @@ Initial records pass through the same duplicate-ID check as `add()`.
 | `replace(record)` | Replaces an existing record and returns the catalog | `AssetNotFoundError` |
 | `remove(id)` | Removes and returns the record | `AssetNotFoundError` |
 | `get(id)` | Returns the record | `AssetNotFoundError` |
+| `byKind(kind)` | Iterates the records of one kind, in insertion order | None |
+| `firstOfKind(kind)` | Returns the first record of one kind | `AssetKindNotFoundError` |
 | `resolve(reference)` | Returns the record after checking its kind | `AssetNotFoundError` or `AssetKindMismatchError` |
 
 Replacing or removing a record does not evict a value already held by an
@@ -40,6 +50,13 @@ Replacing or removing a record does not evict a value already held by an
 for the runtime invalidation sequence.
 
 ## Iteration
+
+`byKind()` is lazy. A matching record removed before the iterator reaches it
+is skipped. `firstOfKind()` returns the first matching record:
+
+```ts
+const world = catalog.firstOfKind("voxelmap");
+```
 
 Direct iteration preserves insertion order:
 

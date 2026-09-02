@@ -33,5 +33,8 @@
     "test": "test"
   },
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "undici": "^7.29.0"
+  }
 }

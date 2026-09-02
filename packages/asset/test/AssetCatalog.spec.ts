@@ -7,6 +7,7 @@ import {
   AssetCatalog,
   AssetId,
   AssetKindMismatchError,
+  AssetKindNotFoundError,
   AssetRecord,
   AssetReference,
   AssetType
@@ -137,6 +138,74 @@ describe("AssetCatalog", () => {
         assets: []
       }),
       /version "2" is not supported/
+    );
+  });
+});
+
+describe("AssetCatalog kind lookup", () => {
+  function catalogOf(
+    ...kinds: string[]
+  ): AssetCatalog {
+    return new AssetCatalog(
+      kinds.map((kind, index) => new AssetRecord({
+        id: `asset-${index}`,
+        kind,
+        source: `project:/asset-${index}`
+      }))
+    );
+  }
+
+  test("byKind yields matching records in insertion order", () => {
+    const catalog = catalogOf("model", "texture", "model");
+
+    assert.deepEqual(
+      Array.from(
+        catalog.byKind("model"),
+        (record) => record.id.value
+      ),
+      ["asset-0", "asset-2"]
+    );
+  });
+
+  test("byKind yields nothing for an unknown kind", () => {
+    assert.deepEqual(
+      Array.from(catalogOf("model").byKind("texture")),
+      []
+    );
+  });
+
+  test("byKind is lazy", () => {
+    const catalog = catalogOf("model", "model");
+    const iterator = catalog.byKind("model");
+
+    assert.equal(iterator.next().value?.id.value, "asset-0");
+    catalog.remove(new AssetId("asset-1"));
+    assert.equal(iterator.next().done, true);
+  });
+
+  test("firstOfKind returns the first matching record", () => {
+    const catalog = catalogOf("texture", "model", "model");
+
+    assert.equal(
+      catalog.firstOfKind("model").id.value,
+      "asset-1"
+    );
+  });
+
+  test("firstOfKind throws when no record matches", () => {
+    assert.throws(
+      () => catalogOf("model").firstOfKind("texture"),
+      (error: AssetKindNotFoundError) => {
+        assert.ok(error instanceof AssetKindNotFoundError);
+        assert.equal(error.name, "AssetKindNotFoundError");
+        assert.equal(
+          error.message,
+          'The catalog holds no "texture" asset.'
+        );
+        assert.equal(error.kind, "texture");
+
+        return true;
+      }
     );
   });
 });

@@ -3,7 +3,11 @@ export {
   AssetBatchLoadError
 } from "./AssetBatchLoadError.ts";
 export type { AssetLoadFailure } from "./AssetBatchLoadError.ts";
+export { AssetFetchError } from "./AssetFetchError.ts";
 export { AssetKindMismatchError } from "./AssetKindMismatchError.ts";
+export {
+  AssetKindNotFoundError
+} from "./AssetKindNotFoundError.ts";
 export {
   AssetLoaderAlreadyExistsError
 } from "./AssetLoaderAlreadyExistsError.ts";

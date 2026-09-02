@@ -7,10 +7,17 @@ import {
 } from "./AssetRecord.ts";
 import { AssetAlreadyExistsError } from "./errors/AssetAlreadyExistsError.ts";
 import { AssetKindMismatchError } from "./errors/AssetKindMismatchError.ts";
+import {
+  AssetKindNotFoundError
+} from "./errors/AssetKindNotFoundError.ts";
 import { AssetNotFoundError } from "./errors/AssetNotFoundError.ts";
 import {
   UnsupportedAssetManifestError
 } from "./errors/UnsupportedAssetManifestError.ts";
+import { AssetFetchError } from "./errors/AssetFetchError.ts";
+import {
+  CATALOG_URL_PATH
+} from "./urls.ts";
 
 // CONSTANTS
 const kAssetManifestVersion = 1;
@@ -24,6 +31,22 @@ export interface AssetManifestData {
  * Owns the persistent asset records for one project or session.
  */
 export class AssetCatalog implements Iterable<AssetRecord> {
+  static async fetch(
+    url = CATALOG_URL_PATH
+  ): Promise<AssetCatalog> {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new AssetFetchError(
+        url,
+        response.status
+      );
+    }
+
+    return AssetCatalog.parse(
+      await response.json()
+    );
+  }
+
   #records = new Map<string, AssetRecord>();
 
   constructor(
@@ -87,6 +110,27 @@ export class AssetCatalog implements Iterable<AssetRecord> {
     }
 
     return record;
+  }
+
+  * byKind(
+    kind: string
+  ): IterableIterator<AssetRecord> {
+    for (const record of this.#records.values()) {
+      if (record.kind === kind) {
+        yield record;
+      }
+    }
+  }
+
+  firstOfKind(
+    kind: string
+  ): AssetRecord {
+    const first = this.byKind(kind).next();
+    if (first.done === true) {
+      throw new AssetKindNotFoundError(kind);
+    }
+
+    return first.value;
   }
 
   resolve(

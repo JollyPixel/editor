@@ -22,8 +22,6 @@ import {
 import {
   AssetCatalog,
   assetRoomName,
-  assetSourceUrl,
-  CATALOG_URL_PATH,
   type AssetRecord
 } from "@jolly-pixel/asset";
 // Register all jolly-* elements.
@@ -51,49 +49,12 @@ const kFallbackTileset: TilesetDefinition = {
   tileSize: 32
 };
 
-async function fetchAssetCatalog(): Promise<AssetCatalog> {
-  const response = await fetch(CATALOG_URL_PATH);
-  if (!response.ok) {
-    throw new Error(
-      `Asset catalog responded with ${response.status}.`
-    );
-  }
-
-  return AssetCatalog.parse(await response.json());
-}
-
-function firstRecordOfKind(
-  catalog: AssetCatalog,
-  kind: string
-): AssetRecord {
-  for (const record of catalog) {
-    if (record.kind === kind) {
-      return record;
-    }
-  }
-
-  throw new Error(
-    `The asset workspace holds no "${kind}" document.`
-  );
-}
-
-// VoxelEngine.load() requires tileset textures to be resident.
 async function preloadTilesets(
   record: AssetRecord | null,
   manager: THREE.LoadingManager
 ): Promise<TilesetSource[]> {
-  if (record === null) {
-    return loadTilesets([kFallbackTileset], { manager });
-  }
-
-  const response = await fetch(assetSourceUrl(record.source));
-  if (!response.ok) {
-    throw new Error(
-      `Voxel-map document responded with ${response.status}.`
-    );
-  }
-
-  const { tilesets } = parseVoxelWorld(await response.text());
+  const source = await record?.text();
+  const tilesets = source ? parseVoxelWorld(source).tilesets : [];
 
   return loadTilesets(
     tilesets.length > 0 ? tilesets : [kFallbackTileset],
@@ -124,12 +85,10 @@ let identity: EditorIdentity | undefined;
 if (!offline) {
   // Prompted before the socket opens: the username travels in the join request.
   identity = await resolveEditorIdentity();
-  const catalog = await fetchAssetCatalog();
-  const textureRecord = firstRecordOfKind(catalog, "pixelart");
-  worldRecord = firstRecordOfKind(catalog, "voxelmap");
-  const wsProtocol = location.protocol === "https:" ? "wss:" : "ws:";
+  const catalog = await AssetCatalog.fetch();
+  const textureRecord = catalog.firstOfKind("pixelart");
+  worldRecord = catalog.firstOfKind("voxelmap");
   const networkClient = new network.Client({
-    url: `${wsProtocol}//${location.host}/ws-sync`,
     identity: toPeerMetadata(identity)
   });
   textureRoom = networkClient.room<PixelNetworkCommand, PixelServerMessage>(
@@ -140,7 +99,10 @@ if (!offline) {
   );
 }
 
-const tilesets = await preloadTilesets(worldRecord, runtime.manager);
+const tilesets = await preloadTilesets(
+  worldRecord,
+  runtime.manager
+);
 
 const editorScene = new EditorScene(
   editorState,
@@ -168,7 +130,6 @@ await loadRuntime(runtime, {
   maxFps: Infinity
 });
 
-// Wait for first-frame scene initialization.
 const { vr, gridRenderer } = await editorScene.ready;
 if (sidebar) {
   sidebar.vr = vr;
