@@ -71,8 +71,7 @@ import {
   loadRuntime
 } from "@jolly-pixel/runtime";
 
-const canvas = document.querySelector("canvas")!;
-const runtime = await Runtime.create(canvas, {
+const runtime = await Runtime.create("canvas", {
   assets: {
     catalog: "/assets.json"
   }

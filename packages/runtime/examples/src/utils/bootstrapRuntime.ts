@@ -26,12 +26,7 @@ export async function bootstrapRuntime<
 ): Promise<Runtime<TContext>> {
   const { scene, loadingDelay, ...runtimeOptions } = options;
 
-  const canvas = document.querySelector<HTMLCanvasElement>("canvas");
-  if (!canvas) {
-    throw new Error("HTMLCanvasElement not found");
-  }
-
-  const runtime = await Runtime.create(canvas, runtimeOptions);
+  const runtime = await Runtime.create("canvas", runtimeOptions);
   await loadRuntime(runtime, { scene, loadingDelay })
     .catch(console.error);
 

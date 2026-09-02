@@ -53,12 +53,7 @@ const catalog = new AssetCatalog([
   })
 ]);
 
-const canvas = document.querySelector("canvas");
-if (!canvas) {
-  throw new Error("HTMLCanvasElement not found");
-}
-
-const runtime = await Runtime.create(canvas, {
+const runtime = await Runtime.create("canvas", {
   assets: {
     catalog,
     loaders: [{

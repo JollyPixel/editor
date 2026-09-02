@@ -32,17 +32,12 @@ import {
 const kSkyColor = "#c2e7ff";
 const kCenter = FLOOR_SIZE / 2;
 
-const canvas = document.querySelector("canvas");
-if (!(canvas instanceof HTMLCanvasElement)) {
-  throw new Error("HTMLCanvasElement not found");
-}
-
 const username = await resolveUsername();
 const tileset = createTerrainTileset();
 
 const tilesets = await loadTilesets([tileset.definition]);
 
-const runtime = await Runtime.create(canvas, {
+const runtime = await Runtime.create("canvas", {
   includePerformanceStats: false,
   focusCanvas: false
 });

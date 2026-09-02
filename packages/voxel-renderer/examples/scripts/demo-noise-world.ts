@@ -73,17 +73,12 @@ interface BuildReport {
   chunkCount: number;
 }
 
-const canvas = document.querySelector("canvas") as HTMLCanvasElement | null;
-if (!canvas) {
-  throw new Error("HTMLCanvasElement not found");
-}
-
 const settings = readSettings();
 const tileset = createTerrainTileset();
 
 const tilesets = await loadTilesets([tileset.definition]);
 
-const runtime = await Runtime.create(canvas, {
+const runtime = await Runtime.create("canvas", {
   includePerformanceStats: true,
   focusCanvas: false
 });

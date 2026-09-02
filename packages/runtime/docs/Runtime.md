@@ -32,12 +32,16 @@ interface RuntimeOptions<TContext = Systems.WorldDefaultContext> {
   loop?: FrameSchedulerOptions;
 }
 
-const runtime = await Runtime.create(canvas, {
+const runtime = await Runtime.create("canvas", {
   assets: {
     catalog: "/assets.json"
   }
 });
 ```
+
+The first argument is either an `HTMLCanvasElement` or a CSS selector matched
+against the document. A selector that matches nothing, or matches a non canvas
+element, throws.
 
 Place a persistent catalog in the Vite project's `public/` directory to serve
 it unchanged in development and copy it to the build output:
@@ -71,7 +75,7 @@ definitions receive the same Three.js loading manager and are added to the
 internal registry:
 
 ```ts
-const runtime = await Runtime.create(canvas, {
+const runtime = await Runtime.create("canvas", {
   assets: {
     catalog: "/assets.json",
     loaders: [
