@@ -103,10 +103,7 @@ async function initRuntime(): Promise<void> {
     return;
   }
 
-  const canvas = document.querySelector<HTMLCanvasElement>(
-    "#canvas-container > canvas"
-  )!;
-  const runtime = await Runtime.create(canvas, {
+  const runtime = await Runtime.create("#canvas-container > canvas", {
     includePerformanceStats: false,
     focusCanvas: false
   });

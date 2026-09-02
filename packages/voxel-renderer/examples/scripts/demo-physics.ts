@@ -29,18 +29,13 @@ const kPlatformMax = 19;
 const kPlatformHeight = 2;
 const kSphereRadius = 0.5;
 
-const canvas = document.querySelector("canvas") as HTMLCanvasElement | null;
-if (!canvas) {
-  throw new Error("HTMLCanvasElement not found");
-}
-
 // @dimforge/rapier3d 0.19.x loads its WASM binary via a static bundler import
 // (`import * as wasm from "./rapier_wasm3d_bg.wasm"`) — no explicit init() call
 // is required. Vite serves the .wasm file directly when the package is excluded
 // from pre-bundling (see vite.config.ts → optimizeDeps.exclude).
 const rapierWorld = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
 
-const runtime = await Runtime.create(canvas, {
+const runtime = await Runtime.create("canvas", {
   includePerformanceStats: true,
   focusCanvas: false
 });

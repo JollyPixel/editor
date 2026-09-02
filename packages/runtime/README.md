@@ -64,9 +64,7 @@ import {
   loadRuntime
 } from "@jolly-pixel/runtime";
 
-const canvas = document.querySelector("canvas")!;
-
-const runtime = await Runtime.create(canvas, {
+const runtime = await Runtime.create("canvas", {
   // Displays the JollyPixel performance HUD during development.
   includePerformanceStats: true,
   // Keeps keyboard focus on the canvas while the runtime is running.

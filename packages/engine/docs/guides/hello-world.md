@@ -95,12 +95,7 @@ Create `src/main.ts`:
 ```ts
 import { Runtime, loadRuntime } from "@jolly-pixel/runtime";
 
-const canvas = document.querySelector("canvas") as HTMLCanvasElement | null;
-if (!canvas) {
-  throw new Error("HTMLCanvasElement not found");
-}
-
-const runtime = await Runtime.create(canvas, {
+const runtime = await Runtime.create("canvas", {
   includePerformanceStats: true
 });
 

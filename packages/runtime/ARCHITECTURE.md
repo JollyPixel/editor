@@ -63,7 +63,7 @@ caller. The runtime does not start after a failed bootstrap.
 ## Runtime lifecycle
 
 ```
-Runtime.create(canvas)
+Runtime.create(target)
  │
  ├─ create ThreeRenderer
  ├─ create AssetCoordinator and World

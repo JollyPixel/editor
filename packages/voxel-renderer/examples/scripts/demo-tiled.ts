@@ -63,12 +63,7 @@ class TiledScene extends Systems.Scene {
   }
 }
 
-const canvas = document.querySelector("canvas") as HTMLCanvasElement | null;
-if (!canvas) {
-  throw new Error("HTMLCanvasElement not found");
-}
-
-const runtime = await Runtime.create(canvas, {
+const runtime = await Runtime.create("canvas", {
   includePerformanceStats: true,
   focusCanvas: false,
   assets: {

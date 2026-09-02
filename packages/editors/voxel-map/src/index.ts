@@ -62,14 +62,7 @@ async function preloadTilesets(
   );
 }
 
-const canvas = document.querySelector<HTMLCanvasElement>(
-  "#game-container > canvas"
-);
-if (!canvas) {
-  throw new Error("Canvas element not found");
-}
-
-const runtime = await Runtime.create(canvas, {
+const runtime = await Runtime.create("#game-container > canvas", {
   includePerformanceStats: {
     position: "top-right"
   },

@@ -25,6 +25,10 @@ import { RuntimeSceneLoader } from "./assets/RuntimeSceneLoader.ts";
 import {
   resolveRuntimeAssetOptions
 } from "./assets/resolveRuntimeAssetOptions.ts";
+import {
+  resolveRuntimeCanvas,
+  type RuntimeCanvasTarget
+} from "./resolveRuntimeCanvas.ts";
 import type {
   MountedPerformanceStats
 } from "./stats/mountPerformanceStats.ts";
@@ -32,7 +36,7 @@ import type {
   PerformanceStatsPosition
 } from "./stats/resolveStatsOverlayX.ts";
 
-export type { PerformanceStatsPosition };
+export type { PerformanceStatsPosition, RuntimeCanvasTarget };
 
 export interface RuntimeOptions<
   TContext = Systems.WorldDefaultContext
@@ -129,21 +133,13 @@ export class Runtime<
     );
   }
 
-  /**
-   * Resolves the asset catalog and initializes the renderer before creating
-   * the Runtime instance.
-   */
   static async create<
     TContext = Systems.WorldDefaultContext
   >(
-    canvas: HTMLCanvasElement,
+    target: RuntimeCanvasTarget,
     options: RuntimeOptions<TContext> = Object.create(null)
   ): Promise<Runtime<TContext>> {
-    if (!canvas) {
-      throw new Error(
-        "Canvas element is required to create a Runtime instance."
-      );
-    }
+    const canvas = resolveRuntimeCanvas(target);
 
     const sceneManager = new Systems.SceneManager<TContext>();
     const assets = await resolveRuntimeAssetOptions(options.assets);
@@ -229,10 +225,6 @@ export class Runtime<
     this.world.disconnect();
   }
 
-  /**
-   * Stops the runtime and releases the GPU context. Call this when the
-   * canvas is torn down; the Runtime must not be started again afterwards.
-   */
   dispose() {
     this.stop();
     this.#statsOverlay?.dispose();

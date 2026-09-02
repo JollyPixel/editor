@@ -9,8 +9,12 @@ export {
 export {
   Runtime,
   type PerformanceStatsPosition,
+  type RuntimeCanvasTarget,
   type RuntimeOptions
 } from "./Runtime.ts";
+export {
+  resolveRuntimeCanvas
+} from "./resolveRuntimeCanvas.ts";
 export {
   type RuntimeAssetCatalog,
   type RuntimeAssetLoaderDefinition,
