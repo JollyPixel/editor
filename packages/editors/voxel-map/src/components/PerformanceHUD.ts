@@ -18,6 +18,7 @@ import type * as THREE from "three/webgpu";
 
 // CONSTANTS
 const kToggleKey = "F3";
+const kStorageKey = "voxel-map:performance-hud";
 const kDebugModeOptions: Record<VoxelDebugMode, VoxelDebugMode> = {
   off: "off",
   overlay: "overlay",
@@ -87,7 +88,11 @@ export class PerformanceHUD extends ActorComponent {
     this.actor.world.renderer.onDraw(this.#captureFrame);
     this.#registerMetrics(renderer);
 
-    const pane = new Pane({ title: "Voxel Stats [F3]" });
+    const pane = new Pane({
+      title: "Voxel Stats [F3]",
+      storageKey: kStorageKey,
+      collapsible: true
+    });
     this.#pane = pane;
 
     const worldFolder = pane.addFolder({ title: "World" });

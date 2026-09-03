@@ -17,6 +17,7 @@
 | `minWidth` | `min-width` | `number` | `160` |
 | `minHeight` | `min-height` | `number` | `80` |
 | `dragging` | `dragging` | `boolean` | `false` |
+| `hidden` | `hidden` | `boolean` | `false` |
 | `storageKey` | `storage-key` | `string` | `""` |
 | `storage` | none | `StorageAdapter` | `LocalStorageAdapter` |
 
@@ -28,3 +29,12 @@ Movement emits `jolly-move` and `jolly-move-end` with `{ x, y }`. Resize events
 carry `{ width, height, collapsed }`. The component exposes
 `resize-handle-right`, `resize-handle-bottom`, and `resize-handle-corner` CSS
 parts. A dock layout sets `dragging` while it moves the window.
+
+## Persistence
+
+An unmanaged window saves `x`, `y`, `width` and `height` when a move or
+resize commits, and `hidden` whenever its owner changes it, then restores all
+five before its first render. Its namespace is `storageKey` when set, otherwise
+the page path plus the key of the pane it holds. A window inside a
+`jolly-dock-layout` writes nothing itself: the layout owns its state and is
+told to save instead.

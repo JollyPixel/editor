@@ -41,6 +41,7 @@ import { hiddenStyles } from "../theme/styles/hiddenStyles.ts";
 // CONSTANTS
 const kRootStack = new WeakMap<Document | ShadowRoot, number>();
 const kOwnedZIndex = "var(--jolly-floating-stack)";
+const kGeometryKeys = ["x", "y", "width", "height"] as const;
 
 @customElement("jolly-floating")
 export class Floating extends LitElement {
@@ -67,12 +68,11 @@ export class Floating extends LitElement {
   @property({ type: Number, attribute: "min-height" })
   declare minHeight: number;
 
-  /**
-   * Ghosts the window while a layout drags it, so what it passes over stays
-   * visible. Set by whoever runs the drag, not by the author.
-   */
   @property({ type: Boolean, reflect: true })
   declare dragging: boolean;
+
+  @property({ type: Boolean, reflect: true })
+  declare hidden: boolean;
 
   @property({ type: String, attribute: "storage-key" })
   declare storageKey: string;
@@ -131,6 +131,7 @@ export class Floating extends LitElement {
     this.minWidth = 160;
     this.minHeight = 80;
     this.dragging = false;
+    this.hidden = false;
     this.storageKey = "";
     this.storage = new LocalStorageAdapter();
   }
@@ -213,6 +214,13 @@ export class Floating extends LitElement {
       changed.has("minHeight")
     ) {
       this.#connectResizeHandles();
+    }
+
+    // Visibility never goes through a drag commit, so it saves itself. The
+    // first pass carries no previous value, and writing there would save a
+    // default over what was just restored.
+    if (changed.get("hidden") !== undefined) {
+      this.#state.write("hidden", String(this.hidden));
     }
   }
 
@@ -459,8 +467,7 @@ export class Floating extends LitElement {
   }
 
   #restore(): void {
-    const values = ["x", "y", "width", "height"] as const;
-    for (const key of values) {
+    for (const key of kGeometryKeys) {
       const stored = this.#state.read(key);
       if (stored === null) {
         continue;
@@ -471,11 +478,15 @@ export class Floating extends LitElement {
         this[key] = value;
       }
     }
+
+    const hidden = this.#state.read("hidden");
+    if (hidden !== null) {
+      this.hidden = hidden === "true";
+    }
   }
 
   #persist(): void {
-    const values = ["x", "y", "width", "height"] as const;
-    for (const key of values) {
+    for (const key of kGeometryKeys) {
       this.#state.write(key, String(this[key]));
     }
   }
