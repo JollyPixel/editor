@@ -56,10 +56,12 @@ the cell that owns the surface. Neither argument is modified.
 
 ## `VoxelWorld`
 
-Top-level container for a layered voxel scene. Layers are composited from highest `order`
-to lowest. The first visible layer with `opacity > 0` that has a voxel at a given position
-wins. This allows decorative layers to override base terrain non-destructively.
-A layer with `opacity === 0` is skipped during compositing exactly like an invisible one.
+Top-level container for a layered voxel scene. World reads examine layers from
+highest `order` to lowest. The first visible layer with `opacity > 0` that has a
+voxel at a given position wins. A layer with `opacity === 0` is skipped exactly
+like an invisible one. Render-time compositing applies separate rules for
+partially opaque layers, described in the
+[world model](../../concepts/world-model.md#layer-compositing).
 
 ### Constructor
 

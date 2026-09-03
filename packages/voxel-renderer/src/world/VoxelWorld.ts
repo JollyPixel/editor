@@ -46,7 +46,7 @@ export type IterableLayerChunk = {
 };
 
 /**
- * Layered voxel data composited by ascending `order`.
+ * Layered voxel data ordered from highest to lowest compositing priority.
  */
 export class VoxelWorld {
   readonly chunkSize: number;
