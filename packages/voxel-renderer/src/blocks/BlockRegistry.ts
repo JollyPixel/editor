@@ -68,6 +68,26 @@ export class BlockRegistry implements Iterable<ResolvedBlockDefinition> {
     return this;
   }
 
+  unregister(
+    id: number
+  ): boolean {
+    const removed = this.#blocks.delete(id);
+    if (removed) {
+      this.#version++;
+    }
+
+    return removed;
+  }
+
+  clear(): void {
+    if (this.#blocks.size === 0) {
+      return;
+    }
+
+    this.#blocks.clear();
+    this.#version++;
+  }
+
   get nextId(): number {
     return this.#highestId + 1;
   }

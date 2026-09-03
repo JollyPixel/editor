@@ -40,9 +40,25 @@ function makeBlock(
 
 function makeFakeVoxelRenderer(): { vr: VoxelRenderer; dirtyReasons: string[]; } {
   const dirtyReasons: string[] = [];
+  const registry = new BlockRegistry();
   const fake = {
     engine: {
-      blockRegistry: new BlockRegistry(),
+      blockRegistry: registry,
+      defineBlock: (def: ResolvedBlockDefinition) => {
+        fake.engine.defineBlocks([def]);
+      },
+      defineBlocks: (defs: Iterable<ResolvedBlockDefinition>) => {
+        const resolved = [...defs];
+        if (resolved.length === 0) {
+          return;
+        }
+
+        for (const def of resolved) {
+          registry.register(def);
+          editorState.dispatchBlockRegistryChanged();
+        }
+        dirtyReasons.push("block-defined");
+      },
       markAllChunksDirty: (reason: string) => {
         dirtyReasons.push(reason);
       }
@@ -174,7 +190,7 @@ describe("BlockUvBridge / region-moved", () => {
       const updated = vr.engine.blockRegistry.get(1)!;
       assert.equal(updated.defaultTexture!.col, 1.875);
       assert.equal(updated.defaultTexture!.row, 3.125);
-      assert.deepEqual(dirtyReasons, ["block definitions updated"]);
+      assert.deepEqual(dirtyReasons, ["block-defined"]);
     }
     finally {
       bridge.dispose();
@@ -218,7 +234,7 @@ describe("BlockUvBridge / region-dragging", () => {
       const updated = vr.engine.blockRegistry.get(1)!;
       assert.equal(updated.defaultTexture!.col, 2);
       assert.equal(updated.defaultTexture!.row, 1);
-      assert.deepEqual(dirtyReasons, ["block definitions updated"]);
+      assert.deepEqual(dirtyReasons, ["block-defined"]);
     }
     finally {
       bridge.dispose();
@@ -278,7 +294,7 @@ describe("BlockUvBridge / region-dragging", () => {
 
       assert.deepEqual(
         dirtyReasons,
-        ["block definitions updated"],
+        ["block-defined"],
         "the drag already wrote it; the release must not remesh a second time"
       );
     }

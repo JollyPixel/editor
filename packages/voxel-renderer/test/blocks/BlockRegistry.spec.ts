@@ -6,7 +6,10 @@ import assert from "node:assert/strict";
 import type { BlockDefinition } from "../../src/blocks/BlockDefinition.ts";
 import { BlockRegistry } from "../../src/blocks/BlockRegistry.ts";
 import { FACE } from "../../src/utils/math.ts";
-import { DEFAULT_TEXTURE } from "../helpers/blocks.ts";
+import {
+  DEFAULT_TEXTURE,
+  makeBlockDef
+} from "../helpers/blocks.ts";
 
 function makeDef(
   id: number,
@@ -422,5 +425,51 @@ describe("BlockRegistry version", () => {
     ]);
 
     assert.equal(registry.version, 1);
+  });
+});
+
+describe("BlockRegistry.unregister", () => {
+  it("removes the definition and reports the removal", () => {
+    const registry = new BlockRegistry([makeBlockDef(3, "cube")]);
+
+    assert.equal(registry.unregister(3), true);
+    assert.equal(registry.has(3), false);
+  });
+
+  it("reports nothing removed for an unknown id, and leaves version alone", () => {
+    const registry = new BlockRegistry([makeBlockDef(3, "cube")]);
+    const { version } = registry;
+
+    assert.equal(registry.unregister(99), false);
+    assert.equal(registry.version, version);
+  });
+
+  it("never recycles the id, so nextId keeps climbing", () => {
+    const registry = new BlockRegistry([makeBlockDef(3, "cube")]);
+
+    registry.unregister(3);
+
+    assert.equal(registry.nextId, 4);
+  });
+});
+
+describe("BlockRegistry.clear", () => {
+  it("drops every definition", () => {
+    const registry = new BlockRegistry([
+      makeBlockDef(1, "cube"),
+      makeBlockDef(2, "cube")
+    ]);
+
+    registry.clear();
+
+    assert.deepEqual([...registry.getAll()], []);
+  });
+
+  it("leaves version alone when there is nothing to clear", () => {
+    const registry = new BlockRegistry();
+
+    registry.clear();
+
+    assert.equal(registry.version, 0);
   });
 });

@@ -4,6 +4,8 @@ import * as network from "@jolly-pixel/network/client";
 // Import Internal Dependencies
 import type { VoxelEngine } from "../VoxelEngine.ts";
 import type {
+  VoxelBlockHookEvent,
+  VoxelBlockHookListener,
   VoxelLayerHookEvent,
   VoxelLayerHookListener
 } from "../hooks.ts";
@@ -13,6 +15,7 @@ import type {
   VoxelServerMessage,
   VoxelWorldReplaceCommand
 } from "./types.ts";
+import { isVoxelBlockCommand } from "./VoxelCommandValidator.ts";
 
 export interface VoxelSyncClientOptions {
   room: network.Room<VoxelNetworkCommand, VoxelServerMessage>;
@@ -24,10 +27,41 @@ export class VoxelSyncClient extends network.SyncAdapter<
   VoxelNetworkCommand,
   VoxelWorldJSON
 > {
+  #engine: VoxelEngine | undefined;
+  #previousBlockHandler: VoxelBlockHookListener | undefined;
+  #applyingRemote = false;
+
   constructor(
     options: VoxelSyncClientOptions
   ) {
     super(options.room);
+  }
+
+  override attach(
+    engine: VoxelEngine
+  ): void {
+    super.attach(engine);
+
+    this.#engine = engine;
+    this.#previousBlockHandler = engine.onBlockUpdated;
+    engine.onBlockUpdated = (event) => {
+      this.#previousBlockHandler?.(event);
+      if (!this.#applyingRemote) {
+        this.room.send(
+          this.stampCommand<VoxelBlockHookEvent>(event)
+        );
+      }
+    };
+  }
+
+  override detach(): void {
+    if (this.#engine) {
+      this.#engine.onBlockUpdated = this.#previousBlockHandler;
+      this.#previousBlockHandler = undefined;
+      this.#engine = undefined;
+    }
+
+    super.detach();
   }
 
   protected getHandler(
@@ -58,7 +92,23 @@ export class VoxelSyncClient extends network.SyncAdapter<
       return;
     }
 
-    engine.applyRemoteCommand(cmd);
+    if (isVoxelBlockCommand(cmd)) {
+      this.#applyingRemote = true;
+      try {
+        if (cmd.action === "block-removed") {
+          engine.removeBlock(cmd.blockId);
+        }
+        else {
+          engine.defineBlock(cmd.block);
+        }
+      }
+      finally {
+        this.#applyingRemote = false;
+      }
+    }
+    else {
+      engine.applyRemoteCommand(cmd);
+    }
   }
 
   replaceWorld(

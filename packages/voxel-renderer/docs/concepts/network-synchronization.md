@@ -25,9 +25,15 @@ the received mutation from being sent back to the server.
 ## Snapshots
 
 A newly connected client receives a full `VoxelWorldJSON` snapshot. The server
-owns voxel and object-layer state but does not load render resources, so its
-snapshot has no tileset or block definitions. Clients prepare those resources
-before joining.
+owns voxel, object-layer, and block-definition state, but does not load render
+resources, so its snapshot has no tileset definitions. Clients prepare those
+resources before joining.
+
+A block definition is not a layer mutation, so it travels on its own engine
+hook as a `"block-defined"` or `"block-removed"` command. `attach()` chains
+that hook exactly as it chains `onLayerUpdated`, so a client publishes block
+edits without asking; the definitions the server accumulates ride along in
+every later snapshot.
 
 `"world-replace"` replaces the authoritative state and broadcasts another
 snapshot. It bypasses conflict arbitration.

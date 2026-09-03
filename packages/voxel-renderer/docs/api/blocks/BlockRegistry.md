@@ -20,6 +20,8 @@ class BlockRegistry implements Iterable<ResolvedBlockDefinition> {
     definitions: Iterable<BlockDefinition>,
     options?: BlockRegisterManyOptions
   ): this;
+  unregister(id: number): boolean;
+  clear(): void;
   get(id: number): ResolvedBlockDefinition | undefined;
   has(id: number): boolean;
   getAll(): IterableIterator<ResolvedBlockDefinition>;
@@ -33,6 +35,11 @@ the ID. It throws for `AIR_BLOCK_ID`.
 `registerMany()` applies the same operation to each input. With
 `skipExisting: true`, an existing local definition wins. This is used when a
 saved document or converter output embeds block definitions.
+
+`unregister()` drops the definition and reports whether one was there.
+`clear()` drops every definition. Neither lowers `nextId`: an ID is never
+recycled, so a removed ID cannot later name a different block while a peer
+still references it.
 
 `nextId` is one above the highest ID ever registered. It never returns `0` and
 does not reuse gaps. It is not clamped to `MAX_BLOCK_ID`; packing a larger ID

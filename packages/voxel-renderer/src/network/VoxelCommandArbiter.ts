@@ -13,9 +13,6 @@ export interface VoxelCommandArbiterOptions {
   conflictResolver?: network.ConflictResolver<VoxelNetworkCommand>;
 }
 
-/**
- * Resolves command conflicts; `world-replace` bypasses arbitration.
- */
 export class VoxelCommandArbiter {
   #tracker: network.ConflictTracker<VoxelNetworkCommand>;
 
@@ -55,6 +52,13 @@ export class VoxelCommandArbiter {
       const { x, y, z } = command.metadata.position;
 
       return `${command.layerName}:${x},${y},${z}`;
+    }
+
+    if (command.action === "block-defined") {
+      return `block:${command.block.id}`;
+    }
+    if (command.action === "block-removed") {
+      return `block:${command.blockId}`;
     }
 
     return null;

@@ -8,7 +8,10 @@ import type { VoxelColliderFactory } from "./collision/VoxelCollider.ts";
 import type { VoxelDebuggerOptions } from "./debug/VoxelDebugger.ts";
 import type { TilesetSource } from "./tileset/loadTilesets.ts";
 import type { ViewDistanceOptions } from "./world/ViewDistance.ts";
-import type { VoxelLayerHookListener } from "./hooks.ts";
+import type {
+  VoxelBlockHookListener,
+  VoxelLayerHookListener
+} from "./hooks.ts";
 import type { VoxelLogger } from "./utils/logger.ts";
 
 export const VoxelRotation = {
@@ -80,6 +83,8 @@ export interface VoxelEngineOptions {
    * Receives local layer mutations for external synchronization.
    */
   onLayerUpdated?: VoxelLayerHookListener;
+
+  onBlockUpdated?: VoxelBlockHookListener;
 
   /**
    * Initial debug view; counters are collected in every mode.

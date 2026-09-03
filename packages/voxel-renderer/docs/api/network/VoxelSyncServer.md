@@ -13,12 +13,14 @@ interface VoxelSyncServerOptions {
   world?: VoxelWorld;
   chunkSize?: number;
   conflictResolver?: network.ConflictResolver<VoxelNetworkCommand>;
+  blocks?: BlockRegistry;
 }
 
 class VoxelSyncServer extends network.Extension {
   readonly id: string;
   readonly name: "voxel.renderer";
   readonly world: VoxelWorld;
+  readonly blocks: BlockRegistry;
   readonly events: readonly string[];
 
   constructor(options?: VoxelSyncServerOptions);
@@ -39,12 +41,23 @@ class VoxelSyncServer extends network.Extension {
 ```
 
 `id` defaults to `"voxel-map"`. When `world` is omitted, the server creates one
-with `chunkSize`, which defaults to `16`.
+with `chunkSize`, which defaults to `16`. When `blocks` is omitted, the server
+creates an empty registry.
 
 `onClientConnect()` sends the current snapshot. `onMessage()` performs the
-shallow command-marker check before calling `receive()`. Invalid mutations and
-world replacements are logged and dropped.
+shallow command-marker check before calling `receive()`.
+
+`receive()` drops a voxel mutation whose layer no longer exists, which is a
+normal race when a peer removes a layer mid-edit: nothing is applied and
+nothing is broadcast. Any other invalid command throws, and the transport
+(`Server`) drops that envelope and logs it with its client and room. A command
+that throws is neither recorded by the conflict tracker nor broadcast.
 
 `name` provides the rights namespace. `events` contains the layer hook action
-vocabulary but excludes `"world-replace"`. `snapshot()` serializes the world
-without tileset metadata or block definitions.
+vocabulary plus `VOXEL_BLOCK_HOOK_ACTIONS`, but excludes `"world-replace"`.
+`snapshot()` serializes the world with its block definitions and without
+tileset metadata.
+
+Block commands are folded into `blocks` and broadcast. A world replacement
+leaves the registry alone unless the document carries a block table, in which
+case that table replaces it.

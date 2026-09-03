@@ -78,8 +78,11 @@ layers. It throws `InvalidVoxelDocumentError` when the document is malformed or
 its chunk size differs from the target world. The target is left unchanged on
 those failures.
 
-Embedded block definitions are registered when `options.blocks` is supplied.
-Existing IDs are kept, so local definitions take precedence.
+Embedded block definitions are registered when `options.blocks` is supplied. A
+document carrying a `blocks` array is authoritative: the registry is emptied
+and refilled from it, after the document has parsed, so a rejected document
+leaves the registry untouched. A document without one leaves the registry
+alone, which keeps a legacy document from wiping a caller's blocks.
 
 See [saving and loading worlds](../../guides/saving-and-loading-worlds.md) for
 the application workflow.

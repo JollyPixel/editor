@@ -13,7 +13,10 @@ import {
 } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
-import { isVoxelNetworkCommand } from "../network/VoxelCommandValidator.ts";
+import {
+  isVoxelBlockCommand,
+  isVoxelNetworkCommand
+} from "../network/VoxelCommandValidator.ts";
 import {
   decodeVoxelDocument,
   encodeVoxelDocument,
@@ -21,6 +24,7 @@ import {
 } from "../serialization/document.ts";
 import { VoxelMapAssetExtension } from "./VoxelMapAssetExtension.ts";
 import { VoxelMapState } from "./VoxelMapState.ts";
+import { applyBlockCommand } from "../network/applyBlockCommand.ts";
 import type { VoxelNetworkCommand } from "../network/types.ts";
 
 export const VOXEL_MAP_KIND = "voxelmap";
@@ -147,6 +151,12 @@ function applyEvent(
     state.load(
       parseVoxelDocument(command.data)
     );
+
+    return;
+  }
+
+  if (isVoxelBlockCommand(command)) {
+    applyBlockCommand(state.blocks, command);
 
     return;
   }

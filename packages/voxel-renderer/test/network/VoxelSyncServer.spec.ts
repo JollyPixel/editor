@@ -12,7 +12,16 @@ import {
 } from "../../src/network/VoxelSyncServer.ts";
 import { VoxelWorld } from "../../src/world/VoxelWorld.ts";
 import type { VoxelNetworkCommand, VoxelServerMessage } from "../../src/network/types.ts";
-import { makeAddedCommand, voxelSetCmd } from "../helpers/networkCommands.ts";
+import {
+  blockDefinedCmd,
+  makeAddedCommand,
+  voxelSetCmd,
+  worldReplaceCmd
+} from "../helpers/networkCommands.ts";
+import { AIR_BLOCK_ID } from "../../src/blocks/BlockId.ts";
+import {
+  InvalidVoxelDocumentError
+} from "../../src/serialization/errors/InvalidVoxelDocumentError.ts";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -296,7 +305,7 @@ describe("VoxelSyncServer — receive: LWW conflict resolution", () => {
   });
 });
 
-describe("VoxelSyncServer — receive: invalid commands are dropped, not thrown", () => {
+describe("VoxelSyncServer — receive: unknown-layer mutations are dropped", () => {
   it("does not throw when a command targets a layer the server doesn't know about", () => {
     const server = new VoxelSyncServer();
     // No "Ground" layer created — the server world is empty.
@@ -306,7 +315,7 @@ describe("VoxelSyncServer — receive: invalid commands are dropped, not thrown"
     });
   });
 
-  it("does not broadcast a command that fails to apply", () => {
+  it("does not broadcast a command that targets an unknown layer", () => {
     const server = new VoxelSyncServer();
 
     const client = createClient("A");
@@ -318,7 +327,7 @@ describe("VoxelSyncServer — receive: invalid commands are dropped, not thrown"
     assert.equal(client.received.length, 0);
   });
 
-  it("keeps the server usable for subsequent valid commands after dropping an invalid one", () => {
+  it("keeps the server usable for subsequent valid commands after dropping one", () => {
     const server = new VoxelSyncServer();
     server.world.addLayer("Ground");
 
@@ -333,6 +342,71 @@ describe("VoxelSyncServer — receive: invalid commands are dropped, not thrown"
   });
 });
 
+describe("VoxelSyncServer — receive: invalid payloads throw", () => {
+  it("throws on a world-replace whose chunkSize does not match the world", () => {
+    const server = new VoxelSyncServer({ chunkSize: 16 });
+
+    assert.throws(
+      () => server.receive(worldReplaceCmd({ chunkSize: 32 }), noopRoom),
+      InvalidVoxelDocumentError
+    );
+  });
+
+  it("does not broadcast a world-replace it rejected", () => {
+    const server = new VoxelSyncServer({ chunkSize: 16 });
+
+    const client = createClient("A");
+    const room = observe(server, client);
+    client.received.length = 0;
+
+    assert.throws(
+      () => server.receive(worldReplaceCmd({ chunkSize: 32 }), room)
+    );
+    assert.equal(client.received.length, 0);
+  });
+
+  it("throws on a block definition using the reserved air id", () => {
+    const server = new VoxelSyncServer();
+
+    assert.throws(
+      () => server.receive(blockDefinedCmd({ id: AIR_BLOCK_ID }), noopRoom),
+      /reserved for air/
+    );
+    assert.equal(server.blocks.has(AIR_BLOCK_ID), false);
+  });
+
+  it("does not broadcast a block command it rejected", () => {
+    const server = new VoxelSyncServer();
+
+    const client = createClient("A");
+    const room = observe(server, client);
+    client.received.length = 0;
+
+    assert.throws(
+      () => server.receive(blockDefinedCmd({ id: AIR_BLOCK_ID }), room)
+    );
+    assert.equal(client.received.length, 0);
+  });
+
+  it("stays usable once an invalid payload has thrown", () => {
+    const server = new VoxelSyncServer();
+    server.world.addLayer("Ground");
+
+    assert.throws(
+      () => server.receive(blockDefinedCmd({ id: AIR_BLOCK_ID }), noopRoom)
+    );
+    server.receive(
+      voxelSetCmd({ layerName: "Ground", x: 1, y: 2, z: 3, blockId: 5 }),
+      noopRoom
+    );
+
+    const entry = server.world
+      .getLayer("Ground")
+      ?.getVoxelAt({ x: 1, y: 2, z: 3 });
+    assert.equal(entry?.blockId, 5);
+  });
+});
+
 describe("VoxelSyncServer — rights", () => {
   it("exposes a stable name shared by every instance, for rights-table namespacing", () => {
     assert.equal(new VoxelSyncServer({ id: "voxel-map:world-1" }).name, "voxel.renderer");
@@ -344,7 +418,9 @@ describe("VoxelSyncServer — rights", () => {
 
     assert.ok(server.events.includes("voxel-set"));
     assert.ok(server.events.includes("object-added"));
-    assert.equal(server.events.length, 17);
+    assert.ok(server.events.includes("block-defined"));
+    assert.ok(server.events.includes("block-removed"));
+    assert.equal(server.events.length, 19);
   });
 
   it("getEventName() reads the command's action", () => {
@@ -441,5 +517,108 @@ describe("VoxelSyncServer — custom world / id", () => {
       new VoxelSyncServer({ id: "voxel-map:world-2" }).id,
       "voxel-map:world-2"
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// block commands
+// ---------------------------------------------------------------------------
+
+describe("VoxelSyncServer — block commands", () => {
+  it("registers a definition and carries it in the snapshot", () => {
+    const server = new VoxelSyncServer();
+
+    server.receive(
+      blockDefinedCmd({
+        id: 3,
+        shapeId: "slope"
+      }),
+      noopRoom
+    );
+
+    assert.equal(server.blocks.get(3)?.shapeId, "slope");
+    assert.deepEqual(
+      server.snapshot().blocks?.map((block) => block.id),
+      [3]
+    );
+  });
+
+  it("broadcasts the command it accepted", () => {
+    const server = new VoxelSyncServer();
+    const client = createClient("client-B");
+    const context = observe(server, client);
+    client.received.length = 0;
+
+    server.receive(blockDefinedCmd({ id: 3 }), context);
+
+    assert.equal(client.received.length, 1);
+    assert.equal(client.received[0].type, "command");
+  });
+
+  it("drops an older edit of the same block", () => {
+    const server = new VoxelSyncServer();
+
+    server.receive(
+      blockDefinedCmd({
+        id: 3,
+        shapeId: "slope",
+        clientId: "late",
+        timestamp: 2000
+      }),
+      noopRoom
+    );
+    server.receive(
+      blockDefinedCmd({
+        id: 3,
+        shapeId: "cube",
+        clientId: "early",
+        timestamp: 1000
+      }),
+      noopRoom
+    );
+
+    assert.equal(server.blocks.get(3)?.shapeId, "slope");
+  });
+
+  it("removes a definition on block-removed", () => {
+    const server = new VoxelSyncServer();
+    server.receive(blockDefinedCmd({ id: 3 }), noopRoom);
+
+    server.receive(
+      {
+        action: "block-removed",
+        blockId: 3,
+        clientId: "client-A",
+        seq: 2,
+        timestamp: 2000
+      },
+      noopRoom
+    );
+
+    assert.equal(server.blocks.has(3), false);
+  });
+
+  it("a world-replace replaces the block table", () => {
+    const server = new VoxelSyncServer();
+    server.receive(blockDefinedCmd({ id: 3 }), noopRoom);
+
+    server.receive(
+      {
+        action: "world-replace",
+        data: {
+          version: 1,
+          chunkSize: 16,
+          tilesets: [],
+          blocks: [],
+          layers: []
+        },
+        clientId: "client-A",
+        seq: 2,
+        timestamp: 2000
+      },
+      noopRoom
+    );
+
+    assert.equal(server.blocks.has(3), false);
   });
 });

@@ -8,10 +8,27 @@ import {
   serializeVoxelWorld
 } from "../serialization/world.ts";
 import type { VoxelWorldJSON } from "../serialization/types.ts";
-import { VOXEL_LAYER_HOOK_ACTIONS } from "../hooks.ts";
-import { isVoxelNetworkCommand } from "./VoxelCommandValidator.ts";
+import {
+  VOXEL_BLOCK_HOOK_ACTIONS,
+  VOXEL_LAYER_HOOK_ACTIONS,
+  type VoxelLayerHookAction
+} from "../hooks.ts";
+import { BlockRegistry } from "../blocks/BlockRegistry.ts";
+import {
+  isVoxelBlockCommand,
+  isVoxelNetworkCommand
+} from "./VoxelCommandValidator.ts";
 import { VoxelCommandArbiter } from "./VoxelCommandArbiter.ts";
+import { applyBlockCommand } from "./applyBlockCommand.ts";
 import type { VoxelNetworkCommand } from "./types.ts";
+
+// CONSTANTS
+const kVoxelMutationActions = new Set<VoxelLayerHookAction>([
+  "voxel-set",
+  "voxel-removed",
+  "voxels-set",
+  "voxels-removed"
+]);
 
 export type ClientHandle = network.ClientHandle;
 
@@ -35,16 +52,21 @@ export interface VoxelSyncServerOptions {
    * @default network.LastWriteWinsResolver
    */
   conflictResolver?: network.ConflictResolver<VoxelNetworkCommand>;
+  /**
+   * Authoritative block definitions; omission creates an empty registry.
+   */
+  blocks?: BlockRegistry;
 }
 
-/**
- * Headless, server-authoritative voxel world manager.
- */
 export class VoxelSyncServer extends network.Extension {
   readonly id: string;
   readonly name = "voxel.renderer";
   readonly world: VoxelWorld;
-  readonly events: readonly string[] = VOXEL_LAYER_HOOK_ACTIONS;
+  readonly blocks: BlockRegistry;
+  readonly events: readonly string[] = [
+    ...VOXEL_LAYER_HOOK_ACTIONS,
+    ...VOXEL_BLOCK_HOOK_ACTIONS
+  ];
 
   #arbiter: VoxelCommandArbiter;
 
@@ -56,11 +78,13 @@ export class VoxelSyncServer extends network.Extension {
       id = "voxel-map",
       world,
       chunkSize = 16,
-      conflictResolver
+      conflictResolver,
+      blocks
     } = options;
 
     this.id = id;
     this.world = world ?? new VoxelWorld(chunkSize);
+    this.blocks = blocks ?? new BlockRegistry();
     this.#arbiter = new VoxelCommandArbiter({
       conflictResolver
     });
@@ -109,20 +133,11 @@ export class VoxelSyncServer extends network.Extension {
     context: network.RoomContext
   ): void {
     if (cmd.action === "world-replace") {
-      try {
-        deserializeVoxelWorld(
-          cmd.data,
-          this.world
-        );
-      }
-      catch (error) {
-        console.error(
-          "VoxelSyncServer: dropped invalid world-replace:",
-          error
-        );
-
-        return;
-      }
+      deserializeVoxelWorld(
+        cmd.data,
+        this.world,
+        { blocks: this.blocks }
+      );
 
       context.room.broadcast({
         type: "snapshot",
@@ -136,16 +151,19 @@ export class VoxelSyncServer extends network.Extension {
       return;
     }
 
-    try {
-      this.world.applyRemoteCommand(cmd);
+    if (isVoxelBlockCommand(cmd)) {
+      applyBlockCommand(this.blocks, cmd);
     }
-    catch (error) {
-      console.error(
-        `VoxelSyncServer: dropped invalid command (action="${cmd.action}", layerName="${cmd.layerName}"):`,
-        error
-      );
+    else {
+      // A peer may have removed the layer while the command was in flight.
+      if (
+        kVoxelMutationActions.has(cmd.action) &&
+        this.world.getLayer(cmd.layerName) === undefined
+      ) {
+        return;
+      }
 
-      return;
+      this.world.applyRemoteCommand(cmd);
     }
 
     this.#arbiter.record(cmd);
@@ -163,6 +181,8 @@ export class VoxelSyncServer extends network.Extension {
   }
 
   snapshot(): VoxelWorldJSON {
-    return serializeVoxelWorld(this.world);
+    return serializeVoxelWorld(this.world, {
+      blocks: this.blocks
+    });
   }
 }

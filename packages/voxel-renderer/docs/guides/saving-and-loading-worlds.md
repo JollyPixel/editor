@@ -28,8 +28,9 @@ engine.load(document);
 ```
 
 Every referenced tileset must be registered by the time `load()` applies the
-document. Embedded block definitions are registered only when the same ID is
-not already present, so local definitions win.
+document. A document carrying block definitions replaces the registry with
+them, so a saved shape survives the load. A document without any leaves the
+registry alone.
 
 Use `parseVoxelDocument()` before treating an unknown JavaScript value as a
 voxel document. Use `encodeVoxelDocument()` and `decodeVoxelDocument()` when a

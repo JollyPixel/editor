@@ -3,8 +3,10 @@
 The asset subpath exports the handler, event-sourced state, and network
 extension used by `@jolly-pixel/asset-server`.
 
-The subpath also re-exports the voxel document codec and the tileset definition
-helpers used by server integrations.
+The subpath also re-exports the voxel document codec, the tileset definition
+helpers, and `BlockRegistry` with `blocksFromTileset()`, so a server can seed
+a document with its authoritative block set without importing the renderer
+entry point.
 
 ## `voxelMapAssetHandler`
 
@@ -40,12 +42,13 @@ valid state.
 
 ## `VoxelMapState`
 
-`VoxelMapState` owns the headless world and tileset metadata for one persisted
-voxel map.
+`VoxelMapState` owns the headless world, tileset metadata, and block table for
+one persisted voxel map.
 
 ```ts
 class VoxelMapState {
   readonly world: VoxelWorld;
+  readonly blocks: BlockRegistry;
   tilesets: TilesetDefinition[];
 
   constructor(chunkSize: number);
@@ -55,13 +58,14 @@ class VoxelMapState {
 }
 ```
 
-`VoxelWorld` does not own the tileset list carried by a document, so the state
-stores both. `load()` replaces the world and copies the document's tilesets.
-`clear()` removes all world layers and resets the list.
+`VoxelWorld` owns neither the tileset list nor the block definitions a document
+carries, so the state stores all three. `load()` replaces the world, copies
+the document's tilesets, and replaces the block table when the document carries
+one. `clear()` empties all three.
 
-`toJSON()` serializes the world with the stored tileset definitions. Loading a
-document with a different chunk size throws `InvalidVoxelDocumentError` and
-leaves the state unchanged.
+`toJSON()` serializes the world with the stored tileset and block definitions,
+so a block edit survives a restart. Loading a document with a different chunk
+size throws `InvalidVoxelDocumentError` and leaves the state unchanged.
 
 ## `VoxelMapAssetExtension`
 
@@ -101,3 +105,7 @@ twice as far.
 Full-world replacement bypasses arbitration, appends one event, and broadcasts
 a fresh snapshot. Other accepted commands are recorded by
 `VoxelCommandArbiter` after the event-store append succeeds.
+
+`events` covers the layer hook actions plus `VOXEL_BLOCK_HOOK_ACTIONS`. Block
+commands are appended, folded into `VoxelMapState.blocks`, and broadcast like
+any other command.

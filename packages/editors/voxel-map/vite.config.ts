@@ -12,6 +12,7 @@ import {
   pixelArtAssetHandler
 } from "@jolly-pixel/pixel-draw.renderer/asset/index.ts";
 import {
+  blocksFromTileset,
   encodeVoxelDocument,
   voxelMapAssetHandler,
   VoxelMapState
@@ -23,6 +24,7 @@ import { readTilesetSeed } from "./vite/tilesetSeed.ts";
 // CONSTANTS
 const kChunkSize = 16;
 const kDefaultLayerName = "Ground";
+const kDefaultBlockLimit = 32;
 
 const tileset = await readTilesetSeed({
   file: path.join(
@@ -58,6 +60,11 @@ export default defineConfig({
         "maps/overworld.voxelmap.json": () => {
           const state = new VoxelMapState(kChunkSize);
           state.tilesets = [tileset.definition];
+          state.blocks.registerMany(
+            blocksFromTileset(tileset.definition, {
+              limit: kDefaultBlockLimit
+            })
+          );
           state.world.addLayer(kDefaultLayerName);
 
           return encodeVoxelDocument(state.toJSON());
