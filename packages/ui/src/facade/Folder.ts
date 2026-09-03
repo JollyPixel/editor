@@ -10,9 +10,6 @@ export interface FolderOptions {
   expanded?: boolean;
 }
 
-/**
- * A `jolly-folder` grouping fields, monitors, and nested folders.
- */
 export class Folder extends FacadeContainer {
   readonly element: HTMLElementTagNameMap["jolly-folder"];
 

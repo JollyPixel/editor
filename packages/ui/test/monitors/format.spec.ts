@@ -6,7 +6,8 @@ import assert from "node:assert/strict";
 import {
   formatCount,
   formatMilliseconds,
-  formatPercent
+  formatPercent,
+  formatVector
 } from "../../src/monitors/format.ts";
 
 describe("monitors.formatCount", () => {
@@ -46,6 +47,33 @@ describe("monitors.formatPercent", () => {
     assert.equal(
       formatPercent(33.333),
       "33.3 %"
+    );
+  });
+});
+
+describe("monitors.formatVector", () => {
+  test("joins only the axes the value carries", () => {
+    assert.equal(
+      formatVector({ x: 1, y: 2 }),
+      "1, 2"
+    );
+    assert.equal(
+      formatVector({ x: 1, y: 2, z: 3, w: 4 }),
+      "1, 2, 3, 4"
+    );
+  });
+
+  test("drops trailing zeros left by rounding", () => {
+    assert.equal(
+      formatVector({ x: 1.5, y: 2, z: 3.14159 }),
+      "1.5, 2, 3.14"
+    );
+  });
+
+  test("keeps the requested precision", () => {
+    assert.equal(
+      formatVector({ x: 3.14159, y: 0, z: 0 }, 4),
+      "3.1416, 0, 0"
     );
   });
 });

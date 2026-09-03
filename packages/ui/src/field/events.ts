@@ -7,6 +7,28 @@ export interface JollyChangeDetail<TValue> {
 
 export type JollyFieldEventName = "jolly-input" | "jolly-change";
 
+/**
+ * Subscribes to a field's committed value, or to every keystroke and drag
+ * with `"jolly-input"`. Returns the unsubscribe.
+ */
+export function onFieldChange<TValue>(
+  field: EventTarget,
+  handler: (value: TValue) => void,
+  name: JollyFieldEventName = "jolly-change"
+): () => void {
+  function listener(
+    event: Event
+  ): void {
+    if (event instanceof CustomEvent) {
+      const detail = event.detail as JollyChangeDetail<TValue>;
+      handler(detail.value);
+    }
+  }
+  field.addEventListener(name, listener);
+
+  return () => field.removeEventListener(name, listener);
+}
+
 export function emitFieldEvent<TValue>(
   target: EventTarget,
   name: JollyFieldEventName,

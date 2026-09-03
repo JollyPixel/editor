@@ -1,9 +1,6 @@
 // Import Internal Dependencies
 import "../controls/Separator.ts";
 
-/**
- * A layout-only `jolly-separator`, matching `folder.addSeparator()`.
- */
 export class Separator {
   readonly element: HTMLElement;
 

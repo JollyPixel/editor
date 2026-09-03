@@ -9,10 +9,8 @@ import {
 } from "@jolly-pixel/color";
 import {
   Pane,
-  detailOf,
-  type Dialog,
-  type JollyChangeDetail,
-  type Vector3 as VectorField
+  formatVector,
+  type Dialog
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -21,8 +19,7 @@ import {
   AreaBoxControls,
   Grid,
   type AreaAxisPolicy,
-  type AreaBoxOptions,
-  type Vector3Like
+  type AreaBoxOptions
 } from "../../src/index.ts";
 import {
   createRenderer,
@@ -213,47 +210,27 @@ function createAreaDialog() {
 
   const dialog = document.createElement("jolly-dialog") as Dialog;
   dialog.heading = "New area";
-  // Pane only sets the label width on the scope it creates for itself while
-  // floating. Mounted in a container it inherits that container's scope, where
-  // the variable defaults to "auto", so every row would size its own label and
-  // none of the value columns would line up.
-  dialog.style.setProperty("--jolly-label-width", kLabelWidth);
   document.body.append(dialog);
 
   const form = new Pane({
     container: dialog,
-    grow: false
+    grow: false,
+    labelWidth: kLabelWidth
   });
   form.addBinding(draft, "displayName", { label: "Name" });
-  // `addBinding` dispatches a hex string to `jolly-color` but cannot turn on
-  // its alpha channel, so the field is built by hand: the fill opacity rides
-  // on the color rather than needing a slider of its own.
-  const colorField = document.createElement("jolly-color");
-  colorField.label = "Color";
-  colorField.alpha = true;
-  colorField.value = draft.color;
-  onFieldChange<string>(colorField, (value) => {
-    draft.color = value;
-  });
-  form.element.append(colorField);
+  // The eight-digit draft turns the alpha channel on by itself: the fill
+  // opacity rides on the color rather than needing a slider of its own.
+  form.addBinding(draft, "color", { label: "Color" });
   form.addSeparator();
-  // One row per vector rather than six sliders: the facade has no vector
-  // dispatch, so the fields are appended to the pane directly.
-  const positionField = createVectorField("Min corner", kCoordRange.step);
-  positionField.value = draft.position;
-  onFieldChange<Vector3Like>(positionField, (value) => {
-    draft.position = value;
+  // One row per vector rather than six sliders.
+  form.addBinding(draft, "position", {
+    label: "Min corner",
+    ...kCoordRange
   });
-
-  const sizeField = createVectorField("Size", kExtentRange.step);
-  sizeField.min = kExtentRange.min;
-  sizeField.max = kExtentRange.max;
-  sizeField.value = draft.size;
-  onFieldChange<Vector3Like>(sizeField, (value) => {
-    draft.size = value;
+  form.addBinding(draft, "size", {
+    label: "Size",
+    ...kExtentRange
   });
-
-  form.element.append(positionField, sizeField);
   form.addSeparator();
   form.addBinding(draft, "edgeOpacity", {
     ...kOpacityRange,
@@ -303,7 +280,6 @@ function createAreaDialog() {
         kPalette[createdCount % kPalette.length],
         AreaBox.Defaults.opacity
       );
-      colorField.value = draft.color;
       // Offset each proposal so a new area does not open inside the last one.
       draft.position = {
         x: (createdCount % 3) * 6,
@@ -311,8 +287,6 @@ function createAreaDialog() {
         z: Math.floor(createdCount / 3) * 6
       };
       draft.size = { x: 4, y: 1, z: 4 };
-      positionField.value = draft.position;
-      sizeField.value = draft.size;
       form.refresh();
       dialog.showModal();
     }
@@ -330,20 +304,12 @@ function refreshReadout(): void {
   }
   else {
     readout.selection = area.label?.displayName ?? "area";
-    readout.min = format(area.position);
-    readout.size = format(area.size);
+    readout.min = formatVector(area.position);
+    readout.size = formatVector(area.size);
   }
 
   removeButton.disabled = area === null;
   pane.refresh();
-}
-
-function format(
-  vector: THREE.Vector3
-): string {
-  return [vector.x, vector.y, vector.z]
-    .map((value) => Number(value.toFixed(2)))
-    .join(", ");
 }
 
 function select(
@@ -424,21 +390,6 @@ startLoop({
 });
 
 /**
- * A `jolly-vector3` row, which packs three axes into the space one slider
- * would take.
- */
-function createVectorField(
-  label: string,
-  step: number
-): VectorField {
-  const field = document.createElement("jolly-vector3");
-  field.label = label;
-  field.step = step;
-
-  return field;
-}
-
-/**
  * Appends an alpha channel to a six-digit hex, the eight-digit form
  * `jolly-color` emits when its alpha channel is on.
  */
@@ -451,21 +402,4 @@ function withAlpha(
     .padStart(2, "0");
 
   return `${hex}${channel}`;
-}
-
-/**
- * Subscribes to a field's committed value. `detailOf` is generic and returns
- * `null` for anything that is not a `CustomEvent`, so the cast and the guard
- * live here rather than at each call site.
- */
-function onFieldChange<TValue>(
-  field: HTMLElement,
-  handler: (value: TValue) => void
-): void {
-  field.addEventListener("jolly-change", (event) => {
-    const detail = detailOf<JollyChangeDetail<TValue>>(event);
-    if (detail !== null) {
-      handler(detail.value);
-    }
-  });
 }

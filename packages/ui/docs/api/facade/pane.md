@@ -12,6 +12,7 @@ interface PaneOptions {
   collapsible?: boolean;
   locked?: boolean;
   storageKey?: string;
+  labelWidth?: string;
 }
 ```
 
@@ -23,6 +24,7 @@ interface PaneOptions {
 | `collapsible` | `false` | Enables folding the pane to its header. |
 | `locked` | `false` | Keeps the pane at its authored position inside a `jolly-dock-layout`. |
 | `storageKey` | derived | Namespace the pane and its floating window persist under. Derived from the page path and the title when unset, so renaming the pane drops what it remembered. |
+| `labelWidth` | `16ch` floating, none mounted | Width of the label column, as `--jolly-label-width`. |
 
 ## Floating and mounted panes
 
@@ -35,12 +37,17 @@ document.body
         └── jolly-pane
 ```
 
-The scope supplies theme tokens and sets `--jolly-label-width` to `16ch`.
-`pane.element` is the `jolly-floating` wrapper in this mode.
+The scope supplies theme tokens and sets `--jolly-label-width` to `16ch`, or
+to `labelWidth` when given. `pane.element` is the `jolly-floating` wrapper in
+this mode.
 
 With `container`, the constructor appends only `jolly-pane` and
 `pane.element` is that pane. The container must already be inside a theme
 scope. See [Theming and density](../../guides/theming-and-density.md).
+
+A mounted pane inherits its container scope, where `--jolly-label-width`
+defaults to `auto` and every row sizes its own label. Pass `labelWidth` to set
+the variable on the pane itself and line the value columns up.
 
 ```ts
 const container = document.querySelector("#inspector");

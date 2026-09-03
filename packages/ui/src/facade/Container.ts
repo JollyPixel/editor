@@ -7,11 +7,7 @@ import {
   Button,
   type ButtonOptions
 } from "./Button.ts";
-/*
- * Type only: `Folder` extends `FacadeContainer`, so a value import here would
- * make each module need the other fully evaluated before its own class body
- * runs. `createFolder` asks each subclass for the value instead.
- */
+
 import type {
   Folder,
   FolderOptions
@@ -37,20 +33,10 @@ interface Refreshable {
   refresh(): void;
 }
 
-/**
- * Every facade builder — `Pane`, `Folder`, `Binding`, `Monitor`, `Button`, and
- * the object `addSeparator()` returns — satisfies this, for a consumer that
- * collects a mixed batch to dispose together (Tweakpane's own `BladeApi`).
- */
 export interface Disposable {
   dispose(): void;
 }
 
-/**
- * Shared `addFolder`/`addBinding`/`addMonitor`/`addButton`/`addSeparator` surface
- * for `Pane` and `Folder`. Children append to `contentHost`, which differs
- * from the public `element` only for `Pane`'s floating wrap.
- */
 export abstract class FacadeContainer {
   abstract readonly element: HTMLElement;
 
@@ -90,7 +76,7 @@ export abstract class FacadeContainer {
   addMonitor<TObject extends object, TKey extends MonitorKey<TObject>>(
     object: TObject,
     key: TKey,
-    options?: MonitorOptions
+    options?: MonitorOptions<TObject[TKey]>
   ): Monitor<TObject, TKey> {
     const monitor = new Monitor(object, key, options);
     this.contentHost.append(monitor.element);
@@ -100,7 +86,6 @@ export abstract class FacadeContainer {
     return monitor;
   }
 
-  /** Adds monitors for each configured number or string property. */
   addMonitors<TObject extends object>(
     object: TObject,
     fields: MonitorFields<TObject>
@@ -138,7 +123,6 @@ export abstract class FacadeContainer {
     return presence;
   }
 
-  /** Disposes every direct builder this container created and starts empty. */
   disposeAll(): void {
     for (const child of this.#children) {
       child.dispose();
@@ -147,7 +131,6 @@ export abstract class FacadeContainer {
     this.#refreshable = [];
   }
 
-  /** Cascades to every bound `Folder`, `Binding`, and `Monitor` added so far. */
   refresh(): void {
     for (const child of this.#refreshable) {
       child.refresh();

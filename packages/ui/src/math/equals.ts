@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import { isMixed } from "../field/mixed.ts";
+import { isQuatLike } from "./guards.ts";
 import type {
   QuatLike,
   VectorValue
@@ -51,10 +52,6 @@ export function vectorValueEquals(
   return true;
 }
 
-/**
- * `hasChanged` for reactive `value`/`default` properties, so re-assigning a
- * fresh but structurally equal object does not repaint.
- */
 export function vectorValueHasChanged(
   value: unknown,
   oldValue: unknown
@@ -84,14 +81,4 @@ function isPlainRecord(
   value: unknown
 ): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
-}
-
-function isQuatLike(
-  value: unknown
-): value is QuatLike {
-  return isPlainRecord(value) &&
-    typeof value.x === "number" &&
-    typeof value.y === "number" &&
-    typeof value.z === "number" &&
-    typeof value.w === "number";
 }

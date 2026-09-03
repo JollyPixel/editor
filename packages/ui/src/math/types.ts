@@ -15,6 +15,13 @@ export interface Vec3Like {
   readonly z: number;
 }
 
+export interface Vec4Like {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+  readonly w: number;
+}
+
 export interface QuatLike {
   readonly x: number;
   readonly y: number;
@@ -28,9 +35,6 @@ export interface TransformLike {
   readonly scale: Vec3Like;
 }
 
-/**
- * Vector value with whole-value or per-axis Mixed state for multi-selection.
- */
 export type VectorValue<TAxis extends string> =
   | Record<TAxis, number>
   | Record<TAxis, FieldValue<number>>

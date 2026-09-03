@@ -1,12 +1,6 @@
 // Import Internal Dependencies
 import { DockLayout } from "../containers/DockLayout.ts";
 
-/**
- * Facade for an authored dock that belongs to a `jolly-dock-layout`.
- *
- * It intentionally does not create dock markup. Use it where HTML owns the
- * layout and code adds panes or controls after it has upgraded.
- */
 export class DockFacade {
   readonly element: HTMLElementTagNameMap["jolly-dock"];
 
@@ -43,7 +37,6 @@ export class DockFacade {
     this.element.hidden = value;
   }
 
-  /** Reconciles panes added after the layout's initial render. */
   sync(): void {
     this.#layout.sync();
   }

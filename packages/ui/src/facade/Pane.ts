@@ -44,6 +44,13 @@ export interface PaneOptions {
    * pane drops what it remembered, and two pages sharing a path collide.
    */
   storageKey?: string;
+  /**
+   * Width of the label column, as `--jolly-label-width`. A floating pane
+   * defaults to `16ch`; a pane mounted in a container inherits its container's
+   * scope, where the variable defaults to `auto` and every row sizes its own
+   * label.
+   */
+  labelWidth?: string;
 }
 
 export class Pane extends FacadeContainer {
@@ -62,8 +69,15 @@ export class Pane extends FacadeContainer {
     this.#pane.storageKey = options.storageKey ?? "";
 
     this.element = options.container === undefined
-      ? this.#mountFloating(options.storageKey ?? "")
-      : this.#mountInto(options.container, options.grow ?? true);
+      ? this.#mountFloating(
+        options.storageKey ?? "",
+        options.labelWidth ?? kDefaultLabelWidth
+      )
+      : this.#mountInto(
+        options.container,
+        options.grow ?? true,
+        options.labelWidth
+      );
   }
 
   get presence(): PresenceSource | null {
@@ -88,16 +102,21 @@ export class Pane extends FacadeContainer {
 
   #mountInto(
     container: HTMLElement,
-    grow: boolean
+    grow: boolean,
+    labelWidth: string | undefined
   ): HTMLElement {
     this.#pane.grow = grow;
+    if (labelWidth !== undefined) {
+      this.#pane.style.setProperty("--jolly-label-width", labelWidth);
+    }
     container.append(this.#pane);
 
     return this.#pane;
   }
 
   #mountFloating(
-    storageKey: string
+    storageKey: string,
+    labelWidth: string
   ): HTMLElement {
     const floating = document.createElement("jolly-floating");
     floating.storageKey = storageKey;
@@ -105,7 +124,7 @@ export class Pane extends FacadeContainer {
 
     const scope = document.createElement("jolly-scope");
     scope.style.display = "contents";
-    scope.style.setProperty("--jolly-label-width", kDefaultLabelWidth);
+    scope.style.setProperty("--jolly-label-width", labelWidth);
     const theme = documentThemeMode();
     if (theme !== null) {
       scope.setAttribute("theme", theme);
