@@ -118,6 +118,8 @@ integration; then the application owns `init()`, `tick()`, `flush()`, and
 
 ### Concepts and guides
 
+- [Glossary](GLOSSARY.md): shared vocabulary for worlds, blocks, layers, and
+  meshing.
 - [World model](docs/concepts/world-model.md): layers, chunks, compositing, and
   ownership.
 - [Rendering and meshing](docs/concepts/rendering-and-meshing.md): dirty chunk

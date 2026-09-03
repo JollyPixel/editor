@@ -14,18 +14,22 @@ VoxelWorld
 
 ## Layer compositing
 
-Voxel layers are composited from the highest `order` to the lowest. At one world
-position, the first visible layer with `opacity >= 1` and a stored voxel wins.
-This lets a decorative layer replace base terrain without modifying it.
+Voxel layers are evaluated from the highest `order` to the lowest. World reads
+return the first visible layer with `opacity > 0` and a stored voxel at the
+requested position.
 
-An opacity below `1` scopes occlusion to the layer itself during mesh
-generation: only its own voxels cull its faces, it does not occlude neighbouring
-faces, and it does not win compositing over the voxels it covers — they stay
-visible through it. Its own interior faces are still culled: emitting them
-stacks coincident blended quads, which reads as a checkerboard through the
-volume. An opacity of `0` behaves like `visible = false`. Collision is
-unchanged for partially transparent layers and removed only when the layer is
-hidden.
+Mesh generation applies an additional opacity rule. A voxel in a fully opaque
+layer hides lower-priority voxels at the same world position. A voxel in a
+partially opaque layer is drawn with the voxels below it, so a decorative layer
+can cover base terrain without modifying it.
+
+An opacity below `1` also scopes face occlusion to the layer itself during mesh
+generation. Its voxels cull only faces in that same layer and do not hide
+neighbouring faces in other layers. Interior faces in the partially opaque
+layer are still culled because drawing coincident blended faces produces a
+checkerboard through the volume. An opacity of `0` behaves like
+`visible = false`. Collision is unchanged for partially transparent layers and
+removed only when the layer is hidden.
 
 ## Coordinates and offsets
 
