@@ -1,0 +1,53 @@
+{
+  "name": "@jolly-pixel/image",
+  "description": "PNG codecs and browser raster decoding",
+  "version": "1.0.0",
+  "type": "module",
+  "imports": {
+    "#src/*": "./src/*"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./raster": {
+      "types": "./dist/raster/index.d.ts",
+      "default": "./dist/raster/index.js"
+    }
+  },
+  "scripts": {
+    "prepublish": "rimraf ./dist && tsc -b",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json",
+    "test-only": "npm run test-only:node && npm run test-only:dom",
+    "test-only:node": "node --test \"test/png/**/*.spec.ts\" \"test/*.spec.ts\"",
+    "test-only:dom": "node --import ./test/setup.ts --test \"test/raster/**/*.spec.ts\"",
+    "test": "npm run typecheck && c8 -r html npm run test-only",
+    "lint": "eslint \"src/**/*.ts\"",
+    "bench": "jolly-bench"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JollyPixel/editor.git",
+    "directory": "packages/image"
+  },
+  "devDependencies": {
+    "@jolly-pixel/bench": "*"
+  },
+  "keywords": [],
+  "files": [
+    "dist"
+  ],
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  },
+  "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
+  "license": "MIT"
+}

@@ -3,10 +3,10 @@ import {
   fromUint8Array,
   toUint8Array
 } from "js-base64";
+import { decodePng } from "@jolly-pixel/image";
 
 // Import Internal Dependencies
 import { PixelBuffer } from "../buffer/PixelBuffer.ts";
-import { decodePng } from "../image/decodePng.ts";
 import type { UVRegionData } from "../uv/UVRegion.ts";
 import type { PixelBufferSnapshot } from "../network/types.ts";
 import type { Vec2 } from "../types.ts";
@@ -160,7 +160,7 @@ export async function createPixelArtBufferFromPng(
   data: Uint8Array,
   options: PixelArtBufferFromPngOptions = {}
 ): Promise<PixelBuffer> {
-  const { width, height, pixels } = await decodePng(data);
+  const { width, height, data: samples } = await decodePng(data);
   const size: Vec2 = {
     x: width,
     y: height
@@ -170,7 +170,7 @@ export async function createPixelArtBufferFromPng(
     size,
     maxSize: options.maxSize ?? Math.max(width, height, kDefaultMaxSize)
   });
-  buffer.replacePixels(pixels, size);
+  buffer.replacePixels(samples, size);
 
   return buffer;
 }

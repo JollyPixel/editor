@@ -77,7 +77,7 @@ const document = encodePixelArtDocument(buffer);
 ```
 
 The buffer is sized to the image and holds its exact samples, decoded by
-[`decodePng`](../image/index.md). UV regions stay empty, since PNG cannot carry
+[`decodePng`](https://github.com/JollyPixel/editor/blob/main/packages/image/docs/png.md). UV regions stay empty, since PNG cannot carry
 them. `maxSize` defaults to the image's own dimensions when they exceed
 `PixelBuffer`'s 2048 ceiling, so an oversized atlas still fits; pass it
 explicitly to pin a different bound.

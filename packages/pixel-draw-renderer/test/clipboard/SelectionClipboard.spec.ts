@@ -5,6 +5,9 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { decodePng } from "@jolly-pixel/image";
+
 // Import Internal Dependencies
 import { SelectionClipboard } from "#src/clipboard/SelectionClipboard.ts";
 import { encodeSelectionPng } from "#src/clipboard/selectionImage.ts";
@@ -16,7 +19,6 @@ import {
   type DecodedRasterImage,
   type SelectionSnapshot
 } from "#src/clipboard/types.ts";
-import { canvasPixels } from "../fixtures/canvas.ts";
 
 const kSnapshot: SelectionSnapshot = {
   rect: { x: -2, y: 4, width: 2, height: 1 },
@@ -282,29 +284,14 @@ describe("SelectionClipboard", () => {
     );
   });
 
-  test("masked-out cells are transparent in the PNG canvas", async() => {
-    const originalToBlob = HTMLCanvasElement.prototype.toBlob;
-    let encodedPixels: Uint8ClampedArray | null = null;
-    Object.assign(HTMLCanvasElement.prototype, {
-      toBlob(
-        callback: BlobCallback
-      ) {
-        encodedPixels = canvasPixels(this);
-        callback(new Blob(["png"], { type: "image/png" }));
-      }
-    });
-
-    try {
-      await encodeSelectionPng(kSnapshot);
-    }
-    finally {
-      Object.assign(HTMLCanvasElement.prototype, {
-        toBlob: originalToBlob
-      });
-    }
+  test("masked-out cells are transparent in the encoded PNG", async() => {
+    const blob = await encodeSelectionPng(kSnapshot);
+    const { data } = await decodePng(
+      new Uint8Array(await blob.arrayBuffer())
+    );
 
     assert.deepStrictEqual(
-      [...encodedPixels!],
+      [...data],
       [1, 2, 3, 4, 5, 6, 7, 0]
     );
   });

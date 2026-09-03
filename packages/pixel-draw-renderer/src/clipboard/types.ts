@@ -52,8 +52,8 @@ export interface SelectionClipboardMetadataV1 {
   mask: SelectionMaskMetadata;
   /**
    * Base64 row-major RGBA8. Optional because the field postdates v1 readers.
-   * When present it supersedes the PNG, which round-trips through a
-   * premultiplying canvas and so cannot preserve partial alpha exactly.
+   * Redundant with the PNG for copies this editor writes, which are now
+   * byte-exact; it stays for readers of copies written before that.
    */
   pixels?: string;
 }

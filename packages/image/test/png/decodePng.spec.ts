@@ -5,53 +5,12 @@ import { Buffer } from "node:buffer";
 import { deflateSync } from "node:zlib";
 
 // Import Internal Dependencies
-import { decodePng } from "#src/image/decodePng.ts";
-
-// CONSTANTS
-const kSignature = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
-
-/**
- * The decoder never verifies CRCs, so the trailing four bytes stay zero.
- */
-function chunk(
-  type: string,
-  data: Buffer
-): Buffer {
-  const length = Buffer.alloc(4);
-  length.writeUInt32BE(data.length);
-
-  return Buffer.concat([
-    length,
-    Buffer.from(type, "ascii"),
-    data,
-    Buffer.alloc(4)
-  ]);
-}
-
-function header(
-  width: number,
-  height: number,
-  colorType: number,
-  options: { bitDepth?: number; interlace?: number; } = {}
-): Buffer {
-  const { bitDepth = 8, interlace = 0 } = options;
-  const data = Buffer.alloc(13);
-  data.writeUInt32BE(width, 0);
-  data.writeUInt32BE(height, 4);
-  data[8] = bitDepth;
-  data[9] = colorType;
-  data[12] = interlace;
-
-  return chunk("IHDR", data);
-}
-
-function png(
-  chunks: Buffer[]
-): Uint8Array {
-  return new Uint8Array(
-    Buffer.concat([kSignature, ...chunks, chunk("IEND", Buffer.alloc(0))])
-  );
-}
+import { decodePng } from "#src/png/decodePng.ts";
+import {
+  chunk,
+  header,
+  png
+} from "../fixtures/png.ts";
 
 describe("decodePng", () => {
   it("decodes an unfiltered truecolor-with-alpha image", async() => {
@@ -64,11 +23,11 @@ describe("decodePng", () => {
       chunk("IDAT", deflateSync(scanlines))
     ]);
 
-    const { width, height, pixels } = await decodePng(image);
+    const { width, height, data } = await decodePng(image);
 
     assert.equal(width, 2);
     assert.equal(height, 2);
-    assert.deepEqual([...pixels], [
+    assert.deepEqual([...data], [
       255, 0, 0, 255, 0, 255, 0, 128,
       0, 0, 255, 255, 10, 20, 30, 40
     ]);
@@ -85,9 +44,9 @@ describe("decodePng", () => {
       chunk("IDAT", deflateSync(scanlines))
     ]);
 
-    const { pixels } = await decodePng(image);
+    const { data } = await decodePng(image);
 
-    assert.deepEqual([...pixels], [
+    assert.deepEqual([...data], [
       10, 20, 30, 255, 15, 25, 35, 255,
       11, 21, 31, 255, 16, 26, 36, 255,
       11, 21, 31, 255, 16, 26, 36, 255
@@ -103,9 +62,9 @@ describe("decodePng", () => {
       chunk("IDAT", deflateSync(scanlines))
     ]);
 
-    const { pixels } = await decodePng(image);
+    const { data } = await decodePng(image);
 
-    assert.deepEqual([...pixels], [1, 2, 3, 64, 4, 5, 6, 255]);
+    assert.deepEqual([...data], [1, 2, 3, 64, 4, 5, 6, 255]);
   });
 
   it("joins image data split across several IDAT chunks", async() => {
@@ -116,9 +75,9 @@ describe("decodePng", () => {
       chunk("IDAT", deflated.subarray(3))
     ]);
 
-    const { pixels } = await decodePng(image);
+    const { data } = await decodePng(image);
 
-    assert.deepEqual([...pixels], [9, 8, 7, 255]);
+    assert.deepEqual([...data], [9, 8, 7, 255]);
   });
 
   it("rejects payloads and formats it cannot read", async() => {
@@ -139,6 +98,13 @@ describe("decodePng", () => {
         chunk("IDAT", deflateSync(Buffer.alloc(5)))
       ])),
       /interlaced/
+    );
+    await assert.rejects(
+      () => decodePng(png([
+        header(0, 1, 6),
+        chunk("IDAT", deflateSync(Buffer.alloc(1)))
+      ])),
+      /dimensions must be positive/
     );
     await assert.rejects(
       () => decodePng(png([

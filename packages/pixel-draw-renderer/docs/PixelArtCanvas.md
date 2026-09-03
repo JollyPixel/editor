@@ -169,7 +169,9 @@ A paste lands as a floating selection: pixel-sharp, movable, and not yet written
 
 ### Pixel accuracy
 
-External images are decoded through WebCodecs `ImageDecoder` when available, which yields the file's own unpremultiplied samples with no color-profile transform applied. Without it, decoding falls back to `createImageBitmap` with `premultiplyAlpha` and `colorSpaceConversion` set to `"none"`, then to an `<img>`; both go through a canvas, whose premultiplied backing store cannot reproduce RGB under a low alpha exactly. `decodeRasterBlob()` and `decodeRasterCanvas()` are exported and share this path.
+Reading is exact wherever the platform allows it: `@jolly-pixel/image/raster` tries WebCodecs `ImageDecoder` first, then its own PNG decoder, and only then a canvas, whose premultiplied backing store cannot reproduce RGB under a low alpha. See [the ladder](https://github.com/JollyPixel/editor/blob/main/packages/image/docs/raster.md). `decodeRasterBlob()` is exported and shares this path, in the `RGBA8[]` shape the clipboard uses.
+
+Writing is exact unconditionally. A copy's `image/png` flavor is built by `encodePng` from the snapshot's own bytes, so no canvas is involved and low-alpha pixels reach other applications intact. Masked-out pixels keep their RGB and take alpha 0.
 
 ### Errors
 

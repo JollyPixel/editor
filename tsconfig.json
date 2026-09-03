@@ -8,6 +8,9 @@
       "path": "./packages/color"
     },
     {
+      "path": "./packages/image"
+    },
+    {
       "path": "./packages/resize-handle"
     },
     {
