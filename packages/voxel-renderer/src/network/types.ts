@@ -2,19 +2,38 @@
 import type * as network from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import type { VoxelLayerHookEvent } from "../hooks.ts";
+import type {
+  VoxelBlockHookEvent,
+  VoxelLayerHookEvent
+} from "../hooks.ts";
 import type { VoxelWorldJSON } from "../serialization/types.ts";
 
-/**
- * Admin command kept outside the per-mutation engine hooks.
- */
 export interface VoxelWorldReplaceCommand {
   action: "world-replace";
   data: VoxelWorldJSON;
 }
 
+export type VoxelBlockCommand = VoxelBlockHookEvent;
+
+export type VoxelBlockDefinedCommand = Extract<
+  VoxelBlockCommand,
+  { action: "block-defined"; }
+>;
+
+export type VoxelBlockRemovedCommand = Extract<
+  VoxelBlockCommand,
+  { action: "block-removed"; }
+>;
+
+export type VoxelBlockAction = VoxelBlockCommand["action"];
+
 export type VoxelNetworkCommand =
-  (VoxelLayerHookEvent | VoxelWorldReplaceCommand) & network.NetworkCommandHeader;
+  & (
+    | VoxelLayerHookEvent
+    | VoxelWorldReplaceCommand
+    | VoxelBlockCommand
+  )
+  & network.NetworkCommandHeader;
 
 export type VoxelServerMessage = network.NetworkServerMessage<
   VoxelNetworkCommand,

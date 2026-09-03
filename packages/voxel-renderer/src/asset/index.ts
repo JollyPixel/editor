@@ -26,3 +26,14 @@ export {
   type ResolvedTilesetDefinition,
   type TilesetDefinition
 } from "../tileset/types.ts";
+
+export {
+  blocksFromTileset,
+  type BlockOverrides,
+  type BlocksFromTilesetOptions
+} from "../blocks/blocksFromTileset.ts";
+export { BlockRegistry } from "../blocks/BlockRegistry.ts";
+export type {
+  BlockDefinition,
+  ResolvedBlockDefinition
+} from "../blocks/BlockDefinition.ts";

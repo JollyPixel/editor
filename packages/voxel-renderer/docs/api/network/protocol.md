@@ -1,6 +1,7 @@
 # Network protocol
 
-Voxel synchronization uses engine hook events plus one administrative command.
+Voxel synchronization uses engine hook events, one administrative command, and
+two block-table commands.
 
 ```ts
 interface VoxelWorldReplaceCommand {
@@ -8,8 +9,22 @@ interface VoxelWorldReplaceCommand {
   data: VoxelWorldJSON;
 }
 
+interface VoxelBlockDefinedCommand {
+  action: "block-defined";
+  block: ResolvedBlockDefinition;
+}
+
+interface VoxelBlockRemovedCommand {
+  action: "block-removed";
+  blockId: number;
+}
+
+type VoxelBlockCommand =
+  | VoxelBlockDefinedCommand
+  | VoxelBlockRemovedCommand;
+
 type VoxelNetworkCommand =
-  (VoxelLayerHookEvent | VoxelWorldReplaceCommand)
+  (VoxelLayerHookEvent | VoxelWorldReplaceCommand | VoxelBlockCommand)
   & network.NetworkCommandHeader;
 
 type VoxelServerMessage = network.NetworkServerMessage<
@@ -20,6 +35,28 @@ type VoxelServerMessage = network.NetworkServerMessage<
 
 `NetworkCommandHeader` supplies `clientId`, `seq`, and `timestamp`. Server
 messages contain either a command or a world snapshot.
+
+## Block commands
+
+A block definition belongs to the document, not to a layer, so it carries no
+`layerName` and travels on its own hook. `VoxelBlockCommand` is the
+`VoxelBlockHookEvent` the engine emits, stamped with a command header, so
+[`VoxelSyncClient`](./VoxelSyncClient.md#block-definitions) publishes one for
+every `engine.defineBlock()` and `engine.removeBlock()`.
+
+`isVoxelBlockCommand()` narrows one, beside `isVoxelNetworkCommand()` in
+`VoxelCommandValidator`:
+
+```ts
+function isVoxelBlockCommand(
+  command: VoxelNetworkCommand
+): command is VoxelBlockCommand & network.NetworkCommandHeader;
+```
+
+`VOXEL_BLOCK_HOOK_ACTIONS` lists both action names for a rights table.
+
+Block commands are keyed `block:<id>` for conflict resolution, so concurrent
+edits contend per block and last write wins.
 
 ## Validation
 

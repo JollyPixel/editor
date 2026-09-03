@@ -11,6 +11,7 @@ import {
 } from "../../src/network/VoxelCommandArbiter.ts";
 import type { VoxelNetworkCommand } from "../../src/network/types.ts";
 import {
+  blockDefinedCmd,
   makeAddedCommand,
   voxelSetCmd
 } from "../helpers/networkCommands.ts";
@@ -95,6 +96,63 @@ describe("VoxelCommandArbiter", () => {
       arbiter.resolve(voxelSetCmd({
         timestamp: 1000,
         x: 1
+      })),
+      true
+    );
+  });
+});
+
+describe("VoxelCommandArbiter — block commands", () => {
+  test("keys a block command by its block id", () => {
+    assert.strictEqual(
+      VoxelCommandArbiter.key(blockDefinedCmd({ id: 4 })),
+      "block:4"
+    );
+    assert.strictEqual(
+      VoxelCommandArbiter.key({
+        action: "block-removed",
+        blockId: 4,
+        clientId: "client-A",
+        seq: 1,
+        timestamp: 1000
+      }),
+      "block:4"
+    );
+  });
+
+  test("rejects an older edit of the same block", () => {
+    const arbiter = new VoxelCommandArbiter();
+
+    arbiter.record(blockDefinedCmd({
+      id: 4,
+      clientId: "late",
+      timestamp: 2000
+    }));
+
+    assert.strictEqual(
+      arbiter.resolve(blockDefinedCmd({
+        id: 4,
+        clientId: "early",
+        timestamp: 1000
+      })),
+      false
+    );
+  });
+
+  test("different blocks do not contend", () => {
+    const arbiter = new VoxelCommandArbiter();
+
+    arbiter.record(blockDefinedCmd({
+      id: 4,
+      clientId: "late",
+      timestamp: 2000
+    }));
+
+    assert.strictEqual(
+      arbiter.resolve(blockDefinedCmd({
+        id: 5,
+        clientId: "early",
+        timestamp: 1000
       })),
       true
     );

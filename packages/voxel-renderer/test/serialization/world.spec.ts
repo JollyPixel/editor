@@ -255,7 +255,7 @@ describe("deserializeVoxelWorld", () => {
     assert.equal(registry.has(7), true);
   });
 
-  it("keeps an existing registration over an embedded definition", () => {
+  it("overwrites an existing registration with the embedded definition", () => {
     const world = new VoxelWorld(16);
     const registry = new BlockRegistry([
       makeBlockDef(7, "cube", { name: "local" })
@@ -276,7 +276,63 @@ describe("deserializeVoxelWorld", () => {
       { blocks: registry }
     );
 
-    assert.equal(registry.get(7)?.name, "local");
+    assert.equal(registry.get(7)?.name, "embedded");
+  });
+
+  it("drops registrations the embedded block table does not name", () => {
+    const world = new VoxelWorld(16);
+    const registry = new BlockRegistry([makeBlockDef(9, "cube")]);
+    deserializeVoxelWorld(
+      {
+        version: 1,
+        chunkSize: 16,
+        tilesets: [],
+        blocks: [resolveBlockDefinition(makeBlockDef(7, "cube"))],
+        layers: []
+      },
+      world,
+      { blocks: registry }
+    );
+
+    assert.equal(registry.has(9), false);
+    assert.equal(registry.has(7), true);
+  });
+
+  it("keeps the registry untouched for a document carrying no block table", () => {
+    const world = new VoxelWorld(16);
+    const registry = new BlockRegistry([makeBlockDef(9, "cube")]);
+    deserializeVoxelWorld(
+      {
+        version: 1,
+        chunkSize: 16,
+        tilesets: [],
+        layers: []
+      },
+      world,
+      { blocks: registry }
+    );
+
+    assert.equal(registry.has(9), true);
+  });
+
+  it("leaves the registry alone when the document is rejected", () => {
+    const world = new VoxelWorld(16);
+    const registry = new BlockRegistry([makeBlockDef(9, "cube")]);
+
+    assert.throws(() => deserializeVoxelWorld(
+      {
+        version: 1,
+        chunkSize: 8,
+        tilesets: [],
+        blocks: [resolveBlockDefinition(makeBlockDef(7, "cube"))],
+        layers: []
+      },
+      world,
+      { blocks: registry }
+    ));
+
+    assert.equal(registry.has(9), true);
+    assert.equal(registry.has(7), false);
   });
 });
 

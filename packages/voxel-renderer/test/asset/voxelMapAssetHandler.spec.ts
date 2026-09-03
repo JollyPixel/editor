@@ -21,11 +21,19 @@ import {
   VOXEL_MAP_KIND
 } from "../../src/asset/voxelMapAssetHandler.ts";
 import {
+  decodeVoxelDocument,
   encodeVoxelDocument
 } from "../../src/serialization/document.ts";
+import {
+  resolveBlockDefinition
+} from "../../src/blocks/BlockDefinition.ts";
 import { VoxelMapState } from "../../src/asset/VoxelMapState.ts";
 import type { VoxelNetworkCommand } from "../../src/network/types.ts";
-import { voxelSetCmd } from "../helpers/networkCommands.ts";
+import {
+  blockDefinedCmd,
+  voxelSetCmd
+} from "../helpers/networkCommands.ts";
+import { makeBlockDef } from "../helpers/blocks.ts";
 
 function event(
   eventType: string,
@@ -313,5 +321,108 @@ describe("voxelMapAssetHandler", () => {
 
     assert.strictEqual(extension.id, `${VOXEL_MAP_KIND}:asset-1`);
     assert.strictEqual(extension.name, VOXEL_MAP_KIND);
+  });
+});
+
+describe("voxelMapAssetHandler — block definitions", () => {
+  test("a block command survives serialization, so a shape edit outlives the server", async() => {
+    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const state = handler.create("asset-1");
+
+    handler.apply(state, documentEvent(new VoxelMapState(16)));
+    handler.apply(
+      state,
+      event(
+        VOXEL_MAP_COMMAND,
+        blockDefinedCmd({
+          id: 3,
+          shapeId: "slope"
+        })
+      )
+    );
+
+    const document = decodeVoxelDocument(await handler.serialize(state));
+
+    assert.deepEqual(
+      document.blocks?.map((block) => [block.id, block.shapeId]),
+      [[3, "slope"]]
+    );
+  });
+
+  test("replaying the serialized document restores the block table", async() => {
+    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const source = handler.create("asset-1");
+    source.blocks.register(makeBlockDef(3, "slope"));
+
+    const restored = handler.create("asset-1");
+    handler.apply(restored, documentEvent(source));
+
+    assert.strictEqual(restored.blocks.get(3)?.shapeId, "slope");
+  });
+
+  test("a later definition of the same id replaces the earlier one", () => {
+    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const state = handler.create("asset-1");
+
+    handler.apply(
+      state,
+      event(VOXEL_MAP_COMMAND, blockDefinedCmd({ id: 3, shapeId: "cube" }))
+    );
+    handler.apply(
+      state,
+      event(VOXEL_MAP_COMMAND, blockDefinedCmd({ id: 3, shapeId: "slope" }))
+    );
+
+    assert.strictEqual(state.blocks.get(3)?.shapeId, "slope");
+  });
+
+  test("a block-removed command drops the definition", () => {
+    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const state = handler.create("asset-1");
+
+    handler.apply(
+      state,
+      event(VOXEL_MAP_COMMAND, blockDefinedCmd({ id: 3 }))
+    );
+    handler.apply(
+      state,
+      event(VOXEL_MAP_COMMAND, {
+        action: "block-removed",
+        blockId: 3,
+        clientId: "client-A",
+        seq: 2,
+        timestamp: 2000
+      })
+    );
+
+    assert.strictEqual(state.blocks.has(3), false);
+  });
+
+  test("a document load replaces the block table rather than merging into it", () => {
+    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const state = handler.create("asset-1");
+    state.blocks.register(makeBlockDef(9, "cube"));
+
+    const source = new VoxelMapState(16);
+    source.blocks.register(
+      resolveBlockDefinition(makeBlockDef(3, "slope"))
+    );
+    handler.apply(state, documentEvent(source));
+
+    assert.strictEqual(state.blocks.has(9), false);
+    assert.strictEqual(state.blocks.get(3)?.shapeId, "slope");
+  });
+
+  test("a delete clears the block table", () => {
+    const handler = voxelMapAssetHandler({ chunkSize: 16 });
+    const state = handler.create("asset-1");
+    state.blocks.register(makeBlockDef(3, "slope"));
+
+    handler.apply(state, event(ASSET_DELETED, {
+      path: "world.voxelmap.json",
+      kind: VOXEL_MAP_KIND
+    }));
+
+    assert.deepEqual([...state.blocks.getAll()], []);
   });
 });

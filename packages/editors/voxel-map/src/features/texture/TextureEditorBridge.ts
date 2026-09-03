@@ -18,13 +18,27 @@ import {
 } from "@jolly-pixel/editor.pixel-art/three/PixelCanvasTexture.ts";
 
 // Import Internal Dependencies
-import { applyBlockUpdates } from "../blocks/applyBlockUpdate.ts";
 import { findBlocksReferencingTileset } from "./blockTextureTiles.ts";
 import { editorState } from "../../EditorState.ts";
 import {
   peerColor,
   readUsername
 } from "../../network/identity.ts";
+
+function rectsUnion(
+  a: SelectionRect,
+  b: SelectionRect
+): SelectionRect {
+  const x = Math.min(a.x, b.x);
+  const y = Math.min(a.y, b.y);
+
+  return {
+    x,
+    y,
+    width: Math.max(a.x + a.width, b.x + b.width) - x,
+    height: Math.max(a.y + a.height, b.y + b.height) - y
+  };
+}
 
 function rectsIntersect(
   a: SelectionRect,
@@ -56,6 +70,7 @@ export class TextureEditorBridge {
   readonly #scheduler: (callback: () => void) => void;
   #running = false;
   #needsFullSync = false;
+  #pendingTransparency: SelectionRect | null = null;
 
   constructor(
     options: TextureEditorBridgeOptions = {}
@@ -123,11 +138,14 @@ export class TextureEditorBridge {
   #flush(): void {
     const dirty = this.#texture?.consume();
     if (!dirty) {
+      this.#flushTransparency();
+
       return;
     }
 
     if (this.#needsFullSync) {
       this.#needsFullSync = false;
+      this.#pendingTransparency = null;
       this.syncToThree();
 
       return;
@@ -138,7 +156,21 @@ export class TextureEditorBridge {
     }
 
     this.#atlas.updateSource(this.#manager.textureCanvas(), dirty);
-    this.syncTransparency(dirty);
+    // A stroke reports a dirty region every frame and its tiles flip
+    // alpha as it goes, so rescan once it settles, not once per frame.
+    this.#pendingTransparency = this.#pendingTransparency === null
+      ? dirty
+      : rectsUnion(this.#pendingTransparency, dirty);
+  }
+
+  #flushTransparency(): void {
+    const bounds = this.#pendingTransparency;
+    if (bounds === null) {
+      return;
+    }
+
+    this.#pendingTransparency = null;
+    this.syncTransparency(bounds);
   }
 
   loadTileset(
@@ -226,6 +258,12 @@ export class TextureEditorBridge {
       return;
     }
 
+    // Deriving from a placeholder registry would publish, and persist,
+    // block definitions the authoritative snapshot is about to replace.
+    if (!editorState.blocksReady) {
+      return;
+    }
+
     const affected = findBlocksReferencingTileset(
       this.#vr.engine.blockRegistry.getAll(),
       this.#tilesetId,
@@ -248,7 +286,7 @@ export class TextureEditorBridge {
 
     this.#syncing = true;
     try {
-      applyBlockUpdates(this.#vr, updates);
+      this.#vr.engine.defineBlocks(updates);
     }
     finally {
       this.#syncing = false;
@@ -265,6 +303,7 @@ export class TextureEditorBridge {
 
   destroy(): void {
     this.#running = false;
+    this.#pendingTransparency = null;
     this.#texture?.dispose();
     this.#texture = null;
     this.#unsubscribe?.();

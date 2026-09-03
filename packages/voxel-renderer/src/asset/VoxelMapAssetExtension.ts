@@ -5,7 +5,10 @@ import type { AssetRoomBinding } from "@jolly-pixel/asset-server";
 // Import Internal Dependencies
 import { VoxelCommandArbiter } from "../network/VoxelCommandArbiter.ts";
 import { isVoxelNetworkCommand } from "../network/VoxelCommandValidator.ts";
-import { VOXEL_LAYER_HOOK_ACTIONS } from "../hooks.ts";
+import {
+  VOXEL_BLOCK_HOOK_ACTIONS,
+  VOXEL_LAYER_HOOK_ACTIONS
+} from "../hooks.ts";
 import type { VoxelMapState } from "./VoxelMapState.ts";
 import type { VoxelNetworkCommand } from "../network/types.ts";
 
@@ -20,7 +23,10 @@ export interface VoxelMapAssetExtensionOptions {
 export class VoxelMapAssetExtension extends network.Extension {
   readonly id: string;
   readonly name: string;
-  readonly events: readonly string[] = VOXEL_LAYER_HOOK_ACTIONS;
+  readonly events: readonly string[] = [
+    ...VOXEL_LAYER_HOOK_ACTIONS,
+    ...VOXEL_BLOCK_HOOK_ACTIONS
+  ];
 
   #assetId: string;
   #state: VoxelMapState;
@@ -73,7 +79,6 @@ export class VoxelMapAssetExtension extends network.Extension {
       return;
     }
 
-    // Full-world replacements bypass arbitration and refresh every peer.
     if (payload.action === "world-replace") {
       if (await this.#append(payload, context)) {
         context.room.broadcast({
@@ -92,7 +97,6 @@ export class VoxelMapAssetExtension extends network.Extension {
       return;
     }
 
-    // Record only appended commands in the conflict tracker.
     this.#arbiter.record(payload);
     context.room.broadcast({
       type: "command",
@@ -100,9 +104,6 @@ export class VoxelMapAssetExtension extends network.Extension {
     });
   }
 
-  /**
-   * Applies the event before its caller broadcasts it.
-   */
   #append(
     command: VoxelNetworkCommand,
     context: network.RoomContext

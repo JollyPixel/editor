@@ -58,6 +58,36 @@ gives you a precise `metadata` type with no casting required.
 | `"object-removed"` | `{ objectId: string }` | |
 | `"object-updated"` | `{ objectId: string; patch: Partial<VoxelObjectJSON> }` | |
 
+## Block definitions
+
+Block definitions belong to the document rather than to a layer, so they are
+reported on a second hook with its own union:
+
+```ts
+type VoxelBlockHookEvent =
+  | { action: "block-defined"; block: ResolvedBlockDefinition; }
+  | { action: "block-removed"; blockId: number; };
+```
+
+| Action | Payload | Notes |
+|---|---|---|
+| `"block-defined"` | `{ block: ResolvedBlockDefinition }` | Resolved, not the raw input |
+| `"block-removed"` | `{ blockId: number }` | Only for an ID that was registered |
+
+```ts
+engine.onBlockUpdated = (event) => { /* ... */ };
+```
+
+Only `engine.defineBlock()`, `engine.defineBlocks()` and `engine.removeBlock()`
+emit it; a direct `engine.blockRegistry.register()` does not. Use the registry
+directly for definitions each peer derives on its own, and the engine methods
+for edits that must reach other systems.
+
+`VoxelBlockHookAction` and `VOXEL_BLOCK_HOOK_ACTIONS` mirror their layer
+equivalents.
+
+## Aliases
+
 `VoxelLayerHookAction` is a convenience alias for `VoxelLayerHookEvent["action"]`.
 `VOXEL_LAYER_HOOK_ACTIONS` contains the same action vocabulary for integrations
 that need a runtime list. The `"object-added"` event carries the full object in

@@ -16,7 +16,6 @@ import {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import { applyBlockUpdate } from "../blocks/applyBlockUpdate.ts";
 import { editorState } from "../../EditorState.ts";
 
 // CONSTANTS
@@ -282,7 +281,7 @@ export class BlockUvBridge {
 
     this.#applying = true;
     try {
-      applyBlockUpdate(this.#vr, updated);
+      this.#vr.engine.defineBlock(updated);
     }
     finally {
       this.#applying = false;

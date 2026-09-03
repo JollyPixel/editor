@@ -53,17 +53,11 @@ export interface EditorSceneOptions {
   identity?: EditorIdentity;
 }
 
-/**
- * Components the UI binds to, published once the scene has awoken.
- */
 export interface EditorSceneHandles {
   vr: VoxelRenderer;
   gridRenderer: GridRenderer;
 }
 
-/**
- * Owns the synchronous ECS scene after its external resources are prepared.
- */
 export class EditorScene extends Systems.Scene {
   #tilesets: TilesetSource[];
   #defaultLayerName: string;
@@ -101,6 +95,8 @@ export class EditorScene extends Systems.Scene {
     this.#voxelRoom = voxelRoom;
     this.#identity = identity;
     this.editorState = editorState;
+    // A networked registry stays a placeholder until its snapshot lands.
+    this.editorState.blocksReady = voxelRoom === undefined;
   }
 
   override awake() {
@@ -140,6 +136,7 @@ export class EditorScene extends Systems.Scene {
         },
         alphaTest: 0,
         onLayerUpdated: (evt) => this.editorState.dispatchLayerUpdated(evt),
+        onBlockUpdated: () => this.editorState.dispatchBlockRegistryChanged(),
         tilesets: this.#tilesets
       });
     this.vr = vr;
@@ -169,7 +166,7 @@ export class EditorScene extends Systems.Scene {
           this.editorState.selectVoxelLayer(layers[0].name);
         }
 
-        this.#registerDefaultBlocks();
+        this.editorState.blocksReady = true;
         this.editorState.dispatchBlockRegistryChanged();
         this.editorState.dispatchWorldReset();
       });
@@ -201,8 +198,11 @@ export class EditorScene extends Systems.Scene {
         }
       });
 
-    this.#registerDefaultBlocks();
-    this.editorState.dispatchBlockRegistryChanged();
+    // Offline only: a networked world receives its blocks in the snapshot.
+    if (!this.#voxelRoom) {
+      this.#registerDefaultBlocks();
+      this.editorState.dispatchBlockRegistryChanged();
+    }
 
     if (this.#voxelRoom && this.#identity) {
       this.#peerRoster = new PeerRoster({
@@ -262,6 +262,7 @@ export class EditorScene extends Systems.Scene {
 
     else {
       this.vr.engine.load(data);
+      this.#registerDefaultBlocks();
       const layers = this.vr.engine.world.getLayers();
       this.editorState.selectVoxelLayer(layers.length > 0 ? layers[0].name : null);
       this.editorState.dispatchBlockRegistryChanged();

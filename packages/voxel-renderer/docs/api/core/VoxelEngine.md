@@ -153,6 +153,12 @@ interface VoxelEngineOptions {
   onLayerUpdated?: VoxelLayerHookListener;
 
   /**
+   * Called for each block definition added or removed through the engine.
+   * See Hooks.md for the event union.
+   */
+  onBlockUpdated?: VoxelBlockHookListener;
+
+  /**
    * Initial state of the debug inspector (`engine.debug`). Mesh counters are
    * always collected; this only decides whether the wireframe is drawn from
    * the start. See [`VoxelDebugger`](./VoxelDebugger.md).
@@ -212,6 +218,7 @@ class VoxelEngine {
   viewDistancePolicy: "hide" | "unload";
   readonly pendingRebuilds: number;
   onLayerUpdated: VoxelLayerHookListener | undefined; // proxies world.onLayerUpdated
+  onBlockUpdated: VoxelBlockHookListener | undefined;
 }
 ```
 
@@ -316,7 +323,8 @@ snapshot references must be registered by the time the world is read, either at
 construction or through `VoxelLoadOptions.tilesets`. A missing tileset throws.
 Already-registered tilesets are skipped.
 
-Embedded block definitions are registered only when their IDs are not already present.
+A snapshot carrying block definitions replaces the registry with them; one carrying
+none leaves the registry alone.
 Set `mergeLayers: true` to collapse voxel layers after deserialization.
 `data.chunkSize` is metadata; `load()` keeps the engine's configured chunk size.
 Construct the engine with the snapshot's chunk size when the values must match.
@@ -327,7 +335,28 @@ Deserialization is muted, so restoring a snapshot emits no hook event.
 
 Marks every chunk dirty for a later rebuild.
 
+#### `defineBlock(def: BlockDefinition): void`
+
+Registers a block definition, marks every chunk dirty, and emits `onBlockUpdated`.
+An existing ID is overwritten. This is the mutation path a synchronized editor
+should use; writing straight to `blockRegistry` emits nothing.
+
+#### `defineBlocks(defs: Iterable<BlockDefinition>): void`
+
+Registers a batch, marking the chunks dirty once and emitting one event per
+definition. An empty batch does nothing.
+
+#### `removeBlock(blockId: number): boolean`
+
+Unregisters a definition, marks every chunk dirty, and emits `onBlockUpdated`.
+Returns `false` and emits nothing when the ID is unknown. `nextId` is unaffected,
+so the ID is never recycled.
+
 ### Hooks
+
+`onBlockUpdated` is emitted by `defineBlock()`, `defineBlocks()` and
+`removeBlock()`. Unlike `onLayerUpdated` it is not muted during `load()`, which
+replaces the registry outright rather than emitting per definition.
 
 `onLayerUpdated` and `applyRemoteCommand` proxy
 [`VoxelWorld`](../world/VoxelWorld.md#hooks), which is where the events are

@@ -16,20 +16,12 @@ const kMaxBrushSize = 8;
 export type SidebarTab = "general" | "paint" | "layers";
 export type RotationMode = typeof VoxelRotation[keyof typeof VoxelRotation] | "auto";
 
-/**
- * What the layers tree has selected. An object row carries its own layer,
- * so an object selection stays anchored to the layer that holds it.
- */
 export type LayerSelection =
   | { kind: "voxel-layer"; name: string; }
   | { kind: "object-layer"; name: string; }
   | { kind: "object"; layerName: string; objectId: string; }
   | null;
 
-/**
- * Resolves the grid cell the camera is aimed at. Registered by the scene,
- * which owns the camera, and read by the UI when it needs a spawn point.
- */
 export type ViewFocusProvider = () => Vector3Like;
 
 export interface EditorStateEventMap {
@@ -58,26 +50,32 @@ export class EditorState {
   #isGizmoDragging = false;
   #gizmoLayer: string | null = null;
   #viewFocusProvider: ViewFocusProvider | null = null;
+  #blocksReady = true;
   #peers: readonly PresencePeer[] = [];
+
+  /**
+   * Whether the block registry holds the authoritative set. False while a
+   * networked world waits for its snapshot, so nothing publishes a block
+   * definition derived from a placeholder registry.
+   */
+  get blocksReady(): boolean {
+    return this.#blocksReady;
+  }
+
+  set blocksReady(value: boolean) {
+    this.#blocksReady = value;
+  }
 
   get selection(): LayerSelection {
     return this.#selection;
   }
 
-  /**
-   * Name of the selected voxel layer, null under any other selection. The
-   * brush paints here, so an object selection must never resolve to a name.
-   */
   get selectedVoxelLayer(): string | null {
     return this.#selection?.kind === "voxel-layer"
       ? this.#selection.name
       : null;
   }
 
-  /**
-   * Object layer the selection sits in, whether the layer row itself or one
-   * of its object rows is selected.
-   */
   get activeObjectLayer(): string | null {
     const selection = this.#selection;
     if (selection === null) {
@@ -94,7 +92,6 @@ export class EditorState {
     }
   }
 
-  /** Whether the layers tree has an object layer or one of its objects. */
   get isObjectContext(): boolean {
     return this.activeObjectLayer !== null;
   }

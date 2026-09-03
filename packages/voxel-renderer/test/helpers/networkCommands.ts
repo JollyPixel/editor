@@ -1,6 +1,11 @@
 // Import Internal Dependencies
 import type { VoxelLayerHookEvent } from "../../src/hooks.ts";
 import type { VoxelNetworkCommand } from "../../src/network/types.ts";
+import type { BlockShapeID } from "../../src/blocks/BlockShape.ts";
+import {
+  resolveBlockDefinition
+} from "../../src/blocks/BlockDefinition.ts";
+import { makeBlockDef } from "./blocks.ts";
 
 type AddedCommand = Extract<VoxelLayerHookEvent, { action: "added"; }>;
 
@@ -40,6 +45,54 @@ export function voxelSetCmd(
       flipX: false,
       flipZ: false,
       flipY: false
+    },
+    clientId: opts.clientId ?? "client-A",
+    seq: opts.seq ?? 1,
+    timestamp: opts.timestamp ?? 1000
+  };
+}
+
+export interface BlockDefinedCmdOptions {
+  id?: number;
+  shapeId?: BlockShapeID;
+  clientId?: string;
+  seq?: number;
+  timestamp?: number;
+}
+
+/** A "block-defined" command for a minimal cube, keyed by block id. */
+export function blockDefinedCmd(
+  opts: BlockDefinedCmdOptions = {}
+): VoxelNetworkCommand {
+  return {
+    action: "block-defined",
+    block: resolveBlockDefinition(
+      makeBlockDef(opts.id ?? 1, opts.shapeId ?? "cube")
+    ),
+    clientId: opts.clientId ?? "client-A",
+    seq: opts.seq ?? 1,
+    timestamp: opts.timestamp ?? 1000
+  };
+}
+
+export interface WorldReplaceCmdOptions {
+  chunkSize?: number;
+  clientId?: string;
+  seq?: number;
+  timestamp?: number;
+}
+
+/** A "world-replace" command carrying an empty document. */
+export function worldReplaceCmd(
+  opts: WorldReplaceCmdOptions = {}
+): VoxelNetworkCommand {
+  return {
+    action: "world-replace",
+    data: {
+      version: 1,
+      chunkSize: opts.chunkSize ?? 16,
+      tilesets: [],
+      layers: []
     },
     clientId: opts.clientId ?? "client-A",
     seq: opts.seq ?? 1,

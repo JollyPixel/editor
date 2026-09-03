@@ -1,7 +1,13 @@
 export type {
+  VoxelBlockAction,
+  VoxelBlockCommand,
+  VoxelBlockDefinedCommand,
+  VoxelBlockRemovedCommand,
   VoxelNetworkCommand,
-  VoxelServerMessage
+  VoxelServerMessage,
+  VoxelWorldReplaceCommand
 } from "./types.ts";
+
 export type {
   VoxelSyncClientOptions
 } from "./VoxelSyncClient.ts";
@@ -15,4 +21,7 @@ export { VoxelCommandArbiter } from "./VoxelCommandArbiter.ts";
 export type {
   VoxelCommandArbiterOptions
 } from "./VoxelCommandArbiter.ts";
-export { isVoxelNetworkCommand } from "./VoxelCommandValidator.ts";
+export {
+  isVoxelBlockCommand,
+  isVoxelNetworkCommand
+} from "./VoxelCommandValidator.ts";

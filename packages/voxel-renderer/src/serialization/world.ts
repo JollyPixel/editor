@@ -46,6 +46,8 @@ export function deserializeVoxelWorld(
   world: VoxelWorld,
   options: VoxelDeserializeOptions = {}
 ): void {
+  const { blocks } = options;
+
   const document = parseVoxelDocument(data);
   if (document.chunkSize !== world.chunkSize) {
     throw new InvalidVoxelDocumentError(
@@ -53,10 +55,10 @@ export function deserializeVoxelWorld(
     );
   }
 
-  options.blocks?.registerMany(
-    document.blocks ?? [],
-    { skipExisting: true }
-  );
+  if (blocks && document.blocks) {
+    blocks.clear();
+    blocks.registerMany(document.blocks);
+  }
 
   world.clear();
 

@@ -8,6 +8,9 @@ import type {
 } from "./world/VoxelLayer.ts";
 import type { VoxelCoord } from "./world/types.ts";
 import type {
+  ResolvedBlockDefinition
+} from "./blocks/BlockDefinition.ts";
+import type {
   VoxelObjectLayerJSON,
   VoxelObjectJSON
 } from "./serialization/types.ts";
@@ -160,4 +163,25 @@ export const VOXEL_LAYER_HOOK_ACTIONS: readonly VoxelLayerHookAction[] = [
 
 export type VoxelLayerHookListener = (
   event: VoxelLayerHookEvent
+) => void;
+
+export type VoxelBlockHookEvent =
+  | {
+    action: "block-defined";
+    block: ResolvedBlockDefinition;
+  }
+  | {
+    action: "block-removed";
+    blockId: number;
+  };
+
+export type VoxelBlockHookAction = VoxelBlockHookEvent["action"];
+
+export const VOXEL_BLOCK_HOOK_ACTIONS: readonly VoxelBlockHookAction[] = [
+  "block-defined",
+  "block-removed"
+];
+
+export type VoxelBlockHookListener = (
+  event: VoxelBlockHookEvent
 ) => void;

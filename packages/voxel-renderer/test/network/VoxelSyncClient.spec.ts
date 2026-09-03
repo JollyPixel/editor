@@ -7,14 +7,24 @@ import type * as network from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import { VoxelSyncClient } from "../../src/network/VoxelSyncClient.ts";
+import { BlockRegistry } from "../../src/blocks/BlockRegistry.ts";
+import {
+  resolveBlockDefinition,
+  type BlockDefinition
+} from "../../src/blocks/BlockDefinition.ts";
 import type {
   VoxelNetworkCommand,
   VoxelServerMessage
 } from "../../src/network/types.ts";
-import type { VoxelLayerHookEvent, VoxelLayerHookListener } from "../../src/hooks.ts";
+import type {
+  VoxelBlockHookListener,
+  VoxelLayerHookEvent,
+  VoxelLayerHookListener
+} from "../../src/hooks.ts";
 import type { VoxelWorldJSON } from "../../src/serialization/types.ts";
 import type { VoxelEngine } from "../../src/VoxelEngine.ts";
 import { makeAddedCommand, voxelSetCmd } from "../helpers/networkCommands.ts";
+import { makeBlockDef } from "../helpers/blocks.ts";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -24,16 +34,25 @@ interface MockEngine {
   onLayerUpdated: VoxelLayerHookListener | undefined;
   applyRemoteCommand(cmd: VoxelLayerHookEvent): void;
   load(data: VoxelWorldJSON): void;
+  markAllChunksDirty(reason: string): void;
+  blockRegistry: BlockRegistry;
+  onBlockUpdated: VoxelBlockHookListener | undefined;
+  defineBlock(def: BlockDefinition): void;
+  defineBlocks(defs: Iterable<BlockDefinition>): void;
+  removeBlock(blockId: number): boolean;
   // Test helper: simulate a local mutation firing the hook
   triggerLocal(event: VoxelLayerHookEvent): void;
   appliedCommands: VoxelLayerHookEvent[];
   loadedSnapshots: VoxelWorldJSON[];
+  dirtyReasons: string[];
 }
 
 function createMockEngine(): MockEngine {
   const appliedCommands: VoxelLayerHookEvent[] = [];
   const loadedSnapshots: VoxelWorldJSON[] = [];
+  const dirtyReasons: string[] = [];
   let listener: VoxelLayerHookListener | undefined;
+  let blockListener: VoxelBlockHookListener | undefined;
 
   const engine: MockEngine = {
     get onLayerUpdated() {
@@ -48,11 +67,49 @@ function createMockEngine(): MockEngine {
     load(data) {
       loadedSnapshots.push(data);
     },
+    markAllChunksDirty(reason) {
+      dirtyReasons.push(reason);
+    },
+    blockRegistry: new BlockRegistry(),
+    get onBlockUpdated() {
+      return blockListener;
+    },
+    set onBlockUpdated(fn: VoxelBlockHookListener | undefined) {
+      blockListener = fn;
+    },
+    defineBlock(def) {
+      engine.defineBlocks([def]);
+    },
+    defineBlocks(defs) {
+      const resolved = [...defs].map(resolveBlockDefinition);
+      if (resolved.length === 0) {
+        return;
+      }
+
+      for (const block of resolved) {
+        engine.blockRegistry.register(block);
+      }
+      dirtyReasons.push("block-defined");
+      for (const block of resolved) {
+        blockListener?.({ action: "block-defined", block });
+      }
+    },
+    removeBlock(blockId) {
+      if (!engine.blockRegistry.unregister(blockId)) {
+        return false;
+      }
+
+      dirtyReasons.push("block-removed");
+      blockListener?.({ action: "block-removed", blockId });
+
+      return true;
+    },
     triggerLocal(event) {
       listener?.(event);
     },
     appliedCommands,
-    loadedSnapshots
+    loadedSnapshots,
+    dirtyReasons
   };
 
   return engine;
@@ -413,5 +470,193 @@ describe("VoxelSyncClient — destroy", () => {
     engine.triggerLocal(makeAddedCommand("L"));
 
     assert.equal(room.sentCommands.length, 0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// block commands
+// ---------------------------------------------------------------------------
+
+describe("VoxelSyncClient — block commands", () => {
+  it("publishes a local definition without an explicit send call", () => {
+    const engine = createMockEngine();
+    const room = createMockRoom();
+    const client = new VoxelSyncClient({ room });
+    client.attach(asEngine(engine));
+
+    engine.defineBlock(makeBlockDef(4, "slope"));
+
+    assert.equal(room.sentCommands.length, 1);
+    const [command] = room.sentCommands;
+    assert.equal(command.action, "block-defined");
+    assert.equal(
+      command.action === "block-defined" ? command.block.shapeId : null,
+      "slope"
+    );
+    assert.equal(command.clientId, "client-A");
+  });
+
+  it("publishes a local removal, and nothing for an unknown id", () => {
+    const engine = createMockEngine();
+    engine.blockRegistry.register(makeBlockDef(4, "cube"));
+    const room = createMockRoom();
+    const client = new VoxelSyncClient({ room });
+    client.attach(asEngine(engine));
+
+    engine.removeBlock(99);
+    assert.equal(room.sentCommands.length, 0);
+
+    engine.removeBlock(4);
+    const [command] = room.sentCommands;
+    assert.equal(command.action, "block-removed");
+    assert.equal(
+      command.action === "block-removed" ? command.blockId : null,
+      4
+    );
+  });
+
+  it("publishes one command per block of a batch", () => {
+    const engine = createMockEngine();
+    const room = createMockRoom();
+    const client = new VoxelSyncClient({ room });
+    client.attach(asEngine(engine));
+
+    engine.defineBlocks([
+      makeBlockDef(4, "slope"),
+      makeBlockDef(5, "cube")
+    ]);
+
+    assert.deepEqual(
+      room.sentCommands.map((command) => command.action),
+      ["block-defined", "block-defined"]
+    );
+  });
+
+  it("keeps the handler an engine already carries", () => {
+    const engine = createMockEngine();
+    const seen: string[] = [];
+    engine.onBlockUpdated = (event) => seen.push(event.action);
+
+    const room = createMockRoom();
+    const client = new VoxelSyncClient({ room });
+    client.attach(asEngine(engine));
+
+    engine.defineBlock(makeBlockDef(4, "slope"));
+
+    assert.deepEqual(seen, ["block-defined"]);
+    assert.equal(room.sentCommands.length, 1);
+  });
+
+  it("restores the previous handler on detach", () => {
+    const engine = createMockEngine();
+    function previous(): void {
+      return void 0;
+    }
+
+    engine.onBlockUpdated = previous;
+
+    const room = createMockRoom();
+    const client = new VoxelSyncClient({ room });
+    client.attach(asEngine(engine));
+    client.detach();
+
+    assert.equal(engine.onBlockUpdated, previous);
+  });
+
+  it("registers a peer definition, invalidates the meshes and notifies", () => {
+    const engine = createMockEngine();
+    const seen: string[] = [];
+    engine.onBlockUpdated = (event) => seen.push(event.action);
+
+    const room = createMockRoom();
+    const client = new VoxelSyncClient({ room });
+    client.attach(asEngine(engine));
+
+    room.simulateCommand({
+      action: "block-defined",
+      block: resolveBlockDefinition(makeBlockDef(4, "slope")),
+      clientId: "client-B",
+      seq: 1,
+      timestamp: 1000
+    });
+
+    assert.equal(engine.blockRegistry.get(4)?.shapeId, "slope");
+    assert.deepEqual(engine.dirtyReasons, ["block-defined"]);
+    assert.deepEqual(seen, ["block-defined"]);
+    assert.equal(engine.appliedCommands.length, 0);
+  });
+
+  it("never re-publishes a peer block command", () => {
+    const engine = createMockEngine();
+    const room = createMockRoom();
+    const client = new VoxelSyncClient({ room });
+    client.attach(asEngine(engine));
+
+    room.simulateCommand({
+      action: "block-defined",
+      block: resolveBlockDefinition(makeBlockDef(4, "slope")),
+      clientId: "client-B",
+      seq: 1,
+      timestamp: 1000
+    });
+
+    assert.equal(room.sentCommands.length, 0);
+  });
+
+  it("unregisters a peer removal", () => {
+    const engine = createMockEngine();
+    engine.blockRegistry.register(makeBlockDef(4, "cube"));
+    const room = createMockRoom();
+    const client = new VoxelSyncClient({ room });
+    client.attach(asEngine(engine));
+
+    room.simulateCommand({
+      action: "block-removed",
+      blockId: 4,
+      clientId: "client-B",
+      seq: 1,
+      timestamp: 1000
+    });
+
+    assert.equal(engine.blockRegistry.has(4), false);
+    assert.equal(room.sentCommands.length, 0);
+  });
+
+  it("stays quiet when a removal names an unknown block", () => {
+    const engine = createMockEngine();
+    let notified = 0;
+    engine.onBlockUpdated = () => notified++;
+
+    const room = createMockRoom();
+    const client = new VoxelSyncClient({ room });
+    client.attach(asEngine(engine));
+
+    room.simulateCommand({
+      action: "block-removed",
+      blockId: 99,
+      clientId: "client-B",
+      seq: 1,
+      timestamp: 1000
+    });
+
+    assert.deepEqual(engine.dirtyReasons, []);
+    assert.equal(notified, 0);
+  });
+
+  it("ignores the echo of its own block command", () => {
+    const engine = createMockEngine();
+    const room = createMockRoom("client-A");
+    const client = new VoxelSyncClient({ room });
+    client.attach(asEngine(engine));
+
+    room.simulateCommand({
+      action: "block-defined",
+      block: resolveBlockDefinition(makeBlockDef(4, "slope")),
+      clientId: "client-A",
+      seq: 1,
+      timestamp: 1000
+    });
+
+    assert.equal(engine.blockRegistry.has(4), false);
   });
 });

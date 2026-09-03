@@ -208,9 +208,10 @@ export class BlockLibrary extends LitElement {
       return;
     }
 
+    // Registry order follows insertion, which a snapshot reshuffles.
     this._blocks = [
       ...this.vr.engine.blockRegistry.getAll()
-    ];
+    ].sort((a, b) => a.id - b.id);
   }
 }
 

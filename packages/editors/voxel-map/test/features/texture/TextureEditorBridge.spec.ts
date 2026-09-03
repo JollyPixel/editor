@@ -22,7 +22,7 @@ import { fromUint8Array } from "js-base64";
 
 // Import Internal Dependencies
 import { TextureEditorBridge } from "../../../src/features/texture/TextureEditorBridge.ts";
-import { applyBlockUpdate } from "../../../src/features/blocks/applyBlockUpdate.ts";
+import { editorState } from "../../../src/EditorState.ts";
 
 function makeBlock(
   id: number,
@@ -78,9 +78,25 @@ function makeFakeVoxelRenderer(
     atlas: (id: string) => atlases.get(id),
     definitions: () => definitions
   };
+  const registry = new BlockRegistry();
   const fake = {
     engine: {
-      blockRegistry: new BlockRegistry(),
+      blockRegistry: registry,
+      defineBlock: (def: ResolvedBlockDefinition) => {
+        fake.engine.defineBlocks([def]);
+      },
+      defineBlocks: (defs: Iterable<ResolvedBlockDefinition>) => {
+        const resolved = [...defs];
+        if (resolved.length === 0) {
+          return;
+        }
+
+        for (const def of resolved) {
+          registry.register(def);
+          editorState.dispatchBlockRegistryChanged();
+        }
+        dirtyReasons.push("block-defined");
+      },
       tilesetManager,
       markAllChunksDirty: (reason: string) => {
         dirtyReasons.push(reason);
@@ -170,7 +186,7 @@ describe("TextureEditorBridge / transparency auto-sync", () => {
 
     assert.equal(vr.engine.blockRegistry.get(1)!.transparent, true);
     assert.equal(vr.engine.blockRegistry.get(2)!.transparent, false);
-    assert.deepEqual(dirtyReasons, ["block definitions updated"]);
+    assert.deepEqual(dirtyReasons, ["block-defined"]);
     bridge.destroy();
   });
 
@@ -189,7 +205,7 @@ describe("TextureEditorBridge / transparency auto-sync", () => {
     bridge.syncToThree();
 
     assert.equal(vr.engine.blockRegistry.get(1)!.transparent, true);
-    assert.deepEqual(dirtyReasons, ["block definitions updated"]);
+    assert.deepEqual(dirtyReasons, ["block-defined"]);
     bridge.destroy();
   });
 
@@ -207,7 +223,7 @@ describe("TextureEditorBridge / transparency auto-sync", () => {
     bridge.syncToThree();
 
     assert.equal(vr.engine.blockRegistry.get(1)!.transparent, false);
-    assert.deepEqual(dirtyReasons, ["block definitions updated"]);
+    assert.deepEqual(dirtyReasons, ["block-defined"]);
     bridge.destroy();
   });
 
@@ -226,7 +242,7 @@ describe("TextureEditorBridge / transparency auto-sync", () => {
     bridge.syncToThree();
 
     assert.equal(vr.engine.blockRegistry.get(1)!.transparent, true);
-    assert.deepEqual(dirtyReasons, ["block definitions updated"]);
+    assert.deepEqual(dirtyReasons, ["block-defined"]);
     bridge.destroy();
   });
 });
@@ -463,6 +479,8 @@ describe("TextureEditorBridge / streaming to the tileset", () => {
       bounds: { x: 4, y: 4, width: 2, height: 2 }
     });
     scheduler.frame();
+    // The rescan waits for the stroke to settle.
+    scheduler.frame();
 
     assert.equal(vr.engine.blockRegistry.get(1)!.transparent, true);
     assert.equal(
@@ -470,6 +488,99 @@ describe("TextureEditorBridge / streaming to the tileset", () => {
       false,
       "a block whose tile the stroke never reached must not be rescanned"
     );
+    bridge.destroy();
+  });
+});
+
+describe("TextureEditorBridge / transparency batching", () => {
+  it("rescans once a stroke settles, not once per dirty frame", () => {
+    const scheduler = makeScheduler();
+    const { vr, dirtyReasons } = makeFakeVoxelRenderer();
+    vr.engine.blockRegistry.register(makeBlock(1, {
+      transparent: false,
+      defaultTexture: { tilesetId: "atlas", col: 0, row: 0 }
+    }));
+
+    // A tile mid-stroke reads as transparent every other frame.
+    let transparent = false;
+    const manager = makeFakeManager(() => transparent);
+    const bridge = new TextureEditorBridge({ scheduler: scheduler.schedule });
+    bridge.attach(manager);
+    bridge.loadTileset(vr, "atlas");
+    dirtyReasons.length = 0;
+
+    for (let frame = 0; frame < 4; frame++) {
+      transparent = frame % 2 === 0;
+      manager.document.emit("changed", {
+        bounds: { x: frame, y: 0, width: 2, height: 2 }
+      });
+      scheduler.frame();
+    }
+    transparent = true;
+
+    assert.deepEqual(
+      dirtyReasons,
+      [],
+      "a stroke in progress must not publish a definition per frame"
+    );
+
+    scheduler.frame();
+
+    assert.deepEqual(dirtyReasons, ["block-defined"]);
+    assert.equal(vr.engine.blockRegistry.get(1)!.transparent, true);
+    bridge.destroy();
+  });
+
+  it("drops a pending rescan when the texture is replaced", () => {
+    const scheduler = makeScheduler();
+    const { vr, updatedTilesets } = makeFakeVoxelRenderer();
+    const manager = makeFakeManager(() => false);
+
+    const bridge = new TextureEditorBridge({ scheduler: scheduler.schedule });
+    bridge.attach(manager);
+    bridge.loadTileset(vr, "atlas");
+    updatedTilesets.length = 0;
+
+    manager.document.emit("changed", {
+      bounds: { x: 0, y: 0, width: 2, height: 2 }
+    });
+    scheduler.frame();
+    manager.document.emit("replaced", { size: { x: 64, y: 64 } });
+    scheduler.frame();
+    scheduler.frame();
+
+    assert.deepEqual(
+      updatedTilesets,
+      ["atlas"],
+      "the full resync supersedes the region the stroke queued"
+    );
+    bridge.destroy();
+  });
+});
+
+describe("TextureEditorBridge / placeholder block registry", () => {
+  it("publishes nothing while a networked snapshot is outstanding", (t) => {
+    const { vr, dirtyReasons } = makeFakeVoxelRenderer();
+    vr.engine.blockRegistry.register(makeBlock(1, {
+      defaultTexture: { tilesetId: "atlas", col: 0, row: 0 }
+    }));
+    editorState.blocksReady = false;
+    t.after(() => {
+      editorState.blocksReady = true;
+    });
+
+    const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
+    bridge.attach(makeFakeManager(() => true));
+    bridge.loadTileset(vr, "atlas");
+
+    assert.equal(vr.engine.blockRegistry.get(1)!.transparent, undefined);
+    assert.deepEqual(dirtyReasons, []);
+
+    // The scene flips the flag with the snapshot, then announces it.
+    editorState.blocksReady = true;
+    editorState.dispatchBlockRegistryChanged();
+
+    assert.equal(vr.engine.blockRegistry.get(1)!.transparent, true);
     bridge.destroy();
   });
 });
@@ -486,7 +597,7 @@ describe("TextureEditorBridge / derived transparency", () => {
     bridge.loadTileset(vr, "atlas");
 
     assert.equal(vr.engine.blockRegistry.get(1)!.transparent, true);
-    assert.deepEqual(dirtyReasons, ["block definitions updated"]);
+    assert.deepEqual(dirtyReasons, ["block-defined"]);
     bridge.destroy();
   });
 
@@ -503,7 +614,7 @@ describe("TextureEditorBridge / derived transparency", () => {
     bridge.loadTileset(vr, "atlas");
     assert.equal(vr.engine.blockRegistry.get(1)!.transparent, false);
 
-    applyBlockUpdate(vr, {
+    vr.engine.defineBlock({
       ...vr.engine.blockRegistry.get(1)!,
       defaultTexture: { tilesetId: "atlas", col: 1, row: 0 }
     });
@@ -519,7 +630,7 @@ describe("TextureEditorBridge / derived transparency", () => {
     bridge.attach(makeFakeManager(() => true));
     bridge.loadTileset(vr, "atlas");
 
-    applyBlockUpdate(vr, makeBlock(7, {
+    vr.engine.defineBlock(makeBlock(7, {
       defaultTexture: { tilesetId: "atlas", col: 0, row: 0 }
     }));
 
@@ -537,7 +648,7 @@ describe("TextureEditorBridge / derived transparency", () => {
     bridge.attach(makeFakeManager(() => true));
     bridge.loadTileset(vr, "atlas");
 
-    assert.deepEqual(dirtyReasons, ["block definitions updated"]);
+    assert.deepEqual(dirtyReasons, ["block-defined"]);
     bridge.destroy();
   });
 
@@ -552,7 +663,7 @@ describe("TextureEditorBridge / derived transparency", () => {
     bridge.loadTileset(vr, "atlas");
     bridge.destroy();
 
-    applyBlockUpdate(vr, makeBlock(2, {
+    vr.engine.defineBlock(makeBlock(2, {
       defaultTexture: { tilesetId: "atlas", col: 0, row: 0 }
     }));
 

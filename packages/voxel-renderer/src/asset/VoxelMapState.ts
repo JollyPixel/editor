@@ -6,12 +6,11 @@ import {
 } from "../serialization/world.ts";
 import type { VoxelWorldJSON } from "../serialization/types.ts";
 import type { TilesetDefinition } from "../tileset/types.ts";
+import { BlockRegistry } from "../blocks/BlockRegistry.ts";
 
-/**
- * A voxel world plus the tileset list a document carries but a world does not.
- */
 export class VoxelMapState {
   readonly world: VoxelWorld;
+  readonly blocks = new BlockRegistry();
   tilesets: TilesetDefinition[] = [];
 
   constructor(
@@ -22,19 +21,23 @@ export class VoxelMapState {
 
   toJSON(): VoxelWorldJSON {
     return serializeVoxelWorld(this.world, {
-      tilesets: this.tilesets
+      tilesets: this.tilesets,
+      blocks: this.blocks
     });
   }
 
   load(
     document: VoxelWorldJSON
   ): void {
-    deserializeVoxelWorld(document, this.world);
+    deserializeVoxelWorld(document, this.world, {
+      blocks: this.blocks
+    });
     this.tilesets = [...document.tilesets];
   }
 
   clear(): void {
     this.world.clear();
+    this.blocks.clear();
     this.tilesets = [];
   }
 }

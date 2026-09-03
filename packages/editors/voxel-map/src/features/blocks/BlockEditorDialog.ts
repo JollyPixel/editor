@@ -1,6 +1,16 @@
 // Import Third-party Dependencies
-import { LitElement, html, css, nothing } from "lit";
-import { customElement, property, query, state } from "lit/decorators.js";
+import {
+  LitElement,
+  html,
+  css,
+  nothing
+} from "lit";
+import {
+  customElement,
+  property,
+  query,
+  state
+} from "lit/decorators.js";
 import type {
   BlockDefinition,
   ResolvedBlockDefinition,
@@ -14,7 +24,6 @@ import type {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { applyBlockUpdate } from "./applyBlockUpdate.ts";
 import { editorState } from "../../EditorState.ts";
 
 // CONSTANTS
@@ -47,6 +56,7 @@ export class BlockEditorDialog extends LitElement {
 
   @state()
   private declare _mode: BlockEditorMode;
+
   @state()
   private declare _draft: BlockDraft;
 
@@ -242,7 +252,7 @@ export class BlockEditorDialog extends LitElement {
       ...this.block,
       ...patch
     };
-    applyBlockUpdate(this.vr, updated);
+    this.vr.engine.defineBlock(updated);
     this.block = updated;
   }
 
@@ -252,7 +262,7 @@ export class BlockEditorDialog extends LitElement {
     }
 
     const { blockRegistry } = this.vr.engine;
-    const block: BlockDefinition = {
+    const definition: BlockDefinition = {
       id: blockRegistry.nextId,
       name: this._draft.name.trim() || kDefaultBlockName,
       shapeId: this._draft.shapeId,
@@ -263,9 +273,8 @@ export class BlockEditorDialog extends LitElement {
       }
     };
 
-    blockRegistry.register(block);
-    editorState.dispatchBlockRegistryChanged();
-    editorState.setSelectedBlock(block.id);
+    this.vr.engine.defineBlock(definition);
+    editorState.setSelectedBlock(definition.id);
     this.close();
   }
 }

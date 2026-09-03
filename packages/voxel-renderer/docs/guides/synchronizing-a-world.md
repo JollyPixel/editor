@@ -77,15 +77,27 @@ const server = new VoxelSyncServer({
 sync.replaceWorld(renderer.engine.save());
 ```
 
-The server replaces its voxel and object layers, then broadcasts a fresh
-snapshot. Server snapshots omit block definitions and use an empty tileset
-list, so every client must already have matching blocks and textures.
+The server replaces its voxel and object layers, adopts the document's block
+table when it carries one, then broadcasts a fresh snapshot. Server snapshots
+use an empty tileset list, so every client must already have matching textures.
+
+## Publish a block definition
+
+```ts
+renderer.engine.defineBlock(definition);
+```
+
+`defineBlock()`, `defineBlocks()`, and `removeBlock()` emit `onBlockUpdated`,
+which `attach()` chains, so the edit publishes itself and a peer's arrives on
+the same hook. Write straight to `engine.blockRegistry` only for definitions
+each client derives on its own, such as tileset defaults, which must not be
+published.
 
 ## Access control
 
-Rights use the extension name `"voxel.renderer"` and hook action names such as
-`"voxel-set"`. Configure them on `network.Server` beside the Vite plugin. The
-network package allows actions that do not have a matching policy entry, so list
+Rights use the extension name `"voxel.renderer"` and action names such as
+`"voxel-set"` or `"block-defined"`. Configure them on `network.Server` beside
+the Vite plugin. The network package allows actions that do not have a matching policy entry, so list
 every mutation that a restricted role must not perform or use a trailing
 `"voxel.renderer.*"` rule.
 

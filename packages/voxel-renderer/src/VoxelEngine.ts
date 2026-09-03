@@ -24,7 +24,15 @@ import { VoxelWorld } from "./world/VoxelWorld.ts";
 import type { VoxelLayer } from "./world/VoxelLayer.ts";
 import type { VoxelChunk } from "./world/VoxelChunk.ts";
 import { ViewDistance } from "./world/ViewDistance.ts";
-import type { VoxelLayerHookEvent, VoxelLayerHookListener } from "./hooks.ts";
+import type {
+  VoxelBlockHookListener,
+  VoxelLayerHookEvent,
+  VoxelLayerHookListener
+} from "./hooks.ts";
+import {
+  resolveBlockDefinition,
+  type BlockDefinition
+} from "./blocks/BlockDefinition.ts";
 import { NOOP_LOGGER, type VoxelLogger } from "./utils/logger.ts";
 import type {
   VoxelEngineOptions,
@@ -44,6 +52,8 @@ export class VoxelEngine {
   readonly tilesetManager: TilesetManager;
 
   readonly debug: VoxelDebugger;
+
+  onBlockUpdated: VoxelBlockHookListener | undefined;
 
   focus: THREE.Vector3Like | null = null;
   viewDistance: ViewDistance;
@@ -72,6 +82,7 @@ export class VoxelEngine {
       alphaTest = 0.1,
       logger = NOOP_LOGGER,
       onLayerUpdated,
+      onBlockUpdated,
       debug,
       tilesetPadding,
       tilesets,
@@ -97,6 +108,7 @@ export class VoxelEngine {
     this.world.onLayerUpdated = onLayerUpdated;
     layers.forEach((name) => this.world.addLayer(name));
 
+    this.onBlockUpdated = onBlockUpdated;
     this.blockRegistry = new BlockRegistry(blocks);
     this.shapeRegistry = BlockShapeRegistry
       .createDefault();
@@ -212,6 +224,49 @@ export class VoxelEngine {
     cmd: VoxelLayerHookEvent
   ): void {
     this.world.applyRemoteCommand(cmd);
+  }
+
+  defineBlock(
+    def: BlockDefinition
+  ): void {
+    this.defineBlocks([def]);
+  }
+
+  defineBlocks(
+    defs: Iterable<BlockDefinition>
+  ): void {
+    const resolved = [...defs].map(resolveBlockDefinition);
+    if (resolved.length === 0) {
+      return;
+    }
+
+    for (const block of resolved) {
+      this.blockRegistry.register(block);
+    }
+    this.markAllChunksDirty("block-defined");
+
+    for (const block of resolved) {
+      this.onBlockUpdated?.({
+        action: "block-defined",
+        block
+      });
+    }
+  }
+
+  removeBlock(
+    blockId: number
+  ): boolean {
+    if (!this.blockRegistry.unregister(blockId)) {
+      return false;
+    }
+
+    this.markAllChunksDirty("block-removed");
+    this.onBlockUpdated?.({
+      action: "block-removed",
+      blockId
+    });
+
+    return true;
   }
 
   loadTileset(
