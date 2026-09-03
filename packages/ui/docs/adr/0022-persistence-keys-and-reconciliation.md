@@ -4,7 +4,8 @@ status: accepted
 
 # Layout persists through derived keys and a stated reconciliation algorithm
 
-Layout state (folder order and expansion, dock size and collapse, floating position and size) goes
+Layout state (folder order and expansion, dock size and collapse, floating position, size and
+visibility) goes
 through a two-method `StorageAdapter` port. The default wraps `localStorage` and degrades to memory
 permanently on failure, at both points where it throws: reading the `window.localStorage` property
 in a sandboxed iframe, and `setItem` raising `QuotaExceededError` long after construction succeeded.

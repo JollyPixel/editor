@@ -11,6 +11,7 @@ interface PaneOptions {
   grow?: boolean;
   collapsible?: boolean;
   locked?: boolean;
+  storageKey?: string;
 }
 ```
 
@@ -21,6 +22,7 @@ interface PaneOptions {
 | `grow` | `true` in container mode | Makes a mounted pane fill the container and scroll its content. Ignored for a floating pane. |
 | `collapsible` | `false` | Enables folding the pane to its header. |
 | `locked` | `false` | Keeps the pane at its authored position inside a `jolly-dock-layout`. |
+| `storageKey` | derived | Namespace the pane and its floating window persist under. Derived from the page path and the title when unset, so renaming the pane drops what it remembered. |
 
 ## Floating and mounted panes
 

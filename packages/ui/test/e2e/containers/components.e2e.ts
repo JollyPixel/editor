@@ -494,6 +494,28 @@ test.describe("Floating", () => {
     await expect.poll(() => heightOf(floating)).toBeCloseTo(height, 0);
     await expect(floating.locator(".resize-handle.bottom")).not.toHaveClass(/disabled/);
   });
+
+  test("a window hidden by its owner comes back hidden", async({ page }) => {
+    await gotoGallery(page, {
+      example: "containers/floating",
+      chrome: "off"
+    });
+
+    const floating = page.locator("jolly-floating");
+    await floating.evaluate((element) => {
+      element.hidden = true;
+    });
+    await expect(floating).toBeHidden();
+
+    await reloadGallery(page);
+    await expect(floating).toBeHidden();
+
+    await floating.evaluate((element) => {
+      element.hidden = false;
+    });
+    await reloadGallery(page);
+    await expect(floating).toBeVisible();
+  });
 });
 
 test.describe("Placement", () => {

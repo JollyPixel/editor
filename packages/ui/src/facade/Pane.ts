@@ -38,13 +38,14 @@ export interface PaneOptions {
    * @default false
    */
   locked?: boolean;
+  /**
+   * Namespace the pane and its floating window persist under. Without it the
+   * namespace is derived from the page path and the title, so renaming the
+   * pane drops what it remembered, and two pages sharing a path collide.
+   */
+  storageKey?: string;
 }
 
-/**
- * The facade's entry point. With no `container`, a `jolly-pane` floats in a
- * self-scoped `jolly-floating` window appended to `document.body`, matching
- * Tweakpane's own default and needing no theme setup from the caller.
- */
 export class Pane extends FacadeContainer {
   readonly element: HTMLElement;
 
@@ -58,15 +59,13 @@ export class Pane extends FacadeContainer {
     this.#pane.heading = options.title ?? "";
     this.#pane.collapsible = options.collapsible ?? false;
     this.#pane.locked = options.locked ?? false;
+    this.#pane.storageKey = options.storageKey ?? "";
 
     this.element = options.container === undefined
-      ? this.#mountFloating()
+      ? this.#mountFloating(options.storageKey ?? "")
       : this.#mountInto(options.container, options.grow ?? true);
   }
 
-  /**
-   * Collaboration source served to every field in this pane.
-   */
   get presence(): PresenceSource | null {
     return this.#pane.presence;
   }
@@ -97,19 +96,11 @@ export class Pane extends FacadeContainer {
     return this.#pane;
   }
 
-  /**
-   * `jolly-pane` reads inherited tokens but declares none itself (only
-   * `jolly-dialog` self-scopes), and a body-appended element sits outside
-   * every shadow root the page owns. `jolly-scope` is `Pane`'s own scope,
-   * so a floating window is themed with no setup from the caller.
-   *
-   * Having no ancestor to inherit from, that scope would otherwise follow the
-   * OS while the page around it follows the theme its own scope host declares:
-   * it adopts that theme instead, and only falls back to the OS on a page that
-   * declares none.
-   */
-  #mountFloating(): HTMLElement {
+  #mountFloating(
+    storageKey: string
+  ): HTMLElement {
     const floating = document.createElement("jolly-floating");
+    floating.storageKey = storageKey;
     floating.append(this.#pane);
 
     const scope = document.createElement("jolly-scope");
