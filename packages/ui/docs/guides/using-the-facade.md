@@ -45,6 +45,26 @@ The first binding creates `jolly-checkbox`. Bounds make the numeric binding a
 `jolly-slider`, and `options` makes the string binding a `jolly-select`. See
 [Binding facade](../api/facade/binding.md) for the full dispatch table.
 
+## Bind a vector
+
+A value carrying numeric axes dispatches to the matching math component, so a
+position is one row rather than three sliders:
+
+```ts
+const area = {
+  position: new THREE.Vector3(0, 0, 0),
+  size: { x: 4, y: 1, z: 4 }
+};
+
+pane.addBinding(area, "position", { step: 1, label: "Min corner" });
+pane.addBinding(area, "size", { min: 1, max: 24, step: 1 });
+```
+
+The axes are copied onto the bound object rather than replacing it, so
+`area.position` is still the same `THREE.Vector3` after an edit. Pass
+`view: "quaternion"` to read a four-axis value as a rotation, or
+`view: "point2d"` to turn a two-axis value into a drag pad.
+
 A binding handler runs after the object has been updated:
 
 ```ts
@@ -94,8 +114,8 @@ every folder created through the pane.
 ## Display monitored values
 
 `addMonitor()` creates a text monitor. Set `view: "graph"` for a numeric
-history graph. `addMonitors()` adds several number or string properties with
-one typed configuration object.
+history graph. `addMonitors()` adds several properties with one typed
+configuration object. A vector property is joined into `x, y, z`.
 
 ```ts
 const stats = {

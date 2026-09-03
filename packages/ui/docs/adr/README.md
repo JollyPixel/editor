@@ -32,6 +32,7 @@ result of a real trade-off. API reference lives in [`docs/api`](../api), usage i
 | [0024](./0024-no-spec-imports-a-component.md) | No spec imports a component, so testable logic lives in plain modules |
 | [0025](./0025-package-boundaries.md) | Lit is a peer dependency and the barrel is never side-effect-free |
 | [0026](./0026-shortcut-registry.md) | A central shortcut registry (proposed, unscheduled) |
+| [0027](./0027-facade-math-writes-are-component-wise.md) | The facade writes a math value component-wise, and refreshes from a snapshot |
 
 ## Scope boundary
 

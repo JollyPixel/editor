@@ -3,34 +3,55 @@ import type {
   Interval,
   JollyOption
 } from "../controls/types.ts";
+import {
+  isVec2Like,
+  isVec3Like,
+  isVec4Like
+} from "../math/guards.ts";
 
 // CONSTANTS
 const kHexColor = /^#[0-9a-f]{6}([0-9a-f]{2})?$/i;
+const kMathTags: readonly DispatchTag[] = [
+  "jolly-point2d",
+  "jolly-quaternion",
+  "jolly-vector2",
+  "jolly-vector3",
+  "jolly-vector4"
+];
 
 export type DispatchTag =
   | "jolly-checkbox"
   | "jolly-color"
   | "jolly-number"
+  | "jolly-point2d"
+  | "jolly-quaternion"
   | "jolly-range"
   | "jolly-select"
   | "jolly-slider"
-  | "jolly-text";
+  | "jolly-text"
+  | "jolly-vector2"
+  | "jolly-vector3"
+  | "jolly-vector4";
+
+export type DispatchView = "point2d" | "quaternion";
 
 export interface DispatchOptions<TValue> {
   min?: number;
   max?: number;
   step?: number;
   options?: Record<string, TValue>;
+  view?: DispatchView;
+  /**
+   * Adds an alpha channel to a color field and switches its output to
+   * `#rrggbbaa`. Defaults to on when the bound value is already eight digits.
+   */
+  alpha?: boolean;
+  /*
+   * Per-axis accessible names for a vector field, e.g. `{ x: "pitch" }`.
+   */
+  axisLabels?: Record<string, string>;
 }
 
-/**
- * Picks a control tag from a bound value and its `addBinding` options.
- *
- * `options.options` wins outright: any value bound alongside a choice list is
- * a select. Bounds pick `jolly-slider` over `jolly-number` only when both
- * `min` and `max` are given, matching Tweakpane's own rendering; `step` alone
- * (an unbounded field) stays a plain number.
- */
 export function dispatchTag<TValue>(
   value: TValue,
   options: DispatchOptions<TValue> = {}
@@ -52,15 +73,31 @@ export function dispatchTag<TValue>(
   if (isInterval(value)) {
     return "jolly-range";
   }
+  if (isVec4Like(value)) {
+    return options.view === "quaternion"
+      ? "jolly-quaternion"
+      : "jolly-vector4";
+  }
+  if (isVec3Like(value)) {
+    return "jolly-vector3";
+  }
+  if (isVec2Like(value)) {
+    return options.view === "point2d"
+      ? "jolly-point2d"
+      : "jolly-vector2";
+  }
 
   throw new TypeError(
     `@jolly-pixel/ui facade: no control dispatches for this value (${typeof value})`
   );
 }
 
-/**
- * Tweakpane's `{ label: value }` record, as `JollyOption[]` for `jolly-select`.
- */
+export function isMathTag(
+  tag: DispatchTag
+): boolean {
+  return kMathTags.includes(tag);
+}
+
 export function toJollyOptions<TValue>(
   record: Record<string, TValue>
 ): JollyOption<TValue>[] {

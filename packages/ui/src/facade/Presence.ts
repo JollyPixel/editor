@@ -5,13 +5,13 @@ import {
 } from "../peer/Presence.ts";
 
 export interface PresenceOptions {
-  /** Maximum number of named peers to show. @default Infinity */
+  /**
+   * Maximum number of named peers to show.
+   * @default Infinity
+   */
   max?: number;
 }
 
-/**
- * A `jolly-presence` snapshot view, added by `pane.addPresence()`.
- */
 export class Presence {
   readonly element: HTMLElementTagNameMap["jolly-presence"];
 
@@ -32,7 +32,6 @@ export class Presence {
     this.element.max = value;
   }
 
-  /** Replaces the rendered collaboration snapshot. */
   update(
     peers: Iterable<PresencePeer>
   ): void {

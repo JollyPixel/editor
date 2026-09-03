@@ -75,8 +75,10 @@ export type {
   FieldAlign,
   FieldLabelPosition
 } from "./field/JollyField.ts";
-export type {
-  JollyChangeDetail
+export {
+  onFieldChange,
+  type JollyChangeDetail,
+  type JollyFieldEventName
 } from "./field/events.ts";
 export type {
   CollaboratorPresence
@@ -182,8 +184,20 @@ export type {
   TransformLike,
   Vec2Like,
   Vec3Like,
+  Vec4Like,
   VectorValue
 } from "./math/types.ts";
+export {
+  isQuatLike,
+  isTransformLike,
+  isVec2Like,
+  isVec3Like,
+  isVec4Like
+} from "./math/guards.ts";
+export {
+  copyComponents,
+  snapshotComponents
+} from "./math/components.ts";
 
 // Interaction
 export {
@@ -323,7 +337,8 @@ export {
 export {
   formatCount,
   formatMilliseconds,
-  formatPercent
+  formatPercent,
+  formatVector
 } from "./monitors/format.ts";
 export {
   StatsElement
@@ -359,8 +374,12 @@ export type {
 } from "./facade/Binding.ts";
 export type {
   MonitorKey,
-  MonitorOptions
+  MonitorOptions,
+  MonitorValue
 } from "./facade/Monitor.ts";
+export type {
+  DispatchView
+} from "./facade/dispatch.ts";
 export type {
   ButtonOptions
 } from "./facade/Button.ts";
