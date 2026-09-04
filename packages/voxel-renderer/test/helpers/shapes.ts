@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import type { FaceDefinition } from "../../src/blocks/BlockShape.ts";
+import type { FaceDefinition } from "../../src/blocks/shape/BlockShape.ts";
 
 /**
  * Asserts every face normal of `faces` has a magnitude of 1.

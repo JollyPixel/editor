@@ -24,6 +24,7 @@ interface ShapeFaceRange {
   face: Face;
   start: number;
   count: number;
+  definitions: readonly FaceDefinition[];
 }
 ```
 
@@ -40,7 +41,9 @@ into four. Iterating `shape.faces` directly would interleave those slots.
 
 `ranges` holds one entry per slot the shape uses, ordered by `Face`, and skips
 slots the shape never renders. A `ramp` therefore returns five ranges, with no
-entry for `NegZ`. `shapeFaceRange(geometry, face)` looks one up.
+entry for `NegZ`. Each range also carries the `definitions` it was built from,
+so a consumer that needs the source polygons does not have to filter
+`shape.faces` again.
 
 Ranges are the hook for per-face texturing: walk them, resolve the block's
 `faceTextures[range.face]`, and rewrite that slice of `uvs`.

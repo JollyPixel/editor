@@ -77,9 +77,7 @@ export function blockShapeUv(
       continue;
     }
 
-    const definitions = shape.faces.filter(
-      (definition) => definition.face === range.face
-    );
+    const { definitions } = range;
     const slotBounds = boundsOf(geometry, range.start, range.count);
 
     activeFaces.push(face);

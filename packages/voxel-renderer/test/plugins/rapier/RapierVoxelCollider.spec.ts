@@ -7,7 +7,7 @@ import { RapierVoxelCollider } from "../../../src/plugins/rapier/RapierVoxelColl
 import type { VoxelChunkCollision } from "../../../src/collision/VoxelCollider.ts";
 import { VoxelChunk } from "../../../src/world/VoxelChunk.ts";
 import { BlockRegistry } from "../../../src/blocks/BlockRegistry.ts";
-import { BlockShapeRegistry } from "../../../src/blocks/BlockShapeRegistry.ts";
+import { BlockShapeRegistry } from "../../../src/blocks/shape/BlockShapeRegistry.ts";
 import type {
   RapierAPI,
   RapierCollider,

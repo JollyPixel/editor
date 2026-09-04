@@ -1,81 +1,79 @@
 // Import Internal Dependencies
-import type {
-  BlockShape,
-  BlockCollisionHint,
-  BlockShapeID,
-  FaceDefinition
-} from "../BlockShape.ts";
-import { projectedFace } from "../faceUv.ts";
+import { FACE } from "../../../utils/math.ts";
 import {
-  FACE
-} from "../../utils/math.ts";
+  defineFace,
+  type FaceDefinition
+} from "../../face/index.ts";
+import { BlockShapeBase } from "../BlockShapeBase.ts";
+import type {
+  BlockCollisionHint,
+  BlockShapeID
+} from "../BlockShape.ts";
 
 // CONSTANTS
 const kStairCornerOuterFaces: readonly FaceDefinition[] = [
-  projectedFace({
+  defineFace({
     face: FACE.NegY,
     normal: [0, -1, 0],
     vertices: [[0, 0, 1], [0, 0, 0], [1, 0, 0], [1, 0, 1]]
   }),
-  projectedFace({
+  defineFace({
     face: FACE.NegZ,
     normal: [0, 0, -1],
     vertices: [[1, 0, 0], [0, 0, 0], [0, 0.5, 0], [1, 0.5, 0]]
   }),
-  projectedFace({
+  defineFace({
     face: FACE.NegZ,
     normal: [0, 0, -1],
     vertices: [[0.5, 0.5, 0], [0, 0.5, 0], [0, 1, 0], [0.5, 1, 0]]
   }),
-  projectedFace({
+  defineFace({
     face: FACE.NegX,
     normal: [-1, 0, 0],
     vertices: [[0, 0, 1], [0, 0.5, 1], [0, 0.5, 0], [0, 0, 0]]
   }),
-  projectedFace({
+  defineFace({
     face: FACE.NegX,
     normal: [-1, 0, 0],
     vertices: [[0, 0.5, 0], [0, 0.5, 0.5], [0, 1, 0.5], [0, 1, 0]]
   }),
-  projectedFace({
+  defineFace({
     face: FACE.PosZ,
     normal: [0, 0, 1],
     vertices: [[0, 0, 1], [1, 0, 1], [1, 0.5, 1], [0, 0.5, 1]]
   }),
-  projectedFace({
+  defineFace({
     face: FACE.PosX,
     normal: [1, 0, 0],
     vertices: [[1, 0, 0], [1, 0.5, 0], [1, 0.5, 1], [1, 0, 1]]
   }),
-  projectedFace({
+  defineFace({
     face: FACE.PosY,
     normal: [0, 1, 0],
     vertices: [[0, 1, 0], [0, 1, 0.5], [0.5, 1, 0.5], [0.5, 1, 0]]
   }),
-  projectedFace({
+  defineFace({
     face: FACE.PosY,
     normal: [0, 1, 0],
     vertices: [[0.5, 0.5, 0], [0.5, 0.5, 0.5], [1, 0.5, 0.5], [1, 0.5, 0]]
   }),
-  projectedFace({
+  defineFace({
     face: FACE.PosY,
     normal: [0, 1, 0],
     vertices: [[0, 0.5, 0.5], [0, 0.5, 1], [0.5, 0.5, 1], [0.5, 0.5, 0.5]]
   }),
-  projectedFace({
+  defineFace({
     face: FACE.PosY,
     normal: [0, 1, 0],
     vertices: [[0.5, 0.5, 0.5], [0.5, 0.5, 1], [1, 0.5, 1], [1, 0.5, 0.5]]
   }),
-  projectedFace({
+  defineFace({
     face: FACE.PosX,
-    cull: null,
     normal: [1, 0, 0],
     vertices: [[0.5, 0.5, 0.5], [0.5, 0.5, 0], [0.5, 1, 0], [0.5, 1, 0.5]]
   }),
-  projectedFace({
+  defineFace({
     face: FACE.PosZ,
-    cull: null,
     normal: [0, 0, 1],
     vertices: [[0, 0.5, 0.5], [0.5, 0.5, 0.5], [0.5, 1, 0.5], [0, 1, 0.5]]
   })
@@ -84,21 +82,15 @@ const kStairCornerOuterFaces: readonly FaceDefinition[] = [
 /**
  * Convex stair corner whose bottom is its only fully occluding face.
  */
-export class StairCornerOuter implements BlockShape {
+export class StairCornerOuter extends BlockShapeBase {
   readonly id: BlockShapeID;
   readonly collisionHint: BlockCollisionHint = "trimesh";
+  readonly faces: readonly FaceDefinition[] = kStairCornerOuterFaces;
 
   constructor(
     id: BlockShapeID = "stairCornerOuter"
   ) {
+    super();
     this.id = id;
-  }
-
-  readonly faces: readonly FaceDefinition[] = kStairCornerOuterFaces;
-
-  occludes(
-    face: FACE
-  ): boolean {
-    return face === FACE.NegY;
   }
 }

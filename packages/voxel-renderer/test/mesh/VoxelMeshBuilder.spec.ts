@@ -8,7 +8,7 @@ import type * as THREE from "three";
 // Import Internal Dependencies
 import { VoxelWorld } from "../../src/world/VoxelWorld.ts";
 import { BlockRegistry } from "../../src/blocks/BlockRegistry.ts";
-import { BlockShapeRegistry } from "../../src/blocks/BlockShapeRegistry.ts";
+import { BlockShapeRegistry } from "../../src/blocks/shape/BlockShapeRegistry.ts";
 import { TilesetManager } from "../../src/tileset/TilesetManager.ts";
 import { VoxelMeshBuilder } from "../../src/mesh/index.ts";
 import { VoxelTransform } from "../../src/world/VoxelTransform.ts";
@@ -421,6 +421,73 @@ describe("VoxelMeshBuilder — neighbour rotation inversion fix (rot=1 / rot=3)"
     // Ramp is in chunk (-1,0,0), only the cube chunk (0,0,0) is built here.
     // Cube: 5 faces (NegX correctly hidden by ramp back wall) = 20 verts.
     assert.equal(countVertices(f), 20);
+  });
+});
+
+describe("VoxelMeshBuilder — a neighbour never hides a face it does not touch", () => {
+  const kSlabBottomId = 6;
+  const kSlabTopId = 7;
+  const kPoleYId = 8;
+
+  function makeShapeFixture() {
+    const f = makeFixture();
+    f.blockRegistry.register(makeBlockDef(kSlabBottomId, "slabBottom", { name: "SlabBottom" }));
+    f.blockRegistry.register(makeBlockDef(kSlabTopId, "slabTop", { name: "SlabTop" }));
+    f.blockRegistry.register(makeBlockDef(kPoleYId, "poleY", { name: "PoleY" }));
+
+    return f;
+  }
+
+  it("keeps the ramp slope under a cube, since air separates the two", () => {
+    const f = makeShapeFixture();
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kRampId, transform: 0 });
+    f.world.setVoxelAt("test", { x: 0, y: 1, z: 0 }, { blockId: kCubeId, transform: 0 });
+
+    // The ramp's slope spans y=0 to y=1, so the cube covers only its top edge.
+    // Ramp keeps all 5 faces (18 verts); the cube keeps all 6 (24 verts)
+    // because a ramp does not occlude PosY.
+    assert.equal(countVertices(f), 42);
+    assert.equal(f.builder.stats.culledFaces, 0);
+  });
+
+  it("keeps a bottom slab's top face under a cube", () => {
+    const f = makeShapeFixture();
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kSlabBottomId, transform: 0 });
+    f.world.setVoxelAt("test", { x: 0, y: 1, z: 0 }, { blockId: kCubeId, transform: 0 });
+
+    // The slab's top sits at y=0.5, half a block below the cube.
+    assert.equal(countVertices(f), 48);
+    assert.equal(f.builder.stats.culledFaces, 0);
+  });
+
+  it("keeps a top slab's bottom face above a cube", () => {
+    const f = makeShapeFixture();
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+    f.world.setVoxelAt("test", { x: 0, y: 1, z: 0 }, { blockId: kSlabTopId, transform: 0 });
+
+    assert.equal(countVertices(f), 48);
+    assert.equal(f.builder.stats.culledFaces, 0);
+  });
+
+  it("keeps a stair's lower tread under a cube but still culls the upper one", () => {
+    const f = makeShapeFixture();
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kStairId, transform: 0 });
+    f.world.setVoxelAt("test", { x: 0, y: 1, z: 0 }, { blockId: kCubeId, transform: 0 });
+
+    // Only the upper tread reaches y=1: 9 of the stair's 10 faces survive
+    // (36 verts) alongside the cube's 6 (24 verts).
+    assert.equal(countVertices(f), 60);
+    assert.equal(f.builder.stats.culledFaces, 1);
+  });
+
+  it("keeps a pole's side faces beside a cube", () => {
+    const f = makeShapeFixture();
+    f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kPoleYId, transform: 0 });
+    f.world.setVoxelAt("test", { x: 1, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
+
+    // The pole is inset to x=0.375..0.625, so the cube touches none of it.
+    assert.equal(countVertices(f), 48);
+    assert.equal(f.builder.stats.culledFaces, 0);
   });
 });
 

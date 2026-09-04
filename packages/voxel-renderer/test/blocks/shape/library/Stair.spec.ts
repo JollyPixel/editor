@@ -3,12 +3,12 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { FACE } from "../../../src/utils/math.ts";
-import { Stair } from "../../../src/blocks/shapes/Stair.ts";
+import { FACE } from "../../../../src/utils/math.ts";
+import { Stair } from "../../../../src/blocks/shape/library/Stair.ts";
 import {
   checkNormalMagnitudes,
   checkVertexCounts
-} from "../../helpers/shapes.ts";
+} from "../../../helpers/shapes.ts";
 
 describe("Stair", () => {
   const stair = new Stair();

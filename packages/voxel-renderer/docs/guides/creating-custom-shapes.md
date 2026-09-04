@@ -1,32 +1,27 @@
 # Creating custom shapes
 
-Implement `BlockShape`, register the instance, then reference its ID from a
+Extend `BlockShapeBase`, register the instance, then reference its ID from a
 `BlockDefinition`.
 
 ```ts
 import {
+  BlockShapeBase,
   VoxelEngine,
-  projectedFace,
-  type BlockShape,
+  defineFace,
   type Face,
   type FaceDefinition
 } from "@jolly-pixel/voxel.renderer";
 
-class MyShape implements BlockShape {
+class MyShape extends BlockShapeBase {
   readonly id = "myShape";
   readonly collisionHint = "box" as const;
   readonly faces: readonly FaceDefinition[] = [
-    // Define triangles or quads in normalized block space.
-    projectedFace({
+    defineFace({
       face: Face.PosZ,
       normal: [0, 0, 1],
       vertices: [[0, 0, 1], [1, 0, 1], [1, 0.5, 1], [0, 0.5, 1]]
     })
   ];
-
-  occludes(_face: Face): boolean {
-    return false;
-  }
 }
 
 const engine = new VoxelEngine({
@@ -34,14 +29,24 @@ const engine = new VoxelEngine({
 });
 ```
 
-`faces` use coordinates from 0 through 1 within a voxel. `projectedFace()`
-derives each face's `uvs` from its vertices so the face samples only the part
-of the tile it covers; see the
-[face UV convention](../api/blocks/BlockShape.md#face-uv-convention). Pass an
-explicit `uvs` to opt out. Return `true` from
-`occludes()` only when the shape completely covers the requested axis-aligned
-face. An incorrect `true` result removes visible geometry from neighbouring
-blocks.
+`faces` use coordinates from 0 through 1 within a voxel, as triangles or quads.
+`defineFace()` settles the two members you may leave out:
+
+- `uvs` default to the projection of the face's own vertices, so it samples
+  only the part of the tile it covers; see the
+  [face UV convention](../api/blocks/BlockShape.md#face-uv-convention)
+- `cull` defaults to the face's own direction, but only when the face lies on
+  that direction's boundary plane, so a face inset into the block needs no
+  annotation; see
+  [default culling](../api/blocks/BlockShape.md#default-culling)
+
+Pass either explicitly to opt out.
+
+`BlockShapeBase` derives `occludes()` from those faces, so the shape above
+correctly hides nothing. Implement `BlockShape` directly, or override
+`occludes()`, only when the vertices cannot say what you mean; see
+[`BlockShapeBase`](../api/blocks/BlockShapeBase.md). An incorrect `true` result
+removes visible geometry from neighbouring blocks.
 
 Registering through `engine.shapeRegistry` is also supported:
 

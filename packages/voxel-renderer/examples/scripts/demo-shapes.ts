@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { ViewHelper } from "three/addons/helpers/ViewHelper.js";
 
 // Import Internal Dependencies
-import type { BlockShape } from "../../src/blocks/BlockShape.ts";
+import type { BlockShape } from "../../src/blocks/shape/BlockShape.ts";
 import {
   type LabelEntry,
   createLabel,
@@ -13,18 +13,18 @@ import {
   startLoop
 } from "./utils/common.ts";
 import { createExamplePane } from "./utils/example-switcher.ts";
-import { Cube } from "../../src/blocks/shapes/Cube.ts";
-import { Slab } from "../../src/blocks/shapes/Slab.ts";
-import { PoleY } from "../../src/blocks/shapes/PoleY.ts";
-import { Pole } from "../../src/blocks/shapes/Pole.ts";
-import { Ramp } from "../../src/blocks/shapes/Ramp.ts";
 import {
+  Cube,
+  Slab,
+  PoleY,
+  Pole,
+  Ramp,
   RampCornerInner,
-  RampCornerOuter
-} from "../../src/blocks/shapes/RampCorner.ts";
-import { Stair } from "../../src/blocks/shapes/Stair.ts";
-import { StairCornerInner } from "../../src/blocks/shapes/StairCornerInner.ts";
-import { StairCornerOuter } from "../../src/blocks/shapes/StairCornerOuter.ts";
+  RampCornerOuter,
+  Stair,
+  StairCornerInner,
+  StairCornerOuter
+} from "../../src/blocks/shape/library/index.ts";
 
 // CONSTANTS
 const kGap = 2.5;

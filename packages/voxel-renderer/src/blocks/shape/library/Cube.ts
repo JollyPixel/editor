@@ -1,11 +1,11 @@
 // Import Internal Dependencies
+import { FACE } from "../../../utils/math.ts";
 import {
-  FACE
-} from "../../utils/math.ts";
-import { projectedFace } from "../faceUv.ts";
+  defineFace,
+  type FaceDefinition
+} from "../../face/index.ts";
+import { BlockShapeBase } from "../BlockShapeBase.ts";
 import type {
-  BlockShape,
-  FaceDefinition,
   BlockCollisionHint,
   BlockShapeID
 } from "../BlockShape.ts";
@@ -13,52 +13,47 @@ import type {
 /**
  * Full unit cube with counter-clockwise outward face winding.
  */
-export class Cube implements BlockShape {
+export class Cube extends BlockShapeBase {
   readonly id: BlockShapeID;
   readonly collisionHint: BlockCollisionHint = "box";
 
   constructor(
     id: BlockShapeID = "cube"
   ) {
+    super();
     this.id = id;
   }
 
   readonly faces: readonly FaceDefinition[] = [
-    projectedFace({
+    defineFace({
       face: FACE.PosX,
       normal: [1, 0, 0],
       vertices: [[1, 0, 0], [1, 1, 0], [1, 1, 1], [1, 0, 1]]
     }),
-    projectedFace({
+    defineFace({
       face: FACE.NegX,
       normal: [-1, 0, 0],
       vertices: [[0, 0, 1], [0, 1, 1], [0, 1, 0], [0, 0, 0]]
     }),
-    projectedFace({
+    defineFace({
       face: FACE.PosY,
       normal: [0, 1, 0],
       vertices: [[0, 1, 0], [0, 1, 1], [1, 1, 1], [1, 1, 0]]
     }),
-    projectedFace({
+    defineFace({
       face: FACE.NegY,
       normal: [0, -1, 0],
       vertices: [[0, 0, 1], [0, 0, 0], [1, 0, 0], [1, 0, 1]]
     }),
-    projectedFace({
+    defineFace({
       face: FACE.PosZ,
       normal: [0, 0, 1],
       vertices: [[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]]
     }),
-    projectedFace({
+    defineFace({
       face: FACE.NegZ,
       normal: [0, 0, -1],
       vertices: [[1, 0, 0], [0, 0, 0], [0, 1, 0], [1, 1, 0]]
     })
   ];
-
-  occludes(
-    _face: FACE
-  ): boolean {
-    return true;
-  }
 }

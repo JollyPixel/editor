@@ -27,7 +27,7 @@ import type {
 } from "../../world/VoxelLayer.ts";
 import type { TilesetDefinition } from "../../tileset/types.ts";
 import type { ResolvedBlockDefinition } from "../../blocks/BlockDefinition.ts";
-import type { BlockShapeID } from "../../blocks/BlockShape.ts";
+import type { BlockShapeID } from "../../blocks/shape/BlockShape.ts";
 
 export interface TiledConverterOptions {
   /**

@@ -5,14 +5,25 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   buildShapeGeometry,
-  shapeFaceRange
-} from "../../src/blocks/shapeGeometry.ts";
-import { BlockShapeRegistry } from "../../src/blocks/BlockShapeRegistry.ts";
-import { Cube } from "../../src/blocks/shapes/Cube.ts";
-import { Ramp } from "../../src/blocks/shapes/Ramp.ts";
-import { Stair } from "../../src/blocks/shapes/Stair.ts";
-import { FACE } from "../../src/utils/math.ts";
-import type { BlockShape } from "../../src/blocks/BlockShape.ts";
+  type ShapeGeometry
+} from "../../../src/blocks/shape/shapeGeometry.ts";
+import {
+  BlockShapeRegistry
+} from "../../../src/blocks/shape/BlockShapeRegistry.ts";
+import { Cube } from "../../../src/blocks/shape/library/Cube.ts";
+import { Ramp } from "../../../src/blocks/shape/library/Ramp.ts";
+import { Stair } from "../../../src/blocks/shape/library/Stair.ts";
+import { FACE } from "../../../src/utils/math.ts";
+import type { BlockShape } from "../../../src/blocks/shape/BlockShape.ts";
+
+function rangeOf(
+  geometry: ShapeGeometry,
+  face: FACE
+) {
+  return geometry.ranges.find(
+    (range) => range.face === face
+  );
+}
 
 describe("buildShapeGeometry", () => {
   it("emits four vertices and two triangles per cube face", () => {
@@ -52,20 +63,32 @@ describe("buildShapeGeometry", () => {
     const geometry = buildShapeGeometry(new Stair());
 
     // The stair splits PosY into two quads and PosZ stays a single quad.
-    assert.equal(shapeFaceRange(geometry, FACE.PosY)?.count, 8);
-    assert.equal(shapeFaceRange(geometry, FACE.PosZ)?.count, 4);
+    assert.equal(rangeOf(geometry, FACE.PosY)?.count, 8);
+    assert.equal(rangeOf(geometry, FACE.PosZ)?.count, 4);
+  });
+
+  it("exposes the polygons a slot was built from", () => {
+    const shape = new Stair();
+    const geometry = buildShapeGeometry(shape);
+    const range = rangeOf(geometry, FACE.PosY)!;
+
+    assert.equal(range.definitions.length, 2);
+    assert.deepEqual(
+      range.definitions,
+      shape.faces.filter((face) => face.face === FACE.PosY)
+    );
   });
 
   it("omits a slot the shape never uses", () => {
     const geometry = buildShapeGeometry(new Ramp());
 
     assert.equal(geometry.ranges.length, 5);
-    assert.equal(shapeFaceRange(geometry, FACE.NegZ), undefined);
+    assert.equal(rangeOf(geometry, FACE.NegZ), undefined);
   });
 
   it("triangulates a three vertex face into a single triangle", () => {
     const geometry = buildShapeGeometry(new Ramp());
-    const range = shapeFaceRange(geometry, FACE.NegX);
+    const range = rangeOf(geometry, FACE.NegX);
 
     assert.equal(range?.count, 3);
     assert.deepEqual(
@@ -84,7 +107,7 @@ describe("buildShapeGeometry", () => {
 
   it("copies the face normal onto every vertex of that polygon", () => {
     const geometry = buildShapeGeometry(new Cube());
-    const range = shapeFaceRange(geometry, FACE.PosX)!;
+    const range = rangeOf(geometry, FACE.PosX)!;
 
     for (let index = range.start; index < range.start + range.count; index++) {
       assert.deepEqual(

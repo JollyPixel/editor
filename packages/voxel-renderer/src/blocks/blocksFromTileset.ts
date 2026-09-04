@@ -2,6 +2,12 @@
 import type { ResolvedTilesetDefinition } from "../tileset/types.ts";
 import type { ResolvedBlockDefinition } from "./BlockDefinition.ts";
 
+// CONSTANTS
+/**
+ * Historical byte-sized cap, unrelated to `MAX_BLOCK_ID`.
+ */
+const kDefaultLimit = 255;
+
 export type BlockOverrides = Partial<
   Pick<
     ResolvedBlockDefinition,
@@ -22,15 +28,12 @@ export interface BlocksFromTilesetOptions {
   ) => BlockOverrides;
 }
 
-/**
- * One cube block per tile, numbered from 1 in row-major order.
- */
 export function* blocksFromTileset(
   def: ResolvedTilesetDefinition,
   options: BlocksFromTilesetOptions = {}
 ): IterableIterator<ResolvedBlockDefinition> {
   const {
-    limit = 255,
+    limit = kDefaultLimit,
     map
   } = options;
 
@@ -40,7 +43,7 @@ export function* blocksFromTileset(
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
       if (blockId > limit) {
-        break;
+        return;
       }
 
       yield {

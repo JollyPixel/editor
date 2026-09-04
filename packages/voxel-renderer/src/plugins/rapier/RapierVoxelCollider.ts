@@ -8,7 +8,7 @@ import type {
 } from "../../collision/VoxelCollider.ts";
 import { mergeChunkGeometries } from "../../collision/mergeChunkGeometries.ts";
 import type { BlockRegistry } from "../../blocks/BlockRegistry.ts";
-import type { BlockShapeRegistry } from "../../blocks/BlockShapeRegistry.ts";
+import type { BlockShapeRegistry } from "../../blocks/shape/BlockShapeRegistry.ts";
 import type { VoxelChunk } from "../../world/VoxelChunk.ts";
 import { voxelBlockId } from "../../world/packedVoxel.ts";
 import type { VoxelCoord } from "../../world/types.ts";

@@ -3,7 +3,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { BlockRegistry } from "./blocks/BlockRegistry.ts";
-import { BlockShapeRegistry } from "./blocks/BlockShapeRegistry.ts";
+import { BlockShapeRegistry } from "./blocks/shape/BlockShapeRegistry.ts";
 import type { VoxelCollider } from "./collision/VoxelCollider.ts";
 import { VoxelDebugger } from "./debug/VoxelDebugger.ts";
 import { VoxelMeshBuilder } from "./mesh/index.ts";

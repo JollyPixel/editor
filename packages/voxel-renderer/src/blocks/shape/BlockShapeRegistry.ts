@@ -3,19 +3,18 @@ import type {
   BlockShape,
   BlockShapeID
 } from "./BlockShape.ts";
-
+import { Cube } from "./library/Cube.ts";
+import { Pole } from "./library/Pole.ts";
+import { PoleY } from "./library/PoleY.ts";
+import { Ramp } from "./library/Ramp.ts";
 import {
-  Cube,
-  Pole,
-  PoleY,
-  Ramp,
   RampCornerInner,
-  RampCornerOuter,
-  Slab,
-  Stair,
-  StairCornerInner,
-  StairCornerOuter
-} from "./shapes/index.ts";
+  RampCornerOuter
+} from "./library/RampCorner.ts";
+import { Slab } from "./library/Slab.ts";
+import { Stair } from "./library/Stair.ts";
+import { StairCornerInner } from "./library/StairCornerInner.ts";
+import { StairCornerOuter } from "./library/StairCornerOuter.ts";
 
 export class BlockShapeRegistry implements Iterable<BlockShape> {
   #shapes = new Map<BlockShapeID, BlockShape>();

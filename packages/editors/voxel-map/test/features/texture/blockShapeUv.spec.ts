@@ -129,7 +129,8 @@ describe("blockShapeUv", () => {
           face: Face.PosZ,
           normal: [0, 0, 1],
           vertices: [[0, 0, 1], [0.5, 0, 1], [0.5, 0.5, 1]],
-          uvs: [[0, 0], [0.5, 0], [0.5, 0.5]]
+          uvs: [[0, 0], [0.5, 0], [0.5, 0.5]],
+          cull: null
         }
       ],
       occludes: () => false
@@ -206,7 +207,8 @@ describe("blockShapeUv", () => {
           face: Face.PosX,
           normal: [1, 0, 0],
           vertices: [[1, 0, 0], [1, 1, 0], [1, 0, 1]],
-          uvs: [[0, 0], [0, 1], [1, 0]]
+          uvs: [[0, 0], [0, 1], [1, 0]],
+          cull: null
         }
       ],
       occludes: () => false
