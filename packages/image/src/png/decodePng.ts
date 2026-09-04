@@ -1,38 +1,26 @@
 // Import Internal Dependencies
-import { inflate } from "./inflate.ts";
+import { inflate } from "./zlib.ts";
 import {
   channelsPerColorType,
   toRGBA,
   unfilter,
   type PngPalette
-} from "./pngScanlines.ts";
-import { InvalidPngError } from "./errors/InvalidPngError.ts";
+} from "./scanlines.ts";
+import { InvalidPngError } from "../errors/InvalidPngError.ts";
+import type { DecodedImage } from "../types.ts";
 
 // CONSTANTS
-const kSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-// Length plus type, followed by the payload and a four-byte CRC.
+const kSignature = [
+  0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A
+];
 const kChunkHeaderSize = 8;
 const kCrcSize = 4;
 const kHeaderSize = 13;
 const kSupportedBitDepth = 8;
 
-export interface DecodedPng {
-  width: number;
-  height: number;
-  /** RGBA8, row-major from the top-left corner. */
-  pixels: Uint8ClampedArray;
-}
-
-/**
- * Decodes 8-bit, non-interlaced PNG images to exact RGBA8 samples, with no
- * color management applied. Chunk CRCs are not verified.
- *
- * Both the seed pipeline, which runs before any browser exists, and the
- * browsers that lack `ImageDecoder` go through this decoder.
- */
 export async function decodePng(
   data: Uint8Array
-): Promise<DecodedPng> {
+): Promise<DecodedImage> {
   assertSignature(data);
 
   const view = new DataView(
@@ -87,7 +75,12 @@ export async function decodePng(
   return {
     width,
     height,
-    pixels: toRGBA(scanline, width * height, colorType, palette)
+    data: toRGBA(
+      scanline,
+      width * height,
+      colorType,
+      palette
+    )
   };
 }
 
@@ -133,6 +126,12 @@ function readHeader(
   const bitDepth = chunk[8];
   const colorType = chunk[9];
   const interlace = chunk[12];
+
+  if (width === 0 || height === 0) {
+    throw new InvalidPngError(
+      `dimensions must be positive, got ${width}x${height}.`
+    );
+  }
 
   if (bitDepth !== kSupportedBitDepth) {
     throw new InvalidPngError(

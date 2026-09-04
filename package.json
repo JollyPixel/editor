@@ -21,6 +21,7 @@
     "packages/loop",
     "packages/asset",
     "packages/color",
+    "packages/image",
     "packages/resize-handle",
     "packages/event-store",
     "packages/network",

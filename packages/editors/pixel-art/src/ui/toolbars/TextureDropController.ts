@@ -5,10 +5,8 @@ import {
   type ReactiveController,
   type ReactiveControllerHost
 } from "lit";
-import {
-  decodeRasterCanvas,
-  type PixelArtCanvas
-} from "@jolly-pixel/pixel-draw.renderer";
+import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
+import { decodeRasterCanvas } from "@jolly-pixel/image/raster";
 
 // Import Internal Dependencies
 import { renderIcon } from "../common/icons.ts";

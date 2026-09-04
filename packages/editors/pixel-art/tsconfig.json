@@ -13,6 +13,9 @@
   ],
   "references": [
     {
+      "path": "../../image"
+    },
+    {
       "path": "../../pixel-draw-renderer"
     },
     {

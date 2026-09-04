@@ -72,15 +72,7 @@ export {
   type KeybindingsMap
 } from "./input/Keybindings.ts";
 export type { WindowLike } from "./input/WindowLike.ts";
-export {
-  decodeRasterBlob,
-  decodeRasterCanvas
-} from "./clipboard/selectionImage.ts";
-export {
-  decodePng,
-  InvalidPngError,
-  type DecodedPng
-} from "./image/index.ts";
+export { decodeRasterBlob } from "./clipboard/selectionImage.ts";
 export type {
   ClipboardAdapter,
   ClipboardOperationResult,

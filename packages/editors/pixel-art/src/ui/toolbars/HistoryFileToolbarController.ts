@@ -5,11 +5,12 @@ import {
   type ReactiveControllerHost
 } from "lit";
 import { ref, createRef, type Ref } from "lit/directives/ref.js";
-import {
-  decodeRasterCanvas,
-  type PixelArtCanvas,
-  type HistoryState
+import type {
+  PixelArtCanvas,
+  HistoryState
 } from "@jolly-pixel/pixel-draw.renderer";
+import { encodePng } from "@jolly-pixel/image";
+import { decodeRasterCanvas } from "@jolly-pixel/image/raster";
 
 // Import Internal Dependencies
 import { renderIcon } from "../common/icons.ts";
@@ -80,18 +81,45 @@ export class HistoryFileToolbarController implements ReactiveController {
     this.#canvas.texture = blank;
   }
 
-  #onExportPng(): void {
+  /**
+   * Reads the texture's own samples and encodes them directly. `toDataURL`
+   * would go through the canvas backing store, which premultiplies, so
+   * low-alpha pixels would not survive the export.
+   */
+  async #onExportPng(): Promise<void> {
     if (!this.#canvas) {
       return;
     }
 
-    const url = this.#canvas
-      .textureCanvas()
-      .toDataURL("image/png");
+    const canvas = this.#canvas.textureCanvas();
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    if (!context) {
+      return;
+    }
+
+    const { data } = context.getImageData(
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+    const png = await encodePng({
+      width: canvas.width,
+      height: canvas.height,
+      data
+    });
+
+    const url = URL.createObjectURL(
+      new Blob([png], { type: "image/png" })
+    );
     const anchor = document.createElement("a");
     anchor.href = url;
     anchor.download = "texture.png";
     anchor.click();
+
+    // Revoking synchronously cancels the download on some browsers, which
+    // have not read the URL by the time click() returns.
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 
   #onImportClick(): void {
@@ -165,7 +193,7 @@ export class HistoryFileToolbarController implements ReactiveController {
         <button
           class="rail-btn" part="export-button"
           aria-label="Export texture"
-          @click=${() => this.#onExportPng()}
+          @click=${() => void this.#onExportPng()}
         >
           ${renderIcon("export")}
           <span class="tooltip">Export</span>

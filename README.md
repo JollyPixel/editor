@@ -46,6 +46,7 @@ We provide agnostic renderers and engines (often used by our editors below):
 - [@jolly-pixel/three](./packages/three) - Three.js utilities (Grid, Frustum, ...)
 - [@jolly-pixel/color](./packages/color) - Color utilities (Parsing, Palettes, Color Spaces, Color Conversions ...)
 - [@jolly-pixel/bench](./packages/bench) - Shared benchmarking harness and CLI (workspace-private)
+- [@jolly-pixel/image](./packages/image) - PNG codecs and browser raster decoding
 
 ### Editors
 

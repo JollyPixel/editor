@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { InvalidPngError } from "./errors/InvalidPngError.ts";
+import { InvalidPngError } from "../errors/InvalidPngError.ts";
 
 // CONSTANTS
 const kChannelsPerColorType: Record<number, number> = {
@@ -15,27 +15,17 @@ const kGrayscaleAlpha = 4;
 const kTruecolorAlpha = 6;
 const kOpaque = 255;
 
-/**
- * Optional palette chunks; `alpha` holds one byte per palette entry.
- */
 export interface PngPalette {
   entries: Uint8Array | null;
   alpha: Uint8Array | null;
 }
 
-/**
- * Returns undefined for color types the decoder does not implement.
- */
 export function channelsPerColorType(
   colorType: number
 ): number | undefined {
   return kChannelsPerColorType[colorType];
 }
 
-/**
- * Reverses the per-scanline filters, dropping the leading filter byte of each
- * row. Filters reference already-unfiltered bytes, so `out` is read as it fills.
- */
 export function unfilter(
   raw: Uint8Array,
   width: number,
@@ -92,17 +82,16 @@ function paeth(
   const distanceUp = Math.abs(estimate - up);
   const distanceUpLeft = Math.abs(estimate - upLeft);
 
-  if (distanceLeft <= distanceUp && distanceLeft <= distanceUpLeft) {
+  if (
+    distanceLeft <= distanceUp &&
+    distanceLeft <= distanceUpLeft
+  ) {
     return left;
   }
 
   return distanceUp <= distanceUpLeft ? up : upLeft;
 }
 
-/**
- * Expands unfiltered samples to RGBA8. Images without an alpha channel become
- * fully opaque, apart from indexed pixels covered by a tRNS table.
- */
 export function toRGBA(
   scanline: Uint8Array,
   pixelCount: number,
@@ -121,7 +110,10 @@ export function toRGBA(
       continue;
     }
 
-    if (colorType === kGrayscale || colorType === kGrayscaleAlpha) {
+    if (
+      colorType === kGrayscale ||
+      colorType === kGrayscaleAlpha
+    ) {
       pixels[to] = scanline[from];
       pixels[to + 1] = scanline[from];
       pixels[to + 2] = scanline[from];
