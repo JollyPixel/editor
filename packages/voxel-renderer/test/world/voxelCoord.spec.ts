@@ -7,6 +7,7 @@ import {
   voxelCellOf,
   voxelPositionOf
 } from "../../src/world/voxelCoord.ts";
+import { SQRT2_OVER_2 } from "../../src/constants.ts";
 
 describe("voxelCellOf", () => {
   it("keeps a point already on a cell corner", () => {
@@ -73,6 +74,37 @@ describe("voxelPositionOf", () => {
     assert.deepEqual(
       voxelPositionOf(face, { x: 1, y: 0, z: 0 }, "back"),
       { x: 4, y: 2, z: 2 }
+    );
+  });
+
+  it("resolves a ramp slope hit to the ramp cell, whatever the height", () => {
+    const slope = { x: 0, y: SQRT2_OVER_2, z: -SQRT2_OVER_2 };
+
+    assert.deepEqual(
+      voxelPositionOf({ x: 3.5, y: 2.3, z: 4.7 }, slope, "back"),
+      { x: 3, y: 2, z: 4 }
+    );
+    assert.deepEqual(
+      voxelPositionOf({ x: 3.5, y: 2.9, z: 4.1 }, slope, "back"),
+      { x: 3, y: 2, z: 4 }
+    );
+  });
+
+  it("stacks on top of a ramp slope rather than inside it", () => {
+    const slope = { x: 0, y: SQRT2_OVER_2, z: -SQRT2_OVER_2 };
+
+    assert.deepEqual(
+      voxelPositionOf({ x: 3.5, y: 2.3, z: 4.7 }, slope, "front"),
+      { x: 3, y: 3, z: 4 }
+    );
+  });
+
+  it("steps one cell at most, however slanted the normal is", () => {
+    const normal = { x: 0.6, y: 0.5, z: 0.62 };
+
+    assert.deepEqual(
+      voxelPositionOf({ x: 1.5, y: 1.5, z: 1.5 }, normal),
+      { x: 1, y: 1, z: 2 }
     );
   });
 

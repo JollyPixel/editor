@@ -25,6 +25,8 @@ export interface PeerBrushesOptions {
 export class PeerBrushes extends ActorComponent {
   #room: network.Room<VoxelNetworkCommand, VoxelServerMessage>;
   #meshes = new Map<string, BrushMesh>();
+  #cursors = new Map<string, BrushCursor | null>();
+  #localCursor: BrushCursor | null = null;
   #lastSent: BrushCursor | null | undefined;
 
   #onSync = (): void => {
@@ -74,9 +76,14 @@ export class PeerBrushes extends ActorComponent {
     }
 
     this.#lastSent = next;
+    this.#localCursor = next;
     this.#room.updatePresence({
       [kPresenceCursorKey]: next
     });
+
+    for (const clientId of this.#cursors.keys()) {
+      this.#render(clientId);
+    }
   }
 
   override destroy(): void {
@@ -110,6 +117,17 @@ export class PeerBrushes extends ActorComponent {
     clientId: string,
     peerCursor: BrushCursor | null
   ): void {
+    if (!this.#room.peers.has(clientId)) {
+      return;
+    }
+
+    this.#cursors.set(clientId, peerCursor);
+    this.#render(clientId);
+  }
+
+  #render(
+    clientId: string
+  ): void {
     const peer = this.#room.peers.get(clientId);
     if (!peer) {
       return;
@@ -119,8 +137,12 @@ export class PeerBrushes extends ActorComponent {
       clientId,
       peerColor(clientId, peer.identity)
     );
+    const peerCursor = this.#cursors.get(clientId) ?? null;
 
-    if (peerCursor === null) {
+    if (
+      peerCursor === null ||
+      cursor.overlaps(peerCursor, this.#localCursor)
+    ) {
       mesh.hide();
 
       return;
@@ -150,6 +172,8 @@ export class PeerBrushes extends ActorComponent {
   #removeMesh(
     clientId: string
   ): void {
+    this.#cursors.delete(clientId);
+
     const mesh = this.#meshes.get(clientId);
     if (!mesh) {
       return;

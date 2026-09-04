@@ -72,3 +72,30 @@ function isVoxelCoord(
     typeof Reflect.get(value, "y") === "number" &&
     typeof Reflect.get(value, "z") === "number";
 }
+
+export function overlaps(
+  a: BrushCursor | null,
+  b: BrushCursor | null
+): boolean {
+  if (a === null || b === null) {
+    return false;
+  }
+  if (a.position.y !== b.position.y) {
+    return false;
+  }
+
+  return spansOverlap(a.position.x, a.size, b.position.x, b.size) &&
+    spansOverlap(a.position.z, a.size, b.position.z, b.size);
+}
+
+function spansOverlap(
+  aCenter: number,
+  aSize: number,
+  bCenter: number,
+  bSize: number
+): boolean {
+  const aStart = aCenter - Math.floor(aSize / 2);
+  const bStart = bCenter - Math.floor(bSize / 2);
+
+  return aStart < bStart + bSize && bStart < aStart + aSize;
+}
