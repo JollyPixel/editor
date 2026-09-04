@@ -53,6 +53,44 @@ interface FaceDefinition {
 and a face may contain three or four of them. A quad is triangulated as
 `[0, 1, 2]` and `[0, 2, 3]`.
 
+`uvs` are in normalized tile space, one per vertex.
+
+## Face UV convention
+
+Every built-in shape states each face's UVs as the orthographic projection of
+its own vertices, seen from outside the block, with `u` growing to the viewer's
+right and `v` upward:
+
+| Slot | `u` | `v` |
+|---|---|---|
+| `PosX` | `z` | `y` |
+| `NegX` | `1 - z` | `y` |
+| `PosY` | `x` | `z` |
+| `NegY` | `x` | `1 - z` |
+| `PosZ` | `x` | `y` |
+| `NegZ` | `1 - x` | `y` |
+
+A face therefore samples exactly the part of the tile its geometry covers: a
+`pole` side spans `u` `0.375` to `0.625` rather than the whole tile, and a
+`slabBottom` side spans `v` `0` to `0.5`. One texture then reads continuously
+across neighbouring blocks whatever their shapes, and the voxel-map UV editor
+can size each face's region from the shape alone.
+
+`projectFaceUv(face, vertex)` and `faceUvs(face, vertices)` compute the
+projection. `projectedFace(definition)` builds a `FaceDefinition` whose `uvs`
+default to it:
+
+```ts
+projectedFace({
+  face: Face.PosZ,
+  normal: [0, 0, 1],
+  vertices: [[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]]
+});
+```
+
+Pass an explicit `uvs` to opt a face out, for instance to repeat or rotate a
+tile deliberately.
+
 ## Face
 
 ```ts

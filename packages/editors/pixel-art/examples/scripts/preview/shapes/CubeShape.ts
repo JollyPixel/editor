@@ -6,7 +6,7 @@ import {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import { boxFaceRanges } from "../../../../src/three/faceRanges.ts";
+import { boxFaceRanges } from "./faceRanges.ts";
 import {
   PREVIEW_SHAPE_SIZE,
   type PreviewShape

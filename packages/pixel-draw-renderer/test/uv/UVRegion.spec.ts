@@ -313,7 +313,54 @@ describe("UVRegion", () => {
       });
     });
 
-    test("resets retained ramp faces to the collapsed rect on uncollapse", () => {
+    test("serializes retained faces even when no face is triangular", () => {
+      const pole = new UVRegion({
+        id: "p1",
+        color: "#f00",
+        state: "uncollapsed",
+        faces: {
+          front: { x: 6, y: 6, width: 4, height: 4 },
+          back: { x: 6, y: 6, width: 4, height: 4 },
+          left: { x: 0, y: 6, width: 16, height: 4 },
+          right: { x: 0, y: 6, width: 16, height: 4 },
+          top: { x: 6, y: 0, width: 4, height: 16 },
+          bottom: { x: 6, y: 0, width: 4, height: 16 }
+        }
+      });
+
+      const data = pole.collapse().toJSON();
+      const restored = UVRegion.from(data).uncollapse();
+
+      assert.strictEqual(data.collapsedFace, "left");
+      assert.deepStrictEqual(restored.rectFor("front"), {
+        x: 6, y: 6, width: 4, height: 4
+      });
+      assert.deepStrictEqual(restored.rectFor("top"), {
+        x: 6, y: 0, width: 4, height: 16
+      });
+    });
+
+    test("omits retained faces when they all match the shared rect", () => {
+      const data = new UVRegion({
+        id: "c1",
+        color: "#f00",
+        state: "uncollapsed",
+        faces: {
+          front: kRect,
+          back: kRect,
+          left: kRect,
+          right: kRect,
+          top: kRect,
+          bottom: kRect
+        }
+      }).collapse().toJSON();
+
+      assert.deepStrictEqual(Object.keys(data).sort(), [
+        "color", "id", "rect", "state"
+      ]);
+    });
+
+    test("keeps each retained face's own bounds across a collapse round-trip", () => {
       const ramp = new UVRegion({
         id: "r1",
         color: "#f00",
@@ -333,11 +380,90 @@ describe("UVRegion", () => {
         }
       });
 
+      const smallLeft = { x: 9, y: 9, width: 1, height: 1 };
       const restored = ramp.collapse().uncollapse();
 
-      assert.deepStrictEqual(restored.rectFor("left"), kRect);
+      assert.deepStrictEqual(restored.rectFor("left"), smallLeft);
       assert.deepStrictEqual(restored.geometryFor("left"), {
-        shape: "triangle", corner: "top-right", rect: kRect
+        shape: "triangle", corner: "top-right", rect: smallLeft
+      });
+      assert.deepStrictEqual(restored.rectFor("back"), kRect);
+    });
+
+    test("translates retained faces when the collapsed region moved", () => {
+      const region = new UVRegion({
+        id: "r1",
+        color: "#f00",
+        state: "uncollapsed",
+        faces: {
+          front: { x: 0, y: 0, width: 4, height: 4 },
+          back: { x: 0, y: 0, width: 4, height: 4 },
+          left: { x: 0, y: 0, width: 16, height: 4 },
+          right: { x: 0, y: 0, width: 16, height: 4 },
+          top: { x: 0, y: 0, width: 4, height: 16 },
+          bottom: { x: 0, y: 0, width: 4, height: 16 }
+        }
+      });
+
+      const collapsed = region.collapse();
+      const moved = collapsed.withRect({
+        ...collapsed.rectFor("front"),
+        x: collapsed.rectFor("front").x + 20,
+        y: collapsed.rectFor("front").y + 10
+      });
+      const restored = moved.uncollapse();
+
+      assert.deepStrictEqual(restored.rectFor("front"), {
+        x: 20, y: 10, width: 4, height: 4
+      });
+      assert.deepStrictEqual(restored.rectFor("top"), {
+        x: 20, y: 10, width: 4, height: 16
+      });
+    });
+
+    test("collapses onto the largest face, not the first one", () => {
+      const pole = new UVRegion({
+        id: "p1",
+        color: "#f00",
+        state: "uncollapsed",
+        faces: {
+          front: { x: 6, y: 6, width: 4, height: 4 },
+          back: { x: 6, y: 6, width: 4, height: 4 },
+          left: { x: 0, y: 6, width: 16, height: 4 },
+          right: { x: 0, y: 6, width: 16, height: 4 },
+          top: { x: 6, y: 0, width: 4, height: 16 },
+          bottom: { x: 6, y: 0, width: 4, height: 16 }
+        }
+      });
+
+      const collapsed = pole.collapse();
+
+      assert.strictEqual(collapsed.collapsedFace, "left");
+      assert.deepStrictEqual(collapsed.rectFor("front"), {
+        x: 0, y: 6, width: 16, height: 4
+      });
+    });
+
+    test("honours an explicitly requested collapse face", () => {
+      const pole = new UVRegion({
+        id: "p1",
+        color: "#f00",
+        state: "uncollapsed",
+        faces: {
+          front: { x: 6, y: 6, width: 4, height: 4 },
+          back: { x: 6, y: 6, width: 4, height: 4 },
+          left: { x: 0, y: 6, width: 16, height: 4 },
+          right: { x: 0, y: 6, width: 16, height: 4 },
+          top: { x: 6, y: 0, width: 4, height: 16 },
+          bottom: { x: 6, y: 0, width: 4, height: 16 }
+        }
+      });
+
+      const collapsed = pole.collapse("top");
+
+      assert.strictEqual(collapsed.collapsedFace, "top");
+      assert.deepStrictEqual(collapsed.rectFor("front"), {
+        x: 6, y: 0, width: 4, height: 16
       });
     });
   });

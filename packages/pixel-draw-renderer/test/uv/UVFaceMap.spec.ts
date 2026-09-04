@@ -84,25 +84,48 @@ describe("UVFaceMap", () => {
     });
   });
 
-  describe("at()", () => {
-    test("repositions every face to the given rect", () => {
-      const nextRect: SelectionRect = { x: 9, y: 9, width: 1, height: 1 };
-      const faces = UVFaceMap.shared(kRect).at(nextRect);
+  describe("translated()", () => {
+    test("shifts every face without resizing it", () => {
+      const faces = UVFaceMap.shared(kRect).translated(8, 7);
 
       for (const face of UV_FACES) {
-        assert.deepStrictEqual(faces.get(face), nextRect);
+        assert.deepStrictEqual(faces.get(face), {
+          x: kRect.x + 8,
+          y: kRect.y + 7,
+          width: kRect.width,
+          height: kRect.height
+        });
       }
+    });
+
+    test("keeps each face's own size and offset", () => {
+      const faces = new UVFaceMap({
+        ...fullRecord(),
+        front: { x: 0, y: 0, width: 4, height: 4 },
+        top: { x: 10, y: 20, width: 16, height: 2 }
+      } as Record<string, UVGeometry> as never).translated(5, 5);
+
+      assert.deepStrictEqual(faces.get("front"), {
+        x: 5, y: 5, width: 4, height: 4
+      });
+      assert.deepStrictEqual(faces.get("top"), {
+        x: 15, y: 25, width: 16, height: 2
+      });
     });
 
     test("preserves triangle shape metadata while moving its bounds", () => {
       const faces = new UVFaceMap(fullRecord(kTriangle) as Record<string, UVGeometry> as never);
-      const nextRect: SelectionRect = { x: 9, y: 9, width: 1, height: 1 };
-      const moved = faces.at(nextRect);
+      const moved = faces.translated(8, 7);
 
       assert.deepStrictEqual(moved.get("left"), {
         shape: "triangle",
         corner: "top-right",
-        rect: nextRect
+        rect: {
+          x: kRect.x + 8,
+          y: kRect.y + 7,
+          width: kRect.width,
+          height: kRect.height
+        }
       });
     });
   });

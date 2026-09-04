@@ -2,7 +2,10 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { enableTileWrapping } from "../mesh/index.ts";
+import {
+  enableTileClamping,
+  enableTileWrapping
+} from "../mesh/index.ts";
 import type { TilesetManager } from "../tileset/TilesetManager.ts";
 import type { MaterialCustomizerFn } from "../VoxelEngine.types.ts";
 
@@ -113,6 +116,9 @@ export class ChunkMaterialCache {
 
     if (this.tileWrapping) {
       enableTileWrapping(material);
+    }
+    else {
+      enableTileClamping(material);
     }
     this.#customizer?.(material, tilesetId);
 

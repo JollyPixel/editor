@@ -36,6 +36,7 @@ export type UVRegionData =
     rect: SelectionRect;
     faces?: Record<UVFace, UVGeometry>;
     activeFaces?: UVFace[];
+    collapsedFace?: UVFace;
   })
   | (UVRegionIdentity & {
     state: "uncollapsed";
@@ -54,6 +55,16 @@ function normalizeActiveFaces(
   return UV_FACES.filter((face) => activeFaces.includes(face));
 }
 
+function sameRect(
+  a: SelectionRect,
+  b: SelectionRect
+): boolean {
+  return a.x === b.x &&
+    a.y === b.y &&
+    a.width === b.width &&
+    a.height === b.height;
+}
+
 /**
  * Immutable region whose mutations return a new instance or `this` on no-op.
  */
@@ -65,6 +76,7 @@ export class UVRegion {
   readonly #faces: UVFaceMap;
   readonly #activeFaces: readonly UVFace[];
   readonly #collapsedRect: SelectionRect | null;
+  readonly #collapsedFace: UVFace | null;
 
   static from(
     value: UVRegion | UVRegionData
@@ -86,6 +98,7 @@ export class UVRegion {
         data.activeFaces ?? UV_FACES
       );
       this.#collapsedRect = null;
+      this.#collapsedFace = null;
     }
     else {
       this.state = "collapsed";
@@ -96,7 +109,12 @@ export class UVRegion {
         data.activeFaces ?? UV_FACES
       );
       this.#collapsedRect = copyRect(data.rect);
+      this.#collapsedFace = data.collapsedFace ?? null;
     }
+  }
+
+  get collapsedFace(): UVFace | null {
+    return this.#collapsedFace;
   }
 
   rectFor(
@@ -138,29 +156,25 @@ export class UVRegion {
   }
 
   collapse(
-    face: UVFace = "front"
+    face?: UVFace
   ): UVRegion {
     if (this.state === "collapsed") {
       return this;
     }
 
-    const preferred = this.#faces.get(face);
-    const geometry = "shape" in preferred ?
-      this.#activeFaces
-        .map((activeFace) => this.#faces.get(activeFace))
-        .find((value) => !("shape" in value)) ?? preferred :
-      preferred;
+    const target = this.#collapseTarget(face);
 
     return new UVRegion({
       id: this.id,
       name: this.name,
       color: this.color,
       state: "collapsed",
-      rect: rectOf(geometry),
+      rect: rectOf(this.#faces.get(target)),
       faces: this.#faces.toJSON(),
       activeFaces: [
         ...this.#activeFaces
-      ]
+      ],
+      collapsedFace: target
     });
   }
 
@@ -169,16 +183,54 @@ export class UVRegion {
       return this;
     }
 
+    const anchor = rectOf(
+      this.#faces.get(this.#collapsedFace ?? "front")
+    );
+
     return new UVRegion({
       id: this.id,
       name: this.name,
       color: this.color,
       state: "uncollapsed",
-      faces: this.#faces.at(this.#collapsedRect!).toJSON(),
+      faces: this.#faces
+        .translated(
+          this.#collapsedRect!.x - anchor.x,
+          this.#collapsedRect!.y - anchor.y
+        )
+        .toJSON(),
       activeFaces: [
         ...this.#activeFaces
       ]
     });
+  }
+
+  #collapseTarget(
+    face: UVFace | undefined
+  ): UVFace {
+    const requested = face ?? this.#largestActiveFace();
+    if (!("shape" in this.#faces.get(requested))) {
+      return requested;
+    }
+
+    return this.#activeFaces.find(
+      (activeFace) => !("shape" in this.#faces.get(activeFace))
+    ) ?? requested;
+  }
+
+  #largestActiveFace(): UVFace {
+    let best: UVFace = this.#activeFaces[0] ?? "front";
+    let bestArea = -1;
+
+    for (const face of this.#activeFaces) {
+      const rect = rectOf(this.#faces.get(face));
+      const area = rect.width * rect.height;
+      if (area > bestArea) {
+        best = face;
+        bestArea = area;
+      }
+    }
+
+    return best;
   }
 
   withRect(
@@ -192,10 +244,16 @@ export class UVRegion {
         color: this.color,
         state: "collapsed",
         rect,
-        faces: this.#faces.toJSON(),
+        faces: this.#faces
+          .translated(
+            rect.x - this.#collapsedRect!.x,
+            rect.y - this.#collapsedRect!.y
+          )
+          .toJSON(),
         activeFaces: [
           ...this.#activeFaces
-        ]
+        ],
+        collapsedFace: this.#collapsedFace ?? undefined
       });
     }
 
@@ -246,12 +304,20 @@ export class UVRegion {
       rect: copyRect(this.#collapsedRect!)
     };
     const hasTopology = this.#activeFaces.length !== UV_FACES.length ||
-      UV_FACES.some((face) => "shape" in this.#faces.get(face));
+      UV_FACES.some((face) => {
+        const geometry = this.#faces.get(face);
+
+        return "shape" in geometry ||
+          !sameRect(geometry, this.#collapsedRect!);
+      });
     if (hasTopology) {
       data.faces = this.#faces.toJSON();
       data.activeFaces = [
         ...this.#activeFaces
       ];
+      if (this.#collapsedFace !== null) {
+        data.collapsedFace = this.#collapsedFace;
+      }
     }
 
     return data;

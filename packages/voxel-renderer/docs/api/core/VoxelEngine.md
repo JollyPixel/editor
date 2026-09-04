@@ -167,10 +167,10 @@ interface VoxelEngineOptions {
 
   /**
    * Texels of edge-replicated gutter added around every tile of an atlas before
-   * it is bound to a material. Prevents distant geometry from sampling
-   * neighbouring tiles. See [atlas padding](../../concepts/atlas-padding.md).
-   * Set to 0 to render atlases untouched.
-   * @default half the tile size, clamped to 2..8
+   * it is bound to a material. Chunk materials already clamp each face to its
+   * own atlas rect, so a gutter is optional and costs texture memory. See
+   * [atlas padding](../../concepts/atlas-padding.md).
+   * @default 0
    */
   tilesetPadding?: number;
 

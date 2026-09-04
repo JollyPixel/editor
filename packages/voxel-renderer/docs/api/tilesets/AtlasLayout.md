@@ -30,7 +30,7 @@ interface AtlasLayoutOptions {
   cols: number;
   rows: number;
   tileSize: number;
-  /** Default: `AtlasLayout.defaultPadding(tileSize)`. */
+  /** Default: `0`. */
   padding?: number;
 }
 ```

@@ -9,6 +9,7 @@ import type { UVTriangleCorner } from "@jolly-pixel/pixel-draw.renderer";
 // Import Internal Dependencies
 import {
   applyUvGeometry,
+  applyUvRect,
   orientUv
 } from "#src/three/applyUvGeometry.ts";
 
@@ -59,7 +60,7 @@ describe("applyUvGeometry", () => {
         rect: { x: 16, y: 32, width: 16, height: 16 }
       },
       { x: 64, y: 64 },
-      { start: 0, count: 3 }
+      [{ start: 0, count: 3 }]
     );
 
     assert.deepStrictEqual(Array.from(attribute.array), [
@@ -86,7 +87,7 @@ describe("applyUvGeometry", () => {
       baseUv,
       { x: 0, y: 0, width: 32, height: 32 },
       { x: 64, y: 64 },
-      { start: 2, count: 2 }
+      [{ start: 2, count: 2 }]
     );
 
     assert.deepStrictEqual(Array.from(attribute.array), [
@@ -94,6 +95,69 @@ describe("applyUvGeometry", () => {
       1, 0,
       0.5, 1,
       0, 1
+    ]);
+  });
+});
+
+describe("applyUvRect", () => {
+  test("scales fractional base UVs into the rect, not to its corners", () => {
+    // A stair riser samples the bottom half of its tile.
+    const baseUv = Float32Array.from([
+      0, 0,
+      1, 0,
+      1, 0.5,
+      0, 0.5
+    ]);
+    const attribute = new THREE.Float32BufferAttribute(
+      Float32Array.from(baseUv),
+      2
+    );
+
+    applyUvRect({
+      uvAttribute: attribute,
+      baseUv,
+      rect: { x: 0, y: 0, width: 16, height: 16 },
+      textureSize: { x: 64, y: 64 },
+      ranges: [{ start: 0, count: 4 }]
+    });
+
+    // v spans [0.75, 1], so 0.5 lands halfway at 0.875.
+    assert.deepStrictEqual(Array.from(attribute.array), [
+      0, 0.75,
+      0.25, 0.75,
+      0.25, 0.875,
+      0, 0.875
+    ]);
+  });
+
+  test("applies every range a face owns", () => {
+    const baseUv = Float32Array.from([
+      0, 0,
+      1, 1,
+      0.5, 0.5,
+      1, 0
+    ]);
+    const attribute = new THREE.Float32BufferAttribute(
+      Float32Array.from(baseUv),
+      2
+    );
+
+    applyUvRect({
+      uvAttribute: attribute,
+      baseUv,
+      rect: { x: 0, y: 0, width: 32, height: 32 },
+      textureSize: { x: 64, y: 64 },
+      ranges: [
+        { start: 0, count: 1 },
+        { start: 3, count: 1 }
+      ]
+    });
+
+    assert.deepStrictEqual(Array.from(attribute.array), [
+      0, 0.5,
+      1, 1,
+      0.5, 0.5,
+      0.5, 0.5
     ]);
   });
 });

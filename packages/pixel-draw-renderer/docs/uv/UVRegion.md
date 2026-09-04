@@ -39,6 +39,7 @@ type UVRegionData =
       rect: SelectionRect;
       faces?: Record<UVFace, UVGeometry>;
       activeFaces?: UVFace[];
+      collapsedFace?: UVFace;
     }
   | {
       id: string;
@@ -50,7 +51,7 @@ type UVRegionData =
     };
 ```
 
-`state` remains optional for collapsed payloads created before multi-face support. Collapsed regions use optional `faces` and `activeFaces` to retain custom topology for a later uncollapse.
+`state` remains optional for collapsed payloads created before multi-face support. Collapsed regions use optional `faces` and `activeFaces` to retain custom topology for a later uncollapse, and `collapsedFace` records which face `rect` was taken from so `uncollapse()` can restore the others around it.
 
 `activeFaces` defaults to all six faces and is normalized to `UV_FACES` order. A triangle occupies the half of `rect` containing the named right-angle corner.
 
@@ -97,15 +98,15 @@ Returns copied geometry in `UV_FACES` order. A collapsed region returns one entr
 uncollapse(): UVRegion
 ```
 
-Restores retained faces and shapes, placing every geometry at the shared rectangle. Returns `this` when already uncollapsed.
+Restores retained faces and shapes, translating them by however far the shared rectangle moved while collapsed. Each face keeps its own size and its offset relative to `collapsedFace`. Returns `this` when already uncollapsed.
 
 ### `collapse(face?)`
 
 ```ts
-collapse(face: UVFace = "front"): UVRegion
+collapse(face?: UVFace): UVRegion
 ```
 
-Uses the selected face's rectangle as the shared rectangle. A triangular face falls back to the first active rectangle when available. Face topology is retained, but the previous per-face layout is not restored by a later `uncollapse()`.
+Uses the selected face's rectangle as the shared rectangle. Without a `face`, it picks the largest active face, so a partial shape such as a pole does not collapse onto its smallest slot. A triangular face falls back to the first active rectangle when available. Face topology and per-face layout are both retained, and a later `uncollapse()` restores them.
 
 ### `withRect(rect, face?)`
 

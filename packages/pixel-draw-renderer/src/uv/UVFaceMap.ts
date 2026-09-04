@@ -2,7 +2,8 @@
 import type { SelectionRect } from "../types.ts";
 import {
   copyGeometry,
-  geometryAt
+  geometryAt,
+  rectOf
 } from "./geometry.ts";
 import {
   UV_FACES,
@@ -58,13 +59,20 @@ export class UVFaceMap {
     );
   }
 
-  at(
-    rect: SelectionRect
+  translated(
+    dx: number,
+    dy: number
   ): UVFaceMap {
     return new UVFaceMap(
-      UVFaceMap.map(
-        (face) => geometryAt(this.#faces[face], rect)
-      )
+      UVFaceMap.map((face) => {
+        const rect = rectOf(this.#faces[face]);
+
+        return geometryAt(this.#faces[face], {
+          ...rect,
+          x: rect.x + dx,
+          y: rect.y + dy
+        });
+      })
     );
   }
 

@@ -31,15 +31,9 @@ export interface PixelCanvasTextureOptions {
 }
 
 export type PixelCanvasTextureEvent = {
-  /**
-   * Fired when resize or replacement changes the canvas dimensions.
-   */
   resized: (event: { size: Vec2; }) => void;
 };
 
-/**
- * Mirrors a live pixel canvas to Three.js, batching uploads per frame.
- */
 export class PixelCanvasTexture extends Emitter<
   PixelCanvasTextureEvent
 > {
@@ -69,10 +63,14 @@ export class PixelCanvasTexture extends Emitter<
   readonly #onReplaced = (
     event: { size: Vec2; }
   ): void => {
-    // loadTexture replaces the canvas, so update the texture image.
     this.texture.image = this.#source.textureCanvas();
-    this.#markDirty(fullBounds(event.size));
-    this.emit("resized", { size: event.size });
+    this.#markDirty(
+      fullBounds(event.size)
+    );
+    this.emit(
+      "resized",
+      { size: event.size }
+    );
   };
 
   constructor(
@@ -97,7 +95,9 @@ export class PixelCanvasTexture extends Emitter<
       THREE.LinearFilter :
       THREE.NearestFilter;
 
-    this.texture = new THREE.CanvasTexture(source.textureCanvas());
+    this.texture = new THREE.CanvasTexture(
+      source.textureCanvas()
+    );
     this.texture.magFilter = threeFilter;
     this.texture.minFilter = threeFilter;
     this.texture.generateMipmaps = false;
@@ -148,7 +148,10 @@ export class PixelCanvasTexture extends Emitter<
 
       return;
     }
-    if (this.#flush === "manual" || this.#scheduled) {
+    if (
+      this.#flush === "manual" ||
+      this.#scheduled
+    ) {
       return;
     }
 

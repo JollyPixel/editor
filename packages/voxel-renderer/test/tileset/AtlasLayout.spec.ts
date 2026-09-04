@@ -42,10 +42,12 @@ describe("AtlasLayout.defaultPadding", () => {
 });
 
 describe("AtlasLayout", () => {
-  it("falls back to the default padding for the tile size", () => {
+  it("leaves an atlas unpadded so any sub-tile rect stays addressable", () => {
     const layout = new AtlasLayout({ cols: 4, rows: 4, tileSize: 16 });
 
-    assert.equal(layout.padding, AtlasLayout.defaultPadding(16));
+    assert.equal(layout.padding, 0);
+    assert.equal(layout.cellSize, 16);
+    assert.equal(layout.isPadded, false);
   });
 
   it("keeps an explicit padding, including zero", () => {
@@ -144,6 +146,18 @@ describe("AtlasLayout#uvFor", () => {
 
     it("row 3 is the bottom row once Y-flipped", () => {
       assertClose(layout.uvFor(0, 3).offsetV, 0.0078125);
+    });
+
+    it("reads real source texels at a fractional index", () => {
+      // A UV region dragged off the tile grid lands here; without a gutter
+      // the window is a plain sub-rect of the source image.
+      const image = 64;
+      const uv = layout.uvFor(1.5, 0);
+
+      assertClose(uv.offsetU, ((1.5 * 16) + 0.5) / image);
+      assertClose(uv.scaleU, 15 / image);
+      // The window spans texels 24 through 39, straddling tiles 1 and 2.
+      assertClose((uv.offsetU + uv.scaleU) * image, 39.5);
     });
   });
 

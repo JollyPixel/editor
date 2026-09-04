@@ -113,3 +113,18 @@ discontinuities at each repeat. Calling code should not replace the material's
 
 Applications normally use this indirectly through `VoxelEngine({ greedy: true })`.
 The export is available for compatible custom material setup.
+
+### Tile clamping
+
+```ts
+function enableTileClamping(
+  material: TileWrappedMaterial
+): void;
+```
+
+Chunk materials outside greedy mode get `enableTileClamping()` instead. It
+confines each face's samples to the `tileRegion` attribute's rect, so an MSAA
+sample taken outside the triangle cannot read a neighbouring tile. This is what
+lets atlases ship without a gutter, and therefore what lets a face reference a
+rect at a fractional tile offset. See
+[atlas padding](./atlas-padding.md).

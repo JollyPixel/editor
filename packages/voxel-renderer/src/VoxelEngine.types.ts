@@ -92,8 +92,10 @@ export interface VoxelEngineOptions {
   debug?: VoxelDebuggerOptions;
 
   /**
-   * Atlas gutter in texels; 0 disables padding.
-   * @default half the tile size, clamped to 2..8
+   * Atlas gutter in texels. Chunk materials clamp each face to its own atlas
+   * rect, so a gutter is optional and makes tiles addressable only by whole
+   * indices.
+   * @default 0
    */
   tilesetPadding?: number;
 
