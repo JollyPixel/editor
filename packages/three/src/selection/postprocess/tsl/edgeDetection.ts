@@ -11,30 +11,27 @@ import {
 
 // Import Internal Dependencies
 import { maskWeight } from "./maskWeight.ts";
+import type { TslNode } from "./tslNode.ts";
 
 /**
  * 4-neighbor edge detection over a downsampled mask - shared by every mask
- * chain a caller builds (the shared chain, plus a `priority`-only and an
- * `isolated`-only chain, see `HighlightPass`'s own doc comments) so they all
- * reuse the exact same shader instead of duplicating it, parameterized only
- * by which downsampled mask texture to read.
+ * chain (shared, `priority`-only, `isolated`-only) so they all reuse the
+ * same shader, parameterized only by which downsampled mask texture to
+ * read.
  *
- * Edge-detection boundary strength comes from the RGB *distance* between
- * neighboring mask texels, not from `maskWeight`'s (background-vs-masked)
- * signal - two different entry colors can have near-identical RGB length
- * (e.g. orange `(.98,.42,.42)` and teal `(.16,.80,.83)`, both length ~1.15)
- * despite being visually distinct, which would otherwise silently drop the
- * edge between two adjacent, differently-colored selections and only ever
- * detect mask-vs-background boundaries. RGB distance catches both cases. At
- * a boundary where two different colors meet (two peers' outlines touching),
- * the shader still blends the neighboring colors' weighted average for the
- * edge's own color rather than picking one - a known, accepted
- * approximation, not a bug; only the *detection* of that boundary needed
- * fixing, not the color chosen once it's found.
+ * Boundary strength comes from the RGB *distance* between neighboring
+ * mask texels, not from `maskWeight`'s background-vs-masked signal - two
+ * different entry colors can have near-identical RGB length (e.g. orange
+ * and teal, both ~1.15) despite being visually distinct, which would
+ * otherwise drop the edge between two adjacent, differently-colored
+ * selections. At a boundary where two colors meet, the shader still
+ * blends their weighted average for the edge's own color rather than
+ * picking one - a known, accepted approximation; only the *detection*
+ * needed fixing, not the color chosen once found.
  */
 export function buildEdgeDetection(
   maskDownSampleTexture: ReturnType<typeof texture>,
-  invSizeNode: ReturnType<typeof vec2>
+  invSizeNode: TslNode<"vec2">
 ) {
   return Fn(() => {
     const uvNode = uv();

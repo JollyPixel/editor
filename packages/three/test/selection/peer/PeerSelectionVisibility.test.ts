@@ -6,7 +6,12 @@ import assert from "node:assert/strict";
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { SelectionManager, PeerSelectionRegistry, PeerSelectionVisibility } from "#src/index.ts";
+import {
+  SelectionManager,
+  PeerSelectionRegistry,
+  PeerHoverRegistry,
+  PeerSelectionVisibility
+} from "#src/index.ts";
 
 /**
  * Camera at the origin looking down -Z, matching this file's own targets:
@@ -111,6 +116,77 @@ describe("isVisible", () => {
     visibility.update();
 
     assert.strictEqual(visibility.isVisible("mesh-1"), true);
+  });
+});
+
+describe("hoverRegistry", () => {
+  function createHoverHarness(): {
+    registry: PeerSelectionRegistry;
+    hoverRegistry: PeerHoverRegistry;
+    visibility: PeerSelectionVisibility;
+    mesh: THREE.Mesh;
+  } {
+    const selection = new SelectionManager();
+    const registry = new PeerSelectionRegistry();
+    const hoverRegistry = new PeerHoverRegistry();
+    const camera = createCamera();
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    selection.register("mesh-1", mesh);
+
+    const visibility = new PeerSelectionVisibility({ registry, selection, camera, hoverRegistry });
+
+    return { registry, hoverRegistry, visibility, mesh };
+  }
+
+  test("true for a peer-hovered-only object inside the frustum", () => {
+    const { hoverRegistry, visibility, mesh } = createHoverHarness();
+    mesh.position.set(0, 0, -10);
+    hoverRegistry.hover("peer-a", "mesh-1");
+
+    visibility.update();
+
+    assert.strictEqual(visibility.isVisible("mesh-1"), true);
+  });
+
+  test("false for a peer-hovered-only object behind the camera", () => {
+    const { hoverRegistry, visibility, mesh } = createHoverHarness();
+    mesh.position.set(0, 0, 10);
+    hoverRegistry.hover("peer-a", "mesh-1");
+
+    visibility.update();
+
+    assert.strictEqual(visibility.isVisible("mesh-1"), false);
+  });
+
+  test("still evaluates a selected object with no hoverer, unaffected by the union", () => {
+    const { registry, visibility, mesh } = createHoverHarness();
+    mesh.position.set(0, 0, 10);
+    registry.select("peer-a", "mesh-1");
+
+    visibility.update();
+
+    assert.strictEqual(visibility.isVisible("mesh-1"), false);
+  });
+
+  test("omitting hoverRegistry preserves selection-only behavior for a hover-only id", () => {
+    const selection = new SelectionManager();
+    const registry = new PeerSelectionRegistry();
+    const hoverRegistry = new PeerHoverRegistry();
+    const camera = createCamera();
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    selection.register("mesh-1", mesh);
+    mesh.position.set(0, 0, 10);
+
+    // No `hoverRegistry` passed here - a hover-only id (no selector) is
+    // never added to the tracked set, so `update()` never evaluates it,
+    // regardless of the peer hover state a caller happens to track
+    // elsewhere.
+    const visibility = new PeerSelectionVisibility({ registry, selection, camera });
+    hoverRegistry.hover("peer-a", "mesh-1");
+
+    visibility.update();
+
+    assert.strictEqual(visibility.isVisible("mesh-1"), true, "falls back to the default, never evaluated");
   });
 });
 

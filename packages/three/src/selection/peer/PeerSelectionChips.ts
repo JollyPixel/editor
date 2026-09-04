@@ -12,14 +12,11 @@ import type { SelectionManager } from "../SelectionManager.ts";
 const kChipSpacing = 0.4;
 const kChipMarginY = 0.35;
 /**
- * Caps how many individual per-selector chips a row ever shows - beyond
- * this, the rest collapse into one "+N" overflow badge (see `#buildSlots`)
- * instead of the row growing without bound. Unlike `HighlightPass`
- * (cost scales with distinct outlined *objects*, not peers), each chip is
- * its own draw call and its own GPU-resident canvas texture with no
- * batching between them - fine for the handful of concurrent selectors a
- * real collaborative editing session actually has, not something to leave
- * unbounded against however many peers happen to pile onto one object.
+ * Caps how many individual per-selector chips a row shows - beyond this,
+ * the rest collapse into one "+N" overflow badge (see `#buildSlots`). Each
+ * chip is its own draw call and GPU-resident canvas texture with no
+ * batching, so this stays small rather than scaling with however many
+ * peers pile onto one object.
  */
 const kMaxChips = 3;
 /**
@@ -33,47 +30,34 @@ export interface PeerSelectionChipsOptions {
   selection: SelectionManager;
   /**
    * Skips the chip row entirely for any object `visibility.isVisible`
-   * reports `false` for - same option, same semantics, as
+   * reports `false` for - same semantics as
    * `PeerSelectionOverlays`/`PeerHighlightPass`'s own `visibility`.
-   * Omitting this preserves always-visible behavior.
    */
   visibility?: PeerSelectionVisibility;
   /**
-   * Whether chip rows render at all. Defaults `false` - opt-in, since each
-   * chip is its own draw call and its own GPU-resident canvas texture (see
-   * `kMaxChips`'s own doc comment), so a caller wiring this class in for the
-   * first time doesn't get it live until deciding to. Toggle at runtime via
-   * `setEnabled`.
+   * Whether chip rows render at all. Opt-in since each chip is its own draw
+   * call and GPU-resident canvas texture (see `kMaxChips`). Toggle at
+   * runtime via `setEnabled`.
    * @default false
    */
   enabled?: boolean;
 }
 
 /**
- * One small row of colored billboard chips - see `PeerSelectionChip`'s own
- * doc comment - floating above any object with *more than one* simultaneous
- * peer selector, oldest-first (`registry.selectorsOf`'s own order), capped
- * at `kMaxChips` individual chips with the rest collapsed into a trailing
- * "+N" overflow badge (see `#buildSlots`) rather than the row growing
- * without bound. An object with zero or one selector gets no chip row at
- * all: the primary ring `PeerSelectionOverlays`/`PeerHighlightPass`
- * already draws communicates a single selector's color on its own, so a
- * one-chip row would be pure redundancy.
+ * One small row of colored billboard chips (see `PeerSelectionChip`)
+ * floating above any object with *more than one* simultaneous peer
+ * selector, oldest-first, capped at `kMaxChips` with the rest collapsed
+ * into a trailing "+N" overflow badge. An object with zero or one selector
+ * gets no chip row - the primary ring already communicates a single
+ * selector's color on its own.
  *
- * Off by default (`enabled: false`, see `PeerSelectionChipsOptions.enabled`)
- * - a caller opts in explicitly, either at construction or later via
- * `setEnabled`.
+ * Off by default (see `PeerSelectionChipsOptions.enabled`) - a caller opts
+ * in explicitly, at construction or later via `setEnabled`.
  *
- * A third, independent rendering concern from the primary ring - this class
- * has no notion of which technique is currently drawing that ring, or
- * whether it's `PeerSelectionOverlays` or `PeerHighlightPass` driving
- * it. Never gated by the local selection: the same object can show a local
- * selection ring *and* a peer chip row at once, since the chip row is only
- * ever about `registry.selectorsOf`, a purely peer-side concern the local
- * selection doesn't affect (the same reasoning
- * `examples/scripts/selection.ts`'s own pre-existing DOM-based
- * `refreshChips` outliner chips already follow - they too only react to
- * `peerSelectionChange`, never a local `selectionChange`).
+ * Independent of the primary ring's technique or which class draws it.
+ * Never gated by the local selection - the chip row is purely about
+ * `registry.selectorsOf`, so the same object can show a local selection
+ * ring and a peer chip row at once.
  */
 export class PeerSelectionChips {
   #registry: PeerSelectionRegistry;
@@ -119,12 +103,10 @@ export class PeerSelectionChips {
   }
 
   /**
-   * Toggles chip rows on/off at runtime. Turning it off immediately disposes
-   * every currently active chip row; turning it on immediately builds one
-   * for every currently-qualifying peer-selected object (same as if this
-   * class had just been constructed with `enabled: true` and every existing
-   * `peerSelectionChange` had already fired) - not a lazy "wait for the next
-   * event" flip. A no-op if `enabled` already matches the current state.
+   * Toggles chip rows on/off at runtime. Turning off immediately disposes
+   * every active row; turning on immediately builds one for every
+   * qualifying object, not a lazy "wait for the next event" flip. A no-op
+   * if `enabled` already matches.
    */
   setEnabled(
     enabled: boolean
@@ -183,7 +165,10 @@ export class PeerSelectionChips {
 
     if (existing && existing.children.length === slots.length) {
       slots.forEach((slot, index) => {
-        const chip = existing.children[index] as PeerSelectionChip;
+        const chip = existing.children[index];
+        if (!(chip instanceof PeerSelectionChip)) {
+          return;
+        }
         chip.color = slot.color;
         chip.label = slot.label;
       });
@@ -222,11 +207,9 @@ export class PeerSelectionChips {
 
   /**
    * One slot per selector, oldest-first, up to `kMaxChips` - beyond that,
-   * the remaining selectors collapse into a single trailing overflow slot
-   * (`color: kOverflowChipColor`, `label: "+N"`) instead of the row growing
-   * per selector without bound. `selectors.length` is always `> 1` by the
-   * time this is called (see the caller's own early return), so this always
-   * returns at least 2 slots.
+   * the rest collapse into a single trailing overflow slot. Always returns
+   * at least 2 slots (the caller only reaches here when
+   * `selectors.length > 1`).
    */
   #buildSlots(
     selectors: readonly string[]
@@ -250,7 +233,9 @@ export class PeerSelectionChips {
   ): void {
     group.removeFromParent();
     for (const child of group.children) {
-      (child as PeerSelectionChip).dispose();
+      if (child instanceof PeerSelectionChip) {
+        child.dispose();
+      }
     }
   }
 }

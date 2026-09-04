@@ -93,16 +93,27 @@ const highlight = new HighlightPass(renderer, scene, camera);
  */
 const highlightJfa = new HighlightPassJfa(renderer, scene, camera);
 
-const selectionManager = new SelectionManager();
+// x-ray defaults on: "Orbiter Box" (see the "Presence" preset below) sits
+// behind "Occluder Wall" from this scene's default view, and
+// `PeerSelectionOverlays` only reads `selection.xray` fresh when a peer
+// overlay is (re)built (see this file's "Peer rendering" doc comment above
+// `setPeerRenderingMode`) - starting `xray: false` here would mean toggling
+// the "x-ray" checkbox afterward could never retroactively reveal that peer
+// through the wall (only "show occluder" reliably does that, or
+// deselecting/reselecting the preset peer). `highlight`/`highlightJfa` need
+// no matching setup - neither has any occlusion concept at all, so both show
+// a peer's ring through the wall unconditionally, in any mode.
+const selectionManager = new SelectionManager({ xray: true });
 const treeView = new TreeView(
   document.querySelector("#outliner") as HTMLDivElement
 );
-spawnSelectableMeshes(scene, selectionManager, treeView);
+const { priorityOrbiters, wall, applyOrbiterPositions } = spawnSelectableMeshes(scene, selectionManager, treeView);
 
 /**
  * Fake remote peers, driven by the "Presence" pane folder below - no real
  * `@jolly-pixel/network` wiring here, same local-only prototyping approach
- * as the rest of this demo. Both peer-rendering mechanisms below
+ * as the rest of this demo (see `examples/peer-selection-sync.html` for the
+ * real-network counterpart). Both peer-rendering mechanisms below
  * (`PeerSelectionOverlays`/`PeerHighlightPass`, see
  * `setPeerRenderingMode`'s own doc comment) render exactly one 3D ring per
  * object (the primary/oldest selector's color), regardless of how many
@@ -166,7 +177,11 @@ const peerChips = new PeerSelectionChips({
  * here so the scene stays legible - see `bindSelectionAndPeerPanel`'s own
  * doc comment (utils/selection-panel.ts) for how the panel's single "mode"
  * control drives which one is active, and each mechanism's own doc comment
- * for what it actually builds.
+ * for what it actually builds. The three orbiters circling "Cone" (the
+ * local selection's own starting pick, see below) exist specifically to
+ * show off "colors"/"colorsJfa"'s `priority` guarantee - the local ring
+ * stays on top of several simultaneous, moving, overlapping peer selections
+ * at once, not just one.
  */
 let peerSelectionOverlays: PeerSelectionOverlays | null = null;
 let peerHighlight: PeerHighlightPass | null = null;
@@ -415,11 +430,25 @@ function refreshChips(
   }));
 }
 
+/** Radians/second - a negative value orbits the opposite direction. */
+interface PriorityOrbiter {
+  id: string;
+  mesh: THREE.Mesh;
+  angle: number;
+  speed: number;
+}
+
+interface SpawnedScene {
+  priorityOrbiters: PriorityOrbiter[];
+  wall: THREE.Mesh;
+  applyOrbiterPositions: () => void;
+}
+
 function spawnSelectableMeshes(
   target: THREE.Scene,
   selection: SelectionManager,
   outline: TreeView
-): void {
+): SpawnedScene {
   function registerStandalone(
     id: string,
     name: string,
@@ -508,12 +537,131 @@ function spawnSelectableMeshes(
     idToNode.set(id, partNode);
     nodeToId.set(partNode, id);
   }
+
+  // Three small shapes continuously orbiting "Cone" - see this file's own
+  // "Priority stack" pane folder for the pause/reshuffle controls, and
+  // `PeerHighlightPass`/`HighlightPass`'s own doc comments for the
+  // `priority` guarantee this is meant to exercise: the local selection
+  // (defaulted to "Cone" below) stays visually on top of several
+  // simultaneous, moving, overlapping peer selections at once, not just one.
+  // Registered the same way as any standalone mesh, so each orbiter also
+  // shows up in the outliner and can be selected from there too, not only by
+  // clicking it mid-orbit.
+  const priorityOrbitCenter = cone.position.clone();
+  const priorityOrbitRadius = 1.3;
+
+  interface SpawnOrbiterOptions {
+    id: string;
+    name: string;
+    geometry: THREE.BufferGeometry;
+    color: THREE.ColorRepresentation;
+    angle: number;
+    speed: number;
+  }
+
+  function spawnOrbiter(
+    options: SpawnOrbiterOptions
+  ): PriorityOrbiter {
+    const { id, name, geometry, color, angle, speed } = options;
+    const mesh = new THREE.Mesh(geometry, material(color));
+    registerStandalone(id, name, mesh);
+
+    return { id, mesh, angle, speed };
+  }
+
+  const priorityOrbiters: PriorityOrbiter[] = [
+    spawnOrbiter({
+      id: "orbiterBox",
+      name: "Orbiter Box",
+      geometry: new THREE.BoxGeometry(0.6, 0.6, 0.6),
+      color: "#8c5a6b",
+      angle: 0,
+      speed: 0.6
+    }),
+    spawnOrbiter({
+      id: "orbiterTetra",
+      name: "Orbiter Tetra",
+      geometry: new THREE.TetrahedronGeometry(0.55),
+      color: "#5a8c7a",
+      angle: (Math.PI * 2) / 3,
+      speed: -0.45
+    }),
+    spawnOrbiter({
+      id: "orbiterOcta",
+      name: "Orbiter Octa",
+      geometry: new THREE.OctahedronGeometry(0.55),
+      color: "#8c7a5a",
+      angle: (Math.PI * 4) / 3,
+      speed: 0.8
+    })
+  ];
+
+  function applyOrbiterPositions(): void {
+    for (const orbiter of priorityOrbiters) {
+      orbiter.mesh.position.set(
+        priorityOrbitCenter.x + (Math.cos(orbiter.angle) * priorityOrbitRadius),
+        priorityOrbitCenter.y,
+        priorityOrbitCenter.z + (Math.sin(orbiter.angle) * priorityOrbitRadius)
+      );
+    }
+  }
+  applyOrbiterPositions();
+
+  // Not registered/selectable - purely an occluder, sitting between the
+  // camera's default position and "Orbiter Box"/Cone from this scene's
+  // default view, toggled via the "show occluder" checkbox in "Peer
+  // rendering" below. Demonstrates x-ray: in "overlays" mode (x-ray on by
+  // default, see `selectionManager` above) a peer selecting an orbiter
+  // behind it is visible through the wall immediately; in either "colors"
+  // mode it always is, since neither `HighlightPass` nor `HighlightPassJfa`
+  // has any occlusion concept at all (see each's own doc comment).
+  const wall = new THREE.Mesh(
+    new THREE.BoxGeometry(1.4, 1.4, 1.4),
+    new THREE.MeshStandardMaterial({ color: "#2a2a38" })
+  );
+  wall.name = "Occluder Wall";
+  wall.position.set(0.6, 1.8, 1.6);
+  target.add(wall);
+
+  return { priorityOrbiters, wall, applyOrbiterPositions };
 }
 
 function material(
   color: THREE.ColorRepresentation = "#4a90d9"
 ): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({ color });
+}
+
+const orbitClock = new THREE.Clock();
+let orbitEnabled = true;
+
+/**
+ * Called once per frame regardless of `orbitEnabled` (see "Priority stack"'s
+ * "spin" checkbox below) so `orbitClock.getDelta()` never accumulates a
+ * large jump across a pause - only *applying* that delta to the orbiters'
+ * angles is gated.
+ */
+function advanceOrbiters(): void {
+  const deltaSeconds = orbitClock.getDelta();
+  if (!orbitEnabled) {
+    return;
+  }
+
+  for (const orbiter of priorityOrbiters) {
+    orbiter.angle += orbiter.speed * deltaSeconds;
+  }
+  applyOrbiterPositions();
+}
+
+/**
+ * Jumps every orbiter to a new random angle instantly - the "reshuffle now"
+ * button's handler, works whether or not `orbitEnabled` is currently on.
+ */
+function reshuffleOrbiters(): void {
+  for (const orbiter of priorityOrbiters) {
+    orbiter.angle = Math.random() * Math.PI * 2;
+  }
+  applyOrbiterPositions();
 }
 
 const pane = createExamplePane({ title: "Selection" });
@@ -532,9 +680,26 @@ function refreshStatus(): void {
   statusFolder.refresh();
 }
 
+const priorityStackFolder = pane.addFolder({ title: "Priority stack" });
+
+const priorityStackHintRow = document.createElement("jolly-property-row");
+priorityStackHintRow.description = "Orbiters keep overlapping Cone - stays visible through them in " +
+  "either \"colors\" mode below, not in \"overlays\".";
+priorityStackFolder.element.append(priorityStackHintRow);
+
+const orbitSettings = { spin: orbitEnabled };
+priorityStackFolder
+  .addBinding(orbitSettings, "spin", { label: "spin" })
+  .on("change", ({ value }) => {
+    orbitEnabled = value;
+  });
+
+priorityStackFolder.addButton({ title: "reshuffle now" }).on("click", () => {
+  reshuffleOrbiters();
+});
+
 // A non-mesh target ("Cluster") always renders a `SelectionBoundingBox`
-// regardless of mode, so `boundingBox: true` here shows "group opacity" -
-// `selection-peer.ts` has no group and omits it.
+// regardless of mode, so `boundingBox: true` here shows "group opacity".
 bindSelectionAndPeerPanel({
   pane,
   selectionManager,
@@ -570,13 +735,29 @@ bindSelectionAndPeerPanel({
   // overlay when something else triggers a refresh - `setXray` itself
   // dispatches no event, so an already peer-selected object needs this
   // explicit nudge. See `refreshAll`'s own doc comment.
-  onXrayChange: () => peerSelectionOverlays?.refreshAll()
+  onXrayChange: () => peerSelectionOverlays?.refreshAll(),
+  extraPeerBindings: (peerFolder) => {
+    const occluderSettings = { visible: wall.visible };
+    peerFolder
+      .addBinding(occluderSettings, "visible", { label: "show occluder" })
+      .on("change", ({ value }) => {
+        wall.visible = value;
+      });
+  }
 });
 
 /**
  * Fake peers, each a dropdown over every registered id plus "(none)". Purely
  * a way to drive `peerRegistry` by hand for this demo - see the comment on
  * `peerRegistry` above for why this isn't real networking.
+ *
+ * Only some start pre-selected, so every notable behavior is visible at a
+ * glance without clicking first, while the rest stay free for manual
+ * experimentation: Peer A and Peer B both pick "Torus Knot" (more than one
+ * simultaneous selector on the same object, so `PeerSelectionChips` has
+ * something to show); Peer C picks "Orbiter Box", behind "Occluder Wall"
+ * from the default view (the x-ray/occlusion story); Peer D and Peer E stay
+ * unset.
  */
 const kNoneOption = "";
 const presenceOptions: Record<string, string> = { "(none)": kNoneOption };
@@ -586,9 +767,9 @@ for (const [id, label] of displayNames) {
 
 const presenceFolder = pane.addFolder({ title: "Presence" });
 const fakePeers = {
-  "Peer A": kNoneOption,
-  "Peer B": kNoneOption,
-  "Peer C": kNoneOption,
+  "Peer A": "torusKnot",
+  "Peer B": "torusKnot",
+  "Peer C": "orbiterBox",
   "Peer D": kNoneOption,
   "Peer E": kNoneOption
 };
@@ -599,17 +780,32 @@ for (const peerId of Object.keys(fakePeers) as (keyof typeof fakePeers)[]) {
     .on("change", ({ value }) => {
       peerRegistry.select(peerId, value === kNoneOption ? null : value);
     });
+
+  const presetValue = fakePeers[peerId];
+  if (presetValue !== kNoneOption) {
+    peerRegistry.select(peerId, presetValue);
+  }
 }
+
+// Shows the "priority" guarantee immediately: the orbiters preset above
+// (Peer C's "Orbiter Box" in particular) keep sweeping past Cone's own
+// silhouette, so the local selection needs something to stay on top of from
+// the very first frame.
+selectionManager.select("cone");
+refreshStatus();
 
 startLoop({
   renderer,
   scene,
   camera,
   controls,
-  // Camera motion (orbit) is independent of any selection-change event -
-  // see `PeerSelectionVisibility`'s own doc comment for why this has to run
-  // every frame rather than only reacting to events.
-  onFrame: () => peerVisibility.update(),
+  onFrame: () => {
+    advanceOrbiters();
+    // Camera motion (orbit) is independent of any selection-change event -
+    // see `PeerSelectionVisibility`'s own doc comment for why this has to run
+    // every frame rather than only reacting to events.
+    peerVisibility.update();
+  },
   // `highlight`/`highlightJfa` each own a full `RenderPipeline`, so one is
   // only used as the frame's render call while it's actually driving
   // anything (its own matching "Peer rendering" mode) - every other frame

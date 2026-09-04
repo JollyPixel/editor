@@ -9,6 +9,7 @@ import * as THREE from "three";
 import {
   SelectionManager,
   PeerSelectionRegistry,
+  PeerHoverRegistry,
   PeerHighlightPass,
   PeerSelectionVisibility,
   type HighlightEntry
@@ -34,10 +35,11 @@ function createHighlightSpy(): {
 }
 
 function createHarness(
-  options?: { visibility?: boolean; }
+  options?: { visibility?: boolean; hover?: boolean; }
 ): {
   selection: SelectionManager;
   registry: PeerSelectionRegistry;
+  hoverRegistry: PeerHoverRegistry | undefined;
   highlight: ReturnType<typeof createHighlightSpy>;
   peerHighlight: PeerHighlightPass;
   visibility: PeerSelectionVisibility | undefined;
@@ -45,6 +47,7 @@ function createHarness(
 } {
   const selection = new SelectionManager();
   const registry = new PeerSelectionRegistry();
+  const hoverRegistry = options?.hover ? new PeerHoverRegistry() : undefined;
   const highlight = createHighlightSpy();
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
 
@@ -56,18 +59,19 @@ function createHarness(
     camera.position.set(0, 0, 0);
     camera.lookAt(0, 0, -1);
     camera.updateMatrixWorld();
-    visibility = new PeerSelectionVisibility({ registry, selection, camera });
+    visibility = new PeerSelectionVisibility({ registry, selection, camera, hoverRegistry });
   }
 
   const peerHighlight = new PeerHighlightPass({
     registry,
     selection,
     highlight,
-    visibility
+    visibility,
+    hoverRegistry
   });
 
   return {
-    selection, registry, highlight, peerHighlight, visibility, mesh
+    selection, registry, hoverRegistry, highlight, peerHighlight, visibility, mesh
   };
 }
 
@@ -251,6 +255,104 @@ describe("local hover", () => {
   });
 });
 
+describe("peer hover", () => {
+  test("one peer hovering a registered mesh produces exactly one isolated, darkened entry", () => {
+    const { hoverRegistry, mesh, highlight } = createHarness({ hover: true });
+    hoverRegistry!.hover("peer-a", "mesh-1");
+
+    const entries = lastEntries(highlight);
+    assert.strictEqual(entries.length, 1);
+    assert.strictEqual(entries[0].target, mesh);
+    assert.strictEqual(entries[0].isolated, true);
+    assert.ok(!entries[0].priority, "a peer hover entry should not be marked priority");
+    assert.notStrictEqual(entries[0].color, hoverRegistry!.colorOf("peer-a"), "must be darkened, not the raw peer color");
+  });
+
+  test("without a hoverRegistry, a peer hover is never included - unchanged behavior", () => {
+    // No `hover: true` here - `createHarness`'s default omits `hoverRegistry`
+    // entirely, matching an existing caller that hasn't opted in.
+    const { registry, highlight } = createHarness();
+    registry.select("peer-a", "mesh-1");
+
+    const entries = lastEntries(highlight);
+    assert.strictEqual(entries.length, 1);
+    assert.strictEqual(entries[0].color, registry.colorOf("peer-a"));
+  });
+
+  test("priority rule: a peer selection on the object suppresses another peer's hover entry", () => {
+    const { registry, hoverRegistry, highlight } = createHarness({ hover: true });
+    hoverRegistry!.hover("peer-a", "mesh-1");
+    registry.select("peer-b", "mesh-1");
+
+    const entries = lastEntries(highlight);
+    assert.strictEqual(entries.length, 1);
+    assert.strictEqual(entries[0].color, registry.colorOf("peer-b"));
+    assert.ok(!entries[0].isolated, "the surviving entry is the peer selection, not a hover");
+  });
+
+  test("priority rule: the local selection suppresses a peer's hover entry", () => {
+    const { selection, hoverRegistry, highlight } = createHarness({ hover: true });
+    hoverRegistry!.hover("peer-a", "mesh-1");
+    selection.select("mesh-1");
+
+    const entries = lastEntries(highlight);
+    assert.strictEqual(entries.length, 1);
+    assert.strictEqual(entries[0].color, selection.color);
+    assert.strictEqual(entries[0].priority, true);
+  });
+
+  test("priority rule: the local hover wins over a peer's hover on the same object", () => {
+    const { selection, hoverRegistry, highlight } = createHarness({ hover: true });
+    hoverRegistry!.hover("peer-a", "mesh-1");
+    selection.hover("mesh-1");
+
+    const entries = lastEntries(highlight);
+    assert.strictEqual(entries.length, 1);
+    assert.strictEqual(entries[0].color, selection.hoverColor);
+    assert.strictEqual(entries[0].isolated, true);
+  });
+
+  test("priority rule: the oldest peer hoverer wins over a later one", () => {
+    const { hoverRegistry, highlight } = createHarness({ hover: true });
+    hoverRegistry!.hover("peer-a", "mesh-1");
+    const afterFirst = lastEntries(highlight)[0].color;
+
+    hoverRegistry!.hover("peer-b", "mesh-1");
+
+    assert.strictEqual(lastEntries(highlight).length, 1);
+    // `#darken` returns a fresh `THREE.Color` per call - compare by value,
+    // not identity.
+    assert.deepStrictEqual(lastEntries(highlight)[0].color, afterFirst, "must stay in the first peer's darkened color");
+  });
+
+  test("a peer hover entry reappears once the suppressing selector clears", () => {
+    const { registry, hoverRegistry, highlight } = createHarness({ hover: true });
+    hoverRegistry!.hover("peer-a", "mesh-1");
+    registry.select("peer-b", "mesh-1");
+    registry.select("peer-b", null);
+
+    const entries = lastEntries(highlight);
+    assert.strictEqual(entries.length, 1);
+    assert.strictEqual(entries[0].isolated, true);
+  });
+
+  test("coexists with a peer selection and local hover on separate objects", () => {
+    const { selection, registry, hoverRegistry, highlight } = createHarness({ hover: true });
+    const meshB = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    const meshC = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    selection.register("mesh-2", meshB);
+    selection.register("mesh-3", meshC);
+
+    registry.select("peer-a", "mesh-2");
+    hoverRegistry!.hover("peer-b", "mesh-3");
+
+    const entries = lastEntries(highlight);
+    assert.strictEqual(entries.length, 2);
+    const hoverEntry = entries.find((entry) => entry.target === meshC);
+    assert.strictEqual(hoverEntry?.isolated, true);
+  });
+});
+
 describe("visibility", () => {
   test("excludes a peer entry for an object visibility reports not visible", () => {
     const { registry, visibility, mesh, highlight } = createHarness({ visibility: true });
@@ -299,6 +401,15 @@ describe("visibility", () => {
     registry.select("peer-a", "mesh-1");
 
     assert.strictEqual(lastEntries(highlight).length, 1);
+  });
+
+  test("excludes a peer hover entry for an object visibility reports not visible", () => {
+    const { hoverRegistry, visibility, mesh, highlight } = createHarness({ visibility: true, hover: true });
+    mesh.position.set(0, 0, 10);
+    hoverRegistry!.hover("peer-a", "mesh-1");
+    visibility!.update();
+
+    assert.deepStrictEqual(lastEntries(highlight), []);
   });
 });
 

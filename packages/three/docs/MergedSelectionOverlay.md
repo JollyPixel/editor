@@ -3,7 +3,7 @@
 One shared `THREE.LineSegments` covering many targets at once - a single
 draw call regardless of how many targets it covers, unlike building one
 [SelectionOutline](./SelectionOutline.md) per target via
-[createSelectionOverlay](./createSelectionOverlay.md) (one draw call *each*).
+[createSelectionOverlay](./SelectionOverlayRegistry.md) (one draw call *each*).
 
 Built for bulk multi-select scenarios outside
 [SelectionManager](./SelectionManager.md)'s own single-selection model - its

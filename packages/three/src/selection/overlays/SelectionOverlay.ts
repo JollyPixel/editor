@@ -13,11 +13,9 @@ export interface SelectionOverlay {
   setOpacity(opacity: number): void;
   setXray(xray: boolean): void;
   /**
-   * Optional - only `SelectionBoundingBox` has a fill mesh to tint at all;
-   * a per-mesh technique like `SelectionOutline` has no fill concept and
-   * simply doesn't implement this. A caller holding a plain `SelectionOverlay`
-   * (not knowing which concrete technique built it) calls it as
-   * `overlay.setFillOpacity?.(opacity)`.
+   * Optional - only `SelectionBoundingBox` has a fill mesh to tint; a
+   * per-mesh technique like `SelectionOutline` doesn't implement this. Call
+   * as `overlay.setFillOpacity?.(opacity)`.
    */
   setFillOpacity?(opacity: number): void;
   dispose(): void;

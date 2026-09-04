@@ -6,20 +6,18 @@ import { inflateEdgesGeometry } from "./inflateEdgesGeometry.ts";
 
 // CONSTANTS
 // Edges sit exactly on the target's own surface, so identical depth values
-// z-fight with the mesh's triangles at that seam (visible as a dashed/flickering
-// line). `glPolygonOffset` doesn't apply to GL_LINES, so nudge every edge
-// vertex slightly outward instead, along its own local surface normal
-// (`inflateEdgesGeometry`) rather than a uniform `object.scale` bump - see
-// that function's own doc comment for why the distinction matters on a
-// torus/torus knot's concave-relative-to-origin regions. Expressed as a
-// fraction of the target's own bounding-sphere radius, not an absolute
-// distance, so it reads the same regardless of the mesh's actual size.
+// z-fight with the mesh (a dashed/flickering line). `glPolygonOffset`
+// doesn't apply to GL_LINES, so nudge each edge vertex outward along its
+// own surface normal instead (`inflateEdgesGeometry`), as a fraction of the
+// bounding-sphere radius so it reads the same at any mesh size.
 const kOffsetFactor = 0.006;
-// Draws after every default-renderOrder object, so an `xray` outline
-// reliably wins the pixel even though it skips the depth test - depth alone
-// would only make it "win" against geometry rendered earlier in the same
-// frame, not geometry drawn afterward.
+// Draws after every default-renderOrder object, so an `xray` outline wins
+// the pixel even though it skips the depth test.
 const kXrayRenderOrder = 999;
+// Dash/gap size for `dashed`, as a fraction of the bounding-sphere radius,
+// same convention as `kOffsetFactor`.
+const kDashSizeFactor = 0.06;
+const kGapSizeFactor = 0.04;
 
 export interface SelectionOutlineOptions {
   /**
@@ -39,24 +37,29 @@ export interface SelectionOutlineOptions {
    */
   opacity?: number;
   /**
-   * Line thickness in (CSS) pixels, forwarded straight to
-   * `THREE.LineBasicMaterial.linewidth`. Most WebGL backends silently clamp
-   * this to 1 regardless of the value given - a long-standing ANGLE/GL_LINES
-   * driver limitation `LineBasicMaterial` does nothing to work around - so a
-   * value above 1 is a "nice if the platform honors it" upgrade, not a
-   * guarantee; `WebGPURenderer` is not affected.
+   * Line thickness in (CSS) pixels, forwarded to
+   * `THREE.LineBasicMaterial.linewidth`. Most WebGL backends clamp this to
+   * 1 regardless of value (a long-standing GL_LINES driver limitation) - not
+   * guaranteed to have a visible effect; `WebGPURenderer` is unaffected.
    * @default 1
    */
   linewidth?: number;
   /**
-   * Skips the depth test (and depth write) so the outline stays visible
-   * through any geometry in front of it, like an X-ray, instead of being
-   * occluded like a normal object - handy for keeping a selection visible
-   * through walls or a crowded scene. Still a single draw call either way,
-   * so this doesn't cost anything extra to render.
+   * Skips the depth test/write so the outline stays visible through other
+   * geometry, like an X-ray. Still a single draw call, so this costs
+   * nothing extra.
    * @default false
    */
   xray?: boolean;
+  /**
+   * Renders a dashed line via `THREE.LineDashedMaterial` (a
+   * `LineBasicMaterial` subclass, so `setColor`/`setOpacity`/`setXray` need
+   * no special-casing). Dash/gap size scale with the target's bounding
+   * sphere, not a caller-facing knob. Typical use: a peer's hover
+   * indicator, distinguished from a solid selection ring.
+   * @default false
+   */
+  dashed?: boolean;
 }
 
 /**
@@ -70,13 +73,26 @@ export class SelectionOutline extends THREE.LineSegments<THREE.BufferGeometry, T
   constructor(
     options: SelectionOutlineOptions
   ) {
-    const { target, color = "#ffffff", opacity = 1, linewidth = 1, xray = false } = options;
+    const {
+      target, color = "#ffffff", opacity = 1, linewidth = 1, xray = false, dashed = false
+    } = options;
 
     target.geometry.computeBoundingSphere();
-    const offset = (target.geometry.boundingSphere?.radius ?? 1) * kOffsetFactor;
+    const radius = target.geometry.boundingSphere?.radius ?? 1;
+    const offset = radius * kOffsetFactor;
+    const geometry = inflateEdgesGeometry(target.geometry, offset);
 
-    super(
-      inflateEdgesGeometry(target.geometry, offset),
+    const material = dashed ?
+      new THREE.LineDashedMaterial({
+        color,
+        transparent: opacity < 1,
+        opacity,
+        linewidth,
+        depthTest: !xray,
+        depthWrite: !xray,
+        dashSize: radius * kDashSizeFactor,
+        gapSize: radius * kGapSizeFactor
+      }) :
       new THREE.LineBasicMaterial({
         color,
         transparent: opacity < 1,
@@ -84,8 +100,16 @@ export class SelectionOutline extends THREE.LineSegments<THREE.BufferGeometry, T
         linewidth,
         depthTest: !xray,
         depthWrite: !xray
-      })
-    );
+      });
+
+    super(geometry, material);
+
+    // `computeLineDistances` is a `THREE.Line`/`LineSegments` instance
+    // method (it reads `this.geometry`), not a `BufferGeometry` one - only
+    // callable after `super()`.
+    if (dashed) {
+      this.computeLineDistances();
+    }
 
     this.renderOrder = xray ? kXrayRenderOrder : 1;
     target.add(this);
@@ -105,9 +129,8 @@ export class SelectionOutline extends THREE.LineSegments<THREE.BufferGeometry, T
   }
 
   /**
-   * Updates the outline material's `linewidth` - see this option's own doc
-   * comment on `SelectionOutlineOptions` for why this is not guaranteed to
-   * have a visible effect on every platform.
+   * Updates the outline material's `linewidth` - see
+   * `SelectionOutlineOptions.linewidth` for platform caveats.
    */
   setLinewidth(
     linewidth: number

@@ -13,7 +13,7 @@ const kDefaultColors = [
   "#277da1"
 ];
 
-export interface PeerSelectionRegistryOptions {
+export interface PeerHoverRegistryOptions {
   /**
    * @default a stateless hash-based allocator over a built-in 8-color palette
    */
@@ -32,10 +32,12 @@ function hash(
 }
 
 /**
- * Stateless, coordination-free fallback - any two registries resolve the
- * same peer id to the same color without sharing state. A caller wanting
- * collision-free/reclaimable colors injects its own `colorAllocator`
- * instead (see `examples/scripts/network/PeerColorPaletteAllocator.ts`).
+ * Stateless, coordination-free fallback - same default
+ * `PeerSelectionRegistry` uses. Sharing the same hash function and palette
+ * means a peer's hover color agrees with `PeerSelectionRegistry`'s default
+ * `colorOf` without either registry knowing about the other. A caller that
+ * injects a custom `colorAllocator` into `PeerSelectionRegistry` should
+ * pass that same instance here too, to keep selection and hover in sync.
  */
 function createDefaultColorAllocator(): PeerColorAllocator {
   return {
@@ -45,32 +47,29 @@ function createDefaultColorAllocator(): PeerColorAllocator {
   };
 }
 
-export interface PeerSelectionChangeEventDetail {
+export interface PeerHoverChangeEventDetail {
   peerId: string;
   objectId: string | null;
   previousObjectId: string | null;
 }
 
 /**
- * Tracks which remote peers currently have which object selected -
- * transport-agnostic bookkeeping (no `THREE` objects, no network types), so
- * it can be driven by fake peers in a demo today and real
- * `@jolly-pixel/network` presence events later without changing this class.
+ * Tracks which remote peers currently hover which object - the hover
+ * counterpart to `PeerSelectionRegistry`, kept as its own class for the
+ * same reason that one is separate from `SelectionManager`.
  *
- * Deliberately separate from `SelectionManager` (single-local-user state):
- * this registry only ever holds *remote* peers.
- *
- * Selectors are kept oldest-first per object so `primarySelectorOf` can
- * resolve a single deterministic "whoever selected it first" peer - the
- * one whose color a 3D viewport should render.
+ * Same oldest-first bookkeeping as `PeerSelectionRegistry.selectorsOf`/
+ * `primarySelectorOf`: `hoverersOf` keeps hoverers in the order they
+ * started hovering, so `primaryHovererOf` can resolve a single
+ * deterministic "whoever hovered it first" peer.
  */
-export class PeerSelectionRegistry extends EventTarget {
+export class PeerHoverRegistry extends EventTarget {
   #peerToObject = new Map<string, string>();
   #objectToPeers = new Map<string, string[]>();
   #colorAllocator: PeerColorAllocator;
 
   constructor(
-    options: PeerSelectionRegistryOptions = {}
+    options: PeerHoverRegistryOptions = {}
   ) {
     super();
 
@@ -78,11 +77,11 @@ export class PeerSelectionRegistry extends EventTarget {
   }
 
   /**
-   * Moves `peerId`'s selection to `objectId` (or clears it, for `null`),
-   * removing it from whatever object it previously selected. No-ops (and
-   * does not dispatch) if `objectId` already is `peerId`'s selection.
+   * Moves `peerId`'s hover to `objectId` (or clears it, for `null`),
+   * removing it from whatever object it previously hovered. No-ops (and
+   * does not dispatch) if `objectId` already is `peerId`'s hover.
    */
-  select(
+  hover(
     peerId: string,
     objectId: string | null
   ): void {
@@ -110,54 +109,54 @@ export class PeerSelectionRegistry extends EventTarget {
     }
 
     this.dispatchEvent(
-      new CustomEvent<PeerSelectionChangeEventDetail>("peerSelectionChange", {
+      new CustomEvent<PeerHoverChangeEventDetail>("peerHoverChange", {
         detail: { peerId, objectId, previousObjectId }
       })
     );
   }
 
   /**
-   * Clears `peerId`'s selection entirely, as if it selected `null`. Use this
-   * when a peer disconnects - the single point where `colorAllocator` learns
-   * a peer is actually gone (see `dispose`, which deliberately does not
+   * Clears `peerId`'s hover entirely, as if it hovered `null`. Use this when
+   * a peer disconnects - the single point where `colorAllocator` learns a
+   * peer is actually gone (see `dispose`, which deliberately does not
    * release colors).
    */
   removePeer(
     peerId: string
   ): void {
-    this.select(peerId, null);
+    this.hover(peerId, null);
     this.#colorAllocator.release(peerId);
   }
 
-  selectionOf(
+  hoverOf(
     peerId: string
   ): string | null {
     return this.#peerToObject.get(peerId) ?? null;
   }
 
   /**
-   * Every peer currently selecting `objectId`, oldest-first.
+   * Every peer currently hovering `objectId`, oldest-first.
    */
-  selectorsOf(
+  hoverersOf(
     objectId: string
   ): readonly string[] {
     return (this.#objectToPeers.get(objectId) ?? []).slice();
   }
 
   /**
-   * Every object id with at least one current selector, in no particular
+   * Every object id with at least one current hoverer, in no particular
    * order. Lets a caller (e.g. `PeerHighlightPass`) enumerate every
-   * currently-selected object without tracking that set itself.
+   * currently-hovered object without tracking that set itself.
    */
-  selectedObjectIds(): readonly string[] {
+  hoveredObjectIds(): readonly string[] {
     return Array.from(this.#objectToPeers.keys());
   }
 
   /**
-   * The peer that has selected `objectId` the longest, or `null` if none
-   * has. This is the peer whose color a single 3D overlay should use.
+   * The peer that has hovered `objectId` the longest, or `null` if none has.
+   * This is the peer whose color a single 3D indicator should use.
    */
-  primarySelectorOf(
+  primaryHovererOf(
     objectId: string
   ): string | null {
     return this.#objectToPeers.get(objectId)?.[0] ?? null;
@@ -173,12 +172,9 @@ export class PeerSelectionRegistry extends EventTarget {
   }
 
   /**
-   * Forgets every peer and object. Does not dispatch `peerSelectionChange`
-   * for the state it clears - consumers tearing this down should stop
-   * listening, not react to a flood of removal events. Does not release
-   * colors either: disposing a registry (e.g. an editor closing) isn't the
-   * same as every peer disconnecting, especially when `colorAllocator` is
-   * shared across several registries.
+   * Forgets every peer and object. Does not dispatch `peerHoverChange` for
+   * the state it clears, and does not release colors either - same
+   * reasoning as `PeerSelectionRegistry.dispose`.
    */
   dispose(): void {
     this.#peerToObject.clear();

@@ -24,16 +24,13 @@ export interface PeerSelectionOverlaysOptions {
 /**
  * Renders exactly one overlay per object that a remote peer has selected,
  * colored by `registry.primarySelectorOf` (the peer that selected it
- * first) - never one overlay per peer, regardless of how many peers are
- * selecting the same object at once. This is the render-side half of the
- * "single 3D overlay, full detail in the outliner" split: the full list of
- * selectors per object still lives in `registry.selectorsOf`, for a caller
- * to render as avatar chips elsewhere.
+ * first) - never one overlay per peer. The full list of selectors per
+ * object still lives in `registry.selectorsOf`, for a caller to render as
+ * avatar chips elsewhere.
  *
- * Whenever the local `SelectionManager` also has an object selected, its
- * own overlay wins visually - the peer overlay for that object is
- * suppressed (not removed from the registry, just hidden) and reappears
- * the instant the local selection moves away.
+ * The local `SelectionManager`'s own selection always wins visually - the
+ * peer overlay for that object is suppressed (not removed from the
+ * registry) and reappears once the local selection moves away.
  */
 export class PeerSelectionOverlays {
   #registry: PeerSelectionRegistry;
@@ -91,19 +88,22 @@ export class PeerSelectionOverlays {
     this.#registry.addEventListener("peerSelectionChange", this.#onPeerSelectionChange);
     this.#selection.addEventListener("selectionChange", this.#onLocalSelectionChange);
     this.#visibility?.addEventListener("visibilityChange", this.#onVisibilityChange);
+
+    // Picks up peers that already had a selection before this instance
+    // existed (a mode switch, or a late joiner) - a future
+    // `peerSelectionChange` alone would never surface already-settled
+    // state.
+    for (const objectId of this.#registry.selectedObjectIds()) {
+      this.#refresh(objectId);
+    }
   }
 
   /**
-   * Re-applies color and x-ray to every currently active peer overlay
-   * against `selection`'s current state. `SelectionManager.setXray` (unlike
-   * `select`/`hover`) dispatches no event of its own, so an already-built
-   * peer overlay has nothing to react to - `#refresh`'s own "existing"
-   * branch keeps it current the moment something else triggers a refresh
-   * (a peer (de)selecting, the local selection changing, a visibility flip),
-   * but a caller driving `setXray` from a settings panel with none of those
-   * happening needs to call this explicitly afterward. A newly built overlay
-   * never needs this - `#refresh`'s construction path already reads
-   * `selection.xray` fresh.
+   * Re-applies color and x-ray to every currently active peer overlay -
+   * `SelectionManager.setXray` dispatches no event of its own, so a caller
+   * driving it from a settings panel needs this to propagate the change. A
+   * newly built overlay never needs it; `#refresh`'s construction path
+   * already reads `selection.xray` fresh.
    */
   refreshAll(): void {
     for (const objectId of [...this.#overlays.keys()]) {
@@ -164,12 +164,11 @@ export class PeerSelectionOverlays {
     const { linewidth } = this.#selection.outlineOptions;
     const { fillOpacity } = this.#selection.boundingBoxOptions;
 
-    // A peer overlay always builds a disposable per-object overlay, one per
-    // selecting peer's color - a scene-level pipeline technique has no such
-    // thing (a single shared pipeline, not a per-id instance, see
-    // `HighlightPass`/`HighlightPassJfa`'s own doc comments), so it can't
-    // represent more than one simultaneously colored peer selection. Falls
-    // back to `"outline"` in that case rather than mishandling the technique.
+    // A peer overlay is one disposable per-object instance per selecting
+    // peer's color - a scene-level pipeline technique has only one shared
+    // pipeline instance (see `HighlightPass`/`HighlightPassJfa`), so it
+    // can't represent more than one peer's color at once. Falls back to
+    // `"outline"` instead.
     const rawTechnique = this.#selection.techniqueFor(objectId);
     const technique = isScenePipelineTechnique(rawTechnique) ? "outline" : rawTechnique;
 

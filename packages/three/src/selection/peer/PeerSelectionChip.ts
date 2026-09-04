@@ -13,31 +13,24 @@ const kChipLabelFont = `700 ${kChipCanvasSize * 0.36}px sans-serif`;
 
 export interface PeerSelectionChipOptions {
   /**
-   * The selecting peer's own color, same source `PeerSelectionOverlays`/
-   * `PeerHighlightPass` already read via `PeerSelectionRegistry.colorOf`.
-   * Also the background fill for an overflow badge (see `label` below) -
-   * a caller building one picks its own neutral color, since an overflow
-   * badge doesn't belong to any single peer.
+   * The selecting peer's own color (same source `PeerSelectionOverlays`/
+   * `PeerHighlightPass` read via `PeerSelectionRegistry.colorOf`), or a
+   * neutral background fill for an overflow badge.
    */
   color: THREE.ColorRepresentation;
   /**
-   * Short text (e.g. `"+3"`) drawn centered on the chip instead of it being
-   * a plain filled circle - `PeerSelectionChips`' own overflow badge for
-   * summarizing selectors beyond its cap uses this; a plain per-selector
-   * chip omits it. Not a general nameplate - `PeerSelectionRegistry` never
-   * guarantees a display name for a bare peer id the way `network.PeerMetadata`
-   * does for `PeerFrustumSync`, so keep this short (a count, not a name).
+   * Short text (e.g. `"+3"`) drawn centered on the chip instead of a plain
+   * filled circle - used by `PeerSelectionChips`' overflow badge. Not a
+   * general nameplate: keep it short (a count, not a name).
    */
   label?: string;
 }
 
 /**
  * A single small filled-circle billboard, one per simultaneous selector on
- * an object (or one overflow badge summarizing several) - `PeerSelectionChips`
- * lays several of these out in a row above a multi-selected target. Mirrors
- * `PeerFrustumLabel`'s own canvas-texture `THREE.Sprite` shape (see its own
- * doc comment), just simpler: usually a pure color indicator, no text - see
- * `label` above for the one exception.
+ * an object (or one overflow badge summarizing several) -
+ * `PeerSelectionChips` lays several of these out in a row above a
+ * multi-selected target.
  */
 export class PeerSelectionChip extends THREE.Sprite {
   #color: THREE.ColorRepresentation;

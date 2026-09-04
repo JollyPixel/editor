@@ -19,14 +19,18 @@ export interface SelectionOverlayCreateOptions {
    */
   fillOpacity?: number;
   xray?: boolean;
+  /**
+   * Forwarded to a technique that supports it (e.g. `SelectionOutline`'s own
+   * `dashed`) - ignored by any technique that doesn't.
+   */
+  dashed?: boolean;
 }
 
 /**
- * One selectable overlay technique - built by `SelectionOverlayRegistry` for
- * a given `id` once `supports(target)` says it applies. A caller adding a
- * new per-object technique (e.g. another editor in this monorepo wanting a
- * different visual style than `outline`) implements this and registers it,
- * rather than forking `createSelectionOverlay`.
+ * One selectable overlay technique - built by `SelectionOverlayRegistry`
+ * for a given `id` once `supports(target)` says it applies. Implement and
+ * register this to add a new per-object technique instead of forking
+ * `createSelectionOverlay`.
  */
 export interface SelectionOverlayFactory {
   /**
@@ -48,38 +52,30 @@ export interface SelectionOverlayFactory {
 
 export interface SelectionOverlayRegistryOptions {
   /**
-   * Technique id resolved to when the requested id isn't registered (or its
-   * factory doesn't support the target) but some registered technique does -
-   * what a `THREE.Mesh` target got for any unrecognized style before this
-   * registry existed (built-in default: `"outline"`).
+   * Technique id used when the requested id isn't registered (or doesn't
+   * support the target) but this one does. Built-in default: `"outline"`.
    */
   defaultId: string;
   /**
-   * Technique id resolved to as the last resort, once neither the requested
-   * id nor `defaultId` supports the target - typically the one technique
-   * that supports every `SelectableObject` (built-in default:
-   * `"boundingBox"`), so it's always eligible here.
+   * Technique id used as a last resort, when neither the requested id nor
+   * `defaultId` supports the target - typically the one technique that
+   * supports every `SelectableObject`. Built-in default: `"boundingBox"`.
    */
   fallbackId: string;
 }
 
 /**
  * Resolves a technique id + target to the `SelectionOverlayFactory` that
- * should build its overlay - the open, registerable replacement for
- * `createSelectionOverlay`'s previous hardcoded `instanceof THREE.Mesh`
- * switch.
+ * builds its overlay - open and registerable, replacing a hardcoded
+ * `instanceof THREE.Mesh` switch.
  *
- * Three-tier resolution, chosen to reproduce that switch's exact prior
- * behavior so opening it up this way is a pure refactor for every id already
- * in use:
+ * Resolution order:
  * 1. The requested id, if registered and it supports `target`.
- * 2. `defaultId`, if it supports `target` - a `THREE.Mesh` target given an id
- *    this registry doesn't know about (e.g. a scene-level pipeline style id
- *    like `"highlight"` reaching here by mistake) silently falls back to
- *    this instead of throwing, same as before.
- * 3. `fallbackId` - what every target none of the above support (typically a
- *    `THREE.Group`, via `"boundingBox"`) always got before, regardless of
- *    the requested id.
+ * 2. `defaultId`, if it supports `target` - an unrecognized id on a
+ *    `THREE.Mesh` (e.g. a scene-level id like `"highlight"` reaching here by
+ *    mistake) falls back here instead of throwing.
+ * 3. `fallbackId` - what every other target (typically a `THREE.Group`)
+ *    always gets, regardless of the requested id.
  */
 export class SelectionOverlayRegistry {
   #factories = new Map<string, SelectionOverlayFactory>();

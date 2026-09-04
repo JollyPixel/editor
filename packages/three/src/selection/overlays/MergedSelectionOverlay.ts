@@ -3,9 +3,8 @@ import * as THREE from "three/webgpu";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 
 // CONSTANTS
-// Same value/rationale as `SelectionOutline`'s own `kXrayRenderOrder` -
-// duplicated locally rather than shared, matching how that class keeps its
-// own copy.
+// Same value/rationale as `SelectionOutline`'s own `kXrayRenderOrder`,
+// duplicated locally.
 const kXrayRenderOrder = 999;
 
 export interface MergedSelectionOverlayOptions {
@@ -24,9 +23,8 @@ export interface MergedSelectionOverlayOptions {
   color: THREE.ColorRepresentation;
   opacity?: number;
   /**
-   * Forwarded to the merged `THREE.LineBasicMaterial`. See
-   * `SelectionOutlineOptions.linewidth`'s own doc comment for the same
-   * platform-clamping caveat.
+   * Forwarded to the merged `THREE.LineBasicMaterial` - same platform
+   * clamping caveat as `SelectionOutlineOptions.linewidth`.
    */
   linewidth?: number;
   xray?: boolean;
@@ -34,31 +32,19 @@ export interface MergedSelectionOverlayOptions {
 
 /**
  * One shared `THREE.LineSegments` covering many targets at once - a single
- * draw call regardless of how many targets it covers, unlike building one
- * `SelectionOutline` per target via `createSelectionOverlay` (one draw call
- * *each*). Built for bulk multi-select scenarios outside `SelectionManager`'s
- * own single-selection model (its own overlay never covers more than two
- * targets - selected and hover - so it has nothing to gain here); see
- * `packages/three/examples/scripts/selection-stress.ts`'s "Random Selection" for
- * the motivating case.
+ * draw call regardless of target count, unlike building one
+ * `SelectionOutline` per target (one draw call each). Built for bulk
+ * multi-select scenarios outside `SelectionManager`'s own single-selection
+ * model; see `examples/scripts/selection-stress.ts`'s "Random Selection".
  *
- * Each target's own `EdgesGeometry` is baked into world space
- * (`geometry.applyMatrix4(target.matrixWorld)`) before merging via
- * `BufferGeometryUtils.mergeGeometries`, then added to `parent` at that
- * parent's own origin - unlike `SelectionOutline`, which stays in the
- * target's local space and inherits its transform for free by being parented
- * as its child. That tradeoff is exactly what makes the merge possible (one
- * shared geometry can't simultaneously sit in N different local spaces) and
- * exactly why this is a static, one-shot bake rather than a live overlay: it
- * does not follow a target that moves afterward, and covers whatever
- * `targets` was at construction time only. Dispose and reconstruct whenever
- * the covered set (or any covered target's transform) changes - the same
- * rebuild-on-change pattern `createSelectionOverlay`'s own callers already
- * use for their per-target overlays.
+ * Each target's `EdgesGeometry` is baked into world space before merging,
+ * then added to `parent` at its own origin - a static, one-shot snapshot of
+ * `targets` at construction time, not a live overlay. Dispose and
+ * reconstruct whenever the covered set or any target's transform changes.
  *
- * Not applicable to the `"highlight"` technique - that one already costs
- * nothing extra per target (`HighlightPass.setEntries` takes the whole
- * batch directly), so there is no per-target draw call here to merge away.
+ * Not applicable to the `"highlight"` technique, which already batches
+ * every target in one pass (`HighlightPass.setEntries`) with nothing
+ * per-target to merge away.
  */
 export class MergedSelectionOverlay {
   readonly object: THREE.LineSegments<THREE.BufferGeometry, THREE.LineBasicMaterial>;

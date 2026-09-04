@@ -19,7 +19,7 @@ const kExamples: Record<string, string> = {
   "Peer Frustum": "/peer-frustum.html",
   "Peer Frustum Sync": "/peer-frustum-sync.html",
   Selection: "/selection.html",
-  "Selection: Peer": "/selection-peer.html",
+  "Selection: Peer Sync": "/peer-selection-sync.html",
   "Selection: Stress": "/selection-stress.html"
 };
 

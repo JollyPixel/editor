@@ -5,14 +5,11 @@ import * as THREE from "three";
 import { computeLocalBoundingBox } from "./computeLocalBoundingBox.ts";
 
 // CONSTANTS
-// Grows the box slightly so a group containing a single box-shaped mesh does
-// not sit exactly on that mesh's own surface (same z-fighting concern as
-// SelectionOutline's kScaleBias, applied to size instead of a scale bias).
+// Grows the box slightly so it doesn't sit exactly on a single box-shaped
+// mesh's own surface (same z-fighting concern as SelectionOutline's offset).
 const kSizeBias = 1.01;
-// Draws after every default-renderOrder object, so an `xray` box reliably
-// wins the pixel even though it skips the depth test - depth alone would
-// only make it "win" against geometry rendered earlier in the same frame,
-// not geometry drawn afterward.
+// Draws after every default-renderOrder object, so an `xray` box wins the
+// pixel even though it skips the depth test.
 const kXrayRenderOrder = 999;
 
 export interface SelectionBoundingBoxOptions {
@@ -33,19 +30,16 @@ export interface SelectionBoundingBoxOptions {
    */
   opacity?: number;
   /**
-   * Skips the depth test (and depth write) so the box stays visible through
-   * any geometry in front of it, like an X-ray, instead of being occluded
-   * like a normal object - handy for keeping a selection visible through
-   * walls or a crowded scene. Still a single draw call either way, so this
-   * doesn't cost anything extra to render.
+   * Skips the depth test/write so the box stays visible through other
+   * geometry, like an X-ray. Still a single draw call, so this costs
+   * nothing extra.
    * @default false
    */
   xray?: boolean;
   /**
-   * Opacity of a translucent fill mesh added alongside the line-segment box,
-   * tinting the group's own volume in `color` instead of only outlining it.
-   * `0` (the default) skips building the fill mesh entirely - the box stays
-   * a pure wireframe, an extra draw call only a caller who wants it pays for.
+   * Opacity of a translucent fill mesh alongside the line-segment box,
+   * tinting the group's own volume in `color`. `0` (default) skips building
+   * the fill mesh entirely.
    * @default 0
    */
   fillOpacity?: number;
@@ -128,13 +122,10 @@ export class SelectionBoundingBox extends THREE.LineSegments<THREE.BufferGeometr
   }
 
   /**
-   * Updates the fill mesh's own opacity - see `SelectionBoundingBoxOptions.fillOpacity`.
-   * A box built with `fillOpacity: 0` (or omitted) has no fill mesh yet - a
-   * positive `opacity` here builds one on demand, matching the wireframe's
-   * current color and X-ray state (read back off `this.material` rather than
-   * kept as separate fields, since `setColor`/`setXray` already keep it
-   * current); a non-positive `opacity` on a box that still has none is a
-   * no-op, same as it always was.
+   * Updates the fill mesh's opacity - see
+   * `SelectionBoundingBoxOptions.fillOpacity`. Builds the fill mesh on
+   * demand if none exists yet, matching the wireframe's current color/X-ray
+   * state; a non-positive opacity on a box with no fill mesh is a no-op.
    */
   setFillOpacity(
     opacity: number
@@ -153,12 +144,10 @@ export class SelectionBoundingBox extends THREE.LineSegments<THREE.BufferGeometr
   }
 
   /**
-   * Toggles depth-test/write and render order between the normal and X-ray
-   * behavior described on `SelectionBoundingBoxOptions.xray`. The fill mesh
-   * (if any) follows the same depth-test toggle so it stays visible through
-   * occluders alongside the wireframe - its own depth write stays permanently
-   * off regardless (see `#createFillMesh`), so this only ever flips its
-   * `depthTest`/render order.
+   * Toggles depth-test/write and render order for X-ray - see
+   * `SelectionBoundingBoxOptions.xray`. The fill mesh (if any) follows the
+   * same depth-test toggle but keeps depth write permanently off (see
+   * `#createFillMesh`).
    */
   setXray(
     xray: boolean
@@ -186,17 +175,12 @@ export class SelectionBoundingBox extends THREE.LineSegments<THREE.BufferGeometr
   }
 
   /**
-   * Same unit `BoxGeometry(1, 1, 1)` the wireframe's own `EdgesGeometry` was
-   * built from, so a fill mesh parented to `this` (inheriting its scale and
-   * position for free, same as the wireframe inherits `target`'s own
-   * transform) exactly fills the wireframe's silhouette without needing its
-   * own separate sizing logic. `depthWrite` stays off unconditionally
-   * (unlike the wireframe's own material, which flips it with `xray`) - a
-   * translucent fill corrupting the depth buffer for whatever draws after it
-   * is exactly the bug already fixed once this session in `HighlightPass`'s
-   * own priority-mask material; nothing here needs the fill's own depth
-   * written for any later pass to read, so there's no upside to risking it
-   * again.
+   * Same unit `BoxGeometry(1, 1, 1)` the wireframe's own `EdgesGeometry`
+   * was built from, so a fill mesh parented to `this` exactly fills the
+   * wireframe's silhouette with no separate sizing logic. `depthWrite`
+   * stays off unconditionally, unlike the wireframe's own material - a
+   * translucent fill writing depth would corrupt whatever draws after it,
+   * and nothing here needs it read back.
    */
   #createFillMesh(
     color: THREE.ColorRepresentation,

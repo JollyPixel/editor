@@ -1,36 +1,37 @@
 // Import Third-party Dependencies
-import { Fn, If, float, vec2, vec4, uv, texture, greaterThan } from "three/tsl";
+import { mrt, select, float, vec4, uv, texture, greaterThan } from "three/tsl";
 
 // Import Internal Dependencies
-import { maskWeight } from "../maskWeight.ts";
+import { maskGate } from "../maskWeight.ts";
+import type { TslNode } from "../tslNode.ts";
 
 /**
- * Seeds every masked texel with its own pixel coordinate (`valid = 1`);
- * every other texel starts invalid (`valid = 0`, own coordinate kept anyway,
- * though unused while invalid) - parameterized by which mask to read so the
- * shared, `priority`-only, and `isolated`-only chains can each reuse this
- * instead of duplicating it, the same "extract a builder function, call it
- * for every chain" shape `buildJfaPositionStep`/`buildJfaColorStep`
- * (`../jfa/propagate.ts`) already use.
+ * Seeds every masked texel with its own pixel coordinate (`valid = 1`) and
+ * color, in one MRT output; every other texel's position starts invalid
+ * (`valid = 0`). Parameterized by which mask to read so the shared,
+ * `priority`-only, and `isolated`-only chains can each reuse this instead
+ * of duplicating it. The color output needs no `masked` branch of its own -
+ * it's just the mask texture's value at this texel either way, since an
+ * unmasked texel's position stays invalid regardless of what color sits
+ * alongside it.
  *
- * The color buffer's own seed init has no equivalent builder here - it's
- * just the mask texture itself, sampled directly (`fragmentNode = maskTexture`),
- * since every masked texel's own color already lives there.
+ * Deliberately *not* wrapped in `Fn(() => {...})()` - confirmed live that a
+ * `mrt(...)` returned from inside a `Fn()` call silently reads back as
+ * all-zero on every output, with no compile error. `mrt(...)` only works
+ * correctly as the material's `fragmentNode` directly (or nested in plain
+ * function calls that aren't themselves `Fn()`-built) - this function
+ * doesn't need `Fn()`'s imperative-statement stack (`select()` is a plain
+ * ternary), so dropping the wrapper costs nothing.
  */
 export function buildJfaSeedInit(
   maskTextureNode: ReturnType<typeof texture>,
-  resolutionNode: ReturnType<typeof vec2>
+  resolutionNode: TslNode<"vec2">
 ) {
-  return Fn(() => {
-    const uvNode = uv();
-    const masked = greaterThan(maskWeight(maskTextureNode.sample(uvNode)), float(0.5));
-    const pixelCoord = uvNode.mul(resolutionNode);
-    const result = vec4(pixelCoord, 0, 0).toVar();
+  const uvNode = uv();
+  const maskSample = maskTextureNode.sample(uvNode);
+  const masked = greaterThan(maskGate(maskSample), float(0.5));
+  const pixelCoord = uvNode.mul(resolutionNode);
+  const position = select(masked, vec4(pixelCoord, 1, 0), vec4(pixelCoord, 0, 0));
 
-    If(masked, () => {
-      result.assign(vec4(pixelCoord, 1, 0));
-    });
-
-    return result;
-  })();
+  return mrt({ position, color: maskSample });
 }

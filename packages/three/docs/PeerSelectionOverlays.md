@@ -16,6 +16,11 @@ object selected, its own overlay wins visually - the peer overlay for that
 object is suppressed (not removed from the registry, just hidden) and
 reappears the instant the local selection moves away.
 
+For a remote peer's *hover* instead of selection, see
+[PeerHoverOverlays](./PeerHoverOverlays.md) - a separate class, since a
+hover overlay needs its own suppression rules (any selector wins, then the
+local hover, then the oldest peer hoverer) on top of this class's own.
+
 ```ts
 import { SelectionManager, PeerSelectionRegistry, PeerSelectionOverlays } from "@jolly-pixel/three";
 
@@ -53,6 +58,7 @@ export interface PeerSelectionOverlaysOptions {
 
 ## Methods
 
+- `refreshAll(): void` - Re-applies color and X-ray to every currently active peer overlay against `selection`'s current state. `SelectionManager.setXray` (unlike `select`/`hover`) dispatches no event of its own, so an already-built peer overlay has nothing to react to on its own - call this explicitly after driving `setXray` from a settings panel with no other selection change happening alongside it. Not needed after a peer (de)selecting, the local selection changing, or a visibility flip - those already trigger a refresh through this class's own listeners.
 - `dispose(): void` - Detaches its listeners and disposes every active peer overlay. Does not touch `registry`/`selection`/`visibility` state - only this class's own render output.
 
 ## Notes

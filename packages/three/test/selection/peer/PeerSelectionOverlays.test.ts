@@ -130,6 +130,21 @@ describe("peer selection", () => {
     assert.ok(mesh.children[0] instanceof SelectionOutline);
   });
 
+  test("a peer selection that already existed before construction renders immediately - " +
+    "e.g. a mode switch rebuilding this class mid-session", () => {
+    const selection = new SelectionManager();
+    const registry = new PeerSelectionRegistry();
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    selection.register("mesh-1", mesh);
+    registry.select("peer-a", "mesh-1");
+
+    new PeerSelectionOverlays({ registry, selection });
+
+    assert.strictEqual(mesh.children.length, 1);
+    const material = (mesh.children[0] as THREE.LineSegments).material as THREE.LineBasicMaterial;
+    assert.strictEqual(`#${material.color.getHexString()}`, registry.colorOf("peer-a"));
+  });
+
   test("setXray on an already-built overlay is picked up once refreshAll() runs", () => {
     const { registry, selection, overlays, mesh } = createHarness();
     registry.select("peer-a", "mesh-1");

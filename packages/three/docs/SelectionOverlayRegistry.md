@@ -42,6 +42,7 @@ export interface SelectionOverlay {
   setColor(color: THREE.ColorRepresentation): void;
   setOpacity(opacity: number): void;
   setXray(xray: boolean): void;
+  setFillOpacity?(opacity: number): void;
   dispose(): void;
 }
 ```
@@ -50,6 +51,13 @@ Common surface every per-object overlay technique implements -
 [SelectionOutline](./SelectionOutline.md) and
 [SelectionBoundingBox](./SelectionBoundingBox.md) both satisfy this already,
 so a new technique only needs to match this shape, not extend a base class.
+`setFillOpacity` is optional - only [SelectionBoundingBox](./SelectionBoundingBox.md)
+has a fill mesh to tint at all, so a technique with no fill concept (like
+`SelectionOutline`) simply doesn't implement it. A caller holding a plain
+`SelectionOverlay` (not knowing which concrete technique built it) calls it
+as `overlay.setFillOpacity?.(opacity)` - see
+[PeerSelectionOverlays](./PeerSelectionOverlays.md#notes)'s own `#refresh` for
+that exact call.
 
 ## SelectionOverlayCreateOptions
 
@@ -60,13 +68,15 @@ export interface SelectionOverlayCreateOptions {
   linewidth?: number;
   fillOpacity?: number;
   xray?: boolean;
+  dashed?: boolean;
 }
 ```
 
 Forwarded by `createSelectionOverlay` to whichever factory's `create` is
-resolved. `linewidth` is only meaningful to a technique that uses it
-(`SelectionOutline`); `fillOpacity` likewise only to `SelectionBoundingBox` -
-a technique that doesn't care about a field simply ignores it.
+resolved. `linewidth`/`dashed` are only meaningful to a technique that uses
+them (`SelectionOutline`); `fillOpacity` likewise only to
+`SelectionBoundingBox` - a technique that doesn't care about a field simply
+ignores it.
 
 ## SelectionOverlayFactory
 

@@ -10,23 +10,15 @@ const kPositionKeyPrecision = 5;
 
 /**
  * `THREE.EdgesGeometry(geometry)`, with every line vertex pushed outward by
- * `offset` along *the source geometry's own vertex normal* at that position
- * (every adjacent face's normal, averaged) - not, like a uniform
+ * `offset` along its own averaged vertex normal - not, like a uniform
  * `object.scale` bump, away from the object's local origin.
  *
- * That distinction only matters for a non-star-convex mesh: a torus's inner
- * (hole-facing) tube surface, or a torus knot's inward-facing groove
- * surfaces, both have points whose true outward normal points *toward* the
- * object's own local origin, not away from it. Scaling the whole edges
- * geometry up from origin (`SelectionOutline`'s previous approach) pushes
- * exactly those edges *into* the solid mesh instead of off it, so they lose
- * the depth test against the surface and disappear - outline lines missing
- * specifically on a shape's concave-relative-to-origin regions. A per-vertex
- * normal offset has no such blind spot: every point moves along its own true
- * local outward direction, so it reads identically for convex and concave
- * surfaces alike (and is a no-op difference on a star-convex shape like a
- * box or sphere, where "away from origin" and "along the local normal"
- * already roughly coincide).
+ * The distinction matters on a non-star-convex mesh (a torus's inner tube,
+ * a torus knot's grooves), where the true outward normal at some points
+ * faces *toward* the local origin. Scaling from origin pushes exactly those
+ * edges into the solid mesh, where they fail the depth test and disappear.
+ * A per-vertex normal offset has no such blind spot, and is a no-op
+ * difference on a star-convex shape like a box or sphere.
  *
  * Reads `geometry`'s own `normal` attribute if present; computes one on a
  * disposable clone otherwise, never mutating the caller's own geometry.

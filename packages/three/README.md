@@ -46,12 +46,18 @@ scene.add(grid); // self-updating: no manual .update() call needed
 - [PeerSelectionRegistry](docs/PeerSelectionRegistry.md) - Tracks which remote peers have which object selected, independent of the local user's own selection. Color assignment is pluggable via `PeerColorAllocator`.
 - [PeerSelectionOverlays](docs/PeerSelectionOverlays.md) - Renders exactly one overlay per object a peer has selected, in the primary (oldest) selector's color.
 - [PeerHighlightPass](docs/PeerHighlightPass.md) - Same role as PeerSelectionOverlays, driving a HighlightPass or HighlightPassJfa instead - scales to many peers/many simultaneous colors, works standalone with zero peers too.
-- [PeerSelectionVisibility](docs/PeerSelectionVisibility.md) - Optional frustum + max-distance gating for peer indicators, accepted by PeerSelectionOverlays/PeerHighlightPass; never affects the local user's own selection.
+- [PeerSelectionVisibility](docs/PeerSelectionVisibility.md) - Optional frustum + max-distance gating for peer indicators, accepted by PeerSelectionOverlays/PeerHighlightPass/PeerHoverOverlays; never affects the local user's own selection/hover.
 - [PeerSelectionChips](docs/PeerSelectionChips.md) - Small colored billboard chips above any object with more than one simultaneous peer selector, so every selector is visible in 3D, not just the primary one.
+- [PeerHoverRegistry](docs/PeerHoverRegistry.md) - Tracks which remote peers currently hover which object, independent of the local user's own hover - the hover counterpart to PeerSelectionRegistry.
+- [PeerHoverOverlays](docs/PeerHoverOverlays.md) - Renders exactly one dashed, faded overlay per object a peer is hovering, for the `"outline"` technique - suppressed by any selector (local or peer) on the object, and by the local user's own hover.
 
 ### Network
 
 Optional, behind the `@jolly-pixel/three/network` entry point.
+
+- [PeerFrustumSync](docs/network/PeerFrustumSync.md) - Publishes an `Object3D` pose and renders remote peers as `PeerFrustum`s.
+- [PeerSelectionSync](docs/network/PeerSelectionSync.md) - Publishes the local `SelectionManager`'s selected id and applies remote peers' selections into a `PeerSelectionRegistry`.
+- [PeerHoverSync](docs/network/PeerHoverSync.md) - Publishes the local `SelectionManager`'s hovered id and applies remote peers' hovers into a `PeerHoverRegistry`, throttled with a trailing flush.
 
 ## ✨ Contributors guide
 

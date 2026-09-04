@@ -1,9 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
 import {
-  float,
-  vec2,
-  vec3,
   vec4,
   uniform,
   texture,
@@ -14,8 +11,20 @@ import {
 import type { HighlightEntry } from "./HighlightPass.ts";
 import { InstancedHighlightMask } from "./InstancedHighlightMask.ts";
 import { buildJfaSeedInit } from "./tsl/jfa/seed.ts";
-import { buildJfaPositionStep, buildJfaColorStep } from "./tsl/jfa/propagate.ts";
+import { buildJfaPropagateStep } from "./tsl/jfa/propagate.ts";
 import { buildJfaRingComposite, type JfaRingChannel } from "./tsl/jfa/resolve.ts";
+import type { TslNode } from "./tsl/tslNode.ts";
+
+// CONSTANTS
+// The isolated (hover) chain's own re-render interval (in frames) scales
+// with canvas resolution rather than a fixed constant - see
+// `#renderJumpFlood`. `kIsolatedRefreshIntervalBase` is what it reduces to
+// at (or below) `kIsolatedRefreshIntervalReferencePixels` (1080p, tuned by
+// feel); `kIsolatedRefreshIntervalMax` caps how large it can grow, so a
+// very large canvas doesn't make the hover ring's staleness read as a pop.
+const kIsolatedRefreshIntervalBase = 6;
+const kIsolatedRefreshIntervalReferencePixels = 1920 * 1080;
+const kIsolatedRefreshIntervalMax = 16;
 
 export interface HighlightPassJfaOptions {
   /**
@@ -27,37 +36,52 @@ export interface HighlightPassJfaOptions {
    * @default 2
    */
   ringThickness?: number;
+  /**
+   * Solid black border, in screen pixels, drawn against an entry's own
+   * silhouette before its assigned color - a peer-allocated color has no
+   * guaranteed contrast with the mesh it lands on, so without this the
+   * ring can be the only separation. Counted from the same seed distance
+   * as `ringThickness`, so keep it smaller to leave any of the entry's own
+   * color visible - see `tsl/jfa/resolve.ts` for the exact shape.
+   * @default 1
+   */
+  borderThickness?: number;
+  /**
+   * Additive wash of the hoverer's own color across an `isolated` entry's
+   * surface, `0`-`1` - a ring alone is a weak cue for a transient hover
+   * nobody's necessarily already looking at. Never applied to
+   * `priority`/shared entries. `0` disables it entirely.
+   * @default 0.15
+   */
+  isolatedFillOpacity?: number;
 }
 
 /**
- * Jump Flood Algorithm alternative to `HighlightPass` - same `HighlightEntry`/
- * `setEntries` shape, so a caller (e.g. `PeerHighlightPass`) can drive either
- * technique interchangeably, but replaces `HighlightPass`'s
- * downsample/edge-detect/blur chain with a real distance field: every
- * background texel knows the exact pixel-space distance to its nearest
- * outlined silhouette, so the ring reads the same width regardless of
- * viewing angle or downsample level, unlike a blurred edge map.
+ * Jump Flood Algorithm alternative to `HighlightPass` - same
+ * `HighlightEntry`/`setEntries` shape, so a caller can drive either
+ * interchangeably, but replaces `HighlightPass`'s downsample/edge-detect/
+ * blur chain with a real distance field: every background texel knows the
+ * exact pixel-space distance to its nearest outlined silhouette, so the
+ * ring reads the same width regardless of viewing angle or downsample
+ * level.
  *
  * Same overall shape as `HighlightPass` (mask pass, `RenderPipeline`
  * compositing the ring onto a `pass(scene, camera)`):
- * 1. Mask pass - flat per-entry color, depth-tested, exactly like
- *    `HighlightPass`'s own non-priority mask pass.
- * 2. Seed init - every masked texel seeds itself (its own pixel coordinate,
- *    `valid = 1`); every other texel starts invalid.
+ * 1. Mask pass - flat per-entry color, depth-tested.
+ * 2. Seed init - every masked texel seeds itself (position, `valid = 1`,
+ *    color) in one MRT draw; every other texel starts invalid.
  * 3. `O(log2(max(width, height)))` Jump Flood passes, each halving the
- *    sample step, propagating the nearest seed's position (and, via a
- *    second, parallel pass re-deriving the same nearest-neighbor decision -
- *    see `buildJfaColorStep`'s own doc comment - its color) to every texel.
- * 4. Composite (`tsl/jfa/resolve.ts`) - every texel now knows the
- *    pixel-space distance to its nearest masked seed; a background texel
- *    within `ringThickness` of one draws that seed's color, with a ~1px
- *    smoothstep falloff at the edge.
+ *    sample step, propagating the nearest seed's position and color
+ *    together in one MRT draw per step.
+ * 4. Composite (`tsl/jfa/resolve.ts`) - a background texel within
+ *    `ringThickness` of its nearest masked seed draws that seed's color,
+ *    with a ~1px smoothstep falloff.
  *
- * Ping-pongs two independent render-target pairs (`#renderTargetSeedPosA`/`B`,
- * `#renderTargetSeedColorA`/`B`) across the Jump Flood passes, alternating
- * which one is "source" vs "destination" each iteration (same `.value`
- * reassignment technique `HighlightPass`'s own blur passes use) - a
- * texture can't be read and written in the same GPU pass.
+ * Ping-pongs two independent render-target pairs (`#renderTargetSeedA`/`B`,
+ * each a `count: 2` MRT target holding position in `textures[0]` and
+ * color in `textures[1]`) across the Jump Flood passes, alternating source
+ * vs destination each iteration - a texture can't be read and written in
+ * the same GPU pass.
  *
  * @note
  * Requires `THREE.WebGPURenderer`. Owns its own `RenderPipeline` - pick one
@@ -65,32 +89,11 @@ export interface HighlightPassJfaOptions {
  * `HighlightPass`.
  *
  * @note
- * `priority` entries (`HighlightEntry.priority`) work the same as
- * `HighlightPass`'s own - see `#renderTargetPriorityMask`'s own doc
- * comment for the mechanism, which mirrors that class's exactly (a
- * `depthTest: false` redraw so priority wins the shared mask's overlap
- * contest, plus a second, independent mask/seed/propagate chain so a
- * priority entry's ring still has somewhere to draw even when its silhouette
- * is entirely enclosed inside a larger, nearer non-priority entry's own).
- * Always on for whichever entries are marked `priority` - no separate option
- * to enable it, same as `HighlightPass` - and free (skipped entirely,
- * same as that class) on a frame with no priority entries.
- *
- * @note
- * `isolated` entries (`HighlightEntry.isolated`) also work the same as
- * `HighlightPass`'s own - see `#renderTargetIsolatedMask`'s own doc
- * comment. The opposite of `priority`: a third, independent mask/seed/
- * propagate chain, but no shared-mask redraw at all - an isolated entry
- * never competes for the shared mask's own pixels, so it can neither be cut
- * by another entry nor cut one itself.
- *
- * @note
- * `instanceId` entries (`HighlightEntry.instanceId`) work the same as
- * `HighlightPass`'s own too, via the same shared `InstancedHighlightMask` -
- * see that class's own doc comment. A mask pass's "which instances are
- * entries, what color/priority do they have" concern is identical between
- * both techniques; only what happens to the resulting mask afterward
- * (blur-based vs distance-field-based) differs.
+ * `priority`/`isolated`/`instanceId` entries work exactly like
+ * `HighlightPass`'s own (see `HighlightEntry` and
+ * `#renderTargetPriorityMask`/`#renderTargetIsolatedMask` below) - a
+ * second and third independent mask/seed/propagate chain, same mechanism,
+ * skipped entirely on a frame with none.
  */
 export class HighlightPassJfa {
   readonly pipeline: THREE.RenderPipeline;
@@ -101,6 +104,19 @@ export class HighlightPassJfa {
 
   #entryByMesh = new Map<THREE.Mesh, THREE.Color>();
   #lastEntryCount = 0;
+  /**
+   * The isolated chain's own seed/propagate work is a full second JFA
+   * chain (same per-frame cost as the shared one) - a hover, driven
+   * continuously by mouse movement, was roughly doubling the pass's
+   * per-frame GPU cost. Since a hover ring doesn't need frame-perfect
+   * precision, this throttles the isolated chain to re-render only every
+   * so often (see `kIsolatedRefreshIntervalBase`), reusing the previous
+   * frame's result the rest of the time. Set whenever the isolated
+   * entries might have changed, so the next frame after a real change is
+   * never stale.
+   */
+  #isolatedDirty = true;
+  #isolatedFrameCounter = 0;
   /** Priority meshes, a subset of `#entryByMesh`'s own keys - see `#renderTargetPriorityMask`'s own doc comment. */
   #priorityMeshes = new Set<THREE.Mesh>();
   /** `isolated` entries land here instead - never part of `#entryByMesh` at all, see `#renderTargetIsolatedMask`'s own doc comment. */
@@ -109,69 +125,70 @@ export class HighlightPassJfa {
   #instancedMask = new InstancedHighlightMask();
 
   #ringThickness: number;
-  #ringThicknessUniform: ReturnType<typeof uniform>;
+  /** See `HighlightPass.#edgeThicknessUniform`'s own doc comment for why every uniform field here is left without an explicit type annotation. */
+  #ringThicknessUniform;
+  #borderThickness: number;
+  /** See `#ringThicknessUniform`'s own comment. */
+  #borderThicknessUniform;
+  #isolatedFillOpacity: number;
+  /** See `#ringThicknessUniform`'s own comment. */
+  #isolatedFillOpacityUniform;
 
   #resolution = new THREE.Vector2();
   #invSize = new THREE.Vector2();
-  #resolutionUniform: ReturnType<typeof uniform>;
-  #invSizeUniform: ReturnType<typeof uniform>;
+  #resolutionUniform;
+  #invSizeUniform;
   #maskColor = new THREE.Color();
-  #maskColorUniform: ReturnType<typeof uniform>;
+  #maskColorUniform;
   /** `0`/`1` - gates the priority ring's own contribution in the composite; see `#hasPriorityUniform`'s own doc comment. */
-  #hasPriorityUniform: ReturnType<typeof uniform>;
+  #hasPriorityUniform;
   /** Same role as `#hasPriorityUniform`, for the isolated channel. */
-  #hasIsolatedUniform: ReturnType<typeof uniform>;
+  #hasIsolatedUniform;
 
   /** Recomputed in `#setSize` - the standard JFA step sequence, largest power of two down to 1. */
   #stepSizes: number[] = [];
-  /** Shared by both the primary and priority propagation chains - both progress through the same `#stepSizes` sequence in lockstep. */
-  #jfaStepUniform: ReturnType<typeof uniform>;
+  /** Shared by all three propagation chains - all three progress through the same `#stepSizes` sequence in lockstep. */
+  #jfaStepUniform;
 
   #renderTargetMask: THREE.RenderTarget;
-  #renderTargetSeedPosA: THREE.RenderTarget;
-  #renderTargetSeedPosB: THREE.RenderTarget;
-  #renderTargetSeedColorA: THREE.RenderTarget;
-  #renderTargetSeedColorB: THREE.RenderTarget;
+  /**
+   * `count: 2` MRT target - `textures[0]` is the position buffer
+   * (`FloatType`, real precision needed for pixel-distance comparisons),
+   * `textures[1]` the color buffer (default 8-bit - a display color needs
+   * no float precision). One MRT draw per seed-init/propagate step writes
+   * both at once, instead of two separate draws - see `buildJfaSeedInit`/
+   * `buildJfaPropagateStep`.
+   */
+  #renderTargetSeedA: THREE.RenderTarget;
+  #renderTargetSeedB: THREE.RenderTarget;
   #renderTargetComposite: THREE.RenderTarget;
 
   /**
-   * Second, independent mask - only ever populated by `priority` entries,
-   * always `depthTest: false` (see `#priorityMaskMaterial`'s own doc
-   * comment), and always cleared fresh, never layered onto the shared mask -
-   * same shape as `HighlightPass.#renderTargetPriorityMask`, and it
-   * exists for the exact same reason: the shared chain's own composite
-   * contribution only ever draws a ring into pixels the shared mask doesn't
-   * already claim, so a priority entry whose silhouette ends up entirely
-   * enclosed inside a larger, nearer non-priority entry's own silhouette has
-   * nowhere to paint even after the priority redraw below already won it the
-   * right color underneath. This second mask (and its own seed/propagate
-   * chain, `#renderTargetPrioritySeedPosA`/`B`/`#renderTargetPrioritySeedColorA`/`B`)
-   * is excluded only by its own silhouette, so its ring always has somewhere
-   * to go. Only built/run on a frame with at least one `priority` entry - see
-   * `#hasPriorityUniform` and `#renderJumpFlood`.
+   * Second, independent mask - only populated by `priority` entries,
+   * always `depthTest: false` and always cleared fresh, never layered onto
+   * the shared mask - same shape and reason as
+   * `HighlightPass.#renderTargetPriorityMask`: the shared chain's own
+   * composite only draws a ring into pixels it doesn't already claim, so a
+   * priority entry entirely enclosed inside a larger, nearer silhouette
+   * has nowhere to paint otherwise. Only built/run on a frame with at
+   * least one `priority` entry.
    */
   #renderTargetPriorityMask: THREE.RenderTarget;
-  #renderTargetPrioritySeedPosA: THREE.RenderTarget;
-  #renderTargetPrioritySeedPosB: THREE.RenderTarget;
-  #renderTargetPrioritySeedColorA: THREE.RenderTarget;
-  #renderTargetPrioritySeedColorB: THREE.RenderTarget;
+  /** Same shape as `#renderTargetSeedA`'s own doc comment, for the priority-only chain. */
+  #renderTargetPrioritySeedA: THREE.RenderTarget;
+  #renderTargetPrioritySeedB: THREE.RenderTarget;
 
   /**
-   * Third, independent mask - only ever populated by `isolated` entries,
-   * same shape as `#renderTargetPriorityMask` (always `depthTest: false`,
-   * always cleared fresh) but for the opposite reason: an `isolated` entry
-   * never redraws into the shared mask at all (see
-   * `HighlightEntry.isolated`'s own doc comment) - the shared mask's own
-   * first pass simply never sees isolated meshes (they're never in
-   * `#entryByMesh`, see `setEntries`). Its own seed/propagate chain
-   * (`#renderTargetIsolatedSeedPosA`/`B`/`#renderTargetIsolatedSeedColorA`/`B`)
-   * mirrors the priority one exactly.
+   * Third, independent mask - only populated by `isolated` entries, same
+   * shape as `#renderTargetPriorityMask` but for the opposite reason: an
+   * isolated entry never redraws into the shared mask at all - isolated
+   * meshes are simply never in `#entryByMesh` (see `setEntries`). Mirrors
+   * the priority chain exactly.
    */
   #renderTargetIsolatedMask: THREE.RenderTarget;
-  #renderTargetIsolatedSeedPosA: THREE.RenderTarget;
-  #renderTargetIsolatedSeedPosB: THREE.RenderTarget;
-  #renderTargetIsolatedSeedColorA: THREE.RenderTarget;
-  #renderTargetIsolatedSeedColorB: THREE.RenderTarget;
+  /** Same shape as `#renderTargetSeedA`'s own doc comment, for the isolated-only chain. */
+  #renderTargetIsolatedSeedA: THREE.RenderTarget;
+  #renderTargetIsolatedSeedB: THREE.RenderTarget;
 
   #maskTexture: ReturnType<typeof texture>;
   #compositeTexture: ReturnType<typeof texture>;
@@ -199,10 +216,10 @@ export class HighlightPassJfa {
   #finalIsolatedColorTexture: ReturnType<typeof texture>;
 
   #maskMaterial: THREE.NodeMaterial;
-  #seedPositionInitMaterial: THREE.NodeMaterial;
-  #seedColorInitMaterial: THREE.NodeMaterial;
-  #jfaPositionStepMaterial: THREE.NodeMaterial;
-  #jfaColorStepMaterial: THREE.NodeMaterial;
+  /** MRT material - writes both `#renderTargetSeedA`'s outputs in one draw, see its own doc comment. */
+  #seedInitMaterial: THREE.NodeMaterial;
+  /** MRT material - writes both of a `#renderTargetSeedA`/`B` pair's outputs in one draw per step. */
+  #jfaStepMaterial: THREE.NodeMaterial;
   #compositeMaterial: THREE.NodeMaterial;
 
   /**
@@ -215,15 +232,11 @@ export class HighlightPassJfa {
    * reads `maskColorNode`/depth-test state, so one material covers all three.
    */
   #priorityMaskMaterial: THREE.NodeMaterial;
-  #prioritySeedPositionInitMaterial: THREE.NodeMaterial;
-  #prioritySeedColorInitMaterial: THREE.NodeMaterial;
-  #jfaPriorityPositionStepMaterial: THREE.NodeMaterial;
-  #jfaPriorityColorStepMaterial: THREE.NodeMaterial;
+  #prioritySeedInitMaterial: THREE.NodeMaterial;
+  #jfaPriorityStepMaterial: THREE.NodeMaterial;
 
-  #isolatedSeedPositionInitMaterial: THREE.NodeMaterial;
-  #isolatedSeedColorInitMaterial: THREE.NodeMaterial;
-  #jfaIsolatedPositionStepMaterial: THREE.NodeMaterial;
-  #jfaIsolatedColorStepMaterial: THREE.NodeMaterial;
+  #isolatedSeedInitMaterial: THREE.NodeMaterial;
+  #jfaIsolatedStepMaterial: THREE.NodeMaterial;
 
   #quad: THREE.QuadMesh;
 
@@ -233,14 +246,18 @@ export class HighlightPassJfa {
     camera: THREE.Camera,
     options: HighlightPassJfaOptions = {}
   ) {
-    const { ringThickness = 2 } = options;
+    const { ringThickness = 2, borderThickness = 1, isolatedFillOpacity = 0.15 } = options;
 
     this.#renderer = renderer;
     this.#scene = scene;
     this.#camera = camera;
     this.#ringThickness = ringThickness;
+    this.#borderThickness = borderThickness;
+    this.#isolatedFillOpacity = isolatedFillOpacity;
 
     this.#ringThicknessUniform = uniform(ringThickness);
+    this.#borderThicknessUniform = uniform(borderThickness);
+    this.#isolatedFillOpacityUniform = uniform(isolatedFillOpacity);
     this.#resolutionUniform = uniform(this.#resolution);
     this.#invSizeUniform = uniform(this.#invSize);
     this.#maskColorUniform = uniform(this.#maskColor);
@@ -248,65 +265,72 @@ export class HighlightPassJfa {
     this.#hasPriorityUniform = uniform(0);
     this.#hasIsolatedUniform = uniform(0);
 
-    // See `HighlightPass`'s own matching comment - `uniform()`'s return
-    // type-checks as an untagged `UniformNode<unknown>`, which TSL's fluent
-    // node methods can't resolve as an argument. Same live reference, just
-    // narrowed for the type checker.
-    const ringThicknessNode = this.#ringThicknessUniform as unknown as ReturnType<typeof float>;
-    const resolutionNode = this.#resolutionUniform as unknown as ReturnType<typeof vec2>;
-    const invSizeNode = this.#invSizeUniform as unknown as ReturnType<typeof vec2>;
-    const maskColorNode = this.#maskColorUniform as unknown as ReturnType<typeof vec3>;
-    const jfaStepNode = this.#jfaStepUniform as unknown as ReturnType<typeof float>;
-    const hasPriorityNode = this.#hasPriorityUniform as unknown as ReturnType<typeof float>;
-    const hasIsolatedNode = this.#hasIsolatedUniform as unknown as ReturnType<typeof float>;
+    const ringThicknessNode = this.#ringThicknessUniform;
+    const borderThicknessNode = this.#borderThicknessUniform;
+    const isolatedFillOpacityNode = this.#isolatedFillOpacityUniform;
+    const resolutionNode = this.#resolutionUniform;
+    const invSizeNode = this.#invSizeUniform;
+    // See `HighlightPass`'s own matching comment - genuine reinterpretation,
+    // not an inference workaround: built from a `THREE.Color` (so TSL infers
+    // it as a `"color"` node), but every consumer below treats it as a plain
+    // `"vec3"`.
+    const maskColorNode = this.#maskColorUniform as TslNode<"vec3">;
+    const jfaStepNode = this.#jfaStepUniform;
+    const hasPriorityNode = this.#hasPriorityUniform;
+    const hasIsolatedNode = this.#hasIsolatedUniform;
 
-    this.#renderTargetMask = new THREE.RenderTarget(1, 1);
+    // Every buffer below stores discrete, per-texel seed data (a pixel
+    // coordinate, a valid flag, or a color tied to one seed) that later
+    // passes re-sample at deliberately offset texel positions
+    // (`buildJfaPropagateStep`'s 9-neighbor scan). `RenderTarget`'s default
+    // `LinearFilter` blends two neighboring texels whenever the sampled UV
+    // drifts even slightly off an exact texel center - harmless for a
+    // color blur, but here it silently averages two different seeds'
+    // positions into a meaningless coordinate, or blends a valid `1` flag
+    // with a neighboring invalid `0` past the `greaterThan(0.5)` checks in
+    // `buildJfaSeedInit`/`buildJfaPropagateStep`, dropping that seed.
+    // Compounded over every ping-ponged pass, this reliably lost an entire
+    // entry's ring whenever 2+ seeds shared a chain. `NearestFilter` reads
+    // the nearest texel outright, so it can never blend across a seed
+    // boundary.
+    const nearestFilter = { magFilter: THREE.NearestFilter, minFilter: THREE.NearestFilter };
+
+    this.#renderTargetMask = new THREE.RenderTarget(1, 1, nearestFilter);
     this.#renderTargetComposite = new THREE.RenderTarget(1, 1, { depthBuffer: false });
 
-    // `FloatType`, not the default 8-bit-per-channel type - a seed's own
-    // pixel coordinate (up to several thousand) needs real float precision
-    // to compare distances correctly; an 8-bit texture would quantize it
-    // into a handful of buckets and the whole distance field would be wrong.
-    const seedPositionOptions = { depthBuffer: false, type: THREE.FloatType };
-    this.#renderTargetSeedPosA = new THREE.RenderTarget(1, 1, seedPositionOptions);
-    this.#renderTargetSeedPosB = new THREE.RenderTarget(1, 1, seedPositionOptions);
-    this.#renderTargetSeedColorA = new THREE.RenderTarget(1, 1, { depthBuffer: false });
-    this.#renderTargetSeedColorB = new THREE.RenderTarget(1, 1, { depthBuffer: false });
+    this.#renderTargetSeedA = this.#createSeedRenderTarget(nearestFilter);
+    this.#renderTargetSeedB = this.#createSeedRenderTarget(nearestFilter);
 
     // No depth buffer - always drawn `depthTest: false` (see
     // `#priorityMaskMaterial`'s own doc comment), so it never needs one.
-    this.#renderTargetPriorityMask = new THREE.RenderTarget(1, 1, { depthBuffer: false });
-    this.#renderTargetPrioritySeedPosA = new THREE.RenderTarget(1, 1, seedPositionOptions);
-    this.#renderTargetPrioritySeedPosB = new THREE.RenderTarget(1, 1, seedPositionOptions);
-    this.#renderTargetPrioritySeedColorA = new THREE.RenderTarget(1, 1, { depthBuffer: false });
-    this.#renderTargetPrioritySeedColorB = new THREE.RenderTarget(1, 1, { depthBuffer: false });
+    this.#renderTargetPriorityMask = new THREE.RenderTarget(1, 1, { depthBuffer: false, ...nearestFilter });
+    this.#renderTargetPrioritySeedA = this.#createSeedRenderTarget(nearestFilter);
+    this.#renderTargetPrioritySeedB = this.#createSeedRenderTarget(nearestFilter);
 
     // Same shape, for `isolated` entries - see `#renderTargetIsolatedMask`'s
     // own doc comment.
-    this.#renderTargetIsolatedMask = new THREE.RenderTarget(1, 1, { depthBuffer: false });
-    this.#renderTargetIsolatedSeedPosA = new THREE.RenderTarget(1, 1, seedPositionOptions);
-    this.#renderTargetIsolatedSeedPosB = new THREE.RenderTarget(1, 1, seedPositionOptions);
-    this.#renderTargetIsolatedSeedColorA = new THREE.RenderTarget(1, 1, { depthBuffer: false });
-    this.#renderTargetIsolatedSeedColorB = new THREE.RenderTarget(1, 1, { depthBuffer: false });
+    this.#renderTargetIsolatedMask = new THREE.RenderTarget(1, 1, { depthBuffer: false, ...nearestFilter });
+    this.#renderTargetIsolatedSeedA = this.#createSeedRenderTarget(nearestFilter);
+    this.#renderTargetIsolatedSeedB = this.#createSeedRenderTarget(nearestFilter);
 
     this.#maskTexture = texture(this.#renderTargetMask.texture);
     this.#compositeTexture = texture(this.#renderTargetComposite.texture);
-    this.#jfaPositionSourceTexture = texture(this.#renderTargetSeedPosA.texture);
-    this.#jfaColorSourceTexture = texture(this.#renderTargetSeedColorA.texture);
-    this.#finalPositionTexture = texture(this.#renderTargetSeedPosA.texture);
-    this.#finalColorTexture = texture(this.#renderTargetSeedColorA.texture);
+    this.#jfaPositionSourceTexture = texture(this.#renderTargetSeedA.textures[0]);
+    this.#jfaColorSourceTexture = texture(this.#renderTargetSeedA.textures[1]);
+    this.#finalPositionTexture = texture(this.#renderTargetSeedA.textures[0]);
+    this.#finalColorTexture = texture(this.#renderTargetSeedA.textures[1]);
 
     this.#priorityMaskTexture = texture(this.#renderTargetPriorityMask.texture);
-    this.#jfaPriorityPositionSourceTexture = texture(this.#renderTargetPrioritySeedPosA.texture);
-    this.#jfaPriorityColorSourceTexture = texture(this.#renderTargetPrioritySeedColorA.texture);
-    this.#finalPriorityPositionTexture = texture(this.#renderTargetPrioritySeedPosA.texture);
-    this.#finalPriorityColorTexture = texture(this.#renderTargetPrioritySeedColorA.texture);
+    this.#jfaPriorityPositionSourceTexture = texture(this.#renderTargetPrioritySeedA.textures[0]);
+    this.#jfaPriorityColorSourceTexture = texture(this.#renderTargetPrioritySeedA.textures[1]);
+    this.#finalPriorityPositionTexture = texture(this.#renderTargetPrioritySeedA.textures[0]);
+    this.#finalPriorityColorTexture = texture(this.#renderTargetPrioritySeedA.textures[1]);
 
     this.#isolatedMaskTexture = texture(this.#renderTargetIsolatedMask.texture);
-    this.#jfaIsolatedPositionSourceTexture = texture(this.#renderTargetIsolatedSeedPosA.texture);
-    this.#jfaIsolatedColorSourceTexture = texture(this.#renderTargetIsolatedSeedColorA.texture);
-    this.#finalIsolatedPositionTexture = texture(this.#renderTargetIsolatedSeedPosA.texture);
-    this.#finalIsolatedColorTexture = texture(this.#renderTargetIsolatedSeedColorA.texture);
+    this.#jfaIsolatedPositionSourceTexture = texture(this.#renderTargetIsolatedSeedA.textures[0]);
+    this.#jfaIsolatedColorSourceTexture = texture(this.#renderTargetIsolatedSeedA.textures[1]);
+    this.#finalIsolatedPositionTexture = texture(this.#renderTargetIsolatedSeedA.textures[0]);
+    this.#finalIsolatedColorTexture = texture(this.#renderTargetIsolatedSeedA.textures[1]);
 
     const scenePassNode = pass(scene, camera);
 
@@ -319,67 +343,33 @@ export class HighlightPassJfa {
     this.#priorityMaskMaterial.colorNode = vec4(maskColorNode, 1);
     this.#priorityMaskMaterial.depthTest = false;
 
-    this.#seedPositionInitMaterial = new THREE.NodeMaterial();
-    this.#seedPositionInitMaterial.name = "HighlightPassJfa.seedPositionInit";
-    this.#seedPositionInitMaterial.fragmentNode = buildJfaSeedInit(this.#maskTexture, resolutionNode);
+    this.#seedInitMaterial = new THREE.NodeMaterial();
+    this.#seedInitMaterial.name = "HighlightPassJfa.seedInit";
+    this.#seedInitMaterial.fragmentNode = buildJfaSeedInit(this.#maskTexture, resolutionNode);
 
-    this.#seedColorInitMaterial = new THREE.NodeMaterial();
-    this.#seedColorInitMaterial.name = "HighlightPassJfa.seedColorInit";
-    this.#seedColorInitMaterial.fragmentNode = this.#maskTexture;
+    this.#prioritySeedInitMaterial = new THREE.NodeMaterial();
+    this.#prioritySeedInitMaterial.name = "HighlightPassJfa.prioritySeedInit";
+    this.#prioritySeedInitMaterial.fragmentNode = buildJfaSeedInit(this.#priorityMaskTexture, resolutionNode);
 
-    this.#prioritySeedPositionInitMaterial = new THREE.NodeMaterial();
-    this.#prioritySeedPositionInitMaterial.name = "HighlightPassJfa.prioritySeedPositionInit";
-    this.#prioritySeedPositionInitMaterial.fragmentNode = buildJfaSeedInit(
-      this.#priorityMaskTexture, resolutionNode
-    );
+    this.#isolatedSeedInitMaterial = new THREE.NodeMaterial();
+    this.#isolatedSeedInitMaterial.name = "HighlightPassJfa.isolatedSeedInit";
+    this.#isolatedSeedInitMaterial.fragmentNode = buildJfaSeedInit(this.#isolatedMaskTexture, resolutionNode);
 
-    this.#prioritySeedColorInitMaterial = new THREE.NodeMaterial();
-    this.#prioritySeedColorInitMaterial.name = "HighlightPassJfa.prioritySeedColorInit";
-    this.#prioritySeedColorInitMaterial.fragmentNode = this.#priorityMaskTexture;
-
-    this.#isolatedSeedPositionInitMaterial = new THREE.NodeMaterial();
-    this.#isolatedSeedPositionInitMaterial.name = "HighlightPassJfa.isolatedSeedPositionInit";
-    this.#isolatedSeedPositionInitMaterial.fragmentNode = buildJfaSeedInit(
-      this.#isolatedMaskTexture, resolutionNode
-    );
-
-    this.#isolatedSeedColorInitMaterial = new THREE.NodeMaterial();
-    this.#isolatedSeedColorInitMaterial.name = "HighlightPassJfa.isolatedSeedColorInit";
-    this.#isolatedSeedColorInitMaterial.fragmentNode = this.#isolatedMaskTexture;
-
-    this.#jfaPositionStepMaterial = new THREE.NodeMaterial();
-    this.#jfaPositionStepMaterial.name = "HighlightPassJfa.jfaPositionStep";
-    this.#jfaPositionStepMaterial.fragmentNode = buildJfaPositionStep(
-      this.#jfaPositionSourceTexture, jfaStepNode, invSizeNode, resolutionNode
-    );
-
-    this.#jfaColorStepMaterial = new THREE.NodeMaterial();
-    this.#jfaColorStepMaterial.name = "HighlightPassJfa.jfaColorStep";
-    this.#jfaColorStepMaterial.fragmentNode = buildJfaColorStep(
+    this.#jfaStepMaterial = new THREE.NodeMaterial();
+    this.#jfaStepMaterial.name = "HighlightPassJfa.jfaStep";
+    this.#jfaStepMaterial.fragmentNode = buildJfaPropagateStep(
       this.#jfaPositionSourceTexture, this.#jfaColorSourceTexture, jfaStepNode, invSizeNode, resolutionNode
     );
 
-    this.#jfaPriorityPositionStepMaterial = new THREE.NodeMaterial();
-    this.#jfaPriorityPositionStepMaterial.name = "HighlightPassJfa.jfaPriorityPositionStep";
-    this.#jfaPriorityPositionStepMaterial.fragmentNode = buildJfaPositionStep(
-      this.#jfaPriorityPositionSourceTexture, jfaStepNode, invSizeNode, resolutionNode
-    );
-
-    this.#jfaPriorityColorStepMaterial = new THREE.NodeMaterial();
-    this.#jfaPriorityColorStepMaterial.name = "HighlightPassJfa.jfaPriorityColorStep";
-    this.#jfaPriorityColorStepMaterial.fragmentNode = buildJfaColorStep(
+    this.#jfaPriorityStepMaterial = new THREE.NodeMaterial();
+    this.#jfaPriorityStepMaterial.name = "HighlightPassJfa.jfaPriorityStep";
+    this.#jfaPriorityStepMaterial.fragmentNode = buildJfaPropagateStep(
       this.#jfaPriorityPositionSourceTexture, this.#jfaPriorityColorSourceTexture, jfaStepNode, invSizeNode, resolutionNode
     );
 
-    this.#jfaIsolatedPositionStepMaterial = new THREE.NodeMaterial();
-    this.#jfaIsolatedPositionStepMaterial.name = "HighlightPassJfa.jfaIsolatedPositionStep";
-    this.#jfaIsolatedPositionStepMaterial.fragmentNode = buildJfaPositionStep(
-      this.#jfaIsolatedPositionSourceTexture, jfaStepNode, invSizeNode, resolutionNode
-    );
-
-    this.#jfaIsolatedColorStepMaterial = new THREE.NodeMaterial();
-    this.#jfaIsolatedColorStepMaterial.name = "HighlightPassJfa.jfaIsolatedColorStep";
-    this.#jfaIsolatedColorStepMaterial.fragmentNode = buildJfaColorStep(
+    this.#jfaIsolatedStepMaterial = new THREE.NodeMaterial();
+    this.#jfaIsolatedStepMaterial.name = "HighlightPassJfa.jfaIsolatedStep";
+    this.#jfaIsolatedStepMaterial.fragmentNode = buildJfaPropagateStep(
       this.#jfaIsolatedPositionSourceTexture, this.#jfaIsolatedColorSourceTexture, jfaStepNode, invSizeNode, resolutionNode
     );
 
@@ -400,7 +390,9 @@ export class HighlightPassJfa {
     this.#compositeMaterial = new THREE.NodeMaterial();
     this.#compositeMaterial.name = "HighlightPassJfa.composite";
     this.#compositeMaterial.fragmentNode = buildJfaRingComposite(
-      { resolutionNode, ringThicknessNode, hasPriorityNode, hasIsolatedNode },
+      {
+        resolutionNode, ringThicknessNode, borderThicknessNode, isolatedFillOpacityNode, hasPriorityNode, hasIsolatedNode
+      },
       sharedChannel,
       priorityChannel,
       isolatedChannel
@@ -410,6 +402,32 @@ export class HighlightPassJfa {
 
     this.pipeline = new THREE.RenderPipeline(renderer);
     this.pipeline.outputNode = this.#compositeTexture.add(scenePassNode);
+  }
+
+  /**
+   * One `count: 2` MRT render target for a seed/propagate chain's position
+   * + color buffers - sharing a target is what lets `buildJfaSeedInit`/
+   * `buildJfaPropagateStep` write both in a single draw. `textures[0]`/`[1]`
+   * need `.name`s (`"position"`/`"color"`) matching the `mrt({...})` keys
+   * those functions return, so the backend's name-matched MRT routing
+   * lands each output correctly.
+   */
+  #createSeedRenderTarget(
+    nearestFilter: { magFilter: THREE.MagnificationTextureFilter; minFilter: THREE.MinificationTextureFilter; }
+  ): THREE.RenderTarget {
+    // `FloatType` uniformly for both attachments at construction (`count`
+    // render targets share one `type` up front) - position needs real
+    // float precision for distance comparisons; color doesn't, and the
+    // MRT shader-output type is derived per-texture from each attachment's
+    // own `.type` regardless of construction, so overriding color back
+    // down afterward is safe and roughly halves its memory/bandwidth cost.
+    const target = new THREE.RenderTarget(1, 1, {
+      depthBuffer: false, type: THREE.FloatType, count: 2, ...nearestFilter
+    });
+    target.textures[0].name = "position";
+    target.textures[1].name = "color";
+
+    return target;
   }
 
   get ringThickness(): number {
@@ -423,16 +441,40 @@ export class HighlightPassJfa {
     this.#ringThicknessUniform.value = ringThickness;
   }
 
+  get borderThickness(): number {
+    return this.#borderThickness;
+  }
+
+  setBorderThickness(
+    borderThickness: number
+  ): void {
+    this.#borderThickness = borderThickness;
+    this.#borderThicknessUniform.value = borderThickness;
+  }
+
+  get isolatedFillOpacity(): number {
+    return this.#isolatedFillOpacity;
+  }
+
+  setIsolatedFillOpacity(
+    isolatedFillOpacity: number
+  ): void {
+    this.#isolatedFillOpacity = isolatedFillOpacity;
+    this.#isolatedFillOpacityUniform.value = isolatedFillOpacity;
+  }
+
   /**
    * Replaces every currently outlined entry - same whole-object group
    * traversal `HighlightPass.setEntries` uses, and `priority`/`isolated`/
-   * `instanceId` are all respected the same way that class does (see
-   * `#renderTargetPriorityMask`'s/`#renderTargetIsolatedMask`'s own doc
-   * comments, and `InstancedHighlightMask`'s own doc comment).
+   * `instanceId` are respected the same way.
    */
   setEntries(
     entries: HighlightEntry[]
   ): void {
+    // Any call could change the isolated set's composition - see
+    // `#isolatedDirty`'s own doc comment.
+    this.#isolatedDirty = true;
+
     this.#entryByMesh.clear();
     this.#priorityMeshes.clear();
     this.#isolatedEntryByMesh.clear();
@@ -448,19 +490,18 @@ export class HighlightPassJfa {
 
       if (isolated) {
         target.traverse((object) => {
-          if ((object as THREE.Mesh).isMesh) {
-            this.#isolatedEntryByMesh.set(object as THREE.Mesh, threeColor);
+          if (object instanceof THREE.Mesh) {
+            this.#isolatedEntryByMesh.set(object, threeColor);
           }
         });
         continue;
       }
 
       target.traverse((object) => {
-        if ((object as THREE.Mesh).isMesh) {
-          const mesh = object as THREE.Mesh;
-          this.#entryByMesh.set(mesh, threeColor);
+        if (object instanceof THREE.Mesh) {
+          this.#entryByMesh.set(object, threeColor);
           if (priority) {
-            this.#priorityMeshes.add(mesh);
+            this.#priorityMeshes.add(object);
           }
         }
       });
@@ -486,36 +527,24 @@ export class HighlightPassJfa {
     this.#instancedMask.dispose();
 
     this.#renderTargetMask.dispose();
-    this.#renderTargetSeedPosA.dispose();
-    this.#renderTargetSeedPosB.dispose();
-    this.#renderTargetSeedColorA.dispose();
-    this.#renderTargetSeedColorB.dispose();
+    this.#renderTargetSeedA.dispose();
+    this.#renderTargetSeedB.dispose();
     this.#renderTargetComposite.dispose();
     this.#renderTargetPriorityMask.dispose();
-    this.#renderTargetPrioritySeedPosA.dispose();
-    this.#renderTargetPrioritySeedPosB.dispose();
-    this.#renderTargetPrioritySeedColorA.dispose();
-    this.#renderTargetPrioritySeedColorB.dispose();
+    this.#renderTargetPrioritySeedA.dispose();
+    this.#renderTargetPrioritySeedB.dispose();
     this.#renderTargetIsolatedMask.dispose();
-    this.#renderTargetIsolatedSeedPosA.dispose();
-    this.#renderTargetIsolatedSeedPosB.dispose();
-    this.#renderTargetIsolatedSeedColorA.dispose();
-    this.#renderTargetIsolatedSeedColorB.dispose();
+    this.#renderTargetIsolatedSeedA.dispose();
+    this.#renderTargetIsolatedSeedB.dispose();
 
     this.#maskMaterial.dispose();
     this.#priorityMaskMaterial.dispose();
-    this.#seedPositionInitMaterial.dispose();
-    this.#seedColorInitMaterial.dispose();
-    this.#prioritySeedPositionInitMaterial.dispose();
-    this.#prioritySeedColorInitMaterial.dispose();
-    this.#jfaPositionStepMaterial.dispose();
-    this.#jfaColorStepMaterial.dispose();
-    this.#jfaPriorityPositionStepMaterial.dispose();
-    this.#jfaPriorityColorStepMaterial.dispose();
-    this.#isolatedSeedPositionInitMaterial.dispose();
-    this.#isolatedSeedColorInitMaterial.dispose();
-    this.#jfaIsolatedPositionStepMaterial.dispose();
-    this.#jfaIsolatedColorStepMaterial.dispose();
+    this.#seedInitMaterial.dispose();
+    this.#prioritySeedInitMaterial.dispose();
+    this.#jfaStepMaterial.dispose();
+    this.#jfaPriorityStepMaterial.dispose();
+    this.#isolatedSeedInitMaterial.dispose();
+    this.#jfaIsolatedStepMaterial.dispose();
     this.#compositeMaterial.dispose();
 
     this.pipeline.dispose();
@@ -537,8 +566,35 @@ export class HighlightPassJfa {
     this.#lastEntryCount = this.#entryByMesh.size + this.#isolatedEntryByMesh.size + this.#instancedMask.size;
     const hasPriority = this.#priorityMeshes.size > 0 || this.#instancedMask.size > 0;
     this.#hasPriorityUniform.value = hasPriority ? 1 : 0;
-    const hasIsolated = this.#isolatedEntryByMesh.size > 0;
-    this.#hasIsolatedUniform.value = hasIsolated ? 1 : 0;
+    const isolatedPresent = this.#isolatedEntryByMesh.size > 0;
+    this.#hasIsolatedUniform.value = isolatedPresent ? 1 : 0;
+
+    // Fetched up front - JFA's cost scales with pixel count, and this
+    // chain re-renders on nearly every mouse-move frame, so a fixed
+    // refresh interval tuned for one canvas size under-throttles a larger
+    // one. Scaling the interval with pixel count keeps the total
+    // per-second isolated-chain cost roughly constant across canvas sizes -
+    // see `kIsolatedRefreshIntervalBase` for the formula.
+    const size = renderer.getDrawingBufferSize(new THREE.Vector2());
+    const isolatedResolutionScale = Math.max(1, (size.width * size.height) / kIsolatedRefreshIntervalReferencePixels);
+    const isolatedRefreshInterval = Math.min(
+      kIsolatedRefreshIntervalMax,
+      Math.round(kIsolatedRefreshIntervalBase * isolatedResolutionScale)
+    );
+
+    // Throttled version of `isolatedPresent`: gates the actual isolated
+    // seed/propagate work below (see `#isolatedDirty`). The composite gate
+    // above always reflects real presence, so a skipped frame keeps
+    // showing the ring, just with up-to-`isolatedRefreshInterval - 1`-
+    // frame-old data - never a visible pop from throttling alone.
+    let hasIsolated = false;
+    if (isolatedPresent) {
+      this.#isolatedFrameCounter++;
+      hasIsolated = this.#isolatedDirty || this.#isolatedFrameCounter % isolatedRefreshInterval === 0;
+      if (hasIsolated) {
+        this.#isolatedDirty = false;
+      }
+    }
 
     const previousTarget = renderer.getRenderTarget();
     const previousAutoClear = renderer.autoClear;
@@ -554,7 +610,6 @@ export class HighlightPassJfa {
     // transparent clear.
     scene.background = null;
 
-    const size = renderer.getDrawingBufferSize(new THREE.Vector2());
     this.#setSize(size.width, size.height);
 
     renderer.autoClear = true;
@@ -564,16 +619,21 @@ export class HighlightPassJfa {
       object, objectScene, objectCamera, geometry, _material, group, lightsNode, clippingContext
       // eslint-disable-next-line max-params -- external callback contract, matches HighlightPass's own override
     ) => {
-      const instanced = this.#instancedMask.materialsFor(object as THREE.InstancedMesh);
-      if (instanced) {
-        renderer.renderObject(
-          object, objectScene, objectCamera, geometry, instanced.material, group, lightsNode, clippingContext
-        );
+      if (object instanceof THREE.InstancedMesh) {
+        const instanced = this.#instancedMask.materialsFor(object);
+        if (instanced) {
+          renderer.renderObject(
+            object, objectScene, objectCamera, geometry, instanced.material, group, lightsNode, clippingContext
+          );
 
-        return;
+          return;
+        }
       }
 
-      const color = this.#entryByMesh.get(object as THREE.Mesh);
+      if (!(object instanceof THREE.Mesh)) {
+        return;
+      }
+      const color = this.#entryByMesh.get(object);
       if (color === undefined) {
         return;
       }
@@ -585,37 +645,35 @@ export class HighlightPassJfa {
     renderer.setRenderTarget(this.#renderTargetMask);
     renderer.render(scene, camera);
 
-    // Second pass: redraws every `priority` entry (and every `InstancedMesh`
-    // referenced by any instanced entry - `priorityMaterial` discards every
-    // non-priority instance's fragments itself, see
-    // `InstancedHighlightMask`'s own doc comment), without clearing the
-    // target first, so priority always wins the shared mask buffer over
-    // everything the first pass already drew wherever silhouettes overlap on
-    // screen - see `#priorityMaskMaterial`'s own doc comment. Third pass:
-    // the same override function (still active) redraws the same priority
-    // entries again into their own fresh (cleared) target instead of
-    // layering onto the shared mask - see `#renderTargetPriorityMask`'s own
-    // doc comment for why this second, independent chain exists.
+    // Second pass: redraws every `priority` entry (and every
+    // `InstancedMesh` with an instanced entry - `priorityMaterial`
+    // discards non-priority instance fragments itself), without clearing
+    // the target first, so priority always wins the shared mask wherever
+    // silhouettes overlap. Third pass: the same override function (still
+    // active) redraws the same priority entries into their own fresh
+    // target instead of layering onto the shared mask - see
+    // `#renderTargetPriorityMask` for why.
     if (hasPriority) {
       renderer.autoClear = false;
       renderer.setRenderObjectFunction((
         object, objectScene, objectCamera, geometry, _material, group, lightsNode, clippingContext
         // eslint-disable-next-line max-params -- external callback contract, matches HighlightPass's own override
       ) => {
-        const instanced = this.#instancedMask.materialsFor(object as THREE.InstancedMesh);
-        if (instanced) {
-          renderer.renderObject(
-            object, objectScene, objectCamera, geometry, instanced.priorityMaterial, group, lightsNode, clippingContext
-          );
+        if (object instanceof THREE.InstancedMesh) {
+          const instanced = this.#instancedMask.materialsFor(object);
+          if (instanced) {
+            renderer.renderObject(
+              object, objectScene, objectCamera, geometry, instanced.priorityMaterial, group, lightsNode, clippingContext
+            );
 
-          return;
+            return;
+          }
         }
 
-        const mesh = object as THREE.Mesh;
-        if (!this.#priorityMeshes.has(mesh)) {
+        if (!(object instanceof THREE.Mesh) || !this.#priorityMeshes.has(object)) {
           return;
         }
-        const color = this.#entryByMesh.get(mesh);
+        const color = this.#entryByMesh.get(object);
         if (color === undefined) {
           return;
         }
@@ -642,7 +700,10 @@ export class HighlightPassJfa {
         object, objectScene, objectCamera, geometry, _material, group, lightsNode, clippingContext
         // eslint-disable-next-line max-params -- external callback contract, matches HighlightPass's own override
       ) => {
-        const color = this.#isolatedEntryByMesh.get(object as THREE.Mesh);
+        if (!(object instanceof THREE.Mesh)) {
+          return;
+        }
+        const color = this.#isolatedEntryByMesh.get(object);
         if (color === undefined) {
           return;
         }
@@ -658,145 +719,97 @@ export class HighlightPassJfa {
 
     renderer.setRenderObjectFunction(previousRenderObjectFunction);
 
-    // Restored here, not at the very end - see `HighlightPass.#renderMask`'s
-    // own comment on why this specific ordering is what actually fixed a
-    // real "whole 3D view turns white" bug: every quad step from here on
-    // must see the caller's own scene background/clear state, not this mask
-    // pass's transparent one.
+    // Restored here, not at the end - see `HighlightPass.#renderMask` for
+    // why this ordering fixed a real "whole 3D view turns white" bug.
     renderer.autoClear = previousAutoClear;
     renderer.setClearColor(previousClearColor, previousClearAlpha);
     scene.background = previousBackground;
 
-    this.#quad.material = this.#seedPositionInitMaterial;
-    renderer.setRenderTarget(this.#renderTargetSeedPosA);
-    this.#quad.render(renderer);
-
-    this.#quad.material = this.#seedColorInitMaterial;
-    renderer.setRenderTarget(this.#renderTargetSeedColorA);
+    this.#quad.material = this.#seedInitMaterial;
+    renderer.setRenderTarget(this.#renderTargetSeedA);
     this.#quad.render(renderer);
 
     if (hasPriority) {
-      this.#quad.material = this.#prioritySeedPositionInitMaterial;
-      renderer.setRenderTarget(this.#renderTargetPrioritySeedPosA);
-      this.#quad.render(renderer);
-
-      this.#quad.material = this.#prioritySeedColorInitMaterial;
-      renderer.setRenderTarget(this.#renderTargetPrioritySeedColorA);
+      this.#quad.material = this.#prioritySeedInitMaterial;
+      renderer.setRenderTarget(this.#renderTargetPrioritySeedA);
       this.#quad.render(renderer);
     }
 
     if (hasIsolated) {
-      this.#quad.material = this.#isolatedSeedPositionInitMaterial;
-      renderer.setRenderTarget(this.#renderTargetIsolatedSeedPosA);
-      this.#quad.render(renderer);
-
-      this.#quad.material = this.#isolatedSeedColorInitMaterial;
-      renderer.setRenderTarget(this.#renderTargetIsolatedSeedColorA);
+      this.#quad.material = this.#isolatedSeedInitMaterial;
+      renderer.setRenderTarget(this.#renderTargetIsolatedSeedA);
       this.#quad.render(renderer);
     }
 
-    // Ping-pongs the A/B pairs across `#stepSizes`, alternating which one is
-    // "source" (read by this iteration's shaders) vs "destination" (written
-    // by it) - see this class's own doc comment. Starts with "A" as source
-    // since the two init passes above just wrote there. The priority and
-    // isolated chains (when present) propagate through the exact same
-    // `#stepSizes` sequence, one iteration at a time alongside the primary
-    // chain - all three share `#jfaStepUniform`, so there's no need for a
-    // second/third loop.
+    // Ping-pongs the A/B pairs across `#stepSizes`, alternating source vs
+    // destination each iteration - starts with "A" as source since init
+    // just wrote there. The priority and isolated chains (when present)
+    // propagate through the same `#stepSizes` sequence in lockstep, all
+    // sharing `#jfaStepUniform`. Each iteration is one MRT draw per chain
+    // (position + color together), not two.
     let sourceIsA = true;
     let prioritySourceIsA = true;
     let isolatedSourceIsA = true;
     for (const step of this.#stepSizes) {
-      const positionSource = sourceIsA ? this.#renderTargetSeedPosA : this.#renderTargetSeedPosB;
-      const positionDest = sourceIsA ? this.#renderTargetSeedPosB : this.#renderTargetSeedPosA;
-      const colorSource = sourceIsA ? this.#renderTargetSeedColorA : this.#renderTargetSeedColorB;
-      const colorDest = sourceIsA ? this.#renderTargetSeedColorB : this.#renderTargetSeedColorA;
+      const source = sourceIsA ? this.#renderTargetSeedA : this.#renderTargetSeedB;
+      const dest = sourceIsA ? this.#renderTargetSeedB : this.#renderTargetSeedA;
 
       this.#jfaStepUniform.value = step;
-      this.#jfaPositionSourceTexture.value = positionSource.texture;
-      this.#jfaColorSourceTexture.value = colorSource.texture;
+      this.#jfaPositionSourceTexture.value = source.textures[0];
+      this.#jfaColorSourceTexture.value = source.textures[1];
 
-      this.#quad.material = this.#jfaPositionStepMaterial;
-      renderer.setRenderTarget(positionDest);
-      this.#quad.render(renderer);
-
-      this.#quad.material = this.#jfaColorStepMaterial;
-      renderer.setRenderTarget(colorDest);
+      this.#quad.material = this.#jfaStepMaterial;
+      renderer.setRenderTarget(dest);
       this.#quad.render(renderer);
 
       sourceIsA = !sourceIsA;
 
       if (hasPriority) {
-        const priorityPositionSource = prioritySourceIsA
-          ? this.#renderTargetPrioritySeedPosA : this.#renderTargetPrioritySeedPosB;
-        const priorityPositionDest = prioritySourceIsA
-          ? this.#renderTargetPrioritySeedPosB : this.#renderTargetPrioritySeedPosA;
-        const priorityColorSource = prioritySourceIsA
-          ? this.#renderTargetPrioritySeedColorA : this.#renderTargetPrioritySeedColorB;
-        const priorityColorDest = prioritySourceIsA
-          ? this.#renderTargetPrioritySeedColorB : this.#renderTargetPrioritySeedColorA;
+        const prioritySource = prioritySourceIsA ? this.#renderTargetPrioritySeedA : this.#renderTargetPrioritySeedB;
+        const priorityDest = prioritySourceIsA ? this.#renderTargetPrioritySeedB : this.#renderTargetPrioritySeedA;
 
-        this.#jfaPriorityPositionSourceTexture.value = priorityPositionSource.texture;
-        this.#jfaPriorityColorSourceTexture.value = priorityColorSource.texture;
+        this.#jfaPriorityPositionSourceTexture.value = prioritySource.textures[0];
+        this.#jfaPriorityColorSourceTexture.value = prioritySource.textures[1];
 
-        this.#quad.material = this.#jfaPriorityPositionStepMaterial;
-        renderer.setRenderTarget(priorityPositionDest);
-        this.#quad.render(renderer);
-
-        this.#quad.material = this.#jfaPriorityColorStepMaterial;
-        renderer.setRenderTarget(priorityColorDest);
+        this.#quad.material = this.#jfaPriorityStepMaterial;
+        renderer.setRenderTarget(priorityDest);
         this.#quad.render(renderer);
 
         prioritySourceIsA = !prioritySourceIsA;
       }
 
       if (hasIsolated) {
-        const isolatedPositionSource = isolatedSourceIsA
-          ? this.#renderTargetIsolatedSeedPosA : this.#renderTargetIsolatedSeedPosB;
-        const isolatedPositionDest = isolatedSourceIsA
-          ? this.#renderTargetIsolatedSeedPosB : this.#renderTargetIsolatedSeedPosA;
-        const isolatedColorSource = isolatedSourceIsA
-          ? this.#renderTargetIsolatedSeedColorA : this.#renderTargetIsolatedSeedColorB;
-        const isolatedColorDest = isolatedSourceIsA
-          ? this.#renderTargetIsolatedSeedColorB : this.#renderTargetIsolatedSeedColorA;
+        const isolatedSource = isolatedSourceIsA ? this.#renderTargetIsolatedSeedA : this.#renderTargetIsolatedSeedB;
+        const isolatedDest = isolatedSourceIsA ? this.#renderTargetIsolatedSeedB : this.#renderTargetIsolatedSeedA;
 
-        this.#jfaIsolatedPositionSourceTexture.value = isolatedPositionSource.texture;
-        this.#jfaIsolatedColorSourceTexture.value = isolatedColorSource.texture;
+        this.#jfaIsolatedPositionSourceTexture.value = isolatedSource.textures[0];
+        this.#jfaIsolatedColorSourceTexture.value = isolatedSource.textures[1];
 
-        this.#quad.material = this.#jfaIsolatedPositionStepMaterial;
-        renderer.setRenderTarget(isolatedPositionDest);
-        this.#quad.render(renderer);
-
-        this.#quad.material = this.#jfaIsolatedColorStepMaterial;
-        renderer.setRenderTarget(isolatedColorDest);
+        this.#quad.material = this.#jfaIsolatedStepMaterial;
+        renderer.setRenderTarget(isolatedDest);
         this.#quad.render(renderer);
 
         isolatedSourceIsA = !isolatedSourceIsA;
       }
     }
 
-    this.#finalPositionTexture.value = (sourceIsA ? this.#renderTargetSeedPosA : this.#renderTargetSeedPosB).texture;
-    this.#finalColorTexture.value = (sourceIsA ? this.#renderTargetSeedColorA : this.#renderTargetSeedColorB).texture;
+    const finalTarget = sourceIsA ? this.#renderTargetSeedA : this.#renderTargetSeedB;
+    this.#finalPositionTexture.value = finalTarget.textures[0];
+    this.#finalColorTexture.value = finalTarget.textures[1];
 
     // Left stale (harmless) when `!hasPriority`/`!hasIsolated` -
     // `#compositeMaterial` gates each channel out entirely via
     // `hasPriorityNode`/`hasIsolatedNode` in that case, see its own doc
     // comment.
     if (hasPriority) {
-      this.#finalPriorityPositionTexture.value = (
-        prioritySourceIsA ? this.#renderTargetPrioritySeedPosA : this.#renderTargetPrioritySeedPosB
-      ).texture;
-      this.#finalPriorityColorTexture.value = (
-        prioritySourceIsA ? this.#renderTargetPrioritySeedColorA : this.#renderTargetPrioritySeedColorB
-      ).texture;
+      const finalPriorityTarget = prioritySourceIsA ? this.#renderTargetPrioritySeedA : this.#renderTargetPrioritySeedB;
+      this.#finalPriorityPositionTexture.value = finalPriorityTarget.textures[0];
+      this.#finalPriorityColorTexture.value = finalPriorityTarget.textures[1];
     }
     if (hasIsolated) {
-      this.#finalIsolatedPositionTexture.value = (
-        isolatedSourceIsA ? this.#renderTargetIsolatedSeedPosA : this.#renderTargetIsolatedSeedPosB
-      ).texture;
-      this.#finalIsolatedColorTexture.value = (
-        isolatedSourceIsA ? this.#renderTargetIsolatedSeedColorA : this.#renderTargetIsolatedSeedColorB
-      ).texture;
+      const finalIsolatedTarget = isolatedSourceIsA ? this.#renderTargetIsolatedSeedA : this.#renderTargetIsolatedSeedB;
+      this.#finalIsolatedPositionTexture.value = finalIsolatedTarget.textures[0];
+      this.#finalIsolatedColorTexture.value = finalIsolatedTarget.textures[1];
     }
 
     this.#quad.material = this.#compositeMaterial;
@@ -834,20 +847,14 @@ export class HighlightPassJfa {
 
     this.#renderTargetMask.setSize(width, height);
     this.#renderTargetComposite.setSize(width, height);
-    this.#renderTargetSeedPosA.setSize(width, height);
-    this.#renderTargetSeedPosB.setSize(width, height);
-    this.#renderTargetSeedColorA.setSize(width, height);
-    this.#renderTargetSeedColorB.setSize(width, height);
+    this.#renderTargetSeedA.setSize(width, height);
+    this.#renderTargetSeedB.setSize(width, height);
     this.#renderTargetPriorityMask.setSize(width, height);
-    this.#renderTargetPrioritySeedPosA.setSize(width, height);
-    this.#renderTargetPrioritySeedPosB.setSize(width, height);
-    this.#renderTargetPrioritySeedColorA.setSize(width, height);
-    this.#renderTargetPrioritySeedColorB.setSize(width, height);
+    this.#renderTargetPrioritySeedA.setSize(width, height);
+    this.#renderTargetPrioritySeedB.setSize(width, height);
     this.#renderTargetIsolatedMask.setSize(width, height);
-    this.#renderTargetIsolatedSeedPosA.setSize(width, height);
-    this.#renderTargetIsolatedSeedPosB.setSize(width, height);
-    this.#renderTargetIsolatedSeedColorA.setSize(width, height);
-    this.#renderTargetIsolatedSeedColorB.setSize(width, height);
+    this.#renderTargetIsolatedSeedA.setSize(width, height);
+    this.#renderTargetIsolatedSeedB.setSize(width, height);
 
     // Standard Jump Flood step sequence: the smallest power of two >= the
     // longest dimension, halved down to 1 (inclusive) - guarantees every

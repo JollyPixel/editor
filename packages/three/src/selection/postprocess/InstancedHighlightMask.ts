@@ -7,18 +7,15 @@ import { instancedVec3Attribute, instancedFloatAttribute } from "./tsl/instanced
 
 /**
  * Per `THREE.InstancedMesh`, the GPU-side resources one mask pass needs to
- * outline individual instances rather than the mesh as a whole: per-instance
- * mask color, a per-instance "is this an entry" flag (read by `material` to
- * `Discard()` every non-entry instance's fragments, not just zero their
- * color - instancing draws every instance of the mesh in one call regardless
- * of which ones are entries, so without this discard a non-entry instance
- * would still write into the mask target's depth buffer at its own real
- * depth, letting it win the shared mask's own depth test against an
- * actually-outlined instance behind it), and a per-instance priority flag
- * (read by `priorityMaterial` to discard every non-priority instance's
- * fragments in that pass's own shader too, so a mesh with no priority
- * instances just costs one harmless all-discarded draw call rather than
- * needing a separate "does this mesh need the second pass" check).
+ * outline individual instances rather than the whole mesh: per-instance
+ * mask color, an "is this an entry" flag (`Discard()`s every non-entry
+ * instance's fragments - instancing draws every instance in one call
+ * regardless of which are entries, so without this a non-entry instance
+ * would still write its own depth into the mask target, letting it win the
+ * shared mask's depth test against an actually-outlined instance behind
+ * it), and a priority flag (discards non-priority instances in the
+ * priority pass, so a mesh with no priority instances just costs one
+ * harmless all-discarded draw call).
  */
 interface InstancedMaskResources {
   colorAttribute: THREE.InstancedBufferAttribute;
@@ -33,27 +30,22 @@ interface InstancedMaskResources {
 /**
  * Owns every `InstancedMesh` instance-level entry a highlight pass (e.g.
  * `HighlightPass`, `HighlightPassJfa`) has been given via `setEntries` -
- * extracted out of the pass class itself since a mask pass's "which
- * instances are entries, what color/priority do they have" concern is
- * identical across every highlight technique (blur-based, distance-field-
- * based, or otherwise); only what happens to the resulting mask afterward
- * differs between them.
+ * extracted out of the pass class since "which instances are entries,
+ * what color/priority" is identical across every highlight technique;
+ * only what happens to the resulting mask afterward differs.
  *
  * Rather than one draw call per outlined instance, each referenced
- * `InstancedMesh` gets one dedicated set of `THREE.InstancedBufferAttribute`s
- * read via TSL's `instancedBufferAttribute()` (through
- * `tsl/instancedAttribute.ts`) - the same low-level technique three's own
- * `instance()` helper uses internally for `InstancedMesh.instanceColor`,
- * just aimed at buffers this class owns instead. Deliberately *not*
- * `mesh.instanceColor` itself - three auto-multiplies every material's
- * diffuse color by `instanceColor` when it's set (`NodeMaterial.
- * setupDiffuseColor`), which would leak into the mesh's own normal scene
- * rendering and tint every non-outlined instance pure black.
+ * `InstancedMesh` gets one dedicated set of
+ * `THREE.InstancedBufferAttribute`s (via `tsl/instancedAttribute.ts`) -
+ * the same low-level technique three's own `instance()` helper uses for
+ * `InstancedMesh.instanceColor`, just aimed at buffers this class owns.
+ * Deliberately *not* `mesh.instanceColor` itself - three auto-multiplies a
+ * material's diffuse color by `instanceColor` when set, which would tint
+ * every non-outlined instance pure black.
  *
- * Net cost per outlined `InstancedMesh`: two draw calls (one per mask pass)
- * regardless of how many of its instances are simultaneously outlined - same
- * shape as a whole-object entry, just per mesh instead of per outlined
- * object.
+ * Net cost per outlined `InstancedMesh`: two draw calls regardless of how
+ * many instances are simultaneously outlined - same shape as a
+ * whole-object entry, just per mesh.
  */
 export class InstancedHighlightMask {
   #entries = new Map<THREE.InstancedMesh, Map<number, { color: THREE.Color; priority: boolean; }>>();

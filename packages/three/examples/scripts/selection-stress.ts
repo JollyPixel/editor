@@ -227,7 +227,7 @@ function nearestInstanceIdsToPosition(
  * spreading `peerCount` peers uniformly at random across the whole grid,
  * clusters them on the `peerCount` instances nearest the current local
  * (priority) selection, densely overlapping it on screen. This is the
- * stress-scale version of `selection-peer.ts`'s "Priority stack": does
+ * stress-scale version of `selection.ts`'s "Priority stack": does
  * the local selection's `HighlightPass` ring stay visible when
  * surrounded by dozens/hundreds of simultaneous, tightly-overlapping peer
  * selections, not just a handful spread across the whole scene? See the

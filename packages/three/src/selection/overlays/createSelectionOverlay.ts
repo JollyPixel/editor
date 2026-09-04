@@ -24,14 +24,10 @@ export interface CreateSelectionOverlayOptions extends SelectionOverlayCreateOpt
 }
 
 /**
- * The registry `createSelectionOverlay` resolves against. Pre-populated with
- * every built-in technique (`outline`/`boundingBox`) - a caller wanting a
- * different or additional per-object technique (e.g. another editor in this
- * monorepo) can `.register()` its own `SelectionOverlayFactory` into this
- * same registry instead of forking `createSelectionOverlay`, or build a
- * wholly separate `SelectionOverlayRegistry` and resolve against that
- * directly. See `SelectionOverlayRegistry`'s own doc comment for the
- * resolution order.
+ * The registry `createSelectionOverlay` resolves against, pre-populated
+ * with the built-in `outline`/`boundingBox` techniques. `.register()`
+ * further factories here (or build a separate `SelectionOverlayRegistry`)
+ * to add more. See `SelectionOverlayRegistry` for resolution order.
  */
 export const defaultSelectionOverlayRegistry = new SelectionOverlayRegistry({
   defaultId: "outline",
@@ -42,13 +38,9 @@ defaultSelectionOverlayRegistry.register(boundingBoxOverlayFactory);
 
 /**
  * Picks and builds the right overlay for `target` via
- * `defaultSelectionOverlayRegistry`: a non-mesh target (e.g. a `THREE.Group`)
- * always falls back to the `"boundingBox"` technique; a `THREE.Mesh` resolves
- * per `options.technique`.
- *
- * Extracted out of `SelectionManager` so `PeerSelectionOverlays` can build
- * the exact same overlays for remote peer selections without duplicating
- * this resolution.
+ * `defaultSelectionOverlayRegistry`. Extracted out of `SelectionManager` so
+ * `PeerSelectionOverlays` can build matching overlays for remote peer
+ * selections without duplicating this resolution.
  */
 export function createSelectionOverlay(
   target: SelectableObject,

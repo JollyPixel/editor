@@ -3,6 +3,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import type { PeerSelectionRegistry } from "./PeerSelectionRegistry.ts";
+import type { PeerHoverRegistry } from "./PeerHoverRegistry.ts";
 import type { SelectionManager } from "../SelectionManager.ts";
 
 export interface PeerSelectionVisibilityOptions {
@@ -16,41 +17,41 @@ export interface PeerSelectionVisibilityOptions {
    * @default Infinity - no distance cutoff, frustum test only
    */
   maxDistance?: number;
+  /**
+   * Unions `hoverRegistry.hoveredObjectIds()` into the ids `update()`
+   * evaluates, alongside `registry.selectedObjectIds()` - so a
+   * peer-hovered-only object also gets frustum/distance culling. Omitting
+   * this preserves selection-only behavior.
+   */
+  hoverRegistry?: PeerHoverRegistry;
 }
 
 /**
- * Tracks, per currently peer-selected object, whether it's actually worth
- * rendering a peer indicator for - inside the camera frustum and within
- * `maxDistance`. `PeerSelectionOverlays`/`PeerHighlightPass` each accept
- * this as an optional `visibility` option and treat a "not visible" id the
- * same as "not selected" - so a collaborative scene with many simultaneous
- * peer selections only pays overlay-construction/entries-rebuild cost for
- * the ones actually worth showing, not every peer selection that exists
- * anywhere in the scene.
+ * Tracks, per currently peer-selected object, whether it's worth rendering
+ * a peer indicator for - inside the camera frustum and within
+ * `maxDistance`. `PeerSelectionOverlays`/`PeerHighlightPass` accept this as
+ * an optional `visibility` option and treat "not visible" the same as "not
+ * selected", so a scene with many peer selections only pays overlay cost
+ * for the ones actually worth showing.
  *
- * Deliberately never consulted for the *local* user's own selection/hover -
- * only `registry`'s peer selections. Camera-relative culling only makes
- * sense for someone else's selection; hiding what the local user just
- * clicked because they panned the camera away from it would read as a bug,
- * not an optimization.
+ * Never consulted for the local user's own selection/hover - only
+ * `registry`'s peer selections. Hiding what the local user just clicked
+ * because they panned away from it would read as a bug, not an
+ * optimization.
  *
  * Must be tick-driven, not event-driven - camera motion is independent of
- * any selection-change event, the same reasoning
- * `examples/scripts/network/PeerFrustumSync.ts`'s own `update()` already
- * documents for itself. Call `update()` once per render tick (e.g. from the
- * same callback that already drives `OrbitControls.update()`); dispatches
- * its own `visibilityChange` `Event` (extends `EventTarget`, same convention
- * `SelectionManager`/`PeerSelectionRegistry` already use) only when that
- * call actually flips at least one id, so `PeerSelectionOverlays`/
- * `PeerHighlightPass` can subscribe once in their own constructors -
- * same shape as their existing `peerSelectionChange`/`selectionChange`
- * subscriptions - and stay in sync without the caller driving them by hand.
+ * any selection-change event (same reasoning as
+ * `PeerFrustumSync.update()`). Call `update()` once per render tick.
+ * Dispatches `visibilityChange` only when a call actually flips at least
+ * one id, so subscribers can listen once in their constructor and stay in
+ * sync without being driven by hand.
  */
 export class PeerSelectionVisibility extends EventTarget {
   #registry: PeerSelectionRegistry;
   #selection: SelectionManager;
   #camera: THREE.Camera;
   #maxDistance: number;
+  #hoverRegistry: PeerHoverRegistry | null;
 
   #visible = new Map<string, boolean>();
 
@@ -73,6 +74,7 @@ export class PeerSelectionVisibility extends EventTarget {
     this.#selection = options.selection;
     this.#camera = options.camera;
     this.#maxDistance = options.maxDistance ?? Infinity;
+    this.#hoverRegistry = options.hoverRegistry ?? null;
   }
 
   setCamera(
@@ -88,13 +90,11 @@ export class PeerSelectionVisibility extends EventTarget {
   }
 
   /**
-   * Recomputes visibility for every currently peer-selected object
-   * (`registry.selectedObjectIds()`) - cheap, O(peer-selected object count),
-   * not scene size. Dispatches `visibilityChange` only when at least one id's
-   * visibility actually changed since the previous call, so a subscriber
-   * only pays its own refresh cost on a real transition. An id no longer
-   * peer-selected is dropped from the tracked set without counting as a
-   * change - nothing was rendering it anyway.
+   * Recomputes visibility for every currently peer-selected (and
+   * peer-hovered, if `hoverRegistry` was given) object - cheap, O(that
+   * count), not scene size. Dispatches `visibilityChange` only when at
+   * least one id's visibility actually changed. An id no longer tracked is
+   * dropped without counting as a change.
    */
   update(): void {
     this.#camera.updateMatrixWorld();
@@ -105,6 +105,11 @@ export class PeerSelectionVisibility extends EventTarget {
     this.#camera.getWorldPosition(this.#cameraPosition);
 
     const currentIds = new Set(this.#registry.selectedObjectIds());
+    if (this.#hoverRegistry) {
+      for (const id of this.#hoverRegistry.hoveredObjectIds()) {
+        currentIds.add(id);
+      }
+    }
     let changed = false;
 
     for (const id of this.#visible.keys()) {

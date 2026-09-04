@@ -55,6 +55,16 @@ export interface SelectionOutlineOptions {
    * @default false
    */
   xray?: boolean;
+  /**
+   * Renders a dashed line instead of a solid one, via
+   * `THREE.LineDashedMaterial` (a `LineBasicMaterial` subclass, so
+   * `setColor`/`setOpacity`/`setXray` need no special-casing for it).
+   * Dash/gap size scale with the target's own bounding-sphere radius, not a
+   * caller-facing knob. Typical use: distinguishing a peer's hover
+   * indicator from a solid selection ring.
+   * @default false
+   */
+  dashed?: boolean;
 }
 ```
 
@@ -72,4 +82,5 @@ export interface SelectionOutlineOptions {
 - Scaled up by a fixed 0.5% (`kScaleBias`) around the target's own origin to avoid z-fighting with the target's coincident surface - the edges would otherwise sit at the exact same depth as the mesh's own triangles and flicker/dash along the seam. Imperceptible as a size change at typical scene scales.
 - `linewidth` above 1 is a best-effort request, not a guarantee - see this option's own doc comment above for the platform caveat. For a line that reliably renders thick everywhere, use a screen-space line library (e.g. `three`'s own `Line2`/`LineMaterial` addons) instead; this class deliberately stays on plain `LineBasicMaterial` to match `SelectionBoundingBox` and avoid pulling in `three/addons`.
 - Does not track live geometry changes - if `target.geometry` is swapped after construction, dispose the old outline and create a new one.
+- `dashed: true` is construction-only - there is no `setDashed`, since it swaps the material class rather than a single property. Rebuild (dispose and reconstruct) to toggle it after construction. See [PeerHoverOverlays](./PeerHoverOverlays.md) for the built-in caller that uses it.
 - See `examples/scripts/selection.ts` (run `npm run dev`, open `/selection.html`) for a click-to-select, hover-to-preview demo built on this class - single-select only, no networking. It reuses the same class for both the full-opacity "selected" outline and a dimmer "hover" preview via the `opacity` option.

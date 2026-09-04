@@ -46,6 +46,30 @@ describe("constructor", () => {
     assert.strictEqual(highlight.ringThickness, 5);
   });
 
+  test("defaults borderThickness to 1", () => {
+    const highlight = createPass();
+
+    assert.strictEqual(highlight.borderThickness, 1);
+  });
+
+  test("applies the given borderThickness option", () => {
+    const highlight = createPass({ borderThickness: 3 });
+
+    assert.strictEqual(highlight.borderThickness, 3);
+  });
+
+  test("defaults isolatedFillOpacity to 0.15", () => {
+    const highlight = createPass();
+
+    assert.strictEqual(highlight.isolatedFillOpacity, 0.15);
+  });
+
+  test("applies the given isolatedFillOpacity option", () => {
+    const highlight = createPass({ isolatedFillOpacity: 0.4 });
+
+    assert.strictEqual(highlight.isolatedFillOpacity, 0.4);
+  });
+
   test("exposes its own RenderPipeline", () => {
     const highlight = createPass();
 
@@ -59,6 +83,24 @@ describe("setRingThickness", () => {
     highlight.setRingThickness(7);
 
     assert.strictEqual(highlight.ringThickness, 7);
+  });
+});
+
+describe("setBorderThickness", () => {
+  test("updates borderThickness", () => {
+    const highlight = createPass();
+    highlight.setBorderThickness(0);
+
+    assert.strictEqual(highlight.borderThickness, 0);
+  });
+});
+
+describe("setIsolatedFillOpacity", () => {
+  test("updates isolatedFillOpacity", () => {
+    const highlight = createPass();
+    highlight.setIsolatedFillOpacity(0.5);
+
+    assert.strictEqual(highlight.isolatedFillOpacity, 0.5);
   });
 });
 

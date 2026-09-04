@@ -16,4 +16,6 @@ export * from "./selection/peer/PeerSelectionOverlays.ts";
 export * from "./selection/peer/PeerSelectionVisibility.ts";
 export * from "./selection/peer/PeerSelectionChip.ts";
 export * from "./selection/peer/PeerSelectionChips.ts";
+export * from "./selection/peer/PeerHoverRegistry.ts";
+export * from "./selection/peer/PeerHoverOverlays.ts";
 export * from "./types.ts";

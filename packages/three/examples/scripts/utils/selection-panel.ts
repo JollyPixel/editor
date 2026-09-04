@@ -97,10 +97,11 @@ export interface SelectionPeerPanel {
 /**
  * Builds the "Selection" (mode/colors/outline/x-ray), "Peer rendering"
  * (technique tuning), and "Peer visibility" (chips/max distance) folders
- * shared by every `SelectionManager`-driven example - `selection.ts`
- * and `selection-peer.ts` differ only in scene setup and a handful of
- * scenario-specific extras, so this is the single place their common panel
- * wiring lives, rather than two drifting copies.
+ * shared by every `SelectionManager`-driven example - `selection.ts`,
+ * `selection-stress.ts`, and `demo-peer-selection-sync.ts` differ only in
+ * scene setup and a handful of scenario-specific extras, so this is the
+ * single place their common panel wiring lives, rather than several
+ * drifting copies.
  */
 export function bindSelectionAndPeerPanel(
   options: SelectionPeerPanelOptions
@@ -207,10 +208,20 @@ export function bindSelectionAndPeerPanel(
     .addBinding(highlightSettings, "edgeThickness", { label: "edge thickness", min: 1, max: 10, step: 1 })
     .on("change", ({ value }) => highlight.setEdgeThickness(value));
 
-  const highlightJfaSettings = { ringThickness: highlightJfa.ringThickness };
+  const highlightJfaSettings = {
+    ringThickness: highlightJfa.ringThickness,
+    borderThickness: highlightJfa.borderThickness,
+    isolatedFillOpacity: highlightJfa.isolatedFillOpacity
+  };
   const ringThicknessBinding = peerFolder
     .addBinding(highlightJfaSettings, "ringThickness", { label: "ring thickness (px)", min: 1, max: 10, step: 1 })
     .on("change", ({ value }) => highlightJfa.setRingThickness(value));
+  const borderThicknessBinding = peerFolder
+    .addBinding(highlightJfaSettings, "borderThickness", { label: "border thickness (px)", min: 0, max: 10, step: 1 })
+    .on("change", ({ value }) => highlightJfa.setBorderThickness(value));
+  const isolatedFillOpacityBinding = peerFolder
+    .addBinding(highlightJfaSettings, "isolatedFillOpacity", { label: "hover fill opacity", min: 0, max: 1, step: 0.05 })
+    .on("change", ({ value }) => highlightJfa.setIsolatedFillOpacity(value));
 
   // Separate from "Peer rendering" (which technique draws a peer) - this is
   // "which peers are even worth drawing", so it groups the chips toggle with
@@ -240,10 +251,11 @@ export function bindSelectionAndPeerPanel(
   /**
    * Hides (rather than merely disables) every binding that does nothing
    * under the current mode - `linewidth`/`xray` only affect an
-   * `"outline"`-mode overlay, `edgeThickness`/`ringThickness`/`priorityHintRow`
-   * only their own matching "colors" peer mode, which `kTechniqueToPeerMode`
-   * derives directly from `mode` - a single source of truth, so there's no
-   * separate peer-mode state to fall out of sync with it.
+   * `"outline"`-mode overlay, `edgeThickness`/the JFA-only ring/border/hover
+   * bindings/`priorityHintRow` only their own matching "colors" peer mode,
+   * which `kTechniqueToPeerMode` derives directly from `mode` - a single
+   * source of truth, so there's no separate peer-mode state to fall out of
+   * sync with it.
    *
    * Under "overlays" mode, "Peer rendering" would otherwise show only its
    * (now-hidden) hint row and nothing else, a header over an empty folder -
@@ -261,6 +273,8 @@ export function bindSelectionAndPeerPanel(
     priorityHintRow.hidden = !colorsModeActive;
     edgeThicknessBinding.hidden = peerMode !== "colors";
     ringThicknessBinding.hidden = peerMode !== "colorsJfa";
+    borderThicknessBinding.hidden = peerMode !== "colorsJfa";
+    isolatedFillOpacityBinding.hidden = peerMode !== "colorsJfa";
     peerFolder.hidden = !colorsModeActive && !extraPeerBindings;
   }
 

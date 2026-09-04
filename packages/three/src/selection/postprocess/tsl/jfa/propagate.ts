@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import { Fn, If, and, float, vec2, vec4, uv, texture, greaterThan, lessThan } from "three/tsl";
+import { mrt, select, and, float, vec2, vec4, uv, texture, greaterThan, lessThan } from "three/tsl";
+
+// Import Internal Dependencies
+import type { TslNode } from "../tslNode.ts";
 
 // CONSTANTS
 /**
@@ -16,73 +19,49 @@ export const JFA_OFFSETS: ReadonlyArray<readonly [number, number]> = [
 ];
 
 /**
- * One Jump Flood propagation step for the *position* buffer: for the current
- * texel, checks the 9 neighbors (at `stepNode` texels away) of the previous
- * iteration's position buffer and keeps whichever one is nearest in pixel
- * space, carrying that neighbor's own stored seed position forward. `vec4`
- * layout: `xy` = seed's own pixel coordinate, `z` = valid flag (`1`/`0`),
- * `w` unused.
+ * One Jump Flood propagation step, for *both* the position and color
+ * buffers at once via an MRT output: checks the 9 neighbors (at
+ * `stepNode` texels away) of the previous iteration's position buffer,
+ * keeps whichever is nearest in pixel space, and carries that neighbor's
+ * seed position *and* color forward together - one 9-neighbor scan and one
+ * "nearest" decision, instead of position and color each separately
+ * recomputing it (an earlier two-single-output-function version of this
+ * measured 78 propagation draws for a single hovered peer selection at 13
+ * JFA steps). Position `vec4` layout: `xy` = seed's own pixel coordinate,
+ * `z` = valid flag (`1`/`0`), `w` unused.
+ *
+ * Deliberately *not* wrapped in `Fn(() => {...})()` - confirmed live that a
+ * `mrt(...)` returned from inside a `Fn()` call silently reads back as
+ * all-zero on every output, with no compile error; `mrt(...)` only works
+ * correctly as the material's `fragmentNode` directly. The 9-neighbor scan
+ * below is a chain of plain JS `let` reassignments to fresh `select()`
+ * expressions, not `.toVar()`/`.assign()` mutation, so it never needed
+ * `Fn()`'s imperative-statement stack.
  */
-export function buildJfaPositionStep(
-  positionSourceTexture: ReturnType<typeof texture>,
-  stepNode: ReturnType<typeof float>,
-  invSizeNode: ReturnType<typeof vec2>,
-  resolutionNode: ReturnType<typeof vec2>
-) {
-  return Fn(() => {
-    const uvNode = uv();
-    const pixelCoord = uvNode.mul(resolutionNode).toVar();
-    const best = vec4(0, 0, 0, 0).toVar();
-    const bestDist = float(1e10).toVar();
-
-    for (const [dx, dy] of JFA_OFFSETS) {
-      const sampleUv = uvNode.add(vec2(dx, dy).mul(stepNode).mul(invSizeNode));
-      const candidate = positionSourceTexture.sample(sampleUv).toVar();
-      const dist = pixelCoord.sub(candidate.xy).length();
-
-      If(and(greaterThan(candidate.z, float(0.5)), lessThan(dist, bestDist)), () => {
-        best.assign(candidate);
-        bestDist.assign(dist);
-      });
-    }
-
-    return best;
-  })();
-}
-
-/**
- * The color-buffer twin of `buildJfaPositionStep` - re-derives the exact
- * same "which of the 9 neighbors is nearest" decision (same source texture,
- * same math, so it agrees with the position step's own choice - recomputing
- * it rather than packing color into the position buffer or using a
- * multi-render-target step keeps every step a plain single-output fragment
- * shader), then outputs *that* neighbor's color instead of its position.
- */
-export function buildJfaColorStep(
+export function buildJfaPropagateStep(
   positionSourceTexture: ReturnType<typeof texture>,
   colorSourceTexture: ReturnType<typeof texture>,
-  stepNode: ReturnType<typeof float>,
-  invSizeNode: ReturnType<typeof vec2>,
-  resolutionNode: ReturnType<typeof vec2>
+  stepNode: TslNode<"float">,
+  invSizeNode: TslNode<"vec2">,
+  resolutionNode: TslNode<"vec2">
 ) {
-  return Fn(() => {
-    const uvNode = uv();
-    const pixelCoord = uvNode.mul(resolutionNode).toVar();
-    const bestColor = vec4(0, 0, 0, 0).toVar();
-    const bestDist = float(1e10).toVar();
+  const uvNode = uv();
+  const pixelCoord = uvNode.mul(resolutionNode);
 
-    for (const [dx, dy] of JFA_OFFSETS) {
-      const offset = vec2(dx, dy).mul(stepNode).mul(invSizeNode);
-      const sampleUv = uvNode.add(offset);
-      const candidatePos = positionSourceTexture.sample(sampleUv).toVar();
-      const dist = pixelCoord.sub(candidatePos.xy).length();
+  let bestPosition: TslNode<"vec4"> = vec4(0, 0, 0, 0);
+  let bestColor: TslNode<"vec4"> = vec4(0, 0, 0, 0);
+  let bestDist: TslNode<"float"> = float(1e10);
 
-      If(and(greaterThan(candidatePos.z, float(0.5)), lessThan(dist, bestDist)), () => {
-        bestDist.assign(dist);
-        bestColor.assign(colorSourceTexture.sample(sampleUv));
-      });
-    }
+  for (const [dx, dy] of JFA_OFFSETS) {
+    const sampleUv = uvNode.add(vec2(dx, dy).mul(stepNode).mul(invSizeNode));
+    const candidatePosition = positionSourceTexture.sample(sampleUv);
+    const dist = pixelCoord.sub(candidatePosition.xy).length();
+    const isBetter = and(greaterThan(candidatePosition.z, float(0.5)), lessThan(dist, bestDist));
 
-    return bestColor;
-  })();
+    bestPosition = select(isBetter, candidatePosition, bestPosition);
+    bestColor = select(isBetter, colorSourceTexture.sample(sampleUv), bestColor);
+    bestDist = select(isBetter, dist, bestDist);
+  }
+
+  return mrt({ position: bestPosition, color: bestColor });
 }

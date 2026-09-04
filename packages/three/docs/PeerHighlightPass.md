@@ -44,6 +44,26 @@ dimming): `HighlightEntry` has no opacity channel, and a
 distinctly-colored, full-strength ring is the same visual language every
 other entry here already uses.
 
+A remote peer's hover (when `hoverRegistry` is given, see
+[PeerHoverRegistry](./PeerHoverRegistry.md)) is included the same way,
+subject to three priority rules resolved fresh in `refresh()`:
+
+1. Any current selector on the object at all - local (`selection.selected`)
+   or any peer (`registry.selectorsOf`) - suppresses every hover entry for
+   it.
+2. Failing that, the local hover (`selection.hovered`) always wins over a
+   peer's.
+3. Failing both, the oldest peer currently hovering it
+   (`hoverRegistry.primaryHovererOf`, same tie-break
+   `registry.primarySelectorOf` already uses) wins.
+
+A winning peer hover entry is `isolated: true`, same role as the local
+hover's own entry, and its color is mixed toward black rather than dimmed
+via opacity - `HighlightEntry` has none, unlike
+[PeerHoverOverlays](./PeerHoverOverlays.md)'s per-object overlay, which
+fades via opacity instead. `hoverRegistry` is optional - omitting it keeps
+this class's exact prior behavior (no peer hover entries at all).
+
 A group (any non-mesh `SelectionManager` target) is pushed here exactly like
 a mesh - `refresh` never special-cases it, and `HighlightPass` already
 traverses a group entry to its own mesh descendants. This is intentionally
@@ -85,6 +105,13 @@ export interface PeerHighlightPassOptions {
    * today's always-included behavior.
    */
   visibility?: PeerSelectionVisibility;
+  /**
+   * Feeds peer hover entries into the same `refresh()` this class already
+   * runs for selection - see this class's own doc comment for the exact
+   * priority rules. Optional so an existing caller that doesn't pass this
+   * keeps today's exact behavior (no peer hover entries at all).
+   */
+  hoverRegistry?: PeerHoverRegistry;
 }
 ```
 
@@ -101,8 +128,8 @@ drive this class with a lightweight spy instead of a real one (which needs a
 
 ## Notes
 
-- Listens to `registry`'s `peerSelectionChange`, `selection`'s `selectionChange`/`hoverChange`, and (if `visibility` was given) `visibility`'s `visibilityChange` to know when to rebuild the entries list. See [PeerSelectionVisibility](./PeerSelectionVisibility.md) for what determines visibility.
+- Listens to `registry`'s `peerSelectionChange`, `selection`'s `selectionChange`/`hoverChange`, (if `visibility` was given) `visibility`'s `visibilityChange`, and (if `hoverRegistry` was given) its own `peerHoverChange`, to know when to rebuild the entries list. See [PeerSelectionVisibility](./PeerSelectionVisibility.md) for what determines visibility.
 - For every object with a current peer selector (`registry.selectedObjectIds()`) that the local user hasn't also selected or hovered, the color used is `registry.colorOf(registry.primarySelectorOf(id))` - the same "oldest selector wins" rule `PeerSelectionRegistry`/`PeerSelectionOverlays` already use, so this reads consistently with the rest of the peer-presence system regardless of which rendering technique is active. The local user's own current selection (`selection.selected`) is always included too, in `selection.color`, taking priority over any peer's claim on that same object; the local hover (`selection.hovered`), if distinct, is included next in `selection.hoverColor`.
 - Unlike `PeerSelectionOverlays`, there's no `"highlight"`-technique fallback to reason about: `HighlightPass` supports arbitrary simultaneous colors natively, so every `SelectionTechnique` reads the same way through this class.
 - To layer in a caller-level concept this class doesn't know about (e.g. `examples/scripts/selection-stress.ts`'s "Random Selection" bulk-select, a demo-only stress mechanism with no equivalent in `SelectionManager`'s own single-selection API), wrap `highlight` in a small object implementing `HighlightTarget` that appends the extra entries before forwarding to the real `setEntries`, pass that wrapper into `PeerHighlightPassOptions.highlight` instead of the real pass, and call `refresh()` whenever the caller-level state changes (nothing else will trigger a re-render of it, since this class only reacts to `registry`/`selection`'s own events).
-- `test/selection/postprocess/PeerHighlightPass.test.ts` exercises this wiring directly against a `PeerSelectionRegistry`/`SelectionManager` harness. `examples/scripts/selection-stress.ts`'s "Peer Colors" pane folder (run `npm run dev`, open `/selection-stress.html`) drives `PeerSelectionRegistry` with synthetic peers but bypasses this class entirely (its own `refreshPeerColors` takes over the same job directly against `HighlightPass.setEntries` - see that function's own doc comment for why: an `InstancedMesh` instance has no whole `SelectableObject` for `SelectionManager.targetFor` to hand back). `examples/scripts/selection.ts` and `examples/scripts/selection-peer.ts` drive the real class instead.
+- `test/selection/postprocess/PeerHighlightPass.test.ts` exercises this wiring directly against a `PeerSelectionRegistry`/`SelectionManager` harness. `examples/scripts/selection-stress.ts`'s "Peer Colors" pane folder (run `npm run dev`, open `/selection-stress.html`) drives `PeerSelectionRegistry` with synthetic peers but bypasses this class entirely (its own `refreshPeerColors` takes over the same job directly against `HighlightPass.setEntries` - see that function's own doc comment for why: an `InstancedMesh` instance has no whole `SelectableObject` for `SelectionManager.targetFor` to hand back). `examples/scripts/selection.ts` and `examples/scripts/demo-peer-selection-sync.ts` drive the real class instead.
