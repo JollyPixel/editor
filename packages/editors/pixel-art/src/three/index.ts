@@ -15,10 +15,8 @@ export {
   orientUv,
   type ApplyUvRectOptions
 } from "./applyUvGeometry.ts";
-export {
-  boxFaceRanges,
-  rampFaceRanges,
-  type FaceRanges,
-  type FaceVertexRange
-} from "./faceRanges.ts";
-export type { PixelTextureSource } from "./types.ts";
+export type {
+  FaceRanges,
+  FaceVertexRange,
+  PixelTextureSource
+} from "./types.ts";

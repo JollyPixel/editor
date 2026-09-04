@@ -5,6 +5,7 @@ import type {
   BlockShapeID,
   FaceDefinition
 } from "../BlockShape.ts";
+import { projectedFace } from "../faceUv.ts";
 import {
   FACE
 } from "../../utils/math.ts";
@@ -26,36 +27,31 @@ export class Ramp implements BlockShape {
   }
 
   readonly faces: readonly FaceDefinition[] = [
-    {
+    projectedFace({
       face: FACE.NegY,
       normal: [0, -1, 0],
-      vertices: [[0, 0, 1], [0, 0, 0], [1, 0, 0], [1, 0, 1]],
-      uvs: [[0, 0], [0, 1], [1, 1], [1, 0]]
-    },
-    {
+      vertices: [[0, 0, 1], [0, 0, 0], [1, 0, 0], [1, 0, 1]]
+    }),
+    projectedFace({
       face: FACE.PosZ,
       normal: [0, 0, 1],
-      vertices: [[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]],
-      uvs: [[0, 0], [1, 0], [1, 1], [0, 1]]
-    },
-    {
+      vertices: [[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]]
+    }),
+    projectedFace({
       face: FACE.NegX,
       normal: [-1, 0, 0],
-      vertices: [[0, 0, 0], [0, 0, 1], [0, 1, 1]],
-      uvs: [[0, 0], [1, 0], [1, 1]]
-    },
-    {
+      vertices: [[0, 0, 0], [0, 0, 1], [0, 1, 1]]
+    }),
+    projectedFace({
       face: FACE.PosX,
       normal: [1, 0, 0],
-      vertices: [[1, 0, 0], [1, 1, 1], [1, 0, 1]],
-      uvs: [[0, 0], [1, 1], [1, 0]]
-    },
-    {
+      vertices: [[1, 0, 0], [1, 1, 1], [1, 0, 1]]
+    }),
+    projectedFace({
       face: FACE.PosY,
       normal: [0, SQRT2_OVER_2, -SQRT2_OVER_2],
-      vertices: [[0, 0, 0], [0, 1, 1], [1, 1, 1], [1, 0, 0]],
-      uvs: [[0, 0], [0, 1], [1, 1], [1, 0]]
-    }
+      vertices: [[0, 0, 0], [0, 1, 1], [1, 1, 1], [1, 0, 0]]
+    })
   ];
 
   occludes(

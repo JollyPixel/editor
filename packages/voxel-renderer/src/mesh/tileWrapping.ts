@@ -18,6 +18,35 @@ export type TileWrappedMaterial =
   | THREE.MeshStandardMaterial;
 
 /**
+ * Confines each face's samples to its own atlas rect. MSAA can shade a
+ * partially covered pixel from a point outside the triangle, whose
+ * interpolated UV would otherwise read a neighbouring tile.
+ */
+export function enableTileClamping(
+  material: TileWrappedMaterial
+): void {
+  const { map } = material;
+  if (!map) {
+    return;
+  }
+
+  const tileRegion = attribute<"vec4">("tileRegion", "vec4");
+  const sampledDiffuseColor = texture(
+    map,
+    clamp(
+      uv(),
+      tileRegion.xy,
+      tileRegion.xy.add(tileRegion.zw)
+    )
+  ).level(float(0));
+
+  const tint = reference("color", "color", material);
+
+  (material as { colorNode?: unknown; }).colorNode = vec4(tint, float(1))
+    .mul(sampledDiffuseColor);
+}
+
+/**
  * Repeats atlas tiles across greedy quads using WebGPU-compatible TSL nodes.
  */
 export function enableTileWrapping(

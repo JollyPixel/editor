@@ -1,11 +1,11 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 import { disposeObject3D } from "@jolly-pixel/engine";
-import type {
-  ResolvedBlockDefinition,
-  BlockShapeRegistry,
-  TilesetManager,
-  FaceDefinition
+import {
+  buildShapeGeometry,
+  type ResolvedBlockDefinition,
+  type BlockShapeRegistry,
+  type TilesetManager
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -184,65 +184,45 @@ export class BlockLibraryRenderer {
       alphaTest: 0.1
     });
 
-    const allFaces = shape.faces as FaceDefinition[];
-    const positions: number[] = [];
-    const normals: number[] = [];
-    const uvs: number[] = [];
-    const indices: number[] = [];
-    let vertOffset = 0;
+    const { positions, normals, uvs, indices, ranges } = buildShapeGeometry(
+      shape
+    );
 
-    for (const face of allFaces) {
-      const verts = face.vertices;
-      const faceUvs = face.uvs;
-      const n = face.normal;
+    // Shape space is 0 to 1, so recenter the preview on the origin.
+    const centered = Float32Array.from(positions, (value) => value - 0.5);
+    const atlasUvs = Float32Array.from(uvs);
 
-      const tileRef =
-        block.faceTextures[face.face as keyof typeof block.faceTextures] ??
-        block.defaultTexture;
-      let uOffset = 0;
-      let vOffset = 0;
-      let uScale = 1;
-      let vScale = 1;
-
-      if (tileRef && texture) {
-        try {
-          const region = this.#tilesetManager
-            .atlas(tileRef.tilesetId)
-            .uvFor(tileRef.col, tileRef.row);
-          uOffset = region.offsetU;
-          vOffset = region.offsetV;
-          uScale = region.scaleU;
-          vScale = region.scaleV;
-        }
-        catch {
-          // A missing tile region falls back to the full texture.
-        }
+    for (const range of ranges) {
+      const tileRef = block.faceTextures[range.face] ?? block.defaultTexture;
+      if (!tileRef || !texture) {
+        continue;
       }
 
-      for (let vi = 0; vi < verts.length; vi++) {
-        const v = verts[vi];
-        positions.push(v[0] - 0.5, v[1] - 0.5, v[2] - 0.5);
-        normals.push(n[0], n[1], n[2]);
-        const u = faceUvs[vi];
-        uvs.push(uOffset + u[0] * uScale, vOffset + u[1] * vScale);
+      let region;
+      try {
+        region = this.#tilesetManager
+          .atlas(tileRef.tilesetId)
+          .uvFor(tileRef.col, tileRef.row);
+      }
+      catch {
+        // A missing tile region falls back to the full texture.
+        continue;
       }
 
-      if (verts.length === 4) {
-        indices.push(
-          vertOffset, vertOffset + 1, vertOffset + 2, vertOffset, vertOffset + 2, vertOffset + 3
-        );
+      const end = range.start + range.count;
+      for (let index = range.start; index < end; index++) {
+        atlasUvs[index * 2] = region.offsetU +
+          (atlasUvs[index * 2] * region.scaleU);
+        atlasUvs[(index * 2) + 1] = region.offsetV +
+          (atlasUvs[(index * 2) + 1] * region.scaleV);
       }
-      else {
-        indices.push(vertOffset, vertOffset + 1, vertOffset + 2);
-      }
-      vertOffset += verts.length;
     }
 
     const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-    geo.setAttribute("normal", new THREE.Float32BufferAttribute(normals, 3));
-    geo.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
-    geo.setIndex(indices);
+    geo.setAttribute("position", new THREE.BufferAttribute(centered, 3));
+    geo.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
+    geo.setAttribute("uv", new THREE.BufferAttribute(atlasUvs, 2));
+    geo.setIndex(new THREE.BufferAttribute(indices, 1));
 
     return new THREE.Mesh(geo, mat);
   }

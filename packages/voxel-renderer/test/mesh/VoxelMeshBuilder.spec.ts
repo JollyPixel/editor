@@ -660,8 +660,8 @@ describe("VoxelMeshBuilder — derived stats", () => {
     f.world.setVoxelAt("test", { x: 0, y: 0, z: 0 }, { blockId: kCubeId, transform: 0 });
     buildGeometries(f);
 
-    // position 3×f32 + normal 3×i8 + uv 2×u16.
-    assert.equal(f.builder.stats.bytesPerVertex, 12 + 3 + 4);
+    // position 3×f32 + normal 3×i8 + uv 2×u16 + tileRegion 4×u16.
+    assert.equal(f.builder.stats.bytesPerVertex, 12 + 3 + 4 + 8);
   });
 });
 

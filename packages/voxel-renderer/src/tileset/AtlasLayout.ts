@@ -10,8 +10,10 @@ export interface AtlasLayoutOptions {
   rows: number;
   tileSize: number;
   /**
-   * Gutter in texels around every tile.
-   * @default AtlasLayout.defaultPadding(tileSize)
+   * Gutter in texels around every tile. Chunk materials clamp each face to
+   * its own atlas rect, so a gutter is only needed to keep a tile addressable
+   * by whole-tile indices.
+   * @default 0
    */
   padding?: number;
 }
@@ -64,7 +66,7 @@ export class AtlasLayout {
       cols,
       rows,
       tileSize,
-      padding = AtlasLayout.defaultPadding(tileSize)
+      padding = 0
     } = options;
 
     this.cols = cols;
@@ -110,9 +112,6 @@ export class AtlasLayout {
     };
   }
 
-  /**
-   * Returns padded UVs with WebGL Y-flip and half-texel inset.
-   */
   uvFor(
     col: number,
     row: number
@@ -134,10 +133,6 @@ export class AtlasLayout {
     };
   }
 
-  /**
-   * Returns clamped tile bounds, assigning exact upper edges to the prior
-   * tile, or null when nothing would be redrawn.
-   */
   tileRangeWithin(
     bounds: AtlasRegion
   ): AtlasTileRange | null {

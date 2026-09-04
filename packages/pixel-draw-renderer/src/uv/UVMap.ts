@@ -345,7 +345,7 @@ export class UVMap extends Emitter<
 
   collapse(
     id: string,
-    face: UVFace = kDefaultFace
+    face?: UVFace
   ): boolean {
     return this.#changeState(
       id,
@@ -365,9 +365,6 @@ export class UVMap extends Emitter<
   }
 
   clear(): void {
-    // Snapshot the ids first: a "region-deleted" listener is free to put a
-    // region back (the voxel-map bridge restores one per block), and walking
-    // the live map would hand those re-insertions straight back to delete().
     for (const id of [...this.#regions.keys()]) {
       this.delete(id);
     }

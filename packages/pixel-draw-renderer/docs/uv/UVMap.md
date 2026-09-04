@@ -155,12 +155,12 @@ Emits `"region-dragging"` with clamped preview geometry. The stored region, hist
 
 ```ts
 uncollapse(id: string): boolean
-collapse(id: string, face: UVFace = "front"): boolean
+collapse(id: string, face?: UVFace): boolean
 ```
 
-`collapse()` chooses one shared rectangle and retains custom face topology. If the requested face is triangular, it prefers the first active rectangular face.
+`collapse()` chooses one shared rectangle and retains custom face topology. Without a `face` it uses the largest active face. If the requested face is triangular, it prefers the first active rectangular face.
 
-`uncollapse()` restores the active faces and their shapes at the shared rectangle. It does not restore their previous layout; undo uses the saved region state for that.
+`uncollapse()` restores the active faces, their shapes and their previous layout, translated by however far the shared rectangle moved while collapsed.
 
 Both methods emit `"region-state-changed"`. They return `false` for an unknown id or a redundant transition.
 

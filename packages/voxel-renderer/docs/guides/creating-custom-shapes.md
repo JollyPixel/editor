@@ -6,6 +6,7 @@ Implement `BlockShape`, register the instance, then reference its ID from a
 ```ts
 import {
   VoxelEngine,
+  projectedFace,
   type BlockShape,
   type Face,
   type FaceDefinition
@@ -16,6 +17,11 @@ class MyShape implements BlockShape {
   readonly collisionHint = "box" as const;
   readonly faces: readonly FaceDefinition[] = [
     // Define triangles or quads in normalized block space.
+    projectedFace({
+      face: Face.PosZ,
+      normal: [0, 0, 1],
+      vertices: [[0, 0, 1], [1, 0, 1], [1, 0.5, 1], [0, 0.5, 1]]
+    })
   ];
 
   occludes(_face: Face): boolean {
@@ -28,7 +34,11 @@ const engine = new VoxelEngine({
 });
 ```
 
-`faces` use coordinates from 0 through 1 within a voxel. Return `true` from
+`faces` use coordinates from 0 through 1 within a voxel. `projectedFace()`
+derives each face's `uvs` from its vertices so the face samples only the part
+of the tile it covers; see the
+[face UV convention](../api/blocks/BlockShape.md#face-uv-convention). Pass an
+explicit `uvs` to opt out. Return `true` from
 `occludes()` only when the shape completely covers the requested axis-aligned
 face. An incorrect `true` result removes visible geometry from neighbouring
 blocks.

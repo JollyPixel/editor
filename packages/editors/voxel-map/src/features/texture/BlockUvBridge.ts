@@ -1,9 +1,8 @@
 // Import Third-party Dependencies
-import {
-  Face,
-  type VoxelRenderer,
-  type ResolvedBlockDefinition,
-  type ResolvedTileRef
+import type {
+  VoxelRenderer,
+  ResolvedBlockDefinition,
+  ResolvedTileRef
 } from "@jolly-pixel/voxel.renderer";
 import {
   UVRegion,
@@ -16,19 +15,27 @@ import {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
+import {
+  blockShapeUv,
+  UV_FACE_TO_VOXEL,
+  type BlockShapeUv,
+  type UVFaceBounds
+} from "./blockShapeUv.ts";
 import { editorState } from "../../EditorState.ts";
 
 // CONSTANTS
 const kRegionIdPrefix = "block-";
 const kRegionColor = "#4488ff";
-
-const kFaceToVoxel: Record<UVFace, Face> = {
-  front: Face.PosZ,
-  back: Face.NegZ,
-  left: Face.NegX,
-  right: Face.PosX,
-  top: Face.PosY,
-  bottom: Face.NegY
+const kWholeTile: UVFaceBounds = { u0: 0, v0: 0, u1: 1, v1: 1 };
+// A block whose shape is unknown still edits as a plain cube.
+const kBoxShapeUv: BlockShapeUv = {
+  activeFaces: [...UV_FACES],
+  bounds: Object.fromEntries(
+    UV_FACES.map((face) => [face, kWholeTile])
+  ) as Record<UVFace, UVFaceBounds>,
+  triangles: {},
+  faceRanges: {},
+  isBox: true
 };
 
 function rectsEqual(
@@ -159,82 +166,90 @@ export class BlockUvBridge {
     this.#onSelectedBlockChange(editorState.selectedBlockId);
   }
 
+  /**
+   * Topology comes from the shape's own face definitions, so a custom shape
+   * needs no entry here.
+   */
+  #shapeUvOf(
+    block: ResolvedBlockDefinition
+  ): BlockShapeUv {
+    const shape = this.#vr.engine.shapeRegistry.get(block.shapeId);
+
+    return shape ? blockShapeUv(shape) : kBoxShapeUv;
+  }
+
   #regionFor(
     block: ResolvedBlockDefinition
   ): UVRegion {
     const id = regionId(block.id);
-    const fallback = this.#rectOf(block.defaultTexture!);
     const faceTextures = block.faceTextures ?? {};
+    const shapeUv = this.#shapeUvOf(block);
 
-    if (Object.keys(faceTextures).length === 0 && block.shapeId !== "ramp") {
+    if (Object.keys(faceTextures).length === 0 && shapeUv.isBox) {
       return new UVRegion({
         id,
         color: kRegionColor,
         state: "collapsed",
-        rect: fallback
+        rect: this.#rectOf(block.defaultTexture!)
       });
     }
 
     const rectFor = (face: UVFace): SelectionRect => {
-      const tileRef = faceTextures[kFaceToVoxel[face]];
+      const tileRef = faceTextures[UV_FACE_TO_VOXEL[face]] ??
+        block.defaultTexture!;
 
-      return tileRef ? this.#rectOf(tileRef) : fallback;
+      return this.#rectOf(tileRef, shapeUv.bounds[face]);
     };
-    const rects = {
-      front: rectFor("front"),
-      back: rectFor("back"),
-      left: rectFor("left"),
-      right: rectFor("right"),
-      top: rectFor("top"),
-      bottom: rectFor("bottom")
-    } satisfies Record<UVFace, SelectionRect>;
-    const faces: Record<UVFace, UVGeometry> = { ...rects };
+    const faces = Object.fromEntries(
+      UV_FACES.map((face): [UVFace, UVGeometry] => {
+        const rect = rectFor(face);
+        const corner = shapeUv.triangles[face];
 
-    if (block.shapeId === "ramp") {
-      faces.left = {
-        shape: "triangle",
-        corner: "bottom-right",
-        rect: rects.left
-      };
-      faces.right = {
-        shape: "triangle",
-        corner: "bottom-right",
-        rect: rects.right
-      };
-    }
+        return [
+          face,
+          corner ?
+            {
+              shape: "triangle",
+              corner,
+              rect
+            } :
+            rect
+        ];
+      })
+    ) as Record<UVFace, UVGeometry>;
 
     return new UVRegion({
       id,
       color: kRegionColor,
       state: "uncollapsed",
       faces,
-      activeFaces: block.shapeId === "ramp" ?
-        ["back", "left", "right", "top", "bottom"] :
-        [...UV_FACES]
+      activeFaces: [...shapeUv.activeFaces]
     });
   }
 
   #rectOf(
-    tileRef: ResolvedTileRef
+    tileRef: ResolvedTileRef,
+    bounds: UVFaceBounds = kWholeTile
   ): SelectionRect {
     const tileSize = this.#tileSize;
 
     return {
-      x: tileRef.col * tileSize,
-      y: tileRef.row * tileSize,
-      width: tileSize,
-      height: tileSize
+      x: (tileRef.col + bounds.u0) * tileSize,
+      y: (tileRef.row + (1 - bounds.v1)) * tileSize,
+      width: (bounds.u1 - bounds.u0) * tileSize,
+      height: (bounds.v1 - bounds.v0) * tileSize
     };
   }
 
   #tileRefOf(
     rect: SelectionRect,
-    template: ResolvedTileRef
+    template: ResolvedTileRef,
+    bounds: UVFaceBounds = kWholeTile
   ): ResolvedTileRef {
     return {
       ...template,
-      col: rect.x / this.#tileSize,
-      row: rect.y / this.#tileSize
+      col: (rect.x / this.#tileSize) - bounds.u0,
+      row: (rect.y / this.#tileSize) - (1 - bounds.v1)
     };
   }
 
@@ -263,20 +278,31 @@ export class BlockUvBridge {
       return;
     }
 
+    const shapeUv = this.#shapeUvOf(block);
     const updated: ResolvedBlockDefinition = region.state === "uncollapsed" ?
       {
         ...block,
+        // Writing only the active faces keeps slots the shape never renders
+        // out of the persisted definition.
         faceTextures: Object.fromEntries(
-          UV_FACES.map((face) => [
-            kFaceToVoxel[face],
-            this.#tileRefOf(region.rectFor(face), block.defaultTexture!)
+          shapeUv.activeFaces.map((face) => [
+            UV_FACE_TO_VOXEL[face],
+            this.#tileRefOf(
+              region.rectFor(face),
+              block.defaultTexture!,
+              shapeUv.bounds[face]
+            )
           ])
         )
       } :
       {
         ...block,
         faceTextures: {},
-        defaultTexture: this.#tileRefOf(region.rectFor("front"), block.defaultTexture)
+        defaultTexture: this.#tileRefOf(
+          region.rectFor("front"),
+          block.defaultTexture,
+          shapeUv.bounds[region.collapsedFace ?? "front"]
+        )
       };
 
     this.#applying = true;

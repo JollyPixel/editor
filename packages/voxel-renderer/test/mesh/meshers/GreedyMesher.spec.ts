@@ -300,7 +300,7 @@ describe("GreedyMesher — non-cube shapes", () => {
 });
 
 describe("GreedyMesher — tile attributes", () => {
-  it("emits tileRegion and tileRepeat only in greedy mode", () => {
+  it("emits tileRegion in both modes and tileRepeat only in greedy mode", () => {
     const greedy = makeFixture();
     const naive = makeFixture({ greedy: false });
     for (const f of [greedy, naive]) {
@@ -311,8 +311,9 @@ describe("GreedyMesher — tile attributes", () => {
     assert.ok(merged.getAttribute("tileRegion"));
     assert.ok(merged.getAttribute("tileRepeat"));
 
+    // Chunk materials clamp to tileRegion in both modes.
     const [plain] = [...build(naive)!.values()];
-    assert.equal(plain.getAttribute("tileRegion"), undefined);
+    assert.ok(plain.getAttribute("tileRegion"));
     assert.equal(plain.getAttribute("tileRepeat"), undefined);
   });
 

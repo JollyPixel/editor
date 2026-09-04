@@ -57,7 +57,7 @@ export class GeometryBuffer {
     this.#indices = new Uint32Array(this.#indexCapacity);
     this.#tileUvs = new Float32Array(tiled ? vertexCapacity * 2 : 0);
     this.#atlasUvs = new Uint16Array(tiled ? 0 : vertexCapacity * 2);
-    this.#regions = new Uint16Array(tiled ? vertexCapacity * 4 : 0);
+    this.#regions = new Uint16Array(vertexCapacity * 4);
     this.#repeats = new Uint16Array(tiled ? vertexCapacity * 2 : 0);
   }
 
@@ -164,17 +164,17 @@ export class GeometryBuffer {
         tileUvs[u + 1] = localTileUvs[i2 + 1] * repeatV;
         repeats[u] = repeatU;
         repeats[u + 1] = repeatV;
-
-        const r = base * 4 + (i * 4);
-        regions[r] = region[0];
-        regions[r + 1] = region[1];
-        regions[r + 2] = region[2];
-        regions[r + 3] = region[3];
       }
       else {
         atlasUvs[u] = localAtlasUvs[i2];
         atlasUvs[u + 1] = localAtlasUvs[i2 + 1];
       }
+
+      const r = (base * 4) + (i * 4);
+      regions[r] = region[0];
+      regions[r + 1] = region[1];
+      regions[r + 2] = region[2];
+      regions[r + 3] = region[3];
       u += 2;
     }
 
@@ -214,11 +214,11 @@ export class GeometryBuffer {
         new THREE.BufferAttribute(this.#tileUvs.slice(0, vertexCount * 2), 2) :
         new THREE.BufferAttribute(this.#atlasUvs.slice(0, vertexCount * 2), 2, true)
     );
+    geometry.setAttribute(
+      "tileRegion",
+      new THREE.BufferAttribute(this.#regions.slice(0, vertexCount * 4), 4, true)
+    );
     if (tiled) {
-      geometry.setAttribute(
-        "tileRegion",
-        new THREE.BufferAttribute(this.#regions.slice(0, vertexCount * 4), 4, true)
-      );
       geometry.setAttribute(
         "tileRepeat",
         new THREE.BufferAttribute(this.#repeats.slice(0, vertexCount * 2), 2)
@@ -246,9 +246,9 @@ export class GeometryBuffer {
 
     this.#positions = grow(this.#positions, capacity * 3);
     this.#normals = grow(this.#normals, capacity * 3);
+    this.#regions = grow(this.#regions, capacity * 4);
     if (this.tiled) {
       this.#tileUvs = grow(this.#tileUvs, capacity * 2);
-      this.#regions = grow(this.#regions, capacity * 4);
       this.#repeats = grow(this.#repeats, capacity * 2);
     }
     else {

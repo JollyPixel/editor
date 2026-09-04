@@ -3,7 +3,7 @@ import * as THREE from "three";
 import type { UVFace } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import { rampFaceRanges } from "../../../../src/three/faceRanges.ts";
+import { rampFaceRanges } from "./faceRanges.ts";
 import {
   PREVIEW_SHAPE_SIZE,
   type PreviewShape

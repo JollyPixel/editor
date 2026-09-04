@@ -17,7 +17,7 @@ import {
 
 // Import Internal Dependencies
 import { UVGeometryBinding } from "#src/three/UVGeometryBinding.ts";
-import { boxFaceRanges } from "#src/three/faceRanges.ts";
+import { boxFaceRanges } from "../../examples/scripts/preview/shapes/faceRanges.ts";
 
 // CONSTANTS
 const kTextureSize: Vec2 = { x: 64, y: 64 };
@@ -112,7 +112,7 @@ describe("UVGeometryBinding", () => {
       geometry,
       region: collapsedRegion(),
       textureSize: kTextureSize,
-      faceRanges: { front: { start: 16, count: 4 } }
+      faceRanges: { front: [{ start: 16, count: 4 }] }
     });
 
     binding.applyFace("top", { x: 32, y: 0, width: 16, height: 16 });

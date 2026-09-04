@@ -95,9 +95,9 @@ describe("VoxelEngine — greedy meshing", () => {
     }
   });
 
-  it("leaves the material untouched when off", () => {
+  it("still clamps each face to its atlas rect when off", () => {
     for (const material of materials(makeEngine(false))) {
-      assert.equal(colorNodeOf(material), undefined);
+      assert.notEqual(colorNodeOf(material), undefined);
     }
   });
 

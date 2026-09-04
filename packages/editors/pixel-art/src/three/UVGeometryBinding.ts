@@ -14,21 +14,15 @@ import {
   applyUvGeometry,
   applyUvRect
 } from "./applyUvGeometry.ts";
-import type { FaceRanges } from "./faceRanges.ts";
+import type { FaceRanges } from "./types.ts";
 
 export interface UVGeometryBindingOptions {
-  /**
-   * Pass untouched UVs. Construction snapshots them as the base.
-   */
   geometry: THREE.BufferGeometry;
   region: UVRegion;
   textureSize: Vec2;
   faceRanges: FaceRanges;
 }
 
-/**
- * Projects a `UVRegion` and follows its live edits when bound.
- */
 export class UVGeometryBinding {
   readonly #geometry: THREE.BufferGeometry;
   readonly #faceRanges: FaceRanges;
@@ -42,8 +36,12 @@ export class UVGeometryBinding {
     if (region.id !== this.#region.id) {
       return;
     }
+
     this.#region = region;
-    this.applyFace(face, region.geometryFor(face ?? "front"));
+    this.applyFace(
+      face,
+      region.geometryFor(face ?? "front")
+    );
   };
 
   readonly #onRegionDragging: UVMapListener<"region-dragging"> = ({
@@ -54,7 +52,11 @@ export class UVGeometryBinding {
     if (id !== this.#region.id) {
       return;
     }
-    this.applyFace(face, geometry);
+
+    this.applyFace(
+      face,
+      geometry
+    );
   };
 
   readonly #onRegionStateChanged: UVMapListener<"region-state-changed"> = ({
@@ -63,6 +65,7 @@ export class UVGeometryBinding {
     if (region.id !== this.#region.id) {
       return;
     }
+
     this.setRegion(region);
   };
 
@@ -98,9 +101,6 @@ export class UVGeometryBinding {
     this.#applyRegion();
   }
 
-  /**
-   * A null face projects the collapsed region's shared rectangle.
-   */
   applyFace(
     face: UVFace | null,
     geometry: UVGeometry
@@ -113,15 +113,17 @@ export class UVGeometryBinding {
         baseUv: this.#baseUv,
         rect: "shape" in geometry ? geometry.rect : geometry,
         textureSize: this.#textureSize,
-        range: {
-          start: 0,
-          count: this.#baseUv.length / 2
-        }
+        ranges: [
+          {
+            start: 0,
+            count: this.#baseUv.length / 2
+          }
+        ]
       });
     }
     else {
-      const range = this.#faceRanges[face];
-      if (!range) {
+      const ranges = this.#faceRanges[face];
+      if (!ranges || ranges.length === 0) {
         return;
       }
       applyUvGeometry(
@@ -129,16 +131,13 @@ export class UVGeometryBinding {
         this.#baseUv,
         geometry,
         this.#textureSize,
-        range
+        ranges
       );
     }
 
     uvAttribute.needsUpdate = true;
   }
 
-  /**
-   * Tracks region moves and live drag updates from `uv`.
-   */
   follow(
     uv: UVMap
   ): void {

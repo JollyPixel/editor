@@ -1,12 +1,10 @@
 // Import Third-party Dependencies
 import type {
   CanvasBufferEvent,
+  UVFace,
   Vec2
 } from "@jolly-pixel/pixel-draw.renderer";
 
-/**
- * Structural event source; unknown returns accept Emitter's fluent methods.
- */
 export interface PixelDocumentEvents {
   on<E extends keyof CanvasBufferEvent>(
     event: E,
@@ -18,11 +16,17 @@ export interface PixelDocumentEvents {
   ): unknown;
 }
 
-/**
- * Minimal structural source required by a texture bridge.
- */
 export interface PixelTextureSource {
   readonly document: PixelDocumentEvents;
   readonly textureSize: Vec2;
   textureCanvas(): HTMLCanvasElement;
 }
+
+export interface FaceVertexRange {
+  start: number;
+  count: number;
+}
+
+export type FaceRanges = Partial<
+  Record<UVFace, readonly FaceVertexRange[]>
+>;
