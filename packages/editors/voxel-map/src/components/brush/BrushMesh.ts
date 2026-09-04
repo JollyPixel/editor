@@ -8,15 +8,12 @@ import type { VoxelCoord } from "@jolly-pixel/voxel.renderer";
 // CONSTANTS
 // The extra 0.01 prevents z-fighting with the chunk mesh.
 const kHalfSize = 0.51;
-const kFaceMargin = 0.05;
-const kFaceOffset = 0.001;
-const kFaceDefaultNormal = new THREE.Vector3(0, 0, 1);
 const kDefaultHighlight = 0x9df6ff;
 
 export interface BrushMeshOptions {
   /**
-   * Color of the brush preview cubes. It also tints the outline and the hit
-   * face unless those are set on their own.
+   * Color of the brush preview cubes. It also tints the outline unless that
+   * is set on its own.
    * @default 0x33e0ff
    */
   color?: THREE.ColorRepresentation;
@@ -35,21 +32,10 @@ export interface BrushMeshOptions {
    * @default 2
    */
   borderLineWidth?: number;
-  /**
-   * Color of the highlighted quad drawn on the hit face.
-   * @default `color` when it is given, 0x9df6ff otherwise
-   */
-  faceColor?: THREE.ColorRepresentation;
-  /**
-   * Opacity of the highlighted hit face.
-   * @default 0.45
-   */
-  faceOpacity?: number;
 }
 
 /**
- * Draws the cells a brush covers, as translucent cubes wrapped in one outline,
- * plus a quad on the face the pointer hit.
+ * Draws the cells a brush covers, as translucent cubes wrapped in one outline.
  *
  * Visibility has a single owner: `hide()` and `show()` set the intent, and
  * nothing is drawn while the cell count is zero.
@@ -62,12 +48,8 @@ export class BrushMesh extends THREE.Group {
 
   #border: LineSegments2;
 
-  #faceMesh: THREE.InstancedMesh;
-  #faceQuaternion = new THREE.Quaternion();
-
   #hidden = false;
   #cellCount = 0;
-  #hasFace = false;
 
   constructor(
     options: BrushMeshOptions = {}
@@ -77,12 +59,10 @@ export class BrushMesh extends THREE.Group {
     const {
       color = 0x33e0ff,
       opacity = 0.15,
-      borderLineWidth = 2,
-      faceOpacity = 0.45
+      borderLineWidth = 2
     } = options;
     const highlight = options.color ?? kDefaultHighlight;
     const borderColor = options.borderColor ?? highlight;
-    const faceColor = options.faceColor ?? highlight;
 
     this.name = "brush";
 
@@ -121,32 +101,9 @@ export class BrushMesh extends THREE.Group {
     this.#border.frustumCulled = false;
     this.#border.visible = false;
 
-    const faceGeometry = new THREE.PlaneGeometry(
-      1 - kFaceMargin * 2,
-      1 - kFaceMargin * 2
-    );
-    const faceMaterial = new THREE.MeshBasicMaterial({
-      color: faceColor,
-      opacity: faceOpacity,
-      transparent: true,
-      depthTest: false,
-      depthWrite: false,
-      side: THREE.DoubleSide
-    });
-    this.#faceMesh = new THREE.InstancedMesh(
-      faceGeometry,
-      faceMaterial,
-      BrushMesh.maxCells
-    );
-    this.#faceMesh.count = 0;
-    this.#faceMesh.renderOrder = 3;
-    this.#faceMesh.frustumCulled = false;
-    this.#faceMesh.visible = false;
-
     this.add(
       this.#previewMesh,
-      this.#border,
-      this.#faceMesh
+      this.#border
     );
   }
 
@@ -160,22 +117,14 @@ export class BrushMesh extends THREE.Group {
     this.#applyVisibility();
   }
 
-  /** Drops every cell, leaving the hidden or shown intent alone. */
   clearCells(): void {
     this.#cellCount = 0;
-    this.#hasFace = false;
     this.#previewMesh.count = 0;
-    this.#faceMesh.count = 0;
     this.#applyVisibility();
   }
 
-  /**
-   * Draws one cube per grid cell. Cells past `BrushMesh.maxCells` are dropped.
-   * The hit face is drawn only when a surface normal is given.
-   */
   drawCells(
-    cells: VoxelCoord[],
-    normal: THREE.Vector3 | null = null
+    cells: VoxelCoord[]
   ): void {
     const count = Math.min(cells.length, BrushMesh.maxCells);
 
@@ -203,7 +152,6 @@ export class BrushMesh extends THREE.Group {
     this.#border.geometry.setPositions(
       this.#buildBorderPositions(cells, count)
     );
-    this.#drawFace(cells, count, normal);
     this.#applyVisibility();
   }
 
@@ -212,41 +160,6 @@ export class BrushMesh extends THREE.Group {
 
     this.#previewMesh.visible = visible;
     this.#border.visible = visible;
-    this.#faceMesh.visible = visible && this.#hasFace;
-  }
-
-  #drawFace(
-    cells: VoxelCoord[],
-    count: number,
-    normal: THREE.Vector3 | null
-  ): void {
-    if (normal === null) {
-      this.#hasFace = false;
-      this.#faceMesh.count = 0;
-
-      return;
-    }
-
-    this.#faceQuaternion.setFromUnitVectors(
-      kFaceDefaultNormal,
-      normal
-    );
-    const offset = kHalfSize + kFaceOffset;
-
-    for (let i = 0; i < count; i++) {
-      this.#dummy.position.set(
-        cells[i].x + 0.5 + normal.x * offset,
-        cells[i].y + 0.5 + normal.y * offset,
-        cells[i].z + 0.5 + normal.z * offset
-      );
-      this.#dummy.quaternion.copy(this.#faceQuaternion);
-      this.#dummy.updateMatrix();
-      this.#faceMesh.setMatrixAt(i, this.#dummy.matrix);
-    }
-
-    this.#faceMesh.count = count;
-    this.#faceMesh.instanceMatrix.needsUpdate = true;
-    this.#hasFace = true;
   }
 
   #buildBorderPositions(

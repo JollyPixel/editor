@@ -150,7 +150,8 @@ integration; then the application owns `init()`, `tick()`, `flush()`, and
 
 - [`BlockDefinition`](docs/api/blocks/BlockDefinition.md),
   [`BlockRegistry` and tileset block generation](docs/api/blocks/BlockRegistry.md),
-  [`BlockShape`](docs/api/blocks/BlockShape.md), and
+  [`BlockShape`](docs/api/blocks/BlockShape.md),
+  [`BlockShapeBase`](docs/api/blocks/BlockShapeBase.md), and
   [`BlockShapeRegistry`](docs/api/blocks/BlockShapeRegistry.md).
 - [Built-in shapes](docs/api/blocks/built-in-shapes.md),
   [`buildShapeGeometry`](docs/api/blocks/buildShapeGeometry.md),

@@ -5,7 +5,7 @@ import {
   type TileRef
 } from "../tileset/types.ts";
 import type { FACE } from "../utils/math.ts";
-import type { BlockShapeID } from "./BlockShape.ts";
+import type { BlockShapeID } from "./shape/BlockShape.ts";
 
 export interface BlockDefinition {
   id: number;

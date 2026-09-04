@@ -3,17 +3,17 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { Cube } from "../../../src/blocks/shapes/Cube.ts";
-import { Pole } from "../../../src/blocks/shapes/Pole.ts";
-import { Slab } from "../../../src/blocks/shapes/Slab.ts";
-import { Ramp } from "../../../src/blocks/shapes/Ramp.ts";
-import { RampCornerInner, RampCornerOuter } from "../../../src/blocks/shapes/RampCorner.ts";
-import { PoleY } from "../../../src/blocks/shapes/PoleY.ts";
-import { Stair } from "../../../src/blocks/shapes/Stair.ts";
-import { StairCornerInner } from "../../../src/blocks/shapes/StairCornerInner.ts";
-import { StairCornerOuter } from "../../../src/blocks/shapes/StairCornerOuter.ts";
-import { FACE } from "../../../src/utils/math.ts";
-import type { BlockShape } from "../../../src/blocks/BlockShape.ts";
+import { Cube } from "../../../../src/blocks/shape/library/Cube.ts";
+import { Pole } from "../../../../src/blocks/shape/library/Pole.ts";
+import { Slab } from "../../../../src/blocks/shape/library/Slab.ts";
+import { Ramp } from "../../../../src/blocks/shape/library/Ramp.ts";
+import { RampCornerInner, RampCornerOuter } from "../../../../src/blocks/shape/library/RampCorner.ts";
+import { PoleY } from "../../../../src/blocks/shape/library/PoleY.ts";
+import { Stair } from "../../../../src/blocks/shape/library/Stair.ts";
+import { StairCornerInner } from "../../../../src/blocks/shape/library/StairCornerInner.ts";
+import { StairCornerOuter } from "../../../../src/blocks/shape/library/StairCornerOuter.ts";
+import { FACE } from "../../../../src/utils/math.ts";
+import type { BlockShape } from "../../../../src/blocks/shape/BlockShape.ts";
 
 const ALL_FACES = [FACE.PosX, FACE.NegX, FACE.PosY, FACE.NegY, FACE.PosZ, FACE.NegZ];
 

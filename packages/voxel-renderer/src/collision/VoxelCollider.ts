@@ -3,7 +3,7 @@ import type * as THREE from "three";
 
 // Import Internal Dependencies
 import type { BlockRegistry } from "../blocks/BlockRegistry.ts";
-import type { BlockShapeRegistry } from "../blocks/BlockShapeRegistry.ts";
+import type { BlockShapeRegistry } from "../blocks/shape/BlockShapeRegistry.ts";
 import type { VoxelChunk } from "../world/VoxelChunk.ts";
 import type { VoxelCoord } from "../world/types.ts";
 

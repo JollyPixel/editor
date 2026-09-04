@@ -54,6 +54,12 @@ Returns the cell on one side of a surface, for example after a raycast hit.
 `"front"` is the empty cell the surface faces and is the default. `"back"` is
 the cell that owns the surface. Neither argument is modified.
 
+`"back"` nudges the point a fraction of a cell against the normal, so it holds
+for slanted faces whose hit point sits inside the cell rather than on its
+boundary, such as a ramp slope. `"front"` steps one cell from there along the
+axis the normal leans on the most, ties resolving to Y; a hit anywhere on a
+ramp slope therefore resolves to the ramp cell and places above it.
+
 ## `VoxelWorld`
 
 Top-level container for a layered voxel scene. World reads examine layers from

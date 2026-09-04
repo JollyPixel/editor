@@ -5,11 +5,12 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   faceUvs,
-  projectFaceUv,
-  projectedFace
-} from "../../src/blocks/faceUv.ts";
-import { BlockShapeRegistry } from "../../src/blocks/BlockShapeRegistry.ts";
-import { FACE } from "../../src/utils/math.ts";
+  projectFaceUv
+} from "../../../src/blocks/face/faceUv.ts";
+import {
+  BlockShapeRegistry
+} from "../../../src/blocks/shape/BlockShapeRegistry.ts";
+import { FACE } from "../../../src/utils/math.ts";
 
 describe("projectFaceUv", () => {
   it("reads a face from outside the block, so u grows rightward", () => {
@@ -38,30 +39,6 @@ describe("faceUvs", () => {
       faceUvs(FACE.PosZ, [[0, 0, 1], [1, 0, 1], [1, 0.5, 1], [0, 0.5, 1]]),
       [[0, 0], [1, 0], [1, 0.5], [0, 0.5]]
     );
-  });
-});
-
-describe("projectedFace", () => {
-  it("derives uvs from the vertices", () => {
-    const face = projectedFace({
-      face: FACE.PosZ,
-      normal: [0, 0, 1],
-      vertices: [[0, 0, 1], [1, 0, 1], [1, 1, 1]]
-    });
-
-    assert.deepEqual(face.uvs, [[0, 0], [1, 0], [1, 1]]);
-  });
-
-  it("keeps explicit uvs so a face can opt out", () => {
-    const uvs: [number, number][] = [[0, 0], [0.5, 0], [0.5, 0.5]];
-    const face = projectedFace({
-      face: FACE.PosZ,
-      normal: [0, 0, 1],
-      vertices: [[0, 0, 1], [1, 0, 1], [1, 1, 1]],
-      uvs
-    });
-
-    assert.deepEqual(face.uvs, uvs);
   });
 });
 

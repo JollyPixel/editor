@@ -1,21 +1,19 @@
 // Import Internal Dependencies
-import { FACE } from "../utils/math.ts";
+import {
+  FACES,
+  type FACE
+} from "../../utils/math.ts";
+import type { FaceDefinition } from "../face/index.ts";
 import type { BlockShape } from "./BlockShape.ts";
-
-// CONSTANTS
-const kFaceOrder: readonly FACE[] = [
-  FACE.PosX,
-  FACE.NegX,
-  FACE.PosY,
-  FACE.NegY,
-  FACE.PosZ,
-  FACE.NegZ
-];
 
 export interface ShapeFaceRange {
   face: FACE;
   start: number;
   count: number;
+  /**
+   * Polygons the slot emitted, in the order their vertices were written.
+   */
+  definitions: readonly FaceDefinition[];
 }
 
 export interface ShapeGeometry {
@@ -38,6 +36,7 @@ export interface ShapeGeometry {
 export function buildShapeGeometry(
   shape: BlockShape
 ): ShapeGeometry {
+  const slots = groupBySlot(shape.faces);
   const positions: number[] = [];
   const normals: number[] = [];
   const uvs: number[] = [];
@@ -45,11 +44,9 @@ export function buildShapeGeometry(
   const ranges: ShapeFaceRange[] = [];
   let vertex = 0;
 
-  for (const slot of kFaceOrder) {
-    const definitions = shape.faces.filter(
-      (definition) => definition.face === slot
-    );
-    if (definitions.length === 0) {
+  for (const slot of FACES) {
+    const definitions = slots[slot];
+    if (definitions === undefined) {
       continue;
     }
 
@@ -73,7 +70,8 @@ export function buildShapeGeometry(
     ranges.push({
       face: slot,
       start,
-      count: vertex - start
+      count: vertex - start,
+      definitions
     });
   }
 
@@ -86,11 +84,14 @@ export function buildShapeGeometry(
   };
 }
 
-export function shapeFaceRange(
-  geometry: ShapeGeometry,
-  face: FACE
-): ShapeFaceRange | undefined {
-  return geometry.ranges.find(
-    (range) => range.face === face
-  );
+function groupBySlot(
+  faces: readonly FaceDefinition[]
+): Partial<Record<FACE, FaceDefinition[]>> {
+  const slots: Partial<Record<FACE, FaceDefinition[]>> = {};
+
+  for (const definition of faces) {
+    (slots[definition.face] ??= []).push(definition);
+  }
+
+  return slots;
 }

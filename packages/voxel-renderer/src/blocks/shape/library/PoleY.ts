@@ -1,14 +1,14 @@
 // Import Internal Dependencies
+import { FACE } from "../../../utils/math.ts";
 import {
-  FACE
-} from "../../utils/math.ts";
+  defineFace,
+  type FaceDefinition
+} from "../../face/index.ts";
+import { BlockShapeBase } from "../BlockShapeBase.ts";
 import type {
-  BlockShape,
   BlockCollisionHint,
-  BlockShapeID,
-  FaceDefinition
+  BlockShapeID
 } from "../BlockShape.ts";
-import { projectedFace } from "../faceUv.ts";
 
 // CONSTANTS
 const kW = 3 / 8;
@@ -17,46 +17,40 @@ const kH = 5 / 8;
 /**
  * Quarter-width vertical post centered in the voxel.
  */
-export class PoleY implements BlockShape {
+export class PoleY extends BlockShapeBase {
   readonly id: BlockShapeID = "poleY";
   readonly collisionHint: BlockCollisionHint = "trimesh";
 
   readonly faces: readonly FaceDefinition[] = [
-    projectedFace({
+    defineFace({
       face: FACE.PosY,
       normal: [0, 1, 0],
       vertices: [[kW, 1, kW], [kW, 1, kH], [kH, 1, kH], [kH, 1, kW]]
     }),
-    projectedFace({
+    defineFace({
       face: FACE.NegY,
       normal: [0, -1, 0],
       vertices: [[kW, 0, kH], [kW, 0, kW], [kH, 0, kW], [kH, 0, kH]]
     }),
-    projectedFace({
+    defineFace({
       face: FACE.PosX,
       normal: [1, 0, 0],
       vertices: [[kH, 0, kW], [kH, 1, kW], [kH, 1, kH], [kH, 0, kH]]
     }),
-    projectedFace({
+    defineFace({
       face: FACE.NegX,
       normal: [-1, 0, 0],
       vertices: [[kW, 0, kH], [kW, 1, kH], [kW, 1, kW], [kW, 0, kW]]
     }),
-    projectedFace({
+    defineFace({
       face: FACE.PosZ,
       normal: [0, 0, 1],
       vertices: [[kW, 0, kH], [kH, 0, kH], [kH, 1, kH], [kW, 1, kH]]
     }),
-    projectedFace({
+    defineFace({
       face: FACE.NegZ,
       normal: [0, 0, -1],
       vertices: [[kH, 0, kW], [kW, 0, kW], [kW, 1, kW], [kH, 1, kW]]
     })
   ];
-
-  occludes(
-    _face: FACE
-  ): boolean {
-    return false;
-  }
 }

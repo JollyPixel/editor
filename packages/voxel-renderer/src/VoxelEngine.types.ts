@@ -3,7 +3,7 @@ import type * as THREE from "three";
 
 // Import Internal Dependencies
 import type { BlockDefinition } from "./blocks/BlockDefinition.ts";
-import type { BlockShape } from "./blocks/BlockShape.ts";
+import type { BlockShape } from "./blocks/shape/BlockShape.ts";
 import type { VoxelColliderFactory } from "./collision/VoxelCollider.ts";
 import type { VoxelDebuggerOptions } from "./debug/VoxelDebugger.ts";
 import type { TilesetSource } from "./tileset/loadTilesets.ts";

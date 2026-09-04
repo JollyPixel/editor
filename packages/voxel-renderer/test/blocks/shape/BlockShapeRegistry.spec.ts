@@ -3,8 +3,8 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { BlockShapeRegistry } from "../../src/blocks/BlockShapeRegistry.ts";
-import type { BlockShape } from "../../src/blocks/BlockShape.ts";
+import { BlockShapeRegistry } from "../../../src/blocks/shape/BlockShapeRegistry.ts";
+import type { BlockShape } from "../../../src/blocks/shape/BlockShape.ts";
 
 // CONSTANTS
 const kDefaultShapeIds = [

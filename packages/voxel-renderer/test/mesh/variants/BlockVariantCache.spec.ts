@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { BlockRegistry } from "../../../src/blocks/BlockRegistry.ts";
-import { BlockShapeRegistry } from "../../../src/blocks/BlockShapeRegistry.ts";
+import { BlockShapeRegistry } from "../../../src/blocks/shape/BlockShapeRegistry.ts";
 import { TilesetManager } from "../../../src/tileset/TilesetManager.ts";
 import { BlockVariantCache } from "../../../src/mesh/variants/BlockVariantCache.ts";
 import { VoxelTransform } from "../../../src/world/VoxelTransform.ts";

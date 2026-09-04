@@ -1,14 +1,16 @@
 // Import Internal Dependencies
 import type { BlockRegistry } from "../../blocks/BlockRegistry.ts";
-import type { BlockShape } from "../../blocks/BlockShape.ts";
-import type { BlockShapeRegistry } from "../../blocks/BlockShapeRegistry.ts";
+import type { BlockShape } from "../../blocks/shape/BlockShape.ts";
+import type {
+  BlockShapeRegistry
+} from "../../blocks/shape/BlockShapeRegistry.ts";
 import type { TilesetManager } from "../../tileset/TilesetManager.ts";
 import type {
   BlockVariant,
   BlockVariantFace
 } from "./types.ts";
 import { ChunkGeometryKey } from "../ChunkGeometryKey.ts";
-import { FACE } from "../../utils/math.ts";
+import { FACES } from "../../utils/math.ts";
 import {
   describeMerge,
   indexMergeFaces
@@ -31,14 +33,6 @@ import {
 // CONSTANTS
 // A packed transform uses bits 0-4, so a block has at most 32 variants.
 const kTransformCount = VOXEL_TRANSFORM_MASK + 1;
-const kAllFaces: readonly FACE[] = [
-  FACE.PosX,
-  FACE.NegX,
-  FACE.PosY,
-  FACE.NegY,
-  FACE.PosZ,
-  FACE.NegZ
-];
 const kOcclusionUnknown = -1;
 /**
  * Caps the flat occlusion table at 64k slots; higher IDs use the map.
@@ -121,9 +115,6 @@ export class BlockVariantCache {
     return variant;
   }
 
-  /**
-   * Returns a world-face occlusion mask, or 0 for an unknown block.
-   */
   occlusionMaskOf(
     blockId: number,
     transform: number
@@ -235,10 +226,9 @@ export class BlockVariantCache {
         continue;
       }
 
-      const cullFace = faceDef.cull === undefined ? faceDef.face : faceDef.cull;
       let cull = -1;
-      if (cullFace !== null) {
-        const worldFace = rotateFace(cullFace, rotation);
+      if (faceDef.cull !== null) {
+        const worldFace = rotateFace(faceDef.cull, rotation);
         cull = flipY ? flipYFace(worldFace) : worldFace;
       }
 
@@ -319,9 +309,6 @@ export class BlockVariantCache {
     };
   }
 
-  /**
-   * Bakes local occlusion into a world-face bitmask.
-   */
   #occlusionMask(
     shape: BlockShape,
     rotation: number,
@@ -330,7 +317,7 @@ export class BlockVariantCache {
     const inverse = (4 - rotation) % 4;
 
     let mask = 0;
-    for (const worldFace of kAllFaces) {
+    for (const worldFace of FACES) {
       const rotated = rotateFace(worldFace, inverse);
       const localFace = flipY ? flipYFace(rotated) : rotated;
 

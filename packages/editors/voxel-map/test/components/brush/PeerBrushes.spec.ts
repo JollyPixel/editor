@@ -245,3 +245,64 @@ describe("PeerBrushes / remote mirroring", () => {
     assert.strictEqual(harness.listenerCount("peer-presence"), 0);
   });
 });
+
+describe("PeerBrushes / local priority", () => {
+  test("hides a peer brush covering the local cursor cells", () => {
+    const harness = createHarness();
+    harness.setPeer("client-a", { brush: kCursor });
+    harness.emit("sync");
+
+    harness.peers.publishLocalCursor({ ...kCursor });
+
+    assert.ok(
+      harness.children[0].children.every((child) => child.visible === false)
+    );
+  });
+
+  test("shows it again once the local cursor moves off", () => {
+    const harness = createHarness();
+    harness.setPeer("client-a", { brush: kCursor });
+    harness.emit("sync");
+
+    harness.peers.publishLocalCursor({ ...kCursor });
+    harness.peers.publishLocalCursor({
+      ...kCursor,
+      position: { x: 20, y: 2, z: 3 }
+    });
+
+    assert.ok(
+      harness.children[0].children.every((child) => child.visible === true)
+    );
+  });
+
+  test("keeps a peer brush aimed elsewhere visible", () => {
+    const harness = createHarness();
+    harness.setPeer("client-a", { brush: kCursor });
+    harness.emit("sync");
+
+    harness.peers.publishLocalCursor({
+      position: { x: 40, y: 2, z: 3 },
+      size: 1
+    });
+
+    assert.ok(
+      harness.children[0].children.every((child) => child.visible === true)
+    );
+  });
+
+  test("hides a peer that moves onto the local cursor", () => {
+    const harness = createHarness();
+    harness.setPeer("client-a", { brush: null });
+    harness.emit("sync");
+    harness.peers.publishLocalCursor({ ...kCursor });
+
+    harness.emit("peer-presence", {
+      clientId: "client-a",
+      patch: { brush: kCursor }
+    });
+
+    assert.ok(
+      harness.children[0].children.every((child) => child.visible === false)
+    );
+  });
+});

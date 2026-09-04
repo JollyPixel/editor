@@ -31,7 +31,9 @@ interface BrushHarness {
   setButtonDown(action: string | null): void;
 }
 
-function createHarness(): BrushHarness {
+function createHarness(
+  maxDistance?: number
+): BrushHarness {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(60, 2, 0.1, 100);
   camera.position.set(0.5, 10, 0.5);
@@ -95,7 +97,8 @@ function createHarness(): BrushHarness {
   const brush = new LocalBrush(actor, {
     vr: { engine } as unknown as VoxelRenderer,
     camera,
-    groundPlaneSize: 10
+    groundPlaneSize: 10,
+    maxDistance
   });
 
   const cursors: (BrushCursor | null)[] = [];
@@ -267,5 +270,71 @@ describe("LocalBrush cursor reporting", () => {
     harness.brush.update();
 
     assert.strictEqual(harness.cursors.at(-1), null);
+  });
+});
+
+describe("LocalBrush reach", () => {
+  afterEach(() => {
+    mock.restoreAll();
+    editorState.setSelection(null);
+    editorState.setBrushSizeAbsolute(1);
+  });
+
+  test("aims at a surface within reach", () => {
+    const harness = createHarness(20);
+
+    harness.brush.update();
+
+    assert.deepStrictEqual(harness.cursors, [
+      {
+        position: { x: 0, y: 0, z: 0 },
+        size: 1
+      }
+    ]);
+  });
+
+  test("aims at nothing past the reach", () => {
+    const harness = createHarness(5);
+
+    harness.brush.update();
+
+    assert.deepStrictEqual(harness.cursors, []);
+    assert.strictEqual(harness.previewUpdates, 0);
+  });
+
+  test("places and removes nothing past the reach", () => {
+    editorState.selectVoxelLayer("Ground");
+    const harness = createHarness(5);
+
+    harness.publishPress("left");
+    harness.brush.update();
+    harness.publishPress("right");
+    harness.brush.update();
+
+    assert.deepStrictEqual(harness.operations, []);
+  });
+
+  test("still edits a surface within reach", () => {
+    editorState.selectVoxelLayer("Ground");
+    const harness = createHarness(20);
+
+    harness.publishPress("left");
+    harness.brush.update();
+
+    assert.deepStrictEqual(harness.operations, ["set", "flush"]);
+  });
+
+  test("aims again once the reach is widened", () => {
+    const harness = createHarness(5);
+
+    harness.brush.update();
+    harness.brush.maxDistance = 20;
+    harness.setMouseMoving(false);
+    harness.brush.update();
+
+    assert.deepStrictEqual(harness.cursors.at(-1), {
+      position: { x: 0, y: 0, z: 0 },
+      size: 1
+    });
   });
 });

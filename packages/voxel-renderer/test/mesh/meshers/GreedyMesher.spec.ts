@@ -8,7 +8,7 @@ import type * as THREE from "three";
 // Import Internal Dependencies
 import { VoxelWorld } from "../../../src/world/VoxelWorld.ts";
 import { BlockRegistry } from "../../../src/blocks/BlockRegistry.ts";
-import { BlockShapeRegistry } from "../../../src/blocks/BlockShapeRegistry.ts";
+import { BlockShapeRegistry } from "../../../src/blocks/shape/BlockShapeRegistry.ts";
 import { TilesetManager } from "../../../src/tileset/TilesetManager.ts";
 import { VoxelMeshBuilder } from "../../../src/mesh/index.ts";
 import { VoxelTransform } from "../../../src/world/VoxelTransform.ts";

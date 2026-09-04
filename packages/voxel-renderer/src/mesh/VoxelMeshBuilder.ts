@@ -6,7 +6,7 @@ import type { VoxelWorld } from "../world/VoxelWorld.ts";
 import type { VoxelChunk } from "../world/VoxelChunk.ts";
 import type { VoxelLayer } from "../world/VoxelLayer.ts";
 import type { BlockRegistry } from "../blocks/BlockRegistry.ts";
-import type { BlockShapeRegistry } from "../blocks/BlockShapeRegistry.ts";
+import type { BlockShapeRegistry } from "../blocks/shape/BlockShapeRegistry.ts";
 import type { TilesetManager } from "../tileset/TilesetManager.ts";
 import type { MeshPassOptions } from "./types.ts";
 import { BlockVariantCache } from "./variants/BlockVariantCache.ts";

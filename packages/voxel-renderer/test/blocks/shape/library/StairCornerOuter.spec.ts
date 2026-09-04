@@ -3,14 +3,14 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { FACE } from "../../../src/utils/math.ts";
+import { FACE } from "../../../../src/utils/math.ts";
 import {
   StairCornerOuter
-} from "../../../src/blocks/shapes/StairCornerOuter.ts";
+} from "../../../../src/blocks/shape/library/StairCornerOuter.ts";
 import {
   checkNormalMagnitudes,
   checkVertexCounts
-} from "../../helpers/shapes.ts";
+} from "../../../helpers/shapes.ts";
 
 describe("StairCornerOuter", () => {
   const shape = new StairCornerOuter();

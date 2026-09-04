@@ -113,3 +113,67 @@ describe("cursor.equals", () => {
     }));
   });
 });
+
+describe("cursor.overlaps", () => {
+  const center: cursor.BrushCursor = {
+    position: { x: 0, y: 0, z: 0 },
+    size: 1
+  };
+
+  test("a cursor overlaps itself", () => {
+    assert.strictEqual(cursor.overlaps(center, { ...center }), true);
+  });
+
+  test("never overlaps a missing cursor", () => {
+    assert.strictEqual(cursor.overlaps(center, null), false);
+    assert.strictEqual(cursor.overlaps(null, center), false);
+    assert.strictEqual(cursor.overlaps(null, null), false);
+  });
+
+  test("does not overlap the same cell one level up", () => {
+    assert.strictEqual(
+      cursor.overlaps(center, {
+        position: { x: 0, y: 1, z: 0 },
+        size: 1
+      }),
+      false
+    );
+  });
+
+  test("does not overlap the neighbouring cell", () => {
+    assert.strictEqual(
+      cursor.overlaps(center, {
+        position: { x: 1, y: 0, z: 0 },
+        size: 1
+      }),
+      false
+    );
+  });
+
+  test("a wider footprint reaches the neighbouring cell", () => {
+    assert.strictEqual(
+      cursor.overlaps(center, {
+        position: { x: 1, y: 0, z: 0 },
+        size: 3
+      }),
+      true
+    );
+  });
+
+  test("stops overlapping once the footprints part on Z", () => {
+    const wide = {
+      position: { x: 0, y: 0, z: 3 },
+      size: 3
+    };
+
+    assert.strictEqual(cursor.overlaps(center, wide), false);
+    assert.strictEqual(
+      cursor.overlaps(center, { ...wide, position: { x: 0, y: 0, z: 2 } }),
+      false
+    );
+    assert.strictEqual(
+      cursor.overlaps(center, { ...wide, position: { x: 0, y: 0, z: 1 } }),
+      true
+    );
+  });
+});

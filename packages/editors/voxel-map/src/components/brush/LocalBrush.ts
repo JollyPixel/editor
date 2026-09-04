@@ -24,6 +24,9 @@ import {
 } from "./orientation.ts";
 import { BrushMesh } from "./BrushMesh.ts";
 
+// CONSTANTS
+const kDefaultMaxDistance = 32;
+
 export interface LocalBrushOptions {
   vr: VoxelRenderer;
   camera: THREE.PerspectiveCamera;
@@ -33,6 +36,12 @@ export interface LocalBrushOptions {
    * @default 4096
    */
   groundPlaneSize?: number;
+  /**
+   * How far from the camera the brush still reaches, in world units. Past it
+   * nothing is previewed and no voxel is placed or removed.
+   * @default 32
+   */
+  maxDistance?: number;
   /**
    * Tint of the cursor preview. Set it to the local peer's collaboration
    * color so this user's brush looks the same here as it does to peers.
@@ -57,6 +66,7 @@ export class LocalBrush extends ActorComponent {
   #cursor: BrushCursor | null = null;
   #raycaster = new THREE.Raycaster();
   #groundPlaneSize: number;
+  #maxDistance: number;
   #mesh: BrushMesh;
   #pointer = new THREE.Vector2();
   #previewDirty = true;
@@ -74,17 +84,32 @@ export class LocalBrush extends ActorComponent {
       vr,
       camera,
       groundPlaneSize = 4096,
+      maxDistance = kDefaultMaxDistance,
       color
     } = options;
 
     this.vr = vr;
     this.#camera = camera;
     this.#groundPlaneSize = groundPlaneSize;
+    this.#maxDistance = maxDistance;
 
     this.#mesh = new BrushMesh(
       color === undefined ? {} : { color }
     );
     this.actor.addChildren(this.#mesh);
+  }
+
+  get maxDistance(): number {
+    return this.#maxDistance;
+  }
+
+  set maxDistance(value: number) {
+    if (value === this.#maxDistance) {
+      return;
+    }
+
+    this.#maxDistance = value;
+    this.#previewDirty = true;
   }
 
   override destroy(): void {
@@ -142,11 +167,17 @@ export class LocalBrush extends ActorComponent {
   #castRay(): ViewRayHit | null {
     const { input } = this.actor.world;
 
-    return castViewRay(this.#camera, this.vr.engine.root, {
+    const hit = castViewRay(this.#camera, this.vr.engine.root, {
       pointer: input.mouse.viewportPositionTo(this.#pointer),
       groundPlaneSize: this.#groundPlaneSize,
       raycaster: this.#raycaster
     });
+
+    if (hit === null || hit.distance > this.#maxDistance) {
+      return null;
+    }
+
+    return hit;
   }
 
   #cellsAround(
@@ -263,8 +294,7 @@ export class LocalBrush extends ActorComponent {
 
     this.#mesh.show();
     this.#mesh.drawCells(
-      this.#cellsAround(center),
-      hit.ground ? null : hit.normal
+      this.#cellsAround(center)
     );
     this.#setCursor({
       position: center,

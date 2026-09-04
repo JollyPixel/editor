@@ -1,7 +1,7 @@
 export type Vec3 = [number, number, number];
 export type Vec2 = [number, number];
 
-// Face enum indexed by FACE_NORMALS / FACE_OFFSETS / FACE_OPPOSITE.
+// Face enum indexed by every FACE_* table below.
 export const FACE = {
   PosX: 0,
   NegX: 1,
@@ -11,6 +11,31 @@ export const FACE = {
   NegZ: 5
 } as const;
 export type FACE = typeof FACE[keyof typeof FACE];
+
+/**
+ * Every face in `FACE` order, for code that walks all six directions.
+ */
+export const FACES: readonly FACE[] = [
+  FACE.PosX,
+  FACE.NegX,
+  FACE.PosY,
+  FACE.NegY,
+  FACE.PosZ,
+  FACE.NegZ
+];
+
+// Axis each face is perpendicular to (0 = x, 1 = y, 2 = z).
+export const FACE_AXIS: readonly number[] = [0, 0, 1, 1, 2, 2];
+
+// True for a face pointing along the positive side of its axis.
+export const FACE_POSITIVE: readonly boolean[] = [
+  true,
+  false,
+  true,
+  false,
+  true,
+  false
+];
 
 export const FACE_NORMALS: readonly Vec3[] = [
   // PosX
