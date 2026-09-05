@@ -14,6 +14,7 @@ interface BindingOptions<TValue> {
   view?: "point2d" | "quaternion";
   alpha?: boolean;
   axisLabels?: Record<string, string>;
+  axes?: "xy" | "xz" | "yz";
 }
 ```
 
@@ -36,6 +37,7 @@ The initial property value and the options determine the element:
 | Object with numeric `x` and `y` | `jolly-vector2` |
 | Object also carrying `z` | `jolly-vector3` |
 | Object also carrying `w` | `jolly-vector4` |
+| Object with two of `x`, `y` and `z` | `jolly-vector2` on that plane |
 
 `options` takes precedence over value type and numeric bounds. Its record keys
 become option labels and its record values become bound values. Declaration
@@ -46,6 +48,9 @@ rather than the two-axis one it also satisfies. `view` picks an alternate
 control for a shape that already dispatches: `"point2d"` turns a two-axis value
 into a drag pad, `"quaternion"` reads a four-axis value as a rotation and edits
 it in degrees. A `view` the value does not match is ignored.
+
+A two-axis value is bound on the plane it carries, so `{ x, z }` gets a field
+labelled X and Z writing back those same keys. `axes` overrides that plane.
 
 A numeric `step` without both bounds creates `jolly-number`. Unsupported
 values, including `null` and `undefined`, cause `addBinding()` to throw a
@@ -64,6 +69,7 @@ directly.
 | `step` | `jolly-quaternion` | Degrees per scrub step or arrow key press. |
 | `alpha` | `jolly-color` | Adds an alpha channel and switches output to `#rrggbbaa`. Defaults to on when the bound value is already eight digits. |
 | `axisLabels` | vectors, `jolly-quaternion` | Per-axis accessible names, e.g. `{ x: "pitch" }`. |
+| `axes` | `jolly-vector2` | Which plane the field edits. Defaults to the pair the bound value carries. |
 
 ## Write-back and change handlers
 

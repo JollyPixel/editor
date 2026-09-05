@@ -48,7 +48,10 @@ import { GRAPH_EXAMPLE } from "./examples/monitors/graph.ts";
 import { FACADE_PARITY_EXAMPLE } from "./examples/scenarios/facadeParity.ts";
 import { STATS_CYCLE_EXAMPLE } from "./examples/scenarios/statsCycle.ts";
 import { PROGRESS_EXAMPLE } from "./examples/feedback/progress.ts";
-import { VECTOR2_EXAMPLE } from "./examples/math/vector2.ts";
+import {
+  VECTOR2_EXAMPLE,
+  VECTOR2_XZ_EXAMPLE
+} from "./examples/math/vector2.ts";
 import { VECTOR3_EXAMPLE } from "./examples/math/vector3.ts";
 import { VECTOR4_EXAMPLE } from "./examples/math/vector4.ts";
 import { QUATERNION_EXAMPLE } from "./examples/math/quaternion.ts";
@@ -112,6 +115,7 @@ export const manifest: readonly GalleryExample[] = [
   GRAPH_EXAMPLE,
   PROGRESS_EXAMPLE,
   VECTOR2_EXAMPLE,
+  VECTOR2_XZ_EXAMPLE,
   VECTOR3_EXAMPLE,
   VECTOR4_EXAMPLE,
   QUATERNION_EXAMPLE,

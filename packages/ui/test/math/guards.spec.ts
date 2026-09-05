@@ -8,7 +8,8 @@ import {
   isTransformLike,
   isVec2Like,
   isVec3Like,
-  isVec4Like
+  isVec4Like,
+  vec2PairOf
 } from "../../src/math/guards.ts";
 
 describe("Math.guards.isVec2Like", () => {
@@ -77,5 +78,38 @@ describe("Math.guards.isTransformLike", () => {
       rotation: { x: 0, y: 0, z: 0 },
       scale: { x: 1, y: 1, z: 1 }
     }), false);
+  });
+});
+
+describe("Math.guards.vec2PairOf", () => {
+  test("names the plane a two-axis value carries", () => {
+    assert.equal(vec2PairOf({ x: 1, y: 2 }), "xy");
+    assert.equal(vec2PairOf({ x: 1, z: 2 }), "xz");
+    assert.equal(vec2PairOf({ y: 1, z: 2 }), "yz");
+  });
+
+  test("reads the axes in xyz order whatever the key order", () => {
+    assert.equal(vec2PairOf({ z: 2, x: 1 }), "xz");
+  });
+
+  test("rejects a three-axis value", () => {
+    assert.equal(vec2PairOf({ x: 1, y: 2, z: 3 }), null);
+  });
+
+  test("rejects a four-axis value", () => {
+    assert.equal(vec2PairOf({ x: 1, y: 2, z: 3, w: 4 }), null);
+  });
+
+  test("rejects a single axis", () => {
+    assert.equal(vec2PairOf({ x: 1 }), null);
+  });
+
+  test("rejects a non-numeric axis", () => {
+    assert.equal(vec2PairOf({ x: 1, z: "2" }), null);
+  });
+
+  test("rejects null and a primitive", () => {
+    assert.equal(vec2PairOf(null), null);
+    assert.equal(vec2PairOf(4), null);
   });
 });

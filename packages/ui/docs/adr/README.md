@@ -33,6 +33,7 @@ result of a real trade-off. API reference lives in [`docs/api`](../api), usage i
 | [0025](./0025-package-boundaries.md) | Lit is a peer dependency and the barrel is never side-effect-free |
 | [0026](./0026-shortcut-registry.md) | A central shortcut registry (proposed, unscheduled) |
 | [0027](./0027-facade-math-writes-are-component-wise.md) | The facade writes a math value component-wise, and refreshes from a snapshot |
+| [0028](./0028-axis-key-is-the-domain-identity.md) | A vector field's axis key is its domain identity |
 
 ## Scope boundary
 

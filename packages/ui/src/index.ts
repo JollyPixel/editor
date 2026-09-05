@@ -185,6 +185,9 @@ export type {
   Vec2Like,
   Vec3Like,
   Vec4Like,
+  Vector2Axis,
+  Vector2Pair,
+  Vector2Value,
   VectorValue
 } from "./math/types.ts";
 export {
@@ -192,7 +195,8 @@ export {
   isTransformLike,
   isVec2Like,
   isVec3Like,
-  isVec4Like
+  isVec4Like,
+  vec2PairOf
 } from "./math/guards.ts";
 export {
   copyComponents,

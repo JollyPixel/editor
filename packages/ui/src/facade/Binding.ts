@@ -15,6 +15,7 @@ import {
   copyComponents,
   snapshotComponents
 } from "../math/components.ts";
+import { vec2PairOf } from "../math/guards.ts";
 
 // CONSTANTS
 const kEightDigitHex = /^#[0-9a-f]{8}$/i;
@@ -169,7 +170,16 @@ function buildElement<TValue>(
 
       return element;
     }
-    case "jolly-vector2":
+    case "jolly-vector2": {
+      const element = document.createElement(tag);
+      applyBounds(element, options);
+      element.axes = options.axes ?? vec2PairOf(value) ?? "xy";
+      if (options.axisLabels !== undefined) {
+        element.axisLabels = options.axisLabels;
+      }
+
+      return element;
+    }
     case "jolly-vector3":
     case "jolly-vector4": {
       const element = document.createElement(tag);

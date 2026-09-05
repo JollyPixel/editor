@@ -98,6 +98,20 @@ describe("facade.dispatchTag", () => {
     );
   });
 
+  test("dispatches an xz value to jolly-vector2", () => {
+    assert.equal(
+      dispatchTag({ x: 0, z: 0 }),
+      "jolly-vector2"
+    );
+  });
+
+  test("dispatches a yz value to jolly-vector2", () => {
+    assert.equal(
+      dispatchTag({ y: 0, z: 0 }),
+      "jolly-vector2"
+    );
+  });
+
   test("dispatches a three-axis value to jolly-vector3", () => {
     assert.equal(
       dispatchTag({ x: 0, y: 0, z: 0 }),

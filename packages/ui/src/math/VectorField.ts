@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
   html,
+  type PropertyValues,
   type TemplateResult
 } from "lit";
 import { property } from "lit/decorators.js";
@@ -18,6 +19,10 @@ import {
   vectorValueHasChanged
 } from "./equals.ts";
 import { AxisController } from "./AxisController.ts";
+import {
+  rekeyVectorValue,
+  sameAxisKeys
+} from "./axes.ts";
 
 export interface VectorFieldDefaults {
   step: number;
@@ -28,8 +33,10 @@ export interface VectorFieldDefaults {
 /**
  * Shared base for `Vector2`, `Vector3` and `Vector4`.
  */
-export abstract class VectorField<TAxis extends string>
-  extends JollyField<VectorValue<TAxis>> {
+export abstract class VectorField<
+  TAxis extends string,
+  TValue extends VectorValue<string> = VectorValue<TAxis>
+> extends JollyField<TValue> {
   static readonly Defaults: VectorFieldDefaults = {
     step: 0.1,
     min: Number.NEGATIVE_INFINITY,
@@ -45,13 +52,13 @@ export abstract class VectorField<TAxis extends string>
     attribute: false,
     hasChanged: vectorValueHasChanged
   })
-  declare value: FieldValue<VectorValue<TAxis>>;
+  declare value: FieldValue<TValue>;
 
   @property({
     attribute: false,
     hasChanged: vectorValueHasChanged
   })
-  declare default: VectorValue<TAxis> | undefined;
+  declare default: TValue | undefined;
 
   @property({ type: Number })
   declare step: number;
@@ -69,6 +76,7 @@ export abstract class VectorField<TAxis extends string>
   declare axisLabels: Partial<Record<TAxis, string>>;
 
   #axes = new Map<TAxis, AxisController>();
+  #axisKeys: readonly TAxis[] | null = null;
 
   constructor() {
     super();
@@ -79,7 +87,7 @@ export abstract class VectorField<TAxis extends string>
     this.axisLabels = {};
     this.value = Object.fromEntries(
       this.getAxisKeys().map((axis) => [axis, 0])
-    ) as VectorValue<TAxis>;
+    ) as TValue;
   }
 
   protected abstract getAxisKeys(): readonly TAxis[];
@@ -88,9 +96,16 @@ export abstract class VectorField<TAxis extends string>
     return this.editable;
   }
 
+  protected override willUpdate(
+    changed: PropertyValues<this>
+  ): void {
+    this.#syncAxisKeys();
+    super.willUpdate(changed);
+  }
+
   protected override valuesEqual(
-    a: VectorValue<TAxis>,
-    b: VectorValue<TAxis>
+    a: TValue,
+    b: TValue
   ): boolean {
     return vectorValueEquals(a, b);
   }
@@ -101,6 +116,22 @@ export abstract class VectorField<TAxis extends string>
         ${this.getAxisKeys().map((axis) => this.#controllerFor(axis).render())}
       </div>
     `;
+  }
+
+  #syncAxisKeys(): void {
+    const next = this.getAxisKeys();
+    const previous = this.#axisKeys;
+    if (previous !== null && sameAxisKeys(previous, next)) {
+      return;
+    }
+
+    this.#axisKeys = next;
+    this.#axes.clear();
+
+    const rekeyed = rekeyVectorValue(this.value, previous, next);
+    if (rekeyed !== null) {
+      this.value = rekeyed;
+    }
   }
 
   #controllerFor(
@@ -131,11 +162,12 @@ export abstract class VectorField<TAxis extends string>
   #axisValue(
     axis: TAxis
   ): number | undefined {
-    if (isMixed(this.value)) {
+    const current = this.value;
+    if (isMixed(current)) {
       return undefined;
     }
 
-    const axisValue = this.value[axis];
+    const axisValue = (current as Record<TAxis, FieldValue<number>>)[axis];
 
     return isMixed(axisValue) ? undefined : axisValue;
   }
@@ -157,7 +189,7 @@ export abstract class VectorField<TAxis extends string>
   #withAxis(
     axis: TAxis,
     value: number
-  ): VectorValue<TAxis> {
+  ): TValue {
     const current = this.value;
     const base: Record<TAxis, FieldValue<number>> = isMixed(current)
       ? Object.fromEntries(
@@ -168,6 +200,6 @@ export abstract class VectorField<TAxis extends string>
     return {
       ...base,
       [axis]: value
-    };
+    } as TValue;
   }
 }

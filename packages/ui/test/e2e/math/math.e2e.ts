@@ -259,3 +259,47 @@ test.describe("point2d: pad drag", () => {
     expect(await changes(page)).toEqual([{ x: 0.98, y: 0.02 }]);
   });
 });
+
+test.describe("vector2: axis pair", () => {
+  test("edits the z axis and commits x and z", async({ page }) => {
+    await gotoGallery(page, {
+      example: "math/vector2-xz",
+      chrome: "off"
+    });
+    await recordChanges(page);
+
+    const field = row(page, "jolly-vector2", "default");
+    await expect(field.locator('.axis-box[data-axis="y"]')).toHaveCount(0);
+
+    const input = field.locator('.axis-box[data-axis="z"] input');
+    await input.fill("9");
+    await input.press("Enter");
+
+    expect(await changes(page)).toEqual([{ x: 4, z: 9 }]);
+  });
+
+  test("paints the z axis with the z ramp colour", async({ page }) => {
+    function tagColor(
+      tag: string,
+      axis: string
+    ): Promise<string> {
+      return row(page, tag, "default")
+        .locator(`.axis-box[data-axis="${axis}"] .axis-tag`)
+        .evaluate((element) => getComputedStyle(element).borderTopColor);
+    }
+
+    await gotoGallery(page, {
+      example: "math/vector3",
+      chrome: "off"
+    });
+    const reference = await tagColor("jolly-vector3", "z");
+
+    await gotoGallery(page, {
+      example: "math/vector2-xz",
+      chrome: "off"
+    });
+
+    expect(await tagColor("jolly-vector2", "z")).toEqual(reference);
+    expect(await tagColor("jolly-vector2", "x")).not.toEqual(reference);
+  });
+});
