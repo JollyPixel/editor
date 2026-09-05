@@ -1,10 +1,10 @@
 // Import Internal Dependencies
 import type { VoxelLayerHookEvent } from "../../src/hooks.ts";
-import type { VoxelNetworkCommand } from "../../src/network/types.ts";
-import type { BlockShapeID } from "../../src/blocks/shape/BlockShape.ts";
+import type { VoxelNetworkCommand } from "../../src/network/index.ts";
+import type { BlockShapeID } from "../../src/blocks/shape/index.ts";
 import {
   resolveBlockDefinition
-} from "../../src/blocks/BlockDefinition.ts";
+} from "../../src/blocks/index.ts";
 import { makeBlockDef } from "./blocks.ts";
 
 type AddedCommand = Extract<VoxelLayerHookEvent, { action: "added"; }>;

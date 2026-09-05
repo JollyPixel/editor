@@ -8,11 +8,10 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import { VoxelEngine } from "../../src/VoxelEngine.ts";
 import type { VoxelDebuggerOptions } from "../../src/debug/VoxelDebugger.ts";
-import { mockTexture } from "../helpers/mockTexture.ts";
-
-// CONSTANTS
-const kCubeId = 1;
-const kDefaultTexture = { col: 0, row: 0 };
+import {
+  makeEngine as makeBaseEngine,
+  CUBE_ID as kCubeId
+} from "../helpers/engine.ts";
 
 /**
  * Engine with one tileset registered and, unless `voxels` is empty, a meshed
@@ -23,31 +22,7 @@ function makeEngine(
 ): VoxelEngine {
   const { debug, voxels = 1 } = options;
 
-  const engine = new VoxelEngine({
-    chunkSize: 4,
-    layers: ["Ground"],
-    blocks: [
-      {
-        id: kCubeId,
-        name: "Cube",
-        shapeId: "cube",
-        faceTextures: {},
-        defaultTexture: kDefaultTexture,
-        collidable: true
-      }
-    ],
-    debug
-  });
-  engine.loadTileset(
-    {
-      id: "atlas",
-      src: "/atlas.png",
-      tileSize: 16,
-      cols: 4,
-      rows: 4
-    },
-    mockTexture()
-  );
+  const engine = makeBaseEngine({ layers: ["Ground"], debug });
 
   for (let x = 0; x < voxels; x++) {
     engine.world.setVoxel("Ground", {

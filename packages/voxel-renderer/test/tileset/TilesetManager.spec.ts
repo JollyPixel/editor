@@ -1,23 +1,24 @@
 // Import Node.js Dependencies
-import { describe, it, beforeEach } from "node:test";
+import {
+  describe,
+  it,
+  beforeEach
+} from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { TilesetManager } from "../../src/tileset/TilesetManager.ts";
+import { type TilesetDefinition, TilesetManager } from "../../src/tileset/index.ts";
 import { mockTexture } from "../helpers/mockTexture.ts";
 import { approxEqual } from "../helpers/math.ts";
 
 /**
- * Minimal tileset definition.
+ * A tileset definition with an arbitrary grid. Unlike the shared
+ * `makeAtlasDef()`, `cols`/`rows` stay optional so the tests covering
+ * grid auto-derivation from the texture size can omit them.
  */
 function makeDef(
-  options: {
-    id: string;
-    tileSize: number;
-    cols?: number;
-    rows?: number;
-  }
-) {
+  options: Pick<TilesetDefinition, "id" | "tileSize" | "cols" | "rows">
+): TilesetDefinition {
   const { id, tileSize, cols, rows } = options;
 
   return { id, src: `/assets/${id}.png`, tileSize, cols, rows };

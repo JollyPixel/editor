@@ -3,11 +3,11 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { BlockRegistry } from "../../../src/blocks/BlockRegistry.ts";
-import { BlockShapeRegistry } from "../../../src/blocks/shape/BlockShapeRegistry.ts";
-import { TilesetManager } from "../../../src/tileset/TilesetManager.ts";
+import { BlockRegistry } from "../../../src/blocks/index.ts";
+import { BlockShapeRegistry } from "../../../src/blocks/shape/index.ts";
+import { TilesetManager } from "../../../src/tileset/index.ts";
 import { BlockVariantCache } from "../../../src/mesh/variants/BlockVariantCache.ts";
-import { VoxelTransform } from "../../../src/world/VoxelTransform.ts";
+import { VoxelTransform } from "../../../src/world/index.ts";
 import { mockTexture } from "../../helpers/mockTexture.ts";
 import { DEFAULT_TEXTURE, makeBlockDef } from "../../helpers/blocks.ts";
 import { makeAtlasDef } from "../../helpers/atlas.ts";

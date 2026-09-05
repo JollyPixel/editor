@@ -3,16 +3,10 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import {
-  deserializeVoxelWorld,
-  serializeVoxelWorld
-} from "../../src/serialization/world.ts";
-import { VoxelWorld } from "../../src/world/VoxelWorld.ts";
-import { BlockRegistry } from "../../src/blocks/BlockRegistry.ts";
-import {
-  resolveBlockDefinition
-} from "../../src/blocks/BlockDefinition.ts";
-import type { TilesetDefinition } from "../../src/tileset/types.ts";
+import { deserializeVoxelWorld, serializeVoxelWorld } from "../../src/serialization/index.ts";
+import { VoxelWorld } from "../../src/world/index.ts";
+import { BlockRegistry, resolveBlockDefinition } from "../../src/blocks/index.ts";
+import type { TilesetDefinition } from "../../src/tileset/index.ts";
 import { makeVoxelEntry } from "../helpers/voxelEntry.ts";
 import { makeBlockDef } from "../helpers/blocks.ts";
 

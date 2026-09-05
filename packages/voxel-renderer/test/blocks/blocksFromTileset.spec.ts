@@ -3,8 +3,8 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { blocksFromTileset } from "../../src/blocks/blocksFromTileset.ts";
-import type { ResolvedTilesetDefinition } from "../../src/tileset/types.ts";
+import { blocksFromTileset } from "../../src/blocks/index.ts";
+import type { ResolvedTilesetDefinition } from "../../src/tileset/index.ts";
 
 // CONSTANTS
 const kTerrain: ResolvedTilesetDefinition = {

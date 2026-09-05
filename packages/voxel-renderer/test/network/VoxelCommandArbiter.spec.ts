@@ -1,15 +1,9 @@
 // Import Node.js Dependencies
-import {
-  describe,
-  test
-} from "node:test";
+import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import {
-  VoxelCommandArbiter
-} from "../../src/network/VoxelCommandArbiter.ts";
-import type { VoxelNetworkCommand } from "../../src/network/types.ts";
+import { VoxelCommandArbiter, type VoxelNetworkCommand } from "../../src/network/index.ts";
 import {
   blockDefinedCmd,
   makeAddedCommand,

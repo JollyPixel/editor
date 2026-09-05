@@ -4,17 +4,17 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
+  type BlockShape,
+  BlockShapeRegistry,
   buildShapeGeometry,
   type ShapeGeometry
-} from "../../../src/blocks/shape/shapeGeometry.ts";
+} from "../../../src/blocks/shape/index.ts";
 import {
-  BlockShapeRegistry
-} from "../../../src/blocks/shape/BlockShapeRegistry.ts";
-import { Cube } from "../../../src/blocks/shape/library/Cube.ts";
-import { Ramp } from "../../../src/blocks/shape/library/Ramp.ts";
-import { Stair } from "../../../src/blocks/shape/library/Stair.ts";
+  Cube,
+  Ramp,
+  Stair
+} from "../../../src/blocks/shape/library/index.ts";
 import { FACE } from "../../../src/utils/math.ts";
-import type { BlockShape } from "../../../src/blocks/shape/BlockShape.ts";
 
 function rangeOf(
   geometry: ShapeGeometry,

@@ -1,8 +1,5 @@
 // Import Node.js Dependencies
-import {
-  describe,
-  test
-} from "node:test";
+import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
@@ -10,10 +7,7 @@ import path from "node:path";
 
 // Import Third-party Dependencies
 import * as EventStore from "@jolly-pixel/event-store";
-import {
-  Server,
-  type ClientHandle
-} from "@jolly-pixel/network";
+import { Server, type ClientHandle } from "@jolly-pixel/network";
 import {
   assetRoomName,
   createAssetBackend,
@@ -23,15 +17,12 @@ import {
 
 // Import Internal Dependencies
 import {
-  voxelMapAssetHandler,
   VOXEL_MAP_COMMAND,
-  VOXEL_MAP_KIND
-} from "../../src/asset/voxelMapAssetHandler.ts";
-import {
-  decodeVoxelDocument,
-  encodeVoxelDocument
-} from "../../src/serialization/document.ts";
-import { VoxelMapState } from "../../src/asset/VoxelMapState.ts";
+  VOXEL_MAP_KIND,
+  voxelMapAssetHandler,
+  VoxelMapState
+} from "../../src/asset/index.ts";
+import { decodeVoxelDocument, encodeVoxelDocument } from "../../src/serialization/index.ts";
 import { voxelSetCmd } from "../helpers/networkCommands.ts";
 
 // CONSTANTS

@@ -11,7 +11,7 @@ import assert from "node:assert/strict";
 import {
   AtlasLayout,
   type AtlasRegion
-} from "../../src/tileset/AtlasLayout.ts";
+} from "../../src/tileset/index.ts";
 import {
   padAtlas,
   padAtlasRegion

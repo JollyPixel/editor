@@ -3,17 +3,14 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import {
-  AssetId,
-  AssetRecord
-} from "@jolly-pixel/asset";
+import { AssetId, AssetRecord } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
 import {
+  type TiledMap,
   TiledMapAssetLoader,
   TiledMapAssetType
-} from "../../../src/plugins/tiled/loader.ts";
-import type { TiledMap } from "../../../src/plugins/tiled/types.ts";
+} from "../../../src/plugins/tiled/index.ts";
 
 test("TiledMapAssetLoader prepares a catalog record", async(context) => {
   const map: TiledMap = {

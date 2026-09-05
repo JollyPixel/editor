@@ -7,29 +7,18 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { VoxelEngine } from "../src/VoxelEngine.ts";
-import { mockTexture } from "./helpers/mockTexture.ts";
-import { makeBlockDef } from "./helpers/blocks.ts";
-import { makeAtlasDef } from "./helpers/atlas.ts";
+import {
+  makeEngine as makeBaseEngine,
+  CUBE_ID as kCubeId
+} from "./helpers/engine.ts";
 
 // CONSTANTS
-const kCubeId = 1;
 const kLayer = "Ground";
 
 function makeEngine(
   greedy: boolean
 ): VoxelEngine {
-  const engine = new VoxelEngine({
-    chunkSize: 4,
-    layers: [kLayer],
-    greedy,
-    blocks: [
-      makeBlockDef(kCubeId, "cube", { name: "Cube" })
-    ]
-  });
-  engine.loadTileset(
-    makeAtlasDef(),
-    mockTexture()
-  );
+  const engine = makeBaseEngine({ layers: [kLayer], greedy });
 
   // A 4×4 plate, which merges into 6 quads.
   for (let x = 0; x < 4; x++) {

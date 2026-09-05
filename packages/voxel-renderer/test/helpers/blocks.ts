@@ -1,15 +1,13 @@
 // Import Internal Dependencies
-import type { BlockDefinition } from "../../src/blocks/BlockDefinition.ts";
-import type { BlockShapeID } from "../../src/blocks/shape/BlockShape.ts";
+import type { BlockDefinition } from "../../src/blocks/index.ts";
+import type { BlockShapeID } from "../../src/blocks/shape/index.ts";
 
 // CONSTANTS
-export const DEFAULT_TEXTURE = { col: 0, row: 0 };
+export const DEFAULT_TEXTURE = {
+  col: 0,
+  row: 0
+};
 
-/**
- * A minimal, collidable BlockDefinition for `shapeId`, with empty
- * per-face textures and DEFAULT_TEXTURE as the fallback. Callers override
- * whatever varies for their test (name, defaultTexture, collidable, ...).
- */
 export function makeBlockDef(
   id: number,
   shapeId: BlockShapeID,

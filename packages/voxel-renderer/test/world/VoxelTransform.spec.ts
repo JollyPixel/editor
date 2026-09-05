@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import {
   VoxelTransform,
   VOXEL_TRANSFORM_MASK
-} from "../../src/world/VoxelTransform.ts";
+} from "../../src/world/index.ts";
 
 // CONSTANTS
 const kRotations = [0, 1, 2, 3] as const;

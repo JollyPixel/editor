@@ -3,8 +3,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { VoxelFootprint } from "../../src/serialization/VoxelFootprint.ts";
-import type { VoxelObjectJSON } from "../../src/serialization/types.ts";
+import { VoxelFootprint, type VoxelObjectJSON } from "../../src/serialization/index.ts";
 
 function makeObject(
   patch: Partial<VoxelObjectJSON> = {}

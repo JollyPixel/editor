@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { mergeChunkGeometries } from "../../src/collision/mergeChunkGeometries.ts";
+import { mergeChunkGeometries } from "../../src/collision/index.ts";
 
 function makeGeometry(
   positions: number[],

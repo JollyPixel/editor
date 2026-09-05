@@ -3,22 +3,14 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import {
-  occlusionMaskOf
-} from "../../../src/blocks/shape/shapeOcclusion.ts";
-import {
-  BlockShapeRegistry
-} from "../../../src/blocks/shape/BlockShapeRegistry.ts";
-import { defineFace } from "../../../src/blocks/face/Face.ts";
-import {
-  FACE,
-  FACES
-} from "../../../src/utils/math.ts";
+import { BlockShapeRegistry, occlusionMaskOf } from "../../../src/blocks/shape/index.ts";
+import { defineFace } from "../../../src/blocks/face/index.ts";
+import { FACE, FACES } from "../../../src/utils/math.ts";
 
 function maskOf(
   faces: readonly FACE[]
 ): number {
-  return faces.reduce((mask, face) => mask | (1 << face), 0);
+  return faces.reduce<number>((mask, face) => mask | (1 << face), 0);
 }
 
 describe("occlusionMaskOf", () => {

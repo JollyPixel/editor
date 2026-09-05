@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { TilesetAtlas } from "../../src/tileset/TilesetAtlas.ts";
+import { TilesetAtlas } from "../../src/tileset/index.ts";
 import { mockTexture } from "../helpers/mockTexture.ts";
 import { approxEqual } from "../helpers/math.ts";
 

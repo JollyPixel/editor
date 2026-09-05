@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import {
   voxelCellOf,
   voxelPositionOf
-} from "../../src/world/voxelCoord.ts";
+} from "../../src/world/index.ts";
 import { SQRT2_OVER_2 } from "../../src/constants.ts";
 
 describe("voxelCellOf", () => {

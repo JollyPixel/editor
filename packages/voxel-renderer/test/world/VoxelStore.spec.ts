@@ -3,8 +3,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { VoxelStore } from "../../src/world/VoxelStore.ts";
-import { VOXEL_ABSENT } from "../../src/world/packedVoxel.ts";
+import { VOXEL_ABSENT, VoxelStore } from "../../src/world/index.ts";
 
 function collect(
   store: VoxelStore

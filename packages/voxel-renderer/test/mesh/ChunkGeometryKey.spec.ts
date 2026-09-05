@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { ChunkGeometryKey } from "../../src/mesh/ChunkGeometryKey.ts";
+import { ChunkGeometryKey } from "../../src/mesh/index.ts";
 
 describe("ChunkGeometryKey", () => {
   it("encodes a solid group as the bare tileset id", () => {

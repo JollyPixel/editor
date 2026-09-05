@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { VoxelChunk, DEFAULT_CHUNK_SIZE } from "../../src/world/VoxelChunk.ts";
+import { VoxelChunk, DEFAULT_CHUNK_SIZE } from "../../src/world/index.ts";
 import { makeVoxelEntry } from "../helpers/voxelEntry.ts";
 
 describe("VoxelChunk DEFAULT_CHUNK_SIZE", () => {

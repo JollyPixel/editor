@@ -3,10 +3,10 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { defineFace } from "../../../src/blocks/face/Face.ts";
+import { defineFace } from "../../../src/blocks/face/index.ts";
 import {
   BlockShapeRegistry
-} from "../../../src/blocks/shape/BlockShapeRegistry.ts";
+} from "../../../src/blocks/shape/index.ts";
 import { FACE } from "../../../src/utils/math.ts";
 
 describe("defineFace", () => {
