@@ -11,8 +11,8 @@ import assert from "node:assert/strict";
 import {
   TouchIdentifier,
   type Mouse
-} from "../../src/index.ts";
-import { MouseEventButton } from "../../src/devices/Mouse.class.ts";
+} from "../../../src/index.ts";
+import { MouseEventButton } from "../../../src/devices/Mouse.class.ts";
 import {
   createConnectedMouseFixture,
   createTouch,
@@ -50,22 +50,34 @@ describe("Controls.Mouse motion", () => {
     mouse.newPosition = { x: 800, y: 0 };
     mouse.update();
 
-    assert.deepStrictEqual(mouse.viewportPosition, { x: 1, y: 1 });
+    assert.deepStrictEqual(
+      mouse.viewportPosition,
+      { x: 1, y: 1 }
+    );
   });
 
   test("worldPosition scales the viewport position by half the canvas size", () => {
     mouse.newPosition = { x: 800, y: 0 };
     mouse.update();
 
-    assert.deepStrictEqual(mouse.worldPosition, { x: 400, y: 300 });
+    assert.deepStrictEqual(
+      mouse.worldPosition,
+      { x: 400, y: 300 }
+    );
   });
 
   test("viewportDelta inverts Y, and normalizes against canvas size when requested", () => {
     mouse.newPosition = { x: 10, y: 20 };
     mouse.update();
 
-    assert.deepStrictEqual(mouse.viewportDelta(), { x: 10, y: -20 });
-    assert.deepStrictEqual(mouse.viewportDelta(true), { x: 0.025, y: -20 / 300 });
+    assert.deepStrictEqual(
+      mouse.viewportDelta(),
+      { x: 10, y: -20 }
+    );
+    assert.deepStrictEqual(
+      mouse.viewportDelta(true),
+      { x: 0.025, y: -20 / 300 }
+    );
   });
 
   test("should handle mouse move event without pointer lock", () => {
@@ -74,10 +86,16 @@ describe("Controls.Mouse motion", () => {
       moveEvents.push(event);
     });
 
-    canvas.dispatchMouseEvent("mousemove", { clientX: 150, clientY: 200 });
+    canvas.dispatchMouseEvent(
+      "mousemove",
+      { clientX: 150, clientY: 200 }
+    );
 
     assert.strictEqual(moveEvents.length, 1);
-    assert.deepStrictEqual(mouse.newPosition, { x: 150, y: 200 });
+    assert.deepStrictEqual(
+      mouse.newPosition,
+      { x: 150, y: 200 }
+    );
   });
 
   test("should calculate position delta correctly", () => {

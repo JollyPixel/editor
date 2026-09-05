@@ -15,21 +15,13 @@ import {
 import type { CanvasAdapter } from "../src/adapters/index.ts";
 import * as mocks from "./mocks/index.ts";
 
-/**
- * `Input`'s constructor wires real `devices.Mouse`/`Screen`/`Keyboard`/`Touchpad`/`Gamepad`
- * instances internally and only exposes a `windowAdapter` override (not a per-device
- * `documentAdapter`). Only `Input`'s own orchestration (device-preference switching,
- * lifecycle) is under test here; per-device query and coordinate-space behavior
- * (isDown/wasJustPressed/viewportPosition/...) is covered in each device's own spec.
- *
- * The device-preference test connects the mouse alone, because mouse button state lives
- * in private bitmasks and is only reachable through the DOM handlers.
- */
 function createFakeCanvas(): CanvasAdapter {
   return {
     clientWidth: 800,
     clientHeight: 600,
-    style: { cursor: "auto" },
+    style: {
+      cursor: "auto"
+    },
     addEventListener: mock.fn(),
     removeEventListener: mock.fn(),
     requestFullscreen: mock.fn(() => Promise.resolve()),
@@ -63,7 +55,10 @@ describe("Controls.Input", () => {
   });
 
   test("publishes accumulated mouse state", () => {
-    const publish = mock.method(input.mouse, "publishFrameState");
+    const publish = mock.method(
+      input.mouse,
+      "publishFrameState"
+    );
 
     input.publishFrameState();
 
@@ -81,7 +76,10 @@ describe("Controls.Input", () => {
       localInput.mouse.connect();
 
       const preferences: string[] = [];
-      localInput.on("devicePreferenceChange", (preference) => preferences.push(preference));
+      localInput.on(
+        "devicePreferenceChange",
+        (preference) => preferences.push(preference)
+      );
 
       assert.strictEqual(localInput.devicePreference, "default");
 
@@ -95,7 +93,13 @@ describe("Controls.Input", () => {
       assert.strictEqual(localInput.devicePreference, "gamepad");
 
       windowAdapter.navigator.gamepads[0] = null;
-      localCanvas.dispatch("mousedown", { button: MouseEventButton.left, preventDefault: () => void 0 });
+      localCanvas.dispatch(
+        "mousedown",
+        {
+          button: MouseEventButton.left,
+          preventDefault: () => void 0
+        }
+      );
       localInput.update();
 
       assert.strictEqual(localInput.devicePreference, "default");
@@ -106,14 +110,22 @@ describe("Controls.Input", () => {
   describe("vibrate", () => {
     test("delegates to the window adapter's navigator", () => {
       const windowAdapter = new FakeWindowAdapter();
-      const vibrateMock = mock.fn((_pattern: VibratePattern) => true);
+      const vibrateMock = mock.fn(
+        (_pattern: VibratePattern) => true
+      );
       windowAdapter.navigator.vibrate = vibrateMock;
-      const localInput = new Input(createFakeCanvas(), { windowAdapter });
+      const localInput = new Input(
+        createFakeCanvas(),
+        { windowAdapter }
+      );
 
       localInput.vibrate([100, 50, 100]);
 
       assert.strictEqual(vibrateMock.mock.calls.length, 1);
-      assert.deepStrictEqual(vibrateMock.mock.calls[0].arguments[0], [100, 50, 100]);
+      assert.deepStrictEqual(
+        vibrateMock.mock.calls[0].arguments[0],
+        [100, 50, 100]
+      );
     });
   });
 });

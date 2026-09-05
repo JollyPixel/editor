@@ -7,8 +7,8 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { GamepadVibration } from "../src/index.ts";
-import * as mocks from "./mocks/index.ts";
+import { GamepadVibration } from "../../../src/index.ts";
+import * as mocks from "../../mocks/index.ts";
 
 describe("Controls.GamepadVibration", () => {
   let actuator: ReturnType<typeof mocks.GamepadHapticActuator>;

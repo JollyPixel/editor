@@ -8,15 +8,13 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import { Window } from "happy-dom";
-
 // Import Internal Dependencies
-import { Screen } from "../src/index.ts";
-import * as mocks from "./mocks/index.ts";
-
-// CONSTANTS
-const kEmulatedBrowserWindow = new Window();
+import { Screen } from "../../../src/index.ts";
+import type * as mocks from "../../mocks/index.ts";
+import {
+  createConnectedScreenFixture,
+  type ScreenDocumentAdapter
+} from "./Screen.fixture.ts";
 
 describe("Controls.Fullscreen", () => {
   let fullscreen: Screen;
@@ -24,14 +22,11 @@ describe("Controls.Fullscreen", () => {
   let documentAdapter: ScreenDocumentAdapter;
 
   beforeEach(() => {
-    canvas = new mocks.CanvasAdapter();
-
-    documentAdapter = new ScreenDocumentAdapter();
-    fullscreen = new Screen({
+    ({
+      fullscreen,
       canvas,
       documentAdapter
-    });
-    fullscreen.connect();
+    } = createConnectedScreenFixture());
   });
 
   afterEach(() => {
@@ -88,16 +83,18 @@ describe("Controls.Fullscreen", () => {
 
     fullscreen.exit();
 
-    assert.strictEqual(documentAdapter.exitFullscreen.mock.calls.length, 0);
+    assert.strictEqual(
+      documentAdapter.exitFullscreen.mock.calls.length,
+      0
+    );
   });
 
   test("should emit stateChange event when entering fullscreen", () => {
-    let emittedState;
+    let emittedState: unknown;
     fullscreen.on("stateChange", (state) => {
       emittedState = state;
     });
 
-    // Simulate entering fullscreen
     documentAdapter.fullscreenElement = canvas;
     documentAdapter.dispatchEvent("fullscreenchange");
 
@@ -107,12 +104,11 @@ describe("Controls.Fullscreen", () => {
 
   test("should emit stateChange event when exiting fullscreen", () => {
     fullscreen.wasFullscreen = true;
-    let emittedState;
+    let emittedState: unknown;
     fullscreen.on("stateChange", (state) => {
       emittedState = state;
     });
 
-    // Simulate exiting fullscreen
     documentAdapter.fullscreenElement = null;
     documentAdapter.dispatchEvent("fullscreenchange");
 
@@ -126,7 +122,6 @@ describe("Controls.Fullscreen", () => {
       eventCount++;
     });
 
-    // Simulate fullscreenchange without actual state change
     documentAdapter.fullscreenElement = null;
     documentAdapter.dispatchEvent("fullscreenchange");
     documentAdapter.dispatchEvent("fullscreenchange");
@@ -136,7 +131,7 @@ describe("Controls.Fullscreen", () => {
 
   test("should handle fullscreen error when was fullscreen", () => {
     fullscreen.wasFullscreen = true;
-    let emittedState;
+    let emittedState: unknown;
     fullscreen.on("stateChange", (state) => {
       emittedState = state;
     });
@@ -165,7 +160,10 @@ describe("Controls.Fullscreen", () => {
 
     fullscreen.requestFullscreenIfWanted();
 
-    assert.strictEqual(canvas.requestFullscreen.mock.calls.length, 1);
+    assert.strictEqual(
+      canvas.requestFullscreen.mock.calls.length,
+      1
+    );
   });
 
   test("should not request fullscreen on user gesture when already fullscreen", () => {
@@ -174,7 +172,10 @@ describe("Controls.Fullscreen", () => {
 
     fullscreen.requestFullscreenIfWanted();
 
-    assert.strictEqual(canvas.requestFullscreen.mock.calls.length, 0);
+    assert.strictEqual(
+      canvas.requestFullscreen.mock.calls.length,
+      0
+    );
   });
 
   test("should not request fullscreen on user gesture when not wants fullscreen", () => {
@@ -183,7 +184,10 @@ describe("Controls.Fullscreen", () => {
 
     fullscreen.requestFullscreenIfWanted();
 
-    assert.strictEqual(canvas.requestFullscreen.mock.calls.length, 0);
+    assert.strictEqual(
+      canvas.requestFullscreen.mock.calls.length,
+      0
+    );
   });
 
   test("should properly connect and disconnect event listeners", () => {
@@ -201,15 +205,33 @@ describe("Controls.Fullscreen", () => {
 
     newFullscreen.connect();
 
-    assert.strictEqual(addEventListener.mock.calls.length, 2);
-    assert.strictEqual(addEventListener.mock.calls[0].arguments[0], "fullscreenchange");
-    assert.strictEqual(addEventListener.mock.calls[1].arguments[0], "fullscreenerror");
+    assert.strictEqual(
+      addEventListener.mock.calls.length,
+      2
+    );
+    assert.strictEqual(
+      addEventListener.mock.calls[0].arguments[0],
+      "fullscreenchange"
+    );
+    assert.strictEqual(
+      addEventListener.mock.calls[1].arguments[0],
+      "fullscreenerror"
+    );
 
     newFullscreen.disconnect();
 
-    assert.strictEqual(removeEventListener.mock.calls.length, 2);
-    assert.strictEqual(removeEventListener.mock.calls[0].arguments[0], "fullscreenchange");
-    assert.strictEqual(removeEventListener.mock.calls[1].arguments[0], "fullscreenerror");
+    assert.strictEqual(
+      removeEventListener.mock.calls.length,
+      2
+    );
+    assert.strictEqual(
+      removeEventListener.mock.calls[0].arguments[0],
+      "fullscreenchange"
+    );
+    assert.strictEqual(
+      removeEventListener.mock.calls[1].arguments[0],
+      "fullscreenerror"
+    );
   });
 
   test("should handle multiple state changes correctly", () => {
@@ -230,17 +252,9 @@ describe("Controls.Fullscreen", () => {
     documentAdapter.fullscreenElement = canvas;
     documentAdapter.dispatchEvent("fullscreenchange");
 
-    assert.deepStrictEqual(states, ["active", "suspended", "active"]);
+    assert.deepStrictEqual(
+      states,
+      ["active", "suspended", "active"]
+    );
   });
 });
-
-class ScreenDocumentAdapter extends mocks.DocumentAdapter {
-  dispatchEvent(
-    type: "fullscreenchange" | "fullscreenerror"
-  ) {
-    const listeners = this.listeners.get(type) ?? new Set();
-    const event = new kEmulatedBrowserWindow.Event(type);
-
-    listeners.forEach((listener) => listener(event));
-  }
-}
