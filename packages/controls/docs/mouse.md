@@ -87,6 +87,7 @@ interface Mouse {
   reset(): void;
 
   readonly wasActive: boolean;
+  readonly hovering: boolean;
   isMoving(): boolean;
   isScrolling(): boolean;
 }
@@ -103,6 +104,17 @@ earlier catch-up updates remain visible to the rendered update.
 
 `update()` returns early while the mouse is idle. `reset()` clears button,
 wheel, position, and delta state.
+
+`hovering` is whether the pointer sits over the canvas, from `mouseenter` and
+`mouseleave` plus any canvas mousemove, so it recovers when the window regains
+focus with the pointer already inside and no enter fires. A primary touch sets
+it while it holds the canvas. `reset()` clears it, which is how `Input` drops
+it when the window loses focus.
+
+Read it before trusting `position` outside a drag: leaving the canvas does not
+clear the position, it freezes it at the last on-canvas value. During a drag
+the position keeps following the pointer even though `hovering` is false, so a
+consumer wanting "the position is live" checks `hovering || isDown("ANY")`.
 
 ## Button queries
 
@@ -246,12 +258,17 @@ type MouseEvents = {
   up: (event: MouseEvent) => void;
   move: (event: MouseEvent) => void;
   wheel: (event: MouseEvent) => void;
+  enter: () => void;
+  leave: () => void;
 };
 ```
 
 Down, move, double-click, and wheel handlers prevent their browser defaults.
 Mouse down also focuses the canvas. A held drag continues to emit `move` and
 `up` from document events outside the canvas.
+
+`enter` and `leave` fire only when `hovering` changes, so a re-entry without an
+intervening leave emits nothing.
 
 `lockStateChange` fires only when the tracked lock state changes or an active
 lock reports an error.

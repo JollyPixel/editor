@@ -127,6 +127,18 @@ export function objectPatchFromArea(
   };
 }
 
+export function isNoopPatch(
+  object: VoxelObjectJSON,
+  patch: Partial<VoxelObjectJSON>
+): boolean {
+  const entries = Object.entries(patch);
+
+  return entries.length > 0 && entries.every(
+    ([key, value]) => typeof value !== "object" &&
+      object[key as keyof VoxelObjectJSON] === value
+  );
+}
+
 export function sameObjectArea(
   object: VoxelObjectJSON,
   patch: ObjectAreaPatch

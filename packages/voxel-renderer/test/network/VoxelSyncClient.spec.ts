@@ -313,7 +313,7 @@ describe("VoxelSyncClient — local mutations forwarded to the room", () => {
 // Remote commands
 // ---------------------------------------------------------------------------
 
-describe("VoxelSyncClient — remote commands applied without re-emitting", () => {
+describe("VoxelSyncClient — remote commands", () => {
   it("applies commands from a different client to the engine", () => {
     const engine = createMockEngine();
     const room = createMockRoom("client-A");
@@ -368,6 +368,40 @@ describe("VoxelSyncClient — remote commands applied without re-emitting", () =
     });
 
     assert.equal(engine.appliedCommands.length, 0);
+  });
+
+  it("replays an applied remote command to the local handler", () => {
+    const engine = createMockEngine();
+    const received: VoxelLayerHookEvent[] = [];
+    engine.onLayerUpdated = (event) => received.push(event);
+
+    const room = createMockRoom("client-A");
+    const client = new VoxelSyncClient({ room });
+    client.attach(asEngine(engine));
+
+    room.simulateCommand(
+      voxelSetCmd({ clientId: "client-B" })
+    );
+
+    assert.equal(received.length, 1);
+    assert.equal(received[0].action, "voxel-set");
+    assert.equal(room.sentCommands.length, 0);
+  });
+
+  it("does not replay an echoed command to the local handler", () => {
+    const engine = createMockEngine();
+    const received: VoxelLayerHookEvent[] = [];
+    engine.onLayerUpdated = (event) => received.push(event);
+
+    const room = createMockRoom("client-A");
+    const client = new VoxelSyncClient({ room });
+    client.attach(asEngine(engine));
+
+    room.simulateCommand(
+      voxelSetCmd({ clientId: "client-A" })
+    );
+
+    assert.equal(received.length, 0);
   });
 
   it("ignores commands when no engine is attached", () => {

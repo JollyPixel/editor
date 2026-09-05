@@ -105,7 +105,8 @@ not exist.
 
 #### `removeLayer(name: string): boolean`
 
-Removes a layer by name. Returns `false` if not found.
+Removes a layer by name. Marks all chunks in every layer dirty so faces culled against
+the removed layer are re-evaluated. Returns `false` if not found.
 
 #### `moveLayer(name: string, direction: "up" | "down"): void`
 
@@ -113,7 +114,9 @@ Swaps `order` with the neighbouring layer in the given direction.
 
 #### `setLayerVisible(name: string, visible: boolean): void`
 
-Hidden layers are skipped during compositing and mesh rebuild.
+Hidden layers are skipped during compositing and mesh rebuild. Marks all chunks in
+every layer dirty when visibility actually flips, since cross-layer face culling
+changes with it; otherwise only the layer's own chunks.
 
 #### `setLayerOpacity(name: string, opacity: number): void`
 

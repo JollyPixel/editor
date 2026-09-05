@@ -323,7 +323,6 @@ export class LayerManager extends LitElement {
         break;
       default:
         this.vr.engine.world.updateLayer(ref.name, { visible });
-        this.vr.engine.markAllChunksDirty();
         break;
     }
     this.#refreshNodes();
@@ -435,7 +434,6 @@ export class LayerManager extends LitElement {
     }
     else {
       this.vr.engine.world.removeLayer(ref.name);
-      this.vr.engine.markAllChunksDirty();
     }
     editorState.setSelection(null);
   }
