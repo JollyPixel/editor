@@ -24,23 +24,21 @@ export interface PeerFrustumSyncOptions<
 > {
   room: network.Room<ClientMessage, ServerMessage>;
   /**
-   * Object3D remote peers' frustums are added to/removed from (typically the scene).
+   * Parent for remote peer frustums.
    */
   parent: THREE.Object3D;
   /**
-   * Presence field poses are published under. Change it when a room carries
-   * more than one frustum stream.
+   * Presence field for frustum poses.
    * @default "frustum"
    */
   presenceKey?: string;
   /**
-   * Minimum delay between two presence updates, in milliseconds. `0` reports
-   * on every `update()` where the pose moved.
+   * Minimum milliseconds between pose updates. `0` sends every moved pose.
    * @default 50
    */
   throttleMs?: number;
   /**
-   * Extracts a display label from a peer's identity.
+   * Returns a peer's display label.
    * @default reads `identity.username` when it's a string
    */
   label?: (
@@ -48,13 +46,7 @@ export interface PeerFrustumSyncOptions<
     identity: network.PeerMetadata
   ) => string | undefined;
   /**
-   * Chooses the color shared by a remote peer's frustum and other presence UI.
-   *
-   * `clientId` is the id the server assigned to that peer, which no client can
-   * compute for itself: `room.clientId` is local and never leaves the tab. Map
-   * the color from a field the host stamps into `identity` when the local tab
-   * must agree with its peers on its own color.
-   *
+   * Returns a remote peer's frustum color.
    * @default a deterministic color from the built-in palette
    */
   color?: (
@@ -62,8 +54,7 @@ export interface PeerFrustumSyncOptions<
     identity: network.PeerMetadata
   ) => THREE.ColorRepresentation;
   /**
-   * Shared visual options applied to every remote peer's frustum.
-   * `color` and `displayName` are driven by presence/identity instead and ignored here.
+   * Shared frustum options excluding `color` and `displayName`.
    */
   frustum?: Omit<PeerFrustumOptions, "color" | "displayName">;
 }

@@ -115,42 +115,42 @@ describe("dashed", () => {
   });
 });
 
-describe("setColor", () => {
+describe("color", () => {
   test("updates the material color", () => {
     const outline = new SelectionOutline({ target: createTarget(), color: "#000000" });
-    outline.setColor("#00ff00");
+    outline.color = "#00ff00";
 
     assert.strictEqual(`#${outline.material.color.getHexString()}`, "#00ff00");
   });
 });
 
-describe("setOpacity", () => {
+describe("opacity", () => {
   test("updates opacity and toggles transparent accordingly", () => {
     const outline = new SelectionOutline({ target: createTarget() });
 
-    outline.setOpacity(0.5);
+    outline.opacity = 0.5;
     assert.strictEqual(outline.material.opacity, 0.5);
     assert.strictEqual(outline.material.transparent, true);
 
-    outline.setOpacity(1);
+    outline.opacity = 1;
     assert.strictEqual(outline.material.opacity, 1);
     assert.strictEqual(outline.material.transparent, false);
   });
 });
 
-describe("setLinewidth", () => {
+describe("linewidth", () => {
   test("updates the material linewidth", () => {
     const outline = new SelectionOutline({ target: createTarget() });
-    outline.setLinewidth(4);
+    outline.linewidth = 4;
 
     assert.strictEqual(outline.material.linewidth, 4);
   });
 });
 
-describe("setXray", () => {
+describe("xray", () => {
   test("toggling xray on disables depth test/write and raises render order", () => {
     const outline = new SelectionOutline({ target: createTarget() });
-    outline.setXray(true);
+    outline.xray = true;
 
     assert.strictEqual(outline.material.depthTest, false);
     assert.strictEqual(outline.material.depthWrite, false);
@@ -159,7 +159,7 @@ describe("setXray", () => {
 
   test("toggling xray off restores depth test/write and the default render order", () => {
     const outline = new SelectionOutline({ target: createTarget(), xray: true });
-    outline.setXray(false);
+    outline.xray = false;
 
     assert.strictEqual(outline.material.depthTest, true);
     assert.strictEqual(outline.material.depthWrite, true);

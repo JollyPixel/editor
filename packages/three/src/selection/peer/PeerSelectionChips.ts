@@ -3,62 +3,40 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { computeLocalBoundingBox } from "../overlays/computeLocalBoundingBox.ts";
-import { PeerSelectionChip, type PeerSelectionChipOptions } from "./PeerSelectionChip.ts";
-import type { PeerSelectionRegistry, PeerSelectionChangeEventDetail } from "./PeerSelectionRegistry.ts";
+import {
+  PeerSelectionChip,
+  type PeerSelectionChipOptions
+} from "./PeerSelectionChip.ts";
+import type {
+  PeerSelectionRegistry,
+  PeerSelectionChangeEventDetail
+} from "./PeerSelectionRegistry.ts";
 import type { PeerSelectionVisibility } from "./PeerSelectionVisibility.ts";
-import type { SelectionManager } from "../SelectionManager.ts";
+import type {
+  SelectionManager,
+  SelectionManagerChangeEventDetail
+} from "../SelectionManager.ts";
 
 // CONSTANTS
 const kChipSpacing = 0.4;
 const kChipMarginY = 0.35;
-/**
- * Caps how many individual per-selector chips a row shows - beyond this,
- * the rest collapse into one "+N" overflow badge (see `#buildSlots`). Each
- * chip is its own draw call and GPU-resident canvas texture with no
- * batching, so this stays small rather than scaling with however many
- * peers pile onto one object.
- */
 const kMaxChips = 3;
-/**
- * Neutral, not tied to any peer's own color, so the overflow badge never
- * gets mistaken for a real selector.
- */
 const kOverflowChipColor = "#4a4a4a";
 
 export interface PeerSelectionChipsOptions {
   registry: PeerSelectionRegistry;
   selection: SelectionManager;
   /**
-   * Skips the chip row entirely for any object `visibility.isVisible`
-   * reports `false` for - same semantics as
-   * `PeerSelectionOverlays`/`PeerHighlightPass`'s own `visibility`.
+   * Suppresses chip rows for objects reported as invisible.
    */
   visibility?: PeerSelectionVisibility;
   /**
-   * Whether chip rows render at all. Opt-in since each chip is its own draw
-   * call and GPU-resident canvas texture (see `kMaxChips`). Toggle at
-   * runtime via `setEnabled`.
+   * Enables chip rows.
    * @default false
    */
   enabled?: boolean;
 }
 
-/**
- * One small row of colored billboard chips (see `PeerSelectionChip`)
- * floating above any object with *more than one* simultaneous peer
- * selector, oldest-first, capped at `kMaxChips` with the rest collapsed
- * into a trailing "+N" overflow badge. An object with zero or one selector
- * gets no chip row - the primary ring already communicates a single
- * selector's color on its own.
- *
- * Off by default (see `PeerSelectionChipsOptions.enabled`) - a caller opts
- * in explicitly, at construction or later via `setEnabled`.
- *
- * Independent of the primary ring's technique or which class draws it.
- * Never gated by the local selection - the chip row is purely about
- * `registry.selectorsOf`, so the same object can show a local selection
- * ring and a peer chip row at once.
- */
 export class PeerSelectionChips {
   #registry: PeerSelectionRegistry;
   #selection: SelectionManager;
@@ -66,8 +44,12 @@ export class PeerSelectionChips {
   #enabled: boolean;
   #groups = new Map<string, THREE.Group>();
 
-  #onPeerSelectionChange: (event: Event) => void;
+  #onPeerSelectionChange: (event: CustomEvent<PeerSelectionChangeEventDetail>) => void;
   #onVisibilityChange: () => void;
+  #onTargetsChange: (
+    event: CustomEvent<SelectionManagerChangeEventDetail>
+  ) => void;
+  #onSelectionDispose: () => void;
 
   constructor(
     options: PeerSelectionChipsOptions
@@ -78,7 +60,7 @@ export class PeerSelectionChips {
     this.#enabled = options.enabled ?? false;
 
     this.#onPeerSelectionChange = (event) => {
-      const { objectId, previousObjectId } = (event as CustomEvent<PeerSelectionChangeEventDetail>).detail;
+      const { objectId, previousObjectId } = event.detail;
 
       if (previousObjectId !== null) {
         this.#refresh(previousObjectId);
@@ -93,24 +75,31 @@ export class PeerSelectionChips {
         this.#refresh(objectId);
       }
     };
+    this.#onTargetsChange = (event) => {
+      for (const objectId of event.detail.objectIds) {
+        const existing = this.#groups.get(objectId);
+        if (existing) {
+          this.#disposeGroup(existing);
+          this.#groups.delete(objectId);
+        }
+        this.#refresh(objectId);
+      }
+    };
+    this.#onSelectionDispose = () => this.dispose();
 
     this.#registry.addEventListener("peerSelectionChange", this.#onPeerSelectionChange);
     this.#visibility?.addEventListener("visibilityChange", this.#onVisibilityChange);
+    this.#selection.addEventListener("targetsChange", this.#onTargetsChange);
+    this.#selection.addEventListener("dispose", this.#onSelectionDispose);
   }
 
   get enabled(): boolean {
     return this.#enabled;
   }
 
-  /**
-   * Toggles chip rows on/off at runtime. Turning off immediately disposes
-   * every active row; turning on immediately builds one for every
-   * qualifying object, not a lazy "wait for the next event" flip. A no-op
-   * if `enabled` already matches.
-   */
-  setEnabled(
+  set enabled(
     enabled: boolean
-  ): void {
+  ) {
     if (this.#enabled === enabled) {
       return;
     }
@@ -130,14 +119,11 @@ export class PeerSelectionChips {
     }
   }
 
-  /**
-   * Detaches its listeners and disposes every active chip row. Does not
-   * touch `registry`/`selection`/`visibility` state - only this class's own
-   * render output.
-   */
   dispose(): void {
     this.#registry.removeEventListener("peerSelectionChange", this.#onPeerSelectionChange);
     this.#visibility?.removeEventListener("visibilityChange", this.#onVisibilityChange);
+    this.#selection.removeEventListener("targetsChange", this.#onTargetsChange);
+    this.#selection.removeEventListener("dispose", this.#onSelectionDispose);
 
     for (const group of this.#groups.values()) {
       this.#disposeGroup(group);
@@ -205,25 +191,26 @@ export class PeerSelectionChips {
     this.#groups.set(objectId, group);
   }
 
-  /**
-   * One slot per selector, oldest-first, up to `kMaxChips` - beyond that,
-   * the rest collapse into a single trailing overflow slot. Always returns
-   * at least 2 slots (the caller only reaches here when
-   * `selectors.length > 1`).
-   */
   #buildSlots(
     selectors: readonly string[]
   ): PeerSelectionChipOptions[] {
     if (selectors.length <= kMaxChips) {
       return selectors.map((peerId) => {
-        return { color: this.#registry.colorOf(peerId) };
+        return {
+          color: this.#registry.colorOf(peerId)
+        };
       });
     }
 
     const slots: PeerSelectionChipOptions[] = selectors.slice(0, kMaxChips).map((peerId) => {
-      return { color: this.#registry.colorOf(peerId) };
+      return {
+        color: this.#registry.colorOf(peerId)
+      };
     });
-    slots.push({ color: kOverflowChipColor, label: `+${selectors.length - kMaxChips}` });
+    slots.push({
+      color: kOverflowChipColor,
+      label: `+${selectors.length - kMaxChips}`
+    });
 
     return slots;
   }

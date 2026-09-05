@@ -10,9 +10,9 @@ import {
   SelectionManager,
   PeerSelectionRegistry,
   PeerSelectionChips,
-  PeerSelectionVisibility,
-  PeerSelectionChip
+  PeerSelectionVisibility
 } from "#src/index.ts";
+import { PeerSelectionChip } from "#src/selection/peer/PeerSelectionChip.ts";
 
 function createHarness(
   options?: { visibility?: boolean; enabled?: boolean; }
@@ -222,13 +222,13 @@ describe("enabled", () => {
     assert.strictEqual(mesh.children.length, 0);
   });
 
-  test("setEnabled(true) immediately builds rows for every currently-qualifying object", () => {
+  test("enabling immediately builds rows for every qualifying object", () => {
     const { registry, chips, mesh } = createHarness({ enabled: false });
     registry.select("peer-a", "mesh-1");
     registry.select("peer-b", "mesh-1");
     assert.strictEqual(mesh.children.length, 0);
 
-    chips.setEnabled(true);
+    chips.enabled = true;
 
     assert.strictEqual(chips.enabled, true);
     assert.strictEqual(mesh.children.length, 1);
@@ -236,26 +236,26 @@ describe("enabled", () => {
     assert.strictEqual(group.children.length, 2);
   });
 
-  test("setEnabled(false) immediately disposes every active chip row", () => {
+  test("disabling immediately disposes every active chip row", () => {
     const { registry, chips, mesh } = createHarness({ enabled: true });
     registry.select("peer-a", "mesh-1");
     registry.select("peer-b", "mesh-1");
     assert.strictEqual(mesh.children.length, 1);
 
-    chips.setEnabled(false);
+    chips.enabled = false;
 
     assert.strictEqual(chips.enabled, false);
     assert.strictEqual(mesh.children.length, 0);
   });
 
-  test("setEnabled is a no-op when already at the given value", () => {
+  test("assigning the current value is a no-op", () => {
     const { registry, chips, mesh } = createHarness({ enabled: true });
     registry.select("peer-a", "mesh-1");
     registry.select("peer-b", "mesh-1");
     const group = mesh.children[0] as THREE.Group;
     const chipBefore = group.children[0];
 
-    chips.setEnabled(true);
+    chips.enabled = true;
 
     assert.strictEqual(mesh.children[0], group, "must not rebuild an unrelated group");
     assert.strictEqual((mesh.children[0] as THREE.Group).children[0], chipBefore);

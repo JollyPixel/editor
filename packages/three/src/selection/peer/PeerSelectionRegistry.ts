@@ -15,7 +15,7 @@ const kDefaultColors = [
 
 export interface PeerSelectionRegistryOptions {
   /**
-   * @default a stateless hash-based allocator over a built-in 8-color palette
+   * @default hash-based allocation from an 8-color palette
    */
   colorAllocator?: PeerColorAllocator;
 }
@@ -31,16 +31,9 @@ function hash(
   return Math.abs(result);
 }
 
-/**
- * Stateless, coordination-free fallback - any two registries resolve the
- * same peer id to the same color without sharing state. A caller wanting
- * collision-free/reclaimable colors injects its own `colorAllocator`
- * instead (see `examples/scripts/network/PeerColorPaletteAllocator.ts`).
- */
 function createDefaultColorAllocator(): PeerColorAllocator {
   return {
     colorOf: (peerId) => kDefaultColors[hash(peerId) % kDefaultColors.length],
-    // Stateless, nothing to free.
     release: () => void 0
   };
 }
@@ -51,19 +44,33 @@ export interface PeerSelectionChangeEventDetail {
   previousObjectId: string | null;
 }
 
-/**
- * Tracks which remote peers currently have which object selected -
- * transport-agnostic bookkeeping (no `THREE` objects, no network types), so
- * it can be driven by fake peers in a demo today and real
- * `@jolly-pixel/network` presence events later without changing this class.
- *
- * Deliberately separate from `SelectionManager` (single-local-user state):
- * this registry only ever holds *remote* peers.
- *
- * Selectors are kept oldest-first per object so `primarySelectorOf` can
- * resolve a single deterministic "whoever selected it first" peer - the
- * one whose color a 3D viewport should render.
- */
+export interface PeerSelectionRegistryEventMap {
+  peerSelectionChange: CustomEvent<PeerSelectionChangeEventDetail>;
+}
+
+export interface PeerSelectionRegistry {
+  addEventListener<K extends keyof PeerSelectionRegistryEventMap>(
+    type: K,
+    listener: (event: PeerSelectionRegistryEventMap[K]) => void,
+    options?: boolean | AddEventListenerOptions
+  ): void;
+  addEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: boolean | AddEventListenerOptions
+  ): void;
+  removeEventListener<K extends keyof PeerSelectionRegistryEventMap>(
+    type: K,
+    listener: (event: PeerSelectionRegistryEventMap[K]) => void,
+    options?: boolean | EventListenerOptions
+  ): void;
+  removeEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: boolean | EventListenerOptions
+  ): void;
+}
+
 export class PeerSelectionRegistry extends EventTarget {
   #peerToObject = new Map<string, string>();
   #objectToPeers = new Map<string, string[]>();
@@ -77,11 +84,6 @@ export class PeerSelectionRegistry extends EventTarget {
     this.#colorAllocator = options.colorAllocator ?? createDefaultColorAllocator();
   }
 
-  /**
-   * Moves `peerId`'s selection to `objectId` (or clears it, for `null`),
-   * removing it from whatever object it previously selected. No-ops (and
-   * does not dispatch) if `objectId` already is `peerId`'s selection.
-   */
   select(
     peerId: string,
     objectId: string | null
@@ -116,12 +118,6 @@ export class PeerSelectionRegistry extends EventTarget {
     );
   }
 
-  /**
-   * Clears `peerId`'s selection entirely, as if it selected `null`. Use this
-   * when a peer disconnects - the single point where `colorAllocator` learns
-   * a peer is actually gone (see `dispose`, which deliberately does not
-   * release colors).
-   */
   removePeer(
     peerId: string
   ): void {
@@ -135,51 +131,28 @@ export class PeerSelectionRegistry extends EventTarget {
     return this.#peerToObject.get(peerId) ?? null;
   }
 
-  /**
-   * Every peer currently selecting `objectId`, oldest-first.
-   */
   selectorsOf(
     objectId: string
   ): readonly string[] {
     return (this.#objectToPeers.get(objectId) ?? []).slice();
   }
 
-  /**
-   * Every object id with at least one current selector, in no particular
-   * order. Lets a caller (e.g. `PeerHighlightPass`) enumerate every
-   * currently-selected object without tracking that set itself.
-   */
   selectedObjectIds(): readonly string[] {
     return Array.from(this.#objectToPeers.keys());
   }
 
-  /**
-   * The peer that has selected `objectId` the longest, or `null` if none
-   * has. This is the peer whose color a single 3D overlay should use.
-   */
   primarySelectorOf(
     objectId: string
   ): string | null {
     return this.#objectToPeers.get(objectId)?.[0] ?? null;
   }
 
-  /**
-   * Deterministic color for `peerId`, stable across calls.
-   */
   colorOf(
     peerId: string
   ): string {
     return this.#colorAllocator.colorOf(peerId);
   }
 
-  /**
-   * Forgets every peer and object. Does not dispatch `peerSelectionChange`
-   * for the state it clears - consumers tearing this down should stop
-   * listening, not react to a flood of removal events. Does not release
-   * colors either: disposing a registry (e.g. an editor closing) isn't the
-   * same as every peer disconnecting, especially when `colorAllocator` is
-   * shared across several registries.
-   */
   dispose(): void {
     this.#peerToObject.clear();
     this.#objectToPeers.clear();

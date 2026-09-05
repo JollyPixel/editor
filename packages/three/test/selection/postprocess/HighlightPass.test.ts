@@ -55,34 +55,52 @@ describe("constructor", () => {
   });
 });
 
-describe("setEdgeThickness / setEdgeGlow", () => {
+describe("edgeThickness and edgeGlow", () => {
   test("updates edgeThickness", () => {
     const highlight = createPass();
-    highlight.setEdgeThickness(5);
+    highlight.edgeThickness = 5;
 
     assert.strictEqual(highlight.edgeThickness, 5);
   });
 
   test("updates edgeGlow", () => {
     const highlight = createPass();
-    highlight.setEdgeGlow(0.75);
+    highlight.edgeGlow = 0.75;
 
     assert.strictEqual(highlight.edgeGlow, 0.75);
   });
 });
 
-describe("setEntries", () => {
+describe("entries", () => {
+  test("returns a copy of the assigned entries", () => {
+    const highlight = createPass();
+    const entry = {
+      target: new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)),
+      color: "#ff0000"
+    };
+    highlight.entries = [entry];
+
+    const entries = highlight.entries;
+    entries.length = 0;
+
+    assert.deepStrictEqual(highlight.entries, [entry]);
+  });
+
   test("accepts an empty array", () => {
     const highlight = createPass();
 
-    assert.doesNotThrow(() => highlight.setEntries([]));
+    assert.doesNotThrow(() => {
+      highlight.entries = [];
+    });
   });
 
   test("accepts a single mesh entry", () => {
     const highlight = createPass();
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
 
-    assert.doesNotThrow(() => highlight.setEntries([{ target: mesh, color: "#ff0000" }]));
+    assert.doesNotThrow(() => {
+      highlight.entries = [{ target: mesh, color: "#ff0000" }];
+    });
   });
 
   test("accepts a group entry, traversed to its meshes", () => {
@@ -91,7 +109,9 @@ describe("setEntries", () => {
     group.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
     group.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
 
-    assert.doesNotThrow(() => highlight.setEntries([{ target: group, color: "#00ff00" }]));
+    assert.doesNotThrow(() => {
+      highlight.entries = [{ target: group, color: "#00ff00" }];
+    });
   });
 
   test("replaces the previous entries rather than accumulating them", () => {
@@ -99,9 +119,11 @@ describe("setEntries", () => {
     const meshA = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     const meshB = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
 
-    highlight.setEntries([{ target: meshA, color: "#ff0000" }]);
+    highlight.entries = [{ target: meshA, color: "#ff0000" }];
 
-    assert.doesNotThrow(() => highlight.setEntries([{ target: meshB, color: "#0000ff" }]));
+    assert.doesNotThrow(() => {
+      highlight.entries = [{ target: meshB, color: "#0000ff" }];
+    });
   });
 
   test("accepts multiple entries with distinct colors", () => {
@@ -113,7 +135,9 @@ describe("setEntries", () => {
       };
     });
 
-    assert.doesNotThrow(() => highlight.setEntries(entries));
+    assert.doesNotThrow(() => {
+      highlight.entries = entries;
+    });
   });
 
   test("accepts a mix of priority and non-priority entries", () => {
@@ -121,10 +145,12 @@ describe("setEntries", () => {
     const priorityMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     const otherMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
 
-    assert.doesNotThrow(() => highlight.setEntries([
-      { target: priorityMesh, color: "#ff0000", priority: true },
-      { target: otherMesh, color: "#0000ff" }
-    ]));
+    assert.doesNotThrow(() => {
+      highlight.entries = [
+        { target: priorityMesh, color: "#ff0000", priority: true },
+        { target: otherMesh, color: "#0000ff" }
+      ];
+    });
   });
 
   test("accepts a priority group entry, traversed to its meshes", () => {
@@ -133,25 +159,31 @@ describe("setEntries", () => {
     group.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
     group.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
 
-    assert.doesNotThrow(() => highlight.setEntries([{ target: group, color: "#ffffff", priority: true }]));
+    assert.doesNotThrow(() => {
+      highlight.entries = [{ target: group, color: "#ffffff", priority: true }];
+    });
   });
 
   test("accepts a single instanced entry (InstancedMesh + instanceId)", () => {
     const highlight = createPass();
     const instancedMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial(), 10);
 
-    assert.doesNotThrow(() => highlight.setEntries([{ target: instancedMesh, instanceId: 3, color: "#ff0000" }]));
+    assert.doesNotThrow(() => {
+      highlight.entries = [{ target: instancedMesh, instanceId: 3, color: "#ff0000" }];
+    });
   });
 
   test("accepts multiple instanced entries on the same InstancedMesh", () => {
     const highlight = createPass();
     const instancedMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial(), 10);
 
-    assert.doesNotThrow(() => highlight.setEntries([
-      { target: instancedMesh, instanceId: 0, color: "#ff0000" },
-      { target: instancedMesh, instanceId: 5, color: "#00ff00" },
-      { target: instancedMesh, instanceId: 9, color: "#0000ff" }
-    ]));
+    assert.doesNotThrow(() => {
+      highlight.entries = [
+        { target: instancedMesh, instanceId: 0, color: "#ff0000" },
+        { target: instancedMesh, instanceId: 5, color: "#00ff00" },
+        { target: instancedMesh, instanceId: 9, color: "#0000ff" }
+      ];
+    });
   });
 
   test("accepts a mix of instanced and whole-object entries", () => {
@@ -159,34 +191,42 @@ describe("setEntries", () => {
     const instancedMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial(), 10);
     const wholeMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
 
-    assert.doesNotThrow(() => highlight.setEntries([
-      { target: instancedMesh, instanceId: 2, color: "#ff0000" },
-      { target: wholeMesh, color: "#00ff00" }
-    ]));
+    assert.doesNotThrow(() => {
+      highlight.entries = [
+        { target: instancedMesh, instanceId: 2, color: "#ff0000" },
+        { target: wholeMesh, color: "#00ff00" }
+      ];
+    });
   });
 
   test("accepts a priority instanced entry", () => {
     const highlight = createPass();
     const instancedMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial(), 10);
 
-    assert.doesNotThrow(() => highlight.setEntries([
-      { target: instancedMesh, instanceId: 1, color: "#ff0000", priority: true }
-    ]));
+    assert.doesNotThrow(() => {
+      highlight.entries = [
+        { target: instancedMesh, instanceId: 1, color: "#ff0000", priority: true }
+      ];
+    });
   });
 
   test("rebuilding entries for the same InstancedMesh across calls does not throw", () => {
     const highlight = createPass();
     const instancedMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial(), 10);
 
-    highlight.setEntries([{ target: instancedMesh, instanceId: 0, color: "#ff0000" }]);
-    assert.doesNotThrow(() => highlight.setEntries([{ target: instancedMesh, instanceId: 4, color: "#00ff00" }]));
+    highlight.entries = [{ target: instancedMesh, instanceId: 0, color: "#ff0000" }];
+    assert.doesNotThrow(() => {
+      highlight.entries = [{ target: instancedMesh, instanceId: 4, color: "#00ff00" }];
+    });
   });
 
   test("accepts a single isolated entry", () => {
     const highlight = createPass();
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
 
-    assert.doesNotThrow(() => highlight.setEntries([{ target: mesh, color: "#ff0000", isolated: true }]));
+    assert.doesNotThrow(() => {
+      highlight.entries = [{ target: mesh, color: "#ff0000", isolated: true }];
+    });
   });
 
   test("accepts a mix of isolated and non-isolated entries", () => {
@@ -194,10 +234,12 @@ describe("setEntries", () => {
     const isolatedMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
     const otherMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
 
-    assert.doesNotThrow(() => highlight.setEntries([
-      { target: isolatedMesh, color: "#ff0000", isolated: true },
-      { target: otherMesh, color: "#0000ff" }
-    ]));
+    assert.doesNotThrow(() => {
+      highlight.entries = [
+        { target: isolatedMesh, color: "#ff0000", isolated: true },
+        { target: otherMesh, color: "#0000ff" }
+      ];
+    });
   });
 
   test("accepts an isolated group entry, traversed to its meshes", () => {
@@ -206,7 +248,9 @@ describe("setEntries", () => {
     group.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
     group.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
 
-    assert.doesNotThrow(() => highlight.setEntries([{ target: group, color: "#ffffff", isolated: true }]));
+    assert.doesNotThrow(() => {
+      highlight.entries = [{ target: group, color: "#ffffff", isolated: true }];
+    });
   });
 });
 
@@ -219,7 +263,7 @@ describe("dispose", () => {
 
   test("does not throw after entries were set", () => {
     const highlight = createPass();
-    highlight.setEntries([{ target: new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)), color: "#ff0000" }]);
+    highlight.entries = [{ target: new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)), color: "#ff0000" }];
 
     assert.doesNotThrow(() => highlight.dispose());
   });
@@ -227,7 +271,7 @@ describe("dispose", () => {
   test("does not throw after instanced entries were set", () => {
     const highlight = createPass();
     const instancedMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial(), 10);
-    highlight.setEntries([{ target: instancedMesh, instanceId: 0, color: "#ff0000", priority: true }]);
+    highlight.entries = [{ target: instancedMesh, instanceId: 0, color: "#ff0000", priority: true }];
 
     assert.doesNotThrow(() => highlight.dispose());
   });
@@ -235,9 +279,9 @@ describe("dispose", () => {
   test("does not throw after a whole-object priority entry was set - " +
     "exercises the priority-only mask/edge-detect chain's own resources", () => {
     const highlight = createPass();
-    highlight.setEntries([
+    highlight.entries = [
       { target: new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)), color: "#ff0000", priority: true }
-    ]);
+    ];
 
     assert.doesNotThrow(() => highlight.dispose());
   });
@@ -245,9 +289,9 @@ describe("dispose", () => {
   test("does not throw after a whole-object isolated entry was set - " +
     "exercises the isolated-only mask/edge-detect chain's own resources", () => {
     const highlight = createPass();
-    highlight.setEntries([
+    highlight.entries = [
       { target: new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)), color: "#ff0000", isolated: true }
-    ]);
+    ];
 
     assert.doesNotThrow(() => highlight.dispose());
   });

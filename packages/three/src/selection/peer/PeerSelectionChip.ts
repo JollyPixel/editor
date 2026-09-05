@@ -2,7 +2,10 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { type Canvas2D, createCanvas2D } from "../../common/Canvas2D.ts";
+import {
+  type Canvas2D,
+  createCanvas2D
+} from "../../common/Canvas2D.ts";
 
 // CONSTANTS
 const kChipCanvasSize = 64;
@@ -12,26 +15,13 @@ const kChipStrokeWidth = kChipCanvasSize * 0.08;
 const kChipLabelFont = `700 ${kChipCanvasSize * 0.36}px sans-serif`;
 
 export interface PeerSelectionChipOptions {
-  /**
-   * The selecting peer's own color (same source `PeerSelectionOverlays`/
-   * `PeerHighlightPass` read via `PeerSelectionRegistry.colorOf`), or a
-   * neutral background fill for an overflow badge.
-   */
   color: THREE.ColorRepresentation;
   /**
-   * Short text (e.g. `"+3"`) drawn centered on the chip instead of a plain
-   * filled circle - used by `PeerSelectionChips`' overflow badge. Not a
-   * general nameplate: keep it short (a count, not a name).
+   * Optional centered label, such as `"+3"`.
    */
   label?: string;
 }
 
-/**
- * A single small filled-circle billboard, one per simultaneous selector on
- * an object (or one overflow badge summarizing several) -
- * `PeerSelectionChips` lays several of these out in a row above a
- * multi-selected target.
- */
 export class PeerSelectionChip extends THREE.Sprite {
   #color: THREE.ColorRepresentation;
   #label: string | undefined;
@@ -102,9 +92,6 @@ export class PeerSelectionChip extends THREE.Sprite {
     context.fillStyle = new THREE.Color(this.#color).getStyle();
     context.fill();
 
-    // Dark stroke, not the peer's own color, so the chip reads against a
-    // background close to its own color too (e.g. two peers with similar
-    // hues sitting side by side).
     context.lineWidth = kChipStrokeWidth;
     context.strokeStyle = "rgba(20, 20, 20, 0.85)";
     context.stroke();

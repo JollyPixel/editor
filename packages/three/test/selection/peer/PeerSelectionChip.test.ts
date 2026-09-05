@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { PeerSelectionChip } from "#src/index.ts";
+import { PeerSelectionChip } from "#src/selection/peer/PeerSelectionChip.ts";
 import { mockContextOf } from "../../fixtures/canvas.ts";
 
 function canvasOf(

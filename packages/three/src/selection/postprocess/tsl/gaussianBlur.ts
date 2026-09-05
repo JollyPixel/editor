@@ -13,28 +13,17 @@ import {
 import type { TslNode } from "./tslNode.ts";
 
 // CONSTANTS
-// Matches OutlineNode's own separable-blur kernel radius.
 export const MAX_BLUR_RADIUS = 4;
 
-/**
- * Plain TS helper (not a TSL `Fn`) - `Fn`'s inferred type only covers its
- * zero-arg/`NodeBuilder`-callback overloads, not this multi-parameter TSL
- * function form. A regular function inlines the same math into whichever
- * shader calls it.
- */
 function gaussianPdf(
   x: TslNode<"float">,
   sigma: TslNode<"float">
 ): TslNode<"float"> {
-  return float(0.39894).mul(exp(float(-0.5).mul(x).mul(x).div(sigma.mul(sigma))).div(sigma));
+  return float(0.39894).mul(
+    exp(float(-0.5).mul(x).mul(x).div(sigma.mul(sigma))).div(sigma)
+  );
 }
 
-/**
- * Separable Gaussian blur, same shape as `OutlineNode.separableBlur` - built
- * once per resolution level (half-res "thickness" pass, quarter-res "glow"
- * pass) via `kernelRadius`, run X then Y via `blurDirectionNode`, toggled
- * between calls by the caller.
- */
 export function buildSeparableBlur(
   blurSourceTexture: ReturnType<typeof texture>,
   blurDirectionNode: TslNode<"vec2">,

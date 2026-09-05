@@ -2,13 +2,7 @@
 import * as THREE from "three";
 
 /**
- * Union of every mesh descendant's bounding box, in `target`'s own local
- * space - usable directly as position/scale for anything parented to
- * `target` afterward.
- *
- * Extracted out of `SelectionBoundingBox.ts` so `PeerSelectionChips` can
- * reuse it for positioning a chip row, rather than a second copy drifting
- * out of sync.
+ * Computes descendant mesh bounds in `target`'s local space.
  */
 export function computeLocalBoundingBox(
   target: THREE.Object3D
@@ -29,8 +23,13 @@ export function computeLocalBoundingBox(
       return;
     }
 
-    relativeMatrix.multiplyMatrices(inverseTargetWorld, descendant.matrixWorld);
-    meshLocalBox.copy(descendant.geometry.boundingBox).applyMatrix4(relativeMatrix);
+    relativeMatrix.multiplyMatrices(
+      inverseTargetWorld,
+      descendant.matrixWorld
+    );
+    meshLocalBox
+      .copy(descendant.geometry.boundingBox)
+      .applyMatrix4(relativeMatrix);
     box.union(meshLocalBox);
   });
 

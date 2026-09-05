@@ -2,27 +2,8 @@
 import * as THREE from "three";
 
 // CONSTANTS
-// Two positions within this many decimal places count as the same source
-// vertex when bucketing normals - collapses the usual float noise between
-// vertices a geometry generator intends as exactly coincident, without
-// merging genuinely distinct vertices a small distance apart.
 const kPositionKeyPrecision = 5;
 
-/**
- * `THREE.EdgesGeometry(geometry)`, with every line vertex pushed outward by
- * `offset` along its own averaged vertex normal - not, like a uniform
- * `object.scale` bump, away from the object's local origin.
- *
- * The distinction matters on a non-star-convex mesh (a torus's inner tube,
- * a torus knot's grooves), where the true outward normal at some points
- * faces *toward* the local origin. Scaling from origin pushes exactly those
- * edges into the solid mesh, where they fail the depth test and disappear.
- * A per-vertex normal offset has no such blind spot, and is a no-op
- * difference on a star-convex shape like a box or sphere.
- *
- * Reads `geometry`'s own `normal` attribute if present; computes one on a
- * disposable clone otherwise, never mutating the caller's own geometry.
- */
 export function inflateEdgesGeometry(
   geometry: THREE.BufferGeometry,
   offset: number
@@ -37,12 +18,12 @@ export function inflateEdgesGeometry(
   const normal = new THREE.Vector3();
 
   for (let i = 0; i < position.count; i++) {
-    const key = positionKey(position.getX(i), position.getY(i), position.getZ(i));
+    const key = positionKey(
+      position.getX(i),
+      position.getY(i),
+      position.getZ(i)
+    );
     const averaged = normalByPosition.get(key);
-    // No matching source vertex - shouldn't happen, `EdgesGeometry`'s own
-    // line vertices are always copies of the source geometry's - but leave
-    // the point exactly where `EdgesGeometry` put it rather than guess a
-    // direction if it somehow does.
     if (!averaged) {
       continue;
     }
@@ -75,15 +56,26 @@ function averagedNormalsByPosition(
 
   const normalByPosition = new Map<string, THREE.Vector3>();
   for (let i = 0; i < position.count; i++) {
-    const key = positionKey(position.getX(i), position.getY(i), position.getZ(i));
-    const vertexNormal = new THREE.Vector3(normal.getX(i), normal.getY(i), normal.getZ(i));
+    const key = positionKey(
+      position.getX(i),
+      position.getY(i),
+      position.getZ(i)
+    );
+    const vertexNormal = new THREE.Vector3(
+      normal.getX(i),
+      normal.getY(i),
+      normal.getZ(i)
+    );
 
     const existing = normalByPosition.get(key);
     if (existing) {
       existing.add(vertexNormal);
     }
     else {
-      normalByPosition.set(key, vertexNormal);
+      normalByPosition.set(
+        key,
+        vertexNormal
+      );
     }
   }
 
@@ -95,5 +87,9 @@ function positionKey(
   y: number,
   z: number
 ): string {
-  return `${x.toFixed(kPositionKeyPrecision)},${y.toFixed(kPositionKeyPrecision)},${z.toFixed(kPositionKeyPrecision)}`;
+  const xStr = x.toFixed(kPositionKeyPrecision);
+  const yStr = y.toFixed(kPositionKeyPrecision);
+  const zStr = z.toFixed(kPositionKeyPrecision);
+
+  return `${xStr},${yStr},${zStr}`;
 }

@@ -15,7 +15,7 @@ const kDefaultColors = [
 
 export interface PeerHoverRegistryOptions {
   /**
-   * @default a stateless hash-based allocator over a built-in 8-color palette
+   * @default hash-based allocation from an 8-color palette
    */
   colorAllocator?: PeerColorAllocator;
 }
@@ -31,18 +31,9 @@ function hash(
   return Math.abs(result);
 }
 
-/**
- * Stateless, coordination-free fallback - same default
- * `PeerSelectionRegistry` uses. Sharing the same hash function and palette
- * means a peer's hover color agrees with `PeerSelectionRegistry`'s default
- * `colorOf` without either registry knowing about the other. A caller that
- * injects a custom `colorAllocator` into `PeerSelectionRegistry` should
- * pass that same instance here too, to keep selection and hover in sync.
- */
 function createDefaultColorAllocator(): PeerColorAllocator {
   return {
     colorOf: (peerId) => kDefaultColors[hash(peerId) % kDefaultColors.length],
-    // Stateless, nothing to free.
     release: () => void 0
   };
 }
@@ -53,16 +44,33 @@ export interface PeerHoverChangeEventDetail {
   previousObjectId: string | null;
 }
 
-/**
- * Tracks which remote peers currently hover which object - the hover
- * counterpart to `PeerSelectionRegistry`, kept as its own class for the
- * same reason that one is separate from `SelectionManager`.
- *
- * Same oldest-first bookkeeping as `PeerSelectionRegistry.selectorsOf`/
- * `primarySelectorOf`: `hoverersOf` keeps hoverers in the order they
- * started hovering, so `primaryHovererOf` can resolve a single
- * deterministic "whoever hovered it first" peer.
- */
+export interface PeerHoverRegistryEventMap {
+  peerHoverChange: CustomEvent<PeerHoverChangeEventDetail>;
+}
+
+export interface PeerHoverRegistry {
+  addEventListener<K extends keyof PeerHoverRegistryEventMap>(
+    type: K,
+    listener: (event: PeerHoverRegistryEventMap[K]) => void,
+    options?: boolean | AddEventListenerOptions
+  ): void;
+  addEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: boolean | AddEventListenerOptions
+  ): void;
+  removeEventListener<K extends keyof PeerHoverRegistryEventMap>(
+    type: K,
+    listener: (event: PeerHoverRegistryEventMap[K]) => void,
+    options?: boolean | EventListenerOptions
+  ): void;
+  removeEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: boolean | EventListenerOptions
+  ): void;
+}
+
 export class PeerHoverRegistry extends EventTarget {
   #peerToObject = new Map<string, string>();
   #objectToPeers = new Map<string, string[]>();
@@ -76,11 +84,6 @@ export class PeerHoverRegistry extends EventTarget {
     this.#colorAllocator = options.colorAllocator ?? createDefaultColorAllocator();
   }
 
-  /**
-   * Moves `peerId`'s hover to `objectId` (or clears it, for `null`),
-   * removing it from whatever object it previously hovered. No-ops (and
-   * does not dispatch) if `objectId` already is `peerId`'s hover.
-   */
   hover(
     peerId: string,
     objectId: string | null
@@ -115,12 +118,6 @@ export class PeerHoverRegistry extends EventTarget {
     );
   }
 
-  /**
-   * Clears `peerId`'s hover entirely, as if it hovered `null`. Use this when
-   * a peer disconnects - the single point where `colorAllocator` learns a
-   * peer is actually gone (see `dispose`, which deliberately does not
-   * release colors).
-   */
   removePeer(
     peerId: string
   ): void {
@@ -134,48 +131,28 @@ export class PeerHoverRegistry extends EventTarget {
     return this.#peerToObject.get(peerId) ?? null;
   }
 
-  /**
-   * Every peer currently hovering `objectId`, oldest-first.
-   */
   hoverersOf(
     objectId: string
   ): readonly string[] {
     return (this.#objectToPeers.get(objectId) ?? []).slice();
   }
 
-  /**
-   * Every object id with at least one current hoverer, in no particular
-   * order. Lets a caller (e.g. `PeerHighlightPass`) enumerate every
-   * currently-hovered object without tracking that set itself.
-   */
   hoveredObjectIds(): readonly string[] {
     return Array.from(this.#objectToPeers.keys());
   }
 
-  /**
-   * The peer that has hovered `objectId` the longest, or `null` if none has.
-   * This is the peer whose color a single 3D indicator should use.
-   */
   primaryHovererOf(
     objectId: string
   ): string | null {
     return this.#objectToPeers.get(objectId)?.[0] ?? null;
   }
 
-  /**
-   * Deterministic color for `peerId`, stable across calls.
-   */
   colorOf(
     peerId: string
   ): string {
     return this.#colorAllocator.colorOf(peerId);
   }
 
-  /**
-   * Forgets every peer and object. Does not dispatch `peerHoverChange` for
-   * the state it clears, and does not release colors either - same
-   * reasoning as `PeerSelectionRegistry.dispose`.
-   */
   dispose(): void {
     this.#peerToObject.clear();
     this.#objectToPeers.clear();

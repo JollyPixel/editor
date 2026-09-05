@@ -190,21 +190,21 @@ describe("hoverRegistry", () => {
   });
 });
 
-describe("setMaxDistance / setCamera", () => {
-  test("setMaxDistance changes the cutoff applied on the next update()", () => {
+describe("camera and maxDistance", () => {
+  test("maxDistance changes the cutoff applied on the next update()", () => {
     const { registry, visibility, mesh } = createHarness();
     mesh.position.set(0, 0, -50);
     registry.select("peer-a", "mesh-1");
     visibility.update();
     assert.strictEqual(visibility.isVisible("mesh-1"), true);
 
-    visibility.setMaxDistance(20);
+    visibility.maxDistance = 20;
     visibility.update();
 
     assert.strictEqual(visibility.isVisible("mesh-1"), false);
   });
 
-  test("setCamera changes which camera update() tests against", () => {
+  test("camera changes which camera update() tests against", () => {
     const { registry, visibility, mesh } = createHarness();
     mesh.position.set(0, 0, -10);
     registry.select("peer-a", "mesh-1");
@@ -215,7 +215,7 @@ describe("setMaxDistance / setCamera", () => {
     behindCamera.position.set(0, 0, -100);
     behindCamera.lookAt(0, 0, -200);
     behindCamera.updateMatrixWorld();
-    visibility.setCamera(behindCamera);
+    visibility.camera = behindCamera;
     visibility.update();
 
     assert.strictEqual(visibility.isVisible("mesh-1"), false);

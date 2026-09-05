@@ -17,18 +17,21 @@ import {
 
 /**
  * A spy standing in for a real `HighlightPass` - `PeerHighlightPass`
- * only ever calls `setEntries` on it, so a real instance (which needs a
+ * only writes `entries` on it, so a real instance (which needs a
  * `THREE.WebGPURenderer`) isn't needed to test the wiring logic here.
  */
 function createHighlightSpy(): {
-  setEntries: (entries: HighlightEntry[]) => void;
+  entries: HighlightEntry[];
   calls: HighlightEntry[][];
 } {
   const calls: HighlightEntry[][] = [];
 
   return {
-    setEntries: (entries) => {
+    set entries(entries: HighlightEntry[]) {
       calls.push(entries);
+    },
+    get entries(): HighlightEntry[] {
+      return calls.at(-1) ?? [];
     },
     calls
   };
@@ -137,14 +140,14 @@ describe("peer selection", () => {
 });
 
 describe("local selection", () => {
-  test("produces its own entry, in selection.color, marked priority, alongside no peers", () => {
+  test("produces a priority entry in the local selection color", () => {
     const { selection, mesh, highlight } = createHarness();
     selection.select("mesh-1");
 
     const entries = lastEntries(highlight);
     assert.strictEqual(entries.length, 1);
     assert.strictEqual(entries[0].target, mesh);
-    assert.strictEqual(entries[0].color, selection.color);
+    assert.strictEqual(entries[0].color, selection.appearance.selected.color);
     assert.strictEqual(entries[0].priority, true);
   });
 
@@ -153,7 +156,7 @@ describe("local selection", () => {
     // group regardless of technique (see its own "highlight technique"
     // test suite) - this is the other half of that: a group's local
     // selection is also pushed into `HighlightPass` unconditionally,
-    // same as a mesh's, since `HighlightPass.setEntries` already
+    // same as a mesh's, since the HighlightPass entries setter already
     // traverses a group entry to its own meshes. Both are intentional and
     // meant to render together for a group - the wireframe/fill box reads
     // as "this is a group", the per-mesh colored outline as "here's what's
@@ -169,18 +172,18 @@ describe("local selection", () => {
     const entries = lastEntries(highlight);
     assert.strictEqual(entries.length, 1);
     assert.strictEqual(entries[0].target, group);
-    assert.strictEqual(entries[0].color, selection.color);
+    assert.strictEqual(entries[0].color, selection.appearance.selected.color);
     assert.strictEqual(entries[0].priority, true);
   });
 
-  test("wins over a peer's claim on the same object, using selection.color instead of the peer's", () => {
+  test("wins over a peer claim using the local selection color", () => {
     const { selection, registry, highlight } = createHarness();
     registry.select("peer-a", "mesh-1");
     selection.select("mesh-1");
 
     const entries = lastEntries(highlight);
     assert.strictEqual(entries.length, 1);
-    assert.strictEqual(entries[0].color, selection.color);
+    assert.strictEqual(entries[0].color, selection.appearance.selected.color);
     assert.notStrictEqual(entries[0].color, registry.colorOf("peer-a"));
   });
 
@@ -195,7 +198,7 @@ describe("local selection", () => {
     const entries = lastEntries(highlight);
     assert.strictEqual(entries.length, 2);
 
-    const localEntry = entries.find((entry) => entry.color === selection.color);
+    const localEntry = entries.find((entry) => entry.color === selection.appearance.selected.color);
     const peerEntry = entries.find((entry) => entry.color === registry.colorOf("peer-a"));
     assert.strictEqual(localEntry?.priority, true);
     assert.ok(!peerEntry?.priority, "the peer's own entry should not be marked priority");
@@ -214,14 +217,14 @@ describe("local selection", () => {
 });
 
 describe("local hover", () => {
-  test("produces its own entry, in selection.hoverColor, marked isolated not priority", () => {
+  test("produces an isolated entry in the local hover color", () => {
     const { selection, mesh, highlight } = createHarness();
     selection.hover("mesh-1");
 
     const entries = lastEntries(highlight);
     assert.strictEqual(entries.length, 1);
     assert.strictEqual(entries[0].target, mesh);
-    assert.strictEqual(entries[0].color, selection.hoverColor);
+    assert.strictEqual(entries[0].color, selection.appearance.hovered.color);
     assert.ok(!entries[0].priority, "a hover-only entry should not be marked priority");
     assert.strictEqual(entries[0].isolated, true);
   });
@@ -233,7 +236,7 @@ describe("local hover", () => {
 
     const entries = lastEntries(highlight);
     assert.strictEqual(entries.length, 1);
-    assert.strictEqual(entries[0].color, selection.color);
+    assert.strictEqual(entries[0].color, selection.appearance.selected.color);
     assert.strictEqual(entries[0].priority, true);
   });
 
@@ -248,7 +251,7 @@ describe("local hover", () => {
     const entries = lastEntries(highlight);
     assert.strictEqual(entries.length, 2);
 
-    const hoverEntry = entries.find((entry) => entry.color === selection.hoverColor);
+    const hoverEntry = entries.find((entry) => entry.color === selection.appearance.hovered.color);
     assert.ok(hoverEntry, "expected a hover entry for mesh-2");
     assert.ok(!hoverEntry?.priority, "the hover entry should not be marked priority");
     assert.strictEqual(hoverEntry?.isolated, true);
@@ -297,7 +300,7 @@ describe("peer hover", () => {
 
     const entries = lastEntries(highlight);
     assert.strictEqual(entries.length, 1);
-    assert.strictEqual(entries[0].color, selection.color);
+    assert.strictEqual(entries[0].color, selection.appearance.selected.color);
     assert.strictEqual(entries[0].priority, true);
   });
 
@@ -308,7 +311,7 @@ describe("peer hover", () => {
 
     const entries = lastEntries(highlight);
     assert.strictEqual(entries.length, 1);
-    assert.strictEqual(entries[0].color, selection.hoverColor);
+    assert.strictEqual(entries[0].color, selection.appearance.hovered.color);
     assert.strictEqual(entries[0].isolated, true);
   });
 
@@ -427,6 +430,15 @@ describe("refresh", () => {
 });
 
 describe("dispose", () => {
+  test("clears the entries it owns", () => {
+    const { registry, highlight, peerHighlight } = createHarness();
+    registry.select("peer-a", "mesh-1");
+
+    peerHighlight.dispose();
+
+    assert.deepStrictEqual(lastEntries(highlight), []);
+  });
+
   test("stops mirroring further peerSelectionChange events", () => {
     const { registry, highlight, peerHighlight } = createHarness();
     peerHighlight.dispose();

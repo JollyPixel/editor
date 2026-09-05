@@ -111,7 +111,7 @@ describe("peer selection", () => {
   test("falls back to \"outline\" for an id resolved to the \"highlight\" technique " +
     "- a peer overlay can't share a single pipeline across peers", () => {
     const { registry, selection, mesh } = createHarness();
-    selection.setTechnique("highlight");
+    selection.technique = "highlight";
 
     registry.select("peer-a", "mesh-1");
 
@@ -122,7 +122,7 @@ describe("peer selection", () => {
   test("falls back to \"outline\" for an id resolved to the \"highlightJfa\" technique " +
     "- same single-shared-pipeline limitation as \"highlight\"", () => {
     const { registry, selection, mesh } = createHarness();
-    selection.setTechnique("highlightJfa");
+    selection.technique = "highlightJfa";
 
     registry.select("peer-a", "mesh-1");
 
@@ -145,20 +145,19 @@ describe("peer selection", () => {
     assert.strictEqual(`#${material.color.getHexString()}`, registry.colorOf("peer-a"));
   });
 
-  test("setXray on an already-built overlay is picked up once refreshAll() runs", () => {
-    const { registry, selection, overlays, mesh } = createHarness();
+  test("an xray change automatically rebuilds peer overlays", () => {
+    const { registry, selection, mesh } = createHarness();
     registry.select("peer-a", "mesh-1");
     const overlayBefore = mesh.children[0];
     const materialBefore = (overlayBefore as THREE.LineSegments).material as THREE.LineBasicMaterial;
     assert.strictEqual(materialBefore.depthTest, true, "starts non-x-ray");
 
-    // `setXray` dispatches no event of its own - see `refreshAll`'s own doc
-    // comment - so nothing re-runs `#refresh` without this explicit call.
-    selection.setXray(true);
-    overlays.refreshAll();
+    selection.configure({ xray: true });
 
-    assert.strictEqual(mesh.children[0], overlayBefore, "must reuse the same overlay instance, not rebuild it");
-    assert.strictEqual(materialBefore.depthTest, false, "x-ray disables depth test");
+    assert.notStrictEqual(mesh.children[0], overlayBefore);
+    const material = (mesh.children[0] as THREE.LineSegments)
+      .material as THREE.LineBasicMaterial;
+    assert.strictEqual(material.depthTest, false, "x-ray disables depth test");
   });
 });
 

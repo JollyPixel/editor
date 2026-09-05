@@ -6,12 +6,16 @@ import assert from "node:assert/strict";
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { createSelectionOverlay, SelectionOutline, SelectionBoundingBox } from "#src/index.ts";
+import { SelectionOutline, SelectionBoundingBox } from "#src/index.ts";
+import { createDefaultSelectionOverlayRegistry } from "#src/selection/overlays/builtinSelectionOverlayFactories.ts";
 
-describe("createSelectionOverlay", () => {
+// CONSTANTS
+const kRegistry = createDefaultSelectionOverlayRegistry();
+
+describe("SelectionOverlayRegistry.create", () => {
   test("builds a SelectionOutline for a mesh with technique \"outline\"", () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    const overlay = createSelectionOverlay(mesh, { technique: "outline", color: "#ffffff", opacity: 1 });
+    const overlay = kRegistry.create(mesh, { technique: "outline", color: "#ffffff", opacity: 1 });
 
     assert.ok(overlay instanceof SelectionOutline);
   });
@@ -20,28 +24,28 @@ describe("createSelectionOverlay", () => {
     const group = new THREE.Group();
     group.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
 
-    const overlay = createSelectionOverlay(group, { technique: "outline", color: "#ffffff", opacity: 1 });
+    const overlay = kRegistry.create(group, { technique: "outline", color: "#ffffff", opacity: 1 });
 
     assert.ok(overlay instanceof SelectionBoundingBox);
   });
 
   test("falls back to \"outline\" for a mesh given an unregistered technique id", () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    const overlay = createSelectionOverlay(mesh, { technique: "highlight", color: "#ffffff", opacity: 1 });
+    const overlay = kRegistry.create(mesh, { technique: "highlight", color: "#ffffff", opacity: 1 });
 
     assert.ok(overlay instanceof SelectionOutline);
   });
 
   test("builds a SelectionBoundingBox for a mesh explicitly given technique \"boundingBox\"", () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    const overlay = createSelectionOverlay(mesh, { technique: "boundingBox", color: "#ffffff", opacity: 1 });
+    const overlay = kRegistry.create(mesh, { technique: "boundingBox", color: "#ffffff", opacity: 1 });
 
     assert.ok(overlay instanceof SelectionBoundingBox);
   });
 
   test("forwards linewidth to a SelectionOutline", () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    const overlay = createSelectionOverlay(
+    const overlay = kRegistry.create(
       mesh,
       { technique: "outline", color: "#ffffff", opacity: 1, linewidth: 3 }
     ) as SelectionOutline;
@@ -51,7 +55,7 @@ describe("createSelectionOverlay", () => {
 
   test("forwards xray to a SelectionOutline", () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    const overlay = createSelectionOverlay(
+    const overlay = kRegistry.create(
       mesh,
       { technique: "outline", color: "#ffffff", opacity: 1, xray: true }
     ) as SelectionOutline;
@@ -63,7 +67,7 @@ describe("createSelectionOverlay", () => {
     const group = new THREE.Group();
     group.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
 
-    const overlay = createSelectionOverlay(
+    const overlay = kRegistry.create(
       group,
       { technique: "outline", color: "#ffffff", opacity: 1, xray: true }
     ) as SelectionBoundingBox;

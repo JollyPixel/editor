@@ -127,15 +127,15 @@ describe("fillOpacity", () => {
     const fill = box.children[0] as THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>;
 
     assert.strictEqual(fill.material.depthWrite, false);
-    box.setXray(true);
+    box.xray = true;
     assert.strictEqual(fill.material.depthWrite, false);
   });
 });
 
-describe("setFillOpacity", () => {
+describe("fillOpacity", () => {
   test("updates the fill mesh's own opacity", () => {
     const box = new SelectionBoundingBox({ target: createGroupOfTwoBoxes(), fillOpacity: 0.3 });
-    box.setFillOpacity(0.6);
+    box.fillOpacity = 0.6;
 
     const fill = box.children[0] as THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>;
     assert.strictEqual(fill.material.opacity, 0.6);
@@ -145,7 +145,7 @@ describe("setFillOpacity", () => {
     const box = new SelectionBoundingBox({ target: createGroupOfTwoBoxes(), color: "#ff00ff", xray: true });
     assert.strictEqual(box.children.length, 0, "starts with no fill mesh - built with fillOpacity: 0");
 
-    box.setFillOpacity(0.5);
+    box.fillOpacity = 0.5;
 
     assert.strictEqual(box.children.length, 1);
     const fill = box.children[0] as THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>;
@@ -157,7 +157,9 @@ describe("setFillOpacity", () => {
   test("remains a no-op for a non-positive opacity on a box with no fill mesh yet", () => {
     const box = new SelectionBoundingBox({ target: createGroupOfTwoBoxes() });
 
-    assert.doesNotThrow(() => box.setFillOpacity(0));
+    assert.doesNotThrow(() => {
+      box.fillOpacity = 0;
+    });
     assert.strictEqual(box.children.length, 0);
   });
 });
@@ -176,41 +178,41 @@ describe("update", () => {
   });
 });
 
-describe("setColor", () => {
+describe("color", () => {
   test("updates the material color", () => {
     const box = new SelectionBoundingBox({ target: createGroupOfTwoBoxes(), color: "#000000" });
-    box.setColor("#00ff00");
+    box.color = "#00ff00";
 
     assert.strictEqual(`#${box.material.color.getHexString()}`, "#00ff00");
   });
 
   test("also updates the fill mesh's own color, when one exists", () => {
     const box = new SelectionBoundingBox({ target: createGroupOfTwoBoxes(), color: "#000000", fillOpacity: 0.3 });
-    box.setColor("#00ff00");
+    box.color = "#00ff00";
 
     const fill = box.children[0] as THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>;
     assert.strictEqual(`#${fill.material.color.getHexString()}`, "#00ff00");
   });
 });
 
-describe("setOpacity", () => {
+describe("opacity", () => {
   test("updates opacity and toggles transparent accordingly", () => {
     const box = new SelectionBoundingBox({ target: createGroupOfTwoBoxes() });
 
-    box.setOpacity(0.5);
+    box.opacity = 0.5;
     assert.strictEqual(box.material.opacity, 0.5);
     assert.strictEqual(box.material.transparent, true);
 
-    box.setOpacity(1);
+    box.opacity = 1;
     assert.strictEqual(box.material.opacity, 1);
     assert.strictEqual(box.material.transparent, false);
   });
 });
 
-describe("setXray", () => {
+describe("xray", () => {
   test("toggling xray on disables depth test/write and raises render order", () => {
     const box = new SelectionBoundingBox({ target: createGroupOfTwoBoxes() });
-    box.setXray(true);
+    box.xray = true;
 
     assert.strictEqual(box.material.depthTest, false);
     assert.strictEqual(box.material.depthWrite, false);
@@ -219,7 +221,7 @@ describe("setXray", () => {
 
   test("toggling xray off restores depth test/write and the default render order", () => {
     const box = new SelectionBoundingBox({ target: createGroupOfTwoBoxes(), xray: true });
-    box.setXray(false);
+    box.xray = false;
 
     assert.strictEqual(box.material.depthTest, true);
     assert.strictEqual(box.material.depthWrite, true);
@@ -228,7 +230,7 @@ describe("setXray", () => {
 
   test("also toggles the fill mesh's own depth test/render order, when one exists", () => {
     const box = new SelectionBoundingBox({ target: createGroupOfTwoBoxes(), fillOpacity: 0.3 });
-    box.setXray(true);
+    box.xray = true;
 
     const fill = box.children[0] as THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>;
     assert.strictEqual(fill.material.depthTest, false);

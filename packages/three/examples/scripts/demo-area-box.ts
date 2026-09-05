@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-
-// Registers the declarative controls declared by the example page, and
-// supplies the pane facade used by the configuration dialog.
 import {
   formatHex,
   parseColor
@@ -45,14 +42,11 @@ const kBounds = new THREE.Box3(
   new THREE.Vector3(-16, 0, -16),
   new THREE.Vector3(16, 8, 16)
 );
-// Cycled through as areas are added, so a new one never lands on the palette
-// entry its neighbour already uses.
 const kPalette = ["#4da3ff", "#f4a261", "#8ecf72", "#c792ea", "#f28ab2"];
 const kExtentRange = { min: 1, max: 24, step: 1 };
 const kCoordRange = { min: -20, max: 20, step: 1 };
 const kOpacityRange = { min: 0, max: 1, step: 0.05 };
 const kEdgeWidthRange = { min: 1, max: 6, step: 1 };
-// Wide enough for the longest label in the dialog ("Edge opacity").
 const kLabelWidth = "13ch";
 
 const canvas = document.querySelector("canvas") as HTMLCanvasElement;
@@ -112,8 +106,6 @@ function removeArea(
 
   areas.splice(areas.indexOf(area), 1);
   scene.remove(area);
-  // Detaching above took the handles back out of the area, so `dispose()`
-  // only has the area's own fill, edges and label left to release.
   area.dispose();
 }
 
@@ -192,10 +184,6 @@ interactionFolder
     controls.bounds = value ? kBounds : null;
   });
 
-/**
- * Modal covering every `AreaBoxOptions` field. The draft is reset on each
- * open, so the dialog always proposes a fresh area rather than the last one.
- */
 function createAreaDialog() {
   const draft = {
     displayName: "Area",
@@ -218,11 +206,8 @@ function createAreaDialog() {
     labelWidth: kLabelWidth
   });
   form.addBinding(draft, "displayName", { label: "Name" });
-  // The eight-digit draft turns the alpha channel on by itself: the fill
-  // opacity rides on the color rather than needing a slider of its own.
   form.addBinding(draft, "color", { label: "Color" });
   form.addSeparator();
-  // One row per vector rather than six sliders.
   form.addBinding(draft, "position", {
     label: "Min corner",
     ...kCoordRange
@@ -280,7 +265,6 @@ function createAreaDialog() {
         kPalette[createdCount % kPalette.length],
         AreaBox.Defaults.opacity
       );
-      // Offset each proposal so a new area does not open inside the last one.
       draft.position = {
         x: (createdCount % 3) * 6,
         y: 0,
@@ -320,9 +304,6 @@ function select(
     controls.detach();
   }
   else {
-    // Passing the originating press lets the controls claim this gesture, so
-    // pressing an unselected area drags it right away instead of leaving the
-    // press to the orbit camera.
     controls.attach(area, { from });
   }
 
@@ -332,12 +313,7 @@ function select(
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 
-// Capture phase, so picking happens before both the orbit camera and the area
-// controls get the press: the host decides what is selected, then hands the
-// same event over for the drag.
 canvas.addEventListener("pointerdown", (event) => {
-  // The arrows float outside the area and are hit-tested through other
-  // geometry, so a press on one is the gizmo's, not a miss to deselect on.
   if (event.button !== 0 || controls.isOverHandle(event)) {
     return;
   }
@@ -361,8 +337,6 @@ canvas.addEventListener("pointerdown", (event) => {
   );
 }, true);
 
-// Suspending the orbit camera for the duration of a gesture is the whole
-// reason `start` and `end` exist.
 controls.addEventListener("start", () => {
   orbit.enabled = false;
 });
@@ -370,7 +344,6 @@ controls.addEventListener("end", () => {
   orbit.enabled = true;
   refreshReadout();
 });
-// A host would persist here: one emission per grid step, not per frame.
 controls.addEventListener("change", refreshReadout);
 
 select(addArea({
@@ -389,10 +362,6 @@ startLoop({
   onAfterRender: () => performanceStats.end()
 });
 
-/**
- * Appends an alpha channel to a six-digit hex, the eight-digit form
- * `jolly-color` emits when its alpha channel is on.
- */
 function withAlpha(
   hex: string,
   alpha: number

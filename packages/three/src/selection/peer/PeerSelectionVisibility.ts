@@ -11,40 +11,19 @@ export interface PeerSelectionVisibilityOptions {
   selection: SelectionManager;
   camera: THREE.Camera;
   /**
-   * World-space distance (from the camera, minus the target's own bounding
-   * radius) beyond which a peer-selected object is treated as not visible,
-   * regardless of whether it's actually inside the frustum.
-   * @default Infinity - no distance cutoff, frustum test only
+   * Maximum camera-to-surface distance in world units.
+   * @default Infinity
    */
   maxDistance?: number;
   /**
-   * Unions `hoverRegistry.hoveredObjectIds()` into the ids `update()`
-   * evaluates, alongside `registry.selectedObjectIds()` - so a
-   * peer-hovered-only object also gets frustum/distance culling. Omitting
-   * this preserves selection-only behavior.
+   * Also evaluates peer-hovered objects when provided.
    */
   hoverRegistry?: PeerHoverRegistry;
 }
 
 /**
- * Tracks, per currently peer-selected object, whether it's worth rendering
- * a peer indicator for - inside the camera frustum and within
- * `maxDistance`. `PeerSelectionOverlays`/`PeerHighlightPass` accept this as
- * an optional `visibility` option and treat "not visible" the same as "not
- * selected", so a scene with many peer selections only pays overlay cost
- * for the ones actually worth showing.
- *
- * Never consulted for the local user's own selection/hover - only
- * `registry`'s peer selections. Hiding what the local user just clicked
- * because they panned away from it would read as a bug, not an
- * optimization.
- *
- * Must be tick-driven, not event-driven - camera motion is independent of
- * any selection-change event (same reasoning as
- * `PeerFrustumSync.update()`). Call `update()` once per render tick.
- * Dispatches `visibilityChange` only when a call actually flips at least
- * one id, so subscribers can listen once in their constructor and stay in
- * sync without being driven by hand.
+ * Tracks frustum and distance visibility for peer indicators.
+ * Call `update()` once per render tick.
  */
 export class PeerSelectionVisibility extends EventTarget {
   #registry: PeerSelectionRegistry;
@@ -55,10 +34,6 @@ export class PeerSelectionVisibility extends EventTarget {
 
   #visible = new Map<string, boolean>();
 
-  // Scratch instances reused across `update()` calls to avoid per-tick GC
-  // churn - their *contents* are always recomputed fresh, never cached
-  // across ticks, since a selected object (an orbiting peer selection, say)
-  // can move.
   #frustum = new THREE.Frustum();
   #viewProjectionMatrix = new THREE.Matrix4();
   #cameraPosition = new THREE.Vector3();
@@ -77,24 +52,28 @@ export class PeerSelectionVisibility extends EventTarget {
     this.#hoverRegistry = options.hoverRegistry ?? null;
   }
 
-  setCamera(
+  get camera(): THREE.Camera {
+    return this.#camera;
+  }
+
+  set camera(
     camera: THREE.Camera
-  ): void {
+  ) {
     this.#camera = camera;
   }
 
-  setMaxDistance(
+  get maxDistance(): number {
+    return this.#maxDistance;
+  }
+
+  set maxDistance(
     maxDistance: number
-  ): void {
+  ) {
     this.#maxDistance = maxDistance;
   }
 
   /**
-   * Recomputes visibility for every currently peer-selected (and
-   * peer-hovered, if `hoverRegistry` was given) object - cheap, O(that
-   * count), not scene size. Dispatches `visibilityChange` only when at
-   * least one id's visibility actually changed. An id no longer tracked is
-   * dropped without counting as a change.
+   * Recomputes visibility and dispatches when a result changes.
    */
   update(): void {
     this.#camera.updateMatrixWorld();
@@ -147,10 +126,7 @@ export class PeerSelectionVisibility extends EventTarget {
   }
 
   /**
-   * Whether `objectId` was found visible on the last `update()` call.
-   * Defaults `true` for an id `update()` hasn't seen yet (fail open, so a
-   * caller reading this before the first `update()` runs doesn't wrongly
-   * suppress everything).
+   * Returns the last result, or `true` before the id is evaluated.
    */
   isVisible(
     objectId: string

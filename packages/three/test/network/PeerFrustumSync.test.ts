@@ -4,82 +4,12 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import * as THREE from "three";
-import type {
-  Peer,
-  PeerMetadata,
-  Room,
-  RoomEventMap
-} from "@jolly-pixel/network/client";
+import type { PeerMetadata } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
+import { FakeRoom } from "../fixtures/room.ts";
 import { PeerFrustum } from "#src/index.ts";
 import { PeerFrustumSync } from "#src/network/index.ts";
-
-/**
- * Room test double that serializes presence patches like the wire.
- */
-class FakeRoom implements Room {
-  readonly id = "three:peer-frustum-test";
-  readonly clientId = "local-uuid-nobody-sees";
-  readonly peers = new Map<string, Peer>();
-  readonly patches: PeerMetadata[] = [];
-
-  #listeners = new Map<string, Set<(...args: any[]) => void>>();
-
-  join(): void {
-    // No transport to join.
-  }
-
-  send(): void {
-    // No transport to send through.
-  }
-
-  updatePresence(
-    patch: PeerMetadata
-  ): void {
-    this.patches.push(JSON.parse(JSON.stringify(patch)));
-  }
-
-  leave(): void {
-    this.peers.clear();
-  }
-
-  on<K extends keyof RoomEventMap>(
-    type: K,
-    listener: RoomEventMap[K]
-  ): void {
-    const set = this.#listeners.get(type) ?? new Set();
-    set.add(listener as (...args: any[]) => void);
-    this.#listeners.set(type, set);
-  }
-
-  off<K extends keyof RoomEventMap>(
-    type: K,
-    listener: RoomEventMap[K]
-  ): void {
-    this.#listeners.get(type)?.delete(listener as (...args: any[]) => void);
-  }
-
-  emit(
-    type: keyof RoomEventMap,
-    payload?: unknown
-  ): void {
-    for (const listener of this.#listeners.get(type) ?? []) {
-      listener(payload);
-    }
-  }
-
-  addPeer(
-    clientId: string,
-    peer: Partial<Omit<Peer, "clientId">> = {}
-  ): void {
-    this.peers.set(clientId, {
-      clientId,
-      identity: peer.identity ?? {},
-      presence: peer.presence ?? {}
-    });
-  }
-}
 
 function pose(
   x: number,
@@ -95,15 +25,13 @@ function pose(
 function setup(
   options: { throttleMs?: number; presenceKey?: string; } = {}
 ) {
-  const room = new FakeRoom();
+  const room = new FakeRoom("three:peer-frustum-test");
   const parent = new THREE.Object3D();
   const sync = new PeerFrustumSync({
     room,
     parent,
     throttleMs: options.throttleMs ?? 0,
-    ...options.presenceKey === undefined ?
-      {} :
-      { presenceKey: options.presenceKey }
+    presenceKey: options.presenceKey
   });
 
   return { room, parent, sync };
@@ -136,7 +64,7 @@ describe("remote peers", () => {
     assert.equal(frustumsOf(parent).length, 0);
 
     room.addPeer("alice", { presence: { frustum: pose(1) } });
-    room.emit("sync", { clientIds: ["alice"] });
+    room.emitSync("alice");
 
     assert.equal(frustumsOf(parent).length, 1);
   });
@@ -146,8 +74,8 @@ describe("remote peers", () => {
     room.addPeer("alice", { presence: { frustum: pose(1) } });
 
     sync.attach(new THREE.Object3D());
-    room.emit("sync", { clientIds: ["alice"] });
-    room.emit("peer-joined", { clientId: "alice" });
+    room.emitSync("alice");
+    room.emitJoin("alice");
 
     assert.equal(frustumsOf(parent).length, 1);
   });
@@ -157,13 +85,10 @@ describe("remote peers", () => {
     room.addPeer("alice", { presence: { frustum: pose(0) } });
     sync.attach(new THREE.Object3D());
 
-    room.emit("peer-presence", {
-      clientId: "alice",
-      patch: {
-        frustum: {
-          position: { x: 1, y: 2, z: 3 },
-          quaternion: { x: 0, y: 1, z: 0, w: 0 }
-        }
+    room.emitPresence("alice", {
+      frustum: {
+        position: { x: 1, y: 2, z: 3 },
+        quaternion: { x: 0, y: 1, z: 0, w: 0 }
       }
     });
 
@@ -176,10 +101,7 @@ describe("remote peers", () => {
     const { room, parent, sync } = setup();
     sync.attach(new THREE.Object3D());
 
-    room.emit("peer-presence", {
-      clientId: "alice",
-      patch: { cursor: { x: 1 } }
-    });
+    room.emitPresence("alice", { cursor: { x: 1 } });
 
     assert.equal(frustumsOf(parent).length, 0);
   });
@@ -189,10 +111,7 @@ describe("remote peers", () => {
     room.addPeer("alice", { presence: { frustum: pose(1) } });
     sync.attach(new THREE.Object3D());
 
-    room.emit("peer-presence", {
-      clientId: "alice",
-      patch: { frustum: null }
-    });
+    room.emitPresence("alice", { frustum: null });
 
     const [frustum] = frustumsOf(parent);
     assert.equal(frustum.visible, false);
@@ -204,7 +123,7 @@ describe("remote peers", () => {
     sync.attach(new THREE.Object3D());
     const [frustum] = frustumsOf(parent);
 
-    room.emit("peer-left", { clientId: "alice" });
+    room.emitLeft("alice");
 
     assert.equal(frustumsOf(parent).length, 0);
     assert.equal(frustum.parent, null);
@@ -238,7 +157,7 @@ describe("presence key", () => {
 
 describe("colors", () => {
   test("resolves a color once per peer, then only on refreshColors()", () => {
-    const room = new FakeRoom();
+    const room = new FakeRoom("three:peer-frustum-test");
     const parent = new THREE.Object3D();
     const colors = ["#111111", "#222222"];
     let calls = 0;
@@ -262,7 +181,7 @@ describe("colors", () => {
   });
 
   test("passes the peer identity to color", () => {
-    const room = new FakeRoom();
+    const room = new FakeRoom("three:peer-frustum-test");
     const parent = new THREE.Object3D();
     const seen: PeerMetadata[] = [];
     const sync = new PeerFrustumSync({
@@ -339,7 +258,7 @@ describe("local reporting", () => {
     sync.attach(new THREE.Object3D());
     sync.update();
 
-    room.emit("sync", { clientIds: [] });
+    room.emitSync();
     sync.update();
 
     assert.equal(room.patches.length, 2);
@@ -350,7 +269,7 @@ describe("local reporting", () => {
     sync.attach(new THREE.Object3D());
     sync.update();
 
-    room.emit("peer-joined", { clientId: "alice" });
+    room.emitJoin("alice");
     sync.update();
 
     assert.equal(room.patches.length, 2);
@@ -380,7 +299,7 @@ describe("local reporting", () => {
     sync.update();
 
     source.position.x = 1;
-    room.emit("peer-joined", { clientId: "alice" });
+    room.emitJoin("alice");
     sync.update();
 
     assert.equal(room.patches.length, 2);
@@ -388,6 +307,20 @@ describe("local reporting", () => {
 });
 
 describe("lifecycle", () => {
+  test("destroy() unsubscribes from every room event", () => {
+    const { room, sync } = setup();
+    assert.deepEqual(room.subscribedEvents(), [
+      "peer-joined",
+      "peer-left",
+      "peer-presence",
+      "sync"
+    ]);
+
+    sync.destroy();
+
+    assert.deepEqual(room.subscribedEvents(), []);
+  });
+
   test("throws when a source is already attached", () => {
     const { sync } = setup();
     sync.attach(new THREE.Object3D());
@@ -420,7 +353,7 @@ describe("lifecycle", () => {
     assert.equal(frustumsOf(parent).length, 0);
 
     room.addPeer("bob", { presence: { frustum: pose(2) } });
-    room.emit("sync", { clientIds: ["bob"] });
+    room.emitSync("bob");
     assert.equal(frustumsOf(parent).length, 0);
   });
 });

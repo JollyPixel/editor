@@ -2,37 +2,22 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { createSelectionOverlay, type SelectionOverlay } from "./overlays/createSelectionOverlay.ts";
+import type { SelectionOverlay } from "./overlays/SelectionOverlay.ts";
+import type { SelectionOverlayRegistry } from "./overlays/SelectionOverlayRegistry.ts";
+import { createDefaultSelectionOverlayRegistry } from "./overlays/builtinSelectionOverlayFactories.ts";
+import {
+  SelectionAppearance,
+  type SelectionAppearanceOptions
+} from "./SelectionAppearance.ts";
 
-export type SelectableObject = THREE.Mesh | THREE.Object3D;
+export type SelectableObject = THREE.Object3D;
 
-/**
- * Which technique a registered object renders when selected/hovered.
- * A non-mesh target (e.g. a `THREE.Group`) always renders
- * `SelectionBoundingBox` instead, regardless of this setting.
- *
- * - `"outline"` - `SelectionOutline`, a per-object overlay, cheap and
- *   pipeline-free.
- * - `"highlight"` / `"highlightJfa"` - `HighlightPass` / `HighlightPassJfa`,
- *   scene-level postprocess passes instead of a per-object overlay.
- *   `SelectionManager` only resolves ids to these; it never drives the pass
- *   itself, so nothing renders until a `PeerHighlightPass` (or equivalent)
- *   is wired up separately - misconfiguring this fails silently, with no
- *   thrown error.
- *
- * These three are only the built-in ids. `"outline"` resolves through
- * `defaultSelectionOverlayRegistry` (`overlays/createSelectionOverlay.ts`),
- * which a caller can register further per-object techniques into (see
- * `SelectionOverlayRegistry`) - hence the trailing `(string & {})` branch,
- * keeping autocomplete for known literals without rejecting an id this type
- * doesn't know about.
- */
-export type SelectionTechnique = "outline" | "highlight" | "highlightJfa" | (string & {});
+export type SelectionTechnique =
+  | "outline"
+  | "highlight"
+  | "highlightJfa"
+  | (string & {});
 
-/**
- * Every scene-level pipeline technique (see `SelectionTechnique`) - kept as
- * a single set so the check isn't repeated at every call site.
- */
 const SCENE_PIPELINE_TECHNIQUES = new Set<SelectionTechnique>(["highlight", "highlightJfa"]);
 
 export function isScenePipelineTechnique(
@@ -43,70 +28,71 @@ export function isScenePipelineTechnique(
 
 export interface SelectionManagerOptions {
   /**
-   * @default "#ffffff"
+   * Immutable visual configuration.
    */
-  color?: THREE.ColorRepresentation;
+  appearance?: SelectionAppearance | SelectionAppearanceOptions;
   /**
-   * @default "#8ab4f8"
-   */
-  hoverColor?: THREE.ColorRepresentation;
-  /**
-   * @default 0.35
-   */
-  hoverOpacity?: number;
-  /**
-   * Default overlay technique for registered meshes, used unless overridden
-   * per-id via `register`'s own `technique` option.
+   * Default overlay technique. `register` can override it per id.
    * @default "outline"
    */
   technique?: SelectionTechnique;
   /**
-   * Default `SelectionOutline` tuning for meshes rendered with the
-   * `"outline"` technique. Adjustable at runtime via `setOutlineOptions`.
+   * Overlay factories this manager resolves its techniques against. Pass a
+   * registry of your own to add or replace a technique for this manager
+   * alone.
+   * @default a registry holding every built-in technique
    */
-  outline?: { linewidth?: number; };
+  overlayRegistry?: SelectionOverlayRegistry;
   /**
-   * Default `SelectionBoundingBox` tuning for any group (a non-mesh target
-   * always renders `SelectionBoundingBox`, regardless of `technique`).
-   * Adjustable at runtime via `setBoundingBoxOptions`.
+   * Disables the legacy local object-overlay presenter. State and events stay
+   * active so another renderer can present the manager.
+   * @default true
    */
-  boundingBox?: { fillOpacity?: number; };
-  /**
-   * Skips depth test/write on the selection/hover overlay so it stays
-   * visible through other geometry, like an X-ray. Applies to both
-   * `SelectionOutline` and `SelectionBoundingBox`. Adjustable at runtime via
-   * `setXray`.
-   * @default false
-   */
-  xray?: boolean;
+  renderOverlays?: boolean;
 }
 
-/**
- * Tracks a single selected id and a single hovered id across a pool of
- * registered objects, rendering a `SelectionOutline`/`SelectionBoundingBox`
- * per `SelectionTechnique` - callers never need to know which technique a
- * given id resolves to.
- *
- * `"outline"` (and every non-mesh id) builds a per-object overlay this
- * class owns and disposes; `"highlight"`/`"highlightJfa"` are scene-level
- * pipelines outside this class (see `SelectionTechnique`).
- *
- * Objects are addressed by a caller-assigned string id, not object
- * reference, so a UI outside the 3D view (e.g. a `TreeView` from
- * `@jolly-pixel/arbor`) can drive selection without holding onto
- * `THREE.Object3D` instances. Dispatches plain `Event`s (`selectionChange`,
- * `hoverChange`); state is read back via the `selected`/`hovered` getters.
- */
+export type SelectionManagerChangeKind =
+  | "selection"
+  | "hover"
+  | "targets"
+  | "appearance"
+  | "technique";
+
+export interface SelectionManagerChangeEventDetail {
+  kind: SelectionManagerChangeKind;
+  objectIds: readonly string[];
+}
+
+export interface SelectionManagerEventMap {
+  selectionChange: Event;
+  hoverChange: Event;
+  targetsChange: CustomEvent<SelectionManagerChangeEventDetail>;
+  appearanceChange: CustomEvent<SelectionManagerChangeEventDetail>;
+  techniqueChange: CustomEvent<SelectionManagerChangeEventDetail>;
+  change: CustomEvent<SelectionManagerChangeEventDetail>;
+  dispose: Event;
+}
+
+export interface SelectionManager {
+  addEventListener<TKey extends keyof SelectionManagerEventMap>(
+    type: TKey,
+    listener: (event: SelectionManagerEventMap[TKey]) => void,
+    options?: boolean | AddEventListenerOptions
+  ): void;
+  removeEventListener<TKey extends keyof SelectionManagerEventMap>(
+    type: TKey,
+    listener: (event: SelectionManagerEventMap[TKey]) => void,
+    options?: boolean | EventListenerOptions
+  ): void;
+}
+
 export class SelectionManager extends EventTarget {
   #targets = new Map<string, SelectableObject>();
   #techniques = new Map<string, SelectionTechnique>();
-  #color: THREE.ColorRepresentation;
-  #hoverColor: THREE.ColorRepresentation;
-  #hoverOpacity: number;
+  #appearance: SelectionAppearance;
   #technique: SelectionTechnique;
-  #outlineOptions: { linewidth?: number; };
-  #boundingBoxOptions: { fillOpacity?: number; };
-  #xray: boolean;
+  #overlayRegistry: SelectionOverlayRegistry;
+  #renderOverlays: boolean;
 
   #selectedId: string | null = null;
   #selectedOverlay: SelectionOverlay | null = null;
@@ -117,14 +103,22 @@ export class SelectionManager extends EventTarget {
     options: SelectionManagerOptions = {}
   ) {
     super();
+    const {
+      technique = "outline",
+      overlayRegistry = createDefaultSelectionOverlayRegistry(),
+      renderOverlays = true
+    } = options;
 
-    this.#color = options.color ?? "#ffffff";
-    this.#hoverColor = options.hoverColor ?? "#8ab4f8";
-    this.#hoverOpacity = options.hoverOpacity ?? 0.35;
-    this.#technique = options.technique ?? "outline";
-    this.#outlineOptions = { ...options.outline };
-    this.#boundingBoxOptions = { ...options.boundingBox };
-    this.#xray = options.xray ?? false;
+    this.#appearance = options.appearance instanceof SelectionAppearance ?
+      options.appearance :
+      new SelectionAppearance(options.appearance);
+    this.#technique = technique;
+    this.#overlayRegistry = overlayRegistry;
+    this.#renderOverlays = renderOverlays;
+  }
+
+  get overlayRegistry(): SelectionOverlayRegistry {
+    return this.#overlayRegistry;
   }
 
   get selected(): string | null {
@@ -135,58 +129,33 @@ export class SelectionManager extends EventTarget {
     return this.#hoveredId;
   }
 
-  /**
-   * Current color of the full-opacity "selected" overlay.
-   */
-  get color(): THREE.ColorRepresentation {
-    return this.#color;
+  get appearance(): SelectionAppearance {
+    return this.#appearance;
   }
 
-  /**
-   * Current color of the dimmer "hover" overlay.
-   */
-  get hoverColor(): THREE.ColorRepresentation {
-    return this.#hoverColor;
+  set appearance(
+    appearance: SelectionAppearance
+  ) {
+    if (appearance === this.#appearance) {
+      return;
+    }
+
+    const previous = this.#appearance;
+    this.#appearance = appearance;
+    try {
+      this.#rebuildActiveOverlays();
+    }
+    catch (error) {
+      this.#appearance = previous;
+      throw error;
+    }
+    this.#dispatchChange("appearance");
   }
 
-  /**
-   * Current opacity of the dimmer "hover" overlay.
-   */
-  get hoverOpacity(): number {
-    return this.#hoverOpacity;
-  }
-
-  /**
-   * Updates the selected overlay's color and reapplies it immediately,
-   * without needing to reselect. Doesn't affect the hover overlay.
-   */
-  setColor(
-    color: THREE.ColorRepresentation
+  configure(
+    options: SelectionAppearanceOptions
   ): void {
-    this.#color = color;
-    this.#selectedOverlay?.setColor(color);
-  }
-
-  /**
-   * Updates the hover overlay's color and reapplies it immediately,
-   * without needing to re-hover.
-   */
-  setHoverColor(
-    color: THREE.ColorRepresentation
-  ): void {
-    this.#hoverColor = color;
-    this.#hoverOverlay?.setColor(color);
-  }
-
-  /**
-   * Updates the hover overlay's opacity and reapplies it immediately,
-   * without needing to re-hover.
-   */
-  setHoverOpacity(
-    opacity: number
-  ): void {
-    this.#hoverOpacity = opacity;
-    this.#hoverOverlay?.setOpacity(opacity);
+    this.appearance = this.#appearance.with(options);
   }
 
   register(
@@ -194,6 +163,8 @@ export class SelectionManager extends EventTarget {
     target: SelectableObject,
     options: { technique?: SelectionTechnique; } = {}
   ): void {
+    const previousTarget = this.#targets.get(id);
+    const previousTechnique = this.#techniques.get(id);
     this.#targets.set(id, target);
 
     if (options.technique) {
@@ -202,12 +173,31 @@ export class SelectionManager extends EventTarget {
     else {
       this.#techniques.delete(id);
     }
+
+    try {
+      if (id === this.#selectedId || id === this.#hoveredId) {
+        this.#rebuildActiveOverlays();
+      }
+    }
+    catch (error) {
+      if (previousTarget) {
+        this.#targets.set(id, previousTarget);
+      }
+      else {
+        this.#targets.delete(id);
+      }
+      if (previousTechnique) {
+        this.#techniques.set(id, previousTechnique);
+      }
+      else {
+        this.#techniques.delete(id);
+      }
+      throw error;
+    }
+
+    this.#dispatchChange("targets", [id]);
   }
 
-  /**
-   * Drops `id` from the registry, clearing selection/hover overlays first if
-   * `id` currently holds either.
-   */
   unregister(
     id: string
   ): void {
@@ -219,6 +209,7 @@ export class SelectionManager extends EventTarget {
     }
     this.#targets.delete(id);
     this.#techniques.delete(id);
+    this.#dispatchChange("targets", [id]);
   }
 
   select(
@@ -228,102 +219,55 @@ export class SelectionManager extends EventTarget {
       return;
     }
 
-    this.#selectedId = id;
-    this.#applySelectedOverlay(id);
-
-    // Selected already reads as outlined - no need for a dimmer hover overlay underneath.
-    if (id !== null && this.#hoveredId === id) {
-      this.#applyHoverOverlay(null);
+    const selectedOverlay = this.#buildOverlay(id, "selected");
+    let hoverOverlay: SelectionOverlay | null;
+    try {
+      hoverOverlay = this.#buildOverlay(
+        id === this.#hoveredId ? null : this.#hoveredId,
+        "hovered"
+      );
     }
+    catch (error) {
+      selectedOverlay?.dispose();
+      throw error;
+    }
+    const previousId = this.#selectedId;
+    const previousSelectedOverlay = this.#selectedOverlay;
+    const previousHoverOverlay = this.#hoverOverlay;
 
-    this.dispatchEvent(new Event("selectionChange"));
+    this.#selectedId = id;
+    this.#selectedOverlay = selectedOverlay;
+    this.#hoverOverlay = hoverOverlay;
+    previousSelectedOverlay?.dispose();
+    previousHoverOverlay?.dispose();
+
+    this.dispatchEvent(
+      new Event("selectionChange")
+    );
+    this.#dispatchChange("selection", changedIds(previousId, id));
   }
 
-  /**
-   * Default overlay technique for registered meshes. A group's
-   * `SelectionBoundingBox` never depends on this.
-   */
   get technique(): SelectionTechnique {
     return this.#technique;
   }
 
-  /**
-   * Switches the default mesh technique, dropping any per-id override
-   * `register` set, and rebuilds active overlays so the change is visible
-   * immediately. A per-id override can be reinstated with a fresh
-   * `register` call.
-   */
-  setTechnique(
+  set technique(
     technique: SelectionTechnique
-  ): void {
-    const changed = technique !== this.#technique || this.#techniques.size > 0;
-    this.#technique = technique;
-    this.#techniques.clear();
-
-    if (!changed) {
+  ) {
+    if (technique === this.#technique) {
       return;
     }
 
-    this.#rebuildActiveOverlays();
-  }
-
-  /**
-   * Current default `SelectionOutline` tuning.
-   */
-  get outlineOptions(): { linewidth?: number; } {
-    return { ...this.#outlineOptions };
-  }
-
-  /**
-   * Merges into the default `SelectionOutline` tuning and rebuilds active
-   * overlays immediately. Only affects overlays currently using
-   * `"outline"`.
-   */
-  setOutlineOptions(
-    options: { linewidth?: number; }
-  ): void {
-    this.#outlineOptions = { ...this.#outlineOptions, ...options };
-    this.#rebuildActiveOverlays();
-  }
-
-  /**
-   * Current default `SelectionBoundingBox` tuning.
-   */
-  get boundingBoxOptions(): { fillOpacity?: number; } {
-    return { ...this.#boundingBoxOptions };
-  }
-
-  /**
-   * Merges into the default `SelectionBoundingBox` tuning and rebuilds
-   * active overlays immediately. Only affects a currently rendered group
-   * overlay.
-   */
-  setBoundingBoxOptions(
-    options: { fillOpacity?: number; }
-  ): void {
-    this.#boundingBoxOptions = { ...this.#boundingBoxOptions, ...options };
-    this.#rebuildActiveOverlays();
-  }
-
-  /**
-   * Current X-ray state.
-   */
-  get xray(): boolean {
-    return this.#xray;
-  }
-
-  /**
-   * Toggles X-ray and updates active overlays in place - cheap, since
-   * `setXray` just flips material flags rather than rebuilding geometry.
-   */
-  setXray(
-    xray: boolean
-  ): void {
-    this.#xray = xray;
-    this.#selectedOverlay?.setXray(xray);
-    if (this.#hoveredId !== null && this.#hoveredId !== this.#selectedId) {
-      this.#hoverOverlay?.setXray(xray);
+    const previous = this.#technique;
+    this.#technique = technique;
+    try {
+      this.#rebuildActiveOverlays();
     }
+    catch (error) {
+      this.#technique = previous;
+      throw error;
+    }
+    this.#dispatchChange("technique");
   }
 
   hover(
@@ -333,103 +277,94 @@ export class SelectionManager extends EventTarget {
       return;
     }
 
+    const overlay = this.#buildOverlay(
+      id !== null && id !== this.#selectedId ? id : null,
+      "hovered"
+    );
+    const previousId = this.#hoveredId;
+    const previousOverlay = this.#hoverOverlay;
+
     this.#hoveredId = id;
-    this.#applyHoverOverlay(id !== null && id !== this.#selectedId ? id : null);
+    this.#hoverOverlay = overlay;
+    previousOverlay?.dispose();
 
     this.dispatchEvent(new Event("hoverChange"));
+    this.#dispatchChange("hover", changedIds(previousId, id));
   }
 
-  /**
-   * Disposes any active overlays and forgets every registered id. The
-   * manager can be reused afterward via `register`.
-   */
   dispose(): void {
-    this.select(null);
-    this.hover(null);
+    this.dispatchEvent(new Event("dispose"));
+    this.#selectedOverlay?.dispose();
+    this.#hoverOverlay?.dispose();
+    this.#selectedOverlay = null;
+    this.#hoverOverlay = null;
+    this.#selectedId = null;
+    this.#hoveredId = null;
     this.#targets.clear();
     this.#techniques.clear();
   }
 
-  /**
-   * Resolves the technique `id` renders with: its own `register` override,
-   * or the manager's default. Exposed so `PeerSelectionOverlays` can build
-   * matching overlays for peer selections without duplicating this
-   * resolution.
-   */
   techniqueFor(
     id: string
   ): SelectionTechnique {
     return this.#techniques.get(id) ?? this.#technique;
   }
 
-  /**
-   * The object registered for `id`, or `undefined` if none is.
-   */
   targetFor(
     id: string
   ): SelectableObject | undefined {
     return this.#targets.get(id);
   }
 
-  /**
-   * Rebuilds active overlays in place so a runtime tuning change
-   * (`setTechnique`, `setOutlineOptions`, ...) is visible without
-   * reselecting. `setColor`/etc. update the existing overlay in place
-   * instead and don't need this.
-   */
   #rebuildActiveOverlays(): void {
-    if (this.#selectedId !== null) {
-      this.#applySelectedOverlay(this.#selectedId);
-    }
-    if (this.#hoveredId !== null && this.#hoveredId !== this.#selectedId) {
-      this.#applyHoverOverlay(this.#hoveredId);
-    }
-  }
+    let selectedOverlay: SelectionOverlay | null = null;
+    let hoverOverlay: SelectionOverlay | null = null;
 
-  /**
-   * Clears the current "selected" overlay and, if `id` isn't `null`,
-   * rebuilds it per its resolved technique. A scene-level pipeline
-   * technique skips building a local overlay for a mesh target (rendered
-   * externally instead); a non-mesh target always gets a
-   * `SelectionBoundingBox` regardless of technique.
-   */
-  #applySelectedOverlay(
-    id: string | null
-  ): void {
+    try {
+      selectedOverlay = this.#buildOverlay(this.#selectedId, "selected");
+      const hoveredId = this.#hoveredId === this.#selectedId ?
+        null : this.#hoveredId;
+      hoverOverlay = this.#buildOverlay(
+        hoveredId,
+        "hovered"
+      );
+    }
+    catch (error) {
+      selectedOverlay?.dispose();
+      hoverOverlay?.dispose();
+      throw error;
+    }
+
     this.#selectedOverlay?.dispose();
-    this.#selectedOverlay = null;
-
-    if (id === null) {
-      return;
-    }
-
-    const target = this.#requireTarget(id);
-    if (isScenePipelineTechnique(this.techniqueFor(id)) && target instanceof THREE.Mesh) {
-      return;
-    }
-
-    this.#selectedOverlay = this.#createOverlay(id, this.#color, 1);
+    this.#hoverOverlay?.dispose();
+    this.#selectedOverlay = selectedOverlay;
+    this.#hoverOverlay = hoverOverlay;
   }
 
-  /**
-   * Same as `#applySelectedOverlay`, for the "hover" slot.
-   */
-  #applyHoverOverlay(
-    id: string | null
-  ): void {
-    this.#hoverOverlay?.dispose();
-    this.#hoverOverlay = null;
-
+  #buildOverlay(
+    id: string | null,
+    state: "selected" | "hovered"
+  ): SelectionOverlay | null {
     if (id === null) {
-      return;
+      return null;
     }
 
     const target = this.#requireTarget(id);
-    if (isScenePipelineTechnique(this.techniqueFor(id)) && target instanceof THREE.Mesh) {
-      return;
+    if (
+      !this.#renderOverlays ||
+      (isScenePipelineTechnique(this.techniqueFor(id)) &&
+        target instanceof THREE.Mesh)
+    ) {
+      return null;
     }
 
-    this.#hoverOverlay = this.#createOverlay(id, this.#hoverColor, this.#hoverOpacity);
+    const indicator = this.#appearance[state];
+
+    return this.#createOverlay(
+      id,
+      indicator.color,
+      indicator.opacity
+    );
   }
 
   #createOverlay(
@@ -440,15 +375,13 @@ export class SelectionManager extends EventTarget {
     const target = this.#requireTarget(id);
     const technique = this.techniqueFor(id);
 
-    // Reached for a non-mesh target even when the technique is scene-level -
-    // `createSelectionOverlay` falls back to `SelectionBoundingBox` there too.
-    return createSelectionOverlay(target, {
+    return this.#overlayRegistry.create(target, {
       technique,
       color,
       opacity,
-      linewidth: this.#outlineOptions.linewidth,
-      fillOpacity: this.#boundingBoxOptions.fillOpacity,
-      xray: this.#xray
+      linewidth: this.#appearance.outline.linewidth,
+      fillOpacity: this.#appearance.bounds.fillOpacity,
+      xray: this.#appearance.xray
     });
   }
 
@@ -462,4 +395,25 @@ export class SelectionManager extends EventTarget {
 
     return target;
   }
+
+  #dispatchChange(
+    kind: SelectionManagerChangeKind,
+    objectIds: readonly string[] = []
+  ): void {
+    const detail: SelectionManagerChangeEventDetail = {
+      kind,
+      objectIds: [...objectIds]
+    };
+    if (kind !== "selection" && kind !== "hover") {
+      this.dispatchEvent(new CustomEvent(`${kind}Change`, { detail }));
+    }
+    this.dispatchEvent(new CustomEvent("change", { detail }));
+  }
+}
+
+function changedIds(
+  previousId: string | null,
+  nextId: string | null
+): string[] {
+  return [...new Set([previousId, nextId].filter((id) => id !== null))];
 }

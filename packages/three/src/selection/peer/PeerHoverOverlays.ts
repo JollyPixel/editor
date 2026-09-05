@@ -1,20 +1,22 @@
 // Import Internal Dependencies
-import { createSelectionOverlay, type SelectionOverlay } from "../overlays/createSelectionOverlay.ts";
-import type { PeerSelectionRegistry, PeerSelectionChangeEventDetail } from "./PeerSelectionRegistry.ts";
-import type { PeerHoverRegistry, PeerHoverChangeEventDetail } from "./PeerHoverRegistry.ts";
+import type { SelectionOverlay } from "../overlays/SelectionOverlay.ts";
+import type {
+  PeerSelectionRegistry,
+  PeerSelectionChangeEventDetail
+} from "./PeerSelectionRegistry.ts";
+import type {
+  PeerHoverRegistry,
+  PeerHoverChangeEventDetail
+} from "./PeerHoverRegistry.ts";
 import type { PeerSelectionVisibility } from "./PeerSelectionVisibility.ts";
-import { isScenePipelineTechnique, type SelectionManager } from "../SelectionManager.ts";
-
-// CONSTANTS
-// Dimmer than `PeerSelectionOverlays`'s own default (`1`) - same role as
-// `SelectionManager`'s own `hoverOpacity` default, reused here so a peer's
-// hover reads with the same "faded" visual language.
-const kDefaultOpacity = 0.35;
+import {
+  isScenePipelineTechnique,
+  type SelectionManager
+} from "../SelectionManager.ts";
 
 export interface PeerHoverOverlaysOptions {
   /**
-   * Consulted only to check whether an object has any selector at all
-   * (local or peer) - a selection always wins over a hover indicator.
+   * Used to suppress hover overlays for selected objects.
    */
   selectionRegistry: PeerSelectionRegistry;
   hoverRegistry: PeerHoverRegistry;
@@ -24,46 +26,28 @@ export interface PeerHoverOverlaysOptions {
    */
   opacity?: number;
   /**
-   * Suppresses a peer hover overlay (same as no hoverer at all) for any
-   * object `visibility.isVisible` reports `false` for - same semantics as
-   * `PeerSelectionOverlays`/`PeerHighlightPass`'s own `visibility`.
+   * Suppresses overlays for objects reported as invisible.
    */
   visibility?: PeerSelectionVisibility;
 }
 
-/**
- * Renders exactly one dashed, faded overlay per object that a remote peer
- * is hovering - the hover counterpart to `PeerSelectionOverlays`, for the
- * `"outline"` technique. Same per-object overlay structure and oldest-wins
- * tie-break (`hoverRegistry.primaryHovererOf`), colored by
- * `hoverRegistry.colorOf`.
- *
- * Three priority rules, resolved fresh on every `#refresh(objectId)` call:
- * 1. Any current selector - local or peer - suppresses every hover
- *    indicator for the object; a full-strength selection makes a fainter
- *    hover ring underneath it redundant.
- * 2. Failing that, the local user's own hover always wins over a peer's -
- *    it already renders through `SelectionManager` itself.
- * 3. Failing both, the oldest peer currently hovering the object wins.
- *
- * `visibility` only ever gates the peer-hover branch, never the local
- * selection/hover checks above.
- */
 export class PeerHoverOverlays {
   #selectionRegistry: PeerSelectionRegistry;
   #hoverRegistry: PeerHoverRegistry;
   #selection: SelectionManager;
-  #opacity: number;
+  #opacity: number | null;
   #visibility: PeerSelectionVisibility | null;
   #overlays = new Map<string, SelectionOverlay>();
   #lastLocalSelected: string | null;
   #lastLocalHovered: string | null;
 
-  #onPeerSelectionChange: (event: Event) => void;
-  #onPeerHoverChange: (event: Event) => void;
+  #onPeerSelectionChange: (event: CustomEvent<PeerSelectionChangeEventDetail>) => void;
+  #onPeerHoverChange: (event: CustomEvent<PeerHoverChangeEventDetail>) => void;
   #onLocalSelectionChange: () => void;
   #onLocalHoverChange: () => void;
   #onVisibilityChange: () => void;
+  #onPresentationChange: () => void;
+  #onSelectionDispose: () => void;
 
   constructor(
     options: PeerHoverOverlaysOptions
@@ -71,13 +55,13 @@ export class PeerHoverOverlays {
     this.#selectionRegistry = options.selectionRegistry;
     this.#hoverRegistry = options.hoverRegistry;
     this.#selection = options.selection;
-    this.#opacity = options.opacity ?? kDefaultOpacity;
+    this.#opacity = options.opacity ?? null;
     this.#visibility = options.visibility ?? null;
     this.#lastLocalSelected = options.selection.selected;
     this.#lastLocalHovered = options.selection.hovered;
 
     this.#onPeerSelectionChange = (event) => {
-      const { objectId, previousObjectId } = (event as CustomEvent<PeerSelectionChangeEventDetail>).detail;
+      const { objectId, previousObjectId } = event.detail;
 
       if (previousObjectId !== null) {
         this.#refresh(previousObjectId);
@@ -88,7 +72,7 @@ export class PeerHoverOverlays {
     };
 
     this.#onPeerHoverChange = (event) => {
-      const { objectId, previousObjectId } = (event as CustomEvent<PeerHoverChangeEventDetail>).detail;
+      const { objectId, previousObjectId } = event.detail;
 
       if (previousObjectId !== null) {
         this.#refresh(previousObjectId);
@@ -124,54 +108,109 @@ export class PeerHoverOverlays {
       }
     };
 
-    // Re-checks every currently peer-hovered id, not just
-    // `this.#overlays.keys()` - a newly *visible* id has no overlay yet to
-    // iterate over.
     this.#onVisibilityChange = () => {
       for (const objectId of this.#hoverRegistry.hoveredObjectIds()) {
         this.#refresh(objectId);
       }
     };
+    this.#onPresentationChange = () => this.#rebuildAll();
+    this.#onSelectionDispose = () => this.dispose();
 
-    this.#selectionRegistry.addEventListener("peerSelectionChange", this.#onPeerSelectionChange);
-    this.#hoverRegistry.addEventListener("peerHoverChange", this.#onPeerHoverChange);
-    this.#selection.addEventListener("selectionChange", this.#onLocalSelectionChange);
-    this.#selection.addEventListener("hoverChange", this.#onLocalHoverChange);
-    this.#visibility?.addEventListener("visibilityChange", this.#onVisibilityChange);
+    this.#selectionRegistry.addEventListener(
+      "peerSelectionChange",
+      this.#onPeerSelectionChange
+    );
+    this.#hoverRegistry.addEventListener(
+      "peerHoverChange",
+      this.#onPeerHoverChange
+    );
+    this.#selection.addEventListener(
+      "selectionChange",
+      this.#onLocalSelectionChange
+    );
+    this.#selection.addEventListener(
+      "hoverChange",
+      this.#onLocalHoverChange
+    );
+    this.#selection.addEventListener(
+      "appearanceChange",
+      this.#onPresentationChange
+    );
+    this.#selection.addEventListener(
+      "techniqueChange",
+      this.#onPresentationChange
+    );
+    this.#selection.addEventListener(
+      "targetsChange",
+      this.#onPresentationChange
+    );
+    this.#selection.addEventListener("dispose", this.#onSelectionDispose);
+    this.#visibility?.addEventListener(
+      "visibilityChange",
+      this.#onVisibilityChange
+    );
 
-    // Same reasoning as `PeerSelectionOverlays`'s own constructor-time
-    // sync - picks up peers already hovering before this instance existed.
     for (const objectId of this.#hoverRegistry.hoveredObjectIds()) {
       this.#refresh(objectId);
     }
   }
 
-  /**
-   * Re-applies color and x-ray to every active peer hover overlay - same
-   * rationale as `PeerSelectionOverlays.refreshAll`.
-   */
   refreshAll(): void {
     for (const objectId of [...this.#overlays.keys()]) {
       this.#refresh(objectId);
     }
   }
 
-  /**
-   * Detaches its listeners and disposes every active peer hover overlay.
-   * Does not touch `selectionRegistry`/`hoverRegistry`/`selection`/
-   * `visibility` state - only this class's own render output.
-   */
   dispose(): void {
-    this.#selectionRegistry.removeEventListener("peerSelectionChange", this.#onPeerSelectionChange);
-    this.#hoverRegistry.removeEventListener("peerHoverChange", this.#onPeerHoverChange);
-    this.#selection.removeEventListener("selectionChange", this.#onLocalSelectionChange);
-    this.#selection.removeEventListener("hoverChange", this.#onLocalHoverChange);
-    this.#visibility?.removeEventListener("visibilityChange", this.#onVisibilityChange);
+    this.#selectionRegistry.removeEventListener(
+      "peerSelectionChange",
+      this.#onPeerSelectionChange
+    );
+    this.#hoverRegistry.removeEventListener(
+      "peerHoverChange",
+      this.#onPeerHoverChange
+    );
+    this.#selection.removeEventListener(
+      "selectionChange",
+      this.#onLocalSelectionChange
+    );
+    this.#selection.removeEventListener(
+      "hoverChange",
+      this.#onLocalHoverChange
+    );
+    this.#selection.removeEventListener(
+      "appearanceChange",
+      this.#onPresentationChange
+    );
+    this.#selection.removeEventListener(
+      "techniqueChange",
+      this.#onPresentationChange
+    );
+    this.#selection.removeEventListener(
+      "targetsChange",
+      this.#onPresentationChange
+    );
+    this.#selection.removeEventListener("dispose", this.#onSelectionDispose);
+    this.#visibility?.removeEventListener(
+      "visibilityChange",
+      this.#onVisibilityChange
+    );
 
     for (const overlay of this.#overlays.values()) {
       overlay.dispose();
     }
     this.#overlays.clear();
+  }
+
+  #rebuildAll(): void {
+    for (const overlay of this.#overlays.values()) {
+      overlay.dispose();
+    }
+    this.#overlays.clear();
+
+    for (const objectId of this.#hoverRegistry.hoveredObjectIds()) {
+      this.#refresh(objectId);
+    }
   }
 
   #refresh(
@@ -182,8 +221,6 @@ export class PeerHoverOverlays {
       this.#selectionRegistry.selectorsOf(objectId).length > 0;
     const isLocalHovered = objectId === this.#selection.hovered;
     const suppressed = hasSelector || isLocalHovered;
-    // `visibility` is never consulted for a suppressed id - only for an
-    // otherwise-eligible peer hover.
     const culled = !suppressed && this.#visibility !== null && !this.#visibility.isVisible(objectId);
     const primaryPeerId = (suppressed || culled) ? null : this.#hoverRegistry.primaryHovererOf(objectId);
 
@@ -198,8 +235,8 @@ export class PeerHoverOverlays {
 
     const color = this.#hoverRegistry.colorOf(primaryPeerId);
     if (existing) {
-      existing.setColor(color);
-      existing.setXray(this.#selection.xray);
+      existing.color = color;
+      existing.xray = this.#selection.appearance.xray;
 
       return;
     }
@@ -209,20 +246,19 @@ export class PeerHoverOverlays {
       return;
     }
 
-    const { linewidth } = this.#selection.outlineOptions;
+    const { linewidth } = this.#selection.appearance.outline;
 
-    // Same scene-level-pipeline fallback as `PeerSelectionOverlays` -
-    // `PeerHighlightPass` is the equivalent driver for those techniques.
     const rawTechnique = this.#selection.techniqueFor(objectId);
     const technique = isScenePipelineTechnique(rawTechnique) ? "outline" : rawTechnique;
 
-    this.#overlays.set(objectId, createSelectionOverlay(target, {
+    this.#overlays.set(objectId, this.#selection.overlayRegistry.create(target, {
       technique,
       color,
-      opacity: this.#opacity,
+      opacity: this.#opacity ??
+        this.#selection.appearance.hovered.opacity,
       linewidth,
       dashed: true,
-      xray: this.#selection.xray
+      xray: this.#selection.appearance.xray
     }));
   }
 }

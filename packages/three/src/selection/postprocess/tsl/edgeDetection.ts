@@ -13,22 +13,6 @@ import {
 import { maskWeight } from "./maskWeight.ts";
 import type { TslNode } from "./tslNode.ts";
 
-/**
- * 4-neighbor edge detection over a downsampled mask - shared by every mask
- * chain (shared, `priority`-only, `isolated`-only) so they all reuse the
- * same shader, parameterized only by which downsampled mask texture to
- * read.
- *
- * Boundary strength comes from the RGB *distance* between neighboring
- * mask texels, not from `maskWeight`'s background-vs-masked signal - two
- * different entry colors can have near-identical RGB length (e.g. orange
- * and teal, both ~1.15) despite being visually distinct, which would
- * otherwise drop the edge between two adjacent, differently-colored
- * selections. At a boundary where two colors meet, the shader still
- * blends their weighted average for the edge's own color rather than
- * picking one - a known, accepted approximation; only the *detection*
- * needed fixing, not the color chosen once found.
- */
 export function buildEdgeDetection(
   maskDownSampleTexture: ReturnType<typeof texture>,
   invSizeNode: TslNode<"vec2">
