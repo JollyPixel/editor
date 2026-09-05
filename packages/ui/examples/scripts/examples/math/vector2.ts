@@ -25,3 +25,31 @@ export const VECTOR2_EXAMPLE: GalleryExample = {
     });
   }
 };
+
+export const VECTOR2_XZ_EXAMPLE: GalleryExample = {
+  id: "math/vector2-xz",
+  title: "Vector2 (xz plane)",
+  group: "Math",
+  render(host) {
+    return renderStateMatrix<Vector2>(host, {
+      liveInput: true,
+      create() {
+        // Authored as markup, the path a Lit template takes: the pair arrives
+        // as an attribute after the constructor, before the value.
+        const holder = document.createElement("div");
+        holder.innerHTML = `
+          <jolly-vector2 label="Size" axes="xz" step="1" min="1"></jolly-vector2>
+        `;
+
+        const field = holder.querySelector("jolly-vector2")!;
+        field.value = { x: 4, z: 6 };
+        field.default = { x: 4, z: 6 };
+
+        return field;
+      },
+      modified(field) {
+        field.value = { x: 8, z: 2 };
+      }
+    });
+  }
+};

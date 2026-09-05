@@ -24,6 +24,10 @@ object:
 - `isVec2Like(value)`, `isVec3Like(value)`, `isVec4Like(value)`,
   `isQuatLike(value)`, `isTransformLike(value)`. Each asks only for the axes it
   names, so a four-axis value satisfies the narrower guards too.
+- `vec2PairOf(value)` names the plane of a value carrying exactly two of `x`,
+  `y` and `z` (`"xy"`, `"xz"` or `"yz"`), and returns null for anything else.
+  It is exact where the guards above are not: a three-axis value belongs to
+  `jolly-vector3`, not to a pair.
 - `snapshotComponents(value)` returns a plain record of a value's own numeric
   axes, one level deep for a transform. Non-numeric axes, `Mixed` among them,
   are skipped.

@@ -39,3 +39,12 @@ export type VectorValue<TAxis extends string> =
   | Record<TAxis, number>
   | Record<TAxis, FieldValue<number>>
   | MixedSymbol;
+
+export type Vector2Pair = "xy" | "xz" | "yz";
+
+export type Vector2Axis = "x" | "y" | "z";
+
+export type Vector2Value =
+  | VectorValue<"x" | "y">
+  | VectorValue<"x" | "z">
+  | VectorValue<"y" | "z">;

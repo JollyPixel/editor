@@ -6,8 +6,10 @@ import type {
 import {
   isVec2Like,
   isVec3Like,
-  isVec4Like
+  isVec4Like,
+  vec2PairOf
 } from "../math/guards.ts";
+import type { Vector2Pair } from "../math/types.ts";
 
 // CONSTANTS
 const kHexColor = /^#[0-9a-f]{6}([0-9a-f]{2})?$/i;
@@ -50,6 +52,11 @@ export interface DispatchOptions<TValue> {
    * Per-axis accessible names for a vector field, e.g. `{ x: "pitch" }`.
    */
   axisLabels?: Record<string, string>;
+  /*
+   * Which plane a two-axis field edits. Defaults to the pair the bound value
+   * itself carries.
+   */
+  axes?: Vector2Pair;
 }
 
 export function dispatchTag<TValue>(
@@ -85,6 +92,9 @@ export function dispatchTag<TValue>(
     return options.view === "point2d"
       ? "jolly-point2d"
       : "jolly-vector2";
+  }
+  if (vec2PairOf(value) !== null) {
+    return "jolly-vector2";
   }
 
   throw new TypeError(

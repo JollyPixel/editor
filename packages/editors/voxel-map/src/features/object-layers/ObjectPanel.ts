@@ -9,7 +9,6 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 import type {
   JollyChangeDetail,
-  Vec2Like,
   Vec3Like
 } from "@jolly-pixel/ui";
 
@@ -25,11 +24,6 @@ import {
   type PropertyRow
 } from "./propertyDraft.ts";
 
-/**
- * Inspector for the object the layers tree has selected. Objects are rows of
- * that tree, so this panel never lists or creates them, and the name is
- * edited on the row itself rather than duplicated here.
- */
 @customElement("object-panel")
 export class ObjectPanel extends LitElement {
   static override styles = css`
@@ -61,11 +55,6 @@ export class ObjectPanel extends LitElement {
   @state()
   private declare _object: VoxelObjectJSON | null;
 
-  /**
-   * Local draft of the custom properties. The store mutates objects in
-   * place, so a row read back from it never looks changed and a controlled
-   * field would be handed its own stale value.
-   */
   @state()
   private declare _props: PropertyRow[];
 
@@ -169,13 +158,13 @@ export class ObjectPanel extends LitElement {
 
       <jolly-vector2
         label="Size"
+        axes="xz"
         step="1"
         min="1"
         ?disabled=${locked}
-        .axisLabels=${{ x: "W", y: "H" }}
         .value=${{
           x: footprint.width,
-          y: footprint.height
+          z: footprint.height
         }}
         @jolly-change=${this.#onSizeChange}
       ></jolly-vector2>
@@ -223,9 +212,6 @@ export class ObjectPanel extends LitElement {
     const value = event.detail.value;
     const object = this._object;
 
-    // The field's own revert emits the default it was given, so landing back
-    // on the derived hue clears the field rather than pinning a copy of it:
-    // the object goes on following its id, as it did before it was colored.
     const derived = object === null ? null : derivedColorOf(object);
     this.#patch({
       color: derived !== null && sameColor(value, derived)
@@ -246,9 +232,9 @@ export class ObjectPanel extends LitElement {
   }
 
   #onSizeChange(
-    event: CustomEvent<JollyChangeDetail<Vec2Like>>
+    event: CustomEvent<JollyChangeDetail<Record<"x" | "z", number>>>
   ): void {
-    const { x: width, y: height } = event.detail.value;
+    const { x: width, z: height } = event.detail.value;
     this.#patch(
       new VoxelFootprint(width, height).toJSON()
     );
