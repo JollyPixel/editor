@@ -42,6 +42,11 @@ export interface CanvasViewOptions {
    * @default null (dominant neighbor color)
    */
   eraseColor?: RGBA8 | null;
+  /**
+   * Whether the selection outline shows its size.
+   * @default true
+   */
+  selectionSizeLabel?: boolean;
 }
 
 /**
@@ -105,7 +110,8 @@ export class CanvasView {
       parent,
       viewport: this.viewport,
       brush: options.brushHighlight,
-      uvMap: doc.uv
+      uvMap: doc.uv,
+      selectionSizeLabel: options.selectionSizeLabel
     });
 
     this.peerPresence = new PeerPresence({

@@ -20,6 +20,11 @@ export interface OverlayLayerOptions {
   viewport: DefaultViewport;
   brush: BrushHighlight;
   uvMap: UVMap;
+  /**
+   * Whether the selection outline shows its size.
+   * @default true
+   */
+  selectionSizeLabel?: boolean;
 }
 
 /**
@@ -66,7 +71,8 @@ export class OverlayLayer {
     this.selection = new SelectionOutline(
       this.#svg,
       options.viewport,
-      options.brush
+      options.brush,
+      { sizeLabel: options.selectionSizeLabel }
     );
     this.peerCursors = new PeerCursors(
       this.#svg,

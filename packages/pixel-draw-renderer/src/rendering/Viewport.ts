@@ -12,6 +12,8 @@ import type {
 export interface DefaultViewport {
   readonly zoom: Zoom;
   readonly camera: Readonly<Vec2>;
+  readonly canvasWidth: number;
+  readonly canvasHeight: number;
 }
 
 /**
@@ -106,6 +108,14 @@ export class Viewport extends Emitter<
 
   get texture(): ViewportTexture {
     return this.#texture;
+  }
+
+  get canvasWidth(): number {
+    return this.#canvasWidth;
+  }
+
+  get canvasHeight(): number {
+    return this.#canvasHeight;
   }
 
   updateCanvasSize(

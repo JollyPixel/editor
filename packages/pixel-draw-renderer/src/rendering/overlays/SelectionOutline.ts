@@ -4,6 +4,7 @@ import {
   selectionContourPath,
   traceSelectionContour
 } from "./selectionContour.ts";
+import { SelectionSizeLabel } from "./SelectionSizeLabel.ts";
 import type {
   DefaultViewport
 } from "../Viewport.ts";
@@ -12,17 +13,27 @@ import type {
   SelectionRect
 } from "../../types.ts";
 
+export interface SelectionOutlineOptions {
+  /**
+   * Whether the outline shows the selection size next to it.
+   * @default true
+   */
+  sizeLabel?: boolean;
+}
+
 export class SelectionOutline {
   #viewport: DefaultViewport;
   #outline: SVGRectElement;
   #inline: SVGRectElement;
   #outlinePath: SVGPathElement;
   #inlinePath: SVGPathElement;
+  #sizeLabel: SelectionSizeLabel | null;
 
   constructor(
     svg: SVGElement,
     viewport: DefaultViewport,
-    brush: BrushHighlight
+    brush: BrushHighlight,
+    options: SelectionOutlineOptions = {}
   ) {
     this.#viewport = viewport;
 
@@ -33,6 +44,10 @@ export class SelectionOutline {
     const [outlinePath, inlinePath] = this.#initPaths(svg, brush);
     this.#outlinePath = outlinePath;
     this.#inlinePath = inlinePath;
+
+    this.#sizeLabel = options.sizeLabel === false
+      ? null
+      : new SelectionSizeLabel(svg, viewport, brush);
   }
 
   #initRects(
@@ -121,6 +136,8 @@ export class SelectionOutline {
       el.setAttribute("height", String(height));
       el.setAttribute("visibility", "visible");
     }
+
+    this.#sizeLabel?.draw(rect);
   }
 
   drawMask(
@@ -153,6 +170,8 @@ export class SelectionOutline {
       el.setAttribute("d", d);
       el.setAttribute("visibility", "visible");
     }
+
+    this.#sizeLabel?.draw(rect);
   }
 
   clear(): void {
@@ -160,5 +179,6 @@ export class SelectionOutline {
     this.#inline.setAttribute("visibility", "hidden");
     this.#outlinePath.setAttribute("visibility", "hidden");
     this.#inlinePath.setAttribute("visibility", "hidden");
+    this.#sizeLabel?.clear();
   }
 }

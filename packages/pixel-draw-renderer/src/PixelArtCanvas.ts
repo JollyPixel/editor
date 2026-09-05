@@ -113,6 +113,11 @@ export interface PixelArtCanvasOptions {
      * @default dominant neighbor color, then transparent
      */
     eraseColor?: ByteColorInput;
+    /**
+     * Whether the selection shows its size next to the outline.
+     * @default true
+     */
+    sizeLabel?: boolean;
   };
   /**
    * Called after a local edit commits to the master buffer.
@@ -224,7 +229,8 @@ export class PixelArtCanvas {
       background: options.backgroundColor,
       backgroundTransparency: options.backgroundTransparency,
       brushHighlight: brushAdapter,
-      eraseColor
+      eraseColor,
+      selectionSizeLabel: options.select?.sizeLabel
     });
     this.viewport = this.#view.viewport;
     this.peerPresence = this.#view.peerPresence;

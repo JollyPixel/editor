@@ -70,14 +70,18 @@ Creates, moves and selects texture regions. See [`UVMap`](./uv/UVMap.md).
 
 ### `viewport`
 
-Read-only camera and zoom state:
+Read-only camera and zoom state, plus the canvas element size in screen pixels:
 
 ```ts
 interface DefaultViewport {
   readonly camera: Readonly<Vec2>;
   readonly zoom: Zoom;
+  readonly canvasWidth: number;
+  readonly canvasHeight: number;
 }
 ```
+
+`canvasWidth` and `canvasHeight` are `0` until the canvas is first sized, and follow every resize.
 
 ## Interaction
 

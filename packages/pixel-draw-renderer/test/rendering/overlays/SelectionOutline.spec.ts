@@ -164,6 +164,90 @@ describe("SelectionOutline", () => {
     });
   });
 
+  describe("size label", () => {
+    test("drawRect() shows the selection size", () => {
+      const svg = makeSvg();
+      const overlay = new SelectionOutline(
+        svg,
+        makeViewport(),
+        makeBrush()
+      );
+
+      overlay.drawRect({
+        x: 0,
+        y: 0,
+        width: 16,
+        height: 16
+      });
+
+      const label = svg.querySelector("[data-overlay='selection-size']")!;
+      assert.strictEqual(label.getAttribute("visibility"), "visible");
+      assert.strictEqual(label.textContent, "16×16");
+    });
+
+    test("drawMask() reports the bounding box, not the traced mask", () => {
+      const svg = makeSvg();
+      const overlay = new SelectionOutline(
+        svg,
+        makeViewport(),
+        makeBrush()
+      );
+
+      overlay.drawMask({
+        x: 0,
+        y: 0,
+        width: 2,
+        height: 2
+      }, [true, false, false, false]);
+
+      const label = svg.querySelector("[data-overlay='selection-size']")!;
+      assert.strictEqual(label.getAttribute("visibility"), "visible");
+      assert.strictEqual(label.textContent, "2×2");
+    });
+
+    test("clear() hides the size label", () => {
+      const svg = makeSvg();
+      const overlay = new SelectionOutline(
+        svg,
+        makeViewport(),
+        makeBrush()
+      );
+
+      overlay.drawRect({
+        x: 0,
+        y: 0,
+        width: 4,
+        height: 4
+      });
+      overlay.clear();
+
+      const label = svg.querySelector("[data-overlay='selection-size']")!;
+      assert.strictEqual(label.getAttribute("visibility"), "hidden");
+    });
+
+    test("sizeLabel: false creates no label at all", () => {
+      const svg = makeSvg();
+      const overlay = new SelectionOutline(
+        svg,
+        makeViewport(),
+        makeBrush(),
+        { sizeLabel: false }
+      );
+
+      overlay.drawRect({
+        x: 0,
+        y: 0,
+        width: 4,
+        height: 4
+      });
+
+      assert.strictEqual(
+        svg.querySelector("[data-overlay='selection-size']"),
+        null
+      );
+    });
+  });
+
   describe("traceSelectionContour", () => {
     test("a full rectangle mask traces its 4 corners, clockwise", () => {
       const loops = traceSelectionContour(

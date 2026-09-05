@@ -55,6 +55,7 @@ interface BackgroundTransparencyOptions {
 
 interface SelectOptions {
   eraseColor?: ColorInput;
+  sizeLabel?: boolean;
 }
 
 interface HistoryOptions {
@@ -150,6 +151,12 @@ Initial brush colors, size and highlight colors. See [`BrushOptions`](./tools/Br
 ### `select.eraseColor`
 
 Color used for pixels vacated by selection deletion, movement or transforms. When omitted, the canvas uses the dominant neighboring color and falls back to transparency when no in-bounds neighbor exists.
+
+### `select.sizeLabel`
+
+Whether the selection shows its size as `16×16` next to the outline. It defaults to `true`.
+
+The label reports the bounding box in texture pixels, including for shape selections, and follows the selection while it is created, moved and transformed. It is anchored below the bottom-right corner, flips above the selection near the bottom of the viewport, and hides when the selection scrolls out of view or measures less than 2 pixels on either axis. It is local only: peer selections never show one.
 
 ## History
 
