@@ -102,7 +102,7 @@ clear the `onbeforeunload` assignment created by `enableOnExit`.
 
 The context-menu listener prevents the browser menu from opening. A window
 blur resets mouse, keyboard, gamepad, and touch state so held controls cannot
-remain stuck.
+remain stuck, which also clears `mouse.hovering`.
 
 ### `update()`
 
@@ -175,6 +175,8 @@ type InputListenerType =
   | "mouse.up"
   | "mouse.move"
   | "mouse.wheel"
+  | "mouse.enter"
+  | "mouse.leave"
   | "mouse.lockStateChange"
   | "gamepad.connect"
   | "gamepad.disconnect"

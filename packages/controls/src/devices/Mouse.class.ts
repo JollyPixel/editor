@@ -66,6 +66,8 @@ export type MouseEvents = {
   up: (event: MouseEvent) => void;
   move: (event: MouseEvent) => void;
   wheel: (event: MouseEvent) => void;
+  enter: () => void;
+  leave: () => void;
 };
 
 export interface MouseOptions {
@@ -159,12 +161,8 @@ export class Mouse extends Emitter<
     y: 0
   };
 
-  /**
-   * Canvas event already handled by the canvas listener. Document listeners
-   * see the same object once it bubbles and must not process it twice.
-   */
   #canvasEvent: MouseEvent | null = null;
-
+  #hovering = false;
   #wasActive = false;
   #settled = true;
   #wantsPointerLock = false;
@@ -188,6 +186,10 @@ export class Mouse extends Emitter<
     return this.#wasActive;
   }
 
+  get hovering() {
+    return this.#hovering;
+  }
+
   connect() {
     this.#canvas.addEventListener(
       "mousemove",
@@ -208,6 +210,14 @@ export class Mouse extends Emitter<
     this.#canvas.addEventListener(
       "wheel",
       this.#onMouseWheel
+    );
+    this.#canvas.addEventListener(
+      "mouseenter",
+      this.#onMouseEnter
+    );
+    this.#canvas.addEventListener(
+      "mouseleave",
+      this.#onMouseLeave
     );
     this.#documentAdapter.addEventListener(
       "mousemove",
@@ -250,6 +260,14 @@ export class Mouse extends Emitter<
       "wheel",
       this.#onMouseWheel
     );
+    this.#canvas.removeEventListener(
+      "mouseenter",
+      this.#onMouseEnter
+    );
+    this.#canvas.removeEventListener(
+      "mouseleave",
+      this.#onMouseLeave
+    );
     this.#documentAdapter.removeEventListener(
       "mousemove",
       this.#onDocumentMouseMove
@@ -278,6 +296,7 @@ export class Mouse extends Emitter<
     this.#frameScroll.x = 0;
     this.#frameScroll.y = 0;
     this.#canvasEvent = null;
+    this.#setHovering(false);
     this.#downMask = 0;
     this.#prevMask = 0;
     this.#pressed.reset();
@@ -445,6 +464,7 @@ export class Mouse extends Emitter<
     }
     if (typeof buttonValue === "boolean") {
       this.#setButton(MouseEventButton.left, buttonValue);
+      this.#setHovering(buttonValue);
     }
     if (position) {
       this.newPosition = position;
@@ -510,10 +530,6 @@ export class Mouse extends Emitter<
       this.#delta.y === 0;
   }
 
-  /**
-   * Re-publishes transient state accumulated across input samples so a
-   * rendered update cannot miss an edge consumed by an earlier fixed step.
-   */
   publishFrameState(): void {
     this.#pressed.publishFrame();
     this.#released.publishFrame();
@@ -664,9 +680,31 @@ export class Mouse extends Emitter<
     return true;
   }
 
+  #setHovering(
+    hovering: boolean
+  ): void {
+    if (this.#hovering === hovering) {
+      return;
+    }
+
+    this.#hovering = hovering;
+    this.emit(hovering ? "enter" : "leave");
+  }
+
+  #onMouseEnter = () => {
+    this.#setHovering(true);
+  };
+
+  #onMouseLeave = () => {
+    this.#setHovering(false);
+  };
+
   #onMouseMove = (event: MouseEvent) => {
     this.#canvasEvent = event;
     event.preventDefault();
+    // A move over the canvas proves the pointer is there, even when the
+    // matching enter was missed, as when the window regains focus under it.
+    this.#setHovering(true);
 
     if (this.#wantsPointerLock) {
       if (this.#wasPointerLocked && event.movementX !== null) {

@@ -17,6 +17,7 @@ abstract class SyncAdapter<
   detach(): void;
   destroy(): void;
 
+  protected notifyLocal(event: Event): void;
   protected stampCommand(event: Event, timestamp?: number): Command;
   protected abstract getHandler(target: Target): ((event: Event) => void) | undefined;
   protected abstract setHandler(target: Target, fn: ((event: Event) => void) | undefined): void;
@@ -62,4 +63,5 @@ class PixelSyncClient extends SyncAdapter<
 
 - `getHandler` / `setHandler` — accessors for the target's local mutation hook (e.g. `onBufferUpdated`).
 - `applySnapshot` / `applyRemoteCommand` — sinks for the initial snapshot and later commands. Commands from the local `clientId` are filtered out before `applyRemoteCommand`.
+- `notifyLocal(event)` — replays an event to the handler captured at `attach`, without sending it back to the room. Call it from `applyRemoteCommand` when the target applies remote changes silently, so local observers still see them.
 - `stampCommand(event, timestamp?)` — builds `{ ...event, clientId, seq, timestamp }`, using an internal counter and `Date.now()`. Override when the original event time must survive, as in replay flows.

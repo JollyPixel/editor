@@ -88,13 +88,17 @@ export abstract class SyncAdapter<
     );
   }
 
+  protected notifyLocal(
+    event: Event
+  ): void {
+    this.#previousHandler?.(event);
+  }
+
   protected stampCommand(
     event: Event,
     timestamp?: number
   ): Command;
-  /**
-   * Stamps non-Event payloads without exposing `#seq`.
-   */
+
   protected stampCommand<E extends object>(
     event: E,
     timestamp?: number
@@ -162,8 +166,6 @@ export abstract class SyncAdapter<
       this.applySnapshot(this.#target, snapshot);
     }
 
-    // `ready` fires after the first sync.
-    // `snapshot` fires after every full replacement.
     this.emit("snapshot");
 
     if (!this.#ready) {

@@ -132,6 +132,7 @@ export class LayerPanel extends LitElement {
         label="Offset"
         step="1"
         .value=${this._offset}
+        @jolly-input=${this.#onOffsetChange}
         @jolly-change=${this.#onOffsetChange}
       ></jolly-vector3>
 
@@ -185,13 +186,17 @@ export class LayerPanel extends LitElement {
     }
 
     const { x, y, z } = event.detail.value;
-    this._offset = {
+    const offset = {
       x: Math.round(x),
       y: Math.round(y),
       z: Math.round(z)
     };
-    this.vr.engine.world.setLayerOffset(this.layerName, this._offset);
-    this.vr.engine.markAllChunksDirty();
+    if (sameOffset(offset, this._offset)) {
+      return;
+    }
+
+    this._offset = offset;
+    this.vr.engine.world.setLayerOffset(this.layerName, offset);
   }
 
   #onPropKeyChange(
@@ -241,6 +246,15 @@ export class LayerPanel extends LitElement {
       properties: props
     });
   }
+}
+
+function sameOffset(
+  left: Vec3Like,
+  right: Vec3Like
+): boolean {
+  return left.x === right.x &&
+    left.y === right.y &&
+    left.z === right.z;
 }
 
 declare global {

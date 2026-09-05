@@ -16,7 +16,8 @@ import type {
 import { editorState } from "../../EditorState.ts";
 import {
   colorOf,
-  derivedColorOf
+  derivedColorOf,
+  isNoopPatch
 } from "./objectArea.ts";
 import {
   propertiesOf,
@@ -120,7 +121,9 @@ export class ObjectPanel extends LitElement {
     const object = this.vr.engine.world
       .getObjectLayer(this.layerName)
       ?.objects.find((candidate) => candidate.id === this.objectId) ?? null;
-    this._object = object;
+    // The store mutates objects in place, so a snapshot is what makes the
+    // reactive identity change and the panel re-render.
+    this._object = object === null ? null : { ...object };
 
     // Rows are rebuilt only when the panel switches object: rebuilding them
     // on every commit would drop the blank key of a half-typed row.
@@ -145,6 +148,7 @@ export class ObjectPanel extends LitElement {
         label="Color"
         .value=${colorOf(object)}
         .default=${derivedColorOf(object)}
+        @jolly-input=${this.#onColorChange}
         @jolly-change=${this.#onColorChange}
       ></jolly-color>
 
@@ -153,6 +157,7 @@ export class ObjectPanel extends LitElement {
         step="1"
         ?disabled=${locked}
         .value=${{ x: object.x, y: object.y, z: object.z }}
+        @jolly-input=${this.#onPositionChange}
         @jolly-change=${this.#onPositionChange}
       ></jolly-vector3>
 
@@ -166,6 +171,7 @@ export class ObjectPanel extends LitElement {
           x: footprint.width,
           z: footprint.height
         }}
+        @jolly-input=${this.#onSizeChange}
         @jolly-change=${this.#onSizeChange}
       ></jolly-vector2>
 
@@ -282,9 +288,14 @@ export class ObjectPanel extends LitElement {
     if (!this.layerName || !this.objectId) {
       return;
     }
+    if (
+      this._object !== null &&
+      isNoopPatch(this._object, patch)
+    ) {
+      return;
+    }
 
     this.vr.engine.world.updateObjectInLayer(this.layerName, this.objectId, patch);
-    this.requestUpdate();
   }
 }
 

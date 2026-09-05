@@ -108,6 +108,7 @@ export class VoxelSyncClient extends network.SyncAdapter<
     }
     else {
       engine.applyRemoteCommand(cmd);
+      this.notifyLocal(cmd);
     }
   }
 

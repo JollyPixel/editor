@@ -121,7 +121,10 @@ export class LocalBrush extends ActorComponent {
     const { input } = this.actor.world;
     const isCtrl = input.keyboard.isDown("ControlLeft") || input.keyboard.isDown("ControlRight");
 
-    if (editorState.isObjectContext) {
+    if (
+      !input.mouse.hovering ||
+      editorState.isObjectContext
+    ) {
       this.#hidePreview();
 
       return;

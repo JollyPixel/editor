@@ -29,6 +29,7 @@ interface BrushHarness {
   publishPress(action: MouseAction): void;
   setMouseMoving(moving: boolean): void;
   setButtonDown(action: string | null): void;
+  setHovering(hovering: boolean): void;
 }
 
 function createHarness(
@@ -43,6 +44,7 @@ function createHarness(
   let pressed: MouseAction | null = null;
   let buttonDown: string | null = null;
   let mouseMoving = true;
+  let hovering = true;
   const operations: string[] = [];
   const engine = {
     root: new THREE.Group(),
@@ -70,6 +72,9 @@ function createHarness(
           viewportPositionTo: <T extends THREE.Vector2>(out: T) => out.set(0, 0),
           isDown: (action: string) => action === buttonDown,
           isMoving: () => mouseMoving,
+          get hovering() {
+            return hovering;
+          },
           wasJustPressed: (action: string) => action === pressed
         }
       },
@@ -120,6 +125,9 @@ function createHarness(
     },
     setButtonDown(action: string | null): void {
       buttonDown = action;
+    },
+    setHovering(value: boolean): void {
+      hovering = value;
     }
   };
 }
@@ -206,6 +214,28 @@ describe("LocalBrush preview refresh gating", () => {
     assert.strictEqual(harness.previewUpdates, 0);
   });
 
+  test("hides the preview while the pointer sits over the UI", () => {
+    const harness = createHarness();
+
+    harness.setHovering(false);
+    harness.brush.update();
+
+    assert.strictEqual(harness.previewUpdates, 0);
+  });
+
+  test("refreshes the preview once the pointer returns to the viewport", () => {
+    const harness = createHarness();
+
+    harness.setHovering(false);
+    harness.brush.update();
+
+    harness.setHovering(true);
+    harness.setMouseMoving(false);
+    harness.brush.update();
+
+    assert.strictEqual(harness.previewUpdates, 1);
+  });
+
   test("refreshes the preview once the camera drag ends", () => {
     const harness = createHarness();
 
@@ -267,6 +297,16 @@ describe("LocalBrush cursor reporting", () => {
 
     harness.brush.update();
     harness.setButtonDown("middle");
+    harness.brush.update();
+
+    assert.strictEqual(harness.cursors.at(-1), null);
+  });
+
+  test("reports nothing aimed at once the pointer leaves the viewport", () => {
+    const harness = createHarness();
+
+    harness.brush.update();
+    harness.setHovering(false);
     harness.brush.update();
 
     assert.strictEqual(harness.cursors.at(-1), null);

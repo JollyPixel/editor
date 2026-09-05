@@ -31,7 +31,10 @@ class VoxelSyncClient extends network.SyncAdapter<
 restores the listener that was present at attachment time.
 
 Incoming snapshots call `engine.load()`. Incoming mutation commands call
-`engine.applyRemoteCommand()` and skip commands echoed from the same client.
+`engine.applyRemoteCommand()` and skip commands echoed from the same client. The
+engine applies them silently, so the command is then replayed to the listener
+captured at attachment: local observers see a peer's edit exactly as they see a
+local one, and nothing is sent back to the room.
 `replaceWorld()` sends a stamped administrative command. `destroy()` detaches,
 removes the room message listener, and calls `room.leave()`.
 

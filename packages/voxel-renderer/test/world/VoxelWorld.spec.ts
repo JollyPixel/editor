@@ -83,6 +83,17 @@ describe("VoxelWorld removeLayer", () => {
     assert.equal(world.getLayer("Ground"), undefined);
     assert.equal(world.getLayers().length, 0);
   });
+
+  it("marks the surviving layers' chunks dirty", () => {
+    const { world, b } = makeTwoLayerWorld();
+    clearAllDirty(world);
+
+    world.removeLayer("A");
+
+    const chunkB = b.getChunk(2, 0, 0);
+    assert.ok(chunkB !== undefined);
+    assert.equal(chunkB.dirty, true);
+  });
 });
 
 describe("VoxelWorld setVoxelAt / removeVoxelAt", () => {
@@ -304,6 +315,45 @@ describe("VoxelWorld setLayerVisible", () => {
     const layer = world.getLayer("Ground");
     assert.ok(layer !== undefined);
     assert.equal(layer.visible, false);
+  });
+
+  it("marks every layer's chunks dirty when visibility flips", () => {
+    const { world, a, b } = makeTwoLayerWorld();
+    clearAllDirty(world);
+
+    world.setLayerVisible("A", false);
+
+    const chunkA = a.getChunk(0, 0, 0);
+    assert.ok(chunkA !== undefined);
+    assert.equal(chunkA.dirty, true);
+    const chunkB = b.getChunk(2, 0, 0);
+    assert.ok(chunkB !== undefined);
+    assert.equal(chunkB.dirty, true);
+  });
+
+  it("marks only the layer's own chunks dirty when visibility is unchanged", () => {
+    const { world, a, b } = makeTwoLayerWorld();
+    clearAllDirty(world);
+
+    world.setLayerVisible("A", true);
+
+    const chunkA = a.getChunk(0, 0, 0);
+    assert.ok(chunkA !== undefined);
+    assert.equal(chunkA.dirty, true);
+    const chunkB = b.getChunk(2, 0, 0);
+    assert.ok(chunkB !== undefined);
+    assert.equal(chunkB.dirty, false);
+  });
+
+  it("marks every layer's chunks dirty through updateLayer", () => {
+    const { world, b } = makeTwoLayerWorld();
+    clearAllDirty(world);
+
+    world.updateLayer("A", { visible: false });
+
+    const chunkB = b.getChunk(2, 0, 0);
+    assert.ok(chunkB !== undefined);
+    assert.equal(chunkB.dirty, true);
   });
 });
 

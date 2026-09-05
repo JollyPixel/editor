@@ -27,6 +27,8 @@ export type InputListenerType =
   | "mouse.up"
   | "mouse.move"
   | "mouse.wheel"
+  | "mouse.enter"
+  | "mouse.leave"
   | "mouse.lockStateChange"
   | "gamepad.connect"
   | "gamepad.disconnect"

@@ -132,6 +132,7 @@ export class VoxelWorld {
     const layer = this.#layers[idx];
     this.#layersToRemove.push(layer);
     this.#layers.splice(idx, 1);
+    this.#markAllLayersDirty();
     this.#emit({
       action: "removed",
       layerName: name,
@@ -188,8 +189,15 @@ export class VoxelWorld {
     layer: VoxelLayer,
     visible: boolean
   ): void {
+    const wasVisible = layer.visible;
     layer.visible = visible;
-    this.#markLayerDirty(layer);
+
+    if (wasVisible === visible) {
+      this.#markLayerDirty(layer);
+    }
+    else {
+      this.#markAllLayersDirty();
+    }
   }
 
   setLayerOpacity(

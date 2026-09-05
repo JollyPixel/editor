@@ -15,6 +15,7 @@ import {
   createObjectAt,
   derivedColorOf,
   isLocked,
+  isNoopPatch,
   objectKey,
   objectPatchFromArea,
   parseObjectKey,
@@ -186,5 +187,32 @@ describe("derivedColorOf", () => {
 
     assert.equal(derivedColorOf(object), derivedColorOf(createObject()));
     assert.notEqual(derivedColorOf(object), "#ff0000");
+  });
+});
+
+describe("isNoopPatch", () => {
+  test("accepts a patch whose every primitive field already matches", () => {
+    const object = createObject();
+
+    assert.equal(isNoopPatch(object, { x: 2, z: -4 }), true);
+    assert.equal(isNoopPatch(object, { color: undefined }), true);
+  });
+
+  test("rejects a patch changing at least one field", () => {
+    const object = createObject();
+
+    assert.equal(isNoopPatch(object, { x: 2, z: 0 }), false);
+    assert.equal(isNoopPatch(object, { color: "#ff0000" }), false);
+  });
+
+  test("never treats an object value as unchanged", () => {
+    const properties = { kind: "spawn" };
+    const object = createObject({ properties });
+
+    assert.equal(isNoopPatch(object, { properties }), false);
+  });
+
+  test("rejects an empty patch", () => {
+    assert.equal(isNoopPatch(createObject(), {}), false);
   });
 });
