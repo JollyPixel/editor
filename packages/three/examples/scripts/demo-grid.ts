@@ -1,7 +1,5 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-
-// Registers the declarative controls declared by the example page.
 import "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -43,7 +41,6 @@ const referenceCube = new THREE.Mesh(
 referenceCube.position.y = 0.5;
 scene.add(referenceCube);
 
-// Orbits when `fadeFrom` is "target", to make the grid's target-tracking visible.
 const kOrbitRadius = 4;
 const kOrbitSpeed = 0.6;
 const orbitTimer = new THREE.Timer();
@@ -80,8 +77,6 @@ const axesFolder = pane.addFolder({
 });
 
 let grid: Grid;
-
-// `extent` is constructor-only; track it locally so rebuilds can preserve it.
 let extentValue = 400;
 
 function bindGridControls(
@@ -89,8 +84,6 @@ function bindGridControls(
 ): void {
   gridFolder.disposeAll();
 
-  // Ignored when `infiniteGrid` is true (see docs/Grid.md); hide it rather than
-  // leave a control that visibly does nothing.
   const followCameraBinding = gridFolder.addBinding(target, "followCamera");
   followCameraBinding.hidden = target.infiniteGrid;
 
@@ -123,7 +116,6 @@ function bindGridControls(
       max: 500,
       step: 5
     })
-    // Rebuild only on release; rebuilding mid-drag disposes the slider and corrupts the value.
     .on("change", ({ value, last }) => {
       if (last) {
         rebuildGrid({ extent: value });
@@ -234,7 +226,6 @@ interface GridOverrides {
 function rebuildGrid(
   overrides: GridOverrides = {}
 ): void {
-  // Defer to let the facade finish its current "change" emit before bindings are disposed.
   queueMicrotask(() => rebuildGridNow(overrides));
 }
 

@@ -1,30 +1,21 @@
 # Network
 
-`@jolly-pixel/three/network` exports components that integrate with
-`@jolly-pixel/network`. It is an optional peer dependency, so applications that
-use this entry point must install it.
+`@jolly-pixel/three/network` connects Three.js helpers to
+`@jolly-pixel/network`. Install that optional peer dependency before using this
+entry point.
 
-## Components
+- [Peer frustums](./frustums.md) publish a camera or `Object3D` pose and draw
+  remote poses.
+- [Peer selection and hover](./selection.md) publish a local
+  `SelectionManager` and update the remote peer registries.
 
-- [`PeerFrustumSync`](PeerFrustumSync.md) publishes an `Object3D` pose and
-  renders remote poses with [`PeerFrustum`](../PeerFrustum.md).
-
-## Pose helpers
-
-These exports describe and decode the presence value used by
-`PeerFrustumSync`:
+The entry point also exports the presence value types and their decoders:
 
 ```ts
-interface PeerFrustumPose {
-  position: THREE.Vector3Like;
-  quaternion: THREE.QuaternionLike;
-}
-
-function decodePeerFrustumPose(
-  value: unknown
-): PeerFrustumPose | undefined;
+decodePeerFrustumPose(value: unknown): PeerFrustumPose | undefined;
+decodePeerSelectionId(value: unknown): string | null | undefined;
+decodePeerHoverId(value: unknown): string | null | undefined;
 ```
 
-`decodePeerFrustumPose` returns `undefined` unless `value` has numeric `x`,
-`y`, and `z` position fields and numeric `x`, `y`, `z`, and `w` quaternion
-fields.
+Malformed values return `undefined`. A valid `null` selection or hover means
+that the peer cleared that state.

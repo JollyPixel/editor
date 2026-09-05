@@ -7,12 +7,20 @@ import {
 // CONSTANTS
 const kDefaultTitle = "three";
 const kToggleKey = "F3";
-/** Label → path, as consumed by the switcher's `options`. */
+/**
+ * Label → path, as consumed by the switcher's `options`. The three
+ * "Selection*" entries share that leading label on purpose, matching their
+ * own script's `selection*.ts` filename - both group together as more
+ * selection-family demos join them, rather than reading as unrelated pages.
+ */
 const kExamples: Record<string, string> = {
   Grid: "/",
   "Area Box": "/area-box.html",
   "Peer Frustum": "/peer-frustum.html",
-  "Peer Frustum Sync": "/peer-frustum-sync.html"
+  "Peer Frustum Sync": "/peer-frustum-sync.html",
+  Selection: "/selection.html",
+  "Selection: Peer Sync": "/peer-selection-sync.html",
+  "Selection: Stress": "/selection-stress.html"
 };
 
 export interface ExamplePaneOptions {

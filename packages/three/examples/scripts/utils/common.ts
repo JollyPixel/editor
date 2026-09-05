@@ -112,6 +112,13 @@ export interface StartLoopOptions {
   onFrame?: () => void;
   onBeforeRender?: () => void;
   onAfterRender?: () => void;
+  /**
+   * Overrides the frame's draw call, in place of the default
+   * `renderer.render(scene, camera)` - e.g. a `HighlightPass`'s own
+   * `render()`, which must run in `renderer.render`'s place once it owns the
+   * frame's `RenderPipeline`.
+   */
+  render?: () => void;
 }
 
 /**
@@ -127,7 +134,8 @@ export function startLoop(
     controls,
     onFrame,
     onBeforeRender,
-    onAfterRender
+    onAfterRender,
+    render = () => renderer.render(scene, camera)
   } = options;
 
   onWindowResize(camera, renderer);
@@ -137,6 +145,7 @@ export function startLoop(
     onFrame?.();
     onBeforeRender?.();
     renderer.render(scene, camera);
+    render();
     onAfterRender?.();
   });
 }

@@ -58,7 +58,10 @@
     "three": "0.185.1"
   },
   "devDependencies": {
+    "@jolly-pixel/arbor": "^1.0.1",
     "@jolly-pixel/network": "1.1.0",
-    "@jolly-pixel/ui": "1.0.1"
+    "@jolly-pixel/ui": "1.0.1",
+    "@tweakpane/core": "2.0.5",
+    "tweakpane": "4.0.5"
   }
 }

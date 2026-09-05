@@ -34,13 +34,13 @@ scene.add(grid); // self-updating: no manual .update() call needed
 
 - [AreaBox](docs/AreaBox.md): Translucent axis-aligned area, moved and resized on a grid by [AreaBoxControls](docs/AreaBoxControls.md).
 - [Grid](docs/Grid.md): Ground-plane grid mesh. (TSL, `THREE.WebGPURenderer`).
-- [PeerFrustum](docs/PeerFrustum.md): Renders connected peers as lightweight camera frustums.
+- [Selection](docs/selection/index.md): Local selection, rendering techniques, and peer indicators.
 
 ### Network
 
-Optional, behind the `@jolly-pixel/three/network` entry point.
+Optional integrations are exported from `@jolly-pixel/three/network`.
 
-- [Network components](docs/network/index.md): Optional integrations with `@jolly-pixel/network`.
+- [Network guide](docs/network/index.md): Peer cameras, selection, and hover presence with `@jolly-pixel/network`.
 
 ## ✨ Contributors guide
 

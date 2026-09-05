@@ -31,11 +31,7 @@ const kUsernameStorageKey = "peer-frustum-demo:username";
 const kUsernameStorage = new LocalStorageAdapter({
   resolve: () => sessionStorage
 });
-// The server assigns each connection a clientId this tab never learns
-// (`networkClient.id` is local and never leaves it), so a color keyed on it
-// would not be the one the other tabs pick for us. This id is stamped into
-// `identity` instead: it reaches every peer in the join snapshot, so all tabs
-// order the room the same way and agree on who gets which color.
+
 const kLocalPeerId = crypto.randomUUID();
 const kBackground = "#1e2a30";
 const kRoomSize = 20;
@@ -44,8 +40,6 @@ const canvas = document.querySelector("canvas") as HTMLCanvasElement;
 const renderer = await createRenderer(canvas);
 
 const scene = createScene(kBackground);
-// Sized and faded to the mirror room: an infinite or camera-following grid
-// would run past the walls and show up in their reflections.
 scene.add(new Grid({
   extent: kRoomSize,
   followCamera: false,
@@ -68,8 +62,6 @@ const { camera, controls } = createFreeFlyCamera(
   { x: 0, y: 2, z: 8 }
 );
 
-// Glass walls closing the grid, so a lone tab still sees a frustum move:
-// its own, reflected back at it.
 const mirrorRoom = createMirrorRoom(camera, {
   size: kRoomSize,
   backdrop: kBackground
@@ -108,8 +100,6 @@ const peerFrustumSync = new PeerFrustumSync({
 });
 peerFrustumSync.attach(camera);
 
-// The local avatar the mirrors reflect. Hidden from the scene camera, which
-// sits exactly inside it, and driven from the same pose peers receive.
 const selfFrustum = new PeerFrustum({
   color: colorForPeer(kLocalPeerId),
   displayName: username
@@ -159,9 +149,6 @@ sessionFolder.addMonitors(sessionState, {
   controls: { label: "controls" }
 });
 
-// `room.peers` only reflects the join snapshot once it round-trips over the
-// socket, and no room event fires when it arrives — refreshing every frame
-// (above) is what keeps this accurate instead of a stale 0 right after join.
 function refreshSession(): void {
   const peers = presencePeers();
   const key = peers.map(
@@ -188,8 +175,6 @@ function colorForPeer(
   );
 }
 
-// Built from the stamped ids, so a given peer lands on the same index — and
-// therefore the same color — in every tab.
 function orderedPeerIds(): string[] {
   return [
     kLocalPeerId,

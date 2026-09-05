@@ -11,6 +11,8 @@ import {
 // CONSTANTS
 // Must match examples/scripts/demo-peer-frustum-sync.ts's room id.
 const kPeerFrustumDemoRoom = "three:peer-frustum-demo";
+// Must match examples/scripts/demo-peer-selection-sync.ts's room id.
+const kPeerSelectionDemoRoom = "three:peer-selection-demo";
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -22,7 +24,8 @@ export default defineConfig({
     checker({ typescript: true }),
     createWebSocketNetworkPlugin({
       extensions: [
-        new PresenceOnlyExtension(kPeerFrustumDemoRoom)
+        new PresenceOnlyExtension(kPeerFrustumDemoRoom),
+        new PresenceOnlyExtension(kPeerSelectionDemoRoom)
       ]
     })
   ]

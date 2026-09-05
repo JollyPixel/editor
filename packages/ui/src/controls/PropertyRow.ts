@@ -12,6 +12,7 @@ import {
 
 // Import Internal Dependencies
 import { propertyRowStyles } from "./PropertyRow.styles.ts";
+import { hiddenStyles } from "../theme/styles/hiddenStyles.ts";
 import type {
   FieldAlign,
   FieldLabelPosition
@@ -26,7 +27,8 @@ import "../icon/Icon.ts";
 @customElement("jolly-property-row")
 export class PropertyRow extends LitElement {
   static override styles = [
-    propertyRowStyles
+    propertyRowStyles,
+    hiddenStyles
   ];
 
   @property({ type: String })
