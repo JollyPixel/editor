@@ -6,7 +6,7 @@ import {
 } from "node:test";
 
 // Import Internal Dependencies
-import { MouseMask } from "../src/devices/MouseMask.ts";
+import { MouseMask } from "../../../src/devices/MouseMask.ts";
 
 describe("MouseMask", () => {
   test("combines queued and sampled bits", () => {

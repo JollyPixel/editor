@@ -8,8 +8,8 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import type { Mouse } from "../../src/index.ts";
-import { MouseEventButton } from "../../src/devices/Mouse.class.ts";
+import type { Mouse } from "../../../src/index.ts";
+import { MouseEventButton } from "../../../src/devices/Mouse.class.ts";
 import {
   createConnectedMouseFixture,
   MouseCanvasAdapter,
@@ -51,8 +51,14 @@ describe("Controls.Mouse pointer lock", () => {
     documentAdapter.pointerLockElement = canvas;
     documentAdapter.dispatchEvent("pointerlockchange");
 
-    canvas.dispatchMouseEvent("mousemove", { movementX: 5, movementY: 3 });
-    canvas.dispatchMouseEvent("mousemove", { movementX: 2, movementY: -1 });
+    canvas.dispatchMouseEvent(
+      "mousemove",
+      { movementX: 5, movementY: 3 }
+    );
+    canvas.dispatchMouseEvent(
+      "mousemove",
+      { movementX: 2, movementY: -1 }
+    );
 
     assert.deepStrictEqual(mouse.newDelta, { x: 7, y: 2 });
   });
@@ -60,9 +66,15 @@ describe("Controls.Mouse pointer lock", () => {
   test("should request pointer lock on mouse down when wanted", () => {
     mouse.lock();
 
-    canvas.dispatchMouseEvent("mousedown", { button: MouseEventButton.left });
+    canvas.dispatchMouseEvent(
+      "mousedown",
+      { button: MouseEventButton.left }
+    );
 
-    assert.strictEqual(canvas.requestPointerLock.mock.calls.length, 1);
+    assert.strictEqual(
+      canvas.requestPointerLock.mock.calls.length,
+      1
+    );
   });
 
   test("should not request pointer lock when already locked", () => {
@@ -70,9 +82,15 @@ describe("Controls.Mouse pointer lock", () => {
     documentAdapter.pointerLockElement = canvas;
     documentAdapter.dispatchEvent("pointerlockchange");
 
-    canvas.dispatchMouseEvent("mousedown", { button: MouseEventButton.left });
+    canvas.dispatchMouseEvent(
+      "mousedown",
+      { button: MouseEventButton.left }
+    );
 
-    assert.strictEqual(canvas.requestPointerLock.mock.calls.length, 0);
+    assert.strictEqual(
+      canvas.requestPointerLock.mock.calls.length,
+      0
+    );
   });
 
   test("should emit lockStateChange event when entering pointer lock", () => {
@@ -125,23 +143,29 @@ describe("Controls.Mouse pointer lock", () => {
 
     mouse.unlock();
 
-    assert.strictEqual(documentAdapter.exitPointerLock.mock.calls.length, 1);
+    assert.strictEqual(
+      documentAdapter.exitPointerLock.mock.calls.length,
+      1
+    );
   });
 
   test("should not exit pointer lock when not locked", () => {
     mouse.unlock();
 
-    assert.strictEqual(documentAdapter.exitPointerLock.mock.calls.length, 0);
+    assert.strictEqual(
+      documentAdapter.exitPointerLock.mock.calls.length,
+      0
+    );
   });
 
   test("unlock() before the lock is granted still clears the pending intent", () => {
-    // The browser grants pointer lock asynchronously. Cancelling in between
-    // used to leave the intent flag set, so mousemove stayed on the
-    // pointer-lock branch and position never updated again.
     mouse.lock();
     mouse.unlock();
 
-    canvas.dispatchMouseEvent("mousemove", { clientX: 120, clientY: 80 });
+    canvas.dispatchMouseEvent(
+      "mousemove",
+      { clientX: 120, clientY: 80 }
+    );
     mouse.update();
 
     assert.deepStrictEqual(mouse.position, { x: 120, y: 80 });

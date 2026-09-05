@@ -2,7 +2,10 @@
 import { Event } from "happy-dom";
 
 export class EventTargetAdapter {
-  protected listeners = new Map<string, Set<(event: Event) => void>>();
+  protected listeners = new Map<
+    string,
+    Set<(event: Event) => void>
+  >();
 
   addEventListener(
     type: string,

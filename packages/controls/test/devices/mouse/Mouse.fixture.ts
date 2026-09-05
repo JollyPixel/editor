@@ -5,9 +5,9 @@ import { mock } from "node:test";
 import { Window } from "happy-dom";
 
 // Import Internal Dependencies
-import { Mouse } from "../../src/index.ts";
-import { CanvasAdapter } from "../mocks/canvas.ts";
-import { DocumentAdapter } from "../mocks/document.ts";
+import { Mouse } from "../../../src/index.ts";
+import { CanvasAdapter } from "../../mocks/canvas.ts";
+import { DocumentAdapter } from "../../mocks/document.ts";
 
 // CONSTANTS
 const kEmulatedBrowserWindow = new Window();

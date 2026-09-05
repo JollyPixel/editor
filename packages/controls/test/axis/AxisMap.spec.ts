@@ -14,8 +14,8 @@ import {
   UnknownAxisError,
   InputCombination,
   type KeyCode
-} from "../src/index.ts";
-import * as mocks from "./mocks/index.ts";
+} from "../../src/index.ts";
+import * as mocks from "../mocks/index.ts";
 
 describe("Controls.AxisMap", () => {
   let input: Input;

@@ -24,8 +24,6 @@ describe("Controls.AtomicInput", () => {
     input = new Input(canvas, {
       documentAdapter: new mocks.DocumentAdapter()
     });
-    // Mouse state now lives in private bitmasks, so it is driven through the
-    // DOM handlers rather than written directly.
     input.mouse.connect();
   });
 

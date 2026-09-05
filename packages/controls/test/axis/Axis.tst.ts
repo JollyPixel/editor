@@ -8,7 +8,7 @@ import {
 import {
   Axis,
   InputCombination
-} from "../src/index.ts";
+} from "../../src/index.ts";
 
 test("Axis accepts keyboard and explicit mouse conditions", () => {
   expect(Axis.buttons).type.toBeCallableWith(

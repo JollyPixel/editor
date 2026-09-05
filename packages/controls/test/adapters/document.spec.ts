@@ -11,12 +11,10 @@ import assert from "node:assert/strict";
 import { Window } from "happy-dom";
 
 // Import Internal Dependencies
-import { BrowserDocumentAdapter } from "../src/adapters/index.ts";
+import { BrowserDocumentAdapter } from "../../src/adapters/index.ts";
 
 // CONSTANTS
 const kEmulatedBrowserWindow = new Window();
-// happy-dom's own Document type doesn't declare fullscreenElement/pointerLockElement,
-// even though real DOM's does — cast to the real lib.dom Document shape.
 const kEmulatedDocument = kEmulatedBrowserWindow.document as unknown as Document;
 const kOriginalDocument = globalThis.document;
 

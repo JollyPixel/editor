@@ -7,7 +7,9 @@ import { EventTargetAdapter } from "./eventTarget.ts";
 export class CanvasAdapter extends EventTargetAdapter {
   clientWidth = 800;
   clientHeight = 600;
-  style = { cursor: "auto" };
+  style = {
+    cursor: "auto"
+  };
 
   requestFullscreen = mock.fn(() => Promise.resolve());
   requestPointerLock = mock.fn(() => Promise.resolve());

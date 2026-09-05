@@ -8,7 +8,7 @@
   "scripts": {
     "prepublish": "rimraf ./dist && tsc -b",
     "build": "tsc",
-    "test-only": "node --test test/**/*.spec.ts",
+    "test-only": "node --test \"test/**/*.spec.ts\"",
     "test-types": "tstyche --tsconfig ./test/tsconfig.json",
     "test": "c8 -r html npm run test-only && npm run test-types",
     "lint": "eslint src/**/*.ts",

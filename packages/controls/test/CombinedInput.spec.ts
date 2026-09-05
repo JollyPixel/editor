@@ -40,15 +40,19 @@ describe("Controls.CombinedInput", () => {
     input = new Input(canvas, {
       documentAdapter: new mocks.DocumentAdapter()
     });
-    // Mouse state now lives in private bitmasks, so it is driven through the
-    // DOM handlers rather than written directly.
     input.mouse.connect();
   });
 
   describe("AllInputs", () => {
     test("is satisfied only when every condition is satisfied", () => {
-      assert.strictEqual(new AllInputs([stubCondition(true), stubCondition(true)]).evaluate(input), true);
-      assert.strictEqual(new AllInputs([stubCondition(true), stubCondition(false)]).evaluate(input), false);
+      assert.strictEqual(
+        new AllInputs([stubCondition(true), stubCondition(true)]).evaluate(input),
+        true
+      );
+      assert.strictEqual(
+        new AllInputs([stubCondition(true), stubCondition(false)]).evaluate(input),
+        false
+      );
     });
 
     test("reset() resets every condition", () => {
@@ -61,15 +65,27 @@ describe("Controls.CombinedInput", () => {
 
   describe("AtLeastOneInput", () => {
     test("is satisfied when any condition is satisfied", () => {
-      assert.strictEqual(new AtLeastOneInput([stubCondition(false), stubCondition(true)]).evaluate(input), true);
-      assert.strictEqual(new AtLeastOneInput([stubCondition(false), stubCondition(false)]).evaluate(input), false);
+      assert.strictEqual(
+        new AtLeastOneInput([stubCondition(false), stubCondition(true)]).evaluate(input),
+        true
+      );
+      assert.strictEqual(
+        new AtLeastOneInput([stubCondition(false), stubCondition(false)]).evaluate(input),
+        false
+      );
     });
   });
 
   describe("NoneInputs", () => {
     test("is satisfied only when no condition is satisfied", () => {
-      assert.strictEqual(new NoneInputs([stubCondition(false), stubCondition(false)]).evaluate(input), true);
-      assert.strictEqual(new NoneInputs([stubCondition(false), stubCondition(true)]).evaluate(input), false);
+      assert.strictEqual(
+        new NoneInputs([stubCondition(false), stubCondition(false)]).evaluate(input),
+        true
+      );
+      assert.strictEqual(
+        new NoneInputs([stubCondition(false), stubCondition(true)]).evaluate(input),
+        false
+      );
     });
   });
 
@@ -111,13 +127,19 @@ describe("Controls.CombinedInput", () => {
     });
 
     test("reset() restarts the sequence and resets every condition", () => {
-      const conditions = [stubCondition(true), stubCondition(true)];
+      const conditions = [
+        stubCondition(true),
+        stubCondition(true)
+      ];
       const sequence = new SequenceInputs(conditions, 100, () => 0);
 
       sequence.evaluate(input);
       sequence.reset();
 
-      assert.deepStrictEqual(conditions.map((condition) => condition.resetCalls), [1, 1]);
+      assert.deepStrictEqual(
+        conditions.map((condition) => condition.resetCalls),
+        [1, 1]
+      );
       assert.strictEqual(sequence.evaluate(input), false);
     });
   });
@@ -138,7 +160,10 @@ describe("Controls.CombinedInput", () => {
     });
 
     test("mouse() accepts a bare button with a default/explicit state, or a dot-path action", () => {
-      canvas.dispatch("mousedown", { button: 0, preventDefault: () => void 0 });
+      canvas.dispatch(
+        "mousedown",
+        { button: 0, preventDefault: () => void 0 }
+      );
       // Two ticks: the second clears `wasJustPressed`, leaving the button held
       // but no longer freshly pressed, which is what the default state needs.
       input.mouse.update();
@@ -176,7 +201,11 @@ describe("Controls.CombinedInput", () => {
       input.keyboard.buttonsDown.add("KeyA");
       input.keyboard.buttonsDown.add("KeyB");
 
-      const sequence = InputCombination.sequenceWithTimeout(50, "KeyA.down", "KeyB.down");
+      const sequence = InputCombination.sequenceWithTimeout(
+        50,
+        "KeyA.down",
+        "KeyB.down"
+      );
 
       assert.ok(sequence instanceof SequenceInputs);
       assert.strictEqual(sequence.evaluate(input), false);

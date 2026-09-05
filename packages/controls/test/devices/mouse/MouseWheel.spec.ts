@@ -8,7 +8,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import type { Mouse } from "../../src/index.ts";
+import type { Mouse } from "../../../src/index.ts";
 import {
   createConnectedMouseFixture,
   MouseCanvasAdapter
@@ -30,7 +30,10 @@ describe("Controls.Mouse wheel", () => {
   });
 
   test("publishes wheel and movement accumulated across samples", () => {
-    canvas.dispatchMouseEvent("mousemove", { clientX: 20, clientY: 10 });
+    canvas.dispatchMouseEvent(
+      "mousemove",
+      { clientX: 20, clientY: 10 }
+    );
     canvas.dispatchWheelEvent({ wheelDelta: 120 });
     mouse.update();
     mouse.update();
@@ -108,7 +111,10 @@ describe("Controls.Mouse wheel", () => {
 
     mouse.update();
 
-    assert.deepStrictEqual(mouse.scroll, { x: 0, y: 0 });
+    assert.deepStrictEqual(
+      mouse.scroll,
+      { x: 0, y: 0 }
+    );
     assert.strictEqual(mouse.isScrolling(), false);
   });
 
