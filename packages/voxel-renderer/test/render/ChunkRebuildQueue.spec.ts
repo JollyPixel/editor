@@ -3,11 +3,12 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { ChunkRebuildQueue } from "../../src/render/ChunkRebuildQueue.ts";
-import { ChunkViewport } from "../../src/render/ChunkViewport.ts";
-import { ViewDistance } from "../../src/world/ViewDistance.ts";
-import { VoxelLayer } from "../../src/world/VoxelLayer.ts";
-import type { VoxelChunk } from "../../src/world/VoxelChunk.ts";
+import { ChunkRebuildQueue, ChunkViewport } from "../../src/render/index.ts";
+import {
+  ViewDistance,
+  type VoxelChunk,
+  VoxelLayer
+} from "../../src/world/index.ts";
 
 // CONSTANTS
 const kChunkSize = 4;

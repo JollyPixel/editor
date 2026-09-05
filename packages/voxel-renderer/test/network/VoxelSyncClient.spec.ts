@@ -6,29 +6,25 @@ import assert from "node:assert/strict";
 import type * as network from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import { VoxelSyncClient } from "../../src/network/VoxelSyncClient.ts";
-import { BlockRegistry } from "../../src/blocks/BlockRegistry.ts";
 import {
-  resolveBlockDefinition,
-  type BlockDefinition
-} from "../../src/blocks/BlockDefinition.ts";
-import type {
-  VoxelNetworkCommand,
-  VoxelServerMessage
-} from "../../src/network/types.ts";
+  type VoxelNetworkCommand,
+  type VoxelServerMessage,
+  VoxelSyncClient
+} from "../../src/network/index.ts";
+import {
+  type BlockDefinition,
+  BlockRegistry,
+  resolveBlockDefinition
+} from "../../src/blocks/index.ts";
 import type {
   VoxelBlockHookListener,
   VoxelLayerHookEvent,
   VoxelLayerHookListener
 } from "../../src/hooks.ts";
-import type { VoxelWorldJSON } from "../../src/serialization/types.ts";
+import type { VoxelWorldJSON } from "../../src/serialization/index.ts";
 import type { VoxelEngine } from "../../src/VoxelEngine.ts";
 import { makeAddedCommand, voxelSetCmd } from "../helpers/networkCommands.ts";
 import { makeBlockDef } from "../helpers/blocks.ts";
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 interface MockEngine {
   onLayerUpdated: VoxelLayerHookListener | undefined;
@@ -182,10 +178,6 @@ function makeEmptySnapshot(): VoxelWorldJSON {
   return { version: 1, chunkSize: 16, tilesets: [], layers: [] };
 }
 
-// ---------------------------------------------------------------------------
-// attach / detach
-// ---------------------------------------------------------------------------
-
 describe("VoxelSyncClient — attach", () => {
   it("sets engine.onLayerUpdated", () => {
     const engine = createMockEngine();
@@ -249,10 +241,6 @@ describe("VoxelSyncClient — chaining onLayerUpdated", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Local mutations forwarded to the room
-// ---------------------------------------------------------------------------
-
 describe("VoxelSyncClient — local mutations forwarded to the room", () => {
   it("sends a command when an attached engine fires a voxel-set", () => {
     const engine = createMockEngine();
@@ -308,10 +296,6 @@ describe("VoxelSyncClient — local mutations forwarded to the room", () => {
     assert.equal(room.sentCommands[2].seq, 3);
   });
 });
-
-// ---------------------------------------------------------------------------
-// Remote commands
-// ---------------------------------------------------------------------------
 
 describe("VoxelSyncClient — remote commands", () => {
   it("applies commands from a different client to the engine", () => {
@@ -419,10 +403,6 @@ describe("VoxelSyncClient — remote commands", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Snapshot loading
-// ---------------------------------------------------------------------------
-
 describe("VoxelSyncClient — snapshot loading", () => {
   it("calls engine.load when a snapshot arrives", () => {
     const engine = createMockEngine();
@@ -447,10 +427,6 @@ describe("VoxelSyncClient — snapshot loading", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// replaceWorld
-// ---------------------------------------------------------------------------
-
 describe("VoxelSyncClient — replaceWorld", () => {
   it("sends a stamped world-replace command carrying the data", () => {
     const room = createMockRoom("client-A");
@@ -474,10 +450,6 @@ describe("VoxelSyncClient — replaceWorld", () => {
     assert.doesNotThrow(() => client.replaceWorld(makeEmptySnapshot()));
   });
 });
-
-// ---------------------------------------------------------------------------
-// destroy
-// ---------------------------------------------------------------------------
 
 describe("VoxelSyncClient — destroy", () => {
   it("detaches the engine, stops listening for room messages and leaves the room", () => {
@@ -506,10 +478,6 @@ describe("VoxelSyncClient — destroy", () => {
     assert.equal(room.sentCommands.length, 0);
   });
 });
-
-// ---------------------------------------------------------------------------
-// block commands
-// ---------------------------------------------------------------------------
 
 describe("VoxelSyncClient — block commands", () => {
   it("publishes a local definition without an explicit send call", () => {

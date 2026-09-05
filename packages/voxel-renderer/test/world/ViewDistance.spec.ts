@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { ViewDistance } from "../../src/world/ViewDistance.ts";
+import { ViewDistance } from "../../src/world/index.ts";
 
 describe("ViewDistance", () => {
   it("is unlimited by default", () => {

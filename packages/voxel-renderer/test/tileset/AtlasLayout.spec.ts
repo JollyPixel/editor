@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { AtlasLayout } from "../../src/tileset/AtlasLayout.ts";
+import { AtlasLayout } from "../../src/tileset/index.ts";
 import { approxEqual } from "../helpers/math.ts";
 
 // CONSTANTS

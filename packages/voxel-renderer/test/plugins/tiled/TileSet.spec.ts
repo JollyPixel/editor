@@ -10,7 +10,7 @@ import {
   FLIPPED_ANTI_DIAGONAL,
   TILED_FLIPPED_FLAGS
 } from "../../../src/plugins/tiled/TileSet.ts";
-import type { TiledMapTileset } from "../../../src/plugins/tiled/types.ts";
+import type { TiledMapTileset } from "../../../src/plugins/tiled/index.ts";
 import { approxEqual } from "../../helpers/math.ts";
 
 // A 4-column, 2-row tileset starting at GID 1 (8 tiles total)

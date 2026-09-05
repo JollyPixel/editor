@@ -4,15 +4,15 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
+  MAX_BLOCK_ID,
   packVoxel,
   unpackVoxel,
+  VOXEL_ABSENT,
   voxelBlockId,
   voxelTransform,
-  MAX_BLOCK_ID,
-  VOXEL_ABSENT
-} from "../../src/world/packedVoxel.ts";
-import { AIR_BLOCK_ID } from "../../src/blocks/BlockId.ts";
-import { VoxelTransform } from "../../src/world/VoxelTransform.ts";
+  VoxelTransform
+} from "../../src/world/index.ts";
+import { AIR_BLOCK_ID } from "../../src/blocks/index.ts";
 
 describe("VOXEL_ABSENT", () => {
   it("is negative so every packed voxel is distinguishable", () => {

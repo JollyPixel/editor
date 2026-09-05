@@ -7,25 +7,20 @@ import type { RoomContext, RoomEventStoreHandle } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import {
-  VoxelSyncServer,
-  type ClientHandle
-} from "../../src/network/VoxelSyncServer.ts";
-import { VoxelWorld } from "../../src/world/VoxelWorld.ts";
-import type { VoxelNetworkCommand, VoxelServerMessage } from "../../src/network/types.ts";
+  type ClientHandle,
+  type VoxelNetworkCommand,
+  type VoxelServerMessage,
+  VoxelSyncServer
+} from "../../src/network/index.ts";
+import { VoxelWorld } from "../../src/world/index.ts";
 import {
   blockDefinedCmd,
   makeAddedCommand,
   voxelSetCmd,
   worldReplaceCmd
 } from "../helpers/networkCommands.ts";
-import { AIR_BLOCK_ID } from "../../src/blocks/BlockId.ts";
-import {
-  InvalidVoxelDocumentError
-} from "../../src/serialization/errors/InvalidVoxelDocumentError.ts";
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+import { AIR_BLOCK_ID } from "../../src/blocks/index.ts";
+import { InvalidVoxelDocumentError } from "../../src/serialization/index.ts";
 
 interface MockClient extends ClientHandle {
   received: VoxelServerMessage[];
@@ -45,23 +40,27 @@ function createClient(id: string): MockClient {
 
 // receive() never touches eventStore, so every RoomContext in this file shares one unused stub.
 const unusedEventStore: RoomEventStoreHandle = {
-  append: () => true,
-  list: () => []
+  append: () => Promise.resolve(true),
+  list: () => Promise.resolve([])
 };
 
 /**
- * `receive()` no longer stashes a broadcast callback — the caller (normally
- * `ServerRoom`, via `onMessage`) hands one in per call. Tests that don't care
- * about broadcast delivery can pass this no-op.
+ * A RoomContext delivering every broadcast to `deliver`, which defaults to
+ * dropping them for the tests that only care about the server's own state.
  */
-const noopRoom: RoomContext = {
-  room: {
-    broadcast: () => {
-      // no observers
-    }
-  },
-  eventStore: unusedEventStore
-};
+function roomContext(
+  deliver: (payload: unknown) => void = () => void 0
+): RoomContext {
+  return {
+    room: {
+      broadcast: deliver,
+      sendTo: (_clientId, payload) => deliver(payload)
+    },
+    eventStore: unusedEventStore
+  };
+}
+
+const noopRoom = roomContext();
 
 /**
  * Connects a client and returns a RoomContext that forwards broadcasts
@@ -74,15 +73,8 @@ function observe(
 ): RoomContext {
   server.onClientConnect(client);
 
-  return {
-    room: { broadcast: (payload) => client.send(payload) },
-    eventStore: unusedEventStore
-  };
+  return roomContext((payload) => client.send(payload));
 }
-
-// ---------------------------------------------------------------------------
-// snapshot()
-// ---------------------------------------------------------------------------
 
 describe("VoxelSyncServer — snapshot", () => {
   it("returns a valid VoxelWorldJSON with version 1", () => {
@@ -106,14 +98,6 @@ describe("VoxelSyncServer — snapshot", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// onClientConnect
-//
-// Peer-joined/peer-left notifications and client-list bookkeeping are now a
-// Server concern (see @jolly-pixel/network's Server.spec.ts) —
-// VoxelSyncServer no longer tracks its own client list.
-// ---------------------------------------------------------------------------
-
 describe("VoxelSyncServer — onClientConnect", () => {
   it("sends a snapshot to the newly connected client", () => {
     const server = new VoxelSyncServer();
@@ -126,10 +110,6 @@ describe("VoxelSyncServer — onClientConnect", () => {
     assert.equal(msg.data.version, 1);
   });
 });
-
-// ---------------------------------------------------------------------------
-// receive()
-// ---------------------------------------------------------------------------
 
 describe("VoxelSyncServer — receive: apply + broadcast", () => {
   it("applies the command to the world", () => {
@@ -519,10 +499,6 @@ describe("VoxelSyncServer — custom world / id", () => {
     );
   });
 });
-
-// ---------------------------------------------------------------------------
-// block commands
-// ---------------------------------------------------------------------------
 
 describe("VoxelSyncServer — block commands", () => {
   it("registers a definition and carries it in the snapshot", () => {

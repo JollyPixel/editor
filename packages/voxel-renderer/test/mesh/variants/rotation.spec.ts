@@ -10,10 +10,8 @@ import {
   flipYFace
 } from "../../../src/mesh/variants/rotation.ts";
 import { FACE } from "../../../src/utils/math.ts";
-import { VoxelTransform } from "../../../src/world/VoxelTransform.ts";
-
-// CONSTANTS
-const kEpsilon = 1e-10;
+import { VoxelTransform } from "../../../src/world/index.ts";
+import { approxEqual } from "../../helpers/math.ts";
 
 function tf(
   rotation: number,
@@ -22,13 +20,6 @@ function tf(
   flipY = false
 ): VoxelTransform {
   return new VoxelTransform({ rotation, flipX, flipZ, flipY });
-}
-
-function approxEqual(
-  a: number,
-  b: number
-): boolean {
-  return Math.abs(a - b) < kEpsilon;
 }
 
 function vecApproxEqual(

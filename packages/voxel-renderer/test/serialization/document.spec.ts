@@ -6,12 +6,10 @@ import assert from "node:assert/strict";
 import {
   decodeVoxelDocument,
   encodeVoxelDocument,
-  parseVoxelDocument
-} from "../../src/serialization/document.ts";
-import {
-  InvalidVoxelDocumentError
-} from "../../src/serialization/errors/InvalidVoxelDocumentError.ts";
-import type { VoxelWorldJSON } from "../../src/serialization/types.ts";
+  InvalidVoxelDocumentError,
+  parseVoxelDocument,
+  type VoxelWorldJSON
+} from "../../src/serialization/index.ts";
 
 // CONSTANTS
 const kEmptyDocument: VoxelWorldJSON = {

@@ -8,16 +8,16 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import { VoxelEngine } from "../src/VoxelEngine.ts";
 import type { VoxelEngineOptions } from "../src/VoxelEngine.types.ts";
-import { ViewDistance } from "../src/world/ViewDistance.ts";
-import type { VoxelCollider } from "../src/collision/VoxelCollider.ts";
-import { mockTexture } from "./helpers/mockTexture.ts";
-import { makeBlockDef } from "./helpers/blocks.ts";
-import { makeAtlasDef } from "./helpers/atlas.ts";
+import { ViewDistance } from "../src/world/index.ts";
+import type { VoxelCollider } from "../src/collision/index.ts";
+import {
+  makeEngine as makeBaseEngine,
+  CUBE_ID as kCubeId,
+  CHUNK_SIZE as kChunkSize
+} from "./helpers/engine.ts";
 
 // CONSTANTS
-const kCubeId = 1;
 const kLayer = "Ground";
-const kChunkSize = 4;
 
 /**
  * One voxel in each of `count` chunks along +X, so chunk `i` is centered on
@@ -27,16 +27,11 @@ function makeEngine(
   count: number,
   options: VoxelEngineOptions = {}
 ): VoxelEngine {
-  const engine = new VoxelEngine({
-    chunkSize: kChunkSize,
+  const engine = makeBaseEngine({
     layers: [kLayer],
     rebuildBudgetMs: 0,
-    blocks: [
-      makeBlockDef(kCubeId, "cube", { name: "Cube" })
-    ],
     ...options
   });
-  engine.loadTileset(makeAtlasDef(), mockTexture());
 
   for (let i = 0; i < count; i++) {
     engine.world.setVoxel(kLayer, {

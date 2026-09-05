@@ -3,8 +3,8 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { VoxelLayer } from "../../src/world/VoxelLayer.ts";
-import { AIR_BLOCK_ID } from "../../src/blocks/BlockId.ts";
+import { VoxelLayer } from "../../src/world/index.ts";
+import { AIR_BLOCK_ID } from "../../src/blocks/index.ts";
 import { makeVoxelEntry } from "../helpers/voxelEntry.ts";
 
 // CONSTANTS

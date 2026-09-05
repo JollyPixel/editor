@@ -1,7 +1,6 @@
 // Import Internal Dependencies
-import type { TilesetDefinition } from "../../src/tileset/types.ts";
+import type { TilesetDefinition } from "../../src/tileset/index.ts";
 
-/** A 4x4, 16px-tile atlas definition, matching the fixture registered by mockTexture()'s default 64x64 size. */
 export function makeAtlasDef(
   overrides: Partial<TilesetDefinition> = {}
 ): TilesetDefinition {

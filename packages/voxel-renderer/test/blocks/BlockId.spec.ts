@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import {
   AIR_BLOCK_ID,
   isAir
-} from "../../src/blocks/BlockId.ts";
+} from "../../src/blocks/index.ts";
 
 describe("AIR_BLOCK_ID", () => {
   it("is zero", () => {

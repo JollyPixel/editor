@@ -5,9 +5,9 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   loadTilesets,
-  type TextureSourceLoader
-} from "../../src/tileset/loadTilesets.ts";
-import type { TilesetDefinition } from "../../src/tileset/types.ts";
+  type TextureSourceLoader,
+  type TilesetDefinition
+} from "../../src/tileset/index.ts";
 import { mockTexture } from "../helpers/mockTexture.ts";
 
 // CONSTANTS

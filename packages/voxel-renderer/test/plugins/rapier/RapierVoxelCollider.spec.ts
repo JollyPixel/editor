@@ -2,23 +2,40 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import type * as THREE from "three";
+
 // Import Internal Dependencies
-import { RapierVoxelCollider } from "../../../src/plugins/rapier/RapierVoxelCollider.ts";
-import type { VoxelChunkCollision } from "../../../src/collision/VoxelCollider.ts";
-import { VoxelChunk } from "../../../src/world/VoxelChunk.ts";
-import { BlockRegistry } from "../../../src/blocks/BlockRegistry.ts";
-import { BlockShapeRegistry } from "../../../src/blocks/shape/BlockShapeRegistry.ts";
-import type {
-  RapierAPI,
-  RapierCollider,
-  RapierColliderDesc,
-  RapierRigidBody,
-  RapierRigidBodyDesc
-} from "../../../src/plugins/rapier/RapierVoxelCollider.types.ts";
-import type { BlockDefinition } from "../../../src/blocks/BlockDefinition.ts";
+import {
+  type RapierAPI,
+  type RapierCollider,
+  type RapierColliderDesc,
+  type RapierRigidBody,
+  type RapierRigidBodyDesc,
+  RapierVoxelCollider
+} from "../../../src/plugins/rapier/index.ts";
+import type { VoxelChunkCollision } from "../../../src/collision/index.ts";
+import { VoxelChunk } from "../../../src/world/index.ts";
+import { type BlockDefinition, BlockRegistry } from "../../../src/blocks/index.ts";
+import { BlockShapeRegistry } from "../../../src/blocks/shape/index.ts";
+import { makeBlockDef } from "../../helpers/blocks.ts";
 
 // CONSTANTS
 const kNoGeometries = new Map();
+
+/**
+ * What the mock world records: a cuboid desc carries half-extents, a trimesh
+ * desc carries buffers, and only cuboids are translated (a trimesh bakes the
+ * offset into its vertices).
+ */
+interface RecordedColliderDesc extends RapierColliderDesc {
+  hx?: number;
+  hy?: number;
+  hz?: number;
+  vertices?: Float32Array;
+  indices?: Uint32Array;
+  _translation?: { x: number; y: number; z: number; } | null;
+}
 
 function makeColliderDesc(hx: number, hy: number, hz: number): RapierColliderDesc & {
   hx: number;
@@ -52,7 +69,10 @@ function makeRigidBodyDesc(): RapierRigidBodyDesc & {
 
 function makeMockWorld() {
   const rigidBodies: RapierRigidBody[] = [];
-  const colliderCalls: { desc: any; parent: RapierRigidBody | undefined; }[] = [];
+  const colliderCalls: {
+    desc: RecordedColliderDesc;
+    parent: RapierRigidBody | undefined;
+  }[] = [];
   const removedBodies: RapierRigidBody[] = [];
 
   return {
@@ -71,7 +91,7 @@ function makeMockWorld() {
 
       return body;
     },
-    createCollider(desc: RapierColliderDesc, parent?: RapierRigidBody): RapierCollider {
+    createCollider(desc: RecordedColliderDesc, parent?: RapierRigidBody): RapierCollider {
       const handle = colliderCalls.length;
       colliderCalls.push({ desc, parent });
 
@@ -116,19 +136,8 @@ function makeMockRapier() {
   };
 }
 
-function makeBlockDef(id: number, shapeId: string, collidable = true): BlockDefinition {
-  return {
-    id,
-    name: `Block${id}`,
-    shapeId,
-    faceTextures: {},
-    defaultTexture: { col: 0, row: 0, tilesetId: "atlas" },
-    collidable
-  };
-}
-
 function makeCollider(
-  blocks: ReturnType<typeof makeBlockDef>[] = []
+  blocks: BlockDefinition[] = []
 ) {
   const world = makeMockWorld();
   const rapier = makeMockRapier();
@@ -171,7 +180,7 @@ function makeGeometry(vertexCount = 3) {
     dispose() {
       // no-op
     }
-  } as any;
+  } as unknown as THREE.BufferGeometry;
 }
 
 describe("RapierVoxelCollider.rebuildChunk", () => {
@@ -186,7 +195,7 @@ describe("RapierVoxelCollider.rebuildChunk", () => {
   it("creates no body when the only block is not collidable", () => {
     const chunk = new VoxelChunk([0, 0, 0], 4);
     chunk.set([0, 0, 0], { blockId: 1, transform: 0 });
-    const { collider, world } = makeCollider([makeBlockDef(1, "cube", false)]);
+    const { collider, world } = makeCollider([makeBlockDef(1, "cube", { collidable: false })]);
 
     collider.rebuildChunk("a", collisionOf(chunk));
 

@@ -6,8 +6,8 @@ import assert from "node:assert/strict";
 import {
   defaultCullFace,
   isBoundaryFace
-} from "../../../src/blocks/face/faceCulling.ts";
-import { BlockShapeRegistry } from "../../../src/blocks/shape/BlockShapeRegistry.ts";
+} from "../../../src/blocks/face/index.ts";
+import { BlockShapeRegistry } from "../../../src/blocks/shape/index.ts";
 import { FACE } from "../../../src/utils/math.ts";
 
 describe("isBoundaryFace", () => {

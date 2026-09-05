@@ -6,8 +6,8 @@ import assert from "node:assert/strict";
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { ChunkMaterialCache } from "../../src/render/ChunkMaterialCache.ts";
-import { TilesetManager } from "../../src/tileset/TilesetManager.ts";
+import { ChunkMaterialCache } from "../../src/render/index.ts";
+import { TilesetManager } from "../../src/tileset/index.ts";
 import { mockTexture } from "../helpers/mockTexture.ts";
 import { makeAtlasDef } from "../helpers/atlas.ts";
 

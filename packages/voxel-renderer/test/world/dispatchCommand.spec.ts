@@ -3,10 +3,9 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { VoxelWorld } from "../../src/world/VoxelWorld.ts";
-import { VoxelTransform } from "../../src/world/VoxelTransform.ts";
+import { VoxelTransform, VoxelWorld } from "../../src/world/index.ts";
 import { VOXEL_LAYER_HOOK_ACTIONS, type VoxelLayerHookEvent } from "../../src/hooks.ts";
-import type { VoxelObjectJSON } from "../../src/serialization/types.ts";
+import type { VoxelObjectJSON } from "../../src/serialization/index.ts";
 import { makeVoxelEntry } from "../helpers/voxelEntry.ts";
 import { makeAddedCommand } from "../helpers/networkCommands.ts";
 
@@ -27,10 +26,6 @@ function makeSpawnObject(
     ...overrides
   };
 }
-
-// ---------------------------------------------------------------------------
-// Layer structural operations
-// ---------------------------------------------------------------------------
 
 describe("VoxelWorld.applyRemoteCommand — added", () => {
   it("creates a new layer in the world", () => {
@@ -136,10 +131,6 @@ describe("VoxelWorld.applyRemoteCommand — reordered", () => {
     assert.equal(layers[1].name, "Top");
   });
 });
-
-// ---------------------------------------------------------------------------
-// Voxel operations
-// ---------------------------------------------------------------------------
 
 describe("VoxelWorld.applyRemoteCommand — voxel-set", () => {
   it("places a voxel at the given position", () => {
@@ -266,10 +257,6 @@ describe("VoxelWorld.applyRemoteCommand — voxels-removed (bulk)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Object layer operations
-// ---------------------------------------------------------------------------
-
 describe("VoxelWorld.applyRemoteCommand — object-layer-added", () => {
   it("creates an object layer", () => {
     const world = makeWorld();
@@ -353,10 +340,6 @@ describe("VoxelWorld.applyRemoteCommand — object-updated", () => {
     assert.equal(obj?.visible, false);
   });
 });
-
-// ---------------------------------------------------------------------------
-// Round-trip: all actions covered
-// ---------------------------------------------------------------------------
 
 describe("VoxelWorld.applyRemoteCommand — cloned", () => {
   it("clones the layer under its new name", () => {

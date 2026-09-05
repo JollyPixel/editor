@@ -6,10 +6,10 @@ import assert from "node:assert/strict";
 import {
   faceUvs,
   projectFaceUv
-} from "../../../src/blocks/face/faceUv.ts";
+} from "../../../src/blocks/face/index.ts";
 import {
   BlockShapeRegistry
-} from "../../../src/blocks/shape/BlockShapeRegistry.ts";
+} from "../../../src/blocks/shape/index.ts";
 import { FACE } from "../../../src/utils/math.ts";
 
 describe("projectFaceUv", () => {

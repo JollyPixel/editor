@@ -6,94 +6,41 @@ import assert from "node:assert/strict";
 import type * as THREE from "three";
 
 // Import Internal Dependencies
-import { VoxelWorld } from "../../../src/world/VoxelWorld.ts";
-import { BlockRegistry } from "../../../src/blocks/BlockRegistry.ts";
-import { BlockShapeRegistry } from "../../../src/blocks/shape/BlockShapeRegistry.ts";
-import { TilesetManager } from "../../../src/tileset/TilesetManager.ts";
-import { VoxelMeshBuilder } from "../../../src/mesh/index.ts";
-import { VoxelTransform } from "../../../src/world/VoxelTransform.ts";
-import { mockTexture } from "../../helpers/mockTexture.ts";
+import { VoxelTransform } from "../../../src/world/index.ts";
 import { DEFAULT_TEXTURE, makeBlockDef } from "../../helpers/blocks.ts";
-import { makeAtlasDef } from "../../helpers/atlas.ts";
+import {
+  buildChunk as build,
+  countVertices,
+  fillBox as fill,
+  makeMeshFixture,
+  type MeshFixture,
+  type MeshFixtureOptions,
+  CUBE_ID as kCubeId,
+  RAMP_ID as kRampId,
+  STAIR_ID as kStairId
+} from "../../helpers/meshFixture.ts";
 
 // CONSTANTS
-const kCubeId = 1;
-const kRampId = 2;
-const kStairId = 3;
 const kOtherCubeId = 4;
-const kChunkSize = 4;
 
+type Fixture = MeshFixture;
+
+/**
+ * The shared mesh fixture with greedy merging on by default, plus a second
+ * cube on a different atlas tile so merge boundaries can be observed.
+ */
 function makeFixture(
-  options: { greedy?: boolean; chunkSize?: number; } = {}
-) {
-  const { greedy = true, chunkSize = kChunkSize } = options;
+  options: MeshFixtureOptions = {}
+): Fixture {
+  const fixture = makeMeshFixture({ greedy: true, ...options });
+  fixture.blockRegistry.register(
+    makeBlockDef(kOtherCubeId, "cube", {
+      name: "Other",
+      defaultTexture: { col: 1, row: 0 }
+    })
+  );
 
-  const world = new VoxelWorld(chunkSize);
-  const layer = world.addLayer("test");
-
-  const blockRegistry = new BlockRegistry([
-    makeBlockDef(kCubeId, "cube", { name: "Cube" }),
-    makeBlockDef(kRampId, "ramp", { name: "Ramp" }),
-    makeBlockDef(kStairId, "stair", { name: "Stair" }),
-    makeBlockDef(kOtherCubeId, "cube", { name: "Other", defaultTexture: { col: 1, row: 0 } })
-  ]);
-
-  const tilesetManager = new TilesetManager();
-  tilesetManager.registerTexture(makeAtlasDef(), mockTexture());
-
-  const builder = new VoxelMeshBuilder({
-    world,
-    blockRegistry,
-    shapeRegistry: BlockShapeRegistry.createDefault(),
-    tilesetManager,
-    greedy
-  });
-
-  return { world, layer, builder, tilesetManager };
-}
-
-type Fixture = ReturnType<typeof makeFixture>;
-
-function build(
-  fixture: Fixture,
-  chunkCoords: [number, number, number] = [0, 0, 0]
-): Map<string, THREE.BufferGeometry> | null {
-  const { layer, builder } = fixture;
-  const chunk = layer.getChunk(...chunkCoords);
-
-  return chunk ? builder.buildChunkGeometries(chunk, layer) : null;
-}
-
-/** Fills a solid box of `blockId`, inclusive bounds. */
-function fill(
-  fixture: Fixture,
-  options: {
-    from: [number, number, number];
-    to: [number, number, number];
-    blockId?: number;
-    transform?: number;
-  }
-): void {
-  const { from, to, blockId = kCubeId, transform = 0 } = options;
-
-  for (let x = from[0]; x <= to[0]; x++) {
-    for (let y = from[1]; y <= to[1]; y++) {
-      for (let z = from[2]; z <= to[2]; z++) {
-        fixture.world.setVoxelAt("test", { x, y, z }, { blockId, transform });
-      }
-    }
-  }
-}
-
-function countVertices(
-  geometries: Map<string, THREE.BufferGeometry> | null
-): number {
-  let total = 0;
-  for (const geometry of geometries?.values() ?? []) {
-    total += geometry.getAttribute("position").count;
-  }
-
-  return total;
+  return fixture;
 }
 
 /**

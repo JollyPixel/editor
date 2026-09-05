@@ -1,8 +1,5 @@
 // Import Node.js Dependencies
-import {
-  describe,
-  test
-} from "node:test";
+import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
@@ -16,23 +13,15 @@ import {
 
 // Import Internal Dependencies
 import {
-  voxelMapAssetHandler,
   VOXEL_MAP_COMMAND,
-  VOXEL_MAP_KIND
-} from "../../src/asset/voxelMapAssetHandler.ts";
-import {
-  decodeVoxelDocument,
-  encodeVoxelDocument
-} from "../../src/serialization/document.ts";
-import {
-  resolveBlockDefinition
-} from "../../src/blocks/BlockDefinition.ts";
-import { VoxelMapState } from "../../src/asset/VoxelMapState.ts";
-import type { VoxelNetworkCommand } from "../../src/network/types.ts";
-import {
-  blockDefinedCmd,
-  voxelSetCmd
-} from "../helpers/networkCommands.ts";
+  VOXEL_MAP_KIND,
+  voxelMapAssetHandler,
+  VoxelMapState
+} from "../../src/asset/index.ts";
+import { decodeVoxelDocument, encodeVoxelDocument } from "../../src/serialization/index.ts";
+import { resolveBlockDefinition } from "../../src/blocks/index.ts";
+import type { VoxelNetworkCommand } from "../../src/network/index.ts";
+import { blockDefinedCmd, voxelSetCmd } from "../helpers/networkCommands.ts";
 import { makeBlockDef } from "../helpers/blocks.ts";
 
 function event(

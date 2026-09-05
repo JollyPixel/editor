@@ -3,17 +3,15 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { VoxelEngine } from "../../src/VoxelEngine.ts";
 import type {
   VoxelCollider,
   VoxelChunkCollision,
   VoxelColliderContext
-} from "../../src/collision/VoxelCollider.ts";
-import { mockTexture } from "../helpers/mockTexture.ts";
-import { DEFAULT_TEXTURE, makeBlockDef } from "../helpers/blocks.ts";
-
-// CONSTANTS
-const kCubeId = 1;
+} from "../src/collision/index.ts";
+import {
+  makeEngine,
+  CUBE_ID as kCubeId
+} from "./helpers/engine.ts";
 
 // No physics backend here on purpose: importing a Rapier symbol would defeat
 // the point of these tests.
@@ -44,40 +42,9 @@ function makeFakeCollider() {
   };
 }
 
-function makeEngine(
-  collider?: (context: VoxelColliderContext) => VoxelCollider
-) {
-  const engine = new VoxelEngine({
-    chunkSize: 4,
-    layers: ["Ground"],
-    blocks: [
-      makeBlockDef(kCubeId, "cube", {
-        name: "Cube",
-        defaultTexture: {
-          ...DEFAULT_TEXTURE,
-          tilesetId: "atlas"
-        }
-      })
-    ],
-    collider
-  });
-  engine.loadTileset(
-    {
-      id: "atlas",
-      src: "/atlas.png",
-      tileSize: 16,
-      cols: 4,
-      rows: 4
-    },
-    mockTexture()
-  );
-
-  return engine;
-}
-
 describe("VoxelEngine — collider wiring", () => {
   it("never calls the factory when no collider option is given", () => {
-    const engine = makeEngine();
+    const engine = makeEngine({ layers: ["Ground"] });
     engine.world.setVoxel("Ground", {
       position: { x: 0, y: 0, z: 0 },
       blockId: kCubeId
@@ -94,10 +61,13 @@ describe("VoxelEngine — collider wiring", () => {
     const contexts: VoxelColliderContext[] = [];
     const fake = makeFakeCollider();
 
-    const engine = makeEngine((context) => {
-      contexts.push(context);
+    const engine = makeEngine({
+      layers: ["Ground"],
+      collider: (context) => {
+        contexts.push(context);
 
-      return fake.collider;
+        return fake.collider;
+      }
     });
 
     assert.equal(contexts.length, 1);
@@ -107,7 +77,7 @@ describe("VoxelEngine — collider wiring", () => {
 
   it("rebuilds collision for a dirty chunk with the layer offset", () => {
     const fake = makeFakeCollider();
-    const engine = makeEngine(() => fake.collider);
+    const engine = makeEngine({ layers: ["Ground"], collider: () => fake.collider });
 
     engine.world.setLayerOffset("Ground", {
       x: 8,
@@ -134,7 +104,7 @@ describe("VoxelEngine — collider wiring", () => {
 
   it("removes collision when a layer is hidden, without rebuilding it", () => {
     const fake = makeFakeCollider();
-    const engine = makeEngine(() => fake.collider);
+    const engine = makeEngine({ layers: ["Ground"], collider: () => fake.collider });
 
     engine.world.setVoxel("Ground", {
       position: { x: 0, y: 0, z: 0 },
@@ -158,7 +128,7 @@ describe("VoxelEngine — collider wiring", () => {
 
   it("removes collision for a chunk emptied of every voxel", () => {
     const fake = makeFakeCollider();
-    const engine = makeEngine(() => fake.collider);
+    const engine = makeEngine({ layers: ["Ground"], collider: () => fake.collider });
 
     engine.world.setVoxel("Ground", {
       position: { x: 0, y: 0, z: 0 },
@@ -181,7 +151,7 @@ describe("VoxelEngine — collider wiring", () => {
 
   it("disposes the collider along with the engine", () => {
     const fake = makeFakeCollider();
-    const engine = makeEngine(() => fake.collider);
+    const engine = makeEngine({ layers: ["Ground"], collider: () => fake.collider });
 
     engine.world.setVoxel("Ground", {
       position: { x: 0, y: 0, z: 0 },

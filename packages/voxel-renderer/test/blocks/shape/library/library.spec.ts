@@ -3,273 +3,198 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { Cube } from "../../../../src/blocks/shape/library/Cube.ts";
-import { Pole } from "../../../../src/blocks/shape/library/Pole.ts";
-import { Slab } from "../../../../src/blocks/shape/library/Slab.ts";
-import { Ramp } from "../../../../src/blocks/shape/library/Ramp.ts";
-import { RampCornerInner, RampCornerOuter } from "../../../../src/blocks/shape/library/RampCorner.ts";
-import { PoleY } from "../../../../src/blocks/shape/library/PoleY.ts";
-import { Stair } from "../../../../src/blocks/shape/library/Stair.ts";
-import { StairCornerInner } from "../../../../src/blocks/shape/library/StairCornerInner.ts";
-import { StairCornerOuter } from "../../../../src/blocks/shape/library/StairCornerOuter.ts";
-import { FACE } from "../../../../src/utils/math.ts";
-import type { BlockShape } from "../../../../src/blocks/shape/BlockShape.ts";
+import {
+  Cube,
+  Pole,
+  PoleY,
+  Ramp,
+  RampCornerInner,
+  RampCornerOuter,
+  Slab,
+  Stair,
+  StairCornerInner,
+  StairCornerOuter
+} from "../../../../src/blocks/shape/library/index.ts";
+import { FACE, FACES } from "../../../../src/utils/math.ts";
+import type { BlockCollisionHint, BlockShape } from "../../../../src/blocks/shape/index.ts";
 
-const ALL_FACES = [FACE.PosX, FACE.NegX, FACE.PosY, FACE.NegY, FACE.PosZ, FACE.NegZ];
-
-function assertOutwardWinding(
-  shape: BlockShape
-): void {
-  for (const face of shape.faces) {
-    const [v0, v1, v2] = face.vertices;
-    const ax = v1[0] - v0[0];
-    const ay = v1[1] - v0[1];
-    const az = v1[2] - v0[2];
-    const bx = v2[0] - v0[0];
-    const by = v2[1] - v0[1];
-    const bz = v2[2] - v0[2];
-    const crossX = (ay * bz) - (az * by);
-    const crossY = (az * bx) - (ax * bz);
-    const crossZ = (ax * by) - (ay * bx);
-    const dot = (crossX * face.normal[0]) +
-      (crossY * face.normal[1]) +
-      (crossZ * face.normal[2]);
-
-    assert.ok(dot > 0, `${shape.id} has an inward-facing polygon`);
-  }
+interface ShapeCase {
+  shape: BlockShape;
+  id: string;
+  collisionHint: BlockCollisionHint;
+  faces: number;
+  /** Every face the shape covers completely; all others must stay visible. */
+  occludes: readonly FACE[];
+  /** Why the shape has the face count it has, where that is not obvious. */
+  note?: string;
 }
 
-describe("Built-in shape winding", () => {
+// CONSTANTS
+const kShapes: readonly ShapeCase[] = [
+  {
+    shape: new Cube(),
+    id: "cube",
+    collisionHint: "box",
+    faces: 6,
+    occludes: FACES
+  },
+  {
+    shape: new Pole(),
+    id: "pole",
+    collisionHint: "trimesh",
+    faces: 6,
+    occludes: [],
+    note: "sub-voxel column, so it covers nothing"
+  },
+  {
+    shape: new PoleY(),
+    id: "poleY",
+    collisionHint: "trimesh",
+    faces: 6,
+    occludes: [],
+    note: "sub-voxel column, so it covers nothing"
+  },
+  {
+    shape: new Slab("bottom"),
+    id: "slabBottom",
+    collisionHint: "box",
+    faces: 6,
+    occludes: [FACE.NegY]
+  },
+  {
+    shape: new Slab("top"),
+    id: "slabTop",
+    collisionHint: "box",
+    faces: 6,
+    occludes: [FACE.PosY]
+  },
+  {
+    shape: new Ramp(),
+    id: "ramp",
+    collisionHint: "trimesh",
+    faces: 5,
+    occludes: [FACE.NegY, FACE.PosZ],
+    note: "2 quads + 2 triangles + 1 diagonal quad"
+  },
+  {
+    shape: new RampCornerInner(),
+    id: "rampCornerInner",
+    collisionHint: "trimesh",
+    faces: 7,
+    occludes: [FACE.PosX, FACE.NegY, FACE.PosZ]
+  },
+  {
+    shape: new RampCornerOuter(),
+    id: "rampCornerOuter",
+    collisionHint: "trimesh",
+    faces: 5,
+    occludes: [FACE.NegY]
+  },
+  {
+    shape: new Stair(),
+    id: "stair",
+    collisionHint: "trimesh",
+    faces: 10,
+    occludes: [FACE.NegY, FACE.PosZ],
+    note: "9 boundary quads + 1 interior riser quad"
+  },
+  {
+    shape: new StairCornerInner(),
+    id: "stairCornerInner",
+    collisionHint: "trimesh",
+    faces: 12,
+    occludes: [FACE.PosX, FACE.NegY, FACE.PosZ],
+    note: "10 boundary quads + 2 interior riser quads"
+  },
+  {
+    shape: new StairCornerOuter(),
+    id: "stairCornerOuter",
+    collisionHint: "trimesh",
+    faces: 13,
+    occludes: [FACE.NegY],
+    note: "11 boundary quads + 2 interior riser quads"
+  }
+];
+
+describe("Built-in shapes", () => {
+  for (const { shape, id, collisionHint, faces, occludes, note } of kShapes) {
+    describe(id, () => {
+      it(`is a ${collisionHint} of ${faces} faces${note ? ` (${note})` : ""}`, () => {
+        assert.equal(shape.id, id);
+        assert.equal(shape.collisionHint, collisionHint);
+        assert.equal(shape.faces.length, faces);
+      });
+
+      it("occludes exactly the faces it covers", () => {
+        assert.deepEqual(
+          FACES.filter((face) => shape.occludes(face)),
+          FACES.filter((face) => occludes.includes(face))
+        );
+      });
+    });
+  }
+});
+
+describe("Built-in shapes — geometry invariants", () => {
   it("points every polygon normal outward", () => {
-    const shapes: BlockShape[] = [
-      new Cube(),
-      new Pole(),
-      new PoleY(),
-      new Ramp(),
-      new RampCornerInner(),
-      new RampCornerOuter(),
-      new Slab("bottom"),
-      new Slab("top"),
-      new Stair(),
-      new StairCornerInner(),
-      new StairCornerOuter()
-    ];
+    for (const { shape } of kShapes) {
+      for (const face of shape.faces) {
+        const [v0, v1, v2] = face.vertices;
+        const ax = v1[0] - v0[0];
+        const ay = v1[1] - v0[1];
+        const az = v1[2] - v0[2];
+        const bx = v2[0] - v0[0];
+        const by = v2[1] - v0[1];
+        const bz = v2[2] - v0[2];
+        const dot = (((ay * bz) - (az * by)) * face.normal[0]) +
+          (((az * bx) - (ax * bz)) * face.normal[1]) +
+          (((ax * by) - (ay * bx)) * face.normal[2]);
 
-    for (const shape of shapes) {
-      assertOutwardWinding(shape);
+        assert.ok(dot > 0, `${shape.id} has an inward-facing polygon`);
+      }
+    }
+  });
+
+  it("gives every face a unit normal", () => {
+    for (const { shape } of kShapes) {
+      for (const [index, { normal }] of shape.faces.entries()) {
+        const magnitude = Math.hypot(normal[0], normal[1], normal[2]);
+        assert.ok(
+          Math.abs(magnitude - 1) < 1e-9,
+          `${shape.id} face[${index}] normal magnitude is ${magnitude}`
+        );
+      }
+    }
+  });
+
+  it("builds every face from a triangle or a quad", () => {
+    for (const { shape } of kShapes) {
+      for (const [index, { vertices }] of shape.faces.entries()) {
+        assert.ok(
+          vertices.length === 3 || vertices.length === 4,
+          `${shape.id} face[${index}] has ${vertices.length} vertices`
+        );
+      }
     }
   });
 });
 
-describe("Cube", () => {
-  const cube = new Cube();
-
-  it("default id is 'cube'", () => {
-    assert.equal(cube.id, "cube");
+describe("Built-in shapes — construction", () => {
+  it("takes a custom id", () => {
+    assert.equal(new Cube("myCustomCube").id, "myCustomCube");
   });
 
-  it("collisionHint is 'box'", () => {
-    assert.equal(cube.collisionHint, "box");
-  });
-
-  it("has exactly 6 faces", () => {
-    assert.equal(cube.faces.length, 6);
-  });
-
-  it("occludes() returns true for every face", () => {
-    for (const face of ALL_FACES) {
-      assert.ok(
-        cube.occludes(face),
-        `expected occludes(${face}) to be true`
-      );
+  it("keeps a slab's occlusion tied to its type, not its id", () => {
+    // A "slabTop" reading as a bottom slab (or vice versa) leaves a hole
+    // wherever the mesher trusts the name over the constructor argument.
+    for (const id of ["myBottomSlab", "slab"]) {
+      const bottom = new Slab("bottom", id);
+      assert.ok(bottom.occludes(FACE.NegY));
+      assert.ok(!bottom.occludes(FACE.PosY));
     }
-  });
 
-  it("accepts a custom id", () => {
-    const custom = new Cube("myCustomCube");
-    assert.equal(custom.id, "myCustomCube");
-  });
-
-  it("each face has 4 vertices (quad)", () => {
-    for (const fd of cube.faces) {
-      assert.ok(
-        fd.vertices.length === 3 || fd.vertices.length === 4,
-        "expected 3 or 4 vertices"
-      );
-    }
+    const top = new Slab("top", "myBottomSlab");
+    assert.ok(top.occludes(FACE.PosY));
+    assert.ok(!top.occludes(FACE.NegY));
   });
 });
-
-describe("Slab (bottom)", () => {
-  const slab = new Slab("bottom");
-
-  it("id is 'slabBottom'", () => {
-    assert.equal(slab.id, "slabBottom");
-  });
-
-  it("collisionHint is 'box'", () => {
-    assert.equal(slab.collisionHint, "box");
-  });
-
-  it("has exactly 6 faces", () => {
-    assert.equal(slab.faces.length, 6);
-  });
-
-  it("occludes NegY (bottom face)", () => {
-    assert.equal(slab.occludes(FACE.NegY), true);
-  });
-
-  it("does not occlude PosY (top face)", () => {
-    assert.equal(slab.occludes(FACE.PosY), false);
-  });
-
-  it("does not occlude side faces", () => {
-    assert.equal(slab.occludes(FACE.PosX), false);
-    assert.equal(slab.occludes(FACE.NegX), false);
-    assert.equal(slab.occludes(FACE.PosZ), false);
-    assert.equal(slab.occludes(FACE.NegZ), false);
-  });
-});
-
-describe("Slab (top)", () => {
-  const slab = new Slab("top");
-
-  it("id is 'slabTop'", () => {
-    assert.equal(slab.id, "slabTop");
-  });
-
-  it("occludes PosY (top face)", () => {
-    assert.equal(slab.occludes(FACE.PosY), true);
-  });
-
-  it("does not occlude NegY (bottom face)", () => {
-    assert.equal(slab.occludes(FACE.NegY), false);
-  });
-});
-
-describe("Slab — occludes() follows the constructor type, not the id", () => {
-  it("keeps bottom occlusion under a custom id", () => {
-    const slab = new Slab("bottom", "myBottomSlab");
-    assert.ok(slab.occludes(FACE.NegY), "NegY should occlude a bottom slab");
-    assert.ok(!slab.occludes(FACE.PosY), "PosY should not occlude a bottom slab");
-  });
-
-  it("keeps bottom occlusion under a custom id that says nothing about the type", () => {
-    const slab = new Slab("bottom", "slab");
-    assert.ok(slab.occludes(FACE.NegY), "NegY should occlude a bottom slab");
-    assert.ok(!slab.occludes(FACE.PosY), "PosY should not occlude a bottom slab");
-  });
-
-  it("keeps top occlusion under a custom id that reads as a bottom slab", () => {
-    const slab = new Slab("top", "myBottomSlab");
-    assert.ok(slab.occludes(FACE.PosY), "PosY should occlude a top slab");
-    assert.ok(!slab.occludes(FACE.NegY), "NegY should not occlude a top slab");
-  });
-});
-
-describe("Ramp", () => {
-  const ramp = new Ramp();
-
-  it("default id is 'ramp'", () => {
-    assert.equal(ramp.id, "ramp");
-  });
-
-  it("collisionHint is 'trimesh'", () => {
-    assert.equal(ramp.collisionHint, "trimesh");
-  });
-
-  it("has 5 faces (2 quads + 2 triangles + 1 diagonal quad)", () => {
-    assert.equal(ramp.faces.length, 5);
-  });
-
-  it("occludes NegY and PosZ only", () => {
-    assert.equal(ramp.occludes(FACE.NegY), true);
-    assert.equal(ramp.occludes(FACE.PosZ), true);
-    assert.equal(ramp.occludes(FACE.PosX), false);
-    assert.equal(ramp.occludes(FACE.NegX), false);
-    assert.equal(ramp.occludes(FACE.PosY), false);
-    assert.equal(ramp.occludes(FACE.NegZ), false);
-  });
-});
-
-describe("RampCornerInner", () => {
-  const corner = new RampCornerInner();
-
-  it("default id is 'rampCornerInner'", () => {
-    assert.equal(corner.id, "rampCornerInner");
-  });
-
-  it("collisionHint is 'trimesh'", () => {
-    assert.equal(corner.collisionHint, "trimesh");
-  });
-
-  it("has 7 faces", () => {
-    assert.equal(corner.faces.length, 7);
-  });
-
-  it("occludes NegY, PosZ, and PosX", () => {
-    assert.equal(corner.occludes(FACE.NegY), true);
-    assert.equal(corner.occludes(FACE.PosZ), true);
-    assert.equal(corner.occludes(FACE.PosX), true);
-  });
-
-  it("does not occlude NegX, NegZ, PosY", () => {
-    assert.equal(corner.occludes(FACE.NegX), false);
-    assert.equal(corner.occludes(FACE.NegZ), false);
-    assert.equal(corner.occludes(FACE.PosY), false);
-  });
-});
-
-describe("RampCornerOuter", () => {
-  const corner = new RampCornerOuter();
-
-  it("default id is 'rampCornerOuter'", () => {
-    assert.equal(corner.id, "rampCornerOuter");
-  });
-
-  it("collisionHint is 'trimesh'", () => {
-    assert.equal(corner.collisionHint, "trimesh");
-  });
-
-  it("has 5 faces", () => {
-    assert.equal(corner.faces.length, 5);
-  });
-
-  it("occludes only NegY", () => {
-    assert.equal(corner.occludes(FACE.NegY), true);
-    for (const face of [FACE.PosX, FACE.NegX, FACE.PosY, FACE.PosZ, FACE.NegZ]) {
-      assert.equal(
-        corner.occludes(face),
-        false,
-        `expected occludes(${face}) to be false`
-      );
-    }
-  });
-});
-
-describe("PoleY", () => {
-  const pillar = new PoleY();
-
-  it("default id is 'poleY'", () => {
-    assert.equal(pillar.id, "poleY");
-  });
-
-  it("collisionHint is 'trimesh'", () => {
-    assert.equal(pillar.collisionHint, "trimesh");
-  });
-
-  it("has 6 faces (narrow column geometry)", () => {
-    assert.equal(pillar.faces.length, 6);
-  });
-
-  it("occludes no faces (sub-voxel shape)", () => {
-    for (const face of ALL_FACES) {
-      assert.equal(
-        pillar.occludes(face),
-        false,
-        `expected poleY.occludes(${face}) to be false`
-      );
-    }
-  });
-});
-

@@ -3,8 +3,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { TiledConverter } from "../../../src/plugins/tiled/TiledConverter.ts";
-import type { TiledMap } from "../../../src/plugins/tiled/types.ts";
+import { TiledConverter, type TiledMap } from "../../../src/plugins/tiled/index.ts";
 
 // Simple resolver that returns the tileset name as the src path
 function simpleSrc(_src: string, id: string) {
