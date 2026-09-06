@@ -110,7 +110,9 @@ the removed layer are re-evaluated. Returns `false` if not found.
 
 #### `moveLayer(name: string, direction: "up" | "down"): void`
 
-Swaps `order` with the neighbouring layer in the given direction.
+Swaps `order` with the neighbouring layer in the given direction. `"up"` raises
+the layer's compositing priority, `"down"` lowers it. Does nothing when the
+layer is already at that end of the stack.
 
 #### `setLayerVisible(name: string, visible: boolean): void`
 

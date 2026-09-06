@@ -154,7 +154,7 @@ export class VoxelWorld {
     }
 
     const layer = this.#layers[idx];
-    const delta = direction === "up" ? 1 : -1;
+    const delta = direction === "up" ? -1 : 1;
     const swapIdx = idx + delta;
 
     if (swapIdx < 0 || swapIdx >= this.#layers.length) {

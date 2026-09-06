@@ -226,9 +226,7 @@ export class LayerManager extends LitElement {
       return;
     }
 
-    const layers = [
-      ...this.vr.engine.world.getLayers()
-    ].reverse();
+    const layers = this.vr.engine.world.getLayers();
 
     this._nodes = [
       ...layers.map((layer): TreeNode<LayerRef> => {

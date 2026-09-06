@@ -50,7 +50,7 @@ gives you a precise `metadata` type with no casting required.
 | `"voxel-removed"` | `{ position: Vector3Like }` | |
 | `"voxels-set"` | `{ entries: VoxelSetOptions[] }` | Bulk placement |
 | `"voxels-removed"` | `{ entries: VoxelRemoveOptions[] }` | Bulk removal |
-| `"reordered"` | `{ direction: "up" \| "down" }` | |
+| `"reordered"` | `{ direction: "up" \| "down" }` | `"up"` raises priority. |
 | `"object-layer-added"` | `{}` | |
 | `"object-layer-removed"` | `{}` | |
 | `"object-layer-updated"` | `{ patch: { visible?: boolean } }` | |
