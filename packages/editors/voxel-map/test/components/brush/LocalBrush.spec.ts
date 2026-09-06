@@ -20,21 +20,43 @@ import type { BrushCursor } from "../../../src/components/brush/cursor.ts";
 
 type MouseAction = "left" | "right";
 
+interface VoxelEntryLike {
+  position: { x: number; y: number; z: number; };
+}
+
+interface BrushHarnessOptions {
+  maxDistance?: number;
+  filled?: boolean;
+  stampInterval?: number;
+  stampCells?: number;
+}
+
 interface BrushHarness {
   cursors: (BrushCursor | null)[];
   brush: LocalBrush;
   camera: THREE.PerspectiveCamera;
   operations: string[];
+  removed: VoxelEntryLike[];
+  placed: VoxelEntryLike[];
   previewUpdates: number;
-  publishPress(action: MouseAction): void;
+  press(action: MouseAction): void;
+  settle(): void;
+  release(): void;
+  setPointer(x: number, y: number): void;
   setMouseMoving(moving: boolean): void;
   setButtonDown(action: string | null): void;
   setHovering(hovering: boolean): void;
 }
 
 function createHarness(
-  maxDistance?: number
+  options: BrushHarnessOptions = {}
 ): BrushHarness {
+  const {
+    maxDistance,
+    filled = true,
+    stampInterval,
+    stampCells
+  } = options;
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(60, 2, 0.1, 100);
   camera.position.set(0.5, 10, 0.5);
@@ -42,18 +64,29 @@ function createHarness(
   camera.updateMatrixWorld(true);
 
   let pressed: MouseAction | null = null;
-  let buttonDown: string | null = null;
+  const down = new Set<string>();
   let mouseMoving = true;
   let hovering = true;
+  const pointer = new THREE.Vector2();
   const operations: string[] = [];
+  const placed: VoxelEntryLike[] = [];
+  const removed: VoxelEntryLike[] = [];
+  const layer = {
+    getVoxelAt(): { blockId: number; } | undefined {
+      return filled ? { blockId: 1 } : undefined;
+    }
+  };
   const engine = {
     root: new THREE.Group(),
     world: {
-      setVoxel(): void {
-        operations.push("set");
+      getLayer: () => layer,
+      setVoxelBulk(_name: string, entries: VoxelEntryLike[]): void {
+        placed.push(...entries);
+        operations.push(`set:${entries.length}`);
       },
-      removeVoxel(): void {
-        operations.push("remove");
+      removeVoxelBulk(_name: string, entries: VoxelEntryLike[]): void {
+        removed.push(...entries);
+        operations.push(`remove:${entries.length}`);
       }
     },
     flush(): void {
@@ -69,8 +102,11 @@ function createHarness(
           isDown: () => false
         },
         mouse: {
-          viewportPositionTo: <T extends THREE.Vector2>(out: T) => out.set(0, 0),
-          isDown: (action: string) => action === buttonDown,
+          viewportPositionTo: <T extends THREE.Vector2>(out: T) => out.set(
+            pointer.x,
+            pointer.y
+          ),
+          isDown: (action: string) => down.has(action),
           isMoving: () => mouseMoving,
           get hovering() {
             return hovering;
@@ -95,15 +131,17 @@ function createHarness(
     }
   };
   const actor = actorValue as unknown as Actor;
-  const drawCells = mock.method(
+  const draw = mock.method(
     BrushMesh.prototype,
-    "drawCells"
+    "draw"
   );
   const brush = new LocalBrush(actor, {
     vr: { engine } as unknown as VoxelRenderer,
     camera,
     groundPlaneSize: 10,
-    maxDistance
+    maxDistance,
+    stampInterval,
+    stampCells
   });
 
   const cursors: (BrushCursor | null)[] = [];
@@ -113,18 +151,34 @@ function createHarness(
     brush,
     camera,
     operations,
+    placed,
+    removed,
     cursors,
     get previewUpdates(): number {
-      return drawCells.mock.callCount();
+      return draw.mock.callCount();
     },
-    publishPress(action: MouseAction): void {
+    press(action: MouseAction): void {
       pressed = action;
+      down.add(action);
+    },
+    settle(): void {
+      pressed = null;
+    },
+    release(): void {
+      pressed = null;
+      down.clear();
+    },
+    setPointer(x: number, y: number): void {
+      pointer.set(x, y);
     },
     setMouseMoving(moving: boolean): void {
       mouseMoving = moving;
     },
     setButtonDown(action: string | null): void {
-      buttonDown = action;
+      down.clear();
+      if (action !== null) {
+        down.add(action);
+      }
     },
     setHovering(value: boolean): void {
       hovering = value;
@@ -132,44 +186,257 @@ function createHarness(
   };
 }
 
-describe("LocalBrush mesh synchronization", () => {
-  afterEach(() => {
-    mock.restoreAll();
-    editorState.setSelection(null);
-    editorState.setBrushSizeAbsolute(1);
-  });
+function resetEditorState(): void {
+  mock.restoreAll();
+  editorState.setSelection(null);
+  editorState.setBrushSizeAbsolute(1);
+}
 
-  test("flushes once after placing every cell of the brush", () => {
+describe("LocalBrush mesh synchronization", () => {
+  afterEach(resetEditorState);
+
+  test("places every cell of the brush in one command", () => {
     editorState.selectVoxelLayer("Ground");
     editorState.setBrushSizeAbsolute(2);
     const harness = createHarness();
 
-    harness.publishPress("left");
+    harness.press("left");
     harness.brush.update();
 
-    assert.deepStrictEqual(
-      harness.operations,
-      ["set", "set", "set", "set", "flush"]
-    );
+    assert.deepStrictEqual(harness.operations, ["set:4", "flush"]);
   });
 
-  test("flushes after removing a voxel", () => {
+  test("removes in one command and flushes", () => {
     editorState.selectVoxelLayer("Ground");
     const harness = createHarness();
 
-    harness.publishPress("right");
+    harness.press("right");
     harness.brush.update();
 
-    assert.deepStrictEqual(harness.operations, ["remove", "flush"]);
+    assert.deepStrictEqual(harness.operations, ["remove:1", "flush"]);
+  });
+
+  test("removes the cell resting on the ground the preview outlines", () => {
+    editorState.selectVoxelLayer("Ground");
+    const harness = createHarness();
+
+    harness.press("right");
+    harness.brush.update();
+
+    assert.deepStrictEqual(
+      harness.removed.map(({ position }) => position),
+      [{ x: 0, y: 0, z: 0 }]
+    );
+  });
+
+  test("sends nothing when the footprint holds no voxel", () => {
+    editorState.selectVoxelLayer("Ground");
+    editorState.setBrushSizeAbsolute(3);
+    const harness = createHarness({ filled: false });
+
+    harness.press("right");
+    harness.brush.update();
+
+    assert.deepStrictEqual(harness.operations, []);
+  });
+
+  test("edits nothing while no voxel layer is selected", () => {
+    const harness = createHarness();
+
+    harness.press("left");
+    harness.brush.update();
+
+    assert.deepStrictEqual(harness.operations, []);
+  });
+});
+
+describe("LocalBrush stroke", () => {
+  afterEach(resetEditorState);
+
+  // Frame deltas are seconds; 0.1 is long enough to stamp again.
+  const kFrame = 0.1;
+
+  test("keeps painting while the button stays down", () => {
+    editorState.selectVoxelLayer("Ground");
+    const harness = createHarness();
+
+    harness.press("left");
+    harness.brush.update();
+    harness.settle();
+    harness.setPointer(0.3, 0);
+    harness.brush.update(kFrame);
+
+    assert.strictEqual(
+      harness.operations.filter((operation) => operation !== "flush").length,
+      2
+    );
+  });
+
+  test("walks the cells the pointer skipped over", () => {
+    editorState.selectVoxelLayer("Ground");
+    const harness = createHarness();
+
+    harness.press("left");
+    harness.brush.update();
+    harness.settle();
+    harness.setPointer(0.3, 0);
+    for (let stamp = 0; stamp < 3; stamp++) {
+      harness.brush.update(kFrame);
+    }
+
+    const positions = harness.placed.map(({ position }) => position);
+    assert.ok(
+      positions.length > 2,
+      `expected a walked run, got ${positions.length} cells`
+    );
+    // A contiguous run: no two successive cells more than one step apart.
+    for (let index = 1; index < positions.length; index++) {
+      const previous = positions[index - 1];
+      const current = positions[index];
+      assert.ok(
+        Math.abs(current.x - previous.x) <= 1 &&
+        Math.abs(current.z - previous.z) <= 1,
+        `gap between ${JSON.stringify(previous)} and ${JSON.stringify(current)}`
+      );
+    }
+  });
+
+  test("waits for the stamp interval before painting again", () => {
+    editorState.selectVoxelLayer("Ground");
+    const harness = createHarness({ stampInterval: 70 });
+
+    harness.press("left");
+    harness.brush.update();
+    harness.settle();
+    harness.setPointer(0.3, 0);
+    harness.brush.update(0.01);
+    harness.brush.update(0.01);
+
+    assert.deepStrictEqual(harness.operations, ["set:1", "flush"]);
+
+    harness.brush.update(0.07);
+
+    assert.strictEqual(harness.operations.length, 4);
+  });
+
+  test("travels no further than its cell budget per stamp", () => {
+    editorState.selectVoxelLayer("Ground");
+    const harness = createHarness({ stampCells: 2 });
+
+    harness.press("left");
+    harness.brush.update();
+    harness.settle();
+    harness.setPointer(0.5, 0);
+    harness.brush.update(kFrame);
+
+    assert.deepStrictEqual(harness.operations, [
+      "set:1",
+      "flush",
+      "set:2",
+      "flush"
+    ]);
+  });
+
+  test("catches up with a pointer that stopped moving", () => {
+    editorState.selectVoxelLayer("Ground");
+    const harness = createHarness({ stampCells: 1 });
+
+    harness.press("left");
+    harness.brush.update();
+    harness.settle();
+    harness.setPointer(0.3, 0);
+    harness.setMouseMoving(false);
+    const target = harness.placed.length;
+    for (let stamp = 0; stamp < 4; stamp++) {
+      harness.brush.update(kFrame);
+    }
+
+    assert.ok(
+      harness.placed.length > target,
+      "the stroke keeps walking toward the pointer it trails"
+    );
+  });
+
+  test("stamps a cell once per stroke", () => {
+    editorState.selectVoxelLayer("Ground");
+    const harness = createHarness();
+
+    harness.press("left");
+    harness.brush.update();
+    harness.settle();
+    harness.brush.update(kFrame);
+    harness.brush.update(kFrame);
+
+    assert.deepStrictEqual(harness.operations, ["set:1", "flush"]);
+  });
+
+  test("stays on the plane it started on", () => {
+    editorState.selectVoxelLayer("Ground");
+    const harness = createHarness();
+
+    harness.press("left");
+    harness.brush.update();
+    harness.settle();
+    harness.setPointer(0.3, 0.2);
+    for (let stamp = 0; stamp < 3; stamp++) {
+      harness.brush.update(kFrame);
+    }
+
+    assert.ok(
+      harness.placed.every(({ position }) => position.y === 0),
+      "every cell of the stroke sits on the plane of its first cell"
+    );
+  });
+
+  test("a released button ends the stroke", () => {
+    editorState.selectVoxelLayer("Ground");
+    const harness = createHarness();
+
+    harness.press("left");
+    harness.brush.update();
+    harness.release();
+    harness.setPointer(0.3, 0);
+    harness.brush.update(kFrame);
+
+    assert.deepStrictEqual(harness.operations, ["set:1", "flush"]);
+  });
+
+  test("a stroke resumes only on a new press", () => {
+    editorState.selectVoxelLayer("Ground");
+    const harness = createHarness();
+
+    harness.press("left");
+    harness.brush.update();
+    harness.release();
+    harness.brush.update(kFrame);
+
+    harness.setButtonDown("left");
+    harness.setPointer(0.3, 0);
+    harness.brush.update(kFrame);
+
+    assert.deepStrictEqual(harness.operations, ["set:1", "flush"]);
+  });
+
+  test("the middle button interrupts the stroke", () => {
+    editorState.selectVoxelLayer("Ground");
+    const harness = createHarness();
+
+    harness.press("left");
+    harness.brush.update();
+    harness.settle();
+    harness.setButtonDown("middle");
+    harness.brush.update(kFrame);
+
+    harness.setButtonDown("left");
+    harness.setPointer(0.3, 0);
+    harness.brush.update(kFrame);
+
+    assert.deepStrictEqual(harness.operations, ["set:1", "flush"]);
   });
 });
 
 describe("LocalBrush preview refresh gating", () => {
-  afterEach(() => {
-    mock.restoreAll();
-    editorState.setSelection(null);
-    editorState.setBrushSizeAbsolute(1);
-  });
+  afterEach(resetEditorState);
 
   test("recomputes the preview while the pointer moves", () => {
     const harness = createHarness();
@@ -251,11 +518,7 @@ describe("LocalBrush preview refresh gating", () => {
 });
 
 describe("LocalBrush cursor reporting", () => {
-  afterEach(() => {
-    mock.restoreAll();
-    editorState.setSelection(null);
-    editorState.setBrushSizeAbsolute(1);
-  });
+  afterEach(resetEditorState);
 
   test("reports the aimed cell and the current brush size", () => {
     const harness = createHarness();
@@ -314,14 +577,10 @@ describe("LocalBrush cursor reporting", () => {
 });
 
 describe("LocalBrush reach", () => {
-  afterEach(() => {
-    mock.restoreAll();
-    editorState.setSelection(null);
-    editorState.setBrushSizeAbsolute(1);
-  });
+  afterEach(resetEditorState);
 
   test("aims at a surface within reach", () => {
-    const harness = createHarness(20);
+    const harness = createHarness({ maxDistance: 20 });
 
     harness.brush.update();
 
@@ -334,7 +593,7 @@ describe("LocalBrush reach", () => {
   });
 
   test("aims at nothing past the reach", () => {
-    const harness = createHarness(5);
+    const harness = createHarness({ maxDistance: 5 });
 
     harness.brush.update();
 
@@ -344,11 +603,12 @@ describe("LocalBrush reach", () => {
 
   test("places and removes nothing past the reach", () => {
     editorState.selectVoxelLayer("Ground");
-    const harness = createHarness(5);
+    const harness = createHarness({ maxDistance: 5 });
 
-    harness.publishPress("left");
+    harness.press("left");
     harness.brush.update();
-    harness.publishPress("right");
+    harness.release();
+    harness.press("right");
     harness.brush.update();
 
     assert.deepStrictEqual(harness.operations, []);
@@ -356,16 +616,16 @@ describe("LocalBrush reach", () => {
 
   test("still edits a surface within reach", () => {
     editorState.selectVoxelLayer("Ground");
-    const harness = createHarness(20);
+    const harness = createHarness({ maxDistance: 20 });
 
-    harness.publishPress("left");
+    harness.press("left");
     harness.brush.update();
 
-    assert.deepStrictEqual(harness.operations, ["set", "flush"]);
+    assert.deepStrictEqual(harness.operations, ["set:1", "flush"]);
   });
 
   test("aims again once the reach is widened", () => {
-    const harness = createHarness(5);
+    const harness = createHarness({ maxDistance: 5 });
 
     harness.brush.update();
     harness.brush.maxDistance = 20;

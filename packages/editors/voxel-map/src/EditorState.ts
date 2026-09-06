@@ -8,6 +8,12 @@ import type {
 
 // Import Internal Dependencies
 import type { ObjectKey } from "./features/object-layers/objectArea.ts";
+import {
+  DEFAULT_BRUSH_STYLE,
+  brushStyleEquals,
+  brushStyleFrom,
+  type BrushStyle
+} from "./components/brush/BrushStyle.ts";
 
 // CONSTANTS
 const kMinBrushSize = 1;
@@ -28,6 +34,7 @@ export interface EditorStateEventMap {
   selectionChange: LayerSelection;
   selectedBlockChange: number;
   brushSizeChange: number;
+  brushStyleChange: BrushStyle;
   rotationModeChange: RotationMode;
   flipYChange: boolean;
   activeSidebarTabChange: SidebarTab;
@@ -44,6 +51,7 @@ export class EditorState {
   #selection: LayerSelection = null;
   #selectedBlockId = 1;
   #brushSize = 1;
+  #brushStyle: BrushStyle = DEFAULT_BRUSH_STYLE;
   #rotationMode: RotationMode = "auto";
   #flipY = false;
   #activeSidebarTab: SidebarTab = "general";
@@ -53,11 +61,6 @@ export class EditorState {
   #blocksReady = true;
   #peers: readonly PresencePeer[] = [];
 
-  /**
-   * Whether the block registry holds the authoritative set. False while a
-   * networked world waits for its snapshot, so nothing publishes a block
-   * definition derived from a placeholder registry.
-   */
   get blocksReady(): boolean {
     return this.#blocksReady;
   }
@@ -111,6 +114,10 @@ export class EditorState {
 
   get brushSize(): number {
     return this.#brushSize;
+  }
+
+  get brushStyle(): BrushStyle {
+    return this.#brushStyle;
   }
 
   get rotationMode(): RotationMode {
@@ -245,6 +252,18 @@ export class EditorState {
 
   setBrushSizeAbsolute(size: number): void {
     this.setBrushSize(size - this.#brushSize);
+  }
+
+  setBrushStyle(
+    patch: Partial<BrushStyle>
+  ): void {
+    const next = brushStyleFrom(patch, this.#brushStyle);
+    if (brushStyleEquals(this.#brushStyle, next)) {
+      return;
+    }
+
+    this.#brushStyle = next;
+    this.#dispatch("brushStyleChange", next);
   }
 
   setRotationMode(mode: RotationMode): void {

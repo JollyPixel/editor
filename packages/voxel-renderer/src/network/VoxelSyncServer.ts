@@ -147,27 +147,28 @@ export class VoxelSyncServer extends network.Extension {
       return;
     }
 
-    if (!this.#arbiter.resolve(cmd)) {
+    const admitted = this.#arbiter.admit(cmd);
+    if (admitted === null) {
       return;
     }
 
-    if (isVoxelBlockCommand(cmd)) {
-      applyBlockCommand(this.blocks, cmd);
+    if (isVoxelBlockCommand(admitted)) {
+      applyBlockCommand(this.blocks, admitted);
     }
     else {
       // A peer may have removed the layer while the command was in flight.
       if (
-        kVoxelMutationActions.has(cmd.action) &&
-        this.world.getLayer(cmd.layerName) === undefined
+        kVoxelMutationActions.has(admitted.action) &&
+        this.world.getLayer(admitted.layerName) === undefined
       ) {
         return;
       }
 
-      this.world.applyRemoteCommand(cmd);
+      this.world.applyRemoteCommand(admitted);
     }
 
-    this.#arbiter.record(cmd);
-    this.#broadcast(cmd, context);
+    this.#arbiter.record(admitted);
+    this.#broadcast(admitted, context);
   }
 
   #broadcast(

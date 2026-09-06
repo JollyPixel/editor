@@ -10,10 +10,12 @@ import type {
 } from "@jolly-pixel/voxel.renderer/network/client.ts";
 
 // Import Internal Dependencies
+import { editorState } from "../../EditorState.ts";
 import { peerColor } from "../../network/identity.ts";
 import * as cursor from "./cursor.ts";
 import type { BrushCursor } from "./cursor.ts";
 import { BrushMesh } from "./BrushMesh.ts";
+import type { BrushStyle } from "./BrushStyle.ts";
 
 // CONSTANTS
 const kPresenceCursorKey = "brush";
@@ -28,6 +30,13 @@ export class PeerBrushes extends ActorComponent {
   #cursors = new Map<string, BrushCursor | null>();
   #localCursor: BrushCursor | null = null;
   #lastSent: BrushCursor | null | undefined;
+  #unsubscribeStyle: () => void;
+
+  #onStyleChange = (style: BrushStyle): void => {
+    for (const mesh of this.#meshes.values()) {
+      mesh.style = style;
+    }
+  };
 
   #onSync = (): void => {
     this.#resync();
@@ -61,6 +70,10 @@ export class PeerBrushes extends ActorComponent {
     this.#room.on("sync", this.#onSync);
     this.#room.on("peer-left", this.#onPeerLeft);
     this.#room.on("peer-presence", this.#onPeerPresence);
+    this.#unsubscribeStyle = editorState.on(
+      "brushStyleChange",
+      this.#onStyleChange
+    );
 
     this.#resync();
   }
@@ -87,6 +100,7 @@ export class PeerBrushes extends ActorComponent {
   }
 
   override destroy(): void {
+    this.#unsubscribeStyle();
     this.#room.off("sync", this.#onSync);
     this.#room.off("peer-left", this.#onPeerLeft);
     this.#room.off("peer-presence", this.#onPeerPresence);
@@ -149,7 +163,7 @@ export class PeerBrushes extends ActorComponent {
     }
 
     mesh.show();
-    mesh.drawCells(cursor.cellsOf(peerCursor));
+    mesh.draw(peerCursor);
   }
 
   #meshFor(
@@ -161,7 +175,10 @@ export class PeerBrushes extends ActorComponent {
       return existing;
     }
 
-    const mesh = new BrushMesh({ color });
+    const mesh = new BrushMesh({
+      color,
+      style: editorState.brushStyle
+    });
     mesh.hide();
     this.#meshes.set(clientId, mesh);
     this.actor.addChildren(mesh);
