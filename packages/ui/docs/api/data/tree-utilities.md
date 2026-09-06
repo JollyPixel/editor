@@ -16,8 +16,12 @@ The root entry point exports these pure helpers:
 - `isSelfOrDescendant(nodes, sourceId, targetId)` checks ancestry.
 - `resolveSelection(options)` computes the next selected IDs.
 - `resolveRowDropZone(rect, clientY)` resolves `above`, `inside`, or `below`.
-- `canDrop(options)` checks structural reparenting constraints.
+- `canDrop(options)` checks structural reparenting constraints, then the
+  optional `options.accept` domain veto.
 - `resolveReparent(options)` returns a reparented tree.
+
+`ResolveReparentOptions.accept` is a `TreeDropAccept`, the same predicate
+shape `jolly-tree` takes as its `acceptDrop` property.
 
 `resolveDropIndex` and its types are documented with the
 [interaction helpers](../interaction/README.md).

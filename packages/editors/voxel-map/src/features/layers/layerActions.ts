@@ -129,19 +129,6 @@ export async function removeLayerEntry(
   selection.clear();
 }
 
-export function moveLayerEntry(
-  world: VoxelWorld,
-  ref: LayerRef,
-  direction: "up" | "down"
-): void {
-  if (ref.kind === "voxel-layer") {
-    world.moveLayer(
-      ref.name,
-      direction
-    );
-  }
-}
-
 function createObject(
   world: VoxelWorld,
   selection: SelectionStore,

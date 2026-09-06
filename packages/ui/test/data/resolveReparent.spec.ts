@@ -8,7 +8,10 @@ import {
   resolveReparent
 } from "../../src/data/resolveReparent.ts";
 import { findNode } from "../../src/data/treeNodes.ts";
-import type { TreeNode } from "../../src/data/Tree.types.ts";
+import type {
+  JollyReparentDetail,
+  TreeNode
+} from "../../src/data/Tree.types.ts";
 
 // CONSTANTS
 function tree(): TreeNode[] {
@@ -66,6 +69,73 @@ describe("Data.canDrop", () => {
     assert.equal(
       canDrop({ nodes: tree(), movedIds: ["b", "a"], targetId: "a2", where: "above" }),
       false
+    );
+  });
+
+  test("rejects a structurally valid move the domain veto refuses", () => {
+    assert.equal(
+      canDrop({
+        nodes: tree(),
+        movedIds: ["b"],
+        targetId: "c",
+        where: "below",
+        accept: () => false
+      }),
+      false
+    );
+  });
+
+  test("hands the domain veto the drop it is judging", () => {
+    const seen: JollyReparentDetail[] = [];
+    canDrop({
+      nodes: tree(),
+      movedIds: ["b"],
+      targetId: "c",
+      where: "inside",
+      accept: (detail) => {
+        seen.push(detail);
+
+        return true;
+      }
+    });
+
+    assert.deepEqual(seen, [
+      {
+        movedIds: ["b"],
+        targetId: "c",
+        where: "inside"
+      }
+    ]);
+  });
+
+  test("never consults the domain veto on a structurally impossible move", () => {
+    let called = false;
+    const rejected = canDrop({
+      nodes: tree(),
+      movedIds: ["a"],
+      targetId: "a1",
+      where: "inside",
+      accept: () => {
+        called = true;
+
+        return true;
+      }
+    });
+
+    assert.equal(rejected, false);
+    assert.equal(called, false);
+  });
+
+  test("treats a null veto the same as an omitted one", () => {
+    assert.equal(
+      canDrop({
+        nodes: tree(),
+        movedIds: ["b"],
+        targetId: "c",
+        where: "below",
+        accept: null
+      }),
+      true
     );
   });
 });

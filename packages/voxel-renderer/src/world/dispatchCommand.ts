@@ -94,6 +94,13 @@ export function dispatchCommand(
       );
       break;
 
+    case "layer-moved":
+      world.moveLayerTo(
+        cmd.layerName,
+        cmd.metadata.toIndex
+      );
+      break;
+
     case "object-layer-added":
       world.addObjectLayer(
         cmd.layerName

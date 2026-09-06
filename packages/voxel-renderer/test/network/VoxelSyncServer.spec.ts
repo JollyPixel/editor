@@ -400,7 +400,7 @@ describe("VoxelSyncServer — rights", () => {
     assert.ok(server.events.includes("object-added"));
     assert.ok(server.events.includes("block-defined"));
     assert.ok(server.events.includes("block-removed"));
-    assert.equal(server.events.length, 19);
+    assert.equal(server.events.length, 20);
   });
 
   it("getEventName() reads the command's action", () => {

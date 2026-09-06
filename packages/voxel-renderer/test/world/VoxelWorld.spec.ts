@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { VoxelWorld } from "../../src/world/index.ts";
 import { FACE } from "../../src/utils/math.ts";
+import type { VoxelLayerHookEvent } from "../../src/hooks.ts";
 import { makeVoxelEntry } from "../helpers/voxelEntry.ts";
 
 describe("VoxelWorld — layer lifecycle", () => {
@@ -77,7 +78,87 @@ describe("VoxelWorld — layer ordering", () => {
 
     assert.equal(only.order, order);
   });
+
+  it("moves a layer to an absolute position in the stack", () => {
+    const world = new VoxelWorld(4);
+    world.addLayer("A");
+    world.addLayer("B");
+    world.addLayer("C");
+    assert.deepEqual(layerNames(world), ["C", "B", "A"]);
+
+    world.moveLayerTo("C", 2);
+    assert.deepEqual(layerNames(world), ["B", "A", "C"]);
+
+    world.moveLayerTo("A", 0);
+    assert.deepEqual(layerNames(world), ["A", "B", "C"]);
+  });
+
+  it("re-ranks order densely and descending after an absolute move", () => {
+    const world = new VoxelWorld(4);
+    world.addLayer("A");
+    world.addLayer("B");
+    world.addLayer("C");
+
+    world.moveLayerTo("C", 2);
+
+    assert.deepEqual(
+      world.getLayers().map((layer) => layer.order),
+      [2, 1, 0]
+    );
+  });
+
+  it("clamps an out-of-range index to the ends of the stack", () => {
+    const world = new VoxelWorld(4);
+    world.addLayer("A");
+    world.addLayer("B");
+    world.addLayer("C");
+
+    world.moveLayerTo("C", 99);
+    assert.deepEqual(layerNames(world), ["B", "A", "C"]);
+
+    world.moveLayerTo("C", -4);
+    assert.deepEqual(layerNames(world), ["C", "B", "A"]);
+  });
+
+  it("emits nothing for a move that changes nothing, or an unknown name", () => {
+    const world = new VoxelWorld(4);
+    world.addLayer("A");
+    world.addLayer("B");
+
+    const actions: string[] = [];
+    world.onLayerUpdated = (event) => actions.push(event.action);
+
+    world.moveLayerTo("B", 0);
+    world.moveLayerTo("NoSuch", 1);
+
+    assert.deepEqual(actions, []);
+  });
+
+  it("emits the clamped index it actually applied", () => {
+    const world = new VoxelWorld(4);
+    world.addLayer("A");
+    world.addLayer("B");
+
+    const events: VoxelLayerHookEvent[] = [];
+    world.onLayerUpdated = (event) => events.push(event);
+
+    world.moveLayerTo("B", 99);
+
+    assert.deepEqual(events, [
+      {
+        action: "layer-moved",
+        layerName: "B",
+        metadata: { toIndex: 1 }
+      }
+    ]);
+  });
 });
+
+function layerNames(
+  world: VoxelWorld
+): string[] {
+  return world.getLayers().map((layer) => layer.name);
+}
 
 describe("VoxelWorld — voxel access", () => {
   it("round-trips a voxel through the named layer", () => {

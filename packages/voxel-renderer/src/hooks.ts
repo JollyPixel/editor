@@ -100,6 +100,13 @@ export type VoxelLayerHookEvent =
     };
   }
   | {
+    action: "layer-moved";
+    layerName: string;
+    metadata: {
+      toIndex: number;
+    };
+  }
+  | {
     action: "object-layer-added";
     layerName: string;
     metadata: Record<string, never>;
@@ -153,6 +160,7 @@ export const VOXEL_LAYER_HOOK_ACTIONS: readonly VoxelLayerHookAction[] = [
   "voxels-set",
   "voxels-removed",
   "reordered",
+  "layer-moved",
   "object-layer-added",
   "object-layer-removed",
   "object-layer-updated",

@@ -110,9 +110,20 @@ the removed layer are re-evaluated. Returns `false` if not found.
 
 #### `moveLayer(name: string, direction: "up" | "down"): void`
 
-Swaps `order` with the neighbouring layer in the given direction. `"up"` raises
-the layer's compositing priority, `"down"` lowers it. Does nothing when the
-layer is already at that end of the stack.
+Moves the layer one step in the given direction. `"up"` raises the layer's
+compositing priority, `"down"` lowers it. Does nothing when the layer is
+already at that end of the stack.
+
+#### `moveLayerTo(name: string, toIndex: number): void`
+
+Moves the layer to an absolute position in `getLayers()` order, where index 0
+is the highest compositing priority. `toIndex` is truncated and clamped to the
+stack, so an out-of-range index lands the layer at the nearest end. A move that
+leaves the layer where it already sits does nothing and emits nothing.
+
+Both methods re-rank every layer's `order` densely and descending from the
+resulting sequence, so `order` is an internal rank rather than a stable
+identifier.
 
 #### `setLayerVisible(name: string, visible: boolean): void`
 

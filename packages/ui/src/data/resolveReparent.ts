@@ -1,6 +1,7 @@
 // Import Internal Dependencies
 import { isSelfOrDescendant } from "./treeNodes.ts";
 import type {
+  TreeDropAccept,
   TreeDropWhere,
   TreeNode
 } from "./Tree.types.ts";
@@ -10,35 +11,34 @@ export interface ResolveReparentOptions<TData> {
   movedIds: string[];
   targetId: string;
   where: TreeDropWhere;
+  accept?: TreeDropAccept | null;
 }
 
-/**
- * The structural invariant a domain veto never needs to restate: a node
- * cannot land inside itself or its own subtree. Dropping "inside" a leaf is
- * exactly how it becomes a branch, so that case is not rejected here.
- */
 export function canDrop<TData>(
   options: ResolveReparentOptions<TData>
 ): boolean {
-  const { nodes, movedIds, targetId } = options;
+  const {
+    nodes,
+    movedIds,
+    targetId,
+    where,
+    accept = null
+  } = options;
 
   if (movedIds.includes(targetId)) {
     return false;
   }
 
-  return movedIds.every(
+  const structural = movedIds.every(
     (movedId) => !isSelfOrDescendant(nodes, movedId, targetId)
   );
+  if (!structural) {
+    return false;
+  }
+
+  return accept === null || accept({ movedIds, targetId, where });
 }
 
-/**
- * Computes the tree that results from moving `movedIds` to `where` of
- * `targetId`, preserving their current relative order. Pure given a node
- * list, moved ids and a drop target — no DOM, no consumer domain knowledge.
- *
- * Returns `nodes` unchanged (same reference) when `canDrop` rejects the
- * move, so a caller can compare by identity to detect a no-op.
- */
 export function resolveReparent<TData>(
   options: ResolveReparentOptions<TData>
 ): TreeNode<TData>[] {

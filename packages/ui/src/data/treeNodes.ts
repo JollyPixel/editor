@@ -7,12 +7,6 @@ export interface FlatTreeRow<TData = unknown> {
   parentId: string | null;
 }
 
-/**
- * Depth-first, visible-only flattening: a branch's children are skipped
- * unless its id is in `expanded`. Keyboard navigation and the drag zone
- * geometry both walk this list rather than the raw `nodes` tree, since a
- * collapsed branch's hidden children are not a valid nav or drop target.
- */
 export function flattenVisible<TData>(
   nodes: readonly TreeNode<TData>[],
   expanded: ReadonlySet<string>,
@@ -33,10 +27,6 @@ export function flattenVisible<TData>(
   return rows;
 }
 
-/**
- * Depth-first search across the whole tree, visible or not: reparenting and
- * the structural guard both need to reach a collapsed node.
- */
 export function findNode<TData>(
   nodes: readonly TreeNode<TData>[],
   id: string
@@ -76,13 +66,6 @@ export function findParentId<TData>(
   return undefined;
 }
 
-/**
- * True when `id` is `ancestorId` itself or sits anywhere in its subtree.
- *
- * This is the structural half of the drop guard: it needs no domain
- * knowledge, so `jolly-tree` enforces it directly rather than leaving it to
- * the consumer.
- */
 export function isSelfOrDescendant<TData>(
   nodes: readonly TreeNode<TData>[],
   ancestorId: string,

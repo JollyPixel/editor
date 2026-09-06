@@ -1,3 +1,5 @@
+/* eslint-disable max-lines */
+
 // Import Third-party Dependencies
 import type { Vector3Like } from "three";
 
@@ -153,26 +155,67 @@ export class VoxelWorld {
       return;
     }
 
-    const layer = this.#layers[idx];
     const delta = direction === "up" ? -1 : 1;
-    const swapIdx = idx + delta;
-
-    if (swapIdx < 0 || swapIdx >= this.#layers.length) {
+    if (!this.#relocateLayer(idx, idx + delta)) {
       return;
     }
 
-    const temp = layer.order;
-    layer.order = this.#layers[swapIdx].order;
-    this.#layers[swapIdx].order = temp;
-    this.#sortLayers();
-
-    // Compositing order changed, so every layer remeshes.
-    this.#markAllLayersDirty();
     this.#emit({
       action: "reordered",
       layerName: name,
       metadata: { direction }
     });
+  }
+
+  moveLayerTo(
+    name: string,
+    toIndex: number
+  ): void {
+    const idx = this.#layers.findIndex(
+      (layer) => layer.name === name
+    );
+    if (idx === -1) {
+      return;
+    }
+
+    const clamped = Math.min(
+      Math.max(Math.trunc(toIndex), 0),
+      this.#layers.length - 1
+    );
+    if (!this.#relocateLayer(idx, clamped)) {
+      return;
+    }
+
+    this.#emit({
+      action: "layer-moved",
+      layerName: name,
+      metadata: { toIndex: clamped }
+    });
+  }
+
+  #relocateLayer(
+    fromIndex: number,
+    toIndex: number
+  ): boolean {
+    if (
+      toIndex === fromIndex ||
+      toIndex < 0 ||
+      toIndex >= this.#layers.length
+    ) {
+      return false;
+    }
+
+    const [layer] = this.#layers.splice(fromIndex, 1);
+    this.#layers.splice(toIndex, 0, layer);
+
+    const lastIndex = this.#layers.length - 1;
+    this.#layers.forEach((entry, index) => {
+      entry.order = lastIndex - index;
+    });
+
+    this.#markAllLayersDirty();
+
+    return true;
   }
 
   setLayerVisible(
