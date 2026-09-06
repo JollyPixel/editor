@@ -42,48 +42,37 @@ export interface LocalBrushOptions {
   brush?: BrushStore;
   selection?: SelectionStore;
   /**
-   * Side of the square ground plane the brush falls back to when the pointer
-   * misses every voxel.
+   * Fallback ground-plane side length, in world units.
    * @default 4096
    */
   groundPlaneSize?: number;
   /**
-   * How far from the camera the brush still reaches, in world units. Past it
-   * nothing is previewed and no voxel is placed or removed.
+   * Maximum brush reach in world units; disables previews and edits beyond it.
    * @default 32
    */
   maxDistance?: number;
   /**
-   * Tint of the cursor preview. Set it to the local peer's collaboration
-   * color so this user's brush looks the same here as it does to peers.
+   * Cursor tint, usually the local peer's collaboration color.
    */
   color?: THREE.ColorRepresentation;
   /**
-   * Shortest delay between two stamps of a held stroke, in milliseconds. The
-   * press itself always stamps at once.
+   * Minimum held-stroke delay in milliseconds; the first stamp is immediate.
    * @default 70
    */
   stampInterval?: number;
   /**
-   * How far a stroke may travel per stamp, in cells. Beyond it the stroke
-   * trails the pointer and catches up over the next stamps instead of laying
-   * the whole run down at once.
+   * Maximum travel per stamp, in cells; excess waits for later stamps.
    * @default 2
    */
   stampCells?: number;
 }
 
 /**
- * Coordinates pointer input, stroke timing, preview presentation, and the
- * aimed cursor published for `PeerBrushes` to share.
- *
- * Holding a button paints a stroke: the cells under the pointer are edited as
- * it travels, once each, at the height the stroke started at.
+ * Paints fixed-height strokes and publishes the aimed cursor for peers.
  */
 export class LocalBrush extends ActorComponent {
   /**
-   * Fired when the aimed cursor moves or resizes, `null` when nothing is
-   * aimed at.
+   * Fires when the aimed cursor changes; null means no target.
    */
   onCursorChange?: (cursor: BrushCursor | null) => void;
 
@@ -279,8 +268,7 @@ export class LocalBrush extends ActorComponent {
     }
 
     const center = mode === "place" ? aim.place : aim.remove;
-    // Frozen for the whole stroke so a moving camera cannot reorient the
-    // voxels laid down halfway through it.
+    // Freeze orientation so camera movement cannot rotate a stroke midway.
     const paint = mode === "place" ? {
       blockId: this.#brush.blockId,
       rotation: resolveRotation(

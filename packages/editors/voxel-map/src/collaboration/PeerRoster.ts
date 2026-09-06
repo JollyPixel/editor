@@ -18,13 +18,19 @@ import {
 } from "./identity.ts";
 
 export interface PeerRosterOptions {
-  room: network.Room<VoxelNetworkCommand, VoxelServerMessage>;
+  room: network.Room<
+    VoxelNetworkCommand,
+    VoxelServerMessage
+  >;
   identity: EditorIdentity;
   shell?: ShellStore;
 }
 
 export class PeerRoster {
-  #room: network.Room<VoxelNetworkCommand, VoxelServerMessage>;
+  #room: network.Room<
+    VoxelNetworkCommand,
+    VoxelServerMessage
+  >;
   #identity: EditorIdentity;
   #shell: ShellStore;
 
@@ -60,10 +66,13 @@ export class PeerRoster {
         return {
           clientId: peer.clientId,
           displayName: readUsername(peer.identity),
-          color: peerColor(peer.clientId, peer.identity)
+          color: peerColor(
+            peer.clientId,
+            peer.identity
+          )
         };
       })
-      .sort((a, b) => a.clientId.localeCompare(b.clientId));
+      .sort((peerLeft, peerRight) => peerLeft.clientId.localeCompare(peerRight.clientId));
 
     return [
       {

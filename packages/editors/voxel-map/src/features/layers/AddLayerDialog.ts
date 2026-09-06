@@ -21,7 +21,6 @@ const kOptions: JollyOption<AddKind>[] = [
 export type AddKind = "voxel-layer" | "object-layer" | "object";
 
 export interface AddLayerContext {
-  /** Whether an object layer is available to receive a new object. */
   canAddObject: boolean;
   defaultKind: AddKind;
   defaultName: Record<AddKind, string>;
@@ -33,11 +32,7 @@ export interface AddLayerResult {
 }
 
 /**
- * Single entry point for everything the layers tree can gain: a voxel
- * layer, an object layer, or an object inside the active object layer.
- *
- * The name field follows the kind until it is edited, so switching kinds
- * never leaves a mismatched default behind.
+ * Creates layers or objects; default names follow the kind until edited.
  */
 @customElement("add-layer-dialog")
 export class AddLayerDialog extends LitElement {
@@ -52,8 +47,10 @@ export class AddLayerDialog extends LitElement {
 
   @state()
   private declare _kind: AddKind;
+
   @state()
   private declare _name: string;
+
   @state()
   private declare _canAddObject: boolean;
 
@@ -76,8 +73,7 @@ export class AddLayerDialog extends LitElement {
   }
 
   /**
-   * Opens the modal and resolves with what to create, or null when it is
-   * dismissed or the name is left blank.
+   * Resolves to null when dismissed or given a blank name.
    */
   async open(
     context: AddLayerContext
@@ -167,7 +163,9 @@ export class AddLayerDialog extends LitElement {
 
   #confirm(): void {
     const name = this._name.trim();
-    this.#resolve(name ? { kind: this._kind, name } : null);
+    this.#resolve(
+      name ? { kind: this._kind, name } : null
+    );
     this._dialog.close("confirm");
   }
 

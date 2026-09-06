@@ -67,10 +67,19 @@ export class VoxelLayerGizmo extends ActorComponent {
     );
     this.#controls = controls;
 
-    this.actor.addChildren(controls.getHelper(), this.#pivot);
+    this.actor.addChildren(
+      controls.getHelper(),
+      this.#pivot
+    );
     this.#subscriptions.push(
-      this.#selection.watch("gizmoLayerChange", this.setActiveLayer.bind(this)),
-      this.#worldStore.watch("layerUpdated", this.#onLayerUpdated)
+      this.#selection.watch(
+        "gizmoLayerChange",
+        this.setActiveLayer.bind(this)
+      ),
+      this.#worldStore.watch(
+        "layerUpdated",
+        this.#onLayerUpdated
+      )
     );
   }
 

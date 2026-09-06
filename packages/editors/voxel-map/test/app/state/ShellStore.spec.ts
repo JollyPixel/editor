@@ -43,6 +43,9 @@ describe("ShellStore", () => {
 
   it("recognizes only the known sidebar tabs", () => {
     assert.equal(isSidebarTab("general"), true);
+    assert.equal(isSidebarTab("paint"), true);
+    assert.equal(isSidebarTab("blocks"), true);
+    assert.equal(isSidebarTab("layers"), true);
     assert.equal(isSidebarTab("nope"), false);
   });
 });

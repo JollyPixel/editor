@@ -24,6 +24,8 @@ import {
 // Registers the Three.js block grid.
 import "./BlockLibraryViewport.ts";
 
+export type BlockLibraryLayout = "compact" | "fill";
+
 export interface BlockSelectionChangeDetail {
   block: ResolvedBlockDefinition | null;
 }
@@ -45,6 +47,20 @@ export class BlockLibrary extends LitElement {
       flex-direction: column;
       gap: var(--jolly-row-gap, 4px);
       overflow: hidden;
+    }
+
+    :host([layout="compact"]) {
+      min-height: 200px;
+    }
+
+    :host([layout="fill"]) {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+
+    :host([layout="fill"]) block-library-viewport {
+      flex: 1 1 auto;
+      min-height: 0;
     }
 
     .brush-row {
@@ -69,19 +85,28 @@ export class BlockLibrary extends LitElement {
 
   @property({ attribute: false })
   declare engine: VoxelEngine | undefined;
+
   @property({ attribute: false })
   declare brush: BrushStore;
+
   @property({ attribute: false })
   declare worldStore: WorldStore;
 
+  @property({ type: String, reflect: true })
+  declare layout: BlockLibraryLayout;
+
   @state()
   private declare _selectedId: number | null;
+
   @state()
   private declare _selectedBlock: ResolvedBlockDefinition | null;
+
   @state()
   private declare _blocks: ResolvedBlockDefinition[];
+
   @state()
   private declare _rotationMode: RotationMode;
+
   @state()
   private declare _flipY: boolean;
 
@@ -96,6 +121,7 @@ export class BlockLibrary extends LitElement {
     this.engine = undefined;
     this.brush = editorState.brush;
     this.worldStore = editorState.world;
+    this.layout = "compact";
     this._selectedId = null;
     this._selectedBlock = null;
     this._blocks = [];
@@ -154,6 +180,7 @@ export class BlockLibrary extends LitElement {
         .engine=${this.engine}
         .blocks=${this._blocks}
         .selectedId=${this._selectedId}
+        .layout=${this.layout}
         @block-select=${this.#onBlockSelect}
         @block-edit=${this.#onBlockEdit}
       ></block-library-viewport>

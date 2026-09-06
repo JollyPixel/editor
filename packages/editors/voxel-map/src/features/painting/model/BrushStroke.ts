@@ -15,22 +15,18 @@ export interface VoxelPaint {
 export interface BrushStrokeOptions {
   mode: StrokeMode;
   /**
-   * Height every cell of the stroke sits at, in cells.
+   * Stroke height, in cells.
    */
   height: number;
   layerName: string;
   /**
-   * Absent while removing.
+   * Undefined in remove mode.
    */
   paint?: VoxelPaint;
 }
 
 /**
- * One press-to-release painting gesture.
- *
- * A stroke stays at the height it started at, matching the footprint of the
- * brush: painting never climbs onto the voxels it just laid down, never digs
- * under them, and stamps every cell at most once.
+ * Fixed-height stroke that interpolates centers and stamps each cell once.
  */
 export class BrushStroke {
   readonly mode: StrokeMode;
@@ -61,10 +57,7 @@ export class BrushStroke {
   }
 
   /**
-   * Brush centers to stamp on the way to `center`, at most `limit` of them so
-   * a fast pointer cannot dump a whole line at once. The stroke walks the
-   * cells in between rather than skipping them, and resumes from where it
-   * stopped on the next call.
+   * Walks toward `center` by at most `limit` cells, resuming on the next call.
    */
   advance(
     center: VoxelCoord,
@@ -87,9 +80,6 @@ export class BrushStroke {
     return cells;
   }
 
-  /**
-   * Whether the stroke still has ground to cover before it reaches `center`.
-   */
   trails(
     center: VoxelCoord
   ): boolean {
@@ -103,7 +93,7 @@ export class BrushStroke {
   }
 
   /**
-   * Keeps the cells this stroke has not stamped yet, and records them.
+   * Returns unstamped cells and records them as stamped.
    */
   claim(
     cells: Iterable<VoxelCoord>

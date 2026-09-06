@@ -18,12 +18,18 @@ import {
 } from "./identity.ts";
 
 export interface PeerFrustumsOptions {
-  room: network.Room<VoxelNetworkCommand, VoxelServerMessage>;
+  room: network.Room<
+    VoxelNetworkCommand,
+    VoxelServerMessage
+  >;
   camera: THREE.PerspectiveCamera;
 }
 
 export class PeerFrustums extends ActorComponent {
-  #sync: PeerFrustumSync<VoxelNetworkCommand, VoxelServerMessage>;
+  #sync: PeerFrustumSync<
+    VoxelNetworkCommand,
+    VoxelServerMessage
+  >;
   #camera: THREE.PerspectiveCamera;
 
   constructor(

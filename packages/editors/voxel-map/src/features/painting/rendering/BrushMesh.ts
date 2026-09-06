@@ -37,8 +37,7 @@ export interface BrushMeshOptions {
 }
 
 /**
- * Draws the footprint a brush covers, as one translucent box wrapped in one
- * outline. Both are resized in place, so a growing brush never allocates.
+ * Reuses one fill and outline while the brush footprint changes.
  */
 export class BrushMesh extends THREE.Group {
   #fill: THREE.Mesh;
@@ -163,8 +162,7 @@ export class BrushMesh extends THREE.Group {
     const depth = span.z + (kInflate * 2);
 
     this.#fill.scale.set(width, height, depth);
-    // Rebuilt rather than scaled so a dash keeps its world-unit length
-    // whatever the brush size.
+    // Rebuild to keep dash lengths constant in world units.
     this.#border.geometry.setPositions(
       boxEdgePositions(width / 2, height / 2, depth / 2)
     );

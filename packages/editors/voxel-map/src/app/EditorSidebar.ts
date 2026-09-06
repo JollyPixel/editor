@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { LitElement, html, css, nothing } from "lit";
+import { LitElement, html, css, nothing, render } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import type {
   JollyTabChangeDetail,
@@ -33,6 +33,9 @@ import { ViewFocus } from "../scene/viewFocus.ts";
 
 import "../features/registerElements.ts";
 
+// CONSTANTS
+const kBlockLibrarySlot = "block-library";
+
 @customElement("editor-sidebar")
 export class EditorSidebar extends LitElement {
   static override styles = css`
@@ -58,13 +61,45 @@ export class EditorSidebar extends LitElement {
       padding: var(--jolly-space-1, 4px);
     }
 
-    jolly-tab[value="paint"] {
+    jolly-tab[value="paint"],
+    jolly-tab[value="blocks"] {
       overflow-y: hidden;
       padding: 0;
     }
 
-    texture-editor {
+    .column {
+      display: flex;
+      flex-direction: column;
       height: 100%;
+      min-height: 0;
+    }
+
+    .column jolly-folder {
+      flex: 0 0 auto;
+    }
+
+    .blocks {
+      gap: var(--jolly-row-gap, 4px);
+      padding: var(--jolly-space-1, 4px);
+      box-sizing: border-box;
+    }
+
+    .blocks-toolbar {
+      display: flex;
+      flex: 0 0 auto;
+      align-items: center;
+      gap: var(--jolly-space-1, 4px);
+    }
+
+    .blocks-title {
+      flex: 1 1 auto;
+      min-width: 0;
+      font-weight: 600;
+    }
+
+    texture-editor {
+      flex: 1 1 auto;
+      min-height: 0;
     }
 
     .hint {
@@ -108,11 +143,12 @@ export class EditorSidebar extends LitElement {
   @state()
   private declare _canEditBlock: boolean;
 
-  @query("block-library")
-  private declare _blockLibrary: BlockLibrary | null;
-
   @query("jolly-folder[key='block-library']")
   private declare _blockFolder: HTMLElementTagNameMap["jolly-folder"] | null;
+
+  get #blockLibrary(): BlockLibrary | null {
+    return this.querySelector("block-library");
+  }
 
   #subscriptions: Array<() => void> = [];
 
@@ -166,12 +202,12 @@ export class EditorSidebar extends LitElement {
 
   readonly #addBlock = async(): Promise<void> => {
     this.#openBlockLibrary();
-    await this._blockLibrary?.addBlock();
+    await this.#blockLibrary?.addBlock();
   };
 
   readonly #editBlock = async(): Promise<void> => {
     this.#openBlockLibrary();
-    await this._blockLibrary?.editBlock();
+    await this.#blockLibrary?.editBlock();
   };
 
   #openBlockLibrary(): void {
@@ -193,11 +229,18 @@ export class EditorSidebar extends LitElement {
         <jolly-tab value="paint" label="Paint">
           ${this.#renderPaint()}
         </jolly-tab>
+        <jolly-tab value="blocks" label="Blocks">
+          ${this.#renderBlocks()}
+        </jolly-tab>
         <jolly-tab value="layers" label="Layers">
           ${this.#renderLayers()}
         </jolly-tab>
       </jolly-tabs>
     `;
+  }
+
+  protected override updated(): void {
+    render(this.#renderBlockLibrary(), this);
   }
 
   #onTabChange(
@@ -207,6 +250,51 @@ export class EditorSidebar extends LitElement {
     if (isSidebarTab(value)) {
       this.state.shell.tab = value;
     }
+  }
+
+  #renderBlockLibrary() {
+    return html`
+      <block-library
+        slot=${kBlockLibrarySlot}
+        .engine=${this.engine}
+        .brush=${this.state.brush}
+        .worldStore=${this.state.world}
+        .layout=${this._tab === "blocks" ? "fill" : "compact"}
+        @block-selection-change=${this.#onBlockSelectionChange}
+      ></block-library>
+    `;
+  }
+
+  #renderBlockLibrarySlot(
+    tab: SidebarTab
+  ) {
+    return this._tab === tab ?
+      html`<slot name=${kBlockLibrarySlot}></slot>` :
+      nothing;
+  }
+
+  #renderBlockActions(
+    slotName?: string
+  ) {
+    return html`
+      <jolly-button
+        slot=${slotName ?? nothing}
+        icon="plus"
+        icon-only
+        label="Add block"
+        title="Add block"
+        @click=${this.#addBlock}
+      ></jolly-button>
+      <jolly-button
+        slot=${slotName ?? nothing}
+        icon="pencil"
+        icon-only
+        label="Edit block"
+        title="Edit block"
+        ?disabled=${!this._canEditBlock}
+        @click=${this.#editBlock}
+      ></jolly-button>
+    `;
   }
 
   #renderGeneral() {
@@ -224,38 +312,6 @@ export class EditorSidebar extends LitElement {
           .onLoadWorld=${this.onLoadWorld}
           @world-loaded=${() => this.requestUpdate()}
         ></map-config-panel>
-      </jolly-folder>
-
-      <jolly-folder
-        key="block-library"
-        label="Block Library"
-        storage-key="voxel-map:folder:block-library"
-      >
-        <jolly-button
-          slot="actions"
-          icon="plus"
-          icon-only
-          label="Add block"
-          title="Add block"
-          @click=${this.#addBlock}
-        ></jolly-button>
-        <jolly-button
-          slot="actions"
-          icon="pencil"
-          icon-only
-          label="Edit block"
-          title="Edit block"
-          ?disabled=${!this._canEditBlock}
-          @click=${this.#editBlock}
-        ></jolly-button>
-
-        <block-library
-          @block-selection-change=${this.#onBlockSelectionChange}
-          .engine=${this.engine}
-          .brush=${this.state.brush}
-          .worldStore=${this.state.world}
-          style="flex:1;min-height:200px;"
-        ></block-library>
       </jolly-folder>
     `;
   }
@@ -325,13 +381,36 @@ export class EditorSidebar extends LitElement {
 
   #renderPaint() {
     return html`
-      <texture-editor
-        .engine=${this.engine}
-        .brush=${this.state.brush}
-        .worldStore=${this.state.world}
-        .active=${this._tab === "paint"}
-        .room=${this.textureRoom}
-      ></texture-editor>
+      <div class="column">
+        <jolly-folder
+          key="block-library"
+          label="Block Library"
+          storage-key="voxel-map:folder:block-library"
+        >
+          ${this.#renderBlockActions("actions")}
+          ${this.#renderBlockLibrarySlot("paint")}
+        </jolly-folder>
+
+        <texture-editor
+          .engine=${this.engine}
+          .brush=${this.state.brush}
+          .worldStore=${this.state.world}
+          .active=${this._tab === "paint"}
+          .room=${this.textureRoom}
+        ></texture-editor>
+      </div>
+    `;
+  }
+
+  #renderBlocks() {
+    return html`
+      <div class="column blocks">
+        <div class="blocks-toolbar">
+          <span class="blocks-title">Block Library</span>
+          ${this.#renderBlockActions()}
+        </div>
+        ${this.#renderBlockLibrarySlot("blocks")}
+      </div>
     `;
   }
 }

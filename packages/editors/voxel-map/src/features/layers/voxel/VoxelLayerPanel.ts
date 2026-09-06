@@ -36,19 +36,25 @@ export class VoxelLayerPanel extends LitElement {
 
   @property({ attribute: false })
   declare world: VoxelWorld | undefined;
+
   @property({ type: String })
   declare layerName: string | null;
+
   @property({ attribute: false })
   declare selection: SelectionStore;
+
   @property({ attribute: false })
   declare worldStore: WorldStore;
 
   @state()
   private declare _layer: VoxelLayer | null;
+
   @state()
   private declare _offset: Vec3Like;
+
   @state()
   private declare _gizmo: boolean;
+
   @state()
   private declare _props: PropertyRow[];
   #subscriptions: Array<() => void> = [];
@@ -65,10 +71,10 @@ export class VoxelLayerPanel extends LitElement {
     this._props = [];
   }
 
-  #onLayerUpdated = (evt: VoxelLayerHookEvent) => {
+  #onLayerUpdated = (event: VoxelLayerHookEvent) => {
     if (
-      evt.layerName !== this.layerName ||
-      evt.action !== "offset-updated"
+      event.layerName !== this.layerName ||
+      event.action !== "offset-updated"
     ) {
       return;
     }
@@ -116,7 +122,11 @@ export class VoxelLayerPanel extends LitElement {
     this._layer = layer;
 
     if (layer) {
-      this._offset = { x: layer.offset.x, y: layer.offset.y, z: layer.offset.z };
+      this._offset = {
+        x: layer.offset.x,
+        y: layer.offset.y,
+        z: layer.offset.z
+      };
       this._gizmo = this.selection.gizmoLayer === this.layerName;
       this._props = propertyRowsOf(layer.properties);
     }
@@ -183,7 +193,10 @@ export class VoxelLayerPanel extends LitElement {
     }
 
     this._offset = offset;
-    world.setLayerOffset(layerName, offset);
+    world.setLayerOffset(
+      layerName,
+      offset
+    );
   }
 
   #onPropertyRowsChange(

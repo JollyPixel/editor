@@ -42,7 +42,9 @@ export interface ObjectLayerRendererOptions {
   worldStore?: WorldStore;
 }
 
-/** Owns object-area selection, picking and transform controls. */
+/**
+ * Owns object-area selection, picking, and transform controls.
+ */
 export class ObjectLayerRenderer extends ActorComponent {
   #world: VoxelWorld;
   #camera: THREE.PerspectiveCamera;
@@ -121,14 +123,19 @@ export class ObjectLayerRenderer extends ActorComponent {
   }
 
   #syncAll(): void {
-    this.#scene.syncAll(this.#editingKey());
+    this.#scene.syncAll(
+      this.#editingKey()
+    );
     this.#updateVisibility();
   }
 
   #syncLayer(
     layerName: string
   ): void {
-    this.#scene.syncLayer(layerName, this.#editingKey());
+    this.#scene.syncLayer(
+      layerName,
+      this.#editingKey()
+    );
     this.#updateVisibility();
   }
 
@@ -141,7 +148,9 @@ export class ObjectLayerRenderer extends ActorComponent {
       this.#detach();
     }
     if (this.#selectedObjectKey() === key) {
-      this.#selection.selectObjectLayer(parseObjectKey(key).layerName);
+      this.#selection.selectObjectLayer(
+        parseObjectKey(key).layerName
+      );
     }
   };
 
@@ -216,7 +225,10 @@ export class ObjectLayerRenderer extends ActorComponent {
       (((event.clientX - rect.left) / rect.width) * 2) - 1,
       (-((event.clientY - rect.top) / rect.height) * 2) + 1
     );
-    this.#raycaster.setFromCamera(this.#pointer, this.#camera);
+    this.#raycaster.setFromCamera(
+      this.#pointer,
+      this.#camera
+    );
 
     const pickable = [...this.#scene.entries].filter(
       ([key, area]) => area.visible && !this.#scene.locked(key)
@@ -300,7 +312,10 @@ export class ObjectLayerRenderer extends ActorComponent {
       return;
     }
 
-    const patch = objectPatchFromArea(event.min, event.size);
+    const patch = objectPatchFromArea(
+      event.min,
+      event.size
+    );
     if (sameObjectArea(object, patch)) {
       return;
     }

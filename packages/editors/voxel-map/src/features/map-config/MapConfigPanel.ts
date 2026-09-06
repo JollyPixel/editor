@@ -43,8 +43,10 @@ export class MapConfigPanel extends LitElement {
 
   @property({ attribute: false })
   declare engine: VoxelEngine | undefined;
+
   @property({ attribute: false })
   declare gridRenderer: GridRenderer | undefined;
+
   @property({ attribute: false })
   declare onLoadWorld: ((data: VoxelWorldJSON) => void) | undefined;
 
@@ -63,7 +65,10 @@ export class MapConfigPanel extends LitElement {
   override willUpdate(
     changedProperties: PropertyValues<this>
   ): void {
-    if (changedProperties.has("gridRenderer") && this.gridRenderer) {
+    if (
+      changedProperties.has("gridRenderer") &&
+      this.gridRenderer
+    ) {
       this._gridVisible = this.gridRenderer.visible;
     }
   }

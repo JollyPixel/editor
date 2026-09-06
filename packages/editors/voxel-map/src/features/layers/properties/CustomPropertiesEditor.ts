@@ -41,11 +41,13 @@ export class CustomPropertiesEditor extends LitElement {
 
   @property({ attribute: false })
   declare rows: PropertyRow[];
+
   @property({ type: String, attribute: "storage-key" })
   declare storageKey: string;
 
   constructor() {
     super();
+
     this.rows = [];
     this.storageKey = "voxel-map:folder:custom-properties";
   }
@@ -128,14 +130,16 @@ export class CustomPropertiesEditor extends LitElement {
   #publish(
     rows: PropertyRow[]
   ): void {
-    this.dispatchEvent(new CustomEvent<PropertyRowsChangeDetail>(
+    const event = new CustomEvent<PropertyRowsChangeDetail>(
       kRowsChangeEvent,
       {
         detail: { rows },
         bubbles: true,
         composed: true
       }
-    ));
+    );
+
+    this.dispatchEvent(event);
   }
 }
 

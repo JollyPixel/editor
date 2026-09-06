@@ -34,7 +34,9 @@ export interface BlockUvBridgeOptions {
   worldStore?: WorldStore;
 }
 
-/** Keeps block texture definitions and pixel-editor UV regions in sync. */
+/**
+ * Keeps block texture definitions and pixel-editor UV regions in sync.
+ */
 export class BlockUvBridge {
   readonly #uv: UVMap;
   readonly #engine: VoxelEngine;
