@@ -1,25 +1,25 @@
 // Import Third-party Dependencies
-import * as THREE from "three";
+import type * as THREE from "three";
 
 // Import Internal Dependencies
 import type { MeshBuildStats } from "../mesh/index.ts";
+import { ChunkBoundsView } from "./ChunkBoundsView.ts";
+import {
+  ChunkWireframeView,
+  type VoxelDebugMode
+} from "./ChunkWireframeView.ts";
+import {
+  DebugChunkRegistry,
+  type VoxelDebugStats
+} from "./DebugChunkRegistry.ts";
+import type {
+  ChunkDebugView,
+  DebugChunkBounds
+} from "./types.ts";
 
-// CONSTANTS
-const kDefaultColor = 0x66FF99;
-const kDefaultOpacity = 0.5;
-const kModeCycle: Record<VoxelDebugMode, VoxelDebugMode> = {
-  off: "overlay",
-  overlay: "wireframe",
-  wireframe: "off"
-};
-
-/**
- * Selects counters only, a wireframe overlay, or wireframe-only rendering.
- */
-export type VoxelDebugMode =
-  | "off"
-  | "overlay"
-  | "wireframe";
+export type { VoxelDebugMode } from "./ChunkWireframeView.ts";
+export type { VoxelDebugStats } from "./DebugChunkRegistry.ts";
+export type { DebugChunkBounds } from "./types.ts";
 
 export interface VoxelDebuggerOptions {
   /**
@@ -36,257 +36,147 @@ export interface VoxelDebuggerOptions {
    * @default 0.5
    */
   opacity?: number;
-}
-
-export interface VoxelDebugStats {
-  chunks: number;
-  culledChunks: number;
-  meshes: number;
-  voxels: number;
-  hiddenVoxels: number;
-  faces: number;
-  culledFaces: number;
-  mergedFaces: number;
-  vertices: number;
-  triangles: number;
-  facesPerSolidVoxel: number;
-  bytesPerVertex: number;
-  buildTimeMs: number;
-}
-
-interface DebugChunk {
-  meshes: readonly THREE.Mesh[];
-  stats: MeshBuildStats;
-  overlays: THREE.Mesh[];
-  culled: boolean;
+  /**
+   * Outlines the boundary of every registered chunk. Independent of `mode`.
+   * @default false
+   */
+  chunkBounds?: boolean;
+  /**
+   * Chunk boundary color.
+   * @default 0xFF3B30
+   */
+  chunkBoundsColor?: THREE.ColorRepresentation;
 }
 
 /**
- * Tracks live chunk statistics and optional wireframe overlays.
+ * Entry point for the debug views. Owns the registry of built chunks and
+ * forwards every build to the views drawn from it.
  */
 export class VoxelDebugger {
-  #parent: THREE.Object3D;
-  #group = new THREE.Group();
-  #chunks = new Map<string, DebugChunk>();
-  #material: THREE.MeshBasicMaterial | null = null;
-
-  #mode: VoxelDebugMode;
-  #color: THREE.ColorRepresentation;
-  #opacity: number;
+  #chunks = new DebugChunkRegistry();
+  #wireframe: ChunkWireframeView;
+  #bounds: ChunkBoundsView;
+  #views: readonly ChunkDebugView[];
 
   constructor(
     parent: THREE.Object3D,
     options: VoxelDebuggerOptions = {}
   ) {
     const {
-      mode = "off",
-      color = kDefaultColor,
-      opacity = kDefaultOpacity
+      mode,
+      color,
+      opacity,
+      chunkBounds,
+      chunkBoundsColor
     } = options;
 
-    this.#mode = mode;
-    this.#color = color;
-    this.#opacity = opacity;
-
-    this.#parent = parent;
-    this.#group.name = "VoxelDebugger";
-    // Attached only while a wireframe is drawn, so a disabled debugger leaves
-    // no trace in the scene graph.
-    if (this.enabled) {
-      parent.add(this.#group);
-    }
+    this.#wireframe = new ChunkWireframeView({
+      parent,
+      chunks: this.#chunks,
+      mode,
+      color,
+      opacity
+    });
+    this.#bounds = new ChunkBoundsView({
+      parent,
+      chunks: this.#chunks,
+      enabled: chunkBounds,
+      color: chunkBoundsColor
+    });
+    this.#views = [
+      this.#wireframe,
+      this.#bounds
+    ];
   }
 
   get mode(): VoxelDebugMode {
-    return this.#mode;
+    return this.#wireframe.mode;
   }
 
   set mode(value: VoxelDebugMode) {
-    if (value === this.#mode) {
-      return;
-    }
-
-    this.#mode = value;
-    for (const chunk of this.#chunks.values()) {
-      this.#applyMode(chunk);
-    }
-
-    if (this.enabled) {
-      this.#parent.add(this.#group);
-    }
-    else {
-      this.#group.removeFromParent();
-    }
+    this.#wireframe.mode = value;
   }
 
   get enabled(): boolean {
-    return this.#mode !== "off";
+    return this.#wireframe.enabled;
   }
 
   set enabled(value: boolean) {
-    this.mode = value ? "overlay" : "off";
+    this.#wireframe.enabled = value;
+  }
+
+  get chunkBounds(): boolean {
+    return this.#bounds.enabled;
+  }
+
+  set chunkBounds(value: boolean) {
+    this.#bounds.enabled = value;
   }
 
   nextMode(): VoxelDebugMode {
-    this.mode = kModeCycle[this.#mode];
-
-    return this.#mode;
+    return this.#wireframe.nextMode();
   }
 
   get stats(): VoxelDebugStats {
-    const total: VoxelDebugStats = {
-      chunks: 0,
-      culledChunks: 0,
-      meshes: 0,
-      voxels: 0,
-      hiddenVoxels: 0,
-      faces: 0,
-      culledFaces: 0,
-      mergedFaces: 0,
-      vertices: 0,
-      triangles: 0,
-      facesPerSolidVoxel: 0,
-      bytesPerVertex: 0,
-      buildTimeMs: 0
-    };
-
-    let vertexBytes = 0;
-    for (const { meshes, stats, culled } of this.#chunks.values()) {
-      total.chunks++;
-      if (culled) {
-        total.culledChunks++;
-      }
-      total.meshes += meshes.length;
-      total.voxels += stats.voxels;
-      total.hiddenVoxels += stats.hiddenVoxels;
-      total.faces += stats.faces;
-      total.culledFaces += stats.culledFaces;
-      total.mergedFaces += stats.mergedFaces;
-      total.vertices += stats.vertices;
-      total.triangles += stats.triangles;
-      total.buildTimeMs += stats.buildTimeMs;
-      vertexBytes += stats.bytesPerVertex * stats.vertices;
-    }
-
-    const solidVoxels = total.voxels - total.hiddenVoxels;
-    if (solidVoxels > 0) {
-      total.facesPerSolidVoxel = total.faces / solidVoxels;
-    }
-    if (total.vertices > 0) {
-      total.bytesPerVertex = vertexBytes / total.vertices;
-    }
-
-    return total;
+    return this.#chunks.stats;
   }
 
-  /**
-   * Records a chunk build and copies its reused statistics object.
-   */
   registerChunk(
     key: string,
     meshes: readonly THREE.Mesh[],
-    stats: MeshBuildStats
+    stats: MeshBuildStats,
+    bounds: DebugChunkBounds | null = null
   ): void {
     this.unregisterChunk(key);
 
-    const chunk: DebugChunk = {
+    const entry = this.#chunks.register(
+      key,
       meshes,
-      stats: stats.clone(),
-      overlays: [],
-      culled: false
-    };
-    this.#chunks.set(key, chunk);
-    this.#applyMode(chunk);
+      stats,
+      bounds
+    );
+    for (const view of this.#views) {
+      view.refresh(entry);
+    }
   }
 
   cullChunk(
     key: string,
     culled: boolean
   ): void {
-    const chunk = this.#chunks.get(key);
-    if (!chunk || chunk.culled === culled) {
+    const entry = this.#chunks.cull(key, culled);
+    if (!entry) {
       return;
     }
 
-    chunk.culled = culled;
-    this.#applyMode(chunk);
+    for (const view of this.#views) {
+      view.refresh(entry);
+    }
   }
 
   unregisterChunk(
     key: string
   ): void {
-    const chunk = this.#chunks.get(key);
-    if (!chunk) {
+    if (!this.#chunks.unregister(key)) {
       return;
     }
 
-    this.#clearOverlays(chunk);
-    this.#chunks.delete(key);
+    for (const view of this.#views) {
+      view.release(key);
+    }
   }
 
   clear(): void {
-    for (const chunk of this.#chunks.values()) {
-      this.#clearOverlays(chunk);
-    }
     this.#chunks.clear();
+    for (const view of this.#views) {
+      view.clear();
+    }
   }
 
   dispose(): void {
-    this.clear();
-    this.#group.removeFromParent();
-    this.#material?.dispose();
-    this.#material = null;
-  }
-
-  #applyMode(
-    chunk: DebugChunk
-  ): void {
-    const visible = !chunk.culled && this.#mode !== "wireframe";
-    for (const mesh of chunk.meshes) {
-      mesh.visible = visible;
+    this.#chunks.clear();
+    for (const view of this.#views) {
+      view.dispose();
     }
-
-    if (this.#mode === "off" || chunk.culled) {
-      this.#clearOverlays(chunk);
-
-      return;
-    }
-    if (chunk.overlays.length > 0) {
-      return;
-    }
-
-    const material = this.#getMaterial();
-    for (const mesh of chunk.meshes) {
-      // Sharing the chunk geometry keeps the wireframe free of extra memory;
-      // it is therefore never disposed here, the engine owns it.
-      const overlay = new THREE.Mesh(mesh.geometry, material);
-      overlay.name = `${mesh.name}:wireframe`;
-      chunk.overlays.push(overlay);
-      this.#group.add(overlay);
-    }
-  }
-
-  #clearOverlays(
-    chunk: DebugChunk
-  ): void {
-    for (const overlay of chunk.overlays) {
-      this.#group.remove(overlay);
-    }
-    chunk.overlays.length = 0;
-  }
-
-  #getMaterial(): THREE.MeshBasicMaterial {
-    this.#material ??= new THREE.MeshBasicMaterial({
-      color: this.#color,
-      wireframe: true,
-      transparent: this.#opacity < 1,
-      opacity: this.#opacity,
-      // Wireframe lines are coplanar with the faces they trace and the default
-      // depth function accepts equal values, so no polygon offset is needed.
-      depthWrite: false,
-      fog: false
-    });
-
-    return this.#material;
   }
 }

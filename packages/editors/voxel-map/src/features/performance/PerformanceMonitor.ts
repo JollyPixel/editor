@@ -49,6 +49,9 @@ export class PerformanceMonitor extends ActorComponent {
       keyboard: this.actor.world.input.keyboard,
       onDebugModeChange: (mode) => {
         this.#engine.debug.mode = mode;
+      },
+      onChunkBoundsChange: (enabled) => {
+        this.#engine.debug.chunkBounds = enabled;
       }
     });
     this.#unsubscribe = this.#recorder.subscribe(
@@ -183,6 +186,7 @@ export class PerformanceMonitor extends ActorComponent {
       },
       voxel: {
         mode: this.#engine.debug.mode,
+        chunkBounds: this.#engine.debug.chunkBounds,
         chunks: stats.chunks ?? 0,
         meshes: stats.meshes ?? 0,
         voxels: stats.voxels ?? 0,

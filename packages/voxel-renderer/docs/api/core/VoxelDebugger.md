@@ -1,7 +1,8 @@
 # VoxelDebugger
 
 `VoxelEngine.debug` exposes a `VoxelDebugger`: live mesh statistics and an
-optional wireframe view of the geometry the mesh builder produced.
+optional wireframe view of the geometry the mesh builder produced, plus an
+outline of every chunk boundary.
 
 ```ts
 import { VoxelEngine } from "@jolly-pixel/voxel.renderer";
@@ -24,6 +25,7 @@ wireframe has an additional rendering cost.
 class VoxelDebugger {
   mode: VoxelDebugMode;
   enabled: boolean;
+  chunkBounds: boolean;
   readonly stats: VoxelDebugStats;
 
   constructor(
@@ -34,18 +36,26 @@ class VoxelDebugger {
   registerChunk(
     key: string,
     meshes: readonly THREE.Mesh[],
-    stats: MeshBuildStats
+    stats: MeshBuildStats,
+    bounds?: DebugChunkBounds | null
   ): void;
   unregisterChunk(key: string): void;
   clear(): void;
   dispose(): void;
 }
+
+interface DebugChunkBounds {
+  readonly origin: Readonly<THREE.Vector3Like>;
+  readonly size: number;
+}
 ```
 
 `registerChunk()` copies the supplied statistics. Re-registering a key replaces
 its meshes and counters. `unregisterChunk()` ignores unknown keys. `clear()`
-removes all tracked chunks and overlays; `dispose()` also releases the debug
-material.
+removes all tracked chunks, overlays and boundary boxes; `dispose()` also
+releases the debug materials and the boundary geometry. `bounds` is copied
+when registered; a chunk registered without it is still counted but never
+outlined.
 
 ## Modes
 
@@ -82,12 +92,49 @@ interface VoxelDebuggerOptions {
   color?: THREE.ColorRepresentation;
   /** Wireframe opacity, `1` disables blending. @default 0.5 */
   opacity?: number;
+  /** Outlines every registered chunk. @default false */
+  chunkBounds?: boolean;
+  /** @default 0xFF3B30 */
+  chunkBoundsColor?: THREE.ColorRepresentation;
 }
 ```
 
+## Chunk bounds
+
+`chunkBounds` outlines the boundary of every registered chunk. It is
+independent of `mode`: the outlines show over normally rendered chunks, over
+the wireframe overlay, or on their own.
+
+```ts
+const engine = new VoxelEngine({
+  layers: ["Ground"],
+  debug: { chunkBounds: true }
+});
+
+// Or at any time.
+engine.debug.chunkBounds = true;
+```
+
+Each box is a `THREE.LineSegments` sharing one unit-cube edge geometry and one
+material, positioned on the chunk origin and scaled to the chunk size, so the
+cost is a draw call per chunk and nothing else. They live in a `THREE.Group`
+named `"VoxelDebugger:chunkBounds"` under `engine.root`, attached only while
+the flag is on.
+
+A box follows the chunk it outlines. A chunk hidden by the
+[view distance](../world/ViewDistance.md) under the `"hide"` policy loses its
+box until it comes back, and one disposed under `"unload"` loses it with the
+mesh, so the outlines never outlive what they wrap. A chunk that produced no
+geometry is outlined, so allocated but empty chunks stay visible.
+
+The lines are drawn with `depthTest: false` and a high `renderOrder`. Chunk
+edges are coplanar with the voxel faces on the border, and most boxes sit
+inside solid terrain, so depth-tested lines would z-fight and stay invisible
+underground.
+
 ## Statistics
 
-`debug.stats` sums the last build of every chunk currently meshed, so it follows
+`debug.stats` sums the last build of every retained chunk, so it follows
 chunk rebuilds, layer removals and `load()` without ever being stale.
 
 ```ts
@@ -179,9 +226,10 @@ instance's counters, and `clone()` returns an independent copy.
 
 ## Example
 
-`examples/noise-world.html` wires both to its HUD: `G` cycles the wireframe
-modes and the panel shows faces, culling ratio, triangles, vertices and chunk
-meshes, refreshed four times per second.
+`examples/noise-world.html` wires all three to its HUD: `G` cycles the
+wireframe modes, a `chunk bounds` checkbox toggles the outlines, and the panel
+shows faces, culling ratio, triangles, vertices and chunk meshes, refreshed
+four times per second.
 
 ```bash
 npm run dev -w @jolly-pixel/voxel.renderer
