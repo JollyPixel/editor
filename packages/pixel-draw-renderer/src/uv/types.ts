@@ -1,7 +1,10 @@
 // Import Internal Dependencies
 import type { SelectionRect } from "../types.ts";
 
-export type UVFace = string;
+/**
+ * Consumer-defined texture slot identifier.
+ */
+export type UVSlot = string;
 
 export type UVRegionState =
   | "collapsed"
@@ -20,12 +23,22 @@ export interface UVTriangle {
 }
 
 export type UVCompoundPart =
-  | SelectionRect
+  | UVNormalizedRect
   | {
     shape: "triangle";
-    rect: SelectionRect;
+    rect: UVNormalizedRect;
     corner: UVTriangleCorner;
   };
+
+/**
+ * Rectangle in normalized local geometry space.
+ */
+export interface UVNormalizedRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
 
 export interface UVCompound {
   shape: "compound";
@@ -38,7 +51,7 @@ export type UVGeometry =
   | UVTriangle
   | UVCompound;
 
-export const UV_FACES: readonly UVFace[] = [
+export const UV_FACES: readonly UVSlot[] = [
   "front",
   "back",
   "left",

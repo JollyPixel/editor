@@ -13,7 +13,7 @@ canvas.mode = "uv";
 canvas.uv.select(region.id);
 ```
 
-In UV mode, click a visible region to select it, drag it to move it, or press `Delete` to remove it. Create, collapse and uncollapse regions through this API.
+In UV mode, click a visible region to select it, drag it to move it, or press `Delete` to remove it. A click outside every visible region clears the selection, unless [`uv.deselectOnEmptyClick`](../PixelArtCanvasOptions.md#uvdeselectonemptyclick) is disabled. Create, collapse and uncollapse regions through this API.
 
 See [`UVRegion`](./UVRegion.md) for region geometry and serialized data.
 
@@ -26,7 +26,7 @@ interface UVMapOptions {
   getCanvasSize: () => Vec2;
 }
 
-type UVFaceGeometryTemplate =
+type UVSlotGeometryTemplate =
   | { shape: "rectangle"; }
   | {
       shape: "triangle";
@@ -37,8 +37,8 @@ interface UVRegionCreateOptions {
   width: number;
   height: number;
   name?: string;
-  activeFaces?: readonly UVFace[];
-  faceGeometries?: Partial<Record<UVFace, UVFaceGeometryTemplate>>;
+  activeFaces?: readonly UVSlot[];
+  faceGeometries?: Partial<Record<UVSlot, UVSlotGeometryTemplate>>;
   state?: "collapsed" | "uncollapsed";
   id?: string;
   color?: string;
@@ -78,7 +78,7 @@ Live view in insertion order. `UVMap` is also iterable. Spread either value to t
 
 ```ts
 get selectedRegionId(): string | null
-get selectedFace(): UVFace | null
+get selectedFace(): UVSlot | null
 ```
 
 The current selection. A collapsed region has no selected face. An uncollapsed region selects the requested active face or falls back to its first active face in `UV_FACES` order.
@@ -138,7 +138,7 @@ Removes a region and emits `"region-deleted"`. Deleting the selected region also
 ### `move(id, rect, face?)`
 
 ```ts
-move(id: string, rect: SelectionRect, face?: UVFace): boolean
+move(id: string, rect: SelectionRect, face?: UVSlot): boolean
 ```
 
 Moves the shared rectangle of a collapsed region or one face of an uncollapsed region. The rectangle is clamped to the canvas. Returns `false` when the id is unknown or an uncollapsed region has no `face`.
@@ -146,7 +146,7 @@ Moves the shared rectangle of a collapsed region or one face of an uncollapsed r
 ### `previewMove(id, rect, face?)`
 
 ```ts
-previewMove(id: string, rect: SelectionRect, face?: UVFace): void
+previewMove(id: string, rect: SelectionRect, face?: UVSlot): void
 ```
 
 Emits `"region-dragging"` with clamped preview geometry. The stored region, history and network state remain unchanged.
@@ -155,7 +155,7 @@ Emits `"region-dragging"` with clamped preview geometry. The stored region, hist
 
 ```ts
 uncollapse(id: string): boolean
-collapse(id: string, face?: UVFace): boolean
+collapse(id: string, face?: UVSlot): boolean
 ```
 
 `collapse()` takes the largest active face as the shared rectangle and retains custom face topology. `face` only picks between equally large ones, and a rectangle wins over a triangle or a compound at the same size.
@@ -167,10 +167,10 @@ Both methods emit `"region-state-changed"`. They return `false` for an unknown i
 ### `select(id, face?)`
 
 ```ts
-select(id: string | null, face?: UVFace): void
+select(id: string | null, face?: UVSlot): void
 ```
 
-Selects a region or clears selection with `null`. For an uncollapsed region, an omitted or inactive face falls back to the first active face. Repeated clicks on coincident faces cycle through them in `UV_FACES` order.
+Selects a region or clears selection with `null`. For an uncollapsed region, an omitted or inactive face falls back to the first active face. Repeated clicks on coincident faces cycle through them in `UV_FACES` order; a click outside every region restarts that cycle whether or not it clears the selection.
 
 ### `restore(region)` / `restoreState(region)`
 

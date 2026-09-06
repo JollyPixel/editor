@@ -16,7 +16,7 @@ import type { CanvasRenderer } from "../rendering/CanvasRenderer.ts";
 import type { Viewport } from "../rendering/Viewport.ts";
 import type { UVMap } from "../uv/UVMap.ts";
 import type {
-  UVFace,
+  UVSlot,
   UVRegion,
   UVRegionData
 } from "../uv/UVRegion.ts";
@@ -477,7 +477,7 @@ export class EditPipeline {
 
   #handleUvMoved(
     region: UVRegion,
-    face: UVFace | null,
+    face: UVSlot | null,
     previousRect: SelectionRect
   ): void {
     if (this.#isApplyingRemote) {

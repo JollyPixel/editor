@@ -23,7 +23,8 @@ export type PixelUvRegionCommand = Extract<
  * Moves conflict per face; other UV commands conflict across all faces.
  */
 function uvConflictKeys(
-  command: PixelUvRegionCommand
+  command: PixelUvRegionCommand,
+  buffer: PixelBuffer
 ): string[] {
   if (command.action === "uv-region-moved") {
     return [
@@ -33,10 +34,11 @@ function uvConflictKeys(
 
   if (command.action === "uv-region-deleted") {
     const { id } = command.metadata;
+    const slots = buffer.uvRegions.get(id)?.faces ?? UV_FACES;
 
     return [
       `${id}:*`,
-      ...UV_FACES.map((face) => `${id}:${face}`)
+      ...slots.map((slot) => `${id}:${slot}`)
     ];
   }
 
@@ -91,7 +93,7 @@ export class PixelCommandArbiter {
       case "uv-region-moved":
       case "uv-region-deleted":
       case "uv-region-state-changed":
-        return this.#acceptUvRegion(command);
+        return this.#acceptUvRegion(buffer, command);
       case "resized":
       case "texture-replaced":
         return buffer.acceptsSize(command.metadata.size) ? command : null;
@@ -159,9 +161,10 @@ export class PixelCommandArbiter {
   }
 
   #acceptUvRegion(
+    buffer: PixelBuffer,
     command: PixelUvRegionCommand
   ): PixelUvRegionCommand | null {
-    const keys = uvConflictKeys(command);
+    const keys = uvConflictKeys(command, buffer);
     const rejected = keys.some(
       (key) => this.#regionTracker.resolve(key, command) === "reject"
     );

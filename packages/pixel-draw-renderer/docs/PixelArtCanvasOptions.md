@@ -31,6 +31,7 @@ interface PixelArtCanvasOptions {
   backgroundColor?: ColorInput;
   brush?: BrushOptions;
   select?: SelectOptions;
+  uv?: UVOptions;
   onDrawEnd?: () => void;
   onBufferUpdated?: PixelBufferHookListener;
   history?: HistoryOptions;
@@ -56,6 +57,10 @@ interface BackgroundTransparencyOptions {
 interface SelectOptions {
   eraseColor?: ColorInput;
   sizeLabel?: boolean;
+}
+
+interface UVOptions {
+  deselectOnEmptyClick?: boolean;
 }
 
 interface HistoryOptions {
@@ -157,6 +162,12 @@ Color used for pixels vacated by selection deletion, movement or transforms. Whe
 Whether the selection shows its size as `16×16` next to the outline. It defaults to `true`.
 
 The label reports the bounding box in texture pixels, including for shape selections, and follows the selection while it is created, moved and transformed. It is anchored below the bottom-right corner, flips above the selection near the bottom of the viewport, and hides when the selection scrolls out of view or measures less than 2 pixels on either axis. It is local only: peer selections never show one.
+
+### `uv.deselectOnEmptyClick`
+
+Whether a UV-mode click landing outside every visible region clears the selection. It defaults to `true`.
+
+Set it to `false` when the host application owns the selection, for instance when a block library drives which region is selected: an outside click then does nothing instead of hiding the selected region. It only governs that gesture; `Delete`, [`UVMap.select(null)`](./uv/UVMap.md#selectid-face) and deleting the selected region still clear the selection.
 
 ## History
 

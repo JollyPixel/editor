@@ -12,7 +12,7 @@ import { UVRegionBorder } from "./UVRegionBorder.ts";
 import type { DefaultViewport } from "../Viewport.ts";
 import type { UVMap } from "../../uv/UVMap.ts";
 import type {
-  UVFace,
+  UVSlot,
   UVGeometry,
   UVRegion
 } from "../../uv/UVRegion.ts";
@@ -34,7 +34,7 @@ const kLabelMaxLength = 20;
 interface RenderEntry {
   key: string;
   region: UVRegion;
-  face: UVFace | null;
+  face: UVSlot | null;
   geometry: UVGeometry;
   selected: boolean;
   /**
@@ -45,7 +45,7 @@ interface RenderEntry {
 
 function entryKey(
   id: string,
-  face: UVFace | null
+  face: UVSlot | null
 ): string {
   return `${id}:${face ?? "*"}`;
 }
@@ -104,7 +104,7 @@ export class UVRegionLayer {
   #group: SVGGElement;
   #borders = new Map<string, UVRegionBorder>();
   #labels = new Map<string, SVGTextElement>();
-  #liveOverride: { id: string; face: UVFace | null; rect: SelectionRect; } | null = null;
+  #liveOverride: { id: string; face: UVSlot | null; rect: SelectionRect; } | null = null;
   #ghostSuppressed = new Set<string>();
 
   #onRegionCreated = () => this.#render();
@@ -135,7 +135,7 @@ export class UVRegionLayer {
 
   setLiveOverride(
     id: string,
-    face: UVFace | null,
+    face: UVSlot | null,
     rect: SelectionRect | null
   ): void {
     this.#liveOverride = rect ? { id, face, rect } : null;
@@ -150,7 +150,7 @@ export class UVRegionLayer {
    * Suppresses stale region borders beneath peer drag ghosts.
    */
   setGhostSuppressed(
-    entries: Iterable<{ id: string; face: UVFace | null; }>
+    entries: Iterable<{ id: string; face: UVSlot | null; }>
   ): void {
     this.#ghostSuppressed = new Set(
       [...entries].map(({ id, face }) => entryKey(id, face))

@@ -9,7 +9,7 @@ import {
   pointInGeometry,
   triangleCornerOf
 } from "../../src/uv/geometry.ts";
-import { UVFaceMap } from "../../src/uv/UVFaceMap.ts";
+import { UVSlotMap } from "../../src/uv/UVSlotMap.ts";
 import { UVRegion } from "../../src/uv/UVRegion.ts";
 import type {
   UVCompound,
@@ -124,9 +124,9 @@ describe("geometry helpers", () => {
   });
 });
 
-describe("UVFaceMap — open slot list", () => {
+describe("UVSlotMap — open slot list", () => {
   test("carries the slots it was given, in order", () => {
-    const map = new UVFaceMap({
+    const map = new UVSlotMap({
       top: { x: 0, y: 0, width: 1, height: 1 },
       "top.1": { x: 2, y: 0, width: 1, height: 1 }
     });
@@ -136,16 +136,16 @@ describe("UVFaceMap — open slot list", () => {
     assert.equal(map.has("bottom"), false);
   });
 
-  test("falls back to the first slot for an unknown face", () => {
-    const map = new UVFaceMap({
+  test("rejects an unknown slot", () => {
+    const map = new UVSlotMap({
       top: { x: 5, y: 0, width: 1, height: 1 }
     });
 
-    assert.deepStrictEqual(map.get("nope"), { x: 5, y: 0, width: 1, height: 1 });
+    assert.throws(() => map.get("nope"), RangeError);
   });
 
   test("translating keeps every slot", () => {
-    const map = new UVFaceMap({
+    const map = new UVSlotMap({
       top: { x: 0, y: 0, width: 1, height: 1 },
       "top.1": { x: 2, y: 0, width: 1, height: 1 }
     }).translated(10, 0);

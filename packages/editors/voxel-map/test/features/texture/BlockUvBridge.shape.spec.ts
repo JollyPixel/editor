@@ -34,6 +34,7 @@ describe("BlockUvBridge / shape footprint", () => {
     const bridge = new BlockUvBridge(uv, vr);
     try {
       bridge.setActiveTileset("atlas", 16);
+      uv.uncollapse("block-1");
 
       const region = uv.get("block-1")!;
       assert.deepEqual(region.rectFor("top"), {
@@ -62,6 +63,7 @@ describe("BlockUvBridge / shape footprint", () => {
     const bridge = new BlockUvBridge(uv, vr);
     try {
       bridge.setActiveTileset("atlas", 16);
+      uv.uncollapse("block-1");
 
       const region = uv.get("block-1")!;
       assert.deepEqual(region.rectFor("front"), {
@@ -150,6 +152,7 @@ describe("BlockUvBridge / shape footprint", () => {
       assert.equal(uv.get("block-1")!.rectFor("front").width, 16);
 
       vr.engine.defineBlock(shapedBlock("pole"));
+      uv.uncollapse("block-1");
 
       assert.deepEqual(uv.get("block-1")!.rectFor("front"), {
         x: 32 + 6,
@@ -163,7 +166,7 @@ describe("BlockUvBridge / shape footprint", () => {
     }
   });
 
-  it("reshapes a region whose rects did not move", () => {
+  it("keeps a region collapsed when the block changes to a non-box shape", () => {
     const { vr } = makeFakeVoxelRenderer();
     vr.engine.blockRegistry.register(shapedBlock("cube"));
 
@@ -176,7 +179,11 @@ describe("BlockUvBridge / shape footprint", () => {
       vr.engine.defineBlock(shapedBlock("stair"));
 
       const region = uv.get("block-1")!;
-      assert.equal(region.state, "uncollapsed");
+      assert.equal(
+        region.state,
+        "collapsed",
+        "a shape change alone must not split the block into per-face textures"
+      );
       assert.deepEqual(region.rectFor("front"), {
         x: 32,
         y: 16,
@@ -198,6 +205,7 @@ describe("BlockUvBridge / shape footprint", () => {
       const bridge = new BlockUvBridge(uv, vr);
       try {
         bridge.setActiveTileset("atlas", 16);
+        uv.uncollapse("block-1");
         const before = uv.get("block-1")!.facesOf();
 
         uv.collapse("block-1");
@@ -224,6 +232,7 @@ describe("BlockUvBridge / shape footprint", () => {
       const bridge = new BlockUvBridge(uv, vr);
       try {
         bridge.setActiveTileset("atlas", 16);
+        uv.uncollapse("block-1");
         const before = uv.get("block-1")!.facesOf();
 
         uv.collapse("block-1");
@@ -302,6 +311,7 @@ describe("BlockUvBridge / shape footprint", () => {
       bridge.setActiveTileset("atlas", 16);
 
       vr.engine.defineBlock(shapedBlock("ramp"));
+      uv.uncollapse("block-1");
 
       assert.deepEqual(uv.get("block-1")!.geometryFor("left"), {
         shape: "triangle",

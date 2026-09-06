@@ -3,7 +3,7 @@
 Projects a `UVRegion` onto a `THREE.BufferGeometry`'s `uv` attribute, and optionally keeps it in step as the user drags the region.
 
 ```ts
-import { UVGeometryBinding } from "@jolly-pixel/editor.pixel-art/three/index.ts";
+import { UVGeometryBinding } from "@jolly-pixel/editor.pixel-art/mesh-texturing/index.ts";
 
 const binding = new UVGeometryBinding({
   geometry: mesh.geometry,
@@ -32,7 +32,7 @@ Building the ranges is the caller's job, since they depend on how the geometry w
 ## `applyFace()`
 
 ```ts
-applyFace(face: UVFace | null, geometry: UVGeometry): void
+applyFace(face: UVSlot | null, geometry: UVGeometry): void
 ```
 
 A `null` face — what a collapsed region reports — projects the region's shared rect across every vertex. A named face writes only that face's ranges. `UVGeometry` may be a rectangle or a triangle; triangles are flipped onto the right corner.

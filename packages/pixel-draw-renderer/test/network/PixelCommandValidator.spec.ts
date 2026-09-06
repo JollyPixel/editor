@@ -51,17 +51,37 @@ describe("isPixelNetworkCommand — uv regions", () => {
             shape: "compound",
             rect: kTile,
             parts: [
-              { x: 0, y: 0, width: 1, height: 1 },
+              { x: 0, y: 0, width: 0.5, height: 1 },
               {
                 shape: "triangle",
                 corner: "top-left",
-                rect: { x: 0, y: 0, width: 1, height: 1 }
+                rect: { x: 0.5, y: 0, width: 0.5, height: 1 }
               }
             ]
           }
         }
       })),
       true
+    );
+  });
+
+  test("rejects a compound part outside normalized space", () => {
+    assert.equal(
+      isPixelNetworkCommand(regionCommand({
+        id: "block-1",
+        color: "#fff",
+        state: "uncollapsed",
+        faces: {
+          right: {
+            shape: "compound",
+            rect: kTile,
+            parts: [
+              { x: 0.75, y: 0, width: 0.5, height: 1 }
+            ]
+          }
+        }
+      })),
+      false
     );
   });
 

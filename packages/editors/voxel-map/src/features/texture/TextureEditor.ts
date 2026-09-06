@@ -79,6 +79,9 @@ export class TextureEditor extends LitElement {
       },
       texture: {
         maxSize: 2048
+      },
+      uv: {
+        deselectOnEmptyClick: false
       }
     });
     if (!this.isConnected) {

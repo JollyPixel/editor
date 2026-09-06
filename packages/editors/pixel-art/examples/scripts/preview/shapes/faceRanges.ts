@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { FaceRanges } from "../../../../src/three/types.ts";
+import type { FaceRanges } from "../../../../src/mesh-texturing/types.ts";
 
 // CONSTANTS
 // THREE.BoxGeometry emits its six faces in this order, four vertices each.

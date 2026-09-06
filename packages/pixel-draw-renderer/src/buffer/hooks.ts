@@ -5,7 +5,7 @@ import type {
   Vec2
 } from "../types.ts";
 import type {
-  UVFace,
+  UVSlot,
   UVRegionData
 } from "../uv/UVRegion.ts";
 
@@ -70,7 +70,7 @@ export type PixelBufferHookEvent =
     action: "uv-region-moved";
     metadata: {
       id: string;
-      face: UVFace | null;
+      face: UVSlot | null;
       rect: SelectionRect;
     };
     originTimestamp?: number;

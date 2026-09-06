@@ -9,7 +9,8 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./three/*.ts": "./dist/three/*.js"
+    "./mesh-texturing/*.ts": "./dist/mesh-texturing/*.js",
+    "./texture/*.ts": "./dist/texture/*.js"
   },
   "imports": {
     "#src/*": "./src/*"

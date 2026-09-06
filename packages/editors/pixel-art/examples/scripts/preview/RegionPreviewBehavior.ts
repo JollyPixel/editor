@@ -11,7 +11,7 @@ import type {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import { UVGeometryBinding } from "../../../src/three/UVGeometryBinding.ts";
+import { UVGeometryBinding } from "../../../src/mesh-texturing/UVGeometryBinding.ts";
 import type { PreviewShape } from "./PreviewShape.ts";
 import { resolvePreviewShape } from "./resolvePreviewShape.ts";
 

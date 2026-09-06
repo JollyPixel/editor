@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
   tileRefForSlot,
+  resolvedBlockTextureSlots,
   type VoxelRenderer,
   type ResolvedBlockDefinition,
   type ResolvedTileRef
@@ -10,7 +11,7 @@ import {
   UV_FACES,
   type UVMap,
   type UVMapListener,
-  type UVFace,
+  type UVSlot,
   type UVGeometry,
   type UVRegionData,
   type SelectionRect
@@ -19,15 +20,16 @@ import {
 // Import Internal Dependencies
 import {
   blockShapeUv,
+  uvGeometryForSlot,
   type BlockShapeUv,
-  type UVFaceBounds
+  type UVSlotBounds
 } from "./blockShapeUv.ts";
 import { editorState } from "../../EditorState.ts";
 
 // CONSTANTS
 const kRegionIdPrefix = "block-";
 const kRegionColor = "#4488ff";
-const kWholeTile: UVFaceBounds = {
+const kWholeTile: UVSlotBounds = {
   u0: 0,
   v0: 0,
   u1: 1,
@@ -37,7 +39,7 @@ const kBoxShapeUv: BlockShapeUv = {
   activeFaces: [...UV_FACES],
   bounds: Object.fromEntries(
     UV_FACES.map((face) => [face, kWholeTile])
-  ) as Record<UVFace, UVFaceBounds>,
+  ) as Record<UVSlot, UVSlotBounds>,
   triangles: {},
   parts: {},
   faceRanges: {},
@@ -58,43 +60,43 @@ function regionsEqual(
   a: UVRegion,
   b: UVRegion
 ): boolean {
-  if (a.state !== b.state) {
+  const left = a.toJSON();
+  const right = b.toJSON();
+  if (
+    left.state !== right.state ||
+    left.name !== right.name ||
+    left.color !== right.color ||
+    a.collapsedFace !== b.collapsedFace
+  ) {
     return false;
   }
-
-  const faces = new Set([
-    ...a.faces,
-    ...b.faces
-  ]);
-
-  return [...faces].every(
-    (face) => rectsEqual(a.rectFor(face), b.rectFor(face))
-  );
-}
-
-function geometryFor(
-  rect: SelectionRect,
-  shapeUv: BlockShapeUv,
-  face: UVFace
-): UVGeometry {
-  const parts = shapeUv.parts[face];
-  if (parts) {
-    return {
-      shape: "compound",
-      rect,
-      parts
-    };
+  if (left.state === "collapsed" && right.state === "collapsed") {
+    return rectsEqual(left.rect, right.rect) &&
+      geometriesEqual(left.faces, right.faces);
+  }
+  if (left.state === "uncollapsed" && right.state === "uncollapsed") {
+    return arraysEqual(left.activeFaces ?? [], right.activeFaces ?? []) &&
+      geometriesEqual(left.faces, right.faces);
   }
 
-  const corner = shapeUv.triangles[face];
+  return false;
+}
 
-  return corner ?
-    {
-      shape: "triangle",
-      corner,
-      rect
-    } :
-    rect;
+function arraysEqual(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((value, index) => value === b[index]);
+}
+
+function geometriesEqual(
+  a: Record<string, UVGeometry> | undefined,
+  b: Record<string, UVGeometry> | undefined
+): boolean {
+  const left = Object.entries(a ?? {});
+  const right = Object.entries(b ?? {});
+
+  return left.length === right.length && left.every(
+    ([slot, geometry], index) => slot === right[index]?.[0] &&
+      JSON.stringify(geometry) === JSON.stringify(right[index]?.[1])
+  );
 }
 
 function regionId(
@@ -176,22 +178,39 @@ export class BlockUvBridge {
       return [];
     }
 
-    return [...this.#vr.engine.blockRegistry.getAll()].filter(
-      (block) => block.defaultTexture?.tilesetId === this.#tilesetId
-    );
+    return [...this.#vr.engine.blockRegistry.getAll()].filter((block) => {
+      const shape = this.#vr.engine.shapeRegistry.get(block.shapeId);
+
+      return shape ? resolvedBlockTextureSlots(block, shape).some(
+        ({ tile }) => tile.tilesetId === this.#tilesetId
+      ) : false;
+    });
   }
 
   #rebuild(): void {
+    const desired = new Map(
+      this.#blocksOnActiveTileset().map((block) => {
+        const region = this.#regionFor(block);
+
+        return [region.id, region] as const;
+      })
+    );
     this.#rebuilding = true;
     try {
       this.#runLocalRestore(() => {
         for (const region of [...this.#uv.regions]) {
-          if (blockIdFromRegion(region.id) !== null) {
+          if (
+            blockIdFromRegion(region.id) !== null &&
+            !desired.has(region.id)
+          ) {
             this.#uv.delete(region.id);
           }
         }
-        for (const block of this.#blocksOnActiveTileset()) {
-          this.#restoreRegionFor(block);
+        for (const region of desired.values()) {
+          const existing = this.#uv.get(region.id);
+          if (!existing || !regionsEqual(existing, region)) {
+            this.#uv.restore(region);
+          }
         }
       });
     }
@@ -213,45 +232,59 @@ export class BlockUvBridge {
   #regionFor(
     block: ResolvedBlockDefinition
   ): UVRegion {
-    const id = regionId(block.id);
-    const faceTextures = block.faceTextures ?? {};
     const shapeUv = this.#shapeUvOf(block);
+    const hasFaceTextures = Object.keys(block.faceTextures ?? {}).length > 0;
 
-    if (Object.keys(faceTextures).length === 0 && shapeUv.isBox) {
+    if (hasFaceTextures || !block.defaultTexture) {
+      return this.#uncollapsedRegionFor(block, shapeUv);
+    }
+
+    if (shapeUv.isBox) {
       return new UVRegion({
-        id,
+        id: regionId(block.id),
         color: kRegionColor,
         state: "collapsed",
-        rect: this.#rectOf(block.defaultTexture!)
+        rect: this.#rectOf(block.defaultTexture)
       });
     }
 
+    return this.#uncollapsedRegionFor(block, shapeUv).collapse();
+  }
+
+  #uncollapsedRegionFor(
+    block: ResolvedBlockDefinition,
+    shapeUv: BlockShapeUv = this.#shapeUvOf(block)
+  ): UVRegion {
+    const id = regionId(block.id);
+    const shape = this.#vr.engine.shapeRegistry.get(block.shapeId);
+    const textureSlots = shape ? resolvedBlockTextureSlots(block, shape) : [];
+
     const faces = Object.fromEntries(
-      shapeUv.activeFaces.map((face): [UVFace, UVGeometry] => {
+      textureSlots.map(({ slot: face, tile }): [UVSlot, UVGeometry] => {
         const rect = this.#rectOf(
-          tileRefForSlot(block, face) ?? block.defaultTexture!,
+          tile,
           shapeUv.bounds[face]
         );
 
         return [
           face,
-          geometryFor(rect, shapeUv, face)
+          uvGeometryForSlot(rect, shapeUv, face)
         ];
       })
-    ) as Record<UVFace, UVGeometry>;
+    ) as Record<UVSlot, UVGeometry>;
 
     return new UVRegion({
       id,
       color: kRegionColor,
       state: "uncollapsed",
       faces,
-      activeFaces: [...shapeUv.activeFaces]
+      activeFaces: textureSlots.map(({ slot }) => slot)
     });
   }
 
   #rectOf(
     tileRef: ResolvedTileRef,
-    bounds: UVFaceBounds = kWholeTile
+    bounds: UVSlotBounds = kWholeTile
   ): SelectionRect {
     const tileSize = this.#tileSize;
 
@@ -266,7 +299,7 @@ export class BlockUvBridge {
   #tileRefOf(
     rect: SelectionRect,
     template: ResolvedTileRef,
-    bounds: UVFaceBounds = kWholeTile
+    bounds: UVSlotBounds = kWholeTile
   ): ResolvedTileRef {
     return {
       ...template,
@@ -296,7 +329,7 @@ export class BlockUvBridge {
     }
 
     const block = this.#vr.engine.blockRegistry.get(blockId);
-    if (!block?.defaultTexture) {
+    if (!block) {
       return;
     }
 
@@ -308,14 +341,18 @@ export class BlockUvBridge {
       {
         ...block,
         faceTextures: Object.fromEntries(
-          shapeUv.activeFaces.map((face) => [
-            face,
-            this.#tileRefOf(
+          region.faces.map((face) => {
+            const template = tileRefForSlot(block, face);
+            if (!template) {
+              throw new RangeError(`No texture template for UV slot "${face}"`);
+            }
+
+            return [face, this.#tileRefOf(
               region.rectFor(face),
-              block.defaultTexture!,
+              template,
               shapeUv.bounds[face]
-            )
-          ])
+            )];
+          })
         )
       } :
       {
@@ -323,7 +360,7 @@ export class BlockUvBridge {
         faceTextures: {},
         defaultTexture: this.#tileRefOf(
           region.rectFor(collapsedSlot),
-          block.defaultTexture,
+          tileRefForSlot(block, collapsedSlot)!,
           shapeUv.bounds[collapsedSlot]
         )
       };
@@ -372,7 +409,10 @@ export class BlockUvBridge {
       return;
     }
 
-    const dragged = region.withRect(event.rect, event.face ?? undefined);
+    const dragged = region.withRect(
+      event.rect,
+      event.face ?? undefined
+    );
     if (regionsEqual(this.#regionFor(block), dragged)) {
       return;
     }
@@ -405,10 +445,12 @@ export class BlockUvBridge {
       return false;
     }
 
-    const derived = this.#regionFor(block);
-    if (this.#shapeUvOf(block).isBox || derived.state !== "uncollapsed") {
+    const shapeUv = this.#shapeUvOf(block);
+    if (shapeUv.isBox) {
       return false;
     }
+
+    const derived = this.#uncollapsedRegionFor(block, shapeUv);
 
     this.#rebuilding = true;
     try {
@@ -432,7 +474,14 @@ export class BlockUvBridge {
 
     const block = this.#vr.engine.blockRegistry.get(blockId);
 
-    return block?.defaultTexture ? block : undefined;
+    if (!block) {
+      return undefined;
+    }
+    const shape = this.#vr.engine.shapeRegistry.get(block.shapeId);
+
+    return shape && resolvedBlockTextureSlots(block, shape).length > 0 ?
+      block :
+      undefined;
   }
 
   readonly #onRegionDeleted: UVMapListener<"region-deleted"> = (event) => {

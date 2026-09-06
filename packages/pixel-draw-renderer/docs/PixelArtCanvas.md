@@ -127,7 +127,7 @@ commitPixels(
   slot?: "primary" | "secondary"
 ): void
 
-hasTransparency(rect: SelectionRect): boolean
+hasTransparency(geometry: UVGeometry): boolean
 ```
 
 ### `textureSize`
@@ -146,7 +146,7 @@ Paints a precomputed set of texture coordinates as one edit. The color slot defa
 
 ### `hasTransparency()`
 
-Returns `true` when any pixel in `rect` has alpha below `255`. Areas outside the texture count as transparent.
+Returns `true` when any sampled pixel in `geometry` has alpha below `255`. Rectangles use their complete area; triangles and compounds ignore pixels outside their actual UV coverage. Sampled areas outside the texture count as transparent.
 
 ## Clipboard
 

@@ -12,8 +12,7 @@ import { UV_FACES } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import {
-  blockShapeUv,
-  UV_FACE_TO_VOXEL
+  blockShapeUv
 } from "../../../src/features/texture/blockShapeUv.ts";
 
 // CONSTANTS
@@ -228,15 +227,5 @@ describe("blockShapeUv", () => {
     assert.deepEqual(topology.activeFaces, ["right"]);
     assert.equal(topology.triangles.right, "bottom-left");
     assert.deepEqual(topology.faceRanges.right, [{ start: 0, count: 3 }]);
-  });
-});
-
-describe("UV_FACE_TO_VOXEL", () => {
-  it("maps each UV face onto a distinct voxel face", () => {
-    const voxelFaces = UV_FACES.map((face) => UV_FACE_TO_VOXEL[face]);
-
-    assert.equal(new Set(voxelFaces).size, UV_FACES.length);
-    assert.equal(UV_FACE_TO_VOXEL.front, Face.PosZ);
-    assert.equal(UV_FACE_TO_VOXEL.top, Face.PosY);
   });
 });

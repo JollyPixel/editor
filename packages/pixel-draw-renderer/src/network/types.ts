@@ -6,7 +6,7 @@ import type {
   PixelBufferHookEvent
 } from "../buffer/hooks.ts";
 import type {
-  UVFace,
+  UVSlot,
   UVGeometry,
   UVRegionData
 } from "../uv/UVRegion.ts";
@@ -29,7 +29,7 @@ export type PixelServerMessage = network.NetworkServerMessage<
 
 export interface UVGhostPayload {
   id: string;
-  face: UVFace | null;
+  face: UVSlot | null;
   geometry: UVGeometry;
 }
 

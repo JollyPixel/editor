@@ -52,6 +52,8 @@ import type {
   UVRegion,
   UVRegionData
 } from "./uv/UVRegion.ts";
+import { UVGeometryValue } from "./uv/UVGeometryValue.ts";
+import type { UVGeometry } from "./uv/types.ts";
 import type { PeerPresence } from "./rendering/presence/PeerPresence.ts";
 import { resolveColor } from "./utils/colors.ts";
 import type {
@@ -59,7 +61,6 @@ import type {
   ByteColorInput,
   Mode,
   PeerStrokePixel,
-  SelectionRect,
   Vec2
 } from "./types.ts";
 import type {
@@ -118,6 +119,15 @@ export interface PixelArtCanvasOptions {
      * @default true
      */
     sizeLabel?: boolean;
+  };
+  uv?: {
+    /**
+     * Whether a UV-mode click outside every visible region clears the
+     * selection. Embeddings that own the selection themselves (a block
+     * library driving the regions) turn this off.
+     * @default true
+     */
+    deselectOnEmptyClick?: boolean;
   };
   /**
    * Called after a local edit commits to the master buffer.
@@ -255,6 +265,7 @@ export class PixelArtCanvas {
       eraseColor,
       uvMap: this.document.uv,
       uvOverlay: this.#view.overlays.uvOverlay,
+      uvDeselectOnEmptyClick: options.uv?.deselectOnEmptyClick,
       pipeline: this.#edits,
       onProgress: (pixels) => this.#onStrokeProgress?.(pixels)
     });
@@ -414,9 +425,28 @@ export class PixelArtCanvas {
   }
 
   hasTransparency(
-    rect: SelectionRect
+    geometry: UVGeometry
   ): boolean {
-    return this.document.buffer.hasTransparency(rect);
+    if (!("shape" in geometry)) {
+      return this.document.buffer.hasTransparency(geometry);
+    }
+
+    const value = UVGeometryValue.from(geometry);
+    const bounds = value.bounds;
+    const maxX = Math.ceil(bounds.x + bounds.width);
+    const maxY = Math.ceil(bounds.y + bounds.height);
+    for (let y = Math.floor(bounds.y); y < maxY; y++) {
+      for (let x = Math.floor(bounds.x); x < maxX; x++) {
+        if (
+          value.contains({ x: x + 0.5, y: y + 0.5 }) &&
+          this.document.buffer.samplePixel(x, y)[3] < 255
+        ) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 
   canvas(): HTMLCanvasElement {

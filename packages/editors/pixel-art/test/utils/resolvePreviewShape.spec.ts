@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import {
   UVRegion,
   type SelectionRect,
-  type UVFace,
+  type UVSlot,
   type UVGeometry
 } from "@jolly-pixel/pixel-draw.renderer";
 
@@ -21,7 +21,7 @@ const kRect: SelectionRect = {
   height: 16
 };
 
-const kRampFaces: UVFace[] = [
+const kRampFaces: UVSlot[] = [
   "back",
   "left",
   "right",
@@ -31,7 +31,7 @@ const kRampFaces: UVFace[] = [
 
 function facesWith(
   sideGeometry: UVGeometry
-): Record<UVFace, UVGeometry> {
+): Record<UVSlot, UVGeometry> {
   return {
     front: kRect,
     back: kRect,
@@ -43,7 +43,7 @@ function facesWith(
 }
 
 function regionWith(
-  activeFaces: UVFace[],
+  activeFaces: UVSlot[],
   sideGeometry: UVGeometry
 ): UVRegion {
   return new UVRegion({

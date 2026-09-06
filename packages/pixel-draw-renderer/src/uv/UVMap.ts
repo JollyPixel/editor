@@ -9,11 +9,11 @@ import type {
   SelectionRect,
   Vec2
 } from "../types.ts";
-import { UVFaceMap } from "./UVFaceMap.ts";
+import { UVSlotMap } from "./UVSlotMap.ts";
 import {
   UV_FACES,
   UVRegion,
-  type UVFace,
+  type UVSlot,
   type UVRegionData,
   type UVRegionState
 } from "./UVRegion.ts";
@@ -33,8 +33,8 @@ export interface UVRegionCreateOptions {
   width: number;
   height: number;
   name?: string;
-  activeFaces?: readonly UVFace[];
-  faceGeometries?: Partial<Record<UVFace, UVFaceGeometryTemplate>>;
+  activeFaces?: readonly UVSlot[];
+  faceGeometries?: Partial<Record<UVSlot, UVSlotGeometryTemplate>>;
   /**
    * @default "uncollapsed" for regions with topology, otherwise "collapsed"
    */
@@ -49,13 +49,13 @@ export interface UVRegionCreateOptions {
   color?: string;
 }
 
-export type UVFaceGeometryTemplate =
+export type UVSlotGeometryTemplate =
   | { shape: "rectangle"; }
   | { shape: "triangle"; corner: "top-left" | "top-right" | "bottom-left" | "bottom-right"; };
 
 // CONSTANTS
 const kCascadeStep = 16;
-const kDefaultFace: UVFace = "front";
+const kDefaultFace: UVSlot = "front";
 
 export class UVMap extends Emitter<
   UVMapEvent
@@ -63,7 +63,7 @@ export class UVMap extends Emitter<
   #getCanvasSize: () => Vec2;
   #regions = new Map<string, UVRegion>();
   #selectedRegionId: string | null = null;
-  #selectedFace: UVFace | null = null;
+  #selectedFace: UVSlot | null = null;
   #showAll = false;
   #showRegionLabels = false;
   #cascadeIndex = 0;
@@ -88,7 +88,7 @@ export class UVMap extends Emitter<
     return this.#selectedRegionId;
   }
 
-  get selectedFace(): UVFace | null {
+  get selectedFace(): UVSlot | null {
     return this.#selectedFace;
   }
 
@@ -140,7 +140,7 @@ export class UVMap extends Emitter<
 
   select(
     id: string | null,
-    face?: UVFace
+    face?: UVSlot
   ): void {
     if (this.#applySelection(id, face ?? null)) {
       this.#emitSelectionChanged();
@@ -172,7 +172,7 @@ export class UVMap extends Emitter<
     };
     const hasTopology = options.activeFaces !== undefined || options.faceGeometries !== undefined;
     const state = options.state ?? (hasTopology ? "uncollapsed" : "collapsed");
-    const faces = UVFaceMap.map(
+    const faces = UVSlotMap.map(
       (face) => this.#geometryFrom(options.faceGeometries?.[face], rect)
     );
     let region: UVRegion;
@@ -258,7 +258,7 @@ export class UVMap extends Emitter<
   move(
     id: string,
     rect: SelectionRect,
-    face?: UVFace
+    face?: UVSlot
   ): boolean {
     const region = this.#regions.get(id);
     if (!region) {
@@ -295,7 +295,7 @@ export class UVMap extends Emitter<
   previewMove(
     id: string,
     rect: SelectionRect,
-    face?: UVFace
+    face?: UVSlot
   ): void {
     const region = this.#regions.get(id);
     if (!region) {
@@ -336,7 +336,7 @@ export class UVMap extends Emitter<
 
   collapse(
     id: string,
-    face?: UVFace
+    face?: UVSlot
   ): boolean {
     return this.#changeState(
       id,
@@ -399,18 +399,20 @@ export class UVMap extends Emitter<
 
   #resolveFace(
     region: UVRegion,
-    face: UVFace | undefined
-  ): UVFace | null | undefined {
+    face: UVSlot | undefined
+  ): UVSlot | null | undefined {
     if (region.state === "collapsed") {
       return null;
     }
 
-    return face ?? undefined;
+    return face !== undefined && region.faces.includes(face) ?
+      face :
+      undefined;
   }
 
   #applySelection(
     id: string | null,
-    face: UVFace | null
+    face: UVSlot | null
   ): boolean {
     if (id === null) {
       const changed = this.#selectedRegionId !== null || this.#selectedFace !== null;
@@ -428,7 +430,7 @@ export class UVMap extends Emitter<
     const activeFaces = region.facesOf()
       .map(({ face: activeFace }) => activeFace)
       .filter((activeFace) => activeFace !== null);
-    let nextFace: UVFace | null = null;
+    let nextFace: UVSlot | null = null;
     if (region.state === "uncollapsed") {
       const firstActiveFace = activeFaces[0] ?? null;
       nextFace = face !== null && activeFaces.includes(face) ? face : firstActiveFace;
@@ -470,7 +472,7 @@ export class UVMap extends Emitter<
   }
 
   #geometryFrom(
-    template: UVFaceGeometryTemplate | undefined,
+    template: UVSlotGeometryTemplate | undefined,
     rect: SelectionRect
   ) {
     return template?.shape === "triangle" ?

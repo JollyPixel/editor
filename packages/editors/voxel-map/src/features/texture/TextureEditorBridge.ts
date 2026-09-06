@@ -7,15 +7,18 @@ import type {
 import type * as network from "@jolly-pixel/network";
 import {
   PixelCursorSync,
+  PixelStrokeGhostSync,
   PixelSyncClient,
+  SelectionGhostSync,
+  UVGhostSync,
   type PixelArtCanvas,
   type PixelNetworkCommand,
   type PixelServerMessage,
   type SelectionRect
 } from "@jolly-pixel/pixel-draw.renderer";
 import {
-  PixelCanvasTexture
-} from "@jolly-pixel/editor.pixel-art/three/PixelCanvasTexture.ts";
+  PixelCanvasChangeTracker
+} from "@jolly-pixel/editor.pixel-art/texture/PixelCanvasChangeTracker.ts";
 
 // Import Internal Dependencies
 import { findBlocksReferencingTileset } from "./blockTextureTiles.ts";
@@ -61,12 +64,15 @@ export class TextureEditorBridge {
   #manager: PixelArtCanvas | null = null;
   #syncClient: PixelSyncClient | null = null;
   #cursorSync: PixelCursorSync | null = null;
+  #uvGhostSync: UVGhostSync | null = null;
+  #strokeGhostSync: PixelStrokeGhostSync | null = null;
+  #selectionGhostSync: SelectionGhostSync | null = null;
   #atlas: TilesetAtlas | null = null;
   #tilesetId: string | null = null;
   #vr: VoxelRenderer | null = null;
   #unsubscribe: (() => void) | null = null;
   #syncing = false;
-  #texture: PixelCanvasTexture | null = null;
+  #changes: PixelCanvasChangeTracker | null = null;
   readonly #scheduler: (callback: () => void) => void;
   #running = false;
   #needsFullSync = false;
@@ -87,6 +93,7 @@ export class TextureEditorBridge {
     canvas: PixelArtCanvas,
     room?: network.Room<PixelNetworkCommand, PixelServerMessage>
   ): void {
+    this.#destroyGhostSyncs();
     this.#cursorSync?.destroy();
     this.#cursorSync = null;
     this.#syncClient?.destroy();
@@ -98,25 +105,49 @@ export class TextureEditorBridge {
     );
 
     // Batch local and remote writes once per frame.
-    this.#texture?.dispose();
-    this.#texture = new PixelCanvasTexture(canvas, { flush: "manual" });
-    this.#texture.on("resized", () => {
-      // Resizes and snapshots invalidate regional padding.
-      this.#needsFullSync = true;
-    });
+    this.#changes?.dispose();
+    this.#changes = new PixelCanvasChangeTracker(canvas, { flush: "manual" });
+    this.#changes.on("resized", this.#onSurfaceChanged);
+    this.#changes.on("replaced", this.#onSurfaceChanged);
     this.#startFrameLoop();
-
     if (room) {
-      this.#syncClient = new PixelSyncClient({ room });
-      this.#syncClient.attach(this.#manager);
-      this.#cursorSync = new PixelCursorSync({
-        room,
-        label: (identity) => readUsername(identity),
-        color: (clientId, identity) => peerColor(clientId, identity)
-      });
-      this.#cursorSync.attach(this.#manager);
-      room.join();
+      this.#attachRoom(canvas, room);
     }
+  }
+
+  readonly #onSurfaceChanged = (): void => {
+    // Resizes and snapshots invalidate regional padding.
+    this.#needsFullSync = true;
+  };
+
+  #attachRoom(
+    canvas: PixelArtCanvas,
+    room: network.Room<PixelNetworkCommand, PixelServerMessage>
+  ): void {
+    this.#syncClient = new PixelSyncClient({ room });
+    this.#syncClient.attach(canvas);
+    this.#cursorSync = new PixelCursorSync({
+      room,
+      label: (identity) => readUsername(identity),
+      color: (clientId, identity) => peerColor(clientId, identity)
+    });
+    this.#cursorSync.attach(canvas);
+    this.#uvGhostSync = new UVGhostSync({ room });
+    this.#uvGhostSync.attach(canvas);
+    this.#strokeGhostSync = new PixelStrokeGhostSync({ room });
+    this.#strokeGhostSync.attach(canvas);
+    this.#selectionGhostSync = new SelectionGhostSync({ room });
+    this.#selectionGhostSync.attach(canvas);
+    room.join();
+  }
+
+  #destroyGhostSyncs(): void {
+    this.#selectionGhostSync?.destroy();
+    this.#selectionGhostSync = null;
+    this.#strokeGhostSync?.destroy();
+    this.#strokeGhostSync = null;
+    this.#uvGhostSync?.destroy();
+    this.#uvGhostSync = null;
   }
 
   #startFrameLoop(): void {
@@ -136,7 +167,7 @@ export class TextureEditorBridge {
   }
 
   #flush(): void {
-    const dirty = this.#texture?.consume();
+    const dirty = this.#changes?.consume();
     if (!dirty) {
       this.#flushTransparency();
 
@@ -193,14 +224,12 @@ export class TextureEditorBridge {
     this.#atlas = atlas;
     this.#vr = vr;
 
-    // Do not overwrite an attached room's snapshot.
     if (this.#syncClient?.ready) {
       this.syncTransparency();
 
       return;
     }
 
-    // Local restore keeps the placeholder out of shared history.
     const applied = this.#manager.runLocalRestore(
       () => this.#applyTexture(
         atlas.sourceTexture.image as HTMLImageElement,
@@ -250,33 +279,32 @@ export class TextureEditorBridge {
     this.syncTransparency();
   }
 
-  /** Recomputes transparency within optional tile bounds. */
   syncTransparency(
     bounds?: SelectionRect
   ): void {
     if (!this.#manager || !this.#vr || !this.#atlas || !this.#tilesetId) {
       return;
     }
-
-    // Deriving from a placeholder registry would publish, and persist,
-    // block definitions the authoritative snapshot is about to replace.
     if (!editorState.blocksReady) {
       return;
     }
 
     const affected = findBlocksReferencingTileset(
       this.#vr.engine.blockRegistry.getAll(),
+      (shapeId) => this.#vr!.engine.shapeRegistry.get(shapeId),
       this.#tilesetId,
       this.#atlas.def.tileSize
     );
 
     const updates: ResolvedBlockDefinition[] = [];
-    for (const { block, rects } of affected) {
+    for (const { block, rects, geometries } of affected) {
       if (bounds && !rects.some((rect) => rectsIntersect(rect, bounds))) {
         continue;
       }
 
-      const transparent = rects.some((rect) => this.#manager!.hasTransparency(rect));
+      const transparent = geometries.some(
+        (geometry) => this.#manager!.hasTransparency(geometry)
+      );
       if (transparent === (block.transparent === true)) {
         continue;
       }
@@ -304,12 +332,13 @@ export class TextureEditorBridge {
   destroy(): void {
     this.#running = false;
     this.#pendingTransparency = null;
-    this.#texture?.dispose();
-    this.#texture = null;
+    this.#changes?.dispose();
+    this.#changes = null;
     this.#unsubscribe?.();
     this.#unsubscribe = null;
     this.#cursorSync?.destroy();
     this.#cursorSync = null;
+    this.#destroyGhostSyncs();
     this.#syncClient?.destroy();
     this.#syncClient = null;
     this.#manager = null;

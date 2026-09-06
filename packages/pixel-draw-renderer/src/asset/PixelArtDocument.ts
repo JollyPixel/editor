@@ -7,7 +7,7 @@ import { decodePng } from "@jolly-pixel/image";
 
 // Import Internal Dependencies
 import { PixelBuffer } from "../buffer/PixelBuffer.ts";
-import type { UVRegionData } from "../uv/UVRegion.ts";
+import { isUVRegionData } from "../uv/validation.ts";
 import type { PixelBufferSnapshot } from "../network/types.ts";
 import type { Vec2 } from "../types.ts";
 
@@ -96,15 +96,18 @@ export function decodePixelArtDocument(
   if (typeof document.pixels !== "string") {
     throw new InvalidPixelArtDocumentError("pixels is not a base64 string");
   }
-  if (!Array.isArray(document.uvRegions)) {
-    throw new InvalidPixelArtDocumentError("uvRegions is not an array");
+  if (
+    !Array.isArray(document.uvRegions) ||
+    !document.uvRegions.every(isUVRegionData)
+  ) {
+    throw new InvalidPixelArtDocumentError("uvRegions contains invalid data");
   }
 
   return {
     version: kDocumentVersion,
     size: document.size,
     pixels: document.pixels,
-    uvRegions: document.uvRegions as UVRegionData[]
+    uvRegions: document.uvRegions
   };
 }
 

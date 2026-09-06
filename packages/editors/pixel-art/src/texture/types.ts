@@ -1,7 +1,6 @@
 // Import Third-party Dependencies
 import type {
   CanvasBufferEvent,
-  UVFace,
   Vec2
 } from "@jolly-pixel/pixel-draw.renderer";
 
@@ -21,12 +20,3 @@ export interface PixelTextureSource {
   readonly textureSize: Vec2;
   textureCanvas(): HTMLCanvasElement;
 }
-
-export interface FaceVertexRange {
-  start: number;
-  count: number;
-}
-
-export type FaceRanges = Partial<
-  Record<UVFace, readonly FaceVertexRange[]>
->;

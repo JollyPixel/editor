@@ -2,7 +2,7 @@
 import * as THREE from "three";
 import {
   UV_FACES,
-  type UVFace
+  type UVSlot
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -56,7 +56,7 @@ function createFaceLabels(): THREE.Object3D[] {
 }
 
 function faceRotation(
-  face: UVFace
+  face: UVSlot
 ): THREE.Euler {
   switch (face) {
     case "right":

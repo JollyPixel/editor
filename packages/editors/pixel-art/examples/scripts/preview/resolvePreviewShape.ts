@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import type * as THREE from "three";
 import type {
-  UVFace,
+  UVSlot,
   UVGeometry,
   UVRegion
 } from "@jolly-pixel/pixel-draw.renderer";
@@ -12,7 +12,7 @@ import { createCubeShape } from "./shapes/CubeShape.ts";
 import { createRampShape } from "./shapes/RampShape.ts";
 
 // CONSTANTS
-const kRampFaces: readonly UVFace[] = [
+const kRampFaces: readonly UVSlot[] = [
   "back",
   "left",
   "right",
