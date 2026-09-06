@@ -51,6 +51,9 @@ export class BlockLibraryRenderer {
   #rot = 0;
   #cols = 1;
   #cellSize = 1;
+  #canvasWidth = 0;
+  #canvasHeight = 0;
+  #layoutDirty = true;
   #container: HTMLElement;
   #resizeObserver: ResizeObserver;
 
@@ -85,7 +88,9 @@ export class BlockLibraryRenderer {
     this.#camera = new THREE.PerspectiveCamera(kCameraFov, 1, 0.1, 20);
     this.#camera.position.set(0, 0, kCameraZ);
 
-    this.#resizeObserver = new ResizeObserver(() => this.#relayout());
+    this.#resizeObserver = new ResizeObserver(() => {
+      this.#layoutDirty = true;
+    });
     this.#resizeObserver.observe(container);
 
     if (options.blocks) {
@@ -230,6 +235,8 @@ export class BlockLibraryRenderer {
   }
 
   #relayout(): void {
+    this.#layoutDirty = false;
+
     const style = getComputedStyle(this.#container);
     const paddingH = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
     const layout = computeBlockGridLayout(
@@ -243,17 +250,24 @@ export class BlockLibraryRenderer {
       this.#cells[i].x = i % this.#cols;
       this.#cells[i].y = Math.floor(i / this.#cols);
     }
-
-    this.#resizeCanvas();
   }
 
-  #resizeCanvas(): void {
+  #syncCanvasSize(): void {
     const rows = Math.ceil(this.#cells.length / this.#cols) || 1;
-    const w = this.#cols * this.#cellSize;
-    const h = rows * this.#cellSize;
-    this.#renderer.setSize(w, h, false);
-    this.canvas.style.width = `${w}px`;
-    this.canvas.style.height = `${h}px`;
+    const width = this.#cols * this.#cellSize;
+    const height = rows * this.#cellSize;
+    if (
+      width === this.#canvasWidth &&
+      height === this.#canvasHeight
+    ) {
+      return;
+    }
+
+    this.#canvasWidth = width;
+    this.#canvasHeight = height;
+    this.#renderer.setSize(width, height, false);
+    this.canvas.style.width = `${width}px`;
+    this.canvas.style.height = `${height}px`;
   }
 
   #startLoop(): void {
@@ -265,6 +279,17 @@ export class BlockLibraryRenderer {
   }
 
   #render(): void {
+    if (this.#layoutDirty) {
+      this.#relayout();
+    }
+    this.#syncCanvasSize();
+    if (
+      this.#canvasWidth === 0 ||
+      this.#canvasHeight === 0
+    ) {
+      return;
+    }
+
     this.#rot += 0.005;
 
     this.#renderer.clear();
