@@ -16,8 +16,8 @@ import type {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import { PixelCanvasTexture } from "#src/three/PixelCanvasTexture.ts";
-import type { PixelTextureSource } from "#src/three/types.ts";
+import { PixelCanvasTexture } from "#src/mesh-texturing/PixelCanvasTexture.ts";
+import type { PixelTextureSource } from "#src/mesh-texturing/types.ts";
 
 // A stand-in for PixelArtCanvas: the three members PixelTextureSource needs.
 class FakeSource extends Emitter<CanvasBufferEvent> implements PixelTextureSource {

@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import type { SelectionRect } from "../types.ts";
 import type {
-  UVFace,
+  UVSlot,
   UVGeometry,
   UVRegion,
   UVRegionData
@@ -12,12 +12,12 @@ export type UVMapEvent = {
   "region-deleted": (event: { region: UVRegion; }) => void;
   "region-moved": (event: {
     region: UVRegion;
-    face: UVFace | null;
+    face: UVSlot | null;
     previousRect: SelectionRect;
   }) => void;
   "region-dragging": (event: {
     id: string;
-    face: UVFace | null;
+    face: UVSlot | null;
     rect: SelectionRect;
     geometry: UVGeometry;
   }) => void;
@@ -27,7 +27,7 @@ export type UVMapEvent = {
   }) => void;
   "selection-changed": (event: {
     selectedRegionId: string | null;
-    selectedFace: UVFace | null;
+    selectedFace: UVSlot | null;
   }) => void;
   "visibility-changed": (event: { showAll: boolean; }) => void;
   "label-visibility-changed": (event: { showRegionLabels: boolean; }) => void;

@@ -94,13 +94,13 @@ export {
   type UVMapEventType,
   type UVMapListener,
   type UVMapOptions,
-  type UVFaceGeometryTemplate,
+  type UVSlotGeometryTemplate,
   type UVRegionCreateOptions
 } from "./uv/UVMap.ts";
 export {
   UVRegion,
   UV_FACES,
-  type UVFace,
+  type UVSlot,
   type UVGeometry,
   type UVRegionData,
   type UVRegionFace,
@@ -108,7 +108,8 @@ export {
   type UVTriangle,
   type UVTriangleCorner,
   type UVCompound,
-  type UVCompoundPart
+  type UVCompoundPart,
+  type UVNormalizedRect
 } from "./uv/UVRegion.ts";
 export { UVRegionCollection } from "./uv/UVRegionCollection.ts";
 // PixelSyncServer pulls worker_threads through the network server barrel.

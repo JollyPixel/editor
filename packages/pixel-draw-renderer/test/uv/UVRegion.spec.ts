@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import {
   UVRegion,
   UV_FACES,
-  type UVFace
+  type UVSlot
 } from "#src/uv/UVRegion.ts";
 import type { SelectionRect } from "#src/types.ts";
 
@@ -662,8 +662,8 @@ describe("UVRegion", () => {
     });
   });
 
-  test("UV_FACES covers every UVFace exactly once", () => {
-    const faces: Record<UVFace, true> = {
+  test("UV_FACES covers every UVSlot exactly once", () => {
+    const faces: Record<UVSlot, true> = {
       front: true,
       back: true,
       left: true,

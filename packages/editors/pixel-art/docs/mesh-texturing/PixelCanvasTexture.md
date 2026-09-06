@@ -3,7 +3,7 @@
 Mirrors a live pixel-draw canvas onto a `THREE.CanvasTexture` and batches the uploads. Handles the parts every call site used to hand-roll: nearest filtering, no mipmaps, `needsUpdate` on change, and re-pointing `image` when the working canvas element is swapped out.
 
 ```ts
-import { PixelCanvasTexture } from "@jolly-pixel/editor.pixel-art/three/index.ts";
+import { PixelCanvasTexture } from "@jolly-pixel/editor.pixel-art/mesh-texturing/index.ts";
 
 const bridge = new PixelCanvasTexture(canvas);
 const material = new THREE.MeshStandardMaterial({

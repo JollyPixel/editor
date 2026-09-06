@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-import type { UVFace } from "@jolly-pixel/pixel-draw.renderer";
+import type { UVSlot } from "@jolly-pixel/pixel-draw.renderer";
 
 // CONSTANTS
 const kCanvasWidth = 256;
@@ -14,7 +14,7 @@ export const FACE_LABEL_MARGIN = 0.09;
 export const FACE_LABEL_SURFACE_OFFSET = 0.015;
 
 export function createFaceLabel(
-  face: UVFace
+  face: UVSlot
 ): THREE.Mesh {
   const label = new THREE.Mesh(
     new THREE.PlaneGeometry(FACE_LABEL_WIDTH, FACE_LABEL_HEIGHT),
@@ -26,7 +26,7 @@ export function createFaceLabel(
 }
 
 function createFaceLabelMaterial(
-  face: UVFace
+  face: UVSlot
 ): THREE.MeshBasicMaterial {
   const canvas = document.createElement("canvas");
   canvas.width = kCanvasWidth;

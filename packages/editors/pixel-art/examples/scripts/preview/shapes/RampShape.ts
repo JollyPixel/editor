@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-import type { UVFace } from "@jolly-pixel/pixel-draw.renderer";
+import type { UVSlot } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import { rampFaceRanges } from "./faceRanges.ts";
@@ -131,7 +131,7 @@ function createFaceLabels(): THREE.Object3D[] {
 }
 
 function positionedLabel(
-  face: UVFace,
+  face: UVSlot,
   position: [number, number, number],
   rotation: [number, number, number]
 ): THREE.Mesh {

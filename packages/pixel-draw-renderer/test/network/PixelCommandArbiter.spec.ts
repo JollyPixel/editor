@@ -50,6 +50,42 @@ function resizedCmd(
 }
 
 describe("PixelCommandArbiter", () => {
+  test("a delete conflicts with a newer move of a derived slot", () => {
+    const arbiter = new PixelCommandArbiter();
+    const buffer = new PixelBuffer({ size: { x: 4, y: 4 } });
+    const rect = { x: 0, y: 0, width: 1, height: 1 };
+    buffer.uvRegions.set({
+      id: "block-1",
+      color: "#fff",
+      state: "uncollapsed",
+      faces: {
+        top: rect,
+        "top.1": rect
+      }
+    });
+    const move: PixelNetworkCommand = {
+      action: "uv-region-moved",
+      clientId: "late",
+      seq: 1,
+      timestamp: 2000,
+      metadata: {
+        id: "block-1",
+        face: "top.1",
+        rect
+      }
+    };
+    const deletion: PixelNetworkCommand = {
+      action: "uv-region-deleted",
+      clientId: "early",
+      seq: 1,
+      timestamp: 1000,
+      metadata: { id: "block-1" }
+    };
+
+    assert.deepEqual(arbiter.accept(buffer, move), move);
+    assert.equal(arbiter.accept(buffer, deletion), null);
+  });
+
   test("accepts an uncontested stroke unchanged", () => {
     const arbiter = new PixelCommandArbiter();
     const buffer = new PixelBuffer({ size: { x: 4, y: 4 } });

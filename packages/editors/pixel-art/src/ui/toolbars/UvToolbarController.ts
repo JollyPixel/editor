@@ -8,7 +8,7 @@ import {
 import { classMap } from "lit/directives/class-map.js";
 import type {
   PixelArtCanvas,
-  UVFace,
+  UVSlot,
   UVMapListener,
   UVRegionState
 } from "@jolly-pixel/pixel-draw.renderer";
@@ -31,7 +31,7 @@ export class UvToolbarController implements ReactiveController {
   #canvas: PixelArtCanvas | null = null;
 
   #selectedRegionId: string | null = null;
-  #selectedFace: UVFace | null = null;
+  #selectedFace: UVSlot | null = null;
   #selectedState: UVRegionState | null = null;
   #showAll = false;
   #showRegionLabels = false;
@@ -64,7 +64,7 @@ export class UvToolbarController implements ReactiveController {
     return this.#selectedRegionId;
   }
 
-  get selectedFace(): UVFace | null {
+  get selectedFace(): UVSlot | null {
     return this.#selectedFace;
   }
 

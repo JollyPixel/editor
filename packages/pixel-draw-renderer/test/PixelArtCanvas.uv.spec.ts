@@ -141,6 +141,41 @@ describe("PixelArtCanvas — uv mode", () => {
     );
   });
 
+  test("clicking outside every region clears the selection by default", () => {
+    const manager = makeManager();
+    manager.mode = "uv";
+    const region = manager.uv.create({
+      width: 4,
+      height: 4
+    });
+    manager.uv.select(region.id);
+
+    const canvas = manager.canvas();
+    canvas.dispatchEvent(mouseEvent("mousedown", 160, 160));
+    canvas.dispatchEvent(mouseEvent("mouseup", 160, 160));
+
+    assert.strictEqual(manager.uv.selectedRegionId, null);
+  });
+
+  test("uv.deselectOnEmptyClick: false keeps the selection on an outside click", () => {
+    const manager = makeManager({
+      uv: { deselectOnEmptyClick: false }
+    });
+    manager.mode = "uv";
+    const region = manager.uv.create({
+      width: 4,
+      height: 4
+    });
+    manager.uv.select(region.id);
+
+    const canvas = manager.canvas();
+    canvas.dispatchEvent(mouseEvent("mousedown", 160, 160));
+    canvas.dispatchEvent(mouseEvent("mouseup", 160, 160));
+
+    assert.strictEqual(manager.uv.selectedRegionId, region.id);
+    assert.ok(manager.uv.isVisible(region.id));
+  });
+
   test("leaving uv mode does not clear the current selection/visibility", () => {
     const manager = makeManager();
     const region = manager.uv.create({

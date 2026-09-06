@@ -5,7 +5,7 @@ import {
 import { pointInGeometry } from "./geometry.ts";
 import type { UVMap } from "./UVMap.ts";
 import type {
-  UVFace,
+  UVSlot,
   UVGeometry,
   UVRegion
 } from "./UVRegion.ts";
@@ -20,11 +20,16 @@ import type {
 export interface UVControllerOptions {
   uvMap: UVMap;
   overlay: UVRegionLayer;
+  /**
+   * Clears the selection when a click lands outside every visible region.
+   * @default true
+   */
+  deselectOnEmptyClick?: boolean;
 }
 
 interface DragState {
   id: string;
-  face: UVFace | null;
+  face: UVSlot | null;
   origin: Vec2;
   baseRect: SelectionRect;
   liveRect: SelectionRect;
@@ -32,7 +37,7 @@ interface DragState {
 
 interface HitCandidate {
   region: UVRegion;
-  face: UVFace | null;
+  face: UVSlot | null;
   geometry: UVGeometry;
 }
 
@@ -40,7 +45,7 @@ interface PickState {
   key: string;
   index: number;
   regionId: string;
-  face: UVFace | null;
+  face: UVSlot | null;
 }
 
 function stackKey(
@@ -59,12 +64,14 @@ export class UVController {
   #overlay: UVRegionLayer;
   #drag: DragState | null = null;
   #pick: PickState | null = null;
+  #deselectOnEmptyClick: boolean;
 
   constructor(
     options: UVControllerOptions
   ) {
     this.#uvMap = options.uvMap;
     this.#overlay = options.overlay;
+    this.#deselectOnEmptyClick = options.deselectOnEmptyClick ?? true;
   }
 
   get isDragging(): boolean {
@@ -77,7 +84,9 @@ export class UVController {
     const candidates = this.#hitStack(pos);
     if (candidates.length === 0) {
       this.#pick = null;
-      this.#uvMap.select(null);
+      if (this.#deselectOnEmptyClick) {
+        this.#uvMap.select(null);
+      }
 
       return;
     }

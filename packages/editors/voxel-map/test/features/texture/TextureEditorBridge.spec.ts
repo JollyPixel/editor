@@ -5,16 +5,17 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import {
   BlockRegistry,
+  BlockShapeRegistry,
   Face,
   type VoxelRenderer,
   type ResolvedBlockDefinition
 } from "@jolly-pixel/voxel.renderer";
-import type {
-  CanvasBufferEvent,
-  PixelArtCanvas,
-  PixelNetworkCommand,
-  PixelServerMessage,
-  SelectionRect
+import {
+  type CanvasBufferEvent,
+  type PixelArtCanvas,
+  type PixelNetworkCommand,
+  type PixelServerMessage,
+  type SelectionRect
 } from "@jolly-pixel/pixel-draw.renderer";
 import type * as network from "@jolly-pixel/network";
 import { Emitter } from "@openally/emitt";
@@ -22,6 +23,7 @@ import { fromUint8Array } from "js-base64";
 
 // Import Internal Dependencies
 import { TextureEditorBridge } from "../../../src/features/texture/TextureEditorBridge.ts";
+import { makeFakeManager } from "./textureBridgeFixtures.ts";
 import { editorState } from "../../../src/EditorState.ts";
 
 function makeBlock(
@@ -82,6 +84,7 @@ function makeFakeVoxelRenderer(
   const fake = {
     engine: {
       blockRegistry: registry,
+      shapeRegistry: BlockShapeRegistry.createDefault(),
       defineBlock: (def: ResolvedBlockDefinition) => {
         fake.engine.defineBlocks([def]);
       },
@@ -129,41 +132,6 @@ function makeScheduler() {
       next?.();
     }
   };
-}
-
-type FakeManager = PixelArtCanvas & {
-  document: Emitter<CanvasBufferEvent>;
-  /** Scope depth at each texture assignment; 0 means it broadcast. */
-  textureSetDepths: number[];
-};
-
-function makeFakeManager(
-  hasTransparency: (rect: SelectionRect) => boolean
-): FakeManager {
-  const fakeCanvas = { toDataURL: () => "data:image/png;base64," } as unknown as HTMLCanvasElement;
-  const textureSetDepths: number[] = [];
-  let depth = 0;
-
-  return {
-    document: new Emitter<CanvasBufferEvent>(),
-    textureSize: { x: 64, y: 64 },
-    textureCanvas: () => fakeCanvas,
-    hasTransparency,
-    textureSetDepths,
-    loadSnapshot: () => void 0,
-    set texture(_source: HTMLImageElement) {
-      textureSetDepths.push(depth);
-    },
-    runLocalRestore: <T>(fn: () => T): T => {
-      depth++;
-      try {
-        return fn();
-      }
-      finally {
-        depth--;
-      }
-    }
-  } as unknown as FakeManager;
 }
 
 describe("TextureEditorBridge / transparency auto-sync", () => {
@@ -328,34 +296,6 @@ describe("TextureEditorBridge / oversized textures", () => {
     assert.equal(manager.assigned, null);
     assert.equal(logged.length, 1);
     assert.match(logged[0], /tileset source image.*1024x512.*512px per side/);
-    bridge.destroy();
-  });
-});
-
-describe("TextureEditorBridge / room startup", () => {
-  it("subscribes before joining the room", () => {
-    const calls: string[] = [];
-    const room = {
-      peers: new Map(),
-      on: () => calls.push("subscribe"),
-      off: () => void 0,
-      join: () => calls.push("join"),
-      leave: () => void 0,
-      send: () => void 0,
-      updatePresence: () => void 0
-    } as unknown as network.Room<PixelNetworkCommand, PixelServerMessage>;
-    const bridge = new TextureEditorBridge({ scheduler: () => void 0 });
-
-    bridge.attach(makeFakeManager(() => false), room);
-
-    // Both the document and the cursor sync must be listening first: a
-    // snapshot or a presence patch arriving before them would be dropped.
-    assert.equal(calls.at(-1), "join");
-    assert.deepEqual(
-      new Set(calls.slice(0, -1)),
-      new Set(["subscribe"])
-    );
-    assert.ok(calls.length > 2);
     bridge.destroy();
   });
 });

@@ -54,11 +54,15 @@ Pasted content held above the texture until it is deposited. It can be moved, bu
 
 ### UV Region
 
-A named texture area mapped to one or more mesh faces. A region may use one shared rectangle or separate geometry for individual faces.
+A named texture area mapped to one or more mesh texture slots. A region may use one shared rectangle or separate geometry for individual slots.
+
+### UV Slot
+
+A consumer-defined texture mapping identifier such as `front`, `top`, or `top.1`. The renderer core treats slots as open strings; a mesh integration decides which polygons each slot controls.
 
 ### UV Map
 
-The collection of UV regions and its current region and face selection.
+The collection of UV regions and its current region and slot selection.
 
 ### History Entry
 

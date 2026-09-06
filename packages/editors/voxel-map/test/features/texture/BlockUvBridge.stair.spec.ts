@@ -50,6 +50,7 @@ describe("BlockUvBridge — stairs", () => {
 
     try {
       bridge.setActiveTileset("atlas", 16);
+      uv.uncollapse("block-1");
 
       const region = uv.get("block-1")!;
 
@@ -70,6 +71,7 @@ describe("BlockUvBridge — stairs", () => {
 
     try {
       bridge.setActiveTileset("atlas", 16);
+      uv.uncollapse("block-1");
 
       const geometry = uv.get("block-1")!.geometryFor("right") as UVCompound;
 
@@ -92,6 +94,7 @@ describe("BlockUvBridge — stairs", () => {
 
     try {
       bridge.setActiveTileset("atlas", 16);
+      uv.uncollapse("block-1");
 
       const region = uv.get("block-1")!;
       const covered = region.facesOf().filter(
@@ -111,6 +114,7 @@ describe("BlockUvBridge — stairs", () => {
 
     try {
       bridge.setActiveTileset("atlas", 16);
+      uv.uncollapse("block-1");
 
       const region = uv.get("block-1")!;
 
@@ -144,6 +148,7 @@ describe("BlockUvBridge — stairs", () => {
 
     try {
       bridge.setActiveTileset("atlas", 16);
+      uv.uncollapse("block-1");
       uv.move("block-1", { x: 48, y: 40, width: 16, height: 8 }, "top.1");
 
       const updated = vr.engine.blockRegistry.get(1)!;

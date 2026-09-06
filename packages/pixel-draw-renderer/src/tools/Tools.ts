@@ -37,6 +37,11 @@ export interface ToolsOptions {
   eraseColor: RGBA8 | null;
   uvMap: UVMap;
   uvOverlay: UVRegionLayer;
+  /**
+   * Clears the UV selection when a click lands outside every visible region.
+   * @default true
+   */
+  uvDeselectOnEmptyClick?: boolean;
   pipeline: EditPipeline;
   /**
    * Streams brush and line pixels; selection geometry uses its own emitter.
@@ -95,7 +100,8 @@ export class Tools {
 
     this.uv = new UVController({
       uvMap: options.uvMap,
-      overlay: options.uvOverlay
+      overlay: options.uvOverlay,
+      deselectOnEmptyClick: options.uvDeselectOnEmptyClick
     });
   }
 }

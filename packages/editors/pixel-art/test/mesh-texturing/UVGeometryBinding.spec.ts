@@ -16,8 +16,8 @@ import {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import { UVGeometryBinding } from "#src/three/UVGeometryBinding.ts";
-import { applyUvGeometry } from "#src/three/applyUvGeometry.ts";
+import { UVGeometryBinding } from "#src/mesh-texturing/UVGeometryBinding.ts";
+import { applyUvGeometry } from "#src/mesh-texturing/applyUvGeometry.ts";
 import { boxFaceRanges } from "../../examples/scripts/preview/shapes/faceRanges.ts";
 
 // CONSTANTS
@@ -34,6 +34,25 @@ function makeGeometry(): THREE.BufferGeometry {
   geometry.setAttribute(
     "uv",
     new THREE.Float32BufferAttribute(uvs, 2)
+  );
+
+  return geometry;
+}
+
+function makeInterleavedGeometry(): THREE.BufferGeometry {
+  const geometry = new THREE.BufferGeometry();
+  const buffer = new THREE.InterleavedBuffer(
+    new Float32Array([
+      10, 20, 0, 1,
+      11, 21, 1, 1,
+      12, 22, 0, 0,
+      13, 23, 1, 0
+    ]),
+    4
+  );
+  geometry.setAttribute(
+    "uv",
+    new THREE.InterleavedBufferAttribute(buffer, 2, 2)
   );
 
   return geometry;
@@ -79,6 +98,22 @@ describe("UVGeometryBinding", () => {
     assert.deepStrictEqual(uvOf(geometry, 1), [0.25, 1]);
     assert.deepStrictEqual(uvOf(geometry, 2), [0, 0.75]);
     assert.deepStrictEqual(uvOf(geometry, 23), [0.25, 0.75]);
+  });
+
+  test("preserves the stride and offset of an interleaved UV attribute", () => {
+    geometry = makeInterleavedGeometry();
+
+    new UVGeometryBinding({
+      geometry,
+      region: collapsedRegion(),
+      textureSize: kTextureSize,
+      faceRanges: { front: [{ start: 0, count: 4 }] }
+    });
+
+    assert.deepStrictEqual(uvOf(geometry, 0), [0, 1]);
+    assert.deepStrictEqual(uvOf(geometry, 1), [0.25, 1]);
+    assert.deepStrictEqual(uvOf(geometry, 2), [0, 0.75]);
+    assert.deepStrictEqual(uvOf(geometry, 3), [0.25, 0.75]);
   });
 
   test("exposes the bound region id", () => {

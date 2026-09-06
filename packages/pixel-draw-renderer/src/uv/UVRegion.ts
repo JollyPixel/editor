@@ -7,21 +7,22 @@ import {
   copyRect,
   rectOf
 } from "./geometry.ts";
-import { UVFaceMap } from "./UVFaceMap.ts";
+import { UVSlotMap } from "./UVSlotMap.ts";
 import {
   UV_FACES,
-  type UVFace,
+  type UVSlot,
   type UVGeometry,
   type UVRegionState
 } from "./types.ts";
 
 export type {
-  UVFace,
   UVRegionState,
   UVTriangleCorner,
   UVTriangle,
   UVCompound,
   UVCompoundPart,
+  UVNormalizedRect,
+  UVSlot,
   UVGeometry
 } from "./types.ts";
 export { UV_FACES } from "./types.ts";
@@ -36,26 +37,26 @@ export type UVRegionData =
   | (UVRegionIdentity & {
     state?: "collapsed";
     rect: SelectionRect;
-    faces?: Record<UVFace, UVGeometry>;
-    activeFaces?: UVFace[];
-    collapsedFace?: UVFace;
+    faces?: Record<UVSlot, UVGeometry>;
+    activeFaces?: UVSlot[];
+    collapsedFace?: UVSlot;
   })
   | (UVRegionIdentity & {
     state: "uncollapsed";
-    faces: Record<UVFace, UVGeometry>;
-    activeFaces?: UVFace[];
+    faces: Record<UVSlot, UVGeometry>;
+    activeFaces?: UVSlot[];
   });
 
 export interface UVRegionFace {
-  face: UVFace | null;
+  face: UVSlot | null;
   geometry: UVGeometry;
 }
 
 function normalizeActiveFaces(
-  activeFaces: readonly UVFace[],
-  faces: UVFaceMap
-): readonly UVFace[] {
-  const seen = new Set<UVFace>();
+  activeFaces: readonly UVSlot[],
+  faces: UVSlotMap
+): readonly UVSlot[] {
+  const seen = new Set<UVSlot>();
 
   return activeFaces.filter(
     (face) => faces.has(face) && !seen.has(face) && seen.add(face) !== undefined
@@ -86,10 +87,10 @@ export class UVRegion {
   readonly name?: string;
   readonly color: string;
   readonly state: UVRegionState;
-  readonly #faces: UVFaceMap;
-  readonly #activeFaces: readonly UVFace[];
+  readonly #faces: UVSlotMap;
+  readonly #activeFaces: readonly UVSlot[];
   readonly #collapsedRect: SelectionRect | null;
-  readonly #collapsedFace: UVFace | null;
+  readonly #collapsedFace: UVSlot | null;
 
   static from(
     value: UVRegion | UVRegionData
@@ -106,15 +107,15 @@ export class UVRegion {
 
     if (data.state === "uncollapsed") {
       this.state = "uncollapsed";
-      this.#faces = new UVFaceMap(data.faces);
+      this.#faces = new UVSlotMap(data.faces);
       this.#collapsedRect = null;
       this.#collapsedFace = null;
     }
     else {
       this.state = "collapsed";
       this.#faces = data.faces ?
-        new UVFaceMap(data.faces) :
-        UVFaceMap.shared(data.rect);
+        new UVSlotMap(data.faces) :
+        UVSlotMap.shared(data.rect);
       this.#collapsedRect = copyRect(data.rect);
       this.#collapsedFace = data.collapsedFace ?? null;
     }
@@ -125,16 +126,16 @@ export class UVRegion {
     );
   }
 
-  get faces(): readonly UVFace[] {
+  get faces(): readonly UVSlot[] {
     return this.#faces.faces;
   }
 
-  get collapsedFace(): UVFace | null {
+  get collapsedFace(): UVSlot | null {
     return this.#collapsedFace;
   }
 
   rectFor(
-    face: UVFace
+    face: UVSlot
   ): SelectionRect {
     if (this.#collapsedRect) {
       return copyRect(this.#collapsedRect);
@@ -144,7 +145,7 @@ export class UVRegion {
   }
 
   geometryFor(
-    face: UVFace
+    face: UVSlot
   ): UVGeometry {
     return this.#collapsedRect ?
       copyGeometry(this.#collapsedRect) :
@@ -172,7 +173,7 @@ export class UVRegion {
   }
 
   collapse(
-    face?: UVFace
+    face?: UVSlot
   ): UVRegion {
     if (this.state === "collapsed") {
       return this;
@@ -201,7 +202,7 @@ export class UVRegion {
     }
 
     const anchor = rectOf(
-      this.#faces.get(this.#collapsedFace ?? "front")
+      this.#faces.get(this.#collapsedFace ?? this.#faces.primaryFace)
     );
 
     return new UVRegion({
@@ -222,8 +223,8 @@ export class UVRegion {
   }
 
   #collapseTarget(
-    face: UVFace | undefined
-  ): UVFace {
+    face: UVSlot | undefined
+  ): UVSlot {
     const largest = this.#largestActiveFaces();
     const rects = largest.filter(
       (candidate) => isRect(this.#faces.get(candidate))
@@ -232,11 +233,11 @@ export class UVRegion {
 
     return (face !== undefined && candidates.includes(face) ? face : candidates[0]) ??
       face ??
-      "front";
+      this.#faces.primaryFace;
   }
 
-  #largestActiveFaces(): UVFace[] {
-    let best: UVFace[] = [];
+  #largestActiveFaces(): UVSlot[] {
+    let best: UVSlot[] = [];
     let bestArea = -1;
 
     for (const face of this.#activeFaces) {
@@ -256,7 +257,7 @@ export class UVRegion {
 
   withRect(
     rect: SelectionRect,
-    face?: UVFace
+    face?: UVSlot
   ): UVRegion {
     if (this.state === "collapsed") {
       return new UVRegion({

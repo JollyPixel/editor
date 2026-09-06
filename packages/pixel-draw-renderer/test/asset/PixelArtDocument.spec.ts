@@ -121,6 +121,25 @@ describe("PixelArtDocument", () => {
     );
   });
 
+  test("rejects malformed UV region data", () => {
+    assert.throws(
+      () => decodePixelArtDocument(bytes({
+        version: 1,
+        size: { x: 1, y: 1 },
+        pixels: "",
+        uvRegions: [
+          {
+            id: "broken",
+            color: "#fff",
+            state: "uncollapsed",
+            faces: {}
+          }
+        ]
+      })),
+      InvalidPixelArtDocumentError
+    );
+  });
+
   test("rejects a size the buffer would refuse", () => {
     const buffer = new PixelBuffer({
       size: { x: 2, y: 2 },

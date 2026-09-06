@@ -5,7 +5,7 @@ import type {
   Vec2
 } from "../types.ts";
 import type {
-  UVFace,
+  UVSlot,
   UVRegionData
 } from "../uv/UVRegion.ts";
 
@@ -63,7 +63,7 @@ export interface HistoryUvMoveEntry {
   action: "uv-move";
   timestamp: number;
   id: string;
-  face: UVFace | null;
+  face: UVSlot | null;
   oldRect: SelectionRect;
   newRect: SelectionRect;
 }

@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { UVFaceMap } from "#src/uv/UVFaceMap.ts";
+import { UVSlotMap } from "#src/uv/UVSlotMap.ts";
 import {
   UV_FACES,
   type UVGeometry
@@ -27,10 +27,10 @@ function fullRecord(
   return Object.fromEntries(UV_FACES.map((face) => [face, geometry]));
 }
 
-describe("UVFaceMap", () => {
+describe("UVSlotMap", () => {
   describe("shared()", () => {
     test("gives every face the same rect value", () => {
-      const faces = UVFaceMap.shared(kRect);
+      const faces = UVSlotMap.shared(kRect);
 
       for (const face of UV_FACES) {
         assert.deepStrictEqual(faces.get(face), kRect);
@@ -38,16 +38,23 @@ describe("UVFaceMap", () => {
     });
 
     test("gives each face an independent object", () => {
-      const faces = UVFaceMap.shared(kRect);
+      const faces = UVSlotMap.shared(kRect);
 
       assert.notStrictEqual(faces.get("front"), faces.get("top"));
     });
   });
 
   describe("constructor", () => {
+    test("rejects an empty slot map", () => {
+      assert.throws(
+        () => new UVSlotMap({}),
+        RangeError
+      );
+    });
+
     test("copies incoming geometry instead of aliasing it", () => {
       const rect = { ...kRect };
-      const faces = new UVFaceMap(fullRecord(rect) as Record<string, UVGeometry> as never);
+      const faces = new UVSlotMap(fullRecord(rect) as Record<string, UVGeometry> as never);
       rect.x = 99;
 
       assert.strictEqual((faces.get("front") as SelectionRect).x, kRect.x);
@@ -55,8 +62,15 @@ describe("UVFaceMap", () => {
   });
 
   describe("get()", () => {
+    test("rejects an unknown slot instead of substituting another", () => {
+      assert.throws(
+        () => UVSlotMap.shared(kRect).get("missing"),
+        RangeError
+      );
+    });
+
     test("returns a copy the caller cannot use to mutate the map", () => {
-      const faces = UVFaceMap.shared(kRect);
+      const faces = UVSlotMap.shared(kRect);
       const geometry = faces.get("front") as SelectionRect;
       geometry.x = 99;
 
@@ -65,9 +79,16 @@ describe("UVFaceMap", () => {
   });
 
   describe("withFace()", () => {
+    test("rejects an unknown slot", () => {
+      assert.throws(
+        () => UVSlotMap.shared(kRect).withFace("missing", kRect),
+        RangeError
+      );
+    });
+
     test("replaces only the named face", () => {
       const nextRect: SelectionRect = { x: 9, y: 9, width: 1, height: 1 };
-      const faces = UVFaceMap.shared(kRect).withFace("left", nextRect);
+      const faces = UVSlotMap.shared(kRect).withFace("left", nextRect);
 
       assert.deepStrictEqual(faces.get("left"), nextRect);
       for (const face of UV_FACES.filter((value) => value !== "left")) {
@@ -77,7 +98,7 @@ describe("UVFaceMap", () => {
 
     test("leaves the source instance untouched", () => {
       const nextRect: SelectionRect = { x: 9, y: 9, width: 1, height: 1 };
-      const faces = UVFaceMap.shared(kRect);
+      const faces = UVSlotMap.shared(kRect);
       faces.withFace("left", nextRect);
 
       assert.deepStrictEqual(faces.get("left"), kRect);
@@ -86,7 +107,7 @@ describe("UVFaceMap", () => {
 
   describe("translated()", () => {
     test("shifts every face without resizing it", () => {
-      const faces = UVFaceMap.shared(kRect).translated(8, 7);
+      const faces = UVSlotMap.shared(kRect).translated(8, 7);
 
       for (const face of UV_FACES) {
         assert.deepStrictEqual(faces.get(face), {
@@ -99,7 +120,7 @@ describe("UVFaceMap", () => {
     });
 
     test("keeps each face's own size and offset", () => {
-      const faces = new UVFaceMap({
+      const faces = new UVSlotMap({
         ...fullRecord(),
         front: { x: 0, y: 0, width: 4, height: 4 },
         top: { x: 10, y: 20, width: 16, height: 2 }
@@ -114,7 +135,7 @@ describe("UVFaceMap", () => {
     });
 
     test("preserves triangle shape metadata while moving its bounds", () => {
-      const faces = new UVFaceMap(fullRecord(kTriangle) as Record<string, UVGeometry> as never);
+      const faces = new UVSlotMap(fullRecord(kTriangle) as Record<string, UVGeometry> as never);
       const moved = faces.translated(8, 7);
 
       assert.deepStrictEqual(moved.get("left"), {
@@ -132,7 +153,7 @@ describe("UVFaceMap", () => {
 
   describe("toJSON()", () => {
     test("returns a full record covering every face", () => {
-      const data = UVFaceMap.shared(kRect).toJSON();
+      const data = UVSlotMap.shared(kRect).toJSON();
 
       assert.deepStrictEqual(
         Object.keys(data).sort(),
@@ -141,7 +162,7 @@ describe("UVFaceMap", () => {
     });
 
     test("returns copies the caller cannot use to mutate the map", () => {
-      const faces = UVFaceMap.shared(kRect);
+      const faces = UVSlotMap.shared(kRect);
       const data = faces.toJSON();
       (data.front as SelectionRect).x = 99;
 

@@ -12,7 +12,7 @@ import {
   type UVMapEventType
 } from "#src/uv/UVMap.ts";
 import { UVController } from "#src/uv/UVController.ts";
-import { UV_FACES, type UVFace } from "#src/uv/UVRegion.ts";
+import { UV_FACES, type UVSlot } from "#src/uv/UVRegion.ts";
 import type { UVRegionLayer } from "#src/rendering/overlays/UVRegions.ts";
 import type { SelectionRect } from "#src/types.ts";
 
@@ -21,11 +21,11 @@ type EventPayload<T extends UVMapEventType> = Parameters<UVMapEvent[T]>[0];
 // UVController only calls overlay.setLiveOverride; FakeOverlay implements that
 // structural subset and is cast to UVRegionLayer at the single injection site.
 class FakeOverlay {
-  overrides: { id: string; face: UVFace | null; rect: SelectionRect | null; }[] = [];
+  overrides: { id: string; face: UVSlot | null; rect: SelectionRect | null; }[] = [];
 
   setLiveOverride(
     id: string,
-    face: UVFace | null,
+    face: UVSlot | null,
     rect: SelectionRect | null
   ): void {
     this.overrides.push({ id, face, rect });
@@ -33,13 +33,15 @@ class FakeOverlay {
 }
 
 function makeSetup(
-  size = { x: 32, y: 32 }
+  size = { x: 32, y: 32 },
+  deselectOnEmptyClick?: boolean
 ): { map: UVMap; overlay: FakeOverlay; controller: UVController; } {
   const map = new UVMap({ getCanvasSize: () => size });
   const overlay = new FakeOverlay();
   const controller = new UVController({
     uvMap: map,
-    overlay: overlay as unknown as UVRegionLayer
+    overlay: overlay as unknown as UVRegionLayer,
+    deselectOnEmptyClick
   });
 
   return { map, overlay, controller };
@@ -129,6 +131,70 @@ describe("UVController — hit-test / select on miss", () => {
     controller.handleStart({ x: 20, y: 20 });
 
     assert.strictEqual(map.selectedRegionId, null);
+  });
+});
+
+describe("UVController — deselectOnEmptyClick: false", () => {
+  test("keeps the selection on a miss and emits no selection-changed", () => {
+    const { map, controller } = makeSetup({ x: 32, y: 32 }, false);
+    const region = map.create({ width: 8, height: 8 });
+    map.showAll = true;
+    controller.handleStart({ x: 2, y: 2 });
+    const events: EventPayload<"selection-changed">[] = [];
+    map.on("selection-changed", (event) => events.push(event));
+
+    controller.handleStart({ x: 20, y: 20 });
+
+    assert.strictEqual(map.selectedRegionId, region.id);
+    assert.strictEqual(events.length, 0);
+  });
+
+  test("a miss starts no drag, so the selected region cannot move", () => {
+    const { map, overlay, controller } = makeSetup({ x: 32, y: 32 }, false);
+    const region = map.create({ width: 8, height: 8 });
+    map.showAll = true;
+    controller.handleStart({ x: 2, y: 2 });
+    controller.handleEnd();
+    overlay.overrides.length = 0;
+
+    controller.handleStart({ x: 20, y: 20 });
+    controller.handleMove({ x: 24, y: 24 });
+    controller.handleEnd();
+
+    assert.ok(!controller.isDragging);
+    assert.strictEqual(overlay.overrides.length, 0);
+    assert.deepStrictEqual(
+      map.get(region.id)!.rectFor("front"),
+      { x: 0, y: 0, width: 8, height: 8 }
+    );
+  });
+
+  test("a miss still restarts the click cycle over coincident regions", () => {
+    const { map, controller } = makeSetup({ x: 32, y: 32 }, false);
+    const first = map.restore({
+      id: "first",
+      color: "#f00",
+      state: "collapsed",
+      rect: { x: 0, y: 0, width: 8, height: 8 }
+    });
+    const second = map.restore({
+      id: "second",
+      color: "#0f0",
+      state: "collapsed",
+      rect: { x: 0, y: 0, width: 8, height: 8 }
+    });
+    map.showAll = true;
+
+    controller.handleStart({ x: 2, y: 2 });
+    assert.strictEqual(map.selectedRegionId, first.id);
+    controller.handleStart({ x: 2, y: 2 });
+    assert.strictEqual(map.selectedRegionId, second.id);
+
+    controller.handleStart({ x: 20, y: 20 });
+    assert.strictEqual(map.selectedRegionId, second.id);
+    controller.handleStart({ x: 2, y: 2 });
+
+    assert.strictEqual(map.selectedRegionId, first.id);
   });
 });
 

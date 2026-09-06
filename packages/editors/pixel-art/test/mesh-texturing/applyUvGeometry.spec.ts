@@ -11,7 +11,7 @@ import {
   applyUvGeometry,
   applyUvRect,
   orientUv
-} from "#src/three/applyUvGeometry.ts";
+} from "#src/mesh-texturing/applyUvGeometry.ts";
 
 // CONSTANTS
 const kCanonicalTriangle: [number, number][] = [

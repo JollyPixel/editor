@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import type * as THREE from "three";
 import type {
-  UVFace,
+  UVSlot,
   UVGeometry,
   UVMap,
   UVMapListener,
@@ -76,9 +76,12 @@ export class UVGeometryBinding {
     this.#faceRanges = options.faceRanges;
     this.#region = options.region;
     this.#textureSize = options.textureSize;
-    this.#baseUv = Float32Array.from(
-      this.#geometry.getAttribute("uv").array
-    );
+    const uvAttribute = this.#geometry.getAttribute("uv");
+    this.#baseUv = new Float32Array(uvAttribute.count * 2);
+    for (let index = 0; index < uvAttribute.count; index++) {
+      this.#baseUv[index * 2] = uvAttribute.getX(index);
+      this.#baseUv[index * 2 + 1] = uvAttribute.getY(index);
+    }
 
     this.#applyRegion();
   }
@@ -102,7 +105,7 @@ export class UVGeometryBinding {
   }
 
   applyFace(
-    face: UVFace | null,
+    face: UVSlot | null,
     geometry: UVGeometry
   ): void {
     const uvAttribute = this.#geometry.getAttribute("uv");
@@ -116,7 +119,7 @@ export class UVGeometryBinding {
         ranges: [
           {
             start: 0,
-            count: this.#baseUv.length / 2
+            count: uvAttribute.count
           }
         ]
       });

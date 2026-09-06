@@ -9,7 +9,7 @@ import type {
 } from "../overlays/UVRegions.ts";
 import type { DefaultViewport } from "../Viewport.ts";
 import type {
-  UVFace,
+  UVSlot,
   UVGeometry
 } from "../../uv/UVRegion.ts";
 
@@ -18,7 +18,7 @@ const kStrokeWidth = 2;
 
 export interface PeerUVPreviewState {
   id: string;
-  face: UVFace | null;
+  face: UVSlot | null;
   geometry: UVGeometry;
   color: string;
 }

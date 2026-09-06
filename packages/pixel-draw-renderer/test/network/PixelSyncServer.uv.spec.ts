@@ -14,7 +14,7 @@ import {
   type ClientHandle
 } from "#src/network/PixelSyncServer.ts";
 import type { PixelNetworkCommand } from "#src/network/types.ts";
-import { UVRegion, type UVFace, type UVRegionData } from "#src/uv/UVRegion.ts";
+import { UVRegion, type UVSlot, type UVRegionData } from "#src/uv/UVRegion.ts";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -119,7 +119,7 @@ function uvMovedCmd(
       width: number;
       height: number;
     };
-    face?: UVFace | null;
+    face?: UVSlot | null;
     clientId?: string;
     seq?: number;
     timestamp?: number;

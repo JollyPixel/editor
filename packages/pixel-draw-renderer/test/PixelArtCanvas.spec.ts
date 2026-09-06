@@ -451,6 +451,31 @@ describe("PixelArtCanvas", () => {
       );
       manager.destroy();
     });
+
+    test("ignores transparency outside a triangular UV's sampled area", () => {
+      const manager = new PixelArtCanvas(container, {
+        texture: {
+          maxSize: 32,
+          size: { x: 8, y: 8 }
+        }
+      });
+      manager.brush.primary.set("#000000", 0);
+      manager.commitPixels([{ x: 0, y: 0 }]);
+
+      assert.strictEqual(manager.hasTransparency({
+        shape: "triangle",
+        corner: "bottom-right",
+        rect: { x: 0, y: 0, width: 8, height: 8 }
+      }), false);
+
+      manager.commitPixels([{ x: 7, y: 7 }]);
+      assert.strictEqual(manager.hasTransparency({
+        shape: "triangle",
+        corner: "bottom-right",
+        rect: { x: 0, y: 0, width: 8, height: 8 }
+      }), true);
+      manager.destroy();
+    });
   });
 
   describe("canvas", () => {

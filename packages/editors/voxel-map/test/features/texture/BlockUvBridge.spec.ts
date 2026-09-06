@@ -51,6 +51,7 @@ describe("BlockUvBridge.setActiveTileset", () => {
     const bridge = new BlockUvBridge(uv, vr);
     try {
       bridge.setActiveTileset("atlas", 16);
+      uv.uncollapse("block-1");
 
       const region = uv.get("block-1")!;
       // The ramp's upright quad is PosZ, which maps to "front", not "back".
@@ -88,6 +89,36 @@ describe("BlockUvBridge.setActiveTileset", () => {
       bridge.setActiveTileset("other", 32);
       assert.equal(uv.get("block-1"), undefined);
       assert.ok(uv.get("block-2"));
+    }
+    finally {
+      bridge.dispose();
+    }
+  });
+
+  it("includes a face-only block with no default texture", () => {
+    const { vr } = makeFakeVoxelRenderer();
+    vr.engine.blockRegistry.register({
+      ...makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }),
+      defaultTexture: undefined,
+      faceTextures: {
+        top: { col: 2, row: 1, tilesetId: "atlas" }
+      }
+    });
+
+    const uv = makeUv();
+    const bridge = new BlockUvBridge(uv, vr);
+    try {
+      bridge.setActiveTileset("atlas", 16);
+
+      const region = uv.get("block-1")!;
+      assert.equal(region.state, "uncollapsed");
+      assert.deepEqual(region.faces, ["top"]);
+      assert.deepEqual(region.rectFor("top"), {
+        x: 32,
+        y: 16,
+        width: 16,
+        height: 16
+      });
     }
     finally {
       bridge.dispose();
@@ -163,7 +194,7 @@ describe("BlockUvBridge / region-moved", () => {
 });
 
 describe("BlockUvBridge / region-dragging", () => {
-  it("moves the block on every pointer move, not only on release", () => {
+  it("applies a pointer-rate preview to the block so the mesh follows the drag", () => {
     const { vr, dirtyReasons } = makeFakeVoxelRenderer();
     vr.engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));
 
@@ -174,9 +205,9 @@ describe("BlockUvBridge / region-dragging", () => {
 
       uv.previewMove("block-1", { x: 32, y: 16, width: 16, height: 16 });
 
-      const updated = vr.engine.blockRegistry.get(1)!;
-      assert.equal(updated.defaultTexture!.col, 2);
-      assert.equal(updated.defaultTexture!.row, 1);
+      const previewed = vr.engine.blockRegistry.get(1)!;
+      assert.equal(previewed.defaultTexture!.col, 2);
+      assert.equal(previewed.defaultTexture!.row, 1);
       assert.deepEqual(dirtyReasons, ["block-defined"]);
     }
     finally {
@@ -222,7 +253,7 @@ describe("BlockUvBridge / region-dragging", () => {
     }
   });
 
-  it("leaves the release event nothing left to do", () => {
+  it("does not remesh again when the commit lands where the preview already put the block", () => {
     const { vr, dirtyReasons } = makeFakeVoxelRenderer();
     vr.engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));
 
@@ -238,8 +269,11 @@ describe("BlockUvBridge / region-dragging", () => {
       assert.deepEqual(
         dirtyReasons,
         ["block-defined"],
-        "the drag already wrote it; the release must not remesh a second time"
+        "the preview already wrote the block; the release is a no-op"
       );
+      const updated = vr.engine.blockRegistry.get(1)!;
+      assert.equal(updated.defaultTexture!.col, 2);
+      assert.equal(updated.defaultTexture!.row, 1);
     }
     finally {
       bridge.dispose();
@@ -471,7 +505,7 @@ describe("BlockUvBridge / selection at boot", () => {
     }
   });
 
-  it("keeps the highlight across a rebuild that deletes every region", () => {
+  it("keeps the highlight across an in-place registry reconciliation", () => {
     const { vr } = makeFakeVoxelRenderer();
     vr.engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));
     vr.engine.blockRegistry.register(makeBlock(2, { col: 1, row: 0, tilesetId: "atlas" }));
@@ -521,6 +555,30 @@ describe("BlockUvBridge / deleted region", () => {
 });
 
 describe("BlockUvBridge / derived-region rebuilds", () => {
+  it("does not churn unchanged regions on a registry notification", () => {
+    const { vr } = makeFakeVoxelRenderer();
+    vr.engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));
+    const uv = makeUv();
+    const bridge = new BlockUvBridge(uv, vr);
+    let created = 0;
+    let deleted = 0;
+    uv.on("region-created", () => created++);
+    uv.on("region-deleted", () => deleted++);
+
+    try {
+      bridge.setActiveTileset("atlas", 16);
+      created = 0;
+
+      editorState.dispatchBlockRegistryChanged();
+
+      assert.equal(created, 0);
+      assert.equal(deleted, 0);
+    }
+    finally {
+      bridge.dispose();
+    }
+  });
+
   it("runs the whole rebuild inside the local-restore scope", () => {
     const { vr } = makeFakeVoxelRenderer();
     vr.engine.blockRegistry.register(makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }));

@@ -4,7 +4,7 @@ import * as THREE from "three";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import { PixelCanvasTexture } from "../../../src/three/PixelCanvasTexture.ts";
+import { PixelCanvasTexture } from "../../../src/mesh-texturing/PixelCanvasTexture.ts";
 import { CameraBehavior } from "../components/Camera.ts";
 import { OrbitControlsBehavior } from "../components/OrbitControlsBehavior.ts";
 import { RegionPreviewFactory } from "./RegionPreviewFactory.ts";
