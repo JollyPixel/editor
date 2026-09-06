@@ -58,11 +58,11 @@ describe("VoxelWorld — layer ordering", () => {
     const base = world.addLayer("Base");
     const top = world.addLayer("Top");
 
-    // "up" walks towards lower priority, "down" towards higher.
-    world.moveLayer("Top", "up");
+    // "up" walks towards higher priority, "down" towards lower.
+    world.moveLayer("Top", "down");
     assert.deepEqual([top.order, base.order], [0, 1]);
 
-    world.moveLayer("Top", "down");
+    world.moveLayer("Top", "up");
     assert.deepEqual([top.order, base.order], [1, 0]);
   });
 

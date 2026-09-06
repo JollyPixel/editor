@@ -72,7 +72,7 @@ describe("VoxelEngine — hook emission", () => {
     engine.world.addLayer("A");
     engine.world.addLayer("B");
 
-    engine.world.moveLayer("B", "up");
+    engine.world.moveLayer("B", "down");
 
     const last = events.at(-1)!;
     assert.equal(last.action, "reordered");
@@ -85,7 +85,7 @@ describe("VoxelEngine — hook emission", () => {
     engine.world.addLayer("A");
     engine.world.addLayer("B");
 
-    engine.world.moveLayer("A", "up");
+    engine.world.moveLayer("A", "down");
 
     assert.equal(events.at(-1)!.action, "added");
   });

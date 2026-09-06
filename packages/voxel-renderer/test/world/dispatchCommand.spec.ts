@@ -119,11 +119,11 @@ describe("VoxelWorld.applyRemoteCommand — reordered", () => {
     world.addLayer("Base");
     world.addLayer("Top");
     // After sort (descending): [Top(order=1), Base(order=0)]
-    // Move Base "down" in array index = higher priority (swaps with Top)
+    // Moving Base "up" raises its priority, swapping it with Top.
     world.applyRemoteCommand({
       action: "reordered",
       layerName: "Base",
-      metadata: { direction: "down" }
+      metadata: { direction: "up" }
     });
     // Base has now overtaken Top in priority
     const layers = world.getLayers();
