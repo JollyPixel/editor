@@ -15,7 +15,7 @@ import type {
   BlockDefinition,
   ResolvedBlockDefinition,
   BlockShapeID,
-  VoxelRenderer
+  VoxelEngine
 } from "@jolly-pixel/voxel.renderer";
 import type {
   Dialog,
@@ -24,7 +24,10 @@ import type {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { editorState } from "../../EditorState.ts";
+import {
+  editorState,
+  type BrushStore
+} from "../../app/state/index.ts";
 
 // CONSTANTS
 const kDefaultBlockName = "New Block";
@@ -49,10 +52,12 @@ export class BlockEditorDialog extends LitElement {
   `;
 
   @property({ attribute: false })
-  declare vr: VoxelRenderer | undefined;
+  declare engine: VoxelEngine | undefined;
 
   @property({ attribute: false })
   declare block: ResolvedBlockDefinition | null;
+  @property({ attribute: false })
+  declare brush: BrushStore;
 
   @state()
   private declare _mode: BlockEditorMode;
@@ -66,6 +71,8 @@ export class BlockEditorDialog extends LitElement {
   constructor() {
     super();
 
+    this.engine = undefined;
+    this.brush = editorState.brush;
     this.block = null;
     this._mode = "edit";
     this._draft = {
@@ -101,21 +108,33 @@ export class BlockEditorDialog extends LitElement {
   }
 
   override render() {
-    const creating = this._mode === "create";
-    if (!creating && !this.block) {
+    if (this._mode === "create") {
+      return this.#renderDialog("New block", this._draft, true);
+    }
+
+    const { block } = this;
+    if (!block) {
       return nothing;
     }
 
-    const values: BlockDraft = creating ?
-      this._draft :
+    return this.#renderDialog(
+      `Block #${block.id}`,
       {
-        name: this.block!.name,
-        shapeId: this.block!.shapeId,
-        tilesetId: this.block!.defaultTexture?.tilesetId ?? this.#defaultTilesetId()
-      };
+        name: block.name,
+        shapeId: block.shapeId,
+        tilesetId: block.defaultTexture?.tilesetId ?? this.#defaultTilesetId()
+      },
+      false
+    );
+  }
 
+  #renderDialog(
+    heading: string,
+    values: BlockDraft,
+    creating: boolean
+  ) {
     return html`
-      <jolly-dialog heading=${this.#heading()}>
+      <jolly-dialog heading=${heading}>
         <div class="fields">
           <jolly-text
             label="Name"
@@ -157,30 +176,22 @@ export class BlockEditorDialog extends LitElement {
     `;
   }
 
-  #heading(): string {
-    if (this._mode === "create") {
-      return "New block";
-    }
-
-    return `Block #${this.block!.id}`;
-  }
-
   #defaultTilesetId(): string {
-    return this.vr?.engine.tilesetManager.defaultTilesetId ?? "";
+    return this.engine?.tilesetManager.defaultTilesetId ?? "";
   }
 
   #shapeOptions(): JollyOption<BlockShapeID>[] {
-    if (!this.vr) {
+    if (!this.engine) {
       return [];
     }
 
-    return [...this.vr.engine.shapeRegistry.ids()].map((id) => {
+    return [...this.engine.shapeRegistry.ids()].map((id) => {
       return { label: id, value: id };
     });
   }
 
   #tilesetOptions(): JollyOption<string>[] {
-    const definitions = this.vr?.engine.tilesetManager.definitions() ?? [];
+    const definitions = this.engine?.tilesetManager.definitions() ?? [];
 
     return definitions.map((def) => {
       return { label: def.id, value: def.id };
@@ -244,7 +255,7 @@ export class BlockEditorDialog extends LitElement {
   #applyEdit(
     patch: Partial<ResolvedBlockDefinition>
   ): void {
-    if (!this.block || !this.vr) {
+    if (!this.block || !this.engine) {
       return;
     }
 
@@ -252,16 +263,16 @@ export class BlockEditorDialog extends LitElement {
       ...this.block,
       ...patch
     };
-    this.vr.engine.defineBlock(updated);
+    this.engine.defineBlock(updated);
     this.block = updated;
   }
 
   #confirmCreate(): void {
-    if (!this.vr) {
+    if (!this.engine) {
       return;
     }
 
-    const { blockRegistry } = this.vr.engine;
+    const { blockRegistry } = this.engine;
     const definition: BlockDefinition = {
       id: blockRegistry.nextId,
       name: this._draft.name.trim() || kDefaultBlockName,
@@ -273,8 +284,8 @@ export class BlockEditorDialog extends LitElement {
       }
     };
 
-    this.vr.engine.defineBlock(definition);
-    editorState.setSelectedBlock(definition.id);
+    this.engine.defineBlock(definition);
+    this.brush.blockId = definition.id;
     this.close();
   }
 }

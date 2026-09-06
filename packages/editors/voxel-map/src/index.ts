@@ -28,18 +28,19 @@ import {
 import "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { editorState } from "./EditorState.ts";
-import { EditorSidebar } from "./features/sidebar/EditorSidebar.ts";
-import { EditorScene } from "./scene/EditorScene.ts";
+import { editorState } from "./app/state/index.ts";
+import { ViewFocus } from "./scene/viewFocus.ts";
+import { EditorSidebar } from "./app/EditorSidebar.ts";
+import { EditorScene } from "./app/EditorScene.ts";
 import { parseVoxelWorld } from "./features/map-config/parseVoxelWorld.ts";
 import {
   toPeerMetadata,
   type EditorIdentity
-} from "./network/identity.ts";
-import { resolveEditorIdentity } from "./network/resolveEditorIdentity.ts";
-import type { EventCanvasHoverChange } from "./shared/dom.types.ts";
+} from "./collaboration/identity.ts";
+import { resolveEditorIdentity } from "./collaboration/resolveEditorIdentity.ts";
+import "./shared/domEvents.ts";
 // Register editor icon glyphs.
-import "./features/sidebar/icons.ts";
+import "./app/sidebarIcons.ts";
 
 // CONSTANTS
 // Used offline or when the shared document has no tileset.
@@ -97,22 +98,26 @@ const tilesets = await preloadTilesets(
   runtime.manager
 );
 
+const viewFocus = new ViewFocus();
 const editorScene = new EditorScene(
   editorState,
   {
     defaultLayerName: "Ground",
     tilesets,
     voxelRoom: worldRoom,
-    identity
+    identity,
+    viewFocus
   }
 );
 
-const sidebar = document.querySelector<EditorSidebar>("#sidebar")!;
+const sidebar = document.querySelector<EditorSidebar>("#sidebar");
 if (sidebar) {
+  sidebar.state = editorState;
+  sidebar.viewFocus = viewFocus;
   sidebar.textureRoom = textureRoom;
   sidebar.onLoadWorld = (data) => editorScene.loadWorld(data);
-  sidebar.addEventListener("canvas-hover-change", (event: Event) => {
-    const { hovering } = (event as EventCanvasHoverChange).detail;
+  sidebar.addEventListener("canvas-hover-change", (event) => {
+    const { hovering } = event.detail;
     world.input.keyboard.enabled = !hovering;
   });
 }
@@ -123,8 +128,8 @@ await loadRuntime(runtime, {
   maxFps: Infinity
 });
 
-const { vr, gridRenderer } = await editorScene.ready;
+const { engine, gridRenderer } = await editorScene.ready;
 if (sidebar) {
-  sidebar.vr = vr;
+  sidebar.engine = engine;
   sidebar.gridRenderer = gridRenderer;
 }

@@ -25,11 +25,16 @@ Add `?offline` to skip network setup entirely. Nothing is persisted in that mode
 
 ## 📚 Architecture
 
-- `EditorScene` owns the ECS scene, voxel renderer, and synchronization. Its `ready` promise publishes `vr` and `gridRenderer` once the scene has awoken.
-- `EditorState` publishes typed UI state changes.
+- `EditorScene` owns the ECS scene, voxel renderer, and synchronization. Its `ready` promise publishes `engine` and `gridRenderer` once the scene has awoken. The stores it takes are injected into every scene component it creates.
+- `src/app/state/` splits UI state into four stores, each an `@openally/emitt` emitter: `SelectionStore` (what is selected, and the gizmo attached to it), `BrushStore` (block, size, style, orientation), `ShellStore` (sidebar tab, peer roster) and `WorldStore` (block-registry, layer and reset signals mirrored from the voxel world). `EditorState` composes the four and `editorState` is the shared singleton; components take the single store they read rather than the composition. Every store exposes `watch(event, listener)`, which subscribes and returns the function that unsubscribes.
+- `ViewFocus` (in `src/scene/viewFocus.ts`) carries the in-view spawn point for new objects. `EditorScene` registers its provider once the camera exists; it reads as the origin before that and after teardown.
 - `EditorSidebar` contains the Lit editing panels.
-- `LocalBrush` owns painting. Holding the left or right button paints a stroke: the cells under the pointer are edited as it travels, once each, and every stamp travels as a single bulk command. A stroke stays at the height it started at, matching the X/Z footprint of the brush, so it never climbs onto the voxels it just laid down. It is paced rather than free-running — `stampInterval` (ms) is the shortest delay between two stamps and `stampCells` how far it may travel per stamp, so a fast pointer makes the stroke trail and catch up instead of laying a whole line down at once. Note that components receive frame deltas in seconds; the brush converts them. `editorState.setBrushStyle()` configures how every brush preview is drawn (opacity, edge width, solid or dashed edges); it is a local preference and is never published.
+- `LocalBrush` owns painting. Holding the left or right button paints a stroke: the cells under the pointer are edited as it travels, once each, and every stamp travels as a single bulk command. A stroke stays at the height it started at, matching the X/Z footprint of the brush, so it never climbs onto the voxels it just laid down. It is paced rather than free-running — `stampInterval` (ms) is the shortest delay between two stamps and `stampCells` how far it may travel per stamp, so a fast pointer makes the stroke trail and catch up instead of laying a whole line down at once. Note that components receive frame deltas in seconds; the brush converts them. `editorState.brush.applyStyle()` configures how every brush preview is drawn (opacity, edge width, solid or dashed edges); it is a local preference and is never published.
 - `TextureEditorBridge`, `BlockUvBridge`, and `BlockLibraryRenderer` connect pixel editing and block previews to the voxel engine. Tile coordinates and `transparent` are derived from the paint tab, never typed in: `block-editor-dialog` configures name, shape, and tileset alone.
+- Brush aiming and voxel writes live in `BrushAimResolver` and `applyBrushStroke()`, leaving `LocalBrush` to coordinate input, strokes, and preview presentation.
+- `ObjectLayerRenderer` owns picking and transform controls; `ObjectAreaScene` owns the Three.js projection of object-layer data.
+- `PixelCollaborationSession` owns the pixel-room adapters, while `blockUvProjection.ts` contains the pure block/UV conversions.
+- `LayerManager` delegates tree projection and world mutations to `layerTree.ts` and `layerActions.ts`. Layer and object panels share `custom-properties-editor`.
 
 ## 🧪 Tests and checks
 

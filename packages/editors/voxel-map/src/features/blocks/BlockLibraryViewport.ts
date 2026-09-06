@@ -2,7 +2,7 @@
 import { LitElement, html, css } from "lit";
 import { customElement, property, query } from "lit/decorators.js";
 import type {
-  VoxelRenderer,
+  VoxelEngine,
   ResolvedBlockDefinition
 } from "@jolly-pixel/voxel.renderer";
 
@@ -33,7 +33,7 @@ export class BlockLibraryViewport extends LitElement {
   `;
 
   @property({ attribute: false })
-  declare vr: VoxelRenderer | undefined;
+  declare engine: VoxelEngine | undefined;
 
   @property({ attribute: false })
   declare blocks: ResolvedBlockDefinition[];
@@ -48,6 +48,7 @@ export class BlockLibraryViewport extends LitElement {
 
   constructor() {
     super();
+    this.engine = undefined;
     this.blocks = [];
     this.selectedId = null;
   }
@@ -61,7 +62,7 @@ export class BlockLibraryViewport extends LitElement {
   override updated(
     changed: Map<string, unknown>
   ): void {
-    if (changed.has("vr")) {
+    if (changed.has("engine")) {
       this.#build();
 
       return;
@@ -84,14 +85,14 @@ export class BlockLibraryViewport extends LitElement {
   }
 
   #build(): void {
-    if (!this.vr) {
+    if (!this.engine) {
       return;
     }
 
     this.#renderer?.dispose();
     this.#renderer = new BlockLibraryRenderer(this._scroller, {
-      shapeRegistry: this.vr.engine.shapeRegistry,
-      tilesetManager: this.vr.engine.tilesetManager,
+      shapeRegistry: this.engine.shapeRegistry,
+      tilesetManager: this.engine.tilesetManager,
       blocks: this.blocks
     });
     this.#renderer.setSelectedBlock(this.selectedId);

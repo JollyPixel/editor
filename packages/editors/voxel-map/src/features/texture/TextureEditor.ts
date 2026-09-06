@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import { LitElement, html, css } from "lit";
-import { customElement, property } from "lit/decorators.js";
-import type { VoxelRenderer } from "@jolly-pixel/voxel.renderer";
+import { customElement, property, query } from "lit/decorators.js";
+import type { VoxelEngine } from "@jolly-pixel/voxel.renderer";
 import type * as network from "@jolly-pixel/network";
 import type {
   PixelArtCanvas,
@@ -12,8 +12,13 @@ import { PixelDrawPanel } from "@jolly-pixel/editor.pixel-art";
 import type { JollyChangeDetail, JollyOption } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { TextureEditorBridge } from "./TextureEditorBridge.ts";
-import { BlockUvBridge } from "./BlockUvBridge.ts";
+import {
+  editorState,
+  type BrushStore,
+  type WorldStore
+} from "../../app/state/index.ts";
+import { TextureEditorBridge } from "./bridge/TextureEditorBridge.ts";
+import { BlockUvBridge } from "./bridge/BlockUvBridge.ts";
 
 // CONSTANTS
 const kCanvasHoverChangeEvent = "canvas-hover-change";
@@ -41,15 +46,22 @@ export class TextureEditor extends LitElement {
   `;
 
   @property({ attribute: false })
-  declare vr: VoxelRenderer | undefined;
+  declare engine: VoxelEngine | undefined;
   @property({ attribute: false })
   declare room: network.Room<PixelNetworkCommand, PixelServerMessage> | undefined;
   @property({ type: String })
   declare tilesetId: string;
   @property({ type: Boolean })
   declare active: boolean;
+  @property({ attribute: false })
+  declare brush: BrushStore;
+  @property({ attribute: false })
+  declare worldStore: WorldStore;
 
-  readonly #bridge = new TextureEditorBridge();
+  @query("pixel-draw-panel")
+  declare private _panel: PixelDrawPanel;
+
+  #bridge: TextureEditorBridge | null = null;
   #uvBridge: BlockUvBridge | null = null;
   #canvas: PixelArtCanvas | null = null;
   #panelEl: PixelDrawPanel | null = null;
@@ -58,12 +70,17 @@ export class TextureEditor extends LitElement {
 
   constructor() {
     super();
+    this.engine = undefined;
     this.tilesetId = "";
     this.active = false;
+    this.brush = editorState.brush;
+    this.worldStore = editorState.world;
   }
 
   override async firstUpdated() {
-    const panelEl = this.shadowRoot!.querySelector<PixelDrawPanel>("pixel-draw-panel")!;
+    const bridge = new TextureEditorBridge({ worldStore: this.worldStore });
+    this.#bridge = bridge;
+    const panelEl = this._panel;
     this.#panelEl = panelEl;
 
     const canvas = await panelEl.initialize({
@@ -88,16 +105,20 @@ export class TextureEditor extends LitElement {
       return;
     }
     this.#canvas = canvas;
-    this.#bridge.attach(canvas, this.room);
+    bridge.attach(canvas, this.room);
 
-    if (this.vr) {
-      this.#uvBridge = new BlockUvBridge(canvas.uv, this.vr, {
-        runLocalRestore: (fn) => canvas.runLocalRestore(fn)
+    if (this.engine) {
+      this.#uvBridge = new BlockUvBridge(canvas.uv, this.engine, {
+        runLocalRestore: (fn) => canvas.runLocalRestore(fn),
+        brush: this.brush,
+        worldStore: this.worldStore
       });
       this.#applyTileset(this.tilesetId || null);
     }
 
-    this.#canvasHostEl = panelEl.shadowRoot!.querySelector<HTMLDivElement>(".canvas-host");
+    this.#canvasHostEl = panelEl.shadowRoot?.querySelector<HTMLDivElement>(
+      "[part~='canvas-host']"
+    ) ?? null;
     this.#canvasHostEl?.addEventListener(
       "mouseenter",
       this.#onCanvasHoverEnter
@@ -114,12 +135,13 @@ export class TextureEditor extends LitElement {
   override updated(
     changed: Map<string, unknown>
   ) {
-    if (!this.#bridge.isActive) {
+    const bridge = this.#bridge;
+    if (!bridge?.isActive) {
       return;
     }
 
     if (changed.has("room") && this.#canvas) {
-      this.#bridge.attach(this.#canvas, this.room);
+      bridge.attach(this.#canvas, this.room);
     }
 
     if (changed.has("active") && this.active) {
@@ -127,10 +149,10 @@ export class TextureEditor extends LitElement {
     }
 
     if (
-      (changed.has("vr") || changed.has("tilesetId")) &&
-      this.vr
+      (changed.has("engine") || changed.has("tilesetId")) &&
+      this.engine
     ) {
-      if (changed.has("vr")) {
+      if (changed.has("engine")) {
         this.#uvBridge?.dispose();
         this.#uvBridge = null;
       }
@@ -138,9 +160,11 @@ export class TextureEditor extends LitElement {
       if (!this.#uvBridge && canvas) {
         this.#uvBridge = new BlockUvBridge(
           canvas.uv,
-          this.vr,
+          this.engine,
           {
-            runLocalRestore: (fn) => canvas.runLocalRestore(fn)
+            runLocalRestore: (fn) => canvas.runLocalRestore(fn),
+            brush: this.brush,
+            worldStore: this.worldStore
           }
         );
       }
@@ -163,22 +187,23 @@ export class TextureEditor extends LitElement {
     this.#resizeObserver = null;
     this.#uvBridge?.dispose();
     this.#uvBridge = null;
-    this.#bridge.destroy();
+    this.#bridge?.destroy();
+    this.#bridge = null;
     this.#panelEl = null;
   }
 
   #applyTileset(
     tilesetId: string | null
   ): void {
-    if (!this.vr) {
+    if (!this.engine) {
       return;
     }
 
-    this.#bridge.loadTileset(this.vr, tilesetId);
+    this.#bridge?.loadTileset(this.engine, tilesetId);
 
-    const resolvedId = tilesetId ?? this.vr.engine.tilesetManager.defaultTilesetId;
+    const resolvedId = tilesetId ?? this.engine.tilesetManager.defaultTilesetId;
     const def = resolvedId
-      ? this.vr.engine.tilesetManager.definitions().find((candidate) => candidate.id === resolvedId)
+      ? this.engine.tilesetManager.definitions().find((candidate) => candidate.id === resolvedId)
       : undefined;
     if (def) {
       this.#uvBridge?.setActiveTileset(def.id, def.tileSize);
@@ -211,8 +236,10 @@ export class TextureEditor extends LitElement {
   }
 
   override render() {
-    const tilesetDefs = this.vr?.engine.tilesetManager.definitions() ?? [];
-    const currentTilesetId = this.tilesetId || this.vr?.engine.tilesetManager.defaultTilesetId || "";
+    const tilesetDefs = this.engine?.tilesetManager.definitions() ?? [];
+    const currentTilesetId = this.tilesetId ||
+      this.engine?.tilesetManager.defaultTilesetId ||
+      "";
     const tilesetOptions: JollyOption<string>[] = tilesetDefs.map((def) => {
       return { label: def.id, value: def.id };
     });
