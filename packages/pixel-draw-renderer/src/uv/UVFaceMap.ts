@@ -1,5 +1,8 @@
 // Import Internal Dependencies
-import type { SelectionRect } from "../types.ts";
+import type {
+  SelectionRect,
+  Vec2
+} from "../types.ts";
 import {
   copyGeometry,
   geometryAt,
@@ -11,41 +14,54 @@ import {
   type UVGeometry
 } from "./types.ts";
 
-/**
- * Copy-on-construct, copy-on-read per-face geometry. `UVRegion` never
- * touches a raw `Record<UVFace, UVGeometry>` directly once built.
- */
 export class UVFaceMap {
-  readonly #faces: Record<UVFace, UVGeometry>;
+  readonly #faces: Map<UVFace, UVGeometry>;
 
   static map<T>(
-    fn: (face: UVFace) => T
+    fn: (face: UVFace) => T,
+    faces: readonly UVFace[] = UV_FACES
   ): Record<UVFace, T> {
     return Object.fromEntries(
-      UV_FACES.map((face) => [face, fn(face)])
-    ) as Record<UVFace, T>;
+      faces.map((face) => [face, fn(face)])
+    );
   }
 
   static shared(
-    rect: SelectionRect
+    rect: SelectionRect,
+    faces: readonly UVFace[] = UV_FACES
   ): UVFaceMap {
     return new UVFaceMap(
-      UVFaceMap.map(() => rect)
+      UVFaceMap.map(() => rect, faces)
     );
   }
 
   constructor(
     faces: Record<UVFace, UVGeometry>
   ) {
-    this.#faces = UVFaceMap.map(
-      (face) => copyGeometry(faces[face])
+    this.#faces = new Map(
+      Object.keys(faces).map(
+        (face) => [face, copyGeometry(faces[face])]
+      )
     );
+  }
+
+  get faces(): readonly UVFace[] {
+    return [...this.#faces.keys()];
+  }
+
+  has(
+    face: UVFace
+  ): boolean {
+    return this.#faces.has(face);
   }
 
   get(
     face: UVFace
   ): UVGeometry {
-    return copyGeometry(this.#faces[face]);
+    const geometry = this.#faces.get(face) ??
+      this.#faces.values().next().value;
+
+    return copyGeometry(geometry!);
   }
 
   withFace(
@@ -54,7 +70,29 @@ export class UVFaceMap {
   ): UVFaceMap {
     return new UVFaceMap(
       UVFaceMap.map(
-        (mapFace) => (mapFace === face ? geometry : this.#faces[mapFace])
+        (mapFace) => (
+          mapFace === face ? geometry : this.#faces.get(mapFace)!
+        ),
+        this.faces
+      )
+    );
+  }
+
+  stackedAt(
+    origin: Vec2
+  ): UVFaceMap {
+    return new UVFaceMap(
+      UVFaceMap.map(
+        (face) => {
+          const geometry = this.#faces.get(face)!;
+
+          return geometryAt(geometry, {
+            ...rectOf(geometry),
+            x: origin.x,
+            y: origin.y
+          });
+        },
+        this.faces
       )
     );
   }
@@ -64,21 +102,26 @@ export class UVFaceMap {
     dy: number
   ): UVFaceMap {
     return new UVFaceMap(
-      UVFaceMap.map((face) => {
-        const rect = rectOf(this.#faces[face]);
+      UVFaceMap.map(
+        (face) => {
+          const geometry = this.#faces.get(face)!;
+          const rect = rectOf(geometry);
 
-        return geometryAt(this.#faces[face], {
-          ...rect,
-          x: rect.x + dx,
-          y: rect.y + dy
-        });
-      })
+          return geometryAt(geometry, {
+            ...rect,
+            x: rect.x + dx,
+            y: rect.y + dy
+          });
+        },
+        this.faces
+      )
     );
   }
 
   toJSON(): Record<UVFace, UVGeometry> {
     return UVFaceMap.map(
-      (face) => copyGeometry(this.#faces[face])
+      (face) => copyGeometry(this.#faces.get(face)!),
+      this.faces
     );
   }
 }

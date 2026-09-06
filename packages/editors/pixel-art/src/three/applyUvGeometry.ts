@@ -26,8 +26,10 @@ export function applyUvGeometry(
   textureSize: Vec2,
   ranges: readonly FaceVertexRange[]
 ): void {
-  const triangle = "shape" in geometry ? geometry : null;
   const rect = "shape" in geometry ? geometry.rect : geometry;
+  const corner = "shape" in geometry && geometry.shape === "triangle" ?
+    geometry.corner :
+    null;
 
   applyUvRect({
     uvAttribute,
@@ -35,7 +37,7 @@ export function applyUvGeometry(
     rect,
     textureSize,
     ranges,
-    corner: triangle?.corner
+    corner
   });
 }
 

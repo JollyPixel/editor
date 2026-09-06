@@ -76,9 +76,6 @@ export class UVMap extends Emitter<
     this.#getCanvasSize = options.getCanvasSize;
   }
 
-  /**
-   * All regions in insertion order (live view, spread for a snapshot).
-   */
   get regions(): IterableIterator<UVRegion> {
     return this.#regions.values();
   }
@@ -214,12 +211,6 @@ export class UVMap extends Emitter<
     return region;
   }
 
-  /**
-   * Recreates a region from serialized data. An id already present is an
-   * update, not a creation, and reports `region-state-changed`: re-emitting
-   * `region-created` would have listeners build a second view of a region
-   * they already track, leaving the first one orphaned.
-   */
   restore(
     region: UVRegion | UVRegionData
   ): UVRegion {

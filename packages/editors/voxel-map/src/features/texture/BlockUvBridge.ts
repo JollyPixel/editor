@@ -1,8 +1,9 @@
 // Import Third-party Dependencies
-import type {
-  VoxelRenderer,
-  ResolvedBlockDefinition,
-  ResolvedTileRef
+import {
+  tileRefForSlot,
+  type VoxelRenderer,
+  type ResolvedBlockDefinition,
+  type ResolvedTileRef
 } from "@jolly-pixel/voxel.renderer";
 import {
   UVRegion,
@@ -11,13 +12,13 @@ import {
   type UVMapListener,
   type UVFace,
   type UVGeometry,
+  type UVRegionData,
   type SelectionRect
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import {
   blockShapeUv,
-  UV_FACE_TO_VOXEL,
   type BlockShapeUv,
   type UVFaceBounds
 } from "./blockShapeUv.ts";
@@ -26,14 +27,19 @@ import { editorState } from "../../EditorState.ts";
 // CONSTANTS
 const kRegionIdPrefix = "block-";
 const kRegionColor = "#4488ff";
-const kWholeTile: UVFaceBounds = { u0: 0, v0: 0, u1: 1, v1: 1 };
-// A block whose shape is unknown still edits as a plain cube.
+const kWholeTile: UVFaceBounds = {
+  u0: 0,
+  v0: 0,
+  u1: 1,
+  v1: 1
+};
 const kBoxShapeUv: BlockShapeUv = {
   activeFaces: [...UV_FACES],
   bounds: Object.fromEntries(
     UV_FACES.map((face) => [face, kWholeTile])
   ) as Record<UVFace, UVFaceBounds>,
   triangles: {},
+  parts: {},
   faceRanges: {},
   isBox: true
 };
@@ -42,7 +48,10 @@ function rectsEqual(
   a: SelectionRect,
   b: SelectionRect
 ): boolean {
-  return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
+  return a.x === b.x &&
+    a.y === b.y &&
+    a.width === b.width &&
+    a.height === b.height;
 }
 
 function regionsEqual(
@@ -53,7 +62,39 @@ function regionsEqual(
     return false;
   }
 
-  return UV_FACES.every((face) => rectsEqual(a.rectFor(face), b.rectFor(face)));
+  const faces = new Set([
+    ...a.faces,
+    ...b.faces
+  ]);
+
+  return [...faces].every(
+    (face) => rectsEqual(a.rectFor(face), b.rectFor(face))
+  );
+}
+
+function geometryFor(
+  rect: SelectionRect,
+  shapeUv: BlockShapeUv,
+  face: UVFace
+): UVGeometry {
+  const parts = shapeUv.parts[face];
+  if (parts) {
+    return {
+      shape: "compound",
+      rect,
+      parts
+    };
+  }
+
+  const corner = shapeUv.triangles[face];
+
+  return corner ?
+    {
+      shape: "triangle",
+      corner,
+      rect
+    } :
+    rect;
 }
 
 function regionId(
@@ -74,10 +115,6 @@ function blockIdFromRegion(
 }
 
 export interface BlockUvBridgeOptions {
-  /**
-   * Scope keeping region rebuilds out of history and the room; pass
-   * `PixelArtCanvas.runLocalRestore`. Defaults to running `fn` unscoped.
-   */
   runLocalRestore?: <T>(fn: () => T) => T;
 }
 
@@ -162,14 +199,9 @@ export class BlockUvBridge {
       this.#rebuilding = false;
     }
 
-    // Restore the boot selection after rebuilding regions.
     this.#onSelectedBlockChange(editorState.selectedBlockId);
   }
 
-  /**
-   * Topology comes from the shape's own face definitions, so a custom shape
-   * needs no entry here.
-   */
   #shapeUvOf(
     block: ResolvedBlockDefinition
   ): BlockShapeUv {
@@ -194,26 +226,16 @@ export class BlockUvBridge {
       });
     }
 
-    const rectFor = (face: UVFace): SelectionRect => {
-      const tileRef = faceTextures[UV_FACE_TO_VOXEL[face]] ??
-        block.defaultTexture!;
-
-      return this.#rectOf(tileRef, shapeUv.bounds[face]);
-    };
     const faces = Object.fromEntries(
-      UV_FACES.map((face): [UVFace, UVGeometry] => {
-        const rect = rectFor(face);
-        const corner = shapeUv.triangles[face];
+      shapeUv.activeFaces.map((face): [UVFace, UVGeometry] => {
+        const rect = this.#rectOf(
+          tileRefForSlot(block, face) ?? block.defaultTexture!,
+          shapeUv.bounds[face]
+        );
 
         return [
           face,
-          corner ?
-            {
-              shape: "triangle",
-              corner,
-              rect
-            } :
-            rect
+          geometryFor(rect, shapeUv, face)
         ];
       })
     ) as Record<UVFace, UVGeometry>;
@@ -279,14 +301,15 @@ export class BlockUvBridge {
     }
 
     const shapeUv = this.#shapeUvOf(block);
+    const collapsedSlot = region.collapsedFace ??
+      shapeUv.activeFaces[0] ??
+      "front";
     const updated: ResolvedBlockDefinition = region.state === "uncollapsed" ?
       {
         ...block,
-        // Writing only the active faces keeps slots the shape never renders
-        // out of the persisted definition.
         faceTextures: Object.fromEntries(
           shapeUv.activeFaces.map((face) => [
-            UV_FACE_TO_VOXEL[face],
+            face,
             this.#tileRefOf(
               region.rectFor(face),
               block.defaultTexture!,
@@ -299,9 +322,9 @@ export class BlockUvBridge {
         ...block,
         faceTextures: {},
         defaultTexture: this.#tileRefOf(
-          region.rectFor("front"),
+          region.rectFor(collapsedSlot),
           block.defaultTexture,
-          shapeUv.bounds[region.collapsedFace ?? "front"]
+          shapeUv.bounds[collapsedSlot]
         )
       };
 
@@ -334,7 +357,6 @@ export class BlockUvBridge {
     this.#applyRegionToBlock(event.region);
   };
 
-  // Update during dragging because region-moved fires only on release.
   readonly #onRegionDragging: UVMapListener<"region-dragging"> = (event) => {
     if (this.#rebuilding) {
       return;
@@ -362,12 +384,43 @@ export class BlockUvBridge {
     if (this.#rebuilding) {
       return;
     }
-    if (!this.#blockOf(event.region.id)) {
+    const block = this.#blockOf(event.region.id);
+    if (!block) {
+      return;
+    }
+
+    if (this.#rederivedOnUncollapse(block, event)) {
       return;
     }
 
     this.#applyRegionToBlock(event.region);
   };
+
+  #rederivedOnUncollapse(
+    block: ResolvedBlockDefinition,
+    event: { region: UVRegion; previous: UVRegionData; }
+  ): boolean {
+    const wasCollapsed = (event.previous.state ?? "collapsed") === "collapsed";
+    if (event.region.state !== "uncollapsed" || !wasCollapsed) {
+      return false;
+    }
+
+    const derived = this.#regionFor(block);
+    if (this.#shapeUvOf(block).isBox || derived.state !== "uncollapsed") {
+      return false;
+    }
+
+    this.#rebuilding = true;
+    try {
+      this.#runLocalRestore(() => this.#uv.restore(derived));
+    }
+    finally {
+      this.#rebuilding = false;
+    }
+    this.#applyRegionToBlock(derived);
+
+    return true;
+  }
 
   #blockOf(
     id: string
@@ -398,8 +451,6 @@ export class BlockUvBridge {
     }
 
     this.#restoreRegionFor(block);
-
-    // Restoring a deleted region does not restore its selection.
     this.#onSelectedBlockChange(editorState.selectedBlockId);
   };
 

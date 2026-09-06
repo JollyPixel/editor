@@ -59,12 +59,12 @@ describe("BlockUvBridge.setActiveTileset", () => {
       ]);
       assert.deepEqual(region.geometryFor("left"), {
         shape: "triangle",
-        corner: "bottom-left",
+        corner: "bottom-right",
         rect: { x: 32, y: 16, width: 16, height: 16 }
       });
       assert.deepEqual(region.geometryFor("right"), {
         shape: "triangle",
-        corner: "bottom-right",
+        corner: "bottom-left",
         rect: { x: 32, y: 16, width: 16, height: 16 }
       });
     }
@@ -291,11 +291,11 @@ describe("BlockUvBridge / faceTextures round-trip", () => {
 
       const updated = vr.engine.blockRegistry.get(1)!;
       assert.deepEqual(
-        { col: updated.faceTextures[Face.PosY]!.col, row: updated.faceTextures[Face.PosY]!.row },
+        { col: updated.faceTextures.top!.col, row: updated.faceTextures.top!.row },
         { col: 3, row: 2 }
       );
       assert.deepEqual(
-        { col: updated.faceTextures[Face.PosZ]!.col, row: updated.faceTextures[Face.PosZ]!.row },
+        { col: updated.faceTextures.front!.col, row: updated.faceTextures.front!.row },
         { col: 0, row: 0 },
         "front must stay where it was"
       );

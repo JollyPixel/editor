@@ -158,9 +158,9 @@ uncollapse(id: string): boolean
 collapse(id: string, face?: UVFace): boolean
 ```
 
-`collapse()` chooses one shared rectangle and retains custom face topology. Without a `face` it uses the largest active face. If the requested face is triangular, it prefers the first active rectangular face.
+`collapse()` takes the largest active face as the shared rectangle and retains custom face topology. `face` only picks between equally large ones, and a rectangle wins over a triangle or a compound at the same size.
 
-`uncollapse()` restores the active faces, their shapes and their previous layout, translated by however far the shared rectangle moved while collapsed.
+`uncollapse()` restores the active faces and their shapes onto the region's current rectangle. Face positions do not survive a collapse, so a region that moved while collapsed uncollapses where it now sits.
 
 Both methods emit `"region-state-changed"`. They return `false` for an unknown id or a redundant transition.
 

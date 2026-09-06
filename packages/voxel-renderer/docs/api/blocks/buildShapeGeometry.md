@@ -21,6 +21,7 @@ interface ShapeGeometry {
 }
 
 interface ShapeFaceRange {
+  slot: string;
   face: Face;
   start: number;
   count: number;
@@ -34,23 +35,24 @@ normalized tile space, before any atlas mapping.
 
 ## Face ranges
 
-Polygons are grouped by face slot, so each slot owns one contiguous vertex
-range. This matters because a shape may emit several polygons into the same
-slot: a `stair` splits `PosY` into two quads, and `stairCornerOuter` splits it
-into four. Iterating `shape.faces` directly would interleave those slots.
+Polygons are grouped by texture slot, so each slot owns one contiguous vertex
+range. A face may carry several slots: a `stair` puts its two `PosY` quads on
+different planes, so they become `top` and `top.1` and take a tile each, while
+its two `PosX` quads share the plane `x=1` and stay on one slot whose coverage
+is an L. See [Shape slots](./shapeSlots.md).
 
 `ranges` holds one entry per slot the shape uses, ordered by `Face`, and skips
 slots the shape never renders. A `ramp` therefore returns five ranges, with no
-entry for `NegZ`. Each range also carries the `definitions` it was built from,
-so a consumer that needs the source polygons does not have to filter
-`shape.faces` again.
+entry for `NegZ`, while a `stair` returns eight. Each range also carries the
+`definitions` it was built from, so a consumer that needs the source polygons
+does not have to filter `shape.faces` again.
 
 Ranges are the hook for per-face texturing: walk them, resolve the block's
-`faceTextures[range.face]`, and rewrite that slice of `uvs`.
+`tileRefForSlot(block, range.slot)`, and rewrite that slice of `uvs`.
 
 ```ts
 for (const range of ranges) {
-  const tile = block.faceTextures[range.face] ?? block.defaultTexture;
+  const tile = tileRefForSlot(block, range.slot);
   const end = range.start + range.count;
 
   for (let index = range.start; index < end; index++) {

@@ -4,7 +4,13 @@ import { contrastingColor } from "@jolly-pixel/color";
 // Import Internal Dependencies
 import { SVG_NS } from "../constants.ts";
 import { rectOf } from "../../uv/geometry.ts";
-import type { UVGeometry } from "../../uv/UVRegion.ts";
+import { compoundOutline } from "../../uv/compoundOutline.ts";
+import type {
+  UVCompound,
+  UVCompoundPart,
+  UVGeometry,
+  UVTriangleCorner
+} from "../../uv/UVRegion.ts";
 import type {
   SelectionRect,
   Vec2
@@ -16,6 +22,10 @@ const kCasingInset = kCasingWidth / 2;
 const kDimOpacity = "0.45";
 const kDashArray = "6 4";
 const kSelectedFillOpacity = "0.06";
+// Outlines are rebuilt on every pan and zoom, while a compound's parts almost
+// never change; entries beyond this many are evicted oldest first.
+const kOutlineCacheLimit = 64;
+const kOutlineCache = new Map<string, Vec2[][] | null>();
 
 export interface UVRegionBorderStyle {
   color: string;
@@ -50,7 +60,7 @@ export class UVRegionBorder {
   ): SVGGeometryElement {
     const el = document.createElementNS(
       SVG_NS,
-      "shape" in geometry ? "polygon" : "rect"
+      elementNameOf(geometry)
     ) as SVGGeometryElement;
 
     el.style.fill = "none";
@@ -91,6 +101,12 @@ export class UVRegionBorder {
     uvGeometry: UVGeometry,
     screen: SelectionRect
   ): void {
+    if ("shape" in uvGeometry && uvGeometry.shape === "compound") {
+      el.setAttribute("d", compoundPath(uvGeometry, screen));
+
+      return;
+    }
+
     if ("shape" in uvGeometry) {
       const corners = {
         "top-left": [
@@ -166,4 +182,96 @@ export class UVRegionBorder {
   remove(): void {
     this.#group.remove();
   }
+}
+
+function elementNameOf(
+  geometry: UVGeometry
+): string {
+  if (!("shape" in geometry)) {
+    return "rect";
+  }
+
+  return geometry.shape === "compound" ? "path" : "polygon";
+}
+
+/**
+ * Outlines the union of the parts, so an assembly such as the L of a stair
+ * reads as one continuous shape instead of stacked rectangles. Falls back to
+ * one subpath per part when the parts do not stitch into closed loops.
+ */
+function compoundPath(
+  geometry: UVCompound,
+  screen: SelectionRect
+): string {
+  const loops = outlineOf(geometry.parts);
+  if (loops === null) {
+    return partsPath(geometry, screen);
+  }
+
+  return loops
+    .map((loop) => {
+      const points = loop.map((point) => {
+        const x = screen.x + (point.x * screen.width);
+        const y = screen.y + (point.y * screen.height);
+
+        return `${x},${y}`;
+      });
+
+      return `M${points.join("L")}Z`;
+    })
+    .join(" ");
+}
+
+function outlineOf(
+  parts: readonly UVCompoundPart[]
+): Vec2[][] | null {
+  const key = JSON.stringify(parts);
+  const cached = kOutlineCache.get(key);
+  if (typeof cached !== "undefined") {
+    return cached;
+  }
+
+  const loops = compoundOutline(parts);
+  if (kOutlineCache.size >= kOutlineCacheLimit) {
+    const [oldest] = kOutlineCache.keys();
+    kOutlineCache.delete(oldest);
+  }
+  kOutlineCache.set(key, loops);
+
+  return loops;
+}
+
+function partsPath(
+  geometry: UVCompound,
+  screen: SelectionRect
+): string {
+  function scale(
+    part: SelectionRect
+  ): SelectionRect {
+    return {
+      x: screen.x + (part.x * screen.width),
+      y: screen.y + (part.y * screen.height),
+      width: part.width * screen.width,
+      height: part.height * screen.height
+    };
+  }
+
+  return geometry.parts.map((part) => {
+    const rect = scale("shape" in part ? part.rect : part);
+    const right = rect.x + rect.width;
+    const bottom = rect.y + rect.height;
+
+    if (!("shape" in part)) {
+      return `M${rect.x},${rect.y}H${right}V${bottom}H${rect.x}Z`;
+    }
+
+    const corners: Record<UVTriangleCorner, string> = {
+      "top-left": `M${rect.x},${rect.y}H${right}L${rect.x},${bottom}Z`,
+      "top-right": `M${rect.x},${rect.y}H${right}V${bottom}Z`,
+      "bottom-left": `M${rect.x},${rect.y}V${bottom}H${right}Z`,
+      "bottom-right": `M${right},${rect.y}V${bottom}H${rect.x}Z`
+    };
+
+    return corners[part.corner];
+  }).join(" ");
 }

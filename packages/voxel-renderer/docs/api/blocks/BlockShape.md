@@ -98,12 +98,17 @@ right and `v` upward:
 
 | Slot | `u` | `v` |
 |---|---|---|
-| `PosX` | `z` | `y` |
-| `NegX` | `1 - z` | `y` |
-| `PosY` | `x` | `z` |
-| `NegY` | `x` | `1 - z` |
+| `PosX` | `1 - z` | `y` |
+| `NegX` | `z` | `y` |
+| `PosY` | `1 - x` | `z` |
+| `NegY` | `1 - x` | `1 - z` |
 | `PosZ` | `x` | `y` |
 | `NegZ` | `1 - x` | `y` |
+
+`PosY` and `NegY` have no natural upward direction, so their tile is keyed to
+the back of the block: the top of the tile is `z = 0`, and the bottom edge of
+`PosY`'s tile meets the top edge of `NegZ`'s. Reading them from the other side
+would turn both half a turn.
 
 A face therefore samples exactly the part of the tile its geometry covers: a
 `pole` side spans `u` `0.375` to `0.625` rather than the whole tile, and a

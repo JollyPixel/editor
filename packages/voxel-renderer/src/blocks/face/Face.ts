@@ -13,6 +13,11 @@ export interface FaceDescriptor {
   vertices: readonly Vec3[];
   uvs?: readonly Vec2[];
   cull?: FACE | null;
+  /**
+   * Pins the polygon to a named texture slot instead of letting the supporting
+   * plane derive one. Polygons sharing a slot share a tile.
+   */
+  slot?: string;
 }
 
 export interface FaceDefinition {
@@ -21,6 +26,11 @@ export interface FaceDefinition {
   readonly vertices: readonly Vec3[];
   readonly uvs: readonly Vec2[];
   readonly cull: FACE | null;
+  /**
+   * Texture slot the polygon belongs to, or null to derive one from its
+   * supporting plane.
+   */
+  readonly slot?: string | null;
 }
 
 export function defineFace(
@@ -31,7 +41,8 @@ export function defineFace(
     normal,
     vertices,
     uvs,
-    cull
+    cull,
+    slot
   } = descriptor;
 
   return {
@@ -39,6 +50,7 @@ export function defineFace(
     normal,
     vertices,
     uvs: uvs ?? faceUvs(face, vertices),
-    cull: cull === undefined ? defaultCullFace(descriptor) : cull
+    cull: cull === undefined ? defaultCullFace(descriptor) : cull,
+    slot: slot ?? null
   };
 }

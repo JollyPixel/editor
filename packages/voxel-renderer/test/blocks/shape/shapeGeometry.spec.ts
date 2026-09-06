@@ -25,6 +25,15 @@ function rangeOf(
   );
 }
 
+function slotOf(
+  geometry: ShapeGeometry,
+  slot: string
+) {
+  return geometry.ranges.find(
+    (range) => range.slot === slot
+  );
+}
+
 describe("buildShapeGeometry", () => {
   it("emits four vertices and two triangles per cube face", () => {
     const geometry = buildShapeGeometry(new Cube());
@@ -40,15 +49,17 @@ describe("buildShapeGeometry", () => {
 
   it("orders ranges by FACE and leaves no gap between them", () => {
     const geometry = buildShapeGeometry(new Stair());
-    const faces = geometry.ranges.map((range) => range.face);
+    const slots = geometry.ranges.map((range) => range.slot);
 
-    assert.deepEqual(faces, [
-      FACE.PosX,
-      FACE.NegX,
-      FACE.PosY,
-      FACE.NegY,
-      FACE.PosZ,
-      FACE.NegZ
+    assert.deepEqual(slots, [
+      "right",
+      "left",
+      "top",
+      "top.1",
+      "bottom",
+      "front",
+      "back",
+      "back.1"
     ]);
 
     let expected = 0;
@@ -59,23 +70,47 @@ describe("buildShapeGeometry", () => {
     assert.equal(expected, geometry.positions.length / 3);
   });
 
-  it("groups the multiple quads a stair emits into one slot range", () => {
+  it("gives the quads of one supporting plane a single slot range", () => {
     const geometry = buildShapeGeometry(new Stair());
 
-    // The stair splits PosY into two quads and PosZ stays a single quad.
-    assert.equal(rangeOf(geometry, FACE.PosY)?.count, 8);
-    assert.equal(rangeOf(geometry, FACE.PosZ)?.count, 4);
+    assert.equal(slotOf(geometry, "right")?.count, 8);
+    assert.equal(slotOf(geometry, "front")?.count, 4);
+  });
+
+  it("splits the quads of one face across planes into separate slots", () => {
+    const geometry = buildShapeGeometry(new Stair());
+
+    assert.equal(slotOf(geometry, "top")?.count, 4);
+    assert.equal(slotOf(geometry, "top.1")?.count, 4);
+    assert.equal(slotOf(geometry, "back")?.count, 4);
+    assert.equal(slotOf(geometry, "back.1")?.count, 4);
   });
 
   it("exposes the polygons a slot was built from", () => {
     const shape = new Stair();
     const geometry = buildShapeGeometry(shape);
-    const range = rangeOf(geometry, FACE.PosY)!;
+    const range = slotOf(geometry, "right")!;
 
     assert.equal(range.definitions.length, 2);
     assert.deepEqual(
       range.definitions,
-      shape.faces.filter((face) => face.face === FACE.PosY)
+      shape.faces.filter((face) => face.face === FACE.PosX)
+    );
+  });
+
+  it("keeps a split slot on the half of the tile it projects onto", () => {
+    const geometry = buildShapeGeometry(new Stair());
+    const range = slotOf(geometry, "top.1")!;
+    const vs: number[] = [];
+
+    for (let index = range.start; index < range.start + range.count; index++) {
+      vs.push(geometry.uvs[(index * 2) + 1]);
+    }
+
+    assert.deepEqual(
+      [Math.min(...vs), Math.max(...vs)],
+      [0, 0.5],
+      "stretching it over the tile would squash the texture on a half-depth quad"
     );
   });
 

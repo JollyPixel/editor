@@ -5,7 +5,8 @@ import { contrastingColor } from "@jolly-pixel/color";
 import { SVG_NS } from "../constants.ts";
 import {
   geometryAt,
-  rectOf
+  rectOf,
+  triangleCornerOf
 } from "../../uv/geometry.ts";
 import { UVRegionBorder } from "./UVRegionBorder.ts";
 import type { DefaultViewport } from "../Viewport.ts";
@@ -36,6 +37,10 @@ interface RenderEntry {
   face: UVFace | null;
   geometry: UVGeometry;
   selected: boolean;
+  /**
+   * Faces sharing this entry's outline, so a stack of slots stays visible.
+   */
+  stacked?: number;
 }
 
 function entryKey(
@@ -51,9 +56,23 @@ function geometryKey(
   const rect = rectOf(geometry);
   const { x, y, width, height } = rect;
 
-  return "shape" in geometry ?
-    `${geometry.shape}:${geometry.corner}:${x},${y},${width},${height}` :
-    `${x},${y},${width},${height}`;
+  if (!("shape" in geometry)) {
+    return `${x},${y},${width},${height}`;
+  }
+
+  const shape = geometry.shape === "compound" ?
+    `compound:${JSON.stringify(geometry.parts)}` :
+    `triangle:${geometry.corner}`;
+
+  return `${shape}:${x},${y},${width},${height}`;
+}
+
+function faceLabel(
+  entry: RenderEntry
+): string {
+  const hidden = (entry.stacked ?? 1) - 1;
+
+  return hidden > 0 ? `${entry.face} +${hidden}` : entry.face ?? "";
 }
 
 function truncateLabel(
@@ -218,7 +237,7 @@ export class UVRegionLayer {
 
     const labelled: RenderEntry[] = [];
     for (const group of groups.values()) {
-      // Entries follow UV_FACES order; group[0] matches the first hit target.
+      // Entries follow the region face order; group[0] is the first hit target.
       const entry = group.find((candidate) => candidate.selected) ?? group[0];
 
       if (
@@ -228,7 +247,10 @@ export class UVRegionLayer {
         continue;
       }
 
-      labelled.push(entry);
+      labelled.push({
+        ...entry,
+        stacked: group.length
+      });
     }
 
     this.#prune(this.#labels, labelled);
@@ -240,8 +262,9 @@ export class UVRegionLayer {
       // Paint-order draws the text casing beneath the glyphs.
       el.setAttribute("stroke", contrastingColor(entry.region.color));
       const { x, y } = this.#labelPosition(entry.geometry, zoom, camera);
-      const rightAligned = "shape" in entry.geometry &&
-        (entry.geometry.corner === "top-right" || entry.geometry.corner === "bottom-right");
+      const corner = triangleCornerOf(entry.geometry);
+      const rightAligned =
+        corner === "top-right" || corner === "bottom-right";
       el.setAttribute("x", String(x));
       el.setAttribute("y", String(y));
       el.setAttribute("text-anchor", rightAligned ? "end" : "start");
@@ -353,25 +376,26 @@ export class UVRegionLayer {
       width: rect.width * zoom,
       height: rect.height * zoom
     };
-    if (!("shape" in geometry)) {
+    const corner = triangleCornerOf(geometry);
+    if (corner === null) {
       return {
         x: screen.x + kLabelPadding,
         y: screen.y + kLabelPadding + kLabelFontSize
       };
     }
-    if (geometry.corner === "top-right") {
+    if (corner === "top-right") {
       return {
         x: screen.x + screen.width - kLabelPadding,
         y: screen.y + kLabelPadding + kLabelFontSize
       };
     }
-    if (geometry.corner === "bottom-left") {
+    if (corner === "bottom-left") {
       return {
         x: screen.x + kLabelPadding,
         y: screen.y + screen.height - kLabelPadding
       };
     }
-    if (geometry.corner === "bottom-right") {
+    if (corner === "bottom-right") {
       return {
         x: screen.x + screen.width - kLabelPadding,
         y: screen.y + screen.height - kLabelPadding
@@ -413,7 +437,7 @@ export class UVRegionLayer {
     y: number
   ): void {
     if (!showRegionLabels) {
-      el.textContent = entry.face;
+      el.textContent = faceLabel(entry);
 
       return;
     }
@@ -425,9 +449,9 @@ export class UVRegionLayer {
     }
 
     el.replaceChildren();
-    const bottomAligned = "shape" in entry.geometry &&
-      (entry.geometry.corner === "bottom-left" ||
-        entry.geometry.corner === "bottom-right");
+    const corner = triangleCornerOf(entry.geometry);
+    const bottomAligned =
+      corner === "bottom-left" || corner === "bottom-right";
     const firstY = bottomAligned ? y - kLabelFontSize : y;
 
     const identity = document.createElementNS(SVG_NS, "tspan");
@@ -439,7 +463,7 @@ export class UVRegionLayer {
     const face = document.createElementNS(SVG_NS, "tspan");
     face.setAttribute("x", String(x));
     face.setAttribute("y", String(firstY + kLabelFontSize));
-    face.textContent = entry.face;
+    face.textContent = faceLabel(entry);
     el.appendChild(face);
   }
 }

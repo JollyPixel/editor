@@ -10,16 +10,10 @@ UVRegion.from(value: UVRegion | UVRegionData): UVRegion
 `UVRegion.from()` returns an existing instance unchanged or builds one from serialized data. Geometry returned by the region is copied, so callers cannot mutate the stored state.
 
 ## Types
-
 ```ts
-type UVFace =
-  | "front"
-  | "back"
-  | "left"
-  | "right"
-  | "top"
-  | "bottom";
+type UVFace = string;
 
+// The six default names of a box; a shape may name further slots.
 const UV_FACES: readonly UVFace[];
 
 type UVTriangle = {
@@ -28,7 +22,15 @@ type UVTriangle = {
   rect: SelectionRect;
 };
 
-type UVGeometry = SelectionRect | UVTriangle;
+type UVCompoundPart = SelectionRect | UVTriangle;
+
+type UVCompound = {
+  shape: "compound";
+  rect: SelectionRect;
+  parts: readonly UVCompoundPart[];
+};
+
+type UVGeometry = SelectionRect | UVTriangle | UVCompound;
 
 type UVRegionData =
   | {
@@ -51,11 +53,11 @@ type UVRegionData =
     };
 ```
 
-`state` remains optional for collapsed payloads created before multi-face support. Collapsed regions use optional `faces` and `activeFaces` to retain custom topology for a later uncollapse, and `collapsedFace` records which face `rect` was taken from so `uncollapse()` can restore the others around it.
+`state` remains optional for collapsed payloads created before multi-face support. Collapsed regions use optional `faces` and `activeFaces` to retain custom topology for a later uncollapse, and `collapsedFace` records which face `rect` was taken from. A payload may still place those faces away from `rect`, in which case `uncollapse()` restores them around it; `collapse()` itself writes them stacked on `rect`.
 
-`activeFaces` defaults to all six faces and is normalized to `UV_FACES` order. A triangle occupies the half of `rect` containing the named right-angle corner.
+`activeFaces` defaults to the slots `faces` carries, keeps the order it was given, and drops any slot the region has no geometry for. A triangle occupies the half of `rect` containing the named right-angle corner. A compound covers the union of its `parts`, each positioned in the `0` to `1` space of `rect` so parts scale with it; the area no part covers, such as the notch of an L, is outside the region. The overlay outlines that union, not the parts: an edge two parts share is not drawn, so an L reads as one continuous shape and two triangles meeting on their hypotenuse read as a square. Parts touching by a single corner keep separate outlines, an enclosed gap is drawn as a hole, and parts crossing each other, which no shape emits, are outlined one by one.
 
-Face names are labels. The consumer decides how `"front"`, `"top"` and the other names map onto mesh axes.
+Slot names are labels. The consumer decides how `"front"`, `"top"` and any further slot map onto mesh geometry; `@jolly-pixel/voxel.renderer` derives them from a shape and may emit names like `"top.1"`.
 
 ## Properties
 
@@ -65,6 +67,7 @@ Face names are labels. The consumer decides how `"front"`, `"top"` and the other
 | `name` | `string \| undefined` | Optional display label. |
 | `color` | `string` | CSS color used by the UV overlay. |
 | `state` | `"collapsed" \| "uncollapsed"` | Current geometry mode. |
+| `faces` | `readonly UVFace[]` | Every slot the region carries geometry for, active or not. |
 
 ## Methods
 
@@ -82,7 +85,7 @@ Returns a copy of the rectangle sampled by `face`. Every face resolves to the sh
 geometryFor(face: UVFace): UVGeometry
 ```
 
-Returns a copy of the face's rectangle or triangle. A collapsed region always returns its shared rectangle.
+Returns a copy of the slot's geometry. A collapsed region always returns its shared rectangle.
 
 ### `facesOf()`
 
@@ -90,7 +93,7 @@ Returns a copy of the face's rectangle or triangle. A collapsed region always re
 facesOf(): { face: UVFace | null; geometry: UVGeometry }[]
 ```
 
-Returns copied geometry in `UV_FACES` order. A collapsed region returns one entry with `face: null`; an uncollapsed region returns its active faces.
+Returns copied geometry in the region's own slot order. A collapsed region returns one entry with `face: null`; an uncollapsed region returns its active slots.
 
 ### `uncollapse()`
 
@@ -98,7 +101,7 @@ Returns copied geometry in `UV_FACES` order. A collapsed region returns one entr
 uncollapse(): UVRegion
 ```
 
-Restores retained faces and shapes, translating them by however far the shared rectangle moved while collapsed. Each face keeps its own size and its offset relative to `collapsedFace`. Returns `this` when already uncollapsed.
+Restores retained faces and shapes onto the shared rectangle, each keeping the size and shape its slot carries. A face collapsed by this class holds no offset of its own, so uncollapsing a region restarts from its current rectangle however far it moved while collapsed. Returns `this` when already uncollapsed.
 
 ### `collapse(face?)`
 
@@ -106,7 +109,7 @@ Restores retained faces and shapes, translating them by however far the shared r
 collapse(face?: UVFace): UVRegion
 ```
 
-Uses the selected face's rectangle as the shared rectangle. Without a `face`, it picks the largest active face, so a partial shape such as a pole does not collapse onto its smallest slot. A triangular face falls back to the first active rectangle when available. Face topology and per-face layout are both retained, and a later `uncollapse()` restores them.
+Uses the largest active face's rectangle as the shared rectangle, so a partial slot such as a stair's tread never becomes the region's footprint. `face` only picks between equally large ones, and a rectangle wins over a triangle or a compound at the same size. Face topology is retained, but per-face positions are not: every slot is stacked on the shared rectangle, so a later `uncollapse()` restarts from it.
 
 ### `withRect(rect, face?)`
 

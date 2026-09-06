@@ -17,6 +17,7 @@ import {
 
 // Import Internal Dependencies
 import { UVGeometryBinding } from "#src/three/UVGeometryBinding.ts";
+import { applyUvGeometry } from "#src/three/applyUvGeometry.ts";
 import { boxFaceRanges } from "../../examples/scripts/preview/shapes/faceRanges.ts";
 
 // CONSTANTS
@@ -233,5 +234,40 @@ describe("UVGeometryBinding", () => {
 
       assert.deepStrictEqual(uvOf(geometry, 1), [0.75, 1]);
     });
+  });
+});
+
+describe("applyUvGeometry — compound", () => {
+  test("maps a compound through its bounds, leaving the base uvs oriented", () => {
+    const geometry = new THREE.BufferGeometry();
+    const baseUv = new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]);
+    geometry.setAttribute(
+      "uv",
+      new THREE.BufferAttribute(new Float32Array(8), 2)
+    );
+
+    applyUvGeometry(
+      geometry.getAttribute("uv") as THREE.BufferAttribute,
+      baseUv,
+      {
+        shape: "compound",
+        rect: { x: 0, y: 0, width: 16, height: 16 },
+        parts: [
+          { x: 0, y: 0.5, width: 1, height: 0.5 },
+          { x: 0.5, y: 0, width: 0.5, height: 0.5 }
+        ]
+      },
+      { x: 32, y: 32 },
+      [{ start: 0, count: 4 }]
+    );
+
+    const uv = geometry.getAttribute("uv");
+
+    assert.deepEqual(
+      [uv.getX(0), uv.getY(0)],
+      [0, 0.5],
+      "a compound is placed by its bounds, exactly like a plain rect"
+    );
+    assert.deepEqual([uv.getX(2), uv.getY(2)], [0.5, 1]);
   });
 });
