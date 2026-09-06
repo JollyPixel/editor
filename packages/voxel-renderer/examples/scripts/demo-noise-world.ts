@@ -157,7 +157,8 @@ const view = {
 const controls = {
   seed: settings.seed,
   greedy: engine.greedy,
-  debug: engine.debug.mode
+  debug: engine.debug.mode,
+  chunkBounds: engine.debug.chunkBounds
 };
 
 const worldFolder = pane.addFolder({ title: "World" });
@@ -226,6 +227,11 @@ controlsFolder
     label: "debug [G]"
   })
   .on("change", ({ value }) => setDebugMode(value));
+controlsFolder
+  .addBinding(controls, "chunkBounds", { label: "chunk bounds" })
+  .on("change", ({ value }) => {
+    engine.debug.chunkBounds = value;
+  });
 
 // Chunks are meshed over several frames (the engine tick is budgeted), so the
 // mesh counters are polled with the renderer counters on the same cadence.

@@ -27,6 +27,7 @@ export interface RendererPerformanceStats {
 
 export interface VoxelPerformanceStats {
   mode: VoxelDebugMode;
+  chunkBounds: boolean;
   chunks: number;
   meshes: number;
   voxels: number;
@@ -46,6 +47,7 @@ export interface PerformanceSnapshot {
 export interface PerformanceHUDOptions {
   keyboard: Keyboard;
   onDebugModeChange: (mode: VoxelDebugMode) => void;
+  onChunkBoundsChange: (enabled: boolean) => void;
 }
 
 export class PerformanceHUD {
@@ -54,6 +56,7 @@ export class PerformanceHUD {
   #worldFolder: ReturnType<Pane["addFolder"]>;
   #meshFolder: ReturnType<Pane["addFolder"]>;
   #onDebugModeChange: (mode: VoxelDebugMode) => void;
+  #onChunkBoundsChange: (enabled: boolean) => void;
 
   #rendererStats: RendererPerformanceStats = {
     calls: 0,
@@ -63,6 +66,7 @@ export class PerformanceHUD {
   };
   #voxelStats: VoxelPerformanceStats = {
     mode: "off",
+    chunkBounds: false,
     chunks: 0,
     meshes: 0,
     voxels: 0,
@@ -90,6 +94,7 @@ export class PerformanceHUD {
   ) {
     this.#keyboard = options.keyboard;
     this.#onDebugModeChange = options.onDebugModeChange;
+    this.#onChunkBoundsChange = options.onChunkBoundsChange;
 
     const pane = new Pane({
       title: "Voxel Stats [F3]",
@@ -104,6 +109,11 @@ export class PerformanceHUD {
       label: "debug"
     }).on("change", ({ value }) => {
       this.#onDebugModeChange(value);
+    });
+    worldFolder.addBinding(this.#voxelStats, "chunkBounds", {
+      label: "chunk bounds"
+    }).on("change", ({ value }) => {
+      this.#onChunkBoundsChange(value);
     });
     worldFolder.addMonitors(this.#voxelStats, {
       chunks: { label: "chunks", format: formatCount },

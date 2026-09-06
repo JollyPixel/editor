@@ -3,7 +3,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import type { VoxelCollider } from "../collision/VoxelCollider.ts";
-import type { VoxelDebugger } from "../debug/VoxelDebugger.ts";
+import type { VoxelDebugger } from "../debug/index.ts";
 import {
   VoxelMeshBuilder,
   ChunkGeometryKey
@@ -37,7 +37,7 @@ export interface ChunkMeshRemoveOptions {
 }
 
 /**
- * Owns chunk meshes, debug registrations, and collider registrations.
+ * Owns built chunk entries, debug registrations, and collider registrations.
  * Materials belong to `ChunkMaterialCache` and are not disposed here.
  */
 export class ChunkMeshStore {
@@ -88,35 +88,27 @@ export class ChunkMeshStore {
       chunk,
       layer
     );
-    if (!geometries) {
-      this.#debug.registerChunk(
-        key,
-        [],
-        this.#meshBuilder.stats
-      );
-
-      return;
-    }
-
     const meshes: THREE.Mesh[] = [];
-    for (const [geometryKey, geometry] of geometries) {
-      const {
-        tilesetId,
-        cutout
-      } = ChunkGeometryKey.parse(geometryKey);
-
-      const mesh = new THREE.Mesh(
-        geometry,
-        this.#materials.resolve(
+    if (geometries) {
+      for (const [geometryKey, geometry] of geometries) {
+        const {
           tilesetId,
-          layer.opacity,
           cutout
-        )
-      );
-      mesh.name = `voxel_chunk_${key}:${geometryKey}`;
+        } = ChunkGeometryKey.parse(geometryKey);
 
-      this.#root.add(mesh);
-      meshes.push(mesh);
+        const mesh = new THREE.Mesh(
+          geometry,
+          this.#materials.resolve(
+            tilesetId,
+            layer.opacity,
+            cutout
+          )
+        );
+        mesh.name = `voxel_chunk_${key}:${geometryKey}`;
+
+        this.#root.add(mesh);
+        meshes.push(mesh);
+      }
     }
 
     this.#entries.set(key, {
@@ -128,10 +120,18 @@ export class ChunkMeshStore {
     this.#debug.registerChunk(
       key,
       meshes,
-      this.#meshBuilder.stats
+      this.#meshBuilder.stats,
+      {
+        origin: {
+          x: (chunk.cx * chunk.size) + layer.offset.x,
+          y: (chunk.cy * chunk.size) + layer.offset.y,
+          z: (chunk.cz * chunk.size) + layer.offset.z
+        },
+        size: chunk.size
+      }
     );
 
-    if (this.#collider) {
+    if (this.#collider && geometries) {
       const layerOffset = layer.offset;
       this.#logger.debug(
         `Rebuilding collision for chunk '${key}' with layer name '${layer.name}'`,

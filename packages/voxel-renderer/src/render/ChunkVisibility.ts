@@ -15,7 +15,7 @@ export interface ChunkVisibilityOptions {
 }
 
 /**
- * Hides or unloads meshed chunks as they leave the view distance, and brings
+ * Hides or unloads built chunks as they leave the view distance, and brings
  * them back when they return.
  */
 export class ChunkVisibility {

@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { BlockRegistry } from "./blocks/BlockRegistry.ts";
 import { BlockShapeRegistry } from "./blocks/shape/BlockShapeRegistry.ts";
 import type { VoxelCollider } from "./collision/VoxelCollider.ts";
-import { VoxelDebugger } from "./debug/VoxelDebugger.ts";
+import { VoxelDebugger } from "./debug/index.ts";
 import { VoxelMeshBuilder } from "./mesh/index.ts";
 import { ChunkMaterialCache } from "./render/ChunkMaterialCache.ts";
 import { ChunkMeshStore } from "./render/ChunkMeshStore.ts";

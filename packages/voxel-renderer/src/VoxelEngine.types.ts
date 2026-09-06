@@ -5,7 +5,7 @@ import type * as THREE from "three";
 import type { BlockDefinition } from "./blocks/BlockDefinition.ts";
 import type { BlockShape } from "./blocks/shape/BlockShape.ts";
 import type { VoxelColliderFactory } from "./collision/VoxelCollider.ts";
-import type { VoxelDebuggerOptions } from "./debug/VoxelDebugger.ts";
+import type { VoxelDebuggerOptions } from "./debug/index.ts";
 import type { TilesetSource } from "./tileset/loadTilesets.ts";
 import type { ViewDistanceOptions } from "./world/ViewDistance.ts";
 import type {
