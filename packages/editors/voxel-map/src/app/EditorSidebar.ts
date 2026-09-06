@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import { LitElement, html, css, nothing } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { customElement, property, query, state } from "lit/decorators.js";
 import type {
   JollyTabChangeDetail,
   PresencePeer
@@ -24,6 +24,10 @@ import {
   type LayerSelection,
   type SidebarTab
 } from "./state/index.ts";
+import type {
+  BlockLibrary,
+  BlockSelectionChangeDetail
+} from "../features/blocks/BlockLibrary.ts";
 import type { GridRenderer } from "../scene/GridRenderer.ts";
 import { ViewFocus } from "../scene/viewFocus.ts";
 
@@ -100,6 +104,16 @@ export class EditorSidebar extends LitElement {
 
   @state()
   private declare _peers: readonly PresencePeer[];
+
+  @state()
+  private declare _canEditBlock: boolean;
+
+  @query("block-library")
+  private declare _blockLibrary: BlockLibrary | null;
+
+  @query("jolly-folder[key='block-library']")
+  private declare _blockFolder: HTMLElementTagNameMap["jolly-folder"] | null;
+
   #subscriptions: Array<() => void> = [];
 
   constructor() {
@@ -110,6 +124,7 @@ export class EditorSidebar extends LitElement {
     this._tab = "general";
     this._selection = null;
     this._peers = this.state.shell.peers;
+    this._canEditBlock = false;
   }
 
   override connectedCallback() {
@@ -142,6 +157,29 @@ export class EditorSidebar extends LitElement {
   readonly #onPeersChange = (peers: readonly PresencePeer[]): void => {
     this._peers = peers;
   };
+
+  readonly #onBlockSelectionChange = (
+    event: CustomEvent<BlockSelectionChangeDetail>
+  ): void => {
+    this._canEditBlock = event.detail.block !== null;
+  };
+
+  readonly #addBlock = async(): Promise<void> => {
+    this.#openBlockLibrary();
+    await this._blockLibrary?.addBlock();
+  };
+
+  readonly #editBlock = async(): Promise<void> => {
+    this.#openBlockLibrary();
+    await this._blockLibrary?.editBlock();
+  };
+
+  #openBlockLibrary(): void {
+    const folder = this._blockFolder;
+    if (folder !== null && !folder.open) {
+      folder.open = true;
+    }
+  }
 
   override render() {
     return html`
@@ -193,7 +231,26 @@ export class EditorSidebar extends LitElement {
         label="Block Library"
         storage-key="voxel-map:folder:block-library"
       >
+        <jolly-button
+          slot="actions"
+          icon="plus"
+          icon-only
+          label="Add block"
+          title="Add block"
+          @click=${this.#addBlock}
+        ></jolly-button>
+        <jolly-button
+          slot="actions"
+          icon="pencil"
+          icon-only
+          label="Edit block"
+          title="Edit block"
+          ?disabled=${!this._canEditBlock}
+          @click=${this.#editBlock}
+        ></jolly-button>
+
         <block-library
+          @block-selection-change=${this.#onBlockSelectionChange}
           .engine=${this.engine}
           .brush=${this.state.brush}
           .worldStore=${this.state.world}

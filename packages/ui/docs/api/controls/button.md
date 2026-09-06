@@ -17,4 +17,6 @@ The root entry point exports `Button` and `ButtonVariant`.
 | `iconOnly` | `icon-only` | `boolean` | `false` |
 
 The default slot supplies visible button content. Set `label` when an icon-only
-button has no visible text. Activation emits the native `click` event.
+button has no visible text; `label` names the button for assistive technology
+and shows nothing on hover, so add the global `title` attribute when an icon
+alone also needs a tooltip. Activation emits the native `click` event.
