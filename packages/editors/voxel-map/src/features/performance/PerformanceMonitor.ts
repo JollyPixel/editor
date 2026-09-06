@@ -46,6 +46,7 @@ export class PerformanceMonitor extends ActorComponent {
     this.#registerMetrics(renderer);
 
     this.#hud = new PerformanceHUD({
+      keyboard: this.actor.world.input.keyboard,
       onDebugModeChange: (mode) => {
         this.#engine.debug.mode = mode;
       }

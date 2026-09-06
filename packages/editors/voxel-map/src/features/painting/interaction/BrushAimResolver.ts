@@ -8,6 +8,7 @@ import {
 
 // Import Internal Dependencies
 import { castViewRay } from "../../../scene/viewFocus.ts";
+import type { StrokeMode } from "../model/BrushStroke.ts";
 
 // CONSTANTS
 const kPlane = new THREE.Plane();
@@ -75,27 +76,46 @@ export class BrushAimResolver {
     };
   }
 
-  onPlane(
+  aimAtHeight(
     pointer: THREE.Vector2,
-    height: number
+    height: number,
+    mode: StrokeMode
   ): VoxelCoord | null {
     this.#raycaster.setFromCamera(pointer, this.#camera);
     kPlane.set(kUp, -(height + 0.5));
 
     const point = this.#raycaster.ray.intersectPlane(kPlane, kPlanePoint);
-    if (
-      point === null ||
-      point.distanceTo(this.#raycaster.ray.origin) > this.#maxDistance
-    ) {
+    if (point === null) {
       return null;
     }
 
-    const cell = voxelCellOf(point);
+    const distance = point.distanceTo(this.#raycaster.ray.origin);
+    if (distance > this.#maxDistance) {
+      return null;
+    }
+
+    const cell = this.#surfaceCellAt(distance, mode) ?? voxelCellOf(point);
 
     return {
       x: cell.x,
       y: height,
       z: cell.z
     };
+  }
+
+  #surfaceCellAt(
+    distance: number,
+    mode: StrokeMode
+  ): VoxelCoord | null {
+    const [hit] = this.#raycaster.intersectObject(this.#solid, true);
+    if (hit === undefined || hit.distance >= distance) {
+      return null;
+    }
+
+    return voxelPositionOf(
+      hit.point,
+      hit.face?.normal ?? kUp,
+      mode === "place" ? "front" : "back"
+    );
   }
 }

@@ -38,6 +38,7 @@
     "@jolly-pixel/asset": "1.0.0",
     "@jolly-pixel/asset-server": "1.0.0",
     "@jolly-pixel/color": "1.0.0",
+    "@jolly-pixel/controls": "1.0.0",
     "@jolly-pixel/editor.pixel-art": "1.1.0",
     "@jolly-pixel/engine": "4.0.0",
     "@jolly-pixel/event-store": "2.0.0",
