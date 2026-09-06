@@ -116,10 +116,14 @@ describe("BlockRegistry — registration resolves the authored definition", () =
       row: 6,
       tilesetId: "terrain"
     });
-    assert.deepEqual(registry.get(5)!.faceTextures, {
-      [FACE.NegY]: { col: 1, row: 2, tilesetId: "terrain" },
-      [FACE.PosY]: { col: 5, row: 6, tilesetId: "terrain" }
-    });
+    assert.deepEqual(
+      registry.get(5)!.faceTextures,
+      {
+        bottom: { col: 1, row: 2, tilesetId: "terrain" },
+        top: { col: 5, row: 6, tilesetId: "terrain" }
+      },
+      "a numeric FACE key resolves to that face's default slot"
+    );
   });
 
   it("resolves into a copy, leaving the authored definition alone", () => {

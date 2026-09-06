@@ -30,23 +30,13 @@ interface DragState {
   liveRect: SelectionRect;
 }
 
-/**
- * One hit-testable rect: a collapsed region (`face: null`) or one face of
- * an uncollapsed one.
- */
 interface HitCandidate {
   region: UVRegion;
   face: UVFace | null;
   geometry: UVGeometry;
 }
 
-/**
- * Last click location; identifies the stack to advance instead of re-picking.
- */
 interface PickState {
-  /**
-   * Identifies the stack itself to detect repeat clicks.
-   */
   key: string;
   index: number;
   regionId: string;
@@ -171,9 +161,6 @@ export class UVController {
     );
   }
 
-  /**
-   * Reverts the live preview to the stored geometry.
-   */
   cancelDrag(): void {
     this.#pick = null;
     if (!this.#drag) {
@@ -218,9 +205,6 @@ export class UVController {
       this.#uvMap.selectedFace === this.#pick.face;
   }
 
-  /**
-   * Returns visible hits in topmost-first order, independent of selection.
-   */
   #hitStack(
     pos: Vec2
   ): HitCandidate[] {

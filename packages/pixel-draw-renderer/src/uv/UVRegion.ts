@@ -20,6 +20,8 @@ export type {
   UVRegionState,
   UVTriangleCorner,
   UVTriangle,
+  UVCompound,
+  UVCompoundPart,
   UVGeometry
 } from "./types.ts";
 export { UV_FACES } from "./types.ts";
@@ -50,9 +52,20 @@ export interface UVRegionFace {
 }
 
 function normalizeActiveFaces(
-  activeFaces: readonly UVFace[]
+  activeFaces: readonly UVFace[],
+  faces: UVFaceMap
 ): readonly UVFace[] {
-  return UV_FACES.filter((face) => activeFaces.includes(face));
+  const seen = new Set<UVFace>();
+
+  return activeFaces.filter(
+    (face) => faces.has(face) && !seen.has(face) && seen.add(face) !== undefined
+  );
+}
+
+function isRect(
+  geometry: UVGeometry
+): boolean {
+  return !("shape" in geometry);
 }
 
 function sameRect(
@@ -94,9 +107,6 @@ export class UVRegion {
     if (data.state === "uncollapsed") {
       this.state = "uncollapsed";
       this.#faces = new UVFaceMap(data.faces);
-      this.#activeFaces = normalizeActiveFaces(
-        data.activeFaces ?? UV_FACES
-      );
       this.#collapsedRect = null;
       this.#collapsedFace = null;
     }
@@ -105,12 +115,18 @@ export class UVRegion {
       this.#faces = data.faces ?
         new UVFaceMap(data.faces) :
         UVFaceMap.shared(data.rect);
-      this.#activeFaces = normalizeActiveFaces(
-        data.activeFaces ?? UV_FACES
-      );
       this.#collapsedRect = copyRect(data.rect);
       this.#collapsedFace = data.collapsedFace ?? null;
     }
+
+    this.#activeFaces = normalizeActiveFaces(
+      data.activeFaces ?? this.#faces.faces,
+      this.#faces
+    );
+  }
+
+  get faces(): readonly UVFace[] {
+    return this.#faces.faces;
   }
 
   get collapsedFace(): UVFace | null {
@@ -163,14 +179,15 @@ export class UVRegion {
     }
 
     const target = this.#collapseTarget(face);
+    const rect = rectOf(this.#faces.get(target));
 
     return new UVRegion({
       id: this.id,
       name: this.name,
       color: this.color,
       state: "collapsed",
-      rect: rectOf(this.#faces.get(target)),
-      faces: this.#faces.toJSON(),
+      rect,
+      faces: this.#faces.stackedAt(rect).toJSON(),
       activeFaces: [
         ...this.#activeFaces
       ],
@@ -207,26 +224,30 @@ export class UVRegion {
   #collapseTarget(
     face: UVFace | undefined
   ): UVFace {
-    const requested = face ?? this.#largestActiveFace();
-    if (!("shape" in this.#faces.get(requested))) {
-      return requested;
-    }
+    const largest = this.#largestActiveFaces();
+    const rects = largest.filter(
+      (candidate) => isRect(this.#faces.get(candidate))
+    );
+    const candidates = rects.length > 0 ? rects : largest;
 
-    return this.#activeFaces.find(
-      (activeFace) => !("shape" in this.#faces.get(activeFace))
-    ) ?? requested;
+    return (face !== undefined && candidates.includes(face) ? face : candidates[0]) ??
+      face ??
+      "front";
   }
 
-  #largestActiveFace(): UVFace {
-    let best: UVFace = this.#activeFaces[0] ?? "front";
+  #largestActiveFaces(): UVFace[] {
+    let best: UVFace[] = [];
     let bestArea = -1;
 
     for (const face of this.#activeFaces) {
       const rect = rectOf(this.#faces.get(face));
       const area = rect.width * rect.height;
       if (area > bestArea) {
-        best = face;
+        best = [face];
         bestArea = area;
+      }
+      else if (area === bestArea) {
+        best.push(face);
       }
     }
 
@@ -303,12 +324,15 @@ export class UVRegion {
       state: "collapsed",
       rect: copyRect(this.#collapsedRect!)
     };
-    const hasTopology = this.#activeFaces.length !== UV_FACES.length ||
-      UV_FACES.some((face) => {
+    const faces = this.#faces.faces;
+    const hasTopology = this.#activeFaces.length !== faces.length ||
+      faces.length !== UV_FACES.length ||
+      faces.some((face, index) => face !== UV_FACES[index]) ||
+      faces.some((face) => {
         const geometry = this.#faces.get(face);
 
-        return "shape" in geometry ||
-          !sameRect(geometry, this.#collapsedRect!);
+        return !isRect(geometry) ||
+          !sameRect(geometry as SelectionRect, this.#collapsedRect!);
       });
     if (hasTopology) {
       data.faces = this.#faces.toJSON();

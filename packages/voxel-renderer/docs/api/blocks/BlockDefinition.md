@@ -8,7 +8,7 @@ interface BlockDefinition {
   id: number;
   name: string;
   shapeId: BlockShapeID;
-  faceTextures?: Partial<Record<Face, TileRef>>;
+  faceTextures?: Record<string, TileRef>;
   defaultTexture?: TileRef;
   collidable?: boolean;
   transparent?: boolean;
@@ -16,13 +16,16 @@ interface BlockDefinition {
 }
 ```
 
-Missing `faceTextures` entries use `defaultTexture`. `collidable` defaults to
-`true`, and `transparent` defaults to `false`. A transparent block does not hide
-the face of a neighbouring block, because its alpha holes may reveal it. It
-does hide the face it shares with a neighbour holding that same block: both
-copies of that face sit on one plane, so drawing them z-fights. Two different
-transparent blocks keep their shared faces. `defaultTilesetId` fills tile
-references that omit a tileset and is removed from the resolved definition.
+`faceTextures` is keyed by texture slot, not by face. A slot missing from it
+falls back to its base slot, then to `defaultTexture`, so a `"top.1"` written by
+no one uses the tile of `"top"`. A numeric `Face` key is read as that face's
+default slot, so definitions written before slots keep loading. `collidable`
+defaults to `true`, and `transparent` defaults to `false`. A transparent block
+does not hide the face of a neighbouring block, because its alpha holes may
+reveal it. It does hide the face it shares with a neighbour holding that same
+block: both copies of that face sit on one plane, so drawing them z-fights. Two
+different transparent blocks keep their shared faces. `defaultTilesetId` fills
+tile references that omit a tileset and is removed from the resolved definition.
 
 ```ts
 registry.register({
@@ -44,7 +47,7 @@ type ResolvedBlockDefinition =
     "faceTextures" | "defaultTexture" | "collidable" | "defaultTilesetId"
   >
   & {
-    faceTextures: Partial<Record<Face, ResolvedTileRef>>;
+    faceTextures: Record<string, ResolvedTileRef>;
     defaultTexture?: ResolvedTileRef;
     collidable: boolean;
   };

@@ -1,12 +1,14 @@
 // Import Internal Dependencies
-import {
-  FACES,
-  type FACE
-} from "../../utils/math.ts";
+import type { FACE } from "../../utils/math.ts";
 import type { FaceDefinition } from "../face/index.ts";
 import type { BlockShape } from "./BlockShape.ts";
+import { shapeSlots } from "./shapeSlots.ts";
 
 export interface ShapeFaceRange {
+  /**
+   * Texture slot the range's vertices sample.
+   */
+  slot: string;
   face: FACE;
   start: number;
   count: number;
@@ -28,7 +30,7 @@ export interface ShapeGeometry {
   uvs: Float32Array;
   indices: Uint16Array;
   /**
-   * One entry per face slot the shape uses, ordered by `FACE`.
+   * One entry per slot the shape uses, ordered by `FACE`.
    */
   ranges: readonly ShapeFaceRange[];
 }
@@ -36,7 +38,6 @@ export interface ShapeGeometry {
 export function buildShapeGeometry(
   shape: BlockShape
 ): ShapeGeometry {
-  const slots = groupBySlot(shape.faces);
   const positions: number[] = [];
   const normals: number[] = [];
   const uvs: number[] = [];
@@ -44,17 +45,19 @@ export function buildShapeGeometry(
   const ranges: ShapeFaceRange[] = [];
   let vertex = 0;
 
-  for (const slot of FACES) {
-    const definitions = slots[slot];
-    if (definitions === undefined) {
-      continue;
-    }
-
+  for (const slot of shapeSlots(shape)) {
     const start = vertex;
-    for (const { vertices, uvs: faceUvs, normal } of definitions) {
-      for (let index = 0; index < vertices.length; index++) {
-        const [x, y, z] = vertices[index];
-        const [u, v] = faceUvs[index];
+
+    for (const definition of slot.definitions) {
+      const {
+        vertices,
+        normal,
+        uvs: faceUvs
+      } = definition;
+
+      for (let corner = 0; corner < vertices.length; corner++) {
+        const [x, y, z] = vertices[corner];
+        const [u, v] = faceUvs[corner];
 
         positions.push(x, y, z);
         normals.push(normal[0], normal[1], normal[2]);
@@ -68,10 +71,11 @@ export function buildShapeGeometry(
     }
 
     ranges.push({
-      face: slot,
+      slot: slot.id,
+      face: slot.face,
       start,
       count: vertex - start,
-      definitions
+      definitions: slot.definitions
     });
   }
 
@@ -82,16 +86,4 @@ export function buildShapeGeometry(
     indices: Uint16Array.from(indices),
     ranges
   };
-}
-
-function groupBySlot(
-  faces: readonly FaceDefinition[]
-): Partial<Record<FACE, FaceDefinition[]>> {
-  const slots: Partial<Record<FACE, FaceDefinition[]>> = {};
-
-  for (const definition of faces) {
-    (slots[definition.face] ??= []).push(definition);
-  }
-
-  return slots;
 }

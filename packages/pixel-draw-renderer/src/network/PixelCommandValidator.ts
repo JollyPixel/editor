@@ -9,6 +9,7 @@ import type {
 } from "./types.ts";
 import type {
   UVFace,
+  UVCompoundPart,
   UVGeometry,
   UVRegionData,
   UVTriangleCorner
@@ -82,15 +83,13 @@ function isRGBA(
     isFiniteNumber(value.a);
 }
 
+/**
+ * A slot vocabulary is open, so a face is validated by shape, not by name.
+ */
 function isUVFace(
   value: unknown
 ): value is UVFace {
-  return value === "front" ||
-    value === "back" ||
-    value === "left" ||
-    value === "right" ||
-    value === "top" ||
-    value === "bottom";
+  return typeof value === "string" && value.length > 0;
 }
 
 function isUVTriangleCorner(
@@ -102,9 +101,9 @@ function isUVTriangleCorner(
     value === "bottom-right";
 }
 
-function isUVGeometry(
+function isUVCompoundPart(
   value: unknown
-): value is UVGeometry {
+): value is UVCompoundPart {
   if (!isRecord(value) || !("shape" in value)) {
     return isRect(value);
   }
@@ -114,16 +113,39 @@ function isUVGeometry(
     isRect(value.rect);
 }
 
+function isUVGeometry(
+  value: unknown
+): value is UVGeometry {
+  if (!isRecord(value) || !("shape" in value)) {
+    return isRect(value);
+  }
+
+  if (value.shape === "compound") {
+    return isRect(value.rect) &&
+      Array.isArray(value.parts) &&
+      value.parts.length > 0 &&
+      value.parts.every(isUVCompoundPart);
+  }
+
+  return value.shape === "triangle" &&
+    isUVTriangleCorner(value.corner) &&
+    isRect(value.rect);
+}
+
+/**
+ * Every value is a geometry and the record carries at least one slot.
+ */
 function isUVFaces(
   value: unknown
 ): value is Record<UVFace, UVGeometry> {
-  return isRecord(value) &&
-    isUVGeometry(value.front) &&
-    isUVGeometry(value.back) &&
-    isUVGeometry(value.left) &&
-    isUVGeometry(value.right) &&
-    isUVGeometry(value.top) &&
-    isUVGeometry(value.bottom);
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  const faces = Object.keys(value);
+
+  return faces.length > 0 &&
+    faces.every((face) => isUVFace(face) && isUVGeometry(value[face]));
 }
 
 function isActiveFaces(
@@ -141,6 +163,15 @@ function isUVRegionData(
     typeof value.color !== "string" ||
     (value.name !== undefined && typeof value.name !== "string") ||
     (value.activeFaces !== undefined && !isActiveFaces(value.activeFaces))
+  ) {
+    return false;
+  }
+
+  const faces = value.faces;
+  if (
+    isActiveFaces(value.activeFaces) &&
+    isRecord(faces) &&
+    !value.activeFaces.every((face) => face in faces)
   ) {
     return false;
   }

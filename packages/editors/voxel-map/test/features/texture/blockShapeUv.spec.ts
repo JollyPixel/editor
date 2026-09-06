@@ -54,17 +54,21 @@ describe("blockShapeUv", () => {
     const topology = blockShapeUv(shapeOf("ramp"));
 
     assert.deepEqual(topology.triangles, {
-      left: "bottom-left",
-      right: "bottom-right"
+      left: "bottom-right",
+      right: "bottom-left"
     });
   });
 
-  it("keeps a stair off the box path, though its slots fill the tile", () => {
+  it("keeps a stair off the box path", () => {
     const topology = blockShapeUv(shapeOf("stair"));
 
     assert.equal(topology.isBox, false);
     assert.deepEqual(topology.triangles, {});
-    assert.deepEqual(topology.bounds.back, { u0: 0, v0: 0, u1: 1, v1: 1 });
+    assert.deepEqual(
+      topology.bounds.back,
+      { u0: 0, v0: 0, u1: 1, v1: 0.5 },
+      "the low end of a stair covers half its tile, like a slab side"
+    );
   });
 
   it("reads only a cube as a plain box", () => {
@@ -117,7 +121,11 @@ describe("blockShapeUv", () => {
   it("unions the quads a slot owns rather than taking the first", () => {
     const topology = blockShapeUv(shapeOf("stair"));
 
-    assert.deepEqual(topology.bounds.back, { u0: 0, v0: 0, u1: 1, v1: 1 });
+    assert.deepEqual(
+      topology.bounds.right,
+      { u0: 0, v0: 0, u1: 1, v1: 1 },
+      "the L spans the tile even though neither of its quads does"
+    );
   });
 
   it("names a triangle corner against its own footprint", () => {
@@ -146,11 +154,13 @@ describe("blockShapeUv", () => {
     assert.equal(topology.triangles.front, "bottom-right");
   });
 
-  it("merges the several quads a stair slot owns into one range", () => {
+  it("gives each stair slot one range, coplanar quads included", () => {
     const topology = blockShapeUv(shapeOf("stair"));
 
     assert.equal(topology.faceRanges.top?.length, 1);
-    assert.equal(topology.faceRanges.top?.[0].count, 8);
+    assert.equal(topology.faceRanges.top?.[0].count, 4);
+    assert.equal(topology.faceRanges["top.1"]?.[0].count, 4);
+    assert.equal(topology.faceRanges.right?.[0].count, 8);
     assert.equal(topology.faceRanges.front?.[0].count, 4);
   });
 

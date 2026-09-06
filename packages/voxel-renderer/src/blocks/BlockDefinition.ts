@@ -4,7 +4,14 @@ import {
   type ResolvedTileRef,
   type TileRef
 } from "../tileset/types.ts";
-import type { FACE } from "../utils/math.ts";
+import {
+  FACES,
+  type FACE
+} from "../utils/math.ts";
+import {
+  baseSlotOf,
+  slotNameOf
+} from "./shape/shapeSlots.ts";
 import type { BlockShapeID } from "./shape/BlockShape.ts";
 
 export interface BlockDefinition {
@@ -12,10 +19,12 @@ export interface BlockDefinition {
   name: string;
   shapeId: BlockShapeID;
   /**
-   * Per-face tiles; missing faces use `defaultTexture`.
+   * Tiles per texture slot; missing slots fall back to their base slot, then
+   * to `defaultTexture`. A numeric `FACE` key is read as that face's default
+   * slot, so documents written before slots keep loading.
    * @default {}
    */
-  faceTextures?: Partial<Record<FACE, TileRef>>;
+  faceTextures?: Record<string, TileRef>;
   defaultTexture?: TileRef;
   /**
    * If false, the mesh builder will not emit collision geometry for this block.
@@ -39,10 +48,36 @@ export type ResolvedBlockDefinition =
     "faceTextures" | "defaultTexture" | "collidable" | "defaultTilesetId"
   >
   & {
-    faceTextures: Partial<Record<FACE, ResolvedTileRef>>;
+    faceTextures: Record<string, ResolvedTileRef>;
     defaultTexture?: ResolvedTileRef;
     collidable: boolean;
   };
+
+/**
+ * Reads a legacy numeric `FACE` key as that face's default slot.
+ */
+export function slotKeyOf(
+  key: string
+): string {
+  const face = Number(key);
+
+  return Number.isInteger(face) && face >= 0 && face < FACES.length ?
+    slotNameOf(face as FACE) :
+    key;
+}
+
+/**
+ * Tile a slot samples, falling back to its base slot then to the block's
+ * default. Returns undefined when the block has no usable tile at all.
+ */
+export function tileRefForSlot(
+  block: ResolvedBlockDefinition,
+  slot: string
+): ResolvedTileRef | undefined {
+  return block.faceTextures[slot] ??
+    block.faceTextures[baseSlotOf(slot)] ??
+    block.defaultTexture;
+}
 
 export function resolveBlockDefinition(
   def: BlockDefinition
@@ -62,10 +97,9 @@ export function resolveBlockDefinition(
   };
 
   for (const key of Object.keys(faceTextures)) {
-    const face = Number(key) as FACE;
-    const ref = faceTextures[face];
+    const ref = faceTextures[key];
     if (ref) {
-      resolved.faceTextures[face] = resolveTileRef(
+      resolved.faceTextures[slotKeyOf(key)] = resolveTileRef(
         ref,
         defaultTilesetId
       );

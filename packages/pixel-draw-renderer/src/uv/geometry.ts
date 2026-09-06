@@ -4,7 +4,10 @@ import type {
   Vec2
 } from "../types.ts";
 import { UVGeometryValue } from "./UVGeometryValue.ts";
-import type { UVGeometry } from "./types.ts";
+import type {
+  UVGeometry,
+  UVTriangleCorner
+} from "./types.ts";
 
 export function copyRect(
   rect: SelectionRect
@@ -50,3 +53,39 @@ export function pointInGeometry(
 }
 
 export { UVGeometryValue } from "./UVGeometryValue.ts";
+
+export function triangleCornerOf(
+  geometry: UVGeometry
+): UVTriangleCorner | null {
+  return "shape" in geometry && geometry.shape === "triangle" ?
+    geometry.corner :
+    null;
+}
+
+export function partsOf(
+  geometry: UVGeometry
+): UVGeometry[] {
+  if (!("shape" in geometry) || geometry.shape !== "compound") {
+    return [copyGeometry(geometry)];
+  }
+
+  const { rect, parts } = geometry;
+
+  return parts.map((part) => {
+    const local = "shape" in part ? part.rect : part;
+    const scaled: SelectionRect = {
+      x: rect.x + (local.x * rect.width),
+      y: rect.y + (local.y * rect.height),
+      width: local.width * rect.width,
+      height: local.height * rect.height
+    };
+
+    return "shape" in part ?
+      {
+        shape: "triangle" as const,
+        corner: part.corner,
+        rect: scaled
+      } :
+      scaled;
+  });
+}

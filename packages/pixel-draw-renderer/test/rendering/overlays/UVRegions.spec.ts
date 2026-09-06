@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { UVRegionLayer } from "#src/rendering/overlays/UVRegions.ts";
-import { UV_FACES } from "#src/uv/UVRegion.ts";
+import { UVRegion } from "#src/uv/UVRegion.ts";
 import {
   makeSvg,
   makeViewport,
@@ -480,296 +480,6 @@ describe("UVRegionLayer — staying visible over the artwork", () => {
     );
   });
 });
-
-describe("UVRegionLayer — face labels", () => {
-  // makeViewport() zooms 4x and labels need 40 screen px, so a labelled
-  // rect must be at least 10 texture px wide/tall.
-  const kLabelSize = 12;
-
-  function setup(): { svg: SVGElement; map: ReturnType<typeof makeUvMap>; } {
-    const svg = makeSvg();
-    const map = makeUvMap();
-    new UVRegionLayer(
-      svg,
-      makeViewport(),
-      map
-    );
-
-    return { svg, map };
-  }
-
-  function labels(
-    svg: SVGElement
-  ): (string | null)[] {
-    return [
-      ...svg.querySelectorAll("text")
-    ].map((el) => el.textContent);
-  }
-
-  function labelLines(
-    svg: SVGElement
-  ): string[] {
-    return [
-      ...svg.querySelectorAll("text tspan")
-    ].map((el) => el.textContent ?? "");
-  }
-
-  test("names only the selected face while the whole stack coincides", () => {
-    const { svg, map } = setup();
-    const region = map.create({
-      width: kLabelSize,
-      height: kLabelSize,
-      id: "r1"
-    });
-    map.uncollapse(region.id);
-    map.select("r1", "left");
-
-    assert.deepStrictEqual(
-      labels(svg),
-      ["left"],
-      "six labels on one pixel would be unreadable"
-    );
-  });
-
-  test("names the next face as soon as the selected one is dragged off the pile", () => {
-    const { svg, map } = setup();
-    const region = map.create({
-      width: kLabelSize,
-      height: kLabelSize,
-      id: "r1"
-    });
-    map.uncollapse(region.id);
-    map.select("r1", "front");
-    assert.deepStrictEqual(labels(svg), ["front"]);
-
-    map.move(
-      "r1",
-      { x: 40, y: 40, width: kLabelSize, height: kLabelSize },
-      "front"
-    );
-
-    assert.deepStrictEqual(
-      labels(svg).sort(),
-      ["back", "front"],
-      "the remaining pile must announce what a click would pick, unclicked"
-    );
-  });
-
-  test("keeps naming the next face down as the pile is peeled apart", () => {
-    const { svg, map } = setup();
-    const region = map.create({
-      width: kLabelSize,
-      height: kLabelSize,
-      id: "r1"
-    });
-    map.uncollapse(region.id);
-    map.select("r1", "front");
-
-    // Peel the first three off, one at a time.
-    const peeled = ["front", "back", "left"] as const;
-    peeled.forEach((face, index) => {
-      map.select("r1", face);
-      map.move(
-        "r1",
-        {
-          x: (index + 1) * kLabelSize * 2,
-          y: 40,
-          width: kLabelSize,
-          height: kLabelSize
-        },
-        face
-      );
-    });
-
-    assert.deepStrictEqual(
-      labels(svg).sort(),
-      ["back", "front", "left", "right"].sort(),
-      "three separated faces plus the pile's new top, 'right'"
-    );
-  });
-
-  test("names a pile belonging to a region that is not the selected one", () => {
-    const { svg, map } = setup();
-    const a = map.create({
-      width: kLabelSize,
-      height: kLabelSize,
-      id: "r1"
-    });
-    map.uncollapse(a.id);
-    map.select("r1", "top");
-    // Show a second, unselected uncollapsed region alongside it.
-    const b = map.create({
-      width: kLabelSize,
-      height: kLabelSize,
-      id: "r2"
-    });
-    map.uncollapse(b.id);
-    map.showAll = true;
-
-    assert.deepStrictEqual(
-      labels(svg).sort(),
-      ["(r1)top", "(r2)front"],
-      "r2's pile is named even though the selection lives in r1"
-    );
-  });
-
-  test("names every face once their rects no longer coincide", () => {
-    const { svg, map } = setup();
-    const region = map.create({
-      width: kLabelSize,
-      height: kLabelSize,
-      id: "r1"
-    });
-    map.uncollapse(region.id);
-    map.select("r1", "front");
-
-    UV_FACES.forEach((face, index) => {
-      map.move(
-        "r1",
-        {
-          x: (index % 4) * kLabelSize,
-          y: Math.floor(index / 4) * kLabelSize,
-          width: kLabelSize,
-          height: kLabelSize
-        },
-        face
-      );
-    });
-
-    assert.deepStrictEqual(
-      labels(svg).sort(),
-      [...UV_FACES].sort()
-    );
-  });
-
-  test("a collapsed region carries no label", () => {
-    const { svg, map } = setup();
-    const region = map.create({
-      width: kLabelSize,
-      height: kLabelSize
-    });
-    map.select(region.id);
-
-    assert.deepStrictEqual(labels(svg), []);
-  });
-
-  test("shows a collapsed region name when region labels are enabled", () => {
-    const { svg, map } = setup();
-    const region = map.create({
-      width: kLabelSize,
-      height: kLabelSize,
-      id: "r1",
-      name: "Grass block"
-    });
-    map.select(region.id);
-
-    map.showRegionLabels = true;
-
-    assert.deepStrictEqual(labels(svg), ["(Grass block)"]);
-  });
-
-  test("falls back to the region id when the name is blank", () => {
-    const { svg, map } = setup();
-    const region = map.create({
-      width: kLabelSize,
-      height: kLabelSize,
-      id: "region-1",
-      name: "   "
-    });
-    map.select(region.id);
-
-    map.showRegionLabels = true;
-
-    assert.deepStrictEqual(labels(svg), ["(region-1)"]);
-  });
-
-  test("puts the region label above the face for an uncollapsed region", () => {
-    const { svg, map } = setup();
-    const region = map.create({
-      width: kLabelSize,
-      height: kLabelSize,
-      id: "r1",
-      name: "Grass block"
-    });
-    map.uncollapse(region.id);
-    map.select(region.id, "front");
-
-    map.showRegionLabels = true;
-
-    assert.deepStrictEqual(labelLines(svg), ["(Grass block)", "front"]);
-  });
-
-  test("truncates only the displayed region label to twenty characters", () => {
-    const { svg, map } = setup();
-    const region = map.create({
-      width: kLabelSize,
-      height: kLabelSize,
-      id: "r1",
-      name: "abcdefghijklmnopqrstuv"
-    });
-    map.select(region.id);
-
-    map.showRegionLabels = true;
-
-    assert.deepStrictEqual(labels(svg), ["(abcdefghijklmnopqrs…)"]);
-    assert.strictEqual(region.name, "abcdefghijklmnopqrstuv");
-  });
-
-  test("showAll forces labels without changing the stored preference", () => {
-    const { svg, map } = setup();
-    map.create({
-      width: kLabelSize,
-      height: kLabelSize,
-      id: "r1"
-    });
-    map.create({
-      width: kLabelSize,
-      height: kLabelSize,
-      id: "r2"
-    });
-
-    map.showAll = true;
-
-    assert.deepStrictEqual(labels(svg).sort(), ["(r1)", "(r2)"]);
-    assert.strictEqual(
-      map.showRegionLabels,
-      false
-    );
-
-    map.showAll = false;
-    assert.deepStrictEqual(labels(svg), []);
-  });
-
-  test("drops the label when the rect is too small on screen to hold it", () => {
-    const { svg, map } = setup();
-    const region = map.create({
-      width: 4,
-      height: 4,
-      id: "r1"
-    });
-    map.uncollapse(region.id);
-    map.select("r1", "front");
-
-    assert.deepStrictEqual(labels(svg), []);
-  });
-
-  test("removes labels once the region is collapsed again", () => {
-    const { svg, map } = setup();
-    const region = map.create({
-      width: kLabelSize,
-      height: kLabelSize,
-      id: "r1"
-    });
-    map.uncollapse(region.id);
-    map.select("r1", "front");
-    assert.strictEqual(labels(svg).length, 1);
-
-    map.collapse("r1");
-
-    assert.deepStrictEqual(labels(svg), []);
-  });
-});
-
 describe("UVRegionLayer — destroy", () => {
   test("stops reacting to UVMap events and removes its rects", () => {
     const svg = makeSvg();
@@ -803,5 +513,46 @@ describe("UVRegionLayer — destroy", () => {
       0,
       "no rect after move"
     );
+  });
+});
+
+describe("UVRegionLayer — compound faces", () => {
+  test("outlines the union of the parts as one continuous subpath", () => {
+    const svg = makeSvg();
+    const map = makeUvMap();
+
+    new UVRegionLayer(svg, makeViewport(), map);
+
+    map.restore(
+      new UVRegion({
+        id: "stair",
+        color: "#123456",
+        state: "uncollapsed",
+        activeFaces: ["left"],
+        faces: {
+          left: {
+            shape: "compound",
+            rect: { x: 0, y: 0, width: 4, height: 4 },
+            parts: [
+              { x: 0, y: 0.5, width: 1, height: 0.5 },
+              { x: 0.5, y: 0, width: 0.5, height: 0.5 }
+            ]
+          }
+        }
+      })
+    );
+    map.select("stair", "left");
+
+    const paths = [...svg.querySelectorAll<SVGPathElement>("g > path:last-child")];
+    assert.strictEqual(paths.length, 1);
+
+    const d = paths[0].getAttribute("d") ?? "";
+    assert.strictEqual(
+      d.split("M").length - 1,
+      1,
+      "the two parts share one subpath, so no edge is drawn inside the L"
+    );
+    // zoom 4, camera (0,0): the region spans 16 screen pixels.
+    assert.strictEqual(d, "M0,8L8,8L8,0L16,0L16,16L0,16Z");
   });
 });

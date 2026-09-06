@@ -494,6 +494,26 @@ describe("UVMap — uncollapse / collapse", () => {
     }
   });
 
+  test("uncollapsing a region that moved while collapsed restarts on its rect", () => {
+    const map = makeMap();
+    const region = map.create({ width: 4, height: 4 });
+    map.uncollapse(region.id);
+    map.move(region.id, { x: 24, y: 24, width: 4, height: 4 }, "top");
+    map.collapse(region.id);
+    map.move(region.id, { x: 12, y: 12, width: 4, height: 4 });
+
+    assert.ok(map.uncollapse(region.id));
+
+    const stored = map.get(region.id)!;
+    for (const face of UV_FACES) {
+      assert.deepStrictEqual(
+        stored.rectFor(face),
+        { x: 12, y: 12, width: 4, height: 4 },
+        `${face} must not carry its pre-collapse offset`
+      );
+    }
+  });
+
   test("uncollapse emits region-state-changed carrying the previous region", () => {
     const map = makeMap();
     const region = map.create({ width: 4, height: 4 });
@@ -620,7 +640,7 @@ describe("UVMap — selectedFace", () => {
 
     map.select(region.id);
 
-    assert.strictEqual(map.selectedFace, "left");
+    assert.strictEqual(map.selectedFace, "top");
   });
 
   test("replaces an inactive requested face with the first active face", () => {
@@ -633,7 +653,7 @@ describe("UVMap — selectedFace", () => {
 
     map.select(region.id, "front");
 
-    assert.strictEqual(map.selectedFace, "left");
+    assert.strictEqual(map.selectedFace, "top");
   });
 
   test("is renormalized when the selected region collapses", () => {

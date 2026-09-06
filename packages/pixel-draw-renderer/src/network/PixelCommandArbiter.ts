@@ -31,13 +31,23 @@ function uvConflictKeys(
     ];
   }
 
-  const id = command.action === "uv-region-deleted" ?
-    command.metadata.id :
-    command.metadata.region.id;
+  if (command.action === "uv-region-deleted") {
+    const { id } = command.metadata;
+
+    return [
+      `${id}:*`,
+      ...UV_FACES.map((face) => `${id}:${face}`)
+    ];
+  }
+
+  const { region } = command.metadata;
+  const faces = region.faces ?
+    Object.keys(region.faces) :
+    UV_FACES;
 
   return [
-    `${id}:*`,
-    ...UV_FACES.map((face) => `${id}:${face}`)
+    `${region.id}:*`,
+    ...faces.map((face) => `${region.id}:${face}`)
   ];
 }
 

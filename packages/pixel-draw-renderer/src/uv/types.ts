@@ -1,13 +1,7 @@
 // Import Internal Dependencies
 import type { SelectionRect } from "../types.ts";
 
-export type UVFace =
-  | "front"
-  | "back"
-  | "left"
-  | "right"
-  | "top"
-  | "bottom";
+export type UVFace = string;
 
 export type UVRegionState =
   | "collapsed"
@@ -19,17 +13,30 @@ export type UVTriangleCorner =
   | "bottom-left"
   | "bottom-right";
 
-/**
- * A triangular UV occupies three corners of its bounding rect.
- * Keeping the bounds separate lets all existing move and clamp paths stay rect-based.
- */
 export interface UVTriangle {
   shape: "triangle";
   rect: SelectionRect;
   corner: UVTriangleCorner;
 }
 
-export type UVGeometry = SelectionRect | UVTriangle;
+export type UVCompoundPart =
+  | SelectionRect
+  | {
+    shape: "triangle";
+    rect: SelectionRect;
+    corner: UVTriangleCorner;
+  };
+
+export interface UVCompound {
+  shape: "compound";
+  rect: SelectionRect;
+  parts: readonly UVCompoundPart[];
+}
+
+export type UVGeometry =
+  | SelectionRect
+  | UVTriangle
+  | UVCompound;
 
 export const UV_FACES: readonly UVFace[] = [
   "front",

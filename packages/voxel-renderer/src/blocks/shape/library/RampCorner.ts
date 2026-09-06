@@ -57,12 +57,14 @@ export class RampCornerInner extends BlockShapeBase {
     defineFace({
       face: FACE.PosY,
       normal: [-SQRT3_OVER_3, SQRT3_OVER_3, -SQRT3_OVER_3],
-      vertices: [[0, 0, 0], [0, 1, 1], [1, 1, 0]]
+      vertices: [[0, 0, 0], [0, 1, 1], [1, 1, 0]],
+      slot: "top"
     }),
     defineFace({
       face: FACE.PosY,
       normal: [0, 1, 0],
-      vertices: [[0, 1, 1], [1, 1, 1], [1, 1, 0]]
+      vertices: [[0, 1, 1], [1, 1, 1], [1, 1, 0]],
+      slot: "top"
     })
   ];
 }

@@ -155,6 +155,7 @@ integration; then the application owns `init()`, `tick()`, `flush()`, and
   [`BlockShapeRegistry`](docs/api/blocks/BlockShapeRegistry.md).
 - [Built-in shapes](docs/api/blocks/built-in-shapes.md),
   [`buildShapeGeometry`](docs/api/blocks/buildShapeGeometry.md),
+  [shape slots](docs/api/blocks/shapeSlots.md),
   [tilesets](docs/api/tilesets/tilesets.md),
   [`TilesetManager`](docs/api/tilesets/TilesetManager.md),
   [`TilesetAtlas`](docs/api/tilesets/TilesetAtlas.md), and

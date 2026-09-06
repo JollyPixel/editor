@@ -1,19 +1,23 @@
 // Import Third-party Dependencies
 import {
   Face,
+  baseSlotOf,
   buildShapeGeometry,
   type BlockShape,
-  type FaceDefinition,
   type ShapeGeometry
 } from "@jolly-pixel/voxel.renderer";
 import {
   UV_FACES,
+  type UVCompoundPart,
   type UVFace,
   type UVTriangleCorner
 } from "@jolly-pixel/pixel-draw.renderer";
 import type { FaceRanges } from "@jolly-pixel/editor.pixel-art/three/types.ts";
 
 // CONSTANTS
+const kEpsilon = 1e-6;
+const kBoxSlots: readonly UVFace[] = UV_FACES;
+
 export const UV_FACE_TO_VOXEL: Record<UVFace, Face> = {
   front: Face.PosZ,
   back: Face.NegZ,
@@ -22,12 +26,6 @@ export const UV_FACE_TO_VOXEL: Record<UVFace, Face> = {
   top: Face.PosY,
   bottom: Face.NegY
 };
-
-const kVoxelFaceToUv = new Map<Face, UVFace>(
-  UV_FACES.map((face) => [UV_FACE_TO_VOXEL[face], face])
-);
-
-const kEpsilon = 1e-6;
 
 export interface UVFaceBounds {
   u0: number;
@@ -38,24 +36,28 @@ export interface UVFaceBounds {
 
 export interface BlockShapeUv {
   /**
-   * Face slots the shape actually emits geometry for.
+   * Texture slots the shape emits geometry for, in the shape's own order.
    */
   activeFaces: UVFace[];
   /**
-   * Tile footprint of each active slot, the union when it holds several
-   * polygons.
+   * Tile footprint of each slot, the union when it holds several polygons.
    */
   bounds: Partial<Record<UVFace, UVFaceBounds>>;
   /**
-   * Faces drawn as a triangle in the 2D editor, with their right-angle corner.
+   * Slots drawn as a triangle in the 2D editor, with their right-angle corner.
    */
   triangles: Partial<Record<UVFace, UVTriangleCorner>>;
   /**
-   * Vertex ranges into `buildShapeGeometry(shape)`, keyed by UV face.
+   * Polygons of a slot holding several of them, in the `0` to `1` space of
+   * that slot's bounds. A slot's true coverage, such as the L of a stair side.
+   */
+  parts: Partial<Record<UVFace, UVCompoundPart[]>>;
+  /**
+   * Vertex ranges into `buildShapeGeometry(shape)`, keyed by slot.
    */
   faceRanges: FaceRanges;
   /**
-   * True when the shape is a plain six-face box, which may collapse to a
+   * True when the shape is a plain six-slot box, which may collapse to a
    * single shared rectangle.
    */
   isBox: boolean;
@@ -68,46 +70,121 @@ export function blockShapeUv(
   const activeFaces: UVFace[] = [];
   const bounds: Partial<Record<UVFace, UVFaceBounds>> = {};
   const triangles: Partial<Record<UVFace, UVTriangleCorner>> = {};
+  const parts: Partial<Record<UVFace, UVCompoundPart[]>> = {};
   const faceRanges: FaceRanges = {};
   let everySlotIsOneFullQuad = true;
 
   for (const range of geometry.ranges) {
-    const face = kVoxelFaceToUv.get(range.face);
-    if (face === undefined) {
-      continue;
-    }
-
-    const { definitions } = range;
+    const slot = range.slot;
     const slotBounds = boundsOf(geometry, range.start, range.count);
 
-    activeFaces.push(face);
-    bounds[face] = slotBounds;
-    faceRanges[face] = [
+    activeFaces.push(slot);
+    bounds[slot] = slotBounds;
+    faceRanges[slot] = [
       {
         start: range.start,
         count: range.count
       }
     ];
 
-    const corner = triangleCornerOf(definitions, slotBounds);
-    if (corner !== null) {
-      triangles[face] = corner;
+    const polygons = polygonsOf(geometry, range.start, range.definitions);
+    if (polygons.length > 1) {
+      parts[slot] = polygons.map(
+        (polygon) => partOf(polygon, slotBounds)
+      );
+      everySlotIsOneFullQuad = false;
+      continue;
     }
 
-    if (definitions.length > 1 || !coversTile(slotBounds)) {
+    const [only] = polygons;
+    if (only.corner !== null) {
+      triangles[slot] = only.corner;
+    }
+    if (only.corner !== null || !coversTile(slotBounds)) {
       everySlotIsOneFullQuad = false;
     }
   }
 
   return {
-    activeFaces: UV_FACES.filter((face) => activeFaces.includes(face)),
+    activeFaces: orderSlots(activeFaces),
     bounds,
     triangles,
+    parts,
     faceRanges,
-    isBox: activeFaces.length === UV_FACES.length &&
-      Object.keys(triangles).length === 0 &&
+    isBox: activeFaces.length === kBoxSlots.length &&
+      kBoxSlots.every((slot) => activeFaces.includes(slot)) &&
       everySlotIsOneFullQuad
   };
+}
+
+function orderSlots(
+  slots: readonly UVFace[]
+): UVFace[] {
+  return [...slots].sort((a, b) => {
+    const base = kBoxSlots.indexOf(baseSlotOf(a)) -
+      kBoxSlots.indexOf(baseSlotOf(b));
+
+    return base === 0 ? suffixOf(a) - suffixOf(b) : base;
+  });
+}
+
+function suffixOf(
+  slot: UVFace
+): number {
+  const separator = slot.indexOf(".");
+
+  return separator === -1 ? 0 : Number(slot.slice(separator + 1));
+}
+
+interface SlotPolygon {
+  bounds: UVFaceBounds;
+  corner: UVTriangleCorner | null;
+}
+
+function polygonsOf(
+  geometry: ShapeGeometry,
+  start: number,
+  definitions: readonly { vertices: readonly unknown[]; }[]
+): SlotPolygon[] {
+  const polygons: SlotPolygon[] = [];
+  let cursor = start;
+
+  for (const definition of definitions) {
+    const count = definition.vertices.length;
+    const polygonBounds = boundsOf(geometry, cursor, count);
+
+    polygons.push({
+      bounds: polygonBounds,
+      corner: count === 3 ?
+        rightAngleCorner(geometry, cursor, polygonBounds) :
+        null
+    });
+    cursor += count;
+  }
+
+  return polygons;
+}
+
+function partOf(
+  polygon: SlotPolygon,
+  slot: UVFaceBounds
+): UVCompoundPart {
+  const width = slot.u1 - slot.u0 || 1;
+  const height = slot.v1 - slot.v0 || 1;
+  const rect = {
+    x: (polygon.bounds.u0 - slot.u0) / width,
+    y: (slot.v1 - polygon.bounds.v1) / height,
+    width: (polygon.bounds.u1 - polygon.bounds.u0) / width,
+    height: (polygon.bounds.v1 - polygon.bounds.v0) / height
+  };
+
+  return polygon.corner === null ?
+    rect :
+    {
+      shape: "triangle",
+      corner: polygon.corner,
+      rect
+    };
 }
 
 function boundsOf(
@@ -141,30 +218,17 @@ function coversTile(
     Math.abs(bounds.v1 - 1) < kEpsilon;
 }
 
-function triangleCornerOf(
-  definitions: readonly FaceDefinition[],
-  bounds: UVFaceBounds
-): UVTriangleCorner | null {
-  if (definitions.length === 0) {
-    return null;
-  }
-
-  const corners = definitions.map(
-    (definition) => rightAngleCorner(definition, bounds)
-  );
-
-  return corners.every((corner) => corner !== null && corner === corners[0]) ?
-    corners[0] :
-    null;
-}
-
 function rightAngleCorner(
-  definition: FaceDefinition,
+  geometry: ShapeGeometry,
+  start: number,
   bounds: UVFaceBounds
 ): UVTriangleCorner | null {
-  const { uvs } = definition;
-  if (uvs.length !== 3) {
-    return null;
+  const uvs: [number, number][] = [];
+  for (let index = start; index < start + 3; index++) {
+    uvs.push([
+      geometry.uvs[index * 2],
+      geometry.uvs[(index * 2) + 1]
+    ]);
   }
 
   for (let index = 0; index < 3; index++) {
@@ -172,8 +236,8 @@ function rightAngleCorner(
     const [firstU, firstV] = uvs[(index + 1) % 3];
     const [secondU, secondV] = uvs[(index + 2) % 3];
     const isRightAngle =
-      (firstU === u && secondV === v) ||
-      (secondU === u && firstV === v);
+      (near(firstU, u) && near(secondV, v)) ||
+      (near(secondU, u) && near(firstV, v));
 
     if (isRightAngle) {
       const vertical = near(v, bounds.v1) ? "top" : "bottom";

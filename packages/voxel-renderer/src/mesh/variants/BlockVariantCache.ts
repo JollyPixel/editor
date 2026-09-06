@@ -5,6 +5,10 @@ import type {
   BlockShapeRegistry
 } from "../../blocks/shape/BlockShapeRegistry.ts";
 import type { TilesetManager } from "../../tileset/TilesetManager.ts";
+import type { TilesetUVRegion } from "../../tileset/types.ts";
+import type { FaceDefinition } from "../../blocks/face/index.ts";
+import { tileRefForSlot } from "../../blocks/BlockDefinition.ts";
+import { shapeSlots } from "../../blocks/shape/shapeSlots.ts";
 import type {
   BlockVariant,
   BlockVariantFace
@@ -40,6 +44,14 @@ const kOcclusionUnknown = -1;
 const kOcclusionMaxSlots = 1 << 16;
 const kOcclusionFaceMask = 0b111111;
 const kSelfOcclusionShift = 6;
+
+interface CompileFaceOptions {
+  faceDef: FaceDefinition;
+  uvRegion: TilesetUVRegion;
+  tilesetId?: string;
+  cutout: boolean;
+  voxelTransform: VoxelTransform;
+}
 
 export interface BlockVariantCacheOptions {
   blockRegistry: BlockRegistry;
@@ -220,78 +232,27 @@ export class BlockVariantCache {
     const { rotation, flipY } = voxelTransform;
 
     const faces: BlockVariantFace[] = [];
-    for (const faceDef of shape.faces) {
-      const tileRef = blockDef.faceTextures[faceDef.face] ?? blockDef.defaultTexture;
+    for (const textureSlot of shapeSlots(shape)) {
+      const tileRef = tileRefForSlot(blockDef, textureSlot.id);
       if (!tileRef) {
         continue;
-      }
-
-      let cull = -1;
-      if (faceDef.cull !== null) {
-        const worldFace = rotateFace(faceDef.cull, rotation);
-        cull = flipY ? flipYFace(worldFace) : worldFace;
       }
 
       const uvRegion = this.#tilesetManager
         .atlas(tileRef.tilesetId)
         .uvFor(tileRef.col, tileRef.row);
-      const vertexCount = faceDef.vertices.length;
-      const positions = new Float32Array(vertexCount * 3);
-      const uvs = new Uint16Array(vertexCount * 2);
-      const tileUvs = new Float32Array(vertexCount * 2);
 
-      for (let i = 0; i < vertexCount; i++) {
-        // flipY mirrors the face, so vertices are stored in reverse order to
-        // keep the winding (and therefore the front side) correct.
-        const vi = flipY ? vertexCount - 1 - i : i;
-        const vertex = rotateVertex(
-          faceDef.vertices[vi],
-          voxelTransform
-        );
-        positions[i * 3] = vertex[0];
-        positions[(i * 3) + 1] = vertex[1];
-        positions[(i * 3) + 2] = vertex[2];
-
-        const tileUV = faceDef.uvs[vi];
-        tileUvs[i * 2] = tileUV[0];
-        tileUvs[(i * 2) + 1] = tileUV[1];
-        // `fround` reproduces the float32 staging buffer these used to pass
-        // through, so the quantised result is unchanged.
-        uvs[i * 2] = toUnorm16(
-          Math.fround(uvRegion.offsetU + (uvRegion.scaleU * tileUV[0]))
-        );
-        uvs[(i * 2) + 1] = toUnorm16(
-          Math.fround(uvRegion.offsetV + (uvRegion.scaleV * tileUV[1]))
+      for (const faceDef of textureSlot.definitions) {
+        faces.push(
+          this.#compileFace({
+            faceDef,
+            uvRegion,
+            tilesetId: tileRef.tilesetId,
+            cutout,
+            voxelTransform
+          })
         );
       }
-
-      const normal = rotateNormal(
-        faceDef.normal,
-        voxelTransform
-      );
-
-      faces.push({
-        cull,
-        slot: this.#slotFor(
-          tileRef.tilesetId ?? this.#tilesetManager.defaultTilesetId!,
-          cutout
-        ),
-        vertexCount,
-        indexCount: vertexCount === 4 ? 6 : 3,
-        positions,
-        uvs,
-        tileUvs,
-        region: new Uint16Array([
-          toUnorm16(Math.fround(uvRegion.offsetU)),
-          toUnorm16(Math.fround(uvRegion.offsetV)),
-          toUnorm16(Math.fround(uvRegion.scaleU)),
-          toUnorm16(Math.fround(uvRegion.scaleV))
-        ]),
-        merge: describeMerge(cull, positions, tileUvs),
-        normalX: toSnorm8(normal[0]),
-        normalY: toSnorm8(normal[1]),
-        normalZ: toSnorm8(normal[2])
-      });
     }
 
     const selfOcclusionMask = this.#occlusionMask(shape, rotation, flipY);
@@ -306,6 +267,83 @@ export class BlockVariantCache {
       // No mesher epoch is ever negative, so a freshly compiled variant always
       // reads as "not yet seen in this chunk".
       sweepEpoch: -1
+    };
+  }
+
+  #compileFace(
+    options: CompileFaceOptions
+  ): BlockVariantFace {
+    const {
+      faceDef,
+      uvRegion,
+      tilesetId,
+      cutout,
+      voxelTransform
+    } = options;
+    const { rotation, flipY } = voxelTransform;
+
+    let cull = -1;
+    if (faceDef.cull !== null) {
+      const worldFace = rotateFace(faceDef.cull, rotation);
+      cull = flipY ? flipYFace(worldFace) : worldFace;
+    }
+
+    const vertexCount = faceDef.vertices.length;
+    const positions = new Float32Array(vertexCount * 3);
+    const uvs = new Uint16Array(vertexCount * 2);
+    const tileUvs = new Float32Array(vertexCount * 2);
+
+    for (let i = 0; i < vertexCount; i++) {
+      // flipY mirrors the face, so vertices are stored in reverse order to
+      // keep the winding (and therefore the front side) correct.
+      const vi = flipY ? vertexCount - 1 - i : i;
+      const vertex = rotateVertex(
+        faceDef.vertices[vi],
+        voxelTransform
+      );
+      positions[i * 3] = vertex[0];
+      positions[(i * 3) + 1] = vertex[1];
+      positions[(i * 3) + 2] = vertex[2];
+
+      const tileUV = faceDef.uvs[vi];
+      tileUvs[i * 2] = tileUV[0];
+      tileUvs[(i * 2) + 1] = tileUV[1];
+      // `fround` reproduces the float32 staging buffer these used to pass
+      // through, so the quantised result is unchanged.
+      uvs[i * 2] = toUnorm16(
+        Math.fround(uvRegion.offsetU + (uvRegion.scaleU * tileUV[0]))
+      );
+      uvs[(i * 2) + 1] = toUnorm16(
+        Math.fround(uvRegion.offsetV + (uvRegion.scaleV * tileUV[1]))
+      );
+    }
+
+    const normal = rotateNormal(
+      faceDef.normal,
+      voxelTransform
+    );
+
+    return {
+      cull,
+      slot: this.#slotFor(
+        tilesetId ?? this.#tilesetManager.defaultTilesetId!,
+        cutout
+      ),
+      vertexCount,
+      indexCount: vertexCount === 4 ? 6 : 3,
+      positions,
+      uvs,
+      tileUvs,
+      region: new Uint16Array([
+        toUnorm16(Math.fround(uvRegion.offsetU)),
+        toUnorm16(Math.fround(uvRegion.offsetV)),
+        toUnorm16(Math.fround(uvRegion.scaleU)),
+        toUnorm16(Math.fround(uvRegion.scaleV))
+      ]),
+      merge: describeMerge(cull, positions, tileUvs),
+      normalX: toSnorm8(normal[0]),
+      normalY: toSnorm8(normal[1]),
+      normalZ: toSnorm8(normal[2])
     };
   }
 

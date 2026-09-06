@@ -106,7 +106,9 @@ export {
   type UVRegionFace,
   type UVRegionState,
   type UVTriangle,
-  type UVTriangleCorner
+  type UVTriangleCorner,
+  type UVCompound,
+  type UVCompoundPart
 } from "./uv/UVRegion.ts";
 export { UVRegionCollection } from "./uv/UVRegionCollection.ts";
 // PixelSyncServer pulls worker_threads through the network server barrel.

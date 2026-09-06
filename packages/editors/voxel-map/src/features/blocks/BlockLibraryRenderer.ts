@@ -3,9 +3,11 @@ import * as THREE from "three";
 import { disposeObject3D } from "@jolly-pixel/engine";
 import {
   buildShapeGeometry,
+  tileRefForSlot,
   type ResolvedBlockDefinition,
   type BlockShapeRegistry,
-  type TilesetManager
+  type TilesetManager,
+  type TilesetUVRegion
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -193,12 +195,12 @@ export class BlockLibraryRenderer {
     const atlasUvs = Float32Array.from(uvs);
 
     for (const range of ranges) {
-      const tileRef = block.faceTextures[range.face] ?? block.defaultTexture;
+      const tileRef = tileRefForSlot(block, range.slot);
       if (!tileRef || !texture) {
         continue;
       }
 
-      let region;
+      let region: TilesetUVRegion;
       try {
         region = this.#tilesetManager
           .atlas(tileRef.tilesetId)

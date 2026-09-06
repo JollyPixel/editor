@@ -148,7 +148,7 @@ describe("UVRegion", () => {
       );
     });
 
-    test("normalizes active faces to UV_FACES order", () => {
+    test("keeps active faces in the order the region declared them", () => {
       const rect = { ...kRect };
       const region = new UVRegion({
         id: "r1",
@@ -167,7 +167,7 @@ describe("UVRegion", () => {
 
       assert.deepStrictEqual(
         region.facesOf().map(({ face }) => face),
-        ["left", "top"]
+        ["top", "left"]
       );
     });
 
@@ -245,8 +245,8 @@ describe("UVRegion", () => {
       assert.deepStrictEqual(collapsed.rectFor("front"), kRect);
     });
 
-    test("uses the requested face as the shared rectangle", () => {
-      const topRect = { x: 9, y: 9, width: 1, height: 1 };
+    test("uses the requested face as the shared rectangle among equally large ones", () => {
+      const topRect = { ...kRect, x: 9, y: 9 };
       const collapsed = makeUncollapsed()
         .withRect(topRect, "top")
         .collapse("top");
@@ -260,13 +260,26 @@ describe("UVRegion", () => {
       }
     });
 
+    test("ignores a requested face smaller than the largest one", () => {
+      const collapsed = makeUncollapsed()
+        .withRect({ x: 9, y: 9, width: 1, height: 1 }, "top")
+        .collapse("top");
+
+      assert.strictEqual(collapsed.collapsedFace, "front");
+      assert.deepStrictEqual(
+        collapsed.rectFor("top"),
+        kRect,
+        "a partial slot must not become the shared rectangle"
+      );
+    });
+
     test("returns the same instance when already collapsed", () => {
       const region = makeCollapsed();
 
       assert.strictEqual(region.collapse(), region);
     });
 
-    test("prefers a rectangle when collapsing a mixed region", () => {
+    test("prefers a rectangle among equally large faces", () => {
       const region = new UVRegion({
         id: "r1",
         color: "#f00",
@@ -277,14 +290,15 @@ describe("UVRegion", () => {
           back: kRect,
           left: { shape: "triangle", corner: "top-right", rect: kRect },
           right: kRect,
-          top: { x: 9, y: 9, width: 1, height: 1 },
+          top: { ...kRect, x: 9, y: 9 },
           bottom: kRect
         }
       });
 
-      assert.deepStrictEqual(region.collapse("left").rectFor("front"), {
-        x: 9, y: 9, width: 1, height: 1
-      });
+      const collapsed = region.collapse("left");
+
+      assert.strictEqual(collapsed.collapsedFace, "top");
+      assert.deepStrictEqual(collapsed.rectFor("front"), { ...kRect, x: 9, y: 9 });
     });
 
     test("restores triangle topology after collapsing and uncollapsing", () => {
@@ -333,10 +347,10 @@ describe("UVRegion", () => {
 
       assert.strictEqual(data.collapsedFace, "left");
       assert.deepStrictEqual(restored.rectFor("front"), {
-        x: 6, y: 6, width: 4, height: 4
+        x: 0, y: 6, width: 4, height: 4
       });
       assert.deepStrictEqual(restored.rectFor("top"), {
-        x: 6, y: 0, width: 4, height: 16
+        x: 0, y: 6, width: 4, height: 16
       });
     });
 
@@ -360,7 +374,7 @@ describe("UVRegion", () => {
       ]);
     });
 
-    test("keeps each retained face's own bounds across a collapse round-trip", () => {
+    test("keeps each retained face's own size across a collapse round-trip", () => {
       const ramp = new UVRegion({
         id: "r1",
         color: "#f00",
@@ -380,7 +394,8 @@ describe("UVRegion", () => {
         }
       });
 
-      const smallLeft = { x: 9, y: 9, width: 1, height: 1 };
+      // Only the position is reset; the slot keeps the size its shape gave it.
+      const smallLeft = { ...kRect, width: 1, height: 1 };
       const restored = ramp.collapse().uncollapse();
 
       assert.deepStrictEqual(restored.rectFor("left"), smallLeft);
@@ -390,7 +405,67 @@ describe("UVRegion", () => {
       assert.deepStrictEqual(restored.rectFor("back"), kRect);
     });
 
-    test("translates retained faces when the collapsed region moved", () => {
+    test("resets moved faces onto the shared rectangle", () => {
+      const region = new UVRegion({
+        id: "r1",
+        color: "#f00",
+        state: "uncollapsed",
+        faces: {
+          front: kRect,
+          back: kRect,
+          left: kRect,
+          right: kRect,
+          top: kRect,
+          bottom: kRect
+        }
+      });
+
+      const restored = region
+        .withRect({ ...kRect, x: 40, y: 30 }, "top")
+        .collapse()
+        .uncollapse();
+
+      for (const face of UV_FACES) {
+        assert.deepStrictEqual(
+          restored.rectFor(face),
+          kRect,
+          `${face} must restart on the region's rect`
+        );
+      }
+    });
+
+    test("resets moved faces when the collapsed region moved too", () => {
+      const region = new UVRegion({
+        id: "r1",
+        color: "#f00",
+        state: "uncollapsed",
+        faces: {
+          front: kRect,
+          back: kRect,
+          left: kRect,
+          right: kRect,
+          top: kRect,
+          bottom: kRect
+        }
+      });
+
+      const moved = { ...kRect, x: 20, y: 10 };
+      const restored = region
+        .withRect({ ...kRect, x: 40, y: 30 }, "top")
+        .collapse()
+        .withRect(moved)
+        .uncollapse();
+
+      for (const face of UV_FACES) {
+        assert.deepStrictEqual(
+          restored.rectFor(face),
+          moved,
+          `${face} must follow the region instead of replaying its old offset`
+        );
+      }
+    });
+
+    test("keeps each face's own size when the collapsed region moved", () => {
       const region = new UVRegion({
         id: "r1",
         color: "#f00",

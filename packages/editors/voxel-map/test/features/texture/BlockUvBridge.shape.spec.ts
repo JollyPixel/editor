@@ -305,7 +305,7 @@ describe("BlockUvBridge / shape footprint", () => {
 
       assert.deepEqual(uv.get("block-1")!.geometryFor("left"), {
         shape: "triangle",
-        corner: "bottom-left",
+        corner: "bottom-right",
         rect: { x: 32, y: 16, width: 16, height: 16 }
       });
     }
