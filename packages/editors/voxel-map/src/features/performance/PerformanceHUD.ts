@@ -2,6 +2,7 @@
 import {
   Pane,
   formatCount,
+  formatDecimal,
   formatMilliseconds,
   formatPercent
 } from "@jolly-pixel/ui";
@@ -138,10 +139,4 @@ export class PerformanceHUD {
     document.removeEventListener("keydown", this.#onKeyDown);
     this.#pane.dispose();
   }
-}
-
-function formatDecimal(
-  value: number
-): string {
-  return value.toFixed(1);
 }

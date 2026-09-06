@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   formatCount,
+  formatDecimal,
   formatMilliseconds,
   formatPercent,
   formatVector
@@ -22,6 +23,33 @@ describe("monitors.formatCount", () => {
     assert.equal(
       formatCount(0.4),
       "0"
+    );
+  });
+});
+
+describe("monitors.formatDecimal", () => {
+  test("keeps one decimal by default", () => {
+    assert.equal(
+      formatDecimal(1.26),
+      "1.3"
+    );
+  });
+
+  test("pads a whole number to one decimal", () => {
+    assert.equal(
+      formatDecimal(4),
+      "4.0"
+    );
+  });
+
+  test("honors an explicit decimals count", () => {
+    assert.equal(
+      formatDecimal(1.2345, 3),
+      "1.234"
+    );
+    assert.equal(
+      formatDecimal(1.5, 0),
+      "2"
     );
   });
 });

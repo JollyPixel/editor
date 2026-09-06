@@ -340,6 +340,7 @@ export {
 } from "./monitors/Graph.ts";
 export {
   formatCount,
+  formatDecimal,
   formatMilliseconds,
   formatPercent,
   formatVector

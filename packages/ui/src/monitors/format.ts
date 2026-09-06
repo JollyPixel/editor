@@ -8,6 +8,7 @@ import type {
 // CONSTANTS
 const kAxes: readonly string[] = ["x", "y", "z", "w"];
 const kDefaultPrecision = 2;
+const kDefaultDecimals = 1;
 
 export function formatCount(
   value: number
@@ -17,16 +18,23 @@ export function formatCount(
   ).toLocaleString("en-US");
 }
 
+export function formatDecimal(
+  value: number,
+  decimals = kDefaultDecimals
+): string {
+  return value.toFixed(decimals);
+}
+
 export function formatMilliseconds(
   value: number
 ): string {
-  return `${value.toFixed(1)} ms`;
+  return `${formatDecimal(value)} ms`;
 }
 
 export function formatPercent(
   value: number
 ): string {
-  return `${value.toFixed(1)} %`;
+  return `${formatDecimal(value)} %`;
 }
 
 export function formatVector(
