@@ -8,18 +8,19 @@ import {
 import {
   customElement,
   property,
+  query,
   state
 } from "lit/decorators.js";
 import type {
-  VoxelRenderer,
+  VoxelEngine,
   VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
 import type { JollyChangeDetail } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { GridRenderer } from "../../components/GridRenderer.ts";
+import type { GridRenderer } from "../../scene/GridRenderer.ts";
 import { parseVoxelWorld } from "./parseVoxelWorld.ts";
-import type { EventInput } from "../../shared/dom.types.ts";
+import type { EventInput } from "../../shared/domEvents.ts";
 
 @customElement("map-config-panel")
 export class MapConfigPanel extends LitElement {
@@ -41,7 +42,7 @@ export class MapConfigPanel extends LitElement {
   `;
 
   @property({ attribute: false })
-  declare vr: VoxelRenderer;
+  declare engine: VoxelEngine | undefined;
   @property({ attribute: false })
   declare gridRenderer: GridRenderer | undefined;
   @property({ attribute: false })
@@ -50,8 +51,12 @@ export class MapConfigPanel extends LitElement {
   @state()
   private declare _gridVisible: boolean;
 
+  @query("#file-input")
+  declare private _fileInput: HTMLInputElement;
+
   constructor() {
     super();
+    this.engine = undefined;
     this._gridVisible = true;
   }
 
@@ -88,11 +93,11 @@ export class MapConfigPanel extends LitElement {
   }
 
   #onSave(): void {
-    if (!this.vr) {
+    if (!this.engine) {
       return;
     }
 
-    const json = this.vr.engine.save();
+    const json = this.engine.save();
     const blob = new Blob([JSON.stringify(json, null, 2)], {
       type: "application/json"
     });
@@ -106,7 +111,7 @@ export class MapConfigPanel extends LitElement {
   }
 
   #onLoad(): void {
-    const input = this.shadowRoot!.querySelector<HTMLInputElement>("#file-input")!;
+    const input = this._fileInput;
     input.value = "";
     input.click();
   }

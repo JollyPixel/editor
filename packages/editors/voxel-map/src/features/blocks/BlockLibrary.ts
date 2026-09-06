@@ -2,7 +2,7 @@
 import { LitElement, html, css } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import {
-  type VoxelRenderer,
+  type VoxelEngine,
   type ResolvedBlockDefinition,
   VoxelRotation
 } from "@jolly-pixel/voxel.renderer";
@@ -16,8 +16,10 @@ import type {
 import { BlockEditorDialog } from "./BlockEditorDialog.ts";
 import {
   editorState,
-  type RotationMode
-} from "../../EditorState.ts";
+  type BrushStore,
+  type RotationMode,
+  type WorldStore
+} from "../../app/state/index.ts";
 
 // Registers the Three.js block grid.
 import "./BlockLibraryViewport.ts";
@@ -43,7 +45,11 @@ export class BlockLibrary extends LitElement {
   `;
 
   @property({ attribute: false })
-  declare vr: VoxelRenderer;
+  declare engine: VoxelEngine | undefined;
+  @property({ attribute: false })
+  declare brush: BrushStore;
+  @property({ attribute: false })
+  declare worldStore: WorldStore;
 
   @state()
   private declare _selectedId: number | null;
@@ -64,41 +70,44 @@ export class BlockLibrary extends LitElement {
   constructor() {
     super();
 
+    this.engine = undefined;
+    this.brush = editorState.brush;
+    this.worldStore = editorState.world;
     this._selectedId = null;
     this._selectedBlock = null;
     this._blocks = [];
-    this._rotationMode = editorState.rotationMode;
-    this._flipY = editorState.flipY;
+    this._rotationMode = this.brush.rotationMode;
+    this._flipY = this.brush.flipY;
   }
 
   readonly #onSelectedBlockChange = () => {
-    this._selectedId = editorState.selectedBlockId;
-    this._selectedBlock = this.vr?.engine.blockRegistry.get(this._selectedId ?? 0) ?? null;
+    this._selectedId = this.brush.blockId;
+    this._selectedBlock = this.engine?.blockRegistry.get(this._selectedId ?? 0) ?? null;
   };
 
   readonly #onBlockRegistryChanged = () => {
-    if (this.vr) {
-      this._selectedId = editorState.selectedBlockId;
-      this._selectedBlock = this.vr.engine.blockRegistry.get(this._selectedId ?? 0) ?? null;
+    if (this.engine) {
+      this._selectedId = this.brush.blockId;
+      this._selectedBlock = this.engine.blockRegistry.get(this._selectedId ?? 0) ?? null;
     }
     this.#refreshBlocks();
   };
 
   readonly #onRotationModeChange = () => {
-    this._rotationMode = editorState.rotationMode;
+    this._rotationMode = this.brush.rotationMode;
   };
 
   readonly #onFlipYChange = () => {
-    this._flipY = editorState.flipY;
+    this._flipY = this.brush.flipY;
   };
 
   override connectedCallback() {
     super.connectedCallback();
     this.#subscriptions.push(
-      editorState.on("selectedBlockChange", this.#onSelectedBlockChange),
-      editorState.on("blockRegistryChanged", this.#onBlockRegistryChanged),
-      editorState.on("rotationModeChange", this.#onRotationModeChange),
-      editorState.on("flipYChange", this.#onFlipYChange)
+      this.brush.watch("blockChange", this.#onSelectedBlockChange),
+      this.worldStore.watch("blockRegistryChanged", this.#onBlockRegistryChanged),
+      this.brush.watch("rotationModeChange", this.#onRotationModeChange),
+      this.brush.watch("flipYChange", this.#onFlipYChange)
     );
   }
 
@@ -112,9 +121,9 @@ export class BlockLibrary extends LitElement {
   override willUpdate(
     changed: Map<string, unknown>
   ) {
-    if (changed.has("vr") && this.vr) {
-      this._selectedId = editorState.selectedBlockId;
-      this._selectedBlock = this.vr.engine.blockRegistry.get(this._selectedId) ?? null;
+    if (changed.has("engine") && this.engine) {
+      this._selectedId = this.brush.blockId;
+      this._selectedBlock = this.engine.blockRegistry.get(this._selectedId) ?? null;
       this.#refreshBlocks();
     }
   }
@@ -133,7 +142,7 @@ export class BlockLibrary extends LitElement {
       </jolly-toolbar>
 
       <block-library-viewport
-        .vr=${this.vr}
+        .engine=${this.engine}
         .blocks=${this._blocks}
         .selectedId=${this._selectedId}
         @block-select=${this.#onBlockSelect}
@@ -154,7 +163,8 @@ export class BlockLibrary extends LitElement {
       ></jolly-checkbox>
 
       <block-editor-dialog
-        .vr=${this.vr}
+        .engine=${this.engine}
+        .brush=${this.brush}
         .block=${this._selectedBlock}
       ></block-editor-dialog>
     `;
@@ -163,30 +173,30 @@ export class BlockLibrary extends LitElement {
   #onBlockSelect(
     event: CustomEvent<{ id: number; }>
   ): void {
-    editorState.setSelectedBlock(event.detail.id);
+    this.brush.blockId = event.detail.id;
   }
 
   #onBlockEdit(
     event: CustomEvent<{ id: number; }>
   ): void {
-    editorState.setSelectedBlock(event.detail.id);
+    this.brush.blockId = event.detail.id;
     void this.#editBlock();
   }
 
   #onRotationChange(
     event: CustomEvent<JollyChangeDetail<RotationMode>>
   ): void {
-    editorState.setRotationMode(event.detail.value);
+    this.brush.rotationMode = event.detail.value;
   }
 
   #onFlipYToggle(
     event: CustomEvent<JollyChangeDetail<boolean>>
   ): void {
-    editorState.setFlipY(event.detail.value);
+    this.brush.flipY = event.detail.value;
   }
 
   async #addBlock(): Promise<void> {
-    if (!this.vr) {
+    if (!this.engine) {
       return;
     }
 
@@ -195,7 +205,7 @@ export class BlockLibrary extends LitElement {
   }
 
   async #editBlock(): Promise<void> {
-    if (!this.vr || this._selectedBlock === null) {
+    if (!this.engine || this._selectedBlock === null) {
       return;
     }
 
@@ -204,13 +214,12 @@ export class BlockLibrary extends LitElement {
   }
 
   #refreshBlocks(): void {
-    if (!this.vr) {
+    if (!this.engine) {
       return;
     }
 
-    // Registry order follows insertion, which a snapshot reshuffles.
     this._blocks = [
-      ...this.vr.engine.blockRegistry.getAll()
+      ...this.engine.blockRegistry.getAll()
     ].sort((a, b) => a.id - b.id);
   }
 }
