@@ -28,26 +28,30 @@ export function applyBrushStroke(
   }
 
   const { world } = engine;
+  const layer = world.getLayer(stroke.layerName);
   if (stroke.paint) {
     const {
       blockId,
       rotation,
       flipY
     } = stroke.paint;
-    world.setVoxelBulk(
-      stroke.layerName,
-      cells.map((position) => {
+    const entries = cells
+      .filter((position) => layer?.getVoxelAt(position) === undefined)
+      .map((position) => {
         return {
           position,
           blockId,
           rotation,
           flipY
         };
-      })
-    );
+      });
+    if (entries.length === 0) {
+      return false;
+    }
+
+    world.setVoxelBulk(stroke.layerName, entries);
   }
   else {
-    const layer = world.getLayer(stroke.layerName);
     const entries = cells
       .filter((position) => layer?.getVoxelAt(position) !== undefined)
       .map((position) => {

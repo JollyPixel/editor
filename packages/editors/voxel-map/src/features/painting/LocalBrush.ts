@@ -237,7 +237,7 @@ export class LocalBrush extends ActorComponent {
       return;
     }
 
-    const center = this.#castOnPlane(stroke.height);
+    const center = this.#aimAtHeight(stroke);
     if (center === null) {
       return;
     }
@@ -325,14 +325,15 @@ export class LocalBrush extends ActorComponent {
     return this.#frameAim;
   }
 
-  #castOnPlane(
-    height: number
+  #aimAtHeight(
+    stroke: BrushStroke
   ): VoxelCoord | null {
     const { input } = this.actor.world;
 
-    return this.#aimer.onPlane(
+    return this.#aimer.aimAtHeight(
       input.mouse.viewportPositionTo(this.#pointer),
-      height
+      stroke.height,
+      stroke.mode
     );
   }
 
@@ -358,7 +359,7 @@ export class LocalBrush extends ActorComponent {
     const stroke = this.#stroke;
     this.#frameCenter = stroke === null ?
       this.#resolveAim()?.remove ?? null :
-      this.#castOnPlane(stroke.height);
+      this.#aimAtHeight(stroke);
 
     return this.#frameCenter;
   }

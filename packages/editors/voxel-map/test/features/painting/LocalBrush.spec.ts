@@ -27,8 +27,15 @@ interface VoxelEntryLike {
 interface BrushHarnessOptions {
   maxDistance?: number;
   filled?: boolean;
+  blocks?: CellLike[];
   stampInterval?: number;
   stampCells?: number;
+}
+
+interface CellLike {
+  x: number;
+  y: number;
+  z: number;
 }
 
 interface BrushHarness {
@@ -61,7 +68,8 @@ function createHarness(
 ): BrushHarness {
   const {
     maxDistance,
-    filled = true,
+    filled = false,
+    blocks = [],
     stampInterval,
     stampCells
   } = options;
@@ -79,13 +87,23 @@ function createHarness(
   const operations: string[] = [];
   const placed: VoxelEntryLike[] = [];
   const removed: VoxelEntryLike[] = [];
+  const occupied = new Set(blocks.map(cellKey));
   const layer = {
-    getVoxelAt(): { blockId: number; } | undefined {
-      return filled ? { blockId: 1 } : undefined;
+    getVoxelAt(position: CellLike): { blockId: number; } | undefined {
+      return filled || occupied.has(cellKey(position)) ?
+        { blockId: 1 } :
+        undefined;
     }
   };
+  const root = new THREE.Group();
+  for (const block of blocks) {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    mesh.position.set(block.x + 0.5, block.y + 0.5, block.z + 0.5);
+    root.add(mesh);
+  }
+  root.updateMatrixWorld(true);
   const engine = {
-    root: new THREE.Group(),
+    root,
     world: {
       getLayer: () => layer,
       setVoxelBulk(_name: string, entries: VoxelEntryLike[]): void {
@@ -200,6 +218,12 @@ function createHarness(
   };
 }
 
+function cellKey(
+  cell: CellLike
+): string {
+  return `${cell.x},${cell.y},${cell.z}`;
+}
+
 function resetEditorState(): void {
   mock.restoreAll();
   editorState.selection.clear();
@@ -222,7 +246,7 @@ describe("LocalBrush mesh synchronization", () => {
 
   test("removes in one command and flushes", () => {
     editorState.selection.selectVoxelLayer("Ground");
-    const harness = createHarness();
+    const harness = createHarness({ filled: true });
 
     harness.press("right");
     harness.brush.update();
@@ -232,7 +256,7 @@ describe("LocalBrush mesh synchronization", () => {
 
   test("removes the cell resting on the ground the preview outlines", () => {
     editorState.selection.selectVoxelLayer("Ground");
-    const harness = createHarness();
+    const harness = createHarness({ filled: true });
 
     harness.press("right");
     harness.brush.update();
@@ -399,6 +423,28 @@ describe("LocalBrush stroke", () => {
     assert.ok(
       harness.placed.every(({ position }) => position.y === 0),
       "every cell of the stroke sits on the plane of its first cell"
+    );
+  });
+
+  test("never paints over the block its first cell rests against", () => {
+    editorState.selection.selectVoxelLayer("Ground");
+    const harness = createHarness({
+      blocks: [{ x: 0, y: 0, z: 0 }]
+    });
+    harness.camera.position.set(0.5, 2.2, -3);
+    harness.camera.lookAt(0.5, 0.85, 0);
+    harness.camera.updateMatrixWorld(true);
+
+    harness.press("left");
+    harness.brush.update();
+    harness.settle();
+    for (let stamp = 0; stamp < 3; stamp++) {
+      harness.brush.update(kFrame);
+    }
+
+    assert.deepStrictEqual(
+      harness.placed.map(({ position }) => position),
+      [{ x: 0, y: 0, z: -1 }]
     );
   });
 

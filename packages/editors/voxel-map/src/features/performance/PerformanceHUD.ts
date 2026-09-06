@@ -6,6 +6,7 @@ import {
   formatMilliseconds,
   formatPercent
 } from "@jolly-pixel/ui";
+import type { Keyboard } from "@jolly-pixel/controls";
 import type { VoxelDebugMode } from "@jolly-pixel/voxel.renderer";
 
 // CONSTANTS
@@ -43,11 +44,13 @@ export interface PerformanceSnapshot {
 }
 
 export interface PerformanceHUDOptions {
+  keyboard: Keyboard;
   onDebugModeChange: (mode: VoxelDebugMode) => void;
 }
 
 export class PerformanceHUD {
   #pane: Pane;
+  #keyboard: Keyboard;
   #worldFolder: ReturnType<Pane["addFolder"]>;
   #meshFolder: ReturnType<Pane["addFolder"]>;
   #onDebugModeChange: (mode: VoxelDebugMode) => void;
@@ -71,18 +74,21 @@ export class PerformanceHUD {
     buildMs: 0
   };
 
-  #onKeyDown = (
+  #onToggleKey = (
     event: KeyboardEvent
   ): void => {
-    if (event.key === kToggleKey) {
-      event.preventDefault();
-      this.#pane.hidden = !this.#pane.hidden;
+    // Auto-repeat would flicker the pane while the key stays held.
+    if (event.repeat) {
+      return;
     }
+
+    this.#pane.hidden = !this.#pane.hidden;
   };
 
   constructor(
     options: PerformanceHUDOptions
   ) {
+    this.#keyboard = options.keyboard;
     this.#onDebugModeChange = options.onDebugModeChange;
 
     const pane = new Pane({
@@ -123,7 +129,7 @@ export class PerformanceHUD {
     });
     this.#meshFolder = meshFolder;
 
-    document.addEventListener("keydown", this.#onKeyDown);
+    this.#keyboard.on(kToggleKey, this.#onToggleKey);
   }
 
   update(
@@ -136,7 +142,7 @@ export class PerformanceHUD {
   }
 
   dispose(): void {
-    document.removeEventListener("keydown", this.#onKeyDown);
+    this.#keyboard.off(kToggleKey, this.#onToggleKey);
     this.#pane.dispose();
   }
 }
