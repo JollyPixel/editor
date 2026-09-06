@@ -21,3 +21,7 @@ field.value = "move";
 `columns = 0` lets the grid choose its column count. The group has one tab
 stop. Arrow keys move between enabled options. A selection emits
 `jolly-change`.
+
+The radio group is named by `label`. A group with no visible label falls back
+to an `aria-label` on the element, so dropping the label column to save width
+keeps the group named.

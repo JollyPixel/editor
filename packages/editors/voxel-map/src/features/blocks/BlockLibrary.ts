@@ -24,6 +24,10 @@ import {
 // Registers the Three.js block grid.
 import "./BlockLibraryViewport.ts";
 
+export interface BlockSelectionChangeDetail {
+  block: ResolvedBlockDefinition | null;
+}
+
 // CONSTANTS
 const kRotationOptions: JollyOption<RotationMode>[] = [
   { label: "Auto", value: "auto" },
@@ -41,6 +45,25 @@ export class BlockLibrary extends LitElement {
       flex-direction: column;
       gap: var(--jolly-row-gap, 4px);
       overflow: hidden;
+    }
+
+    .brush-row {
+      display: flex;
+      align-items: center;
+      gap: var(--jolly-space-1, 4px);
+    }
+
+    .brush-row jolly-button-group {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .brush-row jolly-checkbox {
+      --jolly-label-width: auto;
+      --jolly-label-max-width: none;
+
+      flex: 0 0 auto;
+      margin-inline-start: auto;
     }
   `;
 
@@ -81,14 +104,12 @@ export class BlockLibrary extends LitElement {
   }
 
   readonly #onSelectedBlockChange = () => {
-    this._selectedId = this.brush.blockId;
-    this._selectedBlock = this.engine?.blockRegistry.get(this._selectedId ?? 0) ?? null;
+    this.#resolveSelection();
   };
 
   readonly #onBlockRegistryChanged = () => {
     if (this.engine) {
-      this._selectedId = this.brush.blockId;
-      this._selectedBlock = this.engine.blockRegistry.get(this._selectedId ?? 0) ?? null;
+      this.#resolveSelection();
     }
     this.#refreshBlocks();
   };
@@ -122,25 +143,13 @@ export class BlockLibrary extends LitElement {
     changed: Map<string, unknown>
   ) {
     if (changed.has("engine") && this.engine) {
-      this._selectedId = this.brush.blockId;
-      this._selectedBlock = this.engine.blockRegistry.get(this._selectedId) ?? null;
+      this.#resolveSelection();
       this.#refreshBlocks();
     }
   }
 
   override render() {
     return html`
-      <jolly-toolbar label="Block library">
-        <jolly-button @click=${this.#addBlock}>+ Block</jolly-button>
-        <jolly-button
-          icon="pencil"
-          icon-only
-          label="Edit block"
-          ?disabled=${this._selectedBlock === null}
-          @click=${this.#editBlock}
-        ></jolly-button>
-      </jolly-toolbar>
-
       <block-library-viewport
         .engine=${this.engine}
         .blocks=${this._blocks}
@@ -149,18 +158,19 @@ export class BlockLibrary extends LitElement {
         @block-edit=${this.#onBlockEdit}
       ></block-library-viewport>
 
-      <jolly-button-group
-        label="Rotation"
-        .options=${kRotationOptions}
-        .value=${this._rotationMode}
-        @jolly-change=${this.#onRotationChange}
-      ></jolly-button-group>
-      <jolly-checkbox
-        align="end"
-        label="Flip Y"
-        .value=${this._flipY}
-        @jolly-change=${this.#onFlipYToggle}
-      ></jolly-checkbox>
+      <div class="brush-row">
+        <jolly-button-group
+          aria-label="Rotation"
+          .options=${kRotationOptions}
+          .value=${this._rotationMode}
+          @jolly-change=${this.#onRotationChange}
+        ></jolly-button-group>
+        <jolly-checkbox
+          label="Flip Y"
+          .value=${this._flipY}
+          @jolly-change=${this.#onFlipYToggle}
+        ></jolly-checkbox>
+      </div>
 
       <block-editor-dialog
         .engine=${this.engine}
@@ -180,7 +190,7 @@ export class BlockLibrary extends LitElement {
     event: CustomEvent<{ id: number; }>
   ): void {
     this.brush.blockId = event.detail.id;
-    void this.#editBlock();
+    void this.editBlock();
   }
 
   #onRotationChange(
@@ -195,7 +205,7 @@ export class BlockLibrary extends LitElement {
     this.brush.flipY = event.detail.value;
   }
 
-  async #addBlock(): Promise<void> {
+  async addBlock(): Promise<void> {
     if (!this.engine) {
       return;
     }
@@ -204,13 +214,30 @@ export class BlockLibrary extends LitElement {
     await this._dialog?.openForCreate();
   }
 
-  async #editBlock(): Promise<void> {
+  async editBlock(): Promise<void> {
     if (!this.engine || this._selectedBlock === null) {
       return;
     }
 
     await this.updateComplete;
     await this._dialog?.openForEdit();
+  }
+
+  #resolveSelection(): void {
+    this._selectedId = this.brush.blockId;
+    const block = this.engine?.blockRegistry.get(this._selectedId ?? 0) ?? null;
+    if (block === this._selectedBlock) {
+      return;
+    }
+
+    this._selectedBlock = block;
+    this.dispatchEvent(
+      new CustomEvent<BlockSelectionChangeDetail>("block-selection-change", {
+        detail: { block },
+        bubbles: true,
+        composed: true
+      })
+    );
   }
 
   #refreshBlocks(): void {

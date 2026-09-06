@@ -11,6 +11,7 @@ import { unsafeSVG } from "lit/directives/unsafe-svg.js";
 export type BuiltinIconName =
   | "chevron"
   | "close"
+  | "plus"
   | "revert"
   | "drag"
   | "lock"

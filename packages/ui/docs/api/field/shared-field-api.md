@@ -31,6 +31,11 @@ An empty `label` drops the label column: the field reflects `unlabeled`, and the
 value spans the row with the same inset on both edges. A locked field keeps its
 gutter, so the value stays clear of the lock icon.
 
+The label column is capped at `--jolly-label-max-width` (`45%`) so a long label
+cannot swallow the value area. A field packed next to another on one line is
+narrow enough for that cap to truncate its label; set the property to `none`
+there.
+
 ## Events
 
 | Event | Detail | Timing |

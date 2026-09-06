@@ -50,7 +50,7 @@ export const propertyRowStyles = css`
   .label {
     flex: 0 0 auto;
     width: var(--jolly-label-width, auto);
-    max-width: 45%;
+    max-width: var(--jolly-label-max-width, 45%);
     color: var(--jolly-text-muted);
     text-align: start;
     ${truncate}

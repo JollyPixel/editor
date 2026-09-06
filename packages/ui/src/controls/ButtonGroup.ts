@@ -77,7 +77,7 @@ export class ButtonGroup<TValue> extends JollyField<TValue> {
       <div
         class="group"
         role="radiogroup"
-        aria-label=${this.label}
+        aria-label=${this.label || this.getAttribute("aria-label") || nothing}
         aria-readonly=${this.readonlyAria}
         aria-disabled=${this.lockedAria}
         aria-description=${this.lockDescription}

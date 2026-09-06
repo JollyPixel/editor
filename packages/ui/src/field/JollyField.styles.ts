@@ -142,12 +142,16 @@ export const fieldStyles = css`
     color: var(--jolly-locked-ring, var(--jolly-locked));
   }
 
-  /* A configured width aligns value columns across fields. */
+  /*
+   * A configured width aligns value columns across fields. The cap stops a long
+   * label from eating the value area; a field packed beside another on one line
+   * lifts it, since there the label is legitimately most of the row.
+   */
   .label {
     flex: 0 0 auto;
     width: var(--jolly-label-width, auto);
     min-width: 0;
-    max-width: 45%;
+    max-width: var(--jolly-label-max-width, 45%);
     color: var(--jolly-text-muted);
     text-align: start;
     ${truncate}

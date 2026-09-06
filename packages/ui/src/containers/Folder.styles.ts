@@ -3,7 +3,10 @@ import { css } from "lit";
 
 // Import Internal Dependencies
 import { kFallback } from "../theme/styles/fallbacks.ts";
-import { fillTransition } from "../theme/styles/mixins.ts";
+import {
+  fillTransition,
+  truncate
+} from "../theme/styles/mixins.ts";
 
 export const folderStyles = css`
   :host {
@@ -17,10 +20,6 @@ export const folderStyles = css`
     font: inherit;
   }
 
-  /*
-   * A folder sits inside a plane, so it paints no surface of its own. The header
-   * carries a control fill instead, which is what separates it from its rows.
-   */
   .header {
     position: relative;
     display: flex;
@@ -40,7 +39,6 @@ export const folderStyles = css`
     ${fillTransition}
   }
 
-  /* The checker fades in from the right without competing with the label. */
   .header::after {
     position: absolute;
     z-index: 0;
@@ -85,6 +83,7 @@ export const folderStyles = css`
     align-items: center;
     flex: 1 1 auto;
     align-self: stretch;
+    min-width: 0;
     gap: var(--jolly-space-1, 4px);
     padding: 0;
     border: 0;
@@ -93,6 +92,32 @@ export const folderStyles = css`
     font: inherit;
     text-align: start;
     cursor: pointer;
+  }
+
+  .toggle .label {
+    min-width: 0;
+    ${truncate}
+  }
+
+  ::slotted([slot="actions"]) {
+    position: relative;
+    z-index: 1;
+    flex: 0 0 auto;
+    margin-block: var(--jolly-space-1, 4px);
+  }
+
+  ::slotted(jolly-button[slot="actions"]) {
+    --jolly-text: var(
+      --jolly-folder-action-fg,
+      ${kFallback.folderActionFg}
+    );
+    --jolly-control-bg: var(
+      --jolly-folder-action-bg,
+      ${kFallback.folderActionBg}
+    );
+    --jolly-control-bg-hover: var(--jolly-folder-action-bg-hover);
+    --jolly-control-bg-focus: var(--jolly-folder-action-bg-focus);
+    --jolly-control-bg-active: var(--jolly-folder-action-bg-active);
   }
 
   .toggle .chevron {
@@ -135,7 +160,6 @@ export const folderStyles = css`
     touch-action: none;
   }
 
-  /* The source keeps its slot while a drag previews where it would land. */
   :host([dragging]) {
     opacity: 0.4;
   }

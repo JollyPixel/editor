@@ -39,6 +39,21 @@ const inkTokens = css`
     var(--jolly-accent-fill) 18%,
     transparent
   );
+  /* Inverted, so an action stays legible over the header pattern. */
+  --jolly-folder-action-fg: var(--jolly-surface);
+  --jolly-folder-action-bg: color-mix(
+    in oklab,
+    var(--jolly-ink) 84%,
+    var(--jolly-surface)
+  );
+  --jolly-folder-action-bg-hover: color-mix(
+    in oklab,
+    var(--jolly-ink) 92%,
+    var(--jolly-surface)
+  );
+  --jolly-folder-action-bg-focus: var(--jolly-ink);
+  --jolly-folder-action-bg-active: var(--jolly-ink);
+
   --jolly-pane-header-bg: var(--jolly-accent-fill);
   --jolly-dock-resize-bg: color-mix(
     in oklab,
@@ -160,6 +175,11 @@ export const themeTokens = css`
       --jolly-control-bg-active: ButtonFace;
       --jolly-folder-header-bg: ButtonFace;
       --jolly-folder-header-bg-hover: ButtonFace;
+      --jolly-folder-action-fg: ButtonText;
+      --jolly-folder-action-bg: ButtonFace;
+      --jolly-folder-action-bg-hover: ButtonFace;
+      --jolly-folder-action-bg-focus: ButtonFace;
+      --jolly-folder-action-bg-active: ButtonFace;
       --jolly-pane-header-bg: ButtonFace;
       --jolly-dock-resize-bg: ButtonFace;
       --jolly-dock-resize-bg-hover: Highlight;

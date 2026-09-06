@@ -29,11 +29,6 @@ type ReorderCommand =
   | "start"
   | "up";
 
-/*
- * The pointer half of a reorder lives in "jolly-folder-drag"; the commands
- * below are the keyboard half only.
- */
-
 @customElement("jolly-folder")
 export class Folder extends LitElement {
   static override styles = [
@@ -53,9 +48,6 @@ export class Folder extends LitElement {
   @property({ type: Boolean, reflect: true })
   declare reorderable: boolean;
 
-  /**
-   * Dims the folder in place while a drag session previews its new position.
-   */
   @property({ type: Boolean, reflect: true })
   declare dragging: boolean;
 
@@ -128,7 +120,8 @@ export class Folder extends LitElement {
           class="chevron"
           name="chevron"
           aria-hidden="true"
-        ></jolly-icon>${this.label}</button>
+        ></jolly-icon><span class="label">${this.label}</span></button>
+        <slot name="actions"></slot>
         <button
           class="grip"
           type="button"
@@ -144,9 +137,6 @@ export class Folder extends LitElement {
     `;
   }
 
-  /**
-   * Header rect, used by a drag session to size the ghost it carries.
-   */
   headerRect(): DOMRect {
     const header = this.renderRoot.querySelector(".header");
 
@@ -203,13 +193,6 @@ export class Folder extends LitElement {
     }
   };
 
-  /**
-   * Hands the pointer to the owning pane, which runs the drag session.
-   *
-   * The folder no longer captures the pointer itself: the pane owns the
-   * sibling geometry the session needs, and routing both drags through one
-   * engine is what gives folders the same insertion line panes get.
-   */
   #onGripPointerDown = (
     event: PointerEvent
   ) => {

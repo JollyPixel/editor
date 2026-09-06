@@ -176,6 +176,46 @@ test.describe("Folder", () => {
     expect(margins).toEqual(["2px", "2px", "2px"]);
   });
 
+  test("lays header actions out between the label and the grip", async({ page }) => {
+    await gotoGallery(page, {
+      example: "containers/folder",
+      chrome: "off"
+    });
+
+    const folder = page.locator("jolly-folder");
+    const header = await boxOf(folder.locator(".header"));
+    const label = await boxOf(folder.locator(".toggle .label"));
+    const action = await boxOf(folder.locator("jolly-button[data-action=plus]"));
+
+    expect(action.x).toBeGreaterThan(label.x + label.width);
+    expect(action.x).toBeGreaterThanOrEqual(header.x);
+    expect(action.x + action.width).toBeLessThanOrEqual(header.x + header.width);
+    expect(action.y).toBeGreaterThanOrEqual(header.y);
+    expect(action.y + action.height).toBeLessThanOrEqual(header.y + header.height);
+  });
+
+  test("runs a header action without toggling the folder, open or shut", async({ page }) => {
+    await gotoGallery(page, {
+      example: "containers/folder",
+      chrome: "off"
+    });
+
+    const folder = page.locator("jolly-folder");
+    const action = folder.locator("jolly-button[data-action=plus]");
+
+    await expect(folder).toHaveAttribute("open");
+    await action.click();
+    await expect(action).toHaveAttribute("data-clicks", "1");
+    await expect(folder).toHaveAttribute("open");
+
+    await folder.locator(".toggle").click();
+    await expect(folder).not.toHaveAttribute("open");
+
+    await action.click();
+    await expect(action).toHaveAttribute("data-clicks", "2");
+    await expect(folder).not.toHaveAttribute("open");
+  });
+
   test("distinguishes pane, folder, and control fills", async({ page }) => {
     await gotoGallery(page, {
       example: "scenarios/editor",
