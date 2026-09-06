@@ -8,6 +8,7 @@ import { EditorStore } from "./EditorStore.ts";
 const kSidebarTabs = [
   "general",
   "paint",
+  "blocks",
   "layers"
 ] as const;
 const kSidebarTabSet: ReadonlySet<string> = new Set(kSidebarTabs);
@@ -33,10 +34,13 @@ export class ShellStore extends EditorStore<ShellStoreEvents> {
     return this.#tab;
   }
 
-  set tab(tab: SidebarTab) {
+  set tab(
+    tab: SidebarTab
+  ) {
     if (this.#tab === tab) {
       return;
     }
+
     this.#tab = tab;
     this.emit("tabChange", tab);
   }
@@ -45,8 +49,13 @@ export class ShellStore extends EditorStore<ShellStoreEvents> {
     return this.#peers;
   }
 
-  set peers(peers: Iterable<PresencePeer>) {
+  set peers(
+    peers: Iterable<PresencePeer>
+  ) {
     this.#peers = [...peers];
-    this.emit("peersChange", this.#peers);
+    this.emit(
+      "peersChange",
+      this.#peers
+    );
   }
 }

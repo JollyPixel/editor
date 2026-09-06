@@ -25,7 +25,9 @@ export interface BlockShapeUv {
   isBox: boolean;
 }
 
-/** Adapts renderer-owned texture topology into pixel-editor UV geometry. */
+/**
+ * Adapts renderer-owned texture topology into pixel-editor UV geometry.
+ */
 export function blockShapeUv(shape: BlockShape): BlockShapeUv {
   const layout = shapeTextureLayout(shape);
   const activeFaces: UVSlot[] = [];

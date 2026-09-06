@@ -22,7 +22,9 @@ export interface ObjectAreaSceneOptions {
   onRemoving?: (key: string) => void;
 }
 
-/** Maintains the Three.js area objects projected from object-layer data. */
+/**
+ * Maintains the Three.js area objects projected from object-layer data.
+ */
 export class ObjectAreaScene {
   #actor: Actor;
   #world: VoxelWorld;
@@ -83,7 +85,9 @@ export class ObjectAreaScene {
     skipKey: string | null = null
   ): void {
     const layers = this.#world.getObjectLayers();
-    const names = new Set(layers.map((layer) => layer.name));
+    const names = new Set(
+      layers.map((layer) => layer.name)
+    );
 
     for (const key of [...this.#areas.keys()]) {
       if (!names.has(parseObjectKey(key).layerName)) {
@@ -149,7 +153,11 @@ export class ObjectAreaScene {
       return;
     }
 
-    area.position.set(position.x, position.y, position.z);
+    area.position.set(
+      position.x,
+      position.y,
+      position.z
+    );
     area.size = size;
 
     const color = colorOf(object);

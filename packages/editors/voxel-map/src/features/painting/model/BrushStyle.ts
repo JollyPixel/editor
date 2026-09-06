@@ -7,17 +7,16 @@ export type BrushEdgeStyle = "solid" | "dashed";
 export interface BrushStyle {
   opacity: number;
   /**
-   * Width of the footprint edges, in CSS pixels.
+   * Footprint edge width, in CSS pixels.
    */
   edgeWidth: number;
   edgeStyle: BrushEdgeStyle;
   /**
-   * Length of a dash, in world units. Ignored while the edges are solid.
+   * Dash length in world units; ignored for solid edges.
    */
   dashSize: number;
   /**
-   * Length of the gap between two dashes, in world units. Ignored while the
-   * edges are solid.
+   * Gap length in world units; ignored for solid edges.
    */
   gapSize: number;
 }

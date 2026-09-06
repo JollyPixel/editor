@@ -26,7 +26,9 @@ export interface BrushAimResolverOptions {
   maxDistance: number;
 }
 
-/** Resolves pointer coordinates to voxel cells without owning input state. */
+/**
+ * Resolves pointer coordinates to voxel cells without owning input state.
+ */
 export class BrushAimResolver {
   #camera: THREE.PerspectiveCamera;
   #solid: THREE.Object3D;

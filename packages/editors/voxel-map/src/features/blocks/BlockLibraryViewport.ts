@@ -8,6 +8,7 @@ import type {
 
 // Import Internal Dependencies
 import { BlockLibraryRenderer } from "./BlockLibraryRenderer.ts";
+import type { BlockLibraryLayout } from "./BlockLibrary.ts";
 
 // CONSTANTS
 const kBlockSelectEvent = "block-select";
@@ -20,6 +21,12 @@ export class BlockLibraryViewport extends LitElement {
       display: block;
     }
 
+    :host([layout="fill"]) {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
     .scroller {
       overflow-x: hidden;
       overflow-y: auto;
@@ -29,6 +36,11 @@ export class BlockLibraryViewport extends LitElement {
       background: var(--jolly-well-bg, #0e1316);
       border-radius: var(--jolly-radius-sm, 3px);
       cursor: pointer;
+    }
+
+    :host([layout="fill"]) .scroller {
+      flex: 1 1 auto;
+      max-height: none;
     }
   `;
 
@@ -41,6 +53,9 @@ export class BlockLibraryViewport extends LitElement {
   @property({ attribute: false })
   declare selectedId: number | null;
 
+  @property({ type: String, reflect: true })
+  declare layout: BlockLibraryLayout;
+
   @query(".scroller")
   declare private _scroller: HTMLDivElement;
 
@@ -51,6 +66,7 @@ export class BlockLibraryViewport extends LitElement {
     this.engine = undefined;
     this.blocks = [];
     this.selectedId = null;
+    this.layout = "compact";
   }
 
   override disconnectedCallback() {

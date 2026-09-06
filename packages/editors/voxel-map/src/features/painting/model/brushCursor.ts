@@ -8,11 +8,11 @@ export interface BrushCursor {
 
 export interface BrushBounds {
   /**
-   * Corner holding the lowest coordinates, in cells.
+   * Lowest cell coordinate.
    */
   min: VoxelCoord;
   /**
-   * Extent, in cells. A brush is one cell tall.
+   * Cell extent; brushes are one cell tall.
    */
   span: VoxelCoord;
 }

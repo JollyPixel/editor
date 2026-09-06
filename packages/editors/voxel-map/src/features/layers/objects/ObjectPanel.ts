@@ -121,12 +121,10 @@ export class ObjectPanel extends LitElement {
     const object = this.world
       .getObjectLayer(this.layerName)
       ?.objects.find((candidate) => candidate.id === this.objectId) ?? null;
-    // The store mutates objects in place, so a snapshot is what makes the
-    // reactive identity change and the panel re-render.
+    // Snapshot in-place mutations to trigger a Lit update.
     this._object = object === null ? null : { ...object };
 
-    // Rows are rebuilt only when the panel switches object: rebuilding them
-    // on every commit would drop the blank key of a half-typed row.
+    // Preserve half-typed rows when store commits arrive.
     if (object !== null && options.resetProperties === true) {
       this._props = propertyRowsOf(object.properties);
     }

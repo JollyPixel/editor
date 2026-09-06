@@ -27,9 +27,7 @@ export interface FreeFlyCameraOptions {
   minMoveSpeed?: number;
   maxMoveSpeed?: number;
   /**
-   * Velocity response in 1/s: the rate at which the camera eases towards the
-   * speed the keys ask for, and back to rest when they are released. Applied
-   * against the frame delta, so the feel does not change with frame rate.
+   * Frame-rate-independent acceleration and braking rate, in 1/s.
    */
   responsiveness?: number;
   mouseSensitivity?: number;
@@ -44,9 +42,6 @@ export interface FreeFlyCameraOptions {
   speedAdjustStep?: number;
 }
 
-/**
- * Minecraft-style free-fly camera.
- */
 export class FreeFlyCamera extends CameraComponent {
   enabled = true;
 
@@ -93,6 +88,14 @@ export class FreeFlyCamera extends CameraComponent {
       InputCombination.atLeastOne("KeyS.down", "ArrowDown.down")
     )
   });
+  #controls = InputCombination.atLeastOne(
+    "ControlLeft.down",
+    "ControlRight.down"
+  );
+  #shift = InputCombination.atLeastOne(
+    "ShiftLeft.down",
+    "ShiftRight.down"
+  );
 
   constructor(
     actor: Actor,
@@ -190,8 +193,7 @@ export class FreeFlyCamera extends CameraComponent {
     deltaTime: number
   ) {
     const { input } = this.actor.world;
-    const isDescending = input.keyboard.isDown("ShiftLeft") ||
-      input.keyboard.isDown("ShiftRight");
+    const isDescending = this.#shift.evaluate(input);
 
     if (!this.enabled) {
       this.#descendBlocked = isDescending;
@@ -240,7 +242,7 @@ export class FreeFlyCamera extends CameraComponent {
     }
 
     // Ctrl reserves scrolling for brush size.
-    const isCtrl = input.keyboard.isDown("ControlLeft") || input.keyboard.isDown("ControlRight");
+    const isCtrl = this.#controls.evaluate(input);
     const scroll = input.mouse.scrollTo(this.#scroll);
     if (!isCtrl && scroll.y !== 0) {
       if (isLooking) {

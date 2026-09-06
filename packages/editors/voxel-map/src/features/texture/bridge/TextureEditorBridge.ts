@@ -148,8 +148,7 @@ export class TextureEditorBridge {
     }
 
     this.#atlas.updateSource(this.#manager.textureCanvas(), dirty);
-    // A stroke reports a dirty region every frame and its tiles flip
-    // alpha as it goes, so rescan once it settles, not once per frame.
+    // Defer transparency scans until the stroke's dirty region settles.
     this.#pendingTransparency = this.#pendingTransparency === null
       ? dirty
       : rectsUnion(this.#pendingTransparency, dirty);

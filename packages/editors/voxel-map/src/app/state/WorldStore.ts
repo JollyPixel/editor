@@ -5,7 +5,9 @@ import type { VoxelLayerHookEvent } from "@jolly-pixel/voxel.renderer";
 import { EditorStore } from "./EditorStore.ts";
 
 export type WorldStoreEvents = {
-  layerUpdated: (event: VoxelLayerHookEvent) => void;
+  layerUpdated: (
+    event: VoxelLayerHookEvent
+  ) => void;
   blockRegistryChanged: () => void;
   reset: () => void;
 };

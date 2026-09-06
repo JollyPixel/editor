@@ -23,10 +23,16 @@ export function setLayerEntryVisibility(
       );
       break;
     case "object-layer":
-      world.updateObjectLayer(ref.name, { visible });
+      world.updateObjectLayer(
+        ref.name,
+        { visible }
+      );
       break;
     default:
-      world.updateLayer(ref.name, { visible });
+      world.updateLayer(
+        ref.name,
+        { visible }
+      );
       break;
   }
 }
@@ -79,7 +85,12 @@ export function createLayerEntry(
       selection.selectObjectLayer(result.name);
       break;
     default:
-      createObject(world, selection, viewFocus, result.name);
+      createObject(
+        world,
+        selection,
+        viewFocus,
+        result.name
+      );
       break;
   }
 }
@@ -90,7 +101,10 @@ export async function removeLayerEntry(
   ref: LayerRef
 ): Promise<void> {
   if (ref.kind === "object") {
-    world.removeObjectFromLayer(ref.layerName, ref.objectId);
+    world.removeObjectFromLayer(
+      ref.layerName,
+      ref.objectId
+    );
     selection.selectObjectLayer(ref.layerName);
 
     return;
@@ -121,7 +135,10 @@ export function moveLayerEntry(
   direction: "up" | "down"
 ): void {
   if (ref.kind === "voxel-layer") {
-    world.moveLayer(ref.name, direction);
+    world.moveLayer(
+      ref.name,
+      direction
+    );
   }
 }
 
@@ -136,8 +153,14 @@ function createObject(
     return;
   }
 
-  const object = createObjectAt(name, viewFocus.point);
-  world.addObjectToLayer(layerName, object);
+  const object = createObjectAt(
+    name,
+    viewFocus.point
+  );
+  world.addObjectToLayer(
+    layerName,
+    object
+  );
   selection.selectObject({
     layerName,
     objectId: object.id
@@ -152,7 +175,9 @@ function removalMessage(
     return `Delete the voxel layer "${ref.name}" and everything painted on it?`;
   }
 
-  const count = world.getObjectLayer(ref.name)?.objects.length ?? 0;
+  const count = world.getObjectLayer(
+    ref.name
+  )?.objects.length ?? 0;
 
   return count === 0 ?
     `Delete the object layer "${ref.name}"?` :

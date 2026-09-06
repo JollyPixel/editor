@@ -18,7 +18,9 @@ export interface BrushPreviewOptions {
   onCursorChange: (cursor: BrushCursor | null) => void;
 }
 
-/** Owns local brush presentation and cursor-change publication. */
+/**
+ * Owns local brush presentation and cursor-change publication.
+ */
 export class BrushPreview {
   #actor: Actor;
   #camera: THREE.PerspectiveCamera;

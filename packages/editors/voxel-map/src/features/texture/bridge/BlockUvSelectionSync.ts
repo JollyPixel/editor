@@ -11,7 +11,9 @@ import {
   blockUvRegionId
 } from "../uv/blockUvProjection.ts";
 
-/** Keeps block-library and UV-map selection aligned. */
+/**
+ * Keeps block-library and UV-map selection aligned.
+ */
 export class BlockUvSelectionSync {
   #uv: UVMap;
   #brush: BrushStore;

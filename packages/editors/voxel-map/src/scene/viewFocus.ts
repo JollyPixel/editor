@@ -21,55 +21,53 @@ const kOrigin: Vector3Like = {
 
 export interface ViewRayHit {
   /**
-   * World-space point where the ray landed.
+   * World-space hit point.
    */
   point: THREE.Vector3;
   /**
-   * Distance from the camera, in world units.
+   * Camera distance, in world units.
    */
   distance: number;
   /**
-   * Normal of the surface that was hit, in the space of the object owning it.
+   * Surface normal in the hit object's local space.
    */
   normal: THREE.Vector3;
   /**
-   * True when the ray missed every solid and landed on the ground plane.
+   * True when the ground plane was hit.
    */
   ground: boolean;
 }
 
 export interface ViewRayOptions {
   /**
-   * Normalized device coordinates to cast through.
+   * Pointer in normalized device coordinates.
    * @default the screen center
    */
   pointer?: THREE.Vector2;
   /**
-   * Side of the square ground plane, centered on the origin, used when the
-   * ray misses every solid. Past its bounds the ray hits nothing.
+   * Fallback ground-plane side length, in world units.
    * @default 4096
    */
   groundPlaneSize?: number;
   /**
-   * Raycaster to reuse instead of allocating one.
+   * Raycaster to reuse across calls.
    */
   raycaster?: THREE.Raycaster;
 }
 
 export interface ViewFocusOptions extends ViewRayOptions {
   /**
-   * Distance ahead of the camera used when the ray hits nothing, in world
-   * units.
+   * Distance used when no surface is hit, in world units.
    * @default 12
    */
   fallbackDistance?: number;
   /**
-   * Bounds, in world units, the resolved point is kept within so a grazing
-   * ray never lands over the horizon.
+   * Nearest resolved focus distance, in world units.
    * @default 2
    */
   minDistance?: number;
   /**
+   * Farthest resolved focus distance, in world units.
    * @default 64
    */
   maxDistance?: number;
@@ -86,7 +84,10 @@ export function castViewRay(
     raycaster = new THREE.Raycaster()
   } = options;
 
-  raycaster.setFromCamera(pointer, camera);
+  raycaster.setFromCamera(
+    pointer,
+    camera
+  );
 
   if (solid !== null) {
     const [hit] = raycaster.intersectObject(solid, true);
@@ -115,7 +116,9 @@ export function castViewRay(
 
   return {
     point,
-    distance: point.distanceTo(raycaster.ray.origin),
+    distance: point.distanceTo(
+      raycaster.ray.origin
+    ),
     normal: kGroundPlane.normal.clone(),
     ground: true
   };

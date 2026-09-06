@@ -9,9 +9,15 @@ export type LayerSelection =
   | null;
 
 export type SelectionStoreEvents = {
-  change: (selection: LayerSelection) => void;
-  gizmoLayerChange: (name: string | null) => void;
-  gizmoDraggingChange: (dragging: boolean) => void;
+  change: (
+    selection: LayerSelection
+  ) => void;
+  gizmoLayerChange: (
+    name: string | null
+  ) => void;
+  gizmoDraggingChange: (
+    dragging: boolean
+  ) => void;
 };
 
 export class SelectionStore extends EditorStore<SelectionStoreEvents> {
@@ -23,13 +29,18 @@ export class SelectionStore extends EditorStore<SelectionStoreEvents> {
     return this.#current;
   }
 
-  set current(selection: LayerSelection) {
+  set current(
+    selection: LayerSelection
+  ) {
     if (selectionKey(this.#current) === selectionKey(selection)) {
       return;
     }
 
     this.#current = selection;
-    this.emit("change", selection);
+    this.emit(
+      "change",
+      selection
+    );
 
     this.gizmoLayer = null;
   }
@@ -73,30 +84,43 @@ export class SelectionStore extends EditorStore<SelectionStoreEvents> {
     return this.#gizmoLayer;
   }
 
-  set gizmoLayer(name: string | null) {
+  set gizmoLayer(
+    name: string | null
+  ) {
     if (this.#gizmoLayer === name) {
       return;
     }
+
     this.#gizmoLayer = name;
-    this.emit("gizmoLayerChange", name);
+    this.emit(
+      "gizmoLayerChange",
+      name
+    );
   }
 
   get gizmoDragging(): boolean {
     return this.#gizmoDragging;
   }
 
-  set gizmoDragging(dragging: boolean) {
+  set gizmoDragging(
+    dragging: boolean
+  ) {
     if (this.#gizmoDragging === dragging) {
       return;
     }
     this.#gizmoDragging = dragging;
-    this.emit("gizmoDraggingChange", dragging);
+    this.emit(
+      "gizmoDraggingChange",
+      dragging
+    );
   }
 
   selectVoxelLayer(
     name: string | null
   ): void {
-    this.current = name === null ? null : { kind: "voxel-layer", name };
+    this.current = name === null
+      ? null
+      : { kind: "voxel-layer", name };
   }
 
   selectObjectLayer(

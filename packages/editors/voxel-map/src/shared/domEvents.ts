@@ -1,7 +1,9 @@
 export type EventInput = Event & {
   target: HTMLInputElement;
 };
-export type EventCanvasHoverChange = CustomEvent<{ hovering: boolean; }>;
+export type EventCanvasHoverChange = CustomEvent<{
+  hovering: boolean;
+}>;
 
 declare global {
   interface HTMLElementEventMap {

@@ -43,18 +43,13 @@ const kDefaultBlockLimit = 32;
 
 export interface EditorSceneOptions {
   /**
-   * The name of the default layer to create when the scene awakes. This can be
    * @default "Ground"
    */
   defaultLayerName?: string;
   tilesets: TilesetSource[];
-  /**
-   * Optional room to synchronize the voxel world over the network.
-   */
   voxelRoom?: network.Room<VoxelNetworkCommand, VoxelServerMessage>;
   /**
-   * Local collaborator, resolved before the socket opens. Absent offline, in
-   * which case the brush keeps its default tint.
+   * Local identity; absent offline, leaving the default brush tint.
    */
   identity?: EditorIdentity;
   viewFocus?: ViewFocus;
@@ -210,7 +205,7 @@ export class EditorScene extends Systems.Scene {
         }
       });
 
-    // Offline only: a networked world receives its blocks in the snapshot.
+    // Online snapshots supply block definitions.
     if (!this.#voxelRoom) {
       this.#registerDefaultBlocks();
       this.editorState.world.emit("blockRegistryChanged");
@@ -303,6 +298,7 @@ export class EditorScene extends Systems.Scene {
     for (const unsubscribe of this.#subscriptions.splice(0)) {
       unsubscribe();
     }
+
     this.#viewFocus.provider = null;
     this.#voxelSyncClient?.destroy();
     this.#voxelSyncClient = undefined;

@@ -242,7 +242,11 @@ export class LayerManager extends LitElement {
 
     const { visible } = event.detail;
     const ref = layerRefOf(event.detail.id);
-    setLayerEntryVisibility(this.world, ref, visible);
+    setLayerEntryVisibility(
+      this.world,
+      ref,
+      visible
+    );
     this.#refreshNodes();
   }
 
@@ -254,7 +258,11 @@ export class LayerManager extends LitElement {
       return;
     }
 
-    renameLayerEntry(this.world, ref, event.detail.name);
+    renameLayerEntry(
+      this.world,
+      ref,
+      event.detail.name
+    );
     this.#refreshNodes();
   }
 
@@ -266,7 +274,11 @@ export class LayerManager extends LitElement {
       return;
     }
 
-    setLayerEntryLocked(this.world, ref, event.detail.locked);
+    setLayerEntryLocked(
+      this.world,
+      ref,
+      event.detail.locked
+    );
     this.#refreshNodes();
   }
 
@@ -290,7 +302,12 @@ export class LayerManager extends LitElement {
       return;
     }
 
-    createLayerEntry(this.world, this.selection, this.viewFocus, result);
+    createLayerEntry(
+      this.world,
+      this.selection,
+      this.viewFocus,
+      result
+    );
   }
 
   async #remove() {
@@ -299,7 +316,11 @@ export class LayerManager extends LitElement {
       return;
     }
 
-    await removeLayerEntry(this.world, this.selection, ref);
+    await removeLayerEntry(
+      this.world,
+      this.selection,
+      ref
+    );
   }
 
   #moveUp(): void {
@@ -322,7 +343,11 @@ export class LayerManager extends LitElement {
       return;
     }
 
-    moveLayerEntry(this.world, ref, direction);
+    moveLayerEntry(
+      this.world,
+      ref,
+      direction
+    );
   }
 }
 

@@ -41,8 +41,7 @@ const kBoxShapeUv: BlockShapeUv = {
 };
 
 /**
- * Builds a total record keyed by every UV face, which `Object.fromEntries`
- * cannot express on its own.
+ * Builds a complete UV-face record that `Object.fromEntries` cannot type.
  */
 function recordOfFaces<TValue>(
   valueOf: (face: UVSlot) => TValue

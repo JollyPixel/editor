@@ -17,7 +17,9 @@ import {
   readUsername
 } from "../../collaboration/identity.ts";
 
-/** Owns the network adapters attached to one pixel-art canvas. */
+/**
+ * Owns the network adapters attached to one pixel-art canvas.
+ */
 export class PixelCollaborationSession {
   #syncClient: PixelSyncClient | null = null;
   #cursorSync: PixelCursorSync | null = null;

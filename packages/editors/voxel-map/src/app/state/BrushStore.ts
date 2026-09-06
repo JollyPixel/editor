@@ -47,13 +47,22 @@ export class BrushStore extends EditorStore<BrushStoreEvents> {
     return this.#size;
   }
 
-  set size(size: number) {
-    const next = Math.max(kMinSize, Math.min(kMaxSize, size));
+  set size(
+    size: number
+  ) {
+    const next = Math.max(
+      kMinSize,
+      Math.min(kMaxSize, size)
+    );
     if (this.#size === next) {
       return;
     }
+
     this.#size = next;
-    this.emit("sizeChange", next);
+    this.emit(
+      "sizeChange",
+      next
+    );
   }
 
   get style(): BrushStyle {
@@ -64,12 +73,18 @@ export class BrushStore extends EditorStore<BrushStoreEvents> {
     return this.#rotationMode;
   }
 
-  set rotationMode(mode: RotationMode) {
+  set rotationMode(
+    mode: RotationMode
+  ) {
     if (this.#rotationMode === mode) {
       return;
     }
+
     this.#rotationMode = mode;
-    this.emit("rotationModeChange", mode);
+    this.emit(
+      "rotationModeChange",
+      mode
+    );
   }
 
   get flipY(): boolean {
@@ -80,23 +95,35 @@ export class BrushStore extends EditorStore<BrushStoreEvents> {
     if (this.#flipY === flipY) {
       return;
     }
+
     this.#flipY = flipY;
-    this.emit("flipYChange", flipY);
+    this.emit(
+      "flipYChange",
+      flipY
+    );
   }
 
-  resize(delta: number): void {
+  resize(
+    delta: number
+  ): void {
     this.size = this.#size + delta;
   }
 
   applyStyle(
     patch: Partial<BrushStyle>
   ): void {
-    const next = brushStyleFrom(patch, this.#style);
+    const next = brushStyleFrom(
+      patch,
+      this.#style
+    );
     if (brushStyleEquals(this.#style, next)) {
       return;
     }
 
     this.#style = next;
-    this.emit("styleChange", next);
+    this.emit(
+      "styleChange",
+      next
+    );
   }
 }

@@ -2,11 +2,7 @@
 import type { VoxelObjectProperties } from "@jolly-pixel/voxel.renderer";
 
 /**
- * One editable row of the custom properties table.
- *
- * Rows are addressed by index rather than by key: a key is free to be blank
- * or duplicated while it is being typed, which re-keying a record on every
- * keystroke cannot represent.
+ * Editable row indexed to allow blank or duplicate keys while typing.
  */
 export interface PropertyRow {
   key: string;
@@ -28,8 +24,7 @@ export function propertyRowsOf(
 }
 
 /**
- * Folds the rows back into a record. Blank keys are dropped, and a later
- * row wins over an earlier one holding the same key.
+ * Drops blank keys; later duplicate keys win.
  */
 export function propertiesOf(
   rows: readonly PropertyRow[]

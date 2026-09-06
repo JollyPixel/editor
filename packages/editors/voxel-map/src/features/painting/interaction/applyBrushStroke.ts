@@ -8,7 +8,6 @@ import type {
 import * as cursor from "../model/brushCursor.ts";
 import type { BrushStroke } from "../model/BrushStroke.ts";
 
-/** Applies one group of stroke centers as a single world command. */
 export function applyBrushStroke(
   engine: VoxelEngine,
   stroke: BrushStroke,
