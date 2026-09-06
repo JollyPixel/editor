@@ -7,6 +7,10 @@ import {
   EditorState,
   type LayerSelection
 } from "../src/EditorState.ts";
+import {
+  DEFAULT_BRUSH_STYLE,
+  type BrushStyle
+} from "../src/components/brush/BrushStyle.ts";
 
 describe("EditorState", () => {
   it("publishes one typed selection value", () => {
@@ -104,5 +108,28 @@ describe("EditorState", () => {
       y: 0,
       z: 0
     });
+  });
+});
+
+describe("EditorState / brush style", () => {
+  it("publishes a patched style once", () => {
+    const state = new EditorState();
+    const styles: BrushStyle[] = [];
+    state.on("brushStyleChange", (style) => styles.push(style));
+
+    state.setBrushStyle({ edgeStyle: "dashed" });
+    state.setBrushStyle({ edgeStyle: "dashed" });
+
+    assert.equal(styles.length, 1);
+    assert.equal(state.brushStyle.edgeStyle, "dashed");
+    assert.equal(state.brushStyle.opacity, DEFAULT_BRUSH_STYLE.opacity);
+  });
+
+  it("ignores a member it cannot use", () => {
+    const state = new EditorState();
+
+    state.setBrushStyle({ opacity: Number.NaN });
+
+    assert.equal(state.brushStyle.opacity, DEFAULT_BRUSH_STYLE.opacity);
   });
 });

@@ -28,6 +28,7 @@ Add `?offline` to skip network setup entirely. Nothing is persisted in that mode
 - `EditorScene` owns the ECS scene, voxel renderer, and synchronization. Its `ready` promise publishes `vr` and `gridRenderer` once the scene has awoken.
 - `EditorState` publishes typed UI state changes.
 - `EditorSidebar` contains the Lit editing panels.
+- `LocalBrush` owns painting. Holding the left or right button paints a stroke: the cells under the pointer are edited as it travels, once each, and every stamp travels as a single bulk command. A stroke stays at the height it started at, matching the X/Z footprint of the brush, so it never climbs onto the voxels it just laid down. It is paced rather than free-running — `stampInterval` (ms) is the shortest delay between two stamps and `stampCells` how far it may travel per stamp, so a fast pointer makes the stroke trail and catch up instead of laying a whole line down at once. Note that components receive frame deltas in seconds; the brush converts them. `editorState.setBrushStyle()` configures how every brush preview is drawn (opacity, edge width, solid or dashed edges); it is a local preference and is never published.
 - `TextureEditorBridge`, `BlockUvBridge`, and `BlockLibraryRenderer` connect pixel editing and block previews to the voxel engine. Tile coordinates and `transparent` are derived from the paint tab, never typed in: `block-editor-dialog` configures name, shape, and tileset alone.
 
 ## 🧪 Tests and checks

@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import * as network from "@jolly-pixel/network";
+import type { Vector3Like } from "three";
 
 // Import Internal Dependencies
 import type { VoxelLayerHookEvent } from "../hooks.ts";
@@ -24,22 +25,35 @@ export class VoxelCommandArbiter {
     );
   }
 
-  resolve(
-    command: VoxelNetworkCommand
-  ): boolean {
-    return this.#tracker.resolve(
-      VoxelCommandArbiter.key(command),
-      command
-    ) !== "reject";
+  admit<TCommand extends VoxelNetworkCommand>(
+    command: TCommand
+  ): TCommand | null {
+    // Narrowing only ever drops entries, never changing the action the
+    // caller resolved the command to.
+    return this.#admit(command) as TCommand | null;
   }
 
   record(
     command: VoxelNetworkCommand
   ): void {
-    this.#tracker.record(
-      VoxelCommandArbiter.key(command),
-      command
-    );
+    for (const key of VoxelCommandArbiter.keys(command)) {
+      this.#tracker.record(key, command);
+    }
+  }
+
+  static keys(
+    command: VoxelLayerHookEvent | VoxelNetworkCommand
+  ): string[] {
+    if (isBulkCommand(command)) {
+      return entryKeys(
+        command.layerName,
+        command.metadata.entries
+      );
+    }
+
+    const key = VoxelCommandArbiter.key(command);
+
+    return key === null ? [] : [key];
   }
 
   static key(
@@ -49,9 +63,7 @@ export class VoxelCommandArbiter {
       command.action === "voxel-set" ||
       command.action === "voxel-removed"
     ) {
-      const { x, y, z } = command.metadata.position;
-
-      return `${command.layerName}:${x},${y},${z}`;
+      return voxelKey(command.layerName, command.metadata.position);
     }
 
     if (command.action === "block-defined") {
@@ -63,4 +75,80 @@ export class VoxelCommandArbiter {
 
     return null;
   }
+
+  #admit(
+    command: VoxelNetworkCommand
+  ): VoxelNetworkCommand | null {
+    if (!isBulkCommand(command)) {
+      return this.#wins(VoxelCommandArbiter.key(command), command) ?
+        command :
+        null;
+    }
+
+    const keep = (
+      entry: { position: Vector3Like; }
+    ): boolean => this.#wins(
+      voxelKey(command.layerName, entry.position),
+      command
+    );
+
+    if (command.action === "voxels-set") {
+      const entries = command.metadata.entries.filter(keep);
+      if (entries.length === command.metadata.entries.length) {
+        return command;
+      }
+
+      return entries.length === 0 ? null : {
+        ...command,
+        metadata: { entries }
+      };
+    }
+
+    const entries = command.metadata.entries.filter(keep);
+    if (entries.length === command.metadata.entries.length) {
+      return command;
+    }
+
+    return entries.length === 0 ? null : {
+      ...command,
+      metadata: { entries }
+    };
+  }
+
+  #wins(
+    key: string | null,
+    command: VoxelNetworkCommand
+  ): boolean {
+    return this.#tracker.resolve(key, command) !== "reject";
+  }
+}
+
+function isBulkCommand<
+  TCommand extends VoxelLayerHookEvent | VoxelNetworkCommand
+>(
+  command: TCommand
+): command is Extract<
+  TCommand,
+  { action: "voxels-set" | "voxels-removed"; }
+> {
+  return command.action === "voxels-set" ||
+    command.action === "voxels-removed";
+}
+
+function entryKeys(
+  layerName: string,
+  entries: readonly { position: Vector3Like; }[]
+): string[] {
+  return entries.map(
+    (entry) => voxelKey(layerName, entry.position)
+  );
+}
+
+function voxelKey(
+  layerName: string,
+  position: Vector3Like
+): string {
+  const { x, y, z } = position;
+
+  return `${layerName}:${x},${y},${z}`;
 }

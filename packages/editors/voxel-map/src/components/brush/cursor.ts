@@ -6,6 +6,37 @@ export interface BrushCursor {
   size: number;
 }
 
+export interface BrushBounds {
+  /**
+   * Corner holding the lowest coordinates, in cells.
+   */
+  min: VoxelCoord;
+  /**
+   * Extent, in cells. A brush is one cell tall.
+   */
+  span: VoxelCoord;
+}
+
+export function boundsOf(
+  cursor: BrushCursor
+): BrushBounds {
+  const { position, size } = cursor;
+  const half = Math.floor(size / 2);
+
+  return {
+    min: {
+      x: position.x - half,
+      y: position.y,
+      z: position.z - half
+    },
+    span: {
+      x: size,
+      y: 1,
+      z: size
+    }
+  };
+}
+
 export function cellsOf(
   cursor: BrushCursor
 ): VoxelCoord[] {

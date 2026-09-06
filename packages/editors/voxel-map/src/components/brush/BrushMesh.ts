@@ -5,106 +5,110 @@ import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js
 import { Line2NodeMaterial } from "three/webgpu";
 import type { VoxelCoord } from "@jolly-pixel/voxel.renderer";
 
+// Import Internal Dependencies
+import {
+  boundsOf,
+  type BrushCursor
+} from "./cursor.ts";
+import {
+  DEFAULT_BRUSH_STYLE,
+  brushStyleFrom,
+  type BrushStyle
+} from "./BrushStyle.ts";
+
 // CONSTANTS
-// The extra 0.01 prevents z-fighting with the chunk mesh.
-const kHalfSize = 0.51;
+// The extra 0.01 per side prevents z-fighting with the chunk mesh.
+const kInflate = 0.01;
 const kDefaultHighlight = 0x9df6ff;
 
 export interface BrushMeshOptions {
   /**
-   * Color of the brush preview cubes. It also tints the outline unless that
-   * is set on its own.
    * @default 0x33e0ff
    */
   color?: THREE.ColorRepresentation;
   /**
-   * Opacity of the brush preview cubes.
-   * @default 0.15
-   */
-  opacity?: number;
-  /**
-   * Color of the outline drawn around each preview cube.
    * @default `color` when it is given, 0x9df6ff otherwise
    */
   borderColor?: THREE.ColorRepresentation;
   /**
-   * Outline width in CSS pixels.
-   * @default 2
+   * @default DEFAULT_BRUSH_STYLE
    */
-  borderLineWidth?: number;
+  style?: BrushStyle;
 }
 
 /**
- * Draws the cells a brush covers, as translucent cubes wrapped in one outline.
- *
- * Visibility has a single owner: `hide()` and `show()` set the intent, and
- * nothing is drawn while the cell count is zero.
+ * Draws the footprint a brush covers, as one translucent box wrapped in one
+ * outline. Both are resized in place, so a growing brush never allocates.
  */
 export class BrushMesh extends THREE.Group {
-  static maxCells = 512;
-
-  #previewMesh: THREE.InstancedMesh;
-  #dummy = new THREE.Object3D();
+  #fill: THREE.Mesh;
+  #fillMaterial: THREE.MeshBasicMaterial;
 
   #border: LineSegments2;
+  #borderMaterial: Line2NodeMaterial;
 
+  #style: BrushStyle;
   #hidden = false;
-  #cellCount = 0;
+  #drawn = false;
+  #span = {
+    x: 0,
+    y: 0,
+    z: 0
+  };
 
   constructor(
     options: BrushMeshOptions = {}
   ) {
     super();
 
-    const {
-      color = 0x33e0ff,
-      opacity = 0.15,
-      borderLineWidth = 2
-    } = options;
+    const { color = 0x33e0ff, style = DEFAULT_BRUSH_STYLE } = options;
     const highlight = options.color ?? kDefaultHighlight;
     const borderColor = options.borderColor ?? highlight;
 
     this.name = "brush";
+    this.#style = style;
 
-    const inflatedSize = kHalfSize * 2;
-    const geometry = new THREE.BoxGeometry(
-      inflatedSize,
-      inflatedSize,
-      inflatedSize
-    );
-    const material = new THREE.MeshBasicMaterial({
+    this.#fillMaterial = new THREE.MeshBasicMaterial({
       color,
       transparent: true,
-      opacity,
+      opacity: style.opacity,
       depthWrite: false
     });
-
-    this.#previewMesh = new THREE.InstancedMesh(
-      geometry,
-      material,
-      BrushMesh.maxCells
+    this.#fill = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      this.#fillMaterial
     );
-    this.#previewMesh.count = 0;
-    this.#previewMesh.renderOrder = 1;
-    this.#previewMesh.frustumCulled = false;
-    this.#previewMesh.visible = false;
+    this.#fill.renderOrder = 1;
+    this.#fill.frustumCulled = false;
+    this.#fill.visible = false;
 
-    const borderGeometry = new LineSegmentsGeometry();
-    borderGeometry.setPositions([]);
-    const borderMaterial = new Line2NodeMaterial({
+    this.#borderMaterial = new Line2NodeMaterial({
       color: borderColor,
-      linewidth: borderLineWidth,
+      linewidth: style.edgeWidth,
       depthTest: false
     });
-    this.#border = new LineSegments2(borderGeometry, borderMaterial);
+    this.#border = new LineSegments2(
+      new LineSegmentsGeometry(),
+      this.#borderMaterial
+    );
     this.#border.renderOrder = 2;
     this.#border.frustumCulled = false;
     this.#border.visible = false;
 
     this.add(
-      this.#previewMesh,
+      this.#fill,
       this.#border
     );
+    this.#applyStyle();
+  }
+
+  get style(): BrushStyle {
+    return this.#style;
+  }
+
+  set style(value: BrushStyle) {
+    this.#style = brushStyleFrom(value);
+    this.#applyStyle();
   }
 
   hide(): void {
@@ -117,103 +121,109 @@ export class BrushMesh extends THREE.Group {
     this.#applyVisibility();
   }
 
-  clearCells(): void {
-    this.#cellCount = 0;
-    this.#previewMesh.count = 0;
+  clearFootprint(): void {
+    this.#drawn = false;
     this.#applyVisibility();
   }
 
-  drawCells(
-    cells: VoxelCoord[]
+  draw(
+    cursor: BrushCursor
   ): void {
-    const count = Math.min(cells.length, BrushMesh.maxCells);
+    const { min, span } = boundsOf(cursor);
 
-    for (let i = 0; i < count; i++) {
-      this.#dummy.position.set(
-        cells[i].x + 0.5,
-        cells[i].y + 0.5,
-        cells[i].z + 0.5
-      );
-      this.#dummy.quaternion.identity();
-      this.#dummy.updateMatrix();
-      this.#previewMesh.setMatrixAt(i, this.#dummy.matrix);
-    }
+    this.position.set(
+      min.x + (span.x / 2),
+      min.y + (span.y / 2),
+      min.z + (span.z / 2)
+    );
+    this.#resize(span);
 
-    this.#previewMesh.count = count;
-    this.#previewMesh.instanceMatrix.needsUpdate = true;
-    this.#cellCount = count;
+    this.#drawn = true;
+    this.#applyVisibility();
+  }
 
-    if (count === 0) {
-      this.clearCells();
-
+  #resize(
+    span: VoxelCoord
+  ): void {
+    if (
+      span.x === this.#span.x &&
+      span.y === this.#span.y &&
+      span.z === this.#span.z
+    ) {
       return;
     }
+    this.#span = {
+      x: span.x,
+      y: span.y,
+      z: span.z
+    };
 
+    const width = span.x + (kInflate * 2);
+    const height = span.y + (kInflate * 2);
+    const depth = span.z + (kInflate * 2);
+
+    this.#fill.scale.set(width, height, depth);
+    // Rebuilt rather than scaled so a dash keeps its world-unit length
+    // whatever the brush size.
     this.#border.geometry.setPositions(
-      this.#buildBorderPositions(cells, count)
+      boxEdgePositions(width / 2, height / 2, depth / 2)
     );
+    this.#border.computeLineDistances();
+  }
+
+  #applyStyle(): void {
+    const {
+      opacity,
+      edgeWidth,
+      edgeStyle,
+      dashSize,
+      gapSize
+    } = this.#style;
+
+    this.#fillMaterial.opacity = opacity;
+
+    this.#borderMaterial.linewidth = edgeWidth;
+    this.#borderMaterial.dashed = edgeStyle === "dashed";
+    this.#borderMaterial.dashSize = dashSize;
+    this.#borderMaterial.gapSize = gapSize;
+    this.#borderMaterial.needsUpdate = true;
+
     this.#applyVisibility();
   }
 
   #applyVisibility(): void {
-    const visible = !this.#hidden && this.#cellCount > 0;
+    const visible = !this.#hidden && this.#drawn;
 
-    this.#previewMesh.visible = visible;
-    this.#border.visible = visible;
+    this.#fill.visible = visible && this.#style.opacity > 0;
+    this.#border.visible = visible && this.#style.edgeWidth > 0;
+  }
+}
+
+function boxEdgePositions(
+  hx: number,
+  hy: number,
+  hz: number
+): number[] {
+  const corners: number[][] = [
+    [-hx, -hy, -hz],
+    [hx, -hy, -hz],
+    [hx, -hy, hz],
+    [-hx, -hy, hz],
+    [-hx, hy, -hz],
+    [hx, hy, -hz],
+    [hx, hy, hz],
+    [-hx, hy, hz]
+  ];
+  const edges: number[][] = [
+    [0, 1], [1, 2], [2, 3], [3, 0],
+    [4, 5], [5, 6], [6, 7], [7, 4],
+    [0, 4], [1, 5], [2, 6], [3, 7]
+  ];
+  const result: number[] = [];
+
+  for (const [from, to] of edges) {
+    result.push(...corners[from], ...corners[to]);
   }
 
-  #buildBorderPositions(
-    cells: VoxelCoord[],
-    count: number
-  ): number[] {
-    const result: number[] = [];
-
-    for (let i = 0; i < count; i++) {
-      const x = cells[i].x + 0.5 - kHalfSize;
-      const y = cells[i].y + 0.5 - kHalfSize;
-      const z = cells[i].z + 0.5 - kHalfSize;
-      const size = kHalfSize * 2;
-
-      const b0x = x;
-      const b0y = y;
-      const b0z = z;
-      const b1x = x + size;
-      const b1y = y;
-      const b1z = z;
-      const b2x = x + size;
-      const b2y = y;
-      const b2z = z + size;
-      const b3x = x;
-      const b3y = y;
-      const b3z = z + size;
-
-      const t0x = x;
-      const t0y = y + size;
-      const t0z = z;
-      const t1x = x + size;
-      const t1y = y + size;
-      const t1z = z;
-      const t2x = x + size;
-      const t2y = y + size;
-      const t2z = z + size;
-      const t3x = x;
-      const t3y = y + size;
-      const t3z = z + size;
-
-      result.push(b0x, b0y, b0z, b1x, b1y, b1z);
-      result.push(b1x, b1y, b1z, b2x, b2y, b2z);
-      result.push(b2x, b2y, b2z, b3x, b3y, b3z);
-      result.push(b3x, b3y, b3z, b0x, b0y, b0z);
-      result.push(t0x, t0y, t0z, t1x, t1y, t1z);
-      result.push(t1x, t1y, t1z, t2x, t2y, t2z);
-      result.push(t2x, t2y, t2z, t3x, t3y, t3z);
-      result.push(t3x, t3y, t3z, t0x, t0y, t0z);
-      result.push(b0x, b0y, b0z, t0x, t0y, t0z);
-      result.push(b1x, b1y, b1z, t1x, t1y, t1z);
-      result.push(b2x, b2y, b2z, t2x, t2y, t2z);
-      result.push(b3x, b3y, b3z, t3x, t3y, t3z);
-    }
-
-    return result;
-  }
+  return result;
 }

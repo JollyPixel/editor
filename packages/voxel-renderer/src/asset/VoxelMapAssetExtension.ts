@@ -90,17 +90,18 @@ export class VoxelMapAssetExtension extends network.Extension {
       return;
     }
 
-    if (!this.#arbiter.resolve(payload)) {
+    const admitted = this.#arbiter.admit(payload);
+    if (admitted === null) {
       return;
     }
-    if (!await this.#append(payload, context)) {
+    if (!await this.#append(admitted, context)) {
       return;
     }
 
-    this.#arbiter.record(payload);
+    this.#arbiter.record(admitted);
     context.room.broadcast({
       type: "command",
-      data: payload
+      data: admitted
     });
   }
 
