@@ -27,3 +27,8 @@ prompt and stores its result. It accepts a `StorageAdapter` and uses
 
 The matching option types are `PromptOptions`, `ConfirmOptions`, and
 `StoredPromptOptions`.
+
+Both helpers confirm on Enter and cancel on Escape, through the
+[`jolly-dialog` default action](./dialog.md#default-action). `showConfirm()`
+opens with its confirm action focused; `showPrompt()` opens with the text field
+focused.

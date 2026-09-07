@@ -48,7 +48,6 @@ export function showPrompt({
   field.value = value;
   field.addEventListener("jolly-input", captureValue);
   field.addEventListener("jolly-change", captureValue);
-  field.addEventListener("keydown", confirmOnEnter);
   dialog.append(field);
 
   const confirm = actionButton(
@@ -81,17 +80,6 @@ export function showPrompt({
     returnValue: string
   ): string | null {
     return returnValue === "confirm" ? value.trim() : null;
-  }
-
-  function confirmOnEnter(
-    event: KeyboardEvent
-  ): void {
-    if (event.key !== "Enter") {
-      return;
-    }
-
-    event.preventDefault();
-    queueMicrotask(() => confirm.click());
   }
 }
 
@@ -126,15 +114,11 @@ export function showConfirm({
 
   return settleHelper(
     dialog,
-    (returnValue) => returnValue === "confirm"
+    (returnValue) => returnValue === "confirm",
+    confirm
   );
 }
 
-/**
- * Resolves a persisted value or prompts once, storing a fallback on cancel or
- * blank confirmation. Uses local storage unless the caller provides another
- * adapter, such as one backed by session storage.
- */
 export async function resolveStoredPrompt({
   storage = new LocalStorageAdapter(),
   storageKey,
@@ -171,7 +155,8 @@ function actionButton(
 
 function settleHelper<TResult>(
   dialog: Dialog,
-  resolveValue: (returnValue: string) => TResult
+  resolveValue: (returnValue: string) => TResult,
+  focusOnOpen?: HTMLElement
 ): Promise<TResult> {
   const {
     promise,
@@ -198,7 +183,7 @@ function settleHelper<TResult>(
       settle(detail.returnValue);
     }
   });
-  void dialog.showModal();
+  void dialog.showModal().then(() => focusOnOpen?.focus());
 
   return promise;
 }

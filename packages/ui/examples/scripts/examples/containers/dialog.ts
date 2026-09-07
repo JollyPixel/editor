@@ -1,7 +1,9 @@
 // Import Internal Dependencies
 import {
+  detailOf,
   showConfirm,
-  showPrompt
+  showPrompt,
+  type JollyChangeDetail
 } from "../../../../src/index.ts";
 import type { GalleryExample } from "../../types.ts";
 import {
@@ -18,6 +20,7 @@ export const DIALOG_EXAMPLE: GalleryExample = {
     root.className = "chrome-row";
     const open = button("Open dialog", "accent");
     const dialog = document.createElement("jolly-dialog");
+    dialog.id = "delete-dialog";
     dialog.heading = "Delete layer?";
     dialog.append(text("This declarative dialog can contain arbitrary content."));
     const close = button("Close", "accent");
@@ -41,7 +44,33 @@ export const DIALOG_EXAMPLE: GalleryExample = {
         label: "Name"
       }));
     });
-    root.append(open, confirm, prompt, dialog);
+    const defaultAction = document.createElement("jolly-dialog");
+    defaultAction.id = "rename-dialog";
+    defaultAction.heading = "Rename layer";
+    const field = document.createElement("jolly-text");
+    field.label = "Name";
+    field.addEventListener("jolly-change", (event) => {
+      const detail = detailOf<JollyChangeDetail<string>>(event);
+      if (detail !== null) {
+        field.value = detail.value;
+      }
+    });
+    const cancel = button("Cancel");
+    cancel.slot = "actions";
+    cancel.addEventListener("click", () => defaultAction.close());
+    const rename = button("Rename", "accent");
+    rename.slot = "actions";
+    rename.dataset.default = "";
+    rename.addEventListener("click", () => {
+      root.dataset.result = `renamed:${String(field.value)}`;
+      defaultAction.close();
+    });
+    defaultAction.append(field, cancel, rename);
+    const openDefault = button("Open rename dialog");
+    openDefault.dataset.action = "default-action";
+    openDefault.addEventListener("click", () => void defaultAction.showModal());
+
+    root.append(open, confirm, prompt, openDefault, dialog, defaultAction);
     host.append(root);
 
     return () => root.remove();
