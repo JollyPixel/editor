@@ -24,8 +24,11 @@ import {
 } from "../../app/state/index.ts";
 import { ViewFocus } from "../../scene/viewFocus.ts";
 import { AddLayerDialog } from "./AddLayerDialog.ts";
+import { MergeLayerDialog } from "./MergeLayerDialog.ts";
 import {
+  cloneLayerEntry,
   createLayerEntry,
+  mergeLayerEntry,
   removeLayerEntry,
   renameLayerEntry,
   setLayerEntryLocked,
@@ -82,6 +85,9 @@ export class LayerManager extends LitElement {
 
   @query("add-layer-dialog")
   private declare _addDialog: AddLayerDialog;
+
+  @query("merge-layer-dialog")
+  private declare _mergeDialog: MergeLayerDialog;
 
   #subscriptions: Array<() => void> = [];
 
@@ -154,6 +160,7 @@ export class LayerManager extends LitElement {
       </div>
 
       <add-layer-dialog></add-layer-dialog>
+      <merge-layer-dialog></merge-layer-dialog>
     `;
   }
 
@@ -320,8 +327,59 @@ export class LayerManager extends LitElement {
       return;
     }
 
-    applyLayerReparent(this.world, event.detail);
+    const relocated = applyLayerReparent(this.world, event.detail);
+    this.#followRelocatedObjects(relocated);
     this.#refreshNodes();
+  }
+
+  #followRelocatedObjects(
+    relocated: readonly LayerRef[]
+  ): void {
+    const selected = this.selection.object;
+    if (selected === null) {
+      return;
+    }
+
+    for (const ref of relocated) {
+      if (
+        ref.kind === "object" &&
+        ref.objectId === selected.objectId
+      ) {
+        this.selection.selectObject({
+          layerName: ref.layerName,
+          objectId: ref.objectId
+        });
+
+        return;
+      }
+    }
+  }
+
+  cloneLayer(): void {
+    const ref = this.#selectedRef;
+    if (ref === null || !this.world) {
+      return;
+    }
+
+    cloneLayerEntry(
+      this.world,
+      this.selection,
+      ref
+    );
+  }
+
+  async mergeLayer() {
+    const ref = this.#selectedRef;
+    if (ref === null || !this.world) {
+      return;
+    }
+
+    await mergeLayerEntry(
+      this.world,
+      this.selection,
+      ref,
+      (context) => this._mergeDialog.open(context)
+    );
   }
 }
 

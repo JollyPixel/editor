@@ -287,3 +287,63 @@ describe("VoxelChunk power-of-two size", () => {
     }
   });
 });
+
+describe("VoxelChunk clone()", () => {
+  it("carries coordinates, size and voxels over", () => {
+    const chunk = new VoxelChunk([1, 2, 3], 8);
+    const entry = makeVoxelEntry(7, 2);
+    chunk.set([1, 2, 3], entry);
+    chunk.set([4, 5, 6], makeVoxelEntry(9, 1));
+
+    const copy = chunk.clone();
+
+    assert.equal(copy.cx, 1);
+    assert.equal(copy.cy, 2);
+    assert.equal(copy.cz, 3);
+    assert.equal(copy.size, 8);
+    assert.equal(copy.voxelCount, 2);
+    assert.deepEqual(copy.get([1, 2, 3]), entry);
+    assert.deepEqual([...copy.packedEntries()], [...chunk.packedEntries()]);
+  });
+
+  it("carries the conservative bounds over", () => {
+    const chunk = new VoxelChunk([0, 0, 0], 8);
+    chunk.set([2, 2, 2], makeVoxelEntry());
+    chunk.set([5, 5, 5], makeVoxelEntry());
+
+    const copy = chunk.clone();
+
+    assert.equal(copy.mayContain(3, 3, 3), true);
+    assert.equal(copy.mayContain(6, 6, 6), false);
+    assert.equal(copy.mayContain(1, 1, 1), false);
+  });
+
+  it("marks the copy dirty so it gets meshed", () => {
+    const chunk = new VoxelChunk([0, 0, 0], 8);
+    chunk.set([0, 0, 0], makeVoxelEntry());
+    chunk.dirty = false;
+
+    assert.equal(chunk.clone().dirty, true);
+  });
+
+  it("shares no storage with the source", () => {
+    const chunk = new VoxelChunk([0, 0, 0], 8);
+    chunk.set([0, 0, 0], makeVoxelEntry(1, 0));
+
+    const copy = chunk.clone();
+    copy.set([0, 0, 0], makeVoxelEntry(5, 0));
+    copy.set([7, 7, 7], makeVoxelEntry(6, 0));
+    copy.delete([0, 0, 0]);
+
+    assert.deepEqual(chunk.get([0, 0, 0]), makeVoxelEntry(1, 0));
+    assert.equal(chunk.get([7, 7, 7]), undefined);
+    assert.equal(chunk.voxelCount, 1);
+  });
+
+  it("copies an empty chunk without inventing voxels", () => {
+    const copy = new VoxelChunk([0, 0, 0], 8).clone();
+
+    assert.equal(copy.isEmpty(), true);
+    assert.equal(copy.voxelCount, 0);
+  });
+});

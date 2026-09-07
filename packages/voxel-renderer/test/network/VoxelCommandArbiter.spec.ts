@@ -241,3 +241,123 @@ describe("VoxelCommandArbiter — bulk commands", () => {
     assert.strictEqual(arbiter.admit(command), command);
   });
 });
+
+describe("VoxelCommandArbiter — object commands", () => {
+  const header = {
+    clientId: "client-A",
+    seq: 1,
+    timestamp: 1000
+  };
+
+  test("keys every object command by the object id alone", () => {
+    assert.strictEqual(
+      VoxelCommandArbiter.key({
+        ...header,
+        action: "object-added",
+        layerName: "Spawns",
+        metadata: {
+          object: {
+            id: "obj1",
+            name: "Spawn",
+            x: 0,
+            y: 0,
+            z: 0,
+            visible: true
+          }
+        }
+      }),
+      "object:obj1"
+    );
+
+    assert.strictEqual(
+      VoxelCommandArbiter.key({
+        ...header,
+        action: "object-removed",
+        layerName: "Spawns",
+        metadata: { objectId: "obj1" }
+      }),
+      "object:obj1"
+    );
+
+    assert.strictEqual(
+      VoxelCommandArbiter.key({
+        ...header,
+        action: "object-updated",
+        layerName: "Spawns",
+        metadata: { objectId: "obj1", patch: { name: "Renamed" } }
+      }),
+      "object:obj1"
+    );
+
+    assert.strictEqual(
+      VoxelCommandArbiter.key({
+        ...header,
+        action: "object-moved",
+        layerName: "Spawns",
+        metadata: {
+          objectId: "obj1",
+          fromLayerName: "Spawns",
+          toLayerName: "Props"
+        }
+      }),
+      "object:obj1"
+    );
+  });
+
+  test("resolves two concurrent moves of one object to a single winner", () => {
+    const arbiter = new VoxelCommandArbiter();
+    const moveToProps: VoxelNetworkCommand = {
+      ...header,
+      action: "object-moved",
+      layerName: "Spawns",
+      metadata: {
+        objectId: "obj1",
+        fromLayerName: "Spawns",
+        toLayerName: "Props"
+      }
+    };
+    const moveToDeco: VoxelNetworkCommand = {
+      ...moveToProps,
+      clientId: "client-B",
+      timestamp: 900,
+      metadata: {
+        objectId: "obj1",
+        fromLayerName: "Spawns",
+        toLayerName: "Deco"
+      }
+    };
+
+    assert.strictEqual(arbiter.admit(moveToProps), moveToProps);
+    arbiter.record(moveToProps);
+
+    assert.strictEqual(arbiter.admit(moveToDeco), null);
+  });
+
+  test("leaves a different object unaffected", () => {
+    const arbiter = new VoxelCommandArbiter();
+    const first: VoxelNetworkCommand = {
+      ...header,
+      action: "object-moved",
+      layerName: "Spawns",
+      metadata: {
+        objectId: "obj1",
+        fromLayerName: "Spawns",
+        toLayerName: "Props"
+      }
+    };
+    const second: VoxelNetworkCommand = {
+      ...first,
+      clientId: "client-B",
+      timestamp: 900,
+      metadata: {
+        objectId: "obj2",
+        fromLayerName: "Spawns",
+        toLayerName: "Props"
+      }
+    };
+
+    arbiter.record(first);
+
+    assert.strictEqual(arbiter.admit(second), second);
+  });
+});

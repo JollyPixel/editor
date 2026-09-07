@@ -223,7 +223,7 @@ export class VoxelEngine {
   applyRemoteCommand(
     cmd: VoxelLayerHookEvent
   ): void {
-    this.world.applyRemoteCommand(cmd);
+    this.world.applyRemoteCommand(cmd, this.#logger);
   }
 
   defineBlock(

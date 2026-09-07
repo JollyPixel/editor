@@ -43,8 +43,8 @@ gives you a precise `metadata` type with no casting required.
 | `"added"` | `{ options: VoxelLayerConfigurableOptions }` | |
 | `"removed"` | `{}` | |
 | `"updated"` | `{ options: Partial<VoxelLayerConfigurableOptions> }` | |
-| `"cloned"` | `{ options: PartialExcept<VoxelLayerOptions, "name"> }` | `layerName` is the source layer. |
-| `"merged"` | `{ targetLayerName: string }` | `layerName` is the source layer. |
+| `"cloned"` | `{ options: PartialExcept<VoxelLayerOptions, "name"> }` | `layerName` is the source layer; `options.name` is the resolved clone name. |
+| `"merged"` | `{ targetLayerName: string }` | `layerName` is the source layer, which the merge removes. |
 | `"offset-updated"` | `{ offset: VoxelCoord }` or `{ delta: VoxelCoord }` | |
 | `"voxel-set"` | `{ position, blockId, rotation, flipX, flipZ, flipY }` | |
 | `"voxel-removed"` | `{ position: Vector3Like }` | |
@@ -57,6 +57,7 @@ gives you a precise `metadata` type with no casting required.
 | `"object-layer-updated"` | `{ patch: { visible?: boolean } }` | |
 | `"object-added"` | `{ object: VoxelObjectJSON }` | Full object, not just ID |
 | `"object-removed"` | `{ objectId: string }` | |
+| `"object-moved"` | `{ objectId: string; fromLayerName: string; toLayerName: string }` | `layerName` is the source layer; both sides are named in the metadata so no consumer has to guess which it is. |
 | `"object-updated"` | `{ objectId: string; patch: Partial<VoxelObjectJSON> }` | |
 
 ## Block definitions

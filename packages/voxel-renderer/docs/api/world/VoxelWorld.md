@@ -158,17 +158,37 @@ Adds `delta` to the layer's current offset. Equivalent to calling `setLayerOffse
 
 All layers, sorted highest `order` first.
 
-#### `cloneLayer(name: string, options: PartialExcept<VoxelLayerOptions, "name">): VoxelLayer | undefined`
+#### `cloneLayer(name: string, options?: Partial<VoxelLayerOptions>): VoxelLayer | undefined`
 
-Clones a layer and adds the copy to the world. `options.name` is required. Other
-layer options can override the source values. Returns `undefined` when the source
-layer does not exist.
+Clones a layer, voxels included, and inserts the copy directly above the source,
+renumbering the whole stack. Other layer options can override the source values.
+Returns `undefined` when the source layer does not exist.
+
+`options.name` is optional; when omitted the world derives an unused name from
+the source (`"layer"` becomes `"layer (1)"`, then `"layer (2)"`). A name that is
+already taken is de-duplicated the same way, so layer names stay unique. The
+emitted `"cloned"` hook carries the resolved name, so a peer replaying the
+command produces the same layer rather than deriving a name of its own.
+
+#### `uniqueLayerName(base: string): string`
+
+The first layer name not already in use, derived from `base` by appending
+`" (n)"`. Returns `base` unchanged when it is free.
 
 #### `mergeLayer(sourceName: string, targetName: string): boolean`
 
-Copies the source voxels into the target. Source voxels overwrite target voxels at
-the same world position. Returns `false` when either layer does not exist. The source
-layer remains in the world.
+Merges the source layer into the target and removes the source from the world.
+Returns `false` when either layer does not exist, or when both names resolve to
+the same layer.
+
+Overlapping voxels are resolved by stack position: the layer with the higher
+`order` wins, whichever of the two is the source. A merge therefore never
+changes what an opaque stack looks like, in either direction. Opacity is not
+modelled, so a translucent layer that visually blends is treated as opaque here.
+
+The target keeps its own `opacity`, `visible` and offset. The source's
+`properties` are folded in behind the target's, so keys already present on the
+target win and the rest carry over.
 
 #### `mergeAllLayers(): VoxelLayer | null`
 
@@ -282,11 +302,18 @@ Removes all voxel layers and object layers.
 
 ### Hooks
 
-#### `applyRemoteCommand(cmd: VoxelLayerHookEvent): void`
+#### `applyRemoteCommand(cmd: VoxelLayerHookEvent, logger?: VoxelLogger): void`
 
 Replays a peer's hook event onto this world without emitting it again through
 `onLayerUpdated`, so a network adapter cannot echo it back. Every action of the
 event union is handled; an unknown one throws.
+
+A voxel command naming a layer this world no longer has is dropped rather than
+thrown, since a peer can still be painting a layer that was just merged or
+removed here. The optional `logger` receives a warning for each dropped command;
+without one the drop is silent. Local writes through `setVoxel` and
+`setPackedVoxelAt` still throw for an unknown layer, which stays a programming
+error.
 
 #### `silently<T>(fn: () => T): T`
 
@@ -333,6 +360,17 @@ does not exist.
 
 Removes the object with the given `id` from the layer. Returns `false` if the layer or
 object is not found.
+
+#### `moveObjectToLayer(fromLayerName: string, objectId: string, toLayerName: string): boolean`
+
+Moves an object from one object layer to another, keeping the same object
+instance, and emits a single `"object-moved"` hook. Returns `false` when either
+layer or the object is not found, or when both names resolve to the same layer.
+
+Prefer this over `removeObjectFromLayer` followed by `addObjectToLayer`: the
+pair emits two independent commands, so two peers reparenting the same object at
+once would each apply the other's add and leave the object duplicated in two
+layers.
 
 #### `updateObjectInLayer(layerName: string, objectId: string, patch: Partial<VoxelObjectJSON>): boolean`
 

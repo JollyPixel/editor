@@ -74,3 +74,23 @@ registerIcon("trash", svg`
     stroke-linejoin="round"
   />
 `);
+
+registerIcon("copy", svg`
+  <path
+    d="M9 9h10v10a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V9zM5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`);
+
+registerIcon("merge", svg`
+  <path
+    fill-rule="evenodd"
+    clip-rule="evenodd"
+    d="M3 3H21V8H19V5H5V8H3V3ZM3 16H21V21H3V16ZM5 18V19H19V18H5ZM11 8V11H9L12 15L15 11H13V8H11Z"
+    fill="currentColor"
+  />
+`);

@@ -339,6 +339,7 @@ export class ObjectLayerRenderer extends ActorComponent {
       case "object-layer-added":
       case "object-layer-removed":
       case "object-layer-updated":
+      case "object-moved":
         this.#syncAll();
         break;
       case "object-added":

@@ -26,6 +26,7 @@ import { VoxelMapAssetExtension } from "./VoxelMapAssetExtension.ts";
 import { VoxelMapState } from "./VoxelMapState.ts";
 import { applyBlockCommand } from "../network/applyBlockCommand.ts";
 import type { VoxelNetworkCommand } from "../network/types.ts";
+import { NOOP_LOGGER, type VoxelLogger } from "../utils/logger.ts";
 
 export const VOXEL_MAP_KIND = "voxelmap";
 export const VOXEL_MAP_COMMAND = "voxelmap.command";
@@ -60,6 +61,7 @@ export interface VoxelMapAssetHandlerOptions {
    */
   snapshot?: SnapshotPolicy;
   conflictResolver?: network.ConflictResolver<VoxelNetworkCommand>;
+  logger?: VoxelLogger;
 }
 
 export function voxelMapAssetHandler(
@@ -69,7 +71,8 @@ export function voxelMapAssetHandler(
     match = kDefaultMatch,
     chunkSize = kDefaultChunkSize,
     snapshot = kDefaultSnapshot,
-    conflictResolver
+    conflictResolver,
+    logger = NOOP_LOGGER
   } = options;
 
   return {
@@ -91,9 +94,12 @@ export function voxelMapAssetHandler(
         applyEvent(state, event);
       }
       catch (error) {
-        console.error(
-          `voxelMapAssetHandler: skipped malformed event (eventType="${event.eventType}"):`,
-          error
+        logger.error(
+          "voxelMapAssetHandler: skipped malformed event.",
+          {
+            eventType: event.eventType,
+            error
+          }
         );
       }
     },

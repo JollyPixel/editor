@@ -187,6 +187,24 @@ export class VoxelChunk {
     return this.store.size === 0;
   }
 
+  clone(): VoxelChunk {
+    const copy = new VoxelChunk(
+      [this.cx, this.cy, this.cz],
+      this.size
+    );
+
+    copy.store.copyFrom(this.store);
+    copy.#minX = this.#minX;
+    copy.#minY = this.#minY;
+    copy.#minZ = this.#minZ;
+    copy.#maxX = this.#maxX;
+    copy.#maxY = this.#maxY;
+    copy.#maxZ = this.#maxZ;
+    copy.dirty = true;
+
+    return copy;
+  }
+
   * entries(): IterableIterator<[number, VoxelEntry]> {
     const { keys, values, capacity } = this.store;
 

@@ -127,6 +127,12 @@ empty.
 
 ### `isEmpty(): boolean`
 
+### `clone(): VoxelChunk`
+
+A detached copy holding the same coordinates, size, voxels and conservative
+bounds. The copy owns its storage, so writing to it never reaches the source.
+It is always returned `dirty`, so a renderer meshes it on the next tick.
+
 ### `entries(): IterableIterator<[number, VoxelEntry]>`
 
 Iterates all stored entries as `[linearIndex, VoxelEntry]` pairs. Allocates a tuple and

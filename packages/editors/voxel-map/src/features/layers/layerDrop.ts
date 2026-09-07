@@ -56,21 +56,32 @@ function allows(
 export function applyLayerReparent(
   world: VoxelWorld,
   detail: JollyReparentDetail
-): void {
+): LayerRef[] {
   if (!canDropLayerRef(detail)) {
-    return;
+    return [];
   }
 
+  const relocated: LayerRef[] = [];
   const target = layerRefOf(detail.targetId);
   for (const movedId of detail.movedIds) {
     const moved = layerRefOf(movedId);
     if (moved.kind === "voxel-layer" && target.kind === "voxel-layer") {
       moveVoxelLayerOnto(world, moved.name, target.name, detail.where);
     }
-    else if (moved.kind === "object" && target.kind === "object-layer") {
-      moveObjectToLayer(world, moved, target.name);
+    else if (
+      moved.kind === "object" &&
+      target.kind === "object-layer" &&
+      moveObjectToLayer(world, moved, target.name)
+    ) {
+      relocated.push({
+        kind: "object",
+        layerName: target.name,
+        objectId: moved.objectId
+      });
     }
   }
+
+  return relocated;
 }
 
 function moveVoxelLayerOnto(
@@ -101,15 +112,10 @@ function moveObjectToLayer(
   world: VoxelWorld,
   moved: Extract<LayerRef, { kind: "object"; }>,
   targetLayerName: string
-): void {
-  const object = world
-    .getObjectLayer(moved.layerName)
-    ?.objects
-    .find((candidate) => candidate.id === moved.objectId);
-  if (object === undefined) {
-    return;
-  }
-
-  world.removeObjectFromLayer(moved.layerName, moved.objectId);
-  world.addObjectToLayer(targetLayerName, object);
+): boolean {
+  return world.moveObjectToLayer(
+    moved.layerName,
+    moved.objectId,
+    targetLayerName
+  );
 }
