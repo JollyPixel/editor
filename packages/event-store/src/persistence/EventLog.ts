@@ -1,6 +1,8 @@
 // Import Internal Dependencies
 import type {
   AppendInput,
+  CompactOptions,
+  CompactReport,
   Event,
   EventReader
 } from "../EventStore.ts";
@@ -12,5 +14,8 @@ export interface EventLog extends EventReader {
   insert(
     input: AppendInput
   ): Event;
+  compact(
+    options: CompactOptions
+  ): CompactReport;
   close(): void;
 }

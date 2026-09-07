@@ -137,10 +137,6 @@ export class SnapshotScheduler {
     });
   }
 
-  /**
-   * Snapshots the pending assets, or one of them, and waits for every
-   * snapshot already in flight, including timer-fired ones.
-   */
   async flush(
     assetId?: string
   ): Promise<void> {
@@ -152,9 +148,6 @@ export class SnapshotScheduler {
       await this.snapshot(target);
     }
 
-    /**
-     * Drain chains separately because timer-fired work has left `#pending`.
-     */
     const chains = assetId === undefined ?
       [...this.#chains.values()] :
       [this.#chains.get(assetId)];
@@ -163,9 +156,6 @@ export class SnapshotScheduler {
     );
   }
 
-  /**
-   * Serializes snapshots per asset while allowing different assets in parallel.
-   */
   snapshot(
     assetId: string
   ): Promise<boolean> {

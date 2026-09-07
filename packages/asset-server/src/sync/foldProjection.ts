@@ -18,12 +18,6 @@ export interface AssetProjection {
   readonly content: AssetContent;
 }
 
-/**
- * Applies lifecycle events while preserving content across renames.
- *
- * The switch is exhaustive over `AssetEvent`, so a new lifecycle type fails
- * to compile until it is folded here.
- */
 export function applyProjection(
   projection: AssetProjection | null,
   event: AssetEvent
@@ -57,10 +51,6 @@ export function applyProjection(
   }
 }
 
-/**
- * Compile-time exhaustiveness guard. Adding a lifecycle event type without
- * folding it above turns `event` into a real type here and fails the build.
- */
 function unhandled(
   event: never
 ): never {

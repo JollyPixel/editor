@@ -124,3 +124,59 @@ describe("FilesystemAssetSource — resolve", () => {
     );
   });
 });
+
+describe("FilesystemAssetSource — containment", () => {
+  test("refuses to read through a symlink leaving the root", async() => {
+    await using workspace = await tempWorkspace();
+    await using outside = await tempWorkspace();
+    await fs.writeFile(
+      path.join(outside.root, "secret.txt"),
+      "secret"
+    );
+    await fs.symlink(
+      outside.root,
+      path.join(workspace.root, "link"),
+      "junction"
+    );
+
+    const source = new FilesystemAssetSource(workspace.root);
+
+    await assert.rejects(
+      () => source.read("link/secret.txt"),
+      { name: "AssetPathEscapeError" }
+    );
+    await assert.rejects(
+      () => source.write("link/planted.txt", bytes("x")),
+      { name: "AssetPathEscapeError" }
+    );
+    await assert.rejects(
+      () => source.delete("link/secret.txt"),
+      { name: "AssetPathEscapeError" }
+    );
+    assert.strictEqual(
+      text(await fs.readFile(path.join(outside.root, "secret.txt"))),
+      "secret"
+    );
+  });
+
+  test("writes a new nested file below the root", async() => {
+    await using workspace = await tempWorkspace();
+    const source = new FilesystemAssetSource(workspace.root);
+
+    await source.write("a/b/c/sprite.png", bytes("x"));
+
+    assert.strictEqual(
+      text(await source.read("a/b/c/sprite.png")),
+      "x"
+    );
+  });
+
+  test("ignores the default globs whatever the case", async() => {
+    await using workspace = await tempWorkspace();
+    const source = new FilesystemAssetSource(workspace.root);
+
+    assert.strictEqual(source.isIgnored(".git/config"), true);
+    assert.strictEqual(source.isIgnored(".GIT/config"), true);
+    assert.strictEqual(source.isIgnored("Node_Modules/pkg/index.js"), true);
+  });
+});

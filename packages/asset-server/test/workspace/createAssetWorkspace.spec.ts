@@ -23,7 +23,8 @@ import {
   MemoryAssetSource,
   STATE_GITIGNORE_PATH,
   type AssetKindHandler,
-  type AssetRoomBinding
+  type AssetRoomBinding,
+  type AssetWorkspace
 } from "#src/index.ts";
 import { tempWorkspace } from "../helpers/tempWorkspace.ts";
 import {
@@ -31,6 +32,12 @@ import {
   type CounterState
 } from "../helpers/kinds.ts";
 import { bytes } from "../helpers/bytes.ts";
+
+// CONSTANTS
+const kCompactionActor: EventStore.Actor = {
+  type: "user",
+  id: "tester"
+};
 
 class CounterExtension extends Extension {
   readonly id: string;
@@ -229,3 +236,95 @@ describe("createAssetWorkspace", () => {
     assert.strictEqual(eventStore.reader.listAll().length, 1);
   });
 });
+
+describe("createAssetWorkspace — compaction", () => {
+  /**
+   * Edits one asset through a first workspace, then reopens on the same
+   * log and source so the second open replays what the first left behind.
+   */
+  async function editThenReopen(
+    compactOnOpen: boolean | undefined,
+    eventStore: EventStore.EventStore
+  ): Promise<void> {
+    const source = new MemoryAssetSource();
+    function open(): Promise<AssetWorkspace> {
+      return createAssetWorkspace({
+        root: "unused",
+        source,
+        eventStore,
+        compactOnOpen,
+        backend: { watch: false }
+      });
+    }
+
+    const first = await open();
+    const created = (await first.backend.writer.create({
+      path: "a.png",
+      data: bytes("one"),
+      actor: kCompactionActor
+    })).unwrap();
+    await first.backend.writer.update({
+      assetId: created.assetId,
+      data: bytes("two"),
+      actor: kCompactionActor
+    });
+    await first.backend.flush();
+    await first.close();
+
+    const second = await open();
+    await second.close();
+  }
+
+  test("drops the events superseded by each checkpoint", async() => {
+    using eventStore = EventStore.persistence.memory();
+
+    await editThenReopen(undefined, eventStore);
+
+    assert.deepEqual(
+      eventStore.reader.listAll().map((event) => event.eventType),
+      ["asset.updated"]
+    );
+  });
+
+  test("keeps the whole log when it is turned off", async() => {
+    using eventStore = EventStore.persistence.memory();
+
+    await editThenReopen(false, eventStore);
+
+    assert.deepEqual(
+      eventStore.reader.listAll().map((event) => event.eventType),
+      ["asset.created", "asset.updated"]
+    );
+  });
+
+  test("the catalog a reopened workspace serves survives it", async() => {
+    using eventStore = EventStore.persistence.memory();
+    const source = new MemoryAssetSource();
+    function open(): Promise<AssetWorkspace> {
+      return createAssetWorkspace({
+        root: "unused",
+        source,
+        eventStore,
+        backend: { watch: false }
+      });
+    }
+
+    const first = await open();
+    const created = (await first.backend.writer.create({
+      path: "a.png",
+      data: bytes("one"),
+      actor: kCompactionActor
+    })).unwrap();
+    await first.backend.flush();
+    await first.close();
+
+    await using second = await open();
+
+    assert.strictEqual(second.backend.catalog.size, 1);
+    assert.strictEqual(
+      second.backend.catalog.snapshot().assets[0].id,
+      created.assetId
+    );
+  });
+});
+

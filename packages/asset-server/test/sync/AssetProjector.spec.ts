@@ -14,7 +14,11 @@ import {
   MemoryAssetSource,
   ProjectionState
 } from "#src/index.ts";
-import { syncHarness } from "../helpers/backend.ts";
+import { decodeContent } from "#src/events/AssetEvents.ts";
+import {
+  countingReads,
+  syncHarness
+} from "../helpers/backend.ts";
 import {
   bytes,
   text
@@ -25,6 +29,93 @@ const kActor: EventStore.Actor = {
   type: "user",
   id: "alice"
 };
+
+describe("AssetProjector — load reads the tail of the log", () => {
+  test("reads only each asset's newest checkpoint", async() => {
+    await using harness = await syncHarness();
+    const created = (await harness.writer.create({
+      path: "a.png",
+      data: bytes("0"),
+      actor: kActor
+    })).unwrap();
+    for (let index = 1; index <= 20; index++) {
+      await harness.writer.update({
+        assetId: created.assetId,
+        data: bytes(String(index)),
+        actor: kActor
+      });
+    }
+    await harness.projector.flush();
+
+    const counter = countingReads(harness.eventStore);
+    const projector = new AssetProjector({
+      source: harness.source,
+      eventStore: counter.store,
+      state: harness.state
+    });
+    projector.load();
+
+    assert.strictEqual(counter.read, 1);
+    assert.strictEqual(
+      text(decodeContent(projector.desired(created.assetId)!.content)),
+      "20"
+    );
+  });
+
+  test("folds the renames stored after the checkpoint", async() => {
+    await using harness = await syncHarness();
+    const created = (await harness.writer.create({
+      path: "a.png",
+      data: bytes("one"),
+      actor: kActor
+    })).unwrap();
+    await harness.writer.update({
+      assetId: created.assetId,
+      data: bytes("two"),
+      actor: kActor
+    });
+    await harness.writer.rename({
+      assetId: created.assetId,
+      to: "b.png",
+      actor: kActor
+    });
+    await harness.projector.flush();
+
+    const projector = new AssetProjector({
+      source: harness.source,
+      eventStore: harness.eventStore,
+      state: harness.state
+    });
+    projector.load();
+
+    const desired = projector.desired(created.assetId)!;
+    assert.strictEqual(desired.path, "b.png");
+    assert.strictEqual(text(decodeContent(desired.content)), "two");
+  });
+
+  test("folds a deletion as the newest checkpoint", async() => {
+    await using harness = await syncHarness();
+    const created = (await harness.writer.create({
+      path: "a.png",
+      data: bytes("one"),
+      actor: kActor
+    })).unwrap();
+    await harness.writer.remove({
+      assetId: created.assetId,
+      actor: kActor
+    });
+    await harness.projector.flush();
+
+    const projector = new AssetProjector({
+      source: harness.source,
+      eventStore: harness.eventStore,
+      state: harness.state
+    });
+    projector.load();
+
+    assert.strictEqual(projector.desired(created.assetId), null);
+  });
+});
 
 describe("AssetProjector — lifecycle events land on the source", () => {
   test("a create writes the file", async() => {

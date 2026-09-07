@@ -1,8 +1,11 @@
 // Import Internal Dependencies
 import type {
   AppendInput,
+  CompactOptions,
+  CompactReport,
   Event,
-  ListAllOptions
+  ListAllOptions,
+  ListFromCheckpointsOptions
 } from "../../EventStore.ts";
 import type { EventLog } from "../EventLog.ts";
 import { toStoredValue } from "../serialize.ts";
@@ -97,6 +100,38 @@ export class MemoryEventLog implements EventLog {
     );
   }
 
+  listFromCheckpoints(
+    options: ListFromCheckpointsOptions
+  ): Event[] {
+    const {
+      checkpointEventTypes,
+      eventTypePrefix
+    } = options;
+    const checkpoints = this.#checkpoints(checkpointEventTypes);
+
+    return this.#read(
+      (event) => event.eventId >= (checkpoints.get(event.assetId) ?? 0) &&
+        matchesPrefix(event.eventType, eventTypePrefix)
+    );
+  }
+
+  compact(
+    options: CompactOptions
+  ): CompactReport {
+    this.#assertOpen();
+
+    const checkpoints = this.#checkpoints(options.checkpointEventTypes);
+    const before = this.#events.length;
+    this.#events = this.#events.filter(
+      (event) => event.eventId >= (checkpoints.get(event.assetId) ?? 0)
+    );
+
+    return {
+      removed: before - this.#events.length,
+      assets: checkpoints.size
+    };
+  }
+
   close(): void {
     this.#events = [];
     this.#versionByAsset.clear();
@@ -114,6 +149,27 @@ export class MemoryEventLog implements EventLog {
 
     return (limit === undefined ? events : events.slice(0, limit))
       .map((event) => structuredClone(event));
+  }
+
+  #checkpoints(
+    eventTypes: readonly string[]
+  ): Map<string, number> {
+    const wanted = new Set(eventTypes);
+    const checkpoints = new Map<string, number>();
+    if (wanted.size === 0) {
+      return checkpoints;
+    }
+
+    for (const event of this.#events) {
+      if (
+        wanted.has(event.eventType) &&
+        event.eventId > (checkpoints.get(event.assetId) ?? 0)
+      ) {
+        checkpoints.set(event.assetId, event.eventId);
+      }
+    }
+
+    return checkpoints;
   }
 
   #assertOpen(): void {

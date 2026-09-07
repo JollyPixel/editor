@@ -44,9 +44,6 @@ export class CatalogExtension extends Extension {
   ];
 
   #projection: CatalogProjection;
-  /**
-   * Broadcast target retained while at least one client has joined.
-   */
   #broadcast: RoomBroadcast | null = null;
   #members = new Set<string>();
   #onChanged: (change: CatalogChange) => void;
@@ -101,9 +98,6 @@ export class CatalogExtension extends Extension {
     }
   }
 
-  /**
-   * The catalog is read-only over the wire: it is derived from the log.
-   */
   onMessage(): void {
     return void 0;
   }

@@ -9,6 +9,8 @@ projection.load();
 projection.start();
 ```
 
+- `load()` folds each asset's newest lifecycle checkpoint and the events
+  after it. See [Replay](./Sync.md#replay).
 - `catalog` exposes the current `AssetCatalog`.
 - `size` is the number of cataloged assets.
 - `snapshot()` returns `AssetManifestData`.

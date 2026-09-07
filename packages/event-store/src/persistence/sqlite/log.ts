@@ -8,8 +8,11 @@ import type {
 import type {
   Actor,
   AppendInput,
+  CompactOptions,
+  CompactReport,
   Event,
-  ListAllOptions
+  ListAllOptions,
+  ListFromCheckpointsOptions
 } from "../../EventStore.ts";
 import type { EventLog } from "../EventLog.ts";
 import { toJson } from "../serialize.ts";
@@ -26,7 +29,7 @@ interface EventRow {
 }
 
 // CONSTANTS
-const kColumns = [
+const kColumnNames = [
   "event_id",
   "asset_type",
   "asset_id",
@@ -35,7 +38,12 @@ const kColumns = [
   "event_version",
   "actor",
   "created_at"
-].join(", ");
+];
+const kColumns = kColumnNames.join(", ");
+// The same list for a query that aliases the events table as `e`.
+const kAliasedColumns = kColumnNames
+  .map((column) => `e.${column}`)
+  .join(", ");
 
 export class SqliteEventLog implements EventLog {
   #db: DatabaseSync;
@@ -101,7 +109,7 @@ export class SqliteEventLog implements EventLog {
       return 0;
     }
 
-    const placeholders = eventTypes.map(() => "?").join(", ");
+    const placeholders = placeholdersFor(eventTypes);
     const row = this.#db.prepare(
       `SELECT MAX(event_version) AS event_version
        FROM events
@@ -140,6 +148,90 @@ export class SqliteEventLog implements EventLog {
     ).map((row) => toEvent(row));
   }
 
+  listFromCheckpoints(
+    options: ListFromCheckpointsOptions
+  ): Event[] {
+    const {
+      checkpointEventTypes,
+      eventTypePrefix
+    } = options;
+    if (checkpointEventTypes.length === 0) {
+      return this.listAll({ eventTypePrefix });
+    }
+
+    const parameters: SQLInputValue[] = [...checkpointEventTypes];
+    let prefixCondition = "";
+    if (eventTypePrefix !== undefined) {
+      prefixCondition = "AND e.event_type GLOB ?";
+      parameters.push(`${escapeGlob(eventTypePrefix)}*`);
+    }
+
+    return this.#query(
+      `WITH heads AS (
+         SELECT asset_id, MAX(event_id) AS head
+         FROM events
+         WHERE event_type IN (${placeholdersFor(checkpointEventTypes)})
+         GROUP BY asset_id
+       )
+       SELECT ${kAliasedColumns}
+       FROM events e
+       LEFT JOIN heads h ON h.asset_id = e.asset_id
+       WHERE e.event_id >= COALESCE(h.head, 0) ${prefixCondition}
+       ORDER BY e.event_id ASC`,
+      ...parameters
+    ).map((row) => toEvent(row));
+  }
+
+  compact(
+    options: CompactOptions
+  ): CompactReport {
+    const {
+      checkpointEventTypes,
+      reclaim = true
+    } = options;
+    if (checkpointEventTypes.length === 0) {
+      return {
+        removed: 0,
+        assets: 0
+      };
+    }
+
+    const placeholders = placeholdersFor(checkpointEventTypes);
+    const { assets } = this.#db.prepare(
+      `SELECT COUNT(DISTINCT asset_id) AS assets
+       FROM events
+       WHERE event_type IN (${placeholders})`
+    ).get(...checkpointEventTypes) as { assets: number; };
+
+    /**
+     * The inner join drops assets holding no checkpoint, so their streams
+     * are left whole.
+     */
+    const { changes } = this.#db.prepare(
+      `DELETE FROM events
+       WHERE event_id IN (
+         SELECT e.event_id
+         FROM events e
+         JOIN (
+           SELECT asset_id, MAX(event_id) AS head
+           FROM events
+           WHERE event_type IN (${placeholders})
+           GROUP BY asset_id
+         ) h ON h.asset_id = e.asset_id
+         WHERE e.event_id < h.head
+       )`
+    ).run(...checkpointEventTypes);
+
+    if (reclaim && changes > 0) {
+      this.#db.exec("VACUUM");
+    }
+
+    return {
+      removed: Number(changes),
+      assets
+    };
+  }
+
   close(): void {
     if (this.#closed) {
       return;
@@ -154,6 +246,12 @@ export class SqliteEventLog implements EventLog {
   ): EventRow[] {
     return this.#db.prepare(sql).all(...parameters) as unknown as EventRow[];
   }
+}
+
+function placeholdersFor(
+  values: readonly unknown[]
+): string {
+  return values.map(() => "?").join(", ");
 }
 
 // Escape GLOB wildcards so prefixes match literally.

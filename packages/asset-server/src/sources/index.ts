@@ -8,8 +8,13 @@ export type {
   FilesystemAssetSourceOptions
 } from "./persistence/index.ts";
 export {
+  isStatePath,
   normalizeAssetPath,
+  safeAssetPath,
   toRelativePosix
+} from "./paths.ts";
+export type {
+  AssetPathRejection
 } from "./paths.ts";
 export {
   readJsonFile,

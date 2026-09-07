@@ -7,9 +7,6 @@ import {
 
 export type Logger = ILogLayer;
 
-/**
- * No-op logger used when the host does not supply one.
- */
 export function silentLogger(): Logger {
   return new LogLayer({
     transport: new BlankTransport({

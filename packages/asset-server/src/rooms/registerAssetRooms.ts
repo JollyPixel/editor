@@ -37,19 +37,10 @@ export interface AssetRoomsOptions {
   states: AssetStateStore;
   projector: AssetProjector;
   scheduler: SnapshotScheduler;
-  /**
-   * Grace period, in milliseconds, before an empty asset room is disposed.
-   * Falls back to the Server's default when omitted.
-   */
   graceMs?: number;
   logger?: Logger;
 }
 
-/**
- * Resolves cataloged assets whose kind can create a room extension.
- *
- * Eviction flushes the asset before releasing its live state.
- */
 export function registerAssetRooms(
   options: AssetRoomsOptions
 ): () => void {

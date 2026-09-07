@@ -136,9 +136,6 @@ export function matchRenames(
   };
 }
 
-/**
- * The lone member of `values`, or `undefined` when it holds anything else.
- */
 function singleton<TValue>(
   values: readonly TValue[]
 ): TValue | undefined {

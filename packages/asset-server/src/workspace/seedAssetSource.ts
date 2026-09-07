@@ -2,19 +2,8 @@
 import type { AssetSource } from "../sources/AssetSource.ts";
 
 export type AssetSeedFactory = () => Uint8Array | Promise<Uint8Array>;
-
-/**
- * Starter documents keyed by workspace-relative path.
- */
 export type AssetSeedMap = Record<string, AssetSeedFactory>;
 
-/**
- * Writes the starter documents of a first run so the back-end has something
- * to catalog. An existing path is never overwritten: once the workspace
- * exists it is the source of truth.
- *
- * Returns the paths written, in declaration order.
- */
 export async function seedAssetSource(
   source: AssetSource,
   seed: AssetSeedMap
@@ -26,7 +15,10 @@ export async function seedAssetSource(
       continue;
     }
 
-    await source.write(assetPath, await build());
+    await source.write(
+      assetPath,
+      await build()
+    );
     written.push(assetPath);
   }
 

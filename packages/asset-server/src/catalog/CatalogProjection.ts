@@ -12,6 +12,7 @@ import { Emitter } from "@openally/emitt";
 // Import Internal Dependencies
 import { ASSET_EVENT_PREFIX } from "../constants.ts";
 import {
+  ASSET_CHECKPOINT_EVENT_TYPES,
   ASSET_CREATED,
   ASSET_DELETED,
   ASSET_RENAMED,
@@ -66,7 +67,8 @@ export class CatalogProjection extends Emitter<
 
   load(): void {
     this.#catalog = new AssetCatalog();
-    const events = this.#eventStore.reader.listAll({
+    const events = this.#eventStore.reader.listFromCheckpoints({
+      checkpointEventTypes: ASSET_CHECKPOINT_EVENT_TYPES,
       eventTypePrefix: ASSET_EVENT_PREFIX
     });
     for (const event of events) {
@@ -98,12 +100,6 @@ export class CatalogProjection extends Emitter<
     this.removeAllListeners();
   }
 
-  /**
-   * Folds lifecycle events and rejects events outside the reserved prefix.
-   *
-   * A payload that does not match its event type is dropped, leaving the
-   * catalog on its last good record.
-   */
   apply(
     event: EventStore.Event
   ): boolean {

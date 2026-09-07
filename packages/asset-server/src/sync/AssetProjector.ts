@@ -11,6 +11,7 @@ import {
   ASSET_EVENT_PREFIX
 } from "../constants.ts";
 import {
+  ASSET_CHECKPOINT_EVENT_TYPES,
   decodeContent,
   isAssetEvent
 } from "../events/AssetEvents.ts";
@@ -60,15 +61,12 @@ export class AssetProjector {
     this.#logger = options.logger ?? silentLogger();
   }
 
-  /**
-   * Rebuilds both folds from the log. Events at or below an asset's
-   * checkpoint are the ones already written.
-   */
   load(): void {
     this.#folds.clear();
     this.#dirty.clear();
 
-    const events = this.#eventStore.reader.listAll({
+    const events = this.#eventStore.reader.listFromCheckpoints({
+      checkpointEventTypes: ASSET_CHECKPOINT_EVENT_TYPES,
       eventTypePrefix: ASSET_EVENT_PREFIX
     });
     for (const event of events) {
@@ -76,9 +74,6 @@ export class AssetProjector {
     }
   }
 
-  /**
-   * Subscribes to the log so later appends converge automatically.
-   */
   start(): void {
     if (this.#onAppend !== null) {
       return;
@@ -131,11 +126,6 @@ export class AssetProjector {
     return this.#dirty.size;
   }
 
-  /**
-   * Marks reconciled bytes as projected without writing them again.
-   *
-   * The fold must exist because `start()` subscribes before writer appends.
-   */
   markProjected(
     assetId: string
   ): void {
@@ -157,20 +147,12 @@ export class AssetProjector {
     this.#stateDirty = true;
   }
 
-  /**
-   * Serializes pending writes and checkpoint updates.
-   */
   flush(
     assetId?: string
   ): Promise<void> {
     return this.#queue.run(() => this.#converge(assetId));
   }
 
-  /**
-   * Folds one lifecycle event. Payloads that do not match their event type
-   * are skipped: the asset keeps its last good projection rather than
-   * failing the whole replay.
-   */
   #absorb(
     event: EventStore.Event
   ): void {
@@ -217,9 +199,6 @@ export class AssetProjector {
 
     if (this.#stateDirty) {
       this.#stateDirty = false;
-      /**
-       * A failed checkpoint causes a safe repeated write on the next run.
-       */
       try {
         await this.#state.save();
       }
@@ -291,9 +270,6 @@ export class AssetProjector {
       );
     }
 
-    /**
-     * Writing first ensures a crash leaves both paths, never neither.
-     */
     if (moved) {
       await this.#source.delete(projected.path);
     }

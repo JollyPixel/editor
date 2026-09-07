@@ -7,6 +7,7 @@ Choose a backend in [`Memory`](./Memory.md) or [`Sqlite`](./Sqlite.md).
 export interface EventStore {
   readonly writer: EventWriter & TypedEventEmitter<EventStoreEventMap>;
   readonly reader: EventReader;
+  compact(options: CompactOptions): CompactReport;
   close(): void;
   [Symbol.dispose](): void;
 }
@@ -68,6 +69,7 @@ emitted with the error and original input after a failed write.
 reader.list(assetId: string, fromVersion?: number): Event[]
 reader.lastVersionOf(assetId: string, eventTypes: readonly string[]): number
 reader.listAll(options?: ListAllOptions): Event[]
+reader.listFromCheckpoints(options: ListFromCheckpointsOptions): Event[]
 ```
 
 `list` returns one asset stream in `eventVersion` order and treats `fromVersion`
@@ -92,6 +94,55 @@ export interface ListAllOptions {
 - `fromEventId` is an exclusive lower bound.
 - `eventTypePrefix` matches the start of `eventType` literally.
 - `limit` truncates the ordered result.
+
+### `listFromCheckpoints`
+
+```ts
+export interface ListFromCheckpointsOptions {
+  checkpointEventTypes: readonly string[];
+  eventTypePrefix?: string;
+}
+```
+
+Returns, for each asset, its newest event whose type is in
+`checkpointEventTypes` plus everything appended after it, across every stream
+in `eventId` order. An asset holding no checkpoint yields its whole stream,
+and an empty `checkpointEventTypes` degrades to `listAll`.
+
+`eventTypePrefix` filters the result without moving the bound: an event
+matching the prefix but stored before its asset's checkpoint is still left out.
+
+A reader whose fold restarts from a checkpoint uses this instead of
+`listAll`, so its cost tracks the number of assets rather than the depth of
+the log.
+
+## Compaction
+
+```ts
+export interface CompactOptions {
+  checkpointEventTypes: readonly string[];
+  reclaim?: boolean;
+}
+
+export interface CompactReport {
+  removed: number;
+  assets: number;
+}
+```
+
+`compact` removes every event stored before each asset's newest checkpoint,
+which is exactly the set `listFromCheckpoints` already skips. An asset holding
+no checkpoint keeps its whole stream, and an empty `checkpointEventTypes`
+removes nothing.
+
+> [!WARNING]
+> Compaction is destructive and irreversible. Only call it when the checkpoint
+> types genuinely replace an asset's whole state, so nothing below them is ever
+> read again.
+
+Surviving events keep their `eventId` and `eventVersion`, so a position held
+elsewhere stays valid and `append` keeps assigning increasing versions.
+`reclaim` defaults to `true` and asks the backend to release the freed space.
 
 ## Lifecycle
 
@@ -124,6 +175,7 @@ and version assignment:
 ```ts
 export interface EventLog extends EventReader {
   insert(input: AppendInput): Event;
+  compact(options: CompactOptions): CompactReport;
   close(): void;
 }
 ```

@@ -51,8 +51,9 @@ await backend.writer.remove({ assetId, actor });
 ```
 
 These operations return an error result when the asset ID is unknown. Paths
-are root-relative POSIX paths. Backslashes are normalized, and paths that
-escape the source root throw `AssetPathEscapeError`.
+are [root-relative POSIX paths](./AssetSource.md#paths); one that escapes the
+source root, or that names the `.jollypixel/` state directory, throws
+`AssetPathEscapeError`.
 
 Call `backend.flush(assetId)` when the caller must wait for the resulting
 source write. The `alreadyProjected` input option is reserved for source-backed

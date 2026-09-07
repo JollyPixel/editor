@@ -242,11 +242,6 @@ export async function createAssetBackend(
   return backend;
 }
 
-/**
- * Creates the state `.gitignore` only when it is absent.
- *
- * Other read failures leave a possibly edited file untouched.
- */
 async function ensureGitignore(
   source: AssetSource
 ): Promise<void> {

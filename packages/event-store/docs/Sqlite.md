@@ -37,6 +37,13 @@ See [`EventStore`](./EventStore.md) for the shared writer and reader API.
 `append` assigns versions atomically, so concurrent writers cannot store duplicate
 versions for the same asset.
 
+## Compaction
+
+`compact` deletes the superseded rows in one statement, then runs `VACUUM`
+to return the freed pages to the filesystem. Pass `reclaim: false` to skip
+the `VACUUM` and leave the file at its current size. See
+[`EventStore compaction`](./EventStore.md#compaction).
+
 ## `close`
 
 ```ts

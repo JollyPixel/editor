@@ -110,10 +110,6 @@ export class ProjectionState {
     );
   }
 
-  /**
-   * A missing or malformed file yields empty positions: the projector then
-   * repairs the projection from the log instead of failing to start.
-   */
   static async load(
     source: AssetSource
   ): Promise<ProjectionState> {
@@ -128,9 +124,6 @@ export class ProjectionState {
     );
   }
 
-  /**
-   * Drops malformed checkpoints so the projector safely repeats their writes.
-   */
   static parse(
     input: unknown
   ): ProjectionStateData | null {

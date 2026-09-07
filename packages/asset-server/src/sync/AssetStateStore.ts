@@ -7,20 +7,9 @@ import type * as EventStore from "@jolly-pixel/event-store";
 // Import Internal Dependencies
 import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
 import type { AssetKindHandler } from "../kinds/AssetKindHandler.ts";
-import {
-  ASSET_CREATED,
-  ASSET_DELETED,
-  ASSET_UPDATED
-} from "../events/AssetEvents.ts";
+import { ASSET_CHECKPOINT_EVENT_TYPES } from "../events/AssetEvents.ts";
 
 // CONSTANTS
-/** Lifecycle events a handler folds by replacing the whole state. */
-const kCheckpointEventTypes: readonly string[] = [
-  ASSET_CREATED,
-  ASSET_UPDATED,
-  ASSET_DELETED
-];
-/** Events folded between yields, so one long replay cannot hold the loop. */
 const kReplayYieldEvery = 250;
 
 export interface AssetStateEntry {
@@ -85,10 +74,6 @@ export class AssetStateStore {
     return this.#entries.get(assetId);
   }
 
-  /**
-   * Returns the live entry, replaying the asset's stream on first access.
-   * Concurrent callers share one replay.
-   */
   acquire(
     assetId: string,
     kind: string
@@ -121,10 +106,6 @@ export class AssetStateStore {
     this.#entries.delete(assetId);
   }
 
-  /**
-   * Serializes an asset's state to the bytes its projection stores.
-   * Replays the stream when the asset is not live.
-   */
   async serialize(
     assetId: string,
     kind: string
@@ -135,10 +116,6 @@ export class AssetStateStore {
     return entry.handler.serialize(entry.state);
   }
 
-  /**
-   * Folds an asset's stream into a fresh state from its last checkpoint. Not
-   * registered as live: `acquire` keeps the result, `serialize` drops it.
-   */
   async #replay(
     assetId: string,
     kind: string
@@ -147,7 +124,7 @@ export class AssetStateStore {
     const state = handler.create(assetId);
     const checkpoint = this.#eventStore.reader.lastVersionOf(
       assetId,
-      kCheckpointEventTypes
+      ASSET_CHECKPOINT_EVENT_TYPES
     );
     // `list` is exclusive, so step back one to fold the checkpoint itself.
     let from = Math.max(checkpoint - 1, 0);

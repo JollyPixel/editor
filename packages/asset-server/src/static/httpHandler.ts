@@ -10,15 +10,28 @@ import { ASSET_URL_PREFIX } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
 import type { AssetSource } from "../sources/AssetSource.ts";
-import { normalizeAssetPath } from "../sources/paths.ts";
 import { AssetPathEscapeError } from "../errors/AssetPathEscapeError.ts";
-import { STATE_DIRECTORY } from "../constants.ts";
+import {
+  isStatePath,
+  safeAssetPath,
+  type AssetPathRejection
+} from "../sources/paths.ts";
 import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
 import {
   contentTypesFromKinds,
   DEFAULT_CONTENT_TYPES,
   resolveContentType
 } from "./contentTypes.ts";
+
+// CONSTANTS
+const kRejectionStatus: Readonly<Record<AssetPathRejection, number>> = {
+  empty: 404,
+  directory: 404,
+  invalid: 400,
+  absolute: 403,
+  traversal: 403,
+  reserved: 403
+};
 
 export const DEFAULT_ASSET_PREFIX = ASSET_URL_PREFIX;
 
@@ -46,13 +59,6 @@ export interface AssetStaticHandlerOptions {
   contentTypes?: Readonly<Record<string, string>>;
 }
 
-/**
- * Serves the asset workspace under a URL prefix, reading through the source
- * so any implementation is servable.
- *
- * The catalog hands the browser workspace-relative `source` paths, which
- * have to resolve to something.
- */
 export function createAssetStaticHandler(
   options: AssetStaticHandlerOptions
 ): AssetStaticHandler {
@@ -62,15 +68,21 @@ export function createAssetStaticHandler(
     contentTypes
   } = options;
 
-  const prefix = withTrailingSlash(options.prefix ?? DEFAULT_ASSET_PREFIX);
+  const prefix = withTrailingSlash(
+    options.prefix ?? DEFAULT_ASSET_PREFIX
+  );
   const table = {
     ...kinds ? contentTypesFromKinds(kinds) : DEFAULT_CONTENT_TYPES,
     ...contentTypes
   };
 
-  return function assetStaticHandler(request, response, next) {
-    const url = request.url ?? "";
-    if (!url.startsWith(prefix)) {
+  return function assetStaticHandler(
+    request: IncomingMessage,
+    response: ServerResponse,
+    next: () => void
+  ) {
+    const target = request.url ?? "";
+    if (!target.startsWith(prefix)) {
       next();
 
       return;
@@ -87,39 +99,25 @@ export function createAssetStaticHandler(
       return;
     }
 
-    let requested: string;
-    try {
-      requested = decodeURIComponent(
-        url.slice(prefix.length).split("?")[0]
-      );
-    }
-    catch {
-      response.statusCode = 400;
-      response.end();
+    const requested = decodeRequestPath(
+      target.slice(prefix.length)
+    );
+    if (requested === null) {
+      end(response, 400);
 
       return;
     }
 
-    let assetPath: string;
-    try {
-      assetPath = normalizeAssetPath(requested);
-    }
-    catch (error) {
-      // A "../" in the request must not escape the workspace.
-      if (error instanceof AssetPathEscapeError && looksLikeEscape(requested)) {
-        response.statusCode = 403;
-      }
-      else {
-        response.statusCode = 404;
-      }
-      response.end();
+    const resolved = safeAssetPath(requested);
+    if (!resolved.ok) {
+      end(response, kRejectionStatus[resolved.val]);
 
       return;
     }
 
-    if (isStatePath(assetPath)) {
-      response.statusCode = 404;
-      response.end();
+    const assetPath = resolved.val;
+    if (isHidden(source, assetPath)) {
+      end(response, 404);
 
       return;
     }
@@ -146,8 +144,18 @@ async function serve(
     bytes = await source.read(assetPath);
   }
   catch (error) {
-    response.statusCode = isNotFound(error) ? 404 : 500;
-    response.end();
+    // The source rejects what its own containment check refuses, a symlink
+    // out of the root above all.
+    if (error instanceof AssetPathEscapeError) {
+      end(response, 403);
+
+      return;
+    }
+
+    end(
+      response,
+      isMissing(error) ? 404 : 500
+    );
 
     return;
   }
@@ -164,35 +172,49 @@ async function serve(
   );
 }
 
-/**
- * Tells a rejected traversal from a merely unservable path, such as the
- * prefix itself or a trailing slash.
- */
-function looksLikeEscape(
-  requested: string
-): boolean {
-  return requested.startsWith("/") ||
-    /^[a-zA-Z]:/.test(requested) ||
-    requested.replaceAll("\\", "/").split("/").includes("..");
+function decodeRequestPath(
+  target: string
+): string | null {
+  const separator = target.search(/[?#]/);
+  const encoded = separator === -1 ?
+    target :
+    target.slice(0, separator);
+
+  try {
+    return decodeURIComponent(encoded);
+  }
+  catch {
+    return null;
+  }
 }
 
-/**
- * The state directory is back-end bookkeeping and never served.
- */
-function isStatePath(
+function isHidden(
+  source: AssetSource,
   assetPath: string
 ): boolean {
-  return assetPath === STATE_DIRECTORY ||
-    assetPath.startsWith(`${STATE_DIRECTORY}/`);
+  return isStatePath(assetPath) ||
+    (source.isIgnored?.(assetPath) ?? false);
 }
 
-function isNotFound(
+function isMissing(
   error: unknown
 ): boolean {
   return typeof error === "object" &&
     error !== null &&
     "code" in error &&
-    error.code === "ENOENT";
+    (
+      error.code === "ENOENT" ||
+      error.code === "EISDIR" ||
+      error.code === "ENOTDIR"
+    );
+}
+
+function end(
+  response: ServerResponse,
+  statusCode: number
+): void {
+  response.statusCode = statusCode;
+  response.end();
 }
 
 function withTrailingSlash(

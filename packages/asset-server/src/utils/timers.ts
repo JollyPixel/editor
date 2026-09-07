@@ -1,7 +1,3 @@
-/**
- * Handle returned by a scheduled timer. Real timers hand back a
- * `NodeJS.Timeout`; a controlled clock hands back an id.
- */
 export type TimerHandle = NodeJS.Timeout | number;
 
 export interface Timers {
@@ -14,9 +10,6 @@ export interface Timers {
   ): void;
 }
 
-/**
- * Real timers, unreffed so a pending snapshot never keeps a process alive.
- */
 export const systemTimers: Timers = {
   setTimeout(handler, ms) {
     const handle = setTimeout(handler, ms);

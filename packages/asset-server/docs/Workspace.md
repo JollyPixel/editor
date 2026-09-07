@@ -31,6 +31,7 @@ await using workspace = await createAssetWorkspace({
 | `extensions` | `[]` | Extensions registered before the asset rooms attach. |
 | `rights` | none | Rights map for the server it builds. |
 | `roomGraceMs` | server default | Grace period before an empty room is evicted. |
+| `compactOnOpen` | `true` | Drop the events superseded by each asset's newest checkpoint. |
 | `logger` | silent | A `loglayer` logger. Left unset, the server keeps its own. |
 | `backend` | `{}` | Extra [`AssetBackend`](./AssetBackend.md) options. |
 
@@ -39,6 +40,24 @@ passed in is left open by `close()`.
 
 Seeding runs before the back-end starts, so the first reconciliation catalogs
 the starter documents.
+
+## Compaction
+
+Every `asset.created` and `asset.updated` event carries the whole document
+inline, so a log that keeps them all grows with each edit and startup slows
+with it. Opening a workspace therefore compacts the log first, dropping the
+events stored before each asset's newest `asset.created`, `asset.updated` or
+`asset.deleted`. Nothing reads below that point: both projections load from
+it, and so does state replay.
+
+> [!WARNING]
+> Compaction is destructive and irreversible. It discards the editing history
+> in exchange for a log that stops growing without bound. Pass
+> `compactOnOpen: false` to keep it.
+
+It runs before the back-end, so the projections never read the superseded
+events and the reclaimed file is the one the back-end opens. See
+[`EventStore compaction`](../../event-store/docs/EventStore.md#compaction).
 
 ## Event log
 
@@ -74,10 +93,24 @@ const handler = createAssetStaticHandler({
 ```
 
 Requests outside the prefix are passed to `next()`. `GET` and `HEAD` answer
-`200` from the source, other methods `405`. A path escaping the root answers
-`403`, a missing file or the state directory `404`, and a malformed escape
-sequence `400`. Reads go through the `AssetSource`, so an in-memory workspace
-is servable too.
+`200` from the source, other methods `405`. Reads go through the
+`AssetSource`, so an in-memory workspace is servable too.
+
+The request target is stripped of its query and fragment, decoded once, then
+validated by [`safeAssetPath`](./AssetSource.md#paths), so the source only
+ever sees a root-relative POSIX path. The rejection decides the status:
+
+| Case | Status |
+|---|---|
+| Absolute, drive-qualified or `..` path, source refusing the path | `403` |
+| Malformed escape sequence, control character in the path | `400` |
+| Missing file, directory target, state directory, path the source ignores | `404` |
+
+The state directory is matched case-insensitively, because a
+case-insensitive filesystem answers `.JOLLYPIXEL/state.json` from
+`.jollypixel/`. Paths a source hides through `isIgnored` (`.git/`,
+`node_modules/`, `dist/` by default) answer `404` as well, so the handler
+never serves what listing and reconciliation deliberately skip.
 
 | Option | Default | Description |
 |---|---|---|

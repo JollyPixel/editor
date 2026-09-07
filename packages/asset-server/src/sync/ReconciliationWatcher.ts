@@ -56,10 +56,6 @@ export class ReconciliationWatcher {
     return this.#unwatch !== null;
   }
 
-  /**
-   * Subscribes to the source. Sources with no `watch` are a no-op: the host
-   * can still call `notify` or reconcile explicitly.
-   */
   start(): void {
     if (
       this.#unwatch !== null ||
@@ -71,9 +67,6 @@ export class ReconciliationWatcher {
     this.#unwatch = this.#source.watch((path) => this.notify(path));
   }
 
-  /**
-   * Records a change and resets the debounce.
-   */
   notify(
     path: string
   ): void {
@@ -90,9 +83,6 @@ export class ReconciliationWatcher {
     );
   }
 
-  /**
-   * Runs now and repeats when changes arrive during the pass.
-   */
   run(): Promise<void> {
     if (this.#handle !== null) {
       this.#timers.clearTimeout(this.#handle);

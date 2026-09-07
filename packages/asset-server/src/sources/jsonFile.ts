@@ -1,11 +1,6 @@
 // Import Internal Dependencies
 import type { AssetSource } from "./AssetSource.ts";
 
-/**
- * Reads parseable JSON or returns `null` so callers can rebuild it.
- *
- * Callers remain responsible for validating the parsed shape.
- */
 export async function readJsonFile(
   source: AssetSource,
   path: string
@@ -22,10 +17,6 @@ export async function readJsonFile(
   }
 }
 
-/**
- * Writes a JSON document, pretty-printed and newline-terminated so the
- * committed sidecar stays diff-friendly.
- */
 export function writeJsonFile(
   source: AssetSource,
   path: string,
@@ -33,6 +24,8 @@ export function writeJsonFile(
 ): Promise<void> {
   return source.write(
     path,
-    new TextEncoder().encode(`${JSON.stringify(value, null, 2)}\n`)
+    new TextEncoder().encode(
+      `${JSON.stringify(value, null, 2)}\n`
+    )
   );
 }

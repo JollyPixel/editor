@@ -13,6 +13,7 @@ import {
   normalizeAssetPath,
   toRelativePosix
 } from "../paths.ts";
+import { AssetPathEscapeError } from "../../errors/AssetPathEscapeError.ts";
 import { STATE_DIRECTORY } from "../../constants.ts";
 
 export const DEFAULT_IGNORED_PATHS: readonly string[] = [
@@ -34,12 +35,15 @@ export class FilesystemAssetSource implements AssetSource {
   readonly root: string;
 
   #isIgnored: picomatch.Matcher;
+  #realRoot: Promise<string> | null = null;
 
   constructor(
     root: string,
     options: FilesystemAssetSourceOptions = {}
   ) {
-    const { ignore = [] } = options;
+    const {
+      ignore = []
+    } = options;
 
     this.root = path.resolve(root);
     this.#isIgnored = picomatch(
@@ -47,7 +51,10 @@ export class FilesystemAssetSource implements AssetSource {
         ...DEFAULT_IGNORED_PATHS,
         ...ignore
       ],
-      { dot: true }
+      {
+        dot: true,
+        nocase: true
+      }
     );
   }
 
@@ -70,7 +77,7 @@ export class FilesystemAssetSource implements AssetSource {
     assetPath: string
   ): Promise<Uint8Array> {
     const buffer = await fs.readFile(
-      this.resolve(assetPath)
+      await this.#contained(assetPath)
     );
 
     return new Uint8Array(
@@ -84,7 +91,7 @@ export class FilesystemAssetSource implements AssetSource {
     assetPath: string,
     data: Uint8Array
   ): Promise<void> {
-    const absolute = this.resolve(assetPath);
+    const absolute = await this.#contained(assetPath);
     const directory = path.dirname(absolute);
     await fs.mkdir(
       directory,
@@ -100,7 +107,10 @@ export class FilesystemAssetSource implements AssetSource {
       await fs.rename(temporary, absolute);
     }
     catch (error) {
-      await fs.rm(temporary, { force: true });
+      await fs.rm(
+        temporary,
+        { force: true }
+      );
       throw error;
     }
   }
@@ -109,44 +119,50 @@ export class FilesystemAssetSource implements AssetSource {
     assetPath: string
   ): Promise<void> {
     await fs.rm(
-      this.resolve(assetPath),
+      await this.#contained(assetPath),
       { force: true }
     );
   }
 
   async list(): Promise<string[]> {
     const entries: string[] = [];
-    await this.#walk(this.root, entries);
+    await this.#walk(
+      this.root,
+      entries
+    );
 
     return entries.sort();
   }
 
-  /**
-   * Reports external changes, including the projector's own writes.
-   */
   watch(
     onChange: (path: string) => void
   ): () => void {
     const watcher = chokidar.watch(this.root, {
       persistent: true,
-      /**
-       * Initial entries close the race between scanning and watcher readiness.
-       */
       ignoreInitial: false,
       awaitWriteFinish: {
         stabilityThreshold: 120,
         pollInterval: 30
       },
       ignored: (absolute: string) => {
-        const relative = toRelativePosix(this.root, absolute);
+        const relative = toRelativePosix(
+          this.root,
+          absolute
+        );
 
         return relative !== null && this.#isIgnored(relative);
       }
     });
 
     const notify = (absolute: string) => {
-      const relative = toRelativePosix(this.root, absolute);
-      if (relative === null || this.#isIgnored(relative)) {
+      const relative = toRelativePosix(
+        this.root,
+        absolute
+      );
+      if (
+        relative === null ||
+        this.#isIgnored(relative)
+      ) {
         return;
       }
 
@@ -163,6 +179,24 @@ export class FilesystemAssetSource implements AssetSource {
     };
   }
 
+  async #contained(
+    assetPath: string
+  ): Promise<string> {
+    const absolute = this.resolve(assetPath);
+    this.#realRoot ??= fs.realpath(this.root);
+
+    const root = await this.#realRoot;
+    const real = await realPathOfNearestParent(absolute);
+    if (
+      real !== root &&
+      toRelativePosix(root, real) === null
+    ) {
+      throw new AssetPathEscapeError(assetPath);
+    }
+
+    return absolute;
+  }
+
   async #walk(
     directory: string,
     entries: string[]
@@ -174,19 +208,59 @@ export class FilesystemAssetSource implements AssetSource {
 
     for (const child of children) {
       const absolute = path.join(directory, child.name);
-      const relative = toRelativePosix(this.root, absolute);
-      if (relative === null || this.#isIgnored(relative)) {
+      const relative = toRelativePosix(
+        this.root,
+        absolute
+      );
+      if (
+        relative === null ||
+        this.#isIgnored(relative)
+      ) {
         continue;
       }
 
       if (child.isDirectory()) {
         await this.#walk(absolute, entries);
       }
-      else if (child.isFile() && !isTemporary(child.name)) {
+      else if (
+        child.isFile() &&
+        !isTemporary(child.name)
+      ) {
         entries.push(relative);
       }
     }
   }
+}
+
+async function realPathOfNearestParent(
+  absolute: string
+): Promise<string> {
+  let current = absolute;
+
+  for (;;) {
+    try {
+      return await fs.realpath(current);
+    }
+    catch (error) {
+      const parent = path.dirname(current);
+      if (
+        !isNotFound(error) ||
+        parent === current
+      ) {
+        throw error;
+      }
+      current = parent;
+    }
+  }
+}
+
+function isNotFound(
+  error: unknown
+): boolean {
+  return typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "ENOENT";
 }
 
 function isTemporary(
