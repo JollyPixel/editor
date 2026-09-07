@@ -9,6 +9,7 @@ import {
 import type { VoxelWorld } from "@jolly-pixel/voxel.renderer";
 import {
   type JollyRenameDetail,
+  type JollyReparentDetail,
   type JollySelectDetail,
   type JollyToggleLockDetail,
   type JollyToggleVisibleDetail,
@@ -22,16 +23,18 @@ import {
   type WorldStore
 } from "../../app/state/index.ts";
 import { ViewFocus } from "../../scene/viewFocus.ts";
-// Imported for its side effect too: it registers the child dialog element.
 import { AddLayerDialog } from "./AddLayerDialog.ts";
 import {
   createLayerEntry,
-  moveLayerEntry,
   removeLayerEntry,
   renameLayerEntry,
   setLayerEntryLocked,
   setLayerEntryVisibility
 } from "./layerActions.ts";
+import {
+  applyLayerReparent,
+  canDropLayerRef
+} from "./layerDrop.ts";
 import {
   layerRefOf,
   layerRowId,
@@ -58,17 +61,22 @@ export class LayerManager extends LitElement {
 
   @property({ attribute: false })
   declare world: VoxelWorld | undefined;
+
   @property({ attribute: false })
   declare selection: SelectionStore;
+
   @property({ attribute: false })
   declare worldStore: WorldStore;
+
   @property({ attribute: false })
   declare viewFocus: ViewFocus;
 
   @state()
   private declare _nodes: TreeNode<LayerRef>[];
+
   @state()
   private declare _selected: string[];
+
   @state()
   private declare _expanded: string[];
 
@@ -126,36 +134,22 @@ export class LayerManager extends LitElement {
   }
 
   override render() {
-    const hasSelection = this._selected.length > 0;
-
     return html`
-      <jolly-toolbar label="Layers">
-        <jolly-button @click=${this.#add}>+ Add</jolly-button>
-        <jolly-button
-          @click=${this.#remove}
-          ?disabled=${!hasSelection}
-        >- Remove</jolly-button>
-        <jolly-button
-          @click=${this.#moveUp}
-          ?disabled=${!this.#canMove}
-        >↑</jolly-button>
-        <jolly-button
-          @click=${this.#moveDown}
-          ?disabled=${!this.#canMove}
-        >↓</jolly-button>
-      </jolly-toolbar>
-
       <div class="tree-host" @click=${this.#onHostClick}>
         <jolly-tree
           renamable
+          reorderable
+          row-drag
           .nodes=${this._nodes}
           .selected=${this._selected}
           .expanded=${this._expanded}
+          .acceptDrop=${canDropLayerRef}
           @jolly-select=${this.#onSelect}
           @jolly-toggle-expand=${this.#onToggleExpand}
           @jolly-toggle-visible=${this.#onToggleVisible}
           @jolly-toggle-lock=${this.#onToggleLock}
           @jolly-rename=${this.#onRename}
+          @jolly-reparent=${this.#onReparent}
         ></jolly-tree>
       </div>
 
@@ -167,10 +161,6 @@ export class LayerManager extends LitElement {
     const [id] = this._selected;
 
     return id === undefined ? null : layerRefOf(id);
-  }
-
-  get #canMove(): boolean {
-    return this.#selectedRef?.kind === "voxel-layer";
   }
 
   #selectionFromState(): string[] {
@@ -282,7 +272,7 @@ export class LayerManager extends LitElement {
     this.#refreshNodes();
   }
 
-  async #add() {
+  async addLayer() {
     if (!this.world) {
       return;
     }
@@ -310,7 +300,7 @@ export class LayerManager extends LitElement {
     );
   }
 
-  async #remove() {
+  async removeLayer() {
     const ref = this.#selectedRef;
     if (ref === null || !this.world) {
       return;
@@ -323,31 +313,15 @@ export class LayerManager extends LitElement {
     );
   }
 
-  #moveUp(): void {
-    this.#move("up");
-  }
-
-  #moveDown(): void {
-    this.#move("down");
-  }
-
-  #move(
-    direction: "up" | "down"
+  #onReparent(
+    event: CustomEvent<JollyReparentDetail>
   ): void {
-    const ref = this.#selectedRef;
-    if (
-      ref === null ||
-      ref.kind !== "voxel-layer" ||
-      !this.world
-    ) {
+    if (!this.world) {
       return;
     }
 
-    moveLayerEntry(
-      this.world,
-      ref,
-      direction
-    );
+    applyLayerReparent(this.world, event.detail);
+    this.#refreshNodes();
   }
 }
 

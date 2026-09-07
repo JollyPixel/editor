@@ -300,7 +300,8 @@ export {
 } from "./data/Tree.ts";
 export {
   canDrop,
-  resolveReparent
+  resolveReparent,
+  type ResolveReparentOptions
 } from "./data/resolveReparent.ts";
 export {
   resolveRowDropZone
@@ -323,6 +324,7 @@ export type {
   JollyToggleExpandDetail,
   JollyToggleLockDetail,
   JollyToggleVisibleDetail,
+  TreeDropAccept,
   TreeDropWhere,
   TreeNode
 } from "./data/Tree.types.ts";

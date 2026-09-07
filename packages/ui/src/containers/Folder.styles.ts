@@ -76,7 +76,8 @@ export const folderStyles = css`
     opacity: 0.14;
   }
 
-  .toggle {
+  .toggle,
+  .title {
     position: relative;
     z-index: 1;
     display: flex;
@@ -91,10 +92,14 @@ export const folderStyles = css`
     color: inherit;
     font: inherit;
     text-align: start;
+  }
+
+  .toggle {
     cursor: pointer;
   }
 
-  .toggle .label {
+  .toggle .label,
+  .title .label {
     min-width: 0;
     ${truncate}
   }
@@ -120,10 +125,36 @@ export const folderStyles = css`
     --jolly-control-bg-active: var(--jolly-folder-action-bg-active);
   }
 
-  .toggle .chevron {
+  /*
+   * The danger variant paints itself from its own tokens, so it has to be
+   * inverted on its own: a filled red ground, the glyph in the action
+   * foreground.
+   */
+  ::slotted(jolly-button[slot="actions"][variant="danger"]) {
+    --jolly-danger: var(
+      --jolly-folder-action-danger-fg,
+      ${kFallback.folderActionDangerFg}
+    );
+    --jolly-invalid-bg: var(
+      --jolly-folder-action-danger-bg,
+      ${kFallback.folderActionDangerBg}
+    );
+    --jolly-invalid-bg-hover: var(--jolly-folder-action-danger-bg-hover);
+    --jolly-invalid-bg-focus: var(--jolly-folder-action-danger-bg-focus);
+  }
+
+  /*
+   * The gutter holds the chevron's place in a folder that has none, so a
+   * header that cannot collapse still lines its label up with its neighbours.
+   */
+  .toggle .chevron,
+  .title .gutter {
     flex: 0 0 auto;
     width: 10px;
     height: 10px;
+  }
+
+  .toggle .chevron {
     color: var(--jolly-text-muted, ${kFallback.text});
     transform-origin: center;
     transition: transform var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease);
@@ -173,11 +204,24 @@ export const folderStyles = css`
     display: none;
     flex-direction: column;
     gap: var(--jolly-row-gap, 4px);
-    padding-inline-start: var(--jolly-space-1, 4px);
+    padding-inline-start: var(
+      --jolly-folder-indent,
+      var(--jolly-space-1, 4px)
+    );
   }
 
+  :host([flush]) .content {
+    padding-inline-start: 0;
+  }
+
+  /*
+   * The content takes any height the host is given, so a folder stretched by
+   * its owner hands that height down to a filling child.
+   */
   :host([open]) .content {
     display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
   }
 
   @media (forced-colors: active) {

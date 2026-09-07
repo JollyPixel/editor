@@ -24,6 +24,7 @@ tree.expanded = ["scene"];
 | `reorderable` | `boolean` | `false` |
 | `rowDrag` | `boolean` | `false` |
 | `renamable` | `boolean` | `false` |
+| `acceptDrop` | `TreeDropAccept \| null` | `null` |
 
 The component does not mutate these arrays after user input. Consumers write
 event details back to the relevant property.
@@ -40,6 +41,22 @@ event details back to the relevant property.
 
 Arrow keys navigate visible rows. Enter activates a row. When reordering is
 enabled, Space enters keyboard move mode, Enter commits, and Escape cancels.
+
+## Rejecting a drop the domain does not allow
+
+`jolly-tree` enforces one drop rule on its own: a node cannot land inside
+itself or its own subtree. Every other constraint belongs to the consumer,
+which sets `acceptDrop` to a `(detail: JollyReparentDetail) => boolean`.
+
+```ts
+tree.acceptDrop = ({ movedIds, targetId, where }) =>
+  where !== "inside" && kindOf(movedIds[0]) === kindOf(targetId);
+```
+
+It is consulted while dragging as well as on commit, so a rejected move
+paints no drop indicator and never reaches `jolly-reparent`. A predicate that
+runs on every pointer move should stay cheap. The structural rule runs first,
+so `acceptDrop` is never asked about a move that is already impossible.
 
 ## Renaming a row in place
 

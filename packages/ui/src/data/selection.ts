@@ -2,15 +2,9 @@
 import type { FlatTreeRow } from "./treeNodes.ts";
 
 export interface ResolveSelectionOptions<TData> {
-  /** Visible rows, in document order. */
   rows: readonly FlatTreeRow<TData>[];
   clickedId: string;
   current: readonly string[];
-  /**
-   * Row a Shift range extends from. Presentation state the element keeps
-   * locally, the same way `firstSelectedNode` is local to `arbor`'s
-   * selector rather than part of the controlled `selected` value.
-   */
   anchorId: string | null;
   shiftKey: boolean;
   ctrlKey: boolean;
@@ -22,15 +16,6 @@ export interface ResolvedSelection {
   anchorId: string;
 }
 
-/**
- * Ported from `arbor`'s `TreeViewSelector.updateSelection`, over row ids
- * instead of DOM elements. A plain click, or any click when `multiple` is
- * off, replaces the selection outright. Ctrl toggles membership. Shift
- * selects the contiguous sibling range between the anchor and the clicked
- * row. Both modifiers are a no-op when the anchor and the clicked row do not
- * share a parent — arbor's own restriction, since a range or a toggle across
- * two different sibling groups has no single coherent order.
- */
 export function resolveSelection<TData>(
   options: ResolveSelectionOptions<TData>
 ): ResolvedSelection {

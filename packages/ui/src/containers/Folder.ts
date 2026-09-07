@@ -46,10 +46,16 @@ export class Folder extends LitElement {
   declare open: boolean;
 
   @property({ type: Boolean, reflect: true })
+  declare collapsible: boolean;
+
+  @property({ type: Boolean, reflect: true })
   declare reorderable: boolean;
 
   @property({ type: Boolean, reflect: true })
   declare dragging: boolean;
+
+  @property({ type: Boolean, reflect: true })
+  declare flush: boolean;
 
   @property({
     type: String,
@@ -94,8 +100,10 @@ export class Folder extends LitElement {
     this.label = "";
     this.key = "";
     this.open = true;
+    this.collapsible = true;
     this.reorderable = false;
     this.dragging = false;
+    this.flush = false;
     this.storageKey = "";
     this.storage = new LocalStorageAdapter();
     this._reordering = false;
@@ -108,19 +116,17 @@ export class Folder extends LitElement {
     );
   }
 
+  // A folder that cannot collapse has no way back open, so it stays open.
+  protected override willUpdate(): void {
+    if (!this.collapsible) {
+      this.open = true;
+    }
+  }
+
   override render(): TemplateResult {
     return html`
       <div class="header" part="header">
-        <button
-          class="toggle"
-          type="button"
-          aria-expanded=${String(this.open)}
-          @click=${this.#toggle}
-        ><jolly-icon
-          class="chevron"
-          name="chevron"
-          aria-hidden="true"
-        ></jolly-icon><span class="label">${this.label}</span></button>
+        ${this.collapsible ? this.#renderToggle() : this.#renderTitle()}
         <slot name="actions"></slot>
         <button
           class="grip"
@@ -135,6 +141,26 @@ export class Folder extends LitElement {
         <slot></slot>
       </div>
     `;
+  }
+
+  #renderToggle(): TemplateResult {
+    return html`<button
+      class="toggle"
+      type="button"
+      aria-expanded=${String(this.open)}
+      @click=${this.#toggle}
+    ><jolly-icon
+      class="chevron"
+      name="chevron"
+      aria-hidden="true"
+    ></jolly-icon><span class="label">${this.label}</span></button>`;
+  }
+
+  #renderTitle(): TemplateResult {
+    return html`<div class="title"><span
+      class="gutter"
+      aria-hidden="true"
+    ></span><span class="label">${this.label}</span></div>`;
   }
 
   headerRect(): DOMRect {
@@ -154,6 +180,10 @@ export class Folder extends LitElement {
   };
 
   #restoreOpen(): void {
+    if (!this.collapsible) {
+      return;
+    }
+
     const stored = this.#state.read("open");
     if (stored === "true" || stored === "false") {
       this.open = stored === "true";

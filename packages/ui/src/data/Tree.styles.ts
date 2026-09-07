@@ -84,7 +84,6 @@ export const treeStyles = css`
     ${truncate}
   }
 
-  /* Sits in the label's own box so committing an edit does not reflow. */
   .rename {
     min-width: 0;
     padding: 0;
@@ -97,19 +96,11 @@ export const treeStyles = css`
     font: inherit;
   }
 
-  /* Mirrors the eye toggle's own state: a row with visible=false reads as
-     hidden at a glance, not only through its icon. */
   .row[data-hidden="true"] .label,
   .row[data-hidden="true"] .node-icon {
     opacity: 0.5;
   }
 
-  /*
-   * Narrower than they are tall: the glyph keeps the full row height to click
-   * on, while the trimmed sides bring neighbouring glyphs to the same 4px
-   * rhythm the rest of the row uses. The chevron column is left alone, since
-   * its width sets the indent of every nested row.
-   */
   .visible-toggle,
   .lock-toggle,
   .grip {
@@ -130,11 +121,6 @@ export const treeStyles = css`
     place-items: center;
   }
 
-  /*
-   * The trailing toggles read as one cluster, so they drop the row gap too.
-   * Stacked on the buttons' own insets it spaced the eye and the lock three
-   * times wider than anything else on the row.
-   */
   .visible-toggle + .lock-toggle,
   .visible-toggle + .grip,
   .lock-toggle + .grip {
@@ -160,7 +146,6 @@ export const treeStyles = css`
     height: 12px;
   }
 
-  /* The source dims in place while a drag session previews its new position. */
   .row[data-dragging="true"] {
     opacity: 0.4;
   }

@@ -23,7 +23,11 @@ import {
 } from "./treeNodes.ts";
 import { emitDataEvent } from "./events.ts";
 import { treeStyles } from "./Tree.styles.ts";
-import type { TreeDropWhere, TreeNode } from "./Tree.types.ts";
+import type {
+  TreeDropAccept,
+  TreeDropWhere,
+  TreeNode
+} from "./Tree.types.ts";
 
 // Registers the chevron, eye, lock and drag glyphs.
 import "../icon/Icon.ts";
@@ -83,6 +87,13 @@ export class Tree<TData = unknown> extends LitElement {
   @property({ type: Boolean, reflect: true })
   declare renamable: boolean;
 
+  /**
+   * Domain veto for a candidate drop. Consulted while dragging as well as on
+   * commit, so a move this rejects never paints a drop indicator.
+   */
+  @property({ attribute: false })
+  declare acceptDrop: TreeDropAccept | null;
+
   @state()
   private declare _renamingId: string | null;
 
@@ -110,6 +121,7 @@ export class Tree<TData = unknown> extends LitElement {
     this.reorderable = false;
     this.rowDrag = false;
     this.renamable = false;
+    this.acceptDrop = null;
     this._renamingId = null;
     this._anchorId = null;
     this._dragPreview = null;
@@ -598,7 +610,13 @@ export class Tree<TData = unknown> extends LitElement {
     }
 
     const { movedIds, cursorId, where } = moveState;
-    if (canDrop({ nodes: this.nodes, movedIds, targetId: cursorId, where })) {
+    if (canDrop({
+      nodes: this.nodes,
+      movedIds,
+      targetId: cursorId,
+      where,
+      accept: this.acceptDrop
+    })) {
       emitDataEvent(this, "jolly-reparent", { movedIds, targetId: cursorId, where });
     }
   }
@@ -773,7 +791,13 @@ export class Tree<TData = unknown> extends LitElement {
     const rect = rowElement.getBoundingClientRect();
     const where = resolveRowDropZone(clientY - rect.top, rect.height);
 
-    this._dragPreview = canDrop({ nodes: this.nodes, movedIds, targetId, where }) ?
+    this._dragPreview = canDrop({
+      nodes: this.nodes,
+      movedIds,
+      targetId,
+      where,
+      accept: this.acceptDrop
+    }) ?
       { targetId, where } :
       null;
   }

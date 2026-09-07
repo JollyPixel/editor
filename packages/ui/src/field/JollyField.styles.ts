@@ -44,7 +44,8 @@ export const fieldStyles = css`
     align-items: center;
     gap: var(--jolly-space-1, 4px);
     min-height: var(--jolly-row-height, 20px);
-    padding-inline: var(--jolly-space-1, 4px);
+    padding-inline: var(--jolly-space-1, 4px)
+      var(--jolly-field-inset-end, var(--jolly-space-1, 4px));
     border-radius: var(--jolly-radius-sm, 2px);
     ${fillTransition}
   }
@@ -120,6 +121,11 @@ export const fieldStyles = css`
    */
   :host([unlabeled]:not([locked])) .gutter {
     margin-inline-end: calc(var(--jolly-space-1, 4px) * -1);
+  }
+
+  /* No label column to inset for, so both edges fall back to the row inset. */
+  :host([unlabeled]:not([locked])) .row {
+    padding-inline-start: var(--jolly-field-inset-end, var(--jolly-space-1, 4px));
   }
 
   /*
@@ -407,7 +413,8 @@ export const fieldStyles = css`
   :host([unlabeled]:not([locked])) .description,
   :host([unlabeled]:not([locked])) .error {
     margin-inline-start: calc(
-      var(--jolly-gutter-width, 0px) + var(--jolly-space-1, 4px)
+      var(--jolly-gutter-width, 0px) +
+        var(--jolly-field-inset-end, var(--jolly-space-1, 4px))
     );
   }
 

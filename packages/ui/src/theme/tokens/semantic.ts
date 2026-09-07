@@ -53,6 +53,22 @@ const inkTokens = css`
   );
   --jolly-folder-action-bg-focus: var(--jolly-ink);
   --jolly-folder-action-bg-active: var(--jolly-ink);
+  /*
+   * Filled with danger ink, so a destructive action keeps that same weight.
+   * Its glyph is white in both themes, since the ground stays red in both.
+   */
+  --jolly-folder-action-danger-fg: var(--jolly-neutral-0);
+  --jolly-folder-action-danger-bg: var(--jolly-ink-danger);
+  --jolly-folder-action-danger-bg-hover: color-mix(
+    in oklab,
+    var(--jolly-ink-danger) 86%,
+    var(--jolly-ink)
+  );
+  --jolly-folder-action-danger-bg-focus: color-mix(
+    in oklab,
+    var(--jolly-ink-danger) 72%,
+    var(--jolly-ink)
+  );
 
   --jolly-pane-header-bg: var(--jolly-accent-fill);
   --jolly-dock-resize-bg: color-mix(
@@ -180,6 +196,10 @@ export const themeTokens = css`
       --jolly-folder-action-bg-hover: ButtonFace;
       --jolly-folder-action-bg-focus: ButtonFace;
       --jolly-folder-action-bg-active: ButtonFace;
+      --jolly-folder-action-danger-fg: ButtonText;
+      --jolly-folder-action-danger-bg: ButtonFace;
+      --jolly-folder-action-danger-bg-hover: ButtonFace;
+      --jolly-folder-action-danger-bg-focus: ButtonFace;
       --jolly-pane-header-bg: ButtonFace;
       --jolly-dock-resize-bg: ButtonFace;
       --jolly-dock-resize-bg-hover: Highlight;

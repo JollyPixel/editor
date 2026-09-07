@@ -132,6 +132,26 @@ describe("VoxelWorld.applyRemoteCommand — reordered", () => {
   });
 });
 
+describe("VoxelWorld.applyRemoteCommand — layer-moved", () => {
+  it("moves a layer across the stack in one command", () => {
+    const world = makeWorld();
+    world.addLayer("A");
+    world.addLayer("B");
+    world.addLayer("C");
+    // After sort (descending): [C, B, A]
+    world.applyRemoteCommand({
+      action: "layer-moved",
+      layerName: "C",
+      metadata: { toIndex: 2 }
+    });
+
+    assert.deepEqual(
+      world.getLayers().map((layer) => layer.name),
+      ["B", "A", "C"]
+    );
+  });
+});
+
 describe("VoxelWorld.applyRemoteCommand — voxel-set", () => {
   it("places a voxel at the given position", () => {
     const world = makeWorld();
@@ -382,7 +402,7 @@ describe("VoxelWorld.applyRemoteCommand — exhaustiveness", () => {
   it("handles every action the hook union declares", () => {
     // Ties this check to the real source of truth instead of a hand-rolled
     // list, so a new/renamed action can't silently drop out of coverage.
-    assert.equal(VOXEL_LAYER_HOOK_ACTIONS.length, 17);
+    assert.equal(VOXEL_LAYER_HOOK_ACTIONS.length, 18);
 
     for (const action of VOXEL_LAYER_HOOK_ACTIONS) {
       const world = makeWorld();
@@ -438,6 +458,8 @@ function commandFor(
       return { action, layerName, metadata: { entries: [{ position }] } };
     case "reordered":
       return { action, layerName, metadata: { direction: "up" } };
+    case "layer-moved":
+      return { action, layerName, metadata: { toIndex: 0 } };
     case "object-layer-updated":
       return { action, layerName, metadata: { patch: { visible: false } } };
     case "object-added":

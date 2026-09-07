@@ -34,6 +34,14 @@ export const kFallback = {
    */
   folderActionBg: unsafeCSS("#1b2027"),
   /**
+   * --jolly-folder-action-danger-fg
+   */
+  folderActionDangerFg: unsafeCSS("#ffffff"),
+  /**
+   * --jolly-folder-action-danger-bg
+   */
+  folderActionDangerBg: unsafeCSS("#c0362c"),
+  /**
    * --jolly-pane-header-bg
    */
   paneHeaderBg: unsafeCSS("#2f6fd8"),
