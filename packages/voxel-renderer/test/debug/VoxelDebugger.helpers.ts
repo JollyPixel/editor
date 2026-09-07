@@ -26,7 +26,12 @@ export function makeDebugEngine(
 ): VoxelEngine {
   const { debug, voxels = 1 } = options;
 
-  const engine = makeBaseEngine({ layers: ["Ground"], debug });
+  const engine = makeBaseEngine({
+    layers: ["Ground"],
+    debug,
+    // Drain the whole queue so a single tick() meshes every chunk.
+    rebuildBudgetMs: 0
+  });
   for (let x = 0; x < voxels; x++) {
     engine.world.setVoxel("Ground", {
       position: { x, y: 0, z: 0 },
