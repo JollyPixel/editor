@@ -33,6 +33,11 @@ export class Button extends LitElement {
     variant: "default"
   };
 
+  static override shadowRootOptions = {
+    ...LitElement.shadowRootOptions,
+    delegatesFocus: true
+  };
+
   static override styles = [
     buttonStyles,
     hiddenStyles
@@ -47,14 +52,9 @@ export class Button extends LitElement {
   @property({ type: Boolean, reflect: true })
   declare disabled: boolean;
 
-  /** Names the button when its content is an icon alone. */
   @property({ type: String })
   declare label: string;
 
-  /**
-   * Square target for an icon with no visible text, as a rail uses. Explicit rather than inferred:
-   * the slot is always rendered, so no selector can tell whether a consumer filled it.
-   */
   @property({
     type: Boolean,
     reflect: true,

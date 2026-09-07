@@ -20,6 +20,9 @@ import {
   type ResolvedThemeMode
 } from "../theme/ambientTheme.ts";
 
+// CONSTANTS
+const kDefaultVariants = new Set(["accent", "danger"]);
+
 @customElement("jolly-dialog")
 export class Dialog extends LitElement {
   static override styles = [
@@ -35,6 +38,9 @@ export class Dialog extends LitElement {
 
   @query("dialog")
   declare _dialog: HTMLDialogElement;
+
+  @query("slot[name=actions]")
+  declare _actions: HTMLSlotElement;
 
   #inheritedTheme: ResolvedThemeMode | null = null;
 
@@ -55,6 +61,7 @@ export class Dialog extends LitElement {
         @cancel=${this.#onCancel}
         @click=${this.#onBackdropClick}
         @close=${this.#onClose}
+        @keydown=${this.#onKeyDown}
       >
         ${this.heading === "" ? nothing : html`<header>${this.heading}</header>`}
         <div class="body"><slot></slot></div>
@@ -79,10 +86,6 @@ export class Dialog extends LitElement {
     }
   }
 
-  /**
-   * A helper dialog may live under document.body while its invoking control
-   * sits in a themed shadow root. Declarative dialogs prefer their parent.
-   */
   #syncInheritedTheme(): void {
     const configured = this.getAttribute("theme");
     if (
@@ -100,6 +103,45 @@ export class Dialog extends LitElement {
     this.#inheritedTheme = inherited;
     this.setAttribute("theme", inherited);
   }
+
+  #defaultAction(): HTMLElement | null {
+    const actions = (this._actions?.assignedElements() ?? [])
+      .filter((element) => element instanceof HTMLElement);
+    const candidate = actions.find(
+      (element) => element.hasAttribute("data-default")
+    ) ?? actions.findLast(
+      (element) => kDefaultVariants.has(element.getAttribute("variant") ?? "")
+    );
+    if (candidate === undefined || isDisabled(candidate)) {
+      return null;
+    }
+
+    return candidate;
+  }
+
+  #onKeyDown = (
+    event: KeyboardEvent
+  ) => {
+    if (
+      event.key !== "Enter" ||
+      event.defaultPrevented ||
+      event.shiftKey ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      consumesEnter(event)
+    ) {
+      return;
+    }
+
+    const action = this.#defaultAction();
+    if (action === null) {
+      return;
+    }
+
+    event.preventDefault();
+    action.click();
+  };
 
   #onCancel = (
     event: Event
@@ -147,6 +189,27 @@ export class Dialog extends LitElement {
       returnValue: this._dialog.returnValue
     });
   };
+}
+
+function consumesEnter(
+  event: KeyboardEvent
+): boolean {
+  const [source] = event.composedPath();
+  if (!(source instanceof HTMLElement)) {
+    return false;
+  }
+
+  return source instanceof HTMLButtonElement ||
+    source instanceof HTMLTextAreaElement ||
+    source instanceof HTMLAnchorElement ||
+    source.isContentEditable;
+}
+
+function isDisabled(
+  element: HTMLElement
+): boolean {
+  return element.hasAttribute("disabled") ||
+    element.getAttribute("aria-disabled") === "true";
 }
 
 declare global {

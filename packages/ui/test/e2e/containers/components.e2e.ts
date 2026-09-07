@@ -376,11 +376,11 @@ test.describe("Dialog", () => {
     });
 
     await expect(page.locator("main > .chrome-row > jolly-button"))
-      .toHaveCount(3);
+      .toHaveCount(4);
     await page.getByRole("button", { name: "Open dialog" }).click();
-    const dialog = page.locator("jolly-dialog dialog");
+    const host = page.locator("#delete-dialog");
+    const dialog = host.locator("dialog");
     await expect(dialog).toHaveAttribute("open");
-    const host = page.locator("main jolly-dialog");
     await expect(host).toHaveAttribute("theme", "dark");
     await expect(host.locator(":scope > jolly-button"))
       .toHaveCount(1);
@@ -412,9 +412,37 @@ test.describe("Dialog", () => {
     await expect(example).toHaveAttribute("data-result", "false");
     await expect(confirm).toHaveCount(0);
   });
-});
 
-/**
- * Measures distance from grey using canvas-normalized sRGB channel bytes.
- * Canvas avoids browser-dependent serialization of computed color functions.
- */
+  test("Enter confirms the helper dialogs", async({ page }) => {
+    await gotoGallery(page, {
+      example: "containers/dialog",
+      chrome: "off",
+      theme: "dark"
+    });
+
+    const example = page.locator("main > div");
+    await page.locator("[data-action=confirm-helper]").click();
+    const confirm = page.locator("body > jolly-dialog");
+    await page.keyboard.press("Enter");
+    await expect(example).toHaveAttribute("data-result", "true");
+    await expect(confirm).toHaveCount(0);
+  });
+
+  test("Enter runs the default action from a field", async({ page }) => {
+    await gotoGallery(page, {
+      example: "containers/dialog",
+      chrome: "off",
+      theme: "dark"
+    });
+
+    const example = page.locator("main > div");
+    await page.locator("[data-action=default-action]").click();
+    const dialog = page.locator("#rename-dialog");
+    const input = dialog.locator("input");
+    await expect(input).toBeFocused();
+    await input.fill("Ground");
+    await input.press("Enter");
+    await expect(example).toHaveAttribute("data-result", "renamed:Ground");
+    await expect(dialog.locator("dialog")).not.toHaveAttribute("open");
+  });
+});
