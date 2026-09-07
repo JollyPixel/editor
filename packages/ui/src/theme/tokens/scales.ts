@@ -39,6 +39,12 @@ export const scaleTokens = css`
     /* Optional shared column for trailing revert and presence chrome. */
     --jolly-field-trailing-width: auto;
 
+    /*
+     * Trailing inset of a field row. Set it to 0 on a subtree whose fields sit
+     * beside folder headers, where the bar paints past the value otherwise.
+     */
+    --jolly-field-inset-end: var(--jolly-space-1);
+
     --jolly-duration-fast: 100ms;
     --jolly-duration-base: 160ms;
     --jolly-easing: cubic-bezier(0.2, 0, 0.2, 1);

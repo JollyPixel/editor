@@ -30,6 +30,7 @@ export class BlockLibraryViewport extends LitElement {
     .scroller {
       overflow-x: hidden;
       overflow-y: auto;
+      scrollbar-gutter: stable;
       min-height: 100px;
       max-height: 240px;
       padding: 5px;

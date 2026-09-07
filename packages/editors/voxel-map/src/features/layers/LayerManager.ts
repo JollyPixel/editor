@@ -23,7 +23,6 @@ import {
   type WorldStore
 } from "../../app/state/index.ts";
 import { ViewFocus } from "../../scene/viewFocus.ts";
-// Imported for its side effect too: it registers the child dialog element.
 import { AddLayerDialog } from "./AddLayerDialog.ts";
 import {
   createLayerEntry,
@@ -135,17 +134,7 @@ export class LayerManager extends LitElement {
   }
 
   override render() {
-    const hasSelection = this._selected.length > 0;
-
     return html`
-      <jolly-toolbar label="Layers">
-        <jolly-button @click=${this.#add}>+ Add</jolly-button>
-        <jolly-button
-          @click=${this.#remove}
-          ?disabled=${!hasSelection}
-        >- Remove</jolly-button>
-      </jolly-toolbar>
-
       <div class="tree-host" @click=${this.#onHostClick}>
         <jolly-tree
           renamable
@@ -283,7 +272,7 @@ export class LayerManager extends LitElement {
     this.#refreshNodes();
   }
 
-  async #add() {
+  async addLayer() {
     if (!this.world) {
       return;
     }
@@ -311,7 +300,7 @@ export class LayerManager extends LitElement {
     );
   }
 
-  async #remove() {
+  async removeLayer() {
     const ref = this.#selectedRef;
     if (ref === null || !this.world) {
       return;

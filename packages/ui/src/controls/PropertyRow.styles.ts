@@ -25,7 +25,7 @@ export const propertyRowStyles = css`
      * Match the field's leading inset and collapsible gutter.
      */
     padding-inline: calc(var(--jolly-gutter-width, 0px) + var(--jolly-space-1, 4px))
-      var(--jolly-space-1, 4px);
+      var(--jolly-field-inset-end, var(--jolly-space-1, 4px));
   }
 
   .leading {

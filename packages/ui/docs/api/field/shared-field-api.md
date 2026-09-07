@@ -27,6 +27,10 @@ and `JollyChangeDetail<T>`.
 `value`, `default`, `lockedBy`, and `peers` must be assigned as JavaScript
 properties. `labelPosition="top"` places the label above the value area.
 
+`--jolly-field-inset-end` sets the trailing row inset and defaults to
+`--jolly-space-1`. For a field without a label or lock, it also sets the leading
+inset. Set it to `0` to align rows with a folder header edge.
+
 An empty `label` drops the label column: the field reflects `unlabeled`, and the
 value spans the row with the same inset on both edges. A locked field keeps its
 gutter, so the value stays clear of the lock icon.

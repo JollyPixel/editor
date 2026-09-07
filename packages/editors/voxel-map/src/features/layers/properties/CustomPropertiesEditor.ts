@@ -59,6 +59,15 @@ export class CustomPropertiesEditor extends LitElement {
         label="Custom Properties"
         storage-key=${this.storageKey}
       >
+        <jolly-button
+          slot="actions"
+          icon="plus"
+          icon-only
+          label="Add property"
+          title="Add property"
+          @click=${this.#add}
+        ></jolly-button>
+
         ${repeat(
           this.rows,
           (_, index) => index,
@@ -88,7 +97,6 @@ export class CustomPropertiesEditor extends LitElement {
             </div>
           `
         )}
-        <jolly-button @click=${this.#add}>+ Add property</jolly-button>
       </jolly-folder>
     `;
   }

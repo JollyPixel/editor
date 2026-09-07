@@ -28,6 +28,7 @@ import type {
   BlockLibrary,
   BlockSelectionChangeDetail
 } from "../features/blocks/BlockLibrary.ts";
+import type { LayerManager } from "../features/layers/LayerManager.ts";
 import type { GridRenderer } from "../scene/GridRenderer.ts";
 import { ViewFocus } from "../scene/viewFocus.ts";
 
@@ -58,13 +59,16 @@ export class EditorSidebar extends LitElement {
 
     jolly-tab {
       overflow-y: auto;
-      padding: var(--jolly-space-1, 4px);
     }
 
     jolly-tab[value="paint"],
     jolly-tab[value="blocks"] {
       overflow-y: hidden;
-      padding: 0;
+    }
+
+    jolly-tab[value="layers"] {
+      --jolly-folder-indent: 0;
+      --jolly-field-inset-end: 0;
     }
 
     .column {
@@ -78,23 +82,9 @@ export class EditorSidebar extends LitElement {
       flex: 0 0 auto;
     }
 
-    .blocks {
-      gap: var(--jolly-row-gap, 4px);
-      padding: var(--jolly-space-1, 4px);
-      box-sizing: border-box;
-    }
-
-    .blocks-toolbar {
-      display: flex;
-      flex: 0 0 auto;
-      align-items: center;
-      gap: var(--jolly-space-1, 4px);
-    }
-
-    .blocks-title {
+    .blocks jolly-folder {
       flex: 1 1 auto;
-      min-width: 0;
-      font-weight: 600;
+      min-height: 0;
     }
 
     texture-editor {
@@ -145,6 +135,12 @@ export class EditorSidebar extends LitElement {
 
   @query("jolly-folder[key='block-library']")
   private declare _blockFolder: HTMLElementTagNameMap["jolly-folder"] | null;
+
+  @query("jolly-folder[key='layers']")
+  private declare _layersFolder: HTMLElementTagNameMap["jolly-folder"] | null;
+
+  @query("layer-manager")
+  private declare _layerManager: LayerManager | null;
 
   get #blockLibrary(): BlockLibrary | null {
     return this.querySelector("block-library");
@@ -210,8 +206,22 @@ export class EditorSidebar extends LitElement {
     await this.#blockLibrary?.editBlock();
   };
 
+  readonly #addLayer = async(): Promise<void> => {
+    this.#openFolder(this._layersFolder);
+    await this._layerManager?.addLayer();
+  };
+
+  readonly #removeLayer = async(): Promise<void> => {
+    await this._layerManager?.removeLayer();
+  };
+
   #openBlockLibrary(): void {
-    const folder = this._blockFolder;
+    this.#openFolder(this._blockFolder);
+  }
+
+  #openFolder(
+    folder: HTMLElementTagNameMap["jolly-folder"] | null
+  ): void {
     if (folder !== null && !folder.open) {
       folder.open = true;
     }
@@ -339,6 +349,25 @@ export class EditorSidebar extends LitElement {
         label="Layers"
         storage-key="voxel-map:folder:layers"
       >
+        <jolly-button
+          slot="actions"
+          icon="plus"
+          icon-only
+          label="Add layer"
+          title="Add layer"
+          @click=${this.#addLayer}
+        ></jolly-button>
+        <jolly-button
+          slot="actions"
+          icon="trash"
+          icon-only
+          variant="danger"
+          label="Remove layer"
+          title="Remove layer"
+          ?disabled=${this._selection === null}
+          @click=${this.#removeLayer}
+        ></jolly-button>
+
         <layer-manager
           .world=${this.world}
           .selection=${this.state.selection}
@@ -383,6 +412,7 @@ export class EditorSidebar extends LitElement {
     return html`
       <div class="column">
         <jolly-folder
+          flush
           key="block-library"
           label="Block Library"
           storage-key="voxel-map:folder:block-library"
@@ -405,11 +435,15 @@ export class EditorSidebar extends LitElement {
   #renderBlocks() {
     return html`
       <div class="column blocks">
-        <div class="blocks-toolbar">
-          <span class="blocks-title">Block Library</span>
-          ${this.#renderBlockActions()}
-        </div>
-        ${this.#renderBlockLibrarySlot("blocks")}
+        <jolly-folder
+          .collapsible=${false}
+          flush
+          key="block-library-fill"
+          label="Block Library"
+        >
+          ${this.#renderBlockActions("actions")}
+          ${this.#renderBlockLibrarySlot("blocks")}
+        </jolly-folder>
       </div>
     `;
   }

@@ -21,6 +21,8 @@ import { CONTROLS_EXAMPLE } from "./examples/controls/controls.ts";
 import { CHROME_EXAMPLE } from "./examples/controls/chrome.ts";
 import { PANE_EXAMPLE } from "./examples/containers/pane.ts";
 import { FOLDER_EXAMPLE } from "./examples/containers/folder.ts";
+import { FOLDER_FLUSH_EXAMPLE } from "./examples/containers/folderFlush.ts";
+import { FOLDER_COLLAPSIBLE_EXAMPLE } from "./examples/containers/folderCollapsible.ts";
 import { TABS_EXAMPLE } from "./examples/containers/tabs.ts";
 import { TAB_EXAMPLE } from "./examples/containers/tab.ts";
 import { DOCK_EXAMPLE } from "./examples/containers/dock.ts";
@@ -86,6 +88,8 @@ export const manifest: readonly GalleryExample[] = [
   CHROME_EXAMPLE,
   PANE_EXAMPLE,
   FOLDER_EXAMPLE,
+  FOLDER_FLUSH_EXAMPLE,
+  FOLDER_COLLAPSIBLE_EXAMPLE,
   TABS_EXAMPLE,
   TAB_EXAMPLE,
   DOCK_EXAMPLE,

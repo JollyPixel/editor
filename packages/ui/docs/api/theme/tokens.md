@@ -24,5 +24,5 @@ Components consume semantic properties such as `--jolly-surface`,
 `--jolly-text`, `--jolly-control-bg`, `--jolly-accent-fill`,
 `--jolly-danger`, and `--jolly-divider`. Layout properties include
 `--jolly-label-width`, `--jolly-label-max-width`,
-`--jolly-field-trailing-width`, `--jolly-gutter-width`, and
-`--jolly-dock-size`.
+`--jolly-field-trailing-width`, `--jolly-field-inset-end`,
+`--jolly-folder-indent`, `--jolly-gutter-width`, and `--jolly-dock-size`.
