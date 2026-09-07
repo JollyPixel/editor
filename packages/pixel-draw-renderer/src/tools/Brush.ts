@@ -17,9 +17,6 @@ import type {
 } from "../types.ts";
 
 export class BrushColor {
-  /**
-   * The color without its alpha, which `opacity` owns instead.
-   */
   #color: RGBA;
   #opacity: number;
   #rgba: RGBA8;
@@ -51,9 +48,6 @@ export class BrushColor {
     });
   }
 
-  /**
-   * Returns a mutable RGBA8 snapshot of the current brush color.
-   */
   asRGBA(): RGBA8 {
     return { ...this.#rgba };
   }
@@ -83,9 +77,6 @@ export class BrushColor {
   }
 }
 
-/**
- * Alpha is dropped: opacity is tracked separately so a color swap keeps it.
- */
 function opaqueColor(
   color: ByteColorInput
 ): RGBA {
@@ -96,6 +87,8 @@ function opaqueColor(
 }
 
 export type BrushColorSlot = "primary" | "secondary";
+
+export type BrushPaintSource = BrushColorSlot | "erase";
 
 export interface BrushOptions {
   /**
@@ -108,6 +101,11 @@ export interface BrushOptions {
    * @default "#FFFFFF"
    */
   secondaryColor?: ByteColorInput;
+  /**
+   * Color written in erase mode.
+   * @default transparent
+   */
+  eraseColor?: ByteColorInput;
   /**
    * Brush size in pixels.
    * @default 32
@@ -131,6 +129,7 @@ export interface BrushOptions {
 export class Brush {
   readonly primary: BrushColor;
   readonly secondary: BrushColor;
+  readonly erase: BrushColor;
   #size: number;
   #maxSize: number;
   #colorInline: string;
@@ -142,6 +141,7 @@ export class Brush {
     const {
       color = "#000000",
       secondaryColor = "#FFFFFF",
+      eraseColor,
       size = 32,
       maxSize = 32,
       highlight = {
@@ -152,11 +152,20 @@ export class Brush {
 
     this.primary = new BrushColor(color);
     this.secondary = new BrushColor(secondaryColor);
+    this.erase = eraseColor === undefined ?
+      new BrushColor("#000000", 0) :
+      new BrushColor(eraseColor);
     this.#maxSize = Math.max(maxSize, 1);
     this.size = size;
 
     this.colorInline = highlight.colorInline ?? "#FFF";
     this.colorOutline = highlight.colorOutline ?? "#000";
+  }
+
+  colorFor(
+    source: BrushPaintSource
+  ): RGBA8 {
+    return this[source].asRGBA();
   }
 
   swapColors(): void {

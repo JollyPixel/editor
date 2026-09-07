@@ -2,6 +2,8 @@
 
 Drop-in web component with a mode rail, color controls, canvas and floating toolbars wired to a `PixelArtCanvas`. Undo, redo, import, export and transparent-texture reset remain visible at the bottom. UV and Select actions appear at the top in their respective modes.
 
+The mode rail carries Move, Paint, Erase, Fill, Select and UV. Erase runs the brush against transparency, so the brush size slider stays available there and both mouse buttons erase.
+
 The UV toolbar includes independent toggles for region labels and showing every region. Labels display `(name)` or `(id)` inside collapsed UVs, with the face on a second line when uncollapsed. Show All forces labels while active and restores the prior label preference when disabled.
 
 ```ts

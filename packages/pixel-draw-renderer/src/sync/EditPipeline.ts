@@ -28,7 +28,7 @@ import type {
 import { Fill } from "../tools/Fill.ts";
 import type {
   Brush,
-  BrushColorSlot
+  BrushPaintSource
 } from "../tools/Brush.ts";
 import type { FillGlobalCommit } from "../tools/FillEngine.ts";
 import type { SelectEditEntry } from "../tools/SelectEngine.ts";
@@ -103,9 +103,6 @@ export class EditPipeline {
     this.#onBufferUpdated = fn;
   }
 
-  /**
-   * Records and emits a stroke already applied live by the brush.
-   */
   commitStroke(
     pixels: Vec2[],
     color: RGBA8,
@@ -124,19 +121,16 @@ export class EditPipeline {
     this.#onDrawEnd?.();
   }
 
-  /**
-   * Applies pixels before recording and emitting the stroke.
-   */
   commitPixels(
     pixels: Vec2[],
-    slot: BrushColorSlot = "primary",
+    source: BrushPaintSource = "primary",
     uniformBeforeColor?: RGBA8
   ): void {
     if (pixels.length === 0) {
       return;
     }
 
-    const color = this.#brush[slot].asRGBA();
+    const color = this.#brush.colorFor(source);
     let beforeColors: RGBA8[] = [];
     if (this.#history.enabled) {
       beforeColors = uniformBeforeColor ?
@@ -167,9 +161,6 @@ export class EditPipeline {
     this.#onDrawEnd?.();
   }
 
-  /**
-   * Selection hooks carry final per-pixel colors because content is nonuniform.
-   */
   commitSelectionEdit(
     entry: SelectEditEntry
   ): void {
@@ -249,9 +240,6 @@ export class EditPipeline {
     });
   }
 
-  /**
-   * Public so undo and redo can replay hook events through the same path.
-   */
   emitHook(
     event: PixelBufferHookEvent
   ): void {
@@ -276,7 +264,6 @@ export class EditPipeline {
     color: RGBA8,
     positions: Vec2[]
   ): void {
-    // drawPixels repaints; copyToMaster only persists the visible result.
     this.#canvasBuffer.drawPixels(positions, color);
     this.#canvasBuffer.copyToMaster();
   }
@@ -404,10 +391,6 @@ export class EditPipeline {
     }
   }
 
-  /**
-   * Suppresses history and network broadcast during a synchronous rebuild
-   * that every peer derives locally.
-   */
   runLocalRestore<T>(
     fn: () => T
   ): T {

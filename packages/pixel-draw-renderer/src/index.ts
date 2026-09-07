@@ -1,7 +1,9 @@
 // Import Internal Dependencies
 export {
   Brush,
-  type BrushOptions
+  type BrushColorSlot,
+  type BrushOptions,
+  type BrushPaintSource
 } from "./tools/Brush.ts";
 export type { BrushTool } from "./tools/BrushEngine.ts";
 export type { FillTool } from "./tools/FillEngine.ts";

@@ -8,7 +8,13 @@ export type Vec2 = {
   y: number;
 };
 
-export type Mode = "paint" | "move" | "fill" | "select" | "uv";
+export type Mode =
+  | "paint"
+  | "erase"
+  | "move"
+  | "fill"
+  | "select"
+  | "uv";
 
 export interface SelectionRect {
   x: number;

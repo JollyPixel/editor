@@ -19,6 +19,12 @@ const kBrushMax = 32;
 const kPreviewDotMinPx = 6;
 const kPreviewDotMaxPx = 22;
 
+function isBrushMode(
+  mode: Mode
+): boolean {
+  return mode === "paint" || mode === "erase";
+}
+
 /**
  * Tool option state (mode, brush size, fill/select toggles, eyedropper).
  * Syncs with PixelArtCanvas directly; state re-read after each canvas call.
@@ -80,7 +86,7 @@ export class ToolOptionsController implements ReactiveController {
   readonly #onCanvasWheel = (
     event: WheelEvent
   ): void => {
-    if (!event.ctrlKey || this.#mode !== "paint" || !this.#canvas) {
+    if (!event.ctrlKey || !isBrushMode(this.#mode) || !this.#canvas) {
       return;
     }
 
@@ -186,6 +192,6 @@ export class ToolOptionsController implements ReactiveController {
   }
 
   render() {
-    return this.#mode === "paint" ? this.#renderPaint() : nothing;
+    return isBrushMode(this.#mode) ? this.#renderPaint() : nothing;
   }
 }

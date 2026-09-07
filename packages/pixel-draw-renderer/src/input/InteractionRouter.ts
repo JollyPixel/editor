@@ -151,7 +151,6 @@ export class InteractionRouter implements InputActions {
   }
 
   onPanEnd(): void {
-    // Space keeps the pan cursor active after the pointer is released.
     if (this.#panModifierHeld) {
       this.#setCursor("grab");
 

@@ -30,7 +30,7 @@ The canvas and its overlays are mounted inside `parentHtmlElement`. See [`PixelA
 ## Types
 
 ```ts
-type Mode = "paint" | "move" | "fill" | "select" | "uv";
+type Mode = "paint" | "erase" | "move" | "fill" | "select" | "uv";
 ```
 
 ## Core objects
@@ -95,14 +95,17 @@ set mode(value: Mode)
 | Mode | Left-click | Right-click |
 |---|---|---|
 | `"paint"` | Paint with `brush.primary`. Hold `Shift` for a straight line. When the picker is armed, pick into `brush.primary`. | Paint with `brush.secondary`. When the picker is armed, pick into `brush.secondary`; otherwise `Ctrl`+right-click picks into `brush.primary`. |
+| `"erase"` | Erase with `brush.erase`. Hold `Shift` for a straight line. | Erase, like left-click. |
 | `"move"` | Pan the view. | No action. |
 | `"fill"` | Fill with `brush.primary`. | Fill with `brush.secondary`. |
 | `"select"` | Create or move a selection. | No action. |
 | `"uv"` | Select or drag a visible UV region. | No action. |
 
-Wheel input zooms in every mode. Middle-drag or `Space`+left-drag pans the view. In paint mode, `Ctrl`+wheel changes `brush.size` by one pixel per scroll direction.
+Erase mode is paint mode writing `brush.erase` (transparent unless [`brush.eraseColor`](./tools/Brush.md#types) says otherwise): same brush size, same footprint, same `Shift` line, but neither mouse button paints a brush color and the color picker stays out of reach.
 
-Leaving paint mode cancels an armed line and color pick. Leaving select mode clears the selection. Leaving UV mode cancels the current drag and keeps the UV selection.
+Wheel input zooms in every mode. Middle-drag or `Space`+left-drag pans the view. In paint and erase modes, `Ctrl`+wheel changes `brush.size` by one pixel per scroll direction.
+
+Leaving paint or erase mode cancels an armed line, and leaving paint mode also cancels the color pick. Leaving select mode clears the selection. Leaving UV mode cancels the current drag and keeps the UV selection.
 
 ### `keybindings`
 

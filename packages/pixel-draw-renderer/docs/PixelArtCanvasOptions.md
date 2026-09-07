@@ -153,6 +153,8 @@ Sets the canvas area outside the texture. When omitted, the canvas uses the pare
 
 Initial brush colors, size and highlight colors. See [`BrushOptions`](./tools/Brush.md#types).
 
+`brush.eraseColor` sets what erase mode writes, and defaults to transparency. It is unrelated to `select.eraseColor` below, which only covers pixels a selection leaves behind.
+
 ### `select.eraseColor`
 
 Color used for pixels vacated by selection deletion, movement or transforms. When omitted, the canvas uses the dominant neighboring color and falls back to transparency when no in-bounds neighbor exists.

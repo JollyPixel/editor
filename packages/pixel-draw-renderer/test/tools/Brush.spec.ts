@@ -191,6 +191,42 @@ describe("Brush", () => {
     });
   });
 
+  describe("colorFor", () => {
+    test("resolves each brush color slot", () => {
+      const brush = new Brush({
+        color: "#FF0000",
+        secondaryColor: "#00FF00"
+      });
+
+      assert.deepStrictEqual(
+        brush.colorFor("primary"),
+        { r: 255, g: 0, b: 0, a: 255 }
+      );
+      assert.deepStrictEqual(
+        brush.colorFor("secondary"),
+        { r: 0, g: 255, b: 0, a: 255 }
+      );
+    });
+
+    test("erase is transparent by default", () => {
+      const brush = new Brush();
+
+      assert.deepStrictEqual(
+        brush.colorFor("erase"),
+        { r: 0, g: 0, b: 0, a: 0 }
+      );
+    });
+
+    test("eraseColor overrides the erased color", () => {
+      const brush = new Brush({ eraseColor: "#0000FF" });
+
+      assert.deepStrictEqual(
+        brush.colorFor("erase"),
+        { r: 0, g: 0, b: 255, a: 255 }
+      );
+    });
+  });
+
   describe("affectedPixels", () => {
     test("returns an iterable, not an array", () => {
       const brush = new Brush({ size: 1, maxSize: 32 });

@@ -30,7 +30,7 @@ The camera and zoom through which the user sees and navigates the texture. Panni
 
 ### Mode
 
-The active input interpretation: `paint`, `move`, `fill`, `select`, or `uv`.
+The active input interpretation: `paint`, `erase`, `move`, `fill`, `select`, or `uv`.
 
 ### Tool
 
@@ -39,6 +39,10 @@ A component that performs or configures an editing behavior. Brush, fill, select
 ### Brush
 
 The paint configuration: primary and secondary colors, opacity, size, and cursor appearance.
+
+### Eraser
+
+The brush writing its erase color, transparent by default. Erasing is a stroke like any other: it is undoable, synchronized, and shares the brush size. Distinct from the *selection erase color*, which fills the pixels a selection vacates.
 
 ### Stroke
 
@@ -72,6 +76,7 @@ The reversible record of one local edit, used by undo and redo.
 
 - Use **texture** for editable image data, **viewport** for the user's view of it, and **canvas element** for a DOM canvas.
 - Use **brush** for paint configuration and **stroke** for a completed painting operation.
+- Use **eraser** for the brush writing its erase color, never for selection deletion.
 - Use **selection** for a region already in the texture and **floating selection** for pending pasted content.
 - Use **UV region** for one mapping and **UV map** for the collection that manages all mappings.
 - Use **mode** for input routing and **tool** for editing behavior.
