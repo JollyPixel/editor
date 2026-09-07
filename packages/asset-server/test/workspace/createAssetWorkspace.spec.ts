@@ -117,6 +117,31 @@ describe("createAssetWorkspace", () => {
     assert.notStrictEqual(joined, null);
   });
 
+  test("seeds a root that does not exist yet", async() => {
+    await using temporary = await tempWorkspace();
+    using eventStore = EventStore.persistence.memory();
+    const root = path.join(temporary.root, "assets");
+
+    await using workspace = await createAssetWorkspace({
+      root,
+      eventStore,
+      handlers: [editableCounter()],
+      seed: {
+        "counter.counter": () => bytes("0")
+      },
+      backend: { watch: false }
+    });
+
+    assert.strictEqual(
+      await fs.readFile(
+        path.join(root, "counter.counter"),
+        "utf8"
+      ),
+      "0"
+    );
+    assert.strictEqual(workspace.backend.catalog.size, 1);
+  });
+
   test("keeps an existing document over its seed", async() => {
     await using temporary = await tempWorkspace();
     using eventStore = EventStore.persistence.memory();

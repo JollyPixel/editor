@@ -68,6 +68,9 @@ Writes use a temporary file followed by a rename. The source creates parent
 directories as needed and watches file additions, changes and removals with
 chokidar.
 
+The root may not exist yet: `list()` then returns an empty array and the first
+`write` creates it.
+
 The `ignore` option adds globs to these defaults:
 
 ```ts

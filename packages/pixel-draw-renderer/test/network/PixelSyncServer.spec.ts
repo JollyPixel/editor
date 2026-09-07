@@ -131,6 +131,7 @@ function selectEditCmd(
 function uvCreatedCmd(
   opts: {
     region: {
+      state: "stacked";
       id: string;
       rect: {
         x: number;
@@ -573,7 +574,9 @@ describe("PixelSyncServer — snapshot", () => {
   test("includes the buffer's current UV regions, for late-joining clients", () => {
     const server = makeServer();
     server.receive(uvCreatedCmd({
+      state: "stacked",
       region: {
+        state: "stacked",
         id: "r1",
         rect: {
           x: 0,
@@ -591,7 +594,7 @@ describe("PixelSyncServer — snapshot", () => {
       [
         {
           id: "r1",
-          state: "collapsed",
+          state: "stacked",
           rect: { x: 0, y: 0, width: 2, height: 2 },
           color: "#f00"
         }

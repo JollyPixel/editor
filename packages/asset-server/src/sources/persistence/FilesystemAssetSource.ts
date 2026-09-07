@@ -1,5 +1,6 @@
 // Import Node.js Dependencies
 import fs from "node:fs/promises";
+import type { Dirent } from "node:fs";
 import path from "node:path";
 import { randomBytes } from "node:crypto";
 
@@ -183,10 +184,14 @@ export class FilesystemAssetSource implements AssetSource {
     assetPath: string
   ): Promise<string> {
     const absolute = this.resolve(assetPath);
-    this.#realRoot ??= fs.realpath(this.root);
+    this.#realRoot ??= realPath(this.root)
+      .catch((error) => {
+        this.#realRoot = null;
+        throw error;
+      });
 
     const root = await this.#realRoot;
-    const real = await realPathOfNearestParent(absolute);
+    const real = await realPath(absolute);
     if (
       real !== root &&
       toRelativePosix(root, real) === null
@@ -201,10 +206,22 @@ export class FilesystemAssetSource implements AssetSource {
     directory: string,
     entries: string[]
   ): Promise<void> {
-    const children = await fs.readdir(
-      directory,
-      { withFileTypes: true }
-    );
+    let children: Dirent[];
+    try {
+      children = await fs.readdir(
+        directory,
+        { withFileTypes: true }
+      );
+    }
+    catch (error) {
+      if (
+        isNotFound(error) &&
+        directory === this.root
+      ) {
+        return;
+      }
+      throw error;
+    }
 
     for (const child of children) {
       const absolute = path.join(directory, child.name);
@@ -232,25 +249,25 @@ export class FilesystemAssetSource implements AssetSource {
   }
 }
 
-async function realPathOfNearestParent(
+async function realPath(
   absolute: string
 ): Promise<string> {
-  let current = absolute;
+  try {
+    return await fs.realpath(absolute);
+  }
+  catch (error) {
+    const parent = path.dirname(absolute);
+    if (
+      !isNotFound(error) ||
+      parent === absolute
+    ) {
+      throw error;
+    }
 
-  for (;;) {
-    try {
-      return await fs.realpath(current);
-    }
-    catch (error) {
-      const parent = path.dirname(current);
-      if (
-        !isNotFound(error) ||
-        parent === current
-      ) {
-        throw error;
-      }
-      current = parent;
-    }
+    return path.join(
+      await realPath(parent),
+      path.basename(absolute)
+    );
   }
 }
 

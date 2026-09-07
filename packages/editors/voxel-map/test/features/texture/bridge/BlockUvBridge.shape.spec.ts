@@ -34,7 +34,7 @@ describe("BlockUvBridge / shape footprint", () => {
     const bridge = new BlockUvBridge(uv, engine);
     try {
       bridge.setActiveTileset("atlas", 16);
-      uv.uncollapse("block-1");
+      uv.setState("block-1", "free");
 
       const region = uv.get("block-1")!;
       assert.deepEqual(region.rectFor("top"), {
@@ -63,7 +63,7 @@ describe("BlockUvBridge / shape footprint", () => {
     const bridge = new BlockUvBridge(uv, engine);
     try {
       bridge.setActiveTileset("atlas", 16);
-      uv.uncollapse("block-1");
+      uv.setState("block-1", "free");
 
       const region = uv.get("block-1")!;
       assert.deepEqual(region.rectFor("front"), {
@@ -115,7 +115,7 @@ describe("BlockUvBridge / shape footprint", () => {
       try {
         bridge.setActiveTileset("atlas", 16);
         const region = uv.get("block-1");
-        if (!region || region.state !== "uncollapsed") {
+        if (!region || region.state !== "free") {
           continue;
         }
 
@@ -152,7 +152,7 @@ describe("BlockUvBridge / shape footprint", () => {
       assert.equal(uv.get("block-1")!.rectFor("front").width, 16);
 
       engine.defineBlock(shapedBlock("pole"));
-      uv.uncollapse("block-1");
+      uv.setState("block-1", "free");
 
       assert.deepEqual(uv.get("block-1")!.rectFor("front"), {
         x: 32 + 6,
@@ -166,7 +166,7 @@ describe("BlockUvBridge / shape footprint", () => {
     }
   });
 
-  it("keeps a region collapsed when the block changes to a non-box shape", () => {
+  it("keeps a region stacked when the block changes to a non-box shape", () => {
     const { engine } = makeFakeVoxelEngine();
     engine.blockRegistry.register(shapedBlock("cube"));
 
@@ -174,14 +174,14 @@ describe("BlockUvBridge / shape footprint", () => {
     const bridge = new BlockUvBridge(uv, engine);
     try {
       bridge.setActiveTileset("atlas", 16);
-      assert.equal(uv.get("block-1")!.state, "collapsed");
+      assert.equal(uv.get("block-1")!.state, "stacked");
 
       engine.defineBlock(shapedBlock("stair"));
 
       const region = uv.get("block-1")!;
       assert.equal(
         region.state,
-        "collapsed",
+        "stacked",
         "a shape change alone must not split the block into per-face textures"
       );
       assert.deepEqual(region.rectFor("front"), {
@@ -196,7 +196,7 @@ describe("BlockUvBridge / shape footprint", () => {
     }
   });
 
-  it("keeps every face's size across a collapse round-trip", () => {
+  it("keeps every face's size across a stack round-trip", () => {
     for (const shapeId of ["pole", "poleY", "slabBottom", "slabTop", "stair"]) {
       const { engine } = makeFakeVoxelEngine();
       engine.blockRegistry.register(shapedBlock(shapeId));
@@ -205,11 +205,11 @@ describe("BlockUvBridge / shape footprint", () => {
       const bridge = new BlockUvBridge(uv, engine);
       try {
         bridge.setActiveTileset("atlas", 16);
-        uv.uncollapse("block-1");
+        uv.setState("block-1", "free");
         const before = uv.get("block-1")!.facesOf();
 
-        uv.collapse("block-1");
-        uv.uncollapse("block-1");
+        uv.setState("block-1", "stacked");
+        uv.setState("block-1", "free");
 
         assert.deepEqual(
           uv.get("block-1")!.facesOf(),
@@ -223,7 +223,7 @@ describe("BlockUvBridge / shape footprint", () => {
     }
   });
 
-  it("keeps every face's size across a serialized collapse round-trip", () => {
+  it("keeps every face's size across a serialized stack round-trip", () => {
     for (const shapeId of ["pole", "poleY", "slabBottom", "slabTop", "stair"]) {
       const { engine } = makeFakeVoxelEngine();
       engine.blockRegistry.register(shapedBlock(shapeId));
@@ -232,12 +232,12 @@ describe("BlockUvBridge / shape footprint", () => {
       const bridge = new BlockUvBridge(uv, engine);
       try {
         bridge.setActiveTileset("atlas", 16);
-        uv.uncollapse("block-1");
+        uv.setState("block-1", "free");
         const before = uv.get("block-1")!.facesOf();
 
-        uv.collapse("block-1");
+        uv.setState("block-1", "stacked");
         uv.restore(uv.get("block-1")!.toJSON());
-        uv.uncollapse("block-1");
+        uv.setState("block-1", "free");
 
         assert.deepEqual(
           uv.get("block-1")!.facesOf(),
@@ -251,7 +251,7 @@ describe("BlockUvBridge / shape footprint", () => {
     }
   });
 
-  it("collapses a pole onto its largest face, not its smallest", () => {
+  it("stacks a pole onto its largest face, not its smallest", () => {
     const { engine } = makeFakeVoxelEngine();
     engine.blockRegistry.register(shapedBlock("pole"));
 
@@ -260,10 +260,10 @@ describe("BlockUvBridge / shape footprint", () => {
     try {
       bridge.setActiveTileset("atlas", 16);
 
-      uv.collapse("block-1");
+      uv.setState("block-1", "stacked");
 
       const region = uv.get("block-1")!;
-      assert.equal(region.collapsedFace, "left");
+      assert.equal(region.stackedFace, "left");
       assert.deepEqual(region.rectFor("front"), {
         x: 32,
         y: 22,
@@ -276,7 +276,7 @@ describe("BlockUvBridge / shape footprint", () => {
     }
   });
 
-  it("collapses onto the tile the block already used", () => {
+  it("stacks onto the tile the block already used", () => {
     for (const shapeId of ["cube", "pole", "slabBottom"]) {
       const { engine } = makeFakeVoxelEngine();
       engine.blockRegistry.register(shapedBlock(shapeId));
@@ -286,13 +286,13 @@ describe("BlockUvBridge / shape footprint", () => {
       try {
         bridge.setActiveTileset("atlas", 16);
 
-        uv.collapse("block-1");
+        uv.setState("block-1", "stacked");
 
         const { defaultTexture } = engine.blockRegistry.get(1)!;
         assert.deepEqual(
           { col: defaultTexture!.col, row: defaultTexture!.row },
           { col: 2, row: 1 },
-          `${shapeId} moved off its tile when collapsed`
+          `${shapeId} moved off its tile when stacked`
         );
       }
       finally {
@@ -311,7 +311,7 @@ describe("BlockUvBridge / shape footprint", () => {
       bridge.setActiveTileset("atlas", 16);
 
       engine.defineBlock(shapedBlock("ramp"));
-      uv.uncollapse("block-1");
+      uv.setState("block-1", "free");
 
       assert.deepEqual(uv.get("block-1")!.geometryFor("left"), {
         shape: "triangle",

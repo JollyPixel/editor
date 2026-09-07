@@ -43,6 +43,16 @@ interface RenderEntry {
   stacked?: number;
 }
 
+function deltaOf(
+  from: SelectionRect,
+  to: SelectionRect
+): Vec2 {
+  return {
+    x: to.x - from.x,
+    y: to.y - from.y
+  };
+}
+
 function entryKey(
   id: string,
   face: UVSlot | null
@@ -96,7 +106,7 @@ function regionLabel(
 }
 
 /**
- * Paints selected faces last and dims other uncollapsed faces.
+ * Paints selected faces last and dims other free faces.
  */
 export class UVRegionLayer {
   #viewport: DefaultViewport;
@@ -189,17 +199,17 @@ export class UVRegionLayer {
 
     for (const entry of painted) {
       const border = this.#borders.get(entry.key) ?? this.#createBorder(entry.key, entry.geometry);
-      // Uncollapsed regions show emphasis (+stroke) only on selected faces.
-      const uncollapsed = entry.region.state === "uncollapsed";
+      const perFace = entry.region.state === "free";
+      const emphasised = entry.selected && entry.region.state !== "stacked";
 
       border.place(entry.geometry, zoom, camera);
       border.paint({
         color: entry.region.color,
-        strokeWidth: uncollapsed && entry.selected ?
+        strokeWidth: emphasised ?
           kSelectedStrokeWidth :
           kStrokeWidth,
         selected: entry.selected,
-        dimmed: uncollapsed && !entry.selected
+        dimmed: perFace && !entry.selected
       });
       border.appendTo(this.#group);
     }
@@ -291,13 +301,25 @@ export class UVRegionLayer {
         continue;
       }
 
+      const grouped = region.state === "unfolded";
+      if (grouped && this.#ghostSuppressed.has(entryKey(region.id, null))) {
+        continue;
+      }
+
+      const override = this.#liveOverride;
+      const groupDelta = grouped &&
+        override !== null &&
+        override.id === region.id &&
+        override.face === null ?
+        deltaOf(region.bounds, override.rect) :
+        null;
+
       for (const { face, geometry } of region.facesOf()) {
         const key = entryKey(region.id, face);
         if (this.#ghostSuppressed.has(key)) {
           continue;
         }
 
-        const override = this.#liveOverride;
         const overridden = override !== null &&
           override.id === region.id &&
           override.face === face;
@@ -306,13 +328,35 @@ export class UVRegionLayer {
           key,
           region,
           face,
-          geometry: overridden ? geometryAt(geometry, override.rect) : geometry,
-          selected: region.id === selectedRegionId && face === selectedFace
+          geometry: this.#liveGeometry(geometry, overridden ? override.rect : null, groupDelta),
+          selected: region.id === selectedRegionId &&
+            (grouped || face === selectedFace)
         });
       }
     }
 
     return entries;
+  }
+
+  #liveGeometry(
+    geometry: UVGeometry,
+    rect: SelectionRect | null,
+    delta: Vec2 | null
+  ): UVGeometry {
+    if (rect !== null) {
+      return geometryAt(geometry, rect);
+    }
+    if (delta === null) {
+      return geometry;
+    }
+
+    const bounds = rectOf(geometry);
+
+    return geometryAt(geometry, {
+      ...bounds,
+      x: bounds.x + delta.x,
+      y: bounds.y + delta.y
+    });
   }
 
   #paintOrder(

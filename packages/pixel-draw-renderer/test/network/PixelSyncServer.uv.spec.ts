@@ -86,6 +86,7 @@ function observe(
 function uvCreatedCmd(
   opts: {
     region: {
+      state: "stacked";
       id: string;
       name?: string;
       rect: {
@@ -147,7 +148,9 @@ describe("PixelSyncServer — receive: uv-region-created", () => {
     client.received.length = 0;
 
     server.receive(uvCreatedCmd({
+      state: "stacked",
       region: {
+        state: "stacked",
         id: "r1",
         name: "Grass block",
         rect: { x: 0, y: 0, width: 2, height: 2 },
@@ -164,7 +167,9 @@ describe("PixelSyncServer — receive: uv-region-moved / uv-region-deleted confl
   test("accepts a later-timestamp move over an earlier one for the same region", () => {
     const server = new PixelSyncServer();
     server.receive(uvCreatedCmd({
+      state: "stacked",
       region: {
+        state: "stacked",
         id: "r1",
         rect: { x: 0, y: 0, width: 2, height: 2 },
         color: "#f00"
@@ -192,7 +197,9 @@ describe("PixelSyncServer — receive: uv-region-moved / uv-region-deleted confl
   test("rejects a stale move for a region already moved by a newer command", () => {
     const server = new PixelSyncServer();
     server.receive(uvCreatedCmd({
+      state: "stacked",
       region: {
+        state: "stacked",
         id: "r1",
         rect: { x: 0, y: 0, width: 2, height: 2 },
         color: "#f00"
@@ -220,7 +227,9 @@ describe("PixelSyncServer — receive: uv-region-moved / uv-region-deleted confl
   test("a stale delete does not remove a region moved by a newer command", () => {
     const server = new PixelSyncServer();
     server.receive(uvCreatedCmd({
+      state: "stacked",
       region: {
+        state: "stacked",
         id: "r1",
         rect: { x: 0, y: 0, width: 2, height: 2 },
         color: "#f00"
@@ -249,7 +258,9 @@ describe("PixelSyncServer — receive: uv-region-moved / uv-region-deleted confl
   test("a newer delete removes the region and later stale moves are rejected", () => {
     const server = new PixelSyncServer();
     server.receive(uvCreatedCmd({
+      state: "stacked",
       region: {
+        state: "stacked",
         id: "r1",
         rect: { x: 0, y: 0, width: 2, height: 2 },
         color: "#f00"
@@ -275,14 +286,18 @@ describe("PixelSyncServer — receive: uv-region-moved / uv-region-deleted confl
   test("moves/deletes on different regions never conflict", () => {
     const server = new PixelSyncServer();
     server.receive(uvCreatedCmd({
+      state: "stacked",
       region: {
+        state: "stacked",
         id: "r1",
         rect: { x: 0, y: 0, width: 2, height: 2 },
         color: "#f00"
       }
     }), noopRoom);
     server.receive(uvCreatedCmd({
+      state: "stacked",
       region: {
+        state: "stacked",
         id: "r2",
         rect: { x: 4, y: 4, width: 2, height: 2 },
         color: "#00f"
@@ -330,22 +345,24 @@ describe("PixelSyncServer — per-face conflict resolution", () => {
     };
   }
 
-  function uncollapsed(
+  function free(
     id: string
   ): UVRegionData {
     return new UVRegion({
+      state: "stacked",
       id,
       color: "#f00",
       rect: { x: 0, y: 0, width: 2, height: 2 }
-    }).uncollapse().toJSON();
+    }).free().toJSON();
   }
 
   test("two peers moving different faces of one region do not reject each other", () => {
     const server = new PixelSyncServer();
     server.receive(uvCreatedCmd({
-      region: { id: "r1", rect: { x: 0, y: 0, width: 2, height: 2 }, color: "#f00" }
+      state: "stacked",
+      region: { state: "stacked", id: "r1", rect: { x: 0, y: 0, width: 2, height: 2 }, color: "#f00" }
     }), noopRoom);
-    server.receive(uvStateCmd({ region: uncollapsed("r1"), timestamp: 100 }), noopRoom);
+    server.receive(uvStateCmd({ region: free("r1"), timestamp: 100 }), noopRoom);
 
     server.receive(uvMovedCmd({
       id: "r1",
@@ -375,9 +392,10 @@ describe("PixelSyncServer — per-face conflict resolution", () => {
   test("a stale move on the same face is still rejected", () => {
     const server = new PixelSyncServer();
     server.receive(uvCreatedCmd({
-      region: { id: "r1", rect: { x: 0, y: 0, width: 2, height: 2 }, color: "#f00" }
+      state: "stacked",
+      region: { state: "stacked", id: "r1", rect: { x: 0, y: 0, width: 2, height: 2 }, color: "#f00" }
     }), noopRoom);
-    server.receive(uvStateCmd({ region: uncollapsed("r1"), timestamp: 100 }), noopRoom);
+    server.receive(uvStateCmd({ region: free("r1"), timestamp: 100 }), noopRoom);
 
     server.receive(uvMovedCmd({
       id: "r1",
@@ -403,10 +421,11 @@ describe("PixelSyncServer — per-face conflict resolution", () => {
   test("a state change rewrites the whole region, so a stale face move loses to it", () => {
     const server = new PixelSyncServer();
     server.receive(uvCreatedCmd({
-      region: { id: "r1", rect: { x: 0, y: 0, width: 2, height: 2 }, color: "#f00" }
+      state: "stacked",
+      region: { state: "stacked", id: "r1", rect: { x: 0, y: 0, width: 2, height: 2 }, color: "#f00" }
     }), noopRoom);
     server.receive(uvStateCmd({
-      region: uncollapsed("r1"),
+      region: free("r1"),
       timestamp: 900,
       clientId: "A"
     }), noopRoom);
@@ -422,7 +441,7 @@ describe("PixelSyncServer — per-face conflict resolution", () => {
     assert.deepStrictEqual(
       server.buffer.uvRegions.get("r1")!.rectFor("left"),
       { x: 0, y: 0, width: 2, height: 2 },
-      "the collapse/uncollapse took every face key, so the older move is stale"
+      "the stack/free took every face key, so the older move is stale"
     );
   });
 
@@ -431,13 +450,14 @@ describe("PixelSyncServer — per-face conflict resolution", () => {
     const client = createClient("A");
     const room = observe(server, client);
     server.receive(uvCreatedCmd({
-      region: { id: "r1", rect: { x: 0, y: 0, width: 2, height: 2 }, color: "#f00" }
+      state: "stacked",
+      region: { state: "stacked", id: "r1", rect: { x: 0, y: 0, width: 2, height: 2 }, color: "#f00" }
     }), room);
     client.received.length = 0;
 
-    server.receive(uvStateCmd({ region: uncollapsed("r1") }), room);
+    server.receive(uvStateCmd({ region: free("r1") }), room);
 
-    assert.strictEqual(server.buffer.uvRegions.get("r1")!.state, "uncollapsed");
+    assert.strictEqual(server.buffer.uvRegions.get("r1")!.state, "free");
     assert.strictEqual(client.received.length, 1);
   });
 });

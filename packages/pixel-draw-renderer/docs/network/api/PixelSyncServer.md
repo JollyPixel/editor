@@ -100,6 +100,6 @@ Malformed commands are ignored. A size rejected by `PixelBuffer` is also ignored
 
 The default resolver tracks strokes and selection edits per pixel. A partially stale command is reduced to its accepted positions; no broadcast occurs when every position is rejected.
 
-UV moves use `<region-id>:<face>` as the conflict key. Collapsed moves use `<region-id>:*`. Delete and state-change commands cover every key for that region and are accepted or rejected as a unit.
+UV moves use `<region-id>:<face>` as the conflict key. A region that moves whole, stacked or unfolded, uses `<region-id>:*`. Delete and state-change commands cover every key for that region and are accepted or rejected as a unit.
 
 Resize, texture replacement, global fill and UV creation bypass conflict trackers and are always accepted after validation. For one tracked key, commands from the same client are accepted in sequence. Commands from different clients compare `timestamp`; a tied timestamp uses the lexicographically greater `clientId`.

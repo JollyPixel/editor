@@ -23,7 +23,7 @@ interface HistoryStackOptions {
 | `"resized"` / `"texture-replaced"` | `beforeSize` / `afterSize` and whole-buffer `beforePixels` / `afterPixels` snapshots |
 | `"select-edit"` | Per-position `beforeColors` / `afterColors` and selection metadata used by `PixelArtCanvas` while select mode is active |
 | `"uv-create"` / `"uv-delete"` | Full `region` (undo calls the inverse `UVMap` method) |
-| `"uv-move"` | Region `id`, `face` (`null` when collapsed), and `oldRect` / `newRect` |
+| `"uv-move"` | Region `id`, `face` (`null` unless the region is free), and `oldRect` / `newRect` |
 | `"uv-state"` | Region `id` and full `before` / `after` snapshots |
 
 > [!NOTE]

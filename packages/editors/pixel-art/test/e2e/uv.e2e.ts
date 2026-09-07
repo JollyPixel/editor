@@ -37,6 +37,14 @@ async function dragRegion(
   await page.mouse.up();
 }
 
+async function setRegionState(
+  page: Page,
+  state: "Stacked" | "Unfolded" | "Free"
+): Promise<void> {
+  await page.getByRole("button", { name: /^Region state: / }).click();
+  await page.getByRole("menuitem", { name: state }).click();
+}
+
 interface UvSnapshot {
   selectedRegionId: string | null;
   selectedFace: string | null;
@@ -114,48 +122,90 @@ test("the ramp preset creates triangular side faces", async({ page }) => {
       right: data.faces.right
     };
   })()`) as RampFaceSnapshot;
-  expect(ramp.state).toBe("collapsed");
+  expect(ramp.state).toBe("stacked");
   expect(ramp.activeFaces).toEqual(["back", "left", "right", "top", "bottom"]);
   expect(ramp.left).toMatchObject({ shape: "triangle", corner: "bottom-right" });
   expect(ramp.right).toMatchObject({ shape: "triangle", corner: "bottom-right" });
 });
 
-test("a new region is collapsed and has no face", async({ page }) => {
+test("a new region is stacked and has no face", async({ page }) => {
   await clickTexturePixel(page, 8, 8);
 
   const snapshot = await uvSnapshot(page);
-  expect(snapshot.state).toBe("collapsed");
+  expect(snapshot.state).toBe("stacked");
   expect(snapshot.selectedFace).toBeNull();
   expect(snapshot.faces).toEqual({ "*": { x: 0, y: 0 } });
 });
 
-test("the toolbar offers only the transition that applies", async({ page }) => {
-  const uncollapse = page.getByRole("button", { name: "Uncollapse" });
-  const collapse = page.getByRole("button", { name: "Collapse", exact: true });
+test("the state dropdown appears with a selection and offers the other two states", async({ page }) => {
+  const trigger = page.getByRole("button", { name: /^Region state: / });
 
   // Region exists, but nothing is selected yet.
-  await expect(uncollapse).toHaveCount(0);
-  await expect(collapse).toHaveCount(0);
+  await expect(trigger).toHaveCount(0);
 
   await clickTexturePixel(page, 8, 8);
-  await expect(uncollapse).toHaveCount(1);
-  await expect(collapse).toHaveCount(0);
+  await expect(trigger).toHaveAccessibleName("Region state: Stacked");
 
-  await uncollapse.click();
-  await expect(collapse).toHaveCount(1);
-  await expect(uncollapse).toHaveCount(0);
+  await trigger.click();
+  await expect(page.getByRole("menuitem")).toHaveText(["Unfolded", "Free"]);
+
+  await page.getByRole("menuitem", { name: "Free" }).click();
+  await expect(trigger).toHaveAccessibleName("Region state: Free");
+  await trigger.click();
+  await expect(page.getByRole("menuitem")).toHaveText(["Stacked", "Unfolded"]);
+  await page.keyboard.press("Escape");
 
   // Clicking empty space clears selection.
   await clickTexturePixel(page, 70, 70);
-  await expect(collapse).toHaveCount(0);
-  await expect(uncollapse).toHaveCount(0);
+  await expect(trigger).toHaveCount(0);
 
   // Deleting the selected region only emits "region-deleted".
   await clickTexturePixel(page, 8, 8);
-  await expect(collapse).toHaveCount(1);
+  await expect(trigger).toHaveCount(1);
   await page.getByRole("button", { name: "Delete" }).click();
-  await expect(collapse).toHaveCount(0);
-  await expect(uncollapse).toHaveCount(0);
+  await expect(trigger).toHaveCount(0);
+});
+
+test("unfolding lays every face out as a net that drags as one", async({ page }) => {
+  await clickTexturePixel(page, 8, 8);
+  await setRegionState(page, "Unfolded");
+
+  const unfolded = await uvSnapshot(page);
+  expect(unfolded.state).toBe("unfolded");
+  expect(unfolded.selectedFace).toBeNull();
+  expect(unfolded.faces).toEqual({
+    front: { x: 0, y: 0 },
+    back: { x: 16, y: 0 },
+    left: { x: 0, y: 16 },
+    right: { x: 16, y: 16 },
+    top: { x: 0, y: 32 },
+    bottom: { x: 16, y: 32 }
+  });
+
+  // Grabbing the "right" cell moves the whole net.
+  await dragRegion(page, { x: 20, y: 20 }, { x: 28, y: 24 });
+
+  const moved = await uvSnapshot(page);
+  expect(moved.faces).toEqual({
+    front: { x: 8, y: 4 },
+    back: { x: 24, y: 4 },
+    left: { x: 8, y: 20 },
+    right: { x: 24, y: 20 },
+    top: { x: 8, y: 36 },
+    bottom: { x: 24, y: 36 }
+  });
+});
+
+test("freeing an unfolded region leaves the faces where the net put them", async({ page }) => {
+  await clickTexturePixel(page, 8, 8);
+  await setRegionState(page, "Unfolded");
+  const unfolded = await uvSnapshot(page);
+
+  await setRegionState(page, "Free");
+
+  const freed = await uvSnapshot(page);
+  expect(freed.state).toBe("free");
+  expect(freed.faces).toEqual(unfolded.faces);
 });
 
 test("Show all forces region labels without overwriting their preference", async({ page }) => {
@@ -180,12 +230,12 @@ test("Show all forces region labels without overwriting their preference", async
   await expect(labels).toHaveAttribute("aria-pressed", "true");
 });
 
-test("uncollapsing stacks six faces on the spot the region already occupied", async({ page }) => {
+test("freeing stacks six faces on the spot the region already occupied", async({ page }) => {
   await clickTexturePixel(page, 8, 8);
-  await page.getByRole("button", { name: "Uncollapse" }).click();
+  await setRegionState(page, "Free");
 
   const snapshot = await uvSnapshot(page);
-  expect(snapshot.state).toBe("uncollapsed");
+  expect(snapshot.state).toBe("free");
   expect(snapshot.faces).toEqual({
     front: { x: 0, y: 0 },
     back: { x: 0, y: 0 },
@@ -198,7 +248,7 @@ test("uncollapsing stacks six faces on the spot the region already occupied", as
 
 test("clicking the same spot cycles through the stacked faces", async({ page }) => {
   await clickTexturePixel(page, 8, 8);
-  await page.getByRole("button", { name: "Uncollapse" }).click();
+  await setRegionState(page, "Free");
 
   const picked: (string | null)[] = [];
   for (let index = 0; index < 7; index++) {
@@ -215,7 +265,7 @@ test("clicking the same spot cycles through the stacked faces", async({ page }) 
 
 test("dragging moves only the face the press landed on", async({ page }) => {
   await clickTexturePixel(page, 8, 8);
-  await page.getByRole("button", { name: "Uncollapse" }).click();
+  await setRegionState(page, "Free");
 
   // Presses cycle faces; the drag starts on "left".
   await clickTexturePixel(page, 8, 8);
@@ -229,25 +279,25 @@ test("dragging moves only the face the press landed on", async({ page }) => {
   expect(snapshot.faces.back).toEqual({ x: 0, y: 0 });
 });
 
-test("collapsing keeps the edited face, and undo brings the discarded ones back", async({ page }) => {
+test("stacking keeps the edited face, and undo brings the discarded ones back", async({ page }) => {
   await clickTexturePixel(page, 8, 8);
-  await page.getByRole("button", { name: "Uncollapse" }).click();
+  await setRegionState(page, "Free");
   await dragRegion(page, { x: 8, y: 8 }, { x: 40, y: 8 });
 
   const moved = await uvSnapshot(page);
   expect(moved.selectedFace).toBe("front");
   expect(moved.faces.front).toEqual({ x: 32, y: 0 });
 
-  // Collapse keeps the edited face.
-  await page.getByRole("button", { name: "Collapse", exact: true }).click();
-  const collapsed = await uvSnapshot(page);
-  expect(collapsed.state).toBe("collapsed");
-  expect(collapsed.faces).toEqual({ "*": { x: 32, y: 0 } });
+  // Stack keeps the edited face.
+  await setRegionState(page, "Stacked");
+  const stacked = await uvSnapshot(page);
+  expect(stacked.state).toBe("stacked");
+  expect(stacked.faces).toEqual({ "*": { x: 32, y: 0 } });
 
   await page.getByRole("button", { name: "Undo" }).click();
 
   const restored = await uvSnapshot(page);
-  expect(restored.state).toBe("uncollapsed");
+  expect(restored.state).toBe("free");
   expect(restored.faces.front).toEqual({ x: 32, y: 0 });
   expect(restored.faces.back).toEqual(
     { x: 0, y: 0 }

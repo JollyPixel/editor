@@ -36,7 +36,7 @@ export interface UVRegionCreateOptions {
   activeFaces?: readonly UVSlot[];
   faceGeometries?: Partial<Record<UVSlot, UVSlotGeometryTemplate>>;
   /**
-   * @default "uncollapsed" for regions with topology, otherwise "collapsed"
+   * @default "free" for regions with topology, otherwise "stacked"
    */
   state?: UVRegionState;
   /**
@@ -171,36 +171,39 @@ export class UVMap extends Emitter<
       color: options.color ?? this.#palette.next()
     };
     const hasTopology = options.activeFaces !== undefined || options.faceGeometries !== undefined;
-    const state = options.state ?? (hasTopology ? "uncollapsed" : "collapsed");
+    const state = options.state ?? (hasTopology ? "free" : "stacked");
     const faces = UVSlotMap.map(
       (face) => this.#geometryFrom(options.faceGeometries?.[face], rect)
     );
+    const activeFaces = [
+      ...(options.activeFaces ?? UV_FACES)
+    ];
     let region: UVRegion;
-    if (state === "uncollapsed") {
-      region = new UVRegion({
-        ...identity,
-        state,
-        activeFaces: [...(options.activeFaces ?? UV_FACES)],
-        faces
-      });
-    }
-    else if (hasTopology) {
-      region = new UVRegion({
-        ...identity,
-        state,
-        rect,
-        activeFaces: [
-          ...(options.activeFaces ?? UV_FACES)
-        ],
-        faces
-      });
+    if (state === "stacked") {
+      region = hasTopology ?
+        new UVRegion({
+          ...identity,
+          state,
+          rect,
+          activeFaces,
+          faces
+        }) :
+        new UVRegion({
+          ...identity,
+          state,
+          rect
+        });
     }
     else {
-      region = new UVRegion({
+      const spread = new UVRegion({
         ...identity,
-        state,
-        rect
+        state: "free",
+        activeFaces,
+        faces
       });
+      region = state === "unfolded" ?
+        this.#clamped(spread.unfold()) :
+        spread;
     }
 
     this.#regions.set(region.id, region);
@@ -319,28 +322,29 @@ export class UVMap extends Emitter<
       face: target,
       rect: clamped,
       geometry: geometryAt(
-        region.geometryFor(target ?? kDefaultFace),
+        target === null ? region.bounds : region.geometryFor(target),
         clamped
       )
     });
   }
 
-  uncollapse(
-    id: string
-  ): boolean {
-    return this.#changeState(
-      id,
-      (region) => region.uncollapse()
-    );
-  }
-
-  collapse(
+  setState(
     id: string,
+    state: UVRegionState,
     face?: UVSlot
   ): boolean {
     return this.#changeState(
       id,
-      (region) => region.collapse(face)
+      (region) => {
+        switch (state) {
+          case "stacked":
+            return region.stack(face);
+          case "unfolded":
+            return this.#clamped(region.unfold());
+          default:
+            return region.free();
+        }
+      }
     );
   }
 
@@ -401,7 +405,7 @@ export class UVMap extends Emitter<
     region: UVRegion,
     face: UVSlot | undefined
   ): UVSlot | null | undefined {
-    if (region.state === "collapsed") {
+    if (region.state !== "free") {
       return null;
     }
 
@@ -431,7 +435,7 @@ export class UVMap extends Emitter<
       .map(({ face: activeFace }) => activeFace)
       .filter((activeFace) => activeFace !== null);
     let nextFace: UVSlot | null = null;
-    if (region.state === "uncollapsed") {
+    if (region.state === "free") {
       const firstActiveFace = activeFaces[0] ?? null;
       nextFace = face !== null && activeFaces.includes(face) ? face : firstActiveFace;
     }
@@ -469,6 +473,18 @@ export class UVMap extends Emitter<
       x: clamp(col * kCascadeStep, 0, maxX),
       y: clamp(row * kCascadeStep, 0, maxY)
     };
+  }
+
+  #clamped(
+    region: UVRegion
+  ): UVRegion {
+    const bounds = region.bounds;
+    const size = this.#getCanvasSize();
+
+    return region.translated({
+      x: clamp(bounds.x, 0, Math.max(0, size.x - bounds.width)) - bounds.x,
+      y: clamp(bounds.y, 0, Math.max(0, size.y - bounds.height)) - bounds.y
+    });
   }
 
   #geometryFrom(

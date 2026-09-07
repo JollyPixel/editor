@@ -6,14 +6,14 @@ import assert from "node:assert/strict";
 import { UVMap } from "#src/uv/UVMap.ts";
 
 describe("UVMap slot boundaries", () => {
-  test("rejects a slot the uncollapsed region does not own", () => {
+  test("rejects a slot the free region does not own", () => {
     const map = new UVMap({
       getCanvasSize: () => {
         return { x: 32, y: 32 };
       }
     });
     const region = map.create({ width: 4, height: 4 });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
 
     assert.equal(map.move(
       region.id,

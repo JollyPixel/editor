@@ -53,7 +53,7 @@ describe("UVController — hit-test / select on miss", () => {
     map.restore({
       id: "ramp",
       color: "#f00",
-      state: "uncollapsed",
+      state: "free",
       activeFaces: ["left"],
       faces: {
         front: { x: 0, y: 0, width: 8, height: 8 },
@@ -80,7 +80,7 @@ describe("UVController — hit-test / select on miss", () => {
     map.restore({
       id: "triangle",
       color: "#f00",
-      state: "uncollapsed",
+      state: "free",
       activeFaces: ["left"],
       faces: {
         front: { x: 0, y: 0, width: 8, height: 8 },
@@ -174,13 +174,13 @@ describe("UVController — deselectOnEmptyClick: false", () => {
     const first = map.restore({
       id: "first",
       color: "#f00",
-      state: "collapsed",
+      state: "stacked",
       rect: { x: 0, y: 0, width: 8, height: 8 }
     });
     const second = map.restore({
       id: "second",
       color: "#0f0",
-      state: "collapsed",
+      state: "stacked",
       rect: { x: 0, y: 0, width: 8, height: 8 }
     });
     map.showAll = true;
@@ -350,7 +350,7 @@ describe("UVController — cycling through an overlapping stack", () => {
   test("a repeat click advances to the next face of the stack", () => {
     const { map, controller } = makeSetup();
     const region = map.create({ width: 8, height: 8 });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
     map.showAll = true;
 
     const picked: (string | null)[] = [];
@@ -370,7 +370,7 @@ describe("UVController — cycling through an overlapping stack", () => {
   test("wraps back to the first face after the last one", () => {
     const { map, controller } = makeSetup();
     const region = map.create({ width: 8, height: 8 });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
     map.showAll = true;
 
     for (let index = 0; index < UV_FACES.length; index++) {
@@ -385,7 +385,7 @@ describe("UVController — cycling through an overlapping stack", () => {
   test("dragging a face out of the stack changes the stack, resetting the cycle", () => {
     const { map, controller } = makeSetup();
     const region = map.create({ width: 8, height: 8 });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
     map.showAll = true;
 
     // Pick "front", then drag it away from the shared position.
@@ -402,7 +402,7 @@ describe("UVController — cycling through an overlapping stack", () => {
   test("an external selection change resets the cycle", () => {
     const { map, controller } = makeSetup();
     const region = map.create({ width: 8, height: 8 });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
     map.showAll = true;
 
     controller.handleStart({ x: 2, y: 2 });
@@ -423,7 +423,7 @@ describe("UVController — cycling through an overlapping stack", () => {
   test("a miss resets the cycle", () => {
     const { map, controller } = makeSetup();
     const region = map.create({ width: 8, height: 8 });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
     map.showAll = true;
 
     controller.handleStart({ x: 2, y: 2 });
@@ -439,7 +439,7 @@ describe("UVController — cycling through an overlapping stack", () => {
   test("dragging moves the face the cycle landed on", () => {
     const { map, controller } = makeSetup();
     const region = map.create({ width: 8, height: 8 });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
     map.showAll = true;
 
     controller.handleStart({ x: 2, y: 2 });
@@ -461,7 +461,7 @@ describe("UVController — cycling through an overlapping stack", () => {
     );
   });
 
-  test("a collapsed region is a single-entry stack, so repeat clicks keep it selected", () => {
+  test("a stacked region is a single-entry stack, so repeat clicks keep it selected", () => {
     const { map, controller } = makeSetup();
     const region = map.create({ width: 8, height: 8 });
     map.showAll = true;

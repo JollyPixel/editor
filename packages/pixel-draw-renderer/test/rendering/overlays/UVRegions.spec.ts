@@ -258,7 +258,7 @@ describe("UVRegionLayer — setLiveOverride", () => {
   });
 });
 
-describe("UVRegionLayer — uncollapsed regions", () => {
+describe("UVRegionLayer — free regions", () => {
   test("renders one rect per face", () => {
     const svg = makeSvg();
     const map = makeUvMap();
@@ -266,7 +266,7 @@ describe("UVRegionLayer — uncollapsed regions", () => {
     new UVRegionLayer(svg, makeViewport(), map);
 
     const region = map.create({ width: 4, height: 4, id: "r1" });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
     map.select("r1");
 
     assert.strictEqual(
@@ -287,7 +287,7 @@ describe("UVRegionLayer — uncollapsed regions", () => {
       height: 4,
       id: "r1"
     });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
     // "front" is first in UV_FACES, so raising it is a real reorder.
     map.select("r1", "front");
 
@@ -303,7 +303,7 @@ describe("UVRegionLayer — uncollapsed regions", () => {
     );
   });
 
-  test("a collapsed region keeps its plain full-opacity border", () => {
+  test("a stacked region keeps its plain full-opacity border", () => {
     const svg = makeSvg();
     const map = makeUvMap();
 
@@ -330,7 +330,7 @@ describe("UVRegionLayer — uncollapsed regions", () => {
       height: 4,
       id: "r1"
     });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
     map.select("r1");
 
     overlay.setLiveOverride(
@@ -388,7 +388,7 @@ describe("UVRegionLayer — staying visible over the artwork", () => {
       height: 4,
       id: "r1"
     });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
     map.select("r1", "front");
 
     // Selected face: 3px border, everything else 2px — each casing shows 1px
@@ -413,7 +413,7 @@ describe("UVRegionLayer — staying visible over the artwork", () => {
       id: "r1",
       color: "#123456"
     });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
     map.select("r1", "front");
 
     // "front" is painted last, so it is the last border in document order.
@@ -467,7 +467,7 @@ describe("UVRegionLayer — staying visible over the artwork", () => {
       id: "r1",
       color: "#123456"
     });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
     map.select("r1", "front");
 
     const label = svg.querySelector("text")!;
@@ -527,7 +527,7 @@ describe("UVRegionLayer — compound faces", () => {
       new UVRegion({
         id: "stair",
         color: "#123456",
-        state: "uncollapsed",
+        state: "free",
         activeFaces: ["left"],
         faces: {
           left: {
@@ -554,5 +554,70 @@ describe("UVRegionLayer — compound faces", () => {
     );
     // zoom 4, camera (0,0): the region spans 16 screen pixels.
     assert.strictEqual(d, "M0,8L8,8L8,0L16,0L16,16L0,16Z");
+  });
+});
+
+describe("UVRegionLayer — unfolded regions", () => {
+  function makeUnfolded() {
+    const svg = makeSvg();
+    const map = makeUvMap();
+    const overlay = new UVRegionLayer(svg, makeViewport(), map);
+
+    map.create({ width: 4, height: 4, id: "r1" });
+    map.setState("r1", "unfolded");
+    map.select("r1");
+
+    return { svg, map, overlay };
+  }
+
+  test("paints one border per face", () => {
+    const { svg } = makeUnfolded();
+
+    assert.strictEqual(borders(svg).length, 6);
+  });
+
+  test("keeps every face at full opacity, unlike a free region", () => {
+    const { svg } = makeUnfolded();
+
+    assert.deepStrictEqual(
+      groups(svg).map((group) => group.style.opacity),
+      Array.from({ length: 6 }, () => "")
+    );
+  });
+
+  test("emphasises the whole region, since no single face is selected", () => {
+    const { svg } = makeUnfolded();
+
+    assert.deepStrictEqual(
+      borders(svg).map((rect) => rect.style.strokeWidth),
+      Array.from({ length: 6 }, () => "3")
+    );
+  });
+
+  test("a null live override moves every face together", () => {
+    const { svg, overlay } = makeUnfolded();
+
+    overlay.setLiveOverride(
+      "r1",
+      null,
+      { x: 2, y: 3, width: 8, height: 12 }
+    );
+
+    assert.deepStrictEqual(
+      borders(svg).map((rect) => rect.getAttribute("x")),
+      ["8", "24", "8", "24", "8", "24"]
+    );
+    assert.deepStrictEqual(
+      borders(svg).map((rect) => rect.getAttribute("y")),
+      ["12", "12", "28", "28", "44", "44"]
+    );
+  });
+
+  test("a suppressed region ghost hides all of its faces", () => {
+    const { svg, overlay } = makeUnfolded();
+
+    overlay.setGhostSuppressed([{ id: "r1", face: null }]);
+
+    assert.strictEqual(borders(svg).length, 0);
   });
 });

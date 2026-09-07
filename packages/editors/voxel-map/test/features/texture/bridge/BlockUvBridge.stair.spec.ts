@@ -50,7 +50,7 @@ describe("BlockUvBridge — stairs", () => {
 
     try {
       bridge.setActiveTileset("atlas", 16);
-      uv.uncollapse("block-1");
+      uv.setState("block-1", "free");
 
       const region = uv.get("block-1")!;
 
@@ -71,7 +71,7 @@ describe("BlockUvBridge — stairs", () => {
 
     try {
       bridge.setActiveTileset("atlas", 16);
-      uv.uncollapse("block-1");
+      uv.setState("block-1", "free");
 
       const geometry = uv.get("block-1")!.geometryFor("right") as UVCompound;
 
@@ -94,7 +94,7 @@ describe("BlockUvBridge — stairs", () => {
 
     try {
       bridge.setActiveTileset("atlas", 16);
-      uv.uncollapse("block-1");
+      uv.setState("block-1", "free");
 
       const region = uv.get("block-1")!;
       const covered = region.facesOf().filter(
@@ -114,7 +114,7 @@ describe("BlockUvBridge — stairs", () => {
 
     try {
       bridge.setActiveTileset("atlas", 16);
-      uv.uncollapse("block-1");
+      uv.setState("block-1", "free");
 
       const region = uv.get("block-1")!;
 
@@ -148,7 +148,7 @@ describe("BlockUvBridge — stairs", () => {
 
     try {
       bridge.setActiveTileset("atlas", 16);
-      uv.uncollapse("block-1");
+      uv.setState("block-1", "free");
       uv.move("block-1", { x: 48, y: 40, width: 16, height: 8 }, "top.1");
 
       const updated = engine.blockRegistry.get(1)!;
@@ -175,17 +175,17 @@ describe("BlockUvBridge — stairs", () => {
     }
   });
 
-  it("collapses onto the whole tile, not the partial slot that was selected", () => {
+  it("stacks onto the whole tile, not the partial slot that was selected", () => {
     const { engine, uv } = setup();
     const bridge = new BlockUvBridge(uv, engine);
 
     try {
       bridge.setActiveTileset("atlas", 16);
-      uv.collapse("block-1", "top.1");
+      uv.setState("block-1", "stacked", "top.1");
 
       const region = uv.get("block-1")!;
 
-      assert.equal(region.collapsedFace, "front");
+      assert.equal(region.stackedFace, "front");
       assert.deepEqual(
         region.rectFor("top.1"),
         { x: 0, y: 0, width: 16, height: 16 },
@@ -203,16 +203,16 @@ describe("BlockUvBridge — stairs", () => {
     }
   });
 
-  it("uncollapses a moved stair back onto the shape's own slot footprints", () => {
+  it("frees a moved stair back onto the shape's own slot footprints", () => {
     const { engine, uv } = setup();
     const bridge = new BlockUvBridge(uv, engine);
 
     try {
       bridge.setActiveTileset("atlas", 16);
       uv.move("block-1", { x: 48, y: 40, width: 16, height: 8 }, "top.1");
-      uv.collapse("block-1");
+      uv.setState("block-1", "stacked");
       uv.move("block-1", { x: 32, y: 16, width: 16, height: 16 });
-      uv.uncollapse("block-1");
+      uv.setState("block-1", "free");
 
       const region = uv.get("block-1")!;
 

@@ -189,6 +189,7 @@ describe("applyCommandToBuffer — uv-region-created", () => {
       action: "uv-region-created",
       metadata: {
         region: {
+          state: "stacked",
           id: "r1",
           rect: { x: 0, y: 0, width: 2, height: 2 },
           color: "#f00"
@@ -198,7 +199,7 @@ describe("applyCommandToBuffer — uv-region-created", () => {
 
     assert.deepStrictEqual(buffer.uvRegions.get("r1")!.toJSON(), {
       id: "r1",
-      state: "collapsed",
+      state: "stacked",
       rect: { x: 0, y: 0, width: 2, height: 2 },
       color: "#f00"
     });
@@ -209,6 +210,7 @@ describe("applyCommandToBuffer — uv-region-deleted", () => {
   test("removes the region from the buffer", () => {
     const buffer = makeBuffer();
     buffer.uvRegions.set({
+      state: "stacked",
       id: "r1",
       rect: { x: 0, y: 0, width: 2, height: 2 },
       color: "#f00"
@@ -242,6 +244,7 @@ describe("applyCommandToBuffer — uv-region-moved", () => {
   test("updates the region's rect, preserving its color", () => {
     const buffer = makeBuffer({ x: 8, y: 8 });
     buffer.uvRegions.set({
+      state: "stacked",
       id: "r1",
       rect: { x: 0, y: 0, width: 2, height: 2 },
       color: "#f00"
@@ -259,20 +262,21 @@ describe("applyCommandToBuffer — uv-region-moved", () => {
 
     assert.deepStrictEqual(buffer.uvRegions.get("r1")!.toJSON(), {
       id: "r1",
-      state: "collapsed",
+      state: "stacked",
       rect: { x: 4, y: 4, width: 2, height: 2 },
       color: "#f00"
     });
   });
 
-  test("moves a single face of an uncollapsed region", () => {
+  test("moves a single face of an free region", () => {
     const buffer = makeBuffer({ x: 8, y: 8 });
     buffer.uvRegions.set(
       new UVRegion({
+        state: "stacked",
         id: "r1",
         color: "#f00",
         rect: { x: 0, y: 0, width: 2, height: 2 }
-      }).uncollapse()
+      }).free()
     );
 
     applyCommandToBuffer(buffer, {
@@ -293,6 +297,7 @@ describe("applyCommandToBuffer — uv-region-moved", () => {
   test("uv-region-state-changed replaces the stored region", () => {
     const buffer = makeBuffer({ x: 8, y: 8 });
     buffer.uvRegions.set({
+      state: "stacked",
       id: "r1",
       rect: { x: 0, y: 0, width: 2, height: 2 },
       color: "#f00"
@@ -303,14 +308,15 @@ describe("applyCommandToBuffer — uv-region-moved", () => {
       action: "uv-region-state-changed",
       metadata: {
         region: new UVRegion({
+          state: "stacked",
           id: "r1",
           color: "#f00",
           rect: { x: 0, y: 0, width: 2, height: 2 }
-        }).uncollapse().toJSON()
+        }).free().toJSON()
       }
     });
 
-    assert.strictEqual(buffer.uvRegions.get("r1")!.state, "uncollapsed");
+    assert.strictEqual(buffer.uvRegions.get("r1")!.state, "free");
   });
 
   test("is a no-op for an unknown region", () => {

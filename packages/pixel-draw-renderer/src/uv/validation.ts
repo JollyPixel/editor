@@ -134,12 +134,12 @@ export function isUVRegionData(
     return false;
   }
 
-  if (value.state === "uncollapsed") {
+  if (value.state === "unfolded" || value.state === "free") {
     return isUVSlots(faces);
   }
 
-  return (value.state === undefined || value.state === "collapsed") &&
+  return value.state === "stacked" &&
     isUVTextureRect(value.rect) &&
     (faces === undefined || isUVSlots(faces)) &&
-    (value.collapsedFace === undefined || isUVSlot(value.collapsedFace));
+    (value.stackedFace === undefined || isUVSlot(value.stackedFace));
 }

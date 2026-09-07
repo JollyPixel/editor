@@ -17,7 +17,7 @@ import {
   blockIdFromUvRegion,
   blockUsesTileset,
   blockUvRegion,
-  uncollapsedBlockUvRegion,
+  freeBlockUvRegion,
   uvRegionsEqual
 } from "../uv/blockUvProjection.ts";
 import { blockShapeUv } from "../uv/blockShapeUv.ts";
@@ -237,19 +237,19 @@ export class BlockUvBridge {
       return;
     }
     const block = this.#blockOf(event.region.id);
-    if (!block || this.#rederivedOnUncollapse(block, event)) {
+    if (!block || this.#rederivedOnFree(block, event)) {
       return;
     }
 
     this.#applyRegionToBlock(event.region);
   };
 
-  #rederivedOnUncollapse(
+  #rederivedOnFree(
     block: ResolvedBlockDefinition,
     event: { region: UVRegion; previous: UVRegionData; }
   ): boolean {
-    const wasCollapsed = (event.previous.state ?? "collapsed") === "collapsed";
-    if (event.region.state !== "uncollapsed" || !wasCollapsed) {
+    const wasStacked = event.previous.state === "stacked";
+    if (event.region.state !== "free" || !wasStacked) {
       return false;
     }
 
@@ -258,7 +258,7 @@ export class BlockUvBridge {
       return false;
     }
 
-    const derived = uncollapsedBlockUvRegion(
+    const derived = freeBlockUvRegion(
       block,
       shape,
       this.#tileSize

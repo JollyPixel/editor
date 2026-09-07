@@ -34,6 +34,8 @@ export type IconName =
   | "trash"
   | "collapse"
   | "expand"
+  | "unfold"
+  | "chevronDown"
   | "label"
   | "eye";
 
@@ -647,6 +649,28 @@ registerIcon("label", svg`
       stroke="currentColor"
       stroke-width="2.2"
       stroke-linecap="round"
+    />
+  `);
+
+// A 3x2 grid of cells: the unfolded net.
+registerIcon("unfold", svg`
+    <path
+      d="M3 5h18v14H3zM9 5v14M15 5v14M3 12h18"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linejoin="round"
+    />
+  `);
+
+registerIcon("chevronDown", svg`
+    <path
+      d="m6 9 6 6 6-6"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
     />
   `);
 

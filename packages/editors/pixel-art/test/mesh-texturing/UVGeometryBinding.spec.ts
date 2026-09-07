@@ -67,13 +67,13 @@ function uvOf(
   return [attribute.getX(index), attribute.getY(index)];
 }
 
-function collapsedRegion(
+function stackedRegion(
   rect = { x: 0, y: 0, width: 16, height: 16 }
 ): UVRegionType {
   return UVRegion.from({
     id: "region-a",
     color: "#ff0000",
-    state: "collapsed",
+    state: "stacked",
     rect
   });
 }
@@ -85,10 +85,10 @@ describe("UVGeometryBinding", () => {
     geometry = makeGeometry();
   });
 
-  test("projects a collapsed region across every vertex on construction", () => {
+  test("projects a stacked region across every vertex on construction", () => {
     new UVGeometryBinding({
       geometry,
-      region: collapsedRegion(),
+      region: stackedRegion(),
       textureSize: kTextureSize,
       faceRanges: boxFaceRanges()
     });
@@ -105,7 +105,7 @@ describe("UVGeometryBinding", () => {
 
     new UVGeometryBinding({
       geometry,
-      region: collapsedRegion(),
+      region: stackedRegion(),
       textureSize: kTextureSize,
       faceRanges: { front: [{ start: 0, count: 4 }] }
     });
@@ -119,7 +119,7 @@ describe("UVGeometryBinding", () => {
   test("exposes the bound region id", () => {
     const binding = new UVGeometryBinding({
       geometry,
-      region: collapsedRegion(),
+      region: stackedRegion(),
       textureSize: kTextureSize,
       faceRanges: boxFaceRanges()
     });
@@ -130,14 +130,14 @@ describe("UVGeometryBinding", () => {
   test("applyFace rewrites only the named face's vertex range", () => {
     const binding = new UVGeometryBinding({
       geometry,
-      region: collapsedRegion(),
+      region: stackedRegion(),
       textureSize: kTextureSize,
       faceRanges: boxFaceRanges()
     });
 
     binding.applyFace("top", { x: 32, y: 0, width: 16, height: 16 });
 
-    // "top" is vertices 8..11; "left" (4..7) keeps the collapsed projection.
+    // "top" is vertices 8..11; "left" (4..7) keeps the stacked projection.
     assert.deepStrictEqual(uvOf(geometry, 8), [0.5, 1]);
     assert.deepStrictEqual(uvOf(geometry, 9), [0.75, 1]);
     assert.deepStrictEqual(uvOf(geometry, 4), [0, 1]);
@@ -146,7 +146,7 @@ describe("UVGeometryBinding", () => {
   test("applyFace ignores a face the geometry has no range for", () => {
     const binding = new UVGeometryBinding({
       geometry,
-      region: collapsedRegion(),
+      region: stackedRegion(),
       textureSize: kTextureSize,
       faceRanges: { front: [{ start: 16, count: 4 }] }
     });
@@ -159,7 +159,7 @@ describe("UVGeometryBinding", () => {
   test("setTextureSize reprojects the region against the new size", () => {
     const binding = new UVGeometryBinding({
       geometry,
-      region: collapsedRegion(),
+      region: stackedRegion(),
       textureSize: kTextureSize,
       faceRanges: boxFaceRanges()
     });
@@ -173,7 +173,7 @@ describe("UVGeometryBinding", () => {
   test("setRegion rebinds to another region", () => {
     const binding = new UVGeometryBinding({
       geometry,
-      region: collapsedRegion(),
+      region: stackedRegion(),
       textureSize: kTextureSize,
       faceRanges: boxFaceRanges()
     });
@@ -181,7 +181,7 @@ describe("UVGeometryBinding", () => {
     binding.setRegion(UVRegion.from({
       id: "region-b",
       color: "#00ff00",
-      state: "collapsed",
+      state: "stacked",
       rect: { x: 0, y: 32, width: 16, height: 16 }
     }));
 
@@ -228,7 +228,7 @@ describe("UVGeometryBinding", () => {
     test("tracks region-state-changed", () => {
       const binding = bindCreated();
 
-      uv.uncollapse("tracked");
+      uv.setState("tracked", "free");
 
       assert.strictEqual(binding.regionId, "tracked");
       assert.deepStrictEqual(uvOf(geometry, 0), [0, 1]);

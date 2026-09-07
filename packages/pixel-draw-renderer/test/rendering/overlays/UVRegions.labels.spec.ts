@@ -54,7 +54,7 @@ describe("UVRegionLayer — face labels", () => {
       height: kLabelSize,
       id: "r1"
     });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
     map.select("r1", "left");
 
     assert.deepStrictEqual(
@@ -71,7 +71,7 @@ describe("UVRegionLayer — face labels", () => {
       height: kLabelSize,
       id: "r1"
     });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
     map.select("r1", "front");
     assert.deepStrictEqual(labels(svg), ["front +5"]);
 
@@ -95,7 +95,7 @@ describe("UVRegionLayer — face labels", () => {
       height: kLabelSize,
       id: "r1"
     });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
     map.select("r1", "front");
 
     // Peel the first three off, one at a time.
@@ -128,15 +128,15 @@ describe("UVRegionLayer — face labels", () => {
       height: kLabelSize,
       id: "r1"
     });
-    map.uncollapse(a.id);
+    map.setState(a.id, "free");
     map.select("r1", "top");
-    // Show a second, unselected uncollapsed region alongside it.
+    // Show a second, unselected free region alongside it.
     const b = map.create({
       width: kLabelSize,
       height: kLabelSize,
       id: "r2"
     });
-    map.uncollapse(b.id);
+    map.setState(b.id, "free");
     map.showAll = true;
 
     assert.deepStrictEqual(
@@ -153,7 +153,7 @@ describe("UVRegionLayer — face labels", () => {
       height: kLabelSize,
       id: "r1"
     });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
     map.select("r1", "front");
 
     UV_FACES.forEach((face, index) => {
@@ -175,7 +175,7 @@ describe("UVRegionLayer — face labels", () => {
     );
   });
 
-  test("a collapsed region carries no label", () => {
+  test("a stacked region carries no label", () => {
     const { svg, map } = setup();
     const region = map.create({
       width: kLabelSize,
@@ -186,7 +186,7 @@ describe("UVRegionLayer — face labels", () => {
     assert.deepStrictEqual(labels(svg), []);
   });
 
-  test("shows a collapsed region name when region labels are enabled", () => {
+  test("shows a stacked region name when region labels are enabled", () => {
     const { svg, map } = setup();
     const region = map.create({
       width: kLabelSize,
@@ -216,7 +216,7 @@ describe("UVRegionLayer — face labels", () => {
     assert.deepStrictEqual(labels(svg), ["(region-1)"]);
   });
 
-  test("puts the region label above the face for an uncollapsed region", () => {
+  test("puts the region label above the face for an free region", () => {
     const { svg, map } = setup();
     const region = map.create({
       width: kLabelSize,
@@ -224,7 +224,7 @@ describe("UVRegionLayer — face labels", () => {
       id: "r1",
       name: "Grass block"
     });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
     map.select(region.id, "front");
 
     map.showRegionLabels = true;
@@ -280,24 +280,24 @@ describe("UVRegionLayer — face labels", () => {
       height: 4,
       id: "r1"
     });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
     map.select("r1", "front");
 
     assert.deepStrictEqual(labels(svg), []);
   });
 
-  test("removes labels once the region is collapsed again", () => {
+  test("removes labels once the region is stacked again", () => {
     const { svg, map } = setup();
     const region = map.create({
       width: kLabelSize,
       height: kLabelSize,
       id: "r1"
     });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
     map.select("r1", "front");
     assert.strictEqual(labels(svg).length, 1);
 
-    map.collapse("r1");
+    map.setState("r1", "stacked");
 
     assert.deepStrictEqual(labels(svg), []);
   });
