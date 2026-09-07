@@ -7,6 +7,7 @@ construction.
 ```ts
 interface PresenceOptions {
   max?: number;
+  selectable?: boolean;
 }
 
 const presence = pane.addPresence({ max: 5 });
@@ -25,6 +26,15 @@ so later mutations to the source collection do not change the view. Peer
 shape, overflow behavior, and accessibility are documented under
 [`jolly-presence`](../peer/presence.md).
 
-The builder exposes `element`, `max`, `hidden`, `disabled`, and
-`dispose()`.
+```ts
+onSelect(handler: (clientId: string) => void): () => void
+```
+
+`selectable` defaults to `false`. When set, remote rows become buttons and
+`onSelect()` subscribes to their `jolly-peer-select`, returning the
+unsubscribe. The local peer never raises one. See
+[`jolly-presence`](../peer/presence.md#selection).
+
+The builder exposes `element`, `max`, `selectable`, `hidden`, `disabled`,
+`onSelect()`, and `dispose()`.
 

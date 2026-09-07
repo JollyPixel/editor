@@ -108,6 +108,16 @@ export class PeerFrustumLabel extends THREE.Sprite {
     this.#draw();
   }
 
+  get opacity(): number {
+    return this.material.opacity;
+  }
+
+  set opacity(
+    opacity: number
+  ) {
+    this.material.opacity = Math.min(1, Math.max(0, opacity));
+  }
+
   get showNameBox(): boolean {
     return this.#showNameBox;
   }

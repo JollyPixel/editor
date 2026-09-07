@@ -42,6 +42,11 @@ export interface FreeFlyCameraOptions {
   speedAdjustStep?: number;
 }
 
+export interface CameraPose {
+  position: THREE.Vector3Like;
+  quaternion: THREE.QuaternionLike;
+}
+
 export class FreeFlyCamera extends CameraComponent {
   enabled = true;
 
@@ -180,6 +185,24 @@ export class FreeFlyCamera extends CameraComponent {
     speed: number
   ) {
     this.#moveSpeed = this.#clampMoveSpeed(speed);
+  }
+
+  teleport(
+    pose: CameraPose
+  ): void {
+    const { x, y, z, w } = pose.quaternion;
+    this.#euler.setFromQuaternion(
+      this.#orientation.set(x, y, z, w)
+    );
+    this.#yaw = this.#euler.y;
+    this.#pitch = Math.max(
+      -this.#maxPitch,
+      Math.min(this.#maxPitch, this.#euler.x)
+    );
+    this.#vel.set(0, 0, 0);
+
+    this.#applyOrientation();
+    this.actor.transform.setLocalPosition(pose.position);
   }
 
   start() {

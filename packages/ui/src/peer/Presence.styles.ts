@@ -48,11 +48,36 @@ export const presenceStyles = css`
   }
 
   .swatch {
+    flex: none;
     width: 0.75em;
     height: 0.75em;
     margin-inline-end: var(--jolly-space-2, 8px);
     border-radius: 50%;
-    box-shadow: 0 0 0 1px var(--jolly-border);
+  }
+
+  .select {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    min-height: var(--jolly-row-height, 20px);
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 2px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+  }
+
+  .select:hover {
+    background: var(--jolly-control-bg-hover);
+  }
+
+  .select:focus-visible {
+    outline: none;
+    background: var(--jolly-control-bg-focus);
   }
 
   .overflow {

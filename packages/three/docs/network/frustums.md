@@ -33,7 +33,8 @@ The shape points down local `-Z`.
 | `displayName` | none | Create a billboard label |
 | `showNameBox` | `false` | Draw a dark rounded label background |
 
-`color`, `displayName`, and `showNameBox` can be assigned after construction.
+`color`, `displayName`, `opacity`, and `showNameBox` can be assigned after
+construction.
 The `label` property is `null` until a display name is provided. Call
 `removeFromParent()` and `dispose()` during teardown.
 
@@ -41,9 +42,9 @@ The `label` property is `null` until a display name is provided. Call
 instances.
 
 `PeerFrustumLabel` is also exported for standalone labels. Its constructor
-requires `displayName` and `color`; `showNameBox` defaults to `false`. The same
-three fields are assignable properties. It extends `THREE.Sprite` and exposes
-`dispose()`.
+requires `displayName` and `color`; `showNameBox` defaults to `false`. Those
+three fields and `opacity` are assignable properties. It extends `THREE.Sprite`
+and exposes `dispose()`.
 
 ## Sync room presence
 
@@ -70,6 +71,8 @@ renderer.setAnimationLoop(() => {
 | `parent` | required | Parent for remote frustums |
 | `presenceKey` | `"frustum"` | Presence field for poses |
 | `throttleMs` | `50` | Minimum delay between changed pose reports; `0` reports every change |
+| `hideWithin` | `0` | Distance from the source below which a frustum is hidden |
+| `fadeWithin` | `0` | Distance from the source below which a frustum fades toward hidden |
 | `label` | `identity.username` | Resolve a remote display name |
 | `color` | deterministic peer color | Resolve a remote color |
 | `frustum` | `{}` | Shared `PeerFrustum` options except `color` and `displayName` |
@@ -77,6 +80,22 @@ renderer.setAnimationLoop(() => {
 Call `update()` once per render tick. It publishes after a position or
 quaternion component changes by more than `1e-4` and the throttle interval has
 elapsed.
+
+## Proximity fade
+
+A frustum you stand inside reads as noise on screen, so `update()` fades each
+peer by its distance to the attached source: opaque at `fadeWithin` and beyond,
+ramping linearly to hidden at `hideWithin`. Both default to `0`, which leaves
+every frustum opaque; opt in by setting them. A pose landing next to the source
+fades on arrival rather than on the next tick, and `detach()` restores full
+opacity.
+
+The fade drives `PeerFrustum.opacity`, which spans the wireframe and its label,
+clamps to `0..1`, and turns the line material transparent below `1`.
+
+`poseOf(clientId)` returns a copy of the last pose applied to a peer, or
+`undefined` for an unknown peer, one whose pose is missing or malformed, and
+one that has left. Use it to move a local camera onto a peer's viewpoint.
 
 `detach()` stops local pose reports but leaves remote frustums visible.
 `refreshColors()` reruns the color callback for current peers. `destroy()`

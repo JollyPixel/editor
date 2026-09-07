@@ -17,6 +17,8 @@ import {
 // CONSTANTS
 const kDefaultPresenceKey = "frustum";
 const kDefaultThrottleMs = 50;
+const kDefaultHideWithin = 0;
+const kDefaultFadeWithin = 0;
 
 export interface PeerFrustumSyncOptions<
   ClientMessage = unknown,
@@ -37,6 +39,18 @@ export interface PeerFrustumSyncOptions<
    * @default 50
    */
   throttleMs?: number;
+  /**
+   * Distance from the attached source below which a peer frustum is hidden,
+   * in world units. Both distances default to `0`, which never fades.
+   * @default 0
+   */
+  hideWithin?: number;
+  /**
+   * Distance from the attached source below which a peer frustum fades toward
+   * hidden, in world units. Values at or under `hideWithin` cut without fading.
+   * @default 0
+   */
+  fadeWithin?: number;
   /**
    * Returns a peer's display label.
    * @default reads `identity.username` when it's a string
@@ -74,6 +88,8 @@ export class PeerFrustumSync<
   #parent: THREE.Object3D;
   #presenceKey: string;
   #throttleMs: number;
+  #hideWithin: number;
+  #fadeWithin: number;
   #label: (
     clientId: string,
     identity: network.PeerMetadata
@@ -85,6 +101,7 @@ export class PeerFrustumSync<
   #frustumOptions: Omit<PeerFrustumOptions, "color" | "displayName">;
   #palette = new ColorPalette();
   #peers = new Map<string, PeerFrustum>();
+  #poses = new Map<string, PeerFrustumPose>();
   #source: THREE.Object3D | undefined;
   #lastSent: PeerFrustumPose | undefined;
   #lastSentAt = 0;
@@ -117,6 +134,8 @@ export class PeerFrustumSync<
     this.#parent = options.parent;
     this.#presenceKey = options.presenceKey ?? kDefaultPresenceKey;
     this.#throttleMs = options.throttleMs ?? kDefaultThrottleMs;
+    this.#hideWithin = options.hideWithin ?? kDefaultHideWithin;
+    this.#fadeWithin = options.fadeWithin ?? kDefaultFadeWithin;
     this.#label = options.label ?? defaultLabel;
     this.#color = options.color ?? (
       (clientId) => this.#palette.forKey(clientId)
@@ -143,6 +162,11 @@ export class PeerFrustumSync<
   detach(): void {
     this.#source = undefined;
     this.#invalidateLastSent();
+
+    for (const [clientId, frustum] of this.#peers) {
+      frustum.opacity = 1;
+      frustum.visible = this.#poses.has(clientId);
+    }
   }
 
   destroy(): void {
@@ -168,6 +192,26 @@ export class PeerFrustumSync<
       position: { x, y, z },
       quaternion: { x: qx, y: qy, z: qz, w: qw }
     });
+
+    for (const [clientId, frustum] of this.#peers) {
+      if (this.#poses.has(clientId)) {
+        this.#fade(frustum, x, y, z);
+      }
+    }
+  }
+
+  poseOf(
+    clientId: string
+  ): PeerFrustumPose | undefined {
+    const pose = this.#poses.get(clientId);
+    if (pose === undefined) {
+      return undefined;
+    }
+
+    return {
+      position: { ...pose.position },
+      quaternion: { ...pose.quaternion }
+    };
   }
 
   refreshColors(): void {
@@ -248,6 +292,8 @@ export class PeerFrustumSync<
     const pose = decodePeerFrustumPose(presence[this.#presenceKey]);
 
     if (pose === undefined) {
+      this.#poses.delete(clientId);
+
       const frustum = this.#peers.get(clientId);
       if (frustum) {
         frustum.visible = false;
@@ -256,10 +302,48 @@ export class PeerFrustumSync<
       return;
     }
 
+    this.#poses.set(clientId, pose);
+
     const frustum = this.#peers.get(clientId) ?? this.#createPeer(clientId, identity);
     frustum.visible = true;
     frustum.position.copy(pose.position);
     frustum.quaternion.copy(pose.quaternion);
+
+    if (this.#source !== undefined) {
+      const { x, y, z } = this.#source.position;
+      this.#fade(frustum, x, y, z);
+    }
+  }
+
+  #fade(
+    frustum: PeerFrustum,
+    x: number,
+    y: number,
+    z: number
+  ): void {
+    const distance = Math.hypot(
+      frustum.position.x - x,
+      frustum.position.y - y,
+      frustum.position.z - z
+    );
+
+    const opacity = this.#opacityAt(distance);
+    frustum.opacity = opacity;
+    frustum.visible = opacity > 0;
+  }
+
+  #opacityAt(
+    distance: number
+  ): number {
+    if (distance <= this.#hideWithin) {
+      return 0;
+    }
+    if (distance >= this.#fadeWithin) {
+      return 1;
+    }
+
+    return (distance - this.#hideWithin) /
+      (this.#fadeWithin - this.#hideWithin);
   }
 
   #createPeer(
@@ -280,6 +364,8 @@ export class PeerFrustumSync<
   #removePeer(
     clientId: string
   ): void {
+    this.#poses.delete(clientId);
+
     const frustum = this.#peers.get(clientId);
     if (!frustum) {
       return;

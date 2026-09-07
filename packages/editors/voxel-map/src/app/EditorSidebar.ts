@@ -2,6 +2,7 @@
 import { LitElement, html, css, nothing, render } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import type {
+  JollyPeerSelectDetail,
   JollyTabChangeDetail,
   PresencePeer
 } from "@jolly-pixel/ui";
@@ -116,6 +117,9 @@ export class EditorSidebar extends LitElement {
   declare onLoadWorld: ((data: VoxelWorldJSON) => void) | undefined;
 
   @property({ attribute: false })
+  declare onTeleportToPeer: ((clientId: string) => void) | undefined;
+
+  @property({ attribute: false })
   declare state: EditorState;
 
   @property({ attribute: false })
@@ -188,6 +192,12 @@ export class EditorSidebar extends LitElement {
 
   readonly #onPeersChange = (peers: readonly PresencePeer[]): void => {
     this._peers = peers;
+  };
+
+  readonly #onPeerSelect = (
+    event: CustomEvent<JollyPeerSelectDetail>
+  ): void => {
+    this.onTeleportToPeer?.(event.detail.clientId);
   };
 
   readonly #onBlockSelectionChange = (
@@ -354,7 +364,11 @@ export class EditorSidebar extends LitElement {
         label="Collaborators"
         storage-key="voxel-map:folder:collaborators"
       >
-        <jolly-presence .peers=${this._peers}></jolly-presence>
+        <jolly-presence
+          selectable
+          .peers=${this._peers}
+          @jolly-peer-select=${this.#onPeerSelect}
+        ></jolly-presence>
       </jolly-folder>
     `;
   }
