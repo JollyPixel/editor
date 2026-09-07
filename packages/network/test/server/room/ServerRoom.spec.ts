@@ -129,7 +129,15 @@ function createFailingEventStore(): EventStore.EventStore {
     writer: new FailingEventWriter(),
     reader: {
       list: () => [],
-      listAll: () => []
+      lastVersionOf: () => 0,
+      listAll: () => [],
+      listFromCheckpoints: () => []
+    },
+    compact: () => {
+      return {
+        removed: 0,
+        assets: 0
+      };
     },
     close: () => void 0,
     [Symbol.dispose]() {

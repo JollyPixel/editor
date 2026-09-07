@@ -18,11 +18,12 @@ export type AssetEventType =
   | typeof ASSET_RENAMED
   | typeof ASSET_DELETED;
 
-/**
- * Lifecycle content stored inline or by durable reference.
- *
- * Version 1 supports inline content only but reserves the reference shape.
- */
+export const ASSET_CHECKPOINT_EVENT_TYPES: readonly AssetEventType[] = [
+  ASSET_CREATED,
+  ASSET_UPDATED,
+  ASSET_DELETED
+];
+
 export type AssetContent =
   | { type: "inline"; encoding: "base64"; data: string; }
   | { type: "ref"; hash: string; size: number; };
@@ -58,9 +59,6 @@ export type AssetEventData =
   | AssetRenamedData
   | AssetDeletedData;
 
-/**
- * Binds each lifecycle event type to the payload it carries.
- */
 export type AssetEventDataMap = {
   [ASSET_CREATED]: AssetCreatedData;
   [ASSET_UPDATED]: AssetUpdatedData;
@@ -68,12 +66,6 @@ export type AssetEventDataMap = {
   [ASSET_DELETED]: AssetDeletedData;
 };
 
-/**
- * A stored Event whose `eventData` is known to match its `eventType`.
- *
- * `isAssetEvent` is the only way to obtain one, so readers fold validated
- * payloads instead of asserting their shape.
- */
 export type AssetEvent = {
   [K in keyof AssetEventDataMap]: EventStore.Event & {
     eventType: K;
@@ -87,13 +79,6 @@ export function isAssetEventType(
   return eventType.startsWith(ASSET_EVENT_PREFIX);
 }
 
-/**
- * Validates that an event's payload matches its lifecycle type.
- *
- * Events arrive from persistence as parsed JSON, so the payload is checked
- * rather than asserted. Domain events and malformed lifecycle payloads both
- * return `false`; callers skip them.
- */
 export function isAssetEvent(
   event: EventStore.Event
 ): event is AssetEvent {

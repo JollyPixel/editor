@@ -8,14 +8,44 @@ interface AssetSource {
   write(path: string, data: Uint8Array): Promise<void>;
   delete(path: string): Promise<void>;
   list(): Promise<string[]>;
+  isIgnored?(path: string): boolean;
   watch?(onChange: (path: string) => void): () => void;
 }
 ```
 
-Paths are root-relative POSIX strings. Backslashes are normalized. Absolute
-paths, empty paths and traversal outside the root throw
-`AssetPathEscapeError`. `delete` does nothing when the path is missing, and
-`list` returns sorted paths without `.jollypixel/` state files.
+`delete` does nothing when the path is missing, and `list` returns sorted
+paths without `.jollypixel/` state files. `isIgnored(path)` reports what the
+source hides from listing and watching; a caller exposing the source to the
+outside, the [static handler](./Workspace.md#serving-the-workspace) above
+all, must answer as if the path did not exist.
+
+## Paths
+
+Paths are root-relative POSIX strings. Backslashes are normalized, and inner
+`.`/`..` segments collapse.
+
+```ts
+safeAssetPath(input: string): Result<string, AssetPathRejection>
+normalizeAssetPath(input: string): string
+isStatePath(assetPath: string): boolean
+```
+
+`safeAssetPath` validates untrusted input and reports why it refused;
+`normalizeAssetPath` throws `AssetPathEscapeError`, whose `reason` carries
+the same value.
+
+| Rejection | Input |
+|---|---|
+| `empty` | `""` |
+| `invalid` | a control character, `NUL` included |
+| `absolute` | `/etc/passwd`, `C:/Windows/win.ini`, `\\server\share` |
+| `traversal` | `..`, `../secret`, `textures/../../secret` |
+| `directory` | `.`, `textures/` |
+| `reserved` | a writer naming the `.jollypixel/` state directory |
+
+`isStatePath` matches the state directory case-insensitively, because a
+case-insensitive filesystem answers `.JOLLYPIXEL/state.json` from
+`.jollypixel/`.
 
 ## MemoryAssetSource
 
@@ -49,5 +79,11 @@ The `ignore` option adds globs to these defaults:
 ]
 ```
 
-`isIgnored(path)` tests the configured globs. `watch(callback)` reports
+Globs are matched case-insensitively, so `.GIT/config` is ignored like
+`.git/config` on a case-insensitive filesystem. `watch(callback)` reports
 root-relative POSIX paths and returns a function that stops the watcher.
+
+`resolve(path)` joins the root lexically. `read`, `write` and `delete`
+additionally resolve the real path of the target, or of its closest existing
+parent, and throw `AssetPathEscapeError` when a symlink takes it out of the
+root.

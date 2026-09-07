@@ -11,7 +11,11 @@ import {
 
 // Import Internal Dependencies
 import type { AssetSource } from "../sources/AssetSource.ts";
-import { normalizeAssetPath } from "../sources/paths.ts";
+import {
+  isStatePath,
+  normalizeAssetPath
+} from "../sources/paths.ts";
+import { AssetPathEscapeError } from "../errors/AssetPathEscapeError.ts";
 import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
 import { CatalogIdentitySidecar } from "../catalog/CatalogIdentitySidecar.ts";
 import { contentHash } from "../utils/contentHash.ts";
@@ -97,7 +101,7 @@ export class AssetWriter {
   async create(
     input: CreateAssetInput
   ): Promise<Result<EventStore.Event, Error>> {
-    const path = normalizeAssetPath(input.path);
+    const path = writableAssetPath(input.path);
     const kind = input.kind ?? this.#kinds.resolve(path).kind;
     const assetId = input.assetId ?? randomUUID();
 
@@ -146,7 +150,7 @@ export class AssetWriter {
     }
 
     const current = found.val;
-    const to = normalizeAssetPath(input.to);
+    const to = writableAssetPath(input.to);
     const appended = this.#append(
       input.assetId,
       current.kind,
@@ -206,9 +210,6 @@ export class AssetWriter {
       Ok(current);
   }
 
-  /**
-   * Sidecar failures lose stable ids but never appended events.
-   */
   async #saveIdentity(): Promise<void> {
     try {
       await this.#identity.save(this.#source);
@@ -222,10 +223,6 @@ export class AssetWriter {
     }
   }
 
-  /**
-   * The type parameter binds `eventData` to the payload `eventType`
-   * declares, so a malformed literal fails to compile.
-   */
   #append<TEventType extends keyof AssetEventDataMap>(
     assetId: string,
     kind: string,
@@ -246,4 +243,15 @@ export class AssetWriter {
 
     return result;
   }
+}
+
+function writableAssetPath(
+  input: string
+): string {
+  const path = normalizeAssetPath(input);
+  if (isStatePath(path)) {
+    throw new AssetPathEscapeError(input, "reserved");
+  }
+
+  return path;
 }

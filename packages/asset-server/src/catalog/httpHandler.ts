@@ -35,7 +35,11 @@ export function createCatalogHandler(
     path = DEFAULT_CATALOG_PATH
   } = options;
 
-  return function catalogHandler(request, response, next) {
+  return function catalogHandler(
+    request: IncomingMessage,
+    response: ServerResponse,
+    next: () => void
+  ) {
     const requestUrl = URL.parse(
       request.url ?? "",
       "http://localhost"

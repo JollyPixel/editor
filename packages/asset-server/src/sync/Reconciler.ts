@@ -138,9 +138,6 @@ export class Reconciler {
       failed: scan.unreadable.size
     };
 
-    /**
-     * Deletes run first so creates can reuse paths freed by this pass.
-     */
     for (const operation of this.#plan(diff)) {
       await this.#apply(operation, report);
     }
@@ -208,9 +205,6 @@ export class Reconciler {
     }
   }
 
-  /**
-   * Counts and logs an operation failure without aborting independent work.
-   */
   async #apply(
     operation: ReconcileOperation,
     report: MutableReport
@@ -244,11 +238,6 @@ export class Reconciler {
       report.failed;
   }
 
-  /**
-   * Hashes files in bounded batches and records unreadable paths.
-   *
-   * Both sides of the diff skip unreadable paths to prevent false deletes.
-   */
   async #observe(): Promise<WorkspaceScan> {
     const paths = await this.#source.list();
     const entries: ObservedEntry[] = [];

@@ -10,6 +10,7 @@ import {
 import type { AssetSource } from "../sources/AssetSource.ts";
 import { FilesystemAssetSource } from "../sources/persistence/FilesystemAssetSource.ts";
 import type { AssetKindHandler } from "../kinds/AssetKindHandler.ts";
+import { ASSET_CHECKPOINT_EVENT_TYPES } from "../events/AssetEvents.ts";
 import {
   createAssetBackend,
   type AssetBackend,
@@ -64,6 +65,15 @@ export interface AssetWorkspaceOptions {
    * Grace period, in milliseconds, before an empty asset room is evicted.
    */
   roomGraceMs?: number;
+  /**
+   * Drops the events superseded by each asset's newest lifecycle
+   * checkpoint before the back-end loads its projections.
+   *
+   * Destructive and irreversible: it trades the editing history nothing
+   * reads for a log that stops growing without bound.
+   * @default true
+   */
+  compactOnOpen?: boolean;
   backend?: AssetBackendTuning;
 }
 
@@ -95,18 +105,26 @@ export async function createAssetWorkspace(
     rights,
     logger = silentLogger(),
     roomGraceMs,
+    compactOnOpen = true,
     backend: tuning = {}
   } = options;
 
   const source = options.source ?? new FilesystemAssetSource(root);
-  // Seeding precedes the back-end so its first reconciliation catalogs the
-  // starter documents.
   if (seed) {
     await seedAssetSource(source, seed);
   }
 
   const ownsEventStore = options.eventStore === undefined;
   const eventStore = options.eventStore ?? await openAssetEventStore(root);
+
+  if (compactOnOpen) {
+    const report = eventStore.compact({
+      checkpointEventTypes: ASSET_CHECKPOINT_EVENT_TYPES
+    });
+    logger
+      .withMetadata(report)
+      .debug("event log compacted");
+  }
 
   const backend = await createAssetBackend({
     ...tuning,
@@ -116,8 +134,6 @@ export async function createAssetWorkspace(
     logger
   });
 
-  // The network server keeps its own default logger: a workspace with no
-  // logger silences the back-end, not the transport.
   const server = options.server ?? new Server({
     eventStore,
     rights,

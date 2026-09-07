@@ -45,9 +45,6 @@ export class CatalogIdentitySidecar {
     return this.#byPath.size;
   }
 
-  /**
-   * Binds one id to one path and evicts conflicts from both indexes.
-   */
   set(
     entry: IdentityEntry
   ): this {
@@ -121,10 +118,6 @@ export class CatalogIdentitySidecar {
     );
   }
 
-  /**
-   * Reads the sidecar, returning an empty instance when it is missing,
-   * unreadable or malformed.
-   */
   static async load(
     source: AssetSource
   ): Promise<CatalogIdentitySidecar> {

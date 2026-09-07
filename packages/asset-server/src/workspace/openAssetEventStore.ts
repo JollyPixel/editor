@@ -11,11 +11,7 @@ import {
   STATE_DIRECTORY
 } from "../constants.ts";
 
-/**
- * Opens the workspace event log, creating the state directory first:
- * sqlite will not create its file inside a directory that is missing.
- */
-export function openAssetEventStore(
+export async function openAssetEventStore(
   root: string
 ): Promise<EventStore.EventStore> {
   return fs

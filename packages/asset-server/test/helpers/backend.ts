@@ -40,6 +40,59 @@ export interface SyncHarnessOptions {
   eventStore?: EventStore.EventStore;
 }
 
+export interface ReadCounter {
+  /** Stands in for the real store, counting what its reader hands out. */
+  readonly store: EventStore.EventStore;
+  /** Events returned by the reader since the last `reset`. */
+  readonly read: number;
+  reset(): void;
+}
+
+/**
+ * Counts the events a reader materializes, so a test can pin that a
+ * projection loads from the tail of the log instead of its whole history.
+ */
+export function countingReads(
+  store: EventStore.EventStore
+): ReadCounter {
+  let read = 0;
+
+  const reader: EventStore.EventReader = {
+    list: (...parameters) => count(store.reader.list(...parameters)),
+    lastVersionOf: (...parameters) => store.reader.lastVersionOf(
+      ...parameters
+    ),
+    listAll: (...parameters) => count(store.reader.listAll(...parameters)),
+    listFromCheckpoints: (...parameters) => count(
+      store.reader.listFromCheckpoints(...parameters)
+    )
+  };
+
+  function count(
+    events: EventStore.Event[]
+  ): EventStore.Event[] {
+    read += events.length;
+
+    return events;
+  }
+
+  return {
+    store: {
+      writer: store.writer,
+      reader,
+      compact: (options) => store.compact(options),
+      close: () => store.close(),
+      [Symbol.dispose]: () => store.close()
+    },
+    get read() {
+      return read;
+    },
+    reset() {
+      read = 0;
+    }
+  };
+}
+
 /**
  * Wires source, state, projector and scheduler over in-memory backends,
  * with manual timers so nothing in the sync suite sleeps.

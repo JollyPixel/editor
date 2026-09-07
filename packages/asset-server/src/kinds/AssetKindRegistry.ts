@@ -44,7 +44,10 @@ export class AssetKindRegistry {
 
     this.#kinds.set(handler.kind, {
       handler,
-      isMatch: picomatch([...handler.match], { dot: true })
+      isMatch: picomatch(
+        [...handler.match],
+        { dot: true }
+      )
     });
 
     return this;
@@ -71,9 +74,6 @@ export class AssetKindRegistry {
     return registered.handler;
   }
 
-  /**
-   * First registered handler claiming the path, else the binary fallback.
-   */
   resolve(
     path: string
   ): AssetKindHandler {

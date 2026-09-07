@@ -1,41 +1,85 @@
 // Import Node.js Dependencies
 import path from "node:path";
 
+// Import Third-party Dependencies
+import {
+  Err,
+  Ok,
+  type Result
+} from "@openally/result";
+
 // Import Internal Dependencies
 import { AssetPathEscapeError } from "../errors/AssetPathEscapeError.ts";
+import { STATE_DIRECTORY } from "../constants.ts";
 
-/**
- * Normalizes a source-relative path and rejects root escapes.
- */
-export function normalizeAssetPath(
+// CONSTANTS
+// eslint-disable-next-line no-control-regex
+const kControlCharacters = /[\u0000-\u001F\u007F]/;
+const kWindowsDrive = /^[a-zA-Z]:/;
+
+export type AssetPathRejection =
+  | "empty"
+  | "invalid"
+  | "absolute"
+  | "traversal"
+  | "directory"
+  | "reserved";
+
+export function safeAssetPath(
   input: string
-): string {
+): Result<string, AssetPathRejection> {
   if (input.length === 0) {
-    throw new AssetPathEscapeError(input);
+    return Err("empty");
+  }
+  if (kControlCharacters.test(input)) {
+    return Err("invalid");
   }
 
   const posix = input.replaceAll("\\", "/");
-  if (path.posix.isAbsolute(posix) || /^[a-zA-Z]:/.test(posix)) {
-    throw new AssetPathEscapeError(input);
+  if (
+    path.posix.isAbsolute(posix) ||
+    kWindowsDrive.test(posix)
+  ) {
+    return Err("absolute");
   }
 
   const normalized = path.posix.normalize(posix);
   if (
     normalized === ".." ||
-    normalized.startsWith("../") ||
+    normalized.startsWith("../")
+  ) {
+    return Err("traversal");
+  }
+  if (
     normalized === "." ||
     normalized.endsWith("/")
   ) {
-    throw new AssetPathEscapeError(input);
+    return Err("directory");
   }
 
-  return normalized;
+  return Ok(normalized);
 }
 
-/**
- * Converts an absolute filesystem path to a root-relative POSIX path,
- * or `null` when it lies outside the root.
- */
+export function normalizeAssetPath(
+  input: string
+): string {
+  const result = safeAssetPath(input);
+  if (!result.ok) {
+    throw new AssetPathEscapeError(input, result.val);
+  }
+
+  return result.val;
+}
+
+export function isStatePath(
+  assetPath: string
+): boolean {
+  const lowered = assetPath.toLowerCase();
+
+  return lowered === STATE_DIRECTORY ||
+    lowered.startsWith(`${STATE_DIRECTORY}/`);
+}
+
 export function toRelativePosix(
   root: string,
   absolute: string

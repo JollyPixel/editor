@@ -44,6 +44,34 @@ export interface EventWriter {
   ): Result<Event, Error>;
 }
 
+export interface ListFromCheckpointsOptions {
+  /**
+   * Event types that replace an asset's whole state. The newest one on each
+   * asset bounds the slice returned for that asset.
+   */
+  checkpointEventTypes: readonly string[];
+  eventTypePrefix?: string;
+}
+
+export interface CompactOptions {
+  /**
+   * Event types that replace an asset's whole state. Events stored before
+   * an asset's newest one are superseded and removed.
+   */
+  checkpointEventTypes: readonly string[];
+  /**
+   * Reclaims the space freed by the removal. Backends holding no file
+   * ignore it.
+   * @default true
+   */
+  reclaim?: boolean;
+}
+
+export interface CompactReport {
+  removed: number;
+  assets: number;
+}
+
 export interface EventReader {
   list(
     assetId: string,
@@ -63,11 +91,34 @@ export interface EventReader {
   listAll(
     options?: ListAllOptions
   ): Event[];
+
+  /**
+   * Lists, per asset, its newest checkpoint event and everything appended
+   * after it, across every stream in eventId order.
+   *
+   * An asset holding no checkpoint yields its whole stream. A reader whose
+   * fold restarts from a checkpoint uses this instead of `listAll` so its
+   * cost tracks current state rather than history depth.
+   */
+  listFromCheckpoints(
+    options: ListFromCheckpointsOptions
+  ): Event[];
 }
 
 export interface EventStore {
   readonly writer: EventWriter & TypedEventEmitter<EventStoreEventMap>;
   readonly reader: EventReader;
+
+  /**
+   * Removes every event stored before each asset's newest checkpoint.
+   *
+   * Destructive and irreversible. Surviving events keep their event ids and
+   * versions, so a position held elsewhere stays valid.
+   */
+  compact(
+    options: CompactOptions
+  ): CompactReport;
+
   close(): void;
   [Symbol.dispose](): void;
 }

@@ -73,6 +73,16 @@ edits since the last snapshot rather than the whole history. The fold yields
 periodically, so a long stream cannot hold the event loop while other rooms
 resolve, and concurrent callers share one replay.
 
+Those three types are exported as `ASSET_CHECKPOINT_EVENT_TYPES`. Loading a
+projection uses the same bound: `AssetProjector.load()` and
+`CatalogProjection.load()` read from each asset's newest checkpoint rather
+than the head of the log, because an older `asset.created` or `asset.updated`
+only produces a projection the replay overwrites. `asset.renamed` is not a
+checkpoint: it folds onto the projection before it, and is read as part of the
+tail. Startup cost therefore tracks the number of assets, not the depth of the
+log. See [Workspace compaction](./Workspace.md#compaction) for removing what
+this skips.
+
 ## Reconciliation
 
 ```ts

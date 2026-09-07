@@ -1,7 +1,9 @@
 // Import Internal Dependencies
 import type { AssetSource } from "../AssetSource.ts";
-import { normalizeAssetPath } from "../paths.ts";
-import { STATE_DIRECTORY } from "../../constants.ts";
+import {
+  isStatePath,
+  normalizeAssetPath
+} from "../paths.ts";
 
 export class MemoryAssetSource implements AssetSource {
   #files = new Map<string, Uint8Array>();
@@ -10,7 +12,10 @@ export class MemoryAssetSource implements AssetSource {
     files: Iterable<readonly [string, Uint8Array]> = []
   ) {
     for (const [path, data] of files) {
-      this.#files.set(normalizeAssetPath(path), Uint8Array.from(data));
+      this.#files.set(
+        normalizeAssetPath(path),
+        Uint8Array.from(data)
+      );
     }
   }
 
@@ -42,12 +47,14 @@ export class MemoryAssetSource implements AssetSource {
   async delete(
     path: string
   ): Promise<void> {
-    this.#files.delete(normalizeAssetPath(path));
+    this.#files.delete(
+      normalizeAssetPath(path)
+    );
   }
 
   async list(): Promise<string[]> {
     return [...this.#files.keys()]
-      .filter((path) => !path.startsWith(`${STATE_DIRECTORY}/`))
+      .filter((path) => !isStatePath(path))
       .sort();
   }
 }

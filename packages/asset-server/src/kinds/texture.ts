@@ -33,10 +33,6 @@ export interface TextureAssetHandlerOptions {
   match?: readonly string[];
 }
 
-/**
- * Registers image files under `texture` for matching runtime asset types.
- * State remains raw bytes and has no live editing room.
- */
 export function textureAssetHandler(
   options: TextureAssetHandlerOptions = {}
 ): AssetKindHandler<BinaryAssetState> {

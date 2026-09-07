@@ -10,6 +10,12 @@ EventStore.persistence.memory(): EventStore
 
 See [`EventStore`](./EventStore.md) for the shared writer and reader API.
 
+## Compaction
+
+`compact` drops the superseded events from the in-process log. There is no
+file to shrink, so `reclaim` is ignored. See
+[`EventStore compaction`](./EventStore.md#compaction).
+
 ## `close`
 
 ```ts

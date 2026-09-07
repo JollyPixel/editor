@@ -51,10 +51,6 @@ export function createAssetCatalogPlugin(
 
 export type AssetStaticPluginOptions = AssetStaticHandlerOptions;
 
-/**
- * Serves the asset workspace so the `source` paths the catalog hands the
- * browser resolve.
- */
 export function createAssetStaticPlugin(
   options: AssetStaticPluginOptions
 ): Plugin {
@@ -92,13 +88,6 @@ export interface AssetWorkspacePluginOptions extends AssetWorkspaceOptions {
   ) => void | Promise<void>;
 }
 
-/**
- * Mounts a whole asset workspace on the dev server: catalog route, static
- * delivery and the WebSocket rooms clients edit through.
- *
- * Everything is built inside `configureServer`, so a production build never
- * opens the event log.
- */
 export function createAssetWorkspacePlugin(
   options: AssetWorkspacePluginOptions
 ): Plugin {

@@ -14,7 +14,10 @@ import {
   CatalogProjection,
   type CatalogChange
 } from "#src/index.ts";
-import { syncHarness } from "../helpers/backend.ts";
+import {
+  countingReads,
+  syncHarness
+} from "../helpers/backend.ts";
 import { bytes } from "../helpers/bytes.ts";
 
 // CONSTANTS
@@ -22,6 +25,82 @@ const kActor: EventStore.Actor = {
   type: "user",
   id: "alice"
 };
+
+describe("CatalogProjection — load reads the tail of the log", () => {
+  test("reads only each asset's newest checkpoint", async() => {
+    await using harness = await syncHarness();
+    const created = (await harness.writer.create({
+      path: "a.png",
+      data: bytes("0"),
+      actor: kActor
+    })).unwrap();
+    for (let index = 1; index <= 20; index++) {
+      await harness.writer.update({
+        assetId: created.assetId,
+        data: bytes(String(index)),
+        actor: kActor
+      });
+    }
+
+    const counter = countingReads(harness.eventStore);
+    const projection = new CatalogProjection({ eventStore: counter.store });
+    projection.load();
+
+    assert.strictEqual(counter.read, 1);
+    assert.strictEqual(projection.size, 1);
+  });
+
+  test("folds the renames stored after the checkpoint", async() => {
+    await using harness = await syncHarness();
+    const created = (await harness.writer.create({
+      path: "a.png",
+      data: bytes("one"),
+      actor: kActor
+    })).unwrap();
+    const updated = (await harness.writer.update({
+      assetId: created.assetId,
+      data: bytes("two"),
+      actor: kActor
+    })).unwrap();
+    await harness.writer.rename({
+      assetId: created.assetId,
+      to: "b.png",
+      actor: kActor
+    });
+
+    const projection = new CatalogProjection({
+      eventStore: harness.eventStore
+    });
+    projection.load();
+
+    const record = projection.catalog.get(new AssetId(created.assetId));
+    assert.strictEqual(record.source, "b.png");
+    assert.strictEqual(
+      record.revision,
+      (updated.eventData as { hash: string; }).hash
+    );
+  });
+
+  test("drops an asset deleted after its newest checkpoint", async() => {
+    await using harness = await syncHarness();
+    const created = (await harness.writer.create({
+      path: "a.png",
+      data: bytes("one"),
+      actor: kActor
+    })).unwrap();
+    await harness.writer.remove({
+      assetId: created.assetId,
+      actor: kActor
+    });
+
+    const projection = new CatalogProjection({
+      eventStore: harness.eventStore
+    });
+    projection.load();
+
+    assert.strictEqual(projection.size, 0);
+  });
+});
 
 describe("CatalogProjection — folding", () => {
   test("folds a scripted log into the expected catalog", async() => {
