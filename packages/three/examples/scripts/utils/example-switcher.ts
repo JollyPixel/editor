@@ -16,6 +16,7 @@ const kToggleKey = "F3";
 const kExamples: Record<string, string> = {
   Grid: "/",
   "Area Box": "/area-box.html",
+  "Translation Controls": "/translation-controls.html",
   "Peer Frustum": "/peer-frustum.html",
   "Peer Frustum Sync": "/peer-frustum-sync.html",
   Selection: "/selection.html",
