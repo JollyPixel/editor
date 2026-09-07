@@ -70,6 +70,17 @@ export class ObjectPanel extends LitElement {
   }
 
   readonly #onLayerUpdated = (evt: VoxelLayerHookEvent) => {
+    if (evt.action === "object-moved") {
+      if (
+        evt.metadata.fromLayerName === this.layerName ||
+        evt.metadata.toLayerName === this.layerName
+      ) {
+        this.#syncFromStore();
+      }
+
+      return;
+    }
+
     if (
       evt.layerName !== this.layerName ||
       (

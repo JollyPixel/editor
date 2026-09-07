@@ -115,6 +115,68 @@ describe("applyLayerReparent — objects", () => {
     assert.equal(world.getObjectLayer("Spawns")?.objects[0], original);
   });
 
+  test("emits one object-moved command for the whole move", () => {
+    const world = makeWorld();
+    const actions: string[] = [];
+    world.onLayerUpdated = (event) => actions.push(event.action);
+
+    applyLayerReparent(world, {
+      movedIds: [
+        layerRowId({
+          kind: "object",
+          layerName: "Triggers",
+          objectId: "obj_1"
+        })
+      ],
+      targetId: layerRowId({ kind: "object-layer", name: "Spawns" }),
+      where: "inside"
+    });
+
+    assert.deepEqual(actions, ["object-moved"]);
+  });
+
+  test("reports where each moved object landed", () => {
+    const world = makeWorld();
+
+    const relocated = applyLayerReparent(world, {
+      movedIds: [
+        layerRowId({
+          kind: "object",
+          layerName: "Triggers",
+          objectId: "obj_1"
+        })
+      ],
+      targetId: layerRowId({ kind: "object-layer", name: "Spawns" }),
+      where: "inside"
+    });
+
+    assert.deepEqual(relocated, [
+      {
+        kind: "object",
+        layerName: "Spawns",
+        objectId: "obj_1"
+      }
+    ]);
+  });
+
+  test("reports nothing for a move that did not happen", () => {
+    const world = makeWorld();
+
+    const relocated = applyLayerReparent(world, {
+      movedIds: [
+        layerRowId({
+          kind: "object",
+          layerName: "Triggers",
+          objectId: "gone"
+        })
+      ],
+      targetId: layerRowId({ kind: "object-layer", name: "Spawns" }),
+      where: "inside"
+    });
+
+    assert.deepEqual(relocated, []);
+  });
+
   test("does nothing when the object is no longer in its layer", () => {
     const world = makeWorld();
 

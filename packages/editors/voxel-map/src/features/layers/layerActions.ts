@@ -7,6 +7,11 @@ import type { SelectionStore } from "../../app/state/index.ts";
 import type { ViewFocus } from "../../scene/viewFocus.ts";
 import { createObjectAt } from "./objects/objectArea.ts";
 import type { AddLayerResult } from "./AddLayerDialog.ts";
+import type { MergeLayerContext } from "./MergeLayerDialog.ts";
+import {
+  mergeTargetsFor,
+  mergeWarnings
+} from "./mergeTargets.ts";
 import type { LayerRef } from "./layerTree.ts";
 
 export function setLayerEntryVisibility(
@@ -127,6 +132,67 @@ export async function removeLayerEntry(
     world.removeLayer(ref.name);
   }
   selection.clear();
+}
+
+export function cloneLayerEntry(
+  world: VoxelWorld,
+  selection: SelectionStore,
+  ref: LayerRef
+): void {
+  if (ref.kind !== "voxel-layer") {
+    return;
+  }
+
+  const clone = world.cloneLayer(ref.name);
+  if (clone === undefined) {
+    return;
+  }
+
+  selection.selectVoxelLayer(clone.name);
+}
+
+export async function mergeLayerEntry(
+  world: VoxelWorld,
+  selection: SelectionStore,
+  ref: LayerRef,
+  pickTarget: (context: MergeLayerContext) => Promise<string | null>
+): Promise<void> {
+  if (ref.kind !== "voxel-layer") {
+    return;
+  }
+
+  const { options, defaultTarget } = mergeTargetsFor(world, ref.name);
+  if (defaultTarget === null) {
+    return;
+  }
+
+  const target = await pickTarget({
+    sourceName: ref.name,
+    options,
+    defaultTarget
+  });
+  if (target === null) {
+    return;
+  }
+
+  const warnings = mergeWarnings(world, ref.name);
+  if (warnings.length > 0) {
+    const confirmed = await showConfirm({
+      title: "Merge layer",
+      message: [
+        `Merge "${ref.name}" into "${target}"?`,
+        ...warnings
+      ].join(" "),
+      confirmLabel: "Merge"
+    });
+    if (!confirmed) {
+      return;
+    }
+  }
+
+  if (world.mergeLayer(ref.name, target)) {
+    selection.selectVoxelLayer(target);
+  }
 }
 
 function createObject(

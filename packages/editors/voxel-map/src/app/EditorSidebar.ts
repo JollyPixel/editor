@@ -215,6 +215,23 @@ export class EditorSidebar extends LitElement {
     await this._layerManager?.removeLayer();
   };
 
+  readonly #cloneLayer = (): void => {
+    this._layerManager?.cloneLayer();
+  };
+
+  readonly #mergeLayer = async(): Promise<void> => {
+    await this._layerManager?.mergeLayer();
+  };
+
+  get #canEditVoxelLayer(): boolean {
+    return this._selection?.kind === "voxel-layer";
+  }
+
+  get #canMergeVoxelLayer(): boolean {
+    return this.#canEditVoxelLayer &&
+      (this.world?.getLayers().length ?? 0) > 1;
+  }
+
   #openBlockLibrary(): void {
     this.#openFolder(this._blockFolder);
   }
@@ -356,6 +373,24 @@ export class EditorSidebar extends LitElement {
           label="Add layer"
           title="Add layer"
           @click=${this.#addLayer}
+        ></jolly-button>
+        <jolly-button
+          slot="actions"
+          icon="copy"
+          icon-only
+          label="Clone layer"
+          title="Clone layer"
+          ?disabled=${!this.#canEditVoxelLayer}
+          @click=${this.#cloneLayer}
+        ></jolly-button>
+        <jolly-button
+          slot="actions"
+          icon="merge"
+          icon-only
+          label="Merge layer"
+          title="Merge layer into another"
+          ?disabled=${!this.#canMergeVoxelLayer}
+          @click=${this.#mergeLayer}
         ></jolly-button>
         <jolly-button
           slot="actions"
