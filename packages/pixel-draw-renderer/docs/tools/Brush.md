@@ -8,7 +8,7 @@ canvas.brush.secondary.set("#3366ff");
 canvas.brush.size = 3;
 ```
 
-Paint mode uses `primary` for left-click strokes and `secondary` for right-click strokes. See [`BrushTool`](./BrushTool.md) for color picking.
+Paint mode uses `primary` for left-click strokes and `secondary` for right-click strokes; erase mode uses `erase` for both. See [`BrushTool`](./BrushTool.md) for color picking.
 
 ## Types
 
@@ -20,6 +20,7 @@ type ColorInput = string | Color;
 interface BrushOptions {
   color?: ColorInput;
   secondaryColor?: ColorInput;
+  eraseColor?: ColorInput;
   size?: number;
   maxSize?: number;
   highlight?: {
@@ -39,18 +40,19 @@ interface BrushColor {
 
 `ColorInput` accepts a CSS color string or a [colorjs.io](https://colorjs.io) `Color` instance.
 
-The primary color defaults to `"#000000"` and the secondary color to `"#FFFFFF"`. Both `size` and `maxSize` default to `32`. Highlight colors default to a white inner stroke and black outer stroke.
+The primary color defaults to `"#000000"`, the secondary color to `"#FFFFFF"`, and `eraseColor` to transparency. An explicit `eraseColor` is opaque, so erase mode then repaints instead of clearing. Both `size` and `maxSize` default to `32`. Highlight colors default to a white inner stroke and black outer stroke.
 
 ## Properties
 
-### `primary` / `secondary`
+### `primary` / `secondary` / `erase`
 
 ```ts
 readonly primary: BrushColor
 readonly secondary: BrushColor
+readonly erase: BrushColor
 ```
 
-Each slot stores a color and opacity. `set()` preserves the current opacity when its second argument is omitted. Opacity is clamped to `[0, 1]`.
+Each slot stores a color and opacity. `erase` is what erase mode writes; assigning it a color and opacity changes what erasing leaves behind. `set()` preserves the current opacity when its second argument is omitted. Opacity is clamped to `[0, 1]`.
 
 `asRGBA()` returns a mutable snapshot with byte-valued RGBA components. `asString()` returns `rgba(r, g, b, a)` by default. Pass `"hex"` for a six-digit hex color without opacity.
 
@@ -76,6 +78,14 @@ set colorOutline(value: ColorInput)
 Colors for the inner and outer strokes of the brush cursor.
 
 ## Methods
+
+### `colorFor(source)`
+
+```ts
+colorFor(source: BrushPaintSource): RGBA
+```
+
+Returns the color a stroke takes for the given source, where `BrushPaintSource` is `"primary" | "secondary" | "erase"`. Every drawing tool resolves its color through it.
 
 ### `swapColors()`
 

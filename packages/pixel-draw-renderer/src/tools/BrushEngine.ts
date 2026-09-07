@@ -2,30 +2,30 @@
 import { formatHex8 } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
-import type { Brush, BrushColorSlot } from "./Brush.ts";
+import type {
+  Brush,
+  BrushColorSlot,
+  BrushPaintSource
+} from "./Brush.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import type { EditPipeline } from "../sync/EditPipeline.ts";
-import type { PeerStrokePixel, RGBA8, Vec2 } from "../types.ts";
+import type {
+  PeerStrokePixel,
+  RGBA8,
+  Vec2
+} from "../types.ts";
 
 export interface BrushEngineOptions {
   brush: Brush;
   canvasBuffer: CanvasBuffer;
-  /**
-   * Dispatch target for the `colorpicked` event.
-   */
   canvas: HTMLCanvasElement;
   pipeline: EditPipeline;
-  /**
-   * Receives live stroke pixels for peer streaming.
-   */
   onProgress?: (pixels: PeerStrokePixel[]) => void;
 }
 
+export type BrushPaintMode = "brush" | "erase";
+
 export interface BrushTool {
-  /**
-   * Whether the next primary or secondary action picks a color instead of
-   * painting.
-   */
   pickArmed: boolean;
   pick(
     x: number,
@@ -46,6 +46,7 @@ export class BrushEngine implements BrushTool {
   #strokeColor: RGBA8 | null = null;
   #activeSlot: BrushColorSlot | null = null;
   #pickArmed = false;
+  #paintMode: BrushPaintMode = "brush";
 
   constructor(
     options: BrushEngineOptions
@@ -59,6 +60,16 @@ export class BrushEngine implements BrushTool {
 
   get isActive(): BrushColorSlot | false {
     return this.#activeSlot ?? false;
+  }
+
+  get paintMode(): BrushPaintMode {
+    return this.#paintMode;
+  }
+
+  set paintMode(
+    mode: BrushPaintMode
+  ) {
+    this.#paintMode = mode;
   }
 
   get pickArmed(): boolean {
@@ -77,7 +88,12 @@ export class BrushEngine implements BrushTool {
     slot: BrushColorSlot = "primary"
   ): RGBA8 | null {
     const size = this.#canvasBuffer.size();
-    if (tx < 0 || ty < 0 || tx >= size.x || ty >= size.y) {
+    if (
+      tx < 0 ||
+      ty < 0 ||
+      tx >= size.x ||
+      ty >= size.y
+    ) {
       return null;
     }
 
@@ -117,7 +133,6 @@ export class BrushEngine implements BrushTool {
     this.#canvasBuffer.copyToMaster();
     this.#commit();
     this.#activeSlot = null;
-    // Drop the queued pre-commit ghost tick to prevent stale peer state.
     this.#onProgress?.([]);
   }
 
@@ -125,9 +140,7 @@ export class BrushEngine implements BrushTool {
     tx: number,
     ty: number
   ): void {
-    const rgba = this.#brush[
-      this.#activeSlot ?? "primary"
-    ].asRGBA();
+    const rgba = this.#brush.colorFor(this.#paintSource());
 
     const affected = [...this.#brush.affectedPixels(tx, ty)];
     for (const pixel of affected) {
@@ -146,6 +159,12 @@ export class BrushEngine implements BrushTool {
 
     this.#strokeColor ??= rgba;
     this.#onProgress?.(this.#currentStrokePixels());
+  }
+
+  #paintSource(): BrushPaintSource {
+    return this.#paintMode === "erase" ?
+      "erase" :
+      this.#activeSlot ?? "primary";
   }
 
   #currentStrokePixels(): PeerStrokePixel[] {
@@ -180,6 +199,10 @@ export class BrushEngine implements BrushTool {
     this.#strokeBefore.clear();
     this.#strokeColor = null;
 
-    this.#pipeline.commitStroke(positions, color, beforeColors);
+    this.#pipeline.commitStroke(
+      positions,
+      color,
+      beforeColors
+    );
   }
 }

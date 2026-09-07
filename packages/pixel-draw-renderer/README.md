@@ -16,7 +16,7 @@ Browser-based library for editing pixel-art textures: brush, fill, select, and U
 
 ## 💡 Features
 
-- **Brush painting**: adjustable size, opacity, and primary/secondary color
+- **Brush painting**: adjustable size, opacity, and primary/secondary color, plus an erase mode clearing pixels with the same brush
 - **Paint-bucket fill**: flood-fill a connected region of same-colored pixels
 - **Rectangle and shape select**: drag out a rectangle or select a connected region
 - **UV regions**: create/move/delete rectangular UV regions independently of painting, via the `uv` value object;
@@ -90,12 +90,13 @@ manager.texture = img;
 `mode` selects how left-click/drag is interpreted.
 
 - `"paint"`: draw with the brush
+- `"erase"`: draw with the brush, writing `brush.erase` (transparent by default)
 - `"move"`: pan the camera
 - `"fill"`: flood-fill the clicked region
 - `"select"`: select, move, copy, and delete a rectangular or shape-selected region; set `manager.tools.select.shape = true` for connected-region selection
 - `"uv"`: select and drag UV regions; regions are created programmatically via `manager.uv.create(...)`, not by clicking
 
-Wheel input zooms from any mode unless it arrives with `Ctrl` in `"paint"` mode. Middle-drag or `Space`+left-drag pans from any mode; a plain left-drag pans only in `"move"` mode. In `"paint"` mode, `Ctrl`+wheel input increases (scroll up) or decreases (scroll down) the brush size. Any trackpad gesture reported as `Ctrl`+wheel input follows the same rule.
+Wheel input zooms from any mode unless it arrives with `Ctrl` in `"paint"` or `"erase"` mode. Middle-drag or `Space`+left-drag pans from any mode; a plain left-drag pans only in `"move"` mode. In `"paint"` and `"erase"` modes, `Ctrl`+wheel input increases (scroll up) or decreases (scroll down) the brush size. Any trackpad gesture reported as `Ctrl`+wheel input follows the same rule.
 
 > [!TIP]
 > Read [PixelArtCanvas.md](./docs/PixelArtCanvas.md#mode) for the full behavior, and the [Keybinds](#keybinds) section below for exact shortcuts.
@@ -185,7 +186,7 @@ type Vec2 = {
   y: number;
 };
 
-type Mode = "paint" | "move" | "fill" | "select" | "uv";
+type Mode = "paint" | "erase" | "move" | "fill" | "select" | "uv";
 type ColorInput = string | Color;
 
 interface SelectionRect {

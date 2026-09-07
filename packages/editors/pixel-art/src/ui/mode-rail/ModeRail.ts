@@ -42,6 +42,7 @@ export interface ModeVariantDetail {
 const kModeItems: ModeItem[] = [
   { mode: "move", icon: "move", label: "Move" },
   { mode: "paint", icon: "paint", label: "Paint" },
+  { mode: "erase", icon: "eraser", label: "Erase" },
   { mode: "fill", icon: "fill", label: "Fill" },
   { mode: "select", icon: "select", label: "Select" },
   { mode: "uv", icon: "uv", label: "UV" }
@@ -81,11 +82,6 @@ export class ModeRail extends LitElement {
   @property({ type: Boolean })
   declare selectShape: boolean;
 
-  /**
-   * Which rail item's flyout is open. JS-driven (not plain CSS :hover) so a
-   * click can force it shut immediately instead of waiting for the mouse to
-   * leave the area.
-   */
   #hoveredMode: Mode | null = null;
 
   constructor() {
@@ -154,11 +150,6 @@ export class ModeRail extends LitElement {
     this.requestUpdate();
   }
 
-  /**
-   * The rail button itself shows whichever variant is currently active
-   * (e.g. the wand once Shape is picked) — the flyout only ever offers the
-   * way back to the other one.
-   */
   #displayIcon(
     mode: Mode,
     defaultIcon: IconName
@@ -175,10 +166,6 @@ export class ModeRail extends LitElement {
     }
   }
 
-  /**
-   * Only the non-active alternative is offered — the mode already active
-   * doesn't need its own button restating it.
-   */
   #flyoutButtons(
     mode: Mode
   ): FlyoutButton[] {

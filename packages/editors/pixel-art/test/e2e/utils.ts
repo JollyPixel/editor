@@ -72,6 +72,7 @@ export async function gotoDemo(
 const kModeLabel: Record<Mode, string> = {
   move: "Move",
   paint: "Paint",
+  erase: "Erase",
   fill: "Fill",
   select: "Select",
   uv: "UV"

@@ -4,8 +4,8 @@ import type { Emitter } from "@openally/emitt";
 // Import Internal Dependencies
 import {
   Brush,
-  type BrushColorSlot,
-  type BrushOptions
+  type BrushOptions,
+  type BrushPaintSource
 } from "./tools/Brush.ts";
 import {
   Tools,
@@ -21,6 +21,7 @@ import {
   type ExternalCursorMoveListener
 } from "./input/InteractionRouter.ts";
 import { PaintMode } from "./input/modes/PaintMode.ts";
+import { EraseMode } from "./input/modes/EraseMode.ts";
 import { FillMode } from "./input/modes/FillMode.ts";
 import { SelectMode } from "./input/modes/SelectMode.ts";
 import { UVMode } from "./input/modes/UVMode.ts";
@@ -296,6 +297,12 @@ export class PixelArtCanvas {
           highlight: this.#view.overlays.brushHighlight,
           stopDrawing: () => this.#input.stopDrawing()
         }),
+        new EraseMode({
+          brush: this.#tools.brush,
+          line: this.#tools.line,
+          highlight: this.#view.overlays.brushHighlight,
+          stopDrawing: () => this.#input.stopDrawing()
+        }),
         new FillMode({
           fill: this.#tools.fill,
           highlight: this.#view.overlays.brushHighlight
@@ -314,7 +321,11 @@ export class PixelArtCanvas {
       keybindings: options.keybindings,
       shouldPanOnPrimary: () => this.#router.mode === "move",
       onCtrlWheel: (delta) => {
-        if (this.#router.mode !== "paint" || delta === 0) {
+        const mode = this.#router.mode;
+        if (
+          (mode !== "paint" && mode !== "erase") ||
+          delta === 0
+        ) {
           return false;
         }
 
@@ -472,9 +483,9 @@ export class PixelArtCanvas {
 
   commitPixels(
     pixels: Vec2[],
-    slot: BrushColorSlot = "primary"
+    source: BrushPaintSource = "primary"
   ): void {
-    this.#edits.commitPixels(pixels, slot);
+    this.#edits.commitPixels(pixels, source);
   }
 
   undo(): boolean {

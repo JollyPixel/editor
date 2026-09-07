@@ -10,6 +10,7 @@ import { getIcon, registerIcon } from "@jolly-pixel/ui/icon";
 export type IconName =
   | "move"
   | "paint"
+  | "eraser"
   | "fill"
   | "fillGlobal"
   | "select"
@@ -83,6 +84,32 @@ registerIcon("paint", svg`
       stroke-width="2.4"
       stroke-linecap="round"
       stroke-linejoin="round"
+    />
+  `);
+
+registerIcon("eraser", svg`
+    <g transform="rotate(-45 12 12)">
+      <rect
+        x="2.5"
+        y="8"
+        width="19"
+        height="8"
+        rx="1.8"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.2"
+      />
+      <path
+        d="M9.5 8v8"
+        stroke="currentColor"
+        stroke-width="2.2"
+      />
+    </g>
+    <path
+      d="M4 21h16"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linecap="round"
     />
   `);
 

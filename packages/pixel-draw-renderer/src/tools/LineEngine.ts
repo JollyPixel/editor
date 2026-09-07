@@ -5,8 +5,10 @@ import {
 } from "./Line.ts";
 import type {
   Brush,
-  BrushColorSlot
+  BrushColorSlot,
+  BrushPaintSource
 } from "./Brush.ts";
+import type { BrushPaintMode } from "./BrushEngine.ts";
 import type { EditPipeline } from "../sync/EditPipeline.ts";
 import type { LinePreview } from "../rendering/overlays/LinePreview.ts";
 import type {
@@ -18,9 +20,6 @@ export interface LineEngineOptions {
   brush: Brush;
   linePreview: LinePreview;
   pipeline: EditPipeline;
-  /**
-   * Receives live line pixels for peer streaming.
-   */
   onProgress?: (pixels: PeerStrokePixel[]) => void;
 }
 
@@ -34,6 +33,7 @@ export class LineEngine {
   #lastCursorPos: Vec2 | null = null;
   #isShiftHeld = false;
   #colorSlot: BrushColorSlot = "primary";
+  #paintMode: BrushPaintMode = "brush";
 
   constructor(
     options: LineEngineOptions
@@ -56,6 +56,16 @@ export class LineEngine {
     held: boolean
   ) {
     this.#isShiftHeld = held;
+  }
+
+  get paintMode(): BrushPaintMode {
+    return this.#paintMode;
+  }
+
+  set paintMode(
+    mode: BrushPaintMode
+  ) {
+    this.#paintMode = mode;
   }
 
   updateCursor(
@@ -95,9 +105,8 @@ export class LineEngine {
 
     this.#pipeline.commitPixels(
       this.#stampLinePixels(points),
-      colorSlot
+      this.#paintSource(colorSlot)
     );
-    // Drop the queued pre-commit ghost tick to prevent stale peer state.
     this.#onProgress?.([]);
 
     if (this.#isShiftHeld) {
@@ -131,7 +140,9 @@ export class LineEngine {
         points.at(-1) ?? points[0]
       );
 
-      const color = this.#brush[this.#colorSlot].asRGBA();
+      const color = this.#brush.colorFor(
+        this.#paintSource(this.#colorSlot)
+      );
       this.#onProgress?.(
         this.#stampLinePixels(points).map((pos) => {
           return { ...pos, color };
@@ -140,9 +151,12 @@ export class LineEngine {
     }
   }
 
-  /**
-    * Expands line points into unique brush pixels.
-   */
+  #paintSource(
+    colorSlot: BrushColorSlot
+  ): BrushPaintSource {
+    return this.#paintMode === "erase" ? "erase" : colorSlot;
+  }
+
   #stampLinePixels(
     points: Vec2[]
   ): Vec2[] {
