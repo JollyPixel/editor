@@ -14,7 +14,7 @@ function makeRegion(
 ): UVRegionData {
   return {
     id,
-    state: "collapsed",
+    state: "stacked",
     rect: { x: 0, y: 0, width: 2, height: 2 },
     color: "#f00"
   };
@@ -45,11 +45,11 @@ describe("UVRegionCollection", () => {
     assert.strictEqual(collection.get("r1"), region);
   });
 
-  test("stores an uncollapsed region without flattening it", () => {
+  test("stores an free region without flattening it", () => {
     const collection = new UVRegionCollection();
-    collection.set(new UVRegion(makeRegion("r1")).uncollapse());
+    collection.set(new UVRegion(makeRegion("r1")).free());
 
-    assert.strictEqual(collection.get("r1")!.state, "uncollapsed");
+    assert.strictEqual(collection.get("r1")!.state, "free");
   });
 
   test("set upserts an existing id", () => {

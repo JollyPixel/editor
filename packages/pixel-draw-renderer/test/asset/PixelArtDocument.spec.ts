@@ -46,6 +46,7 @@ describe("PixelArtDocument", () => {
   test("round-trips UV regions", () => {
     const source = new PixelBuffer({ size: { x: 4, y: 4 } });
     source.uvRegions.set({
+      state: "stacked",
       id: "region-1",
       color: "#ff0000",
       rect: {
@@ -72,6 +73,7 @@ describe("PixelArtDocument", () => {
     const source = new PixelBuffer({ size: { x: 2, y: 2 } });
     const target = new PixelBuffer({ size: { x: 2, y: 2 } });
     target.uvRegions.set({
+      state: "stacked",
       id: "stale",
       color: "#00ff00",
       rect: {
@@ -131,7 +133,7 @@ describe("PixelArtDocument", () => {
           {
             id: "broken",
             color: "#fff",
-            state: "uncollapsed",
+            state: "free",
             faces: {}
           }
         ]

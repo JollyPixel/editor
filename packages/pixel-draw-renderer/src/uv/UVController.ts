@@ -2,7 +2,10 @@
 import {
   clampRectPosition
 } from "../utils/math.ts";
-import { pointInGeometry } from "./geometry.ts";
+import {
+  pointInGeometry,
+  rectOf
+} from "./geometry.ts";
 import type { UVMap } from "./UVMap.ts";
 import type {
   UVSlot,
@@ -96,7 +99,8 @@ export class UVController {
       (this.#pick!.index + 1) % candidates.length :
       0;
     const { region, face, geometry } = candidates[index];
-    const rect = "shape" in geometry ? geometry.rect : geometry;
+    const grouped = region.state === "unfolded";
+    const rect = grouped ? region.bounds : rectOf(geometry);
 
     this.#uvMap.select(region.id, face ?? undefined);
     this.#pick = {
@@ -107,7 +111,7 @@ export class UVController {
     };
     this.#drag = {
       id: region.id,
-      face,
+      face: grouped ? null : face,
       origin: pos,
       baseRect: { ...rect },
       liveRect: { ...rect }

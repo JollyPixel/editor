@@ -35,7 +35,7 @@ Building the ranges is the caller's job, since they depend on how the geometry w
 applyFace(face: UVSlot | null, geometry: UVGeometry): void
 ```
 
-A `null` face — what a collapsed region reports — projects the region's shared rect across every vertex. A named face writes only that face's ranges. `UVGeometry` may be a rectangle or a triangle; triangles are flipped onto the right corner.
+A `null` face, which is what a stacked region reports, projects the region's shared rect across every vertex. A named face writes only that face's ranges. `UVGeometry` may be a rectangle or a triangle; triangles are flipped onto the right corner.
 
 ## `follow()` / `unfollow()`
 

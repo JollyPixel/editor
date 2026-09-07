@@ -57,7 +57,7 @@ describe("PixelCommandArbiter", () => {
     buffer.uvRegions.set({
       id: "block-1",
       color: "#fff",
-      state: "uncollapsed",
+      state: "free",
       faces: {
         top: rect,
         "top.1": rect

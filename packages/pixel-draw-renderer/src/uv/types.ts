@@ -7,8 +7,9 @@ import type { SelectionRect } from "../types.ts";
 export type UVSlot = string;
 
 export type UVRegionState =
-  | "collapsed"
-  | "uncollapsed";
+  | "stacked"
+  | "unfolded"
+  | "free";
 
 export type UVTriangleCorner =
   | "top-left"

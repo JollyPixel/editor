@@ -47,6 +47,7 @@ function regionWith(
   sideGeometry: UVGeometry
 ): UVRegion {
   return new UVRegion({
+    state: "stacked",
     id: "preview-shape",
     color: "#ffffff",
     rect: kRect,
@@ -58,6 +59,7 @@ function regionWith(
 describe("resolvePreviewShapeKind", () => {
   test("defaults ordinary regions to cube", () => {
     const region = new UVRegion({
+      state: "stacked",
       id: "cube",
       color: "#ffffff",
       rect: kRect

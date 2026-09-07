@@ -93,6 +93,17 @@ export class UVSlotMap {
     );
   }
 
+  withFaces(
+    entries: ReadonlyMap<UVSlot, UVGeometry>
+  ): UVSlotMap {
+    return new UVSlotMap(
+      UVSlotMap.map(
+        (face) => entries.get(face) ?? this.#faces.get(face)!,
+        this.faces
+      )
+    );
+  }
+
   stackedAt(
     origin: Vec2
   ): UVSlotMap {

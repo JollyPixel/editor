@@ -11,6 +11,7 @@ import {
   type PixelArtCanvasOptions
 } from "#src/PixelArtCanvas.ts";
 import type { PixelBufferHookEvent } from "#src/buffer/hooks.ts";
+import type { UVRegionData } from "#src/uv/UVRegion.ts";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
 import {
   mouseEvent,
@@ -303,42 +304,42 @@ describe("PixelArtCanvas — uv mode", () => {
       );
     });
 
-    test("undo/redo an uncollapse", () => {
+    test("undo/redo an free", () => {
       const manager = makeManager();
       const region = manager.uv.create({ width: 4, height: 4 });
-      manager.uv.uncollapse(region.id);
+      manager.uv.setState(region.id, "free");
 
       manager.undo();
-      assert.strictEqual(manager.uv.get(region.id)!.state, "collapsed");
+      assert.strictEqual(manager.uv.get(region.id)!.state, "stacked");
 
       manager.redo();
-      assert.strictEqual(manager.uv.get(region.id)!.state, "uncollapsed");
+      assert.strictEqual(manager.uv.get(region.id)!.state, "free");
     });
 
-    test("undoing a collapse restores the previous face layout", () => {
+    test("undoing a stack restores the previous face layout", () => {
       const manager = makeManager();
       const region = manager.uv.create({ width: 4, height: 4 });
-      manager.uv.uncollapse(region.id);
+      manager.uv.setState(region.id, "free");
       manager.uv.move(region.id, { x: 3, y: 3, width: 4, height: 4 }, "top");
-      manager.uv.collapse(region.id);
-      assert.strictEqual(manager.uv.get(region.id)!.state, "collapsed");
+      manager.uv.setState(region.id, "stacked");
+      assert.strictEqual(manager.uv.get(region.id)!.state, "stacked");
 
       manager.undo();
 
       const restored = manager.uv.get(region.id)!;
-      assert.strictEqual(restored.state, "uncollapsed");
+      assert.strictEqual(restored.state, "free");
       assert.deepStrictEqual(
         restored.rectFor("top"),
         { x: 3, y: 3, width: 4, height: 4 },
-        "collapse is lossy, so undo must replay the whole previous region"
+        "stack is lossy, so undo must replay the whole previous region"
       );
     });
 
-    test("undoing a collapse does not look like a region being recreated", () => {
+    test("undoing a stack does not look like a region being recreated", () => {
       const manager = makeManager();
       const region = manager.uv.create({ width: 4, height: 4 });
-      manager.uv.uncollapse(region.id);
-      manager.uv.collapse(region.id);
+      manager.uv.setState(region.id, "free");
+      manager.uv.setState(region.id, "stacked");
 
       const created: string[] = [];
       const deleted: string[] = [];
@@ -426,6 +427,7 @@ describe("PixelArtCanvas — uv mode", () => {
         action: "uv-region-created",
         metadata: {
           region: {
+            state: "stacked",
             id: "remote-1",
             rect: { x: 0, y: 0, width: 4, height: 4 },
             color: "#f00"
@@ -447,7 +449,8 @@ describe("PixelArtCanvas — uv mode", () => {
         height: 4
       });
 
-      const remoteRegion = {
+      const remoteRegion: UVRegionData = {
+        state: "stacked",
         id: "remote-1",
         rect: { x: 1, y: 1, width: 2, height: 2 },
         color: "#00f"
@@ -461,7 +464,7 @@ describe("PixelArtCanvas — uv mode", () => {
       assert.strictEqual([...manager.uv.regions].length, 1);
       assert.deepStrictEqual(
         manager.uv.get("remote-1")!.toJSON(),
-        { ...remoteRegion, state: "collapsed" }
+        { ...remoteRegion, state: "stacked" }
       );
     });
   });

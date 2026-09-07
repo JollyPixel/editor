@@ -4,7 +4,9 @@ Drop-in web component with a mode rail, color controls, canvas and floating tool
 
 The mode rail carries Move, Paint, Erase, Fill, Select and UV. Erase runs the brush against transparency, so the brush size slider stays available there and both mouse buttons erase.
 
-The UV toolbar includes independent toggles for region labels and showing every region. Labels display `(name)` or `(id)` inside collapsed UVs, with the face on a second line when uncollapsed. Show All forces labels while active and restores the prior label preference when disabled.
+The UV toolbar includes independent toggles for region labels and showing every region. Labels display `(name)` or `(id)` inside a stacked UV, with the face on a second line once the region has per-face cells. Show All forces labels while active and restores the prior label preference when disabled.
+
+With a region selected, the toolbar also shows a state dropdown. Its trigger carries the current state; opening it lists the two states the region is not in, and picking one calls `UVMap.setState()`. The parts are `uv-state-button` and `uv-state-menu`, plus `uv-stacked-button`, `uv-unfolded-button` and `uv-free-button` for the options.
 
 ```ts
 import "@jolly-pixel/editor.pixel-art";

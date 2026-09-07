@@ -28,7 +28,7 @@ describe("isPixelNetworkCommand — uv regions", () => {
       isPixelNetworkCommand(regionCommand({
         id: "block-1",
         color: "#fff",
-        state: "uncollapsed",
+        state: "free",
         faces: {
           right: kTile,
           top: kTile,
@@ -45,7 +45,7 @@ describe("isPixelNetworkCommand — uv regions", () => {
       isPixelNetworkCommand(regionCommand({
         id: "block-1",
         color: "#fff",
-        state: "uncollapsed",
+        state: "free",
         faces: {
           right: {
             shape: "compound",
@@ -70,7 +70,7 @@ describe("isPixelNetworkCommand — uv regions", () => {
       isPixelNetworkCommand(regionCommand({
         id: "block-1",
         color: "#fff",
-        state: "uncollapsed",
+        state: "free",
         faces: {
           right: {
             shape: "compound",
@@ -90,7 +90,7 @@ describe("isPixelNetworkCommand — uv regions", () => {
       isPixelNetworkCommand(regionCommand({
         id: "block-1",
         color: "#fff",
-        state: "uncollapsed",
+        state: "free",
         faces: {
           right: {
             shape: "compound",
@@ -108,7 +108,7 @@ describe("isPixelNetworkCommand — uv regions", () => {
       isPixelNetworkCommand(regionCommand({
         id: "block-1",
         color: "#fff",
-        state: "uncollapsed",
+        state: "free",
         faces: {}
       })),
       false
@@ -120,7 +120,7 @@ describe("isPixelNetworkCommand — uv regions", () => {
       isPixelNetworkCommand(regionCommand({
         id: "block-1",
         color: "#fff",
-        state: "uncollapsed",
+        state: "free",
         faces: { top: { x: 0, y: 0, width: 0, height: 16 } }
       })),
       false
@@ -132,7 +132,7 @@ describe("isPixelNetworkCommand — uv regions", () => {
       isPixelNetworkCommand(regionCommand({
         id: "block-1",
         color: "#fff",
-        state: "uncollapsed",
+        state: "free",
         faces: { top: kTile },
         activeFaces: ["top", "top.1"]
       })),

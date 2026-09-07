@@ -260,6 +260,55 @@ export const panelStyles = css`
     transform: translateX(-50%);
   }
 
+  .overlay-toolbar .uv-state-trigger {
+    width: auto;
+    padding: 0 4px;
+    gap: 1px;
+  }
+
+  .overlay-toolbar .uv-state-trigger .icon:last-child {
+    width: 10px;
+    height: 10px;
+    opacity: 0.7;
+  }
+
+  .uv-state-menu {
+    position: fixed;
+    margin: 0;
+    padding: 4px;
+    border: 1px solid var(--color-divider);
+    border-radius: 6px;
+    background: var(--color-bg-overlay);
+    color: inherit;
+    inset: auto;
+    overflow: visible;
+  }
+
+  .uv-state-option {
+    display: flex;
+    width: 100%;
+    padding: 4px 8px;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    gap: 6px;
+    align-items: center;
+    white-space: nowrap;
+  }
+
+  .uv-state-option .icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  .uv-state-option:hover,
+  .uv-state-option:focus-visible {
+    background: var(--color-bg-hover);
+  }
+
   .overlay-toolbar-divider {
     width: 1px;
     height: 18px;

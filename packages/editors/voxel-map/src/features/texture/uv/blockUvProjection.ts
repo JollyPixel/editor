@@ -40,9 +40,6 @@ const kBoxShapeUv: BlockShapeUv = {
   isBox: true
 };
 
-/**
- * Builds a complete UV-face record that `Object.fromEntries` cannot type.
- */
 function recordOfFaces<TValue>(
   valueOf: (face: UVSlot) => TValue
 ): Record<UVSlot, TValue> {
@@ -90,27 +87,27 @@ export function blockUvRegion(
   const hasFaceTextures = Object.keys(block.faceTextures ?? {}).length > 0;
 
   if (hasFaceTextures || !block.defaultTexture) {
-    return uncollapsedBlockUvRegion(block, shape, tileSize, shapeUv);
+    return freeBlockUvRegion(block, shape, tileSize, shapeUv);
   }
 
   if (shapeUv.isBox) {
     return new UVRegion({
       id: blockUvRegionId(block.id),
       color: kRegionColor,
-      state: "collapsed",
+      state: "stacked",
       rect: rectOf(block.defaultTexture, tileSize)
     });
   }
 
-  return uncollapsedBlockUvRegion(
+  return freeBlockUvRegion(
     block,
     shape,
     tileSize,
     shapeUv
-  ).collapse();
+  ).stack();
 }
 
-export function uncollapsedBlockUvRegion(
+export function freeBlockUvRegion(
   block: ResolvedBlockDefinition,
   shape: BlockShape | undefined,
   tileSize: number,
@@ -132,7 +129,7 @@ export function uncollapsedBlockUvRegion(
   return new UVRegion({
     id: blockUvRegionId(block.id),
     color: kRegionColor,
-    state: "uncollapsed",
+    state: "free",
     faces,
     activeFaces: textureSlots.map(({ slot }) => slot)
   });
@@ -145,11 +142,11 @@ export function blockFromUvRegion(
   tileSize: number
 ): ResolvedBlockDefinition {
   const shapeUv = shape === undefined ? kBoxShapeUv : blockShapeUv(shape);
-  const collapsedSlot = region.collapsedFace ??
+  const stackedSlot = region.stackedFace ??
     shapeUv.activeFaces[0] ??
     "front";
 
-  if (region.state === "uncollapsed") {
+  if (region.state !== "stacked") {
     return {
       ...block,
       faceTextures: Object.fromEntries(
@@ -159,10 +156,12 @@ export function blockFromUvRegion(
             throw new RangeError(`No texture template for UV slot "${face}"`);
           }
 
+          const geometry = region.geometryFor(face);
+
           return [
             face,
             tileRefOf(
-              region.rectFor(face),
+              "shape" in geometry ? geometry.rect : geometry,
               template,
               tileSize,
               shapeUv.bounds[face]
@@ -173,10 +172,10 @@ export function blockFromUvRegion(
     };
   }
 
-  const template = tileRefForSlot(block, collapsedSlot);
+  const template = tileRefForSlot(block, stackedSlot);
   if (!template) {
     throw new RangeError(
-      `No texture template for UV slot "${collapsedSlot}"`
+      `No texture template for UV slot "${stackedSlot}"`
     );
   }
 
@@ -184,10 +183,10 @@ export function blockFromUvRegion(
     ...block,
     faceTextures: {},
     defaultTexture: tileRefOf(
-      region.rectFor(collapsedSlot),
+      region.rectFor(stackedSlot),
       template,
       tileSize,
-      shapeUv.bounds[collapsedSlot]
+      shapeUv.bounds[stackedSlot]
     )
   };
 }
@@ -202,14 +201,14 @@ export function uvRegionsEqual(
     a.state !== b.state ||
     a.name !== b.name ||
     a.color !== b.color ||
-    left.collapsedFace !== right.collapsedFace
+    left.stackedFace !== right.stackedFace
   ) {
     return false;
   }
-  if (a.state === "collapsed" && b.state === "collapsed") {
+  if (a.state === "stacked" && b.state === "stacked") {
     return rectsEqual(a.rect, b.rect) && geometriesEqual(a.faces, b.faces);
   }
-  if (a.state === "uncollapsed" && b.state === "uncollapsed") {
+  if (a.state !== "stacked" && b.state !== "stacked") {
     return arraysEqual(a.activeFaces ?? [], b.activeFaces ?? []) &&
       geometriesEqual(a.faces, b.faces);
   }

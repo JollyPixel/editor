@@ -16,28 +16,29 @@ import type { SelectionRect } from "#src/types.ts";
 // CONSTANTS
 const kRect: SelectionRect = { x: 1, y: 2, width: 3, height: 4 };
 
-function makeCollapsed(
+function makeStacked(
   rect: SelectionRect = kRect
 ): UVRegion {
-  return new UVRegion({ id: "r1", color: "#f00", rect });
+  return new UVRegion({ state: "stacked", id: "r1", color: "#f00", rect });
 }
 
-function makeUncollapsed(): UVRegion {
-  return makeCollapsed().uncollapse();
+function makeFree(): UVRegion {
+  return makeStacked().free();
 }
 
 describe("UVRegion", () => {
   describe("construction", () => {
-    test("defaults to collapsed when state is omitted", () => {
-      const region = new UVRegion({ id: "r1", color: "#f00", rect: kRect });
+    test("defaults to stacked when state is omitted", () => {
+      const region = new UVRegion({ state: "stacked", id: "r1", color: "#f00", rect: kRect });
 
-      assert.strictEqual(region.state, "collapsed");
+      assert.strictEqual(region.state, "stacked");
       assert.strictEqual(region.name, undefined);
       assert.deepStrictEqual(region.rectFor("front"), kRect);
     });
 
     test("keeps an optional name", () => {
       const region = new UVRegion({
+        state: "stacked",
         id: "r1",
         name: "Grass block",
         color: "#f00",
@@ -47,7 +48,7 @@ describe("UVRegion", () => {
       assert.strictEqual(region.name, "Grass block");
     });
 
-    test("parses an explicit uncollapsed payload", () => {
+    test("parses an explicit free payload", () => {
       const faces = {
         front: { x: 0, y: 0, width: 1, height: 1 },
         back: { x: 1, y: 0, width: 1, height: 1 },
@@ -59,11 +60,11 @@ describe("UVRegion", () => {
       const region = new UVRegion({
         id: "r1",
         color: "#f00",
-        state: "uncollapsed",
+        state: "free",
         faces
       });
 
-      assert.strictEqual(region.state, "uncollapsed");
+      assert.strictEqual(region.state, "free");
       for (const face of UV_FACES) {
         assert.deepStrictEqual(
           region.rectFor(face),
@@ -75,7 +76,7 @@ describe("UVRegion", () => {
 
     test("copies the incoming rect instead of aliasing it", () => {
       const rect = { ...kRect };
-      const region = new UVRegion({ id: "r1", color: "#f00", rect });
+      const region = new UVRegion({ state: "stacked", id: "r1", color: "#f00", rect });
       rect.x = 99;
 
       assert.strictEqual(
@@ -86,31 +87,31 @@ describe("UVRegion", () => {
     });
 
     test("from() passes an existing instance through unchanged", () => {
-      const region = makeCollapsed();
+      const region = makeStacked();
 
       assert.strictEqual(UVRegion.from(region), region);
     });
 
     test("from() builds an instance out of raw data", () => {
-      const region = UVRegion.from({ id: "r1", color: "#f00", rect: kRect });
+      const region = UVRegion.from({ state: "stacked", id: "r1", color: "#f00", rect: kRect });
 
       assert.ok(region instanceof UVRegion);
-      assert.strictEqual(region.state, "collapsed");
+      assert.strictEqual(region.state, "stacked");
     });
   });
 
   describe("rectFor / facesOf", () => {
-    test("a collapsed region returns its single rect for every face", () => {
-      const region = makeCollapsed();
+    test("a stacked region returns its single rect for every face", () => {
+      const region = makeStacked();
 
       for (const face of UV_FACES) {
         assert.deepStrictEqual(region.rectFor(face), kRect, `${face} must share the rect`);
       }
     });
 
-    test("facesOf yields one null-faced entry when collapsed", () => {
+    test("facesOf yields one null-faced entry when stacked", () => {
       assert.deepStrictEqual(
-        makeCollapsed().facesOf(),
+        makeStacked().facesOf(),
         [{ face: null, geometry: kRect }]
       );
     });
@@ -119,7 +120,7 @@ describe("UVRegion", () => {
       const region = new UVRegion({
         id: "r1",
         color: "#f00",
-        state: "uncollapsed",
+        state: "free",
         activeFaces: ["left"],
         faces: {
           front: kRect,
@@ -138,8 +139,8 @@ describe("UVRegion", () => {
       }]);
     });
 
-    test("facesOf yields six entries in UV_FACES order when uncollapsed", () => {
-      const faces = makeUncollapsed().facesOf();
+    test("facesOf yields six entries in UV_FACES order when free", () => {
+      const faces = makeFree().facesOf();
 
       assert.deepStrictEqual(
         faces.map((entry) => entry.face),
@@ -153,7 +154,7 @@ describe("UVRegion", () => {
       const region = new UVRegion({
         id: "r1",
         color: "#f00",
-        state: "uncollapsed",
+        state: "free",
         activeFaces: ["top", "left", "top"],
         faces: {
           front: rect,
@@ -172,7 +173,7 @@ describe("UVRegion", () => {
     });
 
     test("geometryFor returns a copy", () => {
-      const region = makeCollapsed();
+      const region = makeStacked();
       const geometry = region.geometryFor("front");
       if ("shape" in geometry) {
         assert.fail("expected rectangle geometry");
@@ -183,7 +184,7 @@ describe("UVRegion", () => {
     });
 
     test("rectFor returns a copy", () => {
-      const region = makeCollapsed();
+      const region = makeStacked();
       const rect = region.rectFor("front");
       rect.x = 99;
 
@@ -191,7 +192,7 @@ describe("UVRegion", () => {
     });
 
     test("facesOf returns geometry copies", () => {
-      const region = makeUncollapsed();
+      const region = makeFree();
       const [{ geometry }] = region.facesOf();
       if ("shape" in geometry) {
         assert.fail("expected rectangle geometry");
@@ -202,18 +203,18 @@ describe("UVRegion", () => {
     });
   });
 
-  describe("uncollapse", () => {
+  describe("free", () => {
     test("gives every face the current rect, so the mesh does not change", () => {
-      const region = makeUncollapsed();
+      const region = makeFree();
 
-      assert.strictEqual(region.state, "uncollapsed");
+      assert.strictEqual(region.state, "free");
       for (const face of UV_FACES) {
         assert.deepStrictEqual(region.rectFor(face), kRect, `${face} must start where the region was`);
       }
     });
 
     test("gives each face an independent rect object", () => {
-      const region = makeUncollapsed();
+      const region = makeFree();
 
       assert.notStrictEqual(
         region.rectFor("front"),
@@ -222,38 +223,38 @@ describe("UVRegion", () => {
       );
     });
 
-    test("returns the same instance when already uncollapsed", () => {
-      const region = makeUncollapsed();
+    test("returns the same instance when already free", () => {
+      const region = makeFree();
 
-      assert.strictEqual(region.uncollapse(), region);
+      assert.strictEqual(region.free(), region);
     });
 
     test("leaves the source region untouched", () => {
-      const region = makeCollapsed();
-      region.uncollapse();
+      const region = makeStacked();
+      region.free();
 
-      assert.strictEqual(region.state, "collapsed");
+      assert.strictEqual(region.state, "stacked");
     });
   });
 
-  describe("collapse", () => {
+  describe("stack", () => {
     test("keeps the front face by default", () => {
-      const moved = makeUncollapsed().withRect({ x: 9, y: 9, width: 1, height: 1 }, "top");
-      const collapsed = moved.collapse();
+      const moved = makeFree().withRect({ x: 9, y: 9, width: 1, height: 1 }, "top");
+      const stacked = moved.stack();
 
-      assert.strictEqual(collapsed.state, "collapsed");
-      assert.deepStrictEqual(collapsed.rectFor("front"), kRect);
+      assert.strictEqual(stacked.state, "stacked");
+      assert.deepStrictEqual(stacked.rectFor("front"), kRect);
     });
 
     test("uses the requested face as the shared rectangle among equally large ones", () => {
       const topRect = { ...kRect, x: 9, y: 9 };
-      const collapsed = makeUncollapsed()
+      const stacked = makeFree()
         .withRect(topRect, "top")
-        .collapse("top");
+        .stack("top");
 
       for (const face of UV_FACES) {
         assert.deepStrictEqual(
-          collapsed.rectFor(face),
+          stacked.rectFor(face),
           topRect,
           `${face} must adopt the surviving rect`
         );
@@ -261,29 +262,29 @@ describe("UVRegion", () => {
     });
 
     test("ignores a requested face smaller than the largest one", () => {
-      const collapsed = makeUncollapsed()
+      const stacked = makeFree()
         .withRect({ x: 9, y: 9, width: 1, height: 1 }, "top")
-        .collapse("top");
+        .stack("top");
 
-      assert.strictEqual(collapsed.collapsedFace, "front");
+      assert.strictEqual(stacked.stackedFace, "front");
       assert.deepStrictEqual(
-        collapsed.rectFor("top"),
+        stacked.rectFor("top"),
         kRect,
         "a partial slot must not become the shared rectangle"
       );
     });
 
-    test("returns the same instance when already collapsed", () => {
-      const region = makeCollapsed();
+    test("returns the same instance when already stacked", () => {
+      const region = makeStacked();
 
-      assert.strictEqual(region.collapse(), region);
+      assert.strictEqual(region.stack(), region);
     });
 
     test("prefers a rectangle among equally large faces", () => {
       const region = new UVRegion({
         id: "r1",
         color: "#f00",
-        state: "uncollapsed",
+        state: "free",
         activeFaces: ["left", "top"],
         faces: {
           front: kRect,
@@ -295,17 +296,17 @@ describe("UVRegion", () => {
         }
       });
 
-      const collapsed = region.collapse("left");
+      const stacked = region.stack("left");
 
-      assert.strictEqual(collapsed.collapsedFace, "top");
-      assert.deepStrictEqual(collapsed.rectFor("front"), { ...kRect, x: 9, y: 9 });
+      assert.strictEqual(stacked.stackedFace, "top");
+      assert.deepStrictEqual(stacked.rectFor("front"), { ...kRect, x: 9, y: 9 });
     });
 
-    test("restores triangle topology after collapsing and uncollapsing", () => {
+    test("restores triangle topology after stacking and freeing", () => {
       const ramp = new UVRegion({
         id: "r1",
         color: "#f00",
-        state: "uncollapsed",
+        state: "free",
         activeFaces: ["back", "left", "right", "top", "bottom"],
         faces: {
           front: kRect,
@@ -317,7 +318,7 @@ describe("UVRegion", () => {
         }
       });
 
-      const restored = ramp.collapse().uncollapse();
+      const restored = ramp.stack().free();
 
       assert.deepStrictEqual(restored.facesOf().map(({ face }) => face), [
         "back", "left", "right", "top", "bottom"
@@ -331,7 +332,7 @@ describe("UVRegion", () => {
       const pole = new UVRegion({
         id: "p1",
         color: "#f00",
-        state: "uncollapsed",
+        state: "free",
         faces: {
           front: { x: 6, y: 6, width: 4, height: 4 },
           back: { x: 6, y: 6, width: 4, height: 4 },
@@ -342,10 +343,10 @@ describe("UVRegion", () => {
         }
       });
 
-      const data = pole.collapse().toJSON();
-      const restored = UVRegion.from(data).uncollapse();
+      const data = pole.stack().toJSON();
+      const restored = UVRegion.from(data).free();
 
-      assert.strictEqual(data.collapsedFace, "left");
+      assert.strictEqual(data.state === "stacked" ? data.stackedFace : null, "left");
       assert.deepStrictEqual(restored.rectFor("front"), {
         x: 0, y: 6, width: 4, height: 4
       });
@@ -358,7 +359,7 @@ describe("UVRegion", () => {
       const data = new UVRegion({
         id: "c1",
         color: "#f00",
-        state: "uncollapsed",
+        state: "free",
         faces: {
           front: kRect,
           back: kRect,
@@ -367,18 +368,18 @@ describe("UVRegion", () => {
           top: kRect,
           bottom: kRect
         }
-      }).collapse().toJSON();
+      }).stack().toJSON();
 
       assert.deepStrictEqual(Object.keys(data).sort(), [
         "color", "id", "rect", "state"
       ]);
     });
 
-    test("keeps each retained face's own size across a collapse round-trip", () => {
+    test("keeps each retained face's own size across a stack round-trip", () => {
       const ramp = new UVRegion({
         id: "r1",
         color: "#f00",
-        state: "uncollapsed",
+        state: "free",
         activeFaces: ["back", "left", "right", "top", "bottom"],
         faces: {
           front: kRect,
@@ -396,7 +397,7 @@ describe("UVRegion", () => {
 
       // Only the position is reset; the slot keeps the size its shape gave it.
       const smallLeft = { ...kRect, width: 1, height: 1 };
-      const restored = ramp.collapse().uncollapse();
+      const restored = ramp.stack().free();
 
       assert.deepStrictEqual(restored.rectFor("left"), smallLeft);
       assert.deepStrictEqual(restored.geometryFor("left"), {
@@ -409,7 +410,7 @@ describe("UVRegion", () => {
       const region = new UVRegion({
         id: "r1",
         color: "#f00",
-        state: "uncollapsed",
+        state: "free",
         faces: {
           front: kRect,
           back: kRect,
@@ -422,8 +423,8 @@ describe("UVRegion", () => {
 
       const restored = region
         .withRect({ ...kRect, x: 40, y: 30 }, "top")
-        .collapse()
-        .uncollapse();
+        .stack()
+        .free();
 
       for (const face of UV_FACES) {
         assert.deepStrictEqual(
@@ -434,11 +435,11 @@ describe("UVRegion", () => {
       }
     });
 
-    test("resets moved faces when the collapsed region moved too", () => {
+    test("resets moved faces when the stacked region moved too", () => {
       const region = new UVRegion({
         id: "r1",
         color: "#f00",
-        state: "uncollapsed",
+        state: "free",
         faces: {
           front: kRect,
           back: kRect,
@@ -452,9 +453,9 @@ describe("UVRegion", () => {
       const moved = { ...kRect, x: 20, y: 10 };
       const restored = region
         .withRect({ ...kRect, x: 40, y: 30 }, "top")
-        .collapse()
+        .stack()
         .withRect(moved)
-        .uncollapse();
+        .free();
 
       for (const face of UV_FACES) {
         assert.deepStrictEqual(
@@ -465,11 +466,11 @@ describe("UVRegion", () => {
       }
     });
 
-    test("keeps each face's own size when the collapsed region moved", () => {
+    test("keeps each face's own size when the stacked region moved", () => {
       const region = new UVRegion({
         id: "r1",
         color: "#f00",
-        state: "uncollapsed",
+        state: "free",
         faces: {
           front: { x: 0, y: 0, width: 4, height: 4 },
           back: { x: 0, y: 0, width: 4, height: 4 },
@@ -480,13 +481,13 @@ describe("UVRegion", () => {
         }
       });
 
-      const collapsed = region.collapse();
-      const moved = collapsed.withRect({
-        ...collapsed.rectFor("front"),
-        x: collapsed.rectFor("front").x + 20,
-        y: collapsed.rectFor("front").y + 10
+      const stacked = region.stack();
+      const moved = stacked.withRect({
+        ...stacked.rectFor("front"),
+        x: stacked.rectFor("front").x + 20,
+        y: stacked.rectFor("front").y + 10
       });
-      const restored = moved.uncollapse();
+      const restored = moved.free();
 
       assert.deepStrictEqual(restored.rectFor("front"), {
         x: 20, y: 10, width: 4, height: 4
@@ -496,11 +497,11 @@ describe("UVRegion", () => {
       });
     });
 
-    test("collapses onto the largest face, not the first one", () => {
+    test("stacks onto the largest face, not the first one", () => {
       const pole = new UVRegion({
         id: "p1",
         color: "#f00",
-        state: "uncollapsed",
+        state: "free",
         faces: {
           front: { x: 6, y: 6, width: 4, height: 4 },
           back: { x: 6, y: 6, width: 4, height: 4 },
@@ -511,19 +512,19 @@ describe("UVRegion", () => {
         }
       });
 
-      const collapsed = pole.collapse();
+      const stacked = pole.stack();
 
-      assert.strictEqual(collapsed.collapsedFace, "left");
-      assert.deepStrictEqual(collapsed.rectFor("front"), {
+      assert.strictEqual(stacked.stackedFace, "left");
+      assert.deepStrictEqual(stacked.rectFor("front"), {
         x: 0, y: 6, width: 16, height: 4
       });
     });
 
-    test("honours an explicitly requested collapse face", () => {
+    test("honours an explicitly requested stack face", () => {
       const pole = new UVRegion({
         id: "p1",
         color: "#f00",
-        state: "uncollapsed",
+        state: "free",
         faces: {
           front: { x: 6, y: 6, width: 4, height: 4 },
           back: { x: 6, y: 6, width: 4, height: 4 },
@@ -534,10 +535,10 @@ describe("UVRegion", () => {
         }
       });
 
-      const collapsed = pole.collapse("top");
+      const stacked = pole.stack("top");
 
-      assert.strictEqual(collapsed.collapsedFace, "top");
-      assert.deepStrictEqual(collapsed.rectFor("front"), {
+      assert.strictEqual(stacked.stackedFace, "top");
+      assert.deepStrictEqual(stacked.rectFor("front"), {
         x: 6, y: 0, width: 4, height: 16
       });
     });
@@ -546,23 +547,23 @@ describe("UVRegion", () => {
   describe("withRect", () => {
     const nextRect: SelectionRect = { x: 7, y: 8, width: 2, height: 2 };
 
-    test("replaces the shared rect when collapsed", () => {
-      const region = makeCollapsed().withRect(nextRect);
+    test("replaces the shared rect when stacked", () => {
+      const region = makeStacked().withRect(nextRect);
 
-      assert.strictEqual(region.state, "collapsed");
+      assert.strictEqual(region.state, "stacked");
       assert.deepStrictEqual(region.rectFor("back"), nextRect);
     });
 
-    test("ignores the face argument when collapsed", () => {
-      const region = makeCollapsed().withRect(nextRect, "top");
+    test("ignores the face argument when stacked", () => {
+      const region = makeStacked().withRect(nextRect, "top");
 
       for (const face of UV_FACES) {
         assert.deepStrictEqual(region.rectFor(face), nextRect, `${face} must follow the shared rect`);
       }
     });
 
-    test("moves only the named face when uncollapsed", () => {
-      const region = makeUncollapsed().withRect(nextRect, "left");
+    test("moves only the named face when free", () => {
+      const region = makeFree().withRect(nextRect, "left");
 
       assert.deepStrictEqual(region.rectFor("left"), nextRect);
       for (const face of UV_FACES.filter((value) => value !== "left")) {
@@ -570,8 +571,8 @@ describe("UVRegion", () => {
       }
     });
 
-    test("is a no-op when uncollapsed and no face is given", () => {
-      const region = makeUncollapsed();
+    test("is a no-op when free and no face is given", () => {
+      const region = makeFree();
 
       assert.strictEqual(
         region.withRect(nextRect),
@@ -581,7 +582,7 @@ describe("UVRegion", () => {
     });
 
     test("leaves the source region untouched", () => {
-      const region = makeUncollapsed();
+      const region = makeFree();
       region.withRect(nextRect, "left");
 
       assert.deepStrictEqual(region.rectFor("left"), kRect);
@@ -589,6 +590,7 @@ describe("UVRegion", () => {
 
     test("preserves the name through geometry and state changes", () => {
       const region = new UVRegion({
+        state: "stacked",
         id: "r1",
         name: "Grass block",
         color: "#f00",
@@ -596,36 +598,37 @@ describe("UVRegion", () => {
       });
 
       const changed = region
-        .uncollapse()
+        .free()
         .withRect(nextRect, "front")
-        .collapse();
+        .stack();
 
       assert.strictEqual(changed.name, "Grass block");
     });
   });
 
   describe("toJSON", () => {
-    test("emits an explicit collapsed payload", () => {
-      assert.deepStrictEqual(makeCollapsed().toJSON(), {
+    test("emits an explicit stacked payload", () => {
+      assert.deepStrictEqual(makeStacked().toJSON(), {
         id: "r1",
         color: "#f00",
-        state: "collapsed",
+        state: "stacked",
         rect: kRect
       });
     });
 
-    test("emits every face when uncollapsed", () => {
-      const data = makeUncollapsed().toJSON();
+    test("emits every face when free", () => {
+      const data = makeFree().toJSON();
 
-      assert.strictEqual(data.state, "uncollapsed");
+      assert.strictEqual(data.state, "free");
       assert.deepStrictEqual(
-        Object.keys(data.state === "uncollapsed" ? data.faces : {}).sort(),
+        Object.keys(data.state === "free" ? data.faces : {}).sort(),
         [...UV_FACES].sort()
       );
     });
 
     test("includes the optional name", () => {
       const data = new UVRegion({
+        state: "stacked",
         id: "r1",
         name: "Grass block",
         color: "#f00",
@@ -636,12 +639,12 @@ describe("UVRegion", () => {
     });
 
     test("round-trips through JSON", () => {
-      const region = makeUncollapsed().withRect({ x: 5, y: 5, width: 1, height: 1 }, "bottom");
+      const region = makeFree().withRect({ x: 5, y: 5, width: 1, height: 1 }, "bottom");
       const restored = UVRegion.from(
         JSON.parse(JSON.stringify(region)) as ReturnType<UVRegion["toJSON"]>
       );
 
-      assert.strictEqual(restored.state, "uncollapsed");
+      assert.strictEqual(restored.state, "free");
       for (const face of UV_FACES) {
         assert.deepStrictEqual(
           restored.rectFor(face),
@@ -652,9 +655,9 @@ describe("UVRegion", () => {
     });
 
     test("returns copies the caller cannot use to mutate the region", () => {
-      const region = makeCollapsed();
+      const region = makeStacked();
       const data = region.toJSON();
-      if (data.state !== "uncollapsed") {
+      if (data.state === "stacked") {
         data.rect.x = 99;
       }
 

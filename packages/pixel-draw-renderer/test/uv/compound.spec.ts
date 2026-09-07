@@ -171,7 +171,7 @@ describe("UVRegion — a shape's own slots", () => {
     const region = new UVRegion({
       id: "block-1",
       color: "#fff",
-      state: "uncollapsed",
+      state: "free",
       faces: stairFaces
     });
 
@@ -182,18 +182,18 @@ describe("UVRegion — a shape's own slots", () => {
     assert.deepStrictEqual(region.faces, ["right", "top", "top.1"]);
   });
 
-  test("collapse skips a compound when picking the face to collapse onto", () => {
+  test("stack skips a compound when picking the face to stack onto", () => {
     const region = new UVRegion({
       id: "block-1",
       color: "#fff",
-      state: "uncollapsed",
+      state: "free",
       faces: stairFaces
-    }).collapse("right");
+    }).stack("right");
 
     assert.equal(
-      region.collapsedFace,
+      region.stackedFace,
       "top",
-      "a collapsed region paints one rect, which a compound cannot describe"
+      "a stacked region paints one rect, which a compound cannot describe"
     );
   });
 
@@ -201,7 +201,7 @@ describe("UVRegion — a shape's own slots", () => {
     const region = new UVRegion({
       id: "block-1",
       color: "#fff",
-      state: "uncollapsed",
+      state: "free",
       faces: stairFaces,
       activeFaces: ["top", "back.9"]
     });
@@ -216,7 +216,7 @@ describe("UVRegion — a shape's own slots", () => {
     const region = new UVRegion({
       id: "block-1",
       color: "#fff",
-      state: "uncollapsed",
+      state: "free",
       faces: stairFaces
     });
     const restored = new UVRegion(region.toJSON());

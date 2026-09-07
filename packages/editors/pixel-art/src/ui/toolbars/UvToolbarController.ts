@@ -6,6 +6,7 @@ import {
   type ReactiveControllerHost
 } from "lit";
 import { classMap } from "lit/directives/class-map.js";
+import { PopoverController } from "@jolly-pixel/ui";
 import type {
   PixelArtCanvas,
   UVSlot,
@@ -14,7 +15,10 @@ import type {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import { renderIcon } from "../common/icons.ts";
+import {
+  renderIcon,
+  type IconName
+} from "../common/icons.ts";
 
 // UV "Create" button uses this preset size.
 const kUvCreateSize = {
@@ -22,13 +26,40 @@ const kUvCreateSize = {
   height: 16
 };
 
+const kStateLabels: Record<UVRegionState, string> = {
+  stacked: "Stacked",
+  unfolded: "Unfolded",
+  free: "Free"
+};
+
+const kStateIcons: Record<UVRegionState, IconName> = {
+  stacked: "collapse",
+  unfolded: "unfold",
+  free: "expand"
+};
+
+const kStateOrder: readonly UVRegionState[] = [
+  "stacked",
+  "unfolded",
+  "free"
+];
+
+/**
+ * Lit host rendering the toolbar; the controller reads back the state
+ * dropdown's trigger and popover from its render root.
+ */
+export type UvToolbarHost = ReactiveControllerHost & {
+  renderRoot: DocumentFragment | HTMLElement;
+};
+
 /**
  * UV toolbar state (selection, region state, visibility).
  * Syncs with PixelArtCanvas.uv; host renders toolbar only.
  */
 export class UvToolbarController implements ReactiveController {
-  #host: ReactiveControllerHost;
+  #host: UvToolbarHost;
   #canvas: PixelArtCanvas | null = null;
+  #statePopup: PopoverController;
 
   #selectedRegionId: string | null = null;
   #selectedFace: UVSlot | null = null;
@@ -50,9 +81,15 @@ export class UvToolbarController implements ReactiveController {
   };
 
   constructor(
-    host: ReactiveControllerHost
+    host: UvToolbarHost
   ) {
     this.#host = host;
+    this.#statePopup = new PopoverController(host, {
+      anchor: () => this.#stateElement("[part=\"uv-state-button\"]"),
+      popover: () => this.#stateElement("[part=\"uv-state-menu\"]"),
+      side: "below",
+      align: "start"
+    });
     host.addController(this);
   }
 
@@ -110,7 +147,7 @@ export class UvToolbarController implements ReactiveController {
     this.#canvas?.uv.create({
       name: `ramp-${++this.#uvNextId}`,
       ...kUvCreateSize,
-      state: "collapsed",
+      state: "stacked",
       activeFaces: ["back", "left", "right", "top", "bottom"],
       faceGeometries: {
         left: {
@@ -143,47 +180,77 @@ export class UvToolbarController implements ReactiveController {
     }
   }
 
-  uncollapse(): void {
-    if (this.#selectedRegionId) {
-      this.#canvas?.uv.uncollapse(this.#selectedRegionId);
+  setState(
+    state: UVRegionState
+  ): void {
+    this.#statePopup.hide();
+    if (!this.#selectedRegionId) {
+      return;
     }
+
+    this.#canvas?.uv.setState(
+      this.#selectedRegionId,
+      state,
+      state === "stacked" ? this.#selectedFace ?? undefined : undefined
+    );
   }
 
-  collapse(): void {
-    if (this.#selectedRegionId) {
-      this.#canvas?.uv.collapse(
-        this.#selectedRegionId,
-        this.#selectedFace ?? undefined
-      );
-    }
+  #stateElement(
+    selector: string
+  ): HTMLElement | null {
+    return this.#host.renderRoot.querySelector<HTMLElement>(selector);
   }
 
-  #renderStateButton() {
+  #renderStateMenu(
+    current: UVRegionState
+  ) {
+    return kStateOrder
+      .filter((state) => state !== current)
+      .map((state) => html`
+        <button
+          class="uv-state-option"
+          part="uv-${state}-button"
+          role="menuitem"
+          @click=${() => this.setState(state)}
+        >
+          ${renderIcon(kStateIcons[state])}
+          <span>${kStateLabels[state]}</span>
+        </button>
+      `);
+  }
+
+  #renderStateDropdown() {
     if (this.#selectedState === null) {
       return nothing;
     }
 
-    return this.#selectedState === "collapsed" ?
-      html`
-        <button
-          class="rail-btn" part="uv-uncollapse-button"
-          aria-label="Uncollapse"
-          @click=${() => this.uncollapse()}
-        >
-          ${renderIcon("expand")}
-          <span class="tooltip">Uncollapse</span>
-        </button>
-      ` :
-      html`
-        <button
-          class="rail-btn" part="uv-collapse-button"
-          aria-label="Collapse"
-          @click=${() => this.collapse()}
-        >
-          ${renderIcon("collapse")}
-          <span class="tooltip">Collapse</span>
-        </button>
-      `;
+    const current = this.#selectedState;
+
+    return html`
+      <button
+        class="rail-btn uv-state-trigger"
+        part="uv-state-button"
+        popovertarget="uv-state-menu"
+        aria-haspopup="menu"
+        aria-expanded=${this.#statePopup.open}
+        aria-label="Region state: ${kStateLabels[current]}"
+      >
+        ${renderIcon(kStateIcons[current])}
+        ${renderIcon("chevronDown")}
+        <span class="tooltip">Region state: ${kStateLabels[current]}</span>
+      </button>
+      <div
+        class="uv-state-menu"
+        part="uv-state-menu"
+        id="uv-state-menu"
+        role="menu"
+        popover
+        @beforetoggle=${this.#statePopup.onBeforeToggle}
+        @toggle=${this.#statePopup.onToggle}
+      >
+        ${this.#renderStateMenu(current)}
+      </div>
+    `;
   }
 
   #renderCreateDelete() {
@@ -236,7 +303,7 @@ export class UvToolbarController implements ReactiveController {
     return html`
       <div class="overlay-toolbar top" part="uv-toolbar">
         ${allowCreateDelete ? this.#renderCreateDelete() : nothing}
-        ${this.#renderStateButton()}
+        ${this.#renderStateDropdown()}
         <button
           class=${classMap({ "rail-btn": true, active: showRegionLabels })}
           part="uv-show-region-labels-button"

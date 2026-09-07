@@ -11,7 +11,10 @@ import {
   type UVMapEvent,
   type UVMapEventType
 } from "#src/uv/UVMap.ts";
-import { UV_FACES } from "#src/uv/UVRegion.ts";
+import {
+  UV_FACES,
+  type UVRegionData
+} from "#src/uv/UVRegion.ts";
 import type { Vec2 } from "#src/types.ts";
 
 type EventPayload<T extends UVMapEventType> = Parameters<UVMapEvent[T]>[0];
@@ -35,7 +38,7 @@ describe("UVMap — create", () => {
       }
     });
 
-    assert.strictEqual(region.state, "uncollapsed");
+    assert.strictEqual(region.state, "free");
     assert.deepStrictEqual(region.facesOf().map(({ face }) => face), [
       "back", "left", "right", "top", "bottom"
     ]);
@@ -44,12 +47,12 @@ describe("UVMap — create", () => {
     });
   });
 
-  test("creates a collapsed ramp when requested", () => {
+  test("creates a stacked ramp when requested", () => {
     const map = makeMap();
     const region = map.create({
       width: 8,
       height: 8,
-      state: "collapsed",
+      state: "stacked",
       activeFaces: ["back", "left", "right", "top", "bottom"],
       faceGeometries: {
         left: { shape: "triangle", corner: "bottom-right" },
@@ -57,7 +60,7 @@ describe("UVMap — create", () => {
       }
     });
 
-    assert.strictEqual(region.state, "collapsed");
+    assert.strictEqual(region.state, "stacked");
     assert.deepStrictEqual(region.facesOf().map(({ face }) => face), [null]);
     assert.deepStrictEqual(region.toJSON().activeFaces, ["back", "left", "right", "top", "bottom"]);
     assert.deepStrictEqual(region.toJSON().faces?.left, {
@@ -76,10 +79,10 @@ describe("UVMap — create", () => {
     assert.strictEqual([...map.regions].length, 1);
   });
 
-  test("creates collapsed regions", () => {
+  test("creates stacked regions", () => {
     const map = makeMap();
 
-    assert.strictEqual(map.create({ width: 8, height: 8 }).state, "collapsed");
+    assert.strictEqual(map.create({ width: 8, height: 8 }).state, "stacked");
   });
 
   test("clamps width/height to the canvas size", () => {
@@ -153,7 +156,8 @@ describe("UVMap — restore", () => {
     const events: EventPayload<"region-created">[] = [];
     map.on("region-created", (e) => events.push(e));
 
-    const region = {
+    const region: UVRegionData = {
+      state: "stacked",
       id: "r1",
       rect: { x: 3, y: 3, width: 2, height: 2 },
       color: "#abcdef"
@@ -162,18 +166,18 @@ describe("UVMap — restore", () => {
 
     assert.deepStrictEqual(stored.toJSON(), {
       ...region,
-      state: "collapsed"
+      state: "stacked"
     });
     assert.strictEqual(map.get("r1"), stored);
     assert.strictEqual(events.length, 1);
   });
 
-  test("restores an uncollapsed region from raw data", () => {
+  test("restores an free region from raw data", () => {
     const map = makeMap();
     const stored = map.restore({
       id: "r1",
       color: "#abcdef",
-      state: "uncollapsed",
+      state: "free",
       faces: {
         front: { x: 0, y: 0, width: 2, height: 2 },
         back: { x: 2, y: 0, width: 2, height: 2 },
@@ -184,13 +188,14 @@ describe("UVMap — restore", () => {
       }
     });
 
-    assert.strictEqual(stored.state, "uncollapsed");
+    assert.strictEqual(stored.state, "free");
     assert.deepStrictEqual(stored.rectFor("top"), { x: 8, y: 0, width: 2, height: 2 });
   });
 
   test("does not affect cascading placement of subsequent create() calls", () => {
     const map = makeMap();
     map.restore({
+      state: "stacked",
       id: "r1",
       rect: { x: 10, y: 10, width: 2, height: 2 },
       color: "#000"
@@ -269,7 +274,7 @@ describe("UVMap — delete", () => {
   test("clears selection and emits selection-changed when the selected region is deleted", () => {
     const map = makeMap();
     const region = map.create({ width: 4, height: 4 });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
     map.select(region.id, "top");
     const events: EventPayload<"selection-changed">[] = [];
     map.on("selection-changed", (e) => events.push(e));
@@ -304,7 +309,7 @@ describe("UVMap — move", () => {
     );
     assert.strictEqual(events.length, 1);
     assert.strictEqual(events[0].region, map.get(region.id));
-    assert.strictEqual(events[0].face, null, "a collapsed region moves as a whole");
+    assert.strictEqual(events[0].face, null, "a stacked region moves as a whole");
     assert.deepStrictEqual(events[0].previousRect, { x: 0, y: 0, width: 4, height: 4 });
   });
 
@@ -332,10 +337,10 @@ describe("UVMap — move", () => {
     );
   });
 
-  test("moves a single face of an uncollapsed region, leaving the others put", () => {
+  test("moves a single face of an free region, leaving the others put", () => {
     const map = makeMap();
     const region = map.create({ width: 4, height: 4 });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
     const events: EventPayload<"region-moved">[] = [];
     map.on("region-moved", (e) => events.push(e));
 
@@ -352,10 +357,10 @@ describe("UVMap — move", () => {
     assert.strictEqual(events[0].face, "left");
   });
 
-  test("refuses to move an uncollapsed region when no face is given", () => {
+  test("refuses to move an free region when no face is given", () => {
     const map = makeMap();
     const region = map.create({ width: 4, height: 4 });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
     const events: EventPayload<"region-moved">[] = [];
     map.on("region-moved", (e) => events.push(e));
 
@@ -366,7 +371,7 @@ describe("UVMap — move", () => {
     assert.strictEqual(events.length, 0);
   });
 
-  test("ignores the face argument for a collapsed region", () => {
+  test("ignores the face argument for a stacked region", () => {
     const map = makeMap();
     const region = map.create({ width: 4, height: 4 });
 
@@ -405,10 +410,10 @@ describe("UVMap — previewMove", () => {
     );
   });
 
-  test("carries the face for an uncollapsed region", () => {
+  test("carries the face for an free region", () => {
     const map = makeMap();
     const region = map.create({ width: 4, height: 4 });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
     const events: EventPayload<"region-dragging">[] = [];
     map.on("region-dragging", (e) => events.push(e));
 
@@ -476,77 +481,77 @@ describe("UVMap — previewMove", () => {
   });
 });
 
-describe("UVMap — uncollapse / collapse", () => {
-  test("uncollapse gives every face the region's current rect", () => {
+describe("UVMap — free / stack", () => {
+  test("free gives every face the region's current rect", () => {
     const map = makeMap();
     const region = map.create({ width: 4, height: 4 });
 
-    assert.ok(map.uncollapse(region.id));
+    assert.ok(map.setState(region.id, "free"));
 
     const stored = map.get(region.id)!;
-    assert.strictEqual(stored.state, "uncollapsed");
+    assert.strictEqual(stored.state, "free");
     for (const face of UV_FACES) {
       assert.deepStrictEqual(
         stored.rectFor(face),
         region.rectFor("front"),
-        `${face} must not move when uncollapsing`
+        `${face} must not move when freeing`
       );
     }
   });
 
-  test("uncollapsing a region that moved while collapsed restarts on its rect", () => {
+  test("freeing a region that moved while stacked restarts on its rect", () => {
     const map = makeMap();
     const region = map.create({ width: 4, height: 4 });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
     map.move(region.id, { x: 24, y: 24, width: 4, height: 4 }, "top");
-    map.collapse(region.id);
+    map.setState(region.id, "stacked");
     map.move(region.id, { x: 12, y: 12, width: 4, height: 4 });
 
-    assert.ok(map.uncollapse(region.id));
+    assert.ok(map.setState(region.id, "free"));
 
     const stored = map.get(region.id)!;
     for (const face of UV_FACES) {
       assert.deepStrictEqual(
         stored.rectFor(face),
         { x: 12, y: 12, width: 4, height: 4 },
-        `${face} must not carry its pre-collapse offset`
+        `${face} must not carry its pre-stack offset`
       );
     }
   });
 
-  test("uncollapse emits region-state-changed carrying the previous region", () => {
+  test("free emits region-state-changed carrying the previous region", () => {
     const map = makeMap();
     const region = map.create({ width: 4, height: 4 });
     const events: EventPayload<"region-state-changed">[] = [];
     map.on("region-state-changed", (e) => events.push(e));
 
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
 
     assert.strictEqual(events.length, 1);
     assert.strictEqual(events[0].region, map.get(region.id));
     assert.deepStrictEqual(events[0].previous, region.toJSON());
   });
 
-  test("collapse uses the requested face as the shared rectangle", () => {
+  test("stack uses the requested face as the shared rectangle", () => {
     const map = makeMap();
     const region = map.create({ width: 4, height: 4 });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
     map.move(region.id, { x: 12, y: 12, width: 4, height: 4 }, "top");
 
-    assert.ok(map.collapse(region.id, "top"));
+    assert.ok(map.setState(region.id, "stacked", "top"));
 
     const stored = map.get(region.id)!;
-    assert.strictEqual(stored.state, "collapsed");
+    assert.strictEqual(stored.state, "stacked");
     assert.deepStrictEqual(stored.rectFor("front"), { x: 12, y: 12, width: 4, height: 4 });
   });
 
-  test("collapse defaults to the front face", () => {
+  test("stack defaults to the front face", () => {
     const map = makeMap();
     const region = map.create({ width: 4, height: 4 });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
     map.move(region.id, { x: 12, y: 12, width: 4, height: 4 }, "top");
 
-    map.collapse(region.id);
+    map.setState(region.id, "stacked");
 
     assert.deepStrictEqual(
       map.get(region.id)!.rectFor("front"),
@@ -558,27 +563,27 @@ describe("UVMap — uncollapse / collapse", () => {
     const map = makeMap();
     const region = map.create({ width: 4, height: 4 });
 
-    assert.ok(!map.uncollapse("no-such"));
-    assert.ok(!map.collapse(region.id), "already collapsed");
-    assert.ok(map.uncollapse(region.id));
-    assert.ok(!map.uncollapse(region.id), "already uncollapsed");
+    assert.ok(!map.setState("no-such", "free"));
+    assert.ok(!map.setState(region.id, "stacked"), "already stacked");
+    assert.ok(map.setState(region.id, "free"));
+    assert.ok(!map.setState(region.id, "free"), "already free");
   });
 
   test("restoreState puts a whole region back without a create/delete cycle", () => {
     const map = makeMap();
     const region = map.create({ width: 4, height: 4 });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
     map.move(region.id, { x: 12, y: 12, width: 4, height: 4 }, "top");
     const before = map.get(region.id)!.toJSON();
 
-    map.collapse(region.id);
+    map.setState(region.id, "stacked");
     const created: string[] = [];
     map.on("region-created", (e) => created.push(e.region.id));
 
     assert.ok(map.restoreState(before));
 
     const stored = map.get(region.id)!;
-    assert.strictEqual(stored.state, "uncollapsed");
+    assert.strictEqual(stored.state, "free");
     assert.deepStrictEqual(
       stored.rectFor("top"),
       { x: 12, y: 12, width: 4, height: 4 },
@@ -592,6 +597,7 @@ describe("UVMap — uncollapse / collapse", () => {
 
     assert.ok(
       !map.restoreState({
+        state: "stacked",
         id: "no-such",
         color: "#000",
         rect: { x: 0, y: 0, width: 1, height: 1 }
@@ -601,7 +607,7 @@ describe("UVMap — uncollapse / collapse", () => {
 });
 
 describe("UVMap — selectedFace", () => {
-  test("stays null for a collapsed region", () => {
+  test("stays null for a stacked region", () => {
     const map = makeMap();
     const region = map.create({ width: 4, height: 4 });
 
@@ -610,20 +616,20 @@ describe("UVMap — selectedFace", () => {
     assert.strictEqual(map.selectedFace, null);
   });
 
-  test("defaults to front when an uncollapsed region is selected without a face", () => {
+  test("defaults to front when an free region is selected without a face", () => {
     const map = makeMap();
     const region = map.create({ width: 4, height: 4 });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
 
     map.select(region.id);
 
     assert.strictEqual(map.selectedFace, "front");
   });
 
-  test("keeps the requested face for an uncollapsed region", () => {
+  test("keeps the requested face for an free region", () => {
     const map = makeMap();
     const region = map.create({ width: 4, height: 4 });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
 
     map.select(region.id, "bottom");
 
@@ -656,26 +662,26 @@ describe("UVMap — selectedFace", () => {
     assert.strictEqual(map.selectedFace, "top");
   });
 
-  test("is renormalized when the selected region collapses", () => {
+  test("is renormalized when the selected region stacks", () => {
     const map = makeMap();
     const region = map.create({ width: 4, height: 4 });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
     map.select(region.id, "bottom");
 
-    map.collapse(region.id);
+    map.setState(region.id, "stacked");
 
     assert.strictEqual(map.selectedFace, null);
   });
 
-  test("emits selection-changed when collapsing clears the face", () => {
+  test("emits selection-changed when stacking clears the face", () => {
     const map = makeMap();
     const region = map.create({ width: 4, height: 4 });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
     map.select(region.id, "bottom");
     const events: EventPayload<"selection-changed">[] = [];
     map.on("selection-changed", (e) => events.push(e));
 
-    map.collapse(region.id);
+    map.setState(region.id, "stacked");
 
     assert.deepStrictEqual(events, [
       { selectedRegionId: region.id, selectedFace: null }
@@ -685,7 +691,7 @@ describe("UVMap — selectedFace", () => {
   test("emits selection-changed when the face alone changes", () => {
     const map = makeMap();
     const region = map.create({ width: 4, height: 4 });
-    map.uncollapse(region.id);
+    map.setState(region.id, "free");
     map.select(region.id, "front");
     const events: EventPayload<"selection-changed">[] = [];
     map.on("selection-changed", (e) => events.push(e));

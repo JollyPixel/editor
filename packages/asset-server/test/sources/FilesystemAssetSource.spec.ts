@@ -125,6 +125,48 @@ describe("FilesystemAssetSource — resolve", () => {
   });
 });
 
+describe("FilesystemAssetSource — missing root", () => {
+  test("lists nothing when the root does not exist", async() => {
+    await using workspace = await tempWorkspace();
+    const source = new FilesystemAssetSource(
+      path.join(workspace.root, "assets")
+    );
+
+    assert.deepEqual(await source.list(), []);
+  });
+
+  test("reads reject, then a write creates the root", async() => {
+    await using workspace = await tempWorkspace();
+    const root = path.join(workspace.root, "assets");
+    const source = new FilesystemAssetSource(root);
+
+    await assert.rejects(
+      () => source.read("sprite.png"),
+      { code: "ENOENT" }
+    );
+
+    await source.write("sprite.png", bytes("x"));
+
+    assert.strictEqual(
+      text(await source.read("sprite.png")),
+      "x"
+    );
+    assert.deepEqual(await source.list(), ["sprite.png"]);
+  });
+
+  test("still refuses a traversal out of a root created later", async() => {
+    await using workspace = await tempWorkspace();
+    const source = new FilesystemAssetSource(
+      path.join(workspace.root, "assets")
+    );
+
+    await assert.rejects(
+      () => source.write("../planted.txt", bytes("x")),
+      { name: "AssetPathEscapeError" }
+    );
+  });
+});
+
 describe("FilesystemAssetSource — containment", () => {
   test("refuses to read through a symlink leaving the root", async() => {
     await using workspace = await tempWorkspace();
