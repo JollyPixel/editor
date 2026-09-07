@@ -11,7 +11,10 @@ export const PRESENCE_EXAMPLE: GalleryExample = {
       title: "Session",
       container: host
     });
-    const presence = pane.addPresence({ max: 2 });
+    const presence = pane.addPresence({
+      max: 2,
+      selectable: true
+    });
     presence.update([
       {
         clientId: "ada",
@@ -31,6 +34,18 @@ export const PRESENCE_EXAMPLE: GalleryExample = {
       }
     ]);
 
-    return () => pane.dispose();
+    const selection = { peer: "none" };
+    const monitor = pane.addMonitor(selection, "peer", {
+      label: "Selected"
+    });
+    const unsubscribe = presence.onSelect((clientId) => {
+      selection.peer = clientId;
+      monitor.refresh();
+    });
+
+    return () => {
+      unsubscribe();
+      pane.dispose();
+    };
   }
 };

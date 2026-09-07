@@ -67,6 +67,8 @@ export class EditorScene extends Systems.Scene {
   #identity: EditorIdentity | undefined;
   #voxelSyncClient: VoxelSyncClient | undefined;
   #peerRoster: PeerRoster | undefined;
+  #peerFrustums: PeerFrustums | undefined;
+  #freeFlyCamera: FreeFlyCamera | undefined;
   #viewFocus: ViewFocus;
   #handles = Promise.withResolvers<EditorSceneHandles>();
   #subscriptions: Array<() => void> = [];
@@ -122,6 +124,7 @@ export class EditorScene extends Systems.Scene {
       .addComponentAndGet(FreeFlyCamera, {
         position: { x: 8, y: 12, z: 32 }
       });
+    this.#freeFlyCamera = freeFlyCamera;
     this.#subscriptions.push(
       this.editorState.selection.watch("gizmoDraggingChange", (dragging) => {
         freeFlyCamera.enabled = !dragging;
@@ -240,8 +243,8 @@ export class EditorScene extends Systems.Scene {
         peerBrushes.publishLocalCursor(cursor);
       };
 
-      world.createActor("peer-frustums")
-        .addComponent(PeerFrustums, {
+      this.#peerFrustums = world.createActor("peer-frustums")
+        .addComponentAndGet(PeerFrustums, {
           room: this.#voxelRoom,
           camera: freeFlyCamera.camera
         });
@@ -270,6 +273,19 @@ export class EditorScene extends Systems.Scene {
       engine,
       gridRenderer: this.gridRenderer
     });
+  }
+
+  teleportToPeer(
+    clientId: string
+  ): boolean {
+    const pose = this.#peerFrustums?.poseOf(clientId);
+    if (pose === undefined || this.#freeFlyCamera === undefined) {
+      return false;
+    }
+
+    this.#freeFlyCamera.teleport(pose);
+
+    return true;
   }
 
   loadWorld(
@@ -304,6 +320,8 @@ export class EditorScene extends Systems.Scene {
     this.#voxelSyncClient = undefined;
     this.#peerRoster?.dispose();
     this.#peerRoster = undefined;
+    this.#peerFrustums = undefined;
+    this.#freeFlyCamera = undefined;
   }
 
   #registerDefaultBlocks(): void {

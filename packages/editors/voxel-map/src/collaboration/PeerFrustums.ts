@@ -5,7 +5,10 @@ import {
   ActorComponent
 } from "@jolly-pixel/engine";
 import type * as network from "@jolly-pixel/network";
-import { PeerFrustumSync } from "@jolly-pixel/three/network";
+import {
+  PeerFrustumSync,
+  type PeerFrustumPose
+} from "@jolly-pixel/three/network";
 import type {
   VoxelNetworkCommand,
   VoxelServerMessage
@@ -16,6 +19,10 @@ import {
   peerColor,
   readUsername
 } from "./identity.ts";
+
+// CONSTANTS
+const kHideWithin = 1.5;
+const kFadeWithin = 5;
 
 export interface PeerFrustumsOptions {
   room: network.Room<
@@ -47,6 +54,8 @@ export class PeerFrustums extends ActorComponent {
       parent: this.actor.world.sceneManager.getSource(),
       label: (_clientId, identity) => readUsername(identity),
       color: (clientId, identity) => peerColor(clientId, identity),
+      hideWithin: kHideWithin,
+      fadeWithin: kFadeWithin,
       frustum: {
         showNameBox: true
       }
@@ -55,6 +64,12 @@ export class PeerFrustums extends ActorComponent {
 
   awake(): void {
     this.#sync.attach(this.#camera);
+  }
+
+  poseOf(
+    clientId: string
+  ): PeerFrustumPose | undefined {
+    return this.#sync.poseOf(clientId);
   }
 
   update(): void {

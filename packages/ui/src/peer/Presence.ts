@@ -10,19 +10,16 @@ import {
 
 // Import Internal Dependencies
 import { presenceStyles } from "./Presence.styles.ts";
-import type { CollaboratorPresence } from "./types.ts";
+import { emitPeerEvent } from "./events.ts";
 import { hiddenStyles } from "../theme/styles/hiddenStyles.ts";
+import type { CollaboratorPresence } from "./types.ts";
 
 export interface PresencePeer extends CollaboratorPresence {
-  /** Marks the local peer. At most one entry should set this. */
   self?: boolean;
 }
 
 /**
  * A read-only view of a collaboration snapshot.
- *
- * The host owns transport, identity, names, and colors. Assigning peers
- * copies the iterable so later collection mutations do not change this view.
  */
 @customElement("jolly-presence")
 export class PresenceElement extends LitElement {
@@ -32,6 +29,10 @@ export class PresenceElement extends LitElement {
     },
     max: {
       type: Number
+    },
+    selectable: {
+      type: Boolean,
+      reflect: true
     }
   };
 
@@ -42,6 +43,7 @@ export class PresenceElement extends LitElement {
 
   #peers: PresencePeer[] = [];
   #max = Infinity;
+  #selectable = false;
 
   get peers(): ReadonlyArray<PresencePeer> {
     return [...this.#peers];
@@ -55,10 +57,6 @@ export class PresenceElement extends LitElement {
     this.requestUpdate("peers", previous);
   }
 
-  /**
-   * Maximum number of named peers to show. Infinity leaves the list uncapped.
-   * Finite values floor and clamp at zero.
-   */
   get max(): number {
     return this.#max;
   }
@@ -76,6 +74,23 @@ export class PresenceElement extends LitElement {
     this.requestUpdate("max", previous);
   }
 
+  get selectable(): boolean {
+    return this.#selectable;
+  }
+
+  set selectable(
+    value: boolean
+  ) {
+    const next = Boolean(value);
+    if (next === this.#selectable) {
+      return;
+    }
+
+    const previous = this.#selectable;
+    this.#selectable = next;
+    this.requestUpdate("selectable", previous);
+  }
+
   override render(): TemplateResult {
     const visiblePeers = this.#visiblePeers();
     const overflow = this.#peers.length - visiblePeers.length;
@@ -85,20 +100,7 @@ export class PresenceElement extends LitElement {
         ${formatConnectionCount(this.#peers.length)}
       </div>
       <ul class="list" part="list">
-        ${visiblePeers.map((peer) => html`
-          <li class="peer" part="peer">
-            <span
-              class="swatch"
-              part="swatch"
-              role="img"
-              aria-label=${`${peer.displayName}'s color`}
-              style=${`background-color: ${peer.color}`}
-            ></span>
-            <span class=${peer.self ? "self" : ""}>
-              ${peer.displayName}${peer.self ? " (you)" : ""}
-            </span>
-          </li>
-        `)}
+        ${visiblePeers.map((peer) => this.#renderPeer(peer))}
         ${overflow > 0
           ? html`
             <li class="overflow" part="overflow">+${overflow} more</li>
@@ -106,6 +108,49 @@ export class PresenceElement extends LitElement {
           : ""}
       </ul>
     `;
+  }
+
+  #renderPeer(
+    peer: PresencePeer
+  ): TemplateResult {
+    const body = html`
+      <span
+        class="swatch"
+        part="swatch"
+        role="img"
+        aria-label=${`${peer.displayName}'s color`}
+        style=${`background-color: ${peer.color}`}
+      ></span>
+      <span class=${peer.self ? "self" : ""}>
+        ${peer.displayName}${peer.self ? " (you)" : ""}
+      </span>
+    `;
+
+    if (!this.#selectable || peer.self) {
+      return html`
+        <li class="peer" part="peer">${body}</li>
+      `;
+    }
+
+    return html`
+      <li class="peer" part="peer">
+        <button
+          class="select"
+          part="peer-button"
+          type="button"
+          aria-label=${`Select ${peer.displayName}`}
+          @click=${() => this.#select(peer)}
+        >${body}</button>
+      </li>
+    `;
+  }
+
+  #select(
+    peer: PresencePeer
+  ): void {
+    emitPeerEvent(this, "jolly-peer-select", {
+      clientId: peer.clientId
+    });
   }
 
   #visiblePeers(): PresencePeer[] {

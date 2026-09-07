@@ -95,6 +95,10 @@ export {
   type PresenceSource
 } from "./peer/PresenceSource.ts";
 export { toPresencePeers } from "./peer/toPresencePeers.ts";
+export type {
+  JollyPeerSelectDetail,
+  PeerEventMap
+} from "./peer/events.ts";
 
 // Icons
 export {

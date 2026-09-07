@@ -100,6 +100,7 @@ export class PeerFrustum extends THREE.LineSegments<
 
   #color: THREE.ColorRepresentation;
   #showNameBox: boolean;
+  #opacity = 1;
 
   constructor(
     options: PeerFrustumOptions = {}
@@ -155,9 +156,26 @@ export class PeerFrustum extends THREE.LineSegments<
     }
   }
 
-  /**
-   * `undefined` until a name is provided to the constructor or this setter.
-   */
+  get opacity(): number {
+    return this.#opacity;
+  }
+
+  set opacity(
+    opacity: number
+  ) {
+    const next = Math.min(1, Math.max(0, opacity));
+    if (next === this.#opacity) {
+      return;
+    }
+
+    this.#opacity = next;
+    this.material.opacity = next;
+    this.material.transparent = next < 1;
+    if (this.label !== null) {
+      this.label.opacity = next;
+    }
+  }
+
   get displayName(): string | undefined {
     return this.label?.displayName;
   }
@@ -171,6 +189,7 @@ export class PeerFrustum extends THREE.LineSegments<
         color: this.#color,
         showNameBox: this.#showNameBox
       });
+      this.label.opacity = this.#opacity;
       this.add(this.label);
 
       return;

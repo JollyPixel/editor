@@ -26,6 +26,22 @@ test.describe("Presence", () => {
       .toHaveAttribute("aria-label", "Ada's color");
   });
 
+  test("raises a selection for a remote peer, never for the local one", async({ page }) => {
+    await gotoGallery(page, {
+      example: "peer/presence",
+      chrome: "off"
+    });
+
+    const presence = page.locator("jolly-presence");
+
+    await expect(presence.locator("[part=peer-button]"))
+      .toHaveText(["Ada"]);
+
+    await presence.locator("[part=peer-button]").click();
+    await expect(page.locator("jolly-monitor"))
+      .toContainText("ada");
+  });
+
   test("keeps the local peer text readable in the dark theme", async({ page }) => {
     await gotoGallery(page, {
       example: "peer/presence",

@@ -116,6 +116,9 @@ if (sidebar) {
   sidebar.viewFocus = viewFocus;
   sidebar.textureRoom = textureRoom;
   sidebar.onLoadWorld = (data) => editorScene.loadWorld(data);
+  sidebar.onTeleportToPeer = (clientId) => {
+    editorScene.teleportToPeer(clientId);
+  };
   sidebar.addEventListener("canvas-hover-change", (event) => {
     const { hovering } = event.detail;
     world.input.keyboard.enabled = !hovering;

@@ -3,6 +3,7 @@ import {
   PresenceElement,
   type PresencePeer
 } from "../peer/Presence.ts";
+import type { JollyPeerSelectDetail } from "../peer/events.ts";
 
 export interface PresenceOptions {
   /**
@@ -10,6 +11,11 @@ export interface PresenceOptions {
    * @default Infinity
    */
   max?: number;
+  /**
+   * Renders remote peers as buttons raising a selection intent.
+   * @default false
+   */
+  selectable?: boolean;
 }
 
 export class Presence {
@@ -20,6 +26,7 @@ export class Presence {
   ) {
     this.element = new PresenceElement();
     this.element.max = options.max ?? Infinity;
+    this.element.selectable = options.selectable ?? false;
   }
 
   get max(): number {
@@ -30,6 +37,36 @@ export class Presence {
     value: number
   ) {
     this.element.max = value;
+  }
+
+  get selectable(): boolean {
+    return this.element.selectable;
+  }
+
+  set selectable(
+    value: boolean
+  ) {
+    this.element.selectable = value;
+  }
+
+  onSelect(
+    handler: (clientId: string) => void
+  ): () => void {
+    function listener(
+      event: CustomEvent<JollyPeerSelectDetail>
+    ): void {
+      handler(event.detail.clientId);
+    }
+
+    this.element.addEventListener(
+      "jolly-peer-select",
+      listener
+    );
+
+    return () => this.element.removeEventListener(
+      "jolly-peer-select",
+      listener
+    );
   }
 
   update(
