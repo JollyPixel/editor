@@ -66,6 +66,17 @@ export class VoxelCommandArbiter {
       return voxelKey(command.layerName, command.metadata.position);
     }
 
+    if (command.action === "object-added") {
+      return `object:${command.metadata.object.id}`;
+    }
+    if (
+      command.action === "object-removed" ||
+      command.action === "object-updated" ||
+      command.action === "object-moved"
+    ) {
+      return `object:${command.metadata.objectId}`;
+    }
+
     if (command.action === "block-defined") {
       return `block:${command.block.id}`;
     }

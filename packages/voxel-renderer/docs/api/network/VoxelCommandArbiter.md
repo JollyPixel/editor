@@ -36,7 +36,12 @@ on its own: `admit()` returns a copy narrowed to the entries that win, so one
 contested cell never drops the rest of a brush stroke. It returns the command
 itself when every entry wins.
 
-`key()` returns `"<layer>:<x>,<y>,<z>"` for single voxel placement and removal.
-Other actions return `null` and therefore do not conflict by position.
+`key()` returns `"<layer>:<x>,<y>,<z>"` for single voxel placement and removal,
+`"block:<id>"` for block definitions, and `"object:<id>"` for every object
+command, including `"object-moved"`. Objects are keyed by id alone rather than
+by layer, so a move that spans two layers still conflicts with a concurrent edit
+of the same object. Layer lifecycle actions return `null` and do not conflict;
+they converge through the server's command ordering instead.
+
 `keys()` returns one key per cell, so a bulk command reports every cell it
 touches.

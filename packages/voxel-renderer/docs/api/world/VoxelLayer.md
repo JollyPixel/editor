@@ -179,11 +179,19 @@ Creates a detached copy of the layer, including its voxels and properties. Use
 `VoxelWorld.cloneLayer()` or `VoxelEngine.cloneLayer()` when the clone should be
 added to a world.
 
-### mergeFrom(source: VoxelLayer): void
+The copy owns its own chunks, offset and properties; editing it never reaches
+the source. `options.chunkSize` is ignored, since the copied chunks are built
+for the source's chunk size.
 
-Copies every voxel from `source` into this layer. Source voxels overwrite target
-voxels at the same world position. Prefer the world or engine merge method when
-the operation must update world state or emit hooks.
+### mergeFrom(source: VoxelLayer, options?: VoxelLayerMergeOptions): void
+
+Copies every voxel from `source` into this layer, resolved in world space so
+layer offsets are honoured. Prefer the world or engine merge method when the
+operation must update world state or emit hooks.
+
+`options.overwrite` defaults to `true`, letting source voxels replace target
+voxels at the same world position. Pass `false` to fill only the positions this
+layer leaves empty.
 
 ### drainPendingRemovals(): IterableIterator<VoxelChunk>
 

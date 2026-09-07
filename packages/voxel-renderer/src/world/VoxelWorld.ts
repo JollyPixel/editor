@@ -37,6 +37,7 @@ import type {
   VoxelLayerHookListener
 } from "../hooks.ts";
 import { dispatchCommand } from "./dispatchCommand.ts";
+import type { VoxelLogger } from "../utils/logger.ts";
 
 // CONSTANTS
 let kLayerIdCounter = 0;
@@ -207,15 +208,18 @@ export class VoxelWorld {
 
     const [layer] = this.#layers.splice(fromIndex, 1);
     this.#layers.splice(toIndex, 0, layer);
-
-    const lastIndex = this.#layers.length - 1;
-    this.#layers.forEach((entry, index) => {
-      entry.order = lastIndex - index;
-    });
-
+    this.#renumberLayers();
     this.#markAllLayersDirty();
 
     return true;
+  }
+
+  #renumberLayers(): void {
+    const lastIndex = this.#layers.length - 1;
+
+    this.#layers.forEach((entry, index) => {
+      entry.order = lastIndex - index;
+    });
   }
 
   setLayerVisible(
@@ -323,22 +327,50 @@ export class VoxelWorld {
 
   cloneLayer(
     name: string,
-    options: PartialExcept<VoxelLayerOptions, "name">
+    options: Partial<VoxelLayerOptions> = {}
   ): VoxelLayer | undefined {
-    const layer = this.getLayer(name);
-    if (!layer) {
+    const index = this.#layers.findIndex(
+      (layer) => layer.name === name
+    );
+    if (index === -1) {
       return undefined;
     }
 
-    const clone = layer.clone({ ...options, id: `${layer.id}_${kLayerIdCounter++}` });
-    this.#layers.push(clone);
+    const layer = this.#layers[index];
+    const resolved: PartialExcept<VoxelLayerOptions, "name"> = {
+      ...options,
+      name: this.uniqueLayerName(options.name ?? layer.name)
+    };
+    const clone = layer.clone({
+      ...resolved,
+      id: `${layer.id}_${kLayerIdCounter++}`
+    });
+
+    this.#layers.splice(index, 0, clone);
+    this.#renumberLayers();
     this.#emit({
       action: "cloned",
       layerName: name,
-      metadata: { options }
+      metadata: { options: resolved }
     });
 
     return clone;
+  }
+
+  uniqueLayerName(
+    base: string
+  ): string {
+    if (this.getLayer(base) === undefined) {
+      return base;
+    }
+
+    const root = base.replace(/ \(\d+\)$/, "");
+    for (let index = 1; ; index++) {
+      const candidate = `${root} (${index})`;
+      if (this.getLayer(candidate) === undefined) {
+        return candidate;
+      }
+    }
   }
 
   mergeLayer(
@@ -347,12 +379,23 @@ export class VoxelWorld {
   ): boolean {
     const source = this.getLayer(sourceName);
     const target = this.getLayer(targetName);
-    if (!source || !target) {
+    if (!source || !target || source === target) {
       return false;
     }
 
-    target.mergeFrom(source);
-    this.#markLayerDirty(target);
+    target.mergeFrom(source, {
+      overwrite: source.order > target.order
+    });
+    target.properties = {
+      ...structuredClone(source.properties),
+      ...target.properties
+    };
+
+    const index = this.#layers.indexOf(source);
+    this.#layersToRemove.push(source);
+    this.#layers.splice(index, 1);
+    this.#renumberLayers();
+    this.#markAllLayersDirty();
     this.#emit({
       action: "merged",
       layerName: sourceName,
@@ -374,7 +417,7 @@ export class VoxelWorld {
     const target = sorted[0];
 
     for (let i = 1; i < sorted.length; i++) {
-      target.mergeFrom(sorted[i]);
+      target.mergeFrom(sorted[i], { overwrite: true });
     }
 
     for (let i = 1; i < sorted.length; i++) {
@@ -498,6 +541,39 @@ export class VoxelWorld {
       action: "object-removed",
       layerName,
       metadata: { objectId }
+    });
+
+    return true;
+  }
+
+  moveObjectToLayer(
+    fromLayerName: string,
+    objectId: string,
+    toLayerName: string
+  ): boolean {
+    const from = this.#objectLayers.get(fromLayerName);
+    const to = this.#objectLayers.get(toLayerName);
+    if (!from || !to || from === to) {
+      return false;
+    }
+
+    const index = from.objects.findIndex(
+      (object) => object.id === objectId
+    );
+    if (index === -1) {
+      return false;
+    }
+
+    const [object] = from.objects.splice(index, 1);
+    to.objects.push(object);
+    this.#emit({
+      action: "object-moved",
+      layerName: fromLayerName,
+      metadata: {
+        objectId,
+        fromLayerName,
+        toLayerName
+      }
     });
 
     return true;
@@ -733,9 +809,10 @@ export class VoxelWorld {
   }
 
   applyRemoteCommand(
-    cmd: VoxelLayerHookEvent
+    cmd: VoxelLayerHookEvent,
+    logger?: VoxelLogger
   ): void {
-    this.silently(() => dispatchCommand(this, cmd));
+    this.silently(() => dispatchCommand(this, cmd, logger));
   }
 
   silently<T>(

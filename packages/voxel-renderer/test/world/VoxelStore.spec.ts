@@ -235,3 +235,89 @@ describe("VoxelStore clear", () => {
     assert.equal(store.get(7), 3);
   });
 });
+
+describe("VoxelStore copyFrom", () => {
+  it("reproduces every entry of the source", () => {
+    const source = new VoxelStore();
+    for (let key = 0; key < 40; key++) {
+      source.set(key, key + 100);
+    }
+
+    const target = new VoxelStore();
+    target.copyFrom(source);
+
+    assert.equal(target.size, source.size);
+    assert.equal(target.capacity, source.capacity);
+    assert.deepEqual(collect(target), collect(source));
+    for (let key = 0; key < 40; key++) {
+      assert.equal(target.get(key), key + 100);
+    }
+  });
+
+  it("drops whatever the target held before", () => {
+    const source = new VoxelStore();
+    source.set(1, 11);
+
+    const target = new VoxelStore();
+    target.set(2, 22);
+    target.set(3, 33);
+    target.copyFrom(source);
+
+    assert.equal(target.size, 1);
+    assert.equal(target.get(1), 11);
+    assert.equal(target.get(2), VOXEL_ABSENT);
+    assert.equal(target.get(3), VOXEL_ABSENT);
+  });
+
+  it("shrinks a larger target back to the source capacity", () => {
+    const source = new VoxelStore();
+    source.set(1, 11);
+
+    const target = new VoxelStore();
+    for (let key = 0; key < 40; key++) {
+      target.set(key, key);
+    }
+    assert.ok(target.capacity > source.capacity);
+
+    target.copyFrom(source);
+
+    assert.equal(target.capacity, source.capacity);
+    assert.equal(target.size, 1);
+    assert.equal(target.get(1), 11);
+  });
+
+  it("leaves the copy writable and independent of the source", () => {
+    const source = new VoxelStore();
+    source.set(1, 11);
+
+    const target = new VoxelStore();
+    target.copyFrom(source);
+    for (let key = 2; key < 60; key++) {
+      target.set(key, key);
+    }
+    target.delete(1);
+
+    assert.equal(source.size, 1);
+    assert.equal(source.get(1), 11);
+    assert.equal(target.get(1), VOXEL_ABSENT);
+    assert.equal(target.get(59), 59);
+  });
+
+  it("keeps deletion working after a copy, probe clusters intact", () => {
+    const source = new VoxelStore();
+    for (let key = 0; key < 12; key++) {
+      source.set(key, key + 1);
+    }
+
+    const target = new VoxelStore();
+    target.copyFrom(source);
+    for (let key = 0; key < 12; key += 2) {
+      assert.equal(target.delete(key), true);
+    }
+
+    assert.equal(target.size, 6);
+    for (let key = 1; key < 12; key += 2) {
+      assert.equal(target.get(key), key + 1);
+    }
+  });
+});

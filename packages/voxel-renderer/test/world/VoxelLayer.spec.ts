@@ -317,6 +317,97 @@ describe("VoxelLayer clone", () => {
     const clone = layer.clone();
     assert.equal(clone.opacity, 0.3);
   });
+
+  it("carries the voxels over", () => {
+    const layer = makeLayer({ chunkSize: 4 });
+    const entry = makeVoxelEntry(6, 1);
+    layer.setVoxelAt({ x: 1, y: 2, z: 3 }, entry);
+    layer.setVoxelAt({ x: 9, y: 0, z: 0 }, makeVoxelEntry(2, 0));
+
+    const clone = layer.clone();
+
+    assert.equal(clone.chunkCount, layer.chunkCount);
+    assert.deepEqual(clone.getVoxelAt({ x: 1, y: 2, z: 3 }), entry);
+    assert.deepEqual(clone.toJSON().voxels, layer.toJSON().voxels);
+  });
+
+  it("shares no voxel storage with the source", () => {
+    const layer = makeLayer({ chunkSize: 4 });
+    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(1, 0));
+
+    const clone = layer.clone();
+    clone.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(5, 0));
+    clone.removeVoxelAt({ x: 0, y: 0, z: 0 });
+    clone.setVoxelAt({ x: 20, y: 0, z: 0 }, makeVoxelEntry(3, 0));
+
+    assert.deepEqual(
+      layer.getVoxelAt({ x: 0, y: 0, z: 0 }),
+      makeVoxelEntry(1, 0)
+    );
+    assert.equal(layer.getVoxelAt({ x: 20, y: 0, z: 0 }), undefined);
+  });
+
+  it("keeps the source chunk size whatever the overrides ask for", () => {
+    const layer = makeLayer({ chunkSize: 4 });
+    layer.setVoxelAt({ x: 5, y: 0, z: 0 }, makeVoxelEntry());
+
+    const clone = layer.clone({ chunkSize: 16 });
+
+    assert.deepEqual(
+      clone.getVoxelAt({ x: 5, y: 0, z: 0 }),
+      makeVoxelEntry()
+    );
+  });
+
+  it("copies offset and properties rather than sharing them", () => {
+    const layer = makeLayer({
+      chunkSize: 4,
+      offset: { x: 1, y: 2, z: 3 },
+      properties: { biome: "forest" }
+    });
+
+    const clone = layer.clone();
+    clone.offset.x = 99;
+    clone.properties.biome = "desert";
+
+    assert.deepEqual(layer.offset, { x: 1, y: 2, z: 3 });
+    assert.deepEqual(layer.properties, { biome: "forest" });
+  });
+});
+
+describe("VoxelLayer mergeFrom overwrite", () => {
+  it("replaces overlapping voxels by default", () => {
+    const source = makeLayer({ id: "src", name: "Source" });
+    const target = makeLayer({ id: "tgt", name: "Target" });
+    target.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(1, 0));
+    source.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(9, 0));
+
+    target.mergeFrom(source);
+
+    assert.deepEqual(
+      target.getVoxelAt({ x: 0, y: 0, z: 0 }),
+      makeVoxelEntry(9, 0)
+    );
+  });
+
+  it("keeps the target's voxels when overwrite is off", () => {
+    const source = makeLayer({ id: "src", name: "Source" });
+    const target = makeLayer({ id: "tgt", name: "Target" });
+    target.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(1, 0));
+    source.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(9, 0));
+    source.setVoxelAt({ x: 1, y: 0, z: 0 }, makeVoxelEntry(8, 0));
+
+    target.mergeFrom(source, { overwrite: false });
+
+    assert.deepEqual(
+      target.getVoxelAt({ x: 0, y: 0, z: 0 }),
+      makeVoxelEntry(1, 0)
+    );
+    assert.deepEqual(
+      target.getVoxelAt({ x: 1, y: 0, z: 0 }),
+      makeVoxelEntry(8, 0)
+    );
+  });
 });
 
 describe("VoxelLayer mergeFrom", () => {

@@ -8,6 +8,7 @@ import { VOXEL_LAYER_HOOK_ACTIONS, type VoxelLayerHookEvent } from "../../src/ho
 import type { VoxelObjectJSON } from "../../src/serialization/index.ts";
 import { makeVoxelEntry } from "../helpers/voxelEntry.ts";
 import { makeAddedCommand } from "../helpers/networkCommands.ts";
+import type { VoxelLogger } from "../../src/utils/logger.ts";
 
 function makeWorld() {
   return new VoxelWorld(4);
@@ -402,7 +403,7 @@ describe("VoxelWorld.applyRemoteCommand — exhaustiveness", () => {
   it("handles every action the hook union declares", () => {
     // Ties this check to the real source of truth instead of a hand-rolled
     // list, so a new/renamed action can't silently drop out of coverage.
-    assert.equal(VOXEL_LAYER_HOOK_ACTIONS.length, 18);
+    assert.equal(VOXEL_LAYER_HOOK_ACTIONS.length, 19);
 
     for (const action of VOXEL_LAYER_HOOK_ACTIONS) {
       const world = makeWorld();
@@ -466,6 +467,16 @@ function commandFor(
       return { action, layerName, metadata: { object: makeSpawnObject() } };
     case "object-removed":
       return { action, layerName, metadata: { objectId: "obj1" } };
+    case "object-moved":
+      return {
+        action,
+        layerName,
+        metadata: {
+          objectId: "obj1",
+          fromLayerName: layerName,
+          toLayerName: layerName
+        }
+      };
     case "object-updated":
       return {
         action,
@@ -475,4 +486,118 @@ function commandFor(
     default:
       return { action, layerName, metadata: {} };
   }
+}
+
+describe("VoxelWorld.applyRemoteCommand — object-moved", () => {
+  it("moves the object between object layers", () => {
+    const world = makeWorld();
+    world.addObjectLayer("From");
+    world.addObjectLayer("To");
+    world.addObjectToLayer("From", makeSpawnObject());
+
+    world.applyRemoteCommand({
+      action: "object-moved",
+      layerName: "From",
+      metadata: {
+        objectId: "obj1",
+        fromLayerName: "From",
+        toLayerName: "To"
+      }
+    });
+
+    assert.equal(world.getObjectLayer("From")?.objects.length, 0);
+    assert.equal(world.getObjectLayer("To")?.objects.length, 1);
+  });
+});
+
+describe("VoxelWorld.applyRemoteCommand — unknown layer", () => {
+  const voxelCommands: VoxelLayerHookEvent[] = [
+    {
+      action: "voxel-set",
+      layerName: "Gone",
+      metadata: {
+        position: { x: 0, y: 0, z: 0 },
+        blockId: 1,
+        rotation: 0,
+        flipX: false,
+        flipZ: false,
+        flipY: false
+      }
+    },
+    {
+      action: "voxels-set",
+      layerName: "Gone",
+      metadata: { entries: [{ position: { x: 0, y: 0, z: 0 }, blockId: 1 }] }
+    },
+    {
+      action: "voxel-removed",
+      layerName: "Gone",
+      metadata: { position: { x: 0, y: 0, z: 0 } }
+    },
+    {
+      action: "voxels-removed",
+      layerName: "Gone",
+      metadata: { entries: [{ position: { x: 0, y: 0, z: 0 } }] }
+    }
+  ];
+
+  for (const command of voxelCommands) {
+    it(`drops '${command.action}' instead of throwing`, () => {
+      const world = makeWorld();
+
+      assert.doesNotThrow(() => world.applyRemoteCommand(command));
+      assert.equal(world.getLayer("Gone"), undefined);
+    });
+  }
+
+  it("warns through the logger it is handed", () => {
+    const world = makeWorld();
+    const warnings: string[] = [];
+    const logger = makeLogger(warnings);
+
+    world.applyRemoteCommand(voxelCommands[0], logger);
+
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /dropped 'voxel-set' for unknown layer 'Gone'/);
+  });
+
+  it("stays quiet when the layer is known", () => {
+    const world = makeWorld();
+    world.addLayer("Gone");
+    const warnings: string[] = [];
+
+    world.applyRemoteCommand(voxelCommands[0], makeLogger(warnings));
+
+    assert.deepEqual(warnings, []);
+    assert.equal(
+      world.getLayer("Gone")?.getVoxelAt({ x: 0, y: 0, z: 0 })?.blockId,
+      1
+    );
+  });
+
+  it("leaves the layer lifecycle actions to their own guards", () => {
+    const world = makeWorld();
+    const warnings: string[] = [];
+    const logger = makeLogger(warnings);
+
+    assert.doesNotThrow(() => world.applyRemoteCommand({
+      action: "merged",
+      layerName: "Gone",
+      metadata: { targetLayerName: "AlsoGone" }
+    }, logger));
+    assert.deepEqual(warnings, []);
+  });
+});
+
+function makeLogger(
+  warnings: string[]
+): VoxelLogger {
+  const logger: VoxelLogger = {
+    child: () => logger,
+    debug: () => void 0,
+    warn: (msg) => void warnings.push(msg),
+    error: () => void 0
+  };
+
+  return logger;
 }

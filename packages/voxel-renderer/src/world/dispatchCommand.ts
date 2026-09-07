@@ -1,14 +1,36 @@
 // Import Internal Dependencies
-import type { VoxelLayerHookEvent } from "../hooks.ts";
+import type { VoxelLayerHookEvent, VoxelLayerHookAction } from "../hooks.ts";
+import type { VoxelLogger } from "../utils/logger.ts";
 import type { VoxelWorld } from "./VoxelWorld.ts";
+
+// CONSTANTS
+const kVoxelActions: readonly VoxelLayerHookAction[] = [
+  "voxel-set",
+  "voxel-removed",
+  "voxels-set",
+  "voxels-removed"
+];
 
 /**
  * Replays one hook event onto a world.
  */
 export function dispatchCommand(
   world: VoxelWorld,
-  cmd: VoxelLayerHookEvent
+  cmd: VoxelLayerHookEvent,
+  logger?: VoxelLogger
 ): void {
+  if (
+    kVoxelActions.includes(cmd.action) &&
+    world.getLayer(cmd.layerName) === undefined
+  ) {
+    logger?.warn(
+      `dispatchCommand: dropped '${cmd.action}' for unknown layer ` +
+      `'${cmd.layerName}'.`
+    );
+
+    return;
+  }
+
   switch (cmd.action) {
     case "added":
       world.addLayer(
@@ -131,6 +153,14 @@ export function dispatchCommand(
       world.removeObjectFromLayer(
         cmd.layerName,
         cmd.metadata.objectId
+      );
+      break;
+
+    case "object-moved":
+      world.moveObjectToLayer(
+        cmd.metadata.fromLayerName,
+        cmd.metadata.objectId,
+        cmd.metadata.toLayerName
       );
       break;
 

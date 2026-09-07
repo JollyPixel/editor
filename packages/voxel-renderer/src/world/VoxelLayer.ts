@@ -106,6 +106,10 @@ export interface VoxelLayerConfigurableOptions {
   properties?: Record<string, any>;
 }
 
+export interface VoxelLayerMergeOptions {
+  overwrite?: boolean;
+}
+
 export interface VoxelLayerOptions extends VoxelLayerConfigurableOptions {
   /** Unique layer identifier. */
   id: string;
@@ -530,16 +534,31 @@ export class VoxelLayer {
   clone(
     opts: Partial<VoxelLayerOptions> = {}
   ): VoxelLayer {
-    return new VoxelLayer({
-      chunkSize: this.#chunkSize,
-      ...this.toJSON(),
-      ...opts
+    const copy = new VoxelLayer({
+      id: this.id,
+      name: this.name,
+      order: this.order,
+      visible: this.#visible,
+      opacity: this.#opacity,
+      offset: this.offset,
+      properties: this.properties,
+      ...opts,
+      chunkSize: this.#chunkSize
     });
+
+    for (const [key, chunk] of this.#chunks) {
+      copy.#chunks.set(key, chunk.clone());
+    }
+
+    return copy;
   }
 
   mergeFrom(
-    source: VoxelLayer
+    source: VoxelLayer,
+    options: VoxelLayerMergeOptions = {}
   ): void {
+    const { overwrite = true } = options;
+
     for (const chunk of source.getChunks()) {
       const wx0 = chunk.cx * chunk.size + source.offset.x;
       const wy0 = chunk.cy * chunk.size + source.offset.y;
@@ -547,10 +566,20 @@ export class VoxelLayer {
 
       for (const [idx, packed] of chunk.packedEntries()) {
         const { lx, ly, lz } = chunk.fromLinearIndex(idx);
-        this.setPackedVoxelAt(
-          { x: wx0 + lx, y: wy0 + ly, z: wz0 + lz },
-          packed
-        );
+        const position = {
+          x: wx0 + lx,
+          y: wy0 + ly,
+          z: wz0 + lz
+        };
+
+        if (
+          !overwrite &&
+          this.getPackedVoxelAt(position) !== VOXEL_ABSENT
+        ) {
+          continue;
+        }
+
+        this.setPackedVoxelAt(position, packed);
       }
     }
   }

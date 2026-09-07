@@ -6,6 +6,14 @@ export interface VoxelLogger {
     msg: string,
     meta?: Record<string, unknown>
   ): void;
+  warn(
+    msg: string,
+    meta?: Record<string, unknown>
+  ): void;
+  error(
+    msg: string,
+    meta?: Record<string, unknown>
+  ): void;
 }
 
 export const NOOP_LOGGER: VoxelLogger = {
@@ -13,6 +21,12 @@ export const NOOP_LOGGER: VoxelLogger = {
     return NOOP_LOGGER;
   },
   debug() {
+    // Intentionally empty.
+  },
+  warn() {
+    // Intentionally empty.
+  },
+  error() {
     // Intentionally empty.
   }
 };

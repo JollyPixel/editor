@@ -167,6 +167,24 @@ export class VoxelStore {
     this.#size = 0;
   }
 
+  copyFrom(
+    source: VoxelStore
+  ): void {
+    const capacity = source.capacity;
+
+    if (this.#keys.length !== capacity) {
+      this.#keys = new Int32Array(capacity);
+      this.#values = new Uint32Array(capacity);
+      this.#mask = capacity - 1;
+      this.#shift = 32 - Math.log2(capacity);
+      this.#growAt = growThreshold(capacity);
+    }
+
+    this.#keys.set(source.keys);
+    this.#values.set(source.values);
+    this.#size = source.size;
+  }
+
   #grow(): void {
     const oldKeys = this.#keys;
     const oldValues = this.#values;

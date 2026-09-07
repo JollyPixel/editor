@@ -19,6 +19,7 @@ class VoxelStore {
   set(key: number, value: PackedVoxel): boolean;
   delete(key: number): boolean;
   clear(): void;
+  copyFrom(source: VoxelStore): void;
 }
 ```
 
@@ -30,6 +31,11 @@ when it inserts a new key and `false` when it replaces an existing value.
 
 The store grows at a three-quarter load factor. Deletion shifts the following
 probe cluster back instead of leaving tombstones.
+
+`copyFrom()` replaces this store's content with the source's, discarding
+whatever it held. Capacity is matched to the source, so the slots are copied
+verbatim and the probe clusters stay valid without rehashing. The copy owns its
+arrays and can be written to and grown independently.
 
 ## Direct iteration
 
