@@ -4,7 +4,7 @@ import {
   type Actor,
   ActorComponent
 } from "@jolly-pixel/engine";
-import { TransformControls } from "three/addons/controls/TransformControls.js";
+import { TranslationControls } from "@jolly-pixel/three";
 import type {
   VoxelWorld,
   VoxelLayerHookEvent
@@ -28,7 +28,7 @@ export class VoxelLayerGizmo extends ActorComponent {
   #camera: THREE.PerspectiveCamera;
   #selection: SelectionStore;
   #worldStore: WorldStore;
-  #controls: TransformControls | null = null;
+  #controls: TranslationControls | null = null;
   #pivot = new THREE.Object3D();
   #pivotOffset = new THREE.Vector3();
   #activeLayer: string | null = null;
@@ -50,25 +50,41 @@ export class VoxelLayerGizmo extends ActorComponent {
   }
 
   awake(): void {
-    const controls = new TransformControls(
+    const controls = new TranslationControls(
       this.#camera,
-      this.actor.world.renderer.canvas
+      this.actor.world.renderer.canvas,
+      {
+        space: "world",
+        snap: 1,
+        appearance: {
+          size: 0.05,
+          center: false,
+          directions: "positive",
+          handle: {
+            kind: "arrow"
+          },
+          outline: {
+            color: "#080b11"
+          }
+        }
+      }
     );
-    controls.setMode("translate");
-    controls.setSpace("world");
-    controls.setTranslationSnap(1);
     controls.addEventListener(
-      "dragging-changed",
-      this.#onDraggingChanged
+      "start",
+      this.#onDraggingStarted
     );
     controls.addEventListener(
-      "objectChange",
+      "change",
       this.#onObjectChange
+    );
+    controls.addEventListener(
+      "end",
+      this.#onDraggingEnded
     );
     this.#controls = controls;
 
     this.actor.addChildren(
-      controls.getHelper(),
+      controls.helper,
       this.#pivot
     );
     this.#subscriptions.push(
@@ -89,16 +105,21 @@ export class VoxelLayerGizmo extends ActorComponent {
     }
 
     this.#controls?.removeEventListener(
-      "dragging-changed",
-      this.#onDraggingChanged
+      "start",
+      this.#onDraggingStarted
     );
     this.#controls?.removeEventListener(
-      "objectChange",
+      "change",
       this.#onObjectChange
+    );
+    this.#controls?.removeEventListener(
+      "end",
+      this.#onDraggingEnded
     );
     this.#controls?.detach();
     this.#controls?.dispose();
     this.#controls = null;
+    this.#selection.gizmoDragging = false;
 
     super.destroy();
   }
@@ -155,10 +176,12 @@ export class VoxelLayerGizmo extends ActorComponent {
     this.#pivot.position.copy(center);
   }
 
-  readonly #onDraggingChanged = (
-    event: { value: unknown; }
-  ): void => {
-    this.#selection.gizmoDragging = event.value === true;
+  readonly #onDraggingStarted = (): void => {
+    this.#selection.gizmoDragging = true;
+  };
+
+  readonly #onDraggingEnded = (): void => {
+    this.#selection.gizmoDragging = false;
   };
 
   readonly #onObjectChange = (): void => {

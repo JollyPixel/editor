@@ -2,11 +2,8 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import {
-  isOrthographicCamera,
-  isPerspectiveCamera
-} from "../common/cameras.ts";
 import { mergePositions } from "../common/mergePositions.ts";
+import { screenScaleFactor } from "../common/screenScaleFactor.ts";
 import { AreaBox } from "./AreaBox.ts";
 import {
   type AreaAxis,
@@ -25,7 +22,6 @@ const kHeadSegments = 10;
 const kPickerRadius = 0.34;
 const kPickerLength = kShaftLength + kHeadLength;
 const kGapUnits = 0.15;
-const kMaxPerspectiveFactor = 7;
 
 /*
  * Ground-axis slots stay first so instance counts can hide the Y arrows.
@@ -56,7 +52,6 @@ const kAxisDirection: Record<AreaAxis, THREE.Vector3> = {
 };
 
 const _anchor = new THREE.Vector3();
-const _cameraPosition = new THREE.Vector3();
 const _size = new THREE.Vector3();
 const _position = new THREE.Vector3();
 const _scale = new THREE.Vector3();
@@ -215,7 +210,16 @@ export class AreaBoxHandles extends THREE.Object3D {
       this.layout(parent.copySizeTo(_size));
     }
 
-    const scale = this.#screenScaleFactor() * this.#handleSize;
+    /*
+     * The parent's world matrix is current before this node calls super.
+     */
+    _anchor.setFromMatrixPosition(
+      this.parent?.matrixWorld ?? this.matrixWorld
+    );
+    const scale = screenScaleFactor(
+      this.#camera,
+      _anchor
+    ) * this.#handleSize;
     _scale.setScalar(scale);
 
     for (let index = 0; index < this.#slots.length; index++) {
@@ -268,34 +272,6 @@ export class AreaBoxHandles extends THREE.Object3D {
     if (this.#arrows.instanceColor) {
       this.#arrows.instanceColor.needsUpdate = true;
     }
-  }
-
-  #screenScaleFactor(): number {
-    const camera = this.#camera;
-    _cameraPosition.setFromMatrixPosition(camera.matrixWorld);
-    /*
-     * The parent's world matrix is current before this node calls super.
-     */
-    _anchor.setFromMatrixPosition(
-      this.parent?.matrixWorld ?? this.matrixWorld
-    );
-
-    const distance = _anchor.distanceTo(_cameraPosition);
-    if (isOrthographicCamera(camera)) {
-      const { top, bottom, zoom } = camera;
-
-      return (top - bottom) / zoom;
-    }
-    if (!isPerspectiveCamera(camera)) {
-      return distance;
-    }
-
-    const { fov, zoom } = camera;
-
-    return distance * Math.min(
-      1.9 * Math.tan((Math.PI * fov) / 360) / zoom,
-      kMaxPerspectiveFactor
-    );
   }
 }
 
