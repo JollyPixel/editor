@@ -52,7 +52,7 @@ export type UVGeometry =
   | UVTriangle
   | UVCompound;
 
-export const UV_FACES: readonly UVSlot[] = [
+export const DEFAULT_UV_SLOTS: readonly UVSlot[] = [
   "front",
   "back",
   "left",

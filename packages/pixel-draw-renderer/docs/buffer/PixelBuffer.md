@@ -107,6 +107,7 @@ Returns `true` when `rect` contains an alpha value below `255` or extends outsid
 
 ```ts
 readonly uvRegions: UVRegionCollection
+uvRegions.size: number
 ```
 
 Id-keyed [`UVRegion`](../uv/UVRegion.md) storage included in [`PixelSyncServer.snapshot()`](../network/api/PixelSyncServer.md#snapshot). `set()` accepts a `UVRegion` or raw `UVRegionData`, and the collection is iterable.
@@ -114,6 +115,11 @@ Id-keyed [`UVRegion`](../uv/UVRegion.md) storage included in [`PixelSyncServer.s
 ```ts
 uvRegions.get(id: string): UVRegion | undefined
 uvRegions.set(region: UVRegion | UVRegionData): void
+uvRegions.has(id: string): boolean
+uvRegions.keys(): IterableIterator<string>
+uvRegions.values(): IterableIterator<UVRegion>
+uvRegions.delete(id: string): boolean
 uvRegions.remove(id: string): void
+uvRegions.clear(): void
 ```
 

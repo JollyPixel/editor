@@ -9,17 +9,17 @@ import {
   rectOf
 } from "./geometry.ts";
 import {
-  UV_FACES,
+  DEFAULT_UV_SLOTS,
   type UVSlot,
   type UVGeometry
 } from "./types.ts";
 
 export class UVSlotMap {
-  readonly #faces: Map<UVSlot, UVGeometry>;
+  readonly #slots: Map<UVSlot, UVGeometry>;
 
   static map<T>(
     fn: (face: UVSlot) => T,
-    faces: readonly UVSlot[] = UV_FACES
+    faces: readonly UVSlot[] = DEFAULT_UV_SLOTS
   ): Record<UVSlot, T> {
     return Object.fromEntries(
       faces.map((face) => [face, fn(face)])
@@ -28,7 +28,7 @@ export class UVSlotMap {
 
   static shared(
     rect: SelectionRect,
-    faces: readonly UVSlot[] = UV_FACES
+    faces: readonly UVSlot[] = DEFAULT_UV_SLOTS
   ): UVSlotMap {
     return new UVSlotMap(
       UVSlotMap.map(() => rect, faces)
@@ -36,34 +36,34 @@ export class UVSlotMap {
   }
 
   constructor(
-    faces: Record<UVSlot, UVGeometry>
+    slots: Record<UVSlot, UVGeometry>
   ) {
-    const slots = Object.keys(faces);
-    if (slots.length === 0) {
+    const names = Object.keys(slots);
+    if (names.length === 0) {
       throw new RangeError("A UV slot map must contain at least one slot");
     }
 
-    this.#faces = new Map(
-      slots.map(
-        (face) => [face, copyGeometry(faces[face])]
+    this.#slots = new Map(
+      names.map(
+        (slot) => [slot, copyGeometry(slots[slot])]
       )
     );
   }
 
-  get faces(): readonly UVSlot[] {
-    return [...this.#faces.keys()];
+  get slots(): readonly UVSlot[] {
+    return [...this.#slots.keys()];
   }
 
   has(
     face: UVSlot
   ): boolean {
-    return this.#faces.has(face);
+    return this.#slots.has(face);
   }
 
   get(
     face: UVSlot
   ): UVGeometry {
-    const geometry = this.#faces.get(face);
+    const geometry = this.#slots.get(face);
     if (geometry === undefined) {
       throw new RangeError(`Unknown UV slot "${face}"`);
     }
@@ -71,35 +71,35 @@ export class UVSlotMap {
     return copyGeometry(geometry);
   }
 
-  get primaryFace(): UVSlot {
-    return this.#faces.keys().next().value!;
+  get primarySlot(): UVSlot {
+    return this.#slots.keys().next().value!;
   }
 
-  withFace(
-    face: UVSlot,
+  withSlot(
+    slot: UVSlot,
     geometry: UVGeometry
   ): UVSlotMap {
-    if (!this.#faces.has(face)) {
-      throw new RangeError(`Unknown UV slot "${face}"`);
+    if (!this.#slots.has(slot)) {
+      throw new RangeError(`Unknown UV slot "${slot}"`);
     }
 
     return new UVSlotMap(
       UVSlotMap.map(
-        (mapFace) => (
-          mapFace === face ? geometry : this.#faces.get(mapFace)!
+        (mapSlot) => (
+          mapSlot === slot ? geometry : this.#slots.get(mapSlot)!
         ),
-        this.faces
+        this.slots
       )
     );
   }
 
-  withFaces(
+  withSlots(
     entries: ReadonlyMap<UVSlot, UVGeometry>
   ): UVSlotMap {
     return new UVSlotMap(
       UVSlotMap.map(
-        (face) => entries.get(face) ?? this.#faces.get(face)!,
-        this.faces
+        (slot) => entries.get(slot) ?? this.#slots.get(slot)!,
+        this.slots
       )
     );
   }
@@ -109,8 +109,8 @@ export class UVSlotMap {
   ): UVSlotMap {
     return new UVSlotMap(
       UVSlotMap.map(
-        (face) => {
-          const geometry = this.#faces.get(face)!;
+        (slot) => {
+          const geometry = this.#slots.get(slot)!;
 
           return geometryAt(geometry, {
             ...rectOf(geometry),
@@ -118,7 +118,7 @@ export class UVSlotMap {
             y: origin.y
           });
         },
-        this.faces
+        this.slots
       )
     );
   }
@@ -129,8 +129,8 @@ export class UVSlotMap {
   ): UVSlotMap {
     return new UVSlotMap(
       UVSlotMap.map(
-        (face) => {
-          const geometry = this.#faces.get(face)!;
+        (slot) => {
+          const geometry = this.#slots.get(slot)!;
           const rect = rectOf(geometry);
 
           return geometryAt(geometry, {
@@ -139,15 +139,15 @@ export class UVSlotMap {
             y: rect.y + dy
           });
         },
-        this.faces
+        this.slots
       )
     );
   }
 
   toJSON(): Record<UVSlot, UVGeometry> {
     return UVSlotMap.map(
-      (face) => copyGeometry(this.#faces.get(face)!),
-      this.faces
+      (slot) => copyGeometry(this.#slots.get(slot)!),
+      this.slots
     );
   }
 }

@@ -22,8 +22,6 @@ const kCasingInset = kCasingWidth / 2;
 const kDimOpacity = "0.45";
 const kDashArray = "6 4";
 const kSelectedFillOpacity = "0.06";
-// Outlines are rebuilt on every pan and zoom, while a compound's parts almost
-// never change; entries beyond this many are evicted oldest first.
 const kOutlineCacheLimit = 64;
 const kOutlineCache = new Map<string, Vec2[][] | null>();
 
@@ -40,18 +38,19 @@ export class UVRegionBorder {
   #group: SVGGElement;
   #casing: SVGGeometryElement;
   #stroke: SVGGeometryElement;
+  #elementName: string;
 
   constructor(
     geometry: UVGeometry
   ) {
     this.#group = document.createElementNS(SVG_NS, "g");
     this.#group.style.pointerEvents = "none";
-
-    this.#casing = this.#group.appendChild(
-      UVRegionBorder.#createElement(geometry)
-    );
-    this.#stroke = this.#group.appendChild(
-      UVRegionBorder.#createElement(geometry)
+    this.#elementName = elementNameOf(geometry);
+    this.#casing = UVRegionBorder.#createElement(geometry);
+    this.#stroke = UVRegionBorder.#createElement(geometry);
+    this.#group.append(
+      this.#casing,
+      this.#stroke
     );
   }
 
@@ -74,6 +73,7 @@ export class UVRegionBorder {
     zoom: number,
     camera: Vec2
   ): void {
+    this.#ensureGeometryElements(geometry);
     const rect = rectOf(geometry);
     const screen = {
       x: rect.x * zoom + camera.x,
@@ -94,6 +94,23 @@ export class UVRegionBorder {
       width: screen.width - (2 * inset),
       height: screen.height - (2 * inset)
     });
+  }
+
+  #ensureGeometryElements(
+    geometry: UVGeometry
+  ): void {
+    const elementName = elementNameOf(geometry);
+    if (this.#elementName === elementName) {
+      return;
+    }
+
+    this.#elementName = elementName;
+    this.#casing = UVRegionBorder.#createElement(geometry);
+    this.#stroke = UVRegionBorder.#createElement(geometry);
+    this.#group.replaceChildren(
+      this.#casing,
+      this.#stroke
+    );
   }
 
   static #placeGeometry(
@@ -194,11 +211,6 @@ function elementNameOf(
   return geometry.shape === "compound" ? "path" : "polygon";
 }
 
-/**
- * Outlines the union of the parts, so an assembly such as the L of a stair
- * reads as one continuous shape instead of stacked rectangles. Falls back to
- * one subpath per part when the parts do not stitch into closed loops.
- */
 function compoundPath(
   geometry: UVCompound,
   screen: SelectionRect

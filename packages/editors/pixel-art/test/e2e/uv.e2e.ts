@@ -47,7 +47,7 @@ async function setRegionState(
 
 interface UvSnapshot {
   selectedRegionId: string | null;
-  selectedFace: string | null;
+  selectedSlot: string | null;
   state: string | null;
   faces: Record<string, { x: number; y: number; }>;
 }
@@ -81,14 +81,14 @@ async function uvSnapshot(
     const uv = (${uvPanel.toString()})().uv;
     const region = uv.selectedRegionId ? uv.get(uv.selectedRegionId) : undefined;
     const faces = {};
-    for (const entry of region ? region.facesOf() : []) {
+    for (const entry of region ? region.slotsOf() : []) {
       const rect = "rect" in entry.geometry ? entry.geometry.rect : entry.geometry;
-      faces[entry.face ?? "*"] = { x: rect.x, y: rect.y };
+      faces[entry.slot ?? "*"] = { x: rect.x, y: rect.y };
     }
 
     return {
       selectedRegionId: uv.selectedRegionId,
-      selectedFace: uv.selectedFace,
+      selectedSlot: uv.selectedSlot,
       state: region ? region.state : null,
       faces
     };
@@ -133,7 +133,7 @@ test("a new region is stacked and has no face", async({ page }) => {
 
   const snapshot = await uvSnapshot(page);
   expect(snapshot.state).toBe("stacked");
-  expect(snapshot.selectedFace).toBeNull();
+  expect(snapshot.selectedSlot).toBeNull();
   expect(snapshot.faces).toEqual({ "*": { x: 0, y: 0 } });
 });
 
@@ -172,7 +172,7 @@ test("unfolding lays every face out as a net that drags as one", async({ page })
 
   const unfolded = await uvSnapshot(page);
   expect(unfolded.state).toBe("unfolded");
-  expect(unfolded.selectedFace).toBeNull();
+  expect(unfolded.selectedSlot).toBeNull();
   expect(unfolded.faces).toEqual({
     front: { x: 0, y: 0 },
     back: { x: 16, y: 0 },
@@ -253,7 +253,7 @@ test("clicking the same spot cycles through the stacked faces", async({ page }) 
   const picked: (string | null)[] = [];
   for (let index = 0; index < 7; index++) {
     await clickTexturePixel(page, 8, 8);
-    picked.push((await uvSnapshot(page)).selectedFace);
+    picked.push((await uvSnapshot(page)).selectedSlot);
   }
 
   expect(picked).toEqual([
@@ -273,7 +273,7 @@ test("dragging moves only the face the press landed on", async({ page }) => {
   await dragRegion(page, { x: 8, y: 8 }, { x: 40, y: 8 });
 
   const snapshot = await uvSnapshot(page);
-  expect(snapshot.selectedFace).toBe("left");
+  expect(snapshot.selectedSlot).toBe("left");
   expect(snapshot.faces.left).toEqual({ x: 32, y: 0 });
   expect(snapshot.faces.front).toEqual({ x: 0, y: 0 });
   expect(snapshot.faces.back).toEqual({ x: 0, y: 0 });
@@ -285,7 +285,7 @@ test("stacking keeps the edited face, and undo brings the discarded ones back", 
   await dragRegion(page, { x: 8, y: 8 }, { x: 40, y: 8 });
 
   const moved = await uvSnapshot(page);
-  expect(moved.selectedFace).toBe("front");
+  expect(moved.selectedSlot).toBe("front");
   expect(moved.faces.front).toEqual({ x: 32, y: 0 });
 
   // Stack keeps the edited face.

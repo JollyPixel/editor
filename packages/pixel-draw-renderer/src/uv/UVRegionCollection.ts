@@ -5,10 +5,14 @@ import {
 } from "./UVRegion.ts";
 
 /**
- * Mirrors the client UV map while retaining region instances for commands.
+ * Shared id-keyed storage for interactive and headless UV region owners.
  */
 export class UVRegionCollection implements Iterable<UVRegion> {
   #regions = new Map<string, UVRegion>();
+
+  get size(): number {
+    return this.#regions.size;
+  }
 
   get(
     id: string
@@ -26,10 +30,30 @@ export class UVRegionCollection implements Iterable<UVRegion> {
     );
   }
 
+  has(
+    id: string
+  ): boolean {
+    return this.#regions.has(id);
+  }
+
+  keys(): IterableIterator<string> {
+    return this.#regions.keys();
+  }
+
+  values(): IterableIterator<UVRegion> {
+    return this.#regions.values();
+  }
+
+  delete(
+    id: string
+  ): boolean {
+    return this.#regions.delete(id);
+  }
+
   remove(
     id: string
   ): void {
-    this.#regions.delete(id);
+    this.delete(id);
   }
 
   clear(): void {

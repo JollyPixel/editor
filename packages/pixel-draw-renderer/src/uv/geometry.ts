@@ -3,11 +3,63 @@ import type {
   SelectionRect,
   Vec2
 } from "../types.ts";
-import { UVGeometryValue } from "./UVGeometryValue.ts";
+import { pointInRect } from "../utils/math.ts";
 import type {
+  UVCompoundPart,
   UVGeometry,
   UVTriangleCorner
 } from "./types.ts";
+
+function copyPart(
+  part: UVCompoundPart
+): UVCompoundPart {
+  return "shape" in part ?
+    {
+      shape: "triangle",
+      corner: part.corner,
+      rect: { ...part.rect }
+    } :
+    { ...part };
+}
+
+function cornerContains(
+  corner: UVTriangleCorner,
+  x: number,
+  y: number
+): boolean {
+  switch (corner) {
+    case "top-right":
+      return x >= y;
+    case "bottom-left":
+      return x <= y;
+    case "top-left":
+      return x + y <= 1;
+    default:
+      return x + y >= 1;
+  }
+}
+
+function partContains(
+  part: UVCompoundPart,
+  x: number,
+  y: number
+): boolean {
+  const rect = "shape" in part ? part.rect : part;
+  if (
+    x < rect.x ||
+    y < rect.y ||
+    x > rect.x + rect.width ||
+    y > rect.y + rect.height
+  ) {
+    return false;
+  }
+
+  return !("shape" in part) || cornerContains(
+    part.corner,
+    (x - rect.x) / rect.width,
+    (y - rect.y) / rect.height
+  );
+}
 
 export function copyRect(
   rect: SelectionRect
@@ -20,27 +72,43 @@ export function copyRect(
 export function copyGeometry(
   geometry: UVGeometry
 ): UVGeometry {
-  return UVGeometryValue
-    .from(geometry)
-    .toJSON();
+  if (!("shape" in geometry)) {
+    return copyRect(geometry);
+  }
+
+  return geometry.shape === "compound" ?
+    {
+      shape: "compound",
+      rect: copyRect(geometry.rect),
+      parts: geometry.parts.map(copyPart)
+    } :
+    {
+      shape: "triangle",
+      corner: geometry.corner,
+      rect: copyRect(geometry.rect)
+    };
 }
 
 export function rectOf(
   geometry: UVGeometry
 ): SelectionRect {
-  return UVGeometryValue
-    .from(geometry)
-    .bounds;
+  return copyRect(
+    "shape" in geometry ? geometry.rect : geometry
+  );
 }
 
 export function geometryAt(
   geometry: UVGeometry,
   rect: SelectionRect
 ): UVGeometry {
-  return UVGeometryValue
-    .from(geometry)
-    .withBounds(rect)
-    .toJSON();
+  const copied = copyGeometry(geometry);
+
+  return "shape" in copied ?
+    {
+      ...copied,
+      rect: copyRect(rect)
+    } :
+    copyRect(rect);
 }
 
 export function geometryKey(
@@ -63,12 +131,24 @@ export function pointInGeometry(
   pos: Vec2,
   geometry: UVGeometry
 ): boolean {
-  return UVGeometryValue
-    .from(geometry)
-    .contains(pos);
-}
+  const rect = rectOf(geometry);
+  if (!pointInRect(pos, rect)) {
+    return false;
+  }
+  if (!("shape" in geometry)) {
+    return true;
+  }
 
-export { UVGeometryValue } from "./UVGeometryValue.ts";
+  const x = (pos.x - rect.x) / rect.width;
+  const y = (pos.y - rect.y) / rect.height;
+  if (geometry.shape === "triangle") {
+    return cornerContains(geometry.corner, x, y);
+  }
+
+  return geometry.parts.some(
+    (part) => partContains(part, x, y)
+  );
+}
 
 export function triangleCornerOf(
   geometry: UVGeometry

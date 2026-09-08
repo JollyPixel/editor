@@ -55,7 +55,7 @@ describe("BlockUvBridge — stairs", () => {
       const region = uv.get("block-1")!;
 
       assert.deepEqual(
-        region.facesOf().map(({ face }) => face),
+        region.slotsOf().map(({ slot }) => slot),
         kStairSlots,
         "eight quads across six faces become eight editable slots"
       );
@@ -97,8 +97,8 @@ describe("BlockUvBridge — stairs", () => {
       uv.setState("block-1", "free");
 
       const region = uv.get("block-1")!;
-      const covered = region.facesOf().filter(
-        ({ face }) => face === "right"
+      const covered = region.slotsOf().filter(
+        ({ slot }) => slot === "right"
       );
 
       assert.equal(covered.length, 1);

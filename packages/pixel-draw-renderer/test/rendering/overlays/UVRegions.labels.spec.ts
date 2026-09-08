@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { UVRegionLayer } from "#src/rendering/overlays/UVRegions.ts";
-import { UV_FACES } from "#src/uv/UVRegion.ts";
+import { DEFAULT_UV_SLOTS } from "#src/uv/UVRegion.ts";
 import {
   makeSvg,
   makeViewport,
@@ -156,7 +156,7 @@ describe("UVRegionLayer — face labels", () => {
     map.setState(region.id, "free");
     map.select("r1", "front");
 
-    UV_FACES.forEach((face, index) => {
+    DEFAULT_UV_SLOTS.forEach((face, index) => {
       map.move(
         "r1",
         {
@@ -171,7 +171,7 @@ describe("UVRegionLayer — face labels", () => {
 
     assert.deepStrictEqual(
       labels(svg).sort(),
-      [...UV_FACES].sort()
+      [...DEFAULT_UV_SLOTS].sort()
     );
   });
 

@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { UVSlotMap } from "#src/uv/UVSlotMap.ts";
 import {
-  UV_FACES,
+  DEFAULT_UV_SLOTS,
   type UVGeometry
 } from "#src/uv/UVRegion.ts";
 import type { SelectionRect } from "#src/types.ts";
@@ -24,7 +24,7 @@ const kTriangle: UVGeometry = {
 function fullRecord(
   geometry: UVGeometry = kRect
 ): Record<string, UVGeometry> {
-  return Object.fromEntries(UV_FACES.map((face) => [face, geometry]));
+  return Object.fromEntries(DEFAULT_UV_SLOTS.map((face) => [face, geometry]));
 }
 
 describe("UVSlotMap", () => {
@@ -32,7 +32,7 @@ describe("UVSlotMap", () => {
     test("gives every face the same rect value", () => {
       const faces = UVSlotMap.shared(kRect);
 
-      for (const face of UV_FACES) {
+      for (const face of DEFAULT_UV_SLOTS) {
         assert.deepStrictEqual(faces.get(face), kRect);
       }
     });
@@ -78,20 +78,20 @@ describe("UVSlotMap", () => {
     });
   });
 
-  describe("withFace()", () => {
+  describe("withSlot()", () => {
     test("rejects an unknown slot", () => {
       assert.throws(
-        () => UVSlotMap.shared(kRect).withFace("missing", kRect),
+        () => UVSlotMap.shared(kRect).withSlot("missing", kRect),
         RangeError
       );
     });
 
     test("replaces only the named face", () => {
       const nextRect: SelectionRect = { x: 9, y: 9, width: 1, height: 1 };
-      const faces = UVSlotMap.shared(kRect).withFace("left", nextRect);
+      const faces = UVSlotMap.shared(kRect).withSlot("left", nextRect);
 
       assert.deepStrictEqual(faces.get("left"), nextRect);
-      for (const face of UV_FACES.filter((value) => value !== "left")) {
+      for (const face of DEFAULT_UV_SLOTS.filter((value) => value !== "left")) {
         assert.deepStrictEqual(faces.get(face), kRect, `${face} must stay put`);
       }
     });
@@ -99,7 +99,7 @@ describe("UVSlotMap", () => {
     test("leaves the source instance untouched", () => {
       const nextRect: SelectionRect = { x: 9, y: 9, width: 1, height: 1 };
       const faces = UVSlotMap.shared(kRect);
-      faces.withFace("left", nextRect);
+      faces.withSlot("left", nextRect);
 
       assert.deepStrictEqual(faces.get("left"), kRect);
     });
@@ -109,7 +109,7 @@ describe("UVSlotMap", () => {
     test("shifts every face without resizing it", () => {
       const faces = UVSlotMap.shared(kRect).translated(8, 7);
 
-      for (const face of UV_FACES) {
+      for (const face of DEFAULT_UV_SLOTS) {
         assert.deepStrictEqual(faces.get(face), {
           x: kRect.x + 8,
           y: kRect.y + 7,
@@ -157,7 +157,7 @@ describe("UVSlotMap", () => {
 
       assert.deepStrictEqual(
         Object.keys(data).sort(),
-        [...UV_FACES].sort()
+        [...DEFAULT_UV_SLOTS].sort()
       );
     });
 

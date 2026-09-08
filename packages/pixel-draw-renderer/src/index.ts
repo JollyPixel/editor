@@ -101,12 +101,13 @@ export {
 } from "./uv/UVMap.ts";
 export {
   UVRegion,
-  UV_FACES,
+  DEFAULT_UV_SLOTS,
   type UVSlot,
   type UVGeometry,
   type UVRegionData,
-  type UVRegionFace,
+  type UVRegionSlot,
   type UVRegionState,
+  type UVMovementScope,
   type UVTriangle,
   type UVTriangleCorner,
   type UVCompound,

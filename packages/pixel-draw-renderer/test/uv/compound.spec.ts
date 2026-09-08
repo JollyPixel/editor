@@ -4,9 +4,11 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  UVGeometryValue,
+  copyGeometry,
+  geometryAt,
   partsOf,
   pointInGeometry,
+  rectOf,
   triangleCornerOf
 } from "../../src/uv/geometry.ts";
 import { UVSlotMap } from "../../src/uv/UVSlotMap.ts";
@@ -26,24 +28,22 @@ const kStairSide: UVCompound = {
   ]
 };
 
-describe("UVGeometryValue — compound", () => {
+describe("compound geometry", () => {
   test("bounds are the compound's own rect", () => {
     assert.deepStrictEqual(
-      UVGeometryValue.from(kStairSide).bounds,
+      rectOf(kStairSide),
       { x: 0, y: 0, width: 16, height: 16 }
     );
   });
 
   test("contains a point covered by any part", () => {
-    const value = UVGeometryValue.from(kStairSide);
-
-    assert.equal(value.contains({ x: 2, y: 12 }), true, "lower part");
-    assert.equal(value.contains({ x: 12, y: 2 }), true, "upper part");
+    assert.equal(pointInGeometry({ x: 2, y: 12 }, kStairSide), true, "lower part");
+    assert.equal(pointInGeometry({ x: 12, y: 2 }, kStairSide), true, "upper part");
   });
 
   test("does not contain the notch an L leaves open", () => {
     assert.equal(
-      UVGeometryValue.from(kStairSide).contains({ x: 2, y: 2 }),
+      pointInGeometry({ x: 2, y: 2 }, kStairSide),
       false,
       "the notch is inside the bounds but covered by no part"
     );
@@ -51,16 +51,16 @@ describe("UVGeometryValue — compound", () => {
 
   test("rejects a point outside the bounds", () => {
     assert.equal(
-      UVGeometryValue.from(kStairSide).contains({ x: 40, y: 2 }),
+      pointInGeometry({ x: 40, y: 2 }, kStairSide),
       false
     );
   });
 
   test("scales its parts with new bounds, keeping the notch proportional", () => {
-    const moved = UVGeometryValue
-      .from(kStairSide)
-      .withBounds({ x: 32, y: 32, width: 32, height: 32 })
-      .toJSON() as UVCompound;
+    const moved = geometryAt(
+      kStairSide,
+      { x: 32, y: 32, width: 32, height: 32 }
+    ) as UVCompound;
 
     assert.deepStrictEqual(moved.rect, { x: 32, y: 32, width: 32, height: 32 });
     assert.deepStrictEqual(moved.parts, kStairSide.parts);
@@ -69,7 +69,7 @@ describe("UVGeometryValue — compound", () => {
   });
 
   test("round-trips through toJSON without sharing part objects", () => {
-    const copy = UVGeometryValue.from(kStairSide).toJSON() as UVCompound;
+    const copy = copyGeometry(kStairSide) as UVCompound;
 
     assert.deepStrictEqual(copy, kStairSide);
     assert.notEqual(copy.parts[0], kStairSide.parts[0]);
@@ -131,7 +131,7 @@ describe("UVSlotMap — open slot list", () => {
       "top.1": { x: 2, y: 0, width: 1, height: 1 }
     });
 
-    assert.deepStrictEqual(map.faces, ["top", "top.1"]);
+    assert.deepStrictEqual(map.slots, ["top", "top.1"]);
     assert.equal(map.has("top.1"), true);
     assert.equal(map.has("bottom"), false);
   });
@@ -150,7 +150,7 @@ describe("UVSlotMap — open slot list", () => {
       "top.1": { x: 2, y: 0, width: 1, height: 1 }
     }).translated(10, 0);
 
-    assert.deepStrictEqual(map.faces, ["top", "top.1"]);
+    assert.deepStrictEqual(map.slots, ["top", "top.1"]);
     assert.deepStrictEqual(map.get("top.1"), {
       x: 12,
       y: 0,
@@ -176,10 +176,10 @@ describe("UVRegion — a shape's own slots", () => {
     });
 
     assert.deepStrictEqual(
-      region.facesOf().map(({ face }) => face),
+      region.slotsOf().map(({ slot }) => slot),
       ["right", "top", "top.1"]
     );
-    assert.deepStrictEqual(region.faces, ["right", "top", "top.1"]);
+    assert.deepStrictEqual(region.slots, ["right", "top", "top.1"]);
   });
 
   test("stack skips a compound when picking the face to stack onto", () => {
@@ -207,7 +207,7 @@ describe("UVRegion — a shape's own slots", () => {
     });
 
     assert.deepStrictEqual(
-      region.facesOf().map(({ face }) => face),
+      region.slotsOf().map(({ slot }) => slot),
       ["top"]
     );
   });

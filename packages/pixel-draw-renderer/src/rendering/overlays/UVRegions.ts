@@ -4,12 +4,18 @@ import { contrastingColor } from "@jolly-pixel/color";
 // Import Internal Dependencies
 import { SVG_NS } from "../constants.ts";
 import {
-  geometryAt,
   geometryKey,
   rectOf,
   triangleCornerOf
 } from "../../uv/geometry.ts";
+import { uvTargetKey } from "../../uv/UVTarget.ts";
 import { UVRegionBorder } from "./UVRegionBorder.ts";
+import {
+  projectUVOverlay,
+  uvOverlayPaintOrder,
+  type UVLiveOverride,
+  type UVOverlayEntry
+} from "./UVOverlayProjection.ts";
 import type { DefaultViewport } from "../Viewport.ts";
 import type { UVMap } from "../../uv/UVMap.ts";
 import type {
@@ -32,41 +38,22 @@ const kLabelCasingWidth = "3";
 const kLabelMinScreenSize = 40;
 const kLabelMaxLength = 20;
 
-interface RenderEntry {
-  key: string;
-  region: UVRegion;
-  face: UVSlot | null;
-  geometry: UVGeometry;
-  selected: boolean;
-  /**
-   * Faces sharing this entry's outline, so a stack of slots stays visible.
-   */
-  stacked?: number;
-}
-
-function deltaOf(
-  from: SelectionRect,
-  to: SelectionRect
-): Vec2 {
-  return {
-    x: to.x - from.x,
-    y: to.y - from.y
-  };
-}
-
 function entryKey(
   id: string,
   face: UVSlot | null
 ): string {
-  return `${id}:${face ?? "*"}`;
+  return uvTargetKey({
+    regionId: id,
+    slot: face
+  });
 }
 
 function faceLabel(
-  entry: RenderEntry
+  entry: UVOverlayEntry
 ): string {
   const hidden = (entry.stacked ?? 1) - 1;
 
-  return hidden > 0 ? `${entry.face} +${hidden}` : entry.face ?? "";
+  return hidden > 0 ? `${entry.slot} +${hidden}` : entry.slot ?? "";
 }
 
 function truncateLabel(
@@ -98,16 +85,10 @@ export class UVRegionLayer {
   #group: SVGGElement;
   #borders = new Map<string, UVRegionBorder>();
   #labels = new Map<string, SVGTextElement>();
-  #liveOverride: { id: string; face: UVSlot | null; rect: SelectionRect; } | null = null;
+  #liveOverride: UVLiveOverride | null = null;
   #ghostSuppressed = new Set<string>();
 
-  #onRegionCreated = () => this.#render();
-  #onRegionDeleted = () => this.#render();
-  #onRegionMoved = () => this.#render();
-  #onRegionStateChanged = () => this.#render();
-  #onSelectionChanged = () => this.#render();
-  #onVisibilityChanged = () => this.#render();
-  #onLabelVisibilityChanged = () => this.#render();
+  #onChanged = () => this.#render();
 
   constructor(
     svg: SVGElement,
@@ -118,13 +99,7 @@ export class UVRegionLayer {
     this.#viewport = viewport;
     this.#uvMap = uvMap;
 
-    this.#uvMap.on("region-created", this.#onRegionCreated);
-    this.#uvMap.on("region-deleted", this.#onRegionDeleted);
-    this.#uvMap.on("region-moved", this.#onRegionMoved);
-    this.#uvMap.on("region-state-changed", this.#onRegionStateChanged);
-    this.#uvMap.on("selection-changed", this.#onSelectionChanged);
-    this.#uvMap.on("visibility-changed", this.#onVisibilityChanged);
-    this.#uvMap.on("label-visibility-changed", this.#onLabelVisibilityChanged);
+    this.#uvMap.on("changed", this.#onChanged);
   }
 
   setLiveOverride(
@@ -132,7 +107,13 @@ export class UVRegionLayer {
     face: UVSlot | null,
     rect: SelectionRect | null
   ): void {
-    this.#liveOverride = rect ? { id, face, rect } : null;
+    this.#liveOverride = rect ? {
+      target: {
+        regionId: id,
+        slot: face
+      },
+      rect
+    } : null;
     this.#render();
   }
 
@@ -140,9 +121,6 @@ export class UVRegionLayer {
     this.#render();
   }
 
-  /**
-   * Suppresses stale region borders beneath peer drag ghosts.
-   */
   setGhostSuppressed(
     entries: Iterable<{ id: string; face: UVSlot | null; }>
   ): void {
@@ -153,13 +131,7 @@ export class UVRegionLayer {
   }
 
   destroy(): void {
-    this.#uvMap.off("region-created", this.#onRegionCreated);
-    this.#uvMap.off("region-deleted", this.#onRegionDeleted);
-    this.#uvMap.off("region-moved", this.#onRegionMoved);
-    this.#uvMap.off("region-state-changed", this.#onRegionStateChanged);
-    this.#uvMap.off("selection-changed", this.#onSelectionChanged);
-    this.#uvMap.off("visibility-changed", this.#onVisibilityChanged);
-    this.#uvMap.off("label-visibility-changed", this.#onLabelVisibilityChanged);
+    this.#uvMap.off("changed", this.#onChanged);
 
     for (const border of this.#borders.values()) {
       border.remove();
@@ -173,8 +145,12 @@ export class UVRegionLayer {
   }
 
   #render(): void {
-    const entries = this.#visibleEntries();
-    const painted = this.#paintOrder(entries);
+    const entries = projectUVOverlay(
+      this.#uvMap,
+      this.#liveOverride,
+      this.#ghostSuppressed
+    );
+    const painted = uvOverlayPaintOrder(entries);
 
     this.#prune(this.#borders, painted);
 
@@ -182,8 +158,10 @@ export class UVRegionLayer {
     const camera = this.#viewport.camera;
 
     for (const entry of painted) {
-      const border = this.#borders.get(entry.key) ?? this.#createBorder(entry.key, entry.geometry);
-      const perFace = entry.region.state === "free";
+      const border = this.#borders.get(
+        entry.key
+      ) ?? this.#createBorder(entry.key, entry.geometry);
+      const perFace = entry.region.movementScope === "slot";
       const emphasised = entry.selected && entry.region.state !== "stacked";
 
       border.place(entry.geometry, zoom, camera);
@@ -201,18 +179,15 @@ export class UVRegionLayer {
     this.#renderLabels(entries, zoom, camera);
   }
 
-  /**
-   * Uses one label per stack, preferring the selected or top hit-order face.
-   */
   #renderLabels(
-    entries: RenderEntry[],
+    entries: UVOverlayEntry[],
     zoom: number,
     camera: Vec2
   ): void {
     const showRegionLabels = this.#uvMap.showAll || this.#uvMap.showRegionLabels;
-    const groups = new Map<string, RenderEntry[]>();
+    const groups = new Map<string, UVOverlayEntry[]>();
     for (const entry of entries) {
-      if (entry.face === null) {
+      if (entry.slot === null) {
         if (showRegionLabels) {
           groups.set(entry.key, [entry]);
         }
@@ -229,10 +204,11 @@ export class UVRegionLayer {
       }
     }
 
-    const labelled: RenderEntry[] = [];
+    const labelled: UVOverlayEntry[] = [];
     for (const group of groups.values()) {
-      // Entries follow the region face order; group[0] is the first hit target.
-      const entry = group.find((candidate) => candidate.selected) ?? group[0];
+      const entry = group.find(
+        (candidate) => candidate.selected
+      ) ?? group[0];
 
       if (
         rectOf(entry.geometry).width * zoom < kLabelMinScreenSize ||
@@ -270,96 +246,13 @@ export class UVRegionLayer {
         y
       );
 
-      // Append labels after rects to keep them visible.
       this.#group.appendChild(el);
     }
   }
 
-  #visibleEntries(): RenderEntry[] {
-    const selectedRegionId = this.#uvMap.selectedRegionId;
-    const selectedFace = this.#uvMap.selectedFace;
-    const entries: RenderEntry[] = [];
-
-    for (const region of this.#uvMap.regions) {
-      if (!this.#uvMap.isVisible(region.id)) {
-        continue;
-      }
-
-      const grouped = region.state === "unfolded";
-      if (grouped && this.#ghostSuppressed.has(entryKey(region.id, null))) {
-        continue;
-      }
-
-      const override = this.#liveOverride;
-      const groupDelta = grouped &&
-        override !== null &&
-        override.id === region.id &&
-        override.face === null ?
-        deltaOf(region.bounds, override.rect) :
-        null;
-
-      for (const { face, geometry } of region.facesOf()) {
-        const key = entryKey(region.id, face);
-        if (this.#ghostSuppressed.has(key)) {
-          continue;
-        }
-
-        const overridden = override !== null &&
-          override.id === region.id &&
-          override.face === face;
-
-        entries.push({
-          key,
-          region,
-          face,
-          geometry: this.#liveGeometry(geometry, overridden ? override.rect : null, groupDelta),
-          selected: region.id === selectedRegionId &&
-            (grouped || face === selectedFace)
-        });
-      }
-    }
-
-    return entries;
-  }
-
-  #liveGeometry(
-    geometry: UVGeometry,
-    rect: SelectionRect | null,
-    delta: Vec2 | null
-  ): UVGeometry {
-    if (rect !== null) {
-      return geometryAt(geometry, rect);
-    }
-    if (delta === null) {
-      return geometry;
-    }
-
-    const bounds = rectOf(geometry);
-
-    return geometryAt(geometry, {
-      ...bounds,
-      x: bounds.x + delta.x,
-      y: bounds.y + delta.y
-    });
-  }
-
-  #paintOrder(
-    entries: RenderEntry[]
-  ): RenderEntry[] {
-    const selected = entries.filter((entry) => entry.selected);
-    if (selected.length === 0) {
-      return entries;
-    }
-
-    return [
-      ...entries.filter((entry) => !entry.selected),
-      ...selected
-    ];
-  }
-
   #prune<T extends { remove(): void; }>(
     elements: Map<string, T>,
-    keep: RenderEntry[]
+    keep: UVOverlayEntry[]
   ): void {
     const keys = new Set(keep.map((entry) => entry.key));
 
@@ -459,7 +352,7 @@ export class UVRegionLayer {
 
   #setLabelContent(
     el: SVGTextElement,
-    entry: RenderEntry,
+    entry: UVOverlayEntry,
     showRegionLabels: boolean,
     x: number,
     y: number
@@ -470,7 +363,7 @@ export class UVRegionLayer {
       return;
     }
 
-    if (entry.face === null) {
+    if (entry.slot === null) {
       el.textContent = regionLabel(entry.region);
 
       return;

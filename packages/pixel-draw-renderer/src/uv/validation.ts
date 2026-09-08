@@ -1,10 +1,11 @@
 // Import Internal Dependencies
-import type {
-  UVCompoundPart,
-  UVGeometry,
-  UVNormalizedRect,
-  UVSlot,
-  UVTriangleCorner
+import {
+  DEFAULT_UV_SLOTS,
+  type UVCompoundPart,
+  type UVGeometry,
+  type UVNormalizedRect,
+  type UVSlot,
+  type UVTriangleCorner
 } from "./types.ts";
 import type { UVRegionData } from "./UVRegion.ts";
 import type { SelectionRect } from "../types.ts";
@@ -126,10 +127,13 @@ export function isUVRegionData(
   }
 
   const faces = value.faces;
+  const slots = isRecord(faces) ? Object.keys(faces) : [...DEFAULT_UV_SLOTS];
   if (
     isActiveSlots(value.activeFaces) &&
-    isRecord(faces) &&
-    !value.activeFaces.every((slot) => slot in faces)
+    (
+      value.activeFaces.length === 0 ||
+      !value.activeFaces.every((slot) => slots.includes(slot))
+    )
   ) {
     return false;
   }
@@ -141,5 +145,11 @@ export function isUVRegionData(
   return value.state === "stacked" &&
     isUVTextureRect(value.rect) &&
     (faces === undefined || isUVSlots(faces)) &&
-    (value.stackedFace === undefined || isUVSlot(value.stackedFace));
+    (
+      value.stackedFace === undefined ||
+      (
+        isUVSlot(value.stackedFace) &&
+        slots.includes(value.stackedFace)
+      )
+    );
 }

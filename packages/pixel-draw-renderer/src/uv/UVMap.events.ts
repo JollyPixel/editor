@@ -8,6 +8,7 @@ import type {
 } from "./UVRegion.ts";
 
 export type UVMapEvent = {
+  changed: () => void;
   "region-created": (event: { region: UVRegion; }) => void;
   "region-deleted": (event: { region: UVRegion; }) => void;
   "region-moved": (event: {
@@ -21,13 +22,17 @@ export type UVMapEvent = {
     rect: SelectionRect;
     geometry: UVGeometry;
   }) => void;
+  "region-drag-ended": (event: {
+    id: string;
+    committed: boolean;
+  }) => void;
   "region-state-changed": (event: {
     region: UVRegion;
     previous: UVRegionData;
   }) => void;
   "selection-changed": (event: {
     selectedRegionId: string | null;
-    selectedFace: UVSlot | null;
+    selectedSlot: UVSlot | null;
   }) => void;
   "visibility-changed": (event: { showAll: boolean; }) => void;
   "label-visibility-changed": (event: { showRegionLabels: boolean; }) => void;

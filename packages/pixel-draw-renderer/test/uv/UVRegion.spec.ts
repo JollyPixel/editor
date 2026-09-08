@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   UVRegion,
-  UV_FACES,
+  DEFAULT_UV_SLOTS,
   type UVSlot
 } from "#src/uv/UVRegion.ts";
 import type { SelectionRect } from "#src/types.ts";
@@ -27,7 +27,27 @@ function makeFree(): UVRegion {
 }
 
 describe("UVRegion", () => {
+  test("exposes its slots and active slots", () => {
+    const region = makeFree();
+
+    assert.deepStrictEqual(region.slots, DEFAULT_UV_SLOTS);
+    assert.deepStrictEqual(region.activeSlots, DEFAULT_UV_SLOTS);
+  });
+
   describe("construction", () => {
+    test("rejects a stacked slot outside the region topology", () => {
+      assert.throws(
+        () => new UVRegion({
+          state: "stacked",
+          id: "r1",
+          color: "#f00",
+          rect: kRect,
+          stackedFace: "missing"
+        }),
+        RangeError
+      );
+    });
+
     test("defaults to stacked when state is omitted", () => {
       const region = new UVRegion({ state: "stacked", id: "r1", color: "#f00", rect: kRect });
 
@@ -65,7 +85,7 @@ describe("UVRegion", () => {
       });
 
       assert.strictEqual(region.state, "free");
-      for (const face of UV_FACES) {
+      for (const face of DEFAULT_UV_SLOTS) {
         assert.deepStrictEqual(
           region.rectFor(face),
           faces[face],
@@ -104,15 +124,15 @@ describe("UVRegion", () => {
     test("a stacked region returns its single rect for every face", () => {
       const region = makeStacked();
 
-      for (const face of UV_FACES) {
+      for (const face of DEFAULT_UV_SLOTS) {
         assert.deepStrictEqual(region.rectFor(face), kRect, `${face} must share the rect`);
       }
     });
 
-    test("facesOf yields one null-faced entry when stacked", () => {
+    test("slotsOf yields one null-slotted entry when stacked", () => {
       assert.deepStrictEqual(
-        makeStacked().facesOf(),
-        [{ face: null, geometry: kRect }]
+        makeStacked().slotsOf(),
+        [{ slot: null, geometry: kRect }]
       );
     });
 
@@ -133,18 +153,18 @@ describe("UVRegion", () => {
       });
 
       assert.deepStrictEqual(region.rectFor("left"), kRect);
-      assert.deepStrictEqual(region.facesOf(), [{
-        face: "left",
+      assert.deepStrictEqual(region.slotsOf(), [{
+        slot: "left",
         geometry: { shape: "triangle", corner: "top-right", rect: kRect }
       }]);
     });
 
-    test("facesOf yields six entries in UV_FACES order when free", () => {
-      const faces = makeFree().facesOf();
+    test("slotsOf yields six entries in default slot order when free", () => {
+      const faces = makeFree().slotsOf();
 
       assert.deepStrictEqual(
-        faces.map((entry) => entry.face),
-        [...UV_FACES],
+        faces.map((entry) => entry.slot),
+        [...DEFAULT_UV_SLOTS],
         "iteration order drives hit-testing and paint order"
       );
     });
@@ -167,7 +187,7 @@ describe("UVRegion", () => {
       });
 
       assert.deepStrictEqual(
-        region.facesOf().map(({ face }) => face),
+        region.slotsOf().map(({ slot }) => slot),
         ["top", "left"]
       );
     });
@@ -191,9 +211,9 @@ describe("UVRegion", () => {
       assert.strictEqual(region.rectFor("front").x, kRect.x);
     });
 
-    test("facesOf returns geometry copies", () => {
+    test("slotsOf returns geometry copies", () => {
       const region = makeFree();
-      const [{ geometry }] = region.facesOf();
+      const [{ geometry }] = region.slotsOf();
       if ("shape" in geometry) {
         assert.fail("expected rectangle geometry");
       }
@@ -208,7 +228,7 @@ describe("UVRegion", () => {
       const region = makeFree();
 
       assert.strictEqual(region.state, "free");
-      for (const face of UV_FACES) {
+      for (const face of DEFAULT_UV_SLOTS) {
         assert.deepStrictEqual(region.rectFor(face), kRect, `${face} must start where the region was`);
       }
     });
@@ -252,7 +272,7 @@ describe("UVRegion", () => {
         .withRect(topRect, "top")
         .stack("top");
 
-      for (const face of UV_FACES) {
+      for (const face of DEFAULT_UV_SLOTS) {
         assert.deepStrictEqual(
           stacked.rectFor(face),
           topRect,
@@ -320,7 +340,7 @@ describe("UVRegion", () => {
 
       const restored = ramp.stack().free();
 
-      assert.deepStrictEqual(restored.facesOf().map(({ face }) => face), [
+      assert.deepStrictEqual(restored.slotsOf().map(({ slot }) => slot), [
         "back", "left", "right", "top", "bottom"
       ]);
       assert.deepStrictEqual(restored.geometryFor("left"), {
@@ -426,7 +446,7 @@ describe("UVRegion", () => {
         .stack()
         .free();
 
-      for (const face of UV_FACES) {
+      for (const face of DEFAULT_UV_SLOTS) {
         assert.deepStrictEqual(
           restored.rectFor(face),
           kRect,
@@ -457,7 +477,7 @@ describe("UVRegion", () => {
         .withRect(moved)
         .free();
 
-      for (const face of UV_FACES) {
+      for (const face of DEFAULT_UV_SLOTS) {
         assert.deepStrictEqual(
           restored.rectFor(face),
           moved,
@@ -557,7 +577,7 @@ describe("UVRegion", () => {
     test("ignores the face argument when stacked", () => {
       const region = makeStacked().withRect(nextRect, "top");
 
-      for (const face of UV_FACES) {
+      for (const face of DEFAULT_UV_SLOTS) {
         assert.deepStrictEqual(region.rectFor(face), nextRect, `${face} must follow the shared rect`);
       }
     });
@@ -566,7 +586,7 @@ describe("UVRegion", () => {
       const region = makeFree().withRect(nextRect, "left");
 
       assert.deepStrictEqual(region.rectFor("left"), nextRect);
-      for (const face of UV_FACES.filter((value) => value !== "left")) {
+      for (const face of DEFAULT_UV_SLOTS.filter((value) => value !== "left")) {
         assert.deepStrictEqual(region.rectFor(face), kRect, `${face} must stay put`);
       }
     });
@@ -622,7 +642,7 @@ describe("UVRegion", () => {
       assert.strictEqual(data.state, "free");
       assert.deepStrictEqual(
         Object.keys(data.state === "free" ? data.faces : {}).sort(),
-        [...UV_FACES].sort()
+        [...DEFAULT_UV_SLOTS].sort()
       );
     });
 
@@ -645,7 +665,7 @@ describe("UVRegion", () => {
       );
 
       assert.strictEqual(restored.state, "free");
-      for (const face of UV_FACES) {
+      for (const face of DEFAULT_UV_SLOTS) {
         assert.deepStrictEqual(
           restored.rectFor(face),
           region.rectFor(face),
@@ -665,7 +685,7 @@ describe("UVRegion", () => {
     });
   });
 
-  test("UV_FACES covers every UVSlot exactly once", () => {
+  test("DEFAULT_UV_SLOTS covers every built-in UVSlot exactly once", () => {
     const faces: Record<UVSlot, true> = {
       front: true,
       back: true,
@@ -676,7 +696,7 @@ describe("UVRegion", () => {
     };
 
     assert.deepStrictEqual(
-      [...UV_FACES].sort(),
+      [...DEFAULT_UV_SLOTS].sort(),
       Object.keys(faces).sort(),
       "a face missing here would silently drop out of hit-testing and sync"
     );

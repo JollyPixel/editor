@@ -2,7 +2,8 @@
 import * as network from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import { UV_FACES } from "../uv/UVRegion.ts";
+import { DEFAULT_UV_SLOTS } from "../uv/UVRegion.ts";
+import { uvTargetKey } from "../uv/UVTarget.ts";
 import type { PixelBuffer } from "../buffer/PixelBuffer.ts";
 import type { PixelNetworkCommand } from "./types.ts";
 
@@ -28,28 +29,34 @@ function uvConflictKeys(
 ): string[] {
   if (command.action === "uv-region-moved") {
     return [
-      `${command.metadata.id}:${command.metadata.face ?? "*"}`
+      uvTargetKey({
+        regionId: command.metadata.id,
+        slot: command.metadata.face
+      })
     ];
   }
 
   if (command.action === "uv-region-deleted") {
     const { id } = command.metadata;
-    const slots = buffer.uvRegions.get(id)?.faces ?? UV_FACES;
+    const slots = buffer.uvRegions.get(id)?.slots ?? DEFAULT_UV_SLOTS;
 
     return [
-      `${id}:*`,
-      ...slots.map((slot) => `${id}:${slot}`)
+      uvTargetKey({ regionId: id, slot: null }),
+      ...slots.map((slot) => uvTargetKey({ regionId: id, slot }))
     ];
   }
 
   const { region } = command.metadata;
   const faces = region.faces ?
     Object.keys(region.faces) :
-    UV_FACES;
+    DEFAULT_UV_SLOTS;
 
   return [
-    `${region.id}:*`,
-    ...faces.map((face) => `${region.id}:${face}`)
+    uvTargetKey({ regionId: region.id, slot: null }),
+    ...faces.map((face) => uvTargetKey({
+      regionId: region.id,
+      slot: face
+    }))
   ];
 }
 
@@ -77,10 +84,6 @@ export class PixelCommandArbiter {
     this.#regionTracker = new network.ConflictTracker(resolver);
   }
 
-  /**
-   * Returns and records the accepted subset, or `null` if none survives.
-   * Reads `buffer` only to reject invalid sizes.
-   */
   accept(
     buffer: PixelBuffer,
     command: PixelNetworkCommand

@@ -11,7 +11,7 @@ import {
 import { packNet } from "./netLayout.ts";
 import { UVSlotMap } from "./UVSlotMap.ts";
 import {
-  UV_FACES,
+  DEFAULT_UV_SLOTS,
   type UVSlot,
   type UVGeometry,
   type UVRegionState
@@ -27,7 +27,7 @@ export type {
   UVSlot,
   UVGeometry
 } from "./types.ts";
-export { UV_FACES } from "./types.ts";
+export { DEFAULT_UV_SLOTS } from "./types.ts";
 
 interface UVRegionIdentity {
   id: string;
@@ -49,10 +49,22 @@ export type UVRegionData =
     activeFaces?: UVSlot[];
   });
 
-export interface UVRegionFace {
-  face: UVSlot | null;
+export interface UVRegionSlot {
+  slot: UVSlot | null;
   geometry: UVGeometry;
 }
+
+export type UVMovementScope = "region" | "slot";
+
+type UVRegionLayout =
+  | {
+    state: "stacked";
+    rect: SelectionRect;
+    slot: UVSlot | null;
+  }
+  | {
+    state: "unfolded" | "free";
+  };
 
 function normalizeActiveFaces(
   activeFaces: readonly UVSlot[],
@@ -67,7 +79,7 @@ function normalizeActiveFaces(
 
 function isRect(
   geometry: UVGeometry
-): boolean {
+): geometry is SelectionRect {
   return !("shape" in geometry);
 }
 
@@ -104,11 +116,9 @@ export class UVRegion {
   readonly id: string;
   readonly name?: string;
   readonly color: string;
-  readonly state: UVRegionState;
   readonly #faces: UVSlotMap;
   readonly #activeFaces: readonly UVSlot[];
-  readonly #stackedRect: SelectionRect | null;
-  readonly #stackedFace: UVSlot | null;
+  readonly #layout: UVRegionLayout;
 
   static from(
     value: UVRegion | UVRegionData
@@ -124,37 +134,61 @@ export class UVRegion {
     this.color = data.color;
 
     if (data.state === "stacked") {
-      this.state = "stacked";
       this.#faces = data.faces ?
         new UVSlotMap(data.faces) :
         UVSlotMap.shared(data.rect);
-      this.#stackedRect = copyRect(data.rect);
-      this.#stackedFace = data.stackedFace ?? null;
+      if (
+        data.stackedFace !== undefined &&
+        !this.#faces.has(data.stackedFace)
+      ) {
+        throw new RangeError(
+          `Unknown stacked UV slot "${data.stackedFace}"`
+        );
+      }
+      this.#layout = {
+        state: "stacked",
+        rect: copyRect(data.rect),
+        slot: data.stackedFace ?? null
+      };
     }
     else {
-      this.state = data.state;
       this.#faces = new UVSlotMap(data.faces);
-      this.#stackedRect = null;
-      this.#stackedFace = null;
+      this.#layout = {
+        state: data.state
+      };
     }
 
     this.#activeFaces = normalizeActiveFaces(
-      data.activeFaces ?? this.#faces.faces,
+      data.activeFaces ?? this.#faces.slots,
       this.#faces
     );
   }
 
-  get faces(): readonly UVSlot[] {
-    return this.#faces.faces;
+  get slots(): readonly UVSlot[] {
+    return this.#faces.slots;
+  }
+
+  get activeSlots(): readonly UVSlot[] {
+    return [...this.#activeFaces];
+  }
+
+  get movementScope(): UVMovementScope {
+    return this.#layout.state === "free" ? "slot" : "region";
+  }
+
+  get state(): UVRegionState {
+    return this.#layout.state;
   }
 
   get stackedFace(): UVSlot | null {
-    return this.#stackedFace;
+    return this.#layout.state === "stacked" ?
+      this.#layout.slot :
+      null;
   }
 
   get bounds(): SelectionRect {
-    if (this.#stackedRect) {
-      return copyRect(this.#stackedRect);
+    if (this.#layout.state === "stacked") {
+      return copyRect(this.#layout.rect);
     }
 
     return unionOf(
@@ -165,51 +199,49 @@ export class UVRegion {
   }
 
   rectFor(
-    face: UVSlot
+    slot: UVSlot
   ): SelectionRect {
     if (this.state !== "free") {
       return this.bounds;
     }
 
-    return rectOf(this.#faces.get(face));
+    return rectOf(this.#faces.get(slot));
   }
 
   geometryFor(
-    face: UVSlot
+    slot: UVSlot
   ): UVGeometry {
-    return this.#stackedRect ?
-      copyGeometry(this.#stackedRect) :
-      this.#faces.get(face);
+    return this.#layout.state === "stacked" ?
+      copyGeometry(this.#layout.rect) :
+      this.#faces.get(slot);
   }
 
-  facesOf(): UVRegionFace[] {
-    if (this.state === "stacked") {
+  slotsOf(): UVRegionSlot[] {
+    if (this.#layout.state === "stacked") {
       return [
         {
-          face: null,
-          geometry: copyRect(
-            this.#stackedRect!
-          )
+          slot: null,
+          geometry: copyRect(this.#layout.rect)
         }
       ];
     }
 
     return this.#activeFaces.map((face) => {
       return {
-        face,
+        slot: face,
         geometry: this.#faces.get(face)
       };
     });
   }
 
   stack(
-    face?: UVSlot
+    slot?: UVSlot
   ): UVRegion {
-    if (this.state === "stacked") {
+    if (this.#layout.state === "stacked") {
       return this;
     }
 
-    const target = this.#stackTarget(face);
+    const target = this.#stackTarget(slot);
     const rect = rectOf(this.#faces.get(target));
 
     return new UVRegion({
@@ -227,7 +259,7 @@ export class UVRegion {
   }
 
   free(): UVRegion {
-    if (this.state === "free") {
+    if (this.#layout.state === "free") {
       return this;
     }
 
@@ -244,7 +276,7 @@ export class UVRegion {
   }
 
   unfold(): UVRegion {
-    if (this.state === "unfolded") {
+    if (this.#layout.state === "unfolded") {
       return this;
     }
 
@@ -265,7 +297,7 @@ export class UVRegion {
       name: this.name,
       color: this.color,
       state: "unfolded",
-      faces: spread.withFaces(packed).toJSON(),
+      faces: spread.withSlots(packed).toJSON(),
       activeFaces: [
         ...this.#activeFaces
       ]
@@ -274,9 +306,9 @@ export class UVRegion {
 
   withRect(
     rect: SelectionRect,
-    face?: UVSlot
+    slot?: UVSlot
   ): UVRegion {
-    if (this.state === "stacked") {
+    if (this.#layout.state === "stacked") {
       return new UVRegion({
         id: this.id,
         name: this.name,
@@ -285,18 +317,18 @@ export class UVRegion {
         rect,
         faces: this.#faces
           .translated(
-            rect.x - this.#stackedRect!.x,
-            rect.y - this.#stackedRect!.y
+            rect.x - this.#layout.rect.x,
+            rect.y - this.#layout.rect.y
           )
           .toJSON(),
         activeFaces: [
           ...this.#activeFaces
         ],
-        stackedFace: this.#stackedFace ?? undefined
+        stackedFace: this.#layout.slot ?? undefined
       });
     }
 
-    if (this.state === "unfolded") {
+    if (this.#layout.state === "unfolded") {
       const bounds = this.bounds;
 
       return this.translated({
@@ -305,11 +337,11 @@ export class UVRegion {
       });
     }
 
-    if (!face) {
+    if (!slot) {
       return this;
     }
 
-    const previous = this.#faces.get(face);
+    const previous = this.#faces.get(slot);
     const geometry = "shape" in previous ?
       { ...previous, rect: copyRect(rect) } :
       copyRect(rect);
@@ -319,7 +351,7 @@ export class UVRegion {
       name: this.name,
       color: this.color,
       state: "free",
-      faces: this.#faces.withFace(face, geometry).toJSON(),
+      faces: this.#faces.withSlot(slot, geometry).toJSON(),
       activeFaces: [
         ...this.#activeFaces
       ]
@@ -333,11 +365,12 @@ export class UVRegion {
       return this;
     }
 
-    if (this.state === "stacked") {
+    const layout = this.#layout;
+    if (layout.state === "stacked") {
       return this.withRect({
-        ...this.#stackedRect!,
-        x: this.#stackedRect!.x + delta.x,
-        y: this.#stackedRect!.y + delta.y
+        ...layout.rect,
+        x: layout.rect.x + delta.x,
+        y: layout.rect.y + delta.y
       });
     }
 
@@ -345,7 +378,7 @@ export class UVRegion {
       id: this.id,
       name: this.name,
       color: this.color,
-      state: this.state,
+      state: layout.state,
       faces: this.#faces.translated(delta.x, delta.y).toJSON(),
       activeFaces: [
         ...this.#activeFaces
@@ -362,10 +395,11 @@ export class UVRegion {
       identity.name = this.name;
     }
 
-    if (this.state !== "stacked") {
+    const layout = this.#layout;
+    if (layout.state !== "stacked") {
       return {
         ...identity,
-        state: this.state,
+        state: layout.state,
         faces: this.#faces.toJSON(),
         activeFaces: [
           ...this.#activeFaces
@@ -376,25 +410,25 @@ export class UVRegion {
     const data: UVRegionData = {
       ...identity,
       state: "stacked",
-      rect: copyRect(this.#stackedRect!)
+      rect: copyRect(layout.rect)
     };
-    const faces = this.#faces.faces;
+    const faces = this.#faces.slots;
     const hasTopology = this.#activeFaces.length !== faces.length ||
-      faces.length !== UV_FACES.length ||
-      faces.some((face, index) => face !== UV_FACES[index]) ||
+      faces.length !== DEFAULT_UV_SLOTS.length ||
+      faces.some((face, index) => face !== DEFAULT_UV_SLOTS[index]) ||
       faces.some((face) => {
         const geometry = this.#faces.get(face);
 
         return !isRect(geometry) ||
-          !sameRect(geometry as SelectionRect, this.#stackedRect!);
+          !sameRect(geometry, layout.rect);
       });
     if (hasTopology) {
       data.faces = this.#faces.toJSON();
       data.activeFaces = [
         ...this.#activeFaces
       ];
-      if (this.#stackedFace !== null) {
-        data.stackedFace = this.#stackedFace;
+      if (layout.slot !== null) {
+        data.stackedFace = layout.slot;
       }
     }
 
@@ -404,21 +438,22 @@ export class UVRegion {
   #renderedFaces(): readonly UVSlot[] {
     return this.#activeFaces.length > 0 ?
       this.#activeFaces :
-      [this.#faces.primaryFace];
+      [this.#faces.primarySlot];
   }
 
   #spreadFaces(): UVSlotMap {
-    if (this.state !== "stacked") {
+    const layout = this.#layout;
+    if (layout.state !== "stacked") {
       return this.#faces;
     }
 
     const anchor = rectOf(
-      this.#faces.get(this.#stackedFace ?? this.#faces.primaryFace)
+      this.#faces.get(layout.slot ?? this.#faces.primarySlot)
     );
 
     return this.#faces.translated(
-      this.#stackedRect!.x - anchor.x,
-      this.#stackedRect!.y - anchor.y
+      layout.rect.x - anchor.x,
+      layout.rect.y - anchor.y
     );
   }
 
@@ -433,7 +468,7 @@ export class UVRegion {
 
     return (face !== undefined && candidates.includes(face) ? face : candidates[0]) ??
       face ??
-      this.#faces.primaryFace;
+      this.#faces.primarySlot;
   }
 
   #largestActiveFaces(): UVSlot[] {

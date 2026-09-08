@@ -8,6 +8,10 @@ import {
 } from "./PeerPresenceGhostSync.ts";
 import type { PixelArtCanvas } from "../../PixelArtCanvas.ts";
 import type { UVRegion } from "../../uv/UVRegion.ts";
+import {
+  isUVGeometry,
+  isUVSlot
+} from "../../uv/validation.ts";
 import type {
   PixelNetworkCommand,
   UVGhostPayload
@@ -18,15 +22,19 @@ export type UVGhostSyncOptions = PeerPresenceGhostSyncOptions;
 function isUVGhostPayload(
   value: unknown
 ): value is UVGhostPayload {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "id" in value &&
-    typeof value.id === "string" &&
-    "geometry" in value &&
-    typeof value.geometry === "object" &&
-    value.geometry !== null
-  );
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    !("id" in value) ||
+    typeof value.id !== "string" ||
+    !("face" in value) ||
+    !("geometry" in value)
+  ) {
+    return false;
+  }
+
+  return (value.face === null || isUVSlot(value.face)) &&
+    isUVGeometry(value.geometry);
 }
 
 /**
@@ -50,11 +58,27 @@ export class UVGhostSync extends PeerPresenceGhostSync<UVGhostPayload> {
   #onRegionMoved = (
     event: { region: UVRegion; }
   ): void => {
-    // Drop queued ticks after commit so cleared ghosts cannot reappear.
     if (this.pendingPayload?.id === event.region.id) {
       this.cancelPending();
     }
   };
+
+  #onRegionDragEnded = (
+    event: { id: string; committed: boolean; }
+  ): void => {
+    if (this.pendingPayload?.id === event.id) {
+      this.cancelPending();
+    }
+    if (!event.committed) {
+      this.clearPresence();
+    }
+  };
+
+  protected isExplicitClear(
+    value: unknown
+  ): boolean {
+    return value === null;
+  }
 
   protected subscribeLocal(
     canvas: PixelArtCanvas
@@ -66,6 +90,10 @@ export class UVGhostSync extends PeerPresenceGhostSync<UVGhostPayload> {
     canvas.uv.on(
       "region-moved",
       this.#onRegionMoved
+    );
+    canvas.uv.on(
+      "region-drag-ended",
+      this.#onRegionDragEnded
     );
   }
 
@@ -79,6 +107,10 @@ export class UVGhostSync extends PeerPresenceGhostSync<UVGhostPayload> {
     canvas.uv.off(
       "region-moved",
       this.#onRegionMoved
+    );
+    canvas.uv.off(
+      "region-drag-ended",
+      this.#onRegionDragEnded
     );
   }
 

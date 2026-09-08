@@ -7,7 +7,7 @@ import {
   type ResolvedTileRef
 } from "@jolly-pixel/voxel.renderer";
 import {
-  UV_FACES,
+  DEFAULT_UV_SLOTS,
   UVRegion,
   type SelectionRect,
   type UVGeometry,
@@ -32,7 +32,7 @@ const kWholeTile: UVSlotBounds = {
   v1: 1
 };
 const kBoxShapeUv: BlockShapeUv = {
-  activeFaces: [...UV_FACES],
+  activeFaces: [...DEFAULT_UV_SLOTS],
   bounds: recordOfFaces(() => kWholeTile),
   triangles: {},
   parts: {},
@@ -44,7 +44,7 @@ function recordOfFaces<TValue>(
   valueOf: (face: UVSlot) => TValue
 ): Record<UVSlot, TValue> {
   const record = {} as Record<UVSlot, TValue>;
-  for (const face of UV_FACES) {
+  for (const face of DEFAULT_UV_SLOTS) {
     record[face] = valueOf(face);
   }
 
@@ -150,7 +150,7 @@ export function blockFromUvRegion(
     return {
       ...block,
       faceTextures: Object.fromEntries(
-        region.faces.map((face) => {
+        region.slots.map((face) => {
           const template = tileRefForSlot(block, face);
           if (!template) {
             throw new RangeError(`No texture template for UV slot "${face}"`);
