@@ -208,6 +208,7 @@ export class BlockLibrary extends LitElement {
           @jolly-change=${this.#onRotationChange}
         ></jolly-button-group>
         <jolly-checkbox
+          align="end"
           label="Flip Y"
           .value=${this._flipY}
           @jolly-change=${this.#onFlipYToggle}
