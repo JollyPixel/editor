@@ -107,26 +107,30 @@ export class SqliteEventLog implements EventLog {
     );
   }
 
-  lastVersionOf(
+  listFromCheckpoint(
     assetId: string,
-    eventTypes: readonly string[]
-  ): number {
-    this.#assertOpen();
-
-    if (eventTypes.length === 0) {
-      return 0;
+    checkpointEventTypes: readonly string[]
+  ): Event[] {
+    if (checkpointEventTypes.length === 0) {
+      return this.list(assetId);
     }
 
-    const placeholders = placeholdersFor(eventTypes);
-    const row = this.#connection.get<{ event_version: number | null; }>(
-      `SELECT MAX(event_version) AS event_version
-       FROM events
-       WHERE asset_id = ? AND event_type IN (${placeholders})`,
-      assetId,
-      ...eventTypes
-    );
+    const placeholders = placeholdersFor(checkpointEventTypes);
 
-    return row?.event_version ?? 0;
+    return this.#query(
+      `SELECT ${EVENT_COLUMNS}
+       FROM events
+       WHERE asset_id = ?
+         AND event_version >= COALESCE((
+           SELECT MAX(event_version)
+           FROM events
+           WHERE asset_id = ? AND event_type IN (${placeholders})
+         ), 0)
+       ORDER BY event_version ASC`,
+      assetId,
+      assetId,
+      ...checkpointEventTypes
+    );
   }
 
   listAll(

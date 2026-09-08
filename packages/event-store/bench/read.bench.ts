@@ -46,12 +46,12 @@ const suite = defineSuite("event-store / reads", async(bench) => {
         }
       )
       .add(
-        `lastVersionOf / 2 event types [${kind}]`,
+        `listFromCheckpoint / 2 event types [${kind}]`,
         () => {
-          sink += reader.lastVersionOf(
+          sink += reader.listFromCheckpoint(
             "asset-0",
             ["asset.created", "asset.snapshot"]
-          );
+          ).length;
         }
       )
       .add(

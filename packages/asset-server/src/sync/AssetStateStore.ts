@@ -32,7 +32,7 @@ export class AssetStateStore {
   #kinds: AssetKindRegistry;
   #entries = new Map<string, AssetStateEntry>();
   #replays = new Map<string, Promise<AssetStateEntry>>();
-  #onAppend: ((event: EventStore.Event) => void) | null = null;
+  #unsubscribe: (() => void) | null = null;
 
   constructor(
     options: AssetStateStoreOptions
@@ -42,23 +42,15 @@ export class AssetStateStore {
   }
 
   start(): void {
-    if (this.#onAppend !== null) {
-      return;
-    }
-
-    this.#onAppend = (event) => {
+    this.#unsubscribe ??= this.#eventStore.subscribe((event) => {
       const entry = this.#entries.get(event.assetId);
       entry?.handler.apply(entry.state, event);
-    };
-    this.#eventStore.writer.on("append", this.#onAppend);
+    });
   }
 
   close(): void {
-    if (this.#onAppend !== null) {
-      this.#eventStore.writer.off("append", this.#onAppend);
-      this.#onAppend = null;
-    }
-
+    this.#unsubscribe?.();
+    this.#unsubscribe = null;
     this.#entries.clear();
   }
 
@@ -122,20 +114,14 @@ export class AssetStateStore {
   ): Promise<AssetStateEntry> {
     const handler = this.#kinds.get(kind);
     const state = handler.create(assetId);
-    const checkpoint = this.#eventStore.reader.lastVersionOf(
+    let events = this.#eventStore.reader.listFromCheckpoint(
       assetId,
       ASSET_CHECKPOINT_EVENT_TYPES
     );
-    // `list` is exclusive, so step back one to fold the checkpoint itself.
-    let from = Math.max(checkpoint - 1, 0);
+    let from = 0;
     let sinceYield = 0;
 
-    for (;;) {
-      const events = this.#eventStore.reader.list(assetId, from);
-      if (events.length === 0) {
-        break;
-      }
-
+    while (events.length > 0) {
       for (const event of events) {
         handler.apply(state, event);
         from = event.eventVersion;
@@ -144,6 +130,8 @@ export class AssetStateStore {
           await timers.setImmediate();
         }
       }
+
+      events = this.#eventStore.reader.list(assetId, from);
     }
 
     return {

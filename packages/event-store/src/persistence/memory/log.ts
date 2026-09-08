@@ -74,26 +74,25 @@ export class MemoryEventLog implements EventLog {
     );
   }
 
-  lastVersionOf(
+  listFromCheckpoint(
     assetId: string,
-    eventTypes: readonly string[]
-  ): number {
+    checkpointEventTypes: readonly string[]
+  ): Event[] {
     this.#assertOpen();
 
-    const stream = this.#streams.get(assetId);
-    if (stream === undefined || eventTypes.length === 0) {
-      return 0;
-    }
-
-    const wanted = new Set(eventTypes);
+    const stream = this.#streams.get(assetId) ?? [];
+    const wanted = new Set(checkpointEventTypes);
+    let start = 0;
     for (let index = stream.length - 1; index >= 0; index--) {
-      const event = stream[index];
-      if (wanted.has(event.eventType)) {
-        return event.eventVersion;
+      if (wanted.has(stream[index].eventType)) {
+        start = index;
+        break;
       }
     }
 
-    return 0;
+    return stream
+      .slice(start)
+      .map((event) => structuredClone(event));
   }
 
   listAll(

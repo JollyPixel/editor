@@ -6,11 +6,11 @@ import {
   silentLogger,
   type Logger
 } from "../logger.ts";
-import { ASSET_EVENT_PREFIX } from "../constants.ts";
 import { contentHash } from "../utils/contentHash.ts";
 import {
   ASSET_UPDATED,
   encodeContent,
+  isAssetEventType,
   type AssetEventDataMap,
   type AssetUpdatedData
 } from "../events/AssetEvents.ts";
@@ -59,7 +59,7 @@ export class SnapshotScheduler {
 
   #pending = new Map<string, PendingSnapshot>();
   #chains = new Map<string, TaskChain>();
-  #onAppend: ((event: EventStore.Event) => void) | null = null;
+  #unsubscribe: (() => void) | null = null;
 
   constructor(
     options: SnapshotSchedulerOptions
@@ -81,25 +81,16 @@ export class SnapshotScheduler {
   }
 
   start(): void {
-    if (this.#onAppend !== null) {
-      return;
-    }
-
-    this.#onAppend = (event) => {
-      if (event.eventType.startsWith(ASSET_EVENT_PREFIX)) {
-        return;
+    this.#unsubscribe ??= this.#eventStore.subscribe((event) => {
+      if (!isAssetEventType(event.eventType)) {
+        this.schedule(event.assetId);
       }
-
-      this.schedule(event.assetId);
-    };
-    this.#eventStore.writer.on("append", this.#onAppend);
+    });
   }
 
   async close(): Promise<void> {
-    if (this.#onAppend !== null) {
-      this.#eventStore.writer.off("append", this.#onAppend);
-      this.#onAppend = null;
-    }
+    this.#unsubscribe?.();
+    this.#unsubscribe = null;
 
     await this.flush();
   }

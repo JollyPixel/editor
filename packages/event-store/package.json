@@ -22,7 +22,8 @@
     "bench": "jolly-bench",
     "typecheck": "tsc --noEmit -p test/tsconfig.json",
     "test-only": "node --test \"test/**/*.spec.ts\"",
-    "test": "npm run typecheck && c8 -r html npm run test-only",
+    "test-types": "tstyche --tsconfig ./test/tsconfig.json",
+    "test": "npm run typecheck && c8 -r html npm run test-only && npm run test-types",
     "lint": "eslint src/**/*.ts"
   },
   "publishConfig": {

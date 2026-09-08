@@ -19,8 +19,9 @@ import * as EventStore from "@jolly-pixel/event-store";
 using store = await EventStore.persistence.sqlite("./events.sqlite");
 ```
 
-Passing a file path creates or opens a durable database. The default location
-is `":memory:"`, which lasts only until its SQLite connection closes.
+Passing a file path creates or opens a durable database, and creates the
+directories leading to it. The default location is `":memory:"`, which lasts
+only until its SQLite connection closes and touches no filesystem path.
 
 The factory returns a promise because the main package entry point loads the
 Node-only backend when the factory is called. Importing the main entry point is

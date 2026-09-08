@@ -48,7 +48,7 @@ export class CatalogProjection extends Emitter<
 > {
   #eventStore: EventStore.EventStore;
   #catalog = new AssetCatalog();
-  #onAppend: ((event: EventStore.Event) => void) | null = null;
+  #unsubscribe: (() => void) | null = null;
 
   constructor(
     options: CatalogProjectionOptions
@@ -77,36 +77,22 @@ export class CatalogProjection extends Emitter<
   }
 
   start(): void {
-    if (this.#onAppend !== null) {
-      return;
-    }
-
-    this.#onAppend = (event) => this.apply(event);
-    this.#eventStore.writer.on(
-      "append",
-      this.#onAppend
+    this.#unsubscribe ??= this.#eventStore.subscribe(
+      (event) => void this.apply(event),
+      { eventTypePrefix: ASSET_EVENT_PREFIX }
     );
   }
 
   close(): void {
-    if (this.#onAppend !== null) {
-      this.#eventStore.writer.off(
-        "append",
-        this.#onAppend
-      );
-      this.#onAppend = null;
-    }
-
+    this.#unsubscribe?.();
+    this.#unsubscribe = null;
     this.removeAllListeners();
   }
 
   apply(
     event: EventStore.Event
   ): boolean {
-    if (
-      !event.eventType.startsWith(ASSET_EVENT_PREFIX) ||
-      !isAssetEvent(event)
-    ) {
+    if (!isAssetEvent(event)) {
       return false;
     }
 

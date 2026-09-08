@@ -2,6 +2,8 @@
 import type {
   CompactOptions,
   EventDataMap,
+  EventListener,
+  SubscribeOptions,
   TypedEventStore
 } from "../EventStore.ts";
 import type {
@@ -16,12 +18,28 @@ export function createEventStore<
 >(
   log: EventLog
 ): TypedEventStore<TMap> {
-  const writer = new EventStoreWriter(log) as unknown as
-    TypedEventStore<TMap>["writer"];
+  const writer = new EventStoreWriter(log);
 
   return {
-    writer,
+    writer: writer as unknown as TypedEventStore<TMap>["writer"],
     reader: log,
+    subscribe: (
+      listener: EventListener,
+      options: SubscribeOptions = {}
+    ) => {
+      const { eventTypePrefix } = options;
+      const handler: EventListener = eventTypePrefix === undefined ?
+        listener :
+        (event) => {
+          if (event.eventType.startsWith(eventTypePrefix)) {
+            listener(event);
+          }
+        };
+
+      writer.on("append", handler);
+
+      return () => writer.off("append", handler);
+    },
     compact: (
       options: CompactOptions
     ) => log.compact(options),

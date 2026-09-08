@@ -44,6 +44,31 @@ describe("SqliteEventStore — durability", () => {
   });
 });
 
+describe("SqliteEventStore — location", () => {
+  test("creates the directories its file lives in", async(t) => {
+    const root = path.join(
+      os.tmpdir(),
+      `event-store-${process.pid}-${Date.now()}-nested`
+    );
+    t.after(
+      () => fs.rmSync(root, { force: true, recursive: true })
+    );
+
+    const file = path.join(root, ".state", "events.db");
+    using store = await EventStore.persistence.sqlite(file);
+    append(store, "a1", { x: 1 });
+
+    assert.strictEqual(fs.statSync(file).isFile(), true);
+  });
+
+  test("does not touch the filesystem for an in-memory store", async() => {
+    using store = await EventStore.persistence.sqlite(":memory:");
+    append(store, "a1", { x: 1 });
+
+    assert.strictEqual(fs.existsSync(":memory:"), false);
+  });
+});
+
 describe("SqliteEventStore — version invariant", () => {
   test("the schema rejects a duplicate version for one asset", () => {
     using db = new DatabaseSync(":memory:");

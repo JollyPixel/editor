@@ -50,7 +50,7 @@ export class AssetProjector {
   #dirty = new Set<string>();
   #stateDirty = false;
   #queue = new TaskChain();
-  #onAppend: ((event: EventStore.Event) => void) | null = null;
+  #unsubscribe: (() => void) | null = null;
 
   constructor(
     options: AssetProjectorOptions
@@ -75,26 +75,18 @@ export class AssetProjector {
   }
 
   start(): void {
-    if (this.#onAppend !== null) {
-      return;
-    }
-
-    this.#onAppend = (event) => {
-      if (!event.eventType.startsWith(ASSET_EVENT_PREFIX)) {
-        return;
-      }
-
-      this.#absorb(event);
-      void this.flush(event.assetId);
-    };
-    this.#eventStore.writer.on("append", this.#onAppend);
+    this.#unsubscribe ??= this.#eventStore.subscribe(
+      (event) => {
+        this.#absorb(event);
+        void this.flush(event.assetId);
+      },
+      { eventTypePrefix: ASSET_EVENT_PREFIX }
+    );
   }
 
   async close(): Promise<void> {
-    if (this.#onAppend !== null) {
-      this.#eventStore.writer.off("append", this.#onAppend);
-      this.#onAppend = null;
-    }
+    this.#unsubscribe?.();
+    this.#unsubscribe = null;
 
     await this.flush();
   }

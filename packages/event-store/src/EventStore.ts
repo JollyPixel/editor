@@ -79,9 +79,9 @@ export interface EventWriter {
 export interface TypedEventWriter<
   TMap extends EventDataMap
 > {
-  append<K extends EventType<TMap>>(
+  append: <K extends EventType<TMap>>(
     input: TypedAppendInput<TMap, K>
-  ): Result<TypedEvent<TMap>, Error>;
+  ) => Result<Event, Error>;
 }
 
 export interface ListFromCheckpointsOptions {
@@ -109,10 +109,10 @@ export interface EventReader {
     fromVersion?: number
   ): Event[];
 
-  lastVersionOf(
+  listFromCheckpoint(
     assetId: string,
-    eventTypes: readonly string[]
-  ): number;
+    checkpointEventTypes: readonly string[]
+  ): Event[];
 
   listAll(
     options?: ListAllOptions
@@ -123,9 +123,22 @@ export interface EventReader {
   ): Event[];
 }
 
+export interface SubscribeOptions {
+  eventTypePrefix?: string;
+}
+
+export type EventListener = (
+  event: Event
+) => void;
+
 export interface EventStore {
   readonly writer: EventWriter & TypedEventEmitter<EventStoreEventMap>;
   readonly reader: EventReader;
+
+  subscribe(
+    listener: EventListener,
+    options?: SubscribeOptions
+  ): () => void;
 
   compact(
     options: CompactOptions

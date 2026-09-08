@@ -1,5 +1,8 @@
+// Import Node.js Dependencies
+import path from "node:path";
+
 // Import Third-party Dependencies
-import type * as EventStore from "@jolly-pixel/event-store";
+import * as EventStore from "@jolly-pixel/event-store";
 import {
   Server,
   type Extension,
@@ -7,6 +10,7 @@ import {
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
+import { EVENTS_DB_PATH } from "../constants.ts";
 import type { AssetSource } from "../sources/AssetSource.ts";
 import { FilesystemAssetSource } from "../sources/persistence/FilesystemAssetSource.ts";
 import type { AssetKindHandler } from "../kinds/AssetKindHandler.ts";
@@ -23,7 +27,6 @@ import {
   silentLogger,
   type Logger
 } from "../logger.ts";
-import { openAssetEventStore } from "./openAssetEventStore.ts";
 import {
   seedAssetSource,
   type AssetSeedMap
@@ -118,7 +121,10 @@ export async function createAssetWorkspace(
   }
 
   const ownsEventStore = options.eventStore === undefined;
-  const eventStore = options.eventStore ?? await openAssetEventStore(root);
+  const eventStore = options.eventStore ??
+    await EventStore.persistence.sqlite<AssetEventDataMap>(
+      path.join(root, EVENTS_DB_PATH)
+    );
 
   if (compactOnOpen) {
     const report = eventStore.compact({

@@ -11,7 +11,13 @@ Shared API returned by the built-in persistence factories.
 export interface EventStore {
   readonly writer: EventWriter & TypedEventEmitter<EventStoreEventMap>;
   readonly reader: EventReader;
-  compact(options: CompactOptions): CompactReport;
+  subscribe(
+    listener: EventListener,
+    options?: SubscribeOptions
+  ): () => void;
+  compact(
+    options: CompactOptions
+  ): CompactReport;
   close(): void;
   [Symbol.dispose](): void;
 }
@@ -76,6 +82,11 @@ store.writer.append({
 An `eventType` outside the map is rejected, and so is an `eventData` that
 does not match the payload its `eventType` declares.
 
+`append` still returns the loose `Event`, so the map only constrains what a
+holder of the store writes. A store built without a map therefore satisfies
+a `TypedEventStore<TMap>` parameter — its `append` accepts every input the
+map describes — while a store built with a different map does not.
+
 `TypedEvent<TMap>` is the discriminated union the map describes. Narrowing on
 `eventType` narrows `eventData` with it:
 
@@ -124,11 +135,45 @@ export type EventStoreEventMap = {
 `append` is emitted with the stored event after a successful write. `error` is
 emitted with the error and original input after a failed write.
 
+## `subscribe`
+
+```ts
+export type EventListener = (event: Event) => void;
+
+export interface SubscribeOptions {
+  eventTypePrefix?: string;
+}
+
+subscribe(listener: EventListener, options?: SubscribeOptions): () => void
+```
+
+Calls `listener` with each event the store accepts, in append order, and
+returns the function that detaches it. A rejected append notifies nothing.
+`eventTypePrefix` matches the start of `eventType` literally, the same way the
+reader filters, so a consumer folding one family of events does not filter the
+stream itself.
+
+```ts
+const unsubscribe = store.subscribe(
+  (event) => catalog.apply(event),
+  { eventTypePrefix: "asset." }
+);
+```
+
+Subscribing does not replay history. A projection that starts from stored
+events reads them first, then subscribes to follow the log.
+
+`subscribe` covers accepted events only. Use `writer.on("error", ...)` to
+observe the appends a backend rejected.
+
 ## `reader`
 
 ```ts
 reader.list(assetId: string, fromVersion?: number): Event[]
-reader.lastVersionOf(assetId: string, eventTypes: readonly string[]): number
+reader.listFromCheckpoint(
+  assetId: string,
+  checkpointEventTypes: readonly string[]
+): Event[]
 reader.listAll(options?: ListAllOptions): Event[]
 reader.listFromCheckpoints(options: ListFromCheckpointsOptions): Event[]
 ```
@@ -136,11 +181,12 @@ reader.listFromCheckpoints(options: ListFromCheckpointsOptions): Event[]
 `list` returns one asset stream in `eventVersion` order and treats `fromVersion`
 as an exclusive lower bound.
 
-`lastVersionOf` returns the version of the newest event on `assetId` whose type
-is one of `eventTypes`, or `0` when the stream holds none. A reader that knows
-which types rebuild the whole state can use the version to resume a fold from
-that event. The method returns only the version and does not clone the matching
-event.
+`listFromCheckpoint` returns one asset's newest event whose type is in
+`checkpointEventTypes`, plus everything appended after it, in `eventVersion`
+order. A stream holding no such event comes back whole, and so does one read
+with an empty type list. It is the single-asset form of
+[`listFromCheckpoints`](#listfromcheckpoints): a consumer that folds one asset
+uses it to read only the events its fold still needs.
 
 `listAll` reads every stream in `eventId` order and accepts these filters:
 
@@ -226,5 +272,3 @@ All backends follow the same behavior:
   cannot mutate the log.
 - `append` returns an event equivalent to the one returned by a later `list`.
 - A rejected append consumes neither an `eventId` nor an `eventVersion`.
-
-`test/persistence/conformance.spec.ts` runs this contract against each backend.
