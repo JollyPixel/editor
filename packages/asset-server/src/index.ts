@@ -13,7 +13,6 @@ export type {
   AssetBackendInternals,
   AssetBackendOptions
 } from "./createAssetBackend.ts";
-export * from "./errors/index.ts";
 export {
   silentLogger,
   type Logger

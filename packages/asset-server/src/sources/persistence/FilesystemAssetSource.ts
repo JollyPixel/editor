@@ -14,7 +14,7 @@ import {
   normalizeAssetPath,
   toRelativePosix
 } from "../paths.ts";
-import { AssetPathEscapeError } from "../../errors/AssetPathEscapeError.ts";
+import { AssetPathEscapeError } from "../errors/AssetPathEscapeError.ts";
 import { STATE_DIRECTORY } from "../../constants.ts";
 
 export const DEFAULT_IGNORED_PATHS: readonly string[] = [

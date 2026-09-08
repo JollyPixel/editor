@@ -6,7 +6,7 @@ import {
   ASSET_DELETED,
   ASSET_UPDATED,
   decodeContent,
-  isAssetEvent,
+  parseAssetEvent,
   type AssetKindHandler,
   type AssetRoomBinding,
   type SnapshotPolicy
@@ -127,18 +127,20 @@ function applyEvent(
   state: VoxelMapState,
   event: EventStore.Event
 ): void {
-  if (isAssetEvent(event)) {
+  const parsed = parseAssetEvent(event);
+  if (parsed.ok) {
+    const assetEvent = parsed.val;
     if (
-      event.eventType === ASSET_CREATED ||
-      event.eventType === ASSET_UPDATED
+      assetEvent.eventType === ASSET_CREATED ||
+      assetEvent.eventType === ASSET_UPDATED
     ) {
       state.load(
         decodeVoxelDocument(
-          decodeContent(event.eventData.content)
+          decodeContent(assetEvent.eventData.content)
         )
       );
     }
-    else if (event.eventType === ASSET_DELETED) {
+    else if (assetEvent.eventType === ASSET_DELETED) {
       state.clear();
     }
 

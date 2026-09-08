@@ -15,7 +15,7 @@ import {
   isStatePath,
   normalizeAssetPath
 } from "../sources/paths.ts";
-import { AssetPathEscapeError } from "../errors/AssetPathEscapeError.ts";
+import { AssetPathEscapeError } from "../sources/errors/AssetPathEscapeError.ts";
 import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
 import { CatalogIdentitySidecar } from "../catalog/CatalogIdentitySidecar.ts";
 import { contentHash } from "../utils/contentHash.ts";
@@ -103,20 +103,28 @@ export class AssetWriter {
   ): Promise<Result<EventStore.Event, Error>> {
     const path = writableAssetPath(input.path);
     const kind = input.kind ?? this.#kinds.resolve(path).kind;
-    const assetId = input.assetId ?? randomUUID();
 
-    const appended = this.#append(assetId, kind, ASSET_CREATED, {
+    const assetId = input.assetId ?? randomUUID();
+    const assetData = {
       path,
       kind,
       hash: contentHash(input.data),
       size: input.data.byteLength,
       content: encodeContent(input.data)
-    }, input);
+    };
+
+    const appended = this.#append(
+      assetId, kind, ASSET_CREATED, assetData, input
+    );
     if (!appended.ok) {
       return appended;
     }
 
-    this.#identity.set({ id: assetId, path, kind });
+    this.#identity.set({
+      id: assetId,
+      path,
+      kind
+    });
     await this.#saveIdentity();
 
     return appended;
@@ -130,14 +138,22 @@ export class AssetWriter {
       return Promise.resolve(current);
     }
 
+    const updatedAssetData = {
+      path: current.val.path,
+      kind: current.val.kind,
+      hash: contentHash(input.data),
+      size: input.data.byteLength,
+      content: encodeContent(input.data)
+    };
+
     return Promise.resolve(
-      this.#append(input.assetId, current.val.kind, ASSET_UPDATED, {
-        path: current.val.path,
-        kind: current.val.kind,
-        hash: contentHash(input.data),
-        size: input.data.byteLength,
-        content: encodeContent(input.data)
-      }, input)
+      this.#append(
+        input.assetId,
+        current.val.kind,
+        ASSET_UPDATED,
+        updatedAssetData,
+        input
+      )
     );
   }
 
@@ -151,16 +167,18 @@ export class AssetWriter {
 
     const current = found.val;
     const to = writableAssetPath(input.to);
+
+    const renamedAssetData = {
+      from: current.path,
+      to,
+      kind: current.kind,
+      hash: current.hash
+    };
     const appended = this.#append(
       input.assetId,
       current.kind,
       ASSET_RENAMED,
-      {
-        from: current.path,
-        to,
-        kind: current.kind,
-        hash: current.hash
-      },
+      renamedAssetData,
       input
     );
     if (!appended.ok) {
@@ -186,10 +204,17 @@ export class AssetWriter {
     }
 
     const current = found.val;
-    const appended = this.#append(input.assetId, current.kind, ASSET_DELETED, {
+    const deletedAssetData = {
       path: current.path,
       kind: current.kind
-    }, input);
+    };
+    const appended = this.#append(
+      input.assetId,
+      current.kind,
+      ASSET_DELETED,
+      deletedAssetData,
+      input
+    );
     if (!appended.ok) {
       return appended;
     }
@@ -237,7 +262,10 @@ export class AssetWriter {
       eventData,
       actor: options.actor
     });
-    if (result.ok && options.alreadyProjected === true) {
+    if (
+      result.ok &&
+      options.alreadyProjected === true
+    ) {
       this.#projector.markProjected(assetId);
     }
 

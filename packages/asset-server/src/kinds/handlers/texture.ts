@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { AssetKindHandler } from "./AssetKindHandler.ts";
+import type { AssetKindHandler } from "../AssetKindHandler.ts";
 import {
   binaryAssetHandler,
   type BinaryAssetState
@@ -16,6 +16,7 @@ const kDefaultMatch = [
   "**/*.gif",
   "**/*.bmp"
 ] as const;
+
 const kDefaultContentTypes: Readonly<Record<string, string>> = {
   ".png": "image/png",
   ".jpg": "image/jpeg",

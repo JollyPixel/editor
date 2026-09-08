@@ -13,6 +13,7 @@ import {
   MemoryAssetSource
 } from "#src/index.ts";
 import { bytes } from "../helpers/bytes.ts";
+import { recordingLogger } from "../helpers/logger.ts";
 
 describe("CatalogIdentitySidecar — mapping", () => {
   test("indexes entries by path and by id", () => {
@@ -185,5 +186,61 @@ describe("contentHash", () => {
 
   test("is a sha256 hex digest", () => {
     assert.match(contentHash(bytes("hello")), /^[0-9a-f]{64}$/);
+  });
+});
+
+describe("CatalogIdentitySidecar — parse reporting", () => {
+  test("counts the entries it dropped", () => {
+    const { dropped, sidecar } = CatalogIdentitySidecar.parse({
+      version: 1,
+      assets: [
+        { id: "1", path: "a.png", kind: "binary" },
+        { id: 2, path: "b.png", kind: "binary" },
+        null
+      ]
+    });
+
+    assert.strictEqual(dropped, 2);
+    assert.strictEqual(sidecar.size, 1);
+  });
+
+  test("reports no drop for a document it cannot read at all", () => {
+    const { dropped, sidecar } = CatalogIdentitySidecar.parse("nope");
+
+    assert.strictEqual(dropped, 0);
+    assert.strictEqual(sidecar.size, 0);
+  });
+
+  test("warns once when load drops entries", async() => {
+    const source = new MemoryAssetSource();
+    await source.write(
+      IDENTITY_SIDECAR_PATH,
+      bytes(JSON.stringify({
+        version: 1,
+        assets: [
+          { id: "1", path: "a.png", kind: "binary" },
+          { id: 2, path: "b.png", kind: "binary" }
+        ]
+      }))
+    );
+    const { logger, records } = recordingLogger();
+
+    await CatalogIdentitySidecar.load(source, logger);
+
+    assert.strictEqual(records.length, 1);
+    assert.strictEqual(records[0].level, "warn");
+    assert.strictEqual(records[0].metadata.dropped, 1);
+  });
+
+  test("stays silent when every entry parses", async() => {
+    const source = new MemoryAssetSource();
+    await new CatalogIdentitySidecar([
+      { id: "1", path: "a.png", kind: "binary" }
+    ]).save(source);
+    const { logger, records } = recordingLogger();
+
+    await CatalogIdentitySidecar.load(source, logger);
+
+    assert.deepEqual(records, []);
   });
 });

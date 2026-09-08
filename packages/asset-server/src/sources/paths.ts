@@ -9,7 +9,7 @@ import {
 } from "@openally/result";
 
 // Import Internal Dependencies
-import { AssetPathEscapeError } from "../errors/AssetPathEscapeError.ts";
+import { AssetPathEscapeError } from "./errors/AssetPathEscapeError.ts";
 import { STATE_DIRECTORY } from "../constants.ts";
 
 // CONSTANTS

@@ -3,9 +3,40 @@ import { Buffer } from "node:buffer";
 
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
+import {
+  Err,
+  Ok,
+  type Result
+} from "@openally/result";
+import {
+  Validator,
+  type Infer,
+  type ValidationError
+} from "ata-validator";
 
 // Import Internal Dependencies
+import {
+  assetContentSchema,
+  assetDeletedDataSchema,
+  assetRenamedDataSchema,
+  assetWriteDataSchema
+} from "./AssetEvents.schema.ts";
 import { ASSET_EVENT_PREFIX } from "../constants.ts";
+
+// CONSTANTS
+const kValidatorOptions = { useDefaults: false };
+const kWriteDataValidator = new Validator(
+  assetWriteDataSchema,
+  kValidatorOptions
+);
+const kRenamedDataValidator = new Validator(
+  assetRenamedDataSchema,
+  kValidatorOptions
+);
+const kDeletedDataValidator = new Validator(
+  assetDeletedDataSchema,
+  kValidatorOptions
+);
 
 export const ASSET_CREATED = `${ASSET_EVENT_PREFIX}created` as const;
 export const ASSET_UPDATED = `${ASSET_EVENT_PREFIX}updated` as const;
@@ -24,35 +55,31 @@ export const ASSET_CHECKPOINT_EVENT_TYPES: readonly AssetEventType[] = [
   ASSET_DELETED
 ];
 
-export type AssetContent =
-  | { type: "inline"; encoding: "base64"; data: string; }
-  | { type: "ref"; hash: string; size: number; };
+export type AssetContent = Infer<typeof assetContentSchema>;
+
+export type AssetInlineContent = Extract<
+  AssetContent,
+  { type: "inline"; }
+>;
 
 /**
  * Shared payload for create and update events.
  */
-export interface AssetWriteData {
-  readonly path: string;
-  readonly kind: string;
-  readonly hash: string;
-  readonly size: number;
-  readonly content: AssetContent;
-}
+export type AssetWriteData = Readonly<
+  & Omit<Infer<typeof assetWriteDataSchema>, "content">
+  & { content: AssetInlineContent; }
+>;
 
 export type AssetCreatedData = AssetWriteData;
 export type AssetUpdatedData = AssetWriteData;
 
-export interface AssetRenamedData {
-  readonly from: string;
-  readonly to: string;
-  readonly kind: string;
-  readonly hash: string;
-}
+export type AssetRenamedData = Readonly<
+  Infer<typeof assetRenamedDataSchema>
+>;
 
-export interface AssetDeletedData {
-  readonly path: string;
-  readonly kind: string;
-}
+export type AssetDeletedData = Readonly<
+  Infer<typeof assetDeletedDataSchema>
+>;
 
 export type AssetEventData =
   | AssetWriteData
@@ -68,81 +95,112 @@ export type AssetEventDataMap = {
 
 export type AssetEvent = EventStore.TypedEvent<AssetEventDataMap>;
 
+/**
+ * Why an event on an asset stream did not yield an asset event.
+ *
+ * `foreign` means the event belongs to another domain and is none of our
+ * business. `malformed` and `unsupported` both mean an asset event we cannot
+ * project, and are worth reporting.
+ */
+export type AssetEventRejection =
+  | { reason: "foreign"; }
+  | { reason: "malformed"; errors: readonly ValidationError[]; }
+  | { reason: "unsupported"; detail: string; };
+
 export function isAssetEventType(
   eventType: string
 ): boolean {
   return eventType.startsWith(ASSET_EVENT_PREFIX);
 }
 
-export function isAssetEvent(
+export function parseAssetEvent(
   event: EventStore.Event
-): event is AssetEvent {
+): Result<AssetEvent, AssetEventRejection> {
   switch (event.eventType) {
     case ASSET_CREATED:
     case ASSET_UPDATED:
-      return isAssetWriteData(event.eventData);
-    case ASSET_RENAMED:
-      return isAssetRenamedData(event.eventData);
-    case ASSET_DELETED:
-      return isAssetDeletedData(event.eventData);
+      return parseWriteEvent(event.eventType, event);
+    case ASSET_RENAMED: {
+      const result = kRenamedDataValidator.validate(event.eventData);
+
+      return result.valid ?
+        Ok({
+          ...event,
+          eventType: ASSET_RENAMED,
+          eventData: result.data
+        }) :
+        Err(malformed(result.errors));
+    }
+    case ASSET_DELETED: {
+      const result = kDeletedDataValidator.validate(event.eventData);
+
+      return result.valid ?
+        Ok({
+          ...event,
+          eventType: ASSET_DELETED,
+          eventData: result.data
+        }) :
+        Err(malformed(result.errors));
+    }
     default:
-      return false;
+      return Err({ reason: "foreign" });
   }
 }
 
-function isRecord(
-  input: unknown
-): input is Record<string, unknown> {
-  return typeof input === "object" && input !== null;
-}
-
-function isAssetContent(
-  input: unknown
-): input is AssetContent {
-  if (!isRecord(input)) {
-    return false;
+export function describeRejection(
+  rejection: AssetEventRejection
+): string {
+  switch (rejection.reason) {
+    case "foreign":
+      return "event belongs to another domain";
+    case "unsupported":
+      return rejection.detail;
+    default:
+      return rejection.errors
+        .map((error) => `${error.instancePath || "/"} ${error.message}`)
+        .join("; ");
   }
-  if (input.type === "inline") {
-    return input.encoding === "base64" && typeof input.data === "string";
+}
+
+function parseWriteEvent(
+  eventType: typeof ASSET_CREATED | typeof ASSET_UPDATED,
+  event: EventStore.Event
+): Result<AssetEvent, AssetEventRejection> {
+  const result = kWriteDataValidator.validate(event.eventData);
+  if (!result.valid) {
+    return Err(malformed(result.errors));
   }
 
-  return input.type === "ref" &&
-    typeof input.hash === "string" &&
-    typeof input.size === "number";
+  const { content } = result.data;
+  if (content.type !== "inline") {
+    return Err({
+      reason: "unsupported",
+      detail: "content references are not supported yet"
+    });
+  }
+
+  return Ok({
+    ...event,
+    eventType,
+    eventData: {
+      ...result.data,
+      content
+    }
+  });
 }
 
-function isAssetWriteData(
-  input: unknown
-): input is AssetWriteData {
-  return isRecord(input) &&
-    typeof input.path === "string" &&
-    typeof input.kind === "string" &&
-    typeof input.hash === "string" &&
-    typeof input.size === "number" &&
-    isAssetContent(input.content);
-}
-
-function isAssetRenamedData(
-  input: unknown
-): input is AssetRenamedData {
-  return isRecord(input) &&
-    typeof input.from === "string" &&
-    typeof input.to === "string" &&
-    typeof input.kind === "string" &&
-    typeof input.hash === "string";
-}
-
-function isAssetDeletedData(
-  input: unknown
-): input is AssetDeletedData {
-  return isRecord(input) &&
-    typeof input.path === "string" &&
-    typeof input.kind === "string";
+function malformed(
+  errors: readonly ValidationError[]
+): AssetEventRejection {
+  return {
+    reason: "malformed",
+    errors
+  };
 }
 
 export function encodeContent(
   data: Uint8Array
-): AssetContent {
+): AssetInlineContent {
   return {
     type: "inline",
     encoding: "base64",
@@ -155,14 +213,8 @@ export function encodeContent(
 }
 
 export function decodeContent(
-  content: AssetContent
+  content: AssetInlineContent
 ): Uint8Array {
-  if (content.type === "ref") {
-    throw new Error(
-      "Content references are not supported yet; expected inline content."
-    );
-  }
-
   return new Uint8Array(
     Buffer.from(content.data, "base64")
   );

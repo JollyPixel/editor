@@ -1,18 +1,55 @@
+// Import Third-party Dependencies
+import {
+  defineSchema,
+  Validator,
+  type Infer
+} from "ata-validator";
+
 // Import Internal Dependencies
 import type { AssetSource } from "../sources/AssetSource.ts";
 import {
   readJsonFile,
   writeJsonFile
 } from "../sources/jsonFile.ts";
+import {
+  silentLogger,
+  type Logger
+} from "../logger.ts";
 import { IDENTITY_SIDECAR_PATH } from "../constants.ts";
 
 // CONSTANTS
 const kSidecarVersion = 1;
+const kValidatorOptions = { useDefaults: false };
+const kEntrySchema = defineSchema({
+  type: "object",
+  properties: {
+    id: { type: "string" },
+    path: { type: "string" },
+    kind: { type: "string" }
+  },
+  required: [
+    "id",
+    "path",
+    "kind"
+  ]
+});
+const kEntryValidator = new Validator(kEntrySchema, kValidatorOptions);
+const kDocumentValidator = new Validator(
+  defineSchema({
+    type: "object",
+    properties: {
+      assets: { type: "array" }
+    },
+    required: ["assets"]
+  }),
+  kValidatorOptions
+);
 
-export interface IdentityEntry {
-  readonly id: string;
-  readonly path: string;
-  readonly kind: string;
+export type IdentityEntry = Readonly<Infer<typeof kEntrySchema>>;
+
+export interface CatalogIdentitySidecarParse {
+  readonly sidecar: CatalogIdentitySidecar;
+  readonly dropped: number;
 }
 
 export interface CatalogIdentitySidecarData {
@@ -119,40 +156,54 @@ export class CatalogIdentitySidecar {
   }
 
   static async load(
-    source: AssetSource
+    source: AssetSource,
+    logger: Logger = silentLogger()
   ): Promise<CatalogIdentitySidecar> {
-    return CatalogIdentitySidecar.parse(
+    const { sidecar, dropped } = CatalogIdentitySidecar.parse(
       await readJsonFile(
         source,
         IDENTITY_SIDECAR_PATH
       )
     );
+    if (dropped > 0) {
+      logger
+        .withMetadata({
+          path: IDENTITY_SIDECAR_PATH,
+          dropped
+        })
+        .warn("identity sidecar entries dropped");
+    }
+
+    return sidecar;
   }
 
   static parse(
     input: unknown
-  ): CatalogIdentitySidecar {
-    if (
-      typeof input !== "object" ||
-      input === null ||
-      !("assets" in input) ||
-      !Array.isArray(input.assets)
-    ) {
-      return new CatalogIdentitySidecar();
+  ): CatalogIdentitySidecarParse {
+    const document = kDocumentValidator.validate(input);
+    if (!document.valid) {
+      return {
+        sidecar: new CatalogIdentitySidecar(),
+        dropped: 0
+      };
     }
 
-    return new CatalogIdentitySidecar(
-      input.assets.filter(isIdentityEntry)
-    );
-  }
-}
+    const entries: IdentityEntry[] = [];
+    let dropped = 0;
 
-function isIdentityEntry(
-  input: unknown
-): input is IdentityEntry {
-  return typeof input === "object" &&
-    input !== null &&
-    "id" in input && typeof input.id === "string" &&
-    "path" in input && typeof input.path === "string" &&
-    "kind" in input && typeof input.kind === "string";
+    for (const asset of document.data.assets) {
+      const entry = kEntryValidator.validate(asset);
+      if (entry.valid) {
+        entries.push(entry.data);
+      }
+      else {
+        dropped += 1;
+      }
+    }
+
+    return {
+      sidecar: new CatalogIdentitySidecar(entries),
+      dropped
+    };
+  }
 }

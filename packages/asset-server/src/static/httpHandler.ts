@@ -10,7 +10,7 @@ import { ASSET_URL_PREFIX } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
 import type { AssetSource } from "../sources/AssetSource.ts";
-import { AssetPathEscapeError } from "../errors/AssetPathEscapeError.ts";
+import { AssetPathEscapeError } from "../sources/errors/AssetPathEscapeError.ts";
 import {
   isStatePath,
   safeAssetPath,

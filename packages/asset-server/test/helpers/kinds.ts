@@ -6,7 +6,7 @@ import {
   ASSET_CREATED,
   ASSET_UPDATED,
   decodeContent,
-  isAssetEvent,
+  parseAssetEvent,
   type AssetKindHandler,
   type SnapshotPolicy
 } from "#src/index.ts";
@@ -41,14 +41,15 @@ export function counterHandler(
       state: CounterState,
       event: EventStore.Event
     ): void {
+      const parsed = parseAssetEvent(event);
       if (
-        isAssetEvent(event) && (
-          event.eventType === ASSET_CREATED ||
-          event.eventType === ASSET_UPDATED
+        parsed.ok && (
+          parsed.val.eventType === ASSET_CREATED ||
+          parsed.val.eventType === ASSET_UPDATED
         )
       ) {
         state.value = Number.parseInt(
-          text(decodeContent(event.eventData.content)),
+          text(decodeContent(parsed.val.eventData.content)),
           10
         );
       }

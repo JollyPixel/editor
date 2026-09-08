@@ -23,14 +23,16 @@ type AssetContent =
   | { type: "ref"; hash: string; size: number };
 ```
 
-Only inline content is supported. `decodeContent()` throws when given a
-reference. `encodeContent()`, `decodeContent()` and the event constants are
-exported from the main package entrypoint.
+Only inline content is supported. `AssetInlineContent` is that branch alone,
+and it is what a parsed write payload carries, so `decodeContent()` cannot be
+handed a reference. `encodeContent()`, `decodeContent()` and the event
+constants are exported from the main package entrypoint.
 
 ### Typed payloads
 
-`AssetEventDataMap` binds each event type to its payload, and `AssetEvent`
-is a stored event narrowed to a matching pair:
+Each payload type is derived from the JSON Schema that validates it, so the
+schema and the type cannot drift. `AssetEventDataMap` binds each event type to
+its payload, and `AssetEvent` is a stored event narrowed to a matching pair:
 
 ```ts
 type AssetEventDataMap = {
@@ -41,15 +43,27 @@ type AssetEventDataMap = {
 };
 ```
 
-`isAssetEvent(event)` validates a stored event against that map. Readers use
-it instead of asserting a payload shape, because events come back from
-persistence as parsed JSON.
+`parseAssetEvent(event)` parses a stored event against that map and returns
+`Result<AssetEvent, AssetEventRejection>`. Readers use it instead of asserting
+a payload shape, because events come back from persistence as parsed JSON.
 
-An event whose payload does not match its type is skipped rather than folded:
-the projector keeps the asset's last good projection and logs
-`malformed asset event skipped`, and the catalog keeps its last good record
-and returns `false` from `apply`. Neither aborts a replay, so one corrupt
-row cannot stop the backend from starting.
+A rejection says which of three things happened, and `describeRejection()`
+renders it for a log:
+
+| Reason | Meaning |
+|---|---|
+| `foreign` | another domain's event, or an `asset.` type this version does not know |
+| `malformed` | an asset event whose payload fails its schema; carries the failing paths |
+| `unsupported` | a well-formed write event carrying reference content |
+
+Payload schemas accept unknown fields, so an event written by a newer version
+of the backend stays readable rather than being skipped as malformed.
+
+A rejected event is skipped rather than folded: the projector keeps the
+asset's last good projection and warns for `malformed` and `unsupported`, and
+the catalog keeps its last good record and returns `false` from `apply`.
+Neither aborts a replay, so one corrupt row cannot stop the backend from
+starting.
 
 ## Snapshots
 

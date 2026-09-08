@@ -38,15 +38,16 @@ its own state before use. Pass the state type to keep `create`, `apply` and
 ## Reading lifecycle payloads
 
 `event.eventData` is typed `unknown` by the event store, because the store
-holds any domain. Narrow it with `isAssetEvent` rather than asserting a
-shape: it validates the payload against the event type and returns `false`
-for domain events and for lifecycle events whose payload does not match.
+holds any domain. Parse it with `parseAssetEvent` rather than asserting a
+shape: it validates the payload against a JSON Schema for its event type and
+returns a `Result` carrying the parsed event, or the reason it was refused.
 
 ```ts
 apply(state: MyState, event: Event): void {
-  if (isAssetEvent(event) && event.eventType === ASSET_UPDATED) {
+  const parsed = parseAssetEvent(event);
+  if (parsed.ok && parsed.val.eventType === ASSET_UPDATED) {
     // eventData is AssetWriteData here
-    state.bytes = decodeContent(event.eventData.content);
+    state.bytes = decodeContent(parsed.val.eventData.content);
   }
 }
 ```
