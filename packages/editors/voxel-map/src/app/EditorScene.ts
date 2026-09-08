@@ -41,6 +41,7 @@ import type { EditorState } from "./state/index.ts";
 
 // CONSTANTS
 const kDefaultBlockLimit = 32;
+const kExitOrbitFocusKey = "Escape";
 
 export interface EditorSceneOptions {
   /**
@@ -75,6 +76,10 @@ export class EditorScene extends Systems.Scene {
   #viewFocus: ViewFocus;
   #handles = Promise.withResolvers<EditorSceneHandles>();
   #subscriptions: Array<() => void> = [];
+
+  #onExitOrbitFocusKey = (): void => {
+    this.#freeFlyCamera?.exitOrbitFocus();
+  };
 
   editorState: EditorState;
 
@@ -126,13 +131,20 @@ export class EditorScene extends Systems.Scene {
     const freeFlyCamera = world
       .createActor("camera")
       .addComponentAndGet(FreeFlyCamera, {
-        position: { x: 8, y: 12, z: 32 }
+        position: { x: 8, y: 12, z: 32 },
+        focusMode: "lock"
       });
     this.#freeFlyCamera = freeFlyCamera;
     this.#subscriptions.push(
       this.editorState.selection.watch("gizmoDraggingChange", (dragging) => {
         freeFlyCamera.enabled = !dragging;
       })
+    );
+
+    const { keyboard } = world.input;
+    keyboard.on(kExitOrbitFocusKey, this.#onExitOrbitFocusKey);
+    this.#subscriptions.push(
+      () => keyboard.off(kExitOrbitFocusKey, this.#onExitOrbitFocusKey)
     );
 
     const vr = world
@@ -241,6 +253,7 @@ export class EditorScene extends Systems.Scene {
         selection: this.editorState.selection,
         color: this.#identity?.color
       });
+    brush.onFocusRequest = (point) => freeFlyCamera.enterOrbitFocus(point);
 
     this.localBrush = brush;
 

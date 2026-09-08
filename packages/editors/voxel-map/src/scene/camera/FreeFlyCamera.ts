@@ -10,8 +10,14 @@ import {
   type InputCondition
 } from "@jolly-pixel/engine";
 
+// Import Internal Dependencies
+import { OrbitFocus } from "./OrbitFocus.ts";
+import { ElasticFocus } from "./ElasticFocus.ts";
+
 // CONSTANTS
 const kRestingVelocitySq = 1e-6;
+
+export type FreeFlyCameraFocusMode = "none" | "lock" | "elastic";
 
 export interface FreeFlyCameraOptions {
   position?: THREE.Vector3Like;
@@ -40,6 +46,25 @@ export interface FreeFlyCameraOptions {
    * Fraction `moveSpeed` grows per wheel notch while looking around.
    */
   speedAdjustStep?: number;
+  /**
+   * "none": no pivot. "lock": `enterOrbitFocus` engages a fixed pivot;
+   * scroll adjusts distance, only `exitOrbitFocus` releases it. "elastic":
+   * WASD/look pilot a free-floating pivot; scroll trails the camera
+   * behind it, reaching 0 (free-fly) at full zoom-in.
+   * @default "none"
+   */
+  focusMode?: FreeFlyCameraFocusMode;
+  /**
+   * Bounds for the scroll-adjusted pivot distance in "lock" mode; only
+   * `maxPivotDistance` applies to "elastic", as its max trail distance.
+   */
+  minPivotDistance?: number;
+  maxPivotDistance?: number;
+  /**
+   * Distance nudged per key press while orbiting in "lock" mode.
+   * @default 1
+   */
+  pivotNudgeStep?: number;
 }
 
 export interface CameraPose {
@@ -62,6 +87,8 @@ export class FreeFlyCamera extends CameraComponent {
   #maxPitch: number;
   #scrollSpeed: number;
   #speedAdjustStep: number;
+  #orbitFocus: OrbitFocus | null;
+  #elasticFocus: ElasticFocus | null;
 
   // Reused each frame to avoid allocations.
   #forward = new THREE.Vector3();
@@ -69,7 +96,6 @@ export class FreeFlyCamera extends CameraComponent {
   #up = new THREE.Vector3(0, 1, 0);
   #move = new THREE.Vector3();
   #offset = new THREE.Vector3();
-  #dollyOffset = new THREE.Vector3();
   #scroll = { x: 0, y: 0 };
   #euler = new THREE.Euler(0, 0, 0, "YXZ");
   #orientation = new THREE.Quaternion();
@@ -101,6 +127,10 @@ export class FreeFlyCamera extends CameraComponent {
     "ShiftLeft.down",
     "ShiftRight.down"
   );
+  #alt = InputCombination.atLeastOne(
+    "AltLeft.down",
+    "AltRight.down"
+  );
 
   constructor(
     actor: Actor,
@@ -122,7 +152,11 @@ export class FreeFlyCamera extends CameraComponent {
       scrollSpeed = 2.5,
       speedAdjustStep = 0.15,
       yaw = 0,
-      pitch = -0.2
+      pitch = -0.2,
+      focusMode = "none",
+      minPivotDistance = 1,
+      maxPivotDistance = 200,
+      pivotNudgeStep = 1
     } = options;
 
     this.#yaw = yaw;
@@ -136,10 +170,21 @@ export class FreeFlyCamera extends CameraComponent {
     this.#scrollSpeed = scrollSpeed;
     this.#speedAdjustStep = speedAdjustStep;
 
+    const initialPosition = options.position ?? { x: 16, y: 20, z: 40 };
+    this.#orbitFocus = focusMode === "lock" ? new OrbitFocus({
+      minPivotDistance,
+      maxPivotDistance,
+      pivotNudgeStep,
+      sceneProvider: () => this.actor.world.sceneManager.getSource()
+    }) : null;
+    this.#elasticFocus = focusMode === "elastic" ? new ElasticFocus({
+      initialPosition,
+      maxTrailDistance: maxPivotDistance,
+      sceneProvider: () => this.actor.world.sceneManager.getSource()
+    }) : null;
+
     this.#applyOrientation();
-    this.actor.transform.setLocalPosition(
-      options.position ?? { x: 16, y: 20, z: 40 }
-    );
+    this.actor.transform.setLocalPosition(initialPosition);
   }
 
   #applyOrientation() {
@@ -151,16 +196,6 @@ export class FreeFlyCamera extends CameraComponent {
           0
         )
       )
-    );
-  }
-
-  #dolly(
-    transform: Actor["transform"],
-    distance: number
-  ) {
-    transform.moveGlobal(
-      transform.getForward(this.#dollyOffset)
-        .multiplyScalar(distance)
     );
   }
 
@@ -205,6 +240,57 @@ export class FreeFlyCamera extends CameraComponent {
     this.actor.transform.setLocalPosition(pose.position);
   }
 
+  get isOrbiting(): boolean {
+    if (this.#orbitFocus) {
+      return this.#orbitFocus.isOrbiting;
+    }
+
+    return (this.#elasticFocus?.trailDistance ?? 0) > 0;
+  }
+
+  get orbitPivot(): THREE.Vector3Like | null {
+    return this.#orbitFocus?.pivot ?? this.#elasticFocus?.pivotPosition ?? null;
+  }
+
+  enterOrbitFocus(
+    point?: THREE.Vector3Like
+  ): void {
+    if (!this.#orbitFocus) {
+      return;
+    }
+
+    const { transform } = this.actor;
+    const cameraPosition = transform.getGlobalPosition(this.#offset);
+    const result = this.#orbitFocus.enter(
+      point,
+      cameraPosition,
+      this.#yaw,
+      this.#pitch,
+      this.#up
+    );
+    if (result === false) {
+      return;
+    }
+
+    this.#yaw = result.yaw;
+    this.#pitch = Math.max(
+      -this.#maxPitch,
+      Math.min(this.#maxPitch, result.pitch)
+    );
+    this.#vel.set(0, 0, 0);
+    this.#orbitFocus.updatePose(transform, this.#yaw, this.#pitch, 0, this.#responsiveness);
+  }
+
+  exitOrbitFocus(): void {
+    this.#orbitFocus?.exit();
+  }
+
+  override destroy(): void {
+    this.#orbitFocus?.dispose();
+    this.#elasticFocus?.dispose();
+    super.destroy();
+  }
+
   start() {
     createViewHelper(
       this.threeCamera,
@@ -229,7 +315,8 @@ export class FreeFlyCamera extends CameraComponent {
     }
 
     const { transform } = this.actor;
-    const isLooking = input.mouse.isDown("middle");
+    const isLooking = input.mouse.isDown("middle") ||
+      (this.#alt.evaluate(input) && input.mouse.isDown("left"));
 
     if (isLooking && input.mouse.isMoving()) {
       const delta = input.mouse.viewportDelta(false);
@@ -240,7 +327,9 @@ export class FreeFlyCamera extends CameraComponent {
         Math.min(this.#maxPitch, this.#pitch)
       );
 
-      this.#applyOrientation();
+      if (!this.#orbitFocus?.isOrbiting) {
+        this.#applyOrientation();
+      }
     }
 
     transform.getForward(this.#forward);
@@ -250,33 +339,42 @@ export class FreeFlyCamera extends CameraComponent {
 
     this.#axes.update(input);
     this.#move.set(0, 0, 0);
-    this.#move.addScaledVector(
-      this.#forward,
-      this.#axes.value("moveForward")
-    );
-    this.#move.addScaledVector(
-      this.#right,
-      this.#axes.value("moveRight")
-    );
-    this.#move.y += this.#axes.value("moveUp");
+    if (this.#orbitFocus?.isOrbiting) {
+      this.#orbitFocus.nudge(input, this.#forward, this.#right);
+    }
+    else {
+      this.#move.addScaledVector(
+        this.#forward,
+        this.#axes.value("moveForward")
+      );
+      this.#move.addScaledVector(
+        this.#right,
+        this.#axes.value("moveRight")
+      );
+      this.#move.y += this.#axes.value("moveUp");
 
-    if (this.#move.lengthSq() > 0) {
-      this.#move.normalize().multiplyScalar(this.#moveSpeed);
+      if (this.#move.lengthSq() > 0) {
+        this.#move.normalize().multiplyScalar(this.#moveSpeed);
+      }
     }
 
     // Ctrl reserves scrolling for brush size.
     const isCtrl = this.#controls.evaluate(input);
     const scroll = input.mouse.scrollTo(this.#scroll);
     if (!isCtrl && scroll.y !== 0) {
-      if (isLooking) {
-        this.moveSpeed = this.#moveSpeed *
-          Math.pow(1 + this.#speedAdjustStep, scroll.y);
+      if (this.#elasticFocus) {
+        this.#elasticFocus.adjustTrailDistance(-scroll.y * this.#scrollSpeed);
       }
       else {
-        this.#dolly(
-          transform,
-          scroll.y * this.#scrollSpeed
-        );
+        const outcome = this.#orbitFocus?.handleScroll(
+          scroll.y,
+          this.#scrollSpeed
+        ) ?? "inactive";
+
+        if (outcome === "inactive") {
+          this.moveSpeed = this.#moveSpeed *
+            Math.pow(1 + this.#speedAdjustStep, scroll.y);
+        }
       }
     }
 
@@ -289,11 +387,22 @@ export class FreeFlyCamera extends CameraComponent {
       this.#vel.set(0, 0, 0);
     }
     else {
-      transform.moveGlobal(
-        this.#offset
-          .copy(this.#vel)
-          .multiplyScalar(deltaTime)
-      );
+      this.#offset
+        .copy(this.#vel)
+        .multiplyScalar(deltaTime);
+      if (this.#elasticFocus) {
+        this.#elasticFocus.move(this.#offset);
+      }
+      else {
+        transform.moveGlobal(this.#offset);
+      }
+    }
+
+    if (this.#orbitFocus?.isOrbiting) {
+      this.#orbitFocus.updatePose(transform, this.#yaw, this.#pitch, deltaTime, this.#responsiveness);
+    }
+    if (this.#elasticFocus) {
+      this.#elasticFocus.updatePose(transform, this.#orientation, deltaTime, this.#responsiveness);
     }
   }
 }
