@@ -5,9 +5,10 @@ export {
   ASSET_RENAMED,
   ASSET_UPDATED,
   decodeContent,
+  describeRejection,
   encodeContent,
-  isAssetEvent,
-  isAssetEventType
+  isAssetEventType,
+  parseAssetEvent
 } from "./AssetEvents.ts";
 export type {
   AssetContent,
@@ -16,7 +17,9 @@ export type {
   AssetEvent,
   AssetEventData,
   AssetEventDataMap,
+  AssetEventRejection,
   AssetEventType,
+  AssetInlineContent,
   AssetRenamedData,
   AssetUpdatedData,
   AssetWriteData

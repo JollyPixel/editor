@@ -7,12 +7,28 @@ import {
   type RoomContext
 } from "@jolly-pixel/network";
 import type { AssetManifestData } from "@jolly-pixel/asset";
+import {
+  defineSchema,
+  Validator
+} from "ata-validator";
 
 // Import Internal Dependencies
 import type {
   CatalogChange,
   CatalogProjection
 } from "./CatalogProjection.ts";
+
+// CONSTANTS
+const kEnvelopeValidator = new Validator(
+  defineSchema({
+    type: "object",
+    properties: {
+      type: { type: "string" }
+    },
+    required: ["type"]
+  }),
+  { useDefaults: false }
+);
 
 export const CATALOG_ROOM = "asset-catalog";
 
@@ -67,12 +83,9 @@ export class CatalogExtension extends Extension {
   override getEventName(
     payload: unknown
   ): string {
-    return typeof payload === "object" &&
-      payload !== null &&
-      "type" in payload &&
-      typeof payload.type === "string" ?
-      payload.type :
-      CATALOG_CHANGED;
+    const envelope = kEnvelopeValidator.validate(payload);
+
+    return envelope.valid ? envelope.data.type : CATALOG_CHANGED;
   }
 
   onClientConnect(

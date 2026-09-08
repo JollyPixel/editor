@@ -4,8 +4,8 @@ import {
   ASSET_DELETED,
   ASSET_RENAMED,
   ASSET_UPDATED,
-  type AssetContent,
-  type AssetEvent
+  type AssetEvent,
+  type AssetInlineContent
 } from "../events/AssetEvents.ts";
 
 /**
@@ -15,7 +15,7 @@ export interface AssetProjection {
   readonly path: string;
   readonly kind: string;
   readonly hash: string;
-  readonly content: AssetContent;
+  readonly content: AssetInlineContent;
 }
 
 export function applyProjection(

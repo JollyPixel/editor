@@ -119,7 +119,7 @@ export async function createAssetBackend(
   const kinds = new AssetKindRegistry(handlers);
   await ensureGitignore(source);
 
-  const state = await ProjectionState.load(source);
+  const state = await ProjectionState.load(source, logger);
   const projector = new AssetProjector({
     source,
     eventStore,
@@ -145,7 +145,7 @@ export async function createAssetBackend(
   });
   scheduler.start();
 
-  const identity = await CatalogIdentitySidecar.load(source);
+  const identity = await CatalogIdentitySidecar.load(source, logger);
   const writer = new AssetWriter({
     eventStore,
     kinds,

@@ -17,7 +17,7 @@ import {
   ASSET_DELETED,
   ASSET_RENAMED,
   ASSET_UPDATED,
-  isAssetEvent,
+  parseAssetEvent,
   type AssetEvent
 } from "../events/AssetEvents.ts";
 
@@ -92,11 +92,12 @@ export class CatalogProjection extends Emitter<
   apply(
     event: EventStore.Event
   ): boolean {
-    if (!isAssetEvent(event)) {
+    const parsed = parseAssetEvent(event);
+    if (!parsed.ok) {
       return false;
     }
 
-    const change = this.#fold(event);
+    const change = this.#fold(parsed.val);
     if (change === null) {
       return false;
     }

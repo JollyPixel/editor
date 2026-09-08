@@ -8,7 +8,7 @@ import {
   ASSET_DELETED,
   ASSET_UPDATED,
   decodeContent,
-  isAssetEvent
+  parseAssetEvent
 } from "../../events/AssetEvents.ts";
 
 export const BINARY_KIND = "binary";
@@ -25,24 +25,30 @@ export const binaryAssetHandler: AssetKindHandler<BinaryAssetState> = {
   match: ["**/*"],
 
   create(): BinaryAssetState {
-    return { bytes: new Uint8Array() };
+    return {
+      bytes: new Uint8Array()
+    };
   },
 
   apply(
     state: BinaryAssetState,
     event: EventStore.Event
   ): void {
-    if (!isAssetEvent(event)) {
+    const parsed = parseAssetEvent(event);
+    if (!parsed.ok) {
       return;
     }
 
+    const assetEvent = parsed.val;
     if (
-      event.eventType === ASSET_CREATED ||
-      event.eventType === ASSET_UPDATED
+      assetEvent.eventType === ASSET_CREATED ||
+      assetEvent.eventType === ASSET_UPDATED
     ) {
-      state.bytes = decodeContent(event.eventData.content);
+      state.bytes = decodeContent(
+        assetEvent.eventData.content
+      );
     }
-    else if (event.eventType === ASSET_DELETED) {
+    else if (assetEvent.eventType === ASSET_DELETED) {
       state.bytes = new Uint8Array();
     }
   },
@@ -50,6 +56,8 @@ export const binaryAssetHandler: AssetKindHandler<BinaryAssetState> = {
   serialize(
     state: BinaryAssetState
   ): Promise<Uint8Array> {
-    return Promise.resolve(state.bytes);
+    return Promise.resolve(
+      state.bytes
+    );
   }
 };

@@ -13,7 +13,9 @@ import {
 import {
   ASSET_CHECKPOINT_EVENT_TYPES,
   decodeContent,
-  isAssetEvent
+  describeRejection,
+  parseAssetEvent,
+  type AssetEventRejection
 } from "../events/AssetEvents.ts";
 import {
   applyProjection,
@@ -148,25 +150,21 @@ export class AssetProjector {
   #absorb(
     event: EventStore.Event
   ): void {
-    if (!isAssetEvent(event)) {
-      this.#logger
-        .withMetadata({
-          assetId: event.assetId,
-          eventId: event.eventId,
-          eventType: event.eventType
-        })
-        .warn("malformed asset event skipped");
+    const parsed = parseAssetEvent(event);
+    if (!parsed.ok) {
+      this.#reject(event, parsed.val);
 
       return;
     }
 
+    const assetEvent = parsed.val;
     const fold = this.#folds.get(event.assetId) ?? {
       projected: null,
       desired: null,
       desiredEventId: 0
     };
 
-    fold.desired = applyProjection(fold.desired, event);
+    fold.desired = applyProjection(fold.desired, assetEvent);
     fold.desiredEventId = event.eventId;
     if (event.eventId <= this.#state.checkpoint(event.assetId)) {
       fold.projected = fold.desired;
@@ -176,6 +174,27 @@ export class AssetProjector {
     }
 
     this.#folds.set(event.assetId, fold);
+  }
+
+  #reject(
+    event: EventStore.Event,
+    rejection: AssetEventRejection
+  ): void {
+    const log = this.#logger.withMetadata({
+      assetId: event.assetId,
+      eventId: event.eventId,
+      eventType: event.eventType,
+      reason: rejection.reason,
+      detail: describeRejection(rejection)
+    });
+
+    if (rejection.reason === "foreign") {
+      log.debug("unknown asset event skipped");
+
+      return;
+    }
+
+    log.warn("asset event skipped");
   }
 
   async #converge(

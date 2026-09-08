@@ -14,7 +14,10 @@ import {
   MemoryAssetSource,
   ProjectionState
 } from "#src/index.ts";
-import { decodeContent } from "#src/events/AssetEvents.ts";
+import {
+  decodeContent,
+  encodeContent
+} from "#src/events/AssetEvents.ts";
 import {
   countingReads,
   syncHarness
@@ -23,6 +26,7 @@ import {
   bytes,
   text
 } from "../helpers/bytes.ts";
+import { recordingLogger } from "../helpers/logger.ts";
 
 // CONSTANTS
 const kActor: EventStore.Actor = {
@@ -470,5 +474,127 @@ describe("AssetProjector — malformed events", () => {
 
     assert.doesNotThrow(() => replayed.load());
     assert.strictEqual(replayed.desired(created.val.assetId)?.path, "a.png");
+  });
+});
+
+describe("AssetProjector — rejected events", () => {
+  test("warns about a malformed event, naming the offending field",
+    async() => {
+      const source = new MemoryAssetSource();
+      using eventStore = EventStore.persistence.memory();
+      await using harness = await syncHarness({ source, eventStore });
+
+      const created = await harness.writer.create({
+        path: "a.png",
+        data: bytes("one"),
+        actor: kActor
+      });
+      assert.ok(created.ok);
+      assert.ok(eventStore.writer.append({
+        assetType: "binary",
+        assetId: created.val.assetId,
+        eventType: "asset.deleted",
+        eventData: { path: "a.png" },
+        actor: kActor
+      }).ok);
+
+      const { logger, records } = recordingLogger();
+      new AssetProjector({
+        source,
+        eventStore,
+        state: await ProjectionState.load(source),
+        logger
+      }).load();
+
+      const warnings = records.filter((record) => record.level === "warn");
+      assert.strictEqual(warnings.length, 1);
+      assert.strictEqual(warnings[0].metadata.reason, "malformed");
+      assert.match(String(warnings[0].metadata.detail), /kind/);
+    });
+
+  test("does not warn about an asset event type it does not know",
+    async() => {
+      const source = new MemoryAssetSource();
+      using eventStore = EventStore.persistence.memory();
+      await using harness = await syncHarness({ source, eventStore });
+
+      const created = await harness.writer.create({
+        path: "a.png",
+        data: bytes("one"),
+        actor: kActor
+      });
+      assert.ok(created.ok);
+      assert.ok(eventStore.writer.append({
+        assetType: "binary",
+        assetId: created.val.assetId,
+        eventType: "asset.archived",
+        eventData: {},
+        actor: kActor
+      }).ok);
+
+      const { logger, records } = recordingLogger();
+      new AssetProjector({
+        source,
+        eventStore,
+        state: await ProjectionState.load(source),
+        logger
+      }).load();
+
+      assert.deepEqual(
+        records.filter((record) => record.level === "warn"),
+        []
+      );
+    });
+
+  test("skips a content reference rather than throwing", async() => {
+    const source = new MemoryAssetSource();
+    using eventStore = EventStore.persistence.memory();
+
+    assert.ok(eventStore.writer.append({
+      assetType: "binary",
+      assetId: "a1",
+      eventType: "asset.created",
+      eventData: {
+        path: "a.png",
+        kind: "binary",
+        hash: "h1",
+        size: 3,
+        content: encodeContent(bytes("one"))
+      },
+      actor: kActor
+    }).ok);
+    assert.ok(eventStore.writer.append({
+      assetType: "binary",
+      assetId: "a1",
+      eventType: "asset.updated",
+      eventData: {
+        path: "a.png",
+        kind: "binary",
+        hash: "h2",
+        size: 3,
+        content: {
+          type: "ref",
+          hash: "h2",
+          size: 3
+        }
+      },
+      actor: kActor
+    }).ok);
+
+    const { logger, records } = recordingLogger();
+    const projector = new AssetProjector({
+      source,
+      eventStore,
+      state: await ProjectionState.load(source),
+      logger
+    });
+
+    assert.doesNotThrow(() => projector.load());
+    assert.strictEqual(projector.desired("a1"), null);
+    assert.strictEqual(projector.pending, 0);
+
+    const warnings = records.filter((record) => record.level === "warn");
+    assert.strictEqual(warnings.length, 1);
+    assert.strictEqual(warnings[0].metadata.reason, "unsupported");
   });
 });

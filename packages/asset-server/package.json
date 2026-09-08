@@ -36,8 +36,10 @@
   "scripts": {
     "prepublish": "rimraf ./dist && tsc -b",
     "build": "tsc",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json",
     "test-only": "node --test \"test/**/*.spec.ts\"",
-    "test": "c8 -r html npm run test-only",
+    "test-types": "tstyche --tsconfig ./test/tsconfig.json",
+    "test": "npm run typecheck && c8 -r html npm run test-only && npm run test-types",
     "lint": "eslint src/**/*.ts"
   },
   "publishConfig": {
@@ -67,6 +69,7 @@
     "@jolly-pixel/network": "1.1.0",
     "@openally/emitt": "1.0.1",
     "@openally/result": "3.1.0",
+    "ata-validator": "1.13.2",
     "chokidar": "^5.0.0",
     "loglayer": "9.4.0",
     "picomatch": "4.0.7"

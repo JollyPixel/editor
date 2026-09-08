@@ -11,8 +11,9 @@ import {
   ASSET_DELETED,
   ASSET_RENAMED,
   ASSET_UPDATED,
+  describeRejection,
   encodeContent,
-  isAssetEvent
+  parseAssetEvent
 } from "#src/index.ts";
 import { bytes } from "../helpers/bytes.ts";
 import { assetEvent } from "../helpers/events.ts";
@@ -36,35 +37,81 @@ const kDeletedData = {
   kind: "binary"
 };
 
-describe("isAssetEvent", () => {
-  test("accepts each lifecycle type with its own payload", () => {
+function rejectionOf(
+  eventType: string,
+  eventData: unknown
+) {
+  const parsed = parseAssetEvent(assetEvent(eventType, eventData));
+  assert.strictEqual(parsed.ok, false);
+
+  return parsed.val;
+}
+
+describe("parseAssetEvent", () => {
+  test("returns the parsed payload for each lifecycle type", () => {
     for (const eventType of [ASSET_CREATED, ASSET_UPDATED]) {
-      assert.ok(isAssetEvent(assetEvent(eventType, kWriteData)));
+      const parsed = parseAssetEvent(assetEvent(eventType, kWriteData));
+
+      assert.ok(parsed.ok);
+      assert.strictEqual(parsed.val.eventType, eventType);
+      assert.deepStrictEqual(parsed.val.eventData, kWriteData);
     }
 
-    assert.ok(isAssetEvent(assetEvent(ASSET_RENAMED, kRenamedData)));
-    assert.ok(isAssetEvent(assetEvent(ASSET_DELETED, kDeletedData)));
+    const renamed = parseAssetEvent(assetEvent(ASSET_RENAMED, kRenamedData));
+    assert.ok(renamed.ok);
+    assert.deepStrictEqual(renamed.val.eventData, kRenamedData);
+
+    const deleted = parseAssetEvent(assetEvent(ASSET_DELETED, kDeletedData));
+    assert.ok(deleted.ok);
+    assert.deepStrictEqual(deleted.val.eventData, kDeletedData);
   });
 
-  test("accepts a reference content payload", () => {
-    assert.ok(isAssetEvent(assetEvent(ASSET_CREATED, {
+  test("does not mutate the stored payload", () => {
+    const eventData = { ...kWriteData };
+    const parsed = parseAssetEvent(assetEvent(ASSET_CREATED, eventData));
+
+    assert.ok(parsed.ok);
+    assert.deepStrictEqual(eventData, kWriteData);
+  });
+
+  test("keeps unknown payload fields", () => {
+    const parsed = parseAssetEvent(assetEvent(ASSET_DELETED, {
+      ...kDeletedData,
+      addedByANewerWriter: true
+    }));
+
+    assert.ok(parsed.ok);
+    assert.deepStrictEqual(parsed.val.eventData, {
+      ...kDeletedData,
+      addedByANewerWriter: true
+    });
+  });
+
+  test("rejects a reference content payload as unsupported", () => {
+    const rejection = rejectionOf(ASSET_CREATED, {
       ...kWriteData,
       content: {
         type: "ref",
         hash: "h1",
         size: 5
       }
-    })));
+    });
+
+    assert.strictEqual(rejection.reason, "unsupported");
+    assert.strictEqual(
+      describeRejection(rejection),
+      "content references are not supported yet"
+    );
   });
 
   test("rejects a payload belonging to another lifecycle type", () => {
     assert.strictEqual(
-      isAssetEvent(assetEvent(ASSET_CREATED, kRenamedData)),
-      false
+      rejectionOf(ASSET_CREATED, kRenamedData).reason,
+      "malformed"
     );
     assert.strictEqual(
-      isAssetEvent(assetEvent(ASSET_RENAMED, kWriteData)),
-      false
+      rejectionOf(ASSET_RENAMED, kWriteData).reason,
+      "malformed"
     );
   });
 
@@ -74,50 +121,53 @@ describe("isAssetEvent", () => {
       delete eventData[field];
 
       assert.strictEqual(
-        isAssetEvent(assetEvent(ASSET_CREATED, eventData)),
-        false,
+        rejectionOf(ASSET_CREATED, eventData).reason,
+        "malformed",
         `expected a missing "${field}" to be rejected`
       );
     }
   });
 
-  test("rejects a write payload with a mistyped field", () => {
-    assert.strictEqual(
-      isAssetEvent(assetEvent(ASSET_CREATED, {
-        ...kWriteData,
-        size: "5"
-      })),
-      false
-    );
+  test("reports the offending field of a mistyped payload", () => {
+    const rejection = rejectionOf(ASSET_CREATED, {
+      ...kWriteData,
+      size: "5"
+    });
+
+    assert.strictEqual(rejection.reason, "malformed");
+    assert.match(describeRejection(rejection), /\/size/);
   });
 
   test("rejects malformed inline content", () => {
     assert.strictEqual(
-      isAssetEvent(assetEvent(ASSET_CREATED, {
+      rejectionOf(ASSET_CREATED, {
         ...kWriteData,
         content: {
           type: "inline",
           encoding: "utf8",
           data: "hello"
         }
-      })),
-      false
+      }).reason,
+      "malformed"
     );
   });
 
   test("rejects a non-object payload", () => {
     for (const eventData of [null, undefined, "a.png", 42]) {
       assert.strictEqual(
-        isAssetEvent(assetEvent(ASSET_CREATED, eventData)),
-        false
+        rejectionOf(ASSET_CREATED, eventData).reason,
+        "malformed"
       );
     }
   });
 
-  test("rejects domain events on an asset stream", () => {
+  test("reports a domain event on an asset stream as foreign", () => {
+    const rejection = rejectionOf("counter.incremented", {});
+
+    assert.strictEqual(rejection.reason, "foreign");
     assert.strictEqual(
-      isAssetEvent(assetEvent("counter.incremented", {})),
-      false
+      describeRejection(rejection),
+      "event belongs to another domain"
     );
   });
 });

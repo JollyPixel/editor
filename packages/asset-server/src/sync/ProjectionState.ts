@@ -1,18 +1,63 @@
+// Import Third-party Dependencies
+import {
+  defineSchema,
+  Validator
+} from "ata-validator";
+
 // Import Internal Dependencies
 import type { AssetSource } from "../sources/AssetSource.ts";
 import {
   readJsonFile,
   writeJsonFile
 } from "../sources/jsonFile.ts";
+import {
+  silentLogger,
+  type Logger
+} from "../logger.ts";
 import { PROJECTION_STATE_PATH } from "../constants.ts";
 
 // CONSTANTS
 const kStateVersion = 1;
+const kValidatorOptions = { useDefaults: false };
+const kRecordValidator = new Validator(
+  defineSchema({ type: "object" }),
+  kValidatorOptions
+);
+const kCheckpointValidator = new Validator(
+  defineSchema({ type: "integer" }),
+  kValidatorOptions
+);
+const kFailureValidator = new Validator(
+  defineSchema({
+    type: "object",
+    properties: {
+      eventId: { type: "integer" },
+      attempts: { type: "integer" },
+      reason: { type: "string" }
+    },
+    required: [
+      "eventId",
+      "attempts",
+      "reason"
+    ]
+  }),
+  kValidatorOptions
+);
 
 export interface ProjectionFailure {
   readonly eventId: number;
   readonly attempts: number;
   readonly reason: string;
+}
+
+export interface ProjectionStateParse {
+  readonly data: ProjectionStateData | null;
+  readonly dropped: number;
+}
+
+interface PickedEntries<TValue> {
+  readonly entries: Record<string, TValue>;
+  readonly dropped: number;
 }
 
 export interface ProjectionStateData {
@@ -39,10 +84,16 @@ export class ProjectionState {
     }
 
     for (const [assetId, eventId] of Object.entries(data.checkpoints)) {
-      this.#checkpoints.set(assetId, eventId);
+      this.#checkpoints.set(
+        assetId,
+        eventId
+      );
     }
     for (const [assetId, failure] of Object.entries(data.failures)) {
-      this.#failures.set(assetId, failure);
+      this.#failures.set(
+        assetId,
+        failure
+      );
     }
   }
 
@@ -111,63 +162,83 @@ export class ProjectionState {
   }
 
   static async load(
-    source: AssetSource
+    source: AssetSource,
+    logger: Logger = silentLogger()
   ): Promise<ProjectionState> {
-    return new ProjectionState(
-      source,
-      ProjectionState.parse(
-        await readJsonFile(
-          source,
-          PROJECTION_STATE_PATH
-        )
+    const { data, dropped } = ProjectionState.parse(
+      await readJsonFile(
+        source,
+        PROJECTION_STATE_PATH
       )
     );
+    if (dropped > 0) {
+      logger
+        .withMetadata({
+          path: PROJECTION_STATE_PATH,
+          dropped
+        })
+        .warn("projection state entries dropped");
+    }
+
+    return new ProjectionState(source, data);
   }
 
   static parse(
     input: unknown
-  ): ProjectionStateData | null {
-    if (!isRecord(input)) {
-      return null;
+  ): ProjectionStateParse {
+    if (!kRecordValidator.isValidObject(input)) {
+      return {
+        data: null,
+        dropped: 0
+      };
     }
 
+    const checkpoints = pickEntries(
+      input.checkpoints,
+      kCheckpointValidator
+    );
+    const failures = pickEntries(
+      input.failures,
+      kFailureValidator
+    );
+
     return {
-      version: kStateVersion,
-      checkpoints: pickEntries(
-        input.checkpoints,
-        (value): value is number => Number.isInteger(value)
-      ),
-      failures: pickEntries(input.failures, isProjectionFailure)
+      data: {
+        version: kStateVersion,
+        checkpoints: checkpoints.entries,
+        failures: failures.entries
+      },
+      dropped: checkpoints.dropped + failures.dropped
     };
   }
 }
 
-function isRecord(
-  input: unknown
-): input is Record<string, unknown> {
-  return typeof input === "object" && input !== null;
-}
-
-function isProjectionFailure(
-  input: unknown
-): input is ProjectionFailure {
-  return isRecord(input) &&
-    Number.isInteger(input.eventId) &&
-    Number.isInteger(input.attempts) &&
-    typeof input.reason === "string";
-}
-
 function pickEntries<TValue>(
   input: unknown,
-  isValid: (value: unknown) => value is TValue
-): Record<string, TValue> {
-  if (!isRecord(input)) {
-    return {};
+  validator: Validator<TValue>
+): PickedEntries<TValue> {
+  if (!kRecordValidator.isValidObject(input)) {
+    return {
+      entries: {},
+      dropped: 0
+    };
   }
 
-  return Object.fromEntries(
-    Object.entries(input).filter(
-      (entry): entry is [string, TValue] => isValid(entry[1])
-    )
-  );
+  const entries: Record<string, TValue> = {};
+  let dropped = 0;
+
+  for (const [key, value] of Object.entries(input)) {
+    const result = validator.validate(value);
+    if (result.valid) {
+      entries[key] = result.data;
+    }
+    else {
+      dropped += 1;
+    }
+  }
+
+  return {
+    entries,
+    dropped
+  };
 }

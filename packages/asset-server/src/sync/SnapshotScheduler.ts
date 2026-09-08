@@ -200,7 +200,10 @@ export class SnapshotScheduler {
     });
     if (!appended.ok) {
       this.#logger
-        .withMetadata({ assetId, reason: appended.val.message })
+        .withMetadata({
+          assetId,
+          reason: appended.val.message
+        })
         .error("asset snapshot failed");
 
       return false;
