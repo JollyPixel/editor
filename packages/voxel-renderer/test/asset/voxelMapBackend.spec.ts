@@ -7,11 +7,11 @@ import path from "node:path";
 
 // Import Third-party Dependencies
 import * as EventStore from "@jolly-pixel/event-store";
+import { FilesystemAssetSource } from "@jolly-pixel/asset-source";
 import { Server, type ClientHandle } from "@jolly-pixel/network";
 import {
   assetRoomName,
   createAssetBackend,
-  FilesystemAssetSource,
   type Timers
 } from "@jolly-pixel/asset-server";
 

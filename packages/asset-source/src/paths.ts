@@ -10,7 +10,7 @@ import {
 
 // Import Internal Dependencies
 import { AssetPathEscapeError } from "./errors/AssetPathEscapeError.ts";
-import { STATE_DIRECTORY } from "../constants.ts";
+import { STATE_DIRECTORY } from "./constants.ts";
 
 // CONSTANTS
 // eslint-disable-next-line no-control-regex

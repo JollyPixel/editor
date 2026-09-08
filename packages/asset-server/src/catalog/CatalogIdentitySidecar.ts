@@ -4,13 +4,13 @@ import {
   Validator,
   type Infer
 } from "ata-validator";
-
-// Import Internal Dependencies
-import type { AssetSource } from "../sources/AssetSource.ts";
 import {
   readJsonFile,
-  writeJsonFile
-} from "../sources/jsonFile.ts";
+  writeJsonFile,
+  type AssetSource
+} from "@jolly-pixel/asset-source";
+
+// Import Internal Dependencies
 import {
   silentLogger,
   type Logger

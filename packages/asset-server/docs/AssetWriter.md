@@ -51,7 +51,9 @@ await backend.writer.remove({ assetId, actor });
 ```
 
 These operations return an error result when the asset ID is unknown. Paths
-are [root-relative POSIX paths](./AssetSource.md#paths); one that escapes the
+are
+[root-relative POSIX paths](../../asset-source/docs/AssetSource.md#paths); one
+that escapes the
 source root, or that names the `.jollypixel/` state directory, throws
 `AssetPathEscapeError`.
 

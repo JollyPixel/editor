@@ -1,4 +1,8 @@
-export const STATE_DIRECTORY = ".jollypixel";
+// Import Third-party Dependencies
+import { STATE_DIRECTORY } from "@jolly-pixel/asset-source";
+
+export { STATE_DIRECTORY };
+
 export const IDENTITY_SIDECAR_PATH = `${STATE_DIRECTORY}/assets.json`;
 export const PROJECTION_STATE_PATH = `${STATE_DIRECTORY}/state.json`;
 export const STATE_GITIGNORE_PATH = `${STATE_DIRECTORY}/.gitignore`;

@@ -7,14 +7,14 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
+import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
 import {
   ASSET_CREATED,
   ASSET_DELETED,
   ASSET_RENAMED,
-  ASSET_UPDATED,
-  MemoryAssetSource
+  ASSET_UPDATED
 } from "#src/index.ts";
 import { syncHarness } from "../helpers/backend.ts";
 import { counterHandler } from "../helpers/kinds.ts";

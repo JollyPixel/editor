@@ -1,9 +1,9 @@
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
 import type { Server } from "@jolly-pixel/network";
+import type { AssetSource } from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
-import type { AssetSource } from "./sources/AssetSource.ts";
 import {
   STATE_GITIGNORE_CONTENT,
   STATE_GITIGNORE_PATH

@@ -9,6 +9,7 @@ import path from "node:path";
 
 // Import Third-party Dependencies
 import * as EventStore from "@jolly-pixel/event-store";
+import { FilesystemAssetSource } from "@jolly-pixel/asset-source";
 import {
   Extension,
   Server,
@@ -21,7 +22,6 @@ import {
   assetRoomName,
   createAssetBackend,
   createCatalogHandler,
-  FilesystemAssetSource,
   IDENTITY_SIDECAR_PATH,
   PROJECTION_STATE_PATH,
   STATE_GITIGNORE_PATH,

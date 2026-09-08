@@ -4,6 +4,7 @@ The asset-server integration stores a voxel map as an event-sourced asset. Add
 the handler when creating the asset backend:
 
 ```ts
+import { FilesystemAssetSource } from "@jolly-pixel/asset-source";
 import {
   voxelMapAssetHandler
 } from "@jolly-pixel/voxel.renderer/asset/index.ts";

@@ -1,0 +1,50 @@
+{
+  "name": "@jolly-pixel/asset-source",
+  "description": "Physical asset storage",
+  "version": "1.0.0",
+  "type": "module",
+  "imports": {
+    "#src/*": "./src/*"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "prepublish": "rimraf ./dist && tsc -b",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json",
+    "test-only": "node --test \"test/**/*.spec.ts\"",
+    "test-types": "tstyche --tsconfig ./test/tsconfig.json",
+    "test": "npm run typecheck && c8 -r html npm run test-only && npm run test-types",
+    "lint": "eslint src/**/*.ts"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JollyPixel/editor.git",
+    "directory": "packages/asset-source"
+  },
+  "keywords": [],
+  "files": [
+    "dist",
+    "docs"
+  ],
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  },
+  "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@openally/result": "3.1.0",
+    "chokidar": "^5.0.0",
+    "picomatch": "4.0.7"
+  }
+}

@@ -5,9 +5,11 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { MemoryAssetSource } from "@jolly-pixel/asset-source";
+
 // Import Internal Dependencies
 import {
-  MemoryAssetSource,
   ProjectionState,
   PROJECTION_STATE_PATH
 } from "#src/index.ts";

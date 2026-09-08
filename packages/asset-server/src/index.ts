@@ -1,4 +1,3 @@
-export * from "./sources/index.ts";
 export * from "./utils/index.ts";
 export * from "./kinds/index.ts";
 export * from "./events/index.ts";

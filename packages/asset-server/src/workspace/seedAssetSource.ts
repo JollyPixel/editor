@@ -1,5 +1,5 @@
-// Import Internal Dependencies
-import type { AssetSource } from "../sources/AssetSource.ts";
+// Import Third-party Dependencies
+import type { AssetSource } from "@jolly-pixel/asset-source";
 
 export type AssetSeedFactory = () => Uint8Array | Promise<Uint8Array>;
 export type AssetSeedMap = Record<string, AssetSeedFactory>;

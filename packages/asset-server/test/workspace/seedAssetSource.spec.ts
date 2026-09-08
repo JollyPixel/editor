@@ -5,11 +5,11 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { MemoryAssetSource } from "@jolly-pixel/asset-source";
+
 // Import Internal Dependencies
-import {
-  MemoryAssetSource,
-  seedAssetSource
-} from "#src/index.ts";
+import { seedAssetSource } from "#src/index.ts";
 import {
   bytes,
   text

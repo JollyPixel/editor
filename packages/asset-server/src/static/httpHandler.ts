@@ -7,15 +7,15 @@ import type {
 
 // Import Third-party Dependencies
 import { ASSET_URL_PREFIX } from "@jolly-pixel/asset";
-
-// Import Internal Dependencies
-import type { AssetSource } from "../sources/AssetSource.ts";
-import { AssetPathEscapeError } from "../sources/errors/AssetPathEscapeError.ts";
 import {
+  AssetPathEscapeError,
   isStatePath,
   safeAssetPath,
-  type AssetPathRejection
-} from "../sources/paths.ts";
+  type AssetPathRejection,
+  type AssetSource
+} from "@jolly-pixel/asset-source";
+
+// Import Internal Dependencies
 import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
 import {
   contentTypesFromKinds,
