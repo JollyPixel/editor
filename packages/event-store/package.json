@@ -19,8 +19,10 @@
   "scripts": {
     "prepublish": "rimraf ./dist && tsc",
     "build": "tsc",
+    "bench": "jolly-bench",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json",
     "test-only": "node --test \"test/**/*.spec.ts\"",
-    "test": "c8 -r html npm run test-only",
+    "test": "npm run typecheck && c8 -r html npm run test-only",
     "lint": "eslint src/**/*.ts"
   },
   "publishConfig": {
@@ -46,5 +48,8 @@
   "dependencies": {
     "@openally/emitt": "1.0.1",
     "@openally/result": "3.1.0"
+  },
+  "devDependencies": {
+    "@jolly-pixel/bench": "*"
   }
 }

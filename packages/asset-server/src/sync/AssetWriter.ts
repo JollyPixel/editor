@@ -35,7 +35,7 @@ import {
 } from "../logger.ts";
 
 export interface AssetWriterOptions {
-  eventStore: EventStore.EventStore;
+  eventStore: EventStore.TypedEventStore<AssetEventDataMap>;
   kinds: AssetKindRegistry;
   projector: AssetProjector;
   identity: CatalogIdentitySidecar;
@@ -76,7 +76,7 @@ export interface DeleteAssetInput extends WriteOptions {
  * Appends lifecycle events before updating projections and identity.
  */
 export class AssetWriter {
-  #eventStore: EventStore.EventStore;
+  #eventStore: EventStore.TypedEventStore<AssetEventDataMap>;
   #kinds: AssetKindRegistry;
   #projector: AssetProjector;
   #identity: CatalogIdentitySidecar;

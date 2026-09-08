@@ -66,12 +66,7 @@ export type AssetEventDataMap = {
   [ASSET_DELETED]: AssetDeletedData;
 };
 
-export type AssetEvent = {
-  [K in keyof AssetEventDataMap]: EventStore.Event & {
-    eventType: K;
-    eventData: AssetEventDataMap[K];
-  };
-}[keyof AssetEventDataMap];
+export type AssetEvent = EventStore.TypedEvent<AssetEventDataMap>;
 
 export function isAssetEventType(
   eventType: string

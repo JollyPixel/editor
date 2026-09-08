@@ -1,18 +1,30 @@
 // Import Internal Dependencies
 import type {
   CompactOptions,
-  EventStore
+  EventDataMap,
+  TypedEventStore
 } from "../EventStore.ts";
-import type { EventLog } from "./EventLog.ts";
-import { EventStoreWriter } from "./EventStoreWriter.ts";
+import type {
+  EventLog
+} from "./EventLog.ts";
+import {
+  EventStoreWriter
+} from "./EventStoreWriter.ts";
 
-export function createEventStore(
+export function createEventStore<
+  TMap extends EventDataMap = EventDataMap
+>(
   log: EventLog
-): EventStore {
+): TypedEventStore<TMap> {
+  const writer = new EventStoreWriter(log) as unknown as
+    TypedEventStore<TMap>["writer"];
+
   return {
-    writer: new EventStoreWriter(log),
+    writer,
     reader: log,
-    compact: (options: CompactOptions) => log.compact(options),
+    compact: (
+      options: CompactOptions
+    ) => log.compact(options),
     close: () => log.close(),
     [Symbol.dispose]: () => log.close()
   };

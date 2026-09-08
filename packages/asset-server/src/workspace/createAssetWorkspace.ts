@@ -10,7 +10,10 @@ import {
 import type { AssetSource } from "../sources/AssetSource.ts";
 import { FilesystemAssetSource } from "../sources/persistence/FilesystemAssetSource.ts";
 import type { AssetKindHandler } from "../kinds/AssetKindHandler.ts";
-import { ASSET_CHECKPOINT_EVENT_TYPES } from "../events/AssetEvents.ts";
+import {
+  ASSET_CHECKPOINT_EVENT_TYPES,
+  type AssetEventDataMap
+} from "../events/AssetEvents.ts";
 import {
   createAssetBackend,
   type AssetBackend,
@@ -49,7 +52,7 @@ export interface AssetWorkspaceOptions {
   /**
    * @default sqlite log inside the workspace state directory
    */
-  eventStore?: EventStore.EventStore;
+  eventStore?: EventStore.TypedEventStore<AssetEventDataMap>;
   /**
    * Network server hosting the catalog and asset rooms. Pass one already
    * carrying extensions instead of letting the workspace build it.
@@ -79,7 +82,7 @@ export interface AssetWorkspaceOptions {
 
 export interface AssetWorkspace extends AsyncDisposable {
   readonly source: AssetSource;
-  readonly eventStore: EventStore.EventStore;
+  readonly eventStore: EventStore.TypedEventStore<AssetEventDataMap>;
   readonly backend: AssetBackend;
   readonly server: Server;
 

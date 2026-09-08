@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import * as EventStore from "#src/index.ts";
+import { EventLogClosedError } from "#src/persistence/EventLog.ts";
 import {
   append,
   backends,
@@ -16,8 +17,8 @@ import {
 } from "../helpers/backends.ts";
 
 /**
- * Behaviour every backend owes the `EventStore` contract. Anything asserted
- * here is part of the contract, not of one implementation.
+ * Behaviour every backend owes the `EventStore` contract.
+ * Anything asserted here is part of the contract, not of one implementation.
  */
 for (const backend of backends) {
   describe(`${backend.name} — append`, () => {
@@ -43,7 +44,11 @@ for (const backend of backends) {
     test("returns the event exactly as list serves it back", async() => {
       using store = await backend.create();
 
-      const appended = append(store, "a1", { nested: { value: 1 } });
+      const appended = append(
+        store,
+        "a1",
+        { nested: { value: 1 } }
+      );
       const [read] = store.reader.list("a1");
 
       assert.deepEqual(appended, read);
@@ -51,12 +56,23 @@ for (const backend of backends) {
 
     test("does not alias the eventData it was given", async() => {
       using store = await backend.create();
-      const eventData = { nested: { value: 1 } };
+      const eventData = {
+        nested: {
+          value: 1
+        }
+      };
 
-      const event = append(store, "a1", eventData);
+      const event = append(
+        store,
+        "a1",
+        eventData
+      );
       eventData.nested.value = 999;
 
-      assert.deepEqual(event.eventData, { nested: { value: 1 } });
+      assert.deepEqual(
+        event.eventData,
+        { nested: { value: 1 } }
+      );
       assert.deepEqual(
         store.reader.list("a1")[0].eventData,
         { nested: { value: 1 } }
@@ -102,7 +118,11 @@ for (const backend of backends) {
         eventData: Symbol("unserializable"),
         actor: USER_ACTOR
       });
-      const event = append(store, "a1", { x: 1 });
+      const event = append(
+        store,
+        "a1",
+        { x: 1 }
+      );
 
       assert.strictEqual(event.eventId, 1);
       assert.strictEqual(event.eventVersion, 1);
@@ -115,14 +135,20 @@ for (const backend of backends) {
       using store = await backend.create();
       seed(store);
 
-      assert.deepEqual(store.reader.list("a1")[0].actor, USER_ACTOR);
+      assert.deepEqual(
+        store.reader.list("a1")[0].actor,
+        USER_ACTOR
+      );
     });
 
     test("round-trips a system actor", async() => {
       using store = await backend.create();
       seed(store);
 
-      assert.deepEqual(store.reader.list("a2")[0].actor, SYSTEM_ACTOR);
+      assert.deepEqual(
+        store.reader.list("a2")[0].actor,
+        SYSTEM_ACTOR
+      );
     });
   });
 
@@ -135,7 +161,10 @@ for (const backend of backends) {
 
       const events = store.reader.list("a1");
 
-      assert.deepEqual(events.map((event) => event.eventVersion), [1, 2]);
+      assert.deepEqual(
+        events.map((event) => event.eventVersion),
+        [1, 2]
+      );
     });
 
     test("fromVersion excludes events at or before it", async() => {
@@ -146,13 +175,19 @@ for (const backend of backends) {
 
       const events = store.reader.list("a1", 1);
 
-      assert.deepEqual(events.map((event) => event.eventVersion), [2, 3]);
+      assert.deepEqual(
+        events.map((event) => event.eventVersion),
+        [2, 3]
+      );
     });
 
     test("returns an empty array for an unknown asset", async() => {
       using store = await backend.create();
 
-      assert.deepEqual(store.reader.list("missing"), []);
+      assert.deepEqual(
+        store.reader.list("missing"),
+        []
+      );
     });
 
     test("hands back copies, so mutating a result cannot reach the log", async() => {
@@ -162,7 +197,10 @@ for (const backend of backends) {
       const [event] = store.reader.list("a1");
       (event.eventData as { value: number; }).value = 999;
 
-      assert.deepEqual(store.reader.list("a1")[0].eventData, { value: 1 });
+      assert.deepEqual(
+        store.reader.list("a1")[0].eventData,
+        { value: 1 }
+      );
     });
   });
 
@@ -231,7 +269,10 @@ for (const backend of backends) {
 
       const events = store.reader.listAll();
 
-      assert.deepEqual(events.map((event) => event.eventId), [1, 2, 3, 4]);
+      assert.deepEqual(
+        events.map((event) => event.eventId),
+        [1, 2, 3, 4]
+      );
       assert.deepEqual(
         events.map((event) => event.assetId),
         ["a1", "a2", "a1", "a2"]
@@ -244,14 +285,19 @@ for (const backend of backends) {
 
       const events = store.reader.listAll({ fromEventId: 2 });
 
-      assert.deepEqual(events.map((event) => event.eventId), [3, 4]);
+      assert.deepEqual(
+        events.map((event) => event.eventId),
+        [3, 4]
+      );
     });
 
     test("eventTypePrefix keeps only the matching prefix", async() => {
       using store = await backend.create();
       seed(store);
 
-      const events = store.reader.listAll({ eventTypePrefix: "asset." });
+      const events = store.reader.listAll({
+        eventTypePrefix: "asset."
+      });
 
       assert.deepEqual(
         events.map((event) => event.eventType),
@@ -264,9 +310,14 @@ for (const backend of backends) {
       append(store, "a1", {}, "asset.created");
       append(store, "a2", {}, "a*.created");
 
-      const events = store.reader.listAll({ eventTypePrefix: "a*." });
+      const events = store.reader.listAll({
+        eventTypePrefix: "a*."
+      });
 
-      assert.deepEqual(events.map((event) => event.eventType), ["a*.created"]);
+      assert.deepEqual(
+        events.map((event) => event.eventType),
+        ["a*.created"]
+      );
     });
 
     test("limit truncates from the start of the ordered result", async() => {
@@ -275,7 +326,10 @@ for (const backend of backends) {
 
       const events = store.reader.listAll({ limit: 2 });
 
-      assert.deepEqual(events.map((event) => event.eventId), [1, 2]);
+      assert.deepEqual(
+        events.map((event) => event.eventId),
+        [1, 2]
+      );
     });
 
     test("combines every option", async() => {
@@ -288,13 +342,19 @@ for (const backend of backends) {
         limit: 1
       });
 
-      assert.deepEqual(events.map((event) => event.eventId), [2]);
+      assert.deepEqual(
+        events.map((event) => event.eventId),
+        [2]
+      );
     });
 
     test("returns an empty array on an empty log", async() => {
       using store = await backend.create();
 
-      assert.deepEqual(store.reader.listAll(), []);
+      assert.deepEqual(
+        store.reader.listAll(),
+        []
+      );
     });
   });
 
@@ -310,7 +370,10 @@ for (const backend of backends) {
         checkpointEventTypes: ["asset.created", "asset.updated"]
       });
 
-      assert.deepEqual(events.map((event) => event.eventId), [3, 4]);
+      assert.deepEqual(
+        events.map((event) => event.eventId),
+        [3, 4]
+      );
     });
 
     test("bounds each asset by its own checkpoint", async() => {
@@ -338,7 +401,10 @@ for (const backend of backends) {
         checkpointEventTypes: ["asset.created"]
       });
 
-      assert.deepEqual(events.map((event) => event.eventId), [1, 2]);
+      assert.deepEqual(
+        events.map((event) => event.eventId),
+        [1, 2]
+      );
     });
 
     test("filters by prefix without moving the checkpoint", async() => {
@@ -352,7 +418,10 @@ for (const backend of backends) {
         eventTypePrefix: "asset."
       });
 
-      assert.deepEqual(events.map((event) => event.eventId), [2]);
+      assert.deepEqual(
+        events.map((event) => event.eventId),
+        [2]
+      );
     });
 
     test("matches prefix wildcards literally", async() => {
@@ -365,7 +434,10 @@ for (const backend of backends) {
         eventTypePrefix: "a*."
       });
 
-      assert.deepEqual(events.map((event) => event.eventType), ["a*.created"]);
+      assert.deepEqual(
+        events.map((event) => event.eventType),
+        ["a*.created"]
+      );
     });
 
     test("returns every event when no checkpoint type is given", async() => {
@@ -376,7 +448,10 @@ for (const backend of backends) {
         checkpointEventTypes: []
       });
 
-      assert.deepEqual(events.map((event) => event.eventId), [1, 2, 3, 4]);
+      assert.deepEqual(
+        events.map((event) => event.eventId),
+        [1, 2, 3, 4]
+      );
     });
 
     test("returns an empty array on an empty log", async() => {
@@ -393,7 +468,12 @@ for (const backend of backends) {
     test("reads only the tail regardless of history depth", async() => {
       using store = await backend.create();
       for (let index = 0; index < 200; index++) {
-        append(store, "a1", { index }, "asset.updated");
+        append(
+          store,
+          "a1",
+          { index },
+          "asset.updated"
+        );
       }
 
       const events = store.reader.listFromCheckpoints({
@@ -401,7 +481,10 @@ for (const backend of backends) {
       });
 
       assert.strictEqual(events.length, 1);
-      assert.deepEqual(events[0].eventData, { index: 199 });
+      assert.deepEqual(
+        events[0].eventData,
+        { index: 199 }
+      );
     });
   });
 
@@ -502,7 +585,10 @@ for (const backend of backends) {
       append(store, "a1", { v: 3 }, "stroke");
       store.compact({ checkpointEventTypes: ["asset.updated"] });
 
-      const version = store.reader.lastVersionOf("a1", ["asset.updated"]);
+      const version = store.reader.lastVersionOf(
+        "a1",
+        ["asset.updated"]
+      );
 
       assert.strictEqual(version, 2);
       assert.deepEqual(
@@ -520,6 +606,38 @@ for (const backend of backends) {
       assert.throws(() => append(store, "a1"));
       assert.throws(() => store.reader.list("a1"));
       assert.throws(() => store.reader.listAll());
+    });
+
+    test("reports the same failure whichever call is made", async() => {
+      const store = await backend.create();
+      store.close();
+
+      assert.throws(
+        () => append(store, "a1"),
+        EventLogClosedError
+      );
+      assert.throws(
+        () => store.reader.list("a1"),
+        EventLogClosedError
+      );
+      assert.throws(
+        () => store.reader.lastVersionOf("a1", ["asset.created"]),
+        EventLogClosedError
+      );
+      assert.throws(
+        () => store.reader.listAll(),
+        EventLogClosedError
+      );
+      assert.throws(
+        () => store.reader.listFromCheckpoints({
+          checkpointEventTypes: ["asset.created"]
+        }),
+        EventLogClosedError
+      );
+      assert.throws(
+        () => store.compact({ checkpointEventTypes: ["asset.created"] }),
+        EventLogClosedError
+      );
     });
 
     test("close is idempotent", async() => {

@@ -7,8 +7,15 @@ import type {
   ListAllOptions,
   ListFromCheckpointsOptions
 } from "../../EventStore.ts";
-import type { EventLog } from "../EventLog.ts";
-import { toStoredValue } from "../serialize.ts";
+import {
+  EventLogClosedError,
+  type EventLog
+} from "../EventLog.ts";
+import {
+  materializeEvent,
+  toJson,
+  type EventFields
+} from "../serialize.ts";
 
 type EventPredicate = (
   event: Event
@@ -16,6 +23,7 @@ type EventPredicate = (
 
 export class MemoryEventLog implements EventLog {
   #events: Event[] = [];
+  #streams = new Map<string, Event[]>();
   #nextEventId = 1;
   #versionByAsset = new Map<string, number>();
   #closed = false;
@@ -33,33 +41,36 @@ export class MemoryEventLog implements EventLog {
       actor
     } = input;
 
-    const event: Event = {
+    const fields: EventFields = {
       eventId: this.#nextEventId,
       assetType,
       assetId,
       eventType,
-      eventData: toStoredValue(eventData, "eventData"),
+      eventDataJson: toJson(eventData, "eventData"),
       eventVersion: (this.#versionByAsset.get(assetId) ?? 0) + 1,
-      actor: toStoredValue(actor, "actor"),
+      actorJson: toJson(actor, "actor"),
       createdAt: new Date().toISOString()
     };
 
     this.#nextEventId++;
-    this.#versionByAsset.set(
-      assetId,
-      event.eventVersion
-    );
-    this.#events.push(structuredClone(event));
+    this.#versionByAsset.set(assetId, fields.eventVersion);
 
-    return event;
+    const stored = materializeEvent(fields);
+    this.#events.push(stored);
+    this.#stream(assetId).push(stored);
+
+    return materializeEvent(fields);
   }
 
   list(
     assetId: string,
     fromVersion = 0
   ): Event[] {
-    return this.#read(
-      (event) => event.assetId === assetId && event.eventVersion > fromVersion
+    this.#assertOpen();
+
+    return copyMatching(
+      this.#streams.get(assetId) ?? [],
+      (event) => event.eventVersion > fromVersion
     );
   }
 
@@ -69,31 +80,35 @@ export class MemoryEventLog implements EventLog {
   ): number {
     this.#assertOpen();
 
+    const stream = this.#streams.get(assetId);
+    if (stream === undefined || eventTypes.length === 0) {
+      return 0;
+    }
+
     const wanted = new Set(eventTypes);
-    let version = 0;
-    for (const event of this.#events) {
-      if (
-        event.assetId === assetId &&
-        wanted.has(event.eventType) &&
-        event.eventVersion > version
-      ) {
-        version = event.eventVersion;
+    for (let index = stream.length - 1; index >= 0; index--) {
+      const event = stream[index];
+      if (wanted.has(event.eventType)) {
+        return event.eventVersion;
       }
     }
 
-    return version;
+    return 0;
   }
 
   listAll(
     options: ListAllOptions = {}
   ): Event[] {
+    this.#assertOpen();
+
     const {
       fromEventId = 0,
       eventTypePrefix,
       limit
     } = options;
 
-    return this.#read(
+    return copyMatching(
+      this.#events,
       (event) => event.eventId > fromEventId &&
         matchesPrefix(event.eventType, eventTypePrefix),
       limit
@@ -103,13 +118,16 @@ export class MemoryEventLog implements EventLog {
   listFromCheckpoints(
     options: ListFromCheckpointsOptions
   ): Event[] {
+    this.#assertOpen();
+
     const {
       checkpointEventTypes,
       eventTypePrefix
     } = options;
     const checkpoints = this.#checkpoints(checkpointEventTypes);
 
-    return this.#read(
+    return copyMatching(
+      this.#events,
       (event) => event.eventId >= (checkpoints.get(event.assetId) ?? 0) &&
         matchesPrefix(event.eventType, eventTypePrefix)
     );
@@ -122,9 +140,11 @@ export class MemoryEventLog implements EventLog {
 
     const checkpoints = this.#checkpoints(options.checkpointEventTypes);
     const before = this.#events.length;
+
     this.#events = this.#events.filter(
       (event) => event.eventId >= (checkpoints.get(event.assetId) ?? 0)
     );
+    this.#reindex();
 
     return {
       removed: before - this.#events.length,
@@ -134,21 +154,29 @@ export class MemoryEventLog implements EventLog {
 
   close(): void {
     this.#events = [];
+    this.#streams.clear();
     this.#versionByAsset.clear();
     this.#nextEventId = 1;
     this.#closed = true;
   }
 
-  #read(
-    matches: EventPredicate,
-    limit?: number
+  #stream(
+    assetId: string
   ): Event[] {
-    this.#assertOpen();
+    let stream = this.#streams.get(assetId);
+    if (stream === undefined) {
+      stream = [];
+      this.#streams.set(assetId, stream);
+    }
 
-    const events = this.#events.filter(matches);
+    return stream;
+  }
 
-    return (limit === undefined ? events : events.slice(0, limit))
-      .map((event) => structuredClone(event));
+  #reindex(): void {
+    this.#streams.clear();
+    for (const event of this.#events) {
+      this.#stream(event.assetId).push(event);
+    }
   }
 
   #checkpoints(
@@ -174,9 +202,29 @@ export class MemoryEventLog implements EventLog {
 
   #assertOpen(): void {
     if (this.#closed) {
-      throw new Error("event log is closed");
+      throw new EventLogClosedError();
     }
   }
+}
+
+function copyMatching(
+  source: readonly Event[],
+  matches: EventPredicate,
+  limit?: number
+): Event[] {
+  const events: Event[] = [];
+  const max = limit ?? Infinity;
+
+  for (const event of source) {
+    if (events.length >= max) {
+      break;
+    }
+    if (matches(event)) {
+      events.push(structuredClone(event));
+    }
+  }
+
+  return events;
 }
 
 function matchesPrefix(

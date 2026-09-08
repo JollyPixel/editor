@@ -1,7 +1,11 @@
 # EventStore
 
-Shared API returned by the built-in persistence factories and `createEventStore`.
-Choose a backend in [`Memory`](./Memory.md) or [`Sqlite`](./Sqlite.md).
+Shared API returned by the built-in persistence factories.
+
+| Backend | Factory | Storage lifetime | Runtime |
+|---|---|---|---|
+| [Memory](./Memory.md) | `persistence.memory()` | One store instance | Browser or Node.js |
+| [SQLite](./Sqlite.md) | `await persistence.sqlite(location?)` | File-backed, or one connection with `":memory:"` | Node.js |
 
 ```ts
 export interface EventStore {
@@ -16,9 +20,15 @@ export interface EventStore {
 ## Data model
 
 ```ts
-export type Actor =
-  | { type: "user"; id: string; }
-  | { type: "system"; source: string; };
+type ActorUser = {
+  type: "user";
+  id: string;
+};
+type ActorSystem = {
+  type: "system";
+  source: string;
+};
+export type Actor = ActorUser | ActorSystem;
 
 export interface AppendInput {
   assetType: string;
@@ -37,6 +47,57 @@ export interface Event {
   eventVersion: number;
   actor: Actor;
   createdAt: string;
+}
+```
+
+## Schema map
+
+Passing a map of event type to payload shape narrows what `append` accepts.
+Every factory takes it as an optional type argument and returns a
+`TypedEventStore<TMap>`, which remains assignable to `EventStore`.
+
+```ts
+type SpriteMap = {
+  "sprite.created": { path: string; size: number; };
+  "sprite.renamed": { from: string; to: string; };
+};
+
+const store = persistence.memory<SpriteMap>();
+
+store.writer.append({
+  assetType: "sprite",
+  assetId: "a1",
+  eventType: "sprite.created",
+  eventData: { path: "a.png", size: 12 },
+  actor
+});
+```
+
+An `eventType` outside the map is rejected, and so is an `eventData` that
+does not match the payload its `eventType` declares.
+
+`TypedEvent<TMap>` is the discriminated union the map describes. Narrowing on
+`eventType` narrows `eventData` with it:
+
+```ts
+export type TypedEvent<TMap extends EventDataMap> = {
+  [K in EventType<TMap>]: EventEnvelope & {
+    eventType: K;
+    eventData: TMap[K];
+  };
+}[EventType<TMap>];
+```
+
+Reads are deliberately left untyped. `reader` hands back `Event`, whose
+`eventData` is `unknown`, because a stored row is parsed from JSON and may
+predate the current map. Validate it with a type guard before use:
+
+```ts
+function isSpriteCreated(
+  event: Event
+): event is Extract<TypedEvent<SpriteMap>, { eventType: "sprite.created"; }> {
+  return event.eventType === "sprite.created" &&
+    typeof (event.eventData as { path?: unknown; })?.path === "string";
 }
 ```
 
@@ -77,9 +138,9 @@ as an exclusive lower bound.
 
 `lastVersionOf` returns the version of the newest event on `assetId` whose type
 is one of `eventTypes`, or `0` when the stream holds none. A reader that knows
-which types rebuild the whole state uses it to resume a fold from the last one
-instead of the head. The method returns only the version and does not clone the
-matching event. Lookup cost depends on the backend and its stored event count.
+which types rebuild the whole state can use the version to resume a fold from
+that event. The method returns only the version and does not clone the matching
+event.
 
 `listAll` reads every stream in `eventId` order and accepts these filters:
 
@@ -112,9 +173,8 @@ and an empty `checkpointEventTypes` degrades to `listAll`.
 `eventTypePrefix` filters the result without moving the bound: an event
 matching the prefix but stored before its asset's checkpoint is still left out.
 
-A reader whose fold restarts from a checkpoint uses this instead of
-`listAll`, so its cost tracks the number of assets rather than the depth of
-the log.
+A reader whose fold restarts from a checkpoint can use this method to process
+only each checkpoint and its following events.
 
 ## Compaction
 
@@ -158,36 +218,13 @@ close(): void
 
 All backends follow the same behavior:
 
-- `eventData` and `actor` pass through JSON serialization. Unsupported values
-  such as `BigInt` and `Symbol` fail the append. `Date` values become ISO strings.
+- `eventData` and `actor` pass through JSON serialization. `BigInt` values
+  cannot be stored, top-level values such as `undefined` and `Symbol` fail the
+  append, object properties with those values are omitted, and `Date` values
+  become ISO strings.
 - The stored event does not alias the input, and values returned by the reader
   cannot mutate the log.
-- `append` returns the same event that a later `list` returns.
+- `append` returns an event equivalent to the one returned by a later `list`.
 - A rejected append consumes neither an `eventId` nor an `eventVersion`.
 
 `test/persistence/conformance.spec.ts` runs this contract against each backend.
-
-## Custom backends
-
-A custom backend implements `EventLog`, which owns storage plus event identity
-and version assignment:
-
-```ts
-export interface EventLog extends EventReader {
-  insert(input: AppendInput): Event;
-  compact(options: CompactOptions): CompactReport;
-  close(): void;
-}
-```
-
-Pass the log to `createEventStore` to attach the shared writer:
-
-```ts
-import {
-  createEventStore,
-  type EventLog
-} from "@jolly-pixel/event-store";
-
-declare const myLog: EventLog;
-const store = createEventStore(myLog);
-```

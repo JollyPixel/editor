@@ -6,7 +6,6 @@ import type {
 
 // Import Internal Dependencies
 import type {
-  Actor,
   AppendInput,
   CompactOptions,
   CompactReport,
@@ -14,50 +13,40 @@ import type {
   ListAllOptions,
   ListFromCheckpointsOptions
 } from "../../EventStore.ts";
-import type { EventLog } from "../EventLog.ts";
-import { toJson } from "../serialize.ts";
-
-interface EventRow {
-  event_id: number;
-  asset_type: string;
-  asset_id: string;
-  event_type: string;
-  event_data: string;
-  event_version: number;
-  actor: string;
-  created_at: string;
-}
-
-// CONSTANTS
-const kColumnNames = [
-  "event_id",
-  "asset_type",
-  "asset_id",
-  "event_type",
-  "event_data",
-  "event_version",
-  "actor",
-  "created_at"
-];
-const kColumns = kColumnNames.join(", ");
-// The same list for a query that aliases the events table as `e`.
-const kAliasedColumns = kColumnNames
-  .map((column) => `e.${column}`)
-  .join(", ");
+import {
+  EventLogClosedError,
+  type EventLog
+} from "../EventLog.ts";
+import {
+  materializeEvent,
+  toJson
+} from "../serialize.ts";
+import { SqliteConnection } from "./connection.ts";
+import {
+  ALIASED_EVENT_COLUMNS,
+  EVENT_COLUMNS,
+  toEvent,
+  type EventRow
+} from "./rows.ts";
+import {
+  escapeGlob,
+  placeholdersFor
+} from "./sql.ts";
 
 export class SqliteEventLog implements EventLog {
-  #db: DatabaseSync;
-  #closed = false;
+  #connection: SqliteConnection;
 
   constructor(
     db: DatabaseSync
   ) {
-    this.#db = db;
+    this.#connection = new SqliteConnection(db);
   }
 
   insert(
     input: AppendInput
   ): Event {
+    this.#assertOpen();
+
     const {
       assetType,
       assetId,
@@ -66,25 +55,42 @@ export class SqliteEventLog implements EventLog {
       actor
     } = input;
 
-    const sqlInsert = `INSERT INTO events (asset_type, asset_id, event_type, event_data,
-        event_version, actor, created_at)
-      VALUES (?, ?, ?, ?,
-        (SELECT COALESCE(MAX(event_version), 0) + 1 FROM events WHERE asset_id = ?),
-        ?, ?)
-      RETURNING ${kColumns}`;
+    const eventDataJson = toJson(eventData, "eventData");
+    const actorJson = toJson(actor, "actor");
+    const createdAt = new Date().toISOString();
 
-    const [row] = this.#query(
-      sqlInsert,
+    const row = this.#connection.get<{
+      event_id: number;
+      event_version: number;
+    }>(
+      `INSERT INTO events (asset_type, asset_id, event_type, event_data,
+           event_version, actor, created_at)
+         VALUES (?, ?, ?, ?,
+           (SELECT COALESCE(MAX(event_version), 0) + 1 FROM events WHERE asset_id = ?),
+           ?, ?)
+         RETURNING event_id, event_version`,
       assetType,
       assetId,
       eventType,
-      toJson(eventData, "eventData"),
+      eventDataJson,
       assetId,
-      toJson(actor, "actor"),
-      new Date().toISOString()
+      actorJson,
+      createdAt
     );
+    if (row === undefined) {
+      throw new Error("insert did not return the stored event");
+    }
 
-    return toEvent(row);
+    return materializeEvent({
+      eventId: row.event_id,
+      assetType,
+      assetId,
+      eventType,
+      eventDataJson,
+      eventVersion: row.event_version,
+      actorJson,
+      createdAt
+    });
   }
 
   list(
@@ -92,29 +98,33 @@ export class SqliteEventLog implements EventLog {
     fromVersion = 0
   ): Event[] {
     return this.#query(
-      `SELECT ${kColumns}
+      `SELECT ${EVENT_COLUMNS}
        FROM events
        WHERE asset_id = ? AND event_version > ?
        ORDER BY event_version ASC`,
       assetId,
       fromVersion
-    ).map((row) => toEvent(row));
+    );
   }
 
   lastVersionOf(
     assetId: string,
     eventTypes: readonly string[]
   ): number {
+    this.#assertOpen();
+
     if (eventTypes.length === 0) {
       return 0;
     }
 
     const placeholders = placeholdersFor(eventTypes);
-    const row = this.#db.prepare(
+    const row = this.#connection.get<{ event_version: number | null; }>(
       `SELECT MAX(event_version) AS event_version
        FROM events
-       WHERE asset_id = ? AND event_type IN (${placeholders})`
-    ).get(assetId, ...eventTypes) as { event_version: number | null; } | undefined;
+       WHERE asset_id = ? AND event_type IN (${placeholders})`,
+      assetId,
+      ...eventTypes
+    );
 
     return row?.event_version ?? 0;
   }
@@ -139,13 +149,13 @@ export class SqliteEventLog implements EventLog {
     }
 
     return this.#query(
-      `SELECT ${kColumns}
+      `SELECT ${EVENT_COLUMNS}
        FROM events
        WHERE ${conditions.join(" AND ")}
        ORDER BY event_id ASC
        ${limit === undefined ? "" : "LIMIT ?"}`,
       ...parameters
-    ).map((row) => toEvent(row));
+    );
   }
 
   listFromCheckpoints(
@@ -173,18 +183,20 @@ export class SqliteEventLog implements EventLog {
          WHERE event_type IN (${placeholdersFor(checkpointEventTypes)})
          GROUP BY asset_id
        )
-       SELECT ${kAliasedColumns}
+       SELECT ${ALIASED_EVENT_COLUMNS}
        FROM events e
        LEFT JOIN heads h ON h.asset_id = e.asset_id
        WHERE e.event_id >= COALESCE(h.head, 0) ${prefixCondition}
        ORDER BY e.event_id ASC`,
       ...parameters
-    ).map((row) => toEvent(row));
+    );
   }
 
   compact(
     options: CompactOptions
   ): CompactReport {
+    this.#assertOpen();
+
     const {
       checkpointEventTypes,
       reclaim = true
@@ -197,17 +209,14 @@ export class SqliteEventLog implements EventLog {
     }
 
     const placeholders = placeholdersFor(checkpointEventTypes);
-    const { assets } = this.#db.prepare(
+    const counted = this.#connection.get<{ assets: number; }>(
       `SELECT COUNT(DISTINCT asset_id) AS assets
        FROM events
-       WHERE event_type IN (${placeholders})`
-    ).get(...checkpointEventTypes) as { assets: number; };
+       WHERE event_type IN (${placeholders})`,
+      ...checkpointEventTypes
+    );
 
-    /**
-     * The inner join drops assets holding no checkpoint, so their streams
-     * are left whole.
-     */
-    const { changes } = this.#db.prepare(
+    const removed = this.#connection.run(
       `DELETE FROM events
        WHERE event_id IN (
          SELECT e.event_id
@@ -219,59 +228,38 @@ export class SqliteEventLog implements EventLog {
            GROUP BY asset_id
          ) h ON h.asset_id = e.asset_id
          WHERE e.event_id < h.head
-       )`
-    ).run(...checkpointEventTypes);
+       )`,
+      ...checkpointEventTypes
+    );
 
-    if (reclaim && changes > 0) {
-      this.#db.exec("VACUUM");
+    if (reclaim && removed > 0) {
+      this.#connection.exec("VACUUM");
     }
 
     return {
-      removed: Number(changes),
-      assets
+      removed,
+      assets: counted?.assets ?? 0
     };
   }
 
   close(): void {
-    if (this.#closed) {
-      return;
-    }
-    this.#closed = true;
-    this.#db.close();
+    this.#connection.close();
   }
 
   #query(
     sql: string,
     ...parameters: SQLInputValue[]
-  ): EventRow[] {
-    return this.#db.prepare(sql).all(...parameters) as unknown as EventRow[];
+  ): Event[] {
+    this.#assertOpen();
+
+    return this.#connection
+      .all<EventRow>(sql, ...parameters)
+      .map((row) => toEvent(row));
   }
-}
 
-function placeholdersFor(
-  values: readonly unknown[]
-): string {
-  return values.map(() => "?").join(", ");
-}
-
-// Escape GLOB wildcards so prefixes match literally.
-function escapeGlob(
-  value: string
-): string {
-  return value.replace(/[[\]*?]/g, (character) => `[${character}]`);
-}
-
-function toEvent(
-  row: EventRow
-): Event {
-  return {
-    eventId: row.event_id,
-    assetType: row.asset_type,
-    assetId: row.asset_id,
-    eventType: row.event_type,
-    eventData: JSON.parse(row.event_data),
-    eventVersion: row.event_version,
-    actor: JSON.parse(row.actor) as Actor,
-    createdAt: row.created_at
-  };
+  #assertOpen(): void {
+    if (this.#connection.closed) {
+      throw new EventLogClosedError();
+    }
+  }
 }

@@ -1,18 +1,23 @@
 // Import Internal Dependencies
-import type { EventStore } from "../../EventStore.ts";
+import type {
+  EventDataMap,
+  TypedEventStore
+} from "../../EventStore.ts";
 import { createEventStore } from "../createEventStore.ts";
 import { SQL_SCHEMA } from "./schema.ts";
 import { SqliteEventLog } from "./log.ts";
 
-export async function createSqliteEventStore(
+export async function createSqliteEventStore<
+  TMap extends EventDataMap = EventDataMap
+>(
   location: string = ":memory:"
-): Promise<EventStore> {
+): Promise<TypedEventStore<TMap>> {
   const { DatabaseSync } = await import("node:sqlite");
 
   const db = new DatabaseSync(location);
   db.exec(SQL_SCHEMA);
 
-  return createEventStore(
+  return createEventStore<TMap>(
     new SqliteEventLog(db)
   );
 }

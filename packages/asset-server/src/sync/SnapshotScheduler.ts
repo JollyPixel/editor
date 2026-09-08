@@ -11,6 +11,7 @@ import { contentHash } from "../utils/contentHash.ts";
 import {
   ASSET_UPDATED,
   encodeContent,
+  type AssetEventDataMap,
   type AssetUpdatedData
 } from "../events/AssetEvents.ts";
 import type { SnapshotPolicy } from "../kinds/AssetKindHandler.ts";
@@ -33,7 +34,7 @@ interface PendingSnapshot {
 }
 
 export interface SnapshotSchedulerOptions {
-  eventStore: EventStore.EventStore;
+  eventStore: EventStore.TypedEventStore<AssetEventDataMap>;
   states: AssetStateStore;
   projector: AssetProjector;
   snapshot?: SnapshotPolicy;
@@ -48,7 +49,7 @@ export interface SnapshotSchedulerOptions {
  * Snapshots append events; the projector performs the physical write.
  */
 export class SnapshotScheduler {
-  #eventStore: EventStore.EventStore;
+  #eventStore: EventStore.TypedEventStore<AssetEventDataMap>;
   #states: AssetStateStore;
   #projector: AssetProjector;
   #policy: Required<SnapshotPolicy>;
