@@ -20,6 +20,7 @@
     "packages/controls",
     "packages/loop",
     "packages/asset",
+    "packages/asset-source",
     "packages/color",
     "packages/image",
     "packages/resize-handle",

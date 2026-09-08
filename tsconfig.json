@@ -32,6 +32,9 @@
       "path": "./packages/asset"
     },
     {
+      "path": "./packages/asset-source"
+    },
+    {
       "path": "./packages/engine"
     },
     {

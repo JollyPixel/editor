@@ -8,14 +8,14 @@ import {
   Ok,
   type Result
 } from "@openally/result";
+import {
+  AssetPathEscapeError,
+  isStatePath,
+  normalizeAssetPath,
+  type AssetSource
+} from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
-import type { AssetSource } from "../sources/AssetSource.ts";
-import {
-  isStatePath,
-  normalizeAssetPath
-} from "../sources/paths.ts";
-import { AssetPathEscapeError } from "../sources/errors/AssetPathEscapeError.ts";
 import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
 import { CatalogIdentitySidecar } from "../catalog/CatalogIdentitySidecar.ts";
 import { contentHash } from "../utils/contentHash.ts";

@@ -8,9 +8,9 @@ import {
   Ok,
   type Result
 } from "@openally/result";
+import type { AssetSource } from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
-import type { AssetSource } from "../sources/AssetSource.ts";
 import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
 import { contentHash } from "../utils/contentHash.ts";
 import {

@@ -2,6 +2,10 @@
 import path from "node:path";
 
 // Import Third-party Dependencies
+import {
+  FilesystemAssetSource,
+  type AssetSource
+} from "@jolly-pixel/asset-source";
 import * as EventStore from "@jolly-pixel/event-store";
 import {
   Server,
@@ -11,8 +15,6 @@ import {
 
 // Import Internal Dependencies
 import { EVENTS_DB_PATH } from "../constants.ts";
-import type { AssetSource } from "../sources/AssetSource.ts";
-import { FilesystemAssetSource } from "../sources/persistence/FilesystemAssetSource.ts";
 import type { AssetKindHandler } from "../kinds/AssetKindHandler.ts";
 import {
   ASSET_CHECKPOINT_EVENT_TYPES,

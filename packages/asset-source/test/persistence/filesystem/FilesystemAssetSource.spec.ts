@@ -9,11 +9,11 @@ import path from "node:path";
 
 // Import Internal Dependencies
 import { FilesystemAssetSource } from "#src/index.ts";
-import { tempWorkspace } from "../helpers/tempWorkspace.ts";
+import { tempWorkspace } from "../../helpers/tempWorkspace.ts";
 import {
   bytes,
   text
-} from "../helpers/bytes.ts";
+} from "../../helpers/bytes.ts";
 
 describe("FilesystemAssetSource — listing", () => {
   test("skips .jollypixel/ and the other default ignores", async() => {

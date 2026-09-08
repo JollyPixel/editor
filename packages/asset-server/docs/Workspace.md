@@ -95,8 +95,9 @@ Requests outside the prefix are passed to `next()`. `GET` and `HEAD` answer
 `AssetSource`, so an in-memory workspace is servable too.
 
 The request target is stripped of its query and fragment, decoded once, then
-validated by [`safeAssetPath`](./AssetSource.md#paths), so the source only
-ever sees a root-relative POSIX path. The rejection decides the status:
+validated by
+[`safeAssetPath`](../../asset-source/docs/AssetSource.md#paths), so the source
+only ever sees a root-relative POSIX path. The rejection decides the status:
 
 | Case | Status |
 |---|---|

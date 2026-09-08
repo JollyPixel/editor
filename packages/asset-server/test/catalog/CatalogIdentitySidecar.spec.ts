@@ -5,12 +5,14 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { MemoryAssetSource } from "@jolly-pixel/asset-source";
+
 // Import Internal Dependencies
 import {
   contentHash,
   CatalogIdentitySidecar,
-  IDENTITY_SIDECAR_PATH,
-  MemoryAssetSource
+  IDENTITY_SIDECAR_PATH
 } from "#src/index.ts";
 import { bytes } from "../helpers/bytes.ts";
 import { recordingLogger } from "../helpers/logger.ts";

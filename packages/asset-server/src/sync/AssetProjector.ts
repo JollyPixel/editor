@@ -1,8 +1,8 @@
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
+import type { AssetSource } from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
-import type { AssetSource } from "../sources/AssetSource.ts";
 import {
   silentLogger,
   type Logger

@@ -16,15 +16,17 @@ $ npm i @jolly-pixel/asset-server
 
 `@jolly-pixel/asset-server` runs on the server. Browser code should use
 [`@jolly-pixel/asset`](../asset) for asset records and catalogs.
+Physical storage providers are supplied by
+[`@jolly-pixel/asset-source`](../asset-source).
 
 ## 👀 Usage example
 
 ```ts
 import * as EventStore from "@jolly-pixel/event-store";
+import { FilesystemAssetSource } from "@jolly-pixel/asset-source";
 import { Server } from "@jolly-pixel/network";
 import {
   createAssetBackend,
-  FilesystemAssetSource,
   textureAssetHandler
 } from "@jolly-pixel/asset-server";
 
@@ -51,7 +53,8 @@ system events.
 
 - [`AssetBackend`](./docs/AssetBackend.md): setup, options and lifecycle
 - [`AssetWriter`](./docs/AssetWriter.md): create, update, rename and remove assets
-- [`AssetSource`](./docs/AssetSource.md): in-memory and filesystem storage
+- [`AssetSource`](../asset-source/docs/AssetSource.md): in-memory and
+  filesystem storage
 - [`Asset kinds`](./docs/AssetKinds.md): custom state, serialization and editing rooms
 - [`Catalog`](./docs/Catalog.md): catalog projection, network messages and HTTP access
 - [`Rooms`](./docs/Rooms.md): dynamic editing rooms and eviction

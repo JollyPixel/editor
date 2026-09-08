@@ -1,6 +1,7 @@
-export { MemoryAssetSource } from "./MemoryAssetSource.ts";
 export {
-  DEFAULT_IGNORED_PATHS,
+  DEFAULT_IGNORED_PATHS
+} from "./ignoredPaths.ts";
+export {
   FilesystemAssetSource
 } from "./FilesystemAssetSource.ts";
 export type {

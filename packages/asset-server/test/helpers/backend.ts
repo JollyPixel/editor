@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import * as EventStore from "@jolly-pixel/event-store";
+import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
 import {
@@ -10,7 +11,6 @@ import {
   CatalogIdentitySidecar,
   Reconciler,
   ReconciliationWatcher,
-  MemoryAssetSource,
   ProjectionState,
   SnapshotScheduler,
   type AssetKindHandler,

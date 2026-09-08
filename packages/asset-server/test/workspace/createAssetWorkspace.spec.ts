@@ -9,6 +9,7 @@ import path from "node:path";
 
 // Import Third-party Dependencies
 import * as EventStore from "@jolly-pixel/event-store";
+import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 import {
   Extension,
   Server,
@@ -20,7 +21,6 @@ import {
 import {
   assetRoomName,
   createAssetWorkspace,
-  MemoryAssetSource,
   STATE_GITIGNORE_PATH,
   type AssetKindHandler,
   type AssetRoomBinding,

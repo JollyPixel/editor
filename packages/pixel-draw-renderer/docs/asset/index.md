@@ -6,6 +6,7 @@ becomes a catalogued, event-sourced, persisted asset instead of a buffer held
 in server memory.
 
 ```ts
+import { FilesystemAssetSource } from "@jolly-pixel/asset-source";
 import { pixelArtAssetHandler } from "@jolly-pixel/pixel-draw.renderer/asset/index.ts";
 
 await createAssetBackend({

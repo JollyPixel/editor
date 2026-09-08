@@ -9,13 +9,13 @@ import path from "node:path";
 
 // Import Third-party Dependencies
 import * as EventStore from "@jolly-pixel/event-store";
+import { FilesystemAssetSource } from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
 import {
   AssetKindRegistry,
   AssetProjector,
   AssetWriter,
-  FilesystemAssetSource,
   CatalogIdentitySidecar,
   ProjectionState,
   Reconciler,

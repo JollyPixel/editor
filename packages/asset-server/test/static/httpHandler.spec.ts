@@ -5,13 +5,17 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import {
+  AssetPathEscapeError,
+  MemoryAssetSource,
+  STATE_DIRECTORY
+} from "@jolly-pixel/asset-source";
+
 // Import Internal Dependencies
 import {
   AssetKindRegistry,
-  AssetPathEscapeError,
   createAssetStaticHandler,
-  MemoryAssetSource,
-  STATE_DIRECTORY,
   textureAssetHandler
 } from "#src/index.ts";
 import { bytes } from "../helpers/bytes.ts";
