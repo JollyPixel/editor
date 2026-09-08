@@ -21,9 +21,12 @@ export function folder(
   return element;
 }
 
-export function tabs(): HTMLElementTagNameMap["jolly-tabs"] {
+export function tabs(
+  value = ""
+): HTMLElementTagNameMap["jolly-tabs"] {
   const element = document.createElement("jolly-tabs");
   element.id = "container-example-tabs";
+  element.value = value;
   element.append(
     tab("build", "Build"),
     tab("paint", "Paint"),

@@ -140,14 +140,15 @@ export class BlockLibraryViewport extends LitElement {
   ): void {
     if (changed.has("engine")) {
       this.#build();
-
+    }
+    else if (changed.has("blocks")) {
+      this.#renderer?.setBlocks(this.blocks);
+    }
+    else {
       return;
     }
 
-    if (changed.has("blocks")) {
-      this.#renderer?.setBlocks(this.blocks);
-      this.#syncGrid();
-    }
+    void this.updateComplete.then(() => this.#syncGrid());
   }
 
   revealBlock(
@@ -264,7 +265,6 @@ export class BlockLibraryViewport extends LitElement {
       blocks: this.blocks
     });
     this.#renderer.onLayoutChange = () => this.#syncGrid();
-    this.#syncGrid();
   }
 
   #syncGrid(): void {

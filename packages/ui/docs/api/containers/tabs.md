@@ -14,7 +14,8 @@
 | `value` | `string` | `""` |
 | `orientation` | `"horizontal" \| "vertical"` | `"horizontal"` |
 
-An absent, disabled, or unknown value selects the first enabled tab. User
+An absent, disabled, or unknown value selects the first enabled tab, once
+the tabs are slotted; a value set before that is kept as requested. User
 selection emits `jolly-tab-change` with `{ value }`. Home, End, and the arrow
 keys move between enabled tabs according to orientation.
 

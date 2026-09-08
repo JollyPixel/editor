@@ -81,48 +81,46 @@ export class Tabs extends LitElement {
     `;
   }
 
-  protected override updated(
+  protected override willUpdate(
     changed: Map<PropertyKey, unknown>
   ): void {
-    if (changed.has("value")) {
-      this.#synchroniseSelection(false);
+    if (changed.has("value") || changed.has("_tabs")) {
+      this.value = this.#resolveValue();
     }
+  }
+
+  protected override updated(): void {
+    this.#synchroniseTabs();
   }
 
   #onSlotChange = () => {
     this._tabs = this._slot.assignedElements({ flatten: true })
       .filter((element): element is Tab => element.tagName === "JOLLY-TAB");
-    this.#synchroniseSelection(false);
   };
 
-  #synchroniseSelection(
-    userChange: boolean
-  ): void {
+  #resolveValue(): string {
+    if (this._tabs.length === 0) {
+      return this.value;
+    }
+
     const requested = this._tabs.find(
       (tab) => tab.value === this.value && !tab.disabled
     );
     const selected = requested ?? this._tabs.find(
       (tab) => !tab.disabled
     );
-    const nextValue = selected?.value ?? "";
-    if (this.value !== nextValue) {
-      this.value = nextValue;
-    }
 
+    return selected?.value ?? "";
+  }
+
+  #synchroniseTabs(): void {
     for (let index = 0; index < this._tabs.length; index++) {
       const tab = this._tabs[index];
-      tab.active = tab === selected;
+      tab.active = tab.value === this.value && !tab.disabled;
       tab.id = this.#panelId(index);
       tab.setAttribute(
         "aria-labelledby",
         this.#buttonId(index)
-      );
-    }
-    if (userChange && selected !== undefined) {
-      emitContainerEvent(
-        this,
-        "jolly-tab-change",
-        { value: selected.value }
       );
     }
   }
@@ -191,7 +189,13 @@ export class Tabs extends LitElement {
     }
 
     this.value = tab.value;
-    this.#synchroniseSelection(userChange);
+    if (userChange) {
+      emitContainerEvent(
+        this,
+        "jolly-tab-change",
+        { value: tab.value }
+      );
+    }
   }
 
   #buttonId(
