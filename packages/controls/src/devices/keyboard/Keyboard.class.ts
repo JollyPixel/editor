@@ -278,7 +278,8 @@ export class Keyboard extends Emitter<
     }
 
     const isControlKey = kControlKeys.has(event.code);
-    if (isControlKey) {
+    const isAltCombo = event.altKey && !isControlKey;
+    if (isControlKey || isAltCombo) {
       event.preventDefault();
     }
 

@@ -19,7 +19,7 @@ export type KeyCode =
   | "KeyZ" | "KeyX" | "KeyC" | "KeyV" | "KeyB" | "KeyN" | "KeyM"
   | "BracketLeft" | "BracketRight" | "Enter"
   | "Semicolon" | "Quote" | "Backquote" | "Backslash" | "ContextMenu"
-  | "Delete" | "Insert" | "Home" | "End" | "PageUp" | "PageDown"
+  | "Delete" | "Insert" | "Home" | "End" | "PageUp" | "PageDown" | "Escape"
   | "ArrowLeft" | "ArrowUp" | "ArrowRight" | "ArrowDown"
   | "ShiftRight" | "ShiftLeft" | "IntlBackslash"
   | "F1" | "F2" | "F3" | "F4" | "F5" | "F6" | "F7" | "F8" | "F9" | "F10" | "F11" | "F12"

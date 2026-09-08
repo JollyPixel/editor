@@ -36,6 +36,7 @@ import { pickBlockAt } from "./interaction/pickBlockAt.ts";
 // CONSTANTS
 const kDefaultMaxDistance = 32;
 const kDefaultSkyRadius = 24;
+const kAltClickTravelThreshold = 6;
 
 export interface LocalBrushOptions {
   engine: VoxelEngine;
@@ -72,6 +73,7 @@ export class LocalBrush extends ActorComponent {
    * Fires when the aimed cursor changes; null means no target.
    */
   onCursorChange?: (cursor: BrushCursor | null) => void;
+  onFocusRequest?: (point: THREE.Vector3Like) => void;
 
   readonly engine: VoxelEngine;
 
@@ -84,6 +86,7 @@ export class LocalBrush extends ActorComponent {
   #stroke: BrushStroke | null = null;
   #frameAim: BrushAim | null | undefined;
   #frameCenter: VoxelCoord | null | undefined;
+  #altClickTravel = 0;
 
   constructor(
     actor: Actor,
@@ -164,6 +167,8 @@ export class LocalBrush extends ActorComponent {
     const { input } = this.actor.world;
     const isCtrl = input.keyboard.isDown("ControlLeft") ||
       input.keyboard.isDown("ControlRight");
+    const isAlt = input.keyboard.isDown("AltLeft") ||
+      input.keyboard.isDown("AltRight");
 
     if (
       !input.mouse.hovering ||
@@ -172,6 +177,27 @@ export class LocalBrush extends ActorComponent {
     ) {
       this.#endStroke();
       this.#preview.hide();
+
+      return;
+    }
+
+    if (isAlt) {
+      this.#endStroke();
+      this.#preview.hide();
+
+      if (input.mouse.wasJustPressed("left")) {
+        this.#altClickTravel = 0;
+      }
+      if (input.mouse.isDown("left")) {
+        const delta = input.mouse.viewportDelta(false);
+        this.#altClickTravel += Math.abs(delta.x) + Math.abs(delta.y);
+      }
+      if (
+        input.mouse.wasJustReleased("left") &&
+        this.#altClickTravel <= kAltClickTravelThreshold
+      ) {
+        this.#requestFocus();
+      }
 
       return;
     }
@@ -315,6 +341,20 @@ export class LocalBrush extends ActorComponent {
     )) {
       this.#preview.markDirty();
     }
+  }
+
+  #requestFocus(): void {
+    const aim = this.#resolveAim();
+    if (aim === null) {
+      return;
+    }
+
+    const { remove: cell } = aim;
+    this.onFocusRequest?.({
+      x: cell.x + 0.5,
+      y: cell.y + 0.5,
+      z: cell.z + 0.5
+    });
   }
 
   #resolveAim(): BrushAim | null {
